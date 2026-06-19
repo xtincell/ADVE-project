@@ -38,13 +38,19 @@ npx prisma migrate deploy   # applique les 37 migrations dans l'ordre
 
 # 5. (Optionnel) seed des données de référence + démo
 npm run db:seed             # seed de base
-# npm run db:seed:all       # base + pays + démo + spawt + wakanda
+# npm run db:seed:calibration  # région Wakanda (calibration : marques + prestataires + briefs + actions)
+# npm run db:seed:all          # base + pays + coûts + démo + spawt + wakanda
 
 # 6. Lancer
 npm run dev                 # → http://localhost:3000
 ```
 
 **Build production :** `npm run build && npm start`
+
+> **Déploiement** : Vercel (cible canonique, auto-deploy) **et/ou** self-host
+> « serverfull » sur machine dédiée (serveur Node persistant → pas de timeout
+> serverless sur les flux LLM longs ; option Ollama GPU local). Runbook complet :
+> [docs/deploy/SELF-HOST.md](docs/deploy/SELF-HOST.md).
 
 > Sur un **clone neuf**, utilise `prisma migrate deploy` (applique les migrations
 > existantes, n'en génère jamais). Réserve `npm run db:migrate` (`prisma migrate
@@ -54,24 +60,23 @@ npm run dev                 # → http://localhost:3000
 
 **Requises** : `DATABASE_URL`, `NEXTAUTH_SECRET`, `ANTHROPIC_API_KEY` (+ `NEXTAUTH_URL`/`AUTH_URL` en local = `http://localhost:3000`).
 
-**Optionnelles** (toutes ship-without-keys) : `OPENAI_API_KEY` / `OLLAMA_BASE_URL` (fallbacks LLM), paiements (`STRIPE_*` / `PAYPAL_*` / `CINETPAY_*`), mobile money (`WAVE_*` / `ORANGE_MONEY_*` / `MTN_MOMO_*`), email (`RESEND_API_KEY` / `SENDGRID_API_KEY`), Ptah forge (`FREEPIK_API_KEY` / `ADOBE_FIREFLY_*` / `FIGMA_PAT` / `CANVA_*`), connecteurs (`ZOHO_*` / `MONDAY_*` / `SESHAT_API_URL`), `CRON_SECRET`, `INTEGRATION_TOKEN_KEY`. Liste complète + commentaires : [`.env.example`](.env.example).
+**Optionnelles** (toutes ship-without-keys) : `OPENAI_API_KEY` / `OLLAMA_BASE_URL` / `OPENROUTER_API_KEY` (fallbacks LLM en cascade), `MANUAL_PAYMENT_WHATSAPP_NUMBER` (paiement manuel WhatsApp), paiements (`STRIPE_*` / `PAYPAL_*` / `CINETPAY_*`), mobile money (`WAVE_*` / `ORANGE_MONEY_*` / `MTN_MOMO_*`), email (`RESEND_API_KEY` / `SENDGRID_API_KEY`), Ptah forge (`FREEPIK_API_KEY` / `ADOBE_FIREFLY_*` / `FIGMA_PAT` / `CANVA_*`), connecteurs (`ZOHO_*` / `MONDAY_*` / `SESHAT_API_URL`), `CRON_SECRET`, `INTEGRATION_TOKEN_KEY`. Liste complète + commentaires : [`.env.example`](.env.example).
 
 ---
 
-## ✅ État vérifié (2026-06-16)
+## ✅ État vérifié (2026-06-19)
 
-Vérifié sur la machine mainteneur avant publication :
+Vérifié sur la machine mainteneur (branche PR #258 « Fusée non-dépendante du LLM ») :
 
 | Check | Commande | Résultat |
 |---|---|---|
-| Build production | `npm run build` | ✅ exit 0 (route table complète) |
-| Type check | `npx tsc --noEmit` | ✅ clean |
+| Type check | `npx tsc --noEmit` | ✅ 0 erreur |
 | Lint | `npm run lint` | ✅ clean (warnings advisory pré-existants seulement) |
 | Schéma Prisma | `npx prisma validate` | ✅ valid |
-| Migrations | `git ls-files prisma/migrations` | ✅ 37 migrations versionnées |
+| Migrations | `git ls-files prisma/migrations` | ✅ 37 migrations versionnées (0 ajoutée — paiement manuel = champ additif) |
 | Client Prisma | `npm run db:generate` | ✅ généré (v7.8.0) |
-| Suite anti-drift gouvernance | `npx vitest run tests/unit/governance` | ✅ 805 passed |
-| Suite complète | `npx vitest run` | ✅ 2069 passed |
+| Suite anti-drift gouvernance | `npx vitest run tests/unit/governance` | ✅ 845 passed (77 fichiers) |
+| Suite complète | `npx vitest run` | ✅ 2121 passed (169 fichiers) |
 
 ---
 
@@ -105,7 +110,7 @@ du diagnostic au paiement :
 - **Next.js 16** (App Router, Turbopack) · **React 19** · **TypeScript 6**
 - **tRPC 11** · **Prisma 7** (PostgreSQL, driver-adapter) · **NextAuth v5**
 - **Tailwind 4** + design system CVA — **UPgraders DS** (ADR-0097 : corail `#E56458` + or `#FACC15`, Clash Display + Satoshi)
-- **LLM Gateway v4** multi-vendor (Anthropic → OpenAI → Ollama, circuit breaker, cost tracking)
+- **LLM Gateway v4** multi-vendor (Anthropic → OpenAI → Ollama → OpenRouter, circuit breaker, cost tracking)
 - **Vitest 4** (unit/anti-drift) · **Playwright 1.59** (e2e/a11y/visual)
 - ESLint 10 + `madge` enforcent la cascade de layering :
   `domain → lib → server/governance → server/services → server/trpc → components → app`
@@ -237,7 +242,18 @@ npx prisma migrate deploy
 
 ## Statut
 
-**v6.27.x (juin 2026)** — Phase 23 (mécaniques pivot superfans × Overton) close de bout en bout. Depuis : mégasprint back-end « galileo » (V1→V14) — scoring déterministe, Oracle 35/35 sans LLM, paiements production deux-rails (Stripe + mobile money, ADR-0092), Thot coûts atomisés par marché (ADR-0093), **La Guilde** portail public marketplace crew (ADR-0098), **Argos by LaFusée** déployable (ADR-0100), **UPgraders DS** canon (ADR-0097), base Supabase branchée. Cap APOGEE 7/7 préservé. Historique complet : [`CHANGELOG.md`](CHANGELOG.md). Ledger de complétion fonctionnelle : [`_bmad-output/planning-artifacts/closure-roadmap.md`](_bmad-output/planning-artifacts/closure-roadmap.md).
+**v6.27.x (juin 2026)** — Phase 23 (mécaniques pivot superfans × Overton) close de bout en bout. Depuis : mégasprint back-end « galileo » (V1→V14) — scoring déterministe, Oracle 35/35 sans LLM, paiements production deux-rails (Stripe + mobile money, ADR-0092), Thot coûts atomisés par marché (ADR-0093), **La Guilde** portail public marketplace crew (ADR-0098), **Argos by LaFusée** déployable (ADR-0100), **UPgraders DS** canon (ADR-0097), base Supabase branchée. Cap APOGEE 7/7 préservé.
+
+**PR #258 « Fusée non-dépendante du LLM » (v6.27.6 → v6.27.15)** — durcissement de la base + résilience + production :
+- **Circuit de la donnée scellé** : keystone **C5** (test CI HARD interdisant l'écriture `Pillar.content` brute hors gateway + allowlist « à mes risques et périls »), reroutes **C1**/**C2** (intake + infer-needs-human → gateway), gate **C6** `BRIEF_VS_ADVE_COHERENCE` advisory déterministe ([ADR-0103](docs/governance/adr/0103-brief-vs-adve-coherence-deterministic-advisory.md)), invariants **Yggdrasil C7** runtime-testés.
+- **Scoring figé déterministe** ([ADR-0102](docs/governance/adr/0102-adve-structural-score-deterministic-canon.md)) — poids Annexe G canon, `applyQualityModulator` mort retiré, garde LOI 9 zéro-LLM.
+- **Résilience LLM** : **OpenRouter** en 4ᵉ fallback (Anthropic → OpenAI → Ollama → OpenRouter).
+- **Paiement manuel** WhatsApp + file de validation Console (`/console/socle/manual-subscriptions`) — bypasse les providers auto pour passer en production (`feat(thot)`).
+- **Portail communauté** founder (`/cockpit/intelligence/community`) — superfans/dévotion/santé/followers unifiés.
+- **3ᵉ mode HYBRID `fullAuto`** « à mes risques » (LLM remplit / opérateur injecte / full-auto).
+- **Self-host serverfull** ([docs/deploy/SELF-HOST.md](docs/deploy/SELF-HOST.md)) en plus de Vercel + région de calibration **Wakanda** (`npm run db:seed:calibration`).
+
+Cap APOGEE 7/7 préservé. Historique complet : [`CHANGELOG.md`](CHANGELOG.md). Ledger de complétion fonctionnelle : [`_bmad-output/planning-artifacts/closure-roadmap.md`](_bmad-output/planning-artifacts/closure-roadmap.md).
 
 Versionnage : **`MAJEURE.PHASE.ITERATION`** (voir [CHANGELOG.md](CHANGELOG.md)).
 
