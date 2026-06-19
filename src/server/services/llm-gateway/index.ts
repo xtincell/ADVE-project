@@ -136,7 +136,7 @@ const MODEL_PRIORITY = ["claude-opus-4-6", "claude-opus-4-20250514", "claude-son
 
 // ── v4 — Multi-vendor LLM provider abstraction ────────────────────────────
 
-type LLMProvider = "anthropic" | "openai" | "ollama";
+type LLMProvider = "anthropic" | "openai" | "ollama" | "openrouter";
 
 interface ProviderState {
   available: boolean;
@@ -164,6 +164,14 @@ const providerStates: Record<LLMProvider, ProviderState> = {
   ollama: {
     available: !!process.env.OLLAMA_BASE_URL,
     priority: 3,
+    failureCount: 0,
+    circuitOpenUntil: 0,
+  },
+  // OpenRouter — last-resort cloud fallback (OpenAI-API-compatible) so the OS
+  // keeps reasoning when Anthropic AND OpenAI are both down/unkeyed.
+  openrouter: {
+    available: !!process.env.OPENROUTER_API_KEY,
+    priority: 4,
     failureCount: 0,
     circuitOpenUntil: 0,
   },
@@ -207,9 +215,10 @@ function recordProviderSuccess(provider: LLMProvider): void {
 
 export function _resetProvidersForTest(overrides?: Partial<Record<LLMProvider, Partial<ProviderState>>>): void {
   const defaults: Record<LLMProvider, ProviderState> = {
-    anthropic: { available: !!process.env.ANTHROPIC_API_KEY, priority: 1, failureCount: 0, circuitOpenUntil: 0 },
-    openai:    { available: !!process.env.OPENAI_API_KEY,    priority: 2, failureCount: 0, circuitOpenUntil: 0 },
-    ollama:    { available: !!process.env.OLLAMA_BASE_URL,   priority: 3, failureCount: 0, circuitOpenUntil: 0 },
+    anthropic:  { available: !!process.env.ANTHROPIC_API_KEY,  priority: 1, failureCount: 0, circuitOpenUntil: 0 },
+    openai:     { available: !!process.env.OPENAI_API_KEY,     priority: 2, failureCount: 0, circuitOpenUntil: 0 },
+    ollama:     { available: !!process.env.OLLAMA_BASE_URL,    priority: 3, failureCount: 0, circuitOpenUntil: 0 },
+    openrouter: { available: !!process.env.OPENROUTER_API_KEY, priority: 4, failureCount: 0, circuitOpenUntil: 0 },
   };
   for (const key of Object.keys(defaults) as LLMProvider[]) {
     providerStates[key] = { ...defaults[key], ...(overrides?.[key] ?? {}) };
@@ -235,6 +244,23 @@ const OPENAI_MODEL_MAP: Record<string, string> = {
   "claude-haiku-4-5": "gpt-5.5-mini",
   "claude-haiku-4-5-20251001": "gpt-5.5-mini",
 };
+
+// OpenRouter (OpenAI-API-compatible) model mapping — used only when Anthropic +
+// OpenAI are both unavailable. OpenRouter slugs evolve over time, so the operator
+// can pin the exact slug via `OPENROUTER_MODEL`; otherwise we map the policy's
+// Claude model to a stable OpenRouter slug, falling back to a sane default.
+const OPENROUTER_MODEL_MAP: Record<string, string> = {
+  "claude-opus-4-20250514": "anthropic/claude-opus-4",
+  "claude-opus-4-6": "anthropic/claude-opus-4",
+  "claude-sonnet-4-20250514": "anthropic/claude-sonnet-4",
+  "claude-sonnet-4-6": "anthropic/claude-sonnet-4",
+  "claude-haiku-4-5": "anthropic/claude-3.5-haiku",
+  "claude-haiku-4-5-20251001": "anthropic/claude-3.5-haiku",
+};
+
+function resolveOpenRouterModel(model: string): string {
+  return process.env.OPENROUTER_MODEL ?? OPENROUTER_MODEL_MAP[model] ?? "anthropic/claude-sonnet-4";
+}
 
 // ── withRetry — Exponential backoff ─────────────────────────────────────────
 
@@ -457,6 +483,10 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
   if (ollamaPreferred && isProviderHealthy("ollama")) providersToTry.push("ollama");
   if (isProviderHealthy("anthropic")) providersToTry.push("anthropic");
   if (isProviderHealthy("openai") && !ollamaPreferred) providersToTry.push("openai");
+  // OpenRouter — appended LAST so it's only reached once Anthropic + OpenAI have
+  // failed/are unavailable (the « ça marche même quand anthropic et openai sont hs »
+  // safety net). Tried regardless of ollamaPreferred since it's a cloud last-resort.
+  if (isProviderHealthy("openrouter")) providersToTry.push("openrouter");
   // Ensure at least anthropic is tried as the last-resort fallback.
   if (providersToTry.length === 0) providersToTry.push("anthropic");
 
@@ -481,6 +511,20 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
           } else {
             aiModel = openai(openaiModel);
           }
+        } else if (provider === "openrouter") {
+          // OpenRouter via its OpenAI-compatible endpoint. Model slug is
+          // operator-pinnable via OPENROUTER_MODEL (slugs evolve). Optional
+          // ranking headers are best-effort.
+          const { createOpenAI } = await import("@ai-sdk/openai");
+          const openrouter = createOpenAI({
+            baseURL: process.env.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1",
+            apiKey: process.env.OPENROUTER_API_KEY,
+            headers: {
+              "HTTP-Referer": process.env.NEXTAUTH_URL ?? "https://lafusee.app",
+              "X-Title": "La Fusee",
+            },
+          });
+          aiModel = openrouter(resolveOpenRouterModel(anthropicModel));
         } else {
           // Ollama via OpenAI-compatible API. Critical: use the Ollama
           // model name from the policy, NOT the Claude model name.
@@ -496,7 +540,7 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
         // executeStructuredLLMCall in utils/llm-structured.ts). We log a warn
         // here so any drift is surfaced.
         const providerOptions =
-          options.responseFormat === "json_object" && (provider === "openai" || provider === "ollama")
+          options.responseFormat === "json_object" && (provider === "openai" || provider === "ollama" || provider === "openrouter")
             ? { openai: { responseFormat: { type: "json_object" as const } } }
             : undefined;
         if (options.responseFormat === "json_object" && provider === "anthropic") {

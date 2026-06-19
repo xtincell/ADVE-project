@@ -170,11 +170,32 @@ describe("LLM gateway — provider cascade", () => {
     expect(_selectProviderForTest()).toBe("ollama");
   });
 
+  it("falls through to openrouter when anthropic + openai + ollama unavailable", () => {
+    _resetProvidersForTest({
+      anthropic: { available: false },
+      openai: { available: false },
+      ollama: { available: false },
+      openrouter: { available: true },
+    });
+    expect(_selectProviderForTest()).toBe("openrouter");
+  });
+
+  it("prefers anthropic over openrouter when both available (openrouter is last resort)", () => {
+    _resetProvidersForTest({
+      anthropic: { available: true },
+      openai: { available: false },
+      ollama: { available: false },
+      openrouter: { available: true },
+    });
+    expect(_selectProviderForTest()).toBe("anthropic");
+  });
+
   it("returns null when no provider is available", () => {
     _resetProvidersForTest({
       anthropic: { available: false },
       openai: { available: false },
       ollama: { available: false },
+      openrouter: { available: false },
     });
     expect(_selectProviderForTest()).toBeNull();
   });

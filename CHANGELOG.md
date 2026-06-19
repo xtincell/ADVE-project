@@ -10,6 +10,14 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.12 — galileo : OpenRouter en 4ᵉ fallback LLM (résilience) (2026-06-19)
+
+**« Fusée non-dépendante du LLM » étendue à la résilience provider : le système continue de raisonner quand Anthropic ET OpenAI sont HS.**
+
+- `feat(llm-gateway)` **OpenRouter ajouté comme 4ᵉ provider** (priorité 4, dernier recours) dans `callLLM`. OpenAI-API-compatible → réutilise `@ai-sdk/openai` (`createOpenAI` baseURL `https://openrouter.ai/api/v1`), **aucune nouvelle dépendance**. Clé via `OPENROUTER_API_KEY` (jamais en dur, ADR-0075 pattern) ; slug modèle pinnable via `OPENROUTER_MODEL` (défaut mappé Claude→slug OpenRouter stable). Circuit breaker + retry + `responseFormat: json_object` hérités. Câblé en dernier dans la cascade → uniquement atteint quand anthropic+openai ont échoué/sont absents.
+- Tests : 2 cas cascade (`falls through to openrouter`, `prefers anthropic over openrouter`) ; `_resetProvidersForTest` étendu. `.env.example` documenté. `tsc` 0 · lint 0 · 33 tests gateway verts. Cap APOGEE 7/7 préservé.
+
+
 ## v6.27.11 — galileo : reroute C2 + invariants Yggdrasil C7 (2026-06-16)
 
 **Suite « Fusée non-dépendante du LLM » (PR #258). Fermeture des derniers trous de circuit traçables.**
