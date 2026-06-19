@@ -10,6 +10,14 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.14 — galileo : région Wakanda de calibration retrouvée + commande dédiée (2026-06-19)
+
+**« Où est passée la région Wakanda ? » — elle n'a jamais disparu : seed intact mais hors du `db:seed` par défaut.**
+
+- Diagnostic : le mega-seed Wakanda (`scripts/seed-wakanda/`, 28 fichiers, 6 marques BLISS/Vibranium/Brew/Panther/Shuri/Jabari, ~2700 records, BLISS 200/200 ICONE, timeline 3 mois, pays `WK` + devise `WKD` dans `seed-countries.ts`) est **structurellement sain** — un typecheck dédié ne révèle que du bruit null-safety strict (TS18048/TS2322, `scripts/` étant hors tsconfig), **zéro référence modèle périmée** → il tourne via `tsx`. Il « disparaissait » simplement parce qu'il n'est **pas** dans `db:seed` (uniquement `db:seed:wakanda` + `db:seed:all`).
+- `chore(meta)` nouvelle commande **`npm run db:seed:calibration`** = `db:seed:countries && db:seed:action-costs && db:seed:wakanda` : ordre correct (pays `WK`/`WKD` + ZoneIndex AVANT les marques) pour une région de calibration complète et fiable en une commande. **Volontairement PAS câblé dans `db:seed`** : le Golden Path CI lance `db:seed`, et le seed Wakanda (2700 records) n'est pas runtime-vérifiable ici — l'y chaîner risquerait la CI. Cap APOGEE 7/7 préservé.
+
+
 ## v6.27.13 — galileo : paiement manuel WhatsApp + validation Console (full production) (2026-06-19)
 
 **Débloque le passage en production : le paiement automatique (Stripe/mobile-money) exigeait des creds absents. Mécanique manuelle qui bypasse les providers.**

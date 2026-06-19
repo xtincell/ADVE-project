@@ -1,6 +1,6 @@
 {
   "name": "lafusee",
-  "version": "6.27.13",
+  "version": "6.27.14",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
@@ -50,6 +50,7 @@
     "db:seed:action-costs": "node --env-file-if-exists=.env.local --import tsx prisma/seed-action-costs.ts",
     "db:seed:wakanda": "node --env-file-if-exists=.env.local --import tsx scripts/seed-wakanda/index.ts",
     "db:purge:wakanda": "node --env-file-if-exists=.env.local --import tsx scripts/seed-wakanda/purge.ts",
+    "db:seed:calibration": "npm run db:seed:countries && npm run db:seed:action-costs && npm run db:seed:wakanda",
     "db:seed:all": "npm run db:seed && npm run db:seed:countries && npm run db:seed:action-costs && npm run db:seed:demo && npm run db:seed:spawt && npm run db:seed:wakanda",
     "test": "vitest",
     "test:e2e": "playwright test",
