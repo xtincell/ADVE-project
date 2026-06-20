@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { callLLM } from "@/server/services/llm-gateway";
 import { BUSINESS_MODELS, ECONOMIC_MODELS, POSITIONING_ARCHETYPES, BRAND_NATURES } from "@/lib/types/business-context";
 
@@ -339,40 +340,26 @@ Reponds UNIQUEMENT avec un tableau JSON valide. Format:
 [{"id":"${pillar}_ai_1","question":"...","type":"text","pillar":"${pillar}","required":false}]`,
     });
 
-    const text = rawText.trim();
-
-    // Extract JSON array from the response (handle potential markdown wrapping)
-    const jsonMatch = text.match(/\[[\s\S]*\]/);
+    // Extract + valide via Zod (remplace le parsing manuel typeof). Bloc sous
+    // try/catch : tout échec retombe sur la banque statique (best-effort).
+    const jsonMatch = rawText.trim().match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
-      throw new Error(`No JSON array found in AI response: "${text.slice(0, 100)}"`);
+      throw new Error(`No JSON array found in AI response: "${rawText.slice(0, 100)}"`);
+    }
+    const AiQuestionSchema = z.object({ id: z.string().min(1), question: z.string().min(1) });
+    const parsed = z.array(AiQuestionSchema).safeParse(JSON.parse(jsonMatch[0]));
+    if (!parsed.success) {
+      throw new Error(`AI questions failed validation: ${parsed.error.issues[0]?.message ?? "shape"}`);
     }
 
-    const parsed: unknown = JSON.parse(jsonMatch[0]);
-    if (!Array.isArray(parsed)) {
-      throw new Error("AI response is not an array");
-    }
-
-    // Validate and sanitize each question
-    const validated: IntakeQuestion[] = [];
-    for (const item of parsed) {
-      if (
-        typeof item === "object" &&
-        item !== null &&
-        typeof (item as Record<string, unknown>).id === "string" &&
-        typeof (item as Record<string, unknown>).question === "string" &&
-        typeof (item as Record<string, unknown>).pillar === "string"
-      ) {
-        validated.push({
-          id: String((item as Record<string, unknown>).id),
-          question: String((item as Record<string, unknown>).question),
-          type: "text",
-          pillar,
-          required: false,
-        });
-      }
-    }
-
-    return validated.slice(0, 2); // Never more than 2 AI questions
+    // pillar/type/required viennent de nous (pas du LLM) → on ne valide que id+question.
+    return parsed.data.slice(0, 2).map((q) => ({
+      id: q.id,
+      question: q.question,
+      type: "text" as const,
+      pillar,
+      required: false,
+    }));
   } catch (err) {
     // Tier C is best-effort — if the embedded model is unreachable, we
     // simply skip the AI follow-ups and return the static bank.

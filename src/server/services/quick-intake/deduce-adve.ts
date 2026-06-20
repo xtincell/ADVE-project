@@ -17,6 +17,7 @@
 import { z } from "zod";
 import { callLLM, extractJSON } from "@/server/services/llm-gateway";
 import { PILLAR_KEYS, ADVE_KEYS, type AdveKey } from "@/domain/pillars";
+import { classifyTier } from "@/domain";
 
 // ── Output shape ──────────────────────────────────────────────────────
 
@@ -53,6 +54,15 @@ const DeducedAdveSchema = z.object({
 
 export type DeducedAdve = z.infer<typeof DeducedAdveSchema>;
 
+// Sous-schémas pour l'ÉCLATEMENT du mega-appel (PR-K3-ter) : 1 appel « piliers »
+// + 1 appel « teasers ». Le composite/classification/stage sont DÉTERMINISTES.
+const PillarsOnlySchema = z.object({ pillars: z.array(DeducedPillarSchema).length(4) });
+const TeasersSchema = z.object({
+  rtisPreview: DeducedAdveSchema.shape.rtisPreview,
+  ifUpgraded: DeducedAdveSchema.shape.ifUpgraded,
+});
+type DeducedPillar = z.infer<typeof DeducedPillarSchema>;
+
 // ── Input ─────────────────────────────────────────────────────────────
 
 export interface DeduceInput {
@@ -66,28 +76,27 @@ export interface DeduceInput {
   readonly countryCode?: string;
 }
 
-// ── Prompt ────────────────────────────────────────────────────────────
+// ── Prompts (ÉCLATÉS : piliers vs teasers — fiabilité sur le 8B local) ──────
 
-const SYSTEM_PROMPT = `Tu es un stratège de marque senior, spécialisé dans la formation de cultes culturels (méthode ADVE/RTIS).
+const SYSTEM_PILLARS = `Tu es un stratège de marque senior (méthode ADVE). À partir d'un paragraphe libre décrivant une offre/marque, tu DÉDUIS les 4 piliers ADVE. Tu ne paraphrases pas — tu inférences, et tu n'inventes pas de faits absents (marque ta confiance).
 
-Ton job : à partir d'un paragraphe libre décrivant une offre/marque, **DÉDUIRE** une analyse structurée des 4 piliers ADVE. Tu ne paraphrases pas — tu inférences.
-
-Pour chaque pilier (A=Authenticité, D=Distinction, V=Valeur, E=Engagement), tu produis :
+Pour CHAQUE pilier (A=Authenticité, D=Distinction, V=Valeur, E=Engagement) :
 - 4 à 6 champs structurés (tonDeVoix, archetype, promesseMaitre, ennemi, etc.) avec valeurs concrètes inférées
-- Une confiance 0-1 par champ (0.3 = inférence faible, 0.9 = explicite dans le texte)
-- Un narratif de 80-800 mots qui révèle ce que l'offre dit *sans le dire*
-- Un score estimé /25
+- une confiance 0-1 par champ (0.3 = inférence faible, 0.9 = explicite dans le texte)
+- un narratif de 80 à 800 caractères qui révèle ce que l'offre dit *sans le dire*
+- un score estimé /25
 
-Tu produis aussi :
-- Score composite ADVE /100
-- Classification (LATENT/FRAGILE/ORDINAIRE/FORTE/CULTE/ICONE)
-- 3 teasers RTIS (R+T+I+S) — phrases d'accroche qui font envie sans tout révéler
-- Stage observé dans le modèle fusée (BOOSTER_ADVE / MID_RT / UPPER_IS)
-- Liste de 2-5 gaps critiques que la version payante de l'OS comblerait
+Réponds UNIQUEMENT en JSON : { "pillars": [ {key,name,fields,narrative,scoreEstimate} ×4 ] }. Pas de markdown.`;
 
-Tu réponds UNIQUEMENT en JSON conforme au schema. Pas de markdown, pas de texte hors JSON.`;
+const SYSTEM_TEASERS = `Tu es un stratège de marque senior (méthode ADVE-RTIS). On te donne les 4 piliers ADVE déjà déduits d'une marque. Tu produis l'accroche commerciale de la suite RTIS.
 
-function buildUserPrompt(input: DeduceInput): string {
+Produis :
+- rtisPreview : 3 teasers (parmi R=Risk, T=Track, I=Implementation, S=Synthèse) — chacun un headline (20-120 caractères) + un teaser (60-300 caractères) qui donnent envie sans tout révéler, ANCRÉS dans les piliers fournis
+- ifUpgraded : 2 à 5 gaps critiques (≥10 caractères) que la version payante de l'OS comblerait
+
+Réponds UNIQUEMENT en JSON : { "rtisPreview": [...×3], "ifUpgraded": [...] }. Pas de markdown, n'invente aucun chiffre.`;
+
+function buildBaseContext(input: DeduceInput): string {
   const parts: string[] = [];
   if (input.brandName) parts.push(`Marque : ${input.brandName}`);
   if (input.sector) parts.push(`Secteur : ${input.sector}`);
@@ -95,9 +104,84 @@ function buildUserPrompt(input: DeduceInput): string {
   parts.push("");
   parts.push("Description de l'offre :");
   parts.push(`"""\n${input.offerText.trim()}\n"""`);
-  parts.push("");
-  parts.push("Produis le JSON ADVE déduit + RTIS preview.");
   return parts.join("\n");
+}
+
+// ── Étapes DÉTERMINISTES (zéro LLM) ─────────────────────────────────────
+
+/** Score composite ADVE = somme des 4 scores piliers (/25 chacun → /100). */
+function computeComposite(pillars: DeducedPillar[]): number {
+  const sum = pillars.reduce((n, p) => n + (p.scoreEstimate ?? 0), 0);
+  return Math.max(0, Math.min(100, Math.round(sum)));
+}
+
+/** Étage fusée observé — dérivé du composite (déterministe, par seuils). */
+function deriveStage(composite: number): "BOOSTER_ADVE" | "MID_RT" | "UPPER_IS" {
+  if (composite < 50) return "BOOSTER_ADVE";
+  if (composite < 75) return "MID_RT";
+  return "UPPER_IS";
+}
+
+/** Teasers de secours si l'appel LLM B échoue — respecte le schéma (jamais de crash démo). */
+function fallbackTeasers(pillars: DeducedPillar[]): { rtisPreview: DeducedAdve["rtisPreview"]; ifUpgraded: string[] } {
+  const weakest = [...pillars].sort((a, b) => a.scoreEstimate - b.scoreEstimate)[0];
+  return {
+    rtisPreview: [
+      { pillar: "R", headline: "Les failles que vos concurrents exploitent", teaser: "Le protocole Risk cartographie les vulnérabilités de votre marque avant qu'elles ne coûtent cher — diagnostic complet dans la version OS." },
+      { pillar: "T", headline: "Là où le marché vous attend vraiment", teaser: "Le protocole Track confronte votre identité à la réalité terrain : taille de marché, perception réelle, signaux faibles — pour viser juste." },
+      { pillar: "I", headline: "Le plan qui transforme l'intuition en système", teaser: "Le protocole Implementation décline votre stratégie en sprint 90 jours, calendrier annuel et budget — exécutable dès demain." },
+    ],
+    ifUpgraded: [
+      `Renforcer le pilier ${weakest?.name ?? "le plus faible"} avec des données marché vérifiées.`,
+      "Débloquer les protocoles RTIS complets (Risk, Track, Implementation, Synthèse).",
+    ],
+  };
+}
+
+// ── Appels LLM focalisés ────────────────────────────────────────────────
+
+/** Appel A — les 4 piliers ADVE (cœur, essentiel). Throw si invalide. */
+async function deducePillars(input: DeduceInput): Promise<DeducedPillar[]> {
+  const { text } = await callLLM({
+    system: SYSTEM_PILLARS,
+    prompt: `${buildBaseContext(input)}\n\nProduis le JSON des 4 piliers ADVE déduits.`,
+    caller: "quick-intake:deduce-adve:pillars",
+    purpose: "extraction",
+    maxOutputTokens: 2800,
+    tags: ["DEDUCE_ADVE_FROM_OFFER"],
+  });
+  const result = PillarsOnlySchema.safeParse(extractJSON(text));
+  if (!result.success) {
+    throw new Error(
+      `deduce-adve: pillars failed Zod: ${result.error.issues.slice(0, 3).map((i) => i.path.join(".") + " " + i.message).join("; ")}`,
+    );
+  }
+  return result.data.pillars;
+}
+
+/** Appel B — teasers RTIS + gaps (créatif). Fallback déterministe si échec. */
+async function deduceTeasers(
+  input: DeduceInput,
+  pillars: DeducedPillar[],
+): Promise<{ rtisPreview: DeducedAdve["rtisPreview"]; ifUpgraded: string[] }> {
+  try {
+    const pillarsSummary = pillars
+      .map((p) => `${p.key} (${p.name}, ${p.scoreEstimate}/25): ${p.narrative.slice(0, 200)}`)
+      .join("\n");
+    const { text } = await callLLM({
+      system: SYSTEM_TEASERS,
+      prompt: `${buildBaseContext(input)}\n\nPILIERS ADVE DÉJÀ DÉDUITS :\n${pillarsSummary}\n\nProduis le JSON { rtisPreview, ifUpgraded }.`,
+      caller: "quick-intake:deduce-adve:teasers",
+      purpose: "extraction",
+      maxOutputTokens: 1200,
+      tags: ["DEDUCE_ADVE_FROM_OFFER"],
+    });
+    const result = TeasersSchema.safeParse(extractJSON(text));
+    if (result.success) return result.data;
+  } catch {
+    // chute sur le fallback déterministe
+  }
+  return fallbackTeasers(pillars);
 }
 
 // ── Public API ────────────────────────────────────────────────────────
@@ -107,28 +191,20 @@ export async function deduceAdveFromOffer(input: DeduceInput): Promise<DeducedAd
     throw new Error("deduce-adve: offerText too short (need 30+ chars)");
   }
 
-  const { text } = await callLLM({
-    system: SYSTEM_PROMPT,
-    prompt: buildUserPrompt(input),
-    caller: "quick-intake:deduce-adve",
-    purpose: "extraction",
-    maxOutputTokens: 4000,
-    tags: ["DEDUCE_ADVE_FROM_OFFER"],
-  });
+  // 1) Les 4 piliers ADVE (cœur) — appel LLM focalisé.
+  const pillars = await deducePillars(input);
 
-  const parsed = extractJSON(text);
-  if (!parsed) {
-    throw new Error("deduce-adve: LLM returned no parseable JSON");
-  }
+  // 2) Méta DÉTERMINISTE (zéro LLM) : composite = somme des scores piliers,
+  //    classification par seuils (classifyTier), étage fusée dérivé.
+  const compositeAdve = computeComposite(pillars);
+  const classification = classifyTier(compositeAdve, 100) as DeducedAdve["classification"];
+  const stageObserved = deriveStage(compositeAdve);
 
-  const result = DeducedAdveSchema.safeParse(parsed);
-  if (!result.success) {
-    throw new Error(
-      `deduce-adve: LLM output failed Zod validation: ${result.error.issues.slice(0, 3).map((i) => i.path.join(".") + " " + i.message).join("; ")}`,
-    );
-  }
+  // 3) Teasers RTIS + gaps (créatif) — appel LLM focalisé, fallback déterministe.
+  const { rtisPreview, ifUpgraded } = await deduceTeasers(input, pillars);
 
-  return result.data;
+  // Contrat final (revalide l'assemblage complet).
+  return DeducedAdveSchema.parse({ pillars, compositeAdve, classification, rtisPreview, stageObserved, ifUpgraded });
 }
 
 export const DeducedAdveOutputSchema = DeducedAdveSchema;

@@ -4,8 +4,9 @@
  * Each frequency registers a Process DAEMON that the cron scheduler picks up.
  */
 
-import { callLLM } from "@/server/services/llm-gateway";
+import { callLLM, extractJSON } from "@/server/services/llm-gateway";
 import { db } from "@/lib/db";
+import { z } from "zod";
 
 export type SignalFrequency =
   | "REALTIME" | "MINUTE" | "HOURLY" | "DAILY"
@@ -145,47 +146,73 @@ export async function registerCollectionDaemon(
   return process.id;
 }
 
-/**
- * Execute one collection cycle — gather market signals via LLM analysis
- */
-export async function collectMarketSignals(
-  config: CollectionStrategy,
-): Promise<CollectedSignal[]> {
+// PR-K3-ter — sous-schéma validé (plus de JSON.parse brut). `.catch` borne les
+// valeurs douteuses du 8B au lieu de laisser passer (relevance hors [0,1],
+// sourceType inconnu) ou de tout jeter.
+const SignalItemSchema = z.object({
+  title: z.string().min(3).max(200),
+  content: z.string().min(10),
+  sourceType: z.enum(["NEWS", "REPORT", "SOCIAL", "REGULATORY", "FINANCIAL"]).catch("REPORT"),
+  relevance: z.number().min(0).max(1).catch(0.5),
+  sourceUrl: z.string().optional(),
+});
+const SignalsResponseSchema = z.object({ signals: z.array(SignalItemSchema).max(8) });
+
+interface SignalAxis { label: string; instruction: string }
+
+/** Un appel focalisé sur UN axe de veille (2-3 signaux qualitatifs validés Zod). */
+async function collectSignalAxis(config: CollectionStrategy, axis: SignalAxis): Promise<CollectedSignal[]> {
   const countryBlock = buildCountryContextPrompt(config);
-  const systemPrompt = `Tu es un analyste d'intelligence économique spécialisé dans la veille sectorielle.
-Ton rôle : identifier les signaux de marché pertinents pour une marque dans le secteur "${config.sector}"${config.market ? ` sur le marché "${config.market}"` : ""}.
+  const system = `Tu es un analyste d'intelligence économique (veille sectorielle). Secteur "${config.sector}"${config.market ? ` — marché "${config.market}"` : ""}.
+Mots-clés marque : ${config.keywords.join(", ")}
+Concurrents : ${config.competitors.join(", ")}${countryBlock}
 
-Mots-clés de la marque : ${config.keywords.join(", ")}
-Concurrents identifiés : ${config.competitors.join(", ")}
-${countryBlock}
-Tu dois produire des signaux RÉALISTES et DATÉS basés sur les tendances actuelles du secteur.
-Chaque signal doit être un événement, une tendance, ou une donnée qui pourrait impacter la marque.
+Tu produis des signaux QUALITATIFS plausibles pour ce secteur. N'INVENTE PAS de chiffres précis, de dates exactes ni d'URLs : décris des tendances/événements TYPES. Si tu n'es pas sûr, produis MOINS de signaux.
 
-Format JSON strict — tableau de signaux :
-[{
-  "title": "Titre court du signal",
-  "content": "Description détaillée de l'événement/tendance (2-3 phrases)",
-  "sourceType": "NEWS | REPORT | SOCIAL | REGULATORY | FINANCIAL",
-  "relevance": 0.0-1.0,
-  "collectedAt": "ISO date string"
-}]`;
-
-  const result = await callLLM({
-    system: systemPrompt,
-    prompt: `Génère 5-8 signaux de marché actuels et réalistes pour le secteur "${config.sector}". Concentre-toi sur les événements récents, tendances émergentes, et changements réglementaires qui pourraient impacter une marque de ce secteur. JSON uniquement.`,
-    caller: "signal-collector:collect",
-    strategyId: config.strategyId,
-    maxOutputTokens: 4000,
-  });
-
+Format JSON STRICT : { "signals": [ { "title": "...", "content": "2-3 phrases", "sourceType": "NEWS|REPORT|SOCIAL|REGULATORY|FINANCIAL", "relevance": 0.0-1.0 } ] }`;
   try {
-    const match = result.text.match(/\[[\s\S]*\]/);
-    if (!match) return [];
-    const signals = JSON.parse(match[0]) as CollectedSignal[];
+    const { text } = await callLLM({
+      system,
+      prompt: `Produis 2 à 3 signaux ${axis.instruction} pour le secteur "${config.sector}". JSON uniquement.`,
+      caller: `signal-collector:${axis.label}`,
+      strategyId: config.strategyId,
+      maxOutputTokens: 1500,
+    });
+    const parsed = SignalsResponseSchema.safeParse(extractJSON(text));
+    if (!parsed.success) return [];
+    // collectedAt DÉTERMINISTE (horloge serveur) — jamais une date inventée par le LLM.
+    const now = new Date().toISOString();
+    return parsed.data.signals.map((s) => ({
+      title: s.title,
+      content: s.content,
+      sourceType: s.sourceType,
+      relevance: s.relevance,
+      collectedAt: now,
+      ...(s.sourceUrl ? { sourceUrl: s.sourceUrl } : {}),
+    }));
+  } catch {
+    return [];
+  }
+}
 
-    // Persist each signal in DB
-    for (const signal of signals) {
-      await db.signal.create({
+/**
+ * Execute one collection cycle — mega-appel (5-8 signaux, 4000 tokens) ÉCLATÉ en
+ * 3 appels focalisés (tendances / réglementaire / concurrence) en parallèle :
+ * le 8B traite mieux 2-3 signaux ciblés qu'un bloc de 8. Validation Zod, dates
+ * déterministes, persistance en parallèle.
+ */
+export async function collectMarketSignals(config: CollectionStrategy): Promise<CollectedSignal[]> {
+  const AXES: SignalAxis[] = [
+    { label: "trends", instruction: "de TENDANCES de consommation / d'usage émergentes" },
+    { label: "regulatory", instruction: "RÉGLEMENTAIRES ou macro-économiques" },
+    { label: "competitive", instruction: "CONCURRENTIELS (mouvements des acteurs du secteur)" },
+  ];
+  const batches = await Promise.all(AXES.map((axis) => collectSignalAxis(config, axis)));
+  const signals = batches.flat().slice(0, 10);
+
+  await Promise.all(
+    signals.map((signal) =>
+      db.signal.create({
         data: {
           strategyId: config.strategyId,
           type: "EXTERNAL_SAAS",
@@ -198,14 +225,11 @@ Format JSON strict — tableau de signaux :
             frequency: config.frequency,
           },
         },
-      });
-    }
+      }),
+    ),
+  );
 
-    return signals;
-  } catch {
-    console.warn("[signal-collector] Failed to parse signals");
-    return [];
-  }
+  return signals;
 }
 
 /**
