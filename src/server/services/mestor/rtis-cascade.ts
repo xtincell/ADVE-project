@@ -22,7 +22,6 @@ import { scoreObject } from "@/server/services/advertis-scorer";
 import type { AdvertisVector } from "@/lib/types/advertis-vector";
 import { Prisma } from "@prisma/client";
 import { runMarketIntelligence } from "@/server/services/market-intelligence";
-import { getFormatInstructions } from "@/lib/types/variable-bible";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -442,18 +441,24 @@ export async function actualizePillar(
       confidence = tResult.confidence;
 
     } else if (pillarKey === "I") {
-      // I = Catalogue exhaustif (LLM prompt produces new format)
-      const context = ["A", "D", "V", "E", "R", "T"]
-        .map((k) => serializePillar(k, pillars[k]))
-        .join("\n\n");
-      const iBibleKeys = Object.keys((PILLAR_SCHEMAS.I as { shape?: Record<string, unknown> })?.shape ?? {});
-      const iBible = getFormatInstructions("i", iBibleKeys);
-      const response = await callCascadeLLM(
-        RTIS_PROMPTS.I,
-        `Voici les données ADVE + R + T actuelles:\n\n${context}\n\nBIBLE DE FORMAT pour le pilier I:\n${iBible}\n\nProduis le pilier I (Implementation — catalogue exhaustif) en JSON. Respecte les regles de la Bible.`,
-        strategyId,
-      );
-      newContent = extractJSON(response);
+      // I = Catalogue exhaustif. « Éclater et séquencer » : ce schéma est le
+      // plus dense du framework — le générer en un seul appel fait tronquer
+      // les modèles locaux 8B (JSON non fermé → extractJSON échoue → pilier
+      // perdu). On génère donc le catalogue SECTION PAR SECTION via le gateway
+      // (→ Ollama en 100% local), chaque fragment petit et parseable.
+      const { generateICatalogueSequenced } = await import("./i-pillar-sequenced");
+      const catalogue = await generateICatalogueSequenced({ strategyId, pillars });
+      // Filet : si TOUTES les sections ont échoué (LLM indisponible), on remonte
+      // une erreur honnête plutôt que de sauvegarder un catalogue creux.
+      const allEmpty =
+        catalogue.totalActions === 0 &&
+        catalogue.assetsProduisibles.length === 0 &&
+        catalogue.activationsPossibles.length === 0 &&
+        catalogue.formatsDisponibles.length === 0;
+      if (allEmpty) {
+        throw new Error("[i-sequenced] catalogue vide — toutes les sections ont échoué (LLM indisponible ?)");
+      }
+      newContent = catalogue as unknown as Record<string, unknown>;
       confidence = 0.70;
 
     } else if (pillarKey === "S") {

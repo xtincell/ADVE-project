@@ -650,8 +650,6 @@ async function runChunkLLM(args: {
   maxOutputTokens: number;
 }): Promise<Record<string, unknown>> {
   const { strategyId, pillarKey, chunk, pillarContext, financialCtx, hasFinancialFields, caller, maxOutputTokens } = args;
-  const { anthropic } = await import("@ai-sdk/anthropic");
-  const { generateText } = await import("ai");
   const { buildExampleForPath } = await import("@/lib/types/pillar-maturity-contracts");
 
   function fieldExampleBlock(r: FieldRequirement): string {
@@ -689,23 +687,27 @@ CONSIGNES STRICTES:
 ${hasFinancialFields ? "6. Pour les champs financiers, utilise les RÉFÉRENCES FINANCIÈRES ci-dessus. Ne mets PAS 0. Estime à partir des benchmarks sectoriels.\n" : ""}
 Retourne UNIQUEMENT le JSON, rien d'autre. Pas de markdown, pas de commentaire.`;
 
-  const { text, usage } = await generateText({
-    model: anthropic("claude-sonnet-4-5"),
-    prompt,
-    maxOutputTokens,
-  });
-
-  await db.aICostLog.create({
-    data: {
+  // Route via le LLM Gateway (provider-agnostic) au lieu d'Anthropic en dur :
+  // sans ça, le chunked-fill plante en mode 100% local (pas de clé Anthropic).
+  // Le gateway choisit Ollama → Anthropic → OpenRouter selon la ModelPolicy,
+  // gère le cost-tracking, et force du JSON valide via response_format.
+  const { callLLM } = await import("@/server/services/llm-gateway");
+  const system = "Tu es Mestor, l'intelligence stratégique de marque. Tu réponds UNIQUEMENT en JSON valide : pas de markdown, pas de commentaire, pas de texte autour.";
+  let text: string;
+  try {
+    const res = await callLLM({
+      system,
+      prompt,
+      caller,
       strategyId,
-      provider: "anthropic",
-      model: "claude-sonnet-4-5",
-      inputTokens: usage?.inputTokens ?? 0,
-      outputTokens: usage?.outputTokens ?? 0,
-      cost: ((usage?.inputTokens ?? 0) * 0.003 + (usage?.outputTokens ?? 0) * 0.015) / 1000,
-      context: caller,
-    },
-  }).catch(() => {});
+      purpose: "agent", // substituable Ollama
+      responseFormat: "json_object",
+      maxOutputTokens,
+    });
+    text = res.text;
+  } catch {
+    return {};
+  }
 
   try {
     const { extractJSON } = await import("@/server/services/utils/llm");
