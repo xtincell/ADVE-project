@@ -189,6 +189,35 @@ Le pathToIcone DOIT inclure tous les paliers du niveau actuel jusqu'a ICONE (san
   // when the model is unavailable or returns an invalid shape.
   const deterministic = deriveBrandLevelDeterministic(input);
 
+  // Gate (PR-K3-ter — économie d'appels + anti-hallucination). Le LLM n'apporte
+  // une lecture « substance » nuancée (ennemi nommé, rituels, mythologie →
+  // CULTE/ICONE) que s'il y a assez de matière. Sur un intake pauvre, le modèle
+  // ne peut que fabriquer un palier ; la lecture déterministe est alors tout
+  // aussi fiable et gratuite. On exige BOTH thin (champs extraits ET texte brut)
+  // pour ne jamais court-circuiter un intake riche en formulaire mais avare en prose.
+  const totalFilledFields = ADVE_STORAGE_KEYS.reduce((n, k) => {
+    const fields = extractedValues[k] ?? {};
+    return (
+      n +
+      Object.values(fields).filter(
+        (v) => v != null && v !== "" && !(Array.isArray(v) && v.length === 0),
+      ).length
+    );
+  }, 0);
+  const totalResponseChars = responses
+    ? Object.values(responses).reduce(
+        (n, answers) =>
+          n +
+          Object.values(answers ?? {})
+            .filter((v) => typeof v === "string")
+            .join(" ").length,
+        0,
+      )
+    : 0;
+  if (totalFilledFields < 6 && totalResponseChars < 400) {
+    return deterministic;
+  }
+
   let text: string;
   try {
     const res = await callLLM({

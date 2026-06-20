@@ -28,16 +28,19 @@ import {
   OvertonBlockerSchema,
 } from "@/lib/types/pillar-schemas";
 
-// ADR-0063 — LLM-response sub-schema. Items are strictly typed (so malformed
-// rows are dropped by the pruner), but parent-level `.min(N)` count constraints
-// are not applied here: the LLM is best-effort on quantity, and our protocol
-// step downstream calls accept partial outputs.
-const RiskLLMResponseSchema = z.object({
-  globalSwot: SWOTQuadrantSchema.optional(),
-  probabilityImpactMatrix: z.array(RiskEntrySchema).optional(),
-  mitigationPriorities: z.array(MitigationPrioritySchema).optional(),
-  overtonBlockers: z.array(OvertonBlockerSchema).optional(),
-}).partial();
+// ADR-0063 / PR-K3-ter — LLM-response sub-schemas. Items are strictly typed (so
+// malformed rows are dropped by the pruner), but parent-level `.min(N)` count
+// constraints are not applied: the LLM is best-effort on quantity and downstream
+// accepts partial outputs.
+//
+// Le mega-appel SWOT a été ÉCLATÉ en 4 appels focalisés (un par sous-structure) :
+// un modèle faible (8B local) produit un JSON fiable quand on lui demande UNE
+// seule structure simple, pas quatre d'un coup. Chaque appel valide sa propre
+// sous-réponse ; un appel raté n'annule pas les autres.
+const SwotOnlySchema = z.object({ globalSwot: SWOTQuadrantSchema.optional() }).partial();
+const MatrixOnlySchema = z.object({ probabilityImpactMatrix: z.array(RiskEntrySchema).optional() }).partial();
+const MitigationOnlySchema = z.object({ mitigationPriorities: z.array(MitigationPrioritySchema).optional() }).partial();
+const OvertonOnlySchema = z.object({ overtonBlockers: z.array(OvertonBlockerSchema).optional() }).partial();
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -194,15 +197,57 @@ function detectCoherenceRisks(
 
 // ── Step 2 : Enrichissement SWOT (MESTOR_ASSIST) ──────────────────────
 
+/**
+ * Un appel LLM focalisé : une seule sous-structure JSON, validée par son propre
+ * schéma. Retourne null si l'appel ou la validation échoue (l'appelant retombe
+ * sur un défaut vide) — un sous-appel raté n'annule jamais les trois autres.
+ */
+async function callRiskJSON<T extends z.ZodTypeAny>(args: {
+  strategyId: string;
+  label: string;
+  schema: T;
+  system: string;
+  prompt: string;
+  maxOutputTokens: number;
+}): Promise<z.infer<T> | null> {
+  // LLM Gateway obligatoire (jamais @ai-sdk/anthropic direct) : circuit breaker
+  // + fallback provider + substitution Ollama locale + budget/cost tracking.
+  const { callLLM } = await import("@/server/services/llm-gateway");
+  const { parseAndValidateLLM } = await import("@/server/services/utils/llm");
+  try {
+    const { text } = await callLLM({
+      caller: `mestor:protocole-risk:${args.label}`,
+      strategyId: args.strategyId,
+      model: "claude-sonnet-4-20250514",
+      system: args.system,
+      prompt: args.prompt,
+      maxOutputTokens: args.maxOutputTokens,
+    });
+    const result = parseAndValidateLLM(text, args.schema, {
+      context: `protocole-risk:${args.label}`,
+      mode: "prune",
+    });
+    if (result.partial) {
+      console.warn(
+        `[protocole-risk:${args.label}] strategy=${args.strategyId} dropped ${result.droppedPaths.length} invalid paths:`,
+        result.droppedPaths.slice(0, 10),
+      );
+    }
+    return result.data as z.infer<T>;
+  } catch (err) {
+    console.warn(
+      `[protocole-risk:${args.label}] strategy=${args.strategyId} appel/validation échoué:`,
+      err instanceof Error ? err.message : String(err),
+    );
+    return null;
+  }
+}
+
 async function generateSWOT(
   pillars: Record<string, Record<string, unknown> | null>,
   flags: VulnerabilityFlag[],
   strategyId: string,
 ): Promise<{ globalSwot: Record<string, unknown>; probabilityImpactMatrix: unknown[]; mitigationPriorities: unknown[]; overtonBlockers: OvertonBlocker[] }> {
-  // LLM Gateway obligatoire (jamais @ai-sdk/anthropic direct) : circuit
-  // breaker + fallback provider (gpt-5.5) + budget governance + cost tracking.
-  const { callLLM } = await import("@/server/services/llm-gateway");
-
   const adveContext = [...ADVE_STORAGE_KEYS]
     .map(k => {
       const c = pillars[k];
@@ -215,58 +260,41 @@ async function generateSWOT(
     ? `\n\nVULNÉRABILITÉS DÉTECTÉES (scan automatique):\n${flags.map(f => `- [${f.severity}] ${f.pillar.toUpperCase()}.${f.field}: ${f.reason}`).join("\n")}`
     : "\n\nAucune vulnérabilité critique détectée par le scan automatique.";
 
-  const { text } = await callLLM({
-    caller: "mestor:protocole-risk",
-    strategyId,
-    model: "claude-sonnet-4-20250514",
-    system: `Tu es le Protocole Risk de l'essaim MESTOR. Tu analyses les piliers ADVE d'une marque pour identifier les risques stratégiques.
-Tu reçois les données ADVE + un scan automatique de vulnérabilités. Tu dois :
-1. Produire un SWOT global (3-5 items par quadrant, basé sur les DONNÉES RÉELLES pas des généralités)
-2. Construire une matrice probabilité×impact (5+ risques, chacun avec mitigation)
-3. Lister les priorités de mitigation (5+ actions concrètes)
-4. Identifier les overtonBlockers : quels risques BLOQUENT le déplacement de la Fenêtre d'Overton vers le superfan ?
-Retourne UNIQUEMENT du JSON valide.`,
-    prompt: `Données ADVE de la stratégie:
+  const baseSystem = `Tu es le Protocole Risk de l'essaim MESTOR. Tu analyses les piliers ADVE d'une marque pour identifier les risques stratégiques. Base-toi STRICTEMENT sur les données réelles fournies — jamais sur des généralités. Retourne UNIQUEMENT du JSON valide, sans markdown.`;
+  const baseData = `Données ADVE de la stratégie:\n\n${adveContext}\n${flagsSummary}`;
 
-${adveContext}
-${flagsSummary}
+  // Mega-appel éclaté en 4 sous-appels focalisés (chacun UNE structure simple).
+  // Indépendants → exécutés en parallèle (Ollama les sérialise sur le GPU local,
+  // mais chaque prompt reste simple et fiable pour le 8B).
+  const [swot, matrix, mitig, overton] = await Promise.all([
+    callRiskJSON({
+      strategyId, label: "swot", schema: SwotOnlySchema, maxOutputTokens: 1500,
+      system: baseSystem,
+      prompt: `${baseData}\n\nProduis UNIQUEMENT le SWOT global (3-5 items par quadrant, chacun ancré dans une donnée réelle ci-dessus) :\n{ "globalSwot": { "strengths": [], "weaknesses": [], "opportunities": [], "threats": [] } }`,
+    }),
+    callRiskJSON({
+      strategyId, label: "matrix", schema: MatrixOnlySchema, maxOutputTokens: 2000,
+      system: baseSystem,
+      prompt: `${baseData}\n\nProduis UNIQUEMENT la matrice probabilité×impact (5+ risques concrets, chacun avec sa mitigation) :\n{ "probabilityImpactMatrix": [{ "risk": "", "probability": "LOW|MEDIUM|HIGH", "impact": "LOW|MEDIUM|HIGH", "mitigation": "" }] }`,
+    }),
+    callRiskJSON({
+      strategyId, label: "mitigation", schema: MitigationOnlySchema, maxOutputTokens: 1500,
+      system: baseSystem,
+      prompt: `${baseData}\n\nProduis UNIQUEMENT les priorités de mitigation (5+ actions concrètes) :\n{ "mitigationPriorities": [{ "action": "", "owner": "", "timeline": "", "investment": "" }] }`,
+    }),
+    callRiskJSON({
+      strategyId, label: "overton", schema: OvertonOnlySchema, maxOutputTokens: 1500,
+      system: baseSystem,
+      prompt: `${baseData}\n\nProduis UNIQUEMENT les overtonBlockers : quels risques BLOQUENT le déplacement de la Fenêtre d'Overton vers le superfan ?\n{ "overtonBlockers": [{ "risk": "", "blockingPerception": "", "mitigation": "", "devotionLevelBlocked": "" }] }`,
+    }),
+  ]);
 
-Produis le pilier R en JSON avec les champs :
-{
-  "globalSwot": { "strengths": [], "weaknesses": [], "opportunities": [], "threats": [] },
-  "probabilityImpactMatrix": [{ "risk": "", "probability": "LOW|MEDIUM|HIGH", "impact": "LOW|MEDIUM|HIGH", "mitigation": "" }],
-  "mitigationPriorities": [{ "action": "", "owner": "", "timeline": "", "investment": "" }],
-  "overtonBlockers": [{ "risk": "", "blockingPerception": "", "mitigation": "", "devotionLevelBlocked": "" }]
-}`,
-    maxOutputTokens: 6000,
-  });
-
-  // Cost tracking : géré par le gateway (trackCost) — plus de aICostLog manuel.
-
-  // ADR-0063 — Parse + Zod validate at the LLM boundary.
-  try {
-    const { parseAndValidateLLM } = await import("@/server/services/utils/llm");
-    const result = parseAndValidateLLM(text, RiskLLMResponseSchema, {
-      context: "protocole-risk",
-      mode: "prune",
-    });
-    if (result.partial) {
-      console.warn(
-        `[protocole-risk] strategy=${strategyId} dropped ${result.droppedPaths.length} invalid LLM paths:`,
-        result.droppedPaths.slice(0, 10),
-      );
-    }
-    const data = result.data;
-    return {
-      globalSwot: (data.globalSwot ?? { strengths: [], weaknesses: [], opportunities: [], threats: [] }) as Record<string, unknown>,
-      probabilityImpactMatrix: data.probabilityImpactMatrix ?? [],
-      mitigationPriorities: data.mitigationPriorities ?? [],
-      overtonBlockers: (data.overtonBlockers ?? []) as OvertonBlocker[],
-    };
-  } catch (err) {
-    console.error(`[protocole-risk] strategy=${strategyId} unrecoverable LLM output:`, err);
-    return { globalSwot: { strengths: [], weaknesses: [], opportunities: [], threats: [] }, probabilityImpactMatrix: [], mitigationPriorities: [], overtonBlockers: [] };
-  }
+  return {
+    globalSwot: (swot?.globalSwot ?? { strengths: [], weaknesses: [], opportunities: [], threats: [] }) as Record<string, unknown>,
+    probabilityImpactMatrix: matrix?.probabilityImpactMatrix ?? [],
+    mitigationPriorities: mitig?.mitigationPriorities ?? [],
+    overtonBlockers: (overton?.overtonBlockers ?? []) as OvertonBlocker[],
+  };
 }
 
 // ── Step 3 : Scoring riskScore (CALC) ─────────────────────────────────
