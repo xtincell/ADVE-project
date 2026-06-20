@@ -22,6 +22,8 @@ import { ADVE_STORAGE_KEYS } from "@/domain";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { PillarTSchema } from "@/lib/types/pillar-schemas";
+import { loadCountrySectorIntelligence } from "@/server/services/seshat/knowledge/access";
+import type { TamSamSom, TrendTrackerExtraction } from "@/server/services/seshat/knowledge/schemas";
 
 // ADR-0063 / PR-K3-ter — sous-schémas. Le mega-appel (9 champs) est ÉCLATÉ en
 // 4 sous-appels focalisés ; `.pick().partial()` valide strictement chaque champ
@@ -51,54 +53,86 @@ export interface ProtocoleTrackResult {
 
 // ── Step 1 : Données sourcées SESHAT (CALC — zéro LLM) ───────────────
 
-async function loadSeshatKnowledge(
-  sector: string,
-  market: string,
-  strategyId?: string,
-): Promise<{ entries: Array<Record<string, unknown>>; hasFreshData: boolean; externalSignals: Array<Record<string, unknown>> }> {
+// Lecture TYPÉE par (countryCode, secteur) via access.ts (PR-L) : TAM/SAM/SOM,
+// concurrents, segments, signaux et trendTracker RÉELLEMENT ingérés/collectés —
+// plus de blob `knowledgeEntry.findMany` générique sans filtre entryType/pays.
+type Intelligence = Awaited<ReturnType<typeof loadCountrySectorIntelligence>>;
+
+const EMPTY_INTELLIGENCE: Intelligence = {
+  tamSamSom: null,
+  competitors: [],
+  segments: [],
+  signals: { macroSignals: [], weakSignals: [] },
+  trendTracker: null,
+};
+
+/** Résout un libellé pays (code ISO2 ou nom) en code ISO2 pour les lookups Seshat. */
+async function resolveCountryCode(pays: string): Promise<string | null> {
+  const p = (pays ?? "").trim();
+  if (!p) return null;
+  if (/^[A-Za-z]{2}$/.test(p)) return p.toUpperCase();
+  const c = await db.country.findFirst({
+    where: {
+      OR: [
+        { code: { equals: p, mode: "insensitive" } },
+        { name: { contains: p, mode: "insensitive" } },
+      ],
+    },
+    select: { code: true },
+  });
+  return c?.code ?? null;
+}
+
+/** Signaux EXTERNAL_SAAS récents de la stratégie (table Signal, < 30j). */
+async function loadExternalSaasSignals(strategyId?: string): Promise<Array<Record<string, unknown>>> {
+  if (!strategyId) return [];
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const signals = await db.signal.findMany({
+    where: { strategyId, type: "EXTERNAL_SAAS", createdAt: { gte: thirtyDaysAgo } },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+  });
+  return signals.map((s) => ({ type: s.type, data: s.data, createdAt: s.createdAt }));
+}
 
-  const [entries, externalSignals] = await Promise.all([
-    db.knowledgeEntry.findMany({
-      where: {
-        OR: [
-          { sector: { contains: sector, mode: "insensitive" } },
-          { market: { contains: market, mode: "insensitive" } },
-        ],
-        createdAt: { gte: thirtyDaysAgo },
-      },
-      orderBy: { successScore: "desc" },
-      take: 20,
-    }),
-    // v4 — Load recent EXTERNAL_SAAS signals for this strategy
-    strategyId
-      ? db.signal.findMany({
-          where: {
-            strategyId,
-            type: "EXTERNAL_SAAS",
-            createdAt: { gte: thirtyDaysAgo },
-          },
-          orderBy: { createdAt: "desc" },
-          take: 20,
-        })
-      : Promise.resolve([]),
-  ]);
+/** Nombre de variables Trend Tracker effectivement renseignées (valeur non-nulle). */
+function countTrendTrackerVars(tt: TrendTrackerExtraction): number {
+  return Object.values(tt).filter((e) => e && e.value != null).length;
+}
 
-  return {
-    entries: entries.map(e => ({
-      type: e.entryType,
-      sector: e.sector,
-      market: e.market,
-      data: e.data,
-      score: e.successScore,
-    })),
-    hasFreshData: entries.length > 0,
-    externalSignals: externalSignals.map(s => ({
-      type: s.type,
-      data: s.data,
-      createdAt: s.createdAt,
-    })),
+/** Provenance des données marché vérifiées (UI / audit / scoring de confiance). */
+function buildMarketDataSources(intel: Intelligence): Array<Record<string, unknown>> {
+  const out: Array<Record<string, unknown>> = [];
+  if (intel.tamSamSom) out.push({ sourceType: "MARKET_STUDY_TAM", title: `TAM/SAM/SOM vérifié (${intel.tamSamSom.tam.source})`, reliability: 0.9 });
+  if (intel.competitors.length) out.push({ sourceType: "MARKET_STUDY_COMPETITOR", title: `${intel.competitors.length} concurrents (parts de marché)`, reliability: 0.85 });
+  if (intel.segments.length) out.push({ sourceType: "MARKET_STUDY_SEGMENT", title: `${intel.segments.length} segments consommateur`, reliability: 0.8 });
+  if (intel.trendTracker) out.push({ sourceType: "EXTERNAL_FEED_DIGEST", title: `Trend Tracker (${countTrendTrackerVars(intel.trendTracker)} variables)`, reliability: 0.9 });
+  return out;
+}
+
+/** Construit une entrée tamSamSom vérifiée (forme PillarT) depuis un SourcedValue Seshat. */
+function verifiedTamEntry(
+  sv: { value: number; year: number; methodology?: string; source: string },
+  label: string,
+): { value: number; description: string; source: "verified"; sourceRef: string } {
+  const desc = `${label} ${sv.source} ${sv.year}${sv.methodology ? ` — ${sv.methodology}` : ""}`;
+  return { value: sv.value, description: desc.slice(0, 200), source: "verified", sourceRef: "Seshat MARKET_STUDY_TAM" };
+}
+
+/**
+ * Override DÉTERMINISTE : si Seshat détient un TAM/SAM/SOM vérifié pour ce
+ * (pays, secteur), il REMPLACE l'estimation LLM (source=verified). Le LLM ne
+ * sert plus que de fallback, champ par champ.
+ */
+function applyVerifiedTam(trackAnalysis: Record<string, unknown>, verified: TamSamSom | null): void {
+  if (!verified) return;
+  const existing = (trackAnalysis.tamSamSom ?? {}) as Record<string, unknown>;
+  trackAnalysis.tamSamSom = {
+    ...existing,
+    tam: verifiedTamEntry(verified.tam, "TAM"),
+    ...(verified.sam ? { sam: verifiedTamEntry(verified.sam, "SAM") } : {}),
+    ...(verified.som ? { som: verifiedTamEntry(verified.som, "SOM") } : {}),
   };
 }
 
@@ -122,7 +156,7 @@ async function loadCompetitorData(strategyId: string): Promise<Array<Record<stri
 
 function buildTriangulation(
   pillars: Record<string, Record<string, unknown> | null>,
-  seshatEntries: Array<Record<string, unknown>>,
+  intelligence: Intelligence,
 ): { triangulation: Record<string, unknown>; sourcedFields: number; aiFields: number } {
   const a = pillars.a ?? {};
   const d = pillars.d ?? {};
@@ -146,10 +180,13 @@ function buildTriangulation(
     : undefined;
   if (competitiveAnalysis) sourcedFields++; else aiFields++;
 
-  // trendAnalysis — depuis SESHAT si dispo
-  const sectorBenchmarks = seshatEntries.filter(e => e.type === "SECTOR_BENCHMARK");
-  const trendAnalysis = sectorBenchmarks.length > 0
-    ? `${sectorBenchmarks.length} benchmarks sectoriels disponibles (données SESHAT < 30j).`
+  // trendAnalysis — depuis les données Seshat PERSISTÉES (signaux macro réels +
+  // Trend Tracker chiffré), pas un simple comptage de benchmarks.
+  const macroN = intelligence.signals.macroSignals.length;
+  const ttN = intelligence.trendTracker ? countTrendTrackerVars(intelligence.trendTracker) : 0;
+  const topTrends = intelligence.signals.macroSignals.slice(0, 3).map((m) => m.trend).filter(Boolean);
+  const trendAnalysis = (macroN > 0 || ttN > 0)
+    ? `${macroN} signaux macro${topTrends.length ? ` (${topTrends.join(", ")})` : ""} + ${ttN} variables Trend Tracker (Seshat persisté < 90j).`
     : undefined;
   if (trendAnalysis) sourcedFields++; else aiFields++;
 
@@ -231,13 +268,10 @@ async function callTrackJSON(args: {
 async function generateTrackAnalysis(
   pillars: Record<string, Record<string, unknown> | null>,
   riskContent: Record<string, unknown> | null,
-  seshatEntries: Array<Record<string, unknown>>,
+  intelligence: Intelligence,
   competitorData: Array<Record<string, unknown>>,
   strategyId: string,
 ): Promise<Record<string, unknown>> {
-  // LLM Gateway obligatoire (jamais @ai-sdk/anthropic direct) : circuit
-  // breaker + fallback provider (gpt-5.5) + budget governance + cost tracking.
-  const { callLLM } = await import("@/server/services/llm-gateway");
 
   const a = pillars.a ?? {};
   const d = pillars.d ?? {};
@@ -251,9 +285,16 @@ async function generateTrackAnalysis(
     .join("\n\n");
 
   const rContext = riskContent ? `[R]\n${JSON.stringify(riskContent, null, 2)}` : "[R] Vide";
-  const seshatContext = seshatEntries.length > 0
-    ? `\n\nDONNÉES SESHAT (${seshatEntries.length} entrées):\n${JSON.stringify(seshatEntries.slice(0, 5), null, 2)}`
-    : "\n\nAucune donnée SESHAT disponible.";
+  const verifiedBlocks: string[] = [];
+  if (intelligence.tamSamSom) verifiedBlocks.push(`TAM/SAM/SOM VÉRIFIÉ (Seshat — reprends-le tel quel, source=verified):\n${JSON.stringify(intelligence.tamSamSom)}`);
+  if (intelligence.competitors.length) verifiedBlocks.push(`CONCURRENTS (parts de marché réelles):\n${JSON.stringify(intelligence.competitors.slice(0, 8))}`);
+  if (intelligence.segments.length) verifiedBlocks.push(`SEGMENTS CONSOMMATEUR:\n${JSON.stringify(intelligence.segments.slice(0, 6))}`);
+  if (intelligence.trendTracker) verifiedBlocks.push(`TREND TRACKER (chiffrés macro vérifiés — ne les ré-estime pas):\n${JSON.stringify(intelligence.trendTracker)}`);
+  const sig = intelligence.signals;
+  if (sig.macroSignals.length || sig.weakSignals.length) verifiedBlocks.push(`SIGNAUX MARCHÉ — macro:\n${JSON.stringify(sig.macroSignals.slice(0, 6))}\nfaibles:\n${JSON.stringify(sig.weakSignals.slice(0, 4))}`);
+  const seshatContext = verifiedBlocks.length > 0
+    ? `\n\nDONNÉES SESHAT VÉRIFIÉES (vérité terrain — utilise-les, ne les invente pas) :\n${verifiedBlocks.join("\n\n")}`
+    : "\n\nAucune donnée Seshat vérifiée pour ce pays×secteur — marque tes chiffres 'ai_estimate'.";
   const competitorContext = competitorData.length > 0
     ? `\n\nDONNÉES CONCURRENTS (${competitorData.length}):\n${JSON.stringify(competitorData.slice(0, 5), null, 2)}`
     : "";
@@ -349,47 +390,67 @@ export async function executeProtocoleTrack(strategyId: string): Promise<Protoco
     const sector = (a.secteur as string) ?? "";
     const market = (a.pays as string) ?? "";
 
-    // Step 1: SESHAT knowledge + external SaaS signals (CALC)
-    const seshat = await loadSeshatKnowledge(sector, market, strategyId);
+    // Step 1 — SESHAT : données de marché PERSISTÉES, lues de façon TYPÉE par
+    // (countryCode, secteur) via access.ts (PR-L enfin câblé). TAM/SAM/SOM,
+    // concurrents, segments, signaux, trendTracker réellement ingérés/collectés.
+    const countryCode = await resolveCountryCode(market);
+    const intelligence = countryCode
+      ? await loadCountrySectorIntelligence(countryCode, sector)
+      : EMPTY_INTELLIGENCE;
+    const externalSignals = await loadExternalSaasSignals(strategyId);
     const competitorData = await loadCompetitorData(strategyId);
 
-    // Step 2: Triangulation (COMPOSE)
-    const { triangulation, sourcedFields, aiFields } = buildTriangulation(pillars, seshat.entries);
+    // Step 2 — Triangulation (COMPOSE), nourrie par les données Seshat typées.
+    const { triangulation, sourcedFields, aiFields } = buildTriangulation(pillars, intelligence);
 
-    // Step 3: Track analysis (MESTOR_ASSIST)
-    const trackAnalysis = await generateTrackAnalysis(pillars, pillars.r ?? null, seshat.entries, competitorData, strategyId);
+    // Step 3 — Analyse Track (MESTOR_ASSIST) AVEC les données vérifiées en contexte.
+    const trackAnalysis = await generateTrackAnalysis(pillars, pillars.r ?? null, intelligence, competitorData, strategyId);
 
-    // Step 4: BMF score (CALC)
+    // Step 3b — Override DÉTERMINISTE : si Seshat a un TAM/SAM/SOM vérifié, il
+    // écrase l'estimation LLM (source=verified). Le LLM ne reste qu'un fallback.
+    applyVerifiedTam(trackAnalysis, intelligence.tamSamSom);
+
+    // Step 4 — BMF score (CALC)
     const mergedContent = { triangulation, ...trackAnalysis };
     const bmf = calculateBMF(mergedContent);
 
-    // Market data metadata
+    const verifiedTtVars = intelligence.trendTracker ? countTrendTrackerVars(intelligence.trendTracker) : 0;
+    const verifiedCount =
+      (intelligence.tamSamSom ? 1 : 0) +
+      intelligence.competitors.length +
+      intelligence.segments.length +
+      verifiedTtVars;
+
+    // Market data metadata — provenance des données VÉRIFIÉES (pas un blob brut).
     const content: Record<string, unknown> = {
       ...mergedContent,
       brandMarketFitScore: bmf,
-      marketDataSources: seshat.entries.map(e => ({
-        sourceType: e.type,
-        title: `Knowledge: ${e.sector}/${e.market}`,
-        reliability: (e.score as number) / 100,
-      })),
-      // v4 — Include external SaaS signal context
-      externalSaasSignals: seshat.externalSignals,
-      externalSaasSignalCount: seshat.externalSignals.length,
+      marketDataSources: buildMarketDataSources(intelligence),
+      externalSaasSignals: externalSignals,
+      externalSaasSignalCount: externalSignals.length,
       lastMarketDataRefresh: new Date().toISOString(),
-      sectorKnowledgeReused: seshat.hasFreshData,
+      sectorKnowledgeReused: verifiedCount > 0,
+      // Traçabilité : ce qui vient d'une source vérifiée vs estimé par le LLM.
+      verifiedMarketData: {
+        countryCode: countryCode ?? "unknown",
+        tamSamSom: !!intelligence.tamSamSom,
+        competitors: intelligence.competitors.length,
+        segments: intelligence.segments.length,
+        trendTrackerVars: verifiedTtVars,
+      },
     };
 
-    // Confidence — higher if sourced data available
-    // v4 — boost +0.10 when external SaaS signals contribute verified data
+    // Confidence — boostée quand de la donnée VÉRIFIÉE (et non estimée) contribue.
     const sourceRatio = sourcedFields / Math.max(sourcedFields + aiFields, 1);
-    const externalSignalBoost = seshat.externalSignals.length > 0 ? 0.10 : 0;
-    const confidence = Math.min(0.90, 0.35 + sourceRatio * 0.3 + (seshat.hasFreshData ? 0.15 : 0) + externalSignalBoost);
+    const externalSignalBoost = externalSignals.length > 0 ? 0.10 : 0;
+    const verifiedBoost = intelligence.tamSamSom ? 0.10 : 0;
+    const confidence = Math.min(0.92, 0.35 + sourceRatio * 0.3 + (verifiedCount > 0 ? 0.12 : 0) + externalSignalBoost + verifiedBoost);
 
     return {
       pillarKey: "t",
       content,
       confidence,
-      sourcedDataCount: sourcedFields + seshat.entries.length,
+      sourcedDataCount: sourcedFields + verifiedCount,
       aiEstimateCount: aiFields,
     };
   } catch (err) {
