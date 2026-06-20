@@ -21,6 +21,7 @@
  * Cascade ADVERTIS : S puise dans A + D + V + E + R + T + I
  */
 
+import { z } from "zod";
 import { db } from "@/lib/db";
 import { PILLAR_STORAGE_KEYS } from "@/domain";
 import { PillarSSchema, collectNormalizedInitiatives, ROADMAP_ROUTE_KEYS } from "@/lib/types/pillar-schemas";
@@ -34,19 +35,13 @@ import {
 // Re-export for backward compatibility (authoritative server compute).
 export { computeRoadmapRoutes };
 
-// ADR-0063 — LLM-response sub-schema for the Strategy protocol. Picks the
-// fields the prompt asks for and makes them optional ; each item still
-// validates strictly so the pruner can drop malformed rows before persistence.
-const StrategyLLMResponseSchema = PillarSSchema.pick({
-  fenetreOverton: true,
-  roadmap: true,
-  sprint90Days: true,
-  selectedFromI: true,
-  rejectedFromI: true,
-  axesStrategiques: true,
-  facteursClesSucces: true,
-  syntheseExecutive: true,
-}).partial();
+// ADR-0063 / PR-K3-ter — sous-schémas de réponse LLM. Le mega-appel (8 champs)
+// est ÉCLATÉ en 4 sous-appels focalisés ; chacun valide sa propre sous-partie.
+// Items validés strictement (le pruner droppe les lignes malformées).
+const SelectionLLMSchema = PillarSSchema.pick({ selectedFromI: true, rejectedFromI: true }).partial();
+const RoadmapLLMSchema = PillarSSchema.pick({ roadmap: true, sprint90Days: true }).partial();
+const OvertonLLMSchema = PillarSSchema.pick({ fenetreOverton: true }).partial();
+const SyntheseLLMSchema = PillarSSchema.pick({ axesStrategiques: true, facteursClesSucces: true, syntheseExecutive: true }).partial();
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -96,6 +91,52 @@ function buildOverton(
 
 // ── Steps 2-3 : Sélection dans I + Roadmap (MESTOR_ASSIST) ───────────
 
+/**
+ * Un appel LLM focalisé pour le protocole Strategy : une seule sous-partie du
+ * pilier S, validée par son propre sous-schéma. Retourne {} si l'appel ou la
+ * validation échoue — un sous-appel raté n'annule jamais les trois autres.
+ */
+async function callStrategyJSON(args: {
+  strategyId: string;
+  label: string;
+  schema: z.ZodTypeAny;
+  system: string;
+  prompt: string;
+  maxOutputTokens: number;
+}): Promise<Record<string, unknown>> {
+  // LLM Gateway obligatoire (jamais @ai-sdk/anthropic direct) : circuit breaker
+  // + fallback provider + substitution Ollama locale + budget/cost tracking.
+  const { callLLM } = await import("@/server/services/llm-gateway");
+  const { parseAndValidateLLM } = await import("@/server/services/utils/llm");
+  try {
+    const { text } = await callLLM({
+      caller: `mestor:protocole-strategy:${args.label}`,
+      strategyId: args.strategyId,
+      model: "claude-sonnet-4-20250514",
+      system: args.system,
+      prompt: args.prompt,
+      maxOutputTokens: args.maxOutputTokens,
+    });
+    const result = parseAndValidateLLM(text, args.schema, {
+      context: `protocole-strategy:${args.label}`,
+      mode: "prune",
+    });
+    if (result.partial) {
+      console.warn(
+        `[protocole-strategy:${args.label}] strategy=${args.strategyId} dropped ${result.droppedPaths.length} invalid paths:`,
+        result.droppedPaths.slice(0, 10),
+      );
+    }
+    return (result.data ?? {}) as Record<string, unknown>;
+  } catch (err) {
+    console.warn(
+      `[protocole-strategy:${args.label}] strategy=${args.strategyId} appel/validation échoué:`,
+      err instanceof Error ? err.message : String(err),
+    );
+    return {};
+  }
+}
+
 async function generateStrategy(
   pillars: Record<string, Record<string, unknown> | null>,
   overton: Record<string, unknown> | null,
@@ -129,11 +170,7 @@ async function generateStrategy(
     .map(([canal, actions]) => `${canal}: ${Array.isArray(actions) ? actions.length : 0} actions`)
     .join(", ");
 
-  const { text } = await callLLM({
-    caller: "mestor:protocole-strategy",
-    strategyId,
-    model: "claude-sonnet-4-20250514",
-    system: `Tu es le Protocole Strategy de l'essaim MESTOR. Tu prends les DÉCISIONS stratégiques.
+  const baseSystem = `Tu es le Protocole Strategy de l'essaim MESTOR. Tu prends les DÉCISIONS stratégiques.
 
 S PIOCHE DANS I. Le pilier I contient le POTENTIEL TOTAL (${catalogueSummary}).
 Ton rôle : SÉLECTIONNER les actions de I qui déplacent la Fenêtre d'Overton vers le superfan.
@@ -143,59 +180,39 @@ OBJECTIF UNIQUE : accumulation de superfans via déplacement de la Fenêtre d'Ov
 Devotion Ladder (du bas vers le haut) :
 SPECTATEUR → INTÉRESSÉ → PARTICIPANT → ENGAGÉ → AMBASSADEUR → ÉVANGÉLISTE (= superfan)
 
-Chaque phase de la roadmap doit avoir un objectifDevotion (quelle transition elle provoque).
-Chaque action du sprint doit avoir un devotionImpact + un sourceRef vers I.
+Base-toi STRICTEMENT sur les données fournies. Retourne UNIQUEMENT du JSON valide, sans markdown.`;
 
-Retourne UNIQUEMENT du JSON valide.`,
-    prompt: `Données ADVERTIS complètes (7 piliers):
+  const baseData = `Données ADVERTIS complètes (7 piliers):\n\n${context}${overtonContext}`;
 
-${context}
-${overtonContext}
+  // Mega-appel (8 champs, 8000 tokens) ÉCLATÉ en 4 sous-appels focalisés — chacun
+  // une partie cohérente du pilier S, validée par son sous-schéma. Indépendants
+  // → parallèles (Ollama les sérialise sur le GPU local, mais chaque prompt reste
+  // simple et fiable pour le 8B). Un sous-appel raté retombe sur {}.
+  const [selection, roadmap, overtonGen, synthese] = await Promise.all([
+    callStrategyJSON({
+      strategyId, label: "selection", schema: SelectionLLMSchema, maxOutputTokens: 2500,
+      system: baseSystem,
+      prompt: `${baseData}\n\nSÉLECTIONNE dans le catalogue I (catalogueParCanal) les actions qui déplacent la Fenêtre d'Overton. Produis UNIQUEMENT :\n{ "selectedFromI": [{ "sourceRef": "catalogueParCanal.CANAL[index]", "action": "", "phase": "Phase N", "priority": 1 }] (10+), "rejectedFromI": [{ "sourceRef": "catalogueParCanal.CANAL[index]", "reason": "" }] (3+) }`,
+    }),
+    callStrategyJSON({
+      strategyId, label: "roadmap", schema: RoadmapLLMSchema, maxOutputTokens: 3000,
+      system: baseSystem,
+      prompt: `${baseData}\n\nProduis UNIQUEMENT la roadmap Devotion (4 phases) et le sprint 90 jours (Phase 1 détaillée). Chaque phase porte un objectifDevotion ; chaque action de sprint un devotionImpact + sourceRef vers I.\n{ "roadmap": [{ "phase": "Phase 1 — Fondations (0-90j)", "objectif": "", "objectifDevotion": "SPECTATEUR → INTERESSE", "actions": [], "budget": 0, "duree": "3 mois" }] (4 phases : Fondations / Engagement / Accélération / Culte), "sprint90Days": [{ "action": "", "owner": "", "kpi": "", "priority": 1, "devotionImpact": "SPECTATEUR", "sourceRef": "catalogueParCanal.DIGITAL[0]", "isRiskMitigation": false }] (8+) }`,
+    }),
+    callStrategyJSON({
+      strategyId, label: "overton", schema: OvertonLLMSchema, maxOutputTokens: 2000,
+      system: baseSystem,
+      prompt: `${baseData}\n\nProduis UNIQUEMENT la stratégie de déplacement de la Fenêtre d'Overton (5+ étapes concrètes) :\n{ "fenetreOverton": { "perceptionActuelle": ${JSON.stringify(overton?.perceptionActuelle ?? "...")}, "perceptionCible": ${JSON.stringify(overton?.perceptionCible ?? "...")}, "ecart": ${JSON.stringify(overton?.ecart ?? "...")}, "strategieDeplacement": [{ "etape": "", "action": "", "canal": "", "horizon": "Q1|Q2|Q3|Q4", "devotionTarget": "SPECTATEUR", "riskRef": "risque R mitigé", "hypothesisRef": "hypothèse T" }] (5+) } }`,
+    }),
+    callStrategyJSON({
+      strategyId, label: "synthese", schema: SyntheseLLMSchema, maxOutputTokens: 2000,
+      system: baseSystem,
+      prompt: `${baseData}\n\nProduis UNIQUEMENT la synthèse stratégique :\n{ "axesStrategiques": [{ "axe": "", "pillarsLinked": ["A","D"], "kpis": [""] }] (3+), "facteursClesSucces": ["..."] (5+), "syntheseExecutive": "400+ caractères : comment on déplace la perception pour transformer des spectateurs en évangélistes" }`,
+    }),
+  ]);
 
-Produis le JSON avec ces champs:
-{
-  "fenetreOverton": {
-    "perceptionActuelle": "${overton?.perceptionActuelle ?? "..."}",
-    "perceptionCible": "${overton?.perceptionCible ?? "..."}",
-    "ecart": "${overton?.ecart ?? "..."}",
-    "strategieDeplacement": [{ "etape": "", "action": "", "canal": "", "horizon": "Q1|Q2|Q3|Q4", "devotionTarget": "SPECTATEUR|INTERESSE|...", "riskRef": "risque R mitigé", "hypothesisRef": "hypothèse T" }] (5+)
-  },
-  "roadmap": [
-    { "phase": "Phase 1 — Fondations (0-90j)", "objectif": "", "objectifDevotion": "SPECTATEUR → INTERESSE", "actions": [], "budget": 0, "duree": "3 mois" },
-    { "phase": "Phase 2 — Engagement (3-6m)", "objectifDevotion": "INTERESSE → PARTICIPANT", ... },
-    { "phase": "Phase 3 — Accélération (6-12m)", "objectifDevotion": "PARTICIPANT → ENGAGE", ... },
-    { "phase": "Phase 4 — Culte (12-36m)", "objectifDevotion": "ENGAGE → EVANGELISTE", ... }
-  ] (4 phases minimum),
-  "sprint90Days": [{ "action": "", "owner": "", "kpi": "", "priority": 1, "devotionImpact": "SPECTATEUR|...", "sourceRef": "catalogueParCanal.DIGITAL[0]", "isRiskMitigation": false }] (8+),
-  "selectedFromI": [{ "sourceRef": "catalogueParCanal.CANAL[index]", "action": "", "phase": "Phase N", "priority": 1 }] (10+),
-  "rejectedFromI": [{ "sourceRef": "catalogueParCanal.CANAL[index]", "reason": "" }] (3+),
-  "axesStrategiques": [{ "axe": "", "pillarsLinked": ["A","D",...], "kpis": [""] }] (3+),
-  "facteursClesSucces": ["..."] (5+),
-  "syntheseExecutive": "400+ chars — comment on déplace la perception pour transformer des spectateurs en évangélistes"
-}`,
-    maxOutputTokens: 8000,
-  });
-
-  // Cost tracking : géré par le gateway (trackCost) — plus de aICostLog manuel.
-
-  // ADR-0063 — Parse + Zod validate at the LLM boundary.
-  try {
-    const { parseAndValidateLLM } = await import("@/server/services/utils/llm");
-    const result = parseAndValidateLLM(text, StrategyLLMResponseSchema, {
-      context: "protocole-strategy",
-      mode: "prune",
-    });
-    if (result.partial) {
-      console.warn(
-        `[protocole-strategy] strategy=${strategyId} dropped ${result.droppedPaths.length} invalid LLM paths:`,
-        result.droppedPaths.slice(0, 10),
-      );
-    }
-    return result.data as Record<string, unknown>;
-  } catch (err) {
-    console.error(`[protocole-strategy] strategy=${strategyId} unrecoverable LLM output:`, err);
-    return {};
-  }
+  // Fusion des 4 sous-réponses (champs disjoints → pas de collision).
+  return { ...selection, ...roadmap, ...overtonGen, ...synthese };
 }
 
 // ── Step 5 : KPI Dashboard (CALC) ────────────────────────────────────

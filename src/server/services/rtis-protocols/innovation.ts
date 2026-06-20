@@ -20,22 +20,18 @@
  * Cascade ADVERTIS : I puise dans A + D + V + E + R + T
  */
 
+import { z } from "zod";
 import { db } from "@/lib/db";
 import { DEVOTION_LEVELS } from "@/lib/types/taxonomies";
 import { PillarISchema } from "@/lib/types/pillar-schemas";
 
-// ADR-0063 — Sub-schema for the fields the LLM is asked to produce.
-// `.pick().partial()` keeps each picked field strictly validated when present
-// (e.g. PotentialActionSchema.action: z.string().min(1)) while allowing the
-// LLM to omit any of them. The pruner in parseAndValidateLLM drops invalid
-// items before persistence so renderers never see malformed records.
-const InnovationLLMResponseSchema = PillarISchema.pick({
-  catalogueParCanal: true,
-  assetsProduisibles: true,
-  activationsPossibles: true,
-  formatsDisponibles: true,
-  innovationsProduit: true,
-}).partial();
+// ADR-0063 / PR-K3-ter — sous-schémas. Le mega-appel (5 champs) est ÉCLATÉ en
+// 3 sous-appels focalisés ; chacun valide sa sous-partie. `.pick().partial()`
+// garde chaque champ strictement validé quand présent (le pruner droppe les
+// items invalides avant persistance → plus de cartes vides).
+const CatalogueLLMSchema = PillarISchema.pick({ catalogueParCanal: true }).partial();
+const AssetsLLMSchema = PillarISchema.pick({ assetsProduisibles: true, formatsDisponibles: true }).partial();
+const ActivationsLLMSchema = PillarISchema.pick({ activationsPossibles: true, innovationsProduit: true }).partial();
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -69,6 +65,51 @@ function buildBrandPlatform(
 
 // ── Step 2 : Catalogue exhaustif (MESTOR_ASSIST) ──────────────────────
 
+/**
+ * Un appel LLM focalisé pour le protocole Innovation : une seule sous-partie du
+ * pilier I, validée par son propre sous-schéma. Retourne {} si l'appel échoue.
+ */
+async function callInnovationJSON(args: {
+  strategyId: string;
+  label: string;
+  schema: z.ZodTypeAny;
+  system: string;
+  prompt: string;
+  maxOutputTokens: number;
+}): Promise<Record<string, unknown>> {
+  // LLM Gateway obligatoire (jamais @ai-sdk/anthropic direct) : circuit breaker
+  // + fallback provider + substitution Ollama locale + budget/cost tracking.
+  const { callLLM } = await import("@/server/services/llm-gateway");
+  const { parseAndValidateLLM } = await import("@/server/services/utils/llm");
+  try {
+    const { text } = await callLLM({
+      caller: `mestor:protocole-innovation:${args.label}`,
+      strategyId: args.strategyId,
+      model: "claude-sonnet-4-20250514",
+      system: args.system,
+      prompt: args.prompt,
+      maxOutputTokens: args.maxOutputTokens,
+    });
+    const result = parseAndValidateLLM(text, args.schema, {
+      context: `protocole-innovation:${args.label}`,
+      mode: "prune",
+    });
+    if (result.partial) {
+      console.warn(
+        `[protocole-innovation:${args.label}] strategy=${args.strategyId} dropped ${result.droppedPaths.length} invalid paths:`,
+        result.droppedPaths.slice(0, 10),
+      );
+    }
+    return (result.data ?? {}) as Record<string, unknown>;
+  } catch (err) {
+    console.warn(
+      `[protocole-innovation:${args.label}] strategy=${args.strategyId} appel/validation échoué:`,
+      err instanceof Error ? err.message : String(err),
+    );
+    return {};
+  }
+}
+
 async function generateCatalogue(
   pillars: Record<string, Record<string, unknown> | null>,
   strategyId: string,
@@ -95,11 +136,7 @@ async function generateCatalogue(
     ? `\nHYPOTHÈSES À TESTER:\n${(t.hypothesisValidation as Array<Record<string, unknown>>).filter(h => h.status === "HYPOTHESIS" || h.status === "TESTING").map((h, i) => `${i}: ${h.hypothesis}`).join("\n")}`
     : "";
 
-  const { text } = await callLLM({
-    caller: "mestor:protocole-innovation",
-    strategyId,
-    model: "claude-sonnet-4-20250514",
-    system: `Tu es le Protocole Innovation de l'essaim MESTOR. Tu cartographies le POTENTIEL TOTAL de la marque.
+  const baseSystem = `Tu es le Protocole Innovation de l'essaim MESTOR. Tu cartographies le POTENTIEL TOTAL de la marque.
 
 I n'est PAS un plan d'action. I est l'INVENTAIRE COMPLET de tout ce que la marque PEUT faire.
 S (qui vient après) piochera dans I pour construire la roadmap.
@@ -108,55 +145,34 @@ Pour chaque action, indique :
 - devotionImpact : quel niveau de la Devotion Ladder elle active (SPECTATEUR/INTERESSE/PARTICIPANT/ENGAGE/AMBASSADEUR/EVANGELISTE)
 - overtonShift : comment elle déplace la perception du marché
 
-Sois EXHAUSTIF. Liste TOUT le possible, pas juste le prioritaire.
-Retourne UNIQUEMENT du JSON valide.`,
-    prompt: `Données ADVE + R + T:
+Sois EXHAUSTIF mais ancré dans les données. Retourne UNIQUEMENT du JSON valide, sans markdown.`;
 
-${context}
-${risksContext}
-${hypothesesContext}
+  const baseData = `Données ADVE + R + T:\n\n${context}\n${risksContext}\n${hypothesesContext}`;
 
-Produis le JSON avec ces champs:
-{
-  "catalogueParCanal": {
-    "DIGITAL": [{ "action": "", "format": "", "objectif": "", "pilierImpact": "A|D|V|E", "devotionImpact": "SPECTATEUR|INTERESSE|...", "overtonShift": "" }],
-    "EVENEMENTIEL": [...],
-    "MEDIA_TRADITIONNEL": [...],
-    "PR_INFLUENCE": [...],
-    "PRODUCTION": [...],
-    "RETAIL_DISTRIBUTION": [...]
-  } (5+ actions par canal, chacune avec devotionImpact + overtonShift),
-  "assetsProduisibles": [{ "asset": "", "type": "VIDEO|PRINT|DIGITAL|PHOTO|AUDIO|PACKAGING|EXPERIENCE", "usage": "" }] (15+),
-  "activationsPossibles": [{ "activation": "", "canal": "", "cible": "", "budgetEstime": "LOW|MEDIUM|HIGH" }] (10+),
-  "formatsDisponibles": ["..."] (10+),
-  "innovationsProduit": [{ "name": "", "type": "EXTENSION_GAMME|EXTENSION_MARQUE|CO_BRANDING|PIVOT|DIVERSIFICATION", "description": "", "feasibility": "HIGH|MEDIUM|LOW", "horizon": "COURT|MOYEN|LONG", "devotionImpact": "..." }] (3+)
-}`,
-    maxOutputTokens: 8000,
-  });
+  // Mega-appel (5 champs, 8000 tokens) ÉCLATÉ en 3 sous-appels focalisés. Le
+  // catalogue par canal (de loin le plus lourd) est ISOLÉ : le modèle s'y
+  // consacre seul → JSON fiable. Indépendants → parallèles (Ollama sérialise
+  // sur le GPU local). Un sous-appel raté retombe sur {}.
+  const [catalogue, assets, activations] = await Promise.all([
+    callInnovationJSON({
+      strategyId, label: "catalogue", schema: CatalogueLLMSchema, maxOutputTokens: 4000,
+      system: baseSystem,
+      prompt: `${baseData}\n\nProduis UNIQUEMENT le catalogue exhaustif par canal (5+ actions par canal, chacune avec devotionImpact + overtonShift) :\n{ "catalogueParCanal": { "DIGITAL": [{ "action": "", "format": "", "objectif": "", "pilierImpact": "A|D|V|E", "devotionImpact": "SPECTATEUR", "overtonShift": "" }], "EVENEMENTIEL": [], "MEDIA_TRADITIONNEL": [], "PR_INFLUENCE": [], "PRODUCTION": [], "RETAIL_DISTRIBUTION": [] } }`,
+    }),
+    callInnovationJSON({
+      strategyId, label: "assets", schema: AssetsLLMSchema, maxOutputTokens: 2000,
+      system: baseSystem,
+      prompt: `${baseData}\n\nProduis UNIQUEMENT les assets produisibles et les formats disponibles :\n{ "assetsProduisibles": [{ "asset": "", "type": "VIDEO|PRINT|DIGITAL|PHOTO|AUDIO|PACKAGING|EXPERIENCE", "usage": "" }] (15+), "formatsDisponibles": ["..."] (10+) }`,
+    }),
+    callInnovationJSON({
+      strategyId, label: "activations", schema: ActivationsLLMSchema, maxOutputTokens: 2500,
+      system: baseSystem,
+      prompt: `${baseData}\n\nProduis UNIQUEMENT les activations possibles et les innovations produit/marque :\n{ "activationsPossibles": [{ "activation": "", "canal": "", "cible": "", "budgetEstime": "LOW|MEDIUM|HIGH" }] (10+), "innovationsProduit": [{ "name": "", "type": "EXTENSION_GAMME|EXTENSION_MARQUE|CO_BRANDING|PIVOT|DIVERSIFICATION", "description": "", "feasibility": "HIGH|MEDIUM|LOW", "horizon": "COURT|MOYEN|LONG", "devotionImpact": "" }] (3+) }`,
+    }),
+  ]);
 
-  // Cost tracking : géré par le gateway (trackCost) — plus de aICostLog manuel.
-
-  // ADR-0063 — Parse + Zod validate at the LLM boundary. Items that violate
-  // the schema (e.g. missing required `action` in PotentialActionSchema) are
-  // dropped here, BEFORE pillar persistence. Prevents the empty-card class of
-  // bug seen in CatalogueParCanalCard.
-  try {
-    const { parseAndValidateLLM } = await import("@/server/services/utils/llm");
-    const result = parseAndValidateLLM(text, InnovationLLMResponseSchema, {
-      context: "protocole-innovation",
-      mode: "prune",
-    });
-    if (result.partial) {
-      console.warn(
-        `[protocole-innovation] strategy=${strategyId} dropped ${result.droppedPaths.length} invalid LLM paths:`,
-        result.droppedPaths.slice(0, 10),
-      );
-    }
-    return result.data as Record<string, unknown>;
-  } catch (err) {
-    console.error(`[protocole-innovation] strategy=${strategyId} unrecoverable LLM output:`, err);
-    return {};
-  }
+  // Fusion des 3 sous-réponses (champs disjoints → pas de collision).
+  return { ...catalogue, ...assets, ...activations };
 }
 
 // ── Step 3 : Tri par Devotion Level (CALC) ────────────────────────────

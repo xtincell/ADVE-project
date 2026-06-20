@@ -19,23 +19,17 @@ import { ADVE_STORAGE_KEYS } from "@/domain";
  * sans source externe. Le LLM peut produire HYPOTHESIS ou TESTING, jamais VALIDATED.
  */
 
+import { z } from "zod";
 import { db } from "@/lib/db";
 import { PillarTSchema } from "@/lib/types/pillar-schemas";
 
-// ADR-0063 — LLM-response sub-schema for the Track protocol. `.pick` selects
-// only the fields the prompt asks for; `.partial()` allows omissions but each
-// present field is strictly validated. The pruner drops malformed items.
-const TrackLLMResponseSchema = PillarTSchema.pick({
-  hypothesisValidation: true,
-  tamSamSom: true,
-  overtonPosition: true,
-  perceptionGap: true,
-  competitorOvertonPositions: true,
-  riskValidation: true,
-  brandMarketFitScore: true,
-  marketReality: true,
-  weakSignalAnalysis: true,
-}).partial();
+// ADR-0063 / PR-K3-ter — sous-schémas. Le mega-appel (9 champs) est ÉCLATÉ en
+// 4 sous-appels focalisés ; `.pick().partial()` valide strictement chaque champ
+// présent, le pruner droppe les items malformés.
+const HypothesesLLMSchema = PillarTSchema.pick({ hypothesisValidation: true, riskValidation: true }).partial();
+const MarketLLMSchema = PillarTSchema.pick({ tamSamSom: true, brandMarketFitScore: true, marketReality: true }).partial();
+const OvertonTLLMSchema = PillarTSchema.pick({ overtonPosition: true, perceptionGap: true, competitorOvertonPositions: true }).partial();
+const WeakSignalLLMSchema = PillarTSchema.pick({ weakSignalAnalysis: true }).partial();
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -180,6 +174,60 @@ function buildTriangulation(
 
 // ── Step 3 : Overton position + hypothèses + TAM (MESTOR_ASSIST) ──────
 
+/**
+ * Un appel LLM focalisé pour le protocole Track : une seule sous-partie du
+ * pilier T, validée par son propre sous-schéma. Applique AVANT validation
+ * l'invariant protocole « le LLM ne valide jamais une hypothèse »
+ * (status VALIDATED → TESTING). Retourne {} si l'appel échoue.
+ */
+async function callTrackJSON(args: {
+  strategyId: string;
+  label: string;
+  schema: z.ZodTypeAny;
+  system: string;
+  prompt: string;
+  maxOutputTokens: number;
+}): Promise<Record<string, unknown>> {
+  // LLM Gateway obligatoire (jamais @ai-sdk/anthropic direct) : circuit breaker
+  // + fallback provider + substitution Ollama locale + budget/cost tracking.
+  const { callLLM } = await import("@/server/services/llm-gateway");
+  const { extractJSON, parseAndValidateLLM } = await import("@/server/services/utils/llm");
+  try {
+    const { text } = await callLLM({
+      caller: `mestor:protocole-track:${args.label}`,
+      strategyId: args.strategyId,
+      model: "claude-sonnet-4-20250514",
+      system: args.system,
+      prompt: args.prompt,
+      maxOutputTokens: args.maxOutputTokens,
+    });
+    const rawParsed = extractJSON(text) as Record<string, unknown>;
+    // Invariant protocole : seuls l'opérateur/des données externes valident.
+    if (Array.isArray(rawParsed.hypothesisValidation)) {
+      for (const h of rawParsed.hypothesisValidation as Array<Record<string, unknown>>) {
+        if (h.status === "VALIDATED") h.status = "TESTING";
+      }
+    }
+    const result = parseAndValidateLLM(JSON.stringify(rawParsed), args.schema, {
+      context: `protocole-track:${args.label}`,
+      mode: "prune",
+    });
+    if (result.partial) {
+      console.warn(
+        `[protocole-track:${args.label}] strategy=${args.strategyId} dropped ${result.droppedPaths.length} invalid paths:`,
+        result.droppedPaths.slice(0, 10),
+      );
+    }
+    return (result.data ?? {}) as Record<string, unknown>;
+  } catch (err) {
+    console.warn(
+      `[protocole-track:${args.label}] strategy=${args.strategyId} appel/validation échoué:`,
+      err instanceof Error ? err.message : String(err),
+    );
+    return {};
+  }
+}
+
 async function generateTrackAnalysis(
   pillars: Record<string, Record<string, unknown> | null>,
   riskContent: Record<string, unknown> | null,
@@ -210,99 +258,48 @@ async function generateTrackAnalysis(
     ? `\n\nDONNÉES CONCURRENTS (${competitorData.length}):\n${JSON.stringify(competitorData.slice(0, 5), null, 2)}`
     : "";
 
-  const { text } = await callLLM({
-    caller: "mestor:protocole-track",
-    strategyId,
-    model: "claude-sonnet-4-20250514",
-    system: `Tu es le Protocole Track de l'essaim MESTOR. Tu confrontes l'identité ADVE à la réalité marché.
+  const baseSystem = `Tu es le Protocole Track de l'essaim MESTOR. Tu confrontes l'identité ADVE à la réalité marché.
 
 RÈGLES CRITIQUES:
 1. Les hypothèses que tu formules sont en status "HYPOTHESIS" ou "TESTING" — JAMAIS "VALIDATED". Seules des données externes ou l'opérateur peuvent valider.
 2. Les TAM/SAM/SOM doivent porter un champ "source": "ai_estimate" si tu les estimes, "verified" si tu as une source.
 3. L'overtonPosition doit refléter la PERCEPTION RÉELLE du marché, pas la perception souhaitée.
 4. Le perceptionGap est l'écart entre overtonPosition (réalité) et A.prophecy + D.positionnement (cible).
+5. Base-toi sur les données réelles fournies. Marque TOUTES les estimations comme "ai_estimate". N'invente pas de chiffre précis sans le marquer ai_estimate.
 
-Retourne UNIQUEMENT du JSON valide.`,
-    prompt: `Données ADVE + R:
+Retourne UNIQUEMENT du JSON valide, sans markdown.`;
 
-${context}
+  const baseData = `Données ADVE + R:\n\n${context}\n\n${rContext}${seshatContext}${competitorContext}`;
 
-${rContext}
-${seshatContext}
-${competitorContext}
+  // Mega-appel (9 champs, 6000 tokens) ÉCLATÉ en 4 sous-appels focalisés.
+  // L'invariant « le LLM ne valide jamais une hypothèse » (VALIDATED → TESTING)
+  // est appliqué dans callTrackJSON avant la validation Zod. Indépendants →
+  // parallèles (Ollama sérialise sur le GPU local). Un sous-appel raté → {}.
+  const [hypotheses, market, overton, weakSignals] = await Promise.all([
+    callTrackJSON({
+      strategyId, label: "hypotheses", schema: HypothesesLLMSchema, maxOutputTokens: 2000,
+      system: baseSystem,
+      prompt: `${baseData}\n\nProduis UNIQUEMENT les hypothèses à tester et la validation des risques :\n{ "hypothesisValidation": [{ "hypothesis": "", "validationMethod": "", "status": "HYPOTHESIS|TESTING", "evidence": "" }] (5+, PAS de VALIDATED), "riskValidation": [{ "riskRef": "risque de R", "marketEvidence": "", "status": "CONFIRMED|DENIED|UNKNOWN", "source": "ai_estimate" }] }`,
+    }),
+    callTrackJSON({
+      strategyId, label: "market", schema: MarketLLMSchema, maxOutputTokens: 2000,
+      system: baseSystem,
+      prompt: `${baseData}\n\nProduis UNIQUEMENT le dimensionnement marché, le fit et la réalité marché :\n{ "tamSamSom": { "tam": { "value": 0, "description": "", "source": "ai_estimate|verified", "sourceRef": "" }, "sam": { "value": 0, "description": "", "source": "ai_estimate|verified", "sourceRef": "" }, "som": { "value": 0, "description": "", "source": "ai_estimate|verified", "sourceRef": "" } }, "brandMarketFitScore": 0, "marketReality": { "macroTrends": ["tendance macro 1", "tendance macro 2", "tendance macro 3"], "weakSignals": ["signal faible 1", "signal faible 2"] } }`,
+    }),
+    callTrackJSON({
+      strategyId, label: "overton", schema: OvertonTLLMSchema, maxOutputTokens: 2000,
+      system: baseSystem,
+      prompt: `${baseData}\n\nProduis UNIQUEMENT la position Overton, l'écart de perception et les positions concurrentes :\n{ "overtonPosition": { "currentPerception": "Comment le marché perçoit la marque MAINTENANT", "marketSegments": [{ "segment": "", "perception": "" }], "confidence": 0.5 }, "perceptionGap": { "currentPerception": "résumé overtonPosition", "targetPerception": "résumé A.prophecy + D.positionnement", "gapDescription": "l'écart à combler", "gapScore": 0 }, "competitorOvertonPositions": [{ "competitorName": "", "overtonPosition": "", "relativeToUs": "AHEAD|BEHIND|PARALLEL|DIVERGENT" }] }`,
+    }),
+    callTrackJSON({
+      strategyId, label: "weak-signals", schema: WeakSignalLLMSchema, maxOutputTokens: 1500,
+      system: baseSystem,
+      prompt: `${baseData}\n\nProduis UNIQUEMENT l'analyse des signaux faibles :\n{ "weakSignalAnalysis": [{ "thesis": "hypothèse sur l'impact du signal", "rawEvent": "événement brut observé dans le secteur", "causalChain": [{ "from": "événement", "to": "effet intermédiaire", "mechanism": "mécanisme de causalité", "confidence": 0.6 }] }] }`,
+    }),
+  ]);
 
-Produis le JSON avec ces champs:
-{
-  "hypothesisValidation": [{ "hypothesis": "", "validationMethod": "", "status": "HYPOTHESIS|TESTING", "evidence": "" }] (5+ items, PAS de VALIDATED),
-  "tamSamSom": {
-    "tam": { "value": 0, "description": "", "source": "ai_estimate|verified", "sourceRef": "" },
-    "sam": { "value": 0, "description": "", "source": "ai_estimate|verified", "sourceRef": "" },
-    "som": { "value": 0, "description": "", "source": "ai_estimate|verified", "sourceRef": "" }
-  },
-  "overtonPosition": {
-    "currentPerception": "Comment le marché perçoit la marque MAINTENANT",
-    "marketSegments": [{ "segment": "", "perception": "" }],
-    "confidence": 0.0-1.0
-  },
-  "perceptionGap": {
-    "currentPerception": "résumé overtonPosition",
-    "targetPerception": "résumé A.prophecy + D.positionnement",
-    "gapDescription": "l'écart à combler",
-    "gapScore": 0-100
-  },
-  "competitorOvertonPositions": [{ "competitorName": "", "overtonPosition": "", "relativeToUs": "AHEAD|BEHIND|PARALLEL|DIVERGENT" }],
-  "riskValidation": [{ "riskRef": "risque de R", "marketEvidence": "", "status": "CONFIRMED|DENIED|UNKNOWN", "source": "ai_estimate" }],
-  "brandMarketFitScore": 0-100,
-  "marketReality": {
-    "macroTrends": ["tendance macro 1 (issue SESHAT/contexte)", "tendance macro 2", "tendance macro 3"],
-    "weakSignals": ["signal faible 1 (précurseur de tendance)", "signal faible 2"]
-  },
-  "weakSignalAnalysis": [
-    {
-      "thesis": "hypothèse sur l'impact du signal",
-      "rawEvent": "événement brut observé dans le secteur",
-      "causalChain": [
-        { "from": "événement", "to": "effet intermédiaire", "mechanism": "mécanisme de causalité", "confidence": 0.6 }
-      ]
-    }
-  ]
-}
-
-Base-toi sur les données réelles fournies. Marque TOUTES les estimations comme "ai_estimate".`,
-    maxOutputTokens: 6000,
-  });
-
-  // Cost tracking : géré par le gateway (trackCost) — plus de aICostLog manuel.
-
-  // ADR-0063 — Parse + Zod validate at the LLM boundary. Note: VALIDATED-status
-  // downgrade runs BEFORE schema validation so the protocol-level invariant
-  // "LLM never produces VALIDATED" is enforced even on pruned-recovery output.
-  try {
-    const { extractJSON } = await import("@/server/services/utils/llm");
-    const { parseAndValidateLLM } = await import("@/server/services/utils/llm");
-    const rawParsed = extractJSON(text) as Record<string, unknown>;
-    if (Array.isArray(rawParsed.hypothesisValidation)) {
-      for (const h of rawParsed.hypothesisValidation as Array<Record<string, unknown>>) {
-        if (h.status === "VALIDATED") h.status = "TESTING"; // Downgrade — only humans validate
-      }
-    }
-    // Re-stringify the (mutated) raw payload so parseAndValidateLLM extracts
-    // the corrected version, then runs Zod validation + pruning over it.
-    const result = parseAndValidateLLM(JSON.stringify(rawParsed), TrackLLMResponseSchema, {
-      context: "protocole-track",
-      mode: "prune",
-    });
-    if (result.partial) {
-      console.warn(
-        `[protocole-track] strategy=${strategyId} dropped ${result.droppedPaths.length} invalid LLM paths:`,
-        result.droppedPaths.slice(0, 10),
-      );
-    }
-    return result.data as Record<string, unknown>;
-  } catch (err) {
-    console.error(`[protocole-track] strategy=${strategyId} unrecoverable LLM output:`, err);
-    return {};
-  }
+  // Fusion des 4 sous-réponses (champs disjoints → pas de collision).
+  return { ...hypotheses, ...market, ...overton, ...weakSignals };
 }
 
 // ── Step 4 : Brand-Market Fit score (CALC) ────────────────────────────
