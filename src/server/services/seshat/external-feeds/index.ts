@@ -17,6 +17,7 @@ import { callLLM } from "@/server/services/llm-gateway";
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { ExternalFeedDigestDataSchema } from "@/server/services/seshat/knowledge/schemas";
+import { collectTrendTracker, countTrendTrackerCovered } from "./trend-collector";
 import { feedSourcesFor } from "./feed-sources";
 import { fetchRssText, parseRssItems, buildDigestFromItems, type RssItem } from "./rss";
 
@@ -74,6 +75,13 @@ export async function fetchAndPersistFeedDigest(
     return { status: "OK", mode: "CACHED", countryCode, sector, entryId: existing.id, signalsCreated: 0, trendTrackerVarsCovered: 0 };
   }
 
+  // ── Trend Tracker : COLLECTE DÉTERMINISTE (World Bank, sans clé), indépendante
+  // de la voie RSS/LLM → calculée une fois, injectée dans les deux. Jamais inventée
+  // par le LLM ; les variables sans source gratuite restent absentes (cf.
+  // trend-collector.ts / NON_FREE_SOURCE_REGISTRY).
+  const trendTracker = await collectTrendTracker(countryCode);
+  const ttCovered = countTrendTrackerCovered(trendTracker);
+
   // ── Voie DÉTERMINISTE primaire : vrais flux RSS (zéro LLM, zéro clé) ──────────
   const sources = feedSourcesFor(countryCode, sector, countryName);
   const items: RssItem[] = [];
@@ -86,6 +94,7 @@ export async function fetchAndPersistFeedDigest(
     const digest = ExternalFeedDigestDataSchema.safeParse({
       macroSignals,
       weakSignals,
+      ...(ttCovered > 0 ? { trendTracker } : {}),
       generatedAt: new Date().toISOString(),
       feedSource: `rss:${sources.map((s) => s.name).join(",")}`,
     });
@@ -109,16 +118,17 @@ export async function fetchAndPersistFeedDigest(
         sector,
         entryId: entry.id,
         signalsCreated,
-        trendTrackerVarsCovered: 0,
+        trendTrackerVarsCovered: ttCovered,
       };
     }
   }
   // ── Fallback LLM (uniquement si RSS injoignable/vide — réseau bloqué, etc.) ───
   // Les 49 variables Trend Tracker (macro chiffrés pays×secteur : PIB, inflation,
   // pénétration mobile…) ne sont PAS demandées au LLM : un modèle ne doit jamais
-  // deviner un agrégat macro-économique. Elles restent vides en mode fallback —
-  // la voie RSS primaire (ou une future API Statista) les renseigne de façon
-  // déterministe. Le LLM ne produit ici qu'une synthèse QUALITATIVE des signaux.
+  // deviner un agrégat macro-économique. Elles sont COLLECTÉES de façon
+  // déterministe (World Bank — trend-collector.ts) puis injectées plus bas,
+  // identiquement en mode RSS et LLM. Le LLM ne produit ici qu'une synthèse
+  // QUALITATIVE des signaux.
 
   const systemPrompt = `Tu es un agrégateur de feed sectoriel. Tu produis un digest qualitatif macro/micro pour un pays + secteur donné.
 
@@ -156,6 +166,9 @@ Format JSON strict (UNIQUEMENT ces deux clés) :
 
   const validated = ExternalFeedDigestDataSchema.safeParse({
     ...((parsed as Record<string, unknown>) ?? {}),
+    // trendTracker = déterministe (World Bank), jamais issu du LLM. Injecté APRÈS
+    // le spread pour écraser tout chiffre que le modèle aurait émis par erreur.
+    ...(ttCovered > 0 ? { trendTracker } : {}),
     generatedAt: new Date().toISOString(),
     feedSource: "tarsis-llm-synthesis",
   });
@@ -163,9 +176,7 @@ Format JSON strict (UNIQUEMENT ces deux clés) :
     return { status: "VALIDATION_FAILED", countryCode, sector, signalsCreated: 0, trendTrackerVarsCovered: 0, error: validated.error.message.slice(0, 200) };
   }
 
-  const trendTrackerVarsCovered = validated.data.trendTracker
-    ? Object.keys(validated.data.trendTracker).filter((k) => validated.data.trendTracker![k]?.value != null).length
-    : 0;
+  const trendTrackerVarsCovered = ttCovered;
   const signalsCreated = (validated.data.macroSignals?.length ?? 0) + (validated.data.weakSignals?.length ?? 0);
 
   const entry = await db.knowledgeEntry.create({
