@@ -1315,9 +1315,9 @@ async function extractStructuredPillarContent(
     const prompt = `Génère le contenu structuré pour le pilier ${upperK}.
 
 RÈGLES DE GÉNÉRATION (IMPORTANT) :
-1. Tu dois REMPLIR 100% DES CHAMPS demandés pour ce pilier. Ne laisse aucun champ vide.
+1. Remplis le MAXIMUM de champs à partir des réponses brutes et de ce qui en découle logiquement.
 2. Utilise les réponses brutes comme source de vérité absolue.
-3. Si les réponses brutes ne couvrent pas tous les champs, INVENTE ET EXTRAPOLE intelligemment le reste de la stratégie en te basant sur le contexte métier et les piliers précédents. Le résultat doit être haut de gamme et ultra-cohérent.
+3. Pour un champ non couvert par les réponses : déduis-le UNIQUEMENT s'il découle clairement des faits déclarés et des piliers précédents. NE FABRIQUE JAMAIS de chiffres, statistiques, dates, noms de concurrents ou de personnes, ni aucun fait non déduisible — pour ceux-là retourne null (mieux vaut null qu'une valeur inventée).
 4. Tu DOIS rédiger l'ensemble des valeurs en FRANÇAIS exclusivement.
 5. CONTRAINTE DURE — la marque opère dans le secteur, pays et modèle business déclarés ci-dessous. Tout produit, persona, concurrent, exemple ou narrative DOIT être cohérent avec ces faits.
 6. Ne génère PAS les champs canoniques suivants : \`secteur\`, \`pays\`, \`businessModel\`, \`positioningArchetype\`, \`economicModels\`. Ils sont scellés par le système après ton extraction.

@@ -17,7 +17,6 @@ import { callLLM } from "@/server/services/llm-gateway";
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { ExternalFeedDigestDataSchema } from "@/server/services/seshat/knowledge/schemas";
-import { TREND_TRACKER_49 } from "@/server/services/seshat/knowledge/trend-tracker-49";
 import { feedSourcesFor } from "./feed-sources";
 import { fetchRssText, parseRssItems, buildDigestFromItems, type RssItem } from "./rss";
 
@@ -115,35 +114,31 @@ export async function fetchAndPersistFeedDigest(
     }
   }
   // ── Fallback LLM (uniquement si RSS injoignable/vide — réseau bloqué, etc.) ───
+  // Les 49 variables Trend Tracker (macro chiffrés pays×secteur : PIB, inflation,
+  // pénétration mobile…) ne sont PAS demandées au LLM : un modèle ne doit jamais
+  // deviner un agrégat macro-économique. Elles restent vides en mode fallback —
+  // la voie RSS primaire (ou une future API Statista) les renseigne de façon
+  // déterministe. Le LLM ne produit ici qu'une synthèse QUALITATIVE des signaux.
 
-  const trendCatalog = TREND_TRACKER_49.map(
-    (v) => `${v.code} (${v.category}) "${v.label}" [${v.unit}]`,
-  ).join("\n");
-
-  const systemPrompt = `Tu es un agrégateur de feed sectoriel. Tu produis un digest macro/micro pour un pays + secteur donné.
+  const systemPrompt = `Tu es un agrégateur de feed sectoriel. Tu produis un digest qualitatif macro/micro pour un pays + secteur donné.
 
 CONTEXTE PAYS — CONTRAINTE DURE :
 - Pays : ${countryName} (${countryCode}) — région ${region}${ppp !== undefined ? ` — PPP ${ppp}` : ""}
 - Secteur : ${sector}
-- Tous les signaux DOIVENT être plausibles dans ${countryName} pour ${sector}. Si tu ne connais pas, retourne null pour la variable concernée — n'invente pas de chiffres.
+- Tous les signaux DOIVENT être plausibles dans ${countryName} pour ${sector}.
+- N'invente AUCUN chiffre précis (PIB, taux, montants, parts de marché). Décris des tendances QUALITATIVES. Si tu n'as pas de tendance fiable, retourne MOINS de signaux plutôt que d'en inventer.
 
-Format JSON strict :
+Format JSON strict (UNIQUEMENT ces deux clés) :
 {
   "macroSignals": [{ "trend": "...", "evidence": "...", "timeHorizon": "SHORT|MEDIUM|LONG" }] (3-6),
-  "weakSignals": [{ "event": "...", "causalChain": ["...", "..."], "impactCategory": "...", "urgency": "LOW|MEDIUM|HIGH|CRITICAL" }] (1-3),
-  "trendTracker": {
-    "<CODE>": { "value": <number|string>, "year": <number>, "source": "..." } | null
-  }
-}
-
-49 variables Trend Tracker à remplir (retourne null si tu n'as pas l'info pour ${countryCode}) :
-${trendCatalog}`;
+  "weakSignals": [{ "event": "...", "causalChain": ["...", "..."], "impactCategory": "...", "urgency": "LOW|MEDIUM|HIGH|CRITICAL" }] (1-3)
+}`;
 
   const llmResult = await callLLM({
     system: systemPrompt,
-    prompt: `Synthétise le digest ${countryCode} × ${sector}. JSON uniquement.`,
+    prompt: `Synthétise le digest qualitatif ${countryCode} × ${sector}. JSON uniquement, les deux clés macroSignals et weakSignals.`,
     caller: "seshat:external-feeds",
-    maxOutputTokens: 6000,
+    maxOutputTokens: 2000,
   });
 
   const raw = llmResult.text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "");

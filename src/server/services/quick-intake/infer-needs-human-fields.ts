@@ -52,6 +52,71 @@ import { writePillar } from "@/server/services/pillar-gateway";
 const MODEL = "claude-sonnet-4-20250514";
 const TIMEOUT_MS = 45_000;
 
+/**
+ * Benchmarks sectoriels DÉTERMINISTES (PR-K3-ter — dé-LLM des chiffrés).
+ *
+ * Avant : le prompt demandait au LLM d'"inventer" un benchmark sectoriel
+ * plausible pour eNps / indexReputation / turnoverRate / esov / storyEvidence.
+ * Ce ne sont PAS des champs llmables : un modèle faible (8B local) y dérive de
+ * façon incohérente alors que ce sont des constantes sectorielles connues.
+ * On les pose en code, marquées INFERRED comme avant (l'opérateur valide a
+ * posteriori). Le LLM ne génère plus que du texte.
+ */
+interface SectorBenchmarks {
+  eNps: number; // score moyen
+  indexReputation: number; // /5 (Google Reviews moyen secteur)
+  turnoverRate: number; // 0-1 (taux annuel)
+  esov: number; // -1..+1 (part de voix excédentaire)
+  storytellingPct: number; // 0-100 (evidencePct = 100 - storytellingPct)
+}
+
+const DEFAULT_BENCHMARKS: SectorBenchmarks = {
+  eNps: 30,
+  indexReputation: 4.2,
+  turnoverRate: 0.15,
+  esov: -0.05,
+  storytellingPct: 50,
+};
+
+// Matching par mot-clé sur le secteur déclaré (texte libre). Première correspondance gagne.
+const SECTOR_BENCHMARKS: Array<{ match: string[]; v: SectorBenchmarks }> = [
+  { match: ["tech", "saas", "logiciel", "software", "b2b", "digital"], v: { eNps: 30, indexReputation: 4.4, turnoverRate: 0.13, esov: -0.1, storytellingPct: 30 } },
+  { match: ["hotel", "hôtel", "hospitality", "restaur", "tourisme", "voyage"], v: { eNps: 50, indexReputation: 4.3, turnoverRate: 0.3, esov: -0.05, storytellingPct: 55 } },
+  { match: ["retail", "commerce", "boutique", "magasin", "ecommerce", "e-commerce", "distribution"], v: { eNps: 25, indexReputation: 4.2, turnoverRate: 0.2, esov: -0.05, storytellingPct: 45 } },
+  { match: ["mode", "lifestyle", "luxe", "fashion", "cosmet", "beaut", "parfum"], v: { eNps: 35, indexReputation: 4.3, turnoverRate: 0.18, esov: 0.0, storytellingPct: 60 } },
+  { match: ["immobil", "real estate", "btp", "construction", "architecture"], v: { eNps: 20, indexReputation: 4.0, turnoverRate: 0.12, esov: -0.05, storytellingPct: 40 } },
+  { match: ["sante", "santé", "health", "medical", "médical", "pharma", "bien-être"], v: { eNps: 40, indexReputation: 4.5, turnoverRate: 0.14, esov: -0.05, storytellingPct: 45 } },
+  { match: ["finance", "banque", "assur", "fintech", "comptab"], v: { eNps: 25, indexReputation: 4.1, turnoverRate: 0.12, esov: 0.0, storytellingPct: 35 } },
+  { match: ["food", "aliment", "agro", "boisson", "épicerie"], v: { eNps: 35, indexReputation: 4.2, turnoverRate: 0.22, esov: -0.05, storytellingPct: 55 } },
+  { match: ["éduc", "educ", "formation", "school", "edtech"], v: { eNps: 45, indexReputation: 4.4, turnoverRate: 0.16, esov: -0.05, storytellingPct: 50 } },
+];
+
+function pickBenchmarks(sector: string | null): SectorBenchmarks {
+  if (!sector) return DEFAULT_BENCHMARKS;
+  const s = sector.toLowerCase();
+  for (const row of SECTOR_BENCHMARKS) {
+    if (row.match.some((m) => s.includes(m))) return row.v;
+  }
+  return DEFAULT_BENCHMARKS;
+}
+
+/**
+ * Pose les chiffrés des piliers A et D de façon déterministe (benchmarks
+ * sectoriels). Le LLM ne génère plus ces valeurs ; buildPillarPatch n'écrase
+ * jamais une valeur déjà saisie par l'opérateur, donc les benchmarks ne
+ * remplissent que les champs vides.
+ */
+function applyDeterministicBenchmarks(parsed: InferredAdveFields, sector: string | null): void {
+  const b = pickBenchmarks(sector);
+  const a = parsed.a ?? (parsed.a = {});
+  a.eNps = { score: b.eNps, frequency: "ANNUAL" };
+  a.indexReputation = { source: "GOOGLE_REVIEWS", score: b.indexReputation };
+  a.turnoverRate = b.turnoverRate;
+  const d = parsed.d ?? (parsed.d = {});
+  d.esov = { value: b.esov, measurementMethod: "benchmark sectoriel à valider" };
+  d.storyEvidenceRatio = { storytellingPct: b.storytellingPct, evidencePct: 100 - b.storytellingPct };
+}
+
 export interface InferenceResult {
   /** Whether the LLM call succeeded and at least one field was inferred. */
   ok: boolean;
@@ -230,12 +295,12 @@ function buildPillarPatch(
 const SYSTEM_PROMPT = `Tu es un stratège marketing senior. Pour la marque décrite, tu produis un draft INITIAL des champs identitaires du framework ADVE (Authenticité / Distinction / Valeur / Engagement). Ces drafts seront ensuite validés ou réécrits par l'opérateur humain — tu n'as pas à être parfait, mais tu dois proposer des valeurs cohérentes, ancrées dans les faits déclarés, et utiles comme point de départ.
 
 CONTRAINTE DURE — FAITS DÉCLARÉS :
-N'invente JAMAIS de nationalité, secteur, modèle économique ou positionnement absent des faits fournis. Si la marque déclare "Pays = WK" (Wakanda), n'écris jamais "française". Si "Secteur = immobilier", n'écris jamais "cosmétique". Si un fait est inconnu, propose une valeur générique cohérente avec le sectoral mais explicite-le ("à valider", "hypothèse de travail").
+N'invente JAMAIS de nationalité, secteur, modèle économique ou positionnement absent des faits fournis. Si la marque déclare "Pays = WK" (Wakanda), n'écris jamais "française". Si "Secteur = immobilier", n'écris jamais "cosmétique". Si un fait textuel est inconnu ET non déductible des faits déclarés, OMETS le champ (ne le remplis pas avec une valeur générique inventée).
 
 CONTRAINTE — ADR-0037 PR-K3-bis (politique repo : tout est inférable) :
-Le marqueur INFERRED dans Pillar.fieldCertainty (ADR-0032 + ADR-0035) est conçu précisément pour qu'un draft IA soit posé sur un champ, l'opérateur valide ou amend a posteriori. Tu DOIS donc inférer TOUS les champs ADVE — y compris les chiffrés (eNps, indexReputation, esov, turnoverRate) et les nominaux (messieFondateur, equipeDirigeante, preuvesAuthenticite). Un draft imparfait + marker INFERRED + opérateur qui valide = mieux qu'un champ vide qui décourage l'utilisation.
+Le marqueur INFERRED dans Pillar.fieldCertainty (ADR-0032 + ADR-0035) est conçu précisément pour qu'un draft IA soit posé sur un champ, l'opérateur valide ou amend a posteriori. Tu DOIS donc inférer les champs TEXTUELS et NOMINAUX du framework ADVE (archetype, noyauIdentitaire, missionStatement, originMyth, messieFondateur, competencesDivines, positionnement, personas, produitsCatalogue, businessModel, etc.). Un draft imparfait + marker INFERRED + opérateur qui valide = mieux qu'un champ vide.
 
-Pour les chiffrés, propose un BENCHMARK SECTORIEL plausible (eNps moyen sector tech B2B = 30, sector hospitality = 50 ; indexReputation Google Reviews moyen = 4.2/5 ; esov pour startup en croissance = -0.10) avec source "benchmark sectoriel à valider". Pour les nominaux non-déclarés (messieFondateur.nom), utilise "Founder de [marque]" en placeholder explicite. Le sampleSize/lastMeasured restent null si non-déclarés.
+NE GÉNÈRE AUCUN CHIFFRE (eNps, indexReputation, esov, turnoverRate, storyEvidenceRatio) : ces valeurs sont posées automatiquement par le système à partir de benchmarks sectoriels déterministes — ne les inclus PAS dans ton JSON. Pour les nominaux non-déclarés (messieFondateur.nom), utilise "Founder de [marque]" en placeholder explicite.
 
 FORMAT DE SORTIE — STRICT JSON, sans markdown :
 {
@@ -256,18 +321,7 @@ FORMAT DE SORTIE — STRICT JSON, sans markdown :
     ],
     "preuvesAuthenticite": [
       { "type": "heritage|certification|recognition|press|datapoint", "claim": "<phrase>", "evidence": "<référence à valider>", "source": "<source à compléter>" }
-    ],
-    "indexReputation": {
-      "source": "GOOGLE_REVIEWS|TRUSTPILOT|NPS|YELP|TRIPADVISOR|OTHER",
-      "score": "<benchmark sectoriel — ex 4.2/5 Google Reviews moyen retail, à valider>",
-      "sampleSize": null
-    },
-    "eNps": {
-      "score": "<benchmark sectoriel à valider — ex 30 tech B2B, 50 hospitality>",
-      "sampleSize": null,
-      "frequency": "ANNUAL"
-    },
-    "turnoverRate": "<benchmark sectoriel 0-1 — ex 0.15 = 15% turnover annuel>"
+    ]
   },
   "d": {
     "positionnement": "<phrase 15-30 mots, format 'Pour [cible], [marque] est [catégorie] qui [bénéfice unique], parce que [raison de croire]'>",
@@ -284,16 +338,7 @@ FORMAT DE SORTIE — STRICT JSON, sans markdown :
     },
     "barriersImitation": [
       { "barrier": "<phrase ≥40 chars qui décrit la barrière>", "defensibility": "LOW|MEDIUM|HIGH", "category": "data|network|brand|process|cost" }
-    ],
-    "esov": {
-      "value": "<-1 à +1, ex -0.10 pour startup challenger, +0.20 pour leader média>",
-      "measurementMethod": "benchmark sectoriel à valider"
-    },
-    "storyEvidenceRatio": {
-      "storytellingPct": "<0-100, ex 60 pour mode/lifestyle, 30 pour tech B2B>",
-      "evidencePct": "<complément à 100>",
-      "target": "<ratio cible secteur>"
-    }
+    ]
   },
   "v": {
     "produitsCatalogue": [
@@ -423,6 +468,8 @@ export async function inferNeedsHumanFields(intakeId: string): Promise<Inference
       return { ok: false, fieldsInferred: 0, error: "invalid_llm_response_shape" };
     }
     parsed = obj;
+    // PR-K3-ter — chiffrés posés de façon déterministe (le LLM ne les génère plus).
+    applyDeterministicBenchmarks(parsed, intake.sector);
   } catch (err) {
     clearTimeout(timer);
     return {
