@@ -10,6 +10,14 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.18 — galileo : KB anti-confusion enrichie au canon complet (repo + blueprint voisin) (2026-06-21)
+
+**À la demande de l'opérateur : la KB monte au canon complet — PDF (base) + ce repo (canon opérationnel) + le repo voisin `la-fusee-blueprint` (canon conceptuel). « Assure-toi de faire un travail parfait. »**
+
+- `docs(governance)` **[UPGRADERS-LAFUSEE-KB.md](docs/governance/context/UPGRADERS-LAFUSEE-KB.md) réécrite au canon-complet** en intégrant le repo voisin `la-fusee-blueprint` (LA_FUSEE_BLUEPRINT / LIVRE_DE_BORD / CAHIER_DES_CHARGES, NAMING_CANON v3.3). Nouvelles sections : **§0 couches de canon & préséance** (PDF base → repo opérationnel prime-code → blueprint conceptuel prime-doctrine) ; **§3 réconciliation de nommage conceptuel↔opérationnel** (Sia↔Mestor, Neith↔Artemis, Shaï↔Tarsis, Wepwawet↔Hunter, Ished+Sève↔Yggdrasil, Notoria↔Jehuty — *« dans le code : opérationnel ; dans la doctrine : conceptuel »*) ; **§6 les 5 Plans ontologiques** (penser/montrer/faire/**vendre**/savoir — la clé qui sépare le Plan commercial des autres) ; **§9 EFR / obligation d'effet tracé** (score cible par palier, ICP, recours) ; **§11 Doctrine du Mouvement Cosmique** (Agence Spatiale Industrielle · Équipage de Propagation/Devotion Ladder 6 paliers · Coalition Stellaire) ; **§12 désambiguïsation des 7 « arbres »** (vente, ADVE-RTIS, Brand Tree, Ished, Sève, funnel AARRR, arbre de décision EFR) — le blueprint §0.7 nomme lui-même cette confusion *« le drift le plus tenace »*. Pricing canon ajouté (Intake gratuit, PDF 5-25k FCFA, Cockpit 15-25k FCFA/mois). **100 Q/A** refondues (12 thèmes A→L).
+- Aucun code touché ; doc seule. Cap APOGEE 7/7 préservé. (Token d'accès au repo voisin utilisé en lecture seule, transitoire, jamais persisté.)
+
+
 ## v6.27.17 — galileo : KB anti-confusion UPgraders × La Fusée + correction de l'arbre de vente (2026-06-21)
 
 **Suite à un retour opérateur : NEFER avait confondu l'arbre de vente d'UPgraders (qui vend La Fusée ET le reste) avec les arbres internes de La Fusée, et avait écrit « ne vends pas La Fusée ». Correction + base de connaissance pour ne plus jamais refaire l'erreur.**

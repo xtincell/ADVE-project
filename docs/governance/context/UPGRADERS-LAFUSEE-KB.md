@@ -1,515 +1,374 @@
-# UPgraders × La Fusée — Base de connaissance (anti-confusion)
+# UPgraders × La Fusée — Base de connaissance canonique (anti-confusion)
 
-> **But de ce document.** Empêcher la confusion d'identité que NEFER a commise le 2026-06-21 en
-> construisant l'arbre de réponse commercial (`sales-response-tree`, PR #277) : avoir traité
-> **« La Fusée »** comme « non-vendable » et avoir mélangé **l'arbre de vente d'UPgraders**
-> (l'instrument commercial de l'agence) avec **les arbres internes de La Fusée** (ADVE/RTIS,
-> Brand Tree client, funnel). Toute persona/agent qui touche au commercial, à l'identité de
-> marque, au funnel ou au produit **DOIT** lire la §1 (la règle d'or) avant d'agir.
->
-> **Sources.** Synthèse des 4 documents fournis par l'opérateur (Alexandre Djengue) :
-> *« UPGRADERS — Écosystème Complet »*, *« Bâtir le Système d'Exploitation de l'Économie
-> Créative »*, *« Analyse Stratégique du Modèle Économique UPGRADERS »*, *« Recherche
-> Biographique Alexandre Djengue / Xtincell »* — **réconciliés avec le canon du repo**
-> ([CLAUDE.md](../../../CLAUDE.md), [STATE_FINAL_BLUEPRINT.md](../STATE_FINAL_BLUEPRINT.md),
-> [PANTHEON.md](../PANTHEON.md), [MISSION.md](../MISSION.md)). En cas de divergence entre les
-> documents (datés oct. 2025) et le repo, **le repo prime pour l'implémentation** ; les
-> documents priment pour **l'identité commerciale et l'offre**.
+> **But.** Verrouiller l'identité et le vocabulaire d'UPgraders / La Fusée pour qu'aucun agent ne
+> reproduise le drift commis le 2026-06-21 (`sales-response-tree`, PR #277) : avoir traité **« La
+> Fusée »** comme « non-vendable » et mélangé **l'arbre de vente d'UPgraders** avec les **arbres
+> internes de La Fusée**. Le blueprint conceptuel nomme lui-même cette faute : *« On a longtemps
+> appelé "arbre" trois choses différentes, et cette confusion fut la source du drift le plus tenace
+> du système »* (LA_FUSEE_BLUEPRINT §0.7). **À lire avant tout travail commercial / identité /
+> funnel / nommage.**
 
 ---
 
-## §1 — LA RÈGLE D'OR (à ne jamais enfreindre)
+## §0 — Provenance & couches de canon (l'ordre d'autorité)
 
-Trois entités, trois rôles, **jamais interchangeables** :
+Trois couches, empilées. Quand elles divergent, on applique la règle de préséance ci-dessous.
 
-| Entité | Nature | Rôle | Ce que c'est / n'est pas |
+| Couche | Source | Autorité sur… | Statut |
 |---|---|---|---|
-| **UPgraders** | La **société / l'agence** (le *fixer*, la « conciergerie créative ») | **VEND** | C'est le **vendeur**. Fondée par Alexandre Djengue à Douala. Elle vend La Fusée **ET** d'autres offres. |
-| **La Fusée** | Le **produit / l'Industry OS** d'UPgraders | **EST VENDU** (sa face client) **+ propulse** (son moteur) | C'est un **produit** (Cockpit, Oracle, abonnements) **ET** le moteur invisible (OS, Neteru). On **vend** sa face client ; on **ne montre pas** son moteur. |
-| **Argos** | **Sous-marque éditoriale** (veille / références) | Rayonne | Propriété média (sous-domaine Seshat). Ni société, ni OS. |
+| **Base** | Les **4 PDF** fournis (Écosystème Complet · Manifeste « Bâtir le Système d'Exploitation » · Analyse du Modèle Économique · Bio Alexandre Djengue/Xtincell) | l'**offre commerciale historique** + l'origine + le marché | Connaissance de base (oct. 2025). |
+| **Canon opérationnel** | **Ce repo** (`ADVE-project`) : `STATE_FINAL_BLUEPRINT.md` (la bible, absorbe PANTHEON/MISSION/LEXICON/APOGEE), `CLAUDE.md`, ADR 0001-0104, `CODE-MAP.md` | l'**implémentation** : noms de code, modèles, Intents, Glory tools, ce qui tourne | **Prime pour le code.** |
+| **Canon conceptuel** | Repo voisin **`la-fusee-blueprint`** : `LA_FUSEE_BLUEPRINT.md` (Le Livre de la Fusée, 9 Livres), `LIVRE_DE_BORD.md`, `CAHIER_DES_CHARGES.md` (spec opposable), `NAMING_CANON v3.3` | la **doctrine, la vision, le nommage-cible**, la mécanique commerciale (EFR, livrables, régime) | **Prime pour la doctrine & le nommage-cible.** |
 
-**Les deux glissements interdits (l'erreur de NEFER) :**
-
-1. ❌ **« La Fusée ne se vend pas. »** FAUX. La Fusée OS est *invisible en tant que moteur*, mais
-   **sa face client est une ligne de produit qu'on vend** : un abonnement **Cockpit**, un
-   **Oracle**, un **PDF d'intake**. Dire à un commercial « ne vends pas La Fusée » est une faute.
-   ✅ La bonne formulation : « **Vends ce que La Fusée produit/donne accès** (Cockpit, Oracle,
-   score, livrables) ; **ne survends pas l'OS/les Neteru** comme un jargon technique au client. »
-
-2. ❌ **Confondre l'arbre de vente d'UPgraders avec les arbres de La Fusée.** Voir §10. En bref :
-   - **Arbre de vente d'UPgraders** = l'instrument **commercial** (qualifier → vendre → capturer
-     le lead → escalader). Il vend La Fusée **et** le conseil, la Guilde, etc. ← *c'est ça,
-     `sales-response-tree`.*
-   - **Arbres de La Fusée** = des structures **internes au produit** (cascade **ADVE/RTIS**,
-     **Brand Tree** d'un client, **funnel AARRR** de l'OS, DAG des Glory tools). Ils servent à
-     **construire la marque d'un client**, pas à vendre UPgraders.
-
-> Mnémonique : **UPgraders est le marteau ; La Fusée est le meilleur clou de la caisse (et il y a
-> d'autres clous) ; l'arbre de vente sert à placer les clous, pas à décrire le marteau.**
+**Règles de préséance :**
+1. Pour **écrire/lire du code** → le **canon opérationnel** (ce repo) fait foi. Les noms de code actuels sont `Mestor/Artemis/Tarsis/Hunter/Yggdrasil/Jehuty/Argos` (cf. §3).
+2. Pour la **doctrine, le récit, le nommage-cible** → le **canon conceptuel** (blueprint) fait foi. Le nommage égyptien-pur v3.3 (`Sia/Neith/Shaï/Wepwawet/Sève/Notoria/Per-Ankh`) est **scellé mais pas encore migré dans le code**.
+3. Les **PDF** donnent l'offre et l'origine ; quand le repo les contredit (ex. pricing FCFA, plans Cockpit), **le repo gagne**.
+4. Le blueprint conceptuel le dit lui-même : *« Le canon opérationnel de l'OS reste `STATE_FINAL_BLUEPRINT.md` (dans le repo ADVE-project). Ce repo-ci archive la représentation conceptuelle. »*
 
 ---
 
-## §2 — Identité commerciale (canon)
+## §1 — LA RÈGLE D'OR (jamais l'enfreindre)
 
-**UPgraders > La Fusée > Argos.** (Société > produit-phare > sous-marque éditoriale.)
-
-- **UPgraders** (`@upgraderspro`, Douala, Cameroun) — l'**écosystème intégré** qui se veut « le
-  **Système d'Exploitation de l'Économie Créative** en Afrique francophone ». Modèle :
-  *conciergerie créative* / *consulting-led marketplace*. Positionnement **premium curated**
-  (l'inverse de Fiverr/Upwork ; proche de Malt en sélectivité, mais piloté par le conseil).
-- **La Fusée** — l'**Industry OS** construit et opéré par UPgraders. Il **incarne la méthode
-  ADVE/RTIS**. Invisible au client en tant qu'OS ; visible via le portail **Cockpit** et le
-  livrable **Oracle**.
-- **Argos** — sous-marque éditoriale (*Argos by La Fusée*), récolte de références/veille,
-  sous-domaine de **Seshat**. Hunter en est le sub-agent. Pas un Neter.
-
-**Doctrine terminologique :** « **Client** » = le payeur ; « **Client final** » = le
-consommateur cible de la marque du client.
-
----
-
-## §3 — Le fondateur & l'origine
-
-- **Alexandre Djengue**, alias **« Xtincell »** (anciennement « Brazier »), Camerounais, basé à
-  **Douala**. Polymathe créatif : Brand Identity Manager, designer graphique, photographe,
-  blogueur/YouTubeur/podcasteur.
-- Formation **technique** (Bac D scientifique → Licence Pro télécoms & réseaux → certif. sécurité
-  réseau Cisco) **+** créatif autodidacte « guidé par mentorat » (cite Gaétan « Spartan »
-  Weltzer). Cette fusion *ingénierie × création* est son différenciateur.
-- Le pseudo **Xtincell** vient d'une « claque d'humilité » : *« Parce que nous ne sommes
-  qu'étincelle dans le brasier qu'est l'univers. »*
-- Blog **« Geek de brousse »** — *« Carnet de survie d'un créatif dans la brousse numérique
-  africaine francophone »* : son vecteur de **leadership d'opinion** (le « Messie » de la marque).
-- **Origin myth d'UPgraders** : agence de marketing digital classique → **pivot** vers la
-  « conciergerie créative » / l'écosystème intégré, en réponse aux frictions du marché (immaturité,
-  méfiance envers les talents locaux, absence de « plateau technique »). **Le modèle devient la
-  marque.**
-- Note d'homonymie (anti-confusion) : `upgraderz.com`, `geoupgraders.com`, `upgrademg.com` (MMA),
-  `agentupgrade.com` (immobilier US), `upgrade.paris` (étalonnage), `aaupgradegroup.com` —
-  **aucun lien** avec UPgraders d'Alexandre Djengue.
-
----
-
-## §4 — Le problème de marché (le « pourquoi »)
-
-Le marché créatif d'Afrique francophone souffre d'un **double déficit** :
-
-1. **Déficit de confiance** (côté entreprises) : crainte sur la qualité, la fiabilité, le
-   professionnalisme des talents locaux.
-2. **Déficit de compétences structurantes** (côté talents) : gestion de projet, relation client,
-   aspects légaux/financiers.
-
-Aggravé par : informalité massive des ICC (industries culturelles & créatives), fragmentation,
-**frictions de paiement** (Stripe/PayPal indisponibles ; commissions globales prohibitives ;
-blocages bancaires/devises) → **le Mobile Money est incontournable** (Wave, Orange Money, MTN
-MoMo). Cadres légaux : **OHADA** (affaires, signature électronique valide) + **OAPI** (propriété
-intellectuelle, 17 États) + **BCEAO/UEMOA** (agréments paiement).
-
-**Thèse :** la vraie opportunité n'est pas de « connecter offre & demande » mais de **fabriquer
-la confiance** en comblant systématiquement ce double déficit (sélection + formation + pilotage +
-cadre sécurisé). *« Là où les concurrents voient un obstacle réglementaire, UPgraders bâtit une
-barrière à l'entrée. »*
-
----
-
-## §5 — Le modèle économique : le **Flywheel** + les **5 piliers**
-
-UPgraders = **hybride Conseil × Marketplace × SaaS**, conçu comme un **volant d'inertie
-(flywheel) auto-renforçant** :
-
-> Impulsion (conseil) attire des clients stratégiques → génère des projets de qualité → alimente
-> **La Guilde** en missions premium → attire les meilleurs talents → renforce la crédibilité →
-> (re)nourrit Impulsion. **Source Insights** crédibilise et fournit la donnée propriétaire ;
-> **Sérénité** élimine les frictions et rend l'écosystème *collant (sticky)*.
-
-**Les 5 piliers commerciaux** (noms canon des documents, avec leur ancrage dans le repo) :
-
-| Pilier (doc) | Fonction | Ancrage repo (implémentation) |
-|---|---|---|
-| **Impulsion™** | Conseil stratégique (porte d'entrée premium : audit, workshop, retainer) | Le livrable **Oracle** + le funnel **intake → Oracle** + le conseil via **Console** (UPgraders). Neter de tutelle côté brief : **Artemis**. |
-| **Pilotis™** | Gestion de projets déléguée (chef de projet, COO créatif délégué, QA) | Surfaces **Mission / Deal / `/console/operations`** ; orchestration crew via **Imhotep** ; pilotage **Mestor**. |
-| **Source Insights™** | Veille / intelligence de marché (baromètres, rapports, abonnement, sur-mesure) | **Seshat** + **Tarsis** (signaux faibles) + **Argos** (éditorial). Données propriétaires = barrière à l'entrée. |
-| **La Guilde™** | Marketplace de talents **curatés** (CORE freelances / EXTENDED agences / RÉSEAU spécialisés) | Portail public **`/LaGuilde`** (face publique d'**Imhotep**) : mur des missions, dépôt marque, inscription talent. |
-| **Sérénité™** | Conciergerie admin & financière (portage salarial/EoR, facturation, **escrow**, contrats, paiements) | **Thot** (financial brain, fuel/budget) + mobile money (Wave/Orange/MTN) + Credentials Vault. |
-
-**+ La plateforme SaaS/Marketplace** qui orchestre les 5 piliers = **La Fusée** (dans les
-documents : « la plateforme technologique mobile-first » / « ADVE Studio »).
-
-**LTV cibles** (documents) : SMB 30k–80k sur 2-3 ans ; Corporate 150k–500k sur 3-5 ans ; top 10 %
-clients 1M+. *(Montants doc en devise générique ; le repo facture en **FCFA + mobile money**,
-doctrine **capture-then-grow**.)*
-
----
-
-## §6 — La Fusée (l'OS) : ce qu'on **vend** vs ce qui est **invisible**
-
-**La Fusée = Industry OS** pour le marché créatif africain, construit/opéré par UPgraders. Il
-**incarne la méthode ADVE/RTIS**. Architecture canon = **8 couches OS**
-(Kernel/Drivers/Protocoles/Substrats/Services/APIs/Apps/Funnel).
-
-**4 portails** (ne jamais confondre portail ≠ livrable ≠ OS) :
-
-| Portail | Pour qui | Vendu ? |
-|---|---|---|
-| **Console** (Mission Control) | UPgraders / le *fixer* (interne) | **Jamais vendu** — outil interne. |
-| **Cockpit** | Les **marques fondateurs** (ce que le client voit) | **OUI** — abonnement (c'est *la* vente de La Fusée côté produit). |
-| **Agency** (Crew Quarters) | Réseau de partenaires (agences) | Accès partenaire. |
-| **Creator** (Crew Quarters) | Freelances | Accès talent. |
-| *(public)* **Intake / Launchpad** | Prospects | Porte d'entrée du funnel (lead → PDF → Cockpit). |
-
-**Ce qui se vend (face client de La Fusée)** : abonnement **Cockpit**, **Oracle** (livrable
-conseil dynamique, 35 sections), **PDF d'intake**, scores, livrables (BrandAsset.kind).
-**Ce qui reste invisible** : l'OS lui-même, les **7 Neteru** (Mestor, Artemis, Seshat, Thot,
-Ptah, Imhotep, Anubis), les substrats (Yggdrasil, NSP), les Glory tools, NSP, IntentEmission.
-
-> **Règle commerciale :** un commercial **vend la valeur et l'accès** (« votre cockpit de marque,
-> votre Oracle, votre score qui grimpe ») — **pas** la plomberie (« notre OS gouverné par 7
-> Neteru via Mestor »). Le jargon OS est interne ; il **n'apparaît jamais** dans un pitch client.
-
-**L'Oracle** est **un livrable notable parmi N** (BrandAsset.kind ∈ BIG_IDEA / CREATIVE_BRIEF /
-MANIFESTO / ORACLE_DOCUMENT / claim / KV / …) — *notable par la taille, pas par le statut*.
-
----
-
-## §7 — La méthode **ADVE / ADVE-RTIS**
-
-- **Documents (commercial)** : **ADVE = Architecture Divine des Expériences**, 4 piliers —
-  **A**uthenticité, **D**istinction, **V**aleur, **E**ngagement — chacun /50 → **score /200** :
-  Zombie (0-80) · Ordinaire (81-120) · Forte (121-160) · Culte (161-180) · **Icône (181-200)**.
-- **Repo (implémentation)** : cascade **ADVE-RTIS** à 8 piliers **A→D→V→E→R→T→I→S**
-  (R=Risk, T=Track, I=Innovation/Implementation, S=Strategy). **ADVE = fondations**, mutées
-  uniquement par l'opérateur via `OPERATOR_AMEND_PILLAR` ; **RTIS = dérivés** (jamais édités à la
-  main). Tiers d'altitude (framework **APOGEE**) : LATENT → FRAGILE → ORDINAIRE → FORTE → CULTE →
-  **ICÔNE**.
-- **Mission north-star** : transformer des marques en **icônes culturelles** en industrialisant
-  l'accumulation de **superfans** qui font basculer la **fenêtre d'Overton** du secteur.
-
----
-
-## §8 — Pricing & **Value Ladder**
-
-Échelle de valeur (documents) — *à adapter en FCFA / mobile money, doctrine capture-then-grow* :
-
-| Palier | Cible prix | Exemples d'offres |
-|---|---|---|
-| **FREE** (lead magnets) | 0 | Score ADVE gratuit, newsletter *The Upgrade*, templates, baromètres (résumés), webinaires. |
-| **TRIPWIRE** (1ᵉʳ achat) | ~50–500 | Playbook ADVE, micro-courses, rapport Source Insights ponctuel, **Impulsion Audit Express**. |
-| **CORE** (revenu principal) | ~2k–15k | **Certification Brand Architect**, **Workshop ADVE complet**, **Pilotis** (gestion projet), missions Guilde, **Source Insights Pro** (abonnement). |
-| **PREMIUM** (forte marge) | ~15k–100k | **Retainer stratégique / CMO délégué**, **COO créatif délégué**, projets agences EXTENDED, Intelligence sur-mesure. |
-| **ULTRA-PREMIUM** (prestige) | 100k+ | Partenariat stratégique annuel (Advisory Board), transformation complète, licensing de la méthode. |
-
-**Doctrine pricing canon (repo)** : **FCFA + mobile money** (Wave/Orange/MTN/Moov), **jamais**
-USD/Stripe imposé ; **capture-then-grow** ; **premium assumé** (jamais la course au moins-disant).
-Moteur économique runtime = **Thot formula engine + Seshat zone-indices** (jamais une grille
-statique). Un commercial **n'annonce pas de prix ferme hors mandat** → renvoie vers `/pricing` ou
-**escalade**.
-
----
-
-## §9 — Qui achète quoi (carte commerciale → segments)
-
-| Segment (QUI) | Ce qu'on lui vend (QUOI) | Palier d'entrée |
-|---|---|---|
-| **Fondateur / PME** (cœur de cible) | Score ADVE gratuit → Oracle (Audit) → **Cockpit** → Workshop → Retainer | FREE/TRIPWIRE → CORE |
-| **Corporate / CMO / scale-up** | Workshop, **Retainer/CMO délégué**, **COO créatif (Pilotis)**, Intelligence sur-mesure, partenariat | CORE → PREMIUM/ULTRA |
-| **Talent freelance** | Inscription **La Guilde CORE** + **portage Sérénité** + Certification/Académie | FREE (offre talent — souvent objectif **indirect** : Acquisition/Activation) |
-| **Agence / studio** | **La Guilde EXTENDED** (partenariat B2B, forfait projet) | Acquisition partenaire (indirect) |
-| **Prestataire spécialisé** | **Réseau UPgraders** (référencement, commission referral) | Indirect |
-| **Client existant** | Rétention (révision, nouvelle saison, sections Oracle, missions) + **Référral** | RETENTION / REFERRAL |
-| **Investisseur / partenaire / presse** | Pas de vente → relation → **escalade opérateur** | — |
-| **Candidat emploi** | Orienter vers inscription Guilde, ou décliner poliment | — |
-
----
-
-## §10 — Les « ARBRES » : désambiguïsation formelle (le cœur de l'erreur)
-
-Plusieurs « arbres » coexistent. **Ne jamais les confondre.**
-
-| Arbre | Appartient à | Sert à | C'est… |
+| Entité | Nature | Rôle | Jamais… |
 |---|---|---|---|
-| **Arbre de vente d'UPgraders** | **UPgraders** (l'agence, le vendeur) | **Vendre** : qualifier le prospect → recommander l'offre → capturer le lead → escalader | `sales-response-tree` (PR #277). Vend **La Fusée (Cockpit/Oracle) ET** le conseil, la Guilde, Sérénité, Source Insights, certifs, events. **Instrument commercial.** |
-| **Arbre / cascade ADVE-RTIS** | **La Fusée** (le produit) | **Construire la marque d'un client** (A→D→V→E→R→T→I→S) | Méthode interne. Mutée via `OPERATOR_AMEND_PILLAR`. **N'est pas un script de vente.** |
-| **Brand Tree** (multi-archétype) | **La Fusée** (le produit) | Modéliser la **marque hiérarchique d'un client** (9 `BrandNature`, cascade FMCG 7 niveaux) | ADR-0059. C'est la marque **du client**, pas l'arbre de vente d'UPgraders. |
-| **Funnel AARRR** | **La Fusée** (l'OS) + **UPgraders** (acquisition) | Mesurer Acquisition/Activation/Rétention/Revenue/Référral | `CampaignAARRMetric` / `aarrStage`. L'arbre de vente *vise* un AARRR ; il n'**est** pas le funnel. |
+| **UPgraders** | La **société / agence** — *« l'Agence Spatiale Industrielle »* | **VEND / OPÈRE** | …confondue avec son produit. C'est le **vendeur** et l'opérateur. |
+| **La Fusée** | Le **produit / l'Industry OS** d'UPgraders | **EST VENDU** (face client) **+ propulse** (moteur) | …dite « non-vendable » : sa face client (**Cockpit/Oracle/PDF/score**) **se vend**. Seul son **moteur** (OS, Neteru, Sève) est invisible. |
+| **Argos** | **Sous-marque éditoriale visible** (façade publique de Per-Ankh) | Rayonne / observe | …prise pour une société ou pour l'OS. C'est la vitrine + l'oracle économique public. |
+| **NEFER** | L'**opérateur** (humain senior ou agent IA) | Sert les Neteru | …compté comme un Neter. Hors `BRAINS`. |
 
-**Conséquence pratique pour `sales-response-tree` :** c'est l'**arbre de vente d'UPgraders**. Donc
-il (1) **vend La Fusée** explicitement (Cockpit/Oracle = produits, pas tabous) **et** les autres
-piliers ; (2) ne se présente **jamais** comme un livrable de construction de marque ; (3) garde le
-jargon OS/Neteru **hors** du discours client.
+**Les deux interdits qui résument l'erreur de NEFER :**
+
+1. ❌ *« On ne vend pas La Fusée. »* → **FAUX.** On vend **ce que La Fusée donne/produit** : abonnement **Cockpit**, **Oracle**, **PDF d'intake**, **score**. On **n'expose pas** l'OS/les Neteru en jargon au client. *Vendre La Fusée = vendre l'accès et la valeur, pas décrire la plomberie.*
+2. ❌ *Confondre l'arbre de vente avec les arbres internes.* → voir **§12**. L'**arbre de vente d'UPgraders** (`sales-response-tree`) appartient au **Plan commercial** (« vendre ») ; les **arbres internes** (ADVE-RTIS, Brand Tree/Ished, Sève, funnel, arbre de décision EFR) appartiennent aux autres plans (« penser / faire / savoir » + substrat).
+
+> **Mnémonique :** *UPgraders est l'Agence Spatiale ; La Fusée est le véhicule produit en série (la charge utile vendue = Cockpit/Oracle) ; l'arbre de vente place les véhicules, les arbres internes les construisent et les font voler.*
 
 ---
 
-## §11 — Lexique anti-drift (paires à ne jamais confondre)
+## §2 — Identité commerciale (canon conceptuel §0.3)
 
-- **UPgraders** (vendeur/agence) ≠ **La Fusée** (produit/OS) ≠ **Argos** (sous-marque éditoriale).
-- **« Vendre La Fusée »** = vendre **Cockpit/Oracle/abonnement** (OK) ≠ **« exposer l'OS/les
-  Neteru »** au client (interdit).
-- **Arbre de vente** (commercial UPgraders) ≠ **cascade ADVE-RTIS** / **Brand Tree** / **funnel**
-  (internes produit).
+**UPgraders > La Fusée > Argos** (société > produit-phare > sous-marque).
+
+- **UPgraders = l'Agence Spatiale Industrielle.** Pas l'éditeur d'un SaaS parmi d'autres. Une marque qui entre ne « reçoit pas un outil » — elle **devient une mission propulsée** (équipage, trajectoire, contrôle au sol, apogée visé). À l'échelle, UPgraders ne produit pas un client : il produit un **marché** (le constellateur de l'industrie créative africaine francophone).
+- **La Fusée = le produit, l'Industry OS** — le véhicule reproductible. *« La Fusée d'UPgraders. »* Jamais « LaFusee OS » ni « plateforme ».
+- **Argos = sous-marque éditoriale visible** — vitrine de la flotte + oracle économique public. Seul nom **grec** du système (exception assumée, valeur commerciale conservée) ; côté code/doctrine c'est la **façade publique de Per-Ankh** (sous-domaine de Seshat).
+- **NEFER = l'opérateur** qui sert les Neteru (« parfait, accompli, irréprochable »). Pas un Neter.
+
+Doctrine terminologique : **« Client » = le payeur ; « client final » = le consommateur cible de la marque du client.**
+
+---
+
+## §3 — Réconciliation de nommage (conceptuel ↔ opérationnel) — CRITIQUE
+
+Le blueprint a **scellé** un nommage égyptien-pur (`NAMING_CANON v3.3`) que **le code n'a pas encore adopté**. Pour ne jamais se tromper : **dans le code, utilise la colonne opérationnelle ; dans la doctrine/le blueprint, reconnais la colonne conceptuelle.**
+
+| Conceptuel (blueprint v3.3, doctrine) | Opérationnel (ce repo, code aujourd'hui) | Fonction |
+|---|---|---|
+| **Sia** | **Mestor** | Guidance — dispatcher d'Intent unique |
+| **Neith** | **Artemis** | Propulsion phase brief (Glory tools) |
+| **Ptah** | Ptah | Propulsion phase forge (matérialisation) |
+| **Seshat** | Seshat | Telemetry — observe/mesure/archive |
+| **Thot** | Thot | Sustainment + Operations (carburant + escrow/mobile money/CRM) |
+| **Imhotep** | Imhotep | Crew Programs (talents/agences/Académie) |
+| **Anubis** | Anubis | Comms (ad networks, email/SMS, MCP) |
+| **Wepwawet** | **Hunter** | Sub-agent récolte de références (Argos) |
+| **Shaï** | **Tarsis** | Signaux faibles / capture culturelle |
+| **Per-Ankh** | sous-domaine **Seshat (ex-Argos)** | Veille / référentiel éditorial |
+| **Argos** (façade publique) | **Argos** (projection publique) | Sous-marque éditoriale visible — **même nom** |
+| **l'Arbre (Ished) + la Sève** | **Yggdrasil** (substrat) | Image-monde + substrat de circulation (cf. §12) |
+| **Notoria** (2 étages) | **Jehuty** (+ fonctions repliées) | Catalogue des amendements scorés |
+| palier **LATENT** | **LATENT** (repo a purgé Zombie→Latent) | Palier d'orbite le plus bas |
+
+**Invariants communs aux deux couches :** `BRAINS = exactement 7 Neteru` (cap APOGEE **7/7**) ; INFRASTRUCTURE (Console/Admin) **n'est pas un Neter** ; la **Sève / Yggdrasil** est un **substrat ungouverné** (pas un Neter, pas dans BRAINS).
+
+---
+
+## §4 — Le fondateur & l'origine (PDF Bio)
+
+- **Alexandre Djengue**, alias **« Xtincell »** (ex-« Brazier »), Camerounais, **Douala**. CEO d'UPgraders, concepteur de la méthode **ADVE/ADVERTIS**. Devise : *« De la poussière à l'étoile. »*
+- Polymathe : ingénierie (Licence Pro télécoms/réseaux, certif. sécurité Cisco) **×** créatif (Brand Identity, design, photo), « autodidacte guidé par mentorat ».
+- **Xtincell** : *« nous ne sommes qu'étincelle dans le brasier qu'est l'univers »* (claque d'humilité). Blog **« Geek de brousse »** = son leadership d'opinion (le « Messie » de la marque).
+- **Origin myth** : agence de marketing digital → **pivot** vers la « conciergerie créative » / l'écosystème intégré → aujourd'hui **Agence Spatiale Industrielle**. *Le modèle devient la marque* (le nom « Upgrade » est générique ; le modèle unique distingue).
+- Homonymes sans lien : `upgraderz.com`, `upgrademg.com` (MMA), `upgrade.paris`, etc.
+
+---
+
+## §5 — Le problème de marché (« le pourquoi »)
+
+**Double déficit :** confiance (entreprises ↔ talents locaux) **+** compétences structurantes (talents : gestion de projet, relation client, légal/financier). Aggravé par l'informalité des ICC, la fragmentation, et les **frictions de paiement** (pas de Stripe/PayPal grand public ; commissions globales prohibitives).
+
+**Marché-monde :** **Afrique francophone** (UEMOA + CEMAC + diaspora). **FCFA** primaire (XOF/XAF, parité fixe 655,957/€). **Mobile money** primaire (Wave, Orange Money, MTN MoMo, Moov). Cadres : **OHADA** (affaires, signature électronique), **OAPI** (PI, 17 États), **BCEAO/UEMOA** (agréments paiement). **Escrow** = séquestre jusqu'à validation.
+
+**Doctrine de capture — `capture-then-grow` :** on ne vise **pas** frontalement les corporates riches (qui restent 3-5 ans chez Deloitte/BCG/McKinsey) ; on capture les **forts potentiels à faible pouvoir d'achat** (l'étoffe d'icônes, pas encore les moyens) et on grandit avec eux. *Crossing the Chasm* appliqué. *« La Fusée capture l'ambition, pas la fortune. »*
+
+---
+
+## §6 — Les 5 Plans ontologiques de la Mission (clé anti-confusion — blueprint §0.10)
+
+La taxonomie qui **sauve l'OS de la confusion sémantique la plus dangereuse** : ne jamais mélanger un brief, un asset, une campagne, une mission et un rapport. **Cinq verbes, cinq natures, cinq producteurs.**
+
+| Plan | Verbe | Quoi | Producteur (concept / code) |
+|---|---|---|---|
+| **Intellectuel** | *penser* | le **brief** (concept, story, manifeste, positionnement) | Neith **conçoit** / Artemis |
+| **Matériel** | *montrer* | l'**asset** (image, vidéo, audio, design) | Ptah **forge** |
+| **Opérationnel** | *faire* | la **campagne + action** (déploiement réel) | Sia orchestre · Anubis adresse / Mestor + Anubis |
+| **Commercial** | ***vendre*** | la **mission + le livrable** (cargaison payante au client) | Imhotep crew · Thot facture · qc-router juge |
+| **Analytique** | *savoir* | le **rapport + l'Oracle** (synthèse, insight, reco) | Seshat observe · sequences DERIVED assemblent |
+
+> **Conséquence directe pour la confusion #277 :** l'**arbre de vente** opère dans le **Plan commercial (« vendre »)**. L'**Oracle** est un livrable du **Plan analytique (« savoir »)** — mais il **se vend** (c'est une cargaison payante). Les **campagnes** sont le **Plan opérationnel (« faire »)**. On ne confond pas *vendre une mission* avec *faire une campagne* avec *savoir via un Oracle*.
+
+---
+
+## §7 — Le modèle économique : Flywheel + 5 piliers (PDF + canon)
+
+Hybride **Conseil × Marketplace × SaaS**, **flywheel auto-renforçant** : Impulsion attire des clients → projets de qualité → alimentent La Guilde → attirent les talents → renforcent la crédibilité → (re)nourrissent Impulsion. Source Insights crédibilise (donnée propriétaire) ; Sérénité rend l'écosystème *collant*. **L'actif défendable = la flotte (N marques dans un substrat unifié) + la trace (hash-chain + score).**
+
+| Pilier (PDF, ™) | Fonction | Ancrage repo / Neter |
+|---|---|---|
+| **Impulsion™** | Conseil stratégique (Audit Express, Workshop, Retainer/CMO délégué) — porte d'entrée premium | Oracle + funnel intake→Oracle ; **Artemis/Neith** (briefs) |
+| **Pilotis™** | Gestion de projets déléguée (chef de projet, COO créatif, QA) | Mission/Deal + `/console/operations` ; **Mestor/Sia** orchestre, **Imhotep** crew |
+| **Source Insights™** | Veille / intelligence de marché (baromètres, rapports, abonnement, sur-mesure) | **Seshat** + **Tarsis/Shaï** + **Argos/Per-Ankh** |
+| **La Guilde™** | Marketplace de talents curatés (**CORE** freelances / **EXTENDED** agences / **RÉSEAU** spécialisés) | portail public `/LaGuilde` (**Imhotep**) |
+| **Sérénité™** | Conciergerie admin & financière (portage/EoR, facturation, **escrow**, contrats, paiements) | **Thot** (Operations) + mobile money + Credentials Vault |
+
+**+ La plateforme SaaS/Marketplace** qui orchestre les 5 piliers = **La Fusée** (l'Industry OS ; dans les PDF : « plateforme mobile-first » / « ADVE Studio »).
+
+---
+
+## §8 — La Fusée : ce qui **se vend** vs ce qui est **invisible** + portails + pricing
+
+**5 portails** (blueprint §0.11) :
+
+| Portail | Pont | Acteur | Vendu ? |
+|---|---|---|---|
+| **Cockpit** | pont du founder | propriétaire de marque (pilote SA mission) | **OUI — abonnement** (c'est *la* vente de La Fusée côté produit) |
+| **Console** | Mission Control | opérateurs UPgraders / agences filles | **Jamais vendu** (interne) |
+| **Crew Quarters** (Creator + Agency) | quartiers passagers | talents freelance + agences | accès embarquement |
+| **Launchpad** (Intake) | tour de lancement | visiteur public en qualification | **gratuit** (porte du funnel) |
+| **Argos** | vitrine + observatoire | public éditorial + oracle économique | sous-marque visible |
+
+**Ce qui se vend (face client) :** abonnement **Cockpit**, **Oracle** (diagnostic dynamique 35 sections), **PDF d'intake**, score, livrables (BrandAsset.kind). **Ce qui est invisible :** l'OS, les **7 Neteru**, la **Sève/Yggdrasil**, les Glory tools, NSP, IntentEmission.
+
+**Pricing canon (blueprint §1.3/§2, doctrine capture-then-grow) :**
+- **Intake = gratuit** (la reconnaissance ne se paie pas).
+- **PDF Oracle = 5-25k FCFA** (« le prix d'un bon repas »).
+- **Embarquement (1ᵉʳ abonnement Cockpit) = 15-25k FCFA/mois** en zone Dakar-Abidjan.
+- Le **paywall de conversion = un rituel d'ignition** (le 1ᵉʳ `OPERATOR_AMEND` : le founder déclare prendre sa marque au sérieux), pas une transaction Netflix.
+- Prix **localisé par zone** (Thot formula engine + Seshat zone-indices) — Dakar ≠ Libreville. **Jamais** de grille FCFA statique ; **jamais** imposer USD/Stripe (sauf international). Un commercial **n'annonce pas de prix ferme hors mandat** → `/pricing` ou escalade.
+
+---
+
+## §9 — EFR / obligation d'effet (le repositionnement commercial — Cahier des Charges Ch.1)
+
+La rupture commerciale n°1 — *l'agence à obligation d'effet* :
+
+- **EFR = État Final Recherché** : *« On ne vend pas des moyens, on vend un état final mesuré »* = palier visé **+** score cible **+** horizon. Gelés et hash-chaînés à la signature.
+- **Obligation d'effet tracé** (composite) : **résultat ferme** sur ce que l'Agence contrôle ; **effort intégralement prouvé** (hash-chain) sur ce qu'elle co-détermine. L'effort cesse d'être une allégation → grandeur **auditée**.
+- **Score cible S\*** par défaut = seuil d'entrée du palier visé : **FRAGILE 80 · ORDINAIRE 100 · FORTE 120 · CULTE 160 · ICONE 180** (sur 200).
+- **ICP (Indice de Co-Pilotage)** : mesure la co-responsabilité (l'effet dépend aussi du founder/du marché).
+- **Constat d'échec calculé, pas négocié** (score + hash-chain) ; **4 recours** (remédiation / renégociation du cap / geste / sortie). **Loi 1** : l'altitude acquise reste acquise — un échec interrompt une trajectoire, il ne rembobine pas la marque.
+- Le moat : **la flotte + la trace** (pas les Glory tools). 7 ruptures : *agence à obligation d'effet · marque comme actif auditable · miroir sectoriel vivant · communauté possédée · curseur de délégation · marketing-patrimoine · Coalition Stellaire.*
+
+---
+
+## §10 — Méthode ADVE/RTIS, APOGEE, paliers, score
+
+- **ADVE (PDF) = Architecture Divine des Expériences** : **A**uthenticité · **D**istinction · **V**aleur · **E**ngagement, /50 chacun → **score /200**.
+- **Repo = cascade ADVE-RTIS à 8 piliers A→D→V→E→R→T→I→S** (R=Risk, T=Track, I=Innovation, S=Strategy). **3 stages rocket** : Booster (A+D+V+E), Mid (R+T), Upper (I+S). **ADVE = noyau mutable** (`OPERATOR_AMEND_PILLAR` seul) ; **RTIS = couronne dérivée** (non éditable).
+- **APOGEE** = framework de pilotage de trajectoire (8 sous-systèmes, 3 Lois + Loi 4). Pas un dieu, pas une maison — le **point culminant d'orbite**.
+- **6 paliers d'orbite culturelle** : LATENT → FRAGILE → ORDINAIRE → FORTE → CULTE → **ICONE**.
+- **9 archétypes (BrandNature / familles de poussière)** : PRODUCT · SERVICE · CHARACTER_IP · FESTIVAL_IP · MEDIA_IP · RETAIL_SPACE · PLATFORM · INSTITUTION · PERSONAL. Même framework, sous-systèmes adaptés à l'archétype.
+- **Satellisation organique** : chaque marque-cliente = un **satellite isomorphe** (son propre noyau ADVE, sa couronne RTIS, sa Sève-satellite, ses 7 Neteru tenant-scopés). **Connexion (Sève-mère), pas fusion.** Aucune valeur métier ne fuit entre satellites (isolation tenant default-deny).
+
+---
+
+## §11 — La Doctrine du Mouvement Cosmique (blueprint §0.13)
+
+1. **UPgraders = Agence Spatiale Industrielle** — industrialise la production de **marchés** (flotte de N satellites en orbites diverses ; véhicule en série, mission unique, façon SpaceX).
+2. **Superfans = Équipage de Propagation** — pas une audience achetée, des **équipiers** qui propagent la mythologie par conviction. **Devotion Ladder = hiérarchie d'équipage (6 paliers)** : **Spectateur → Intéressé → Participant → Engagé → Ambassadeur → Évangéliste** (commandant de mission satellite, propage en autonomie). Le founder = **premier équipier enrôlé** (pas premier client).
+3. **Coalition Stellaire** — plusieurs marques ICONE **coordonnées dans la même direction** rendent le basculement de l'**Overton** sectoriel **irréversible** (Apple+Sony+B&O… ; Patagonia+North Face+REI…). Convergence structurelle, pas cartel. Le **client ultime de La Fusée = l'industrie créative africaine francophone** elle-même. UPgraders **organise** ces coalitions (Argos cartographie · signal pool via Sève-mère · véhicule commun).
+
+> **Superfans & Overton ne sont pas des KPIs** — ce sont les **mécaniques pivots** (masse d'équipage + axe culturel). Anubis a un KPI proxy : le **coût par superfan recruté**.
+
+---
+
+## §12 — LES « ARBRES » : désambiguïsation complète (le cœur de l'erreur)
+
+Le mot « arbre » désigne **sept** choses distinctes à travers les deux couches de canon. **Ne jamais les confondre.** (Le blueprint §0.7 désigne lui-même cette confusion comme « le drift le plus tenace ».)
+
+| # | « Arbre » | Couche | Appartient à | Sert à | C'est… |
+|---|---|---|---|---|---|
+| 1 | **Arbre de VENTE d'UPgraders** | opérationnel | UPgraders (l'agence) — **Plan commercial** | qualifier → vendre → capturer le lead → escalader | `sales-response-tree` (PR #277). **Vend La Fusée (Cockpit/Oracle) ET le reste de l'offre.** Instrument commercial. |
+| 2 | **Cascade ADVE-RTIS** | les deux | La Fusée (méthode) — **Plan intellectuel** | construire la marque d'un client (A→S) | la méthode propulsive. Mutée via `OPERATOR_AMEND_PILLAR`. **Pas un script de vente.** |
+| 3 | **Brand Tree** | les deux | La Fusée (produit) — un **satellite** | structurer le portfolio d'un client (`archétype → VENTURE_DIVISION → PROJECT → DELIVERABLE → INSTANCE`) | l'arbre-miniature **isomorphe** de la marque-cliente. C'est l'**Ished au niveau satellite**. |
+| 4 | **L'Arbre (Ished)** | conceptuel | La Fusée **entière** (image-monde) | métaphore ombrelle de l'organisme | l'arbre sacré des annales (Héliopolis). Tronc+branches = **l'architecture** (APOGEE + 7 Neteru, qui *décide*). Ex-Yggdrasil. |
+| 5 | **La Sève** | les deux | substrat **ungouverné** | faire **circuler** la valeur (ne décide rien) | 7 racines (Intent bus, hash-chain, NSP, pillar cascade, RAG, tenant isolation, layering). = **Yggdrasil** côté code. **Pas un arbre décisionnel, pas un Neter.** |
+| 6 | **Funnel AARRR** | opérationnel | La Fusée (OS) + UPgraders (acquisition) | mesurer Acquisition/Activation/Rétention/Revenue/Référral | `CampaignAARRMetric` / `aarrStage`. L'arbre de vente **vise** un AARRR ; il n'**est** pas le funnel. |
+| 7 | **Arbre de décision d'échec EFR** | conceptuel | UPgraders (contrat) | trancher le recours quand l'EFR n'est pas atteint | Cahier des Charges §1.7 (Artefact C). Un arbre **contractuel**, pas un script de vente ni une méthode. |
+
+**Conséquence pour `sales-response-tree` :** c'est **l'arbre #1** (Plan commercial). Il **vend La Fusée explicitement** (Cockpit/Oracle = produits, pas tabous) **et** les autres piliers ; il ne se présente **jamais** comme #2/#3/#4 (construction de marque) ni comme un livrable produit ; il garde l'OS/les Neteru/la Sève **hors** du discours client.
+
+---
+
+## §13 — Lexique anti-drift (paires à ne jamais confondre)
+
+- **UPgraders** (vendeur/agence/Agence Spatiale) ≠ **La Fusée** (produit/OS) ≠ **Argos** (sous-marque éditoriale).
+- **« Vendre La Fusée »** = vendre **Cockpit/Oracle/accès** (OK) ≠ **« exposer l'OS / les Neteru / la Sève »** au client (interdit).
+- Les **7 arbres** de §12 — chacun distinct.
 - **Cockpit** (portail client, vendu) ≠ **Console** (portail interne, jamais vendu).
-- **Client** (payeur) ≠ **Client final** (consommateur cible de la marque du client).
-- **Oracle** = **un** livrable notable parmi N ≠ « le moteur » (le moteur = l'OS/les Neteru).
-- **La Guilde** (marketplace talents, publique) ≠ **Imhotep** (le Neter interne qui l'orchestre).
-- **Source Insights / Argos** (veille, vendable) ≠ **Seshat/Tarsis** (les composants internes).
-- **Impulsion/Pilotis/Sérénité** (noms **commerciaux** des piliers) ≠ leurs implémentations repo
-  (Oracle/Artemis, Mission/Imhotep, Thot).
+- **Client** (payeur) ≠ **client final** (cible de la marque du client).
+- **Oracle** = livrable du **Plan analytique** (savoir), **vendable** ≠ « le moteur » (= l'OS).
+- **Plan opérationnel** (faire / campagnes) ≠ **Plan commercial** (vendre / missions) ≠ **Plan analytique** (savoir / Oracle).
+- **Noms de code** (Mestor/Artemis/Tarsis/Hunter/Yggdrasil/Jehuty) ≠ **noms de doctrine** (Sia/Neith/Shaï/Wepwawet/Sève/Notoria) — cf. §3. **Dans le code : opérationnel. Dans la doctrine : conceptuel.**
+- **Sève / Yggdrasil** = substrat **ungouverné** (circule) ≠ **Sia/Mestor** (décide). Substrat ≠ governor.
+- **EFR** (état final vendu) ≠ moyens (ce qu'on ne vend plus).
+- **Superfans / Overton** = mécaniques pivots ≠ KPIs.
+- **Impulsion/Pilotis/Source Insights/La Guilde/Sérénité** (noms **commerciaux** ™ des piliers) ≠ leurs implémentations (Oracle/Artemis, Mission/Imhotep, Seshat, `/LaGuilde`, Thot).
 
 ---
 
-## §12 — 100 Questions / Réponses
+## §14 — 100 Questions / Réponses
 
-### A. Identité & frontières (1–15)
+### A. Identité & frontières (1–12)
 
-1. **Q : Qu'est-ce qu'UPgraders ?** — R : La **société / l'agence** (conciergerie créative) fondée
-   par Alexandre Djengue à Douala ; elle se veut le « Système d'Exploitation de l'Économie
-   Créative » d'Afrique francophone. **C'est le vendeur.**
-2. **Q : Qu'est-ce que La Fusée ?** — R : Le **produit / l'Industry OS** construit et opéré par
-   UPgraders, qui incarne la méthode ADVE/RTIS. Moteur invisible **+** face client vendable
-   (Cockpit/Oracle).
-3. **Q : Qu'est-ce qu'Argos ?** — R : La **sous-marque éditoriale** (*Argos by La Fusée*), récolte
-   de références/veille, sous-domaine de Seshat. Ni société, ni OS.
-4. **Q : Quelle est la hiérarchie d'identité ?** — R : **UPgraders > La Fusée > Argos.**
-5. **Q : La Fusée se vend-elle ?** — R : **Oui** — sa face client (Cockpit, Oracle, PDF, score).
-   Son **moteur** (OS, Neteru) reste invisible. Ne jamais dire « on ne vend pas La Fusée ».
-6. **Q : Que vend exactement le commercial quand il vend La Fusée ?** — R : Un **abonnement
-   Cockpit**, un **Oracle**, un **PDF d'intake**, l'accès à un score qui progresse — *la valeur et
-   l'accès*, pas la plomberie.
-7. **Q : Le commercial doit-il parler des Neteru / de l'OS au client ?** — R : **Non.** Le jargon
-   OS (Mestor, Artemis, Glory tools…) est **interne**. Au client : valeur, livrables, résultats.
-8. **Q : UPgraders ne vend-il que La Fusée ?** — R : **Non.** Il vend La Fusée **ET** le conseil
-   (Impulsion), la gestion de projet (Pilotis), les talents (La Guilde), l'admin/finance
-   (Sérénité), la veille (Source Insights), certifications, events.
-9. **Q : Quelle est l'erreur d'identité classique ?** — R : Confondre l'**agence** (UPgraders) avec
-   le **produit** (La Fusée), ou croire que La Fusée « ne se vend pas ».
-10. **Q : « Industry OS » ou « plateforme » ?** — R : **Industry OS** (codé comme tel). Jamais
-    « LaFusee OS » ni « plateforme ».
-11. **Q : Qui voit La Fusée comme un OS ?** — R : Personne côté client. L'OS est **invisible** ;
-    le client voit le **Cockpit**.
-12. **Q : Cockpit vs Console ?** — R : **Cockpit** = portail des marques fondateurs (vendu).
-    **Console** = portail interne UPgraders (jamais vendu).
-13. **Q : Quel est le positionnement d'UPgraders ?** — R : **Premium curated** — l'opposé de
-    Fiverr/Upwork (course au moins-disant) ; proche de Malt en sélectivité, mais **piloté par le
-    conseil** (*consulting-led marketplace*).
-14. **Q : « Client » vs « client final » ?** — R : **Client** = le payeur. **Client final** = le
-    consommateur cible de la marque du client.
-15. **Q : Pourquoi « le modèle devient la marque » ?** — R : Le nom « Upgrade » est générique
-    (beaucoup d'homonymes) ; c'est le **modèle unique** (conciergerie créative / écosystème) qui
-    distingue UPgraders.
+1. **UPgraders, c'est quoi ?** — La société/agence — *« l'Agence Spatiale Industrielle »* — qui **vend et opère** La Fusée. Fondée par Alexandre Djengue (Douala).
+2. **La Fusée, c'est quoi ?** — Le **produit / l'Industry OS** d'UPgraders (le véhicule reproductible). Incarne ADVE/RTIS.
+3. **Argos, c'est quoi ?** — La **sous-marque éditoriale visible** (vitrine + oracle économique public) ; façade publique de Per-Ankh (sous-domaine Seshat). Seul nom grec.
+4. **NEFER ?** — L'**opérateur** (humain senior ou agent IA) qui sert les Neteru. **Pas un Neter.**
+5. **La hiérarchie d'identité ?** — UPgraders > La Fusée > Argos.
+6. **La Fusée se vend-elle ?** — **Oui**, sa face client (Cockpit/Oracle/PDF/score). Seul son moteur (OS/Neteru/Sève) est invisible. Ne jamais dire « on ne vend pas La Fusée ».
+7. **Que vend le commercial quand il vend La Fusée ?** — Un **abonnement Cockpit**, un **Oracle**, un **PDF**, l'accès au score — la valeur et l'accès, pas la plomberie.
+8. **Le commercial cite-t-il les Neteru/l'OS au client ?** — **Non.** Jargon interne. Au client : valeur, livrables, résultats.
+9. **UPgraders ne vend-il que La Fusée ?** — **Non** : La Fusée **ET** conseil (Impulsion), projet (Pilotis), talents (La Guilde), admin/paiements (Sérénité), veille (Source Insights), certif, events.
+10. **« Industry OS » ou « plateforme » ?** — **Industry OS** (codé comme tel). Jamais « plateforme » ni « LaFusee OS ».
+11. **Cockpit vs Console ?** — **Cockpit** = portail client (vendu). **Console** = Mission Control interne (jamais vendu).
+12. **Le positionnement ?** — **Premium curated** (≠ Fiverr/Upwork) ; *consulting-led marketplace*.
 
-### B. Le fondateur & l'origine (16–23)
+### B. Couches de canon & nommage (13–22)
 
-16. **Q : Qui a fondé UPgraders ?** — R : **Alexandre Djengue**, alias **« Xtincell »**, à Douala
-    (Cameroun).
-17. **Q : D'où vient « Xtincell » ?** — R : D'une « claque d'humilité » — *« nous ne sommes
-    qu'étincelle dans le brasier qu'est l'univers »* (ancien pseudo : « Brazier »).
-18. **Q : Quel est le profil d'Alexandre ?** — R : Polymathe — ingénierie (télécoms/réseaux,
-    Cisco) **+** création autodidacte « guidée par mentorat » (Brand Identity, design, photo).
-19. **Q : Quel est son média de leadership d'opinion ?** — R : Le blog **« Geek de brousse »**
-    (*carnet de survie d'un créatif dans la brousse numérique africaine francophone*).
-20. **Q : Quel est l'origin myth d'UPgraders ?** — R : Une agence de marketing digital classique
-    qui **pivote** vers la « conciergerie créative » pour combler les frictions du marché.
-21. **Q : Quelles frictions Alexandre a-t-il publiquement citées ?** — R : Immaturité du marché,
-    méfiance des clients envers les talents locaux, absence de « plateau technique » de soutien.
-22. **Q : Comment le modèle répond-il à ces frictions ?** — R : Portage + garanties mutuelles
-    (contre l'immaturité/méfiance) ; soutien projet/DA/admin (le « plateau technique » manquant).
-23. **Q : Y a-t-il un risque d'homonymie ?** — R : Oui — `upgraderz.com`, `upgrademg.com` (MMA),
-    `upgrade.paris`, etc. **n'ont aucun lien** avec UPgraders d'Alexandre Djengue.
+13. **Quelles sont les 3 couches de canon ?** — PDF (base/offre), repo `ADVE-project` (**opérationnel**, prime pour le code), repo `la-fusee-blueprint` (**conceptuel**, prime pour la doctrine/le nommage).
+14. **Si le PDF et le repo divergent ?** — **Le repo gagne** (ex. pricing FCFA, plans Cockpit).
+15. **Pour écrire du code, quel nommage ?** — L'**opérationnel** : Mestor, Artemis, Tarsis, Hunter, Yggdrasil, Jehuty, Argos.
+16. **Pour la doctrine, quel nommage ?** — Le **conceptuel v3.3** : Sia, Neith, Shaï, Wepwawet, Sève/Ished, Notoria, Per-Ankh.
+17. **Sia = ?** — **Mestor** (Guidance, dispatcher d'Intent unique).
+18. **Neith = ?** — **Artemis** (Propulsion phase brief).
+19. **Shaï / Wepwawet = ?** — **Tarsis** (signaux faibles) / **Hunter** (récolte de références Argos).
+20. **Yggdrasil = ?** — Dans la doctrine : dissous en **l'Arbre (Ished)** + **la Sève**. Dans le code : **Yggdrasil** (substrat ungouverné).
+21. **Notoria = ?** — **Jehuty** (catalogue des amendements scorés ; deux étages côté doctrine).
+22. **Le nommage v3.3 est-il dans le code ?** — **Non** — scellé en doctrine, **pas encore migré**. Ne pas utiliser « Sia » dans le code.
 
-### C. Le problème de marché (24–31)
+### C. Le fondateur (23–28)
 
-24. **Q : Quel est le « double déficit » du marché ?** — R : Déficit de **confiance** (entreprises)
-    + déficit de **compétences structurantes** (talents).
-25. **Q : Quelle est la vraie opportunité ?** — R : **Fabriquer la confiance** (sélection +
-    formation + pilotage + cadre sécurisé), pas seulement connecter offre & demande.
-26. **Q : Pourquoi Fiverr/Upwork échouent en Afrique ?** — R : Course aux prix, qualité hétérogène,
-    commissions prohibitives, et surtout **frictions de paiement** (devises, blocages, pas de
-    PayPal/Stripe).
-27. **Q : Quel moyen de paiement est incontournable ?** — R : Le **Mobile Money** (Wave, Orange
-    Money, MTN MoMo, Moov).
-28. **Q : Quels cadres légaux structurent l'activité ?** — R : **OHADA** (affaires, signature
-    électronique), **OAPI** (propriété intellectuelle, 17 États), **BCEAO/UEMOA** (agréments
-    paiement).
-29. **Q : Quel mécanisme financier sécurise les transactions ?** — R : L'**escrow** (séquestre) :
-    fonds gelés jusqu'à validation du livrable (pilier Sérénité).
-30. **Q : Quel est le marché adressé ?** — R : **Afrique francophone** (Ouest + centrale) :
-    Côte d'Ivoire, Sénégal, Cameroun, Bénin, Burkina, Togo… ; mobile-first.
-31. **Q : Pourquoi la conformité réglementaire est-elle une force, pas un coût ?** — R : Elle est
-    **difficile à répliquer** → barrière à l'entrée + tranquillité d'esprit pour les grands comptes
-    (« conformité marketing »).
+23. **Qui a fondé UPgraders ?** — **Alexandre Djengue**, alias **« Xtincell »**, Douala.
+24. **Origine de « Xtincell » ?** — *« Nous ne sommes qu'étincelle dans le brasier qu'est l'univers »* (ex-« Brazier »).
+25. **Son profil ?** — Polymathe : ingénierie (télécoms/Cisco) × création (Brand Identity, design, photo).
+26. **Son média d'influence ?** — Le blog **« Geek de brousse »**.
+27. **L'origin myth ?** — Agence digitale → pivot « conciergerie créative » → Agence Spatiale Industrielle. *Le modèle devient la marque.*
+28. **La devise ?** — *« De la poussière à l'étoile. »*
 
-### D. Le modèle économique & le Flywheel (32–40)
+### D. Marché & doctrine de capture (29–35)
 
-32. **Q : Quelle est la nature du modèle ?** — R : **Hybride Conseil × Marketplace × SaaS**,
-    auto-renforçant (flywheel).
-33. **Q : Décris le flywheel.** — R : Impulsion attire des clients → projets de qualité →
-    alimentent La Guilde → attirent les talents → renforcent la crédibilité → (re)nourrissent
-    Impulsion ; Source Insights crédibilise ; Sérénité rend l'écosystème *sticky*.
-34. **Q : Quel est l'« actif propriétaire » ?** — R : Les **données** générées par chaque mission/
-    transaction → barrière à l'entrée impossible à répliquer (alimente Source Insights).
-35. **Q : Quelle est la porte d'entrée premium ?** — R : **Impulsion** (le conseil) — pas
-    l'exécution. *« Preuve par le conseil. »*
-36. **Q : Comment amorcer la marketplace (œuf/poule) ?** — R : *Focus on one side first* : agréger
-    les talents, et UPgraders est **son propre premier client** (les missions Impulsion/Pilotis
-    amorcent la demande).
-37. **Q : Quelles sont les LTV cibles ?** — R : SMB 30k–80k (2-3 ans) ; Corporate 150k–500k (3-5
-    ans) ; top 10 % 1M+. *(Devise doc ; repo = FCFA.)*
-38. **Q : Quel est l'objectif north-star (repo) ?** — R : Transformer les marques en **icônes
-    culturelles** via l'accumulation de **superfans** qui déplacent la fenêtre d'**Overton**.
-39. **Q : Superfans et Overton sont-ils des KPIs ?** — R : **Non** — ce sont des **mécanismes
-    pivots** (masse stratégique + axe culturel sectoriel), pas des compteurs.
-40. **Q : Quel inspirateur de modèle est cité ?** — R : L'écosystème **Adobe** (SaaS + marketplace
-    d'actifs + services + collaboration → valeur exponentielle, forte rétention).
+29. **Le double déficit ?** — Confiance (entreprises) + compétences structurantes (talents).
+30. **La vraie opportunité ?** — **Fabriquer la confiance** (sélection + formation + pilotage + cadre sécurisé), pas seulement connecter offre & demande.
+31. **Le marché-monde ?** — Afrique francophone (UEMOA + CEMAC + diaspora), mobile-first.
+32. **La devise ? Le paiement ?** — **FCFA** ; **mobile money** (Wave/Orange/MTN/Moov). Jamais USD/Stripe imposé.
+33. **`capture-then-grow` ?** — Capturer les **forts potentiels à faible pouvoir d'achat** (pas les corporates riches, qui restent chez Deloitte/BCG/McKinsey), grandir avec eux. *Crossing the Chasm.*
+34. **Quels cadres légaux ?** — OHADA (affaires/signature), OAPI (PI), BCEAO/UEMOA (paiement).
+35. **L'escrow ?** — Séquestre : fonds gelés jusqu'à validation du livrable (Sérénité / Thot Operations).
 
-### E. Les 5 piliers (41–55)
+### E. Les 5 Plans ontologiques (36–43)
 
-41. **Q : Quels sont les 5 piliers commerciaux ?** — R : **Impulsion™** (conseil), **Pilotis™**
-    (gestion projet), **Source Insights™** (veille), **La Guilde™** (talents), **Sérénité™**
-    (admin/finance).
-42. **Q : Que fait Impulsion ?** — R : Conseil stratégique premium : Audit Express, Workshop
-    complet, Stratégie continue (retainer). Pose le cadre + la confiance.
-43. **Q : Que fait Pilotis ?** — R : Gestion de projet déléguée : chef de projet dédié, COO
-    créatif délégué, QA, reporting. Transforme la stratégie en exécution suivie.
-44. **Q : Que fait Source Insights ?** — R : Veille / intelligence de marché : baromètres
-    sectoriels, rapports ponctuels, abonnement, études sur-mesure. Capitalise la donnée
-    propriétaire.
-45. **Q : Que fait La Guilde ?** — R : Marketplace **curatée** de talents : sélection, formation,
-    certification, mise en relation. **3 catégories** : CORE / EXTENDED / RÉSEAU.
-46. **Q : CORE vs EXTENDED vs RÉSEAU ?** — R : **CORE** = freelances individuels (portage Sérénité,
-    TJM) ; **EXTENDED** = agences/studios (B2B, forfait projet, pas de portage) ; **RÉSEAU** =
-    prestataires spécialisés (referral, commission).
-47. **Q : Que fait Sérénité ?** — R : Conciergerie admin/finance : **portage salarial/EoR**,
-    facturation, **escrow**, contrats (NDA/cession de droits), paiements **mobile money**.
-48. **Q : Quel pilier est la porte d'entrée ?** — R : **Impulsion** (le conseil génère les leads
-    qualifiés pour Pilotis et crédibilise tout l'écosystème).
-49. **Q : Quel pilier est le « cœur opérationnel » ?** — R : **La Guilde** (la capacité
-    d'exécution qui délivre les promesses des autres piliers).
-50. **Q : Quel pilier est le plus critique/complexe ?** — R : **Sérénité** (contractualisation +
-    paiement + portage → garant de la confiance ; navigue l'incertitude légale).
-51. **Q : Quel pilier crée l'actif de données ?** — R : **Source Insights**, alimenté par tous les
-    autres piliers.
-52. **Q : Où vivent les 5 piliers dans le repo ?** — R : Impulsion→Oracle/Artemis ;
-    Pilotis→Mission/Imhotep/`/console/operations` ; Source Insights→Seshat/Tarsis/Argos ;
-    La Guilde→`/LaGuilde` (Imhotep) ; Sérénité→Thot + mobile money + Credentials Vault.
-53. **Q : Quel risque opérationnel #1 ?** — R : Une **défaillance qualité** d'un livrable Guilde
-    (un seul projet raté discrédite tout) → QA non-négociable dans Pilotis.
-54. **Q : Les piliers sont-ils indépendants ?** — R : **Non** — ce sont les engrenages d'un
-    flywheel ; la défense du modèle vient de leur **intégration**, pas d'un pilier isolé.
-55. **Q : Le client entre-t-il toujours par Impulsion ?** — R : **Non** — parcours non linéaire :
-    il peut entrer par Source Insights (abonnement), puis Impulsion, puis Pilotis+Guilde
-    (up/cross-sell).
+36. **Quels sont les 5 plans ?** — Intellectuel (penser), Matériel (montrer), Opérationnel (faire), **Commercial (vendre)**, Analytique (savoir).
+37. **Plan intellectuel ?** — Le **brief** ; producteur **Neith/Artemis** (conçoit).
+38. **Plan matériel ?** — L'**asset** ; producteur **Ptah** (forge).
+39. **Plan opérationnel ?** — La **campagne + action** ; Sia/Mestor orchestre, Anubis adresse.
+40. **Plan commercial ?** — La **mission + le livrable** (cargaison payante) ; Imhotep crew, Thot facture, qc-router juge.
+41. **Plan analytique ?** — Le **rapport + l'Oracle** ; Seshat observe, sequences DERIVED assemblent.
+42. **Où vit l'arbre de vente ?** — Dans le **Plan commercial** (vendre).
+43. **L'Oracle est dans quel plan ? Se vend-il ?** — Plan **analytique** (savoir) ; **oui, il se vend** (cargaison payante).
 
-### F. La Fusée (l'OS) (56–70)
+### F. Modèle économique & 5 piliers (44–54)
 
-56. **Q : La Fusée est-elle un pilier ?** — R : **Non** — c'est la **plateforme SaaS/Marketplace**
-    qui **orchestre** les 5 piliers (l'OS). Dans les documents : « la plateforme technologique » /
-    « ADVE Studio ».
-57. **Q : Quels sont les 4 portails de La Fusée ?** — R : **Console** (interne UPgraders),
-    **Cockpit** (clients fondateurs), **Agency** (partenaires), **Creator** (freelances) ; +
-    **Intake** public.
-58. **Q : Lequel est « ce que le client voit » ?** — R : Le **Cockpit**.
-59. **Q : Lequel n'est jamais vendu ?** — R : La **Console** (Mission Control, interne).
-60. **Q : Qu'est-ce que l'Oracle ?** — R : Un livrable de conseil **dynamique et modulaire** (35
-    sections, 3 tiers) qui s'auto-met à jour. **Un** livrable notable **parmi N** — notable par la
-    taille, pas par le statut.
-61. **Q : L'Oracle est-il « le produit » ?** — R : **Non** — c'est un *output* notable, pas le
-    moteur. Le moteur = l'OS + les Neteru.
-62. **Q : Combien de Neteru, et sont-ils vendus ?** — R : **7 Neteru** (Mestor, Artemis, Seshat,
-    Thot, Ptah, Imhotep, Anubis) — **internes, invisibles, jamais « vendus »**.
-63. **Q : Qu'est-ce qu'un « Glory tool » / outil Artemis ?** — R : Un **skill d'agent** (prompt/
-    capacité) interne à La Fusée, codé comme `GloryToolDef`. `sales-response-tree` en est un.
-64. **Q : Le commercial manipule-t-il les Glory tools devant le client ?** — R : **Non** — ce sont
-    des rouages internes. Le commercial peut en **utiliser** un (ex. l'arbre de vente) en coulisse.
-65. **Q : Qu'est-ce que le funnel public Intake ?** — R : La **Launchpad** : lead → PDF d'intake →
-    paywall → `/cockpit/new` (ignition). C'est la porte d'acquisition côté produit.
-66. **Q : Qu'est-ce que `/LaGuilde` dans le repo ?** — R : Le **portail public** du marketplace
-    crew (face publique d'Imhotep) : mur des missions, dépôt marque, inscription talent. **Pas un
-    nouveau Neter.**
-67. **Q : La Fusée est-elle visible pour le client final ?** — R : **Non** — elle est invisible.
-    Le client voit le Cockpit/Oracle ; le client **final** voit la marque du client.
-68. **Q : Quelle est l'architecture canon de l'OS ?** — R : **8 couches**
-    (Kernel/Drivers/Protocoles/Substrats/Services/APIs/Apps/Funnel) — ADR-0084.
-69. **Q : Qu'est-ce qu'APOGEE ?** — R : Le **framework** de propulsion/guidance qui pilote les
-    marques de LATENT à **ICÔNE** (6 tiers), avec 3 Lois de trajectoire.
-70. **Q : Quel est le plafond Neteru ?** — R : **7/7** (cap APOGEE atteint). Aucune feature ne doit
-    ajouter un 8ᵉ Neter.
+44. **La nature du modèle ?** — Hybride **Conseil × Marketplace × SaaS**, flywheel auto-renforçant.
+45. **L'actif défendable (le moat) ?** — **La flotte + la trace** (N marques dans un substrat unifié + hash-chain/score). Pas les Glory tools.
+46. **Les 5 piliers ?** — **Impulsion** (conseil), **Pilotis** (projet), **Source Insights** (veille), **La Guilde** (talents), **Sérénité** (admin/finance).
+47. **Impulsion ?** — Conseil premium (Audit/Workshop/Retainer/CMO délégué) ; porte d'entrée.
+48. **Pilotis ?** — Gestion de projet déléguée (chef de projet, COO créatif, QA).
+49. **Source Insights ?** — Veille/intelligence de marché (baromètres, rapports, abonnement, sur-mesure).
+50. **La Guilde — 3 catégories ?** — **CORE** (freelances, portage), **EXTENDED** (agences, B2B forfait), **RÉSEAU** (spécialisés, referral).
+51. **Sérénité ?** — Admin/finance : portage/EoR, facturation, **escrow**, contrats, mobile money.
+52. **Où vivent les piliers dans le repo ?** — Impulsion→Oracle/Artemis ; Pilotis→Mission/Imhotep/`/console/operations` ; Source Insights→Seshat/Tarsis/Argos ; La Guilde→`/LaGuilde` (Imhotep) ; Sérénité→Thot (Operations).
+53. **Le flywheel en une phrase ?** — Impulsion attire → projets → La Guilde → talents → crédibilité → Impulsion ; Source Insights crédibilise ; Sérénité rend *collant*.
+54. **La Fusée est-elle un pilier ?** — **Non** — c'est la **plateforme/OS** qui **orchestre** les 5 piliers.
 
-### G. La méthode ADVE/RTIS (71–78)
+### G. La Fusée, portails, pricing (55–66)
 
-71. **Q : Que signifie ADVE (documents) ?** — R : **Architecture Divine des Expériences** :
-    **A**uthenticité, **D**istinction, **V**aleur, **E**ngagement.
-72. **Q : Et dans le repo ?** — R : Cascade **ADVE-RTIS** à 8 piliers **A→D→V→E→R→T→I→S**
-    (R=Risk, T=Track, I=Innovation, S=Strategy).
-73. **Q : Comment se calcule le score (documents) ?** — R : 4 piliers × /50 = **/200** ; tiers
-    Zombie→Ordinaire→Forte→Culte→**Icône**.
-74. **Q : ADVE vs RTIS — qui est éditable ?** — R : **ADVE = fondations** (mutées par l'opérateur
-    via `OPERATOR_AMEND_PILLAR`) ; **RTIS = dérivés** (jamais édités à la main).
-75. **Q : Les 6 composantes d'Authenticité ?** — R : Le Messie, la Vision, la Mission, les Valeurs,
-    l'Origin Myth, les Compétences Divines.
-76. **Q : Que vise la marque au sommet ?** — R : Le statut d'**Icône** (référence sectorielle,
-    patrimoine, Overton déplacé, superfans en orbite stable).
-77. **Q : ADVE est-il un argumentaire de vente ?** — R : **Non** — c'est la **méthode de
-    construction de marque** (interne produit). Le **score** peut servir d'accroche commerciale (un
-    diagnostic gratuit), mais la cascade elle-même n'est pas un script de vente.
-78. **Q : Pillar vs Brand Tree ?** — R : Les **piliers** (A…S) décrivent la maturité ; le **Brand
-    Tree** décrit la **hiérarchie de marque du client** (archétypes). Deux choses distinctes.
+55. **Combien de portails ?** — **5** : Cockpit, Console, Crew Quarters (Creator+Agency), Launchpad (Intake), Argos.
+56. **Lequel se vend ?** — Le **Cockpit** (abonnement).
+57. **Lequel n'est jamais vendu ?** — La **Console** (Mission Control interne).
+58. **Le Launchpad/Intake ?** — **Gratuit** — la porte du funnel (la reconnaissance ne se paie pas).
+59. **Prix du PDF Oracle ?** — **5-25k FCFA** (« le prix d'un bon repas »).
+60. **Prix du 1ᵉʳ abonnement Cockpit (Embarquement) ?** — **15-25k FCFA/mois** (zone Dakar-Abidjan).
+61. **Le paywall, c'est quoi doctrinalement ?** — Un **rituel d'ignition** (1ᵉʳ `OPERATOR_AMEND`), pas une transaction Netflix.
+62. **Le prix est-il une grille fixe ?** — **Non** — localisé par zone (Thot formula engine + Seshat zone-indices). Dakar ≠ Libreville.
+63. **Le commercial annonce-t-il un prix ferme ?** — **Non hors mandat** → `/pricing` ou escalade.
+64. **Ce qui se vend (face client) ?** — Cockpit, Oracle, PDF, score, livrables.
+65. **Ce qui reste invisible ?** — L'OS, les 7 Neteru, la Sève/Yggdrasil, les Glory tools, NSP.
+66. **Le Cockpit, c'est un dashboard ?** — **Non** — un **pont de pilotage** (altimètre = score /200, tier label, instruments = Glory tools, vault, Notoria).
 
-### H. Pricing & Value Ladder (79–86)
+### H. EFR / obligation d'effet (67–73)
 
-79. **Q : Quels sont les paliers de la value ladder ?** — R : **FREE → TRIPWIRE → CORE → PREMIUM →
-    ULTRA-PREMIUM.**
-80. **Q : Exemple FREE ?** — R : Score ADVE gratuit, newsletter *The Upgrade*, templates,
-    baromètres (résumés).
-81. **Q : Exemple TRIPWIRE ?** — R : Playbook, micro-courses, rapport ponctuel, **Audit Express**.
-82. **Q : Exemple CORE ?** — R : **Certification**, **Workshop complet**, **Cockpit/Pilotis**,
-    missions Guilde, Source Insights Pro.
-83. **Q : Exemple PREMIUM/ULTRA ?** — R : Retainer/CMO délégué, COO créatif, agences EXTENDED,
-    Intelligence sur-mesure ; partenariat annuel, transformation complète, licensing.
-84. **Q : Quelle devise / quel paiement ?** — R : **FCFA + mobile money** (Wave/Orange/MTN/Moov).
-    **Jamais** imposer USD/Stripe. Doctrine **capture-then-grow**.
-85. **Q : Le commercial annonce-t-il un prix ferme ?** — R : **Non hors mandat** — il ancre la
-    **valeur**, renvoie vers `/pricing`, ou **escalade** (négociation hors mandat).
-86. **Q : Comment le prix est-il calculé (repo) ?** — R : Moteur runtime **Thot formula engine +
-    Seshat zone-indices** (par marché/coût de la vie) — **jamais** une grille FCFA statique.
+67. **EFR = ?** — **État Final Recherché** : *on ne vend pas des moyens, on vend un état final mesuré* (palier visé + score cible + horizon).
+68. **C'est quelle innovation ?** — La n°1 : **l'agence à obligation d'effet**.
+69. **Obligation de résultat ou de moyens ?** — **Obligation d'effet tracé** (composite) : résultat ferme sur ce que l'Agence contrôle, effort **prouvé** (hash-chain) sur ce qu'elle co-détermine.
+70. **Score cible par palier ?** — FRAGILE 80 · ORDINAIRE 100 · FORTE 120 · CULTE 160 · ICONE 180 (sur 200).
+71. **L'ICP ?** — Indice de Co-Pilotage : la part de co-responsabilité (founder/marché).
+72. **Que se passe-t-il si l'EFR échoue ?** — Constat **calculé** (score+hash-chain), **4 recours** (remédiation/renégociation/geste/sortie). Loi 1 : l'altitude acquise reste acquise.
+73. **Les 7 ruptures disruptives ?** — Obligation d'effet · marque actif auditable · miroir sectoriel · communauté possédée · curseur de délégation · marketing-patrimoine · Coalition Stellaire.
 
-### I. Qui achète quoi (87–92)
+### I. ADVE/RTIS, APOGEE, archétypes (74–82)
 
-87. **Q : Cœur de cible commercial ?** — R : Le **fondateur / dirigeant de PME** (Cockpit).
-88. **Q : Que vendre à un CMO/corporate ?** — R : Workshop, **Retainer/CMO délégué**, **COO
-    créatif (Pilotis)**, Intelligence sur-mesure, partenariat (ULTRA).
-89. **Q : Que « vendre » à un talent freelance ?** — R : Inscription **La Guilde CORE** + portage
-    Sérénité + Certification. Objectif souvent **indirect** (Acquisition/Activation de l'offre
-    talent).
-90. **Q : Que proposer à une agence/studio ?** — R : **La Guilde EXTENDED** (partenariat B2B,
-    forfait projet).
-91. **Q : Que faire d'un investisseur/presse/partenaire ?** — R : **Pas de vente** → relation →
-    **escalade opérateur**.
-92. **Q : Que faire d'un client existant ?** — R : **Rétention** (révision, nouvelle saison,
-    sections Oracle, missions) + **Référral** (programme parrainage).
+74. **ADVE (PDF) ?** — Authenticité, Distinction, Valeur, Engagement ; /50 → **/200**.
+75. **Repo ?** — Cascade **A→D→V→E→R→T→I→S** (R=Risk, T=Track, I=Innovation, S=Strategy).
+76. **Les 3 stages rocket ?** — Booster (A+D+V+E), Mid (R+T), Upper (I+S).
+77. **ADVE vs RTIS — éditable ?** — ADVE = noyau **mutable** (`OPERATOR_AMEND_PILLAR` seul) ; RTIS = couronne **dérivée**.
+78. **APOGEE ?** — Framework de **trajectoire** (point culminant d'orbite). Pas un dieu, pas une maison.
+79. **Les 6 paliers ?** — LATENT → FRAGILE → ORDINAIRE → FORTE → CULTE → **ICONE**.
+80. **Les 9 archétypes ?** — PRODUCT, SERVICE, CHARACTER_IP, FESTIVAL_IP, MEDIA_IP, RETAIL_SPACE, PLATFORM, INSTITUTION, PERSONAL.
+81. **La satellisation organique ?** — Chaque marque = un **satellite isomorphe** (noyau ADVE, RTIS, Sève, 7 Neteru tenant-scopés). **Connexion (Sève-mère), pas fusion.**
+82. **Les 7 Neteru ?** — Mestor/Sia, Artemis/Neith, Seshat, Thot, Ptah, Imhotep, Anubis. **Cap 7/7.** INFRASTRUCTURE n'est pas un Neter.
 
-### J. Les « arbres » — désambiguïsation (93–100)
+### J. Doctrine du Mouvement Cosmique (83–89)
 
-93. **Q : Quels « arbres » existent ?** — R : (1) l'**arbre de vente d'UPgraders** ; (2) la
-    **cascade ADVE-RTIS** ; (3) le **Brand Tree** client ; (4) le **funnel AARRR**.
-94. **Q : À qui appartient l'arbre de vente ?** — R : À **UPgraders** (l'agence/le vendeur). Il
-    **vend** ; il ne construit pas de marque.
-95. **Q : À qui appartiennent ADVE-RTIS / Brand Tree / funnel ?** — R : À **La Fusée** (le produit/
-    l'OS). Ils **construisent/mesurent la marque d'un client**.
-96. **Q : L'arbre de vente vend-il La Fusée ?** — R : **Oui — explicitement** (Cockpit, Oracle,
-    abonnement) **ET** les autres piliers (conseil, Guilde, Sérénité, Source Insights).
-97. **Q : Quelle était l'erreur de NEFER (2026-06-21) ?** — R : (a) écrire « ne vends pas La
-    Fusée » ; (b) mélanger l'instrument commercial d'UPgraders avec les arbres internes de La
-    Fusée (en l'ancrant comme un livrable produit).
-98. **Q : Comment formuler correctement la consigne au commercial ?** — R : « **Vends la valeur et
-    l'accès** que donne La Fusée (Cockpit/Oracle/score) **et** les services UPgraders ; **n'expose
-    pas** l'OS/les Neteru. »
-99. **Q : `sales-response-tree` est-il un livrable de marque ?** — R : **Non.** C'est un **outil
-    interne d'aide à la vente** (un Glory tool utilisé en coulisse), pas un Oracle/BrandAsset livré
-    au client.
-100. **Q : La règle d'or en une phrase ?** — R : **UPgraders vend ; La Fusée est le produit-phare
-     vendu (et il y en a d'autres) ; l'arbre de vente place les produits, les arbres de La Fusée
-     construisent la marque du client — on ne les confond jamais.**
+83. **Premier principe ?** — UPgraders = **Agence Spatiale Industrielle** (produit un **marché**, pas un client ; une flotte de N satellites).
+84. **Deuxième principe ?** — Superfans = **Équipage de Propagation** (équipiers par conviction).
+85. **La Devotion Ladder (6 paliers) ?** — Spectateur → Intéressé → Participant → Engagé → Ambassadeur → **Évangéliste**.
+86. **Le founder, c'est qui dans l'équipage ?** — Le **premier équipier enrôlé** (pas le premier client).
+87. **Troisième principe ?** — **Coalition Stellaire** : marques ICONE coordonnées → basculement Overton **irréversible**.
+88. **Le client ultime de La Fusée ?** — L'**industrie créative africaine francophone** elle-même.
+89. **Superfans/Overton sont-ils des KPIs ?** — **Non** — mécaniques pivots. (KPI proxy Anubis : coût par superfan recruté.)
+
+### K. Les arbres (90–96)
+
+90. **Combien de « arbres » distincts ?** — **Sept** (§12).
+91. **L'arbre de vente appartient à qui ?** — **UPgraders** (Plan commercial). Il **vend**.
+92. **L'arbre de vente vend-il La Fusée ?** — **Oui, explicitement** (Cockpit/Oracle) **ET** le reste de l'offre.
+93. **Brand Tree = ?** — L'arbre-portfolio d'un **client** (`archétype → VENTURE_DIVISION → PROJECT → DELIVERABLE → INSTANCE`) — l'**Ished au niveau satellite**.
+94. **L'Arbre (Ished) = ?** — L'**image-monde** : La Fusée entière. Tronc+branches = l'architecture (APOGEE + 7 Neteru) qui **décide**.
+95. **La Sève = ?** — Le **substrat** (7 racines) qui **circule** sans décider (= Yggdrasil côté code). **Pas un arbre décisionnel, pas un Neter.**
+96. **L'« arbre de décision d'échec EFR » = ?** — Un arbre **contractuel** (Cahier des Charges §1.7), pas un script de vente ni une méthode.
+
+### L. La faute & sa correction (97–100)
+
+97. **Quelle était l'erreur de NEFER (2026-06-21) ?** — (a) écrire « ne vends pas La Fusée » ; (b) confondre l'arbre de **vente** d'UPgraders avec les arbres **internes** de La Fusée.
+98. **Comment formuler la consigne au commercial ?** — *« Vends la valeur et l'accès que donne La Fusée (Cockpit/Oracle/score) **et** les services UPgraders ; n'expose pas l'OS/les Neteru. »*
+99. **`sales-response-tree` est-il un livrable de marque ?** — **Non** — un **outil interne d'aide à la vente** (Plan commercial), pas un Oracle/BrandAsset livré au client.
+100. **La règle d'or en une phrase ?** — **UPgraders (l'Agence Spatiale) vend ; La Fusée est le véhicule-produit vendu via Cockpit/Oracle (et il y a d'autres offres) ; l'arbre de vente place les véhicules, les sept arbres internes les construisent et les font circuler — on ne les confond jamais.**
 
 ---
 
-*Maintenu par NEFER. Toute correction de vocabulaire/concept canon doit propager dans les sources
-de vérité (CLAUDE.md, LEXICON, STATE_FINAL_BLUEPRINT, PANTHEON) — cf. interdit anti-drift #3.*
+*Maintenu par NEFER. Provenance : 4 PDF UPgraders (base) + canon opérationnel `ADVE-project` + canon
+conceptuel `la-fusee-blueprint` (LA_FUSEE_BLUEPRINT / LIVRE_DE_BORD / CAHIER_DES_CHARGES,
+NAMING_CANON v3.3). Toute correction de vocabulaire canon doit propager dans les sources de vérité —
+interdit anti-drift #3.*
