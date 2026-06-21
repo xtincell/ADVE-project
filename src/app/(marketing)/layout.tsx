@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "La Fusée — Industry OS du marché créatif africain",
-  description: "Diagnostic ADVE-RTIS instantané · score /200 · radar 8 piliers · 7 Neteru actifs (Mestor/Artemis/Seshat/Thot/Ptah/Imhotep/Anubis — cap APOGEE atteint).",
+  description: "Diagnostic ADVE instantané · score de marque /200 · radar 8 piliers · feuille de route stratégique. Gratuit, sans engagement.",
 };
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
