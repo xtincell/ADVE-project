@@ -38,6 +38,8 @@ export type ICatalogue = {
   activationsPossibles: Array<Record<string, unknown>>;
   formatsDisponibles: string[];
   totalActions: number;
+  /** Enveloppe budgétaire DÉTERMINISTE dérivée de V.unitEconomics.budgetCom (jamais inventée par le LLM). */
+  potentielBudget?: Record<string, number>;
 };
 
 const SYSTEM = `Tu es Mestor, le moteur d'intelligence stratégique du framework ADVE-RTIS.
@@ -75,6 +77,38 @@ export function buildContext(pillars: Record<string, unknown>): string {
   return ["A", "D", "V", "E", "R", "T"]
     .map((k) => `[PILIER ${k}]\n${compactPillar(pillars[k])}`)
     .join("\n\n");
+}
+
+const fcfaShort = (n: number) => (n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1000 ? `${Math.round(n / 1000)}k` : String(Math.round(n)));
+
+/**
+ * Bloc de grounding ÉCONOMIQUE + MARCHÉ — chiffres RÉELS de V (budget) et T
+ * (TAM/marché), NON tronqués (≠ compactPillar). Injecté dans chaque appel de
+ * section pour que le catalogue I soit cohérent avec l'enveloppe budgétaire et
+ * le marché réels (pas un blockbuster pour un budget de PME). Retourne aussi le
+ * budgetCom pour le calcul déterministe de potentielBudget.
+ */
+function buildEconomicGrounding(pillars: Record<string, unknown>): { block: string; budgetCom: number | null } {
+  const v = (pillars.V ?? {}) as Record<string, unknown>;
+  const t = (pillars.T ?? {}) as Record<string, unknown>;
+  const ue = (v.unitEconomics ?? {}) as Record<string, unknown>;
+  const budgetCom = typeof ue.budgetCom === "number" && ue.budgetCom > 0 ? ue.budgetCom : null;
+  const caVise = typeof ue.caVise === "number" ? ue.caVise : null;
+  const tam = (t.tamSamSom ?? {}) as Record<string, { value?: unknown }>;
+  const tamVal = typeof tam.tam?.value === "number" ? tam.tam.value : null;
+  const samVal = typeof tam.sam?.value === "number" ? tam.sam.value : null;
+  const bmf = typeof t.brandMarketFitScore === "number" ? t.brandMarketFitScore : null;
+  const mr = (t.marketReality ?? {}) as Record<string, unknown>;
+  const trends = Array.isArray(mr.macroTrends) ? mr.macroTrends.slice(0, 4).map(String) : [];
+  const lines = [
+    "ENVELOPPE ÉCONOMIQUE & MARCHÉ (chiffres RÉELS — propose des actions cohérentes avec CE budget et CE marché) :",
+    budgetCom != null ? `- Budget marketing annuel disponible : ${fcfaShort(budgetCom)} FCFA (les actions doivent tenir dans cette enveloppe)` : "- Budget marketing : non renseigné (V.unitEconomics.budgetCom)",
+    caVise != null ? `- CA visé : ${fcfaShort(caVise)} FCFA` : null,
+    (tamVal != null || samVal != null) ? `- Marché : TAM ${tamVal != null ? fcfaShort(tamVal) : "?"}${samVal != null ? ` / SAM ${fcfaShort(samVal)}` : ""}` : null,
+    bmf != null ? `- Brand-Market Fit : ${bmf}/100` : null,
+    trends.length ? `- Tendances marché (T) : ${trends.join(" ; ")}` : null,
+  ].filter(Boolean);
+  return { block: "\n\n" + lines.join("\n"), budgetCom };
 }
 
 /** Un appel LLM pour une section, via le gateway (Ollama en local). */
@@ -177,7 +211,8 @@ export async function generateICatalogueSequenced(args: {
   onProgress?: (msg: string) => void;
 }): Promise<ICatalogue> {
   const { strategyId, pillars, onProgress } = args;
-  const context = buildContext(pillars);
+  const grounding = buildEconomicGrounding(pillars);
+  const context = buildContext(pillars) + grounding.block;
   const log = (m: string) => { onProgress?.(m); console.log(`[i-seq] ${m}`); };
 
   // ── 1. Catalogue par canal — 1 appel par canal (le gros morceau) ──────────
@@ -244,5 +279,11 @@ Réponds STRICTEMENT au format : { "formats": [ …12 strings… ] }`,
     0,
   );
 
-  return { catalogueParCanal, assetsProduisibles, activationsPossibles, formatsDisponibles, totalActions };
+  // potentielBudget DÉTERMINISTE depuis l'enveloppe V (jamais inventé par le LLM).
+  const bc = grounding.budgetCom;
+  const potentielBudget = bc != null
+    ? { total: bc, media: Math.round(bc * 0.45), production: Math.round(bc * 0.30), talent: Math.round(bc * 0.15), technology: Math.round(bc * 0.10) }
+    : undefined;
+
+  return { catalogueParCanal, assetsProduisibles, activationsPossibles, formatsDisponibles, totalActions, ...(potentielBudget ? { potentielBudget } : {}) };
 }
