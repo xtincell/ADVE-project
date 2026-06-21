@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.21 — fix CI : Golden Path 1-landing (lien mort `/legal/privacy` + icônes PWA) (2026-06-21)
+
+**Correctif racine du check `Golden Path E2E` rouge sur `main` depuis ~2026-05-31 (step `1-landing`).**
+
+- `fix(ui)` **lien mort `/legal/privacy`** (cause exacte du finding) : le bandeau cookies (`cookie-consent.tsx`, rendu sur **toutes** les pages dont `/intake`) pointait « En savoir plus » → `/legal/privacy`, route **inexistante** (la vraie est `/privacy` — tous les autres liens du repo l'utilisent déjà). Next.js **prefetch** ce `<Link>` au chargement → 404 RSC (`/legal/privacy?_rsc=…`) → `console:generic-error` capté par le golden-path. Corrigé en `/privacy`.
+- `fix(ui)` **icônes PWA manquantes** (bug latent annexe) : `public/manifest.webmanifest` référençait `/images/icon-192.png` + `/images/icon-512.png`, **absents du repo** → 404 pour tout fetch du manifest (Lighthouse/PWA install). Génération des 2 assets **maskable-safe** (fond `#0b0b0e` + fusée canon centrée à 72 %) depuis `src/app/icon.svg` via `sharp`.
+- `chore(ci)` **golden-path auto-diagnostiquable** (PR #280) : imprime le détail des findings des steps en échec dans le log du run + **annexe l'URL de la ressource** (`msg.location().url`) au détail d'un console-error 404 — c'est ce qui a révélé `/legal/privacy` (le message console seul ne contient pas l'URL).
+- Hors phases 0–9 (out-of-scope, cf. `scope-drift.md` #280). 0 nouveau Neter, 0 model Prisma, 0 bypass. Cap APOGEE 7/7 préservé.
+
+
 ## v6.27.20 — galileo : « évangélistes » → « prescripteurs » côté client + SEO landing nettoyé (2026-06-21)
 
 **Suite à l'audit de la surface de vente (arbre de vente OK, funnel WhatsApp OK) : nettoyage du vocabulaire religieux résiduel côté client.**
