@@ -10,13 +10,14 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
-## v6.27.16 — fix CI : Golden Path 1-landing (icônes PWA manquantes) (2026-06-21)
+## v6.27.16 — fix CI : Golden Path 1-landing (lien mort `/legal/privacy` + icônes PWA) (2026-06-21)
 
 **Correctif racine du check `Golden Path E2E` rouge sur `main` depuis ~2026-05-31 (step `1-landing`).**
 
-- `fix(ui)` **icônes PWA manquantes** : `public/manifest.webmanifest` référençait `/images/icon-192.png` + `/images/icon-512.png`, **absents du repo** → 404 console au 1er chargement de `/intake` → finding `console:generic-error` capté par le golden-path (seul le step 1 le voit : la ressource n'est fetchée qu'une fois par session). Génération des 2 assets **maskable-safe** (fond plein `#0b0b0e` + fusée canon centrée à 72 %) depuis `src/app/icon.svg` via `sharp`.
-- `chore(ci)` **golden-path auto-diagnostiquable** (PR #280) : imprime le détail des findings des steps en échec directement dans le log du run (avant : seulement dans l'artefact non téléchargeable) + annexe l'URL de la ressource (`msg.location().url`) au détail d'un console-error 404 — sans quoi le finding n'était pas exploitable.
-- Hors phases 0–9 (out-of-scope, cf. `scope-drift.md` #280). **0 code de production** (assets statiques + outillage CI), 0 nouveau Neter, 0 model Prisma, 0 bypass. Cap APOGEE 7/7 préservé.
+- `fix(ui)` **lien mort `/legal/privacy`** (cause exacte du finding) : le bandeau cookies (`cookie-consent.tsx`, rendu sur **toutes** les pages dont `/intake`) pointait « En savoir plus » → `/legal/privacy`, route **inexistante** (la vraie est `/privacy` — tous les autres liens du repo l'utilisent déjà). Next.js **prefetch** ce `<Link>` au chargement → 404 RSC (`/legal/privacy?_rsc=…`) → `console:generic-error` capté par le golden-path. Corrigé en `/privacy`.
+- `fix(ui)` **icônes PWA manquantes** (bug latent annexe) : `public/manifest.webmanifest` référençait `/images/icon-192.png` + `/images/icon-512.png`, **absents du repo** → 404 pour tout fetch du manifest (Lighthouse/PWA install). Génération des 2 assets **maskable-safe** (fond `#0b0b0e` + fusée canon centrée à 72 %) depuis `src/app/icon.svg` via `sharp`.
+- `chore(ci)` **golden-path auto-diagnostiquable** (PR #280) : imprime le détail des findings des steps en échec dans le log du run + **annexe l'URL de la ressource** (`msg.location().url`) au détail d'un console-error 404 — c'est ce qui a révélé `/legal/privacy` (le message console seul ne contient pas l'URL).
+- Hors phases 0–9 (out-of-scope, cf. `scope-drift.md` #280). 0 nouveau Neter, 0 model Prisma, 0 bypass. Cap APOGEE 7/7 préservé.
 
 
 ## v6.27.15 — galileo : self-host « serverfull » Windows (en plus de Vercel) (2026-06-19)
