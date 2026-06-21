@@ -458,6 +458,15 @@ async function main() {
   console.log(`\nReport: logs/golden-path-${ts}.{json,md}`);
   RESULTS.forEach((r) => {
     console.log(`  ${r.ok ? "✓" : "✗"} ${r.step}  ${r.durationMs}ms  ${r.findings.length} findings`);
+    // Surface failing-step detail in the CI console (not only in the uploaded
+    // artifact .md). Makes a red Golden Path self-diagnosing from the run log —
+    // no artifact download needed to know WHY a step failed.
+    if (!r.ok) {
+      if (r.details) console.log(`      ↳ ${r.details}`);
+      for (const f of r.findings) {
+        console.log(`      • [${f.class}] ${f.severity}: ${f.detail}`);
+      }
+    }
   });
 
   process.exit(okCount === RESULTS.length ? 0 : 1);
