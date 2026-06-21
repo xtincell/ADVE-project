@@ -44,6 +44,15 @@ const SYSTEM = `Tu es Mestor, le moteur d'intelligence stratégique du framework
 Tu produis le PILIER I (Potentiel) — l'inventaire EXHAUSTIF de ce qu'une marque PEUT faire — section par section.
 Tu réponds TOUJOURS et UNIQUEMENT en JSON valide : pas de markdown, pas de commentaire, pas de texte autour.`;
 
+/**
+ * Modèle Ollama pour le pilier I. Par défaut `hermes3:8b` (ctx 4K, tient en
+ * VRAM sur une GTX 1080 → ~42 tok/s, 100% GPU) plutôt que le `hermes3-ctx`
+ * (ctx 64K) de la ModelPolicy qui déborde la VRAM → spill CPU → ~7 tok/s.
+ * Les sections I sont petites (≤3K tokens), 4K de contexte suffisent largement.
+ * Surcharge possible via env `OLLAMA_FAST_MODEL`.
+ */
+export const I_OLLAMA_MODEL = process.env.OLLAMA_FAST_MODEL ?? "hermes3:8b";
+
 /** Résume un pilier en gardant la forme + l'intention sans saturer la fenêtre d'entrée du 8B. */
 function compactPillar(content: unknown, cap = 1100): string {
   if (!content || typeof content !== "object") return "(vide)";
@@ -84,6 +93,7 @@ async function callSection(
     caller: `mestor:i-seq:${callerTag}`,
     strategyId,
     purpose: "agent", // substituable Ollama (allowOllamaSubstitution=true)
+    ollamaModel: I_OLLAMA_MODEL, // modèle rapide 4K ctx (cf. note ci-dessus)
     responseFormat: jsonMode ? "json_object" : "text",
     maxOutputTokens,
   });

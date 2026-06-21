@@ -542,6 +542,9 @@ Retourne le pilier ${pillarKey} complet en JSON.`;
               allPillars: allPillarsLower,
               missingReqs: missingDerivable,
               caller: `rtis-cascade-completion:${pillarKey.toLowerCase()}`,
+              // I (Potentiel) = gros volume → modèle Ollama rapide (4K ctx, full GPU)
+              // au lieu du hermes3-ctx 64K qui spille sur CPU. Cf. i-pillar-sequenced.
+              ollamaModel: pillarKey === "I" ? (process.env.OLLAMA_FAST_MODEL ?? "hermes3:8b") : undefined,
             });
 
             for (const [path, value] of Object.entries(filled)) {

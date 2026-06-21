@@ -648,8 +648,9 @@ async function runChunkLLM(args: {
   hasFinancialFields: boolean;
   caller: string;
   maxOutputTokens: number;
+  ollamaModel?: string;
 }): Promise<Record<string, unknown>> {
-  const { strategyId, pillarKey, chunk, pillarContext, financialCtx, hasFinancialFields, caller, maxOutputTokens } = args;
+  const { strategyId, pillarKey, chunk, pillarContext, financialCtx, hasFinancialFields, caller, maxOutputTokens, ollamaModel } = args;
   const { buildExampleForPath } = await import("@/lib/types/pillar-maturity-contracts");
 
   function fieldExampleBlock(r: FieldRequirement): string {
@@ -701,6 +702,7 @@ Retourne UNIQUEMENT le JSON, rien d'autre. Pas de markdown, pas de commentaire.`
       caller,
       strategyId,
       purpose: "agent", // substituable Ollama
+      ollamaModel,
       responseFormat: "json_object",
       maxOutputTokens,
     });
@@ -738,6 +740,8 @@ export async function runChunkedFieldGeneration(args: {
   missingReqs: FieldRequirement[];
   fieldsPerChunk?: number;
   caller?: string;
+  /** Per-call Ollama model override (e.g. "hermes3:8b" for the fast I path). */
+  ollamaModel?: string;
 }): Promise<Record<string, unknown>> {
   const { strategyId, pillarKey, allPillars, missingReqs } = args;
   if (missingReqs.length === 0) return {};
@@ -760,6 +764,7 @@ export async function runChunkedFieldGeneration(args: {
       hasFinancialFields,
       caller: callerBase,
       maxOutputTokens: 6000,
+      ollamaModel: args.ollamaModel,
     });
   }
 
@@ -776,6 +781,7 @@ export async function runChunkedFieldGeneration(args: {
       hasFinancialFields,
       caller: `${callerBase}:chunk-${i + 1}/${chunks.length}`,
       maxOutputTokens: 3000,
+      ollamaModel: args.ollamaModel,
     });
     Object.assign(merged, result);
   }

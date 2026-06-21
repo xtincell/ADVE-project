@@ -65,6 +65,14 @@ export interface GatewayCallOptions {
   /** Model override. Default: derived from `purpose` (or DEFAULT_MODEL if no purpose). */
   model?: string;
   /**
+   * Ollama model override — bypasses the policy's `ollamaModel` for THIS call
+   * only. Routes a specific flow to a faster/smaller local model (e.g. the
+   * I-pillar catalogue uses `hermes3:8b` at 4K ctx instead of the slow
+   * 64K-context `hermes3-ctx` that spills to CPU on an 8 GB GPU). Ignored
+   * when the served provider isn't Ollama.
+   */
+  ollamaModel?: string;
+  /**
    * Concrete scenario this call serves — see GatewayPurpose doc. Drives
    * BOTH the default model AND whether Ollama can substitute. When omitted
    * the call is treated as `agent` to preserve the pre-purpose behaviour.
@@ -527,10 +535,10 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
           aiModel = openrouter(resolveOpenRouterModel(anthropicModel));
         } else {
           // Ollama via OpenAI-compatible API. Critical: use the Ollama
-          // model name from the policy, NOT the Claude model name.
+          // model name (per-call override > policy), NOT the Claude model name.
           const { createOpenAI } = await import("@ai-sdk/openai");
           const ollama = createOpenAI({ baseURL: process.env.OLLAMA_BASE_URL });
-          aiModel = ollama(ollamaModel ?? anthropicModel);
+          aiModel = ollama(options.ollamaModel ?? ollamaModel ?? anthropicModel);
         }
 
         // ── F-A3 (ADR-0067) — responseFormat propagation ────────────────
@@ -579,7 +587,7 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
 
         // Non-blocking cost tracking. Use the actually-served model name
         // (anthropic name when on Anthropic/OpenAI, ollama name when free).
-        const billedModel = provider === "ollama" ? (ollamaModel ?? anthropicModel) : anthropicModel;
+        const billedModel = provider === "ollama" ? (options.ollamaModel ?? ollamaModel ?? anthropicModel) : anthropicModel;
         trackCost(options, gatewayUsage, billedModel);
 
         return { text, usage: gatewayUsage };
