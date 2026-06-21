@@ -565,7 +565,7 @@ function composeDevotionLadder(ctx: ComposerContext): Blob {
         { niveau: "Participant", valeur: snap.participant },
         { niveau: "Engagé", valeur: snap.engage },
         { niveau: "Ambassadeur", valeur: snap.ambassadeur },
-        { niveau: "Évangéliste", valeur: snap.evangeliste },
+        { niveau: "Prescripteur", valeur: snap.evangeliste },
       ]
     : [];
 

@@ -65,7 +65,7 @@ const SECTION_DOCS: Record<string, { subtitle: string; description: string }> = 
   "fenetre-overton": { subtitle: "Fenêtre d'Overton", description: "Perception actuelle → cible, stratégie de déplacement, roadmap, jalons — bouger la ligne du secteur." },
   "medias-distribution": { subtitle: "Médias & distribution", description: "Drivers média, planner digital, actions média — où et comment diffuser." },
   "production-livrables": { subtitle: "Production & livrables", description: "Missions de production et livrables Glory par couche — ce qui sort concrètement." },
-  "profil-superfan": { subtitle: "Profil superfan", description: "Portrait du superfan, parcours de dévotion cible, métriques (actifs/évangélistes/ratio)." },
+  "profil-superfan": { subtitle: "Profil superfan", description: "Portrait du superfan, parcours de dévotion cible, métriques (actifs/prescripteurs/ratio)." },
   "kpis-mesure": { subtitle: "KPIs & mesure", description: "Tableau de KPIs, dévotion, Cult Index, superfans, AARRR — comment on mesure le succès." },
   "croissance-evolution": { subtitle: "Croissance & évolution", description: "Boucles de croissance, stratégie d'expansion, évolution de marque, pipeline d'innovation." },
   "budget": { subtitle: "Budget", description: "Unit economics, budgets de campagne, ventilation — le coût et l'allocation." },
@@ -83,7 +83,7 @@ const SECTION_DOCS: Record<string, { subtitle: string; description: string }> = 
   "deloitte-budget": { subtitle: "Deloitte Budget", description: "Cadre de budgétisation stratégique — allocation par horizon et par initiative." },
   "cult-index": { subtitle: "Cult Index", description: "Score de masse culturelle : à quel point la marque génère une dévotion organique. Distinctif La Fusée." },
   "manipulation-matrix": { subtitle: "Manipulation Matrix", description: "Les 4 modes (peddler / dealer / facilitator / entertainer) qui transforment l'audience en propellant." },
-  "devotion-ladder": { subtitle: "Devotion Ladder", description: "Hiérarchie des superfans, du curieux à l'évangéliste — l'échelle d'engagement." },
+  "devotion-ladder": { subtitle: "Devotion Ladder", description: "Hiérarchie des superfans, du curieux au prescripteur — l'échelle d'engagement." },
   "overton-distinctive": { subtitle: "Overton distinctif", description: "Position de la marque dans la fenêtre culturelle du secteur, alimentée par un signal réel (vs placebo)." },
   "tarsis-weak-signals": { subtitle: "Tarsis — signaux faibles", description: "Détection des signaux faibles sectoriels par Tarsis — l'alerte précoce." },
 };

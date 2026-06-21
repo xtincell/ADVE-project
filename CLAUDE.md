@@ -113,6 +113,8 @@ Tout le reste — l'OS, les Neteru, l'Oracle, les Glory tools, ADVERTIS, APOGEE,
 
 ## Product identity (non-negotiable)
 
+> **Anti-confusion KB** : [docs/governance/context/UPGRADERS-LAFUSEE-KB.md](docs/governance/context/UPGRADERS-LAFUSEE-KB.md) — base de connaissance **en vocable business** + lexique business (§3, *terme business · impact · alias code · alias doctrine*) + 100 Q/A qui verrouillent les frontières **UPgraders (société, vend) ≠ La Fusée (produit/OS, EST vendu via Cockpit/Oracle) ≠ Argos (sous-marque)** et **l'arbre de vente d'UPgraders ≠ les 7 arbres internes (ADVE-RTIS, Brand Tree, substrat de circulation, funnel…)**. À lire avant tout travail commercial / identité / funnel / nommage. La Fusée **se vend** (sa face client) ; seule sa mécanique interne est invisible — ne jamais dire « on ne vend pas La Fusée ». **Vocabulaire client : business uniquement** ; les noms mythologiques (« Neteru », Mestor/Sia…, « la Pesée », « Messie »…) sont des **alias internes**, jamais exposés au client (registre aéronautique Fusée/Cockpit conservé — ce n'est pas du religieux).
+
 **La Fusée = Industry OS** for the African creative market. Built and operated by **UPgraders** (the agency / fixer). Never call it "LaFusee OS" or "platform" — it is an *Industry OS*, codé comme tel.
 
 Vision: transform brands into cult / cultural phenomena via accumulation of superfans who shift the Overton window. The OS embodies the **ADVE/RTIS** method — cascade A→D→V→E→R→T→I→S where I=Innovation, S=Strategy.

@@ -29,9 +29,9 @@ export const fr = {
 
   // ── Marketing — manifesto ────────────────────────────────────────────
   "marketing.manifesto.title": "Superfans × Overton — la double équation",
-  "marketing.manifesto.body": "Le marketing classique optimise des conversions. La Fusée optimise la masse critique d'évangélistes et le déplacement culturel sectoriel — deux mécaniques inséparables qui font basculer le marché.",
+  "marketing.manifesto.body": "Le marketing classique optimise des conversions. La Fusée optimise la masse critique de prescripteurs et le déplacement culturel sectoriel — deux mécaniques inséparables qui font basculer le marché.",
   "marketing.manifesto.pillar.superfan": "Superfans",
-  "marketing.manifesto.pillar.superfan.body": "Masse stratégique d'ambassadeurs et d'évangélistes qui produisent du travail organique pour la marque.",
+  "marketing.manifesto.pillar.superfan.body": "Masse stratégique d'ambassadeurs et de prescripteurs qui produisent du travail organique pour la marque.",
   "marketing.manifesto.pillar.overton": "Overton",
   "marketing.manifesto.pillar.overton.body": "Axe culturel sectoriel — quand la marque le déplace, le secteur se redéfinit autour d'elle.",
 
@@ -39,7 +39,7 @@ export const fr = {
   "marketing.value.adve.title": "ADVE-RTIS — la cascade qui propulse",
   "marketing.value.adve.body": "Une marque cohérente est la pré-condition. La cascade A→D→V→E→R→T→I→S transforme la cohérence en propulsion mesurable.",
   "marketing.value.superfan.title": "Superfans — la masse qui fait basculer",
-  "marketing.value.superfan.body": "Pas des followers, des évangélistes. La Fusée mécanise leur accumulation jusqu'au seuil de masse critique.",
+  "marketing.value.superfan.body": "Pas des followers, des prescripteurs. La Fusée mécanise leur accumulation jusqu'au seuil de masse critique.",
   "marketing.value.overton.title": "Overton — le secteur qui se redéfinit",
   "marketing.value.overton.body": "Quand votre marque déplace l'axe culturel sectoriel, le marché entier se réoriente autour de vous.",
 
