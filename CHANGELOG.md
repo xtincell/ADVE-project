@@ -10,6 +10,15 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.17 — galileo : KB anti-confusion UPgraders × La Fusée + correction de l'arbre de vente (2026-06-21)
+
+**Suite à un retour opérateur : NEFER avait confondu l'arbre de vente d'UPgraders (qui vend La Fusée ET le reste) avec les arbres internes de La Fusée, et avait écrit « ne vends pas La Fusée ». Correction + base de connaissance pour ne plus jamais refaire l'erreur.**
+
+- `docs(governance)` **base de connaissance** [docs/governance/context/UPGRADERS-LAFUSEE-KB.md](docs/governance/context/UPGRADERS-LAFUSEE-KB.md) — synthèse des 4 documents fournis (Écosystème, Manifeste « Bâtir le Système d'Exploitation », Analyse du Modèle Économique, Bio Alexandre Djengue / Xtincell) **réconciliée avec le canon du repo**, conclue par **100 Q/A**. Verrouille : **UPgraders (société, VEND) ≠ La Fusée (produit/OS, EST vendu via Cockpit/Oracle) ≠ Argos (sous-marque)** ; **La Fusée se vend** (sa face client) — seul son moteur (OS/Neteru) est invisible ; **l'arbre de vente d'UPgraders ≠ les arbres internes de La Fusée** (cascade ADVE-RTIS, Brand Tree client, funnel AARRR) ; les 5 piliers Impulsion/Pilotis/Source Insights/La Guilde/Sérénité + value ladder + segments.
+- `fix(artemis)` **correction de `sales-response-tree`** : le bloc IDENTITÉ disait « La Fusée… ne le vends pas en tant que tel » (faux) et ne désambiguïsait pas les deux arbres. Reformulé : *vendre La Fusée = vendre Cockpit/Oracle/accès* (le moteur reste invisible), tu vends La Fusée **ET** le reste de l'offre UPgraders, et NE CONFONDS PAS cet arbre de VENTE avec les arbres internes de construction de marque. Référence KB ajoutée au prompt.
+- `docs(meta)` pointeur KB ajouté dans CLAUDE.md §Product identity. tsc/lint inchangés ; `sales-response-tree.test.ts` 10/10 verts. Cap APOGEE 7/7 préservé.
+
+
 ## v6.27.16 — galileo : Glory tool `sales-response-tree` (arbre de réponse commercial) (2026-06-21)
 
 **Les commerciaux ont enfin leur outil Artemis : un arbre de réponse qui vend (direct ou indirect via AARRR), sait quoi vendre à qui, capte le minimum CRM (nom + téléphone) et escalade sur scénario non anticipé / demande explicite.**
