@@ -10,6 +10,15 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.16 — galileo : Glory tool `sales-response-tree` (arbre de réponse commercial) (2026-06-21)
+
+**Les commerciaux ont enfin leur outil Artemis : un arbre de réponse qui vend (direct ou indirect via AARRR), sait quoi vendre à qui, capte le minimum CRM (nom + téléphone) et escalade sur scénario non anticipé / demande explicite.**
+
+- `feat(artemis)` nouvel outil HYBRID **`sales-response-tree`** ([ADR-0104](docs/governance/adr/0104-sales-response-tree-glory-tool.md), layer CR, ordre 24_001) dans `src/server/services/artemis/tools/sales-response-tree-tools.ts`, branché sur `EXTENDED_GLORY_TOOLS` (**pas CORE** — cardinalité 56 préservée). Transform pur : à chaque tour il **identifie le QUI** (9 segments), **choisit QUOI vendre** (carte d'offres × value ladder FREE→ULTRA_PREMIUM), **route l'objectif AARRR** (DIRECT=REVENUE / INDIRECT=Acquisition·Activation·Rétention·Référral), **rédige la réponse** prête à envoyer (canaux : **WhatsApp primaire** + DM + outbound + intake), **capte le lead** (`leadCapture` nom/téléphone min, `crmSource="MANUAL"`, `dealStageHint`) et **escalade** (`UNANTICIPATED_SCENARIO` / `EXPLICIT_CLIENT_REQUEST` obligatoires + 6 autres motifs).
+- **On étend, on ne double pas** : aucun nouveau modèle Prisma — la persistance passe par les Intents CRM existants (`crm-contacts.upsertContact` source=MANUAL, `crm.createDealFromIntake`, pipeline `Deal`/`DealStage`). Parité manual-first ADR-0060 (`outputSchema === manualFormSchema` via `defineHybridTool`) + sortie structurée imposée ADR-0067. Ancrage de marque via la Strategy maison UPgraders (`loadStrategyContext`).
+- Garde anti-drift `tests/unit/governance/sales-response-tree.test.ts` (9 assertions HARD) + couvert par `phase22-glory-hybrid.test.ts`. `tsc` 0 · `eslint` 0 · 75 tests ciblés verts. Cap APOGEE 7/7 préservé (Artemis sub-domaine, pas de Neter).
+
+
 ## v6.27.15 — galileo : self-host « serverfull » Windows (en plus de Vercel) (2026-06-19)
 
 **Déploiement sur desktop dédié EN PLUS de Vercel — serveur Node persistant : fin du timeout serverless pour les flux LLM longs.**
