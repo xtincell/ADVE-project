@@ -81,10 +81,13 @@ function attachListeners(page: Page, currentStep: () => string, findings: Findin
     const text = msg.text();
     if (text.includes("[next-auth]")) return;
     if (text.includes("favicon")) return;
+    const srcUrl = msg.location()?.url ?? "";
     if (text.includes("Failed to load resource") && text.includes("404")) {
-      const src = msg.location().url;
-      if (src === page.url() || src === page.url() + "/") return;
+      if (srcUrl === page.url() || srcUrl === page.url() + "/") return;
     }
+    // Le message console d'un 404 ne contient pas l'URL de la ressource
+    // (Chrome la met dans `location`). On l'annexe pour un diagnostic exploitable.
+    const where = srcUrl ? ` @ ${srcUrl}` : "";
     findings.push({
       step: currentStep(),
       class: text.includes("Cannot read prop") ? "js:null-access"
@@ -92,7 +95,7 @@ function attachListeners(page: Page, currentStep: () => string, findings: Findin
         : text.includes("TRPCClientError") ? "trpc:client-error"
         : "console:generic-error",
       severity: "ERROR",
-      detail: text.slice(0, 200),
+      detail: (text + where).slice(0, 300),
     });
   });
   page.on("pageerror", (err) => {
@@ -458,6 +461,15 @@ async function main() {
   console.log(`\nReport: logs/golden-path-${ts}.{json,md}`);
   RESULTS.forEach((r) => {
     console.log(`  ${r.ok ? "✓" : "✗"} ${r.step}  ${r.durationMs}ms  ${r.findings.length} findings`);
+    // Surface failing-step detail in the CI console (not only in the uploaded
+    // artifact .md). Makes a red Golden Path self-diagnosing from the run log —
+    // no artifact download needed to know WHY a step failed.
+    if (!r.ok) {
+      if (r.details) console.log(`      ↳ ${r.details}`);
+      for (const f of r.findings) {
+        console.log(`      • [${f.class}] ${f.severity}: ${f.detail}`);
+      }
+    }
   });
 
   process.exit(okCount === RESULTS.length ? 0 : 1);
