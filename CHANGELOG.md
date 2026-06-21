@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.19 — galileo : KB consolidée en vocable business (registre religieux → business) (2026-06-21)
+
+**Directive opérateur : « consolider la connaissance, mettre à jour le vocabulaire, affecter l'impact business ; les mentions qui sonnent religieux doivent être remplacées par le vocable business. »**
+
+- `docs(governance)` **[UPGRADERS-LAFUSEE-KB.md](docs/governance/context/UPGRADERS-LAFUSEE-KB.md) refondue en vocable business.** Le canon habille l'OS d'un registre mythologique/religieux (« Neteru », noms de divinités, « la Pesée », « Messie », « Gospel », « Temples », « évangélisation »…) ; la KB parle désormais **business par défaut**, les termes religieux devenant des **alias internes** (entre parenthèses, jamais client-facing). Le registre **aéronautique** (Fusée, Cockpit, orbite) reste — signature produit, pas du religieux.
+- Nouvelle pièce maîtresse **§3 LEXIQUE BUSINESS** (*terme business · **impact business** · alias code · alias doctrine*) : les 7 moteurs de gouvernance (Orchestrateur=Mestor/Sia, Studio de Brief=Artemis/Neith, Forge d'Assets=Ptah, Télémétrie=Seshat, Moteur Financier & Opérations=Thot, Moteur Talent=Imhotep, Moteur de Diffusion=Anubis) + substrat de circulation (=Yggdrasil/la Sève), validation pré-vol (=la Pesée), catalogue d'amendements (=Jehuty/Notoria) + le cult-marketing traduit (figure de proue=Messie, récit fondateur=Gospel, points de contact=Temples, ambassadeurs=clergé, événements phares=pèlerinages, recommandation=évangélisation, prescripteur/champion=évangéliste). 100 Q/A refondues business-first.
+- `fix(artemis)` **`sales-response-tree`** : le prompt ne référence plus « les Neteru » → « les moteurs internes » + consigne explicite *« aucun terme interne à connotation religieuse/mythologique face au client »*.
+- `docs(meta)` pointeur CLAUDE.md mis à jour (vocable business + lexique §3). `sales-response-tree.test.ts` 10/10 verts ; tsc/lint inchangés. Cap APOGEE 7/7 préservé.
+
+
 ## v6.27.18 — galileo : KB anti-confusion enrichie au canon complet (repo + blueprint voisin) (2026-06-21)
 
 **À la demande de l'opérateur : la KB monte au canon complet — PDF (base) + ce repo (canon opérationnel) + le repo voisin `la-fusee-blueprint` (canon conceptuel). « Assure-toi de faire un travail parfait. »**
