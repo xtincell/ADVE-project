@@ -24,7 +24,7 @@ export function MarketingManifesto() {
                   <span className="font-mono text-xs text-accent">I.</span>
                   <h3 className="font-display font-semibold text-2xl tracking-tight">Superfans</h3>
                 </header>
-                <p className="text-sm leading-relaxed text-foreground-secondary">Pas des followers. Pas une communauté tiède. Des évangélistes qui produisent du travail organique pour la marque sans qu&rsquo;on leur demande.</p>
+                <p className="text-sm leading-relaxed text-foreground-secondary">Pas des followers. Pas une communauté tiède. Des prescripteurs qui produisent du travail organique pour la marque sans qu&rsquo;on leur demande.</p>
                 <p className="text-sm leading-relaxed text-foreground-secondary">Quand cette masse passe le <strong className="text-foreground">seuil critique</strong> de ton secteur, le marché t&rsquo;entend même quand tu te tais.</p>
               </article>
 

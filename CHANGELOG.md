@@ -10,6 +10,15 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.20 — galileo : « évangélistes » → « prescripteurs » côté client + SEO landing nettoyé (2026-06-21)
+
+**Suite à l'audit de la surface de vente (arbre de vente OK, funnel WhatsApp OK) : nettoyage du vocabulaire religieux résiduel côté client.**
+
+- `fix(ui)` **SEO landing** : la description metadata `(marketing)/layout.tsx` exposait au public « 7 Neteru actifs (Mestor/Artemis/…) » → remplacée par une description business (commit séparé `370c3a4`).
+- `fix(ui)` **« évangélistes » → « prescripteurs »** dans **toutes les surfaces vues par le fondateur/prospect** (décision opérateur) : i18n marketing FR (+ EN « evangelists » → « advocates »), landing manifesto, Cockpit (tracker de campagne, lignée prescripteur, community panel, founder ritual, superfan mass meter, apogee maintenance), et le **livrable Oracle** (catalogue de sections + composer déterministe Devotion Ladder). **Les enums `EVANGELISTE`, les clés de données (`evangeliste`/`Evangelist`/`snap.evangeliste`), les maps de normalisation, les prompts LLM, le seed canon, les commentaires et les surfaces Console (opérateur) restent intacts** — seul l'affichage client change.
+- « Mestor » conservé comme marque-feature (décision opérateur). tsc 0 · eslint 0 · aucun test ne référence le label. Cap APOGEE 7/7 préservé.
+
+
 ## v6.27.19 — galileo : KB consolidée en vocable business (registre religieux → business) (2026-06-21)
 
 **Directive opérateur : « consolider la connaissance, mettre à jour le vocabulaire, affecter l'impact business ; les mentions qui sonnent religieux doivent être remplacées par le vocable business. »**

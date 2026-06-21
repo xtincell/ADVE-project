@@ -739,7 +739,7 @@ export function DevotionLadder({ data }: Props) {
     <SectionShell
       tier="DISTINCTIVE"
       title="Devotion Ladder — Hiérarchie superfans"
-      description="Spectateur → Intéressé → Participant → Engagé → Ambassadeur → Évangéliste. Échelle canon de progression de la dévotion La Fusée."
+      description="Spectateur → Intéressé → Participant → Engagé → Ambassadeur → Prescripteur. Échelle canon de progression de la dévotion La Fusée."
     >
       {hasAny ? (
         <Stack direction="col" gap={4}>

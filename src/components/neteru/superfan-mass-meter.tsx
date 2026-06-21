@@ -31,7 +31,7 @@ interface SuperfanMassMeterProps {
 }
 
 const SEGMENTS: { key: keyof SegmentCounts; label: string; weight: number; color: string }[] = [
-  { key: "evangeliste", label: "Évangélistes", weight: 5, color: "bg-amber-500" },
+  { key: "evangeliste", label: "Prescripteurs", weight: 5, color: "bg-amber-500" },
   { key: "ambassadeur", label: "Ambassadeurs", weight: 3, color: "bg-amber-400/80" },
   { key: "engage", label: "Engagés", weight: 1.5, color: "bg-amber-300/60" },
   { key: "participant", label: "Participants", weight: 0.5, color: "bg-zinc-500" },
