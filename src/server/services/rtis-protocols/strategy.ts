@@ -22,9 +22,10 @@
  */
 
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { PILLAR_STORAGE_KEYS } from "@/domain";
-import { PillarSSchema, collectNormalizedInitiatives, ROADMAP_ROUTE_KEYS } from "@/lib/types/pillar-schemas";
+import { PillarSSchema, collectNormalizedInitiatives, ROADMAP_ROUTE_KEYS, INITIATIVE_TIMEFRAMES } from "@/lib/types/pillar-schemas";
 import {
   computeRoadmapRoutes,
   routeInitiativeSet,
@@ -113,6 +114,13 @@ async function callStrategyJSON(args: {
       caller: `mestor:protocole-strategy:${args.label}`,
       strategyId: args.strategyId,
       model: "claude-sonnet-4-20250514",
+      // Contexte 8 piliers + 2-3K de sortie → modèle Ollama rapide à contexte
+      // intermédiaire (16K) plutôt que hermes3-ctx (64K, spill CPU) ou
+      // hermes3:8b (4K, tronque). Inerte sans Ollama (cloud ignore l'option).
+      ollamaModel: process.env.OLLAMA_STRUCTURED_MODEL ?? "hermes3-fast",
+      // Force du JSON valide côté provider (Ollama/OpenAI). Sans ça le 8B local
+      // ajoute des préambules en prose / double les accolades → extractJSON KO.
+      responseFormat: "json_object",
       system: args.system,
       prompt: args.prompt,
       maxOutputTokens: args.maxOutputTokens,
@@ -169,6 +177,16 @@ async function generateStrategy(
   const catalogueSummary = Object.entries((iContent.catalogueParCanal ?? {}) as Record<string, unknown[]>)
     .map(([canal, actions]) => `${canal}: ${Array.isArray(actions) ? actions.length : 0} actions`)
     .join(", ");
+  // ÉNUMÉRATION des actions avec leur sourceRef EXACT — sans ça le LLM ne voit
+  // que des compteurs et invente des sourceRefs non-mappables (→ la sélection S
+  // ne se relie jamais au blob I). Avec, il sélectionne de vraies actions par réf.
+  const catalogueListing = Object.entries((iContent.catalogueParCanal ?? {}) as Record<string, Array<Record<string, unknown>>>)
+    .flatMap(([canal, actions]) =>
+      (Array.isArray(actions) ? actions : []).map((a, idx) =>
+        `catalogueParCanal.${canal}[${idx}]: ${String(a.action ?? "").slice(0, 130)}${a.objectif ? " — " + String(a.objectif).slice(0, 70) : ""}`,
+      ),
+    )
+    .join("\n");
 
   const baseSystem = `Tu es le Protocole Strategy de l'essaim MESTOR. Tu prends les DÉCISIONS stratégiques.
 
@@ -182,7 +200,7 @@ SPECTATEUR → INTÉRESSÉ → PARTICIPANT → ENGAGÉ → AMBASSADEUR → ÉVAN
 
 Base-toi STRICTEMENT sur les données fournies. Retourne UNIQUEMENT du JSON valide, sans markdown.`;
 
-  const baseData = `Données ADVERTIS complètes (7 piliers):\n\n${context}${overtonContext}`;
+  const baseData = `Données ADVERTIS complètes (7 piliers):\n\n${context}${overtonContext}\n\nCATALOGUE I — actions sélectionnables (recopie le sourceRef EXACT ci-dessous) :\n${catalogueListing || "(catalogue vide)"}`;
 
   // Mega-appel (8 champs, 8000 tokens) ÉCLATÉ en 4 sous-appels focalisés — chacun
   // une partie cohérente du pilier S, validée par son sous-schéma. Indépendants
@@ -428,6 +446,71 @@ export function computePillarS(
   };
 }
 
+// ── I→S link : persister la sélection S sur le blob I (ADR-0088) ──────────
+//
+// computePillarS n'agrège QUE les initiatives du blob I en status
+// SELECTED_FOR_ROADMAP. Or les actions GÉNÉRÉES sont RECOMMENDED (proposées).
+// La sélection du protocole S (`selectedFromI`) doit donc être réinjectée sur
+// le blob I, sinon S voit 0 initiative (cas générique). Le canon (écrit main)
+// porte déjà SELECTED_FOR_ROADMAP, d'où sa cohérence — cette étape donne la
+// même cohérence au contenu généré.
+
+/** Phase de roadmap (libellé libre LLM) → timeframe INITIATIVE canonique. */
+function phaseToTimeframe(phase: unknown): (typeof INITIATIVE_TIMEFRAMES)[number] {
+  const p = String(phase ?? "").toLowerCase();
+  if (p.includes("sprint") || p.includes("90") || /phase\s*1\b/.test(p) || p.includes("fondation")) return "SPRINT_90";
+  if (/phase\s*2\b/.test(p) || p.includes("engagement")) return "PHASE_1";
+  if (/phase\s*3\b/.test(p) || p.includes("accel") || p.includes("accél")) return "PHASE_2";
+  return "LONG_TERM";
+}
+
+const normLoose = (s: unknown) => String(s ?? "").toLowerCase().replace(/\s+/g, " ").trim();
+
+/**
+ * Marque en SELECTED_FOR_ROADMAP (+ timeframe dérivé de la phase) les actions
+ * du blob I retenues par `selectedFromI`. Match : sourceRef
+ * `catalogueParCanal.CANAL[idx]` d'abord, repli sur le texte d'action. PURE —
+ * retourne une copie du blob + le nombre promu (0 = rien à persister).
+ */
+export function promoteSelectedInBlob(
+  iContent: Record<string, unknown> | null,
+  selectedFromI: Array<Record<string, unknown>>,
+): { content: Record<string, unknown>; promoted: number } {
+  const content = (iContent ? JSON.parse(JSON.stringify(iContent)) : {}) as Record<string, unknown>;
+  const cat = (content.catalogueParCanal ?? {}) as Record<string, Array<Record<string, unknown>>>;
+  let promoted = 0;
+  const mark = (a: Record<string, unknown>, phase: unknown): boolean => {
+    if (a.status === "SELECTED_FOR_ROADMAP") return false; // déjà retenue
+    a.status = "SELECTED_FOR_ROADMAP";
+    a.timeframe = phaseToTimeframe(phase);
+    return true;
+  };
+  for (const sel of selectedFromI) {
+    let done = false;
+    const m = /catalogueParCanal\.([A-Za-z_]+)\s*\[\s*(\d+)\s*\]/.exec(String(sel.sourceRef ?? ""));
+    if (m) {
+      const arr = cat[m[1]!];
+      const idx = Number(m[2]);
+      if (Array.isArray(arr) && arr[idx]) done = mark(arr[idx]!, sel.phase);
+    }
+    if (!done) {
+      const target = normLoose(sel.action);
+      if (target) {
+        outer: for (const arr of Object.values(cat)) {
+          if (!Array.isArray(arr)) continue;
+          for (const a of arr) {
+            const at = normLoose(a.action);
+            if (at && (at === target || at.includes(target) || target.includes(at))) { done = mark(a, sel.phase); if (done) break outer; }
+          }
+        }
+      }
+    }
+    if (done) promoted++;
+  }
+  content.catalogueParCanal = cat;
+  return { content, promoted };
+}
+
 // ── Public API ────────────────────────────────────────────────────────
 
 export async function executeProtocoleStrategy(strategyId: string): Promise<ProtocoleStrategyResult> {
@@ -490,6 +573,30 @@ export async function executeProtocoleStrategy(strategyId: string): Promise<Prot
       declaredBudget ?? (strategyContent.globalBudget as number | undefined),
       companyStage,
     );
+
+    // I→S link (ADR-0088) — persister la sélection sur le blob I AVANT
+    // d'agréger : computePillarS ne compte que les actions SELECTED_FOR_ROADMAP
+    // du blob. On promeut les actions retenues (selectedFromI), on persiste le
+    // blob I (status-only → n'affecte pas le cache completionLevel/D-2), et on
+    // re-matérialise BrandAction pour que le panel reflète la sélection.
+    const selFromI = (strategyContent.selectedFromI ?? []) as Array<Record<string, unknown>>;
+    if (selFromI.length > 0 && pillars.i) {
+      const { content: promotedI, promoted } = promoteSelectedInBlob(pillars.i, selFromI);
+      if (promoted > 0) {
+        pillars.i = promotedI; // computePillarS (ci-dessous) lit pillars.i en mémoire
+        try {
+          await db.pillar.update({
+            where: { strategyId_key: { strategyId, key: "i" } },
+            data: { content: promotedI as unknown as Prisma.InputJsonValue },
+          });
+          const { syncBrandActionsFromBlob } = await import("@/server/services/artemis/action-db/materializer");
+          await syncBrandActionsFromBlob(strategyId);
+        } catch (err) {
+          console.warn("[protocole-S] writeback I / matérialisation échoué:", err instanceof Error ? err.message : err);
+        }
+        console.log(`[protocole-S] ${promoted}/${selFromI.length} action(s) I promues SELECTED_FOR_ROADMAP`);
+      }
+    }
 
     // Pure computed dashboard (ADR-0088) — aggregations over the relational
     // backbone. Recomputed here and again by the recommendation apply path

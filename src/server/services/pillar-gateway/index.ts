@@ -559,6 +559,14 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
         stalePropagated: dependents,
         warnings,
       };
+    }, {
+      // Supabase EU = latence réseau élevée (cf. DB_POOL_CONN_MS=30000). Le défaut
+      // Prisma de 5s pour les transactions interactives expirait sur les écritures
+      // RTIS lourdes (gros blob + versioning + staleness propagation) → écriture
+      // rejetée → (avant le fix savePillar) perdue en silence → catalogue I perdu,
+      // base d'actions vide. 30s de marge ; le scoring reste hors transaction.
+      timeout: 30_000,
+      maxWait: 15_000,
     });
   } catch (err) {
     return {

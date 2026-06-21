@@ -181,15 +181,27 @@ export async function generateICatalogueSequenced(args: {
   const log = (m: string) => { onProgress?.(m); console.log(`[i-seq] ${m}`); };
 
   // ── 1. Catalogue par canal — 1 appel par canal (le gros morceau) ──────────
+  // Chaque action porte le BACKBONE structuré (ADR-0088) requis par le
+  // materializer BrandAction ET par l'agrégation S : `channel` + `status` +
+  // `budgetEstime` (→ budget numérique via BUDGET_ESTIME_FCFA). status =
+  // RECOMMENDED (proposé par l'IA, pas encore retenu) ; la promotion en
+  // SELECTED_FOR_ROADMAP est faite par le protocole S à la sélection.
+  const VALID_BUDGET = new Set(["LOW", "MEDIUM", "HIGH"]);
   const catalogueParCanal: Record<string, Array<Record<string, unknown>>> = {};
   for (const canal of I_CHANNELS) {
     const actions = await sectionArray({
-      strategyId, context, arrayKey: "actions", maxOutputTokens: 1200, tag: `canal-${canal}`, onProgress: log,
+      strategyId, context, arrayKey: "actions", maxOutputTokens: 1400, tag: `canal-${canal}`, onProgress: log,
       instruction: `Pour le CANAL « ${canal} », génère un inventaire de 5 à 8 actions marketing CONCRÈTES, spécifiques à CETTE marque (pas générique).
-Chaque action = objet { "action": string, "format": string, "objectif": string, "pilierImpact": "A"|"D"|"V"|"E" }.
+Chaque action = objet { "action": string, "format": string, "objectif": string, "pilierImpact": "A"|"D"|"V"|"E", "budgetEstime": "LOW"|"MEDIUM"|"HIGH" }.
 Réponds STRICTEMENT au format : { "actions": [ …5 à 8 objets… ] }`,
     });
-    catalogueParCanal[canal] = actions;
+    // Enrichissement déterministe du backbone (ne dépend pas du 8B pour les enums critiques).
+    catalogueParCanal[canal] = actions.map((a) => ({
+      ...a,
+      channel: canal,
+      status: "RECOMMENDED",
+      budgetEstime: VALID_BUDGET.has(String(a.budgetEstime)) ? a.budgetEstime : "MEDIUM",
+    }));
     log(`canal ${canal}: ${actions.length} actions`);
   }
 
