@@ -67,7 +67,10 @@
     "test:golden-path": "tsx scripts/test-golden-path.ts",
     "audit:full": "npm run harvest:static",
     "prepare": "husky",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "cf:deploy": "wrangler deploy",
+    "cf:dryrun": "wrangler deploy --dry-run",
+    "cf:typegen": "wrangler types"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.74",
@@ -75,6 +78,7 @@
     "@ai-sdk/react": "^3.0.179",
     "@anthropic-ai/sdk": "^0.92.0",
     "@auth/prisma-adapter": "^2.11.2",
+    "@cloudflare/containers": "^0.3.7",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
@@ -130,6 +134,7 @@
     "tailwindcss": "^4.0.0",
     "tsx": "^4.19.0",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.5"
+    "vitest": "^4.1.5",
+    "wrangler": "^4.101.0"
   }
 }

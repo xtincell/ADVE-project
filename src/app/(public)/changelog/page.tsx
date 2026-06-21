@@ -53,7 +53,11 @@ const TYPE_ACCENT: Record<ChangelogEntry["type"], string> = {
   other: "border-zinc-800 text-zinc-500",
 };
 
-export const revalidate = 3600; // refresh hourly
+// Baked at build time. `loadEntries()` reads git (execSync) / the filesystem,
+// neither of which exist on the Cloudflare Workers runtime — so we prerender
+// the snapshot once during `next build` (where git is available) and serve it
+// statically on every host. Refreshes on each deploy.
+export const dynamic = "force-static";
 
 export default async function ChangelogPage() {
   const entries = await loadEntries();
