@@ -119,8 +119,10 @@ function Hero() {
               <figcaption className="up-figure__cap"><span>Direction créative</span><span className="em">DOUALA · ABIDJAN</span></figcaption>
             </figure>
 
-            {/* real brand stats, not live metrics — editorial proof */}
-            <div className="absolute -bottom-5 -left-5 hidden items-center gap-3 border border-border bg-surface-card px-4 py-3 shadow-lg sm:flex" style={{ borderRadius: "var(--radius-lg)" }}>
+            {/* real brand stats, not live metrics — editorial proof.
+                Badge en bas-DROITE : le bas-gauche est occupé par la figcaption
+                `up-figure__cap` (Direction créative · Douala) → collision sinon. */}
+            <div className="absolute -bottom-5 -right-5 hidden items-center gap-3 border border-border bg-surface-card px-4 py-3 shadow-lg sm:flex" style={{ borderRadius: "var(--radius-lg)" }}>
               <span className="font-display text-2xl font-semibold text-accent">{STATS[2]?.value}</span>
               <span className="max-w-[12ch] font-mono text-2xs uppercase leading-tight tracking-widest text-foreground-muted">{STATS[2]?.label}</span>
             </div>

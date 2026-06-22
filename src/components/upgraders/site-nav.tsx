@@ -11,8 +11,15 @@ import { NAV_ITEMS } from "./data";
 function Wordmark() {
   return (
     <Link href="/" className="flex items-center" aria-label="UPgraders — accueil">
-      <Logo variant="lockup-horizontal" size={30} alt="UPgraders" className="hidden sm:block" />
-      <Logo variant="mark" size={30} alt="UPgraders" className="sm:hidden" />
+      {/* Responsive show/hide on the WRAPPER, not the <img> : `.up-logo__img`
+          forces display:block (upgraders.css) et écraserait `hidden`/`sm:hidden`
+          appliqués directement sur l'image → les deux logos s'afficheraient. */}
+      <span className="hidden sm:block">
+        <Logo variant="lockup-horizontal" size={30} alt="UPgraders" />
+      </span>
+      <span className="sm:hidden">
+        <Logo variant="mark" size={30} alt="UPgraders" />
+      </span>
     </Link>
   );
 }

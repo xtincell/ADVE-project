@@ -75,7 +75,8 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "La Guilde", href: "/la-guilde" },
   { label: "Réalisations", href: "/realisations" },
   { label: "Blog", href: "/blog" },
-  { label: "Contact", href: "/contact" },
+  // « Contact » retiré du top-nav : redondant avec le CTA « Démarrer un projet »
+  // (→ /contact). Allège la barre (le footer garde le lien Contact).
 ];
 
 /* ─────────────────────────────────────────────────────────────────────────

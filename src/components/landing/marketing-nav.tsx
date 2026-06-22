@@ -85,6 +85,14 @@ export function MarketingNav() {
         </div>
 
         <div className="flex items-center gap-4">
+          {/* Retour vers le site UPgraders (La Fusée = produit d'UPgraders) */}
+          <Link
+            href="/"
+            className="hidden md:inline-flex items-center gap-1.5 font-mono text-2xs uppercase tracking-widest text-foreground-muted transition-colors hover:text-accent"
+          >
+            <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M11 5l-7 7 7 7" /></svg>
+            UPgraders
+          </Link>
           <LocaleToggle variant="compact" />
           <NavSessionLink />
           <a

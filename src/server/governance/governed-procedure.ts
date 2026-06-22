@@ -472,13 +472,42 @@ export function auditedProcedure<P extends typeof protectedProcedure>(
 
 // ── Internal: write IntentEmission rows ───────────────────────────────
 
+/**
+ * Intent kinds émis par le PUBLIC (portail La Guilde, ADR-0098) — utilisateurs
+ * sans compte Operator. Ils sont rattachés à l'opérateur universel "GUILD_PUBLIC"
+ * au lieu d'être refusés. NB : GUILD_PUBLISH_MISSION (modération) en est EXCLU —
+ * c'est une décision opérateur, elle exige un vrai operator binding.
+ */
+const PUBLIC_INTENT_KINDS = new Set<string>([
+  "APPLY_TO_MISSION",
+  "GUILD_POST_MISSION",
+  "GUILD_REGISTER_TALENT",
+  "GUILD_REGISTER_ORGANIZATION",
+  "GUILD_DRAFT_MISSION_FROM_TEXT",
+]);
+
 async function preEmitIntent(
   ctx: Context,
   kind: string,
   payload: unknown,
   caller: string,
 ): Promise<string> {
-  const operatorId = await resolveOperatorId(ctx).catch(() => null);
+  // ── Colle universelle d'opérateur (ADR-0098 + persona founder) ──────────
+  // Tous les utilisateurs ne sont pas des Operators (staff UPgraders) : un
+  // founder qui crée sa marque dans le Cockpit, un freelance qui s'inscrit à La
+  // Guilde, une marque qui dépose une mission sont des utilisateurs AUTHENTIFIÉS
+  // sans compte Operator. Refuser leur Intent (« Cannot emit intent without
+  // operator binding ») cassait la création de marque ET l'onboarding Guilde.
+  // Cascade de rattachement (l'audit IntentEmission + hash-chain reste intact ;
+  // les role-gates operatorProcedure/adminProcedure protègent toujours les
+  // Intents sensibles en amont) :
+  //   1. Operator résolu (staff / ADMIN)            → son id
+  //   2. sinon utilisateur authentifié              → "USER:<id>" (self-binding)
+  //   3. sinon kind public anonyme (Guilde ADR-0098) → "GUILD_PUBLIC" (universel)
+  const operatorId =
+    (await resolveOperatorId(ctx).catch(() => null)) ??
+    (ctx.session?.user?.id ? `USER:${ctx.session.user.id}` : null) ??
+    (PUBLIC_INTENT_KINDS.has(kind) ? "GUILD_PUBLIC" : null);
   if (!operatorId && kind !== "LEGACY_MUTATION") {
     throw new TRPCError({
       code: "FORBIDDEN",

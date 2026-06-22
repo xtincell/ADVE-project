@@ -55,9 +55,9 @@ export function MarketingFooter() {
   return (
     <footer className="border-t border-border pt-12 pb-6">
       <div className="mx-auto max-w-[var(--maxw-content)] px-[var(--pad-page)] grid grid-cols-1 md:grid-cols-[1fr_1.4fr] gap-12 pb-10 border-b border-border">
-        <div className="flex gap-3.5 items-center">
+        <div className="flex gap-3.5 items-start">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/logos/lafusee-logo.png" alt="" aria-hidden="true" className="h-8 w-auto" />
+          <img src="/brand/logos/lafusee-logo.png" alt="" aria-hidden="true" className="h-8 w-auto shrink-0" />
           <div>
             <div className="font-semibold tracking-tight text-lg">La Fusée<span className="text-accent">.</span></div>
             <div className="font-mono text-2xs text-foreground-muted">Industry OS — marché créatif africain.</div>

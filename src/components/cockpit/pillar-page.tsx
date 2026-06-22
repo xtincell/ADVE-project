@@ -509,6 +509,18 @@ export function PillarPage({ pageKey }: PillarPageProps) {
             selectedRouteKey: selectedKey as "CONSERVATIVE" | "TARGET" | "AMBITIOUS",
           });
         }
+        // Garde-fou : un S stocké peut contenir des roadmapRoutes dupliquées
+        // (régression de génération en amont) → 12 cartes au lieu de 3. On
+        // déduplique par `key` (CONSERVATIVE/TARGET/AMBITIOUS), 1ʳᵉ occurrence.
+        {
+          const seenRoute = new Set<string>();
+          routes = routes.filter((r) => {
+            const k = String(r.key ?? "");
+            if (seenRoute.has(k)) return false;
+            seenRoute.add(k);
+            return true;
+          });
+        }
         return (
           <div className="rounded-lg border border-white/5 bg-surface-raised p-4">
             <div className="mb-3">
