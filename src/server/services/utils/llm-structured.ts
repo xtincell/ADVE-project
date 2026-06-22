@@ -49,6 +49,15 @@ export interface StructuredLLMOptions<T> {
   strategyId?: string;
   /** Purpose Gateway (default 'agent'). */
   purpose?: GatewayPurpose;
+  /**
+   * Override du modèle Ollama pour CET appel structuré. À défaut, lit l'env
+   * `OLLAMA_STRUCTURED_MODEL` (ex: `hermes3-fast` 16K ctx, full GPU) ; sinon le
+   * modèle de la ModelPolicy (`hermes3-ctx` 64K, qui spille sur CPU → ~5× plus
+   * lent). Les appels structurés (Oracle, frameworks, glory tools) ont un
+   * schéma + contexte volumineux + 4K de sortie → un modèle 4K tronquerait,
+   * d'où un modèle à contexte intermédiaire dédié. Ignoré hors provider Ollama.
+   */
+  ollamaModel?: string;
   /** Max output tokens (default 6000). */
   maxOutputTokens?: number;
   /** Nombre de retries sur échec Zod (default 2). Total = 1 + retries calls. */
@@ -118,6 +127,9 @@ export async function executeStructuredLLMCall<T>(
       caller: `${options.caller}:struct${attempt > 1 ? `:retry${attempt - 1}` : ""}`,
       strategyId: options.strategyId,
       purpose: options.purpose,
+      // Modèle Ollama rapide pour les appels structurés (Oracle inclus) —
+      // override par appel > env OLLAMA_STRUCTURED_MODEL > modèle ModelPolicy.
+      ollamaModel: options.ollamaModel ?? process.env.OLLAMA_STRUCTURED_MODEL,
       maxOutputTokens: options.maxOutputTokens,
       // F-A3 — Demande au gateway de forcer json_object si provider supporte
       // (OpenAI / Ollama). Pour Anthropic, le system prompt enrichi A2 garantit
