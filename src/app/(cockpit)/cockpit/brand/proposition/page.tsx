@@ -407,7 +407,11 @@ export default function PropositionPage() {
 
         {enrichMutation.error && <p className="text-xs text-error">{enrichMutation.error.message}</p>}
 
-        {/* Phase 13 (B7 + R2) — NSP streaming tracker */}
+        {/* Phase 13 (B7 + R2) — NSP streaming tracker (35 sections, tier groups).
+            R2 : intentId capturé après mutation enrichOracle pour replay NSP
+            (events stockés dans IntentEmissionEvent). Le polling completeness
+            alimente le fallback live-pendant-mutation (le vrai pre-completion
+            streaming nécessite refactor background queue, hors scope sprint). */}
         <OracleEnrichmentTracker intentId={lastIntentId} completenessReport={completeness.data ?? undefined} />
 
         {/* ─ Lien public / partage (strategyPresentation.shareLink) ─ */}

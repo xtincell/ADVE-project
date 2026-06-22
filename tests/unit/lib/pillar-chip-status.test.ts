@@ -139,16 +139,16 @@ describe("isPillarReadyForCascade — convenience", () => {
 });
 
 describe("getPillarChipStatus — className mapping", () => {
-  it("stale → amber tone", () => {
-    expect(getPillarChipStatus({ ...baseComplete, stale: true }).className).toContain("amber");
+  it("stale → warning tone", () => {
+    expect(getPillarChipStatus({ ...baseComplete, stale: true }).className).toContain("warning");
   });
 
-  it("FULL → emerald tone", () => {
-    expect(getPillarChipStatus({ ...baseComplete, completionLevel: "FULL" }).className).toContain("emerald");
+  it("FULL → success tone", () => {
+    expect(getPillarChipStatus({ ...baseComplete, completionLevel: "FULL" }).className).toContain("success");
   });
 
-  it("COMPLET → blue tone", () => {
-    expect(getPillarChipStatus(baseComplete).className).toContain("blue");
+  it("COMPLET → info tone", () => {
+    expect(getPillarChipStatus(baseComplete).className).toContain("info");
   });
 
   it("INCOMPLET → error tone", () => {

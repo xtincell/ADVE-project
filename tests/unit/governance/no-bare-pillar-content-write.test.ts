@@ -128,6 +128,14 @@ const ALLOWED_BARE_PILLAR_CONTENT_WRITES: ReadonlyArray<AcceptedBareWrite> = [
       "Primitive de rollback : restaure le content d'un `PillarVersion` déjà validé. Sous-service du gateway (createVersion y est appelé) ; la restauration d'une version antérieure est un retour à un état déjà scoré.",
     reroutePlanned: false,
   },
+  {
+    file: "src/server/services/rtis-protocols/strategy.ts",
+    line: 713,
+    hole: "—",
+    reason:
+      "Protocole S (lien I→S, ADR-0088) : writeback status-only du blob I — promeut les actions selectedFromI en SELECTED_FOR_ROADMAP avant d'agréger computePillarS, puis re-matérialise BrandAction. Promotion de statut, pas mutation de contenu métier (n'affecte pas le cache completionLevel/D-2). Reroute via gateway = dette P2.",
+    reroutePlanned: true,
+  },
 ];
 
 interface BareWrite {
