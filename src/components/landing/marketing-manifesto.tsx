@@ -24,7 +24,7 @@ export function MarketingManifesto() {
                   <span className="font-mono text-xs text-accent">I.</span>
                   <h3 className="font-display font-semibold text-2xl tracking-tight">Superfans</h3>
                 </header>
-                <p className="text-sm leading-relaxed text-foreground-secondary">Pas des followers. Pas une communauté tiède. Des évangélistes qui produisent du travail organique pour la marque sans qu&rsquo;on leur demande.</p>
+                <p className="text-sm leading-relaxed text-foreground-secondary">Pas des followers. Pas une communauté tiède. Des prescripteurs qui produisent du travail organique pour la marque sans qu&rsquo;on leur demande.</p>
                 <p className="text-sm leading-relaxed text-foreground-secondary">Quand cette masse passe le <strong className="text-foreground">seuil critique</strong> de ton secteur, le marché t&rsquo;entend même quand tu te tais.</p>
               </article>
 
@@ -37,7 +37,7 @@ export function MarketingManifesto() {
                 </header>
                 <p className="text-sm leading-relaxed text-foreground-secondary">Chaque secteur a une fenêtre d&rsquo;opinions et de codes acceptables. Une marque ICONE ne joue pas dans la fenêtre — elle la <strong className="text-foreground">déplace</strong>.</p>
                 <p className="text-sm leading-relaxed text-foreground-secondary">Quand l&rsquo;axe bouge, les concurrents s&rsquo;orientent autour de ta direction. Le pricing power suit. C&rsquo;est ça, le verrouillage culturel.</p>
-                <p className="text-xs leading-relaxed text-foreground-muted font-mono pt-2 border-t border-dashed border-border">↳ Cult Index mesuré post-déploiement. Overton deflection chiffrée par secteur.</p>
+                <p className="text-xs leading-relaxed text-foreground-muted font-mono pt-2 border-t border-dashed border-border">↳ Indice d'attachement mesuré post-déploiement. Overton deflection chiffrée par secteur.</p>
               </article>
             </div>
 

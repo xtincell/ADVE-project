@@ -29,7 +29,7 @@ const DEVOTION_RUNGS: ReadonlyArray<{ key: keyof CommunityDistribution; label: s
   { key: "participant", label: "Participant" },
   { key: "engage", label: "Engagé" },
   { key: "ambassadeur", label: "Ambassadeur" },
-  { key: "evangeliste", label: "Évangéliste" },
+  { key: "evangeliste", label: "Prescripteur" },
 ];
 
 interface CommunityDistribution {
@@ -93,7 +93,7 @@ function CommunityPanelInner({ strategyId }: { strategyId: string }) {
       <EmptyState
         icon={Lock}
         title="Suivi communauté — réservé aux abonnements"
-        description="Suivez vos superfans, l'échelle de dévotion et la santé de votre communauté en activant votre abonnement."
+        description="Suivez vos superfans, l'échelle d'engagement et la santé de votre communauté en activant votre abonnement."
         action={{ label: "Découvrir les formules", onClick: () => router.push(data.configureUrl) }}
       />
     );
@@ -116,7 +116,7 @@ function CommunityPanelInner({ strategyId }: { strategyId: string }) {
       {/* Superfan KPIs — the northstar */}
       <div className="grid grid-cols-1 gap-4 @md:grid-cols-2 @xl:grid-cols-4">
         <MetricCard label="Superfans actifs" value={superfans.active} trend={superfans.velocity.trend} />
-        <MetricCard label="Évangélistes" value={superfans.evangelistes} />
+        <MetricCard label="Prescripteurs" value={superfans.evangelistes} />
         <MetricCard label="Ratio d'activation" value={superfans.ratio} format="percent" />
         <MetricCard
           label={`Croissance (${superfans.velocity.periodDays}j)`}
@@ -128,7 +128,7 @@ function CommunityPanelInner({ strategyId }: { strategyId: string }) {
       <div className="grid grid-cols-1 gap-5 @lg:grid-cols-2">
         {/* Devotion ladder distribution */}
         {devotion && (
-          <SectionCard title="Échelle de dévotion" icon={Crown}>
+          <SectionCard title="Échelle d'engagement" icon={Crown}>
             <ul className="space-y-2.5">
               {DEVOTION_RUNGS.map(({ key, label }) => {
                 const width = pct(devotion.distribution[key]);

@@ -248,7 +248,7 @@ export function Mckinsey7s({ data }: Props) {
           })}
         </Stack>
       ) : (
-        <EmptyState message="Section non encore enrichie. Lance un enrich-oracle pour produire le 7S." />
+        <EmptyState message="Analyse 7S à produire — déclarer la vision stratégique (S), l'équipe dirigeante (A) et le catalogue d'actions (I)." />
       )}
     </SectionShell>
   );
@@ -300,7 +300,7 @@ export function BcgPortfolio({ data, strategyId }: Props) {
           </Grid>
         </Stack>
       ) : (
-        <EmptyState message="Portfolio non encore tracé. Le bouton 'Forge now' permet de générer un deck Figma associé (B8)." />
+        <EmptyState message="Portefeuille de marques non encore tracé. Un visuel de présentation associé peut être généré à la demande." />
       )}
       {strategyId && portfolio ? (
         <Stack direction="row" justify="end" gap={2}>
@@ -457,7 +457,7 @@ export function Mckinsey3Horizons({ data, strategyId }: Props) {
           </Grid>
         </Stack>
       ) : (
-        <EmptyState message="3-Horizons non encore mappé. Bouton 'Forge now' peut générer un deck Figma (B8)." />
+        <EmptyState message="Trois Horizons non encore cartographiés — déclarer les initiatives (pilier I) et la vision stratégique (pilier S)." />
       )}
       {strategyId && m3h ? (
         <Stack direction="row" justify="end" gap={2}>
@@ -616,8 +616,8 @@ export function CultIndex({ data }: Props) {
   return (
     <SectionShell
       tier="DISTINCTIVE"
-      title="Cult Index — Score de masse culturelle"
-      description="Score composite Devotion + Rituals + Vocabulary + Enemy + Manifesto. Distinctif La Fusée vs frameworks Big4."
+      title="Indice d'attachement"
+      description="Mesure de la ferveur de la communauté autour de la marque : engagement, rituels d'usage, vocabulaire propre, ennemi commun, récit fondateur."
     >
       {ci ? (
         <Stack direction="col" gap={3}>
@@ -640,7 +640,7 @@ export function CultIndex({ data }: Props) {
           ) : null}
         </Stack>
       ) : (
-        <EmptyState message="Cult Index non encore calculé. Le pipeline invoque cult-index-engine SESHAT." />
+        <EmptyState message="Indice d'attachement — à mesurer dès le lancement : il se calcule sur les premières données réelles de communauté et d'engagement. Cible alignée sur le palier de marque visé." />
       )}
     </SectionShell>
   );
@@ -671,7 +671,7 @@ export function ManipulationMatrix({ data, strategyId }: Props) {
             ))}
           </Grid>
           <Banner tone="neutral">
-            Visualisation matrice forgeable via bouton &quot;Forge now&quot; (B8) — Magnific Banana KV.
+            Visualisation de la matrice générable à la demande.
           </Banner>
           {strategyId ? (
             <Stack direction="row" justify="end" gap={2}>
@@ -738,8 +738,8 @@ export function DevotionLadder({ data }: Props) {
   return (
     <SectionShell
       tier="DISTINCTIVE"
-      title="Devotion Ladder — Hiérarchie superfans"
-      description="Spectateur → Intéressé → Participant → Engagé → Ambassadeur → Évangéliste. Échelle canon de progression de la dévotion La Fusée."
+      title="Échelle d'engagement — du spectateur au prescripteur"
+      description="Spectateur → Intéressé → Participant → Engagé → Ambassadeur → Prescripteur. Mesure la montée en engagement de la communauté autour de la marque."
     >
       {hasAny ? (
         <Stack direction="col" gap={4}>
@@ -814,7 +814,7 @@ export function DevotionLadder({ data }: Props) {
           ) : null}
         </Stack>
       ) : (
-        <EmptyState message="Devotion Ladder non encore mesurée — capturer un DevotionSnapshot (SESHAT) ou déclarer les conversionTriggers du pilier E." />
+        <EmptyState message="Échelle d'engagement — à mesurer dès le lancement : elle se renseigne sur l'engagement réel de la communauté, ou via les déclencheurs de conversion déclarés dans le pilier Engagement." />
       )}
     </SectionShell>
   );
@@ -932,7 +932,7 @@ export function TarsisWeakSignals({ data }: Props) {
     <SectionShell
       tier="DISTINCTIVE"
       title="Tarsis — Signaux faibles sectoriels"
-      description="Détection signaux faibles via seshat/tarsis + scoring impact + horizon J+30/90/180/365+."
+      description="Détection des signaux faibles du secteur, scoring d'impact et horizon de matérialisation (J+30 / 90 / 180 / 365+)."
     >
       {tarsis && tarsis.signals ? (
         <Stack direction="col" gap={2}>

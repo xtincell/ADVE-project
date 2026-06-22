@@ -33,7 +33,7 @@ const RUNG_LABEL_FR: Record<string, string> = {
   Curious: "Curieux",
   Convinced: "Convaincu",
   Ambassador: "Ambassadeur",
-  Evangelist: "Évangéliste",
+  Evangelist: "Prescripteur",
 };
 
 function LineagePanel({ strategyId, campaignId }: { strategyId: string; campaignId: string }) {
@@ -55,8 +55,8 @@ function LineagePanel({ strategyId, campaignId }: { strategyId: string; campaign
     return (
       <EmptyState
         icon={Lock}
-        title="Lignée évangéliste — réservée aux abonnements"
-        description="Visualisez quelles campagnes transforment vos fans en ambassadeurs et évangélistes en activant votre abonnement."
+        title="Lignée des prescripteurs — réservée aux abonnements"
+        description="Visualisez quelles campagnes transforment vos fans en ambassadeurs et prescripteurs en activant votre abonnement."
         action={{ label: "Découvrir les formules", onClick: () => router.push(data.configureUrl) }}
       />
     );
@@ -66,7 +66,7 @@ function LineagePanel({ strategyId, campaignId }: { strategyId: string; campaign
     return (
       <EmptyState
         icon={Sparkles}
-        title="Lignée évangéliste"
+        title="Lignée des prescripteurs"
         description="Cette campagne n'est pas rattachée à votre marque."
       />
     );
@@ -76,7 +76,7 @@ function LineagePanel({ strategyId, campaignId }: { strategyId: string; campaign
     return (
       <EmptyState
         icon={Sparkles}
-        title="Lignée évangéliste — accumulation en cours"
+        title="Lignée des prescripteurs — accumulation en cours"
         description="Pas encore assez de transitions observées sur cette campagne pour révéler la lignée. Continuez à activer votre communauté : chaque ambassadeur compte."
       />
     );
@@ -87,7 +87,7 @@ function LineagePanel({ strategyId, campaignId }: { strategyId: string; campaign
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <StatCard
-          title="Évangélistes générés"
+          title="Prescripteurs générés"
           value={data.evangelistCount}
           trend={data.evangelistCount > 0 ? "up" : "flat"}
           trendValue="par cette campagne"
@@ -97,14 +97,14 @@ function LineagePanel({ strategyId, campaignId }: { strategyId: string; campaign
           title="Transitions observées"
           value={data.lineage.length}
           trend="flat"
-          trendValue="vers ambassadeur / évangéliste"
+          trendValue="vers ambassadeur / prescripteur"
           icon={GitBranch}
         />
       </div>
 
       {data.lineage.length === 0 ? (
         <p className="text-sm text-foreground-secondary">
-          Aucune transition vers ambassadeur ou évangéliste observée pour le moment.
+          Aucune transition vers ambassadeur ou prescripteur observée pour le moment.
         </p>
       ) : (
         <ol className="space-y-2">
@@ -163,10 +163,10 @@ export function EvangelistLineageView() {
         <div>
           <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
             <Sparkles className="h-5 w-5 text-accent" />
-            Lignée évangéliste
+            Lignée des prescripteurs
           </h2>
           <p className="mt-0.5 text-sm text-foreground-secondary">
-            Les fans que cette campagne a fait monter au rang d&apos;ambassadeur ou d&apos;évangéliste.
+            Les fans que cette campagne a fait monter au rang d&apos;ambassadeur ou de prescripteur.
           </p>
         </div>
         {campaigns.length > 0 && (
@@ -191,8 +191,8 @@ export function EvangelistLineageView() {
       ) : campaigns.length === 0 ? (
         <EmptyState
           icon={Sparkles}
-          title="Lignée évangéliste — accumulation en cours"
-          description="Lancez une campagne pour commencer à transformer vos fans en évangélistes."
+          title="Lignée des prescripteurs — accumulation en cours"
+          description="Lancez une campagne pour commencer à transformer vos fans en prescripteurs."
         />
       ) : campaignId ? (
         <LineagePanel strategyId={strategyId} campaignId={campaignId} />
