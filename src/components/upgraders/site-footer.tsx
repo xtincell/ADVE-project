@@ -108,7 +108,7 @@ export function SiteFooter() {
 
         <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
           <Col title="Agence">
-            <FLink href="/agence">L&apos;agence</FLink>
+            <FLink href="/agence">Qui sommes-nous</FLink>
             <FLink href="/methode">Méthode ADVE/RTIS</FLink>
             <FLink href="/services">Services</FLink>
             <FLink href="/la-guilde">La Guilde</FLink>

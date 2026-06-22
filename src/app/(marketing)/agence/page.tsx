@@ -22,7 +22,7 @@ export default function AgencePage() {
     <main>
       <SiteNav />
       <PageHeader
-        eyebrow="L'agence"
+        eyebrow="Qui sommes-nous"
         title="UPgraders, l'usine à"
         emphasis="marques cultes."
         lede="Cabinet de conseil & stratégie fondé en 2017 à Douala. Nous avons commencé en agence de marketing digital, puis pivoté en conciergerie créative, pour devenir l'agence qui industrialise la production de marques en Afrique francophone."

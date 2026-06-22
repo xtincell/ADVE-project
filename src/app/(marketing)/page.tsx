@@ -14,7 +14,7 @@ import {
   PostCard,
 } from "@/components/upgraders/blocks";
 import { IDENTITY, CLIENT_STRIP, PILLARS } from "@/components/upgraders/data";
-import { getAllPosts } from "@/components/upgraders/posts";
+import { getBlogIndex } from "@/components/upgraders/blog-data";
 
 export const metadata: Metadata = {
   title: "UPgraders — Cabinet de conseil & stratégie · La passion pour propulseur",
@@ -133,8 +133,8 @@ function ClientsStrip() {
   );
 }
 
-export default function UpgradersHomePage() {
-  const posts = getAllPosts().slice(0, 3);
+export default async function UpgradersHomePage() {
+  const posts = (await getBlogIndex()).slice(0, 3);
 
   return (
     <main>

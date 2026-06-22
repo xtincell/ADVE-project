@@ -1069,14 +1069,14 @@ model MissionApplication {
 /// strategyId null = comptes propres de La Fusée / UPgraders.
 /// Vague 10 — CRM backend : contact unifié (intake, newsletter, client, talent).
 model CrmContact {
-  id        String  @id @default(cuid())
-  email     String  @unique
-  name      String?
-  phone     String?
-  company   String?
+  id         String   @id @default(cuid())
+  email      String   @unique
+  name       String?
+  phone      String?
+  company    String?
   /// INTAKE | NEWSLETTER | CLIENT | TALENT | MANUAL
-  source    String  @default("MANUAL")
-  tags      String[] @default([])
+  source     String   @default("MANUAL")
+  tags       String[] @default([])
   strategyId String?
   userId     String?
 
@@ -1098,18 +1098,18 @@ model CrmContact {
 
 /// Message CRM (email transactionnel sortant ou note entrante consignée).
 model CrmMessage {
-  id        String @id @default(cuid())
-  contactId String
-  direction String // OUT | IN
-  channel   String @default("EMAIL")
-  subject   String?
-  body      String
-  status    String @default("DRAFT") // DRAFT|SENT|FAILED|RECEIVED
-  provider  String? // RESEND|MAILGUN|SENDGRID|MANUAL
+  id          String  @id @default(cuid())
+  contactId   String
+  direction   String // OUT | IN
+  channel     String  @default("EMAIL")
+  subject     String?
+  body        String
+  status      String  @default("DRAFT") // DRAFT|SENT|FAILED|RECEIVED
+  provider    String? // RESEND|MAILGUN|SENDGRID|MANUAL
   providerRef String?
-  error     String?
-  sentBy    String? // User.id opérateur
-  campaignId String? // NewsletterCampaign si envoi de masse
+  error       String?
+  sentBy      String? // User.id opérateur
+  campaignId  String? // NewsletterCampaign si envoi de masse
 
   contact CrmContact @relation(fields: [contactId], references: [id])
 
@@ -1122,17 +1122,17 @@ model CrmMessage {
 
 /// Campagne newsletter (The Upgrade) — composer, tester, envoyer aux opt-in.
 model NewsletterCampaign {
-  id        String  @id @default(cuid())
-  subject   String
+  id             String    @id @default(cuid())
+  subject        String
   /// Corps MJML (rendu via anubis/mjml-render — zéro dépendance) ou HTML brut.
-  bodyMjml  String?
-  bodyHtml  String?
-  status    String  @default("DRAFT") // DRAFT|SENDING|SENT|FAILED
-  sentAt    DateTime?
-  sentBy    String?
-  recipientCount Int @default(0)
-  sentCount      Int @default(0)
-  failedCount    Int @default(0)
+  bodyMjml       String?
+  bodyHtml       String?
+  status         String    @default("DRAFT") // DRAFT|SENDING|SENT|FAILED
+  sentAt         DateTime?
+  sentBy         String?
+  recipientCount Int       @default(0)
+  sentCount      Int       @default(0)
+  failedCount    Int       @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1141,7 +1141,7 @@ model NewsletterCampaign {
 }
 
 model FollowerSnapshot {
-  id             String  @id @default(cuid())
+  id             String         @id @default(cuid())
   strategyId     String?
   platform       SocialPlatform
   handle         String
@@ -1149,7 +1149,7 @@ model FollowerSnapshot {
   followingCount Int?
   /// Tags / mentions du compte captés sur la période écoulée.
   mentionsCount  Int?
-  source         String  @default("MANUAL") // MANUAL|CONNECTOR
+  source         String         @default("MANUAL") // MANUAL|CONNECTOR
 
   capturedAt DateTime @default(now())
 
@@ -4069,7 +4069,7 @@ model CampaignReferenceDossier {
   editorial Json? // { sections: [{ title, body }] }
   sources   Json? // [{ title, url }]
 
-  safetyVerdict String  @default("QUARANTINE") // PASS | QUARANTINE | REJECT
+  safetyVerdict String @default("QUARANTINE") // PASS | QUARANTINE | REJECT
   safetyReasons Json? // string[]
 
   published   Boolean   @default(false)
@@ -4258,49 +4258,49 @@ model MarketContextNode {
 // ═══════════════════════════════════════════════════════════════════
 
 model BrandAction {
-  id               String    @id @default(cuid())
-  strategyId       String
+  id                 String    @id @default(cuid())
+  strategyId         String
   /// Short title for the action
-  title            String
+  title              String
   /// 1-2 sentence description
-  description      String?   @db.Text
+  description        String?   @db.Text
   /// Touchpoint family: DIGITAL | ATL | BTL | TTL | OWNED | EARNED
-  touchpoint       String?
+  touchpoint         String?
   /// AARRR intent: ACQUISITION | ACTIVATION | RETENTION | REFERRAL | REVENUE
-  aarrrIntent      String?
+  aarrrIntent        String?
   /// Persona slug or label
-  persona          String?
+  persona            String?
   /// SKU / product line
-  sku              String?
+  sku                String?
   /// Budget envelope (FCFA or strategy currency)
-  budgetMin        Float?
-  budgetMax        Float?
-  budgetCurrency   String?   @default("XAF")
+  budgetMin          Float?
+  budgetMax          Float?
+  budgetCurrency     String?   @default("XAF")
   /// Opportunity tag (LAUNCH | CRISIS | EVENT | SEASONAL | ALWAYS_ON | ...)
-  opportunity      String?
+  opportunity        String?
   /// Geographic scope
-  locality         String?
+  locality           String?
   /// Time window
-  timingStart      DateTime?
-  timingEnd        DateTime?
+  timingStart        DateTime?
+  timingEnd          DateTime?
   /// Manager priority: P0 | P1 | P2 | P3
-  priority         String?   @default("P2")
+  priority           String?   @default("P2")
   /// Whether the strategist has selected this action for inclusion in S synthesis
-  selected         Boolean   @default(false)
+  selected           Boolean   @default(false)
   /// Source: NOTORIA_GENERATED | OPERATOR_MANUAL | SEED
-  source           String    @default("NOTORIA_GENERATED")
+  source             String    @default("NOTORIA_GENERATED")
   /// Optional reference to the Notoria recommendation that produced this action
-  recoId           String?
+  recoId             String?
   /// Optional reference to the Intent that emitted the generation
-  intentEmissionId String?
+  intentEmissionId   String?
   /// Phase 24 (ADR-0094) — stable id of the source I-pillar initiative
   /// (collectNormalizedInitiatives) this row materializes. Materialization key:
   /// (strategyId, sourceInitiativeId) is unique. Null for operator-manual rows.
   sourceInitiativeId String?
   /// Free-form parameters envelope (any extra KPIs, references)
-  metadata         Json?
+  metadata           Json?
   /// Status: DRAFT | PROPOSED | ACCEPTED | SCHEDULED | EXECUTED | CANCELLED
-  status           String    @default("PROPOSED")
+  status             String    @default("PROPOSED")
 
   // ── Phase 26 (ADR-0093) — Thot atomized action-costing inputs + result anchor ──
   /// Catalog archetype this action maps to (ActionCostTemplate.actionKey).
@@ -5410,28 +5410,28 @@ model ActionCostTemplate {
 
 /// Atome de coût composant un archétype (cascade depuis le template).
 model ActionCostComponent {
-  id         String             @id @default(cuid())
-  templateId String
-  template   ActionCostTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  driver     CostDriver
+  id                String             @id @default(cuid())
+  templateId        String
+  template          ActionCostTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  driver            CostDriver
   /// Libellé humain ("Photographe principal", "Location boîtier + objectifs").
-  label      String
+  label             String
   /// Quantité d'unités (heures, jours, pièces). Overridable par action.
-  quantity   Float              @default(1)
-  unit       CostUnit           @default(FLAT)
-  rateBasis  CostRateBasis      @default(FIXED)
+  quantity          Float              @default(1)
+  unit              CostUnit           @default(FLAT)
+  rateBasis         CostRateBasis      @default(FIXED)
   /// Clé dans la source de taux (ZoneIndex.key / MarketBenchmark.metric / rôle prestataire).
-  rateKey    String?
+  rateKey           String?
   /// Famille d'indice pour rateBasis = MARKET_INDEX.
-  indexFamily ZoneIndexFamily?
+  indexFamily       ZoneIndexFamily?
   /// Taux unitaire indicatif @ baseZone/baseCurrency (DATA, pas code-literal — ADR-0087).
-  baseRate   Float              @default(0)
+  baseRate          Float              @default(0)
   /// L'opérateur peut désactiver cet atome.
-  optional   Boolean            @default(false)
+  optional          Boolean            @default(false)
   /// Driver % appliqué au sous-total (margin/contingency/tax).
-  appliesToSubtotal Boolean     @default(false)
-  sortOrder  Int                @default(0)
-  notes      String?
+  appliesToSubtotal Boolean            @default(false)
+  sortOrder         Int                @default(0)
+  notes             String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -5531,4 +5531,37 @@ model ActionCostEstimate {
   @@index([brandActionId])
   @@index([strategyId])
   @@index([templateKey, zoneCode])
+}
+
+// ============================================================================
+// BLOG — CMS natif « Notes de cabinet » (site public UPgraders)
+// ============================================================================
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+}
+
+/// Article de blog public du site UPgraders (« Notes de cabinet »).
+/// CMS natif éditorial — distinct des livrables client (`BrandAsset`) et des
+/// entrées de veille marché (`KnowledgeEntry`). Édité via /console/anubis/blog,
+/// lu en public par /blog (+ fallback bundle `components/upgraders/posts.ts`).
+model Post {
+  id             String     @id @default(cuid())
+  slug           String     @unique
+  title          String
+  excerpt        String     @default("")
+  contentHtml    String     @default("")
+  coverUrl       String?
+  coverAlt       String?
+  category       String?
+  tags           String[]   @default([])
+  authorName     String     @default("Alexandre « Xtincell » Djengue")
+  readingMinutes Int        @default(3)
+  status         PostStatus @default(DRAFT)
+  publishedAt    DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([status, publishedAt])
 }

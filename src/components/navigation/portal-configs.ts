@@ -334,6 +334,7 @@ export const consoleNavGroups: NavGroup[] = [
     divisionColor: "var(--color-division-anubis)",
     items: [
       { href: "/console/anubis/crm", label: "CRM & Newsletter", icon: Mail },
+      { href: "/console/anubis/blog", label: "Blog — Notes de cabinet", icon: FileText },
       { href: "/console/anubis/credentials", label: "Credentials Vault", icon: Lock },
       { href: "/console/anubis/api-billing", label: "API Billing", icon: CreditCard },
       { href: "/console/anubis/notifications", label: "Notifications", icon: Radio },
