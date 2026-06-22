@@ -4,8 +4,12 @@ import type { Metadata } from "next";
    fois au RootLayout et héritées ici via les CSS vars --font-*. */
 
 export const metadata: Metadata = {
-  title: "La Fusée — Industry OS du marché créatif africain",
-  description: "Diagnostic ADVE instantané · score de marque /200 · radar 8 piliers · feuille de route stratégique. Gratuit, sans engagement.",
+  title: {
+    default: "UPgraders — Cabinet de conseil & stratégie · La passion pour propulseur",
+    template: "%s",
+  },
+  description:
+    "UPgraders industrialise la production de marques en Afrique francophone : conseil stratégique (ADVE/RTIS), réseau de talents curatés (La Guilde) et l'Industry OS La Fusée. Depuis 2017 — Douala · Abidjan.",
 };
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
