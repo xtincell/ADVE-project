@@ -93,7 +93,7 @@ function CommunityPanelInner({ strategyId }: { strategyId: string }) {
       <EmptyState
         icon={Lock}
         title="Suivi communauté — réservé aux abonnements"
-        description="Suivez vos superfans, l'échelle de dévotion et la santé de votre communauté en activant votre abonnement."
+        description="Suivez vos superfans, l'échelle d'engagement et la santé de votre communauté en activant votre abonnement."
         action={{ label: "Découvrir les formules", onClick: () => router.push(data.configureUrl) }}
       />
     );
@@ -128,7 +128,7 @@ function CommunityPanelInner({ strategyId }: { strategyId: string }) {
       <div className="grid grid-cols-1 gap-5 @lg:grid-cols-2">
         {/* Devotion ladder distribution */}
         {devotion && (
-          <SectionCard title="Échelle de dévotion" icon={Crown}>
+          <SectionCard title="Échelle d'engagement" icon={Crown}>
             <ul className="space-y-2.5">
               {DEVOTION_RUNGS.map(({ key, label }) => {
                 const width = pct(devotion.distribution[key]);

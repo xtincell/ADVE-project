@@ -40,7 +40,7 @@ const GOVS = {
     role: "Capteur de marché",
     rule: { k: "RÈGLE 03", t: "L'observateur n'écrit jamais. Il observe — et nourrit la décision." },
     desc: "Le capteur. Surveille le marché en continu, interprète les signaux faibles avant qu'ils ne deviennent évidents, anticipe les tendances sectorielles. Ses sources internes : Tarsis (curation données) et Jehuty (intelligence feed).",
-    caps: ["Tarsis · weak signals", "Cult-index (mesure de fan)", "Devotion engine", "Knowledge graph sectoriel", "Cross-brand benchmark", "Jehuty · intelligence feed"],
+    caps: ["Tarsis · weak signals", "Indice d'attachement (mesure du lien client)", "Moteur d'engagement", "Knowledge graph sectoriel", "Cross-brand benchmark", "Jehuty · intelligence feed"],
   },
   thot: {
     func: "Finances",

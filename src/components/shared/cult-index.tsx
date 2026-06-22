@@ -14,11 +14,11 @@ interface CultIndexProps {
 }
 
 const TIER_CONFIG: { tier: CultTier; label: string; min: number; max: number; color: string }[] = [
-  { tier: "GHOST", label: "Ghost", min: 0, max: 20, color: "var(--color-class-latent)" },
-  { tier: "FUNCTIONAL", label: "Functional", min: 20, max: 40, color: "var(--color-tier-apprenti)" },
-  { tier: "LOVED", label: "Loved", min: 40, max: 60, color: "var(--color-division-signal)" },
-  { tier: "EMERGING", label: "Emerging", min: 60, max: 80, color: "var(--color-division-oracle)" },
-  { tier: "CULT", label: "Cult", min: 80, max: 100, color: "var(--color-class-icone)" },
+  { tier: "GHOST", label: "Latent", min: 0, max: 20, color: "var(--color-class-latent)" },
+  { tier: "FUNCTIONAL", label: "Fonctionnel", min: 20, max: 40, color: "var(--color-tier-apprenti)" },
+  { tier: "LOVED", label: "Apprécié", min: 40, max: 60, color: "var(--color-division-signal)" },
+  { tier: "EMERGING", label: "Émergent", min: 60, max: 80, color: "var(--color-division-oracle)" },
+  { tier: "CULT", label: "Culte", min: 80, max: 100, color: "var(--color-class-icone)" },
 ];
 
 function getTier(score: number) {
@@ -104,7 +104,7 @@ export function CultIndex({
         height={gaugeHeight}
         viewBox={`0 0 ${gaugeWidth} ${gaugeHeight}`}
         role="img"
-        aria-label={`Cult Index: ${score} sur 100, tier ${tier.label}`}
+        aria-label={`Indice d'attachement : ${score} sur 100, palier ${tier.label}`}
       >
         {/* Tier arc segments */}
         {TIER_CONFIG.map((t) => {

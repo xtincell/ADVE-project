@@ -22,9 +22,10 @@
  */
 
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { PILLAR_STORAGE_KEYS } from "@/domain";
-import { PillarSSchema, collectNormalizedInitiatives, ROADMAP_ROUTE_KEYS } from "@/lib/types/pillar-schemas";
+import { PillarSSchema, collectNormalizedInitiatives, ROADMAP_ROUTE_KEYS, INITIATIVE_TIMEFRAMES, BUDGET_ESTIME_FCFA } from "@/lib/types/pillar-schemas";
 import {
   computeRoadmapRoutes,
   routeInitiativeSet,
@@ -35,13 +36,11 @@ import {
 // Re-export for backward compatibility (authoritative server compute).
 export { computeRoadmapRoutes };
 
-// ADR-0063 / PR-K3-ter — sous-schémas de réponse LLM. Le mega-appel (8 champs)
-// est ÉCLATÉ en 4 sous-appels focalisés ; chacun valide sa propre sous-partie.
-// Items validés strictement (le pruner droppe les lignes malformées).
-const SelectionLLMSchema = PillarSSchema.pick({ selectedFromI: true, rejectedFromI: true }).partial();
-const RoadmapLLMSchema = PillarSSchema.pick({ roadmap: true, sprint90Days: true }).partial();
-const OvertonLLMSchema = PillarSSchema.pick({ fenetreOverton: true }).partial();
-const SyntheseLLMSchema = PillarSSchema.pick({ axesStrategiques: true, facteursClesSucces: true, syntheseExecutive: true }).partial();
+// S est désormais MÉCANIQUE (déterministe) : sélection, roadmap, overton, axes,
+// facteurs et budgets sont CALCULÉS depuis I/V/T/R (cf. generateStrategy plus
+// bas). Seule la synthèse exécutive narrative reste 1 appel LLM OPTIONNEL,
+// skippé proprement si indisponible — le squelette ne dépend jamais du LLM.
+const SyntheseLLMSchema = PillarSSchema.pick({ syntheseExecutive: true }).partial();
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -113,6 +112,13 @@ async function callStrategyJSON(args: {
       caller: `mestor:protocole-strategy:${args.label}`,
       strategyId: args.strategyId,
       model: "claude-sonnet-4-20250514",
+      // Contexte 8 piliers + 2-3K de sortie → modèle Ollama rapide à contexte
+      // intermédiaire (16K) plutôt que hermes3-ctx (64K, spill CPU) ou
+      // hermes3:8b (4K, tronque). Inerte sans Ollama (cloud ignore l'option).
+      ollamaModel: process.env.OLLAMA_STRUCTURED_MODEL ?? "hermes3-fast",
+      // Force du JSON valide côté provider (Ollama/OpenAI). Sans ça le 8B local
+      // ajoute des préambules en prose / double les accolades → extractJSON KO.
+      responseFormat: "json_object",
       system: args.system,
       prompt: args.prompt,
       maxOutputTokens: args.maxOutputTokens,
@@ -137,82 +143,219 @@ async function callStrategyJSON(args: {
   }
 }
 
+// ── S MÉCANIQUE — composition déterministe (ADR-0088 étendu) ─────────────────
+// S ne devine plus : il SÉLECTIONNE et ORDONNE le catalogue I de façon
+// déterministe, dans l'enveloppe budgétaire RÉELLE de V, et déplace l'Overton
+// MESURÉ par T. Aucune inférence LLM dans le squelette → zéro souci d'affichage.
+// Seule la prose de syntheseExecutive reste 1 appel LLM OPTIONNEL.
+
+type Tf = (typeof INITIATIVE_TIMEFRAMES)[number];
+const TF_PHASE_LABEL: Record<Tf, string> = { SPRINT_90: "Phase 1", PHASE_1: "Phase 2", PHASE_2: "Phase 3", LONG_TERM: "Phase 4" };
+const TF_HORIZON: Record<Tf, string> = { SPRINT_90: "Q1", PHASE_1: "Q2", PHASE_2: "Q3", LONG_TERM: "Q4" };
+const DEVOTION_BY_PHASE: Record<Tf, string> = { SPRINT_90: "SPECTATEUR", PHASE_1: "INTERESSE", PHASE_2: "PARTICIPANT", LONG_TERM: "AMBASSADEUR" };
+const PILLAR_LABEL: Record<string, string> = { A: "Authenticité", D: "Distinction", V: "Valeur", E: "Engagement" };
+
+interface SelectedAction {
+  ref: string; channel: string; action: string; objectif: string;
+  pilierImpact: string | null; budget: number; timeframe: Tf;
+}
+
+/** Sélection DÉTERMINISTE des actions I, dans l'enveloppe budgétaire RÉELLE de V. */
+function selectInitiativesMechanical(
+  iContent: Record<string, unknown>,
+  budgetCom: number | null,
+): { selected: SelectedAction[]; selectedFromI: Array<Record<string, unknown>> } {
+  const cat = (iContent.catalogueParCanal ?? {}) as Record<string, Array<Record<string, unknown>>>;
+  type Cand = { ref: string; channel: string; action: string; objectif: string; pilierImpact: string | null; budget: number; score: number };
+  const cands: Cand[] = [];
+  for (const [channel, arr] of Object.entries(cat)) {
+    if (!Array.isArray(arr)) continue;
+    arr.forEach((a, idx) => {
+      const action = String(a.action ?? "").trim();
+      if (!action) return;
+      const be = (a.budgetEstime === "LOW" || a.budgetEstime === "MEDIUM" || a.budgetEstime === "HIGH") ? a.budgetEstime : "MEDIUM";
+      const pilierImpact = (a.pilierImpact === "A" || a.pilierImpact === "D" || a.pilierImpact === "V" || a.pilierImpact === "E") ? a.pilierImpact : null;
+      let score = 1;
+      if (pilierImpact) score += 2;                                          // fait avancer un pilier ADVE
+      if (typeof a.overtonShift === "string" && a.overtonShift) score += 2;  // déplace l'Overton
+      if (be === "LOW") score += 1;                                          // sobre = priorisé à valeur égale
+      cands.push({ ref: `catalogueParCanal.${channel}[${idx}]`, channel, action, objectif: String(a.objectif ?? ""), pilierImpact, budget: BUDGET_ESTIME_FCFA[be], score });
+    });
+  }
+  // Tri déterministe : score décroissant, budget croissant (moins cher gagne), réf (stable).
+  cands.sort((x, y) => y.score - x.score || x.budget - y.budget || x.ref.localeCompare(y.ref));
+
+  const envelope = budgetCom != null && budgetCom > 0 ? budgetCom : Infinity;
+  const MIN_KEEP = 6, MAX_KEEP = 14;
+  const selectedCands: Cand[] = [];
+  let spent = 0;
+  for (const c of cands) {
+    if (selectedCands.length >= MAX_KEEP) break;
+    if (spent + c.budget > envelope && selectedCands.length >= MIN_KEEP) continue; // garde un socle même si l'enveloppe est petite
+    selectedCands.push(c);
+    spent += c.budget;
+  }
+
+  const N = Math.max(selectedCands.length, 1);
+  const selected: SelectedAction[] = selectedCands.map((c, i) => {
+    const r = i / N;
+    const timeframe: Tf = r < 0.35 ? "SPRINT_90" : r < 0.6 ? "PHASE_1" : r < 0.85 ? "PHASE_2" : "LONG_TERM";
+    return { ref: c.ref, channel: c.channel, action: c.action, objectif: c.objectif, pilierImpact: c.pilierImpact, budget: c.budget, timeframe };
+  });
+  const selectedFromI = selected.map((s, i) => ({ sourceRef: s.ref, action: s.action, phase: TF_PHASE_LABEL[s.timeframe], priority: i + 1 }));
+  return { selected, selectedFromI };
+}
+
+/** Roadmap 4 phases déterministe depuis les actions sélectionnées (groupées par timeframe). */
+function buildRoadmapMechanical(selected: SelectedAction[]): Array<Record<string, unknown>> {
+  const phases: Array<{ tf: Tf; phase: string; objectifDevotion: string; duree: string }> = [
+    { tf: "SPRINT_90", phase: "Phase 1 — Fondations (0-90j)", objectifDevotion: "SPECTATEUR → INTÉRESSÉ", duree: "3 mois" },
+    { tf: "PHASE_1", phase: "Phase 2 — Engagement (3-6 mois)", objectifDevotion: "INTÉRESSÉ → PARTICIPANT", duree: "3 mois" },
+    { tf: "PHASE_2", phase: "Phase 3 — Accélération (6-12 mois)", objectifDevotion: "PARTICIPANT → AMBASSADEUR", duree: "6 mois" },
+    { tf: "LONG_TERM", phase: "Phase 4 — Culte (12 mois+)", objectifDevotion: "AMBASSADEUR → ÉVANGÉLISTE", duree: "12 mois+" },
+  ];
+  return phases.map((p) => {
+    const acts = selected.filter((s) => s.timeframe === p.tf);
+    const titres = acts.slice(0, 3).map((a) => a.action.slice(0, 45)).join(", ");
+    return {
+      phase: p.phase,
+      objectif: acts.length ? `${acts.length} action(s) prioritaires : ${titres}` : "Phase de consolidation",
+      objectifDevotion: p.objectifDevotion,
+      actions: acts.map((a) => a.action.slice(0, 180)),
+      budget: acts.reduce((sum, a) => sum + a.budget, 0),
+      duree: p.duree,
+    };
+  });
+}
+
+/** Sprint 90 jours = les actions SPRINT_90 sélectionnées. */
+function buildSprintMechanical(selected: SelectedAction[]): Array<Record<string, unknown>> {
+  return selected.filter((s) => s.timeframe === "SPRINT_90").map((a, i) => ({
+    action: a.action,
+    kpi: (a.objectif || "À définir").slice(0, 200),
+    priority: i + 1,
+    devotionImpact: "SPECTATEUR",
+    sourceRef: a.ref,
+  }));
+}
+
+/** strategieDeplacement Overton = parcours déterministe des actions sélectionnées. */
+function buildStrategieDeplacement(selected: SelectedAction[]): Array<Record<string, unknown>> {
+  return selected.slice(0, 6).map((s, i) => ({
+    etape: `Étape ${i + 1} — ${s.action.slice(0, 60)}`,
+    action: s.action.slice(0, 200),
+    canal: s.channel.slice(0, 60),
+    horizon: TF_HORIZON[s.timeframe],
+    devotionTarget: DEVOTION_BY_PHASE[s.timeframe],
+  }));
+}
+
+/** axesStrategiques déterministes — un axe par pilier ADVE couvert (≥3 garantis). */
+function buildAxesMechanical(selected: SelectedAction[]): Array<Record<string, unknown>> {
+  const byPillar = new Map<string, SelectedAction[]>();
+  for (const s of selected) {
+    const p = s.pilierImpact ?? "A";
+    if (!byPillar.has(p)) byPillar.set(p, []);
+    byPillar.get(p)!.push(s);
+  }
+  const axes: Array<Record<string, unknown>> = [];
+  for (const [p, acts] of byPillar) {
+    axes.push({ axe: `Activer ${PILLAR_LABEL[p] ?? p} (${acts.length} action${acts.length > 1 ? "s" : ""})`, pillarsLinked: [p, "S"], kpis: [`${acts.length} action(s) ${p} exécutée(s)`, "Progression Devotion Ladder"] });
+  }
+  const padAxes: Array<Record<string, unknown>> = [
+    { axe: "Déplacer la Fenêtre d'Overton", pillarsLinked: ["T", "S"], kpis: ["Réduction du perception gap"] },
+    { axe: "Tenir l'enveloppe budgétaire", pillarsLinked: ["V", "S"], kpis: ["Budget consommé / budget alloué"] },
+    { axe: "Convertir les spectateurs en superfans", pillarsLinked: ["E", "S"], kpis: ["% évangélistes par trimestre"] },
+  ];
+  let i = 0;
+  while (axes.length < 3 && i < padAxes.length) axes.push(padAxes[i++]!);
+  return axes;
+}
+
+/** facteursClesSucces déterministes depuis R (mitigations) + T (fit) — ≥3 garantis. */
+function buildFacteursMechanical(pillars: Record<string, Record<string, unknown> | null>): string[] {
+  const r = pillars.r ?? {};
+  const t = pillars.t ?? {};
+  const out: string[] = [];
+  const mp = Array.isArray(r.mitigationPriorities) ? (r.mitigationPriorities as Array<Record<string, unknown>>) : [];
+  for (const m of mp.slice(0, 3)) {
+    if (typeof m.action === "string" && m.action.trim()) out.push(`Mitiger : ${m.action.slice(0, 180)}`);
+  }
+  const bmf = typeof t.brandMarketFitScore === "number" ? t.brandMarketFitScore : null;
+  if (bmf != null) out.push(`Consolider le Brand-Market Fit (actuel ${bmf}/100)`.slice(0, 200));
+  const defaults = [
+    "Exécution disciplinée du sprint 90 jours",
+    "Respect strict de l'enveloppe budgétaire (V)",
+    "Mesure continue de la Devotion Ladder",
+    "Déplacement progressif de la Fenêtre d'Overton",
+  ];
+  let i = 0;
+  while (out.length < 5 && i < defaults.length) out.push(defaults[i++]!);
+  return out.slice(0, 7);
+}
+
+/** Synthèse exécutive déterministe (fallback si le LLM est indisponible). */
+function buildSyntheseTemplate(
+  pillars: Record<string, Record<string, unknown> | null>,
+  selected: SelectedAction[],
+  globalBudget: number,
+): string {
+  const nom = String((pillars.a as Record<string, unknown>)?.nomMarque ?? "La marque");
+  const fcfa = globalBudget >= 1_000_000 ? `${(globalBudget / 1_000_000).toFixed(1)} M FCFA` : `${Math.round(globalBudget / 1000)} k FCFA`;
+  const sprint = selected.filter((s) => s.timeframe === "SPRINT_90").length;
+  const covered = new Set(selected.map((s) => s.pilierImpact).filter(Boolean)).size;
+  return `${nom} engage une trajectoire en 4 phases (Fondations → Engagement → Accélération → Culte) articulée autour de ${selected.length} actions sélectionnées dans son catalogue de potentiel, pour une enveloppe de ${fcfa}. Le sprint de 90 jours mobilise ${sprint} action(s) prioritaire(s) pour amorcer la conversion des spectateurs en participants. La stratégie active ${covered} levier(s) ADVE et déplace progressivement la Fenêtre d'Overton vers la perception cible, en transformant l'audience en communauté de superfans. Chaque phase est budgétée et reliée à un palier de la Devotion Ladder.`;
+}
+
+/**
+ * COMPOSE le pilier S de façon MÉCANIQUE (déterministe). Remplace les 4 appels
+ * LLM fragiles (sélection/roadmap/overton/synthèse) par du calcul ancré sur
+ * I (catalogue) + V (budget réel) + T (Overton mesuré) + R (risques). Seule la
+ * `syntheseExecutive` narrative reste 1 appel LLM OPTIONNEL (fallback templaté)
+ * — le squelette ne dépend JAMAIS du LLM, donc plus de souci d'affichage.
+ */
 async function generateStrategy(
   pillars: Record<string, Record<string, unknown> | null>,
   overton: Record<string, unknown> | null,
   strategyId: string,
 ): Promise<Record<string, unknown>> {
-  // LLM Gateway obligatoire (jamais @ai-sdk/anthropic direct) : circuit
-  // breaker + fallback provider (gpt-5.5) + budget governance + cost tracking.
-  const { callLLM } = await import("@/server/services/llm-gateway");
+  const iContent = (pillars.i ?? {}) as Record<string, unknown>;
+  const v = (pillars.v ?? {}) as Record<string, unknown>;
+  const ue = (v.unitEconomics ?? {}) as Record<string, unknown>;
+  const budgetCom = typeof ue.budgetCom === "number" && ue.budgetCom > 0 ? ue.budgetCom : null;
 
-  const context = ["a", "d", "v", "e", "r", "t", "i"]
-    .map(k => {
-      const c = pillars[k];
-      if (!c || Object.keys(c).length === 0) return `[${k.toUpperCase()}] Vide`;
-      // For I, show the catalogue summary (not the full data to save tokens)
-      if (k === "i") {
-        const totalActions = (c as Record<string, unknown>).totalActions ?? "?";
-        const innovations = (c as Record<string, unknown>).innovationsProduit;
-        return `[I — INNOVATION]\ntotalActions: ${totalActions}\ninnovationsProduit: ${JSON.stringify(innovations ?? [], null, 2)}\n(catalogue complet disponible dans I.catalogueParCanal)`;
-      }
-      return `[${k.toUpperCase()}]\n${JSON.stringify(c, null, 2)}`;
-    })
-    .join("\n\n");
+  // 1. Sélection déterministe dans l'enveloppe V.
+  const { selected, selectedFromI } = selectInitiativesMechanical(iContent, budgetCom);
 
-  const overtonContext = overton
-    ? `\n\nFENÊTRE D'OVERTON (construite depuis T):\n${JSON.stringify(overton, null, 2)}`
-    : "\n\nFenêtre d'Overton: non disponible (T.overtonPosition manquant).";
+  // 2-5. Roadmap, sprint, overton, axes, facteurs, budget — tout CALCULÉ.
+  const roadmap = buildRoadmapMechanical(selected);
+  const sprint90Days = buildSprintMechanical(selected);
+  const fenetreOverton = { ...(overton ?? {}), strategieDeplacement: buildStrategieDeplacement(selected) };
+  const axesStrategiques = buildAxesMechanical(selected);
+  const facteursClesSucces = buildFacteursMechanical(pillars);
+  const globalBudget = selected.reduce((s, a) => s + a.budget, 0);
 
-  // Get I catalogue for selection
-  const iContent = pillars.i ?? {};
-  const catalogueSummary = Object.entries((iContent.catalogueParCanal ?? {}) as Record<string, unknown[]>)
-    .map(([canal, actions]) => `${canal}: ${Array.isArray(actions) ? actions.length : 0} actions`)
-    .join(", ");
+  // 6. Synthèse exécutive — 1 appel LLM OPTIONNEL, fallback templaté déterministe.
+  let syntheseExecutive = buildSyntheseTemplate(pillars, selected, globalBudget);
+  try {
+    const ctx = [
+      `Marque : ${String((pillars.a as Record<string, unknown>)?.nomMarque ?? "")}`,
+      `Perception actuelle : ${String((overton as Record<string, unknown>)?.perceptionActuelle ?? "?")}`,
+      `Perception cible : ${String((overton as Record<string, unknown>)?.perceptionCible ?? "?")}`,
+      `${selected.length} actions retenues, budget ${globalBudget} FCFA`,
+      `Axes : ${axesStrategiques.map((a) => a.axe).join("; ")}`,
+    ].join("\n");
+    const res = await callStrategyJSON({
+      strategyId, label: "synthese", schema: SyntheseLLMSchema, maxOutputTokens: 1200,
+      system: "Tu es le Protocole Strategy. Rédige une synthèse exécutive narrative (≥400 caractères) en français à partir d'éléments DÉJÀ DÉCIDÉS. N'invente AUCUN chiffre. Réponds en JSON strict.",
+      prompt: `${ctx}\n\nProduis UNIQUEMENT : { "syntheseExecutive": "…synthèse de 400+ caractères…" }`,
+    });
+    if (typeof res.syntheseExecutive === "string" && res.syntheseExecutive.length >= 200) {
+      syntheseExecutive = res.syntheseExecutive;
+    }
+  } catch { /* fallback templaté déjà en place */ }
 
-  const baseSystem = `Tu es le Protocole Strategy de l'essaim MESTOR. Tu prends les DÉCISIONS stratégiques.
-
-S PIOCHE DANS I. Le pilier I contient le POTENTIEL TOTAL (${catalogueSummary}).
-Ton rôle : SÉLECTIONNER les actions de I qui déplacent la Fenêtre d'Overton vers le superfan.
-
-OBJECTIF UNIQUE : accumulation de superfans via déplacement de la Fenêtre d'Overton.
-
-Devotion Ladder (du bas vers le haut) :
-SPECTATEUR → INTÉRESSÉ → PARTICIPANT → ENGAGÉ → AMBASSADEUR → ÉVANGÉLISTE (= superfan)
-
-Base-toi STRICTEMENT sur les données fournies. Retourne UNIQUEMENT du JSON valide, sans markdown.`;
-
-  const baseData = `Données ADVERTIS complètes (7 piliers):\n\n${context}${overtonContext}`;
-
-  // Mega-appel (8 champs, 8000 tokens) ÉCLATÉ en 4 sous-appels focalisés — chacun
-  // une partie cohérente du pilier S, validée par son sous-schéma. Indépendants
-  // → parallèles (Ollama les sérialise sur le GPU local, mais chaque prompt reste
-  // simple et fiable pour le 8B). Un sous-appel raté retombe sur {}.
-  const [selection, roadmap, overtonGen, synthese] = await Promise.all([
-    callStrategyJSON({
-      strategyId, label: "selection", schema: SelectionLLMSchema, maxOutputTokens: 2500,
-      system: baseSystem,
-      prompt: `${baseData}\n\nSÉLECTIONNE dans le catalogue I (catalogueParCanal) les actions qui déplacent la Fenêtre d'Overton. Produis UNIQUEMENT :\n{ "selectedFromI": [{ "sourceRef": "catalogueParCanal.CANAL[index]", "action": "", "phase": "Phase N", "priority": 1 }] (10+), "rejectedFromI": [{ "sourceRef": "catalogueParCanal.CANAL[index]", "reason": "" }] (3+) }`,
-    }),
-    callStrategyJSON({
-      strategyId, label: "roadmap", schema: RoadmapLLMSchema, maxOutputTokens: 3000,
-      system: baseSystem,
-      prompt: `${baseData}\n\nProduis UNIQUEMENT la roadmap Devotion (4 phases) et le sprint 90 jours (Phase 1 détaillée). Chaque phase porte un objectifDevotion ; chaque action de sprint un devotionImpact + sourceRef vers I.\n{ "roadmap": [{ "phase": "Phase 1 — Fondations (0-90j)", "objectif": "", "objectifDevotion": "SPECTATEUR → INTERESSE", "actions": [], "budget": 0, "duree": "3 mois" }] (4 phases : Fondations / Engagement / Accélération / Culte), "sprint90Days": [{ "action": "", "owner": "", "kpi": "", "priority": 1, "devotionImpact": "SPECTATEUR", "sourceRef": "catalogueParCanal.DIGITAL[0]", "isRiskMitigation": false }] (8+) }`,
-    }),
-    callStrategyJSON({
-      strategyId, label: "overton", schema: OvertonLLMSchema, maxOutputTokens: 2000,
-      system: baseSystem,
-      prompt: `${baseData}\n\nProduis UNIQUEMENT la stratégie de déplacement de la Fenêtre d'Overton (5+ étapes concrètes) :\n{ "fenetreOverton": { "perceptionActuelle": ${JSON.stringify(overton?.perceptionActuelle ?? "...")}, "perceptionCible": ${JSON.stringify(overton?.perceptionCible ?? "...")}, "ecart": ${JSON.stringify(overton?.ecart ?? "...")}, "strategieDeplacement": [{ "etape": "", "action": "", "canal": "", "horizon": "Q1|Q2|Q3|Q4", "devotionTarget": "SPECTATEUR", "riskRef": "risque R mitigé", "hypothesisRef": "hypothèse T" }] (5+) } }`,
-    }),
-    callStrategyJSON({
-      strategyId, label: "synthese", schema: SyntheseLLMSchema, maxOutputTokens: 2000,
-      system: baseSystem,
-      prompt: `${baseData}\n\nProduis UNIQUEMENT la synthèse stratégique :\n{ "axesStrategiques": [{ "axe": "", "pillarsLinked": ["A","D"], "kpis": [""] }] (3+), "facteursClesSucces": ["..."] (5+), "syntheseExecutive": "400+ caractères : comment on déplace la perception pour transformer des spectateurs en évangélistes" }`,
-    }),
-  ]);
-
-  // Fusion des 4 sous-réponses (champs disjoints → pas de collision).
-  return { ...selection, ...roadmap, ...overtonGen, ...synthese };
+  return { selectedFromI, roadmap, sprint90Days, fenetreOverton, axesStrategiques, facteursClesSucces, syntheseExecutive, globalBudget };
 }
 
 // ── Step 5 : KPI Dashboard (CALC) ────────────────────────────────────
@@ -428,6 +571,71 @@ export function computePillarS(
   };
 }
 
+// ── I→S link : persister la sélection S sur le blob I (ADR-0088) ──────────
+//
+// computePillarS n'agrège QUE les initiatives du blob I en status
+// SELECTED_FOR_ROADMAP. Or les actions GÉNÉRÉES sont RECOMMENDED (proposées).
+// La sélection du protocole S (`selectedFromI`) doit donc être réinjectée sur
+// le blob I, sinon S voit 0 initiative (cas générique). Le canon (écrit main)
+// porte déjà SELECTED_FOR_ROADMAP, d'où sa cohérence — cette étape donne la
+// même cohérence au contenu généré.
+
+/** Phase de roadmap (libellé libre LLM) → timeframe INITIATIVE canonique. */
+function phaseToTimeframe(phase: unknown): (typeof INITIATIVE_TIMEFRAMES)[number] {
+  const p = String(phase ?? "").toLowerCase();
+  if (p.includes("sprint") || p.includes("90") || /phase\s*1\b/.test(p) || p.includes("fondation")) return "SPRINT_90";
+  if (/phase\s*2\b/.test(p) || p.includes("engagement")) return "PHASE_1";
+  if (/phase\s*3\b/.test(p) || p.includes("accel") || p.includes("accél")) return "PHASE_2";
+  return "LONG_TERM";
+}
+
+const normLoose = (s: unknown) => String(s ?? "").toLowerCase().replace(/\s+/g, " ").trim();
+
+/**
+ * Marque en SELECTED_FOR_ROADMAP (+ timeframe dérivé de la phase) les actions
+ * du blob I retenues par `selectedFromI`. Match : sourceRef
+ * `catalogueParCanal.CANAL[idx]` d'abord, repli sur le texte d'action. PURE —
+ * retourne une copie du blob + le nombre promu (0 = rien à persister).
+ */
+export function promoteSelectedInBlob(
+  iContent: Record<string, unknown> | null,
+  selectedFromI: Array<Record<string, unknown>>,
+): { content: Record<string, unknown>; promoted: number } {
+  const content = (iContent ? JSON.parse(JSON.stringify(iContent)) : {}) as Record<string, unknown>;
+  const cat = (content.catalogueParCanal ?? {}) as Record<string, Array<Record<string, unknown>>>;
+  let promoted = 0;
+  const mark = (a: Record<string, unknown>, phase: unknown): boolean => {
+    if (a.status === "SELECTED_FOR_ROADMAP") return false; // déjà retenue
+    a.status = "SELECTED_FOR_ROADMAP";
+    a.timeframe = phaseToTimeframe(phase);
+    return true;
+  };
+  for (const sel of selectedFromI) {
+    let done = false;
+    const m = /catalogueParCanal\.([A-Za-z_]+)\s*\[\s*(\d+)\s*\]/.exec(String(sel.sourceRef ?? ""));
+    if (m) {
+      const arr = cat[m[1]!];
+      const idx = Number(m[2]);
+      if (Array.isArray(arr) && arr[idx]) done = mark(arr[idx]!, sel.phase);
+    }
+    if (!done) {
+      const target = normLoose(sel.action);
+      if (target) {
+        outer: for (const arr of Object.values(cat)) {
+          if (!Array.isArray(arr)) continue;
+          for (const a of arr) {
+            const at = normLoose(a.action);
+            if (at && (at === target || at.includes(target) || target.includes(at))) { done = mark(a, sel.phase); if (done) break outer; }
+          }
+        }
+      }
+    }
+    if (done) promoted++;
+  }
+  content.catalogueParCanal = cat;
+  return { content, promoted };
+}
+
 // ── Public API ────────────────────────────────────────────────────────
 
 export async function executeProtocoleStrategy(strategyId: string): Promise<ProtocoleStrategyResult> {
@@ -490,6 +698,30 @@ export async function executeProtocoleStrategy(strategyId: string): Promise<Prot
       declaredBudget ?? (strategyContent.globalBudget as number | undefined),
       companyStage,
     );
+
+    // I→S link (ADR-0088) — persister la sélection sur le blob I AVANT
+    // d'agréger : computePillarS ne compte que les actions SELECTED_FOR_ROADMAP
+    // du blob. On promeut les actions retenues (selectedFromI), on persiste le
+    // blob I (status-only → n'affecte pas le cache completionLevel/D-2), et on
+    // re-matérialise BrandAction pour que le panel reflète la sélection.
+    const selFromI = (strategyContent.selectedFromI ?? []) as Array<Record<string, unknown>>;
+    if (selFromI.length > 0 && pillars.i) {
+      const { content: promotedI, promoted } = promoteSelectedInBlob(pillars.i, selFromI);
+      if (promoted > 0) {
+        pillars.i = promotedI; // computePillarS (ci-dessous) lit pillars.i en mémoire
+        try {
+          await db.pillar.update({
+            where: { strategyId_key: { strategyId, key: "i" } },
+            data: { content: promotedI as unknown as Prisma.InputJsonValue },
+          });
+          const { syncBrandActionsFromBlob } = await import("@/server/services/artemis/action-db/materializer");
+          await syncBrandActionsFromBlob(strategyId);
+        } catch (err) {
+          console.warn("[protocole-S] writeback I / matérialisation échoué:", err instanceof Error ? err.message : err);
+        }
+        console.log(`[protocole-S] ${promoted}/${selFromI.length} action(s) I promues SELECTED_FOR_ROADMAP`);
+      }
+    }
 
     // Pure computed dashboard (ADR-0088) — aggregations over the relational
     // backbone. Recomputed here and again by the recommendation apply path

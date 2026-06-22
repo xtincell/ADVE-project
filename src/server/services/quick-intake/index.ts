@@ -1341,6 +1341,13 @@ Réponds UNIQUEMENT avec un objet JSON contenant TOUS les champs du pilier ${upp
         prompt,
         caller: `quick-intake:extract-${pillarKey}`,
         purpose: "extraction",
+        // Extraction structurée (schéma pilier complet) : modèle Ollama rapide à
+        // contexte 16K + json_object → JSON fiable sur le 8B local. Sans ça,
+        // extractJSON échouait → fallback sur les réponses BRUTES (clés a_*) →
+        // pilier A non canonique → tout l'aval (Oracle, scorer) le voit vide.
+        // Inerte sans Ollama (le cloud ignore l'option).
+        ollamaModel: process.env.OLLAMA_STRUCTURED_MODEL ?? "hermes3-fast",
+        responseFormat: "json_object",
         maxOutputTokens: 4096,
       });
 

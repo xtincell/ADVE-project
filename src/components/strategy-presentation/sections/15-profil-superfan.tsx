@@ -46,7 +46,7 @@ export function ProfilSuperfan({ data }: Props) {
       {/* Metriques */}
       <div className="grid gap-4 sm:grid-cols-4">
         <MetricCard label="Superfans actifs" value={String(data.metriquesSuperfan.actifs)} />
-        <MetricCard label="Evangelistes" value={String(data.metriquesSuperfan.evangelistes)} />
+        <MetricCard label="Prescripteurs" value={String(data.metriquesSuperfan.evangelistes)} />
         <MetricCard label="Ratio superfan" value={`${data.metriquesSuperfan.ratio}%`} />
         <MetricCard label="Velocite /30j" value={data.metriquesSuperfan.velocite != null ? String(data.metriquesSuperfan.velocite) : "—"} />
       </div>

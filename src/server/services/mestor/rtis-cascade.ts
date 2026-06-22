@@ -32,18 +32,32 @@ async function loadPillars(strategyId: string): Promise<Record<string, unknown>>
   return map;
 }
 
-async function savePillar(strategyId: string, key: string, content: Record<string, unknown>, confidence: number) {
+async function savePillar(
+  strategyId: string,
+  key: string,
+  content: Record<string, unknown>,
+  confidence: number,
+  operationType: "MERGE_DEEP" | "REPLACE_FULL" = "MERGE_DEEP",
+) {
   // LOI 1 — writePillarAndScore reconcile Pillar.completionLevel cache
   // (D-2 invariant). writePillar seul laisse le cache divergent, ce qui
   // bloque le stepper Notoria sur étape 1 même quand stage=COMPLETE.
   const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
-  await writePillarAndScore({
+  const res = await writePillarAndScore({
     strategyId,
     pillarKey: key.toLowerCase() as import("@/lib/types/advertis-vector").PillarKey,
-    operation: { type: "MERGE_DEEP", patch: content },
+    operation: operationType === "REPLACE_FULL"
+      ? { type: "REPLACE_FULL", content }
+      : { type: "MERGE_DEEP", patch: content },
     author: { system: "MESTOR", reason: "RTIS cascade — actualizePillar" },
     options: { targetStatus: "AI_PROPOSED", confidenceDelta: confidence * 0.1 },
   });
+  // Ne JAMAIS avaler un échec d'écriture en silence : sinon actualizePillar
+  // renvoie updated=true alors que le blob n'a PAS été persisté (bug observé :
+  // catalogue généré mais perdu, base d'actions vide). On remonte l'erreur.
+  if (!res.success) {
+    throw new Error(`[savePillar ${key}] écriture rejetée: ${res.error ?? "(sans message)"}${res.warnings?.length ? " | " + res.warnings.slice(0, 3).join(" | ") : ""}`);
+  }
 }
 
 async function recalcScores(strategyId: string) {
@@ -542,9 +556,10 @@ Retourne le pilier ${pillarKey} complet en JSON.`;
               allPillars: allPillarsLower,
               missingReqs: missingDerivable,
               caller: `rtis-cascade-completion:${pillarKey.toLowerCase()}`,
-              // I (Potentiel) = gros volume → modèle Ollama rapide (4K ctx, full GPU)
-              // au lieu du hermes3-ctx 64K qui spille sur CPU. Cf. i-pillar-sequenced.
-              ollamaModel: pillarKey === "I" ? (process.env.OLLAMA_FAST_MODEL ?? "hermes3:8b") : undefined,
+              // Complétion = contexte multi-piliers + champs imbriqués → modèle
+              // Ollama rapide à contexte 16K (hermes3-fast) au lieu du hermes3-ctx
+              // 64K qui spille sur CPU. Inerte sans Ollama (cloud ignore l'option).
+              ollamaModel: process.env.OLLAMA_STRUCTURED_MODEL ?? "hermes3-fast",
             });
 
             for (const [path, value] of Object.entries(filled)) {
@@ -570,8 +585,32 @@ Retourne le pilier ${pillarKey} complet en JSON.`;
       }
     }
 
-    // Save
-    await savePillar(strategyId, pillarKey, newContent, confidence);
+    // Save — I = régénération COMPLÈTE du catalogue → REPLACE (le MERGE_DEEP
+    // append-ait les arrays → le catalogue gonflait à chaque « Recalculer » :
+    // 37 → 79 → … On préserve les champs HORS catalogue de l'ancien blob
+    // (éditions opérateur, collections Notoria type actionsByDevotionLevel) en
+    // les spreadant SOUS le nouveau contenu. Les autres piliers gardent le
+    // MERGE_DEEP incrémental (LOI 1).
+    if (pillarKey === "I") {
+      const existingI = (pillars[pillarKey] ?? {}) as Record<string, unknown>;
+      await savePillar(strategyId, pillarKey, { ...existingI, ...newContent }, confidence, "REPLACE_FULL");
+    } else {
+      await savePillar(strategyId, pillarKey, newContent, confidence);
+    }
+
+    // ADR-0094 — projeter le blob I fraîchement sauvé dans la table requêtable
+    // BrandAction (ce que le panel cockpit + les sections Oracle lisent). Le
+    // chemin "Recalculer ce pilier" sautait cette projection (seul
+    // GENERATE_I_ACTIONS la faisait) → la base d'actions restait vide. Non-fatal.
+    if (pillarKey === "I") {
+      try {
+        const { syncBrandActionsFromBlob } = await import("@/server/services/artemis/action-db/materializer");
+        const mat = await syncBrandActionsFromBlob(strategyId);
+        console.log(`[rtis-cascade] I → BrandAction: ${mat.upserted} upserted, ${mat.deleted} réconciliés (${mat.initiatives} initiatives)`);
+      } catch (err) {
+        console.warn(`[rtis-cascade] matérialisation BrandAction échouée:`, err instanceof Error ? err.message : err);
+      }
+    }
 
     // Recalc scores
     const scoreResult = await recalcScores(strategyId);

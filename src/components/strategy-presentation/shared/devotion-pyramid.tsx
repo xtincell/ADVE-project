@@ -1,7 +1,7 @@
 "use client";
 
 const LEVELS = [
-  { key: "evangeliste", label: "Evangeliste", color: "rgb(232, 75, 34)" },
+  { key: "evangeliste", label: "Prescripteur", color: "rgb(232, 75, 34)" },
   { key: "ambassadeur", label: "Ambassadeur", color: "rgb(245, 124, 0)" },
   { key: "engage", label: "Engage", color: "rgb(251, 176, 59)" },
   { key: "participant", label: "Participant", color: "rgb(124, 179, 66)" },
@@ -20,7 +20,7 @@ export function DevotionPyramid({ data, score }: DevotionPyramidProps) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-semibold text-foreground-secondary">Pyramide de Devotion</h4>
+        <h4 className="text-sm font-semibold text-foreground-secondary">Pyramide d'engagement</h4>
         <span className="rounded-full bg-background px-3 py-1 text-xs font-bold text-orange-400">
           Score: {score.toFixed(1)}
         </span>

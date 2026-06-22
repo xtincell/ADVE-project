@@ -42,7 +42,7 @@ const PILLAR_CONFIG: Record<string, {
   identity:     { title: "Identite",                subtitle: "Qui est votre marque ? Son ADN, ses valeurs, sa vision.", pillarKey: "a", type: "adve", accent: "text-accent" },
   positioning:  { title: "Positionnement & Design", subtitle: "Comment votre marque se distingue sur le marche.",       pillarKey: "d", type: "adve", accent: "text-blue-400" },
   offer:        { title: "Offre & Pricing",         subtitle: "Votre proposition de valeur et votre modele economique.",pillarKey: "v", type: "adve", accent: "text-emerald-400" },
-  engagement:   { title: "Experience & Engagement",  subtitle: "Comment vous creez la devotion autour de votre marque.", pillarKey: "e", type: "adve", accent: "text-amber-400" },
+  engagement:   { title: "Experience & Engagement",  subtitle: "Comment vous creez l'attachement autour de votre marque.", pillarKey: "e", type: "adve", accent: "text-amber-400" },
   diagnostic:   { title: "Diagnostic",               subtitle: "Analyse des risques et vulnerabilites.",                 pillarKey: "r", type: "rtis", accent: "text-error" },
   market:       { title: "Realite Marche",           subtitle: "Ce que le marche dit de votre marque.",                  pillarKey: "t", type: "rtis", accent: "text-sky-400" },
   potential:    { title: "Potentiel",                 subtitle: "Tout ce que votre marque peut faire.",                   pillarKey: "i", type: "rtis", accent: "text-orange-400" },
@@ -534,7 +534,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                     <div className="text-xs font-semibold text-foreground">{String(r.label ?? key)}</div>
                     <div className={`mt-1 text-2xl font-extrabold ${isSelected ? "text-accent" : "text-foreground"}`}>+{growth}%</div>
                     <div className="mt-1 space-y-0.5 text-[10px] text-foreground-muted">
-                      {cult != null ? <div>Cult Index cible : <span className="font-bold text-foreground">{cult}/100</span></div> : null}
+                      {cult != null ? <div>Indice d'attachement cible : <span className="font-bold text-foreground">{cult}/100</span></div> : null}
                       {count != null ? <div>{count} initiative{count > 1 ? "s" : ""}{budget != null && budget > 0 ? ` · ${(budget / 1_000_000).toLocaleString()} M F` : ""}</div> : null}
                       {coverage != null ? <div>{coverage}% des risques couverts</div> : null}
                     </div>
