@@ -330,7 +330,7 @@ export default function CampaignTrackerPage() {
         </div>
         <p className="mt-2">
           La trajectoire APOGEE de votre marque ne se mesure pas dans les KPIs marketing classiques (impressions,
-          conversions, ROAS). Elle se mesure dans <strong>la production d'évangélistes</strong>, le{" "}
+          conversions, ROAS). Elle se mesure dans <strong>la production de prescripteurs</strong>, le{" "}
           <strong>déplacement de l'axe culturel sectoriel</strong>, et la <strong>cohérence du culte</strong>. Cette
           vue agrège les indicateurs L2 Instrumental qui répondent à <em>"cette campagne renforce-t-elle ou dilue-t-elle
           la marque iconique en construction ?"</em>.

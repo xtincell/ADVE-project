@@ -48,7 +48,7 @@ const TIER_LABEL: Record<string, string> = {
   PARTICIPANT: "Participant",
   ENGAGE: "Engagé",
   AMBASSADEUR: "Ambassadeur",
-  EVANGELISTE: "Évangéliste",
+  EVANGELISTE: "Prescripteur",
 };
 
 export function FounderRitual({ weekOf, cultIndex, sections, callToActionIntent, onTriggerCta }: FounderRitualProps) {
@@ -100,7 +100,7 @@ export function FounderRitual({ weekOf, cultIndex, sections, callToActionIntent,
               }
             />
           ))}
-          <span className="ml-2 whitespace-nowrap text-foreground-muted">vers Évangéliste</span>
+          <span className="ml-2 whitespace-nowrap text-foreground-muted">vers Prescripteur</span>
         </div>
       </div>
 

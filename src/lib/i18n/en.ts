@@ -29,9 +29,9 @@ export const en = {
 
   // ── Marketing — manifesto ────────────────────────────────────────────
   "marketing.manifesto.title": "Superfans × Overton — the dual equation",
-  "marketing.manifesto.body": "Classic marketing optimizes conversions. La Fusée optimizes critical mass of evangelists and sector-cultural displacement — two inseparable mechanics that tip the market.",
+  "marketing.manifesto.body": "Classic marketing optimizes conversions. La Fusée optimizes critical mass of advocates and sector-cultural displacement — two inseparable mechanics that tip the market.",
   "marketing.manifesto.pillar.superfan": "Superfans",
-  "marketing.manifesto.pillar.superfan.body": "Strategic mass of ambassadors and evangelists who produce organic work for the brand.",
+  "marketing.manifesto.pillar.superfan.body": "Strategic mass of ambassadors and advocates who produce organic work for the brand.",
   "marketing.manifesto.pillar.overton": "Overton",
   "marketing.manifesto.pillar.overton.body": "Sector cultural axis — when the brand shifts it, the sector redefines itself around it.",
 
@@ -39,7 +39,7 @@ export const en = {
   "marketing.value.adve.title": "ADVE-RTIS — the cascade that propels",
   "marketing.value.adve.body": "Brand coherence is the prerequisite. The A→D→V→E→R→T→I→S cascade turns coherence into measurable propulsion.",
   "marketing.value.superfan.title": "Superfans — the mass that tips",
-  "marketing.value.superfan.body": "Not followers — evangelists. La Fusée mechanizes their accumulation up to the critical-mass threshold.",
+  "marketing.value.superfan.body": "Not followers — advocates. La Fusée mechanizes their accumulation up to the critical-mass threshold.",
   "marketing.value.overton.title": "Overton — the sector redefines itself",
   "marketing.value.overton.body": "When your brand shifts the sector's cultural axis, the entire market re-orients around you.",
 

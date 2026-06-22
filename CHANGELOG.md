@@ -10,6 +10,83 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.23 — UPgraders : formulaire contact branché au CRM natif + blog CMS natif (+ Qui sommes-nous, mentions légales UPgraders) (2026-06-22)
+
+**Directive opérateur : « branche [le formulaire contact] au CRM et build le CMS natif » (après pro/con WordPress vs from-scratch — reco : natif, le repo a déjà un CRM) + « tu as oublié le Qui sommes-nous et de rajouter des mentions légales pour UPgraders également ».**
+
+- `feat(crm)` **Formulaire contact → CRM natif.** Route publique `POST /api/contact` (même pattern idempotent que `/api/newsletter/subscribe`) : upsert `CrmContact` `source="WEBSITE_CONTACT"` + consigne le brief en `CrmMessage` (direction `IN`, channel `WEB_FORM`). Le `ContactForm` capture le lead (nom + email requis, téléphone/marque/besoin) **avant** d'ouvrir WhatsApp/email pré-rempli — les leads atterrissent dans `/console/anubis/crm` (filtre source étendu à `WEBSITE_CONTACT`), l'opérateur qualifie en `Deal`. Aucun WordPress : le CRM (Thot/Anubis) est déjà natif et gouverné.
+- `feat(blog)` **CMS natif « Notes de cabinet »** (reco from-scratch vs WordPress headless — cohérence OS, 1 source de vérité, 0 infra en plus). Modèle Prisma **`Post`** + enum `PostStatus` (DRAFT/PUBLISHED) + migration additive `20260622000000_blog_post_cms`. Router tRPC **`blog`** (public `listPublished`/`getBySlug` ; opérateur `listAll`/`upsert`/`setStatus`/`remove`, direct-`db` comme le router CRM — contenu éditorial, pas de mutation gouvernée). Éditeur **Console `/console/anubis/blog`** (créer/éditer/publier/supprimer) + entrée nav Anubis. `/blog` (+ `/blog/[slug]` + teaser home) lisent **DB-first** via `blog-data.ts` avec **fallback bundle** `posts.ts` (résilient si migration non appliquée / DB down). Seed idempotent `db:seed:blog` (importe les 6 notes fournies en PUBLISHED).
+- `fix(ui)` **« Qui sommes-nous »** : la page `/agence` (récit fondateur, équipe, trajectoire) est relabellisée « Qui sommes-nous » (nav + footer + eyebrow) — route inchangée.
+- `docs(legal)` **Mentions légales UPgraders** : `/mentions-legales` réécrite **UPgraders-first** (l'agence = l'entité éditrice du site, opératrice du produit La Fusée) + section explicite « UPgraders & La Fusée — qui édite quoi » + coordonnées agence réelles (Douala/Abidjan, WhatsApp, email).
+- Hors phases 0–9 (out-of-scope, cf. `scope-drift.md`). **1 nouveau model Prisma** (`Post`, additif, migration backfill-safe) — pas un doublon (grep CODE-MAP négatif : ni `Article`/`BlogPost`/`Content`). **0 nouveau Neter** (Cap APOGEE 7/7), **0 bypass governance** (CRM/CMS = CRUD direct-db éditorial, précédent `crm-contacts`/newsletter). tsc 0 · eslint 0 · 855 tests gouvernance verts · `prisma validate` ok · `next build` exit 0.
+
+
+## v6.27.22 — UPgraders : vrai site d'agence multi-pages en page d'accueil (La Fusée → sous-site) (2026-06-22)
+
+**Directive opérateur : « où est le site d'UPgraders ? je veux un vrai site, pas une solopage. c'est cette page qui servira d'index. » + « ne confonds pas les CTA de La Fusée et ceux d'UPgraders : La Fusée est un produit d'UPgraders, un parmi d'autres. » + « inclus tout ce que tu sais d'UPgraders synthétisé. »**
+
+- `feat(marketing)` **Le site public `/` devient le vrai site multi-pages d'UPgraders (l'agence)** ; **La Fusée (le produit/OS) devient un sous-site `/lafusee`** (l'ancienne landing long-scroll, déplacée intacte avec ses 14 sections `Marketing*` + sa propre chrome). 9 routes neuves sous `(marketing)` : `/` (accueil agence), `/agence`, `/methode`, `/services`, `/la-guilde`, `/realisations`, `/blog` (+ `/blog/[slug]`), `/contact`, `/lafusee`.
+- **Distinction CTA agence ≠ produit (correctif explicite)** : le CTA d'UPgraders **vend l'agence** → « Démarrer un projet » / « Parler à l'agence » / « Demander un devis » → `/contact` (canal commercial réel = **WhatsApp** Douala/Abidjan, surfacé sur `/contact` + brief express sans backend qui pré-remplit le message). Le diagnostic `/intake` **reste le funnel self-serve de La Fusée** (un produit parmi d'autres), partout étiqueté « La Fusée — notre produit ». Vocabulaire CTA centralisé dans `src/components/upgraders/data.ts` (`CTA.projectPrimary` vs `CTA.lafuseeDiagnostic`).
+- **Contenu = canon business + dossier agence concret** : porté de la KB [UPGRADERS-LAFUSEE-KB.md](docs/governance/context/UPGRADERS-LAFUSEE-KB.md) (5 piliers Impulsion/Pilotis/Source Insights/La Guilde/Sérénité ; EFR / **obligation d'effet** ; 6 paliers + score cible /200 ; `capture-then-grow` ; premium curated ; hiérarchie UPgraders › La Fusée › Argos) **+** du dossier réel (équipe Alexandre « Xtincell » Djengue / Ingrid Nya Ngatchou / Jean-Philippe Veigne ; trajectoire 2017→2026 ; La Guilde — Stéphane Nounamo, Annick, Paulhan, Friends Studio ; réalisations Motion19, UMA, Chococam, Orange, Cimencam, KOF, Akwa Palace, Maison Gimane, Shakazz… ; contacts WhatsApp + email + réseaux). 6 « notes de cabinet » (blog). **Aucun terme religieux/interne face au client** (KB §3).
+- **DS canon respecté** (UPgraders DS — corail + Clash Display/Satoshi/JetBrains Mono) : composants `src/components/upgraders/` (chrome `site-nav`/`site-footer` responsive + session-aware, helpers `ui`, blocs réutilisables `blocks`, `contact-form`, `data`, `posts`). Tokens sémantiques uniquement — passe les 3 gates anti-drift (`design-tokens-cascade`/`-canonical`/`-primitives-cva`). 0 nouveau token, 0 raw color.
+- Hors phases 0–9 de la refonte (out-of-scope, cf. `scope-drift.md`). 0 nouveau Neter, 0 model Prisma, 0 bypass governance (pages statiques de contenu). tsc 0 · eslint 0 · `next build` exit 0 (9 routes générées). Cap APOGEE 7/7 préservé.
+
+
+## v6.27.21 — fix CI : Golden Path 1-landing (lien mort `/legal/privacy` + icônes PWA) (2026-06-21)
+
+**Correctif racine du check `Golden Path E2E` rouge sur `main` depuis ~2026-05-31 (step `1-landing`).**
+
+- `fix(ui)` **lien mort `/legal/privacy`** (cause exacte du finding) : le bandeau cookies (`cookie-consent.tsx`, rendu sur **toutes** les pages dont `/intake`) pointait « En savoir plus » → `/legal/privacy`, route **inexistante** (la vraie est `/privacy` — tous les autres liens du repo l'utilisent déjà). Next.js **prefetch** ce `<Link>` au chargement → 404 RSC (`/legal/privacy?_rsc=…`) → `console:generic-error` capté par le golden-path. Corrigé en `/privacy`.
+- `fix(ui)` **icônes PWA manquantes** (bug latent annexe) : `public/manifest.webmanifest` référençait `/images/icon-192.png` + `/images/icon-512.png`, **absents du repo** → 404 pour tout fetch du manifest (Lighthouse/PWA install). Génération des 2 assets **maskable-safe** (fond `#0b0b0e` + fusée canon centrée à 72 %) depuis `src/app/icon.svg` via `sharp`.
+- `chore(ci)` **golden-path auto-diagnostiquable** (PR #280) : imprime le détail des findings des steps en échec dans le log du run + **annexe l'URL de la ressource** (`msg.location().url`) au détail d'un console-error 404 — c'est ce qui a révélé `/legal/privacy` (le message console seul ne contient pas l'URL).
+- Hors phases 0–9 (out-of-scope, cf. `scope-drift.md` #280). 0 nouveau Neter, 0 model Prisma, 0 bypass. Cap APOGEE 7/7 préservé.
+
+
+## v6.27.20 — galileo : « évangélistes » → « prescripteurs » côté client + SEO landing nettoyé (2026-06-21)
+
+**Suite à l'audit de la surface de vente (arbre de vente OK, funnel WhatsApp OK) : nettoyage du vocabulaire religieux résiduel côté client.**
+
+- `fix(ui)` **SEO landing** : la description metadata `(marketing)/layout.tsx` exposait au public « 7 Neteru actifs (Mestor/Artemis/…) » → remplacée par une description business (commit séparé `370c3a4`).
+- `fix(ui)` **« évangélistes » → « prescripteurs »** dans **toutes les surfaces vues par le fondateur/prospect** (décision opérateur) : i18n marketing FR (+ EN « evangelists » → « advocates »), landing manifesto, Cockpit (tracker de campagne, lignée prescripteur, community panel, founder ritual, superfan mass meter, apogee maintenance), et le **livrable Oracle** (catalogue de sections + composer déterministe Devotion Ladder). **Les enums `EVANGELISTE`, les clés de données (`evangeliste`/`Evangelist`/`snap.evangeliste`), les maps de normalisation, les prompts LLM, le seed canon, les commentaires et les surfaces Console (opérateur) restent intacts** — seul l'affichage client change.
+- « Mestor » conservé comme marque-feature (décision opérateur). tsc 0 · eslint 0 · aucun test ne référence le label. Cap APOGEE 7/7 préservé.
+
+
+## v6.27.19 — galileo : KB consolidée en vocable business (registre religieux → business) (2026-06-21)
+
+**Directive opérateur : « consolider la connaissance, mettre à jour le vocabulaire, affecter l'impact business ; les mentions qui sonnent religieux doivent être remplacées par le vocable business. »**
+
+- `docs(governance)` **[UPGRADERS-LAFUSEE-KB.md](docs/governance/context/UPGRADERS-LAFUSEE-KB.md) refondue en vocable business.** Le canon habille l'OS d'un registre mythologique/religieux (« Neteru », noms de divinités, « la Pesée », « Messie », « Gospel », « Temples », « évangélisation »…) ; la KB parle désormais **business par défaut**, les termes religieux devenant des **alias internes** (entre parenthèses, jamais client-facing). Le registre **aéronautique** (Fusée, Cockpit, orbite) reste — signature produit, pas du religieux.
+- Nouvelle pièce maîtresse **§3 LEXIQUE BUSINESS** (*terme business · **impact business** · alias code · alias doctrine*) : les 7 moteurs de gouvernance (Orchestrateur=Mestor/Sia, Studio de Brief=Artemis/Neith, Forge d'Assets=Ptah, Télémétrie=Seshat, Moteur Financier & Opérations=Thot, Moteur Talent=Imhotep, Moteur de Diffusion=Anubis) + substrat de circulation (=Yggdrasil/la Sève), validation pré-vol (=la Pesée), catalogue d'amendements (=Jehuty/Notoria) + le cult-marketing traduit (figure de proue=Messie, récit fondateur=Gospel, points de contact=Temples, ambassadeurs=clergé, événements phares=pèlerinages, recommandation=évangélisation, prescripteur/champion=évangéliste). 100 Q/A refondues business-first.
+- `fix(artemis)` **`sales-response-tree`** : le prompt ne référence plus « les Neteru » → « les moteurs internes » + consigne explicite *« aucun terme interne à connotation religieuse/mythologique face au client »*.
+- `docs(meta)` pointeur CLAUDE.md mis à jour (vocable business + lexique §3). `sales-response-tree.test.ts` 10/10 verts ; tsc/lint inchangés. Cap APOGEE 7/7 préservé.
+
+
+## v6.27.18 — galileo : KB anti-confusion enrichie au canon complet (repo + blueprint voisin) (2026-06-21)
+
+**À la demande de l'opérateur : la KB monte au canon complet — PDF (base) + ce repo (canon opérationnel) + le repo voisin `la-fusee-blueprint` (canon conceptuel). « Assure-toi de faire un travail parfait. »**
+
+- `docs(governance)` **[UPGRADERS-LAFUSEE-KB.md](docs/governance/context/UPGRADERS-LAFUSEE-KB.md) réécrite au canon-complet** en intégrant le repo voisin `la-fusee-blueprint` (LA_FUSEE_BLUEPRINT / LIVRE_DE_BORD / CAHIER_DES_CHARGES, NAMING_CANON v3.3). Nouvelles sections : **§0 couches de canon & préséance** (PDF base → repo opérationnel prime-code → blueprint conceptuel prime-doctrine) ; **§3 réconciliation de nommage conceptuel↔opérationnel** (Sia↔Mestor, Neith↔Artemis, Shaï↔Tarsis, Wepwawet↔Hunter, Ished+Sève↔Yggdrasil, Notoria↔Jehuty — *« dans le code : opérationnel ; dans la doctrine : conceptuel »*) ; **§6 les 5 Plans ontologiques** (penser/montrer/faire/**vendre**/savoir — la clé qui sépare le Plan commercial des autres) ; **§9 EFR / obligation d'effet tracé** (score cible par palier, ICP, recours) ; **§11 Doctrine du Mouvement Cosmique** (Agence Spatiale Industrielle · Équipage de Propagation/Devotion Ladder 6 paliers · Coalition Stellaire) ; **§12 désambiguïsation des 7 « arbres »** (vente, ADVE-RTIS, Brand Tree, Ished, Sève, funnel AARRR, arbre de décision EFR) — le blueprint §0.7 nomme lui-même cette confusion *« le drift le plus tenace »*. Pricing canon ajouté (Intake gratuit, PDF 5-25k FCFA, Cockpit 15-25k FCFA/mois). **100 Q/A** refondues (12 thèmes A→L).
+- Aucun code touché ; doc seule. Cap APOGEE 7/7 préservé. (Token d'accès au repo voisin utilisé en lecture seule, transitoire, jamais persisté.)
+
+
+## v6.27.17 — galileo : KB anti-confusion UPgraders × La Fusée + correction de l'arbre de vente (2026-06-21)
+
+**Suite à un retour opérateur : NEFER avait confondu l'arbre de vente d'UPgraders (qui vend La Fusée ET le reste) avec les arbres internes de La Fusée, et avait écrit « ne vends pas La Fusée ». Correction + base de connaissance pour ne plus jamais refaire l'erreur.**
+
+- `docs(governance)` **base de connaissance** [docs/governance/context/UPGRADERS-LAFUSEE-KB.md](docs/governance/context/UPGRADERS-LAFUSEE-KB.md) — synthèse des 4 documents fournis (Écosystème, Manifeste « Bâtir le Système d'Exploitation », Analyse du Modèle Économique, Bio Alexandre Djengue / Xtincell) **réconciliée avec le canon du repo**, conclue par **100 Q/A**. Verrouille : **UPgraders (société, VEND) ≠ La Fusée (produit/OS, EST vendu via Cockpit/Oracle) ≠ Argos (sous-marque)** ; **La Fusée se vend** (sa face client) — seul son moteur (OS/Neteru) est invisible ; **l'arbre de vente d'UPgraders ≠ les arbres internes de La Fusée** (cascade ADVE-RTIS, Brand Tree client, funnel AARRR) ; les 5 piliers Impulsion/Pilotis/Source Insights/La Guilde/Sérénité + value ladder + segments.
+- `fix(artemis)` **correction de `sales-response-tree`** : le bloc IDENTITÉ disait « La Fusée… ne le vends pas en tant que tel » (faux) et ne désambiguïsait pas les deux arbres. Reformulé : *vendre La Fusée = vendre Cockpit/Oracle/accès* (le moteur reste invisible), tu vends La Fusée **ET** le reste de l'offre UPgraders, et NE CONFONDS PAS cet arbre de VENTE avec les arbres internes de construction de marque. Référence KB ajoutée au prompt.
+- `docs(meta)` pointeur KB ajouté dans CLAUDE.md §Product identity. tsc/lint inchangés ; `sales-response-tree.test.ts` 10/10 verts. Cap APOGEE 7/7 préservé.
+
+
+## v6.27.16 — galileo : Glory tool `sales-response-tree` (arbre de réponse commercial) (2026-06-21)
+
+**Les commerciaux ont enfin leur outil Artemis : un arbre de réponse qui vend (direct ou indirect via AARRR), sait quoi vendre à qui, capte le minimum CRM (nom + téléphone) et escalade sur scénario non anticipé / demande explicite.**
+
+- `feat(artemis)` nouvel outil HYBRID **`sales-response-tree`** ([ADR-0104](docs/governance/adr/0104-sales-response-tree-glory-tool.md), layer CR, ordre 24_001) dans `src/server/services/artemis/tools/sales-response-tree-tools.ts`, branché sur `EXTENDED_GLORY_TOOLS` (**pas CORE** — cardinalité 56 préservée). Transform pur : à chaque tour il **identifie le QUI** (9 segments), **choisit QUOI vendre** (carte d'offres × value ladder FREE→ULTRA_PREMIUM), **route l'objectif AARRR** (DIRECT=REVENUE / INDIRECT=Acquisition·Activation·Rétention·Référral), **rédige la réponse** prête à envoyer (canaux : **WhatsApp primaire** + DM + outbound + intake), **capte le lead** (`leadCapture` nom/téléphone min, `crmSource="MANUAL"`, `dealStageHint`) et **escalade** (`UNANTICIPATED_SCENARIO` / `EXPLICIT_CLIENT_REQUEST` obligatoires + 6 autres motifs).
+- **On étend, on ne double pas** : aucun nouveau modèle Prisma — la persistance passe par les Intents CRM existants (`crm-contacts.upsertContact` source=MANUAL, `crm.createDealFromIntake`, pipeline `Deal`/`DealStage`). Parité manual-first ADR-0060 (`outputSchema === manualFormSchema` via `defineHybridTool`) + sortie structurée imposée ADR-0067. Ancrage de marque via la Strategy maison UPgraders (`loadStrategyContext`).
+- Garde anti-drift `tests/unit/governance/sales-response-tree.test.ts` (9 assertions HARD) + couvert par `phase22-glory-hybrid.test.ts`. `tsc` 0 · `eslint` 0 · 75 tests ciblés verts. Cap APOGEE 7/7 préservé (Artemis sub-domaine, pas de Neter).
+
+
 ## v6.27.15 — galileo : self-host « serverfull » Windows (en plus de Vercel) (2026-06-19)
 
 **Déploiement sur desktop dédié EN PLUS de Vercel — serveur Node persistant : fin du timeout serverless pour les flux LLM longs.**

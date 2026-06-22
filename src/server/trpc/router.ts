@@ -110,6 +110,8 @@ import { xlsxParserRouter } from "./routers/xlsx-parser";
 import { thotRouter } from "./routers/thot";
 // Phase 24 (ADR-0094) — canonical I-pillar action database (BrandAction projection)
 import { actionsRouter } from "./routers/actions";
+// Blog — CMS natif « Notes de cabinet » du site public UPgraders (public read + operator CRUD)
+import { blogRouter } from "./routers/blog";
 
 export const appRouter = createTRPCRouter({
   // Existing routers
@@ -238,6 +240,8 @@ export const appRouter = createTRPCRouter({
   thot: thotRouter,
   // Phase 24 (ADR-0094) — canonical I-pillar action database (BrandAction projection)
   actions: actionsRouter,
+  // Blog — CMS natif « Notes de cabinet » du site public UPgraders
+  blog: blogRouter,
 });
 
 export type AppRouter = typeof appRouter;

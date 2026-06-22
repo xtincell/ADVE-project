@@ -37,7 +37,7 @@ interface ApogeeMaintenanceDashboardProps {
 const SENTINEL_LABELS: Record<SentinelRunSummary["kind"], { fr: string; gloss: string }> = {
   MAINTAIN_APOGEE: {
     fr: "Maintien d'apogée",
-    gloss: "Vérifie chaque mois le ratio évangélistes/total. Alerte si dilution.",
+    gloss: "Vérifie chaque mois le ratio prescripteurs/total. Alerte si dilution.",
   },
   DEFEND_OVERTON: {
     fr: "Défense Overton",

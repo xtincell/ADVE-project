@@ -3193,6 +3193,13 @@ import { PHASE19_TOOLS } from "./phase19-tools";
 // cardinalité 56).
 import { MARKET_RESEARCH_TOOLS } from "./market-research-tools";
 
+// ─── Sales Response Tree — Glory tool commercial (ADR-0104) ───────────────────
+// 1 outil HYBRID `sales-response-tree` : arbre de réponse pour les commerciaux
+// (identifie le QUI → choisit QUOI vendre → route l'AARRR → rédige la réponse →
+// capture nom+téléphone CRM → escalade opérateur). Ajouté à EXTENDED_GLORY_TOOLS
+// (pas CORE) — préserve la cardinalité 56 du test `glory-tools.test.ts`.
+import { SALES_RESPONSE_TREE_TOOLS } from "./sales-response-tree-tools";
+
 // ─── Exports ─────────────────────────────────────────────────────────────────
 
 // Core registry: original GLORY tools (CR, DC, HYBRID, BRAND) + Phase 13/14/15 tools
@@ -3223,6 +3230,7 @@ export const EXTENDED_GLORY_TOOLS: GloryToolDef[] = [
   ...ADOPS_TOOLS,
   ...PHASE19_TOOLS,
   ...MARKET_RESEARCH_TOOLS,
+  ...SALES_RESPONSE_TREE_TOOLS,
 ];
 
 // Public API canonical export — `ALL_GLORY_TOOLS` = `CORE_GLORY_TOOLS` = 56 tools

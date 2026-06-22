@@ -58,7 +58,7 @@ export function CookieConsent() {
             On utilise des cookies pour la session de connexion (essentiels) et,
             avec ton accord, pour mesurer l&apos;usage afin d&apos;améliorer La Fusée.
             Aucun tracking publicitaire tiers.{" "}
-            <Link href="/legal/privacy" className="underline hover:text-foreground">
+            <Link href="/privacy" className="underline hover:text-foreground">
               En savoir plus
             </Link>
             .

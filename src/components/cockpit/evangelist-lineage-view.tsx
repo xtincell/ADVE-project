@@ -55,7 +55,7 @@ function LineagePanel({ strategyId, campaignId }: { strategyId: string; campaign
     return (
       <EmptyState
         icon={Lock}
-        title="Lignée des prescripteurs — réservée aux abonnements"
+        title="Lignée prescripteur — réservée aux abonnements"
         description="Visualisez quelles campagnes transforment vos fans en ambassadeurs et prescripteurs en activant votre abonnement."
         action={{ label: "Découvrir les formules", onClick: () => router.push(data.configureUrl) }}
       />
@@ -66,7 +66,7 @@ function LineagePanel({ strategyId, campaignId }: { strategyId: string; campaign
     return (
       <EmptyState
         icon={Sparkles}
-        title="Lignée des prescripteurs"
+        title="Lignée prescripteur"
         description="Cette campagne n'est pas rattachée à votre marque."
       />
     );
@@ -76,7 +76,7 @@ function LineagePanel({ strategyId, campaignId }: { strategyId: string; campaign
     return (
       <EmptyState
         icon={Sparkles}
-        title="Lignée des prescripteurs — accumulation en cours"
+        title="Lignée prescripteur — accumulation en cours"
         description="Pas encore assez de transitions observées sur cette campagne pour révéler la lignée. Continuez à activer votre communauté : chaque ambassadeur compte."
       />
     );
@@ -163,7 +163,7 @@ export function EvangelistLineageView() {
         <div>
           <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
             <Sparkles className="h-5 w-5 text-accent" />
-            Lignée des prescripteurs
+            Lignée prescripteur
           </h2>
           <p className="mt-0.5 text-sm text-foreground-secondary">
             Les fans que cette campagne a fait monter au rang d&apos;ambassadeur ou de prescripteur.
@@ -191,7 +191,7 @@ export function EvangelistLineageView() {
       ) : campaigns.length === 0 ? (
         <EmptyState
           icon={Sparkles}
-          title="Lignée des prescripteurs — accumulation en cours"
+          title="Lignée prescripteur — accumulation en cours"
           description="Lancez une campagne pour commencer à transformer vos fans en prescripteurs."
         />
       ) : campaignId ? (
