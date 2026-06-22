@@ -10,6 +10,15 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.24 — Blog : seed des notes de cabinet automatisé au déploiement (create-only) (2026-06-22)
+
+**Directive opérateur : « tu ne peux pas lancer le seed toi-même ou le mettre dans le process de déploiement ? » — le sandbox n'a pas de credential DB ; la bonne réponse est de le câbler au déploiement.**
+
+- `chore(deploy)` **`vercel.json` buildCommand** : `npx prisma migrate deploy && (npm run db:seed:blog || …) && npm run build`. Le seed blog tourne désormais à chaque déploiement, **juste après la migration** et **non-bloquant** (un souci de seed ne casse pas le build).
+- `fix(blog)` **seed `db:seed:blog` rendu CREATE-ONLY** (au lieu d'upsert) : n'insère que les slugs absents, **ne touche jamais un article existant** — les éditions faites dans `/console/anubis/blog` sont préservées d'un déploiement à l'autre. Idempotent et sûr en exécution répétée.
+- Hors phases 0–9 (out-of-scope, suite de #289). 0 schéma touché, 0 nouveau Neter (Cap APOGEE 7/7), 0 bypass. tsc 0 · vercel.json JSON valide.
+
+
 ## v6.27.23 — UPgraders : formulaire contact branché au CRM natif + blog CMS natif (+ Qui sommes-nous, mentions légales UPgraders) (2026-06-22)
 
 **Directive opérateur : « branche [le formulaire contact] au CRM et build le CMS natif » (après pro/con WordPress vs from-scratch — reco : natif, le repo a déjà un CRM) + « tu as oublié le Qui sommes-nous et de rajouter des mentions légales pour UPgraders également ».**
