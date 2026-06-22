@@ -26,14 +26,19 @@ import {
   PillarASchema, PillarDSchema, PillarVSchema, PillarESchema,
   PillarRSchema, PillarTSchema, PillarISchema, PillarSSchema,
 } from "./pillar-schemas";
-import { PILLAR_KEYS } from "@/domain/pillars";
-
-type PillarKey = (typeof PILLAR_KEYS)[number];
 
 const SCHEMAS = {
   a: PillarASchema, d: PillarDSchema, v: PillarVSchema, e: PillarESchema,
   r: PillarRSchema, t: PillarTSchema, i: PillarISchema, s: PillarSSchema,
 } as const;
+
+/**
+ * Clés de stockage lowercase des piliers (`a`..`s`) — ce sont les VRAIES clés de
+ * `SCHEMAS` et du `Pillar.key` en base. NB : `domain/pillars` PILLAR_KEYS est en
+ * MAJUSCULES (A..S) ; ces cartes sont indexées en minuscules (runtime), donc on
+ * type sur `keyof typeof SCHEMAS` pour que le type colle au runtime.
+ */
+type PillarStorageKey = keyof typeof SCHEMAS;
 
 /**
  * Cles de premier niveau d'un schema pilier. Gere ZodObject (`.shape`) et
@@ -46,9 +51,9 @@ function topLevelKeys(schema: unknown): string[] {
 }
 
 /** Champs canoniques de premier niveau, par pilier (depuis les schemas Zod). */
-export const PILLAR_TOPLEVEL_FIELDS: Record<PillarKey, readonly string[]> = Object.fromEntries(
-  (Object.keys(SCHEMAS) as PillarKey[]).map((k) => [k, topLevelKeys(SCHEMAS[k])]),
-) as Record<PillarKey, readonly string[]>;
+export const PILLAR_TOPLEVEL_FIELDS: Record<PillarStorageKey, readonly string[]> = Object.fromEntries(
+  (Object.keys(SCHEMAS) as PillarStorageKey[]).map((k) => [k, topLevelKeys(SCHEMAS[k])]),
+) as unknown as Record<PillarStorageKey, readonly string[]>;
 
 /** Prefixe canonique d'un champ : `noyauIdentitaire` -> `a_noyauIdentitaire`. */
 export function prefixField(pillarKey: string, fieldName: string): string {
@@ -67,20 +72,20 @@ export function unprefixField(pillarKey: string, fieldName: string): string {
  * Pilote le codemod des consommateurs et la migration de donnees (phase A).
  * Ex: `PILLAR_FIELD_PREFIX_MAP.a.noyauIdentitaire === "a_noyauIdentitaire"`.
  */
-export const PILLAR_FIELD_PREFIX_MAP: Record<PillarKey, Record<string, string>> = Object.fromEntries(
-  (Object.keys(SCHEMAS) as PillarKey[]).map((k) => [
+export const PILLAR_FIELD_PREFIX_MAP: Record<PillarStorageKey, Record<string, string>> = Object.fromEntries(
+  (Object.keys(SCHEMAS) as PillarStorageKey[]).map((k) => [
     k,
     Object.fromEntries(PILLAR_TOPLEVEL_FIELDS[k].map((f) => [f, prefixField(k, f)])),
   ]),
-) as Record<PillarKey, Record<string, string>>;
+) as Record<PillarStorageKey, Record<string, string>>;
 
 /** Carte inverse prefixe -> canonique, par pilier. */
-export const PILLAR_FIELD_UNPREFIX_MAP: Record<PillarKey, Record<string, string>> = Object.fromEntries(
-  (Object.keys(PILLAR_FIELD_PREFIX_MAP) as PillarKey[]).map((k) => [
+export const PILLAR_FIELD_UNPREFIX_MAP: Record<PillarStorageKey, Record<string, string>> = Object.fromEntries(
+  (Object.keys(PILLAR_FIELD_PREFIX_MAP) as PillarStorageKey[]).map((k) => [
     k,
     Object.fromEntries(Object.entries(PILLAR_FIELD_PREFIX_MAP[k]).map(([canon, pre]) => [pre, canon])),
   ]),
-) as Record<PillarKey, Record<string, string>>;
+) as Record<PillarStorageKey, Record<string, string>>;
 
 /**
  * MECANIQUE : aplatit le `content` d'UN pilier en prefixant TOUTE cle de premier
