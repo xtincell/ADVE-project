@@ -10,6 +10,17 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.23 — UPgraders : formulaire contact branché au CRM natif + blog CMS natif (+ Qui sommes-nous, mentions légales UPgraders) (2026-06-22)
+
+**Directive opérateur : « branche [le formulaire contact] au CRM et build le CMS natif » (après pro/con WordPress vs from-scratch — reco : natif, le repo a déjà un CRM) + « tu as oublié le Qui sommes-nous et de rajouter des mentions légales pour UPgraders également ».**
+
+- `feat(crm)` **Formulaire contact → CRM natif.** Route publique `POST /api/contact` (même pattern idempotent que `/api/newsletter/subscribe`) : upsert `CrmContact` `source="WEBSITE_CONTACT"` + consigne le brief en `CrmMessage` (direction `IN`, channel `WEB_FORM`). Le `ContactForm` capture le lead (nom + email requis, téléphone/marque/besoin) **avant** d'ouvrir WhatsApp/email pré-rempli — les leads atterrissent dans `/console/anubis/crm` (filtre source étendu à `WEBSITE_CONTACT`), l'opérateur qualifie en `Deal`. Aucun WordPress : le CRM (Thot/Anubis) est déjà natif et gouverné.
+- `feat(blog)` **CMS natif « Notes de cabinet »** (reco from-scratch vs WordPress headless — cohérence OS, 1 source de vérité, 0 infra en plus). Modèle Prisma **`Post`** + enum `PostStatus` (DRAFT/PUBLISHED) + migration additive `20260622000000_blog_post_cms`. Router tRPC **`blog`** (public `listPublished`/`getBySlug` ; opérateur `listAll`/`upsert`/`setStatus`/`remove`, direct-`db` comme le router CRM — contenu éditorial, pas de mutation gouvernée). Éditeur **Console `/console/anubis/blog`** (créer/éditer/publier/supprimer) + entrée nav Anubis. `/blog` (+ `/blog/[slug]` + teaser home) lisent **DB-first** via `blog-data.ts` avec **fallback bundle** `posts.ts` (résilient si migration non appliquée / DB down). Seed idempotent `db:seed:blog` (importe les 6 notes fournies en PUBLISHED).
+- `fix(ui)` **« Qui sommes-nous »** : la page `/agence` (récit fondateur, équipe, trajectoire) est relabellisée « Qui sommes-nous » (nav + footer + eyebrow) — route inchangée.
+- `docs(legal)` **Mentions légales UPgraders** : `/mentions-legales` réécrite **UPgraders-first** (l'agence = l'entité éditrice du site, opératrice du produit La Fusée) + section explicite « UPgraders & La Fusée — qui édite quoi » + coordonnées agence réelles (Douala/Abidjan, WhatsApp, email).
+- Hors phases 0–9 (out-of-scope, cf. `scope-drift.md`). **1 nouveau model Prisma** (`Post`, additif, migration backfill-safe) — pas un doublon (grep CODE-MAP négatif : ni `Article`/`BlogPost`/`Content`). **0 nouveau Neter** (Cap APOGEE 7/7), **0 bypass governance** (CRM/CMS = CRUD direct-db éditorial, précédent `crm-contacts`/newsletter). tsc 0 · eslint 0 · 855 tests gouvernance verts · `prisma validate` ok · `next build` exit 0.
+
+
 ## v6.27.22 — UPgraders : vrai site d'agence multi-pages en page d'accueil (La Fusée → sous-site) (2026-06-22)
 
 **Directive opérateur : « où est le site d'UPgraders ? je veux un vrai site, pas une solopage. c'est cette page qui servira d'index. » + « ne confonds pas les CTA de La Fusée et ceux d'UPgraders : La Fusée est un produit d'UPgraders, un parmi d'autres. » + « inclus tout ce que tu sais d'UPgraders synthétisé. »**

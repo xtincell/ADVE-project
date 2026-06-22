@@ -36,7 +36,7 @@ export const crmContactsRouter = createTRPCRouter({
     .input(
       z.object({
         search: z.string().max(120).optional(),
-        source: z.enum(["INTAKE", "NEWSLETTER", "CLIENT", "TALENT", "MANUAL"]).optional(),
+        source: z.enum(["INTAKE", "NEWSLETTER", "CLIENT", "TALENT", "MANUAL", "WEBSITE_CONTACT"]).optional(),
         newsletterOnly: z.boolean().default(false),
         limit: z.number().int().min(1).max(200).default(50),
         cursor: z.string().optional(),

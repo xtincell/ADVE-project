@@ -32,7 +32,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 180 models, 65 enums
+## Prisma — 181 models, 66 enums
 
 ### Models
 
@@ -216,6 +216,7 @@ Ces correspondances évitent la réinvention :
 - **EconomicNeighborMap** (4 fields) — Chaîne de fallback voisin économique — canonique ADR-0087.
 - **ProviderCostRate** (16 fields) — Taux de coût par prestataire — le "par prestataire" de l'ajustement.
 - **ActionCostEstimate** (25 fields) — Snapshot d'estimation persisté — audit trail Thot (frère de CostDecision).
+- **Post** (15 fields) — Article de blog public du site UPgraders (« Notes de cabinet »). CMS natif éditorial — distinct des livrables client (`B
 
 ### Enums
 
@@ -284,6 +285,7 @@ Ces correspondances évitent la réinvention :
 - **CostUnit** : HOUR | DAY | HALF_DAY | UNIT | FLAT | PERCENT | KM | SQUARE_METER | IMPRESSION
 - **CostRateBasis** : MARKET_INDEX | PROVIDER_RATE | BENCHMARK | FIXED
 - **ZoneIndexFamily** : COST_OF_LIVING | FOREX | MACRO | TJM | MARKETING_BUDGETS | MOBILE_MONEY_FEES | TAXES
+- **PostStatus** : DRAFT | PUBLISHED
 
 ---
 
@@ -394,7 +396,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 100
+## tRPC routers — 101
 
 - `accounts` (`src/server/trpc/routers/accounts.ts`)
 - `actions` (`src/server/trpc/routers/actions.ts`)
@@ -405,6 +407,7 @@ Ces correspondances évitent la réinvention :
 - `argos` (`src/server/trpc/routers/argos.ts`)
 - `attribution-router` (`src/server/trpc/routers/attribution-router.ts`)
 - `auth` (`src/server/trpc/routers/auth.ts`)
+- `blog` (`src/server/trpc/routers/blog.ts`)
 - `boot-sequence` (`src/server/trpc/routers/boot-sequence.ts`)
 - `boutique` (`src/server/trpc/routers/boutique.ts`)
 - `brand-node` (`src/server/trpc/routers/brand-node.ts`)
@@ -499,7 +502,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 233 (par deck)
+## Pages — 243 (par deck)
 
 ### Agency (12)
 
@@ -566,7 +569,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/portfolio/[corporateSlug]`
 - `/cockpit/settings`
 
-### Console (117)
+### Console (118)
 
 - `/console`
 - `/console/academie`
@@ -576,6 +579,7 @@ Ces correspondances évitent la réinvention :
 - `/console/academie/courses`
 - `/console/anubis`
 - `/console/anubis/api-billing`
+- `/console/anubis/blog`
 - `/console/anubis/credentials`
 - `/console/anubis/crm`
 - `/console/anubis/mcp`
@@ -724,16 +728,22 @@ Ces correspondances évitent la réinvention :
 - `/launchpad/portfolio-bulk-import`
 - `/score`
 
-### Public (25)
+### Public (34)
 
 - `/(marketing)`
+- `/agence`
 - `/argos`
 - `/argos/[ref]`
+- `/blog`
+- `/blog/[slug]`
 - `/cgu`
 - `/cgv`
 - `/changelog`
+- `/contact`
 - `/dpa`
 - `/forgot-password`
+- `/la-guilde`
+- `/lafusee`
 - `/LaGuilde`
 - `/LaGuilde/m/[slug]`
 - `/LaGuilde/publier`
@@ -741,11 +751,14 @@ Ces correspondances évitent la réinvention :
 - `/landingintake`
 - `/login`
 - `/mentions-legales`
+- `/methode`
 - `/portals`
 - `/pricing`
 - `/privacy`
+- `/realisations`
 - `/register`
 - `/reset-password`
+- `/services`
 - `/shared/strategy/[token]`
 - `/sla`
 - `/status`

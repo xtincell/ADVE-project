@@ -3,7 +3,7 @@ import { SiteNav } from "@/components/upgraders/site-nav";
 import { SiteFooter } from "@/components/upgraders/site-footer";
 import { Section, PageHeader, PrimaryCta, GhostCta } from "@/components/upgraders/ui";
 import { PostCard } from "@/components/upgraders/blocks";
-import { getAllPosts } from "@/components/upgraders/posts";
+import { getBlogIndex } from "@/components/upgraders/blog-data";
 
 export const metadata: Metadata = {
   title: "Blog — UPgraders · Notes de cabinet",
@@ -11,8 +11,8 @@ export const metadata: Metadata = {
     "Les notes de cabinet d'UPgraders : méthode ADVE/RTIS, culte de marque en Afrique, modèle Guilde, roadmap dynamique, La Fusée. Stratégie de marque, sans langue de bois.",
 };
 
-export default function BlogPage() {
-  const posts = getAllPosts();
+export default async function BlogPage() {
+  const posts = await getBlogIndex();
 
   return (
     <main>

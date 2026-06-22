@@ -4,15 +4,16 @@ import { notFound } from "next/navigation";
 import { SiteNav } from "@/components/upgraders/site-nav";
 import { SiteFooter } from "@/components/upgraders/site-footer";
 import { Shell, PrimaryCta, GhostCta } from "@/components/upgraders/ui";
-import { getAllPosts, getPost, formatPostDate } from "@/components/upgraders/posts";
+import { formatPostDate } from "@/components/upgraders/posts";
+import { getBlogPost, getBlogSlugs } from "@/components/upgraders/blog-data";
 
-export function generateStaticParams() {
-  return getAllPosts().map((p) => ({ slug: p.slug }));
+export async function generateStaticParams() {
+  return (await getBlogSlugs()).map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const post = getPost(slug);
+  const post = await getBlogPost(slug);
   if (!post) return { title: "Article introuvable — UPgraders" };
   return {
     title: `${post.title} — UPgraders`,
@@ -31,7 +32,7 @@ const PROSE =
 
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const post = getPost(slug);
+  const post = await getBlogPost(slug);
   if (!post) notFound();
 
   return (

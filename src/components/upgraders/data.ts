@@ -69,7 +69,7 @@ export const CTA = {
 export type NavItem = { label: string; href: string };
 
 export const NAV_ITEMS: NavItem[] = [
-  { label: "Agence", href: "/agence" },
+  { label: "Qui sommes-nous", href: "/agence" },
   { label: "Méthode", href: "/methode" },
   { label: "Services", href: "/services" },
   { label: "La Guilde", href: "/la-guilde" },
