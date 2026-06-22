@@ -1,0 +1,107 @@
+/* La Fusée — Cockpit · L'ORACLE — pilotage (reskin handoff design).
+   Porté de claude.ai/design (oracle.css, vue pilotage). 100% tokens DS
+   (src/styles → exempt). Vues reader/éditorial non portées : le livrable
+   partageable reste servi via strategyPresentation.shareLink + export PDF. */
+
+/* ── Synthèse vivante (hero) — données réelles uniquement ── */
+.ck-oracle-hero { position: relative; overflow: hidden; border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+  border-radius: var(--radius-xl); background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, var(--surface-card)), var(--surface-card) 60%);
+  padding: 26px 28px; display: flex; flex-direction: column; gap: 12px; }
+.ck-oracle-hero__glow { position: absolute; top: -40%; right: -10%; width: 60%; height: 180%; z-index: 0; pointer-events: none;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 18%, transparent), transparent 70%); }
+.ck-oracle-hero__rocket { position: absolute; top: -28px; right: 18px; width: clamp(150px, 20vw, 260px); height: auto; transform: rotate(8deg); pointer-events: none; opacity: 0.92; filter: drop-shadow(0 12px 28px rgba(0,0,0,0.45)); z-index: 0; }
+.ck-oracle-hero__eyebrow, .ck-oracle-hero__h, .ck-oracle-hero__p, .ck-oracle-hero__stats { position: relative; z-index: 1; }
+.ck-oracle-hero__eyebrow { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); }
+.ck-oracle-hero__eyebrow svg { width: 14px; height: 14px; }
+.ck-oracle-hero__h { font-family: var(--font-display); font-weight: 700; font-size: clamp(22px, 3vw, 30px); line-height: 1.15; letter-spacing: -0.02em; color: var(--text-primary); margin: 0; max-width: 32ch; text-wrap: balance; }
+.ck-oracle-hero__h .hl { color: var(--accent); }
+.ck-oracle-hero__p { font-size: 14px; line-height: 1.6; color: var(--text-secondary); margin: 0; max-width: 64ch; }
+.ck-oracle-hero__stats { display: flex; flex-wrap: wrap; gap: 22px; margin-top: 6px; }
+.ck-oracle-hero__stats > div { display: flex; flex-direction: column; gap: 2px; }
+.ck-oracle-hero__stats .k { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+.ck-oracle-hero__stats b { font-family: var(--font-display); font-weight: 700; font-size: 17px; color: var(--text-primary); }
+
+/* ── 3-col grid + hero cards ── */
+.ck-grid--3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+@media (max-width: 860px){ .ck-grid--3 { grid-template-columns: 1fr; } }
+.ck-oracle-card { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-card); padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; }
+.ck-oracle-card__ic { display: grid; place-items: center; width: 32px; height: 32px; border-radius: var(--radius-md); background: var(--accent-fill); color: var(--accent); }
+.ck-oracle-card__ic svg { width: 17px; height: 17px; }
+.ck-oracle-card__t { font-family: var(--font-sans); font-weight: 700; font-size: 14px; color: var(--text-primary); margin: 0; }
+.ck-oracle-card__b { font-size: 12.5px; line-height: 1.55; color: var(--text-secondary); margin: 0; }
+
+/* ── Assembleur (génération progressive) ── */
+.ck-orc { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-card); padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+.ck-orc__head { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+.ck-orc__head-l { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.ck-orc__head-l h3 { font-family: var(--font-sans); font-weight: 700; font-size: 15px; color: var(--text-primary); margin: 0; }
+.ck-orc__adr { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
+.ck-orc__tally { display: flex; gap: 14px; font-family: var(--font-mono); font-size: 11px; }
+.ck-orc__tally .ok { color: var(--success); } .ck-orc__tally .fail { color: var(--danger); } .ck-orc__tally .stale { color: var(--up-gold); } .ck-orc__tally .idle { color: var(--text-muted); }
+.ck-orc__controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ck-orc__assemble { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: var(--radius-md); border: none; cursor: pointer; background: var(--accent); color: var(--text-on-accent); font-family: var(--font-sans); font-weight: 700; font-size: 13.5px; transition: filter var(--dur-fast); white-space: nowrap; }
+.ck-orc__assemble[data-variant="ready"] { background: var(--success); }
+.ck-orc__assemble:hover:not(:disabled) { filter: brightness(1.06); }
+.ck-orc__assemble:disabled { opacity: 0.5; cursor: not-allowed; }
+.ck-orc__assemble svg { width: 16px; height: 16px; }
+.ck-orc__preview { display: inline-flex; align-items: center; gap: 7px; padding: 10px 13px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--surface-sunken); cursor: pointer; font-family: var(--font-sans); font-weight: 600; font-size: 12px; color: var(--text-secondary); margin-left: auto; white-space: nowrap; text-decoration: none; }
+.ck-orc__preview:hover { border-color: var(--border-strong); color: var(--text-primary); }
+.ck-orc__preview svg { width: 14px; height: 14px; }
+.ck-orc__progress { display: flex; flex-direction: column; gap: 6px; }
+.ck-orc__progress-meta { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); }
+.ck-orc__progress-track { height: 6px; border-radius: 3px; background: var(--surface-sunken); overflow: hidden; }
+.ck-orc__progress-fill { height: 100%; border-radius: 3px; background: var(--success); transition: width 0.5s var(--ease-out); }
+.ck-orc__console { border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-page); padding: 12px 14px; font-family: var(--font-mono); max-height: 14rem; overflow-y: auto; }
+.ck-orc__console-head { display: flex; align-items: center; gap: 8px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 10px; }
+.ck-orc__console-head .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+.ck-orc__line { display: flex; gap: 12px; font-size: 11px; line-height: 1.7; }
+.ck-orc__line-t { flex: none; color: color-mix(in srgb, var(--text-muted) 70%, transparent); }
+.ck-orc__line-m { color: var(--text-secondary); }
+.ck-orc__line[data-tone="ok"] .ck-orc__line-m { color: var(--success); }
+.ck-orc__line[data-tone="gen"] .ck-orc__line-m { color: var(--info); }
+.ck-orc__line[data-tone="fail"] .ck-orc__line-m { color: var(--danger); }
+.ck-orc__line[data-tone="stale"] .ck-orc__line-m { color: var(--up-gold); }
+
+/* ── Grille des 35 sections ── */
+.ck-orc__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+@media (max-width: 760px){ .ck-orc__grid { grid-template-columns: 1fr; } }
+.ck-orc__sec { display: flex; align-items: flex-start; gap: 11px; padding: 12px 13px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); background: var(--surface-sunken); transition: box-shadow var(--dur-fast), transform var(--dur-fast); }
+.ck-orc__sec.changed { box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 50%, transparent); }
+.ck-orc__sec[data-st="ok"] { border-color: color-mix(in srgb, var(--success) 22%, transparent); }
+.ck-orc__sec[data-st="fail"] { border-color: color-mix(in srgb, var(--danger) 30%, transparent); background: color-mix(in srgb, var(--danger) 6%, var(--surface-sunken)); }
+.ck-orc__sec[data-st="stale"] { border-color: color-mix(in srgb, var(--up-gold) 26%, transparent); }
+.ck-orc__sec[data-st="gen"] { border-color: color-mix(in srgb, var(--info) 30%, transparent); background: color-mix(in srgb, var(--info) 6%, var(--surface-sunken)); }
+.ck-orc__sec-ic { flex: none; display: grid; place-items: center; width: 18px; height: 18px; margin-top: 1px; }
+.ck-orc__sec-ic svg { width: 16px; height: 16px; }
+.ck-orc__sec-ic[data-st="ok"] { color: var(--success); } .ck-orc__sec-ic[data-st="fail"] { color: var(--danger); }
+.ck-orc__sec-ic[data-st="stale"] { color: var(--up-gold); } .ck-orc__sec-ic[data-st="gen"] { color: var(--info); } .ck-orc__sec-ic[data-st="idle"] { color: var(--text-muted); }
+.ck-orc__sec-b { flex: 1; min-width: 0; }
+.ck-orc__sec-top { display: flex; align-items: center; gap: 8px; }
+.ck-orc__sec-n { font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--text-muted); flex: none; }
+.ck-orc__sec-title { font-size: 12.5px; font-weight: 600; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ck-orc__sec-meta { display: flex; align-items: center; gap: 5px; margin-top: 3px; font-family: var(--font-mono); font-size: 10px; }
+.ck-orc__sec-st[data-st="ok"] { color: var(--success); } .ck-orc__sec-st[data-st="fail"] { color: var(--danger); }
+.ck-orc__sec-st[data-st="stale"] { color: var(--up-gold); } .ck-orc__sec-st[data-st="gen"] { color: var(--info); } .ck-orc__sec-st[data-st="idle"] { color: var(--text-muted); }
+.ck-orc__sec-tier { flex: none; font-family: var(--font-mono); font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; padding: 2px 6px; border-radius: var(--radius-pill); border: 1px solid; }
+.ck-orc__sec-tier[data-t="CORE"] { color: var(--info); border-color: color-mix(in srgb, var(--info) 30%, transparent); background: var(--info-fill); }
+.ck-orc__sec-tier[data-t="BIG4_BASELINE"] { color: var(--text-muted); border-color: var(--border-strong); background: var(--surface-overlay); }
+.ck-orc__sec-tier[data-t="DISTINCTIVE"] { color: var(--up-violet); border-color: color-mix(in srgb, var(--up-violet) 30%, transparent); background: color-mix(in srgb, var(--up-violet) 12%, transparent); }
+
+/* ── Bloc partage (personas + lien public) ── */
+.ck-orc__share { border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-sunken); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+.ck-orc__share-l { display: flex; flex-direction: column; gap: 3px; }
+.ck-orc__share-h { display: inline-flex; align-items: center; gap: 7px; font-family: var(--font-sans); font-weight: 700; font-size: 13px; color: var(--text-primary); }
+.ck-orc__share-h svg { width: 15px; height: 15px; color: var(--accent); }
+.ck-orc__share-s { font-size: 12px; color: var(--text-muted); }
+.ck-orc__share-personas { display: flex; gap: 7px; flex-wrap: wrap; }
+.ck-orc__share-personas button { display: inline-flex; align-items: center; gap: 6px; padding: 7px 13px; border-radius: var(--radius-pill); border: 1px solid var(--border); background: var(--surface-card); color: var(--text-secondary); font-family: var(--font-sans); font-weight: 600; font-size: 12px; cursor: pointer; }
+.ck-orc__share-personas button svg { width: 13px; height: 13px; }
+.ck-orc__share-personas button:disabled { opacity: 0.5; cursor: not-allowed; }
+.ck-orc__share-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ck-orc__share-url { flex: 1; min-width: 200px; font-family: var(--font-mono); font-size: 11.5px; color: var(--up-gold); background: var(--surface-page); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ck-orc__share-copy, .ck-orc__share-open { display: inline-flex; align-items: center; gap: 6px; padding: 8px 13px; border-radius: var(--radius-md); font-family: var(--font-sans); font-weight: 600; font-size: 12px; cursor: pointer; white-space: nowrap; text-decoration: none; border: none; }
+.ck-orc__share-copy { border: 1px solid var(--border); background: var(--surface-card); color: var(--text-secondary); }
+.ck-orc__share-copy:hover { color: var(--text-primary); border-color: var(--border-strong); }
+.ck-orc__share-open { border: 1px solid var(--accent); background: var(--accent); color: var(--text-on-accent); }
+.ck-orc__share-open:hover { filter: brightness(1.06); }
+.ck-orc__share-copy svg, .ck-orc__share-open svg { width: 13px; height: 13px; }

@@ -29,6 +29,7 @@ import Link from "next/link";
 import { AmendPillarModal } from "@/components/pillars/amend-pillar-modal";
 import { RecalculateRtisButton } from "@/components/pillars/recalculate-rtis-button";
 import { ActionDatabasePanel } from "@/components/cockpit/action-database-panel";
+import { BESPOKE_PILLAR_RENDERERS } from "@/components/cockpit/pillars";
 
 // ── Pillar config ─────────────────────────────────────────────────────
 
@@ -323,6 +324,12 @@ export function PillarPage({ pageKey }: PillarPageProps) {
   Object.entries(PILLAR_CONFIG).forEach(([page, cfg]) => {
     if (cfg.type === "adve") ADVE_PAGE_FOR_KEY[cfg.pillarKey.toUpperCase()] = page;
   });
+
+  // ── Bespoke renderer (handoff design) — remplace la grille générique
+  //    AutoField pour les piliers qui ont un renderer hyper-détaillé. Le shell
+  //    gouverné (toolbar, score, panneaux, modals) reste identique. ──
+  const Bespoke = BESPOKE_PILLAR_RENDERERS[config.pillarKey];
+  const pillarCertainty = (pillar?.fieldCertainty as Record<string, string> | null) ?? null;
 
   // ── Render ──────────────────────────────────────────────────────
 
@@ -879,8 +886,8 @@ export function PillarPage({ pageKey }: PillarPageProps) {
         </div>
       ) : null}
 
-      {/* ── Inline metadata badges ─────────────────────────────────── */}
-      {(() => {
+      {/* ── Inline metadata badges (générique only — bespoke couvre déjà) ── */}
+      {!Bespoke && (() => {
         const filled = inlineKeys.filter(k => isFilled(content[k]));
         return filled.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
@@ -896,19 +903,23 @@ export function PillarPage({ pageKey }: PillarPageProps) {
         <ActionDatabasePanel strategyId={strategyId} />
       ) : null}
 
-      {/* ── All fields in 2-col grid — design system renders each ── */}
-      <div className="grid gap-3 md:grid-cols-2">
-        {visibleFieldKeys.map(key => (
-          <AutoField
-            key={key}
-            fieldKey={key}
-            value={content[key]}
-            accent={config.accent}
-            onFocus={setFocusedItem}
-            pillarKey={config.pillarKey}
-          />
-        ))}
-      </div>
+      {/* ── Field body — bespoke renderer (design handoff) ou grille générique ── */}
+      {Bespoke ? (
+        <Bespoke content={content} certainty={pillarCertainty} />
+      ) : (
+        <div className="grid gap-3 md:grid-cols-2">
+          {visibleFieldKeys.map(key => (
+            <AutoField
+              key={key}
+              fieldKey={key}
+              value={content[key]}
+              accent={config.accent}
+              onFocus={setFocusedItem}
+              pillarKey={config.pillarKey}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

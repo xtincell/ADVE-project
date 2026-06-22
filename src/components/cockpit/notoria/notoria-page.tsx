@@ -20,13 +20,12 @@ import { useCockpitEditStore } from "@/lib/stores/cockpit-edit-store";
 import type { PillarKey } from "@/domain/pillars";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { getFieldLabel } from "@/components/cockpit/field-renderers";
-import { Stepper, type StepperStep } from "@/components/primitives/stepper";
+import { type StepperStep } from "@/components/primitives/stepper";
 import {
   Sparkles, Loader2, CheckCircle, ThumbsUp, ThumbsDown,
-  ChevronRight, ChevronDown, Zap, Rocket, Route, Eye, Shield,
-  AlertTriangle, Clock, ArrowRight, Undo2,
+  ChevronRight, ChevronDown, Zap, Rocket, Route, Shield,
+  AlertTriangle, ArrowRight,
 } from "lucide-react";
-import Link from "next/link";
 // Phase 21 F-A.5 (ADR-0069) — source unique de vérité pour le rendu chip
 // pillaire. Stale-aware via `byPillar[k]` exposé par notoria.getDashboard.
 import { getPillarChipStatus, type PillarReadinessProjection } from "./lib/pillar-chip-status";
@@ -42,25 +41,20 @@ const PILLAR_LABELS: Record<string, string> = {
 // canonique vit dans `lib/pillar-chip-status.ts` qui inclut le statut PÉRIMÉ
 // (stale-aware). Les chips lisent `getPillarChipStatus(byPillar[k])`.
 
-const IMPACT_COLORS: Record<string, string> = {
-  HIGH: "bg-error/15 text-error",
-  MEDIUM: "bg-warning/15 text-warning",
-  LOW: "bg-white/10 text-foreground-muted",
+// Reskin (handoff design) — op/urgency tone codes for the ck-nz markup.
+const OP_RESKIN: Record<string, { label: string; c: string }> = {
+  SET: { label: "Remplacer", c: "orange" }, ADD: { label: "Ajouter", c: "emerald" },
+  MODIFY: { label: "Modifier", c: "blue" }, REMOVE: { label: "Supprimer", c: "red" },
+  EXTEND: { label: "Enrichir", c: "accent" },
 };
-
-const OP_LABELS: Record<string, { label: string; color: string }> = {
-  SET: { label: "Remplacer", color: "bg-warning/15 text-warning" },
-  ADD: { label: "Ajouter", color: "bg-success/15 text-success" },
-  MODIFY: { label: "Modifier", color: "bg-info/15 text-info" },
-  REMOVE: { label: "Supprimer", color: "bg-error/15 text-error" },
-  EXTEND: { label: "Enrichir", color: "bg-accent/15 text-accent" },
+const URG_RESKIN: Record<string, { label: string; c: string }> = {
+  NOW: { label: "Urgent", c: "ko" }, SOON: { label: "Recommandé", c: "warn" }, LATER: { label: "Optionnel", c: "muted" },
 };
-
-const URGENCY_LABELS: Record<string, { label: string; color: string }> = {
-  NOW: { label: "Urgent", color: "text-error" },
-  SOON: { label: "Recommande", color: "text-warning" },
-  LATER: { label: "Optionnel", color: "text-foreground-muted" },
-};
+// Cascade canon (operator) : ADVE → R+T → Jehuty → Notoria → I → S.
+const NZ_CELLFLOW: Array<{ label: string; on?: boolean; passive?: boolean }> = [
+  { label: "ADVE" }, { label: "R + T" }, { label: "Jehuty", passive: true },
+  { label: "Notoria", on: true }, { label: "I" }, { label: "S" },
+];
 
 // ── Component ─────────────────────────────────────────────────────
 
@@ -414,140 +408,114 @@ export function NotoriaPage() {
     };
   }
 
+  // ── Engine Health note (canon cascade guidance) ──
+  const healthNote = !adveReady
+    ? <>ADVE pas encore consolidé. <b>{firstAdveGapKey?.toUpperCase()}</b> bloque la cascade R+T — complétez-le pour débloquer le pipeline.</>
+    : !rtReady
+      ? <>ADVE consolidé. Lancez la <b>veille R + T</b> pour nourrir Jehuty puis Notoria.</>
+      : <>Cascade ouverte — Notoria applique les recommandations issues de <b>R+T</b> vers I puis S.</>;
+
   return (
-    <div className="mx-auto max-w-6xl space-y-4 p-4 md:p-6">
-      {/* ═══ Section 1: Engine Health ═══════════════════════════════ */}
-      <div className="rounded-lg border border-white/5 bg-surface-raised p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-warning" />
-            <h1 className="text-lg font-bold text-white">Notoria</h1>
-            <span className="text-xs text-foreground-muted">Moteur de Recommandation</span>
+    <div className="ck-nz">
+      {/* ─ Cascade flow (ADVE → R+T → Jehuty ▸ Notoria → I → S) ─ */}
+      <div className="ck-cellflow">
+        {NZ_CELLFLOW.map((n, i) => (
+          <div key={n.label} style={{ display: "contents" }}>
+            <span className="ck-cellflow__node" data-on={n.on ? 1 : 0} data-passive={n.passive ? 1 : 0}>{n.label}</span>
+            {i < NZ_CELLFLOW.length - 1 ? <span className="ck-cellflow__arr"><ChevronRight /></span> : null}
           </div>
-          {totalPending > 0 && (
-            <span className="rounded-full bg-warning/15 px-2.5 py-0.5 text-xs font-bold text-warning">
-              {totalPending} en attente
-            </span>
-          )}
+        ))}
+      </div>
+
+      {/* ═══ Section 1: Engine Health ═══════════════════════════════ */}
+      <div className="ck-nz__card">
+        <div className="ck-nz__health-head">
+          <div className="ck-nz__brand">
+            <span className="ck-nz__brand-ic"><Sparkles /></span>
+            <h1>Notoria</h1>
+            <span className="ck-nz__brand-sub">Moteur de Recommandation</span>
+          </div>
+          {totalPending > 0 && <span className="ck-nz__pending-pill">{totalPending} en attente</span>}
         </div>
 
-        {/* Completion levels per pillar — Phase 21 F-A.5 (ADR-0069) :
-            stale-aware via `chipStatus(k)`. Un pilier `staleAt != null`
-            apparaît "PÉRIMÉ" (amber) au lieu du label legacy "COMPLET". */}
-        <div className="flex flex-wrap gap-2">
+        {/* Completion levels per pillar — Phase 21 F-A.5 (ADR-0069), stale-aware */}
+        <div className="ck-nz__chips">
           {[...PILLAR_STORAGE_KEYS].map((k) => {
             const status = chipStatus(k);
+            const tone = status.variant === "full" || status.variant === "complet" ? "ok"
+              : status.variant === "stale" || status.variant === "stale-advisory" ? "stale"
+              : "muted";
             return (
-              <div key={k} className="flex items-center gap-1.5">
-                <span className="text-2xs font-medium text-foreground-muted uppercase">{k}</span>
+              <div key={k} className="ck-nz__chip">
+                <span className="ck-nz__chip-k">{k}</span>
                 <span
-                  className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${status.className}`}
+                  className="ck-nz__chip-v" data-tone={tone}
                   title={
-                    // Phase 21 F-AB (ADR-0076) — tooltip différencié selon
-                    // sévérité stale. Advisory = la cascade peut tourner ;
-                    // Blocking = il faut compléter d'abord.
                     status.variant === "stale-advisory"
                       ? "Mise à jour recommandée — un pilier amont a muté, mais le contenu actuel reste utilisable. La cascade R+T peut tourner pour produire les recos qui rafraîchiront ce pilier."
                       : status.variant === "stale"
                         ? "Pilier périmé — contenu insuffisant ET un pilier amont a muté. Compléter d'abord pour débloquer la cascade."
                         : undefined
                   }
-                >
-                  {status.label}
-                </span>
+                >{status.label}</span>
               </div>
             );
           })}
         </div>
-
+        <p className="ck-nz__health-note"><Sparkles /> {healthNote}</p>
       </div>
 
       {/* ═══ Section 2: Mission Launcher ═══════════════════════════ */}
-      <div className="rounded-lg border border-white/5 bg-surface-raised p-4 space-y-4">
-        <div className="overflow-x-auto">
-          <Stepper steps={stepperSteps} className="min-w-fit" />
+      <div className="ck-nz__card" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div className="ck-nz__stepper">
+          {stepperSteps.map((s, i) => (
+            <div className="ck-nz__step" data-st={s.status} key={i}>
+              <span className="ck-nz__step-n">{s.status === "done" ? <CheckCircle /> : i + 1}</span>
+              <div className="ck-nz__step-b">
+                <span className="ck-nz__step-l">{s.label}</span>
+                <span className="ck-nz__step-d">{s.description}</span>
+              </div>
+              {i < stepperSteps.length - 1 ? <span className="ck-nz__step-arr"><ChevronRight /></span> : null}
+            </div>
+          ))}
         </div>
 
         {/* ADR-0030 Axe 3 — gate RTIS_CASCADE veto message */}
         {rtVetoMessage ? (
-          <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
-            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
-            <div className="flex-1">{rtVetoMessage}</div>
-            <button onClick={() => setRtVetoMessage(null)} className="text-warning/60 hover:text-warning">✕</button>
+          <div className="ck-nz__veto">
+            <AlertTriangle />
+            <span>{rtVetoMessage}</span>
+            <button onClick={() => setRtVetoMessage(null)}>✕</button>
           </div>
         ) : null}
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={primary.onClick}
-            disabled={primary.disabled}
-            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed ${
-              primary.variant === "go"
-                ? "bg-accent text-accent-foreground hover:bg-accent/90 disabled:opacity-50"
-                : primary.variant === "wait"
-                  ? "bg-warning/15 text-warning disabled:opacity-100"
-                  : "bg-success/15 text-success disabled:opacity-100"
-            }`}
-          >
-            {primary.icon}
-            {primary.label}
+        <div className="ck-nz__launch">
+          <button className="ck-nz__primary" data-variant={primary.variant} onClick={primary.onClick} disabled={primary.disabled}>
+            {primary.icon}{primary.label}
           </button>
 
-          <details className="relative">
-            <summary className="flex cursor-pointer list-none items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-foreground-muted hover:bg-white/10 [&::-webkit-details-marker]:hidden">
-              Avancé
-              <ChevronDown className="h-3.5 w-3.5" />
-            </summary>
-            <div className="absolute left-0 top-full z-10 mt-1 w-64 rounded-lg border border-white/10 bg-surface-raised p-1 shadow-xl">
-              <button
-                onClick={() => actualizeRTMutation.mutate({ strategyId: strategyId!, pillars: ["R", "T"] })}
-                disabled={anyPending}
-                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-foreground hover:bg-white/5 disabled:opacity-40"
-              >
-                <Shield className="h-3.5 w-3.5 text-error" />
-                Re-lancer R + T
+          <details className="ck-nz__adv">
+            <summary className="ck-nz__adv-btn">Avancé<ChevronDown /></summary>
+            <div className="ck-nz__adv-menu">
+              <button onClick={() => actualizeRTMutation.mutate({ strategyId: strategyId!, pillars: ["R", "T"] })} disabled={anyPending}>
+                <Shield style={{ color: "var(--danger)" }} />Re-lancer R + T
               </button>
-              <button
-                onClick={() => generateMutation.mutate({ strategyId: strategyId!, missionType: "ADVE_UPDATE" })}
-                disabled={anyPending}
-                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-foreground hover:bg-white/5 disabled:opacity-40"
-              >
-                <Sparkles className="h-3.5 w-3.5 text-accent" />
-                Re-générer recos ADVE
+              <button onClick={() => generateMutation.mutate({ strategyId: strategyId!, missionType: "ADVE_UPDATE" })} disabled={anyPending}>
+                <Sparkles style={{ color: "var(--accent)" }} />Re-générer recos ADVE
               </button>
-              <button
-                onClick={() => generateMutation.mutate({ strategyId: strategyId!, missionType: "I_GENERATION" })}
-                disabled={anyPending}
-                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-foreground hover:bg-white/5 disabled:opacity-40"
-              >
-                <Rocket className="h-3.5 w-3.5 text-warning" />
-                Re-générer Potentiel (I)
+              <button onClick={() => generateMutation.mutate({ strategyId: strategyId!, missionType: "I_GENERATION" })} disabled={anyPending}>
+                <Rocket style={{ color: "var(--warning)" }} />Re-générer Potentiel (I)
               </button>
               {/* ADR-0088 — function-calling generation (typed mutations by id) */}
-              <button
-                onClick={() => generateTypedMutation.mutate({ strategyId: strategyId! })}
-                disabled={anyPending || generateTypedMutation.isPending}
-                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-foreground hover:bg-white/5 disabled:opacity-40"
-              >
-                <Zap className="h-3.5 w-3.5 text-accent" />
-                Générer recos ciblées (function-calling)
+              <button onClick={() => generateTypedMutation.mutate({ strategyId: strategyId! })} disabled={anyPending || generateTypedMutation.isPending}>
+                <Zap style={{ color: "var(--accent)" }} />Générer recos ciblées (function-calling)
               </button>
-              <button
-                onClick={() => generateMutation.mutate({ strategyId: strategyId!, missionType: "S_SYNTHESIS" })}
-                disabled={anyPending}
-                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-foreground hover:bg-white/5 disabled:opacity-40"
-              >
-                <Route className="h-3.5 w-3.5 text-error" />
-                Re-synthétiser Stratégie (S)
+              <button onClick={() => generateMutation.mutate({ strategyId: strategyId!, missionType: "S_SYNTHESIS" })} disabled={anyPending}>
+                <Route style={{ color: "var(--danger)" }} />Re-synthétiser Stratégie (S)
               </button>
-              <div className="my-1 border-t border-white/5" />
-              <button
-                onClick={() => pipelineMutation.mutate({ strategyId: strategyId! })}
-                disabled={anyPending}
-                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-foreground hover:bg-white/5 disabled:opacity-40"
-              >
-                <Zap className="h-3.5 w-3.5 text-warning" />
-                Relancer le pipeline complet
+              <div className="ck-nz__adv-sep" />
+              <button onClick={() => pipelineMutation.mutate({ strategyId: strategyId! })} disabled={anyPending}>
+                <Zap style={{ color: "var(--warning)" }} />Relancer le pipeline complet
               </button>
             </div>
           </details>
@@ -555,235 +523,131 @@ export function NotoriaPage() {
       </div>
 
       {/* ═══ Tab bar: Pending / History ════════════════════════════ */}
-      <div className="flex gap-4 border-b border-white/5">
-        <button
-          onClick={() => setActiveTab("pending")}
-          className={`pb-2 text-sm font-medium transition-colors ${activeTab === "pending" ? "text-white border-b-2 border-warning" : "text-foreground-muted hover:text-white"}`}
-        >
-          En attente ({totalPending})
-        </button>
-        <button
-          onClick={() => setActiveTab("history")}
-          className={`pb-2 text-sm font-medium transition-colors ${activeTab === "history" ? "text-white border-b-2 border-warning" : "text-foreground-muted hover:text-white"}`}
-        >
-          Historique
-        </button>
+      <div className="ck-nz__tabbar">
+        <button data-on={activeTab === "pending" ? 1 : 0} onClick={() => setActiveTab("pending")}>En attente ({totalPending})</button>
+        <button data-on={activeTab === "history" ? 1 : 0} onClick={() => setActiveTab("history")}>Historique</button>
       </div>
 
       {/* ═══ Section 3: Reco Panel ═════════════════════════════════ */}
       {activeTab === "pending" && (
         <>
           {/* Pillar tabs */}
-          <div className="flex gap-1 flex-wrap">
-            <button
-              onClick={() => setSelectedPillar(null)}
-              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${!selectedPillar ? "bg-white/10 text-white" : "text-foreground-muted hover:text-white"}`}
-            >
-              Tous
-            </button>
+          <div className="ck-nz__ptabs">
+            <button data-on={!selectedPillar ? 1 : 0} onClick={() => setSelectedPillar(null)}>Tous</button>
             {pillarTabs.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setSelectedPillar(tab.key === selectedPillar ? null : tab.key)}
-                className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${selectedPillar === tab.key ? "bg-white/10 text-white" : "text-foreground-muted hover:text-white"}`}
-              >
-                {tab.label}
-                {tab.count > 0 && <span className="ml-1 rounded-full bg-warning/20 px-1.5 text-[9px] text-warning">{tab.count}</span>}
+              <button key={tab.key} data-on={selectedPillar === tab.key ? 1 : 0} onClick={() => setSelectedPillar(tab.key === selectedPillar ? null : tab.key)}>
+                {tab.label}{tab.count > 0 && <span className="ck-nz__ptab-n">{tab.count}</span>}
               </button>
             ))}
           </div>
 
           {/* Apply feedback banner */}
           {applyFeedback && (
-            <div className={`flex items-start justify-between gap-2 rounded-lg border px-3 py-2 text-xs ${
-              applyFeedback.type === "success" ? "border-success/30 bg-success/10 text-success" :
-              applyFeedback.type === "warning" ? "border-warning/30 bg-warning/10 text-warning" :
-              "border-error/30 bg-error/10 text-error"
-            }`}>
-              <span className="flex-1">{applyFeedback.message}</span>
-              <button onClick={() => setApplyFeedback(null)} className="shrink-0 opacity-60 hover:opacity-100">✕</button>
+            <div className="ck-nz__feedback" data-t={applyFeedback.type}>
+              <span>{applyFeedback.message}</span>
+              <button onClick={() => setApplyFeedback(null)}>✕</button>
             </div>
           )}
 
           {/* Batch actions */}
           {recos.length > 0 && (
-            <div className="flex items-center gap-2 flex-wrap">
-              {/* Accept all PENDING */}
+            <div className="ck-nz__batch">
               {recos.some((r) => r.status === "PENDING") && (
-                <button
-                  onClick={() => {
-                    const ids = recos.filter((r) => r.status === "PENDING").map((r) => r.id);
-                    if (ids.length > 0) acceptMutation.mutate({ strategyId: strategyId!, recoIds: ids });
-                  }}
-                  disabled={isMutating}
-                  className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-success/20 text-success hover:bg-success/30 disabled:opacity-40"
-                >
-                  <CheckCircle className="h-3 w-3" /> Tout accepter ({recos.filter((r) => r.status === "PENDING").length})
+                <button className="ck-nz__bb emerald" disabled={isMutating}
+                  onClick={() => { const ids = recos.filter((r) => r.status === "PENDING").map((r) => r.id); if (ids.length > 0) acceptMutation.mutate({ strategyId: strategyId!, recoIds: ids }); }}>
+                  <CheckCircle /> Tout accepter ({recos.filter((r) => r.status === "PENDING").length})
                 </button>
               )}
-              {/* Apply all ACCEPTED */}
               {recos.some((r) => r.status === "ACCEPTED") && (
-                <button
-                  onClick={() => {
-                    setApplyFeedback(null);
-                    const ids = recos.filter((r) => r.status === "ACCEPTED").map((r) => r.id);
-                    if (ids.length > 0) applyMutation.mutate({ strategyId: strategyId!, recoIds: ids });
-                  }}
-                  disabled={isMutating}
-                  className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-info/20 text-info hover:bg-info/30 disabled:opacity-40"
-                >
-                  <Zap className="h-3 w-3" /> Appliquer tout ({recos.filter((r) => r.status === "ACCEPTED").length})
+                <button className="ck-nz__bb blue" disabled={isMutating}
+                  onClick={() => { setApplyFeedback(null); const ids = recos.filter((r) => r.status === "ACCEPTED").map((r) => r.id); if (ids.length > 0) applyMutation.mutate({ strategyId: strategyId!, recoIds: ids }); }}>
+                  <Zap /> Appliquer tout ({recos.filter((r) => r.status === "ACCEPTED").length})
                 </button>
               )}
-              {/* Accept + Apply selection */}
-              <button
+              <button className="ck-nz__bb accent" disabled={selectedRecoIds.length === 0 || isMutating}
                 onClick={() => {
                   setApplyFeedback(null);
                   const ids = selectedRecoIds;
                   if (ids.length === 0) return;
                   const pendingIds = ids.filter((id) => recos.find((r) => r.id === id)?.status === "PENDING");
-                  if (pendingIds.length > 0) {
-                    acceptMutation.mutate({ strategyId: strategyId!, recoIds: pendingIds });
-                  }
+                  if (pendingIds.length > 0) acceptMutation.mutate({ strategyId: strategyId!, recoIds: pendingIds });
                   const acceptedIds = ids.filter((id) => recos.find((r) => r.id === id)?.status === "ACCEPTED");
-                  if (acceptedIds.length > 0) {
-                    applyMutation.mutate({ strategyId: strategyId!, recoIds: acceptedIds });
-                  }
+                  if (acceptedIds.length > 0) applyMutation.mutate({ strategyId: strategyId!, recoIds: acceptedIds });
                   resetRecoQueue();
-                }}
-                disabled={selectedRecoIds.length === 0 || isMutating}
-                className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-accent/10 text-accent/70 hover:bg-accent/20 disabled:opacity-40"
-              >
-                <ThumbsUp className="h-3 w-3" /> Selection ({selectedRecoIds.length})
+                }}>
+                <ThumbsUp /> Sélection ({selectedRecoIds.length})
               </button>
-              {/* Reject all PENDING */}
               {recos.some((r) => r.status === "PENDING") && (
-                <button
-                  onClick={() => {
-                    const ids = recos.filter((r) => r.status === "PENDING").map((r) => r.id);
-                    if (ids.length > 0) rejectMutation.mutate({ strategyId: strategyId!, recoIds: ids });
-                  }}
-                  disabled={isMutating}
-                  className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-error/20 text-error hover:bg-error/30 disabled:opacity-40"
-                >
-                  <ThumbsDown className="h-3 w-3" /> Rejeter
+                <button className="ck-nz__bb red" disabled={isMutating}
+                  onClick={() => { const ids = recos.filter((r) => r.status === "PENDING").map((r) => r.id); if (ids.length > 0) rejectMutation.mutate({ strategyId: strategyId!, recoIds: ids }); }}>
+                  <ThumbsDown /> Rejeter
                 </button>
               )}
             </div>
           )}
 
           {/* Reco cards */}
-          <div className="space-y-2 max-h-[36rem] overflow-y-auto">
-            {recos.length === 0 && (
-              <div className="rounded-lg border border-white/5 bg-white/[0.02] p-8 text-center text-sm text-foreground-muted">
-                Aucune recommandation en attente.
-              </div>
-            )}
+          <div className="ck-nz__recos">
+            {recos.length === 0 && <div className="ck-nz__empty">Aucune recommandation en attente.</div>}
             {recos.map((reco) => {
               const isSelected = !!recoQueue[reco.id];
-              const op = OP_LABELS[reco.operation] ?? { label: reco.operation, color: "bg-white/10 text-foreground-muted" };
-              const impact = IMPACT_COLORS[reco.impact] ?? IMPACT_COLORS.LOW!;
-              const urgency = URGENCY_LABELS[reco.urgency] ?? URGENCY_LABELS.SOON!;
+              const isActionable = reco.status === "PENDING" || reco.status === "ACCEPTED";
+              const op = OP_RESKIN[reco.operation] ?? { label: reco.operation, c: "blue" };
+              const urg = URG_RESKIN[reco.urgency] ?? URG_RESKIN.SOON!;
               const advantages = Array.isArray(reco.advantages) ? reco.advantages as string[] : [];
               const disadvantages = Array.isArray(reco.disadvantages) ? reco.disadvantages as string[] : [];
-
+              const hasAnalysis = advantages.length > 0 || disadvantages.length > 0;
               return (
                 <div
                   key={reco.id}
-                  onClick={() => {
-                    if (reco.status !== "PENDING" && reco.status !== "ACCEPTED") return;
-                    if (isSelected) unstageReco(reco.id); else stageReco(reco.id, "ACCEPT");
-                  }}
-                  className={`rounded-lg border p-3 transition-colors ${
-                    reco.status !== "PENDING" && reco.status !== "ACCEPTED"
-                      ? "border-white/5 bg-white/[0.01] opacity-60"
-                      : isSelected
-                        ? "cursor-pointer border-success/30 bg-success/10"
-                        : "cursor-pointer border-white/5 bg-white/[0.02] hover:bg-white/5"
-                  }`}
+                  onClick={() => { if (!isActionable) return; if (isSelected) unstageReco(reco.id); else stageReco(reco.id, "ACCEPT"); }}
+                  className={`ck-nz__reco${isSelected ? " is-sel" : ""}${!isActionable ? " is-done" : ""}`}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      {/* Header: op + field + pillar + impact + urgency + source + confidence */}
-                      <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                        <span className={`rounded px-1.5 py-0.5 text-2xs font-bold ${op.color}`}>{op.label}</span>
-                        <span className="text-xs font-medium text-white">{getFieldLabel(reco.targetField)}</span>
-                        <span className="rounded-full bg-white/5 px-1.5 py-0.5 text-[9px] text-foreground-muted">{PILLAR_LABELS[reco.targetPillarKey] ?? reco.targetPillarKey}</span>
-                        <span className={`rounded-full px-1.5 py-0.5 text-[9px] ${impact}`}>{reco.impact}</span>
-                        <span className={`text-[9px] font-medium ${urgency.color}`}>{urgency.label}</span>
-                        <span className="rounded-full bg-white/5 px-1 py-0.5 text-[8px] text-foreground-muted">{reco.source}</span>
-                        <span className={`text-[8px] ${reco.confidence >= 0.7 ? "text-success" : reco.confidence >= 0.5 ? "text-warning" : "text-error"}`}>
-                          {Math.round(reco.confidence * 100)}%
-                        </span>
-                        {/* ADR-0090 — score pondéré déterministe (ruler + impact + confidence) */}
-                        {typeof reco.weightedScore === "number" && (
-                          <span
-                            title={`Score pondéré ADR-0090 — ruler ${reco.rulerScore ?? "?"}/100 · impact ${reco.scoreImpactEstimate != null ? (reco.scoreImpactEstimate >= 0 ? "+" : "") + reco.scoreImpactEstimate : "n/a"} pts composite`}
-                            className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${reco.weightedScore >= 70 ? "bg-success/15 text-success" : reco.weightedScore >= 50 ? "bg-warning/15 text-warning" : "bg-error/15 text-error"}`}
-                          >
-                            ◈ {Math.round(reco.weightedScore)}
-                          </span>
-                        )}
-                        {reco.validationWarning && (
-                          <span title={reco.validationWarning}><AlertTriangle className="h-3 w-3 text-warning" /></span>
-                        )}
-                        {/* Always show status badge */}
-                        <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
-                          reco.status === "PENDING" ? "bg-warning/15 text-warning" :
-                          reco.status === "ACCEPTED" ? "bg-info/15 text-info" :
-                          reco.status === "APPLIED" ? "bg-success/15 text-success" :
-                          reco.status === "REJECTED" ? "bg-error/15 text-error" :
-                          reco.status === "REVERTED" ? "bg-warning/15 text-warning" :
-                          "bg-white/5 text-foreground-muted"
-                        }`}>{reco.status}</span>
-                      </div>
-
-                      {/* Explain */}
-                      <p className="text-2xs text-foreground-muted mb-1">{reco.explain}</p>
-
-                      {/* Advantages / Disadvantages (collapsible) */}
-                      {(advantages.length > 0 || disadvantages.length > 0) && (
-                        <details className="mb-2">
-                          <summary className="text-2xs text-foreground-muted/60 cursor-pointer hover:text-foreground-muted">
-                            Avantages/Risques
-                          </summary>
-                          <div className="mt-1 space-y-0.5 pl-2">
-                            {advantages.map((a, i) => (
-                              <div key={i} className="flex items-start gap-1 text-2xs text-success/70">
-                                <span className="shrink-0">+</span><span>{a}</span>
-                              </div>
-                            ))}
-                            {disadvantages.map((d, i) => (
-                              <div key={i} className="flex items-start gap-1 text-2xs text-error/70">
-                                <span className="shrink-0">-</span><span>{d}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </details>
+                  <div className="ck-nz__reco-b">
+                    <div className="ck-nz__reco-head">
+                      <span className="ck-nz__op" data-c={op.c}>{op.label}</span>
+                      <span className="ck-nz__reco-field">{getFieldLabel(reco.targetField)}</span>
+                      <span className="ck-nz__reco-pillar">{PILLAR_LABELS[reco.targetPillarKey] ?? reco.targetPillarKey}</span>
+                      <span className="ck-nz__reco-impact" data-i={reco.impact}>{reco.impact}</span>
+                      <span className="ck-nz__reco-urg" data-c={urg.c}>{urg.label}</span>
+                      <span className="ck-nz__reco-src">{reco.source}</span>
+                      <span className="ck-nz__reco-conf" data-hi={reco.confidence >= 0.7 ? 1 : 0}>{Math.round(reco.confidence * 100)}%</span>
+                      {/* ADR-0090 — score pondéré déterministe (ruler + impact + confidence) */}
+                      {typeof reco.weightedScore === "number" && (
+                        <span
+                          className="ck-nz__reco-score" data-s={reco.weightedScore >= 70 ? "hi" : reco.weightedScore >= 50 ? "mid" : "lo"}
+                          title={`Score pondéré ADR-0090 — ruler ${reco.rulerScore ?? "?"}/100 · impact ${reco.scoreImpactEstimate != null ? (reco.scoreImpactEstimate >= 0 ? "+" : "") + reco.scoreImpactEstimate : "n/a"} pts composite`}
+                        >◈ {Math.round(reco.weightedScore)}</span>
                       )}
-
-                      {/* Proposed value preview */}
-                      {reco.proposedValue != null && (
-                        <div className="rounded border border-white/5 bg-black/20 p-2">
-                          <p className="text-[9px] text-success/70 uppercase tracking-wide mb-0.5">
-                            {reco.operation === "ADD" ? "A ajouter" : reco.operation === "REMOVE" ? "A supprimer" : "Propose"}
-                          </p>
-                          <div className="text-2xs text-white/70 line-clamp-4">
-                            {typeof reco.proposedValue === "string"
-                              ? reco.proposedValue
-                              : JSON.stringify(reco.proposedValue, null, 1).slice(0, 200)}
-                          </div>
-                        </div>
-                      )}
+                      {reco.validationWarning && <span title={reco.validationWarning}><AlertTriangle className="h-3 w-3 text-warning" /></span>}
+                      <span className="ck-nz__status" data-s={reco.status}>{reco.status}</span>
                     </div>
 
-                    {/* Selection checkbox (for PENDING + ACCEPTED) */}
-                    {(reco.status === "PENDING" || reco.status === "ACCEPTED") && (
-                      <div className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border ${isSelected ? "border-success bg-success text-black" : "border-white/20"}`}>
-                        {isSelected && <CheckCircle className="h-3 w-3" />}
+                    <p className="ck-nz__reco-explain">{reco.explain}</p>
+
+                    {hasAnalysis && (
+                      <details onClick={(e) => e.stopPropagation()}>
+                        <summary className="ck-nz__reco-toggle">Avantages / Risques</summary>
+                        <div className="ck-nz__reco-analysis">
+                          {advantages.map((a, i) => <div key={`a${i}`} className="ok"><span>+</span>{a}</div>)}
+                          {disadvantages.map((d, i) => <div key={`d${i}`} className="ko"><span>−</span>{d}</div>)}
+                        </div>
+                      </details>
+                    )}
+
+                    {reco.proposedValue != null && (
+                      <div className="ck-nz__reco-diff">
+                        <div className="ck-nz__diff-prop">
+                          <span className="ck-nz__diff-l ok">{reco.operation === "ADD" ? "À ajouter" : reco.operation === "REMOVE" ? "À supprimer" : "Proposé"}</span>
+                          {typeof reco.proposedValue === "string" ? reco.proposedValue : JSON.stringify(reco.proposedValue, null, 1).slice(0, 200)}
+                        </div>
                       </div>
                     )}
                   </div>
+
+                  {isActionable && (
+                    <div className={`ck-nz__check${isSelected ? " on" : ""}`}>{isSelected && <CheckCircle />}</div>
+                  )}
                 </div>
               );
             })}
@@ -793,53 +657,36 @@ export function NotoriaPage() {
 
       {/* ═══ Section 4: History ════════════════════════════════════ */}
       {activeTab === "history" && (
-        <div className="space-y-3">
-          {/* Recent batches */}
-          <h3 className="text-sm font-semibold text-foreground-muted">Batches recents</h3>
-          {batches.length === 0 && (
-            <p className="text-xs text-foreground-muted/50">Aucun batch genere.</p>
-          )}
+        <div className="ck-nz__hist">
+          <h3 className="ck-nz__hist-h">Batches récents</h3>
+          {batches.length === 0 && <p className="text-xs text-foreground-muted">Aucun batch généré.</p>}
           {batches.map((batch) => (
-            <div key={batch.id} className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-white">{batch.missionType}</span>
-                  <span className="text-2xs text-foreground-muted">
-                    {new Date(batch.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-2xs">
-                  <span className="text-foreground-muted">{batch.totalRecos} recos</span>
-                  {batch.appliedCount > 0 && <span className="text-success">{batch.appliedCount} appliquees</span>}
-                  {batch.rejectedCount > 0 && <span className="text-error">{batch.rejectedCount} rejetees</span>}
-                  {batch.pendingCount > 0 && <span className="text-warning">{batch.pendingCount} en attente</span>}
-                </div>
+            <div key={batch.id} className="ck-nz__batchrow">
+              <div>
+                <span className="ck-nz__batch-type">{batch.missionType}</span>
+                <span className="ck-nz__batch-date">{new Date(batch.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+              </div>
+              <div className="ck-nz__batch-stats">
+                <span className="muted">{batch.totalRecos} recos</span>
+                {batch.appliedCount > 0 && <span className="ok">{batch.appliedCount} appliquées</span>}
+                {batch.rejectedCount > 0 && <span className="ko">{batch.rejectedCount} rejetées</span>}
+                {batch.pendingCount > 0 && <span className="warn">{batch.pendingCount} en attente</span>}
               </div>
             </div>
           ))}
 
-          {/* Applied recos list (from the general query with no status filter) */}
-          <h3 className="text-sm font-semibold text-foreground-muted mt-4">Recommandations traitees</h3>
-          <div className="space-y-2 max-h-[24rem] overflow-y-auto">
-            {recos.filter((r) => r.status !== "PENDING").map((reco) => {
-              const op = OP_LABELS[reco.operation] ?? { label: reco.operation, color: "bg-white/10" };
-              return (
-                <div key={reco.id} className="rounded border border-white/5 bg-white/[0.01] p-2 opacity-70">
-                  <div className="flex items-center gap-1.5 text-2xs">
-                    <span className={`rounded px-1 py-0.5 font-bold ${op.color}`}>{op.label}</span>
-                    <span className="text-white/70">{getFieldLabel(reco.targetField)}</span>
-                    <span className="text-foreground-muted">{PILLAR_LABELS[reco.targetPillarKey]}</span>
-                    <span className={`ml-auto rounded-full px-1.5 py-0.5 font-bold ${
-                      reco.status === "APPLIED" ? "bg-success/15 text-success" :
-                      reco.status === "REJECTED" ? "bg-error/15 text-error" :
-                      reco.status === "REVERTED" ? "bg-warning/15 text-warning" :
-                      "bg-white/5 text-foreground-muted"
-                    }`}>{reco.status}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <h3 className="ck-nz__hist-h" style={{ marginTop: 18 }}>Recommandations traitées</h3>
+          {recos.filter((r) => r.status !== "PENDING").map((reco) => {
+            const op = OP_RESKIN[reco.operation] ?? { label: reco.operation, c: "blue" };
+            return (
+              <div key={reco.id} className="ck-nz__histrow">
+                <span className="ck-nz__op" data-c={op.c}>{op.label}</span>
+                <span className="ck-nz__hist-field">{getFieldLabel(reco.targetField)}</span>
+                <span className="ck-nz__hist-pillar">{PILLAR_LABELS[reco.targetPillarKey]}</span>
+                <span className="ck-nz__status" data-s={reco.status}>{reco.status}</span>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

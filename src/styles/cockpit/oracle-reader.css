@@ -1,0 +1,111 @@
+/* La Fusée — L'Oracle · PAGE GÉNÉRÉE (reader public partageable) — reskin handoff.
+   Porté de claude.ai/design (oracle.jsx OracleGenerated). Reskin de
+   presentation-layout.tsx : chrome ck-ogen, contenu = sections live (données
+   générées réelles). 100% tokens DS (src/styles → exempt). Light theme = override
+   compact des vars DS sous [data-theme="light"] (doc client-facing). */
+
+.ck-ogen { min-height: 100vh; background: var(--surface-page); color: var(--text-primary); display: flex; flex-direction: column; }
+
+/* Light theme — override des vars DS (doc consulting clair) */
+.ck-ogen[data-theme="light"] {
+  --surface-page: #f5f4f1; --surface-card: #ffffff; --surface-raised: #ffffff; --surface-overlay: #efece6; --surface-sunken: #faf9f6;
+  --text-primary: #1a1a1a; --text-secondary: #3a3a3a; --text-muted: #7a766c;
+  --border: #e2dfd7; --border-subtle: #edeae3; --border-strong: #cfc9bd;
+}
+
+/* ── Navbar slim ── */
+.ck-ogen__bar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 18px; background: color-mix(in srgb, var(--surface-page) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border-subtle); }
+.ck-ogen__bar-l { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.ck-ogen__back { display: grid; place-items: center; width: 32px; height: 32px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--surface-card); color: var(--text-secondary); cursor: pointer; text-decoration: none; }
+.ck-ogen__back:hover { color: var(--text-primary); border-color: var(--border-strong); }
+.ck-ogen__back svg { width: 16px; height: 16px; }
+.ck-ogen__badge { display: grid; place-items: center; width: 30px; height: 30px; border-radius: var(--radius-md); background: var(--accent-fill); color: var(--accent); }
+.ck-ogen__badge svg { width: 17px; height: 17px; }
+.ck-ogen__id { display: flex; flex-direction: column; min-width: 0; }
+.ck-ogen__id-k { font-family: var(--font-mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
+.ck-ogen__id-t { font-family: var(--font-display); font-weight: 700; font-size: 15px; color: var(--text-primary); }
+.ck-ogen__bar-r { display: flex; align-items: center; gap: 8px; }
+.ck-ogen__icon { display: grid; place-items: center; width: 32px; height: 32px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--surface-card); color: var(--text-secondary); cursor: pointer; }
+.ck-ogen__icon:hover { color: var(--text-primary); border-color: var(--border-strong); }
+.ck-ogen__icon svg { width: 15px; height: 15px; }
+.ck-ogen__act { display: inline-flex; align-items: center; gap: 7px; padding: 7px 13px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--surface-card); color: var(--text-secondary); font-family: var(--font-sans); font-weight: 600; font-size: 12px; cursor: pointer; text-decoration: none; white-space: nowrap; }
+.ck-ogen__act:hover { color: var(--text-primary); border-color: var(--border-strong); }
+.ck-ogen__act svg { width: 14px; height: 14px; }
+.ck-ogen__act.primary { background: var(--accent); border-color: var(--accent); color: var(--text-on-accent); }
+.ck-ogen__act.primary:hover { filter: brightness(1.06); }
+.ck-ogen__sharewrap { position: relative; }
+.ck-ogen__sharepop { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; width: 320px; max-width: 90vw; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-overlay); box-shadow: var(--shadow-lg, 0 18px 50px -20px rgba(0,0,0,0.5)); display: flex; flex-direction: column; gap: 8px; }
+.ck-ogen__sharepop-h { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin: 0; }
+.ck-ogen__sharelink { font-family: var(--font-mono); font-size: 11px; color: var(--up-gold); background: var(--surface-page); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ck-ogen__shareacts { display: flex; gap: 6px; }
+.ck-ogen__shareacts button, .ck-ogen__shareacts a { display: inline-flex; align-items: center; gap: 6px; padding: 7px 11px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface-card); color: var(--text-secondary); font-family: var(--font-sans); font-weight: 600; font-size: 11.5px; cursor: pointer; text-decoration: none; }
+.ck-ogen__shareacts button:hover, .ck-ogen__shareacts a:hover { color: var(--text-primary); }
+.ck-ogen__shareacts svg { width: 13px; height: 13px; }
+
+/* ── Bande lentille (persona) ── */
+.ck-ogen__lens { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 12px 18px; border-bottom: 1px solid var(--border-subtle); background: var(--surface-card); }
+.ck-ogen__seg { display: inline-flex; gap: 3px; padding: 3px; border-radius: var(--radius-md); background: var(--surface-overlay); }
+.ck-ogen__seg button { display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px; border-radius: var(--radius-sm); border: none; background: none; cursor: pointer; font-family: var(--font-sans); font-weight: 600; font-size: 12.5px; color: var(--text-muted); }
+.ck-ogen__seg button svg { width: 14px; height: 14px; }
+.ck-ogen__seg button[data-on="1"] { background: var(--surface-card); color: var(--accent); box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,0.18)); }
+.ck-ogen__lensinfo { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.ck-ogen__lensinfo .desc { font-size: 12.5px; color: var(--text-secondary); }
+.ck-ogen__lensinfo .meta { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+.ck-ogen__lensinfo .meta svg { width: 13px; height: 13px; }
+
+/* ── Body : TOC + scroll ── */
+.ck-ogen__body { flex: 1; display: grid; grid-template-columns: 268px 1fr; min-height: 0; }
+@media (max-width: 960px){ .ck-ogen__body { grid-template-columns: 1fr; } .ck-ogen__toc { display: none; } }
+.ck-ogen__toc { border-right: 1px solid var(--border-subtle); padding: 18px 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.ck-ogen__toc-grp { display: flex; flex-direction: column; }
+.ck-ogen__toc-h { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 10px; border: none; background: none; cursor: pointer; border-radius: var(--radius-sm); }
+.ck-ogen__toc-h:hover { background: var(--surface-overlay); }
+.ck-ogen__toc-h .chev { width: 13px; height: 13px; color: var(--text-muted); transition: transform var(--dur-fast); }
+.ck-ogen__toc-grp[data-open="1"] .ck-ogen__toc-h .chev { transform: rotate(90deg); }
+.ck-ogen__toc-h .lbl { font-family: var(--font-mono); font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; padding: 2px 6px; border-radius: var(--radius-pill); border: 1px solid; }
+.ck-ogen__toc-h .lbl[data-t="CORE"] { color: var(--info); border-color: color-mix(in srgb, var(--info) 30%, transparent); background: var(--info-fill); }
+.ck-ogen__toc-h .lbl[data-t="BIG4_BASELINE"] { color: var(--text-muted); border-color: var(--border-strong); background: var(--surface-overlay); }
+.ck-ogen__toc-h .lbl[data-t="DISTINCTIVE"] { color: var(--up-violet); border-color: color-mix(in srgb, var(--up-violet) 30%, transparent); background: color-mix(in srgb, var(--up-violet) 12%, transparent); }
+.ck-ogen__toc-h .ttl { flex: 1; text-align: left; font-size: 11.5px; font-weight: 700; color: var(--text-secondary); }
+.ck-ogen__toc-h .cnt { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); }
+.ck-ogen__toc-i { display: flex; align-items: baseline; gap: 8px; width: 100%; padding: 6px 10px 6px 26px; border: none; background: none; cursor: pointer; border-radius: var(--radius-sm); text-align: left; }
+.ck-ogen__toc-i:hover { background: var(--surface-overlay); }
+.ck-ogen__toc-i[data-on="1"] { background: var(--accent-fill); }
+.ck-ogen__toc-i[data-on="1"] .t { color: var(--accent); }
+.ck-ogen__toc-i .n { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); flex: none; }
+.ck-ogen__toc-i .t { font-size: 12px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.ck-ogen__scroll { overflow-y: auto; }
+.ck-ogen__inner { max-width: 860px; margin: 0 auto; padding: 40px 28px 100px; }
+
+/* ── Cover ── */
+.ck-ogen__cover { margin-bottom: 40px; padding-bottom: 28px; border-bottom: 1px solid var(--border-subtle); }
+.ck-ogen__cover-eyebrow { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin: 0 0 10px; }
+.ck-ogen__cover-h { font-family: var(--font-display); font-weight: 700; font-size: clamp(30px, 5vw, 46px); letter-spacing: -0.03em; line-height: 1; color: var(--text-primary); margin: 0; }
+.ck-ogen__cover-lead { margin: 14px 0 0; font-size: 15px; line-height: 1.6; color: var(--text-secondary); max-width: 60ch; }
+.ck-ogen__cover-meta { margin: 16px 0 0; font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+
+/* ── Chapitres + sections ── */
+.ck-ogen__sections { display: flex; flex-direction: column; gap: 14px; }
+.ck-ogen__chap { position: relative; overflow: hidden; display: flex; align-items: center; gap: 16px; margin-top: 26px; padding: 20px 22px; border-radius: var(--radius-xl); border: 1px solid var(--border-subtle); background: var(--surface-card); }
+.ck-ogen__chap-rn { font-family: var(--font-display); font-weight: 700; font-size: 40px; line-height: 1; color: color-mix(in srgb, var(--accent) 40%, transparent); flex: none; }
+.ck-ogen__chap-medal { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; background: var(--accent-fill); color: var(--accent); flex: none; }
+.ck-ogen__chap-medal svg { width: 20px; height: 20px; }
+.ck-ogen__chap-tt { flex: 1; min-width: 0; }
+.ck-ogen__chap-k { font-family: var(--font-mono); font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.ck-ogen__chap-k[data-t="CORE"] { color: var(--info); } .ck-ogen__chap-k[data-t="BIG4_BASELINE"] { color: var(--text-muted); } .ck-ogen__chap-k[data-t="DISTINCTIVE"] { color: var(--up-violet); }
+.ck-ogen__chap-h { font-family: var(--font-display); font-weight: 700; font-size: 20px; letter-spacing: -0.01em; color: var(--text-primary); margin: 3px 0 2px; }
+.ck-ogen__chap-d { font-size: 12.5px; line-height: 1.45; color: var(--text-muted); margin: 0; max-width: 60ch; }
+
+.ck-ogen__sec { scroll-margin-top: 80px; padding: 18px 0; border-top: 1px solid var(--border-subtle); }
+.ck-ogen__sec:first-of-type { border-top: none; }
+.ck-ogen__sec-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 14px; }
+.ck-ogen__sec-n { font-family: var(--font-display); font-weight: 700; font-size: 26px; line-height: 1; color: color-mix(in srgb, var(--accent) 55%, transparent); flex: none; }
+.ck-ogen__sec-tt { flex: 1; min-width: 0; }
+.ck-ogen__sec-t { font-family: var(--font-sans); font-weight: 700; font-size: 18px; text-transform: uppercase; letter-spacing: 0.01em; color: var(--text-primary); margin: 0; }
+.ck-ogen__sec-rule { margin-top: 6px; height: 2px; width: 100%; background: linear-gradient(to right, color-mix(in srgb, var(--accent) 60%, transparent), transparent); }
+.ck-ogen__sec-body { font-size: 14px; line-height: 1.6; color: var(--text-secondary); }
+
+.ck-ogen__foot { margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--border-subtle); text-align: center; }
+.ck-ogen__foot p { margin: 2px 0; font-size: 11.5px; color: var(--text-muted); }

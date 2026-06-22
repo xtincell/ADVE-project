@@ -4,11 +4,7 @@ import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
-import { AdvertisRadar } from "@/components/shared/advertis-radar";
 import { DevotionLadder } from "@/components/shared/devotion-ladder";
-import { CultIndex } from "@/components/shared/cult-index";
-import { StatCard } from "@/components/shared/stat-card";
-import { PageHeader } from "@/components/shared/page-header";
 import { MissionCard } from "@/components/shared/mission-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SkeletonPage, SkeletonCard } from "@/components/shared/loading-skeleton";
@@ -135,8 +131,8 @@ export default function CockpitDashboard() {
 
   if (strategyQuery.error) {
     return (
-      <div className="space-y-6">
-        <PageHeader title="Cult Dashboard" />
+      <div className="ck-dash">
+        <h1 className="ck-ph__title">Cult Dashboard</h1>
         <div className="rounded-xl border border-destructive-subtle bg-destructive-subtle/20 p-6 text-center">
           <AlertTriangle className="mx-auto h-8 w-8 text-destructive" />
           <p className="mt-2 text-sm text-destructive">
@@ -271,27 +267,19 @@ export default function CockpitDashboard() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header with mode selector */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <PageHeader
-          title="Cult Dashboard"
-          description={`Marque : ${strategy?.name ?? "..."}`}
-          breadcrumbs={[{ label: "Cockpit", href: "/cockpit" }, { label: "Dashboard" }]}
-        />
-        <div className="flex gap-1 rounded-lg bg-background-overlay p-1">
+    <div className="ck-dash">
+      <div className="ck-dash__mobile-note"><Eye />Le cockpit est optimisé pour grand écran — basculez sur desktop pour la sidebar complète.</div>
+
+      {/* Header + view modes */}
+      <div className="ck-ph">
+        <div>
+          <p className="ck-ph__bc">Cockpit / Dashboard</p>
+          <h1 className="ck-ph__title">Cult Dashboard</h1>
+          <p className="ck-ph__desc">Marque : <span className="em">{strategy?.name ?? "…"}</span></p>
+        </div>
+        <div className="ck-views">
           {(Object.keys(VIEW_MODE_LABELS) as ViewMode[]).map((mode) => (
-            <button
-              key={mode}
-              onClick={() => setViewMode(mode)}
-              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                viewMode === mode
-                  ? "bg-primary text-primary-foreground"
-                  : "text-foreground-muted hover:text-foreground"
-              }`}
-            >
-              {VIEW_MODE_LABELS[mode]}
-            </button>
+            <button key={mode} data-on={viewMode === mode ? 1 : 0} onClick={() => setViewMode(mode)}>{VIEW_MODE_LABELS[mode]}</button>
           ))}
         </div>
       </div>
@@ -300,220 +288,142 @@ export default function CockpitDashboard() {
       <BatchActionsBar strategyId={strategyId} />
 
       {/* Brand Story Hero */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* Identite & Positionnement */}
-        <div className="lg:col-span-2 rounded-xl border border-accent/30 bg-gradient-to-br from-accent/30 to-background/80 p-6">
-          <div className="mb-3 flex items-center gap-2">
-            <Fingerprint className="h-4 w-4 text-accent" />
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-accent">Identite de marque</h3>
-          </div>
+      <div className="ck-grid ck-grid--hero">
+        {/* Identité & Positionnement */}
+        <div className="ck-id">
+          <p className="ck-id__eyebrow"><Fingerprint />Identité de marque</p>
           {authContent?.noyauIdentitaire || authContent?.prophecy ? (
-            <p className="text-lg font-semibold leading-relaxed text-white">
-              {safeString(authContent.noyauIdentitaire || authContent.prophecy)}
-            </p>
+            <p className="ck-id__noyau">{safeString(authContent.noyauIdentitaire || authContent.prophecy)}</p>
           ) : (
-            <p className="text-sm text-foreground-muted italic">Noyau identitaire non defini — remplissez le pilier A (Authenticite)</p>
+            <p className="ck-id__noyau" style={{ fontStyle: "italic", color: "var(--text-muted)", fontSize: 14 }}>Noyau identitaire non défini — remplissez le pilier A (Authenticité)</p>
           )}
           {!!distContent?.positionnement && (
-            <p className="mt-2 text-sm text-foreground-secondary">
-              <span className="text-foreground-muted">Positionnement :</span>{" "}
-              {safeString(distContent.positionnement)}
-            </p>
+            <p className="ck-id__row"><span className="k">Positionnement :</span> {safeString(distContent.positionnement)}</p>
           )}
           {!!distContent?.promesseMaitre && (
-            <p className="mt-2 text-sm font-medium text-accent italic">
-              &ldquo;{safeString(distContent.promesseMaitre)}&rdquo;
-            </p>
+            <p className="ck-id__promise">« {safeString(distContent.promesseMaitre)} »</p>
           )}
           {!!authContent?.valeurs && Array.isArray(authContent.valeurs) && (
-            <div className="mt-3 flex flex-wrap gap-1.5">
+            <div className="ck-id__values">
               {(authContent.valeurs as Array<Record<string, unknown>>).slice(0, 6).map((v, i) => (
-                <span key={i} className="rounded-full bg-accent/10 px-2.5 py-0.5 text-xs font-medium text-accent">
-                  {safeString(v.customName || v.value || v)}
-                </span>
+                <span className="ck-val" key={i}>{safeString(v.customName || v.value || v)}</span>
               ))}
             </div>
           )}
         </div>
 
-        {/* Focus Strategique */}
-        <div className="rounded-xl border border-border bg-background/80 p-6">
-          <div className="mb-3 flex items-center gap-2">
-            <Target className="h-4 w-4 text-warning" />
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-warning">Focus strategique</h3>
-          </div>
-          <div className="space-y-4">
+        {/* Focus Stratégique */}
+        <div className="ck-focus">
+          <p className="ck-focus__eyebrow"><Target />Focus stratégique</p>
+          <div className="ck-focus__blocks">
             <div>
-              <p className="text-2xs font-medium uppercase text-foreground-muted">Force principale</p>
-              <p className="mt-1 text-sm font-semibold text-success">
-                {strongestPillar[0].toUpperCase()} — {PILLAR_NAMES[strongestPillar[0]]}
-              </p>
-              {getPillarHeadline(strongestPillar[0]) ? (
-                <p className="mt-0.5 text-xs text-foreground-secondary line-clamp-2">{getPillarHeadline(strongestPillar[0])}</p>
-              ) : (
-                <p className="text-xs text-foreground-muted">{strongestPillar[1].toFixed(1)}/25</p>
-              )}
+              <p className="ck-focus__k">Force principale</p>
+              <p className="ck-focus__v up">{strongestPillar[0].toUpperCase()} — {PILLAR_NAMES[strongestPillar[0]]}</p>
+              {getPillarHeadline(strongestPillar[0])
+                ? <p className="ck-focus__d">{getPillarHeadline(strongestPillar[0])}</p>
+                : <p className="ck-focus__d">{strongestPillar[1].toFixed(1)}/25</p>}
             </div>
             <div>
-              <p className="text-2xs font-medium uppercase text-foreground-muted">Priorite d'amelioration</p>
-              <p className="mt-1 text-sm font-semibold text-warning">
-                {weakestPillar[0].toUpperCase()} — {PILLAR_NAMES[weakestPillar[0]]}
-              </p>
-              {getPillarHeadline(weakestPillar[0]) ? (
-                <p className="mt-0.5 text-xs text-foreground-secondary line-clamp-2">{getPillarHeadline(weakestPillar[0])}</p>
-              ) : (
-                <p className="text-xs text-foreground-muted italic">Contenu a remplir</p>
-              )}
+              <p className="ck-focus__k">Priorité d&apos;amélioration</p>
+              <p className="ck-focus__v down">{weakestPillar[0].toUpperCase()} — {PILLAR_NAMES[weakestPillar[0]]}</p>
+              {getPillarHeadline(weakestPillar[0])
+                ? <p className="ck-focus__d">{getPillarHeadline(weakestPillar[0])}</p>
+                : <p className="ck-focus__d" style={{ fontStyle: "italic" }}>Contenu à remplir</p>}
             </div>
-            <div className="flex items-start gap-2 rounded-lg bg-warning/20 p-3">
-              <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
-              <p className="text-xs text-foreground-secondary">
-                Renforcer {PILLAR_NAMES[weakestPillar[0]]} pour convertir plus de superfans et debloquer le prochain palier.
-              </p>
+            <div className="ck-focus__tip">
+              <Lightbulb />
+              <p>Renforcer {PILLAR_NAMES[weakestPillar[0]]} pour convertir plus de superfans et débloquer le prochain palier.</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* NORTHSTAR: Active Superfans Hero */}
+      {/* NORTHSTAR + KPIs */}
       {showSection("kpi") && (
         <>
-          <div className="rounded-xl border border-accent/30 bg-gradient-to-r from-accent/40 via-accent/20 to-background/80 p-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/20 ring-1 ring-accent/30">
-                  <Crown className="h-7 w-7 text-accent" />
-                </div>
+          <div className="ck-north">
+            <div className="ck-north__grid">
+              <div className="ck-north__lead">
+                <span className="ck-north__crown"><Crown /></span>
                 <div>
-                  <p className="text-2xs font-bold uppercase tracking-widest text-accent/80">Northstar</p>
-                  <div className="flex items-baseline gap-3">
-                    <span className="text-4xl font-black tabular-nums text-white">
-                      {superfanCountQuery.data?.active ?? "—"}
-                    </span>
-                    <span className="text-sm font-medium text-foreground-secondary">superfans actifs</span>
+                  <p className="ck-north__k">Northstar</p>
+                  <div className="ck-north__big">
+                    <span className="ck-north__n">{superfanCountQuery.data?.active ?? "—"}</span>
+                    <span className="ck-north__lbl">superfans actifs</span>
                   </div>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-4 sm:gap-6">
-                <div className="text-right">
-                  <p className="text-2xs font-medium uppercase text-foreground-muted">Evangelistes</p>
-                  <p className="text-lg font-bold text-accent">{superfanCountQuery.data?.evangelistes ?? 0}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-2xs font-medium uppercase text-foreground-muted">Ratio superfan</p>
-                  <p className="text-lg font-bold text-accent">{superfanCountQuery.data?.ratio ?? 0}%</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-2xs font-medium uppercase text-foreground-muted">Velocite /30j</p>
-                  <div className="flex items-center justify-end gap-1">
-                    {superfanVelocityQuery.data?.trend === "up" && <TrendingUp className="h-3.5 w-3.5 text-success" />}
-                    {superfanVelocityQuery.data?.trend === "down" && <TrendingUp className="h-3.5 w-3.5 rotate-180 text-error" />}
-                    <span className={`text-lg font-bold ${
-                      superfanVelocityQuery.data?.trend === "up" ? "text-success" :
-                      superfanVelocityQuery.data?.trend === "down" ? "text-error" : "text-foreground-secondary"
-                    }`}>
-                      {superfanVelocityQuery.data?.delta != null
-                        ? `${superfanVelocityQuery.data.delta > 0 ? "+" : ""}${superfanVelocityQuery.data.delta}`
-                        : "—"}
-                    </span>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-2xs font-medium uppercase text-foreground-muted">Total profiles</p>
-                  <p className="text-lg font-bold text-foreground-secondary">{superfanCountQuery.data?.total ?? 0}</p>
-                </div>
+              <div className="ck-north__stats">
+                <div className="ck-north__stat"><p className="sk">Évangélistes</p><p className="sv gold">{superfanCountQuery.data?.evangelistes ?? 0}</p></div>
+                <div className="ck-north__stat"><p className="sk">Ratio superfan</p><p className="sv accent">{superfanCountQuery.data?.ratio ?? 0}%</p></div>
+                <div className="ck-north__stat"><p className="sk">Vélocité /30j</p><p className={`sv ${superfanVelocityQuery.data?.trend === "up" ? "up" : ""}`}>
+                  {superfanVelocityQuery.data?.trend === "up" && <TrendingUp />}
+                  {superfanVelocityQuery.data?.delta != null ? `${superfanVelocityQuery.data.delta > 0 ? "+" : ""}${superfanVelocityQuery.data.delta}` : "—"}
+                </p></div>
+                <div className="ck-north__stat"><p className="sk">Total profils</p><p className="sv">{superfanCountQuery.data?.total ?? 0}</p></div>
               </div>
             </div>
           </div>
 
-          {/* Secondary KPIs */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-xl border border-border bg-card p-5">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-medium text-foreground-muted">Cult Index</p>
-                <Sparkline data={cultTrend} width={60} height={20} />
-              </div>
-              <CultIndex
-                score={cultIndexQuery.data?.current ?? cultIndex}
-                trend={(cultIndexQuery.data?.trend?.toLowerCase() as "up" | "down" | "stable") ?? "stable"}
-                trendValue={Math.abs(cultIndexQuery.data?.delta ?? 0)}
-                variant="compact"
-                className="mt-2"
-              />
+          {/* KPI grid */}
+          <div className="ck-grid ck-grid--kpi">
+            <div className="ck-kpi">
+              <div className="ck-kpi__top"><span className="ck-kpi__lbl">Cult Index</span><span className="ck-kpi__spark"><Sparkline data={cultTrend} width={60} height={20} /></span></div>
+              <p className="ck-kpi__val">{cultIndexQuery.data?.current ?? cultIndex}<span className="m">/100</span></p>
+              {(() => {
+                const d = cultIndexQuery.data?.delta ?? 0;
+                return d !== 0 ? <span className={`ck-kpi__delta ${d > 0 ? "up" : ""}`}><TrendingUp />{d > 0 ? "+" : ""}{d} ce mois</span> : null;
+              })()}
             </div>
-
-            <StatCard
-              title="Missions actives"
-              value={activeMissions.length}
-              trend={activeMissions.length > 0 ? "up" : "flat"}
-              trendValue={`${activeCampaigns.length} campagne${activeCampaigns.length > 1 ? "s" : ""}`}
-              icon={Rocket}
-            />
-
-            <StatCard
-              title="Alertes"
-              value={alertSignals.length}
-              trend={alertSignals.length > 3 ? "up" : "flat"}
-              trendValue={`${alertSignals.length} prescription${alertSignals.length > 1 ? "s" : ""}`}
-              icon={AlertTriangle}
-            />
-
-            <div className="rounded-xl border border-border bg-card p-5">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-medium text-foreground-muted">Score ADVE-RTIS</p>
-                <Sparkline data={scoreTrend} width={60} height={20} />
-              </div>
-              <p className="mt-2 text-lg font-semibold tabular-nums text-foreground">{Math.round(composite)}<span className="text-xs text-foreground-muted">/200</span></p>
+            <div className="ck-kpi">
+              <div className="ck-kpi__top"><span className="ck-kpi__lbl">Missions actives</span><Rocket className="h-4 w-4 text-accent" /></div>
+              <p className="ck-kpi__val">{activeMissions.length}</p>
+              <span className="ck-kpi__delta">{activeCampaigns.length} campagne{activeCampaigns.length > 1 ? "s" : ""}</span>
+            </div>
+            <div className="ck-kpi">
+              <div className="ck-kpi__top"><span className="ck-kpi__lbl">Alertes</span><AlertTriangle className="h-4 w-4 text-warning" /></div>
+              <p className="ck-kpi__val">{alertSignals.length}</p>
+              <span className="ck-kpi__delta">{alertSignals.length} prescription{alertSignals.length > 1 ? "s" : ""}</span>
+            </div>
+            <div className="ck-kpi">
+              <div className="ck-kpi__top"><span className="ck-kpi__lbl">Score ADVE-RTIS</span><span className="ck-kpi__spark"><Sparkline data={scoreTrend} width={60} height={20} /></span></div>
+              <p className="ck-kpi__val">{Math.round(composite)}<span className="m">/200</span></p>
             </div>
           </div>
         </>
       )}
 
-      {/* Radar + Devotion Ladder */}
+      {/* Pipeline + Devotion */}
       {(showSection("radar") || showSection("devotion")) && (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="ck-grid ck-grid--2">
           {showSection("radar") && (
-            <div className="space-y-4">
-              {/* Pipeline ADVE → RTIS */}
-              <div className="rounded-xl border border-border bg-card p-6">
-                <div className="mb-4 flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-foreground">Pipeline de transformation</h3>
-                  <Link href="/cockpit/insights/diagnostics" className="text-2xs text-foreground-muted hover:text-foreground">
-                    Voir le radar →
-                  </Link>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div className="ck-card">
+                <div className="ck-card__head">
+                  <h3 className="ck-card__t">Pipeline de transformation</h3>
+                  <Link href="/cockpit/insights/diagnostics" className="ck-card__link">Voir le radar →</Link>
                 </div>
                 <PipelineProgress steps={buildPipelineSteps(scores, {})} />
               </div>
-              {/* Acces direct L'Oracle */}
-              <Link
-                href="/cockpit/brand/proposition"
-                className="flex items-center gap-3 rounded-xl border border-accent/30 bg-accent/20 p-4 transition-colors hover:bg-accent/30"
-              >
-                <Brain className="h-5 w-5 text-accent" />
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-accent">L'Oracle</p>
-                  <p className="text-2xs text-accent/60">Proposition strategique vivante</p>
-                </div>
-                <ArrowRight className="h-4 w-4 text-accent/40" />
+              <Link href="/cockpit/brand/proposition" className="ck-oracle">
+                <span className="ck-oracle__ic"><Brain /></span>
+                <span className="ck-oracle__t"><b>L&apos;Oracle</b><span>Proposition stratégique vivante</span></span>
+                <ArrowRight className="ck-oracle__arr" />
               </Link>
-              {/* Phase 23 Epic 7 Story 7.6 — Overton teaser (contextual discovery) */}
               <OvertonTeaser />
             </div>
           )}
 
           {showSection("devotion") && (
-            <div className="rounded-xl border border-border bg-card p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-foreground">Devotion Ladder</h3>
-                <div className="flex items-center gap-1.5 text-xs text-foreground-muted">
-                  <Heart className="h-3 w-3 text-accent" />
-                  <span>{superfanCountQuery.data?.active ?? 0} superfans actifs</span>
-                </div>
+            <div className="ck-card">
+              <div className="ck-card__head">
+                <h3 className="ck-card__t">Devotion Ladder</h3>
+                <span className="ck-card__sub"><Heart />{superfanCountQuery.data?.active ?? 0} superfans actifs</span>
               </div>
               {devotionQuery.isLoading ? (
                 <div className="space-y-3">
                   {Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="h-6 animate-[shimmer_2s_linear_infinite] rounded-full bg-background-overlay" />
+                    <div key={i} className="h-6 animate-[shimmer_2s_linear_infinite] rounded-full bg-surface-overlay" />
                   ))}
                 </div>
               ) : (
@@ -526,74 +436,59 @@ export default function CockpitDashboard() {
 
       {/* Prescriptions Mestor */}
       {showSection("prescriptions") && (
-        <div className="rounded-xl border border-warning/30 bg-warning/10 p-5">
-          <div className="mb-3 flex items-center gap-2">
-            <Brain className="h-4 w-4 text-warning" />
-            <h3 className="text-sm font-semibold text-foreground">Prescriptions Mestor</h3>
-            <AiBadge />
-          </div>
+        <div className="ck-presc">
+          <div className="ck-presc__head"><Brain /><h3>Prescriptions Mestor</h3><AiBadge /></div>
           {mestorInsightsQuery.isLoading ? (
             <div className="space-y-2">
               {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="h-14 animate-[shimmer_2s_linear_infinite] rounded-lg bg-background-overlay" />
+                <div key={i} className="h-14 animate-[shimmer_2s_linear_infinite] rounded-lg bg-surface-overlay" />
               ))}
             </div>
           ) : (mestorInsightsQuery.data ?? []).length > 0 ? (
-            <div className="space-y-2">
+            <div className="ck-presc__list">
               {(mestorInsightsQuery.data ?? []).slice(0, 4).map((insight: { type: string; severity: string; title: string; description: string; suggestedAction?: string }, i: number) => (
-                <div
-                  key={i}
-                  className="flex items-start gap-3 rounded-lg bg-background-raised/50 px-4 py-3"
-                >
-                  <div className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${
-                    insight.severity === "CRITICAL" ? "bg-error" :
-                    insight.severity === "HIGH" ? "bg-warning" :
-                    insight.severity === "MEDIUM" ? "bg-warning" : "bg-foreground-muted"
-                  }`} />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xs font-medium uppercase text-warning/70">{insight.type}</span>
-                      <p className="text-sm font-medium text-foreground">{insight.title}</p>
+                <div className="ck-presc__item" key={i}>
+                  <span className="ck-presc__sev" data-s={insight.severity} />
+                  <div className="ck-presc__b">
+                    <div className="ck-presc__row1">
+                      <span className="ck-presc__type">{insight.type}</span>
+                      <span className="ck-presc__title">{insight.title}</span>
                     </div>
-                    <p className="mt-0.5 text-xs text-foreground-secondary">{insight.description}</p>
-                    {insight.suggestedAction && (
-                      <p className="mt-1 text-xs font-medium text-warning">→ {insight.suggestedAction}</p>
-                    )}
+                    <p className="ck-presc__desc">{insight.description}</p>
+                    {insight.suggestedAction && <p className="ck-presc__action">→ {insight.suggestedAction}</p>}
                   </div>
                 </div>
               ))}
             </div>
           ) : alertSignals.length > 0 ? (
-            <div className="space-y-2">
+            <div className="ck-presc__list">
               {alertSignals.slice(0, 3).map((signal, i) => {
                 const data = signal.data as Record<string, unknown> | null;
                 return (
-                  <div key={signal.id ?? i} className="flex items-start gap-3 rounded-lg bg-background-raised/50 px-4 py-3">
-                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{(data?.title as string) ?? signal.type}</p>
-                      {!!data?.description && <p className="mt-0.5 text-xs text-foreground-secondary">{safeString(data.description)}</p>}
+                  <div className="ck-presc__item" key={signal.id ?? i}>
+                    <span className="ck-presc__sev" data-s="HIGH" />
+                    <div className="ck-presc__b">
+                      <span className="ck-presc__title">{(data?.title as string) ?? signal.type}</span>
+                      {!!data?.description && <p className="ck-presc__desc">{safeString(data.description)}</p>}
                     </div>
                   </div>
                 );
               })}
             </div>
           ) : (
-            <p className="text-xs text-foreground-muted">Aucune prescription active — Mestor surveille votre marque.</p>
+            <p className="ck-presc__empty">Aucune prescription active — Mestor surveille votre marque.</p>
           )}
         </div>
       )}
 
       {/* Missions + Timeline */}
       {(showSection("missions") || showSection("timeline")) && (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="ck-grid ck-grid--2">
           {showSection("missions") && (
-            <div className="rounded-xl border border-border bg-card p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-foreground">Missions recentes</h3>
-                <a href="/cockpit/operate/missions" className="text-xs text-foreground-muted hover:text-foreground">
-                  Voir tout →
-                </a>
+            <div className="ck-card">
+              <div className="ck-card__head">
+                <h3 className="ck-card__t">Missions récentes</h3>
+                <a href="/cockpit/operate/missions" className="ck-card__link">Voir tout →</a>
               </div>
               {missionsQuery.isLoading ? (
                 <div className="space-y-3">
@@ -621,16 +516,16 @@ export default function CockpitDashboard() {
           )}
 
           {showSection("timeline") && (
-            <div className="rounded-xl border border-border bg-card p-6">
-              <h3 className="mb-4 text-sm font-semibold text-foreground">Activite recente</h3>
+            <div className="ck-card">
+              <div className="ck-card__head"><h3 className="ck-card__t">Activité récente</h3></div>
               {signalsQuery.isLoading ? (
                 <div className="space-y-4">
                   {Array.from({ length: 4 }).map((_, i) => (
                     <div key={i} className="flex gap-3">
-                      <div className="h-8 w-8 animate-pulse rounded-full bg-background-overlay" />
+                      <div className="h-8 w-8 animate-pulse rounded-full bg-surface-overlay" />
                       <div className="flex-1 space-y-2">
-                        <div className="h-4 w-3/4 animate-pulse rounded bg-background-overlay" />
-                        <div className="h-3 w-1/2 animate-pulse rounded bg-background-overlay" />
+                        <div className="h-4 w-3/4 animate-pulse rounded bg-surface-overlay" />
+                        <div className="h-3 w-1/2 animate-pulse rounded bg-surface-overlay" />
                       </div>
                     </div>
                   ))}
@@ -679,8 +574,8 @@ function BatchActionsBar({ strategyId }: { strategyId: string }) {
   const anyLoading = autoFillAll.isPending || cascadeRTIS.isPending || enrichAll.isPending;
 
   return (
-    <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-3">
-      <span className="text-xs font-semibold text-foreground-muted mr-2">Actions</span>
+    <div className="ck-batch">
+      <span className="ck-batch__lbl">Actions</span>
 
       <Tooltip
         multiline
@@ -694,12 +589,8 @@ function BatchActionsBar({ strategyId }: { strategyId: string }) {
           </span>
         }
       >
-        <button
-          onClick={() => autoFillAll.mutate({ strategyId })}
-          disabled={anyLoading}
-          className="flex items-center gap-1.5 rounded-lg bg-accent/20 px-3 py-2 text-xs font-medium text-accent hover:bg-accent/30 disabled:opacity-50 transition-colors"
-        >
-          {autoFillAll.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+        <button className="ck-chip ck-chip--accent" onClick={() => autoFillAll.mutate({ strategyId })} disabled={anyLoading}>
+          {autoFillAll.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles />}
           Enrichir ADVE
         </button>
       </Tooltip>
@@ -716,12 +607,8 @@ function BatchActionsBar({ strategyId }: { strategyId: string }) {
           </span>
         }
       >
-        <button
-          onClick={() => cascadeRTIS.mutate({ strategyId, updateADVE: true })}
-          disabled={anyLoading}
-          className="flex items-center gap-1.5 rounded-lg bg-info/20 px-3 py-2 text-xs font-medium text-info hover:bg-info/30 disabled:opacity-50 transition-colors"
-        >
-          {cascadeRTIS.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
+        <button className="ck-chip ck-chip--info" onClick={() => cascadeRTIS.mutate({ strategyId, updateADVE: true })} disabled={anyLoading}>
+          {cascadeRTIS.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap />}
           Lancer R+T
         </button>
       </Tooltip>
@@ -738,20 +625,14 @@ function BatchActionsBar({ strategyId }: { strategyId: string }) {
           </span>
         }
       >
-        <button
-          onClick={() => enrichAll.mutate({ strategyId })}
-          disabled={anyLoading}
-          className="flex items-center gap-1.5 rounded-lg bg-foreground-muted/10 px-3 py-2 text-xs font-medium text-foreground-muted hover:bg-foreground-muted/20 disabled:opacity-50 transition-colors"
-        >
-          {enrichAll.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Database className="h-3.5 w-3.5" />}
+        <button className="ck-chip ck-chip--muted" onClick={() => enrichAll.mutate({ strategyId })} disabled={anyLoading}>
+          {enrichAll.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Database />}
           Sources
         </button>
       </Tooltip>
 
       {(autoFillAll.isSuccess || cascadeRTIS.isSuccess || enrichAll.isSuccess) && (
-        <span className="flex items-center gap-1 text-2xs text-success ml-2">
-          <CheckCircle className="h-3 w-3" /> Done
-        </span>
+        <span className="ck-batch__done"><CheckCircle /> Terminé</span>
       )}
     </div>
   );

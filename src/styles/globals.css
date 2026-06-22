@@ -20,6 +20,11 @@
 @import "./tokens/index.css";
 @import "./print.css";
 @import "./mobile.css";
+@import "./cockpit/pillars.css";
+@import "./cockpit/notoria.css";
+@import "./cockpit/oracle.css";
+@import "./cockpit/oracle-reader.css";
+@import "./cockpit/dashboard.css";
 
 /* ═══════════════════════════════════════════════════════════════
    Layer base + extensions Phase 11

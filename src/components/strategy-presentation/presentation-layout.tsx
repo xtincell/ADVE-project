@@ -6,9 +6,13 @@ import { SECTION_REGISTRY } from "@/server/services/strategy-presentation/types"
 import type { StrategyPresentationDocument } from "@/server/services/strategy-presentation/types";
 import type { PresentationPersona } from "@/server/services/strategy-presentation/types";
 
-import { PersonaSelector } from "./persona-selector";
-import { CollapsibleNav } from "./collapsible-nav";
-import { SectionWrapper } from "./section-wrapper";
+// Reskin (handoff design) — chrome ck-ogen ; PersonaSelector/CollapsibleNav/
+// SectionWrapper remplacés par la bande lentille + TOC groupée + en-têtes inline.
+import {
+  ChevronRight, Sun, Moon, Briefcase, Users, Palette,
+  Rocket, LayoutGrid, Sparkles, FileText, Share2, Copy, Check, BookOpen, Brain,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 // Section components — Phase 1 (ADVE)
 import { ExecutiveSummary } from "./sections/01-executive-summary";
@@ -166,18 +170,42 @@ const SECTION_DATA_MAP: Record<string, string> = {
   "anubis-plan-comms": "anubis-plan-comms",
 };
 
+// ── Persona lens meta (reader) ──
+const PERSONA_META: Record<PresentationPersona, { label: string; icon: LucideIcon; desc: string; eyebrow: string }> = {
+  consultant: { label: "Consultant", icon: Briefcase, desc: "Analyse complète — diagnostic ADVERTIS, frameworks Big 4 et distinctives.", eyebrow: "Proposition stratégique · analyse" },
+  client: { label: "Client", icon: Users, desc: "L'essentiel pour décider — synthèse, valeur, plan et budget.", eyebrow: "Proposition stratégique · pour décision" },
+  creative: { label: "Creative", icon: Palette, desc: "Territoire & exécution — plateforme, création et production.", eyebrow: "Proposition stratégique · brief créatif" },
+};
+const PERSONA_ORDER: PresentationPersona[] = ["consultant", "client", "creative"];
+
+// ── Tier (chapter) meta ──
+const TIER_ORDER = ["CORE", "BIG4_BASELINE", "DISTINCTIVE"] as const;
+const TIER_META: Record<string, { rn: string; chip: string; nav: string; icon: LucideIcon; title: string; desc: string }> = {
+  CORE: { rn: "I", chip: "Core", nav: "Fondation & exécution", icon: Rocket, title: "Fondation & exécution", desc: "Le cœur ADVERTIS — identité, diagnostic, plan et mesure." },
+  BIG4_BASELINE: { rn: "II", chip: "Big 4", nav: "Baseline Big 4", icon: LayoutGrid, title: "Baseline consulting", desc: "Les cadres de référence Big 4 appliqués à la marque." },
+  DISTINCTIVE: { rn: "III", chip: "Distinct", nav: "Distinctives", icon: Sparkles, title: "Distinctives La Fusée", desc: "Ce que les Big 4 ne mesurent pas : la masse culturelle." },
+};
+
 export function PresentationLayout({ document: doc, defaultPersona }: PresentationLayoutProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [persona, setPersona] = useState<PresentationPersona>(defaultPersona);
   const [activeSection, setActiveSection] = useState(SECTION_REGISTRY[0]!.id);
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [openGroups, setOpenGroups] = useState<Set<string>>(() => new Set(TIER_ORDER));
+  const [shareOpen, setShareOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  // Theme persistence
+  useEffect(() => {
+    try { const t = window.localStorage.getItem("oracle-theme"); if (t === "light" || t === "dark") setTheme(t); } catch { /* private mode */ }
+  }, []);
+  useEffect(() => { try { window.localStorage.setItem("oracle-theme", theme); } catch { /* private mode */ } }, [theme]);
 
   // Sync persona from URL
   useEffect(() => {
     const urlPersona = searchParams.get("persona");
-    if (urlPersona === "client" || urlPersona === "creative" || urlPersona === "consultant") {
-      setPersona(urlPersona);
-    }
+    if (urlPersona === "client" || urlPersona === "creative" || urlPersona === "consultant") setPersona(urlPersona);
   }, [searchParams]);
 
   function handlePersonaChange(p: PresentationPersona) {
@@ -187,90 +215,176 @@ export function PresentationLayout({ document: doc, defaultPersona }: Presentati
     router.replace(`?${params.toString()}`, { scroll: false });
   }
 
+  function toggleGroup(t: string) {
+    setOpenGroups((prev) => { const n = new Set(prev); if (n.has(t)) n.delete(t); else n.add(t); return n; });
+  }
+  function jump(id: string) {
+    setActiveSection(id);
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  function copyShareLink() {
+    try {
+      navigator.clipboard.writeText(window.location.href);
+      setCopied(true); setTimeout(() => setCopied(false), 1800);
+    } catch { /* clipboard indispo */ }
+  }
+
   // Scroll spy
   useEffect(() => {
     const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            setActiveSection(entry.target.id);
-          }
-        }
-      },
+      (entries) => { for (const entry of entries) if (entry.isIntersecting) setActiveSection(entry.target.id); },
       { rootMargin: "-20% 0px -60% 0px" }
     );
-
     for (const section of SECTION_REGISTRY) {
       const el = document.getElementById(section.id);
       if (el) observer.observe(el);
     }
-
     return () => observer.disconnect();
   }, [persona]);
 
   const visibleSections = SECTION_REGISTRY.filter((s) => s.personas.includes(persona));
+  const byTier: Record<string, typeof visibleSections> = { CORE: [], BIG4_BASELINE: [], DISTINCTIVE: [] };
+  for (const s of visibleSections) (byTier[s.tier ?? "CORE"] ??= []).push(s);
+  const tiersShown = TIER_ORDER.filter((t) => (byTier[t]?.length ?? 0) > 0);
+  const readMin = Math.max(3, Math.round(visibleSections.length * 1.1));
+  const pmeta = PERSONA_META[persona];
+
+  const coverLead = persona === "consultant"
+    ? `Score ${doc.meta.vector.composite}/200 · ${doc.meta.classification} · diagnostic ${visibleSections.length} sections`
+    : persona === "client"
+      ? "La promesse, la valeur et le plan — l'essentiel pour décider, en clair."
+      : "Le territoire de marque — plateforme, création et exécution.";
+
+  const pdfHref = `/api/export/oracle/${doc.meta.strategyId}/pdf`;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      {/* Header */}
-      <div className="mb-8 text-center">
-        <p className="text-xs uppercase tracking-widest text-foreground-muted">L'Oracle — Proposition Strategique</p>
-        <h1 className="mt-2 text-3xl font-black text-foreground sm:text-4xl">
-          {doc.meta.brandName}
-        </h1>
-        {doc.meta.operatorName && (
-          <p className="mt-1 text-sm text-foreground-muted">par {doc.meta.operatorName}</p>
-        )}
-        <p className="mt-1 text-xs text-foreground-muted">
-          Score {doc.meta.vector.composite}/200 — {doc.meta.classification} — Genere le{" "}
-          {new Date(doc.meta.generatedAt).toLocaleDateString("fr")}
-        </p>
+    <div className="ck-ogen" data-theme={theme} role="main" aria-label="L'Oracle — page générée">
+      {/* ── Navbar slim ── */}
+      <div className="ck-ogen__bar">
+        <div className="ck-ogen__bar-l">
+          <span className="ck-ogen__badge"><Brain /></span>
+          <div className="ck-ogen__id">
+            <span className="ck-ogen__id-k">L&apos;Oracle · proposition stratégique</span>
+            <b className="ck-ogen__id-t">{doc.meta.brandName}</b>
+          </div>
+        </div>
+        <div className="ck-ogen__bar-r">
+          <button className="ck-ogen__icon" onClick={() => setTheme((t) => t === "dark" ? "light" : "dark")} title={theme === "dark" ? "Mode clair" : "Mode sombre"} aria-label="Basculer le thème">
+            {theme === "dark" ? <Sun /> : <Moon />}
+          </button>
+          <a className="ck-ogen__act" href={pdfHref} target="_blank" rel="noopener"><FileText /><span>Export PDF</span></a>
+          <div className="ck-ogen__sharewrap">
+            <button className="ck-ogen__act primary" onClick={() => setShareOpen((o) => !o)}><Share2 /><span>Partager</span></button>
+            {shareOpen && (
+              <div className="ck-ogen__sharepop" onMouseLeave={() => setShareOpen(false)}>
+                <p className="ck-ogen__sharepop-h">Lien public · vue {pmeta.label.toLowerCase()}</p>
+                <div className="ck-ogen__sharelink">{typeof window !== "undefined" ? window.location.href : ""}</div>
+                <div className="ck-ogen__shareacts">
+                  <button onClick={copyShareLink}>{copied ? <><Check />Copié</> : <><Copy />Copier le lien</>}</button>
+                  <a href={pdfHref} target="_blank" rel="noopener"><FileText />PDF</a>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Persona selector */}
-      <div className="no-print mb-8 flex justify-center">
-        <PersonaSelector current={persona} onChange={handlePersonaChange} />
+      {/* ── Bande lentille (persona) ── */}
+      <div className="ck-ogen__lens">
+        <div className="ck-ogen__seg" role="tablist" aria-label="Lentille de lecture">
+          {PERSONA_ORDER.map((p) => {
+            const Icon = PERSONA_META[p].icon;
+            return (
+              <button key={p} role="tab" aria-selected={persona === p} data-on={persona === p ? 1 : 0} onClick={() => handlePersonaChange(p)}>
+                <Icon /><span>{PERSONA_META[p].label}</span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="ck-ogen__lensinfo">
+          <span className="desc">{pmeta.desc}</span>
+          <span className="meta"><BookOpen />{visibleSections.length} sections · ~{readMin} min</span>
+        </div>
       </div>
 
-      {/* Layout: sidebar + content */}
-      <div className="flex gap-8">
-        {/* Sticky sidebar nav */}
-        <aside className="no-print hidden w-56 shrink-0 lg:block">
-          <div className="sticky top-20">
-            <CollapsibleNav persona={persona} activeSection={activeSection} />
-          </div>
-        </aside>
+      <div className="ck-ogen__body">
+        {/* ── TOC groupée par tier ── */}
+        <nav className="ck-ogen__toc">
+          {tiersShown.map((t) => {
+            const open = openGroups.has(t); const tm = TIER_META[t]!;
+            return (
+              <div className="ck-ogen__toc-grp" key={t} data-open={open ? 1 : 0}>
+                <button className="ck-ogen__toc-h" onClick={() => toggleGroup(t)}>
+                  <ChevronRight className="chev" />
+                  <span className="lbl" data-t={t}>{tm.chip}</span>
+                  <span className="ttl">{tm.nav}</span>
+                  <span className="cnt">{byTier[t]!.length}</span>
+                </button>
+                {open && byTier[t]!.map((s) => (
+                  <button key={s.id} className="ck-ogen__toc-i" data-on={activeSection === s.id ? 1 : 0} onClick={() => jump(s.id)}>
+                    <span className="n">{s.number}</span><span className="t">{s.title}</span>
+                  </button>
+                ))}
+              </div>
+            );
+          })}
+        </nav>
 
-        {/* Main content */}
-        <div className="min-w-0 flex-1">
-          <div className="divide-y divide-zinc-800/50">
-            {visibleSections.map((section) => {
-              const Component = SECTION_COMPONENTS[section.id];
-              const dataKey = SECTION_DATA_MAP[section.id];
-              if (!Component || !dataKey) return null;
-              const sectionData = doc.sections[dataKey as keyof typeof doc.sections];
+        {/* ── Contenu ── */}
+        <div className="ck-ogen__scroll">
+          <div className="ck-ogen__inner">
+            <header className="ck-ogen__cover">
+              <p className="ck-ogen__cover-eyebrow">{pmeta.eyebrow}</p>
+              <h1 className="ck-ogen__cover-h">{doc.meta.brandName}</h1>
+              <p className="ck-ogen__cover-lead">{coverLead}</p>
+              <p className="ck-ogen__cover-meta">
+                {doc.meta.operatorName ? `par ${doc.meta.operatorName} · ` : ""}généré le {new Date(doc.meta.generatedAt).toLocaleDateString("fr-FR")}
+              </p>
+            </header>
 
-              return (
-                <SectionWrapper
-                  key={section.id}
-                  id={section.id}
-                  number={section.number}
-                  title={section.title}
-                >
-                  <Component data={sectionData ?? {}} strategyId={doc.meta.strategyId} />
-                </SectionWrapper>
-              );
-            })}
-          </div>
+            <div className="ck-ogen__sections">
+              {tiersShown.map((t) => {
+                const tm = TIER_META[t]!; const ChIcon = tm.icon;
+                return (
+                  <div key={t} style={{ display: "contents" }}>
+                    <div className="ck-ogen__chap">
+                      <span className="ck-ogen__chap-rn">{tm.rn}</span>
+                      <span className="ck-ogen__chap-medal"><ChIcon /></span>
+                      <div className="ck-ogen__chap-tt">
+                        <span className="ck-ogen__chap-k" data-t={t}>{tm.chip} · {byTier[t]!.length} sections</span>
+                        <h2 className="ck-ogen__chap-h">{tm.title}</h2>
+                        <p className="ck-ogen__chap-d">{tm.desc}</p>
+                      </div>
+                    </div>
+                    {byTier[t]!.map((section) => {
+                      const Component = SECTION_COMPONENTS[section.id];
+                      const dataKey = SECTION_DATA_MAP[section.id];
+                      if (!Component || !dataKey) return null;
+                      const sectionData = doc.sections[dataKey as keyof typeof doc.sections];
+                      return (
+                        <section className="ck-ogen__sec" id={section.id} key={section.id}>
+                          <div className="ck-ogen__sec-head">
+                            <span className="ck-ogen__sec-n">{section.number}</span>
+                            <div className="ck-ogen__sec-tt">
+                              <h2 className="ck-ogen__sec-t">{section.title}</h2>
+                              <div className="ck-ogen__sec-rule" />
+                            </div>
+                          </div>
+                          <div className="ck-ogen__sec-body">
+                            <Component data={sectionData ?? {}} strategyId={doc.meta.strategyId} />
+                          </div>
+                        </section>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
 
-          {/* Footer */}
-          <div className="mt-16 border-t border-border pt-8 text-center">
-            <p className="text-xs text-foreground-muted">
-              Document confidentiel — usage interne client uniquement
-            </p>
-            <p className="mt-1 text-xs text-foreground-muted">
-              Genere par LaFusee Industry OS — Methode ADVE-RTIS
-            </p>
+            <footer className="ck-ogen__foot">
+              <p>Document confidentiel — usage interne client uniquement.</p>
+              <p>Généré par La Fusée — Industry OS · méthode ADVE-RTIS.</p>
+            </footer>
           </div>
         </div>
       </div>

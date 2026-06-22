@@ -16,7 +16,6 @@ import {
   AlertCircle,
   Circle,
   Sparkles,
-  RefreshCw,
 } from "lucide-react";
 import { AiBadge } from "@/components/shared/ai-badge";
 import { OracleEnrichmentTracker } from "@/components/neteru/oracle-enrichment-tracker";
@@ -233,6 +232,33 @@ export default function PropositionPage() {
   const completeSections = Object.values(report).filter((s) => s === "complete").length;
   const partialSections = Object.values(report).filter((s) => s === "partial").length;
   const emptySections = Object.values(report).filter((s) => s === "empty").length;
+  // lafusee:allow-adhoc-completion: display-only assembled% (Oracle section-count ratio, not the canonical pillar completion gate)
+  const pct = totalSections > 0 ? Math.round((completeSections / totalSections) * 100) : 0;
+
+  // ── 3 cartes de préparation — état RÉEL de la cascade (pas de prose mock) ──
+  const readinessCards = [
+    {
+      key: "adve", title: "Fondations ADVE",
+      ready: adveAllComplete,
+      body: adveAllComplete
+        ? "Les 4 piliers fondateurs (A·D·V·E) sont enrichis — socle prêt à dériver."
+        : "Complétez A·D·V·E (au moins ENRICHED) : c'est le socle qui nourrit toute la cascade.",
+    },
+    {
+      key: "rtis", title: "Dérivés RTIS",
+      ready: rtisReady,
+      body: rtisReady
+        ? "R·T·I·S dérivés depuis ADVE — diagnostic, marché, potentiel et stratégie consolidés."
+        : "Lancez la cascade R+T → I → S pour dériver le diagnostic et la stratégie depuis ADVE.",
+    },
+    {
+      key: "oracle", title: "Assemblage Oracle",
+      ready: oracleReadyToCompile,
+      body: oracleReadyToCompile
+        ? `${completeSections}/${totalSections} sections — Artemis peut compiler le livrable sans heurt.`
+        : `${totalSections - completeSections} sections restantes — préparez ADVE + RTIS pour débloquer l'assemblage.`,
+    },
+  ];
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-6">
@@ -240,83 +266,70 @@ export default function PropositionPage() {
       <div>
         <h1 className="flex items-center gap-3 text-2xl font-bold text-foreground">
           <FileText className="h-7 w-7 text-accent" />
-          L'Oracle — Proposition Strategique
+          L&apos;Oracle — Proposition Stratégique
         </h1>
         <p className="mt-1 text-sm text-foreground-muted">
-          Document vivant assemble depuis vos piliers ADVE-RTIS, Artemis et outils Glory.
+          Document vivant assemblé depuis vos piliers ADVE-RTIS, Artemis et outils Glory.
         </p>
       </div>
 
-      {/* Live score bar */}
-      <div className="rounded-xl border border-border bg-background/50 p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-semibold text-foreground-secondary">Completude</span>
-            {isArtemisRunning && <RefreshCw className="h-3 w-3 animate-spin text-accent" />}
-          </div>
-          <div className="flex items-center gap-4 text-sm">
-            <span className="text-success">{completeSections} complets</span>
-            <span className="text-warning">{partialSections} partiels</span>
-            <span className="text-foreground-muted">{emptySections} vides</span>
-            <span className="font-bold text-foreground">{completeSections}/{totalSections}</span>
-          </div>
-        </div>
-        <div className="mt-3 flex h-2.5 overflow-hidden rounded-full bg-background">
-          {/* lafusee:allow-adhoc-completion: UI section completion ratio (display-only, derived from server query result; not the canonical completion gate) */}
-          <div className="bg-success transition-all duration-500" style={{ width: `${(completeSections / totalSections) * 100}%` }} />
-          {/* lafusee:allow-adhoc-completion: UI section completion ratio (display-only, derived from server query result; not the canonical completion gate) */}
-          <div className="bg-warning transition-all duration-500" style={{ width: `${(partialSections / totalSections) * 100}%` }} />
+      {/* ─ Synthèse vivante (hero) — données réelles ─ */}
+      <div className="ck-oracle-hero">
+        <div className="ck-oracle-hero__glow" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img className="ck-oracle-hero__rocket" src="/brand/illustrations/rocket-3d.png" alt="" />
+        <span className="ck-oracle-hero__eyebrow"><Sparkles /> Synthèse vivante · réévaluée en continu</span>
+        <h2 className="ck-oracle-hero__h">
+          {oracleReadyToCompile
+            ? <>Votre proposition stratégique est <span className="hl">prête à compiler</span> — {completeSections}/{totalSections} sections assemblées.</>
+            : <>Votre proposition s&apos;assemble en continu — <span className="hl">{pct}%</span> du livrable est consolidé.</>}
+        </h2>
+        <p className="ck-oracle-hero__p">
+          L&apos;Oracle est un livrable consulting de {totalSections} sections, assemblé et réévalué par Mestor (méthode ADVE-RTIS).
+          {isArtemisRunning ? " Artemis exécute les frameworks — les sections se mettent à jour en temps réel." : ` ${totalSections - completeSections} section(s) restantes.`}
+        </p>
+        <div className="ck-oracle-hero__stats">
+          <div><span className="k">Complètes</span><b className="text-success">{completeSections}/{totalSections}</b></div>
+          <div><span className="k">Partielles</span><b>{partialSections}</b></div>
+          <div><span className="k">Vides</span><b>{emptySections}</b></div>
+          <div><span className="k">Assemblé</span><b style={{ color: "var(--accent)" }}>{pct}%</b></div>
         </div>
       </div>
 
-      {/* Artemis control + live log
-          Wash conditionnel cohérent avec l'état du bouton :
-          - rouge fusée pendant qu'Artemis tourne (action en cours)
-          - emerald quand Oracle peut compiler (ADVE + RTIS prêts)
-          - neutre sinon — pas de wash rouge ambiant qui ressemble à une alerte. */}
-      <div
-        className={
-          isArtemisRunning
-            ? "rounded-xl border border-accent/40 bg-accent/15 p-5"
-            : oracleReadyToCompile
-              ? "rounded-xl border border-success/30 bg-success/5 p-5"
-              : "rounded-xl border border-border bg-surface-raised p-5"
-        }
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Sparkles className={`h-5 w-5 ${isArtemisRunning ? "animate-pulse text-accent" : oracleReadyToCompile ? "text-success" : "text-foreground-secondary"}`} />
-            <div>
-              <p className={`text-sm font-semibold ${isArtemisRunning ? "text-accent" : oracleReadyToCompile ? "text-success" : "text-foreground"}`}>
-                Assembler L&apos;Oracle
-              </p>
-              <p className="text-xs text-foreground-muted">
-                {isArtemisRunning
-                  ? "Frameworks Artemis en execution — les sections se mettent a jour en temps reel..."
-                  : `${totalSections - completeSections} sections a completer. Artemis execute les frameworks necessaires.`}
-              </p>
+      {/* ─ 3 cartes de préparation — état réel de la cascade ─ */}
+      <div className="ck-grid--3">
+        {readinessCards.map((c) => {
+          const Icon = c.ready ? CheckCircle : AlertCircle;
+          return (
+            <div className="ck-oracle-card" key={c.key}>
+              <span className="ck-oracle-card__ic" style={c.ready ? { background: "color-mix(in srgb, var(--success) 14%, transparent)", color: "var(--success)" } : undefined}><Icon /></span>
+              <h3 className="ck-oracle-card__t">{c.title}</h3>
+              <p className="ck-oracle-card__b">{c.body}</p>
             </div>
+          );
+        })}
+      </div>
+
+      {/* ─ Assembleur Artemis + console live ─ */}
+      <div className="ck-orc">
+        <div className="ck-orc__head">
+          <div className="ck-orc__head-l">
+            <h3>Assembler L&apos;Oracle</h3>
+            <span className="ck-orc__adr">{pct}% assemblé · méthode ADVE-RTIS</span>
             <AiBadge />
           </div>
+          <div className="ck-orc__tally">
+            <span className="ok">{completeSections} complètes</span>
+            <span className="stale">{partialSections} partielles</span>
+            <span className="idle">{emptySections} vides</span>
+          </div>
+        </div>
+
+        {/* ADR — bouton contextuel (préparer ADVE / RTIS / lancer Artemis) — wiring inchangé */}
+        <div className="ck-orc__controls">
           <button
-            onClick={() => {
-              if (!adveAllComplete) {
-                // ADVE pas mûr → l'ArtemisLaunchModal sait gérer ce cas
-                // (phase DIAGNOSE qui propose "Préparer automatiquement").
-                setExternalBlockers(undefined);
-                setLaunchModalOpen(true);
-                return;
-              }
-              if (!rtisReady) {
-                // ADVE OK mais cascade RTIS pas faite → ouvre RtisCascadeModal
-                // (fallback ; auto-prompt initial peut avoir été fermé / skippé).
-                setCascadeModalOpen(true);
-                return;
-              }
-              // Tout est prêt → ArtemisLaunchModal va auto-advance en READY.
-              setExternalBlockers(undefined);
-              setLaunchModalOpen(true);
-            }}
+            className="ck-orc__assemble"
+            data-variant={oracleReadyToCompile ? "ready" : undefined}
             disabled={enrichMutation.isPending}
             title={
               oracleReadyToCompile
@@ -325,46 +338,59 @@ export default function PropositionPage() {
                   ? "Vos 4 fondations ADVE ne sont pas encore enrichies. Un clic ouvre la préparation automatique."
                   : "RTIS pas encore dérivés — un clic ouvre la cascade RTIS pour préparer Oracle."
             }
-            className={
-              oracleReadyToCompile
-                ? "flex items-center gap-2 rounded-lg bg-success px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-success disabled:opacity-50"
-                : "flex items-center gap-2 rounded-lg bg-error px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-error disabled:opacity-50"
-            }
+            onClick={() => {
+              if (!adveAllComplete) { setExternalBlockers(undefined); setLaunchModalOpen(true); return; }
+              if (!rtisReady) { setCascadeModalOpen(true); return; }
+              setExternalBlockers(undefined); setLaunchModalOpen(true);
+            }}
           >
-            {enrichMutation.isPending ? (
-              <><Loader2 className="h-4 w-4 animate-spin" /> Artemis en cours...</>
-            ) : oracleReadyToCompile ? (
-              <><Sparkles className="h-4 w-4" /> Lancer Artemis</>
-            ) : !adveAllComplete ? (
-              <><AlertCircle className="h-4 w-4" /> Préparer ADVE d'abord</>
-            ) : (
-              <><AlertCircle className="h-4 w-4" /> Préparer RTIS d'abord</>
-            )}
+            {enrichMutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Artemis en cours…</>
+              : oracleReadyToCompile ? <><Sparkles /> Lancer Artemis</>
+              : !adveAllComplete ? <><AlertCircle /> Préparer ADVE d&apos;abord</>
+              : <><AlertCircle /> Préparer RTIS d&apos;abord</>}
+          </button>
+          <button
+            className="ck-orc__preview"
+            onClick={() => { if (shareUrl) window.open(shareUrl, "_blank"); else shareMutation.mutate({ strategyId: strategyId! }); }}
+          >
+            <ExternalLink /> Ouvrir le livrable
           </button>
         </div>
 
-        {/* Live log console */}
+        {/* Progress (pendant Artemis) */}
+        {isArtemisRunning && (
+          <div className="ck-orc__progress">
+            <div className="ck-orc__progress-meta"><span>{completeSections}/{totalSections} sections</span><span>Artemis en cours</span></div>
+            <div className="ck-orc__progress-track"><div className="ck-orc__progress-fill" style={{ width: `${pct}%` }} /></div>
+          </div>
+        )}
+
+        {/* Console live (enrichLog réel) */}
         {enrichLog.length > 0 && (
-          <div className="mt-3 max-h-32 overflow-y-auto rounded-lg border border-border bg-background p-3 font-mono text-xs">
-            {enrichLog.map((line, i) => (
-              <div key={i} className={`py-0.5 ${line.startsWith("---") ? "font-bold text-accent" : line.startsWith("ERREUR") ? "text-error" : "text-foreground-muted"}`}>
-                <span className="text-foreground-muted select-none">[{String(i).padStart(2, "0")}] </span>
-                {line}
-              </div>
-            ))}
+          <div className="ck-orc__console">
+            <div className="ck-orc__console-head"><span className="dot" /> Console live · télémétrie d&apos;assemblage</div>
+            {enrichLog.map((line, i) => {
+              const tone = line.startsWith("ERREUR") ? "fail" : line.startsWith("---") ? "ok" : undefined;
+              return (
+                <div className="ck-orc__line" data-tone={tone} key={i}>
+                  <span className="ck-orc__line-t">[{String(i).padStart(2, "0")}]</span>
+                  <span className="ck-orc__line-m">{line}</span>
+                </div>
+              );
+            })}
             <div ref={logEndRef} />
           </div>
         )}
 
         {/* Final result details */}
         {enrichResult && !isArtemisRunning && (
-          <div className="mt-3 space-y-2">
+          <div className="space-y-2">
             <p className="text-sm font-semibold text-accent">{enrichResult.finalScore} — {enrichResult.message}</p>
             {enrichResult.seeded.length > 0 && (
-              <p className="text-xs text-success">Metriques seedees : {enrichResult.seeded.join(", ")}</p>
+              <p className="text-xs text-success">Métriques seedées : {enrichResult.seeded.join(", ")}</p>
             )}
             <details className="text-xs text-foreground-muted" open>
-              <summary className="cursor-pointer hover:text-foreground-secondary">Detail par section</summary>
+              <summary className="cursor-pointer hover:text-foreground-secondary">Détail par section</summary>
               <div className="mt-1 max-h-48 overflow-y-auto rounded border border-border bg-background/50 p-2">
                 {Object.entries(enrichResult.sectionFeedback).map(([id, fb]) => (
                   <div key={id} className="flex items-center justify-between border-b border-border/30 py-1 last:border-0">
@@ -379,108 +405,72 @@ export default function PropositionPage() {
           </div>
         )}
 
-        {enrichMutation.error && (
-          <p className="mt-3 text-xs text-error">{enrichMutation.error.message}</p>
-        )}
+        {enrichMutation.error && <p className="text-xs text-error">{enrichMutation.error.message}</p>}
 
-        {/* Phase 13 (B7 + R2) — NSP streaming tracker (35 sections, tier groups).
-            R2 : intentId capturé après mutation enrichOracle pour replay NSP
-            (events stockés dans IntentEmissionEvent). Le polling completeness
-            alimente le fallback live-pendant-mutation (le vrai pre-completion
-            streaming nécessite refactor background queue, hors scope sprint). */}
-        <div className="mt-3">
-          <OracleEnrichmentTracker
-            intentId={lastIntentId}
-            completenessReport={completeness.data ?? undefined}
-          />
+        {/* Phase 13 (B7 + R2) — NSP streaming tracker */}
+        <OracleEnrichmentTracker intentId={lastIntentId} completenessReport={completeness.data ?? undefined} />
+
+        {/* ─ Lien public / partage (strategyPresentation.shareLink) ─ */}
+        <div className="ck-orc__share">
+          <div className="ck-orc__share-l">
+            <span className="ck-orc__share-h"><Share2 /> Page générée — lien public</span>
+            <span className="ck-orc__share-s">Livrable partageable au client. Choisissez la vue (persona) à partager.</span>
+          </div>
+          <div className="ck-orc__share-personas">
+            {(["consultant", "client", "creative"] as const).map((persona) => (
+              <button key={persona} disabled={shareMutation.isPending} onClick={() => shareMutation.mutate({ strategyId: strategyId!, persona })}>
+                {shareMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Share2 />}{persona}
+              </button>
+            ))}
+          </div>
+          {shareUrl && (
+            <div className="ck-orc__share-row">
+              <code className="ck-orc__share-url">{typeof window !== "undefined" ? window.location.origin : ""}{shareUrl}</code>
+              <button className="ck-orc__share-copy" onClick={async () => { await navigator.clipboard.writeText(`${window.location.origin}${shareUrl}`); setCopied(true); setTimeout(() => setCopied(false), 2000); }}>
+                {copied ? <><Check /> Copié</> : <><Copy /> Copier</>}
+              </button>
+              <a className="ck-orc__share-open" href={shareUrl} target="_blank" rel="noopener"><ExternalLink /> Prévisualiser</a>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Phase 21 F-F (ADR-0073) — Génération progressive avec stream SSE.
-          Cohabitation : ce panel est ADDITIONNEL au flow legacy "Lancer Artemis"
-          ci-dessus. L'opérateur peut soit lancer le legacy global soit
-          générer section par section avec contrôle granulaire + console live. */}
+      {/* Phase 21 F-F (ADR-0073) — Génération progressive avec stream SSE (granulaire). */}
       <OracleProgressivePanel strategyId={strategyId} />
 
-      {/* Section grid — always visible, live updating */}
+      {/* ─ Grille des 35 sections (statut live) ─ */}
       <div className="space-y-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Sections (legacy completeness view)</h2>
-        <div className="grid gap-2 sm:grid-cols-2">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Les {totalSections} sections</h2>
+        <div className="ck-orc__grid">
           {SECTION_REGISTRY.map((section) => {
             const status = report[section.id] ?? "empty";
-            const config = STATUS_CONFIG[status];
-            const StatusIcon = config.icon;
+            const st = status === "complete" ? "ok" : status === "partial" ? "stale" : "idle";
+            const StatusIcon = STATUS_CONFIG[status].icon;
             const justChanged = changedSections.has(section.id);
-
+            const tier = (section as { tier?: string }).tier;
             return (
-              <div
-                key={section.id}
-                className={`flex items-center gap-3 rounded-lg border ${config.border} ${config.bg} px-4 py-3 transition-all duration-500 ${
-                  justChanged ? "ring-2 ring-accent/50 scale-[1.01]" : ""
-                } ${isArtemisRunning && status !== "complete" ? "animate-pulse" : ""}`}
-              >
-                <StatusIcon className={`h-4 w-4 shrink-0 ${config.color} ${justChanged ? "animate-bounce" : ""}`} />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-foreground-muted">{section.number}</span>
-                    <span className="truncate text-sm text-foreground-secondary">{section.title}</span>
+              <div key={section.id} className={`ck-orc__sec${justChanged ? " changed" : ""}`} data-st={st}>
+                <span className="ck-orc__sec-ic" data-st={st}><StatusIcon /></span>
+                <div className="ck-orc__sec-b">
+                  <div className="ck-orc__sec-top">
+                    <span className="ck-orc__sec-n">{section.number}</span>
+                    <span className="ck-orc__sec-title">{section.title}</span>
+                    {tier ? <span className="ck-orc__sec-tier" data-t={tier}>{tier === "CORE" ? "Core" : tier === "BIG4_BASELINE" ? "Big4" : "Distinct"}</span> : null}
+                  </div>
+                  <div className="ck-orc__sec-meta">
+                    <span className="ck-orc__sec-st" data-st={st}>{STATUS_CONFIG[status].label}</span>
                   </div>
                 </div>
-                <span className={`shrink-0 text-xs font-medium capitalize ${config.color}`}>
-                  {config.label}
-                </span>
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* Actions */}
+      {/* Export PDF (server-side jspdf walk) */}
       <div className="flex flex-wrap gap-3">
         <button
-          onClick={() => {
-            if (shareUrl) window.open(shareUrl, "_blank");
-            else shareMutation.mutate({ strategyId: strategyId! });
-          }}
-          className="flex items-center gap-2 rounded-lg bg-warning px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-warning"
-        >
-          <ExternalLink className="h-4 w-4" /> Previsualiser
-        </button>
-
-        <div className="flex gap-1 rounded-lg border border-border bg-background/50">
-          {(["consultant", "client", "creative"] as const).map((persona) => (
-            <button
-              key={persona}
-              onClick={() => shareMutation.mutate({ strategyId: strategyId!, persona })}
-              disabled={shareMutation.isPending}
-              className="flex items-center gap-1 rounded-md px-3 py-2 text-xs font-medium text-foreground-secondary transition-colors hover:bg-surface-raised hover:text-foreground"
-            >
-              {shareMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Share2 className="h-3 w-3" />}
-              {persona}
-            </button>
-          ))}
-        </div>
-
-        {shareUrl && (
-          <button
-            onClick={async () => {
-              await navigator.clipboard.writeText(`${window.location.origin}${shareUrl}`);
-              setCopied(true);
-              setTimeout(() => setCopied(false), 2000);
-            }}
-            className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-foreground-secondary hover:bg-background"
-          >
-            {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
-            {copied ? "Copie!" : "Copier le lien"}
-          </button>
-        )}
-
-        <button
           onClick={async () => {
-            // Streams the Oracle as PDF from /api/export/oracle/[strategyId]/pdf
-            // (server-side jspdf walk over the 35-section SECTION_REGISTRY).
-            // Replaces the legacy `window.print()` which printed the proposition
-            // index (checklist) instead of the Oracle itself.
             if (!strategyId) return;
             try {
               const res = await fetch(`/api/export/oracle/${strategyId}/pdf`);
@@ -504,19 +494,9 @@ export default function PropositionPage() {
           }}
           className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-foreground-secondary hover:bg-background"
         >
-          Export PDF
+          <FileText className="h-4 w-4" /> Export PDF
         </button>
       </div>
-
-      {/* Share URL */}
-      {shareUrl && (
-        <div className="rounded-lg border border-border bg-background/50 px-4 py-3">
-          <p className="text-xs text-foreground-muted">Lien partageable :</p>
-          <p className="mt-1 break-all font-mono text-sm text-warning">
-            {typeof window !== "undefined" ? window.location.origin : ""}{shareUrl}
-          </p>
-        </div>
-      )}
 
       <ArtemisLaunchModal
         open={launchModalOpen}
