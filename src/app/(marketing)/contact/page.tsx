@@ -45,7 +45,7 @@ export default function ContactPage() {
           {/* Coordonnées */}
           <div className="flex flex-col gap-8">
             <div>
-              <div className="mb-3 font-mono text-[11px] uppercase tracking-widest text-foreground-muted">WhatsApp — le plus rapide</div>
+              <div className="mb-3 font-mono text-2xs uppercase tracking-widest text-foreground-muted">WhatsApp — le plus rapide</div>
               <div className="flex flex-col gap-3">
                 {CONTACT.whatsapp.map((w) => (
                   <a
@@ -59,14 +59,14 @@ export default function ContactPage() {
                       <div className="font-display text-lg font-semibold tracking-tight">{w.label}</div>
                       <div className="font-mono text-sm text-foreground-secondary">{w.display}</div>
                     </div>
-                    <span className="font-mono text-[11px] uppercase tracking-widest text-accent">Ouvrir →</span>
+                    <span className="font-mono text-2xs uppercase tracking-widest text-accent">Ouvrir →</span>
                   </a>
                 ))}
               </div>
             </div>
 
             <div>
-              <div className="mb-3 font-mono text-[11px] uppercase tracking-widest text-foreground-muted">Email & réseaux</div>
+              <div className="mb-3 font-mono text-2xs uppercase tracking-widest text-foreground-muted">Email & réseaux</div>
               <div className="flex flex-col gap-2">
                 <a href={`mailto:${CONTACT.email}`} className="text-sm text-foreground-secondary transition-colors hover:text-accent">
                   {CONTACT.email}
@@ -81,7 +81,7 @@ export default function ContactPage() {
                       href={s.link}
                       target="_blank"
                       rel="noreferrer"
-                      className="border border-border-subtle px-3 py-1.5 font-mono text-[11px] text-foreground-secondary transition-colors hover:border-border-strong hover:text-foreground"
+                      className="border border-border-subtle px-3 py-1.5 font-mono text-2xs text-foreground-secondary transition-colors hover:border-border-strong hover:text-foreground"
                     >
                       {s.label}
                     </a>
@@ -91,7 +91,7 @@ export default function ContactPage() {
             </div>
 
             <div className="border-t border-border-subtle pt-6">
-              <div className="font-mono text-[11px] uppercase tracking-widest text-foreground-muted">Le cabinet</div>
+              <div className="font-mono text-2xs uppercase tracking-widest text-foreground-muted">Le cabinet</div>
               <p className="mt-2 text-sm text-foreground-secondary">
                 {IDENTITY.name} — cabinet de conseil &amp; stratégie · {IDENTITY.hq}. Hubs Douala &amp; Abidjan,
                 interventions sur toute l&apos;Afrique francophone.

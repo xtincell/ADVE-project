@@ -26,7 +26,7 @@ export function MarketingPricing() {
   return (
     <section id="tarifs" data-theme="bone" className="py-24 md:py-32 bg-background text-foreground">
       <div className="mx-auto max-w-[var(--maxw-content)] px-[var(--pad-page)]">
-        <div className="flex items-baseline gap-3.5 mb-8 font-mono text-[11px] uppercase tracking-widest" style={{ color: "var(--color-foreground-secondary)" }}>
+        <div className="flex items-baseline gap-3.5 mb-8 font-mono text-2xs uppercase tracking-widest" style={{ color: "var(--color-foreground-secondary)" }}>
           <span className="w-8 h-px bg-accent" />
           07 · Tarifs
         </div>
@@ -59,10 +59,10 @@ export function MarketingPricing() {
               }
             >
               {plan.featured && (
-                <span className="absolute -top-3 left-8 px-2.5 py-1 bg-accent text-accent-foreground font-mono text-[10px] uppercase tracking-widest">★ Phare</span>
+                <span className="absolute -top-3 left-8 px-2.5 py-1 bg-accent text-accent-foreground font-mono text-2xs uppercase tracking-widest">★ Phare</span>
               )}
               <header className="flex flex-col gap-1.5">
-                <span className="font-mono text-[11px] uppercase tracking-widest text-accent">{plan.name}</span>
+                <span className="font-mono text-2xs uppercase tracking-widest text-accent">{plan.name}</span>
                 <h3 className="font-display font-semibold text-3xl tracking-tight">{plan.title}</h3>
                 <p className="text-sm" style={{ color: plan.featured ? "var(--color-foreground-muted)" : "var(--color-foreground-secondary)" }}>{plan.lead}</p>
               </header>
@@ -78,7 +78,7 @@ export function MarketingPricing() {
                   </li>
                 ))}
               </ul>
-              <p className="font-mono text-[10px] uppercase tracking-wider pt-3 border-t border-dashed" style={{ color: plan.featured ? "var(--color-foreground-muted)" : "var(--color-foreground-secondary)", borderColor: plan.featured ? "color-mix(in oklab, var(--color-background) 14%, transparent)" : "color-mix(in oklab, var(--color-foreground) 12%, transparent)" }}>{plan.timeline}</p>
+              <p className="font-mono text-2xs uppercase tracking-wider pt-3 border-t border-dashed" style={{ color: plan.featured ? "var(--color-foreground-muted)" : "var(--color-foreground-secondary)", borderColor: plan.featured ? "color-mix(in oklab, var(--color-background) 14%, transparent)" : "color-mix(in oklab, var(--color-foreground) 12%, transparent)" }}>{plan.timeline}</p>
               <a
                 href={plan.href}
                 className={`inline-flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium self-start ${

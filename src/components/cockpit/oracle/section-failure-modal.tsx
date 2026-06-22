@@ -55,14 +55,14 @@ export function OracleSectionFailureModal(props: OracleSectionFailureModalProps)
         role="dialog"
         aria-modal="true"
         aria-labelledby="oracle-failure-title"
-        className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-rose-700/50 bg-surface-raised shadow-2xl"
+        className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-error/50 bg-surface-raised shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between border-b border-rose-700/30 bg-rose-950/30 px-5 py-4">
+        <div className="flex items-start justify-between border-b border-error/30 bg-error/30 px-5 py-4">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-rose-400" />
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-error" />
             <div>
-              <h2 id="oracle-failure-title" className="text-base font-bold text-rose-300">
+              <h2 id="oracle-failure-title" className="text-base font-bold text-error">
                 §{sectionNumber} {sectionTitle} — Échec de génération
               </h2>
               <p className="mt-0.5 text-xs text-foreground-muted">
@@ -99,14 +99,14 @@ export function OracleSectionFailureModal(props: OracleSectionFailureModalProps)
               <h3 className="mb-1 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
                 Détails Zod
               </h3>
-              <pre className="max-h-64 overflow-auto rounded border border-border bg-background px-3 py-2 font-mono text-[11px] leading-snug text-foreground-muted">
+              <pre className="max-h-64 overflow-auto rounded border border-border bg-background px-3 py-2 font-mono text-2xs leading-snug text-foreground-muted">
                 {formatZodIssues(zodIssues)}
               </pre>
             </section>
           )}
 
           {errorCode === "ZOD_VALIDATION_FAILED" && (
-            <p className="rounded border border-amber-800/40 bg-amber-900/15 px-3 py-2 text-xs text-amber-200">
+            <p className="rounded border border-warning/40 bg-warning/15 px-3 py-2 text-xs text-warning">
               Le LLM n&apos;a pas réussi à produire un payload conforme au schéma Zod après{" "}
               {attempts ?? 3} tentatives. Le retry relancera une nouvelle session avec un prompt
               repropulsé. Si l&apos;échec persiste, vérifier la complétude des piliers ADVE
@@ -130,7 +130,7 @@ export function OracleSectionFailureModal(props: OracleSectionFailureModalProps)
               onOpenChange(false);
             }}
             disabled={retryDisabled}
-            className="flex items-center gap-2 rounded-md bg-rose-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-rose-500 disabled:opacity-40"
+            className="flex items-center gap-2 rounded-md bg-error px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-error disabled:opacity-40"
           >
             <RefreshCw className="h-3.5 w-3.5" /> Réessayer §{sectionNumber}
           </button>

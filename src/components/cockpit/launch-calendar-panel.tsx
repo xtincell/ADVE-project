@@ -100,7 +100,7 @@ export function LaunchCalendarPanel() {
     <article className="mx-auto max-w-[var(--maxw-content,1200px)] px-[var(--pad-page,1.5rem)] py-8 md:py-12">
       {/* ═══ Header ═══════════════════════════════════════════════ */}
       <header className="border-b border-border-subtle pb-6 mb-10">
-        <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-foreground-muted mb-3">
+        <div className="flex items-center gap-2 font-mono text-2xs uppercase tracking-widest text-foreground-muted mb-3">
           <CalendarDays className="h-3.5 w-3.5 text-accent" />
           <span>{COPY.header.kicker}</span>
           {brand ? (<><span className="opacity-50">·</span><span>{brand}</span></>) : null}
@@ -155,7 +155,7 @@ export function LaunchCalendarPanel() {
                   <div key={canal} className="rounded-lg border border-white/5 bg-surface-raised p-4">
                     <div className="mb-2 flex items-center justify-between gap-2">
                       <span className="text-sm font-semibold text-foreground">{canal}</span>
-                      {c.rythme ? <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] text-accent">{c.rythme}</span> : null}
+                      {c.rythme ? <span className="rounded-full bg-accent/15 px-2 py-0.5 text-2xs text-accent">{c.rythme}</span> : null}
                     </div>
                     {c.format ? <p className="mb-2 text-xs text-foreground-secondary">{c.format}</p> : null}
                     {(c.piliers.length > 0 || c.formats.length > 0) ? (
@@ -179,7 +179,7 @@ export function LaunchCalendarPanel() {
               <div className="space-y-6">
                 {groupPostsByWeek(calendar.posts).map(([week, posts]) => (
                   <div key={week}>
-                    <div className="mb-2 font-mono text-[10px] uppercase tracking-widest text-accent">{week}</div>
+                    <div className="mb-2 font-mono text-2xs uppercase tracking-widest text-accent">{week}</div>
                     <ol className="space-y-1.5">
                       {posts.map((p, i) => (
                         <PostRow key={i} post={p} />
@@ -197,7 +197,7 @@ export function LaunchCalendarPanel() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {calendar.themesParPhaseOverton.map((p, i) => (
                   <div key={i} className="rounded-lg border border-white/5 bg-surface-raised p-4">
-                    <div className="mb-2 font-mono text-[10px] uppercase tracking-widest text-accent">{p.phase}</div>
+                    <div className="mb-2 font-mono text-2xs uppercase tracking-widest text-accent">{p.phase}</div>
                     <ul className="space-y-1.5">
                       {p.contenus.map((contenu, j) => (
                         <li key={j} className="flex gap-2 text-xs text-foreground-secondary">
@@ -217,7 +217,7 @@ export function LaunchCalendarPanel() {
               <div className="space-y-3">
                 {calendar.hashtags.signature.length > 0 ? (
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-mono text-[10px] uppercase tracking-widest text-foreground-muted">{COPY.hashtagKinds.signature}</span>
+                    <span className="font-mono text-2xs uppercase tracking-widest text-foreground-muted">{COPY.hashtagKinds.signature}</span>
                     {calendar.hashtags.signature.map((h) => (
                       <span key={h} className="rounded-full bg-accent/15 px-2.5 py-0.5 text-xs text-accent">{h}</span>
                     ))}
@@ -225,7 +225,7 @@ export function LaunchCalendarPanel() {
                 ) : null}
                 {calendar.hashtags.local.length > 0 ? (
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-mono text-[10px] uppercase tracking-widest text-foreground-muted">{COPY.hashtagKinds.local}</span>
+                    <span className="font-mono text-2xs uppercase tracking-widest text-foreground-muted">{COPY.hashtagKinds.local}</span>
                     {calendar.hashtags.local.map((h) => (
                       <span key={h} className="rounded-full bg-white/5 px-2.5 py-0.5 text-xs text-foreground-secondary">{h}</span>
                     ))}
@@ -272,12 +272,12 @@ function SocialPresence({ naming, social }: { naming: SocialNaming | null; socia
             {naming.handles.map((h) => (
               <div key={h.key} className="flex items-start justify-between gap-3 rounded-lg border border-white/5 bg-surface-raised p-3">
                 <div className="min-w-0">
-                  <div className="font-mono text-[10px] uppercase tracking-widest text-foreground-muted">{h.platform}</div>
+                  <div className="font-mono text-2xs uppercase tracking-widest text-foreground-muted">{h.platform}</div>
                   <div className="mt-0.5 truncate text-sm font-semibold text-foreground">{h.value}</div>
                   {h.fallbacks.length > 0 ? (
                     <div className="mt-1 flex flex-wrap gap-1">
                       {h.fallbacks.map((f) => (
-                        <span key={f} className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-foreground-muted">{f}</span>
+                        <span key={f} className="rounded bg-white/5 px-1.5 py-0.5 text-2xs text-foreground-muted">{f}</span>
                       ))}
                     </div>
                   ) : null}
@@ -287,7 +287,7 @@ function SocialPresence({ naming, social }: { naming: SocialNaming | null; socia
             ))}
           </div>
           {naming.availabilityToVerify.length > 0 ? (
-            <p className="mt-3 text-[11px] text-foreground-muted">
+            <p className="mt-3 text-2xs text-foreground-muted">
               <span className="font-semibold">{COPY.labels.availability}&nbsp;:</span> {naming.availabilityToVerify.join(" · ")}
             </p>
           ) : null}
@@ -309,22 +309,22 @@ function SocialPresence({ naming, social }: { naming: SocialNaming | null; socia
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <span className="text-sm font-semibold text-foreground">{p.platform}</span>
                     <div className="flex items-center gap-2">
-                      {p.priority ? <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] text-foreground-muted">{p.priority}</span> : null}
+                      {p.priority ? <span className="rounded-full bg-white/5 px-2 py-0.5 text-2xs text-foreground-muted">{p.priority}</span> : null}
                       {copyText ? <CopyButton value={copyText} label="" /> : null}
                     </div>
                   </div>
                   {p.displayName ? <div className="text-xs font-medium text-foreground-secondary">{p.displayName}</div> : null}
-                  {p.handle ? <div className="font-mono text-[11px] text-accent">{p.handle}</div> : null}
+                  {p.handle ? <div className="font-mono text-2xs text-accent">{p.handle}</div> : null}
                   {(p.bio ?? p.about ?? p.shortDescription) ? (
                     <p className="mt-2 whitespace-pre-wrap text-xs text-foreground-secondary leading-relaxed">{p.bio ?? p.about ?? p.shortDescription}</p>
                   ) : null}
                   {p.fullDescription ? (
-                    <p className="mt-2 whitespace-pre-wrap text-[11px] text-foreground-muted leading-relaxed">{p.fullDescription}</p>
+                    <p className="mt-2 whitespace-pre-wrap text-2xs text-foreground-muted leading-relaxed">{p.fullDescription}</p>
                   ) : null}
                   {p.highlights.length > 0 ? (
                     <div className="mt-2 flex flex-wrap gap-1">
                       {p.highlights.map((h) => (
-                        <span key={h} className="inline-flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] text-accent">
+                        <span key={h} className="inline-flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-2xs text-accent">
                           <Star className="h-2.5 w-2.5" />{h}
                         </span>
                       ))}
@@ -333,12 +333,12 @@ function SocialPresence({ naming, social }: { naming: SocialNaming | null; socia
                   {p.keywords.length > 0 ? (
                     <div className="mt-2 flex flex-wrap gap-1">
                       {p.keywords.map((k) => (
-                        <span key={k} className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-foreground-muted">{k}</span>
+                        <span key={k} className="rounded bg-white/5 px-1.5 py-0.5 text-2xs text-foreground-muted">{k}</span>
                       ))}
                     </div>
                   ) : null}
                   {(p.pinned || p.contentAngle) ? (
-                    <p className="mt-2 text-[11px] text-foreground-muted">
+                    <p className="mt-2 text-2xs text-foreground-muted">
                       {p.pinned ? <><span className="font-semibold">{COPY.labels.pinned}&nbsp;:</span> {p.pinned}</> : null}
                       {p.pinned && p.contentAngle ? " · " : null}
                       {p.contentAngle ? <><span className="font-semibold">{COPY.labels.angle}&nbsp;:</span> {p.contentAngle}</> : null}
@@ -358,7 +358,7 @@ function SocialPresence({ naming, social }: { naming: SocialNaming | null; socia
           <div className="rounded-lg border border-white/5 bg-surface-raised p-4">
             <p className="text-xs text-foreground-secondary"><span className="text-accent">→</span> {social.linkInBio.recommendation}</p>
             {social.linkInBio.avoid ? (
-              <p className="mt-1.5 flex gap-2 text-[11px] text-foreground-muted"><Ban className="mt-0.5 h-3 w-3 shrink-0 text-error" /><span>{social.linkInBio.avoid}</span></p>
+              <p className="mt-1.5 flex gap-2 text-2xs text-foreground-muted"><Ban className="mt-0.5 h-3 w-3 shrink-0 text-error" /><span>{social.linkInBio.avoid}</span></p>
             ) : null}
           </div>
         </div>
@@ -373,7 +373,7 @@ function SectionHeader({ icon: Icon, label, suffix }: { icon: LucideIcon; label:
       <Icon className="h-4 w-4 text-accent" />
       <h2 className="font-display font-semibold tracking-tight text-foreground" style={{ fontSize: "var(--text-xl)" }}>{label}</h2>
       <div className="h-px flex-1 bg-border-subtle" />
-      {suffix ? <span className="font-mono text-[10px] uppercase tracking-widest text-foreground-muted">{suffix}</span> : null}
+      {suffix ? <span className="font-mono text-2xs uppercase tracking-widest text-foreground-muted">{suffix}</span> : null}
     </div>
   );
 }
@@ -384,7 +384,7 @@ function WeekRow({ week, isLast }: { week: LaunchTimelineWeek; isLast: boolean }
     <li className="relative flex gap-4 rounded-lg border border-white/5 bg-surface-raised p-4">
       {/* Rail */}
       <div className="flex flex-col items-center">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/15 text-[11px] font-bold text-accent">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/15 text-2xs font-bold text-accent">
           {week.semaine}
         </div>
         {!isLast ? <div className="mt-1 w-px flex-1 bg-border-subtle" /> : null}
@@ -392,13 +392,13 @@ function WeekRow({ week, isLast }: { week: LaunchTimelineWeek; isLast: boolean }
       {/* Content */}
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="font-mono text-[10px] uppercase tracking-widest text-foreground-muted">{week.dates}</span>
+          <span className="font-mono text-2xs uppercase tracking-widest text-foreground-muted">{week.dates}</span>
           {week.theme ? (<><span className="opacity-40">·</span><span className="font-serif text-xs italic text-foreground-secondary">{week.theme}</span></>) : null}
         </div>
         <p className="text-sm font-semibold text-foreground">{week.phase}</p>
 
         {week.kpi ? (
-          <div className={`mt-2 inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] ${gate ? "bg-accent/15 font-semibold text-accent" : "bg-white/5 text-foreground-muted"}`}>
+          <div className={`mt-2 inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-2xs ${gate ? "bg-accent/15 font-semibold text-accent" : "bg-white/5 text-foreground-muted"}`}>
             <Flag className="h-3 w-3" />{week.kpi}
           </div>
         ) : null}
@@ -424,7 +424,7 @@ function WeekRow({ week, isLast }: { week: LaunchTimelineWeek; isLast: boolean }
         {week.opsDigitales.length > 0 ? (
           <ul className="mt-1.5 space-y-0.5">
             {week.opsDigitales.map((o, i) => (
-              <li key={i} className="flex gap-2 text-[11px] text-foreground-muted">
+              <li key={i} className="flex gap-2 text-2xs text-foreground-muted">
                 <span className="text-foreground-muted/50">›</span><span>{o}</span>
               </li>
             ))}
@@ -448,10 +448,10 @@ function PostRow({ post }: { post: ContentPost }) {
         aria-expanded={open}
         className="flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-white/[0.03]"
       >
-        <span className="w-28 shrink-0 font-mono text-[10px] text-foreground-muted">{post.weekday} {formatPostDate(post.date)}</span>
-        <span className="shrink-0 rounded bg-accent/15 px-1.5 py-0.5 text-[10px] text-accent">{post.platform}</span>
+        <span className="w-28 shrink-0 font-mono text-2xs text-foreground-muted">{post.weekday} {formatPostDate(post.date)}</span>
+        <span className="shrink-0 rounded bg-accent/15 px-1.5 py-0.5 text-2xs text-accent">{post.platform}</span>
         <span className="min-w-0 flex-1 truncate text-xs text-foreground-secondary">{title}</span>
-        {post.format ? <span className="hidden shrink-0 text-[10px] text-foreground-muted md:inline">{post.format}</span> : null}
+        {post.format ? <span className="hidden shrink-0 text-2xs text-foreground-muted md:inline">{post.format}</span> : null}
         <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-foreground-muted transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 
@@ -459,16 +459,16 @@ function PostRow({ post }: { post: ContentPost }) {
         <div className="space-y-4 border-t border-white/5 px-3 py-3">
           {/* Méta */}
           <div className="flex flex-wrap items-center gap-2">
-            {post.week ? <span className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-foreground-muted">{post.week}</span> : null}
-            {post.format ? <span className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-foreground-muted">{post.format}</span> : null}
-            <span className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-foreground-muted">{post.status}</span>
-            {post.angle ? <span className="text-[10px] italic text-foreground-secondary">{COPY.labels.angle} : {post.angle}</span> : null}
+            {post.week ? <span className="rounded bg-white/5 px-1.5 py-0.5 text-2xs text-foreground-muted">{post.week}</span> : null}
+            {post.format ? <span className="rounded bg-white/5 px-1.5 py-0.5 text-2xs text-foreground-muted">{post.format}</span> : null}
+            <span className="rounded bg-white/5 px-1.5 py-0.5 text-2xs text-foreground-muted">{post.status}</span>
+            {post.angle ? <span className="text-2xs italic text-foreground-secondary">{COPY.labels.angle} : {post.angle}</span> : null}
           </div>
 
           {/* Caption */}
           <div>
             <div className="mb-1 flex items-center justify-between gap-2">
-              <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-foreground-muted">
+              <span className="flex items-center gap-1.5 font-mono text-2xs uppercase tracking-widest text-foreground-muted">
                 <MessageSquareText className="h-3 w-3" /> {COPY.labels.caption}
               </span>
               {caption ? <CopyButton value={caption} label="" /> : null}
@@ -479,7 +479,7 @@ function PostRow({ post }: { post: ContentPost }) {
           {/* Illustration */}
           <div>
             <div className="mb-1 flex items-center justify-between gap-2">
-              <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-foreground-muted">
+              <span className="flex items-center gap-1.5 font-mono text-2xs uppercase tracking-widest text-foreground-muted">
                 <ImageIcon className="h-3 w-3" /> {COPY.labels.illustration}
               </span>
               {post.illustration ? <CopyButton value={post.illustration} label="" /> : null}
@@ -491,7 +491,7 @@ function PostRow({ post }: { post: ContentPost }) {
           {post.hashtags.length > 0 ? (
             <div className="flex flex-wrap gap-1">
               {post.hashtags.map((h) => (
-                <span key={h} className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] text-accent">{h}</span>
+                <span key={h} className="rounded-full bg-accent/15 px-2 py-0.5 text-2xs text-accent">{h}</span>
               ))}
             </div>
           ) : null}

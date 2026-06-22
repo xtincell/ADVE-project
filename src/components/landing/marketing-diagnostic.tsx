@@ -38,7 +38,7 @@ export function MarketingDiagnostic() {
   return (
     <section id="intake" className="py-24 md:py-32 bg-bone text-ink" style={{ background: "var(--color-background)", color: "var(--color-foreground)" }}>
       <div className="mx-auto max-w-[var(--maxw-content)] px-[var(--pad-page)]">
-        <div className="flex items-baseline gap-3.5 mb-8 font-mono text-[11px] uppercase tracking-widest" style={{ color: "var(--color-foreground-secondary)" }}>
+        <div className="flex items-baseline gap-3.5 mb-8 font-mono text-2xs uppercase tracking-widest" style={{ color: "var(--color-foreground-secondary)" }}>
           <span className="w-8 h-px bg-accent" />
           04 · Diagnostic instantané
         </div>
@@ -70,8 +70,8 @@ export function MarketingDiagnostic() {
                 >
                   {letter.l}
                 </span>
-                <span className="font-mono text-[10px] uppercase tracking-widest opacity-70">{letter.name}</span>
-                <span className="font-mono text-[10px] tracking-wide opacity-50">⌁ {letter.tool}</span>
+                <span className="font-mono text-2xs uppercase tracking-widest opacity-70">{letter.name}</span>
+                <span className="font-mono text-2xs tracking-wide opacity-50">⌁ {letter.tool}</span>
               </div>
             );
           })}
@@ -82,11 +82,11 @@ export function MarketingDiagnostic() {
             <div className="font-mono text-xs text-accent uppercase tracking-widest mb-4">⌖ INPUT</div>
             <div className="space-y-3 mb-4">
               <div className="p-3 border bg-bone-2" style={{ borderColor: "color-mix(in oklab, var(--color-foreground) 12%, transparent)", background: "white" }}>
-                <div className="text-[10px] uppercase tracking-widest font-mono mb-1" style={{ color: "var(--color-foreground-secondary)" }}>URL marque</div>
+                <div className="text-2xs uppercase tracking-widest font-mono mb-1" style={{ color: "var(--color-foreground-secondary)" }}>URL marque</div>
                 <div className="text-sm font-mono" style={{ color: "var(--color-foreground)" }}>https://luxorhotels.ci</div>
               </div>
               <div className="p-3 border" style={{ borderColor: "color-mix(in oklab, var(--color-foreground) 12%, transparent)", background: "white" }}>
-                <div className="text-[10px] uppercase tracking-widest font-mono mb-1" style={{ color: "var(--color-foreground-secondary)" }}>Réseaux</div>
+                <div className="text-2xs uppercase tracking-widest font-mono mb-1" style={{ color: "var(--color-foreground-secondary)" }}>Réseaux</div>
                 <div className="text-sm font-mono" style={{ color: "var(--color-foreground)" }}>@luxorhotels · 14.2k followers</div>
               </div>
             </div>
@@ -109,7 +109,7 @@ export function MarketingDiagnostic() {
                   <li key={letter.l} className={`grid grid-cols-[14px_1fr_auto] gap-2 items-center py-2 border-b border-dashed last:border-0 transition-opacity ${isActive || isDone ? "opacity-100" : "opacity-50"}`} style={{ borderColor: "color-mix(in oklab, var(--color-foreground) 14%, transparent)" }}>
                     <span className={`w-2.5 h-2.5 rounded-full ${isActive ? "bg-accent animate-pulse" : isDone ? "bg-success" : "bg-foreground-muted/30"}`} />
                     <span className="text-sm font-medium font-mono" style={{ color: "var(--color-foreground)" }}>{letter.tool}</span>
-                    <span className="text-[10px] font-mono uppercase tracking-widest" style={{ color: isActive ? "var(--color-accent)" : isDone ? "var(--color-success)" : "var(--color-foreground-secondary)" }}>
+                    <span className="text-2xs font-mono uppercase tracking-widest" style={{ color: isActive ? "var(--color-accent)" : isDone ? "var(--color-success)" : "var(--color-foreground-secondary)" }}>
                       {isActive ? "analyse" : isDone ? "OK" : "—"}
                     </span>
                   </li>
@@ -121,7 +121,7 @@ export function MarketingDiagnostic() {
           <div className="p-6" style={{ background: "var(--color-background)" }}>
             <div className="font-mono text-xs text-accent uppercase tracking-widest mb-4">⌖ OUTPUT · rapport + reco</div>
             <div className={`transition-opacity ${done ? "opacity-100" : "opacity-50"}`}>
-              <div className="font-mono text-[10px] uppercase tracking-widest mb-1" style={{ color: "var(--color-foreground-secondary)" }}>SCORE ADVE-RTIS</div>
+              <div className="font-mono text-2xs uppercase tracking-widest mb-1" style={{ color: "var(--color-foreground-secondary)" }}>SCORE ADVE-RTIS</div>
               <div className="font-serif font-medium text-5xl mb-1" style={{ color: "var(--color-foreground)" }}>{done ? "115" : "—"}<span className="text-xl" style={{ color: "var(--color-foreground-secondary)" }}>/200</span></div>
               <div className="font-mono text-xs uppercase tracking-widest text-accent mb-4">TIER · ORDINAIRE</div>
               <div className="text-sm leading-relaxed mb-4" style={{ color: "var(--color-foreground)" }}>

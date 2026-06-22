@@ -48,7 +48,7 @@ export default function PortfolioRootPage() {
         <div className="flex gap-2">
           <Link
             href="/launchpad/portfolio-bulk-import"
-            className="inline-flex items-center gap-2 rounded border border-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-800"
+            className="inline-flex items-center gap-2 rounded border border-border px-3 py-1.5 text-sm hover:bg-surface-card"
           >
             <Upload className="h-4 w-4" /> Import XLSX
           </Link>
@@ -62,7 +62,7 @@ export default function PortfolioRootPage() {
       </header>
 
       {showForm && (
-        <div className="rounded border border-zinc-700 bg-zinc-900/50">
+        <div className="rounded border border-border bg-surface-raised/50">
           <BrandNodeForm
             operatorId={operator.id}
             parentNodeId={null}

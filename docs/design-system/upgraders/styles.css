@@ -13,3 +13,4 @@
 @import "./tokens/spacing.css";
 @import "./tokens/effects.css";
 @import "./tokens/base.css";
+@import "./tokens/patterns.css";   /* editorial & motion composites — consume tokens, load last */

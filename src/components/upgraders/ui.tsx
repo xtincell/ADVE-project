@@ -18,7 +18,7 @@ export function Shell({ children, className = "" }: { children: React.ReactNode;
 /* Mono eyebrow with an accent dot — the recurring section kicker. */
 export function Eyebrow({ children, num }: { children: React.ReactNode; num?: string }) {
   return (
-    <div className="mb-5 inline-flex items-center gap-2.5 font-mono text-[11px] uppercase tracking-widest text-foreground-muted">
+    <div className="mb-5 inline-flex items-center gap-2.5 font-mono text-2xs uppercase tracking-widest text-foreground-muted">
       {num ? (
         <span className="text-accent">{num}</span>
       ) : (

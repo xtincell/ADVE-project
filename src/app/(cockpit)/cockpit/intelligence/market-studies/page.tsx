@@ -143,7 +143,7 @@ export default function MarketStudiesPage() {
                   {new Date(entry.createdAt).toLocaleDateString("fr-FR")}
                 </p>
               </div>
-              <span className="rounded bg-emerald-500/10 px-2 py-1 text-[10px] font-semibold text-emerald-400">
+              <span className="rounded bg-success/10 px-2 py-1 text-2xs font-semibold text-success">
                 INGÉRÉE
               </span>
             </div>
@@ -214,14 +214,14 @@ export default function MarketStudiesPage() {
                   <div>Trend Tracker : <span className="text-white">{state.data.extraction.trendTracker ? `${Object.keys(state.data.extraction.trendTracker).length}/49` : "0/49"}</span></div>
                 </div>
                 {state.data.alreadyIngested ? (
-                  <p className="mt-2 text-amber-400">Cette étude a déjà été ingérée (sha256 match). Re-confirm créera un doublon.</p>
+                  <p className="mt-2 text-warning">Cette étude a déjà été ingérée (sha256 match). Re-confirm créera un doublon.</p>
                 ) : null}
               </div>
               <button
                 type="button"
                 onClick={handleConfirm}
                 disabled={!state.data.resolvedCountryCode || !state.data.resolvedSector}
-                className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500/90 disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-lg bg-success px-4 py-2 text-sm font-semibold text-white hover:bg-success/90 disabled:opacity-50"
               >
                 <CheckCircle className="h-4 w-4" /> Confirmer ingestion
               </button>
@@ -235,13 +235,13 @@ export default function MarketStudiesPage() {
           )}
 
           {state.status === "confirmed" && (
-            <div className="flex items-center gap-2 rounded-lg bg-emerald-500/10 p-3 text-sm text-emerald-400">
+            <div className="flex items-center gap-2 rounded-lg bg-success/10 p-3 text-sm text-success">
               <CheckCircle className="h-4 w-4" /> Étude ingérée. Le pilier T des brands de ce pays / secteur va l'absorber au prochain enrich.
             </div>
           )}
 
           {state.status === "error" && (
-            <div className="flex items-start gap-2 rounded-lg bg-rose-500/10 p-3 text-sm text-rose-400">
+            <div className="flex items-start gap-2 rounded-lg bg-error/10 p-3 text-sm text-error">
               <AlertCircle className="h-4 w-4 mt-0.5" />
               <div>
                 <strong>Erreur :</strong> {state.message}

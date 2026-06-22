@@ -302,7 +302,7 @@ export default function CockpitDashboard() {
       {/* Brand Story Hero */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Identite & Positionnement */}
-        <div className="lg:col-span-2 rounded-xl border border-accent/30 bg-gradient-to-br from-violet-950/30 to-zinc-900/80 p-6">
+        <div className="lg:col-span-2 rounded-xl border border-accent/30 bg-gradient-to-br from-accent/30 to-background/80 p-6">
           <div className="mb-3 flex items-center gap-2">
             <Fingerprint className="h-4 w-4 text-accent" />
             <h3 className="text-xs font-semibold uppercase tracking-wider text-accent">Identite de marque</h3>
@@ -339,13 +339,13 @@ export default function CockpitDashboard() {
         {/* Focus Strategique */}
         <div className="rounded-xl border border-border bg-background/80 p-6">
           <div className="mb-3 flex items-center gap-2">
-            <Target className="h-4 w-4 text-amber-400" />
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-amber-400">Focus strategique</h3>
+            <Target className="h-4 w-4 text-warning" />
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-warning">Focus strategique</h3>
           </div>
           <div className="space-y-4">
             <div>
-              <p className="text-[10px] font-medium uppercase text-foreground-muted">Force principale</p>
-              <p className="mt-1 text-sm font-semibold text-emerald-400">
+              <p className="text-2xs font-medium uppercase text-foreground-muted">Force principale</p>
+              <p className="mt-1 text-sm font-semibold text-success">
                 {strongestPillar[0].toUpperCase()} — {PILLAR_NAMES[strongestPillar[0]]}
               </p>
               {getPillarHeadline(strongestPillar[0]) ? (
@@ -355,8 +355,8 @@ export default function CockpitDashboard() {
               )}
             </div>
             <div>
-              <p className="text-[10px] font-medium uppercase text-foreground-muted">Priorite d'amelioration</p>
-              <p className="mt-1 text-sm font-semibold text-amber-400">
+              <p className="text-2xs font-medium uppercase text-foreground-muted">Priorite d'amelioration</p>
+              <p className="mt-1 text-sm font-semibold text-warning">
                 {weakestPillar[0].toUpperCase()} — {PILLAR_NAMES[weakestPillar[0]]}
               </p>
               {getPillarHeadline(weakestPillar[0]) ? (
@@ -365,8 +365,8 @@ export default function CockpitDashboard() {
                 <p className="text-xs text-foreground-muted italic">Contenu a remplir</p>
               )}
             </div>
-            <div className="flex items-start gap-2 rounded-lg bg-amber-950/20 p-3">
-              <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" />
+            <div className="flex items-start gap-2 rounded-lg bg-warning/20 p-3">
+              <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
               <p className="text-xs text-foreground-secondary">
                 Renforcer {PILLAR_NAMES[weakestPillar[0]]} pour convertir plus de superfans et debloquer le prochain palier.
               </p>
@@ -378,14 +378,14 @@ export default function CockpitDashboard() {
       {/* NORTHSTAR: Active Superfans Hero */}
       {showSection("kpi") && (
         <>
-          <div className="rounded-xl border border-accent/30 bg-gradient-to-r from-violet-950/40 via-fuchsia-950/20 to-zinc-900/80 p-6">
+          <div className="rounded-xl border border-accent/30 bg-gradient-to-r from-accent/40 via-accent/20 to-background/80 p-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/20 ring-1 ring-violet-500/30">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/20 ring-1 ring-accent/30">
                   <Crown className="h-7 w-7 text-accent" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-accent/80">Northstar</p>
+                  <p className="text-2xs font-bold uppercase tracking-widest text-accent/80">Northstar</p>
                   <div className="flex items-baseline gap-3">
                     <span className="text-4xl font-black tabular-nums text-white">
                       {superfanCountQuery.data?.active ?? "—"}
@@ -396,20 +396,20 @@ export default function CockpitDashboard() {
               </div>
               <div className="flex flex-wrap gap-4 sm:gap-6">
                 <div className="text-right">
-                  <p className="text-[10px] font-medium uppercase text-foreground-muted">Evangelistes</p>
-                  <p className="text-lg font-bold text-fuchsia-400">{superfanCountQuery.data?.evangelistes ?? 0}</p>
+                  <p className="text-2xs font-medium uppercase text-foreground-muted">Evangelistes</p>
+                  <p className="text-lg font-bold text-accent">{superfanCountQuery.data?.evangelistes ?? 0}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] font-medium uppercase text-foreground-muted">Ratio superfan</p>
+                  <p className="text-2xs font-medium uppercase text-foreground-muted">Ratio superfan</p>
                   <p className="text-lg font-bold text-accent">{superfanCountQuery.data?.ratio ?? 0}%</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] font-medium uppercase text-foreground-muted">Velocite /30j</p>
+                  <p className="text-2xs font-medium uppercase text-foreground-muted">Velocite /30j</p>
                   <div className="flex items-center justify-end gap-1">
-                    {superfanVelocityQuery.data?.trend === "up" && <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />}
+                    {superfanVelocityQuery.data?.trend === "up" && <TrendingUp className="h-3.5 w-3.5 text-success" />}
                     {superfanVelocityQuery.data?.trend === "down" && <TrendingUp className="h-3.5 w-3.5 rotate-180 text-error" />}
                     <span className={`text-lg font-bold ${
-                      superfanVelocityQuery.data?.trend === "up" ? "text-emerald-400" :
+                      superfanVelocityQuery.data?.trend === "up" ? "text-success" :
                       superfanVelocityQuery.data?.trend === "down" ? "text-error" : "text-foreground-secondary"
                     }`}>
                       {superfanVelocityQuery.data?.delta != null
@@ -419,7 +419,7 @@ export default function CockpitDashboard() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] font-medium uppercase text-foreground-muted">Total profiles</p>
+                  <p className="text-2xs font-medium uppercase text-foreground-muted">Total profiles</p>
                   <p className="text-lg font-bold text-foreground-secondary">{superfanCountQuery.data?.total ?? 0}</p>
                 </div>
               </div>
@@ -478,7 +478,7 @@ export default function CockpitDashboard() {
               <div className="rounded-xl border border-border bg-card p-6">
                 <div className="mb-4 flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-foreground">Pipeline de transformation</h3>
-                  <Link href="/cockpit/insights/diagnostics" className="text-[10px] text-foreground-muted hover:text-foreground">
+                  <Link href="/cockpit/insights/diagnostics" className="text-2xs text-foreground-muted hover:text-foreground">
                     Voir le radar →
                   </Link>
                 </div>
@@ -492,7 +492,7 @@ export default function CockpitDashboard() {
                 <Brain className="h-5 w-5 text-accent" />
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-accent">L'Oracle</p>
-                  <p className="text-[10px] text-accent/60">Proposition strategique vivante</p>
+                  <p className="text-2xs text-accent/60">Proposition strategique vivante</p>
                 </div>
                 <ArrowRight className="h-4 w-4 text-accent/40" />
               </Link>
@@ -526,9 +526,9 @@ export default function CockpitDashboard() {
 
       {/* Prescriptions Mestor */}
       {showSection("prescriptions") && (
-        <div className="rounded-xl border border-amber-800/30 bg-amber-950/10 p-5">
+        <div className="rounded-xl border border-warning/30 bg-warning/10 p-5">
           <div className="mb-3 flex items-center gap-2">
-            <Brain className="h-4 w-4 text-amber-400" />
+            <Brain className="h-4 w-4 text-warning" />
             <h3 className="text-sm font-semibold text-foreground">Prescriptions Mestor</h3>
             <AiBadge />
           </div>
@@ -547,17 +547,17 @@ export default function CockpitDashboard() {
                 >
                   <div className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${
                     insight.severity === "CRITICAL" ? "bg-error" :
-                    insight.severity === "HIGH" ? "bg-amber-500" :
-                    insight.severity === "MEDIUM" ? "bg-yellow-500" : "bg-zinc-500"
+                    insight.severity === "HIGH" ? "bg-warning" :
+                    insight.severity === "MEDIUM" ? "bg-warning" : "bg-foreground-muted"
                   }`} />
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-medium uppercase text-amber-400/70">{insight.type}</span>
+                      <span className="text-2xs font-medium uppercase text-warning/70">{insight.type}</span>
                       <p className="text-sm font-medium text-foreground">{insight.title}</p>
                     </div>
                     <p className="mt-0.5 text-xs text-foreground-secondary">{insight.description}</p>
                     {insight.suggestedAction && (
-                      <p className="mt-1 text-xs font-medium text-amber-400">→ {insight.suggestedAction}</p>
+                      <p className="mt-1 text-xs font-medium text-warning">→ {insight.suggestedAction}</p>
                     )}
                   </div>
                 </div>
@@ -687,8 +687,8 @@ function BatchActionsBar({ strategyId }: { strategyId: string }) {
         side="bottom"
         content={
           <span className="block">
-            <strong className="block text-[11px] font-bold text-accent">Enrichir ADVE</strong>
-            <span className="mt-0.5 block text-[11px] leading-snug">
+            <strong className="block text-2xs font-bold text-accent">Enrichir ADVE</strong>
+            <span className="mt-0.5 block text-2xs leading-snug">
               Auto-remplit les 4 piliers fondateurs (Authenticité, Distinction, Valeur, Engagement) via vault de documents, calculs déductifs, puis IA pour les champs restants. Ne touche pas RTIS.
             </span>
           </span>
@@ -709,8 +709,8 @@ function BatchActionsBar({ strategyId }: { strategyId: string }) {
         side="bottom"
         content={
           <span className="block">
-            <strong className="block text-[11px] font-bold text-sky-300">Lancer R + T</strong>
-            <span className="mt-0.5 block text-[11px] leading-snug">
+            <strong className="block text-2xs font-bold text-info">Lancer R + T</strong>
+            <span className="mt-0.5 block text-2xs leading-snug">
               Déclenche la cascade RTIS depuis ADVE : R (analyse risques + SWOT), T (triangulation marché via Market Intelligence), puis recos pour enrichir ADVE en retour. Requiert ADVE ENRICHED minimum.
             </span>
           </span>
@@ -719,7 +719,7 @@ function BatchActionsBar({ strategyId }: { strategyId: string }) {
         <button
           onClick={() => cascadeRTIS.mutate({ strategyId, updateADVE: true })}
           disabled={anyLoading}
-          className="flex items-center gap-1.5 rounded-lg bg-sky-600/20 px-3 py-2 text-xs font-medium text-sky-300 hover:bg-sky-600/30 disabled:opacity-50 transition-colors"
+          className="flex items-center gap-1.5 rounded-lg bg-info/20 px-3 py-2 text-xs font-medium text-info hover:bg-info/30 disabled:opacity-50 transition-colors"
         >
           {cascadeRTIS.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
           Lancer R+T
@@ -731,8 +731,8 @@ function BatchActionsBar({ strategyId }: { strategyId: string }) {
         side="bottom"
         content={
           <span className="block">
-            <strong className="block text-[11px] font-bold text-foreground">Enrichir depuis Sources</strong>
-            <span className="mt-0.5 block text-[11px] leading-snug">
+            <strong className="block text-2xs font-bold text-foreground">Enrichir depuis Sources</strong>
+            <span className="mt-0.5 block text-2xs leading-snug">
               Scanne les BrandDataSource (PDF, sites web, briefs ingérés) pour générer des recommandations granulaires sur tous les piliers. Les recos PENDING apparaissent dans Notoria pour validation.
             </span>
           </span>
@@ -749,7 +749,7 @@ function BatchActionsBar({ strategyId }: { strategyId: string }) {
       </Tooltip>
 
       {(autoFillAll.isSuccess || cascadeRTIS.isSuccess || enrichAll.isSuccess) && (
-        <span className="flex items-center gap-1 text-[10px] text-emerald-400 ml-2">
+        <span className="flex items-center gap-1 text-2xs text-success ml-2">
           <CheckCircle className="h-3 w-3" /> Done
         </span>
       )}

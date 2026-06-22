@@ -213,7 +213,7 @@ export default function CockpitMessagesPage() {
                       onKeyDown={handleKeyDown}
                       placeholder="Ecrivez un message..."
                       rows={1}
-                      className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
+                      className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong"
                       style={{ minHeight: 38, maxHeight: 120 }}
                     />
                   </div>

@@ -78,7 +78,7 @@ export function BrandMarketCommutator({
   // Aucun marché enfant → on n'affiche pas le commutator (la page reste en vue globale implicite).
   if (data.markets.length === 0) return null;
 
-  const padding = compact ? "px-2 py-0.5 text-[10px]" : "px-3 py-1 text-xs";
+  const padding = compact ? "px-2 py-0.5 text-2xs" : "px-3 py-1 text-xs";
 
   return (
     <div className={`flex flex-wrap items-center gap-1 ${className}`} role="tablist" aria-label="Vue par marché">

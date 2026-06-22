@@ -41,11 +41,11 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
       <article className="pt-28 md:pt-32">
         <Shell className="max-w-[var(--maxw-prose,860px)]">
-          <Link href="/blog" className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-foreground-muted transition-colors hover:text-accent">
+          <Link href="/blog" className="inline-flex items-center gap-2 font-mono text-2xs uppercase tracking-widest text-foreground-muted transition-colors hover:text-accent">
             ← Toutes les notes
           </Link>
 
-          <div className="mt-8 flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-foreground-muted">
+          <div className="mt-8 flex items-center gap-2 font-mono text-2xs uppercase tracking-widest text-foreground-muted">
             {post.categories[0] ? <span className="text-accent">{post.categories[0].name}</span> : null}
             <span>·</span>
             <span>{formatPostDate(post.publishedAt)}</span>
@@ -60,7 +60,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             {post.excerpt}
           </p>
           {post.author ? (
-            <div className="mt-6 border-t border-border-subtle pt-5 font-mono text-[11px] uppercase tracking-widest text-foreground-muted">
+            <div className="mt-6 border-t border-border-subtle pt-5 font-mono text-2xs uppercase tracking-widest text-foreground-muted">
               Par {post.author.name}
             </div>
           ) : null}
@@ -81,7 +81,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           {post.tags.length > 0 ? (
             <div className="mt-10 flex flex-wrap gap-2 border-t border-border-subtle pt-6">
               {post.tags.map((t) => (
-                <span key={t.slug} className="border border-border-subtle px-3 py-1.5 font-mono text-[11px] text-foreground-secondary">
+                <span key={t.slug} className="border border-border-subtle px-3 py-1.5 font-mono text-2xs text-foreground-secondary">
                   #{t.name}
                 </span>
               ))}

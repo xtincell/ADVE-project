@@ -2,7 +2,7 @@ export function MarketingManifesto() {
   return (
     <section id="manifesto" className="py-24 md:py-40">
       <div className="mx-auto max-w-[var(--maxw-content)] px-[var(--pad-page)]">
-        <div className="flex items-baseline gap-3.5 mb-8 font-mono text-[11px] uppercase tracking-widest text-foreground-muted">
+        <div className="flex items-baseline gap-3.5 mb-8 font-mono text-2xs uppercase tracking-widest text-foreground-muted">
           <span className="w-8 h-px bg-accent" />
           01 · Doctrine
         </div>

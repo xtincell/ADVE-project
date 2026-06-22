@@ -125,11 +125,11 @@ interface Tile {
 type BrandClassification = BrandTier;
 
 const CLASSIF_BADGES: Record<BrandClassification, { label: string; icon: typeof Skull; color: string }> = {
-  LATENT:    { label: "Latent",    icon: Skull,  color: "bg-zinc-700/30 text-zinc-300" },
-  FRAGILE:   { label: "Fragile",   icon: Eye,    color: "bg-orange-500/20 text-orange-300" },
-  ORDINAIRE: { label: "Ordinaire", icon: Eye,    color: "bg-zinc-600/30 text-zinc-200" },
-  FORTE:     { label: "Forte",     icon: Shield, color: "bg-blue-500/20 text-blue-300" },
-  CULTE:     { label: "Culte",     icon: Flame,  color: "bg-amber-500/20 text-amber-300" },
+  LATENT:    { label: "Latent",    icon: Skull,  color: "bg-surface-overlay/30 text-foreground-secondary" },
+  FRAGILE:   { label: "Fragile",   icon: Eye,    color: "bg-warning/20 text-warning" },
+  ORDINAIRE: { label: "Ordinaire", icon: Eye,    color: "bg-foreground-muted/30 text-foreground" },
+  FORTE:     { label: "Forte",     icon: Shield, color: "bg-info/20 text-info" },
+  CULTE:     { label: "Culte",     icon: Flame,  color: "bg-warning/20 text-warning" },
   ICONE:     { label: "Icône",     icon: Crown,  color: "bg-accent/20 text-accent" },
 };
 
@@ -363,7 +363,7 @@ function BrandPickerModal({ tree, onClose }: { tree: BrandTreeData; onClose: () 
       style={{ isolation: "isolate" }}
     >
       <div
-        className="relative flex h-full max-h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-border bg-zinc-950 shadow-2xl"
+        className="relative flex h-full max-h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-border bg-background shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header — close + title + count */}
@@ -403,7 +403,7 @@ function BrandPickerModal({ tree, onClose }: { tree: BrandTreeData; onClose: () 
                 <X className="h-3.5 w-3.5" />
               </button>
             )}
-            <span className="hidden sm:inline-flex items-center gap-0.5 rounded bg-foreground-muted/10 px-1.5 py-0.5 text-[10px] font-mono text-foreground-muted">
+            <span className="hidden sm:inline-flex items-center gap-0.5 rounded bg-foreground-muted/10 px-1.5 py-0.5 text-2xs font-mono text-foreground-muted">
               ⌘K
             </span>
           </div>
@@ -485,7 +485,7 @@ function FilterPill({ active, onClick, label }: { active: boolean; onClick: () =
   return (
     <button
       onClick={onClick}
-      className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
+      className={`rounded-full border px-2.5 py-0.5 text-2xs font-medium transition-colors ${
         active
           ? "border-accent bg-accent/15 text-accent"
           : "border-border bg-transparent text-foreground-muted hover:border-border-strong hover:text-foreground-secondary"
@@ -550,14 +550,14 @@ function CollapsibleGroup({
   const isOpen = forceOpen || (userToggled !== null ? userToggled : true);
 
   return (
-    <section className="rounded-lg border border-border/40 bg-zinc-900/30">
+    <section className="rounded-lg border border-border/40 bg-surface-raised/30">
       {/* Header — toggle + label + counts */}
       <button
         type="button"
         onClick={() => setUserToggled((prev) => (prev === null ? !isOpen : !prev))}
         disabled={forceOpen}
         className={`flex w-full items-center gap-2 px-4 py-2.5 text-left transition-colors ${
-          forceOpen ? "cursor-default" : "hover:bg-zinc-900/60"
+          forceOpen ? "cursor-default" : "hover:bg-surface-raised/60"
         }`}
         aria-expanded={isOpen}
       >
@@ -572,10 +572,10 @@ function CollapsibleGroup({
             }`}
           />
         )}
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-foreground-muted">
+        <span className="text-2xs font-semibold uppercase tracking-wider text-foreground-muted">
           {group.label}
         </span>
-        <span className="text-[11px] text-foreground-muted/60">
+        <span className="text-2xs text-foreground-muted/60">
           · {totalTiles} entité{totalTiles > 1 ? "s" : ""}
           {pilotableCount > 0 && pilotableCount < totalTiles && (
             <span className="ml-1 text-foreground-muted/40">({pilotableCount} pilotable{pilotableCount > 1 ? "s" : ""})</span>
@@ -589,7 +589,7 @@ function CollapsibleGroup({
           {/* Marque ombrelle (CORPORATE) */}
           {group.umbrella && (
             <div>
-              <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-accent/70">Marque ombrelle</p>
+              <p className="mb-1.5 text-2xs font-medium uppercase tracking-wider text-accent/70">Marque ombrelle</p>
               <BrandTile
                 tile={group.umbrella}
                 isActive={group.umbrella.strategyId === activeStrategyId}
@@ -606,7 +606,7 @@ function CollapsibleGroup({
           {group.directBrands.length > 0 && (
             <div>
               {group.umbrella && (
-                <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-foreground-muted">
+                <p className="mb-1.5 text-2xs font-medium uppercase tracking-wider text-foreground-muted">
                   {group.key === "__standalone__"
                     ? `Marques (${group.directBrands.length})`
                     : group.directBrands.every((t) => t.nodeKind === "PRODUCT_LINE")
@@ -668,7 +668,7 @@ function FilialeBlock({
 
   return (
     <div className="rounded border border-border/30 bg-background-overlay/20 p-3">
-      <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-foreground-muted">
+      <p className="mb-1.5 text-2xs font-medium uppercase tracking-wider text-foreground-muted">
         {headerLabel}
       </p>
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -726,7 +726,7 @@ function BrandTile({
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-white">{tile.name}</p>
-          <p className="text-[10px] uppercase tracking-wider text-foreground-muted">
+          <p className="text-2xs uppercase tracking-wider text-foreground-muted">
             {KIND_LABELS[tile.nodeKind] ?? tile.nodeKind}
             {tile.parentName && ` · ${tile.parentName}`}
           </p>
@@ -738,27 +738,27 @@ function BrandTile({
       {isPiloted && tile.composite != null ? (
         <div className="flex items-end gap-2">
           <span className="text-2xl font-bold text-white tabular-nums">{Math.round(tile.composite)}</span>
-          <span className="mb-0.5 text-[10px] text-foreground-muted">/200</span>
+          <span className="mb-0.5 text-2xs text-foreground-muted">/200</span>
           {classifBadge && ClassifIcon && (
-            <span className={`ml-auto inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold ${classifBadge.color}`}>
+            <span className={`ml-auto inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-2xs font-bold ${classifBadge.color}`}>
               <ClassifIcon className="h-3 w-3" />
               {classifBadge.label}
             </span>
           )}
         </div>
       ) : isPiloted ? (
-        <p className="text-[11px] italic text-foreground-muted">Score non encore calculé</p>
+        <p className="text-2xs italic text-foreground-muted">Score non encore calculé</p>
       ) : (
-        <div className="flex items-center gap-1.5 text-[11px] text-foreground-muted">
+        <div className="flex items-center gap-1.5 text-2xs text-foreground-muted">
           <Settings className="h-3 w-3" />
           Pas encore piloté
         </div>
       )}
 
       {/* Status */}
-      <div className="mt-auto flex items-center gap-2 pt-1 text-[10px] text-foreground-muted">
+      <div className="mt-auto flex items-center gap-2 pt-1 text-2xs text-foreground-muted">
         {tile.strategyStatus && tile.strategyStatus !== "ACTIVE" && (
-          <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-amber-300">{tile.strategyStatus}</span>
+          <span className="rounded bg-warning/15 px-1.5 py-0.5 text-warning">{tile.strategyStatus}</span>
         )}
         {!isPiloted && (
           <span className="rounded bg-foreground-muted/15 px-1.5 py-0.5">Configurer →</span>

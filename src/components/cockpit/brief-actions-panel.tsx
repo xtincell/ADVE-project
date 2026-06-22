@@ -92,7 +92,7 @@ export function BriefActionsPanel() {
   return (
     <article className="mx-auto max-w-[var(--maxw-content,1200px)] px-[var(--pad-page,1.5rem)] py-8 md:py-12">
       <header className="mb-8 border-b border-border-subtle pb-6">
-        <div className="mb-3 flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-foreground-muted">
+        <div className="mb-3 flex items-center gap-2 font-mono text-2xs uppercase tracking-widest text-foreground-muted">
           <Lightbulb className="h-3.5 w-3.5 text-accent" />
           <span>Brief → roadmap · injection d&rsquo;actions</span>
         </div>
@@ -134,17 +134,17 @@ export function BriefActionsPanel() {
 
           {/* Manual-first parity */}
           <div className="border-t border-white/5 pt-3">
-            <p className="mb-1.5 text-[10px] uppercase tracking-widest text-foreground-muted">ou à la main</p>
+            <p className="mb-1.5 text-2xs uppercase tracking-widest text-foreground-muted">ou à la main</p>
             <div className="flex gap-2">
               <input value={manualTitle} onChange={(e) => setManualTitle(e.target.value)} placeholder="Titre d'une action" className={`${INPUT_CLS} flex-1`} />
-              <button type="button" disabled={manualTitle.trim().length < 3 || propose.isPending} onClick={addManual} className="flex items-center gap-1 rounded-lg bg-white/5 px-2.5 py-1.5 text-[11px] font-medium text-foreground-secondary transition-colors hover:bg-white/10 hover:text-foreground disabled:opacity-50">
+              <button type="button" disabled={manualTitle.trim().length < 3 || propose.isPending} onClick={addManual} className="flex items-center gap-1 rounded-lg bg-white/5 px-2.5 py-1.5 text-2xs font-medium text-foreground-secondary transition-colors hover:bg-white/10 hover:text-foreground disabled:opacity-50">
                 <Plus className="h-3 w-3" /> Ajouter
               </button>
             </div>
           </div>
 
           {propose.data ? (
-            <p className={`text-[11px] ${propose.data.status === "OK" ? "text-success" : "text-foreground-muted"}`}>
+            <p className={`text-2xs ${propose.data.status === "OK" ? "text-success" : "text-foreground-muted"}`}>
               {propose.data.status === "OK"
                 ? `${propose.data.created} action(s) proposée(s) ci-contre.`
                 : propose.data.status === "DEFERRED"
@@ -152,7 +152,7 @@ export function BriefActionsPanel() {
                   : "Rien à proposer."}
             </p>
           ) : propose.isError ? (
-            <p className="text-[11px] text-error">{propose.error.message}</p>
+            <p className="text-2xs text-error">{propose.error.message}</p>
           ) : null}
         </div>
 
@@ -163,7 +163,7 @@ export function BriefActionsPanel() {
               Actions proposées <span className="text-foreground-muted">({proposed.length})</span>
             </span>
             {proposed.length > 0 ? (
-              <button type="button" onClick={retainAll} disabled={select.isPending} className="flex items-center gap-1.5 rounded-lg bg-accent/15 px-2.5 py-1.5 text-[11px] font-medium text-accent transition-colors hover:bg-accent/25 disabled:opacity-50">
+              <button type="button" onClick={retainAll} disabled={select.isPending} className="flex items-center gap-1.5 rounded-lg bg-accent/15 px-2.5 py-1.5 text-2xs font-medium text-accent transition-colors hover:bg-accent/25 disabled:opacity-50">
                 <Star className="h-3 w-3" /> Tout retenir
               </button>
             ) : null}
@@ -186,14 +186,14 @@ export function BriefActionsPanel() {
                     </button>
                     <div className="min-w-0 flex-1">
                       <span className="text-xs font-medium text-foreground">{a.title}</span>
-                      {a.description ? <p className="mt-0.5 line-clamp-2 text-[11px] text-foreground-muted">{a.description}</p> : null}
+                      {a.description ? <p className="mt-0.5 line-clamp-2 text-2xs text-foreground-muted">{a.description}</p> : null}
                       <div className="mt-1 flex flex-wrap items-center gap-1">
                         {ch ? <span className="rounded bg-white/5 px-1.5 py-0.5 text-[9px] text-foreground-muted">{CHANNEL_LABEL[ch] ?? ch}</span> : null}
                         {pillar ? <span className="rounded bg-accent/15 px-1.5 py-0.5 text-[9px] font-bold text-accent">{pillar}</span> : null}
                         {a.costTemplateKey ? <span className="rounded bg-white/5 px-1.5 py-0.5 text-[9px] text-foreground-muted">💰 {a.costTemplateKey}</span> : null}
                       </div>
                     </div>
-                    <span className="flex-shrink-0 text-[11px] font-semibold text-foreground">{fcfa(a.budgetMax ?? a.budgetMin)}</span>
+                    <span className="flex-shrink-0 text-2xs font-semibold text-foreground">{fcfa(a.budgetMax ?? a.budgetMin)}</span>
                   </div>
                 );
               })}
@@ -201,7 +201,7 @@ export function BriefActionsPanel() {
           )}
 
           {summary && summary.selectedCount > 0 ? (
-            <div className="mt-4 flex items-center gap-2 rounded-lg border border-accent/20 bg-accent/[0.04] px-3 py-2 text-[11px] text-accent">
+            <div className="mt-4 flex items-center gap-2 rounded-lg border border-accent/20 bg-accent/[0.04] px-3 py-2 text-2xs text-accent">
               <Star className="h-3.5 w-3.5 fill-accent" />
               <span><strong>{summary.selectedCount}</strong> action(s) retenue(s) alimentent la roadmap (pilier&nbsp;S) — budget {fcfa(summary.totalSelectedBudget)}.</span>
             </div>

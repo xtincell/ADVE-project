@@ -47,12 +47,12 @@ const BRIEF_STATUS_LABELS: Record<string, string> = {
   ASSIGNED: "Assigné",
 };
 const BRIEF_STATUS_VARIANTS: Record<string, string> = {
-  DRAFT: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
-  SUBMITTED: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
-  VALIDATED: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
-  ASSIGNED: "bg-accent/15 text-accent ring-violet-400/30",
-  IN_PROGRESS: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
-  COMPLETED: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
+  DRAFT: "bg-foreground-muted/15 text-foreground-secondary ring-border/30",
+  SUBMITTED: "bg-warning/15 text-warning ring-warning/30",
+  VALIDATED: "bg-success/15 text-success ring-success/30",
+  ASSIGNED: "bg-accent/15 text-accent ring-accent/30",
+  IN_PROGRESS: "bg-info/15 text-info ring-info/30",
+  COMPLETED: "bg-success/15 text-success ring-success/30",
 };
 
 function formatXAF(v: number) {
@@ -62,7 +62,7 @@ function formatXAF(v: number) {
 function KV({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">{label}</p>
+      <p className="text-2xs font-semibold uppercase tracking-wide text-foreground-muted">{label}</p>
       <p className="mt-0.5 text-xs text-foreground">{value}</p>
     </div>
   );
@@ -122,7 +122,7 @@ function BriefCard({ m, getBriefStatus }: { m: Mission; getBriefStatus: (m: Miss
 
             {/* Campaign + mission link row */}
             {m.campaign && (
-              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-foreground-muted">
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-2xs text-foreground-muted">
                 <span className="flex items-center gap-1">
                   <Megaphone className="h-3 w-3 text-foreground-muted" />
                   <button
@@ -136,8 +136,8 @@ function BriefCard({ m, getBriefStatus }: { m: Mission; getBriefStatus: (m: Miss
                   <ArrowRight className="h-2.5 w-2.5" />
                   <span className="text-foreground-secondary">Mission #{m.priority ?? "—"}</span>
                   <span className={`rounded-full px-1.5 py-px text-[9px] font-semibold ${
-                    m.status === "COMPLETED" ? "bg-emerald-500/15 text-emerald-400" :
-                    m.status === "IN_PROGRESS" ? "bg-blue-500/15 text-blue-400" :
+                    m.status === "COMPLETED" ? "bg-success/15 text-success" :
+                    m.status === "IN_PROGRESS" ? "bg-info/15 text-info" :
                     "bg-surface-raised text-foreground-secondary"
                   }`}>{m.status}</span>
                 </span>
@@ -152,7 +152,7 @@ function BriefCard({ m, getBriefStatus }: { m: Mission; getBriefStatus: (m: Miss
             )}
 
             {/* Chips: deadline, budget, driver */}
-            <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-foreground-muted">
+            <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-2xs text-foreground-muted">
               {deadlineStr && (
                 <span className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
@@ -194,7 +194,7 @@ function BriefCard({ m, getBriefStatus }: { m: Mission; getBriefStatus: (m: Miss
           {/* Objective full */}
           {objective && (
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted flex items-center gap-1.5 mb-1.5">
+              <p className="text-2xs font-semibold uppercase tracking-wide text-foreground-muted flex items-center gap-1.5 mb-1.5">
                 <Target className="h-3 w-3" /> Objectif
               </p>
               <p className="text-sm text-foreground leading-relaxed">{objective}</p>
@@ -206,7 +206,7 @@ function BriefCard({ m, getBriefStatus }: { m: Mission; getBriefStatus: (m: Miss
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {persona && (
                 <div className="rounded-lg border border-border bg-background/60 p-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted flex items-center gap-1 mb-1.5">
+                  <p className="text-2xs font-semibold uppercase tracking-wide text-foreground-muted flex items-center gap-1 mb-1.5">
                     <User className="h-3 w-3" /> Persona cible
                   </p>
                   <p className="text-xs text-foreground-secondary leading-relaxed">{persona}</p>
@@ -214,7 +214,7 @@ function BriefCard({ m, getBriefStatus }: { m: Mission; getBriefStatus: (m: Miss
               )}
               {keyMessage && (
                 <div className="rounded-lg border border-border bg-background/60 p-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted flex items-center gap-1 mb-1.5">
+                  <p className="text-2xs font-semibold uppercase tracking-wide text-foreground-muted flex items-center gap-1 mb-1.5">
                     <Send className="h-3 w-3" /> Message clé
                   </p>
                   <p className="text-xs text-accent italic leading-relaxed">"{keyMessage}"</p>
@@ -226,7 +226,7 @@ function BriefCard({ m, getBriefStatus }: { m: Mission; getBriefStatus: (m: Miss
           {/* Livrables attendus */}
           {deliverablesExpected && (
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted flex items-center gap-1.5 mb-1.5">
+              <p className="text-2xs font-semibold uppercase tracking-wide text-foreground-muted flex items-center gap-1.5 mb-1.5">
                 <ClipboardList className="h-3 w-3" /> Livrables attendus
               </p>
               <p className="text-xs text-foreground-secondary leading-relaxed whitespace-pre-line">{deliverablesExpected}</p>
@@ -236,13 +236,13 @@ function BriefCard({ m, getBriefStatus }: { m: Mission; getBriefStatus: (m: Miss
           {/* KPIs / métriques */}
           {Object.keys(metriques).length > 0 && (
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted flex items-center gap-1.5 mb-2">
+              <p className="text-2xs font-semibold uppercase tracking-wide text-foreground-muted flex items-center gap-1.5 mb-2">
                 <TrendingUp className="h-3 w-3" /> KPIs cibles
               </p>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {Object.entries(metriques).map(([k, v]) => (
                   <div key={k} className="rounded-lg border border-border bg-background/60 p-2.5">
-                    <p className="text-[10px] text-foreground-muted capitalize">{k.replace(/([A-Z])/g, " $1").trim()}</p>
+                    <p className="text-2xs text-foreground-muted capitalize">{k.replace(/([A-Z])/g, " $1").trim()}</p>
                     <p className="text-sm font-semibold text-white">{String(v)}</p>
                   </div>
                 ))}
@@ -253,13 +253,13 @@ function BriefCard({ m, getBriefStatus }: { m: Mission; getBriefStatus: (m: Miss
           {/* Risques */}
           {risques.length > 0 && (
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-600/80 flex items-center gap-1.5 mb-1.5">
+              <p className="text-2xs font-semibold uppercase tracking-wide text-warning/80 flex items-center gap-1.5 mb-1.5">
                 <AlertTriangle className="h-3 w-3" /> Risques identifiés
               </p>
               <ul className="space-y-1">
                 {risques.map((r, i) => (
                   <li key={i} className="flex items-start gap-2 text-xs text-foreground-secondary">
-                    <span className="mt-0.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-amber-500/60" />
+                    <span className="mt-0.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-warning/60" />
                     {r}
                   </li>
                 ))}
@@ -270,10 +270,10 @@ function BriefCard({ m, getBriefStatus }: { m: Mission; getBriefStatus: (m: Miss
           {/* Pillar priorities */}
           {pillarPriority.length > 0 && (
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted mb-1.5">Piliers prioritaires</p>
+              <p className="text-2xs font-semibold uppercase tracking-wide text-foreground-muted mb-1.5">Piliers prioritaires</p>
               <div className="flex flex-wrap gap-1.5">
                 {pillarPriority.map((k, i) => (
-                  <span key={k} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${PILLAR_TAG_BG[k as PillarKey] ?? "bg-background text-foreground-secondary"}`}>
+                  <span key={k} className={`rounded-full px-2 py-0.5 text-2xs font-semibold ${PILLAR_TAG_BG[k as PillarKey] ?? "bg-background text-foreground-secondary"}`}>
                     {i + 1}. {k.toUpperCase()} — {PILLAR_NAMES[k as PillarKey] ?? k}
                   </span>
                 ))}
@@ -284,17 +284,17 @@ function BriefCard({ m, getBriefStatus }: { m: Mission; getBriefStatus: (m: Miss
           {/* Livrables soumis (actuels) */}
           {deliverables.length > 0 && (
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted flex items-center gap-1.5 mb-2">
+              <p className="text-2xs font-semibold uppercase tracking-wide text-foreground-muted flex items-center gap-1.5 mb-2">
                 <ListChecks className="h-3 w-3" /> Livrables soumis ({deliverables.length})
               </p>
               <div className="space-y-1.5">
                 {deliverables.map((d) => (
                   <div key={d.id} className="flex items-center justify-between rounded-lg border border-border bg-background/60 px-3 py-2">
                     <div className="flex items-center gap-2">
-                      <CheckCircle className={`h-3.5 w-3.5 flex-shrink-0 ${d.status === "ACCEPTED" ? "text-emerald-400" : "text-foreground-muted"}`} />
+                      <CheckCircle className={`h-3.5 w-3.5 flex-shrink-0 ${d.status === "ACCEPTED" ? "text-success" : "text-foreground-muted"}`} />
                       <div>
                         <p className="text-xs font-medium text-white">{d.title}</p>
-                        {d.fileUrl && <p className="text-[10px] text-foreground-muted font-mono">{d.fileUrl}</p>}
+                        {d.fileUrl && <p className="text-2xs text-foreground-muted font-mono">{d.fileUrl}</p>}
                       </div>
                     </div>
                     <StatusBadge status={d.status} />
@@ -354,19 +354,19 @@ function CampaignBriefCard({ b }: { b: CampaignBriefRow }) {
           <div className="flex flex-wrap items-center gap-2">
             <h4 className="text-sm font-semibold text-white">{b.title}</h4>
             {isActive && (
-              <span className="rounded-full bg-emerald-400/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-400 ring-1 ring-inset ring-emerald-400/30">
+              <span className="rounded-full bg-success/15 px-2 py-0.5 text-2xs font-semibold text-success ring-1 ring-inset ring-success/30">
                 ACTIF
               </span>
             )}
             <StatusBadge status={b.status} variantMap={BRIEF_STATUS_VARIANTS} />
             {b.briefType && (
-              <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-semibold uppercase text-accent">
+              <span className="rounded-full bg-accent/15 px-2 py-0.5 text-2xs font-semibold uppercase text-accent">
                 {b.briefType}
               </span>
             )}
-            <span className="text-[10px] text-foreground-muted">v{b.version}</span>
+            <span className="text-2xs text-foreground-muted">v{b.version}</span>
           </div>
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-foreground-muted">
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-2xs text-foreground-muted">
             <span className="flex items-center gap-1">
               <Megaphone className="h-3 w-3" />
               {b.campaign.name}
@@ -450,7 +450,7 @@ function BriefImportModal({ open, onClose, onSuccess }: { open: boolean; onClose
                 <span className="text-xs font-medium text-foreground-secondary">
                   {fileName ? fileName : "Cliquez pour sélectionner un fichier"}
                 </span>
-                <span className="text-[10px] text-foreground-muted">PDF · DOCX · TXT</span>
+                <span className="text-2xs text-foreground-muted">PDF · DOCX · TXT</span>
                 <input
                   type="file"
                   accept=".pdf,.docx,.txt"
@@ -466,7 +466,7 @@ function BriefImportModal({ open, onClose, onSuccess }: { open: boolean; onClose
               className="flex w-full items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-foreground-muted hover:bg-foreground disabled:opacity-50"
             >
               {previewMut.isPending ? (
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-400 border-t-zinc-900" />
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-border-strong border-t-border-subtle" />
               ) : (
                 <Upload className="h-4 w-4" />
               )}
@@ -488,9 +488,9 @@ function BriefImportModal({ open, onClose, onSuccess }: { open: boolean; onClose
           const marketContext = ctx.marketContext as string | undefined;
           return (
             <>
-              <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3 text-xs text-emerald-300">
+              <div className="rounded-lg border border-success/30 bg-success/5 p-3 text-xs text-success">
                 <p className="font-semibold">Brief analysé avec succès</p>
-                <p className="mt-1 text-emerald-300/80">Vérifiez les informations extraites avant confirmation.</p>
+                <p className="mt-1 text-success/80">Vérifiez les informations extraites avant confirmation.</p>
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-xs">
@@ -502,7 +502,7 @@ function BriefImportModal({ open, onClose, onSuccess }: { open: boolean; onClose
 
               {marketContext && (
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">Contexte marché</p>
+                  <p className="text-2xs font-semibold uppercase tracking-wide text-foreground-muted">Contexte marché</p>
                   <p className="mt-1 text-xs text-foreground-secondary leading-relaxed line-clamp-4">{marketContext}</p>
                 </div>
               )}
@@ -522,7 +522,7 @@ function BriefImportModal({ open, onClose, onSuccess }: { open: boolean; onClose
                   className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-medium text-foreground-muted hover:bg-foreground disabled:opacity-50"
                 >
                   {confirmMut.isPending ? (
-                    <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-zinc-400 border-t-zinc-900" />
+                    <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-border-strong border-t-border-subtle" />
                   ) : (
                     <CheckCircle className="h-3.5 w-3.5" />
                   )}
@@ -537,10 +537,10 @@ function BriefImportModal({ open, onClose, onSuccess }: { open: boolean; onClose
         })()}
 
         {phase === "done" && (
-          <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4 text-center">
-            <CheckCircle className="mx-auto h-8 w-8 text-emerald-400" />
-            <p className="mt-2 text-sm font-medium text-emerald-300">Brief importé avec succès</p>
-            <p className="mt-1 text-xs text-emerald-300/80">Votre campagne est maintenant gouvernée par ce brief.</p>
+          <div className="rounded-lg border border-success/30 bg-success/5 p-4 text-center">
+            <CheckCircle className="mx-auto h-8 w-8 text-success" />
+            <p className="mt-2 text-sm font-medium text-success">Brief importé avec succès</p>
+            <p className="mt-1 text-xs text-success/80">Votre campagne est maintenant gouvernée par ce brief.</p>
           </div>
         )}
       </div>
@@ -597,7 +597,7 @@ export default function BriefsPage() {
     return (
       <div className="space-y-6">
         <PageHeader title="Briefs" />
-        <div className="rounded-xl border border-red-900/50 bg-error/20 p-6 text-center">
+        <div className="rounded-xl border border-error/50 bg-error/20 p-6 text-center">
           <AlertTriangle className="mx-auto h-8 w-8 text-error" />
           <p className="mt-2 text-sm text-error">{missionsQuery.error.message}</p>
         </div>
@@ -740,7 +740,7 @@ export default function BriefsPage() {
               onChange={(e) => setBriefForm({ ...briefForm, objective: e.target.value })}
               rows={2}
               placeholder="Définissez l'objectif principal du brief..."
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong"
             />
           </FormField>
 
@@ -750,7 +750,7 @@ export default function BriefsPage() {
               value={briefForm.targetPersona}
               onChange={(e) => setBriefForm({ ...briefForm, targetPersona: e.target.value })}
               placeholder="Ex: foodies 25-35 ans, Abidjan, 2000+ followers"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong"
             />
           </FormField>
 
@@ -760,7 +760,7 @@ export default function BriefsPage() {
               onChange={(e) => setBriefForm({ ...briefForm, keyMessage: e.target.value })}
               rows={2}
               placeholder="Le message principal à communiquer..."
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong"
             />
           </FormField>
 
@@ -770,7 +770,7 @@ export default function BriefsPage() {
               onChange={(e) => setBriefForm({ ...briefForm, deliverables: e.target.value })}
               rows={3}
               placeholder="Ex: 26 interviews foodies&#10;20 restaurants visités&#10;Rapport terrain"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong"
             />
           </FormField>
 
@@ -811,7 +811,7 @@ export default function BriefsPage() {
               <input type="number" value={briefForm.budget}
                 onChange={(e) => setBriefForm({ ...briefForm, budget: e.target.value })}
                 placeholder="0"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong"
               />
             </FormField>
             <FormField label="Date limite">
@@ -847,7 +847,7 @@ export default function BriefsPage() {
             }}
             className="flex w-full items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-foreground-muted hover:bg-foreground disabled:opacity-50"
           >
-            {createMission.isPending ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-400 border-t-zinc-900" /> : <Send className="h-4 w-4" />}
+            {createMission.isPending ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-border-strong border-t-border-subtle" /> : <Send className="h-4 w-4" />}
             {createMission.isPending ? "Création..." : "Créer le brief"}
           </button>
 

@@ -43,18 +43,18 @@ type CampaignState =
   | "LIVE" | "POST_CAMPAIGN" | "ARCHIVED" | "CANCELLED";
 
 const STATE_COLORS: Record<string, string> = {
-  BRIEF_DRAFT: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
-  BRIEF_VALIDATED: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
-  PLANNING: "bg-accent/15 text-accent ring-violet-400/30",
-  CREATIVE_DEV: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
-  PRODUCTION: "bg-orange-400/15 text-orange-400 ring-orange-400/30",
-  PRE_PRODUCTION: "bg-orange-400/15 text-orange-300 ring-orange-400/30",
-  APPROVAL: "bg-yellow-400/15 text-yellow-400 ring-yellow-400/30",
-  READY_TO_LAUNCH: "bg-cyan-400/15 text-cyan-400 ring-cyan-400/30",
-  LIVE: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
-  POST_CAMPAIGN: "bg-pink-400/15 text-pink-400 ring-pink-400/30",
-  ARCHIVED: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
-  CANCELLED: "bg-error/15 text-error ring-red-400/30",
+  BRIEF_DRAFT: "bg-foreground-muted/15 text-foreground-secondary ring-border/30",
+  BRIEF_VALIDATED: "bg-info/15 text-info ring-info/30",
+  PLANNING: "bg-accent/15 text-accent ring-accent/30",
+  CREATIVE_DEV: "bg-warning/15 text-warning ring-warning/30",
+  PRODUCTION: "bg-warning/15 text-warning ring-warning/30",
+  PRE_PRODUCTION: "bg-warning/15 text-warning ring-warning/30",
+  APPROVAL: "bg-warning/15 text-warning ring-warning/30",
+  READY_TO_LAUNCH: "bg-info/15 text-info ring-info/30",
+  LIVE: "bg-success/15 text-success ring-success/30",
+  POST_CAMPAIGN: "bg-error/15 text-error ring-error/30",
+  ARCHIVED: "bg-foreground-muted/15 text-foreground-secondary ring-border/30",
+  CANCELLED: "bg-error/15 text-error ring-error/30",
 };
 
 function StateBadge({ state }: { state: string }) {
@@ -104,14 +104,14 @@ function Section({ title, icon: Icon, action, children }: { title: string; icon?
 
 function MiniBtn({ onClick, disabled, children, variant = "default" }: { onClick: () => void; disabled?: boolean; children: React.ReactNode; variant?: "default" | "danger" | "primary" }) {
   const base = "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50";
-  const v = variant === "danger" ? "border border-red-800 text-error hover:bg-error/40" : variant === "primary" ? "bg-white text-foreground-muted hover:bg-foreground" : "border border-border bg-background text-foreground-secondary hover:bg-surface-raised";
+  const v = variant === "danger" ? "border border-error text-error hover:bg-error/40" : variant === "primary" ? "bg-white text-foreground-muted hover:bg-foreground" : "border border-border bg-background text-foreground-secondary hover:bg-surface-raised";
   return <button onClick={onClick} disabled={disabled} className={`${base} ${v}`}>{children}</button>;
 }
 
 function KV({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
   return (
     <div>
-      <p className="text-[11px] font-medium uppercase tracking-wide text-foreground-muted">{label}</p>
+      <p className="text-2xs font-medium uppercase tracking-wide text-foreground-muted">{label}</p>
       <p className={`text-sm text-white ${mono ? "font-mono" : ""}`}>{value ?? "—"}</p>
     </div>
   );
@@ -136,7 +136,7 @@ export default function CampaignDetailPage() {
     return (
       <div className="space-y-6">
         <PageHeader title="Campagne introuvable" />
-        <div className="rounded-xl border border-red-900/50 bg-error/20 p-6 text-center">
+        <div className="rounded-xl border border-error/50 bg-error/20 p-6 text-center">
           <ShieldAlert className="mx-auto h-8 w-8 text-error" />
           <p className="mt-2 text-sm text-error">{campaignQuery.error.message}</p>
         </div>
@@ -253,7 +253,7 @@ function OverviewTab({ campaignId, strategyId, state, onRefresh }: { campaignId:
             { label: "Score", value: dashboard.overallScore ?? "—" },
           ].map((s) => (
             <div key={s.label} className="rounded-lg border border-border bg-background/50 p-3">
-              <p className="text-[11px] uppercase text-foreground-muted">{s.label}</p>
+              <p className="text-2xs uppercase text-foreground-muted">{s.label}</p>
               <p className="text-lg font-bold text-white">{String(s.value)}</p>
             </div>
           ))}
@@ -283,7 +283,7 @@ function OverviewTab({ campaignId, strategyId, state, onRefresh }: { campaignId:
           </div>
         )}
         {transitionError && (
-          <div className="mt-3 flex items-start gap-2 rounded-lg border border-red-900/50 bg-error/20 p-3">
+          <div className="mt-3 flex items-start gap-2 rounded-lg border border-error/50 bg-error/20 p-3">
             <ShieldAlert className="mt-0.5 h-4 w-4 flex-shrink-0 text-error" />
             <p className="text-xs text-error">{transitionError}</p>
           </div>
@@ -300,7 +300,7 @@ function OverviewTab({ campaignId, strategyId, state, onRefresh }: { campaignId:
               <div key={m.id as string} className="flex items-center justify-between rounded-lg border border-border bg-background/50 p-3">
                 <div className="flex items-center gap-2">
                   {typeof m.priority === "number" && (
-                    <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${m.priority <= 1 ? "bg-error/20 text-error" : m.priority <= 3 ? "bg-amber-500/20 text-amber-400" : "bg-surface-raised text-foreground-secondary"}`}>
+                    <span className={`flex h-5 w-5 items-center justify-center rounded-full text-2xs font-bold ${m.priority <= 1 ? "bg-error/20 text-error" : m.priority <= 3 ? "bg-warning/20 text-warning" : "bg-surface-raised text-foreground-secondary"}`}>
                       {m.priority}
                     </span>
                   )}
@@ -383,7 +383,7 @@ function ActionsTab({ campaignId }: { campaignId: string }) {
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${a.category === "ATL" ? "bg-blue-500/15 text-blue-400" : a.category === "BTL" ? "bg-emerald-500/15 text-emerald-400" : a.category === "TTL" ? "bg-accent/15 text-accent" : "bg-amber-500/15 text-amber-400"}`}>
+                    <span className={`rounded px-1.5 py-0.5 text-2xs font-bold ${a.category === "ATL" ? "bg-info/15 text-info" : a.category === "BTL" ? "bg-success/15 text-success" : a.category === "TTL" ? "bg-accent/15 text-accent" : "bg-warning/15 text-warning"}`}>
                       {a.category as string}
                     </span>
                     <h4 className="text-sm font-medium text-white">{a.label as string}</h4>
@@ -419,7 +419,7 @@ function ActionsTab({ campaignId }: { campaignId: string }) {
               value={newAction.name}
               onChange={(e) => setNewAction({ ...newAction, name: e.target.value })}
               placeholder="Ex: Spot TV 30s — campagne notoriete"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong"
             />
           </FormField>
           <FormField label="Budget (XAF)">
@@ -428,7 +428,7 @@ function ActionsTab({ campaignId }: { campaignId: string }) {
               value={newAction.budget}
               onChange={(e) => setNewAction({ ...newAction, budget: e.target.value })}
               placeholder="Ex: 500000"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong"
             />
           </FormField>
           <div className="flex justify-end gap-3 pt-2">
@@ -481,7 +481,7 @@ function ExecutionsTab({ campaignId }: { campaignId: string }) {
                   <div>
                     <h4 className="text-sm font-medium text-white">{(ex.label as string) ?? `Execution ${(ex.id as string).slice(0, 8)}`}</h4>
                     <p className="mt-0.5 text-xs text-foreground-muted">Action: {(ex.actionId as string)?.slice(0, 8)}...</p>
-                    {!!ex.deliverableUrl && <p className="mt-1 text-xs text-blue-400">{ex.deliverableUrl as string}</p>}
+                    {!!ex.deliverableUrl && <p className="mt-1 text-xs text-info">{ex.deliverableUrl as string}</p>}
                   </div>
                   <div className="flex items-center gap-2">
                     <StatusBadge status={ex.state as string} />
@@ -498,7 +498,7 @@ function ExecutionsTab({ campaignId }: { campaignId: string }) {
                 {/* Progress bar based on state index */}
                 <div className="mt-3 h-1.5 w-full rounded-full bg-background">
                   <div
-                    className="h-1.5 rounded-full bg-emerald-500 transition-all"
+                    className="h-1.5 rounded-full bg-success transition-all"
                     style={{ width: `${Math.max(10, ((currentIdx + 1) / (EXEC_STATES.length - 1)) * 100)}%` }}
                   />
                 </div>
@@ -552,7 +552,7 @@ function TeamTab({ campaignId }: { campaignId: string }) {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-white">{(user?.name as string) ?? (m.userId as string)?.slice(0, 8)}</p>
-                      <span className="rounded bg-background px-1.5 py-0.5 text-[10px] font-medium text-foreground-secondary">{m.role as string}</span>
+                      <span className="rounded bg-background px-1.5 py-0.5 text-2xs font-medium text-foreground-secondary">{m.role as string}</span>
                     </div>
                   </div>
                   <MiniBtn variant="danger" onClick={() => removeMut.mutate({ campaignId, userId: m.userId as string })} disabled={removeMut.isPending}>
@@ -573,7 +573,7 @@ function TeamTab({ campaignId }: { campaignId: string }) {
               value={newMember.userId}
               onChange={(e) => setNewMember({ ...newMember, userId: e.target.value })}
               placeholder="ID utilisateur"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong"
             />
           </FormField>
           <FormField label="Role" required>
@@ -635,12 +635,12 @@ function MilestonesTab({ campaignId }: { campaignId: string }) {
               const dueDate = ms.dueDate ? new Date(ms.dueDate as string) : null;
               const isOverdue = dueDate && !isComplete && dueDate < new Date();
               return (
-                <div key={ms.id as string} className={`rounded-lg border p-4 ${isComplete ? "border-emerald-900/50 bg-emerald-950/10" : isOverdue ? "border-red-900/50 bg-error/10" : "border-border bg-background/50"}`}>
+                <div key={ms.id as string} className={`rounded-lg border p-4 ${isComplete ? "border-success/50 bg-success/10" : isOverdue ? "border-error/50 bg-error/10" : "border-border bg-background/50"}`}>
                   <div className="flex items-start justify-between">
                     <div>
                       <div className="flex items-center gap-2">
-                        {isComplete && <CheckCircle className="h-4 w-4 text-emerald-400" />}
-                        <h4 className={`text-sm font-medium ${isComplete ? "text-emerald-300 line-through" : "text-white"}`}>{ms.title as string}</h4>
+                        {isComplete && <CheckCircle className="h-4 w-4 text-success" />}
+                        <h4 className={`text-sm font-medium ${isComplete ? "text-success line-through" : "text-white"}`}>{ms.title as string}</h4>
                       </div>
                       {!!ms.phase && <p className="mt-1 text-xs text-foreground-muted">Phase: {ms.phase as string}</p>}
                       {dueDate && (
@@ -673,12 +673,12 @@ function MilestonesTab({ campaignId }: { campaignId: string }) {
           <FormField label="Titre" required>
             <input type="text" value={newMs.title} onChange={(e) => setNewMs({ ...newMs, title: e.target.value })}
               placeholder="Ex: Validation du brief creatif"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong" />
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
           </FormField>
           <FormField label="Phase">
             <input type="text" value={newMs.phase} onChange={(e) => setNewMs({ ...newMs, phase: e.target.value })}
               placeholder="Ex: PLANNING, PRODUCTION, APPROVAL"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong" />
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
           </FormField>
           <FormField label="Date d'echeance" required>
             <input type="date" value={newMs.dueDate} onChange={(e) => setNewMs({ ...newMs, dueDate: e.target.value })}
@@ -731,12 +731,12 @@ function BudgetTab({ campaignId }: { campaignId: string }) {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           { label: "Budget total", value: `${fmt(summary?.total)} XAF`, color: "text-white" },
-          { label: "Depense", value: `${fmt(summary?.spent)} XAF`, color: "text-amber-400" },
-          { label: "Restant", value: `${fmt(summary?.remaining)} XAF`, color: "text-emerald-400" },
-          { label: "Variance", value: `${fmt(variance?.percentage)}%`, color: typeof variance?.percentage === "number" && variance.percentage > 0 ? "text-error" : "text-emerald-400" },
+          { label: "Depense", value: `${fmt(summary?.spent)} XAF`, color: "text-warning" },
+          { label: "Restant", value: `${fmt(summary?.remaining)} XAF`, color: "text-success" },
+          { label: "Variance", value: `${fmt(variance?.percentage)}%`, color: typeof variance?.percentage === "number" && variance.percentage > 0 ? "text-error" : "text-success" },
         ].map((s) => (
           <div key={s.label} className="rounded-lg border border-border bg-background/50 p-3">
-            <p className="text-[11px] uppercase text-foreground-muted">{s.label}</p>
+            <p className="text-2xs uppercase text-foreground-muted">{s.label}</p>
             <p className={`text-lg font-bold ${s.color}`}>{s.value}</p>
           </div>
         ))}
@@ -755,7 +755,7 @@ function BudgetTab({ campaignId }: { campaignId: string }) {
                     <span className="text-white">{fmt(b.amount)} XAF ({Math.round(pct)}%)</span>
                   </div>
                   <div className="mt-1 h-1.5 w-full rounded-full bg-background">
-                    <div className="h-1.5 rounded-full bg-blue-500 transition-all" style={{ width: `${Math.min(100, pct)}%` }} />
+                    <div className="h-1.5 rounded-full bg-info transition-all" style={{ width: `${Math.min(100, pct)}%` }} />
                   </div>
                 </div>
               );
@@ -807,7 +807,7 @@ function BudgetTab({ campaignId }: { campaignId: string }) {
                     <td className="py-2 pr-3 text-foreground-secondary">{l.category as string}</td>
                     <td className="py-2 pr-3 text-white">{l.label as string}</td>
                     <td className="py-2 pr-3 text-right text-foreground-secondary">{fmt(l.plannedAmount)} XAF</td>
-                    <td className="py-2 text-right text-amber-400">{fmt(l.actualAmount)} XAF</td>
+                    <td className="py-2 text-right text-warning">{fmt(l.actualAmount)} XAF</td>
                   </tr>
                 ))}
               </tbody>
@@ -828,7 +828,7 @@ function BudgetTab({ campaignId }: { campaignId: string }) {
           <FormField label="Libelle" required>
             <input type="text" value={newLine.label} onChange={(e) => setNewLine({ ...newLine, label: e.target.value })}
               placeholder="Ex: Achat media Facebook"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong" />
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
           </FormField>
           <FormField label="Montant prevu (XAF)" required>
             <input type="number" value={newLine.planned} onChange={(e) => setNewLine({ ...newLine, planned: e.target.value })}
@@ -837,7 +837,7 @@ function BudgetTab({ campaignId }: { campaignId: string }) {
           <FormField label="Notes">
             <input type="text" value={newLine.notes} onChange={(e) => setNewLine({ ...newLine, notes: e.target.value })}
               placeholder="Notes optionnelles..."
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong" />
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
           </FormField>
           <div className="flex justify-end gap-3 pt-2">
             <MiniBtn onClick={() => setShowAdd(false)}>Annuler</MiniBtn>
@@ -930,7 +930,7 @@ function BriefsTab({ campaignId, strategyId }: { campaignId: string; strategyId:
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="rounded bg-accent/15 px-1.5 py-0.5 text-[10px] font-bold text-accent">{b.type as string}</span>
+                      <span className="rounded bg-accent/15 px-1.5 py-0.5 text-2xs font-bold text-accent">{b.type as string}</span>
                       <h4 className="text-sm font-medium text-white">{(b.title as string) ?? `Brief ${(b.id as string).slice(0, 8)}`}</h4>
                     </div>
                     {!!b.version && <p className="mt-0.5 text-xs text-foreground-muted">v{b.version as number}</p>}
@@ -963,12 +963,12 @@ function BriefsTab({ campaignId, strategyId }: { campaignId: string; strategyId:
           <FormField label="Titre" required>
             <input type="text" value={newBrief.title} onChange={(e) => setNewBrief({ ...newBrief, title: e.target.value })}
               placeholder="Ex: Brief creatif — lancement produit X"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong" />
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
           </FormField>
           <FormField label="Contenu" required>
             <textarea value={newBrief.content} onChange={(e) => setNewBrief({ ...newBrief, content: e.target.value })}
               rows={6} placeholder="Redigez le contenu du brief..."
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong" />
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
           </FormField>
           <div className="flex justify-end gap-3 pt-2">
             <MiniBtn onClick={() => setShowCreate(false)}>Annuler</MiniBtn>
@@ -1010,7 +1010,7 @@ function AssetsTab({ campaignId }: { campaignId: string }) {
                   {!!a.fileSize && <p className="text-xs text-foreground-muted">{Math.round((a.fileSize as number) / 1024)} KB</p>}
                 </div>
                 {!!a.url && (
-                  <a href={a.url as string} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
+                  <a href={a.url as string} target="_blank" rel="noopener noreferrer" className="text-info hover:text-info">
                     <Download className="h-4 w-4" />
                   </a>
                 )}
@@ -1057,15 +1057,15 @@ function AARRRTab({ campaignId, budget }: { campaignId: string; budget?: number 
 
   const STAGES = ["ACQUISITION", "ACTIVATION", "RETENTION", "REFERRAL", "REVENUE"];
   const STAGE_COLORS: Record<string, string> = {
-    ACQUISITION: "border-blue-800 bg-blue-950/20",
-    ACTIVATION: "border-emerald-800 bg-emerald-950/20",
-    RETENTION: "border-amber-800 bg-amber-950/20",
+    ACQUISITION: "border-info bg-info/20",
+    ACTIVATION: "border-success bg-success/20",
+    RETENTION: "border-warning bg-warning/20",
     REFERRAL: "border-accent bg-accent/20",
-    REVENUE: "border-pink-800 bg-pink-950/20",
+    REVENUE: "border-error bg-error/20",
   };
   const STAGE_TEXT_COLORS: Record<string, string> = {
-    ACQUISITION: "text-blue-400", ACTIVATION: "text-emerald-400", RETENTION: "text-amber-400",
-    REFERRAL: "text-accent", REVENUE: "text-pink-400",
+    ACQUISITION: "text-info", ACTIVATION: "text-success", RETENTION: "text-warning",
+    REFERRAL: "text-accent", REVENUE: "text-error",
   };
 
   // Aggregate field report data by AARRR stage
@@ -1099,9 +1099,9 @@ function AARRRTab({ campaignId, budget }: { campaignId: string; budget?: number 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         {STAGES.map((stage) => (
           <div key={stage} className={`rounded-lg border p-3 ${STAGE_COLORS[stage]}`}>
-            <p className="text-[10px] font-bold uppercase text-foreground-muted">{stage}</p>
+            <p className="text-2xs font-bold uppercase text-foreground-muted">{stage}</p>
             <p className={`text-xl font-bold ${STAGE_TEXT_COLORS[stage]}`}>{(ft[stage] ?? 0).toLocaleString("fr-FR")}</p>
-            <p className="text-[10px] text-foreground-muted">terrain</p>
+            <p className="text-2xs text-foreground-muted">terrain</p>
           </div>
         ))}
       </div>
@@ -1114,8 +1114,8 @@ function AARRRTab({ campaignId, budget }: { campaignId: string; budget?: number 
               <div key={i} className="flex items-center gap-2">
                 {i > 0 && <ArrowRight className="h-3 w-3 text-foreground-muted" />}
                 <div className="flex-shrink-0 rounded-lg border border-border bg-background/50 p-2 text-center">
-                  <p className="text-[10px] text-foreground-muted">{c.from} → {c.to}</p>
-                  <p className={`text-lg font-bold ${c.rate != null && c.rate > 0.5 ? "text-emerald-400" : c.rate != null && c.rate > 0.2 ? "text-amber-400" : "text-error"}`}>
+                  <p className="text-2xs text-foreground-muted">{c.from} → {c.to}</p>
+                  <p className={`text-lg font-bold ${c.rate != null && c.rate > 0.5 ? "text-success" : c.rate != null && c.rate > 0.2 ? "text-warning" : "text-error"}`}>
                     {c.rate != null ? `${(c.rate * 100).toFixed(1)}%` : "—"}
                   </p>
                 </div>
@@ -1157,19 +1157,19 @@ function AARRRTab({ campaignId, budget }: { campaignId: string; budget?: number 
                 <div key={stage} className={`rounded-lg border p-4 ${STAGE_COLORS[stage] ?? "border-border bg-background/50"}`} style={{ marginLeft: `${idx * 2}%`, marginRight: `${idx * 2}%` }}>
                   <div className="flex items-center justify-between mb-2">
                     <h5 className="text-xs font-bold text-white">{stage}</h5>
-                    {(fieldTotals as Record<string, number>)[stage]! > 0 && <span className="text-[10px] text-foreground-muted">Terrain: {(fieldTotals as Record<string, number>)[stage]!.toLocaleString("fr-FR")}</span>}
+                    {(fieldTotals as Record<string, number>)[stage]! > 0 && <span className="text-2xs text-foreground-muted">Terrain: {(fieldTotals as Record<string, number>)[stage]!.toLocaleString("fr-FR")}</span>}
                   </div>
                   {stageData?.metrics && stageData.metrics.length > 0 ? (
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                       {stageData.metrics.map((m) => (
                         <div key={m.metric}>
-                          <p className="text-[10px] text-foreground-muted">{m.metric}</p>
+                          <p className="text-2xs text-foreground-muted">{m.metric}</p>
                           <p className="text-sm font-semibold text-white">
                             {m.value.toLocaleString("fr-FR")}
                             {m.target && (
                               <>
                                 <span className="text-xs text-foreground-muted"> / {m.target.toLocaleString("fr-FR")}</span>
-                                <span className={`ml-1 text-[10px] ${m.value >= m.target ? "text-emerald-400" : "text-amber-400"}`}>
+                                <span className={`ml-1 text-2xs ${m.value >= m.target ? "text-success" : "text-warning"}`}>
                                   ({((m.value / m.target) * 100).toFixed(0)}%)
                                 </span>
                               </>
@@ -1218,10 +1218,10 @@ function AARRRTab({ campaignId, budget }: { campaignId: string; budget?: number 
                   return (
                     <tr key={op.id as string} className="border-b border-border/50 hover:bg-background/20">
                       <td className="py-2 text-white">{(op.name as string) ?? (op.title as string)}</td>
-                      <td className="py-2 text-right text-blue-400">{opTotals.acq.toLocaleString("fr-FR")}</td>
-                      <td className="py-2 text-right text-emerald-400">{opTotals.act.toLocaleString("fr-FR")}</td>
-                      <td className="py-2 text-right text-amber-400">{opTotals.ret.toLocaleString("fr-FR")}</td>
-                      <td className="py-2 text-right text-pink-400">{opTotals.rev.toLocaleString("fr-FR")}</td>
+                      <td className="py-2 text-right text-info">{opTotals.acq.toLocaleString("fr-FR")}</td>
+                      <td className="py-2 text-right text-success">{opTotals.act.toLocaleString("fr-FR")}</td>
+                      <td className="py-2 text-right text-warning">{opTotals.ret.toLocaleString("fr-FR")}</td>
+                      <td className="py-2 text-right text-error">{opTotals.rev.toLocaleString("fr-FR")}</td>
                       <td className="py-2 text-right text-accent">{opTotals.ref.toLocaleString("fr-FR")}</td>
                       <td className="py-2 text-right text-foreground-secondary">{opReports.length}</td>
                     </tr>
@@ -1230,10 +1230,10 @@ function AARRRTab({ campaignId, budget }: { campaignId: string; budget?: number 
                 {/* Totals row */}
                 <tr className="border-t border-border font-bold">
                   <td className="py-2 text-white">TOTAL</td>
-                  <td className="py-2 text-right text-blue-400">{fieldTotals.ACQUISITION.toLocaleString("fr-FR")}</td>
-                  <td className="py-2 text-right text-emerald-400">{fieldTotals.ACTIVATION.toLocaleString("fr-FR")}</td>
-                  <td className="py-2 text-right text-amber-400">{fieldTotals.RETENTION.toLocaleString("fr-FR")}</td>
-                  <td className="py-2 text-right text-pink-400">{fieldTotals.REVENUE.toLocaleString("fr-FR")}</td>
+                  <td className="py-2 text-right text-info">{fieldTotals.ACQUISITION.toLocaleString("fr-FR")}</td>
+                  <td className="py-2 text-right text-success">{fieldTotals.ACTIVATION.toLocaleString("fr-FR")}</td>
+                  <td className="py-2 text-right text-warning">{fieldTotals.RETENTION.toLocaleString("fr-FR")}</td>
+                  <td className="py-2 text-right text-error">{fieldTotals.REVENUE.toLocaleString("fr-FR")}</td>
                   <td className="py-2 text-right text-accent">{fieldTotals.REFERRAL.toLocaleString("fr-FR")}</td>
                   <td className="py-2 text-right text-foreground-secondary">{fieldReports.length}</td>
                 </tr>
@@ -1265,7 +1265,7 @@ function AARRRTab({ campaignId, budget }: { campaignId: string; budget?: number 
           <div className="space-y-2">
             {recos.map((r, i) => (
               <div key={i} className="flex items-start gap-3 rounded-lg border border-border bg-background/50 p-3">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-accent/20 text-[10px] font-bold text-accent">{i + 1}</span>
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-accent/20 text-2xs font-bold text-accent">{i + 1}</span>
                 <div>
                   <p className="text-sm text-white">{r.action as string}</p>
                   {!!r.reason && <p className="mt-0.5 text-xs text-foreground-muted">{r.reason as string}</p>}
@@ -1288,7 +1288,7 @@ function AARRRTab({ campaignId, budget }: { campaignId: string; budget?: number 
           <FormField label="Metrique" required>
             <input type="text" value={newMetric.metric} onChange={(e) => setNewMetric({ ...newMetric, metric: e.target.value })}
               placeholder="Ex: impressions, clicks, signups"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong" />
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
           </FormField>
           <div className="grid grid-cols-2 gap-4">
             <FormField label="Valeur" required>
@@ -1298,7 +1298,7 @@ function AARRRTab({ campaignId, budget }: { campaignId: string; budget?: number 
             <FormField label="Cible">
               <input type="number" value={newMetric.target} onChange={(e) => setNewMetric({ ...newMetric, target: e.target.value })}
                 placeholder="Optionnel"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong" />
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
             </FormField>
           </div>
           <FormField label="Periode" required>
@@ -1392,14 +1392,14 @@ function FieldOpsTab({ campaignId }: { campaignId: string }) {
       {stats && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
           {[
-            { label: "Operations", value: stats.totalOps ?? 0, color: "text-blue-400" },
+            { label: "Operations", value: stats.totalOps ?? 0, color: "text-info" },
             { label: "Rapports", value: stats.totalReports ?? 0, color: "text-foreground-secondary" },
-            { label: "Valides", value: stats.validatedReports ?? 0, color: "text-emerald-400" },
-            { label: "En attente", value: stats.pendingReports ?? 0, color: "text-amber-400" },
-            { label: "Budget total", value: ops.reduce((s, o) => s + ((o.budget as number) ?? 0), 0).toLocaleString("fr-FR") + " XAF", color: "text-pink-400" },
+            { label: "Valides", value: stats.validatedReports ?? 0, color: "text-success" },
+            { label: "En attente", value: stats.pendingReports ?? 0, color: "text-warning" },
+            { label: "Budget total", value: ops.reduce((s, o) => s + ((o.budget as number) ?? 0), 0).toLocaleString("fr-FR") + " XAF", color: "text-error" },
           ].map((s) => (
             <div key={s.label} className="rounded-lg border border-border bg-background/50 p-3">
-              <p className="text-[11px] uppercase text-foreground-muted">{s.label}</p>
+              <p className="text-2xs uppercase text-foreground-muted">{s.label}</p>
               <p className={`text-lg font-bold ${s.color}`}>{String(s.value)}</p>
             </div>
           ))}
@@ -1424,20 +1424,20 @@ function FieldOpsTab({ campaignId }: { campaignId: string }) {
               const opReports = reports.filter((r) => r.fieldOpId === op.id);
 
               return (
-                <div key={op.id as string} className={`rounded-lg border p-4 transition-colors cursor-pointer ${isSelected ? "border-blue-700 bg-blue-950/10" : "border-border bg-background/50 hover:border-border"}`}
+                <div key={op.id as string} className={`rounded-lg border p-4 transition-colors cursor-pointer ${isSelected ? "border-info bg-info/10" : "border-border bg-background/50 hover:border-border"}`}
                   onClick={() => setSelectedOpId(isSelected ? null : (op.id as string))}>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
-                          op.status === "COMPLETED" ? "bg-emerald-500/15 text-emerald-400" :
-                          op.status === "IN_PROGRESS" ? "bg-blue-500/15 text-blue-400" :
+                        <span className={`rounded px-1.5 py-0.5 text-2xs font-bold ${
+                          op.status === "COMPLETED" ? "bg-success/15 text-success" :
+                          op.status === "IN_PROGRESS" ? "bg-info/15 text-info" :
                           op.status === "CANCELLED" ? "bg-error/15 text-error" :
-                          "bg-zinc-500/15 text-foreground-secondary"
+                          "bg-foreground-muted/15 text-foreground-secondary"
                         }`}>{(op.status as string) ?? "PLANNED"}</span>
                         <h4 className="text-sm font-medium text-white">{(op.name as string) ?? (op.title as string)}</h4>
                         {!!aarrConfig.primaryStage && (
-                          <span className="rounded bg-accent/15 px-1.5 py-0.5 text-[10px] font-bold text-accent">{aarrConfig.primaryStage as string}</span>
+                          <span className="rounded bg-accent/15 px-1.5 py-0.5 text-2xs font-bold text-accent">{aarrConfig.primaryStage as string}</span>
                         )}
                       </div>
                       <div className="mt-1.5 flex flex-wrap gap-3 text-xs text-foreground-muted">
@@ -1519,7 +1519,7 @@ function FieldOpsTab({ campaignId }: { campaignId: string }) {
                             {(aarrConfig.resources as Array<Record<string, unknown>>).map((r, i) => (
                               <div key={i} className="rounded-lg border border-border bg-background/50 p-2">
                                 <p className="text-xs font-medium text-white">{(r.role as string) ?? "Role"}</p>
-                                <p className="text-[11px] text-foreground-muted">Qty: {(r.count as number) ?? 1}</p>
+                                <p className="text-2xs text-foreground-muted">Qty: {(r.count as number) ?? 1}</p>
                               </div>
                             ))}
                           </div>
@@ -1535,13 +1535,13 @@ function FieldOpsTab({ campaignId }: { campaignId: string }) {
                               <div key={r.id as string} className="rounded-lg border border-border bg-background/60 p-3">
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-2">
-                                    <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
-                                      r.status === "VALIDATED" ? "bg-emerald-500/15 text-emerald-400" :
-                                      r.status === "SUBMITTED" ? "bg-amber-500/15 text-amber-400" :
-                                      "bg-zinc-500/15 text-foreground-secondary"
+                                    <span className={`rounded px-1.5 py-0.5 text-2xs font-bold ${
+                                      r.status === "VALIDATED" ? "bg-success/15 text-success" :
+                                      r.status === "SUBMITTED" ? "bg-warning/15 text-warning" :
+                                      "bg-foreground-muted/15 text-foreground-secondary"
                                     }`}>{(r.status as string) ?? "DRAFT"}</span>
                                     <span className="text-xs text-white">{(r.reporterName as string) ?? "Anonyme"}</span>
-                                    {!!r.createdAt && <span className="text-[10px] text-foreground-muted">{new Date(r.createdAt as string).toLocaleDateString("fr-FR")}</span>}
+                                    {!!r.createdAt && <span className="text-2xs text-foreground-muted">{new Date(r.createdAt as string).toLocaleDateString("fr-FR")}</span>}
                                   </div>
                                   {(r.status === "SUBMITTED" || r.status === "DRAFT") && (
                                     <MiniBtn onClick={() => validateReportMut.mutate({ id: r.id as string, validatorId: "current-user" })} disabled={validateReportMut.isPending}>
@@ -1558,7 +1558,7 @@ function FieldOpsTab({ campaignId }: { campaignId: string }) {
                                     { label: (r.referralLabel as string) ?? "Referral", val: r.referralCount as number, unit: (r.referralUnit as string) ?? "" },
                                   ].map((m) => (
                                     <div key={m.label} className="text-center">
-                                      <p className="text-[10px] text-foreground-muted">{m.label}</p>
+                                      <p className="text-2xs text-foreground-muted">{m.label}</p>
                                       <p className="text-sm font-bold text-white">{m.val != null ? m.val.toLocaleString("fr-FR") : "—"}</p>
                                       {!!m.unit && <p className="text-[9px] text-foreground-muted">{m.unit}</p>}
                                     </div>
@@ -1585,7 +1585,7 @@ function FieldOpsTab({ campaignId }: { campaignId: string }) {
             <FormField label="Nom de l'operation" required>
               <input type="text" value={newOp.name} onChange={(e) => setNewOp({ ...newOp, name: e.target.value })}
                 placeholder="Ex: Activation marche central Douala"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong" />
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
             </FormField>
             <FormField label="Type d'operation">
               <select value={newOp.type} onChange={(e) => setNewOp({ ...newOp, type: e.target.value })}
@@ -1596,7 +1596,7 @@ function FieldOpsTab({ campaignId }: { campaignId: string }) {
             <FormField label="Lieu / Zone d'execution" required>
               <input type="text" value={newOp.location} onChange={(e) => setNewOp({ ...newOp, location: e.target.value })}
                 placeholder="Ex: Douala, Marche Mboppi"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong" />
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
             </FormField>
             <FormField label="Date" required>
               <input type="date" value={newOp.date} onChange={(e) => setNewOp({ ...newOp, date: e.target.value })}
@@ -1605,22 +1605,22 @@ function FieldOpsTab({ campaignId }: { campaignId: string }) {
             <FormField label="Chef des operations">
               <input type="text" value={newOp.chefOps} onChange={(e) => setNewOp({ ...newOp, chefOps: e.target.value })}
                 placeholder="Nom du responsable terrain"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong" />
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
             </FormField>
             <FormField label="Duree">
               <input type="text" value={newOp.duree} onChange={(e) => setNewOp({ ...newOp, duree: e.target.value })}
                 placeholder="Ex: 3 jours, 1 semaine"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong" />
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
             </FormField>
             <FormField label="Budget (XAF)">
               <input type="number" value={newOp.budget} onChange={(e) => setNewOp({ ...newOp, budget: e.target.value })}
                 placeholder="Ex: 500000"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong" />
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
             </FormField>
             <FormField label="Taille de l'equipe">
               <input type="number" value={newOp.teamSize} onChange={(e) => setNewOp({ ...newOp, teamSize: e.target.value })}
                 placeholder="Ex: 5"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong" />
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
             </FormField>
           </div>
 
@@ -1650,7 +1650,7 @@ function FieldOpsTab({ campaignId }: { campaignId: string }) {
             {newOp.team.map((t, i) => (
               <div key={i} className="mb-2 flex gap-2">
                 <input type="text" value={t.name} onChange={(e) => { const tm = [...newOp.team]; tm[i] = { ...tm[i]!, name: e.target.value }; setNewOp({ ...newOp, team: tm }); }}
-                  placeholder="Nom" className="flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-border-strong" />
+                  placeholder="Nom" className="flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
                 <select value={t.role} onChange={(e) => { const tm = [...newOp.team]; tm[i] = { ...tm[i]!, role: e.target.value }; setNewOp({ ...newOp, team: tm }); }}
                   className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-white outline-none focus:border-border-strong">
                   {["agent", "superviseur", "vendeur", "hotesse", "animateur", "chauffeur"].map((r) => <option key={r} value={r}>{r}</option>)}
@@ -1673,9 +1673,9 @@ function FieldOpsTab({ campaignId }: { campaignId: string }) {
             {newOp.ambassadors.map((a, i) => (
               <div key={i} className="mb-2 flex gap-2">
                 <input type="text" value={a.name} onChange={(e) => { const am = [...newOp.ambassadors]; am[i] = { ...am[i]!, name: e.target.value }; setNewOp({ ...newOp, ambassadors: am }); }}
-                  placeholder="Nom" className="flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-border-strong" />
+                  placeholder="Nom" className="flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
                 <input type="text" value={a.phone} onChange={(e) => { const am = [...newOp.ambassadors]; am[i] = { ...am[i]!, phone: e.target.value }; setNewOp({ ...newOp, ambassadors: am }); }}
-                  placeholder="Telephone" className="w-32 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-border-strong" />
+                  placeholder="Telephone" className="w-32 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
                 <MiniBtn variant="danger" onClick={() => setNewOp({ ...newOp, ambassadors: newOp.ambassadors.filter((_, j) => j !== i) })}>
                   <Trash2 className="h-3 w-3" />
                 </MiniBtn>
@@ -1694,9 +1694,9 @@ function FieldOpsTab({ campaignId }: { campaignId: string }) {
             {newOp.resources.map((r, i) => (
               <div key={i} className="mb-2 flex gap-2">
                 <input type="text" value={r.role} onChange={(e) => { const rs = [...newOp.resources]; rs[i] = { ...rs[i]!, role: e.target.value }; setNewOp({ ...newOp, resources: rs }); }}
-                  placeholder="Ex: vendeurs, hotesses, flyers" className="flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-border-strong" />
+                  placeholder="Ex: vendeurs, hotesses, flyers" className="flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
                 <input type="number" value={r.count} onChange={(e) => { const rs = [...newOp.resources]; rs[i] = { ...rs[i]!, count: e.target.value }; setNewOp({ ...newOp, resources: rs }); }}
-                  placeholder="Qty" className="w-20 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-border-strong" />
+                  placeholder="Qty" className="w-20 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
                 <MiniBtn variant="danger" onClick={() => setNewOp({ ...newOp, resources: newOp.resources.filter((_, j) => j !== i) })}>
                   <Trash2 className="h-3 w-3" />
                 </MiniBtn>
@@ -1737,15 +1737,15 @@ function FieldOpsTab({ campaignId }: { campaignId: string }) {
           <FormField label="Nom du rapporteur" required>
             <input type="text" value={newReport.reporterName} onChange={(e) => setNewReport({ ...newReport, reporterName: e.target.value })}
               placeholder="Ex: Jean Mballa"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong" />
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
           </FormField>
 
           <h5 className="text-xs font-semibold text-foreground-secondary">Metriques AARRR</h5>
           {[
-            { stage: "Acquisition", prefix: "acquisition" as const, color: "border-blue-800 bg-blue-950/20" },
-            { stage: "Activation", prefix: "activation" as const, color: "border-emerald-800 bg-emerald-950/20" },
-            { stage: "Retention", prefix: "retention" as const, color: "border-amber-800 bg-amber-950/20" },
-            { stage: "Revenue", prefix: "revenue" as const, color: "border-pink-800 bg-pink-950/20" },
+            { stage: "Acquisition", prefix: "acquisition" as const, color: "border-info bg-info/20" },
+            { stage: "Activation", prefix: "activation" as const, color: "border-success bg-success/20" },
+            { stage: "Retention", prefix: "retention" as const, color: "border-warning bg-warning/20" },
+            { stage: "Revenue", prefix: "revenue" as const, color: "border-error bg-error/20" },
             { stage: "Referral", prefix: "referral" as const, color: "border-accent bg-accent/20" },
           ].map(({ stage, prefix, color }) => (
             <div key={prefix} className={`rounded-lg border p-3 ${color}`}>
@@ -1753,13 +1753,13 @@ function FieldOpsTab({ campaignId }: { campaignId: string }) {
               <div className="grid grid-cols-3 gap-2">
                 <input type="number" value={(newReport as Record<string, string>)[`${prefix}Count`]}
                   onChange={(e) => setNewReport({ ...newReport, [`${prefix}Count`]: e.target.value })}
-                  placeholder="Quantite" className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-white placeholder-zinc-500 outline-none" />
+                  placeholder="Quantite" className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-white placeholder-foreground-muted outline-none" />
                 <input type="text" value={(newReport as Record<string, string>)[`${prefix}Label`]}
                   onChange={(e) => setNewReport({ ...newReport, [`${prefix}Label`]: e.target.value })}
-                  placeholder="Label" className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-white placeholder-zinc-500 outline-none" />
+                  placeholder="Label" className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-white placeholder-foreground-muted outline-none" />
                 <input type="text" value={(newReport as Record<string, string>)[`${prefix}Unit`]}
                   onChange={(e) => setNewReport({ ...newReport, [`${prefix}Unit`]: e.target.value })}
-                  placeholder="Unite" className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-white placeholder-zinc-500 outline-none" />
+                  placeholder="Unite" className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-white placeholder-foreground-muted outline-none" />
               </div>
             </div>
           ))}
@@ -1767,7 +1767,7 @@ function FieldOpsTab({ campaignId }: { campaignId: string }) {
           <FormField label="Notes">
             <textarea value={newReport.notes} onChange={(e) => setNewReport({ ...newReport, notes: e.target.value })}
               rows={3} placeholder="Observations, incidents, remarques..."
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong" />
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
           </FormField>
 
           <div className="flex justify-end gap-3 pt-2">
@@ -1838,14 +1838,14 @@ function AmplificationsTab({ campaignId }: { campaignId: string }) {
       {metrics && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
           {[
-            { label: "Budget total", value: `${metrics.totals.budget?.toLocaleString("fr-FR") ?? 0} XAF`, color: "text-pink-400" },
-            { label: "Impressions", value: metrics.totals.impressions?.toLocaleString("fr-FR") ?? "0", color: "text-blue-400" },
-            { label: "Clicks", value: metrics.totals.clicks?.toLocaleString("fr-FR") ?? "0", color: "text-emerald-400" },
-            { label: "CTR", value: metrics.calculated.ctr != null ? `${(metrics.calculated.ctr * 100).toFixed(2)}%` : "—", color: "text-amber-400" },
+            { label: "Budget total", value: `${metrics.totals.budget?.toLocaleString("fr-FR") ?? 0} XAF`, color: "text-error" },
+            { label: "Impressions", value: metrics.totals.impressions?.toLocaleString("fr-FR") ?? "0", color: "text-info" },
+            { label: "Clicks", value: metrics.totals.clicks?.toLocaleString("fr-FR") ?? "0", color: "text-success" },
+            { label: "CTR", value: metrics.calculated.ctr != null ? `${(metrics.calculated.ctr * 100).toFixed(2)}%` : "—", color: "text-warning" },
             { label: "Conversions", value: metrics.totals.conversions?.toLocaleString("fr-FR") ?? "0", color: "text-accent" },
           ].map((s) => (
             <div key={s.label} className="rounded-lg border border-border bg-background/50 p-3">
-              <p className="text-[11px] uppercase text-foreground-muted">{s.label}</p>
+              <p className="text-2xs uppercase text-foreground-muted">{s.label}</p>
               <p className={`text-lg font-bold ${s.color}`}>{s.value}</p>
             </div>
           ))}
@@ -1862,7 +1862,7 @@ function AmplificationsTab({ campaignId }: { campaignId: string }) {
             { label: "Reach", value: metrics.totals.reach?.toLocaleString("fr-FR") ?? "0" },
           ].map((s) => (
             <div key={s.label} className="rounded-lg border border-border bg-background/50 p-2.5">
-              <p className="text-[10px] uppercase text-foreground-muted">{s.label}</p>
+              <p className="text-2xs uppercase text-foreground-muted">{s.label}</p>
               <p className="text-sm font-semibold text-white">{s.value}</p>
             </div>
           ))}
@@ -1886,8 +1886,8 @@ function AmplificationsTab({ campaignId }: { campaignId: string }) {
                   <div className="flex items-start justify-between">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="rounded bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-bold text-blue-400">{amp.platform as string}</span>
-                        {!!amp.mediaType && <span className="rounded bg-surface-raised px-1.5 py-0.5 text-[10px] font-bold text-foreground-secondary">{amp.mediaType as string}</span>}
+                        <span className="rounded bg-info/15 px-1.5 py-0.5 text-2xs font-bold text-info">{amp.platform as string}</span>
+                        {!!amp.mediaType && <span className="rounded bg-surface-raised px-1.5 py-0.5 text-2xs font-bold text-foreground-secondary">{amp.mediaType as string}</span>}
                         <span className="text-sm font-medium text-white">{((amp.budget as number) ?? 0).toLocaleString("fr-FR")} XAF</span>
                       </div>
                       <div className="mt-1.5 flex flex-wrap gap-3 text-xs text-foreground-muted">
@@ -1923,7 +1923,7 @@ function AmplificationsTab({ campaignId }: { campaignId: string }) {
                       { label: "Engagements", val: amp.engagements as number },
                     ].map((m) => (
                       <div key={m.label} className="text-center">
-                        <p className="text-[10px] text-foreground-muted">{m.label}</p>
+                        <p className="text-2xs text-foreground-muted">{m.label}</p>
                         <p className="text-sm font-bold text-white">{m.val != null ? m.val.toLocaleString("fr-FR") : "—"}</p>
                       </div>
                     ))}
@@ -1935,7 +1935,7 @@ function AmplificationsTab({ campaignId }: { campaignId: string }) {
                       <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
                         {(["impressions", "clicks", "conversions", "reach", "views", "engagements"] as const).map((field) => (
                           <div key={field}>
-                            <label className="text-[10px] text-foreground-muted">{field}</label>
+                            <label className="text-2xs text-foreground-muted">{field}</label>
                             <input type="number" value={(editMetrics as Record<string, string>)[field]}
                               onChange={(e) => setEditMetrics({ ...editMetrics, [field]: e.target.value })}
                               className="w-full rounded border border-border bg-background px-2 py-1 text-xs text-white outline-none" />
@@ -1980,11 +1980,11 @@ function AmplificationsTab({ campaignId }: { campaignId: string }) {
             </FormField>
             <FormField label="Budget total (XAF)" required>
               <input type="number" value={newAmp.budget} onChange={(e) => setNewAmp({ ...newAmp, budget: e.target.value })}
-                placeholder="Ex: 1000000" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong" />
+                placeholder="Ex: 1000000" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
             </FormField>
             <FormField label="Cout media (XAF)">
               <input type="number" value={newAmp.mediaCost} onChange={(e) => setNewAmp({ ...newAmp, mediaCost: e.target.value })}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong" />
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
             </FormField>
             <FormField label="Date debut">
               <input type="date" value={newAmp.startDate} onChange={(e) => setNewAmp({ ...newAmp, startDate: e.target.value })}
@@ -1996,11 +1996,11 @@ function AmplificationsTab({ campaignId }: { campaignId: string }) {
             </FormField>
             <FormField label="Cout production (XAF)">
               <input type="number" value={newAmp.productionCost} onChange={(e) => setNewAmp({ ...newAmp, productionCost: e.target.value })}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong" />
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
             </FormField>
             <FormField label="Frais agence (XAF)">
               <input type="number" value={newAmp.agencyFee} onChange={(e) => setNewAmp({ ...newAmp, agencyFee: e.target.value })}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong" />
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
             </FormField>
           </div>
           <div className="flex justify-end gap-3 pt-2">
@@ -2067,7 +2067,7 @@ function ReportsTab({ campaignId }: { campaignId: string }) {
                 <Icon className="h-4 w-4 text-foreground-secondary" />
                 <div>
                   <p className="text-xs font-medium text-white">{rt.label}</p>
-                  <p className="text-[10px] text-foreground-muted">{generating === rt.type ? "Generation..." : "Cliquer pour generer"}</p>
+                  <p className="text-2xs text-foreground-muted">{generating === rt.type ? "Generation..." : "Cliquer pour generer"}</p>
                 </div>
               </button>
             );
@@ -2086,7 +2086,7 @@ function ReportsTab({ campaignId }: { campaignId: string }) {
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="rounded bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-bold text-blue-400">{r.type as string}</span>
+                      <span className="rounded bg-info/15 px-1.5 py-0.5 text-2xs font-bold text-info">{r.type as string}</span>
                       <h4 className="text-sm font-medium text-white">{(r.title as string) ?? `Rapport ${(r.id as string).slice(0, 8)}`}</h4>
                     </div>
                     <p className="mt-0.5 text-xs text-foreground-muted">
@@ -2094,7 +2094,7 @@ function ReportsTab({ campaignId }: { campaignId: string }) {
                     </p>
                   </div>
                   {!!r.url && (
-                    <a href={r.url as string} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
+                    <a href={r.url as string} target="_blank" rel="noopener noreferrer" className="text-info hover:text-info">
                       <Download className="h-4 w-4" />
                     </a>
                   )}

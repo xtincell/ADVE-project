@@ -293,7 +293,7 @@ function Card({ children, className, span }: { children: React.ReactNode; classN
 }
 
 function Label({ children }: { children: React.ReactNode }) {
-  return <p className="text-[10px] font-semibold text-foreground-muted uppercase tracking-wide mb-1.5">{children}</p>;
+  return <p className="text-2xs font-semibold text-foreground-muted uppercase tracking-wide mb-1.5">{children}</p>;
 }
 
 function Empty({ label }: { label: string }) {
@@ -346,7 +346,7 @@ export function MetricCard({ label, value, suffix, accent }: { label: string; va
   const finite = Number.isFinite(value);
   return (
     <div className="rounded-lg border border-white/5 bg-surface-raised p-3 text-center">
-      <p className="text-[10px] font-semibold text-foreground-muted uppercase tracking-wide">{label}</p>
+      <p className="text-2xs font-semibold text-foreground-muted uppercase tracking-wide">{label}</p>
       <p className={`text-xl font-bold ${accent}`}>{finite ? value.toLocaleString() : "—"}{finite && suffix ? <span className="text-xs text-foreground-muted ml-0.5">{suffix}</span> : null}</p>
     </div>
   );
@@ -356,7 +356,7 @@ export function MetricCard({ label, value, suffix, accent }: { label: string; va
 export function BadgeCard({ label, value, color }: { label: string; value: string; color: string }) {
   return (
     <div className={`rounded-lg border p-3 ${color}`}>
-      <p className="text-[10px] font-semibold uppercase tracking-wide opacity-70">{label}</p>
+      <p className="text-2xs font-semibold uppercase tracking-wide opacity-70">{label}</p>
       <p className="text-lg font-bold mt-0.5">{value}</p>
     </div>
   );
@@ -405,7 +405,7 @@ export function ItemList({ label, items, onFocus, nameKey }: { label: string; it
             </div>
           </div>
         ))}
-        {items.length > 15 ? <p className="text-[10px] text-foreground-muted px-1">+{items.length - 15} autres</p> : null}
+        {items.length > 15 ? <p className="text-2xs text-foreground-muted px-1">+{items.length - 15} autres</p> : null}
       </div>
     </Card>
   );
@@ -422,26 +422,26 @@ export function ObjectCard({ label, obj, onFocus }: { label: string; obj: Record
       <div className={`space-y-1.5 ${onFocus ? "cursor-pointer" : ""}`} onClick={onFocus ? () => onFocus(obj) : undefined}>
         {entries.map(([k, v]) => (
           <div key={k} className="rounded bg-white/5 px-3 py-1.5">
-            <span className="text-[10px] text-foreground-muted">{getFieldLabel(k)}</span>
+            <span className="text-2xs text-foreground-muted">{getFieldLabel(k)}</span>
             {typeof v === "string" ? (
               <p className="text-xs text-white/80 mt-0.5">{v.slice(0, 200)}{v.length > 200 ? "..." : ""}</p>
             ) : Array.isArray(v) ? (
               <div className="flex flex-wrap gap-1 mt-0.5">
                 {v.slice(0, 5).map((item, i) => (
-                  <span key={i} className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-white/70">
+                  <span key={i} className="rounded bg-white/5 px-1.5 py-0.5 text-2xs text-white/70">
                     {typeof item === "string" ? item : typeof item === "number" ? item.toLocaleString() : typeof item === "object" && item !== null ? extractLabel(item as Record<string, unknown>) : String(item)}
                   </span>
                 ))}
-                {v.length > 5 ? <span className="text-[10px] text-foreground-muted">+{v.length - 5}</span> : null}
+                {v.length > 5 ? <span className="text-2xs text-foreground-muted">+{v.length - 5}</span> : null}
               </div>
             ) : typeof v === "boolean" ? (
-              <span className={`text-xs ${v ? "text-emerald-400" : "text-error"}`}>{v ? "Oui" : "Non"}</span>
+              <span className={`text-xs ${v ? "text-success" : "text-error"}`}>{v ? "Oui" : "Non"}</span>
             ) : typeof v === "number" ? (
               <span className="text-xs text-white font-medium">{v.toLocaleString()}</span>
             ) : typeof v === "object" && v !== null ? (
               <div className="mt-0.5 space-y-0.5">
                 {Object.entries(v as Record<string, unknown>).filter(([, sv]) => sv != null && sv !== "").slice(0, 6).map(([sk, sv]) => (
-                  <div key={sk} className="flex gap-1.5 text-[10px]">
+                  <div key={sk} className="flex gap-1.5 text-2xs">
                     <span className="text-foreground-muted/60 shrink-0">{getFieldLabel(sk)}:</span>
                     <span className="text-white/60 truncate">{typeof sv === "string" ? sv.slice(0, 80) : Array.isArray(sv) ? sv.slice(0, 3).map(x => typeof x === "string" ? x : extractLabel(x as Record<string, unknown>)).join(", ") + (sv.length > 3 ? ` +${sv.length - 3}` : "") : typeof sv === "number" ? sv.toLocaleString() : String(sv)}</span>
                   </div>
@@ -460,10 +460,10 @@ export function ObjectCard({ label, obj, onFocus }: { label: string; obj: Record
 /** SWOT grid — 4 quadrants */
 export function SWOTCard({ swot }: { swot: Record<string, unknown> }) {
   const quadrants = [
-    { key: "strengths", label: "Forces", color: "text-emerald-400 border-emerald-500/30 bg-emerald-500/5" },
-    { key: "weaknesses", label: "Faiblesses", color: "text-error border-red-500/30 bg-error/5" },
-    { key: "opportunities", label: "Opportunites", color: "text-blue-400 border-blue-500/30 bg-blue-500/5" },
-    { key: "threats", label: "Menaces", color: "text-amber-400 border-amber-500/30 bg-amber-500/5" },
+    { key: "strengths", label: "Forces", color: "text-success border-success/30 bg-success/5" },
+    { key: "weaknesses", label: "Faiblesses", color: "text-error border-error/30 bg-error/5" },
+    { key: "opportunities", label: "Opportunites", color: "text-info border-info/30 bg-info/5" },
+    { key: "threats", label: "Menaces", color: "text-warning border-warning/30 bg-warning/5" },
   ];
   return (
     <Card span={2}>
@@ -472,7 +472,7 @@ export function SWOTCard({ swot }: { swot: Record<string, unknown> }) {
         {quadrants.map(q => (
           <div key={q.key} className={`rounded-lg border p-3 ${q.color}`}>
             <p className="text-xs font-semibold mb-1">{q.label}</p>
-            <ul className="space-y-0.5 text-[11px]">
+            <ul className="space-y-0.5 text-2xs">
               {Array.isArray(swot[q.key]) ? (swot[q.key] as string[]).map((item, i) => (
                 <li key={i}>• {item}</li>
               )) : null}
@@ -489,10 +489,10 @@ export function SWOTCard({ swot }: { swot: Record<string, unknown> }) {
  *  (alias court FR-EN). Fallback chain par quadrant. */
 export function IkigaiCard({ ikigai }: { ikigai: Record<string, unknown> }) {
   const quadrants = [
-    { aliases: ["love", "passion", "amour", "ce_que_vous_aimez", "ceQueVousAimez"], label: "Ce qu'on aime", color: "text-pink-400" },
-    { aliases: ["competence", "skill", "savoir", "talent", "ce_en_quoi_vous_excellez", "ceEnQuoiVousExcellez"], label: "Ce qu'on sait faire", color: "text-blue-400" },
-    { aliases: ["worldNeed", "good", "besoin", "mission", "ce_dont_le_monde_a_besoin", "ceDontLeMondeABesoin"], label: "Ce dont le monde a besoin", color: "text-emerald-400" },
-    { aliases: ["remuneration", "paid", "vocation", "job", "ce_pour_quoi_vous_pouvez_etre_paye", "cePourQuoiVousPouvezEtrePaye"], label: "Ce pour quoi on est paye", color: "text-amber-400" },
+    { aliases: ["love", "passion", "amour", "ce_que_vous_aimez", "ceQueVousAimez"], label: "Ce qu'on aime", color: "text-error" },
+    { aliases: ["competence", "skill", "savoir", "talent", "ce_en_quoi_vous_excellez", "ceEnQuoiVousExcellez"], label: "Ce qu'on sait faire", color: "text-info" },
+    { aliases: ["worldNeed", "good", "besoin", "mission", "ce_dont_le_monde_a_besoin", "ceDontLeMondeABesoin"], label: "Ce dont le monde a besoin", color: "text-success" },
+    { aliases: ["remuneration", "paid", "vocation", "job", "ce_pour_quoi_vous_pouvez_etre_paye", "cePourQuoiVousPouvezEtrePaye"], label: "Ce pour quoi on est paye", color: "text-warning" },
   ];
   function pickValue(aliases: string[]): unknown {
     for (const a of aliases) {
@@ -508,7 +508,7 @@ export function IkigaiCard({ ikigai }: { ikigai: Record<string, unknown> }) {
           const value = pickValue(q.aliases);
           return (
             <div key={q.aliases[0]} className="rounded-lg border border-white/10 bg-white/5 p-3">
-              <p className={`text-[10px] font-semibold ${q.color}`}>{q.label}</p>
+              <p className={`text-2xs font-semibold ${q.color}`}>{q.label}</p>
               <p className="mt-1 text-xs text-white/80 leading-relaxed">{value != null ? String(value) : "—"}</p>
             </div>
           );
@@ -524,18 +524,18 @@ export function OvertonCard({ overton }: { overton: Record<string, unknown> }) {
     <Card span={2}>
       <Label>Fenetre d'Overton</Label>
       <div className="grid gap-2 md:grid-cols-2 mb-2">
-        <div className="rounded-lg border border-red-500/20 bg-error/5 p-3">
-          <p className="text-[10px] font-semibold text-error">Perception actuelle</p>
+        <div className="rounded-lg border border-error/20 bg-error/5 p-3">
+          <p className="text-2xs font-semibold text-error">Perception actuelle</p>
           <p className="mt-1 text-xs text-white/80">{String(overton.perceptionActuelle ?? "—")}</p>
         </div>
-        <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
-          <p className="text-[10px] font-semibold text-emerald-400">Perception cible</p>
+        <div className="rounded-lg border border-success/20 bg-success/5 p-3">
+          <p className="text-2xs font-semibold text-success">Perception cible</p>
           <p className="mt-1 text-xs text-white/80">{String(overton.perceptionCible ?? "—")}</p>
         </div>
       </div>
       {overton.ecart ? (
-        <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3">
-          <p className="text-[10px] font-semibold text-amber-400">Ecart</p>
+        <div className="rounded-lg border border-warning/20 bg-warning/5 p-3">
+          <p className="text-2xs font-semibold text-warning">Ecart</p>
           <p className="mt-1 text-xs text-white/80">{String(overton.ecart)}</p>
         </div>
       ) : null}
@@ -564,7 +564,7 @@ export function TAMCard({ tam }: { tam: Record<string, unknown> }) {
             const displayValue = typeof raw === "number" ? raw.toLocaleString() : raw;
             return (
               <div key={k} className="rounded-lg border border-white/10 bg-white/5 p-3 text-center">
-                <p className="text-[10px] font-semibold text-foreground-muted">{k.toUpperCase()}</p>
+                <p className="text-2xs font-semibold text-foreground-muted">{k.toUpperCase()}</p>
                 <p className="text-lg font-bold text-white">{displayValue}</p>
               </div>
             );
@@ -573,11 +573,11 @@ export function TAMCard({ tam }: { tam: Record<string, unknown> }) {
           const d = raw as Record<string, unknown>;
           return (
             <div key={k} className="rounded-lg border border-white/10 bg-white/5 p-3 text-center">
-              <p className="text-[10px] font-semibold text-foreground-muted">{k.toUpperCase()}</p>
+              <p className="text-2xs font-semibold text-foreground-muted">{k.toUpperCase()}</p>
               <p className="text-lg font-bold text-white">{d.value ? Number(d.value).toLocaleString() : "—"}</p>
-              <p className="text-[10px] text-foreground-muted">{String(d.description ?? "")}</p>
+              <p className="text-2xs text-foreground-muted">{String(d.description ?? "")}</p>
               {d.source ? (
-                <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[9px] ${d.source === "verified" ? "bg-emerald-500/15 text-emerald-300" : "bg-amber-500/15 text-amber-300"}`}>
+                <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[9px] ${d.source === "verified" ? "bg-success/15 text-success" : "bg-warning/15 text-warning"}`}>
                   {d.source === "verified" ? "Verifie" : "Estimation IA"}
                 </span>
               ) : null}
@@ -585,7 +585,7 @@ export function TAMCard({ tam }: { tam: Record<string, unknown> }) {
           );
         })}
       </div>
-      {methode ? <p className="mt-2 text-[10px] italic text-foreground-muted/70">Méthode : {methode}</p> : null}
+      {methode ? <p className="mt-2 text-2xs italic text-foreground-muted/70">Méthode : {methode}</p> : null}
     </Card>
   );
 }
@@ -597,7 +597,7 @@ function FocusValue({ value }: { value: unknown }) {
   if (value == null || value === "") return null;
   if (typeof value === "string") return <p className="mt-0.5 text-sm text-white whitespace-pre-wrap">{value}</p>;
   if (typeof value === "number") return <p className="mt-0.5 text-sm text-white font-medium">{value.toLocaleString()}</p>;
-  if (typeof value === "boolean") return <span className={`text-sm ${value ? "text-emerald-400" : "text-error"}`}>{value ? "Oui" : "Non"}</span>;
+  if (typeof value === "boolean") return <span className={`text-sm ${value ? "text-success" : "text-error"}`}>{value ? "Oui" : "Non"}</span>;
   if (Array.isArray(value)) {
     if (value.length === 0) return null;
     if (typeof value[0] === "string") {
@@ -614,7 +614,7 @@ function FocusValue({ value }: { value: unknown }) {
           <div key={i} className="rounded bg-white/5 p-2 space-y-1">
             {Object.entries(obj).filter(([, v]) => v != null && v !== "").map(([k, v]) => (
               <div key={k} className="flex gap-2">
-                <span className="text-[10px] text-foreground-muted shrink-0">{getFieldLabel(k)}</span>
+                <span className="text-2xs text-foreground-muted shrink-0">{getFieldLabel(k)}</span>
                 <span className="text-xs text-white/80">{typeof v === "object" && v !== null ? (Array.isArray(v) ? v.map((x) => typeof x === "string" ? x : typeof x === "object" && x !== null ? extractLabel(x as Record<string, unknown>) : String(x)).join(", ") : Object.values(v as Record<string, unknown>).map((x) => typeof x === "string" ? x : typeof x === "object" && x !== null ? extractLabel(x as Record<string, unknown>) : String(x)).join(", ")) : String(v)}</span>
               </div>
             ))}
@@ -628,7 +628,7 @@ function FocusValue({ value }: { value: unknown }) {
       <div className="mt-1 space-y-1">
         {Object.entries(value as Record<string, unknown>).filter(([, v]) => v != null && v !== "").map(([k, v]) => (
           <div key={k} className="rounded bg-white/5 px-2.5 py-1.5">
-            <span className="text-[10px] text-foreground-muted">{getFieldLabel(k)}</span>
+            <span className="text-2xs text-foreground-muted">{getFieldLabel(k)}</span>
             <FocusValue value={v} />
           </div>
         ))}
@@ -648,7 +648,7 @@ export function FocusModal({ item, onClose }: { item: Record<string, unknown>; o
             .filter(([, v]) => v != null && v !== "")
             .map(([key, value]) => (
               <div key={key}>
-                <p className="text-[10px] font-semibold text-foreground-muted uppercase tracking-wide">{getFieldLabel(key)}</p>
+                <p className="text-2xs font-semibold text-foreground-muted uppercase tracking-wide">{getFieldLabel(key)}</p>
                 <FocusValue value={value} />
               </div>
             ))}
@@ -667,35 +667,35 @@ export function FocusModal({ item, onClose }: { item: Record<string, unknown>; o
 
 function BudgetBadge({ level }: { level: string }) {
   const c = level === "HIGH" ? "bg-error/15 text-error" :
-            level === "MEDIUM" ? "bg-amber-500/15 text-amber-300" :
-            "bg-emerald-500/15 text-emerald-300";
+            level === "MEDIUM" ? "bg-warning/15 text-warning" :
+            "bg-success/15 text-success";
   return <span className={`rounded-full px-2 py-0.5 text-[9px] font-medium ${c}`}>{level}</span>;
 }
 
 function DevotionBadge({ level }: { level: string }) {
   const colors: Record<string, string> = {
-    SPECTATEUR: "bg-zinc-500/15 text-foreground-secondary",
-    INTERESSE: "bg-blue-500/15 text-blue-300",
-    PARTICIPANT: "bg-sky-500/15 text-sky-300",
+    SPECTATEUR: "bg-foreground-muted/15 text-foreground-secondary",
+    INTERESSE: "bg-info/15 text-info",
+    PARTICIPANT: "bg-info/15 text-info",
     ENGAGE: "bg-accent/15 text-accent",
-    AMBASSADEUR: "bg-amber-500/15 text-amber-300",
-    EVANGELISTE: "bg-emerald-500/15 text-emerald-300",
+    AMBASSADEUR: "bg-warning/15 text-warning",
+    EVANGELISTE: "bg-success/15 text-success",
   };
   return <span className={`rounded-full px-2 py-0.5 text-[9px] font-medium ${colors[level] ?? "bg-white/10 text-foreground-muted"}`}>{level}</span>;
 }
 
 function FeasibilityBadge({ level }: { level: string }) {
-  const c = level === "HIGH" ? "bg-emerald-500/15 text-emerald-300" :
-            level === "MEDIUM" ? "bg-amber-500/15 text-amber-300" :
+  const c = level === "HIGH" ? "bg-success/15 text-success" :
+            level === "MEDIUM" ? "bg-warning/15 text-warning" :
             "bg-error/15 text-error";
   return <span className={`rounded-full px-2 py-0.5 text-[9px] font-medium ${c}`}>{level}</span>;
 }
 
 function RiskColorCell({ probability, impact }: { probability: string; impact: string }) {
   const score = (["LOW", "MEDIUM", "HIGH"].indexOf(probability) + 1) * (["LOW", "MEDIUM", "HIGH"].indexOf(impact) + 1);
-  const c = score >= 6 ? "bg-error/20 border-red-500/30 text-error" :
-            score >= 3 ? "bg-amber-500/20 border-amber-500/30 text-amber-300" :
-            "bg-emerald-500/20 border-emerald-500/30 text-emerald-300";
+  const c = score >= 6 ? "bg-error/20 border-error/30 text-error" :
+            score >= 3 ? "bg-warning/20 border-warning/30 text-warning" :
+            "bg-success/20 border-success/30 text-success";
   return <span className={`rounded px-1.5 py-0.5 text-[9px] font-medium border ${c}`}>P:{probability} I:{impact}</span>;
 }
 
@@ -717,15 +717,15 @@ export function CatalogueParCanalCard({ data, onFocus }: { data: Record<string, 
   if (channels.length === 0) return null;
 
   const channelColors: Record<string, string> = {
-    DIGITAL: "border-blue-500/20 text-blue-400",
-    EVENEMENTIEL: "border-amber-500/20 text-amber-400",
-    PRINT: "border-emerald-500/20 text-emerald-400",
-    RADIO: "border-purple-500/20 text-purple-400",
-    TV: "border-red-500/20 text-error",
-    OOH: "border-sky-500/20 text-sky-400",
-    SOCIAL: "border-pink-500/20 text-pink-400",
-    INFLUENCE: "border-orange-500/20 text-orange-400",
-    PR: "border-teal-500/20 text-teal-400",
+    DIGITAL: "border-info/20 text-info",
+    EVENEMENTIEL: "border-warning/20 text-warning",
+    PRINT: "border-success/20 text-success",
+    RADIO: "border-accent/20 text-accent",
+    TV: "border-error/20 text-error",
+    OOH: "border-info/20 text-info",
+    SOCIAL: "border-error/20 text-error",
+    INFLUENCE: "border-warning/20 text-warning",
+    PR: "border-success/20 text-success",
   };
 
   return (
@@ -737,7 +737,7 @@ export function CatalogueParCanalCard({ data, onFocus }: { data: Record<string, 
             <div className={`flex items-center gap-2 mb-1.5 border-l-2 pl-2 ${channelColors[canal] ?? "border-white/20 text-foreground-muted"}`}>
               <Megaphone className="h-3 w-3" />
               <span className="text-xs font-semibold uppercase tracking-wide">{canal}</span>
-              <span className="text-[10px] text-foreground-muted">({actions.length})</span>
+              <span className="text-2xs text-foreground-muted">({actions.length})</span>
             </div>
             <div className="space-y-1 ml-4">
               {(actions as Array<Record<string, unknown>>).slice(0, 8).map((a, i) => (
@@ -746,14 +746,14 @@ export function CatalogueParCanalCard({ data, onFocus }: { data: Record<string, 
                   className={`rounded bg-white/[0.03] px-3 py-1.5 text-xs ${onFocus ? "cursor-pointer hover:bg-white/[0.06] transition-colors" : ""}`}>
                   <div className="flex items-center gap-2">
                     <span className="text-white font-medium">{String(a.action ?? a.name ?? a.title ?? "")}</span>
-                    {a.format ? <span className="text-foreground-muted/60 text-[10px]">{String(a.format)}</span> : null}
+                    {a.format ? <span className="text-foreground-muted/60 text-2xs">{String(a.format)}</span> : null}
                     {a.devotionImpact ? <DevotionBadge level={String(a.devotionImpact)} /> : null}
                     {onFocus ? <ChevronRight className="h-3 w-3 ml-auto flex-shrink-0 text-foreground-muted/30" /> : null}
                   </div>
-                  {a.objectif ? <p className="text-[10px] text-foreground-muted mt-0.5">{String(a.objectif)}</p> : null}
+                  {a.objectif ? <p className="text-2xs text-foreground-muted mt-0.5">{String(a.objectif)}</p> : null}
                 </div>
               ))}
-              {actions.length > 8 ? <p className="text-[10px] text-foreground-muted px-3">+{actions.length - 8} autres</p> : null}
+              {actions.length > 8 ? <p className="text-2xs text-foreground-muted px-3">+{actions.length - 8} autres</p> : null}
             </div>
           </div>
         ))}
@@ -768,10 +768,10 @@ export function RoadmapCard({ phases }: { phases: Array<Record<string, unknown>>
   return (
     <Card span={2}>
       <div className="flex items-center gap-2 mb-3">
-        <Target className="h-4 w-4 text-pink-400" />
+        <Target className="h-4 w-4 text-error" />
         <Label>Roadmap</Label>
       </div>
-      <div className="relative ml-3 border-l border-pink-500/30 pl-5 space-y-4">
+      <div className="relative ml-3 border-l border-error/30 pl-5 space-y-4">
         {phases.map((p, i) => {
           // Drift LLM : items souvent `{ id, name }` minimal au lieu du shape
           // canon `{ phase, duree, budget, objectif, actions, objectifDevotion }`.
@@ -784,19 +784,19 @@ export function RoadmapCard({ phases }: { phases: Array<Record<string, unknown>>
           return (
             <div key={i} className="relative">
               {/* Timeline dot */}
-              <div className="absolute -left-[1.625rem] top-1 h-2.5 w-2.5 rounded-full border-2 border-pink-500/50 bg-background" />
+              <div className="absolute -left-[1.625rem] top-1 h-2.5 w-2.5 rounded-full border-2 border-error/50 bg-background" />
               <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-sm font-semibold text-white">{phaseLabel}</span>
-                  {duree ? <span className="flex items-center gap-0.5 text-[10px] text-foreground-muted"><Clock className="h-2.5 w-2.5" />{String(duree)}</span> : null}
-                  {budget ? <span className="flex items-center gap-0.5 text-[10px] text-emerald-300"><DollarSign className="h-2.5 w-2.5" />{Number(budget).toLocaleString()} XAF</span> : null}
+                  {duree ? <span className="flex items-center gap-0.5 text-2xs text-foreground-muted"><Clock className="h-2.5 w-2.5" />{String(duree)}</span> : null}
+                  {budget ? <span className="flex items-center gap-0.5 text-2xs text-success"><DollarSign className="h-2.5 w-2.5" />{Number(budget).toLocaleString()} XAF</span> : null}
                 </div>
                 {objectif ? <p className="text-xs text-white/70">{String(objectif)}</p> : null}
                 {devotion ? <div className="mt-1"><DevotionBadge level={String(devotion)} /></div> : null}
                 {actions.length > 0 ? (
                   <div className="mt-2 flex flex-wrap gap-1">
                     {(actions as unknown[]).map((a, j) => (
-                      <span key={j} className="rounded bg-white/5 px-2 py-0.5 text-[10px] text-white/60">{typeof a === "string" ? a : extractLabel(a as Record<string, unknown>)}</span>
+                      <span key={j} className="rounded bg-white/5 px-2 py-0.5 text-2xs text-white/60">{typeof a === "string" ? a : extractLabel(a as Record<string, unknown>)}</span>
                     ))}
                   </div>
                 ) : null}
@@ -818,7 +818,7 @@ export function Sprint90DaysCard({ sprints }: { sprints: Array<Record<string, un
   return (
     <Card span={2}>
       <div className="flex items-center gap-2 mb-3">
-        <Zap className="h-4 w-4 text-pink-400" />
+        <Zap className="h-4 w-4 text-error" />
         <Label>Sprint 90 jours ({sprints.length} actions)</Label>
       </div>
       <div className="space-y-1.5">
@@ -830,12 +830,12 @@ export function Sprint90DaysCard({ sprints }: { sprints: Array<Record<string, un
           const devotion = s.devotionImpact ?? s.devotionTarget ?? null;
           return (
             <div key={i} className="flex items-start gap-3 rounded-lg bg-white/[0.02] px-3 py-2">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-pink-500/15 text-[10px] font-bold text-pink-300">{priority}</span>
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-error/15 text-2xs font-bold text-error">{priority}</span>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-white">{action || <em className="text-foreground-muted/50 italic">(sans action)</em>}</p>
                 <div className="flex flex-wrap gap-2 mt-1">
-                  {owner ? <span className="text-[10px] text-foreground-muted"><Users className="inline h-2.5 w-2.5 mr-0.5" />{String(owner)}</span> : null}
-                  {kpi ? <span className="text-[10px] text-foreground-muted"><TrendingUp className="inline h-2.5 w-2.5 mr-0.5" />{String(kpi)}</span> : null}
+                  {owner ? <span className="text-2xs text-foreground-muted"><Users className="inline h-2.5 w-2.5 mr-0.5" />{String(owner)}</span> : null}
+                  {kpi ? <span className="text-2xs text-foreground-muted"><TrendingUp className="inline h-2.5 w-2.5 mr-0.5" />{String(kpi)}</span> : null}
                   {devotion ? <DevotionBadge level={String(devotion)} /> : null}
                   {s.isRiskMitigation ? <span className="rounded-full bg-error/15 px-1.5 py-0.5 text-[9px] text-error"><Shield className="inline h-2.5 w-2.5 mr-0.5" />Risque</span> : null}
                 </div>
@@ -866,14 +866,14 @@ export function PersonasCard({ personas, onFocus }: { personas: Array<Record<str
                 {p.devotionPotential ? <DevotionBadge level={String(p.devotionPotential)} /> : null}
               </div>
             </div>
-            <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-foreground-muted mb-2">
+            <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-2xs text-foreground-muted mb-2">
               {p.age ? <span>{String(p.age)} ans</span> : null}
               {p.csp ? <span>{String(p.csp)}</span> : null}
               {p.location ? <span>{String(p.location)}</span> : null}
               {p.income ? <span>{String(p.income)}</span> : null}
             </div>
-            {p.motivations ? <p className="text-[11px] text-emerald-300/80 line-clamp-2"><Flame className="inline h-2.5 w-2.5 mr-0.5" />{String(p.motivations)}</p> : null}
-            {p.fears ? <p className="text-[11px] text-error/70 mt-0.5 line-clamp-1"><Shield className="inline h-2.5 w-2.5 mr-0.5" />{String(p.fears)}</p> : null}
+            {p.motivations ? <p className="text-2xs text-success/80 line-clamp-2"><Flame className="inline h-2.5 w-2.5 mr-0.5" />{String(p.motivations)}</p> : null}
+            {p.fears ? <p className="text-2xs text-error/70 mt-0.5 line-clamp-1"><Shield className="inline h-2.5 w-2.5 mr-0.5" />{String(p.fears)}</p> : null}
             {onFocus ? <ChevronRight className="h-3 w-3 text-foreground-muted/30 mt-1 ml-auto" /> : null}
           </div>
         ))}
@@ -895,18 +895,18 @@ export function ProduitsCatalogueCard({ produits, onFocus }: { produits: Array<R
             className={`rounded-lg border border-white/5 bg-white/[0.02] p-3 ${onFocus ? "cursor-pointer hover:bg-white/[0.05] transition-colors" : ""}`}>
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs font-semibold text-white">{String(p.nom ?? p.name ?? "")}</span>
-              {p.prix ? <span className="text-xs font-bold text-emerald-300">{Number(p.prix).toLocaleString()} XAF</span> : null}
+              {p.prix ? <span className="text-xs font-bold text-success">{Number(p.prix).toLocaleString()} XAF</span> : null}
             </div>
-            <div className="flex flex-wrap gap-1.5 text-[10px]">
-              {p.categorie ? <span className="rounded bg-blue-500/10 px-1.5 py-0.5 text-blue-300">{String(p.categorie)}</span> : null}
+            <div className="flex flex-wrap gap-1.5 text-2xs">
+              {p.categorie ? <span className="rounded bg-info/10 px-1.5 py-0.5 text-info">{String(p.categorie)}</span> : null}
               {p.segmentCible ? <span className="rounded bg-accent/10 px-1.5 py-0.5 text-accent">{String(p.segmentCible)}</span> : null}
               {p.phaseLifecycle ? <span className="rounded bg-white/5 px-1.5 py-0.5 text-foreground-muted">{String(p.phaseLifecycle)}</span> : null}
             </div>
-            {p.margeUnitaire != null ? <p className="text-[10px] text-emerald-400/60 mt-1">Marge: {Number(p.margeUnitaire).toLocaleString()} XAF</p> : null}
-            {p.lienPromesse ? <p className="text-[10px] text-foreground-muted mt-0.5 line-clamp-1">{String(p.lienPromesse)}</p> : null}
+            {p.margeUnitaire != null ? <p className="text-2xs text-success/60 mt-1">Marge: {Number(p.margeUnitaire).toLocaleString()} XAF</p> : null}
+            {p.lienPromesse ? <p className="text-2xs text-foreground-muted mt-0.5 line-clamp-1">{String(p.lienPromesse)}</p> : null}
           </div>
         ))}
-        {produits.length > 12 ? <p className="text-[10px] text-foreground-muted md:col-span-2">+{produits.length - 12} produits</p> : null}
+        {produits.length > 12 ? <p className="text-2xs text-foreground-muted md:col-span-2">+{produits.length - 12} produits</p> : null}
       </div>
     </Card>
   );
@@ -938,7 +938,7 @@ export function RiskMatrixCard({ risks, onFocus }: { risks: Array<Record<string,
               <RiskColorCell probability={prob} impact={imp} />
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-white">{label || <em className="text-foreground-muted/50 italic">(risque sans label)</em>}</p>
-                {mitigation ? <p className="text-[10px] text-foreground-muted mt-0.5 line-clamp-1">{String(mitigation)}</p> : null}
+                {mitigation ? <p className="text-2xs text-foreground-muted mt-0.5 line-clamp-1">{String(mitigation)}</p> : null}
               </div>
             </div>
           );
@@ -973,14 +973,14 @@ export function HerosJourneyCard({ acts }: { acts: Array<Record<string, unknown>
           return (
           <div key={i} className="relative min-w-[140px] flex-shrink-0 rounded-lg border border-white/5 bg-white/[0.02] p-3 md:min-w-0">
             <div className="flex items-center gap-1.5 mb-1.5">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent/20 text-[10px] font-bold text-accent">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent/20 text-2xs font-bold text-accent">
                 {actNum}
               </span>
               <span className="text-xs font-semibold text-white truncate">{actTitle}</span>
             </div>
-            <p className="text-[11px] text-white/70 leading-relaxed line-clamp-3">{actNarrative}</p>
+            <p className="text-2xs text-white/70 leading-relaxed line-clamp-3">{actNarrative}</p>
             {actEmotional ? (
-              <p className="mt-1.5 text-[10px] italic text-accent/70">{String(actEmotional)}</p>
+              <p className="mt-1.5 text-2xs italic text-accent/70">{String(actEmotional)}</p>
             ) : null}
             {/* Connector arrow (not on last) */}
             {i < sorted.length - 1 ? (
@@ -1007,7 +1007,7 @@ export function ValeursCard({ valeurs, onFocus }: { valeurs: Array<Record<string
           <Label>Valeurs (format inattendu)</Label>
         </div>
         <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
-          <p className="text-sm text-amber-300">Le champ <strong>valeurs</strong> n'est pas au format attendu (tableau).</p>
+          <p className="text-sm text-warning">Le champ <strong>valeurs</strong> n'est pas au format attendu (tableau).</p>
           <pre className="mt-2 max-h-40 overflow-auto text-xs bg-white/5 p-2 rounded text-white/80">{JSON.stringify(valeurs, null, 2)}</pre>
         </div>
       </Card>
@@ -1041,11 +1041,11 @@ export function ValeursCard({ valeurs, onFocus }: { valeurs: Array<Record<string
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold text-white">{label || <em className="text-foreground-muted/50 italic">(sans nom)</em>}</span>
-                  {v.value && v.customName ? <span className="text-[10px] text-foreground-muted/50">({String(v.value)})</span> : null}
+                  {v.value && v.customName ? <span className="text-2xs text-foreground-muted/50">({String(v.value)})</span> : null}
                 </div>
-                {detail ? <p className="text-[11px] text-white/60 mt-0.5 line-clamp-3">{String(detail)}</p> : null}
-                {v.manifestation && detail !== v.manifestation ? <p className="text-[10px] text-accent/60 mt-0.5 line-clamp-2">→ {String(v.manifestation)}</p> : null}
-                {v.costOfHolding ? <p className="text-[10px] text-amber-300/50 mt-0.5">Cout : {String(v.costOfHolding)}</p> : null}
+                {detail ? <p className="text-2xs text-white/60 mt-0.5 line-clamp-3">{String(detail)}</p> : null}
+                {v.manifestation && detail !== v.manifestation ? <p className="text-2xs text-accent/60 mt-0.5 line-clamp-2">→ {String(v.manifestation)}</p> : null}
+                {v.costOfHolding ? <p className="text-2xs text-warning/50 mt-0.5">Cout : {String(v.costOfHolding)}</p> : null}
               </div>
             </div>
           );
@@ -1072,16 +1072,16 @@ export function TonDeVoixCard({ ton }: { ton: Record<string, unknown> }) {
   return (
     <Card span={2}>
       <div className="flex items-center gap-2 mb-3">
-        <Volume2 className="h-4 w-4 text-blue-400" />
+        <Volume2 className="h-4 w-4 text-info" />
         <Label>Ton de voix</Label>
       </div>
       {/* Personnalite badges */}
       {personnalite.length > 0 ? (
         <div className="mb-3">
-          <p className="text-[10px] text-foreground-muted mb-1">Personnalite</p>
+          <p className="text-2xs text-foreground-muted mb-1">Personnalite</p>
           <div className="flex flex-wrap gap-1.5">
             {personnalite.map((p, i) => (
-              <span key={i} className="rounded-full bg-blue-500/10 border border-blue-500/20 px-2.5 py-0.5 text-xs text-blue-300">{p}</span>
+              <span key={i} className="rounded-full bg-info/10 border border-info/20 px-2.5 py-0.5 text-xs text-info">{p}</span>
             ))}
           </div>
         </div>
@@ -1089,12 +1089,12 @@ export function TonDeVoixCard({ ton }: { ton: Record<string, unknown> }) {
       <div className="grid gap-2 md:grid-cols-2">
         {/* On dit */}
         {onDit.length > 0 ? (
-          <div className="rounded-lg border border-emerald-500/15 bg-emerald-500/5 p-3">
-            <p className="text-[10px] font-semibold text-emerald-400 mb-1.5">On dit</p>
+          <div className="rounded-lg border border-success/15 bg-success/5 p-3">
+            <p className="text-2xs font-semibold text-success mb-1.5">On dit</p>
             <ul className="space-y-1">
               {onDit.map((o, i) => (
-                <li key={i} className="text-[11px] text-white/80 flex items-start gap-1.5">
-                  <span className="text-emerald-400 shrink-0">✓</span> {o}
+                <li key={i} className="text-2xs text-white/80 flex items-start gap-1.5">
+                  <span className="text-success shrink-0">✓</span> {o}
                 </li>
               ))}
             </ul>
@@ -1102,11 +1102,11 @@ export function TonDeVoixCard({ ton }: { ton: Record<string, unknown> }) {
         ) : null}
         {/* On ne dit pas */}
         {onNeditPas.length > 0 ? (
-          <div className="rounded-lg border border-red-500/15 bg-error/5 p-3">
-            <p className="text-[10px] font-semibold text-error mb-1.5">On ne dit pas</p>
+          <div className="rounded-lg border border-error/15 bg-error/5 p-3">
+            <p className="text-2xs font-semibold text-error mb-1.5">On ne dit pas</p>
             <ul className="space-y-1">
               {onNeditPas.map((o, i) => (
-                <li key={i} className="text-[11px] text-white/80 flex items-start gap-1.5">
+                <li key={i} className="text-2xs text-white/80 flex items-start gap-1.5">
                   <span className="text-error shrink-0">✕</span> {o}
                 </li>
               ))}
@@ -1133,7 +1133,7 @@ export function DirectionArtistiqueCard({ da, onFocus }: { da: Record<string, un
   return (
     <Card span={2}>
       <div className="flex items-center gap-2 mb-3">
-        <Palette className="h-4 w-4 text-blue-400" />
+        <Palette className="h-4 w-4 text-info" />
         <Label>Direction artistique ({sections.length} sections)</Label>
       </div>
       <div className="grid gap-2 md:grid-cols-3">
@@ -1151,7 +1151,7 @@ export function DirectionArtistiqueCard({ da, onFocus }: { da: Record<string, un
               {/* Preview first non-null string */}
               {(() => {
                 const preview = Object.entries(obj).find(([k, v]) => typeof v === "string" && v.length > 0 && k !== "gloryOutputId");
-                return preview ? <p className="text-[10px] text-foreground-muted line-clamp-2">{preview[1] as string}</p> : null;
+                return preview ? <p className="text-2xs text-foreground-muted line-clamp-2">{preview[1] as string}</p> : null;
               })()}
               {onFocus ? <ChevronRight className="h-3 w-3 text-foreground-muted/30 mt-1 ml-auto" /> : null}
             </div>
@@ -1179,9 +1179,9 @@ export function EquipeDirigenteCard({ equipe, onFocus }: { equipe: Array<Record<
             className={`rounded-lg border border-white/5 bg-white/[0.02] p-3 ${onFocus ? "cursor-pointer hover:bg-white/[0.05] transition-colors" : ""}`}>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-sm font-bold text-white">{String(m.nom ?? "")}</span>
-              <span className="rounded bg-accent/10 px-1.5 py-0.5 text-[10px] text-accent">{String(m.role ?? "")}</span>
+              <span className="rounded bg-accent/10 px-1.5 py-0.5 text-2xs text-accent">{String(m.role ?? "")}</span>
             </div>
-            {m.bio ? <p className="text-[11px] text-white/60 line-clamp-2 mb-1.5">{String(m.bio)}</p> : null}
+            {m.bio ? <p className="text-2xs text-white/60 line-clamp-2 mb-1.5">{String(m.bio)}</p> : null}
             {Array.isArray(m.competencesCles) ? (
               <div className="flex flex-wrap gap-1">
                 {(m.competencesCles as string[]).slice(0, 4).map((c, j) => (
@@ -1223,13 +1223,13 @@ export function EnemyCard({ enemy, onFocus }: { enemy: Record<string, unknown>; 
     <Card span={2}>
       <div
         onClick={onFocus ? () => onFocus(enemy) : undefined}
-        className={`rounded-lg border border-red-500/20 bg-error/5 p-4 ${onFocus ? "cursor-pointer hover:bg-error/[0.08] transition-colors" : ""}`}>
+        className={`rounded-lg border border-error/20 bg-error/5 p-4 ${onFocus ? "cursor-pointer hover:bg-error/[0.08] transition-colors" : ""}`}>
         <div className="flex items-center gap-2 mb-3">
           <Swords className="h-4 w-4 text-error" />
           <span className="text-base font-bold text-error">{displayName}</span>
         </div>
         {(showManifesto || showManifestoFromName) ? (
-          <blockquote className="border-l-2 border-red-400/40 pl-3 italic text-sm text-white/70 mb-3 leading-relaxed">
+          <blockquote className="border-l-2 border-error/40 pl-3 italic text-sm text-white/70 mb-3 leading-relaxed">
             &laquo; {String(manifesto ?? rawName)} &raquo;
           </blockquote>
         ) : null}
@@ -1238,14 +1238,14 @@ export function EnemyCard({ enemy, onFocus }: { enemy: Record<string, unknown>; 
         ) : null}
         {/* Counter strategy */}
         {enemy.counterStrategy && typeof enemy.counterStrategy === "object" ? (
-          <div className="rounded bg-emerald-500/5 border border-emerald-500/15 p-3 mb-2">
-            <p className="text-[10px] font-semibold text-emerald-400 mb-1">Contre-strategie</p>
+          <div className="rounded bg-success/5 border border-success/15 p-3 mb-2">
+            <p className="text-2xs font-semibold text-success mb-1">Contre-strategie</p>
             {(enemy.counterStrategy as Record<string, unknown>).marketingCounter ?
               <p className="text-xs text-white/70 leading-relaxed">{String((enemy.counterStrategy as Record<string, unknown>).marketingCounter)}</p> : null}
             {Array.isArray((enemy.counterStrategy as Record<string, unknown>).alliances) ? (
               <div className="flex flex-wrap gap-1 mt-1.5">
                 {((enemy.counterStrategy as Record<string, unknown>).alliances as string[]).map((a, i) => (
-                  <span key={i} className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] text-emerald-300">{a}</span>
+                  <span key={i} className="rounded bg-success/10 px-1.5 py-0.5 text-2xs text-success">{a}</span>
                 ))}
               </div>
             ) : null}
@@ -1254,20 +1254,20 @@ export function EnemyCard({ enemy, onFocus }: { enemy: Record<string, unknown>; 
         {/* Oppositions */}
         {Array.isArray(enemy.activeOpposition) && (enemy.activeOpposition as string[]).length > 0 ? (
           <div className="mb-2">
-            <p className="text-[10px] text-foreground-muted mb-1">Opposition active</p>
+            <p className="text-2xs text-foreground-muted mb-1">Opposition active</p>
             <div className="flex flex-wrap gap-1">
               {(enemy.activeOpposition as string[]).map((a, i) => (
-                <span key={i} className="rounded bg-error/10 border border-red-500/15 px-2 py-0.5 text-[10px] text-error">{a}</span>
+                <span key={i} className="rounded bg-error/10 border border-error/15 px-2 py-0.5 text-2xs text-error">{a}</span>
               ))}
             </div>
           </div>
         ) : null}
         {Array.isArray(enemy.passiveOpposition) && (enemy.passiveOpposition as string[]).length > 0 ? (
           <div>
-            <p className="text-[10px] text-foreground-muted mb-1">Opposition passive</p>
+            <p className="text-2xs text-foreground-muted mb-1">Opposition passive</p>
             <div className="flex flex-wrap gap-1">
               {(enemy.passiveOpposition as string[]).map((a, i) => (
-                <span key={i} className="rounded bg-amber-500/10 border border-amber-500/15 px-2 py-0.5 text-[10px] text-amber-300">{a}</span>
+                <span key={i} className="rounded bg-warning/10 border border-warning/15 px-2 py-0.5 text-2xs text-warning">{a}</span>
               ))}
             </div>
           </div>
@@ -1287,16 +1287,16 @@ export function EnemyCard({ enemy, onFocus }: { enemy: Record<string, unknown>; 
           );
           if (extras.length === 0) return null;
           return (
-            <div className="border-t border-red-500/15 pt-2 mt-2 space-y-1.5">
+            <div className="border-t border-error/15 pt-2 mt-2 space-y-1.5">
               {extras.map(([k, v]) => (
                 <div key={k}>
-                  <p className="text-[10px] font-semibold text-error/70 mb-0.5">{getFieldLabel(k)}</p>
+                  <p className="text-2xs font-semibold text-error/70 mb-0.5">{getFieldLabel(k)}</p>
                   {typeof v === "string" ? (
                     <p className="text-xs text-white/70 leading-relaxed">{v}</p>
                   ) : Array.isArray(v) ? (
                     <div className="flex flex-wrap gap-1">
                       {(v as unknown[]).map((item, i) => (
-                        <span key={i} className="rounded bg-error/10 border border-red-500/15 px-1.5 py-0.5 text-[10px] text-error/90">
+                        <span key={i} className="rounded bg-error/10 border border-error/15 px-1.5 py-0.5 text-2xs text-error/90">
                           {typeof item === "string" ? item : extractLabel(item as Record<string, unknown>)}
                         </span>
                       ))}
@@ -1304,7 +1304,7 @@ export function EnemyCard({ enemy, onFocus }: { enemy: Record<string, unknown>; 
                   ) : typeof v === "object" && v !== null ? (
                     <div className="space-y-0.5">
                       {Object.entries(v as Record<string, unknown>).filter(([, sv]) => sv != null && sv !== "").map(([sk, sv]) => (
-                        <div key={sk} className="flex gap-1.5 text-[10px]">
+                        <div key={sk} className="flex gap-1.5 text-2xs">
                           <span className="text-foreground-muted shrink-0">{getFieldLabel(sk)}:</span>
                           <span className="text-white/70">{typeof sv === "string" ? sv : Array.isArray(sv) ? sv.map((x) => typeof x === "string" ? x : typeof x === "object" && x !== null ? extractLabel(x as Record<string, unknown>) : String(x)).join(", ") : String(sv)}</span>
                         </div>
@@ -1349,7 +1349,7 @@ export function ProphecyCard({ prophecy }: { prophecy: Record<string, unknown> |
         <div className="flex items-center gap-2 mb-2">
           <Eye className="h-4 w-4 text-accent" />
           <Label>Prophetie</Label>
-          {prophecy.urgency ? <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[9px] text-amber-300">{String(prophecy.urgency)}</span> : null}
+          {prophecy.urgency ? <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[9px] text-warning">{String(prophecy.urgency)}</span> : null}
         </div>
         <p className={`${textSize} text-white leading-snug mb-2`}>{wt}</p>
         {prophecy.pioneers ? <p className="text-xs text-accent/70"><Users className="inline h-3 w-3 mr-1" />Pionniers : {String(prophecy.pioneers)}</p> : null}
@@ -1384,7 +1384,7 @@ export function DoctrineCard({ doctrine }: { doctrine: Record<string, unknown> |
       </div>
       {dogmas.length > 0 ? (
         <div className="mb-3">
-          <p className="text-[10px] text-foreground-muted mb-1.5">Dogmes</p>
+          <p className="text-2xs text-foreground-muted mb-1.5">Dogmes</p>
           <ol className="space-y-1 list-decimal list-inside">
             {dogmas.map((d, i) => (
               <li key={i} className="text-xs text-white/80">{d}</li>
@@ -1394,7 +1394,7 @@ export function DoctrineCard({ doctrine }: { doctrine: Record<string, unknown> |
       ) : null}
       {principles.length > 0 ? (
         <div className="mb-3">
-          <p className="text-[10px] text-foreground-muted mb-1.5">Principes</p>
+          <p className="text-2xs text-foreground-muted mb-1.5">Principes</p>
           <div className="flex flex-wrap gap-1.5">
             {principles.map((p, i) => (
               <span key={i} className="rounded-full bg-accent/10 border border-accent/20 px-2.5 py-0.5 text-xs text-accent">{p}</span>
@@ -1404,10 +1404,10 @@ export function DoctrineCard({ doctrine }: { doctrine: Record<string, unknown> |
       ) : null}
       {practices.length > 0 ? (
         <div>
-          <p className="text-[10px] text-foreground-muted mb-1.5">Pratiques</p>
+          <p className="text-2xs text-foreground-muted mb-1.5">Pratiques</p>
           <div className="flex flex-wrap gap-1.5">
             {practices.map((p, i) => (
-              <span key={i} className="rounded bg-white/5 px-2 py-0.5 text-[10px] text-foreground-muted">{p}</span>
+              <span key={i} className="rounded bg-white/5 px-2 py-0.5 text-2xs text-foreground-muted">{p}</span>
             ))}
           </div>
         </div>
@@ -1422,7 +1422,7 @@ export function ActivationsCard({ activations, onFocus }: { activations: Array<R
   return (
     <Card span={2}>
       <div className="flex items-center gap-2 mb-3">
-        <Megaphone className="h-4 w-4 text-orange-400" />
+        <Megaphone className="h-4 w-4 text-warning" />
         <Label>Activations possibles ({activations.length})</Label>
       </div>
       <div className="grid gap-2 md:grid-cols-2">
@@ -1438,14 +1438,14 @@ export function ActivationsCard({ activations, onFocus }: { activations: Array<R
               className={`rounded-lg border border-white/5 bg-white/[0.02] p-3 ${onFocus ? "cursor-pointer hover:bg-white/[0.05] transition-colors" : ""}`}>
               <span className="text-xs font-semibold text-white">{label || <em className="text-foreground-muted/50 italic">(sans nom)</em>}</span>
               <div className="flex flex-wrap gap-1.5 mt-1.5">
-                {canal ? <span className="rounded bg-sky-500/10 px-1.5 py-0.5 text-[10px] text-sky-300">{String(canal)}</span> : null}
-                {cible ? <span className="rounded bg-accent/10 px-1.5 py-0.5 text-[10px] text-accent">{String(cible)}</span> : null}
+                {canal ? <span className="rounded bg-info/10 px-1.5 py-0.5 text-2xs text-info">{String(canal)}</span> : null}
+                {cible ? <span className="rounded bg-accent/10 px-1.5 py-0.5 text-2xs text-accent">{String(cible)}</span> : null}
                 {budget ? <BudgetBadge level={String(budget)} /> : null}
               </div>
             </div>
           );
         })}
-        {activations.length > 10 ? <p className="text-[10px] text-foreground-muted md:col-span-2">+{activations.length - 10} activations</p> : null}
+        {activations.length > 10 ? <p className="text-2xs text-foreground-muted md:col-span-2">+{activations.length - 10} activations</p> : null}
       </div>
     </Card>
   );
@@ -1457,7 +1457,7 @@ export function InnovationsCard({ innovations, onFocus }: { innovations: Array<R
   return (
     <Card span={2}>
       <div className="flex items-center gap-2 mb-3">
-        <Lightbulb className="h-4 w-4 text-orange-400" />
+        <Lightbulb className="h-4 w-4 text-warning" />
         <Label>Innovations produit ({innovations.length})</Label>
       </div>
       <div className="grid gap-2 md:grid-cols-2">
@@ -1467,12 +1467,12 @@ export function InnovationsCard({ innovations, onFocus }: { innovations: Array<R
             className={`rounded-lg border border-white/5 bg-white/[0.02] p-3 ${onFocus ? "cursor-pointer hover:bg-white/[0.05] transition-colors" : ""}`}>
             <span className="text-xs font-semibold text-white">{String(inn.name ?? "")}</span>
             <div className="flex flex-wrap gap-1.5 mt-1.5">
-              {inn.type ? <span className="rounded bg-orange-500/10 px-1.5 py-0.5 text-[10px] text-orange-300">{String(inn.type)}</span> : null}
+              {inn.type ? <span className="rounded bg-warning/10 px-1.5 py-0.5 text-2xs text-warning">{String(inn.type)}</span> : null}
               {inn.feasibility ? <FeasibilityBadge level={String(inn.feasibility)} /> : null}
-              {inn.horizon ? <span className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-foreground-muted">{String(inn.horizon)}</span> : null}
+              {inn.horizon ? <span className="rounded bg-white/5 px-1.5 py-0.5 text-2xs text-foreground-muted">{String(inn.horizon)}</span> : null}
               {inn.devotionImpact ? <DevotionBadge level={String(inn.devotionImpact)} /> : null}
             </div>
-            {inn.description ? <p className="text-[10px] text-foreground-muted mt-1 line-clamp-2">{String(inn.description)}</p> : null}
+            {inn.description ? <p className="text-2xs text-foreground-muted mt-1 line-clamp-2">{String(inn.description)}</p> : null}
           </div>
         ))}
       </div>
@@ -1521,19 +1521,19 @@ export function LivingMythologyCard({ myth: rawMyth }: { myth: Record<string, un
       <div className="space-y-2">
         {myth.canon ? (
           <div className="rounded-lg border border-accent/15 bg-accent/5 p-3">
-            <p className="text-[10px] font-semibold text-accent mb-1">Canon</p>
+            <p className="text-2xs font-semibold text-accent mb-1">Canon</p>
             <p className="text-sm text-white/80 leading-relaxed">{String(myth.canon)}</p>
           </div>
         ) : null}
         {myth.extensionRules ? (
           <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
-            <p className="text-[10px] font-semibold text-foreground-muted mb-1">Regles d&apos;extension</p>
+            <p className="text-2xs font-semibold text-foreground-muted mb-1">Regles d&apos;extension</p>
             <p className="text-xs text-white/70 leading-relaxed">{String(myth.extensionRules)}</p>
           </div>
         ) : null}
         {myth.captureSystem ? (
           <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
-            <p className="text-[10px] font-semibold text-foreground-muted mb-1">Systeme de capture</p>
+            <p className="text-2xs font-semibold text-foreground-muted mb-1">Systeme de capture</p>
             <p className="text-xs text-white/70 leading-relaxed">{String(myth.captureSystem)}</p>
           </div>
         ) : null}
@@ -1542,17 +1542,17 @@ export function LivingMythologyCard({ myth: rawMyth }: { myth: Record<string, un
           <div className="space-y-2">
             {myth.foundingMyth ? (
               <div className="rounded-lg border border-accent/15 bg-accent/5 p-3">
-                <p className="text-[10px] font-semibold text-accent mb-1">Mythe fondateur</p>
+                <p className="text-2xs font-semibold text-accent mb-1">Mythe fondateur</p>
                 <p className="text-sm text-white/80 leading-relaxed">{typeof myth.foundingMyth === "string" ? myth.foundingMyth : ""}</p>
               </div>
             ) : null}
             {Array.isArray(myth.heroicMoments) ? (
               <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
-                <p className="text-[10px] font-semibold text-foreground-muted mb-1.5">Moments heroiques</p>
+                <p className="text-2xs font-semibold text-foreground-muted mb-1.5">Moments heroiques</p>
                 <div className="space-y-1">
                   {(myth.heroicMoments as string[]).map((m, i) => (
                     <div key={i} className="flex items-start gap-2 text-xs text-white/70">
-                      <Star className="h-3 w-3 text-amber-400 shrink-0 mt-0.5" />{typeof m === "string" ? m : extractLabel(m as Record<string, unknown>)}
+                      <Star className="h-3 w-3 text-warning shrink-0 mt-0.5" />{typeof m === "string" ? m : extractLabel(m as Record<string, unknown>)}
                     </div>
                   ))}
                 </div>
@@ -1560,7 +1560,7 @@ export function LivingMythologyCard({ myth: rawMyth }: { myth: Record<string, un
             ) : null}
             {Array.isArray(myth.sacredRituals) ? (
               <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
-                <p className="text-[10px] font-semibold text-foreground-muted mb-1.5">Rituels sacres</p>
+                <p className="text-2xs font-semibold text-foreground-muted mb-1.5">Rituels sacres</p>
                 <div className="space-y-1">
                   {(myth.sacredRituals as string[]).map((r, i) => (
                     <div key={i} className="flex items-start gap-2 text-xs text-white/70">
@@ -1579,7 +1579,7 @@ export function LivingMythologyCard({ myth: rawMyth }: { myth: Record<string, un
           <div className={knownNonEmpty ? "border-t border-white/5 pt-2 mt-2 space-y-2" : "space-y-2"}>
             {extras.map(([k, v]) => (
               <div key={k} className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
-                <p className="text-[10px] font-semibold text-foreground-muted mb-1.5">{getFieldLabel(k)}</p>
+                <p className="text-2xs font-semibold text-foreground-muted mb-1.5">{getFieldLabel(k)}</p>
                 {typeof v === "string" ? (
                   <p className="text-xs text-white/80 leading-relaxed whitespace-pre-wrap">{v}</p>
                 ) : Array.isArray(v) ? (
@@ -1596,7 +1596,7 @@ export function LivingMythologyCard({ myth: rawMyth }: { myth: Record<string, un
                     {Object.entries(v as Record<string, unknown>)
                       .filter(([, sv]) => sv != null && sv !== "")
                       .map(([sk, sv]) => (
-                        <div key={sk} className="flex gap-1.5 text-[11px]">
+                        <div key={sk} className="flex gap-1.5 text-2xs">
                           <span className="text-foreground-muted/60 shrink-0">{getFieldLabel(sk)}:</span>
                           <span className="text-white/70">
                             {typeof sv === "string" ? sv : Array.isArray(sv) ? sv.map((x) => typeof x === "string" ? x : typeof x === "object" && x !== null ? extractLabel(x as Record<string, unknown>) : String(x)).join(", ") : String(sv)}
@@ -1778,7 +1778,7 @@ export function AutoField({ fieldKey, value, accent, onFocus, pillarKey }: {
           </span>
           <span className="rounded bg-white/5 px-1.5 py-0.5 text-[9px] text-foreground-muted/60">vide</span>
         </div>
-        {spec?.description ? <p className="text-[10px] text-foreground-muted/40 italic">{spec.description}</p> : null}
+        {spec?.description ? <p className="text-2xs text-foreground-muted/40 italic">{spec.description}</p> : null}
       </div>
     );
   }
@@ -1807,7 +1807,7 @@ export function AutoField({ fieldKey, value, accent, onFocus, pillarKey }: {
       case "hero": return <HeroCard label={label} value={String(value)} accent={accent} />;
       case "hero-sm": return <Card><Label>{label}</Label><p className="text-lg font-semibold text-white/90">{String(value)}</p></Card>;
       case "quote": return <QuoteCard label={label} value={String(value)} />;
-      case "badge-amber": return <BadgeCard label={label} value={String(value)} color="text-amber-400 border-amber-500/20 bg-amber-500/5" />;
+      case "badge-amber": return <BadgeCard label={label} value={String(value)} color="text-warning border-warning/20 bg-warning/5" />;
       case "badge-grey": return <BadgeCard label={label} value={String(value)} color="text-foreground-muted border-white/10 bg-white/5" />;
       case "swot": return <SWOTCard swot={value as Record<string, unknown>} />;
       case "ikigai": return <IkigaiCard ikigai={value as Record<string, unknown>} />;
@@ -1866,7 +1866,7 @@ export function AutoField({ fieldKey, value, accent, onFocus, pillarKey }: {
   // Type-based auto-detection
   if (typeof value === "string") return <TextCard label={label} value={value} />;
   if (typeof value === "number") return <MetricCard label={label} value={value} accent={accent} />;
-  if (typeof value === "boolean") return <Card><Label>{label}</Label><span className={value ? "text-emerald-400 text-sm" : "text-error text-sm"}>{value ? "Oui" : "Non"}</span></Card>;
+  if (typeof value === "boolean") return <Card><Label>{label}</Label><span className={value ? "text-success text-sm" : "text-error text-sm"}>{value ? "Oui" : "Non"}</span></Card>;
 
   if (Array.isArray(value)) {
     if (value.length === 0) return <Empty label={label} />;

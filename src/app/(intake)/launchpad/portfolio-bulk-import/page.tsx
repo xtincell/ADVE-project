@@ -155,7 +155,7 @@ export default function PortfolioBulkImportPage() {
             <div className="flex items-center justify-between gap-3 rounded border border-zinc-800 bg-zinc-900/50 px-3 py-2">
               <div className="text-xs text-foreground-secondary">
                 Tu as un .xlsx ? Charge le fichier directement — la première feuille est convertie en TSV automatiquement.
-                {xlsxFileName && <span className="ml-2 font-mono text-[11px] text-accent">{xlsxFileName}</span>}
+                {xlsxFileName && <span className="ml-2 font-mono text-2xs text-accent">{xlsxFileName}</span>}
               </div>
               <label className={`inline-flex cursor-pointer items-center gap-1 rounded bg-zinc-800 px-3 py-1 text-xs font-medium hover:bg-zinc-700 ${xlsxBusy ? "opacity-50" : ""}`}>
                 <Upload className="h-3 w-3" />

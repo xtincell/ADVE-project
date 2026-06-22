@@ -70,11 +70,11 @@ export function NotoriaStatusDock() {
 
   let stageLabel: string;
   let stageColor: string;
-  if (!adveReady) { stageLabel = "Compléter ADVE"; stageColor = "text-amber-300"; }
-  else if (!rtReady) { stageLabel = "Lancer R + T"; stageColor = "text-rose-300"; }
-  else if (!iReady) { stageLabel = "Générer Potentiel (I)"; stageColor = "text-orange-300"; }
-  else if (!sReady) { stageLabel = "Synthétiser Stratégie (S)"; stageColor = "text-pink-300"; }
-  else { stageLabel = "Améliorer en continu"; stageColor = "text-emerald-300"; }
+  if (!adveReady) { stageLabel = "Compléter ADVE"; stageColor = "text-warning"; }
+  else if (!rtReady) { stageLabel = "Lancer R + T"; stageColor = "text-error"; }
+  else if (!iReady) { stageLabel = "Générer Potentiel (I)"; stageColor = "text-warning"; }
+  else if (!sReady) { stageLabel = "Synthétiser Stratégie (S)"; stageColor = "text-error"; }
+  else { stageLabel = "Améliorer en continu"; stageColor = "text-success"; }
 
   // Compte les piliers stale (advisory ou blocking) pour pulse visuel
   const staleCount = Object.values(byPillar).filter((p) => p?.stale).length;
@@ -90,22 +90,22 @@ export function NotoriaStatusDock() {
       >
         <span className="relative flex h-2 w-2">
           <span className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${
-            isLoading ? "bg-sky-400 animate-ping" :
-            staleCount > 0 ? "bg-amber-400 animate-ping" :
-            totalPending > 0 ? "bg-amber-400" :
-            "bg-emerald-400"
+            isLoading ? "bg-info animate-ping" :
+            staleCount > 0 ? "bg-warning animate-ping" :
+            totalPending > 0 ? "bg-warning" :
+            "bg-success"
           }`} />
           <span className={`relative inline-flex h-2 w-2 rounded-full ${
-            isLoading ? "bg-sky-500" :
-            staleCount > 0 ? "bg-amber-500" :
-            totalPending > 0 ? "bg-amber-500" :
-            "bg-emerald-500"
+            isLoading ? "bg-info" :
+            staleCount > 0 ? "bg-warning" :
+            totalPending > 0 ? "bg-warning" :
+            "bg-success"
           }`} />
         </span>
-        <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+        <Sparkles className="h-3.5 w-3.5 text-warning" />
         <span className="text-xs font-semibold text-white">Notoria</span>
         {totalPending > 0 ? (
-          <span className="rounded-full bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">
+          <span className="rounded-full bg-warning/20 px-1.5 py-0.5 text-2xs font-bold text-warning">
             {totalPending}
           </span>
         ) : null}
@@ -119,10 +119,10 @@ export function NotoriaStatusDock() {
     <div className="fixed bottom-4 right-4 z-40 w-80 max-w-[calc(100vw-2rem)] rounded-lg border border-white/10 bg-surface-raised/95 p-3 shadow-2xl backdrop-blur">
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-amber-400" />
+          <Sparkles className="h-4 w-4 text-warning" />
           <span className="text-sm font-bold text-white">Notoria</span>
-          <span className="text-[10px] text-foreground-muted">moteur de reco</span>
-          {isLoading ? <Loader2 className="h-3 w-3 animate-spin text-sky-400" /> : null}
+          <span className="text-2xs text-foreground-muted">moteur de reco</span>
+          {isLoading ? <Loader2 className="h-3 w-3 animate-spin text-info" /> : null}
         </div>
         <button
           type="button"
@@ -142,7 +142,7 @@ export function NotoriaStatusDock() {
           <div className={`text-xs font-semibold ${stageColor} truncate`}>{stageLabel}</div>
         </div>
         {totalPending > 0 ? (
-          <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-300 whitespace-nowrap">
+          <span className="rounded-full bg-warning/15 px-2 py-0.5 text-2xs font-bold text-warning whitespace-nowrap">
             {totalPending} reco{totalPending > 1 ? "s" : ""}
           </span>
         ) : null}
@@ -182,7 +182,7 @@ export function NotoriaStatusDock() {
                       {PILLAR_LABELS[k]}
                     </span>
                     {count > 0 ? (
-                      <span className="rounded bg-amber-500/15 px-1 text-[8px] font-bold text-amber-300">
+                      <span className="rounded bg-warning/15 px-1 text-[8px] font-bold text-warning">
                         {count}
                       </span>
                     ) : null}
@@ -197,15 +197,15 @@ export function NotoriaStatusDock() {
       {/* Lien Notoria + indicateur stale */}
       <div className="flex items-center justify-between gap-2 border-t border-white/5 pt-2">
         {staleCount > 0 ? (
-          <span className="text-[10px] text-amber-300/80">
+          <span className="text-2xs text-warning/80">
             {staleCount} pilier{staleCount > 1 ? "s" : ""} à rafraîchir
           </span>
         ) : (
-          <span className="text-[10px] text-foreground-muted">Tout est à jour</span>
+          <span className="text-2xs text-foreground-muted">Tout est à jour</span>
         )}
         <Link
           href="/cockpit/brand/notoria"
-          className="flex items-center gap-1 rounded bg-accent/15 px-2 py-1 text-[11px] font-medium text-accent transition-colors hover:bg-accent/25"
+          className="flex items-center gap-1 rounded bg-accent/15 px-2 py-1 text-2xs font-medium text-accent transition-colors hover:bg-accent/25"
         >
           <Sparkles className="h-3 w-3" />
           Ouvrir

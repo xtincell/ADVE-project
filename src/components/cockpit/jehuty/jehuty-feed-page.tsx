@@ -157,7 +157,7 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
     <article className="mx-auto max-w-[var(--maxw-content,1200px)] px-[var(--pad-page,1.5rem)] py-8 md:py-12">
       {/* ═══ Supra-header / dateline ═══════════════════════════════ */}
       <header className="border-b border-border-subtle pb-4 mb-8">
-        <div className="flex items-center justify-between gap-4 font-mono text-[10px] uppercase tracking-widest text-foreground-muted flex-wrap">
+        <div className="flex items-center justify-between gap-4 font-mono text-2xs uppercase tracking-widest text-foreground-muted flex-wrap">
           <div className="flex items-center gap-3 flex-wrap">
             <span className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
@@ -214,7 +214,7 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
       <nav className="flex items-center gap-x-6 gap-y-3 flex-wrap mb-10 pb-4 border-b border-border-subtle">
         <button
           onClick={() => setSelectedCategory(null)}
-          className={`text-[11px] font-mono uppercase tracking-widest transition-colors ${
+          className={`text-2xs font-mono uppercase tracking-widest transition-colors ${
             !selectedCategory ? "text-foreground" : "text-foreground-muted hover:text-foreground"
           }`}
         >
@@ -224,7 +224,7 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
           <button
             key={cat}
             onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
-            className={`text-[11px] font-mono uppercase tracking-widest transition-colors ${
+            className={`text-2xs font-mono uppercase tracking-widest transition-colors ${
               selectedCategory === cat ? "text-accent" : "text-foreground-muted hover:text-foreground"
             }`}
           >
@@ -232,12 +232,12 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
           </button>
         ))}
         <div className="ml-auto flex items-center gap-1.5">
-          <span className="text-[10px] font-mono uppercase tracking-widest text-foreground-muted/60 mr-1">Pilier</span>
+          <span className="text-2xs font-mono uppercase tracking-widest text-foreground-muted/60 mr-1">Pilier</span>
           {PILLAR_KEYS_LOWER.map((k) => (
             <button
               key={k}
               onClick={() => setSelectedPillar(selectedPillar === k ? null : k)}
-              className={`font-mono text-[11px] font-bold w-6 h-6 rounded-full transition-colors ${
+              className={`font-mono text-2xs font-bold w-6 h-6 rounded-full transition-colors ${
                 selectedPillar === k
                   ? "bg-accent text-accent-foreground"
                   : "text-foreground-muted/50 hover:bg-surface-elevated hover:text-foreground"
@@ -254,7 +254,7 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
       {!feedQuery.isLoading && items.length === 0 && (
         <div className="py-24 text-center border-y border-border-subtle">
           <p className="font-serif italic text-2xl text-foreground-secondary">Le journal est vide ce matin.</p>
-          <p className="font-mono text-[11px] uppercase tracking-widest text-foreground-muted mt-3">
+          <p className="font-mono text-2xs uppercase tracking-widest text-foreground-muted mt-3">
             Les signaux et recommandations apparaîtront ici dès que Seshat les capture.
           </p>
         </div>
@@ -319,7 +319,7 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
 
       {/* ═══ Footer / colophon ═════════════════════════════════════ */}
       <footer className="border-t border-border-subtle pt-6 mt-12 flex items-center justify-between flex-wrap gap-4">
-        <p className="font-mono text-[10px] uppercase tracking-widest text-foreground-muted/60">
+        <p className="font-mono text-2xs uppercase tracking-widest text-foreground-muted/60">
           Jehuty · Telemetry sous Seshat · Les dépêches se rafraîchissent toutes les 30s.
         </p>
         <p className="font-serif italic text-sm text-foreground-muted">
@@ -346,7 +346,7 @@ function Indicator({ label, value, hint, accent }: {
       >
         {value}
       </div>
-      <div className="font-mono text-[10px] uppercase tracking-widest text-foreground mt-2">{label}</div>
+      <div className="font-mono text-2xs uppercase tracking-widest text-foreground mt-2">{label}</div>
       <div className="text-xs text-foreground-muted mt-0.5">{hint}</div>
     </div>
   );
@@ -363,7 +363,7 @@ function RubricHeader({ label, suffix }: { label: string; suffix?: string | null
       </h2>
       <div className="flex-1 h-px bg-border-subtle" />
       {suffix && (
-        <span className="font-mono text-[10px] uppercase tracking-widest text-foreground-muted">
+        <span className="font-mono text-2xs uppercase tracking-widest text-foreground-muted">
           {suffix}
         </span>
       )}
@@ -388,7 +388,7 @@ function DispatchActions({
   item, isPinned, isTriggered, onPin, onUnpin, onDismiss, onNotoria, isNotoriaPending, onApply, isApplyPending,
 }: DispatchActionsProps) {
   return (
-    <div className="flex items-center gap-4 font-mono text-[10px] uppercase tracking-widest">
+    <div className="flex items-center gap-4 font-mono text-2xs uppercase tracking-widest">
       {isPinned ? (
         <button onClick={onUnpin} className="flex items-center gap-1.5 text-accent hover:opacity-80 transition-opacity">
           <Pin className="h-3 w-3" /> Retirer
@@ -456,7 +456,7 @@ function LeadStory({
     <article className={`grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-x-10 gap-y-6 ${isPinned ? "border-l-2 border-accent pl-6" : ""}`}>
       {/* Body */}
       <div>
-        <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-foreground-muted mb-3">
+        <div className="flex items-center gap-2 font-mono text-2xs uppercase tracking-widest text-foreground-muted mb-3">
           <Icon className="h-3.5 w-3.5 text-accent" />
           <span>{CATEGORY_RUBRIC[item.category]}</span>
           {item.pillarKey && (
@@ -511,7 +511,7 @@ function LeadStory({
             isApplyPending={isApplyPending}
           />
           {item.source && (
-            <span className="font-mono text-[10px] uppercase tracking-widest text-foreground-muted/60 ml-auto">
+            <span className="font-mono text-2xs uppercase tracking-widest text-foreground-muted/60 ml-auto">
               source · {item.source}
             </span>
           )}
@@ -521,10 +521,10 @@ function LeadStory({
       {/* Aside — pull quote des avantages/inconvénients */}
       {hasDetails ? (
         <aside className="border-l border-border-subtle pl-6 lg:pl-8 self-start">
-          <p className="font-mono text-[10px] uppercase tracking-widest text-foreground-muted mb-3">L&rsquo;analyse</p>
+          <p className="font-mono text-2xs uppercase tracking-widest text-foreground-muted mb-3">L&rsquo;analyse</p>
           {item.advantages?.length ? (
             <div className="mb-5">
-              <p className="font-mono text-[10px] uppercase tracking-widest text-success mb-2">Avantages</p>
+              <p className="font-mono text-2xs uppercase tracking-widest text-success mb-2">Avantages</p>
               <ul className="space-y-2 font-serif text-foreground-secondary leading-snug">
                 {item.advantages.map((a, i) => (
                   <li key={i} className="flex gap-2">
@@ -537,7 +537,7 @@ function LeadStory({
           ) : null}
           {item.disadvantages?.length ? (
             <div>
-              <p className="font-mono text-[10px] uppercase tracking-widest text-error mb-2">Risques</p>
+              <p className="font-mono text-2xs uppercase tracking-widest text-error mb-2">Risques</p>
               <ul className="space-y-2 font-serif text-foreground-secondary leading-snug">
                 {item.disadvantages.map((d, i) => (
                   <li key={i} className="flex gap-2">
@@ -551,18 +551,18 @@ function LeadStory({
         </aside>
       ) : (
         <aside className="border-l border-border-subtle pl-6 lg:pl-8 self-start">
-          <p className="font-mono text-[10px] uppercase tracking-widest text-foreground-muted mb-3">Qualification</p>
+          <p className="font-mono text-2xs uppercase tracking-widest text-foreground-muted mb-3">Qualification</p>
           <dl className="space-y-3">
             <div>
-              <dt className="font-mono text-[10px] uppercase tracking-widest text-foreground-muted/60">Urgence</dt>
+              <dt className="font-mono text-2xs uppercase tracking-widest text-foreground-muted/60">Urgence</dt>
               <dd className="font-display text-2xl font-semibold tracking-tight text-foreground">{item.urgency}</dd>
             </div>
             <div>
-              <dt className="font-mono text-[10px] uppercase tracking-widest text-foreground-muted/60">Impact</dt>
+              <dt className="font-mono text-2xs uppercase tracking-widest text-foreground-muted/60">Impact</dt>
               <dd className="font-display text-2xl font-semibold tracking-tight text-foreground">{item.impact}</dd>
             </div>
             <div>
-              <dt className="font-mono text-[10px] uppercase tracking-widest text-foreground-muted/60">Confiance</dt>
+              <dt className="font-mono text-2xs uppercase tracking-widest text-foreground-muted/60">Confiance</dt>
               <dd className="font-display text-2xl font-semibold tracking-tight text-foreground">{Math.round(item.confidence * 100)}%</dd>
             </div>
           </dl>
@@ -572,14 +572,14 @@ function LeadStory({
       {hasDetails && !isExpanded && (
         <button
           onClick={() => onToggleExpand(item.id)}
-          className="lg:col-span-2 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-foreground-muted hover:text-foreground transition-colors mt-1"
+          className="lg:col-span-2 flex items-center gap-1.5 font-mono text-2xs uppercase tracking-widest text-foreground-muted hover:text-foreground transition-colors mt-1"
         >
           <ChevronDown className="h-3 w-3" /> Lire la qualification complète
         </button>
       )}
 
       {isTriggered && (
-        <div className="lg:col-span-2 border-t border-border-subtle pt-4 -mt-2 font-mono text-[10px] uppercase tracking-widest text-accent flex items-center gap-2">
+        <div className="lg:col-span-2 border-t border-border-subtle pt-4 -mt-2 font-mono text-2xs uppercase tracking-widest text-accent flex items-center gap-2">
           <Zap className="h-3 w-3" /> Notoria activée — recommandation en cours d&rsquo;exécution
         </div>
       )}
@@ -612,7 +612,7 @@ function Dispatch({
 
   return (
     <article className={`flex flex-col ${isPinned ? "border-l-2 border-accent pl-4 -ml-4" : ""}`}>
-      <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-foreground-muted mb-2.5">
+      <div className="flex items-center gap-2 font-mono text-2xs uppercase tracking-widest text-foreground-muted mb-2.5">
         <Icon className="h-3 w-3 text-accent" />
         {item.pillarKey && <span className="text-foreground">{item.pillarKey.toUpperCase()}</span>}
         {item.urgency === "NOW" && (
@@ -645,7 +645,7 @@ function Dispatch({
       {hasDetails && (
         <button
           onClick={() => onToggleExpand(item.id)}
-          className="flex items-center gap-1.5 mt-3 font-mono text-[10px] uppercase tracking-widest text-foreground-muted hover:text-foreground transition-colors"
+          className="flex items-center gap-1.5 mt-3 font-mono text-2xs uppercase tracking-widest text-foreground-muted hover:text-foreground transition-colors"
         >
           <ChevronDown className={`h-3 w-3 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
           {isExpanded ? "Replier" : "L'analyse"}
@@ -683,7 +683,7 @@ function Dispatch({
       </div>
 
       {isTriggered && (
-        <div className="mt-2 font-mono text-[10px] uppercase tracking-widest text-accent flex items-center gap-1.5">
+        <div className="mt-2 font-mono text-2xs uppercase tracking-widest text-accent flex items-center gap-1.5">
           <Zap className="h-3 w-3" /> Notoria activée
         </div>
       )}

@@ -163,11 +163,11 @@ export default function AssetsPage() {
   const getTypeBgColor = (type: string) => {
     switch (type) {
       case "LOGO": return "bg-accent/20";
-      case "FONT": return "bg-sky-500/20";
-      case "COLOR": return "bg-emerald-500/20";
-      case "IMAGE": return "bg-amber-500/20";
-      case "DOCUMENT": return "bg-zinc-500/20";
-      default: return "bg-zinc-500/20";
+      case "FONT": return "bg-info/20";
+      case "COLOR": return "bg-success/20";
+      case "IMAGE": return "bg-warning/20";
+      case "DOCUMENT": return "bg-foreground-muted/20";
+      default: return "bg-foreground-muted/20";
     }
   };
 
@@ -328,7 +328,7 @@ export default function AssetsPage() {
 
       {/* Error */}
       {assetsQuery.error && (
-        <div className="rounded-xl border border-red-900/50 bg-error/20 p-6 text-center">
+        <div className="rounded-xl border border-error/50 bg-error/20 p-6 text-center">
           <AlertTriangle className="mx-auto h-8 w-8 text-error" />
           <p className="mt-2 text-sm text-error">
             {assetsQuery.error.message}
@@ -407,9 +407,9 @@ export default function AssetsPage() {
                         <StatusBadge
                           status={level}
                           variantMap={{
-                            system: "bg-accent/15 text-accent ring-violet-400/30",
-                            operator: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
-                            production: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
+                            system: "bg-accent/15 text-accent ring-accent/30",
+                            operator: "bg-info/15 text-info ring-info/30",
+                            production: "bg-foreground-muted/15 text-foreground-secondary ring-border/30",
                           }}
                         />
                         {tags &&
@@ -418,7 +418,7 @@ export default function AssetsPage() {
                             .map((k) => (
                               <span
                                 key={k}
-                                className="rounded bg-background px-1.5 py-0.5 text-[10px] font-medium text-foreground-secondary"
+                                className="rounded bg-background px-1.5 py-0.5 text-2xs font-medium text-foreground-secondary"
                               >
                                 {k.toUpperCase()}
                               </span>
@@ -456,9 +456,9 @@ export default function AssetsPage() {
                       <StatusBadge
                         status={level}
                         variantMap={{
-                          system: "bg-accent/15 text-accent ring-violet-400/30",
-                          operator: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
-                          production: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
+                          system: "bg-accent/15 text-accent ring-accent/30",
+                          operator: "bg-info/15 text-info ring-info/30",
+                          production: "bg-foreground-muted/15 text-foreground-secondary ring-border/30",
                         }}
                       />
                       <div className="flex gap-1">
@@ -468,7 +468,7 @@ export default function AssetsPage() {
                             .map((k) => (
                               <span
                                 key={k}
-                                className="rounded bg-background px-1.5 py-0.5 text-[10px] font-medium text-foreground-secondary"
+                                className="rounded bg-background px-1.5 py-0.5 text-2xs font-medium text-foreground-secondary"
                               >
                                 {k.toUpperCase()}
                               </span>
@@ -514,7 +514,7 @@ export default function AssetsPage() {
                 setUploadForm({ ...uploadForm, name: e.target.value })
               }
               placeholder="Ex: Logo principal, Charte couleurs..."
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
             />
           </FormField>
 
@@ -578,7 +578,7 @@ export default function AssetsPage() {
                   <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-background/50 p-6 transition-colors hover:border-border-strong">
                     <Upload className="mb-2 h-8 w-8 text-foreground-muted" />
                     <span className="text-sm text-foreground-secondary">Cliquez ou glissez un fichier ici</span>
-                    <span className="mt-1 text-[10px] text-foreground-muted">Max 10 MB — Images, PDF, Documents</span>
+                    <span className="mt-1 text-2xs text-foreground-muted">Max 10 MB — Images, PDF, Documents</span>
                     <input type="file" className="hidden" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.svg,.mp4"
                       onChange={handleFileChange} />
                   </label>
@@ -591,7 +591,7 @@ export default function AssetsPage() {
                       )}
                       <div className="flex-1 min-w-0">
                         <p className="truncate text-sm text-white">{uploadForm.name || "Fichier selectionne"}</p>
-                        <p className="text-[10px] text-foreground-muted">Pret a uploader</p>
+                        <p className="text-2xs text-foreground-muted">Pret a uploader</p>
                       </div>
                       <button type="button" onClick={() => { setFilePreview(null); setUploadForm((p) => ({ ...p, fileUrl: "" })); }}
                         className="text-xs text-error hover:text-error">Retirer</button>
@@ -602,13 +602,13 @@ export default function AssetsPage() {
                 <input type="url" value={uploadForm.fileUrl}
                   onChange={(e) => setUploadForm({ ...uploadForm, fileUrl: e.target.value })}
                   placeholder="https://..."
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600" />
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong focus:ring-1 focus:ring-border" />
               )}
             </div>
           </FormField>
 
           {uploadMutation.error && (
-            <div className="rounded-lg border border-red-900/50 bg-error/20 p-3 text-sm text-error">
+            <div className="rounded-lg border border-error/50 bg-error/20 p-3 text-sm text-error">
               <AlertTriangle className="mr-2 inline h-4 w-4" />
               {uploadMutation.error.message}
             </div>
@@ -670,9 +670,9 @@ export default function AssetsPage() {
                     <StatusBadge
                       status={level}
                       variantMap={{
-                        system: "bg-accent/15 text-accent ring-violet-400/30",
-                        operator: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
-                        production: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
+                        system: "bg-accent/15 text-accent ring-accent/30",
+                        operator: "bg-info/15 text-info ring-info/30",
+                        production: "bg-foreground-muted/15 text-foreground-secondary ring-border/30",
                       }}
                     />
                   </div>

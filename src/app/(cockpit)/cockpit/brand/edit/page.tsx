@@ -16,13 +16,13 @@ import {
 
 const PILLAR_CONFIG = [
   { key: "A", label: "Authenticité", icon: Shield, color: "text-error", bgColor: "bg-error/10" },
-  { key: "D", label: "Distinction", icon: Eye, color: "text-blue-400", bgColor: "bg-blue-400/10" },
-  { key: "V", label: "Valeur", icon: Gem, color: "text-emerald-400", bgColor: "bg-emerald-400/10" },
-  { key: "E", label: "Engagement", icon: Heart, color: "text-pink-400", bgColor: "bg-pink-400/10" },
-  { key: "R", label: "Risk", icon: AlertTriangle, color: "text-amber-400", bgColor: "bg-amber-400/10" },
-  { key: "T", label: "Track", icon: Target, color: "text-cyan-400", bgColor: "bg-cyan-400/10" },
+  { key: "D", label: "Distinction", icon: Eye, color: "text-info", bgColor: "bg-info/10" },
+  { key: "V", label: "Valeur", icon: Gem, color: "text-success", bgColor: "bg-success/10" },
+  { key: "E", label: "Engagement", icon: Heart, color: "text-error", bgColor: "bg-error/10" },
+  { key: "R", label: "Risk", icon: AlertTriangle, color: "text-warning", bgColor: "bg-warning/10" },
+  { key: "T", label: "Track", icon: Target, color: "text-info", bgColor: "bg-info/10" },
   { key: "I", label: "Implémentation", icon: Rocket, color: "text-accent", bgColor: "bg-accent/10" },
-  { key: "S", label: "Stratégie", icon: Compass, color: "text-orange-400", bgColor: "bg-orange-400/10" },
+  { key: "S", label: "Stratégie", icon: Compass, color: "text-warning", bgColor: "bg-warning/10" },
 ] as const;
 
 const SCHWARTZ_VALUES = [
@@ -172,10 +172,10 @@ export default function PillarEditorPage() {
     <div className="space-y-6">
       {/* Focus mode banner */}
       {focusMode && (
-        <div className="sticky top-0 z-20 rounded-xl border border-amber-500/30 bg-amber-500/5 backdrop-blur-sm px-5 py-3">
+        <div className="sticky top-0 z-20 rounded-xl border border-warning/30 bg-warning/5 backdrop-blur-sm px-5 py-3">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold text-amber-400">
+              <p className="text-sm font-semibold text-warning">
                 Mode completion{focusSeqKey ? ` — ${focusSeqKey}` : ""}
               </p>
               <p className="text-xs text-foreground-secondary mt-0.5">
@@ -184,21 +184,21 @@ export default function PillarEditorPage() {
             </div>
             <div className="flex items-center gap-3">
               {!focusAllDone && (
-                <span className="text-[10px] text-foreground-muted">
+                <span className="text-2xs text-foreground-muted">
                   Piliers: {Object.keys(focusByPillar).join(", ")}
                 </span>
               )}
               {focusAllDone ? (
                 <a
                   href="/console/fusee/glory"
-                  className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-500"
+                  className="flex items-center gap-1.5 rounded-lg bg-success px-4 py-2 text-xs font-semibold text-white hover:bg-success"
                 >
                   <CheckCircle className="h-3.5 w-3.5" /> Retour a la queue
                 </a>
               ) : (
                 <a
                   href="/console/fusee/glory"
-                  className="rounded-lg border border-border px-3 py-1.5 text-[10px] text-foreground-muted hover:text-foreground-secondary"
+                  className="rounded-lg border border-border px-3 py-1.5 text-2xs text-foreground-muted hover:text-foreground-secondary"
                 >
                   Retour
                 </a>
@@ -207,7 +207,7 @@ export default function PillarEditorPage() {
           </div>
           <div className="mt-2 h-1.5 rounded-full bg-background">
             <div
-              className="h-1.5 rounded-full bg-amber-500 transition-all"
+              className="h-1.5 rounded-full bg-warning transition-all"
               // lafusee:allow-adhoc-completion: UI section completion ratio (display-only, derived from server query result; not the canonical completion gate)
               style={{ width: `${focusPaths.length > 0 ? (focusCompletedCount / focusPaths.length) * 100 : 0}%` }}
             />
@@ -254,12 +254,12 @@ export default function PillarEditorPage() {
                 <div className="flex items-center gap-1.5 font-medium">
                   {p.key} — {p.label}
                   {focusByPillar[p.key] && focusByPillar[p.key]!.length > 0 && (
-                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] font-bold text-black">
+                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-warning text-[9px] font-bold text-black">
                       {focusByPillar[p.key]!.length}
                     </span>
                   )}
                 </div>
-                <div className="text-[10px] text-foreground-muted">{score.toFixed(1)}/25 · {completion}%</div>
+                <div className="text-2xs text-foreground-muted">{score.toFixed(1)}/25 · {completion}%</div>
               </div>
             </button>
           );
@@ -292,7 +292,7 @@ export default function PillarEditorPage() {
 
         {saveMessage && (
           <div className={`mb-4 flex items-center gap-2 rounded-lg p-3 text-sm ${
-            saveMessage.type === "success" ? "bg-emerald-400/10 text-emerald-400" : "bg-error/10 text-error"
+            saveMessage.type === "success" ? "bg-success/10 text-success" : "bg-error/10 text-error"
           }`}>
             {saveMessage.type === "success" ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
             {saveMessage.text}
@@ -378,11 +378,11 @@ export default function PillarEditorPage() {
               </p>
               {/* Focus mode: show missing paths for this pillar */}
               {focusMode && focusByPillar[activePillar] && focusByPillar[activePillar].length > 0 && (
-                <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
-                  <p className="text-xs font-semibold text-amber-400 mb-1.5">Champs a completer dans ce pilier :</p>
+                <div className="rounded-lg border border-warning/30 bg-warning/5 p-3">
+                  <p className="text-xs font-semibold text-warning mb-1.5">Champs a completer dans ce pilier :</p>
                   <div className="flex flex-wrap gap-1.5">
                     {focusByPillar[activePillar].map((path) => (
-                      <span key={path} className="inline-flex rounded-full bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-mono text-amber-400 ring-1 ring-inset ring-amber-500/30">
+                      <span key={path} className="inline-flex rounded-full bg-warning/10 px-2.5 py-0.5 text-2xs font-mono text-warning ring-1 ring-inset ring-warning/30">
                         {path}
                       </span>
                     ))}
@@ -431,11 +431,11 @@ function TextField({ label, value, onChange, placeholder, minLength, maxLength, 
   const isLong = maxLength && len > maxLength;
   const isEmpty = highlight && len === 0;
   return (
-    <div className={highlight ? "rounded-lg p-2 -m-2 ring-1 ring-amber-500/40 bg-amber-500/5" : ""}>
+    <div className={highlight ? "rounded-lg p-2 -m-2 ring-1 ring-warning/40 bg-warning/5" : ""}>
       <label className="mb-1 flex items-center gap-2 text-xs font-medium text-foreground-secondary">
         {label}
-        {isEmpty && <span className="text-[9px] font-semibold text-amber-400 uppercase">Requis</span>}
-        {highlight && len > 0 && <span className="text-[9px] font-semibold text-emerald-400">✓</span>}
+        {isEmpty && <span className="text-[9px] font-semibold text-warning uppercase">Requis</span>}
+        {highlight && len > 0 && <span className="text-[9px] font-semibold text-success">✓</span>}
       </label>
       <input
         type="text"
@@ -443,12 +443,12 @@ function TextField({ label, value, onChange, placeholder, minLength, maxLength, 
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         maxLength={maxLength}
-        className={`w-full rounded-lg border bg-background/60 px-3 py-2 text-sm text-white placeholder-zinc-600 ${
-          isEmpty ? "border-amber-500/60" : isShort ? "border-amber-500/50" : isLong ? "border-red-500/50" : "border-border"
+        className={`w-full rounded-lg border bg-background/60 px-3 py-2 text-sm text-white placeholder-foreground-muted ${
+          isEmpty ? "border-warning/60" : isShort ? "border-warning/50" : isLong ? "border-error/50" : "border-border"
         }`}
       />
       {(minLength || maxLength) && (
-        <p className={`mt-1 text-[10px] ${isShort ? "text-amber-400" : isLong ? "text-error" : "text-foreground-muted"}`}>
+        <p className={`mt-1 text-2xs ${isShort ? "text-warning" : isLong ? "text-error" : "text-foreground-muted"}`}>
           {len} caractères{minLength ? ` (min: ${minLength})` : ""}{maxLength ? ` (max: ${maxLength})` : ""}
         </p>
       )}
@@ -463,23 +463,23 @@ function TextArea({ label, value, onChange, placeholder, minLength, rows = 3, hi
   const isShort = minLength && len > 0 && len < minLength;
   const isEmpty = highlight && len === 0;
   return (
-    <div className={highlight ? "rounded-lg p-2 -m-2 ring-1 ring-amber-500/40 bg-amber-500/5" : ""}>
+    <div className={highlight ? "rounded-lg p-2 -m-2 ring-1 ring-warning/40 bg-warning/5" : ""}>
       <label className="mb-1 flex items-center gap-2 text-xs font-medium text-foreground-secondary">
         {label}
-        {isEmpty && <span className="text-[9px] font-semibold text-amber-400 uppercase">Requis</span>}
-        {highlight && len > 0 && <span className="text-[9px] font-semibold text-emerald-400">✓</span>}
+        {isEmpty && <span className="text-[9px] font-semibold text-warning uppercase">Requis</span>}
+        {highlight && len > 0 && <span className="text-[9px] font-semibold text-success">✓</span>}
       </label>
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={rows}
-        className={`w-full rounded-lg border bg-background/60 px-3 py-2 text-sm text-white placeholder-zinc-600 ${
-          isEmpty ? "border-amber-500/60" : isShort ? "border-amber-500/50" : "border-border"
+        className={`w-full rounded-lg border bg-background/60 px-3 py-2 text-sm text-white placeholder-foreground-muted ${
+          isEmpty ? "border-warning/60" : isShort ? "border-warning/50" : "border-border"
         }`}
       />
       {minLength && (
-        <p className={`mt-1 text-[10px] ${isShort ? "text-amber-400" : "text-foreground-muted"}`}>
+        <p className={`mt-1 text-2xs ${isShort ? "text-warning" : "text-foreground-muted"}`}>
           {len}/{minLength} caractères minimum
         </p>
       )}
@@ -492,11 +492,11 @@ function SelectField({ label, value, options, onChange, highlight }: {
 }) {
   const isEmpty = highlight && !value;
   return (
-    <div className={highlight ? "rounded-lg p-2 -m-2 ring-1 ring-amber-500/40 bg-amber-500/5" : ""}>
+    <div className={highlight ? "rounded-lg p-2 -m-2 ring-1 ring-warning/40 bg-warning/5" : ""}>
       <label className="mb-1 flex items-center gap-2 text-xs font-medium text-foreground-secondary">
         {label}
-        {isEmpty && <span className="text-[9px] font-semibold text-amber-400 uppercase">Requis</span>}
-        {highlight && value && <span className="text-[9px] font-semibold text-emerald-400">✓</span>}
+        {isEmpty && <span className="text-[9px] font-semibold text-warning uppercase">Requis</span>}
+        {highlight && value && <span className="text-[9px] font-semibold text-success">✓</span>}
       </label>
       <select
         value={value}

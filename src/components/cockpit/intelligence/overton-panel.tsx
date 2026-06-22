@@ -121,7 +121,7 @@ export function OvertonTeaser() {
       aria-label="Ouvrir le radar Overton sectoriel"
     >
       {hasNewActivity && (
-        <span className="absolute right-3 top-3 z-10 inline-flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-accent">
+        <span className="absolute right-3 top-3 z-10 inline-flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-2xs font-semibold uppercase tracking-wider text-accent">
           Nouveau
         </span>
       )}

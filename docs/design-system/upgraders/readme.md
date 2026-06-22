@@ -186,6 +186,7 @@ anglais assumés de la culture startup (« Level Up », « Boss Mode », « Bran
 | `tokens/spacing.css` | Espacement 4px, rayons, layout, z-index. |
 | `tokens/effects.css` | Ombres, glows, blur, easing/durées. |
 | `tokens/base.css` | Defaults `.up-root` + utilitaires (`.up-glass`, `.up-texture-geo`, `.up-grain`, eyebrow). |
+| `tokens/patterns.css` | **Patterns éditoriaux & motion** : `.up-figure` (photo scan-frame), `.up-kicker`, `.up-marquee`, `.up-fab` (CTA flottant), `.up-float`. |
 | `tokens/fonts.css` | `@font-face` Clash Display + Satoshi (`.woff2` locaux), JetBrains via Google. |
 | `assets/fonts/` | Polices variables hébergées (Clash Display, Satoshi + italique). |
 | `assets/logos/` | Hexagone, lockups H/V, wordmark, monogramme UP, strapline, cachet SARL. |

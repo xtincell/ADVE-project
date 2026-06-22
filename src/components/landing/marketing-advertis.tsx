@@ -37,7 +37,7 @@ export function MarketingAdvertis() {
   return (
     <section id="methode" className="py-24 md:py-32">
       <div className="mx-auto max-w-[var(--maxw-content)] px-[var(--pad-page)]">
-        <div className="flex items-baseline gap-3.5 mb-8 font-mono text-[11px] uppercase tracking-widest text-foreground-muted">
+        <div className="flex items-baseline gap-3.5 mb-8 font-mono text-2xs uppercase tracking-widest text-foreground-muted">
           <span className="w-8 h-px bg-accent" />
           03 · Méthode ADVE-RTIS
         </div>
@@ -83,7 +83,7 @@ export function MarketingAdvertis() {
                 <div className="font-display font-semibold text-5xl tracking-tight">{total}<span className="text-2xl text-foreground-muted">/200</span></div>
                 <div className="font-mono text-xs uppercase tracking-widest text-accent mt-1">{tier}</div>
               </div>
-              <div className="font-mono text-[10px] uppercase tracking-widest text-foreground-muted text-right">↳ glisse pour ajuster<br />score recalculé live</div>
+              <div className="font-mono text-2xs uppercase tracking-widest text-foreground-muted text-right">↳ glisse pour ajuster<br />score recalculé live</div>
             </div>
           </div>
 
@@ -109,7 +109,7 @@ export function MarketingAdvertis() {
             ))}
             <li className="mt-4 p-5 border border-accent/40 bg-accent-subtle flex items-center justify-between gap-4 flex-wrap">
               <div className="flex flex-col gap-0.5">
-                <span className="font-mono text-[10px] uppercase tracking-widest text-accent">↳ Tu joues avec le radar</span>
+                <span className="font-mono text-2xs uppercase tracking-widest text-accent">↳ Tu joues avec le radar</span>
                 <span className="text-sm font-medium text-foreground">Le vrai diagnostic prend 15 minutes et te rend un rapport actionnable.</span>
               </div>
               <a href="/intake" className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium bg-accent text-accent-foreground hover:bg-accent-hover transition-colors whitespace-nowrap">

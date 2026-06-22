@@ -35,7 +35,7 @@ export default function ServicesPage() {
               className={`flex flex-col border bg-background p-8 ${s.featured ? "border-accent" : "border-border"}`}
             >
               {s.featured ? (
-                <div className="mb-4 inline-flex w-fit items-center gap-1.5 bg-accent px-2.5 py-1 font-mono text-[10px] uppercase tracking-widest text-accent-foreground">
+                <div className="mb-4 inline-flex w-fit items-center gap-1.5 bg-accent px-2.5 py-1 font-mono text-2xs uppercase tracking-widest text-accent-foreground">
                   Formule reine
                 </div>
               ) : (
@@ -44,13 +44,13 @@ export default function ServicesPage() {
               <h3 className="font-display text-2xl font-semibold tracking-tight">
                 {s.title}<span className="font-serif italic font-medium text-accent"> {s.emphasis}</span>
               </h3>
-              <div className="mt-1 font-mono text-[11px] uppercase tracking-widest text-foreground-muted">{s.duration}</div>
+              <div className="mt-1 font-mono text-2xs uppercase tracking-widest text-foreground-muted">{s.duration}</div>
               <p className="mt-4 flex-1 text-sm leading-relaxed text-foreground-secondary">{s.desc}</p>
               <div className="mt-6 border-t border-border-subtle pt-4 text-sm font-semibold text-foreground">{s.tag}</div>
             </div>
           ))}
         </div>
-        <p className="mt-6 font-mono text-[11px] uppercase tracking-widest text-foreground-muted">
+        <p className="mt-6 font-mono text-2xs uppercase tracking-widest text-foreground-muted">
           ↳ Pricing localisé par zone (FCFA · mobile money). Le diagnostic d&apos;entrée reste gratuit.
         </p>
       </Section>
@@ -69,7 +69,7 @@ export default function ServicesPage() {
               <div>
                 <div className="flex flex-wrap items-baseline gap-3">
                   <h3 className="font-display text-xl font-semibold tracking-tight">{p.name}</h3>
-                  <span className="font-mono text-[10px] uppercase tracking-widest text-foreground-muted">{p.line}</span>
+                  <span className="font-mono text-2xs uppercase tracking-widest text-foreground-muted">{p.line}</span>
                 </div>
                 <p className="mt-2 max-w-[70ch] text-sm leading-relaxed text-foreground-secondary">{p.desc}</p>
               </div>

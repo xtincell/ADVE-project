@@ -44,21 +44,21 @@ const PILLAR_LABELS: Record<string, string> = {
 
 const IMPACT_COLORS: Record<string, string> = {
   HIGH: "bg-error/15 text-error",
-  MEDIUM: "bg-amber-500/15 text-amber-300",
+  MEDIUM: "bg-warning/15 text-warning",
   LOW: "bg-white/10 text-foreground-muted",
 };
 
 const OP_LABELS: Record<string, { label: string; color: string }> = {
-  SET: { label: "Remplacer", color: "bg-orange-500/15 text-orange-300" },
-  ADD: { label: "Ajouter", color: "bg-emerald-500/15 text-emerald-300" },
-  MODIFY: { label: "Modifier", color: "bg-blue-500/15 text-blue-300" },
+  SET: { label: "Remplacer", color: "bg-warning/15 text-warning" },
+  ADD: { label: "Ajouter", color: "bg-success/15 text-success" },
+  MODIFY: { label: "Modifier", color: "bg-info/15 text-info" },
   REMOVE: { label: "Supprimer", color: "bg-error/15 text-error" },
   EXTEND: { label: "Enrichir", color: "bg-accent/15 text-accent" },
 };
 
 const URGENCY_LABELS: Record<string, { label: string; color: string }> = {
   NOW: { label: "Urgent", color: "text-error" },
-  SOON: { label: "Recommande", color: "text-amber-300" },
+  SOON: { label: "Recommande", color: "text-warning" },
   LATER: { label: "Optionnel", color: "text-foreground-muted" },
 };
 
@@ -420,12 +420,12 @@ export function NotoriaPage() {
       <div className="rounded-lg border border-white/5 bg-surface-raised p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-amber-400" />
+            <Sparkles className="h-5 w-5 text-warning" />
             <h1 className="text-lg font-bold text-white">Notoria</h1>
             <span className="text-xs text-foreground-muted">Moteur de Recommandation</span>
           </div>
           {totalPending > 0 && (
-            <span className="rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-bold text-amber-300">
+            <span className="rounded-full bg-warning/15 px-2.5 py-0.5 text-xs font-bold text-warning">
               {totalPending} en attente
             </span>
           )}
@@ -439,7 +439,7 @@ export function NotoriaPage() {
             const status = chipStatus(k);
             return (
               <div key={k} className="flex items-center gap-1.5">
-                <span className="text-[10px] font-medium text-foreground-muted uppercase">{k}</span>
+                <span className="text-2xs font-medium text-foreground-muted uppercase">{k}</span>
                 <span
                   className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${status.className}`}
                   title={
@@ -470,10 +470,10 @@ export function NotoriaPage() {
 
         {/* ADR-0030 Axe 3 — gate RTIS_CASCADE veto message */}
         {rtVetoMessage ? (
-          <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+          <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
             <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
             <div className="flex-1">{rtVetoMessage}</div>
-            <button onClick={() => setRtVetoMessage(null)} className="text-amber-300/60 hover:text-amber-200">✕</button>
+            <button onClick={() => setRtVetoMessage(null)} className="text-warning/60 hover:text-warning">✕</button>
           </div>
         ) : null}
 
@@ -485,8 +485,8 @@ export function NotoriaPage() {
               primary.variant === "go"
                 ? "bg-accent text-accent-foreground hover:bg-accent/90 disabled:opacity-50"
                 : primary.variant === "wait"
-                  ? "bg-amber-500/15 text-amber-300 disabled:opacity-100"
-                  : "bg-emerald-500/15 text-emerald-300 disabled:opacity-100"
+                  ? "bg-warning/15 text-warning disabled:opacity-100"
+                  : "bg-success/15 text-success disabled:opacity-100"
             }`}
           >
             {primary.icon}
@@ -520,7 +520,7 @@ export function NotoriaPage() {
                 disabled={anyPending}
                 className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-foreground hover:bg-white/5 disabled:opacity-40"
               >
-                <Rocket className="h-3.5 w-3.5 text-orange-300" />
+                <Rocket className="h-3.5 w-3.5 text-warning" />
                 Re-générer Potentiel (I)
               </button>
               {/* ADR-0088 — function-calling generation (typed mutations by id) */}
@@ -537,7 +537,7 @@ export function NotoriaPage() {
                 disabled={anyPending}
                 className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-foreground hover:bg-white/5 disabled:opacity-40"
               >
-                <Route className="h-3.5 w-3.5 text-pink-300" />
+                <Route className="h-3.5 w-3.5 text-error" />
                 Re-synthétiser Stratégie (S)
               </button>
               <div className="my-1 border-t border-white/5" />
@@ -546,7 +546,7 @@ export function NotoriaPage() {
                 disabled={anyPending}
                 className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-foreground hover:bg-white/5 disabled:opacity-40"
               >
-                <Zap className="h-3.5 w-3.5 text-amber-300" />
+                <Zap className="h-3.5 w-3.5 text-warning" />
                 Relancer le pipeline complet
               </button>
             </div>
@@ -558,13 +558,13 @@ export function NotoriaPage() {
       <div className="flex gap-4 border-b border-white/5">
         <button
           onClick={() => setActiveTab("pending")}
-          className={`pb-2 text-sm font-medium transition-colors ${activeTab === "pending" ? "text-white border-b-2 border-amber-400" : "text-foreground-muted hover:text-white"}`}
+          className={`pb-2 text-sm font-medium transition-colors ${activeTab === "pending" ? "text-white border-b-2 border-warning" : "text-foreground-muted hover:text-white"}`}
         >
           En attente ({totalPending})
         </button>
         <button
           onClick={() => setActiveTab("history")}
-          className={`pb-2 text-sm font-medium transition-colors ${activeTab === "history" ? "text-white border-b-2 border-amber-400" : "text-foreground-muted hover:text-white"}`}
+          className={`pb-2 text-sm font-medium transition-colors ${activeTab === "history" ? "text-white border-b-2 border-warning" : "text-foreground-muted hover:text-white"}`}
         >
           Historique
         </button>
@@ -588,7 +588,7 @@ export function NotoriaPage() {
                 className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${selectedPillar === tab.key ? "bg-white/10 text-white" : "text-foreground-muted hover:text-white"}`}
               >
                 {tab.label}
-                {tab.count > 0 && <span className="ml-1 rounded-full bg-amber-500/20 px-1.5 text-[9px] text-amber-300">{tab.count}</span>}
+                {tab.count > 0 && <span className="ml-1 rounded-full bg-warning/20 px-1.5 text-[9px] text-warning">{tab.count}</span>}
               </button>
             ))}
           </div>
@@ -596,8 +596,8 @@ export function NotoriaPage() {
           {/* Apply feedback banner */}
           {applyFeedback && (
             <div className={`flex items-start justify-between gap-2 rounded-lg border px-3 py-2 text-xs ${
-              applyFeedback.type === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200" :
-              applyFeedback.type === "warning" ? "border-amber-500/30 bg-amber-500/10 text-amber-200" :
+              applyFeedback.type === "success" ? "border-success/30 bg-success/10 text-success" :
+              applyFeedback.type === "warning" ? "border-warning/30 bg-warning/10 text-warning" :
               "border-error/30 bg-error/10 text-error"
             }`}>
               <span className="flex-1">{applyFeedback.message}</span>
@@ -616,7 +616,7 @@ export function NotoriaPage() {
                     if (ids.length > 0) acceptMutation.mutate({ strategyId: strategyId!, recoIds: ids });
                   }}
                   disabled={isMutating}
-                  className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30 disabled:opacity-40"
+                  className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-success/20 text-success hover:bg-success/30 disabled:opacity-40"
                 >
                   <CheckCircle className="h-3 w-3" /> Tout accepter ({recos.filter((r) => r.status === "PENDING").length})
                 </button>
@@ -630,7 +630,7 @@ export function NotoriaPage() {
                     if (ids.length > 0) applyMutation.mutate({ strategyId: strategyId!, recoIds: ids });
                   }}
                   disabled={isMutating}
-                  className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 disabled:opacity-40"
+                  className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-info/20 text-info hover:bg-info/30 disabled:opacity-40"
                 >
                   <Zap className="h-3 w-3" /> Appliquer tout ({recos.filter((r) => r.status === "ACCEPTED").length})
                 </button>
@@ -698,7 +698,7 @@ export function NotoriaPage() {
                     reco.status !== "PENDING" && reco.status !== "ACCEPTED"
                       ? "border-white/5 bg-white/[0.01] opacity-60"
                       : isSelected
-                        ? "cursor-pointer border-emerald-500/30 bg-emerald-500/10"
+                        ? "cursor-pointer border-success/30 bg-success/10"
                         : "cursor-pointer border-white/5 bg-white/[0.02] hover:bg-white/5"
                   }`}
                 >
@@ -706,55 +706,55 @@ export function NotoriaPage() {
                     <div className="min-w-0 flex-1">
                       {/* Header: op + field + pillar + impact + urgency + source + confidence */}
                       <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                        <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${op.color}`}>{op.label}</span>
+                        <span className={`rounded px-1.5 py-0.5 text-2xs font-bold ${op.color}`}>{op.label}</span>
                         <span className="text-xs font-medium text-white">{getFieldLabel(reco.targetField)}</span>
                         <span className="rounded-full bg-white/5 px-1.5 py-0.5 text-[9px] text-foreground-muted">{PILLAR_LABELS[reco.targetPillarKey] ?? reco.targetPillarKey}</span>
                         <span className={`rounded-full px-1.5 py-0.5 text-[9px] ${impact}`}>{reco.impact}</span>
                         <span className={`text-[9px] font-medium ${urgency.color}`}>{urgency.label}</span>
                         <span className="rounded-full bg-white/5 px-1 py-0.5 text-[8px] text-foreground-muted">{reco.source}</span>
-                        <span className={`text-[8px] ${reco.confidence >= 0.7 ? "text-emerald-400" : reco.confidence >= 0.5 ? "text-amber-300" : "text-error"}`}>
+                        <span className={`text-[8px] ${reco.confidence >= 0.7 ? "text-success" : reco.confidence >= 0.5 ? "text-warning" : "text-error"}`}>
                           {Math.round(reco.confidence * 100)}%
                         </span>
                         {/* ADR-0090 — score pondéré déterministe (ruler + impact + confidence) */}
                         {typeof reco.weightedScore === "number" && (
                           <span
                             title={`Score pondéré ADR-0090 — ruler ${reco.rulerScore ?? "?"}/100 · impact ${reco.scoreImpactEstimate != null ? (reco.scoreImpactEstimate >= 0 ? "+" : "") + reco.scoreImpactEstimate : "n/a"} pts composite`}
-                            className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${reco.weightedScore >= 70 ? "bg-emerald-500/15 text-emerald-300" : reco.weightedScore >= 50 ? "bg-amber-500/15 text-amber-300" : "bg-error/15 text-error"}`}
+                            className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${reco.weightedScore >= 70 ? "bg-success/15 text-success" : reco.weightedScore >= 50 ? "bg-warning/15 text-warning" : "bg-error/15 text-error"}`}
                           >
                             ◈ {Math.round(reco.weightedScore)}
                           </span>
                         )}
                         {reco.validationWarning && (
-                          <span title={reco.validationWarning}><AlertTriangle className="h-3 w-3 text-amber-400" /></span>
+                          <span title={reco.validationWarning}><AlertTriangle className="h-3 w-3 text-warning" /></span>
                         )}
                         {/* Always show status badge */}
                         <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
-                          reco.status === "PENDING" ? "bg-amber-500/15 text-amber-300" :
-                          reco.status === "ACCEPTED" ? "bg-blue-500/15 text-blue-300" :
-                          reco.status === "APPLIED" ? "bg-emerald-500/15 text-emerald-300" :
+                          reco.status === "PENDING" ? "bg-warning/15 text-warning" :
+                          reco.status === "ACCEPTED" ? "bg-info/15 text-info" :
+                          reco.status === "APPLIED" ? "bg-success/15 text-success" :
                           reco.status === "REJECTED" ? "bg-error/15 text-error" :
-                          reco.status === "REVERTED" ? "bg-orange-500/15 text-orange-300" :
+                          reco.status === "REVERTED" ? "bg-warning/15 text-warning" :
                           "bg-white/5 text-foreground-muted"
                         }`}>{reco.status}</span>
                       </div>
 
                       {/* Explain */}
-                      <p className="text-[11px] text-foreground-muted mb-1">{reco.explain}</p>
+                      <p className="text-2xs text-foreground-muted mb-1">{reco.explain}</p>
 
                       {/* Advantages / Disadvantages (collapsible) */}
                       {(advantages.length > 0 || disadvantages.length > 0) && (
                         <details className="mb-2">
-                          <summary className="text-[10px] text-foreground-muted/60 cursor-pointer hover:text-foreground-muted">
+                          <summary className="text-2xs text-foreground-muted/60 cursor-pointer hover:text-foreground-muted">
                             Avantages/Risques
                           </summary>
                           <div className="mt-1 space-y-0.5 pl-2">
                             {advantages.map((a, i) => (
-                              <div key={i} className="flex items-start gap-1 text-[10px] text-emerald-300/70">
+                              <div key={i} className="flex items-start gap-1 text-2xs text-success/70">
                                 <span className="shrink-0">+</span><span>{a}</span>
                               </div>
                             ))}
                             {disadvantages.map((d, i) => (
-                              <div key={i} className="flex items-start gap-1 text-[10px] text-error/70">
+                              <div key={i} className="flex items-start gap-1 text-2xs text-error/70">
                                 <span className="shrink-0">-</span><span>{d}</span>
                               </div>
                             ))}
@@ -765,10 +765,10 @@ export function NotoriaPage() {
                       {/* Proposed value preview */}
                       {reco.proposedValue != null && (
                         <div className="rounded border border-white/5 bg-black/20 p-2">
-                          <p className="text-[9px] text-emerald-400/70 uppercase tracking-wide mb-0.5">
+                          <p className="text-[9px] text-success/70 uppercase tracking-wide mb-0.5">
                             {reco.operation === "ADD" ? "A ajouter" : reco.operation === "REMOVE" ? "A supprimer" : "Propose"}
                           </p>
-                          <div className="text-[11px] text-white/70 line-clamp-4">
+                          <div className="text-2xs text-white/70 line-clamp-4">
                             {typeof reco.proposedValue === "string"
                               ? reco.proposedValue
                               : JSON.stringify(reco.proposedValue, null, 1).slice(0, 200)}
@@ -779,7 +779,7 @@ export function NotoriaPage() {
 
                     {/* Selection checkbox (for PENDING + ACCEPTED) */}
                     {(reco.status === "PENDING" || reco.status === "ACCEPTED") && (
-                      <div className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border ${isSelected ? "border-emerald-400 bg-emerald-400 text-black" : "border-white/20"}`}>
+                      <div className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border ${isSelected ? "border-success bg-success text-black" : "border-white/20"}`}>
                         {isSelected && <CheckCircle className="h-3 w-3" />}
                       </div>
                     )}
@@ -804,15 +804,15 @@ export function NotoriaPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium text-white">{batch.missionType}</span>
-                  <span className="text-[10px] text-foreground-muted">
+                  <span className="text-2xs text-foreground-muted">
                     {new Date(batch.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 text-[10px]">
+                <div className="flex items-center gap-2 text-2xs">
                   <span className="text-foreground-muted">{batch.totalRecos} recos</span>
-                  {batch.appliedCount > 0 && <span className="text-emerald-300">{batch.appliedCount} appliquees</span>}
+                  {batch.appliedCount > 0 && <span className="text-success">{batch.appliedCount} appliquees</span>}
                   {batch.rejectedCount > 0 && <span className="text-error">{batch.rejectedCount} rejetees</span>}
-                  {batch.pendingCount > 0 && <span className="text-amber-300">{batch.pendingCount} en attente</span>}
+                  {batch.pendingCount > 0 && <span className="text-warning">{batch.pendingCount} en attente</span>}
                 </div>
               </div>
             </div>
@@ -825,14 +825,14 @@ export function NotoriaPage() {
               const op = OP_LABELS[reco.operation] ?? { label: reco.operation, color: "bg-white/10" };
               return (
                 <div key={reco.id} className="rounded border border-white/5 bg-white/[0.01] p-2 opacity-70">
-                  <div className="flex items-center gap-1.5 text-[10px]">
+                  <div className="flex items-center gap-1.5 text-2xs">
                     <span className={`rounded px-1 py-0.5 font-bold ${op.color}`}>{op.label}</span>
                     <span className="text-white/70">{getFieldLabel(reco.targetField)}</span>
                     <span className="text-foreground-muted">{PILLAR_LABELS[reco.targetPillarKey]}</span>
                     <span className={`ml-auto rounded-full px-1.5 py-0.5 font-bold ${
-                      reco.status === "APPLIED" ? "bg-emerald-500/15 text-emerald-300" :
+                      reco.status === "APPLIED" ? "bg-success/15 text-success" :
                       reco.status === "REJECTED" ? "bg-error/15 text-error" :
-                      reco.status === "REVERTED" ? "bg-orange-500/15 text-orange-300" :
+                      reco.status === "REVERTED" ? "bg-warning/15 text-warning" :
                       "bg-white/5 text-foreground-muted"
                     }`}>{reco.status}</span>
                   </div>

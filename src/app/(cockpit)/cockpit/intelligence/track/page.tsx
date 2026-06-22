@@ -57,7 +57,7 @@ export default function TrackPage() {
     return (
       <div className="p-6">
         <PageHeader title="Trend Tracker — 49 variables" description="Pilier T canon ADVE GEN." />
-        <div className="mt-6 rounded-lg border border-amber-500/20 bg-amber-500/5 p-4 text-sm text-amber-300">
+        <div className="mt-6 rounded-lg border border-warning/20 bg-warning/5 p-4 text-sm text-warning">
           Cette stratégie n'a pas de <code>countryCode</code> ou de <code>businessContext.sector</code> renseigné.
           Renseigne-les pour activer le Trend Tracker.
         </div>
@@ -112,7 +112,7 @@ export default function TrackPage() {
                           <td className="px-3 py-2 text-xs text-foreground-muted">{v.unit}</td>
                           <td className="px-3 py-2">
                             {value && value.value != null ? (
-                              <span className="font-semibold text-emerald-300">{String(value.value)}</span>
+                              <span className="font-semibold text-success">{String(value.value)}</span>
                             ) : (
                               <span className="text-foreground-muted/40">—</span>
                             )}
@@ -142,7 +142,7 @@ export default function TrackPage() {
             {intel.data.tamSamSom ? (
               <div className="rounded-lg border border-white/8 bg-white/[0.02] p-3 text-xs">
                 <p className="font-semibold text-white">TAM</p>
-                <p className="mt-1 text-emerald-300">{intel.data.tamSamSom.tam.value} {intel.data.tamSamSom.tam.currency ?? ""} ({intel.data.tamSamSom.tam.year})</p>
+                <p className="mt-1 text-success">{intel.data.tamSamSom.tam.value} {intel.data.tamSamSom.tam.currency ?? ""} ({intel.data.tamSamSom.tam.year})</p>
                 {intel.data.tamSamSom.sam ? <p className="text-foreground-muted">SAM : {intel.data.tamSamSom.sam.value}</p> : null}
                 {intel.data.tamSamSom.som ? <p className="text-foreground-muted">SOM : {intel.data.tamSamSom.som.value}</p> : null}
               </div>
@@ -152,7 +152,7 @@ export default function TrackPage() {
                 <p className="font-semibold text-white">Concurrents (parts marché)</p>
                 <ul className="mt-1 space-y-1">
                   {intel.data.competitors.slice(0, 5).map((c, i) => (
-                    <li key={i}><span className="text-foreground-muted">{c.name} :</span> <span className="text-emerald-300">{c.marketSharePct ?? "?"}%</span></li>
+                    <li key={i}><span className="text-foreground-muted">{c.name} :</span> <span className="text-success">{c.marketSharePct ?? "?"}%</span></li>
                   ))}
                 </ul>
               </div>
@@ -162,7 +162,7 @@ export default function TrackPage() {
                 <p className="font-semibold text-white">Segments consommateurs</p>
                 <ul className="mt-1 space-y-1">
                   {intel.data.segments.slice(0, 5).map((s, i) => (
-                    <li key={i}><span className="text-foreground-muted">{s.segment} :</span> <span className="text-emerald-300">{s.sizePct}%</span></li>
+                    <li key={i}><span className="text-foreground-muted">{s.segment} :</span> <span className="text-success">{s.sizePct}%</span></li>
                   ))}
                 </ul>
               </div>

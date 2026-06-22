@@ -37,7 +37,7 @@ export function MarketingFaq() {
   return (
     <section id="faq" className="py-24 md:py-32">
       <div className="mx-auto max-w-[var(--maxw-content)] px-[var(--pad-page)]">
-        <div className="flex items-baseline gap-3.5 mb-8 font-mono text-[11px] uppercase tracking-widest text-foreground-muted">
+        <div className="flex items-baseline gap-3.5 mb-8 font-mono text-2xs uppercase tracking-widest text-foreground-muted">
           <span className="w-8 h-px bg-accent" />
           08 · Questions rétives
         </div>
@@ -49,7 +49,7 @@ export function MarketingFaq() {
           {QUESTIONS.map((item, i) => (
             <details key={item.q} open={i === 0} className="group border-t border-border last:border-b">
               <summary className="flex items-baseline gap-5 cursor-pointer py-6 list-none [&::-webkit-details-marker]:hidden">
-                <span className="font-mono text-[11px] uppercase tracking-widest text-accent shrink-0">Q.{String(i + 1).padStart(2, "0")}</span>
+                <span className="font-mono text-2xs uppercase tracking-widest text-accent shrink-0">Q.{String(i + 1).padStart(2, "0")}</span>
                 <span className="flex-1 text-lg md:text-xl font-medium tracking-tight">{item.q}</span>
                 <span aria-hidden="true" className="font-mono text-2xl text-accent group-open:rotate-45 transition-transform">+</span>
               </summary>

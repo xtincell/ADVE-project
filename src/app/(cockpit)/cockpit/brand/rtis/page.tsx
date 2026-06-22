@@ -24,27 +24,27 @@ type RTISKey = "R" | "T" | "I" | "S";
 
 const RTIS_META: Record<RTISKey, { label: string; full: string; icon: React.ElementType; accent: string; border: string; bg: string; description: string }> = {
   R: {
-    label: "R", full: "Risk", icon: Shield, accent: "text-error", border: "border-red-800/40", bg: "bg-error/10",
+    label: "R", full: "Risk", icon: Shield, accent: "text-error", border: "border-error/40", bg: "bg-error/10",
     description: "SWOT interne : forces, faiblesses, menaces et opportunites de la marque",
   },
   T: {
-    label: "T", full: "Track", icon: Crosshair, accent: "text-sky-400", border: "border-sky-800/40", bg: "bg-sky-500/10",
+    label: "T", full: "Track", icon: Crosshair, accent: "text-info", border: "border-info/40", bg: "bg-info/10",
     description: "SWOT externe : marche, concurrence, tendances, validation terrain, TAM/SAM/SOM",
   },
   I: {
-    label: "I", full: "Implementation", icon: Rocket, accent: "text-orange-400", border: "border-orange-800/40", bg: "bg-orange-500/10",
+    label: "I", full: "Implementation", icon: Rocket, accent: "text-warning", border: "border-warning/40", bg: "bg-warning/10",
     description: "Catalogue exhaustif du potentiel d'action : assets, formats, canaux, activations",
   },
   S: {
-    label: "S", full: "Strategy", icon: Brain, accent: "text-pink-400", border: "border-pink-800/40", bg: "bg-pink-500/10",
+    label: "S", full: "Strategy", icon: Brain, accent: "text-error", border: "border-error/40", bg: "bg-error/10",
     description: "Fenetre d'Overton, plan d'action, roadmap pour creer des superfans",
   },
 };
 
 const STATUS_BADGE: Record<string, { label: string; color: string }> = {
-  DRAFT: { label: "Brouillon", color: "bg-zinc-500/15 text-foreground-secondary border-border-strong/30" },
-  AI_PROPOSED: { label: "IA Propose", color: "bg-amber-500/15 text-amber-300 border-amber-600/30" },
-  VALIDATED: { label: "Valide", color: "bg-emerald-500/15 text-emerald-300 border-emerald-600/30" },
+  DRAFT: { label: "Brouillon", color: "bg-foreground-muted/15 text-foreground-secondary border-border-strong/30" },
+  AI_PROPOSED: { label: "IA Propose", color: "bg-warning/15 text-warning border-warning/30" },
+  VALIDATED: { label: "Valide", color: "bg-success/15 text-success border-success/30" },
   LOCKED: { label: "Verrouille", color: "bg-accent/15 text-accent border-accent/30" },
 };
 
@@ -65,21 +65,21 @@ function safeArr(val: unknown): Record<string, unknown>[] {
 type ADVEKey = "A" | "D" | "V" | "E";
 const ADVE_META: Record<ADVEKey, { label: string; full: string; accent: string; border: string; bg: string }> = {
   A: { label: "A", full: "Authenticite", accent: "text-accent", border: "border-accent/40", bg: "bg-accent/10" },
-  D: { label: "D", full: "Distinction", accent: "text-blue-400", border: "border-blue-800/40", bg: "bg-blue-500/10" },
-  V: { label: "V", full: "Valeur", accent: "text-emerald-400", border: "border-emerald-800/40", bg: "bg-emerald-500/10" },
-  E: { label: "E", full: "Engagement", accent: "text-amber-400", border: "border-amber-800/40", bg: "bg-amber-500/10" },
+  D: { label: "D", full: "Distinction", accent: "text-info", border: "border-info/40", bg: "bg-info/10" },
+  V: { label: "V", full: "Valeur", accent: "text-success", border: "border-success/40", bg: "bg-success/10" },
+  E: { label: "E", full: "Engagement", accent: "text-warning", border: "border-warning/40", bg: "bg-warning/10" },
 };
 
 const IMPACT_COLORS: Record<string, string> = {
-  HIGH: "bg-error/15 text-error border-red-600/30",
-  MEDIUM: "bg-amber-500/15 text-amber-300 border-amber-600/30",
-  LOW: "bg-zinc-500/15 text-foreground-secondary border-border-strong/30",
+  HIGH: "bg-error/15 text-error border-error/30",
+  MEDIUM: "bg-warning/15 text-warning border-warning/30",
+  LOW: "bg-foreground-muted/15 text-foreground-secondary border-border-strong/30",
 };
 
 const SOURCE_COLORS: Record<string, string> = {
   R: "bg-error/10 text-error",
-  T: "bg-sky-500/10 text-sky-400",
-  "R+T": "bg-purple-500/10 text-purple-400",
+  T: "bg-info/10 text-info",
+  "R+T": "bg-accent/10 text-accent",
 };
 
 type RecoOperation = "SET" | "ADD" | "MODIFY" | "REMOVE" | "EXTEND";
@@ -99,11 +99,11 @@ interface RecoItem {
 }
 
 const OP_BADGE: Record<RecoOperation, { label: string; color: string; icon: string }> = {
-  SET: { label: "Remplacer", color: "bg-error/15 text-error border-red-600/30", icon: "~" },
-  ADD: { label: "Ajouter", color: "bg-emerald-500/15 text-emerald-300 border-emerald-600/30", icon: "+" },
-  MODIFY: { label: "Modifier", color: "bg-amber-500/15 text-amber-300 border-amber-600/30", icon: "~" },
-  REMOVE: { label: "Supprimer", color: "bg-error/15 text-error border-red-600/30 line-through", icon: "-" },
-  EXTEND: { label: "Etendre", color: "bg-sky-500/15 text-sky-300 border-sky-600/30", icon: "+" },
+  SET: { label: "Remplacer", color: "bg-error/15 text-error border-error/30", icon: "~" },
+  ADD: { label: "Ajouter", color: "bg-success/15 text-success border-success/30", icon: "+" },
+  MODIFY: { label: "Modifier", color: "bg-warning/15 text-warning border-warning/30", icon: "~" },
+  REMOVE: { label: "Supprimer", color: "bg-error/15 text-error border-error/30 line-through", icon: "-" },
+  EXTEND: { label: "Etendre", color: "bg-info/15 text-info border-info/30", icon: "+" },
 };
 
 function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: string; onApplied: () => void }) {
@@ -169,9 +169,9 @@ function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: strin
     const op = reco.operation ?? "SET";
     if (op === "REMOVE") {
       return (
-        <div className="rounded-lg bg-error/30 border border-red-800/30 p-2.5">
-          <span className="text-[10px] font-bold text-error uppercase block mb-1">Supprimer</span>
-          <p className="text-[11px] text-error/70 line-through line-clamp-3">
+        <div className="rounded-lg bg-error/30 border border-error/30 p-2.5">
+          <span className="text-2xs font-bold text-error uppercase block mb-1">Supprimer</span>
+          <p className="text-2xs text-error/70 line-through line-clamp-3">
             {reco.targetMatch ? `${(reco.targetMatch as { key: string; value: string }).key}: ${(reco.targetMatch as { key: string; value: string }).value}` : reco.currentSummary || "\u2014"}
           </p>
         </div>
@@ -179,33 +179,33 @@ function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: strin
     }
     if (op === "ADD") {
       return (
-        <div className="rounded-lg bg-emerald-950/30 border border-emerald-800/30 p-2.5">
-          <span className="text-[10px] font-bold text-emerald-400 uppercase block mb-1">+ Nouvel element</span>
-          <p className="text-[11px] text-foreground line-clamp-3">{formatValue(reco.proposedValue)}</p>
+        <div className="rounded-lg bg-success/30 border border-success/30 p-2.5">
+          <span className="text-2xs font-bold text-success uppercase block mb-1">+ Nouvel element</span>
+          <p className="text-2xs text-foreground line-clamp-3">{formatValue(reco.proposedValue)}</p>
         </div>
       );
     }
     if (op === "EXTEND") {
       return (
-        <div className="rounded-lg bg-sky-950/30 border border-sky-800/30 p-2.5">
-          <span className="text-[10px] font-bold text-sky-400 uppercase block mb-1">Cles ajoutees</span>
-          <p className="text-[11px] text-foreground line-clamp-3">{formatValue(reco.proposedValue)}</p>
+        <div className="rounded-lg bg-info/30 border border-info/30 p-2.5">
+          <span className="text-2xs font-bold text-info uppercase block mb-1">Cles ajoutees</span>
+          <p className="text-2xs text-foreground line-clamp-3">{formatValue(reco.proposedValue)}</p>
         </div>
       );
     }
     // SET or MODIFY
     return (
       <div className={`rounded-lg ${meta.bg} border ${meta.border} p-2.5`}>
-        <span className={`text-[10px] font-bold ${meta.accent} uppercase block mb-1`}>
+        <span className={`text-2xs font-bold ${meta.accent} uppercase block mb-1`}>
           {op === "MODIFY" ? "Modifie" : "Propose"}
         </span>
-        <p className="text-[11px] text-foreground line-clamp-3">{formatValue(reco.proposedValue)}</p>
+        <p className="text-2xs text-foreground line-clamp-3">{formatValue(reco.proposedValue)}</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-accent/40 bg-gradient-to-b from-violet-950/20 to-zinc-900/60 overflow-hidden">
+    <div className="rounded-xl border border-accent/40 bg-gradient-to-b from-accent/20 to-background/60 overflow-hidden">
       <div className="flex items-center justify-between p-4 border-b border-accent/20">
         <div className="flex items-center gap-3">
           <Sparkles className="h-5 w-5 text-accent" />
@@ -226,7 +226,7 @@ function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: strin
             >
               {meta.full}
               {count > 0 && (
-                <span className={`rounded-full ${meta.bg} px-1.5 py-0.5 text-[10px] font-bold ${meta.accent}`}>{count}</span>
+                <span className={`rounded-full ${meta.bg} px-1.5 py-0.5 text-2xs font-bold ${meta.accent}`}>{count}</span>
               )}
             </button>
           );
@@ -243,7 +243,7 @@ function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: strin
               <button
                 onClick={() => acceptMutation.mutate({ strategyId, key: activeTab, recoIndices: Array.from(selected) })}
                 disabled={selected.size === 0 || acceptMutation.isPending}
-                className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-40 transition-colors"
+                className="flex items-center gap-1.5 rounded-lg bg-success px-3 py-1.5 text-xs font-medium text-white hover:bg-success disabled:opacity-40 transition-colors"
               >
                 {acceptMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ThumbsUp className="h-3.5 w-3.5" />}
                 Accepter ({selected.size})
@@ -251,7 +251,7 @@ function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: strin
               <button
                 onClick={() => rejectMutation.mutate({ strategyId, key: activeTab })}
                 disabled={rejectMutation.isPending}
-                className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground-secondary hover:text-error hover:border-red-800/40 transition-colors"
+                className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground-secondary hover:text-error hover:border-error/40 transition-colors"
               >
                 <Trash2 className="h-3.5 w-3.5" />
                 Tout rejeter
@@ -266,9 +266,9 @@ function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: strin
               <div key={fieldName} className="rounded-xl border border-border overflow-hidden">
                 <div className="flex items-center gap-2 px-4 py-2 bg-background/80 border-b border-border">
                   <span className={`text-sm font-semibold ${meta.accent}`}>{fieldName}</span>
-                  <span className="text-[10px] text-foreground-muted">({items.length} operation{items.length > 1 ? "s" : ""})</span>
+                  <span className="text-2xs text-foreground-muted">({items.length} operation{items.length > 1 ? "s" : ""})</span>
                 </div>
-                <div className="divide-y divide-zinc-800/50">
+                <div className="divide-y divide-border/50">
                   {items.map(({ reco, idx }) => {
                     const isSelected = selected.has(idx);
                     const op = reco.operation ?? "SET";
@@ -280,22 +280,22 @@ function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: strin
                         className={`p-4 cursor-pointer transition-all ${isSelected ? "bg-background/60 ring-1 ring-inset ring-white/5" : "bg-background/40 hover:bg-background/30"}`}
                       >
                         <div className="flex items-start gap-3">
-                          <div className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${isSelected ? "bg-emerald-600 border-emerald-500" : "border-border-strong bg-background"}`}>
+                          <div className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${isSelected ? "bg-success border-success" : "border-border-strong bg-background"}`}>
                             {isSelected && <Check className="h-3 w-3 text-white" />}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1.5">
-                              <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase border ${opInfo.color}`}>
+                              <span className={`rounded px-1.5 py-0.5 text-2xs font-bold uppercase border ${opInfo.color}`}>
                                 {opInfo.label}
                               </span>
-                              <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${IMPACT_COLORS[reco.impact] ?? IMPACT_COLORS.LOW}`}>
+                              <span className={`rounded px-1.5 py-0.5 text-2xs font-bold uppercase ${IMPACT_COLORS[reco.impact] ?? IMPACT_COLORS.LOW}`}>
                                 {reco.impact}
                               </span>
-                              <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${SOURCE_COLORS[reco.source] ?? SOURCE_COLORS.R}`}>
+                              <span className={`rounded px-1.5 py-0.5 text-2xs font-bold ${SOURCE_COLORS[reco.source] ?? SOURCE_COLORS.R}`}>
                                 {reco.source}
                               </span>
                               {!!reco.targetMatch && (
-                                <span className="text-[10px] text-foreground-muted">
+                                <span className="text-2xs text-foreground-muted">
                                   cible: {(reco.targetMatch as { value: string }).value}
                                 </span>
                               )}
@@ -303,8 +303,8 @@ function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: strin
                             <p className="text-xs text-foreground-secondary leading-relaxed mb-2">{reco.justification}</p>
                             <div className="grid grid-cols-2 gap-3">
                               <div className="rounded-lg bg-background/60 border border-border p-2.5">
-                                <span className="text-[10px] font-bold text-foreground-muted uppercase block mb-1">Actuel</span>
-                                <p className={`text-[11px] text-foreground-secondary line-clamp-3 ${op === "REMOVE" ? "" : ""}`}>
+                                <span className="text-2xs font-bold text-foreground-muted uppercase block mb-1">Actuel</span>
+                                <p className={`text-2xs text-foreground-secondary line-clamp-3 ${op === "REMOVE" ? "" : ""}`}>
                                   {reco.currentSummary || "\u2014"}
                                 </p>
                               </div>
@@ -357,11 +357,11 @@ function formatValue(val: unknown): string {
 type WorkflowPhase = "R" | "T" | "RECOS" | "I" | "S" | "COMPLETE";
 
 const WORKFLOW_STEPS: { phase: WorkflowPhase; label: string; description: string; accent: string; border: string; bg: string; icon: React.ElementType }[] = [
-  { phase: "R", label: "1. Risk", description: "SWOT interne — forces, faiblesses, menaces, opportunites", accent: "text-error", border: "border-red-800/40", bg: "bg-error/10", icon: Shield },
-  { phase: "T", label: "2. Track", description: "SWOT externe — marche, concurrence, validation terrain", accent: "text-sky-400", border: "border-sky-800/40", bg: "bg-sky-500/10", icon: Crosshair },
+  { phase: "R", label: "1. Risk", description: "SWOT interne — forces, faiblesses, menaces, opportunites", accent: "text-error", border: "border-error/40", bg: "bg-error/10", icon: Shield },
+  { phase: "T", label: "2. Track", description: "SWOT externe — marche, concurrence, validation terrain", accent: "text-info", border: "border-info/40", bg: "bg-info/10", icon: Crosshair },
   { phase: "RECOS", label: "3. Recos R+T", description: "R+T recalibrent ADVE — accepter ou rejeter", accent: "text-accent", border: "border-accent/40", bg: "bg-accent/10", icon: Sparkles },
-  { phase: "I", label: "4. Implementation", description: "Catalogue exhaustif — tout ce que la marque peut faire", accent: "text-orange-400", border: "border-orange-800/40", bg: "bg-orange-500/10", icon: Rocket },
-  { phase: "S", label: "5. Strategy", description: "Fenetre d'Overton — plan d'action + roadmap superfan", accent: "text-pink-400", border: "border-pink-800/40", bg: "bg-pink-500/10", icon: Brain },
+  { phase: "I", label: "4. Implementation", description: "Catalogue exhaustif — tout ce que la marque peut faire", accent: "text-warning", border: "border-warning/40", bg: "bg-warning/10", icon: Rocket },
+  { phase: "S", label: "5. Strategy", description: "Fenetre d'Overton — plan d'action + roadmap superfan", accent: "text-error", border: "border-error/40", bg: "bg-error/10", icon: Brain },
 ];
 
 type PillarData = { content: unknown; score: number; completion: number; errors: number; validationStatus?: string } | undefined;
@@ -414,7 +414,7 @@ function CascadeWorkflowTracker({
           <Layers className="h-5 w-5 text-accent" />
           <span className="font-semibold text-accent">Workflow Cascade RTIS</span>
           {currentPhase === "COMPLETE" && (
-            <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-xs font-bold text-emerald-300">Complet</span>
+            <span className="rounded-full bg-success/20 px-2.5 py-0.5 text-xs font-bold text-success">Complet</span>
           )}
         </div>
       </div>
@@ -434,12 +434,12 @@ function CascadeWorkflowTracker({
                 isCurrent
                   ? `${step.border} ${step.bg} ring-1 ring-white/10`
                   : isDone
-                    ? "border-emerald-800/30 bg-emerald-500/5"
+                    ? "border-success/30 bg-success/5"
                     : "border-border bg-background/40 opacity-50"
               }`}
             >
               {isDone ? (
-                <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-400" />
+                <CheckCircle2 className="h-5 w-5 shrink-0 text-success" />
               ) : isGenerating ? (
                 <Loader2 className="h-5 w-5 shrink-0 text-accent animate-spin" />
               ) : isCurrent ? (
@@ -448,14 +448,14 @@ function CascadeWorkflowTracker({
                 <Circle className="h-5 w-5 shrink-0 text-foreground-muted" />
               )}
               <div className="flex-1 min-w-0">
-                <span className={`text-sm font-semibold ${isDone ? "text-emerald-300" : isCurrent ? step.accent : "text-foreground-muted"}`}>
+                <span className={`text-sm font-semibold ${isDone ? "text-success" : isCurrent ? step.accent : "text-foreground-muted"}`}>
                   {step.label}
                 </span>
                 <p className="text-xs text-foreground-muted">{step.description}</p>
               </div>
-              {isDone && <span className="text-[10px] text-emerald-400 font-bold uppercase">Valide</span>}
+              {isDone && <span className="text-2xs text-success font-bold uppercase">Valide</span>}
               {isCurrent && !isGenerating && <ArrowRight className={`h-4 w-4 ${step.accent}`} />}
-              {isGenerating && <span className="text-[10px] text-accent font-bold uppercase">Generation...</span>}
+              {isGenerating && <span className="text-2xs text-accent font-bold uppercase">Generation...</span>}
               {isLocked && <Lock className="h-4 w-4 text-foreground-muted" />}
             </div>
           );
@@ -563,9 +563,9 @@ export default function RTISPage() {
               <meta.icon className={`h-4 w-4 ${meta.accent}`} />
               <span className={`text-sm font-medium ${expandedPillar === k ? meta.accent : "text-foreground-secondary"}`}>{meta.full}</span>
               {hasContent ? (
-                <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold border ${statusBadge.color}`}>{statusBadge.label}</span>
+                <span className={`rounded-full px-2 py-0.5 text-2xs font-bold border ${statusBadge.color}`}>{statusBadge.label}</span>
               ) : (
-                <span className="rounded-full bg-background px-2 py-0.5 text-[10px] text-foreground-muted">Vide</span>
+                <span className="rounded-full bg-background px-2 py-0.5 text-2xs text-foreground-muted">Vide</span>
               )}
             </button>
           );
@@ -582,9 +582,9 @@ export default function RTISPage() {
         {/* Right: Current step action */}
         <div className="lg:col-span-2 space-y-4">
           {!adveAllPresent && (
-            <div className="rounded-xl border border-amber-800/40 bg-amber-500/5 p-4 flex items-center gap-3">
-              <AlertTriangle className="h-5 w-5 text-amber-400 shrink-0" />
-              <p className="text-sm text-amber-300">Remplissez d&apos;abord les 4 piliers ADVE avant de lancer la cascade RTIS.</p>
+            <div className="rounded-xl border border-warning/40 bg-warning/5 p-4 flex items-center gap-3">
+              <AlertTriangle className="h-5 w-5 text-warning shrink-0" />
+              <p className="text-sm text-warning">Remplissez d&apos;abord les 4 piliers ADVE avant de lancer la cascade RTIS.</p>
             </div>
           )}
 
@@ -613,7 +613,7 @@ export default function RTISPage() {
                     const isValidated = data[currentPhase]?.validationStatus === "VALIDATED" || data[currentPhase]?.validationStatus === "LOCKED";
                     return isValidated ? (
                       <div className="flex items-center gap-2">
-                        <span className="flex items-center gap-1.5 rounded-lg bg-emerald-500/15 px-4 py-2 text-sm font-medium text-emerald-400">
+                        <span className="flex items-center gap-1.5 rounded-lg bg-success/15 px-4 py-2 text-sm font-medium text-success">
                           <CheckCircle2 className="h-4 w-4" />
                           Valide
                         </span>
@@ -629,7 +629,7 @@ export default function RTISPage() {
                       <button
                         onClick={() => transitionMutation.mutate({ strategyId, key: currentPhase as RTISKey, targetStatus: "VALIDATED" })}
                         disabled={transitionMutation.isPending}
-                        className="flex items-center gap-1.5 rounded-lg border border-emerald-800/40 bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 transition-colors"
+                        className="flex items-center gap-1.5 rounded-lg border border-success/40 bg-success px-4 py-2 text-sm font-medium text-white hover:bg-success transition-colors"
                       >
                         <Check className="h-4 w-4" />
                         Valider {RTIS_META[currentPhase as RTISKey]?.full ?? ""}
@@ -643,7 +643,7 @@ export default function RTISPage() {
                 {" — "}Generez le contenu puis validez-le pour passer a l&apos;etape suivante.
               </p>
               {lastError && (
-                <div className="mt-3 rounded-lg border border-red-800/40 bg-error/30 px-4 py-3 text-sm text-error">
+                <div className="mt-3 rounded-lg border border-error/40 bg-error/30 px-4 py-3 text-sm text-error">
                   <p className="font-medium">Erreur de generation</p>
                   <p className="mt-1 text-xs text-error">{lastError}</p>
                 </div>
@@ -651,7 +651,7 @@ export default function RTISPage() {
               {/* Preview of generated content */}
               {Boolean(data[currentPhase]?.content) && (
                 <div className="mt-4 rounded-lg border border-border bg-background/50 p-4">
-                  <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-foreground-muted">Contenu genere</p>
+                  <p className="mb-2 text-2xs font-bold uppercase tracking-wider text-foreground-muted">Contenu genere</p>
                   <div className="space-y-1.5 text-xs text-foreground-secondary">
                     {Object.entries(data[currentPhase]?.content as Record<string, unknown> ?? {}).slice(0, 6).map(([key, val]) => (
                       <div key={key} className="flex items-start gap-2">
@@ -692,7 +692,7 @@ export default function RTISPage() {
                       actualizeMutation.mutate({ strategyId, key: "I" });
                     }}
                     disabled={!!generatingStep}
-                    className="flex items-center gap-2 rounded-lg border border-orange-800/40 px-4 py-2 text-sm font-medium text-orange-400 hover:bg-orange-500/10 disabled:opacity-40 transition-colors"
+                    className="flex items-center gap-2 rounded-lg border border-warning/40 px-4 py-2 text-sm font-medium text-warning hover:bg-warning/10 disabled:opacity-40 transition-colors"
                   >
                     <ArrowRight className="h-4 w-4" />
                     Passer a Implementation
@@ -707,10 +707,10 @@ export default function RTISPage() {
           )}
 
           {currentPhase === "COMPLETE" && (
-            <div className="rounded-xl border border-emerald-800/40 bg-emerald-500/5 p-5 flex items-center gap-3">
-              <CheckCircle2 className="h-6 w-6 text-emerald-400" />
+            <div className="rounded-xl border border-success/40 bg-success/5 p-5 flex items-center gap-3">
+              <CheckCircle2 className="h-6 w-6 text-success" />
               <div>
-                <span className="font-semibold text-emerald-300">Cascade RTIS complete</span>
+                <span className="font-semibold text-success">Cascade RTIS complete</span>
                 <p className="text-xs text-foreground-muted">Tous les piliers RTIS sont generes et valides. Consultez L'Oracle pour la proposition strategique.</p>
               </div>
             </div>
@@ -763,7 +763,7 @@ export default function RTISPage() {
                     <button
                       onClick={() => transitionMutation.mutate({ strategyId, key: k, targetStatus: "VALIDATED" })}
                       disabled={transitionMutation.isPending}
-                      className="flex items-center gap-1.5 rounded-lg border border-emerald-800/40 px-3 py-1.5 text-xs font-medium text-emerald-400 hover:bg-background transition-colors"
+                      className="flex items-center gap-1.5 rounded-lg border border-success/40 px-3 py-1.5 text-xs font-medium text-success hover:bg-background transition-colors"
                     >
                       <Check className="h-3.5 w-3.5" />
                       Valider
@@ -816,7 +816,7 @@ function RiskContent({ content }: { content: Record<string, unknown> }) {
       <div className="flex items-center gap-4">
         <Gauge className="h-5 w-5 text-error" />
         <span className="text-sm text-foreground-secondary">Score de risque global:</span>
-        <span className={`text-2xl font-bold ${riskScore > 70 ? "text-error" : riskScore > 40 ? "text-amber-400" : "text-emerald-400"}`}>
+        <span className={`text-2xl font-bold ${riskScore > 70 ? "text-error" : riskScore > 40 ? "text-warning" : "text-success"}`}>
           {riskScore}/100
         </span>
       </div>
@@ -830,10 +830,10 @@ function RiskContent({ content }: { content: Record<string, unknown> }) {
           {(["strengths", "weaknesses", "opportunities", "threats"] as const).map((cat) => {
             const items = safeArr(swot[cat] as unknown);
             const labels: Record<string, { label: string; color: string }> = {
-              strengths: { label: "Forces", color: "text-emerald-400 border-emerald-800/40" },
-              weaknesses: { label: "Faiblesses", color: "text-error border-red-800/40" },
-              opportunities: { label: "Opportunites", color: "text-sky-400 border-sky-800/40" },
-              threats: { label: "Menaces", color: "text-amber-400 border-amber-800/40" },
+              strengths: { label: "Forces", color: "text-success border-success/40" },
+              weaknesses: { label: "Faiblesses", color: "text-error border-error/40" },
+              opportunities: { label: "Opportunites", color: "text-info border-info/40" },
+              threats: { label: "Menaces", color: "text-warning border-warning/40" },
             };
             const meta = labels[cat]!;
             return (
@@ -895,10 +895,10 @@ function RiskContent({ content }: { content: Record<string, unknown> }) {
           <div className="space-y-2">
             {mitigations.map((m, i) => (
               <div key={i} className="flex items-start gap-3 rounded-lg border border-border bg-background/80 p-3">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-error/15 text-[10px] font-bold text-error">{i + 1}</span>
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-error/15 text-2xs font-bold text-error">{i + 1}</span>
                 <div className="flex-1">
                   <p className="text-xs text-foreground-secondary">{safeStr(m.action)}</p>
-                  <div className="flex gap-4 mt-1 text-[10px] text-foreground-muted">
+                  <div className="flex gap-4 mt-1 text-2xs text-foreground-muted">
                     {safeStr(m.owner) && <span>Responsable: {safeStr(m.owner)}</span>}
                     {safeStr(m.timeline) && <span>Echeance: {safeStr(m.timeline)}</span>}
                     {safeStr(m.investment) && <span>Invest: {safeStr(m.investment)}</span>}
@@ -925,16 +925,16 @@ function TrackContent({ content }: { content: Record<string, unknown> }) {
     <div className="space-y-5">
       {/* Brand Market Fit */}
       <div className="flex items-center gap-4">
-        <Gauge className="h-5 w-5 text-sky-400" />
+        <Gauge className="h-5 w-5 text-info" />
         <span className="text-sm text-foreground-secondary">Brand-Market Fit Score:</span>
-        <span className={`text-2xl font-bold ${bmfScore > 70 ? "text-emerald-400" : bmfScore > 40 ? "text-amber-400" : "text-error"}`}>
+        <span className={`text-2xl font-bold ${bmfScore > 70 ? "text-success" : bmfScore > 40 ? "text-warning" : "text-error"}`}>
           {bmfScore}/100
         </span>
       </div>
 
       {/* Triangulation */}
       <div>
-        <h4 className="text-sm font-semibold text-sky-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+        <h4 className="text-sm font-semibold text-info uppercase tracking-wider mb-3 flex items-center gap-2">
           <Crosshair className="h-4 w-4" /> Triangulation
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -947,10 +947,10 @@ function TrackContent({ content }: { content: Record<string, unknown> }) {
             };
             const meta = labels[field]!;
             return (
-              <div key={field} className="rounded-lg border border-sky-800/40 bg-background/80 p-3">
+              <div key={field} className="rounded-lg border border-info/40 bg-background/80 p-3">
                 <div className="flex items-center gap-2 mb-2">
-                  <meta.icon className="h-3.5 w-3.5 text-sky-400" />
-                  <span className="text-xs font-bold text-sky-400 uppercase">{meta.label}</span>
+                  <meta.icon className="h-3.5 w-3.5 text-info" />
+                  <span className="text-xs font-bold text-info uppercase">{meta.label}</span>
                 </div>
                 <p className="text-xs text-foreground-secondary leading-relaxed">{safeStr(triangulation[field], "Non disponible")}</p>
               </div>
@@ -962,7 +962,7 @@ function TrackContent({ content }: { content: Record<string, unknown> }) {
       {/* TAM/SAM/SOM */}
       {Boolean(tamSamSom.tam || tamSamSom.sam || tamSamSom.som) && (
         <div>
-          <h4 className="text-sm font-semibold text-sky-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+          <h4 className="text-sm font-semibold text-info uppercase tracking-wider mb-3 flex items-center gap-2">
             <Layers className="h-4 w-4" /> TAM / SAM / SOM
           </h4>
           <div className="grid grid-cols-3 gap-3">
@@ -970,11 +970,11 @@ function TrackContent({ content }: { content: Record<string, unknown> }) {
               const v = (tamSamSom[tier] ?? {}) as Record<string, unknown>;
               const labels = { tam: "Total Addressable Market", sam: "Serviceable Available", som: "Serviceable Obtainable" };
               return (
-                <div key={tier} className="rounded-lg border border-sky-800/40 bg-background/80 p-3 text-center">
-                  <span className="text-[10px] font-bold text-sky-400 uppercase">{tier.toUpperCase()}</span>
+                <div key={tier} className="rounded-lg border border-info/40 bg-background/80 p-3 text-center">
+                  <span className="text-2xs font-bold text-info uppercase">{tier.toUpperCase()}</span>
                   <p className="text-lg font-bold text-white mt-1">{fmtCurrency(v.value)}</p>
-                  <p className="text-[10px] text-foreground-muted mt-0.5">{labels[tier]}</p>
-                  {safeStr(v.description) && <p className="text-[10px] text-foreground-secondary mt-1">{safeStr(v.description)}</p>}
+                  <p className="text-2xs text-foreground-muted mt-0.5">{labels[tier]}</p>
+                  {safeStr(v.description) && <p className="text-2xs text-foreground-secondary mt-1">{safeStr(v.description)}</p>}
                 </div>
               );
             })}
@@ -985,7 +985,7 @@ function TrackContent({ content }: { content: Record<string, unknown> }) {
       {/* Hypothesis Validation */}
       {hypotheses.length > 0 && (
         <div>
-          <h4 className="text-sm font-semibold text-sky-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+          <h4 className="text-sm font-semibold text-info uppercase tracking-wider mb-3 flex items-center gap-2">
             <Activity className="h-4 w-4" /> Validation Hypotheses
           </h4>
           <div className="space-y-2">
@@ -994,8 +994,8 @@ function TrackContent({ content }: { content: Record<string, unknown> }) {
                 <HypothesisBadge status={safeStr(h.status, "HYPOTHESIS")} />
                 <div className="flex-1">
                   <p className="text-xs font-medium text-foreground">{safeStr(h.hypothesis)}</p>
-                  <p className="text-[10px] text-foreground-muted mt-0.5">Methode: {safeStr(h.validationMethod, "-")}</p>
-                  {safeStr(h.evidence) && <p className="text-[10px] text-foreground-secondary mt-0.5">Evidence: {safeStr(h.evidence)}</p>}
+                  <p className="text-2xs text-foreground-muted mt-0.5">Methode: {safeStr(h.validationMethod, "-")}</p>
+                  {safeStr(h.evidence) && <p className="text-2xs text-foreground-secondary mt-0.5">Evidence: {safeStr(h.evidence)}</p>}
                 </div>
               </div>
             ))}
@@ -1025,13 +1025,13 @@ function ImplementationContent({ content }: { content: Record<string, unknown> }
     // Legacy: show old sprint format with warning
     return (
       <div className="space-y-4">
-        <div className="rounded-lg border border-amber-800/30 bg-amber-950/20 p-3">
-          <p className="text-xs text-amber-400">Ancien format (sprint). Cliquez "Generer Implementation" pour obtenir le catalogue exhaustif.</p>
+        <div className="rounded-lg border border-warning/30 bg-warning/20 p-3">
+          <p className="text-xs text-warning">Ancien format (sprint). Cliquez "Generer Implementation" pour obtenir le catalogue exhaustif.</p>
         </div>
         <div className="space-y-2">
           {sprint.map((s, i) => (
             <div key={i} className="flex items-start gap-3 rounded-lg border border-border bg-background/80 p-3">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-orange-500/15 text-[10px] font-bold text-orange-400">{i + 1}</span>
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-warning/15 text-2xs font-bold text-warning">{i + 1}</span>
               <p className="text-xs text-foreground-secondary">{safeStr(s.action)}</p>
             </div>
           ))}
@@ -1044,7 +1044,7 @@ function ImplementationContent({ content }: { content: Record<string, unknown> }
     <div className="space-y-5">
       {totalActions > 0 && (
         <div className="flex items-center gap-3">
-          <span className="text-2xl font-bold text-orange-400">{totalActions}</span>
+          <span className="text-2xl font-bold text-warning">{totalActions}</span>
           <span className="text-sm text-foreground-secondary">actions possibles identifiees</span>
         </div>
       )}
@@ -1052,7 +1052,7 @@ function ImplementationContent({ content }: { content: Record<string, unknown> }
       {/* Catalogue par canal */}
       {canaux.length > 0 && (
         <div>
-          <h4 className="text-sm font-semibold text-orange-400 uppercase tracking-wider mb-3">Catalogue par canal</h4>
+          <h4 className="text-sm font-semibold text-warning uppercase tracking-wider mb-3">Catalogue par canal</h4>
           {canaux.map((canal) => {
             const actions = safeArr(catalogue[canal]);
             return (
@@ -1063,10 +1063,10 @@ function ImplementationContent({ content }: { content: Record<string, unknown> }
                     <div key={i} className="flex items-start gap-3 rounded-lg border border-border bg-background/80 p-3">
                       <div className="flex-1">
                         <p className="text-xs text-foreground-secondary">{safeStr(a.action)}</p>
-                        <div className="flex gap-3 mt-1 text-[10px] text-foreground-muted">
+                        <div className="flex gap-3 mt-1 text-2xs text-foreground-muted">
                           {safeStr(a.format) && <span>Format: {safeStr(a.format)}</span>}
                           {safeStr(a.objectif) && <span>Objectif: {safeStr(a.objectif)}</span>}
-                          {safeStr(a.pilierImpact) && <span className="text-orange-400">Pilier {safeStr(a.pilierImpact)}</span>}
+                          {safeStr(a.pilierImpact) && <span className="text-warning">Pilier {safeStr(a.pilierImpact)}</span>}
                         </div>
                       </div>
                     </div>
@@ -1081,7 +1081,7 @@ function ImplementationContent({ content }: { content: Record<string, unknown> }
       {/* Assets produisibles */}
       {assets.length > 0 && (
         <div>
-          <h4 className="text-sm font-semibold text-orange-400 uppercase tracking-wider mb-3">Assets produisibles ({assets.length})</h4>
+          <h4 className="text-sm font-semibold text-warning uppercase tracking-wider mb-3">Assets produisibles ({assets.length})</h4>
           <div className="flex flex-wrap gap-2">
             {assets.map((a, i) => (
               <span key={i} className="rounded-full border border-border bg-background px-3 py-1 text-xs text-foreground-secondary">
@@ -1095,15 +1095,15 @@ function ImplementationContent({ content }: { content: Record<string, unknown> }
       {/* Activations */}
       {activations.length > 0 && (
         <div>
-          <h4 className="text-sm font-semibold text-orange-400 uppercase tracking-wider mb-3">Activations possibles ({activations.length})</h4>
+          <h4 className="text-sm font-semibold text-warning uppercase tracking-wider mb-3">Activations possibles ({activations.length})</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {activations.map((a, i) => (
               <div key={i} className="rounded-lg border border-border bg-background/80 p-3">
                 <p className="text-xs font-medium text-foreground">{safeStr(a.activation)}</p>
-                <div className="flex gap-2 mt-1 text-[10px]">
+                <div className="flex gap-2 mt-1 text-2xs">
                   {safeStr(a.canal) && <span className="rounded bg-background px-1.5 py-0.5 text-foreground-muted">{safeStr(a.canal)}</span>}
                   {safeStr(a.cible) && <span className="rounded bg-background px-1.5 py-0.5 text-foreground-muted">{safeStr(a.cible)}</span>}
-                  {safeStr(a.budgetEstime) && <span className="rounded bg-orange-500/10 px-1.5 py-0.5 text-orange-400">{safeStr(a.budgetEstime)}</span>}
+                  {safeStr(a.budgetEstime) && <span className="rounded bg-warning/10 px-1.5 py-0.5 text-warning">{safeStr(a.budgetEstime)}</span>}
                 </div>
               </div>
             ))}
@@ -1114,10 +1114,10 @@ function ImplementationContent({ content }: { content: Record<string, unknown> }
       {/* Formats disponibles */}
       {formats.length > 0 && (
         <div>
-          <h4 className="text-sm font-semibold text-orange-400 uppercase tracking-wider mb-3">Formats disponibles</h4>
+          <h4 className="text-sm font-semibold text-warning uppercase tracking-wider mb-3">Formats disponibles</h4>
           <div className="flex flex-wrap gap-1.5">
             {formats.map((f, i) => (
-              <span key={i} className="rounded bg-orange-500/10 px-2.5 py-1 text-xs text-orange-300">{safeStr(f)}</span>
+              <span key={i} className="rounded bg-warning/10 px-2.5 py-1 text-xs text-warning">{safeStr(f)}</span>
             ))}
           </div>
         </div>
@@ -1147,8 +1147,8 @@ function StrategyContent({ content }: { content: Record<string, unknown> }) {
     <div className="space-y-5">
       {/* Executive Summary */}
       {safeStr(content.syntheseExecutive) && (
-        <div className="rounded-lg border border-pink-800/40 bg-background/80 p-4">
-          <h4 className="text-xs font-bold text-pink-400 uppercase mb-2">Resume Executif</h4>
+        <div className="rounded-lg border border-error/40 bg-background/80 p-4">
+          <h4 className="text-xs font-bold text-error uppercase mb-2">Resume Executif</h4>
           <p className="text-xs text-foreground-secondary leading-relaxed">{safeStr(content.syntheseExecutive)}</p>
         </div>
       )}
@@ -1156,32 +1156,32 @@ function StrategyContent({ content }: { content: Record<string, unknown> }) {
       {/* Fenêtre d'Overton */}
       {(safeStr(overton.perceptionActuelle) || safeStr(overton.perceptionCible)) && (
         <div>
-          <h4 className="text-sm font-semibold text-pink-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+          <h4 className="text-sm font-semibold text-error uppercase tracking-wider mb-3 flex items-center gap-2">
             <Target className="h-4 w-4" /> Fenetre d'Overton
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="rounded-lg border border-red-800/30 bg-error/10 p-4">
-              <p className="text-[10px] font-bold uppercase text-error">Perception actuelle</p>
+            <div className="rounded-lg border border-error/30 bg-error/10 p-4">
+              <p className="text-2xs font-bold uppercase text-error">Perception actuelle</p>
               <p className="mt-1 text-xs text-foreground-secondary">{safeStr(overton.perceptionActuelle)}</p>
             </div>
-            <div className="rounded-lg border border-emerald-800/30 bg-emerald-950/10 p-4">
-              <p className="text-[10px] font-bold uppercase text-emerald-400">Perception cible</p>
+            <div className="rounded-lg border border-success/30 bg-success/10 p-4">
+              <p className="text-2xs font-bold uppercase text-success">Perception cible</p>
               <p className="mt-1 text-xs text-foreground-secondary">{safeStr(overton.perceptionCible)}</p>
             </div>
           </div>
           {safeStr(overton.ecart) && (
-            <div className="mt-2 rounded-lg border border-amber-800/30 bg-amber-950/10 p-3">
-              <p className="text-xs text-amber-300"><span className="font-bold">Ecart :</span> {safeStr(overton.ecart)}</p>
+            <div className="mt-2 rounded-lg border border-warning/30 bg-warning/10 p-3">
+              <p className="text-xs text-warning"><span className="font-bold">Ecart :</span> {safeStr(overton.ecart)}</p>
             </div>
           )}
           {safeArr(overton.strategieDeplacement as unknown).length > 0 && (
             <div className="mt-3 space-y-2">
               {safeArr(overton.strategieDeplacement as unknown).map((s, i) => (
                 <div key={i} className="flex items-start gap-3">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-pink-500/15 text-[10px] font-bold text-pink-400">{i + 1}</span>
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-error/15 text-2xs font-bold text-error">{i + 1}</span>
                   <div>
                     <p className="text-xs text-foreground-secondary">{safeStr(s.etape)} — {safeStr(s.action)}</p>
-                    <div className="flex gap-2 mt-0.5 text-[10px]">
+                    <div className="flex gap-2 mt-0.5 text-2xs">
                       {safeStr(s.canal) && <span className="rounded bg-background px-1.5 py-0.5 text-foreground-muted">{safeStr(s.canal)}</span>}
                       {safeStr(s.horizon) && <span className="rounded bg-background px-1.5 py-0.5 text-foreground-muted">{safeStr(s.horizon)}</span>}
                     </div>
@@ -1196,22 +1196,22 @@ function StrategyContent({ content }: { content: Record<string, unknown> }) {
       {/* Roadmap */}
       {roadmap.length > 0 && (
         <div>
-          <h4 className="text-sm font-semibold text-pink-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+          <h4 className="text-sm font-semibold text-error uppercase tracking-wider mb-3 flex items-center gap-2">
             <Layers className="h-4 w-4" /> Roadmap
           </h4>
           <div className="space-y-3">
             {roadmap.map((phase, i) => (
               <div key={i} className="rounded-lg border border-border bg-background/80 p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-pink-400">{safeStr(phase.phase)}</span>
-                  {safeStr(phase.duree) && <span className="text-[10px] text-foreground-muted">{safeStr(phase.duree)}</span>}
-                  {safeNum(phase.budget) > 0 && <span className="text-[10px] text-foreground-secondary">{fmtCurrency(phase.budget)} FCFA</span>}
+                  <span className="text-xs font-bold text-error">{safeStr(phase.phase)}</span>
+                  {safeStr(phase.duree) && <span className="text-2xs text-foreground-muted">{safeStr(phase.duree)}</span>}
+                  {safeNum(phase.budget) > 0 && <span className="text-2xs text-foreground-secondary">{fmtCurrency(phase.budget)} FCFA</span>}
                 </div>
                 <p className="text-xs text-foreground-secondary">{safeStr(phase.objectif)}</p>
                 {safeArr(phase.actions as unknown).length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {safeArr(phase.actions as unknown).map((a, j) => (
-                      <span key={j} className="rounded bg-pink-500/10 px-2 py-0.5 text-[10px] text-pink-300">{typeof a === "string" ? a : "?"}</span>
+                      <span key={j} className="rounded bg-error/10 px-2 py-0.5 text-2xs text-error">{typeof a === "string" ? a : "?"}</span>
                     ))}
                   </div>
                 )}
@@ -1224,7 +1224,7 @@ function StrategyContent({ content }: { content: Record<string, unknown> }) {
       {/* Budget */}
       {budget > 0 && (
         <div className="flex items-center gap-4">
-          <DollarSign className="h-5 w-5 text-pink-400" />
+          <DollarSign className="h-5 w-5 text-error" />
           <span className="text-sm text-foreground-secondary">Budget global:</span>
           <span className="text-2xl font-bold text-white">{fmtCurrency(budget)} FCFA</span>
         </div>
@@ -1233,18 +1233,18 @@ function StrategyContent({ content }: { content: Record<string, unknown> }) {
       {/* Sprint 90 Days */}
       {sprint.length > 0 && (
         <div>
-          <h4 className="text-sm font-semibold text-pink-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+          <h4 className="text-sm font-semibold text-error uppercase tracking-wider mb-3 flex items-center gap-2">
             <Rocket className="h-4 w-4" /> Sprint 90 Jours ({sprint.length} actions)
           </h4>
           <div className="space-y-2">
             {sprint.map((s, i) => (
               <div key={i} className="flex items-start gap-3 rounded-lg border border-border bg-background/80 p-3">
-                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${s.isRiskMitigation ? "bg-error/15 text-error" : "bg-pink-500/15 text-pink-400"}`}>
+                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-2xs font-bold ${s.isRiskMitigation ? "bg-error/15 text-error" : "bg-error/15 text-error"}`}>
                   {safeNum(s.priority, i + 1)}
                 </span>
                 <div className="flex-1">
                   <p className="text-xs text-foreground-secondary">{safeStr(s.action)}</p>
-                  <div className="flex gap-4 mt-1 text-[10px] text-foreground-muted">
+                  <div className="flex gap-4 mt-1 text-2xs text-foreground-muted">
                     {safeStr(s.owner) && <span>Owner: {safeStr(s.owner)}</span>}
                     {safeStr(s.kpi) && <span>KPI: {safeStr(s.kpi)}</span>}
                     {Boolean(s.isRiskMitigation) && <span className="text-error">Mitigation risque</span>}
@@ -1259,7 +1259,7 @@ function StrategyContent({ content }: { content: Record<string, unknown> }) {
       {/* KPI Dashboard */}
       {kpis.length > 0 && (
         <div>
-          <h4 className="text-sm font-semibold text-pink-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+          <h4 className="text-sm font-semibold text-error uppercase tracking-wider mb-3 flex items-center gap-2">
             <BarChart3 className="h-4 w-4" /> KPI Dashboard
           </h4>
           <div className="overflow-x-auto">
@@ -1269,7 +1269,7 @@ function StrategyContent({ content }: { content: Record<string, unknown> }) {
                 {kpis.map((kpi, i) => (
                   <tr key={i} className="border-t border-border/50">
                     <td className="p-2 text-foreground-secondary">{safeStr(kpi.name)}</td>
-                    <td className="p-2 text-center"><span className="rounded bg-pink-500/10 px-1.5 py-0.5 text-[10px] font-bold text-pink-300">{safeStr(kpi.pillar)}</span></td>
+                    <td className="p-2 text-center"><span className="rounded bg-error/10 px-1.5 py-0.5 text-2xs font-bold text-error">{safeStr(kpi.pillar)}</span></td>
                     <td className="p-2 text-foreground-secondary">{safeStr(kpi.target)}</td>
                     <td className="p-2 text-center text-foreground-muted">{safeStr(kpi.frequency)}</td>
                   </tr>
@@ -1289,12 +1289,12 @@ function StrategyContent({ content }: { content: Record<string, unknown> }) {
 
 function ProbBadge({ level }: { level: string }) {
   const colors: Record<string, string> = {
-    LOW: "bg-emerald-500/15 text-emerald-300",
-    MEDIUM: "bg-amber-500/15 text-amber-300",
+    LOW: "bg-success/15 text-success",
+    MEDIUM: "bg-warning/15 text-warning",
     HIGH: "bg-error/15 text-error",
   };
   return (
-    <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-bold uppercase ${colors[level] ?? "bg-surface-raised text-foreground-secondary"}`}>
+    <span className={`inline-block rounded px-2 py-0.5 text-2xs font-bold uppercase ${colors[level] ?? "bg-surface-raised text-foreground-secondary"}`}>
       {level}
     </span>
   );
@@ -1302,13 +1302,13 @@ function ProbBadge({ level }: { level: string }) {
 
 function HypothesisBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
-    HYPOTHESIS: "bg-zinc-500/15 text-foreground-secondary",
-    TESTING: "bg-amber-500/15 text-amber-300",
-    VALIDATED: "bg-emerald-500/15 text-emerald-300",
+    HYPOTHESIS: "bg-foreground-muted/15 text-foreground-secondary",
+    TESTING: "bg-warning/15 text-warning",
+    VALIDATED: "bg-success/15 text-success",
     INVALIDATED: "bg-error/15 text-error",
   };
   return (
-    <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-bold uppercase shrink-0 ${colors[status] ?? "bg-surface-raised text-foreground-secondary"}`}>
+    <span className={`inline-block rounded px-2 py-0.5 text-2xs font-bold uppercase shrink-0 ${colors[status] ?? "bg-surface-raised text-foreground-secondary"}`}>
       {status}
     </span>
   );

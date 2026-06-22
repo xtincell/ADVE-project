@@ -53,7 +53,7 @@ export default async function StatusPage() {
   return (
     <div className="mx-auto max-w-3xl px-6 py-12">
       <header className="mb-10">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-500/80">Status</div>
+        <div className="text-2xs font-semibold uppercase tracking-[0.2em] text-amber-500/80">Status</div>
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-zinc-100">Santé de l&apos;OS</h1>
       </header>
 
@@ -61,11 +61,11 @@ export default async function StatusPage() {
       <section className={"mb-6 rounded-2xl border p-5 " + overall.bg}>
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-[10px] uppercase tracking-wider text-zinc-500">État global</div>
+            <div className="text-2xs uppercase tracking-wider text-zinc-500">État global</div>
             <div className={"mt-1 text-2xl font-bold " + overall.color}>{overall.label}</div>
           </div>
           <div className="text-right">
-            <div className="text-[10px] uppercase tracking-wider text-zinc-500">Réussite 24h</div>
+            <div className="text-2xs uppercase tracking-wider text-zinc-500">Réussite 24h</div>
             <div className={"mt-1 font-mono text-3xl " + overall.color}>{s.successRate.toFixed(1)}%</div>
           </div>
         </div>
@@ -82,14 +82,14 @@ export default async function StatusPage() {
       {/* Last intent */}
       {s.lastIntent && (
         <section className="mb-6 rounded-xl border border-zinc-800 bg-zinc-950 p-5">
-          <div className="text-[10px] uppercase tracking-wider text-zinc-500">Dernier Intent émis</div>
+          <div className="text-2xs uppercase tracking-wider text-zinc-500">Dernier Intent émis</div>
           <div className="mt-1 flex items-baseline gap-3">
             <span className="font-mono text-sm text-zinc-200">{s.lastIntent.intentKind}</span>
-            <span className="rounded border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-[10px] text-zinc-400">
+            <span className="rounded border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-2xs text-zinc-400">
               {s.lastIntent.governor}
             </span>
             <span className={
-              "rounded px-2 py-0.5 text-[10px] font-semibold " +
+              "rounded px-2 py-0.5 text-2xs font-semibold " +
               (s.lastIntent.status === "OK"
                 ? "bg-emerald-950/40 text-emerald-300"
                 : s.lastIntent.status === "FAILED"
@@ -98,7 +98,7 @@ export default async function StatusPage() {
             }>
               {s.lastIntent.status}
             </span>
-            <span className="ml-auto text-[10px] text-zinc-500">{new Date(s.lastIntent.emittedAt).toLocaleString("fr-FR")}</span>
+            <span className="ml-auto text-2xs text-zinc-500">{new Date(s.lastIntent.emittedAt).toLocaleString("fr-FR")}</span>
           </div>
         </section>
       )}
@@ -127,7 +127,7 @@ export default async function StatusPage() {
               {s.models.map((m) => (
                 <li key={`${m.provider}-${m.model}`} className="flex items-center justify-between">
                   <span className="font-mono text-zinc-300">{m.provider}:{m.model}</span>
-                  <span className="text-[10px] text-zinc-500">~{m.typicalLatencyMs}ms</span>
+                  <span className="text-2xs text-zinc-500">~{m.typicalLatencyMs}ms</span>
                 </li>
               ))}
             </ul>
@@ -135,7 +135,7 @@ export default async function StatusPage() {
         </div>
       </section>
 
-      <p className="text-center text-[10px] text-zinc-600">Mise à jour : à la minute. Données : IntentEmission rolling 24h/7j.</p>
+      <p className="text-center text-2xs text-zinc-600">Mise à jour : à la minute. Données : IntentEmission rolling 24h/7j.</p>
     </div>
   );
 }
@@ -143,7 +143,7 @@ export default async function StatusPage() {
 function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
-      <div className="text-[10px] uppercase tracking-wider text-zinc-500">{label}</div>
+      <div className="text-2xs uppercase tracking-wider text-zinc-500">{label}</div>
       <div className="mt-1 font-mono text-2xl font-semibold text-zinc-100">{value.toLocaleString("fr-FR")}</div>
     </div>
   );

@@ -94,7 +94,7 @@ export function Sidebar({ navGroups, portalAccentVar, headerContent }: SidebarPr
       {/* Favorites section */}
       {!collapsed && favoriteItems.length > 0 && (
         <div className="border-b border-border-subtle px-3 py-2">
-          <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-[0.05em] text-foreground-muted">
+          <p className="mb-1 px-2 text-2xs font-semibold uppercase tracking-[0.05em] text-foreground-muted">
             Favoris
           </p>
           {favoriteItems.map((item) => {
@@ -124,7 +124,7 @@ export function Sidebar({ navGroups, portalAccentVar, headerContent }: SidebarPr
           <div key={gi} className={gi > 0 ? "mt-4" : ""}>
             {group.title && !collapsed && (
               <p
-                className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-[0.05em] text-foreground-muted"
+                className="mb-1 px-2 text-2xs font-semibold uppercase tracking-[0.05em] text-foreground-muted"
                 style={group.divisionColor ? { borderLeft: `3px solid ${group.divisionColor}`, paddingLeft: "8px" } : undefined}
               >
                 {group.titleKey ? t(group.titleKey) : group.title}
@@ -167,7 +167,7 @@ export function Sidebar({ navGroups, portalAccentVar, headerContent }: SidebarPr
                         return sub ? (
                           <span className="flex min-w-0 flex-col leading-tight">
                             <span className="truncate">{itemLabel(item)}</span>
-                            <span className="truncate text-[10px] font-normal text-foreground-muted">{sub}</span>
+                            <span className="truncate text-2xs font-normal text-foreground-muted">{sub}</span>
                           </span>
                         ) : (
                           <span className="truncate">{itemLabel(item)}</span>
@@ -175,7 +175,7 @@ export function Sidebar({ navGroups, portalAccentVar, headerContent }: SidebarPr
                       })()}
                       {!collapsed && item.badge !== undefined && item.badge > 0 && (
                         <span
-                          className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold text-primary-foreground"
+                          className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-2xs font-bold text-primary-foreground"
                           style={{ backgroundColor: portalAccentVar }}
                         >
                           {item.badge}
@@ -216,7 +216,7 @@ export function Sidebar({ navGroups, portalAccentVar, headerContent }: SidebarPr
         </Link>
         {!collapsed ? (
           <p className="mt-1 px-2 text-[9px] text-foreground-muted/40">
-            LaFusee v5.0 — NETERU
+            La Fusée v5.0 — NETERU
           </p>
         ) : null}
       </div>

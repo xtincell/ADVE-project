@@ -23,7 +23,7 @@ function NewsletterBox() {
 
   return (
     <div className="mt-6">
-      <div className="font-mono text-[11px] uppercase tracking-widest text-foreground-muted mb-2">The Upgrade — newsletter</div>
+      <div className="font-mono text-2xs uppercase tracking-widest text-foreground-muted mb-2">The Upgrade — newsletter</div>
       {state === "ok" ? (
         <p className="text-sm text-foreground-secondary">Inscription confirmée — bienvenue à bord. ✦</p>
       ) : (
@@ -39,14 +39,14 @@ function NewsletterBox() {
           <button
             onClick={subscribe}
             disabled={state === "pending" || !email.includes("@")}
-            className="bg-accent px-4 py-2 font-mono text-[11px] uppercase tracking-widest text-accent-foreground hover:opacity-90 disabled:opacity-40"
+            className="bg-accent px-4 py-2 font-mono text-2xs uppercase tracking-widest text-accent-foreground hover:opacity-90 disabled:opacity-40"
           >
             {state === "pending" ? "…" : "S'abonner"}
           </button>
         </div>
       )}
       {state === "error" && <p className="mt-1 text-xs text-error">Échec — réessayez.</p>}
-      <p className="mt-1.5 text-[11px] text-foreground-muted">Stratégie de marque, hebdo. Désinscription en un clic, à chaque envoi.</p>
+      <p className="mt-1.5 text-2xs text-foreground-muted">Stratégie de marque, hebdo. Désinscription en un clic, à chaque envoi.</p>
     </div>
   );
 }
@@ -56,30 +56,24 @@ export function MarketingFooter() {
     <footer className="border-t border-border pt-12 pb-6">
       <div className="mx-auto max-w-[var(--maxw-content)] px-[var(--pad-page)] grid grid-cols-1 md:grid-cols-[1fr_1.4fr] gap-12 pb-10 border-b border-border">
         <div className="flex gap-3.5 items-center">
-          <span aria-hidden="true">
-            <svg viewBox="0 0 32 32" width="22" height="22" fill="none">
-              <rect x="14" y="2" width="4" height="22" fill="var(--color-foreground)" />
-              <path d="M16 2 L20 8 L12 8 Z" fill="var(--color-accent)" />
-              <rect x="10" y="20" width="12" height="4" fill="var(--color-foreground)" />
-              <path d="M10 24 L16 30 L22 24 Z" fill="var(--color-accent)" />
-            </svg>
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/logos/lafusee-logo.png" alt="" aria-hidden="true" className="h-8 w-auto" />
           <div>
             <div className="font-semibold tracking-tight text-lg">La Fusée<span className="text-accent">.</span></div>
-            <div className="font-mono text-[11px] text-foreground-muted">Industry OS — marché créatif africain.</div>
+            <div className="font-mono text-2xs text-foreground-muted">Industry OS — marché créatif africain.</div>
             <NewsletterBox />
           </div>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
           <div>
-            <div className="font-mono text-[11px] uppercase tracking-widest text-foreground-muted mb-3.5">Doctrine</div>
+            <div className="font-mono text-2xs uppercase tracking-widest text-foreground-muted mb-3.5">Doctrine</div>
             <a href="#manifesto" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">Manifesto</a>
             <a href="#methode" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">ADVE-RTIS</a>
             <a href="#apogee" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">APOGEE</a>
             <a href="#gouverneurs" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">Gouverneurs</a>
           </div>
           <div>
-            <div className="font-mono text-[11px] uppercase tracking-widest text-foreground-muted mb-3.5">Portails</div>
+            <div className="font-mono text-2xs uppercase tracking-widest text-foreground-muted mb-3.5">Portails</div>
             <a href="/cockpit" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">Cockpit</a>
             <a href="/console" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">Console</a>
             <a href="/creator" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">Creator</a>
@@ -87,14 +81,14 @@ export function MarketingFooter() {
             <a href="/LaGuilde" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">La Guilde</a>
           </div>
           <div>
-            <div className="font-mono text-[11px] uppercase tracking-widest text-foreground-muted mb-3.5">Maison</div>
+            <div className="font-mono text-2xs uppercase tracking-widest text-foreground-muted mb-3.5">Maison</div>
             <a href="/agency" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">UPgraders</a>
             <a href="/pricing" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">Tarifs</a>
             <a href="/changelog" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">Changelog</a>
             <a href="/status" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">Status</a>
           </div>
           <div>
-            <div className="font-mono text-[11px] uppercase tracking-widest text-foreground-muted mb-3.5">Conformité</div>
+            <div className="font-mono text-2xs uppercase tracking-widest text-foreground-muted mb-3.5">Conformité</div>
             <a href="/mentions-legales" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">Mentions légales</a>
             <a href="/cgu" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">CGU</a>
             <a href="/cgv" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">CGV</a>
@@ -105,7 +99,7 @@ export function MarketingFooter() {
           </div>
         </div>
       </div>
-      <div className="mx-auto max-w-[var(--maxw-content)] px-[var(--pad-page)] mt-6 flex gap-6 font-mono text-[11px] text-foreground-muted flex-wrap">
+      <div className="mx-auto max-w-[var(--maxw-content)] px-[var(--pad-page)] mt-6 flex gap-6 font-mono text-2xs text-foreground-muted flex-wrap">
         <span>UPgraders / La Fusée SARL — 2026</span>
         <span>v6.27.5 · 2026-06-16</span>
         <span>Tous droits réservés.</span>

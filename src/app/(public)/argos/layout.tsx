@@ -24,7 +24,7 @@ export default function ArgosLayout({ children }: { children: React.ReactNode })
             </span>
             <span className="flex flex-col leading-none">
               <span className="text-sm font-bold tracking-tight text-foreground">Argos</span>
-              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">par La Fusée</span>
+              <span className="text-2xs uppercase tracking-wider text-muted-foreground">par La Fusée</span>
             </span>
           </Link>
           <Link href="/" className="text-sm font-medium text-foreground-secondary hover:text-foreground">

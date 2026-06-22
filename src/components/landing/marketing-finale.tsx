@@ -9,7 +9,9 @@ export function MarketingFinale() {
         }}
       />
       <div className="relative mx-auto max-w-[var(--maxw-content)] px-[var(--pad-page)] flex flex-col items-center gap-6">
-        <p className="inline-flex items-center gap-2.5 font-mono text-[11px] uppercase tracking-widest text-foreground-muted">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/illustrations/trophy-3d.png" alt="" aria-hidden="true" className="up-float h-24 w-auto drop-shadow-2xl md:h-32" />
+        <p className="inline-flex items-center gap-2.5 font-mono text-2xs uppercase tracking-widest text-foreground-muted">
           <span className="w-1.5 h-1.5 rounded-full bg-accent" />
           Préparation au décollage
         </p>
@@ -29,8 +31,8 @@ export function MarketingFinale() {
             Lire la doctrine complète
           </a>
         </div>
-        <p className="font-mono text-[11px] uppercase tracking-widest text-foreground-muted">↳ gratuit · 15 min · sans engagement</p>
-        <div className="flex gap-4 items-center mt-8 pt-6 border-t border-border font-mono text-[11px] text-foreground-muted flex-wrap justify-center">
+        <p className="font-mono text-2xs uppercase tracking-widest text-foreground-muted">↳ gratuit · 15 min · sans engagement</p>
+        <div className="flex gap-4 items-center mt-8 pt-6 border-t border-border font-mono text-2xs text-foreground-muted flex-wrap justify-center">
           <span>UPgraders · Industry OS</span>
           <span aria-hidden="true" className="text-accent">●</span>
           <span>Abidjan · Douala · Dakar · Lagos</span>

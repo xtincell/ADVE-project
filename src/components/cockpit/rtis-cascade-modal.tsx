@@ -225,9 +225,9 @@ export function RtisCascadeModal({
               >
                 <span className="flex items-center gap-2">
                   {p.ready ? (
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    <CheckCircle2 className="h-4 w-4 text-success" />
                   ) : p.inProgress ? (
-                    <Loader2 className="h-4 w-4 animate-spin text-yellow-500" />
+                    <Loader2 className="h-4 w-4 animate-spin text-warning" />
                   ) : (
                     <Loader2 className="h-4 w-4 animate-spin text-foreground-muted" />
                   )}
@@ -238,9 +238,9 @@ export function RtisCascadeModal({
                 <span
                   className={
                     p.ready
-                      ? "text-xs font-medium text-emerald-500"
+                      ? "text-xs font-medium text-success"
                       : p.inProgress
-                        ? "text-xs font-medium text-yellow-500"
+                        ? "text-xs font-medium text-warning"
                         : "text-xs font-medium text-foreground-muted"
                   }
                 >
@@ -251,15 +251,15 @@ export function RtisCascadeModal({
           </ul>
 
           {sinceRefresh !== null && (
-            <p className="text-[11px] text-foreground-muted">
+            <p className="text-2xs text-foreground-muted">
               Dernière mise à jour : il y a {sinceRefresh}s
               {readiness.isFetching && " · rafraîchissement…"}
             </p>
           )}
 
           {elapsed > 90 && (
-            <div className="rounded-lg border border-yellow-500/40 bg-yellow-500/5 p-3 text-xs text-foreground-secondary">
-              <strong className="text-yellow-500">Plus long que prévu.</strong>{" "}
+            <div className="rounded-lg border border-warning/40 bg-warning/5 p-3 text-xs text-foreground-secondary">
+              <strong className="text-warning">Plus long que prévu.</strong>{" "}
               Le LLM travaille toujours. Tu peux fermer cette fenêtre — la cascade
               continue en arrière-plan, le bouton « Lancer Artemis » virera vert
               quand RTIS sera prêt.
@@ -271,10 +271,10 @@ export function RtisCascadeModal({
       {/* DONE phase */}
       {phase === "DONE" && (
         <div className="space-y-3 py-2">
-          <div className="flex items-start gap-3 rounded-lg border border-emerald-500/40 bg-emerald-500/5 p-4">
-            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" />
+          <div className="flex items-start gap-3 rounded-lg border border-success/40 bg-success/5 p-4">
+            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
             <div className="space-y-1">
-              <p className="text-sm font-semibold text-emerald-500">
+              <p className="text-sm font-semibold text-success">
                 Cascade RTIS terminée — vos 8 piliers sont prêts.
               </p>
               <p className="text-xs text-foreground-secondary">
@@ -293,7 +293,7 @@ export function RtisCascadeModal({
               <ul className="space-y-1 text-xs text-foreground-muted">
                 {cascade.data.results.map((r) => (
                   <li key={r.pillarKey} className="flex items-center justify-between">
-                    <span className="font-mono text-[11px]">
+                    <span className="font-mono text-2xs">
                       {PILLAR_NAMES[r.pillarKey.toLowerCase() as RtisKey] ?? r.pillarKey}
                     </span>
                     <span
@@ -301,7 +301,7 @@ export function RtisCascadeModal({
                         r.error
                           ? "text-error"
                           : r.updated
-                            ? "text-emerald-400"
+                            ? "text-success"
                             : "text-foreground-muted"
                       }
                     >
@@ -350,7 +350,7 @@ export function RtisCascadeModal({
                     key={r.pillarKey}
                     className="flex items-start justify-between gap-2"
                   >
-                    <span className="font-mono text-[11px] text-foreground-muted">
+                    <span className="font-mono text-2xs text-foreground-muted">
                       {PILLAR_NAMES[r.pillarKey.toLowerCase() as RtisKey] ?? r.pillarKey}
                     </span>
                     <span
@@ -358,7 +358,7 @@ export function RtisCascadeModal({
                         r.error
                           ? "text-error"
                           : r.updated
-                            ? "text-emerald-400"
+                            ? "text-success"
                             : "text-foreground-muted"
                       }
                     >

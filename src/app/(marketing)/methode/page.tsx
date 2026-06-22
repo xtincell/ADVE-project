@@ -98,7 +98,7 @@ export default function MethodePage() {
             </div>
           </div>
           <div className="border border-border bg-surface-raised p-7">
-            <div className="font-mono text-[11px] uppercase tracking-widest text-foreground-muted">Ce que contient l&apos;Oracle</div>
+            <div className="font-mono text-2xs uppercase tracking-widest text-foreground-muted">Ce que contient l&apos;Oracle</div>
             <ul className="mt-4 flex flex-col gap-3 text-sm text-foreground-secondary">
               {[
                 "Le diagnostic ADVE — 4 piliers d'identité notés",

@@ -19,3 +19,4 @@
 @import "./component.css";
 @import "./domain.css";
 @import "./animations.css";
+@import "./patterns.css";   /* editorial & motion composites — consume tokens, load last */

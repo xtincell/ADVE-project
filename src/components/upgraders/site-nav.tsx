@@ -5,17 +5,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { ArrowRight, LayoutGrid, Menu, X } from "lucide-react";
+import { Logo } from "@/components/brand/Logo";
 import { NAV_ITEMS } from "./data";
 
 function Wordmark() {
   return (
-    <Link href="/" className="flex items-baseline gap-2" aria-label="UPgraders — accueil">
-      <span className="font-display text-lg font-semibold tracking-tight">
-        <span className="text-accent">UP</span>graders
-      </span>
-      <span className="hidden font-mono text-[10px] uppercase tracking-widest text-foreground-muted sm:inline">
-        conseil &amp; stratégie
-      </span>
+    <Link href="/" className="flex items-center" aria-label="UPgraders — accueil">
+      <Logo variant="lockup-horizontal" size={30} alt="UPgraders" className="hidden sm:block" />
+      <Logo variant="mark" size={30} alt="UPgraders" className="sm:hidden" />
     </Link>
   );
 }
@@ -71,7 +68,7 @@ export function SiteNav() {
         <div className="flex items-center gap-3">
           <Link
             href="/lafusee"
-            className="hidden items-center gap-1.5 font-mono text-[11px] uppercase tracking-widest text-foreground-muted transition-colors hover:text-accent md:inline-flex"
+            className="hidden items-center gap-1.5 font-mono text-2xs uppercase tracking-widest text-foreground-muted transition-colors hover:text-accent md:inline-flex"
           >
             La Fusée
             <span className="h-1 w-1 rounded-full bg-accent" aria-hidden="true" />
@@ -112,7 +109,7 @@ export function SiteNav() {
             <Link
               href="/lafusee"
               onClick={() => setOpen(false)}
-              className="border-b border-border-subtle py-3 font-mono text-[11px] uppercase tracking-widest text-foreground-muted transition-colors hover:text-accent"
+              className="border-b border-border-subtle py-3 font-mono text-2xs uppercase tracking-widest text-foreground-muted transition-colors hover:text-accent"
             >
               La Fusée — l&apos;OS produit
             </Link>

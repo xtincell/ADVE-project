@@ -21,7 +21,7 @@ function CockpitSidebarHeader() {
         <div className="min-w-0">
           <p className="text-sm font-bold text-foreground">Brand OS</p>
           {current && (
-            <p className="truncate text-[11px] text-muted-foreground">{current.name}</p>
+            <p className="truncate text-2xs text-muted-foreground">{current.name}</p>
           )}
         </div>
       </div>

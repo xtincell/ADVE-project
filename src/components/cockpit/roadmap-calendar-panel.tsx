@@ -120,7 +120,7 @@ export function RoadmapCalendarPanel() {
   return (
     <article className="mx-auto max-w-[var(--maxw-content,1200px)] px-[var(--pad-page,1.5rem)] py-8 md:py-12">
       <header className="mb-8 border-b border-border-subtle pb-6">
-        <div className="mb-3 flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-foreground-muted">
+        <div className="mb-3 flex items-center gap-2 font-mono text-2xs uppercase tracking-widest text-foreground-muted">
           <CalendarRange className="h-3.5 w-3.5 text-accent" />
           <span>Roadmap · calendrier des actions retenues</span>
         </div>
@@ -143,15 +143,15 @@ export function RoadmapCalendarPanel() {
         <>
           {/* Auto-schedule bar */}
           <div className="mb-8 flex flex-wrap items-end gap-3 rounded-lg border border-white/5 bg-surface-raised p-4">
-            <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-foreground-muted">
+            <label className="flex flex-col gap-1 text-2xs uppercase tracking-widest text-foreground-muted">
               Départ
               <input type="date" value={start} onChange={(e) => setStart(e.target.value)} className={INPUT_CLS} />
             </label>
-            <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-foreground-muted">
+            <label className="flex flex-col gap-1 text-2xs uppercase tracking-widest text-foreground-muted">
               Cadence (jours)
               <input type="number" min={1} max={90} value={cadence} onChange={(e) => setCadence(Math.max(1, Math.min(90, Number(e.target.value) || 14)))} className={`${INPUT_CLS} w-24`} />
             </label>
-            <label className="flex items-center gap-1.5 pb-2 text-[11px] text-foreground-secondary">
+            <label className="flex items-center gap-1.5 pb-2 text-2xs text-foreground-secondary">
               <input type="checkbox" checked={onlyUnscheduled} onChange={(e) => setOnlyUnscheduled(e.target.checked)} className="accent-accent" />
               Garder les dates manuelles
             </label>
@@ -164,7 +164,7 @@ export function RoadmapCalendarPanel() {
               {auto.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
               Auto-planifier
             </button>
-            {auto.data ? <span className="w-full text-[11px] text-success">{auto.data.scheduled} action(s) planifiée(s).</span> : null}
+            {auto.data ? <span className="w-full text-2xs text-success">{auto.data.scheduled} action(s) planifiée(s).</span> : null}
           </div>
 
           {/* Unscheduled bucket */}
@@ -187,13 +187,13 @@ export function RoadmapCalendarPanel() {
                 <CalendarClock className="h-4 w-4 text-accent" />
                 <h2 className="font-display font-semibold capitalize tracking-tight text-foreground" style={{ fontSize: "var(--text-lg)" }}>{g.label}</h2>
                 <div className="h-px flex-1 bg-border-subtle" />
-                <span className="font-mono text-[10px] uppercase tracking-widest text-foreground-muted">{g.items.length}</span>
+                <span className="font-mono text-2xs uppercase tracking-widest text-foreground-muted">{g.items.length}</span>
               </div>
               <ol className="space-y-2">
                 {g.items.map((a) => (
                   <li key={a.id} className="flex gap-3">
                     <div className="flex w-12 flex-shrink-0 flex-col items-center pt-2">
-                      <span className="font-mono text-[10px] font-bold text-accent">{dayLabel(a.timingStart!)}</span>
+                      <span className="font-mono text-2xs font-bold text-accent">{dayLabel(a.timingStart!)}</span>
                     </div>
                     <div className="flex-1"><ActionRow a={a} /></div>
                   </li>

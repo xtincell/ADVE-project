@@ -48,7 +48,7 @@ export function MobileTabBar({ navGroups, portalAccentVar, maxTabs = 4 }: Mobile
               }`}
             >
               <Icon className="h-5 w-5" style={active ? { color: portalAccentVar } : undefined} />
-              <span className="text-[10px] font-medium">{item.label}</span>
+              <span className="text-2xs font-medium">{item.label}</span>
             </Link>
           );
         })}
@@ -60,7 +60,7 @@ export function MobileTabBar({ navGroups, portalAccentVar, maxTabs = 4 }: Mobile
             aria-label="Plus de pages"
           >
             <MoreHorizontal className="h-5 w-5" />
-            <span className="text-[10px] font-medium">Plus</span>
+            <span className="text-2xs font-medium">Plus</span>
           </button>
         )}
       </nav>
@@ -91,7 +91,7 @@ export function MobileTabBar({ navGroups, portalAccentVar, maxTabs = 4 }: Mobile
                       className="h-5 w-5"
                       style={active ? { color: portalAccentVar } : undefined}
                     />
-                    <span className="text-center text-[11px] font-medium text-foreground-secondary">
+                    <span className="text-center text-2xs font-medium text-foreground-secondary">
                       {item.label}
                     </span>
                   </Link>

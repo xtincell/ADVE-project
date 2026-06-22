@@ -45,7 +45,7 @@ export function SequenceLauncherPanel() {
   return (
     <article className="mx-auto max-w-[var(--maxw-content,1200px)] px-[var(--pad-page,1.5rem)] py-8 md:py-12">
       <header className="mb-8 border-b border-border-subtle pb-6">
-        <div className="mb-3 flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-foreground-muted">
+        <div className="mb-3 flex items-center gap-2 font-mono text-2xs uppercase tracking-widest text-foreground-muted">
           <Rocket className="h-3.5 w-3.5 text-accent" />
           <span>Séquences Glory · déclenchables depuis la marque</span>
         </div>
@@ -58,9 +58,9 @@ export function SequenceLauncherPanel() {
       </header>
 
       <nav className="mb-8 flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-border-subtle pb-4">
-        <button type="button" onClick={() => setFamilyFilter(null)} className={`font-mono text-[11px] uppercase tracking-widest transition-colors ${!familyFilter ? "text-accent" : "text-foreground-muted hover:text-foreground"}`}>Toutes</button>
+        <button type="button" onClick={() => setFamilyFilter(null)} className={`font-mono text-2xs uppercase tracking-widest transition-colors ${!familyFilter ? "text-accent" : "text-foreground-muted hover:text-foreground"}`}>Toutes</button>
         {families.map((f) => (
-          <button key={f} type="button" onClick={() => setFamilyFilter(f)} className={`font-mono text-[11px] uppercase tracking-widest transition-colors ${familyFilter === f ? "text-accent" : "text-foreground-muted hover:text-foreground"}`}>{f}</button>
+          <button key={f} type="button" onClick={() => setFamilyFilter(f)} className={`font-mono text-2xs uppercase tracking-widest transition-colors ${familyFilter === f ? "text-accent" : "text-foreground-muted hover:text-foreground"}`}>{f}</button>
         ))}
       </nav>
 
@@ -77,7 +77,7 @@ function SequenceCard({ seq, onLaunch }: { seq: Seq; onLaunch: () => void }) {
   return (
     <div className="flex flex-col rounded-lg border border-white/5 bg-surface-raised p-4">
       <div className="mb-1 flex items-center gap-2">
-        {seq.pillar ? <span className="flex h-5 w-5 items-center justify-center rounded-full bg-accent/15 text-[10px] font-bold text-accent">{seq.pillar}</span> : null}
+        {seq.pillar ? <span className="flex h-5 w-5 items-center justify-center rounded-full bg-accent/15 text-2xs font-bold text-accent">{seq.pillar}</span> : null}
         <span className="truncate text-sm font-semibold text-foreground">{seq.name}</span>
       </div>
       <p className="mb-3 flex-1 text-xs leading-relaxed text-foreground-secondary">{seq.description}</p>
@@ -88,11 +88,11 @@ function SequenceCard({ seq, onLaunch }: { seq: Seq; onLaunch: () => void }) {
       </div>
       <div className="flex items-center justify-between gap-2">
         {seq.cost.costClass === "LLM" ? (
-          <span className="inline-flex items-center gap-1 text-[11px] text-accent"><Zap className="h-3 w-3" /> ~${seq.cost.estimateUsd.toFixed(2)}</span>
+          <span className="inline-flex items-center gap-1 text-2xs text-accent"><Zap className="h-3 w-3" /> ~${seq.cost.estimateUsd.toFixed(2)}</span>
         ) : (
-          <span className="inline-flex items-center gap-1 text-[11px] text-success"><Coins className="h-3 w-3" /> gratuit</span>
+          <span className="inline-flex items-center gap-1 text-2xs text-success"><Coins className="h-3 w-3" /> gratuit</span>
         )}
-        <button type="button" onClick={onLaunch} className="inline-flex items-center gap-1.5 rounded-lg bg-accent/15 px-2.5 py-1.5 text-[11px] font-medium text-accent transition-colors hover:bg-accent/25">
+        <button type="button" onClick={onLaunch} className="inline-flex items-center gap-1.5 rounded-lg bg-accent/15 px-2.5 py-1.5 text-2xs font-medium text-accent transition-colors hover:bg-accent/25">
           <Rocket className="h-3 w-3" /> Lancer
         </button>
       </div>

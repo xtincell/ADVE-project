@@ -64,7 +64,7 @@ export default async function ChangelogPage() {
   return (
     <div className="mx-auto max-w-3xl px-6 py-12">
       <header className="mb-10">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-500/80">
+        <div className="text-2xs font-semibold uppercase tracking-[0.2em] text-amber-500/80">
           Journal
         </div>
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-zinc-100">Changelog</h1>
@@ -81,16 +81,16 @@ export default async function ChangelogPage() {
             className="rounded-lg border border-zinc-800 bg-zinc-950 p-4 transition hover:border-zinc-700"
           >
             <div className="mb-1 flex items-center gap-2">
-              <span className={"rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase " + TYPE_ACCENT[e.type]}>
+              <span className={"rounded border px-1.5 py-0.5 text-2xs font-semibold uppercase " + TYPE_ACCENT[e.type]}>
                 {e.type}
               </span>
               {e.scope && (
-                <span className="rounded border border-zinc-800 bg-zinc-900 px-1.5 py-0.5 text-[10px] font-mono text-zinc-400">
+                <span className="rounded border border-zinc-800 bg-zinc-900 px-1.5 py-0.5 text-2xs font-mono text-zinc-400">
                   {e.scope}
                 </span>
               )}
-              <span className="ml-auto text-[10px] font-mono text-zinc-600">{e.date}</span>
-              <span className="font-mono text-[10px] text-zinc-700">{e.hash}</span>
+              <span className="ml-auto text-2xs font-mono text-zinc-600">{e.date}</span>
+              <span className="font-mono text-2xs text-zinc-700">{e.hash}</span>
             </div>
             <p className="text-sm text-zinc-200">{e.summary}</p>
           </li>

@@ -38,7 +38,7 @@ export function MarketingPortails() {
   return (
     <section id="portails" className="py-24 md:py-32">
       <div className="mx-auto max-w-[var(--maxw-content)] px-[var(--pad-page)]">
-        <div className="flex items-baseline gap-3.5 mb-8 font-mono text-[11px] uppercase tracking-widest text-foreground-muted">
+        <div className="flex items-baseline gap-3.5 mb-8 font-mono text-2xs uppercase tracking-widest text-foreground-muted">
           <span className="w-8 h-px bg-accent" />
           06 · Portails
         </div>
@@ -59,9 +59,9 @@ export function MarketingPortails() {
               }`}
             >
               <header className="flex flex-col gap-1.5">
-                <span className={`font-mono text-[11px] uppercase tracking-widest ${p.accent ? "opacity-70" : "text-foreground-muted"}`}>{p.num}</span>
+                <span className={`font-mono text-2xs uppercase tracking-widest ${p.accent ? "opacity-70" : "text-foreground-muted"}`}>{p.num}</span>
                 <h3 className="font-display font-semibold text-2xl tracking-tight">{p.name}</h3>
-                <span className={`font-mono text-[11px] mt-1 ${p.accent ? "opacity-70" : "text-foreground-muted"}`}>{p.forWhom}</span>
+                <span className={`font-mono text-2xs mt-1 ${p.accent ? "opacity-70" : "text-foreground-muted"}`}>{p.forWhom}</span>
               </header>
               <ul className="flex flex-col gap-2.5 flex-1">
                 {p.bullets.map((b) => (

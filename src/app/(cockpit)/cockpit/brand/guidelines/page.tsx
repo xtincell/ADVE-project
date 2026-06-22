@@ -276,7 +276,7 @@ export default function GuidelinesPage() {
           >
             {copied ? (
               <>
-                <Check className="h-3 w-3 text-emerald-400" /> Copie
+                <Check className="h-3 w-3 text-success" /> Copie
               </>
             ) : (
               <>
@@ -321,7 +321,7 @@ export default function GuidelinesPage() {
 
       {/* Error state */}
       {guidelinesQuery.error && (
-        <div className="rounded-xl border border-red-900/50 bg-error/20 p-6 text-center">
+        <div className="rounded-xl border border-error/50 bg-error/20 p-6 text-center">
           <AlertTriangle className="mx-auto h-8 w-8 text-error" />
           <p className="mt-2 text-sm text-error">
             {guidelinesQuery.error.message}
@@ -351,7 +351,7 @@ export default function GuidelinesPage() {
             <div className="flex gap-6">
               {/* Section navigation sidebar */}
               <nav className="hidden lg:block w-56 shrink-0 space-y-1">
-                <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-foreground-muted">
+                <p className="mb-3 text-2xs font-semibold uppercase tracking-wider text-foreground-muted">
                   Sections
                 </p>
                 {SECTIONS.map((section) => {
@@ -371,7 +371,7 @@ export default function GuidelinesPage() {
                       <Icon className="h-3.5 w-3.5 shrink-0" />
                       <span className="flex-1 truncate">{section.label}</span>
                       {isFilled ? (
-                        <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-500" />
+                        <CheckCircle2 className="h-3 w-3 shrink-0 text-success" />
                       ) : (
                         <Circle className="h-3 w-3 shrink-0 text-foreground-muted" />
                       )}
@@ -381,11 +381,11 @@ export default function GuidelinesPage() {
 
                 {/* Pillar source legend */}
                 <div className="mt-6 space-y-1 border-t border-border pt-4">
-                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-foreground-muted">
+                  <p className="mb-2 text-2xs font-semibold uppercase tracking-wider text-foreground-muted">
                     Sources piliers
                   </p>
                   {SECTIONS.filter((s) => s.pillarSource).map((s) => (
-                    <div key={s.id} className="flex items-center gap-1.5 text-[10px]">
+                    <div key={s.id} className="flex items-center gap-1.5 text-2xs">
                       <span
                         className={`rounded-full px-1.5 py-0.5 font-bold ${PILLAR_TAG_BG[s.pillarSource!]}`}
                       >
@@ -425,7 +425,7 @@ export default function GuidelinesPage() {
                           </div>
                           {section.pillarSource && (
                             <span
-                              className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${PILLAR_TAG_BG[section.pillarSource]}`}
+                              className={`rounded-full px-2 py-0.5 text-2xs font-medium ${PILLAR_TAG_BG[section.pillarSource]}`}
                             >
                               Source: Pilier {section.pillarSource.toUpperCase()} &mdash;{" "}
                               {PILLAR_NAMES[section.pillarSource]}

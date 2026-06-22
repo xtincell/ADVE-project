@@ -51,7 +51,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   oracle: "L'Oracle",
   signal: "Le Signal",
   arene: "L'Arene",
-  fusee: "La Fusee",
+  fusee: "La Fusée",
   socle: "Le Socle",
   clients: "Clients",
   intake: "Pipeline Intake",

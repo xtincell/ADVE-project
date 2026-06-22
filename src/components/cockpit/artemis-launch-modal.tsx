@@ -270,7 +270,7 @@ export function ArtemisLaunchModal({
                 <li key={p.pillarKey} className="flex items-center justify-between gap-2">
                   <span className="flex items-center gap-2 text-foreground-secondary">
                     {ready ? (
-                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                      <CheckCircle2 className="h-3.5 w-3.5 text-success" />
                     ) : (
                       <Loader2 className="h-3.5 w-3.5 animate-spin text-foreground-muted" />
                     )}
@@ -279,9 +279,9 @@ export function ArtemisLaunchModal({
                   <span
                     className={
                       ready
-                        ? "font-medium text-emerald-500"
+                        ? "font-medium text-success"
                         : stageInfo.tone === "warn"
-                          ? "text-yellow-500"
+                          ? "text-warning"
                           : "text-foreground-muted"
                     }
                   >
@@ -294,7 +294,7 @@ export function ArtemisLaunchModal({
 
           {/* Heartbeat — confirms the polling is alive */}
           {sinceRefresh !== null && (
-            <p className="text-[11px] text-foreground-muted">
+            <p className="text-2xs text-foreground-muted">
               Dernière mise à jour : il y a {sinceRefresh}s
               {readiness.isFetching && " · rafraîchissement…"}
             </p>
@@ -302,8 +302,8 @@ export function ArtemisLaunchModal({
 
           {/* Soft warning after 75s — exceeding the typical window */}
           {elapsed > 75 && (
-            <div className="rounded-lg border border-yellow-500/40 bg-yellow-500/5 p-3 text-xs text-foreground-secondary">
-              <strong className="text-yellow-500">C'est plus long que prévu.</strong>{" "}
+            <div className="rounded-lg border border-warning/40 bg-warning/5 p-3 text-xs text-foreground-secondary">
+              <strong className="text-warning">C'est plus long que prévu.</strong>{" "}
               Le serveur travaille toujours (LLM + écritures). Tu peux fermer cette
               fenêtre — la préparation continue en arrière-plan, et tu verras les
               piliers passer en « Prêt » sur leurs pages dédiées.
@@ -317,10 +317,10 @@ export function ArtemisLaunchModal({
           INFERRED-marked fields later from each pillar page. */}
       {phase === "READY" && (
         <div className="space-y-3">
-          <div className="flex items-start gap-3 rounded-lg border border-emerald-500/40 bg-emerald-500/5 p-4">
-            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" />
+          <div className="flex items-start gap-3 rounded-lg border border-success/40 bg-success/5 p-4">
+            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
             <div className="space-y-1">
-              <p className="text-sm font-semibold text-emerald-500">
+              <p className="text-sm font-semibold text-success">
                 Vos 4 fondations sont prêtes.
               </p>
               <p className="text-xs text-foreground-secondary">
@@ -339,7 +339,7 @@ export function ArtemisLaunchModal({
                 {fillResults.map((r) => (
                   <li key={r.pillarKey} className="flex items-center justify-between">
                     <span>{PILLAR_NAMES[r.pillarKey as keyof typeof PILLAR_NAMES]}</span>
-                    <span className="text-emerald-400">
+                    <span className="text-success">
                       {r.filled.length > 0 ? `+${r.filled.length} champs` : "déjà prêt"}
                     </span>
                   </li>
@@ -349,10 +349,10 @@ export function ArtemisLaunchModal({
           )}
 
           {inferredMarked > 0 && (
-            <div className="flex items-start gap-2 rounded-lg border border-yellow-500/40 bg-yellow-500/5 p-3">
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-yellow-500" />
+            <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/5 p-3">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
               <p className="text-xs text-foreground-secondary">
-                <strong className="text-yellow-500">{inferredMarked} champ{inferredMarked > 1 ? "s" : ""} inféré{inferredMarked > 1 ? "s" : ""}</strong>{" "}
+                <strong className="text-warning">{inferredMarked} champ{inferredMarked > 1 ? "s" : ""} inféré{inferredMarked > 1 ? "s" : ""}</strong>{" "}
                 par l'IA et marqué{inferredMarked > 1 ? "s" : ""} comme tel{inferredMarked > 1 ? "s" : ""}. Vous pourrez les valider ou les
                 réécrire depuis chaque page de fondation (Authenticité / Distinction / Valeur /
                 Engagement) — un badge « Inféré IA » s'affiche à côté de chaque valeur concernée.
@@ -461,11 +461,11 @@ function PillarRow({ pillar }: { pillar: PillarReadinessLite }) {
     <div className="flex items-center justify-between rounded-lg border border-border bg-background/50 px-4 py-3">
       <div className="flex items-center gap-3">
         {ready ? (
-          <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+          <CheckCircle2 className="h-5 w-5 text-success" />
         ) : (
           <AlertCircle
             className={
-              stageInfo.tone === "warn" ? "h-5 w-5 text-yellow-500" : "h-5 w-5 text-foreground-muted"
+              stageInfo.tone === "warn" ? "h-5 w-5 text-warning" : "h-5 w-5 text-foreground-muted"
             }
           />
         )}
@@ -492,9 +492,9 @@ function PillarRow({ pillar }: { pillar: PillarReadinessLite }) {
       <span
         className={
           ready
-            ? "rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-medium text-emerald-500"
+            ? "rounded-full bg-success/15 px-2.5 py-0.5 text-xs font-medium text-success"
             : stageInfo.tone === "warn"
-              ? "rounded-full bg-yellow-500/15 px-2.5 py-0.5 text-xs font-medium text-yellow-500"
+              ? "rounded-full bg-warning/15 px-2.5 py-0.5 text-xs font-medium text-warning"
               : "rounded-full bg-background px-2.5 py-0.5 text-xs font-medium text-foreground-muted"
         }
       >

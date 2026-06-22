@@ -113,14 +113,14 @@ export function OracleProgressivePanel(props: OracleProgressivePanelProps): Reac
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-sm">
             <h3 className="font-semibold text-foreground">Génération progressive</h3>
-            <span className="rounded-full bg-blue-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-300">
+            <span className="rounded-full bg-info/15 px-2 py-0.5 text-2xs font-bold uppercase tracking-wider text-info">
               ADR-0073
             </span>
           </div>
           <div className="flex items-center gap-3 text-xs">
-            <span className="text-emerald-400">{stats.complete} complets</span>
-            <span className="text-rose-400">{stats.failed} ratés</span>
-            <span className="text-amber-300">{stats.stale} périmés</span>
+            <span className="text-success">{stats.complete} complets</span>
+            <span className="text-error">{stats.failed} ratés</span>
+            <span className="text-warning">{stats.stale} périmés</span>
             <span className="text-foreground-muted">{stats.pending + stats.generating} en attente</span>
           </div>
         </div>
@@ -130,7 +130,7 @@ export function OracleProgressivePanel(props: OracleProgressivePanelProps): Reac
             type="button"
             onClick={() => assembleMutation.mutate({ strategyId, scope })}
             disabled={anyMutationPending}
-            className="flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-rose-500 disabled:opacity-40"
+            className="flex items-center gap-2 rounded-lg bg-error px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-error disabled:opacity-40"
             title={`Émet ASSEMBLE_ORACLE (scope=${scope}). L'Assembler boucle sur GENERATE_ORACLE_SECTION × N — chaque section traverse executeStructuredLLMCall (Zod strict + retry x2).`}
           >
             {isAssemblerRunning ? (
@@ -178,7 +178,7 @@ export function OracleProgressivePanel(props: OracleProgressivePanelProps): Reac
           </div>
 
           {stream.error && (
-            <span className="rounded-md border border-amber-800/40 bg-amber-900/15 px-2 py-1 text-[10px] text-amber-300">
+            <span className="rounded-md border border-warning/40 bg-warning/15 px-2 py-1 text-2xs text-warning">
               stream: {stream.error}
             </span>
           )}
@@ -187,7 +187,7 @@ export function OracleProgressivePanel(props: OracleProgressivePanelProps): Reac
         {/* Assembler progress bar (live) */}
         {stream.assemblerState.phase === "running" && stream.assemblerState.total ? (
           <div className="mt-3 space-y-1">
-            <div className="flex items-center justify-between text-[10px] text-foreground-muted">
+            <div className="flex items-center justify-between text-2xs text-foreground-muted">
               <span>
                 {stream.assemblerState.completed ?? 0}/{stream.assemblerState.total}
                 {typeof stream.assemblerState.failed === "number" && stream.assemblerState.failed > 0
@@ -201,7 +201,7 @@ export function OracleProgressivePanel(props: OracleProgressivePanelProps): Reac
             </div>
             <div className="h-1.5 overflow-hidden rounded-full bg-background">
               <div
-                className="h-full bg-emerald-500 transition-all duration-500"
+                className="h-full bg-success transition-all duration-500"
                 style={{
                   width: `${Math.min(100, ((stream.assemblerState.completed ?? 0) / stream.assemblerState.total) * 100)}%`,
                 }}

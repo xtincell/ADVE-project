@@ -34,9 +34,9 @@ import {
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const FORMAT_BADGE: Record<string, { label: string; color: string; icon: typeof FileText }> = {
-  PDF: { label: "PDF", color: "bg-rose-400/15 text-rose-400 ring-rose-400/30", icon: FileText },
-  HTML: { label: "HTML", color: "bg-sky-400/15 text-sky-400 ring-sky-400/30", icon: Globe },
-  JSON: { label: "JSON", color: "bg-amber-400/15 text-amber-400 ring-amber-400/30", icon: FileJson },
+  PDF: { label: "PDF", color: "bg-error/15 text-error ring-error/30", icon: FileText },
+  HTML: { label: "HTML", color: "bg-info/15 text-info ring-info/30", icon: Globe },
+  JSON: { label: "JSON", color: "bg-warning/15 text-warning ring-warning/30", icon: FileJson },
 };
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -135,7 +135,7 @@ export default function BrandDeliverablesPage() {
       {/* Complete deliverables — ready to export */}
       {complete.length > 0 && (
         <div>
-          <h3 className="mb-3 text-sm font-semibold text-emerald-400 uppercase tracking-wider">
+          <h3 className="mb-3 text-sm font-semibold text-success uppercase tracking-wider">
             Prets a exporter
           </h3>
           <div className="space-y-2">
@@ -143,20 +143,20 @@ export default function BrandDeliverablesPage() {
               const fmt = (FORMAT_BADGE[d.format] ?? FORMAT_BADGE["JSON"])!;
               const FmtIcon = fmt.icon;
               return (
-                <div key={d.sequenceKey} className="flex items-center justify-between rounded-xl border border-emerald-500/20 bg-background/80 p-4">
+                <div key={d.sequenceKey} className="flex items-center justify-between rounded-xl border border-success/20 bg-background/80 p-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10">
-                      <FmtIcon className="h-5 w-5 text-emerald-400" />
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success/10">
+                      <FmtIcon className="h-5 w-5 text-success" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
                         <h4 className="text-sm font-semibold text-white">{d.name}</h4>
-                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${fmt.color}`}>
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold ring-1 ring-inset ${fmt.color}`}>
                           {fmt.label}
                         </span>
-                        <CheckCircle className="h-3.5 w-3.5 text-emerald-500" />
+                        <CheckCircle className="h-3.5 w-3.5 text-success" />
                       </div>
-                      <p className="text-[10px] text-foreground-muted">{d.sequenceKey} — {d.completeness}% complet</p>
+                      <p className="text-2xs text-foreground-muted">{d.sequenceKey} — {d.completeness}% complet</p>
                     </div>
                   </div>
                   <div className="flex gap-2">
@@ -178,7 +178,7 @@ export default function BrandDeliverablesPage() {
       {/* Partial deliverables — in progress */}
       {partial.length > 0 && (
         <div>
-          <h3 className="mb-3 text-sm font-semibold text-amber-400 uppercase tracking-wider">
+          <h3 className="mb-3 text-sm font-semibold text-warning uppercase tracking-wider">
             En cours de completion
           </h3>
           <div className="space-y-2">
@@ -190,21 +190,21 @@ export default function BrandDeliverablesPage() {
                     <div>
                       <div className="flex items-center gap-2">
                         <h4 className="text-sm font-semibold text-white">{d.name}</h4>
-                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${fmt.color}`}>
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold ring-1 ring-inset ${fmt.color}`}>
                           {fmt.label}
                         </span>
                       </div>
-                      <p className="text-[10px] text-foreground-muted">{d.sequenceKey}</p>
+                      <p className="text-2xs text-foreground-muted">{d.sequenceKey}</p>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="w-24">
                         <div className="h-1.5 rounded-full bg-background">
                           <div
-                            className="h-1.5 rounded-full bg-amber-500 transition-all"
+                            className="h-1.5 rounded-full bg-warning transition-all"
                             style={{ width: `${d.completeness}%` }}
                           />
                         </div>
-                        <p className="mt-0.5 text-[10px] text-foreground-muted text-right">{d.completeness}%</p>
+                        <p className="mt-0.5 text-2xs text-foreground-muted text-right">{d.completeness}%</p>
                       </div>
                       <a
                         href={`/cockpit/brand/deliverables/${d.sequenceKey}`}
@@ -240,21 +240,21 @@ export default function BrandDeliverablesPage() {
           <CalendarDays className="h-5 w-5 text-accent" />
           <div>
             <p className="text-sm font-medium text-foreground">Plan de lancement</p>
-            <p className="text-[10px] text-foreground-muted">GTM, cadence, hashtags & social</p>
+            <p className="text-2xs text-foreground-muted">GTM, cadence, hashtags & social</p>
           </div>
         </a>
         <a href="/cockpit/brand/guidelines" className="flex items-center gap-3 rounded-xl border border-border bg-surface-raised p-4 hover:border-accent/40 transition-colors">
           <BookOpen className="h-5 w-5 text-foreground-secondary" />
           <div>
             <p className="text-sm font-medium text-foreground">Brand Guidelines</p>
-            <p className="text-[10px] text-foreground-muted">Issu de la sequence BRANDBOOK-D</p>
+            <p className="text-2xs text-foreground-muted">Issu de la sequence BRANDBOOK-D</p>
           </div>
         </a>
         <a href="/cockpit/brand/assets" className="flex items-center gap-3 rounded-xl border border-border bg-surface-raised p-4 hover:border-accent/40 transition-colors">
           <Image className="h-5 w-5 text-foreground-secondary" />
           <div>
             <p className="text-sm font-medium text-foreground">Assets Visuels</p>
-            <p className="text-[10px] text-foreground-muted">KV, logos, chromatic, typo</p>
+            <p className="text-2xs text-foreground-muted">KV, logos, chromatic, typo</p>
           </div>
         </a>
       </div>
@@ -277,11 +277,11 @@ export default function BrandDeliverablesPage() {
                   {m.format}
                 </span>
                 {m.isComplete ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-400/15 px-2.5 py-0.5 text-xs font-semibold text-emerald-400">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2.5 py-0.5 text-xs font-semibold text-success">
                     <CheckCircle className="h-3 w-3" /> Complet
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/15 px-2.5 py-0.5 text-xs font-semibold text-amber-400">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-warning/15 px-2.5 py-0.5 text-xs font-semibold text-warning">
                     <AlertTriangle className="h-3 w-3" /> {m.meta.completedSteps}/{m.meta.totalSteps} sections
                   </span>
                 )}
@@ -313,7 +313,7 @@ export default function BrandDeliverablesPage() {
                           {i + 1}
                         </span>
                         <span className={`text-sm flex-1 ${isExpanded ? "text-accent font-semibold" : "text-white"}`}>{s.title}</span>
-                        <span className="text-[10px] text-foreground-muted">{s.sourceType}</span>
+                        <span className="text-2xs text-foreground-muted">{s.sourceType}</span>
                         <span className="text-foreground-muted">{isExpanded ? "▴" : "▾"}</span>
                       </button>
 
@@ -325,13 +325,13 @@ export default function BrandDeliverablesPage() {
                                 .filter(([k]) => !k.startsWith("_"))
                                 .map(([key, value]) => (
                                   <div key={key}>
-                                    <p className="text-[10px] font-bold text-foreground-muted uppercase mb-1">{key.replace(/_/g, " ")}</p>
+                                    <p className="text-2xs font-bold text-foreground-muted uppercase mb-1">{key.replace(/_/g, " ")}</p>
                                     {typeof value === "string" ? (
                                       <p className="text-[12px] text-foreground-secondary whitespace-pre-wrap leading-relaxed">{value}</p>
                                     ) : Array.isArray(value) ? (
                                       <div className="space-y-1">
                                         {(value as unknown[]).slice(0, 20).map((item, j) => (
-                                          <div key={j} className="rounded bg-background/50 px-2.5 py-1.5 text-[11px] text-foreground-secondary">
+                                          <div key={j} className="rounded bg-background/50 px-2.5 py-1.5 text-2xs text-foreground-secondary">
                                             {typeof item === "string" ? item : typeof item === "object" && item ? (
                                               <div className="space-y-0.5">
                                                 {Object.entries(item as Record<string, unknown>).map(([k, v]) => (
@@ -343,7 +343,7 @@ export default function BrandDeliverablesPage() {
                                         ))}
                                       </div>
                                     ) : typeof value === "object" && value !== null ? (
-                                      <div className="rounded bg-background/50 p-2.5 text-[11px] space-y-0.5">
+                                      <div className="rounded bg-background/50 p-2.5 text-2xs space-y-0.5">
                                         {Object.entries(value as Record<string, unknown>).map(([k, v]) => (
                                           <div key={k} className="text-foreground-secondary">
                                             <span className="text-foreground-muted">{getFieldLabel(k)}:</span> {typeof v === "string" ? v : typeof v === "number" ? v.toLocaleString() : typeof v === "boolean" ? (v ? "Oui" : "Non") : Array.isArray(v) ? `${v.length} elements` : typeof v === "object" && v !== null ? Object.values(v as Record<string, unknown>).filter(x => typeof x === "string").slice(0, 2).join(", ") || "(structure)" : String(v)}
@@ -351,7 +351,7 @@ export default function BrandDeliverablesPage() {
                                         ))}
                                       </div>
                                     ) : (
-                                      <p className="text-[11px] text-foreground-secondary">{String(value)}</p>
+                                      <p className="text-2xs text-foreground-secondary">{String(value)}</p>
                                     )}
                                   </div>
                                 ))}
@@ -365,13 +365,13 @@ export default function BrandDeliverablesPage() {
                                   a.click();
                                   URL.revokeObjectURL(url);
                                 }}
-                                className="mt-2 rounded border border-border px-2.5 py-1 text-[10px] text-foreground-secondary hover:text-white hover:border-border-strong transition-colors"
+                                className="mt-2 rounded border border-border px-2.5 py-1 text-2xs text-foreground-secondary hover:text-white hover:border-border-strong transition-colors"
                               >
                                 ↓ Telecharger JSON
                               </button>
                             </div>
                           ) : (
-                            <p className="text-[11px] text-foreground-muted italic">Contenu non disponible — l{"'"}outil n{"'"}a pas encore ete execute ou l{"'"}output n{"'"}a pas ete enregistre.</p>
+                            <p className="text-2xs text-foreground-muted italic">Contenu non disponible — l{"'"}outil n{"'"}a pas encore ete execute ou l{"'"}output n{"'"}a pas ete enregistre.</p>
                           )}
                         </div>
                       )}
@@ -385,7 +385,7 @@ export default function BrandDeliverablesPage() {
                 <button
                   onClick={() => exportMutation.mutate({ strategyId: strategyId!, sequenceKey: selectedKey! })}
                   disabled={exportMutation.isPending}
-                  className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
+                  className="flex items-center gap-1.5 rounded-lg bg-success px-4 py-2 text-xs font-semibold text-white hover:bg-success disabled:opacity-50"
                 >
                   <Download className="h-3.5 w-3.5" />
                   {exportMutation.isPending ? "Export en cours..." : "Telecharger le livrable complet"}
@@ -394,11 +394,11 @@ export default function BrandDeliverablesPage() {
 
               {/* Missing outputs */}
               {m.missingOutputs.length > 0 && (
-                <div className="rounded-lg border border-red-500/20 bg-error/5 p-3">
+                <div className="rounded-lg border border-error/20 bg-error/5 p-3">
                   <p className="text-xs font-medium text-error mb-1">Outputs manquants</p>
                   <div className="flex flex-wrap gap-1">
                     {m.missingOutputs.map((slug) => (
-                      <span key={slug} className="inline-flex rounded-full bg-error/10 px-2 py-0.5 text-[10px] text-error">
+                      <span key={slug} className="inline-flex rounded-full bg-error/10 px-2 py-0.5 text-2xs text-error">
                         {slug}
                       </span>
                     ))}
@@ -459,12 +459,12 @@ function OperationalDeliverables({ kit, isLoading }: { kit: LaunchKit; isLoading
             <p className="text-xs text-foreground-muted">{timeline.weeks.length} phases J-ancrées</p>
             <div className="flex flex-wrap gap-1">
               {timeline.weeks.slice(0, 4).map((w, i) => (
-                <span key={i} className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-foreground-secondary">
+                <span key={i} className="rounded bg-white/5 px-1.5 py-0.5 text-2xs text-foreground-secondary">
                   {w.semaine} · {w.phase.split(" — ")[0] ?? w.phase}
                 </span>
               ))}
               {timeline.weeks.length > 4 ? (
-                <span className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-foreground-muted">+{timeline.weeks.length - 4}</span>
+                <span className="rounded bg-white/5 px-1.5 py-0.5 text-2xs text-foreground-muted">+{timeline.weeks.length - 4}</span>
               ) : null}
             </div>
           </OpCard>
@@ -485,7 +485,7 @@ function OperationalDeliverables({ kit, isLoading }: { kit: LaunchKit; isLoading
             {allHashtags.length ? (
               <div className="flex flex-wrap gap-1">
                 {allHashtags.slice(0, 6).map((h) => (
-                  <span key={h} className="inline-flex items-center gap-0.5 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] text-accent">
+                  <span key={h} className="inline-flex items-center gap-0.5 rounded-full bg-accent/15 px-2 py-0.5 text-2xs text-accent">
                     <Hash className="h-2.5 w-2.5" />{h.replace(/^#/, "")}
                   </span>
                 ))}
@@ -510,7 +510,7 @@ function OperationalDeliverables({ kit, isLoading }: { kit: LaunchKit; isLoading
             {naming && naming.handles.length ? (
               <div className="flex flex-wrap gap-1">
                 {naming.handles.slice(0, 5).map((h) => (
-                  <span key={h.key} className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] text-foreground-secondary">{h.value}</span>
+                  <span key={h.key} className="rounded-full bg-white/5 px-2 py-0.5 text-2xs text-foreground-secondary">{h.value}</span>
                 ))}
               </div>
             ) : null}

@@ -604,7 +604,7 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
             <div className="flex flex-1 flex-col sm:hidden">
               {currentQ && (
                 <>
-                  <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-foreground-muted">
+                  <p className="mb-2 text-2xs font-medium uppercase tracking-wider text-foreground-muted">
                     Question {currentQuestionIndex + 1}/{questions.length}
                     {currentQ.id.includes("_ai_") && " · IA"}
                   </p>

@@ -35,7 +35,7 @@ export function GuildShell({ children }: { children: React.ReactNode }) {
             </span>
             <span className="flex flex-col leading-none">
               <span className="text-sm font-bold tracking-tight text-foreground">La Guilde</span>
-              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              <span className="text-2xs uppercase tracking-wider text-muted-foreground">
                 par La Fusée
               </span>
             </span>

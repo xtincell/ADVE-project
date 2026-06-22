@@ -44,9 +44,9 @@ export interface OracleSectionCardProps {
 }
 
 const TIER_CHIPS: Record<OracleSectionCardProps["tier"], string> = {
-  CORE: "bg-blue-500/10 text-blue-300 border-blue-700/30",
-  BIG4_BASELINE: "bg-zinc-500/10 text-zinc-300 border-zinc-700/30",
-  DISTINCTIVE: "bg-fuchsia-500/10 text-fuchsia-300 border-fuchsia-700/30",
+  CORE: "bg-info/10 text-info border-info/30",
+  BIG4_BASELINE: "bg-foreground-muted/10 text-foreground-secondary border-border/30",
+  DISTINCTIVE: "bg-accent/10 text-accent border-accent/30",
 };
 
 export function OracleSectionCard(props: OracleSectionCardProps): React.ReactElement {
@@ -89,13 +89,13 @@ export function OracleSectionCard(props: OracleSectionCardProps): React.ReactEle
             {tier === "BIG4_BASELINE" ? "BIG4" : tier === "DISTINCTIVE" ? "DISTINCT" : "CORE"}
           </span>
         </div>
-        <div className="mt-0.5 flex items-center gap-2 text-[10px] text-foreground-muted">
+        <div className="mt-0.5 flex items-center gap-2 text-2xs text-foreground-muted">
           <span className={`font-medium ${visual.color}`}>{visual.label}</span>
           {effectivePhase === "completed" && typeof confidence === "number" && (
             <span>· conf {confidence.toFixed(2)}</span>
           )}
           {isStale && effectivePhase !== "generating" && (
-            <span className="text-amber-300">· un pilier amont a muté</span>
+            <span className="text-warning">· un pilier amont a muté</span>
           )}
         </div>
       </div>
@@ -104,7 +104,7 @@ export function OracleSectionCard(props: OracleSectionCardProps): React.ReactEle
           <button
             type="button"
             onClick={onShowError}
-            className="rounded border border-rose-700/40 bg-rose-900/20 px-2 py-0.5 text-[10px] font-medium text-rose-300 transition-colors hover:bg-rose-900/40"
+            className="rounded border border-error/40 bg-error/20 px-2 py-0.5 text-2xs font-medium text-error transition-colors hover:bg-error/40"
             title={lastError.errorMessage ?? lastError.errorCode}
           >
             voir l&apos;erreur
@@ -114,7 +114,7 @@ export function OracleSectionCard(props: OracleSectionCardProps): React.ReactEle
           type="button"
           onClick={() => onAction(buttonConfig.mode)}
           disabled={disabled || effectivePhase === "generating"}
-          className={`flex items-center gap-1 rounded-md border px-2.5 py-1 text-[11px] font-semibold transition-colors disabled:opacity-40 ${buttonConfig.className}`}
+          className={`flex items-center gap-1 rounded-md border px-2.5 py-1 text-2xs font-semibold transition-colors disabled:opacity-40 ${buttonConfig.className}`}
           title={buttonConfig.title}
         >
           <buttonConfig.Icon className={`h-3 w-3 ${effectivePhase === "generating" ? "animate-spin" : ""}`} />
@@ -153,36 +153,36 @@ function getVisual(phase: ReturnType<typeof resolveEffectivePhase>, isStale: boo
   if (phase === "generating") {
     return {
       Icon: Loader2,
-      color: "text-blue-400",
-      bg: "bg-blue-900/15",
-      border: "border-blue-700/40",
+      color: "text-info",
+      bg: "bg-info/15",
+      border: "border-info/40",
       label: "Génération en cours",
     };
   }
   if (phase === "completed") {
     return {
       Icon: CheckCircle,
-      color: "text-emerald-400",
-      bg: "bg-emerald-900/10",
-      border: "border-emerald-800/30",
+      color: "text-success",
+      bg: "bg-success/10",
+      border: "border-success/30",
       label: isStale ? "Complète (périmée)" : "Complète",
     };
   }
   if (phase === "failed") {
     return {
       Icon: AlertCircle,
-      color: "text-rose-400",
-      bg: "bg-rose-900/15",
-      border: "border-rose-800/40",
+      color: "text-error",
+      bg: "bg-error/15",
+      border: "border-error/40",
       label: "Échec",
     };
   }
   if (phase === "stale") {
     return {
       Icon: AlertCircle,
-      color: "text-amber-300",
-      bg: "bg-amber-900/10",
-      border: "border-amber-800/30",
+      color: "text-warning",
+      bg: "bg-warning/10",
+      border: "border-warning/30",
       label: "Périmée",
     };
   }
@@ -213,7 +213,7 @@ function getButtonConfig(
       label: "En cours…",
       mode: "FRESH",
       title: "Génération déjà en cours",
-      className: "border-blue-700/40 bg-blue-900/30 text-blue-300",
+      className: "border-info/40 bg-info/30 text-info",
     };
   }
   if (phase === "failed" || dbStatus === "FAILED") {
@@ -222,7 +222,7 @@ function getButtonConfig(
       label: "Retry",
       mode: "RETRY",
       title: "Reprendre après échec (mode RETRY)",
-      className: "border-rose-700/40 bg-rose-900/20 text-rose-300 hover:bg-rose-900/40",
+      className: "border-error/40 bg-error/20 text-error hover:bg-error/40",
     };
   }
   if (phase === "stale" || dbStatus === "STALE") {
@@ -231,7 +231,7 @@ function getButtonConfig(
       label: "Régénérer",
       mode: "RETRY",
       title: "Section périmée — régénère pour rafraîchir",
-      className: "border-amber-700/40 bg-amber-900/20 text-amber-300 hover:bg-amber-900/40",
+      className: "border-warning/40 bg-warning/20 text-warning hover:bg-warning/40",
     };
   }
   if (phase === "completed" || dbStatus === "COMPLETE") {

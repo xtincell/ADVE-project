@@ -81,38 +81,25 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
     <div className="flex flex-col items-center">
       {/* Branding */}
       <div className="mb-8 text-center">
-        <div className="mb-3 flex items-center justify-center gap-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/20">
-            <svg
-              className="h-5 w-5 text-violet-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M13 10V3L4 14h7v7l9-11h-7z"
-              />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-white">LaFusee</h1>
+        <div className="mb-3 flex items-center justify-center gap-2.5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/logos/lafusee-logo.png" alt="" aria-hidden="true" className="h-9 w-auto" />
+          <h1 className="text-2xl font-bold text-foreground">La Fusée<span className="text-accent">.</span></h1>
         </div>
-        <p className="text-sm text-zinc-500">
-          Industry OS — De la Poussiere a l&apos;Etoile
+        <p className="text-sm text-foreground-muted">
+          Industry OS — De la poussière à l&apos;étoile
         </p>
       </div>
 
       {/* Login Form */}
-      <div className="w-full rounded-xl border border-zinc-800 bg-zinc-900/50 p-6 shadow-xl">
-        <h2 className="mb-6 text-center text-lg font-semibold text-white">
+      <div className="w-full rounded-xl border border-border-subtle bg-surface-raised/50 p-6 shadow-xl">
+        <h2 className="mb-6 text-center text-lg font-semibold text-foreground">
           Connexion
         </h2>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {error && (
-            <div className="rounded-lg border border-red-800/50 bg-red-950/50 px-4 py-3 text-sm text-red-300">
+            <div className="rounded-lg border border-error/50 bg-error/10 px-4 py-3 text-sm text-error">
               {error}
             </div>
           )}
@@ -120,7 +107,7 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
           <div>
             <label
               htmlFor="email"
-              className="mb-1.5 block text-sm font-medium text-zinc-300"
+              className="mb-1.5 block text-sm font-medium text-foreground-secondary"
             >
               Email
             </label>
@@ -133,7 +120,7 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="vous@entreprise.com"
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
+              className="w-full rounded-lg border border-border bg-surface-card px-3 py-2.5 text-sm text-foreground placeholder:text-foreground-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
             />
           </div>
 
@@ -141,11 +128,11 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
             <div className="mb-1.5 flex items-center justify-between">
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-zinc-300"
+                className="block text-sm font-medium text-foreground-secondary"
               >
                 Mot de passe
               </label>
-              <Link href="/forgot-password" className="text-xs text-violet-400 hover:text-violet-300">
+              <Link href="/forgot-password" className="text-xs text-accent hover:text-accent-hover">
                 Mot de passe oublie ?
               </Link>
             </div>
@@ -158,14 +145,14 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
+              className="w-full rounded-lg border border-border bg-surface-card px-3 py-2.5 text-sm text-foreground placeholder:text-foreground-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="mt-2 w-full rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 focus:ring-offset-zinc-900 disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-2 w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? "Connexion en cours..." : "Se connecter"}
           </button>
@@ -174,15 +161,15 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
         {googleEnabled && (
           <>
             <div className="my-5 flex items-center gap-3">
-              <div className="h-px flex-1 bg-zinc-800" />
-              <span className="text-xs uppercase tracking-wide text-zinc-500">ou</span>
-              <div className="h-px flex-1 bg-zinc-800" />
+              <div className="h-px flex-1 bg-surface-card" />
+              <span className="text-xs uppercase tracking-wide text-foreground-muted">ou</span>
+              <div className="h-px flex-1 bg-surface-card" />
             </div>
 
             <button
               type="button"
               onClick={handleGoogle}
-              className="flex w-full items-center justify-center gap-2.5 rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 focus:ring-offset-zinc-900"
+              className="flex w-full items-center justify-center gap-2.5 rounded-lg border border-border bg-surface-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-surface-overlay focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-background"
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
                 <path
@@ -210,9 +197,9 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
 
       {/* Register link */}
       <div className="mt-6 text-center">
-        <p className="text-sm text-zinc-400">
+        <p className="text-sm text-foreground-secondary">
           Pas encore de compte ?{" "}
-          <Link href="/register" className="font-medium text-violet-400 hover:text-violet-300">
+          <Link href="/register" className="font-medium text-accent hover:text-accent-hover">
             Creer un compte
           </Link>
         </p>

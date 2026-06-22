@@ -75,7 +75,7 @@ export function getPillarChipStatus(p: PillarReadinessProjection): PillarChipSta
   if (p.stale && p.completionLevel === "INCOMPLET") {
     return {
       label: "PÉRIMÉ",
-      className: "bg-rose-500/15 text-rose-300",
+      className: "bg-error/15 text-error",
       variant: "stale",
       isReadyForCascade: false,
       shouldRegenerate: true,
@@ -85,7 +85,7 @@ export function getPillarChipStatus(p: PillarReadinessProjection): PillarChipSta
     // Content COMPLET/FULL + stale → advisory non-bloquant
     return {
       label: "MAJ RECOMMANDÉE",
-      className: "bg-amber-500/15 text-amber-300",
+      className: "bg-warning/15 text-warning",
       variant: "stale-advisory",
       // Note: rtisCascadeReady côté serveur reflète déjà la nouvelle règle
       // (ADR-0076) — il est `true` pour stale-advisory. On le respecte tel quel.
@@ -96,7 +96,7 @@ export function getPillarChipStatus(p: PillarReadinessProjection): PillarChipSta
   if (p.completionLevel === "FULL") {
     return {
       label: "FULL",
-      className: "bg-emerald-500/15 text-emerald-300",
+      className: "bg-success/15 text-success",
       variant: "full",
       isReadyForCascade: p.rtisCascadeReady,
       shouldRegenerate: false,
@@ -105,7 +105,7 @@ export function getPillarChipStatus(p: PillarReadinessProjection): PillarChipSta
   if (p.completionLevel === "COMPLET") {
     return {
       label: "COMPLET",
-      className: "bg-blue-500/15 text-blue-300",
+      className: "bg-info/15 text-info",
       variant: "complet",
       isReadyForCascade: p.rtisCascadeReady,
       shouldRegenerate: false,

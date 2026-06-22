@@ -21,7 +21,15 @@ export function MarketingHero() {
         }}
       />
 
-      <div className="relative z-10 flex items-center gap-4 px-[var(--pad-page)] py-3.5 text-[11px] font-mono text-foreground-muted border-b border-border-subtle flex-wrap">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/brand/illustrations/rocket-3d.png"
+        alt=""
+        aria-hidden="true"
+        className="up-float pointer-events-none absolute right-[5%] top-[26%] z-[1] hidden w-36 opacity-95 drop-shadow-2xl xl:w-44 lg:block"
+      />
+
+      <div className="relative z-10 flex items-center gap-4 px-[var(--pad-page)] py-3.5 text-2xs font-mono text-foreground-muted border-b border-border-subtle flex-wrap">
         <span><span className="inline-block w-1.5 h-1.5 rounded-full bg-success animate-pulse mr-1.5"></span>SYSTEM · NOMINAL</span>
         <span className="text-[color-mix(in_oklab,var(--color-foreground-muted)_60%,transparent)]">·</span>
         <span>47 MARQUES DIAGNOSTIQUÉES</span>
@@ -32,7 +40,7 @@ export function MarketingHero() {
       </div>
 
       <div className="relative z-10 mx-auto max-w-[var(--maxw-content)] w-full px-[var(--pad-page)] flex-1 flex flex-col pt-12 md:pt-20">
-        <div className="inline-flex items-center gap-2.5 mb-7 text-[11px] font-mono uppercase tracking-widest text-foreground-muted">
+        <div className="inline-flex items-center gap-2.5 mb-7 text-2xs font-mono uppercase tracking-widest text-foreground-muted">
           <span className="w-1.5 h-1.5 rounded-full bg-accent" />
           Industry OS — marché créatif africain
         </div>
@@ -62,8 +70,8 @@ export function MarketingHero() {
                   Voir les offres
                 </a>
               </div>
-              <p className="font-mono text-[11px] uppercase tracking-widest text-foreground-muted">↳ gratuit · 15 min · sans engagement · PDF brandé en option payante</p>
-              <p className="font-mono text-[11px] uppercase tracking-widest text-foreground-muted pt-3 mt-1 border-t border-dashed border-border-subtle">
+              <p className="font-mono text-2xs uppercase tracking-widest text-foreground-muted">↳ gratuit · 15 min · sans engagement · PDF brandé en option payante</p>
+              <p className="font-mono text-2xs uppercase tracking-widest text-foreground-muted pt-3 mt-1 border-t border-dashed border-border-subtle">
                 Pas founder ?
                 <a href="#portails" className="ml-2 text-foreground-secondary hover:text-accent transition-colors">→ Agence</a>
                 <a href="#portails" className="ml-2 text-foreground-secondary hover:text-accent transition-colors">→ Créatif</a>
@@ -73,7 +81,7 @@ export function MarketingHero() {
           </div>
 
           <aside className="border border-border bg-surface-raised/70 backdrop-blur-sm">
-            <header className="flex items-center gap-2 px-3.5 py-2.5 text-[10px] font-mono uppercase tracking-widest text-foreground-secondary border-b border-border">
+            <header className="flex items-center gap-2 px-3.5 py-2.5 text-2xs font-mono uppercase tracking-widest text-foreground-secondary border-b border-border">
               <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
               TELEMETRY · LIVE
             </header>
@@ -91,7 +99,7 @@ export function MarketingHero() {
                 </li>
               ))}
             </ul>
-            <footer className="flex justify-between px-3.5 py-2.5 text-[10px] font-mono text-foreground-muted border-t border-border">
+            <footer className="flex justify-between px-3.5 py-2.5 text-2xs font-mono text-foreground-muted border-t border-border">
               <span>↳ updated</span>
               <span>now</span>
             </footer>

@@ -51,7 +51,7 @@ export default function CrewBootstrapPage() {
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <span className="font-medium">{member.displayName}</span>
-                  <span className="rounded bg-blue-500/15 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-blue-300">
+                  <span className="rounded bg-blue-500/15 px-1.5 py-0.5 text-2xs uppercase tracking-wide text-blue-300">
                     {member.role}
                   </span>
                 </div>

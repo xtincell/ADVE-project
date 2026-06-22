@@ -26,7 +26,7 @@ import { trpc } from "@/lib/trpc/client";
 import { BUSINESS_MODELS, POSITIONING_ARCHETYPES } from "@/lib/types/business-context";
 import { INTAKE_SECTORS, INTAKE_COUNTRIES } from "@/lib/constants/intake-options";
 import {
-  Rocket, Shield, Clock, BarChart3, Users,
+  Shield, Clock, BarChart3, Users,
   ClipboardList, FileText, Upload, Globe,
   ArrowLeft, HelpCircle, ChevronRight,
 } from "lucide-react";
@@ -181,10 +181,9 @@ function IntakeLandingContent() {
   return (
     <main className="flex min-h-screen flex-col bg-background">
       <div className="flex flex-1 flex-col items-center justify-center px-5 py-12 sm:px-8">
-        {/* Logo */}
-        <div className="mb-8 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-subtle">
-          <Rocket className="h-7 w-7 text-primary" />
-        </div>
+        {/* Logo — official La Fusée mark */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/logos/lafusee-logo.png" alt="La Fusée" className="mb-8 h-12 w-auto" />
 
         {/* Headline */}
         <h1 className="max-w-lg text-center text-3xl font-bold leading-tight text-foreground sm:text-4xl">
@@ -436,7 +435,7 @@ function IntakeLandingContent() {
                     }`}
                   >
                     {method.recommended && (
-                      <span className="absolute -top-2.5 right-4 rounded-full bg-primary px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary-foreground">
+                      <span className="absolute -top-2.5 right-4 rounded-full bg-primary px-2.5 py-0.5 text-2xs font-bold uppercase tracking-wider text-primary-foreground">
                         Recommande
                       </span>
                     )}
@@ -486,7 +485,7 @@ function IntakeLandingContent() {
           </div>
         )}
 
-        <p className="mt-6 max-w-xs text-center text-[11px] leading-relaxed text-foreground-muted">
+        <p className="mt-6 max-w-xs text-center text-2xs leading-relaxed text-foreground-muted">
           Vos donnees sont confidentielles et ne seront jamais partagees sans votre accord explicite.
         </p>
       </div>

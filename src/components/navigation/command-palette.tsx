@@ -44,8 +44,8 @@ const PAGE_ITEMS: CommandItem[] = [
   { id: "co-kg", label: "Knowledge Graph", href: "/console/signal/knowledge", section: "Console > Le Signal", icon: Layers },
   { id: "co-guild", label: "Guilde", href: "/console/arene/guild", section: "Console > L'Arene", icon: Users, keywords: "creatif freelance" },
   { id: "co-match", label: "Matching", href: "/console/arene/matching", section: "Console > L'Arene", icon: Users },
-  { id: "co-miss", label: "Missions", href: "/console/fusee/missions", section: "Console > La Fusee", icon: Target },
-  { id: "co-camp", label: "Campagnes", href: "/console/fusee/campaigns", section: "Console > La Fusee", icon: Megaphone },
+  { id: "co-miss", label: "Missions", href: "/console/fusee/missions", section: "Console > La Fusée", icon: Target },
+  { id: "co-camp", label: "Campagnes", href: "/console/fusee/campaigns", section: "Console > La Fusée", icon: Megaphone },
   { id: "co-rev", label: "Revenus", href: "/console/socle/revenue", section: "Console > Le Socle", icon: BarChart3, keywords: "finance argent" },
   { id: "co-comm", label: "Commissions", href: "/console/socle/commissions", section: "Console > Le Socle", icon: BarChart3 },
 ];
@@ -157,12 +157,12 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
           <div className="max-h-80 overflow-y-auto p-2">
             {!query.trim() && recentItems.length === 0 && (
               <p className="px-3 py-6 text-center text-sm text-foreground-muted">
-                Tapez pour rechercher dans LaFusee
+                Tapez pour rechercher dans La Fusée
               </p>
             )}
 
             {!query.trim() && recentItems.length > 0 && (
-              <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-[0.05em] text-foreground-muted">
+              <p className="mb-1 px-3 text-2xs font-semibold uppercase tracking-[0.05em] text-foreground-muted">
                 <Clock className="mr-1 inline h-3 w-3" />
                 Recents
               </p>
@@ -198,13 +198,13 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
 
           {/* Footer */}
           <div className="flex items-center gap-4 border-t border-border-subtle px-4 py-2">
-            <span className="text-[10px] text-foreground-muted">
+            <span className="text-2xs text-foreground-muted">
               <kbd className="rounded border border-border-subtle bg-background px-1 py-0.5 text-[9px]">↑↓</kbd> naviguer
             </span>
-            <span className="text-[10px] text-foreground-muted">
+            <span className="text-2xs text-foreground-muted">
               <kbd className="rounded border border-border-subtle bg-background px-1 py-0.5 text-[9px]">⏎</kbd> ouvrir
             </span>
-            <span className="text-[10px] text-foreground-muted">
+            <span className="text-2xs text-foreground-muted">
               <kbd className="rounded border border-border-subtle bg-background px-1 py-0.5 text-[9px]">esc</kbd> fermer
             </span>
           </div>

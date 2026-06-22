@@ -43,8 +43,8 @@ const VAULT_STATUS_LABELS: Record<string, string> = {
 };
 
 const VAULT_STATUS_VARIANTS: Record<string, string> = {
-  ACTIVE_REUSE: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
-  STALE_REFRESH: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
+  ACTIVE_REUSE: "bg-success/15 text-success ring-success/30",
+  STALE_REFRESH: "bg-warning/15 text-warning ring-warning/30",
   MISSING_GENERATE: "bg-accent/15 text-accent ring-accent/30",
 };
 
@@ -177,8 +177,8 @@ export default function DeliverableForgePage() {
           )}
 
           {requirements.data && !requirements.data.ok && (
-            <div className="rounded-lg border border-amber-400/30 bg-amber-400/10 p-3">
-              <p className="text-xs font-semibold text-amber-400 flex items-center gap-1.5">
+            <div className="rounded-lg border border-warning/30 bg-warning/10 p-3">
+              <p className="text-xs font-semibold text-warning flex items-center gap-1.5">
                 <AlertTriangle className="h-4 w-4" />
                 {requirements.data.code}
               </p>
@@ -204,7 +204,7 @@ export default function DeliverableForgePage() {
                     >
                       <span className="text-xs font-medium text-foreground">{match.kind}</span>
                       <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${VAULT_STATUS_VARIANTS[match.status] ?? ""}`}
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold ring-1 ring-inset ${VAULT_STATUS_VARIANTS[match.status] ?? ""}`}
                       >
                         {VAULT_STATUS_LABELS[match.status] ?? match.status}
                       </span>
@@ -273,9 +273,9 @@ export default function DeliverableForgePage() {
 
       {/* ── Étape 3 — Résultat ───────────────────────────────────────── */}
       {composition && (
-        <section className="rounded-xl border border-emerald-400/40 bg-emerald-400/5 p-5 space-y-3">
+        <section className="rounded-xl border border-success/40 bg-success/5 p-5 space-y-3">
           <div className="flex items-start gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-400/15 text-emerald-400">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-success/15 text-success">
               <CheckCircle2 className="h-5 w-5" />
             </div>
             <div className="flex-1">

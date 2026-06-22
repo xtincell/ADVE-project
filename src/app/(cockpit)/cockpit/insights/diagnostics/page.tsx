@@ -20,8 +20,8 @@ import {
 } from "lucide-react";
 
 const CONFIDENCE_LABELS: Record<string, { label: string; color: string }> = {
-  high: { label: "Haute", color: "text-emerald-400" },
-  medium: { label: "Moyenne", color: "text-amber-400" },
+  high: { label: "Haute", color: "text-success" },
+  medium: { label: "Moyenne", color: "text-warning" },
   low: { label: "Faible", color: "text-error" },
 };
 
@@ -69,7 +69,7 @@ export default function DiagnosticsPage() {
     return (
       <div className="space-y-6">
         <PageHeader title="Diagnostics ADVE" />
-        <div className="rounded-xl border border-red-900/50 bg-error/20 p-6 text-center">
+        <div className="rounded-xl border border-error/50 bg-error/20 p-6 text-center">
           <AlertTriangle className="mx-auto h-8 w-8 text-error" />
           <p className="mt-2 text-sm text-error">
             {strategyQuery.error.message}
@@ -175,7 +175,7 @@ export default function DiagnosticsPage() {
               key={key}
               className={`rounded-xl border p-5 transition-colors ${
                 isWeak
-                  ? "border-amber-900/50 bg-amber-950/10"
+                  ? "border-warning/50 bg-warning/10"
                   : "border-border bg-background/80 hover:border-border"
               }`}
             >
@@ -183,7 +183,7 @@ export default function DiagnosticsPage() {
                 <div className="flex items-center gap-3">
                   <span
                     className={`flex h-11 w-11 items-center justify-center rounded-xl text-sm font-bold text-white ${
-                      isWeak ? "bg-amber-900/50" : "bg-background"
+                      isWeak ? "bg-warning/50" : "bg-background"
                     }`}
                   >
                     {key.toUpperCase()}
@@ -199,7 +199,7 @@ export default function DiagnosticsPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   {drift === "up" && (
-                    <TrendingUp className="h-4 w-4 text-emerald-400" />
+                    <TrendingUp className="h-4 w-4 text-success" />
                   )}
                   {drift === "down" && (
                     <TrendingDown className="h-4 w-4 text-error" />
@@ -208,7 +208,7 @@ export default function DiagnosticsPage() {
                     <Minus className="h-4 w-4 text-foreground-muted" />
                   )}
                   {isWeak && (
-                    <AlertTriangle className="h-4 w-4 text-amber-400" />
+                    <AlertTriangle className="h-4 w-4 text-warning" />
                   )}
                 </div>
               </div>
@@ -218,9 +218,9 @@ export default function DiagnosticsPage() {
                 <div
                   className={`h-full rounded-full transition-all duration-500 ${
                     isWeak
-                      ? "bg-amber-500"
+                      ? "bg-warning"
                       : score >= 20
-                        ? "bg-emerald-500"
+                        ? "bg-success"
                         : "bg-accent"
                   }`}
                   style={{ width: `${(score / 25) * 100}%` }}
@@ -242,14 +242,14 @@ export default function DiagnosticsPage() {
 
       {/* Weak pillars warning section */}
       {weakPillars.length > 0 && (
-        <div className="rounded-xl border border-amber-900/50 bg-amber-950/10 p-6">
+        <div className="rounded-xl border border-warning/50 bg-warning/10 p-6">
           <div className="flex items-center gap-3">
-            <AlertTriangle className="h-5 w-5 text-amber-400" />
-            <h3 className="font-semibold text-amber-300">
+            <AlertTriangle className="h-5 w-5 text-warning" />
+            <h3 className="font-semibold text-warning">
               Piliers necessitant une attention
             </h3>
           </div>
-          <p className="mt-2 text-sm text-amber-200/70">
+          <p className="mt-2 text-sm text-warning/70">
             {weakPillars.length} pilier{weakPillars.length > 1 ? "s" : ""} en
             dessous de 15/25 :{" "}
             {weakPillars
@@ -263,25 +263,25 @@ export default function DiagnosticsPage() {
             {weakPillars.map((k) => (
               <div
                 key={k}
-                className="flex items-center gap-3 rounded-lg border border-amber-900/30 bg-amber-950/20 p-3"
+                className="flex items-center gap-3 rounded-lg border border-warning/30 bg-warning/20 p-3"
               >
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-900/30 text-xs font-bold text-amber-300">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-warning/30 text-xs font-bold text-warning">
                   {k.toUpperCase()}
                 </span>
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-amber-200">
+                  <p className="text-sm font-medium text-warning">
                     {PILLAR_NAMES[k]}
                   </p>
-                  <div className="mt-1 h-1.5 rounded-full bg-amber-900/30">
+                  <div className="mt-1 h-1.5 rounded-full bg-warning/30">
                     <div
-                      className="h-full rounded-full bg-amber-500"
+                      className="h-full rounded-full bg-warning"
                       style={{
                         width: `${((scores[k] ?? 0) / 25) * 100}%`,
                       }}
                     />
                   </div>
                 </div>
-                <span className="text-sm font-semibold text-amber-300">
+                <span className="text-sm font-semibold text-warning">
                   {(scores[k] ?? 0).toFixed(1)}
                 </span>
               </div>
@@ -305,7 +305,7 @@ export default function DiagnosticsPage() {
           {recalculateMutation.isPending ? "Diagnostic en cours..." : "Demander un Diagnostic"}
         </button>
         {recalculateMutation.isSuccess && (
-          <p className="text-xs text-emerald-400 mt-2">Diagnostic termine avec succes.</p>
+          <p className="text-xs text-success mt-2">Diagnostic termine avec succes.</p>
         )}
         {recalculateMutation.isError && (
           <p className="text-xs text-error mt-2">{recalculateMutation.error.message}</p>

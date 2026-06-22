@@ -43,21 +43,21 @@ import {
 
 const FUEL_STATE_STYLES: Record<string, { bg: string; text: string; ring: string; Icon: typeof CheckCircle2 }> = {
   ALLOWED: {
-    bg: "bg-emerald-400/15",
-    text: "text-emerald-400",
-    ring: "ring-emerald-400/30",
+    bg: "bg-success/15",
+    text: "text-success",
+    ring: "ring-success/30",
     Icon: CheckCircle2,
   },
   WARN_AT_BURN_RATE: {
-    bg: "bg-amber-400/15",
-    text: "text-amber-400",
-    ring: "ring-amber-400/30",
+    bg: "bg-warning/15",
+    text: "text-warning",
+    ring: "ring-warning/30",
     Icon: AlertTriangle,
   },
   DENIED: {
     bg: "bg-error/15",
     text: "text-error",
-    ring: "ring-red-400/30",
+    ring: "ring-error/30",
     Icon: Flame,
   },
 };
@@ -81,7 +81,7 @@ function deltaIcon(delta: number | null) {
 
 function deltaColor(delta: number | null): string {
   if (delta === null) return "text-foreground-secondary";
-  if (delta > 0) return "text-emerald-400";
+  if (delta > 0) return "text-success";
   if (delta < 0) return "text-error";
   return "text-foreground-secondary";
 }
@@ -156,7 +156,7 @@ export default function CampaignTrackerPage() {
       />
 
       {campaign.killTriggeredAt && (
-        <div className="flex items-center gap-3 rounded-lg bg-error/10 p-4 ring-1 ring-inset ring-red-400/30">
+        <div className="flex items-center gap-3 rounded-lg bg-error/10 p-4 ring-1 ring-inset ring-error/30">
           <PauseCircle className="h-5 w-5 text-error" />
           <div>
             <div className="text-sm font-semibold text-error">Campaign paused — flame-out détecté</div>
@@ -195,7 +195,7 @@ export default function CampaignTrackerPage() {
                   <span className="text-xs text-foreground-secondary">composite delta</span>
                 </div>
                 {campaign.altitudeRegression && (
-                  <div className="rounded bg-amber-400/10 px-2 py-1 text-xs font-medium text-amber-400">
+                  <div className="rounded bg-warning/10 px-2 py-1 text-xs font-medium text-warning">
                     LAW_1_SILENT_REGRESSION détecté — un pillar a régressé silencieusement
                   </div>
                 )}
@@ -221,13 +221,13 @@ export default function CampaignTrackerPage() {
           {/* Regret-window */}
           <Card title="Regret-window" subtitle="J+3 / J+7 / J+14 — Seshat">
             {fuelQuery.data?.ok && fuelQuery.data.regretWindowFlag ? (
-              <div className="flex items-center gap-2 text-sm font-medium text-amber-400">
+              <div className="flex items-center gap-2 text-sm font-medium text-warning">
                 <AlertTriangle className="h-4 w-4" />
                 Window active — vérifier KPIs vs targets
               </div>
             ) : (
               <div className="flex items-center gap-2 text-sm text-foreground-secondary">
-                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                <CheckCircle2 className="h-4 w-4 text-success" />
                 Hors fenêtre regret
               </div>
             )}
@@ -286,7 +286,7 @@ export default function CampaignTrackerPage() {
                 {debtQuery.data.degradationCodes.map((code) => (
                   <code
                     key={code}
-                    className="mt-1 inline-block rounded bg-amber-400/10 px-1.5 py-0.5 text-[10px] text-amber-400"
+                    className="mt-1 inline-block rounded bg-warning/10 px-1.5 py-0.5 text-2xs text-warning"
                   >
                     {code}
                   </code>
@@ -309,7 +309,7 @@ export default function CampaignTrackerPage() {
                 <div className="text-xs text-foreground-secondary">
                   {mythQuery.data.pairs.length} paire{mythQuery.data.pairs.length > 1 ? "s" : ""} de chapitres
                 </div>
-                <div className="text-[11px] text-foreground-secondary">
+                <div className="text-2xs text-foreground-secondary">
                   Seuil continuité : 0.18 (Jaccard MVP)
                 </div>
               </div>
@@ -335,7 +335,7 @@ export default function CampaignTrackerPage() {
           vue agrège les indicateurs L2 Instrumental qui répondent à <em>"cette campagne renforce-t-elle ou dilue-t-elle
           la marque iconique en construction ?"</em>.
         </p>
-        <p className="mt-2 text-[11px]">
+        <p className="mt-2 text-2xs">
           Vague 1 = Cluster A + B en mode MVP (Jaccard heuristic). Vagues 2 + 3 ajouteront superfan economy, signaux
           faibles culturels, économie agence et negative space audit.
         </p>
@@ -361,7 +361,7 @@ function Card({
     <div className="rounded-lg bg-surface p-4 ring-1 ring-inset ring-border">
       <div className="flex items-baseline justify-between">
         <div className="text-sm font-semibold text-foreground">{title}</div>
-        {subtitle && <div className="text-[11px] text-foreground-secondary">{subtitle}</div>}
+        {subtitle && <div className="text-2xs text-foreground-secondary">{subtitle}</div>}
       </div>
       <div className="mt-2">{children}</div>
     </div>
@@ -398,7 +398,7 @@ function FuelDisplay({
           </>
         )}
       </div>
-      <p className="text-[11px] text-foreground-secondary">{data.recommendation}</p>
+      <p className="text-2xs text-foreground-secondary">{data.recommendation}</p>
     </div>
   );
 }

@@ -95,7 +95,7 @@ export function ActionDatabasePanel({ strategyId, canSync = true }: Props) {
           <Layers className="h-4 w-4 text-accent" />
           <span className="text-sm font-semibold text-foreground">Base d'actions</span>
           {summary ? (
-            <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] text-foreground-muted">
+            <span className="rounded-full bg-white/5 px-2 py-0.5 text-2xs text-foreground-muted">
               {summary.total} action{summary.total > 1 ? "s" : ""}
               {summary.selectedCount > 0 ? ` · ${summary.selectedCount} retenue${summary.selectedCount > 1 ? "s" : ""}` : ""}
             </span>
@@ -105,7 +105,7 @@ export function ActionDatabasePanel({ strategyId, canSync = true }: Props) {
           <button
             type="button"
             onClick={() => setShowPropose((v) => !v)}
-            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-colors ${showPropose ? "bg-accent/20 text-accent" : "bg-white/5 text-foreground-secondary hover:bg-white/10 hover:text-foreground"}`}
+            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-2xs font-medium transition-colors ${showPropose ? "bg-accent/20 text-accent" : "bg-white/5 text-foreground-secondary hover:bg-white/10 hover:text-foreground"}`}
           >
             <Plus className="h-3 w-3" /> Proposer
           </button>
@@ -115,7 +115,7 @@ export function ActionDatabasePanel({ strategyId, canSync = true }: Props) {
               onClick={() => syncMutation.mutate({ strategyId })}
               disabled={syncMutation.isPending}
               title="Re-matérialiser la base d'actions depuis le pilier I"
-              className="flex items-center gap-1.5 rounded-lg bg-white/5 px-2.5 py-1.5 text-[11px] font-medium text-foreground-secondary transition-colors hover:bg-white/10 hover:text-foreground disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-lg bg-white/5 px-2.5 py-1.5 text-2xs font-medium text-foreground-secondary transition-colors hover:bg-white/10 hover:text-foreground disabled:opacity-50"
             >
               {syncMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
               Synchroniser
@@ -128,8 +128,8 @@ export function ActionDatabasePanel({ strategyId, canSync = true }: Props) {
       {showPropose ? (
         <div className="mb-3 rounded-lg border border-accent/20 bg-accent/[0.04] p-3">
           <div className="mb-2 flex gap-1.5">
-            <button type="button" onClick={() => setProposeMode("LLM")} className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${proposeMode === "LLM" ? "bg-accent/20 text-accent" : "bg-white/5 text-foreground-muted hover:bg-white/10"}`}>Générer (IA)</button>
-            <button type="button" onClick={() => setProposeMode("MANUAL")} className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${proposeMode === "MANUAL" ? "bg-accent/20 text-accent" : "bg-white/5 text-foreground-muted hover:bg-white/10"}`}>Ajouter manuellement</button>
+            <button type="button" onClick={() => setProposeMode("LLM")} className={`rounded-full px-2.5 py-0.5 text-2xs font-medium transition-colors ${proposeMode === "LLM" ? "bg-accent/20 text-accent" : "bg-white/5 text-foreground-muted hover:bg-white/10"}`}>Générer (IA)</button>
+            <button type="button" onClick={() => setProposeMode("MANUAL")} className={`rounded-full px-2.5 py-0.5 text-2xs font-medium transition-colors ${proposeMode === "MANUAL" ? "bg-accent/20 text-accent" : "bg-white/5 text-foreground-muted hover:bg-white/10"}`}>Ajouter manuellement</button>
           </div>
 
           {proposeMode === "LLM" ? (
@@ -139,14 +139,14 @@ export function ActionDatabasePanel({ strategyId, canSync = true }: Props) {
                   {CHANNELS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                 </select>
                 <input type="number" min={1} max={12} value={count} onChange={(e) => setCount(Math.max(1, Math.min(12, Number(e.target.value) || 5)))} className={`${INPUT_CLS} w-16`} title="Nombre d'actions" />
-                <span className="text-[10px] text-foreground-muted">action(s) cohérentes ADVE+R+T</span>
+                <span className="text-2xs text-foreground-muted">action(s) cohérentes ADVE+R+T</span>
               </div>
               <textarea value={intention} onChange={(e) => setIntention(e.target.value)} rows={2} placeholder="Brief / intention (optionnel) — ex. « lancer le mobile money en zone rurale, budget serré »" className={`${INPUT_CLS} w-full resize-none`} />
               <button
                 type="button"
                 disabled={proposeMutation.isPending}
                 onClick={() => proposeMutation.mutate({ strategyId, mode: "LLM", channel, count, ...(intention.trim() ? { briefIntention: intention.trim(), via: "BRIEF" as const } : { via: "GENERATE_MORE" as const }) })}
-                className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-[11px] font-semibold text-accent-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-2xs font-semibold text-accent-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
               >
                 {proposeMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
                 Générer {count} action{count > 1 ? "s" : ""}
@@ -164,7 +164,7 @@ export function ActionDatabasePanel({ strategyId, canSync = true }: Props) {
                   type="button"
                   disabled={manualTitle.trim().length < 3 || proposeMutation.isPending}
                   onClick={() => { proposeMutation.mutate({ strategyId, mode: "MANUAL", channel, manualActions: [{ title: manualTitle.trim(), channel, ...(manualBudget && Number(manualBudget) > 0 ? { budget: Number(manualBudget) } : {}) }] }); setManualTitle(""); setManualBudget(""); }}
-                  className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-[11px] font-semibold text-accent-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+                  className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-2xs font-semibold text-accent-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
                 >
                   <Plus className="h-3 w-3" /> Ajouter
                 </button>
@@ -173,7 +173,7 @@ export function ActionDatabasePanel({ strategyId, canSync = true }: Props) {
           )}
 
           {proposeMutation.data ? (
-            <p className={`mt-2 text-[11px] ${proposeMutation.data.status === "OK" ? "text-success" : "text-foreground-muted"}`}>
+            <p className={`mt-2 text-2xs ${proposeMutation.data.status === "OK" ? "text-success" : "text-foreground-muted"}`}>
               {proposeMutation.data.status === "OK"
                 ? `${proposeMutation.data.created} action(s) proposée(s) — clique l'étoile pour les retenir dans la roadmap.`
                 : proposeMutation.data.status === "DEFERRED"
@@ -181,7 +181,7 @@ export function ActionDatabasePanel({ strategyId, canSync = true }: Props) {
                   : "Rien à ajouter."}
             </p>
           ) : proposeMutation.isError ? (
-            <p className="mt-2 text-[11px] text-error">{proposeMutation.error.message}</p>
+            <p className="mt-2 text-2xs text-error">{proposeMutation.error.message}</p>
           ) : null}
         </div>
       ) : null}
@@ -192,7 +192,7 @@ export function ActionDatabasePanel({ strategyId, canSync = true }: Props) {
           <button
             type="button"
             onClick={() => setTouchpointFilter(null)}
-            className={`rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors ${
+            className={`rounded-full px-2 py-0.5 text-2xs font-medium transition-colors ${
               touchpointFilter === null ? "bg-accent/20 text-accent" : "bg-white/5 text-foreground-muted hover:bg-white/10"
             }`}
           >
@@ -203,7 +203,7 @@ export function ActionDatabasePanel({ strategyId, canSync = true }: Props) {
               key={tp}
               type="button"
               onClick={() => setTouchpointFilter(tp)}
-              className={`rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors ${
+              className={`rounded-full px-2 py-0.5 text-2xs font-medium transition-colors ${
                 touchpointFilter === tp ? "bg-accent/20 text-accent" : "bg-white/5 text-foreground-muted hover:bg-white/10"
               }`}
             >
@@ -249,7 +249,7 @@ export function ActionDatabasePanel({ strategyId, canSync = true }: Props) {
                     <span className="truncate text-xs font-medium text-foreground">{a.title}</span>
                   </div>
                   {a.description ? (
-                    <p className="mt-0.5 line-clamp-1 text-[11px] text-foreground-muted">{a.description}</p>
+                    <p className="mt-0.5 line-clamp-1 text-2xs text-foreground-muted">{a.description}</p>
                   ) : null}
                   <div className="mt-1 flex flex-wrap items-center gap-1">
                     {a.touchpoint ? (
@@ -271,7 +271,7 @@ export function ActionDatabasePanel({ strategyId, canSync = true }: Props) {
                   </div>
                 </div>
                 <div className="flex flex-shrink-0 flex-col items-end gap-1">
-                  <span className="text-[11px] font-semibold text-foreground">{fcfa(a.budgetMin)}<span className="text-[9px] font-normal text-foreground-muted"> {a.budgetCurrency ?? ""}</span></span>
+                  <span className="text-2xs font-semibold text-foreground">{fcfa(a.budgetMin)}<span className="text-[9px] font-normal text-foreground-muted"> {a.budgetCurrency ?? ""}</span></span>
                   <div className="flex items-center gap-1">
                     <span className="rounded bg-white/5 px-1.5 py-0.5 text-[9px] text-foreground-muted">{a.priority}</span>
                     <span className="rounded bg-white/5 px-1.5 py-0.5 text-[9px] text-foreground-muted">{STATUS_LABELS[a.status] ?? a.status}</span>

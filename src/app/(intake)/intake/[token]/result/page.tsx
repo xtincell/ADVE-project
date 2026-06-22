@@ -597,7 +597,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
           {/* Level placement — the headline */}
           {classification !== "NON_CLASSIFIE" && (
             <div className="mt-6 rounded-2xl border-2 border-primary/30 bg-gradient-to-br from-primary-subtle/30 to-card p-5 sm:p-6">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-primary">
+              <p className="text-2xs font-bold uppercase tracking-widest text-primary">
                 Niveau actuel de la marque
               </p>
               <div className="mt-1 flex flex-wrap items-baseline gap-3">
@@ -616,7 +616,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
 
               {/* Ladder progress */}
               <div className="mt-5">
-                <div className="mb-1.5 flex items-center justify-between text-[10px] font-semibold uppercase tracking-widest text-foreground-muted">
+                <div className="mb-1.5 flex items-center justify-between text-2xs font-semibold uppercase tracking-widest text-foreground-muted">
                   <span>Echelle</span>
                   <span>Cible : ICONE</span>
                 </div>
@@ -651,7 +651,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
               {/* Next milestone — the immediate promise */}
               {brandLevel?.nextMilestone && classification !== "ICONE" && (
                 <div className="mt-5 rounded-lg border border-primary/40 bg-card p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-primary">
+                  <p className="text-2xs font-bold uppercase tracking-widest text-primary">
                     Prochaine etape : {brandLevel.nextMilestone.targetLevel}
                   </p>
                   <p className="mt-1 text-sm font-medium text-foreground">
@@ -877,7 +877,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                           {step.level}
                         </span>
                         {isCurrent && (
-                          <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-medium text-primary-foreground">
+                          <span className="rounded-full bg-primary px-2 py-0.5 text-2xs font-medium text-primary-foreground">
                             Vous etes ici
                           </span>
                         )}
@@ -897,7 +897,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
 
             {brandLevel.iconeVision && (
               <div className="mt-6 rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/10 to-card p-5">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-primary">
+                <p className="text-2xs font-bold uppercase tracking-widest text-primary">
                   Vision ICONE pour {intake.companyName}
                 </p>
                 <p className="mt-2 text-sm leading-relaxed text-foreground">{brandLevel.iconeVision}</p>
@@ -931,7 +931,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                 <article key={meta.key} className="rounded-xl border border-border bg-card p-5">
                   <header className="mb-4 flex items-center justify-between gap-3 border-b border-border-subtle pb-3">
                     <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-foreground-muted">
+                      <p className="text-2xs font-bold uppercase tracking-widest text-foreground-muted">
                         {meta.key.toUpperCase()} · {meta.tagline}
                       </p>
                       <h3 className="mt-0.5 text-lg font-semibold text-foreground">{meta.name}</h3>
@@ -1060,7 +1060,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                 <article key={p.key} className="flex flex-col rounded-xl border border-border bg-card p-5">
                   <header className="mb-3 flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-foreground-muted">
+                      <p className="text-2xs font-bold uppercase tracking-widest text-foreground-muted">
                         {p.key.toUpperCase()} · {RTIS_PILLARS_META.find((m) => m.key === p.key)?.tagline ?? ""}
                       </p>
                       <h3 className="mt-0.5 text-base font-semibold text-foreground">{p.name}</h3>
@@ -1127,14 +1127,14 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
           <section className="mt-10 rounded-2xl border border-amber-700/50 bg-gradient-to-br from-amber-950/15 via-card to-card p-6 sm:p-8 print:mt-0 print:rounded-none print:border-0 print:bg-transparent print:break-before-page">
             <header className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-amber-400 print:text-foreground-muted">
+                <p className="text-2xs font-bold uppercase tracking-[0.25em] text-amber-400 print:text-foreground-muted">
                   Recommandation stratégique — Mestor
                 </p>
                 <h2 className="mt-1 text-xl font-bold text-foreground sm:text-2xl print:text-2xl">
                   {report.recommendation.strategicMove}
                 </h2>
               </div>
-              <span className="hidden rounded-full border border-amber-700/50 bg-amber-950/30 px-2 py-0.5 text-[10px] font-medium text-amber-300 print:hidden sm:inline-flex">
+              <span className="hidden rounded-full border border-amber-700/50 bg-amber-950/30 px-2 py-0.5 text-2xs font-medium text-amber-300 print:hidden sm:inline-flex">
                 Opus · ancré sur la tension centrale
               </span>
             </header>
@@ -1156,21 +1156,21 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                   className="rounded-lg border border-border-subtle bg-card/50 p-4 print:border-0 print:border-b print:border-foreground-muted print:rounded-none print:bg-transparent print:px-0 print:py-3"
                 >
                   <div className="mb-1.5 flex flex-wrap items-baseline gap-2">
-                    <span className="font-mono text-[10px] font-bold text-foreground-muted">
+                    <span className="font-mono text-2xs font-bold text-foreground-muted">
                       #{i + 1}
                     </span>
                     <span className="font-semibold text-foreground">{a.title}</span>
-                    <span className="rounded-full border border-border bg-background-overlay px-2 py-0.5 text-[10px] uppercase tracking-wider text-foreground-secondary">
+                    <span className="rounded-full border border-border bg-background-overlay px-2 py-0.5 text-2xs uppercase tracking-wider text-foreground-secondary">
                       {a.when}
                     </span>
-                    <span className="rounded-full border border-border bg-background-overlay px-2 py-0.5 text-[10px] uppercase tracking-wider text-foreground-secondary">
+                    <span className="rounded-full border border-border bg-background-overlay px-2 py-0.5 text-2xs uppercase tracking-wider text-foreground-secondary">
                       {a.owner}
                     </span>
                   </div>
                   <p className="text-sm text-foreground-secondary">{a.rationale}</p>
                   {Array.isArray(a.examples) && a.examples.length > 0 && (
                     <div className="mt-3 rounded-md border border-border-subtle bg-background-overlay/40 p-3 print:border-foreground-muted print:bg-transparent">
-                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-foreground-muted">
+                      <p className="mb-2 text-2xs font-semibold uppercase tracking-wider text-foreground-muted">
                         Comment l&apos;exécuter — 2 exemples
                       </p>
                       <ul className="space-y-1.5 text-sm text-foreground-secondary">
@@ -1204,7 +1204,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                   key={phase.label}
                   className="rounded-lg border border-border-subtle bg-card/50 p-3 print:border-foreground-muted print:bg-transparent print:rounded-none print:border-0 print:border-l-2 print:pl-3 print:p-0 print:mb-4"
                 >
-                  <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-amber-400 print:text-foreground-muted">
+                  <p className="mb-1 text-2xs font-bold uppercase tracking-widest text-amber-400 print:text-foreground-muted">
                     {phase.label}
                   </p>
                   <p className="text-sm leading-snug text-foreground">{phase.text}</p>
@@ -1407,7 +1407,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
               <div className="rounded-2xl border border-amber-700/40 bg-gradient-to-br from-amber-950/20 via-zinc-950 to-zinc-900 p-5 sm:p-7">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-amber-400">
+                    <p className="text-2xs font-semibold uppercase tracking-[0.25em] text-amber-400">
                       Et après ? Voici votre trajectoire
                     </p>
                     <h2 className="mt-2 text-xl font-semibold text-zinc-50 sm:text-2xl">
@@ -1427,7 +1427,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                       <ArrowRight className="h-4 w-4" />
                     </button>
                     {recommendedPrice && (
-                      <p className="mt-2 text-right text-[11px] text-zinc-500">
+                      <p className="mt-2 text-right text-2xs text-zinc-500">
                         Recommandé : Oracle complet · <span className="text-zinc-300">{recommendedPrice}</span>
                       </p>
                     )}
@@ -1537,7 +1537,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
           >
             <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
               <div className="min-w-0">
-                <p className="truncate text-[11px] uppercase tracking-wider text-zinc-500">
+                <p className="truncate text-2xs uppercase tracking-wider text-zinc-500">
                   Débloquer la suite
                 </p>
                 <p className="truncate text-sm text-zinc-200">

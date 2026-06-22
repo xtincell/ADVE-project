@@ -86,7 +86,7 @@ export function MarketingGouverneurs() {
   return (
     <section id="gouverneurs" className="py-24 md:py-32">
       <div className="mx-auto max-w-[var(--maxw-content)] px-[var(--pad-page)]">
-        <div className="flex items-baseline gap-3.5 mb-8 font-mono text-[11px] uppercase tracking-widest text-foreground-muted">
+        <div className="flex items-baseline gap-3.5 mb-8 font-mono text-2xs uppercase tracking-widest text-foreground-muted">
           <span className="w-8 h-px bg-accent" />
           05 · Gouverneurs
         </div>
@@ -116,7 +116,7 @@ export function MarketingGouverneurs() {
                   <span className={`font-mono text-sm ${isActive ? "text-accent" : "text-foreground-muted"}`}>0{i + 1}</span>
                   <div className="min-w-0">
                     <div className={`text-sm font-semibold tracking-wide ${isActive ? "text-accent" : "text-foreground"}`}>{GOVS[key].func}</div>
-                    <div className="text-[11px] font-mono uppercase tracking-wider text-foreground-muted">{GOVS[key].tag}</div>
+                    <div className="text-2xs font-mono uppercase tracking-wider text-foreground-muted">{GOVS[key].tag}</div>
                   </div>
                 </button>
               );
@@ -128,13 +128,13 @@ export function MarketingGouverneurs() {
               <span className="font-mono text-xs uppercase tracking-widest text-foreground-muted">{g.tag} · {g.role}</span>
             </div>
             <div className="p-4 border-l-2 border-accent bg-accent-subtle font-serif italic text-base md:text-lg leading-relaxed">
-              <span className="block font-mono not-italic text-[10px] uppercase tracking-widest text-accent mb-1">{g.rule.k}</span>
+              <span className="block font-mono not-italic text-2xs uppercase tracking-widest text-accent mb-1">{g.rule.k}</span>
               {g.rule.t}
             </div>
             <p className="text-foreground-secondary leading-relaxed max-w-[60ch]">{g.desc}</p>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2 pt-3 border-t border-dashed border-border">
               {g.caps.map((c) => (
-                <div key={c} className="px-3 py-2.5 border border-border font-mono text-[11px] text-foreground-secondary flex items-center gap-2">
+                <div key={c} className="px-3 py-2.5 border border-border font-mono text-2xs text-foreground-secondary flex items-center gap-2">
                   <span aria-hidden="true" className="w-1 h-1 bg-accent shrink-0" />
                   <span className="truncate">{c}</span>
                 </div>

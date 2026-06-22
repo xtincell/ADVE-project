@@ -40,31 +40,31 @@ const PILLAR_CONFIG: Record<string, {
   accent: string;
 }> = {
   identity:     { title: "Identite",                subtitle: "Qui est votre marque ? Son ADN, ses valeurs, sa vision.", pillarKey: "a", type: "adve", accent: "text-accent" },
-  positioning:  { title: "Positionnement & Design", subtitle: "Comment votre marque se distingue sur le marche.",       pillarKey: "d", type: "adve", accent: "text-blue-400" },
-  offer:        { title: "Offre & Pricing",         subtitle: "Votre proposition de valeur et votre modele economique.",pillarKey: "v", type: "adve", accent: "text-emerald-400" },
-  engagement:   { title: "Experience & Engagement",  subtitle: "Comment vous creez l'attachement autour de votre marque.", pillarKey: "e", type: "adve", accent: "text-amber-400" },
+  positioning:  { title: "Positionnement & Design", subtitle: "Comment votre marque se distingue sur le marche.",       pillarKey: "d", type: "adve", accent: "text-info" },
+  offer:        { title: "Offre & Pricing",         subtitle: "Votre proposition de valeur et votre modele economique.",pillarKey: "v", type: "adve", accent: "text-success" },
+  engagement:   { title: "Experience & Engagement",  subtitle: "Comment vous creez l'attachement autour de votre marque.", pillarKey: "e", type: "adve", accent: "text-warning" },
   diagnostic:   { title: "Diagnostic",               subtitle: "Analyse des risques et vulnerabilites.",                 pillarKey: "r", type: "rtis", accent: "text-error" },
-  market:       { title: "Realite Marche",           subtitle: "Ce que le marche dit de votre marque.",                  pillarKey: "t", type: "rtis", accent: "text-sky-400" },
-  potential:    { title: "Potentiel",                 subtitle: "Tout ce que votre marque peut faire.",                   pillarKey: "i", type: "rtis", accent: "text-orange-400" },
-  roadmap:      { title: "Strategie",                subtitle: "Votre plan d'action vers le superfan.",                  pillarKey: "s", type: "rtis", accent: "text-pink-400" },
+  market:       { title: "Realite Marche",           subtitle: "Ce que le marche dit de votre marque.",                  pillarKey: "t", type: "rtis", accent: "text-info" },
+  potential:    { title: "Potentiel",                 subtitle: "Tout ce que votre marque peut faire.",                   pillarKey: "i", type: "rtis", accent: "text-warning" },
+  roadmap:      { title: "Strategie",                subtitle: "Votre plan d'action vers le superfan.",                  pillarKey: "s", type: "rtis", accent: "text-error" },
 };
 
 // ── RecoValuePreview — compact preview of proposed/current value ──────
 
 function RecoValuePreview({ value }: { value: unknown }) {
-  if (value == null || value === "") return <span className="text-[10px] text-foreground-muted/50 italic">vide</span>;
-  if (typeof value === "string") return <p className="text-[11px] text-white/80 line-clamp-3">{value}</p>;
-  if (typeof value === "number") return <span className="text-[11px] text-white font-medium">{value.toLocaleString()}</span>;
-  if (typeof value === "boolean") return <span className={`text-[11px] ${value ? "text-emerald-300" : "text-error"}`}>{value ? "Oui" : "Non"}</span>;
+  if (value == null || value === "") return <span className="text-2xs text-foreground-muted/50 italic">vide</span>;
+  if (typeof value === "string") return <p className="text-2xs text-white/80 line-clamp-3">{value}</p>;
+  if (typeof value === "number") return <span className="text-2xs text-white font-medium">{value.toLocaleString()}</span>;
+  if (typeof value === "boolean") return <span className={`text-2xs ${value ? "text-success" : "text-error"}`}>{value ? "Oui" : "Non"}</span>;
   if (Array.isArray(value)) {
-    if (value.length === 0) return <span className="text-[10px] text-foreground-muted/50 italic">vide</span>;
+    if (value.length === 0) return <span className="text-2xs text-foreground-muted/50 italic">vide</span>;
     if (typeof value[0] === "string") {
       return (
         <div className="flex flex-wrap gap-1">
           {(value as string[]).slice(0, 5).map((v, i) => (
-            <span key={i} className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-white/70">{v}</span>
+            <span key={i} className="rounded bg-white/5 px-1.5 py-0.5 text-2xs text-white/70">{v}</span>
           ))}
-          {value.length > 5 ? <span className="text-[10px] text-foreground-muted">+{value.length - 5}</span> : null}
+          {value.length > 5 ? <span className="text-2xs text-foreground-muted">+{value.length - 5}</span> : null}
         </div>
       );
     }
@@ -72,7 +72,7 @@ function RecoValuePreview({ value }: { value: unknown }) {
     const first = value[0] as Record<string, unknown>;
     const nameKey = ["name", "nom", "action", "title", "axe", "phase", "risk", "activation"].find(k => typeof first[k] === "string");
     return (
-      <div className="text-[11px] text-white/70">
+      <div className="text-2xs text-white/70">
         <span className="text-foreground-muted">{value.length} elements</span>
         {nameKey ? <span className="ml-1 text-white/50">({(value as Array<Record<string, unknown>>).slice(0, 3).map(v => String(v[nameKey])).join(", ")}{value.length > 3 ? "..." : ""})</span> : null}
       </div>
@@ -83,7 +83,7 @@ function RecoValuePreview({ value }: { value: unknown }) {
     return (
       <div className="space-y-0.5">
         {entries.slice(0, 4).map(([k, v]) => (
-          <div key={k} className="flex gap-1.5 text-[10px]">
+          <div key={k} className="flex gap-1.5 text-2xs">
             <span className="text-foreground-muted shrink-0">{getFieldLabel(k)}:</span>
             <span className="text-white/70 truncate">{typeof v === "string" ? v.slice(0, 80) : typeof v === "number" ? v.toLocaleString() : Array.isArray(v) ? `${v.length} elements` : "..."}</span>
           </div>
@@ -92,7 +92,7 @@ function RecoValuePreview({ value }: { value: unknown }) {
       </div>
     );
   }
-  return <span className="text-[11px] text-white/70">{String(value)}</span>;
+  return <span className="text-2xs text-white/70">{String(value)}</span>;
 }
 
 // ── Component ─────────────────────────────────────────────────────────
@@ -355,10 +355,10 @@ export function PillarPage({ pageKey }: PillarPageProps) {
           <div className="flex items-center gap-3 min-w-0">
             <h1 className={`text-lg font-bold ${config.accent} truncate`}>{config.title}</h1>
             {pillar?.validationStatus && pillar.validationStatus !== "DRAFT" ? (
-              <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+              <span className={`rounded-full px-2 py-0.5 text-2xs font-medium ${
                 // lafusee:allow-adhoc-completion: validationStatus badge logic (status string compare, not completion math)
-                pillar.validationStatus === "VALIDATED" ? "bg-emerald-500/15 text-emerald-300" :
-                pillar.validationStatus === "AI_PROPOSED" ? "bg-amber-500/15 text-amber-300" :
+                pillar.validationStatus === "VALIDATED" ? "bg-success/15 text-success" :
+                pillar.validationStatus === "AI_PROPOSED" ? "bg-warning/15 text-warning" :
                 "bg-white/10 text-foreground-muted"
               // lafusee:allow-adhoc-completion: validationStatus badge logic (status string compare, not completion math)
               }`}>{pillar.validationStatus === "VALIDATED" ? "Valide" : pillar.validationStatus === "AI_PROPOSED" ? "IA" : pillar.validationStatus}</span>
@@ -393,7 +393,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                   : "Enrichir auto-remplit les champs manquants via vault, calculs et IA."
               }
               className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                isAdve ? "bg-accent/20 text-accent hover:bg-accent/30" : "bg-sky-600/20 text-sky-300 hover:bg-sky-600/30"
+                isAdve ? "bg-accent/20 text-accent hover:bg-accent/30" : "bg-info/20 text-info hover:bg-info/30"
               } disabled:opacity-50`}>
               {isRegenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
               Enrichir
@@ -412,41 +412,41 @@ export function PillarPage({ pageKey }: PillarPageProps) {
             const completeReached = stage === "COMPLETE";
             // Couleurs : vert = stage atteint ; amber = % haut mais stage manqué (gap needsHuman) ; muted = bas
             const sufClass = enrichedReached
-              ? "text-emerald-400"
+              ? "text-success"
               : enrichedPct >= 80
-                ? "text-amber-400"
+                ? "text-warning"
                 : "text-foreground-muted";
             const sufBg = enrichedReached ? "#34d399" : enrichedPct >= 80 ? "#f59e0b" : "#a78bfa";
             const cplClass = completeReached
-              ? "text-emerald-400"
+              ? "text-success"
               : completePct >= 95
-                ? "text-amber-400"
+                ? "text-warning"
                 : "text-foreground-muted";
             const cplBg = completeReached ? "#34d399" : completePct >= 95 ? "#f59e0b" : "#a78bfa";
             return (
               <>
                 <div className="flex items-center gap-1.5">
-                  <span className={`text-[10px] font-semibold ${sufClass}`}>Suffisant</span>
+                  <span className={`text-2xs font-semibold ${sufClass}`}>Suffisant</span>
                   <div className="h-1.5 w-16 rounded-full bg-white/5">
                     <div className="h-1.5 rounded-full transition-all" style={{ width: `${Math.min(enrichedPct, 100)}%`, backgroundColor: sufBg }} />
                   </div>
-                  <span className={`text-[10px] ${sufClass}`}>{enrichedPct}%</span>
+                  <span className={`text-2xs ${sufClass}`}>{enrichedPct}%</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className={`text-[10px] font-semibold ${cplClass}`}>Complet</span>
+                  <span className={`text-2xs font-semibold ${cplClass}`}>Complet</span>
                   <div className="h-1.5 w-16 rounded-full bg-white/5">
                     <div className="h-1.5 rounded-full transition-all" style={{ width: `${Math.min(completePct, 100)}%`, backgroundColor: cplBg }} />
                   </div>
-                  <span className={`text-[10px] ${cplClass}`}>{completePct}%</span>
+                  <span className={`text-2xs ${cplClass}`}>{completePct}%</span>
                 </div>
               </>
             );
           })()}
           {/* R+T Consolidé (golden badge) */}
           {isAdve && (
-            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+            <span className={`rounded-full px-2 py-0.5 text-2xs font-bold ${
               rtConsolidated
-                ? "bg-amber-400/20 text-amber-300 border border-amber-400/30"
+                ? "bg-warning/20 text-warning border border-warning/30"
                 : "bg-white/5 text-foreground-muted"
             }`}>
               R+T {rtConsolidated ? "✓" : "—"}
@@ -454,10 +454,10 @@ export function PillarPage({ pageKey }: PillarPageProps) {
           )}
           {/* Stage badge */}
           {assess?.currentStage && (
-            <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-medium ${
-              assess.currentStage === "COMPLETE" ? "bg-emerald-500/15 text-emerald-300" :
-              assess.currentStage === "ENRICHED" ? "bg-blue-500/15 text-blue-300" :
-              assess.currentStage === "INTAKE" ? "bg-amber-500/15 text-amber-300" :
+            <span className={`ml-auto rounded-full px-2 py-0.5 text-2xs font-medium ${
+              assess.currentStage === "COMPLETE" ? "bg-success/15 text-success" :
+              assess.currentStage === "ENRICHED" ? "bg-info/15 text-info" :
+              assess.currentStage === "INTAKE" ? "bg-warning/15 text-warning" :
               "bg-white/5 text-foreground-muted"
             }`}>{assess.currentStage}</span>
           )}
@@ -467,9 +467,9 @@ export function PillarPage({ pageKey }: PillarPageProps) {
       {/* ── Feedback toast ─────────────────────────────────────────── */}
       {enrichResult ? (
         <div className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs ${
-          enrichResult.type === "success" ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/20" :
-          enrichResult.type === "warning" ? "bg-amber-500/10 text-amber-300 border border-amber-500/20" :
-          "bg-error/10 text-error border border-red-500/20"
+          enrichResult.type === "success" ? "bg-success/10 text-success border border-success/20" :
+          enrichResult.type === "warning" ? "bg-warning/10 text-warning border border-warning/20" :
+          "bg-error/10 text-error border border-error/20"
         }`}>
           {enrichResult.type === "success" ? <CheckCircle className="h-3.5 w-3.5 flex-shrink-0" /> : <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />}
           <span>{enrichResult.message}</span>
@@ -506,7 +506,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
           <div className="rounded-lg border border-white/5 bg-surface-raised p-4">
             <div className="mb-3">
               <div className="text-sm font-semibold text-foreground">Ambition stratégique</div>
-              <p className="mt-1 text-[11px] text-foreground-muted">
+              <p className="mt-1 text-2xs text-foreground-muted">
                 3 trajectoires calculées depuis le même backbone (initiatives + risques). Retenir une ambition recalcule le dashboard S sur son jeu de stratégie.
               </p>
             </div>
@@ -533,7 +533,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                     ) : null}
                     <div className="text-xs font-semibold text-foreground">{String(r.label ?? key)}</div>
                     <div className={`mt-1 text-2xl font-extrabold ${isSelected ? "text-accent" : "text-foreground"}`}>+{growth}%</div>
-                    <div className="mt-1 space-y-0.5 text-[10px] text-foreground-muted">
+                    <div className="mt-1 space-y-0.5 text-2xs text-foreground-muted">
                       {cult != null ? <div>Indice d'attachement cible : <span className="font-bold text-foreground">{cult}/100</span></div> : null}
                       {count != null ? <div>{count} initiative{count > 1 ? "s" : ""}{budget != null && budget > 0 ? ` · ${(budget / 1_000_000).toLocaleString()} M F` : ""}</div> : null}
                       {coverage != null ? <div>{coverage}% des risques couverts</div> : null}
@@ -542,7 +542,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                       type="button"
                       disabled={isSelected || selectRouteMutation.isPending}
                       onClick={() => selectRouteMutation.mutate({ strategyId, routeKey: key as "CONSERVATIVE" | "TARGET" | "AMBITIOUS" })}
-                      className={`mt-2 w-full rounded-md px-2.5 py-1.5 text-[11px] font-medium transition-colors ${
+                      className={`mt-2 w-full rounded-md px-2.5 py-1.5 text-2xs font-medium transition-colors ${
                         isSelected
                           ? "bg-accent/20 text-accent cursor-default"
                           : "bg-white/5 text-foreground-secondary hover:bg-accent/20 hover:text-accent"
@@ -562,14 +562,14 @@ export function PillarPage({ pageKey }: PillarPageProps) {
             Concerne typiquement E (ADVE sans derivable:false) et R/T/I/S à l'état vierge.
             Sans cette bannière, l'opérateur voit une page totalement vide sans guidance. ─ */}
       {assess && (assess.currentStage === "EMPTY" || (enrichedPct === 0 && completePct === 0)) && (assess.needsHuman?.length ?? 0) === 0 ? (
-        <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-4">
+        <div className="rounded-lg border border-info/20 bg-info/5 p-4">
           <div className="flex items-start gap-3">
-            <Sparkles className="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-300" />
+            <Sparkles className="mt-0.5 h-4 w-4 flex-shrink-0 text-info" />
             <div className="flex-1">
-              <div className="text-sm font-semibold text-blue-300">
+              <div className="text-sm font-semibold text-info">
                 Pilier vierge — 0/{(assess.derivable?.length ?? 0) + (assess.satisfied?.length ?? 0)} champs renseignés
               </div>
-              <p className="mt-1 text-[11px] text-foreground-muted">
+              <p className="mt-1 text-2xs text-foreground-muted">
                 {isAdve
                   ? "Clique sur "
                   : "La cascade RTIS s'alimente à partir d'ADVE. "}
@@ -594,18 +594,18 @@ export function PillarPage({ pageKey }: PillarPageProps) {
           if (typeof tf === "string") pendingByField.set(tf, { id: r.id });
         }
         return (
-          <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4">
+          <div className="rounded-lg border border-warning/20 bg-warning/5 p-4">
             <div className="mb-3 flex items-start justify-between gap-3">
               <div>
-                <div className="flex items-center gap-2 text-sm font-semibold text-amber-300">
+                <div className="flex items-center gap-2 text-sm font-semibold text-warning">
                   <Pencil className="h-4 w-4" />
                   {assess.needsHuman.length} champ{assess.needsHuman.length > 1 ? "s" : ""} essentiel{assess.needsHuman.length > 1 ? "s" : ""} à saisir
                 </div>
-                <p className="mt-1 text-[11px] text-foreground-muted">
+                <p className="mt-1 text-2xs text-foreground-muted">
                   Ces champs forment le socle identitaire de la marque. L'IA pré-remplit un draft à l'activation (badge orange ci-dessous), à toi de le valider ou réécrire.
                 </p>
               </div>
-              <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-300 whitespace-nowrap">
+              <span className="rounded-full bg-warning/15 px-2 py-0.5 text-2xs font-bold text-warning whitespace-nowrap">
                 Stage : {assess.currentStage ?? "EMPTY"}
               </span>
             </div>
@@ -616,9 +616,9 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                   <div key={path} className="flex items-center justify-between gap-2 rounded border border-white/5 bg-white/[0.02] px-3 py-2">
                     <div className="min-w-0 flex-1">
                       <span className="text-xs font-medium text-white">{getFieldLabel(path)}</span>
-                      <span className="ml-2 font-mono text-[10px] text-foreground-muted/60">{path}</span>
+                      <span className="ml-2 font-mono text-2xs text-foreground-muted/60">{path}</span>
                       {hasReco ? (
-                        <span className="ml-2 inline-flex items-center gap-0.5 rounded bg-blue-500/15 px-1.5 py-0.5 text-[9px] font-bold text-blue-300" title="Une recommandation Notoria existe pour ce champ">
+                        <span className="ml-2 inline-flex items-center gap-0.5 rounded bg-info/15 px-1.5 py-0.5 text-[9px] font-bold text-info" title="Une recommandation Notoria existe pour ce champ">
                           <Sparkles className="h-2.5 w-2.5" />
                           reco IA
                         </span>
@@ -627,7 +627,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                     <button
                       type="button"
                       onClick={() => openAmendOnField(path)}
-                      className="flex items-center gap-1 rounded-md bg-amber-500/15 px-2.5 py-1 text-[11px] font-medium text-amber-300 transition-colors hover:bg-amber-500/25"
+                      className="flex items-center gap-1 rounded-md bg-warning/15 px-2.5 py-1 text-2xs font-medium text-warning transition-colors hover:bg-warning/25"
                     >
                       <Pencil className="h-3 w-3" />
                       Saisir
@@ -667,18 +667,18 @@ export function PillarPage({ pageKey }: PillarPageProps) {
         };
 
         return (
-          <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-4">
+          <div className="rounded-lg border border-warning/30 bg-warning/5 p-4">
             <div className="mb-3 flex items-start justify-between gap-3">
               <div>
-                <div className="flex items-center gap-2 text-sm font-semibold text-orange-300">
+                <div className="flex items-center gap-2 text-sm font-semibold text-warning">
                   <Sparkles className="h-4 w-4" />
                   {inferredPaths.length} champ{inferredPaths.length > 1 ? "s" : ""} inféré{inferredPaths.length > 1 ? "s" : ""} par l&apos;IA — à valider
                 </div>
-                <p className="mt-1 text-[11px] text-foreground-muted">
+                <p className="mt-1 text-2xs text-foreground-muted">
                   Draft initial pré-rempli au moment de l&apos;activation. Clique <strong>Valider tel quel</strong> si la valeur convient, ou utilise <strong>Saisir</strong> pour la réécrire (le badge disparaîtra dans les deux cas).
                 </p>
               </div>
-              <span className="rounded-full bg-orange-500/15 px-2 py-0.5 text-[10px] font-bold text-orange-300 whitespace-nowrap">
+              <span className="rounded-full bg-warning/15 px-2 py-0.5 text-2xs font-bold text-warning whitespace-nowrap">
                 Certainty : INFERRED
               </span>
             </div>
@@ -691,9 +691,9 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-medium text-white">{getFieldLabel(path)}</span>
-                        <span className="font-mono text-[10px] text-foreground-muted/60">{path}</span>
+                        <span className="font-mono text-2xs text-foreground-muted/60">{path}</span>
                       </div>
-                      <div className="mt-0.5 truncate text-[11px] italic text-foreground-muted/80">
+                      <div className="mt-0.5 truncate text-2xs italic text-foreground-muted/80">
                         {renderPreview(value)}
                       </div>
                     </div>
@@ -701,7 +701,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                       <button
                         type="button"
                         onClick={() => openAmendOnField(path)}
-                        className="flex items-center gap-1 rounded-md border border-white/10 px-2 py-1 text-[11px] text-foreground-muted transition-colors hover:border-amber-500/40 hover:text-amber-300"
+                        className="flex items-center gap-1 rounded-md border border-white/10 px-2 py-1 text-2xs text-foreground-muted transition-colors hover:border-warning/40 hover:text-warning"
                         title="Réécrire ce champ"
                       >
                         <Pencil className="h-3 w-3" />
@@ -718,7 +718,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                             fieldPath: path,
                           });
                         }}
-                        className="flex items-center gap-1 rounded-md bg-orange-500/15 px-2.5 py-1 text-[11px] font-medium text-orange-300 transition-colors hover:bg-orange-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex items-center gap-1 rounded-md bg-warning/15 px-2.5 py-1 text-2xs font-medium text-warning transition-colors hover:bg-warning/25 disabled:cursor-not-allowed disabled:opacity-50"
                         title="Garder cette valeur — passe la certitude à DECLARED"
                       >
                         <CheckCircle className="h-3 w-3" />
@@ -735,11 +735,11 @@ export function PillarPage({ pageKey }: PillarPageProps) {
 
       {/* ── Recommendation review panel ────────────────────────────── */}
       {isAdve && pendingRecos.length > 0 ? (
-        <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4">
+        <div className="rounded-lg border border-warning/20 bg-warning/5 p-4">
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-amber-400" />
-              <span className="text-sm font-semibold text-amber-300">{pendingRecos.length} recommandation(s)</span>
+              <Sparkles className="h-4 w-4 text-warning" />
+              <span className="text-sm font-semibold text-warning">{pendingRecos.length} recommandation(s)</span>
             </div>
             <div className="flex gap-2">
               <button onClick={() => {
@@ -748,7 +748,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                 acceptRecosMutation.mutate({ strategyId: strategyId!, recoIds: ids });
                 setSelectedRecos(new Set());
               }} disabled={acceptRecosMutation.isPending || pendingRecos.length === 0}
-                className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30 disabled:opacity-40">
+                className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-success/20 text-success hover:bg-success/30 disabled:opacity-40">
                 <CheckCircle className="h-3 w-3" /> Tout accepter
               </button>
               <button onClick={() => {
@@ -757,7 +757,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                 acceptRecosMutation.mutate({ strategyId: strategyId!, recoIds: ids });
                 setSelectedRecos(new Set());
               }} disabled={selectedRecos.size === 0 || acceptRecosMutation.isPending}
-                className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-emerald-600/10 text-emerald-300/70 hover:bg-emerald-600/20 disabled:opacity-40">
+                className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-success/10 text-success/70 hover:bg-success/20 disabled:opacity-40">
                 <ThumbsUp className="h-3 w-3" /> Selection ({selectedRecos.size})
               </button>
               <button onClick={() => {
@@ -768,7 +768,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                 className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-error/20 text-error hover:bg-error/30 disabled:opacity-40">
                 <ThumbsDown className="h-3 w-3" /> Rejeter
               </button>
-              <Link href="/cockpit/brand/notoria" className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-amber-600/10 text-amber-300 hover:bg-amber-600/20 ml-auto">
+              <Link href="/cockpit/brand/notoria" className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-warning/10 text-warning hover:bg-warning/20 ml-auto">
                 <Sparkles className="h-3 w-3" /> Notoria
               </Link>
             </div>
@@ -779,9 +779,9 @@ export function PillarPage({ pageKey }: PillarPageProps) {
               const isSelected = selectedRecos.has(recoId);
               const op = String(reco.operation ?? "SET");
               const opLabel = op === "SET" ? "Remplacer" : op === "ADD" ? "Ajouter" : op === "MODIFY" ? "Modifier" : op === "REMOVE" ? "Supprimer" : op === "EXTEND" ? "Enrichir" : op;
-              const opColor = op === "SET" ? "bg-orange-500/15 text-orange-300" :
-                              op === "ADD" ? "bg-emerald-500/15 text-emerald-300" :
-                              op === "MODIFY" ? "bg-blue-500/15 text-blue-300" :
+              const opColor = op === "SET" ? "bg-warning/15 text-warning" :
+                              op === "ADD" ? "bg-success/15 text-success" :
+                              op === "MODIFY" ? "bg-info/15 text-info" :
                               op === "REMOVE" ? "bg-error/15 text-error" :
                               op === "EXTEND" ? "bg-accent/15 text-accent" :
                               "bg-white/10 text-foreground-muted";
@@ -791,17 +791,17 @@ export function PillarPage({ pageKey }: PillarPageProps) {
 
               return (
                 <div key={recoId} onClick={() => { const s = new Set(selectedRecos); if (isSelected) s.delete(recoId); else s.add(recoId); setSelectedRecos(s); }}
-                  className={`cursor-pointer rounded-lg border p-3 transition-colors ${isSelected ? "border-emerald-500/30 bg-emerald-500/10" : "border-white/5 bg-white/[0.02] hover:bg-white/5"}`}>
+                  className={`cursor-pointer rounded-lg border p-3 transition-colors ${isSelected ? "border-success/30 bg-success/10" : "border-white/5 bg-white/[0.02] hover:bg-white/5"}`}>
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
                       {/* Operation badge + field name + impact */}
                       <div className="flex items-center gap-2 mb-1">
-                        <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${opColor}`}>{opLabel}</span>
+                        <span className={`rounded px-1.5 py-0.5 text-2xs font-bold ${opColor}`}>{opLabel}</span>
                         <span className="text-xs font-medium text-white">{getFieldLabel(fieldName)}</span>
-                        {reco.impact ? <span className={`rounded-full px-1.5 py-0.5 text-[9px] ${reco.impact === "HIGH" ? "bg-error/15 text-error" : reco.impact === "MEDIUM" ? "bg-amber-500/15 text-amber-300" : "bg-white/10 text-foreground-muted"}`}>{String(reco.impact)}</span> : null}
+                        {reco.impact ? <span className={`rounded-full px-1.5 py-0.5 text-[9px] ${reco.impact === "HIGH" ? "bg-error/15 text-error" : reco.impact === "MEDIUM" ? "bg-warning/15 text-warning" : "bg-white/10 text-foreground-muted"}`}>{String(reco.impact)}</span> : null}
                       </div>
                       {/* Justification */}
-                      <p className="text-[11px] text-foreground-muted mb-2">{String(reco.justification ?? "")}</p>
+                      <p className="text-2xs text-foreground-muted mb-2">{String(reco.justification ?? "")}</p>
                       {/* Diff: current → proposed */}
                       {hasProposed ? (
                         <div className="rounded border border-white/5 bg-black/20 p-2 space-y-1.5">
@@ -822,7 +822,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                           ) : null}
                           {/* Proposed value */}
                           <div>
-                            <p className="text-[9px] text-emerald-400/70 uppercase tracking-wide mb-0.5">
+                            <p className="text-[9px] text-success/70 uppercase tracking-wide mb-0.5">
                               {op === "ADD" ? "A ajouter" : "Propose"}
                             </p>
                             <RecoValuePreview value={reco.proposedValue} />
@@ -830,7 +830,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                         </div>
                       ) : null}
                     </div>
-                    <div className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border ${isSelected ? "border-emerald-400 bg-emerald-400 text-black" : "border-white/20"}`}>
+                    <div className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border ${isSelected ? "border-success bg-success text-black" : "border-white/20"}`}>
                       {isSelected ? <CheckCircle className="h-3 w-3" /> : null}
                     </div>
                   </div>
@@ -848,15 +848,15 @@ export function PillarPage({ pageKey }: PillarPageProps) {
           ADVE individuelles. Label clarifié pour éviter la confusion
           entre les deux compteurs. */}
       {!isAdve && totalPendingADVE > 0 ? (
-        <div className="rounded-lg border border-amber-500/10 bg-amber-800/5 p-4">
+        <div className="rounded-lg border border-warning/10 bg-warning/5 p-4">
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-amber-300" />
-              <span className="text-sm font-semibold text-amber-200" title="PENDING + ACCEPTED (en attente d'apply)">
+              <Sparkles className="h-4 w-4 text-warning" />
+              <span className="text-sm font-semibold text-warning" title="PENDING + ACCEPTED (en attente d'apply)">
                 {totalPendingADVE} reco(s) ADVE en attente de traitement
               </span>
             </div>
-            <Link href="/cockpit/brand/notoria" className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-amber-600/20 text-amber-300 hover:bg-amber-600/30">
+            <Link href="/cockpit/brand/notoria" className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-warning/20 text-warning hover:bg-warning/30">
               <Sparkles className="h-3 w-3" /> Voir dans Notoria
             </Link>
           </div>
@@ -871,7 +871,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                     <div className="text-sm font-medium">Pilier {k.toUpperCase()}</div>
                     <div className="text-xs text-foreground-muted">{count} recommandation(s)</div>
                   </div>
-                  <Link href={`/cockpit/brand/${page}`} className="text-xs text-amber-200 hover:underline">Revue</Link>
+                  <Link href={`/cockpit/brand/${page}`} className="text-xs text-warning hover:underline">Revue</Link>
                 </div>
               );
             })}

@@ -49,7 +49,7 @@ export function MarketingSurveillance() {
     <section id="probleme" data-theme="bone" className="py-24 md:py-32 relative overflow-hidden bg-background text-foreground">
       <div className="mx-auto max-w-[var(--maxw-content)] px-[var(--pad-page)] relative">
         <header className="max-w-[720px] mb-16">
-          <div className="inline-flex items-center gap-3 mb-6 font-mono text-[11px] uppercase tracking-widest" style={{ color: "var(--color-foreground-muted)" }}>
+          <div className="inline-flex items-center gap-3 mb-6 font-mono text-2xs uppercase tracking-widest" style={{ color: "var(--color-foreground-muted)" }}>
             <span className="w-7 h-px bg-accent" />
             02 · État du marché
           </div>
@@ -63,7 +63,7 @@ export function MarketingSurveillance() {
 
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-8 lg:gap-16 items-stretch">
           <div className="relative bg-bone/2 border p-6 flex flex-col gap-4 min-h-[540px]" style={{ background: "color-mix(in oklab, var(--color-foreground) 2%, transparent)", borderColor: "color-mix(in oklab, var(--color-foreground) 10%, transparent)" }}>
-            <div className="flex gap-6 flex-wrap font-mono text-[11px] uppercase tracking-widest pb-3 border-b border-dashed" style={{ color: "var(--color-foreground-muted)", borderColor: "color-mix(in oklab, var(--color-foreground) 12%, transparent)" }}>
+            <div className="flex gap-6 flex-wrap font-mono text-2xs uppercase tracking-widest pb-3 border-b border-dashed" style={{ color: "var(--color-foreground-muted)", borderColor: "color-mix(in oklab, var(--color-foreground) 12%, transparent)" }}>
               <span><span style={{ color: "var(--color-foreground-secondary)" }}>SCAN</span> <span className="text-accent font-semibold ml-2">VIDE STRUCTUREL</span></span>
               <span><span style={{ color: "var(--color-foreground-secondary)" }}>PING</span> <span className="font-semibold ml-2" style={{ color: "var(--color-foreground)" }}>04 / 04 cibles</span></span>
             </div>
@@ -109,7 +109,7 @@ export function MarketingSurveillance() {
               })}
             </svg>
 
-            <footer className="flex justify-between gap-4 font-mono text-[10px] uppercase tracking-widest pt-3 border-t border-dashed" style={{ color: "var(--color-foreground-muted)", borderColor: "color-mix(in oklab, var(--color-foreground) 12%, transparent)" }}>
+            <footer className="flex justify-between gap-4 font-mono text-2xs uppercase tracking-widest pt-3 border-t border-dashed" style={{ color: "var(--color-foreground-muted)", borderColor: "color-mix(in oklab, var(--color-foreground) 12%, transparent)" }}>
               <span className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" /> SWEEP ACTIF</span>
               <span>n=412 · 2024-2026</span>
             </footer>
@@ -117,11 +117,11 @@ export function MarketingSurveillance() {
 
           <aside data-theme="dark" className="bg-foreground text-background min-h-[540px] flex flex-col">
             <div className="flex justify-between items-center px-6 py-4 border-b" style={{ borderColor: "color-mix(in oklab, var(--color-background) 12%, transparent)" }}>
-              <span className="font-mono text-[10px] uppercase tracking-widest opacity-60 inline-flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" /> PANNEAU D&rsquo;INSPECTION</span>
-              <span className="font-mono text-[10px] uppercase tracking-widest"><span className="opacity-40">COORD</span> <span className="font-semibold ml-1">{t.coord}</span></span>
+              <span className="font-mono text-2xs uppercase tracking-widest opacity-60 inline-flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" /> PANNEAU D&rsquo;INSPECTION</span>
+              <span className="font-mono text-2xs uppercase tracking-widest"><span className="opacity-40">COORD</span> <span className="font-semibold ml-1">{t.coord}</span></span>
             </div>
             <div className="flex-1 px-6 py-8 flex flex-col gap-5">
-              <div className="flex justify-between items-baseline pb-3 border-b border-dashed font-mono text-[11px] uppercase tracking-widest opacity-60" style={{ borderColor: "color-mix(in oklab, var(--color-background) 12%, transparent)" }}>
+              <div className="flex justify-between items-baseline pb-3 border-b border-dashed font-mono text-2xs uppercase tracking-widest opacity-60" style={{ borderColor: "color-mix(in oklab, var(--color-background) 12%, transparent)" }}>
                 <span className="text-accent font-semibold">{t.actor.split(" · ")[0]}</span>
                 <span>{t.actor.split(" · ")[1]?.toUpperCase()}</span>
               </div>
@@ -131,14 +131,14 @@ export function MarketingSurveillance() {
                 &laquo;&nbsp;{t.quote}&nbsp;&raquo;
               </blockquote>
               <p className="text-sm leading-relaxed opacity-70">{t.copy}</p>
-              <div className="grid grid-cols-2 gap-3 font-mono text-[10px] uppercase tracking-widest mt-auto pt-4 border-t border-dashed" style={{ borderColor: "color-mix(in oklab, var(--color-background) 12%, transparent)" }}>
+              <div className="grid grid-cols-2 gap-3 font-mono text-2xs uppercase tracking-widest mt-auto pt-4 border-t border-dashed" style={{ borderColor: "color-mix(in oklab, var(--color-background) 12%, transparent)" }}>
                 <div><span className="block opacity-40 mb-1">{t.pillar.split(" · ")[0]}</span><span className="font-semibold">{t.pillar.split(" · ")[1]}</span></div>
                 {t.meta.map(([k, v]) => (
                   <div key={k}><span className="block opacity-40 mb-1">{k}</span><span className="font-semibold text-accent">{v}</span></div>
                 ))}
               </div>
             </div>
-            <div className="flex justify-between items-center px-4 py-3 border-t font-mono text-[10px] uppercase tracking-widest" style={{ borderColor: "color-mix(in oklab, var(--color-background) 12%, transparent)" }}>
+            <div className="flex justify-between items-center px-4 py-3 border-t font-mono text-2xs uppercase tracking-widest" style={{ borderColor: "color-mix(in oklab, var(--color-background) 12%, transparent)" }}>
               <button onClick={() => setActive((i) => (i - 1 + TARGETS.length) % TARGETS.length)} className="opacity-60 hover:opacity-100 hover:text-accent transition-colors">‹ PRÉC.</button>
               <div className="flex gap-2">
                 {TARGETS.map((_, i) => (

@@ -28,8 +28,8 @@ export interface OracleLiveConsoleProps {
 
 const LEVEL_CLASS: Record<LogEntry["level"], string> = {
   info: "text-foreground-muted",
-  ok: "text-emerald-300",
-  fail: "text-rose-400",
+  ok: "text-success",
+  fail: "text-error",
 };
 
 export function OracleLiveConsole(props: OracleLiveConsoleProps): React.ReactElement {

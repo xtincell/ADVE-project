@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Logo } from "@/components/brand/Logo";
 import { CONTACT, IDENTITY } from "./data";
 
 function Newsletter() {
@@ -25,7 +26,7 @@ function Newsletter() {
 
   return (
     <div>
-      <div className="mb-2 font-mono text-[11px] uppercase tracking-widest text-foreground-muted">The Upgrade — notes de cabinet</div>
+      <div className="mb-2 font-mono text-2xs uppercase tracking-widest text-foreground-muted">The Upgrade — notes de cabinet</div>
       {state === "ok" ? (
         <p className="text-sm text-foreground-secondary">Inscription confirmée — bienvenue à bord.</p>
       ) : (
@@ -43,14 +44,14 @@ function Newsletter() {
             type="button"
             onClick={subscribe}
             disabled={state === "pending" || !email.includes("@")}
-            className="bg-accent px-4 py-2 font-mono text-[11px] uppercase tracking-widest text-accent-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
+            className="bg-accent px-4 py-2 font-mono text-2xs uppercase tracking-widest text-accent-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
           >
             {state === "pending" ? "…" : "S'abonner"}
           </button>
         </div>
       )}
       {state === "error" && <p className="mt-1 text-xs text-error">Échec — réessayez.</p>}
-      <p className="mt-1.5 text-[11px] text-foreground-muted">Stratégie de marque, une fois par mois. Désinscription en un clic.</p>
+      <p className="mt-1.5 text-2xs text-foreground-muted">Stratégie de marque, une fois par mois. Désinscription en un clic.</p>
     </div>
   );
 }
@@ -58,7 +59,7 @@ function Newsletter() {
 function Col({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="mb-3.5 font-mono text-[11px] uppercase tracking-widest text-foreground-muted">{title}</div>
+      <div className="mb-3.5 font-mono text-2xs uppercase tracking-widest text-foreground-muted">{title}</div>
       {children}
     </div>
   );
@@ -77,10 +78,8 @@ export function SiteFooter() {
     <footer className="border-t border-border bg-surface-raised print:hidden">
       <div className="mx-auto grid max-w-[var(--maxw-content)] grid-cols-1 gap-12 border-b border-border px-[var(--pad-page)] pb-12 pt-16 md:grid-cols-[1.3fr_2fr]">
         <div>
-          <div className="font-display text-2xl font-semibold tracking-tight">
-            <span className="text-accent">UP</span>graders
-          </div>
-          <p className="mt-2 max-w-[34ch] text-sm text-foreground-secondary">{IDENTITY.tagline} {IDENTITY.claim}</p>
+          <Logo variant="lockup-horizontal" size={38} alt="UPgraders" />
+          <p className="mt-3 max-w-[34ch] text-sm text-foreground-secondary">{IDENTITY.tagline} {IDENTITY.claim}</p>
 
           <div className="mt-6 flex flex-col gap-1.5">
             {CONTACT.whatsapp.map((w) => (
@@ -99,7 +98,7 @@ export function SiteFooter() {
 
           <div className="mt-6 flex flex-wrap gap-2">
             {IDENTITY.hashtags.map((h) => (
-              <span key={h} className="border border-border-subtle px-2 py-1 font-mono text-[11px] text-foreground-muted">
+              <span key={h} className="border border-border-subtle px-2 py-1 font-mono text-2xs text-foreground-muted">
                 {h}
               </span>
             ))}
@@ -137,7 +136,7 @@ export function SiteFooter() {
           </Col>
         </div>
       </div>
-      <div className="mx-auto mt-6 flex max-w-[var(--maxw-content)] flex-wrap gap-x-6 gap-y-2 px-[var(--pad-page)] pb-8 font-mono text-[11px] text-foreground-muted">
+      <div className="mx-auto mt-6 flex max-w-[var(--maxw-content)] flex-wrap gap-x-6 gap-y-2 px-[var(--pad-page)] pb-8 font-mono text-2xs text-foreground-muted">
         <span>© 2026 UPgraders — cabinet de conseil &amp; stratégie · {IDENTITY.hq}</span>
         <span>IP ADVE/RTIS</span>
         <span>La Fusée — Industry OS du marché créatif africain</span>

@@ -77,7 +77,7 @@ export function ContactForm() {
 
   return (
     <div className="border border-border bg-background p-7 md:p-8">
-      <div className="mb-5 font-mono text-[11px] uppercase tracking-widest text-foreground-muted">Brief express</div>
+      <div className="mb-5 font-mono text-2xs uppercase tracking-widest text-foreground-muted">Brief express</div>
       <div className="flex flex-col gap-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="flex flex-col gap-1.5">
@@ -165,11 +165,11 @@ export function ContactForm() {
           </button>
         </div>
         {captured ? (
-          <p className="inline-flex items-center gap-2 font-mono text-[11px] text-success">
+          <p className="inline-flex items-center gap-2 font-mono text-2xs text-success">
             <Check className="h-3.5 w-3.5" /> Brief enregistré — on revient vers vous sous 24 h.
           </p>
         ) : (
-          <p className="font-mono text-[11px] text-foreground-muted">
+          <p className="font-mono text-2xs text-foreground-muted">
             Le brief est enregistré dès l&apos;envoi ; le canal s&apos;ouvre avec le message pré-rempli.
           </p>
         )}

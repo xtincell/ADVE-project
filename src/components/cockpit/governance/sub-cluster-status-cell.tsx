@@ -138,7 +138,7 @@ export function SubClusterStatusCell({
         )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 text-[11px] text-foreground-secondary">
+      <div className="flex flex-wrap items-center gap-2 text-2xs text-foreground-secondary">
         <span>Signal : {formatFreshness(freshnessIso)}</span>
         {deferred && (
           <Link

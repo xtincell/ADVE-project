@@ -11,11 +11,11 @@ import { getFieldLabel } from "@/components/cockpit/field-renderers";
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 const SOURCE_COLORS: Record<string, string> = {
-  GLORY: "bg-blue-500/15 text-blue-400",
-  ARTEMIS: "bg-rose-500/15 text-rose-400",
-  SESHAT: "bg-teal-500/15 text-teal-400",
-  CALC: "bg-orange-500/15 text-orange-400",
-  PILLAR: "bg-amber-500/15 text-amber-400",
+  GLORY: "bg-info/15 text-info",
+  ARTEMIS: "bg-error/15 text-error",
+  SESHAT: "bg-success/15 text-success",
+  CALC: "bg-warning/15 text-warning",
+  PILLAR: "bg-warning/15 text-warning",
   MESTOR: "bg-accent/15 text-accent",
 };
 
@@ -106,16 +106,16 @@ export default function DeliverableViewPage() {
         <div className="flex items-center gap-3">
           <span className="text-sm text-foreground-muted">{m.name}</span>
           {m.isComplete ? (
-            <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400">
+            <span className="inline-flex items-center gap-1 text-2xs text-success">
               <CheckCircle className="h-3 w-3" /> Complet
             </span>
           ) : (
-            <span className="text-[10px] text-amber-400">{m.meta.completedSteps}/{m.meta.totalSteps} sections</span>
+            <span className="text-2xs text-warning">{m.meta.completedSteps}/{m.meta.totalSteps} sections</span>
           )}
           <button
             onClick={handleExportPDF}
             disabled={exporting}
-            className="flex items-center gap-1.5 rounded-lg bg-orange-600 px-4 py-2 text-xs font-semibold text-white hover:bg-orange-500 disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-lg bg-warning px-4 py-2 text-xs font-semibold text-white hover:bg-warning disabled:opacity-50"
           >
             {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
             {exporting ? "Export en cours..." : "Exporter PDF"}
@@ -135,7 +135,7 @@ export default function DeliverableViewPage() {
             <span>•</span>
             <span>{m.sections.length} sections</span>
           </div>
-          <div className="mt-8 h-px bg-gradient-to-r from-transparent via-orange-500/50 to-transparent" />
+          <div className="mt-8 h-px bg-gradient-to-r from-transparent via-warning/50 to-transparent" />
         </div>
 
         {/* Table of contents */}
@@ -179,7 +179,7 @@ export default function DeliverableViewPage() {
                 <div className="space-y-6">
                   {entries.map(([key, value]) => (
                     <div key={key}>
-                      <h3 className="text-[11px] font-bold uppercase tracking-wider text-foreground-muted mb-2">
+                      <h3 className="text-2xs font-bold uppercase tracking-wider text-foreground-muted mb-2">
                         {key.replace(/_/g, " ").replace(/([A-Z])/g, " $1").trim()}
                       </h3>
                       {renderValue(value)}
@@ -190,7 +190,7 @@ export default function DeliverableViewPage() {
 
               {/* Section divider */}
               {i < m.sections.length - 1 && (
-                <div className="mt-12 h-px bg-gradient-to-r from-transparent via-zinc-800 to-transparent" />
+                <div className="mt-12 h-px bg-gradient-to-r from-transparent via-surface-card to-transparent" />
               )}
             </div>
           );
@@ -198,7 +198,7 @@ export default function DeliverableViewPage() {
 
         {/* Footer */}
         <div className="mt-20 pt-8 border-t border-border text-center">
-          <p className="text-[10px] text-foreground-muted">
+          <p className="text-2xs text-foreground-muted">
             Document genere par LaFusee Industry OS — {m.meta.sequenceName} — {new Date(m.meta.generatedAt).toLocaleDateString("fr-FR")}
           </p>
         </div>
@@ -235,7 +235,7 @@ function renderValue(value: unknown): ReactNode {
         <ul className="space-y-1">
           {value.map((item, i) => (
             <li key={i} className="flex items-start gap-2 text-sm text-foreground-secondary">
-              <span className="text-orange-500 mt-1 shrink-0">•</span>
+              <span className="text-warning mt-1 shrink-0">•</span>
               <span>{item as string}</span>
             </li>
           ))}
@@ -271,7 +271,7 @@ function renderValue(value: unknown): ReactNode {
       <div className="rounded-lg border border-border/50 bg-background/30 p-4 space-y-2">
         {Object.entries(value as Record<string, unknown>).map(([k, v]) => (
           <div key={k}>
-            <span className="text-[10px] font-bold text-foreground-muted uppercase">{k.replace(/_/g, " ")}</span>
+            <span className="text-2xs font-bold text-foreground-muted uppercase">{k.replace(/_/g, " ")}</span>
             <div className="mt-0.5">{renderValue(v)}</div>
           </div>
         ))}

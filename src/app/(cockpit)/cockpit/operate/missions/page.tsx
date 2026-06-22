@@ -72,15 +72,15 @@ function hoursUntilDeadline(deadline: string): number {
 function slaColor(hours: number): string {
   if (hours < 0) return "text-error animate-pulse";
   if (hours < 24) return "text-error";
-  if (hours < 48) return "text-amber-400";
-  return "text-emerald-400";
+  if (hours < 48) return "text-warning";
+  return "text-success";
 }
 
 function slaBg(hours: number): string {
-  if (hours < 0) return "bg-error/15 ring-red-500/30";
-  if (hours < 24) return "bg-error/10 ring-red-500/20";
-  if (hours < 48) return "bg-amber-500/10 ring-amber-500/20";
-  return "bg-emerald-500/10 ring-emerald-500/20";
+  if (hours < 0) return "bg-error/15 ring-error/30";
+  if (hours < 24) return "bg-error/10 ring-error/20";
+  if (hours < 48) return "bg-warning/10 ring-warning/20";
+  return "bg-success/10 ring-success/20";
 }
 
 function getNextStatuses(current: string): string[] {
@@ -95,9 +95,9 @@ function getNextStatuses(current: string): string[] {
 }
 
 function priorityBadge(priority: number): { bg: string; text: string } {
-  if (priority === 1) return { bg: "bg-error/15 text-error ring-red-500/30", text: "1" };
-  if (priority <= 3) return { bg: "bg-amber-500/15 text-amber-400 ring-amber-500/30", text: String(priority) };
-  return { bg: "bg-zinc-500/15 text-foreground-secondary ring-zinc-500/30", text: String(priority) };
+  if (priority === 1) return { bg: "bg-error/15 text-error ring-error/30", text: "1" };
+  if (priority <= 3) return { bg: "bg-warning/15 text-warning ring-warning/30", text: String(priority) };
+  return { bg: "bg-foreground-muted/15 text-foreground-secondary ring-border/30", text: String(priority) };
 }
 
 function formatXAF(amount: number): string {
@@ -140,7 +140,7 @@ function ProgressTimeline({ currentStatus }: { currentStatus: string }) {
               <div
                 className={`h-1.5 w-full rounded-full transition-all ${
                   isCompleted
-                    ? "bg-emerald-500"
+                    ? "bg-success"
                     : isCurrent
                       ? "bg-accent"
                       : "bg-background"
@@ -149,7 +149,7 @@ function ProgressTimeline({ currentStatus }: { currentStatus: string }) {
               <span
                 className={`mt-1 text-[9px] font-medium ${
                   isCompleted
-                    ? "text-emerald-400"
+                    ? "text-success"
                     : isCurrent
                       ? "text-accent"
                       : "text-foreground-muted"
@@ -363,7 +363,7 @@ export default function MissionsPage() {
     return (
       <div className="space-y-6">
         <PageHeader title="Missions" />
-        <div className="rounded-xl border border-red-900/50 bg-error/20 p-6 text-center">
+        <div className="rounded-xl border border-error/50 bg-error/20 p-6 text-center">
           <AlertTriangle className="mx-auto h-8 w-8 text-error" />
           <p className="mt-2 text-sm text-error">
             {missionsQuery.error.message}
@@ -506,10 +506,10 @@ export default function MissionsPage() {
                         <StatusBadge status={m.status} />
                         {/* Mode badge */}
                         {!!(m as Record<string, unknown>).mode && (
-                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-medium ${
                             (m as Record<string, unknown>).mode === "DISPATCH"
-                              ? "bg-blue-500/15 text-blue-400"
-                              : "bg-purple-500/15 text-purple-400"
+                              ? "bg-info/15 text-info"
+                              : "bg-accent/15 text-accent"
                           }`}>
                             {(m as Record<string, unknown>).mode as string}
                           </span>
@@ -520,7 +520,7 @@ export default function MissionsPage() {
                           if (p == null) return null;
                           const pb = priorityBadge(p);
                           return (
-                            <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ring-1 ring-inset ${pb.bg}`}>
+                            <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-2xs font-bold ring-1 ring-inset ${pb.bg}`}>
                               {pb.text}
                             </span>
                           );
@@ -528,7 +528,7 @@ export default function MissionsPage() {
                         {/* SLA countdown */}
                         {hoursLeft !== null && (
                           <span
-                            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${slaBg(hoursLeft)} ${slaColor(hoursLeft)}`}
+                            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-semibold ring-1 ring-inset ${slaBg(hoursLeft)} ${slaColor(hoursLeft)}`}
                           >
                             <Timer className="h-3 w-3" />
                             {hoursLeft < 0
@@ -589,7 +589,7 @@ export default function MissionsPage() {
                           {deliverables.length !== 1 ? "s" : ""}
                         </span>
                         {pendingDeliverables.length > 0 && (
-                          <span className="text-amber-400">
+                          <span className="text-warning">
                             {pendingDeliverables.length} en attente
                           </span>
                         )}
@@ -612,7 +612,7 @@ export default function MissionsPage() {
                             {sortedKeys.slice(0, 4).map((pk) => (
                               <span
                                 key={pk}
-                                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${PILLAR_TAG_BG[pk]}`}
+                                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-medium ${PILLAR_TAG_BG[pk]}`}
                               >
                                 {pk.toUpperCase()} &mdash; {PILLAR_NAMES[pk]}
                               </span>
@@ -637,7 +637,7 @@ export default function MissionsPage() {
                       {m.status === "IN_PROGRESS" && (
                         <button
                           onClick={(e) => { e.stopPropagation(); setSubmitTarget({ missionId: m.id, title: m.title }); }}
-                          className="rounded-lg border border-blue-700 bg-blue-950/30 p-1.5 text-blue-400 hover:bg-blue-950/60"
+                          className="rounded-lg border border-info bg-info/30 p-1.5 text-info hover:bg-info/60"
                           title="Soumettre un livrable"
                         >
                           <Send className="h-4 w-4" />
@@ -697,15 +697,15 @@ export default function MissionsPage() {
                   const netPay = commissions?.reduce((s, c) => s + (c.netAmount ?? 0), 0) ?? 0;
 
                   return (
-                    <div className="border-t border-border bg-background/40 divide-y divide-zinc-800/60">
+                    <div className="border-t border-border bg-background/40 divide-y divide-border/60">
 
                       {/* ── Brief ── */}
                       {(objective || persona || keyMsg || delExpected) && (
                         <div className="p-4 space-y-3">
-                          <p className="text-[10px] font-bold uppercase tracking-widest text-accent">Brief</p>
+                          <p className="text-2xs font-bold uppercase tracking-widest text-accent">Brief</p>
                           {objective && (
                             <div>
-                              <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted mb-1 flex items-center gap-1"><Target className="h-3 w-3" /> Objectif</p>
+                              <p className="text-2xs font-semibold uppercase tracking-wide text-foreground-muted mb-1 flex items-center gap-1"><Target className="h-3 w-3" /> Objectif</p>
                               <p className="text-xs text-foreground leading-relaxed">{objective}</p>
                             </div>
                           )}
@@ -713,13 +713,13 @@ export default function MissionsPage() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                               {persona && (
                                 <div className="rounded-lg border border-border bg-background/60 p-3">
-                                  <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted mb-1 flex items-center gap-1"><User className="h-3 w-3" /> Persona</p>
+                                  <p className="text-2xs font-semibold uppercase tracking-wide text-foreground-muted mb-1 flex items-center gap-1"><User className="h-3 w-3" /> Persona</p>
                                   <p className="text-xs text-foreground-secondary leading-relaxed">{persona}</p>
                                 </div>
                               )}
                               {keyMsg && (
                                 <div className="rounded-lg border border-border bg-background/60 p-3">
-                                  <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted mb-1 flex items-center gap-1"><Send className="h-3 w-3" /> Message clé</p>
+                                  <p className="text-2xs font-semibold uppercase tracking-wide text-foreground-muted mb-1 flex items-center gap-1"><Send className="h-3 w-3" /> Message clé</p>
                                   <p className="text-xs text-accent italic">"{keyMsg}"</p>
                                 </div>
                               )}
@@ -727,17 +727,17 @@ export default function MissionsPage() {
                           )}
                           {delExpected && (
                             <div>
-                              <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted mb-1 flex items-center gap-1"><FileCheck className="h-3 w-3" /> Livrables attendus</p>
+                              <p className="text-2xs font-semibold uppercase tracking-wide text-foreground-muted mb-1 flex items-center gap-1"><FileCheck className="h-3 w-3" /> Livrables attendus</p>
                               <p className="text-xs text-foreground-secondary whitespace-pre-line leading-relaxed">{delExpected}</p>
                             </div>
                           )}
                           {Object.keys(metriques).length > 0 && (
                             <div>
-                              <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted mb-2 flex items-center gap-1"><TrendingUp className="h-3 w-3" /> KPIs cibles</p>
+                              <p className="text-2xs font-semibold uppercase tracking-wide text-foreground-muted mb-2 flex items-center gap-1"><TrendingUp className="h-3 w-3" /> KPIs cibles</p>
                               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                 {Object.entries(metriques).map(([k, v]) => (
                                   <div key={k} className="rounded-lg border border-border bg-background/60 p-2.5">
-                                    <p className="text-[10px] text-foreground-muted capitalize">{k.replace(/([A-Z])/g, " $1").trim()}</p>
+                                    <p className="text-2xs text-foreground-muted capitalize">{k.replace(/([A-Z])/g, " $1").trim()}</p>
                                     <p className="text-sm font-semibold text-white">{String(v)}</p>
                                   </div>
                                 ))}
@@ -746,11 +746,11 @@ export default function MissionsPage() {
                           )}
                           {risques.length > 0 && (
                             <div>
-                              <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-600/80 mb-1.5 flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Risques</p>
+                              <p className="text-2xs font-semibold uppercase tracking-wide text-warning/80 mb-1.5 flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Risques</p>
                               <ul className="space-y-1">
                                 {risques.map((r, i) => (
                                   <li key={i} className="flex items-start gap-2 text-xs text-foreground-secondary">
-                                    <span className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-amber-500/60" />
+                                    <span className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-warning/60" />
                                     {r}
                                   </li>
                                 ))}
@@ -760,7 +760,7 @@ export default function MissionsPage() {
                           {pillarPriority.length > 0 && (
                             <div className="flex flex-wrap gap-1.5">
                               {pillarPriority.map((k, i) => (
-                                <span key={k} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${PILLAR_TAG_BG[k as PillarKey] ?? "bg-background text-foreground-secondary"}`}>
+                                <span key={k} className={`rounded-full px-2 py-0.5 text-2xs font-semibold ${PILLAR_TAG_BG[k as PillarKey] ?? "bg-background text-foreground-secondary"}`}>
                                   {i + 1}. {k.toUpperCase()} — {PILLAR_NAMES[k as PillarKey] ?? k}
                                 </span>
                               ))}
@@ -771,7 +771,7 @@ export default function MissionsPage() {
 
                       {/* ── Exécutant + Budget + Commission ── */}
                       <div className="p-4 space-y-3">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-accent">Exécution</p>
+                        <p className="text-2xs font-bold uppercase tracking-widest text-accent">Exécution</p>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                           {/* Exécutant */}
                           <div className="col-span-2 rounded-lg border border-border bg-background/60 p-3 flex items-center gap-3">
@@ -782,26 +782,26 @@ export default function MissionsPage() {
                               }
                             </div>
                             <div className="min-w-0">
-                              <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">Exécutant</p>
+                              <p className="text-2xs font-semibold uppercase tracking-wide text-foreground-muted">Exécutant</p>
                               <p className="text-sm font-medium text-white truncate">{assignee?.name ?? "Non assigné"}</p>
-                              {assignee?.email && <p className="text-[10px] text-foreground-muted truncate">{assignee.email}</p>}
+                              {assignee?.email && <p className="text-2xs text-foreground-muted truncate">{assignee.email}</p>}
                               {commissions?.[0]?.tierAtTime && (
-                                <span className="inline-block mt-0.5 rounded-full bg-amber-500/15 px-1.5 py-px text-[9px] font-semibold text-amber-400">{commissions[0].tierAtTime}</span>
+                                <span className="inline-block mt-0.5 rounded-full bg-warning/15 px-1.5 py-px text-[9px] font-semibold text-warning">{commissions[0].tierAtTime}</span>
                               )}
                             </div>
                           </div>
                           {/* Budget */}
                           <div className="rounded-lg border border-border bg-background/60 p-3">
-                            <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted flex items-center gap-1"><DollarSign className="h-3 w-3" /> Budget</p>
+                            <p className="text-2xs font-semibold uppercase tracking-wide text-foreground-muted flex items-center gap-1"><DollarSign className="h-3 w-3" /> Budget</p>
                             <p className="mt-1 text-sm font-semibold text-white">{budgetVal != null ? formatXAF(budgetVal) : "—"}</p>
                           </div>
                           {/* Rémunération */}
                           {(commissions?.length ?? 0) > 0 && (
                             <div className="rounded-lg border border-border bg-background/60 p-3">
-                              <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted flex items-center gap-1"><Award className="h-3 w-3" /> Rémunération</p>
-                              <p className="mt-1 text-sm font-semibold text-emerald-400">{formatXAF(netPay)}</p>
-                              {totalCommission > 0 && <p className="text-[10px] text-foreground-muted">commission {formatXAF(totalCommission)}</p>}
-                              <span className={`mt-1 inline-block rounded-full px-1.5 py-px text-[9px] font-semibold ${commissions![0]!.status === "PAID" ? "bg-emerald-500/15 text-emerald-400" : "bg-amber-500/15 text-amber-400"}`}>{commissions![0]!.status}</span>
+                              <p className="text-2xs font-semibold uppercase tracking-wide text-foreground-muted flex items-center gap-1"><Award className="h-3 w-3" /> Rémunération</p>
+                              <p className="mt-1 text-sm font-semibold text-success">{formatXAF(netPay)}</p>
+                              {totalCommission > 0 && <p className="text-2xs text-foreground-muted">commission {formatXAF(totalCommission)}</p>}
+                              <span className={`mt-1 inline-block rounded-full px-1.5 py-px text-[9px] font-semibold ${commissions![0]!.status === "PAID" ? "bg-success/15 text-success" : "bg-warning/15 text-warning"}`}>{commissions![0]!.status}</span>
                             </div>
                           )}
                         </div>
@@ -809,7 +809,7 @@ export default function MissionsPage() {
 
                       {/* ── Rapport / Livrables ── */}
                       <div className="p-4 space-y-3">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-accent">
+                        <p className="text-2xs font-bold uppercase tracking-widest text-accent">
                           Rapport d'exécution {deliverables.length > 0 ? `(${deliverables.length})` : ""}
                         </p>
                         {deliverables.length === 0 ? (
@@ -825,17 +825,17 @@ export default function MissionsPage() {
                                 <div key={d.id} className="rounded-xl border border-border bg-background/60 p-4 space-y-2">
                                   <div className="flex items-start justify-between gap-3">
                                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                                      <FileCheck className={`h-4 w-4 flex-shrink-0 ${d.status === "ACCEPTED" ? "text-emerald-400" : d.status === "PENDING" ? "text-amber-400" : "text-foreground-muted"}`} />
+                                      <FileCheck className={`h-4 w-4 flex-shrink-0 ${d.status === "ACCEPTED" ? "text-success" : d.status === "PENDING" ? "text-warning" : "text-foreground-muted"}`} />
                                       <div className="min-w-0">
                                         <p className="text-sm font-semibold text-white">{d.title}</p>
                                         {(dMeta.fileUrl as string | undefined) && (
-                                          <p className="text-[10px] text-accent/70 font-mono truncate">{dMeta.fileUrl as string}</p>
+                                          <p className="text-2xs text-accent/70 font-mono truncate">{dMeta.fileUrl as string}</p>
                                         )}
                                       </div>
                                     </div>
                                     <div className="flex items-center gap-2 flex-shrink-0">
                                       {qcScore != null && (
-                                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${qcScore >= 8 ? "bg-emerald-500/15 text-emerald-400" : qcScore >= 6 ? "bg-amber-500/15 text-amber-400" : "bg-error/15 text-error"}`}>
+                                        <span className={`rounded-full px-2 py-0.5 text-2xs font-bold ${qcScore >= 8 ? "bg-success/15 text-success" : qcScore >= 6 ? "bg-warning/15 text-warning" : "bg-error/15 text-error"}`}>
                                           QC {qcScore}/10
                                         </span>
                                       )}
@@ -847,7 +847,7 @@ export default function MissionsPage() {
                                             <ShieldCheck className="h-3.5 w-3.5" /> QC Review
                                           </button>
                                           <button onClick={(e) => { e.stopPropagation(); setValidateTarget({ id: d.id, title: d.title }); }}
-                                            className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700">
+                                            className="rounded-lg bg-success px-3 py-1.5 text-xs font-medium text-white hover:bg-success">
                                             Valider
                                           </button>
                                         </>
@@ -862,7 +862,7 @@ export default function MissionsPage() {
                                   )}
                                   {qcFeedback && (
                                     <div className="rounded-lg border border-accent/30 bg-accent/10 p-2.5">
-                                      <p className="text-[10px] font-semibold text-accent mb-1">Feedback QC</p>
+                                      <p className="text-2xs font-semibold text-accent mb-1">Feedback QC</p>
                                       <p className="text-xs text-foreground-secondary leading-relaxed">{qcFeedback}</p>
                                     </div>
                                   )}
@@ -942,19 +942,19 @@ export default function MissionsPage() {
                   <p className="mb-1 text-xs font-medium text-foreground-muted uppercase">Donnees du brief</p>
                   {!!briefData.objective && (
                     <div>
-                      <p className="text-[11px] font-medium text-foreground-muted uppercase">Objectif</p>
+                      <p className="text-2xs font-medium text-foreground-muted uppercase">Objectif</p>
                       <p className="text-sm leading-relaxed text-foreground-secondary">{briefData.objective as string}</p>
                     </div>
                   )}
                   {!!briefData.targetPersona && (
                     <div>
-                      <p className="text-[11px] font-medium text-foreground-muted uppercase">Persona cible</p>
+                      <p className="text-2xs font-medium text-foreground-muted uppercase">Persona cible</p>
                       <p className="text-sm leading-relaxed text-foreground-secondary">{briefData.targetPersona as string}</p>
                     </div>
                   )}
                   {!!briefData.keyMessage && (
                     <div>
-                      <p className="text-[11px] font-medium text-foreground-muted uppercase">Message cle</p>
+                      <p className="text-2xs font-medium text-foreground-muted uppercase">Message cle</p>
                       <div className="mt-1 rounded-lg border-l-2 border-accent bg-accent/5 px-3 py-2">
                         <p className="text-sm italic text-accent">{briefData.keyMessage as string}</p>
                       </div>
@@ -962,12 +962,12 @@ export default function MissionsPage() {
                   )}
                   {!!briefData.pillarPriority && Array.isArray(briefData.pillarPriority) && (
                     <div>
-                      <p className="text-[11px] font-medium text-foreground-muted uppercase">Piliers prioritaires</p>
+                      <p className="text-2xs font-medium text-foreground-muted uppercase">Piliers prioritaires</p>
                       <div className="mt-1 flex flex-wrap gap-1.5">
                         {(briefData.pillarPriority as string[]).map((pk) => (
                           <span
                             key={pk}
-                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${PILLAR_TAG_BG[pk as PillarKey] ?? "bg-surface-raised/50 text-foreground-secondary"}`}
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-medium ${PILLAR_TAG_BG[pk as PillarKey] ?? "bg-surface-raised/50 text-foreground-secondary"}`}
                           >
                             {pk.toUpperCase()}
                           </span>
@@ -977,7 +977,7 @@ export default function MissionsPage() {
                   )}
                   {(briefData.budget != null || !!briefData.currency) && (
                     <div>
-                      <p className="text-[11px] font-medium text-foreground-muted uppercase">Budget brief</p>
+                      <p className="text-2xs font-medium text-foreground-muted uppercase">Budget brief</p>
                       <p className="text-sm text-white">
                         {briefData.budget != null
                           ? `${(briefData.budget as number).toLocaleString("fr-FR")} ${(briefData.currency as string) ?? "XAF"}`
@@ -987,7 +987,7 @@ export default function MissionsPage() {
                   )}
                   {!!briefData.deadline && (
                     <div>
-                      <p className="text-[11px] font-medium text-foreground-muted uppercase">Deadline brief</p>
+                      <p className="text-2xs font-medium text-foreground-muted uppercase">Deadline brief</p>
                       <p className="text-sm text-white">
                         {new Date(briefData.deadline as string).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
                       </p>
@@ -995,13 +995,13 @@ export default function MissionsPage() {
                   )}
                   {!!briefData.deliverablesExpected && (
                     <div>
-                      <p className="text-[11px] font-medium text-foreground-muted uppercase">Livrables attendus</p>
+                      <p className="text-2xs font-medium text-foreground-muted uppercase">Livrables attendus</p>
                       <p className="text-sm leading-relaxed text-foreground-secondary">{briefData.deliverablesExpected as string}</p>
                     </div>
                   )}
                   {!!briefData.status && (
                     <div>
-                      <p className="text-[11px] font-medium text-foreground-muted uppercase">Statut brief</p>
+                      <p className="text-2xs font-medium text-foreground-muted uppercase">Statut brief</p>
                       <StatusBadge status={briefData.status as string} />
                     </div>
                   )}
@@ -1009,16 +1009,16 @@ export default function MissionsPage() {
                     const ctx = briefData.missionContext as Record<string, unknown>;
                     return (
                       <div className="rounded-lg border border-border bg-background/80 p-3 space-y-2">
-                        <p className="text-[11px] font-medium text-foreground-muted uppercase">Contexte mission</p>
+                        <p className="text-2xs font-medium text-foreground-muted uppercase">Contexte mission</p>
                         {!!ctx.prerequis && (
                           <div>
-                            <p className="text-[10px] font-medium text-foreground-muted">Prerequis</p>
+                            <p className="text-2xs font-medium text-foreground-muted">Prerequis</p>
                             <p className="text-xs text-foreground-secondary">{String(ctx.prerequis)}</p>
                           </div>
                         )}
                         {!!ctx.metriques && (
                           <div>
-                            <p className="text-[10px] font-medium text-foreground-muted">Metriques</p>
+                            <p className="text-2xs font-medium text-foreground-muted">Metriques</p>
                             <div className="mt-1 space-y-0.5">
                               {typeof ctx.metriques === "object" && ctx.metriques !== null
                                 ? Object.entries(ctx.metriques as Record<string, unknown>).map(([k, v]) => (
@@ -1033,7 +1033,7 @@ export default function MissionsPage() {
                         )}
                         {!!ctx.risques && (
                           <div>
-                            <p className="text-[10px] font-medium text-foreground-muted">Risques</p>
+                            <p className="text-2xs font-medium text-foreground-muted">Risques</p>
                             {Array.isArray(ctx.risques)
                               ? <ul className="mt-1 space-y-0.5 text-xs text-foreground-secondary list-disc list-inside">{(ctx.risques as string[]).map((r, i) => <li key={i}>{r}</li>)}</ul>
                               : <p className="text-xs text-foreground-secondary">{String(ctx.risques)}</p>}
@@ -1104,7 +1104,7 @@ export default function MissionsPage() {
                       .filter(([k]) => k in PILLAR_NAMES)
                       .map(([k, v]) => (
                         <div key={k} className="flex items-center gap-2">
-                          <span className={`w-6 text-center text-[11px] font-bold ${PILLAR_TAG_BG[k as PillarKey].split(" ")[1]}`}>
+                          <span className={`w-6 text-center text-2xs font-bold ${PILLAR_TAG_BG[k as PillarKey].split(" ")[1]}`}>
                             {k.toUpperCase()}
                           </span>
                           <div className="flex-1 h-2 rounded-full bg-background">
@@ -1113,7 +1113,7 @@ export default function MissionsPage() {
                               style={{ width: `${Math.min((v / 25) * 100, 100)}%` }}
                             />
                           </div>
-                          <span className="text-[11px] text-foreground-secondary w-8 text-right">
+                          <span className="text-2xs text-foreground-secondary w-8 text-right">
                             {typeof v === "number" ? v.toFixed(0) : v}
                           </span>
                         </div>
@@ -1139,7 +1139,7 @@ export default function MissionsPage() {
                         disabled={updateMissionMutation.isPending}
                         className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
                           ns === "CANCELLED"
-                            ? "border border-red-800 bg-error/30 text-error hover:bg-error/60"
+                            ? "border border-error bg-error/30 text-error hover:bg-error/60"
                             : "border border-border bg-background text-foreground-secondary hover:bg-surface-raised hover:text-white"
                         }`}
                       >
@@ -1181,11 +1181,11 @@ export default function MissionsPage() {
                             <div className="flex items-center gap-2">
                               {qcScore != null && (
                                 <span
-                                  className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                                  className={`rounded-full px-2 py-0.5 text-2xs font-semibold ${
                                     qcScore >= 80
-                                      ? "bg-emerald-500/15 text-emerald-400"
+                                      ? "bg-success/15 text-success"
                                       : qcScore >= 60
-                                        ? "bg-amber-500/15 text-amber-400"
+                                        ? "bg-warning/15 text-warning"
                                         : "bg-error/15 text-error"
                                   }`}
                                 >
@@ -1288,7 +1288,7 @@ export default function MissionsPage() {
                 value={newMission.title}
                 onChange={(e) => setNewMission({ ...newMission, title: e.target.value })}
                 placeholder="Ex: Creation spot radio 60s — lancement SPAWT"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong"
               />
             </FormField>
             <FormField label="Description">
@@ -1297,7 +1297,7 @@ export default function MissionsPage() {
                 onChange={(e) => setNewMission({ ...newMission, description: e.target.value })}
                 rows={2}
                 placeholder="Contexte et perimetre de la mission..."
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong"
               />
             </FormField>
             <div className="grid grid-cols-3 gap-4">
@@ -1346,7 +1346,7 @@ export default function MissionsPage() {
                   value={newMission.campaignId}
                   onChange={(e) => setNewMission({ ...newMission, campaignId: e.target.value })}
                   placeholder="ID de la campagne (optionnel)"
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong"
                 />
               </FormField>
             </div>
@@ -1361,7 +1361,7 @@ export default function MissionsPage() {
                 value={newMission.objective}
                 onChange={(e) => setNewMission({ ...newMission, objective: e.target.value })}
                 placeholder="Ex: Augmenter la notoriete de 15pts en 3 mois"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong"
               />
             </FormField>
             <FormField label="Persona cible">
@@ -1370,7 +1370,7 @@ export default function MissionsPage() {
                 value={newMission.targetPersona}
                 onChange={(e) => setNewMission({ ...newMission, targetPersona: e.target.value })}
                 placeholder="Ex: Entrepreneurs 25-40 ans, urbains, digitaux"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong"
               />
             </FormField>
             <FormField label="Message cle">
@@ -1379,7 +1379,7 @@ export default function MissionsPage() {
                 value={newMission.keyMessage}
                 onChange={(e) => setNewMission({ ...newMission, keyMessage: e.target.value })}
                 placeholder="Ex: SPAWT — La plateforme qui transforme ton audience en revenus"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong"
               />
             </FormField>
             <FormField label="Livrables attendus">
@@ -1388,13 +1388,13 @@ export default function MissionsPage() {
                 onChange={(e) => setNewMission({ ...newMission, deliverablesExpected: e.target.value })}
                 rows={2}
                 placeholder="Ex: 1 spot radio 60s, 3 variantes 30s, guide de diffusion"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong"
               />
             </FormField>
           </div>
 
           {createMutation.error && (
-            <div className="rounded-lg border border-red-900/50 bg-error/20 p-3 text-xs text-error">
+            <div className="rounded-lg border border-error/50 bg-error/20 p-3 text-xs text-error">
               <AlertTriangle className="mr-2 inline h-4 w-4" />
               {createMutation.error.message}
             </div>
@@ -1456,7 +1456,7 @@ export default function MissionsPage() {
             </div>
           )}
           {suggestQuery.error && (
-            <div className="rounded-lg border border-red-900/50 bg-error/20 p-3 text-xs text-error">
+            <div className="rounded-lg border border-error/50 bg-error/20 p-3 text-xs text-error">
               <AlertTriangle className="mr-2 inline h-3.5 w-3.5" />
               {suggestQuery.error.message}
             </div>
@@ -1490,15 +1490,15 @@ export default function MissionsPage() {
                             {c.displayName ?? c.userId.slice(0, 12)}
                           </p>
                           <div className="mt-0.5 flex items-center gap-2">
-                            <span className="rounded bg-background px-1.5 py-0.5 text-[10px] font-bold text-foreground-secondary">
+                            <span className="rounded bg-background px-1.5 py-0.5 text-2xs font-bold text-foreground-secondary">
                               {c.tier}
                             </span>
                             <span className="text-xs text-foreground-secondary">
-                              Score: <span className={`font-semibold ${c.score >= 70 ? "text-emerald-400" : c.score >= 50 ? "text-amber-400" : "text-foreground-secondary"}`}>{c.score}/100</span>
+                              Score: <span className={`font-semibold ${c.score >= 70 ? "text-success" : c.score >= 50 ? "text-warning" : "text-foreground-secondary"}`}>{c.score}/100</span>
                             </span>
                           </div>
                           {c.breakdown && (
-                            <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-foreground-muted">
+                            <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-2xs text-foreground-muted">
                               {Object.entries(c.breakdown).map(([k, v]) => (
                                 <span key={k}>{getFieldLabel(k)}: <span className="text-foreground-secondary">{v}</span></span>
                               ))}
@@ -1531,7 +1531,7 @@ export default function MissionsPage() {
             );
           })()}
           {assignMutation.isSuccess && (
-            <div className="flex items-center gap-2 rounded-lg border border-emerald-800 bg-emerald-950/20 p-3 text-xs text-emerald-300">
+            <div className="flex items-center gap-2 rounded-lg border border-success bg-success/20 p-3 text-xs text-success">
               <Award className="h-4 w-4" />
               Talent assigne avec succes. La mission est maintenant EN_COURS.
             </div>
@@ -1549,7 +1549,7 @@ export default function MissionsPage() {
         size="md"
       >
         <div className="space-y-4">
-          <div className="flex items-center gap-2 rounded-lg bg-blue-950/20 border border-blue-800/40 p-3 text-xs text-blue-300">
+          <div className="flex items-center gap-2 rounded-lg bg-info/20 border border-info/40 p-3 text-xs text-info">
             <Send className="h-4 w-4 shrink-0" />
             Le livrable sera soumis en revue QC. Un reviewer sera automatiquement assigne selon le tier.
           </div>
@@ -1559,7 +1559,7 @@ export default function MissionsPage() {
               value={newDeliverable.title}
               onChange={(e) => setNewDeliverable({ ...newDeliverable, title: e.target.value })}
               placeholder="Ex: Spot radio 60s — Version finale"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong"
             />
           </FormField>
           <FormField label="URL du fichier">
@@ -1568,7 +1568,7 @@ export default function MissionsPage() {
               value={newDeliverable.fileUrl}
               onChange={(e) => setNewDeliverable({ ...newDeliverable, fileUrl: e.target.value })}
               placeholder="https://drive.google.com/..."
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong"
             />
           </FormField>
           <FormField label="Description / notes">
@@ -1577,11 +1577,11 @@ export default function MissionsPage() {
               onChange={(e) => setNewDeliverable({ ...newDeliverable, description: e.target.value })}
               rows={2}
               placeholder="Contexte, version, remarques..."
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong"
             />
           </FormField>
           {submitDeliverableMutation.error && (
-            <div className="rounded-lg border border-red-900/50 bg-error/20 p-3 text-xs text-error">
+            <div className="rounded-lg border border-error/50 bg-error/20 p-3 text-xs text-error">
               <AlertTriangle className="mr-2 inline h-4 w-4" />
               {submitDeliverableMutation.error.message}
             </div>
@@ -1604,7 +1604,7 @@ export default function MissionsPage() {
                 });
               }}
               disabled={!newDeliverable.title.trim() || submitDeliverableMutation.isPending}
-              className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              className="flex items-center gap-2 rounded-lg bg-info px-4 py-2 text-sm font-medium text-white hover:bg-info disabled:opacity-50"
             >
               <Send className="h-4 w-4" />
               {submitDeliverableMutation.isPending ? "Soumission..." : "Soumettre"}
@@ -1632,15 +1632,15 @@ export default function MissionsPage() {
           <FormField label="Verdict" required>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { v: "ACCEPTED", label: "Accepte", color: "border-emerald-700 bg-emerald-950/30 text-emerald-300" },
-                { v: "MINOR_REVISION", label: "Revision mineure", color: "border-amber-700 bg-amber-950/30 text-amber-300" },
-                { v: "MAJOR_REVISION", label: "Revision majeure", color: "border-orange-700 bg-orange-950/30 text-orange-300" },
-                { v: "REJECTED", label: "Rejete", color: "border-red-700 bg-error/30 text-error" },
+                { v: "ACCEPTED", label: "Accepte", color: "border-success bg-success/30 text-success" },
+                { v: "MINOR_REVISION", label: "Revision mineure", color: "border-warning bg-warning/30 text-warning" },
+                { v: "MAJOR_REVISION", label: "Revision majeure", color: "border-warning bg-warning/30 text-warning" },
+                { v: "REJECTED", label: "Rejete", color: "border-error bg-error/30 text-error" },
               ].map((opt) => (
                 <button
                   key={opt.v}
                   onClick={() => setQcVerdict(opt.v)}
-                  className={`rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${qcVerdict === opt.v ? opt.color + " ring-2 ring-offset-1 ring-offset-zinc-950" : "border-border bg-background text-foreground-secondary hover:border-border"}`}
+                  className={`rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${qcVerdict === opt.v ? opt.color + " ring-2 ring-offset-1 ring-offset-background" : "border-border bg-background text-foreground-secondary hover:border-border"}`}
                 >
                   {opt.label}
                 </button>
@@ -1657,9 +1657,9 @@ export default function MissionsPage() {
               step={0.5}
               value={qcScore}
               onChange={(e) => setQcScore(parseFloat(e.target.value))}
-              className="w-full accent-violet-500"
+              className="w-full accent-accent"
             />
-            <div className="flex justify-between text-[10px] text-foreground-muted">
+            <div className="flex justify-between text-2xs text-foreground-muted">
               <span>0 — Inacceptable</span>
               <span>5 — Moyen</span>
               <span>10 — Parfait</span>
@@ -1672,7 +1672,7 @@ export default function MissionsPage() {
             <div className="grid grid-cols-4 gap-2">
               {[...PILLAR_STORAGE_KEYS].map((pk) => (
                 <div key={pk}>
-                  <p className="mb-1 text-[10px] text-foreground-muted text-center">{pk.toUpperCase()}</p>
+                  <p className="mb-1 text-2xs text-foreground-muted text-center">{pk.toUpperCase()}</p>
                   <input
                     type="number"
                     min={0}
@@ -1703,12 +1703,12 @@ export default function MissionsPage() {
               onChange={(e) => setQcFeedback(e.target.value)}
               rows={4}
               placeholder="Detaillez les points forts, axes d'amelioration, et contexte du verdict..."
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong"
             />
           </FormField>
 
           {reviewDeliverableMutation.error && (
-            <div className="rounded-lg border border-red-900/50 bg-error/20 p-3 text-xs text-error">
+            <div className="rounded-lg border border-error/50 bg-error/20 p-3 text-xs text-error">
               <AlertTriangle className="mr-2 inline h-4 w-4" />
               {reviewDeliverableMutation.error.message}
             </div>
@@ -1758,7 +1758,7 @@ export default function MissionsPage() {
                 onChange={(e) =>
                   setEditTarget({ ...editTarget, title: e.target.value })
                 }
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
               />
             </FormField>
 
@@ -1769,12 +1769,12 @@ export default function MissionsPage() {
                 onChange={(e) =>
                   setEditTarget({ ...editTarget, deadline: e.target.value })
                 }
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
               />
             </FormField>
 
             {(updateMissionMutation.error || setDeadlineMutation.error) && (
-              <div className="rounded-lg border border-red-900/50 bg-error/20 p-3 text-sm text-error">
+              <div className="rounded-lg border border-error/50 bg-error/20 p-3 text-sm text-error">
                 <AlertTriangle className="mr-2 inline h-4 w-4" />
                 {updateMissionMutation.error?.message ?? setDeadlineMutation.error?.message}
               </div>

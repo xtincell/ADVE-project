@@ -41,12 +41,12 @@ const ICON_MAP: Record<string, LucideIcon> = {
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
-  BRANDING: "border-amber-500/30 hover:border-amber-500/60",
-  CAMPAIGN: "border-blue-500/30 hover:border-blue-500/60",
-  CONTENT: "border-emerald-500/30 hover:border-emerald-500/60",
-  PRODUCTION: "border-purple-500/30 hover:border-purple-500/60",
+  BRANDING: "border-warning/30 hover:border-warning/60",
+  CAMPAIGN: "border-info/30 hover:border-info/60",
+  CONTENT: "border-success/30 hover:border-success/60",
+  PRODUCTION: "border-accent/30 hover:border-accent/60",
   OPERATIONS: "border-border-strong/30 hover:border-border-strong/60",
-  ANALYTICS: "border-rose-500/30 hover:border-rose-500/60",
+  ANALYTICS: "border-error/30 hover:border-error/60",
 };
 
 interface Props {
@@ -100,15 +100,15 @@ export function GloryQuickActions({ strategyId, autoOnly, limit }: Props) {
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-medium text-white truncate">{tpl.name}</p>
-                <p className="text-[11px] text-foreground-muted line-clamp-2 mt-0.5">{tpl.description}</p>
+                <p className="text-2xs text-foreground-muted line-clamp-2 mt-0.5">{tpl.description}</p>
                 <div className="mt-1.5 flex items-center gap-2">
-                  <span className="text-[10px] text-foreground-muted">{tpl.estimatedDays}j</span>
+                  <span className="text-2xs text-foreground-muted">{tpl.estimatedDays}j</span>
                   {tpl.autoExecutable && (
-                    <span className="inline-flex rounded-full bg-emerald-400/10 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-400">
+                    <span className="inline-flex rounded-full bg-success/10 px-1.5 py-0.5 text-[9px] font-semibold text-success">
                       AUTO
                     </span>
                   )}
-                  <span className="text-[10px] text-foreground-muted">
+                  <span className="text-2xs text-foreground-muted">
                     {tpl.sequenceKeys.length} seq.
                   </span>
                 </div>

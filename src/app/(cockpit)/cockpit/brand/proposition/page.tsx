@@ -32,8 +32,8 @@ interface BlockerHint {
 }
 
 const STATUS_CONFIG = {
-  complete: { icon: CheckCircle, color: "text-emerald-400", bg: "bg-emerald-900/20", border: "border-emerald-800/30", label: "Complete" },
-  partial: { icon: AlertCircle, color: "text-yellow-400", bg: "bg-yellow-900/20", border: "border-yellow-800/30", label: "Partial" },
+  complete: { icon: CheckCircle, color: "text-success", bg: "bg-success/20", border: "border-success/30", label: "Complete" },
+  partial: { icon: AlertCircle, color: "text-warning", bg: "bg-warning/20", border: "border-warning/30", label: "Partial" },
   empty: { icon: Circle, color: "text-foreground-muted", bg: "bg-background/20", border: "border-border", label: "Vide" },
 };
 
@@ -255,17 +255,17 @@ export default function PropositionPage() {
             {isArtemisRunning && <RefreshCw className="h-3 w-3 animate-spin text-accent" />}
           </div>
           <div className="flex items-center gap-4 text-sm">
-            <span className="text-emerald-400">{completeSections} complets</span>
-            <span className="text-yellow-400">{partialSections} partiels</span>
+            <span className="text-success">{completeSections} complets</span>
+            <span className="text-warning">{partialSections} partiels</span>
             <span className="text-foreground-muted">{emptySections} vides</span>
             <span className="font-bold text-foreground">{completeSections}/{totalSections}</span>
           </div>
         </div>
         <div className="mt-3 flex h-2.5 overflow-hidden rounded-full bg-background">
           {/* lafusee:allow-adhoc-completion: UI section completion ratio (display-only, derived from server query result; not the canonical completion gate) */}
-          <div className="bg-emerald-500 transition-all duration-500" style={{ width: `${(completeSections / totalSections) * 100}%` }} />
+          <div className="bg-success transition-all duration-500" style={{ width: `${(completeSections / totalSections) * 100}%` }} />
           {/* lafusee:allow-adhoc-completion: UI section completion ratio (display-only, derived from server query result; not the canonical completion gate) */}
-          <div className="bg-yellow-500 transition-all duration-500" style={{ width: `${(partialSections / totalSections) * 100}%` }} />
+          <div className="bg-warning transition-all duration-500" style={{ width: `${(partialSections / totalSections) * 100}%` }} />
         </div>
       </div>
 
@@ -279,15 +279,15 @@ export default function PropositionPage() {
           isArtemisRunning
             ? "rounded-xl border border-accent/40 bg-accent/15 p-5"
             : oracleReadyToCompile
-              ? "rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-5"
+              ? "rounded-xl border border-success/30 bg-success/5 p-5"
               : "rounded-xl border border-border bg-surface-raised p-5"
         }
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Sparkles className={`h-5 w-5 ${isArtemisRunning ? "animate-pulse text-accent" : oracleReadyToCompile ? "text-emerald-500" : "text-foreground-secondary"}`} />
+            <Sparkles className={`h-5 w-5 ${isArtemisRunning ? "animate-pulse text-accent" : oracleReadyToCompile ? "text-success" : "text-foreground-secondary"}`} />
             <div>
-              <p className={`text-sm font-semibold ${isArtemisRunning ? "text-accent" : oracleReadyToCompile ? "text-emerald-500" : "text-foreground"}`}>
+              <p className={`text-sm font-semibold ${isArtemisRunning ? "text-accent" : oracleReadyToCompile ? "text-success" : "text-foreground"}`}>
                 Assembler L&apos;Oracle
               </p>
               <p className="text-xs text-foreground-muted">
@@ -327,8 +327,8 @@ export default function PropositionPage() {
             }
             className={
               oracleReadyToCompile
-                ? "flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 disabled:opacity-50"
-                : "flex items-center gap-2 rounded-lg bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-rose-500 disabled:opacity-50"
+                ? "flex items-center gap-2 rounded-lg bg-success px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-success disabled:opacity-50"
+                : "flex items-center gap-2 rounded-lg bg-error px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-error disabled:opacity-50"
             }
           >
             {enrichMutation.isPending ? (
@@ -361,7 +361,7 @@ export default function PropositionPage() {
           <div className="mt-3 space-y-2">
             <p className="text-sm font-semibold text-accent">{enrichResult.finalScore} — {enrichResult.message}</p>
             {enrichResult.seeded.length > 0 && (
-              <p className="text-xs text-emerald-400">Metriques seedees : {enrichResult.seeded.join(", ")}</p>
+              <p className="text-xs text-success">Metriques seedees : {enrichResult.seeded.join(", ")}</p>
             )}
             <details className="text-xs text-foreground-muted" open>
               <summary className="cursor-pointer hover:text-foreground-secondary">Detail par section</summary>
@@ -369,7 +369,7 @@ export default function PropositionPage() {
                 {Object.entries(enrichResult.sectionFeedback).map(([id, fb]) => (
                   <div key={id} className="flex items-center justify-between border-b border-border/30 py-1 last:border-0">
                     <span className="text-foreground-secondary">{id}</span>
-                    <span className={fb.after === "complete" ? "text-emerald-400" : fb.after === "partial" ? "text-yellow-400" : "text-foreground-muted"}>
+                    <span className={fb.after === "complete" ? "text-success" : fb.after === "partial" ? "text-warning" : "text-foreground-muted"}>
                       {fb.after} <span className="text-foreground-muted">({fb.action})</span>
                     </span>
                   </div>
@@ -416,7 +416,7 @@ export default function PropositionPage() {
               <div
                 key={section.id}
                 className={`flex items-center gap-3 rounded-lg border ${config.border} ${config.bg} px-4 py-3 transition-all duration-500 ${
-                  justChanged ? "ring-2 ring-violet-500/50 scale-[1.01]" : ""
+                  justChanged ? "ring-2 ring-accent/50 scale-[1.01]" : ""
                 } ${isArtemisRunning && status !== "complete" ? "animate-pulse" : ""}`}
               >
                 <StatusIcon className={`h-4 w-4 shrink-0 ${config.color} ${justChanged ? "animate-bounce" : ""}`} />
@@ -442,7 +442,7 @@ export default function PropositionPage() {
             if (shareUrl) window.open(shareUrl, "_blank");
             else shareMutation.mutate({ strategyId: strategyId! });
           }}
-          className="flex items-center gap-2 rounded-lg bg-orange-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-orange-500"
+          className="flex items-center gap-2 rounded-lg bg-warning px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-warning"
         >
           <ExternalLink className="h-4 w-4" /> Previsualiser
         </button>
@@ -470,7 +470,7 @@ export default function PropositionPage() {
             }}
             className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-foreground-secondary hover:bg-background"
           >
-            {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+            {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
             {copied ? "Copie!" : "Copier le lien"}
           </button>
         )}
@@ -512,7 +512,7 @@ export default function PropositionPage() {
       {shareUrl && (
         <div className="rounded-lg border border-border bg-background/50 px-4 py-3">
           <p className="text-xs text-foreground-muted">Lien partageable :</p>
-          <p className="mt-1 break-all font-mono text-sm text-orange-400">
+          <p className="mt-1 break-all font-mono text-sm text-warning">
             {typeof window !== "undefined" ? window.location.origin : ""}{shareUrl}
           </p>
         </div>

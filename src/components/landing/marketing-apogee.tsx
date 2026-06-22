@@ -11,13 +11,13 @@ export function MarketingApogee() {
   return (
     <section id="apogee" className="py-24 md:py-32 bg-background relative">
       <div className="mx-auto max-w-[var(--maxw-content)] px-[var(--pad-page)]">
-        <div className="flex items-baseline gap-3.5 mb-6 font-mono text-[11px] uppercase tracking-widest text-foreground-muted">
+        <div className="flex items-baseline gap-3.5 mb-6 font-mono text-2xs uppercase tracking-widest text-foreground-muted">
           <span className="w-8 h-px bg-accent" />
           APOGEE · Trajectoire
         </div>
         <header className="grid grid-cols-1 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] gap-8 lg:gap-20 items-end mb-16">
           <div>
-            <div className="inline-flex items-center gap-3 mb-5 font-mono text-[11px] uppercase tracking-widest text-foreground-muted">
+            <div className="inline-flex items-center gap-3 mb-5 font-mono text-2xs uppercase tracking-widest text-foreground-muted">
               <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
               ↳ DE LATENT À ICÔNE · 6 PALIERS · UNE SEULE DIRECTION
             </div>
@@ -41,22 +41,22 @@ export function MarketingApogee() {
               } ${t.i === 1 ? "opacity-55" : ""}`}
             >
               <div className="flex flex-col gap-1">
-                <span className="font-mono text-[10px] uppercase tracking-widest text-foreground-muted">{t.num}</span>
+                <span className="font-mono text-2xs uppercase tracking-widest text-foreground-muted">{t.num}</span>
                 <span className={`font-display font-semibold text-3xl md:text-4xl tracking-tight ${t.i === 6 ? "text-accent" : t.i === 1 ? "text-foreground-muted" : "text-foreground"}`}>
                   {t.name}
                 </span>
-                <span className="font-mono text-[10px] uppercase tracking-wider text-foreground-muted">{t.alt}</span>
+                <span className="font-mono text-2xs uppercase tracking-wider text-foreground-muted">{t.alt}</span>
               </div>
               <div className="flex flex-col gap-2">
-                <span className="font-mono text-[10px] uppercase tracking-widest text-foreground-muted">PREUVES</span>
+                <span className="font-mono text-2xs uppercase tracking-widest text-foreground-muted">PREUVES</span>
                 <ul className="flex flex-col gap-1 text-sm leading-relaxed text-foreground-secondary">
                   {t.proofs.map((p) => (
                     <li key={p} className="relative pl-3.5 before:content-[''] before:absolute before:left-0 before:top-[0.5em] before:w-1.5 before:h-px before:bg-foreground-muted">{p}</li>
                   ))}
                 </ul>
-                <span className="font-mono text-[10px] uppercase tracking-wider text-accent pt-1.5 mt-1 border-t border-dashed border-border-subtle">↳ {t.metric}</span>
+                <span className="font-mono text-2xs uppercase tracking-wider text-accent pt-1.5 mt-1 border-t border-dashed border-border-subtle">↳ {t.metric}</span>
               </div>
-              <span className="font-mono text-[10px] uppercase tracking-widest text-foreground-muted inline-flex items-center gap-2 whitespace-nowrap">
+              <span className="font-mono text-2xs uppercase tracking-widest text-foreground-muted inline-flex items-center gap-2 whitespace-nowrap">
                 <span className="w-1 h-1 rounded-full bg-accent animate-pulse" />
                 CRON · {t.cron}
               </span>

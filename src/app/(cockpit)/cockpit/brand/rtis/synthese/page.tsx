@@ -29,13 +29,13 @@ function safeArr(val: unknown): Record<string, unknown>[] {
 
 const PILLAR_COLORS: Record<string, { accent: string; bg: string; border: string }> = {
   A: { accent: "text-accent", bg: "bg-accent/10", border: "border-accent/40" },
-  D: { accent: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-800/40" },
-  V: { accent: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-800/40" },
-  E: { accent: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-800/40" },
-  R: { accent: "text-error", bg: "bg-error/10", border: "border-red-800/40" },
-  T: { accent: "text-sky-400", bg: "bg-sky-500/10", border: "border-sky-800/40" },
-  I: { accent: "text-orange-400", bg: "bg-orange-500/10", border: "border-orange-800/40" },
-  S: { accent: "text-pink-400", bg: "bg-pink-500/10", border: "border-pink-800/40" },
+  D: { accent: "text-info", bg: "bg-info/10", border: "border-info/40" },
+  V: { accent: "text-success", bg: "bg-success/10", border: "border-success/40" },
+  E: { accent: "text-warning", bg: "bg-warning/10", border: "border-warning/40" },
+  R: { accent: "text-error", bg: "bg-error/10", border: "border-error/40" },
+  T: { accent: "text-info", bg: "bg-info/10", border: "border-info/40" },
+  I: { accent: "text-warning", bg: "bg-warning/10", border: "border-warning/40" },
+  S: { accent: "text-error", bg: "bg-error/10", border: "border-error/40" },
 };
 
 const PILLAR_ICONS: Record<string, React.ElementType> = {
@@ -152,14 +152,14 @@ export default function SynthesePage() {
       )}
 
       {/* ── NORTHSTAR: Active Superfans ─────────────── */}
-      <section className="rounded-2xl border border-accent/30 bg-gradient-to-r from-violet-950/40 via-fuchsia-950/20 to-zinc-900/80 p-6">
+      <section className="rounded-2xl border border-accent/30 bg-gradient-to-r from-accent/40 via-accent/20 to-background/80 p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/20 ring-1 ring-violet-500/30">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/20 ring-1 ring-accent/30">
               <Crown className="h-7 w-7 text-accent" />
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-accent/80">Northstar</p>
+              <p className="text-2xs font-bold uppercase tracking-widest text-accent/80">Northstar</p>
               <div className="flex items-baseline gap-3">
                 <span className="text-4xl font-black tabular-nums text-white">
                   {superfanCountQuery.data?.active ?? "—"}
@@ -170,20 +170,20 @@ export default function SynthesePage() {
           </div>
           <div className="flex flex-wrap gap-6">
             <div className="text-right">
-              <p className="text-[10px] font-medium uppercase text-foreground-muted">Evangelistes</p>
-              <p className="text-lg font-bold text-fuchsia-400">{superfanCountQuery.data?.evangelistes ?? 0}</p>
+              <p className="text-2xs font-medium uppercase text-foreground-muted">Evangelistes</p>
+              <p className="text-lg font-bold text-accent">{superfanCountQuery.data?.evangelistes ?? 0}</p>
             </div>
             <div className="text-right">
-              <p className="text-[10px] font-medium uppercase text-foreground-muted">Ratio superfan</p>
+              <p className="text-2xs font-medium uppercase text-foreground-muted">Ratio superfan</p>
               <p className="text-lg font-bold text-accent">{superfanCountQuery.data?.ratio ?? 0}%</p>
             </div>
             <div className="text-right">
-              <p className="text-[10px] font-medium uppercase text-foreground-muted">Velocite /30j</p>
+              <p className="text-2xs font-medium uppercase text-foreground-muted">Velocite /30j</p>
               <div className="flex items-center justify-end gap-1">
-                {superfanVelocityQuery.data?.trend === "up" && <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />}
+                {superfanVelocityQuery.data?.trend === "up" && <TrendingUp className="h-3.5 w-3.5 text-success" />}
                 {superfanVelocityQuery.data?.trend === "down" && <TrendingUp className="h-3.5 w-3.5 rotate-180 text-error" />}
                 <span className={`text-lg font-bold ${
-                  superfanVelocityQuery.data?.trend === "up" ? "text-emerald-400" :
+                  superfanVelocityQuery.data?.trend === "up" ? "text-success" :
                   superfanVelocityQuery.data?.trend === "down" ? "text-error" : "text-foreground-secondary"
                 }`}>
                   {superfanVelocityQuery.data?.delta != null
@@ -193,7 +193,7 @@ export default function SynthesePage() {
               </div>
             </div>
             <div className="text-right">
-              <p className="text-[10px] font-medium uppercase text-foreground-muted">Total profiles</p>
+              <p className="text-2xs font-medium uppercase text-foreground-muted">Total profiles</p>
               <p className="text-lg font-bold text-foreground-secondary">{superfanCountQuery.data?.total ?? 0}</p>
             </div>
           </div>
@@ -203,8 +203,8 @@ export default function SynthesePage() {
       {/* ── Cult Index + Devotion Ladder ─────────────── */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Cult Index */}
-        <div className="rounded-2xl border border-pink-800/30 bg-gradient-to-b from-pink-950/10 to-zinc-900/40 p-6">
-          <h2 className="text-lg font-bold text-pink-300 mb-4 flex items-center gap-2">
+        <div className="rounded-2xl border border-error/30 bg-gradient-to-b from-error/10 to-background/40 p-6">
+          <h2 className="text-lg font-bold text-error mb-4 flex items-center gap-2">
             <Gauge className="h-5 w-5" />
             Cult Index
           </h2>
@@ -222,7 +222,7 @@ export default function SynthesePage() {
         </div>
 
         {/* Devotion Ladder */}
-        <div className="rounded-2xl border border-accent/30 bg-gradient-to-b from-violet-950/10 to-zinc-900/40 p-6">
+        <div className="rounded-2xl border border-accent/30 bg-gradient-to-b from-accent/10 to-background/40 p-6">
           <h2 className="text-lg font-bold text-accent mb-4 flex items-center gap-2">
             <Users className="h-5 w-5" />
             Devotion Ladder
@@ -247,8 +247,8 @@ export default function SynthesePage() {
 
       {/* Executive Summary */}
       {syntheseExecutive && (
-        <section className="rounded-2xl border border-pink-800/30 bg-gradient-to-b from-pink-950/10 to-zinc-900/40 p-6">
-          <h2 className="text-lg font-bold text-pink-300 mb-4 flex items-center gap-2">
+        <section className="rounded-2xl border border-error/30 bg-gradient-to-b from-error/10 to-background/40 p-6">
+          <h2 className="text-lg font-bold text-error mb-4 flex items-center gap-2">
             <Brain className="h-5 w-5" />
             Synthese Executive
           </h2>
@@ -258,7 +258,7 @@ export default function SynthesePage() {
 
       {/* Strategic Vision */}
       {visionStrategique && (
-        <section className="rounded-2xl border border-accent/30 bg-gradient-to-b from-violet-950/10 to-zinc-900/40 p-6">
+        <section className="rounded-2xl border border-accent/30 bg-gradient-to-b from-accent/10 to-background/40 p-6">
           <h2 className="text-lg font-bold text-accent mb-4 flex items-center gap-2">
             <Eye className="h-5 w-5" />
             Vision Strategique (3-5 ans)
@@ -271,7 +271,7 @@ export default function SynthesePage() {
       {axes.length > 0 && (
         <section>
           <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            <Target className="h-5 w-5 text-orange-400" />
+            <Target className="h-5 w-5 text-warning" />
             Axes Strategiques
           </h2>
           <div className="grid gap-4">
@@ -288,7 +288,7 @@ export default function SynthesePage() {
                         const colors = PILLAR_COLORS[key];
                         const Icon = PILLAR_ICONS[key] ?? Layers;
                         return colors ? (
-                          <span key={key} className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold ${colors.bg} ${colors.accent}`}>
+                          <span key={key} className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-2xs font-bold ${colors.bg} ${colors.accent}`}>
                             <Icon className="h-3 w-3" />{key}
                           </span>
                         ) : null;
@@ -298,7 +298,7 @@ export default function SynthesePage() {
                   {kpis.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {kpis.map((kpi, j) => (
-                        <span key={j} className="rounded-full bg-background px-2.5 py-1 text-[11px] text-foreground-secondary">
+                        <span key={j} className="rounded-full bg-background px-2.5 py-1 text-2xs text-foreground-secondary">
                           {typeof kpi === "string" ? kpi : safeStr(kpi)}
                         </span>
                       ))}
@@ -315,13 +315,13 @@ export default function SynthesePage() {
       {facteursCles.length > 0 && (
         <section>
           <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            <Star className="h-5 w-5 text-amber-400" />
+            <Star className="h-5 w-5 text-warning" />
             Facteurs Cles de Succes
           </h2>
           <div className="grid grid-cols-2 gap-3">
             {facteursCles.map((f, i) => (
               <div key={i} className="flex items-start gap-3 rounded-xl border border-border bg-background/60 p-4">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-xs font-bold text-amber-300">{i + 1}</span>
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-warning/15 text-xs font-bold text-warning">{i + 1}</span>
                 <p className="text-sm text-foreground-secondary">{typeof f === "string" ? f : ""}</p>
               </div>
             ))}
@@ -347,7 +347,7 @@ export default function SynthesePage() {
                   </span>
                   <p className="flex-1 text-sm text-foreground-secondary">{safeStr(r.recommendation)}</p>
                   {colors && (
-                    <span className={`rounded px-2 py-0.5 text-[10px] font-bold ${colors.bg} ${colors.accent}`}>{source}</span>
+                    <span className={`rounded px-2 py-0.5 text-2xs font-bold ${colors.bg} ${colors.accent}`}>{source}</span>
                   )}
                 </div>
               );
@@ -360,7 +360,7 @@ export default function SynthesePage() {
       {coherencePiliers.length > 0 && (
         <section>
           <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            <Layers className="h-5 w-5 text-cyan-400" />
+            <Layers className="h-5 w-5 text-info" />
             Carte de Coherence Inter-Piliers
           </h2>
           <div className="overflow-x-auto">
@@ -375,7 +375,7 @@ export default function SynthesePage() {
               <tbody>
                 {coherencePiliers.map((c, i) => (
                   <tr key={i} className="border-b border-border/50 hover:bg-background/30">
-                    <td className="py-2.5 px-3 text-cyan-300 font-semibold">{safeStr(c.pilier)}</td>
+                    <td className="py-2.5 px-3 text-info font-semibold">{safeStr(c.pilier)}</td>
                     <td className="py-2.5 px-3 text-foreground-secondary">{safeStr(c.contribution)}</td>
                     <td className="py-2.5 px-3 text-foreground-secondary">{safeStr(c.articulation)}</td>
                   </tr>
@@ -390,13 +390,13 @@ export default function SynthesePage() {
       {sprint90.length > 0 && (
         <section>
           <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            <Rocket className="h-5 w-5 text-orange-400" />
+            <Rocket className="h-5 w-5 text-warning" />
             Sprint 90 Jours — Recap
           </h2>
           <div className="space-y-2">
             {sprint90.map((item, i) => (
               <div key={i} className="flex items-start gap-3 rounded-lg border border-border bg-background/60 p-3">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-orange-500/15 text-[10px] font-bold text-orange-300">{i + 1}</span>
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-warning/15 text-2xs font-bold text-warning">{i + 1}</span>
                 <p className="text-sm text-foreground-secondary">{typeof item === "string" ? item : ""}</p>
               </div>
             ))}
@@ -408,7 +408,7 @@ export default function SynthesePage() {
       {kpiDashboard.length > 0 && (
         <section>
           <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-emerald-400" />
+            <BarChart3 className="h-5 w-5 text-success" />
             Tableau de Bord KPI
           </h2>
           <div className="overflow-x-auto">
@@ -430,7 +430,7 @@ export default function SynthesePage() {
                       <td className="py-2.5 px-3 text-foreground font-medium">{safeStr(kpi.name)}</td>
                       <td className="py-2.5 px-3">
                         {colors ? (
-                          <span className={`rounded px-2 py-0.5 text-[10px] font-bold ${colors.bg} ${colors.accent}`}>{pillar}</span>
+                          <span className={`rounded px-2 py-0.5 text-2xs font-bold ${colors.bg} ${colors.accent}`}>{pillar}</span>
                         ) : (
                           <span className="text-foreground-muted">{pillar}</span>
                         )}

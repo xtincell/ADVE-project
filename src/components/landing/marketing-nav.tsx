@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { LayoutGrid } from "lucide-react";
+import { LayoutGrid, Menu, X } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { LocaleToggle } from "@/components/i18n/locale-toggle";
 
@@ -43,33 +44,44 @@ function NavSessionLink() {
   );
 }
 
+/* La Fusée brand lockup — official mark + wordmark + version tag (design MkBrand). */
+function FuseeBrand() {
+  return (
+    <Link href="/lafusee" className="flex items-center gap-2.5" aria-label="La Fusée">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/brand/logos/lafusee-logo.png" alt="" aria-hidden="true" className="h-6 w-auto sm:h-7" />
+      <span className="font-semibold tracking-tight text-base">
+        La Fusée<span className="text-accent">.</span>
+      </span>
+      <span className="hidden text-2xs font-mono text-foreground-muted px-1.5 py-0.5 border border-border sm:inline">v6.27</span>
+    </Link>
+  );
+}
+
 export function MarketingNav() {
   const { t } = useLocale();
+  const [open, setOpen] = useState(false);
+
+  const links: { href: string; label: string }[] = [
+    { href: "#manifesto", label: t("landing.nav.manifesto") },
+    { href: "#methode", label: t("landing.nav.method") },
+    { href: "#apogee", label: t("landing.nav.apogee") },
+    { href: "#gouverneurs", label: t("landing.nav.governors") },
+    { href: "#portails", label: t("landing.nav.portals") },
+    { href: "#tarifs", label: t("landing.nav.pricing") },
+  ];
+
   return (
-    <nav className="fixed top-0 left-0 right-0 z-[var(--z-topbar)] backdrop-blur-md bg-background/60 border-b border-border-subtle">
+    <nav className="fixed top-0 left-0 right-0 z-[var(--z-topbar)] backdrop-blur-md bg-background/60 border-b border-border-subtle print:hidden">
       <div className="mx-auto max-w-[var(--maxw-content)] px-[var(--pad-page)] flex items-center justify-between py-4">
-        <Link href="/" className="flex items-center gap-3" aria-label="La Fusée">
-          <span aria-hidden="true">
-            <svg viewBox="0 0 32 32" width="22" height="22" fill="none">
-              <rect x="14" y="2" width="4" height="22" fill="var(--color-foreground)" />
-              <path d="M16 2 L20 8 L12 8 Z" fill="var(--color-accent)" />
-              <rect x="10" y="20" width="12" height="4" fill="var(--color-foreground)" />
-              <path d="M10 24 L16 30 L22 24 Z" fill="var(--color-accent)" />
-            </svg>
-          </span>
-          <span className="font-semibold tracking-tight text-base">
-            La Fusée<span className="text-accent">.</span>
-          </span>
-          <span className="text-[10px] font-mono text-foreground-muted px-1.5 py-0.5 border border-border">v6.27</span>
-        </Link>
+        <FuseeBrand />
 
         <div className="hidden lg:flex gap-7 text-sm">
-          <a href="#manifesto" className="text-foreground-secondary hover:text-foreground transition-colors">{t("landing.nav.manifesto")}</a>
-          <a href="#methode" className="text-foreground-secondary hover:text-foreground transition-colors">{t("landing.nav.method")}</a>
-          <a href="#apogee" className="text-foreground-secondary hover:text-foreground transition-colors">{t("landing.nav.apogee")}</a>
-          <a href="#gouverneurs" className="text-foreground-secondary hover:text-foreground transition-colors">{t("landing.nav.governors")}</a>
-          <a href="#portails" className="text-foreground-secondary hover:text-foreground transition-colors">{t("landing.nav.portals")}</a>
-          <a href="#tarifs" className="text-foreground-secondary hover:text-foreground transition-colors">{t("landing.nav.pricing")}</a>
+          {links.map((l) => (
+            <a key={l.href} href={l.href} className="text-foreground-secondary hover:text-foreground transition-colors">
+              {l.label}
+            </a>
+          ))}
         </div>
 
         <div className="flex items-center gap-4">
@@ -77,13 +89,47 @@ export function MarketingNav() {
           <NavSessionLink />
           <a
             href="/intake"
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-accent text-accent-foreground hover:bg-accent-hover transition-colors"
+            className="hidden sm:inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-accent text-accent-foreground hover:bg-accent-hover transition-colors"
           >
             {t("landing.nav.cta")}
             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
           </a>
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            className="inline-flex h-9 w-9 items-center justify-center text-foreground lg:hidden"
+            aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
+            aria-expanded={open}
+          >
+            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
         </div>
       </div>
+
+      {open ? (
+        <div className="border-t border-border-subtle bg-background/95 backdrop-blur-md lg:hidden">
+          <div className="mx-auto flex max-w-[var(--maxw-content)] flex-col px-[var(--pad-page)] py-3">
+            {links.map((l) => (
+              <a
+                key={l.href}
+                href={l.href}
+                onClick={() => setOpen(false)}
+                className="border-b border-border-subtle py-3 text-sm text-foreground-secondary transition-colors hover:text-foreground"
+              >
+                {l.label}
+              </a>
+            ))}
+            <a
+              href="/intake"
+              onClick={() => setOpen(false)}
+              className="mt-4 inline-flex items-center justify-center gap-2 bg-accent px-4 py-3 text-sm font-medium text-accent-foreground"
+            >
+              {t("landing.nav.cta")}
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+            </a>
+          </div>
+        </div>
+      ) : null}
     </nav>
   );
 }

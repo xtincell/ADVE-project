@@ -49,10 +49,10 @@ const ASSIGNEE_OPTIONS = [
 ];
 
 const URGENCY_VARIANTS: Record<string, string> = {
-  low: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
-  medium: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
-  high: "bg-orange-400/15 text-orange-400 ring-orange-400/30",
-  critical: "bg-error/15 text-error ring-red-400/30",
+  low: "bg-foreground-muted/15 text-foreground-secondary ring-border/30",
+  medium: "bg-warning/15 text-warning ring-warning/30",
+  high: "bg-warning/15 text-warning ring-warning/30",
+  critical: "bg-error/15 text-error ring-error/30",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -66,13 +66,13 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_VARIANTS: Record<string, string> = {
-  OPEN: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
-  ASSIGNED: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
-  IN_PROGRESS: "bg-accent/15 text-accent ring-violet-400/30",
-  RESOLVED: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
-  pending: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
-  converted: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
-  dismissed: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
+  OPEN: "bg-warning/15 text-warning ring-warning/30",
+  ASSIGNED: "bg-info/15 text-info ring-info/30",
+  IN_PROGRESS: "bg-accent/15 text-accent ring-accent/30",
+  RESOLVED: "bg-success/15 text-success ring-success/30",
+  pending: "bg-warning/15 text-warning ring-warning/30",
+  converted: "bg-success/15 text-success ring-success/30",
+  dismissed: "bg-foreground-muted/15 text-foreground-secondary ring-border/30",
 };
 
 const RESOLUTION_FLOW = ["OPEN", "ASSIGNED", "IN_PROGRESS", "RESOLVED"] as const;
@@ -91,8 +91,8 @@ function SlaIndicator({ createdAt, urgency }: { createdAt: string; urgency: stri
   const remaining = slaLimit - elapsed;
   const pct = Math.min((elapsed / slaLimit) * 100, 100);
 
-  let color = "text-emerald-400";
-  let bgColor = "bg-emerald-500";
+  let color = "text-success";
+  let bgColor = "bg-success";
   if (remaining <= 0) {
     color = "text-error animate-pulse";
     bgColor = "bg-error";
@@ -100,8 +100,8 @@ function SlaIndicator({ createdAt, urgency }: { createdAt: string; urgency: stri
     color = "text-error";
     bgColor = "bg-error";
   } else if (remaining < slaLimit * 0.5) {
-    color = "text-amber-400";
-    bgColor = "bg-amber-500";
+    color = "text-warning";
+    bgColor = "bg-warning";
   }
 
   const formatTime = (h: number) => {
@@ -113,7 +113,7 @@ function SlaIndicator({ createdAt, urgency }: { createdAt: string; urgency: stri
 
   return (
     <div className="space-y-1">
-      <div className="flex items-center justify-between text-[10px]">
+      <div className="flex items-center justify-between text-2xs">
         <span className={color}>
           {remaining <= 0 ? "SLA depasse" : `${formatTime(remaining)} restant`}
         </span>
@@ -140,18 +140,18 @@ function ResolutionWorkflow({ currentStatus }: { currentStatus: string }) {
         return (
           <div key={s} className="flex items-center">
             <div
-              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+              className={`rounded-full px-2 py-0.5 text-2xs font-semibold ${
                 isCurrent
-                  ? "bg-accent/20 text-accent ring-1 ring-violet-500/30"
+                  ? "bg-accent/20 text-accent ring-1 ring-accent/30"
                   : done
-                    ? "bg-emerald-500/15 text-emerald-400"
+                    ? "bg-success/15 text-success"
                     : "bg-background text-foreground-muted"
               }`}
             >
               {STATUS_LABELS[s] ?? s}
             </div>
             {i < RESOLUTION_FLOW.length - 1 && (
-              <ArrowRight className={`mx-0.5 h-3 w-3 ${done ? "text-emerald-500/50" : "text-foreground-muted"}`} />
+              <ArrowRight className={`mx-0.5 h-3 w-3 ${done ? "text-success/50" : "text-foreground-muted"}`} />
             )}
           </div>
         );
@@ -175,7 +175,7 @@ function TypeDistribution({ requests }: { requests: Array<Record<string, unknown
     emergency: "Urgence",
   };
   const colors: Record<string, string> = {
-    one_off: "bg-blue-500",
+    one_off: "bg-info",
     recurring: "bg-accent",
     emergency: "bg-error",
   };
@@ -184,13 +184,13 @@ function TypeDistribution({ requests }: { requests: Array<Record<string, unknown
     <div className="space-y-2">
       {Object.entries(counts).map(([type, count]) => (
         <div key={type} className="space-y-0.5">
-          <div className="flex items-center justify-between text-[10px]">
+          <div className="flex items-center justify-between text-2xs">
             <span className="text-foreground-secondary">{labels[type] ?? type}</span>
             <span className="text-foreground-muted">{count}</span>
           </div>
           <div className="h-1.5 w-full rounded-full bg-background">
             <div
-              className={`h-full rounded-full transition-all ${colors[type] ?? "bg-zinc-500"}`}
+              className={`h-full rounded-full transition-all ${colors[type] ?? "bg-foreground-muted"}`}
               // lafusee:allow-adhoc-completion: UI mission/request progress display (count-based, not pillar completion)
               style={{ width: `${(count / total) * 100}%` }}
             />
@@ -322,7 +322,7 @@ export default function RequestsPage() {
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
                 placeholder="Ex: Mise a jour urgente du logo"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
               />
             </FormField>
 
@@ -334,7 +334,7 @@ export default function RequestsPage() {
                 }
                 rows={4}
                 placeholder="Decrivez votre besoin en detail..."
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
               />
             </FormField>
 
@@ -367,14 +367,14 @@ export default function RequestsPage() {
             </FormField>
 
             {createMutation.error && (
-              <div className="rounded-lg border border-red-900/50 bg-error/20 p-3 text-sm text-error">
+              <div className="rounded-lg border border-error/50 bg-error/20 p-3 text-sm text-error">
                 <AlertTriangle className="mr-2 inline h-4 w-4" />
                 {createMutation.error.message}
               </div>
             )}
 
             {createMutation.isSuccess && (
-              <div className="rounded-lg border border-emerald-900/50 bg-emerald-950/20 p-3 text-sm text-emerald-300">
+              <div className="rounded-lg border border-success/50 bg-success/20 p-3 text-sm text-success">
                 <CheckCircle className="mr-2 inline h-4 w-4" />
                 Demande envoyee avec succes.
               </div>
@@ -442,7 +442,7 @@ export default function RequestsPage() {
                               status={urgency}
                               variantMap={URGENCY_VARIANTS}
                             />
-                            <span className="rounded-full bg-background px-2 py-0.5 text-[10px] font-medium text-foreground-secondary">
+                            <span className="rounded-full bg-background px-2 py-0.5 text-2xs font-medium text-foreground-secondary">
                               {reqType === "one_off" ? "Ponctuelle" : reqType === "recurring" ? "Recurrente" : "Urgence"}
                             </span>
                           </div>

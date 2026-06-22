@@ -72,10 +72,10 @@ export default function PortfolioNodeDetailPage() {
           <div>
             <h1 className="flex items-baseline gap-3 text-2xl font-semibold">
               {node.name}
-              <span className="rounded bg-blue-500/15 px-2 py-0.5 text-xs uppercase tracking-wide text-blue-300">
+              <span className="rounded bg-info/15 px-2 py-0.5 text-xs uppercase tracking-wide text-info">
                 {node.nodeKind}
               </span>
-              <span className="rounded bg-zinc-700 px-2 py-0.5 text-xs uppercase tracking-wide">
+              <span className="rounded bg-surface-overlay px-2 py-0.5 text-xs uppercase tracking-wide">
                 {node.nodeNature}
               </span>
             </h1>
@@ -92,13 +92,13 @@ export default function PortfolioNodeDetailPage() {
             />
             <button
               onClick={() => setMode((m) => (m === "EDIT" ? "VIEW" : "EDIT"))}
-              className="inline-flex items-center gap-1 rounded border border-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-800"
+              className="inline-flex items-center gap-1 rounded border border-border px-3 py-1.5 text-sm hover:bg-surface-card"
             >
               <Edit3 className="h-4 w-4" /> Éditer
             </button>
             <button
               onClick={() => setMode((m) => (m === "CREATE_CHILD" ? "VIEW" : "CREATE_CHILD"))}
-              className="inline-flex items-center gap-1 rounded border border-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-800"
+              className="inline-flex items-center gap-1 rounded border border-border px-3 py-1.5 text-sm hover:bg-surface-card"
             >
               <Plus className="h-4 w-4" /> Ajouter enfant
             </button>
@@ -115,7 +115,7 @@ export default function PortfolioNodeDetailPage() {
 
       {/* Forms */}
       {mode === "EDIT" && (
-        <div className="rounded border border-zinc-700 bg-zinc-900/50">
+        <div className="rounded border border-border bg-surface-raised/50">
           <BrandNodeForm
             nodeId={node.id}
             operatorId={operator.id}
@@ -131,7 +131,7 @@ export default function PortfolioNodeDetailPage() {
       )}
 
       {mode === "CREATE_CHILD" && (
-        <div className="rounded border border-zinc-700 bg-zinc-900/50">
+        <div className="rounded border border-border bg-surface-raised/50">
           <BrandNodeForm
             operatorId={operator.id}
             parentNodeId={node.id}
@@ -275,10 +275,10 @@ function InheritanceSection({ nodeId }: { nodeId: string }) {
   if (!resolved) return null;
 
   const SOURCE_COLORS: Record<string, string> = {
-    OWN_OVERRIDE: "bg-amber-500/15 text-amber-300",
-    OWN_VIA_STRATEGY: "bg-emerald-500/15 text-emerald-300",
-    INHERITED_FROM: "bg-blue-500/15 text-blue-300",
-    DEFAULT_EMPTY: "bg-zinc-500/15 text-zinc-400",
+    OWN_OVERRIDE: "bg-warning/15 text-warning",
+    OWN_VIA_STRATEGY: "bg-success/15 text-success",
+    INHERITED_FROM: "bg-info/15 text-info",
+    DEFAULT_EMPTY: "bg-foreground-muted/15 text-foreground-secondary",
   };
   const SOURCE_LABELS: Record<string, string> = {
     OWN_OVERRIDE: "🟡 OVERRIDE",
@@ -291,8 +291,8 @@ function InheritanceSection({ nodeId }: { nodeId: string }) {
   const RTIS = RTIS_STORAGE_KEYS;
 
   return (
-    <section className="rounded border border-zinc-700">
-      <header className="border-b border-zinc-700 px-4 py-2 flex items-center gap-2">
+    <section className="rounded border border-border">
+      <header className="border-b border-border px-4 py-2 flex items-center gap-2">
         <h2 className="text-sm font-medium uppercase tracking-wide">
           Piliers ADVE/RTIS résolus (héritage)
         </h2>
@@ -304,27 +304,27 @@ function InheritanceSection({ nodeId }: { nodeId: string }) {
         {ADVE.map((key) => {
           const v = resolved.pillars[key];
           return (
-            <div key={key} className="rounded border border-zinc-800 bg-zinc-900/30 p-3">
+            <div key={key} className="rounded border border-border-subtle bg-surface-raised/30 p-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-lg font-semibold uppercase">{key}</span>
-                <span className={`rounded px-1.5 py-0.5 text-[10px] uppercase ${SOURCE_COLORS[v.source] ?? ""}`}>
+                <span className={`rounded px-1.5 py-0.5 text-2xs uppercase ${SOURCE_COLORS[v.source] ?? ""}`}>
                   {SOURCE_LABELS[v.source] ?? v.source}
                 </span>
               </div>
               {v.provenanceNodeName && (
-                <div className="mt-1 text-[10px] text-foreground-secondary" title={`Distance: ${v.inheritanceDistance}`}>
+                <div className="mt-1 text-2xs text-foreground-secondary" title={`Distance: ${v.inheritanceDistance}`}>
                   ← {v.provenanceNodeName}
                 </div>
               )}
-              <div className="mt-1 text-[10px] text-foreground-secondary">
+              <div className="mt-1 text-2xs text-foreground-secondary">
                 {v.content === null ? "(pas de contenu)" : `${Object.keys((v.content as object) ?? {}).length} champs`}
               </div>
             </div>
           );
         })}
       </div>
-      <div className="border-t border-zinc-800 px-4 py-2">
-        <div className="text-[10px] uppercase tracking-wide text-foreground-secondary">
+      <div className="border-t border-border-subtle px-4 py-2">
+        <div className="text-2xs uppercase tracking-wide text-foreground-secondary">
           RTIS (dérivés ADR-0023 — recalculés via ENRICH_*)
         </div>
         <div className="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -350,7 +350,7 @@ function InheritanceSection({ nodeId }: { nodeId: string }) {
 
 function MetaItem({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="rounded border border-zinc-800 bg-zinc-900/30 p-3">
+    <div className="rounded border border-border-subtle bg-surface-raised/30 p-3">
       <div className="flex items-center gap-1.5 text-xs text-foreground-secondary">
         {icon} {label}
       </div>

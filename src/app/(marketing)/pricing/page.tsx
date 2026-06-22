@@ -82,7 +82,7 @@ export default function PricingPage() {
       <MarketingNav />
 
       <main className="mx-auto max-w-[var(--maxw-content)] px-[var(--pad-page)] py-24">
-        <div className="mb-8 flex items-baseline gap-3.5 font-mono text-[11px] uppercase tracking-widest" style={{ color: "var(--color-foreground-secondary)" }}>
+        <div className="mb-8 flex items-baseline gap-3.5 font-mono text-2xs uppercase tracking-widest" style={{ color: "var(--color-foreground-secondary)" }}>
           <span className="h-px w-8 bg-accent" />
           Tarifs · Product ladder
         </div>
@@ -101,14 +101,14 @@ export default function PricingPage() {
 
         {/* Sélecteur de zone */}
         <div className="mb-12 flex flex-wrap items-center gap-2">
-          <span className="font-mono text-[11px] uppercase tracking-widest" style={{ color: "var(--color-foreground-secondary)" }}>
+          <span className="font-mono text-2xs uppercase tracking-widest" style={{ color: "var(--color-foreground-secondary)" }}>
             Zone :
           </span>
           {ZONES.map((z) => (
             <button
               key={z.code}
               onClick={() => setCountry(z.code)}
-              className={`border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider transition-colors ${
+              className={`border px-3 py-1.5 font-mono text-2xs uppercase tracking-wider transition-colors ${
                 country === z.code ? "bg-accent text-accent-foreground border-accent" : "hover:border-accent"
               }`}
               style={country === z.code ? {} : { borderColor: "color-mix(in oklab, var(--color-foreground) 18%, transparent)" }}
@@ -146,12 +146,12 @@ export default function PricingPage() {
                   }
                 >
                   {featured && (
-                    <span className="absolute -top-3 left-8 bg-accent px-2.5 py-1 font-mono text-[10px] uppercase tracking-widest text-accent-foreground">
+                    <span className="absolute -top-3 left-8 bg-accent px-2.5 py-1 font-mono text-2xs uppercase tracking-widest text-accent-foreground">
                       ★ Recommandé
                     </span>
                   )}
                   <header className="flex flex-col gap-1.5">
-                    <span className="font-mono text-[11px] uppercase tracking-widest text-accent">{tier.key.replaceAll("_", " ")}</span>
+                    <span className="font-mono text-2xs uppercase tracking-widest text-accent">{tier.key.replaceAll("_", " ")}</span>
                     <h3 className="font-display text-3xl font-semibold tracking-tight">{tier.label}</h3>
                     <p className="text-sm opacity-75">{tier.summary}</p>
                   </header>
@@ -170,7 +170,7 @@ export default function PricingPage() {
                     {monthly && tier.amount > 0 && !tier.adminFree && <span className="text-sm opacity-60">/ mois</span>}
                   </div>
                   {tier.adminFree && (
-                    <span className="-mt-3 inline-block w-fit bg-accent px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest text-accent-foreground">
+                    <span className="-mt-3 inline-block w-fit bg-accent px-2 py-0.5 font-mono text-2xs uppercase tracking-widest text-accent-foreground">
                       Accès admin · -100%
                     </span>
                   )}

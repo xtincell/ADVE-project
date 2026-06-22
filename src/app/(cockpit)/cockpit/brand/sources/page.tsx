@@ -37,10 +37,10 @@ import {
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof CheckCircle }> = {
   PENDING: { label: "En attente", color: "text-foreground-muted", icon: Clock },
-  EXTRACTING: { label: "Extraction...", color: "text-amber-400", icon: Loader2 },
-  EXTRACTED: { label: "Extrait", color: "text-blue-400", icon: CheckCircle },
-  PROCESSING: { label: "Traitement...", color: "text-amber-400", icon: Loader2 },
-  PROCESSED: { label: "Traite", color: "text-emerald-400", icon: CheckCircle },
+  EXTRACTING: { label: "Extraction...", color: "text-warning", icon: Loader2 },
+  EXTRACTED: { label: "Extrait", color: "text-info", icon: CheckCircle },
+  PROCESSING: { label: "Traitement...", color: "text-warning", icon: Loader2 },
+  PROCESSED: { label: "Traite", color: "text-success", icon: CheckCircle },
   FAILED: { label: "Echec", color: "text-error", icon: AlertCircle },
 };
 
@@ -53,10 +53,10 @@ const TYPE_ICONS: Record<string, typeof FileText> = {
 
 // PR-A (ADR-0032) — visual mapping certainty → couleur + icône.
 const CERTAINTY_VISUAL: Record<SourceCertainty, { color: string; icon: typeof Shield }> = {
-  OFFICIAL: { color: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300", icon: ShieldCheck },
-  DECLARED: { color: "border-blue-500/40 bg-blue-500/10 text-blue-300", icon: Shield },
-  INFERRED: { color: "border-amber-500/40 bg-amber-500/10 text-amber-300", icon: ShieldAlert },
-  ARBITRARY: { color: "border-zinc-500/40 bg-zinc-500/10 text-zinc-300", icon: ShieldQuestion },
+  OFFICIAL: { color: "border-success/40 bg-success/10 text-success", icon: ShieldCheck },
+  DECLARED: { color: "border-info/40 bg-info/10 text-info", icon: Shield },
+  INFERRED: { color: "border-warning/40 bg-warning/10 text-warning", icon: ShieldAlert },
+  ARBITRARY: { color: "border-border/40 bg-foreground-muted/10 text-foreground-secondary", icon: ShieldQuestion },
 };
 
 /**
@@ -82,7 +82,7 @@ function CertaintyBadge({
   const Icon = visual.icon;
   return (
     <label
-      className={`relative inline-flex cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium transition ${visual.color} ${pending ? "opacity-50" : "hover:brightness-110"}`}
+      className={`relative inline-flex cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 text-2xs font-medium transition ${visual.color} ${pending ? "opacity-50" : "hover:brightness-110"}`}
       title={SOURCE_CERTAINTY_DESCRIPTION[current]}
     >
       <Icon className="h-3 w-3" />
@@ -114,9 +114,9 @@ function renderPillarMapping(mapping: unknown): React.ReactNode {
   if (keys.length === 0) return null;
   return (
     <div className="mt-2 flex flex-wrap gap-1">
-      <span className="text-[10px] text-foreground-muted">Piliers nourris :</span>
+      <span className="text-2xs text-foreground-muted">Piliers nourris :</span>
       {keys.map(key => (
-        <span key={key} className="rounded-full bg-blue-500/15 px-2 py-0.5 text-[10px] text-blue-300">
+        <span key={key} className="rounded-full bg-info/15 px-2 py-0.5 text-2xs text-info">
           {key.toUpperCase()}
         </span>
       ))}
@@ -186,7 +186,7 @@ function ProposalsPanel({
           <Sparkles className="h-3.5 w-3.5" />
           <span>Propositions vault</span>
           {drafts.length > 0 ? (
-            <span className="rounded-full bg-accent/20 px-2 py-0.5 text-[10px]">
+            <span className="rounded-full bg-accent/20 px-2 py-0.5 text-2xs">
               {drafts.length}
             </span>
           ) : null}
@@ -199,7 +199,7 @@ function ProposalsPanel({
               acceptAllMutation.mutate({ strategyId, sourceDataSourceId: sourceId });
             }}
             disabled={acceptAllMutation.isPending}
-            className="rounded bg-accent px-2 py-1 text-[10px] font-medium text-white hover:bg-accent/80 disabled:opacity-50"
+            className="rounded bg-accent px-2 py-1 text-2xs font-medium text-white hover:bg-accent/80 disabled:opacity-50"
           >
             {acceptAllMutation.isPending ? "Acceptation..." : "Tout accepter (≥0.8)"}
           </button>
@@ -219,7 +219,7 @@ function ProposalsPanel({
                 type="button"
                 onClick={() => proposeMutation.mutate({ strategyId, sourceId })}
                 disabled={proposeMutation.isPending}
-                className="flex items-center gap-1 rounded bg-accent/20 px-2 py-1 text-[10px] text-accent hover:bg-accent/30 disabled:opacity-50"
+                className="flex items-center gap-1 rounded bg-accent/20 px-2 py-1 text-2xs text-accent hover:bg-accent/30 disabled:opacity-50"
               >
                 {proposeMutation.isPending ? (
                   <Loader2 className="h-3 w-3 animate-spin" />
@@ -293,22 +293,22 @@ function ProposalCard({
                 ))}
               </select>
             ) : (
-              <span className="rounded bg-accent/15 px-2 py-0.5 text-[10px] font-mono text-accent">
+              <span className="rounded bg-accent/15 px-2 py-0.5 text-2xs font-mono text-accent">
                 {draft.kind}
               </span>
             )}
             {draft.pillarSource ? (
-              <span className="rounded-full bg-blue-500/15 px-2 py-0.5 text-[10px] text-blue-300">
+              <span className="rounded-full bg-info/15 px-2 py-0.5 text-2xs text-info">
                 Pilier {draft.pillarSource}
               </span>
             ) : null}
             {confidence !== null ? (
-              <span className="text-[10px] text-foreground-muted">
+              <span className="text-2xs text-foreground-muted">
                 conf. {(confidence * 100).toFixed(0)}%
               </span>
             ) : null}
             {inferredBy ? (
-              <span className="text-[10px] text-foreground-muted">via {inferredBy}</span>
+              <span className="text-2xs text-foreground-muted">via {inferredBy}</span>
             ) : null}
           </div>
           <p className="mt-1 truncate text-sm font-medium text-foreground">{draft.name}</p>
@@ -326,7 +326,7 @@ function ProposalCard({
                   setEditing(false);
                 }}
                 disabled={pending}
-                className="rounded bg-emerald-500/20 p-1.5 text-emerald-300 hover:bg-emerald-500/30 disabled:opacity-50"
+                className="rounded bg-success/20 p-1.5 text-success hover:bg-success/30 disabled:opacity-50"
                 title="Accepter avec ce kind"
               >
                 <Check className="h-3.5 w-3.5" />
@@ -346,7 +346,7 @@ function ProposalCard({
                 type="button"
                 onClick={() => onAccept()}
                 disabled={pending}
-                className="rounded bg-emerald-500/20 p-1.5 text-emerald-300 hover:bg-emerald-500/30 disabled:opacity-50"
+                className="rounded bg-success/20 p-1.5 text-success hover:bg-success/30 disabled:opacity-50"
                 title="Accepter (DRAFT → SELECTED)"
               >
                 <Check className="h-3.5 w-3.5" />
@@ -464,14 +464,14 @@ export default function SourcesPage() {
             placeholder="Titre (ex: Notes de reunion client, Brief initial, Analyse concurrentielle...)"
             value={noteTitle}
             onChange={e => setNoteTitle(e.target.value)}
-            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-accent"
+            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-accent"
           />
           <textarea
             placeholder="Collez ici toute information utile sur la marque : description, historique, positionnement, concurrents, chiffres cles, verbatims clients, notes de reunion..."
             value={noteContent}
             onChange={e => setNoteContent(e.target.value)}
             rows={6}
-            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-accent resize-y"
+            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-accent resize-y"
           />
           <div className="flex justify-end gap-2">
             <button onClick={() => setShowAddForm(false)} className="rounded px-3 py-1.5 text-xs text-foreground-muted hover:bg-white/5">
@@ -562,7 +562,7 @@ export default function SourcesPage() {
                           });
                           setPurgeConfirmName("");
                         }}
-                        className="rounded p-1 text-foreground-muted/40 hover:text-amber-300 hover:bg-amber-500/10 transition-colors"
+                        className="rounded p-1 text-foreground-muted/40 hover:text-warning hover:bg-warning/10 transition-colors"
                         title="Re-ingérer (purge + re-extract depuis l'intake)"
                       >
                         <RefreshCw className="h-3.5 w-3.5" />
@@ -586,7 +586,7 @@ export default function SourcesPage() {
                     <p className="mb-1 text-xs font-medium text-foreground-muted">Champs extraits :</p>
                     <div className="flex flex-wrap gap-1">
                       {Object.keys(source.extractedFields as Record<string, unknown>).slice(0, 10).map(key => (
-                        <span key={key} className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] text-accent">
+                        <span key={key} className="rounded-full bg-accent/15 px-2 py-0.5 text-2xs text-accent">
                           {key}
                         </span>
                       ))}
@@ -632,13 +632,13 @@ export default function SourcesPage() {
               <p className="text-foreground-muted">
                 Les éditions opérateur sur les piliers A/D/V/E seront perdues. Les piliers RTIS sont préservés (mais marqués <em>stale</em> automatiquement par le prochain ENRICH).
               </p>
-              <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3">
-                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-amber-300">
+              <div className="rounded-md border border-warning/40 bg-warning/5 p-3">
+                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-warning">
                   Anti-foot-gun
                 </p>
                 <p className="mb-3 text-xs text-foreground-muted">
                   Tapez le nom de la marque en MAJUSCULES pour confirmer :
-                  <code className="ml-1 rounded bg-white/10 px-1.5 py-0.5 text-amber-200">{expectedName}</code>
+                  <code className="ml-1 rounded bg-white/10 px-1.5 py-0.5 text-warning">{expectedName}</code>
                 </p>
                 <input
                   type="text"
@@ -647,7 +647,7 @@ export default function SourcesPage() {
                   placeholder={expectedName}
                   disabled={submitting}
                   autoFocus
-                  className="w-full rounded border border-white/15 bg-white/5 px-3 py-2 text-sm uppercase tracking-wider text-foreground outline-none focus:border-amber-400 disabled:opacity-50"
+                  className="w-full rounded border border-white/15 bg-white/5 px-3 py-2 text-sm uppercase tracking-wider text-foreground outline-none focus:border-warning disabled:opacity-50"
                 />
               </div>
 
@@ -675,7 +675,7 @@ export default function SourcesPage() {
                     });
                   }}
                   disabled={!echoMatches || submitting}
-                  className="flex items-center gap-1.5 rounded bg-amber-600 px-3 py-1.5 text-xs font-medium text-black hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex items-center gap-1.5 rounded bg-warning px-3 py-1.5 text-xs font-medium text-black hover:bg-warning disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {submitting ? (
                     <><Loader2 className="h-3 w-3 animate-spin" /> Re-ingestion…</>

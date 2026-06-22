@@ -95,7 +95,7 @@ export function Topbar({
       >
         <Search className="h-3.5 w-3.5" />
         <span>Rechercher...</span>
-        <kbd className="ml-4 rounded-sm border border-border-subtle bg-background px-1.5 py-0.5 text-[10px] font-medium text-foreground-muted">
+        <kbd className="ml-4 rounded-sm border border-border-subtle bg-background px-1.5 py-0.5 text-2xs font-medium text-foreground-muted">
           Ctrl K
         </kbd>
       </button>
