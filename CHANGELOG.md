@@ -10,6 +10,17 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.22 — UPgraders : vrai site d'agence multi-pages en page d'accueil (La Fusée → sous-site) (2026-06-22)
+
+**Directive opérateur : « où est le site d'UPgraders ? je veux un vrai site, pas une solopage. c'est cette page qui servira d'index. » + « ne confonds pas les CTA de La Fusée et ceux d'UPgraders : La Fusée est un produit d'UPgraders, un parmi d'autres. » + « inclus tout ce que tu sais d'UPgraders synthétisé. »**
+
+- `feat(marketing)` **Le site public `/` devient le vrai site multi-pages d'UPgraders (l'agence)** ; **La Fusée (le produit/OS) devient un sous-site `/lafusee`** (l'ancienne landing long-scroll, déplacée intacte avec ses 14 sections `Marketing*` + sa propre chrome). 9 routes neuves sous `(marketing)` : `/` (accueil agence), `/agence`, `/methode`, `/services`, `/la-guilde`, `/realisations`, `/blog` (+ `/blog/[slug]`), `/contact`, `/lafusee`.
+- **Distinction CTA agence ≠ produit (correctif explicite)** : le CTA d'UPgraders **vend l'agence** → « Démarrer un projet » / « Parler à l'agence » / « Demander un devis » → `/contact` (canal commercial réel = **WhatsApp** Douala/Abidjan, surfacé sur `/contact` + brief express sans backend qui pré-remplit le message). Le diagnostic `/intake` **reste le funnel self-serve de La Fusée** (un produit parmi d'autres), partout étiqueté « La Fusée — notre produit ». Vocabulaire CTA centralisé dans `src/components/upgraders/data.ts` (`CTA.projectPrimary` vs `CTA.lafuseeDiagnostic`).
+- **Contenu = canon business + dossier agence concret** : porté de la KB [UPGRADERS-LAFUSEE-KB.md](docs/governance/context/UPGRADERS-LAFUSEE-KB.md) (5 piliers Impulsion/Pilotis/Source Insights/La Guilde/Sérénité ; EFR / **obligation d'effet** ; 6 paliers + score cible /200 ; `capture-then-grow` ; premium curated ; hiérarchie UPgraders › La Fusée › Argos) **+** du dossier réel (équipe Alexandre « Xtincell » Djengue / Ingrid Nya Ngatchou / Jean-Philippe Veigne ; trajectoire 2017→2026 ; La Guilde — Stéphane Nounamo, Annick, Paulhan, Friends Studio ; réalisations Motion19, UMA, Chococam, Orange, Cimencam, KOF, Akwa Palace, Maison Gimane, Shakazz… ; contacts WhatsApp + email + réseaux). 6 « notes de cabinet » (blog). **Aucun terme religieux/interne face au client** (KB §3).
+- **DS canon respecté** (UPgraders DS — corail + Clash Display/Satoshi/JetBrains Mono) : composants `src/components/upgraders/` (chrome `site-nav`/`site-footer` responsive + session-aware, helpers `ui`, blocs réutilisables `blocks`, `contact-form`, `data`, `posts`). Tokens sémantiques uniquement — passe les 3 gates anti-drift (`design-tokens-cascade`/`-canonical`/`-primitives-cva`). 0 nouveau token, 0 raw color.
+- Hors phases 0–9 de la refonte (out-of-scope, cf. `scope-drift.md`). 0 nouveau Neter, 0 model Prisma, 0 bypass governance (pages statiques de contenu). tsc 0 · eslint 0 · `next build` exit 0 (9 routes générées). Cap APOGEE 7/7 préservé.
+
+
 ## v6.27.21 — fix CI : Golden Path 1-landing (lien mort `/legal/privacy` + icônes PWA) (2026-06-21)
 
 **Correctif racine du check `Golden Path E2E` rouge sur `main` depuis ~2026-05-31 (step `1-landing`).**
