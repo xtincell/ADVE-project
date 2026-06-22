@@ -48,9 +48,11 @@ describe("manual payment — INVARIANT: pending_manual grants no access", () => 
 
 describe("manual payment — UI surface", () => {
   it("pricing page CTA uses the manual flow (not the auto provider redirect)", () => {
-    const pricing = read("src/app/(marketing)/pricing/page.tsx");
-    expect(pricing).toContain("initManualSubscription");
-    expect(pricing).toContain("whatsappUrl");
+    // La grille tarifaire (+ son CTA manual-flow) est partagée par /pricing
+    // (chrome La Fusée) et /tarifs (chrome UPgraders) via <PricingGrid>.
+    const grid = read("src/components/marketing/pricing-grid.tsx");
+    expect(grid).toContain("initManualSubscription");
+    expect(grid).toContain("whatsappUrl");
   });
   it("console validation queue route exists + is in the nav", () => {
     expect(existsSync(join(ROOT, "src/app/(console)/console/socle/manual-subscriptions/page.tsx"))).toBe(true);

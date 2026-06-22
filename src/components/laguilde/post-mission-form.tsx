@@ -18,7 +18,8 @@ import { Input } from "@/components/primitives/input";
 import { Textarea } from "@/components/primitives/textarea";
 import { Select } from "@/components/primitives/select";
 import { Card, CardHeader, CardBody } from "@/components/primitives/card";
-import { Field, FieldHelper, FieldError } from "@/components/primitives/field";
+import { Field, FieldHelper } from "@/components/primitives/field";
+import { FriendlyError } from "@/components/shared/friendly-error";
 import { Label } from "@/components/primitives/label";
 import { cn } from "@/lib/utils";
 import {
@@ -487,9 +488,7 @@ export function PostMissionForm() {
         </CardBody>
       </Card>
 
-      {post.isError && (
-        <FieldError>{post.error.message}</FieldError>
-      )}
+      {post.isError && <FriendlyError error={post.error} />}
 
       <div className="flex items-center gap-3">
         <Button type="submit" size="lg" loading={post.isPending}>

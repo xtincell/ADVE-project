@@ -18,7 +18,8 @@ import { Button } from "@/components/primitives/button";
 import { Input } from "@/components/primitives/input";
 import { Textarea } from "@/components/primitives/textarea";
 import { Card, CardBody } from "@/components/primitives/card";
-import { Field, FieldHelper, FieldError } from "@/components/primitives/field";
+import { Field, FieldHelper } from "@/components/primitives/field";
+import { FriendlyError } from "@/components/shared/friendly-error";
 import { Label } from "@/components/primitives/label";
 import { cn } from "@/lib/utils";
 
@@ -276,7 +277,7 @@ export function JoinGuildForm() {
         </CardBody>
       </Card>
 
-      {error && <FieldError>{error}</FieldError>}
+      {error && <FriendlyError error={error} />}
 
       <div className="flex items-center gap-3">
         <Button type="submit" size="lg" loading={busy}>

@@ -72,6 +72,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Qui sommes-nous", href: "/agence" },
   { label: "Méthode", href: "/methode" },
   { label: "Services", href: "/services" },
+  { label: "Tarifs", href: "/tarifs" },
   { label: "La Guilde", href: "/la-guilde" },
   { label: "Réalisations", href: "/realisations" },
   { label: "Blog", href: "/blog" },
