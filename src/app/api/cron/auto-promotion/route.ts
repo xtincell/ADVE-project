@@ -17,13 +17,7 @@ export const dynamic = "force-dynamic";
  */
 
 import { NextResponse } from "next/server";
-
-function verifyCronSecret(request: Request): boolean {
-  const authHeader = request.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret) return true; // dev mode bypass
-  return authHeader === `Bearer ${cronSecret}`;
-}
+import { verifyCronSecret } from "@/lib/cron-auth";
 
 function isLiveMode(request: Request): boolean {
   if (process.env.AUTO_PROMOTION_LIVE === "true") return true;

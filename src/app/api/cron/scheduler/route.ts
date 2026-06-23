@@ -9,18 +9,11 @@ export const dynamic = "force-dynamic";
 
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
+import { verifyCronSecret } from "@/lib/cron-auth";
 import { snapshotAllStrategies } from "@/server/services/advertis-scorer";
 import { schedulerAutoTrigger, checkPipelineContention } from "@/server/services/pipeline-orchestrator";
 import { collectMarketSignals, type CollectionStrategy } from "@/server/services/market-intelligence/signal-collector";
 import { analyzeWeakSignals, buildSearchContext } from "@/server/services/market-intelligence/weak-signal-analyzer";
-
-// Verify cron secret to prevent unauthorized access
-function verifyCronSecret(request: Request): boolean {
-  const authHeader = request.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret) return true; // Allow in dev if no secret configured
-  return authHeader === `Bearer ${cronSecret}`;
-}
 
 export async function GET(request: Request) {
   if (!verifyCronSecret(request)) {

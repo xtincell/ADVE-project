@@ -1,11 +1,18 @@
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { verifyCronSecret } from "@/lib/cron-auth";
 import { quickIntakeRouter } from "@/server/trpc/routers/quick-intake";
 import { oracleRouter } from "@/server/trpc/routers/oracle";
 import { createCallerFactory } from "@/server/trpc/init";
 
-export async function GET() {
+export async function GET(request: Request) {
+  // E2E harness writes to the DB (creates users/intakes/strategies) — must never
+  // be reachable anonymously in production. 404 hides its existence.
+  if (!verifyCronSecret(request)) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   const output: string[] = [];
   const log = (msg: string) => {
     console.log(msg);
