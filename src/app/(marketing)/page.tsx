@@ -116,13 +116,16 @@ function Hero() {
               <span className="up-figure__tick up-figure__tick--bl" />
               <span className="up-figure__tick up-figure__tick--br" />
               <span className="up-figure__tag"><i />UPGRADERS · STUDIO</span>
-              <figcaption className="up-figure__cap"><span>Direction créative</span><span className="em">DOUALA · ABIDJAN</span></figcaption>
+              {/* figcaption retirée ici : elle occupe TOUTE la largeur du bas
+                  (Direction créative à gauche, Douala·Abidjan à droite) et entrait
+                  en collision avec le badge stat flottant, quel que soit le côté.
+                  Le tag UPGRADERS·STUDIO + les 2 badges suffisent à brander. */}
             </figure>
 
             {/* real brand stats, not live metrics — editorial proof.
-                Badge en bas-DROITE : le bas-gauche est occupé par la figcaption
-                `up-figure__cap` (Direction créative · Douala) → collision sinon. */}
-            <div className="absolute -bottom-5 -right-5 hidden items-center gap-3 border border-border bg-surface-card px-4 py-3 shadow-lg sm:flex" style={{ borderRadius: "var(--radius-lg)" }}>
+                Badges aux coins opposés : « 7 ans » en haut-droite, « 30+ » en
+                bas-gauche — plus de figcaption pleine largeur → aucune collision. */}
+            <div className="absolute -bottom-5 -left-5 hidden items-center gap-3 border border-border bg-surface-card px-4 py-3 shadow-lg sm:flex" style={{ borderRadius: "var(--radius-lg)" }}>
               <span className="font-display text-2xl font-semibold text-accent">{STATS[2]?.value}</span>
               <span className="max-w-[12ch] font-mono text-2xs uppercase leading-tight tracking-widest text-foreground-muted">{STATS[2]?.label}</span>
             </div>
