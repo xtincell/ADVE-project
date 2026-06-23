@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.25 — Sécurité : endpoints cron fail-closed + harnais test-e2e gardé (2026-06-23)
+
+**Découvert par le bot `site-prober` (PR #298) : les 10 routes `/api/cron/*` s'exécutaient SANS authentification en production, et `/api/test-e2e` écrivait en base + divulguait l'e-mail admin — pour n'importe quel visiteur anonyme.**
+
+- `fix(security)` **cause racine** : chaque route cron définissait son propre `verifyCronSecret` avec `if (!cronSecret) return true` (**fail-open**) ; la prod n'ayant pas `CRON_SECRET` défini, tout appelant anonyme était autorisé. `feedback-loop` n'avait même aucune garde.
+- **Helper partagé `src/lib/cron-auth.ts`** — `verifyCronSecret(request)` **fail-CLOSED en production** : exige `Authorization: Bearer $CRON_SECRET` ; en l'absence de secret, n'autorise que hors production (confort dev), **jamais en prod**. Les 10 routes cron consomment ce helper (9 copies locales supprimées + garde ajoutée sur `feedback-loop`).
+- `fix(security)` **`/api/test-e2e`** : le harnais E2E (créait users/intakes/strategies en base) est gardé par le même secret → **404 en prod** sans bearer valide.
+- **Action requise au déploiement** : définir `CRON_SECRET` (valeur aléatoire forte) dans **Vercel env** ET en **secret GitHub Actions** (même valeur ; `.github/workflows/scheduled-ops.yml` l'envoie déjà). Sans ça, les crons restent fermés — c'est l'état sûr.
+- Hors phases 0–9 (out-of-scope, hotfix sécurité). 0 nouveau Neter (Cap APOGEE 7/7), 0 model Prisma, 0 bypass. tsc 0 · eslint 0. Cf. Justification — out-of-scope dans le body PR.
+
 ## v6.27.24 — Blog : seed des notes de cabinet automatisé au déploiement (create-only) (2026-06-22)
 
 **Directive opérateur : « tu ne peux pas lancer le seed toi-même ou le mettre dans le process de déploiement ? » — le sandbox n'a pas de credential DB ; la bonne réponse est de le câbler au déploiement.**

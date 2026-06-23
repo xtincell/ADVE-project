@@ -15,17 +15,11 @@ export const dynamic = "force-dynamic";
  */
 
 import { NextResponse } from "next/server";
+import { verifyCronSecret } from "@/lib/cron-auth";
 import { db } from "@/lib/db";
 
 const GRACE_DAYS = 3;
 const RECO_MAX_AGE_DAYS = 30;
-
-function verifyCronSecret(request: Request): boolean {
-  const authHeader = request.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret) return true;
-  return authHeader === `Bearer ${cronSecret}`;
-}
 
 export async function GET(request: Request) {
   if (!verifyCronSecret(request)) {

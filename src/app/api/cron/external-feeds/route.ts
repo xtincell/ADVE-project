@@ -16,14 +16,8 @@ export const dynamic = "force-dynamic";
  * Cadence recommandée : quotidienne (les agrégats macro bougent lentement).
  */
 import { NextResponse } from "next/server";
+import { verifyCronSecret } from "@/lib/cron-auth";
 import { refreshAllPriorityPairs } from "@/server/services/seshat/external-feeds";
-
-function verifyCronSecret(request: Request): boolean {
-  const authHeader = request.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret) return true; // dev/local sans secret : autorisé
-  return authHeader === `Bearer ${cronSecret}`;
-}
 
 export async function GET(request: Request) {
   if (!verifyCronSecret(request)) {

@@ -14,14 +14,8 @@ export const dynamic = "force-dynamic";
  */
 
 import { NextResponse } from "next/server";
+import { verifyCronSecret } from "@/lib/cron-auth";
 import { runDownloadArchiver } from "@/server/services/ptah/download-archiver";
-
-function verifyCronSecret(request: Request): boolean {
-  const authHeader = request.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret) return true;
-  return authHeader === `Bearer ${cronSecret}`;
-}
 
 export async function GET(request: Request) {
   if (!verifyCronSecret(request)) {
