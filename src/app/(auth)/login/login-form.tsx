@@ -120,7 +120,7 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="vous@entreprise.com"
-              className="w-full rounded-lg border border-border bg-surface-card px-3 py-2.5 text-sm text-foreground placeholder:text-foreground-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+              className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground placeholder:text-foreground-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
             />
           </div>
 
@@ -145,7 +145,7 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full rounded-lg border border-border bg-surface-card px-3 py-2.5 text-sm text-foreground placeholder:text-foreground-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+              className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground placeholder:text-foreground-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
             />
           </div>
 
@@ -161,15 +161,15 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
         {googleEnabled && (
           <>
             <div className="my-5 flex items-center gap-3">
-              <div className="h-px flex-1 bg-surface-card" />
+              <div className="h-px flex-1 bg-card" />
               <span className="text-xs uppercase tracking-wide text-foreground-muted">ou</span>
-              <div className="h-px flex-1 bg-surface-card" />
+              <div className="h-px flex-1 bg-card" />
             </div>
 
             <button
               type="button"
               onClick={handleGoogle}
-              className="flex w-full items-center justify-center gap-2.5 rounded-lg border border-border bg-surface-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-surface-overlay focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-background"
+              className="flex w-full items-center justify-center gap-2.5 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-surface-overlay focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-background"
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
                 <path

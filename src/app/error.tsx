@@ -69,7 +69,7 @@ export default function Error({
           </button>
           <Link
             href="/"
-            className="rounded-lg border border-border px-5 py-2.5 text-sm font-medium text-foreground-secondary transition-colors hover:border-border hover:bg-surface-card hover:text-foreground"
+            className="rounded-lg border border-border px-5 py-2.5 text-sm font-medium text-foreground-secondary transition-colors hover:border-border hover:bg-card hover:text-foreground"
           >
             Retour a l&apos;accueil
           </Link>

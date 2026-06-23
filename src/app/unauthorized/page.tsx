@@ -36,25 +36,25 @@ export default function UnauthorizedPage() {
           <div className="flex flex-col gap-2">
             <Link
               href="/portals"
-              className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground-secondary transition-colors hover:border-accent/50 hover:bg-surface-card hover:text-foreground"
+              className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground-secondary transition-colors hover:border-accent/50 hover:bg-card hover:text-foreground"
             >
               Hub des portails (mes accès)
             </Link>
             <Link
               href="/cockpit"
-              className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground-secondary transition-colors hover:border-accent/50 hover:bg-surface-card hover:text-foreground"
+              className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground-secondary transition-colors hover:border-accent/50 hover:bg-card hover:text-foreground"
             >
               Cockpit — Brand OS
             </Link>
             <Link
               href="/creator"
-              className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground-secondary transition-colors hover:border-accent/50 hover:bg-surface-card hover:text-foreground"
+              className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground-secondary transition-colors hover:border-accent/50 hover:bg-card hover:text-foreground"
             >
               Creator — Espace Createur
             </Link>
             <Link
               href="/"
-              className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground-secondary transition-colors hover:border-accent/50 hover:bg-surface-card hover:text-foreground"
+              className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground-secondary transition-colors hover:border-accent/50 hover:bg-card hover:text-foreground"
             >
               ← Landing La Fusée
             </Link>

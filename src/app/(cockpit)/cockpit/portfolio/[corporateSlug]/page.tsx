@@ -92,13 +92,13 @@ export default function PortfolioNodeDetailPage() {
             />
             <button
               onClick={() => setMode((m) => (m === "EDIT" ? "VIEW" : "EDIT"))}
-              className="inline-flex items-center gap-1 rounded border border-border px-3 py-1.5 text-sm hover:bg-surface-card"
+              className="inline-flex items-center gap-1 rounded border border-border px-3 py-1.5 text-sm hover:bg-card"
             >
               <Edit3 className="h-4 w-4" /> Éditer
             </button>
             <button
               onClick={() => setMode((m) => (m === "CREATE_CHILD" ? "VIEW" : "CREATE_CHILD"))}
-              className="inline-flex items-center gap-1 rounded border border-border px-3 py-1.5 text-sm hover:bg-surface-card"
+              className="inline-flex items-center gap-1 rounded border border-border px-3 py-1.5 text-sm hover:bg-card"
             >
               <Plus className="h-4 w-4" /> Ajouter enfant
             </button>

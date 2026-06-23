@@ -48,7 +48,7 @@ export default function PortfolioRootPage() {
         <div className="flex gap-2">
           <Link
             href="/launchpad/portfolio-bulk-import"
-            className="inline-flex items-center gap-2 rounded border border-border px-3 py-1.5 text-sm hover:bg-surface-card"
+            className="inline-flex items-center gap-2 rounded border border-border px-3 py-1.5 text-sm hover:bg-card"
           >
             <Upload className="h-4 w-4" /> Import XLSX
           </Link>

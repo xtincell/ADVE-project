@@ -125,11 +125,11 @@ function Hero() {
             {/* real brand stats, not live metrics — editorial proof.
                 Badges aux coins opposés : « 7 ans » en haut-droite, « 30+ » en
                 bas-gauche — plus de figcaption pleine largeur → aucune collision. */}
-            <div className="absolute -bottom-5 -left-5 hidden items-center gap-3 border border-border bg-surface-card px-4 py-3 shadow-lg sm:flex" style={{ borderRadius: "var(--radius-lg)" }}>
+            <div className="absolute -bottom-5 -left-5 hidden items-center gap-3 border border-border bg-card px-4 py-3 shadow-lg sm:flex" style={{ borderRadius: "var(--radius-lg)" }}>
               <span className="font-display text-2xl font-semibold text-accent">{STATS[2]?.value}</span>
               <span className="max-w-[12ch] font-mono text-2xs uppercase leading-tight tracking-widest text-foreground-muted">{STATS[2]?.label}</span>
             </div>
-            <div className="absolute -right-4 top-6 hidden items-center gap-3 border border-border bg-surface-card px-4 py-3 shadow-lg md:flex" style={{ borderRadius: "var(--radius-lg)" }}>
+            <div className="absolute -right-4 top-6 hidden items-center gap-3 border border-border bg-card px-4 py-3 shadow-lg md:flex" style={{ borderRadius: "var(--radius-lg)" }}>
               <span className="font-display text-2xl font-semibold text-foreground">{STATS[1]?.value}</span>
               <span className="max-w-[12ch] font-mono text-2xs uppercase leading-tight tracking-widest text-foreground-muted">{STATS[1]?.label}</span>
             </div>

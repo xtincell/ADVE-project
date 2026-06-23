@@ -5,7 +5,7 @@ export default function NotFound() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
       <div className="text-center">
         {/* 404 badge */}
-        <div className="mb-6 inline-flex items-center justify-center rounded-full bg-surface-card px-4 py-1.5">
+        <div className="mb-6 inline-flex items-center justify-center rounded-full bg-card px-4 py-1.5">
           <span className="text-sm font-semibold text-foreground-secondary">404</span>
         </div>
 
@@ -37,7 +37,7 @@ export default function NotFound() {
           </Link>
           <Link
             href="/login"
-            className="rounded-lg border border-border px-5 py-2.5 text-sm font-medium text-foreground-secondary transition-colors hover:border-border hover:bg-surface-card hover:text-foreground"
+            className="rounded-lg border border-border px-5 py-2.5 text-sm font-medium text-foreground-secondary transition-colors hover:border-border hover:bg-card hover:text-foreground"
           >
             Se connecter
           </Link>
