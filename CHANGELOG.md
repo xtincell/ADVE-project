@@ -10,6 +10,14 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.40 — Sécurité LLM LOT 1c (batch 4) : schémas de sortie réels — 5 outils CR (2026-06-23)
+
+**Suite LOT 1c** — vrais schémas pour 5 outils CR de copywriting stratégique.
+
+- `feat(artemis)` `outputSchema` ajouté à **`tone-of-voice-designer`** (charte : personnalité/registre/vocabulaire/do-dont par canal/reformulations), **`manifesto-writer`** (texte fondateur), **`engagement-rituals-designer`** (rituels nom/fréquence/mécanique/canal/KPI/coût), **`claim-architect`** (master/sub-claims/proofs/RTB), **`vocabulary-builder`** (5 catégories de lexique).
+- **Baseline du gate ratchetée 22 → 17.** **20/37 outils Glory validés en sortie.**
+- Hors phases 0–9 (out-of-scope). **0 nouveau Neter** (Cap APOGEE 7/7), **0 model Prisma**, **0 bypass**. tsc 0 · eslint 0 · 40 tests verts. Cf. Justification — out-of-scope dans le body PR.
+
 ## v6.27.39 — Sécurité LLM LOT 1c (batch 3) : schémas de sortie réels — 4 outils BRAND (2026-06-23)
 
 **Suite LOT 1c** — vrais schémas de sortie pour 4 outils BRAND **sans `forgeOutput` couplé** (les outils BRAND avec auto-handoff forge sont tenus à l'écart : un schéma mal aligné casserait le `briefTextPath` → à traiter avec vérif fonctionnelle).
