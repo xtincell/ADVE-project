@@ -18,6 +18,10 @@ import {
   brandGuardianOutputSchema,
   insightSynthesizerOutputSchema,
   ideaKillerSaverOutputSchema,
+  semioticBrandAnalyzerOutputSchema,
+  logoTypeAdvisorOutputSchema,
+  logoValidationOutputSchema,
+  motionIdentityOutputSchema,
 } from "./glory-output-schemas";
 
 /**
@@ -1047,6 +1051,7 @@ const BRAND_TOOLS: GloryToolDef[] = [
       cultural_context: "a.doctrine",
     },
     outputFormat: "semiotic_analysis",
+    outputSchema: semioticBrandAnalyzerOutputSchema,
     promptTemplate: `Analyse sémiotique de la marque :
 Identité actuelle : {{brand_identity}}
 Codes sectoriels : {{sector_codes}} | Contexte culturel : {{cultural_context}}
@@ -1181,6 +1186,7 @@ Livrable : familles, hiérarchie, échelle, line-height, letter-spacing, web/pri
       chromatic_strategy: "d.directionArtistique",
     },
     outputFormat: "logotype_direction",
+    outputSchema: logoTypeAdvisorOutputSchema,
     promptTemplate: `Direction logotype :
 Nom : {{brand_name}} | Valeurs : {{brand_values}}
 Système typo : {{typography_system}} | Stratégie chromatique : {{chromatic_strategy}}
@@ -1202,6 +1208,7 @@ Livrable : type de logo recommandé, direction stylistique, do/don't, déclinais
       brand_guidelines: "d.directionArtistique",
     },
     outputFormat: "logo_validation_report",
+    outputSchema: logoValidationOutputSchema,
     promptTemplate: `Validation des propositions de logo :
 Critères : lisibilité (5 tailles), mémorabilité, reproductibilité, cohérence marque, unicité.
 Contextes : digital, print, packaging, signalétique, favicon.
@@ -1247,6 +1254,7 @@ Format : JSON compatible avec Tailwind/CSS variables, avec nommage sémantique.`
       design_tokens: "d.directionArtistique",
     },
     outputFormat: "motion_identity",
+    outputSchema: motionIdentityOutputSchema,
     promptTemplate: `Identité motion :
 Personnalité : {{brand_personality}}
 Tokens : {{design_tokens}}

@@ -10,7 +10,7 @@ Deux contrats vérifiés par nœud : **sortie** (validation Zod stricte) et **en
 
 | Catégorie | Total | Protégés (sortie) | Couverture | Sans garde |
 |---|---|---|---|---|
-| Glory tools (LLM/HYBRID) | 76 | 40 | 53% | 36 |
+| Glory tools (LLM/HYBRID) | 76 | 48 | 63% | 28 |
 | Frameworks | 28 | 28 | 100% | 0 |
 | Appels LLM directs (bypass wrapper) | — | — | — | 52 sur 38 fichiers |
 
@@ -20,21 +20,13 @@ Ces nœuds appellent un LLM mais ne déclarent ni `outputSchema` ni `_noSchemaJu
 
 | Type | Slug | Exec |
 |---|---|---|
-| glory | `semiotic-brand-analyzer` | LLM |
 | glory | `visual-moodboard-generator` | LLM |
-| glory | `logo-type-advisor` | LLM |
-| glory | `logo-validation-protocol` | LLM |
-| glory | `motion-identity-designer` | LLM |
 | glory | `crew-matcher` | LLM |
 | glory | `formation-recommender` | LLM |
 | glory | `qc-evaluator` | LLM |
 | glory | `ad-copy-generator` | LLM |
 | glory | `audience-targeter` | LLM |
-| glory | `semiotic-brand-analyzer` | LLM |
 | glory | `visual-moodboard-generator` | LLM |
-| glory | `logo-type-advisor` | LLM |
-| glory | `logo-validation-protocol` | LLM |
-| glory | `motion-identity-designer` | LLM |
 | glory | `crew-matcher` | LLM |
 | glory | `formation-recommender` | LLM |
 | glory | `qc-evaluator` | LLM |
