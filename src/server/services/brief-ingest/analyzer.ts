@@ -6,6 +6,7 @@
  */
 
 import { callLLMAndParse } from "@/server/services/llm-gateway";
+import { wrapUntrusted } from "@/server/services/utils/untrusted-content";
 import { parsedBriefSchema, type ParsedBrief } from "./types";
 
 // ── System prompt ───────────────────────────────────────────────────────────
@@ -85,9 +86,7 @@ function buildUserPrompt(rawText: string): string {
   "campaignName": "Nom de la campagne"
 }
 
-=== BRIEF CLIENT ===
-${rawText}
-=== FIN DU BRIEF ===`;
+${wrapUntrusted("BRIEF CLIENT", rawText, { max: 20000 })}`;
 }
 
 // ── Confidence scorer ───────────────────────────────────────────────────────
