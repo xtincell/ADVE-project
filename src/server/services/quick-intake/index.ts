@@ -30,6 +30,7 @@ import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { callLLM } from "@/server/services/llm-gateway";
+import { wrapUntrusted, sanitizeInline, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import * as mestor from "@/server/services/mestor";
 import { scoreObject } from "@/server/services/advertis-scorer";
 import { normalizePillarForIntake } from "@/server/services/pillar-normalizer";
@@ -1280,13 +1281,16 @@ async function extractStructuredPillarContent(
   // Canonical declared facts — these are HARD CONSTRAINTS, not suggestions.
   // The LLM must produce content coherent with this context. The post-call
   // `sealCanonicalPillarFields` step still overwrites if the LLM ignores it.
+  // LOT 1e — entrées non fiables neutralisées (anti-injection) : ces faits sont
+  // déclarés par le dirigeant (saisie libre) ; on neutralise inline les jetons
+  // de rupture tout en gardant la lisibilité de la contrainte.
   const declaredFacts = [
-    `MARQUE         : ${ctx.companyName}`,
-    `SECTEUR        : ${ctx.sector ?? "Non précisé"}`,
-    `PAYS / MARCHÉ  : ${ctx.country ?? "Non précisé"}`,
-    `MODÈLE BUSINESS: ${ctx.businessModel ?? "Non précisé"}`,
-    `POSITIONNEMENT : ${ctx.positioning ?? "Non précisé"}`,
-    `MODÈLE ÉCO     : ${ctx.economicModel ?? "Non précisé"}`,
+    `MARQUE         : ${sanitizeInline(ctx.companyName, { max: 120 })}`,
+    `SECTEUR        : ${sanitizeInline(ctx.sector ?? "Non précisé", { max: 80 })}`,
+    `PAYS / MARCHÉ  : ${sanitizeInline(ctx.country ?? "Non précisé", { max: 60 })}`,
+    `MODÈLE BUSINESS: ${sanitizeInline(ctx.businessModel ?? "Non précisé", { max: 60 })}`,
+    `POSITIONNEMENT : ${sanitizeInline(ctx.positioning ?? "Non précisé", { max: 60 })}`,
+    `MODÈLE ÉCO     : ${sanitizeInline(ctx.economicModel ?? "Non précisé", { max: 60 })}`,
   ].join("\n");
 
   const result: Record<string, Record<string, unknown>> = {};
@@ -1325,19 +1329,20 @@ RÈGLES DE GÉNÉRATION (IMPORTANT) :
 FAITS DÉCLARÉS (CONTRAINTE) :
 ${declaredFacts}
 
-CONTEXTE BUSINESS LIBRE: ${bizContext}
+${wrapUntrusted("CONTEXTE BUSINESS LIBRE", bizContext, { max: 4000 })}
 
-${previousPillarsContext ? `PILIERS DÉJÀ GÉNÉRÉS (Sers-t'en pour la cohérence globale) :\n${previousPillarsContext}\n` : ""}
+${previousPillarsContext ? `PILIERS DÉJÀ GÉNÉRÉS (Sers-t'en pour la cohérence globale) :\n${wrapUntrusted("PILIERS DÉJÀ GÉNÉRÉS", previousPillarsContext, { max: 12000 })}\n` : ""}
 
 ${instructions ? `FORMAT ATTENDU (TOUS les champs doivent être remplis) :\n${instructions}\n` : ""}
-RÉPONSES BRUTES DE L'UTILISATEUR POUR LE PILIER ${upperK}:
-${answersText}
+${wrapUntrusted(`RÉPONSES BRUTES DE L'UTILISATEUR POUR LE PILIER ${upperK}`, answersText, { max: 8000 })}
 
 Réponds UNIQUEMENT avec un objet JSON contenant TOUS les champs du pilier ${upperK}. Pas de texte autour.`;
 
     try {
       const { text } = await callLLM({
-        system,
+        // LOT 1e — system durci d'un rappel anti-injection ; les blocs founder du
+        // prompt (biz, réponses brutes, piliers déjà générés) sont balisés ci-dessus.
+        system: `${UNTRUSTED_NOTICE}\n\n${system}`,
         prompt,
         caller: `quick-intake:extract-${pillarKey}`,
         purpose: "extraction",

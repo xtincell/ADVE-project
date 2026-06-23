@@ -15,6 +15,7 @@
  */
 
 import { TREND_TRACKER_49 } from "@/server/services/seshat/knowledge/trend-tracker-49";
+import { wrapUntrusted, sanitizeInline } from "@/server/services/utils/untrusted-content";
 import type { FetchedSource } from "./web-fetcher";
 
 const TEMPLATE_BUDGET_CHARS_PER_SOURCE = 12_000;
@@ -85,15 +86,17 @@ Aucun texte hors du document Markdown. Pas de fence \`\`\`. Le document commence
     : "";
 
   const failedBlock = failedSources.length > 0
-    ? `\n\n[Sources non récupérées — à ignorer dans la rédaction]\n${failedSources.map((s) => `- ${s.url} : ${s.error ?? `HTTP ${s.status}`}`).join("\n")}`
+    ? `\n\n[Sources non récupérées — à ignorer dans la rédaction]\n${failedSources.map((s) => `- ${sanitizeInline(s.url, { max: 500 })} : ${sanitizeInline(s.error ?? `HTTP ${s.status}`, { max: 300 })}`).join("\n")}`
     : "";
 
+  // LOT 1e — entrée non fiable neutralisée (anti-injection) : valeurs déclarées
+  // par l'opérateur (pays, secteur, nature de marque, niveau de cascade) et
+  // surtout le brief libre (query) sont neutralisés avant concaténation.
   const promptHeader = `Date de génération : ${input.generatedAt}
-Pays cible : ${input.countryCode}
-Secteur cible : ${input.sector}${input.brandNature ? `\nBrand nature : ${input.brandNature}` : ""}${input.cascadeLevel ? `\nCascade level : ${input.cascadeLevel}` : ""}
+Pays cible : ${sanitizeInline(input.countryCode, { max: 100 })}
+Secteur cible : ${sanitizeInline(input.sector, { max: 200 })}${input.brandNature ? `\nBrand nature : ${sanitizeInline(input.brandNature, { max: 200 })}` : ""}${input.cascadeLevel ? `\nCascade level : ${sanitizeInline(input.cascadeLevel, { max: 200 })}` : ""}
 
-Question / brief opérateur :
-${input.query.trim()}`;
+${wrapUntrusted("Question / brief opérateur", input.query.trim(), { max: 4000 })}`;
 
   const fullPrompt = `${promptHeader}${sourcesBlock}${failedBlock}\n\nProduis le document Markdown complet.`;
 
@@ -120,5 +123,14 @@ ${input.query.trim()}`;
 function formatSource(source: FetchedSource, idx: number): string {
   const text = (source.text ?? "").slice(0, TEMPLATE_BUDGET_CHARS_PER_SOURCE);
   const truncatedTag = (source.text ?? "").length > TEMPLATE_BUDGET_CHARS_PER_SOURCE ? "\n[truncated]" : "";
-  return `[Source ${idx}] ${source.url}${source.contentType ? ` (${source.contentType})` : ""}\n${text}${truncatedTag}`;
+  // LOT 1e — entrée non fiable neutralisée (anti-injection) : le corps de la
+  // source est du texte web fetché (vecteur d'injection RAG) → fencé ; l'URL
+  // (fournie par l'opérateur) est neutralisée inline.
+  const safeUrl = sanitizeInline(source.url, { max: 500 });
+  const body = wrapUntrusted(
+    `Source ${idx} (${safeUrl}${source.contentType ? `, ${sanitizeInline(source.contentType, { max: 100 })}` : ""})`,
+    `${text}${truncatedTag}`,
+    { max: TEMPLATE_BUDGET_CHARS_PER_SOURCE + 200 },
+  );
+  return `[Source ${idx}] ${safeUrl}${source.contentType ? ` (${sanitizeInline(source.contentType, { max: 100 })})` : ""}\n${body}`;
 }

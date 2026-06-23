@@ -20,6 +20,7 @@ import type { MaturityStage, AutoFillResult, FieldRequirement } from "@/lib/type
 import { assessPillar } from "./assessor";
 import { getContract } from "./contracts-loader";
 import { getFormatInstructions } from "@/lib/types/variable-bible";
+import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 
 // ─── Main API ───────────────────────────────────────────────────────────────
 
@@ -609,9 +610,11 @@ function summarizePillar(content: Record<string, unknown>): string {
 }
 
 function buildPillarContext(allPillars: Record<string, Record<string, unknown>>): string {
+  // LOT 1e — entrée non fiable neutralisée (anti-injection) : contenu des
+  // piliers (dérivé du fondateur) balisé bloc par bloc ; la clé pilier est interne.
   return Object.entries(allPillars)
     .filter(([, v]) => v && Object.keys(v).length > 0)
-    .map(([k, v]) => `[PILIER ${k.toUpperCase()}]\n${summarizePillar(v)}`)
+    .map(([k, v]) => wrapUntrusted(`PILIER ${k.toUpperCase()}`, summarizePillar(v), { max: PILLAR_CHAR_BUDGET }))
     .join("\n\n");
 }
 
@@ -693,7 +696,10 @@ Retourne UNIQUEMENT le JSON, rien d'autre. Pas de markdown, pas de commentaire.`
   // Le gateway choisit Ollama → Anthropic → OpenRouter selon la ModelPolicy,
   // gère le cost-tracking, et force du JSON valide via response_format.
   const { callLLM } = await import("@/server/services/llm-gateway");
-  const system = "Tu es Mestor, l'intelligence stratégique de marque. Tu réponds UNIQUEMENT en JSON valide : pas de markdown, pas de commentaire, pas de texte autour.";
+  // LOT 1e — entrée non fiable neutralisée (anti-injection) : le `pillarContext`
+  // (piliers fondateur) est balisé par buildPillarContext ; rappel sécurité au system.
+  // `fieldList` (paths/shapes du contrat) et `financialCtx` (benchmarks internes) sont internes.
+  const system = `${UNTRUSTED_NOTICE}\n\nTu es Mestor, l'intelligence stratégique de marque. Tu réponds UNIQUEMENT en JSON valide : pas de markdown, pas de commentaire, pas de texte autour.`;
   let text: string;
   try {
     const res = await callLLM({
@@ -917,9 +923,15 @@ async function extractFromSources(
       try {
         const { callLLMAndParse } = await import("@/server/services/utils/llm");
         const bibleInstructions = getFormatInstructions(pillarKey, stillMissing);
+        // LOT 1e — entrée non fiable neutralisée (anti-injection) : `allText` =
+        // contenu brut de documents marque uploadés (BrandDataSource.rawContent),
+        // entrée la plus à risque (style RAG). `stillMissing` (paths du contrat)
+        // et `bibleInstructions` (formats internes) ne sont pas balisés.
         const aiExtracted = await callLLMAndParse({
-          system: `Tu es un extracteur de données. On te donne du texte brut sur une marque et une liste de champs à remplir. Extrais UNIQUEMENT les informations présentes dans le texte. Si une information n'est pas dans le texte, ne l'invente pas — omets-la. Retourne un JSON avec les champs trouvés. RESPECTE les formats de la Bible de Variables pour chaque champ.`,
-          prompt: `Texte source:\n${allText.slice(0, 8000)}\n\nChamps à extraire pour le pilier ${pillarKey.toUpperCase()}:\n${stillMissing.map(p => `- ${p}`).join("\n")}\n\nBIBLE DE FORMAT:\n${bibleInstructions}\n\nRetourne UNIQUEMENT les champs que tu TROUVES dans le texte. Respecte les regles de format de la Bible.`,
+          system: `${UNTRUSTED_NOTICE}
+
+Tu es un extracteur de données. On te donne du texte brut sur une marque et une liste de champs à remplir. Extrais UNIQUEMENT les informations présentes dans le texte. Si une information n'est pas dans le texte, ne l'invente pas — omets-la. Retourne un JSON avec les champs trouvés. RESPECTE les formats de la Bible de Variables pour chaque champ.`,
+          prompt: `${wrapUntrusted("Texte source", allText, { max: 8000 })}\n\nChamps à extraire pour le pilier ${pillarKey.toUpperCase()}:\n${stillMissing.map(p => `- ${p}`).join("\n")}\n\nBIBLE DE FORMAT:\n${bibleInstructions}\n\nRetourne UNIQUEMENT les champs que tu TROUVES dans le texte. Respecte les regles de format de la Bible.`,
           maxOutputTokens: 3000,
           strategyId,
           caller: `source-extraction:${pillarKey}`,

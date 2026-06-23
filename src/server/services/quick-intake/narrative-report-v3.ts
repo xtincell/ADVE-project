@@ -26,6 +26,7 @@ import { ADVE_STORAGE_KEYS } from "@/domain";
 
 import { db } from "@/lib/db";
 import { callLLM, extractJSON } from "@/server/services/llm-gateway";
+import { wrapUntrusted, sanitizeInline, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import { getOracleBrandContextByQuery } from "@/server/services/seshat/context-store";
 import type { NarrativeReport, AdvePillarReport, RtisPillarReport } from "./narrative-report";
 
@@ -159,17 +160,19 @@ async function synthesizeCentralTension(
   adveByPillar: Record<"a" | "d" | "v" | "e", Record<string, unknown>>,
   rtisDrafts: Record<"r" | "t" | "i" | "s", Record<string, unknown>>,
 ): Promise<string> {
-  const prompt = `MARQUE: ${input.companyName}
-SECTEUR: ${input.sector ?? "—"}
+  // LOT 1e — entrées non fiables neutralisées (anti-injection). ADVE verbatim
+  // founder + drafts RTIS (dérivés founder/RAG) balisés en blocs ; nom/secteur inline.
+  const prompt = `MARQUE: ${sanitizeInline(input.companyName, { max: 120 })}
+SECTEUR: ${sanitizeInline(input.sector ?? "—", { max: 80 })}
 
 ADVE (extraits) :
-${JSON.stringify(adveByPillar).slice(0, 2400)}
+${wrapUntrusted("ADVE (extraits)", JSON.stringify(adveByPillar).slice(0, 2400), { max: 2400 })}
 
 RTIS DRAFT (déjà calculé, RAG-grounded) :
-R: ${JSON.stringify(rtisDrafts.r).slice(0, 600)}
-T: ${JSON.stringify(rtisDrafts.t).slice(0, 600)}
-I: ${JSON.stringify(rtisDrafts.i).slice(0, 600)}
-S: ${JSON.stringify(rtisDrafts.s).slice(0, 600)}
+${wrapUntrusted("RTIS DRAFT R", JSON.stringify(rtisDrafts.r).slice(0, 600), { max: 600 })}
+${wrapUntrusted("RTIS DRAFT T", JSON.stringify(rtisDrafts.t).slice(0, 600), { max: 600 })}
+${wrapUntrusted("RTIS DRAFT I", JSON.stringify(rtisDrafts.i).slice(0, 600), { max: 600 })}
+${wrapUntrusted("RTIS DRAFT S", JSON.stringify(rtisDrafts.s).slice(0, 600), { max: 600 })}
 
 Identifie LA tension centrale qui structure cette marque — la contradiction la plus
 parlante entre ce qu'elle dit (ADVE), ce que le marché impose (T/R), et ce qu'elle
@@ -181,7 +184,7 @@ Réponds UNIQUEMENT avec : { "tension": "<une phrase, 15-30 mots>" }`;
   const { text } = await callLLM({
     caller: "quick-intake:v3:tension",
     purpose: "extraction",
-    system: "Tu es un stratège senior. Tu extrais des tensions, jamais de descriptions plates.",
+    system: `${UNTRUSTED_NOTICE}\n\nTu es un stratège senior. Tu extrais des tensions, jamais de descriptions plates.`,
     prompt,
     maxOutputTokens: 200,
   });
@@ -216,38 +219,45 @@ async function writeFinalDeliverable(
   rtisHybridContextByPillar: Record<string, string>,
   centralTension: string,
 ): Promise<OpusSynthesis> {
+  // LOT 1e — entrées non fiables neutralisées (anti-injection). Valeurs verbatim
+  // founder + paragraphe ADVE (dérivé du founder) balisés en blocs « donnée »
+  // (l'enveloppe remplace l'ancien encadrement """ non sécurisé).
   const adveContextBlock = (ADVE_STORAGE_KEYS)
     .map((k) => {
       const verbatim = JSON.stringify(adveByPillar[k], null, 2);
       const narrated = adveNarrated[k].full;
       return `=== ${PILLAR_NAMES_ADVE[k]} (${k.toUpperCase()}) ===
 Valeurs verbatim founder :
-${verbatim}
+${wrapUntrusted(`Valeurs verbatim ${k.toUpperCase()}`, verbatim, { max: 4000 })}
 
 Paragraphe ADVE déjà rédigé en amont (déterministe, persisté en base — ne pas le réécrire) :
-"""
-${narrated}
-"""`;
+${wrapUntrusted(`Paragraphe ADVE ${k.toUpperCase()}`, narrated, { max: 4000 })}`;
     })
     .join("\n\n");
 
-  const prompt = `MARQUE : ${input.companyName}
-SECTEUR : ${input.sector ?? "non précisé"}
-PAYS : ${input.country ?? "non précisé"}
+  // LOT 1e — entrées non fiables neutralisées (anti-injection). Nom/secteur/pays
+  // inline ; tension centrale (placée en prose) neutralisée inline ; drafts RTIS
+  // et contexte hybride Seshat (RAG founder/externe) balisés en blocs « donnée ».
+  // NB : l'écho de centralTension dans le gabarit JSON ci-dessous reste verbatim
+  // (contrat foundedOnTension ≥8 mots consécutifs) ; il provient de notre propre
+  // appel amont dont les entrées sont déjà balisées.
+  const prompt = `MARQUE : ${sanitizeInline(input.companyName, { max: 120 })}
+SECTEUR : ${sanitizeInline(input.sector ?? "non précisé", { max: 80 })}
+PAYS : ${sanitizeInline(input.country ?? "non précisé", { max: 60 })}
 CLASSIFICATION : ${input.classification}
 
 TENSION CENTRALE (à citer verbatim dans recommendation.foundedOnTension) :
-"${centralTension}"
+"${sanitizeInline(centralTension, { max: 400 })}"
 
 ADVE — déjà rédigé, fourni ICI EN CONTEXTE UNIQUEMENT (lecture pour informer ta synthèse) :
 ${adveContextBlock}
 
 RTIS DRAFT — déjà synthétisé en amont (RAG-grounded) :
-${JSON.stringify(rtisDrafts, null, 2)}
+${wrapUntrusted("RTIS DRAFT", JSON.stringify(rtisDrafts, null, 2), { max: 8000 })}
 
 CONTEXTE HYBRIDE par pilier RTIS (narratif Seshat + précis verbatim) :
 ${Object.entries(rtisHybridContextByPillar)
-  .map(([k, v]) => `=== Pilier ${k.toUpperCase()} ===\n${v}`)
+  .map(([k, v]) => wrapUntrusted(`CONTEXTE HYBRIDE Pilier ${k.toUpperCase()}`, v, { max: 6000 }))
   .join("\n\n")}
 
 CONTRAINTES NON NÉGOCIABLES :
@@ -306,7 +316,7 @@ Réponds UNIQUEMENT avec ce JSON :
   const { text } = await callLLM({
     caller: "quick-intake:v3:final",
     purpose: "final-report",
-    system: `Tu es Mestor, le directeur stratégique senior de La Fusée. Tu produis la synthèse stratégique :
+    system: `${UNTRUSTED_NOTICE}\n\nTu es Mestor, le directeur stratégique senior de La Fusée. Tu produis la synthèse stratégique :
 - executive summary qui applique la tension centrale à la marque
 - narrative RTIS (framing + 4 piliers) qui résout la tension
 - recommandation actionnable ancrée sur la tension

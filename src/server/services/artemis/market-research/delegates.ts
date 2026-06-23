@@ -32,6 +32,7 @@
  */
 
 import { callLLM } from "@/server/services/llm-gateway";
+import { UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import { fetchSources } from "./web-fetcher";
 import { buildMarketResearchPrompt } from "./prompt-builder";
 import { registerDelegateHandler } from "../tools/delegate-registry";
@@ -84,8 +85,16 @@ registerDelegateHandler("market-research:llm-extract", async (input, ctx) => {
     generatedAt,
   });
 
+  // LOT 1e — entrée non fiable neutralisée (anti-injection) : le rappel sécurité
+  // est ajouté au system. Le brief opérateur (input.query) et le texte des
+  // sources web fetchées (FetchedSource.text) sont fencés via wrapUntrusted
+  // dans buildMarketResearchPrompt (point de concaténation réel).
+  // @llm-input-internal: ce site ne concatène aucune entrée brute — il transmet
+  // `built.prompt`/`built.system` déjà neutralisés en amont (wrapUntrusted par
+  // source web + sanitizeInline query/codes dans buildMarketResearchPrompt) et
+  // ajoute UNTRUSTED_NOTICE.
   const llmResult = await callLLM({
-    system: built.system,
+    system: `${UNTRUSTED_NOTICE}\n\n${built.system}`,
     prompt: built.prompt,
     caller: "glory:market-research-llm-extractor",
     purpose: "extraction",

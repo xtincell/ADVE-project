@@ -4,7 +4,6 @@
     "src/server/services/artemis/index.ts",
     "src/server/services/artemis/market-research/delegates.ts",
     "src/server/services/artemis/tools/engine.ts",
-    "src/server/services/artemis/tools/market-research-tools.ts",
     "src/server/services/boot-sequence/index.ts",
     "src/server/services/brief-ingest/analyzer.ts",
     "src/server/services/brief-ingest/index.ts",
@@ -39,5 +38,6 @@
     "src/server/services/seshat/tarsis/weak-signal-analyzer.ts",
     "src/server/services/source-classifier/llm-decomposer.ts",
     "src/server/services/strategy-presentation/enrich-oracle.ts"
-  ]
+  ],
+  "rawInputFiles": []
 }

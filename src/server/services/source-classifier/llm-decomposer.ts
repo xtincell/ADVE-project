@@ -13,6 +13,7 @@
  */
 
 import { callLLMAndParse } from "@/server/services/llm-gateway";
+import { wrapUntrusted, sanitizeInline, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import {
   BRAND_ASSET_KINDS,
   isBrandAssetKind,
@@ -81,7 +82,9 @@ export async function decomposeDocument(
   if (!truncated.trim()) return [];
 
   const allowedKinds = DOCUMENT_KIND_HINTS.join(", ");
-  const system = `Tu es l'opérateur "filtreur qualifiant" du vault de marque La Fusée.
+  const system = `${UNTRUSTED_NOTICE}
+
+Tu es l'opérateur "filtreur qualifiant" du vault de marque La Fusée.
 Ta mission : décomposer un document fourni par le founder en 1 à ${MAX_DECOMPOSER_PROPOSALS} actifs de marque qualifiés (BrandAsset),
 chacun avec son \`kind\` canonique. Cherche activement à couvrir plusieurs piliers ADVERTIS quand le document est riche.
 
@@ -105,15 +108,14 @@ Tu réponds STRICTEMENT en JSON, format :
   ]
 }`;
 
+  // LOT 1e — entrée non fiable neutralisée (anti-injection) : document fourni
+  // par le founder (contenu + métadonnées de fichier attaquant-contrôlables).
   const prompt = `Document à décomposer :
-- Nom de fichier : ${input.fileName ?? "(sans nom)"}
-- Type MIME : ${input.mimeType ?? "inconnu"}
-- Type fichier : ${input.fileType ?? "inconnu"}
+- Nom de fichier : ${sanitizeInline(input.fileName ?? "(sans nom)", { max: 300 })}
+- Type MIME : ${sanitizeInline(input.mimeType ?? "inconnu", { max: 120 })}
+- Type fichier : ${sanitizeInline(input.fileType ?? "inconnu", { max: 60 })}
 
-Contenu (potentiellement tronqué à ${DECOMPOSER_INPUT_CAP} caractères) :
-"""
-${truncated}
-"""
+${wrapUntrusted(`CONTENU DU DOCUMENT (potentiellement tronqué à ${DECOMPOSER_INPUT_CAP} caractères)`, truncated, { max: DECOMPOSER_INPUT_CAP })}
 
 Décompose ce document en propositions BrandAsset (max ${MAX_DECOMPOSER_PROPOSALS}).`;
 
@@ -190,7 +192,9 @@ export async function classifyImage(
   input: ClassifyImageInput,
 ): Promise<SourceClassificationProposal | null> {
   const allowed = IMAGE_KIND_OPTIONS.join(" | ");
-  const system = `Tu es un expert en identité visuelle. Tu reçois une image fournie par un founder
+  const system = `${UNTRUSTED_NOTICE}
+
+Tu es un expert en identité visuelle. Tu reçois une image fournie par un founder
 et tu choisis le kind canonique parmi : ${allowed}.
 
 Réponds STRICTEMENT en JSON :
@@ -203,8 +207,10 @@ Réponds STRICTEMENT en JSON :
 }`;
 
   const stripped = input.base64Data.replace(/^data:image\/[^;]+;base64,/, "");
-  const prompt = `Nom de fichier : ${input.fileName ?? "(sans nom)"} — MIME : ${input.mimeType ?? "image"}.
-[IMAGE_DATA:${stripped.slice(0, 200)}…]
+  // LOT 1e — entrée non fiable neutralisée (anti-injection) : nom de fichier,
+  // MIME et charge base64 fournis par le founder (upload attaquant-contrôlable).
+  const prompt = `Nom de fichier : ${sanitizeInline(input.fileName ?? "(sans nom)", { max: 300 })} — MIME : ${sanitizeInline(input.mimeType ?? "image", { max: 120 })}.
+[IMAGE_DATA:${sanitizeInline(stripped.slice(0, 200), { max: 200 })}…]
 Choisis le kind le plus précis selon le contenu visuel inféré du nom et du contexte.`;
 
   let parsed: Record<string, unknown> | unknown[];

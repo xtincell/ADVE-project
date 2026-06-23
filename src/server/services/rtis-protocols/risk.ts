@@ -27,6 +27,7 @@ import {
   MitigationPrioritySchema,
   OvertonBlockerSchema,
 } from "@/lib/types/pillar-schemas";
+import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 
 // ADR-0063 / PR-K3-ter — LLM-response sub-schemas. Items are strictly typed (so
 // malformed rows are dropped by the pruner), but parent-level `.min(N)` count
@@ -219,7 +220,10 @@ async function callRiskJSON<T extends z.ZodTypeAny>(args: {
       caller: `mestor:protocole-risk:${args.label}`,
       strategyId: args.strategyId,
       model: "claude-sonnet-4-20250514",
-      system: args.system,
+      // LOT 1e — entrée non fiable neutralisée (anti-injection) : le prompt porte
+      // le contexte ADVE (piliers dérivés de la saisie fondateur, wrappés via
+      // wrapUntrusted plus bas) → rappel sécurité dans le system.
+      system: `${UNTRUSTED_NOTICE}\n\n${args.system}`,
       prompt: args.prompt,
       maxOutputTokens: args.maxOutputTokens,
     });
@@ -248,14 +252,20 @@ async function generateSWOT(
   flags: VulnerabilityFlag[],
   strategyId: string,
 ): Promise<{ globalSwot: Record<string, unknown>; probabilityImpactMatrix: unknown[]; mitigationPriorities: unknown[]; overtonBlockers: OvertonBlocker[] }> {
+  // LOT 1e — entrée non fiable neutralisée (anti-injection) : le contenu des
+  // piliers ADVE dérive de la saisie fondateur → chaque bloc est encadré comme
+  // DONNÉE (jamais instruction) avant d'entrer dans le prompt.
   const adveContext = [...ADVE_STORAGE_KEYS]
     .map(k => {
       const c = pillars[k];
       if (!c || Object.keys(c).length === 0) return `[PILIER ${k.toUpperCase()}] Vide`;
-      return `[PILIER ${k.toUpperCase()}]\n${JSON.stringify(c, null, 2)}`;
+      return wrapUntrusted(`PILIER ${k.toUpperCase()}`, JSON.stringify(c, null, 2), { max: 8000 });
     })
     .join("\n\n");
 
+  // @llm-input-internal: flagsSummary est 100% interne — severity/field/pillar
+  // sont des enums/clés calculés et f.reason est une chaîne hardcodée du scan
+  // déterministe scanVulnerabilities (aucun texte fondateur). Pas de wrap.
   const flagsSummary = flags.length > 0
     ? `\n\nVULNÉRABILITÉS DÉTECTÉES (scan automatique):\n${flags.map(f => `- [${f.severity}] ${f.pillar.toUpperCase()}.${f.field}: ${f.reason}`).join("\n")}`
     : "\n\nAucune vulnérabilité critique détectée par le scan automatique.";

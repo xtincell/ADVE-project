@@ -14,6 +14,7 @@ import { callLLM, extractJSON as gatewayExtractJSON } from "@/server/services/ll
 import { db } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { executeTool } from "@/server/services/glory-tools";
+import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import { PASS1_SYSTEM, PASS2_SYSTEM, PASS3_SYSTEM } from "./prompts";
 import { createCampaignDrafts } from "./campaign-bridge";
 import { PILLAR_KEYS } from "@/domain/pillars";
@@ -98,9 +99,11 @@ export async function generateImplementation(
   // ── Phase 2: LLM Multi-Pass Premium Generation ──────────────────────────
 
   // Pass 1: Brand Platform + Copy Strategy + Big Idea
+  // LOT 1e — entrée non fiable neutralisée (anti-injection) : fullContext est
+  // construit à partir du contenu des 8 piliers (dérivé fondateur).
   const pass1Result = await callLLM({
-    system: PASS1_SYSTEM,
-    prompt: `Produis le socle stratégique (Brand Platform, Copy Strategy, Big Idea, Syntheses) pour cette marque.\n\n${fullContext}\n\nJSON uniquement.`,
+    system: `${UNTRUSTED_NOTICE}\n\n${PASS1_SYSTEM}`,
+    prompt: `Produis le socle stratégique (Brand Platform, Copy Strategy, Big Idea, Syntheses) pour cette marque.\n\n${wrapUntrusted("Contexte piliers ADVE-RTIS", fullContext, { max: 24000 })}\n\nJSON uniquement.`,
     caller: "implementation-generator:pass1",
     strategyId,
     maxOutputTokens: 6000,
@@ -108,9 +111,12 @@ export async function generateImplementation(
   const pass1 = extractJSON(pass1Result.text);
 
   // Pass 2: Operational Plan (enriched with GLORY outputs)
+  // LOT 1e — entrée non fiable neutralisée (anti-injection) : fullContext
+  // (piliers fondateur), pass1 (sortie LLM dérivée du fondateur) et
+  // gloryContext (sorties d'outils GLORY dérivées du fondateur) sont fencés.
   const pass2Result = await callLLM({
-    system: PASS2_SYSTEM,
-    prompt: `Produis le plan opérationnel complet basé sur cette stratégie.\n\n${fullContext}\n\n## Socle stratégique (Pass 1)\n${JSON.stringify(pass1, null, 2)}\n\n${gloryContext}\n\nJSON uniquement.`,
+    system: `${UNTRUSTED_NOTICE}\n\n${PASS2_SYSTEM}`,
+    prompt: `Produis le plan opérationnel complet basé sur cette stratégie.\n\n${wrapUntrusted("Contexte piliers ADVE-RTIS", fullContext, { max: 24000 })}\n\n${wrapUntrusted("Socle stratégique (Pass 1)", JSON.stringify(pass1, null, 2), { max: 12000 })}\n\n${wrapUntrusted("Sorties outils GLORY", gloryContext, { max: 16000 })}\n\nJSON uniquement.`,
     caller: "implementation-generator:pass2",
     strategyId,
     maxOutputTokens: 8000,
@@ -132,9 +138,11 @@ export async function generateImplementation(
   // Pass 3: Quality self-assessment
   let qualityScore = 70;
   try {
+    // LOT 1e — entrée non fiable neutralisée (anti-injection) : pillarContent
+    // est le livrable assemblé (pass1+pass2), dérivé du contenu fondateur.
     const pass3Result = await callLLM({
-      system: PASS3_SYSTEM,
-      prompt: `Évalue la qualité de ce livrable stratégique :\n\n${JSON.stringify(pillarContent, null, 2)}\n\nJSON uniquement.`,
+      system: `${UNTRUSTED_NOTICE}\n\n${PASS3_SYSTEM}`,
+      prompt: `Évalue la qualité de ce livrable stratégique :\n\n${wrapUntrusted("Livrable à évaluer", JSON.stringify(pillarContent, null, 2), { max: 28000 })}\n\nJSON uniquement.`,
       caller: "implementation-generator:pass3-quality",
       strategyId,
       maxOutputTokens: 2000,
@@ -148,9 +156,12 @@ export async function generateImplementation(
 
     // Pass 4: Refinement if quality is below threshold
     if (qualityScore < 70 && pass3.criticalIssues) {
+      // LOT 1e — entrée non fiable neutralisée (anti-injection) : issues /
+      // suggestions (sortie LLM) et pillarContent (livrable dérivé fondateur).
+      // qualityScore est un nombre que nous avons calculé.
       const refinementResult = await callLLM({
-        system: PASS1_SYSTEM,
-        prompt: `Le livrable suivant a reçu un score qualité de ${qualityScore}/100.\nIssues critiques : ${JSON.stringify(pass3.criticalIssues)}\nSuggestions : ${JSON.stringify(pass3.improvementSuggestions)}\n\nAméliore UNIQUEMENT les sections faibles. Retourne le JSON complet amélioré.\n\n${JSON.stringify(pillarContent, null, 2)}`,
+        system: `${UNTRUSTED_NOTICE}\n\n${PASS1_SYSTEM}`,
+        prompt: `Le livrable suivant a reçu un score qualité de ${qualityScore}/100.\n${wrapUntrusted("Issues critiques", JSON.stringify(pass3.criticalIssues), { max: 4000 })}\n${wrapUntrusted("Suggestions", JSON.stringify(pass3.improvementSuggestions), { max: 4000 })}\n\nAméliore UNIQUEMENT les sections faibles. Retourne le JSON complet amélioré.\n\n${wrapUntrusted("Livrable à améliorer", JSON.stringify(pillarContent, null, 2), { max: 24000 })}`,
         caller: "implementation-generator:pass4-refinement",
         strategyId,
         maxOutputTokens: 6000,

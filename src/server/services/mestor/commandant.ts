@@ -20,6 +20,7 @@
 import { db } from "@/lib/db";
 import type { PillarKey } from "@/lib/types/advertis-vector";
 import { callLLMAndParse, withRetry } from "@/server/services/utils/llm";
+import { wrapUntrusted, sanitizeInline, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -89,13 +90,17 @@ export async function assistGloryTool(
   context: Record<string, unknown>,
   strategyId?: string,
 ): Promise<Record<string, unknown>> {
+  // LOT 1e — entrée non fiable neutralisée (anti-injection) : `context` porte
+  // les bindings piliers/séquence dérivés du fondateur ; `toolSlug` est un slug
+  // interne et `toolPrompt` la consigne de l'outil (framework, interne).
   return callLLMAndParse({
-    system: `Tu es le Commandant de l'essaim MESTOR. Un outil GLORY te demande un jugement créatif/stratégique.
-Outil : ${toolSlug}
+    system: `${UNTRUSTED_NOTICE}
+
+Tu es le Commandant de l'essaim MESTOR. Un outil GLORY te demande un jugement créatif/stratégique.
+Outil : ${sanitizeInline(toolSlug, { max: 120 })}
 Tu dois fournir le contenu créatif demandé. L'outil structurera ta réponse dans son outputSchema.
 Retourne UNIQUEMENT du JSON valide.`,
-    prompt: `Contexte de l'outil:
-${JSON.stringify(context, null, 2)}
+    prompt: `${wrapUntrusted("Contexte de l'outil", JSON.stringify(context, null, 2), { max: 8000 })}
 
 Demande de l'outil:
 ${toolPrompt}`,
@@ -149,7 +154,9 @@ export async function generateStrategicInsights(
           (typeof payload.justification === "string" && payload.justification) ||
           (typeof payload.full === "string" && payload.full) ||
           JSON.stringify(payload).slice(0, 200);
-        return `  · ${String(snippet).slice(0, 220)} (sim=${p.similarity.toFixed(2)})`;
+        // LOT 1e — entrée non fiable neutralisée (anti-injection) : snippet
+        // de payload de marque voisine (contenu cross-stratégie, externe).
+        return `  · ${sanitizeInline(snippet, { max: 220 })} (sim=${p.similarity.toFixed(2)})`;
       });
       peerBlock = `\n\nPATTERNS observés chez marques voisines (calibration uniquement, ne pas citer) :\n${lines.join("\n")}`;
     }
@@ -158,11 +165,17 @@ export async function generateStrategicInsights(
   }
 
   try {
+    // LOT 1e — entrée non fiable neutralisée (anti-injection) : `strategy.name`
+    // est saisi par le fondateur ; les snippets de `peerBlock` sont déjà
+    // assainis ci-dessus. `pillarSummary` (clés + compteurs calculés) et le
+    // composite numérique sont internes.
     const result = await callLLMAndParse({
-      system: `Tu es le Commandant MESTOR. Analyse l'état de cette stratégie et produis 3-5 insights actionnables.
+      system: `${UNTRUSTED_NOTICE}
+
+Tu es le Commandant MESTOR. Analyse l'état de cette stratégie et produis 3-5 insights actionnables.
 Types : COHERENCE, STALE_PILLAR, OPPORTUNITY, RISK, DEVOTION_ALERT.
 Retourne un JSON array. Chaque item: { type, severity (LOW|MEDIUM|HIGH|CRITICAL), title, description, suggestedAction }`,
-      prompt: `Stratégie: ${strategy.name}
+      prompt: `Stratégie: ${sanitizeInline(strategy.name, { max: 200 })}
 Composite: ${vec.composite ?? 0}/200
 Piliers:\n${pillarSummary}${peerBlock}`,
       maxOutputTokens: 2000,
@@ -196,22 +209,26 @@ export async function runScenario(input: ScenarioInput): Promise<Record<string, 
 
   if (!strategy) return { error: "Strategy not found" };
 
+  // LOT 1e — entrée non fiable neutralisée (anti-injection) : contenu des
+  // piliers (dérivé du fondateur) balisé bloc par bloc ; la clé pilier est interne.
   const pillarContext = strategy.pillars
-    .map(p => `[${p.key.toUpperCase()}] ${JSON.stringify(p.content, null, 2)}`)
+    .map(p => wrapUntrusted(`PILIER ${p.key.toUpperCase()}`, JSON.stringify(p.content, null, 2), { max: 6000 }))
     .join("\n\n");
 
+  // LOT 1e — entrée non fiable neutralisée (anti-injection) : `strategy.name`
+  // + le scénario fourni par l'opérateur (type/description/paramètres).
   return callLLMAndParse({
-    system: `Tu es le Commandant MESTOR. On te demande de simuler un scénario stratégique.
+    system: `${UNTRUSTED_NOTICE}
+
+Tu es le Commandant MESTOR. On te demande de simuler un scénario stratégique.
 Analyse les données de la stratégie et projette les impacts.
 Retourne un JSON: { title, summary, impacts: [{ dimension, currentValue, projectedValue, delta, timeframe }], risks: [], recommendations: [], confidence: 0-1 }`,
-    prompt: `Stratégie: ${strategy.name}
+    prompt: `Stratégie: ${sanitizeInline(strategy.name, { max: 200 })}
 
 Piliers:
 ${pillarContext}
 
-Scénario: ${input.type}
-Description: ${input.description}
-Paramètres: ${JSON.stringify(input.parameters)}
+${wrapUntrusted("Scénario demandé", `Scénario: ${input.type}\nDescription: ${input.description}\nParamètres: ${JSON.stringify(input.parameters)}`, { max: 4000 })}
 
 Simule l'impact de ce scénario sur la stratégie.`,
     maxOutputTokens: 4000,

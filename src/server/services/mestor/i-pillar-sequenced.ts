@@ -21,6 +21,7 @@
 
 import { callLLM } from "@/server/services/llm-gateway";
 import { extractJSON } from "@/server/services/utils/llm";
+import { wrapUntrusted, sanitizeInline, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 
 // Canaux du catalogue I (cf. RTIS_PROMPTS.I dans rtis-cascade.ts)
 export const I_CHANNELS = [
@@ -74,8 +75,10 @@ function compactPillar(content: unknown, cap = 1100): string {
 
 /** Contexte marque compact (ADVE + R + T) réutilisé pour chaque appel de section. */
 export function buildContext(pillars: Record<string, unknown>): string {
+  // LOT 1e — entrée non fiable neutralisée (anti-injection) : contenu des
+  // piliers (dérivé du fondateur) balisé bloc par bloc ; la clé pilier est interne.
   return ["A", "D", "V", "E", "R", "T"]
-    .map((k) => `[PILIER ${k}]\n${compactPillar(pillars[k])}`)
+    .map((k) => wrapUntrusted(`PILIER ${k}`, compactPillar(pillars[k]), { max: 1100 }))
     .join("\n\n");
 }
 
@@ -99,7 +102,9 @@ function buildEconomicGrounding(pillars: Record<string, unknown>): { block: stri
   const samVal = typeof tam.sam?.value === "number" ? tam.sam.value : null;
   const bmf = typeof t.brandMarketFitScore === "number" ? t.brandMarketFitScore : null;
   const mr = (t.marketReality ?? {}) as Record<string, unknown>;
-  const trends = Array.isArray(mr.macroTrends) ? mr.macroTrends.slice(0, 4).map(String) : [];
+  // LOT 1e — entrée non fiable neutralisée (anti-injection) : tendances marché
+  // (texte libre dérivé du pilier T) ; les montants budget/TAM sont des nombres calculés.
+  const trends = Array.isArray(mr.macroTrends) ? mr.macroTrends.slice(0, 4).map((t) => sanitizeInline(t, { max: 200 })) : [];
   const lines = [
     "ENVELOPPE ÉCONOMIQUE & MARCHÉ (chiffres RÉELS — propose des actions cohérentes avec CE budget et CE marché) :",
     budgetCom != null ? `- Budget marketing annuel disponible : ${fcfaShort(budgetCom)} FCFA (les actions doivent tenir dans cette enveloppe)` : "- Budget marketing : non renseigné (V.unitEconomics.budgetCom)",
@@ -121,8 +126,10 @@ async function callSection(
   jsonMode: boolean,
 ): Promise<string> {
   const tail = jsonMode ? "" : "\n\nIMPORTANT : réponds par le JSON BRUT uniquement (commence par { ), rien d'autre.";
+  // LOT 1e — entrée non fiable neutralisée (anti-injection) : le `context`
+  // (piliers fondateur) est déjà balisé par buildContext ; rappel sécurité au system.
   const { text } = await callLLM({
-    system: SYSTEM,
+    system: `${UNTRUSTED_NOTICE}\n\n${SYSTEM}`,
     prompt: `CONTEXTE MARQUE (piliers ADVE + R + T, condensés) :\n${context}\n\n${instruction}${tail}`,
     caller: `mestor:i-seq:${callerTag}`,
     strategyId,
