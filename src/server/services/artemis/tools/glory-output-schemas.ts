@@ -270,3 +270,229 @@ export const vocabularyBuilderOutputSchema = z.object({
     z.object({ cliche: z.string(), alternative: z.string() }),
   ),
 });
+
+// ─── LAYER BRAND (forge-couplé) ─────────────────────────────────────────────
+
+/** visual-moodboard-generator — 3 directions. `moodboard_brief` préservé pour le handoff forge (forgeOutput.briefTextPath). */
+export const visualMoodboardOutputSchema = z.object({
+  directions: z
+    .array(
+      z.object({
+        concept: z.string(),
+        ambiance: z.string(),
+        referencesVisuelles: z.array(z.string()),
+        paletteSuggere: z.array(z.string()),
+      }),
+    )
+    .min(1),
+  moodboard_brief: z.string().optional(),
+});
+
+// ─── Oracle ─────────────────────────────────────────────────────────────────
+
+/** synthesize-section — narratif + payload structuré fidèle au draft (contrat explicite). */
+export const synthesizeSectionOutputSchema = z.object({
+  narrative: z.string(),
+  structured_payload: z.unknown(),
+});
+
+// ─── LSI (Logo/Symbol/IP — character design) ────────────────────────────────
+
+/** lsi-universe-setup. */
+export const lsiUniverseSetupOutputSchema = z.object({
+  genreMaitre: z.string(),
+  themesCles: z.array(z.string()),
+  vibeSensorielle: z.array(z.string()),
+  contraintes: z.array(z.string()),
+  justification: z.string(),
+});
+
+/** lsi-symbol-alchemy — formule de fusion 4 thèmes. */
+export const lsiSymbolAlchemyOutputSchema = z.object({
+  artifacts: z
+    .array(
+      z.object({
+        baseSymbol: z.string(),
+        themeApplications: z.object({
+          forme: z.string(),
+          matiere: z.string(),
+          fonction: z.string(),
+          symbolique: z.string(),
+        }),
+        name: z.string(),
+        description: z.string(),
+      }),
+    )
+    .min(1),
+});
+
+/** lsi-distribution-matrix — 5 couches visuelles. */
+export const lsiDistributionMatrixOutputSchema = z.object({
+  matrix: z
+    .array(
+      z.object({
+        artifact: z.string(),
+        anatomie: z.string(),
+        outfit: z.string(),
+        texture: z.string(),
+        accessoires: z.string(),
+        attitude: z.string(),
+      }),
+    )
+    .min(1),
+});
+
+/** lsi-sublimation — reality check final. */
+export const lsiSublimationOutputSchema = z.object({
+  adjustments: z.array(
+    z.object({ element: z.string(), issue: z.string(), fix: z.string() }),
+  ),
+  echos: z.array(
+    z.object({ primaryElement: z.string(), echoLocations: z.array(z.string()) }),
+  ),
+  silhouetteRead: z.string(),
+  verdict: z.enum(["APPROVED", "NEEDS_REVISION"]),
+});
+
+/** lsi-morpho-semantic — prompt génératif structuré. */
+export const lsiMorphoSemanticOutputSchema = z.object({
+  promptSections: z.object({
+    anatomie: z.string(),
+    outfit: z.string(),
+    texture: z.string(),
+    accessoires: z.string(),
+    attitude: z.string(),
+    lighting: z.string(),
+    camera: z.string(),
+  }),
+  fullPrompt: z.string(),
+  negativePrompt: z.string(),
+  styleTags: z.array(z.string()),
+});
+
+// ─── Phase 14 — Imhotep (Crew) ──────────────────────────────────────────────
+
+/** crew-matcher — appariement talents/mission (contrat explicite). */
+export const crewMatcherOutputSchema = z.object({
+  ranked: z
+    .array(
+      z.object({
+        talentProfileId: z.string(),
+        matchScore: z.number(),
+        matchReasons: z.array(z.string()),
+        devotionAlignment: z.string().optional(),
+      }),
+    )
+    .min(1),
+  rationale: z.string(),
+});
+
+/** formation-recommender — 3 cours pour combler un gap. */
+export const formationRecommenderOutputSchema = z.object({
+  courses: z
+    .array(
+      z.object({
+        courseId: z.string(),
+        title: z.string(),
+        rationale: z.string(),
+        estimatedDurationMin: z.number(),
+      }),
+    )
+    .min(1),
+});
+
+/** qc-evaluator — QC deliverable (contrat explicite). */
+export const qcEvaluatorOutputSchema = z.object({
+  passed: z.boolean(),
+  score: z.number().min(0).max(100),
+  issues: z.array(
+    z.object({
+      type: z.string(),
+      severity: z.string(),
+      message: z.string(),
+      fix: z.string(),
+    }),
+  ),
+});
+
+// ─── Phase 15 — Anubis (Comms) ──────────────────────────────────────────────
+
+/** ad-copy-generator — 3 variants A/B/C (contrat explicite). */
+export const adCopyOutputSchema = z.object({
+  variants: z
+    .array(
+      z.object({
+        label: z.string(),
+        copy: z.string(),
+        cta: z.string(),
+        hashtags: z.array(z.string()).optional(),
+      }),
+    )
+    .min(1),
+  rationale: z.string().optional(),
+});
+
+/** audience-targeter — règles de targeting queryables (rules souple par ad-network). */
+export const audienceTargeterOutputSchema = z.object({
+  rules: z
+    .object({
+      demographics: z.unknown().optional(),
+      interests: z.array(z.string()).optional(),
+      behaviors: z.array(z.string()).optional(),
+      exclusions: z.unknown().optional(),
+    })
+    .passthrough(),
+  estimatedReach: z.string(),
+  rationale: z.string().optional(),
+});
+
+// ─── AD/OPS (Direction de Création — research) ──────────────────────────────
+
+/** adops-expand-semantic-field — champ sémantique 5D. */
+export const adopsExpandOutputSchema = z.object({
+  movements: z.array(z.string()),
+  artists: z.array(z.string()),
+  materials: z.array(z.string()),
+  eras: z.array(z.string()),
+  adjacent: z.array(z.string()),
+});
+
+/** adops-cross-pollinate-concepts — hybridation 2 concepts. */
+export const adopsCrossPollinateOutputSchema = z.object({
+  brief: z.string(),
+  ratio: z.string(),
+  tensions: z.object({
+    formal: z.string(),
+    reading: z.string(),
+    pitfall: z.string(),
+  }),
+  activation_query: z.string(),
+});
+
+/** adops-decode-reference-grid — grille 8 axes. */
+export const adopsDecodeGridOutputSchema = z.object({
+  axes: z
+    .array(
+      z.object({
+        key: z.string(),
+        title: z.string(),
+        answers: z.array(z.string()),
+      }),
+    )
+    .min(1),
+});
+
+/** adops-defend-creative-direction — speech défensif 6 sections. */
+export const adopsDefendOutputSchema = z.object({
+  sections: z.array(z.object({ h: z.string(), body: z.string() })).min(1),
+});
+
+// ─── Phase 19 — postmortem ──────────────────────────────────────────────────
+
+const postmortemAnswerSchema = z.object({
+  answer: z.string(),
+  score: z.number().min(0).max(1),
+  evidenceUrls: z.array(z.string()).optional(),
+});
+/** postmortem-12q — 12 questions canoniques (qN → {answer, score, evidenceUrls}). */
+export const postmortem12qOutputSchema = z.record(z.string(), postmortemAnswerSchema);

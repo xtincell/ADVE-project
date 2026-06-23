@@ -10,7 +10,7 @@ Deux contrats vérifiés par nœud : **sortie** (validation Zod stricte) et **en
 
 | Catégorie | Total | Protégés (sortie) | Couverture | Sans garde |
 |---|---|---|---|---|
-| Glory tools (LLM/HYBRID) | 76 | 53 | 70% | 23 |
+| Glory tools (LLM/HYBRID) | 76 | 76 | 100% | 0 |
 | Frameworks | 28 | 28 | 100% | 0 |
 | Appels LLM directs (bypass wrapper) | — | — | — | 52 sur 38 fichiers |
 
@@ -18,31 +18,7 @@ Deux contrats vérifiés par nœud : **sortie** (validation Zod stricte) et **en
 
 Ces nœuds appellent un LLM mais ne déclarent ni `outputSchema` ni `_noSchemaJustification` : leur sortie n'est pas validée structurellement.
 
-| Type | Slug | Exec |
-|---|---|---|
-| glory | `visual-moodboard-generator` | LLM |
-| glory | `crew-matcher` | LLM |
-| glory | `formation-recommender` | LLM |
-| glory | `qc-evaluator` | LLM |
-| glory | `ad-copy-generator` | LLM |
-| glory | `audience-targeter` | LLM |
-| glory | `visual-moodboard-generator` | LLM |
-| glory | `crew-matcher` | LLM |
-| glory | `formation-recommender` | LLM |
-| glory | `qc-evaluator` | LLM |
-| glory | `ad-copy-generator` | LLM |
-| glory | `audience-targeter` | LLM |
-| glory | `synthesize-section` | LLM |
-| glory | `lsi-universe-setup` | LLM |
-| glory | `lsi-symbol-alchemy` | LLM |
-| glory | `lsi-distribution-matrix` | LLM |
-| glory | `lsi-sublimation` | LLM |
-| glory | `lsi-morpho-semantic` | LLM |
-| glory | `adops-expand-semantic-field` | LLM |
-| glory | `adops-cross-pollinate-concepts` | LLM |
-| glory | `adops-decode-reference-grid` | LLM |
-| glory | `adops-defend-creative-direction` | LLM |
-| glory | `postmortem-12q` | LLM |
+_Aucun. ✅_
 
 ## ENTRÉE — appels LLM directs (court-circuitent la validation)
 

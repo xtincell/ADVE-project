@@ -10,6 +10,15 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.41 — Sécurité LLM LOT 1c (batch 5) : schémas de sortie réels — 17 derniers outils → 37/37 (2026-06-23)
+
+**Clôture LOT 1c** — vrais schémas de sortie pour les **17 outils Glory restants**, dérivés ligne à ligne de chaque `promptTemplate` (aucun schéma permissif « attrape-tout »).
+
+- `feat(artemis)` `outputSchema` ajouté à : **7 outils registry** (`visual-moodboard-generator`, `synthesize-section`, `lsi-universe-setup`, `lsi-symbol-alchemy`, `lsi-distribution-matrix`, `lsi-sublimation`, `lsi-morpho-semantic`) ; **3 Imhotep** (`crew-matcher`, `formation-recommender`, `qc-evaluator`) ; **2 Anubis** (`ad-copy-generator`, `audience-targeter`) ; **4 AD/OPS** (`adops-expand-semantic-field`, `adops-cross-pollinate-concepts`, `adops-decode-reference-grid`, `adops-defend-creative-direction`) ; **1 postmortem** (`postmortem-12q` — `z.record(qN → {answer, score 0..1, evidenceUrls})`, valeur strictement typée, clés dynamiques q1..q12).
+- Schémas couplés-forge préservés (`visual-moodboard-generator` garde `moodboard_brief` optionnel pour le handoff Ptah ; `synthesize-section` payload libre typé `{narrative, structured_payload}`).
+- **Baseline du gate ratchetée 17 → 0.** **37/37 outils Glory validés en sortie — 76/76 nœuds LLM/HYBRID + 28/28 frameworks à 100 %.** Le contournement restant (52 appels / 38 fichiers) est de l'**entrée** (LOT 1e), pas de la sortie.
+- Hors phases 0–9 (out-of-scope). **0 nouveau Neter** (Cap APOGEE 7/7), **0 model Prisma**, **0 bypass**. tsc 0 · eslint 0 · tests verts. Cf. Justification — out-of-scope dans le body PR.
+
 ## v6.27.40 — Sécurité LLM LOT 1c (batch 4) : schémas de sortie réels — 5 outils CR (2026-06-23)
 
 **Suite LOT 1c** — vrais schémas pour 5 outils CR de copywriting stratégique.
