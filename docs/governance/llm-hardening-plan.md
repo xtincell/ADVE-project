@@ -18,7 +18,9 @@ harnais n'ont aucun impact production.
 |---|---|---|---|
 | **0** | PROD | **Verrou d'entrée anti-injection** : utilitaire `untrusted-content` (balisage + neutralisation des jetons de rupture, plafond de taille) + rappel sécurité dans le system prompt. Branché au chokepoint des outils (`engine.ts`), des frameworks (`artemis/index.ts`) et du wrapper structuré (`llm-structured.ts` → couvre tout nœud structuré). | 🟡 en cours (1ʳᵉ PR) |
 | **1** | PROD | **Verrou de sortie** (+ entrée sur les sites qui contournent les chokepoints LOT 0). Sous-lots : **1a** points d'intake ✅ (`deduce-adve`, `boot-sequence`, `narrate-adve`, `rtis-draft`, `brief-ingest`) ; **1b** rtis-cascade/notoria/mestor-insights ✅ (entrée) ; **1c** Glory concept ; **1d** Glory brand ; **1e** campaign-plan/vault-enrichment/reliquat. *(Note : les ~55 Glory tools 1c/1d ont déjà l'entrée durcie via LOT 0/`engine.ts` ; leur reste = schéma de sortie. Frameworks 28/28 déjà OK.)* | 🟡 1a+1b faits |
-| **2** | PROD | **Gate CI** : brancher `audit:llm:strict` (régression-only). | ⬜ à venir |
+| **2** | PROD | **Gate CI** : `audit:llm:strict` branché dans `ci.yml` (job *LLM node guardrails*, régression-only vs baseline). | ✅ |
+
+> **État sécurité (2026-06-23)** : l'**injection de prompt (entrée) est fermée sur tout le périmètre** — outils Glory (LOT 0/engine.ts), frameworks (LOT 0/artemis), points d'intake (LOT 1a), services de dérivation (LOT 1b). Le **gate CI (LOT 2)** empêche tout nouveau nœud non protégé. **Reste = dette de robustesse, pas de sécurité** : schéma de **sortie** pour ~55 Glory tools (1c/1d) + sorties multi-formes des services directs (1e) — désormais *gelées au baseline* et à résorber au fil de l'eau.
 | **3** | SANDBOX | **Harnais fonctionnel Wakanda** : exécuter chaque flux structurant (stratégie, Oracle/rapport, forge, Intents clés, cascade ADVE→RTIS, scoring) et vérifier une sortie valide. Nœuds LLM **et** non-LLM. DB de test, jamais la prod. | ⬜ à venir |
 | **4** | SANDBOX | **Harnais adverse** : rejoue les flux avec entrées piégées (injection, données malformées, SSRF, PII, dépassement) et vérifie que les gardes LOT 0+1 tiennent. | ⬜ après 0+1 |
 
