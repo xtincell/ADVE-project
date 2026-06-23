@@ -10,6 +10,14 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.33 — Sécurité LLM LOT 1a (fin) : brief-ingest — LOT 1a complet (2026-06-23)
+
+**Clôture du LOT 1a** (5 points d'entrée utilisateur durcis).
+
+- `feat(intake)` **`brief-ingest`** : le `rawText` du brief (document client uploadé) est balisé via `wrapUntrusted` (qui neutralise aussi la tentative de breakout `=== FIN DU BRIEF ===`). *(Sortie déjà validée Zod via `parsedBriefSchema.safeParse`.)* L'OCR `extractWithVision` n'expose aucun vecteur (seule la longueur du base64 entre dans le prompt, sortie texte libre par nature).
+- **LOT 1a complet** : `deduce-adve`, `boot-sequence`, `narrate-adve`, `rtis-draft`, `brief-ingest` — tous les appels LLM directs du flux d'intake sont durcis en entrée (et en sortie là où elle manquait).
+- Hors phases 0–9 (out-of-scope). **0 nouveau Neter** (Cap APOGEE 7/7), **0 model Prisma**, **0 bypass**. tsc 0 · eslint 0. Cf. Justification — out-of-scope dans le body PR.
+
 ## v6.27.32 — Sécurité LLM LOT 1a (suite) : narrate-adve + rtis-draft (entrée) (2026-06-23)
 
 **Suite du LOT 1a** — durcissement entrée des deux derniers appels LLM directs du cœur quick-intake.
