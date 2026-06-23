@@ -98,3 +98,61 @@ export const wordplayBankOutputSchema = z.object({
   expressionsLocales: z.array(z.string()),
   doublesSens: z.array(z.string()),
 });
+
+// ─── LAYER DC — Direction de Création ───────────────────────────────────────
+
+/** coherence-checker — alignement cross-séquence (contrat explicite du prompt). */
+export const coherenceCheckerOutputSchema = z.object({
+  aligned: z.boolean(),
+  score: z.number().min(0).max(100),
+  gaps: z.array(z.string()),
+  risks: z.array(z.string()),
+  recommendations: z.array(z.string()),
+});
+
+const brandGuardianScoreNote = z.object({
+  score: z.number().int().min(0).max(100),
+  notes: z.string(),
+});
+/** brand-guardian — audit culturel de marque (schéma VERROUILLÉ dans le prompt). */
+export const brandGuardianOutputSchema = z.object({
+  brand_culture_audit: z.object({
+    coherence_visual: brandGuardianScoreNote,
+    coherence_tonal: brandGuardianScoreNote,
+    coherence_semiotic: brandGuardianScoreNote,
+    alignment_values: brandGuardianScoreNote,
+  }),
+  coherenceScore: z.number().min(0).max(100),
+  violations: z.array(z.string()),
+  suggestions: z.array(z.string()).min(1),
+  verdict: z.enum(["APPROVED", "NEEDS_REVISION", "REJECTED"]),
+});
+
+const insightItemSchema = z.object({
+  formulation: z.string(),
+  evidence: z.array(z.string()),
+  confidence: z.enum(["HIGH", "MEDIUM", "LOW"]),
+  strategic_implication: z.string(),
+});
+/** insight-synthesizer — insights 4 axes (contrat explicite du prompt). */
+export const insightSynthesizerOutputSchema = z.object({
+  insights: z.object({
+    consumer: z.array(insightItemSchema),
+    market: z.array(insightItemSchema),
+    cultural: z.array(insightItemSchema),
+    weak_signals: z.array(insightItemSchema),
+  }),
+});
+
+/** idea-killer-saver — triage créatif KILL / SAVE / PIVOT. */
+export const ideaKillerSaverOutputSchema = z.object({
+  verdicts: z
+    .array(
+      z.object({
+        idee: z.string().optional(),
+        verdict: z.enum(["KILL", "SAVE", "PIVOT"]),
+        justification: z.string(),
+      }),
+    )
+    .min(1),
+});

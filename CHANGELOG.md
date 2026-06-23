@@ -10,6 +10,15 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.38 — Sécurité LLM LOT 1c (batch 2) : schémas de sortie réels — 4 outils DC (2026-06-23)
+
+**Suite LOT 1c** — vrais schémas de sortie pour 4 outils DC (évaluation/diagnostic) dont 3 ont un contrat JSON **explicite** dans leur prompt.
+
+- `feat(artemis)` `outputSchema` ajouté à **`coherence-checker`** (`{aligned, score, gaps, risks, recommendations}`), **`brand-guardian`** (audit culturel 4 axes + verdict APPROVED/NEEDS_REVISION/REJECTED — schéma verrouillé), **`insight-synthesizer`** (insights consumer/market/cultural/weak_signals), **`idea-killer-saver`** (triage KILL/SAVE/PIVOT). Schémas fidèles aux contrats des prompts.
+- **Baseline du gate ratchetée 30 → 26** manques de sortie.
+- *(`synthesize-section` tenu à l'écart de ce batch : chemin Oracle-assembler + payload libre, à traiter à part.)*
+- Hors phases 0–9 (out-of-scope). **0 nouveau Neter** (Cap APOGEE 7/7), **0 model Prisma**, **0 bypass**. tsc 0 · eslint 0 · 40 tests verts. Cf. Justification — out-of-scope dans le body PR.
+
 ## v6.27.37 — Sécurité LLM LOT 1c (batch 1) : schémas de sortie réels — 7 outils CR (2026-06-23)
 
 **LOT 1c du plan** — vrais schémas de sortie pour les Glory tools LLM (pas de schéma permissif « attrape-tout » : on valide réellement, dérivé du contrat de chaque `promptTemplate`).
