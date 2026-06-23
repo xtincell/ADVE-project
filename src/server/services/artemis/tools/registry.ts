@@ -14,6 +14,10 @@ import {
   claimBaselineOutputSchema,
   storytellingSequencerOutputSchema,
   wordplayBankOutputSchema,
+  coherenceCheckerOutputSchema,
+  brandGuardianOutputSchema,
+  insightSynthesizerOutputSchema,
+  ideaKillerSaverOutputSchema,
 } from "./glory-output-schemas";
 
 /**
@@ -480,6 +484,7 @@ Règles : evaluations MIN 1, MAX 8 (si pas de proposals : 1 entry "à enrichir" 
       budget_reality: "s.globalBudget",
     },
     outputFormat: "idea_triage",
+    outputSchema: ideaKillerSaverOutputSchema,
     promptTemplate: `Triage les idées créatives :
 Pour chaque idée, verdict : KILL (pourquoi), SAVE (pourquoi + renforcement), PIVOT (vers quoi).
 Critères : faisabilité, différenciation, cohérence marque, potentiel viral.`,
@@ -1814,6 +1819,7 @@ Livrable : radar visuel (4 quadrants : émergent/croissant/mature/déclinant), 5
       tarsis_signals: "t.marketReality.weakSignals",
     },
     outputFormat: "insights",
+    outputSchema: insightSynthesizerOutputSchema,
     promptTemplate: `Synthèse d'insights (avec Tarsis weak signals integration) :
 
 Données marché : {{market_data}}
@@ -2786,6 +2792,7 @@ const NETERU_TOOLS: GloryToolDef[] = [
       brand_guidelines: "d.directionArtistique",
     },
     outputFormat: "brand_validation_report",
+    outputSchema: brandGuardianOutputSchema,
     promptTemplate: `Tu es le Brand Guardian. Analyse cet output candidat en le confrontant à l'identité de marque et aux guidelines.
 Identité marque : {{brand_identity}}
 Guidelines : {{brand_guidelines}}
@@ -2825,6 +2832,7 @@ Règles : brand_culture_audit : 4 sous-clés OBLIGATOIRES (score entier ∈ [0,1
       brand_dna: "a.noyauIdentitaire",
     },
     outputFormat: "coherence_report",
+    outputSchema: coherenceCheckerOutputSchema,
     promptTemplate: `Compare ces deux outputs de séquences différentes pour vérifier leur cohérence mutuelle.
 ADN marque : {{brand_dna}}
 Output source (référence) : {{source_output}}

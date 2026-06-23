@@ -10,7 +10,7 @@ Deux contrats vérifiés par nœud : **sortie** (validation Zod stricte) et **en
 
 | Catégorie | Total | Protégés (sortie) | Couverture | Sans garde |
 |---|---|---|---|---|
-| Glory tools (LLM/HYBRID) | 76 | 35 | 46% | 41 |
+| Glory tools (LLM/HYBRID) | 76 | 40 | 53% | 36 |
 | Frameworks | 28 | 28 | 100% | 0 |
 | Appels LLM directs (bypass wrapper) | — | — | — | 52 sur 38 fichiers |
 
@@ -20,7 +20,6 @@ Ces nœuds appellent un LLM mais ne déclarent ni `outputSchema` ni `_noSchemaJu
 
 | Type | Slug | Exec |
 |---|---|---|
-| glory | `idea-killer-saver` | LLM |
 | glory | `semiotic-brand-analyzer` | LLM |
 | glory | `visual-moodboard-generator` | LLM |
 | glory | `logo-type-advisor` | LLM |
@@ -31,7 +30,6 @@ Ces nœuds appellent un LLM mais ne déclarent ni `outputSchema` ni `_noSchemaJu
 | glory | `qc-evaluator` | LLM |
 | glory | `ad-copy-generator` | LLM |
 | glory | `audience-targeter` | LLM |
-| glory | `idea-killer-saver` | LLM |
 | glory | `semiotic-brand-analyzer` | LLM |
 | glory | `visual-moodboard-generator` | LLM |
 | glory | `logo-type-advisor` | LLM |
@@ -45,10 +43,7 @@ Ces nœuds appellent un LLM mais ne déclarent ni `outputSchema` ni `_noSchemaJu
 | glory | `tone-of-voice-designer` | LLM |
 | glory | `manifesto-writer` | LLM |
 | glory | `engagement-rituals-designer` | LLM |
-| glory | `insight-synthesizer` | LLM |
 | glory | `synthesize-section` | LLM |
-| glory | `brand-guardian` | LLM |
-| glory | `coherence-checker` | LLM |
 | glory | `claim-architect` | LLM |
 | glory | `vocabulary-builder` | LLM |
 | glory | `lsi-universe-setup` | LLM |
