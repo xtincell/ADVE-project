@@ -234,20 +234,37 @@ export const SERVICES: Service[] = [
 ];
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Catalogue produits UPgraders (/tarifs) — set produit propre à l'agence
+   Catalogue produits UPgraders (/tarifs) — la gamme propre à l'agence
 
-   UPgraders vend UNE GAMME : le produit self-serve La Fusée (qui a SON propre
-   univers de prix, localisé par zone — cf. <PricingGrid> sur /pricing) + les
-   PRESTATIONS agence sur devis (Audit ADVE, Mandat RTIS, Marque blanche).
-   On ne re-mélange pas les deux : pas de grille FCFA statique ici — La Fusée
-   renvoie vers sa grille live, l'agence reste sur devis (EFR · contrat).
+   UPgraders vend UNE GAMME, coordonnée par La Fusée : le produit self-serve
+   La Fusée (qui a SON propre univers de prix localisé par zone — cf.
+   <PricingGrid> sur /pricing) + un menu de PRESTATIONS opérées en marque
+   blanche / sous-couvert via La Guilde (stratégie marketing, production
+   graphique & audiovisuelle, chartes, études de marché & rapports, audit
+   financier). On ne re-mélange pas les deux univers : pas de grille FCFA
+   statique ici — La Fusée renvoie vers sa grille live, les prestations restent
+   sur devis (EFR · contrat).
 
    Posture tarifaire (doctrine) : un palier gratuit (entrée La Fusée), les
-   one-shots (rapport/étude) à prix fixe côté La Fusée, les abonnements/retainers
-   « à partir de », et les grosses offres sur devis.
+   one-shots productisés (rapport/étude/Oracle) à prix fixe côté La Fusée, les
+   abonnements/retainers « à partir de », et les prestations sur mesure sur devis.
    ───────────────────────────────────────────────────────────────────────── */
 
+export type ProductCategory =
+  | "Le produit"
+  | "Conseil & stratégie"
+  | "Production · marque blanche"
+  | "Le cadre";
+
+export const PRODUCT_CATEGORIES: { name: ProductCategory; intro: string }[] = [
+  { name: "Le produit", intro: "L'Industry OS en libre-service — la seule offre qui se pilote seule, avec son propre univers de prix." },
+  { name: "Conseil & stratégie", intro: "Le cerveau : extraction d'ADN, roadmap, marché et finance. Le socle ADVE/RTIS, accompagné." },
+  { name: "Production · marque blanche", intro: "Les mains : design, image, son. Une cellule sur mesure convoquée à la mission via La Guilde, sous votre marque." },
+  { name: "Le cadre", intro: "La couverture : on porte la méthode, le contrat, l'escrow et l'admin ; vous portez la relation et le métier." },
+];
+
 export type ProductOffer = {
+  category: ProductCategory;
   mark: string;
   name: string;
   /** Fragment serif-italic accentué (ex. « Fusée », « ADVE »). */
@@ -267,7 +284,9 @@ export type ProductOffer = {
 };
 
 export const PRODUCTS: ProductOffer[] = [
+  /* ── Le produit ─────────────────────────────────────────────────────── */
   {
+    category: "Le produit",
     mark: "01",
     name: "La",
     emphasis: "Fusée",
@@ -286,8 +305,29 @@ export const PRODUCTS: ProductOffer[] = [
     featured: true,
     badge: "Produit phare",
   },
+
+  /* ── Conseil & stratégie ────────────────────────────────────────────── */
   {
+    category: "Conseil & stratégie",
     mark: "02",
+    name: "Stratégie",
+    emphasis: "marketing",
+    kind: "Prestation",
+    tagline: "ADVE en entrée, propulseur RTIS en exécution : positionnement, roadmap, direction créative déléguée.",
+    priceLabel: "À partir de — sur devis",
+    priceNote: "En mandat (retainer 6 à 24 mois) ou à la mission. Périmètre, palier visé et score cible gelés à la signature (EFR).",
+    inclusions: [
+      "Socle ADVE + roadmap RTIS dynamique",
+      "Positionnement & plateforme de marque",
+      "Direction créative & média déléguée",
+      "Pilotage Cockpit + reporting mensuel",
+    ],
+    primaryCta: { label: "Demander un devis", href: "/contact?offre=strategie-marketing" },
+    badge: "Formule reine",
+  },
+  {
+    category: "Conseil & stratégie",
+    mark: "03",
     name: "Audit",
     emphasis: "ADVE",
     kind: "Prestation",
@@ -304,34 +344,108 @@ export const PRODUCTS: ProductOffer[] = [
     secondaryCta: { label: "Ou : Oracle self-serve", href: "/pricing" },
   },
   {
-    mark: "03",
-    name: "Mandat",
-    emphasis: "RTIS",
+    category: "Conseil & stratégie",
+    mark: "04",
+    name: "Audit",
+    emphasis: "financier",
     kind: "Prestation",
-    tagline: "Le cycle complet : ADVE en entrée, propulseur RTIS en exécution. La formule reine.",
-    priceLabel: "À partir de — sur devis",
-    priceNote: "Retainer 6 à 24 mois. Périmètre, palier visé et score cible gelés à la signature (EFR).",
+    tagline: "Diagnostic, modélisation et structuration financière — mené par notre direction financière (MBA).",
+    priceLabel: "Sur devis",
+    priceNote: "Viabilité, structure de coûts, plan de financement. Adossé à l'expertise MBA de la maison.",
     inclusions: [
-      "ADVE + roadmap RTIS dynamique",
-      "Cellule sur mesure via La Guilde",
-      "Pilotage Cockpit + reporting mensuel",
-      "Obligation d'effet tracée",
+      "Diagnostic financier complet",
+      "Modélisation & structure de coûts",
+      "Plan de financement / rentabilité",
+      "Recommandations chiffrées",
     ],
-    primaryCta: { label: "Demander un devis", href: "/contact?offre=mandat-rtis" },
-    badge: "Formule reine",
+    primaryCta: { label: "Demander un devis", href: "/contact?offre=audit-financier" },
   },
   {
-    mark: "04",
-    name: "Marque",
-    emphasis: "blanche",
+    category: "Conseil & stratégie",
+    mark: "05",
+    name: "Études de marché",
+    emphasis: "& rapports",
     kind: "Prestation",
-    tagline: "Vous portez la relation client, nous portons la méthode. Pour agences relais & studios.",
+    tagline: "Veille, signaux faibles, observatoire sectoriel et rapports sur mesure. La piste devient lisible.",
+    priceLabel: "À partir de — sur devis",
+    priceNote: "Étude cadrée par périmètre. Version productisée : le rapport ADVE+RTIS / l'Oracle La Fusée, à prix fixe.",
+    inclusions: [
+      "Étude concurrentielle & sectorielle",
+      "Lecture des signaux faibles (Tarsis)",
+      "Observatoire / veille continue",
+      "Rapport livré, actionnable",
+    ],
+    primaryCta: { label: "Demander un devis", href: "/contact?offre=etudes-rapports" },
+    secondaryCta: { label: "Ou : rapport self-serve", href: "/pricing" },
+  },
+
+  /* ── Production · marque blanche ────────────────────────────────────── */
+  {
+    category: "Production · marque blanche",
+    mark: "06",
+    name: "Charte graphique",
+    emphasis: "& identité",
+    kind: "Prestation",
+    tagline: "Système visuel complet : logo, palette, typographies, règles d'usage. L'ADN rendu visible.",
     priceLabel: "Sur devis",
-    priceNote: "Sous-traitance stratégique B2B. Conditions selon volume et durée d'engagement.",
+    priceNote: "Livrable cadré (brand book), décliné depuis l'ADVE de la marque.",
+    inclusions: [
+      "Logo & système de marque",
+      "Palette, typographies, grilles",
+      "Brand book & règles d'usage",
+      "Kit de déclinaison",
+    ],
+    primaryCta: { label: "Demander un devis", href: "/contact?offre=charte-graphique" },
+  },
+  {
+    category: "Production · marque blanche",
+    mark: "07",
+    name: "Production",
+    emphasis: "graphique",
+    kind: "Prestation",
+    tagline: "Design, key visuals, print, social, packaging. La distinction qui brise le scroll, déclinée à l'échelle.",
+    priceLabel: "Sur devis",
+    priceNote: "À la mission ou au volume. Cellule curatée convoquée via La Guilde, sous votre marque.",
+    inclusions: [
+      "Key visuals & campagnes",
+      "Social, print, packaging",
+      "Déclinaisons multi-formats",
+      "Contrôle qualité UPgraders",
+    ],
+    primaryCta: { label: "Demander un devis", href: "/contact?offre=production-graphique" },
+  },
+  {
+    category: "Production · marque blanche",
+    mark: "08",
+    name: "Production",
+    emphasis: "audiovisuelle",
+    kind: "Prestation",
+    tagline: "Photo, vidéo, motion. Captée par notre cellule de production (Friends Studio & réseau).",
+    priceLabel: "Sur devis",
+    priceNote: "À la mission. Équipe image assemblée pour le brief, sous votre marque.",
+    inclusions: [
+      "Photo & direction artistique",
+      "Vidéo corporate & publicitaire",
+      "Motion design",
+      "Post-production",
+    ],
+    primaryCta: { label: "Demander un devis", href: "/contact?offre=production-audiovisuelle" },
+  },
+
+  /* ── Le cadre ───────────────────────────────────────────────────────── */
+  {
+    category: "Le cadre",
+    mark: "09",
+    name: "Marque blanche",
+    emphasis: "& sous-couvert",
+    kind: "Prestation",
+    tagline: "Vous portez la relation, nous portons la méthode. Sous-couvert contractuel pour freelances, agences & studios.",
+    priceLabel: "Sur devis",
+    priceNote: "Umbrella : contrat, escrow (séquestre), conciergerie admin & mobile money. Conditions selon volume et durée.",
     inclusions: [
       "Méthode ADVE/RTIS en marque blanche",
-      "Production orchestrée via La Guilde",
-      "Confidentialité contractuelle",
+      "Sous-couvert contractuel freelances",
+      "Escrow & conciergerie (Sérénité)",
       "Facturation partenaire dédiée",
     ],
     primaryCta: { label: "Demander un devis", href: "/contact?offre=marque-blanche" },

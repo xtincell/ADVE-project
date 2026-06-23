@@ -27,7 +27,7 @@ export default function TarifsPage() {
         eyebrow="Tarifs"
         title="Une gamme,"
         emphasis="deux logiques."
-        lede="UPgraders vend un produit et des prestations. La Fusée — l'Industry OS self-serve — a son propre univers de prix, localisé par zone. Les prestations agence (audit, mandat, marque blanche) sont cadrées sur devis : on ne vend pas des moyens, on gèle un état final mesuré."
+        lede="UPgraders vend un produit et un menu de prestations, coordonnés par La Fusée. Le produit — l'Industry OS self-serve — a son propre univers de prix, localisé par zone. Les prestations (stratégie marketing, production graphique & audiovisuelle, chartes, études & rapports, audit financier) s'opèrent en marque blanche via La Guilde, sur devis : on ne vend pas des moyens, on gèle un état final mesuré."
       >
         <PrimaryCta href="/pricing">Tarifs La Fusée</PrimaryCta>
         <GhostCta href="/contact">Parler à l&apos;agence</GhostCta>
@@ -63,9 +63,9 @@ export default function TarifsPage() {
             <Eyebrow num="03">Les prestations</Eyebrow>
             <SectionHeading emphasis="devis.">Sur</SectionHeading>
             <Lede className="mt-4">
-              Audit ADVE, Mandat RTIS, Marque blanche : chaque engagement agence est cadré sur mesure.
-              Le périmètre, le palier visé et le score cible sont gelés et tracés à la signature —
-              l&apos;obligation d&apos;effet, pas la facturation de moyens.
+              Stratégie marketing, production graphique &amp; audiovisuelle, chartes, études de marché,
+              audit financier — opérées en marque blanche / sous-couvert via La Guilde. Chaque engagement
+              est cadré sur mesure : périmètre, palier visé et score cible gelés et tracés à la signature (EFR).
             </Lede>
             <div className="mt-8 flex flex-wrap gap-3">
               <PrimaryCta href="/contact">Demander un devis</PrimaryCta>
