@@ -10,6 +10,15 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.32 — Sécurité LLM LOT 1a (suite) : narrate-adve + rtis-draft (entrée) (2026-06-23)
+
+**Suite du LOT 1a** — durcissement entrée des deux derniers appels LLM directs du cœur quick-intake.
+
+- `feat(intake)` **`narrate-adve`** : les **valeurs verbatim du founder** + le `brandName` sont neutralisés via `sanitizeInline` avant insertion dans le prompt — la neutralisation ne casse que les jetons de rupture (faux `=== ===`, balises de rôle, ``` ```), le texte légitime (cité « caractère pour caractère ») est préservé.
+- `feat(intake)` **`rtis-draft`** : `companyName` neutralisé + le **contexte marque** (ADVE verbatim + contexte hybride Seshat/RAG + marques comparables) est balisé comme donnée via `wrapUntrusted`.
+- *(Sorties : `narrate-adve` et `rtis-draft` lèvent déjà sur forme invalide ; migration Zod complète = follow-up.)*
+- Hors phases 0–9 (out-of-scope). **0 nouveau Neter** (Cap APOGEE 7/7), **0 model Prisma**, **0 bypass**. tsc 0 · eslint 0 · tests verts. Cf. Justification — out-of-scope dans le body PR.
+
 ## v6.27.31 — Sécurité LLM LOT 1a : durcissement des points d'intake (2026-06-23)
 
 **LOT 1a du plan de durcissement** — les appels LLM directs des points d'entrée utilisateur contournent les chokepoints LOT 0 ; on les durcit donc en entrée **et** en sortie.
