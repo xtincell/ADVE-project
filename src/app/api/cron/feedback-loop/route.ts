@@ -6,10 +6,10 @@ export const dynamic = "force-dynamic";
 
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
+import { verifyCronSecret } from "@/lib/cron-auth";
 
 export async function GET(request: Request) {
-  const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret && request.headers.get("authorization") !== `Bearer ${cronSecret}`) {
+  if (!verifyCronSecret(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
