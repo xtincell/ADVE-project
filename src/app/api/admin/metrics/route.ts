@@ -39,7 +39,9 @@ export async function GET(req: Request) {
   const required = process.env.ADMIN_METRICS_TOKEN;
   const auth = req.headers.get("authorization") ?? "";
   if (process.env.NODE_ENV === "production" && !required) {
-    return new NextResponse("ADMIN_METRICS_TOKEN not configured", { status: 500 });
+    // Fail closed without leaking the env-var name or confirming the route
+    // exists (site-prober finding: 500 "ADMIN_METRICS_TOKEN not configured").
+    return new NextResponse("Not found", { status: 404 });
   }
   if (required && auth !== `Bearer ${required}`) {
     return new NextResponse("unauthorized", { status: 401 });

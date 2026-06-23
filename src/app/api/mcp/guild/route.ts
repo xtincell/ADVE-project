@@ -41,7 +41,10 @@ export async function POST(request: Request) {
 // GET — Tool manifest / health check
 // ---------------------------------------------------------------------------
 
-export async function GET() {
+export async function GET(request: Request) {
+  // Catalogue gated (site-prober: tool list exposed to anonymous GET).
+  const __mcpGate = await authenticateMcpRequest(request, "guild");
+  if (!__mcpGate.ok) return NextResponse.json({ server: "guild", status: "ok" });
   return NextResponse.json({
     server: "guild",
     tools: guildTools.map((t) => t.name),

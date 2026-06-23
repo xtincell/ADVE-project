@@ -27,7 +27,10 @@ export async function POST(request: Request) {
   return meterAndRun(gate, "operations", tool, () => handler(body.params ?? {}));
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  // Catalogue gated (site-prober: tool list exposed to anonymous GET).
+  const __mcpGate = await authenticateMcpRequest(request, "operations");
+  if (!__mcpGate.ok) return NextResponse.json({ server: "operations", status: "ok" });
   return NextResponse.json({
     server: "operations",
     tools: operationsTools.map((t) => ({ name: t.name, description: t.description })),
