@@ -42,6 +42,36 @@ normal (route protégée qui rebondit vers `/login`).
   ton site.
 - N'utiliser que sur une cible que **tu possèdes / es autorisé à tester**.
 
+## Couverture des routes
+
+Le bot **découvre automatiquement toutes les routes** (`page.*`) sous `src/app`
+(lecture de chemins de fichiers uniquement — aucun import de code, il reste
+black-box) et les sonde toutes. Présentes et futures : pas de liste à maintenir.
+Les routes dynamiques (`[id]`) sont ignorées (elles exigent de vraies valeurs).
+`--no-discover` pour s'en passer.
+
+## Mode authentifié (agir comme un compte)
+
+Par défaut le bot est **anonyme** : il vérifie seulement que les routes
+protégées **rebondissent vers `/login`**. Avec des identifiants, il **se
+connecte une fois** via le vrai formulaire `/login` (NextAuth credentials),
+capture la session, et **crawle derrière le mur d'auth** (phases HTTP +
+navigateur). La classification s'inverse alors pour les routes protégées :
+un 5xx, un 404, un rebond `/login` (session non honorée) ou `/unauthorized`
+(rôle insuffisant) deviennent des findings.
+
+**Un seul compte ADMIN couvre les 4 portails** (Console/Cockpit/Agency/Creator —
+`proxy.ts` met ADMIN dans toutes les listes de rôles). Le crawl reste
+**read-only (GET)** même authentifié : il charge les pages, il ne soumet ni ne
+mute rien. Identifiants par **variables d'env uniquement** (jamais en dur, jamais
+écrits dans le rapport — redacted).
+
+```bash
+PROBE_EMAIL="bot-admin@upgraders.app" PROBE_PASSWORD="…" npm run probe:prod
+# ou
+npx tsx scripts/site-prober/index.ts --email bot-admin@x.app --password …
+```
+
 ## Usage
 
 ```bash
@@ -54,17 +84,21 @@ npm run probe:burst        # ajoute 3 vagues de charge concurrente
 npx tsx scripts/site-prober/index.ts \
   --base https://lafusee-app.vercel.app \
   --concurrency 16 --max-pages 400 --max-depth 5 \
-  --burst 5 --no-browser --skip-sideeffects --quick
+  --burst 5 --no-browser --skip-sideeffects --quick \
+  --email bot@x.app --password ••• --no-discover
 ```
 
 | Flag | Effet | Défaut |
 |---|---|---|
 | `--base <url>` / `PROBE_BASE_URL` | cible | `https://lafusee-app.vercel.app` |
+| `--email <e>` / `PROBE_EMAIL` | compte de test (active le mode authentifié) | — |
+| `--password <p>` / `PROBE_PASSWORD` | mot de passe du compte de test | — |
 | `--concurrency <n>` | workers HTTP simultanés | 10 |
 | `--max-pages <n>` | plafond de pages crawlées | 250 |
 | `--max-depth <n>` | profondeur de crawl | 4 |
 | `--burst <n>` | vagues de charge concurrente (0 = off) | 0 |
 | `--no-browser` | saute la passe Playwright | off |
+| `--no-discover` | n'auto-découvre pas les routes de `src/app` | off |
 | `--quick` | seeds + API seulement | off |
 | `--skip-sideeffects` | n'appelle aucun endpoint à effet de bord | off |
 
@@ -81,9 +115,11 @@ Code de sortie `2` s'il y a au moins un finding CRITICAL/HIGH (utile en CI).
 ```
 index.ts      orchestrateur + CLI + pool de concurrence + crawl + burst
 config.ts     cible, seeds, classification (calquée sur proxy.ts), probes API, headers attendus
-http.ts       client fetch (redirects manuels, timing, retries) + extraction de liens
+routes.ts     découverte des routes depuis src/app (chemins de fichiers, pas d'import de code)
+auth.ts       login via formulaire /login → cookies de session (mode authentifié)
+http.ts       client fetch (redirects manuels, timing, retries, cookie) + extraction de liens
 analyzers.ts  HttpResult → Finding (auth, cron, mcp, disclosure, headers, redirects…)
-browser.ts    passe Playwright/Chromium (console/JS/hydration/assets) — dégrade si absent
-report.ts     agrégation, dédup, Markdown + JSON
+browser.ts    passe Playwright/Chromium (console/JS/hydration/assets, cookies) — dégrade si absent
+report.ts     agrégation (collapse du bruit), dédup, Markdown + JSON
 types.ts      types partagés
 ```

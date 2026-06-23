@@ -15,6 +15,47 @@ const SEV_EMOJI: Record<Severity, string> = {
   INFO: "⚪",
 };
 
+/**
+ * Collapse site-wide noise (missing security headers, x-powered-by) into one
+ * finding per header instead of one per page — otherwise crawling 200+ routes
+ * buries the real signal under hundreds of identical rows.
+ */
+export function aggregateNoisy(findings: Finding[]): Finding[] {
+  const COLLAPSE = new Set(["security-header", "header-leak"]);
+  const passthrough: Finding[] = [];
+  const groups = new Map<string, Finding[]>();
+  for (const f of findings) {
+    if (COLLAPSE.has(f.category)) {
+      const key = `${f.category}::${f.title}`;
+      (groups.get(key) ?? groups.set(key, []).get(key)!).push(f);
+    } else {
+      passthrough.push(f);
+    }
+  }
+  const collapsed: Finding[] = [];
+  for (const [key, items] of groups) {
+    const first = items[0]!;
+    const n = items.length;
+    const sample = items
+      .slice(0, 5)
+      .map((x) => {
+        try {
+          return new URL(x.target).pathname;
+        } catch {
+          return x.target;
+        }
+      })
+      .join(", ");
+    collapsed.push({
+      ...first,
+      id: key,
+      target: `site-wide (${n} page${n > 1 ? "s" : ""})`,
+      detail: `${first.detail} — sur ${n} réponse${n > 1 ? "s" : ""} HTML. Ex : ${sample}${n > 5 ? " …" : ""}. À corriger en une fois (en-têtes globaux next.config.ts / vercel.json).`,
+    });
+  }
+  return [...passthrough, ...collapsed];
+}
+
 export function dedupe(findings: Finding[]): Finding[] {
   const seen = new Map<string, Finding>();
   for (const f of findings) {
@@ -76,6 +117,8 @@ export function renderMarkdown(report: ProbeReport): string {
   lines.push(`- Requêtes HTTP émises : **${report.stats.requestsSent}**`);
   lines.push(`- Pages crawlées (découvertes) : **${report.stats.pagesCrawled}**`);
   lines.push(`- Pages ouvertes en navigateur réel : **${report.stats.browserPages}**`);
+  const authed = (report.config as { authenticated?: boolean }).authenticated;
+  lines.push(`- Mode : **${authed ? "authentifié (crawl derrière le login)" : "anonyme (black-box)"}**`);
   lines.push("");
 
   // Top criticals/highs callout

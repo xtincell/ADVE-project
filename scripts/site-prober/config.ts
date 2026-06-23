@@ -23,6 +23,15 @@ export interface ProberConfig {
   bodySampleBytes: number;
   outputDir: string;
   userAgent: string;
+  // ── route discovery ──
+  discoverRoutes: boolean; // seed every page route found under src/app
+  appDir: string;
+  // ── authenticated mode (credentials from env; runtime fields set after login) ──
+  email?: string;
+  password?: string;
+  authenticated: boolean; // true once a session is established
+  cookieHeader?: string; // sent on every HTTP request when set
+  sessionCookies?: unknown[]; // Playwright cookies for the browser pass
 }
 
 export const DEFAULT_CONFIG: ProberConfig = {
@@ -40,6 +49,11 @@ export const DEFAULT_CONFIG: ProberConfig = {
   outputDir: "reports",
   userAgent:
     "LaFusee-SiteProber/1.0 (+authorized QA; owner=xtincell; read-only GET/HEAD)",
+  discoverRoutes: true,
+  appDir: "src/app",
+  email: process.env.PROBE_EMAIL,
+  password: process.env.PROBE_PASSWORD,
+  authenticated: false,
 };
 
 /**

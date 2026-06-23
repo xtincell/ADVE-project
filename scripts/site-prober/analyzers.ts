@@ -53,7 +53,7 @@ const DISCLOSURE_PATTERNS: { re: RegExp; sev: Severity; what: string }[] = [
   { re: /webpack-internal:\/\//, sev: "LOW", what: "webpack-internal reference (dev artifact)" },
 ];
 
-export function analyzeStatusAndAuth(r: HttpResult): Finding[] {
+export function analyzeStatusAndAuth(r: HttpResult, authenticated = false): Finding[] {
   const out: Finding[] = [];
   const path = new URL(r.url).pathname;
 
@@ -74,11 +74,21 @@ export function analyzeStatusAndAuth(r: HttpResult): Finding[] {
       const redirectsToLogin =
         r.redirectChain.some((h) => /\/login/.test(h.location)) ||
         /\/login/.test(r.finalUrl);
-      const blocked = r.status === 401 || r.status === 403 || redirectsToLogin || /\/unauthorized/.test(r.finalUrl);
-      if (r.status === 200 && !blocked) {
-        out.push(mk("CRITICAL", "auth-leak", "Protected route served to anonymous user", r.url, `Expected redirect to /login or 401/403, got 200 (${r.bytes}b of ${r.contentType}). This route is declared protected in proxy.ts but is reachable without a session.`, snippet(r.bodySample)));
-      } else if (!blocked && r.status !== 404) {
-        out.push(mk("MEDIUM", "auth-anomaly", "Protected route returned unexpected status", r.url, `Expected login bounce / 401 / 403, got ${r.status} → ${r.finalUrl}`));
+      const bouncedUnauthorized = /\/unauthorized/.test(r.finalUrl);
+      const blocked = r.status === 401 || r.status === 403 || redirectsToLogin || bouncedUnauthorized;
+      if (authenticated) {
+        // With a session the route SHOULD render. The findings flip:
+        if (r.status >= 500) out.push(mk("CRITICAL", "server-error", "Protected page 5xx (authenticated)", r.url, `Status ${r.status} behind the auth wall — a real server error a logged-in user hits.`, snippet(r.bodySample)));
+        else if (redirectsToLogin) out.push(mk("MEDIUM", "session-not-honored", "Protected route still bounces to /login", r.url, `Authenticated but redirected to login → session not honored, or the route over-restricts.`));
+        else if (bouncedUnauthorized) out.push(mk("LOW", "role-insufficient", "Route refused for this role", r.url, `Authenticated session lacks the role for this route (→ /unauthorized). Use an ADMIN account for full coverage.`));
+        else if (r.status === 404) out.push(mk("MEDIUM", "broken-link", "Protected route 404 (authenticated)", r.url, `Reachable route returns 404 for a logged-in user — dead branchement.`));
+        else if (r.status >= 400) out.push(mk("MEDIUM", "client-error", `Protected page ${r.status} (authenticated)`, r.url, `Unexpected ${r.status} behind the auth wall.`));
+      } else {
+        if (r.status === 200 && !blocked) {
+          out.push(mk("CRITICAL", "auth-leak", "Protected route served to anonymous user", r.url, `Expected redirect to /login or 401/403, got 200 (${r.bytes}b of ${r.contentType}). This route is declared protected in proxy.ts but is reachable without a session.`, snippet(r.bodySample)));
+        } else if (!blocked && r.status !== 404) {
+          out.push(mk("MEDIUM", "auth-anomaly", "Protected route returned unexpected status", r.url, `Expected login bounce / 401 / 403, got ${r.status} → ${r.finalUrl}`));
+        }
       }
       break;
     }
@@ -232,9 +242,9 @@ function snippet(s: string, n = 280): string {
   return s.replace(/\s+/g, " ").trim().slice(0, n);
 }
 
-export function runHttpAnalyzers(r: HttpResult, _cfg: ProberConfig): Finding[] {
+export function runHttpAnalyzers(r: HttpResult, cfg: ProberConfig): Finding[] {
   return [
-    ...analyzeStatusAndAuth(r),
+    ...analyzeStatusAndAuth(r, cfg.authenticated),
     ...analyzeDisclosure(r),
     ...analyzeSecurityHeaders(r),
   ];

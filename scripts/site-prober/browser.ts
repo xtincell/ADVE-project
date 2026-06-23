@@ -24,7 +24,16 @@ type BrowserLike = {
 type ContextLike = {
   newPage: () => Promise<PageLike>;
   close: () => Promise<void>;
+  addCookies?: (cookies: unknown[]) => Promise<void>;
 };
+
+/** Chromium launch flags required to run headless in a container (no sandbox). */
+export const LAUNCH_ARGS = [
+  "--no-sandbox",
+  "--disable-setuid-sandbox",
+  "--disable-dev-shm-usage",
+  "--disable-gpu",
+];
 type PageLike = {
   on: (event: string, cb: (arg: unknown) => void) => void;
   goto: (url: string, opts: { waitUntil: string; timeout: number }) => Promise<unknown>;
@@ -34,7 +43,7 @@ type PageLike = {
   close: () => Promise<void>;
 };
 
-async function loadChromium(): Promise<ChromiumLike | null> {
+export async function loadChromium(): Promise<ChromiumLike | null> {
   try {
     const mod = (await import("@playwright/test")) as unknown as {
       chromium: ChromiumLike;
@@ -124,11 +133,14 @@ async function probePage(
   return res;
 }
 
-/** Run the browser pass over `urls` with `parallel` simultaneous contexts. */
+/** Run the browser pass over `urls` with `parallel` simultaneous contexts.
+ * When `cookies` are supplied (from an authenticated login) each context is
+ * seeded with them, so the browser pass crawls behind the auth wall. */
 export async function runBrowserPass(
   urls: string[],
   cfg: ProberConfig,
   parallel = 4,
+  cookies?: unknown[],
 ): Promise<{ results: BrowserResult[]; skipped?: string }> {
   const chromium = await loadChromium();
   if (!chromium) {
@@ -154,7 +166,7 @@ export async function runBrowserPass(
     browser = await chromium.launch({
       headless: true,
       timeout: 30_000,
-      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+      args: LAUNCH_ARGS,
     });
   } catch (e) {
     return {
@@ -182,6 +194,9 @@ export async function runBrowserPass(
         userAgent: cfg.userAgent,
         ignoreHTTPSErrors: true,
       });
+      if (cookies?.length && ctx.addCookies) {
+        await ctx.addCookies(cookies).catch(() => {});
+      }
       try {
         for (;;) {
           const url = queue.shift();

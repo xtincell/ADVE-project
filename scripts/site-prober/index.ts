@@ -16,6 +16,13 @@
  *   npx tsx scripts/site-prober --no-browser        # HTTP-only (no Chromium)
  *   npx tsx scripts/site-prober --burst 3           # add load-simulation waves
  *   npx tsx scripts/site-prober --quick             # seeds only, no crawl
+ *
+ *   # Authenticated mode — act as a dummy account and crawl behind the login
+ *   # (one ADMIN account covers all four portals). Credentials via env vars:
+ *   PROBE_EMAIL=bot@x.app PROBE_PASSWORD=… npx tsx scripts/site-prober
+ *   npx tsx scripts/site-prober --email bot@x.app --password …
+ *   # Still read-only (GET): loads protected pages, never submits/mutates.
+ *   # Every static page route under src/app is auto-discovered and probed.
  */
 
 import {
@@ -36,8 +43,11 @@ import {
   analyzeSensitiveFile,
 } from "./analyzers";
 import { runBrowserPass, analyzeBrowser } from "./browser";
+import { loginViaForm } from "./auth";
+import { discoverStaticRoutes } from "./routes";
 import {
   dedupe,
+  aggregateNoisy,
   countBySeverity,
   writeReport,
   printSummary,
@@ -61,10 +71,15 @@ function parseArgs(): ProberConfig & { quick: boolean; skipSideEffects: boolean 
     runBrowser: !a.includes("--no-browser"),
     quick: a.includes("--quick"),
     skipSideEffects: a.includes("--skip-sideeffects"),
+    discoverRoutes: !a.includes("--no-discover"),
   };
-  const baseIdx = a.indexOf("--base");
-  if (baseIdx >= 0 && a[baseIdx + 1]) cfg.baseUrl = a[baseIdx + 1]!;
-  cfg.baseUrl = cfg.baseUrl.replace(/\/+$/, "");
+  const str = (flag: string) => {
+    const i = a.indexOf(flag);
+    return i >= 0 && a[i + 1] ? a[i + 1] : undefined;
+  };
+  cfg.baseUrl = (str("--base") ?? cfg.baseUrl).replace(/\/+$/, "");
+  cfg.email = str("--email") ?? cfg.email;
+  cfg.password = str("--password") ?? cfg.password;
   return cfg;
 }
 
@@ -175,12 +190,35 @@ async function main() {
   const findings: Finding[] = [];
   const allHttp: HttpResult[] = [];
 
+  // ── Phase 0: authenticate (optional) ──
+  if (cfg.email && cfg.password) {
+    console.log(`\n▸ Phase 0 — authentification (login as ${cfg.email})`);
+    const auth = await loginViaForm(cfg);
+    if (auth.ok) {
+      cfg.authenticated = true;
+      cfg.cookieHeader = auth.cookieHeader;
+      cfg.sessionCookies = auth.cookies;
+      console.log(`  ✅ session établie → crawl derrière le mur d'auth (landed ${auth.landedUrl})`);
+    } else {
+      console.log(`  ⚠️  login échoué : ${auth.error} — poursuite en anonyme`);
+      findings.push({ id: "auth-login-failed", severity: "MEDIUM", category: "tooling", title: "Login échoué — mode anonyme", target: `${cfg.baseUrl}/login`, detail: `Le mode authentifié a échoué (${auth.error}). Les routes protégées ne sont testées que pour leur rebond vers /login.`, source: "http" });
+    }
+  } else {
+    console.log("   mode       : anonyme (set PROBE_EMAIL/PROBE_PASSWORD pour tester derrière le login)");
+  }
+
+  // Discover every static page route from src/app so the entire route surface
+  // is probed (present + future), not just the hand-maintained seed lists.
+  const discovered = cfg.discoverRoutes ? discoverStaticRoutes(cfg.appDir) : [];
+  if (discovered.length) console.log(`   routes     : ${discovered.length} routes statiques découvertes sous ${cfg.appDir}`);
+
   // ── Phase 1: targeted seeds (public + protected + legacy + sensitive files) ──
   console.log("\n▸ Phase 1 — sondage ciblé (routes connues + branchements + fichiers sensibles)");
   const seedPaths = [
     ...new Set([
       ...PUBLIC_ROUTES,
       ...PROTECTED_ROUTES,
+      ...discovered, // every static page route under src/app
       ...Object.keys(LEGACY_REDIRECTS),
       ...SENSITIVE_FILES,
     ]),
@@ -213,8 +251,17 @@ async function main() {
   // ── Phase 3: crawl (discover the rest of the public surface) ──
   let crawledCount = 0;
   if (!cfg.quick) {
-    console.log("\n▸ Phase 3 — crawl du graphe public (découverte des branchements)");
-    const crawlSeeds = PUBLIC_ROUTES.map((p) => origin + p);
+    console.log(`\n▸ Phase 3 — crawl du graphe ${cfg.authenticated ? "complet (public + protégé)" : "public"} (découverte des branchements)`);
+    // Anonymous: crawl public surface only (protected routes just redirect).
+    // Authenticated: also seed the protected portals so we crawl behind the wall.
+    const crawlSeedPaths = [
+      ...new Set([
+        ...PUBLIC_ROUTES,
+        ...discovered,
+        ...(cfg.authenticated ? PROTECTED_ROUTES : []),
+      ]),
+    ].filter((p) => cfg.authenticated || classify(p) !== "protected");
+    const crawlSeeds = crawlSeedPaths.map((p) => origin + p);
     const { results, assets, external } = await crawl(cfg, origin, crawlSeeds);
     crawledCount = results.length;
     // analyze crawl results not already covered by seeds
@@ -253,8 +300,8 @@ async function main() {
     console.log("\n▸ Phase 5 — navigateur réel (console/JS/hydration/assets) — plusieurs onglets en parallèle");
     // browse the high-value seeds + a sample of crawled HTML pages
     const htmlUrls = allHttp.filter((r) => r.ok && r.status === 200 && /text\/html/.test(r.contentType)).map((r) => r.finalUrl);
-    const browseSet = [...new Set([...BROWSER_SEED_PAGES.map((p) => origin + p), ...htmlUrls])].slice(0, 40);
-    const { results, skipped } = await runBrowserPass(browseSet, cfg, 4);
+    const browseSet = [...new Set([...BROWSER_SEED_PAGES.map((p) => origin + p), ...htmlUrls])].slice(0, cfg.authenticated ? 90 : 40);
+    const { results, skipped } = await runBrowserPass(browseSet, cfg, 4, cfg.sessionCookies);
     browserResults.push(...results);
     if (skipped) {
       console.log(`  ⚠️  navigateur sauté : ${skipped}`);
@@ -264,14 +311,20 @@ async function main() {
   }
 
   // ── Aggregate + write ──
-  const deduped = dedupe(findings);
+  const deduped = dedupe(aggregateNoisy(findings));
   const finishedAt = new Date().toISOString();
   const report: ProbeReport = {
     baseUrl: cfg.baseUrl,
     startedAt,
     finishedAt,
     durationMs: Date.now() - t0,
-    config: { ...cfg },
+    // Redact secrets — reports must never carry the password or session cookie.
+    config: {
+      ...cfg,
+      password: cfg.password ? "***" : undefined,
+      cookieHeader: cfg.cookieHeader ? "***" : undefined,
+      sessionCookies: undefined,
+    },
     stats: {
       urlsProbed: new Set(allHttp.map((r) => r.url)).size,
       requestsSent: getRequestCount(),

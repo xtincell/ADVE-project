@@ -36,6 +36,7 @@ async function rawFetch(
         "user-agent": cfg.userAgent,
         accept:
           "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",
+        ...(cfg.cookieHeader ? { cookie: cfg.cookieHeader } : {}),
       },
     });
   } finally {
