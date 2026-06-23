@@ -85,6 +85,10 @@ const PROTECTED_ROUTES: Array<{
   { prefix: "/console", roles: ["ADMIN", "OPERATOR"] },
   { prefix: "/agency", roles: ["ADMIN", "OPERATOR", "AGENCY", "PARTNER", "CLIENT_RETAINER", "CLIENT_STATIC"] },
   { prefix: "/portals", roles: [...new Set([...COCKPIT_ROLES, ...CREATOR_ROLES])] },
+  // Operator-only bootstrap wizards (call operator.getOwn) — were publicly
+  // reachable in the (intake) group and 401'd for anonymous users
+  // (site-prober finding). Restrict to operators.
+  { prefix: "/launchpad", roles: ["ADMIN", "OPERATOR"] },
 ];
 
 export async function proxy(request: NextRequest) {
@@ -165,5 +169,6 @@ export const config = {
     "/creator/:path*",
     "/console/:path*",
     "/agency/:path*",
+    "/launchpad/:path*",
   ],
 };

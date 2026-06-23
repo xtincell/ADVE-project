@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight } from "lucide-react";
+import { APP_ROUTES } from "@/lib/generated/app-routes";
 
 const SEGMENT_LABELS: Record<string, string> = {
   cockpit: "Brand OS",
@@ -77,7 +78,11 @@ export function Breadcrumb() {
     const href = "/" + segments.slice(0, i + 1).join("/");
     const label = SEGMENT_LABELS[segment] || segment;
     const isLast = i === segments.length - 1;
-    return { href, label, isLast };
+    // Only linkify segments that resolve to a real page. Section containers
+    // (e.g. /console/socle) have sub-pages but no index page → linking them
+    // 404s (site-prober finding). Such segments render as plain text.
+    const navigable = !isLast && APP_ROUTES.has(href);
+    return { href, label, isLast, navigable };
   });
 
   return (
@@ -85,15 +90,17 @@ export function Breadcrumb() {
       {crumbs.map((crumb, i) => (
         <span key={crumb.href} className="flex items-center gap-1">
           {i > 0 && <ChevronRight className="h-3 w-3 text-foreground-muted" />}
-          {crumb.isLast ? (
-            <span className="font-medium text-foreground">{crumb.label}</span>
-          ) : (
+          {crumb.navigable ? (
             <Link
               href={crumb.href}
               className="text-foreground-muted transition-colors hover:text-foreground-secondary"
             >
               {crumb.label}
             </Link>
+          ) : (
+            <span className={crumb.isLast ? "font-medium text-foreground" : "text-foreground-muted"}>
+              {crumb.label}
+            </span>
           )}
         </span>
       ))}
