@@ -41,7 +41,10 @@ export async function POST(request: Request) {
 // GET — Tool manifest / health check
 // ---------------------------------------------------------------------------
 
-export async function GET() {
+export async function GET(request: Request) {
+  // Catalogue gated (site-prober: tool list exposed to anonymous GET).
+  const __mcpGate = await authenticateMcpRequest(request, "seshat");
+  if (!__mcpGate.ok) return NextResponse.json({ server: "seshat", status: "ok" });
   return NextResponse.json({
     server: "seshat",
     tools: seshatTools.map((t) => t.name),

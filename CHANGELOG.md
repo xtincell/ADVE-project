@@ -10,6 +10,15 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.26 — Sécurité : en-têtes globaux + MCP catalogue gardé + admin-metrics fail-closed (2026-06-23)
+
+**Lot 1 du plan de remédiation des findings `site-prober`.**
+
+- `fix(security)` **en-têtes de sécurité globaux** (`next.config.ts` `headers()`) : HSTS, `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy`, `Permissions-Policy` — **enforced** ; **CSP en `Report-Only`** d'abord (promotion en CSP bloquante après observation). `poweredByHeader: false` (fin de la fuite `x-powered-by`).
+- `fix(security)` **MCP** : le `GET` catalogue des 9 serveurs (`/api/mcp/<server>`) est désormais **gardé par la même auth que le POST** (`authenticateMcpRequest`) — un appelant anonyme reçoit un health-check `{ server, status: "ok" }` sans énumération d'outils. L'exécution (POST) était déjà gardée.
+- `fix(security)` **`/api/admin/metrics`** : renvoie **404** (au lieu de 500 `ADMIN_METRICS_TOKEN not configured`) quand le token n'est pas configuré en prod — ne fuit plus le nom de la variable ni l'existence de la route.
+- Hors phases 0–9 (out-of-scope, hotfix sécurité). 0 nouveau Neter (Cap APOGEE 7/7), 0 model Prisma, 0 bypass. tsc 0 · eslint 0. Cf. Justification — out-of-scope dans le body PR.
+
 ## v6.27.25 — Sécurité : endpoints cron fail-closed + harnais test-e2e gardé (2026-06-23)
 
 **Découvert par le bot `site-prober` (PR #298) : les 10 routes `/api/cron/*` s'exécutaient SANS authentification en production, et `/api/test-e2e` écrivait en base + divulguait l'e-mail admin — pour n'importe quel visiteur anonyme.**

@@ -27,7 +27,10 @@ export async function POST(request: Request) {
   return meterAndRun(gate, "intelligence", tool, () => handler(body.params ?? {}));
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  // Catalogue gated (site-prober: tool list exposed to anonymous GET).
+  const __mcpGate = await authenticateMcpRequest(request, "intelligence");
+  if (!__mcpGate.ok) return NextResponse.json({ server: "intelligence", status: "ok" });
   return NextResponse.json({
     server: "intelligence",
     tools: intelligenceTools.map((t) => ({ name: t.name, description: t.description })),
