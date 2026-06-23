@@ -109,7 +109,7 @@ function Hero() {
 
             <figure className="up-figure aspect-[4/5] w-full">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/brand/photos/presenting.png" alt="Atelier de marque UPgraders — direction créative, Douala · Abidjan" />
+              <img src="/brand/photos/presenting.webp" alt="Atelier de marque UPgraders — direction créative, Douala · Abidjan" width={1024} height={1280} />
               <span className="up-figure__scan" />
               <span className="up-figure__tick up-figure__tick--tl" />
               <span className="up-figure__tick up-figure__tick--tr" />
@@ -220,7 +220,7 @@ export default async function UpgradersHomePage() {
           <GuildeCategories />
           <figure className="up-figure hidden aspect-[5/4] w-full lg:block">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/brand/photos/handshake.png" alt="Partenariat scellé — cellule sur mesure de La Guilde" />
+            <img src="/brand/photos/handshake.webp" alt="Partenariat scellé — cellule sur mesure de La Guilde" loading="lazy" width={1280} height={1024} />
             <span className="up-figure__scan" />
             <span className="up-figure__tick up-figure__tick--tl" />
             <span className="up-figure__tick up-figure__tick--tr" />
@@ -268,7 +268,7 @@ export default async function UpgradersHomePage() {
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-[0.85fr_1fr] lg:items-start">
           <figure className="up-figure hidden aspect-[4/3] w-full self-start lg:block">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/brand/photos/collab.jpg" alt="L'équipe UPgraders en atelier créatif" />
+            <img src="/brand/photos/collab.webp" alt="L'équipe UPgraders en atelier créatif" loading="lazy" width={1280} height={960} />
             <span className="up-figure__scan" />
             <span className="up-figure__tick up-figure__tick--tl" />
             <span className="up-figure__tick up-figure__tick--tr" />

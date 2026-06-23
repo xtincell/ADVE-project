@@ -10,6 +10,17 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.28 — Performance : images lourdes recompressées + assets morts purgés (2026-06-23)
+
+**Lot 4 du plan de remédiation des findings `site-prober`.**
+
+- `perf(images)` **`public/brand` : 66 Mo → 6,3 Mo.** Les photos servies en `<img>` brut sur la page d'accueil agence pesaient ~15 Mo non optimisés (marché Afrique mobile).
+  - **41 Mo d'assets morts purgés** (0 référence) : `creative-hub`, `entrepreneur`, `tablet-garden`, `team-stickers`, `workspace` (photos ~6 Mo), `brand-sheet` (5,2 Mo), portraits `p3`/`p6`.
+  - **3 photos d'accueil → WebP** (resize 1280px, q80) : `presenting` 6,0→0,12 Mo · `handshake` 6,7→0,14 Mo · `collab` 2,8→0,12 Mo. Refs mises à jour (`.png`/`.jpg` → `.webp`) + `loading="lazy"` + `width`/`height` (anti-CLS) sur les visuels sous la ligne de flottaison.
+  - **Portraits** `p1/p2/p4/p5/p7` redimensionnés en place (avatars 400px) : ~1,5 Mo → ~0,4 Mo chacun.
+- Compatible `X-Content-Type-Options: nosniff` (ajouté en #300) : format et extension cohérents (pas de PNG-déguisé-en-WebP). `.up-figure img { object-fit: cover }` → swap sans décalage de mise en page.
+- Hors phases 0–9 (out-of-scope). 0 nouveau Neter (Cap APOGEE 7/7), 0 model Prisma, 0 bypass. tsc 0 · eslint 0. Cf. Justification — out-of-scope dans le body PR.
+
 ## v6.27.27 — Branchements & SEO : fil d'Ariane, /launchpad protégé, robots + sitemap (2026-06-23)
 
 **Lot 2+3 du plan de remédiation des findings `site-prober`.**
