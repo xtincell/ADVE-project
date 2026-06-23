@@ -125,7 +125,7 @@ function Hero({ onStart }: { onStart: () => void }) {
         <div className="hero__art">
           <span className="hero__sticker"><span className="up-sticker up-sticker--red">Level <span className="up-sticker__em">Up!</span></span></span>
           <div className="hero__photo up-grain">
-            <Image src="/brand/photos/presenting.png" alt="Dirigeante de PME présentant sa stratégie de marque" width={520} height={460} priority />
+            <Image src="/brand/photos/presenting.webp" alt="Dirigeante de PME présentant sa stratégie de marque" width={520} height={460} priority />
           </div>
           <div className="float float--score">
             <span className="float__ic" style={{ background: "var(--accent-fill)", color: "var(--accent)" }}><Gauge /></span>
