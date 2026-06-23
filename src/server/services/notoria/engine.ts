@@ -7,6 +7,7 @@
 
 import { db } from "@/lib/db";
 import { callLLM } from "@/server/services/llm-gateway";
+import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import { extractJSON as _extractJSON } from "@/server/services/utils/llm";
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
 import type { PillarKey } from "@/lib/types/advertis-vector";
@@ -34,7 +35,7 @@ async function callNotoriaLLM(
   strategyId?: string,
 ): Promise<string> {
   const { text } = await callLLM({
-    system,
+    system: `${UNTRUSTED_NOTICE}\n\n${system}`,
     prompt,
     caller: "notoria:engine",
     strategyId,
@@ -54,7 +55,8 @@ async function loadPillars(
 
 function serializePillar(key: string, content: unknown): string {
   if (!content || typeof content !== "object") return `[${key}] Vide`;
-  return `[PILIER ${key}]\n${JSON.stringify(content, null, 2)}`;
+  // LOT 1b — contenu pilier (donnée non fiable) balisé anti-injection.
+  return wrapUntrusted(`PILIER ${key}`, JSON.stringify(content, null, 2), { max: 8000 });
 }
 
 function describeSchemaFields(key: string): string {

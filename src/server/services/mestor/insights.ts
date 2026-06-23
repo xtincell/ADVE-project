@@ -6,6 +6,7 @@ import { PILLAR_STORAGE_KEYS } from "@/domain";
  */
 
 import { callLLM } from "@/server/services/llm-gateway";
+import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import { db } from "@/lib/db";
 import { PILLAR_KEYS } from "@/domain/pillars";
 
@@ -248,11 +249,13 @@ export async function generateAIInsights(strategyId: string): Promise<MestorInsi
 
   try {
     const result = await callLLM({
-      system: `Tu es Mestor, le moteur d'insights strategiques de LaFusee.
+      system: `${UNTRUSTED_NOTICE}
+
+Tu es Mestor, le moteur d'insights strategiques de LaFusee.
 Analyse le contexte de cette marque et genere 3-5 insights strategiques actionnables.
 Chaque insight doit etre en JSON avec: type (COHERENCE|STALE_PILLAR|SIGNAL_ALERT|OPPORTUNITY|CULT_INDEX|SLA_RISK|DRIFT), severity (LOW|MEDIUM|HIGH|CRITICAL), title, description, suggestedAction.
 Reponds UNIQUEMENT avec un tableau JSON.`,
-      prompt: `Contexte marque:\n${contextLines.join("\n")}\n\nGenere les insights strategiques AI.`,
+      prompt: `${wrapUntrusted("Contexte marque", contextLines.join("\n"), { max: 8000 })}\n\nGenere les insights strategiques AI.`,
       caller: "mestor:ai_insights",
       strategyId,
       maxOutputTokens: 2048,
