@@ -10,7 +10,7 @@ Deux contrats vérifiés par nœud : **sortie** (validation Zod stricte) et **en
 
 | Catégorie | Total | Protégés (sortie) | Couverture | Sans garde |
 |---|---|---|---|---|
-| Glory tools (LLM/HYBRID) | 76 | 21 | 28% | 55 |
+| Glory tools (LLM/HYBRID) | 76 | 35 | 46% | 41 |
 | Frameworks | 28 | 28 | 100% | 0 |
 | Appels LLM directs (bypass wrapper) | — | — | — | 52 sur 38 fichiers |
 
@@ -20,13 +20,6 @@ Ces nœuds appellent un LLM mais ne déclarent ni `outputSchema` ni `_noSchemaJu
 
 | Type | Slug | Exec |
 |---|---|---|
-| glory | `concept-generator` | LLM |
-| glory | `script-writer` | LLM |
-| glory | `long-copy-craftsman` | LLM |
-| glory | `dialogue-writer` | LLM |
-| glory | `claim-baseline-factory` | LLM |
-| glory | `storytelling-sequencer` | LLM |
-| glory | `wordplay-cultural-bank` | LLM |
 | glory | `idea-killer-saver` | LLM |
 | glory | `semiotic-brand-analyzer` | LLM |
 | glory | `visual-moodboard-generator` | LLM |
@@ -38,13 +31,6 @@ Ces nœuds appellent un LLM mais ne déclarent ni `outputSchema` ni `_noSchemaJu
 | glory | `qc-evaluator` | LLM |
 | glory | `ad-copy-generator` | LLM |
 | glory | `audience-targeter` | LLM |
-| glory | `concept-generator` | LLM |
-| glory | `script-writer` | LLM |
-| glory | `long-copy-craftsman` | LLM |
-| glory | `dialogue-writer` | LLM |
-| glory | `claim-baseline-factory` | LLM |
-| glory | `storytelling-sequencer` | LLM |
-| glory | `wordplay-cultural-bank` | LLM |
 | glory | `idea-killer-saver` | LLM |
 | glory | `semiotic-brand-analyzer` | LLM |
 | glory | `visual-moodboard-generator` | LLM |
@@ -82,12 +68,12 @@ Ces points appellent `callLLM`/`callLLMAndParse` sans passer par `executeStructu
 
 | Fichier | Lignes | Appels | Utilise aussi le wrapper |
 |---|---|---|---|
-| `src/server/services/artemis/index.ts` | 226 | 1 | oui (mixte) |
+| `src/server/services/artemis/index.ts` | 228 | 1 | oui (mixte) |
 | `src/server/services/artemis/market-research/delegates.ts` | 87 | 1 | non |
-| `src/server/services/artemis/tools/engine.ts` | 317 | 1 | oui (mixte) |
+| `src/server/services/artemis/tools/engine.ts` | 321 | 1 | oui (mixte) |
 | `src/server/services/artemis/tools/market-research-tools.ts` | 65 | 1 | non |
-| `src/server/services/boot-sequence/index.ts` | 56 | 1 | non |
-| `src/server/services/brief-ingest/analyzer.ts` | 155 | 1 | non |
+| `src/server/services/boot-sequence/index.ts` | 69 | 1 | non |
+| `src/server/services/brief-ingest/analyzer.ts` | 154 | 1 | non |
 | `src/server/services/brief-ingest/index.ts` | 160 | 1 | non |
 | `src/server/services/campaign-plan-generator/index.ts` | 113 | 1 | non |
 | `src/server/services/implementation-generator/index.ts` | 101, 111, 135, 151 | 4 | non |
@@ -95,20 +81,20 @@ Ces points appellent `callLLM`/`callLLMAndParse` sans passer par `executeStructu
 | `src/server/services/ingestion-pipeline/extractors.ts` | 85 | 1 | non |
 | `src/server/services/mestor/commandant.ts` | 92, 161, 203 | 3 | non |
 | `src/server/services/mestor/i-pillar-sequenced.ts` | 124 | 1 | non |
-| `src/server/services/mestor/insights.ts` | 250 | 1 | non |
-| `src/server/services/mestor/rtis-cascade.ts` | 70 | 1 | non |
-| `src/server/services/notoria/engine.ts` | 36 | 1 | non |
+| `src/server/services/mestor/insights.ts` | 251 | 1 | non |
+| `src/server/services/mestor/rtis-cascade.ts` | 71 | 1 | non |
+| `src/server/services/notoria/engine.ts` | 37 | 1 | non |
 | `src/server/services/pillar-maturity/auto-filler.ts` | 699, 920 | 2 | non |
 | `src/server/services/quick-intake/brand-level-evaluator.ts` | 223 | 1 | non |
-| `src/server/services/quick-intake/deduce-adve.ts` | 145, 171 | 2 | non |
+| `src/server/services/quick-intake/deduce-adve.ts` | 147, 173 | 2 | non |
 | `src/server/services/quick-intake/index.ts` | 1339 | 1 | non |
 | `src/server/services/quick-intake/multi-agent-orchestrator.ts` | 62, 97 | 2 | non |
-| `src/server/services/quick-intake/narrate-adve.ts` | 166 | 1 | non |
+| `src/server/services/quick-intake/narrate-adve.ts` | 169 | 1 | non |
 | `src/server/services/quick-intake/narrative-report-v2.ts` | 108, 172 | 2 | non |
 | `src/server/services/quick-intake/narrative-report-v3.ts` | 181, 306 | 2 | non |
 | `src/server/services/quick-intake/narrative-report.ts` | 234, 242 | 2 | non |
 | `src/server/services/quick-intake/question-bank.ts` | 313 | 1 | non |
-| `src/server/services/quick-intake/rtis-draft.ts` | 207 | 1 | non |
+| `src/server/services/quick-intake/rtis-draft.ts` | 208 | 1 | non |
 | `src/server/services/rtis-protocols/innovation.ts` | 85 | 1 | non |
 | `src/server/services/rtis-protocols/risk.ts` | 218 | 1 | non |
 | `src/server/services/rtis-protocols/strategy.ts` | 111 | 1 | non |
