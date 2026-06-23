@@ -16,6 +16,7 @@ import { ADVE_KEYS } from "@/domain";
  */
 
 import { callLLM } from "@/server/services/llm-gateway";
+import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import { db } from "@/lib/db";
 import { PILLAR_SCHEMAS, type PillarKey } from "@/lib/types/pillar-schemas";
 import { scoreObject } from "@/server/services/advertis-scorer";
@@ -68,7 +69,7 @@ async function recalcScores(strategyId: string) {
 /** Thin wrapper: adapts old positional (system, prompt, strategyId?) signature to gateway */
 async function callCascadeLLM(system: string, prompt: string, strategyId?: string): Promise<string> {
   const { text } = await callLLM({
-    system,
+    system: `${UNTRUSTED_NOTICE}\n\n${system}`,
     prompt,
     caller: "mestor:rtis-cascade",
     strategyId,
@@ -85,7 +86,8 @@ function extractJSON(text: string): Record<string, unknown> {
 
 function serializePillar(key: string, content: unknown): string {
   if (!content || typeof content !== "object") return `[${key}] Vide`;
-  return `[PILIER ${key}]\n${JSON.stringify(content, null, 2)}`;
+  // LOT 1b — contenu pilier (donnée non fiable) balisé anti-injection.
+  return wrapUntrusted(`PILIER ${key}`, JSON.stringify(content, null, 2), { max: 8000 });
 }
 
 /**

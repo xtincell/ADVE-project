@@ -10,6 +10,14 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.34 — Sécurité LLM LOT 1b : durcissement entrée des services de dérivation (2026-06-23)
+
+**LOT 1b du plan** — les services de dérivation appellent le LLM en direct (hors chokepoints LOT 0).
+
+- `feat(meta)` **`rtis-cascade`**, **`notoria`**, **`mestor/insights`** : le contenu pilier (donnée non fiable : ADVE/RTIS verbatim, contexte marque) est balisé via `wrapUntrusted` — dans `serializePillar` (rtis-cascade + notoria, couvre **toutes les branches R/T/I/S**) et dans le bloc `contextLines` (insights) — + `UNTRUSTED_NOTICE` préfixé au system de chaque appel (`callCascadeLLM`, `runLLM`, `ai_insights`).
+- *(Entrée durcie. Sorties de ces services = `extractJSON`/`JSON.parse` multi-formes → migration Zod = follow-up.)*
+- Hors phases 0–9 (out-of-scope). **0 nouveau Neter** (Cap APOGEE 7/7), **0 model Prisma**, **0 bypass**. tsc 0 · eslint 0 · 46 tests verts. Cf. Justification — out-of-scope dans le body PR.
+
 ## v6.27.33 — Sécurité LLM LOT 1a (fin) : brief-ingest — LOT 1a complet (2026-06-23)
 
 **Clôture du LOT 1a** (5 points d'entrée utilisateur durcis).
