@@ -105,6 +105,12 @@ async function pool<T, R>(
   return results;
 }
 
+// Links the crawler must never follow: logout (would drop the session mid-crawl)
+// and anything that looks like a destructive GET action (safety net — such links
+// would themselves be a vuln, but we don't pull the trigger).
+const UNSAFE_LINK_RE =
+  /\b(logout|sign[-_]?out|deconnexion|deconnecter)\b|\/(delete|remove|destroy|revoke|reset|purge|wipe)\b|[?&](action|do)=(delete|remove|destroy|revoke)\b/i;
+
 // ─── Crawl (BFS link discovery) ──────────────────────────────────────────────
 
 async function crawl(
@@ -144,8 +150,10 @@ async function crawl(
       for (const l of links) {
         const norm = l.replace(/#.*$/, "");
         if (visited.has(norm) || visited.size >= cfg.maxPages) continue;
-        // stay on same origin & skip obvious file downloads
+        // stay on same origin
         if (new URL(norm).origin !== origin) continue;
+        // never follow logout / destructive GET links (esp. when authenticated)
+        if (UNSAFE_LINK_RE.test(norm)) continue;
         visited.add(norm);
         next.add(norm);
       }
