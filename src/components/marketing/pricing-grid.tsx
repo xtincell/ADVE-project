@@ -1,11 +1,15 @@
 "use client";
 
 /**
- * <PricingGrid> — grille tarifaire publique localisée, sans chrome (extrait de
- * /pricing). Prix RÉSOLUS par zone (SPU × market-factor × FX, déterministe).
- * Réutilisé par /pricing (chrome La Fusée) ET /tarifs (chrome UPgraders) pour
- * que l'offre soit accessible depuis les deux sites — même source de vérité,
- * deux habillages. `callbackPath` = retour après login.
+ * <PricingGrid> — grille tarifaire LA FUSÉE, localisée, sans chrome.
+ * Prix RÉSOLUS par zone (SPU × market-factor × FX, déterministe) — jamais une
+ * grille statique. C'est l'univers de prix du PRODUIT La Fusée (self-serve) :
+ * diagnostic gratuit → one-shots à prix fixe (rapport, Oracle) → abonnements
+ * « à partir de » (Cockpit, Retainers) → Enterprise sur devis.
+ *
+ * NB : les PRESTATIONS agence d'UPgraders (Audit ADVE, Mandat RTIS, Marque
+ * blanche) ne vivent PAS ici — elles sont sur /tarifs (catalogue UPgraders),
+ * sur devis. Ne pas re-mélanger les deux univers. `callbackPath` = retour login.
  */
 
 import { useState } from "react";
@@ -66,7 +70,7 @@ export function PricingGrid({ callbackPath = "/pricing" }: { callbackPath?: stri
     <main className="mx-auto max-w-[var(--maxw-content)] px-[var(--pad-page)] py-24">
       <div className="mb-8 flex items-baseline gap-3.5 font-mono text-2xs uppercase tracking-widest" style={{ color: "var(--color-foreground-secondary)" }}>
         <span className="h-px w-8 bg-accent" />
-        Tarifs · Product ladder
+        La Fusée · Tarifs
       </div>
 
       <header className="mb-10 max-w-3xl">
@@ -78,6 +82,11 @@ export function PricingGrid({ callbackPath = "/pricing" }: { callbackPath?: stri
           Les montants sont résolus en temps réel selon votre marché (indice de zone + devise locale) —
           jamais une grille statique. Mobile money (CinetPay) en zone FCFA, carte (Stripe/PayPal) à
           l&apos;international. Chaque devis et chaque paiement sont tracés.
+        </p>
+        <p className="mt-3 text-sm" style={{ color: "var(--color-foreground-secondary)" }}>
+          La Fusée est le produit self-serve d&apos;UPgraders. Pour les prestations agence
+          (audit, mandat, marque blanche),{" "}
+          <a href="/tarifs" className="underline hover:text-accent">voir les offres UPgraders →</a>
         </p>
       </header>
 
@@ -134,18 +143,23 @@ export function PricingGrid({ callbackPath = "/pricing" }: { callbackPath?: stri
                   <p className="text-sm opacity-75">{tier.summary}</p>
                 </header>
 
-                <div className="flex items-baseline gap-2">
-                  <span className="font-display text-3xl font-semibold">
-                    {enterprise && tier.listAmount === 0
-                      ? "Sur devis"
-                      : tier.adminFree
-                        ? "Inclus"
-                        : fmtAmount(tier.amount, tier.currencyCode)}
-                  </span>
-                  {tier.adminFree && tier.listAmount > 0 && (
-                    <span className="text-sm line-through opacity-50">{fmtAmount(tier.listAmount, tier.currencyCode)}</span>
+                <div className="flex flex-col gap-0.5">
+                  {monthly && !enterprise && !tier.adminFree && tier.amount > 0 && (
+                    <span className="font-mono text-2xs uppercase tracking-widest opacity-60">À partir de</span>
                   )}
-                  {monthly && tier.amount > 0 && !tier.adminFree && <span className="text-sm opacity-60">/ mois</span>}
+                  <div className="flex items-baseline gap-2">
+                    <span className="font-display text-3xl font-semibold">
+                      {enterprise && tier.listAmount === 0
+                        ? "Sur devis"
+                        : tier.adminFree
+                          ? "Inclus"
+                          : fmtAmount(tier.amount, tier.currencyCode)}
+                    </span>
+                    {tier.adminFree && tier.listAmount > 0 && (
+                      <span className="text-sm line-through opacity-50">{fmtAmount(tier.listAmount, tier.currencyCode)}</span>
+                    )}
+                    {monthly && tier.amount > 0 && !tier.adminFree && <span className="text-sm opacity-60">/ mois</span>}
+                  </div>
                 </div>
                 {tier.adminFree && (
                   <span className="-mt-3 inline-block w-fit bg-accent px-2 py-0.5 font-mono text-2xs uppercase tracking-widest text-accent-foreground">
@@ -165,10 +179,10 @@ export function PricingGrid({ callbackPath = "/pricing" }: { callbackPath?: stri
                 {monthly ? (
                   enterprise ? (
                     <a
-                      href="mailto:alexandre@upgraders.com?subject=La%20Fus%C3%A9e%20%E2%80%94%20Enterprise"
+                      href="/contact?offre=lafusee-enterprise"
                       className="mt-auto inline-block bg-accent px-5 py-3 text-center font-mono text-[12px] uppercase tracking-widest text-accent-foreground hover:opacity-90"
                     >
-                      Briefer un opérateur →
+                      Demander un devis →
                     </a>
                   ) : (
                     <button

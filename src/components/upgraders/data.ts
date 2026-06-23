@@ -234,6 +234,111 @@ export const SERVICES: Service[] = [
 ];
 
 /* ─────────────────────────────────────────────────────────────────────────
+   Catalogue produits UPgraders (/tarifs) — set produit propre à l'agence
+
+   UPgraders vend UNE GAMME : le produit self-serve La Fusée (qui a SON propre
+   univers de prix, localisé par zone — cf. <PricingGrid> sur /pricing) + les
+   PRESTATIONS agence sur devis (Audit ADVE, Mandat RTIS, Marque blanche).
+   On ne re-mélange pas les deux : pas de grille FCFA statique ici — La Fusée
+   renvoie vers sa grille live, l'agence reste sur devis (EFR · contrat).
+
+   Posture tarifaire (doctrine) : un palier gratuit (entrée La Fusée), les
+   one-shots (rapport/étude) à prix fixe côté La Fusée, les abonnements/retainers
+   « à partir de », et les grosses offres sur devis.
+   ───────────────────────────────────────────────────────────────────────── */
+
+export type ProductOffer = {
+  mark: string;
+  name: string;
+  /** Fragment serif-italic accentué (ex. « Fusée », « ADVE »). */
+  emphasis?: string;
+  kind: "Produit" | "Prestation";
+  tagline: string;
+  /** Posture tarifaire affichée — jamais une grille FCFA statique. */
+  priceLabel: string;
+  priceNote: string;
+  inclusions: readonly string[];
+  primaryCta: { label: string; href: string };
+  secondaryCta?: { label: string; href: string };
+  /** Carte mise en avant (fond sombre). */
+  featured?: boolean;
+  /** Ruban (ex. « Produit phare », « Formule reine »). */
+  badge?: string;
+};
+
+export const PRODUCTS: ProductOffer[] = [
+  {
+    mark: "01",
+    name: "La",
+    emphasis: "Fusée",
+    kind: "Produit",
+    tagline: "L'Industry OS en libre-service — le produit-phare d'UPgraders, avec son propre univers de prix.",
+    priceLabel: "Gratuit → sur devis",
+    priceNote: "Diagnostic gratuit, puis paliers résolus selon votre zone (mobile money). Univers tarifaire dédié.",
+    inclusions: [
+      "Diagnostic ADVE gratuit (score /200)",
+      "Rapport ADVE+RTIS & Oracle à l'acte — prix fixe",
+      "Cockpit & Retainers en abonnement — à partir de",
+      "Enterprise multi-marques — sur devis",
+    ],
+    primaryCta: { label: "Voir les tarifs La Fusée", href: "/pricing" },
+    secondaryCta: { label: "Découvrir l'OS", href: "/lafusee" },
+    featured: true,
+    badge: "Produit phare",
+  },
+  {
+    mark: "02",
+    name: "Audit",
+    emphasis: "ADVE",
+    kind: "Prestation",
+    tagline: "Trois ateliers pour extraire l'ADN. Livrable Oracle — une boussole pour 18 mois minimum.",
+    priceLabel: "Sur devis",
+    priceNote: "Prestation cadrée, 2 à 4 semaines. Version self-serve : l'Oracle La Fusée, à prix fixe.",
+    inclusions: [
+      "3 ateliers de cadrage accompagnés",
+      "Extraction ADVE pilotée par un opérateur",
+      "Livrable Oracle structuré",
+      "Restitution + plan d'action 90 jours",
+    ],
+    primaryCta: { label: "Demander un devis", href: "/contact?offre=audit-adve" },
+    secondaryCta: { label: "Ou : Oracle self-serve", href: "/pricing" },
+  },
+  {
+    mark: "03",
+    name: "Mandat",
+    emphasis: "RTIS",
+    kind: "Prestation",
+    tagline: "Le cycle complet : ADVE en entrée, propulseur RTIS en exécution. La formule reine.",
+    priceLabel: "À partir de — sur devis",
+    priceNote: "Retainer 6 à 24 mois. Périmètre, palier visé et score cible gelés à la signature (EFR).",
+    inclusions: [
+      "ADVE + roadmap RTIS dynamique",
+      "Cellule sur mesure via La Guilde",
+      "Pilotage Cockpit + reporting mensuel",
+      "Obligation d'effet tracée",
+    ],
+    primaryCta: { label: "Demander un devis", href: "/contact?offre=mandat-rtis" },
+    badge: "Formule reine",
+  },
+  {
+    mark: "04",
+    name: "Marque",
+    emphasis: "blanche",
+    kind: "Prestation",
+    tagline: "Vous portez la relation client, nous portons la méthode. Pour agences relais & studios.",
+    priceLabel: "Sur devis",
+    priceNote: "Sous-traitance stratégique B2B. Conditions selon volume et durée d'engagement.",
+    inclusions: [
+      "Méthode ADVE/RTIS en marque blanche",
+      "Production orchestrée via La Guilde",
+      "Confidentialité contractuelle",
+      "Facturation partenaire dédiée",
+    ],
+    primaryCta: { label: "Demander un devis", href: "/contact?offre=marque-blanche" },
+  },
+];
+
+/* ─────────────────────────────────────────────────────────────────────────
    EFR — obligation d'effet (KB §9)
    ───────────────────────────────────────────────────────────────────────── */
 
