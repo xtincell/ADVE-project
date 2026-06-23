@@ -1,11 +1,24 @@
+import { z } from "zod";
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 
 import { scoreObject } from "@/server/services/advertis-scorer";
 import { classifyBrand } from "@/lib/types/advertis-vector";
 import { callLLM } from "@/server/services/llm-gateway";
+import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import { getFormatInstructions } from "@/lib/types/variable-bible";
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
+
+// LOT 1a — contrat de sortie : valide chaque question générée (sortie) au lieu
+// d'un JSON.parse brut. Best-effort : on garde les items valides, on jette les
+// malformés (boot reste résilient → un set vide régénère sans crash).
+const GeneratedQuestionSchema = z.object({
+  key: z.string().min(1),
+  label: z.string().min(1),
+  hint: z.string().optional(),
+  type: z.enum(["text", "textarea", "select"]),
+  options: z.array(z.string()).optional(),
+});
 
 interface BootState {
   strategyId: string;
@@ -54,7 +67,9 @@ async function generateQuestions(
   );
 
   const { text } = await callLLM({
-    system: `Tu es Mestor, le commandant strategique du systeme ADVE.
+    system: `${UNTRUSTED_NOTICE}
+
+Tu es Mestor, le commandant strategique du systeme ADVE.
 Tu generes des questions de diagnostic de marque pour le pilier "${pillarKey}".
 Reponds UNIQUEMENT en JSON (array d'objets).
 
@@ -63,7 +78,7 @@ ${bibleRules}`,
     prompt: `Pilier: ${pillarKey}
 Schema du pilier: ${JSON.stringify(schema, null, 2)}
 Champs deja remplis: ${JSON.stringify(filled)}
-Contenu existant: ${JSON.stringify(existingContent)}
+${wrapUntrusted("Contenu existant", JSON.stringify(existingContent), { max: 6000 })}
 
 Genere 3-5 questions adaptatives pour les champs manquants ou incomplets.
 Chaque question: { "key": "<field_key>", "label": "<question en francais>", "hint": "<aide contextuelle>", "type": "text"|"textarea"|"select", "options": ["..."] }
@@ -73,9 +88,13 @@ Retourne un JSON array pur, sans markdown.`,
     maxOutputTokens: 2000,
   });
 
+  // Contrat de sortie (LOT 1a) — best-effort : garde les questions valides.
   try {
-    const parsed = JSON.parse(text.trim().replace(/^```json?\n?/, "").replace(/\n?```$/, ""));
-    return Array.isArray(parsed) ? parsed : [];
+    const raw = JSON.parse(text.trim().replace(/^```json?\n?/, "").replace(/\n?```$/, ""));
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .map((q) => GeneratedQuestionSchema.safeParse(q))
+      .flatMap((r) => (r.success ? [r.data] : []));
   } catch {
     return [];
   }

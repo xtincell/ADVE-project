@@ -10,6 +10,14 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.31 — Sécurité LLM LOT 1a : durcissement des points d'intake (2026-06-23)
+
+**LOT 1a du plan de durcissement** — les appels LLM directs des points d'entrée utilisateur contournent les chokepoints LOT 0 ; on les durcit donc en entrée **et** en sortie.
+
+- `feat(intake)` **`deduce-adve`** (la démo paywall) : entrées utilisateur neutralisées (`offerText`/`brandName`/`sector`/`countryCode` via `untrusted-content`), fence `"""` artisanale remplacée par le `wrapUntrusted` canonique. *(Sortie déjà validée Zod.)*
+- `feat(intake)` **`boot-sequence`** : `Contenu existant` (saisie utilisateur) balisé comme donnée (entrée) + **sortie validée par Zod par question** (best-effort : garde les valides, jette les malformées) au lieu d'un `JSON.parse` brut + rappel sécurité dans le system prompt.
+- Hors phases 0–9 (out-of-scope). **0 nouveau Neter** (Cap APOGEE 7/7), **0 model Prisma**, **0 bypass**. tsc 0 · eslint 0 · tests verts (boot-sequence 14 + untrusted-content 7). Cf. Justification — out-of-scope dans le body PR.
+
 ## v6.27.30 — Sécurité LLM LOT 0 : verrou d'entrée anti-injection (2026-06-23)
 
 **LOT 0 du plan de durcissement des nœuds LLM** ([llm-hardening-plan.md](docs/governance/llm-hardening-plan.md), validé opérateur).
