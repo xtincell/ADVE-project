@@ -21,6 +21,7 @@ import { ADVE_STORAGE_KEYS, type PillarStorageKey } from "@/domain";
 
 import { db } from "@/lib/db";
 import { callLLM, extractJSON } from "@/server/services/llm-gateway";
+import { sanitizeInline } from "@/server/services/utils/untrusted-content";
 
 type AdvePillar = "a" | "d" | "v" | "e";
 
@@ -123,16 +124,18 @@ async function narratePillar(
   );
   const { min: fullMin, max: fullMax } = pickFullWordRange(atomCount);
 
+  // LOT 1a — neutralise les valeurs verbatim (anti-injection) sans altérer le
+  // texte légitime : sanitizeInline ne casse que les jetons de rupture de prompt.
   const valuesBlock = verbatimEntries
     .map(([field, val]) => {
       if (Array.isArray(val)) {
-        return `- ${field}: ${val.map((v) => `"${v}"`).join(", ")}`;
+        return `- ${field}: ${val.map((v) => `"${sanitizeInline(v, { max: 600 })}"`).join(", ")}`;
       }
-      return `- ${field}: "${val}"`;
+      return `- ${field}: "${sanitizeInline(val, { max: 600 })}"`;
     })
     .join("\n");
 
-  const prompt = `MARQUE : ${brandName}
+  const prompt = `MARQUE : ${sanitizeInline(brandName, { max: 120 })}
 PILIER : ${PILLAR_NAMES[pillarKey]} (${PILLAR_ANGLE[pillarKey]})
 
 VALEURS VERBATIM RENSEIGNÉES PAR LE FOUNDER (${atomCount} valeur${atomCount > 1 ? "s" : ""} à citer) :
