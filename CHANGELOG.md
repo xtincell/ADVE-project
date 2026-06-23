@@ -10,6 +10,15 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.30 — Sécurité LLM LOT 0 : verrou d'entrée anti-injection (2026-06-23)
+
+**LOT 0 du plan de durcissement des nœuds LLM** ([llm-hardening-plan.md](docs/governance/llm-hardening-plan.md), validé opérateur).
+
+- `feat(meta)` nouvel utilitaire **`src/server/services/utils/untrusted-content.ts`** — neutralise le contenu non fiable avant insertion dans un prompt (anti-injection, OWASP LLM01) : `sanitizeInline` (casse les jetons de rupture — faux en-têtes `=== ===`, balises de rôle, `[INST]`/`<<SYS>>`, clôtures ``` ``` ``` — + plafond de taille), `wrapUntrusted` (enveloppe « donnée, pas instruction » + sentinelle non simulable), `UNTRUSTED_NOTICE` (rappel system prompt).
+- Branché aux **3 chokepoints** : `executeStructuredLLMCall` (couvre **tout nœud structuré**), `engine.ts` (outils Glory — valeurs `{{var}}` neutralisées + contexte stratégie fencé), `artemis/index.ts` (frameworks — contexte + données fournies fencés).
+- 7 tests anti-injection (`tests/unit/security/untrusted-content.test.ts`).
+- Hors phases 0–9 (out-of-scope, hotfix sécurité). **0 nouveau Neter** (Cap APOGEE 7/7), **0 model Prisma**, **0 bypass**. tsc 0 · eslint 0. Cf. Justification — out-of-scope dans le body PR.
+
 ## v6.27.29 — Auditeur de sécurité des nœuds LLM (entrée + sortie) (2026-06-23)
 
 **Premier volet du durcissement des « nœuds magiques » LLM** (suite au scan fonctionnel demandé).
