@@ -114,7 +114,7 @@ const ALLOWED_BARE_PILLAR_CONTENT_WRITES: ReadonlyArray<AcceptedBareWrite> = [
   },
   {
     file: "src/server/services/boot-sequence/index.ts",
-    line: 191,
+    line: 210,
     hole: "—",
     reason:
       "Boot-sequence : normalise le content pilier (legacy → schéma courant) avant scoring. Migration de forme, pas mutation métier. Reroute via gateway = dette P2.",

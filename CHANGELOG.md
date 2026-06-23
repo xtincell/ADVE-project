@@ -10,6 +10,11 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.36 — fix(test) : numéro de ligne allowlist C5 (boot-sequence) — main au vert (2026-06-23)
+
+- `fix(test)` Le LOT 1a (#306) a ajouté ~19 lignes en tête de `boot-sequence/index.ts`, décalant l'écriture `Pillar.content` de normalisation legacy (191 → 210). L'allowlist **line-number** du test KEYSTONE **C5** (`no-bare-pillar-content-write.test.ts`) pointait toujours sur 191 → 2 échecs (write hors allowlist + entrée allowlist obsolète). Numéro corrigé 191 → 210. **Remet `main` au vert** (la suite vitest était rouge depuis #306). Aucun code de prod touché.
+- Hors phases 0–9 (out-of-scope, hotfix CI). **0 nouveau Neter** (Cap APOGEE 7/7), **0 model Prisma**, **0 bypass**. Cf. Justification — out-of-scope dans le body PR.
+
 ## v6.27.35 — Sécurité LLM LOT 2 : gate CI anti-régression (2026-06-23)
 
 **LOT 2 du plan** — fige l'état durci et empêche toute régression.
