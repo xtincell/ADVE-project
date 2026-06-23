@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.29 — Auditeur de sécurité des nœuds LLM (entrée + sortie) (2026-06-23)
+
+**Premier volet du durcissement des « nœuds magiques » LLM** (suite au scan fonctionnel demandé).
+
+- `feat(tooling)` nouveau scanner **`scripts/audit-llm-nodes.ts`** (`npm run audit:llm` · `audit:llm:strict`) — complète le robot site-prober (navigation) par un audit *code* des pipes LLM :
+  - **SORTIE** (introspection fiable du registre) : tout nœud `LLM`/`HYBRID` doit déclarer `outputSchema` (validation Zod stricte) ou `_noSchemaJustification`. État : **Glory tools 21/76 validés (55 sans contrat)** · **Frameworks 28/28 validés ✅**.
+  - **ENTRÉE / bypass** (scan des points d'appel) : **52 appels `callLLM`/`callLLMAndParse` directs sur 38 fichiers** qui court-circuitent le wrapper structuré (sortie non validée + entrée souvent concaténée brute → surface d'injection).
+- Rapport auto-généré **`docs/governance/llm-node-audit.md`** + **baseline** `scripts/llm-audit-baseline.json`. Mode `--strict` = **gate de régression** (échoue uniquement sur un *nouveau* nœud non gardé, sans casser le backlog existant).
+- Tooling hors phases 0–9 (out-of-scope, 0 couplage gates `src/**`, comme #298). **0 nouveau Neter** (Cap APOGEE 7/7), **0 model Prisma**, **0 bypass**. Cf. Justification — out-of-scope dans le body PR.
+
 ## v6.27.28 — Performance : images lourdes recompressées + assets morts purgés (2026-06-23)
 
 **Lot 4 du plan de remédiation des findings `site-prober`.**
