@@ -7,6 +7,7 @@
  */
 
 import { callLLM } from "@/server/services/llm-gateway";
+import { UNTRUSTED_NOTICE, wrapUntrusted } from "@/server/services/utils/untrusted-content";
 import { db } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { collectMarketSignals, type CollectionStrategy } from "./signal-collector";
@@ -178,29 +179,39 @@ export async function runMarketIntelligence(
   const pillarMap: Record<string, unknown> = {};
   for (const p of pillars) pillarMap[p.key.toUpperCase()] = p.content;
 
-  const adveRContext = ["A", "D", "V", "E", "R"]
+  // LOT 1e — entrée non fiable neutralisée (anti-injection) : le contenu des
+  // piliers ADVE-R dérive de la saisie fondateur → encadré comme donnée.
+  const adveRContextRaw = ["A", "D", "V", "E", "R"]
     .map(k => {
       const content = pillarMap[k];
       return content ? `## Pilier ${k}\n${JSON.stringify(content, null, 2)}` : null;
     })
     .filter(Boolean)
     .join("\n\n");
+  const adveRContext = adveRContextRaw
+    ? wrapUntrusted("CONTEXTE MARQUE (piliers ADVE-R)", adveRContextRaw, { max: 12_000 })
+    : "";
 
-  // 6. LLM synthesis: combine real market data + ADVE context → structured T
+  // 6. LLM synthesis: combine real market data + ADVE context → structured T.
+  // LOT 1e — entrée non fiable neutralisée (anti-injection) : les signaux marché
+  // (réutilisés ou frais) et les signaux faibles dérivent de sources externes /
+  // de contenu récupéré → encadrés comme donnée.
   const marketDataSection = sectorReused
-    ? `## DONNÉES SECTEUR RÉUTILISÉES (fraîches, même secteur)\n${JSON.stringify(existingData.slice(0, 3), null, 2)}`
-    : `## SIGNAUX MARCHÉ COLLECTÉS (${freshSignals.length} signaux)\n${freshSignals.map(s => `- ${s.title}: ${s.content}`).join("\n")}`;
+    ? `## DONNÉES SECTEUR RÉUTILISÉES (fraîches, même secteur)\n${wrapUntrusted("DONNÉES SECTEUR", JSON.stringify(existingData.slice(0, 3), null, 2), { max: 12_000 })}`
+    : `## SIGNAUX MARCHÉ COLLECTÉS (${freshSignals.length} signaux)\n${wrapUntrusted("SIGNAUX MARCHÉ", freshSignals.map(s => `- ${s.title}: ${s.content}`).join("\n"), { max: 12_000 })}`;
 
   const weakSignalsSection = weakSignals.length > 0
-    ? `## SIGNAUX FAIBLES DÉTECTÉS (${weakSignals.length} thèses)\n${weakSignals.map(ws =>
+    ? `## SIGNAUX FAIBLES DÉTECTÉS (${weakSignals.length} thèses)\n${wrapUntrusted("SIGNAUX FAIBLES", weakSignals.map(ws =>
         `### ${ws.thesis} (confiance: ${Math.round(ws.confidence * 100)}%)\n` +
         `Chaîne causale: ${ws.causalChain.map(c => `${c.from} → ${c.to}`).join(" → ")}\n` +
         `Impact: ${ws.brandImpact}\n` +
         `Signaux de soutien: ${ws.supportingSignals.length} signaux renforçant cette thèse`
-      ).join("\n\n")}`
+      ).join("\n\n"), { max: 12_000 })}`
     : "";
 
-  const systemPrompt = `Tu es un analyste stratégique senior spécialisé en intelligence de marché.
+  const systemPrompt = `${UNTRUSTED_NOTICE}
+
+Tu es un analyste stratégique senior spécialisé en intelligence de marché.
 Tu produis le pilier T (Track) du protocole ADVE-RTIS : triangulation marché, validation d'hypothèses, TAM/SAM/SOM, et score brand-market fit.
 
 IMPORTANT : Base-toi sur les DONNÉES RÉELLES fournies. Ne les invente pas.

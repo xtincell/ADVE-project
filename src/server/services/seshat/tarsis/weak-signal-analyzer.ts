@@ -10,6 +10,7 @@
  */
 
 import { callLLM } from "@/server/services/llm-gateway";
+import { UNTRUSTED_NOTICE, wrapUntrusted, sanitizeInline } from "@/server/services/utils/untrusted-content";
 import { db } from "@/lib/db";
 import type { CollectedSignal } from "./signal-collector";
 
@@ -87,9 +88,16 @@ export async function analyzeWeakSignals(
 ): Promise<WeakSignal[]> {
   if (signals.length === 0) return [];
 
-  const signalsText = signals
-    .map((s, i) => `[Signal ${i + 1}] ${s.title}\n${s.content} (source: ${s.sourceType}, relevance: ${s.relevance})`)
-    .join("\n\n");
+  // LOT 1e — entrée non fiable neutralisée (anti-injection) : les signaux
+  // collectés proviennent de sources marché externes (vecteur attaquant) →
+  // encadrés comme donnée dans le user prompt (cf. plus bas).
+  const signalsText = wrapUntrusted(
+    "SIGNAUX MARCHÉ À ANALYSER",
+    signals
+      .map((s, i) => `[Signal ${i + 1}] ${s.title}\n${s.content} (source: ${s.sourceType}, relevance: ${s.relevance})`)
+      .join("\n\n"),
+    { max: 16_000 },
+  );
 
   // ADR-0037 PR-D — country-aware system prompt. The CONTEXTE PAYS block
   // below constrains the LLM to country-plausible signals instead of
@@ -109,15 +117,27 @@ export async function analyzeWeakSignals(
     ? `\nSignaux brand-health (mesures opérateur) :\n${healthLines.join("\n")}\n`
     : "";
 
-  const systemPrompt = `Tu es un expert en intelligence économique et en analyse de signaux faibles.
+  // LOT 1e — entrée non fiable neutralisée (anti-injection) : le contexte marque
+  // dérive de la saisie fondateur → neutralisé inline. brandHealthBlock (mesures
+  // numériques opérateur) et countryBlock (table Country) restent internes.
+  const sectorSafe = sanitizeInline(brandContext.sector, { max: 120 });
+  const marketSafe = brandContext.market ? sanitizeInline(brandContext.market, { max: 120 }) : "";
+  const brandIdentitySafe = sanitizeInline(brandContext.brandIdentity, { max: 600 });
+  const positioningSafe = sanitizeInline(brandContext.positioning, { max: 600 });
+  const productsSafe = sanitizeInline(brandContext.products, { max: 600 });
+  const riskFactorsSafe = sanitizeInline(brandContext.riskFactors, { max: 600 });
+
+  const systemPrompt = `${UNTRUSTED_NOTICE}
+
+Tu es un expert en intelligence économique et en analyse de signaux faibles.
 Ton expertise : détecter les menaces et opportunités AVANT qu'elles ne deviennent évidentes.
 
 Contexte marque :
-- Secteur : ${brandContext.sector}${brandContext.market ? ` | Marché : ${brandContext.market}` : ""}
-- Identité : ${brandContext.brandIdentity}
-- Positionnement : ${brandContext.positioning}
-- Produits : ${brandContext.products}
-- Facteurs de risque existants : ${brandContext.riskFactors}
+- Secteur : ${sectorSafe}${marketSafe ? ` | Marché : ${marketSafe}` : ""}
+- Identité : ${brandIdentitySafe}
+- Positionnement : ${positioningSafe}
+- Produits : ${productsSafe}
+- Facteurs de risque existants : ${riskFactorsSafe}
 ${brandHealthBlock}${countryBlock}
 
 Tu dois :

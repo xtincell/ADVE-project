@@ -7,6 +7,7 @@
  */
 
 import { callLLM } from "@/server/services/llm-gateway";
+import { UNTRUSTED_NOTICE, wrapUntrusted, sanitizeInline } from "@/server/services/utils/untrusted-content";
 import { MarketStudyExtractionSchema, type MarketStudyExtraction } from "./types";
 import { TREND_TRACKER_49 } from "@/server/services/seshat/knowledge/trend-tracker-49";
 
@@ -20,14 +21,21 @@ export async function extractMarketStudy(input: {
     (v) => `- ${v.code} (${v.category}) "${v.label}" [${v.unit}] hints: ${v.llmExtractionHints.join(", ")}`,
   ).join("\n");
 
-  const systemPrompt = `Tu es un analyste senior spécialisé dans l'extraction structurée de données depuis des études de marché (Statista, Nielsen, Kantar, BCG, McKinsey, Euromonitor, banques centrales).
+  // LOT 1e — entrée non fiable neutralisée (anti-injection) : les paramètres
+  // opérateur déclarés sont interpolés dans le system prompt → sanitize inline.
+  const declaredCountrySafe = input.declaredCountryCode ? sanitizeInline(input.declaredCountryCode, { max: 80 }) : "";
+  const declaredSectorSafe = input.declaredSector ? sanitizeInline(input.declaredSector, { max: 120 }) : "";
+
+  const systemPrompt = `${UNTRUSTED_NOTICE}
+
+Tu es un analyste senior spécialisé dans l'extraction structurée de données depuis des études de marché (Statista, Nielsen, Kantar, BCG, McKinsey, Euromonitor, banques centrales).
 
 Tu reçois le texte brut d'une étude. Tu dois en extraire un objet JSON STRICT conforme au schéma MarketStudyExtraction.
 
 CONTRAINTE DURE — anti-fabrication :
 - Si une section n'est PAS explicitement mentionnée dans le texte, retourne null OU un array vide ([]). Jamais d'invention.
-${input.declaredCountryCode ? `- Le pays cible est ${input.declaredCountryCode}. Si le document couvre un autre pays, flag explicitement et privilégie les datapoints qui mentionnent ${input.declaredCountryCode}.` : ""}
-${input.declaredSector ? `- Le secteur cible est ${input.declaredSector}. Privilégie les datapoints alignés.` : ""}
+${declaredCountrySafe ? `- Le pays cible est ${declaredCountrySafe}. Si le document couvre un autre pays, flag explicitement et privilégie les datapoints qui mentionnent ${declaredCountrySafe}.` : ""}
+${declaredSectorSafe ? `- Le secteur cible est ${declaredSectorSafe}. Privilégie les datapoints alignés.` : ""}
 - Pour chaque valeur chiffrée, capture la SOURCE textuelle (page, table, paragraphe).
 
 49 variables Trend Tracker à chercher systématiquement (retourne null si non trouvé) :
@@ -50,11 +58,16 @@ Format JSON strict :
   "trendTracker": { "A1": { "value": 110, "year": 2024, "source": "page 12" }, "B3": { "value": "0.72", "year": 2024 }, "...": null }
 }`;
 
-  const truncatedText = input.text.length > 80_000 ? input.text.slice(0, 80_000) + "\n[...truncated]" : input.text;
+  // LOT 1e — entrée non fiable neutralisée (anti-injection) : le texte brut
+  // d'une étude UPLOADÉE (PDF/DOCX/XLSX) est le vecteur d'injection principal.
+  // On l'encadre via wrapUntrusted (casse fences/balises de rôle/`=== ===`) au
+  // lieu des délimiteurs ad-hoc, et on neutralise le nom de fichier (saisi).
+  const filenameSafe = sanitizeInline(input.sourceFilename, { max: 200 });
+  const documentBlock = wrapUntrusted("TEXTE BRUT DE L'ÉTUDE", input.text, { max: 80_000 });
 
   const result = await callLLM({
     system: systemPrompt,
-    prompt: `Document : ${input.sourceFilename}\n\n=== TEXTE BRUT ===\n${truncatedText}\n\n=== FIN ===\n\nExtrais l'objet JSON. Aucun texte hors JSON.`,
+    prompt: `Document : ${filenameSafe}\n\n${documentBlock}\n\nExtrais l'objet JSON. Aucun texte hors JSON.`,
     caller: "seshat:market-study-extractor",
     maxOutputTokens: 8000,
   });

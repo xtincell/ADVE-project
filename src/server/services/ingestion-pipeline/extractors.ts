@@ -4,6 +4,7 @@
  */
 
 import { callLLM } from "@/server/services/llm-gateway";
+import { sanitizeInline, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import type { ExtractionResult } from "./types";
 
 /**
@@ -82,9 +83,11 @@ export async function extractImage(
   // Strip data URL prefix if present
   const rawBase64 = base64Data.replace(/^data:image\/[^;]+;base64,/, "");
 
+  // LOT 1e — entrée non fiable neutralisée (anti-injection) : la charge base64
+  // de l'image est fournie par l'utilisateur (upload attaquant-contrôlable).
   const result = await callLLM({
-    system: "Tu es un expert en analyse visuelle de marque. Reponds en francais.",
-    prompt: `[Image base64 fournie — mediaType: ${mediaType}]\n\nDecris cette image de maniere detaillee dans le contexte d'une marque/entreprise.\nIdentifie : type de document (logo, charte, photo produit, affiche, etc.),\ncouleurs dominantes, typographies visibles, textes lisibles, elements graphiques,\nton general, et toute information utile pour definir l'identite de marque.\nReponds en francais.\n\n[IMAGE_DATA:${rawBase64.slice(0, 200)}...]`,
+    system: `${UNTRUSTED_NOTICE}\n\nTu es un expert en analyse visuelle de marque. Reponds en francais.`,
+    prompt: `[Image base64 fournie — mediaType: ${mediaType}]\n\nDecris cette image de maniere detaillee dans le contexte d'une marque/entreprise.\nIdentifie : type de document (logo, charte, photo produit, affiche, etc.),\ncouleurs dominantes, typographies visibles, textes lisibles, elements graphiques,\nton general, et toute information utile pour definir l'identite de marque.\nReponds en francais.\n\n[IMAGE_DATA:${sanitizeInline(rawBase64.slice(0, 200), { max: 200 })}...]`,
     caller: "ingestion:image-extract",
     strategyId,
     maxOutputTokens: 1500,

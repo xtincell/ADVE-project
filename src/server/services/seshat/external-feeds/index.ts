@@ -14,6 +14,7 @@
  */
 
 import { callLLM } from "@/server/services/llm-gateway";
+import { UNTRUSTED_NOTICE, sanitizeInline } from "@/server/services/utils/untrusted-content";
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { ExternalFeedDigestDataSchema } from "@/server/services/seshat/knowledge/schemas";
@@ -130,12 +131,22 @@ export async function fetchAndPersistFeedDigest(
   // identiquement en mode RSS et LLM. Le LLM ne produit ici qu'une synthèse
   // QUALITATIVE des signaux.
 
-  const systemPrompt = `Tu es un agrégateur de feed sectoriel. Tu produis un digest qualitatif macro/micro pour un pays + secteur donné.
+  // LOT 1e — entrée non fiable neutralisée (anti-injection). Les vrais items
+  // RSS (vecteur attaquant) ne transitent PAS par cet appel : ils passent par
+  // la voie déterministe `buildDigestFromItems` qui court-circuite avant ce
+  // fallback. Restent ici `sector`/`countryName` (params intent / dérivés
+  // saisie), neutralisés inline ; `countryCode`/`region`/`ppp` viennent de la
+  // table Country (taxonomie interne).
+  const sectorSafe = sanitizeInline(sector, { max: 120 });
+  const countryNameSafe = sanitizeInline(countryName, { max: 120 });
+  const systemPrompt = `${UNTRUSTED_NOTICE}
+
+Tu es un agrégateur de feed sectoriel. Tu produis un digest qualitatif macro/micro pour un pays + secteur donné.
 
 CONTEXTE PAYS — CONTRAINTE DURE :
-- Pays : ${countryName} (${countryCode}) — région ${region}${ppp !== undefined ? ` — PPP ${ppp}` : ""}
-- Secteur : ${sector}
-- Tous les signaux DOIVENT être plausibles dans ${countryName} pour ${sector}.
+- Pays : ${countryNameSafe} (${countryCode}) — région ${region}${ppp !== undefined ? ` — PPP ${ppp}` : ""}
+- Secteur : ${sectorSafe}
+- Tous les signaux DOIVENT être plausibles dans ${countryNameSafe} pour ${sectorSafe}.
 - N'invente AUCUN chiffre précis (PIB, taux, montants, parts de marché). Décris des tendances QUALITATIVES. Si tu n'as pas de tendance fiable, retourne MOINS de signaux plutôt que d'en inventer.
 
 Format JSON strict (UNIQUEMENT ces deux clés) :
@@ -146,7 +157,7 @@ Format JSON strict (UNIQUEMENT ces deux clés) :
 
   const llmResult = await callLLM({
     system: systemPrompt,
-    prompt: `Synthétise le digest qualitatif ${countryCode} × ${sector}. JSON uniquement, les deux clés macroSignals et weakSignals.`,
+    prompt: `Synthétise le digest qualitatif ${countryCode} × ${sectorSafe}. JSON uniquement, les deux clés macroSignals et weakSignals.`,
     caller: "seshat:external-feeds",
     maxOutputTokens: 2000,
   });

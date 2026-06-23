@@ -7,6 +7,7 @@ import { ADVE_KEYS } from "@/domain";
  */
 
 import { callLLM } from "@/server/services/llm-gateway";
+import { wrapUntrusted, sanitizeInline, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import { db } from "@/lib/db";
 import { PILLAR_SCHEMAS, validatePillarPartial } from "@/lib/types/pillar-schemas";
 import { executeTool as executeGloryTool } from "@/server/services/glory-tools";
@@ -146,8 +147,11 @@ export async function analyzeAndMapSources(strategyId: string): Promise<Record<s
   const ctx = await buildSourceContext(strategyId);
   if (!ctx.fullText.trim()) return {};
 
+  // LOT 1e — entrée non fiable neutralisée (anti-injection)
   const result = await callLLM({
-    system: `Tu es un expert en strategie de marque utilisant le framework ADVE-RTIS.
+    system: `${UNTRUSTED_NOTICE}
+
+Tu es un expert en strategie de marque utilisant le framework ADVE-RTIS.
 Les 4 piliers ADVE sont :
 - A (Authenticite) : identite, valeurs, archetype, histoire fondatrice, ikigai
 - D (Distinction) : personas, positionnement, promesse, ton de voix, concurrence
@@ -157,10 +161,9 @@ Les 4 piliers ADVE sont :
 Analyse les donnees fournies et determine quels piliers chaque source peut nourrir.
 Reponds en JSON : { "A": ["sourceId1"], "D": ["sourceId2", "sourceId3"], "V": [], "E": ["sourceId1"] }
 Inclus AUSSI un champ "businessContext" si tu detectes des infos sur le modele d'affaires.`,
-    prompt: `Marque: ${ctx.strategy.name}
+    prompt: `Marque: ${sanitizeInline(ctx.strategy.name, { max: 200 })}
 
-DONNEES SOURCES:
-${ctx.fullText}
+${wrapUntrusted("DONNEES SOURCES", ctx.fullText, { max: 20000 })}
 
 Retourne le mapping JSON source → pilier.`,
     caller: "ingestion:analyze-map",
@@ -222,6 +225,8 @@ export async function fillPillar(
   const gloryToolsUsed: GloryToolUsage[] = [];
 
   // --- Step 1: Direct AI fill from source data ---
+  // LOT 1e — entrée non fiable neutralisée (anti-injection) : nom de marque +
+  // contexte business (founder-fourni) + contenu des sources (fichiers ingérés).
   const fillPrompt = `Tu es un expert en strategie de marque (framework ADVE-RTIS).
 
 A partir des donnees sources ci-dessous, remplis le pilier ${pillarKey} avec les champs suivants.
@@ -230,11 +235,10 @@ Chaque champ doit etre rempli avec des donnees REELLES extraites des sources. Ne
 CHAMPS A REMPLIR:
 ${fieldNames.map((f) => `- ${f}`).join("\n")}
 
-MARQUE: ${ctx.strategy.name}
-${ctx.strategy.businessContext ? `CONTEXTE: ${JSON.stringify(ctx.strategy.businessContext)}` : ""}
+MARQUE: ${sanitizeInline(ctx.strategy.name, { max: 200 })}
+${ctx.strategy.businessContext ? wrapUntrusted("CONTEXTE BUSINESS", JSON.stringify(ctx.strategy.businessContext), { max: 4000 }) : ""}
 
-DONNEES SOURCES:
-${ctx.fullText}
+${wrapUntrusted("DONNEES SOURCES", ctx.fullText, { max: 20000 })}
 
 INSTRUCTIONS:
 - Reponds en JSON valide avec les champs listes ci-dessus
@@ -244,7 +248,7 @@ INSTRUCTIONS:
 - Ne fabrique JAMAIS de donnees fictives`;
 
   const aiResult = await callLLM({
-    system: "Tu es un extracteur de donnees structurees. Reponds UNIQUEMENT en JSON valide. Pas de texte avant ou apres le JSON.",
+    system: `${UNTRUSTED_NOTICE}\n\nTu es un extracteur de donnees structurees. Reponds UNIQUEMENT en JSON valide. Pas de texte avant ou apres le JSON.`,
     prompt: fillPrompt,
     caller: `ingestion:fill-${pillarKey}`,
     strategyId,
@@ -409,14 +413,15 @@ export async function fillRTISPillar(
     S: "Strategie — Synthese executive, axes strategiques, facteurs cles de succes, recommandations",
   };
 
+  // LOT 1e — entrée non fiable neutralisée (anti-injection) : nom de marque +
+  // contexte business + ADN ADVE (dérivé de piliers seedés depuis l'ingestion).
   const prompt = `Tu es un strategiste de marque senior utilisant le framework ADVE-RTIS.
 A partir de l'ADN de marque (piliers ADVE valides ci-dessous), remplis le pilier ${pillarKey} (${PILLAR_DESCRIPTIONS[pillarKey]}).
 
-MARQUE: ${strategy.name}
-CONTEXTE BUSINESS: ${JSON.stringify(strategy.businessContext ?? {})}
+MARQUE: ${sanitizeInline(strategy.name, { max: 200 })}
+${wrapUntrusted("CONTEXTE BUSINESS", JSON.stringify(strategy.businessContext ?? {}), { max: 4000 })}
 
-ADN DE MARQUE (ADVE VALIDE):
-${adveContext}
+${wrapUntrusted("ADN DE MARQUE (ADVE VALIDE)", adveContext, { max: 16000 })}
 
 CHAMPS A REMPLIR:
 ${fieldNames.map((f) => `- ${f}`).join("\n")}
@@ -424,7 +429,7 @@ ${fieldNames.map((f) => `- ${f}`).join("\n")}
 Reponds en JSON valide. Sois precis et actionnable. Base tes recommandations sur les donnees ADVE reelles.`;
 
   const result = await callLLM({
-    system: "Tu es un extracteur de donnees structurees. Reponds UNIQUEMENT en JSON valide.",
+    system: `${UNTRUSTED_NOTICE}\n\nTu es un extracteur de donnees structurees. Reponds UNIQUEMENT en JSON valide.`,
     prompt,
     caller: `ingestion:fill-rtis-${pillarKey}`,
     strategyId,

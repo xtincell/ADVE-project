@@ -157,8 +157,15 @@ async function extractText(fileType: string, base64Content: string): Promise<str
 
 async function extractWithVision(base64Content: string): Promise<string> {
   const { callLLM } = await import("@/server/services/llm-gateway");
+  const { UNTRUSTED_NOTICE } = await import("@/server/services/utils/untrusted-content");
+  // LOT 1e — entrée non fiable neutralisée (anti-injection) : OCR d'un document
+  // uploadé (attaquant-contrôlable). Le prompt ne porte qu'une longueur (nombre,
+  // non sensible) ; le document non fiable est neutralisé via le system prompt.
+  // @llm-input-internal: le prompt texte n'interpole que base64Content.length
+  // (nombre) ; le contenu image est OCRisé par le modèle vision, jamais
+  // concaténé en texte → aucun vecteur d'injection texte. UNTRUSTED_NOTICE ajouté.
   const result = await callLLM({
-    system: "Tu es un expert en OCR. Extrais tout le texte visible de cette image de document, en préservant la structure (titres, listes, paragraphes).",
+    system: `${UNTRUSTED_NOTICE}\n\nTu es un expert en OCR. Extrais tout le texte visible de cette image de document, en préservant la structure (titres, listes, paragraphes).`,
     prompt: `[Image du document en base64 — ${base64Content.length} caractères]`,
     caller: "brief-ingest:vision-ocr",
     model: "claude-sonnet-4-20250514",

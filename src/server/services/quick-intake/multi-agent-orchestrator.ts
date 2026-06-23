@@ -1,4 +1,5 @@
 import { callLLM, extractJSON } from "@/server/services/llm-gateway";
+import { wrapUntrusted, sanitizeInline, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import { SHAPE_PER_PILLAR } from "./pillar-shapes";
 
 interface AgentWorkerConfig {
@@ -41,10 +42,12 @@ export async function generatePillarIMultiAgent(
 ): Promise<Record<string, unknown>> {
   // 1. Lancement des 3 workers en parallèle
   const workerPromises = Object.entries(WORKERS).map(async ([id, config]) => {
-    const prompt = `MARQUE : ${companyName}
+    // LOT 1e — entrées non fiables neutralisées (anti-injection). companyName +
+    // contextBlock (ADVE founder + refs marché Seshat + comparables) viennent du
+    // dirigeant/sources externes : nom inline, contexte en bloc « donnée ».
+    const prompt = `MARQUE : ${sanitizeInline(companyName, { max: 120 })}
 
-CONTEXTE ADVE & MARCHÉ :
-${contextBlock}
+${wrapUntrusted("CONTEXTE ADVE & MARCHÉ", contextBlock, { max: 12000 })}
 
 Tu es ${config.role}.
 ${config.focus}
@@ -62,7 +65,7 @@ Réponds UNIQUEMENT avec un objet JSON contenant le tableau "actions".
       const { text } = await callLLM({
         caller: `quick-intake:multi-agent:worker-${id}`,
         purpose: "agent",
-        system: "Tu es un agent expert marketing spécialisé. Tu réponds strictement en JSON.",
+        system: `${UNTRUSTED_NOTICE}\n\nTu es un agent expert marketing spécialisé. Tu réponds strictement en JSON.`,
         prompt,
         maxOutputTokens: 2500,
       });
@@ -78,12 +81,14 @@ Réponds UNIQUEMENT avec un objet JSON contenant le tableau "actions".
   const allActions = workerResults.flat();
 
   // 2. Superviseur pour synthétiser et dédupliquer
-  const supervisorPrompt = `MARQUE : ${companyName}
+  // LOT 1e — entrées non fiables neutralisées (anti-injection). companyName inline ;
+  // allActions est une sortie LLM dérivée du contexte founder/marché non fiable
+  // (peut contenir une injection ré-émise) → on la balise comme bloc « donnée ».
+  const supervisorPrompt = `MARQUE : ${sanitizeInline(companyName, { max: 120 })}
 
 Voici ${allActions.length} propositions d'actions marketing générées par tes sous-agents (Acquisition, Rétention, Culture).
 
-ACTIONS PROPOSÉES :
-${JSON.stringify(allActions, null, 2)}
+${wrapUntrusted("ACTIONS PROPOSÉES", JSON.stringify(allActions, null, 2), { max: 16000 })}
 
 Mission du Superviseur :
 1. Examine ces actions. Supprime les doublons ou celles qui se ressemblent trop.
@@ -97,7 +102,7 @@ ${SHAPE_PER_PILLAR["i"]}
   const { text } = await callLLM({
     caller: "quick-intake:multi-agent:supervisor",
     purpose: "agent",
-    system: "Tu es l'Agent Superviseur (Directeur Stratégie). Tu harmonises le travail de tes sous-agents. Tu réponds strictement en JSON.",
+    system: `${UNTRUSTED_NOTICE}\n\nTu es l'Agent Superviseur (Directeur Stratégie). Tu harmonises le travail de tes sous-agents. Tu réponds strictement en JSON.`,
     prompt: supervisorPrompt,
     maxOutputTokens: 4000,
   });

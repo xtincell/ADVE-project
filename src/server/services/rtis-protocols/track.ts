@@ -24,6 +24,7 @@ import { db } from "@/lib/db";
 import { PillarTSchema } from "@/lib/types/pillar-schemas";
 import { loadCountrySectorIntelligence } from "@/server/services/seshat/knowledge/access";
 import type { TamSamSom, TrendTrackerExtraction } from "@/server/services/seshat/knowledge/schemas";
+import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 
 // ADR-0063 / PR-K3-ter — sous-schémas. Le mega-appel (9 champs) est ÉCLATÉ en
 // 4 sous-appels focalisés ; `.pick().partial()` valide strictement chaque champ
@@ -234,7 +235,11 @@ async function callTrackJSON(args: {
       caller: `mestor:protocole-track:${args.label}`,
       strategyId: args.strategyId,
       model: "claude-sonnet-4-20250514",
-      system: args.system,
+      // LOT 1e — entrée non fiable neutralisée (anti-injection) : le prompt porte
+      // le contexte ADVE+R (saisie fondateur) ET les données marché Seshat /
+      // concurrents (sources externes), tous wrappés via wrapUntrusted côté
+      // appelant → rappel sécurité dans le system.
+      system: `${UNTRUSTED_NOTICE}\n\n${args.system}`,
       prompt: args.prompt,
       maxOutputTokens: args.maxOutputTokens,
     });
@@ -276,27 +281,38 @@ async function generateTrackAnalysis(
   const a = pillars.a ?? {};
   const d = pillars.d ?? {};
 
+  // LOT 1e — entrée non fiable neutralisée (anti-injection) : le contenu des
+  // piliers ADVE dérive de la saisie fondateur → chaque bloc encadré comme
+  // DONNÉE (jamais instruction).
   const context = [...ADVE_STORAGE_KEYS]
     .map(k => {
       const c = pillars[k];
       if (!c || Object.keys(c).length === 0) return `[${k.toUpperCase()}] Vide`;
-      return `[${k.toUpperCase()}]\n${JSON.stringify(c, null, 2)}`;
+      return wrapUntrusted(`PILIER ${k.toUpperCase()}`, JSON.stringify(c, null, 2), { max: 8000 });
     })
     .join("\n\n");
 
-  const rContext = riskContent ? `[R]\n${JSON.stringify(riskContent, null, 2)}` : "[R] Vide";
+  // LOT 1e — entrée non fiable neutralisée (anti-injection) : le pilier R dérive
+  // lui aussi de l'ADVE fondateur.
+  const rContext = riskContent ? wrapUntrusted("PILIER R", JSON.stringify(riskContent, null, 2), { max: 8000 }) : "[R] Vide";
+  // LOT 1e — entrée non fiable neutralisée (anti-injection) : données marché
+  // Seshat = contenu externe (études, feeds, signaux) → encadré comme DONNÉE.
+  // L'étiquette de chaque bloc conserve la consigne d'usage ; seul le payload
+  // (potentiellement empoisonné) est wrappé.
   const verifiedBlocks: string[] = [];
-  if (intelligence.tamSamSom) verifiedBlocks.push(`TAM/SAM/SOM VÉRIFIÉ (Seshat — reprends-le tel quel, source=verified):\n${JSON.stringify(intelligence.tamSamSom)}`);
-  if (intelligence.competitors.length) verifiedBlocks.push(`CONCURRENTS (parts de marché réelles):\n${JSON.stringify(intelligence.competitors.slice(0, 8))}`);
-  if (intelligence.segments.length) verifiedBlocks.push(`SEGMENTS CONSOMMATEUR:\n${JSON.stringify(intelligence.segments.slice(0, 6))}`);
-  if (intelligence.trendTracker) verifiedBlocks.push(`TREND TRACKER (chiffrés macro vérifiés — ne les ré-estime pas):\n${JSON.stringify(intelligence.trendTracker)}`);
+  if (intelligence.tamSamSom) verifiedBlocks.push(`TAM/SAM/SOM VÉRIFIÉ (Seshat — reprends-le tel quel, source=verified):\n${wrapUntrusted("TAM/SAM/SOM", JSON.stringify(intelligence.tamSamSom), { max: 4000 })}`);
+  if (intelligence.competitors.length) verifiedBlocks.push(`CONCURRENTS (parts de marché réelles):\n${wrapUntrusted("CONCURRENTS", JSON.stringify(intelligence.competitors.slice(0, 8)), { max: 4000 })}`);
+  if (intelligence.segments.length) verifiedBlocks.push(`SEGMENTS CONSOMMATEUR:\n${wrapUntrusted("SEGMENTS", JSON.stringify(intelligence.segments.slice(0, 6)), { max: 4000 })}`);
+  if (intelligence.trendTracker) verifiedBlocks.push(`TREND TRACKER (chiffrés macro vérifiés — ne les ré-estime pas):\n${wrapUntrusted("TREND TRACKER", JSON.stringify(intelligence.trendTracker), { max: 4000 })}`);
   const sig = intelligence.signals;
-  if (sig.macroSignals.length || sig.weakSignals.length) verifiedBlocks.push(`SIGNAUX MARCHÉ — macro:\n${JSON.stringify(sig.macroSignals.slice(0, 6))}\nfaibles:\n${JSON.stringify(sig.weakSignals.slice(0, 4))}`);
+  if (sig.macroSignals.length || sig.weakSignals.length) verifiedBlocks.push(`SIGNAUX MARCHÉ —\n${wrapUntrusted("SIGNAUX MARCHÉ", `macro:\n${JSON.stringify(sig.macroSignals.slice(0, 6))}\nfaibles:\n${JSON.stringify(sig.weakSignals.slice(0, 4))}`, { max: 4000 })}`);
   const seshatContext = verifiedBlocks.length > 0
     ? `\n\nDONNÉES SESHAT VÉRIFIÉES (vérité terrain — utilise-les, ne les invente pas) :\n${verifiedBlocks.join("\n\n")}`
     : "\n\nAucune donnée Seshat vérifiée pour ce pays×secteur — marque tes chiffres 'ai_estimate'.";
+  // LOT 1e — entrée non fiable neutralisée (anti-injection) : snapshots
+  // concurrents = données externes collectées → encadrées comme DONNÉE.
   const competitorContext = competitorData.length > 0
-    ? `\n\nDONNÉES CONCURRENTS (${competitorData.length}):\n${JSON.stringify(competitorData.slice(0, 5), null, 2)}`
+    ? `\n\nDONNÉES CONCURRENTS (${competitorData.length}):\n${wrapUntrusted("CONCURRENTS (snapshots)", JSON.stringify(competitorData.slice(0, 5), null, 2), { max: 4000 })}`
     : "";
 
   const baseSystem = `Tu es le Protocole Track de l'essaim MESTOR. Tu confrontes l'identité ADVE à la réalité marché.

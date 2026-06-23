@@ -11,6 +11,7 @@ import { ADVE_STORAGE_KEYS } from "@/domain";
 // ============================================================================
 
 import { callLLM, extractJSON } from "@/server/services/llm-gateway";
+import { wrapUntrusted, sanitizeInline, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 
 export interface AdvePillarReport {
   /** Lowercase pillar key */
@@ -167,9 +168,12 @@ export async function generateNarrativeReport(input: {
     .join("\n");
 
   // Contexte commun aux 2 sous-rapports parallèles (ADVE + RTIS).
-  const ctxBlock = `MARQUE : ${companyName}
-SECTEUR : ${sector ?? "non precis"}
-PAYS : ${country ?? "non precis"}
+  // LOT 1e — entrées non fiables neutralisées (anti-injection). Nom/secteur/pays
+  // inline ; valeurs extraites + réponses brutes (texte founder) balisées en bloc.
+  // classification/scores sont calculés par nous (données internes, non balisées).
+  const ctxBlock = `MARQUE : ${sanitizeInline(companyName, { max: 120 })}
+SECTEUR : ${sanitizeInline(sector ?? "non precis", { max: 80 })}
+PAYS : ${sanitizeInline(country ?? "non precis", { max: 60 })}
 CLASSIFICATION ADVE : ${classification}
 SCORES /25 PAR PILIER :
 - Authenticite (A) : ${(vector.a ?? 0).toFixed(1)}
@@ -178,10 +182,9 @@ SCORES /25 PAR PILIER :
 - Engagement (E)   : ${(vector.e ?? 0).toFixed(1)}
 
 VALEURS EXTRAITES PAR PILIER (a CITER explicitement dans tes commentaires — c'est ce que la marque doit reconnaitre dans ton rapport) :
-${formatExtracted()}
+${wrapUntrusted("VALEURS EXTRAITES PAR PILIER", formatExtracted(), { max: 8000 })}
 
-REPONSES BRUTES DE LA MARQUE :
-${formatResponses()}`;
+${wrapUntrusted("REPONSES BRUTES DE LA MARQUE", formatResponses(), { max: 8000 })}`;
 
   // Optimisation 2026-05-11 (commit c2d872d + post) : on splite le single-shot
   // Opus ~4k tokens en 2 calls parallèles ~2k tokens chacun (ADVE + RTIS).
@@ -204,8 +207,10 @@ Produis le JSON avec cette forme exacte :
   ]
 }`;
 
+  // LOT 1e — recoText (dérivé du contenu founder) + seshatGrounding (réfs marché
+  // externes) sont des entrées non fiables → balisées en bloc « donnée ».
   const rtisPrompt = `${ctxBlock}
-${recoText ? `\nRECOMMANDATIONS NOTORIA DEJA GENEREES (a utiliser pour calibrer les axes RTIS) :\n${recoText}` : ""}${seshatGrounding ? `\nREFERENCES SECTORIELLES SESHAT (a utiliser comme grounding pour la proposition RTIS) :\n${seshatGrounding}` : ""}
+${recoText ? `\nRECOMMANDATIONS NOTORIA DEJA GENEREES (a utiliser pour calibrer les axes RTIS) :\n${wrapUntrusted("RECOMMANDATIONS NOTORIA", recoText, { max: 4000 })}` : ""}${seshatGrounding ? `\nREFERENCES SECTORIELLES SESHAT (a utiliser comme grounding pour la proposition RTIS) :\n${wrapUntrusted("REFERENCES SECTORIELLES SESHAT", seshatGrounding, { max: 6000 })}` : ""}
 
 Produis le JSON avec cette forme exacte :
 {
@@ -232,7 +237,7 @@ Produis le JSON avec cette forme exacte :
   // ADVE régresse en prod, revert l'override → re-policy Opus.
   const [adveResult, rtisResult] = await Promise.all([
     callLLM({
-      system: SYSTEM_PROMPT_ADVE,
+      system: `${UNTRUSTED_NOTICE}\n\n${SYSTEM_PROMPT_ADVE}`,
       prompt: advePrompt,
       caller: "quick-intake:narrative-report:adve",
       purpose: "final-report",
@@ -240,7 +245,7 @@ Produis le JSON avec cette forme exacte :
       maxOutputTokens: 2048,
     }).then(({ text }) => extractJSON(text) as Partial<{ executiveSummary: string; adve: AdvePillarReport[] }>),
     callLLM({
-      system: SYSTEM_PROMPT_RTIS,
+      system: `${UNTRUSTED_NOTICE}\n\n${SYSTEM_PROMPT_RTIS}`,
       prompt: rtisPrompt,
       caller: "quick-intake:narrative-report:rtis",
       purpose: "final-report",

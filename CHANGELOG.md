@@ -10,6 +10,15 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.42 — Sécurité LLM LOT 1e : verrou d'entrée anti-injection sur tous les appels directs — 37/37 (2026-06-23)
+
+**Clôture LOT 1e** — neutralisation de l'**entrée** (anti-injection OWASP LLM01) sur **tous les appels LLM directs** restants (hors chokepoints LOT 0). La sortie était déjà 100 % (LOT 1c). L'entrée l'est désormais aussi.
+
+- **Auditeur renforcé** (`scripts/audit-llm-nodes.ts`) : ne compte plus seulement les appels directs, il **vérifie** par fichier que l'entrée est neutralisée — verdict `FENCED` (appel réel `wrapUntrusted`/`sanitizeInline`), `INTERNAL` (annoté `@llm-input-internal` : entrée 100 % interne, ou prompt construit/neutralisé en amont, ou seule entrée non-texte = image OCR couverte par `UNTRUSTED_NOTICE`), ou `RAW`. Faux positif corrigé (un `callLLM(` cité dans une chaîne `description` n'est plus compté). Le gate `--strict` bloque désormais toute nouvelle **entrée brute** (`rawInputFiles`).
+- **28 fichiers durcis** (sur les 38 répertoriés ; 10 l'étaient déjà via LOT 0/1a/1b) : quick-intake (7), rtis-protocols (4), seshat (5), mestor + pillar-maturity (3), ingestion-pipeline + source-classifier + brief-ingest (4), générateurs (campaign-plan, implementation) + artemis market-research + enrich-oracle (5). Chaque contenu non fiable — texte fondateur, documents uploadés, **flux RSS/études/signaux externes (vecteur attaquant)**, contenu piliers, données marché — est encadré comme DONNÉE (`wrapUntrusted`) ou neutralisé inline (`sanitizeInline`), et `UNTRUSTED_NOTICE` est ajouté au system prompt. Les délimiteurs ad-hoc empoisonnables (`=== TEXTE BRUT ===`, `"""…"""`) sont remplacés par le fence canonique.
+- **Résultat audit : 37/37 fichiers à entrée durcie (35 `FENCED` + 2 `INTERNAL`), 0 brut.** Sortie maintenue 76/76 nœuds + 28/28 frameworks. **Toute la surface LLM est désormais sécurisée à l'entrée ET à la sortie.**
+- Hors phases 0–9 (out-of-scope, LOT 1e du plan `docs/governance/llm-hardening-plan.md`). **0 nouveau Neter** (Cap APOGEE 7/7), **0 model Prisma**, **0 bypass** (durcissement entrée + tooling d'audit, ne touche ni Intent ni schéma). tsc 0 · eslint 0 · tests verts. Cf. Justification — out-of-scope dans le body PR.
+
 ## v6.27.41 — Sécurité LLM LOT 1c (batch 5) : schémas de sortie réels — 17 derniers outils → 37/37 (2026-06-23)
 
 **Clôture LOT 1c** — vrais schémas de sortie pour les **17 outils Glory restants**, dérivés ligne à ligne de chaque `promptTemplate` (aucun schéma permissif « attrape-tout »).
