@@ -6,22 +6,17 @@
     "glory:adops-defend-creative-direction",
     "glory:adops-expand-semantic-field",
     "glory:audience-targeter",
-    "glory:claim-architect",
     "glory:crew-matcher",
-    "glory:engagement-rituals-designer",
     "glory:formation-recommender",
     "glory:lsi-distribution-matrix",
     "glory:lsi-morpho-semantic",
     "glory:lsi-sublimation",
     "glory:lsi-symbol-alchemy",
     "glory:lsi-universe-setup",
-    "glory:manifesto-writer",
     "glory:postmortem-12q",
     "glory:qc-evaluator",
     "glory:synthesize-section",
-    "glory:tone-of-voice-designer",
-    "glory:visual-moodboard-generator",
-    "glory:vocabulary-builder"
+    "glory:visual-moodboard-generator"
   ],
   "bypassFiles": [
     "src/server/services/artemis/index.ts",

@@ -22,6 +22,11 @@ import {
   logoTypeAdvisorOutputSchema,
   logoValidationOutputSchema,
   motionIdentityOutputSchema,
+  toneOfVoiceOutputSchema,
+  manifestoOutputSchema,
+  engagementRitualsOutputSchema,
+  claimArchitectOutputSchema,
+  vocabularyBuilderOutputSchema,
 } from "./glory-output-schemas";
 
 /**
@@ -1382,6 +1387,7 @@ Livrable : genre musical, tempo BPM, ambiance, SFX clés, specs voix off (genre 
       cultural_context: "a.doctrine",
     },
     outputFormat: "tone_charter",
+    outputSchema: toneOfVoiceOutputSchema,
     promptTemplate: `Conçois la charte de ton de voix :
 Archétype : {{archetype}}
 Valeurs : {{values}}
@@ -1413,6 +1419,7 @@ expressions interdites, do/don't par canal (social, print, corporate, customer s
       baseline: "d.assetsLinguistiques.slogan",
     },
     outputFormat: "manifesto",
+    outputSchema: manifestoOutputSchema,
     promptTemplate: `Rédige le manifeste de marque :
 ADN : {{brand_dna}}
 Prophétie : {{prophecy}}
@@ -1664,6 +1671,7 @@ Livrable : carte du parcours (stage par stage), triggers de progression, rewards
       existing_rituals: "e.rituels",
     },
     outputFormat: "brand_rituals",
+    outputSchema: engagementRitualsOutputSchema,
     promptTemplate: `Rituels de marque :
 Personnalité : {{brand_personality}}
 Niveaux communautaires : {{community_levels}}
@@ -2870,6 +2878,7 @@ Retourne : { aligned: boolean, score: 0-100, gaps: string[], risks: string[], re
       personas: "d.personas",
     },
     outputFormat: "claim_hierarchy",
+    outputSchema: claimArchitectOutputSchema,
     promptTemplate: `Tu es un stratège de marque. Construis la hiérarchie de claims pour cette marque.
 ADN : {{brand_dna}}
 Archétype : {{archetype}}
@@ -2927,6 +2936,7 @@ Pour chaque combinaison (persona × canal) : registre (formel/informel/technique
       tone_of_voice: "d.tonDeVoix",
     },
     outputFormat: "brand_vocabulary",
+    outputSchema: vocabularyBuilderOutputSchema,
     promptTemplate: `Construis le lexique de marque.
 ADN : {{brand_dna}}
 Archétype : {{archetype}}

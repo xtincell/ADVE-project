@@ -201,3 +201,72 @@ export const motionIdentityOutputSchema = z.object({
   bibliothequeAnimations: z.array(z.string()),
   guidelines: z.array(z.string()),
 });
+
+// ─── LAYER CR (suite) — copywriting stratégique ─────────────────────────────
+
+/** tone-of-voice-designer — charte de ton de voix. */
+export const toneOfVoiceOutputSchema = z.object({
+  personnalite: z.array(z.string()).min(1),
+  registreLinguistique: z.string(),
+  vocabulaireSignature: z.array(z.string()).min(1),
+  expressionsInterdites: z.array(z.string()),
+  doDontParCanal: z
+    .array(
+      z.object({
+        canal: z.string(),
+        dos: z.array(z.string()),
+        donts: z.array(z.string()),
+      }),
+    )
+    .min(1),
+  reformulations: z
+    .array(z.object({ avant: z.string(), apres: z.string() }))
+    .min(1),
+});
+
+/** manifesto-writer — texte fondateur (constat → révolte → vision → promesse → appel). */
+export const manifestoOutputSchema = z.object({
+  manifesto: z.string().min(1),
+});
+
+/** engagement-rituals-designer — 5-8 rituels récurrents détaillés. */
+export const engagementRitualsOutputSchema = z.object({
+  rituels: z
+    .array(
+      z.object({
+        nom: z.string(),
+        frequence: z.string(),
+        mecanique: z.string(),
+        canal: z.string(),
+        niveauDevotionCible: z.string(),
+        kpi: z.string(),
+        coutEstime: z.string(),
+      }),
+    )
+    .min(1),
+});
+
+/** claim-architect — hiérarchie de claims (master / sub / proofs / RTB). */
+export const claimArchitectOutputSchema = z.object({
+  masterClaim: z.string(),
+  subClaims: z
+    .array(z.object({ persona: z.string(), claim: z.string() }))
+    .min(1),
+  proofPoints: z.array(z.string()).min(1),
+  rtb: z
+    .array(z.object({ persona: z.string(), reasons: z.array(z.string()) }))
+    .min(1),
+});
+
+/** vocabulary-builder — lexique de marque (5 catégories). */
+export const vocabularyBuilderOutputSchema = z.object({
+  motsSacres: z.array(z.string()),
+  motsInterdits: z.array(z.string()),
+  expressionsSignatures: z.array(z.string()),
+  vocabulaireTechnique: z.array(
+    z.object({ terme: z.string(), traduction: z.string() }),
+  ),
+  alternatives: z.array(
+    z.object({ cliche: z.string(), alternative: z.string() }),
+  ),
+});
