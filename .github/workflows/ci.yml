@@ -98,6 +98,22 @@ jobs:
       - run: npm ci
       - run: npm run audit:governance
 
+  llm-node-audit:
+    name: LLM node guardrails (no regression)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      # Fails only on a NEW unguarded LLM node (output schema missing OR direct
+      # callLLM bypass) vs scripts/llm-audit-baseline.json. Doesn't require
+      # migrating the existing backlog. See docs/governance/llm-hardening-plan.md.
+      - run: npm run audit:llm:strict
+
   dep-cycle:
     name: Dependency cycles (madge)
     runs-on: ubuntu-latest

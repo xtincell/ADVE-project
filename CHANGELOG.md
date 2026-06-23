@@ -10,6 +10,14 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.35 — Sécurité LLM LOT 2 : gate CI anti-régression (2026-06-23)
+
+**LOT 2 du plan** — fige l'état durci et empêche toute régression.
+
+- `ci(meta)` nouveau job **`LLM node guardrails (no regression)`** dans `.github/workflows/ci.yml` : exécute `npm run audit:llm:strict` à chaque PR. Échoue uniquement sur un **nouveau** nœud LLM non protégé (schéma de sortie manquant **ou** `callLLM` direct hors wrapper) vs `scripts/llm-audit-baseline.json` — sans imposer de migrer le backlog existant.
+- **Bilan sécurité** : l'injection de prompt (entrée) est fermée sur tout le périmètre (LOT 0 outils+frameworks, LOT 1a intake, LOT 1b dérivation) ; le gate verrouille l'acquis. Reste = **dette de robustesse** (schéma de sortie de ~55 Glory tools 1c/1d + sorties multi-formes 1e), désormais gelée au baseline.
+- Hors phases 0–9 (out-of-scope). **0 nouveau Neter** (Cap APOGEE 7/7), **0 model Prisma**, **0 bypass**. Cf. Justification — out-of-scope dans le body PR.
+
 ## v6.27.34 — Sécurité LLM LOT 1b : durcissement entrée des services de dérivation (2026-06-23)
 
 **LOT 1b du plan** — les services de dérivation appellent le LLM en direct (hors chokepoints LOT 0).
