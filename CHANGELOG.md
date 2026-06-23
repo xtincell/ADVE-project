@@ -10,6 +10,14 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.39 — Sécurité LLM LOT 1c (batch 3) : schémas de sortie réels — 4 outils BRAND (2026-06-23)
+
+**Suite LOT 1c** — vrais schémas de sortie pour 4 outils BRAND **sans `forgeOutput` couplé** (les outils BRAND avec auto-handoff forge sont tenus à l'écart : un schéma mal aligné casserait le `briefTextPath` → à traiter avec vérif fonctionnelle).
+
+- `feat(artemis)` `outputSchema` ajouté à **`semiotic-brand-analyzer`** (signifiants/signifiés/connotations/codes/positionnement), **`logo-type-advisor`** (type/direction/dos/donts/déclinaisons), **`logo-validation-protocol`** (évaluations scorées + reco finale), **`motion-identity-designer`** (principes easing/durée/rythme + bibliothèque + guidelines).
+- **Baseline du gate ratchetée 26 → 22** manques de sortie. **15/37 outils Glory** désormais validés en sortie.
+- Hors phases 0–9 (out-of-scope). **0 nouveau Neter** (Cap APOGEE 7/7), **0 model Prisma**, **0 bypass**. tsc 0 · eslint 0 · tests verts. Cf. Justification — out-of-scope dans le body PR.
+
 ## v6.27.38 — Sécurité LLM LOT 1c (batch 2) : schémas de sortie réels — 4 outils DC (2026-06-23)
 
 **Suite LOT 1c** — vrais schémas de sortie pour 4 outils DC (évaluation/diagnostic) dont 3 ont un contrat JSON **explicite** dans leur prompt.

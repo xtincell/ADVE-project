@@ -156,3 +156,48 @@ export const ideaKillerSaverOutputSchema = z.object({
     )
     .min(1),
 });
+
+// ─── LAYER BRAND — Identité visuelle (outils sans forgeOutput couplé) ────────
+
+/** semiotic-brand-analyzer — analyse sémiotique. */
+export const semioticBrandAnalyzerOutputSchema = z.object({
+  signifiants: z.array(z.string()),
+  signifies: z.array(z.string()),
+  connotations: z.array(z.string()),
+  codesCulturels: z.array(z.string()),
+  positionnementSemiotique: z.string(),
+});
+
+/** logo-type-advisor — direction logotype. */
+export const logoTypeAdvisorOutputSchema = z.object({
+  typeRecommande: z.string(),
+  directionStylistique: z.string(),
+  dos: z.array(z.string()),
+  donts: z.array(z.string()),
+  declinaisons: z.array(z.string()),
+});
+
+/** logo-validation-protocol — évaluation + recommandation finale. */
+export const logoValidationOutputSchema = z.object({
+  evaluations: z
+    .array(
+      z.object({
+        proposition: z.string(),
+        score: z.number().min(0).max(100),
+        notes: z.string().optional(),
+      }),
+    )
+    .min(1),
+  recommandationFinale: z.string(),
+});
+
+/** motion-identity-designer — principes + bibliothèque + guidelines motion. */
+export const motionIdentityOutputSchema = z.object({
+  principes: z.object({
+    easing: z.string(),
+    duree: z.string(),
+    rythme: z.string(),
+  }),
+  bibliothequeAnimations: z.array(z.string()),
+  guidelines: z.array(z.string()),
+});
