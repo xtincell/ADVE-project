@@ -28,6 +28,7 @@
 
 import { z } from "zod";
 import { defineHybridTool, type GloryToolDef, type GloryToolNature } from "./tool-types";
+import { postmortem12qOutputSchema } from "./glory-output-schemas";
 import { ADVE_KEYS } from "@/domain";
 
 /**
@@ -236,6 +237,7 @@ Produis un JSON strict :
       // etc.) — pas de bindings pillar directs.
     },
     outputFormat: "postmortem_structured_12q",
+    outputSchema: postmortem12qOutputSchema,
     promptTemplate: `Tu es l'enquêteur post-mission. Réponds aux 12 questions canoniques du postmortem en t'appuyant strictement sur les données fournies. Aucune invention.
 
 DONNÉES CAMPAGNE :

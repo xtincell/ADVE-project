@@ -16,6 +16,11 @@
  */
 
 import type { GloryToolDef } from "./tool-types";
+import {
+  crewMatcherOutputSchema,
+  formationRecommenderOutputSchema,
+  qcEvaluatorOutputSchema,
+} from "./glory-output-schemas";
 
 export const PHASE14_IMHOTEP_TOOLS: GloryToolDef[] = [
   {
@@ -34,6 +39,7 @@ export const PHASE14_IMHOTEP_TOOLS: GloryToolDef[] = [
     // matching-engine.suggest) — aucun champ pilier ne porte ce brief.
     pillarBindings: {},
     outputFormat: "talent_match_ranking",
+    outputSchema: crewMatcherOutputSchema,
     promptTemplate: `Tu es Imhotep, sage architecte qui apparie talents et missions.
 
 Brief mission : {{mission_brief}}
@@ -90,6 +96,7 @@ Format JSON : { "ranked": [{talentProfileId, matchScore, matchReasons, devotionA
     inputFields: ["user_id", "skill_gap", "current_tier"],
     pillarBindings: {},
     outputFormat: "formation_recommendation",
+    outputSchema: formationRecommenderOutputSchema,
     promptTemplate: `Tu es Imhotep, sage formateur égyptien. Tu recommandes 3 cours pour combler un gap.
 
 User : {{user_id}}
@@ -121,6 +128,7 @@ Format JSON : { "courses": [{courseId, title, rationale, estimatedDurationMin}] 
     inputFields: ["deliverable_id", "reviewer_id"],
     pillarBindings: {},
     outputFormat: "qc_result",
+    outputSchema: qcEvaluatorOutputSchema,
     promptTemplate: `Tu es Imhotep, gardien de la qualité. Tu évalues un deliverable.
 
 Deliverable : {{deliverable_id}}

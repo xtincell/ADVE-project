@@ -15,6 +15,10 @@
  */
 
 import type { GloryToolDef } from "./tool-types";
+import {
+  adCopyOutputSchema,
+  audienceTargeterOutputSchema,
+} from "./glory-output-schemas";
 
 export const PHASE15_ANUBIS_TOOLS: GloryToolDef[] = [
   {
@@ -35,6 +39,7 @@ export const PHASE15_ANUBIS_TOOLS: GloryToolDef[] = [
       campaign_brief: "d.promesseMaitre",
     },
     outputFormat: "ad_copy_variants",
+    outputSchema: adCopyOutputSchema,
     promptTemplate: `Tu es Anubis, psychopompe des messages. Tu produis 3 variants d'ad copy.
 
 Brief campagne : {{campaign_brief}}
@@ -70,6 +75,7 @@ Format JSON : { "variants": [{label: "A", copy: "...", cta: "...", hashtags: [..
       sector: "a.secteur",
     },
     outputFormat: "audience_segment_rules",
+    outputSchema: audienceTargeterOutputSchema,
     promptTemplate: `Tu es Anubis, segmenteur d'audience. Tu produis des règles de targeting.
 
 Persona cible : {{target_persona}}

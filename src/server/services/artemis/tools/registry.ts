@@ -27,6 +27,13 @@ import {
   engagementRitualsOutputSchema,
   claimArchitectOutputSchema,
   vocabularyBuilderOutputSchema,
+  visualMoodboardOutputSchema,
+  synthesizeSectionOutputSchema,
+  lsiUniverseSetupOutputSchema,
+  lsiSymbolAlchemyOutputSchema,
+  lsiDistributionMatrixOutputSchema,
+  lsiSublimationOutputSchema,
+  lsiMorphoSemanticOutputSchema,
 } from "./glory-output-schemas";
 
 /**
@@ -1111,6 +1118,7 @@ Map : codes visuels dominants, espaces libres, opportunités de différenciation
       brand_values: "a.valeurs",
     },
     outputFormat: "moodboard_directions",
+    outputSchema: visualMoodboardOutputSchema,
     promptTemplate: `3 directions de moodboard :
 Insights sémiotiques : {{semiotic_insights}}
 Espaces visuels libres : {{landscape_gaps}}
@@ -1883,6 +1891,7 @@ Règles : consumer EXACTEMENT 3 entrées. market EXACTEMENT 3 entrées. cultural
     inputFields: ["section_id", "section_draft", "brand_context"],
     pillarBindings: { brand_context: "a.doctrine" },
     outputFormat: "section_narrative",
+    outputSchema: synthesizeSectionOutputSchema,
     promptTemplate: `Synthèse Oracle section "{{section_id}}".
 
 Draft déterministe (NE PAS modifier les données numériques ni inventer) :
@@ -3016,6 +3025,7 @@ Compiler en document structuré : 1. Philosophie verbale, 2. Hiérarchie de clai
       direction_artistique: "d.directionArtistique",
     },
     outputFormat: "universe_setup",
+    outputSchema: lsiUniverseSetupOutputSchema,
     promptTemplate: `Tu es un directeur artistique specialise en creation d'univers IP.
 ADN de marque : {{brand_dna}}
 Archetype : {{archetype}}
@@ -3046,6 +3056,7 @@ Retourne : { genreMaitre: string, themesCles: string[], vibeSensorielle: string[
       brand_dna: "a.noyauIdentitaire",
     },
     outputFormat: "artifacts",
+    outputSchema: lsiSymbolAlchemyOutputSchema,
     promptTemplate: `Tu es un concepteur d'artefacts pour IP.
 Setup univers : {{universe_setup}}
 ADN marque : {{brand_dna}}
@@ -3078,6 +3089,7 @@ Retourne : { artifacts: [{ baseSymbol: string, themeApplications: { forme: strin
     inputFields: ["artifacts", "universe_setup"],
     pillarBindings: {},
     outputFormat: "distribution_matrix",
+    outputSchema: lsiDistributionMatrixOutputSchema,
     promptTemplate: `Tu es un character designer expert en integration visuelle.
 Artefacts crees : {{artifacts}}
 Setup univers : {{universe_setup}}
@@ -3109,6 +3121,7 @@ Retourne : { matrix: [{ artifact: string, anatomie: string, outfit: string, text
     inputFields: ["distribution_matrix", "universe_setup"],
     pillarBindings: {},
     outputFormat: "sublimation_report",
+    outputSchema: lsiSublimationOutputSchema,
     promptTemplate: `Tu es un directeur artistique senior qui fait le reality check final.
 Matrice de distribution : {{distribution_matrix}}
 Setup univers : {{universe_setup}}
@@ -3135,6 +3148,7 @@ Retourne : { adjustments: [{ element: string, issue: string, fix: string }], ech
     inputFields: ["sublimation_report", "distribution_matrix", "universe_setup"],
     pillarBindings: {},
     outputFormat: "morpho_semantic_definition",
+    outputSchema: lsiMorphoSemanticOutputSchema,
     promptTemplate: `Tu es un expert en prompting visuel pour IA generative.
 Rapport sublimation : {{sublimation_report}}
 Matrice distribution : {{distribution_matrix}}
