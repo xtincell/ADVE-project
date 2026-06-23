@@ -10,6 +10,14 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.37 — Sécurité LLM LOT 1c (batch 1) : schémas de sortie réels — 7 outils CR (2026-06-23)
+
+**LOT 1c du plan** — vrais schémas de sortie pour les Glory tools LLM (pas de schéma permissif « attrape-tout » : on valide réellement, dérivé du contrat de chaque `promptTemplate`).
+
+- `feat(artemis)` nouveau fichier feuille **`glory-output-schemas.ts`** (n'importe que `zod`, zéro cycle) + `outputSchema` ajouté à **7 outils CR** : `concept-generator`, `script-writer`, `long-copy-craftsman`, `dialogue-writer`, `claim-baseline-factory`, `storytelling-sequencer`, `wordplay-cultural-bank`. Schémas **fidèles** (noms de champs FR que les prompts élicitaient déjà) et **souples** (`.min(1)`, champs vagues `.optional()`) → `executeStructuredLLMCall` réinjecte le schéma dans le prompt + valide + retry, sans sur-rejeter.
+- **Baseline du gate ratchetée 37 → 30** manques de sortie (`scripts/llm-audit-baseline.json`) — le gate ne peut plus régresser sous ce seuil.
+- Hors phases 0–9 (out-of-scope). **0 nouveau Neter** (Cap APOGEE 7/7), **0 model Prisma**, **0 bypass**. tsc 0 · eslint 0 · 97 tests verts. Cf. Justification — out-of-scope dans le body PR.
+
 ## v6.27.36 — fix(test) : numéro de ligne allowlist C5 (boot-sequence) — main au vert (2026-06-23)
 
 - `fix(test)` Le LOT 1a (#306) a ajouté ~19 lignes en tête de `boot-sequence/index.ts`, décalant l'écriture `Pillar.content` de normalisation legacy (191 → 210). L'allowlist **line-number** du test KEYSTONE **C5** (`no-bare-pillar-content-write.test.ts`) pointait toujours sur 191 → 2 échecs (write hors allowlist + entrée allowlist obsolète). Numéro corrigé 191 → 210. **Remet `main` au vert** (la suite vitest était rouge depuis #306). Aucun code de prod touché.

@@ -6,6 +6,15 @@ import {
   contentCalendarOutputSchema,
   launchTimelineOutputSchema,
 } from "./launch-social-schemas";
+import {
+  conceptGeneratorOutputSchema,
+  scriptWriterOutputSchema,
+  longCopyOutputSchema,
+  dialogueWriterOutputSchema,
+  claimBaselineOutputSchema,
+  storytellingSequencerOutputSchema,
+  wordplayBankOutputSchema,
+} from "./glory-output-schemas";
 
 /**
  * GLORY Tools — Atomic Creative Operations Registry
@@ -79,6 +88,7 @@ const CR_TOOLS: GloryToolDef[] = [
       emotional_position: "d.positionnementEmotionnel", // ressenti unique 1ère personne
     },
     outputFormat: "concepts_list",
+    outputSchema: conceptGeneratorOutputSchema,
     promptTemplate: `En tant que concepteur-rédacteur senior, génère 5 concepts créatifs pour ce brief.
 Contexte marque : {{brand_dna}}
 Brief : {{brief}}
@@ -104,6 +114,7 @@ Pour chaque concept, fournis : titre, accroche, description (3 lignes), déclina
       cta: "d.assetsLinguistiques.slogan",
     },
     outputFormat: "script",
+    outputSchema: scriptWriterOutputSchema,
     promptTemplate: `Écris un script {{format}} de {{duration}} secondes.
 Concept : {{concept}}
 Ton : {{tone}}
@@ -129,6 +140,7 @@ Format : dialogues, indications de réalisation, musique/SFX.`,
       angle: "a.prophecy.worldTransformed",
     },
     outputFormat: "long_copy",
+    outputSchema: longCopyOutputSchema,
     promptTemplate: `Rédige un texte long-format persuasif sur le sujet : {{topic}}
 Angle : {{angle}} | Cible : {{target}} | Longueur : {{length}} mots
 Structure narrative : Hook → Problem → Agitation → Solution → Proof → CTA.`,
@@ -151,6 +163,7 @@ Structure narrative : Hook → Problem → Agitation → Solution → Proof → 
       characters: "d.personas",
     },
     outputFormat: "dialogue",
+    outputSchema: dialogueWriterOutputSchema,
     promptTemplate: `Écris un dialogue pour ce scénario :
 {{scenario}}
 Personnages : {{characters}}
@@ -176,6 +189,7 @@ Message clé à intégrer naturellement : {{key_message}}`,
       constraints: "r.mitigationPriorities",
     },
     outputFormat: "claims_list",
+    outputSchema: claimBaselineOutputSchema,
     promptTemplate: `Génère 10 claims/baselines pour cette marque :
 Positionnement : {{brand_positioning}}
 Bénéfice clé : {{key_benefit}}
@@ -257,6 +271,7 @@ Fournis : copy principal, variantes A/B, hashtags, CTA, heures de publication re
       origin_myth: "a.originMyth.storytelling", // récit fondateur 3-7 paragraphes
     },
     outputFormat: "story_sequence",
+    outputSchema: storytellingSequencerOutputSchema,
     promptTemplate: `Séquence un arc narratif en {{episodes}} épisodes :
 Arc : {{story_arc}}
 Plateforme : {{platform}} | Fréquence : {{frequency}}
@@ -281,6 +296,7 @@ Pour chaque épisode : titre, hook, contenu, cliffhanger, CTA.`,
       language: "d.assetsLinguistiques.languePrincipale",
     },
     outputFormat: "wordplay_bank",
+    outputSchema: wordplayBankOutputSchema,
     promptTemplate: `Génère une banque de jeux de mots et références culturelles :
 Marque : {{brand_name}} | Marché : {{market}}
 Contexte culturel : {{cultural_context}} | Langue : {{language}}
