@@ -16,6 +16,7 @@
 
 import { z } from "zod";
 import { callLLM, extractJSON } from "@/server/services/llm-gateway";
+import { sanitizeInline, wrapUntrusted } from "@/server/services/utils/untrusted-content";
 import { PILLAR_KEYS, ADVE_KEYS, type AdveKey } from "@/domain/pillars";
 import { classifyTier } from "@/domain";
 
@@ -97,13 +98,14 @@ Produis :
 Réponds UNIQUEMENT en JSON : { "rtisPreview": [...×3], "ifUpgraded": [...] }. Pas de markdown, n'invente aucun chiffre.`;
 
 function buildBaseContext(input: DeduceInput): string {
+  // LOT 1a — entrées utilisateur neutralisées (anti-injection). Ce chemin
+  // appelle le LLM en direct (hors chokepoints LOT 0) ; on balise donc ici.
   const parts: string[] = [];
-  if (input.brandName) parts.push(`Marque : ${input.brandName}`);
-  if (input.sector) parts.push(`Secteur : ${input.sector}`);
-  if (input.countryCode) parts.push(`Pays : ${input.countryCode}`);
+  if (input.brandName) parts.push(`Marque : ${sanitizeInline(input.brandName, { max: 120 })}`);
+  if (input.sector) parts.push(`Secteur : ${sanitizeInline(input.sector, { max: 80 })}`);
+  if (input.countryCode) parts.push(`Pays : ${sanitizeInline(input.countryCode, { max: 8 })}`);
   parts.push("");
-  parts.push("Description de l'offre :");
-  parts.push(`"""\n${input.offerText.trim()}\n"""`);
+  parts.push(wrapUntrusted("Description de l'offre", input.offerText.trim(), { max: 4000 }));
   return parts.join("\n");
 }
 
