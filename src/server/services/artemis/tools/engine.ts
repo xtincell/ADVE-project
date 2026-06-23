@@ -11,6 +11,7 @@
 import { callLLM } from "@/server/services/llm-gateway";
 import { executeStructuredLLMCall, LLMStructuredCallError } from "@/server/services/utils/llm-structured";
 import { deriveJsonSchemaFromZod } from "@/server/services/utils/zod-to-json-schema";
+import { sanitizeInline, wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { EXTENDED_GLORY_TOOLS, getGloryTool, getBrandPipelineDependencyOrder, type GloryToolDef } from "./registry";
@@ -235,16 +236,19 @@ export async function executeTool(
     }
   }
 
-  // Build prompt from template
+  // Build prompt from template — LOT 0 : les valeurs fournies sont neutralisées
+  // (anti-injection) avant substitution dans le template.
   let userPrompt = tool.promptTemplate;
   for (const [key, value] of Object.entries(input)) {
-    userPrompt = userPrompt.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), value);
+    userPrompt = userPrompt.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), sanitizeInline(value));
   }
 
-  // Load strategy context
-  const strategyContext = await loadStrategyContext(strategyId);
+  // Load strategy context — fencé comme DONNÉE non fiable (anti-injection).
+  const strategyContext = wrapUntrusted("CONTEXTE STRATÉGIE", await loadStrategyContext(strategyId), { max: 12000 });
 
-  const systemPrompt = `Tu es un expert en strategie de marque et en creation publicitaire, specialise dans le marche africain.
+  const systemPrompt = `${UNTRUSTED_NOTICE}
+
+Tu es un expert en strategie de marque et en creation publicitaire, specialise dans le marche africain.
 Tu utilises le protocole ADVE-RTIS (8 piliers: Authenticite, Distinction, Valeur, Engagement, Risk, Track, Implementation, Strategie).
 Tu produis des outputs structures, actionnables, et adaptes au contexte culturel et economique de la marque.
 Reponds en francais. Sois precis, concret, et oriente resultats.

@@ -6,6 +6,7 @@
 
 import { callLLM } from "@/server/services/llm-gateway";
 import { executeStructuredLLMCall, LLMStructuredCallError } from "@/server/services/utils/llm-structured";
+import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { FRAMEWORKS, getFramework, getFrameworksByPillar, type FrameworkDef } from "./frameworks";
@@ -120,7 +121,9 @@ export async function executeFramework(
   const ctx = await loadStrategyContextForFramework(strategyId);
   const strategyLines = ctx.lines;
 
-  const systemPrompt = `Tu es ARTEMIS, le moteur de diagnostic strategique de LaFusee.
+  const systemPrompt = `${UNTRUSTED_NOTICE}
+
+Tu es ARTEMIS, le moteur de diagnostic strategique de LaFusee.
 Tu analyses les marques selon le protocole ADVE-RTIS (8 piliers /25 chacun, total /200).
 Tu es dans la couche "${fw.layer}" et tu executes le framework "${fw.name}".
 Tu dois produire une analyse structuree avec:
@@ -130,12 +133,11 @@ Tu dois produire une analyse structuree avec:
 4. Un niveau de confiance (0-1) sur ton diagnostic
 Reponds en JSON avec les champs: analysis, score (0-10), prescriptions (array), confidence (0-1), ${fw.outputFields.map((f) => f).join(", ")}
 
-${strategyLines.join("\n")}`;
+${wrapUntrusted("CONTEXTE STRATÉGIE", strategyLines.join("\n"), { max: 12000 })}`;
 
   const userPrompt = `${fw.promptTemplate}
 
-Donnees fournies:
-${JSON.stringify(input, null, 2)}`;
+${wrapUntrusted("DONNÉES FOURNIES", JSON.stringify(input, null, 2))}`;
 
   const startTime = Date.now();
   let output: Record<string, unknown>;
