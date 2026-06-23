@@ -10,6 +10,15 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.27 — Branchements & SEO : fil d'Ariane, /launchpad protégé, robots + sitemap (2026-06-23)
+
+**Lot 2+3 du plan de remédiation des findings `site-prober`.**
+
+- `fix(ui)` **Fil d'Ariane** : ne linke plus que les segments qui résolvent vers une vraie page. Les racines de section sans page d'index (`/console/socle`, `/cockpit/brand`…) étaient cliquables → **404** (15 occurrences). Nouveau manifeste généré `src/lib/generated/app-routes.ts` (`npm run gen:routes`, script `scripts/gen-app-routes.ts`) consommé par le breadcrumb.
+- `fix(security)` **`/launchpad/*` protégé** : les assistants opérateur `crew-bootstrap` / `portfolio-bulk-import` (appellent `operator.getOwn`) étaient publics dans le groupe `(intake)` et renvoyaient des 401 console pour l'anonyme. Ajoutés aux `PROTECTED_ROUTES` + matcher de `proxy.ts` (ADMIN/OPERATOR).
+- `chore(seo)` **`robots.txt` + `sitemap.xml`** natifs Next (`app/robots.ts` + `app/sitemap.ts`) : sitemap des routes publiques indexables, robots bloquant les surfaces privées (console/cockpit/agency/creator/launchpad/api + pages token intake).
+- Hors phases 0–9 (out-of-scope). 0 nouveau Neter (Cap APOGEE 7/7), 0 model Prisma, 0 bypass. tsc 0 · eslint 0. Cf. Justification — out-of-scope dans le body PR.
+
 ## v6.27.26 — Sécurité : en-têtes globaux + MCP catalogue gardé + admin-metrics fail-closed (2026-06-23)
 
 **Lot 1 du plan de remédiation des findings `site-prober`.**

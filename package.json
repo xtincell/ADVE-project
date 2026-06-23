@@ -25,6 +25,7 @@
     "backfill:manipulation-mix": "tsx scripts/backfill-manipulation-mix.ts",
     "gen:legacy-intent-kinds": "tsx scripts/generate-legacy-intent-kinds.ts",
     "codemap:gen": "tsx scripts/gen-code-map.ts",
+    "gen:routes": "tsx scripts/gen-app-routes.ts",
     "ds:components-map": "tsx scripts/generate-component-map.ts",
     "ds:tokens-map": "tsx scripts/generate-token-map.ts",
     "audit:design": "tsx scripts/audit-design-tokens.ts",
