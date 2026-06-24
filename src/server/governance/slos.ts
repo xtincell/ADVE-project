@@ -106,6 +106,8 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "SESHAT_HARVEST_REFERENCE", p95LatencyMs: 45_000, errorRatePct: 0.08, costP95Usd: 0.15 },
   { kind: "OPERATOR_CREATE_REFERENCE_DOSSIER", p95LatencyMs: 1_000, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "RECORD_FOLLOWER_SNAPSHOT", p95LatencyMs: 800, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "SOCIAL_AUDIT_FETCH_OFFICIAL", p95LatencyMs: 10_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "SOCIAL_AUDIT_FETCH_THIRD_PARTY", p95LatencyMs: 90_000, errorRatePct: 0.10, costP95Usd: 0.002 },
   { kind: "SYNC_UPGRADERS_CANON", p95LatencyMs: 30_000, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "COLLECT_WEB_FOOTPRINT", p95LatencyMs: 45_000, errorRatePct: 0.15, costP95Usd: 0 },
   { kind: "CRM_SEND_MESSAGE", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0.001 },
