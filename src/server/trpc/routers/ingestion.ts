@@ -107,6 +107,17 @@ export const ingestionRouter = createTRPCRouter({
       });
     }),
 
+  // Get ONE source with its raw content (lazy — listSources omits rawContent
+  // car volumineux). Consommé par le panneau d'édition de source du cockpit.
+  getSource: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ ctx, input }) => {
+      return ctx.db.brandDataSource.findUnique({
+        where: { id: input.id },
+        select: { id: true, fileName: true, rawContent: true, certainty: true, sourceType: true },
+      });
+    }),
+
   // Delete a data source
   deleteSource: governedProcedure({
 

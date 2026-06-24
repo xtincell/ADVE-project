@@ -6,11 +6,11 @@
  * RTIS / les chips Notoria / la readiness gate divergent du contenu réel.
  *
  * **Tous les callers DOIVENT passer par `writePillarAndScore`** (cf.
- * `src/server/services/pillar-gateway/index.ts:582`) qui wrappe writePillar +
+ * `src/server/services/pillar-gateway/index.ts`) qui wrappe writePillar +
  * postWriteScore + reconcileCompletionLevelCache + eventBus.publish.
  *
  * **Sites légitimes restants** :
- *   - `src/server/services/pillar-gateway/index.ts:583` — l'implémentation
+ *   - `src/server/services/pillar-gateway/index.ts` — l'implémentation
  *     interne de `writePillarAndScore` qui appelle `writePillar(request)`.
  *
  * Tout autre site est une régression (Phase 21 mégasprint cleanup).
@@ -35,7 +35,7 @@ const SRC = join(ROOT, "src");
 const ALLOWED_BARE_CALLERS: ReadonlyArray<{ file: string; line: number; reason: string }> = [
   {
     file: "src/server/services/pillar-gateway/index.ts",
-    line: 601,
+    line: 640,
     reason: "Implémentation interne de writePillarAndScore — appelle writePillar puis cache reconcile + scoring + event.",
   },
   {

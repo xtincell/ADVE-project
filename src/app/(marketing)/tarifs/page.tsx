@@ -11,6 +11,7 @@ import { SiteNav } from "@/components/upgraders/site-nav";
 import { SiteFooter } from "@/components/upgraders/site-footer";
 import { Section, Eyebrow, SectionHeading, Lede, PageHeader, PrimaryCta, GhostCta } from "@/components/upgraders/ui";
 import { ProductCatalog } from "@/components/upgraders/product-catalog";
+import { LaFuseeTierPrices } from "@/components/upgraders/lafusee-tier-prices";
 
 export const metadata: Metadata = {
   title: "Tarifs — UPgraders · La Fusée, Audit ADVE, Mandat RTIS, Marque blanche",
@@ -54,6 +55,9 @@ export default function TarifsPage() {
               puis Oracle à l&apos;acte, Cockpit et Retainers en abonnement — chaque palier a un prix clair,
               recalculé pour votre marché. La porte d&apos;entrée sans engagement vers la méthode.
             </Lede>
+            <div className="mt-8">
+              <LaFuseeTierPrices />
+            </div>
             <div className="mt-8 flex flex-wrap gap-3">
               <PrimaryCta href="/pricing">Voir les tarifs La Fusée</PrimaryCta>
               <GhostCta href="/lafusee">Découvrir l&apos;OS</GhostCta>

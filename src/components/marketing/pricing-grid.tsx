@@ -144,9 +144,6 @@ export function PricingGrid({ callbackPath = "/pricing" }: { callbackPath?: stri
                 </header>
 
                 <div className="flex flex-col gap-0.5">
-                  {monthly && !enterprise && !tier.adminFree && tier.amount > 0 && (
-                    <span className="font-mono text-2xs uppercase tracking-widest opacity-60">À partir de</span>
-                  )}
                   <div className="flex items-baseline gap-2">
                     <span className="font-display text-3xl font-semibold">
                       {enterprise && tier.listAmount === 0

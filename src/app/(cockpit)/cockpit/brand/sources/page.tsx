@@ -377,6 +377,84 @@ function ProposalCard({
   );
 }
 
+/**
+ * Modal d'édition d'une source (titre + contenu). Charge le rawContent en lazy
+ * via `getSource` (la liste l'omet car volumineux), sauve via `updateSource`.
+ * Toute source est éditable — y compris la source intake et les fichiers
+ * uploadés (le formulaire d'intake atterrit comme BrandDataSource exploitable).
+ */
+function SourceEditModal({
+  sourceId,
+  onClose,
+  onSaved,
+}: {
+  sourceId: string;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const sourceQuery = trpc.ingestion.getSource.useQuery({ id: sourceId });
+  const update = trpc.ingestion.updateSource.useMutation({
+    onSuccess: () => { onSaved(); onClose(); },
+  });
+  const [title, setTitle] = useState<string | null>(null);
+  const [content, setContent] = useState<string | null>(null);
+
+  const data = sourceQuery.data;
+  const titleValue = title ?? (data?.fileName ?? "");
+  const contentValue = content ?? (data?.rawContent ?? "");
+
+  return (
+    <Modal open={true} onClose={onClose} title="Éditer la source" size="lg">
+      {sourceQuery.isLoading ? (
+        <p className="text-sm text-foreground-muted">Chargement…</p>
+      ) : (
+        <div className="space-y-4 text-sm">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-foreground-muted">Titre</label>
+            <input
+              type="text"
+              value={titleValue}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full rounded border border-white/10 bg-surface px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-foreground-muted">
+              Contenu brut (exploité par l&apos;enrichissement + l&apos;auto-fill)
+            </label>
+            <textarea
+              value={contentValue}
+              onChange={(e) => setContent(e.target.value)}
+              rows={14}
+              className="w-full rounded border border-white/10 bg-surface px-3 py-2 font-mono text-xs"
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={onClose}
+              className="rounded px-3 py-1.5 text-sm text-foreground-muted hover:bg-white/5"
+            >
+              Annuler
+            </button>
+            <button
+              disabled={update.isPending || (!title && !content)}
+              onClick={() => update.mutate({
+                id: sourceId,
+                ...(title !== null ? { title: title.trim() || undefined } : {}),
+                ...(content !== null ? { content: content.trim() || undefined } : {}),
+              })}
+              className="flex items-center gap-1.5 rounded bg-accent px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
+            >
+              {update.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+              Enregistrer
+            </button>
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
 export default function SourcesPage() {
   const strategyId = useCurrentStrategyId();
   const [showAddForm, setShowAddForm] = useState(false);
@@ -390,6 +468,8 @@ export default function SourcesPage() {
   // that needs the canonical name to validate the echo client-side).
   const [purgeTarget, setPurgeTarget] = useState<{ sourceId: string; sourceLabel: string } | null>(null);
   const [purgeConfirmName, setPurgeConfirmName] = useState("");
+  // Source en cours d'édition (titre + contenu). Toute source est éditable.
+  const [editSourceId, setEditSourceId] = useState<string | null>(null);
 
   const sourcesQuery = trpc.ingestion.listSources.useQuery(
     { strategyId: strategyId ?? "" },
@@ -549,6 +629,17 @@ export default function SourcesPage() {
                       <StatusIcon className="h-3 w-3" />
                       {status.label}
                     </div>
+                    {/* Édition de source (titre + contenu) — toute source est
+                        éditable. updateSource passe par le gateway d'ingestion. */}
+                    {typeof source.id === "string" ? (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setEditSourceId(source.id as string); }}
+                        className="rounded p-1 text-foreground-muted/40 hover:text-accent hover:bg-accent/10 transition-colors"
+                        title="Éditer cette source (titre + contenu)"
+                      >
+                        <Edit3 className="h-3.5 w-3.5" />
+                      </button>
+                    ) : null}
                     {/* PR-B (ADR-0033) — Re-ingest button, only on intake-origin
                         sources. The full purge happens server-side via Mestor
                         Intent ; this button just opens the confirm modal. */}
@@ -608,6 +699,15 @@ export default function SourcesPage() {
           })}
         </div>
       )}
+
+      {/* Modal d'édition de source (titre + contenu) — toute source. */}
+      {editSourceId !== null ? (
+        <SourceEditModal
+          sourceId={editSourceId}
+          onClose={() => setEditSourceId(null)}
+          onSaved={() => sourcesQuery.refetch()}
+        />
+      ) : null}
 
       {/* PR-B (ADR-0033) — Re-ingest modal. Anti-foot-gun pattern : the
           operator must echo the brand name uppercase to confirm. The actual

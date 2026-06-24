@@ -17,3 +17,4 @@ export * from "./connector-result";
 export * from "./overton-radar-signal";
 export * from "./brand-tier";
 export * from "./cult-index-tier";
+export * from "./field-provenance";
