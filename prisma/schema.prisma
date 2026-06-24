@@ -3882,6 +3882,14 @@ model Currency {
   updatedAt DateTime @updatedAt
 }
 
+/// ADR-0105 — Market kill-switch lifecycle states (carried by Country).
+enum MarketStatus {
+  ACTIVE
+  FROZEN
+  SHADOWBANNED
+  PURGED
+}
+
 model Country {
   /// ISO-3166-1 alpha-2 (CM, CI, SN, FR, US, WK for Wakanda…).
   code                 String   @id @db.VarChar(2)
@@ -3900,11 +3908,20 @@ model Country {
   /// Additional market metadata — populated by Seshat ingest, free shape.
   marketMeta           Json?
 
+  /// ADR-0105 — market kill-switch lifecycle. ACTIVE = normal ; FROZEN = visible
+  /// read-only ; SHADOWBANNED = invisible (filtered from non-ADMIN reads) +
+  /// read-only ; PURGED = terminal tombstone (tenant data hard-purged via cascade).
+  status          MarketStatus @default(ACTIVE)
+  statusReason    String?
+  statusChangedAt DateTime?
+  statusChangedBy String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([region])
   @@index([currencyCode])
+  @@index([status])
 }
 
 // Phase 7 — OracleSnapshot: time-travel for the dynamic Oracle.

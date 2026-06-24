@@ -62,6 +62,10 @@ async function main() {
 
   const brands = { bliss, vibranium, brew, panther, shuri, jabari };
 
+  // Phase 2.5 — Markets (ADR-0105 kill-switch : countryCode ISO-2 réel sur les stratégies)
+  const { seedMarkets } = await import("./16-markets");
+  await seedMarkets(prisma);
+
   // Phase 3 — Cross-brand systems
   console.log("\n── Phase 3: Cross-brand systems ─────────────────────────────");
   const { seedRecommendations } = await import("./20-recommendations");
