@@ -57,6 +57,14 @@ interface PillarWriteOptions {
    * never silently corrupts the pillar content.
    */
   strictSchemaValidation?: boolean;
+  /**
+   * Provenance par champ de l'écriture entrante (path → HUMAN/SOURCE/INFERRED).
+   * Le garde de provenance (HUMAIN > SOURCE > INFÉRÉ) l'utilise pour refuser
+   * qu'un inféré écrase un humain/source, et pour signaler les conflits
+   * source↔humain en CHALLENGE. À défaut, la provenance est déduite de
+   * `author.system`. Cf. `provenance-guard.ts` + `domain/field-provenance.ts`.
+   */
+  fieldProvenance?: Record<string, import("@/domain/field-provenance").FieldProvenance>;
 }
 
 interface PillarWriteRequest {
@@ -74,6 +82,8 @@ interface PillarWriteResult {
   newContent: Record<string, unknown>;
   stalePropagated: string[];
   warnings: string[];
+  /** Champs où une source contredit une valeur humaine — à remonter en reco CHALLENGE. */
+  challenged?: string[];
   error?: string;
 }
 
@@ -468,6 +478,34 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
         targetStatus = currentStatus === "VALIDATED" ? "AI_PROPOSED" : currentStatus;
       }
 
+      // ── PROVENANCE GUARD: HUMAIN > SOURCE > INFÉRÉ (au champ) ─────
+      // Inerte tant qu'aucune provenance n'est tracée (champs UNKNOWN → ALLOW).
+      // Wrappé : un bug du garde ne doit jamais bloquer une écriture légitime.
+      let challenged: string[] = [];
+      try {
+        const { applyProvenanceGuard, provenanceFromAuthorSystem } = await import("./provenance-guard");
+        const existingProvenance = (previousContent._fieldProvenance ?? null) as Record<string, unknown> | null;
+        const defaultProv = provenanceFromAuthorSystem(author.system);
+        const explicit = options?.fieldProvenance;
+        const guard = applyProvenanceGuard({
+          previousContent,
+          newContent,
+          existingProvenance,
+          incomingFor: (path) => explicit?.[path] ?? defaultProv,
+        });
+        // Reverte en place les champs DENY/CHALLENGE sur le contenu candidat.
+        for (const key of Object.keys(newContent)) {
+          if (key.startsWith("_")) continue;
+          if (!(key in guard.content)) delete newContent[key];
+          else newContent[key] = guard.content[key];
+        }
+        newContent._fieldProvenance = guard.provenance;
+        challenged = guard.challenged;
+        for (const w of guard.warnings) warnings.push(w);
+      } catch (err) {
+        warnings.push(`Provenance guard skipped: ${err instanceof Error ? err.message : String(err)}`);
+      }
+
       // ── VERSION: create PillarVersion ────────────────────────────
       await createVersion({
         pillarId: pillar.id,
@@ -558,6 +596,7 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
         newContent,
         stalePropagated: dependents,
         warnings,
+        challenged,
       };
     }, {
       // Supabase EU = latence réseau élevée (cf. DB_POOL_CONN_MS=30000). Le défaut

@@ -52,6 +52,7 @@ export async function fillToStage(
   const content = ((pillar?.content ?? {}) as Record<string, unknown>);
 
   const aggregateFilled: string[] = [];
+  const aggregateSourceFilled = new Set<string>(); // champs SOURCE (ÉTAPE 0)
   const aggregateFailed: Array<{ path: string; reason: string }> = [];
   const aggregateNeedsHuman = new Set<string>();
   const MAX_PASSES = 3;
@@ -59,6 +60,7 @@ export async function fillToStage(
   for (let pass = 1; pass <= MAX_PASSES; pass++) {
     const passResult = await runFillPass(strategyId, key, content, targetStage, contract);
     for (const p of passResult.filled) if (!aggregateFilled.includes(p)) aggregateFilled.push(p);
+    for (const p of passResult.sourceFilled) aggregateSourceFilled.add(p);
     for (const f of passResult.failed) {
       // Only keep latest failure reason per path
       const existing = aggregateFailed.findIndex(x => x.path === f.path);
@@ -79,13 +81,24 @@ export async function fillToStage(
   }
 
   if (aggregateFilled.length > 0) {
+    // Provenance par champ : SOURCE pour les extraits de BrandDataSource (ÉTAPE 0,
+    // source of truth), INFERRED pour le reste (calcul / cross-pilier / IA).
+    // Le garde de provenance du gateway empêche ainsi un inféré d'écraser un
+    // humain/source, et signale les contradictions source↔humain (CHALLENGE).
+    const fieldProvenance: Record<string, import("@/domain/field-provenance").FieldProvenance> = {};
+    for (const path of aggregateFilled) {
+      const topKey = path.split(".")[0]!;
+      // SOURCE l'emporte sur INFERRED si plusieurs sous-champs d'une même clé.
+      if (aggregateSourceFilled.has(path)) fieldProvenance[topKey] = "SOURCE";
+      else if (fieldProvenance[topKey] !== "SOURCE") fieldProvenance[topKey] = "INFERRED";
+    }
     const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
     await writePillarAndScore({
       strategyId,
       pillarKey: key as import("@/lib/types/advertis-vector").PillarKey,
       operation: { type: "REPLACE_FULL", content },
       author: { system: "AUTO_FILLER", reason: `fillToStage(${targetStage}) — ${aggregateFilled.length} fields filled across ${MAX_PASSES} max passes` },
-      options: { confidenceDelta: 0.03 * aggregateFilled.length },
+      options: { confidenceDelta: 0.03 * aggregateFilled.length, fieldProvenance },
     });
   }
 
@@ -128,7 +141,7 @@ async function runFillPass(
   content: Record<string, unknown>,
   targetStage: MaturityStage,
   contract: import("@/lib/types/pillar-maturity").PillarMaturityContract,
-): Promise<{ filled: string[]; failed: Array<{ path: string; reason: string }>; needsHuman: string[] }> {
+): Promise<{ filled: string[]; failed: Array<{ path: string; reason: string }>; needsHuman: string[]; sourceFilled: string[] }> {
   // Assess current state
   const before = assessPillar(key, content, contract);
 
@@ -137,7 +150,7 @@ async function runFillPass(
   const missingReqs = targetReqs.filter(r => before.missing.includes(r.path));
 
   if (missingReqs.length === 0) {
-    return { filled: [], failed: [], needsHuman: [] };
+    return { filled: [], failed: [], needsHuman: [], sourceFilled: [] };
   }
 
   // Sort by derivation priority: calculation → cross_pillar → rtis_cascade → ai_generation
@@ -149,6 +162,7 @@ async function runFillPass(
   const filled: string[] = [];
   const failed: Array<{ path: string; reason: string }> = [];
   const needsHuman: string[] = [];
+  const sourceFilled: string[] = []; // champs extraits d'une BrandDataSource (ÉTAPE 0)
 
   // Load all pillars for cross-pillar derivation
   const allPillars = await db.pillar.findMany({ where: { strategyId } });
@@ -181,6 +195,7 @@ async function runFillPass(
       if (value !== undefined && value !== null && value !== "") {
         setNestedValue(content, path, value);
         filled.push(path);
+        sourceFilled.push(path); // provenance SOURCE (ÉTAPE 0 — source of truth)
         // Remove from other groups — already filled
         const removeFrom = (arr: FieldRequirement[]) => {
           const idx = arr.findIndex(r => r.path === path);
@@ -279,7 +294,7 @@ async function runFillPass(
     } catch { /* financial-brain not available — skip validation */ }
   }
 
-  return { filled, failed, needsHuman };
+  return { filled, failed, needsHuman, sourceFilled };
 }
 
 /**
