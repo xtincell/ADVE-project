@@ -1,0 +1,122 @@
+name: Seed Wakanda (manual)
+
+# Déclenchement MANUEL uniquement (onglet Actions → Run workflow).
+# Injecte / retire / scanne le jeu de démo Wakanda « LA TOTALE » dans la base
+# ciblée par le secret DATABASE_URL de l'Environnement GitHub choisi.
+#
+# ⚠️  Wakanda = données de DÉMO fictives (6 marques inventées). À ne lancer que
+#     sur une base vitrine/démo, jamais sur une prod contenant de vrais clients.
+#     Réversible : tout est isDummy=true → tâche `purge`.
+#
+# SETUP (une seule fois) :
+#   Settings → Environments → (créer) « production » → Add secret :
+#     DATABASE_URL = postgresql://postgres.<ref>:<pwd>@aws-0-<region>.pooler.supabase.com:5432/postgres
+#   ⚠️  Session pooler / connexion directe (port 5432) — PAS le transaction
+#       pooler (6543) : la purge tourne dans un seul $transaction.
+#   Optionnel : protection rules (required reviewers) sur l'Environnement pour
+#   exiger une approbation avant chaque run.
+#
+# LANCER : onglet Actions → « Seed Wakanda (manual) » → Run workflow →
+#   choisir l'environnement + la tâche, et taper WAKANDA pour confirmer
+#   (écriture/purge). La tâche `scan` (lecture seule) ne demande pas WAKANDA.
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environnement GitHub portant le secret DATABASE_URL"
+        type: environment
+        required: true
+      task:
+        description: "Tâche"
+        type: choice
+        required: true
+        default: seed
+        options:
+          - seed # 7 batches Wakanda (idempotent, upsert wk-*)
+          - calibration # countries + action-costs + wakanda
+          - scan # couverture seule (lecture)
+          - purge # SUPPRIME les données wk-* / isDummy
+      confirm:
+        description: "Taper WAKANDA pour confirmer (requis sauf scan)"
+        type: string
+        required: false
+        default: ""
+      run_migrations:
+        description: "prisma migrate deploy avant seed/calibration (recommandé)"
+        type: boolean
+        required: false
+        default: true
+
+concurrency:
+  group: seed-wakanda-${{ github.event.inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  run:
+    name: ${{ github.event.inputs.task }} → ${{ github.event.inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    steps:
+      - name: Guard — confirmation requise (écriture / purge)
+        if: ${{ github.event.inputs.task != 'scan' && github.event.inputs.confirm != 'WAKANDA' }}
+        run: |
+          echo "::error::Confirmation invalide. Tapez WAKANDA pour exécuter « ${{ github.event.inputs.task }} »."
+          exit 1
+
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install deps (+ prisma generate via postinstall)
+        run: npm ci
+
+      - name: Guard — DATABASE_URL présent
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::Secret DATABASE_URL absent dans l'Environnement « ${{ github.event.inputs.environment }} »."
+            exit 1
+          fi
+
+      - name: Prisma migrate deploy
+        if: ${{ github.event.inputs.run_migrations == 'true' && (github.event.inputs.task == 'seed' || github.event.inputs.task == 'calibration') }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx prisma migrate deploy
+
+      - name: Exécuter la tâche
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          case "${{ github.event.inputs.task }}" in
+            seed)        npm run db:seed:wakanda ;;
+            calibration) npm run db:seed:calibration ;;
+            scan)        npm run wakanda:scan ;;
+            purge)       npm run db:purge:wakanda ;;
+            *)           echo "::error::tâche inconnue"; exit 1 ;;
+          esac
+
+      - name: Coverage scan (après seed/calibration)
+        if: ${{ github.event.inputs.task == 'seed' || github.event.inputs.task == 'calibration' }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run wakanda:scan
+
+      - name: Récapitulatif
+        if: ${{ always() }}
+        run: |
+          {
+            echo "### Seed Wakanda — \`${{ github.event.inputs.task }}\`"
+            echo ""
+            echo "| Champ | Valeur |"
+            echo "|---|---|"
+            echo "| Environnement | \`${{ github.event.inputs.environment }}\` |"
+            echo "| Tâche | \`${{ github.event.inputs.task }}\` |"
+            echo "| migrate deploy | \`${{ github.event.inputs.run_migrations }}\` |"
+            echo "| Résultat | ${{ job.status }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
