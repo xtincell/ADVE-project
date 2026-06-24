@@ -278,21 +278,53 @@ export async function enrichFromVault(
     // d'inventer des sous-clés alias (ex: ikigai {good,love,paid,skill} vs.
     // shape canonique {love, competence, worldNeed, remuneration}).
     const { buildExampleForPath } = await import("@/lib/types/pillar-maturity-contracts");
-    const fieldsToScope = [...unresolvedEmpty, ...filledFields.slice(0, 10)];
+    // Couverture INTÉGRALE : tous les champs (vides + remplis), plus de slice(0,10).
+    // Les tokens ne sont plus bornés par un cap de champs mais par le retrieval RAG
+    // ciblé (extraits de source pertinents par champ) au lieu d'un dump intégral.
+    const fieldsToScope = [...unresolvedEmpty, ...filledFields];
+    // Shape examples bornés en taille totale (format guidance) — priorité aux
+    // champs vides, puis remplis, jusqu'à un budget caractères.
+    const SHAPE_BUDGET = 7000;
+    let shapeChars = 0;
     const shapeExamples = fieldsToScope
       .map((f) => {
+        if (shapeChars >= SHAPE_BUDGET) return null;
         try {
           const ex = buildExampleForPath(pillarKey, f);
           if (ex == null) return null;
           const json = JSON.stringify(ex, null, 2);
           const trimmed = json.length > 1200 ? json.slice(0, 1200) + "\n  // ..." : json;
-          return `* ${f}:\n${trimmed.split("\n").map((l) => "  " + l).join("\n")}`;
+          const block = `* ${f}:\n${trimmed.split("\n").map((l) => "  " + l).join("\n")}`;
+          shapeChars += block.length;
+          return block;
         } catch {
           return null;
         }
       })
       .filter((x): x is string => Boolean(x))
       .join("\n\n");
+
+    // ── RAG : indexe les sources (chunk+embed) puis retrieve par champ ──────
+    // Exploite l'embedding pour absorber la source → tokens bornés + chaque champ
+    // analysé contre ses extraits pertinents. Best-effort ; fallback dump legacy
+    // si aucun provider d'embedding (retrieval vide).
+    let retrievedSourceBrief = "";
+    try {
+      const { ensureSourcesIndexed, buildRetrievedSourceBrief } = await import("./source-rag");
+      await ensureSourcesIndexed(strategyId);
+      const queryForField = (f: string): string => {
+        const v = currentContent[f];
+        const valStr = v == null ? "" : typeof v === "string" ? v.slice(0, 120) : JSON.stringify(v).slice(0, 120);
+        return `${f} ${valStr}`.trim().slice(0, 300);
+      };
+      retrievedSourceBrief = await buildRetrievedSourceBrief(
+        strategyId,
+        fieldsToScope.map((f) => ({ field: f, query: queryForField(f) })),
+        { perFieldTopK: 3, maxChars: 9000 },
+      );
+    } catch {
+      // Best-effort — on retombera sur le dump vault legacy.
+    }
 
     // Build a structured brief of ALL available data (other pillars + vault)
     const dataBrief: string[] = [];
@@ -323,9 +355,13 @@ export async function enrichFromVault(
       }
     }
 
-    // Vault text (full, not keyword-extracted)
-    if (vaultText.length > 0) {
-      dataBrief.push(`[VAULT — ${sourceCount} source(s)]\n${vaultText.slice(0, 6000)}`);
+    // Vault : extraits CIBLÉS par champ via retrieval sémantique (RAG) — tokens
+    // bornés, chaque champ vu vs ses passages de source pertinents. Fallback sur
+    // le dump intégral tronqué uniquement si le retrieval est vide (pas d'embeddings).
+    if (retrievedSourceBrief.length > 0) {
+      dataBrief.push(`[VAULT — extraits ciblés par champ (RAG sémantique)]\n${retrievedSourceBrief}`);
+    } else if (vaultText.length > 0) {
+      dataBrief.push(`[VAULT — ${sourceCount} source(s), dump (embeddings indisponibles)]\n${vaultText.slice(0, 6000)}`);
     }
 
     // ── Phase 21 (ADR-0067) — Schema-enforced LLM call ─────────────────
@@ -381,7 +417,7 @@ ${JSON.stringify(currentContent, null, 2).slice(0, 3000)}
 ${dataBrief.join("\n\n").slice(0, 10000)}
 
 ${unresolvedEmpty.length > 0 ? `\nCHAMPS PRIORITAIRES A REMPLIR : ${unresolvedEmpty.join(", ")}` : ""}
-${filledFields.length > 0 ? `\nCHAMPS A VERIFIER (ameliorables ?) : ${filledFields.slice(0, 15).join(", ")}` : ""}
+${filledFields.length > 0 ? `\nCHAMPS A VERIFIER (tous, vs source) : ${filledFields.join(", ")}` : ""}
 
 === BIBLE DE FORMAT (respecte EXACTEMENT ces formats pour chaque proposedValue) ===
 ${getFormatInstructions(pillarKey, fieldsToScope)}

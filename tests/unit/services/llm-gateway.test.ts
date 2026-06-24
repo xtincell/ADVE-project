@@ -152,16 +152,28 @@ describe("LLM gateway — provider cascade", () => {
     expect(_selectProviderForTest()).toBe("anthropic");
   });
 
-  it("falls through to openai when anthropic is unavailable", () => {
+  it("skips openai for text gen (embeddings-only) → falls through to ollama", () => {
+    // Directive opérateur : GPT est réservé aux embeddings, jamais à la
+    // génération de texte. selectProvider ne doit JAMAIS retourner openai.
     _resetProvidersForTest({
       anthropic: { available: false },
       openai: { available: true },
       ollama: { available: true },
     });
-    expect(_selectProviderForTest()).toBe("openai");
+    expect(_selectProviderForTest()).toBe("ollama");
   });
 
-  it("falls through to ollama when anthropic + openai unavailable", () => {
+  it("never selects openai for text even when it is the only key set", () => {
+    _resetProvidersForTest({
+      anthropic: { available: false },
+      openai: { available: true },
+      ollama: { available: false },
+      openrouter: { available: false },
+    });
+    expect(_selectProviderForTest()).toBeNull();
+  });
+
+  it("falls through to ollama when anthropic unavailable", () => {
     _resetProvidersForTest({
       anthropic: { available: false },
       openai: { available: false },
@@ -237,15 +249,15 @@ describe("LLM gateway — circuit breaker", () => {
     const state = _getProviderStateForTest("anthropic");
     expect(state.failureCount).toBe(3);
     expect(state.circuitOpenUntil).toBeGreaterThan(Date.now());
-    // Cascade promotes openai
-    expect(_selectProviderForTest()).toBe("openai");
+    // Cascade promotes ollama (openai exclu de la génération de texte)
+    expect(_selectProviderForTest()).toBe("ollama");
   });
 
   it("recordProviderSuccess fully resets a tripped breaker", () => {
     for (let i = 0; i < _CIRCUIT_BREAKER_THRESHOLD_FOR_TEST; i++) {
       _recordProviderFailureForTest("anthropic");
     }
-    expect(_selectProviderForTest()).toBe("openai"); // tripped
+    expect(_selectProviderForTest()).toBe("ollama"); // tripped → ollama (openai exclu du texte)
     _recordProviderSuccessForTest("anthropic");
     const state = _getProviderStateForTest("anthropic");
     expect(state.failureCount).toBe(0);
@@ -261,11 +273,11 @@ describe("LLM gateway — circuit breaker", () => {
     for (let i = 0; i < _CIRCUIT_BREAKER_THRESHOLD_FOR_TEST; i++) {
       _recordProviderFailureForTest("anthropic");
     }
-    expect(_selectProviderForTest()).toBe("openai");
+    expect(_selectProviderForTest()).toBe("ollama");
 
     // Just before reset window — still tripped
     vi.setSystemTime(start + _CIRCUIT_BREAKER_RESET_MS_FOR_TEST - 100);
-    expect(_selectProviderForTest()).toBe("openai");
+    expect(_selectProviderForTest()).toBe("ollama");
 
     // After reset window — anthropic is selectable again
     vi.setSystemTime(start + _CIRCUIT_BREAKER_RESET_MS_FOR_TEST + 100);

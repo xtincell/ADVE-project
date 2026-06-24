@@ -147,7 +147,6 @@ export function PillarPage({ pageKey }: PillarPageProps) {
 
   const autoFillMutation = trpc.pillar.autoFill.useMutation({ onSuccess: () => { pillarQuery.refetch(); recosQuery.refetch(); } });
   const actualizeMutation = trpc.pillar.actualize.useMutation({ onSuccess: () => pillarQuery.refetch() });
-  const vaultEnrichMutation = trpc.pillar.enrichFromVault.useMutation({ onSuccess: () => { pillarQuery.refetch(); recosQuery.refetch(); } });
   // PR-C (ADR-0035) — confirm an LLM-inferred field as DECLARED. Triggers
   // pillar refetch so the badge disappears immediately on success.
   const confirmInferredMutation = trpc.pillar.confirmInferredField.useMutation({
@@ -242,71 +241,33 @@ export function PillarPage({ pageKey }: PillarPageProps) {
     if (!strategyId) return;
     setIsRegenerating(true);
     setEnrichResult(null);
-    // L'utilisateur a tranché : "Enrichir doit GARANTIR le remplissage de TOUS
-    // les champs". On ne court-circuite plus l'autoFill quand vault produit
-    // des recos. Vault propose des recos (review workflow pour les champs déjà
-    // remplis), autoFill remplit en direct les champs vides. Les deux flows
-    // tournent SYSTÉMATIQUEMENT à la suite.
-    let vaultRecoCount = 0;
-    let vaultErr: string | null = null;
-    let filledCount = 0;
-    let needsHumanAfter: string[] = [];
-    let autoFillErr: string | null = null;
-
+    // PASSAGE UNIQUE (correctif double-call) : Enrichir = un seul effort propre.
+    // autoFill commence par un scan solide du vault de source (rawContent →
+    // extraction LLM ciblée, source-first) puis remplit NET les champs vides.
+    // Aucune recommandation n'est générée ici : challenger la population est une
+    // action séparée de Notoria (« Générer depuis les sources »), pas un second
+    // scan du vault. Avant, on lançait enrichFromVault (scan vault → recos) PUIS
+    // autoFill (qui re-scanne le vault) → double passe LLM coûteuse + bruit.
     try {
-      // 1. Vault enrichment (best-effort, génère des recos PENDING — non bloquant)
-      try {
-        const vr = await vaultEnrichMutation.mutateAsync({ strategyId, pillarKey: config.pillarKey });
-        vaultRecoCount = vr.recommendations?.length ?? 0;
-        if (vr.error) vaultErr = vr.error;
-      } catch (err) {
-        console.warn("[enrichir] vault failed:", err);
-        vaultErr = err instanceof Error ? err.message : String(err);
+      if (!isAdve) {
+        // RTIS = dérivé : pas de remplissage direct ici. La cascade est le
+        // bouton « Recalculer ce pilier » (ENRICH_*_FROM_ADVE).
+        setEnrichResult({ type: "warning", message: "Pilier dérivé — utilise « Recalculer ce pilier » pour lancer la cascade." });
+        return;
       }
+      const r = await autoFillMutation.mutateAsync({ strategyId, pillarKey: config.pillarKey });
+      const data = r as unknown as Record<string, unknown>;
+      const filledCount = Array.isArray(data?.filled) ? (data.filled as string[]).length : 0;
+      const needsHumanAfter = Array.isArray(data?.needsHuman) ? (data.needsHuman as string[]) : [];
 
-      // 2. AutoFill (toujours, pas en fallback) — remplit en direct les champs
-      //    vides via cross_pillar / calculation / AI. Les recos vault restent
-      //    visibles dans le panel "recommandations" pour les fields déjà
-      //    présents (workflow review/accept distinct).
-      try {
-        if (isAdve) {
-          const r = await autoFillMutation.mutateAsync({ strategyId, pillarKey: config.pillarKey });
-          const data = r as unknown as Record<string, unknown>;
-          const filled = Array.isArray(data?.filled) ? (data.filled as string[]) : [];
-          filledCount = filled.length;
-          needsHumanAfter = Array.isArray(data?.needsHuman) ? (data.needsHuman as string[]) : [];
-        } else {
-          // Enrichir = vault scan only. Cascade is "Recalculer ce pilier" — separate button.
-          filledCount = -1;
-        }
-      } catch (err) {
-        autoFillErr = err instanceof Error ? err.message : String(err);
-      }
-
-      // 3. Toast agrégé — synthèse honnête
-      if (autoFillErr && vaultErr) {
-        setEnrichResult({ type: "error", message: `Vault: ${vaultErr} | AutoFill: ${autoFillErr}` });
-      } else if (autoFillErr) {
-        setEnrichResult({ type: "error", message: autoFillErr });
-      } else {
-        const parts: string[] = [];
-        if (filledCount > 0) parts.push(`${filledCount} champ(s) rempli(s)`);
-        if (filledCount === -1) {
-          // RTIS: Enrichir now runs vault scan only — guide user to "Recalculer ce pilier"
-          if (vaultRecoCount > 0) {
-            parts.push(`${vaultRecoCount} reco(s) vault à valider dans Notoria`);
-          } else {
-            parts.push("Aucune recommandation vault");
-          }
-          parts.push("Utilise Recalculer ce pilier pour lancer la cascade Track");
-        } else if (vaultRecoCount > 0) {
-          parts.push(`${vaultRecoCount} reco(s) vault à valider`);
-        }
-        if (needsHumanAfter.length > 0) parts.push(`${needsHumanAfter.length} champ(s) à saisir manuellement`);
-        if (parts.length === 0) parts.push("Tous les champs sont remplis ou nécessitent une saisie manuelle");
-        const ok = filledCount > 0 || filledCount === -1 || vaultRecoCount > 0;
-        setEnrichResult({ type: ok ? "success" : "warning", message: parts.join(" · ") });
-      }
+      const parts: string[] = [];
+      if (filledCount > 0) parts.push(`${filledCount} champ(s) rempli(s) depuis les sources`);
+      if (needsHumanAfter.length > 0) parts.push(`${needsHumanAfter.length} champ(s) à saisir manuellement`);
+      if (parts.length === 0) parts.push("Tous les champs sont remplis ou nécessitent une saisie manuelle");
+      parts.push("Pour challenger : « Générer depuis les sources » dans Notoria");
+      setEnrichResult({ type: filledCount > 0 ? "success" : "warning", message: parts.join(" · ") });
+    } catch (err) {
+      setEnrichResult({ type: "error", message: err instanceof Error ? err.message : String(err) });
     } finally { setIsRegenerating(false); }
   };
 

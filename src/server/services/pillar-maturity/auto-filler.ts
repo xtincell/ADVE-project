@@ -923,11 +923,14 @@ async function extractFromSources(
     }
   }
 
-  // ── Step 0c: If rawContent exists and many fields still missing, ──────
-  //    use Mestor (LLM) to extract specific fields from the text.
-  //    This is a targeted extraction, not a full regeneration.
+  // ── Step 0c: If rawContent exists and fields still missing, use l'LLM ─
+  //    pour EXTRAIRE les champs depuis le texte source (scan solide du vault).
+  //    Source-first : on lit les vraies sources AVANT de tomber sur le calcul /
+  //    cross-pilier / inférence. Gate à >=1 (et non >3) pour que le remplissage
+  //    soit ancré-source dès qu'il reste un champ vide et qu'une source existe —
+  //    c'est ce scan qui rend le passage Enrichir « net », pas de l'inférence pure.
   const stillMissing = missingPaths.filter(p => extracted[p] === undefined);
-  if (stillMissing.length > 3) {
+  if (stillMissing.length >= 1) {
     // Gather all rawContent
     const allText = sources
       .map(s => s.rawContent)

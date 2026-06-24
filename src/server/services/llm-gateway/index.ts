@@ -188,6 +188,9 @@ const providerStates: Record<LLMProvider, ProviderState> = {
 function selectProvider(): LLMProvider | null {
   const now = Date.now();
   const candidates = (Object.entries(providerStates) as [LLMProvider, ProviderState][])
+    // OpenAI/GPT exclu de la génération de texte — réservé aux embeddings
+    // (directive opérateur). Le texte reste Anthropic → Ollama → OpenRouter.
+    .filter(([p]) => p !== "openai")
     .filter(([, s]) => s.available && (s.circuitOpenUntil === 0 || s.circuitOpenUntil < now))
     .sort((a, b) => a[1].priority - b[1].priority);
 
@@ -484,17 +487,23 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
   // Build the provider try-order from the policy.
   //   - When Ollama is both available AND the policy allows substitution,
   //     it's first (free local compute).
-  //   - Anthropic is always tried after Ollama as a quality fallback.
-  //   - OpenAI is added at the end so the budget-conscious flows skip it
-  //     entirely (its cheapest model still costs more than Haiku).
+  //   - Anthropic is the canonical text-generation provider (Opus pour les
+  //     grosses opérations, Sonnet pour le reste — cf. FALLBACK_POLICY).
+  //   - OpenAI/GPT est VOLONTAIREMENT EXCLU de la génération de texte
+  //     (directive opérateur 2026-06-24) : GPT est réservé aux EMBEDDINGS
+  //     (cf. `embed()` / `selectEmbedProvider`). On ne convertit/génère jamais
+  //     de texte avec ChatGPT — le texte reste Anthropic, avec Ollama (local)
+  //     et OpenRouter (qui sert du Claude) comme seuls replis.
   const providersToTry: LLMProvider[] = [];
   if (ollamaPreferred && isProviderHealthy("ollama")) providersToTry.push("ollama");
   if (isProviderHealthy("anthropic")) providersToTry.push("anthropic");
-  if (isProviderHealthy("openai") && !ollamaPreferred) providersToTry.push("openai");
-  // OpenRouter — appended LAST so it's only reached once Anthropic + OpenAI have
-  // failed/are unavailable (the « ça marche même quand anthropic et openai sont hs »
-  // safety net). Tried regardless of ollamaPreferred since it's a cloud last-resort.
+  // OpenRouter — appended after Anthropic so it's only reached once Anthropic
+  // (and Ollama if preferred) are unavailable. OpenRouter route vers Claude
+  // (resolveOpenRouterModel → anthropic/claude-*), donc reste cohérent avec la
+  // directive « texte = Anthropic ». Jamais OpenAI ici.
   if (isProviderHealthy("openrouter")) providersToTry.push("openrouter");
+  // Ollama non-préféré reste un repli local valable avant le dernier recours.
+  if (!ollamaPreferred && isProviderHealthy("ollama")) providersToTry.push("ollama");
   // Ensure at least anthropic is tried as the last-resort fallback.
   if (providersToTry.length === 0) providersToTry.push("anthropic");
 
@@ -636,7 +645,25 @@ export async function callLLMAndParse(
 // safest for a SaaS that values data residency: local-first, fall back if
 // Ollama unreachable, no-op if neither available.
 
-export type EmbedProvider = "ollama" | "openai" | "none";
+export type EmbedProvider = "ollama" | "openai" | "openrouter" | "none";
+
+// Embeddings : quand OpenAI « tombe à sec » (quota/429/auth), on bascule sur
+// OpenRouter pendant 24h pour continuer avec un modèle d'embedding gratuit
+// (directive opérateur 2026-06-24). Circuit horodaté, réessaie OpenAI après.
+const OPENAI_EMBED_DRY_MS = 24 * 60 * 60 * 1000;
+let openaiEmbedDryUntil = 0;
+
+/** OpenAI embeddings est-il en fenêtre « à sec » (basculé sur OpenRouter) ? */
+function isOpenAiEmbedDry(): boolean {
+  return openaiEmbedDryUntil > Date.now();
+}
+function markOpenAiEmbedDry(): void {
+  openaiEmbedDryUntil = Date.now() + OPENAI_EMBED_DRY_MS;
+}
+/** Test-only reset. */
+export function _resetOpenAiEmbedCircuitForTest(): void {
+  openaiEmbedDryUntil = 0;
+}
 
 export interface EmbedOptions {
   /** One or many texts to embed in a single batch */
@@ -681,8 +708,57 @@ const OPENAI_DIM_BY_MODEL: Record<string, number> = {
 function selectEmbedProvider(override?: EmbedProvider): EmbedProvider {
   if (override) return override;
   if (process.env.OLLAMA_BASE_URL) return "ollama";
+  // OpenAI = chemin embeddings principal, SAUF s'il est en fenêtre « à sec » 24h
+  // (auquel cas on passe à OpenRouter pour des embeddings gratuits).
+  if (process.env.OPENAI_API_KEY && !isOpenAiEmbedDry()) return "openai";
+  if (process.env.OPENROUTER_API_KEY) return "openrouter";
+  // OpenAI configuré mais « à sec » et pas d'OpenRouter : on tente quand même
+  // OpenAI (la fenêtre finira par expirer) plutôt que de ne rien renvoyer.
   if (process.env.OPENAI_API_KEY) return "openai";
   return "none";
+}
+
+/**
+ * Embeddings via OpenRouter (endpoint OpenAI-compatible /embeddings). Repli
+ * gratuit quand OpenAI est à sec. Modèle épinglable via OPENROUTER_EMBED_MODEL
+ * (slugs évoluent) ; défaut sur un modèle d'embedding gratuit.
+ */
+async function embedViaOpenRouter(
+  inputs: string[],
+  model: string,
+): Promise<EmbedResult> {
+  const baseUrl = (process.env.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1").replace(/\/$/, "");
+  const embeddings: number[][] = [];
+  let totalTokens = 0;
+  const BATCH = 100;
+
+  for (let i = 0; i < inputs.length; i += BATCH) {
+    const slice = inputs.slice(i, i + BATCH);
+    const res = await fetch(`${baseUrl}/embeddings`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        "HTTP-Referer": process.env.NEXTAUTH_URL ?? "https://lafusee.app",
+        "X-Title": "La Fusee",
+      },
+      body: JSON.stringify({ model, input: slice }),
+    });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => res.statusText);
+      throw new Error(`OpenRouter embeddings ${res.status}: ${errText}`);
+    }
+    const json = (await res.json()) as {
+      data: Array<{ embedding: number[]; index: number }>;
+      usage?: { prompt_tokens?: number };
+    };
+    json.data.sort((a, b) => a.index - b.index);
+    for (const item of json.data) embeddings.push(item.embedding);
+    totalTokens += json.usage?.prompt_tokens ?? 0;
+  }
+
+  const dim = embeddings[0]?.length ?? 0;
+  return { embeddings, dim, model, provider: "openrouter", inputTokens: totalTokens };
 }
 
 async function embedViaOllama(
@@ -777,26 +853,53 @@ export async function embed(options: EmbedOptions): Promise<EmbedResult> {
     };
   }
 
+  const orModel = process.env.OPENROUTER_EMBED_MODEL ?? "text-embedding-3-small";
+
+  // Tente OpenAI ; si « à sec » (échec) bascule sur OpenRouter 24h (embeddings gratuits).
+  const tryOpenAiThenOpenRouter = async (): Promise<EmbedResult> => {
+    const openaiModel = options.model ?? "text-embedding-3-small";
+    try {
+      return await embedViaOpenAI(inputs, openaiModel);
+    } catch (err) {
+      if (process.env.OPENROUTER_API_KEY) {
+        markOpenAiEmbedDry();
+        console.warn(
+          `[llm-gateway.embed] OpenAI embeddings à sec (${err instanceof Error ? err.message : err}) — bascule OpenRouter 24h pour caller=${options.caller}`,
+        );
+        return embedViaOpenRouter(inputs, orModel);
+      }
+      throw err;
+    }
+  };
+
   if (provider === "ollama") {
     const model = options.model ?? process.env.OLLAMA_EMBED_MODEL ?? "nomic-embed-text";
     try {
       return await embedViaOllama(inputs, model, options.caller);
     } catch (err) {
-      // Auto-fallback to OpenAI when Ollama fails and OpenAI is configured
-      if (process.env.OPENAI_API_KEY) {
+      // Repli Ollama → OpenAI (puis OpenRouter 24h si OpenAI à sec).
+      if (process.env.OPENAI_API_KEY && !isOpenAiEmbedDry()) {
         console.warn(
           `[llm-gateway.embed] Ollama failed (${err instanceof Error ? err.message : err}), falling back to OpenAI for caller=${options.caller}`,
         );
-        const openaiModel = "text-embedding-3-small";
-        return embedViaOpenAI(inputs, openaiModel);
+        return tryOpenAiThenOpenRouter();
+      }
+      if (process.env.OPENROUTER_API_KEY) {
+        console.warn(
+          `[llm-gateway.embed] Ollama failed (${err instanceof Error ? err.message : err}), falling back to OpenRouter for caller=${options.caller}`,
+        );
+        return embedViaOpenRouter(inputs, orModel);
       }
       throw err;
     }
   }
 
-  // provider === "openai"
-  const openaiModel = options.model ?? "text-embedding-3-small";
-  return embedViaOpenAI(inputs, openaiModel);
+  if (provider === "openrouter") {
+    return embedViaOpenRouter(inputs, options.model ?? orModel);
+  }
+
+  // provider === "openai" (avec bascule OpenRouter 24h si à sec)
+  return tryOpenAiThenOpenRouter();
 }
 
 // Legacy stubs preserved for compat in case any older code referenced them
