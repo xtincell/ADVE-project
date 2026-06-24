@@ -35,6 +35,7 @@ import {
   jsonSchemaToPromptBlock,
   type JsonSchema7,
 } from "./zod-to-json-schema";
+import { UNTRUSTED_NOTICE } from "./untrusted-content";
 
 export interface StructuredLLMOptions<T> {
   /** System prompt — la directive "Réponds en JSON" est ajoutée automatiquement. */
@@ -183,6 +184,9 @@ function enrichSystemWithSchema(
   const schemaBlock = jsonSchemaToPromptBlock(jsonSchema);
   const blocks = [
     baseSystem.trim(),
+    "",
+    "=== SÉCURITÉ ENTRÉE ===",
+    UNTRUSTED_NOTICE,
     "",
     "=== CONTRAT DE SORTIE STRICT ===",
     "Tu DOIS répondre UNIQUEMENT en JSON valide, conforme EXACTEMENT au schéma ci-dessous.",

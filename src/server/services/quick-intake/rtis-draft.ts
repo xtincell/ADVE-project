@@ -30,6 +30,7 @@ import { type Pillar, SHAPE_PER_PILLAR } from "./pillar-shapes";
 
 import { db } from "@/lib/db";
 import { callLLM, extractJSON } from "@/server/services/llm-gateway";
+import { sanitizeInline, wrapUntrusted } from "@/server/services/utils/untrusted-content";
 import {
   getOracleBrandContextByQuery,
   findComparableBrands,
@@ -198,8 +199,8 @@ ${seshatRefs ? `\nRÉFÉRENCES SECTORIELLES :\n${seshatRefs}` : ""}${comparables
     return generatePillarIMultiAgent(input.companyName, contextBlock);
   }
 
-  const prompt = `MARQUE : ${input.companyName}
-${contextBlock}
+  const prompt = `MARQUE : ${sanitizeInline(input.companyName, { max: 120 })}
+${wrapUntrusted("CONTEXTE MARQUE", contextBlock, { max: 12000 })}
 
 Produis UNIQUEMENT ce JSON exact :
 ${SHAPE_PER_PILLAR[pillar]}`;

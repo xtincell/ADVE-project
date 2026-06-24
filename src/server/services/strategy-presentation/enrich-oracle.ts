@@ -23,6 +23,7 @@ import { checkCompleteness } from "./index";
 import { promoteSectionToBrandAsset } from "./section-writeback";
 export { promoteSectionToBrandAsset } from "./section-writeback";
 import { callLLMAndParse } from "@/server/services/llm-gateway";
+import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import { assertReadyFor, ReadinessVetoError } from "@/server/governance/pillar-readiness";
 import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS, type PillarStorageKey } from "@/domain";
 import { OracleError } from "./error-codes";
@@ -1650,7 +1651,9 @@ export async function enrichAllSectionsNeteru(strategyId: string): Promise<Neter
         .filter((b): b is NonNullable<typeof b> => b !== null)
         .map((b) => b.text)
         .join("\n\n");
-      if (joined) brandContextBlock = `\n\n${joined}`;
+      // LOT 1e — entrée non fiable neutralisée (anti-injection) : contexte de
+      // marque dérivé des BrandContextNodes (contenu fondateur/stratégie).
+      if (joined) brandContextBlock = `\n\n${wrapUntrusted("Contexte de marque", joined, { max: 8000 })}`;
     } catch (err) {
       console.warn(
         "[enrichOracle] brand context augmentation failed (non-blocking):",
@@ -1658,8 +1661,12 @@ export async function enrichAllSectionsNeteru(strategyId: string): Promise<Neter
       );
     }
 
+    // LOT 1e — entrée non fiable neutralisée (anti-injection) : le prompt porte
+    // brandContextBlock (contexte de marque fondateur, fencé ci-dessus) → rappel
+    // sécurité ajouté au system. incomplete/pillarConfidence/seshatStats sont des
+    // identifiants de sections et des scores que nous avons calculés.
     const mestorDecision = await callLLMAndParse({
-      system: `Tu es le Commandant de l'essaim MESTOR. Tu priorises les sections de l'Oracle à enrichir.
+      system: `${UNTRUSTED_NOTICE}\n\nTu es le Commandant de l'essaim MESTOR. Tu priorises les sections de l'Oracle à enrichir.
 Pour chaque section, tu choisis la stratégie d'enrichissement optimale :
 - "framework" : un framework diagnostique Artemis suffit
 - "sequence" : une séquence complète GLORY est nécessaire (production créative)

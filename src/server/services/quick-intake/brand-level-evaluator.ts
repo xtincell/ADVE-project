@@ -32,6 +32,7 @@ import {
 // ============================================================================
 
 import { callLLM, extractJSON } from "@/server/services/llm-gateway";
+import { wrapUntrusted, sanitizeInline, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 
 // The ladder is canonical (`@/domain/brand-tier`). These aliases keep the
 // historical export surface (BrandLevel / BRAND_LEVELS / LEVEL_DEFINITIONS).
@@ -148,15 +149,15 @@ export async function evaluateBrandLevel(input: {
     return lines.join("\n") || "(aucune reponse texte)";
   };
 
-  const prompt = `MARQUE : ${companyName}
-SECTEUR : ${sector ?? "non precis"}
-PAYS : ${country ?? "non precis"}
+  // LOT 1e — entrées non fiables neutralisées (anti-injection). Nom/secteur/pays
+  // inline ; valeurs extraites + réponses brutes (texte founder) balisées en bloc.
+  const prompt = `MARQUE : ${sanitizeInline(companyName, { max: 120 })}
+SECTEUR : ${sanitizeInline(sector ?? "non precis", { max: 80 })}
+PAYS : ${sanitizeInline(country ?? "non precis", { max: 60 })}
 
-VALEURS EXTRAITES PAR PILIER ADVE :
-${formatExtracted()}
+${wrapUntrusted("VALEURS EXTRAITES PAR PILIER ADVE", formatExtracted(), { max: 8000 })}
 
-REPONSES BRUTES DE LA MARQUE :
-${formatResponses()}
+${wrapUntrusted("REPONSES BRUTES DE LA MARQUE", formatResponses(), { max: 8000 })}
 
 Produis le JSON suivant (toutes les justifications doivent CITER au moins une valeur extraite) :
 {
@@ -221,7 +222,7 @@ Le pathToIcone DOIT inclure tous les paliers du niveau actuel jusqu'a ICONE (san
   let text: string;
   try {
     const res = await callLLM({
-      system: SYSTEM_PROMPT,
+      system: `${UNTRUSTED_NOTICE}\n\n${SYSTEM_PROMPT}`,
       prompt,
       caller: "quick-intake:brand-level-evaluator",
       purpose: "agent",

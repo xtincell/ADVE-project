@@ -6,6 +6,35 @@ import {
   contentCalendarOutputSchema,
   launchTimelineOutputSchema,
 } from "./launch-social-schemas";
+import {
+  conceptGeneratorOutputSchema,
+  scriptWriterOutputSchema,
+  longCopyOutputSchema,
+  dialogueWriterOutputSchema,
+  claimBaselineOutputSchema,
+  storytellingSequencerOutputSchema,
+  wordplayBankOutputSchema,
+  coherenceCheckerOutputSchema,
+  brandGuardianOutputSchema,
+  insightSynthesizerOutputSchema,
+  ideaKillerSaverOutputSchema,
+  semioticBrandAnalyzerOutputSchema,
+  logoTypeAdvisorOutputSchema,
+  logoValidationOutputSchema,
+  motionIdentityOutputSchema,
+  toneOfVoiceOutputSchema,
+  manifestoOutputSchema,
+  engagementRitualsOutputSchema,
+  claimArchitectOutputSchema,
+  vocabularyBuilderOutputSchema,
+  visualMoodboardOutputSchema,
+  synthesizeSectionOutputSchema,
+  lsiUniverseSetupOutputSchema,
+  lsiSymbolAlchemyOutputSchema,
+  lsiDistributionMatrixOutputSchema,
+  lsiSublimationOutputSchema,
+  lsiMorphoSemanticOutputSchema,
+} from "./glory-output-schemas";
 
 /**
  * GLORY Tools — Atomic Creative Operations Registry
@@ -79,6 +108,7 @@ const CR_TOOLS: GloryToolDef[] = [
       emotional_position: "d.positionnementEmotionnel", // ressenti unique 1ère personne
     },
     outputFormat: "concepts_list",
+    outputSchema: conceptGeneratorOutputSchema,
     promptTemplate: `En tant que concepteur-rédacteur senior, génère 5 concepts créatifs pour ce brief.
 Contexte marque : {{brand_dna}}
 Brief : {{brief}}
@@ -104,6 +134,7 @@ Pour chaque concept, fournis : titre, accroche, description (3 lignes), déclina
       cta: "d.assetsLinguistiques.slogan",
     },
     outputFormat: "script",
+    outputSchema: scriptWriterOutputSchema,
     promptTemplate: `Écris un script {{format}} de {{duration}} secondes.
 Concept : {{concept}}
 Ton : {{tone}}
@@ -129,6 +160,7 @@ Format : dialogues, indications de réalisation, musique/SFX.`,
       angle: "a.prophecy.worldTransformed",
     },
     outputFormat: "long_copy",
+    outputSchema: longCopyOutputSchema,
     promptTemplate: `Rédige un texte long-format persuasif sur le sujet : {{topic}}
 Angle : {{angle}} | Cible : {{target}} | Longueur : {{length}} mots
 Structure narrative : Hook → Problem → Agitation → Solution → Proof → CTA.`,
@@ -151,6 +183,7 @@ Structure narrative : Hook → Problem → Agitation → Solution → Proof → 
       characters: "d.personas",
     },
     outputFormat: "dialogue",
+    outputSchema: dialogueWriterOutputSchema,
     promptTemplate: `Écris un dialogue pour ce scénario :
 {{scenario}}
 Personnages : {{characters}}
@@ -176,6 +209,7 @@ Message clé à intégrer naturellement : {{key_message}}`,
       constraints: "r.mitigationPriorities",
     },
     outputFormat: "claims_list",
+    outputSchema: claimBaselineOutputSchema,
     promptTemplate: `Génère 10 claims/baselines pour cette marque :
 Positionnement : {{brand_positioning}}
 Bénéfice clé : {{key_benefit}}
@@ -257,6 +291,7 @@ Fournis : copy principal, variantes A/B, hashtags, CTA, heures de publication re
       origin_myth: "a.originMyth.storytelling", // récit fondateur 3-7 paragraphes
     },
     outputFormat: "story_sequence",
+    outputSchema: storytellingSequencerOutputSchema,
     promptTemplate: `Séquence un arc narratif en {{episodes}} épisodes :
 Arc : {{story_arc}}
 Plateforme : {{platform}} | Fréquence : {{frequency}}
@@ -281,6 +316,7 @@ Pour chaque épisode : titre, hook, contenu, cliffhanger, CTA.`,
       language: "d.assetsLinguistiques.languePrincipale",
     },
     outputFormat: "wordplay_bank",
+    outputSchema: wordplayBankOutputSchema,
     promptTemplate: `Génère une banque de jeux de mots et références culturelles :
 Marque : {{brand_name}} | Marché : {{market}}
 Contexte culturel : {{cultural_context}} | Langue : {{language}}
@@ -464,6 +500,7 @@ Règles : evaluations MIN 1, MAX 8 (si pas de proposals : 1 entry "à enrichir" 
       budget_reality: "s.globalBudget",
     },
     outputFormat: "idea_triage",
+    outputSchema: ideaKillerSaverOutputSchema,
     promptTemplate: `Triage les idées créatives :
 Pour chaque idée, verdict : KILL (pourquoi), SAVE (pourquoi + renforcement), PIVOT (vers quoi).
 Critères : faisabilité, différenciation, cohérence marque, potentiel viral.`,
@@ -1026,6 +1063,7 @@ const BRAND_TOOLS: GloryToolDef[] = [
       cultural_context: "a.doctrine",
     },
     outputFormat: "semiotic_analysis",
+    outputSchema: semioticBrandAnalyzerOutputSchema,
     promptTemplate: `Analyse sémiotique de la marque :
 Identité actuelle : {{brand_identity}}
 Codes sectoriels : {{sector_codes}} | Contexte culturel : {{cultural_context}}
@@ -1080,6 +1118,7 @@ Map : codes visuels dominants, espaces libres, opportunités de différenciation
       brand_values: "a.valeurs",
     },
     outputFormat: "moodboard_directions",
+    outputSchema: visualMoodboardOutputSchema,
     promptTemplate: `3 directions de moodboard :
 Insights sémiotiques : {{semiotic_insights}}
 Espaces visuels libres : {{landscape_gaps}}
@@ -1160,6 +1199,7 @@ Livrable : familles, hiérarchie, échelle, line-height, letter-spacing, web/pri
       chromatic_strategy: "d.directionArtistique",
     },
     outputFormat: "logotype_direction",
+    outputSchema: logoTypeAdvisorOutputSchema,
     promptTemplate: `Direction logotype :
 Nom : {{brand_name}} | Valeurs : {{brand_values}}
 Système typo : {{typography_system}} | Stratégie chromatique : {{chromatic_strategy}}
@@ -1181,6 +1221,7 @@ Livrable : type de logo recommandé, direction stylistique, do/don't, déclinais
       brand_guidelines: "d.directionArtistique",
     },
     outputFormat: "logo_validation_report",
+    outputSchema: logoValidationOutputSchema,
     promptTemplate: `Validation des propositions de logo :
 Critères : lisibilité (5 tailles), mémorabilité, reproductibilité, cohérence marque, unicité.
 Contextes : digital, print, packaging, signalétique, favicon.
@@ -1226,6 +1267,7 @@ Format : JSON compatible avec Tailwind/CSS variables, avec nommage sémantique.`
       design_tokens: "d.directionArtistique",
     },
     outputFormat: "motion_identity",
+    outputSchema: motionIdentityOutputSchema,
     promptTemplate: `Identité motion :
 Personnalité : {{brand_personality}}
 Tokens : {{design_tokens}}
@@ -1353,6 +1395,7 @@ Livrable : genre musical, tempo BPM, ambiance, SFX clés, specs voix off (genre 
       cultural_context: "a.doctrine",
     },
     outputFormat: "tone_charter",
+    outputSchema: toneOfVoiceOutputSchema,
     promptTemplate: `Conçois la charte de ton de voix :
 Archétype : {{archetype}}
 Valeurs : {{values}}
@@ -1384,6 +1427,7 @@ expressions interdites, do/don't par canal (social, print, corporate, customer s
       baseline: "d.assetsLinguistiques.slogan",
     },
     outputFormat: "manifesto",
+    outputSchema: manifestoOutputSchema,
     promptTemplate: `Rédige le manifeste de marque :
 ADN : {{brand_dna}}
 Prophétie : {{prophecy}}
@@ -1635,6 +1679,7 @@ Livrable : carte du parcours (stage par stage), triggers de progression, rewards
       existing_rituals: "e.rituels",
     },
     outputFormat: "brand_rituals",
+    outputSchema: engagementRitualsOutputSchema,
     promptTemplate: `Rituels de marque :
 Personnalité : {{brand_personality}}
 Niveaux communautaires : {{community_levels}}
@@ -1798,6 +1843,7 @@ Livrable : radar visuel (4 quadrants : émergent/croissant/mature/déclinant), 5
       tarsis_signals: "t.marketReality.weakSignals",
     },
     outputFormat: "insights",
+    outputSchema: insightSynthesizerOutputSchema,
     promptTemplate: `Synthèse d'insights (avec Tarsis weak signals integration) :
 
 Données marché : {{market_data}}
@@ -1845,6 +1891,7 @@ Règles : consumer EXACTEMENT 3 entrées. market EXACTEMENT 3 entrées. cultural
     inputFields: ["section_id", "section_draft", "brand_context"],
     pillarBindings: { brand_context: "a.doctrine" },
     outputFormat: "section_narrative",
+    outputSchema: synthesizeSectionOutputSchema,
     promptTemplate: `Synthèse Oracle section "{{section_id}}".
 
 Draft déterministe (NE PAS modifier les données numériques ni inventer) :
@@ -2770,6 +2817,7 @@ const NETERU_TOOLS: GloryToolDef[] = [
       brand_guidelines: "d.directionArtistique",
     },
     outputFormat: "brand_validation_report",
+    outputSchema: brandGuardianOutputSchema,
     promptTemplate: `Tu es le Brand Guardian. Analyse cet output candidat en le confrontant à l'identité de marque et aux guidelines.
 Identité marque : {{brand_identity}}
 Guidelines : {{brand_guidelines}}
@@ -2809,6 +2857,7 @@ Règles : brand_culture_audit : 4 sous-clés OBLIGATOIRES (score entier ∈ [0,1
       brand_dna: "a.noyauIdentitaire",
     },
     outputFormat: "coherence_report",
+    outputSchema: coherenceCheckerOutputSchema,
     promptTemplate: `Compare ces deux outputs de séquences différentes pour vérifier leur cohérence mutuelle.
 ADN marque : {{brand_dna}}
 Output source (référence) : {{source_output}}
@@ -2838,6 +2887,7 @@ Retourne : { aligned: boolean, score: 0-100, gaps: string[], risks: string[], re
       personas: "d.personas",
     },
     outputFormat: "claim_hierarchy",
+    outputSchema: claimArchitectOutputSchema,
     promptTemplate: `Tu es un stratège de marque. Construis la hiérarchie de claims pour cette marque.
 ADN : {{brand_dna}}
 Archétype : {{archetype}}
@@ -2895,6 +2945,7 @@ Pour chaque combinaison (persona × canal) : registre (formel/informel/technique
       tone_of_voice: "d.tonDeVoix",
     },
     outputFormat: "brand_vocabulary",
+    outputSchema: vocabularyBuilderOutputSchema,
     promptTemplate: `Construis le lexique de marque.
 ADN : {{brand_dna}}
 Archétype : {{archetype}}
@@ -2974,6 +3025,7 @@ Compiler en document structuré : 1. Philosophie verbale, 2. Hiérarchie de clai
       direction_artistique: "d.directionArtistique",
     },
     outputFormat: "universe_setup",
+    outputSchema: lsiUniverseSetupOutputSchema,
     promptTemplate: `Tu es un directeur artistique specialise en creation d'univers IP.
 ADN de marque : {{brand_dna}}
 Archetype : {{archetype}}
@@ -3004,6 +3056,7 @@ Retourne : { genreMaitre: string, themesCles: string[], vibeSensorielle: string[
       brand_dna: "a.noyauIdentitaire",
     },
     outputFormat: "artifacts",
+    outputSchema: lsiSymbolAlchemyOutputSchema,
     promptTemplate: `Tu es un concepteur d'artefacts pour IP.
 Setup univers : {{universe_setup}}
 ADN marque : {{brand_dna}}
@@ -3036,6 +3089,7 @@ Retourne : { artifacts: [{ baseSymbol: string, themeApplications: { forme: strin
     inputFields: ["artifacts", "universe_setup"],
     pillarBindings: {},
     outputFormat: "distribution_matrix",
+    outputSchema: lsiDistributionMatrixOutputSchema,
     promptTemplate: `Tu es un character designer expert en integration visuelle.
 Artefacts crees : {{artifacts}}
 Setup univers : {{universe_setup}}
@@ -3067,6 +3121,7 @@ Retourne : { matrix: [{ artifact: string, anatomie: string, outfit: string, text
     inputFields: ["distribution_matrix", "universe_setup"],
     pillarBindings: {},
     outputFormat: "sublimation_report",
+    outputSchema: lsiSublimationOutputSchema,
     promptTemplate: `Tu es un directeur artistique senior qui fait le reality check final.
 Matrice de distribution : {{distribution_matrix}}
 Setup univers : {{universe_setup}}
@@ -3093,6 +3148,7 @@ Retourne : { adjustments: [{ element: string, issue: string, fix: string }], ech
     inputFields: ["sublimation_report", "distribution_matrix", "universe_setup"],
     pillarBindings: {},
     outputFormat: "morpho_semantic_definition",
+    outputSchema: lsiMorphoSemanticOutputSchema,
     promptTemplate: `Tu es un expert en prompting visuel pour IA generative.
 Rapport sublimation : {{sublimation_report}}
 Matrice distribution : {{distribution_matrix}}

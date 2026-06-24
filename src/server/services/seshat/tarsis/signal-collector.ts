@@ -5,6 +5,7 @@
  */
 
 import { callLLM, extractJSON } from "@/server/services/llm-gateway";
+import { UNTRUSTED_NOTICE, sanitizeInline } from "@/server/services/utils/untrusted-content";
 import { db } from "@/lib/db";
 import { z } from "zod";
 
@@ -163,9 +164,19 @@ interface SignalAxis { label: string; instruction: string }
 /** Un appel focalisé sur UN axe de veille (2-3 signaux qualitatifs validés Zod). */
 async function collectSignalAxis(config: CollectionStrategy, axis: SignalAxis): Promise<CollectedSignal[]> {
   const countryBlock = buildCountryContextPrompt(config);
-  const system = `Tu es un analyste d'intelligence économique (veille sectorielle). Secteur "${config.sector}"${config.market ? ` — marché "${config.market}"` : ""}.
-Mots-clés marque : ${config.keywords.join(", ")}
-Concurrents : ${config.competitors.join(", ")}${countryBlock}
+  // LOT 1e — entrée non fiable neutralisée (anti-injection) : secteur, marché,
+  // mots-clés et concurrents dérivent de la saisie fondateur (extraits des
+  // piliers ADVE) → neutralisés inline. countryBlock vient de la table Country
+  // (taxonomie interne).
+  const sectorSafe = sanitizeInline(config.sector, { max: 120 });
+  const marketSafe = config.market ? sanitizeInline(config.market, { max: 120 }) : "";
+  const keywordsSafe = sanitizeInline(config.keywords.join(", "), { max: 600 });
+  const competitorsSafe = sanitizeInline(config.competitors.join(", "), { max: 600 });
+  const system = `${UNTRUSTED_NOTICE}
+
+Tu es un analyste d'intelligence économique (veille sectorielle). Secteur "${sectorSafe}"${marketSafe ? ` — marché "${marketSafe}"` : ""}.
+Mots-clés marque : ${keywordsSafe}
+Concurrents : ${competitorsSafe}${countryBlock}
 
 Tu produis des signaux QUALITATIFS plausibles pour ce secteur. N'INVENTE PAS de chiffres précis, de dates exactes ni d'URLs : décris des tendances/événements TYPES. Si tu n'es pas sûr, produis MOINS de signaux.
 
@@ -173,7 +184,7 @@ Format JSON STRICT : { "signals": [ { "title": "...", "content": "2-3 phrases", 
   try {
     const { text } = await callLLM({
       system,
-      prompt: `Produis 2 à 3 signaux ${axis.instruction} pour le secteur "${config.sector}". JSON uniquement.`,
+      prompt: `Produis 2 à 3 signaux ${axis.instruction} pour le secteur "${sectorSafe}". JSON uniquement.`,
       caller: `signal-collector:${axis.label}`,
       strategyId: config.strategyId,
       maxOutputTokens: 1500,

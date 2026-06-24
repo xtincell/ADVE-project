@@ -10,6 +10,122 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.42 — Sécurité LLM LOT 1e : verrou d'entrée anti-injection sur tous les appels directs — 37/37 (2026-06-23)
+
+**Clôture LOT 1e** — neutralisation de l'**entrée** (anti-injection OWASP LLM01) sur **tous les appels LLM directs** restants (hors chokepoints LOT 0). La sortie était déjà 100 % (LOT 1c). L'entrée l'est désormais aussi.
+
+- **Auditeur renforcé** (`scripts/audit-llm-nodes.ts`) : ne compte plus seulement les appels directs, il **vérifie** par fichier que l'entrée est neutralisée — verdict `FENCED` (appel réel `wrapUntrusted`/`sanitizeInline`), `INTERNAL` (annoté `@llm-input-internal` : entrée 100 % interne, ou prompt construit/neutralisé en amont, ou seule entrée non-texte = image OCR couverte par `UNTRUSTED_NOTICE`), ou `RAW`. Faux positif corrigé (un `callLLM(` cité dans une chaîne `description` n'est plus compté). Le gate `--strict` bloque désormais toute nouvelle **entrée brute** (`rawInputFiles`).
+- **28 fichiers durcis** (sur les 38 répertoriés ; 10 l'étaient déjà via LOT 0/1a/1b) : quick-intake (7), rtis-protocols (4), seshat (5), mestor + pillar-maturity (3), ingestion-pipeline + source-classifier + brief-ingest (4), générateurs (campaign-plan, implementation) + artemis market-research + enrich-oracle (5). Chaque contenu non fiable — texte fondateur, documents uploadés, **flux RSS/études/signaux externes (vecteur attaquant)**, contenu piliers, données marché — est encadré comme DONNÉE (`wrapUntrusted`) ou neutralisé inline (`sanitizeInline`), et `UNTRUSTED_NOTICE` est ajouté au system prompt. Les délimiteurs ad-hoc empoisonnables (`=== TEXTE BRUT ===`, `"""…"""`) sont remplacés par le fence canonique.
+- **Résultat audit : 37/37 fichiers à entrée durcie (35 `FENCED` + 2 `INTERNAL`), 0 brut.** Sortie maintenue 76/76 nœuds + 28/28 frameworks. **Toute la surface LLM est désormais sécurisée à l'entrée ET à la sortie.**
+- Hors phases 0–9 (out-of-scope, LOT 1e du plan `docs/governance/llm-hardening-plan.md`). **0 nouveau Neter** (Cap APOGEE 7/7), **0 model Prisma**, **0 bypass** (durcissement entrée + tooling d'audit, ne touche ni Intent ni schéma). tsc 0 · eslint 0 · tests verts. Cf. Justification — out-of-scope dans le body PR.
+
+## v6.27.41 — Sécurité LLM LOT 1c (batch 5) : schémas de sortie réels — 17 derniers outils → 37/37 (2026-06-23)
+
+**Clôture LOT 1c** — vrais schémas de sortie pour les **17 outils Glory restants**, dérivés ligne à ligne de chaque `promptTemplate` (aucun schéma permissif « attrape-tout »).
+
+- `feat(artemis)` `outputSchema` ajouté à : **7 outils registry** (`visual-moodboard-generator`, `synthesize-section`, `lsi-universe-setup`, `lsi-symbol-alchemy`, `lsi-distribution-matrix`, `lsi-sublimation`, `lsi-morpho-semantic`) ; **3 Imhotep** (`crew-matcher`, `formation-recommender`, `qc-evaluator`) ; **2 Anubis** (`ad-copy-generator`, `audience-targeter`) ; **4 AD/OPS** (`adops-expand-semantic-field`, `adops-cross-pollinate-concepts`, `adops-decode-reference-grid`, `adops-defend-creative-direction`) ; **1 postmortem** (`postmortem-12q` — `z.record(qN → {answer, score 0..1, evidenceUrls})`, valeur strictement typée, clés dynamiques q1..q12).
+- Schémas couplés-forge préservés (`visual-moodboard-generator` garde `moodboard_brief` optionnel pour le handoff Ptah ; `synthesize-section` payload libre typé `{narrative, structured_payload}`).
+- **Baseline du gate ratchetée 17 → 0.** **37/37 outils Glory validés en sortie — 76/76 nœuds LLM/HYBRID + 28/28 frameworks à 100 %.** Le contournement restant (52 appels / 38 fichiers) est de l'**entrée** (LOT 1e), pas de la sortie.
+- Hors phases 0–9 (out-of-scope). **0 nouveau Neter** (Cap APOGEE 7/7), **0 model Prisma**, **0 bypass**. tsc 0 · eslint 0 · tests verts. Cf. Justification — out-of-scope dans le body PR.
+
+## v6.27.40 — Sécurité LLM LOT 1c (batch 4) : schémas de sortie réels — 5 outils CR (2026-06-23)
+
+**Suite LOT 1c** — vrais schémas pour 5 outils CR de copywriting stratégique.
+
+- `feat(artemis)` `outputSchema` ajouté à **`tone-of-voice-designer`** (charte : personnalité/registre/vocabulaire/do-dont par canal/reformulations), **`manifesto-writer`** (texte fondateur), **`engagement-rituals-designer`** (rituels nom/fréquence/mécanique/canal/KPI/coût), **`claim-architect`** (master/sub-claims/proofs/RTB), **`vocabulary-builder`** (5 catégories de lexique).
+- **Baseline du gate ratchetée 22 → 17.** **20/37 outils Glory validés en sortie.**
+- Hors phases 0–9 (out-of-scope). **0 nouveau Neter** (Cap APOGEE 7/7), **0 model Prisma**, **0 bypass**. tsc 0 · eslint 0 · 40 tests verts. Cf. Justification — out-of-scope dans le body PR.
+
+## v6.27.39 — Sécurité LLM LOT 1c (batch 3) : schémas de sortie réels — 4 outils BRAND (2026-06-23)
+
+**Suite LOT 1c** — vrais schémas de sortie pour 4 outils BRAND **sans `forgeOutput` couplé** (les outils BRAND avec auto-handoff forge sont tenus à l'écart : un schéma mal aligné casserait le `briefTextPath` → à traiter avec vérif fonctionnelle).
+
+- `feat(artemis)` `outputSchema` ajouté à **`semiotic-brand-analyzer`** (signifiants/signifiés/connotations/codes/positionnement), **`logo-type-advisor`** (type/direction/dos/donts/déclinaisons), **`logo-validation-protocol`** (évaluations scorées + reco finale), **`motion-identity-designer`** (principes easing/durée/rythme + bibliothèque + guidelines).
+- **Baseline du gate ratchetée 26 → 22** manques de sortie. **15/37 outils Glory** désormais validés en sortie.
+- Hors phases 0–9 (out-of-scope). **0 nouveau Neter** (Cap APOGEE 7/7), **0 model Prisma**, **0 bypass**. tsc 0 · eslint 0 · tests verts. Cf. Justification — out-of-scope dans le body PR.
+
+## v6.27.38 — Sécurité LLM LOT 1c (batch 2) : schémas de sortie réels — 4 outils DC (2026-06-23)
+
+**Suite LOT 1c** — vrais schémas de sortie pour 4 outils DC (évaluation/diagnostic) dont 3 ont un contrat JSON **explicite** dans leur prompt.
+
+- `feat(artemis)` `outputSchema` ajouté à **`coherence-checker`** (`{aligned, score, gaps, risks, recommendations}`), **`brand-guardian`** (audit culturel 4 axes + verdict APPROVED/NEEDS_REVISION/REJECTED — schéma verrouillé), **`insight-synthesizer`** (insights consumer/market/cultural/weak_signals), **`idea-killer-saver`** (triage KILL/SAVE/PIVOT). Schémas fidèles aux contrats des prompts.
+- **Baseline du gate ratchetée 30 → 26** manques de sortie.
+- *(`synthesize-section` tenu à l'écart de ce batch : chemin Oracle-assembler + payload libre, à traiter à part.)*
+- Hors phases 0–9 (out-of-scope). **0 nouveau Neter** (Cap APOGEE 7/7), **0 model Prisma**, **0 bypass**. tsc 0 · eslint 0 · 40 tests verts. Cf. Justification — out-of-scope dans le body PR.
+
+## v6.27.37 — Sécurité LLM LOT 1c (batch 1) : schémas de sortie réels — 7 outils CR (2026-06-23)
+
+**LOT 1c du plan** — vrais schémas de sortie pour les Glory tools LLM (pas de schéma permissif « attrape-tout » : on valide réellement, dérivé du contrat de chaque `promptTemplate`).
+
+- `feat(artemis)` nouveau fichier feuille **`glory-output-schemas.ts`** (n'importe que `zod`, zéro cycle) + `outputSchema` ajouté à **7 outils CR** : `concept-generator`, `script-writer`, `long-copy-craftsman`, `dialogue-writer`, `claim-baseline-factory`, `storytelling-sequencer`, `wordplay-cultural-bank`. Schémas **fidèles** (noms de champs FR que les prompts élicitaient déjà) et **souples** (`.min(1)`, champs vagues `.optional()`) → `executeStructuredLLMCall` réinjecte le schéma dans le prompt + valide + retry, sans sur-rejeter.
+- **Baseline du gate ratchetée 37 → 30** manques de sortie (`scripts/llm-audit-baseline.json`) — le gate ne peut plus régresser sous ce seuil.
+- Hors phases 0–9 (out-of-scope). **0 nouveau Neter** (Cap APOGEE 7/7), **0 model Prisma**, **0 bypass**. tsc 0 · eslint 0 · 97 tests verts. Cf. Justification — out-of-scope dans le body PR.
+
+## v6.27.36 — fix(test) : numéro de ligne allowlist C5 (boot-sequence) — main au vert (2026-06-23)
+
+- `fix(test)` Le LOT 1a (#306) a ajouté ~19 lignes en tête de `boot-sequence/index.ts`, décalant l'écriture `Pillar.content` de normalisation legacy (191 → 210). L'allowlist **line-number** du test KEYSTONE **C5** (`no-bare-pillar-content-write.test.ts`) pointait toujours sur 191 → 2 échecs (write hors allowlist + entrée allowlist obsolète). Numéro corrigé 191 → 210. **Remet `main` au vert** (la suite vitest était rouge depuis #306). Aucun code de prod touché.
+- Hors phases 0–9 (out-of-scope, hotfix CI). **0 nouveau Neter** (Cap APOGEE 7/7), **0 model Prisma**, **0 bypass**. Cf. Justification — out-of-scope dans le body PR.
+
+## v6.27.35 — Sécurité LLM LOT 2 : gate CI anti-régression (2026-06-23)
+
+**LOT 2 du plan** — fige l'état durci et empêche toute régression.
+
+- `ci(meta)` nouveau job **`LLM node guardrails (no regression)`** dans `.github/workflows/ci.yml` : exécute `npm run audit:llm:strict` à chaque PR. Échoue uniquement sur un **nouveau** nœud LLM non protégé (schéma de sortie manquant **ou** `callLLM` direct hors wrapper) vs `scripts/llm-audit-baseline.json` — sans imposer de migrer le backlog existant.
+- **Bilan sécurité** : l'injection de prompt (entrée) est fermée sur tout le périmètre (LOT 0 outils+frameworks, LOT 1a intake, LOT 1b dérivation) ; le gate verrouille l'acquis. Reste = **dette de robustesse** (schéma de sortie de ~55 Glory tools 1c/1d + sorties multi-formes 1e), désormais gelée au baseline.
+- Hors phases 0–9 (out-of-scope). **0 nouveau Neter** (Cap APOGEE 7/7), **0 model Prisma**, **0 bypass**. Cf. Justification — out-of-scope dans le body PR.
+
+## v6.27.34 — Sécurité LLM LOT 1b : durcissement entrée des services de dérivation (2026-06-23)
+
+**LOT 1b du plan** — les services de dérivation appellent le LLM en direct (hors chokepoints LOT 0).
+
+- `feat(meta)` **`rtis-cascade`**, **`notoria`**, **`mestor/insights`** : le contenu pilier (donnée non fiable : ADVE/RTIS verbatim, contexte marque) est balisé via `wrapUntrusted` — dans `serializePillar` (rtis-cascade + notoria, couvre **toutes les branches R/T/I/S**) et dans le bloc `contextLines` (insights) — + `UNTRUSTED_NOTICE` préfixé au system de chaque appel (`callCascadeLLM`, `runLLM`, `ai_insights`).
+- *(Entrée durcie. Sorties de ces services = `extractJSON`/`JSON.parse` multi-formes → migration Zod = follow-up.)*
+- Hors phases 0–9 (out-of-scope). **0 nouveau Neter** (Cap APOGEE 7/7), **0 model Prisma**, **0 bypass**. tsc 0 · eslint 0 · 46 tests verts. Cf. Justification — out-of-scope dans le body PR.
+
+## v6.27.33 — Sécurité LLM LOT 1a (fin) : brief-ingest — LOT 1a complet (2026-06-23)
+
+**Clôture du LOT 1a** (5 points d'entrée utilisateur durcis).
+
+- `feat(intake)` **`brief-ingest`** : le `rawText` du brief (document client uploadé) est balisé via `wrapUntrusted` (qui neutralise aussi la tentative de breakout `=== FIN DU BRIEF ===`). *(Sortie déjà validée Zod via `parsedBriefSchema.safeParse`.)* L'OCR `extractWithVision` n'expose aucun vecteur (seule la longueur du base64 entre dans le prompt, sortie texte libre par nature).
+- **LOT 1a complet** : `deduce-adve`, `boot-sequence`, `narrate-adve`, `rtis-draft`, `brief-ingest` — tous les appels LLM directs du flux d'intake sont durcis en entrée (et en sortie là où elle manquait).
+- Hors phases 0–9 (out-of-scope). **0 nouveau Neter** (Cap APOGEE 7/7), **0 model Prisma**, **0 bypass**. tsc 0 · eslint 0. Cf. Justification — out-of-scope dans le body PR.
+
+## v6.27.32 — Sécurité LLM LOT 1a (suite) : narrate-adve + rtis-draft (entrée) (2026-06-23)
+
+**Suite du LOT 1a** — durcissement entrée des deux derniers appels LLM directs du cœur quick-intake.
+
+- `feat(intake)` **`narrate-adve`** : les **valeurs verbatim du founder** + le `brandName` sont neutralisés via `sanitizeInline` avant insertion dans le prompt — la neutralisation ne casse que les jetons de rupture (faux `=== ===`, balises de rôle, ``` ```), le texte légitime (cité « caractère pour caractère ») est préservé.
+- `feat(intake)` **`rtis-draft`** : `companyName` neutralisé + le **contexte marque** (ADVE verbatim + contexte hybride Seshat/RAG + marques comparables) est balisé comme donnée via `wrapUntrusted`.
+- *(Sorties : `narrate-adve` et `rtis-draft` lèvent déjà sur forme invalide ; migration Zod complète = follow-up.)*
+- Hors phases 0–9 (out-of-scope). **0 nouveau Neter** (Cap APOGEE 7/7), **0 model Prisma**, **0 bypass**. tsc 0 · eslint 0 · tests verts. Cf. Justification — out-of-scope dans le body PR.
+
+## v6.27.31 — Sécurité LLM LOT 1a : durcissement des points d'intake (2026-06-23)
+
+**LOT 1a du plan de durcissement** — les appels LLM directs des points d'entrée utilisateur contournent les chokepoints LOT 0 ; on les durcit donc en entrée **et** en sortie.
+
+- `feat(intake)` **`deduce-adve`** (la démo paywall) : entrées utilisateur neutralisées (`offerText`/`brandName`/`sector`/`countryCode` via `untrusted-content`), fence `"""` artisanale remplacée par le `wrapUntrusted` canonique. *(Sortie déjà validée Zod.)*
+- `feat(intake)` **`boot-sequence`** : `Contenu existant` (saisie utilisateur) balisé comme donnée (entrée) + **sortie validée par Zod par question** (best-effort : garde les valides, jette les malformées) au lieu d'un `JSON.parse` brut + rappel sécurité dans le system prompt.
+- Hors phases 0–9 (out-of-scope). **0 nouveau Neter** (Cap APOGEE 7/7), **0 model Prisma**, **0 bypass**. tsc 0 · eslint 0 · tests verts (boot-sequence 14 + untrusted-content 7). Cf. Justification — out-of-scope dans le body PR.
+
+## v6.27.30 — Sécurité LLM LOT 0 : verrou d'entrée anti-injection (2026-06-23)
+
+**LOT 0 du plan de durcissement des nœuds LLM** ([llm-hardening-plan.md](docs/governance/llm-hardening-plan.md), validé opérateur).
+
+- `feat(meta)` nouvel utilitaire **`src/server/services/utils/untrusted-content.ts`** — neutralise le contenu non fiable avant insertion dans un prompt (anti-injection, OWASP LLM01) : `sanitizeInline` (casse les jetons de rupture — faux en-têtes `=== ===`, balises de rôle, `[INST]`/`<<SYS>>`, clôtures ``` ``` ``` — + plafond de taille), `wrapUntrusted` (enveloppe « donnée, pas instruction » + sentinelle non simulable), `UNTRUSTED_NOTICE` (rappel system prompt).
+- Branché aux **3 chokepoints** : `executeStructuredLLMCall` (couvre **tout nœud structuré**), `engine.ts` (outils Glory — valeurs `{{var}}` neutralisées + contexte stratégie fencé), `artemis/index.ts` (frameworks — contexte + données fournies fencés).
+- 7 tests anti-injection (`tests/unit/security/untrusted-content.test.ts`).
+- Hors phases 0–9 (out-of-scope, hotfix sécurité). **0 nouveau Neter** (Cap APOGEE 7/7), **0 model Prisma**, **0 bypass**. tsc 0 · eslint 0. Cf. Justification — out-of-scope dans le body PR.
+
+## v6.27.29 — Auditeur de sécurité des nœuds LLM (entrée + sortie) (2026-06-23)
+
+**Premier volet du durcissement des « nœuds magiques » LLM** (suite au scan fonctionnel demandé).
+
+- `feat(tooling)` nouveau scanner **`scripts/audit-llm-nodes.ts`** (`npm run audit:llm` · `audit:llm:strict`) — complète le robot site-prober (navigation) par un audit *code* des pipes LLM :
+  - **SORTIE** (introspection fiable du registre) : tout nœud `LLM`/`HYBRID` doit déclarer `outputSchema` (validation Zod stricte) ou `_noSchemaJustification`. État : **Glory tools 21/76 validés (55 sans contrat)** · **Frameworks 28/28 validés ✅**.
+  - **ENTRÉE / bypass** (scan des points d'appel) : **52 appels `callLLM`/`callLLMAndParse` directs sur 38 fichiers** qui court-circuitent le wrapper structuré (sortie non validée + entrée souvent concaténée brute → surface d'injection).
+- Rapport auto-généré **`docs/governance/llm-node-audit.md`** + **baseline** `scripts/llm-audit-baseline.json`. Mode `--strict` = **gate de régression** (échoue uniquement sur un *nouveau* nœud non gardé, sans casser le backlog existant).
+- Tooling hors phases 0–9 (out-of-scope, 0 couplage gates `src/**`, comme #298). **0 nouveau Neter** (Cap APOGEE 7/7), **0 model Prisma**, **0 bypass**. Cf. Justification — out-of-scope dans le body PR.
+
 ## v6.27.28 — Performance : images lourdes recompressées + assets morts purgés (2026-06-23)
 
 **Lot 4 du plan de remédiation des findings `site-prober`.**

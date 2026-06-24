@@ -9,6 +9,11 @@ import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
 import { db } from "@/lib/db";
 import { callLLM } from "@/server/services/llm-gateway";
 import { getFormatInstructions } from "@/lib/types/variable-bible";
+import {
+  wrapUntrusted,
+  sanitizeInline,
+  UNTRUSTED_NOTICE,
+} from "@/server/services/utils/untrusted-content";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -110,26 +115,31 @@ export async function generateCampaignPlan(
   const budgetMax = brief.budgetRange?.max ?? strategy.drivers.length * 500000;
   const currency = brief.budgetRange?.currency ?? "XAF";
 
+  // LOT 1e — entrée non fiable neutralisée (anti-injection) : contexte piliers
+  // (dérivé fondateur), noms de drivers + champs libres du brief (objectif,
+  // audience, durée, canaux, contraintes, devise) sont saisis par le client.
+  // vector / weakPillars / budgetMax sont des scores/énumérations calculés.
   const { text } = await callLLM({
-    system: `Tu es un strategiste publicitaire expert du framework ADVE/RTIS.
+    system: `${UNTRUSTED_NOTICE}
+
+Tu es un strategiste publicitaire expert du framework ADVE/RTIS.
 Tu generes des plans de campagne structures en phases, avec allocation budgetaire et assignation de drivers.
 Reponds UNIQUEMENT en JSON valide, sans markdown.
 
 ${bibleRules}`,
-    prompt: `Contexte de marque (8 piliers ADVE+RTIS):
-${JSON.stringify(pillarContext, null, 2)}
+    prompt: `${wrapUntrusted("Contexte de marque (8 piliers ADVE+RTIS)", JSON.stringify(pillarContext, null, 2), { max: 8000 })}
 
 Vecteur ADVE actuel: ${JSON.stringify(vector)}
 Piliers faibles a renforcer: ${JSON.stringify(weakPillars)}
-Drivers actifs: ${JSON.stringify(drivers)}
+${wrapUntrusted("Drivers actifs", JSON.stringify(drivers), { max: 2000 })}
 
 Brief campagne:
-- Objectif: ${brief.objective}
-- Audience cible: ${brief.targetAudience ?? "Non precise"}
-- Duree: ${brief.duration ?? "3 mois"}
-- Budget max: ${budgetMax} ${currency}
-- Canaux souhaites: ${JSON.stringify(brief.channels ?? [])}
-- Contraintes: ${JSON.stringify(brief.constraints ?? [])}
+- Objectif: ${sanitizeInline(brief.objective, { max: 1000 })}
+- Audience cible: ${sanitizeInline(brief.targetAudience ?? "Non precise", { max: 500 })}
+- Duree: ${sanitizeInline(brief.duration ?? "3 mois", { max: 100 })}
+- Budget max: ${budgetMax} ${sanitizeInline(currency, { max: 20 })}
+- Canaux souhaites: ${sanitizeInline(JSON.stringify(brief.channels ?? []), { max: 500 })}
+- Contraintes: ${sanitizeInline(JSON.stringify(brief.constraints ?? []), { max: 1000 })}
 
 Genere un plan de campagne JSON:
 {

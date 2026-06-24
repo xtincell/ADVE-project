@@ -28,6 +28,12 @@
  */
 
 import type { GloryToolDef } from "./tool-types";
+import {
+  adopsExpandOutputSchema,
+  adopsCrossPollinateOutputSchema,
+  adopsDecodeGridOutputSchema,
+  adopsDefendOutputSchema,
+} from "./glory-output-schemas";
 
 /**
  * AD/OPS · EXPAND — Champ sémantique 5D.
@@ -56,6 +62,7 @@ export const ADOPS_EXPAND_TOOL: GloryToolDef = {
     constraints: "r.mitigationPriorities",
   },
   outputFormat: "semantic_field_json",
+  outputSchema: adopsExpandOutputSchema,
   promptTemplate: `En tant que Direction de Création senior, génère le champ sémantique 5D pour la query "{{query}}".
 Contexte marque : {{brand_dna}}
 Contraintes : {{constraints}}
@@ -97,6 +104,7 @@ export const ADOPS_CROSS_TOOL: GloryToolDef = {
     brand_dna: "a.noyauIdentitaire",
   },
   outputFormat: "hybrid_brief_json",
+  outputSchema: adopsCrossPollinateOutputSchema,
   promptTemplate: `Hybride les concepts "{{concept_a}}" × "{{concept_b}}" en un brief créatif distinctif pour la marque ({{brand_dna}}).
 
 Renvoie un JSON :
@@ -182,6 +190,7 @@ export const ADOPS_DECODE_TOOL: GloryToolDef = {
     brand_context: "d.directionArtistique",
   },
   outputFormat: "decode_grid_json",
+  outputSchema: adopsDecodeGridOutputSchema,
   promptTemplate: `Décoder la référence visuelle suivante avec la grille AD/OPS 8 axes.
 Référence : {{reference_description}}
 URL : {{reference_url}}
@@ -234,6 +243,7 @@ export const ADOPS_DEFEND_TOOL: GloryToolDef = {
     brand_positioning: "d.positionnement",
   },
   outputFormat: "defense_speech_json",
+  outputSchema: adopsDefendOutputSchema,
   promptTemplate: `Construire le speech défensif AD/OPS pour la direction créative suivante.
 Concept central : {{concept}}
 Audience visée : {{audience}}

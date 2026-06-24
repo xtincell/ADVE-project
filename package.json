@@ -16,6 +16,8 @@
     "manifests:scaffold": "tsx scripts/scaffold-capability.ts",
     "plugin:scaffold": "tsx scripts/scaffold-plugin.ts",
     "audit:lighthouse": "tsx scripts/audit-lighthouse.ts",
+    "audit:llm": "tsx scripts/audit-llm-nodes.ts",
+    "audit:llm:strict": "tsx scripts/audit-llm-nodes.ts --strict",
     "preview:mobile": "tsx preview/preview-landing-mobile.ts",
     "preview:mobile:dark": "DARK_MODE=true tsx preview/preview-landing-mobile.ts",
     "preview:mobile:se": "VIEWPORT=iphonese tsx preview/preview-landing-mobile.ts",

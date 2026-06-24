@@ -24,6 +24,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { DEVOTION_LEVELS } from "@/lib/types/taxonomies";
 import { PillarISchema } from "@/lib/types/pillar-schemas";
+import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 
 // ADR-0063 / PR-K3-ter — sous-schémas. Le mega-appel (5 champs) est ÉCLATÉ en
 // 3 sous-appels focalisés ; chacun valide sa sous-partie. `.pick().partial()`
@@ -86,7 +87,10 @@ async function callInnovationJSON(args: {
       caller: `mestor:protocole-innovation:${args.label}`,
       strategyId: args.strategyId,
       model: "claude-sonnet-4-20250514",
-      system: args.system,
+      // LOT 1e — entrée non fiable neutralisée (anti-injection) : le prompt
+      // porte le contexte ADVE+R+T (piliers dérivés de la saisie fondateur,
+      // wrappés via wrapUntrusted plus bas) → rappel sécurité dans le system.
+      system: `${UNTRUSTED_NOTICE}\n\n${args.system}`,
       prompt: args.prompt,
       maxOutputTokens: args.maxOutputTokens,
     });
@@ -118,22 +122,27 @@ async function generateCatalogue(
   // breaker + fallback provider (gpt-5.5) + budget governance + cost tracking.
   const { callLLM } = await import("@/server/services/llm-gateway");
 
+  // LOT 1e — entrée non fiable neutralisée (anti-injection) : le contenu des
+  // piliers A/D/V/E/R/T dérive de la saisie fondateur → chaque bloc est encadré
+  // comme DONNÉE (jamais instruction) avant d'entrer dans le prompt.
   const context = ["a", "d", "v", "e", "r", "t"]
     .map(k => {
       const c = pillars[k];
       if (!c || Object.keys(c).length === 0) return `[${k.toUpperCase()}] Vide`;
-      return `[${k.toUpperCase()}]\n${JSON.stringify(c, null, 2)}`;
+      return wrapUntrusted(`PILIER ${k.toUpperCase()}`, JSON.stringify(c, null, 2), { max: 8000 });
     })
     .join("\n\n");
 
   // Extract risks and hypotheses for cross-reference
   const r = pillars.r ?? {};
   const t = pillars.t ?? {};
+  // LOT 1e — entrée non fiable neutralisée (anti-injection) : actions de
+  // mitigation (R) et hypothèses (T) dérivent de l'ADVE fondateur → wrappées.
   const risksContext = Array.isArray(r.mitigationPriorities)
-    ? `\nRISQUES À MITIGER:\n${(r.mitigationPriorities as Array<Record<string, unknown>>).map((m, i) => `${i}: ${m.action}`).join("\n")}`
+    ? `\n${wrapUntrusted("RISQUES À MITIGER", (r.mitigationPriorities as Array<Record<string, unknown>>).map((m, i) => `${i}: ${m.action}`).join("\n"), { max: 4000 })}`
     : "";
   const hypothesesContext = Array.isArray(t.hypothesisValidation)
-    ? `\nHYPOTHÈSES À TESTER:\n${(t.hypothesisValidation as Array<Record<string, unknown>>).filter(h => h.status === "HYPOTHESIS" || h.status === "TESTING").map((h, i) => `${i}: ${h.hypothesis}`).join("\n")}`
+    ? `\n${wrapUntrusted("HYPOTHÈSES À TESTER", (t.hypothesisValidation as Array<Record<string, unknown>>).filter(h => h.status === "HYPOTHESIS" || h.status === "TESTING").map((h, i) => `${i}: ${h.hypothesis}`).join("\n"), { max: 4000 })}`
     : "";
 
   const baseSystem = `Tu es le Protocole Innovation de l'essaim MESTOR. Tu cartographies le POTENTIEL TOTAL de la marque.

@@ -114,7 +114,7 @@ const ALLOWED_BARE_PILLAR_CONTENT_WRITES: ReadonlyArray<AcceptedBareWrite> = [
   },
   {
     file: "src/server/services/boot-sequence/index.ts",
-    line: 191,
+    line: 210,
     hole: "—",
     reason:
       "Boot-sequence : normalise le content pilier (legacy → schéma courant) avant scoring. Migration de forme, pas mutation métier. Reroute via gateway = dette P2.",
@@ -130,7 +130,7 @@ const ALLOWED_BARE_PILLAR_CONTENT_WRITES: ReadonlyArray<AcceptedBareWrite> = [
   },
   {
     file: "src/server/services/rtis-protocols/strategy.ts",
-    line: 713,
+    line: 722,
     hole: "—",
     reason:
       "Protocole S (lien I→S, ADR-0088) : writeback status-only du blob I — promeut les actions selectedFromI en SELECTED_FOR_ROADMAP avant d'agréger computePillarS, puis re-matérialise BrandAction. Promotion de statut, pas mutation de contenu métier (n'affecte pas le cache completionLevel/D-2). Reroute via gateway = dette P2.",

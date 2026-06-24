@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { callLLM } from "@/server/services/llm-gateway";
+import { wrapUntrusted, sanitizeInline, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import { BUSINESS_MODELS, ECONOMIC_MODELS, POSITIONING_ARCHETYPES, BRAND_NATURES } from "@/lib/types/business-context";
 
 export interface IntakeQuestion {
@@ -306,15 +307,17 @@ async function generateAiFollowUps(
       .map(([k, v]) => `- ${k}: ${typeof v === "string" ? v : JSON.stringify(v)}`)
       .join("\n");
 
+    // LOT 1e — entrées non fiables neutralisées (anti-injection) : secteur +
+    // positionnement déclarés par le dirigeant, placés inline dans une phrase.
     const contextInfo = businessContext
-      ? `Secteur d'activite: ${businessContext.sector ?? "non specifie"}\nPositionnement: ${businessContext.positioning ?? "non specifie"}`
+      ? `Secteur d'activite: ${sanitizeInline(businessContext.sector ?? "non specifie", { max: 80 })}\nPositionnement: ${sanitizeInline(businessContext.positioning ?? "non specifie", { max: 80 })}`
       : "Contexte business non disponible.";
 
     const { text: rawText } = await callLLM({
       caller: "quick-intake:question-bank",
       purpose: "intake-followup",
       maxOutputTokens: 512,
-      system: "Tu es Mestor, le guide strategique de La Fusee. Réponses brèves, conversationnelles, jamais académiques.",
+      system: `${UNTRUSTED_NOTICE}\n\nTu es Mestor, le guide strategique de La Fusee. Réponses brèves, conversationnelles, jamais académiques.`,
       prompt: `Tu accompagnes un dirigeant dans un diagnostic de marque en mode interview conversationnelle.
 
 Ton style:
@@ -329,7 +332,7 @@ Contexte business:
 ${contextInfo}
 
 Reponses deja donnees:
-${responseSummary || "Aucune reponse encore."}
+${responseSummary ? wrapUntrusted("Reponses deja donnees", responseSummary, { max: 6000 }) : "Aucune reponse encore."}
 
 Genere exactement 1 ou 2 questions de suivi en francais qui:
 1. Creusent les lacunes ou zones vagues dans les reponses existantes

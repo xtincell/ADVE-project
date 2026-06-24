@@ -32,6 +32,7 @@ import {
   aggregateInitiativeSet,
   type RouteKey,
 } from "@/lib/strategy/roadmap-routes";
+import { sanitizeInline, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 
 // Re-export for backward compatibility (authoritative server compute).
 export { computeRoadmapRoutes };
@@ -119,7 +120,10 @@ async function callStrategyJSON(args: {
       // Force du JSON valide côté provider (Ollama/OpenAI). Sans ça le 8B local
       // ajoute des préambules en prose / double les accolades → extractJSON KO.
       responseFormat: "json_object",
-      system: args.system,
+      // LOT 1e — entrée non fiable neutralisée (anti-injection) : le prompt porte
+      // nom de marque + perceptions + axes dérivés de l'ADVE fondateur
+      // (sanitizeInline côté appelant) → rappel sécurité dans le system.
+      system: `${UNTRUSTED_NOTICE}\n\n${args.system}`,
       prompt: args.prompt,
       maxOutputTokens: args.maxOutputTokens,
     });
@@ -338,12 +342,17 @@ async function generateStrategy(
   // 6. Synthèse exécutive — 1 appel LLM OPTIONNEL, fallback templaté déterministe.
   let syntheseExecutive = buildSyntheseTemplate(pillars, selected, globalBudget);
   try {
+    // LOT 1e — entrée non fiable neutralisée (anti-injection) : nom de marque,
+    // perceptions Overton et libellés d'axes dérivent du contenu ADVE fondateur
+    // (les axes reprennent le texte des actions du catalogue I). Interpolés au
+    // fil de phrases → sanitizeInline (casse fences/balises de rôle, plafonne).
+    // Les compteurs/budget sont des nombres internes calculés → laissés bruts.
     const ctx = [
-      `Marque : ${String((pillars.a as Record<string, unknown>)?.nomMarque ?? "")}`,
-      `Perception actuelle : ${String((overton as Record<string, unknown>)?.perceptionActuelle ?? "?")}`,
-      `Perception cible : ${String((overton as Record<string, unknown>)?.perceptionCible ?? "?")}`,
+      `Marque : ${sanitizeInline((pillars.a as Record<string, unknown>)?.nomMarque ?? "", { max: 200 })}`,
+      `Perception actuelle : ${sanitizeInline((overton as Record<string, unknown>)?.perceptionActuelle ?? "?", { max: 600 })}`,
+      `Perception cible : ${sanitizeInline((overton as Record<string, unknown>)?.perceptionCible ?? "?", { max: 600 })}`,
       `${selected.length} actions retenues, budget ${globalBudget} FCFA`,
-      `Axes : ${axesStrategiques.map((a) => a.axe).join("; ")}`,
+      `Axes : ${sanitizeInline(axesStrategiques.map((a) => a.axe).join("; "), { max: 1000 })}`,
     ].join("\n");
     const res = await callStrategyJSON({
       strategyId, label: "synthese", schema: SyntheseLLMSchema, maxOutputTokens: 1200,
