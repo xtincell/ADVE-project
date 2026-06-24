@@ -524,7 +524,11 @@ export const socialRouter = createTRPCRouter({
   }).mutation(async ({ ctx, input }) => {
     const { fetchOfficialApiFollowers } = await import("@/server/services/anubis/social-audit");
     const operatorId = ctx.session.user.id;
-    const result = await fetchOfficialApiFollowers(operatorId, input.strategyId, input.handles as never);
+    const result = await fetchOfficialApiFollowers(
+      operatorId,
+      input.strategyId,
+      input.handles as Parameters<typeof fetchOfficialApiFollowers>[2],
+    );
     return result;
   }),
 
@@ -548,7 +552,11 @@ export const socialRouter = createTRPCRouter({
   }).mutation(async ({ ctx, input }) => {
     const { fetchThirdPartyFollowers } = await import("@/server/services/anubis/social-audit");
     const operatorId = ctx.session.user.id;
-    const result = await fetchThirdPartyFollowers(operatorId, input.strategyId, input.handles as never);
+    const result = await fetchThirdPartyFollowers(
+      operatorId,
+      input.strategyId,
+      input.handles as Parameters<typeof fetchThirdPartyFollowers>[2],
+    );
     return result;
   }),
 

@@ -61,7 +61,7 @@ export async function resolveSessionUserId(ctx: Context): Promise<string> {
       create: {
         email: sessionUser.email,
         name: sessionUser.name ?? null,
-        role: role as never,
+        role,
         ...(operatorId ? { operatorId } : {}),
       },
       select: { id: true },

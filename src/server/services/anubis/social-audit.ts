@@ -28,6 +28,7 @@
  *   - DEGRADED + INSUFFICIENT_DATA  — réponse vide ou incohérente
  */
 
+import type { Prisma, SocialPlatform } from "@prisma/client";
 import { db } from "@/lib/db";
 import type { ConnectorResult } from "@/domain";
 
@@ -62,7 +63,7 @@ async function persistSnapshot(
   await db.followerSnapshot.create({
     data: {
       strategyId,
-      platform: data.platform as never,
+      platform: data.platform as SocialPlatform,
       handle: data.handle.replace(/^@/, ""),
       followerCount: data.followerCount,
       followingCount: data.followingCount ?? null,
@@ -298,13 +299,13 @@ export async function upsertSocialConnector(
   if (existing) {
     return db.externalConnector.update({
       where: { id: existing.id },
-      data: { config: config as never, status: "ACTIVE", updatedAt: new Date() },
+      data: { config: config as Prisma.InputJsonValue, status: "ACTIVE", updatedAt: new Date() },
       select: { id: true },
     });
   }
 
   return db.externalConnector.create({
-    data: { operatorId, connectorType, config: config as never, status: "ACTIVE" },
+    data: { operatorId, connectorType, config: config as Prisma.InputJsonValue, status: "ACTIVE" },
     select: { id: true },
   });
 }
