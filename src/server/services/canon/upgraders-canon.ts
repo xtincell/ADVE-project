@@ -50,6 +50,32 @@ export const PILLAR_A = {
     "UPgraders ne se vit pas comme une agence de plus : c'est l'opérateur qui industrialise l'ascension des marques. Nous croyons que chaque marque organique porte un noyau ADVE qui mérite une trajectoire orbitale complète — et que la preuve doit primer sur la promesse. Pour le tenir, nous avons forgé nos propres instruments (La Fusée, Argos) ; nous les opérons nous-mêmes au service du client. Pas de bon sens — du protocole.",
   citationFondatrice:
     "« On ne vend pas des moyens, on vend un état final mesuré. De la poussière à l'étoile. » — Alexandre Djengue, fondateur d'UPgraders",
+  // Équipe dirigeante réelle (source : dossier agence UPgraders / data.ts TEAM).
+  // Avant : stub « Fondateur UP.graders ». Ici la vraie direction historique.
+  equipeDirigeante: [
+    {
+      nom: "Alexandre « Xtincell » Djengue",
+      role: "CEO — Direction générale & créative",
+      bio: "Pilote la méthode ADVE/RTIS, l'OS La Fusée et La Guilde. Opère aussi en mission (image, motion, DA) quand le brief le demande. CEO depuis 2025.",
+      experiencePasse: ["UPgraders (CEO depuis 2025)", "Directeur Créatif MATANGA Agency", "Friends Studio (binôme production)"],
+      competencesCles: ["stratégie de marque (ADVE/RTIS)", "architecture d'Industry OS gouverné", "direction créative & artistique", "photo/vidéo/motion"],
+      allocationPct: 100,
+    },
+    {
+      nom: "Ingrid Nya Ngatchou",
+      role: "Co-fondatrice — Éminence stratégique (ex-CEO)",
+      bio: "Co-fondatrice (2017) et ancienne CEO. Architecte des premières années : positionnement, structuration, premières grandes missions.",
+      experiencePasse: ["UPgraders (co-fondatrice 2017, ex-CEO)"],
+      competencesCles: ["positionnement de marque", "structuration d'agence", "direction stratégique"],
+    },
+    {
+      nom: "Jean-Philippe Veigne",
+      role: "Co-fondateur — Gouvernance (ex-CEO)",
+      bio: "Co-fondateur (2017) et ancien CEO. Pilier des opérations historiques ; référence en gouvernance et trajectoire long terme.",
+      experiencePasse: ["UPgraders (co-fondateur 2017, ex-CEO)"],
+      competencesCles: ["opérations agence", "gouvernance", "trajectoire long terme"],
+    },
+  ],
 } as const;
 
 // ── PILIER D — DIFFÉRENCIATION (positionnement de l'ombrelle) ───────────

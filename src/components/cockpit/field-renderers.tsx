@@ -443,12 +443,12 @@ export function ObjectCard({ label, obj, onFocus }: { label: string; obj: Record
                 {Object.entries(v as Record<string, unknown>).filter(([, sv]) => sv != null && sv !== "").slice(0, 6).map(([sk, sv]) => (
                   <div key={sk} className="flex gap-1.5 text-2xs">
                     <span className="text-foreground-muted/60 shrink-0">{getFieldLabel(sk)}:</span>
-                    <span className="text-white/60 truncate">{typeof sv === "string" ? sv.slice(0, 80) : Array.isArray(sv) ? sv.slice(0, 3).map(x => typeof x === "string" ? x : extractLabel(x as Record<string, unknown>)).join(", ") + (sv.length > 3 ? ` +${sv.length - 3}` : "") : typeof sv === "number" ? sv.toLocaleString() : String(sv)}</span>
+                    <span className="text-white/60 truncate">{typeof sv === "string" ? sv.slice(0, 80) : Array.isArray(sv) ? sv.slice(0, 3).map(x => typeof x === "string" ? x : extractLabel(x as Record<string, unknown>)).join(", ") + (sv.length > 3 ? ` +${sv.length - 3}` : "") : typeof sv === "number" ? sv.toLocaleString() : scalarText(sv)}</span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-white/80 mt-0.5">{String(v)}</p>
+              <p className="text-xs text-white/80 mt-0.5">{scalarText(v)}</p>
             )}
           </div>
         ))}
@@ -603,7 +603,7 @@ function FocusValue({ value }: { value: unknown }) {
     if (typeof value[0] === "string") {
       return (
         <div className="mt-1 flex flex-wrap gap-1">
-          {value.map((v, i) => <span key={i} className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-white">{v}</span>)}
+          {value.map((v, i) => <span key={i} className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-white">{typeof v === "string" ? v : scalarText(v)}</span>)}
         </div>
       );
     }
@@ -635,7 +635,7 @@ function FocusValue({ value }: { value: unknown }) {
       </div>
     );
   }
-  return <p className="mt-0.5 text-sm text-white">{String(value)}</p>;
+  return <p className="mt-0.5 text-sm text-white">{scalarText(value)}</p>;
 }
 
 export function FocusModal({ item, onClose }: { item: Record<string, unknown>; onClose: () => void }) {
@@ -1644,6 +1644,22 @@ function extractLabel(obj: Record<string, unknown>): string {
   if (typeof firstStr === "string") return firstStr.slice(0, 60);
   // Fallback: count of fields
   return `(${Object.keys(obj).length} champs)`;
+}
+
+/**
+ * Rend n'importe quelle valeur en texte lisible — JAMAIS « [object Object] ».
+ * Les objets passent par `extractLabel`, les tableaux sont joints récursivement.
+ * À utiliser partout où l'on stringifierait naïvement une valeur de champ
+ * (qui peut être un objet imbriqué à cause d'un drift LLM ou de données legacy).
+ */
+function scalarText(v: unknown): string {
+  if (v == null || v === "") return "";
+  if (typeof v === "string") return v;
+  if (typeof v === "number") return v.toLocaleString();
+  if (typeof v === "boolean") return v ? "Oui" : "Non";
+  if (Array.isArray(v)) return v.map(scalarText).filter(Boolean).join(", ");
+  if (typeof v === "object") return extractLabel(v as Record<string, unknown>);
+  return String(v);
 }
 
 function detectNameKey(items: Array<Record<string, unknown>>): string | null {
