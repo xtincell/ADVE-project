@@ -80,6 +80,31 @@ export const notoriaRouter = createTRPCRouter({
     .input(z.object({ strategyId: z.string() }))
     .mutation(({ input }) => generateTypedRecommendations(input.strategyId)),
 
+  /** Génère des recommandations ANCRÉES dans les sources importées (vault).
+   *  Scanne toutes les BrandDataSource de la stratégie et produit des recos
+   *  CONFIRM/CHALLENGE/INFIRM/ADD par pilier (dérivation cross-pilier
+   *  déterministe ÉTAPE 1 + scan LLM ciblé ÉTAPE 2). Les recos atterrissent dans
+   *  la même file Recommendation que le reste de Notoria. Comble le trou : avant,
+   *  seul le bouton « Enrichir » par-pilier consultait les sources — le hub
+   *  Notoria les ignorait. */
+  generateFromVault: operatorProcedure
+    .input(z.object({ strategyId: z.string() }))
+    .mutation(async ({ input }) => {
+      const { enrichAllFromVault } = await import("@/server/services/vault-enrichment");
+      const perPillar = await enrichAllFromVault(input.strategyId);
+      const count = Object.values(perPillar).reduce(
+        (sum, r) => sum + (r.recommendations?.length ?? 0),
+        0,
+      );
+      const errored = Object.entries(perPillar)
+        .filter(([, r]) => r.error)
+        .map(([k]) => k);
+      const noSources = Object.values(perPillar).every(
+        (r) => (r.vaultSize ?? 0) === 0,
+      );
+      return { count, noSources, erroredPillars: errored };
+    }),
+
   /** ADR-0089 — Sélection de l'ambition (Conservateur / Cible / Ambitieux).
    *  Intent gouverné SELECT_ROADMAP_ROUTE : le dashboard S re-agrège sur le
    *  jeu de stratégie de la route choisie (manual-first parity ADR-0060). */

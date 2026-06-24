@@ -24,7 +24,7 @@ import { type StepperStep } from "@/components/primitives/stepper";
 import {
   Sparkles, Loader2, CheckCircle, ThumbsUp, ThumbsDown,
   ChevronRight, ChevronDown, Zap, Rocket, Route, Shield,
-  AlertTriangle, ArrowRight,
+  AlertTriangle, ArrowRight, FileText,
 } from "lucide-react";
 // Phase 21 F-A.5 (ADR-0069) — source unique de vérité pour le rendu chip
 // pillaire. Stale-aware via `byPillar[k]` exposé par notoria.getDashboard.
@@ -119,6 +119,21 @@ export function NotoriaPage() {
       );
     },
   });
+  // Recos ancrées dans les sources importées (vault) — comble le trou
+  // « Notoria ignore les sources ».
+  const generateFromVaultMutation = trpc.notoria.generateFromVault.useMutation({
+    onSuccess: (data) => {
+      recosQuery.refetch();
+      dashboardQuery.refetch();
+      setApplyFeedback(
+        data.noSources
+          ? { type: "warning", message: "Aucune source importée — ajoute des documents dans l'onglet Sources." }
+          : data.count > 0
+            ? { type: "success", message: `${data.count} recommandation(s) générée(s) depuis les sources importées.` }
+            : { type: "warning", message: "Sources scannées — aucune divergence vs le modèle actuel." },
+      );
+    },
+  });
   const acceptMutation = trpc.notoria.acceptRecos.useMutation({
     onSuccess: () => { recosQuery.refetch(); dashboardQuery.refetch(); },
   });
@@ -177,7 +192,7 @@ export function NotoriaPage() {
   const pipeline = pipelineQuery.data;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const batches: any[] = batchesQuery.data ?? [];
-  const isMutating = generateMutation.isPending || generateTypedMutation.isPending || acceptMutation.isPending || rejectMutation.isPending || applyMutation.isPending;
+  const isMutating = generateMutation.isPending || generateTypedMutation.isPending || generateFromVaultMutation.isPending || acceptMutation.isPending || rejectMutation.isPending || applyMutation.isPending;
 
   // Split recos: actionable (PENDING + ACCEPTED) vs history (APPLIED/REJECTED/REVERTED/EXPIRED)
   const actionableRecos = allRecos.filter((r) => r.status === "PENDING" || r.status === "ACCEPTED");
@@ -509,6 +524,10 @@ export function NotoriaPage() {
               {/* ADR-0088 — function-calling generation (typed mutations by id) */}
               <button onClick={() => generateTypedMutation.mutate({ strategyId: strategyId! })} disabled={anyPending || generateTypedMutation.isPending}>
                 <Zap style={{ color: "var(--accent)" }} />Générer recos ciblées (function-calling)
+              </button>
+              {/* Recos ancrées dans les sources importées (vault) */}
+              <button onClick={() => generateFromVaultMutation.mutate({ strategyId: strategyId! })} disabled={anyPending || generateFromVaultMutation.isPending}>
+                <FileText style={{ color: "var(--accent)" }} />Générer depuis les sources importées
               </button>
               <button onClick={() => generateMutation.mutate({ strategyId: strategyId!, missionType: "S_SYNTHESIS" })} disabled={anyPending}>
                 <Route style={{ color: "var(--danger)" }} />Re-synthétiser Stratégie (S)
