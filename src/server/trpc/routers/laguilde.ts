@@ -159,6 +159,10 @@ export const laGuildeRouter = createTRPCRouter({
     caller: "laguilde:postMission",
   }).mutation(async ({ ctx, input }) => {
     const user = ctx.session.user;
+    // Résout vers un User réellement présent en base — la session JWT peut
+    // porter un id orphelin après re-seed (sinon FK Strategy_userId_fkey).
+    const { resolveSessionUserId } = await import("../resolve-session-user");
+    const resolvedUserId = await resolveSessionUserId(ctx);
 
     const operator = await db.operator.findUnique({
       where: { slug: UPGRADERS_OPERATOR_SLUG },
@@ -190,14 +194,14 @@ export const laGuildeRouter = createTRPCRouter({
 
     // Strategy shell — conteneur stratégique minimal exigé par Mission.strategyId.
     let strategy = await db.strategy.findFirst({
-      where: { clientId: client.id, userId: user.id },
+      where: { clientId: client.id, userId: resolvedUserId },
       select: { id: true },
     });
     if (!strategy) {
       strategy = await db.strategy.create({
         data: {
           name: input.brandName,
-          userId: user.id,
+          userId: resolvedUserId,
           operatorId: operator.id,
           clientId: client.id,
           status: "ACTIVE",
