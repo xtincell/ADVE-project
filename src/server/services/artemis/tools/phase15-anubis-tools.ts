@@ -14,19 +14,25 @@
  * - Loi 3 (Conservation carburant) : ad-copy LLM cost ~$0.02-0.05 par variant
  */
 
-import type { GloryToolDef } from "./tool-types";
+import { defineHybridTool, type GloryToolDef, type GloryToolNature } from "./tool-types";
+
+const ALL_NATURES: readonly [GloryToolNature, ...GloryToolNature[]] = [
+  "PRODUCT", "SERVICE", "CHARACTER_IP", "FESTIVAL_IP", "MEDIA_IP",
+  "RETAIL_SPACE", "PLATFORM", "INSTITUTION", "PERSONAL",
+];
 import {
   adCopyOutputSchema,
   audienceTargeterOutputSchema,
 } from "./glory-output-schemas";
 
 export const PHASE15_ANUBIS_TOOLS: GloryToolDef[] = [
-  {
+  defineHybridTool({
     slug: "ad-copy-generator",
     name: "Générateur d'Ad Copy",
     layer: "CR",
     order: 61,
-    executionType: "LLM",
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["V", "S"],
     requiredDrivers: [],
     dependencies: [],
@@ -56,14 +62,15 @@ Produis 3 variants distincts (A/B/C) :
 
 Format JSON : { "variants": [{label: "A", copy: "...", cta: "...", hashtags: [...]}], "rationale": "..." }.`,
     status: "ACTIVE",
-  },
+  }),
 
-  {
+  defineHybridTool({
     slug: "audience-targeter",
     name: "Cibleur d'Audience",
     layer: "HYBRID",
     order: 62,
-    executionType: "LLM",
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["D", "T"],
     requiredDrivers: [],
     dependencies: [],
@@ -92,7 +99,7 @@ Produis un objet rules JSON queryable :
 
 Format JSON : { "rules": {...}, "estimatedReach": "...", "rationale": "..." }.`,
     status: "ACTIVE",
-  },
+  }),
 
   {
     slug: "broadcast-scheduler",

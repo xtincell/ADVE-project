@@ -15,7 +15,12 @@
  * - Loi 3 (Conservation carburant) : tools qualityTier B/A, costEstimate ~$0-0.05
  */
 
-import type { GloryToolDef } from "./tool-types";
+import { defineHybridTool, type GloryToolDef, type GloryToolNature } from "./tool-types";
+
+const ALL_NATURES: readonly [GloryToolNature, ...GloryToolNature[]] = [
+  "PRODUCT", "SERVICE", "CHARACTER_IP", "FESTIVAL_IP", "MEDIA_IP",
+  "RETAIL_SPACE", "PLATFORM", "INSTITUTION", "PERSONAL",
+];
 import {
   crewMatcherOutputSchema,
   formationRecommenderOutputSchema,
@@ -23,12 +28,13 @@ import {
 } from "./glory-output-schemas";
 
 export const PHASE14_IMHOTEP_TOOLS: GloryToolDef[] = [
-  {
+  defineHybridTool({
     slug: "crew-matcher",
     name: "Matcheur de Talents",
     layer: "HYBRID",
     order: 51,
-    executionType: "LLM",
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["I"],
     requiredDrivers: [],
     dependencies: [],
@@ -54,7 +60,7 @@ Pour chaque candidate fourni en input par matching-engine :
 
 Format JSON : { "ranked": [{talentProfileId, matchScore, matchReasons, devotionAlignment}], "rationale": "string" }.`,
     status: "ACTIVE",
-  },
+  }),
 
   {
     slug: "talent-evaluator",
@@ -82,12 +88,13 @@ Format JSON : { "ranked": [{talentProfileId, matchScore, matchReasons, devotionA
     status: "ACTIVE",
   },
 
-  {
+  defineHybridTool({
     slug: "formation-recommender",
     name: "Recommandeur de Formation",
     layer: "HYBRID",
     order: 53,
-    executionType: "LLM",
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["I"],
     requiredDrivers: [],
     dependencies: [],
@@ -112,14 +119,15 @@ Pour chaque cours :
 
 Format JSON : { "courses": [{courseId, title, rationale, estimatedDurationMin}] }.`,
     status: "ACTIVE",
-  },
+  }),
 
-  {
+  defineHybridTool({
     slug: "qc-evaluator",
     name: "Évaluateur QC Deliverable",
     layer: "DC",
     order: 54,
-    executionType: "LLM",
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["E", "T"],
     requiredDrivers: [],
     dependencies: [],
@@ -140,5 +148,5 @@ Pour chaque catégorie d'issue (format/brand/content/pillar) :
 
 Format JSON : { "passed": bool, "score": 0-100, "issues": [{type, severity, message, fix}] }.`,
     status: "ACTIVE",
-  },
+  }),
 ];

@@ -122,7 +122,7 @@ describe("ADR-0040 — Sections Oracle dérivées sous gouvernance Artemis", () 
     );
     const tool = getGloryTool("synthesize-section");
     expect(tool).toBeDefined();
-    expect(tool?.executionType).toBe("LLM");
+    expect(tool?.executionType).toBe("HYBRID");
     expect(tool?.layer).toBe("DC");
   });
 

@@ -82,16 +82,23 @@ export type {
 } from "./tool-types";
 export { defineHybridTool } from "./tool-types";
 import type { GloryLayer, GloryExecutionType, GloryToolDef } from "./tool-types";
+import { defineHybridTool, type GloryToolNature } from "./tool-types";
 
 // ─── LAYER CR — Concepteur-Rédacteur (10 tools) ─────────────────────────────
 
+const ALL_NATURES: readonly [GloryToolNature, ...GloryToolNature[]] = [
+  "PRODUCT", "SERVICE", "CHARACTER_IP", "FESTIVAL_IP", "MEDIA_IP",
+  "RETAIL_SPACE", "PLATFORM", "INSTITUTION", "PERSONAL",
+];
+
 const CR_TOOLS: GloryToolDef[] = [
-  {
+  defineHybridTool({
     slug: "concept-generator",
     name: "Générateur de Concepts",
     layer: "CR",
     order: 1,
-    executionType: "LLM",
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["A", "D"],
     requiredDrivers: [],
     dependencies: [],
@@ -117,13 +124,14 @@ Ton : {{tone}}
 Contraintes : {{constraints}}
 Pour chaque concept, fournis : titre, accroche, description (3 lignes), déclinaisons possibles.`,
     status: "ACTIVE",
-  },
-  {
+  }),
+  defineHybridTool({
     slug: "script-writer",
     name: "Scripteur",
     layer: "CR",
     order: 2,
-    executionType: "LLM",
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["A", "E"],
     requiredDrivers: ["VIDEO", "TV", "RADIO"],
     dependencies: ["concept-generator"],
@@ -142,13 +150,14 @@ CTA : {{cta}}
 Structure : Accroche (3s) → Développement → Climax → CTA.
 Format : dialogues, indications de réalisation, musique/SFX.`,
     status: "ACTIVE",
-  },
-  {
+  }),
+  defineHybridTool({
     slug: "long-copy-craftsman",
     name: "Artisan du Long Copy",
     layer: "CR",
     order: 3,
-    executionType: "LLM",
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["A", "V"],
     requiredDrivers: ["PRINT", "WEBSITE"],
     dependencies: [],
@@ -165,13 +174,14 @@ Format : dialogues, indications de réalisation, musique/SFX.`,
 Angle : {{angle}} | Cible : {{target}} | Longueur : {{length}} mots
 Structure narrative : Hook → Problem → Agitation → Solution → Proof → CTA.`,
     status: "ACTIVE",
-  },
-  {
+  }),
+  defineHybridTool({
     slug: "dialogue-writer",
     name: "Dialoguiste",
     layer: "CR",
     order: 4,
-    executionType: "LLM",
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["A", "E"],
     requiredDrivers: ["VIDEO", "RADIO"],
     dependencies: [],
@@ -190,13 +200,14 @@ Personnages : {{characters}}
 Ton : {{tone}}
 Message clé à intégrer naturellement : {{key_message}}`,
     status: "ACTIVE",
-  },
-  {
+  }),
+  defineHybridTool({
     slug: "claim-baseline-factory",
     name: "Usine à Claims & Baselines",
     layer: "CR",
     order: 5,
-    executionType: "LLM",
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["D", "V"],
     requiredDrivers: [],
     dependencies: [],
@@ -216,7 +227,7 @@ Bénéfice clé : {{key_benefit}}
 Ton : {{tone}}
 Pour chaque proposition : version courte (≤5 mots), version longue (≤10 mots), justification.`,
     status: "ACTIVE",
-  },
+  }),
   {
     slug: "print-ad-architect",
     name: "Architecte Print",
@@ -273,12 +284,13 @@ Stratégie hashtags : {{hashtags_strategy}}
 Fournis : copy principal, variantes A/B, hashtags, CTA, heures de publication recommandées.`,
     status: "ACTIVE",
   },
-  {
+  defineHybridTool({
     slug: "storytelling-sequencer",
     name: "Séquenceur Narratif",
     layer: "CR",
     order: 8,
-    executionType: "LLM",  // Narrative arc structuring — needs creative judgment
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["A", "E"],
     requiredDrivers: [],
     dependencies: ["concept-generator"],
@@ -297,13 +309,14 @@ Arc : {{story_arc}}
 Plateforme : {{platform}} | Fréquence : {{frequency}}
 Pour chaque épisode : titre, hook, contenu, cliffhanger, CTA.`,
     status: "ACTIVE",
-  },
-  {
+  }),
+  defineHybridTool({
     slug: "wordplay-cultural-bank",
     name: "Banque Jeux de Mots & Références Culturelles",
     layer: "CR",
     order: 9,
-    executionType: "LLM",  // Creative wordplay — needs linguistic creativity
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["A", "D"],
     requiredDrivers: [],
     dependencies: [],
@@ -322,7 +335,7 @@ Marque : {{brand_name}} | Marché : {{market}}
 Contexte culturel : {{cultural_context}} | Langue : {{language}}
 Catégories : jeux de mots, références pop culture, expressions locales, double sens.`,
     status: "ACTIVE",
-  },
+  }),
   {
     slug: "brief-creatif-interne",
     name: "Brief Créatif Interne",
@@ -378,12 +391,13 @@ Territoire créatif : {{creative_territory}}
 Livrable : phases, concepts par phase, déclinaisons par canal, cohérence narrative.`,
     status: "ACTIVE",
   },
-  {
+  defineHybridTool({
     slug: "creative-evaluation-matrix",
     name: "Matrice d'Évaluation Créative",
     layer: "DC",
     order: 12,
-    executionType: "LLM",  // Subjective evaluation — needs human-like judgment
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["D", "T"],
     requiredDrivers: [],
     dependencies: [],
@@ -482,13 +496,14 @@ Règles : evaluations MIN 1, MAX 8 (si pas de proposals : 1 entry "à enrichir" 
       // Phase 17 (ADR-0037) — creative-evaluation-matrix : compare concepts vs personas
       requires: ["CONCEPT", "PERSONA"],
     },
-  },
-  {
+  }),
+  defineHybridTool({
     slug: "idea-killer-saver",
     name: "Idea Killer/Saver",
     layer: "DC",
     order: 13,
-    executionType: "LLM",  // Triage decisions — needs judgment
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["D"],
     requiredDrivers: [],
     dependencies: ["creative-evaluation-matrix"],
@@ -505,7 +520,7 @@ Règles : evaluations MIN 1, MAX 8 (si pas de proposals : 1 entry "à enrichir" 
 Pour chaque idée, verdict : KILL (pourquoi), SAVE (pourquoi + renforcement), PIVOT (vers quoi).
 Critères : faisabilité, différenciation, cohérence marque, potentiel viral.`,
     status: "ACTIVE",
-  },
+  }),
   {
     slug: "multi-team-coherence-checker",
     name: "Vérificateur de Cohérence Multi-Équipe",
@@ -1047,12 +1062,13 @@ Livrable : allocation par plateforme, formats, ciblages, calendrier, KPI cibles,
 // ─── LAYER BRAND — Visual Identity Pipeline (10 tools, sequential) ───────────
 
 const BRAND_TOOLS: GloryToolDef[] = [
-  {
+  defineHybridTool({
     slug: "semiotic-brand-analyzer",
     name: "Analyseur Sémiotique de Marque",
     layer: "BRAND",
     order: 31,
-    executionType: "LLM",  // Semiotic analysis requires interpretive judgment
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["A", "D"],
     requiredDrivers: [],
     dependencies: [],
@@ -1069,7 +1085,7 @@ Identité actuelle : {{brand_identity}}
 Codes sectoriels : {{sector_codes}} | Contexte culturel : {{cultural_context}}
 Analyse : signifiants, signifiés, connotations, codes culturels, positionnement sémiotique.`,
     status: "ACTIVE",
-  },
+  }),
   {
     slug: "visual-landscape-mapper",
     name: "Cartographe du Paysage Visuel",
@@ -1103,12 +1119,13 @@ Map : codes visuels dominants, espaces libres, opportunités de différenciation
       requires: [],
     },
   },
-  {
+  defineHybridTool({
     slug: "visual-moodboard-generator",
     name: "Générateur de Moodboard Visuel",
     layer: "BRAND",
     order: 33,
-    executionType: "LLM",  // Creative direction — needs aesthetic judgment
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["D", "A"],
     requiredDrivers: [],
     dependencies: ["visual-landscape-mapper"],
@@ -1136,7 +1153,7 @@ Par direction : concept, ambiance, références visuelles, palette suggérée.`,
       // Phase 17 (ADR-0037) — visual-moodboard-generator : décline la big idea en 3 directions visuelles
       requires: ["BIG_IDEA"],
     },
-  },
+  }),
   {
     slug: "chromatic-strategy-builder",
     name: "Constructeur de Stratégie Chromatique",
@@ -1181,12 +1198,13 @@ Accessibilité : {{accessibility}}
 Livrable : familles, hiérarchie, échelle, line-height, letter-spacing, web/print specs.`,
     status: "ACTIVE",
   },
-  {
+  defineHybridTool({
     slug: "logo-type-advisor",
     name: "Conseiller en Logotype",
     layer: "BRAND",
     order: 36,
-    executionType: "LLM",  // Logo direction requires creative/strategic judgment
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["D", "A"],
     requiredDrivers: [],
     dependencies: ["typography-system-architect"],
@@ -1205,13 +1223,14 @@ Nom : {{brand_name}} | Valeurs : {{brand_values}}
 Système typo : {{typography_system}} | Stratégie chromatique : {{chromatic_strategy}}
 Livrable : type de logo recommandé, direction stylistique, do/don't, déclinaisons nécessaires.`,
     status: "ACTIVE",
-  },
-  {
+  }),
+  defineHybridTool({
     slug: "logo-validation-protocol",
     name: "Protocole de Validation Logo",
     layer: "BRAND",
     order: 37,
-    executionType: "LLM",  // Logo evaluation requires aesthetic judgment
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["D"],
     requiredDrivers: [],
     dependencies: ["logo-type-advisor"],
@@ -1227,7 +1246,7 @@ Critères : lisibilité (5 tailles), mémorabilité, reproductibilité, cohéren
 Contextes : digital, print, packaging, signalétique, favicon.
 Score chaque proposition et recommande la direction finale.`,
     status: "ACTIVE",
-  },
+  }),
   {
     slug: "design-token-architect",
     name: "Architecte de Design Tokens",
@@ -1251,12 +1270,13 @@ Spacing : {{spacing}} | Motion : {{motion}}
 Format : JSON compatible avec Tailwind/CSS variables, avec nommage sémantique.`,
     status: "ACTIVE",
   },
-  {
+  defineHybridTool({
     slug: "motion-identity-designer",
     name: "Designer d'Identité Motion",
     layer: "BRAND",
     order: 39,
-    executionType: "LLM",  // Motion design direction requires creative judgment
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["D", "E"],
     requiredDrivers: ["VIDEO"],
     dependencies: ["design-token-architect"],
@@ -1274,7 +1294,7 @@ Tokens : {{design_tokens}}
 Contextes : transitions UI, vidéo intro/outro, loading states, micro-interactions.
 Livrable : principes (easing, durée, rythme), bibliothèque d'animations, guidelines motion.`,
     status: "ACTIVE",
-  },
+  }),
   {
     slug: "brand-guidelines-generator",
     name: "Générateur de Brand Guidelines",
@@ -1376,12 +1396,13 @@ Livrable : genre musical, tempo BPM, ambiance, SFX clés, specs voix off (genre 
   },
 
   // ── MANIFESTE-A : 2 outils manquants ──
-  {
+  defineHybridTool({
     slug: "tone-of-voice-designer",
     name: "Designer Ton de Voix",
     layer: "CR",
     order: 44,
-    executionType: "LLM",
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["A", "D"],
     requiredDrivers: [],
     dependencies: [],
@@ -1406,13 +1427,14 @@ Livrable : personnalité en 5-7 traits, registre linguistique, vocabulaire signa
 expressions interdites, do/don't par canal (social, print, corporate, customer service),
 3 exemples de reformulation (avant/après).`,
     status: "ACTIVE",
-  },
-  {
+  }),
+  defineHybridTool({
     slug: "manifesto-writer",
     name: "Rédacteur de Manifeste",
     layer: "CR",
     order: 45,
-    executionType: "LLM",
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["A"],
     requiredDrivers: [],
     dependencies: ["tone-of-voice-designer", "concept-generator"],
@@ -1438,7 +1460,7 @@ Baseline : {{baseline}}
 Format : texte fondateur de 300-500 mots. Structure : constat → révolte → vision → promesse → appel.
 Ton : celui de la charte. Pas de jargon marketing. Doit donner des frissons.`,
     status: "ACTIVE",
-  },
+  }),
 
   // ── BRANDBOOK-D : 2 outils manquants ──
   {
@@ -1661,12 +1683,13 @@ Rites de passage : {{rites_de_passage}}
 Livrable : carte du parcours (stage par stage), triggers de progression, rewards par niveau, métriques de loyalty, points de friction, actions de relance.`,
     status: "ACTIVE",
   },
-  {
+  defineHybridTool({
     slug: "engagement-rituals-designer",
     name: "Designer de Rituels de Marque",
     layer: "CR",
     order: 53,
-    executionType: "LLM",
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["E", "A"],
     requiredDrivers: [],
     dependencies: [],
@@ -1689,7 +1712,7 @@ Plateformes : {{platforms}}
 Livrable : 5-8 rituels récurrents, chacun avec : nom, fréquence, mécanique, canal, niveau de dévotion ciblé, KPI, coût estimé.
 Types : hebdomadaire, mensuel, saisonnier, anniversaire, initiation, célébration.`,
     status: "ACTIVE",
-  },
+  }),
 
   // ── AUDIT-R (3 outils) ──
   {
@@ -1823,12 +1846,13 @@ Triangulation : {{triangulation}}
 Livrable : radar visuel (4 quadrants : émergent/croissant/mature/déclinant), 5 macro-trends, 10 micro-trends, signaux faibles avec impact potentiel, fenêtres d'opportunité.`,
     status: "ACTIVE",
   },
-  {
+  defineHybridTool({
     slug: "insight-synthesizer",
     name: "Synthétiseur d'Insights",
     layer: "DC",
     order: 59,
-    executionType: "LLM",
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["T", "A"],
     requiredDrivers: [],
     dependencies: [],
@@ -1868,7 +1892,7 @@ Schéma EXACT :
 
 Règles : consumer EXACTEMENT 3 entrées. market EXACTEMENT 3 entrées. cultural EXACTEMENT 2 entrées. weak_signals EXACTEMENT 2 entrées (Tarsis-sourcés si {{tarsis_signals}} fourni, sinon "à enrichir"). confidence : STRICTEMENT "HIGH"|"MEDIUM"|"LOW" (majuscules). evidence MIN 1, MAX 4 par insight. formulation et strategic_implication JAMAIS vides. Si manquant : entries "à enrichir" / confidence="LOW". Pas de wrapper. Pas de champ supplémentaire.`,
     status: "ACTIVE",
-  },
+  }),
 
   // ── Phase 17 (ADR-0040) — Synthétiseur générique de sections Oracle ──
   // Polit le draft JSON déterministe d'une section Oracle (généré via mapXxx
@@ -1877,12 +1901,13 @@ Règles : consumer EXACTEMENT 3 entrées. market EXACTEMENT 3 entrées. cultural
   // les 7 sequences DERIVED-* (executive-summary, plateforme, plan-act,
   // prod-liv, budget, timeline, conditions) pour ajouter une couche de
   // cohérence narrative sur la projection brute des piliers.
-  {
+  defineHybridTool({
     slug: "synthesize-section",
     name: "Synthétiseur de Section Oracle",
     layer: "DC",
     order: 60,
-    executionType: "LLM",
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: [],
     requiredDrivers: [],
     dependencies: [],
@@ -1907,7 +1932,7 @@ Livrable : objet JSON
 
 Aucune fabrication de chiffre, aucune invention de fait, fidélité au draft = contrat strict.`,
     status: "ACTIVE",
-  },
+  }),
 
   // ── BRAINSTORM-I (2 outils) ──
   {
@@ -2293,12 +2318,13 @@ Livrable : score readability, structure Hn recommandée, méta title/description
   },
 
   // ── NAMING (2) ──
-  {
+  defineHybridTool({
     slug: "naming-generator",
     name: "Générateur de Noms",
     layer: "CR",
     order: 72,
-    executionType: "LLM",
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["A", "D"],
     requiredDrivers: [],
     dependencies: ["wordplay-cultural-bank"],
@@ -2317,7 +2343,7 @@ Contexte culturel : {{cultural_context}}
 Banque de mots : {{wordplay_bank}} | Secteur : {{sector}}
 Génère 15 propositions de noms. Par nom : le mot, étymologie/origine, sonorité (nb syllabes, phonétique), score mémorabilité (1-5), connotations positives/négatives, extensions possibles (.com, .fr, @handle).`,
     status: "ACTIVE",
-  },
+  }),
   {
     slug: "naming-legal-checker",
     name: "Vérificateur Légal de Nom",
@@ -2801,12 +2827,13 @@ Par membre : taux_utilisation = billable/available*100, taux_occupation = (billa
 
 const NETERU_TOOLS: GloryToolDef[] = [
   // ── DC: Validation / Coherence ───────────────────────────────────────────
-  {
+  defineHybridTool({
     slug: "brand-guardian",
     name: "Brand Guardian",
     layer: "DC",
     order: 90,
-    executionType: "LLM",
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["A", "D"],
     requiredDrivers: [],
     dependencies: [],
@@ -2841,13 +2868,14 @@ Schéma EXACT :
 
 Règles : brand_culture_audit : 4 sous-clés OBLIGATOIRES (score entier ∈ [0,100], notes JAMAIS vide). coherenceScore = moyenne des 4 sous-scores. violations MIN 0, MAX 6 (peut être []). suggestions MIN 1, MAX 6. verdict : STRICTEMENT "APPROVED"|"NEEDS_REVISION"|"REJECTED" (majuscules). Mapping indicatif : score ≥ 80 → APPROVED, 50-79 → NEEDS_REVISION, < 50 → REJECTED. Si {{output_candidate}} absent : verdict="NEEDS_REVISION", scores=50, notes="à enrichir". Pas de wrapper. Pas de champ supplémentaire.`,
     status: "ACTIVE",
-  },
-  {
+  }),
+  defineHybridTool({
     slug: "coherence-checker",
     name: "Vérificateur de Cohérence Cross-Séquence",
     layer: "DC",
     order: 91,
-    executionType: "LLM",
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: [...ADVE_KEYS],
     requiredDrivers: [],
     dependencies: [],
@@ -2866,15 +2894,16 @@ Output cible (à vérifier) : {{target_output}}
 Évalue : alignement visuel, tonal, sémiotique, narratif.
 Retourne : { aligned: boolean, score: 0-100, gaps: string[], risks: string[], recommendations: string[] }`,
     status: "ACTIVE",
-  },
+  }),
 
   // ── CR: Pipeline MESSAGING (5 outils) ────────────────────────────────────
-  {
+  defineHybridTool({
     slug: "claim-architect",
     name: "Architecte de Claims",
     layer: "CR",
     order: 80,
-    executionType: "LLM",
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["A", "D"],
     requiredDrivers: [],
     dependencies: [],
@@ -2902,7 +2931,7 @@ Produis :
 
 Retourne : { masterClaim: string, subClaims: [{persona, claim, proofPoints}], rtb: [{persona, reasons}] }`,
     status: "ACTIVE",
-  },
+  }),
   {
     slug: "tone-matrix",
     name: "Matrice de Ton",
@@ -2928,12 +2957,13 @@ Claims : {{claims}}
 Pour chaque combinaison (persona × canal) : registre (formel/informel/technique/émotionnel), intensité (1-5), exemples de formulations, mots-clés, interdits.`,
     status: "ACTIVE",
   },
-  {
+  defineHybridTool({
     slug: "vocabulary-builder",
     name: "Constructeur de Vocabulaire",
     layer: "CR",
     order: 82,
-    executionType: "LLM",
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["A", "D"],
     requiredDrivers: [],
     dependencies: ["claim-architect"],
@@ -2961,7 +2991,7 @@ Produis :
 
 Retourne : { sacred: string[], forbidden: string[], signatures: string[], technical: [{term, brandVersion}], alternatives: [{cliche, replacement}] }`,
     status: "ACTIVE",
-  },
+  }),
   {
     slug: "message-templater",
     name: "Générateur de Templates Messages",
@@ -3008,12 +3038,13 @@ Compiler en document structuré : 1. Philosophie verbale, 2. Hiérarchie de clai
   },
 
   // ── CHARACTER DESIGN: LSI Framework (Layered Semantic Integration) ────────
-  {
+  defineHybridTool({
     slug: "lsi-universe-setup",
     name: "LSI Phase 1 — Setup Univers",
     layer: "CR",
     order: 90,
-    executionType: "LLM",
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["A", "D"],
     requiredDrivers: [],
     dependencies: [],
@@ -3040,13 +3071,14 @@ Definis :
 
 Retourne : { genreMaitre: string, themesCles: string[], vibeSensorielle: string[], contraintes: string[], justification: string }`,
     status: "ACTIVE",
-  },
-  {
+  }),
+  defineHybridTool({
     slug: "lsi-symbol-alchemy",
     name: "LSI Phase 2 — Alchimie des Symboles",
     layer: "CR",
     order: 91,
-    executionType: "LLM",
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["A", "D"],
     requiredDrivers: [],
     dependencies: ["lsi-universe-setup"],
@@ -3075,13 +3107,14 @@ Cree 5 Artefacts Ultimes. Pour chacun :
 
 Retourne : { artifacts: [{ baseSymbol: string, themeApplications: { forme: string, matiere: string, fonction: string, symbolique: string }, name: string, description: string }] }`,
     status: "ACTIVE",
-  },
-  {
+  }),
+  defineHybridTool({
     slug: "lsi-distribution-matrix",
     name: "LSI Phase 3 — Matrice de Distribution 5x5",
     layer: "CR",
     order: 92,
-    executionType: "LLM",
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["D"],
     requiredDrivers: [],
     dependencies: ["lsi-symbol-alchemy"],
@@ -3107,13 +3140,14 @@ REGLE CRITIQUE : Ne pose JAMAIS l'artefact litteralement sur le personnage.
 
 Retourne : { matrix: [{ artifact: string, anatomie: string, outfit: string, texture: string, accessoires: string, attitude: string }] }`,
     status: "ACTIVE",
-  },
-  {
+  }),
+  defineHybridTool({
     slug: "lsi-sublimation",
     name: "LSI Phase 4 — Sublimation (Reality Check)",
     layer: "DC",
     order: 93,
-    executionType: "LLM",
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["D"],
     requiredDrivers: [],
     dependencies: ["lsi-distribution-matrix"],
@@ -3134,13 +3168,14 @@ Verifie :
 
 Retourne : { adjustments: [{ element: string, issue: string, fix: string }], echos: [{ primaryElement: string, echoLocations: string[] }], silhouetteRead: string, verdict: "APPROVED" | "NEEDS_REVISION" }`,
     status: "ACTIVE",
-  },
-  {
+  }),
+  defineHybridTool({
     slug: "lsi-morpho-semantic",
     name: "LSI Phase 5 — Definition Morpho-Semantique",
     layer: "CR",
     order: 94,
-    executionType: "LLM",
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["D"],
     requiredDrivers: [],
     dependencies: ["lsi-sublimation"],
@@ -3163,7 +3198,7 @@ Produis le prompt de generation image complet, section par section.
 
 Retourne : { promptSections: { anatomie: string, outfit: string, texture: string, accessoires: string, attitude: string, lighting: string, camera: string }, fullPrompt: string, negativePrompt: string, styleTags: string[] }`,
     status: "ACTIVE",
-  },
+  }),
   {
     slug: "lsi-character-sheet",
     name: "LSI Phase 6 — Fiche Personnage",

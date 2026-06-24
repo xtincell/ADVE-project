@@ -10,6 +10,21 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.43 — feat(artemis): 44 Glory tools LLM → HYBRID + llm-cost-model doc (2026-06-24)
+
+Conversion structurelle de **44 Glory tools** `executionType: "LLM"` → `"HYBRID"` via `defineHybridTool()` factory (ADR-0060 manual-first parity — ferme N6-bis résiduel Phase 23 Epic 5) :
+- `registry.ts` : 29 tools CR (concept-generator, script-writer, long-copy-craftsman, dialogue-writer, claim-baseline-factory, storytelling-sequencer, wordplay-cultural-bank, creative-evaluation-matrix, idea-killer-saver, semiotic-brand-analyzer, visual-moodboard-generator, logo-type-advisor, logo-validation-protocol, motion-identity-designer, tone-of-voice-designer, manifesto-writer, engagement-rituals-designer, insight-synthesizer, synthesize-section, naming-generator, brand-guardian, coherence-checker, claim-architect, vocabulary-builder, lsi-universe-setup, lsi-symbol-alchemy, lsi-distribution-matrix, lsi-sublimation, lsi-morpho-semantic)
+- `adops-tools.ts` : 4 tools (expand, cross, decode, defend)
+- `phase13-oracle-tools.ts` : 6 tools (mckinsey-7s-analyzer, mckinsey-3-horizons-mapper, overton-window-mapper, tarsis-signal-detector, devotion-levels-mapper, devotion-rituals-designer)
+- `phase14-imhotep-tools.ts` : 3 tools (crew-matcher, formation-recommender, qc-evaluator)
+- `phase15-anubis-tools.ts` : 2 tools (ad-copy-generator, audience-targeter)
+
+Chaque tool converti gagne `applicableNatures: ALL_NATURES` (9 archétypes) et `manualFormSchema = outputSchema` (peer-toggle UI Epic 5). CALC + `postmortem-12q` inchangés.
+
+Nouveau `docs/governance/llm-cost-model.md` : table pricing providers, coûts p95 par Intent, modèle de coût mensuel client type, invariants (zéro LLM scoring, $0 chemin manuel HYBRID).
+
+---
+
 ## v6.27.42 — Sécurité LLM LOT 1e : verrou d'entrée anti-injection sur tous les appels directs — 37/37 (2026-06-23)
 
 **Clôture LOT 1e** — neutralisation de l'**entrée** (anti-injection OWASP LLM01) sur **tous les appels LLM directs** restants (hors chokepoints LOT 0). La sortie était déjà 100 % (LOT 1c). L'entrée l'est désormais aussi.
