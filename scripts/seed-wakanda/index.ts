@@ -27,7 +27,7 @@ const prisma = makeClient();
 async function main() {
   console.log("============================================================");
   console.log("  WAKANDA MEGA SEED");
-  console.log("  6 brands · 450+ records · 111/116 models · 3-month timeline");
+  console.log("  6 brands · « LA TOTALE » coverage · 3-month timeline");
   console.log("============================================================\n");
 
   const start = Date.now();
@@ -94,6 +94,44 @@ async function main() {
 
   const { seedInfrastructure } = await import("./28-infrastructure");
   await seedInfrastructure(prisma, brands, users);
+
+  // Phase 4 — Coverage completion « LA TOTALE » (7 batches, cf.
+  // docs/scan/wakanda-coverage-plan.md). Toutes les FK parentes (strategies,
+  // campaigns, missions, intakes infra) existent à ce stade. Ordre intra-bloc :
+  // brand-tree avant deliverables (FK targetNodeId → SKU).
+  console.log("\n── Phase 4: Coverage completion « LA TOTALE » ───────────────");
+  const { seedIntakePaywall } = await import("./03-intake-paywall");
+  await seedIntakePaywall(prisma);
+
+  const { seedFinancialCosting } = await import("./24b-financial-costing");
+  await seedFinancialCosting(prisma);
+
+  const { seedSuperfanTracking } = await import("./25b-superfan-tracking");
+  await seedSuperfanTracking(prisma);
+
+  const { seedOracleSections } = await import("./19-oracle-sections");
+  await seedOracleSections(prisma);
+
+  const { seedBrandTree } = await import("./18-brand-tree");
+  await seedBrandTree(prisma);
+
+  const { seedCampaignDeliverables } = await import("./24c-campaign-deliverables");
+  await seedCampaignDeliverables(prisma);
+
+  const { seedMissionsApplications } = await import("./31-missions-applications");
+  await seedMissionsApplications(prisma);
+
+  const { seedCommsBroadcast } = await import("./26b-comms-broadcast");
+  await seedCommsBroadcast(prisma);
+
+  const { seedMcpConfig } = await import("./29-mcp-config");
+  await seedMcpConfig(prisma);
+
+  const { seedArgosDossiers } = await import("./30-argos-dossiers");
+  await seedArgosDossiers(prisma);
+
+  const { seedMarketExtended } = await import("./32-market-extended");
+  await seedMarketExtended(prisma);
 
   // Summary
   const elapsed = ((Date.now() - start) / 1000).toFixed(1);
