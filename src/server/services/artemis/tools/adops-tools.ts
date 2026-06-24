@@ -27,7 +27,12 @@
  * qui articule la valeur défendue.
  */
 
-import type { GloryToolDef } from "./tool-types";
+import { defineHybridTool, type GloryToolDef, type GloryToolNature } from "./tool-types";
+
+const ALL_NATURES: readonly [GloryToolNature, ...GloryToolNature[]] = [
+  "PRODUCT", "SERVICE", "CHARACTER_IP", "FESTIVAL_IP", "MEDIA_IP",
+  "RETAIL_SPACE", "PLATFORM", "INSTITUTION", "PERSONAL",
+];
 import {
   adopsExpandOutputSchema,
   adopsCrossPollinateOutputSchema,
@@ -45,12 +50,13 @@ import {
  * Output JSON exploitable par le module Decode et par la suggestion de
  * presets pour Cross.
  */
-export const ADOPS_EXPAND_TOOL: GloryToolDef = {
+export const ADOPS_EXPAND_TOOL: GloryToolDef = defineHybridTool({
   slug: "adops-expand-semantic-field",
   name: "AD/OPS Expand — Champ sémantique 5D",
   layer: "DC",
   order: 200,
-  executionType: "LLM",
+  executionType: "HYBRID",
+  applicableNatures: ALL_NATURES,
   pillarKeys: ["D"],
   requiredDrivers: [],
   dependencies: [],
@@ -78,7 +84,7 @@ Renvoie un JSON strict avec 5 clés :
 
 Discipline : noms propres réels, pas de jargon générique. Une école = un nom identifiable (ex: "Swiss Style", pas "design suisse").`,
   status: "ACTIVE",
-};
+});
 
 /**
  * AD/OPS · CROSS — Hybridation conceptuelle A × B.
@@ -88,12 +94,13 @@ Discipline : noms propres réels, pas de jargon générique. Une école = un nom
  * piège à éviter). Sert à forcer la distinctiveness en sortant des sentiers
  * battus de la catégorie.
  */
-export const ADOPS_CROSS_TOOL: GloryToolDef = {
+export const ADOPS_CROSS_TOOL: GloryToolDef = defineHybridTool({
   slug: "adops-cross-pollinate-concepts",
   name: "AD/OPS Cross — Hybridation conceptuelle A × B",
   layer: "DC",
   order: 201,
-  executionType: "LLM",
+  executionType: "HYBRID",
+  applicableNatures: ALL_NATURES,
   pillarKeys: ["D"],
   requiredDrivers: [],
   dependencies: [],
@@ -121,7 +128,7 @@ Renvoie un JSON :
 
 Discipline : pas de banalités, le brief doit révéler une grammaire visuelle qu'aucun concurrent n'occupe.`,
   status: "ACTIVE",
-};
+});
 
 /**
  * AD/OPS · LAUNCH — Vecteur de recherche multi-plateformes.
@@ -174,12 +181,13 @@ URLs construits par interpolation de la query (encodeURIComponent côté consomm
  * posture humaine, mouvement référencé, stratégie narrative, distinctiveness.
  * Chaque axe = 4 questions analytiques répondues.
  */
-export const ADOPS_DECODE_TOOL: GloryToolDef = {
+export const ADOPS_DECODE_TOOL: GloryToolDef = defineHybridTool({
   slug: "adops-decode-reference-grid",
   name: "AD/OPS Decode — Grille d'analyse formelle 8 axes",
   layer: "DC",
   order: 203,
-  executionType: "LLM",
+  executionType: "HYBRID",
+  applicableNatures: ALL_NATURES,
   pillarKeys: ["D"],
   requiredDrivers: [],
   dependencies: [],
@@ -209,7 +217,7 @@ Pour chaque axe, répondre aux 4 questions analytiques avec précision (pas de g
 
 Renvoyer un JSON { axes: [{key, title, answers: [...4]}] }.`,
   status: "ACTIVE",
-};
+});
 
 /**
  * AD/OPS · DEFEND — Speech défensif 6 sections.
@@ -219,12 +227,13 @@ Renvoyer un JSON { axes: [{key, title, answers: [...4]}] }.`,
  * résolue), audience & résonance, ancrage formel & références, distinctiveness,
  * closing (pari assumé). Sert directement la Value pillar.
  */
-export const ADOPS_DEFEND_TOOL: GloryToolDef = {
+export const ADOPS_DEFEND_TOOL: GloryToolDef = defineHybridTool({
   slug: "adops-defend-creative-direction",
   name: "AD/OPS Defend — Speech défensif 6 sections",
   layer: "DC",
   order: 204,
-  executionType: "LLM",
+  executionType: "HYBRID",
+  applicableNatures: ALL_NATURES,
   pillarKeys: ["D", "V"],
   requiredDrivers: [],
   dependencies: ["adops-expand-semantic-field"],
@@ -262,7 +271,7 @@ Renvoyer un JSON { sections: [{h, body}] } avec exactement ces 6 sections :
 
 Discipline : prose défendable, ZÉRO superlatif vague, références citées explicitement (italique markdown).`,
   status: "ACTIVE",
-};
+});
 
 /**
  * AD/OPS · VAULT CAPTURE — Capture documentaire structurée.

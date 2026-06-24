@@ -34,19 +34,25 @@
  */
 
 import { z } from "zod";
-import type { GloryToolDef } from "./tool-types";
+import { defineHybridTool, type GloryToolDef, type GloryToolNature } from "./tool-types";
+
+const ALL_NATURES: readonly [GloryToolNature, ...GloryToolNature[]] = [
+  "PRODUCT", "SERVICE", "CHARACTER_IP", "FESTIVAL_IP", "MEDIA_IP",
+  "RETAIL_SPACE", "PLATFORM", "INSTITUTION", "PERSONAL",
+];
 
 export const PHASE13_ORACLE_TOOLS: GloryToolDef[] = [
   // ──────────────────────────────────────────────────────────────────────────
   // BRAND layer — Big4 stratégie & analyse
   // ──────────────────────────────────────────────────────────────────────────
 
-  {
+  defineHybridTool({
     slug: "mckinsey-7s-analyzer",
     name: "Analyseur McKinsey 7S",
     layer: "DC",
     order: 41,
-    executionType: "LLM",
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["A", "T"],
     requiredDrivers: [],
     dependencies: [],
@@ -97,7 +103,7 @@ Schéma EXACT (clé "seven_s_map" obligatoire au top-level) :
 
 Règles : 7 clés OBLIGATOIRES (strategy/structure/systems/shared_values/style/staff/skills). score entier ∈ [0,10]. Pas de wrapper "result"/"data"/"output". Pas de champ supplémentaire.`,
     status: "ACTIVE",
-  },
+  }),
 
   {
     slug: "bcg-portfolio-plotter",
@@ -164,12 +170,13 @@ Règles : 4 clés quadrants OBLIGATOIRES (tableau vide [] si pas de BU dans ce q
     },
   },
 
-  {
+  defineHybridTool({
     slug: "mckinsey-3-horizons-mapper",
     name: "Mappeur McKinsey 3-Horizons of Growth",
     layer: "DC",
     order: 43,
-    executionType: "LLM",
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["S", "I"],
     requiredDrivers: [],
     dependencies: [],
@@ -221,14 +228,15 @@ Règles : h1+h2+h3 OBLIGATOIRES. Somme h1+h2+h3 DOIT = 100 (typique 70/20/10). C
       // Phase 17 (ADR-0037) — mckinsey-3-horizons-mapper : vision stratégique ancrée sur positionnement
       requires: ["POSITIONING"],
     },
-  },
+  }),
 
-  {
+  defineHybridTool({
     slug: "overton-window-mapper",
     name: "Cartographe Fenêtre d'Overton",
     layer: "DC",
     order: 44,
-    executionType: "LLM",
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["S", "T"],
     requiredDrivers: [],
     dependencies: [],
@@ -267,7 +275,7 @@ Schéma EXACT :
 
 Règles : axes MIN 3, MAX 5 (JAMAIS vide). maneuvers EXACTEMENT 5. current/target_position : utiliser STRICTEMENT une des 5 valeurs énumérées. manipulation_mode : STRICTEMENT une des 4 valeurs. Si manquant : "à enrichir" pour strings, JAMAIS array vide. Pas de wrapper. Pas de champ supplémentaire.`,
     status: "ACTIVE",
-  },
+  }),
 
   {
     slug: "cult-index-scorer",
@@ -384,12 +392,13 @@ Règles : nps_score = promoters_pct - detractors_pct (cohérent). promoters+pass
     status: "ACTIVE",
   },
 
-  {
+  defineHybridTool({
     slug: "tarsis-signal-detector",
     name: "Détecteur de Signaux Faibles Tarsis",
     layer: "DC",
     order: 47,
-    executionType: "LLM",
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["T"],
     requiredDrivers: [],
     dependencies: [],
@@ -441,7 +450,7 @@ Schéma EXACT :
 
 Règles : signals MIN 5, MAX 12 (JAMAIS vide). category/horizon/action : STRICTEMENT les valeurs énumérées. impact entier ∈ [-10,+10]. confidence entier ∈ [0,100]. top_3_priority EXACTEMENT 3 entrées (sélectionnées parmi signals à fort impact*confidence). summary JAMAIS vide (2-3 phrases). Si données vides : "à enrichir" pour description, impact=0. Pas de wrapper. Pas de champ supplémentaire.`,
     status: "ACTIVE",
-  },
+  }),
 
   // ──────────────────────────────────────────────────────────────────────────
   // Phase 13 R4 — DEVOTION-LADDER tools (closure résidu B5)
@@ -450,7 +459,7 @@ Règles : signals MIN 5, MAX 12 (JAMAIS vide). category/horizon/action : STRICTE
   // (devotion-engine, cult-index-engine) — anti-doublon NEFER §3.
   // ──────────────────────────────────────────────────────────────────────────
 
-  {
+  defineHybridTool({
     // Renommé depuis "superfan-journey-mapper" (audit Oracle 2026-06-11) : le slug
     // était DUPLIQUÉ avec l'outil legacy PLAYBOOK-E du registry (NEFER interdit #1).
     // getGloryTool = first-match → DEVOTION-LADDER recevait l'outil legacy sans
@@ -459,7 +468,8 @@ Règles : signals MIN 5, MAX 12 (JAMAIS vide). category/horizon/action : STRICTE
     name: "Mappeur Parcours Superfan",
     layer: "DC",
     order: 48,
-    executionType: "LLM",
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["E", "A"],
     requiredDrivers: [],
     dependencies: [],
@@ -514,15 +524,16 @@ Schéma EXACT :
 
 Règles : devotion_levels EXACTEMENT 5 entrées (visiteur → suiveur → fan → superfan → ambassadeur). palier : STRICTEMENT une des 5 valeurs énumérées. conversionPct : taux conversion vers palier SUIVANT (ambassadeur = 0 ou taux d'évangélisation). kpis MIN 3, MAX 5 par palier. drifts MIN 1, MAX 3. current_distribution : 5 clés OBLIGATOIRES, somme proche 100 (pyramide typique 70/20/7/2/1). summary JAMAIS vide. Si manquant : "à enrichir" pour strings. Pas de wrapper. Pas de champ supplémentaire.`,
     status: "ACTIVE",
-  },
+  }),
 
-  {
+  defineHybridTool({
     // Renommé depuis "engagement-rituals-designer" (même doublon, audit 2026-06-11).
     slug: "devotion-rituals-designer",
     name: "Designer Rituels d'Engagement",
     layer: "DC",
     order: 49,
-    executionType: "LLM",
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
     pillarKeys: ["E", "D"],
     requiredDrivers: [],
     dependencies: ["devotion-levels-mapper"],
@@ -573,5 +584,5 @@ Schéma EXACT :
 
 Règles : rituals_by_level EXACTEMENT 5 entrées (1 par palier, ordre visiteur → ambassadeur). rituals MIN 2, MAX 3 par palier. frequency : STRICTEMENT une des 5 valeurs. codes MIN 1, MAX 4. symbols MIN 1, MAX 3. ceremonies MIN 1, MAX 2. implementation_priorities MIN 3, MAX 7 (priority entier ∈ [1,5], 1=top). manifesto_extract JAMAIS vide. Si manquant : "à enrichir" pour strings. Pas de wrapper. Pas de champ supplémentaire.`,
     status: "ACTIVE",
-  },
+  }),
 ];
