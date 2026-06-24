@@ -212,6 +212,53 @@ async function purge() {
 
   // Execute cascade delete in a transaction
   await prisma.$transaction(async (tx) => {
+    // Phase 4 reverse — Coverage completion « LA TOTALE » (tous préfixés wk-*).
+    // Enfants avant parents ; ce bloc tourne en premier pour précéder la
+    // suppression de Strategy/Campaign/Mission/Operator/User plus bas.
+    d("BroadcastJob", await tx.broadcastJob.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("CommsPlan", await tx.commsPlan.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("McpToolInvocation", await tx.mcpToolInvocation.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("McpUsageStatement", await tx.mcpUsageStatement.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("McpApiCall", await tx.mcpApiCall.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("McpRegistry", await tx.mcpRegistry.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("McpApiKey", await tx.mcpApiKey.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("McpServerConfig", await tx.mcpServerConfig.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("EmailTemplate", await tx.emailTemplate.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("SmsTemplate", await tx.smsTemplate.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("ExternalConnector", await tx.externalConnector.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("CampaignReferenceDossier", await tx.campaignReferenceDossier.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("MissionApplication", await tx.missionApplication.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("CampaignChangeRequest", await tx.campaignChangeRequest.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("CampaignDeliverable", await tx.campaignDeliverable.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("BriefIngestionDraft", await tx.briefIngestionDraft.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("MorningBriefBatch", await tx.morningBriefBatch.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("IngestedSource", await tx.ingestedSource.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("BrandContextNode", await tx.brandContextNode.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    // BrandNode self-relation : enfants (parentNodeId non-null) avant racines.
+    d("BrandNode", await tx.brandNode.deleteMany({ where: { id: { startsWith: "wk-" }, parentNodeId: { not: null } } }));
+    d("BrandNode", await tx.brandNode.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("OperatorAction", await tx.operatorAction.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("BrandAction", await tx.brandAction.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("ActionCostEstimate", await tx.actionCostEstimate.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("ActionCostComponent", await tx.actionCostComponent.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("ActionCostTemplate", await tx.actionCostTemplate.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("ProviderCostRate", await tx.providerCostRate.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("ZoneIndex", await tx.zoneIndex.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("OracleSection", await tx.oracleSection.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("OracleSnapshot", await tx.oracleSnapshot.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("FollowerSnapshot", await tx.followerSnapshot.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("TarsisCaptureSession", await tx.tarsisCaptureSession.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("MarketBenchmark", await tx.marketBenchmark.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("MarketCostSnapshot", await tx.marketCostSnapshot.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("MarketDocument", await tx.marketDocument.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("MarketContextNode", await tx.marketContextNode.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("NewsletterCampaign", await tx.newsletterCampaign.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("IntakePayment", await tx.intakePayment.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("Subscription", await tx.subscription.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("Account", await tx.account.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("Session", await tx.session.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+    d("IntentEmission", await tx.intentEmission.deleteMany({ where: { id: { startsWith: "wk-" } } }));
+
     // Phase 3 reverse — Infrastructure records
     d("OrchestrationStep", await tx.orchestrationStep.deleteMany({ where: { planId: { in: orchestrationPlanIds } } }));
     d("OrchestrationPlan", await tx.orchestrationPlan.deleteMany({ where: { id: { in: orchestrationPlanIds } } }));

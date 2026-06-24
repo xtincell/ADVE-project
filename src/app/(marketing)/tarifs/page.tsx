@@ -1,24 +1,81 @@
-"use client";
-
 /**
- * /tarifs — page tarifs UPgraders (chrome UPgraders : SiteNav + SiteFooter).
- * UPgraders vend La Fusée : l'offre (audit / Oracle à l'acte + Cockpit/Retainer
- * en abonnement) est la même que /pricing, surfacée ici sous le site UPgraders.
- * Contenu partagé via <PricingGrid> (prix résolus par zone, déterministe).
+ * /tarifs — catalogue tarifaire UPgraders (chrome UPgraders : SiteNav + SiteFooter).
+ *
+ * Le SET PRODUIT propre à l'agence : le produit self-serve La Fusée (qui renvoie
+ * vers SON univers de prix /pricing) + les prestations agence sur devis (Audit
+ * ADVE, Mandat RTIS, Marque blanche). NE PAS re-mélanger avec la grille La Fusée
+ * (<PricingGrid> sur /pricing) — deux univers distincts. Server component.
  */
-
+import type { Metadata } from "next";
 import { SiteNav } from "@/components/upgraders/site-nav";
 import { SiteFooter } from "@/components/upgraders/site-footer";
-import { PricingGrid } from "@/components/marketing/pricing-grid";
+import { Section, Eyebrow, SectionHeading, Lede, PageHeader, PrimaryCta, GhostCta } from "@/components/upgraders/ui";
+import { ProductCatalog } from "@/components/upgraders/product-catalog";
+
+export const metadata: Metadata = {
+  title: "Tarifs — UPgraders · La Fusée, Audit ADVE, Mandat RTIS, Marque blanche",
+  description:
+    "La gamme UPgraders : le produit self-serve La Fusée (prix dédiés, localisés par zone) et les prestations agence sur devis — Audit ADVE, Mandat RTIS, Marque blanche.",
+};
 
 export default function TarifsPage() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <main>
       <SiteNav />
-      <div className="pt-16">
-        <PricingGrid callbackPath="/tarifs" />
-      </div>
+
+      <PageHeader
+        eyebrow="Tarifs"
+        title="Une gamme,"
+        emphasis="deux logiques."
+        lede="UPgraders vend un produit et un menu de prestations, coordonnés par La Fusée. Le produit — l'Industry OS self-serve — a son propre univers de prix, localisé par zone. Les prestations (stratégie marketing, production graphique & audiovisuelle, chartes, études & rapports, audit financier) s'opèrent en marque blanche via La Guilde, sur devis : on ne vend pas des moyens, on gèle un état final mesuré."
+      >
+        <PrimaryCta href="/pricing">Tarifs La Fusée</PrimaryCta>
+        <GhostCta href="/contact">Parler à l&apos;agence</GhostCta>
+      </PageHeader>
+
+      <Section>
+        <Eyebrow num="01">La gamme</Eyebrow>
+        <SectionHeading emphasis="produits">Nos</SectionHeading>
+        <div className="mt-10">
+          <ProductCatalog />
+        </div>
+        <p className="mt-8 font-mono text-2xs uppercase tracking-widest text-foreground-muted">
+          ↳ La Fusée : prix résolus par zone (FCFA · mobile money), jamais une grille statique. Diagnostic d&apos;entrée gratuit.
+        </p>
+      </Section>
+
+      <Section surface>
+        <div className="grid grid-cols-1 gap-12 lg:grid-cols-[1fr_1fr] lg:gap-16">
+          <div>
+            <Eyebrow num="02">Le produit</Eyebrow>
+            <SectionHeading emphasis="Fusée.">La</SectionHeading>
+            <Lede className="mt-4">
+              Parmi nos offres, un produit se pilote seul : La Fusée. Diagnostic gratuit en quinze minutes,
+              puis Oracle à l&apos;acte, Cockpit et Retainers en abonnement — chaque palier a un prix clair,
+              recalculé pour votre marché. La porte d&apos;entrée sans engagement vers la méthode.
+            </Lede>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <PrimaryCta href="/pricing">Voir les tarifs La Fusée</PrimaryCta>
+              <GhostCta href="/lafusee">Découvrir l&apos;OS</GhostCta>
+            </div>
+          </div>
+          <div>
+            <Eyebrow num="03">Les prestations</Eyebrow>
+            <SectionHeading emphasis="devis.">Sur</SectionHeading>
+            <Lede className="mt-4">
+              Stratégie marketing, production graphique &amp; audiovisuelle, chartes, études de marché,
+              audit financier — opérées en marque blanche / sous-couvert via La Guilde. Chaque engagement
+              est cadré sur mesure : périmètre, palier visé et score cible gelés et tracés à la signature (EFR).
+            </Lede>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <PrimaryCta href="/contact">Demander un devis</PrimaryCta>
+              <GhostCta href="/services">Le détail des prestations</GhostCta>
+            </div>
+          </div>
+        </div>
+      </Section>
+
       <SiteFooter />
-    </div>
+    </main>
   );
 }

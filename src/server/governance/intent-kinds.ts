@@ -30,6 +30,10 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "OPERATOR_ARCHIVE_STRATEGY", governor: "MESTOR", handler: "strategy-archive", async: false, description: "Soft archive a Strategy (Strategy.archivedAt = now). Hides from default queries, restorable. Refuses Wakanda dummies." },
   { kind: "OPERATOR_RESTORE_STRATEGY", governor: "MESTOR", handler: "strategy-archive", async: false, description: "Restore a soft-archived Strategy (Strategy.archivedAt = null). Reverses OPERATOR_ARCHIVE_STRATEGY." },
   { kind: "OPERATOR_PURGE_ARCHIVED_STRATEGY", governor: "MESTOR", handler: "strategy-archive", async: false, description: "Hard delete a Strategy + BFS cascade on 30+ child tables via information_schema FK discovery. Requires preceding archive (anti-foot-gun). Refuses Wakanda dummies." },
+  // ADR-0105 — Market kill-switch (cycle de vie marché sur Country).
+  { kind: "NEUTRALIZE_MARKET", governor: "MESTOR", handler: "market-lifecycle", async: false, description: "Neutralize a market (Country.status → FROZEN | SHADOWBANNED). FROZEN = visible read-only ; SHADOWBANNED = invisible (non-ADMIN reads filtered) + read-only. ADR-0105." },
+  { kind: "REINSTATE_MARKET", governor: "MESTOR", handler: "market-lifecycle", async: false, description: "Reinstate a market (Country.status → ACTIVE). Réintégration sans perte. Refuse si PURGED. Reverses NEUTRALIZE_MARKET. ADR-0105." },
+  { kind: "PURGE_MARKET", governor: "MESTOR", handler: "market-lifecycle", async: false, description: "Hard purge every strategy of a market via BFS cascade, then Country.status → PURGED. Requires SHADOWBANNED first (anti-foot-gun). ADR-0105." },
   { kind: "RUN_RTIS_CASCADE", governor: "MESTOR", handler: "mestor", async: false, description: "Run R→T→I→S cascade on a strategy." },
   { kind: "GENERATE_RECOMMENDATIONS", governor: "MESTOR", handler: "notoria", async: false, description: "Generate Notoria recos for a strategy." },
   { kind: "APPLY_RECOMMENDATIONS", governor: "MESTOR", handler: "notoria", async: false, description: "Apply accepted recos." },

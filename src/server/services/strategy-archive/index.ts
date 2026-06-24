@@ -235,17 +235,24 @@ export interface PurgeResult {
   tablesAffected: { table: string; rows: number }[];
 }
 
-export async function purgeStrategy(strategyId: string): Promise<PurgeResult> {
+export async function purgeStrategy(
+  strategyId: string,
+  opts: { force?: boolean } = {},
+): Promise<PurgeResult> {
   const strategy = await db.strategy.findUnique({
     where: { id: strategyId },
     select: { id: true, archivedAt: true, isDummy: true },
   });
   if (!strategy) throw new Error(`Strategy ${strategyId} not found`);
-  if (strategy.isDummy) throw new Error(`Strategy ${strategyId} is a dummy seed — refuse to hard-delete`);
-  if (!strategy.archivedAt) {
-    throw new Error(
-      `Strategy ${strategyId} must be archived first (call archiveStrategy then purgeStrategy). Anti-foot-gun.`,
-    );
+  // ADR-0105 — `force` bypasse les gardes (dummy + archive-préalable) pour la
+  // purge marché : la neutralisation du marché EST le geste délibéré gouverné.
+  if (!opts.force) {
+    if (strategy.isDummy) throw new Error(`Strategy ${strategyId} is a dummy seed — refuse to hard-delete`);
+    if (!strategy.archivedAt) {
+      throw new Error(
+        `Strategy ${strategyId} must be archived first (call archiveStrategy then purgeStrategy). Anti-foot-gun.`,
+      );
+    }
   }
 
   const fks = await loadFks();

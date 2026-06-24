@@ -28,6 +28,10 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "OPERATOR_RESTORE_STRATEGY", p95LatencyMs: 500, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "OPERATOR_PURGE_ARCHIVED_STRATEGY", p95LatencyMs: 30_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "INTAKE_SOURCE_PURGE_AND_REINGEST", p95LatencyMs: 30_000, errorRatePct: 0.05, costP95Usd: 0 },
+  // ADR-0105 — Market kill-switch. Neutralize/reinstate = single UPDATE + cache invalidate. Purge = BFS cascade over N strategies.
+  { kind: "NEUTRALIZE_MARKET", p95LatencyMs: 1_000, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "REINSTATE_MARKET", p95LatencyMs: 1_000, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "PURGE_MARKET", p95LatencyMs: 60_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "RUN_RTIS_CASCADE", p95LatencyMs: 45_000, errorRatePct: 0.05, costP95Usd: 0.6 },
   // Phase 17 (ADR-0039) — Sequence run via governed path. p95 50s (longest single sequence ~MCK-7S/BCG-PORTFOLIO Glory chains).
   { kind: "RUN_ORACLE_SEQUENCE", p95LatencyMs: 50_000, errorRatePct: 0.05, costP95Usd: 0.5 },

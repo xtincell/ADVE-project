@@ -324,6 +324,20 @@ export async function execute(intent: Intent): Promise<IntentResult> {
         return wrap({ ...base, ...(await purgeArchivedStrategyHandler(intent)) });
       }
 
+      // ── ADR-0105 — Market kill-switch (neutralize / reinstate / purge) ──
+      case "NEUTRALIZE_MARKET": {
+        const { neutralizeMarketHandler } = await import("@/server/services/market-lifecycle");
+        return wrap({ ...base, ...(await neutralizeMarketHandler(intent)) });
+      }
+      case "REINSTATE_MARKET": {
+        const { reinstateMarketHandler } = await import("@/server/services/market-lifecycle");
+        return wrap({ ...base, ...(await reinstateMarketHandler(intent)) });
+      }
+      case "PURGE_MARKET": {
+        const { purgeMarketHandler } = await import("@/server/services/market-lifecycle");
+        return wrap({ ...base, ...(await purgeMarketHandler(intent)) });
+      }
+
       // ── ADR-0033 — atomic purge + re-ingest of an intake-origin source ──
       case "INTAKE_SOURCE_PURGE_AND_REINGEST": {
         const { purgeAndReingestHandler } = await import(

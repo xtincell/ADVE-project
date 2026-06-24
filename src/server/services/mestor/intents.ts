@@ -535,6 +535,32 @@ export type Intent =
       /** Anti-foot-gun: caller must echo strategy name uppercase to confirm. */
       confirmName: string;
     }
+  // ── ADR-0105 — Market kill-switch (cycle de vie marché sur Country) ──
+  // Le marché = Country.code (ISO-2). strategyId porte une sentinelle
+  // "MARKET:<code>" (pivot d'audit hash-chain — pas une vraie stratégie ;
+  // IntentEmission.strategyId est un String dénormalisé, pas une FK).
+  | {
+      kind: "NEUTRALIZE_MARKET";
+      strategyId: string;
+      operatorId: string;
+      countryCode: string;
+      mode: "FREEZE" | "SHADOWBAN";
+      reason?: string;
+    }
+  | {
+      kind: "REINSTATE_MARKET";
+      strategyId: string;
+      operatorId: string;
+      countryCode: string;
+    }
+  | {
+      kind: "PURGE_MARKET";
+      strategyId: string;
+      operatorId: string;
+      countryCode: string;
+      /** Anti-foot-gun: caller must echo the country code to confirm. */
+      confirmCode: string;
+    }
   // ── ADR-0033 — Atomic purge + re-ingest of an intake-origin source ──
   // Deletes the BrandDataSource (origin="intake:<id>"), the INTAKE_REPORT
   // BrandAsset, resets ADVE Pillar.content (A/D/V/E only — RTIS untouched
@@ -1114,6 +1140,10 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     case "OPERATOR_ARCHIVE_STRATEGY":
     case "OPERATOR_RESTORE_STRATEGY":
     case "OPERATOR_PURGE_ARCHIVED_STRATEGY":
+    // ADR-0105 — market kill-switch : opère sur Country, ne touche aucun pillar.
+    case "NEUTRALIZE_MARKET":
+    case "REINSTATE_MARKET":
+    case "PURGE_MARKET":
       return [];
     // ADR-0033 — re-extracts ADVE pillars from intake responses.
     case "INTAKE_SOURCE_PURGE_AND_REINGEST":
@@ -1277,6 +1307,28 @@ async function preflightBriefVsAdveCoherence(
   }
 }
 
+/**
+ * ADR-0105 — MARKET_STATUS pre-flight. Refuse toute mutation ciblant une
+ * stratégie dont le marché est FROZEN/SHADOWBANNED. Les Intents du kill-switch
+ * marché (NEUTRALIZE/REINSTATE/PURGE_MARKET) sont exemptés — ils opèrent SUR le
+ * marché. Renvoie un signal VETO ou null.
+ */
+async function preflightMarketStatus(
+  intent: Intent,
+): Promise<{ status: "VETOED"; reason: string } | null> {
+  if (
+    intent.kind === "NEUTRALIZE_MARKET" ||
+    intent.kind === "REINSTATE_MARKET" ||
+    intent.kind === "PURGE_MARKET"
+  ) {
+    return null;
+  }
+  const { marketStatusGate } = await import("./gates/market-status");
+  const verdict = await marketStatusGate(intent.strategyId);
+  if (verdict.verdict === "BLOCK") return { status: "VETOED", reason: verdict.reason };
+  return null;
+}
+
 // ── emitIntent — single entry point ───────────────────────────────────
 
 /**
@@ -1358,6 +1410,31 @@ export async function emitIntent(
       startedAt,
       completedAt: new Date().toISOString(),
       reason: "CALIBRATION_SNAPSHOT_REQUIRED",
+    };
+    if (emissionId) {
+      try {
+        await db.intentEmission.update({
+          where: { id: emissionId },
+          data: { result: result as unknown as Prisma.InputJsonValue, status: "VETOED", completedAt: new Date() },
+        });
+      } catch {
+        /* best-effort */
+      }
+    }
+    return result;
+  }
+
+  // ── ADR-0105 — MARKET_STATUS pre-flight (op-gate marché gelé/shadowbanné) ──
+  const marketCheck = await preflightMarketStatus(intent);
+  if (marketCheck) {
+    const result: IntentResult = {
+      intentKind: intent.kind,
+      strategyId: intent.strategyId,
+      status: "VETOED",
+      summary: marketCheck.reason,
+      startedAt,
+      completedAt: new Date().toISOString(),
+      reason: "MARKET_STATUS",
     };
     if (emissionId) {
       try {

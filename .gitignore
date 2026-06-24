@@ -19,6 +19,9 @@ logs/
 # Generated previews / lighthouse reports (heavy binaries)
 reports/
 
+# Wakanda coverage scan output (regénéré selon l'état de la base)
+scripts/seed-wakanda/coverage-report.json
+
 # macOS / iCloud sync artifacts (Finder duplicates)
 * 2.ts
 * 2.tsx

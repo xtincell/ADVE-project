@@ -22,7 +22,7 @@ export default function ServicesPage() {
         lede="On entre par un audit, un mandat complet ou une collaboration en marque blanche. Derrière chaque porte, la même mécanique : cinq piliers orchestrés par l'Industry OS La Fusée."
       >
         <PrimaryCta href="/contact">Démarrer un projet</PrimaryCta>
-        <GhostCta href="/contact">Demander un devis</GhostCta>
+        <GhostCta href="/tarifs">Voir les tarifs</GhostCta>
       </PageHeader>
 
       <Section>
@@ -50,9 +50,12 @@ export default function ServicesPage() {
             </div>
           ))}
         </div>
-        <p className="mt-6 font-mono text-2xs uppercase tracking-widest text-foreground-muted">
-          ↳ Pricing localisé par zone (FCFA · mobile money). Le diagnostic d&apos;entrée reste gratuit.
-        </p>
+        <Link
+          href="/tarifs"
+          className="mt-6 inline-block font-mono text-2xs uppercase tracking-widest text-foreground-muted underline-offset-4 hover:text-accent hover:underline"
+        >
+          ↳ Voir les tarifs — La Fusée (localisé par zone, mobile money) + prestations agence sur devis
+        </Link>
       </Section>
 
       <Section surface>

@@ -58,6 +58,7 @@
     "db:seed:blog": "node --env-file-if-exists=.env.local --import tsx prisma/seed-blog.ts",
     "db:seed:wakanda": "node --env-file-if-exists=.env.local --import tsx scripts/seed-wakanda/index.ts",
     "db:purge:wakanda": "node --env-file-if-exists=.env.local --import tsx scripts/seed-wakanda/purge.ts",
+    "wakanda:scan": "node --env-file-if-exists=.env.local --import tsx scripts/seed-wakanda/coverage-scan.ts",
     "db:seed:calibration": "npm run db:seed:countries && npm run db:seed:action-costs && npm run db:seed:wakanda",
     "db:seed:all": "npm run db:seed && npm run db:seed:countries && npm run db:seed:action-costs && npm run db:seed:demo && npm run db:seed:spawt && npm run db:seed:wakanda",
     "test": "vitest",
