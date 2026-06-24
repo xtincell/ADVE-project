@@ -2449,6 +2449,15 @@ async function main() {
   const matz = await syncBrandActionsFromBlob(strategy.id);
   console.log(`        ✓ ${matz.upserted} actions matérialisées depuis le pilier I (supprimées: ${matz.deleted})`);
 
+  // ── 8c. Sources : alimente la section Sources + vault d'enrichissement ─
+  console.log("\n[ 8c ] Sources (matériel client réel depuis Customers/SPAWT/)...");
+  try {
+    const { seedSpawtSources } = await import("../prisma/seed-spawt-sources");
+    await seedSpawtSources(db, strategy.id);
+  } catch (err) {
+    console.warn("        ⚠ seed des sources échoué (non bloquant):", err instanceof Error ? err.message : err);
+  }
+
   // ── Résultats ──────────────────────────────────────────────────────────
   console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   console.log("RÉSULTATS");

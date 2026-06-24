@@ -146,4 +146,12 @@ export async function seedSpawt(prisma: PrismaClient): Promise<void> {
   } catch (err) {
     console.warn("[seed-spawt] scoring post-seed échoué (non bloquant):", err instanceof Error ? err.message : err);
   }
+
+  // ── Sources : alimente la section Sources + le vault d'enrichissement ──
+  try {
+    const { seedSpawtSources } = await import("./seed-spawt-sources");
+    await seedSpawtSources(prisma, strategy.id);
+  } catch (err) {
+    console.warn("[seed-spawt] seed des sources échoué (non bloquant):", err instanceof Error ? err.message : err);
+  }
 }

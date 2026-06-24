@@ -33,10 +33,14 @@ export const strategyRouter = createTRPCRouter({
   })
     .mutation(async ({ ctx, input }) => {
       const { sector, country, businessContext, clientId, ...rest } = input;
+      // Résout vers un User réellement présent en base — la session JWT peut
+      // porter un id orphelin après re-seed (sinon FK Strategy_userId_fkey).
+      const { resolveSessionUserId } = await import("../resolve-session-user");
+      const userId = await resolveSessionUserId(ctx);
       const strategy = await ctx.db.strategy.create({
         data: {
           ...rest,
-          userId: ctx.session.user.id,
+          userId,
           operatorId: input.operatorId ?? (ctx.session.user as unknown as Record<string, unknown>).operatorId as string | undefined,
           clientId: clientId ?? undefined,
           businessContext: businessContext as Prisma.InputJsonValue,
@@ -114,7 +118,7 @@ export const strategyRouter = createTRPCRouter({
       await ctx.db.deal.create({
         data: {
           strategyId: strategy.id,
-          userId: ctx.session.user.id,
+          userId,
           contactName: ctx.session.user.name ?? "",
           contactEmail: ctx.session.user.email ?? "",
           companyName: input.name,

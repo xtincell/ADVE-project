@@ -19,7 +19,7 @@
 // ============================================================================
 
 import { z } from "zod";
-import type { Prisma } from "@prisma/client";
+import type { InputJsonValue as PrismaInputJson } from "@prisma/client/runtime/client";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
@@ -65,7 +65,7 @@ export const socialRouter = createTRPCRouter({
               accountName: input.accountName,
               connectedAt: new Date().toISOString(),
             },
-          } as Prisma.InputJsonValue,
+          } as PrismaInputJson,
         },
       });
     }),
@@ -118,8 +118,8 @@ export const socialRouter = createTRPCRouter({
             driverId: input.driverId,
             ...input.metrics,
             engagementRate,
-          } as Prisma.InputJsonValue,
-          advertis_vector: adveImpact as Prisma.InputJsonValue,
+          } as PrismaInputJson,
+          advertis_vector: adveImpact as PrismaInputJson,
         },
       });
 
@@ -214,7 +214,7 @@ export const socialRouter = createTRPCRouter({
           constraints: {
             ...existing,
             socialConnections,
-          } as Prisma.InputJsonValue,
+          } as PrismaInputJson,
         },
       });
     }),
@@ -272,12 +272,12 @@ export const socialRouter = createTRPCRouter({
               postCount: stats.count,
               avgEngagementRate: engRate,
               processedAt: new Date().toISOString(),
-            } as Prisma.InputJsonValue,
+            } as PrismaInputJson,
             advertis_vector: {
               e: Math.min(25, engRate * 2.5),
               d: stats.impressions > 50000 ? 3 : 1,
               t: 2,
-            } as Prisma.InputJsonValue,
+            } as PrismaInputJson,
           },
         });
         created.push(sig);
@@ -497,10 +497,97 @@ export const socialRouter = createTRPCRouter({
           handle: first.handle,
           current: last.followerCount,
           delta: last.followerCount - first.followerCount,
-          mentions: list.reduce((sum, r) => sum + (r.mentionsCount ?? 0), 0),
-          series: list.map((r) => ({ at: r.capturedAt, followers: r.followerCount, mentions: r.mentionsCount ?? 0 })),
+          mentions: list.reduce((sum: number, r: { mentionsCount: number | null }) => sum + (r.mentionsCount ?? 0), 0),
+          series: (list as (typeof rows[number])[]).map((r) => ({ at: r.capturedAt, followers: r.followerCount, mentions: r.mentionsCount ?? 0 })),
           lastCapturedAt: last.capturedAt,
         };
       }).sort((a, b) => b.current - a.current);
+    }),
+
+  // ════════════════════════════════════════════════════════════════════
+  // Option 1 — Collecte via API officielle Meta
+  // ════════════════════════════════════════════════════════════════════
+
+  /**
+   * Déclenche une collecte followers via le token Meta Graph stocké dans
+   * ExternalConnector (META_SOCIAL_OFFICIAL). DEFERRED si absent.
+   */
+  triggerOfficialFetch: governedProcedure({
+    kind: "SOCIAL_AUDIT_FETCH_OFFICIAL",
+    inputSchema: z.object({
+      strategyId: z.string().nullable().default(null),
+      handles: z.array(z.object({
+        platform: z.enum(["INSTAGRAM", "FACEBOOK"]),
+        handle: z.string().min(1).max(120),
+      })).min(1).max(20),
+    }),
+  }).mutation(async ({ ctx, input }) => {
+    const { fetchOfficialApiFollowers } = await import("@/server/services/anubis/social-audit");
+    const operatorId = ctx.session.user.id;
+    const result = await fetchOfficialApiFollowers(
+      operatorId,
+      input.strategyId,
+      input.handles as Parameters<typeof fetchOfficialApiFollowers>[2],
+    );
+    return result;
+  }),
+
+  // ════════════════════════════════════════════════════════════════════
+  // Option 2 — Collecte via API tierce (Apify)
+  // ════════════════════════════════════════════════════════════════════
+
+  /**
+   * Déclenche une collecte followers via Apify Instagram Profile Scraper.
+   * DEFERRED si clé absente. Supporte uniquement INSTAGRAM (Apify scraper).
+   */
+  triggerThirdPartyFetch: governedProcedure({
+    kind: "SOCIAL_AUDIT_FETCH_THIRD_PARTY",
+    inputSchema: z.object({
+      strategyId: z.string().nullable().default(null),
+      handles: z.array(z.object({
+        platform: z.enum(["INSTAGRAM"]),
+        handle: z.string().min(1).max(120),
+      })).min(1).max(20),
+    }),
+  }).mutation(async ({ ctx, input }) => {
+    const { fetchThirdPartyFollowers } = await import("@/server/services/anubis/social-audit");
+    const operatorId = ctx.session.user.id;
+    const result = await fetchThirdPartyFollowers(
+      operatorId,
+      input.strategyId,
+      input.handles as Parameters<typeof fetchThirdPartyFollowers>[2],
+    );
+    return result;
+  }),
+
+  // ════════════════════════════════════════════════════════════════════
+  // Gestion des connecteurs sociaux
+  // ════════════════════════════════════════════════════════════════════
+
+  /** Liste les connecteurs sociaux configurés pour cet opérateur. */
+  listSocialConnectors: protectedProcedure
+    .query(async ({ ctx }) => {
+      const { getSocialConnectors } = await import("@/server/services/anubis/social-audit");
+      return getSocialConnectors(ctx.session.user.id);
+    }),
+
+  /**
+   * Upsert un connecteur social (META_SOCIAL_OFFICIAL ou APIFY_SOCIAL).
+   * La config JSON est passée telle quelle — le service valide les champs requis
+   * au moment de l'utilisation (fetch).
+   *
+   * IMPORTANT : ne jamais logger ctx ni le token renvoyé.
+   */
+  upsertSocialConnector: protectedProcedure
+    .input(z.object({
+      connectorType: z.enum(["META_SOCIAL_OFFICIAL", "APIFY_SOCIAL"]),
+      config: z.record(z.string(), z.unknown()),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { upsertSocialConnector } = await import("@/server/services/anubis/social-audit");
+      return upsertSocialConnector(ctx.session.user.id, {
+        connectorType: input.connectorType,
+        config: input.config,
+      });
     }),
 });
