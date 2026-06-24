@@ -111,7 +111,7 @@ export function PricingGrid({ callbackPath = "/pricing" }: { callbackPath?: stri
       )}
 
       {isLoading ? (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[...Array(6)].map((_, i) => (
             <div key={i} className="h-72 animate-pulse border" style={{ borderColor: "color-mix(in oklab, var(--color-foreground) 12%, transparent)", background: "color-mix(in oklab, var(--color-foreground) 4%, transparent)" }} />
           ))}
@@ -125,7 +125,7 @@ export function PricingGrid({ callbackPath = "/pricing" }: { callbackPath?: stri
             return (
               <article
                 key={tier.key}
-                className={`relative flex min-h-[420px] flex-col gap-5 p-8 ${featured ? "" : "border bg-white"}`}
+                className={`relative flex min-h-[420px] flex-col gap-5 p-8 ${featured ? "" : "border border-border bg-background"}`}
                 style={
                   featured
                     ? { background: "var(--color-foreground)", color: "var(--color-background)" }
