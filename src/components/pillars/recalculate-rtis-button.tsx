@@ -83,7 +83,7 @@ export function RecalculateRtisButton({
         type="button"
         onClick={handleClick}
         disabled={actualize.isPending}
-        title={`Re-générer ${PILLAR_LABELS[pillarKey]} depuis ADVE${pillarKey !== "R" ? " + RTIS amont" : ""}.`}
+        title={pillarKey === "T" ? "Calculer le pilier T sur la base de ADVE + R + Seshat + sources." : `Re-générer ${PILLAR_LABELS[pillarKey]} depuis ADVE${pillarKey !== "R" ? " + RTIS amont" : ""}.`}
         className="flex items-center gap-1.5 rounded-lg bg-sky-600/20 px-3 py-1.5 text-xs font-medium text-sky-300 hover:bg-sky-600/30 disabled:opacity-50"
       >
         {actualize.isPending ? (
@@ -91,7 +91,7 @@ export function RecalculateRtisButton({
         ) : (
           <RefreshCw className="h-3.5 w-3.5" />
         )}
-        Recalculer ce pilier
+        {pillarKey === "T" ? "Calculer le pilier T" : "Recalculer ce pilier"}
       </button>
       {feedback ? (
         <span

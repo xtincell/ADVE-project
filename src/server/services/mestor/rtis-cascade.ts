@@ -389,65 +389,7 @@ export async function actualizePillar(
       confidence = 0.75;
 
     } else if (pillarKey === "T") {
-      // Phase 0: Skip if T is already sufficient
-      const { assessPillar: assess } = await import("@/server/services/pillar-maturity/assessor");
-      const { getContract } = await import("@/server/services/pillar-maturity/contracts-loader");
-      const currentT = await db.pillar.findFirst({ where: { strategyId, key: "t" }, select: { content: true } });
-      const currentTContent = (currentT?.content ?? null) as Record<string, unknown> | null;
-      const tContract = getContract("t");
-      if (currentTContent && tContract) {
-        const tAssessment = assess("t", currentTContent, tContract);
-        if (tAssessment.completionPct >= 90) {
-          return { pillarKey, updated: false, maturityStage: tAssessment.currentStage, maturityCompletionPct: tAssessment.completionPct };
-        }
-      }
-
-      // Phase 1: Vault → Seshat ingest
-      const { buildSearchContext } = await import("@/server/services/seshat/tarsis/weak-signal-analyzer");
-      const { scanVaultForMarketIntelligence, ingestVaultToKnowledgeEntry } = await import("@/server/services/seshat/tarsis/vault-bridge");
-      let searchCtx: Awaited<ReturnType<typeof buildSearchContext>> | null = null;
-      try {
-        searchCtx = await buildSearchContext(strategyId);
-        const vaultSnapshot = await scanVaultForMarketIntelligence(strategyId);
-        if (vaultSnapshot.hasData && searchCtx) {
-          await ingestVaultToKnowledgeEntry(strategyId, searchCtx, vaultSnapshot.assets);
-        }
-      } catch (err) {
-        console.warn("[rtis-cascade:T] vault scan failed (non-fatal):", err instanceof Error ? err.message : err);
-      }
-
-      // Phase 2: Collect if Seshat has no useful data
-      if (searchCtx?.countryCode && searchCtx?.sector) {
-        try {
-          const { loadCountrySectorIntelligence } = await import("@/server/services/seshat/knowledge/access");
-          const intelligence = await loadCountrySectorIntelligence(searchCtx.countryCode, searchCtx.sector);
-          const hasSeshatData =
-            intelligence.tamSamSom !== null ||
-            intelligence.competitors.length > 0 ||
-            intelligence.signals.macroSignals.length > 0;
-          if (!hasSeshatData) {
-            const { collectMarketSignals } = await import("@/server/services/seshat/tarsis/signal-collector");
-            await collectMarketSignals({
-              strategyId,
-              sector: searchCtx.sector,
-              market: searchCtx.market,
-              countryCode: searchCtx.countryCode,
-              countryName: searchCtx.countryName,
-              primaryLanguage: searchCtx.primaryLanguage,
-              purchasingPowerIndex: searchCtx.purchasingPowerIndex,
-              region: searchCtx.region,
-              countryMeta: searchCtx.countryMeta,
-              keywords: searchCtx.keywords,
-              competitors: searchCtx.competitors,
-              frequency: "DAILY",
-            });
-          }
-        } catch (err) {
-          console.warn("[rtis-cascade:T] Seshat collection failed (non-fatal):", err instanceof Error ? err.message : err);
-        }
-      }
-
-      // Phase 3: Generate full T pillar via Protocole Track
+      // Step 2 only: Generate T pillar via Protocole Track using prepared Seshat data
       const { executeProtocoleTrack } = await import("@/server/services/rtis-protocols");
       const tResult = await executeProtocoleTrack(strategyId);
       if (tResult.error || Object.keys(tResult.content).length === 0) {
@@ -866,4 +808,129 @@ export async function runRTISCascade(
   const finalScore = await recalcScores(strategyId);
 
   return { results, finalScore };
+}
+
+/**
+ * Decoupled step 1 for Pillar T: triggers market study.
+ * Scan vault assets, perform targeted web search using Brave Search API (if key is set),
+ * and persistently update Seshat under the strategy's sector & country Code.
+ */
+export async function triggerMarketStudy(
+  strategyId: string,
+  operatorId: string,
+): Promise<{ success: boolean; message: string; sourceUrlsCount: number; sector: string; countryCode: string }> {
+  const { buildSearchContext } = await import("@/server/services/seshat/tarsis/weak-signal-analyzer");
+  const searchCtx = await buildSearchContext(strategyId);
+
+  const sector = searchCtx.sector || "unknown";
+  const countryCode = searchCtx.countryCode || "XX";
+  const countryName = searchCtx.countryName || "";
+  const competitors = searchCtx.competitors || [];
+  const keywords = searchCtx.keywords || [];
+
+  // 1. Vault → Seshat ingest
+  try {
+    const { scanVaultForMarketIntelligence, ingestVaultToKnowledgeEntry } = await import("@/server/services/seshat/tarsis/vault-bridge");
+    const vaultSnapshot = await scanVaultForMarketIntelligence(strategyId);
+    if (vaultSnapshot.hasData) {
+      await ingestVaultToKnowledgeEntry(strategyId, searchCtx, vaultSnapshot.assets);
+    }
+  } catch (err) {
+    console.warn("[triggerMarketStudy] vault scan failed (non-fatal):", err instanceof Error ? err.message : err);
+  }
+
+  // 2. Collect market signals
+  try {
+    const { collectMarketSignals } = await import("@/server/services/seshat/tarsis/signal-collector");
+    await collectMarketSignals({
+      strategyId,
+      sector,
+      market: searchCtx.market,
+      countryCode,
+      countryName,
+      primaryLanguage: searchCtx.primaryLanguage,
+      purchasingPowerIndex: searchCtx.purchasingPowerIndex,
+      region: searchCtx.region,
+      countryMeta: searchCtx.countryMeta,
+      keywords,
+      competitors,
+      frequency: "DAILY",
+    });
+  } catch (err) {
+    console.warn("[triggerMarketStudy] signal collection failed (non-fatal):", err instanceof Error ? err.message : err);
+  }
+
+  // 3. Web search via Brave Search API (if key is present)
+  const sourceUrls: string[] = [];
+  const braveKey = process.env.BRAVE_API_KEY;
+  if (braveKey) {
+    try {
+      const { isUrlAllowed } = await import("@/server/services/artemis/market-research/web-fetcher");
+      // Build search queries
+      const query1 = `"${sector}" market size trends ${countryName}`.trim();
+      const query2 = `"${sector}" industry competitors ${countryName}`.trim();
+      const queries = [query1, query2];
+
+      for (const q of queries) {
+        const url = new URL("https://api.search.brave.com/res/v1/web/search");
+        url.searchParams.set("q", q);
+        url.searchParams.set("count", "5");
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
+
+        const res = await fetch(url.toString(), {
+          signal: controller.signal,
+          headers: { "Accept": "application/json", "X-Subscription-Token": braveKey },
+        });
+        clearTimeout(timeout);
+
+        if (res.ok) {
+          const data = await res.json();
+          const results = data.web?.results || [];
+          for (const item of results) {
+            if (item.url && isUrlAllowed(item.url).ok) {
+              sourceUrls.push(item.url);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("[triggerMarketStudy] Brave Search failed:", err instanceof Error ? err.message : err);
+    }
+  }
+
+  const uniqueUrls = Array.from(new Set(sourceUrls)).slice(0, 5);
+
+  // 4. Emit Intent RUN_MARKET_RESEARCH to persistently update Seshat
+  const { emitIntent } = await import("@/server/services/mestor/intents");
+  const query = `Étude de marché sur le secteur ${sector} en ${countryName || countryCode}. Analyse des tendances, des concurrents et des dynamiques clients.`.trim();
+
+  const intentResult = await emitIntent(
+    {
+      kind: "RUN_MARKET_RESEARCH",
+      strategyId,
+      payload: {
+        query,
+        countryCode,
+        sector,
+        sourceUrls: uniqueUrls,
+        uploadedBy: operatorId,
+        brandNature: (searchCtx.countryMeta?.brandNature as string | undefined) ?? "",
+      },
+    },
+    { caller: "triggerMarketStudy" },
+  );
+
+  if (intentResult.status !== "OK") {
+    throw new Error(`[RUN_MARKET_RESEARCH] ${intentResult.summary || "failed to execute research intent"}`);
+  }
+
+  return {
+    success: true,
+    message: intentResult.summary || "Étude de marché exécutée et Seshat mis à jour.",
+    sourceUrlsCount: uniqueUrls.length,
+    sector,
+    countryCode,
+  };
 }

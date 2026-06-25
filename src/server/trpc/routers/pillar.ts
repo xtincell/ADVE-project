@@ -620,6 +620,15 @@ export const pillarRouter = createTRPCRouter({
       return actualizePillar(input.strategyId, input.key);
     }),
 
+  triggerMarketStudy: governedProcedure({
+    kind: "RUN_MARKET_RESEARCH",
+    inputSchema: z.object({ strategyId: z.string() }),
+    caller: "pillar:triggerMarketStudy",
+  }).mutation(async ({ input, ctx }) => {
+    const { triggerMarketStudy } = await import("@/server/services/mestor/rtis-cascade");
+    return triggerMarketStudy(input.strategyId, ctx.session.user.id);
+  }),
+
   cascadeRTIS: governedProcedure({
     kind: "RUN_RTIS_CASCADE",
     inputSchema: z.object({

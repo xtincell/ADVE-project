@@ -149,6 +149,12 @@ export function PillarPage({ pageKey }: PillarPageProps) {
 
   const autoFillMutation = trpc.pillar.autoFill.useMutation({ onSuccess: () => { pillarQuery.refetch(); recosQuery.refetch(); } });
   const actualizeMutation = trpc.pillar.actualize.useMutation({ onSuccess: () => pillarQuery.refetch() });
+  const triggerMarketStudyMutation = trpc.pillar.triggerMarketStudy.useMutation({
+    onSuccess: () => {
+      pillarQuery.refetch();
+      assessQuery.refetch();
+    },
+  });
   // PR-C (ADR-0035) — confirm an LLM-inferred field as DECLARED. Triggers
   // pillar refetch so the badge disappears immediately on success.
   const confirmInferredMutation = trpc.pillar.confirmInferredField.useMutation({
@@ -247,6 +253,15 @@ export function PillarPage({ pageKey }: PillarPageProps) {
     setRegenerateProgress("Initialisation...");
     try {
       if (!isAdve) {
+        if (config.pillarKey === "t") {
+          setRegenerateProgress("Étude de marché...");
+          const res = await triggerMarketStudyMutation.mutateAsync({ strategyId });
+          setEnrichResult({
+            type: "success",
+            message: `${res.message} (Sources web: ${res.sourceUrlsCount})`,
+          });
+          return;
+        }
         setEnrichResult({ type: "warning", message: "Pilier dérivé — utilise « Recalculer ce pilier » pour lancer la cascade." });
         return;
       }
@@ -415,29 +430,51 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                 pillarKey={config.pillarKey.toUpperCase() as "R" | "T" | "I" | "S"}
               />
             ) : null}
-            <button
-              onClick={handleRegenerate}
-              disabled={isRegenerating}
-              title={
-                (assess?.needsHuman?.length ?? 0) > 0
-                  ? `Enrichir remplit les ${assess?.derivable?.length ?? 0} champ(s) dérivable(s). ${assess?.needsHuman?.length} champ(s) nécessitent ta saisie — voir liste ci-dessous.`
-                  : "Enrichir auto-remplit les champs manquants via vault, calculs et IA."
-              }
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                isAdve ? "bg-accent/20 text-accent hover:bg-accent/30" : "bg-info/20 text-info hover:bg-info/30"
-              } disabled:opacity-50`}>
-              {isRegenerating ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  <span>{regenerateProgress ?? "Enrichir..."}</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-3.5 w-3.5" />
-                  <span>Enrichir</span>
-                </>
-              )}
-            </button>
+            {config.pillarKey === "t" ? (
+              <button
+                onClick={handleRegenerate}
+                disabled={isRegenerating}
+                title="Lancer l'étude de marché sur le web et mettre à jour Seshat."
+                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors bg-info/20 text-info hover:bg-info/30 disabled:opacity-50"
+              >
+                {isRegenerating ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span>{regenerateProgress ?? "Étude de marché..."}</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-3.5 w-3.5" />
+                    <span>Lancer l'étude de marché</span>
+                  </>
+                )}
+              </button>
+            ) : (
+              <button
+                onClick={handleRegenerate}
+                disabled={isRegenerating}
+                title={
+                  (assess?.needsHuman?.length ?? 0) > 0
+                    ? `Enrichir remplit les ${assess?.derivable?.length ?? 0} champ(s) dérivable(s). ${assess?.needsHuman?.length} champ(s) nécessitent ta saisie — voir liste ci-dessous.`
+                    : "Enrichir auto-remplit les champs manquants via vault, calculs et IA."
+                }
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                  isAdve ? "bg-accent/20 text-accent hover:bg-accent/30" : "bg-info/20 text-info hover:bg-info/30"
+                } disabled:opacity-50`}
+              >
+                {isRegenerating ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span>{regenerateProgress ?? "Enrichir..."}</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-3.5 w-3.5" />
+                    <span>Enrichir</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </div>
         {/* 3-level scoring bar — ADR-0030 PR-Fix-1 : couleur conditionnée
