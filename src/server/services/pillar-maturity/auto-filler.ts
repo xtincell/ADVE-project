@@ -806,24 +806,28 @@ export async function runChunkedFieldGeneration(args: {
     });
   }
 
-  // Multi-chunk path — round-robin split, sequential calls, merge.
+  // Multi-chunk path — round-robin split, appels PARALLÈLES, merge.
+  // Avant : séquentiel → N chunks × 20-30s = timeout Vercel 60s sur les piliers
+  // complexes (E = 23 champs = 3 chunks = 90s). Après : parallèle → max(chunk_time)
+  // = ~25-30s quel que soit N. Les chunks sont indépendants (champs distincts,
+  // contexte pilier identique) donc la parallélisation est safe.
   const chunks = chunkFields(missingReqs, fieldsPerChunk);
-  const merged: Record<string, unknown> = {};
-  for (let i = 0; i < chunks.length; i++) {
-    const result = await runChunkLLM({
-      strategyId,
-      pillarKey,
-      chunk: chunks[i]!,
-      pillarContext,
-      financialCtx,
-      hasFinancialFields,
-      caller: `${callerBase}:chunk-${i + 1}/${chunks.length}`,
-      maxOutputTokens: 3000,
-      ollamaModel: args.ollamaModel,
-    });
-    Object.assign(merged, result);
-  }
-  return merged;
+  const results = await Promise.all(
+    chunks.map((chunk, i) =>
+      runChunkLLM({
+        strategyId,
+        pillarKey,
+        chunk,
+        pillarContext,
+        financialCtx,
+        hasFinancialFields,
+        caller: `${callerBase}:chunk-${i + 1}/${chunks.length}`,
+        maxOutputTokens: 4000,
+        ollamaModel: args.ollamaModel,
+      }),
+    ),
+  );
+  return Object.assign({}, ...results);
 }
 
 async function generateMissingFields(
