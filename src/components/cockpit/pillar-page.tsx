@@ -222,6 +222,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
     if (v == null) return true;
     if (typeof v === "string") return v.length <= 32;
     if (Array.isArray(v)) return v.every((x) => typeof x === "string" && x.length <= 24) && (v as unknown[]).join(", ").length <= 64;
+    if (typeof v === "object") return false; // jamais un objet en badge inline
     return String(v).length <= 32;
   };
   const inlineKeys = allKeys.filter((k) => isInlineField(k) && inlineFitsLocal(content[k]));
@@ -258,12 +259,17 @@ export function PillarPage({ pageKey }: PillarPageProps) {
       const r = await autoFillMutation.mutateAsync({ strategyId, pillarKey: config.pillarKey });
       const data = r as unknown as Record<string, unknown>;
       const filledCount = Array.isArray(data?.filled) ? (data.filled as string[]).length : 0;
+      const failedCount = Array.isArray(data?.failed) ? (data.failed as unknown[]).length : 0;
       const needsHumanAfter = Array.isArray(data?.needsHuman) ? (data.needsHuman as string[]) : [];
 
       const parts: string[] = [];
       if (filledCount > 0) parts.push(`${filledCount} champ(s) rempli(s) depuis les sources`);
-      if (needsHumanAfter.length > 0) parts.push(`${needsHumanAfter.length} champ(s) à saisir manuellement`);
-      if (parts.length === 0) parts.push("Tous les champs sont remplis ou nécessitent une saisie manuelle");
+      // needsHuman = champs nominatifs réels (ex: traction). Tous les autres champs
+      // structurels sont inférables ; s'ils restent vides c'est un échec LLM (failed),
+      // pas un blocage conceptuel.
+      if (needsHumanAfter.length > 0) parts.push(`${needsHumanAfter.length} champ(s) nécessitent une saisie réelle (données opérateur, ex: traction)`);
+      if (failedCount > 0) parts.push(`${failedCount} champ(s) non remplis (LLM insuffisant — relance Enrichir ou ajoute des sources)`);
+      if (parts.length === 0) parts.push("Tous les champs dérivables sont déjà remplis");
       parts.push("Pour challenger : « Générer depuis les sources » dans Notoria");
       setEnrichResult({ type: filledCount > 0 ? "success" : "warning", message: parts.join(" · ") });
     } catch (err) {
@@ -862,9 +868,28 @@ export function PillarPage({ pageKey }: PillarPageProps) {
       {/* ── Inline metadata badges (générique only — bespoke couvre déjà) ── */}
       {!Bespoke && (() => {
         const filled = inlineKeys.filter(k => isFilled(content[k]));
+        // Safe serialization : jamais de « [object Object] » quel que soit le
+        // type stocké (drift LLM fréquent sur economicModels/businessModel).
+        const safeInlineStr = (v: unknown): string => {
+          if (v == null) return "";
+          if (typeof v === "string") return v;
+          if (typeof v === "number" || typeof v === "boolean") return String(v);
+          if (Array.isArray(v))
+            return (v as unknown[]).map(x =>
+              typeof x === "string" ? x :
+              typeof x === "object" && x !== null
+                ? (Object.values(x as Record<string, unknown>).find(s => typeof s === "string") as string | undefined ?? `(${Object.keys(x as Record<string, unknown>).length} champs)`)
+                : String(x)
+            ).join(", ");
+          if (typeof v === "object" && v !== null) {
+            const first = Object.values(v as Record<string, unknown>).find(s => typeof s === "string");
+            return typeof first === "string" ? first : `(${Object.keys(v as Record<string, unknown>).length} champs)`;
+          }
+          return String(v);
+        };
         return filled.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
-            {filled.map(k => <InlineBadge key={k} label={getFieldLabel(k)} value={Array.isArray(content[k]) ? (content[k] as unknown[]).join(", ") : String(content[k])} />)}
+            {filled.map(k => <InlineBadge key={k} label={getFieldLabel(k)} value={safeInlineStr(content[k])} />)}
           </div>
         ) : null;
       })()}
