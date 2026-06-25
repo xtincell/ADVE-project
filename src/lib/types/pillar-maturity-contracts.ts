@@ -117,19 +117,6 @@ const ENRICHED_E: FieldRequirement[] = [
   // ADR-0037 PR-K3 — fields canon manuel inférables E
   { path: "programmeEvangelisation", validator: "is_object", derivable: true, derivationSource: "ai_generation", description: "Programme d'Évangélisation (manuel E §4.7) — referral/advocacy/recruitment" },
   { path: "communityBuilding", validator: "is_object", derivable: true, derivationSource: "ai_generation", description: "Community Building (manuel E §4.8) — platforms/moderationRules/growthMechanics" },
-  // Champs cult-marketing — 100 % inférables depuis ADVE (A.doctrine/prophecy/valeurs/archetype/enemy, D.personas)
-  // Ajoutés ici (ENRICHED) car ils faisaient partie du pool COMPLETE via schema-derivation mais n'étaient jamais
-  // remplis (3 chunks → timeout Vercel 60s). 2 chunks totaux = ~20s avec ces 10 champs.
-  { path: "sacredCalendar", validator: "min_items", validatorArg: 4, derivable: true, derivationSource: "ai_generation", description: "Calendrier sacré (4+ dates clés de la marque) — dérivé de A.prophecy, A.doctrine" },
-  { path: "commandments", validator: "min_items", validatorArg: 5, derivable: true, derivationSource: "ai_generation", description: "Commandements de la tribu — dérivés de A.doctrine.dogmas + A.valeurs" },
-  { path: "taboos", validator: "min_items", validatorArg: 3, derivable: true, derivationSource: "ai_generation", description: "Tabous communautaires — dérivés de A.enemy + A.doctrine" },
-  { path: "principesCommunautaires", validator: "min_items", validatorArg: 3, derivable: true, derivationSource: "ai_generation", description: "Principes communautaires — dérivés de A.doctrine.principles + A.valeurs" },
-  { path: "ritesDePassage", validator: "min_items", validatorArg: 2, derivable: true, derivationSource: "ai_generation", description: "Rites de passage Devotion Ladder — dérivés de A.hierarchieCommunautaire" },
-  { path: "sacraments", validator: "min_items", validatorArg: 3, derivable: true, derivationSource: "ai_generation", description: "Sacrements (rituels déclencheurs) — dérivés de A.archetype + D.personas" },
-  { path: "gamification", validator: "is_object", derivable: true, derivationSource: "ai_generation", description: "Système de gamification — dérivé de A.hierarchieCommunautaire niveaux" },
-  { path: "barriersEngagement", validator: "min_items", validatorArg: 2, derivable: true, derivationSource: "ai_generation", description: "Barrières d'engagement — dérivées de D.personas.fears + Devotion Ladder" },
-  { path: "clergeStructure", validator: "is_object", derivable: true, derivationSource: "ai_generation", description: "Structure du clergé (community manager, ambassadeurs) — dérivée de A.equipeDirigeante" },
-  { path: "pelerinages", validator: "min_items", validatorArg: 1, derivable: true, derivationSource: "ai_generation", description: "Pèlerinages / événements sacrés — dérivés de A.prophecy + brand events" },
 ];
 
 const ENRICHED_R: FieldRequirement[] = [
