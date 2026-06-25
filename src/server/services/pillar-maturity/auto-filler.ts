@@ -55,7 +55,7 @@ export async function fillToStage(
   const aggregateSourceFilled = new Set<string>(); // champs SOURCE (ÉTAPE 0)
   const aggregateFailed: Array<{ path: string; reason: string }> = [];
   const aggregateNeedsHuman = new Set<string>();
-  const MAX_PASSES = 3;
+  const MAX_PASSES = 1;
 
   for (let pass = 1; pass <= MAX_PASSES; pass++) {
     const passResult = await runFillPass(strategyId, key, content, targetStage, contract);
@@ -684,8 +684,9 @@ async function runChunkLLM(args: {
   caller: string;
   maxOutputTokens: number;
   ollamaModel?: string;
+  sourcesBlock?: string;
 }): Promise<Record<string, unknown>> {
-  const { strategyId, pillarKey, chunk, pillarContext, financialCtx, hasFinancialFields, caller, maxOutputTokens, ollamaModel } = args;
+  const { strategyId, pillarKey, chunk, pillarContext, financialCtx, hasFinancialFields, caller, maxOutputTokens, ollamaModel, sourcesBlock } = args;
   const { buildExampleForPath } = await import("@/lib/types/pillar-maturity-contracts");
 
   function fieldExampleBlock(r: FieldRequirement): string {
@@ -705,7 +706,7 @@ async function runChunkLLM(args: {
   const prompt = `Tu es Mestor, l'intelligence strategique de marque.
 
 Voici les 8 piliers actuels de la strategie:
-${pillarContext}${financialCtx}
+${pillarContext}${financialCtx}${sourcesBlock ? `\n\n${sourcesBlock}` : ""}
 
 Le pilier ${pillarKey.toUpperCase()} a besoin des champs suivants (manquants):
 ${fieldList}
@@ -718,14 +719,14 @@ CONSIGNES STRICTES:
    - "ARRAY ≥N items" → tableau de N+ entrées (chaque entrée = objet avec sous-clés nommées).
    - "STRING ≥N chars" → string ≥N caractères, PAS un objet ni un tableau.
    - "NUMBER" → number fini (pas string).
-4. Base-toi sur le contenu existant des autres piliers. Sois SPÉCIFIQUE à cette marque, jamais générique.
+4. Base-toi sur le contenu existant des autres piliers${sourcesBlock ? " et les documents sources ci-dessus" : ""}. Sois SPÉCIFIQUE à cette marque, jamais générique.
 5. Si tu n'es vraiment pas sûr d'un champ, propose la meilleure inférence possible — un placeholder narratif vaut mieux qu'une omission.
 ${hasFinancialFields ? "6. Pour les champs financiers, utilise les RÉFÉRENCES FINANCIÈRES ci-dessus. Ne mets PAS 0. Estime à partir des benchmarks sectoriels.\n" : ""}
 Retourne UNIQUEMENT le JSON, rien d'autre. Pas de markdown, pas de commentaire.`;
 
   // Route via le LLM Gateway (provider-agnostic) au lieu d'Anthropic en dur :
   // sans ça, le chunked-fill plante en mode 100% local (pas de clé Anthropic).
-  // Le gateway choisit Ollama → Anthropic → OpenRouter selon la ModelPolicy,
+  // Le gateway choisit Ollama → Anthropic → OpenRouter selon the ModelPolicy,
   // gère le cost-tracking, et force du JSON valide via response_format.
   const { callLLM } = await import("@/server/services/llm-gateway");
   // LOT 1e — entrée non fiable neutralisée (anti-injection) : le `pillarContext`
@@ -745,14 +746,17 @@ Retourne UNIQUEMENT le JSON, rien d'autre. Pas de markdown, pas de commentaire.`
       maxOutputTokens,
     });
     text = res.text;
-  } catch {
+  } catch (err) {
+    console.error(`[auto-filler] callLLM failed for strategyId=${strategyId}, pillarKey=${pillarKey}, caller=${caller}:`, err);
     return {};
   }
 
   try {
     const { extractJSON } = await import("@/server/services/utils/llm");
     return extractJSON(text) as Record<string, unknown>;
-  } catch {
+  } catch (err) {
+    console.error(`[auto-filler] JSON extraction failed for strategyId=${strategyId}, pillarKey=${pillarKey}, caller=${caller}. Raw LLM text:`, text);
+    console.error(err);
     return {};
   }
 }
@@ -791,6 +795,24 @@ export async function runChunkedFieldGeneration(args: {
   const financialCtx = await buildFinancialContext(allPillars, missingReqs);
   const hasFinancialFields = missingReqs.some(r => r.path.startsWith("unitEconomics"));
 
+  // Load sources context (ADVE-project V3.3 correction)
+  const sources = await db.brandDataSource.findMany({
+    where: {
+      strategyId,
+      processingStatus: { in: ["EXTRACTED", "PROCESSED"] },
+    },
+    select: {
+      rawContent: true,
+    },
+  });
+  const sourcesContext = sources
+    .map(s => s.rawContent)
+    .filter(Boolean)
+    .join("\n\n---\n\n");
+  const sourcesBlock = sourcesContext.trim()
+    ? wrapUntrusted("DOCUMENTS SOURCES DE LA MARQUE", sourcesContext, { max: 8000 })
+    : "";
+
   // Single-chunk path — preserves original behavior for short pillars.
   if (missingReqs.length <= fieldsPerChunk) {
     return runChunkLLM({
@@ -803,6 +825,7 @@ export async function runChunkedFieldGeneration(args: {
       caller: callerBase,
       maxOutputTokens: 6000,
       ollamaModel: args.ollamaModel,
+      sourcesBlock,
     });
   }
 
@@ -824,6 +847,7 @@ export async function runChunkedFieldGeneration(args: {
         caller: `${callerBase}:chunk-${i + 1}/${chunks.length}`,
         maxOutputTokens: 4000,
         ollamaModel: args.ollamaModel,
+        sourcesBlock,
       }),
     ),
   );
