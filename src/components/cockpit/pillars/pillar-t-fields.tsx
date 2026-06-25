@@ -8,11 +8,29 @@
  * validation des risques, sources, traction. Palette T = sky (var(--info)).
  */
 
+import type { ReactNode } from "react";
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
 import {
   Section, ACard, EmptyBody, EmptyValue, ObjCard, ProofList,
   isEmpty, asArr, asRec, str, makeStatusFor, type Rec,
 } from "./pillar-kit";
+
+// ── Helpers ────────────────────────────────────────────────────────────
+
+function formatMarketValue(entry: unknown): ReactNode {
+  const o = asRec(entry);
+  if (isEmpty(o.value)) return "—";
+  const num = Number(o.value);
+  if (Number.isNaN(num)) return str(o.value);
+  const isUsd = typeof o.description === "string" && o.description.toUpperCase().includes("USD");
+  const suffix = isUsd ? " USD" : " XAF";
+  return (
+    <span title={o.description ? String(o.description) : undefined}>
+      {num.toLocaleString("fr-FR")}{suffix}
+      {o.source === "ai_estimate" && <span className="opacity-50 text-2xs ml-1.5 font-normal">(estimation IA)</span>}
+    </span>
+  );
+}
 
 // ── Confrontation VALEUR MARQUE ↔ VALEUR MARCHÉ ────────────────────────
 
@@ -38,9 +56,9 @@ function BrandVsMarket({ fit, tam, perception }: { fit: unknown; tam: unknown; p
         <span className="ck-t-bvm__tag">Valeur marché</span>
         {isEmpty(tam) ? <div className="ck-a-empty">À saisir</div> : (
           <div className="ck-t-funnel">
-            <div className="ck-t-funnel__l" data-t="tam"><span>TAM</span>{str(tamO.tam)}</div>
-            <div className="ck-t-funnel__l" data-t="sam"><span>SAM</span>{str(tamO.sam)}</div>
-            <div className="ck-t-funnel__l" data-t="som"><span>SOM</span>{str(tamO.som)}</div>
+            <div className="ck-t-funnel__l" data-t="tam"><span>TAM</span>{formatMarketValue(tamO.tam)}</div>
+            <div className="ck-t-funnel__l" data-t="sam"><span>SAM</span>{formatMarketValue(tamO.sam)}</div>
+            <div className="ck-t-funnel__l" data-t="som"><span>SOM</span>{formatMarketValue(tamO.som)}</div>
           </div>
         )}
       </div>
