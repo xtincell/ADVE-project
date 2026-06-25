@@ -490,6 +490,23 @@ function deriveCrossPillar(
     }
   }
 
+  if (pillarKey === "e") {
+    // ladderProductAlignment : croise V.productLadder (paliers produit) avec les
+    // niveaux de la Devotion Ladder pour produire un mapping entrée/upgrade.
+    if (path === "ladderProductAlignment") {
+      const v = allPillars.v ?? {};
+      const ladder = Array.isArray(v.productLadder) ? (v.productLadder as Array<Record<string, unknown>>) : [];
+      const DEVOTION_LADDER = ["SPECTATEUR", "INTERESSE", "PARTICIPANT", "ENGAGE", "AMBASSADEUR"];
+      if (ladder.length === 0) return undefined;
+      return DEVOTION_LADDER.slice(0, Math.max(2, ladder.length)).map((level, i) => ({
+        devotionLevel: level,
+        productTierRef: typeof ladder[i]?.tier === "string" ? ladder[i]?.tier : undefined,
+        entryAction: ladder[i] ? `Decouvrir ${String(ladder[i]?.tier ?? "ce palier")}` : undefined,
+        upgradeAction: ladder[i + 1] ? `Passer a ${String(ladder[i + 1]?.tier ?? "le palier suivant")}` : undefined,
+      }));
+    }
+  }
+
   if (pillarKey === "r") {
     if (path === "pillarGaps") {
       // Derive from maturity assessment of ADVE
