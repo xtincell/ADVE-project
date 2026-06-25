@@ -53,14 +53,21 @@ export function buildMarketResearchPrompt(input: BuildPromptInput): BuiltPrompt 
 
 CONTRAINTES DURES — anti-fabrication (ADR-0030 + ADR-0037) :
 1. Tu produis UN SEUL document Markdown commençant par \`---\` frontmatter et contenant les 10 sections \`## §1\` à \`## §10\` exactement comme dans le template.
-2. Chaque cellule de table où tu n'as PAS de donnée explicitement présente dans les sources fournies doit contenir \`-\` (tiret unique). Pas de fabrication. Pas d'estimation. Pas d'interpolation depuis un autre pays.
-3. Pour chaque ligne où tu donnes un chiffre, la cellule \`source\` DOIT contenir soit l'URL exacte d'une source fournie, soit \`"memory"\` (uniquement si aucune source URL n'a été fournie en input).
-4. Le frontmatter \`format:\` est exactement \`structured-market-study/v1\`.
-5. Le frontmatter \`scoping.countryCode\` est exactement \`${input.countryCode}\` (ISO-2 majuscules).
-6. Le frontmatter \`scoping.sector\` est exactement \`${input.sector}\`.
-7. Le frontmatter \`study.geography\` est le pays au format texte (ex: "South Africa", "Cameroun").
-8. Le frontmatter \`study.sectorCoverage\` contient au minimum le secteur cible.
-9. Pas de placeholders \`REMPLIR\` / \`XX\` / \`YYYY-MM-DD\`. Si la valeur est inconnue, tu OMETS la clé entière du frontmatter (sauf champs requis : title, sectorCoverage, format, scoping.countryCode, scoping.sector).
+2. Le frontmatter YAML en haut de ton document doit obligatoirement avoir cette structure exacte, avec 'title' sous 'study' et 'sectorCoverage' comme tableau (remplace <Pays> par le nom complet du pays cible, ex: "Cameroun", "Afrique du Sud", etc., et ne mets aucun placeholder comme REMPLIR/XX/YYYY-MM-DD) :
+---
+format: structured-market-study/v1
+study:
+  title: "Étude de marché — ${input.sector.replace(/"/g, '\\"')}"
+  geography: "<Pays>"
+  sectorCoverage:
+    - "${input.sector.replace(/"/g, '\\"')}"
+scoping:
+  countryCode: "${input.countryCode}"
+  sector: "${input.sector.replace(/"/g, '\\"')}"
+---
+3. Chaque cellule de table où tu n'as PAS de donnée explicitement présente dans les sources fournies doit contenir \`-\` (tiret unique). Pas de fabrication. Pas d'estimation. Pas d'interpolation depuis un autre pays.
+4. Pour chaque ligne où tu donnes un chiffre, la cellule \`source\` DOIT contenir soit l'URL exacte d'une source fournie, soit \`"memory"\` (uniquement si aucune source URL n'a été fournie en input).
+5. RÈGLE STRICTE SUR LES LIGNES DE TABLEAU : Pour chaque tableau, si tu n'as pas de données valides pour TOUTES les colonnes obligatoires d'une ligne (ex: pour la croissance en §2, si tu n'as pas la CAGR ou la période ; pour les concurrents en §3, si tu n'as pas l'année ; pour les segments en §4, si tu n'as pas la taille en % ; etc.), n'écris PAS cette ligne du tout. Les lignes partiellement renseignées (contenant des tirets '-' dans des colonnes obligatoires à côté de colonnes remplies) provoquent des échecs de parsing. Si tu n'as aucune donnée complète pour un tableau entier, laisse-le avec une unique ligne de tirets (ex: \`| - | - | - | - |\`).
 
 CONVENTIONS CELLULES (mêmes que le template manuel) :
 - Nombres : \`1200\`, \`0.085\`, \`5.2\` (point décimal). Pas de virgule.

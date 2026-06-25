@@ -12,8 +12,8 @@ import type { ExtractionResult } from "./types";
  */
 export async function extractPDF(buffer: Buffer): Promise<ExtractionResult> {
   const pdfModule = await import("pdf-parse");
-  const pdfParse = (pdfModule as { default?: (buf: Buffer) => Promise<{ text: string; numpages: number }> }).default ?? pdfModule;
-  const data = await (pdfParse as (buf: Buffer) => Promise<{ text: string; numpages: number }>)(buffer);
+  const pdfParse = (pdfModule as any).default ?? pdfModule;
+  const data = await (pdfParse as any)(buffer);
   return {
     text: data.text,
     metadata: {
