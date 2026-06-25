@@ -68,9 +68,40 @@ CONVENTIONS CELLULES (mêmes que le template manuel) :
 - Demographics : \`clé=valeur, clé=valeur\` (ex: \`age=18-25, income=mid\`).
 - Causal chains : étapes séparées par \` -> \`.
 - Enums : \`impactSeverity\` ∈ {LOW, MEDIUM, HIGH} ; \`timeHorizon\` ∈ {SHORT, MEDIUM, LONG} ; \`urgency\` ∈ {LOW, MEDIUM, HIGH, CRITICAL}.
-- Trend Tracker §10 : tu dois renvoyer les 49 codes pré-listés (A1-A12, B1-B8, C1-C10, D1-D7, E1-E12). Cellule \`value\` vide (\`-\`) pour les codes que tu ne peux pas chiffrer depuis les sources.
+STRUCTURE DES SECTIONS ET EN-TÊTES DE TABLEAUX (CONTRAINTE STRICTE DE FORMAT) :
+Tu dois obligatoirement utiliser EXACTEMENT les titres de section et en-têtes de colonnes suivants (respecte l'ordre et les noms exacts des colonnes) :
 
-49 variables canon Trend Tracker à scanner :
+## §1 TAM / SAM / SOM
+| metric | value | currency | year | methodology | source |
+
+## §2 Croissance & saisonnalité
+| segment | cagr | period | source |
+
+## §3 Concurrents
+| name | marketSharePct | year | source |
+
+## §4 Segments consommateur
+| segment | sizePct | demographics | behaviors | painPoints |
+
+## §5 Prix
+| tier | range | asp | source |
+
+## §6 Mix canaux
+| channel | sharePct | growthTrend |
+
+## §7 Réglementaire
+| regulation | impactSeverity | timeline |
+
+## §8 Macro signals
+| trend | evidence | timeHorizon |
+
+## §9 Signaux faibles
+| event | causalChain | impactCategory | urgency |
+
+## §10 Trend Tracker — 49 variables canon
+| code | label | value | year | source | confidence |
+
+49 variables canon Trend Tracker à scanner (remplis les codes correspondants dans le tableau §10) :
 ${trendCatalog}
 
 ${memoryOnly ? `\nATTENTION — MODE MÉMOIRE-MODÈLE :
