@@ -47,6 +47,13 @@ export function str(v: unknown): string {
   if (v == null) return "";
   if (typeof v === "string") return v;
   if (typeof v === "number") return v.toLocaleString("fr-FR");
+  if (typeof v === "boolean") return v ? "Oui" : "Non";
+  if (Array.isArray(v)) return (v as unknown[]).map(str).filter(Boolean).join(", ");
+  if (typeof v === "object") {
+    const vals = Object.values(v as Record<string, unknown>);
+    const first = vals.find((x): x is string => typeof x === "string" && x.length > 0);
+    return first ?? vals.map(str).filter(Boolean).join(", ");
+  }
   return String(v);
 }
 
