@@ -89,6 +89,105 @@ export const strategyRouter = createTRPCRouter({
         });
       }
 
+      // Initialize structured responses object
+      const bizCtx = (biz ?? {}) as Record<string, unknown>;
+      const initialResponses = {
+        biz: {
+          biz_model: bizCtx.businessModel ?? null,
+          biz_nature: bizCtx.brandNature ?? null,
+          biz_revenue: bizCtx.economicModels ?? [],
+          biz_positioning: bizCtx.positioningArchetype ?? null,
+          biz_sales_channel: bizCtx.salesChannel ?? null,
+          biz_free_element: bizCtx.freeLayer ? (bizCtx.freeLayer as any).whatIsFree : "NONE",
+          biz_free_detail: bizCtx.freeLayer ? (bizCtx.freeLayer as any).whatIsPaid : "",
+          biz_premium_scope: bizCtx.premiumScope ?? "NONE",
+        },
+        a: {
+          a_vision: "",
+          a_mission: "",
+          a_noyau: input.name,
+          a_values: "",
+          a_origin: "",
+          a_archetype: "",
+          a_citation: "",
+        },
+        d: {
+          d_positioning: "",
+          d_promise: "",
+          d_persona_principal: "",
+          d_persona_secondary: "",
+          d_visual: "Inexistante",
+          d_voice: "Pas defini",
+          d_competitors: "",
+        },
+        v: {
+          v_promise: "",
+          v_products: "",
+          v_experience: "5",
+        },
+        e: {
+          e_community: "Aucune",
+          e_loyalty: "10-30%",
+          e_advocates: "Rarement",
+          e_rituals: "",
+        },
+        r: {
+          r_threats: "",
+          r_crisis: "Non",
+          r_reputation: "Pas du tout",
+        },
+        t: {
+          t_kpis: "",
+          t_measurement: "Jamais",
+          t_nps: "Non",
+        },
+        i: {
+          i_roadmap: "Non",
+          i_budget: "< 2%",
+          i_team: "Personne de dedie",
+        },
+        s: {
+          s_guidelines: "Non",
+          s_coherence: "5",
+          s_ambition: "",
+        }
+      };
+
+      // Auto-create QuickIntake to act as the biz intake for the cockpit-created brand
+      const quickIntake = await ctx.db.quickIntake.create({
+        data: {
+          contactName: ctx.session.user.name ?? "System",
+          contactEmail: ctx.session.user.email ?? "system@lafusee.io",
+          companyName: input.name,
+          sector: sector ?? null,
+          country: country ?? null,
+          businessModel: bizCtx.businessModel as string ?? null,
+          economicModel: Array.isArray(bizCtx.economicModels) ? (bizCtx.economicModels as string[]).join(",") : null,
+          positioning: bizCtx.positioningArchetype as string ?? null,
+          brandNature: bizCtx.brandNature as string ?? null,
+          responses: initialResponses as Prisma.InputJsonValue,
+          status: "CONVERTED",
+          convertedToId: strategy.id,
+        }
+      });
+
+      // Auto-create BrandDataSource of type MANUAL_INPUT linked to the QuickIntake
+      const rawContent = formatIntakeRawContent(input.name, initialResponses);
+      await ctx.db.brandDataSource.create({
+        data: {
+          strategyId: strategy.id,
+          sourceType: "MANUAL_INPUT",
+          fileName: `Quick Intake — ${input.name}`,
+          rawContent,
+          rawData: initialResponses as Prisma.InputJsonValue,
+          extractedFields: initialResponses as Prisma.InputJsonValue,
+          pillarMapping: { a: true, d: true, v: true, e: true } as Prisma.InputJsonValue,
+          processingStatus: "PROCESSED",
+          certainty: "DECLARED",
+          origin: `intake:${quickIntake.id}`,
+        },
+      }).catch((err) => { console.warn("[strategy] BrandDataSource creation failed:", err); });
+
       // Chantier 7 — Seed SESHAT with sector benchmarks
       if (sector) {
         await ctx.db.knowledgeEntry.create({
@@ -651,4 +750,70 @@ export const strategyRouter = createTRPCRouter({
 
 function classifyScore(composite: number): string {
   return classifyTier(composite);
+}
+
+export function formatIntakeRawContent(name: string, responses: Record<string, any>): string {
+  const parts: string[] = [];
+  parts.push(`=== Fiche d'Intake : ${name} ===`);
+  
+  const biz = responses.biz ?? {};
+  if (biz.biz_model) parts.push(`Modèle d'affaires: ${biz.biz_model}`);
+  if (biz.biz_nature) parts.push(`Nature de marque: ${biz.biz_nature}`);
+  if (biz.biz_revenue) parts.push(`Modèle économique: ${Array.isArray(biz.biz_revenue) ? biz.biz_revenue.join(", ") : biz.biz_revenue}`);
+  if (biz.biz_positioning) parts.push(`Positionnement prix: ${biz.biz_positioning}`);
+  if (biz.biz_sales_channel) parts.push(`Canal de vente: ${biz.biz_sales_channel}`);
+  if (biz.biz_free_element) parts.push(`Partie gratuite: ${biz.biz_free_element}`);
+  if (biz.biz_free_detail) parts.push(`Détail gratuité: ${biz.biz_free_detail}`);
+  if (biz.biz_premium_scope) parts.push(`Gamme premium: ${biz.biz_premium_scope}`);
+
+  const a = responses.a ?? {};
+  if (a.a_vision) parts.push(`Vision: ${a.a_vision}`);
+  if (a.a_mission) parts.push(`Mission: ${a.a_mission}`);
+  if (a.a_noyau) parts.push(`Noyau identitaire: ${a.a_noyau}`);
+  if (a.a_values) parts.push(`Valeurs: ${a.a_values}`);
+  if (a.a_origin) parts.push(`Origine: ${a.a_origin}`);
+  if (a.a_archetype) parts.push(`Archétype: ${a.a_archetype}`);
+  if (a.a_citation) parts.push(`Citation: ${a.a_citation}`);
+
+  const d = responses.d ?? {};
+  if (d.d_positioning) parts.push(`Positionnement unique: ${d.d_positioning}`);
+  if (d.d_promise) parts.push(`Promesse maître: ${d.d_promise}`);
+  if (d.d_persona_principal) parts.push(`Persona principal: ${d.d_persona_principal}`);
+  if (d.d_persona_secondary) parts.push(`Persona secondaire: ${d.d_persona_secondary}`);
+  if (d.d_visual) parts.push(`Identité visuelle: ${d.d_visual}`);
+  if (d.d_voice) parts.push(`Ton de voix: ${d.d_voice}`);
+  if (d.d_competitors) parts.push(`Concurrents: ${d.d_competitors}`);
+
+  const v = responses.v ?? {};
+  if (v.v_promise) parts.push(`Promesse client: ${v.v_promise}`);
+  if (v.v_products) parts.push(`Produits/services: ${v.v_products}`);
+  if (v.v_experience) parts.push(`Expérience client: ${v.v_experience}/10`);
+
+  const e = responses.e ?? {};
+  if (e.e_community) parts.push(`Communauté: ${e.e_community}`);
+  if (e.e_loyalty) parts.push(`Fidélité client: ${e.e_loyalty}`);
+  if (e.e_advocates) parts.push(`Recommandation: ${e.e_advocates}`);
+  if (e.e_rituals) parts.push(`Rituels: ${e.e_rituals}`);
+
+  const r = responses.r ?? {};
+  if (r.r_threats) parts.push(`Risques: ${r.r_threats}`);
+  if (r.r_crisis) parts.push(`Plan de crise: ${r.r_crisis}`);
+  if (r.r_reputation) parts.push(`Suivi réputation: ${r.r_reputation}`);
+
+  const t = responses.t ?? {};
+  if (t.t_kpis) parts.push(`KPIs: ${t.t_kpis}`);
+  if (t.t_measurement) parts.push(`Fréquence de mesure: ${t.t_measurement}`);
+  if (t.t_nps) parts.push(`Connaissance NPS: ${t.t_nps}`);
+
+  const i = responses.i ?? {};
+  if (i.i_roadmap) parts.push(`Plan marketing: ${i.i_roadmap}`);
+  if (i.i_budget) parts.push(`Budget marketing (% CA): ${i.i_budget}`);
+  if (i.i_team) parts.push(`Gestion marketing: ${i.i_team}`);
+
+  const s = responses.s ?? {};
+  if (s.s_guidelines) parts.push(`Guidelines de marque: ${s.s_guidelines}`);
+  if (s.s_coherence) parts.push(`Cohérence communication: ${s.s_coherence}/10`);
+  if (s.s_ambition) parts.push(`Ambition à 3 ans: ${s.s_ambition}`);
+
+  return parts.filter(Boolean).join("\n");
 }

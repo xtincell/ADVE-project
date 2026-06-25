@@ -114,7 +114,7 @@ export const ingestionRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       return ctx.db.brandDataSource.findUnique({
         where: { id: input.id },
-        select: { id: true, fileName: true, rawContent: true, certainty: true, sourceType: true },
+        select: { id: true, fileName: true, rawContent: true, certainty: true, sourceType: true, origin: true },
       });
     }),
 

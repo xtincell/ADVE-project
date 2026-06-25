@@ -65,8 +65,8 @@ scoping:
   countryCode: "${input.countryCode}"
   sector: "${input.sector.replace(/"/g, '\\"')}"
 ---
-3. Chaque cellule de table où tu n'as PAS de donnée explicitement présente dans les sources fournies doit contenir \`-\` (tiret unique). Pas de fabrication. Pas d'estimation. Pas d'interpolation depuis un autre pays.
-4. Pour chaque ligne où tu donnes un chiffre, la cellule \`source\` DOIT contenir soit l'URL exacte d'une source fournie, soit \`"memory"\` (uniquement si aucune source URL n'a été fournie en input).
+3. Priorise au maximum les données issues des sources fournies si elles sont disponibles. Si les sources fournies ne couvrent pas certaines variables requises (ou si aucune source n'est fournie), tu es autorisé à utiliser ta propre mémoire d'analyste sénior pour estimer et inférer des données réalistes pour ce marché (au lieu de laisser un tableau vide). Pour chaque donnée estimée ou inférée depuis ta mémoire, tu DOIS obligatoirement indiquer "memory" ou "inferred" dans la colonne de source.
+4. Pour chaque ligne où tu donnes un chiffre, la cellule \`source\` DOIT contenir soit l'URL exacte d'une des sources fournies, soit \`"memory"\` / \`"inferred"\` si la donnée provient de tes connaissances d'analyste.
 5. RÈGLE STRICTE SUR LES LIGNES DE TABLEAU : Pour chaque tableau, si tu n'as pas de données valides pour TOUTES les colonnes obligatoires d'une ligne (ex: pour la croissance en §2, si tu n'as pas la CAGR ou la période ; pour les concurrents en §3, si tu n'as pas l'année ; pour les segments en §4, si tu n'as pas la taille en % ; etc.), n'écris PAS cette ligne du tout. Les lignes partiellement renseignées (contenant des tirets '-' dans des colonnes obligatoires à côté de colonnes remplies) provoquent des échecs de parsing. Si tu n'as aucune donnée complète pour un tableau entier, laisse-le avec une unique ligne de tirets (ex: \`| - | - | - | - |\`).
 
 CONVENTIONS CELLULES (mêmes que le template manuel) :
@@ -75,6 +75,9 @@ CONVENTIONS CELLULES (mêmes que le template manuel) :
 - Demographics : \`clé=valeur, clé=valeur\` (ex: \`age=18-25, income=mid\`).
 - Causal chains : étapes séparées par \` -> \`.
 - Enums : \`impactSeverity\` ∈ {LOW, MEDIUM, HIGH} ; \`timeHorizon\` ∈ {SHORT, MEDIUM, LONG} ; \`urgency\` ∈ {LOW, MEDIUM, HIGH, CRITICAL}.
+- Table §1 : La colonne \`metric\` DOIT contenir uniquement la valeur exacte \`TAM\`, \`SAM\` ou \`SOM\` sans aucun texte additionnel ou parenthèses (ex: pas de "TAM (Ciment)").
+- Table §10 : La colonne \`confidence\` DOIT obligatoirement être un nombre décimal entre 0 et 1 (ex: \`0.85\`, \`0.5\`) ou un tiret \`-\`. Ne mets jamais de qualificatif textuel (ex: pas de "MEDIUM", "LOW", "HIGH").
+- Toutes les tables (notamment §1, §3, §10) : La colonne \`year\` DOIT être un nombre entier de 4 chiffres représentant une année unique (ex: \`2024\`, \`2025\`) ou un tiret \`-\`. Les plages d'années (ex: "2020-2025") sont strictement interdites.
 STRUCTURE DES SECTIONS ET EN-TÊTES DE TABLEAUX (CONTRAINTE STRICTE DE FORMAT) :
 Tu dois obligatoirement utiliser EXACTEMENT les titres de section et en-têtes de colonnes suivants (respecte l'ordre et les noms exacts des colonnes) :
 
@@ -113,9 +116,9 @@ ${trendCatalog}
 
 ${memoryOnly ? `\nATTENTION — MODE MÉMOIRE-MODÈLE :
 Aucune source URL n'a été fournie. Tu produis le document depuis ta mémoire d'entraînement. CONSÉQUENCE :
-- Toute cellule \`source\` est \`"memory"\` ou laissée vide.
-- Tu dois être CONSERVATEUR : préfère \`-\` à un chiffre que tu ne peux pas attester par une source publiée. Le UI affichera un disclaimer.` : `\nMODE SOURCES :
-${okSources.length} source(s) URL fournies (extraits inclus ci-dessous). Tu n'utilises QUE ces sources. Si une variable n'est pas couverte, cellule \`-\`.`}
+- Remplis les tableaux de manière complète et réaliste en utilisant tes connaissances pour ce pays et ce secteur.
+- Toute cellule \`source\` de ces lignes doit obligatoirement être renseignée comme \`"memory"\` ou \`"inferred"\`.` : `\nMODE SOURCES :
+${okSources.length} source(s) URL fournies (extraits inclus ci-dessous). Priorise ces sources pour remplir le document. Si une donnée n'est pas présente dans les sources fournies, tu es encouragé à l'estimer/l'inférer depuis tes connaissances générales du pays/secteur afin de ne pas laisser de tableau vide, et d'indiquer \`"memory"\` ou \`"inferred"\` dans sa colonne \`source\`.`}
 
 Aucun texte hors du document Markdown. Pas de fence \`\`\`. Le document commence par \`---\` et finit par la dernière ligne du tableau §10.`;
 

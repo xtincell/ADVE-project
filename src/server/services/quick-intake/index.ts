@@ -259,27 +259,30 @@ export async function advance(input: QuickIntakeAdvanceInput) {
   const progress = answeredSteps.size / allSteps.length;
 
   // If biz step just completed, persist business context fields on the intake
-  if (answeredSteps.has("biz") && mergedResponses.biz_model) {
-    const bizModel = extractKeyFromOption(mergedResponses.biz_model as string);
-    const bizPositioning = extractKeyFromOption(mergedResponses.biz_positioning as string);
-    const bizNature = mergedResponses.biz_nature
-      ? extractKeyFromOption(mergedResponses.biz_nature as string)
-      : undefined;
-    const bizRevenue = Array.isArray(mergedResponses.biz_revenue)
-      ? (mergedResponses.biz_revenue as string[]).map(extractKeyFromOption).join(",")
-      : typeof mergedResponses.biz_revenue === "string"
-        ? extractKeyFromOption(mergedResponses.biz_revenue)
+  if (answeredSteps.has("biz")) {
+    const bizData = (mergedResponses.biz ?? mergedResponses) as Record<string, unknown>;
+    if (bizData.biz_model) {
+      const bizModel = extractKeyFromOption(bizData.biz_model as string);
+      const bizPositioning = extractKeyFromOption(bizData.biz_positioning as string);
+      const bizNature = bizData.biz_nature
+        ? extractKeyFromOption(bizData.biz_nature as string)
         : undefined;
+      const bizRevenue = Array.isArray(bizData.biz_revenue)
+        ? (bizData.biz_revenue as string[]).map(extractKeyFromOption).join(",")
+        : typeof bizData.biz_revenue === "string"
+          ? extractKeyFromOption(bizData.biz_revenue)
+          : undefined;
 
-    await db.quickIntake.update({
-      where: { id: intake.id },
-      data: {
-        businessModel: bizModel,
-        economicModel: bizRevenue,
-        positioning: bizPositioning,
-        brandNature: bizNature,
-      },
-    });
+      await db.quickIntake.update({
+        where: { id: intake.id },
+        data: {
+          businessModel: bizModel,
+          economicModel: bizRevenue,
+          positioning: bizPositioning,
+          brandNature: bizNature,
+        },
+      });
+    }
   }
 
   await db.quickIntake.update({
@@ -1453,9 +1456,10 @@ function buildBusinessContext(
   if (!intake.businessModel) return null;
 
   const responses = (intake.responses ?? {}) as Record<string, unknown>;
-  const salesChannelRaw = extractKeyFromOption((responses.biz_sales_channel as string) ?? "HYBRID");
-  const premiumScopeRaw = extractKeyFromOption((responses.biz_premium_scope as string) ?? "NONE");
-  const freeElementRaw = extractKeyFromOption((responses.biz_free_element as string) ?? "NONE");
+  const bizData = (responses.biz ?? responses) as Record<string, unknown>;
+  const salesChannelRaw = extractKeyFromOption((bizData.biz_sales_channel as string) ?? "HYBRID");
+  const premiumScopeRaw = extractKeyFromOption((bizData.biz_premium_scope as string) ?? "NONE");
+  const freeElementRaw = extractKeyFromOption((bizData.biz_free_element as string) ?? "NONE");
 
   const positioningKey = (intake.positioning ?? "MAINSTREAM") as PositioningArchetypeKey;
   const archetype = POSITIONING_ARCHETYPES[positioningKey];
@@ -1477,7 +1481,7 @@ function buildBusinessContext(
 
   // Build free layer if applicable
   if (freeElementRaw !== "NONE") {
-    const freeDetail = (responses.biz_free_detail as string) ?? "";
+    const freeDetail = (bizData.biz_free_detail as string) ?? "";
     ctx.freeLayer = {
       whatIsFree: freeElementRaw,
       whatIsPaid: freeDetail || "Non précisé",

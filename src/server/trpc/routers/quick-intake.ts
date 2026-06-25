@@ -30,7 +30,7 @@ import { callLLM } from "@/server/services/llm-gateway";
 import * as mestor from "@/server/services/mestor";
 import { emitIntent as mestorEmitIntent } from "@/server/services/mestor/intents";
 import { TRPCError } from "@trpc/server";
-import { createTRPCRouter, publicProcedure, adminProcedure } from "../init";
+import { createTRPCRouter, publicProcedure, adminProcedure, protectedProcedure } from "../init";
 import * as quickIntakeService from "@/server/services/quick-intake";
 import { getAdaptiveQuestions, getBusinessContextQuestions, getAllQuestions } from "@/server/services/quick-intake/question-bank";
 import { governedProcedure } from "@/server/governance/governed-procedure";
@@ -1175,4 +1175,143 @@ export const quickIntakeRouter = createTRPCRouter({
         })),
       };
     }),
+
+  get: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ ctx, input }) => {
+      return ctx.db.quickIntake.findUniqueOrThrow({
+        where: { id: input.id },
+      });
+    }),
+
+  getAllQuestions: protectedProcedure
+    .query(async () => {
+      const { getAllQuestions } = await import("@/server/services/quick-intake/question-bank");
+      return getAllQuestions();
+    }),
+
+  updateIntake: governedProcedure({
+    kind: "LEGACY_QUICK_INTAKE_UPDATE",
+    inputSchema: z.object({
+      id: z.string(),
+      responses: z.record(z.string(), z.record(z.string(), z.unknown())),
+    }),
+    caller: "quick-intake:updateIntake",
+  })
+    .mutation(async ({ ctx, input }) => {
+      const intake = await ctx.db.quickIntake.findUniqueOrThrow({
+        where: { id: input.id },
+      });
+
+      const biz = input.responses.biz ?? {};
+      const bizModel = biz.biz_model ? extractKeyFromOption(biz.biz_model as string) : undefined;
+      const bizPositioning = biz.biz_positioning ? extractKeyFromOption(biz.biz_positioning as string) : undefined;
+      const bizNature = biz.biz_nature ? extractKeyFromOption(biz.biz_nature as string) : undefined;
+      const bizRevenue = Array.isArray(biz.biz_revenue)
+        ? (biz.biz_revenue as string[]).map(extractKeyFromOption).join(",")
+        : typeof biz.biz_revenue === "string"
+          ? extractKeyFromOption(biz.biz_revenue)
+          : undefined;
+
+      const updatedIntake = await ctx.db.quickIntake.update({
+        where: { id: input.id },
+        data: {
+          responses: input.responses as Prisma.InputJsonValue,
+          ...(bizModel !== undefined ? { businessModel: bizModel } : {}),
+          ...(bizPositioning !== undefined ? { positioning: bizPositioning } : {}),
+          ...(bizNature !== undefined ? { brandNature: bizNature } : {}),
+          ...(bizRevenue !== undefined ? { economicModel: bizRevenue } : {}),
+        },
+      });
+
+      // Update associated BrandDataSource if it exists
+      const source = await ctx.db.brandDataSource.findFirst({
+        where: { origin: `intake:${intake.id}` },
+      });
+
+      if (source) {
+        const rawContent = formatIntakeRawContent(intake.companyName, input.responses);
+        await ctx.db.brandDataSource.update({
+          where: { id: source.id },
+          data: {
+            rawContent,
+            rawData: input.responses as Prisma.InputJsonValue,
+            extractedFields: input.responses as Prisma.InputJsonValue,
+          },
+        });
+      }
+
+      return updatedIntake;
+    }),
 });
+
+function extractKeyFromOption(option: string): string {
+  const parts = option.split("::");
+  return parts[0] ?? option;
+}
+
+function formatIntakeRawContent(name: string, responses: Record<string, any>): string {
+  const parts: string[] = [];
+  parts.push(`=== Fiche d'Intake : ${name} ===`);
+  
+  const biz = responses.biz ?? {};
+  if (biz.biz_model) parts.push(`Modèle d'affaires: ${biz.biz_model}`);
+  if (biz.biz_nature) parts.push(`Nature de marque: ${biz.biz_nature}`);
+  if (biz.biz_revenue) parts.push(`Modèle économique: ${Array.isArray(biz.biz_revenue) ? biz.biz_revenue.join(", ") : biz.biz_revenue}`);
+  if (biz.biz_positioning) parts.push(`Positionnement prix: ${biz.biz_positioning}`);
+  if (biz.biz_sales_channel) parts.push(`Canal de vente: ${biz.biz_sales_channel}`);
+  if (biz.biz_free_element) parts.push(`Partie gratuite: ${biz.biz_free_element}`);
+  if (biz.biz_free_detail) parts.push(`Détail gratuité: ${biz.biz_free_detail}`);
+  if (biz.biz_premium_scope) parts.push(`Gamme premium: ${biz.biz_premium_scope}`);
+
+  const a = responses.a ?? {};
+  if (a.a_vision) parts.push(`Vision: ${a.a_vision}`);
+  if (a.a_mission) parts.push(`Mission: ${a.a_mission}`);
+  if (a.a_noyau) parts.push(`Noyau identitaire: ${a.a_noyau}`);
+  if (a.a_values) parts.push(`Valeurs: ${a.a_values}`);
+  if (a.a_origin) parts.push(`Origine: ${a.a_origin}`);
+  if (a.a_archetype) parts.push(`Archétype: ${a.a_archetype}`);
+  if (a.a_citation) parts.push(`Citation: ${a.a_citation}`);
+
+  const d = responses.d ?? {};
+  if (d.d_positioning) parts.push(`Positionnement unique: ${d.d_positioning}`);
+  if (d.d_promise) parts.push(`Promesse maître: ${d.d_promise}`);
+  if (d.d_persona_principal) parts.push(`Persona principal: ${d.d_persona_principal}`);
+  if (d.d_persona_secondary) parts.push(`Persona secondaire: ${d.d_persona_secondary}`);
+  if (d.d_visual) parts.push(`Identité visuelle: ${d.d_visual}`);
+  if (d.d_voice) parts.push(`Ton de voix: ${d.d_voice}`);
+  if (d.d_competitors) parts.push(`Concurrents: ${d.d_competitors}`);
+
+  const v = responses.v ?? {};
+  if (v.v_promise) parts.push(`Promesse client: ${v.v_promise}`);
+  if (v.v_products) parts.push(`Produits/services: ${v.v_products}`);
+  if (v.v_experience) parts.push(`Expérience client: ${v.v_experience}/10`);
+
+  const e = responses.e ?? {};
+  if (e.e_community) parts.push(`Communauté: ${e.e_community}`);
+  if (e.e_loyalty) parts.push(`Fidélité client: ${e.e_loyalty}`);
+  if (e.e_advocates) parts.push(`Recommandation: ${e.e_advocates}`);
+  if (e.e_rituals) parts.push(`Rituels: ${e.e_rituals}`);
+
+  const r = responses.r ?? {};
+  if (r.r_threats) parts.push(`Risques: ${r.r_threats}`);
+  if (r.r_crisis) parts.push(`Plan de crise: ${r.r_crisis}`);
+  if (r.r_reputation) parts.push(`Suivi réputation: ${r.r_reputation}`);
+
+  const t = responses.t ?? {};
+  if (t.t_kpis) parts.push(`KPIs: ${t.t_kpis}`);
+  if (t.t_measurement) parts.push(`Fréquence de mesure: ${t.t_measurement}`);
+  if (t.t_nps) parts.push(`Connaissance NPS: ${t.t_nps}`);
+
+  const i = responses.i ?? {};
+  if (i.i_roadmap) parts.push(`Plan marketing: ${i.i_roadmap}`);
+  if (i.i_budget) parts.push(`Budget marketing (% CA): ${i.i_budget}`);
+  if (i.i_team) parts.push(`Gestion marketing: ${i.i_team}`);
+
+  const s = responses.s ?? {};
+  if (s.s_guidelines) parts.push(`Guidelines de marque: ${s.s_guidelines}`);
+  if (s.s_coherence) parts.push(`Cohérence communication: ${s.s_coherence}/10`);
+  if (s.s_ambition) parts.push(`Ambition à 3 ans: ${s.s_ambition}`);
+
+  return parts.filter(Boolean).join("\n");
+}

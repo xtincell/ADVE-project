@@ -22,9 +22,9 @@ describe("buildMarketResearchPrompt — system prompt invariants", () => {
       generatedAt: "2026-05-07T12:00:00Z",
     });
     expect(built.system).toContain("structured-market-study/v1");
-    expect(built.system).toContain("scoping.countryCode\` est exactement \`ZA\`");
-    expect(built.system).toContain("scoping.sector\` est exactement \`cosmetics\`");
-    expect(built.system).toContain("Pas de placeholders");
+    expect(built.system).toContain('countryCode: "ZA"');
+    expect(built.system).toContain('sector: "cosmetics"');
+    expect(built.system).toContain("aucun placeholder");
     expect(built.system).toContain("§1");
     expect(built.system).toContain("§10");
   });

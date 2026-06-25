@@ -32,7 +32,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 181 models, 66 enums
+## Prisma — 181 models, 67 enums
 
 ### Models
 
@@ -173,7 +173,7 @@ Ces correspondances évitent la réinvention :
 - **IntentEmissionEvent** (10 fields)
 - **IntentQueue** (10 fields)
 - **Currency** (8 fields)
-- **Country** (11 fields)
+- **Country** (15 fields)
 - **OracleSnapshot** (7 fields)
 - **IntegrationConnection** (9 fields)
 - **ModelPolicy** (11 fields) — Governance — `purpose → model` resolution policy used by the LLM Gateway.  Each row maps an operational purpose (e.g. "f
@@ -277,6 +277,7 @@ Ces correspondances évitent la réinvention :
 - **CampaignTeamRole** : ACCOUNT_DIRECTOR | ACCOUNT_MANAGER | STRATEGIC_PLANNER | CREATIVE_DIRECTOR | ART_DIRECTOR | COPYWRITER | MEDIA_PLANNER | MEDIA_BUYER | SOCIAL_MANAGER | PRODUCTION_MANAGER | PROJECT_MANAGER | DATA_ANALYST | CLIENT
 - **NotificationChannel** : IN_APP | EMAIL | SMS | PUSH
 - **BrandAssetState** : DRAFT | CANDIDATE | SELECTED | ACTIVE | SUPERSEDED | ARCHIVED | REJECTED
+- **MarketStatus** : ACTIVE | FROZEN | SHADOWBANNED | PURGED
 - **ErrorSeverity** : TRACE | DEBUG | INFO | WARN | ERROR | CRITICAL
 - **ErrorSource** : SERVER | CLIENT | PRISMA | NSP | PTAH | STRESS_TEST | CRON | WEBHOOK | UNKNOWN
 - **OracleTier** : CORE | DISTINCTIVE
@@ -289,7 +290,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Services backend — 102
+## Services backend — 104
 
 - `src/server/services/advertis-connectors/` ✓ manifest
 - `src/server/services/advertis-scorer/` ✓ manifest
@@ -347,6 +348,8 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/llm-gateway/` ✓ manifest
 - `src/server/services/market-cost/` ✓ manifest
 - `src/server/services/market-intelligence/` ✓ manifest
+- `src/server/services/market-lifecycle/`
+- `src/server/services/market-visibility/`
 - `src/server/services/matching-engine/` ✓ manifest
 - `src/server/services/mestor/` ✓ manifest
 - `src/server/services/mfa/` ✓ manifest
@@ -396,7 +399,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 101
+## tRPC routers — 102
 
 - `accounts` (`src/server/trpc/routers/accounts.ts`)
 - `actions` (`src/server/trpc/routers/actions.ts`)
@@ -456,6 +459,7 @@ Ces correspondances évitent la réinvention :
 - `market-pricing` (`src/server/trpc/routers/market-pricing.ts`)
 - `market-study` (`src/server/trpc/routers/market-study.ts`)
 - `market-study-ingestion` (`src/server/trpc/routers/market-study-ingestion.ts`)
+- `markets` (`src/server/trpc/routers/markets.ts`)
 - `matching` (`src/server/trpc/routers/matching.ts`)
 - `mcp-billing` (`src/server/trpc/routers/mcp-billing.ts`)
 - `media-buying` (`src/server/trpc/routers/media-buying.ts`)
@@ -502,7 +506,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 244 (par deck)
+## Pages — 246 (par deck)
 
 ### Agency (12)
 
@@ -569,7 +573,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/portfolio/[corporateSlug]`
 - `/cockpit/settings`
 
-### Console (118)
+### Console (120)
 
 - `/console`
 - `/console/academie`
@@ -595,6 +599,7 @@ Ces correspondances évitent la réinvention :
 - `/console/arene/matching`
 - `/console/arene/missions-guilde`
 - `/console/arene/orgs`
+- `/console/arene/social-audit`
 - `/console/artemis`
 - `/console/artemis/campaigns`
 - `/console/artemis/campaigns/[id]/postmortem`
@@ -636,6 +641,7 @@ Ces correspondances évitent la réinvention :
 - `/console/governance/design-system`
 - `/console/governance/error-vault`
 - `/console/governance/intents`
+- `/console/governance/markets`
 - `/console/governance/model-policy`
 - `/console/governance/oracle-incidents`
 - `/console/governance/phase-18-residuals`
@@ -768,46 +774,29 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Glory tools — 105 (par layer)
+## Glory tools — 80 (par layer)
 
-### Layer CR (30)
+### Layer CR (14)
 
 - `concept-generator` (concepts_list)
-- `script-writer` (script)
-- `long-copy-craftsman` (long_copy)
-- `dialogue-writer` (dialogue)
-- `claim-baseline-factory` (claims_list)
 - `print-ad-architect` (print_ad_spec · brief→forge)
 - `social-copy-engine` (social_copy_set)
-- `storytelling-sequencer` (story_sequence)
-- `wordplay-cultural-bank` (wordplay_bank)
 - `brief-creatif-interne` (creative_brief)
 - `music-sound-brief` (sound_brief)
-- `tone-of-voice-designer` (tone_charter)
-- `manifesto-writer` (manifesto)
-- `engagement-rituals-designer` (brand_rituals)
 - `storyboard-generator` (storyboard · brief→forge)
 - `casting-brief-generator` (casting_brief)
 - `voiceover-brief-generator` (voiceover_brief · brief→forge)
 - `seo-copy-optimizer` (seo_report)
-- `naming-generator` (name_proposals)
 - `influencer-brief-generator` (influencer_brief)
-- `claim-architect` (claim_hierarchy)
 - `tone-matrix` (tone_matrix)
-- `vocabulary-builder` (brand_vocabulary)
 - `message-templater` (message_templates)
 - `copy-guidelines` (copy_guidelines_document)
-- `lsi-universe-setup` (universe_setup)
-- `lsi-symbol-alchemy` (artifacts)
-- `lsi-distribution-matrix` (distribution_matrix)
-- `lsi-morpho-semantic` (morpho_semantic_definition)
 - `lsi-character-sheet` (character_sheet)
 
-### Layer DC (26)
+### Layer DC (22)
 
 - `campaign-architecture-planner` (campaign_architecture)
-- `creative-evaluation-matrix` (evaluation_matrix)
-- `idea-killer-saver` (idea_triage)
+- `idea-killer-saver` (idea_triage · brief→forge)
 - `multi-team-coherence-checker` (coherence_report)
 - `client-presentation-strategist` (presentation_strategy · brief→forge)
 - `creative-direction-memo` (direction_memo · brief→forge)
@@ -818,7 +807,6 @@ Ces correspondances évitent la réinvention :
 - `value-proposition-builder` (value_proposition)
 - `sales-deck-builder` (sales_deck · brief→forge)
 - `superfan-journey-mapper` (superfan_journey)
-- `insight-synthesizer` (insights)
 - `synthesize-section` (section_narrative)
 - `ideation-workshop-facilitator` (ideation_output)
 - `strategic-diagnostic` (swot_augmented)
@@ -828,9 +816,7 @@ Ces correspondances évitent la réinvention :
 - `launch-timeline-planner` (launch_timeline)
 - `migration-playbook-generator` (migration_playbook)
 - `credentials-deck-builder` (credentials_deck · brief→forge)
-- `brand-guardian` (brand_validation_report)
 - `coherence-checker` (coherence_report)
-- `lsi-sublimation` (sublimation_report)
 
 ### Layer HYBRID (36)
 
@@ -871,17 +857,12 @@ Ces correspondances évitent la réinvention :
 - `client-profitability-analyzer` (client_profitability)
 - `utilization-rate-tracker` (utilization)
 
-### Layer BRAND (13)
+### Layer BRAND (8)
 
-- `semiotic-brand-analyzer` (semiotic_analysis)
 - `visual-landscape-mapper` (visual_landscape_map · brief→forge)
-- `visual-moodboard-generator` (moodboard_directions · brief→forge)
 - `chromatic-strategy-builder` (chromatic_strategy)
 - `typography-system-architect` (typography_system)
-- `logo-type-advisor` (logotype_direction)
-- `logo-validation-protocol` (logo_validation_report)
 - `design-token-architect` (design_tokens)
-- `motion-identity-designer` (motion_identity)
 - `brand-guidelines-generator` (brand_guidelines)
 - `photography-style-guide` (photo_guidelines)
 - `iconography-system-builder` (icon_system · brief→forge)
@@ -961,15 +942,18 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 502 (par governor)
+## Intent kinds — 508 (par governor)
 
-### MESTOR (76)
+### MESTOR (79)
 
 - `FILL_ADVE` → mestor (sync) — Fill ADVE pillars from sources.…
 - `OPERATOR_AMEND_PILLAR` → mestor (sync) — Operator-driven ADVE pillar field amendment (PATCH_DIRECT / LLM_REPHRASE / STRAT…
 - `OPERATOR_ARCHIVE_STRATEGY` → strategy-archive (sync) — Soft archive a Strategy (Strategy.archivedAt = now). Hides from default queries,…
 - `OPERATOR_RESTORE_STRATEGY` → strategy-archive (sync) — Restore a soft-archived Strategy (Strategy.archivedAt = null). Reverses OPERATOR…
 - `OPERATOR_PURGE_ARCHIVED_STRATEGY` → strategy-archive (sync) — Hard delete a Strategy + BFS cascade on 30+ child tables via information_schema …
+- `NEUTRALIZE_MARKET` → market-lifecycle (sync) — Neutralize a market (Country.status → FROZEN | SHADOWBANNED). FROZEN = visible r…
+- `REINSTATE_MARKET` → market-lifecycle (sync) — Reinstate a market (Country.status → ACTIVE). Réintégration sans perte. Refuse s…
+- `PURGE_MARKET` → market-lifecycle (sync) — Hard purge every strategy of a market via BFS cascade, then Country.status → PUR…
 - `RUN_RTIS_CASCADE` → mestor (sync) — Run R→T→I→S cascade on a strategy.…
 - `GENERATE_RECOMMENDATIONS` → notoria (sync) — Generate Notoria recos for a strategy.…
 - `APPLY_RECOMMENDATIONS` → notoria (sync) — Apply accepted recos.…
@@ -1081,7 +1065,7 @@ Ces correspondances évitent la réinvention :
 - `MEASURE_OVERTON_SHIFT` → campaign-tracker (async) — Cluster D — Mesure le déplacement de l'axe culturel sectoriel post-LIVE. Compare…
 - `EVALUATE_OVERTON_READINESS` → campaign-tracker (sync) — Cluster D pré-LIVE — Tarsis évalue OvertonReadiness sur l'axe culturel ciblé. Ou…
 
-### INFRASTRUCTURE (338)
+### INFRASTRUCTURE (339)
 
 - `ADMIN_SET_USER_ROLE` → accounts (sync) — Console superviseur (Vague 7) : promotion/retrogradation du role d'un compte (en…
 - `SYNC_UPGRADERS_CANON` → canon-sync (sync) — Vague 10 : pousse le canon UPgraders 100% (8 piliers contrats COMPLETE) dans la …
@@ -1395,6 +1379,7 @@ Ces correspondances évitent la réinvention :
 - `LEGACY_QUICK_INTAKE_PROCESS_SHORT` → quick-intake (sync) — Strangler-promoted mutation 'processShort' from router 'quick-intake'.…
 - `LEGACY_QUICK_INTAKE_PURGE_AND_REINGEST` → quick-intake (sync) — Strangler-promoted mutation 'purgeAndReingest' from router 'quick-intake'.…
 - `LEGACY_QUICK_INTAKE_REGENERATE_ANALYSIS` → quick-intake (sync) — Strangler-promoted mutation 'regenerateAnalysis' from router 'quick-intake'.…
+- `LEGACY_QUICK_INTAKE_UPDATE` → quick-intake (sync) — Strangler-promoted mutation 'updateIntake' from router 'quick-intake'.…
 - `LEGACY_SEQUENCE_VAULT_ACCEPT` → sequence-vault (sync) — Strangler-promoted mutation 'accept' from router 'sequence-vault'.…
 - `LEGACY_SEQUENCE_VAULT_DELETE` → sequence-vault (sync) — Strangler-promoted mutation 'delete' from router 'sequence-vault'.…
 - `LEGACY_SEQUENCE_VAULT_REJECT` → sequence-vault (sync) — Strangler-promoted mutation 'reject' from router 'sequence-vault'.…
@@ -1442,9 +1427,11 @@ Ces correspondances évitent la réinvention :
 - `IMHOTEP_QC_DELIVERABLE` → imhotep (sync) — Route un MissionDeliverable vers QC (AUTOMATED via qc-router.automatedQc, ou ASS…
 - `IMHOTEP_RECOMMEND_FORMATION` → imhotep (sync) — Propose top 3 Courses pour combler un skill gap (filtre par pillarFocus si fourn…
 
-### ANUBIS (27)
+### ANUBIS (29)
 
 - `RECORD_FOLLOWER_SNAPSHOT` → social (sync) — Vague 7 : instantane followers/mentions par plateforme (traque unifiee — comptes…
+- `SOCIAL_AUDIT_FETCH_OFFICIAL` → social (async) — Declenche une collecte de followers via l API officielle Meta (Page/User Access …
+- `SOCIAL_AUDIT_FETCH_THIRD_PARTY` → social (async) — Declenche une collecte de followers via Apify Instagram Profile Scraper (Externa…
 - `CRM_SEND_MESSAGE` → crm (sync) — Vague 10 : envoi d un message CRM transactionnel (email) a un contact — sender r…
 - `NEWSLETTER_SEND_CAMPAIGN` → crm (async) — Vague 10 : envoi d une campagne newsletter aux contacts opt-in (batch, lien de d…
 - `CRM_SEGMENT_CAPTURE_SUPERFANS_FROM_CAMPAIGN` → campaign-tracker (sync) — Cluster C — À POST_CAMPAIGN → ARCHIVED, crée segment CRM nominal `superfans-{cam…

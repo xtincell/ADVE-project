@@ -1,4 +1,5 @@
 import { PILLAR_STORAGE_KEYS } from "@/domain";
+import { formatIntakeRawContent } from "./strategy";
 
 // ============================================================================
 // MODULE M05b — Client Router (Multi-tenant entity management)
@@ -234,6 +235,9 @@ export const clientRouter = createTRPCRouter({
       clientId: z.string(),
       name: z.string().min(1),
       description: z.string().optional(),
+      sector: z.string().optional(),
+      country: z.string().optional(),
+      businessContext: z.record(z.string(), z.unknown()).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const userOperatorId = (ctx.session.user as unknown as Record<string, unknown>).operatorId as string | null ?? null;
@@ -246,6 +250,10 @@ export const clientRouter = createTRPCRouter({
 
       const client = await ctx.db.client.findUniqueOrThrow({ where: { id: input.clientId } });
 
+      const sector = input.sector ?? client.sector ?? undefined;
+      const country = input.country ?? client.country ?? undefined;
+      const businessContext = input.businessContext ?? {};
+
       const strategy = await ctx.db.strategy.create({
         data: {
           name: input.name,
@@ -253,15 +261,149 @@ export const clientRouter = createTRPCRouter({
           userId: ctx.session.user.id,
           operatorId: client.operatorId,
           clientId: client.id,
+          businessContext: businessContext as Prisma.InputJsonValue,
         },
       });
 
-      // Auto-create 8 empty pillars
+      // Auto-create 8 pillars — seed A and V with Strategy metadata (Chantier -1)
+      const biz = businessContext as Record<string, unknown>;
+      const pillarSeeds: Record<string, Record<string, unknown>> = {
+        a: {
+          nomMarque: input.name,
+          description: input.description ?? "",
+          secteur: sector ?? "",
+          pays: country ?? "",
+          brandNature: biz.brandNature ?? undefined,
+          langue: biz.language ?? "fr",
+        },
+        d: {},
+        v: {
+          businessModel: biz.businessModel ?? undefined,
+          economicModels: biz.economicModels ?? undefined,
+          positioningArchetype: biz.positioningArchetype ?? undefined,
+          salesChannel: biz.salesChannel ?? undefined,
+          freeLayer: biz.freeLayer ?? undefined,
+        },
+        e: {},
+        r: {},
+        t: {},
+        i: {},
+        s: {},
+      };
+      // Clean undefined values to avoid Prisma issues
+      for (const obj of Object.values(pillarSeeds)) {
+        for (const [k, v] of Object.entries(obj)) {
+          if (v === undefined) delete obj[k];
+        }
+      }
       for (const key of [...PILLAR_STORAGE_KEYS]) {
         await ctx.db.pillar.create({
-          data: { strategyId: strategy.id, key, content: {}, confidence: 0 },
+          data: {
+            strategyId: strategy.id,
+            key,
+            content: pillarSeeds[key] as Prisma.InputJsonValue,
+            confidence: key === "a" || key === "v" ? 0.1 : 0,
+          },
         });
       }
+
+      // Initialize structured responses object
+      const initialResponses = {
+        biz: {
+          biz_model: biz.businessModel ?? null,
+          biz_nature: biz.brandNature ?? null,
+          biz_revenue: biz.economicModels ?? [],
+          biz_positioning: biz.positioningArchetype ?? null,
+          biz_sales_channel: biz.salesChannel ?? null,
+          biz_free_element: biz.freeLayer ? (biz.freeLayer as any).whatIsFree : "NONE",
+          biz_free_detail: biz.freeLayer ? (biz.freeLayer as any).whatIsPaid : "",
+          biz_premium_scope: biz.premiumScope ?? "NONE",
+        },
+        a: {
+          a_vision: "",
+          a_mission: "",
+          a_noyau: input.name,
+          a_values: "",
+          a_origin: "",
+          a_archetype: "",
+          a_citation: "",
+        },
+        d: {
+          d_positioning: "",
+          d_promise: "",
+          d_persona_principal: "",
+          d_persona_secondary: "",
+          d_visual: "Inexistante",
+          d_voice: "Pas defini",
+          d_competitors: "",
+        },
+        v: {
+          v_promise: "",
+          v_products: "",
+          v_experience: "5",
+        },
+        e: {
+          e_community: "Aucune",
+          e_loyalty: "10-30%",
+          e_advocates: "Rarement",
+          e_rituals: "",
+        },
+        r: {
+          r_threats: "",
+          r_crisis: "Non",
+          r_reputation: "Pas du tout",
+        },
+        t: {
+          t_kpis: "",
+          t_measurement: "Jamais",
+          t_nps: "Non",
+        },
+        i: {
+          i_roadmap: "Non",
+          i_budget: "< 2%",
+          i_team: "Personne de dedie",
+        },
+        s: {
+          s_guidelines: "Non",
+          s_coherence: "5",
+          s_ambition: "",
+        }
+      };
+
+      // Auto-create QuickIntake to act as the biz intake for the cockpit-created brand
+      const quickIntake = await ctx.db.quickIntake.create({
+        data: {
+          contactName: ctx.session.user.name ?? "System",
+          contactEmail: ctx.session.user.email ?? "system@lafusee.io",
+          companyName: input.name,
+          sector: sector ?? null,
+          country: country ?? null,
+          businessModel: biz.businessModel as string ?? null,
+          economicModel: Array.isArray(biz.economicModels) ? (biz.economicModels as string[]).join(",") : null,
+          positioning: biz.positioningArchetype as string ?? null,
+          brandNature: biz.brandNature as string ?? null,
+          responses: initialResponses as Prisma.InputJsonValue,
+          status: "CONVERTED",
+          convertedToId: strategy.id,
+        }
+      });
+
+      // Auto-create BrandDataSource of type MANUAL_INPUT linked to the QuickIntake
+      const rawContent = formatIntakeRawContent(input.name, initialResponses);
+      await ctx.db.brandDataSource.create({
+        data: {
+          strategyId: strategy.id,
+          sourceType: "MANUAL_INPUT",
+          fileName: `Quick Intake — ${input.name}`,
+          rawContent,
+          rawData: initialResponses as Prisma.InputJsonValue,
+          extractedFields: initialResponses as Prisma.InputJsonValue,
+          pillarMapping: { a: true, d: true, v: true, e: true } as Prisma.InputJsonValue,
+          processingStatus: "PROCESSED",
+          certainty: "DECLARED",
+          origin: `intake:${quickIntake.id}`,
+        },
+      }).catch((err) => { console.warn("[client.addBrand] BrandDataSource creation failed:", err); });
 
       // Auto-create VariableStoreConfig
       await ctx.db.variableStoreConfig.create({

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 /**
  * Sources de marque — Le dossier complet des données brutes
@@ -396,40 +396,224 @@ function SourceEditModal({
   const update = trpc.ingestion.updateSource.useMutation({
     onSuccess: () => { onSaved(); onClose(); },
   });
+  
   const [title, setTitle] = useState<string | null>(null);
   const [content, setContent] = useState<string | null>(null);
 
   const data = sourceQuery.data;
+  const intakeId = data?.origin?.startsWith("intake:") ? data.origin.slice("intake:".length) : null;
+
+  // Intake field-by-field editor state & queries
+  const questionsQuery = trpc.quickIntake.getAllQuestions.useQuery(undefined, { enabled: !!intakeId });
+  const intakeQuery = trpc.quickIntake.get.useQuery({ id: intakeId! }, { enabled: !!intakeId });
+  const updateIntake = trpc.quickIntake.updateIntake.useMutation({
+    onSuccess: () => { onSaved(); onClose(); },
+  });
+
+  const [activeTab, setActiveTab] = useState("biz");
+  const [editedResponses, setEditedResponses] = useState<Record<string, Record<string, any>> | null>(null);
+
+  // Initialize local response values when fetched
+  useEffect(() => {
+    if (intakeQuery.data?.responses) {
+      setEditedResponses(intakeQuery.data.responses as Record<string, Record<string, any>>);
+    }
+  }, [intakeQuery.data]);
+
+  const handleResponseChange = (qId: string, val: any) => {
+    setEditedResponses((prev) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        [activeTab]: {
+          ...(prev[activeTab] ?? {}),
+          [qId]: val,
+        },
+      };
+    });
+  };
+
+  const isSaving = update.isPending || updateIntake.isPending;
+
+  const handleSave = () => {
+    if (intakeId && editedResponses) {
+      updateIntake.mutate({
+        id: intakeId,
+        responses: editedResponses,
+      });
+    } else {
+      update.mutate({
+        id: sourceId,
+        ...(title !== null ? { title: title.trim() || undefined } : {}),
+        ...(content !== null ? { content: content.trim() || undefined } : {}),
+      });
+    }
+  };
+
   const titleValue = title ?? (data?.fileName ?? "");
   const contentValue = content ?? (data?.rawContent ?? "");
 
+  const TABS = [
+    { key: "biz", label: "Business" },
+    { key: "a", label: "Authenticité (A)" },
+    { key: "d", label: "Distinction (D)" },
+    { key: "v", label: "Valeur (V)" },
+    { key: "e", label: "Engagement (E)" },
+    { key: "r", label: "Risk (R)" },
+    { key: "t", label: "Track (T)" },
+    { key: "i", label: "Implémentation (I)" },
+    { key: "s", label: "Stratégie (S)" },
+  ];
+
+  const questions = (questionsQuery.data?.[activeTab] ?? []) as any[];
+
   return (
-    <Modal open={true} onClose={onClose} title="Éditer la source" size="lg">
-      {sourceQuery.isLoading ? (
+    <Modal open={true} onClose={onClose} title={intakeId ? "Modifier le diagnostic (Business Intake)" : "Éditer la source"} size={intakeId ? "xl" : "lg"}>
+      {sourceQuery.isLoading || (intakeId && (intakeQuery.isLoading || questionsQuery.isLoading)) ? (
         <p className="text-sm text-foreground-muted">Chargement…</p>
       ) : (
         <div className="space-y-4 text-sm">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-foreground-muted">Titre</label>
-            <input
-              type="text"
-              value={titleValue}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full rounded border border-white/10 bg-surface px-3 py-2 text-sm"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-foreground-muted">
-              Contenu brut (exploité par l&apos;enrichissement + l&apos;auto-fill)
-            </label>
-            <textarea
-              value={contentValue}
-              onChange={(e) => setContent(e.target.value)}
-              rows={14}
-              className="w-full rounded border border-white/10 bg-surface px-3 py-2 font-mono text-xs"
-            />
-          </div>
-          <div className="flex justify-end gap-2">
+          {!intakeId && (
+            <div>
+              <label className="mb-1 block text-xs font-medium text-foreground-muted">Titre</label>
+              <input
+                type="text"
+                value={titleValue}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full rounded border border-white/10 bg-surface px-3 py-2 text-sm text-white"
+              />
+            </div>
+          )}
+
+          {intakeId ? (
+            <div className="flex flex-col md:flex-row gap-4 min-h-[500px]">
+              {/* Tab Navigation */}
+              <div className="flex flex-row md:flex-col gap-1 overflow-x-auto md:overflow-x-visible shrink-0 md:w-48 border-b md:border-b-0 md:border-r border-white/10 pb-2 md:pb-0 pr-0 md:pr-4">
+                {TABS.map((t) => (
+                  <button
+                    key={t.key}
+                    type="button"
+                    onClick={() => setActiveTab(t.key)}
+                    className={`rounded-lg px-3 py-2 text-left text-xs font-medium transition ${
+                      activeTab === t.key
+                        ? "bg-accent text-white"
+                        : "text-foreground-secondary hover:bg-white/5"
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Form Fields */}
+              <div className="flex-1 space-y-4 max-h-[500px] overflow-y-auto pr-2">
+                {questions.length === 0 ? (
+                  <p className="text-xs text-foreground-muted italic">Aucune question dans cette section.</p>
+                ) : (
+                  questions.map((q) => {
+                    const value = editedResponses?.[activeTab]?.[q.id] ?? "";
+                    return (
+                      <div key={q.id} className="space-y-1">
+                        <label className="block text-xs font-medium text-foreground-muted">
+                          {q.question}
+                          {q.required && <span className="text-error ml-0.5">*</span>}
+                        </label>
+                        {q.tooltip && (
+                          <p className="text-[10px] text-foreground-secondary leading-normal italic mb-1">
+                            {q.tooltip}
+                          </p>
+                        )}
+                        
+                        {q.type === "text" && (
+                          <textarea
+                            value={value as string}
+                            onChange={(e) => handleResponseChange(q.id, e.target.value)}
+                            rows={3}
+                            className="w-full rounded border border-white/10 bg-surface px-3 py-2 text-xs text-white placeholder-foreground-muted outline-none focus:border-accent"
+                            placeholder="Votre réponse..."
+                          />
+                        )}
+
+                        {q.type === "select" && (
+                          <select
+                            value={value as string}
+                            onChange={(e) => handleResponseChange(q.id, e.target.value)}
+                            className="w-full rounded border border-white/10 bg-surface px-3 py-2 text-xs text-white placeholder-foreground-muted outline-none focus:border-accent"
+                          >
+                            <option value="">— Sélectionner —</option>
+                            {q.options?.map((opt: string) => {
+                              const [, label] = opt.includes("::") ? opt.split("::") : [opt, opt];
+                              return (
+                                <option key={opt} value={opt}>
+                                  {label}
+                                </option>
+                              );
+                            })}
+                          </select>
+                        )}
+
+                        {q.type === "multiselect" && (() => {
+                          const selectedValues = Array.isArray(value) ? value : [];
+                          return (
+                            <div className="space-y-1.5 p-2 rounded border border-white/5 bg-surface-raised">
+                              {q.options?.map((opt: string) => {
+                                const [, label] = opt.includes("::") ? opt.split("::") : [opt, opt];
+                                const isChecked = selectedValues.includes(opt);
+                                return (
+                                  <label key={opt} className="flex items-center gap-2 text-2xs font-normal text-foreground-secondary cursor-pointer hover:text-white">
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={(e) => {
+                                        const nextValues = e.target.checked
+                                          ? [...selectedValues, opt]
+                                          : selectedValues.filter((v) => v !== opt);
+                                        handleResponseChange(q.id, nextValues);
+                                      }}
+                                      className="rounded border-white/10 bg-background text-accent focus:ring-accent h-3.5 w-3.5"
+                                    />
+                                    <span>{label}</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
+
+                        {q.type === "scale" && (
+                          <div className="flex items-center gap-4 p-2 rounded border border-white/5 bg-surface-raised">
+                            <input
+                              type="range"
+                              min="1"
+                              max="10"
+                              value={value || 5}
+                              onChange={(e) => handleResponseChange(q.id, parseInt(e.target.value))}
+                              className="flex-1 accent-accent"
+                            />
+                            <span className="text-xs font-semibold text-accent w-8 text-right">{value || 5}/10</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label className="mb-1 block text-xs font-medium text-foreground-muted">
+                Contenu brut (exploité par l&apos;enrichissement + l&apos;auto-fill)
+              </label>
+              <textarea
+                value={contentValue}
+                onChange={(e) => setContent(e.target.value)}
+                rows={14}
+                className="w-full rounded border border-white/10 bg-surface px-3 py-2 font-mono text-xs text-white"
+              />
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-white/5">
             <button
               onClick={onClose}
               className="rounded px-3 py-1.5 text-sm text-foreground-muted hover:bg-white/5"
@@ -437,15 +621,11 @@ function SourceEditModal({
               Annuler
             </button>
             <button
-              disabled={update.isPending || (!title && !content)}
-              onClick={() => update.mutate({
-                id: sourceId,
-                ...(title !== null ? { title: title.trim() || undefined } : {}),
-                ...(content !== null ? { content: content.trim() || undefined } : {}),
-              })}
+              disabled={isSaving || (!intakeId && !title && !content)}
+              onClick={handleSave}
               className="flex items-center gap-1.5 rounded bg-accent px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
             >
-              {update.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+              {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
               Enregistrer
             </button>
           </div>
