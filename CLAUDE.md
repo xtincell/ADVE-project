@@ -22,7 +22,7 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 **Doctrine terminologique** : "Client" = payeur · "Client final" = consommateur cible de la marque.
 
-**Décision ADVE = MANUEL** : aucune cascade auto. STOP à Jehuty, opérateur explicite via `OPERATOR_AMEND_PILLAR`.
+**Décision ADVE = MANUEL** : aucune cascade auto. STOP à Jehuty, opérateur explicite via `OPERATOR_AMEND_PILLAR`. Règle needsHuman : tout champ needsHuman (non-dérivable, ex: archetype, positionnement, businessModel) est pré-rempli par l'IA sous forme de draft et marqué "INFERRED" dans `fieldCertainty` (exclus les données réelles comme `traction`). L'opérateur valide ensuite manuellement pour flip à DECLARED.
 
 Intégré dans `_bmad/custom/_nefer-facts.md §11` — toute persona BMAD doit s'y référer.
 

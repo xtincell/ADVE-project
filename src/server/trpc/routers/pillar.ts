@@ -772,10 +772,11 @@ export const pillarRouter = createTRPCRouter({
       strategyId: z.string(),
       pillarKey: z.string(),
       targetStage: z.enum(["INTAKE", "ENRICHED", "COMPLETE"]).optional(),
+      fields: z.array(z.string()).optional(),
     }))
     .mutation(async ({ input }) => {
       const { fillToStage } = await import("@/server/services/pillar-maturity/auto-filler");
-      return fillToStage(input.strategyId, input.pillarKey, input.targetStage ?? "COMPLETE");
+      return fillToStage(input.strategyId, input.pillarKey, input.targetStage ?? "COMPLETE", input.fields);
     }),
 
   /** Auto-fill ALL pillars toward COMPLETE */

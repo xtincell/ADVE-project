@@ -135,3 +135,12 @@ Pas dans un Mestor Intent (l'inférence est un détail d'implémentation interne
 - Si usage massif et qualité LLM jugée insuffisante : ajouter un bouton **"Re-inférer ce champ"** (mutation séparée) qui re-call le LLM uniquement pour 1 path, en passant un hint opérateur ("ne pas dire X", "axe sur Y"). Pas dans cette ADR.
 - Étendre la même logique aux 5 champs E (`touchpoints`, etc.) qui sont marqués `derivable: true` mais via `ai_generation` — actuellement gérés par le auto-filler post-activation. Pas urgent.
 - Persister un trace audit (qui a inféré quoi, quand, modèle utilisé) dans une table `PillarFieldHistory`. Pas dans cette ADR — pour l'instant on a juste le marker.
+
+## 11. Addendum v3.3 — Généralisation de la règle needsHuman
+
+Afin de viser une complétude à 100% lors des phases de génération (Enrichir), la règle d'inférence des champs `needsHuman` (historiquement limitée à l'activation de marque) est généralisée à l'ensemble du système de complétion (`auto-filler`).
+
+* **Principe** : Tout champ du contrat de maturité marqué `derivable: false` (ex: `archetype`, `positionnement`, `businessModel`, etc.) peut être généré par l'IA lors du processus `auto-fill`.
+* **Exception** : Les données réelles opérateur qui ne peuvent pas être déduites logiquement ou textuellement (comme `traction` dans le pilier T) sont conservées en saisie humaine stricte.
+* **Souveraineté & Marquage** : Les valeurs ainsi générées par l'IA DOIVENT être enregistrées dans la colonne `fieldCertainty` du pilier avec le marqueur `"INFERRED"` afin de conserver le badge visuel orange "Inféré IA — à valider" et inciter l'opérateur à la relecture/édition manuelle.
+

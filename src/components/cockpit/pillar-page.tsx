@@ -106,6 +106,8 @@ export function PillarPage({ pageKey }: PillarPageProps) {
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [enrichResult, setEnrichResult] = useState<{ type: "success" | "warning" | "error"; message: string } | null>(null);
   const [focusedItem, setFocusedItem] = useState<Record<string, unknown> | null>(null);
+  const [regenerateProgress, setRegenerateProgress] = useState<string | null>(null);
+  const utils = trpc.useUtils();
 
   const isAdve = config.type === "adve";
   const [amendOpen, setAmendOpen] = useState(false);
@@ -242,39 +244,94 @@ export function PillarPage({ pageKey }: PillarPageProps) {
     if (!strategyId) return;
     setIsRegenerating(true);
     setEnrichResult(null);
-    // PASSAGE UNIQUE (correctif double-call) : Enrichir = un seul effort propre.
-    // autoFill commence par un scan solide du vault de source (rawContent →
-    // extraction LLM ciblée, source-first) puis remplit NET les champs vides.
-    // Aucune recommandation n'est générée ici : challenger la population est une
-    // action séparée de Notoria (« Générer depuis les sources »), pas un second
-    // scan du vault. Avant, on lançait enrichFromVault (scan vault → recos) PUIS
-    // autoFill (qui re-scanne le vault) → double passe LLM coûteuse + bruit.
+    setRegenerateProgress("Initialisation...");
     try {
       if (!isAdve) {
-        // RTIS = dérivé : pas de remplissage direct ici. La cascade est le
-        // bouton « Recalculer ce pilier » (ENRICH_*_FROM_ADVE).
         setEnrichResult({ type: "warning", message: "Pilier dérivé — utilise « Recalculer ce pilier » pour lancer la cascade." });
         return;
       }
-      const r = await autoFillMutation.mutateAsync({ strategyId, pillarKey: config.pillarKey });
-      const data = r as unknown as Record<string, unknown>;
-      const filledCount = Array.isArray(data?.filled) ? (data.filled as string[]).length : 0;
-      const failedCount = Array.isArray(data?.failed) ? (data.failed as unknown[]).length : 0;
-      const needsHumanAfter = Array.isArray(data?.needsHuman) ? (data.needsHuman as string[]) : [];
+
+      let derivableFields = [
+        ...(assessQuery.data?.derivable ?? []),
+        ...(assessQuery.data?.needsHuman ?? []).filter(path => path !== "traction")
+      ];
+      if (derivableFields.length === 0) {
+        if (assessQuery.data) {
+          setEnrichResult({ type: "warning", message: "Tous les champs dérivables et inférables sont déjà remplis" });
+          return;
+        }
+      }
+
+      // If we don't have derivable fields list loaded yet, fall back to generating everything at once
+      if (derivableFields.length === 0) {
+        const r = await autoFillMutation.mutateAsync({ strategyId, pillarKey: config.pillarKey });
+        const data = r as unknown as Record<string, unknown>;
+        const filledCount = Array.isArray(data?.filled) ? (data.filled as string[]).length : 0;
+        const failedCount = Array.isArray(data?.failed) ? (data.failed as unknown[]).length : 0;
+        const needsHumanAfter = Array.isArray(data?.needsHuman) ? (data.needsHuman as string[]) : [];
+
+        const parts: string[] = [];
+        if (filledCount > 0) parts.push(`${filledCount} champ(s) rempli(s) depuis les sources`);
+        if (needsHumanAfter.length > 0) parts.push(`${needsHumanAfter.length} champ(s) nécessitent une saisie réelle (données opérateur, ex: traction)`);
+        if (failedCount > 0) parts.push(`${failedCount} champ(s) non remplis (LLM insuffisant — relance Enrichir ou ajoute des sources)`);
+        if (parts.length === 0) parts.push("Tous les champs dérivables sont déjà remplis");
+        parts.push("Pour challenger : « Générer depuis les sources » dans Notoria");
+        setEnrichResult({ type: filledCount > 0 ? "success" : "warning", message: parts.join(" · ") });
+        return;
+      }
+
+      // Chunk execution: 5 fields per chunk sequentially
+      const chunkSize = 5;
+      const chunks: string[][] = [];
+      for (let i = 0; i < derivableFields.length; i += chunkSize) {
+        chunks.push(derivableFields.slice(i, i + chunkSize));
+      }
+
+      let totalFilled = 0;
+      let totalFailed = 0;
+      let needsHumanAfter: string[] = [];
+
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i]!;
+        setRegenerateProgress(`Génération ${i + 1}/${chunks.length}...`);
+
+        const r = await autoFillMutation.mutateAsync({
+          strategyId,
+          pillarKey: config.pillarKey,
+          targetStage: "COMPLETE",
+          fields: chunk,
+        });
+
+        const data = r as unknown as Record<string, unknown>;
+        const filledCount = Array.isArray(data?.filled) ? (data.filled as string[]).length : 0;
+        const failedCount = Array.isArray(data?.failed) ? (data.failed as unknown[]).length : 0;
+        const needsHumanChunk = Array.isArray(data?.needsHuman) ? (data.needsHuman as string[]) : [];
+
+        totalFilled += filledCount;
+        totalFailed += failedCount;
+        needsHumanAfter = Array.from(new Set([...needsHumanAfter, ...needsHumanChunk]));
+
+        // Refresh query states after each chunk so the operator can see the fields populate in real-time
+        await Promise.all([
+          pillarQuery.refetch(),
+          assessQuery.refetch(),
+          recosQuery.refetch(),
+        ]);
+      }
 
       const parts: string[] = [];
-      if (filledCount > 0) parts.push(`${filledCount} champ(s) rempli(s) depuis les sources`);
-      // needsHuman = champs nominatifs réels (ex: traction). Tous les autres champs
-      // structurels sont inférables ; s'ils restent vides c'est un échec LLM (failed),
-      // pas un blocage conceptuel.
+      if (totalFilled > 0) parts.push(`${totalFilled} champ(s) rempli(s) depuis les sources`);
       if (needsHumanAfter.length > 0) parts.push(`${needsHumanAfter.length} champ(s) nécessitent une saisie réelle (données opérateur, ex: traction)`);
-      if (failedCount > 0) parts.push(`${failedCount} champ(s) non remplis (LLM insuffisant — relance Enrichir ou ajoute des sources)`);
+      if (totalFailed > 0) parts.push(`${totalFailed} champ(s) non remplis (LLM insuffisant — relance Enrichir ou ajoute des sources)`);
       if (parts.length === 0) parts.push("Tous les champs dérivables sont déjà remplis");
       parts.push("Pour challenger : « Générer depuis les sources » dans Notoria");
-      setEnrichResult({ type: filledCount > 0 ? "success" : "warning", message: parts.join(" · ") });
+      setEnrichResult({ type: totalFilled > 0 ? "success" : "warning", message: parts.join(" · ") });
     } catch (err) {
       setEnrichResult({ type: "error", message: err instanceof Error ? err.message : String(err) });
-    } finally { setIsRegenerating(false); }
+    } finally {
+      setIsRegenerating(false);
+      setRegenerateProgress(null);
+    }
   };
 
   // ── Recos data ──────────────────────────────────────────────────
@@ -369,8 +426,17 @@ export function PillarPage({ pageKey }: PillarPageProps) {
               className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                 isAdve ? "bg-accent/20 text-accent hover:bg-accent/30" : "bg-info/20 text-info hover:bg-info/30"
               } disabled:opacity-50`}>
-              {isRegenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-              Enrichir
+              {isRegenerating ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <span>{regenerateProgress ?? "Enrichir..."}</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-3.5 w-3.5" />
+                  <span>Enrichir</span>
+                </>
+              )}
             </button>
           </div>
         </div>

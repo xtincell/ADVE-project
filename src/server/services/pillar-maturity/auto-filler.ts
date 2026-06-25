@@ -36,6 +36,7 @@ export async function fillToStage(
   strategyId: string,
   pillarKey: string,
   targetStage: MaturityStage = "COMPLETE",
+  fieldsToFill?: string[],
 ): Promise<AutoFillResult> {
   const start = Date.now();
   const key = pillarKey.toLowerCase();
@@ -50,17 +51,20 @@ export async function fillToStage(
     where: { strategyId_key: { strategyId, key } },
   });
   const content = ((pillar?.content ?? {}) as Record<string, unknown>);
+  const existingCertainty = ((pillar?.fieldCertainty ?? {}) as Record<string, string>);
 
   const aggregateFilled: string[] = [];
   const aggregateSourceFilled = new Set<string>(); // champs SOURCE (ÉTAPE 0)
+  const aggregateAiFilled: string[] = [];
   const aggregateFailed: Array<{ path: string; reason: string }> = [];
   const aggregateNeedsHuman = new Set<string>();
-  const MAX_PASSES = 1;
+  const MAX_PASSES = targetStage === "COMPLETE" ? 3 : 2;
 
   for (let pass = 1; pass <= MAX_PASSES; pass++) {
-    const passResult = await runFillPass(strategyId, key, content, targetStage, contract);
+    const passResult = await runFillPass(strategyId, key, content, targetStage, contract, fieldsToFill);
     for (const p of passResult.filled) if (!aggregateFilled.includes(p)) aggregateFilled.push(p);
     for (const p of passResult.sourceFilled) aggregateSourceFilled.add(p);
+    for (const p of passResult.aiFilled) if (!aggregateAiFilled.includes(p)) aggregateAiFilled.push(p);
     for (const f of passResult.failed) {
       // Only keep latest failure reason per path
       const existing = aggregateFailed.findIndex(x => x.path === f.path);
@@ -68,9 +72,13 @@ export async function fillToStage(
     }
     for (const h of passResult.needsHuman) aggregateNeedsHuman.add(h);
 
-    // Stop early if nothing left derivable
+    // Stop early if nothing left to fill
     const after = assessPillar(key, content, contract);
-    if (after.derivable.length === 0) break;
+    let remainingToFill = [...after.derivable, ...after.needsHuman];
+    if (fieldsToFill && fieldsToFill.length > 0) {
+      remainingToFill = remainingToFill.filter(path => fieldsToFill.includes(path));
+    }
+    if (remainingToFill.length === 0) break;
     // Stop if this pass didn't fill anything new (avoid infinite retries)
     if (passResult.filled.length === 0) break;
   }
@@ -100,12 +108,33 @@ export async function fillToStage(
       author: { system: "AUTO_FILLER", reason: `fillToStage(${targetStage}) — ${aggregateFilled.length} fields filled across ${MAX_PASSES} max passes` },
       options: { confidenceDelta: 0.03 * aggregateFilled.length, fieldProvenance },
     });
+
+    // Update fieldCertainty with INFERRED for any newly AI-filled fields
+    const updatedCertainty = { ...existingCertainty };
+    let certaintyChanged = false;
+    for (const path of aggregateAiFilled) {
+      const dbKey = `${key}.${path}`;
+      if (!updatedCertainty[dbKey] || updatedCertainty[dbKey] === "INFERRED") {
+        updatedCertainty[dbKey] = "INFERRED";
+        certaintyChanged = true;
+      }
+    }
+    if (certaintyChanged) {
+      await db.pillar.update({
+        where: { strategyId_key: { strategyId, key } },
+        data: { fieldCertainty: updatedCertainty },
+      });
+    }
   }
 
   // Re-assess
   const after = assessPillar(key, content, contract);
   // After all passes, anything still missing AND non-derivable goes to needsHuman
-  for (const path of after.needsHuman) aggregateNeedsHuman.add(path);
+  for (const path of after.needsHuman) {
+    if (!fieldsToFill || fieldsToFill.includes(path)) {
+      aggregateNeedsHuman.add(path);
+    }
+  }
 
   // Drop fields from `failed` that ended up filled in a later pass
   const finalFailed = aggregateFailed.filter(f => !aggregateFilled.includes(f.path) && !after.satisfied.includes(f.path));
@@ -141,16 +170,21 @@ async function runFillPass(
   content: Record<string, unknown>,
   targetStage: MaturityStage,
   contract: import("@/lib/types/pillar-maturity").PillarMaturityContract,
-): Promise<{ filled: string[]; failed: Array<{ path: string; reason: string }>; needsHuman: string[]; sourceFilled: string[] }> {
+  fieldsToFill?: string[],
+): Promise<{ filled: string[]; failed: Array<{ path: string; reason: string }>; needsHuman: string[]; sourceFilled: string[]; aiFilled: string[] }> {
   // Assess current state
   const before = assessPillar(key, content, contract);
 
   // Get target requirements
   const targetReqs = contract.stages[targetStage];
-  const missingReqs = targetReqs.filter(r => before.missing.includes(r.path));
+  let missingReqs = targetReqs.filter(r => before.missing.includes(r.path));
+
+  if (fieldsToFill && fieldsToFill.length > 0) {
+    missingReqs = missingReqs.filter(r => fieldsToFill.includes(r.path));
+  }
 
   if (missingReqs.length === 0) {
-    return { filled: [], failed: [], needsHuman: [], sourceFilled: [] };
+    return { filled: [], failed: [], needsHuman: [], sourceFilled: [], aiFilled: [] };
   }
 
   // Sort by derivation priority: calculation → cross_pillar → rtis_cascade → ai_generation
@@ -163,6 +197,7 @@ async function runFillPass(
   const failed: Array<{ path: string; reason: string }> = [];
   const needsHuman: string[] = [];
   const sourceFilled: string[] = []; // champs extraits d'une BrandDataSource (ÉTAPE 0)
+  const aiFilled: string[] = [];
 
   // Load all pillars for cross-pillar derivation
   const allPillars = await db.pillar.findMany({ where: { strategyId } });
@@ -179,6 +214,7 @@ async function runFillPass(
   for (const req of sorted) {
     if (!req.derivable) {
       needsHuman.push(req.path);
+      aiFields.push(req); // Try to generate non-derivable fields via AI (marked INFERRED)
       continue;
     }
     switch (req.derivationSource) {
@@ -249,6 +285,7 @@ async function runFillPass(
         if (aiResults[req.path] !== undefined) {
           setNestedValue(content, req.path, aiResults[req.path]);
           filled.push(req.path);
+          aiFilled.push(req.path);
         } else {
           failed.push({ path: req.path, reason: "AI did not generate this field" });
         }
@@ -289,12 +326,15 @@ async function runFillPass(
             filled.splice(filled.indexOf(fieldPath), 1);
             failed.push({ path: fieldPath, reason: `Validation BLOCK: ${blocker.message}` });
           }
+          if (aiFilled.includes(fieldPath)) {
+            aiFilled.splice(aiFilled.indexOf(fieldPath), 1);
+          }
         }
       }
     } catch { /* financial-brain not available — skip validation */ }
   }
 
-  return { filled, failed, needsHuman, sourceFilled };
+  return { filled, failed, needsHuman, sourceFilled, aiFilled };
 }
 
 /**
@@ -566,7 +606,7 @@ function deriveCrossPillar(
 // emits one LLM call per chunk sequentially. If a chunk fails JSON parse,
 // the others continue — at least ~20/30 fields are saved instead of zero.
 
-const LLM_FIELDS_PER_CHUNK = 10;
+const LLM_FIELDS_PER_CHUNK = 5;
 
 const VALIDATOR_COMPLEXITY: Record<string, number> = {
   is_object: 3,
@@ -577,15 +617,40 @@ const VALIDATOR_COMPLEXITY: Record<string, number> = {
   is_number: 1,
 };
 
-/** Round-robin chunking weighted by validator complexity. */
-function chunkFields(reqs: FieldRequirement[], size: number): FieldRequirement[][] {
-  if (reqs.length <= size) return [reqs];
-  const numChunks = Math.ceil(reqs.length / size);
+/**
+ * Partition fields into chunks dynamically based on complexity and count.
+ * Each chunk's total validator complexity will not exceed maxComplexity.
+ * Each chunk's field count will not exceed maxFields.
+ */
+function chunkFieldsDynamically(reqs: FieldRequirement[], maxFields: number, maxComplexity: number): FieldRequirement[][] {
+  if (reqs.length === 0) return [];
+  
+  // Sort by complexity descending so we pack heavier/more complex fields first
   const sorted = [...reqs].sort(
     (a, b) => (VALIDATOR_COMPLEXITY[b.validator] ?? 1) - (VALIDATOR_COMPLEXITY[a.validator] ?? 1),
   );
-  const chunks: FieldRequirement[][] = Array.from({ length: numChunks }, () => []);
-  sorted.forEach((req, i) => chunks[i % numChunks]!.push(req));
+
+  const chunks: FieldRequirement[][] = [];
+
+  for (const req of sorted) {
+    const complexity = VALIDATOR_COMPLEXITY[req.validator] ?? 1;
+    
+    // Find first chunk that can accommodate this field without exceeding limits
+    let placed = false;
+    for (const chunk of chunks) {
+      const chunkComplexity = chunk.reduce((sum, r) => sum + (VALIDATOR_COMPLEXITY[r.validator] ?? 1), 0);
+      if (chunk.length < maxFields && (chunkComplexity + complexity) <= maxComplexity) {
+        chunk.push(req);
+        placed = true;
+        break;
+      }
+    }
+
+    if (!placed) {
+      chunks.push([req]);
+    }
+  }
+
   return chunks;
 }
 
@@ -717,7 +782,8 @@ CONSIGNES STRICTES DE HAUTE QUALITÉ (COERCITIVES) :
 3. Respecte STRICTEMENT le shape annoncé entre crochets [SHAPE] pour chaque path.
 4. Base-toi uniquement sur les faits décrits dans les documents sources et les autres piliers. Sois extrêmement SPÉCIFIQUE à cette marque.
 5. Règle anti-triche/anti-paresse : Tu ne dois JAMAIS utiliser de placeholders génériques ou simplistes (ex: "Valeur cardinale du manifeste", "Opposition à l'ennemi commun", etc.) ni répéter la même justification ou le même texte pour différents éléments ou objets d'une liste. Chaque description, justification ou conséquence doit être unique, riche, distincte, personnalisée et pleinement rédigée.
-${hasFinancialFields ? "6. Pour les champs financiers, utilise les RÉFÉRENCES FINANCIÈRES ci-dessus. Ne mets PAS 0. Estime à partir des benchmarks sectoriels.\n" : ""}
+6. Règle needsHuman : Certains champs à remplir sont marqués non-dérivables par défaut (nécessitant une saisie humaine). Tu DOIS néanmoins proposer un draft initial de haute qualité pour ces champs. Ils seront marqués comme "inférés" par le système pour encourager l'édition manuelle par l'opérateur. Ne les ignore pas.
+${hasFinancialFields ? "7. Pour les champs financiers, utilise les RÉFÉRENCES FINANCIÈRES ci-dessus. Ne mets PAS 0. Estime à partir des benchmarks sectoriels.\n" : ""}
 Retourne UNIQUEMENT le JSON, rien d'autre. Pas de markdown, pas de commentaire.`;
 
   // Route via le LLM Gateway (provider-agnostic) au lieu d'Anthropic en dur :
@@ -729,33 +795,38 @@ Retourne UNIQUEMENT le JSON, rien d'autre. Pas de markdown, pas de commentaire.`
   // (piliers fondateur) est balisé par buildPillarContext ; rappel sécurité au system.
   // `fieldList` (paths/shapes du contrat) et `financialCtx` (benchmarks internes) sont internes.
   const system = `${UNTRUSTED_NOTICE}\n\nTu es Mestor, l'intelligence stratégique de marque. Tu réponds UNIQUEMENT en JSON valide : pas de markdown, pas de commentaire, pas de texte autour.`;
-  let text: string;
-  try {
-    const res = await callLLM({
-      system,
-      prompt,
-      caller,
-      strategyId,
-      purpose: "agent", // substituable Ollama
-      ollamaModel,
-      responseFormat: "json_object",
-      maxOutputTokens,
-      temperature: 0.1, // Basse température pour maximiser la conformité aux instructions
-    });
-    text = res.text;
-  } catch (err) {
-    console.error(`[auto-filler] callLLM failed for strategyId=${strategyId}, pillarKey=${pillarKey}, caller=${caller}:`, err);
-    return {};
-  }
+  const attempts = 3;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    let text: string;
+    try {
+      const res = await callLLM({
+        system,
+        prompt,
+        caller: attempts > 1 ? `${caller}:attempt-${attempt}` : caller,
+        strategyId,
+        purpose: "agent", // substituable Ollama
+        ollamaModel,
+        responseFormat: "json_object",
+        maxOutputTokens,
+        temperature: 0.1, // Basse température pour maximiser la conformité aux instructions
+      });
+      text = res.text;
+    } catch (err) {
+      console.error(`[auto-filler] callLLM failed (attempt ${attempt}/${attempts}) for strategyId=${strategyId}, pillarKey=${pillarKey}, caller=${caller}:`, err);
+      if (attempt === attempts) return {};
+      continue;
+    }
 
-  try {
-    const { extractJSON } = await import("@/server/services/utils/llm");
-    return extractJSON(text) as Record<string, unknown>;
-  } catch (err) {
-    console.error(`[auto-filler] JSON extraction failed for strategyId=${strategyId}, pillarKey=${pillarKey}, caller=${caller}. Raw LLM text:`, text);
-    console.error(err);
-    return {};
+    try {
+      const { extractJSON } = await import("@/server/services/utils/llm");
+      return extractJSON(text) as Record<string, unknown>;
+    } catch (err) {
+      console.error(`[auto-filler] JSON extraction failed (attempt ${attempt}/${attempts}) for strategyId=${strategyId}, pillarKey=${pillarKey}, caller=${caller}. Raw LLM text:`, text);
+      console.error(err);
+      if (attempt === attempts) return {};
+    }
   }
+  return {};
 }
 
 /**
@@ -810,12 +881,27 @@ export async function runChunkedFieldGeneration(args: {
     ? wrapUntrusted("DOCUMENTS SOURCES DE LA MARQUE", sourcesContext, { max: 8000 })
     : "";
 
+  // Determine if the risk of truncation is high (modèle owl ou complexité totale > 15)
+  const totalComplexity = missingReqs.reduce((sum, r) => sum + (VALIDATOR_COMPLEXITY[r.validator] ?? 1), 0);
+  const isOwlModel = args.ollamaModel?.includes("owl") || process.env.OPENROUTER_MODEL?.includes("owl");
+  const isHighRisk = isOwlModel || totalComplexity > 15;
+
+  let maxFields = fieldsPerChunk;
+  let maxComplexity = 8;
+
+  if (isHighRisk) {
+    maxFields = 3;
+    maxComplexity = 5;
+  }
+
+  const chunks = chunkFieldsDynamically(missingReqs, maxFields, maxComplexity);
+
   // Single-chunk path — preserves original behavior for short pillars.
-  if (missingReqs.length <= fieldsPerChunk) {
+  if (chunks.length === 1) {
     return runChunkLLM({
       strategyId,
       pillarKey,
-      chunk: missingReqs,
+      chunk: chunks[0]!,
       pillarContext,
       financialCtx,
       hasFinancialFields,
@@ -826,12 +912,11 @@ export async function runChunkedFieldGeneration(args: {
     });
   }
 
-  // Multi-chunk path — round-robin split, appels PARALLÈLES, merge.
+  // Multi-chunk path — split dynamically, appels PARALLÈLES, merge.
   // Avant : séquentiel → N chunks × 20-30s = timeout Vercel 60s sur les piliers
   // complexes (E = 23 champs = 3 chunks = 90s). Après : parallèle → max(chunk_time)
   // = ~25-30s quel que soit N. Les chunks sont indépendants (champs distincts,
   // contexte pilier identique) donc la parallélisation est safe.
-  const chunks = chunkFields(missingReqs, fieldsPerChunk);
   const results = await Promise.all(
     chunks.map((chunk, i) =>
       runChunkLLM({
