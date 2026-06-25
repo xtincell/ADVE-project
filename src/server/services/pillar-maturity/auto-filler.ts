@@ -711,16 +711,12 @@ ${pillarContext}${financialCtx}${sourcesBlock ? `\n\n${sourcesBlock}` : ""}
 Le pilier ${pillarKey.toUpperCase()} a besoin des champs suivants (manquants):
 ${fieldList}
 
-CONSIGNES STRICTES:
-1. Tu DOIS générer une valeur pour CHACUN des ${chunk.length} champs ci-dessus. Aucune omission tolérée — l'opérateur a explicitement demandé une auto-complétion exhaustive.
+CONSIGNES STRICTES DE HAUTE QUALITÉ (COERCITIVES) :
+1. Tu DOIS générer une valeur pour CHACUN des ${chunk.length} champs ci-dessus. Aucune omission ou paresse tolérée.
 2. Le JSON doit être un objet plat où les clés sont EXACTEMENT les paths listés (ex: "${chunk[0]?.path ?? "exemple"}", "${chunk[Math.min(1, chunk.length - 1)]?.path ?? "autre"}", …).
-3. Respecte STRICTEMENT le shape annoncé entre crochets [SHAPE] pour chaque path :
-   - "OBJECT" → JSON object avec sous-clés nommées (PAS une string).
-   - "ARRAY ≥N items" → tableau de N+ entrées (chaque entrée = objet avec sous-clés nommées).
-   - "STRING ≥N chars" → string ≥N caractères, PAS un objet ni un tableau.
-   - "NUMBER" → number fini (pas string).
-4. Base-toi sur le contenu existant des autres piliers${sourcesBlock ? " et les documents sources ci-dessus" : ""}. Sois SPÉCIFIQUE à cette marque, jamais générique.
-5. Si tu n'es vraiment pas sûr d'un champ, propose la meilleure inférence possible — un placeholder narratif vaut mieux qu'une omission.
+3. Respecte STRICTEMENT le shape annoncé entre crochets [SHAPE] pour chaque path.
+4. Base-toi uniquement sur les faits décrits dans les documents sources et les autres piliers. Sois extrêmement SPÉCIFIQUE à cette marque.
+5. Règle anti-triche/anti-paresse : Tu ne dois JAMAIS utiliser de placeholders génériques ou simplistes (ex: "Valeur cardinale du manifeste", "Opposition à l'ennemi commun", etc.) ni répéter la même justification ou le même texte pour différents éléments ou objets d'une liste. Chaque description, justification ou conséquence doit être unique, riche, distincte, personnalisée et pleinement rédigée.
 ${hasFinancialFields ? "6. Pour les champs financiers, utilise les RÉFÉRENCES FINANCIÈRES ci-dessus. Ne mets PAS 0. Estime à partir des benchmarks sectoriels.\n" : ""}
 Retourne UNIQUEMENT le JSON, rien d'autre. Pas de markdown, pas de commentaire.`;
 
@@ -744,6 +740,7 @@ Retourne UNIQUEMENT le JSON, rien d'autre. Pas de markdown, pas de commentaire.`
       ollamaModel,
       responseFormat: "json_object",
       maxOutputTokens,
+      temperature: 0.1, // Basse température pour maximiser la conformité aux instructions
     });
     text = res.text;
   } catch (err) {

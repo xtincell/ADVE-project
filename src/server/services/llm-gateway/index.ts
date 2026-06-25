@@ -92,6 +92,8 @@ export interface GatewayCallOptions {
    * Cf. ADR-0067 — F-A3 LLM Gateway responseFormat extension.
    */
   responseFormat?: "text" | "json_object";
+  /** Control the creativity and determinism of the output. 0.0 = deterministic/coercive, 1.0 = creative. */
+  temperature?: number;
 }
 
 export interface GatewayResult {
@@ -586,6 +588,7 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
           system: hr.system,
           prompt: hr.prompt,
           maxOutputTokens: options.maxOutputTokens ?? DEFAULT_MAX_TOKENS,
+          temperature: options.temperature,
           ...(providerOptions ? { providerOptions } : {}),
         });
 
