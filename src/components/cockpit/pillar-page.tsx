@@ -256,7 +256,12 @@ export function PillarPage({ pageKey }: PillarPageProps) {
         setEnrichResult({ type: "warning", message: "Pilier dérivé — utilise « Recalculer ce pilier » pour lancer la cascade." });
         return;
       }
-      const r = await autoFillMutation.mutateAsync({ strategyId, pillarKey: config.pillarKey });
+      // Cible ENRICHED (10 champs, 1 chunk LLM, ~10s) et non COMPLETE (23 champs,
+      // 3 chunks, 60s+) : le timeout Vercel tue COMPLETE avant la fin.
+      // Les champs optionnels (sacredCalendar, commandments, sacraments…) sont de
+      // la data cult-marketing spécifique à la marque — ils restent vides jusqu'à
+      // saisie manuelle ou Oracle. ENRICHED = les champs opérationnels essentiels.
+      const r = await autoFillMutation.mutateAsync({ strategyId, pillarKey: config.pillarKey, targetStage: "ENRICHED" });
       const data = r as unknown as Record<string, unknown>;
       const filledCount = Array.isArray(data?.filled) ? (data.filled as string[]).length : 0;
       const failedCount = Array.isArray(data?.failed) ? (data.failed as unknown[]).length : 0;
