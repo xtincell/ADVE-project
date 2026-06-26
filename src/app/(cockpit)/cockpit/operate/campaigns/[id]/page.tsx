@@ -225,9 +225,11 @@ export default function CampaignDetailPage() {
 
 function OverviewTab({ campaignId, strategyId, state, onRefresh }: { campaignId: string; strategyId: string; state: CampaignState; onRefresh: () => void }) {
   const [transitionError, setTransitionError] = useState<string | null>(null);
+  const [generatingBrief, setGeneratingBrief] = useState(false);
 
   const dashboardQuery = trpc.campaignManager.dashboard.useQuery({ strategyId });
   const transitionsQuery = trpc.campaignManager.availableTransitions.useQuery({ state });
+  const briefsQuery = trpc.campaignManager.listBriefs.useQuery({ campaignId });
   const missionsQuery = trpc.campaign.get.useQuery({ id: campaignId });
   const depsQuery = trpc.campaignManager.listDependencies.useQuery({ campaignId });
 
@@ -236,10 +238,32 @@ function OverviewTab({ campaignId, strategyId, state, onRefresh }: { campaignId:
     onError: (err) => setTransitionError(err.message),
   });
 
+  const validateBriefMut = trpc.campaignManager.validateBriefAndCreateMission.useMutation({
+    onSuccess: () => {
+      briefsQuery.refetch();
+      missionsQuery.refetch();
+      onRefresh();
+    },
+  });
+
+  const genProd = trpc.campaignManager.generateProductionBrief.useMutation({
+    onSuccess: () => {
+      briefsQuery.refetch();
+      setGeneratingBrief(false);
+    },
+    onError: (err) => {
+      console.error(err);
+      setGeneratingBrief(false);
+    }
+  });
+
   const dashboard = dashboardQuery.data as Record<string, unknown> | null;
   const transitions = (transitionsQuery.data ?? []) as string[];
+  const briefs = (briefsQuery.data ?? []) as Array<Record<string, unknown>>;
   const missions = ((missionsQuery.data as Record<string, unknown>)?.missions ?? []) as Array<Record<string, unknown>>;
   const deps = (depsQuery.data ?? []) as Array<Record<string, unknown>>;
+
+  const pendingBriefs = briefs.filter((b) => b.status !== "VALIDATED");
 
   return (
     <div className="space-y-5">
@@ -291,7 +315,49 @@ function OverviewTab({ campaignId, strategyId, state, onRefresh }: { campaignId:
       </Section>
 
       {/* Missions */}
-      <Section title={`Missions (${missions.length})`} icon={Briefcase}>
+      <Section
+        title={`Missions (${missions.length})`}
+        icon={Briefcase}
+        action={
+          <button
+            onClick={() => {
+              setGeneratingBrief(true);
+              genProd.mutate({ campaignId, strategyId });
+            }}
+            disabled={generatingBrief}
+            className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-foreground-secondary hover:bg-surface-raised disabled:opacity-50"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-accent" />
+            {generatingBrief ? "Génération..." : "Générer Brief de Mission"}
+          </button>
+        }
+      >
+        {pendingBriefs.length > 0 && (
+          <div className="mb-4 space-y-2 border-b border-border/50 pb-4">
+            <h4 className="text-xs font-semibold text-foreground-muted flex items-center gap-1.5">
+              <ClipboardList className="h-3.5 w-3.5" />
+              Briefs de missions à valider ({pendingBriefs.length})
+            </h4>
+            <div className="space-y-2">
+              {pendingBriefs.map((b) => (
+                <div key={b.id as string} className="flex items-center justify-between rounded-lg border border-warning/30 bg-warning/5 p-3">
+                  <div>
+                    <p className="text-sm font-medium text-white">{b.title as string}</p>
+                    <p className="text-2xs text-foreground-muted">Type: {String(b.briefType || b.type || "PRODUCTION")}</p>
+                  </div>
+                  <button
+                    onClick={() => validateBriefMut.mutate({ id: b.id as string })}
+                    disabled={validateBriefMut.isPending}
+                    className="flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-foreground-muted hover:bg-foreground disabled:opacity-50"
+                  >
+                    {validateBriefMut.isPending ? "Validation..." : "Valider & Créer la Mission"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {missions.length === 0 ? (
           <EmptyMsg text="Aucune mission associee." />
         ) : (
@@ -873,6 +939,12 @@ function BriefsTab({ campaignId, strategyId }: { campaignId: string; strategyId:
     onSuccess: () => { briefsQuery.refetch(); setShowCreate(false); setNewBrief({ briefType: "CREATIVE", title: "", content: "" }); },
   });
 
+  const validateBriefMut = trpc.campaignManager.validateBriefAndCreateMission.useMutation({
+    onSuccess: () => {
+      briefsQuery.refetch();
+    },
+  });
+
   const genCreative = trpc.campaignManager.generateCreativeBrief.useMutation({ onSuccess: () => { briefsQuery.refetch(); setGenerating(null); } });
   const genMedia = trpc.campaignManager.generateMediaBrief.useMutation({ onSuccess: () => { briefsQuery.refetch(); setGenerating(null); } });
   const genVendor = trpc.campaignManager.generateVendorBrief.useMutation({ onSuccess: () => { briefsQuery.refetch(); setGenerating(null); } });
@@ -932,12 +1004,30 @@ function BriefsTab({ campaignId, strategyId }: { campaignId: string; strategyId:
                     <div className="flex items-center gap-2">
                       <span className="rounded bg-accent/15 px-1.5 py-0.5 text-2xs font-bold text-accent">{b.type as string}</span>
                       <h4 className="text-sm font-medium text-white">{(b.title as string) ?? `Brief ${(b.id as string).slice(0, 8)}`}</h4>
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold ring-1 ring-inset ${
+                        b.status === "VALIDATED"
+                          ? "bg-success/15 text-success ring-success/30 border border-success/30"
+                          : "bg-foreground-muted/15 text-foreground-secondary ring-border/30 border border-border/30"
+                      }`}>
+                        {b.status === "VALIDATED" ? "Validé" : "Brouillon"}
+                      </span>
                     </div>
                     {!!b.version && <p className="mt-0.5 text-xs text-foreground-muted">v{b.version as number}</p>}
                   </div>
-                  <span className="text-xs text-foreground-muted">
-                    {b.createdAt ? new Date(b.createdAt as string).toLocaleDateString("fr-FR") : ""}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    {b.status !== "VALIDATED" && (
+                      <MiniBtn
+                        variant="primary"
+                        onClick={() => validateBriefMut.mutate({ id: b.id as string })}
+                        disabled={validateBriefMut.isPending}
+                      >
+                        {validateBriefMut.isPending ? "Validation..." : "Valider & Créer la Mission"}
+                      </MiniBtn>
+                    )}
+                    <span className="text-xs text-foreground-muted">
+                      {b.createdAt ? new Date(b.createdAt as string).toLocaleDateString("fr-FR") : ""}
+                    </span>
+                  </div>
                 </div>
                 {!!b.content && (
                   <p className="mt-2 text-xs text-foreground-secondary line-clamp-3">{typeof b.content === "string" ? b.content : typeof b.content === "object" && b.content !== null ? Object.entries(b.content as Record<string, unknown>).filter(([, v]) => typeof v === "string").slice(0, 3).map(([k, v]) => `${getFieldLabel(k)}: ${(v as string).slice(0, 50)}`).join(" · ") || "(contenu structure)" : String(b.content)}</p>

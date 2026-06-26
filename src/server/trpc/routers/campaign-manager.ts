@@ -1190,6 +1190,48 @@ export const campaignManagerRouter = createTRPCRouter({
       });
     }),
 
+  validateBriefAndCreateMission: governedProcedure({
+    kind: "LEGACY_CAMPAIGN_MANAGER_VALIDATE_BRIEF_AND_CREATE_MISSION",
+    inputSchema: z.object({ id: z.string() }),
+    caller: "campaign-manager:validateBriefAndCreateMission",
+  })
+    .mutation(async ({ ctx, input }) => {
+      const brief = await ctx.db.campaignBrief.findUniqueOrThrow({
+        where: { id: input.id },
+        include: { campaign: true },
+      });
+
+      const updatedBrief = await ctx.db.campaignBrief.update({
+        where: { id: input.id },
+        data: { status: "VALIDATED" },
+      });
+
+      const title = `Production - ${brief.title}`;
+      let mission = await ctx.db.mission.findFirst({
+        where: {
+          campaignId: brief.campaignId,
+          title: title,
+        },
+      });
+
+      if (!mission) {
+        mission = await ctx.db.mission.create({
+          data: {
+            title,
+            strategyId: brief.campaign.strategyId,
+            campaignId: brief.campaignId,
+            status: "DRAFT",
+            priority: 3,
+            budget: brief.campaign.budget ?? 0,
+            slaDeadline: brief.campaign.endDate,
+            briefData: brief.content as any,
+          },
+        });
+      }
+
+      return { success: true, briefId: brief.id, missionId: mission.id };
+    }),
+
   getBriefTypes: protectedProcedure
     .query(() => cm.getBriefTypes()),
 
