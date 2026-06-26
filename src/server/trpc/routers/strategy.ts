@@ -747,13 +747,75 @@ export const strategyRouter = createTRPCRouter({
         .sort((a, b) => b.topSimilarity - a.topSimilarity);
     }),
 
-  validateSynthesis: protectedProcedure
+  /** Retourne la confiance et le statut du pilier S pour La Forge */
+  getSynthesisConfidence: protectedProcedure
     .input(z.object({ strategyId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const sPillar = await ctx.db.pillar.findFirst({
+        where: { strategyId: input.strategyId, key: "s" },
+      });
+
+      const allPillars = await ctx.db.pillar.findMany({
+        where: { strategyId: input.strategyId },
+        select: { key: true, confidence: true, validationStatus: true },
+      });
+
+      const pillarScores = Object.fromEntries(
+        allPillars.map((p) => [p.key, { confidence: p.confidence, status: p.validationStatus }])
+      );
+
+      return {
+        confidence: sPillar?.confidence ?? null,
+        validationStatus: sPillar?.validationStatus ?? "DRAFT",
+        fieldCertainty: sPillar?.fieldCertainty ?? null,
+        pillarScores,
+        hasLowConfidence: (sPillar?.confidence ?? 0) < 0.30,
+        isAiProposed: sPillar?.validationStatus === "AI_PROPOSED",
+      };
+    }),
+
+  validateSynthesis: protectedProcedure
+    .input(z.object({
+      strategyId: z.string(),
+      /** Si true : force la validation même si confiance < 30% et met confidence=1.0 */
+      forceConfidence: z.boolean().optional().default(false),
+    }))
     .mutation(async ({ ctx, input }) => {
+      // 1. Lire le pilier S
+      const sPillar = await ctx.db.pillar.findFirst({
+        where: { strategyId: input.strategyId, key: "s" },
+      });
+
+      const confidence = sPillar?.confidence ?? 0;
+
+      // 2. Si confiance < 30% et pas de forceConfidence → retourner un warning
+      //    Le client affichera le modal de confirmation.
+      if (confidence < 0.30 && !input.forceConfidence) {
+        return {
+          warning: true as const,
+          confidence,
+          validationStatus: sPillar?.validationStatus ?? "DRAFT",
+          message: "Stratégie majoritairement inférée par l'IA. Confirmation requise.",
+          updated: null,
+        };
+      }
+
+      // 3. Valider la stratégie
       const updated = await ctx.db.strategy.update({
         where: { id: input.strategyId },
         data: { status: "VALIDATED" },
       });
+
+      // 4. Si pilier S existe : mettre confidence=1.0 et status=VALIDATED
+      if (sPillar) {
+        await ctx.db.pillar.update({
+          where: { id: sPillar.id },
+          data: {
+            confidence: 1.0,
+            validationStatus: "VALIDATED",
+          },
+        });
+      }
 
       // Audit trail (non-blocking)
       auditTrail.log({
@@ -761,10 +823,15 @@ export const strategyRouter = createTRPCRouter({
         action: "UPDATE",
         entityType: "Strategy",
         entityId: input.strategyId,
-        newValue: { status: "VALIDATED" },
+        newValue: {
+          status: "VALIDATED",
+          sPillarConfidence: 1.0,
+          forceConfidence: input.forceConfidence,
+          previousConfidence: confidence,
+        },
       }).catch((err) => { console.warn("[audit-trail] strategy validate log failed:", err); });
 
-      return updated;
+      return { warning: false as const, confidence: 1.0, updated };
     }),
 
   generateProjectsFromActions: operatorProcedure

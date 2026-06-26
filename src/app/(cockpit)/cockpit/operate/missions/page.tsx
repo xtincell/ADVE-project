@@ -48,17 +48,13 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
+import { getMissionStageConfig, getCampaignStateConfig } from "@/lib/operate-config";
+
 /* ---- helpers ---- */
 
 const STAGES = ["DRAFT", "IN_PROGRESS", "REVIEW", "COMPLETED"] as const;
 
-const STAGE_LABELS: Record<string, string> = {
-  DRAFT: "Brouillon",
-  IN_PROGRESS: "En cours",
-  REVIEW: "Revue",
-  COMPLETED: "Termine",
-  CANCELLED: "Annule",
-};
+// STAGE_LABELS supprimé — utiliser getMissionStageConfig(stage).label depuis operate-config
 
 function stageIndex(status: string): number {
   const idx = STAGES.indexOf(status as (typeof STAGES)[number]);
@@ -155,7 +151,7 @@ function ProgressTimeline({ currentStatus }: { currentStatus: string }) {
                       : "text-foreground-muted"
                 }`}
               >
-                {STAGE_LABELS[stage]}
+                {getMissionStageConfig(stage).label}
               </span>
             </div>
             {!isLast && <div className="w-1" />}
@@ -1180,7 +1176,7 @@ export default function MissionsPage() {
                         ) : (
                           <ArrowRight className="h-3.5 w-3.5" />
                         )}
-                        {STAGE_LABELS[ns] ?? ns}
+                        {getMissionStageConfig(ns).label}
                       </button>
                     ))}
                   </div>

@@ -4,7 +4,9 @@ import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
+import { Modal } from "@/components/shared/modal";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
+import { formatConfidence } from "@/lib/operate-config";
 import {
   Hammer,
   Layers,
@@ -22,10 +24,13 @@ import {
   ArrowRight,
   AlertCircle,
   Briefcase,
-  Users
+  Users,
+  BookOpen,
+  ShieldAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// Constantes locales non liées aux enums Prisma (OK de garder ici)
 const VAULT_STATUS_LABELS: Record<string, string> = {
   ACTIVE_REUSE: "Réutiliser",
   STALE_REFRESH: "Rafraîchir",
@@ -45,6 +50,8 @@ export default function DeliverableForgePage() {
   // Tab 1: Project Forge States
   const [selectedActionIds, setSelectedActionIds] = useState<string[]>([]);
   const [routeGuildeOnCreate, setRouteGuildeOnCreate] = useState(false);
+  // Modal de confirmation validation S < 30%
+  const [showLowConfidenceModal, setShowLowConfidenceModal] = useState(false);
 
   // Tab 2: Deliverable Forge States
   const [targetKind, setTargetKind] = useState<string>("");
@@ -56,14 +63,26 @@ export default function DeliverableForgePage() {
     { enabled: Boolean(strategyId) }
   );
 
+  // Confiance du pilier S — alimente la bannière
+  const synthesisConfidenceQuery = trpc.strategy.getSynthesisConfidence.useQuery(
+    { strategyId: strategyId ?? "" },
+    { enabled: Boolean(strategyId) }
+  );
+
   const actionsQuery = trpc.actions.byStrategy.useQuery(
     { strategyId: strategyId ?? "" },
     { enabled: Boolean(strategyId) }
   );
 
   const validateSynthesisMutation = trpc.strategy.validateSynthesis.useMutation({
-    onSuccess: () => {
-      strategyQuery.refetch();
+    onSuccess: (data) => {
+      if (data && "warning" in data && data.warning) {
+        // Confiance < 30% — afficher le modal
+        setShowLowConfidenceModal(true);
+      } else {
+        strategyQuery.refetch();
+        synthesisConfidenceQuery.refetch();
+      }
     }
   });
 
@@ -121,7 +140,17 @@ export default function DeliverableForgePage() {
 
   async function handleValidateStrategy() {
     if (!strategyId) return;
+    // Lance la validation — le serveur retourne { warning: true } si confiance < 30%
+    // Le onSuccess du mutation gère l'affichage du modal
     await validateSynthesisMutation.mutateAsync({ strategyId });
+  }
+
+  async function handleForceValidate() {
+    if (!strategyId) return;
+    setShowLowConfidenceModal(false);
+    await validateSynthesisMutation.mutateAsync({ strategyId, forceConfidence: true });
+    strategyQuery.refetch();
+    synthesisConfidenceQuery.refetch();
   }
 
   async function handleGenerateProjects() {
@@ -161,6 +190,8 @@ export default function DeliverableForgePage() {
   const strategy = strategyQuery.data;
   const isStrategyValidated = strategy?.status === "VALIDATED" || strategy?.status === "ACTIVE";
   const actions = actionsQuery.data ?? [];
+  const sConf = synthesisConfidenceQuery.data;
+  const confFmt = formatConfidence(sConf?.confidence);
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
@@ -168,6 +199,104 @@ export default function DeliverableForgePage() {
         title="La Forge"
         description="Le creuset opérationnel de transformation. Validez votre stratégie ADVE-RTIS, générez les projets associés et matérialisez vos livrables."
       />
+
+      {/* ── Bannière confiance Pilier S ──────────────────────────────────── */}
+      {sConf && !isStrategyValidated && (
+        <div
+          className={cn(
+            "rounded-xl border p-4 space-y-3",
+            sConf.hasLowConfidence
+              ? "border-error/30 bg-error/5"
+              : confFmt.level === "medium"
+                ? "border-warning/30 bg-warning/5"
+                : "border-success/20 bg-success/5"
+          )}
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <ShieldAlert
+                className={cn(
+                  "h-4 w-4 shrink-0",
+                  sConf.hasLowConfidence ? "text-error" : confFmt.level === "medium" ? "text-warning" : "text-success"
+                )}
+              />
+              <div>
+                <p className="text-sm font-semibold text-foreground">
+                  Confiance stratégique — Pilier S (Synthèse)
+                </p>
+                <p className="text-xs text-foreground-muted mt-0.5">
+                  {sConf.isAiProposed
+                    ? "⚠️ La majorité des données stratégiques ont été inférées par l'IA et ne sont pas encore validées par un opérateur."
+                    : confFmt.level === "low"
+                      ? "Les données de synthèse sont insuffisantes pour garantir la qualité des projets générés."
+                      : confFmt.level === "medium"
+                        ? "La stratégie est partiellement validée. Une revue avant forge est recommandée."
+                        : "La stratégie est bien documentée. Vous pouvez forger en toute confiance."}
+                </p>
+              </div>
+            </div>
+            <div className="shrink-0 text-right">
+              <span className={cn("text-2xl font-black tabular-nums", confFmt.color)}>
+                {confFmt.pct}
+              </span>
+              {sConf.isAiProposed && (
+                <p className="text-[9px] font-mono uppercase tracking-widest text-error mt-0.5">
+                  AI_PROPOSED
+                </p>
+              )}
+            </div>
+          </div>
+          {/* Barre de progression */}
+          <div className="h-1.5 w-full rounded-full bg-background/40">
+            <div
+              className={cn(
+                "h-1.5 rounded-full transition-all",
+                sConf.hasLowConfidence ? "bg-error" : confFmt.level === "medium" ? "bg-warning" : "bg-success"
+              )}
+              style={{ width: confFmt.pct }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal : validation < 30% ─────────────────────────────────────── */}
+      {showLowConfidenceModal && sConf && (
+        <Modal
+          open={showLowConfidenceModal}
+          onClose={() => setShowLowConfidenceModal(false)}
+          title={`⚠️ Stratégie à ${confFmt.pct} de confiance`}
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-foreground-secondary">
+              La majorité des données de cette stratégie ont été <strong>inférées par l'IA</strong>
+              {sConf.isAiProposed ? " (statut : AI_PROPOSED)" : ""}. Forger des projets sur une base
+              aussi incertaine peut produire des campagnes mal alignées avec votre réalité terrain.
+            </p>
+            <div className="rounded-lg border border-error/20 bg-error/5 p-3 text-xs text-error">
+              <strong>Risque :</strong> les briefs et KPI générés seront basés sur des hypothèses non validées.
+              Nous recommandons de revoir l'ADVE-RTIS avant de procéder.
+            </div>
+            <div className="flex flex-col gap-2 pt-2">
+              <a
+                href="/cockpit/brand/roadmap"
+                onClick={() => setShowLowConfidenceModal(false)}
+                className="flex items-center justify-center gap-2 rounded-xl border border-accent/30 bg-accent/10 px-4 py-3 text-sm font-semibold text-accent transition-colors hover:bg-accent/20"
+              >
+                <BookOpen className="h-4 w-4" />
+                Relire et compléter l'ADVE-RTIS
+              </a>
+              <button
+                type="button"
+                onClick={handleForceValidate}
+                className="flex items-center justify-center gap-2 rounded-xl border border-error/20 bg-error/5 px-4 py-3 text-sm font-medium text-error transition-colors hover:bg-error/10"
+              >
+                <CheckCircle2 className="h-4 w-4" />
+                Confirmer et passer à 100% de confiance
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {/* Tabs Selector */}
       <div className="flex border-b border-border">

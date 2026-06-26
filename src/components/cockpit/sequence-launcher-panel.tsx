@@ -13,7 +13,7 @@ import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
-import { Rocket, Zap, Coins, Loader2, X, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Rocket, Zap, Coins, Loader2, X, AlertTriangle, CheckCircle2, FolderOpen, RotateCcw, Clock } from "lucide-react";
 
 const LIFECYCLE_LABEL: Record<string, string> = { DRAFT: "Brouillon", STABLE: "Stable", DEPRECATED: "Déprécié" };
 
@@ -73,28 +73,93 @@ export function SequenceLauncherPanel() {
   );
 }
 
-function SequenceCard({ seq, onLaunch }: { seq: Seq; onLaunch: () => void }) {
+function SequenceCard({
+  seq,
+  onLaunch,
+  lastOutput,
+}: {
+  seq: Seq;
+  onLaunch: () => void;
+  lastOutput?: { outputUrl?: string | null; completedAt?: string | null; id?: string } | null;
+}) {
+  const isCompleted = !!lastOutput?.completedAt;
+
   return (
-    <div className="flex flex-col rounded-lg border border-white/5 bg-surface-raised p-4">
+    <div
+      className={`flex flex-col rounded-lg border bg-surface-raised p-4 transition-all ${
+        isCompleted ? "border-success/20 bg-success/[0.03]" : "border-white/5"
+      }`}
+    >
       <div className="mb-1 flex items-center gap-2">
-        {seq.pillar ? <span className="flex h-5 w-5 items-center justify-center rounded-full bg-accent/15 text-2xs font-bold text-accent">{seq.pillar}</span> : null}
+        {seq.pillar ? (
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-accent/15 text-2xs font-bold text-accent">
+            {seq.pillar}
+          </span>
+        ) : null}
         <span className="truncate text-sm font-semibold text-foreground">{seq.name}</span>
+        {isCompleted && (
+          <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[9px] font-bold text-success ring-1 ring-inset ring-success/30">
+            <CheckCircle2 className="h-2.5 w-2.5" /> Terminé
+          </span>
+        )}
       </div>
       <p className="mb-3 flex-1 text-xs leading-relaxed text-foreground-secondary">{seq.description}</p>
       <div className="mb-3 flex flex-wrap items-center gap-1.5 text-[9px] uppercase tracking-wide">
         <span className="rounded bg-white/5 px-1.5 py-0.5 text-foreground-muted">{seq.family}</span>
-        <span className="rounded bg-white/5 px-1.5 py-0.5 text-foreground-muted">{LIFECYCLE_LABEL[seq.lifecycle] ?? seq.lifecycle}</span>
+        <span className="rounded bg-white/5 px-1.5 py-0.5 text-foreground-muted">
+          {LIFECYCLE_LABEL[seq.lifecycle] ?? seq.lifecycle}
+        </span>
         <span className="rounded bg-white/5 px-1.5 py-0.5 text-foreground-muted">{seq.stepCount} étapes</span>
+        {isCompleted && lastOutput?.completedAt && (
+          <span className="flex items-center gap-0.5 rounded bg-success/10 px-1.5 py-0.5 text-[9px] text-success">
+            <Clock className="h-2.5 w-2.5" />
+            {new Date(lastOutput.completedAt).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })}
+          </span>
+        )}
       </div>
       <div className="flex items-center justify-between gap-2">
         {seq.cost.costClass === "LLM" ? (
-          <span className="inline-flex items-center gap-1 text-2xs text-accent"><Zap className="h-3 w-3" /> ~${seq.cost.estimateUsd.toFixed(2)}</span>
+          <span className="inline-flex items-center gap-1 text-2xs text-accent">
+            <Zap className="h-3 w-3" /> ~${seq.cost.estimateUsd.toFixed(2)}
+          </span>
         ) : (
-          <span className="inline-flex items-center gap-1 text-2xs text-success"><Coins className="h-3 w-3" /> gratuit</span>
+          <span className="inline-flex items-center gap-1 text-2xs text-success">
+            <Coins className="h-3 w-3" /> gratuit
+          </span>
         )}
-        <button type="button" onClick={onLaunch} className="inline-flex items-center gap-1.5 rounded-lg bg-accent/15 px-2.5 py-1.5 text-2xs font-medium text-accent transition-colors hover:bg-accent/25">
-          <Rocket className="h-3 w-3" /> Lancer
-        </button>
+
+        {isCompleted ? (
+          // ─ Tuile post-completion : Ouvrir + Relancer
+          <div className="flex items-center gap-1.5">
+            {lastOutput?.outputUrl && (
+              <a
+                href={lastOutput.outputUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 rounded-lg bg-success/15 px-2.5 py-1.5 text-2xs font-medium text-success transition-colors hover:bg-success/25"
+              >
+                <FolderOpen className="h-3 w-3" /> Ouvrir
+              </a>
+            )}
+            <button
+              type="button"
+              onClick={onLaunch}
+              title="Relancer la séquence (la nouvelle version remplacera l'actuelle, l'ancienne sera historisée)"
+              className="inline-flex items-center gap-1 rounded-lg bg-foreground-muted/10 px-2.5 py-1.5 text-2xs font-medium text-foreground-secondary transition-colors hover:bg-foreground-muted/20"
+            >
+              <RotateCcw className="h-3 w-3" /> Relancer
+            </button>
+          </div>
+        ) : (
+          // ─ Tuile initiale : bouton Lancer
+          <button
+            type="button"
+            onClick={onLaunch}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-accent/15 px-2.5 py-1.5 text-2xs font-medium text-accent transition-colors hover:bg-accent/25"
+          >
+            <Rocket className="h-3 w-3" /> Lancer
+          </button>
+        )}
       </div>
     </div>
   );

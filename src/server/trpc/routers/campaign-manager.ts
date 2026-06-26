@@ -1814,4 +1814,144 @@ export const campaignManagerRouter = createTRPCRouter({
 
       return { success: true, missionId: mission.id, publicSlug: slug };
     }),
+
+  // ==========================================================================
+  // Rapport de clôture — POST_CAMPAIGN / ARCHIVED
+  // ==========================================================================
+
+  /** Agrège toutes les données de performance d'une campagne pour le bilan de clôture */
+  getCampaignClosureReport: protectedProcedure
+    .input(z.object({ campaignId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      await enforceCampaignAccess(ctx, input.campaignId);
+
+      const campaign = await ctx.db.campaign.findUniqueOrThrow({
+        where: { id: input.campaignId },
+        include: {
+          aarrMetrics:   true,
+          fieldReports:  true,
+          budgetLines:   true,
+          teamMembers:   { include: { user: { select: { id: true, name: true, image: true } } } },
+          missions:      { select: { id: true, title: true, status: true } },
+          milestones:    { orderBy: { dueDate: "asc" } },
+        },
+      });
+
+      // ── Métriques AARRR groupées par stage ──────────────────────────────
+      const metricsByStage = campaign.aarrMetrics.reduce<
+        Record<string, Array<{ metric: string; value: number; target: number | null; period: string }>>
+      >((acc, m) => {
+        const stage = m.stage as string;
+        if (!acc[stage]) acc[stage] = [];
+        acc[stage].push({ metric: m.metric, value: m.value, target: m.target ?? null, period: m.period });
+        return acc;
+      }, {});
+
+      // ── Budget ──────────────────────────────────────────────────────────
+      const totalPlanned = campaign.budgetLines.reduce((s, b) => s + (b.planned ?? 0), 0);
+      const totalSpent   = campaign.budgetLines.reduce((s, b) => s + (b.actual ?? 0), 0);
+      const budgetVariance = totalPlanned > 0 ? ((totalSpent - totalPlanned) / totalPlanned) * 100 : 0;
+
+      // ── Verdict AARRR — ratio métriques ayant atteint leur target ───────
+      const allMetrics = campaign.aarrMetrics;
+      const withTargets = allMetrics.filter((m) => m.target != null && m.target > 0);
+      const achieved = withTargets.filter((m) => m.value >= (m.target ?? 0)).length;
+      const verdictRatio = withTargets.length > 0 ? achieved / withTargets.length : null;
+      const verdictLevel =
+        verdictRatio == null  ? "unknown"
+        : verdictRatio >= 0.8 ? "success"
+        : verdictRatio >= 0.5 ? "partial"
+        :                       "failure";
+
+      return {
+        campaign: {
+          id: campaign.id,
+          name: campaign.name,
+          state: campaign.state as string,
+          startDate: campaign.startDate,
+          endDate: campaign.endDate,
+          budget: campaign.budget,
+          budgetCurrency: campaign.budgetCurrency,
+        },
+        aarrr: {
+          byStage: metricsByStage,
+          totalMetrics: allMetrics.length,
+          withTargets: withTargets.length,
+          achieved,
+        },
+        budget: {
+          totalPlanned,
+          totalSpent,
+          variance: budgetVariance,
+          lines: campaign.budgetLines,
+        },
+        team: campaign.teamMembers.map((tm) => ({
+          id: tm.id,
+          role: tm.role,
+          user: tm.user,
+        })),
+        missions: campaign.missions,
+        milestones: campaign.milestones,
+        fieldReportsCount: campaign.fieldReports.length,
+        verdict: {
+          level: verdictLevel,
+          ratio: verdictRatio,
+        },
+      };
+    }),
+
+  /** Retourne la timeline des jalons et l'historique d'état d'une campagne */
+  getCampaignTimeline: protectedProcedure
+    .input(z.object({ campaignId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      await enforceCampaignAccess(ctx, input.campaignId);
+
+      const campaign = await ctx.db.campaign.findUniqueOrThrow({
+        where: { id: input.campaignId },
+        select: {
+          id: true,
+          name: true,
+          state: true,
+          createdAt: true,
+          updatedAt: true,
+          startDate: true,
+          endDate: true,
+          milestones: {
+            orderBy: { dueDate: "asc" },
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              dueDate: true,
+              completedAt: true,
+              status: true,
+            },
+          },
+          approvals: {
+            orderBy: { createdAt: "asc" },
+            select: {
+              id: true,
+              type: true,
+              status: true,
+              createdAt: true,
+              updatedAt: true,
+              notes: true,
+            },
+          },
+        },
+      });
+
+      return {
+        campaignId: campaign.id,
+        name: campaign.name,
+        currentState: campaign.state as string,
+        createdAt: campaign.createdAt,
+        updatedAt: campaign.updatedAt,
+        startDate: campaign.startDate,
+        endDate: campaign.endDate,
+        milestones: campaign.milestones,
+        approvals: campaign.approvals,
+      };
+    }),
 });
+

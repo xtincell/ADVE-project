@@ -71,21 +71,40 @@ export const cockpitNavGroups: NavGroup[] = [
       { href: "/cockpit", label: "Tableau de bord", icon: LayoutDashboard },
     ],
   },
+  // ── Operations — Hub central ──────────────────────────────────────────────
   {
-    title: "Operations",
+    title: "Opérations",
     items: [
-      { href: "/cockpit/operate/center", label: "Operations Center", icon: Building },
-      { href: "/cockpit/operate/forge", label: "La Forge", icon: Zap },
-      { href: "/cockpit/operate/tracker", label: "Campaign Tracker", icon: Activity },
-      { href: "/cockpit/operate/newsletter", label: "Newsletter", icon: Mail },
-      { href: "/cockpit/operate/missions", label: "Missions", icon: Target },
-      { href: "/cockpit/operate/campaigns", label: "Campagnes", icon: Megaphone },
-      { href: "/cockpit/operate/calendar", label: "Calendrier", sublabel: "Prélancement", icon: CalendarDays },
-      { href: "/cockpit/operate/sequences", label: "Séquences", sublabel: "Livrables Glory", icon: PlayCircle },
-      { href: "/cockpit/operate/action-brief", label: "Brief → actions", sublabel: "Injection roadmap", icon: Lightbulb },
+      { href: "/cockpit/operate/center", label: "Operations Center", sublabel: "Hub quotidien", icon: Building },
+    ],
+  },
+  // ── Stratégie → Actions — du S validé aux projets forgés ─────────────────
+  {
+    title: "Stratégie → Actions",
+    items: [
+      { href: "/cockpit/operate/forge", label: "La Forge", sublabel: "S → Projets campagne", icon: Zap },
+      { href: "/cockpit/operate/action-brief", label: "Brief → Actions", sublabel: "Idéation guidée", icon: Lightbulb },
       { href: "/cockpit/operate/roadmap", label: "Roadmap", sublabel: "Calendrier des actions", icon: Calendar },
-      { href: "/cockpit/operate/briefs", label: "Briefs", icon: FileText },
-      { href: "/cockpit/operate/requests", label: "Demandes", icon: MessageCircle },
+      { href: "/cockpit/operate/sequences", label: "Séquences Glory", sublabel: "Livrables IA", icon: PlayCircle },
+    ],
+  },
+  // ── Production & Livrables — du brief à la mise en ligne ─────────────────
+  {
+    title: "Production",
+    items: [
+      { href: "/cockpit/operate/campaigns", label: "Campagnes", sublabel: "Pipeline 12 états", icon: Megaphone },
+      { href: "/cockpit/operate/briefs", label: "Briefs", sublabel: "Client · Créa · Prod", icon: FileText },
+      { href: "/cockpit/operate/missions", label: "Missions", sublabel: "Équipe & Guilde", icon: Target },
+    ],
+  },
+  // ── Lancement & Mesure — LIVE, terrain, résultats ────────────────────────
+  {
+    title: "Lancement & Mesure",
+    items: [
+      { href: "/cockpit/operate/calendar", label: "Calendrier Lancement", sublabel: "Prélancement digital", icon: CalendarDays },
+      { href: "/cockpit/operate/tracker", label: "Campaign Tracker", sublabel: "AARRR & clôture", icon: Activity },
+      { href: "/cockpit/operate/newsletter", label: "Newsletter", sublabel: "CRM & envois", icon: Mail },
+      { href: "/cockpit/operate/requests", label: "Demandes", sublabel: "Tickets & escalades", icon: MessageCircle },
     ],
   },
   {

@@ -15,6 +15,7 @@ import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { PILLAR_KEYS, PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
 import { PILLAR_TAG_BG } from "@/components/shared/pillar-content-card";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
+import { BRIEF_STATUS_CONFIG, formatCurrency } from "@/lib/operate-config";
 import {
   FileText,
   AlertTriangle,
@@ -40,20 +41,8 @@ import {
 /* ─── helpers ────────────────────────────────────────────────────────────── */
 
 const BRIEF_STATUSES = ["DRAFT", "SUBMITTED", "VALIDATED", "ASSIGNED"] as const;
-const BRIEF_STATUS_LABELS: Record<string, string> = {
-  DRAFT: "Brouillon",
-  SUBMITTED: "Soumis",
-  VALIDATED: "Validé",
-  ASSIGNED: "Assigné",
-};
-const BRIEF_STATUS_VARIANTS: Record<string, string> = {
-  DRAFT: "bg-foreground-muted/15 text-foreground-secondary ring-border/30",
-  SUBMITTED: "bg-warning/15 text-warning ring-warning/30",
-  VALIDATED: "bg-success/15 text-success ring-success/30",
-  ASSIGNED: "bg-accent/15 text-accent ring-accent/30",
-  IN_PROGRESS: "bg-info/15 text-info ring-info/30",
-  COMPLETED: "bg-success/15 text-success ring-success/30",
-};
+// BRIEF_STATUS_LABELS supprimé — utiliser BRIEF_STATUS_CONFIG[status].label depuis operate-config
+// BRIEF_STATUS_VARIANTS supprimé — utiliser BRIEF_STATUS_CONFIG[status].color depuis operate-config
 
 function formatXAF(v: number) {
   return v.toLocaleString("fr-FR") + " XAF";
@@ -117,7 +106,14 @@ function BriefCard({ m, getBriefStatus }: { m: Mission; getBriefStatus: (m: Miss
             {/* Title + status */}
             <div className="flex flex-wrap items-center gap-2">
               <h4 className="text-sm font-semibold text-white leading-snug">{m.title}</h4>
-              <StatusBadge status={briefStatus} variantMap={BRIEF_STATUS_VARIANTS} />
+              <span
+                className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${
+                  BRIEF_STATUS_CONFIG[briefStatus as keyof typeof BRIEF_STATUS_CONFIG]?.color ??
+                  "bg-foreground-muted/15 text-foreground-secondary ring-border/30"
+                }`}
+              >
+                {BRIEF_STATUS_CONFIG[briefStatus as keyof typeof BRIEF_STATUS_CONFIG]?.label ?? briefStatus}
+              </span>
             </div>
 
             {/* Campaign + mission link row */}
@@ -358,7 +354,14 @@ function CampaignBriefCard({ b }: { b: CampaignBriefRow }) {
                 ACTIF
               </span>
             )}
-            <StatusBadge status={b.status} variantMap={BRIEF_STATUS_VARIANTS} />
+            <span
+              className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${
+                BRIEF_STATUS_CONFIG[b.status as keyof typeof BRIEF_STATUS_CONFIG]?.color ??
+                "bg-foreground-muted/15 text-foreground-secondary ring-border/30"
+              }`}
+            >
+              {BRIEF_STATUS_CONFIG[b.status as keyof typeof BRIEF_STATUS_CONFIG]?.label ?? b.status}
+            </span>
             {b.briefType && (
               <span className="rounded-full bg-accent/15 px-2 py-0.5 text-2xs font-semibold uppercase text-accent">
                 {b.briefType}

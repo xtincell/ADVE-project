@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Modal } from "@/components/shared/modal";
 import { SkeletonPage, SkeletonList } from "@/components/shared/loading-skeleton";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
+import { REQUEST_STATUS_CONFIG } from "@/lib/operate-config";
 import {
   Zap,
   Send,
@@ -55,25 +56,8 @@ const URGENCY_VARIANTS: Record<string, string> = {
   critical: "bg-error/15 text-error ring-error/30",
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  OPEN: "Ouvert",
-  ASSIGNED: "Assigne",
-  IN_PROGRESS: "En cours",
-  RESOLVED: "Resolu",
-  pending: "En attente",
-  converted: "Converti",
-  dismissed: "Rejete",
-};
-
-const STATUS_VARIANTS: Record<string, string> = {
-  OPEN: "bg-warning/15 text-warning ring-warning/30",
-  ASSIGNED: "bg-info/15 text-info ring-info/30",
-  IN_PROGRESS: "bg-accent/15 text-accent ring-accent/30",
-  RESOLVED: "bg-success/15 text-success ring-success/30",
-  pending: "bg-warning/15 text-warning ring-warning/30",
-  converted: "bg-success/15 text-success ring-success/30",
-  dismissed: "bg-foreground-muted/15 text-foreground-secondary ring-border/30",
-};
+// STATUS_LABELS supprimé — utiliser REQUEST_STATUS_CONFIG[status].label depuis operate-config
+// STATUS_VARIANTS supprimé — utiliser REQUEST_STATUS_CONFIG[status].color depuis operate-config
 
 const RESOLUTION_FLOW = ["OPEN", "ASSIGNED", "IN_PROGRESS", "RESOLVED"] as const;
 
@@ -148,7 +132,7 @@ function ResolutionWorkflow({ currentStatus }: { currentStatus: string }) {
                     : "bg-background text-foreground-muted"
               }`}
             >
-              {STATUS_LABELS[s] ?? s}
+              {REQUEST_STATUS_CONFIG[s as keyof typeof REQUEST_STATUS_CONFIG]?.label ?? s}
             </div>
             {i < RESOLUTION_FLOW.length - 1 && (
               <ArrowRight className={`mx-0.5 h-3 w-3 ${done ? "text-success/50" : "text-foreground-muted"}`} />
@@ -450,10 +434,14 @@ export default function RequestsPage() {
                             {(data?.description as string) ?? ""}
                           </p>
                         </div>
-                        <StatusBadge
-                          status={STATUS_LABELS[status] ?? status}
-                          variantMap={STATUS_VARIANTS}
-                        />
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${
+                            REQUEST_STATUS_CONFIG[status as keyof typeof REQUEST_STATUS_CONFIG]?.color ??
+                            "bg-foreground-muted/15 text-foreground-secondary ring-border/30"
+                          }`}
+                        >
+                          {REQUEST_STATUS_CONFIG[status as keyof typeof REQUEST_STATUS_CONFIG]?.label ?? status}
+                        </span>
                       </div>
 
                       <div className="mt-2 flex items-center gap-3 text-xs text-foreground-muted">
@@ -508,7 +496,14 @@ export default function RequestsPage() {
             <div className="space-y-4">
               {/* Status + urgency */}
               <div className="flex items-center gap-2 flex-wrap">
-                <StatusBadge status={STATUS_LABELS[status] ?? status} variantMap={STATUS_VARIANTS} />
+                <span
+                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${
+                    REQUEST_STATUS_CONFIG[status as keyof typeof REQUEST_STATUS_CONFIG]?.color ??
+                    "bg-foreground-muted/15 text-foreground-secondary ring-border/30"
+                  }`}
+                >
+                  {REQUEST_STATUS_CONFIG[status as keyof typeof REQUEST_STATUS_CONFIG]?.label ?? status}
+                </span>
                 <StatusBadge status={urgency} variantMap={URGENCY_VARIANTS} />
                 <span className="rounded-full bg-background px-2.5 py-0.5 text-xs font-medium text-foreground-secondary">
                   {reqType === "one_off" ? "Ponctuelle" : reqType === "recurring" ? "Recurrente" : "Urgence"}

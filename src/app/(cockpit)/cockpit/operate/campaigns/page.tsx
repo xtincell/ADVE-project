@@ -17,6 +17,16 @@ import { SkeletonPage, SkeletonCard } from "@/components/shared/loading-skeleton
 import { buildPillarContentMap } from "@/components/shared/pillar-content-card";
 import { PILLAR_NAMES, PILLAR_KEYS, type PillarKey } from "@/lib/types/advertis-vector";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
+// ── operate-config : source de vérité unique — aucune constante d'état en local
+import {
+  getCampaignStateConfig,
+  getCampaignStateLabel,
+  STATE_PHASE_GROUPS,
+  ACTIVE_CAMPAIGN_STATES,
+  formatCurrency,
+} from "@/lib/operate-config";
+import { CampaignPipeline } from "@/components/cockpit/campaign-pipeline";
+import { CampaignStateBadge } from "@/components/cockpit/operate-status-badge";
 import {
   Megaphone,
   Plus,
@@ -31,32 +41,10 @@ import {
   BarChart3,
   ShieldAlert,
   Users,
+  GitBranch,
 } from "lucide-react";
 
-const STATE_BADGE_COLORS: Record<string, string> = {
-  BRIEF_DRAFT: "bg-foreground-muted/15 text-foreground-secondary ring-border/30",
-  BRIEF_VALIDATED: "bg-info/15 text-info ring-info/30",
-  PLANNING: "bg-accent/15 text-accent ring-accent/30",
-  CREATIVE_DEV: "bg-warning/15 text-warning ring-warning/30",
-  PRODUCTION: "bg-warning/15 text-warning ring-warning/30",
-  PRE_PRODUCTION: "bg-warning/15 text-warning ring-warning/30",
-  APPROVAL: "bg-warning/15 text-warning ring-warning/30",
-  READY_TO_LAUNCH: "bg-info/15 text-info ring-info/30",
-  LIVE: "bg-success/15 text-success ring-success/30",
-  POST_CAMPAIGN: "bg-error/15 text-error ring-error/30",
-  ARCHIVED: "bg-foreground-muted/15 text-foreground-secondary ring-border/30",
-  CANCELLED: "bg-error/15 text-error ring-error/30",
-};
-
-function CampaignStateBadge({ state }: { state: string }) {
-  const colors = STATE_BADGE_COLORS[state] ?? "bg-foreground-muted/15 text-foreground-secondary ring-border/30";
-  return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${colors}`}>
-      {state.replace(/_/g, " ")}
-    </span>
-  );
-}
-
+// PILLAR_BADGE_COLORS : propres aux piliers ADVE, pas liés aux enums campagne — OK ici
 const PILLAR_BADGE_COLORS: Record<PillarKey, string> = {
   a: "bg-accent/15 text-accent border-accent/40",
   d: "bg-info/15 text-info border-info/40",
@@ -125,14 +113,11 @@ export default function CampaignsPage() {
 
   const allCampaigns = campaignsQuery.data ?? [];
 
-  // Tab filtering based on 12-state machine (state field takes precedence, falls back to status)
-  const getState = (c: { state?: string; status: string }) => c.state ?? c.status;
-  const ACTIVE_STATES = ["BRIEF_DRAFT", "BRIEF_VALIDATED", "PLANNING", "CREATIVE_DEV", "APPROVAL", "READY_TO_LAUNCH", "LIVE"];
-  const PRODUCTION_STATES = ["PRODUCTION", "PRE_PRODUCTION"];
-  const COMPLETED_STATES = ["POST_CAMPAIGN", "ARCHIVED", "CANCELLED"];
-  const activeCampaigns = allCampaigns.filter((c) => ACTIVE_STATES.includes(getState(c)));
-  const productionCampaigns = allCampaigns.filter((c) => PRODUCTION_STATES.includes(getState(c)));
-  const completedCampaigns = allCampaigns.filter((c) => COMPLETED_STATES.includes(getState(c)));
+  // Tab filtering — depuis STATE_PHASE_GROUPS de operate-config (jamais hardcodé)
+  const getState = (c: { state?: string | null; status: string }) => c.state ?? c.status;
+  const activeCampaigns    = allCampaigns.filter((c) => STATE_PHASE_GROUPS.active.includes(getState(c) as never));
+  const productionCampaigns = allCampaigns.filter((c) => STATE_PHASE_GROUPS.production.includes(getState(c) as never));
+  const completedCampaigns  = allCampaigns.filter((c) => STATE_PHASE_GROUPS.done.includes(getState(c) as never));
 
   const tabFiltered =
     activeTab === "all"
@@ -533,74 +518,24 @@ interface CampaignDetailModalProps {
   onTransitionComplete: () => void;
 }
 
-// Client-side state machine matching the real 12-state campaign lifecycle
-const VALID_TRANSITIONS: Record<string, string[]> = {
-  BRIEF_DRAFT: ["BRIEF_VALIDATED", "CANCELLED"],
-  BRIEF_VALIDATED: ["PLANNING", "BRIEF_DRAFT", "CANCELLED"],
-  PLANNING: ["CREATIVE_DEV", "BRIEF_VALIDATED", "CANCELLED"],
-  CREATIVE_DEV: ["PRODUCTION", "PLANNING", "CANCELLED"],
-  PRODUCTION: ["PRE_PRODUCTION", "CREATIVE_DEV", "CANCELLED"],
-  PRE_PRODUCTION: ["APPROVAL", "PRODUCTION", "CANCELLED"],
-  APPROVAL: ["READY_TO_LAUNCH", "PRE_PRODUCTION", "CANCELLED"],
-  READY_TO_LAUNCH: ["LIVE", "APPROVAL", "CANCELLED"],
-  LIVE: ["POST_CAMPAIGN", "CANCELLED"],
-  POST_CAMPAIGN: ["ARCHIVED"],
-  ARCHIVED: [],
-  CANCELLED: [],
-};
-
-function isValidTransition(from: string, to: string): boolean {
-  return (VALID_TRANSITIONS[from] ?? []).includes(to);
-}
+// VALID_TRANSITIONS supprimé — transitions golées par getDisplayTransitions() depuis operate-config
+// Validation finale toujours côté serveur via campaignManager.transition
 
 function CampaignDetailModal({ campaign, pillarContentMap, onClose, onTransitionComplete }: CampaignDetailModalProps) {
-  const [transitioning, setTransitioning] = useState(false);
-  const [transitionError, setTransitionError] = useState<string | null>(null);
-
-  // Use the 12-state machine state (falls back to status for legacy data)
-  const campaignState = (campaign.state ?? campaign.status) as "BRIEF_DRAFT" | "BRIEF_VALIDATED" | "PLANNING" | "CREATIVE_DEV" | "PRODUCTION" | "PRE_PRODUCTION" | "APPROVAL" | "READY_TO_LAUNCH" | "LIVE" | "POST_CAMPAIGN" | "ARCHIVED" | "CANCELLED";
-
-  // Fetch available transitions for current state
-  const transitionsQuery = trpc.campaignManager.availableTransitions.useQuery(
-    { state: campaignState },
-  );
+  const campaignState = (campaign.state ?? campaign.status) as string;
+  const stateCfg = getCampaignStateConfig(campaignState);
 
   // Fetch budget breakdown
   const budgetQuery = trpc.campaignManager.getBudgetBreakdown.useQuery(
     { campaignId: campaign.id },
   );
 
-  // Fetch AARRR report if LIVE or POST_CAMPAIGN
+  // Fetch AARRR report si LIVE ou POST_CAMPAIGN
   const showAarrr = campaignState === "LIVE" || campaignState === "POST_CAMPAIGN";
   const aarrrQuery = trpc.campaignManager.getAARRReport.useQuery(
     { campaignId: campaign.id },
     { enabled: showAarrr },
   );
-
-  const transitionMutation = trpc.campaignManager.transition.useMutation({
-    onSuccess: () => {
-      setTransitioning(false);
-      setTransitionError(null);
-      onTransitionComplete();
-    },
-    onError: (err) => {
-      setTransitioning(false);
-      setTransitionError(err.message);
-    },
-  });
-
-  const handleTransition = (toState: string) => {
-    // Client-side validation of the state transition
-    if (!isValidTransition(campaignState, toState)) {
-      setTransitionError(
-        `Transition invalide : impossible de passer de ${campaignState.replace(/_/g, " ")} a ${toState.replace(/_/g, " ")}. Transitions autorisees depuis ${campaignState.replace(/_/g, " ")} : ${(VALID_TRANSITIONS[campaignState] ?? []).map((s) => s.replace(/_/g, " ")).join(", ") || "aucune"}.`
-      );
-      return;
-    }
-    setTransitioning(true);
-    setTransitionError(null);
-    transitionMutation.mutate({ campaignId: campaign.id, toState: toState as "BRIEF_DRAFT" | "BRIEF_VALIDATED" | "PLANNING" | "CREATIVE_DEV" | "PRODUCTION" | "PRE_PRODUCTION" | "APPROVAL" | "READY_TO_LAUNCH" | "LIVE" | "POST_CAMPAIGN" | "ARCHIVED" | "CANCELLED" });
-  };
 
   const meta = campaign.advertis_vector as Record<string, unknown> | null;
   const missions = campaign.missions ?? [];
@@ -620,7 +555,6 @@ function CampaignDetailModal({ campaign, pillarContentMap, onClose, onTransition
     Array.isArray(meta?.focus) ? meta.focus : PILLAR_KEYS.filter((k) => typeof meta?.[k] === "number" && (meta[k] as number) > 0)
   ) as PillarKey[];
 
-  const availableTransitions = (transitionsQuery.data ?? []) as string[];
   const budget = budgetQuery.data as {
     total?: number;
     spent?: number;
@@ -668,40 +602,17 @@ function CampaignDetailModal({ campaign, pillarContentMap, onClose, onTransition
           )}
         </div>
 
-        {/* State Transition Buttons */}
-        <div className="rounded-lg border border-border bg-background/50 p-4">
-          <h4 className="mb-3 flex items-center gap-2 text-sm font-medium text-foreground-secondary">
-            <ArrowRight className="h-4 w-4" />
-            Transitions disponibles
+        {/* Pipeline 12 états — CampaignPipeline remplace les boutons de transition */}
+        <div className="rounded-xl border border-border bg-background/50 p-4">
+          <h4 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
+            <GitBranch className="h-4 w-4 text-accent" />
+            Pipeline de la campagne
           </h4>
-          {transitionsQuery.isLoading ? (
-            <p className="text-xs text-foreground-muted">Chargement des transitions...</p>
-          ) : availableTransitions.length === 0 ? (
-            <p className="text-xs text-foreground-muted">Aucune transition disponible depuis cet etat.</p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {availableTransitions.map((toState) => (
-                <button
-                  key={toState}
-                  onClick={() => handleTransition(toState)}
-                  disabled={transitioning}
-                  className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-surface-raised disabled:opacity-50"
-                >
-                  <ArrowRight className="h-3 w-3" />
-                  {(toState as string).replace(/_/g, " ")}
-                </button>
-              ))}
-            </div>
-          )}
-          {transitionError && (
-            <div className="mt-3 flex items-start gap-2 rounded-lg border border-error/50 bg-error/20 p-3">
-              <ShieldAlert className="mt-0.5 h-4 w-4 flex-shrink-0 text-error" />
-              <p className="text-xs text-error">{transitionError}</p>
-            </div>
-          )}
-          {transitioning && (
-            <p className="mt-2 text-xs text-foreground-muted">Transition en cours...</p>
-          )}
+          <CampaignPipeline
+            campaignId={campaign.id}
+            currentState={campaignState}
+            onTransitionComplete={onTransitionComplete}
+          />
         </div>
 
         {/* Objectives */}
