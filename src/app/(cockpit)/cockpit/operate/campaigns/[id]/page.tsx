@@ -242,6 +242,7 @@ function OverviewTab({ campaignId, strategyId, state, onRefresh }: { campaignId:
     onSuccess: () => {
       briefsQuery.refetch();
       missionsQuery.refetch();
+      dashboardQuery.refetch();
       onRefresh();
     },
   });
@@ -345,13 +346,18 @@ function OverviewTab({ campaignId, strategyId, state, onRefresh }: { campaignId:
                     <p className="text-sm font-medium text-white">{b.title as string}</p>
                     <p className="text-2xs text-foreground-muted">Type: {String(b.briefType || b.type || "PRODUCTION")}</p>
                   </div>
-                  <button
-                    onClick={() => validateBriefMut.mutate({ id: b.id as string })}
-                    disabled={validateBriefMut.isPending}
-                    className="flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-foreground-muted hover:bg-foreground disabled:opacity-50"
-                  >
-                    {validateBriefMut.isPending ? "Validation..." : "Valider & Créer la Mission"}
-                  </button>
+                  <div className="flex flex-col items-end gap-1">
+                    <button
+                      onClick={() => validateBriefMut.mutate({ id: b.id as string })}
+                      disabled={validateBriefMut.isPending}
+                      className="flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-foreground-muted hover:bg-foreground disabled:opacity-50"
+                    >
+                      {validateBriefMut.isPending ? "Validation..." : "Valider & Créer la Mission"}
+                    </button>
+                    {validateBriefMut.isError && validateBriefMut.variables?.id === b.id && (
+                      <p className="text-2xs text-error max-w-[200px] text-right">{validateBriefMut.error.message}</p>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -939,9 +945,12 @@ function BriefsTab({ campaignId, strategyId }: { campaignId: string; strategyId:
     onSuccess: () => { briefsQuery.refetch(); setShowCreate(false); setNewBrief({ briefType: "CREATIVE", title: "", content: "" }); },
   });
 
+  const utils = trpc.useUtils();
   const validateBriefMut = trpc.campaignManager.validateBriefAndCreateMission.useMutation({
     onSuccess: () => {
       briefsQuery.refetch();
+      utils.campaign.get.invalidate({ id: campaignId });
+      utils.campaignManager.dashboard.invalidate({ strategyId });
     },
   });
 
@@ -1016,13 +1025,18 @@ function BriefsTab({ campaignId, strategyId }: { campaignId: string; strategyId:
                   </div>
                   <div className="flex items-center gap-3">
                     {b.status !== "VALIDATED" && (
-                      <MiniBtn
-                        variant="primary"
-                        onClick={() => validateBriefMut.mutate({ id: b.id as string })}
-                        disabled={validateBriefMut.isPending}
-                      >
-                        {validateBriefMut.isPending ? "Validation..." : "Valider & Créer la Mission"}
-                      </MiniBtn>
+                      <div className="flex flex-col items-end gap-1">
+                        <MiniBtn
+                          variant="primary"
+                          onClick={() => validateBriefMut.mutate({ id: b.id as string })}
+                          disabled={validateBriefMut.isPending}
+                        >
+                          {validateBriefMut.isPending ? "Validation..." : "Valider & Créer la Mission"}
+                        </MiniBtn>
+                        {validateBriefMut.isError && validateBriefMut.variables?.id === b.id && (
+                          <p className="text-[10px] text-error max-w-[200px] text-right">{validateBriefMut.error.message}</p>
+                        )}
+                      </div>
                     )}
                     <span className="text-xs text-foreground-muted">
                       {b.createdAt ? new Date(b.createdAt as string).toLocaleDateString("fr-FR") : ""}
