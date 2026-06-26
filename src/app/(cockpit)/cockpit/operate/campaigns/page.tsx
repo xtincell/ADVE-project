@@ -75,7 +75,10 @@ export default function CampaignsPage() {
     { enabled: !!strategyId },
   );
 
-  const overviewQuery = trpc.operationsOverview.overview.useQuery(undefined, { enabled: !!strategyId });
+  const overviewQuery = trpc.operationsOverview.overview.useQuery(
+    { strategyId: strategyId ?? undefined },
+    { enabled: !!strategyId }
+  );
   const budgetQuery = trpc.operationsOverview.budgetConsolidation.useQuery(
     { strategyId: strategyId ?? "" },
     { enabled: !!strategyId }

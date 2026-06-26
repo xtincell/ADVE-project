@@ -12,58 +12,76 @@ import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 
 export const operationsOverviewRouter = createTRPCRouter({
-  overview: operatorProcedure.query(async () => {
-    const [missionsByStatus, openApplications, devisExecutions, budgetAgg, pendingCommissions] =
-      await Promise.all([
-        db.mission.groupBy({ by: ["status"], _count: true }),
-        db.missionApplication.count({ where: { status: "PENDING" } }),
-        db.campaignExecution.findMany({
-          where: { productionState: "DEVIS" },
-          select: {
-            id: true,
-            devisAmount: true,
-            vendor: true,
-            dueDate: true,
-            campaign: { select: { id: true, name: true } },
-            action: { select: { name: true, category: true } },
-          },
-          orderBy: { dueDate: "asc" },
-          take: 50,
-        }),
-        db.budgetLine.groupBy({
-          by: ["category"],
-          _sum: { planned: true, actual: true },
-        }),
-        db.commission.aggregate({
-          where: { status: "PENDING" },
-          _count: true,
-          _sum: { netAmount: true },
-        }),
-      ]);
+  overview: operatorProcedure
+    .input(z.object({ strategyId: z.string().optional() }).optional())
+    .query(async ({ input }) => {
+      const [missionsByStatus, openApplications, devisExecutions, budgetAgg, pendingCommissions] =
+        await Promise.all([
+          db.mission.groupBy({
+            where: input?.strategyId ? { strategyId: input.strategyId } : undefined,
+            by: ["status"],
+            _count: true,
+          }),
+          db.missionApplication.count({
+            where: {
+              status: "PENDING",
+              ...(input?.strategyId ? { mission: { strategyId: input.strategyId } } : {}),
+            },
+          }),
+          db.campaignExecution.findMany({
+            where: {
+              productionState: "DEVIS",
+              ...(input?.strategyId ? { campaign: { strategyId: input.strategyId } } : {}),
+            },
+            select: {
+              id: true,
+              devisAmount: true,
+              vendor: true,
+              dueDate: true,
+              campaign: { select: { id: true, name: true } },
+              action: { select: { name: true, category: true } },
+            },
+            orderBy: { dueDate: "asc" },
+            take: 50,
+          }),
+          db.budgetLine.groupBy({
+            where: input?.strategyId ? { campaign: { strategyId: input.strategyId } } : undefined,
+            by: ["category"],
+            _sum: { planned: true, actual: true },
+          }),
+          db.commission.aggregate({
+            where: {
+              status: "PENDING",
+              ...(input?.strategyId ? { mission: { strategyId: input.strategyId } } : {}),
+            },
+            _count: true,
+            _sum: { netAmount: true },
+          }),
+        ]);
 
-    return {
-      missions: Object.fromEntries(missionsByStatus.map((m) => [m.status, m._count])),
-      openApplications,
-      devis: devisExecutions.map((e) => ({
-        id: e.id,
-        campaign: e.campaign?.name ?? null,
-        action: e.action?.name ?? null,
-        category: e.action?.category ?? null,
-        amount: e.devisAmount,
-        vendor: e.vendor,
-        dueDate: e.dueDate,
-      })),
-      budgets: budgetAgg.map((b) => ({
-        category: b.category,
-        planned: b._sum.planned ?? 0,
-        actual: b._sum.actual ?? 0,
-      })),
-      commissions: {
-        pendingCount: pendingCommissions._count,
-        pendingNetTotal: pendingCommissions._sum.netAmount ?? 0,
-      },
-    };
-  }),
+      return {
+        missions: Object.fromEntries(missionsByStatus.map((m) => [m.status, m._count])),
+        openApplications,
+        devis: devisExecutions.map((e) => ({
+          id: e.id,
+          campaign: e.campaign?.name ?? null,
+          action: e.action?.name ?? null,
+          category: e.action?.category ?? null,
+          amount: e.devisAmount,
+          vendor: e.vendor,
+          dueDate: e.dueDate,
+        })),
+        budgets: budgetAgg.map((b) => ({
+          category: b.category,
+          planned: b._sum.planned ?? 0,
+          actual: b._sum.actual ?? 0,
+        })),
+        commissions: {
+          pendingCount: pendingCommissions._count,
+          pendingNetTotal: pendingCommissions._sum.netAmount ?? 0,
+        },
+      };
+    }),
 
   /** Missions en cours détaillées (table console). */
   activeMissions: operatorProcedure

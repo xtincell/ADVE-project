@@ -29,7 +29,7 @@ export default function OperationsCenter({ strategyId }: { strategyId: string })
   
   // Queries
   const { data: operator } = trpc.operator.getOwn.useQuery();
-  const overviewQuery = trpc.operationsOverview.overview.useQuery();
+  const overviewQuery = trpc.operationsOverview.overview.useQuery({ strategyId });
   const todayActionsQuery = trpc.operationsOverview.todayActions.useQuery({ strategyId });
   const teamWorkloadQuery = trpc.operationsOverview.teamWorkload.useQuery({ strategyId });
   const budgetQuery = trpc.operationsOverview.budgetConsolidation.useQuery({ strategyId });
