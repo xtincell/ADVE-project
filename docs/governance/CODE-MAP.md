@@ -399,7 +399,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 102
+## tRPC routers — 103
 
 - `accounts` (`src/server/trpc/routers/accounts.ts`)
 - `actions` (`src/server/trpc/routers/actions.ts`)
@@ -471,6 +471,7 @@ Ces correspondances évitent la réinvention :
 - `mobile-money` (`src/server/trpc/routers/mobile-money.ts`)
 - `monetization` (`src/server/trpc/routers/monetization.ts`)
 - `morning-batch` (`src/server/trpc/routers/morning-batch.ts`)
+- `newsletter` (`src/server/trpc/routers/newsletter.ts`)
 - `notification` (`src/server/trpc/routers/notification.ts`)
 - `notoria` (`src/server/trpc/routers/notoria.ts`)
 - `onboarding` (`src/server/trpc/routers/onboarding.ts`)
@@ -506,7 +507,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 246 (par deck)
+## Pages — 249 (par deck)
 
 ### Agency (12)
 
@@ -523,7 +524,7 @@ Ces correspondances évitent la réinvention :
 - `/agency/revenue`
 - `/agency/signals`
 
-### Cockpit (47)
+### Cockpit (50)
 
 - `/cockpit`
 - `/cockpit/brand/assets`
@@ -564,11 +565,14 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/operate/campaigns`
 - `/cockpit/operate/campaigns/[id]`
 - `/cockpit/operate/campaigns/[id]/tracker`
+- `/cockpit/operate/center`
 - `/cockpit/operate/forge`
 - `/cockpit/operate/missions`
+- `/cockpit/operate/newsletter`
 - `/cockpit/operate/requests`
 - `/cockpit/operate/roadmap`
 - `/cockpit/operate/sequences`
+- `/cockpit/operate/tracker`
 - `/cockpit/portfolio`
 - `/cockpit/portfolio/[corporateSlug]`
 - `/cockpit/settings`

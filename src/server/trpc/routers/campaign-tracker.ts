@@ -27,6 +27,7 @@
  */
 
 import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
@@ -836,5 +837,152 @@ export const campaignTrackerRouter = createTRPCRouter({
         output: result.output ?? null,
         reason: result.reason ?? null,
       };
+    }),
+
+  reportFieldProgress: operatorProcedure
+    .input(z.object({
+      fieldOpId: z.string(),
+      reporterName: z.string(),
+      data: z.record(z.string(), z.unknown()),
+      photos: z.array(z.string()).optional(),
+      metrics: z.object({
+        acquisitionCount: z.number().optional(),
+        activationCount: z.number().optional(),
+        retentionCount: z.number().optional(),
+        revenueCount: z.number().optional(),
+        referralCount: z.number().optional(),
+      }).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const fieldOp = await ctx.db.campaignFieldOp.findUniqueOrThrow({
+        where: { id: input.fieldOpId },
+      });
+
+       const report = await ctx.db.campaignFieldReport.create({
+        data: {
+          fieldOpId: input.fieldOpId,
+          campaignId: fieldOp.campaignId,
+          reporterName: input.reporterName,
+          data: input.data as Prisma.InputJsonValue,
+          photos: input.photos ? input.photos : undefined,
+          status: "SUBMITTED",
+          acquisitionCount: input.metrics?.acquisitionCount ?? null,
+          activationCount: input.metrics?.activationCount ?? null,
+          retentionCount: input.metrics?.retentionCount ?? null,
+          revenueCount: input.metrics?.revenueCount ?? null,
+          referralCount: input.metrics?.referralCount ?? null,
+        },
+      });
+
+      await ctx.db.campaignFieldOp.update({
+        where: { id: input.fieldOpId },
+        data: { status: "IN_PROGRESS" },
+      });
+
+      return report;
+    }),
+
+  getOperationalSummary: operatorProcedure
+    .input(z.object({ strategyId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const campaigns = await ctx.db.campaign.findMany({
+        where: { strategyId: input.strategyId, state: { not: "ARCHIVED" } },
+        include: {
+          fieldOps: { include: { reports: true } },
+          missions: true,
+          executions: true,
+        },
+      });
+
+      let totalCampaigns = campaigns.length;
+      let liveCampaigns = campaigns.filter(c => c.state === "LIVE").length;
+      let totalMissions = 0;
+      let activeMissions = 0;
+      let totalFieldOps = 0;
+      let completedFieldOps = 0;
+
+      const aarrrTotals = {
+        acquisition: 0,
+        activation: 0,
+        retention: 0,
+        revenue: 0,
+        referral: 0,
+      };
+
+      let devisTotalAmount = 0;
+
+      for (const c of campaigns) {
+        totalMissions += c.missions.length;
+        activeMissions += c.missions.filter(m => m.status === "IN_PROGRESS" || m.status === "REVIEW").length;
+        totalFieldOps += c.fieldOps.length;
+        completedFieldOps += c.fieldOps.filter(f => f.status === "COMPLETED").length;
+
+        for (const exec of c.executions) {
+          devisTotalAmount += exec.devisAmount ?? 0;
+        }
+
+        for (const op of c.fieldOps) {
+          for (const rep of op.reports) {
+            aarrrTotals.acquisition += rep.acquisitionCount ?? 0;
+            aarrrTotals.activation += rep.activationCount ?? 0;
+            aarrrTotals.retention += rep.retentionCount ?? 0;
+            aarrrTotals.revenue += rep.revenueCount ?? 0;
+            aarrrTotals.referral += rep.referralCount ?? 0;
+          }
+        }
+      }
+
+      return {
+        campaigns: { total: totalCampaigns, live: liveCampaigns },
+        missions: { total: totalMissions, active: activeMissions },
+        fieldOps: { total: totalFieldOps, completed: completedFieldOps },
+        aarrrTotals,
+        devisTotalAmount,
+      };
+    }),
+
+  getFieldKpiProgress: operatorProcedure
+    .input(z.object({ campaignId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const fieldOps = await ctx.db.campaignFieldOp.findMany({
+        where: { campaignId: input.campaignId },
+        include: { reports: true },
+      });
+
+      return fieldOps.map((op) => {
+        const config = op.aarrConfig as Record<string, unknown> | null;
+        const targets = {
+          acquisition: typeof config?.acquisitionTarget === "number" ? config.acquisitionTarget : 100,
+          activation: typeof config?.activationTarget === "number" ? config.activationTarget : 50,
+          retention: typeof config?.retentionTarget === "number" ? config.retentionTarget : 20,
+          revenue: typeof config?.revenueTarget === "number" ? config.revenueTarget : 10,
+          referral: typeof config?.referralTarget === "number" ? config.referralTarget : 5,
+        };
+
+        const progress = {
+          acquisition: 0,
+          activation: 0,
+          retention: 0,
+          revenue: 0,
+          referral: 0,
+        };
+
+        for (const rep of op.reports) {
+          progress.acquisition += rep.acquisitionCount ?? 0;
+          progress.activation += rep.activationCount ?? 0;
+          progress.retention += rep.retentionCount ?? 0;
+          progress.revenue += rep.revenueCount ?? 0;
+          progress.referral += rep.referralCount ?? 0;
+        }
+
+        return {
+          id: op.id,
+          name: op.name,
+          location: op.location,
+          status: op.status,
+          targets,
+          progress,
+        };
+      });
     }),
 });

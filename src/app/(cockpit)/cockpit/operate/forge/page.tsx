@@ -1,21 +1,3 @@
-/**
- * /cockpit/operate/forge — Deliverable Forge (Phase 17b, ADR-0050 — anciennement ADR-0037).
- *
- * Surface output-first du Deliverable Forge. Le founder pointe le
- * `BrandAsset.kind` matériel cible et l'OS résout en arrière la cascade
- * Glory→Brief→Forge :
- *   1. resolveRequirements → DAG des briefs requis + scan vault
- *   2. compose (mode PREVIEW Phase 17 commit 4) → composition complète +
- *      coût estimé + verdict pre-conditions Loi 2
- *
- * Le mode DISPATCHED async (avec NSP streaming des étapes) viendra dans un
- * commit ultérieur — pour l'instant la page expose le PREVIEW.
- *
- * Design tokens : panda noir/bone + accent rouge fusée (ADR-0013). Aucune
- * classe Tailwind couleur brute hors primitives — uniquement les tokens
- * canoniques (text-foreground, bg-surface-raised, border-border, etc.).
- */
-
 "use client";
 
 import { useState, useMemo } from "react";
@@ -34,7 +16,15 @@ import {
   Zap,
   DollarSign,
   ChevronRight,
+  ShieldCheck,
+  CheckSquare,
+  Square,
+  ArrowRight,
+  AlertCircle,
+  Briefcase,
+  Users
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const VAULT_STATUS_LABELS: Record<string, string> = {
   ACTIVE_REUSE: "Réutiliser",
@@ -50,21 +40,51 @@ const VAULT_STATUS_VARIANTS: Record<string, string> = {
 
 export default function DeliverableForgePage() {
   const strategyId = useCurrentStrategyId();
+  const [activeTab, setActiveTab] = useState<"projects" | "deliverables">("projects");
+
+  // Tab 1: Project Forge States
+  const [selectedActionIds, setSelectedActionIds] = useState<string[]>([]);
+  const [routeGuildeOnCreate, setRouteGuildeOnCreate] = useState(false);
+
+  // Tab 2: Deliverable Forge States
   const [targetKind, setTargetKind] = useState<string>("");
   const [confirmedDispatch, setConfirmedDispatch] = useState(false);
 
-  // Étape 0 — liste des kinds supportés
-  const supported = trpc.deliverableOrchestrator.listSupportedKinds.useQuery();
-
-  // Étape 1 — DAG + vault scan (skip tant qu'on n'a pas choisi un kind)
-  const requirements = trpc.deliverableOrchestrator.resolveRequirements.useQuery(
-    { targetKind, strategyId: strategyId ?? undefined },
-    { enabled: Boolean(targetKind && strategyId) },
+  // tRPC Queries & Mutations
+  const strategyQuery = trpc.strategy.get.useQuery(
+    { id: strategyId ?? "" },
+    { enabled: Boolean(strategyId) }
   );
 
-  // Étape 2 — compose mutation (mode PREVIEW)
-  const composeMutation = trpc.deliverableOrchestrator.compose.useMutation();
+  const actionsQuery = trpc.actions.byStrategy.useQuery(
+    { strategyId: strategyId ?? "" },
+    { enabled: Boolean(strategyId) }
+  );
 
+  const validateSynthesisMutation = trpc.strategy.validateSynthesis.useMutation({
+    onSuccess: () => {
+      strategyQuery.refetch();
+    }
+  });
+
+  const generateProjectsMutation = trpc.strategy.generateProjectsFromActions.useMutation({
+    onSuccess: () => {
+      actionsQuery.refetch();
+      setSelectedActionIds([]);
+    }
+  });
+
+  const routeToGuildeMutation = trpc.campaignManager.routeToGuilde.useMutation();
+
+  // Deliverable Forge queries (Tab 2)
+  const supported = trpc.deliverableOrchestrator.listSupportedKinds.useQuery();
+  
+  const requirements = trpc.deliverableOrchestrator.resolveRequirements.useQuery(
+    { targetKind, strategyId: strategyId ?? undefined },
+    { enabled: Boolean(targetKind && strategyId && activeTab === "deliverables") },
+  );
+
+  const composeMutation = trpc.deliverableOrchestrator.compose.useMutation();
   const composition = composeMutation.data?.intentResult ?? null;
 
   const totalEstimatedCost = useMemo(() => {
@@ -73,7 +93,7 @@ export default function DeliverableForgePage() {
     const toGenerate = matches.filter(
       (m) => m.status === "MISSING_GENERATE" || m.status === "STALE_REFRESH",
     ).length;
-    return toGenerate * 0.1 + 0.5; // mêmes constantes que composer.ts
+    return toGenerate * 0.1 + 0.5;
   }, [requirements.data]);
 
   const canDispatch =
@@ -82,13 +102,14 @@ export default function DeliverableForgePage() {
     !composition &&
     Boolean(strategyId);
 
+  // Handlers
   function handleLaunch() {
     if (!strategyId || !targetKind) return;
     setConfirmedDispatch(true);
     composeMutation.mutate({
       strategyId,
       targetKind,
-      previewOnly: true, // Phase 17 commit 4 : toujours PREVIEW
+      previewOnly: true,
     });
   }
 
@@ -98,204 +119,454 @@ export default function DeliverableForgePage() {
     composeMutation.reset();
   }
 
+  async function handleValidateStrategy() {
+    if (!strategyId) return;
+    await validateSynthesisMutation.mutateAsync({ strategyId });
+  }
+
+  async function handleGenerateProjects() {
+    if (!strategyId || selectedActionIds.length === 0) return;
+    const res = await generateProjectsMutation.mutateAsync({
+      strategyId,
+      actionIds: selectedActionIds
+    });
+
+    if (routeGuildeOnCreate && res.projects) {
+      for (const proj of res.projects) {
+        await routeToGuildeMutation.mutateAsync({
+          campaignId: proj.campaignId
+        });
+      }
+    }
+  }
+
+  function toggleActionSelection(id: string) {
+    setSelectedActionIds(prev => 
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  }
+
   if (!strategyId) {
     return (
       <div className="container mx-auto px-4 py-8">
         <EmptyState
           icon={Hammer}
           title="Sélectionnez une marque"
-          description="Cette surface ne peut produire un livrable que dans le contexte d'une stratégie active."
+          description="Cette surface ne peut produire un projet ou un livrable que dans le contexte d'une stratégie active."
         />
       </div>
     );
   }
 
+  const strategy = strategyQuery.data;
+  const isStrategyValidated = strategy?.status === "VALIDATED" || strategy?.status === "ACTIVE";
+  const actions = actionsQuery.data ?? [];
+
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
       <PageHeader
-        title="Deliverable Forge"
-        description="Pointez un livrable matériel cible — l'OS résout la cascade complète, scanne votre vault, et propose une production."
+        title="La Forge"
+        description="Le creuset opérationnel de transformation. Validez votre stratégie ADVE-RTIS, générez les projets associés et matérialisez vos livrables."
       />
 
-      {/* ── Étape 0 — Sélecteur target kind ──────────────────────────── */}
-      <section className="rounded-xl border border-border bg-background/80 p-5 space-y-4">
-        <div className="flex items-start gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/15 text-accent">
-            <span className="text-sm font-semibold">1</span>
-          </div>
-          <div className="flex-1">
-            <h3 className="text-sm font-semibold text-foreground">Que voulez-vous produire ?</h3>
-            <p className="mt-0.5 text-xs text-foreground-secondary">
-              Sélectionnez le type de livrable matériel cible. L'OS remontera automatiquement les
-              briefs upstream nécessaires.
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-          {supported.data?.kinds.map((kind) => (
-            <button
-              key={kind}
-              onClick={() => {
-                setTargetKind(kind);
-                composeMutation.reset();
-                setConfirmedDispatch(false);
-              }}
-              className={`rounded-lg border p-3 text-left transition-colors ${
-                targetKind === kind
-                  ? "border-accent bg-accent/10"
-                  : "border-border bg-background/40 hover:border-foreground-muted"
-              }`}
-            >
-              <span className="text-xs font-medium text-foreground">{kind}</span>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/* ── Étape 1 — DAG résolu + vault scan ────────────────────────── */}
-      {targetKind && (
-        <section className="rounded-xl border border-border bg-background/80 p-5 space-y-4">
-          <div className="flex items-start gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/15 text-accent">
-              <span className="text-sm font-semibold">2</span>
-            </div>
-            <div className="flex-1">
-              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <Layers className="h-4 w-4" />
-                Cascade requise
-              </h3>
-              <p className="mt-0.5 text-xs text-foreground-secondary">
-                Briefs upstream à fournir (depuis le vault) ou à générer. L'estimation coût
-                inclut les LLM tools manquants + le forge Ptah final.
-              </p>
-            </div>
-          </div>
-
-          {requirements.isPending && (
-            <p className="text-xs text-foreground-muted">Résolution du DAG en cours…</p>
+      {/* Tabs Selector */}
+      <div className="flex border-b border-border">
+        <button
+          onClick={() => setActiveTab("projects")}
+          className={cn(
+            "px-4 py-2 text-sm font-semibold border-b-2 -mb-[2px] transition-colors",
+            activeTab === "projects"
+              ? "border-accent text-accent"
+              : "border-transparent text-foreground-secondary hover:text-white"
           )}
-
-          {requirements.data && !requirements.data.ok && (
-            <div className="rounded-lg border border-warning/30 bg-warning/10 p-3">
-              <p className="text-xs font-semibold text-warning flex items-center gap-1.5">
-                <AlertTriangle className="h-4 w-4" />
-                {requirements.data.code}
-              </p>
-              <p className="mt-1 text-xs text-foreground-secondary">{requirements.data.message}</p>
-            </div>
+        >
+          S → Projets (La Forge)
+        </button>
+        <button
+          onClick={() => setActiveTab("deliverables")}
+          className={cn(
+            "px-4 py-2 text-sm font-semibold border-b-2 -mb-[2px] transition-colors",
+            activeTab === "deliverables"
+              ? "border-accent text-accent"
+              : "border-transparent text-foreground-secondary hover:text-white"
           )}
+        >
+          Livrables (Deliverable Forge)
+        </button>
+      </div>
 
-          {requirements.data?.ok && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-xs text-foreground-secondary">
-                <Search className="h-3 w-3" />
-                <span>
-                  Producteur target : <span className="text-accent">{requirements.data.targetGloryToolSlug}</span>
-                </span>
+      {/* ── TAB 1 : LA FORGE (S → PROJECTS) ────────────────────────── */}
+      {activeTab === "projects" && (
+        <div className="space-y-6">
+          {/* Strategy validation gate */}
+          {!isStrategyValidated ? (
+            <section className="rounded-xl border border-warning/30 bg-warning/5 p-6 space-y-4">
+              <div className="flex items-start gap-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-warning/10 text-warning">
+                  <AlertCircle className="h-5 w-5" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-sm font-bold text-white">Validation du S requise</h3>
+                  <p className="text-xs text-foreground-secondary leading-relaxed">
+                    La stratégie ADVE-RTIS de la marque <span className="font-semibold text-white">{strategy?.name}</span> n'a pas encore été validée. La validation de la synthèse est nécessaire pour verrouiller la stratégie et déclencher sa vie opérationnelle sous ADVERTIS.
+                  </p>
+                </div>
               </div>
 
-              {requirements.data.vaultMatches && requirements.data.vaultMatches.length > 0 ? (
-                <ul className="space-y-1.5">
-                  {requirements.data.vaultMatches.map((match) => (
-                    <li
-                      key={match.kind}
-                      className="flex items-center justify-between rounded-md border border-border bg-background/40 px-3 py-2"
-                    >
-                      <span className="text-xs font-medium text-foreground">{match.kind}</span>
-                      <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold ring-1 ring-inset ${VAULT_STATUS_VARIANTS[match.status] ?? ""}`}
-                      >
-                        {VAULT_STATUS_LABELS[match.status] ?? match.status}
-                      </span>
-                    </li>
-                  ))}
+              {/* S-Validation checklist */}
+              <div className="border border-border/60 bg-background/50 rounded-lg p-4 space-y-3">
+                <h4 className="text-2xs font-semibold text-foreground-secondary uppercase tracking-wider">
+                  Checklist de validation stratégique
+                </h4>
+                
+                <ul className="space-y-2 text-xs">
+                  <li className="flex items-center gap-2 text-white">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                    Piliers A, D, V, E complétés et qualifiés
+                  </li>
+                  <li className="flex items-center gap-2 text-white">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                    Bilan des risques et opportunités (R+T) calculé
+                  </li>
+                  <li className="flex items-center gap-2 text-white">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                    Oracle stratégique validé et assemblé
+                  </li>
                 </ul>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleValidateStrategy}
+                  disabled={validateSynthesisMutation.isPending}
+                  className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-background hover:bg-accent/90 disabled:opacity-50"
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  {validateSynthesisMutation.isPending ? "Validation..." : "Valider le S → Déclencher la vie de la marque"}
+                </button>
+              </div>
+            </section>
+          ) : (
+            <section className="rounded-xl border border-success/30 bg-success/5 p-4 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <ShieldCheck className="h-5 w-5 text-success" />
+                <div className="text-xs">
+                  <span className="font-semibold text-white">Stratégie Validée.</span> La vie de la marque sous ADVERTIS est active. Vous pouvez forger des projets ci-dessous.
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Action to Projects Pipeline */}
+          {isStrategyValidated && (
+            <section className="rounded-xl border border-border bg-background/80 p-5 space-y-4">
+              <div className="flex items-start justify-between border-b border-border pb-3 flex-wrap gap-2">
+                <div className="space-y-1">
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <Briefcase className="h-4 w-4 text-accent" />
+                    Actions Recommandées & Initiatives
+                  </h3>
+                  <p className="text-xs text-foreground-secondary">
+                    Sélectionnez les initiatives issues de la synthèse pour les matérialiser en projets opérationnels (campagnes + briefs créatifs/prod + missions).
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-4 text-xs">
+                  <label className="flex items-center gap-2 text-foreground-secondary cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={routeGuildeOnCreate}
+                      onChange={(e) => setRouteGuildeOnCreate(e.target.checked)}
+                      className="rounded border-border bg-background text-accent focus:ring-accent"
+                    />
+                    Acheminer automatiquement vers la Guilde
+                  </label>
+
+                  <button
+                    onClick={handleGenerateProjects}
+                    disabled={selectedActionIds.length === 0 || generateProjectsMutation.isPending}
+                    className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-background hover:bg-accent/90 disabled:opacity-50"
+                  >
+                    <Zap className="h-4 w-4" />
+                    {generateProjectsMutation.isPending ? "Création..." : `Forger ${selectedActionIds.length} projets`}
+                  </button>
+                </div>
+              </div>
+
+              {actions.length === 0 ? (
+                <EmptyState
+                  icon={Briefcase}
+                  title="Aucune action proposée"
+                  description="Synchronisez ou enrichissez l'Innovation (I) pour générer des initiatives."
+                />
               ) : (
-                <p className="text-xs text-foreground-muted">
-                  Aucun kind upstream — production directe (cas rare).
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="text-foreground-secondary border-b border-border pb-2">
+                        <th className="py-2 pl-2"></th>
+                        <th className="py-2 font-semibold">Initiative</th>
+                        <th className="py-2 font-semibold">Touchpoint</th>
+                        <th className="py-2 font-semibold">AARRR</th>
+                        <th className="py-2 font-semibold">Priorité</th>
+                        <th className="py-2 font-semibold text-right">Budget prévu</th>
+                        <th className="py-2 font-semibold text-right pr-2">Statut</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {actions.map((act) => {
+                        const isSelected = selectedActionIds.includes(act.id);
+                        const isAlreadyAccepted = act.status === "ACCEPTED" || act.status === "SCHEDULED" || act.status === "EXECUTED";
+
+                        return (
+                          <tr
+                            key={act.id}
+                            className={cn(
+                              "hover:bg-background/20 transition-colors",
+                              isSelected && "bg-accent/5",
+                              isAlreadyAccepted && "opacity-50"
+                            )}
+                          >
+                            <td className="py-3 pl-2">
+                              {!isAlreadyAccepted && (
+                                <button
+                                  onClick={() => toggleActionSelection(act.id)}
+                                  className="text-foreground-secondary hover:text-accent transition-colors"
+                                >
+                                  {isSelected ? (
+                                    <CheckSquare className="h-4 w-4 text-accent" />
+                                  ) : (
+                                    <Square className="h-4 w-4" />
+                                  )}
+                                </button>
+                              )}
+                            </td>
+                            <td className="py-3 max-w-sm">
+                              <p className="font-semibold text-white">{act.title}</p>
+                              <p className="text-2xs text-foreground-secondary line-clamp-1">{act.description}</p>
+                            </td>
+                            <td className="py-3">
+                              <span className="px-1.5 py-0.5 rounded bg-background border border-border text-foreground-secondary">
+                                {act.touchpoint ?? "UNCLASSIFIED"}
+                              </span>
+                            </td>
+                            <td className="py-3 text-foreground-secondary">{act.aarrrIntent ?? "—"}</td>
+                            <td className="py-3">
+                              <span className="font-mono">{act.priority ?? "P2"}</span>
+                            </td>
+                            <td className="py-3 text-right text-white">
+                              {act.budgetMin ? `${act.budgetMin.toLocaleString()} XAF` : "—"}
+                            </td>
+                            <td className="py-3 text-right pr-2">
+                              <span className={cn(
+                                "text-2xs font-semibold px-2 py-0.5 rounded border uppercase",
+                                isAlreadyAccepted
+                                  ? "bg-success/15 text-success border-success/30"
+                                  : "bg-warning/15 text-warning border-warning/30"
+                              )}>
+                                {act.status}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          )}
+        </div>
+      )}
+
+      {/* ── TAB 2 : DELIVERABLE FORGE (ORIGINAL GLORY COMPOSER) ────────────────── */}
+      {activeTab === "deliverables" && (
+        <div className="space-y-6">
+          {/* ── Étape 0 — Sélecteur target kind ──────────────────────────── */}
+          <section className="rounded-xl border border-border bg-background/80 p-5 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/15 text-accent">
+                <span className="text-sm font-semibold">1</span>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-foreground">Que voulez-vous produire ?</h3>
+                <p className="mt-0.5 text-xs text-foreground-secondary">
+                  Sélectionnez le type de livrable matériel cible. L'OS remontera automatiquement les
+                  briefs upstream nécessaires.
                 </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+              {supported.data?.kinds.map((kind) => (
+                <button
+                  key={kind}
+                  onClick={() => {
+                    setTargetKind(kind);
+                    composeMutation.reset();
+                    setConfirmedDispatch(false);
+                  }}
+                  className={cn(
+                    "rounded-lg border p-3 text-left transition-colors",
+                    targetKind === kind
+                      ? "border-accent bg-accent/10"
+                      : "border-border bg-background/40 hover:border-foreground-muted"
+                  )}
+                >
+                  <span className="text-xs font-medium text-foreground">{kind}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {/* ── Étape 1 — DAG résolu + vault scan ────────────────────────── */}
+          {targetKind && (
+            <section className="rounded-xl border border-border bg-background/80 p-5 space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/15 text-accent">
+                  <span className="text-sm font-semibold">2</span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <Layers className="h-4 w-4" />
+                    Cascade requise
+                  </h3>
+                  <p className="mt-0.5 text-xs text-foreground-secondary">
+                    Briefs upstream à fournir (depuis le vault) ou à générer. L'estimation coût
+                    inclut les LLM tools manquants + le forge Ptah final.
+                  </p>
+                </div>
+              </div>
+
+              {requirements.isPending && (
+                <p className="text-xs text-foreground-muted">Résolution du DAG en cours…</p>
               )}
 
-              <div className="flex items-center gap-3 border-t border-border pt-3 text-xs">
-                <DollarSign className="h-4 w-4 text-foreground-muted" />
-                <span className="text-foreground-secondary">Coût estimé</span>
-                <span className="font-semibold text-foreground">
-                  ${totalEstimatedCost.toFixed(2)}
-                </span>
-              </div>
-            </div>
+              {requirements.data && !requirements.data.ok && (
+                <div className="rounded-lg border border-warning/30 bg-warning/10 p-3">
+                  <p className="text-xs font-semibold text-warning flex items-center gap-1.5">
+                    <AlertTriangle className="h-4 w-4" />
+                    {requirements.data.code}
+                  </p>
+                  <p className="mt-1 text-xs text-foreground-secondary">{requirements.data.message}</p>
+                </div>
+              )}
+
+              {requirements.data?.ok && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-xs text-foreground-secondary">
+                    <Search className="h-3 w-3" />
+                    <span>
+                      Producteur target : <span className="text-accent">{requirements.data.targetGloryToolSlug}</span>
+                    </span>
+                  </div>
+
+                  {requirements.data.vaultMatches && requirements.data.vaultMatches.length > 0 ? (
+                    <ul className="space-y-1.5">
+                      {requirements.data.vaultMatches.map((match) => (
+                        <li
+                          key={match.kind}
+                          className="flex items-center justify-between rounded-md border border-border bg-background/40 px-3 py-2"
+                        >
+                          <span className="text-xs font-medium text-foreground">{match.kind}</span>
+                          <span
+                            className={cn(
+                              "inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold ring-1 ring-inset",
+                              VAULT_STATUS_VARIANTS[match.status]
+                            )}
+                          >
+                            {VAULT_STATUS_LABELS[match.status] ?? match.status}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-xs text-foreground-muted">
+                      Aucun kind upstream — production directe (cas rare).
+                    </p>
+                  )}
+
+                  <div className="flex items-center gap-3 border-t border-border pt-3 text-xs">
+                    <DollarSign className="h-4 w-4 text-foreground-muted" />
+                    <span className="text-foreground-secondary">Coût estimé</span>
+                    <span className="font-semibold text-foreground">
+                      ${totalEstimatedCost.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </section>
           )}
-        </section>
-      )}
 
-      {/* ── Étape 2 — Lancement ──────────────────────────────────────── */}
-      {requirements.data?.ok && !composition && (
-        <section className="rounded-xl border border-border bg-background/80 p-5 space-y-3">
-          <div className="flex items-start gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/15 text-accent">
-              <span className="text-sm font-semibold">3</span>
-            </div>
-            <div className="flex-1">
-              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <Sparkles className="h-4 w-4" />
-                Lancer la production
-              </h3>
-              <p className="mt-0.5 text-xs text-foreground-secondary">
-                Phase 17 mode PREVIEW : la composition est calculée et persistée hash-chained
-                dans IntentEmission, sans encore déclencher de forge. Le dispatch async réel
-                (avec streaming NSP des étapes) viendra dans un commit ultérieur.
-              </p>
-            </div>
-          </div>
+          {/* ── Étape 2 — Lancement ──────────────────────────────────────── */}
+          {requirements.data?.ok && !composition && (
+            <section className="rounded-xl border border-border bg-background/80 p-5 space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/15 text-accent">
+                  <span className="text-sm font-semibold">3</span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <Sparkles className="h-4 w-4" />
+                    Lancer la production
+                  </h3>
+                  <p className="mt-0.5 text-xs text-foreground-secondary">
+                    Phase 17 mode PREVIEW : la composition est calculée et persistée hash-chained
+                    dans IntentEmission, sans encore déclencher de forge. Le dispatch async réel
+                    (avec streaming NSP des étapes) viendra dans un commit ultérieur.
+                  </p>
+                </div>
+              </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleLaunch}
-              disabled={!canDispatch || confirmedDispatch}
-              className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-background hover:bg-accent/90 disabled:opacity-50"
-            >
-              <Zap className="h-4 w-4" />
-              {composeMutation.isPending ? "Composition…" : "Lancer la composition (PREVIEW)"}
-            </button>
-            <button
-              type="button"
-              onClick={handleReset}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background/40 px-3 py-2 text-xs text-foreground-secondary hover:border-foreground-muted"
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-              Reset
-            </button>
-          </div>
-        </section>
-      )}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleLaunch}
+                  disabled={!canDispatch || confirmedDispatch}
+                  className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-background hover:bg-accent/90 disabled:opacity-50"
+                >
+                  <Zap className="h-4 w-4" />
+                  {composeMutation.isPending ? "Composition…" : "Lancer la composition (PREVIEW)"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background/40 px-3 py-2 text-xs text-foreground-secondary hover:border-foreground-muted"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  Reset
+                </button>
+              </div>
+            </section>
+          )}
 
-      {/* ── Étape 3 — Résultat ───────────────────────────────────────── */}
-      {composition && (
-        <section className="rounded-xl border border-success/40 bg-success/5 p-5 space-y-3">
-          <div className="flex items-start gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-success/15 text-success">
-              <CheckCircle2 className="h-5 w-5" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-sm font-semibold text-foreground">Composition complétée</h3>
-              <p className="mt-0.5 text-xs text-foreground-secondary">
-                Status : <span className="font-semibold">{composition.status}</span>
-              </p>
-              <p className="mt-2 text-xs text-foreground">{composition.summary}</p>
-            </div>
-          </div>
+          {/* ── Étape 3 — Résultat ───────────────────────────────────────── */}
+          {composition && (
+            <section className="rounded-xl border border-success/40 bg-success/5 p-5 space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-success/15 text-success">
+                  <CheckCircle2 className="h-5 w-5" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-foreground">Composition complétée</h3>
+                  <p className="mt-0.5 text-xs text-foreground-secondary">
+                    Status : <span className="font-semibold">{composition.status}</span>
+                  </p>
+                  <p className="mt-2 text-xs text-foreground">{composition.summary}</p>
+                </div>
+              </div>
 
-          <button
-            type="button"
-            onClick={handleReset}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background/40 px-3 py-2 text-xs text-foreground-secondary hover:border-foreground-muted"
-          >
-            <ChevronRight className="h-3.5 w-3.5" />
-            Composer un autre livrable
-          </button>
-        </section>
+              <button
+                type="button"
+                onClick={handleReset}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background/40 px-3 py-2 text-xs text-foreground-secondary hover:border-foreground-muted"
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+                Composer un autre livrable
+              </button>
+            </section>
+          )}
+        </div>
       )}
     </div>
   );

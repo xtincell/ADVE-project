@@ -2,7 +2,7 @@ import { z } from "zod";
 import { classifyTier } from "@/domain";
 import type { Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
-import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { createTRPCRouter, protectedProcedure, adminProcedure, operatorProcedure } from "../init";
 import { scoreObject } from "@/server/services/advertis-scorer";
 import { propagateFromPillar } from "@/server/services/staleness-propagator";
 import * as auditTrail from "@/server/services/audit-trail";
@@ -745,6 +745,136 @@ export const strategyRouter = createTRPCRouter({
           };
         })
         .sort((a, b) => b.topSimilarity - a.topSimilarity);
+    }),
+
+  validateSynthesis: protectedProcedure
+    .input(z.object({ strategyId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const updated = await ctx.db.strategy.update({
+        where: { id: input.strategyId },
+        data: { status: "VALIDATED" },
+      });
+
+      // Audit trail (non-blocking)
+      auditTrail.log({
+        userId: ctx.session.user.id,
+        action: "UPDATE",
+        entityType: "Strategy",
+        entityId: input.strategyId,
+        newValue: { status: "VALIDATED" },
+      }).catch((err) => { console.warn("[audit-trail] strategy validate log failed:", err); });
+
+      return updated;
+    }),
+
+  generateProjectsFromActions: operatorProcedure
+    .input(z.object({
+      strategyId: z.string(),
+      actionIds: z.array(z.string()),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { generateCampaignCode } = await import("@/server/services/campaign-manager");
+
+      const strategy = await ctx.db.strategy.findUniqueOrThrow({
+        where: { id: input.strategyId },
+        include: { pillars: true },
+      });
+
+      const brandActions = await ctx.db.brandAction.findMany({
+        where: {
+          id: { in: input.actionIds },
+          strategyId: input.strategyId,
+        },
+      });
+
+      if (brandActions.length === 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Aucune action correspondante trouvée",
+        });
+      }
+
+      const results = [];
+
+      for (const action of brandActions) {
+        const campaignCode = generateCampaignCode();
+        const budgetPlanned = action.budgetMin ?? 0;
+
+        const campaign = await ctx.db.campaign.create({
+          data: {
+            strategyId: input.strategyId,
+            name: action.title,
+            description: action.description ?? "",
+            code: campaignCode,
+            budget: budgetPlanned,
+            budgetCurrency: action.budgetCurrency ?? "XAF",
+            startDate: action.timingStart,
+            endDate: action.timingEnd,
+            state: "PLANNING",
+            status: "PLANNING",
+            objectives: action.description ? { description: action.description } : undefined,
+            advertis_vector: strategy.advertis_vector ?? undefined,
+          },
+        });
+
+        const initialBriefContent = {
+          briefClient: {
+            client: strategy.name,
+            contexte_business: action.description ?? "",
+            contexte_marque: `Généré depuis la validation de la stratégie d'ADVE-RTIS.`,
+            contexte_market: `Localité : ${action.locality ?? "Non spécifié"}.`,
+            cible_principale: action.persona ?? "Non spécifié",
+            obj_business: `Lancer le projet issu de l'action ${action.title}.`,
+            big_idea: `Nourrir la réussite sous le territoire ${strategy.name}.`,
+          },
+          briefCreatif: {
+            message_claim: action.title,
+            challenge_creatif: `Traduire l'action ${action.title} en une campagne percutante.`,
+          },
+          briefProduction: {
+            livrable_principal: `Supports requis pour le touchpoint ${action.touchpoint ?? "Non spécifié"}.`,
+            deadline_prod: action.timingEnd ? action.timingEnd.toISOString().slice(0, 10) : undefined,
+          },
+          caseStudy: {},
+        };
+
+        await ctx.db.campaignBrief.create({
+          data: {
+            campaignId: campaign.id,
+            title: `Brief - ${campaign.name}`,
+            content: initialBriefContent,
+            briefType: "CREATIVE",
+            status: "VALIDATED",
+          },
+        });
+
+        const mission = await ctx.db.mission.create({
+          data: {
+            title: `Production - ${action.title}`,
+            strategyId: input.strategyId,
+            campaignId: campaign.id,
+            status: "DRAFT",
+            priority: action.priority === "P0" ? 1 : action.priority === "P1" ? 3 : 5,
+            budget: budgetPlanned,
+            slaDeadline: action.timingEnd,
+            briefData: initialBriefContent,
+          },
+        });
+
+        await ctx.db.brandAction.update({
+          where: { id: action.id },
+          data: { status: "ACCEPTED", selected: true },
+        });
+
+        results.push({
+          actionId: action.id,
+          campaignId: campaign.id,
+          campaignCode,
+          missionId: mission.id,
+        });
+      }
+
+      return { success: true, count: results.length, projects: results };
     }),
 });
 

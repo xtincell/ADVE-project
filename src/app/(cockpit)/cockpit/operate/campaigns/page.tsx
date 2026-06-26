@@ -30,6 +30,7 @@ import {
   DollarSign,
   BarChart3,
   ShieldAlert,
+  Users,
 } from "lucide-react";
 
 const STATE_BADGE_COLORS: Record<string, string> = {
@@ -86,6 +87,16 @@ export default function CampaignsPage() {
     { enabled: !!strategyId },
   );
 
+  const overviewQuery = trpc.operationsOverview.overview.useQuery(undefined, { enabled: !!strategyId });
+  const budgetQuery = trpc.operationsOverview.budgetConsolidation.useQuery(
+    { strategyId: strategyId ?? "" },
+    { enabled: !!strategyId }
+  );
+  const fieldOpProgressQuery = trpc.operationsOverview.fieldOpProgress.useQuery(
+    { strategyId: strategyId ?? "" },
+    { enabled: !!strategyId }
+  );
+
   const createMutation = trpc.campaign.create.useMutation({
     onSuccess: () => {
       campaignsQuery.refetch();
@@ -94,7 +105,7 @@ export default function CampaignsPage() {
     },
   });
 
-  if (!strategyId || campaignsQuery.isLoading) {
+  if (!strategyId || campaignsQuery.isLoading || overviewQuery.isLoading || budgetQuery.isLoading || fieldOpProgressQuery.isLoading) {
     return <SkeletonPage />;
   }
 
@@ -140,6 +151,26 @@ export default function CampaignsPage() {
     (sum, c) => sum + (c.missions?.length ?? 0),
     0,
   );
+
+  const budgetLines = budgetQuery.data ?? [];
+  const fieldOps = fieldOpProgressQuery.data ?? [];
+  const overview = overviewQuery.data;
+
+  const activeMissionsCount = (overview?.missions.IN_PROGRESS ?? 0) + (overview?.missions.REVIEW ?? 0);
+  const totalSpent = budgetLines.reduce((acc, b) => acc + b.spent, 0);
+
+  // Group budget consolidation by campaign ID
+  const budgetMap = new Map(budgetLines.map(b => [b.id, b]));
+
+  // Group field ops progress by campaign ID
+  const fieldOpsMap = new Map<string, typeof fieldOps>();
+  fieldOps.forEach(op => {
+    if (op.campaign) {
+      const list = fieldOpsMap.get(op.campaign.id) ?? [];
+      list.push(op);
+      fieldOpsMap.set(op.campaign.id, list);
+    }
+  });
 
   const tabs = [
     { key: "all", label: "Toutes", count: allCampaigns.length },
@@ -191,25 +222,25 @@ export default function CampaignsPage() {
           trendValue={`${totalMissions} mission${totalMissions !== 1 ? "s" : ""}`}
         />
         <StatCard
-          title="Actives"
-          value={activeCampaigns.length}
+          title="Missions Actives"
+          value={activeMissionsCount}
           icon={Play}
-          trend={activeCampaigns.length > 0 ? "up" : "flat"}
-          trendValue="en cours"
+          trend={activeMissionsCount > 0 ? "up" : "flat"}
+          trendValue="en exécution"
         />
         <StatCard
-          title="En production"
-          value={productionCampaigns.length}
-          icon={Rocket}
-          trend={productionCampaigns.length > 0 ? "up" : "flat"}
-          trendValue="en execution"
+          title="Candidatures Guilde"
+          value={overview?.openApplications ?? 0}
+          icon={Users}
+          trend={overview?.openApplications && overview.openApplications > 0 ? "up" : "flat"}
+          trendValue="en attente"
         />
         <StatCard
-          title="Terminees"
-          value={completedCampaigns.length}
-          icon={CheckCircle}
+          title="Budget Dépensé"
+          value={`${totalSpent.toLocaleString("fr-FR")} XAF`}
+          icon={DollarSign}
           trend="flat"
-          trendValue="completees"
+          trendValue="total cumulé"
         />
       </div>
 
@@ -243,6 +274,60 @@ export default function CampaignsPage() {
               Array.isArray(meta?.focus) ? meta.focus : PILLAR_KEYS.filter((k) => typeof meta?.[k] === "number" && (meta[k] as number) > 0)
             ) as PillarKey[];
 
+            // Success status logic based on AARRR reports & targets
+            const campaignOps = fieldOpsMap.get(c.id) ?? [];
+            let totalProgress = 0;
+            let totalTarget = 0;
+            let hasReports = false;
+
+            campaignOps.forEach(op => {
+              const config = op.aarrConfig as Record<string, unknown> | null;
+              const targets = {
+                acquisition: typeof config?.acquisitionTarget === "number" ? config.acquisitionTarget : 100,
+                activation: typeof config?.activationTarget === "number" ? config.activationTarget : 50,
+                retention: typeof config?.retentionTarget === "number" ? config.retentionTarget : 20,
+                revenue: typeof config?.revenueTarget === "number" ? config.revenueTarget : 10,
+                referral: typeof config?.referralTarget === "number" ? config.referralTarget : 5,
+              };
+              
+              const progress = op.metrics ?? {
+                acquisition: 0,
+                activation: 0,
+                retention: 0,
+                revenue: 0,
+                referral: 0,
+              };
+              
+              if (op.reportsCount > 0) {
+                hasReports = true;
+              }
+              
+              totalProgress += progress.acquisition + progress.activation + progress.retention + progress.revenue + progress.referral;
+              totalTarget += targets.acquisition + targets.activation + targets.retention + targets.revenue + targets.referral;
+            });
+
+            let successStatus = "N/A";
+            let successColor = "bg-foreground-muted/15 text-foreground-secondary ring-border/30";
+
+            if (hasReports && totalTarget > 0) {
+              const ratio = totalProgress / totalTarget;
+              if (ratio >= 0.8) {
+                successStatus = "Réussite Totale";
+                successColor = "bg-success/15 text-success ring-success/30";
+              } else if (ratio >= 0.3) {
+                successStatus = "Réussite Partielle";
+                successColor = "bg-warning/15 text-warning ring-warning/30";
+              } else {
+                successStatus = "Échec";
+                successColor = "bg-error/15 text-error ring-error/30";
+              }
+            } else if (campaignOps.length > 0) {
+              successStatus = "En cours";
+              successColor = "bg-info/15 text-info ring-info/30";
+            }
+
+            const bData = budgetMap.get(c.id);
+
             return (
               <button
                 key={c.id}
@@ -251,11 +336,16 @@ export default function CampaignsPage() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <h4 className="text-sm font-semibold text-white">
                         {c.name}
                       </h4>
                       <CampaignStateBadge state={getState(c)} />
+                      {successStatus !== "N/A" && (
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-2xs font-semibold ring-1 ring-inset ${successColor}`}>
+                          {successStatus}
+                        </span>
+                      )}
                     </div>
                     <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-foreground-secondary">
                       <span className="flex items-center gap-1">
@@ -272,11 +362,18 @@ export default function CampaignsPage() {
                           year: "numeric",
                         })}
                       </span>
-                      {(c as any).budget != null && (
-                        <span className="flex items-center gap-1">
-                          <DollarSign className="h-3 w-3" />
-                          {((c as any).budget as number).toLocaleString("fr-FR")} XAF
+                      {bData ? (
+                        <span className="flex items-center gap-1 text-white">
+                          <DollarSign className="h-3 w-3 text-accent" />
+                          <span>Dépensé : {bData.spent.toLocaleString("fr-FR")} / {bData.planned.toLocaleString("fr-FR")} XAF</span>
                         </span>
+                      ) : (
+                        (c as any).budget != null && (
+                          <span className="flex items-center gap-1">
+                            <DollarSign className="h-3 w-3" />
+                            {((c as any).budget as number).toLocaleString("fr-FR")} XAF
+                          </span>
+                        )
                       )}
                       {((c as any).startDate || (c as any).endDate) && (
                         <span className="text-foreground-muted">

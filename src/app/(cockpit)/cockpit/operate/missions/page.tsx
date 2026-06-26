@@ -186,6 +186,11 @@ export default function MissionsPage() {
     { enabled: !!strategyId },
   );
 
+  const teamWorkloadQuery = trpc.operationsOverview.teamWorkload.useQuery(
+    { strategyId: strategyId ?? "" },
+    { enabled: !!strategyId }
+  );
+
   const [editTarget, setEditTarget] = useState<{
     id: string;
     title: string;
@@ -355,7 +360,7 @@ export default function MissionsPage() {
     return { total, completed, completionRate, avgQc, onTimeRate };
   }, [allMissions]);
 
-  if (!strategyId || missionsQuery.isLoading) {
+  if (!strategyId || missionsQuery.isLoading || teamWorkloadQuery.isLoading) {
     return <SkeletonPage />;
   }
 
@@ -485,6 +490,10 @@ export default function MissionsPage() {
               (meta?.pillarPriority as Record<string, number> | undefined) ??
               (m.driver?.pillarPriority as Record<string, number> | undefined);
 
+            const assignee = (m as Record<string, unknown>).assignee as { id: string; name: string; email: string; image?: string | null } | null;
+            const workloadMap = new Map(teamWorkloadQuery.data?.map(w => [w.user.id, w.workloadLevel]) ?? []);
+            const workload = assignee ? workloadMap.get(assignee.id) : null;
+
             return (
               <div
                 key={m.id}
@@ -571,6 +580,23 @@ export default function MissionsPage() {
                               {m.driver.name}
                             </span>
                           </>
+                        )}
+                        {assignee && (
+                          <span className="flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            {assignee.name}
+                            {workload && (
+                              <span className={`ml-1 px-1.5 py-px text-[9px] rounded font-semibold uppercase ${
+                                workload === "HIGH"
+                                  ? "bg-error/15 text-error ring-error/30"
+                                  : workload === "MEDIUM"
+                                    ? "bg-warning/15 text-warning ring-warning/30"
+                                    : "bg-success/15 text-success ring-success/30"
+                              }`}>
+                                {workload === "HIGH" ? "Surcharge" : workload === "MEDIUM" ? "Soutenue" : "Fluide"}
+                              </span>
+                            )}
+                          </span>
                         )}
                         {(m as Record<string, unknown>).budget != null && (
                           <span className="flex items-center gap-1">
@@ -682,7 +708,6 @@ export default function MissionsPage() {
                 {/* ── Expanded dossier de mission ── */}
                 {isExpanded && (() => {
                   const bd = ((m as Record<string, unknown>).briefData ?? {}) as Record<string, unknown>;
-                  const assignee = (m as Record<string, unknown>).assignee as { id: string; name: string; email: string; image?: string | null } | null;
                   const commissions = (m as Record<string, unknown>).commissions as Array<{ id: string; status: string; grossAmount: number; netAmount: number; commissionAmount: number; currency: string; tierAtTime?: string }> | undefined;
                   const objective = bd.objective as string | undefined;
                   const persona = bd.targetPersona as string | undefined;
@@ -787,6 +812,13 @@ export default function MissionsPage() {
                               {assignee?.email && <p className="text-2xs text-foreground-muted truncate">{assignee.email}</p>}
                               {commissions?.[0]?.tierAtTime && (
                                 <span className="inline-block mt-0.5 rounded-full bg-warning/15 px-1.5 py-px text-[9px] font-semibold text-warning">{commissions[0].tierAtTime}</span>
+                              )}
+                              {workload && (
+                                <span className={`inline-block mt-1 px-1.5 py-px rounded border text-[9px] font-semibold uppercase ${
+                                  workload === "HIGH" ? "text-error border-error/20 bg-error/5" : workload === "MEDIUM" ? "text-warning border-warning/20 bg-warning/5" : "text-emerald-400 border-emerald-500/20 bg-emerald-500/5"
+                                }`}>
+                                  {workload === "HIGH" ? "Surcharge" : workload === "MEDIUM" ? "Soutenue" : "Fluide"}
+                                </span>
                               )}
                             </div>
                           </div>

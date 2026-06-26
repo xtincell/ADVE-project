@@ -114,9 +114,11 @@ import { thotRouter } from "./routers/thot";
 import { actionsRouter } from "./routers/actions";
 // Blog — CMS natif « Notes de cabinet » du site public UPgraders (public read + operator CRUD)
 import { blogRouter } from "./routers/blog";
+import { newsletterRouter } from "./routers/newsletter";
 
 export const appRouter = createTRPCRouter({
   // Existing routers
+  newsletter: newsletterRouter,
   operator: operatorRouter,
   advertisScorer: advertisScorerRouter,
   quickIntake: quickIntakeRouter,
