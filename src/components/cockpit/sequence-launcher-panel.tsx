@@ -9,7 +9,7 @@
  * governed `glory.executeSequence` mutation (no bypass).
  */
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
@@ -33,6 +33,11 @@ interface Seq {
 export function SequenceLauncherPanel() {
   const strategyId = useCurrentStrategyId();
   const listQuery = trpc.glory.launchableSequences.useQuery(undefined);
+  const executionsQuery = trpc.sequenceVault.list.useQuery(
+    { strategyId: strategyId ?? "" },
+    { enabled: !!strategyId }
+  );
+
   const [familyFilter, setFamilyFilter] = useState<string | null>(null);
   const [selected, setSelected] = useState<Seq | null>(null);
 
@@ -40,10 +45,53 @@ export function SequenceLauncherPanel() {
   const families = useMemo(() => [...new Set(sequences.map((s) => s.family))].sort(), [sequences]);
   const filtered = useMemo(() => sequences.filter((s) => !familyFilter || s.family === familyFilter), [sequences, familyFilter]);
 
-  if (!strategyId || listQuery.isLoading) return <SkeletonPage />;
+  const executions = useMemo(() => {
+    const map = new Map<string, any>();
+    if (executionsQuery.data) {
+      for (const exec of executionsQuery.data) {
+        map.set(exec.sequenceKey, exec);
+      }
+    }
+    return map;
+  }, [executionsQuery.data]);
+
+  if (!strategyId || listQuery.isLoading || executionsQuery.isLoading) return <SkeletonPage />;
 
   return (
     <article className="mx-auto max-w-[var(--maxw-content,1200px)] px-[var(--pad-page,1.5rem)] py-8 md:py-12">
+      <style>{`
+        .flip-card {
+          perspective: 1000px;
+          min-height: 220px;
+        }
+        .flip-card-inner {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          transform-style: preserve-3d;
+        }
+        .flip-card-inner.has-transition {
+          transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .flip-card-inner.is-flipped {
+          transform: rotateY(180deg);
+        }
+        .flip-card-front, .flip-card-back {
+          width: 100%;
+          backface-visibility: hidden;
+          -webkit-backface-visibility: hidden;
+        }
+        .flip-card-front {
+          position: relative;
+          transform: rotateY(0deg);
+        }
+        .flip-card-back {
+          position: absolute;
+          inset: 0;
+          transform: rotateY(180deg);
+        }
+      `}</style>
+
       <header className="mb-8 border-b border-border-subtle pb-6">
         <div className="mb-3 flex items-center gap-2 font-mono text-2xs uppercase tracking-widest text-foreground-muted">
           <Rocket className="h-3.5 w-3.5 text-accent" />
@@ -64,11 +112,33 @@ export function SequenceLauncherPanel() {
         ))}
       </nav>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filtered.map((s) => <SequenceCard key={s.key} seq={s} onLaunch={() => setSelected(s)} />)}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {filtered.map((s) => {
+          const exec = executions.get(s.key);
+          const lastOutput = exec && exec.status === "COMPLETED" ? {
+            id: exec.id,
+            completedAt: exec.createdAt instanceof Date ? exec.createdAt.toISOString() : exec.createdAt,
+            outputUrl: `/cockpit/brand/deliverables/${s.key}`,
+          } : null;
+          return (
+            <SequenceCard
+              key={s.key}
+              seq={s}
+              onLaunch={() => setSelected(s)}
+              lastOutput={lastOutput}
+            />
+          );
+        })}
       </div>
 
-      {selected ? <LaunchModal strategyId={strategyId} seq={selected} onClose={() => setSelected(null)} /> : null}
+      {selected ? (
+        <LaunchModal
+          strategyId={strategyId}
+          seq={selected}
+          onClose={() => setSelected(null)}
+          onSuccess={() => executionsQuery.refetch()}
+        />
+      ) : null}
     </article>
   );
 }
@@ -83,91 +153,139 @@ function SequenceCard({
   lastOutput?: { outputUrl?: string | null; completedAt?: string | null; id?: string } | null;
 }) {
   const isCompleted = !!lastOutput?.completedAt;
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
-    <div
-      className={`flex flex-col rounded-lg border bg-surface-raised p-4 transition-all ${
-        isCompleted ? "border-success/20 bg-success/[0.03]" : "border-white/5"
-      }`}
-    >
-      <div className="mb-1 flex items-center gap-2">
-        {seq.pillar ? (
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-accent/15 text-2xs font-bold text-accent">
-            {seq.pillar}
-          </span>
-        ) : null}
-        <span className="truncate text-sm font-semibold text-foreground">{seq.name}</span>
-        {isCompleted && (
-          <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[9px] font-bold text-success ring-1 ring-inset ring-success/30">
-            <CheckCircle2 className="h-2.5 w-2.5" /> Terminé
-          </span>
-        )}
-      </div>
-      <p className="mb-3 flex-1 text-xs leading-relaxed text-foreground-secondary">{seq.description}</p>
-      <div className="mb-3 flex flex-wrap items-center gap-1.5 text-[9px] uppercase tracking-wide">
-        <span className="rounded bg-white/5 px-1.5 py-0.5 text-foreground-muted">{seq.family}</span>
-        <span className="rounded bg-white/5 px-1.5 py-0.5 text-foreground-muted">
-          {LIFECYCLE_LABEL[seq.lifecycle] ?? seq.lifecycle}
-        </span>
-        <span className="rounded bg-white/5 px-1.5 py-0.5 text-foreground-muted">{seq.stepCount} étapes</span>
-        {isCompleted && lastOutput?.completedAt && (
-          <span className="flex items-center gap-0.5 rounded bg-success/10 px-1.5 py-0.5 text-[9px] text-success">
-            <Clock className="h-2.5 w-2.5" />
-            {new Date(lastOutput.completedAt).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })}
-          </span>
-        )}
-      </div>
-      <div className="flex items-center justify-between gap-2">
-        {seq.cost.costClass === "LLM" ? (
-          <span className="inline-flex items-center gap-1 text-2xs text-accent">
-            <Zap className="h-3 w-3" /> ~${seq.cost.estimateUsd.toFixed(2)}
-          </span>
-        ) : (
-          <span className="inline-flex items-center gap-1 text-2xs text-success">
-            <Coins className="h-3 w-3" /> gratuit
-          </span>
-        )}
-
-        {isCompleted ? (
-          // ─ Tuile post-completion : Ouvrir + Relancer
-          <div className="flex items-center gap-1.5">
-            {lastOutput?.outputUrl && (
-              <a
-                href={lastOutput.outputUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 rounded-lg bg-success/15 px-2.5 py-1.5 text-2xs font-medium text-success transition-colors hover:bg-success/25"
-              >
-                <FolderOpen className="h-3 w-3" /> Ouvrir
-              </a>
+    <div className="flip-card">
+      <div className={`flip-card-inner ${mounted ? "has-transition" : ""} ${isCompleted ? "is-flipped" : ""}`}>
+        {/* Front Face: Launch card */}
+        <div className="flip-card-front flex h-full flex-col rounded-lg border border-white/5 bg-surface-raised p-4">
+          <div className="mb-1 flex items-center gap-2">
+            {seq.pillar ? (
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-accent/15 text-2xs font-bold text-accent">
+                {seq.pillar}
+              </span>
+            ) : null}
+            <span className="truncate text-sm font-semibold text-foreground">{seq.name}</span>
+          </div>
+          <p className="mb-4 flex-1 text-xs leading-relaxed text-foreground-secondary">{seq.description}</p>
+          <div className="mb-4 flex flex-wrap items-center gap-1.5 text-[9px] uppercase tracking-wide">
+            <span className="rounded bg-white/5 px-1.5 py-0.5 text-foreground-muted">{seq.family}</span>
+            <span className="rounded bg-white/5 px-1.5 py-0.5 text-foreground-muted">
+              {LIFECYCLE_LABEL[seq.lifecycle] ?? seq.lifecycle}
+            </span>
+            <span className="rounded bg-white/5 px-1.5 py-0.5 text-foreground-muted">{seq.stepCount} étapes</span>
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            {seq.cost.costClass === "LLM" ? (
+              <span className="inline-flex items-center gap-1 text-2xs text-accent">
+                <Zap className="h-3 w-3" /> ~${seq.cost.estimateUsd.toFixed(2)}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-2xs text-success">
+                <Coins className="h-3 w-3" /> gratuit
+              </span>
             )}
+
             <button
               type="button"
               onClick={onLaunch}
-              title="Relancer la séquence (la nouvelle version remplacera l'actuelle, l'ancienne sera historisée)"
-              className="inline-flex items-center gap-1 rounded-lg bg-foreground-muted/10 px-2.5 py-1.5 text-2xs font-medium text-foreground-secondary transition-colors hover:bg-foreground-muted/20"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-accent/15 px-2.5 py-1.5 text-2xs font-medium text-accent transition-colors hover:bg-accent/25"
             >
-              <RotateCcw className="h-3 w-3" /> Relancer
+              <Rocket className="h-3 w-3" /> Lancer
             </button>
           </div>
-        ) : (
-          // ─ Tuile initiale : bouton Lancer
-          <button
-            type="button"
-            onClick={onLaunch}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-accent/15 px-2.5 py-1.5 text-2xs font-medium text-accent transition-colors hover:bg-accent/25"
-          >
-            <Rocket className="h-3 w-3" /> Lancer
-          </button>
-        )}
+        </div>
+
+        {/* Back Face: Completed state */}
+        <div className="flip-card-back flex h-full flex-col justify-between rounded-lg border border-success/20 bg-success/[0.03] p-4">
+          <div>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                {seq.pillar ? (
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-success/20 text-2xs font-bold text-success">
+                    {seq.pillar}
+                  </span>
+                ) : null}
+                <span className="truncate text-sm font-semibold text-foreground">{seq.name}</span>
+              </div>
+              <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[9px] font-bold text-success ring-1 ring-inset ring-success/30">
+                <CheckCircle2 className="h-2.5 w-2.5" /> Terminé
+              </span>
+            </div>
+            <p className="text-xs text-foreground-secondary leading-relaxed mb-4">
+              Ce livrable a été généré avec succès. Vous pouvez maintenant l'ouvrir ou relancer la séquence si des données sources ont changé.
+            </p>
+          </div>
+
+          <div>
+            <div className="mb-4 flex flex-wrap items-center gap-1.5 text-[9px] uppercase tracking-wide">
+              <span className="rounded bg-white/5 px-1.5 py-0.5 text-foreground-muted">{seq.family}</span>
+              {lastOutput?.completedAt && (
+                <span className="flex items-center gap-0.5 rounded bg-success/10 px-1.5 py-0.5 text-[9px] text-success font-medium">
+                  <Clock className="h-2.5 w-2.5" /> Généré le{" "}
+                  {new Date(lastOutput.completedAt).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              {seq.cost.costClass === "LLM" ? (
+                <span className="inline-flex items-center gap-1 text-2xs text-accent">
+                  <Zap className="h-3 w-3" /> ~${seq.cost.estimateUsd.toFixed(2)}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-2xs text-success">
+                  <Coins className="h-3 w-3" /> gratuit
+                </span>
+              )}
+
+              <div className="flex items-center gap-1.5">
+                {lastOutput?.outputUrl && (
+                  <a
+                    href={lastOutput.outputUrl}
+                    className="inline-flex items-center gap-1 rounded-lg bg-success/20 px-3 py-1.5 text-2xs font-semibold text-success transition-colors hover:bg-success/30"
+                  >
+                    <FolderOpen className="h-3 w-3" /> Ouvrir
+                  </a>
+                )}
+                <button
+                  type="button"
+                  onClick={onLaunch}
+                  title="Relancer la séquence (la nouvelle version remplacera l'actuelle, l'ancienne sera historisée)"
+                  className="inline-flex items-center gap-1 rounded-lg bg-foreground-muted/10 px-3 py-1.5 text-2xs font-semibold text-foreground-secondary transition-colors hover:bg-foreground-muted/20"
+                >
+                  <RotateCcw className="h-3 w-3" /> Relancer
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-function LaunchModal({ strategyId, seq, onClose }: { strategyId: string; seq: Seq; onClose: () => void }) {
+function LaunchModal({
+  strategyId,
+  seq,
+  onClose,
+  onSuccess,
+}: {
+  strategyId: string;
+  seq: Seq;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
   const scan = trpc.glory.scanSequence.useQuery({ strategyId, sequenceKey: seq.key });
-  const exec = trpc.glory.executeSequence.useMutation();
+  const exec = trpc.glory.executeSequence.useMutation({
+    onSuccess: () => {
+      onSuccess();
+    },
+  });
 
   const blocked = (scan.data as { blocked?: boolean } | undefined)?.blocked ?? false;
 
