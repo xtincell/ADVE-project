@@ -230,10 +230,26 @@ export async function estimateActionCostFromDb(
   templateKey: string,
   input: EstimateInput,
 ): Promise<ActionCostEstimateResult> {
-  const template = await db.actionCostTemplate.findUnique({
+  let template = await db.actionCostTemplate.findUnique({
     where: { actionKey: templateKey },
     include: { components: { orderBy: { sortOrder: "asc" } } },
   });
+  // Auto-amorçage (ADR-0119 pattern) : le build Vercel ne lance que
+  // `migrate deploy`, pas `db:seed:action-costs` → table vide en prod. Plutôt
+  // que de throw (estimation morte / panneau inerte), on amorce le catalogue
+  // canon (idempotent, zéro LLM) quand la table est entièrement vide, puis on
+  // relit. Une clé réellement inconnue throw toujours.
+  if (!template) {
+    const total = await db.actionCostTemplate.count();
+    if (total === 0) {
+      const { ensureActionCostCatalog } = await import("./catalog");
+      await ensureActionCostCatalog(db);
+      template = await db.actionCostTemplate.findUnique({
+        where: { actionKey: templateKey },
+        include: { components: { orderBy: { sortOrder: "asc" } } },
+      });
+    }
+  }
   if (!template) {
     throw new Error(`action-costing: unknown templateKey '${templateKey}'.`);
   }
