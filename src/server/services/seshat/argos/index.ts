@@ -86,6 +86,26 @@ export async function harvestReference(input: {
     "dna.keyPhrases = formules signature ; dna.axes = axes culturels ; dna.voice = ton de marque.",
   ].join("\n");
 
+  // ── Ancrage internet RÉEL via Brave (ADR-0108) ──────────────────────────────
+  // owl-alpha n'a pas de recherche web native → Hunter passe par le point d'accès
+  // internet canonique de Seshat (Brave). On récolte d'abord des résultats réels,
+  // on les fournit comme grounding NEUTRALISÉ (OWASP LLM01), et on récupère de
+  // VRAIES URLs pour `sources` au lieu de laisser le LLM les halluciner. Sans clé
+  // Brave → DEFERRED honnête : Hunter retombe sur le rappel LLM (comportement
+  // historique), jamais de hard-fail.
+  const { braveWebSearch, formatWebHits } = await import("@/server/services/seshat/web-search");
+  const { wrapUntrusted } = await import("@/server/services/utils/untrusted-content");
+  const searchQuery = [input.brand, input.campaign, input.sector, "campagne publicitaire"]
+    .filter(Boolean)
+    .join(" ");
+  const search = await braveWebSearch(searchQuery, { count: 6 });
+  const realHits = search.status === "OK" ? search.hits : [];
+  const realUrls = realHits.map((h) => h.url);
+  const groundingBlock = realHits.length
+    ? `\n\n${wrapUntrusted("RÉSULTATS WEB RÉELS (Brave)", formatWebHits(realHits), { max: 6000 })}\n` +
+      "Ancre le dossier sur ces résultats réels. Pour `sources`, n'utilise QUE des URLs ci-dessus."
+    : "";
+
   const prompt = [
     `Marque : ${input.brand}`,
     input.campaign ? `Campagne : ${input.campaign}` : "",
@@ -93,6 +113,7 @@ export async function harvestReference(input: {
     input.market ? `Marché : ${input.market}` : "",
     input.topics?.length ? `Angles à couvrir : ${input.topics.join(", ")}` : "",
     "Produis le dossier de référence complet (DNA + editorial.sections).",
+    groundingBlock,
   ]
     .filter(Boolean)
     .join("\n");
@@ -106,6 +127,27 @@ export async function harvestReference(input: {
     maxOutputTokens: 3000,
   });
 
+  // Sources = priorité aux VRAIES sources Brave (title+url réels) ; complétées
+  // par celles du LLM dont l'URL figure parmi les résultats réels (anti-hallu).
+  const llmSources = data.sources ?? [];
+  let sources = llmSources;
+  if (realHits.length) {
+    const seen = new Set<string>();
+    const merged: HarvestOutput["sources"] = [];
+    for (const h of realHits) {
+      if (seen.has(h.url)) continue;
+      seen.add(h.url);
+      merged.push({ title: (h.title || h.url).slice(0, 200), url: h.url.slice(0, 2000) });
+    }
+    for (const s of llmSources) {
+      if (realUrls.includes(s.url) && !seen.has(s.url)) {
+        seen.add(s.url);
+        merged.push(s);
+      }
+    }
+    sources = merged.slice(0, 8);
+  }
+
   return persistDossier({
     brand: data.brand || input.brand,
     campaign: data.campaign ?? input.campaign,
@@ -113,7 +155,7 @@ export async function harvestReference(input: {
     market: data.market ?? input.market,
     dna: data.dna,
     editorial: data.editorial,
-    sources: data.sources,
+    sources,
     origin: "HUNTER",
     intentEmissionId: input.intentEmissionId,
   });
