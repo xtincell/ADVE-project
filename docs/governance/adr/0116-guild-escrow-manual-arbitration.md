@@ -25,10 +25,12 @@ seul `Contract`→`Strategy`).
   le net du talent est mis sous séquestre (`HELD`) avec des conditions par défaut
   → atterrit dans la file d'arbitrage.
 - **Service** `escrow-arbitration/` : `holdEscrowForMission`, `meetEscrowCondition`,
-  `releaseEscrow` (RELEASED + émet un `PaymentOrder` momo **PENDING** honnête —
-  jamais COMPLETED sans preuve provider — + marque la commission PAID),
-  `refundEscrow` (REFUNDED), `disputeEscrow` (DISPUTED). Helper pur
-  `allConditionsMet`. Le payout SDK réel reste credential-gated.
+  `releaseEscrow` (RELEASED + émet un `PaymentOrder` momo **PENDING** réel + marque
+  la commission PAID), `refundEscrow` (REFUNDED), `disputeEscrow` (DISPUTED).
+  **Capture manuelle des payouts** (`captureManualPayout` : l'opérateur enregistre
+  la référence de transaction momo → `PaymentOrder` COMPLETED ; `markPayoutFailed`).
+  Helper pur `allConditionsMet`. Les virements momo automatiques n'étant pas
+  disponibles, le paiement est capturé à la main — jamais marqué payé sans preuve.
 - **Intents gouvernés** `LEGACY_ESCROW_HOLD/_MEET_CONDITION/_RELEASE/_REFUND/_DISPUTE`
   + SLOs. Router `escrowArbitration` (mutations réservées aux arbitres ADMIN).
 - **Interface d'arbitrage** : `/console/socle/escrow` réécrite sur le modèle
@@ -40,6 +42,9 @@ seul `Contract`→`Strategy`).
 - Le paiement asynchrone à validation manuelle existe vraiment, de bout en bout :
   mission complétée → fonds sous séquestre → arbitre valide → libère (payout momo)
   ou rembourse. Tout gouverné, tracé (`arbitratedBy`), déterministe.
-- Le payout mobile money réel (SDK Wave/MTN/Orange) reste à câbler (PENDING
-  honnête) — contrat `PaymentOrder` posé.
+- Paiement par **capture manuelle** (pas d'auto-virement) : libération → payout
+  PENDING → l'opérateur confirme la transaction (référence) → COMPLETED. Le SDK
+  momo automatique pourra se brancher plus tard sans changer le contrat.
+- `commission-engine.generatePaymentOrder` n'est plus un stub JSON : il persiste un
+  `PaymentOrder` réel (fin du code mort).
 - Cap APOGEE 7/7 préservé — sous-domaine Thot/Imhotep, aucun nouveau Neter.

@@ -513,6 +513,8 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "LEGACY_ESCROW_RELEASE", governor: "INFRASTRUCTURE", handler: "escrow-arbitration", async: false, description: "Libération arbitrée du séquestre + payout momo PENDING (ADR-0116)." },
   { kind: "LEGACY_ESCROW_REFUND", governor: "INFRASTRUCTURE", handler: "escrow-arbitration", async: false, description: "Rejet arbitré : remboursement marque (ADR-0116)." },
   { kind: "LEGACY_ESCROW_DISPUTE", governor: "INFRASTRUCTURE", handler: "escrow-arbitration", async: false, description: "Mise en litige d'un escrow (file d'arbitrage, ADR-0116)." },
+  { kind: "LEGACY_PAYOUT_CAPTURE_MANUAL", governor: "INFRASTRUCTURE", handler: "escrow-arbitration", async: false, description: "Capture manuelle d'un payout momo (référence de transaction → COMPLETED, ADR-0116)." },
+  { kind: "LEGACY_PAYOUT_MARK_FAILED", governor: "INFRASTRUCTURE", handler: "escrow-arbitration", async: false, description: "Marque un payout en échec (ADR-0116)." },
   { kind: "LEGACY_TALENT_SERVICE_CREATE", governor: "INFRASTRUCTURE", handler: "talent-services", async: false, description: "Création d'un gig prestataire (listing de service, ADR-0117)." },
   { kind: "LEGACY_TALENT_SERVICE_UPDATE", governor: "INFRASTRUCTURE", handler: "talent-services", async: false, description: "Mise à jour d'un gig prestataire (ADR-0117)." },
   { kind: "LEGACY_TALENT_SERVICE_TOGGLE", governor: "INFRASTRUCTURE", handler: "talent-services", async: false, description: "Activation/désactivation d'un gig prestataire (ADR-0117)." },

@@ -102,17 +102,34 @@ export async function calculateOperatorFee(
   return { operatorFee, operatorRate };
 }
 
-export async function generatePaymentOrder(commissionId: string): Promise<Record<string, unknown>> {
-  const commission = await db.commission.findUniqueOrThrow({
-    where: { id: commissionId },
+/**
+ * Crée un VRAI ordre de payout (`PaymentOrder` persisté) pour une commission —
+ * status PENDING, destinataire = téléphone momo du talent. La capture du paiement
+ * est ensuite MANUELLE (l'opérateur confirme la transaction). Plus de stub JSON.
+ */
+export async function generatePaymentOrder(commissionId: string) {
+  const commission = await db.commission.findUniqueOrThrow({ where: { id: commissionId } });
+  const talent = await db.talentProfile.findUnique({
+    where: { userId: commission.talentId },
+    select: { payoutPhone: true, displayName: true },
   });
+  const phone = talent?.payoutPhone ?? null;
+  const method = phone && /MTN/i.test(phone)
+    ? "MOBILE_MONEY_MTN"
+    : phone && /ORANGE/i.test(phone)
+      ? "MOBILE_MONEY_ORANGE"
+      : "MOBILE_MONEY_WAVE";
 
-  return {
-    commissionId,
-    amount: commission.netAmount,
-    currency: commission.currency,
-    status: "PENDING",
-    method: "MOBILE_MONEY",
-    generatedAt: new Date().toISOString(),
-  };
+  return db.paymentOrder.create({
+    data: {
+      commissionId,
+      amount: commission.netAmount,
+      currency: commission.currency,
+      method,
+      status: "PENDING",
+      recipientPhone: phone,
+      recipientName: talent?.displayName ?? null,
+      failureReason: phone ? null : "Aucun numéro momo talent — à compléter avant capture.",
+    },
+  });
 }

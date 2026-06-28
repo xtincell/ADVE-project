@@ -84,4 +84,33 @@ export const escrowArbitrationRouter = createTRPCRouter({
     assertArbiter(ctx);
     return escrow.disputeEscrow(input);
   }),
+
+  // ── Capture manuelle des payouts (ADR-0116) ────────────────────────────────
+
+  /** File des ordres de paiement (payouts) à capturer manuellement. */
+  payouts: adminProcedure
+    .input(z.object({ status: z.enum(["PENDING", "PROCESSING", "COMPLETED", "FAILED", "CANCELLED"]).optional() }).optional())
+    .query(async ({ input }) => {
+      return escrow.listPayouts({ status: input?.status });
+    }),
+
+  /** L'opérateur confirme le virement momo (référence) → COMPLETED. */
+  capturePayout: governedProcedure({
+    kind: "LEGACY_PAYOUT_CAPTURE_MANUAL",
+    inputSchema: z.object({ paymentOrderId: z.string(), transactionRef: z.string().min(1).max(120) }),
+    caller: "escrow:capturePayout",
+  }).mutation(async ({ ctx, input }) => {
+    assertArbiter(ctx);
+    return escrow.captureManualPayout({ paymentOrderId: input.paymentOrderId, transactionRef: input.transactionRef, capturedBy: ctx.session.user.id });
+  }),
+
+  /** Marque un payout en échec. */
+  failPayout: governedProcedure({
+    kind: "LEGACY_PAYOUT_MARK_FAILED",
+    inputSchema: z.object({ paymentOrderId: z.string(), reason: z.string().min(1).max(500) }),
+    caller: "escrow:failPayout",
+  }).mutation(async ({ ctx, input }) => {
+    assertArbiter(ctx);
+    return escrow.markPayoutFailed(input);
+  }),
 });

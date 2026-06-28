@@ -5,13 +5,14 @@
  * escrow à **validation manuelle** par UPgraders et ses agents arbitres, dans une
  * interface dédiée. Ce service câble ce flux : HOLD (séquestre) → conditions
  * vérifiées par l'arbitre → RELEASE (libère + émet un payout momo) ou REFUND
- * (rejette). 100 % déterministe, zéro LLM. Le payout mobile money réel est
- * credential/SDK-gated : on émet un `PaymentOrder` PENDING honnête (jamais marqué
- * PAID sans preuve provider).
+ * (rejette). 100 % déterministe, zéro LLM. Les virements momo automatiques n'étant
+ * pas disponibles, le payout est CAPTURÉ MANUELLEMENT : la libération crée un
+ * `PaymentOrder` PENDING réel, que l'opérateur passe COMPLETED en enregistrant la
+ * référence de transaction (preuve du virement). Jamais marqué payé sans preuve.
  */
 
 import { db } from "@/lib/db";
-import type { PaymentMethod, EscrowStatus } from "@prisma/client";
+import type { PaymentMethod, EscrowStatus, PaymentOrderStatus } from "@prisma/client";
 
 export interface EscrowConditionLike {
   met: boolean;
@@ -149,5 +150,44 @@ export async function listEscrows(input?: { status?: EscrowStatus }) {
     where: input?.status ? { status: input.status } : undefined,
     include: { conditions: true, mission: { select: { id: true, title: true, assigneeId: true } } },
     orderBy: { heldAt: "desc" },
+  });
+}
+
+// ── Capture manuelle des payouts (ADR-0116) ──────────────────────────────────
+// Les virements momo automatiques ne sont pas disponibles → l'opérateur capture
+// le paiement à la main : il paie via Wave/MTN/Orange, puis enregistre la
+// référence de transaction ici. L'ordre passe PENDING → COMPLETED. Zéro SDK,
+// zéro stub : un PaymentOrder réel, complété par preuve opérateur.
+
+/** File des payouts (ordres de paiement) pour la console. */
+export async function listPayouts(input?: { status?: PaymentOrderStatus }) {
+  return db.paymentOrder.findMany({
+    where: input?.status ? { status: input.status } : undefined,
+    orderBy: { createdAt: "desc" },
+    take: 200,
+  });
+}
+
+/** Capture manuelle : l'opérateur confirme le virement (référence) → COMPLETED. */
+export async function captureManualPayout(input: { paymentOrderId: string; transactionRef: string; capturedBy: string }) {
+  const order = await db.paymentOrder.findUniqueOrThrow({ where: { id: input.paymentOrderId }, select: { status: true } });
+  if (order.status === "COMPLETED") throw new Error("Payout déjà capturé.");
+  return db.paymentOrder.update({
+    where: { id: input.paymentOrderId },
+    data: {
+      status: "COMPLETED",
+      transactionRef: input.transactionRef,
+      providerRef: input.transactionRef,
+      processedAt: new Date(),
+      failureReason: null,
+    },
+  });
+}
+
+/** Marque un payout en échec (numéro invalide, virement refusé…). */
+export async function markPayoutFailed(input: { paymentOrderId: string; reason: string }) {
+  return db.paymentOrder.update({
+    where: { id: input.paymentOrderId },
+    data: { status: "FAILED", failureReason: input.reason },
   });
 }

@@ -484,6 +484,8 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "LEGACY_ESCROW_RELEASE", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_ESCROW_REFUND", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_ESCROW_DISPUTE", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "LEGACY_PAYOUT_CAPTURE_MANUAL", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "LEGACY_PAYOUT_MARK_FAILED", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_TALENT_SERVICE_CREATE", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_TALENT_SERVICE_UPDATE", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_TALENT_SERVICE_TOGGLE", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },

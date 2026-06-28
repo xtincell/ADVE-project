@@ -20,6 +20,7 @@ type EscrowStatus = "HELD" | "RELEASED" | "DISPUTED" | "REFUNDED";
  * (rembourser), mettre en litige. Le paiement reste asynchrone à validation manuelle.
  */
 export default function EscrowPage() {
+  const [view, setView] = useState<"arbitrage" | "payouts">("arbitrage");
   const [activeTab, setActiveTab] = useState<EscrowStatus | "all">("all");
   const utils = trpc.useUtils();
   const { data: escrows, isLoading } = trpc.escrowArbitration.list.useQuery({});
@@ -70,6 +71,15 @@ export default function EscrowPage() {
         ]}
       />
 
+      <div className="flex gap-2">
+        <Button size="sm" variant={view === "arbitrage" ? "primary" : "outline"} onClick={() => setView("arbitrage")}>Arbitrage du séquestre</Button>
+        <Button size="sm" variant={view === "payouts" ? "primary" : "outline"} onClick={() => setView("payouts")}>Capture des paiements</Button>
+      </div>
+
+      {view === "payouts" ? (
+        <PayoutsPanel />
+      ) : (
+      <>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard title="Total séquestres" value={items.length} icon={Lock} />
         <StatCard title="Montant sous séquestre" value={`${fmt(totalHeld)} XAF`} icon={DollarSign} />
@@ -184,6 +194,89 @@ export default function EscrowPage() {
           })}
         </div>
       )}
+      </>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Capture manuelle des payouts — les virements momo automatiques ne sont pas
+ * disponibles : l'opérateur paie via Wave/MTN/Orange puis enregistre la référence
+ * de transaction ici (PENDING → COMPLETED). Zéro stub : PaymentOrder réel.
+ */
+function PayoutsPanel() {
+  const utils = trpc.useUtils();
+  const { data: payouts, isLoading } = trpc.escrowArbitration.payouts.useQuery({});
+  const invalidate = () => utils.escrowArbitration.payouts.invalidate();
+  const capture = trpc.escrowArbitration.capturePayout.useMutation({ onSuccess: invalidate });
+  const fail = trpc.escrowArbitration.failPayout.useMutation({ onSuccess: invalidate });
+
+  if (isLoading) return <SkeletonPage />;
+  const items = payouts ?? [];
+  const fmt = (n: number) => new Intl.NumberFormat("fr-FR").format(Math.round(n));
+  const pending = items.filter((p) => p.status === "PENDING");
+  const busy = capture.isPending || fail.isPending;
+
+  if (items.length === 0) {
+    return (
+      <EmptyState
+        icon={DollarSign}
+        title="Aucun paiement à capturer"
+        description="Les payouts apparaissent ici après libération d'un séquestre. Vous payez via mobile money puis enregistrez la référence."
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-foreground-muted">{pending.length} paiement(s) en attente de capture manuelle.</p>
+      {items.map((p) => (
+        <div key={p.id} className="rounded-lg border border-border bg-card p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                {p.recipientName ?? "Talent"} · {p.method.replace("MOBILE_MONEY_", "")}
+              </p>
+              <p className="text-xs text-foreground-muted">
+                {p.recipientPhone ?? "numéro momo manquant"}
+                {p.transactionRef ? ` · réf ${p.transactionRef}` : ""}
+              </p>
+              {p.failureReason ? <p className="mt-1 text-xs text-foreground-muted">{p.failureReason}</p> : null}
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-semibold text-foreground">{fmt(p.amount)} {p.currency}</span>
+              <StatusBadge status={p.status} />
+            </div>
+          </div>
+          {p.status === "PENDING" && (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <Button
+                size="sm"
+                variant="primary"
+                disabled={busy}
+                onClick={() => {
+                  const ref = window.prompt("Référence de la transaction mobile money (preuve du virement) :");
+                  if (ref) capture.mutate({ paymentOrderId: p.id, transactionRef: ref.trim() });
+                }}
+              >
+                Marquer payé (référence)
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                disabled={busy}
+                onClick={() => {
+                  const reason = window.prompt("Motif de l'échec du paiement :");
+                  if (reason) fail.mutate({ paymentOrderId: p.id, reason });
+                }}
+              >
+                Échec
+              </Button>
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
