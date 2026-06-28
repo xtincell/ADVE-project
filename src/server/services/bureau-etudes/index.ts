@@ -8,8 +8,10 @@
 
 import { db } from "@/lib/db";
 import { marginOfErrorPct, waveOnWaveSignificance, type WaveComparison } from "./statistics";
+import { fuseEstimates, type SourcePoint } from "./fusion";
 
 export * from "./statistics";
+export * from "./fusion";
 
 export interface CreateWaveInput {
   studyId: string;
@@ -75,4 +77,44 @@ export async function compareWaves(input: {
   const n2 = b.achievedN ?? 0;
   const cmp = waveOnWaveSignificance(input.p1, n1, input.p2, n2, input.confidenceLevel ?? 0.95);
   return { ...cmp, n1: a.achievedN, n2: b.achievedN };
+}
+
+// ── Provenance & fusion (ADR-0114) ───────────────────────────────────────────
+
+/** Fusionne des estimations chiffrées des sources d'une étude (pondérées fiabilité). */
+export async function fuseStudySources(studyId: string, valueKey: string) {
+  const sources = await db.marketSource.findMany({
+    where: { studyId },
+    select: { reliability: true, provenanceClass: true, content: true, title: true },
+  });
+  // On extrait la valeur numérique du champ `content` si elle y est encodée
+  // JSON sous `valueKey` — déterministe, jamais d'inférence LLM.
+  const points: SourcePoint[] = [];
+  for (const s of sources) {
+    let value: number | null = null;
+    if (s.content) {
+      try {
+        const parsed = JSON.parse(s.content) as Record<string, unknown>;
+        const v = parsed[valueKey];
+        if (typeof v === "number" && Number.isFinite(v)) value = v;
+      } catch {
+        /* contenu non-JSON → pas de valeur extractible */
+      }
+    }
+    if (value !== null) points.push({ value, reliability: s.reliability, provenanceClass: s.provenanceClass });
+  }
+  return fuseEstimates(points);
+}
+
+/** Snapshots concurrents d'une étude (provenance rattachée). */
+export async function listCompetitorsByStudy(studyId: string) {
+  return db.competitorSnapshot.findMany({ where: { studyId }, orderBy: { measuredAt: "desc" } });
+}
+
+/** Classe la provenance d'une source (FIRST_PARTY/SYNDICATED/AI_INFERRED/PUBLIC). */
+export async function setSourceProvenance(input: { sourceId: string; provenanceClass: string; reliability?: number }) {
+  return db.marketSource.update({
+    where: { id: input.sourceId },
+    data: { provenanceClass: input.provenanceClass, ...(input.reliability !== undefined ? { reliability: input.reliability } : {}) },
+  });
 }

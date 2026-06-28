@@ -87,4 +87,37 @@ export const bureauEtudesRouter = createTRPCRouter({
     await assertStudyAccess(ctx, wave.studyId);
     return be.recordWaveAchieved(input);
   }),
+
+  // ── Provenance & fusion (ADR-0114) ─────────────────────────────────────────
+
+  /** Concurrents rattachés à une étude (provenance). */
+  competitors: protectedProcedure
+    .input(z.object({ studyId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      await assertStudyAccess(ctx, input.studyId);
+      return be.listCompetitorsByStudy(input.studyId);
+    }),
+
+  /** Fusion pondérée d'une grandeur chiffrée des sources d'une étude + erreur. */
+  fuse: protectedProcedure
+    .input(z.object({ studyId: z.string(), valueKey: z.string().min(1).max(80) }))
+    .query(async ({ ctx, input }) => {
+      await assertStudyAccess(ctx, input.studyId);
+      return be.fuseStudySources(input.studyId, input.valueKey);
+    }),
+
+  /** Classe la provenance d'une source (pour pondérer la fusion). */
+  setProvenance: governedProcedure({
+    kind: "LEGACY_SOURCE_SET_PROVENANCE",
+    inputSchema: z.object({
+      sourceId: z.string(),
+      provenanceClass: z.enum(["FIRST_PARTY", "SYNDICATED", "AI_INFERRED", "PUBLIC"]),
+      reliability: z.number().min(0).max(1).optional(),
+    }),
+    caller: "bureau-etudes:setProvenance",
+  }).mutation(async ({ ctx, input }) => {
+    const src = await ctx.db.marketSource.findUniqueOrThrow({ where: { id: input.sourceId }, select: { studyId: true } });
+    await assertStudyAccess(ctx, src.studyId);
+    return be.setSourceProvenance(input);
+  }),
 });

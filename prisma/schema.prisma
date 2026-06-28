@@ -3049,6 +3049,7 @@ model MarketStudy {
   sources   MarketSource[]
   syntheses MarketSynthesis[]
   waves     ResearchWave[]
+  competitorSnapshots CompetitorSnapshot[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -3111,6 +3112,8 @@ model MarketSource {
   url         String?
   content     String?   @db.Text
   reliability Float?
+  // ── Provenance (ADR-0114) — classe de source pour fusion pondérée honnête ──
+  provenanceClass String? // FIRST_PARTY|SYNDICATED|AI_INFERRED|PUBLIC
   extractedAt DateTime?
 
   study MarketStudy @relation(fields: [studyId], references: [id])
@@ -3145,10 +3148,15 @@ model CompetitorSnapshot {
   positioning    String?
   estimatedScore Float?
   source         String?
+  // ── Provenance (ADR-0114) — rattachement à l'étude qui a produit ce snapshot ──
+  studyId        String?
   measuredAt     DateTime @default(now())
+
+  study MarketStudy? @relation(fields: [studyId], references: [id])
 
   @@index([sector])
   @@index([market])
+  @@index([studyId])
 }
 
 model InsightReport {
