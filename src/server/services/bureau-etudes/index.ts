@@ -118,3 +118,26 @@ export async function setSourceProvenance(input: { sourceId: string; provenanceC
     data: { provenanceClass: input.provenanceClass, ...(input.reliability !== undefined ? { reliability: input.reliability } : {}) },
   });
 }
+
+// ── Console marketplace (ADR-0114) — picker d'études + sources provenance ─────
+
+/** Liste les études de marché récentes (picker console) avec compteurs. */
+export async function listStudies(opts?: { limit?: number }) {
+  return db.marketStudy.findMany({
+    orderBy: { createdAt: "desc" },
+    take: opts?.limit ?? 50,
+    select: {
+      id: true, title: true, status: true, methodologyKey: true, createdAt: true,
+      _count: { select: { sources: true, waves: true, competitorSnapshots: true } },
+    },
+  });
+}
+
+/** Sources d'une étude avec leur classe de provenance (pour pondération/affichage). */
+export async function listStudySources(studyId: string) {
+  return db.marketSource.findMany({
+    where: { studyId },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, title: true, sourceType: true, url: true, reliability: true, provenanceClass: true },
+  });
+}

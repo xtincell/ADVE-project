@@ -8,7 +8,7 @@
 
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { createTRPCRouter, protectedProcedure } from "../init";
+import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { canAccessStrategy } from "@/server/services/operator-isolation";
 import * as be from "@/server/services/bureau-etudes";
@@ -87,6 +87,22 @@ export const bureauEtudesRouter = createTRPCRouter({
     await assertStudyAccess(ctx, wave.studyId);
     return be.recordWaveAchieved(input);
   }),
+
+  // ── Console marketplace (ADR-0114) ─────────────────────────────────────────
+
+  /** Picker d'études récentes (console bureau d'étude). */
+  studies: adminProcedure
+    .input(z.object({ limit: z.number().int().positive().max(100).optional() }).optional())
+    .query(async ({ input }) => {
+      return be.listStudies({ limit: input?.limit });
+    }),
+
+  /** Sources d'une étude + provenance (console). */
+  sources: adminProcedure
+    .input(z.object({ studyId: z.string() }))
+    .query(async ({ input }) => {
+      return be.listStudySources(input.studyId);
+    }),
 
   // ── Provenance & fusion (ADR-0114) ─────────────────────────────────────────
 

@@ -348,6 +348,7 @@ export const consoleNavGroups: NavGroup[] = [
       { href: "/console/seshat/market", label: "Marche", icon: TrendingUp },
       { href: "/console/seshat/tarsis", label: "Tarsis", icon: Radar },
       { href: "/console/seshat/argos", label: "Argos (Hunter)", icon: Crosshair },
+      { href: "/console/seshat/marketplace", label: "Marketplace", icon: Building2 },
       { href: "/console/seshat/attribution", label: "Attribution", icon: GitBranch },
     ],
   },
