@@ -4,7 +4,7 @@
 **Date** : 2026-06-28
 **Phase** : 24+ — refonte du flux Stratégie → Campagnes → Actions
 **Depends on** : ADR-0052 (Campaign double-couche), ADR-0088/0089 (routes roadmap S), ADR-0085 (STOP-à-Jehuty), ADR-0086 (score/tier de marque), ADR-0093/0099 (coûts atomisés + base marché Seshat), ADR-0060 (manual-first parity)
-**Supersedes (flux)** : le bouton `generateProjectsFromActions` (action → campagne) est déprécié.
+**Supersedes (flux)** : le flux inversé `generateProjectsFromActions` (action → **nouvelle** campagne) est désinversé (P5) : la production s'attache à la campagne existante de l'action, l'orpheline est unifiée dans une campagne d'une action.
 
 ## Contexte
 
@@ -83,7 +83,11 @@ appartiennent aux campagnes.** `CampaignAction` (rattaché à `Campaign`) et
 - **P3** — Onglet Campagnes affiche canon + ponctuelles + leurs actions ; roadmap =
   vue calendaire dérivée des actions DE campagnes.
 - **P4** — Ponctuel (insight/Jehuty) + boucle rapport mensuel → ADVERTIS → always-on.
-- **P5** — Retrait du bouton legacy `generateProjectsFromActions`.
+- **P5** ✅ Désinversion du bouton de production : `generateProjectsFromActions` ne crée
+  **plus** une campagne par action. Il attache la production (brief + `Mission`) à la
+  campagne **existante** de l'action (`campaignId`) ; action orpheline → unifiée dans une
+  « campagne d'une action » (`canonType=PUNCTUAL`) puis rattachée. Le bouton roadmap
+  devient « Lancer la production » ; plus aucune action hors campagne après production.
 
 ## Conséquences
 

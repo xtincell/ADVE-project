@@ -207,7 +207,7 @@ export function RoadmapCalendarPanel() {
               {isAccepted ? (
                 <div className="flex w-full flex-col items-end gap-1.5">
                   <div className="flex items-center gap-1 font-semibold text-success">
-                    <CheckCircle2 className="h-3.5 w-3.5" /> Campagne & Mission de production créées
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Production lancée dans la campagne
                   </div>
                   <Link
                     href={campaignHref}
@@ -231,7 +231,7 @@ export function RoadmapCalendarPanel() {
                     className="flex items-center gap-1.5 rounded bg-accent px-3 py-1.5 text-xs font-semibold text-accent-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
                   >
                     {generateMut.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Rocket className="h-3 w-3" />}
-                    {generateMut.isPending ? "Déclenchement…" : "Déclencher Campagne & Production"}
+                    {generateMut.isPending ? "Déclenchement…" : "Lancer la production"}
                   </button>
                 </>
               )}
