@@ -79,7 +79,8 @@
     "postinstall": "prisma generate",
     "cf:deploy": "wrangler deploy",
     "cf:dryrun": "wrangler deploy --dry-run",
-    "cf:typegen": "wrangler types"
+    "cf:typegen": "wrangler types",
+    "db:seed:media-benchmarks": "node --env-file-if-exists=.env.local --import tsx prisma/seed-media-benchmarks-run.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.74",

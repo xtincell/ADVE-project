@@ -98,6 +98,32 @@ export async function getMarketCostHistory(args: {
   });
 }
 
+/**
+ * Clé métrique canonique d'un benchmark média CPM/CPC par canal. Le moteur média
+ * (`media-metrics.ts`) ne code aucune valeur : il résout le CPM via cette clé
+ * depuis `MarketCostSnapshot` (lignes seedées sourcées). Cf. seed-media-benchmarks.ts.
+ */
+export function mediaMetricKey(channel: string, kind: "CPM" | "CPC" = "CPM"): string {
+  return `${kind}_${channel.toUpperCase()}`;
+}
+
+/**
+ * Résout le CPM/CPC média d'un canal pour un marché/période depuis la base de
+ * référence (jamais une constante). `null` si aucun benchmark seedé pour ce marché.
+ */
+export async function getMediaCost(args: {
+  channel: string;
+  countryCode: string;
+  kind?: "CPM" | "CPC";
+  period?: string;
+}) {
+  return getMarketCost({
+    countryCode: args.countryCode,
+    metric: mediaMetricKey(args.channel, args.kind ?? "CPM"),
+    period: args.period,
+  });
+}
+
 /** Liste filtrée (console). */
 export async function listMarketCosts(args: {
   countryCode?: string;

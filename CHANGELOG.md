@@ -10,6 +10,27 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.48 — feat(thot): benchmarks média CPM/CPC en base, sourcés (1ère fermeture média) (2026-06-28)
+
+Ferme le trou « barèmes média codés en dur » du gap-analysis multi-acteurs : les tarifs
+média ne sont **jamais des constantes**, ce sont des **lignes de référence datées + sourcées**.
+
+- **Anti-doublon (NEFER interdit #1)** : aucune nouvelle table — on **étend `MarketCostSnapshot`**
+  (ADR-0099, qui modélise déjà « CPM par marché × période × devise × source »). 0 migration.
+- `prisma/seed-media-benchmarks.ts` : constructeur **pur** `buildMediaBenchmarkRows()` (22 lignes
+  sourcées — Adwave/Remnant/WordStream/Gupta/AdQuick/Adamigo) : CPM TV broadcast/cable/CTV/Netflix,
+  YouTube, radio, OOH, display, cinéma, podcast, Meta, TikTok, CPC Google (US) + proxys Afrique
+  (NG/KE/ZA/EG, flaggés **PROXY** + confiance basse — honnêteté). Chaque ligne : marché, période,
+  devise, **source (nom/URL/année)**, distribution p10/p50/p90, confiance.
+- `market-cost` : helpers `mediaMetricKey(channel, CPM|CPC)` + `getMediaCost(...)` — le moteur média
+  (`media-metrics.ts`) **résout le CPM depuis la base**, il n'en code aucun.
+- `npm run db:seed:media-benchmarks` (upsert idempotent).
+
+Test **zéro mock** : le constructeur pur garantit source+devise+marché+période+confiance par ligne,
+cohérence p10≤p50≤p90, unicité des clés, déterminisme. tsc 0 · eslint 0 · 2197 tests verts. Cap 7/7.
+
+---
+
 ## v6.27.47 — docs+feat: cycle de vie multi-acteurs (audit marché) + moteur média déterministe (2026-06-28)
 
 Réponse au mandat « élabore le cycle de vie du wrap croustillant BK côté freelance/production,
