@@ -195,14 +195,27 @@ async function resolveComponentRate(
       };
     }
   }
-  // 3. Market benchmark (country p50).
+  // 3. Base de marché Seshat — snapshot daté & sourcé (ADR-0099), PRIORITAIRE sur
+  //    le benchmark statique : c'est la « base de données de marché » canonique.
   if (c.rateBasis === "BENCHMARK" && c.rateKey) {
+    const { getMarketCost } = await import("@/server/services/market-cost");
+    const snap = await getMarketCost({ countryCode: zoneCode, metric: c.rateKey });
+    if (snap) {
+      return {
+        unitRate: snap.p50,
+        zoneAdjustable: false,
+        resolvedFrom: `seshat-market:${zoneCode}:${c.rateKey}@${snap.period}`,
+        usedFallback: false,
+        fallbackChain: [],
+      };
+    }
+    // 3-bis. Repli : benchmark statique (country p50).
     const bench = await db.marketBenchmark.findFirst({
       where: { country: zoneCode, metric: c.rateKey },
       orderBy: { updatedAt: "desc" },
     });
     if (bench) {
-      return { unitRate: bench.p50, zoneAdjustable: false, resolvedFrom: `benchmark:${zoneCode}:${c.rateKey}`, usedFallback: false, fallbackChain: [] };
+      return { unitRate: bench.p50, zoneAdjustable: false, resolvedFrom: `benchmark:${zoneCode}:${c.rateKey}`, usedFallback: true, fallbackChain: ["seshat-market→benchmark"] };
     }
   }
   // 4. Fixed baseRate (zone-multiplied downstream).
