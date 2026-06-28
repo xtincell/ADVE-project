@@ -928,9 +928,22 @@ model Campaign {
   // Phase 18-A1 — Priorité opérationnelle (V4 sheet ACTIONS column PRIORITÉ).
   priority          OperationalPriority      @default(MOYENNE)
 
+  // ── ADR-0119 — campagne canon générée par le Pilier S ───────────────────────
+  // canonType : GTM_90 | ANNUAL | ALWAYS_ON | PUNCTUAL. routeKey : route S d'ambition
+  // (ADR-0088/0089) d'origine. AARRR majeur + secondaire orientent la lecture des KPI.
+  // recommendedBudget : budget conseillé unique (les 3 niveaux d'exécution sont
+  // dérivés en aval par les outils). isAlwaysOn ⇒ endDate null + budget récurrent.
+  canonType         String?
+  routeKey          String?
+  aarrrPrimary      String?
+  aarrrSecondary    String?
+  recommendedBudget Float?
+  isAlwaysOn        Boolean                  @default(false)
+
   strategy       Strategy                @relation(fields: [strategyId], references: [id])
   missions       Mission[]
   actions        CampaignAction[]
+  brandActions   BrandAction[]           @relation("CampaignBrandActions")
   executions     CampaignExecution[]
   amplifications CampaignAmplification[]
   teamMembers    CampaignTeamMember[]
@@ -4089,6 +4102,48 @@ model RecommendationBatch {
   @@index([strategyId, missionType])
 }
 
+// Moment de prise de parole de marque — DONNÉES de référence seedées (ADR-0119).
+// La campagne annuelle ancre ses actions sur ces moments. `type=GENERAL` (Nouvel
+// An, Ramadan, Back-to-School, Noël…) ou `POSITIONING` (Black Friday, fête
+// nationale, journée mondiale d'un thème…). `movable` pour les dates variables
+// (Pâques, Ramadan, nouvel an chinois). Mutable, jamais en dur dans le code.
+model BrandMoment {
+  id             String  @id @default(cuid())
+  key            String  @unique // "NOUVEL_AN", "RAMADAN", "BLACK_FRIDAY"…
+  label          String
+  type           String // GENERAL | POSITIONING
+  month          Int // 1-12 (mois d'ancrage ; approximatif si movable)
+  dayOfMonth     Int? // null si variable
+  movable        Boolean @default(false)
+  positioningTag String? // pour POSITIONING : "TECH", "MUSIQUE", "RETAIL", "NATIONAL", "RELIGIEUX"…
+  note           String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type, month])
+}
+
+// Template de campagne canon — DONNÉES de référence seedées (ADR-0119). Définit
+// ce qu'EST chaque campagne canon (GTM_90 / ANNUAL / ALWAYS_ON) : objectifs AARRR
+// par défaut, durée, récurrence. Mutable. Le générateur lit ces lignes, ne les
+// code pas en dur.
+model CampaignCanonTemplate {
+  id             String  @id @default(cuid())
+  canonType      String  @unique // GTM_90 | ANNUAL | ALWAYS_ON
+  label          String
+  aarrrPrimary   String // ACQUISITION|ACTIVATION|RETENTION|REVENUE|REFERRAL
+  aarrrSecondary String
+  durationDays   Int? // null = sans fin (always-on)
+  isAlwaysOn     Boolean @default(false)
+  budgetShare    Float // part indicative du budget global (0-1) à répartir
+  sortOrder      Int     @default(0)
+  note           String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 // Barème RICE — DONNÉES de référence, jamais une constante en code (ADR-0109).
 // L'acteur Conseil priorise les recommandations via RICE (Reach×Impact×Confidence
 // /Effort). Les valeurs numériques des libellés (« Massive » → 3, « High » → 2…)
@@ -4815,12 +4870,18 @@ model BrandAction {
   // I-pillar initiatives. FK to Strategy (cascade purge with the brand).
   strategy Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
 
+  // ADR-0119 — toute action appartient à une campagne (invariant cible). Nullable
+  // pendant la migration d'unification (orphelines → backlog puis rattachées).
+  campaignId String?
+  campaign   Campaign? @relation("CampaignBrandActions", fields: [campaignId], references: [id], onDelete: SetNull)
+
   @@unique([strategyId, sourceInitiativeId])
   @@index([strategyId, status])
   @@index([strategyId, selected])
   @@index([touchpoint, aarrrIntent])
   @@index([recoId])
   @@index([costTemplateKey, costZoneCode])
+  @@index([campaignId])
 }
 
 // ═══════════════════════════════════════════════════════════════════

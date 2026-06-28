@@ -947,6 +947,49 @@ export const strategyRouter = createTRPCRouter({
 
       return { success: true, count: results.length, projects: results };
     }),
+
+  /**
+   * ADR-0119 — génère les 3 campagnes canon (30-60-90 / annuelle / always-on) d'une
+   * route depuis le Pilier I. Déterministe (zéro LLM), exception à STOP-à-Jehuty.
+   * Rattache les actions sélectionnées aux campagnes (invariant : plus d'orpheline).
+   */
+  generateCanonicalCampaigns: governedProcedure({
+    kind: "GENERATE_CANONICAL_CAMPAIGNS",
+    inputSchema: z.object({
+      strategyId: z.string(),
+      routeKey: z.string().max(40).optional(),
+      startDate: z.date().optional(),
+    }),
+    caller: "strategy:generateCanonicalCampaigns",
+  }).mutation(async ({ ctx, input }) => {
+    const strat = await ctx.db.strategy.findUniqueOrThrow({ where: { id: input.strategyId }, select: { id: true } });
+    const { generateCanonicalCampaigns } = await import("@/server/services/campaign-canon");
+    return generateCanonicalCampaigns({ strategyId: strat.id, routeKey: input.routeKey, startDate: input.startDate });
+  }),
+
+  /**
+   * ADR-0119 — campagne ponctuelle (hors canon) déclenchée par un insight externe
+   * / Jehuty, avec son action de tête rattachée. Déterministe.
+   */
+  createPunctualCampaign: governedProcedure({
+    kind: "CREATE_PUNCTUAL_CAMPAIGN",
+    inputSchema: z.object({
+      strategyId: z.string(),
+      title: z.string().min(3).max(200),
+      description: z.string().max(2000).optional(),
+      budget: z.number().nonnegative().optional(),
+      aarrrPrimary: z.string().max(40).optional(),
+      aarrrSecondary: z.string().max(40).optional(),
+      insightSource: z.string().max(40).optional(),
+      startDate: z.date().optional(),
+      endDate: z.date().optional(),
+    }),
+    caller: "strategy:createPunctualCampaign",
+  }).mutation(async ({ ctx, input }) => {
+    await ctx.db.strategy.findUniqueOrThrow({ where: { id: input.strategyId }, select: { id: true } });
+    const { createPunctualCampaign } = await import("@/server/services/campaign-canon");
+    return createPunctualCampaign(input);
+  }),
 });
 
 function classifyScore(composite: number): string {

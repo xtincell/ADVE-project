@@ -1073,6 +1073,15 @@ async function main() {
   const { seedFrameworkReferences } = await import("./seed-framework-references");
   const fwN = await seedFrameworkReferences(prisma);
   console.log(`✓ ${fwN} frameworks seedés`);
+
+  // ADR-0119 — calendrier de moments de marque + templates de campagnes canon.
+  const { seedBrandMoments } = await import("./seed-brand-moments");
+  const bmN = await seedBrandMoments(prisma);
+  console.log(`✓ ${bmN} moments de marque seedés`);
+
+  const { seedCampaignCanonTemplates } = await import("./seed-campaign-canon-templates");
+  const ctN = await seedCampaignCanonTemplates(prisma);
+  console.log(`✓ ${ctN} templates de campagne canon seedés`);
 }
 
 main()
