@@ -205,10 +205,14 @@ CBBE — cf. annexe.*
 | 5 | Production | `DeliverableSpec` matrix + catalogue canaux **seedé** | table + seed + fan-out execution | ✅ **P1** (ADR-0111) | reference-data + fan-out |
 | 6 | Production | `UsageGrant` + **expiry gate** | table + staleness gate | ✅ **P1** (ADR-0111) | staleAt/expiry |
 | 7 | Conseil | `RICE` déterministe sur `Recommendation` | champs additifs + calcul pur | ✅ **P1** (ADR-0109) | scoring déterministe |
-| 8 | Production | Devis AICP (sections A→X seedées + actual/variance) | reference-taxonomy + triple-colonne | P2 | reference-data + estimate/actual |
-| 9 | Bureau | provenanceClass + fusion + FK competitor↔study + console | additifs + surface | P2 | provenance-spine |
-| 10 | Média | connecteurs ingestion perf (credential-gated) | pipeline normalisation | P2 | connectors (Vault) |
-| 11 | Conseil | `ConsultingEngagement`/`Hypothesis`/`Evidence` + `FrameworkReference` | nouvelles tables | P2 | provenance-chain |
+| 8 | Production | Devis AICP (sections A→X seedées + actual/variance) | reference-taxonomy + triple-colonne | ✅ **P2** (ADR-0112) | reference-data + estimate/actual |
+| 9 | Bureau | provenanceClass + fusion + FK competitor↔study + console | additifs + surface | ✅ **P2** (ADR-0114, console UI restante) | provenance-spine |
+| 10 | Média | connecteurs ingestion perf (credential-gated) | pipeline normalisation | ✅ **P2** (ADR-0115, SDK live restant) | connectors (Vault) |
+| 11 | Conseil | `ConsultingEngagement`/`Hypothesis`/`Evidence` + `FrameworkReference` | nouvelles tables | ✅ **P2** (ADR-0113) | provenance-chain |
+
+**État au 2026-06-28 : les 11 fermetures (7 P1 + 4 P2) sont SHIPPÉES.** Restes connus non
+bloquants : console `/console/seshat/marketplace` (#9, donnée + tRPC posés), câblage SDK live
+Meta/Google/TikTok/POS (#10, contrat `ConnectorResult` + normalizer posés).
 
 **Tout ce qui est barème/taxonomie/norme/chiffre est une ligne de table seedée** (AICP A→X,
 specs livrables, CAWI/CATI, n→MoE, T2B, CPM/CPP, frameworks, RICE) — **jamais une constante en

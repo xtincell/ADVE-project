@@ -507,6 +507,7 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "LEGACY_MEDIA_PLAN_CREATE", governor: "INFRASTRUCTURE", handler: "media-plan", async: false, description: "Création d'un plan média ATL/BTL/TTL (ADR-0107)." },
   { kind: "LEGACY_MEDIA_PLAN_ADD_LINE", governor: "INFRASTRUCTURE", handler: "media-plan", async: false, description: "Ajout d'une ligne média prévue à un plan (ADR-0107)." },
   { kind: "LEGACY_MEDIA_PLAN_RECORD_ACTUALS", governor: "INFRASTRUCTURE", handler: "media-plan", async: false, description: "Enregistrement du réalisé d'une ligne média (post-buy/PCA, ADR-0107)." },
+  { kind: "LEGACY_MEDIA_PERF_INGEST_MANUAL", governor: "INFRASTRUCTURE", handler: "media-perf", async: false, description: "Ingestion manuelle de perf média réelle → CampaignAmplification (acteur Média, ADR-0115)." },
   { kind: "LEGACY_RECOMMENDATION_SET_RICE", governor: "INFRASTRUCTURE", handler: "consulting-rice", async: false, description: "Priorisation RICE déterministe d'une recommandation (acteur Conseil, ADR-0109)." },
   { kind: "LEGACY_RESEARCH_WAVE_CREATE", governor: "INFRASTRUCTURE", handler: "bureau-etudes", async: false, description: "Création d'une vague d'étude (time-spine, acteur Bureau d'étude, ADR-0110)." },
   { kind: "LEGACY_RESEARCH_WAVE_RECORD", governor: "INFRASTRUCTURE", handler: "bureau-etudes", async: false, description: "Enregistrement de l'échantillon atteint d'une vague (ADR-0110)." },

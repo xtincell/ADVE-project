@@ -12,6 +12,7 @@ import { createTRPCRouter, protectedProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { canAccessCampaign } from "@/server/services/operator-isolation";
 import * as mp from "@/server/services/media-plan";
+import * as perf from "@/server/services/media-perf";
 /* lafusee:governed-active */
 
 type Ctx = { session: { user: { id: string; role: string; operatorId?: string | null } } };
@@ -98,5 +99,46 @@ export const mediaPlanRouter = createTRPCRouter({
     const line = await ctx.db.mediaPlanLine.findUniqueOrThrow({ where: { id: input.lineId }, select: { plan: { select: { campaignId: true } } } });
     await assertCampaignAccess(ctx, line.plan.campaignId);
     return mp.recordLineActuals(input);
+  }),
+
+  // ── Ingestion de performance (ADR-0115) ────────────────────────────────────
+
+  /** État de l'ingestion LIVE credential-gated (ConnectorResult honnête). */
+  perfLiveStatus: protectedProcedure
+    .input(z.object({ campaignId: z.string(), platform: z.string() }))
+    .query(async ({ ctx, input }) => {
+      await assertCampaignAccess(ctx, input.campaignId);
+      const operatorId =
+        ((ctx.session.user as unknown as Record<string, unknown>).operatorId as string | undefined) ?? ctx.session.user.id;
+      return perf.ingestLivePerformance({
+        operatorId,
+        campaignId: input.campaignId,
+        platform: input.platform,
+      });
+    }),
+
+  /** Ingestion MANUELLE de perf réelle (POS / export plateforme) → normalisée. */
+  ingestManualPerf: governedProcedure({
+    kind: "LEGACY_MEDIA_PERF_INGEST_MANUAL",
+    inputSchema: z.object({
+      campaignId: z.string(),
+      platform: z.string().min(1).max(40),
+      raw: z.object({
+        impressions: z.number().nonnegative().optional(),
+        clicks: z.number().nonnegative().optional(),
+        conversions: z.number().nonnegative().optional(),
+        reach: z.number().nonnegative().optional(),
+        views: z.number().nonnegative().optional(),
+        engagements: z.number().nonnegative().optional(),
+        spend: z.number().nonnegative().optional(),
+        revenue: z.number().nonnegative().optional(),
+      }),
+      budget: z.number().nonnegative().optional(),
+      currency: z.string().max(8).optional(),
+    }),
+    caller: "media-perf:ingestManual",
+  }).mutation(async ({ ctx, input }) => {
+    await assertCampaignAccess(ctx, input.campaignId);
+    return perf.ingestManualPerformance(input);
   }),
 });
