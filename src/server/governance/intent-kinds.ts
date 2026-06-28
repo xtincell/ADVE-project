@@ -516,6 +516,8 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "LEGACY_TALENT_SERVICE_CREATE", governor: "INFRASTRUCTURE", handler: "talent-services", async: false, description: "Création d'un gig prestataire (listing de service, ADR-0117)." },
   { kind: "LEGACY_TALENT_SERVICE_UPDATE", governor: "INFRASTRUCTURE", handler: "talent-services", async: false, description: "Mise à jour d'un gig prestataire (ADR-0117)." },
   { kind: "LEGACY_TALENT_SERVICE_TOGGLE", governor: "INFRASTRUCTURE", handler: "talent-services", async: false, description: "Activation/désactivation d'un gig prestataire (ADR-0117)." },
+  { kind: "LEGACY_MISSION_QUOTE_SUBMIT", governor: "INFRASTRUCTURE", handler: "mission-quote", async: false, description: "Soumission d'un devis structuré prestataire → marque (ADR-0118)." },
+  { kind: "LEGACY_MISSION_QUOTE_DECIDE", governor: "INFRASTRUCTURE", handler: "mission-quote", async: false, description: "Décision marque sur un devis (accepté/rejeté, ADR-0118)." },
   { kind: "LEGACY_RECOMMENDATION_SET_RICE", governor: "INFRASTRUCTURE", handler: "consulting-rice", async: false, description: "Priorisation RICE déterministe d'une recommandation (acteur Conseil, ADR-0109)." },
   { kind: "LEGACY_RESEARCH_WAVE_CREATE", governor: "INFRASTRUCTURE", handler: "bureau-etudes", async: false, description: "Création d'une vague d'étude (time-spine, acteur Bureau d'étude, ADR-0110)." },
   { kind: "LEGACY_RESEARCH_WAVE_RECORD", governor: "INFRASTRUCTURE", handler: "bureau-etudes", async: false, description: "Enregistrement de l'échantillon atteint d'une vague (ADR-0110)." },

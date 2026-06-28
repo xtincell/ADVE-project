@@ -1064,6 +1064,7 @@ model Mission {
   commissions  Commission[]
   applications MissionApplication[]
   escrows      Escrow[]
+  quotes       MissionQuote[]
 
   tenantId String? // v4 — multi-tenant RLS
 
@@ -1244,9 +1245,38 @@ model TalentProfile {
   reviews           TalentReview[]
   usageGrants       UsageGrant[]
   services          TalentService[]
+  quotes            MissionQuote[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Devis structuré prestataire → marque (ADR-0118). Lignes détaillées + TVA + total
+// calculés déterministes. Distinct de la candidature simple (proposedRate) et du
+// devis AICP de production (post-exécution).
+model MissionQuote {
+  id              String   @id @default(cuid())
+  missionId       String
+  talentProfileId String
+  reference       String // numéro de devis lisible
+  lines           Json // [{ label, qty, unitPrice }]
+  subtotal        Float
+  taxRatePct      Float    @default(0)
+  taxAmount       Float
+  total           Float
+  currency        String   @default("XAF")
+  status          String   @default("SENT") // DRAFT|SENT|ACCEPTED|REJECTED|EXPIRED
+  validUntil      DateTime?
+  notes           String?
+
+  mission       Mission       @relation(fields: [missionId], references: [id])
+  talentProfile TalentProfile @relation(fields: [talentProfileId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([missionId])
+  @@index([talentProfileId])
 }
 
 // Service de prestataire — gig façon Fiverr/Malt (ADR-0117). Un talent liste ses

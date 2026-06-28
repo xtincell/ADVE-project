@@ -487,6 +487,8 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "LEGACY_TALENT_SERVICE_CREATE", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_TALENT_SERVICE_UPDATE", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_TALENT_SERVICE_TOGGLE", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "LEGACY_MISSION_QUOTE_SUBMIT", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "LEGACY_MISSION_QUOTE_DECIDE", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_RECOMMENDATION_SET_RICE", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_RESEARCH_WAVE_CREATE", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_RESEARCH_WAVE_RECORD", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
