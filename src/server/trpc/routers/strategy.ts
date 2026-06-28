@@ -947,6 +947,25 @@ export const strategyRouter = createTRPCRouter({
 
       return { success: true, count: results.length, projects: results };
     }),
+
+  /**
+   * ADR-0119 — génère les 3 campagnes canon (30-60-90 / annuelle / always-on) d'une
+   * route depuis le Pilier I. Déterministe (zéro LLM), exception à STOP-à-Jehuty.
+   * Rattache les actions sélectionnées aux campagnes (invariant : plus d'orpheline).
+   */
+  generateCanonicalCampaigns: governedProcedure({
+    kind: "GENERATE_CANONICAL_CAMPAIGNS",
+    inputSchema: z.object({
+      strategyId: z.string(),
+      routeKey: z.string().max(40).optional(),
+      startDate: z.date().optional(),
+    }),
+    caller: "strategy:generateCanonicalCampaigns",
+  }).mutation(async ({ ctx, input }) => {
+    const strat = await ctx.db.strategy.findUniqueOrThrow({ where: { id: input.strategyId }, select: { id: true } });
+    const { generateCanonicalCampaigns } = await import("@/server/services/campaign-canon");
+    return generateCanonicalCampaigns({ strategyId: strat.id, routeKey: input.routeKey, startDate: input.startDate });
+  }),
 });
 
 function classifyScore(composite: number): string {
