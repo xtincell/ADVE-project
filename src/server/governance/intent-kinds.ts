@@ -629,6 +629,7 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "LEGACY_STRATEGY_ARCHIVE", governor: "INFRASTRUCTURE", handler: "strategy", async: false, description: "Strangler-promoted mutation 'archive' from router 'strategy'." },
   { kind: "LEGACY_STRATEGY_CREATE", governor: "INFRASTRUCTURE", handler: "strategy", async: false, description: "Strangler-promoted mutation 'create' from router 'strategy'." },
   { kind: "LEGACY_STRATEGY_DELETE", governor: "INFRASTRUCTURE", handler: "strategy", async: false, description: "Strangler-promoted mutation 'delete' from router 'strategy'." },
+  { kind: "LEGACY_STRATEGY_GENERATE_PROJECTS_FROM_ACTIONS", governor: "INFRASTRUCTURE", handler: "strategy", async: false, description: "Génération déterministe (zéro LLM) campagne + brief + mission de production depuis des actions retenues." },
   { kind: "LEGACY_STRATEGY_MIGRATE_TO_V4", governor: "INFRASTRUCTURE", handler: "strategy", async: false, description: "Strangler-promoted mutation 'migrateToV4' from router 'strategy'." },
   { kind: "LEGACY_STRATEGY_PRESENTATION_PRECONDITIONS", governor: "INFRASTRUCTURE", handler: "strategy-presentation", async: false, description: "Strangler-promoted mutation 'preconditions' from router 'strategy-presentation'." },
   { kind: "LEGACY_STRATEGY_PRESENTATION_SHARE_LINK", governor: "INFRASTRUCTURE", handler: "strategy-presentation", async: false, description: "Strangler-promoted mutation 'shareLink' from router 'strategy-presentation'." },

@@ -10,6 +10,22 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.44 — fix(campaign): génération de campagne 100 % déterministe + gouvernée (2026-06-28)
+
+Canonisation de la **zone production campagne** après dérive des dernières mises à jour. La doctrine « Fusée non-dépendante du LLM » (LOI 9) n'était pas respectée sur le bouton de génération de campagne et ses briefs.
+
+**1. Brief de campagne déterministe (zéro LLM).** Suppression de `callAI()` dans `campaign-manager/index.ts` — il importait le SDK Anthropic **en direct** (hors LLM Gateway : pas de circuit-breaker, pas de fallback multi-provider, pas de cost-tracking, pas de headroom) avec un **modèle hardcodé** périmé, en chemin primaire des 4 générateurs de brief. Nouveau module pur `campaign-manager/brief-builder.ts` (`buildCampaignBrief`) : le brief est dérivé mécaniquement du noyau ADVE de la marque (réutilise `flattenPillarText`, helper déterministe de la gate C6). Les 4 générateurs (`generateCreativeBrief/Media/Vendor/Production`) passent par cette voie unique. Variance = 0, reproductible, auditable.
+
+**2. Bouton « Déclencher Campagne & Production » gouverné.** `strategy.generateProjectsFromActions` faisait des écritures `ctx.db.*` brutes (campaign + brief + mission + brandAction) **sans `emitIntent`** (bypass governance, interdit NEFER #2). Désormais `governedProcedure` + nouveau kind `LEGACY_STRATEGY_GENERATE_PROJECTS_FROM_ACTIONS` (+ SLO) → IntentEmission hash-chaînée + cost-gate + contrôle d'accès stratégie. Brief initial unifié sur le même `buildCampaignBrief` (fin du drift de forme entre les deux points d'entrée).
+
+**3. Honnêteté UI.** Le bloc cockpit « Génération IA » (campagne `[id]`) est relabellisé « Génération de brief (déterministe) » — il ne revendique plus l'IA pour un chemin mécanique.
+
+**4. Drift résiduel des commits récents corrigé.** 3 casts `as never` introduits dans `cockpit/operate/campaigns/page.tsx` (filtrage `STATE_PHASE_GROUPS`) → helper typé `inPhase(readonly string[], …)` (rétablit le baseline 0 de `no-bare-as-never`).
+
+Chaîne validée bout-en-bout (pilier S → actions → roadmap → campagne → brief → mission → bilan) : tout est déterministe. Test `tests/unit/services/campaign-manager/brief-builder.test.ts` (advertis de BLISS, dummy content) : forme canonique non-vide, déterminisme variance=0, zéro primitive LLM dans le source, cohérence brief↔ADVE (gate C6) jamais DIVERGENT. tsc 0 · eslint 0 · 2168 tests unit verts (dont 869 governance). Cap APOGEE 7/7 préservé.
+
+---
+
 ## v6.27.43 — feat(artemis): 44 Glory tools LLM → HYBRID + llm-cost-model doc (2026-06-24)
 
 Conversion structurelle de **44 Glory tools** `executionType: "LLM"` → `"HYBRID"` via `defineHybridTool()` factory (ADR-0060 manual-first parity — ferme N6-bis résiduel Phase 23 Epic 5) :

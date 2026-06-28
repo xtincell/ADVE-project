@@ -118,9 +118,11 @@ export default function CampaignsPage() {
 
   // Tab filtering — depuis STATE_PHASE_GROUPS de operate-config (jamais hardcodé)
   const getState = (c: { state?: string | null; status: string }) => c.state ?? c.status;
-  const activeCampaigns    = allCampaigns.filter((c) => STATE_PHASE_GROUPS.active.includes(getState(c) as never));
-  const productionCampaigns = allCampaigns.filter((c) => STATE_PHASE_GROUPS.production.includes(getState(c) as never));
-  const completedCampaigns  = allCampaigns.filter((c) => STATE_PHASE_GROUPS.done.includes(getState(c) as never));
+  const inPhase = (group: readonly string[], c: { state?: string | null; status: string }) =>
+    group.includes(getState(c));
+  const activeCampaigns    = allCampaigns.filter((c) => inPhase(STATE_PHASE_GROUPS.active, c));
+  const productionCampaigns = allCampaigns.filter((c) => inPhase(STATE_PHASE_GROUPS.production, c));
+  const completedCampaigns  = allCampaigns.filter((c) => inPhase(STATE_PHASE_GROUPS.done, c));
 
   const tabFiltered =
     activeTab === "all"

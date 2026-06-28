@@ -600,6 +600,7 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "LEGACY_STRATEGY_ARCHIVE", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_STRATEGY_CREATE", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_STRATEGY_DELETE", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "LEGACY_STRATEGY_GENERATE_PROJECTS_FROM_ACTIONS", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_STRATEGY_MIGRATE_TO_V4", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_STRATEGY_PRESENTATION_PRECONDITIONS", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_STRATEGY_PRESENTATION_SHARE_LINK", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
