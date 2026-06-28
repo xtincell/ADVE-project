@@ -779,6 +779,7 @@ model Strategy {
   orchestrationPlans OrchestrationPlan[]
   recommendations    Recommendation[]
   recoBatches        RecommendationBatch[]
+  consultingEngagements ConsultingEngagement[]
   // Phase 24 (ADR-0094) — canonical queryable projection of I-pillar initiatives.
   brandActions       BrandAction[]
   notoriaPipeline    Json? // { currentStage, stages[], startedAt }
@@ -794,6 +795,10 @@ model Strategy {
   // Phase 21 (ADR-0068) — 35 OracleSection × strategyId. Lifecycle PENDING → GENERATING
   // → COMPLETE → FAILED → STALE. Voir oracle-section/ service + schema bottom-of-file.
   oracleSections OracleSection[]
+
+  // Phase 24 (ADR-0106) — porte d'entrée du cycle de vie : intentions net-new
+  // (insight/opportunité/envie) croisées avec l'ADVE → brief validé → projets.
+  intentions Intention[]
 
   // v4 — LLM budget governance
   llmBudget       Float? // Monthly USD cap for LLM calls on this strategy
@@ -834,6 +839,56 @@ model Strategy {
   @@index([clientId])
   @@index([tenantId])
   @@index([archivedAt])
+}
+
+// Phase 24 (ADR-0106) — Intention : porte d'entrée canonique du cycle de vie.
+// Une marque articule une envie net-new (lancer un produit, repositionner,
+// entrer sur un marché…). Le LLM croise l'intention × l'ADVE réel (RAG) pour
+// produire un BRIEF VALIDÉ ; ce brief alimente ensuite le pipeline déterministe
+// (action → campagne → projets). C'est la SEULE porte LLM légitime en amont :
+// tout le reste est projection déterministe de l'ADVE.
+enum IntentionType {
+  PRODUCT_LAUNCH // nouveau produit / SKU
+  REPOSITION // repositionnement de marque
+  MARKET_ENTRY // entrée sur un nouveau marché / pays
+  CAMPAIGN // nouvelle campagne ad-hoc
+  PLATFORM // nouvelle plateforme / sous-marque
+  PARTNERSHIP // collaboration / co-branding
+  OTHER
+}
+
+enum IntentionStatus {
+  CAPTURED // articulée par l'opérateur, pas encore traitée
+  BRIEF_GENERATED // brief candidat produit (LLM ou manuel)
+  BRIEF_VALIDATED // brief passé le gate cohérence + validé opérateur
+  CONVERTED // brief converti en projets (campagne/mission)
+  ARCHIVED
+}
+
+model Intention {
+  id          String          @id @default(cuid())
+  strategyId  String
+  strategy    Strategy        @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  type        IntentionType
+  title       String
+  /// Articulation libre de l'opérateur (contenu NON FIABLE — neutralisé avant LLM).
+  description String
+  status      IntentionStatus @default(CAPTURED)
+  operatorId  String?
+  /// Mode de génération du brief : "LLM" (croisement IA × ADVE) ou "MANUAL" (parité ADR-0060).
+  briefMode   String?
+  /// Snapshot du verdict de cohérence brief↔ADVE (gate C6) au moment de la génération.
+  coherence   Json?
+  /// Brief candidat produit (CampaignBrief.id). Non-FK volontaire : le brief peut
+  /// précéder la campagne (créé lazy à la conversion). Lien souple.
+  generatedBriefId String?
+  /// Contenu structuré du brief candidat (avant matérialisation en CampaignBrief).
+  briefDraft  Json?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([strategyId, status])
+  @@index([operatorId])
 }
 
 model Campaign {
@@ -891,6 +946,8 @@ model Campaign {
   aarrMetrics    CampaignAARRMetric[]
   links          CampaignLink[]
   budgetLines    BudgetLine[]
+  // Phase 24 (ADR-0107) — plans média ATL/BTL/TTL (prévu vs réalisé → PCA).
+  mediaPlans     MediaPlan[]
 
   // Phase 10 (ADR-0012) — BrandAssets actifs sélectionnés parmi candidats.
   // Une Campaign garde 1 BrandAsset ACTIVE par kind clé (BigIdea/Brief/Claim/Manifesto/KV).
@@ -1006,6 +1063,8 @@ model Mission {
   deliverables MissionDeliverable[]
   commissions  Commission[]
   applications MissionApplication[]
+  escrows      Escrow[]
+  quotes       MissionQuote[]
 
   tenantId String? // v4 — multi-tenant RLS
 
@@ -1184,9 +1243,63 @@ model TalentProfile {
   commissions       Commission[]
   certifications    TalentCertification[]
   reviews           TalentReview[]
+  usageGrants       UsageGrant[]
+  services          TalentService[]
+  quotes            MissionQuote[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Devis structuré prestataire → marque (ADR-0118). Lignes détaillées + TVA + total
+// calculés déterministes. Distinct de la candidature simple (proposedRate) et du
+// devis AICP de production (post-exécution).
+model MissionQuote {
+  id              String   @id @default(cuid())
+  missionId       String
+  talentProfileId String
+  reference       String // numéro de devis lisible
+  lines           Json // [{ label, qty, unitPrice }]
+  subtotal        Float
+  taxRatePct      Float    @default(0)
+  taxAmount       Float
+  total           Float
+  currency        String   @default("XAF")
+  status          String   @default("SENT") // DRAFT|SENT|ACCEPTED|REJECTED|EXPIRED
+  validUntil      DateTime?
+  notes           String?
+
+  mission       Mission       @relation(fields: [missionId], references: [id])
+  talentProfile TalentProfile @relation(fields: [talentProfileId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([missionId])
+  @@index([talentProfileId])
+}
+
+// Service de prestataire — gig façon Fiverr/Malt (ADR-0117). Un talent liste ses
+// offres avec description + prix indicatif, indépendamment des missions ouvertes.
+model TalentService {
+  id              String  @id @default(cuid())
+  talentProfileId String
+  title           String
+  description     String
+  category        String? // PHOTO|VIDEO|DESIGN|COPYWRITING|STRATEGY|SOCIAL…
+  priceAmount     Float
+  currency        String  @default("XAF")
+  priceUnit       String  @default("FORFAIT") // FORFAIT|JOUR|HEURE|LIVRABLE
+  deliveryDays    Int? // délai indicatif
+  active          Boolean @default(true)
+
+  talentProfile TalentProfile @relation(fields: [talentProfileId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([talentProfileId])
+  @@index([category, active])
 }
 
 model Signal {
@@ -1862,6 +1975,65 @@ model QuickIntake {
 // CAMPAIGN MANAGER 360 MODELS
 // ============================================================================
 
+// Phase 24 (ADR-0107) — Plan média ATL/BTL/TTL : prévu → réalisé → PCA.
+// Audité sur la réalité ad-ops (GAM Order/LineItem ; Mediaocean Lumina
+// budgeted→planned→booked→actual ; anatomie du media plan bionic-ads). Le PCA
+// (écart prévu/réalisé, makegood) est calculé **déterministe** par `media-metrics.ts` ;
+// les CPM viennent de `MarketCostSnapshot` (benchmarks seedés), jamais codés.
+enum MediaPlanStatus {
+  PLANNED // construit
+  BOOKED // ordres d'insertion passés
+  LIVE // en diffusion
+  RECONCILED // PCA bouclé (prévu vs réalisé)
+}
+
+model MediaPlan {
+  id          String          @id @default(cuid())
+  campaignId  String
+  campaign    Campaign        @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  name        String
+  objective   String?
+  /// Marché (ISO-2) — sert à résoudre les benchmarks CPM par marché.
+  countryCode String?         @db.VarChar(2)
+  currency    String          @default("XAF")
+  status      MediaPlanStatus @default(PLANNED)
+  flightStart DateTime?
+  flightEnd   DateTime?
+  lines       MediaPlanLine[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([campaignId, status])
+}
+
+model MediaPlanLine {
+  id        String    @id @default(cuid())
+  planId    String
+  plan      MediaPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  /// Canal (TV_BROADCAST, CTV, META, TIKTOK, OOH, RADIO…) → clé benchmark CPM.
+  channel   String
+  /// ATL | BTL | TTL.
+  category  String?
+  vendor    String?
+  // ── Prévu (planning) ──
+  plannedImpressions Float?
+  plannedGrp         Float?
+  plannedReachPct    Float?
+  plannedFrequency   Float?
+  plannedSpend       Float?
+  /// CPM retenu (résolu depuis benchmark seedé ou négocié) — donnée, jamais codée.
+  cpm                Float?
+  flightStart        DateTime?
+  flightEnd          DateTime?
+  // ── Réalisé (post-buy / PCA) ──
+  actualImpressions  Float?
+  actualSpend        Float?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([planId])
+}
+
 model CampaignAction {
   id                   String         @id @default(cuid())
   campaignId           String
@@ -1940,11 +2112,135 @@ model CampaignExecution {
   action   CampaignAction @relation(fields: [actionId], references: [id])
   campaign Campaign       @relation(fields: [campaignId], references: [id])
 
+  deliverableSpecs DeliverableSpec[]
+  aicpLines        AicpLineItem[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([actionId])
   @@index([campaignId])
+}
+
+// Taxonomie AICP A→X — DONNÉES de référence seedées (ADR-0112), jamais en code.
+// Le plan de coût standardisé de production publicitaire (AICP bid form) : chaque
+// section (A pré-prod, B équipe de tournage, C lieux/déplacements…) est une LIGNE.
+model AicpSectionReference {
+  id        String  @id @default(cuid())
+  code      String  @unique // "A", "B", … "X"
+  label     String
+  family    String // PRE_PROD|CREW|LOCATION|ART|EQUIPMENT|STUDIO|POST|FEES|INSURANCE|MISC
+  sortOrder Int     @default(0)
+  note      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([family])
+}
+
+// Ligne de devis AICP — triple PLANNED / ACTUAL / VARIANCE (ADR-0112).
+// Estimate→Actual→Variance par ligne (le pattern budget étendu). La variance est
+// calculée déterministe (actual − planned) à l'enregistrement du réalisé.
+model AicpLineItem {
+  id            String  @id @default(cuid())
+  executionId   String
+  sectionCode   String // FK souple vers AicpSectionReference.code
+  description   String
+  plannedAmount Float
+  actualAmount  Float? // null tant que non réalisé
+  variance      Float? // actualAmount − plannedAmount (calculé)
+  currency      String  @default("XAF")
+
+  execution CampaignExecution @relation(fields: [executionId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([executionId])
+  @@index([sectionCode])
+}
+
+// Spec de livrable — fan-out d'une exécution en N livrables techniques (ADR-0111).
+// Un CampaignExecution éclate en specs concrètes (TV 16:9 H.264 -23 LUFS,
+// Meta 9:16 6s, OOH 4x3m…). Chaque spec dérive d'une LIGNE du catalogue
+// `ChannelSpecReference` (seedé) — jamais une liste en code.
+model DeliverableSpec {
+  id             String  @id @default(cuid())
+  executionId    String
+  channelSpecKey String? // FK souple vers ChannelSpecReference.key
+  channel        String
+  aspectRatio    String? // "16:9", "9:16", "1:1", "4x3m"…
+  resolution     String? // "1920x1080", "1080x1920"…
+  durationSec    Int? // pour les formats temporels
+  codec          String?
+  frameRate      Float?
+  loudnessTarget String? // "-23 LUFS", "-16 LUFS"…
+  captionRequired Boolean @default(false)
+  fileFormat     String?
+  maxFileMb      Int?
+  status         String  @default("PENDING") // PENDING|IN_PRODUCTION|DELIVERED|APPROVED
+
+  execution   CampaignExecution @relation(fields: [executionId], references: [id])
+  usageGrants UsageGrant[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([executionId])
+  @@index([channelSpecKey])
+}
+
+// Catalogue canaux × specs — DONNÉES de référence seedées (ADR-0111), jamais en
+// code. TV/CTV/Meta/TikTok/YouTube/OOH/Print… avec leurs contraintes techniques.
+model ChannelSpecReference {
+  id             String  @id @default(cuid())
+  key            String  @unique // "META_REELS_9x16", "TV_HD_16x9"…
+  channel        String
+  label          String
+  aspectRatio    String?
+  resolution     String?
+  durationSec    Int?
+  codec          String?
+  frameRate      Float?
+  loudnessTarget String?
+  captionRequired Boolean @default(false)
+  fileFormat     String?
+  maxFileMb      Int?
+  note           String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([channel])
+}
+
+// Droit d'usage (talent × livrable) — ADR-0111. Encadre la diffusion : médias,
+// territoire, durée, buyout, exclusivité. Gate d'EXPIRATION isomorphe à `staleAt` :
+// un grant périmé (expiresAt < now) bloque la diffusion (vérif déterministe).
+model UsageGrant {
+  id               String   @id @default(cuid())
+  talentProfileId  String?
+  deliverableSpecId String?
+  media            Json // string[] — ["TV","DIGITAL","OOH"…]
+  territory        String // "CM", "CEMAC", "WORLDWIDE"…
+  termStart        DateTime
+  termMonths       Int
+  buyoutFee        Float?
+  currency         String   @default("XAF")
+  exclusivity      Boolean  @default(false)
+  expiresAt        DateTime // termStart + termMonths (calculé à la création)
+  status           String   @default("ACTIVE") // ACTIVE|EXPIRED|REVOKED
+
+  talentProfile   TalentProfile?   @relation(fields: [talentProfileId], references: [id])
+  deliverableSpec DeliverableSpec? @relation(fields: [deliverableSpecId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([talentProfileId])
+  @@index([deliverableSpecId])
+  @@index([expiresAt])
 }
 
 model CampaignAmplification {
@@ -2647,18 +2943,27 @@ model Contract {
 
 model Escrow {
   id         String       @id @default(cuid())
-  contractId String
+  contractId String?
+  // ── Escrow de mission Guilde (ADR-0116) — arbitrage manuel UPgraders ──
+  missionId    String? // escrow rattaché directement à une mission marketplace
+  commissionId String? // commission dont les fonds sont sous séquestre
   amount     Float
   currency   String       @default("XAF")
   status     EscrowStatus @default(HELD)
   heldAt     DateTime     @default(now())
   releasedAt DateTime?
   reason     String?
+  // Traçabilité de l'arbitre (agent UPgraders) qui a tranché.
+  arbitratedBy String?
+  paymentOrderId String? // ordre de payout momo émis à la libération
 
-  contract   Contract          @relation(fields: [contractId], references: [id])
+  contract   Contract?         @relation(fields: [contractId], references: [id])
+  mission    Mission?          @relation(fields: [missionId], references: [id])
   conditions EscrowCondition[]
 
   @@index([contractId])
+  @@index([missionId])
+  @@index([status])
 }
 
 model EscrowCondition {
@@ -2799,14 +3104,68 @@ model MarketStudy {
   summary     String?   @db.Text
   completedAt DateTime?
 
+  // ── Acteur Bureau d'étude (ADR-0110) — typage méthodologique ──
+  // FK souple vers `MethodologyReference.key` (catalogue seedé) : quel protocole
+  // (CONCEPT_TEST/PRICING/TRACKER…) cette étude applique. Nullable (rétrocompat).
+  methodologyKey String?
+
   strategy  Strategy          @relation(fields: [strategyId], references: [id])
   sources   MarketSource[]
   syntheses MarketSynthesis[]
+  waves     ResearchWave[]
+  competitorSnapshots CompetitorSnapshot[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([strategyId])
+  @@index([methodologyKey])
+}
+
+// Vague d'étude — TIME-SPINE de l'acteur Bureau d'étude (ADR-0110).
+// Une étude trackée se mesure en vagues (wave-on-wave). Débloque la
+// significativité inter-vagues DÉTERMINISTE (z-test proportions, zéro LLM).
+model ResearchWave {
+  id         String    @id @default(cuid())
+  studyId    String
+  waveLabel  String // "W1", "W2", "Vague 3"…
+  periodLabel String // "T1 2026", "Mai 2026"…
+  fieldStart DateTime?
+  fieldEnd   DateTime?
+  cadence    String? // ONE_SHOT|MONTHLY|QUARTERLY|ROLLING
+  targetN    Int? // taille d'échantillon visée
+  achievedN  Int? // taille réellement atteinte
+  isRolling  Boolean   @default(false)
+
+  study MarketStudy @relation(fields: [studyId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studyId])
+}
+
+// Catalogue de méthodes — DONNÉES de référence seedées (ADR-0110), jamais en code.
+// Le réel d'un bureau d'étude : familles (CONCEPT_TEST/PRICING/CONJOINT/TRACKER/
+// U_A/SEGMENTATION/SENSORY), tailles types, normes n→marge d'erreur, T2B norms.
+// Toutes mutables en base ; le moteur (formules) reste en code.
+model MethodologyReference {
+  id              String  @id @default(cuid())
+  key             String  @unique // "CONCEPT_TEST_MONADIC", "VAN_WESTENDORP"…
+  family          String // CONCEPT_TEST|PRICING|CONJOINT|TRACKER|U_A|SEGMENTATION|SENSORY
+  label           String
+  typicalN        Int? // taille d'échantillon typique
+  confidenceLevel Float? // 0.90 | 0.95 | 0.99
+  marginOfErrorPct Float? // marge d'erreur attendue à typicalN (ex. 5.0)
+  t2bNormPct      Float? // norme Top-2-Box de la catégorie (ex. 60.0)
+  outputShape     String? // "OPP/IPP" | "T2B" | "part-worths" | "demand-curve"…
+  whenToUse       String?
+  note            String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([family])
 }
 
 model MarketSource {
@@ -2817,6 +3176,8 @@ model MarketSource {
   url         String?
   content     String?   @db.Text
   reliability Float?
+  // ── Provenance (ADR-0114) — classe de source pour fusion pondérée honnête ──
+  provenanceClass String? // FIRST_PARTY|SYNDICATED|AI_INFERRED|PUBLIC
   extractedAt DateTime?
 
   study MarketStudy @relation(fields: [studyId], references: [id])
@@ -2851,10 +3212,15 @@ model CompetitorSnapshot {
   positioning    String?
   estimatedScore Float?
   source         String?
+  // ── Provenance (ADR-0114) — rattachement à l'étude qui a produit ce snapshot ──
+  studyId        String?
   measuredAt     DateTime @default(now())
+
+  study MarketStudy? @relation(fields: [studyId], references: [id])
 
   @@index([sector])
   @@index([market])
+  @@index([studyId])
 }
 
 model InsightReport {
@@ -3655,6 +4021,19 @@ model Recommendation {
   weightedScore       Float? // 0.45×ruler + 0.35×impact normalisé + 0.20×confidence
   predecessorId       String? // reco APPLIED que celle-ci prétend remplacer (lineage)
 
+  // ── Priorisation RICE déterministe (ADR-0109 — acteur Conseil) ──
+  // riceScore = (reach × impact × confidence) / effort. PUR, zéro LLM. Les valeurs
+  // numériques des libellés viennent de la table de référence seedée `RiceScale`
+  // (jamais une constante en code). Nullable : non calculé tant qu'absent.
+  riceReach      Float? // portée (people/période ou valeur d'échelle seedée)
+  riceImpact     Float? // multiplicateur d'impact (échelle RICE seedée)
+  riceConfidence Float? // 0.0-1.0 (réutilise `confidence` par défaut)
+  riceEffort     Float? // effort en personne-mois (> 0)
+  riceScore      Float? // résultat pur (null si effort ≤ 0)
+
+  // ── Chaîne de preuve (ADR-0113) — le « pourquoi » remonte à une hypothèse ──
+  hypothesisId String? // reco adossée à une hypothèse traçable (évidence datée)
+
   // ── Lifecycle ──
   status       String    @default("PENDING") // PENDING|ACCEPTED|REJECTED|APPLIED|REVERTED|EXPIRED
   reviewedBy   String? // userId
@@ -3708,6 +4087,98 @@ model RecommendationBatch {
   updatedAt DateTime @updatedAt
 
   @@index([strategyId, missionType])
+}
+
+// Barème RICE — DONNÉES de référence, jamais une constante en code (ADR-0109).
+// L'acteur Conseil priorise les recommandations via RICE (Reach×Impact×Confidence
+// /Effort). Les valeurs numériques des libellés (« Massive » → 3, « High » → 2…)
+// sont des LIGNES mutables, seedées (échelle Intercom canon), pas du hardcode.
+model RiceScale {
+  id        String @id @default(cuid())
+  dimension String // REACH|IMPACT|CONFIDENCE|EFFORT
+  label     String // "Massive" | "High" | "Medium" | "Low" | "Minimal" …
+  value     Float // multiplicateur/valeur déterministe associé au libellé
+  sortOrder Int    @default(0)
+  note      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([dimension, label])
+  @@index([dimension, sortOrder])
+}
+
+// Catalogue de frameworks — DONNÉES de référence seedées (ADR-0113), jamais en
+// code. Le *moteur* des 28 frameworks Artemis reste en code ; leur MÉTADONNÉE
+// (nom, famille, forme de sortie, quand l'utiliser) devient une table mutable.
+model FrameworkReference {
+  id          String  @id @default(cuid())
+  key         String  @unique // "MCKINSEY_7S", "BCG_MATRIX", "RICE"…
+  family      String // STRATEGY|PORTFOLIO|GROWTH|BRAND|PRIORITIZATION|MEASUREMENT
+  label       String
+  outputShape String? // "2x2-matrix" | "7-levers" | "score" | "horizons"…
+  whenToUse   String?
+  note        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([family])
+}
+
+// Mission de conseil — ADR-0113. Rattache une chaîne hypothèse → évidence → reco
+// à une stratégie. Le « pourquoi » d'une recommandation devient traçable.
+model ConsultingEngagement {
+  id         String @id @default(cuid())
+  strategyId String
+  title      String
+  objective  String?
+  status     String @default("OPEN") // OPEN|IN_REVIEW|CLOSED
+
+  strategy   Strategy     @relation(fields: [strategyId], references: [id])
+  hypotheses Hypothesis[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([strategyId])
+}
+
+// Hypothèse — ADR-0113. Statut DÉTERMINISTE depuis le poids net des évidences.
+model Hypothesis {
+  id           String  @id @default(cuid())
+  engagementId String
+  statement    String
+  status       String  @default("OPEN") // OPEN|SUPPORTED|REFUTED
+  netSupport   Float? // somme(weight SUPPORTS) − somme(weight REFUTES), calculé
+
+  engagement ConsultingEngagement @relation(fields: [engagementId], references: [id])
+  evidence   Evidence[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([engagementId])
+}
+
+// Évidence datée — ADR-0113. Pose une preuve POUR ou CONTRE une hypothèse, avec
+// un poids et une source (idéalement une `MarketSource` du bureau d'étude).
+model Evidence {
+  id           String   @id @default(cuid())
+  hypothesisId String
+  stance       String // SUPPORTS|REFUTES
+  weight       Float    @default(0.5) // 0.0-1.0
+  summary      String
+  sourceType   String? // STUDY|FEED|EXPERT|OBSERVATION…
+  sourceUrl    String?
+  marketSourceId String? // FK souple vers MarketSource (provenance)
+  recordedAt   DateTime @default(now())
+
+  hypothesis Hypothesis @relation(fields: [hypothesisId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([hypothesisId])
 }
 
 // ═══════════════════════════════════════════════════════════════════

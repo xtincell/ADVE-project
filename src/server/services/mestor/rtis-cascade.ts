@@ -860,43 +860,19 @@ export async function triggerMarketStudy(
     console.warn("[triggerMarketStudy] signal collection failed (non-fatal):", err instanceof Error ? err.message : err);
   }
 
-  // 3. Web search via Brave Search API (if key is present)
+  // 3. Recherche web via le point d'accès internet canonique de Seshat (Brave).
+  //    De-dup : plus de code Brave inline ici (ADR-0108). Sans clé → DEFERRED,
+  //    on continue mécaniquement sans URLs sources.
+  const { braveWebSearch } = await import("@/server/services/seshat/web-search");
   const sourceUrls: string[] = [];
-  const braveKey = process.env.BRAVE_API_KEY;
-  if (braveKey) {
-    try {
-      const { isUrlAllowed } = await import("@/server/services/artemis/market-research/web-fetcher");
-      // Build search queries
-      const query1 = `"${sector}" market size trends ${countryName}`.trim();
-      const query2 = `"${sector}" industry competitors ${countryName}`.trim();
-      const queries = [query1, query2];
-
-      for (const q of queries) {
-        const url = new URL("https://api.search.brave.com/res/v1/web/search");
-        url.searchParams.set("q", q);
-        url.searchParams.set("count", "5");
-
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 8000);
-
-        const res = await fetch(url.toString(), {
-          signal: controller.signal,
-          headers: { "Accept": "application/json", "X-Subscription-Token": braveKey },
-        });
-        clearTimeout(timeout);
-
-        if (res.ok) {
-          const data = await res.json();
-          const results = data.web?.results || [];
-          for (const item of results) {
-            if (item.url && isUrlAllowed(item.url).ok) {
-              sourceUrls.push(item.url);
-            }
-          }
-        }
-      }
-    } catch (err) {
-      console.warn("[triggerMarketStudy] Brave Search failed:", err instanceof Error ? err.message : err);
+  const queries = [
+    `"${sector}" market size trends ${countryName}`.trim(),
+    `"${sector}" industry competitors ${countryName}`.trim(),
+  ];
+  for (const q of queries) {
+    const search = await braveWebSearch(q, { count: 5, allowlistOnly: true });
+    if (search.status === "OK") {
+      for (const hit of search.hits) sourceUrls.push(hit.url);
     }
   }
 

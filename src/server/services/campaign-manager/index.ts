@@ -12,31 +12,12 @@ import type { Prisma, CampaignState as PrismaCampaignState } from "@prisma/clien
 import { canTransition, requiresApproval, getAvailableTransitions, validateGates, type CampaignState } from "./state-machine";
 import { ACTION_TYPES, getActionType, getActionsByCategory, type ActionCategory } from "./action-types";
 import { assertCampaignHasBrief, getCampaignBriefStatus, BriefMissingError } from "./brief-gate";
+import { buildCampaignBrief, briefTitle, type CampaignBriefType } from "./brief-builder";
 
 export { canTransition, requiresApproval, getAvailableTransitions } from "./state-machine";
 export { ACTION_TYPES, getActionType, getActionsByCategory, getActionsByDriver, searchActions } from "./action-types";
 export { assertCampaignHasBrief, getCampaignBriefStatus, BriefMissingError } from "./brief-gate";
-
-// ============================================================================
-// AI HELPER
-// ============================================================================
-
-async function callAI(systemPrompt: string, userPrompt: string): Promise<Record<string, unknown>> {
-  try {
-    const { default: Anthropic } = await import("@anthropic-ai/sdk");
-    const client = new Anthropic();
-    const msg = await client.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 2000,
-      system: systemPrompt,
-      messages: [{ role: "user", content: userPrompt }],
-    });
-    const text = msg.content.find((b: { type: string }) => b.type === "text") as { text?: string } | undefined;
-    return JSON.parse(text?.text ?? "{}");
-  } catch {
-    return {};
-  }
-}
+export { buildCampaignBrief, briefTitle, type CampaignBriefType } from "./brief-builder";
 
 // ============================================================================
 // SAFE MATH HELPERS
@@ -775,157 +756,47 @@ async function loadCampaignWithStrategy(campaignId: string, strategyId: string) 
   return { campaign, strategy };
 }
 
-function buildBriefSystemPrompt(briefType: string): string {
-  return `Tu es un stratège publicitaire expert, spécialiste du framework ADVE (Authenticité, Distinction, Valeur, Engagement) utilisé par l'agence La Fusée.
-Génère un brief ${briefType} structuré en JSON valide. Le brief doit être actionnable, précis, et inspirant.
-Réponds UNIQUEMENT avec du JSON valide, sans texte additionnel.`;
-}
-
-function buildBriefFallback(briefType: string, campaignName: string, pillars: Array<{ key: string; content: unknown }>): Record<string, unknown> {
-  const pillarMap: Record<string, unknown> = {};
-  for (const p of pillars) {
-    pillarMap[p.key] = p.content;
-  }
-  return {
-    type: briefType,
-    campaign: campaignName,
-    context: "Brief généré par template heuristique",
-    pillars: pillarMap,
-    objectives: [],
-    targetAudience: {},
-    keyMessages: [],
-    tone: {},
-    deliverables: [],
-    timeline: {},
-    budget: {},
-    kpis: [],
-  };
-}
-
 /**
- * AI-generate a creative brief from strategy pillars
+ * Génère + persiste un brief de campagne **déterministe** (zéro LLM).
+ *
+ * Voie unique pour les 4 types : le contenu structuré est dérivé mécaniquement
+ * du noyau ADVE de la marque + de la campagne via `buildCampaignBrief`. Aligné
+ * sur `strategy.generateProjectsFromActions` (même constructeur, même forme).
  */
+async function generateBrief(briefType: CampaignBriefType, campaignId: string, strategyId: string) {
+  const { campaign, strategy } = await loadCampaignWithStrategy(campaignId, strategyId);
+  const content = buildCampaignBrief(briefType, { campaign, strategy });
+
+  return db.campaignBrief.create({
+    data: {
+      campaignId,
+      title: briefTitle(briefType, campaign.name),
+      content: content as Prisma.InputJsonValue,
+      status: "DRAFT",
+      targetDriver: briefType,
+      advertis_vector: campaign.advertis_vector as Prisma.InputJsonValue,
+    },
+  });
+}
+
+/** Génère un brief créatif déterministe depuis les piliers de marque. */
 export async function generateCreativeBrief(campaignId: string, strategyId: string) {
-  const { campaign, strategy } = await loadCampaignWithStrategy(campaignId, strategyId);
-  const systemPrompt = buildBriefSystemPrompt("créatif");
-  const userPrompt = `Campagne: ${campaign.name}
-Objectifs: ${JSON.stringify(campaign.objectives)}
-Vecteur ADVE: ${JSON.stringify(campaign.advertis_vector)}
-Piliers de marque: ${JSON.stringify(strategy.pillars.map((p) => ({ key: p.key, content: p.content })))}
-Budget: ${campaign.budget} ${campaign.budgetCurrency}
-Période: ${campaign.startDate?.toISOString()} → ${campaign.endDate?.toISOString()}
-
-Génère un brief créatif avec: direction_artistique, concept, tone_of_voice, messages_cles, livrables, contraintes`;
-
-  let content = await callAI(systemPrompt, userPrompt);
-  if (!content || Object.keys(content).length === 0) {
-    content = buildBriefFallback("creative", campaign.name, strategy.pillars);
-  }
-
-  return db.campaignBrief.create({
-    data: {
-      campaignId,
-      title: `Brief Créatif — ${campaign.name}`,
-      content: content as Prisma.InputJsonValue,
-      status: "DRAFT",
-      targetDriver: "CREATIVE",
-      advertis_vector: campaign.advertis_vector as Prisma.InputJsonValue,
-    },
-  });
+  return generateBrief("CREATIVE", campaignId, strategyId);
 }
 
-/**
- * AI-generate a media brief
- */
+/** Génère un brief média déterministe depuis les piliers de marque. */
 export async function generateMediaBrief(campaignId: string, strategyId: string) {
-  const { campaign, strategy } = await loadCampaignWithStrategy(campaignId, strategyId);
-  const systemPrompt = buildBriefSystemPrompt("média");
-  const userPrompt = `Campagne: ${campaign.name}
-Objectifs: ${JSON.stringify(campaign.objectives)}
-Vecteur ADVE: ${JSON.stringify(campaign.advertis_vector)}
-Piliers: ${JSON.stringify(strategy.pillars.map((p) => ({ key: p.key, content: p.content })))}
-Budget: ${campaign.budget} ${campaign.budgetCurrency}
-Actions prévues: ${JSON.stringify(campaign.actions.map((a) => ({ name: a.name, category: a.category, type: a.actionType })))}
-
-Génère un brief média avec: objectifs_media, cibles, canaux, budget_repartition, calendrier, kpis, contraintes`;
-
-  let content = await callAI(systemPrompt, userPrompt);
-  if (!content || Object.keys(content).length === 0) {
-    content = buildBriefFallback("media", campaign.name, strategy.pillars);
-  }
-
-  return db.campaignBrief.create({
-    data: {
-      campaignId,
-      title: `Brief Média — ${campaign.name}`,
-      content: content as Prisma.InputJsonValue,
-      status: "DRAFT",
-      targetDriver: "MEDIA",
-      advertis_vector: campaign.advertis_vector as Prisma.InputJsonValue,
-    },
-  });
+  return generateBrief("MEDIA", campaignId, strategyId);
 }
 
-/**
- * AI-generate a vendor/production brief
- */
+/** Génère un brief fournisseur / prestataire déterministe. */
 export async function generateVendorBrief(campaignId: string, strategyId: string) {
-  const { campaign, strategy } = await loadCampaignWithStrategy(campaignId, strategyId);
-  const systemPrompt = buildBriefSystemPrompt("fournisseur / prestataire");
-  const userPrompt = `Campagne: ${campaign.name}
-Objectifs: ${JSON.stringify(campaign.objectives)}
-Piliers: ${JSON.stringify(strategy.pillars.map((p) => ({ key: p.key, content: p.content })))}
-Budget: ${campaign.budget} ${campaign.budgetCurrency}
-Actions terrain: ${JSON.stringify(campaign.actions.filter((a) => a.category === "BTL").map((a) => ({ name: a.name, type: a.actionType })))}
-
-Génère un brief fournisseur avec: contexte, specifications_techniques, quantites, delais, qualite_attendue, budget_indicatif, criteres_selection`;
-
-  let content = await callAI(systemPrompt, userPrompt);
-  if (!content || Object.keys(content).length === 0) {
-    content = buildBriefFallback("vendor", campaign.name, strategy.pillars);
-  }
-
-  return db.campaignBrief.create({
-    data: {
-      campaignId,
-      title: `Brief Fournisseur — ${campaign.name}`,
-      content: content as Prisma.InputJsonValue,
-      status: "DRAFT",
-      targetDriver: "VENDOR",
-      advertis_vector: campaign.advertis_vector as Prisma.InputJsonValue,
-    },
-  });
+  return generateBrief("VENDOR", campaignId, strategyId);
 }
 
-/**
- * AI-generate a production brief
- */
+/** Génère un brief production déterministe. */
 export async function generateProductionBrief(campaignId: string, strategyId: string) {
-  const { campaign, strategy } = await loadCampaignWithStrategy(campaignId, strategyId);
-  const systemPrompt = buildBriefSystemPrompt("production");
-  const userPrompt = `Campagne: ${campaign.name}
-Objectifs: ${JSON.stringify(campaign.objectives)}
-Piliers: ${JSON.stringify(strategy.pillars.map((p) => ({ key: p.key, content: p.content })))}
-Budget: ${campaign.budget} ${campaign.budgetCurrency}
-Période: ${campaign.startDate?.toISOString()} → ${campaign.endDate?.toISOString()}
-
-Génère un brief production avec: concept_description, format_deliverables, specifications_techniques, planning_production, equipe_requise, budget_production, controle_qualite`;
-
-  let content = await callAI(systemPrompt, userPrompt);
-  if (!content || Object.keys(content).length === 0) {
-    content = buildBriefFallback("production", campaign.name, strategy.pillars);
-  }
-
-  return db.campaignBrief.create({
-    data: {
-      campaignId,
-      title: `Brief Production — ${campaign.name}`,
-      content: content as Prisma.InputJsonValue,
-      status: "DRAFT",
-      targetDriver: "PRODUCTION",
-      advertis_vector: campaign.advertis_vector as Prisma.InputJsonValue,
-    },
-  });
+  return generateBrief("PRODUCTION", campaignId, strategyId);
 }
 
 /**

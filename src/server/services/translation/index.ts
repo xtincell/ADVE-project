@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
-import Anthropic from "@anthropic-ai/sdk";
+import { callLLM } from "@/server/services/llm-gateway";
+import { UNTRUSTED_NOTICE, wrapUntrusted } from "@/server/services/utils/untrusted-content";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -177,14 +178,22 @@ export function getSupportedLanguages(): SupportedLanguage[] {
 // getAnthropicClient — Lazily create the Anthropic client
 // ---------------------------------------------------------------------------
 
-function getAnthropicClient(): Anthropic {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    throw new Error(
-      "ANTHROPIC_API_KEY is not set. Translation service requires an Anthropic API key."
-    );
-  }
-  return new Anthropic({ apiKey });
+/**
+ * Appel LLM via le **gateway** (multi-provider + police de débit par modèle).
+ * Plus de SDK Anthropic en direct : la traduction respecte le provider primaire
+ * (OpenRouter/owl-alpha) et ses limites RPM/RPS comme tout le reste.
+ */
+async function llmTranslate(system: string, prompt: string, maxTokens: number): Promise<string> {
+  const { text } = await callLLM({
+    system: `${UNTRUSTED_NOTICE}\n\n${system}`,
+    prompt,
+    caller: "translation",
+    purpose: "intermediate",
+    responseFormat: "json_object",
+    maxOutputTokens: maxTokens,
+    temperature: 0.2,
+  });
+  return text;
 }
 
 // ---------------------------------------------------------------------------
@@ -209,38 +218,22 @@ export async function translateContent(
     );
   }
 
-  const client = getAnthropicClient();
-
   const systemPrompt = buildTranslationSystemPrompt(langInfo, context);
   const contentStr = JSON.stringify(content, null, 2);
 
-  const response = await client.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 4096,
-    system: systemPrompt,
-    messages: [
-      {
-        role: "user",
-        content: `Translate the following strategic content to ${langInfo.name} (${langInfo.nativeName}).
+  const responseText = await llmTranslate(
+    systemPrompt,
+    `Translate the following strategic content to ${langInfo.name} (${langInfo.nativeName}).
 
 Return a JSON object with exactly two keys:
 1. "translated" — the translated content preserving the same JSON structure and keys (keys stay in English, only values are translated)
 2. "adaptations" — an array of strings describing cultural adaptations you made
 
-Content to translate:
-\`\`\`json
-${contentStr}
-\`\`\``,
-      },
-    ],
-  });
+${wrapUntrusted("Content to translate (JSON)", contentStr, { max: 12000 })}`,
+    4096,
+  );
 
-  const textContent = response.content.find((c: { type: string }) => c.type === "text");
-  if (!textContent || textContent.type !== "text") {
-    throw new Error("No text response from translation API");
-  }
-
-  const parsed = extractJsonFromResponse(textContent.text);
+  const parsed = extractJsonFromResponse(responseText);
 
   return {
     translatedContent: (parsed.translated as Record<string, unknown>) ?? content,
@@ -304,22 +297,15 @@ export async function translateBrief(
   }
   briefContent.pillarContext = pillarContent;
 
-  const client = getAnthropicClient();
-
   const systemPrompt = buildTranslationSystemPrompt(langInfo, {
     sector: intake?.sector ?? undefined,
     market: intake?.country ?? undefined,
     channel: mission.driver?.channel,
   });
 
-  const response = await client.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 8192,
-    system: systemPrompt,
-    messages: [
-      {
-        role: "user",
-        content: `Translate this complete creative brief to ${langInfo.name} (${langInfo.nativeName}).
+  const responseText = await llmTranslate(
+    systemPrompt,
+    `Translate this complete creative brief to ${langInfo.name} (${langInfo.nativeName}).
 
 This is a strategic creative brief for a brand. Maintain:
 - Brand voice consistency
@@ -332,20 +318,11 @@ Return a JSON object with exactly three keys:
 2. "translated" — the full translated brief content preserving JSON structure (keys in English, values translated)
 3. "adaptations" — array of cultural adaptations made
 
-Brief content:
-\`\`\`json
-${JSON.stringify(briefContent, null, 2)}
-\`\`\``,
-      },
-    ],
-  });
+${wrapUntrusted("Brief content (JSON)", JSON.stringify(briefContent, null, 2), { max: 16000 })}`,
+    8192,
+  );
 
-  const textContent = response.content.find((c: { type: string }) => c.type === "text");
-  if (!textContent || textContent.type !== "text") {
-    throw new Error("No text response from translation API");
-  }
-
-  const parsed = extractJsonFromResponse(textContent.text);
+  const parsed = extractJsonFromResponse(responseText);
 
   return {
     briefId,

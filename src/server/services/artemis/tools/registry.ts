@@ -116,6 +116,7 @@ const CR_TOOLS: GloryToolDef[] = [
     },
     outputFormat: "concepts_list",
     outputSchema: conceptGeneratorOutputSchema,
+    usesSeshatReferences: true, // idéation ancrée sur les campagnes réelles du corpus Hunter
     promptTemplate: `En tant que concepteur-rédacteur senior, génère 5 concepts créatifs pour ce brief.
 Contexte marque : {{brand_dna}}
 Brief : {{brief}}
@@ -389,6 +390,7 @@ Objectifs : {{campaign_objectives}} | Budget : {{budget}}
 Timeline : {{timeline}} | Canaux : {{channels}}
 Territoire créatif : {{creative_territory}}
 Livrable : phases, concepts par phase, déclinaisons par canal, cohérence narrative.`,
+    usesSeshatReferences: true, // architecture ancrée sur des campagnes réelles comparables
     status: "ACTIVE",
   },
   defineHybridTool({
@@ -1957,6 +1959,7 @@ Participants : {{participants}} | Durée : {{duration}}
 Contraintes : {{constraints}}
 Catalogue d'actions existant : {{catalogue_actions}}
 Livrable : agenda atelier (warm-up 10min, divergence 30min, convergence 20min, sélection 15min), techniques par phase (SCAMPER, 6 chapeaux, brainwriting), grille de sélection (impact × faisabilité × budget), template de capture.`,
+    usesSeshatReferences: true, // matière d'inspiration : campagnes réelles du corpus Hunter
     status: "ACTIVE",
   },
   {

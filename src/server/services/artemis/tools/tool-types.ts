@@ -210,6 +210,15 @@ export interface GloryToolDef {
    */
   paidTierAllowList?: readonly string[];
   /**
+   * Phase 24 (ADR-0108) — quand `true`, le moteur injecte dans le contexte LLM
+   * un bloc de **références réelles Seshat** (campagnes récoltées par Hunter,
+   * `CampaignReferenceDossier` verdict PASS, pertinentes par secteur/marché),
+   * neutralisé anti-injection. Réservé aux tools d'idéation/benchmark : le LLM
+   * propose des idées **ancrées sur des références réelles**, pas seulement sur
+   * l'ADVE de la marque. Default `undefined` = pas d'injection (ADVE seul).
+   */
+  usesSeshatReferences?: boolean;
+  /**
    * Phase 18-N6 (ADR-0061) — BrandNature applicables pour ce tool. Le sequence-
    * executor + UI cockpit filtrent les tools selon la nodeNature du BrandNode
    * cible. Default `undefined` = tool universel (tous archétypes éligibles).

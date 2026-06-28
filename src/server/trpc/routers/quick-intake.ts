@@ -944,36 +944,16 @@ export const quickIntakeRouter = createTRPCRouter({
         }
       }
 
-      // 4. Social Media & Digital Presence (Brave Search - Moyen légal unifié)
+      // 4. Présence digitale & réseaux sociaux — point d'accès internet canonique
+      //    de Seshat (Brave). De-dup : plus de code Brave inline (ADR-0108). Sans
+      //    clé → DEFERRED, on continue sans bloc présence digitale.
       if (intake.companyName) {
-        try {
-          const braveKey = process.env.BRAVE_API_KEY;
-          if (braveKey) {
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 10_000);
-            
-            // On cherche la marque globalement + spécifiquement sur les réseaux
-            const query = `"${intake.companyName}" OR site:twitter.com OR site:linkedin.com OR site:tiktok.com`;
-            const url = new URL("https://api.search.brave.com/res/v1/web/search");
-            url.searchParams.set("q", query);
-            url.searchParams.set("count", "10"); // Top 10 resultats
-            
-            const res = await fetch(url.toString(), {
-              signal: controller.signal,
-              headers: { "Accept": "application/json", "X-Subscription-Token": braveKey },
-            });
-            clearTimeout(timeout);
-
-            if (res.ok) {
-              const data = await res.json();
-              const results = (data.web?.results || []).map((item: any) => `- ${item.title}: ${item.description}`).join("\n");
-              if (results) {
-                textParts.push(`[PRÉSENCE DIGITALE & RÉSEAUX SOCIAUX]\n${results}`);
-              }
-            }
-          }
-        } catch (err) {
-          console.warn("[quick-intake] Echec de la collecte de presence digitale:", err);
+        const { braveWebSearch } = await import("@/server/services/seshat/web-search");
+        const query = `"${intake.companyName}" OR site:twitter.com OR site:linkedin.com OR site:tiktok.com`;
+        const search = await braveWebSearch(query, { count: 10, timeoutMs: 10_000 });
+        if (search.status === "OK" && search.hits.length) {
+          const results = search.hits.map((h) => `- ${h.title}: ${h.description}`).join("\n");
+          textParts.push(`[PRÉSENCE DIGITALE & RÉSEAUX SOCIAUX]\n${results}`);
         }
       }
 

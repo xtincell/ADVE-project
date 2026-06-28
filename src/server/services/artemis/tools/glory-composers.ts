@@ -369,6 +369,69 @@ export function composeLaunchTimeline(ctx: GloryComposerContext): Blob {
   };
 }
 
+// ── Composer async, adossé à la connaissance Seshat ──────────────────────────
+// `benchmark-reference-finder` se DÉCLARE « interroge le Knowledge Graph Seshat »
+// mais, faute de composer, retombait sur le LLM avec un simple template — il ne
+// lisait jamais le corpus réel. Drift corrigé : on COMPOSE le rapport de benchmark
+// depuis les dossiers de référence RÉELS récoltés par Hunter (verdict PASS,
+// secteur/marché de la marque). 0 LLM, 0 internet — DB pure, reproductible.
+// C'est exactement la doctrine « DB d'abord » : la matière vient de Seshat, le LLM
+// n'est jamais sur le chemin critique de ce tool.
+
+function dnaField(dna: unknown, key: string): string[] {
+  const obj = dna && typeof dna === "object" ? (dna as Blob) : {};
+  return strArr(obj[key]);
+}
+
+export async function composeBenchmarkReferenceFinder(strategyId: string): Promise<Blob> {
+  const { retrieveReferenceDossiers } = await import("@/server/services/seshat/reference-context");
+  const dossiers = await retrieveReferenceDossiers(strategyId, { limit: 8 });
+
+  if (dossiers.length === 0) {
+    return {
+      references: [],
+      count: 0,
+      _provenance: "DETERMINISTIC_COMPOSE",
+      _gap: "Corpus de référence Seshat vide pour ce secteur. Lance une récolte Hunter (Argos) pour alimenter la base — aucune référence inventée.",
+    };
+  }
+
+  const references = dossiers.map((d) => {
+    const voice = (() => {
+      const obj = d.dna && typeof d.dna === "object" ? (d.dna as Blob) : {};
+      return str(obj.voice);
+    })();
+    const axes = dnaField(d.dna, "axes");
+    const keyPhrases = dnaField(d.dna, "keyPhrases");
+    const visualCodes = dnaField(d.dna, "visualCodes");
+    const editorial = str(d.editorial);
+    return {
+      brand: d.brand,
+      campaign: d.campaign,
+      sector: d.sector,
+      market: d.market,
+      whatWorks: [voice ? `Voix : ${voice}` : null, ...axes.map((a) => `Axe : ${a}`)].filter(Boolean),
+      keyPhrases,
+      visualCodes,
+      editorial,
+      // Applicabilité = laissée à l'opérateur/au tool aval : on ne PRÉTEND pas
+      // déduire la transposabilité sans LLM. On fournit la matière brute, sourcée.
+      source: "Seshat / Hunter (CampaignReferenceDossier, verdict PASS)",
+    };
+  });
+
+  return {
+    references,
+    count: references.length,
+    _provenance: "DETERMINISTIC_COMPOSE",
+    _note: "Références réelles récoltées par Hunter. À croiser avec l'ADVE pour en déduire du distinctif (étage LLM aval, découplé).",
+  };
+}
+
+const ASYNC_GLORY_COMPOSERS: Record<string, (strategyId: string) => Promise<Blob>> = {
+  "benchmark-reference-finder": composeBenchmarkReferenceFinder,
+};
+
 // ── Registry + dispatch ──────────────────────────────────────────────────────
 
 const GLORY_COMPOSERS: Record<string, (ctx: GloryComposerContext) => Blob> = {
@@ -378,9 +441,9 @@ const GLORY_COMPOSERS: Record<string, (ctx: GloryComposerContext) => Blob> = {
   "launch-timeline-planner": composeLaunchTimeline,
 };
 
-/** True si un composer déterministe existe pour ce slug. */
+/** True si un composer déterministe existe pour ce slug (sync ou async Seshat). */
 export function hasGloryComposer(slug: string): boolean {
-  return slug in GLORY_COMPOSERS;
+  return slug in GLORY_COMPOSERS || slug in ASYNC_GLORY_COMPOSERS;
 }
 
 export interface DeterministicGloryResult {
@@ -398,6 +461,13 @@ export async function composeGloryDeterministic(
   slug: string,
   strategyId: string,
 ): Promise<DeterministicGloryResult> {
+  // Composer async adossé à Seshat (lit le corpus DB, pas l'ADVERTIS seul).
+  const asyncComposer = ASYNC_GLORY_COMPOSERS[slug];
+  if (asyncComposer) {
+    const output = await asyncComposer(strategyId);
+    return { output, ok: true };
+  }
+
   const composer = GLORY_COMPOSERS[slug];
   if (!composer) return { output: {}, ok: false };
 

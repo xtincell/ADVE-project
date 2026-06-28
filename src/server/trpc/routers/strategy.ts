@@ -9,6 +9,7 @@ import * as auditTrail from "@/server/services/audit-trail";
 import { canAccessStrategy, scopeStrategies } from "@/server/services/operator-isolation";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import * as strategyArchive from "@/server/services/strategy-archive";
+import { buildCampaignBrief } from "@/server/services/campaign-manager/brief-builder";
 import { emitIntent } from "@/server/services/mestor/intents";
 import { PILLAR_STORAGE_KEYS } from "@/domain";
 /* lafusee:governed-active */
@@ -834,12 +835,23 @@ export const strategyRouter = createTRPCRouter({
       return { warning: false as const, confidence: 1.0, updated };
     }),
 
-  generateProjectsFromActions: operatorProcedure
-    .input(z.object({
+  generateProjectsFromActions: governedProcedure({
+    kind: "LEGACY_STRATEGY_GENERATE_PROJECTS_FROM_ACTIONS",
+    inputSchema: z.object({
       strategyId: z.string(),
       actionIds: z.array(z.string()),
-    }))
+    }),
+    caller: "strategy:generateProjectsFromActions",
+  })
     .mutation(async ({ ctx, input }) => {
+      if (!(await canAccessStrategy(input.strategyId, {
+        operatorId: (ctx.session.user as unknown as Record<string, unknown>).operatorId as string | null ?? null,
+        userId: ctx.session.user.id,
+        role: ctx.session.user.role ?? "USER",
+      }))) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé: cette stratégie appartient à un autre opérateur" });
+      }
+
       const { generateCampaignCode } = await import("@/server/services/campaign-manager");
 
       const strategy = await ctx.db.strategy.findUniqueOrThrow({
@@ -884,32 +896,24 @@ export const strategyRouter = createTRPCRouter({
           },
         });
 
+        // Brief déterministe (zéro LLM) — même constructeur que campaign-manager,
+        // combine direction créative + specs de production pour le projet.
+        const briefCtx = { campaign, strategy, action } as const;
+        const creative = buildCampaignBrief("CREATIVE", briefCtx);
+        const production = buildCampaignBrief("PRODUCTION", briefCtx);
         const initialBriefContent = {
-          briefClient: {
-            client: strategy.name,
-            contexte_business: action.description ?? "",
-            contexte_marque: `Généré depuis la validation de la stratégie d'ADVE-RTIS.`,
-            contexte_market: `Localité : ${action.locality ?? "Non spécifié"}.`,
-            cible_principale: action.persona ?? "Non spécifié",
-            obj_business: `Lancer le projet issu de l'action ${action.title}.`,
-            big_idea: `Nourrir la réussite sous le territoire ${strategy.name}.`,
-          },
-          briefCreatif: {
-            message_claim: action.title,
-            challenge_creatif: `Traduire l'action ${action.title} en une campagne percutante.`,
-          },
-          briefProduction: {
-            livrable_principal: `Supports requis pour le touchpoint ${action.touchpoint ?? "Non spécifié"}.`,
-            deadline_prod: action.timingEnd ? action.timingEnd.toISOString().slice(0, 10) : undefined,
-          },
+          briefClient: creative.briefClient,
+          briefCreatif: creative.briefCreatif,
+          briefProduction: production.briefProduction,
           caseStudy: {},
+          meta: production.meta,
         };
 
         await ctx.db.campaignBrief.create({
           data: {
             campaignId: campaign.id,
             title: `Brief - ${campaign.name}`,
-            content: initialBriefContent,
+            content: initialBriefContent as Prisma.InputJsonValue,
             briefType: "CREATIVE",
             status: "VALIDATED",
           },
@@ -924,7 +928,7 @@ export const strategyRouter = createTRPCRouter({
             priority: action.priority === "P0" ? 1 : action.priority === "P1" ? 3 : 5,
             budget: budgetPlanned,
             slaDeadline: action.timingEnd,
-            briefData: initialBriefContent,
+            briefData: initialBriefContent as Prisma.InputJsonValue,
           },
         });
 

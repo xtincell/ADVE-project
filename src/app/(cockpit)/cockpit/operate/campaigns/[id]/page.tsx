@@ -973,8 +973,9 @@ function BriefsTab({ campaignId, strategyId }: { campaignId: string; strategyId:
 
   return (
     <div className="space-y-5">
-      {/* AI Generation bar */}
-      <Section title="Generation IA" icon={Sparkles}>
+      {/* Deterministic brief generation bar */}
+      <Section title="Génération de brief (déterministe)" icon={FileText}>
+        <p className="mb-3 text-xs text-foreground-muted">Briefs dérivés mécaniquement du noyau ADVE de la marque — reproductibles, sans LLM.</p>
         <div className="flex flex-wrap gap-2">
           {[
             { type: "CREATIVE", label: "Brief creatif" },
@@ -988,7 +989,7 @@ function BriefsTab({ campaignId, strategyId }: { campaignId: string; strategyId:
               disabled={generating === g.type}
             >
               <span className="flex items-center gap-1">
-                <Sparkles className="h-3 w-3" />
+                <FileText className="h-3 w-3" />
                 {generating === g.type ? "Generation..." : `Generer ${g.label}`}
               </span>
             </MiniBtn>

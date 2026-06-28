@@ -2,7 +2,8 @@ import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import type { PillarKey } from "@/lib/types/advertis-vector";
 import { PILLAR_KEYS, PILLAR_NAMES } from "@/lib/types/advertis-vector";
-import Anthropic from "@anthropic-ai/sdk";
+import { callLLM } from "@/server/services/llm-gateway";
+import { UNTRUSTED_NOTICE, wrapUntrusted, sanitizeInline } from "@/server/services/utils/untrusted-content";
 
 interface TagResult {
   assetId: string;
@@ -169,8 +170,6 @@ async function aiTagAsset(
   confidence: number;
   reasons: Record<string, string>;
 }> {
-  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
   const pillarContext = asset.strategy.pillars
     .map((p) => `${p.key.toUpperCase()} (${PILLAR_NAMES[p.key as PillarKey] ?? p.key}): ${JSON.stringify(p.content)}`)
     .join("\n");
@@ -179,13 +178,14 @@ async function aiTagAsset(
     ? `Also include "reasons": { "pillar_key": "brief explanation" } for each pillar with relevance > 0.3.`
     : "";
 
-  const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 1024,
-    messages: [
-      {
-        role: "user",
-        content: `You are a brand asset analyst using the ADVERTIS framework with 8 pillars:
+  const { text: responseText } = await callLLM({
+    system: UNTRUSTED_NOTICE,
+    caller: "asset-tagger",
+    purpose: "intermediate",
+    responseFormat: "json_object",
+    maxOutputTokens: 1024,
+    temperature: 0,
+    prompt: `You are a brand asset analyst using the ADVERTIS framework with 8 pillars:
 A = Authenticite (brand identity, values, heritage)
 D = Distinction (visual identity, design, differentiation)
 V = Valeur (value proposition, products, services)
@@ -197,12 +197,11 @@ S = Strategie (brand strategy, guidelines, playbooks)
 
 Analyze this brand asset and rate its relevance to each pillar (0.0 to 1.0):
 
-Asset name: "${asset.name}"
-File URL: ${asset.fileUrl ?? "N/A"}
-Strategy: "${asset.strategy.name}"
+Asset name: "${sanitizeInline(asset.name, { max: 300 })}"
+File URL: ${sanitizeInline(asset.fileUrl ?? "N/A", { max: 500 })}
+Strategy: "${sanitizeInline(asset.strategy.name, { max: 200 })}"
 
-Strategy pillars context:
-${pillarContext}
+${wrapUntrusted("Strategy pillars context", pillarContext, { max: 8000 })}
 
 Return JSON only:
 {
@@ -212,17 +211,14 @@ Return JSON only:
 }
 
 ${reasonInstruction}`,
-      },
-    ],
   });
 
-  const textBlock = message.content.find((b) => b.type === "text");
-  if (!textBlock) {
+  if (!responseText) {
     throw new Error("No text response from AI");
   }
 
   // Parse JSON from response
-  let jsonStr = textBlock.text;
+  let jsonStr = responseText;
   const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
   if (jsonMatch) jsonStr = jsonMatch[0];
 

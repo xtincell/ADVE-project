@@ -59,6 +59,13 @@ export async function execute(intent: Intent): Promise<IntentResult> {
       case "PROPOSE_BRAND_ACTIONS":
         return wrap({ ...base, ...(await proposeBrandActionsHandler(intent)) });
 
+      case "CAPTURE_INTENTION":
+        return wrap({ ...base, ...(await captureIntentionHandler(intent)) });
+      case "GENERATE_BRIEF_FROM_INTENTION":
+        return wrap({ ...base, ...(await generateBriefFromIntentionHandler(intent)) });
+      case "VALIDATE_INTENTION_BRIEF":
+        return wrap({ ...base, ...(await validateIntentionBriefHandler(intent)) });
+
       case "PRODUCE_DELIVERABLE":
         return wrap({ ...base, ...(await produceDeliverable(intent)) });
 
@@ -737,6 +744,70 @@ async function proposeBrandActionsHandler(
     status: "OK",
     summary,
     tool: "artemis:propose-brand-actions",
+    output: res,
+  };
+}
+
+// ── Phase 24 (ADR-0106) — Intention : porte d'entrée du cycle de vie ──
+
+async function captureIntentionHandler(
+  intent: Extract<Intent, { kind: "CAPTURE_INTENTION" }>,
+): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
+  const { captureIntention } = await import("@/server/services/intention");
+  const row = await captureIntention({
+    strategyId: intent.strategyId,
+    type: intent.type,
+    title: intent.title,
+    description: intent.description,
+    operatorId: intent.operatorId,
+  });
+  return {
+    status: "OK",
+    summary: `Intention « ${row.title} » capturée (${row.type}).`,
+    tool: "intention:capture",
+    output: row,
+  };
+}
+
+async function generateBriefFromIntentionHandler(
+  intent: Extract<Intent, { kind: "GENERATE_BRIEF_FROM_INTENTION" }>,
+): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
+  const { generateBriefFromIntention, IntentionBriefSchema } = await import("@/server/services/intention");
+  const manualBrief =
+    intent.mode === "MANUAL" && intent.manualBrief != null
+      ? IntentionBriefSchema.parse(intent.manualBrief)
+      : undefined;
+  const res = await generateBriefFromIntention({
+    intentionId: intent.intentionId,
+    mode: intent.mode,
+    manualBrief,
+  });
+  const summary =
+    res.status === "BRIEF_GENERATED"
+      ? `Brief candidat généré (${res.mode}) — cohérence ADVE : ${res.coherence?.band ?? "?"}.`
+      : `Génération de brief différée (${res.mode}) : ${res.deferredReason ?? "indisponible"}.`;
+  return {
+    status: "OK",
+    summary,
+    tool: "intention:generate-brief",
+    output: res,
+    ...(res.coherence?.band === "DIVERGENT"
+      ? { warnings: ["Brief candidat DIVERGENT du noyau ADVE — validation nécessite un override."] }
+      : {}),
+  };
+}
+
+async function validateIntentionBriefHandler(
+  intent: Extract<Intent, { kind: "VALIDATE_INTENTION_BRIEF" }>,
+): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
+  const { validateIntentionBrief } = await import("@/server/services/intention");
+  const res = await validateIntentionBrief(intent.intentionId, { override: intent.override });
+  return {
+    status: "OK",
+    summary: res.validated
+      ? `Brief d'intention validé (cohérence ${res.band ?? "n/a"}).`
+      : `Validation bloquée : ${res.blocked} (override requis).`,
+    tool: "intention:validate-brief",
     output: res,
   };
 }

@@ -89,6 +89,33 @@ export type Intent =
       via?: "BRIEF" | "GENERATE_MORE" | "MANUAL";
       operatorId?: string;
     }
+  // ── Phase 24 (ADR-0106) — Intention : porte d'entrée du cycle de vie ──
+  // CAPTURE = déterministe. GENERATE_BRIEF = seule porte LLM légitime (croise
+  // l'intention × ADVE), parité MANUAL + dégradation DEFERRED. VALIDATE = gate
+  // cohérence déterministe. Aucun pilier ADVE muté (le brief est en aval).
+  | {
+      kind: "CAPTURE_INTENTION";
+      strategyId: string;
+      type: "PRODUCT_LAUNCH" | "REPOSITION" | "MARKET_ENTRY" | "CAMPAIGN" | "PLATFORM" | "PARTNERSHIP" | "OTHER";
+      title: string;
+      description: string;
+      operatorId?: string;
+    }
+  | {
+      kind: "GENERATE_BRIEF_FROM_INTENTION";
+      strategyId: string;
+      intentionId: string;
+      mode: "LLM" | "MANUAL";
+      manualBrief?: unknown;
+      operatorId?: string;
+    }
+  | {
+      kind: "VALIDATE_INTENTION_BRIEF";
+      strategyId: string;
+      intentionId: string;
+      override?: boolean;
+      operatorId?: string;
+    }
   // ── Deliverable production (PILLAR sequences) ──
   | {
       kind: "PRODUCE_DELIVERABLE";
@@ -1082,6 +1109,11 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
       return ["i"];
     case "SYNTHESIZE_S":
       return ["s"];
+    // Phase 24 (ADR-0106) — Intention : aval de l'ADVE, ne mute aucun pilier.
+    case "CAPTURE_INTENTION":
+    case "GENERATE_BRIEF_FROM_INTENTION":
+    case "VALIDATE_INTENTION_BRIEF":
+      return [];
     case "PRODUCE_DELIVERABLE":
     case "INDEX_BRAND_CONTEXT":
     case "INDEX_BRAND_SOURCE":

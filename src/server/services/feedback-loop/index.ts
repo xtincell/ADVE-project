@@ -30,7 +30,8 @@ import { captureEvent } from "@/server/services/knowledge-capture";
 import { detectDrift } from "./drift-detector";
 import type { PillarKey } from "@/lib/types/advertis-vector";
 import { PILLAR_KEYS, PILLAR_NAMES } from "@/lib/types/advertis-vector";
-import Anthropic from "@anthropic-ai/sdk";
+import { callLLM } from "@/server/services/llm-gateway";
+import { UNTRUSTED_NOTICE, wrapUntrusted, sanitizeInline } from "@/server/services/utils/untrusted-content";
 
 const DRIFT_THRESHOLD_PERCENT = 15;
 
@@ -241,22 +242,21 @@ async function runArtemisDiagnostic(
 
     const pillarContent = strategy.pillars.find((p) => p.key === pillar);
 
-    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const { text: responseText } = await callLLM({
+      system: UNTRUSTED_NOTICE,
+      caller: "feedback-loop:drift-diagnostic",
+      purpose: "intermediate",
+      responseFormat: "json_object",
+      maxOutputTokens: 1024,
+      temperature: 0,
+      prompt: `You are ARTEMIS, the brand strategy diagnostic engine for the ADVERTIS framework.
 
-    const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1024,
-      messages: [
-        {
-          role: "user",
-          content: `You are ARTEMIS, the brand strategy diagnostic engine for the ADVERTIS framework.
-
-A drift has been detected on the "${PILLAR_NAMES[pillar]}" pillar (key: ${pillar}) for strategy "${strategy.name}".
+A drift has been detected on the "${PILLAR_NAMES[pillar]}" pillar (key: ${pillar}) for strategy "${sanitizeInline(strategy.name, { max: 200 })}".
 
 Previous score: ${previousScore}/25
 Current score: ${currentScore}/25
-Severity: ${severity}
-Pillar content: ${JSON.stringify(pillarContent?.content ?? {}, null, 2)}
+Severity: ${sanitizeInline(severity, { max: 40 })}
+${wrapUntrusted("Pillar content", JSON.stringify(pillarContent?.content ?? {}, null, 2), { max: 6000 })}
 
 Analyze this drift and provide:
 1. Root cause analysis (what likely caused the score drop)
@@ -269,12 +269,9 @@ Be concise and actionable. Respond in JSON format:
   "impact": "...",
   "actions": ["action1", "action2", ...]
 }`,
-        },
-      ],
     });
 
-    const textBlock = message.content.find((b) => b.type === "text");
-    return textBlock?.text ?? "Diagnostic unavailable";
+    return responseText || "Diagnostic unavailable";
   } catch {
     return `Drift detected on ${PILLAR_NAMES[pillar]}: score dropped from ${previousScore} to ${currentScore} (${severity}). Manual review recommended.`;
   }

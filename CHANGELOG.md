@@ -10,6 +10,127 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.49 — feat(agency): MediaPlan + PCA déterministe (post-buy prévu vs réalisé) (2026-06-28)
+
+Ferme le trou « pas de media plan structuré / PCA » du gap-analysis média. Audité sur la
+réalité ad-ops (GAM Order/LineItem ; Mediaocean Lumina budgeted→planned→booked→actual ;
+anatomie media plan bionic-ads).
+
+- **Modèles** `MediaPlan` + `MediaPlanLine` (+ enum `MediaPlanStatus` PLANNED→BOOKED→LIVE→
+  RECONCILED), migration additive `20260628140000_phase24_media_plan`. Ligne = canal + ATL/BTL/TTL
+  + **prévu** (impressions/GRP/reach/freq/spend/cpm) + **réalisé** (impressions/spend).
+- **PCA déterministe** (`media-plan/`) : `computeLinePca`/`computePlanPca` **purs** réutilisent le
+  moteur `media-metrics` (écart prévu/réalisé, **makegood** sous-livraison, CPM réalisé, GRP dérivé
+  reach×freq). Zéro LLM, zéro valeur métier codée (CPM résolu depuis `MarketCostSnapshot`).
+- **tRPC `mediaPlan`** : `listByCampaign`/`pca` (lectures tenant-scopées) + `create`/`addLine`/
+  `recordActuals` gouvernés (3 Intent kinds `LEGACY_MEDIA_PLAN_*` + SLOs).
+
+Test **zéro mock** : PCA pur sur valeurs réelles (sous-livraison 100k→80k → variance −20 %,
+makegood 20k, CPM réalisé ; GRP dérivé ; déterminisme). tsc 0 · eslint 0 · 2203 tests verts. Cap 7/7.
+
+---
+
+## v6.27.48 — feat(thot): benchmarks média CPM/CPC en base, sourcés (1ère fermeture média) (2026-06-28)
+
+Ferme le trou « barèmes média codés en dur » du gap-analysis multi-acteurs : les tarifs
+média ne sont **jamais des constantes**, ce sont des **lignes de référence datées + sourcées**.
+
+- **Anti-doublon (NEFER interdit #1)** : aucune nouvelle table — on **étend `MarketCostSnapshot`**
+  (ADR-0099, qui modélise déjà « CPM par marché × période × devise × source »). 0 migration.
+- `prisma/seed-media-benchmarks.ts` : constructeur **pur** `buildMediaBenchmarkRows()` (22 lignes
+  sourcées — Adwave/Remnant/WordStream/Gupta/AdQuick/Adamigo) : CPM TV broadcast/cable/CTV/Netflix,
+  YouTube, radio, OOH, display, cinéma, podcast, Meta, TikTok, CPC Google (US) + proxys Afrique
+  (NG/KE/ZA/EG, flaggés **PROXY** + confiance basse — honnêteté). Chaque ligne : marché, période,
+  devise, **source (nom/URL/année)**, distribution p10/p50/p90, confiance.
+- `market-cost` : helpers `mediaMetricKey(channel, CPM|CPC)` + `getMediaCost(...)` — le moteur média
+  (`media-metrics.ts`) **résout le CPM depuis la base**, il n'en code aucun.
+- `npm run db:seed:media-benchmarks` (upsert idempotent).
+
+Test **zéro mock** : le constructeur pur garantit source+devise+marché+période+confiance par ligne,
+cohérence p10≤p50≤p90, unicité des clés, déterminisme. tsc 0 · eslint 0 · 2197 tests verts. Cap 7/7.
+
+---
+
+## v6.27.47 — docs+feat: cycle de vie multi-acteurs (audit marché) + moteur média déterministe (2026-06-28)
+
+Réponse au mandat « élabore le cycle de vie du wrap croustillant BK côté freelance/production,
+bureau d'étude, agence ATL/BTL/TTL, agence conseil ; audite les process sur internet ; ferme
+les trous ; rien codé en dur, base de données, pas de mock ».
+
+- **`docs/governance/lifecycle-gap-analysis-multi-actor.md`** : les 4 cycles de vie **audités sur
+  la réalité du marché** (sources citées — AICP/Wrapbook/StudioBinder pour la production ;
+  ESOMAR/Nielsen BASES/Kantar/Sawtooth/DDI/Triple-S pour le bureau d'étude ; WARC/Binet&Field/
+  IAB/Geopath + cas BK Whopper Detour 37:1 ROI, Moldy Whopper $40M EMV/+14 %, Shot-on-iPhone
+  6,5 Md impressions, Riot Worlds/K-DA pour le média ; McKinsey/BCG/Keller CBBE/Holt/RICE pour
+  le conseil). Chaque acteur : cycle réel → mapping système (EXISTS/PARTIAL/MISSING) → **11 trous
+  priorisés** fermés par des **entités DB seedées** (jamais des constantes). Constat transverse :
+  taxonomies/barèmes/chiffres = **lignes de table datées + sourcées**, jamais en dur.
+- **`media-metrics.ts`** (1ère fermeture, production-level) : moteur **déterministe** des KPI
+  média (GRP, CPM, CPP, CTR, CPC, VCR/VTR, CPA, ROAS, SOV/ESOV→croissance, conversion sampling,
+  rédemption, écart PCA, makegood) — **formules canoniques uniquement, zéro valeur métier codée**
+  (CPM/GRP-cible/fréquence-efficace/coef ESOV fournis en entrée depuis la base). Division sûre,
+  zéro LLM. Test **zéro mock** sur valeurs sourcées (Adjust/Wikipedia/True Impact/Binet&Field).
+
+Reste séquencé dans le doc : tables de référence seedées (MediaBenchmark CPM×canal×marché×période,
+n→MoE/T2B, AICP A→X, framework catalog) + entités (ResearchWave, DeliverableSpec/UsageGrant,
+MediaPlan PCA, RICE) — toutes sur le pattern `MarketCostSnapshot` (daté/sourcé). tsc 0 · eslint 0 ·
+2192 tests verts. Cap APOGEE 7/7 préservé.
+
+---
+
+## v6.27.46 — feat(intention): porte d'entrée du cycle de vie (intention × ADVE → brief validé) (2026-06-28)
+
+Ferme les **2 trous P0** du gap-analysis : aucune entité ne captait une **intention
+net-new** (lancer un produit, repositionner, entrer sur un marché), et aucun Intent
+ne **croisait l'intention × l'ADVE réel** pour produire un brief validé. C'est le
+point d'entrée n°1 de la valeur et la **seule porte LLM légitime** du cycle (ADR-0106).
+
+- **Modèle `Intention`** (+ enums `IntentionType`/`IntentionStatus`, migration additive
+  `20260628120000_phase24_intention_front_door`). 0 hardcode : le brief est une projection
+  ADVE (manuel) ou un croisement LLM×ADVE (IA).
+- **3 Intents gouvernés** (union `emitIntent` → Artemis commandant) : `CAPTURE_INTENTION`
+  (déterministe) · `GENERATE_BRIEF_FROM_INTENTION` (mode LLM via `executeStructuredLLMCall`
+  — sortie gardée par schéma Zod, entrée neutralisée OWASP LLM01, débit owl-alpha respecté ;
+  **mode MANUAL** parité ADR-0060 ; **DEFERRED** sans provider — jamais de hard-fail ; gate
+  cohérence C6 snapshotté) · `VALIDATE_INTENTION_BRIEF` (un brief DIVERGENT de l'ADVE exige
+  un override explicite). Le brief validé alimente le pipeline déterministe aval (déjà en place).
+- **tRPC `intention`** (list/get/capture/generateBrief/validateBrief), tenant-scopé.
+- `pillarsAffected = []` (aval de l'ADVE — STOP à Jehuty préservé : aucune écriture pilier).
+
+Test **zéro mock, production-level** : schéma + gate cohérence C6 réel (COHERENT vs DIVERGENT)
++ décision de validation pure. tsc 0 · eslint 0 · audit LLM strict 0 régression · 2181 tests verts.
+Cap APOGEE 7/7 préservé (sous-domaine Artemis).
+
+---
+
+## v6.27.45 — fix(llm-gateway): police de débit par modèle + fin des appels Anthropic directs (2026-06-28)
+
+Le système faisait des **erreurs Anthropic alors que tout est censé être sur OpenRouter** (modèle `owl-alpha`), et **aucune limite RPS/RPM par modèle** n'était respectée (seul un retry-on-failure existait → 429 en rafale). Deux corrections structurelles :
+
+**1. Police de débit PAR MODÈLE (le système n'improvise plus).** Nouveau module pur `llm-gateway/rate-policy.ts` : registre déclaratif `{ modèle → { rpm, maxConcurrent, minIntervalMs } }` (entrée `owl-alpha` + défaut conservateur), valeurs **surchargeables par env** (le code déclare la structure, l'opérateur fixe les chiffres). Limiteur process-local (fenêtre glissante RPM + sémaphore de concurrence + intervalle min RPS) : `callLLM` **acquiert un créneau pour le modèle effectivement servi** avant chaque appel provider et **attend** si la limite est atteinte au lieu de partir et de se prendre un 429. Env : `OWL_ALPHA_RPM` (déf. 20), `OWL_ALPHA_CONCURRENCY` (déf. 2), `OWL_ALPHA_MIN_INTERVAL_MS` (déf. 1500), `LLM_DEFAULT_RPM`/`_CONCURRENCY`/`_MIN_INTERVAL_MS`, `LLM_RATE_MAX_WAIT_MS`. Limite : process-local (multi-pod exact = Redis, résidu connu).
+
+**2. Provider primaire + fin des bypass Anthropic.** Nouveau `LLM_PRIMARY_PROVIDER` (ex. `openrouter`) → ce provider passe en tête de l'ordre d'essai (sinon Anthropic était tenté d'abord et levait des erreurs). Surtout : **5 services appelaient le SDK Anthropic en DIRECT** (hors gateway, modèle hardcodé) — source réelle des « erreurs Anthropic » : `quality-modulator` (mort depuis LOI 9 → **supprimé**), `translation`, `qc-router/automated-qc`, `asset-tagger`, `feedback-loop` (**reroutés via `callLLM`**). Plus **aucun** `import @anthropic-ai/sdk` hors gateway : tout le texte respecte désormais le cascade provider + la police de débit + le cost-tracking.
+
+`rate-policy.test.ts` (résolution exact/sous-chaîne/défaut + concurrence + RPM + release-on-throw). tsc 0 · eslint 0 · 2173 tests unit verts. Cap APOGEE 7/7 préservé.
+
+---
+
+## v6.27.44 — fix(campaign): génération de campagne 100 % déterministe + gouvernée (2026-06-28)
+
+Canonisation de la **zone production campagne** après dérive des dernières mises à jour. La doctrine « Fusée non-dépendante du LLM » (LOI 9) n'était pas respectée sur le bouton de génération de campagne et ses briefs.
+
+**1. Brief de campagne déterministe (zéro LLM).** Suppression de `callAI()` dans `campaign-manager/index.ts` — il importait le SDK Anthropic **en direct** (hors LLM Gateway : pas de circuit-breaker, pas de fallback multi-provider, pas de cost-tracking, pas de headroom) avec un **modèle hardcodé** périmé, en chemin primaire des 4 générateurs de brief. Nouveau module pur `campaign-manager/brief-builder.ts` (`buildCampaignBrief`) : le brief est dérivé mécaniquement du noyau ADVE de la marque (réutilise `flattenPillarText`, helper déterministe de la gate C6). Les 4 générateurs (`generateCreativeBrief/Media/Vendor/Production`) passent par cette voie unique. Variance = 0, reproductible, auditable.
+
+**2. Bouton « Déclencher Campagne & Production » gouverné.** `strategy.generateProjectsFromActions` faisait des écritures `ctx.db.*` brutes (campaign + brief + mission + brandAction) **sans `emitIntent`** (bypass governance, interdit NEFER #2). Désormais `governedProcedure` + nouveau kind `LEGACY_STRATEGY_GENERATE_PROJECTS_FROM_ACTIONS` (+ SLO) → IntentEmission hash-chaînée + cost-gate + contrôle d'accès stratégie. Brief initial unifié sur le même `buildCampaignBrief` (fin du drift de forme entre les deux points d'entrée).
+
+**3. Honnêteté UI.** Le bloc cockpit « Génération IA » (campagne `[id]`) est relabellisé « Génération de brief (déterministe) » — il ne revendique plus l'IA pour un chemin mécanique.
+
+**4. Drift résiduel des commits récents corrigé.** 3 casts `as never` introduits dans `cockpit/operate/campaigns/page.tsx` (filtrage `STATE_PHASE_GROUPS`) → helper typé `inPhase(readonly string[], …)` (rétablit le baseline 0 de `no-bare-as-never`).
+
+Chaîne validée bout-en-bout (pilier S → actions → roadmap → campagne → brief → mission → bilan) : tout est déterministe. Test `tests/unit/services/campaign-manager/brief-builder.test.ts` (advertis de BLISS, dummy content) : forme canonique non-vide, déterminisme variance=0, zéro primitive LLM dans le source, cohérence brief↔ADVE (gate C6) jamais DIVERGENT. tsc 0 · eslint 0 · 2168 tests unit verts (dont 869 governance). Cap APOGEE 7/7 préservé.
+
+---
+
 ## v6.27.43 — feat(artemis): 44 Glory tools LLM → HYBRID + llm-cost-model doc (2026-06-24)
 
 Conversion structurelle de **44 Glory tools** `executionType: "LLM"` → `"HYBRID"` via `defineHybridTool()` factory (ADR-0060 manual-first parity — ferme N6-bis résiduel Phase 23 Epic 5) :
