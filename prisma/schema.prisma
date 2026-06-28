@@ -3770,6 +3770,16 @@ model Recommendation {
   weightedScore       Float? // 0.45×ruler + 0.35×impact normalisé + 0.20×confidence
   predecessorId       String? // reco APPLIED que celle-ci prétend remplacer (lineage)
 
+  // ── Priorisation RICE déterministe (ADR-0109 — acteur Conseil) ──
+  // riceScore = (reach × impact × confidence) / effort. PUR, zéro LLM. Les valeurs
+  // numériques des libellés viennent de la table de référence seedée `RiceScale`
+  // (jamais une constante en code). Nullable : non calculé tant qu'absent.
+  riceReach      Float? // portée (people/période ou valeur d'échelle seedée)
+  riceImpact     Float? // multiplicateur d'impact (échelle RICE seedée)
+  riceConfidence Float? // 0.0-1.0 (réutilise `confidence` par défaut)
+  riceEffort     Float? // effort en personne-mois (> 0)
+  riceScore      Float? // résultat pur (null si effort ≤ 0)
+
   // ── Lifecycle ──
   status       String    @default("PENDING") // PENDING|ACCEPTED|REJECTED|APPLIED|REVERTED|EXPIRED
   reviewedBy   String? // userId
@@ -3823,6 +3833,25 @@ model RecommendationBatch {
   updatedAt DateTime @updatedAt
 
   @@index([strategyId, missionType])
+}
+
+// Barème RICE — DONNÉES de référence, jamais une constante en code (ADR-0109).
+// L'acteur Conseil priorise les recommandations via RICE (Reach×Impact×Confidence
+// /Effort). Les valeurs numériques des libellés (« Massive » → 3, « High » → 2…)
+// sont des LIGNES mutables, seedées (échelle Intercom canon), pas du hardcode.
+model RiceScale {
+  id        String @id @default(cuid())
+  dimension String // REACH|IMPACT|CONFIDENCE|EFFORT
+  label     String // "Massive" | "High" | "Medium" | "Low" | "Minimal" …
+  value     Float // multiplicateur/valeur déterministe associé au libellé
+  sortOrder Int    @default(0)
+  note      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([dimension, label])
+  @@index([dimension, sortOrder])
 }
 
 // ═══════════════════════════════════════════════════════════════════

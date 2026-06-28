@@ -114,6 +114,7 @@ import { thotRouter } from "./routers/thot";
 import { actionsRouter } from "./routers/actions";
 import { intentionRouter } from "./routers/intention";
 import { mediaPlanRouter } from "./routers/media-plan";
+import { consultingRouter } from "./routers/consulting";
 // Blog — CMS natif « Notes de cabinet » du site public UPgraders (public read + operator CRUD)
 import { blogRouter } from "./routers/blog";
 import { newsletterRouter } from "./routers/newsletter";
@@ -250,6 +251,7 @@ export const appRouter = createTRPCRouter({
   actions: actionsRouter,
   intention: intentionRouter,
   mediaPlan: mediaPlanRouter,
+  consulting: consultingRouter,
   // Blog — CMS natif « Notes de cabinet » du site public UPgraders
   blog: blogRouter,
 });

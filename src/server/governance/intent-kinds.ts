@@ -507,6 +507,7 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "LEGACY_MEDIA_PLAN_CREATE", governor: "INFRASTRUCTURE", handler: "media-plan", async: false, description: "Création d'un plan média ATL/BTL/TTL (ADR-0107)." },
   { kind: "LEGACY_MEDIA_PLAN_ADD_LINE", governor: "INFRASTRUCTURE", handler: "media-plan", async: false, description: "Ajout d'une ligne média prévue à un plan (ADR-0107)." },
   { kind: "LEGACY_MEDIA_PLAN_RECORD_ACTUALS", governor: "INFRASTRUCTURE", handler: "media-plan", async: false, description: "Enregistrement du réalisé d'une ligne média (post-buy/PCA, ADR-0107)." },
+  { kind: "LEGACY_RECOMMENDATION_SET_RICE", governor: "INFRASTRUCTURE", handler: "consulting-rice", async: false, description: "Priorisation RICE déterministe d'une recommandation (acteur Conseil, ADR-0109)." },
   { kind: "LEGACY_MATCHING_OVERRIDE", governor: "INFRASTRUCTURE", handler: "matching", async: false, description: "Strangler-promoted mutation 'override' from router 'matching'." },
   { kind: "LEGACY_MEDIA_BUYING_DETECT_ANOMALIES", governor: "INFRASTRUCTURE", handler: "media-buying", async: false, description: "Strangler-promoted mutation 'detectAnomalies' from router 'media-buying'." },
   { kind: "LEGACY_MEDIA_BUYING_PUSH_BENCHMARKS", governor: "INFRASTRUCTURE", handler: "media-buying", async: false, description: "Strangler-promoted mutation 'pushBenchmarks' from router 'media-buying'." },

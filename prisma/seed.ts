@@ -1045,6 +1045,18 @@ async function main() {
   // ================================================================
   const { seedSpawt } = await import("./seed-spawt");
   await seedSpawt(prisma);
+
+  // ================================================================
+  // Barèmes de référence déterministes (jamais en dur dans le code) :
+  // RICE (acteur Conseil, ADR-0109) + benchmarks média (ADR-0107).
+  // ================================================================
+  const { seedRiceScales } = await import("./seed-rice-scales");
+  const riceN = await seedRiceScales(prisma);
+  console.log(`✓ ${riceN} lignes de barème RICE seedées`);
+
+  const { seedMediaBenchmarks } = await import("./seed-media-benchmarks");
+  const mediaN = await seedMediaBenchmarks(prisma);
+  console.log(`✓ ${mediaN} benchmarks média seedés`);
 }
 
 main()
