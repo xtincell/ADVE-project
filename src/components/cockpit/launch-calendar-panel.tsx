@@ -155,7 +155,19 @@ export function LaunchCalendarPanel() {
                   <div key={canal} className="rounded-lg border border-white/5 bg-surface-raised p-4">
                     <div className="mb-2 flex items-center justify-between gap-2">
                       <span className="text-sm font-semibold text-foreground">{canal}</span>
-                      {c.rythme ? <span className="rounded-full bg-accent/15 px-2 py-0.5 text-2xs text-accent">{c.rythme}</span> : null}
+                      {c.rythme ? (
+                        <span className="flex items-center gap-1.5">
+                          <span className="rounded-full bg-accent/15 px-2 py-0.5 text-2xs text-accent">{c.rythme}</span>
+                          {c.rythmeSource === "DEFAULT_TEMPLATE" ? (
+                            <span
+                              className="text-2xs text-foreground-muted"
+                              title="Cadence indicative — modèle sectoriel par défaut, à ajuster selon la marque"
+                            >
+                              par défaut
+                            </span>
+                          ) : null}
+                        </span>
+                      ) : null}
                     </div>
                     {c.format ? <p className="mb-2 text-xs text-foreground-secondary">{c.format}</p> : null}
                     {(c.piliers.length > 0 || c.formats.length > 0) ? (

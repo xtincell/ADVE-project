@@ -76,6 +76,7 @@ export const contentCalendarOutputSchema = z.object({
     z.string(),
     z.object({
       rythme: z.string().nullable().optional(),
+      rythmeSource: z.string().nullable().optional(),
       piliers: z.array(z.string()).optional(),
       formats: z.array(z.string()).optional(),
       format: z.string().nullable().optional(),

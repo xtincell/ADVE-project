@@ -291,11 +291,14 @@ export function composeContentCalendar(ctx: GloryComposerContext): Blob {
   const country = str(pick(ctx.strategy.businessContext, "country")) ?? (ctx.strategy.countryCode ?? null);
 
   const piliers = (rituels.length ? rituels : lexique).slice(0, 4);
+  // Le `rythme` par canal est un modèle sectoriel par défaut (best-practice), PAS
+  // dérivé des piliers de la marque comme `piliers`/`formats` le sont → flag
+  // `rythmeSource: "DEFAULT_TEMPLATE"` pour que l'UI le signale honnêtement (trou H2).
   const cadenceParCanal: ContentCalendar["cadenceParCanal"] = {
-    Instagram: { rythme: "4-5 posts/sem + stories quotidiennes", piliers, formats, format: null },
-    TikTok: { rythme: "3-4 vidéos/sem", piliers: [], formats: formats.length ? formats : ["UGC natif", "format court"], format: null },
-    Facebook: { rythme: "2 posts/sem", piliers: [], formats: [], format: "reprise IG + communauté locale" },
-    "WhatsApp Community": { rythme: "1 digest / semaine", piliers: [], formats: [], format: "digest hebdomadaire (jamais un classement)" },
+    Instagram: { rythme: "4-5 posts/sem + stories quotidiennes", rythmeSource: "DEFAULT_TEMPLATE", piliers, formats, format: null },
+    TikTok: { rythme: "3-4 vidéos/sem", rythmeSource: "DEFAULT_TEMPLATE", piliers: [], formats: formats.length ? formats : ["UGC natif", "format court"], format: null },
+    Facebook: { rythme: "2 posts/sem", rythmeSource: "DEFAULT_TEMPLATE", piliers: [], formats: [], format: "reprise IG + communauté locale" },
+    "WhatsApp Community": { rythme: "1 digest / semaine", rythmeSource: "DEFAULT_TEMPLATE", piliers: [], formats: [], format: "digest hebdomadaire (jamais un classement)" },
   };
 
   // Overton phases canon (Révéler → Prouver → Normaliser) garnies de données réelles.
