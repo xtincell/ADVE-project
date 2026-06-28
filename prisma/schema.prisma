@@ -2057,12 +2057,52 @@ model CampaignExecution {
   campaign Campaign       @relation(fields: [campaignId], references: [id])
 
   deliverableSpecs DeliverableSpec[]
+  aicpLines        AicpLineItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([actionId])
   @@index([campaignId])
+}
+
+// Taxonomie AICP A→X — DONNÉES de référence seedées (ADR-0112), jamais en code.
+// Le plan de coût standardisé de production publicitaire (AICP bid form) : chaque
+// section (A pré-prod, B équipe de tournage, C lieux/déplacements…) est une LIGNE.
+model AicpSectionReference {
+  id        String  @id @default(cuid())
+  code      String  @unique // "A", "B", … "X"
+  label     String
+  family    String // PRE_PROD|CREW|LOCATION|ART|EQUIPMENT|STUDIO|POST|FEES|INSURANCE|MISC
+  sortOrder Int     @default(0)
+  note      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([family])
+}
+
+// Ligne de devis AICP — triple PLANNED / ACTUAL / VARIANCE (ADR-0112).
+// Estimate→Actual→Variance par ligne (le pattern budget étendu). La variance est
+// calculée déterministe (actual − planned) à l'enregistrement du réalisé.
+model AicpLineItem {
+  id            String  @id @default(cuid())
+  executionId   String
+  sectionCode   String // FK souple vers AicpSectionReference.code
+  description   String
+  plannedAmount Float
+  actualAmount  Float? // null tant que non réalisé
+  variance      Float? // actualAmount − plannedAmount (calculé)
+  currency      String  @default("XAF")
+
+  execution CampaignExecution @relation(fields: [executionId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([executionId])
+  @@index([sectionCode])
 }
 
 // Spec de livrable — fan-out d'une exécution en N livrables techniques (ADR-0111).

@@ -512,6 +512,8 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "LEGACY_RESEARCH_WAVE_RECORD", governor: "INFRASTRUCTURE", handler: "bureau-etudes", async: false, description: "Enregistrement de l'échantillon atteint d'une vague (ADR-0110)." },
   { kind: "LEGACY_DELIVERABLE_FANOUT", governor: "INFRASTRUCTURE", handler: "production", async: false, description: "Fan-out d'une exécution en specs de livrable depuis le catalogue (acteur Production, ADR-0111)." },
   { kind: "LEGACY_USAGE_GRANT_CREATE", governor: "INFRASTRUCTURE", handler: "production", async: false, description: "Création d'un droit d'usage (talent × livrable) avec gate d'expiration (ADR-0111)." },
+  { kind: "LEGACY_AICP_ADD_LINE", governor: "INFRASTRUCTURE", handler: "production", async: false, description: "Ajout d'une ligne de devis AICP prévue (acteur Production, ADR-0112)." },
+  { kind: "LEGACY_AICP_RECORD_ACTUAL", governor: "INFRASTRUCTURE", handler: "production", async: false, description: "Enregistrement du réalisé d'une ligne AICP + variance (ADR-0112)." },
   { kind: "LEGACY_MATCHING_OVERRIDE", governor: "INFRASTRUCTURE", handler: "matching", async: false, description: "Strangler-promoted mutation 'override' from router 'matching'." },
   { kind: "LEGACY_MEDIA_BUYING_DETECT_ANOMALIES", governor: "INFRASTRUCTURE", handler: "media-buying", async: false, description: "Strangler-promoted mutation 'detectAnomalies' from router 'media-buying'." },
   { kind: "LEGACY_MEDIA_BUYING_PUSH_BENCHMARKS", governor: "INFRASTRUCTURE", handler: "media-buying", async: false, description: "Strangler-promoted mutation 'pushBenchmarks' from router 'media-buying'." },

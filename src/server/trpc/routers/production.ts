@@ -31,6 +31,20 @@ export const productionRouter = createTRPCRouter({
     return ctx.db.channelSpecReference.findMany({ orderBy: [{ channel: "asc" }, { label: "asc" }] });
   }),
 
+  /** Taxonomie AICP A→X seedée (sections de devis). */
+  aicpSections: protectedProcedure.query(async ({ ctx }) => {
+    return ctx.db.aicpSectionReference.findMany({ orderBy: { sortOrder: "asc" } });
+  }),
+
+  /** Devis AICP d'une exécution : lignes + rollup section + totaux (déterministe). */
+  aicpDevis: protectedProcedure
+    .input(z.object({ executionId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const exec = await ctx.db.campaignExecution.findUniqueOrThrow({ where: { id: input.executionId }, select: { campaignId: true } });
+      await assertCampaignAccess(ctx, exec.campaignId);
+      return prod.getAicpDevis(input.executionId);
+    }),
+
   /** Specs de livrable d'une exécution. */
   deliverables: protectedProcedure
     .input(z.object({ executionId: z.string() }))
@@ -85,5 +99,36 @@ export const productionRouter = createTRPCRouter({
     });
     await assertCampaignAccess(ctx, spec.execution.campaignId);
     return prod.createUsageGrant(input);
+  }),
+
+  /** Ajoute une ligne de devis AICP (prévue). */
+  addAicpLine: governedProcedure({
+    kind: "LEGACY_AICP_ADD_LINE",
+    inputSchema: z.object({
+      executionId: z.string(),
+      sectionCode: z.string().min(1).max(4),
+      description: z.string().min(1).max(500),
+      plannedAmount: z.number().nonnegative(),
+      currency: z.string().max(8).optional(),
+    }),
+    caller: "production:addAicpLine",
+  }).mutation(async ({ ctx, input }) => {
+    const exec = await ctx.db.campaignExecution.findUniqueOrThrow({ where: { id: input.executionId }, select: { campaignId: true } });
+    await assertCampaignAccess(ctx, exec.campaignId);
+    return prod.addAicpLine(input);
+  }),
+
+  /** Enregistre le réalisé d'une ligne AICP (→ variance). */
+  recordAicpActual: governedProcedure({
+    kind: "LEGACY_AICP_RECORD_ACTUAL",
+    inputSchema: z.object({ lineId: z.string(), actualAmount: z.number().nonnegative() }),
+    caller: "production:recordAicpActual",
+  }).mutation(async ({ ctx, input }) => {
+    const line = await ctx.db.aicpLineItem.findUniqueOrThrow({
+      where: { id: input.lineId },
+      select: { execution: { select: { campaignId: true } } },
+    });
+    await assertCampaignAccess(ctx, line.execution.campaignId);
+    return prod.recordAicpActual(input);
   }),
 });

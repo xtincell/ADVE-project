@@ -1065,6 +1065,10 @@ async function main() {
   const { seedChannelSpecs } = await import("./seed-channel-specs");
   const specN = await seedChannelSpecs(prisma);
   console.log(`✓ ${specN} specs canaux seedées`);
+
+  const { seedAicpSections } = await import("./seed-aicp-sections");
+  const aicpN = await seedAicpSections(prisma);
+  console.log(`✓ ${aicpN} sections AICP seedées`);
 }
 
 main()

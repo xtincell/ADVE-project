@@ -483,6 +483,8 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "LEGACY_RESEARCH_WAVE_RECORD", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_DELIVERABLE_FANOUT", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_USAGE_GRANT_CREATE", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "LEGACY_AICP_ADD_LINE", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "LEGACY_AICP_RECORD_ACTUAL", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_MATCHING_OVERRIDE", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_MEDIA_BUYING_DETECT_ANOMALIES", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_MEDIA_BUYING_PUSH_BENCHMARKS", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
