@@ -1243,9 +1243,33 @@ model TalentProfile {
   certifications    TalentCertification[]
   reviews           TalentReview[]
   usageGrants       UsageGrant[]
+  services          TalentService[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Service de prestataire — gig façon Fiverr/Malt (ADR-0117). Un talent liste ses
+// offres avec description + prix indicatif, indépendamment des missions ouvertes.
+model TalentService {
+  id              String  @id @default(cuid())
+  talentProfileId String
+  title           String
+  description     String
+  category        String? // PHOTO|VIDEO|DESIGN|COPYWRITING|STRATEGY|SOCIAL…
+  priceAmount     Float
+  currency        String  @default("XAF")
+  priceUnit       String  @default("FORFAIT") // FORFAIT|JOUR|HEURE|LIVRABLE
+  deliveryDays    Int? // délai indicatif
+  active          Boolean @default(true)
+
+  talentProfile TalentProfile @relation(fields: [talentProfileId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([talentProfileId])
+  @@index([category, active])
 }
 
 model Signal {
