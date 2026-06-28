@@ -795,6 +795,10 @@ model Strategy {
   // → COMPLETE → FAILED → STALE. Voir oracle-section/ service + schema bottom-of-file.
   oracleSections OracleSection[]
 
+  // Phase 24 (ADR-0106) — porte d'entrée du cycle de vie : intentions net-new
+  // (insight/opportunité/envie) croisées avec l'ADVE → brief validé → projets.
+  intentions Intention[]
+
   // v4 — LLM budget governance
   llmBudget       Float? // Monthly USD cap for LLM calls on this strategy
   llmBudgetAlerts Json? // { "75": false, "90": false, "100": false }
@@ -834,6 +838,56 @@ model Strategy {
   @@index([clientId])
   @@index([tenantId])
   @@index([archivedAt])
+}
+
+// Phase 24 (ADR-0106) — Intention : porte d'entrée canonique du cycle de vie.
+// Une marque articule une envie net-new (lancer un produit, repositionner,
+// entrer sur un marché…). Le LLM croise l'intention × l'ADVE réel (RAG) pour
+// produire un BRIEF VALIDÉ ; ce brief alimente ensuite le pipeline déterministe
+// (action → campagne → projets). C'est la SEULE porte LLM légitime en amont :
+// tout le reste est projection déterministe de l'ADVE.
+enum IntentionType {
+  PRODUCT_LAUNCH // nouveau produit / SKU
+  REPOSITION // repositionnement de marque
+  MARKET_ENTRY // entrée sur un nouveau marché / pays
+  CAMPAIGN // nouvelle campagne ad-hoc
+  PLATFORM // nouvelle plateforme / sous-marque
+  PARTNERSHIP // collaboration / co-branding
+  OTHER
+}
+
+enum IntentionStatus {
+  CAPTURED // articulée par l'opérateur, pas encore traitée
+  BRIEF_GENERATED // brief candidat produit (LLM ou manuel)
+  BRIEF_VALIDATED // brief passé le gate cohérence + validé opérateur
+  CONVERTED // brief converti en projets (campagne/mission)
+  ARCHIVED
+}
+
+model Intention {
+  id          String          @id @default(cuid())
+  strategyId  String
+  strategy    Strategy        @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  type        IntentionType
+  title       String
+  /// Articulation libre de l'opérateur (contenu NON FIABLE — neutralisé avant LLM).
+  description String
+  status      IntentionStatus @default(CAPTURED)
+  operatorId  String?
+  /// Mode de génération du brief : "LLM" (croisement IA × ADVE) ou "MANUAL" (parité ADR-0060).
+  briefMode   String?
+  /// Snapshot du verdict de cohérence brief↔ADVE (gate C6) au moment de la génération.
+  coherence   Json?
+  /// Brief candidat produit (CampaignBrief.id). Non-FK volontaire : le brief peut
+  /// précéder la campagne (créé lazy à la conversion). Lien souple.
+  generatedBriefId String?
+  /// Contenu structuré du brief candidat (avant matérialisation en CampaignBrief).
+  briefDraft  Json?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([strategyId, status])
+  @@index([operatorId])
 }
 
 model Campaign {

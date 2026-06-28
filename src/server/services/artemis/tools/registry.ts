@@ -3284,7 +3284,7 @@ import { PHASE19_TOOLS } from "./phase19-tools";
 // cardinalité 56).
 import { MARKET_RESEARCH_TOOLS } from "./market-research-tools";
 
-// ─── Sales Response Tree — Glory tool commercial (ADR-0104) ───────────────────
+// ─── Sales Response Tree — Glory tool commercial (ADR-0106) ───────────────────
 // 1 outil HYBRID `sales-response-tree` : arbre de réponse pour les commerciaux
 // (identifie le QUI → choisit QUOI vendre → route l'AARRR → rédige la réponse →
 // capture nom+téléphone CRM → escalade opérateur). Ajouté à EXTENDED_GLORY_TOOLS

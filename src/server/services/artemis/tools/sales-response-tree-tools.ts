@@ -253,7 +253,7 @@ export const SALES_RESPONSE_TREE_TOOLS: GloryToolDef[] = [
       "minimum CRM (nom + téléphone, source=MANUAL) et escalade à l'opérateur sur scénario non " +
       "anticipé ou demande explicite. HYBRID (parité manuelle ADR-0060). Transform pur : la " +
       "persistance CRM passe par les Intents existants (upsertContact / createDealFromIntake). " +
-      "Cf. ADR-0104.",
+      "Cf. ADR-0106.",
     inputFields: [
       "channel",
       "inbound_message",

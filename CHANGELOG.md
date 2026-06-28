@@ -10,6 +10,31 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.46 — feat(intention): porte d'entrée du cycle de vie (intention × ADVE → brief validé) (2026-06-28)
+
+Ferme les **2 trous P0** du gap-analysis : aucune entité ne captait une **intention
+net-new** (lancer un produit, repositionner, entrer sur un marché), et aucun Intent
+ne **croisait l'intention × l'ADVE réel** pour produire un brief validé. C'est le
+point d'entrée n°1 de la valeur et la **seule porte LLM légitime** du cycle (ADR-0106).
+
+- **Modèle `Intention`** (+ enums `IntentionType`/`IntentionStatus`, migration additive
+  `20260628120000_phase24_intention_front_door`). 0 hardcode : le brief est une projection
+  ADVE (manuel) ou un croisement LLM×ADVE (IA).
+- **3 Intents gouvernés** (union `emitIntent` → Artemis commandant) : `CAPTURE_INTENTION`
+  (déterministe) · `GENERATE_BRIEF_FROM_INTENTION` (mode LLM via `executeStructuredLLMCall`
+  — sortie gardée par schéma Zod, entrée neutralisée OWASP LLM01, débit owl-alpha respecté ;
+  **mode MANUAL** parité ADR-0060 ; **DEFERRED** sans provider — jamais de hard-fail ; gate
+  cohérence C6 snapshotté) · `VALIDATE_INTENTION_BRIEF` (un brief DIVERGENT de l'ADVE exige
+  un override explicite). Le brief validé alimente le pipeline déterministe aval (déjà en place).
+- **tRPC `intention`** (list/get/capture/generateBrief/validateBrief), tenant-scopé.
+- `pillarsAffected = []` (aval de l'ADVE — STOP à Jehuty préservé : aucune écriture pilier).
+
+Test **zéro mock, production-level** : schéma + gate cohérence C6 réel (COHERENT vs DIVERGENT)
++ décision de validation pure. tsc 0 · eslint 0 · audit LLM strict 0 régression · 2181 tests verts.
+Cap APOGEE 7/7 préservé (sous-domaine Artemis).
+
+---
+
 ## v6.27.45 — fix(llm-gateway): police de débit par modèle + fin des appels Anthropic directs (2026-06-28)
 
 Le système faisait des **erreurs Anthropic alors que tout est censé être sur OpenRouter** (modèle `owl-alpha`), et **aucune limite RPS/RPM par modèle** n'était respectée (seul un retry-on-failure existait → 429 en rafale). Deux corrections structurelles :
