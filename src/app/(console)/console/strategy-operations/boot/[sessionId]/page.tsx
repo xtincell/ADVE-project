@@ -98,14 +98,23 @@ export default function BootSessionPage({ params }: { params: Promise<{ sessionI
           <div className="flex justify-end gap-2">
             <button
               onClick={() => {
-                advanceMutation.mutate({
-                  strategyId: sessionId,
-                  step: currentStep,
-                  responses: { [pillar]: responses },
-                });
+                const isLastStep = currentStep >= 7;
+                advanceMutation.mutate(
+                  {
+                    strategyId: sessionId,
+                    step: currentStep,
+                    responses: { [pillar]: responses },
+                  },
+                  // Dernière étape : finaliser le boot (status ACTIVE) après avoir
+                  // enregistré le 8ᵉ pilier. Sinon « Terminer » avançait sans jamais
+                  // appeler `complete` → la séquence restait non finalisée.
+                  isLastStep
+                    ? { onSuccess: () => completeMutation.mutate({ strategyId: sessionId }) }
+                    : undefined,
+                );
                 setResponses({});
               }}
-              disabled={advanceMutation.isPending}
+              disabled={advanceMutation.isPending || completeMutation.isPending}
               className="rounded-lg bg-primary px-6 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
             >
               {currentStep < 7 ? "Pilier suivant" : "Terminer"}
