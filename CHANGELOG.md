@@ -10,6 +10,31 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.51 — fix: passe de debug NEFER (Lot B+C+D) — liens morts, garde crash, écart budget + anti-récidive timeline (2026-06-28)
+
+Suite de la passe de debug (Lot A = v6.27.50). Couacs P2/P3 + garde anti-récidive du P0.
+
+- **`fix(ui)` — liens morts console** : le CTA « Upgrade » après tier-deny pointait `/cockpit/subscription`
+  (route inexistante, ×5 réfs) → `/pricing` ; le lien résultat de recherche Seshat
+  `/console/socle/strategies/:id` (inexistant) → `/console/strategy-portfolio/brands/:id` ; 4 liens
+  « source de vérité » `/docs/governance/*.md` (404, aucune route ni rewrite) → URL GitHub blob (`target=_blank`).
+- **`fix(ui)` — garde crash intake** : `console/strategy-operations/intake` accédait `(...).client.brandName`
+  sans garde sur une **sortie LLM** (le cast masquait le risque à `tsc`) → white-screen si `client` absent.
+  Optional-chaining `…client?.brandName ?? "—"`.
+- **`fix(ops)` — écart budgétaire** : `operationsOverview.budgetConsolidation` étiquetait l'utilisation
+  `realSpent/planned*100` comme `variance` → calcule désormais le **vrai écart**
+  `((realSpent − planned)/planned)*100` (cohérent avec la formule canon de `campaign-manager`).
+- **`test(campaign)` — anti-récidive du P0** : garde DMMF (`campaign-timeline-select-fields.test.ts`) qui
+  épingle le contrat de champs des modèles lus par `getCampaignTimeline` contre `Prisma.dmmf` (sans DB) —
+  car `tsc` ne valide pas les clés invalides dans les `select` de relations imbriquées (la cause de l'angle mort).
+
+Reportés (follow-up — risque runtime faible ou décision produit) : `RiceScale` self-seed (le picker dégrade
+déjà à vide), cadence éditoriale hardcodée (vrai fix = dérivation pilier I), badge saturation placeholder,
+idempotence escrow `hold`, garde `decideQuote` déjà-décidé, `completeMutation` mort de `boot/[sessionId]`.
+eslint 0 ; tsc/tests délégués à la CI.
+
+---
+
 ## v6.27.50 — fix: passe de debug NEFER — 4 couacs runtime (timeline 500, mutations muettes, coûts prod, 404 créateur) (2026-06-28)
 
 Passe de debug « intégralité de la Fusée » : la CI est verte (tsc/lint/vitest/Golden-Path),

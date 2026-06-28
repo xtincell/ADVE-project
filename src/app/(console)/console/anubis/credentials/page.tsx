@@ -196,7 +196,7 @@ export default function AnubisCredentialsPage() {
           <strong className="text-foreground">Sécurité</strong> — les credentials sont stockés dans `ExternalConnector.config`
           (Json). Le router ne retourne JAMAIS `config` dans `listCredentials`. Décryption côté server uniquement, en
           mémoire seule. Cf.{" "}
-          <a href="/docs/governance/adr/0021-external-credentials-vault.md" className="underline hover:text-foreground">
+          <a target="_blank" rel="noreferrer" href="https://github.com/xtincell/ADVE-project/blob/main/docs/governance/adr/0021-external-credentials-vault.md" className="underline hover:text-foreground">
             ADR-0021
           </a>
           .

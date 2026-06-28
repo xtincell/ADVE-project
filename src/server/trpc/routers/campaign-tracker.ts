@@ -412,7 +412,7 @@ export const campaignTrackerRouter = createTRPCRouter({
           state: "TIER_GATE_DENIED" as const,
           campaignId: input.campaignId,
           reason: gate.reason ?? "Abonnement payant requis.",
-          configureUrl: gate.configureUrl ?? "/cockpit/subscription",
+          configureUrl: gate.configureUrl ?? "/pricing",
         };
       }
       return getAttributionLineage({

@@ -83,7 +83,7 @@ export async function checkPaidTier(
     return {
       allowed: false,
       reason: `Aucune souscription active dans tiers payants (${tiers.join(", ")}). Cet outil est réservé aux abonnements payants.`,
-      configureUrl: "/cockpit/subscription",
+      configureUrl: "/pricing",
     };
   }
 
@@ -109,7 +109,7 @@ export function tierGateDenied(
   return {
     status: "TIER_GATE_DENIED",
     reason,
-    configureUrl: "/cockpit/subscription",
+    configureUrl: "/pricing",
     requiredTiers: allowedTiers ?? PAID_TIER_KEYS_DEFAULT,
   };
 }

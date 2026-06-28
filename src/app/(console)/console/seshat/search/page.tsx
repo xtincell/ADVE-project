@@ -134,7 +134,7 @@ export default function SeshatSearchPage() {
                       {r.pillarKey ? ` · pilier ${r.pillarKey.toUpperCase()}` : ""}
                       {r.field ? ` · ${r.field}` : ""}
                       {" · "}
-                      <a href={`/console/socle/strategies/${r.strategyId}`} className="underline hover:no-underline">
+                      <a href={`/console/strategy-portfolio/brands/${r.strategyId}`} className="underline hover:no-underline">
                         {r.strategyId.slice(0, 12)}…
                       </a>
                     </span>

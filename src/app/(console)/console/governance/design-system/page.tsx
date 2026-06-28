@@ -47,7 +47,7 @@ export default function DesignSystemPreviewPage() {
         <Heading level={1}>Design System preview</Heading>
         <Text variant="lead">
           Live inspection des 4 couches token cascade (Reference → System → Component → Domain) +
-          primitives + patterns. Source de vérité : <a href="/docs/governance/DESIGN-SYSTEM.md" className="text-accent underline">DESIGN-SYSTEM.md</a>.
+          primitives + patterns. Source de vérité : <a target="_blank" rel="noreferrer" href="https://github.com/xtincell/ADVE-project/blob/main/docs/governance/DESIGN-SYSTEM.md" className="text-accent underline">DESIGN-SYSTEM.md</a>.
         </Text>
       </header>
 
