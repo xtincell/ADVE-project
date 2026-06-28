@@ -31,6 +31,19 @@ export async function holdEscrowForMission(input: {
   commissionId?: string;
   conditions?: string[];
 }) {
+  // Idempotence : un seul séquestre actif (HELD) par mission (et par commission
+  // si fournie). L'endpoint arbitre `hold` n'est pas one-shot ; sans garde, un
+  // double-clic créerait des escrows HELD dupliqués sur la même mission.
+  const existing = await db.escrow.findFirst({
+    where: {
+      missionId: input.missionId,
+      commissionId: input.commissionId ?? null,
+      status: "HELD",
+    },
+    include: { conditions: true },
+  });
+  if (existing) return existing;
+
   return db.escrow.create({
     data: {
       missionId: input.missionId,
