@@ -10,6 +10,26 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.49 — feat(agency): MediaPlan + PCA déterministe (post-buy prévu vs réalisé) (2026-06-28)
+
+Ferme le trou « pas de media plan structuré / PCA » du gap-analysis média. Audité sur la
+réalité ad-ops (GAM Order/LineItem ; Mediaocean Lumina budgeted→planned→booked→actual ;
+anatomie media plan bionic-ads).
+
+- **Modèles** `MediaPlan` + `MediaPlanLine` (+ enum `MediaPlanStatus` PLANNED→BOOKED→LIVE→
+  RECONCILED), migration additive `20260628140000_phase24_media_plan`. Ligne = canal + ATL/BTL/TTL
+  + **prévu** (impressions/GRP/reach/freq/spend/cpm) + **réalisé** (impressions/spend).
+- **PCA déterministe** (`media-plan/`) : `computeLinePca`/`computePlanPca` **purs** réutilisent le
+  moteur `media-metrics` (écart prévu/réalisé, **makegood** sous-livraison, CPM réalisé, GRP dérivé
+  reach×freq). Zéro LLM, zéro valeur métier codée (CPM résolu depuis `MarketCostSnapshot`).
+- **tRPC `mediaPlan`** : `listByCampaign`/`pca` (lectures tenant-scopées) + `create`/`addLine`/
+  `recordActuals` gouvernés (3 Intent kinds `LEGACY_MEDIA_PLAN_*` + SLOs).
+
+Test **zéro mock** : PCA pur sur valeurs réelles (sous-livraison 100k→80k → variance −20 %,
+makegood 20k, CPM réalisé ; GRP dérivé ; déterminisme). tsc 0 · eslint 0 · 2203 tests verts. Cap 7/7.
+
+---
+
 ## v6.27.48 — feat(thot): benchmarks média CPM/CPC en base, sourcés (1ère fermeture média) (2026-06-28)
 
 Ferme le trou « barèmes média codés en dur » du gap-analysis multi-acteurs : les tarifs

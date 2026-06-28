@@ -945,6 +945,8 @@ model Campaign {
   aarrMetrics    CampaignAARRMetric[]
   links          CampaignLink[]
   budgetLines    BudgetLine[]
+  // Phase 24 (ADR-0107) — plans média ATL/BTL/TTL (prévu vs réalisé → PCA).
+  mediaPlans     MediaPlan[]
 
   // Phase 10 (ADR-0012) — BrandAssets actifs sélectionnés parmi candidats.
   // Une Campaign garde 1 BrandAsset ACTIVE par kind clé (BigIdea/Brief/Claim/Manifesto/KV).
@@ -1915,6 +1917,65 @@ model QuickIntake {
 // ============================================================================
 // CAMPAIGN MANAGER 360 MODELS
 // ============================================================================
+
+// Phase 24 (ADR-0107) — Plan média ATL/BTL/TTL : prévu → réalisé → PCA.
+// Audité sur la réalité ad-ops (GAM Order/LineItem ; Mediaocean Lumina
+// budgeted→planned→booked→actual ; anatomie du media plan bionic-ads). Le PCA
+// (écart prévu/réalisé, makegood) est calculé **déterministe** par `media-metrics.ts` ;
+// les CPM viennent de `MarketCostSnapshot` (benchmarks seedés), jamais codés.
+enum MediaPlanStatus {
+  PLANNED // construit
+  BOOKED // ordres d'insertion passés
+  LIVE // en diffusion
+  RECONCILED // PCA bouclé (prévu vs réalisé)
+}
+
+model MediaPlan {
+  id          String          @id @default(cuid())
+  campaignId  String
+  campaign    Campaign        @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  name        String
+  objective   String?
+  /// Marché (ISO-2) — sert à résoudre les benchmarks CPM par marché.
+  countryCode String?         @db.VarChar(2)
+  currency    String          @default("XAF")
+  status      MediaPlanStatus @default(PLANNED)
+  flightStart DateTime?
+  flightEnd   DateTime?
+  lines       MediaPlanLine[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([campaignId, status])
+}
+
+model MediaPlanLine {
+  id        String    @id @default(cuid())
+  planId    String
+  plan      MediaPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  /// Canal (TV_BROADCAST, CTV, META, TIKTOK, OOH, RADIO…) → clé benchmark CPM.
+  channel   String
+  /// ATL | BTL | TTL.
+  category  String?
+  vendor    String?
+  // ── Prévu (planning) ──
+  plannedImpressions Float?
+  plannedGrp         Float?
+  plannedReachPct    Float?
+  plannedFrequency   Float?
+  plannedSpend       Float?
+  /// CPM retenu (résolu depuis benchmark seedé ou négocié) — donnée, jamais codée.
+  cpm                Float?
+  flightStart        DateTime?
+  flightEnd          DateTime?
+  // ── Réalisé (post-buy / PCA) ──
+  actualImpressions  Float?
+  actualSpend        Float?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([planId])
+}
 
 model CampaignAction {
   id                   String         @id @default(cuid())

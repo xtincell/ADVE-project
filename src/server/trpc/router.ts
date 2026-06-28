@@ -113,6 +113,7 @@ import { thotRouter } from "./routers/thot";
 // Phase 24 (ADR-0094) — canonical I-pillar action database (BrandAction projection)
 import { actionsRouter } from "./routers/actions";
 import { intentionRouter } from "./routers/intention";
+import { mediaPlanRouter } from "./routers/media-plan";
 // Blog — CMS natif « Notes de cabinet » du site public UPgraders (public read + operator CRUD)
 import { blogRouter } from "./routers/blog";
 import { newsletterRouter } from "./routers/newsletter";
@@ -248,6 +249,7 @@ export const appRouter = createTRPCRouter({
   // Phase 24 (ADR-0094) — canonical I-pillar action database (BrandAction projection)
   actions: actionsRouter,
   intention: intentionRouter,
+  mediaPlan: mediaPlanRouter,
   // Blog — CMS natif « Notes de cabinet » du site public UPgraders
   blog: blogRouter,
 });
