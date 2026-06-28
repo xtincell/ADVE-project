@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 
 const NAV = [
   { href: "/LaGuilde", label: "Le mur", exact: true },
+  { href: "/LaGuilde/services", label: "Les services" },
   { href: "/LaGuilde/publier", label: "Publier une mission" },
   { href: "/LaGuilde/rejoindre", label: "Rejoindre la Guilde" },
 ];
