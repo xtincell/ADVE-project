@@ -194,15 +194,17 @@ CBBE — cf. annexe.*
 
 ## Synthèse — feuille de route de fermeture (priorisée, DB-backed)
 
+**État au 2026-06-28 : les 7 fermetures P1 sont SHIPPÉES** (✅). Restent les P2 (#8-11).
+
 | # | Acteur | Trou | Fermeture (entité/seed) | Prio | Pattern réutilisé |
 |---|---|---|---|---|---|
-| 1 | Bureau | `ResearchWave` (time-spine tracker) | nouvelle table + wave-on-wave sig déterministe | **P1** | time-spine |
-| 2 | Bureau | `MethodologyReference` + normes n→MoE/T2B **seedées** | table de référence + seed | **P1** | reference-data |
-| 3 | Média | `MediaPlan/Line` planned-vs-actual + PCA | nouvelles tables + triple-colonne | **P1** | estimate/actual/variance |
-| 4 | Média | `MediaBenchmark` CPM/CPP/reach-freq **seedés** | table de référence + seed | **P1** | reference-data (≈ `MarketCostSnapshot`) |
-| 5 | Production | `DeliverableSpec` matrix + catalogue canaux **seedé** | table + seed + fan-out execution | **P1** | reference-data + fan-out |
-| 6 | Production | `UsageGrant` + **expiry gate** | table + staleness gate | **P1** | staleAt/expiry |
-| 7 | Conseil | `RICE` déterministe sur `Recommendation` | champs additifs + calcul pur | **P1** | scoring déterministe |
+| 1 | Bureau | `ResearchWave` (time-spine tracker) | nouvelle table + wave-on-wave sig déterministe | ✅ **P1** (ADR-0110) | time-spine |
+| 2 | Bureau | `MethodologyReference` + normes n→MoE/T2B **seedées** | table de référence + seed | ✅ **P1** (ADR-0110) | reference-data |
+| 3 | Média | `MediaPlan/Line` planned-vs-actual + PCA | nouvelles tables + triple-colonne | ✅ **P1** (ADR-0107) | estimate/actual/variance |
+| 4 | Média | `MediaBenchmark` CPM/CPP/reach-freq **seedés** | table de référence + seed | ✅ **P1** (ADR-0107) | reference-data (≈ `MarketCostSnapshot`) |
+| 5 | Production | `DeliverableSpec` matrix + catalogue canaux **seedé** | table + seed + fan-out execution | ✅ **P1** (ADR-0111) | reference-data + fan-out |
+| 6 | Production | `UsageGrant` + **expiry gate** | table + staleness gate | ✅ **P1** (ADR-0111) | staleAt/expiry |
+| 7 | Conseil | `RICE` déterministe sur `Recommendation` | champs additifs + calcul pur | ✅ **P1** (ADR-0109) | scoring déterministe |
 | 8 | Production | Devis AICP (sections A→X seedées + actual/variance) | reference-taxonomy + triple-colonne | P2 | reference-data + estimate/actual |
 | 9 | Bureau | provenanceClass + fusion + FK competitor↔study + console | additifs + surface | P2 | provenance-spine |
 | 10 | Média | connecteurs ingestion perf (credential-gated) | pipeline normalisation | P2 | connectors (Vault) |
