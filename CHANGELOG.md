@@ -10,6 +10,33 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.47 — docs+feat: cycle de vie multi-acteurs (audit marché) + moteur média déterministe (2026-06-28)
+
+Réponse au mandat « élabore le cycle de vie du wrap croustillant BK côté freelance/production,
+bureau d'étude, agence ATL/BTL/TTL, agence conseil ; audite les process sur internet ; ferme
+les trous ; rien codé en dur, base de données, pas de mock ».
+
+- **`docs/governance/lifecycle-gap-analysis-multi-actor.md`** : les 4 cycles de vie **audités sur
+  la réalité du marché** (sources citées — AICP/Wrapbook/StudioBinder pour la production ;
+  ESOMAR/Nielsen BASES/Kantar/Sawtooth/DDI/Triple-S pour le bureau d'étude ; WARC/Binet&Field/
+  IAB/Geopath + cas BK Whopper Detour 37:1 ROI, Moldy Whopper $40M EMV/+14 %, Shot-on-iPhone
+  6,5 Md impressions, Riot Worlds/K-DA pour le média ; McKinsey/BCG/Keller CBBE/Holt/RICE pour
+  le conseil). Chaque acteur : cycle réel → mapping système (EXISTS/PARTIAL/MISSING) → **11 trous
+  priorisés** fermés par des **entités DB seedées** (jamais des constantes). Constat transverse :
+  taxonomies/barèmes/chiffres = **lignes de table datées + sourcées**, jamais en dur.
+- **`media-metrics.ts`** (1ère fermeture, production-level) : moteur **déterministe** des KPI
+  média (GRP, CPM, CPP, CTR, CPC, VCR/VTR, CPA, ROAS, SOV/ESOV→croissance, conversion sampling,
+  rédemption, écart PCA, makegood) — **formules canoniques uniquement, zéro valeur métier codée**
+  (CPM/GRP-cible/fréquence-efficace/coef ESOV fournis en entrée depuis la base). Division sûre,
+  zéro LLM. Test **zéro mock** sur valeurs sourcées (Adjust/Wikipedia/True Impact/Binet&Field).
+
+Reste séquencé dans le doc : tables de référence seedées (MediaBenchmark CPM×canal×marché×période,
+n→MoE/T2B, AICP A→X, framework catalog) + entités (ResearchWave, DeliverableSpec/UsageGrant,
+MediaPlan PCA, RICE) — toutes sur le pattern `MarketCostSnapshot` (daté/sourcé). tsc 0 · eslint 0 ·
+2192 tests verts. Cap APOGEE 7/7 préservé.
+
+---
+
 ## v6.27.46 — feat(intention): porte d'entrée du cycle de vie (intention × ADVE → brief validé) (2026-06-28)
 
 Ferme les **2 trous P0** du gap-analysis : aucune entité ne captait une **intention
