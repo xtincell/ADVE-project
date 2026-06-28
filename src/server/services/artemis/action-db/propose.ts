@@ -210,7 +210,8 @@ export async function proposeBrandActions(input: ProposeBrandActionsInput): Prom
       schema: ProposedActionsSchema,
       schemaTitle: "ProposedBrandActions",
       system:
-        "Tu es un stratège de marque senior de La Fusée. Tu proposes des actions marketing concrètes, activables et cohérentes avec l'identité réelle de la marque. Pas de généralités — chaque action est spécifique, mesurable et ancrée dans le contexte fourni.",
+        "Tu es un stratège de marque senior de La Fusée. Tu proposes des actions marketing concrètes, activables et cohérentes avec l'identité réelle de la marque. Pas de généralités — chaque action est spécifique, mesurable et ancrée dans le contexte fourni. " +
+        "RÉDIGE TOUT EN FRANÇAIS, sans aucun anglicisme (pas de « thought leader », « positioning », « always-on »… : utilise les équivalents français « leader d'opinion », « positionnement », « permanent »).",
       prompt:
         `Contexte de la marque (piliers ADVE + Risque/Marché) :\n${context}\n\n` +
         `Génère ${count} action(s) marketing concrètes` +
@@ -219,6 +220,7 @@ export async function proposeBrandActions(input: ProposeBrandActionsInput): Prom
         (input.budgetMax ? `, en restant sous un budget de ${input.budgetMax} ${currency}` : "") +
         `. Chaque action sert l'Authenticité (A), la Distinction (D), la Valeur (V) ou l'Engagement (E), ` +
         `en tenant compte des Risques (R) et de la réalité du Marché (T). ` +
+        `CONTRAINTE DE FORMAT : le champ « title » est un titre COURT (≤ 70 caractères, comme un nom de campagne — ex. « Série LinkedIn UP.grader Insights »), DISTINCT du champ « objectif » qui porte la description détaillée. Ne mets jamais toute la description dans le titre. Tout en français. ` +
         `Ne duplique PAS ces actions déjà présentes : ${existingTitles}.`,
       caller: "artemis.proposeBrandActions",
       strategyId: input.strategyId,

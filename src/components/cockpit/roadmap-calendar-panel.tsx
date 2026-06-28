@@ -103,7 +103,7 @@ export function RoadmapCalendarPanel() {
       : "/cockpit/operate/campaigns";
 
     return (
-      <div className="flex flex-col rounded-lg border border-white/5 bg-surface-raised transition-all hover:border-white/10 w-full">
+      <div className="flex w-full min-w-0 flex-col rounded-lg border border-white/5 bg-surface-raised transition-all hover:border-white/10">
         {/* Header clickable to expand */}
         <div
           onClick={() => setExpandedId(isExpanded ? null : a.id)}
@@ -320,7 +320,7 @@ export function RoadmapCalendarPanel() {
                     <div className="flex w-12 flex-shrink-0 flex-col items-center pt-2">
                       <span className="font-mono text-2xs font-bold text-accent">{dayLabel(a.timingStart!)}</span>
                     </div>
-                    <div className="flex-1"><ActionRow a={a} /></div>
+                    <div className="min-w-0 flex-1"><ActionRow a={a} /></div>
                   </li>
                 ))}
               </ol>
