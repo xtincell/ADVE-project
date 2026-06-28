@@ -12,12 +12,13 @@
 import { trpc } from "@/lib/trpc/client";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { Button } from "@/components/primitives/button";
-import { Loader2, Sparkles, Infinity as InfinityIcon, CalendarRange } from "lucide-react";
+import { Loader2, Sparkles, Infinity as InfinityIcon, CalendarRange, Plus } from "lucide-react";
 
 const CANON_LABEL: Record<string, string> = {
   GTM_90: "Go-to-market 30-60-90",
   ANNUAL: "Campagne annuelle",
   ALWAYS_ON: "Always-on (permanent)",
+  PUNCTUAL: "Ponctuelle (insight / Jehuty)",
 };
 
 function fmtBudget(n: number | null | undefined, currency: string | null | undefined): string {
@@ -38,9 +39,9 @@ export function CanonCampaignsPanel() {
     { strategyId: strategyId ?? "" },
     { enabled: !!strategyId },
   );
-  const generate = trpc.strategy.generateCanonicalCampaigns.useMutation({
-    onSuccess: () => utils.campaign.canonByStrategy.invalidate({ strategyId: strategyId ?? "" }),
-  });
+  const invalidate = () => utils.campaign.canonByStrategy.invalidate({ strategyId: strategyId ?? "" });
+  const generate = trpc.strategy.generateCanonicalCampaigns.useMutation({ onSuccess: invalidate });
+  const punctual = trpc.strategy.createPunctualCampaign.useMutation({ onSuccess: invalidate });
 
   if (!strategyId) return null;
   const campaigns = canon ?? [];
@@ -56,19 +57,33 @@ export function CanonCampaignsPanel() {
             30-60-90 · annuelle · always-on — générées depuis le Pilier I, avec leurs actions rattachées.
           </p>
         </div>
-        <Button
-          size="sm"
-          variant="primary"
-          disabled={generate.isPending}
-          onClick={() => generate.mutate({ strategyId })}
-        >
-          {generate.isPending ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Sparkles className="mr-1 h-3.5 w-3.5" />}
-          {campaigns.length > 0 ? "Régénérer" : "Générer les campagnes canon"}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={punctual.isPending}
+            onClick={() => {
+              const title = window.prompt("Titre de la campagne ponctuelle (insight externe / Jehuty) :");
+              if (title && title.trim().length >= 3) punctual.mutate({ strategyId, title: title.trim(), insightSource: "EXTERNAL_INSIGHT" });
+            }}
+          >
+            {punctual.isPending ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Plus className="mr-1 h-3.5 w-3.5" />}
+            Ponctuelle
+          </Button>
+          <Button
+            size="sm"
+            variant="primary"
+            disabled={generate.isPending}
+            onClick={() => generate.mutate({ strategyId })}
+          >
+            {generate.isPending ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Sparkles className="mr-1 h-3.5 w-3.5" />}
+            {campaigns.length > 0 ? "Régénérer" : "Générer les campagnes canon"}
+          </Button>
+        </div>
       </div>
 
-      {generate.isError ? (
-        <p className="mt-2 text-xs font-medium text-error">Échec : {generate.error.message}</p>
+      {generate.isError || punctual.isError ? (
+        <p className="mt-2 text-xs font-medium text-error">Échec : {(generate.error ?? punctual.error)?.message}</p>
       ) : null}
 
       {isLoading ? (

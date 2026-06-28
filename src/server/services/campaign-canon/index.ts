@@ -111,6 +111,64 @@ export async function generateCanonicalCampaigns(input: {
   return { status: "OK", routeKey, campaigns: out };
 }
 
+/**
+ * ADR-0119 — campagne PONCTUELLE (hors canon) déclenchée par un insight externe /
+ * Jehuty. Crée une `Campaign` `canonType=PUNCTUAL` + une action de tête rattachée
+ * (invariant : toute action a une campagne). Déterministe, zéro LLM. Une mécanique
+ * d'ajout d'actions de soutien réutilise ensuite le rattachement `campaignId`.
+ */
+export async function createPunctualCampaign(input: {
+  strategyId: string;
+  title: string;
+  description?: string;
+  budget?: number;
+  aarrrPrimary?: string;
+  aarrrSecondary?: string;
+  insightSource?: string; // "JEHUTY" | "EXTERNAL_INSIGHT" | …
+  startDate?: Date;
+  endDate?: Date;
+}) {
+  const strategy = await db.strategy.findUniqueOrThrow({ where: { id: input.strategyId }, select: { currencyCode: true } });
+  const currency = strategy.currencyCode ?? "XAF";
+  const campaign = await db.campaign.create({
+    data: {
+      strategyId: input.strategyId,
+      name: input.title,
+      description: input.description ?? "",
+      canonType: "PUNCTUAL",
+      routeKey: input.insightSource ?? "PUNCTUAL",
+      aarrrPrimary: input.aarrrPrimary ?? null,
+      aarrrSecondary: input.aarrrSecondary ?? null,
+      recommendedBudget: input.budget ?? null,
+      budget: input.budget ?? 0,
+      budgetCurrency: currency,
+      isAlwaysOn: false,
+      startDate: input.startDate ?? new Date(),
+      endDate: input.endDate ?? null,
+      code: `PUNCT-${Date.now().toString(36).toUpperCase()}`.slice(0, 40),
+      state: "BRIEF_DRAFT",
+      status: "PLANNING",
+    },
+  });
+  // Action de tête rattachée (invariant : pas d'action orpheline).
+  await db.brandAction.create({
+    data: {
+      strategyId: input.strategyId,
+      campaignId: campaign.id,
+      title: input.title.slice(0, 200),
+      description: input.description ?? null,
+      budgetMin: input.budget ?? null,
+      budgetMax: input.budget ?? null,
+      budgetCurrency: currency,
+      priority: "P1",
+      selected: true,
+      status: "PROPOSED",
+      source: input.insightSource ?? "PUNCTUAL",
+    },
+  });
+  return campaign;
+}
+
 async function upsertCanonCampaign(strategyId: string, routeKey: string, currency: string, p: PlannedCampaign) {
   const existing = await db.campaign.findFirst({
     where: { strategyId, canonType: p.canonType, routeKey },

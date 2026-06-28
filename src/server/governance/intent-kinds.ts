@@ -522,6 +522,7 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "LEGACY_MISSION_QUOTE_DECIDE", governor: "INFRASTRUCTURE", handler: "mission-quote", async: false, description: "Décision marque sur un devis (accepté/rejeté, ADR-0118)." },
   { kind: "LEGACY_RECOMMENDATION_SET_RICE", governor: "INFRASTRUCTURE", handler: "consulting-rice", async: false, description: "Priorisation RICE déterministe d'une recommandation (acteur Conseil, ADR-0109)." },
   { kind: "GENERATE_CANONICAL_CAMPAIGNS", governor: "INFRASTRUCTURE", handler: "campaign-canon", async: false, description: "Génère les 3 campagnes canon (30-60-90/annuelle/always-on) d'une route depuis le Pilier I — déterministe, exception STOP-à-Jehuty (ADR-0119)." },
+  { kind: "CREATE_PUNCTUAL_CAMPAIGN", governor: "INFRASTRUCTURE", handler: "campaign-canon", async: false, description: "Crée une campagne ponctuelle (hors canon) déclenchée par un insight externe / Jehuty + action de tête rattachée (ADR-0119)." },
   { kind: "LEGACY_RESEARCH_WAVE_CREATE", governor: "INFRASTRUCTURE", handler: "bureau-etudes", async: false, description: "Création d'une vague d'étude (time-spine, acteur Bureau d'étude, ADR-0110)." },
   { kind: "LEGACY_RESEARCH_WAVE_RECORD", governor: "INFRASTRUCTURE", handler: "bureau-etudes", async: false, description: "Enregistrement de l'échantillon atteint d'une vague (ADR-0110)." },
   { kind: "LEGACY_SOURCE_SET_PROVENANCE", governor: "INFRASTRUCTURE", handler: "bureau-etudes", async: false, description: "Classe la provenance d'une source de marché pour fusion pondérée (ADR-0114)." },
