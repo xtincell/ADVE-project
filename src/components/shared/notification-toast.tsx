@@ -10,12 +10,11 @@ import {
 } from "react";
 import { CheckCircle, XCircle, AlertTriangle, Info, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TOAST_EVENT, type ToastEventDetail, type ToastVariant } from "@/lib/toast-bus";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                               */
 /* ------------------------------------------------------------------ */
-
-type ToastVariant = "success" | "error" | "warning" | "info";
 
 interface Toast {
   id: string;
@@ -125,6 +124,16 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     },
     [],
   );
+
+  // Bridge: surface toasts dispatched imperatively via `emitToast` (window event).
+  useEffect(() => {
+    function onToastEvent(e: Event) {
+      const detail = (e as CustomEvent<ToastEventDetail>).detail;
+      if (detail?.message) addToast(detail.message, detail.variant ?? "info", detail.duration);
+    }
+    window.addEventListener(TOAST_EVENT, onToastEvent);
+    return () => window.removeEventListener(TOAST_EVENT, onToastEvent);
+  }, [addToast]);
 
   const contextValue: ToastContextValue = {
     toast: addToast,
