@@ -2914,14 +2914,67 @@ model MarketStudy {
   summary     String?   @db.Text
   completedAt DateTime?
 
+  // ── Acteur Bureau d'étude (ADR-0110) — typage méthodologique ──
+  // FK souple vers `MethodologyReference.key` (catalogue seedé) : quel protocole
+  // (CONCEPT_TEST/PRICING/TRACKER…) cette étude applique. Nullable (rétrocompat).
+  methodologyKey String?
+
   strategy  Strategy          @relation(fields: [strategyId], references: [id])
   sources   MarketSource[]
   syntheses MarketSynthesis[]
+  waves     ResearchWave[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([strategyId])
+  @@index([methodologyKey])
+}
+
+// Vague d'étude — TIME-SPINE de l'acteur Bureau d'étude (ADR-0110).
+// Une étude trackée se mesure en vagues (wave-on-wave). Débloque la
+// significativité inter-vagues DÉTERMINISTE (z-test proportions, zéro LLM).
+model ResearchWave {
+  id         String    @id @default(cuid())
+  studyId    String
+  waveLabel  String // "W1", "W2", "Vague 3"…
+  periodLabel String // "T1 2026", "Mai 2026"…
+  fieldStart DateTime?
+  fieldEnd   DateTime?
+  cadence    String? // ONE_SHOT|MONTHLY|QUARTERLY|ROLLING
+  targetN    Int? // taille d'échantillon visée
+  achievedN  Int? // taille réellement atteinte
+  isRolling  Boolean   @default(false)
+
+  study MarketStudy @relation(fields: [studyId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studyId])
+}
+
+// Catalogue de méthodes — DONNÉES de référence seedées (ADR-0110), jamais en code.
+// Le réel d'un bureau d'étude : familles (CONCEPT_TEST/PRICING/CONJOINT/TRACKER/
+// U_A/SEGMENTATION/SENSORY), tailles types, normes n→marge d'erreur, T2B norms.
+// Toutes mutables en base ; le moteur (formules) reste en code.
+model MethodologyReference {
+  id              String  @id @default(cuid())
+  key             String  @unique // "CONCEPT_TEST_MONADIC", "VAN_WESTENDORP"…
+  family          String // CONCEPT_TEST|PRICING|CONJOINT|TRACKER|U_A|SEGMENTATION|SENSORY
+  label           String
+  typicalN        Int? // taille d'échantillon typique
+  confidenceLevel Float? // 0.90 | 0.95 | 0.99
+  marginOfErrorPct Float? // marge d'erreur attendue à typicalN (ex. 5.0)
+  t2bNormPct      Float? // norme Top-2-Box de la catégorie (ex. 60.0)
+  outputShape     String? // "OPP/IPP" | "T2B" | "part-worths" | "demand-curve"…
+  whenToUse       String?
+  note            String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([family])
 }
 
 model MarketSource {

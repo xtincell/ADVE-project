@@ -1057,6 +1057,10 @@ async function main() {
   const { seedMediaBenchmarks } = await import("./seed-media-benchmarks");
   const mediaN = await seedMediaBenchmarks(prisma);
   console.log(`✓ ${mediaN} benchmarks média seedés`);
+
+  const { seedMethodologyReferences } = await import("./seed-methodology-references");
+  const methodN = await seedMethodologyReferences(prisma);
+  console.log(`✓ ${methodN} méthodes d'étude seedées`);
 }
 
 main()
