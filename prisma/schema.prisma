@@ -1240,6 +1240,7 @@ model TalentProfile {
   commissions       Commission[]
   certifications    TalentCertification[]
   reviews           TalentReview[]
+  usageGrants       UsageGrant[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2055,11 +2056,95 @@ model CampaignExecution {
   action   CampaignAction @relation(fields: [actionId], references: [id])
   campaign Campaign       @relation(fields: [campaignId], references: [id])
 
+  deliverableSpecs DeliverableSpec[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([actionId])
   @@index([campaignId])
+}
+
+// Spec de livrable — fan-out d'une exécution en N livrables techniques (ADR-0111).
+// Un CampaignExecution éclate en specs concrètes (TV 16:9 H.264 -23 LUFS,
+// Meta 9:16 6s, OOH 4x3m…). Chaque spec dérive d'une LIGNE du catalogue
+// `ChannelSpecReference` (seedé) — jamais une liste en code.
+model DeliverableSpec {
+  id             String  @id @default(cuid())
+  executionId    String
+  channelSpecKey String? // FK souple vers ChannelSpecReference.key
+  channel        String
+  aspectRatio    String? // "16:9", "9:16", "1:1", "4x3m"…
+  resolution     String? // "1920x1080", "1080x1920"…
+  durationSec    Int? // pour les formats temporels
+  codec          String?
+  frameRate      Float?
+  loudnessTarget String? // "-23 LUFS", "-16 LUFS"…
+  captionRequired Boolean @default(false)
+  fileFormat     String?
+  maxFileMb      Int?
+  status         String  @default("PENDING") // PENDING|IN_PRODUCTION|DELIVERED|APPROVED
+
+  execution   CampaignExecution @relation(fields: [executionId], references: [id])
+  usageGrants UsageGrant[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([executionId])
+  @@index([channelSpecKey])
+}
+
+// Catalogue canaux × specs — DONNÉES de référence seedées (ADR-0111), jamais en
+// code. TV/CTV/Meta/TikTok/YouTube/OOH/Print… avec leurs contraintes techniques.
+model ChannelSpecReference {
+  id             String  @id @default(cuid())
+  key            String  @unique // "META_REELS_9x16", "TV_HD_16x9"…
+  channel        String
+  label          String
+  aspectRatio    String?
+  resolution     String?
+  durationSec    Int?
+  codec          String?
+  frameRate      Float?
+  loudnessTarget String?
+  captionRequired Boolean @default(false)
+  fileFormat     String?
+  maxFileMb      Int?
+  note           String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([channel])
+}
+
+// Droit d'usage (talent × livrable) — ADR-0111. Encadre la diffusion : médias,
+// territoire, durée, buyout, exclusivité. Gate d'EXPIRATION isomorphe à `staleAt` :
+// un grant périmé (expiresAt < now) bloque la diffusion (vérif déterministe).
+model UsageGrant {
+  id               String   @id @default(cuid())
+  talentProfileId  String?
+  deliverableSpecId String?
+  media            Json // string[] — ["TV","DIGITAL","OOH"…]
+  territory        String // "CM", "CEMAC", "WORLDWIDE"…
+  termStart        DateTime
+  termMonths       Int
+  buyoutFee        Float?
+  currency         String   @default("XAF")
+  exclusivity      Boolean  @default(false)
+  expiresAt        DateTime // termStart + termMonths (calculé à la création)
+  status           String   @default("ACTIVE") // ACTIVE|EXPIRED|REVOKED
+
+  talentProfile   TalentProfile?   @relation(fields: [talentProfileId], references: [id])
+  deliverableSpec DeliverableSpec? @relation(fields: [deliverableSpecId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([talentProfileId])
+  @@index([deliverableSpecId])
+  @@index([expiresAt])
 }
 
 model CampaignAmplification {

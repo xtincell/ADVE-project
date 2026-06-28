@@ -510,6 +510,8 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "LEGACY_RECOMMENDATION_SET_RICE", governor: "INFRASTRUCTURE", handler: "consulting-rice", async: false, description: "Priorisation RICE déterministe d'une recommandation (acteur Conseil, ADR-0109)." },
   { kind: "LEGACY_RESEARCH_WAVE_CREATE", governor: "INFRASTRUCTURE", handler: "bureau-etudes", async: false, description: "Création d'une vague d'étude (time-spine, acteur Bureau d'étude, ADR-0110)." },
   { kind: "LEGACY_RESEARCH_WAVE_RECORD", governor: "INFRASTRUCTURE", handler: "bureau-etudes", async: false, description: "Enregistrement de l'échantillon atteint d'une vague (ADR-0110)." },
+  { kind: "LEGACY_DELIVERABLE_FANOUT", governor: "INFRASTRUCTURE", handler: "production", async: false, description: "Fan-out d'une exécution en specs de livrable depuis le catalogue (acteur Production, ADR-0111)." },
+  { kind: "LEGACY_USAGE_GRANT_CREATE", governor: "INFRASTRUCTURE", handler: "production", async: false, description: "Création d'un droit d'usage (talent × livrable) avec gate d'expiration (ADR-0111)." },
   { kind: "LEGACY_MATCHING_OVERRIDE", governor: "INFRASTRUCTURE", handler: "matching", async: false, description: "Strangler-promoted mutation 'override' from router 'matching'." },
   { kind: "LEGACY_MEDIA_BUYING_DETECT_ANOMALIES", governor: "INFRASTRUCTURE", handler: "media-buying", async: false, description: "Strangler-promoted mutation 'detectAnomalies' from router 'media-buying'." },
   { kind: "LEGACY_MEDIA_BUYING_PUSH_BENCHMARKS", governor: "INFRASTRUCTURE", handler: "media-buying", async: false, description: "Strangler-promoted mutation 'pushBenchmarks' from router 'media-buying'." },

@@ -1061,6 +1061,10 @@ async function main() {
   const { seedMethodologyReferences } = await import("./seed-methodology-references");
   const methodN = await seedMethodologyReferences(prisma);
   console.log(`✓ ${methodN} méthodes d'étude seedées`);
+
+  const { seedChannelSpecs } = await import("./seed-channel-specs");
+  const specN = await seedChannelSpecs(prisma);
+  console.log(`✓ ${specN} specs canaux seedées`);
 }
 
 main()
