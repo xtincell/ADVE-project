@@ -208,6 +208,21 @@ function isProviderHealthy(p: LLMProvider): boolean {
   return s.available && (s.circuitOpenUntil === 0 || s.circuitOpenUntil < now);
 }
 
+/**
+ * Signal canonique « le step LLM vaut-il la peine d'être tenté ? ».
+ *
+ * Renvoie `true` ssi AU MOINS un provider de **texte** est sain (clé présente +
+ * circuit fermé). OpenAI est exclu (réservé aux embeddings, cf. selectProvider).
+ *
+ * C'est le seul point où le reste de La Fusée décide de **sauter** l'étage LLM
+ * proprement, sans partir à l'aveugle et se prendre une exception. Toute
+ * mécanique « DB d'abord, LLM ensuite (découplé, skippable) » — notamment le
+ * Knowledge Gateway de Seshat — s'appuie là-dessus.
+ */
+export function isTextLLMAvailable(): boolean {
+  return (["anthropic", "ollama", "openrouter"] as const).some((p) => isProviderHealthy(p));
+}
+
 function recordProviderFailure(provider: LLMProvider, forceTrip = false): void {
   const state = providerStates[provider];
   state.failureCount++;

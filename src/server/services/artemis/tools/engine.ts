@@ -246,6 +246,17 @@ export async function executeTool(
   // Load strategy context — fencé comme DONNÉE non fiable (anti-injection).
   const strategyContext = wrapUntrusted("CONTEXTE STRATÉGIE", await loadStrategyContext(strategyId), { max: 12000 });
 
+  // ── Phase 24 (ADR-0108) — Références Seshat (corpus Hunter) pour l'idéation ──
+  // Pour les tools d'idéation/benchmark, on injecte les campagnes RÉELLES récoltées
+  // par Hunter (verdict PASS, secteur/marché pertinents) — neutralisées. Le LLM
+  // propose alors du distinctif ancré sur des références réelles, pas l'ADVE seul.
+  let referenceContext = "";
+  if (tool.usesSeshatReferences) {
+    const { buildReferenceContextText } = await import("@/server/services/seshat/reference-context");
+    const refs = await buildReferenceContextText(strategyId, { limit: 5 });
+    if (refs) referenceContext = `\n\n${wrapUntrusted("RÉFÉRENCES SESHAT", refs, { max: 8000 })}`;
+  }
+
   const systemPrompt = `${UNTRUSTED_NOTICE}
 
 Tu es un expert en strategie de marque et en creation publicitaire, specialise dans le marche africain.
@@ -254,7 +265,7 @@ Tu produis des outputs structures, actionnables, et adaptes au contexte culturel
 Reponds en francais. Sois precis, concret, et oriente resultats.
 Format de sortie: JSON structure avec les champs suivants: ${tool.outputFormat}
 
-${strategyContext}`;
+${strategyContext}${referenceContext}`;
 
   const startTime = Date.now();
   let aiOutput: Record<string, unknown>;

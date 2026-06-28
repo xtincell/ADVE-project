@@ -112,6 +112,7 @@ export const ADOPS_CROSS_TOOL: GloryToolDef = defineHybridTool({
   },
   outputFormat: "hybrid_brief_json",
   outputSchema: adopsCrossPollinateOutputSchema,
+  usesSeshatReferences: true, // hybridation nourrie par les campagnes réelles du corpus Hunter
   promptTemplate: `Hybride les concepts "{{concept_a}}" × "{{concept_b}}" en un brief créatif distinctif pour la marque ({{brand_dna}}).
 
 Renvoie un JSON :
