@@ -24,16 +24,20 @@ export function MobileTabBar({ navGroups, portalAccentVar, maxTabs = 4 }: Mobile
     return pathname.startsWith(href);
   };
 
-  // Show first N items as tabs, rest in "More" sheet
+  // Show first N items as tabs, rest in "More" sheet (regroupé par section).
   const visibleItems = allItems.slice(0, maxTabs);
-  const overflowItems = allItems.slice(maxTabs);
-  const hasOverflow = overflowItems.length > 0;
+  const hasOverflow = allItems.length > maxTabs;
+  const overflowHrefs = new Set(visibleItems.map((i) => i.href));
+  const overflowGroups = navGroups
+    .map((g) => ({ ...g, items: g.items.filter((it) => !overflowHrefs.has(it.href)) }))
+    .filter((g) => g.items.length > 0);
 
   return (
     <>
-      {/* Bottom tab bar - only visible on mobile */}
+      {/* Bottom tab bar - only visible on mobile. Hauteur + safe-area (encoches). */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-[var(--z-sidebar)] flex h-[var(--mobile-tab-height)] items-center justify-around border-t border-border-subtle bg-background/95 backdrop-blur-md md:hidden"
+        className="fixed bottom-0 left-0 right-0 z-[var(--z-sidebar)] flex items-stretch justify-around border-t border-border-subtle bg-background/95 backdrop-blur-md md:hidden"
+        style={{ height: "calc(var(--mobile-tab-height) + env(safe-area-inset-bottom))", paddingBottom: "env(safe-area-inset-bottom)" }}
         aria-label="Navigation mobile"
       >
         {visibleItems.map((item) => {
@@ -43,12 +47,13 @@ export function MobileTabBar({ navGroups, portalAccentVar, maxTabs = 4 }: Mobile
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-1 ${
+              aria-current={active ? "page" : undefined}
+              className={`flex min-w-[var(--tap-min)] flex-1 flex-col items-center justify-center gap-0.5 ${
                 active ? "text-foreground" : "text-foreground-muted"
               }`}
             >
               <Icon className="h-5 w-5" style={active ? { color: portalAccentVar } : undefined} />
-              <span className="text-2xs font-medium">{item.label}</span>
+              <span className="text-2xs font-medium leading-none">{item.label}</span>
             </Link>
           );
         })}
@@ -56,48 +61,55 @@ export function MobileTabBar({ navGroups, portalAccentVar, maxTabs = 4 }: Mobile
         {hasOverflow && (
           <button
             onClick={() => setMoreOpen(true)}
-            className="flex flex-1 flex-col items-center justify-center gap-0.5 py-1 text-foreground-muted"
+            className="flex min-w-[var(--tap-min)] flex-1 flex-col items-center justify-center gap-0.5 text-foreground-muted"
             aria-label="Plus de pages"
           >
             <MoreHorizontal className="h-5 w-5" />
-            <span className="text-2xs font-medium">Plus</span>
+            <span className="text-2xs font-medium leading-none">Plus</span>
           </button>
         )}
       </nav>
 
-      {/* More sheet overlay */}
+      {/* More sheet overlay — regroupé par section (préserve la hiérarchie). */}
       {moreOpen && (
         <>
           <div
-            className="fixed inset-0 z-[var(--z-modal-backdrop)] bg-background/60 backdrop-blur-sm md:hidden"
+            className="fixed inset-0 z-[var(--z-modal-backdrop)] bg-background/60 backdrop-blur-sm md:hidden animate-[fade-in_150ms_ease-out]"
             onClick={() => setMoreOpen(false)}
           />
-          <div className="fixed bottom-0 left-0 right-0 z-[var(--z-modal)] rounded-t-2xl border-t border-border bg-background-raised p-4 pb-8 md:hidden animate-[slide-up_250ms_ease-out]">
+          <div
+            className="fixed bottom-0 left-0 right-0 z-[var(--z-modal)] max-h-[80vh] overflow-y-auto rounded-t-2xl border-t border-border bg-background-raised p-4 md:hidden animate-[slide-up_250ms_ease-out]"
+            style={{ paddingBottom: "calc(2rem + env(safe-area-inset-bottom))" }}
+          >
             <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-border" />
-            <div className="grid grid-cols-3 gap-2">
-              {overflowItems.map((item) => {
-                const active = isActive(item.href);
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setMoreOpen(false)}
-                    className={`flex flex-col items-center gap-1.5 rounded-xl p-3 transition-colors ${
-                      active ? "bg-background-overlay" : "hover:bg-background-overlay/50"
-                    }`}
-                  >
-                    <Icon
-                      className="h-5 w-5"
-                      style={active ? { color: portalAccentVar } : undefined}
-                    />
-                    <span className="text-center text-2xs font-medium text-foreground-secondary">
-                      {item.label}
-                    </span>
-                  </Link>
-                );
-              })}
-            </div>
+            {overflowGroups.map((group, gi) => (
+              <div key={gi} className={gi > 0 ? "mt-4" : ""}>
+                {group.title && (
+                  <p className="mb-1.5 px-1 text-2xs font-semibold uppercase tracking-[0.05em] text-foreground-muted">
+                    {group.title}
+                  </p>
+                )}
+                <div className="grid grid-cols-3 gap-2">
+                  {group.items.map((item) => {
+                    const active = isActive(item.href);
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setMoreOpen(false)}
+                        className={`flex min-h-[var(--tap-min)] flex-col items-center justify-center gap-1.5 rounded-xl p-3 transition-colors ${
+                          active ? "bg-background-overlay" : "hover:bg-background-overlay/50"
+                        }`}
+                      >
+                        <Icon className="h-5 w-5" style={active ? { color: portalAccentVar } : undefined} />
+                        <span className="text-center text-2xs font-medium text-foreground-secondary">{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         </>
       )}

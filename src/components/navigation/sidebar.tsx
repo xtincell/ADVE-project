@@ -11,12 +11,19 @@ interface SidebarProps {
   navGroups: NavGroup[];
   portalAccentVar: string;
   headerContent?: React.ReactNode;
+  /** Rendu dans le tiroir mobile : pleine largeur, jamais réduit, ferme à la navigation. */
+  mobile?: boolean;
+  /** Appelé à chaque navigation (pour fermer le tiroir mobile). */
+  onNavigate?: () => void;
 }
 
-export function Sidebar({ navGroups, portalAccentVar, headerContent }: SidebarProps) {
+export function Sidebar({ navGroups, portalAccentVar, headerContent, mobile = false, onNavigate }: SidebarProps) {
   const pathname = usePathname();
   const { t } = useLocale();
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsedState, setCollapsedState] = useState(false);
+  // En tiroir mobile, jamais réduit (on veut la nav groupée complète).
+  const collapsed = mobile ? false : collapsedState;
+  const setCollapsed = setCollapsedState;
   const [favorites, setFavorites] = useState<string[]>([]);
 
   // Locale-aware label resolution — pillar items translate via their slug
@@ -74,21 +81,27 @@ export function Sidebar({ navGroups, portalAccentVar, headerContent }: SidebarPr
   return (
     <aside
       data-tour-step="sidebar"
-      className="sticky top-[var(--topbar-height)] flex h-[calc(100vh-var(--topbar-height))] shrink-0 flex-col overflow-visible border-r border-border-subtle bg-background-subtle transition-[width] duration-normal ease-out"
-      style={{ width: collapsed ? "var(--sidebar-collapsed)" : "var(--sidebar-expanded)" }}
+      className={
+        mobile
+          ? "flex h-full w-full flex-col overflow-y-auto bg-background-subtle"
+          : "sticky top-[var(--topbar-height)] flex h-[calc(100vh-var(--topbar-height))] shrink-0 flex-col overflow-visible border-r border-border-subtle bg-background-subtle transition-[width] duration-normal ease-out"
+      }
+      style={mobile ? undefined : { width: collapsed ? "var(--sidebar-collapsed)" : "var(--sidebar-expanded)" }}
     >
       {/* Header area */}
       <div className="flex items-center justify-between border-b border-border-subtle px-3 py-3 overflow-visible relative z-[60]">
         {!collapsed && headerContent && (
           <div className="min-w-0 flex-1 overflow-visible">{headerContent}</div>
         )}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-foreground-muted transition-colors hover:bg-background-overlay hover:text-foreground"
-          aria-label={collapsed ? "Ouvrir la barre laterale" : "Reduire la barre laterale"}
-        >
-          {collapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-        </button>
+        {!mobile && (
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-foreground-muted transition-colors hover:bg-background-overlay hover:text-foreground"
+            aria-label={collapsed ? "Ouvrir la barre laterale" : "Reduire la barre laterale"}
+          >
+            {collapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+          </button>
+        )}
       </div>
 
       {/* Favorites section */}
@@ -104,6 +117,7 @@ export function Sidebar({ navGroups, portalAccentVar, headerContent }: SidebarPr
               <Link
                 key={`fav-${item.href}`}
                 href={item.href}
+                onClick={onNavigate}
                 className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors ${
                   active
                     ? "bg-background-overlay text-foreground"
@@ -141,6 +155,7 @@ export function Sidebar({ navGroups, portalAccentVar, headerContent }: SidebarPr
                   <div key={item.href} className="group relative flex items-center">
                     <Link
                       href={item.href}
+                      onClick={onNavigate}
                       className={`flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-sm font-medium transition-colors ${
                         active
                           ? "bg-background-overlay text-foreground"
@@ -209,6 +224,7 @@ export function Sidebar({ navGroups, portalAccentVar, headerContent }: SidebarPr
       <div className="mt-auto border-t border-border-subtle px-3 py-2">
         <Link
           href="/"
+          onClick={onNavigate}
           className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-foreground-muted transition-colors hover:bg-background-overlay hover:text-foreground"
         >
           <Home className="h-3.5 w-3.5" />

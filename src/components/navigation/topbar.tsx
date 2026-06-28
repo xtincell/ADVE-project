@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { Search, Brain, User, LogOut, Settings, ChevronDown } from "lucide-react";
+import { Search, Brain, User, LogOut, Settings, ChevronDown, Menu } from "lucide-react";
 import { PortalSwitcher } from "./portal-switcher";
 import { Breadcrumb } from "./breadcrumb";
 import { NotificationBell } from "@/components/neteru/notification-bell";
@@ -14,6 +14,8 @@ interface TopbarProps {
   currentPortal: PortalId;
   onOpenCommandPalette?: () => void;
   onToggleMestor?: () => void;
+  /** Ouvre le tiroir de navigation mobile (md:hidden). */
+  onOpenMobileNav?: () => void;
   /** @deprecated — branché live via NotificationBell (ADR-0025). */
   notificationCount?: number;
   mestorHasSuggestions?: boolean;
@@ -42,6 +44,7 @@ export function Topbar({
   currentPortal,
   onOpenCommandPalette,
   onToggleMestor,
+  onOpenMobileNav,
   mestorHasSuggestions = false,
   userName = "Utilisateur",
 }: TopbarProps) {
@@ -78,6 +81,15 @@ export function Topbar({
       className="sticky top-0 z-[var(--z-topbar)] flex h-[var(--topbar-height)] items-center gap-3 border-b border-border-subtle bg-background/80 px-4 backdrop-blur-md"
       role="banner"
     >
+      {/* Mobile: hamburger to open the grouped nav drawer */}
+      <button
+        onClick={onOpenMobileNav}
+        className="-ml-1 flex h-11 w-11 items-center justify-center rounded-md text-foreground-secondary transition-colors hover:bg-background-overlay hover:text-foreground md:hidden"
+        aria-label="Ouvrir le menu de navigation"
+      >
+        <Menu className="h-5 w-5" />
+      </button>
+
       {/* Left: Portal Switcher + Breadcrumb */}
       <div className="flex items-center gap-3">
         <PortalSwitcher currentPortal={currentPortal} />
