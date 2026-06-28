@@ -10,6 +10,25 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.52 — fix: passe de debug NEFER (follow-ups) — RiceScale self-seed, garde devis, idempotence escrow (2026-06-28)
+
+Clôture des follow-ups différés de la passe de debug (Lot A/B/C/D = v6.27.50/51).
+
+- **`fix(consulting)` — `RiceScale` self-seed (parité ADR-0119)** : barème RICE relocalisé en couche
+  service (`consulting/rice-canon.ts`, source unique) + `ensureRiceScales` idempotent ; `loadScales`
+  amorce le barème quand la table est vide (le build Vercel ne lance pas `db:seed`) au lieu de laisser
+  `setRecommendationRice` throw sur la voie libellés. Le seed `prisma/` réutilise la même source (re-export rétro-compat).
+- **`fix(mission-quote)` — garde d'état devis** : `decideQuote` n'écrase plus une décision finale — seul
+  un devis `SENT` est décidable (sinon throw), évitant un basculement ACCEPTED→REJECTED après engagement du talent.
+- **`fix(escrow)` — idempotence `hold`** : `holdEscrowForMission` ne crée plus de séquestre `HELD` dupliqué —
+  un double-clic arbitre retourne l'escrow existant (clé mission + commission).
+
+Reportés (décision produit ou risque > valeur) : badge UI saturation (la **donnée** expose déjà
+`MVP_PLACEHOLDER_CAPACITY_LIMITS` — seul le rendu manque), cadence éditoriale (vrai fix = dérivation
+pilier I, trou H2 documenté), mutation morte `boot/[sessionId]`. eslint 0 · madge 0 cycle.
+
+---
+
 ## v6.27.51 — fix: passe de debug NEFER (Lot B+C+D) — liens morts, garde crash, écart budget + anti-récidive timeline (2026-06-28)
 
 Suite de la passe de debug (Lot A = v6.27.50). Couacs P2/P3 + garde anti-récidive du P0.
