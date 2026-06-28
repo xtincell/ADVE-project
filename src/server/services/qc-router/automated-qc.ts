@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import Anthropic from "@anthropic-ai/sdk";
+import { callLLM } from "@/server/services/llm-gateway";
 import { PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
 
 import { PILLAR_STORAGE_KEYS } from "@/domain";
@@ -143,19 +143,18 @@ async function runAiContentAnalysis(
   },
   qcCriteria: Record<string, unknown>
 ): Promise<{ score: number; issues: AutomatedQcResult["issues"] } | null> {
-  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
   const pillarSummary = deliverable.mission.strategy.pillars
     .map((p) => `${PILLAR_NAMES[p.key as PillarKey] ?? p.key}: ${JSON.stringify(p.content)}`)
     .join("\n");
 
-  const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 1024,
-    messages: [
-      {
-        role: "user",
-        content: `You are a brand QC analyst for the ADVERTIS framework. Evaluate this deliverable for brand conformity.
+  const { text: responseText } = await callLLM({
+    system: "",
+    caller: "qc-router:automated-qc",
+    purpose: "intermediate",
+    responseFormat: "json_object",
+    maxOutputTokens: 1024,
+    temperature: 0,
+    prompt: `You are a brand QC analyst for the ADVERTIS framework. Evaluate this deliverable for brand conformity.
 
 Deliverable: "${deliverable.title}"
 Mission: "${deliverable.mission.title}"
@@ -179,16 +178,13 @@ Return JSON only:
     {"type": "brand"|"content"|"pillar"|"format", "severity": "info"|"warning"|"error", "message": "..."}
   ]
 }`,
-      },
-    ],
   });
 
-  const textBlock = message.content.find((b) => b.type === "text");
-  if (!textBlock) return null;
+  if (!responseText) return null;
 
   try {
     // Extract JSON from the response (handle markdown code blocks)
-    let jsonStr = textBlock.text;
+    let jsonStr = responseText;
     const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
     if (jsonMatch) jsonStr = jsonMatch[0];
 

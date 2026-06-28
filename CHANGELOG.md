@@ -10,6 +10,18 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.45 — fix(llm-gateway): police de débit par modèle + fin des appels Anthropic directs (2026-06-28)
+
+Le système faisait des **erreurs Anthropic alors que tout est censé être sur OpenRouter** (modèle `owl-alpha`), et **aucune limite RPS/RPM par modèle** n'était respectée (seul un retry-on-failure existait → 429 en rafale). Deux corrections structurelles :
+
+**1. Police de débit PAR MODÈLE (le système n'improvise plus).** Nouveau module pur `llm-gateway/rate-policy.ts` : registre déclaratif `{ modèle → { rpm, maxConcurrent, minIntervalMs } }` (entrée `owl-alpha` + défaut conservateur), valeurs **surchargeables par env** (le code déclare la structure, l'opérateur fixe les chiffres). Limiteur process-local (fenêtre glissante RPM + sémaphore de concurrence + intervalle min RPS) : `callLLM` **acquiert un créneau pour le modèle effectivement servi** avant chaque appel provider et **attend** si la limite est atteinte au lieu de partir et de se prendre un 429. Env : `OWL_ALPHA_RPM` (déf. 20), `OWL_ALPHA_CONCURRENCY` (déf. 2), `OWL_ALPHA_MIN_INTERVAL_MS` (déf. 1500), `LLM_DEFAULT_RPM`/`_CONCURRENCY`/`_MIN_INTERVAL_MS`, `LLM_RATE_MAX_WAIT_MS`. Limite : process-local (multi-pod exact = Redis, résidu connu).
+
+**2. Provider primaire + fin des bypass Anthropic.** Nouveau `LLM_PRIMARY_PROVIDER` (ex. `openrouter`) → ce provider passe en tête de l'ordre d'essai (sinon Anthropic était tenté d'abord et levait des erreurs). Surtout : **5 services appelaient le SDK Anthropic en DIRECT** (hors gateway, modèle hardcodé) — source réelle des « erreurs Anthropic » : `quality-modulator` (mort depuis LOI 9 → **supprimé**), `translation`, `qc-router/automated-qc`, `asset-tagger`, `feedback-loop` (**reroutés via `callLLM`**). Plus **aucun** `import @anthropic-ai/sdk` hors gateway : tout le texte respecte désormais le cascade provider + la police de débit + le cost-tracking.
+
+`rate-policy.test.ts` (résolution exact/sous-chaîne/défaut + concurrence + RPM + release-on-throw). tsc 0 · eslint 0 · 2173 tests unit verts. Cap APOGEE 7/7 préservé.
+
+---
+
 ## v6.27.44 — fix(campaign): génération de campagne 100 % déterministe + gouvernée (2026-06-28)
 
 Canonisation de la **zone production campagne** après dérive des dernières mises à jour. La doctrine « Fusée non-dépendante du LLM » (LOI 9) n'était pas respectée sur le bouton de génération de campagne et ses briefs.

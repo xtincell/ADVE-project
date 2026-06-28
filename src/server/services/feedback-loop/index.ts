@@ -30,7 +30,7 @@ import { captureEvent } from "@/server/services/knowledge-capture";
 import { detectDrift } from "./drift-detector";
 import type { PillarKey } from "@/lib/types/advertis-vector";
 import { PILLAR_KEYS, PILLAR_NAMES } from "@/lib/types/advertis-vector";
-import Anthropic from "@anthropic-ai/sdk";
+import { callLLM } from "@/server/services/llm-gateway";
 
 const DRIFT_THRESHOLD_PERCENT = 15;
 
@@ -241,15 +241,14 @@ async function runArtemisDiagnostic(
 
     const pillarContent = strategy.pillars.find((p) => p.key === pillar);
 
-    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-    const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1024,
-      messages: [
-        {
-          role: "user",
-          content: `You are ARTEMIS, the brand strategy diagnostic engine for the ADVERTIS framework.
+    const { text: responseText } = await callLLM({
+      system: "",
+      caller: "feedback-loop:drift-diagnostic",
+      purpose: "intermediate",
+      responseFormat: "json_object",
+      maxOutputTokens: 1024,
+      temperature: 0,
+      prompt: `You are ARTEMIS, the brand strategy diagnostic engine for the ADVERTIS framework.
 
 A drift has been detected on the "${PILLAR_NAMES[pillar]}" pillar (key: ${pillar}) for strategy "${strategy.name}".
 
@@ -269,12 +268,9 @@ Be concise and actionable. Respond in JSON format:
   "impact": "...",
   "actions": ["action1", "action2", ...]
 }`,
-        },
-      ],
     });
 
-    const textBlock = message.content.find((b) => b.type === "text");
-    return textBlock?.text ?? "Diagnostic unavailable";
+    return responseText || "Diagnostic unavailable";
   } catch {
     return `Drift detected on ${PILLAR_NAMES[pillar]}: score dropped from ${previousScore} to ${currentScore} (${severity}). Manual review recommended.`;
   }

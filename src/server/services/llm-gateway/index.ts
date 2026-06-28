@@ -509,10 +509,25 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
   // Ensure at least anthropic is tried as the last-resort fallback.
   if (providersToTry.length === 0) providersToTry.push("anthropic");
 
-  for (const provider of providersToTry) {
+  // ── Provider primaire opérateur (directive « tout sur OpenRouter ») ──────
+  // Quand `LLM_PRIMARY_PROVIDER` est fixé (ex. "openrouter" pour servir
+  // owl-alpha), ce provider passe en TÊTE de l'ordre d'essai — sinon Anthropic
+  // serait tenté d'abord et lèverait des erreurs alors qu'on est censé être
+  // 100 % OpenRouter. Non fixé → comportement historique inchangé.
+  const primary = process.env.LLM_PRIMARY_PROVIDER as LLMProvider | undefined;
+  const orderedProviders =
+    primary && providersToTry.includes(primary)
+      ? [primary, ...providersToTry.filter((p) => p !== primary)]
+      : providersToTry;
+
+  const { acquireSlot, releaseSlot } = await import("./rate-policy");
+
+  for (const provider of orderedProviders) {
     try {
       const result = await withRetry(async () => {
         let aiModel;
+        // Modèle effectivement servi — clé de la police de débit par modèle.
+        let servedModel = anthropicModel;
         if (provider === "anthropic") {
           const { anthropic, createAnthropic } = await import("@ai-sdk/anthropic");
           if (process.env.HEADROOM_PROXY_URL) {
@@ -524,6 +539,7 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
         } else if (provider === "openai") {
           const { openai, createOpenAI } = await import("@ai-sdk/openai");
           const openaiModel = OPENAI_MODEL_MAP[anthropicModel] ?? "gpt-4o";
+          servedModel = openaiModel;
           if (process.env.HEADROOM_PROXY_URL) {
             const customOpenAI = createOpenAI({ baseURL: process.env.HEADROOM_PROXY_URL });
             aiModel = customOpenAI(openaiModel);
@@ -543,13 +559,15 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
               "X-Title": "La Fusee",
             },
           });
-          aiModel = openrouter(resolveOpenRouterModel(anthropicModel));
+          servedModel = resolveOpenRouterModel(anthropicModel);
+          aiModel = openrouter(servedModel);
         } else {
           // Ollama via OpenAI-compatible API. Critical: use the Ollama
           // model name (per-call override > policy), NOT the Claude model name.
           const { createOpenAI } = await import("@ai-sdk/openai");
           const ollama = createOpenAI({ baseURL: process.env.OLLAMA_BASE_URL });
-          aiModel = ollama(options.ollamaModel ?? ollamaModel ?? anthropicModel);
+          servedModel = options.ollamaModel ?? ollamaModel ?? anthropicModel;
+          aiModel = ollama(servedModel);
         }
 
         // ── F-A3 (ADR-0067) — responseFormat propagation ────────────────
@@ -583,14 +601,25 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
           );
         }
 
-        const { text, usage } = await generateText({
-          model: aiModel as Parameters<typeof generateText>[0]["model"],
-          system: hr.system,
-          prompt: hr.prompt,
-          maxOutputTokens: options.maxOutputTokens ?? DEFAULT_MAX_TOKENS,
-          temperature: options.temperature,
-          ...(providerOptions ? { providerOptions } : {}),
-        });
+        // ── Police de débit PAR MODÈLE — n'improvise jamais le RPS/RPM ──────
+        // Acquiert un créneau pour le modèle effectivement servi (ex. owl-alpha
+        // sur OpenRouter) ; attend si la limite RPM/concurrence/RPS est atteinte
+        // plutôt que de partir et de se prendre un 429. Local au process.
+        const slotKey = await acquireSlot(servedModel);
+        let text: string;
+        let usage: Awaited<ReturnType<typeof generateText>>["usage"];
+        try {
+          ({ text, usage } = await generateText({
+            model: aiModel as Parameters<typeof generateText>[0]["model"],
+            system: hr.system,
+            prompt: hr.prompt,
+            maxOutputTokens: options.maxOutputTokens ?? DEFAULT_MAX_TOKENS,
+            temperature: options.temperature,
+            ...(providerOptions ? { providerOptions } : {}),
+          }));
+        } finally {
+          releaseSlot(slotKey);
+        }
 
         const gatewayUsage = {
           inputTokens: usage?.inputTokens ?? 0,
