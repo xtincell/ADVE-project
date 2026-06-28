@@ -10,6 +10,28 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.53 — fix: passe de debug NEFER (items différés) — badge saturation, boot complete, cadence H2 (2026-06-28)
+
+Clôture des 3 items volontairement différés de la passe de debug (v6.27.50→52).
+
+- **`fix(console)` — badge saturation** : la page économie agence rendait les `degradationCodes` des
+  marges mais pas ceux de la saturation ressources, alors que la **donnée** expose déjà
+  `MVP_PLACEHOLDER_CAPACITY_LIMITS` (capacité = constante placeholder, pas encore branchée à Imhotep).
+  Rendu du badge (token sémantique `warning`) → l'opérateur sait que la saturation est indicative.
+- **`fix(intake)` — boot complete** : `boot/[sessionId]` déclarait `completeMutation` mais ne
+  l'appelait jamais — « Terminer » avançait le 8ᵉ pilier sans finaliser. La dernière étape enchaîne
+  désormais `advance` → `complete` (`onSuccess`), qui passe la Strategy en `status: ACTIVE` (First Value
+  Protocol débloqué).
+- **`fix(artemis)` — cadence H2** : le `rythme` par canal du calendrier de contenu est un modèle
+  sectoriel par défaut (pas dérivé des piliers comme `piliers`/`formats`). Aucun signal de cadence
+  fiable dans le pilier I → on mire le pattern d'honnêteté `mixSource` : champ
+  `rythmeSource: "DEFAULT_TEMPLATE"` (type + Zod + composer) surfacé « par défaut · à ajuster » dans le
+  panneau calendrier cockpit. Le trou H2 (PROPAGATION-MAP §6a) n'est plus un drift silencieux.
+
+eslint 0 · 3 tests DS anti-drift verts · cap APOGEE 7/7. tsc/tests délégués à la CI.
+
+---
+
 ## v6.27.52 — fix: passe de debug NEFER (follow-ups) — RiceScale self-seed, garde devis, idempotence escrow (2026-06-28)
 
 Clôture des follow-ups différés de la passe de debug (Lot A/B/C/D = v6.27.50/51).
