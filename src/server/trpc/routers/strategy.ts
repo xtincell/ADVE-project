@@ -876,25 +876,37 @@ export const strategyRouter = createTRPCRouter({
       const results = [];
 
       for (const action of brandActions) {
-        const campaignCode = generateCampaignCode();
         const budgetPlanned = action.budgetMin ?? 0;
 
-        const campaign = await ctx.db.campaign.create({
-          data: {
-            strategyId: input.strategyId,
-            name: action.title,
-            description: action.description ?? "",
-            code: campaignCode,
-            budget: budgetPlanned,
-            budgetCurrency: action.budgetCurrency ?? "XAF",
-            startDate: action.timingStart,
-            endDate: action.timingEnd,
-            state: "PLANNING",
-            status: "PLANNING",
-            objectives: action.description ? { description: action.description } : undefined,
-            advertis_vector: strategy.advertis_vector ?? undefined,
-          },
-        });
+        // ADR-0119 — toute action appartient à une campagne. On NE crée PLUS une
+        // campagne par action (flux inversé) : on attache la production à la
+        // campagne existante de l'action (canon ou ponctuelle). Action orpheline
+        // → on l'unifie dans une « campagne d'une action » (instruction opérateur).
+        let campaign = action.campaignId
+          ? await ctx.db.campaign.findFirst({ where: { id: action.campaignId, strategyId: input.strategyId } })
+          : null;
+
+        if (!campaign) {
+          campaign = await ctx.db.campaign.create({
+            data: {
+              strategyId: input.strategyId,
+              name: action.title,
+              description: action.description ?? "",
+              code: generateCampaignCode(),
+              canonType: "PUNCTUAL",
+              routeKey: action.source ?? "PUNCTUAL",
+              budget: budgetPlanned,
+              budgetCurrency: action.budgetCurrency ?? "XAF",
+              startDate: action.timingStart,
+              endDate: action.timingEnd,
+              state: "PLANNING",
+              status: "PLANNING",
+              objectives: action.description ? { description: action.description } : undefined,
+              advertis_vector: strategy.advertis_vector ?? undefined,
+            },
+          });
+        }
+        const campaignCode = campaign.code;
 
         // Brief déterministe (zéro LLM) — même constructeur que campaign-manager,
         // combine direction créative + specs de production pour le projet.
@@ -934,7 +946,7 @@ export const strategyRouter = createTRPCRouter({
 
         await ctx.db.brandAction.update({
           where: { id: action.id },
-          data: { status: "ACCEPTED", selected: true },
+          data: { status: "ACCEPTED", selected: true, campaignId: campaign.id },
         });
 
         results.push({

@@ -11,8 +11,10 @@
 import { db } from "@/lib/db";
 import { BRAND_TIERS, classifyTier, type BrandTier } from "@/domain/brand-tier";
 import { planCanonicalCampaigns, type InitiativeLite, type CanonTemplateLite, type PlannedCampaign } from "./plan";
+import { ensureCanonTemplates } from "./reference";
 
 export * from "./plan";
+export * from "./reference";
 
 function tierToOrdinal(tier: BrandTier): number {
   const i = BRAND_TIERS.indexOf(tier);
@@ -59,9 +61,16 @@ export async function generateCanonicalCampaigns(input: {
   const routeKey = input.routeKey ?? "TARGET";
   const startDate = input.startDate ?? new Date();
 
-  const templatesRaw = await db.campaignCanonTemplate.findMany({ orderBy: { sortOrder: "asc" } });
+  let templatesRaw = await db.campaignCanonTemplate.findMany({ orderBy: { sortOrder: "asc" } });
   if (templatesRaw.length === 0) {
-    return { status: "DEFERRED", reason: "Templates canon non seedés (seed-campaign-canon-templates).", routeKey, campaigns: [] };
+    // Auto-amorçage : le seed ne tourne pas au déploiement (migrate deploy seul).
+    // On matérialise les templates de référence (idempotent, zéro LLM) plutôt que
+    // de DEFER — le bouton ne doit jamais paraître inerte (ADR-0119).
+    await ensureCanonTemplates(db);
+    templatesRaw = await db.campaignCanonTemplate.findMany({ orderBy: { sortOrder: "asc" } });
+  }
+  if (templatesRaw.length === 0) {
+    return { status: "DEFERRED", reason: "Templates canon indisponibles (échec d'amorçage de la base de référence).", routeKey, campaigns: [] };
   }
   const templates: CanonTemplateLite[] = templatesRaw.map((t) => ({
     canonType: t.canonType,
