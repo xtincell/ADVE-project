@@ -10,6 +10,7 @@ import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { canAccessStrategy } from "@/server/services/operator-isolation";
+import * as consulting from "@/server/services/consulting";
 import { setRecommendationRice, sortByRice } from "@/server/services/consulting";
 /* lafusee:governed-active */
 
@@ -68,5 +69,71 @@ export const consultingRouter = createTRPCRouter({
     });
     await assertStrategyAccess(ctx, reco.strategyId);
     return setRecommendationRice(input);
+  }),
+
+  // ── Chaîne de preuve (ADR-0113) ────────────────────────────────────────────
+
+  /** Catalogue de frameworks seedé. */
+  frameworks: protectedProcedure.query(async ({ ctx }) => {
+    return ctx.db.frameworkReference.findMany({ orderBy: [{ family: "asc" }, { label: "asc" }] });
+  }),
+
+  /** Missions de conseil d'une stratégie (avec hypothèses + évidences). */
+  engagements: protectedProcedure
+    .input(z.object({ strategyId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      await assertStrategyAccess(ctx, input.strategyId);
+      return ctx.db.consultingEngagement.findMany({
+        where: { strategyId: input.strategyId },
+        include: { hypotheses: { include: { evidence: true } } },
+        orderBy: { createdAt: "desc" },
+      });
+    }),
+
+  createEngagement: governedProcedure({
+    kind: "LEGACY_CONSULTING_CREATE_ENGAGEMENT",
+    inputSchema: z.object({ strategyId: z.string(), title: z.string().min(1).max(200), objective: z.string().max(2000).optional() }),
+    caller: "consulting:createEngagement",
+  }).mutation(async ({ ctx, input }) => {
+    await assertStrategyAccess(ctx, input.strategyId);
+    return consulting.createEngagement(input);
+  }),
+
+  addHypothesis: governedProcedure({
+    kind: "LEGACY_CONSULTING_ADD_HYPOTHESIS",
+    inputSchema: z.object({ engagementId: z.string(), statement: z.string().min(1).max(1000) }),
+    caller: "consulting:addHypothesis",
+  }).mutation(async ({ ctx, input }) => {
+    const eng = await ctx.db.consultingEngagement.findUniqueOrThrow({ where: { id: input.engagementId }, select: { strategyId: true } });
+    await assertStrategyAccess(ctx, eng.strategyId);
+    return consulting.addHypothesis(input);
+  }),
+
+  addEvidence: governedProcedure({
+    kind: "LEGACY_CONSULTING_ADD_EVIDENCE",
+    inputSchema: z.object({
+      hypothesisId: z.string(),
+      stance: z.enum(["SUPPORTS", "REFUTES"]),
+      weight: z.number().min(0).max(1).optional(),
+      summary: z.string().min(1).max(2000),
+      sourceType: z.string().max(40).optional(),
+      sourceUrl: z.string().url().max(2000).optional(),
+      marketSourceId: z.string().optional(),
+    }),
+    caller: "consulting:addEvidence",
+  }).mutation(async ({ ctx, input }) => {
+    const hyp = await ctx.db.hypothesis.findUniqueOrThrow({ where: { id: input.hypothesisId }, select: { engagement: { select: { strategyId: true } } } });
+    await assertStrategyAccess(ctx, hyp.engagement.strategyId);
+    return consulting.addEvidence(input);
+  }),
+
+  linkRecommendation: governedProcedure({
+    kind: "LEGACY_CONSULTING_LINK_RECO",
+    inputSchema: z.object({ recommendationId: z.string(), hypothesisId: z.string() }),
+    caller: "consulting:linkRecommendation",
+  }).mutation(async ({ ctx, input }) => {
+    const reco = await ctx.db.recommendation.findUniqueOrThrow({ where: { id: input.recommendationId }, select: { strategyId: true } });
+    await assertStrategyAccess(ctx, reco.strategyId);
+    return consulting.linkRecommendationToHypothesis(input);
   }),
 });

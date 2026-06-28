@@ -1069,6 +1069,10 @@ async function main() {
   const { seedAicpSections } = await import("./seed-aicp-sections");
   const aicpN = await seedAicpSections(prisma);
   console.log(`✓ ${aicpN} sections AICP seedées`);
+
+  const { seedFrameworkReferences } = await import("./seed-framework-references");
+  const fwN = await seedFrameworkReferences(prisma);
+  console.log(`✓ ${fwN} frameworks seedés`);
 }
 
 main()

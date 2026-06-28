@@ -8,8 +8,10 @@
 
 import { db } from "@/lib/db";
 import { computeRiceScore, resolveScaleValue, type RiceScaleRow } from "./rice";
+import { evaluateHypothesis, type EvidenceLike } from "./evidence";
 
 export * from "./rice";
+export * from "./evidence";
 
 export interface SetRiceInput {
   recommendationId: string;
@@ -71,5 +73,67 @@ export async function setRecommendationRice(input: SetRiceInput) {
       riceEffort: effort,
       riceScore,
     },
+  });
+}
+
+// ── Chaîne de preuve (ADR-0113) — hypothèse → évidence → reco ────────────────
+
+export async function createEngagement(input: { strategyId: string; title: string; objective?: string }) {
+  return db.consultingEngagement.create({
+    data: { strategyId: input.strategyId, title: input.title, objective: input.objective ?? null },
+  });
+}
+
+export async function addHypothesis(input: { engagementId: string; statement: string }) {
+  return db.hypothesis.create({
+    data: { engagementId: input.engagementId, statement: input.statement },
+  });
+}
+
+/**
+ * Ajoute une évidence à une hypothèse PUIS recalcule son statut déterministe
+ * depuis le poids net de TOUTES ses évidences. Renvoie l'hypothèse mise à jour.
+ */
+export async function addEvidence(input: {
+  hypothesisId: string;
+  stance: "SUPPORTS" | "REFUTES";
+  weight?: number;
+  summary: string;
+  sourceType?: string;
+  sourceUrl?: string;
+  marketSourceId?: string;
+}) {
+  await db.evidence.create({
+    data: {
+      hypothesisId: input.hypothesisId,
+      stance: input.stance,
+      weight: input.weight ?? 0.5,
+      summary: input.summary,
+      sourceType: input.sourceType ?? null,
+      sourceUrl: input.sourceUrl ?? null,
+      marketSourceId: input.marketSourceId ?? null,
+    },
+  });
+  return recomputeHypothesis(input.hypothesisId);
+}
+
+/** Recalcule statut + netSupport d'une hypothèse depuis ses évidences. Déterministe. */
+export async function recomputeHypothesis(hypothesisId: string) {
+  const evidence = (await db.evidence.findMany({
+    where: { hypothesisId },
+    select: { stance: true, weight: true },
+  })) as EvidenceLike[];
+  const verdict = evaluateHypothesis(evidence);
+  return db.hypothesis.update({
+    where: { id: hypothesisId },
+    data: { status: verdict.status, netSupport: verdict.netSupport },
+  });
+}
+
+/** Lie une recommandation à une hypothèse (traçabilité du « pourquoi »). */
+export async function linkRecommendationToHypothesis(input: { recommendationId: string; hypothesisId: string }) {
+  return db.recommendation.update({
+    where: { id: input.recommendationId },
+    data: { hypothesisId: input.hypothesisId },
   });
 }

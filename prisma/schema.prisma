@@ -779,6 +779,7 @@ model Strategy {
   orchestrationPlans OrchestrationPlan[]
   recommendations    Recommendation[]
   recoBatches        RecommendationBatch[]
+  consultingEngagements ConsultingEngagement[]
   // Phase 24 (ADR-0094) — canonical queryable projection of I-pillar initiatives.
   brandActions       BrandAction[]
   notoriaPipeline    Json? // { currentStage, stages[], startedAt }
@@ -3958,6 +3959,9 @@ model Recommendation {
   riceEffort     Float? // effort en personne-mois (> 0)
   riceScore      Float? // résultat pur (null si effort ≤ 0)
 
+  // ── Chaîne de preuve (ADR-0113) — le « pourquoi » remonte à une hypothèse ──
+  hypothesisId String? // reco adossée à une hypothèse traçable (évidence datée)
+
   // ── Lifecycle ──
   status       String    @default("PENDING") // PENDING|ACCEPTED|REJECTED|APPLIED|REVERTED|EXPIRED
   reviewedBy   String? // userId
@@ -4030,6 +4034,79 @@ model RiceScale {
 
   @@unique([dimension, label])
   @@index([dimension, sortOrder])
+}
+
+// Catalogue de frameworks — DONNÉES de référence seedées (ADR-0113), jamais en
+// code. Le *moteur* des 28 frameworks Artemis reste en code ; leur MÉTADONNÉE
+// (nom, famille, forme de sortie, quand l'utiliser) devient une table mutable.
+model FrameworkReference {
+  id          String  @id @default(cuid())
+  key         String  @unique // "MCKINSEY_7S", "BCG_MATRIX", "RICE"…
+  family      String // STRATEGY|PORTFOLIO|GROWTH|BRAND|PRIORITIZATION|MEASUREMENT
+  label       String
+  outputShape String? // "2x2-matrix" | "7-levers" | "score" | "horizons"…
+  whenToUse   String?
+  note        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([family])
+}
+
+// Mission de conseil — ADR-0113. Rattache une chaîne hypothèse → évidence → reco
+// à une stratégie. Le « pourquoi » d'une recommandation devient traçable.
+model ConsultingEngagement {
+  id         String @id @default(cuid())
+  strategyId String
+  title      String
+  objective  String?
+  status     String @default("OPEN") // OPEN|IN_REVIEW|CLOSED
+
+  strategy   Strategy     @relation(fields: [strategyId], references: [id])
+  hypotheses Hypothesis[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([strategyId])
+}
+
+// Hypothèse — ADR-0113. Statut DÉTERMINISTE depuis le poids net des évidences.
+model Hypothesis {
+  id           String  @id @default(cuid())
+  engagementId String
+  statement    String
+  status       String  @default("OPEN") // OPEN|SUPPORTED|REFUTED
+  netSupport   Float? // somme(weight SUPPORTS) − somme(weight REFUTES), calculé
+
+  engagement ConsultingEngagement @relation(fields: [engagementId], references: [id])
+  evidence   Evidence[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([engagementId])
+}
+
+// Évidence datée — ADR-0113. Pose une preuve POUR ou CONTRE une hypothèse, avec
+// un poids et une source (idéalement une `MarketSource` du bureau d'étude).
+model Evidence {
+  id           String   @id @default(cuid())
+  hypothesisId String
+  stance       String // SUPPORTS|REFUTES
+  weight       Float    @default(0.5) // 0.0-1.0
+  summary      String
+  sourceType   String? // STUDY|FEED|EXPERT|OBSERVATION…
+  sourceUrl    String?
+  marketSourceId String? // FK souple vers MarketSource (provenance)
+  recordedAt   DateTime @default(now())
+
+  hypothesis Hypothesis @relation(fields: [hypothesisId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([hypothesisId])
 }
 
 // ═══════════════════════════════════════════════════════════════════
