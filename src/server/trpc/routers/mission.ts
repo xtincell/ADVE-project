@@ -133,7 +133,7 @@ export const missionRouter = createTRPCRouter({
         if (updated.assigneeId && (updated.budget ?? 0) > 0) {
           commissionEngine.calculate(id).then(async (result) => {
             // Persist the commission record
-            await ctx.db.commission.create({
+            const commission = await ctx.db.commission.create({
               data: {
                 missionId: id,
                 talentId: updated.assigneeId!,
@@ -148,6 +148,17 @@ export const missionRouter = createTRPCRouter({
               },
             });
             console.log(`[commission-engine] Commission created for mission ${id}: ${result.netAmount} XAF net`);
+
+            // Met le net du talent sous séquestre → file d'arbitrage UPgraders
+            // (ADR-0116). Le paiement reste asynchrone, libéré manuellement.
+            const { holdEscrowForMission } = await import("@/server/services/escrow-arbitration");
+            await holdEscrowForMission({
+              missionId: id,
+              commissionId: commission.id,
+              amount: result.netAmount,
+              currency: "XAF",
+              conditions: ["Livrable accepté en QC", "Aucun litige ouvert"],
+            }).catch((err) => { console.warn("[escrow] auto-hold failed:", err instanceof Error ? err.message : err); });
           }).catch((err) => { console.warn("[commission-engine] auto-commission failed:", err instanceof Error ? err.message : err); });
         }
 

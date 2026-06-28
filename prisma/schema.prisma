@@ -1063,6 +1063,7 @@ model Mission {
   deliverables MissionDeliverable[]
   commissions  Commission[]
   applications MissionApplication[]
+  escrows      Escrow[]
 
   tenantId String? // v4 — multi-tenant RLS
 
@@ -2888,18 +2889,27 @@ model Contract {
 
 model Escrow {
   id         String       @id @default(cuid())
-  contractId String
+  contractId String?
+  // ── Escrow de mission Guilde (ADR-0116) — arbitrage manuel UPgraders ──
+  missionId    String? // escrow rattaché directement à une mission marketplace
+  commissionId String? // commission dont les fonds sont sous séquestre
   amount     Float
   currency   String       @default("XAF")
   status     EscrowStatus @default(HELD)
   heldAt     DateTime     @default(now())
   releasedAt DateTime?
   reason     String?
+  // Traçabilité de l'arbitre (agent UPgraders) qui a tranché.
+  arbitratedBy String?
+  paymentOrderId String? // ordre de payout momo émis à la libération
 
-  contract   Contract          @relation(fields: [contractId], references: [id])
+  contract   Contract?         @relation(fields: [contractId], references: [id])
+  mission    Mission?          @relation(fields: [missionId], references: [id])
   conditions EscrowCondition[]
 
   @@index([contractId])
+  @@index([missionId])
+  @@index([status])
 }
 
 model EscrowCondition {

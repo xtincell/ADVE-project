@@ -117,6 +117,7 @@ import { mediaPlanRouter } from "./routers/media-plan";
 import { consultingRouter } from "./routers/consulting";
 import { bureauEtudesRouter } from "./routers/bureau-etudes";
 import { productionRouter } from "./routers/production";
+import { escrowArbitrationRouter } from "./routers/escrow-arbitration";
 // Blog — CMS natif « Notes de cabinet » du site public UPgraders (public read + operator CRUD)
 import { blogRouter } from "./routers/blog";
 import { newsletterRouter } from "./routers/newsletter";
@@ -256,6 +257,7 @@ export const appRouter = createTRPCRouter({
   consulting: consultingRouter,
   bureauEtudes: bureauEtudesRouter,
   production: productionRouter,
+  escrowArbitration: escrowArbitrationRouter,
   // Blog — CMS natif « Notes de cabinet » du site public UPgraders
   blog: blogRouter,
 });
