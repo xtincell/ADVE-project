@@ -41,6 +41,12 @@ export interface LaunchTimeline {
 
 export interface ContentCadenceChannel {
   rythme: string | null;
+  /**
+   * Provenance du `rythme`. `"DEFAULT_TEMPLATE"` = modèle sectoriel par défaut (pas
+   * dérivé des piliers de la marque) — l'UI le signale « par défaut · à ajuster »
+   * (honnêteté, cf. trou H2 / pattern `mixSource`). Absent/null = dérivé.
+   */
+  rythmeSource?: string | null;
   piliers: string[];
   formats: string[];
   format: string | null;

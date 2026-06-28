@@ -195,6 +195,19 @@ export default function UpgradersEconomicsPage() {
             <span className="uppercase tracking-wide">Resource saturation forecast (8 semaines)</span>
           </header>
 
+          {saturationQuery.data?.degradationCodes && saturationQuery.data.degradationCodes.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {saturationQuery.data.degradationCodes.map((c) => (
+                <code
+                  key={c}
+                  className="rounded bg-warning/10 px-1.5 py-0.5 text-[10px] text-warning"
+                >
+                  {c}
+                </code>
+              ))}
+            </div>
+          )}
+
           {saturationQuery.isLoading ? (
             <SkeletonPage />
           ) : saturationQuery.data?.ok && saturationQuery.data.forecast.length > 0 ? (
