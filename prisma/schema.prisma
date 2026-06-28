@@ -928,9 +928,22 @@ model Campaign {
   // Phase 18-A1 — Priorité opérationnelle (V4 sheet ACTIONS column PRIORITÉ).
   priority          OperationalPriority      @default(MOYENNE)
 
+  // ── ADR-0119 — campagne canon générée par le Pilier S ───────────────────────
+  // canonType : GTM_90 | ANNUAL | ALWAYS_ON | PUNCTUAL. routeKey : route S d'ambition
+  // (ADR-0088/0089) d'origine. AARRR majeur + secondaire orientent la lecture des KPI.
+  // recommendedBudget : budget conseillé unique (les 3 niveaux d'exécution sont
+  // dérivés en aval par les outils). isAlwaysOn ⇒ endDate null + budget récurrent.
+  canonType         String?
+  routeKey          String?
+  aarrrPrimary      String?
+  aarrrSecondary    String?
+  recommendedBudget Float?
+  isAlwaysOn        Boolean                  @default(false)
+
   strategy       Strategy                @relation(fields: [strategyId], references: [id])
   missions       Mission[]
   actions        CampaignAction[]
+  brandActions   BrandAction[]           @relation("CampaignBrandActions")
   executions     CampaignExecution[]
   amplifications CampaignAmplification[]
   teamMembers    CampaignTeamMember[]
@@ -4815,12 +4828,18 @@ model BrandAction {
   // I-pillar initiatives. FK to Strategy (cascade purge with the brand).
   strategy Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
 
+  // ADR-0119 — toute action appartient à une campagne (invariant cible). Nullable
+  // pendant la migration d'unification (orphelines → backlog puis rattachées).
+  campaignId String?
+  campaign   Campaign? @relation("CampaignBrandActions", fields: [campaignId], references: [id], onDelete: SetNull)
+
   @@unique([strategyId, sourceInitiativeId])
   @@index([strategyId, status])
   @@index([strategyId, selected])
   @@index([touchpoint, aarrrIntent])
   @@index([recoId])
   @@index([costTemplateKey, costZoneCode])
+  @@index([campaignId])
 }
 
 // ═══════════════════════════════════════════════════════════════════
