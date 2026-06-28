@@ -339,7 +339,7 @@ function BriefIngestTab() {
         <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
           <h3 className="mb-2 text-sm font-semibold text-emerald-300">Brief analyse</h3>
           <p className="text-xs text-foreground-muted">
-            Marque : {(previewMutation.data.parsed as Record<string, unknown> & { client: { brandName: string } }).client.brandName} —
+            Marque : {(previewMutation.data.parsed as Record<string, unknown> & { client?: { brandName?: string } }).client?.brandName ?? "—"} —
             Confiance : {Math.round((previewMutation.data.confidence ?? 0) * 100)}%
           </p>
           <p className="mt-2 text-xs text-foreground-muted">

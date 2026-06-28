@@ -176,7 +176,7 @@ export default function ProgressPathPage() {
             </div>
             {isPromotable && (
               <a
-                href={`/creator/progress/promotion-request?tier=${eval_.suggestedTier}`}
+                href={`/creator/messages?sujet=promotion&tier=${eval_.suggestedTier}`}
                 className="flex items-center gap-1.5 rounded-lg bg-emerald-500 px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-emerald-600"
               >
                 <ArrowUpCircle className="h-3.5 w-3.5" />

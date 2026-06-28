@@ -28,7 +28,16 @@ export interface SetRiceInput {
 }
 
 async function loadScales(): Promise<RiceScaleRow[]> {
-  return db.riceScale.findMany({ select: { dimension: true, label: true, value: true } });
+  let rows = await db.riceScale.findMany({ select: { dimension: true, label: true, value: true } });
+  // Auto-amorçage (ADR-0119) : le build Vercel ne lance pas `db:seed` → `RiceScale`
+  // est vide en prod, et la voie libellés de `setRecommendationRice` throwerait. On
+  // amorce le barème canon (idempotent, zéro LLM) quand la table est vide, puis relit.
+  if (rows.length === 0) {
+    const { ensureRiceScales } = await import("./rice-canon");
+    await ensureRiceScales(db);
+    rows = await db.riceScale.findMany({ select: { dimension: true, label: true, value: true } });
+  }
+  return rows;
 }
 
 /**

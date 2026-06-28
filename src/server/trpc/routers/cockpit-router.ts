@@ -132,7 +132,7 @@ export const cockpitRouter = createTRPCRouter({
       // Paid-tier gate (FR32) — mirrors `campaignTracker.getFounderAttributionLineage`.
       const gate = await checkPaidTier(ctx.session.user.id);
       if (!gate.allowed) {
-        return { state: "TIER_GATE_DENIED", configureUrl: gate.configureUrl ?? "/cockpit/subscription" };
+        return { state: "TIER_GATE_DENIED", configureUrl: gate.configureUrl ?? "/pricing" };
       }
 
       const strategy = await ctx.db.strategy.findUnique({
@@ -201,7 +201,7 @@ export const cockpitRouter = createTRPCRouter({
     .query(async ({ ctx, input }): Promise<CommunityDashboardResult> => {
       const gate = await checkPaidTier(ctx.session.user.id);
       if (!gate.allowed) {
-        return { state: "TIER_GATE_DENIED", configureUrl: gate.configureUrl ?? "/cockpit/subscription" };
+        return { state: "TIER_GATE_DENIED", configureUrl: gate.configureUrl ?? "/pricing" };
       }
 
       const strategy = await ctx.db.strategy.findUnique({

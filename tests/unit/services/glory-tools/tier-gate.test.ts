@@ -38,7 +38,7 @@ describe("Glory Tools — Paid Tier Gate (Phase 16-A, ADR-0048)", () => {
     const r = await checkPaidTier("op-123");
     expect(r.allowed).toBe(false);
     expect(r.reason).toMatch(/Aucune souscription active/);
-    expect(r.configureUrl).toBe("/cockpit/subscription");
+    expect(r.configureUrl).toBe("/pricing");
   });
 
   it("god mode — un operator founder bypasse le tier gate sans subscription", async () => {
@@ -74,7 +74,7 @@ describe("Glory Tools — Paid Tier Gate (Phase 16-A, ADR-0048)", () => {
     const r = tierGateDenied("Higgsfield Soul réservé aux abonnements payants.");
     expect(r.status).toBe("TIER_GATE_DENIED");
     expect(r.reason).toMatch(/Higgsfield/);
-    expect(r.configureUrl).toBe("/cockpit/subscription");
+    expect(r.configureUrl).toBe("/pricing");
     expect(r.requiredTiers).toEqual(PAID_TIER_KEYS_DEFAULT);
   });
 

@@ -13,6 +13,7 @@
  * upsert rows at runtime (THOT_UPSERT_* intents). Definitive shape, growing data.
  */
 
+import type { PrismaClient } from "@prisma/client";
 import type { CatalogTemplate } from "./types";
 
 export const ACTION_COST_CATALOG: CatalogTemplate[] = [
@@ -234,3 +235,60 @@ export const ACTION_COST_CATALOG: CatalogTemplate[] = [
 export const CATALOG_BY_KEY: Record<string, CatalogTemplate> = Object.fromEntries(
   ACTION_COST_CATALOG.map((t) => [t.actionKey, t]),
 );
+
+/**
+ * Idempotent self-seed of the action-cost catalog (templates + atoms) from
+ * ACTION_COST_CATALOG. Mirrors `campaign-canon/reference.ts:ensureCanonTemplates`
+ * (ADR-0119 auto-amorçage) so the Thot estimator never throws on an empty table
+ * in prod — the Vercel build runs `migrate deploy` only, not `db:seed:action-costs`.
+ * Single source of truth for the upsert: `prisma/seed-action-costs.ts` reuses it.
+ */
+export async function ensureActionCostCatalog(
+  client: Pick<PrismaClient, "actionCostTemplate" | "actionCostComponent">,
+): Promise<{ templates: number; components: number }> {
+  let templates = 0;
+  let components = 0;
+  for (const t of ACTION_COST_CATALOG) {
+    const data = {
+      label: t.label,
+      category: t.category,
+      family: t.family ?? null,
+      unitOfWork: t.unitOfWork ?? "PROJECT",
+      description: t.description ?? null,
+      defaultDurationHours: t.defaultDurationHours ?? null,
+      baseZoneCode: t.baseZoneCode ?? "CM",
+      baseCurrency: t.baseCurrency ?? "XAF",
+      defaultMarginPct: t.defaultMarginPct ?? 0.2,
+      defaultContingencyPct: t.defaultContingencyPct ?? 0.05,
+      tags: t.tags ?? [],
+      source: t.source ?? null,
+    };
+    const tpl = await client.actionCostTemplate.upsert({
+      where: { actionKey: t.actionKey },
+      create: { actionKey: t.actionKey, ...data },
+      update: data,
+    });
+    templates++;
+
+    // Atoms are catalog-owned (not operator-edited here) → replace wholesale.
+    await client.actionCostComponent.deleteMany({ where: { templateId: tpl.id } });
+    await client.actionCostComponent.createMany({
+      data: t.components.map((c, i) => ({
+        templateId: tpl.id,
+        driver: c.driver,
+        label: c.label,
+        quantity: c.quantity ?? 1,
+        unit: c.unit ?? "FLAT",
+        rateBasis: c.rateBasis ?? "FIXED",
+        rateKey: c.rateKey ?? null,
+        indexFamily: c.indexFamily ?? null,
+        baseRate: c.baseRate ?? 0,
+        optional: c.optional ?? false,
+        sortOrder: i,
+        notes: c.notes ?? null,
+      })),
+    });
+    components += t.components.length;
+  }
+  return { templates, components };
+}

@@ -11,7 +11,7 @@
 
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { ACTION_COST_CATALOG } from "../src/server/services/financial-brain/action-costing/catalog";
+import { ensureActionCostCatalog } from "../src/server/services/financial-brain/action-costing/catalog";
 import {
   ZONE_INDEX_SEED,
   NEIGHBOR_MAP_SEED,
@@ -30,65 +30,13 @@ const db = makeClient();
 /** Fixed seed validity start so ZoneIndex upserts stay idempotent across runs. */
 const SEED_VALID_FROM = new Date("2026-01-01T00:00:00.000Z");
 
+/**
+ * Catalog seed delegates to the canonical service-layer upsert
+ * (`ensureActionCostCatalog`) — single source of truth, also used by the
+ * estimator's runtime auto-amorçage (ADR-0119 pattern). Idempotent.
+ */
 async function seedCatalog() {
-  let templates = 0;
-  let components = 0;
-  for (const t of ACTION_COST_CATALOG) {
-    const tpl = await db.actionCostTemplate.upsert({
-      where: { actionKey: t.actionKey },
-      create: {
-        actionKey: t.actionKey,
-        label: t.label,
-        category: t.category,
-        family: t.family ?? null,
-        unitOfWork: t.unitOfWork ?? "PROJECT",
-        description: t.description ?? null,
-        defaultDurationHours: t.defaultDurationHours ?? null,
-        baseZoneCode: t.baseZoneCode ?? "CM",
-        baseCurrency: t.baseCurrency ?? "XAF",
-        defaultMarginPct: t.defaultMarginPct ?? 0.2,
-        defaultContingencyPct: t.defaultContingencyPct ?? 0.05,
-        tags: t.tags ?? [],
-        source: t.source ?? null,
-      },
-      update: {
-        label: t.label,
-        category: t.category,
-        family: t.family ?? null,
-        unitOfWork: t.unitOfWork ?? "PROJECT",
-        description: t.description ?? null,
-        defaultDurationHours: t.defaultDurationHours ?? null,
-        baseZoneCode: t.baseZoneCode ?? "CM",
-        baseCurrency: t.baseCurrency ?? "XAF",
-        defaultMarginPct: t.defaultMarginPct ?? 0.2,
-        defaultContingencyPct: t.defaultContingencyPct ?? 0.05,
-        tags: t.tags ?? [],
-        source: t.source ?? null,
-      },
-    });
-    templates++;
-
-    // Replace components wholesale (atoms are catalog-owned, not operator-edited here).
-    await db.actionCostComponent.deleteMany({ where: { templateId: tpl.id } });
-    await db.actionCostComponent.createMany({
-      data: t.components.map((c, i) => ({
-        templateId: tpl.id,
-        driver: c.driver,
-        label: c.label,
-        quantity: c.quantity ?? 1,
-        unit: c.unit ?? "FLAT",
-        rateBasis: c.rateBasis ?? "FIXED",
-        rateKey: c.rateKey ?? null,
-        indexFamily: c.indexFamily ?? null,
-        baseRate: c.baseRate ?? 0,
-        optional: c.optional ?? false,
-        sortOrder: i,
-        notes: c.notes ?? null,
-      })),
-    });
-    components += t.components.length;
-  }
-  return { templates, components };
+  return ensureActionCostCatalog(db);
 }
 
 async function seedZoneIndices() {

@@ -10,6 +10,84 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.52 — fix: passe de debug NEFER (follow-ups) — RiceScale self-seed, garde devis, idempotence escrow (2026-06-28)
+
+Clôture des follow-ups différés de la passe de debug (Lot A/B/C/D = v6.27.50/51).
+
+- **`fix(consulting)` — `RiceScale` self-seed (parité ADR-0119)** : barème RICE relocalisé en couche
+  service (`consulting/rice-canon.ts`, source unique) + `ensureRiceScales` idempotent ; `loadScales`
+  amorce le barème quand la table est vide (le build Vercel ne lance pas `db:seed`) au lieu de laisser
+  `setRecommendationRice` throw sur la voie libellés. Le seed `prisma/` réutilise la même source (re-export rétro-compat).
+- **`fix(mission-quote)` — garde d'état devis** : `decideQuote` n'écrase plus une décision finale — seul
+  un devis `SENT` est décidable (sinon throw), évitant un basculement ACCEPTED→REJECTED après engagement du talent.
+- **`fix(escrow)` — idempotence `hold`** : `holdEscrowForMission` ne crée plus de séquestre `HELD` dupliqué —
+  un double-clic arbitre retourne l'escrow existant (clé mission + commission).
+
+Reportés (décision produit ou risque > valeur) : badge UI saturation (la **donnée** expose déjà
+`MVP_PLACEHOLDER_CAPACITY_LIMITS` — seul le rendu manque), cadence éditoriale (vrai fix = dérivation
+pilier I, trou H2 documenté), mutation morte `boot/[sessionId]`. eslint 0 · madge 0 cycle.
+
+---
+
+## v6.27.51 — fix: passe de debug NEFER (Lot B+C+D) — liens morts, garde crash, écart budget + anti-récidive timeline (2026-06-28)
+
+Suite de la passe de debug (Lot A = v6.27.50). Couacs P2/P3 + garde anti-récidive du P0.
+
+- **`fix(ui)` — liens morts console** : le CTA « Upgrade » après tier-deny pointait `/cockpit/subscription`
+  (route inexistante, ×5 réfs) → `/pricing` ; le lien résultat de recherche Seshat
+  `/console/socle/strategies/:id` (inexistant) → `/console/strategy-portfolio/brands/:id` ; 4 liens
+  « source de vérité » `/docs/governance/*.md` (404, aucune route ni rewrite) → URL GitHub blob (`target=_blank`).
+- **`fix(ui)` — garde crash intake** : `console/strategy-operations/intake` accédait `(...).client.brandName`
+  sans garde sur une **sortie LLM** (le cast masquait le risque à `tsc`) → white-screen si `client` absent.
+  Optional-chaining `…client?.brandName ?? "—"`.
+- **`fix(ops)` — écart budgétaire** : `operationsOverview.budgetConsolidation` étiquetait l'utilisation
+  `realSpent/planned*100` comme `variance` → calcule désormais le **vrai écart**
+  `((realSpent − planned)/planned)*100` (cohérent avec la formule canon de `campaign-manager`).
+- **`test(campaign)` — anti-récidive du P0** : garde DMMF (`campaign-timeline-select-fields.test.ts`) qui
+  épingle le contrat de champs des modèles lus par `getCampaignTimeline` contre `Prisma.dmmf` (sans DB) —
+  car `tsc` ne valide pas les clés invalides dans les `select` de relations imbriquées (la cause de l'angle mort).
+
+Reportés (follow-up — risque runtime faible ou décision produit) : `RiceScale` self-seed (le picker dégrade
+déjà à vide), cadence éditoriale hardcodée (vrai fix = dérivation pilier I), badge saturation placeholder,
+idempotence escrow `hold`, garde `decideQuote` déjà-décidé, `completeMutation` mort de `boot/[sessionId]`.
+eslint 0 ; tsc/tests délégués à la CI.
+
+---
+
+## v6.27.50 — fix: passe de debug NEFER — 4 couacs runtime (timeline 500, mutations muettes, coûts prod, 404 créateur) (2026-06-28)
+
+Passe de debug « intégralité de la Fusée » : la CI est verte (tsc/lint/vitest/Golden-Path),
+donc les couacs restants sont **runtime/comportementaux** — invisibles à la CI. 4 correctifs P0/P1.
+
+- **`fix(campaign)` — `getCampaignTimeline` 500 garanti** : le query sélectionnait 5 clés Prisma
+  inexistantes — `name`/`description` sur `CampaignMilestone` (champ réel `title`, pas de
+  description) et `type`/`updatedAt`/`notes` sur `CampaignApproval` (réels :
+  `approvalType`/`comment`/`createdAt`) → `PrismaClientValidationError` à chaque appel. Passé en
+  CI verte car `tsc` ne valide pas les clés invalides dans les `select` de **relations imbriquées**
+  (angle mort à combler — Lot B). Endpoint encore non câblé à l'UI (latent).
+- **`fix(ui)` — mutations muettes (« bouton inerte »)** : le `QueryClient` n'avait pas de
+  `MutationCache.onError` → toute mutation sans `onError` propre échouait en silence
+  (escrow/commissions/abonnements manuels/pricing — mouvement d'argent). Filet global qui surface
+  un toast d'erreur (sauf si le composant gère son `onError`, pas de double toast). `ToastProvider`
+  monté **globalement** dans `providers.tsx` (il n'était que dans `(shared)` → console/cockpit sans
+  hôte de toast). Bus d'événements `window` en couche `lib` (`toast-bus.ts`) pour respecter la
+  cascade (`lib` ne peut pas importer `components`).
+- **`fix(thot)` — coûts d'action inertes en prod** : `estimateActionCostFromDb` throwait sur
+  `ActionCostTemplate` vide — cas en prod (build Vercel = `migrate deploy` + `seed:blog` seuls, pas
+  `db:seed:action-costs`). Même classe que le « bouton inerte » des campagnes (ADR-0119).
+  Auto-amorçage `ensureActionCostCatalog` (couche service, idempotent, zéro LLM) appelé quand la
+  table est entièrement vide ; le seed `prisma/seed-action-costs.ts` le réutilise (source unique).
+- **`fix(creator)` — CTA « Demander une évaluation » 404** : `/creator/progress/promotion-request`
+  n'existe pas. Repointe vers `/creator/messages` — pas de 404, pas d'escalade (la promotion de
+  tier créateur n'est pas automatique et `guildTier.promote` est non-admin).
+
+Diagnostic complet (15 couacs P0→P3 + 2 causes racines : angle mort `tsc` sur `select` imbriqués,
+seed-en-prod) établi via 4 audits parallèles + sondes mécaniques (404, paiements, migrations).
+eslint 0 · madge 0 cycle. Cap APOGEE 7/7. `tsc`/tests non rejouables en local (engine Prisma bloqué
+par la politique réseau) — validés en CI.
+
+---
+
 ## v6.27.49 — feat(agency): MediaPlan + PCA déterministe (post-buy prévu vs réalisé) (2026-06-28)
 
 Ferme le trou « pas de media plan structuré / PCA » du gap-analysis média. Audité sur la

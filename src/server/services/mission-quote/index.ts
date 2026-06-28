@@ -77,8 +77,17 @@ export async function submitQuote(input: {
   });
 }
 
-/** Décision marque sur un devis (ACCEPTED/REJECTED). */
+/** Décision marque sur un devis (ACCEPTED/REJECTED). Seul un devis `SENT` est décidable. */
 export async function decideQuote(input: { quoteId: string; decision: "ACCEPTED" | "REJECTED" }) {
+  // Garde d'état : ne pas écraser une décision finale (ACCEPTED/REJECTED/EXPIRED)
+  // — un re-décidage pourrait basculer ACCEPTED→REJECTED après engagement du talent.
+  const q = await db.missionQuote.findUniqueOrThrow({
+    where: { id: input.quoteId },
+    select: { status: true },
+  });
+  if (q.status !== "SENT") {
+    throw new Error(`Devis non décidable : statut "${q.status}" (seul SENT est décidable).`);
+  }
   return db.missionQuote.update({ where: { id: input.quoteId }, data: { status: input.decision } });
 }
 

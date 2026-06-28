@@ -330,7 +330,7 @@ export const operationsOverviewRouter = createTRPCRouter({
           planned: budgetPlanned,
           spent: realSpent,
           remaining,
-          variance: budgetPlanned > 0 ? (realSpent / budgetPlanned) * 100 : 0,
+          variance: budgetPlanned > 0 ? ((realSpent - budgetPlanned) / budgetPlanned) * 100 : 0,
           devisTotal,
           commissionsTotal,
           budgetLinesPlanned: budgetLinePlannedTotal,

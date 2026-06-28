@@ -451,7 +451,7 @@ export default function CampaignTrackerGovernancePage() {
           Cf.{" "}
           <a
             className="text-cyan-400 underline"
-            href="/docs/governance/adr/0052-campaign-module-canonical-trajectory-instrument.md"
+            target="_blank" rel="noreferrer" href="https://github.com/xtincell/ADVE-project/blob/main/docs/governance/adr/0052-campaign-module-canonical-trajectory-instrument.md"
           >
             ADR-0052 v2 §2.5 trois primitives architecturales
           </a>
