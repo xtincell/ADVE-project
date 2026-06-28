@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { callLLM } from "@/server/services/llm-gateway";
+import { UNTRUSTED_NOTICE, wrapUntrusted } from "@/server/services/utils/untrusted-content";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -184,7 +185,7 @@ export function getSupportedLanguages(): SupportedLanguage[] {
  */
 async function llmTranslate(system: string, prompt: string, maxTokens: number): Promise<string> {
   const { text } = await callLLM({
-    system,
+    system: `${UNTRUSTED_NOTICE}\n\n${system}`,
     prompt,
     caller: "translation",
     purpose: "intermediate",
@@ -228,10 +229,7 @@ Return a JSON object with exactly two keys:
 1. "translated" — the translated content preserving the same JSON structure and keys (keys stay in English, only values are translated)
 2. "adaptations" — an array of strings describing cultural adaptations you made
 
-Content to translate:
-\`\`\`json
-${contentStr}
-\`\`\``,
+${wrapUntrusted("Content to translate (JSON)", contentStr, { max: 12000 })}`,
     4096,
   );
 
@@ -320,10 +318,7 @@ Return a JSON object with exactly three keys:
 2. "translated" — the full translated brief content preserving JSON structure (keys in English, values translated)
 3. "adaptations" — array of cultural adaptations made
 
-Brief content:
-\`\`\`json
-${JSON.stringify(briefContent, null, 2)}
-\`\`\``,
+${wrapUntrusted("Brief content (JSON)", JSON.stringify(briefContent, null, 2), { max: 16000 })}`,
     8192,
   );
 

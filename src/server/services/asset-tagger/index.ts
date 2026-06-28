@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import type { PillarKey } from "@/lib/types/advertis-vector";
 import { PILLAR_KEYS, PILLAR_NAMES } from "@/lib/types/advertis-vector";
 import { callLLM } from "@/server/services/llm-gateway";
+import { UNTRUSTED_NOTICE, wrapUntrusted, sanitizeInline } from "@/server/services/utils/untrusted-content";
 
 interface TagResult {
   assetId: string;
@@ -178,7 +179,7 @@ async function aiTagAsset(
     : "";
 
   const { text: responseText } = await callLLM({
-    system: "",
+    system: UNTRUSTED_NOTICE,
     caller: "asset-tagger",
     purpose: "intermediate",
     responseFormat: "json_object",
@@ -196,12 +197,11 @@ S = Strategie (brand strategy, guidelines, playbooks)
 
 Analyze this brand asset and rate its relevance to each pillar (0.0 to 1.0):
 
-Asset name: "${asset.name}"
-File URL: ${asset.fileUrl ?? "N/A"}
-Strategy: "${asset.strategy.name}"
+Asset name: "${sanitizeInline(asset.name, { max: 300 })}"
+File URL: ${sanitizeInline(asset.fileUrl ?? "N/A", { max: 500 })}
+Strategy: "${sanitizeInline(asset.strategy.name, { max: 200 })}"
 
-Strategy pillars context:
-${pillarContext}
+${wrapUntrusted("Strategy pillars context", pillarContext, { max: 8000 })}
 
 Return JSON only:
 {

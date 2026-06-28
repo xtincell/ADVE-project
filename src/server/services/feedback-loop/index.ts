@@ -31,6 +31,7 @@ import { detectDrift } from "./drift-detector";
 import type { PillarKey } from "@/lib/types/advertis-vector";
 import { PILLAR_KEYS, PILLAR_NAMES } from "@/lib/types/advertis-vector";
 import { callLLM } from "@/server/services/llm-gateway";
+import { UNTRUSTED_NOTICE, wrapUntrusted, sanitizeInline } from "@/server/services/utils/untrusted-content";
 
 const DRIFT_THRESHOLD_PERCENT = 15;
 
@@ -242,7 +243,7 @@ async function runArtemisDiagnostic(
     const pillarContent = strategy.pillars.find((p) => p.key === pillar);
 
     const { text: responseText } = await callLLM({
-      system: "",
+      system: UNTRUSTED_NOTICE,
       caller: "feedback-loop:drift-diagnostic",
       purpose: "intermediate",
       responseFormat: "json_object",
@@ -250,12 +251,12 @@ async function runArtemisDiagnostic(
       temperature: 0,
       prompt: `You are ARTEMIS, the brand strategy diagnostic engine for the ADVERTIS framework.
 
-A drift has been detected on the "${PILLAR_NAMES[pillar]}" pillar (key: ${pillar}) for strategy "${strategy.name}".
+A drift has been detected on the "${PILLAR_NAMES[pillar]}" pillar (key: ${pillar}) for strategy "${sanitizeInline(strategy.name, { max: 200 })}".
 
 Previous score: ${previousScore}/25
 Current score: ${currentScore}/25
-Severity: ${severity}
-Pillar content: ${JSON.stringify(pillarContent?.content ?? {}, null, 2)}
+Severity: ${sanitizeInline(severity, { max: 40 })}
+${wrapUntrusted("Pillar content", JSON.stringify(pillarContent?.content ?? {}, null, 2), { max: 6000 })}
 
 Analyze this drift and provide:
 1. Root cause analysis (what likely caused the score drop)

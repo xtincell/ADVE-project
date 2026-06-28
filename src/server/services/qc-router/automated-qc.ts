@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { callLLM } from "@/server/services/llm-gateway";
+import { UNTRUSTED_NOTICE, wrapUntrusted, sanitizeInline } from "@/server/services/utils/untrusted-content";
 import { PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
 
 import { PILLAR_STORAGE_KEYS } from "@/domain";
@@ -148,7 +149,7 @@ async function runAiContentAnalysis(
     .join("\n");
 
   const { text: responseText } = await callLLM({
-    system: "",
+    system: UNTRUSTED_NOTICE,
     caller: "qc-router:automated-qc",
     purpose: "intermediate",
     responseFormat: "json_object",
@@ -156,15 +157,14 @@ async function runAiContentAnalysis(
     temperature: 0,
     prompt: `You are a brand QC analyst for the ADVERTIS framework. Evaluate this deliverable for brand conformity.
 
-Deliverable: "${deliverable.title}"
-Mission: "${deliverable.mission.title}"
-Driver/Channel: ${deliverable.mission.driver?.name ?? "N/A"} (${deliverable.mission.driver?.channel ?? "N/A"})
-Strategy: "${deliverable.mission.strategy.name}"
+Deliverable: "${sanitizeInline(deliverable.title, { max: 300 })}"
+Mission: "${sanitizeInline(deliverable.mission.title, { max: 300 })}"
+Driver/Channel: ${sanitizeInline(deliverable.mission.driver?.name ?? "N/A", { max: 120 })} (${sanitizeInline(deliverable.mission.driver?.channel ?? "N/A", { max: 60 })})
+Strategy: "${sanitizeInline(deliverable.mission.strategy.name, { max: 200 })}"
 
-Brand pillars:
-${pillarSummary}
+${wrapUntrusted("Brand pillars", pillarSummary, { max: 8000 })}
 
-QC criteria: ${JSON.stringify(qcCriteria)}
+${wrapUntrusted("QC criteria", JSON.stringify(qcCriteria), { max: 2000 })}
 
 Evaluate the deliverable title and context for:
 1. Brand alignment with strategy pillars
