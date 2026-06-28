@@ -117,6 +117,28 @@ export const campaignRouter = createTRPCRouter({
       });
     }),
 
+  /**
+   * ADR-0119 — campagnes canon d'une stratégie (canonType non-null), avec leurs
+   * actions rattachées (`brandActions`). Triées par route puis ordre canon.
+   */
+  canonByStrategy: protectedProcedure
+    .input(z.object({ strategyId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const campaigns = await ctx.db.campaign.findMany({
+        where: { strategyId: input.strategyId, canonType: { not: null } },
+        select: {
+          id: true, name: true, canonType: true, routeKey: true, aarrrPrimary: true, aarrrSecondary: true,
+          recommendedBudget: true, isAlwaysOn: true, budget: true, budgetCurrency: true, startDate: true, endDate: true, state: true,
+          brandActions: {
+            select: { id: true, title: true, description: true, budgetMin: true, budgetMax: true, touchpoint: true, priority: true },
+            orderBy: { priority: "asc" },
+          },
+        },
+        orderBy: [{ routeKey: "asc" }, { canonType: "asc" }],
+      });
+      return campaigns;
+    }),
+
   delete: governedProcedure({
 
 
