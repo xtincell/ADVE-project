@@ -126,7 +126,40 @@ describe("brief-builder — déterministe, zéro LLM", () => {
       const meta = brief.meta as Record<string, unknown>;
       expect(meta.generatedBy).toBe("deterministic-builder");
       expect(meta.briefType).toBe(type);
+      // ADVE de BLISS 100 % rempli → aucun trou, projection complète.
+      expect(meta.gaps).toEqual([]);
+      expect(meta.adveComplete).toBe(true);
     }
+  });
+
+  it("ne fabrique JAMAIS de prose quand un pilier ADVE est vide — il omet + trace le trou", () => {
+    const sparse: BriefBuilderContext = {
+      strategy: { name: "Marque Sans ADVE", pillars: [{ key: "a", content: {} }, { key: "d", content: {} }] },
+      campaign: { name: "Campagne test", budget: 1_000_000, budgetCurrency: "XAF" },
+      action: { title: "Action test", touchpoint: "DIGITAL", budgetMin: 500_000, budgetCurrency: "XAF" },
+    };
+    const brief = buildCampaignBrief("CREATIVE", sparse) as Record<string, unknown>;
+    const client = brief.briefClient as Record<string, string>;
+    const creative = brief.briefCreatif as Record<string, string>;
+    const meta = brief.meta as Record<string, unknown>;
+
+    // Champs dérivés de l'ADVE absents → OMIS (pas de phrase générique inventée).
+    expect(client.contexte_marque).toBeUndefined();
+    expect(creative.tone_of_voice).toBeUndefined();
+    expect(creative.direction_artistique).toBeUndefined();
+    // Les trous sont tracés (diagnostic opérateur).
+    expect((meta.gaps as string[]).length).toBeGreaterThan(0);
+    expect(meta.adveComplete).toBe(false);
+
+    // Aucun champ ne contient de prose-placeholder inventée.
+    const allText = flattenPillarText(brief);
+    for (const invented of ["à confirmer", "à préciser", "à dériver", "à cadrer", "à arbitrer", "Faire rayonner"]) {
+      expect(allText.includes(invented), `pas de placeholder inventé: ${invented}`).toBe(false);
+    }
+
+    // Les champs ancrés sur des données réelles (action) restent présents.
+    expect(creative.message_claim).toBe("Action test");
+    expect(creative.livrables).toContain("DIGITAL");
   });
 
   it("est strictement déterministe — variance = 0 sur 50 constructions", () => {
