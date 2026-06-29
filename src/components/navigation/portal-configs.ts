@@ -182,6 +182,7 @@ export const creatorNavGroups: NavGroup[] = [
       { href: "/creator/missions/available", label: "Disponibles", icon: Inbox },
       { href: "/creator/missions/active", label: "En cours", icon: PlayCircle },
       { href: "/creator/missions/collab", label: "Collaboratives", icon: Users },
+      { href: "/creator/proposals", label: "Propositions", icon: Lightbulb },
     ],
   },
   {

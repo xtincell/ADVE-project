@@ -10,6 +10,18 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.68 — feat(laguilde): Voie B — soumission de direction créative par un membre guilde (ADR-0120 PR-6) (2026-06-29)
+
+Branche **La Guilde comme Voie B** du pipeline de Proposition Créative (le portail était déféré ; voici l'intégration). Un membre guilde **assigné à ≥1 mission** d'une stratégie peut soumettre une direction créative (Big Idea/insight/axe/pistes) → la proposition arrive **SUBMITTED** dans la file de validation de l'opérateur (cockpit), traitée par la gate existante.
+
+- **Accès gardé par lien mission** (`Mission.assigneeId`) — pas de chicken-and-egg : la direction initiale reste opérateur/Voie A, La Guilde propose pour les marques qu'elle sert déjà. **0 migration, 0 nouveau modèle** (réutilise `CreativeProposal` `source=LAGUILDE_HUMAN` + `Mission`).
+- `listGuildProposableStrategies` + `submitGuildCreativeProposal` (helper pur `dedupeProposableStrategies`, testé) + Intent gouverné `GUILD_SUBMIT_CREATIVE_PROPOSAL` + SLO + manifest + tRPC (`guildProposableStrategies` / `submitGuildProposal`).
+- **UI creator** `/creator/proposals` (+ nav « Propositions ») : picker marque → niveau d'exécution → direction → soumettre. Côté opérateur, la proposition apparaît déjà dans le panel (source « La Guilde (humain) ») et se valide.
+
+Les deux voies de la spec existent désormais bout-en-bout : **Voie A** (IA, #378) et **Voie B** (La Guilde, ce PR), même Data Contract, même gate. Reste credential-gated : génération de visuels (image API). tsc 0 · eslint 0 · **2326 tests verts** (2 nouveaux) · 0 migration · 0 bypass. Cap APOGEE 7/7.
+
+---
+
 ## v6.27.67 — feat(campaigns): Voie A IA — brouillon de direction créative depuis l'ADVE (ADR-0120 PR-5) (2026-06-29)
 
 Sort la **Voie A IA** du suivi déféré — dernière pièce LLM de la spec « Nouveau Pipeline de Production ». Un bouton **« Pré-remplir avec l'IA »** dans le formulaire de Proposition Créative génère un BROUILLON de direction (Big Idea / insight / axe / pistes) déduit de l'ADVE (piliers A/D/V) via le Gateway (`executeStructuredLLMCall`, ADR-0067).

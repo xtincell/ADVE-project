@@ -551,7 +551,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 252 (par deck)
+## Pages — 253 (par deck)
 
 ### Agency (12)
 
@@ -745,7 +745,7 @@ Ces correspondances évitent la réinvention :
 - `/console/strategy-portfolio/diagnostics`
 - `/console/upgraders/economics`
 
-### Creator (24)
+### Creator (25)
 
 - `/creator`
 - `/creator/community/events`
@@ -768,6 +768,7 @@ Ces correspondances évitent la réinvention :
 - `/creator/progress/metrics`
 - `/creator/progress/path`
 - `/creator/progress/strengths`
+- `/creator/proposals`
 - `/creator/qc/peer`
 - `/creator/qc/submitted`
 - `/creator/services`
@@ -993,7 +994,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 544 (par governor)
+## Intent kinds — 545 (par governor)
 
 ### MESTOR (79)
 
@@ -1116,7 +1117,7 @@ Ces correspondances évitent la réinvention :
 - `MEASURE_OVERTON_SHIFT` → campaign-tracker (async) — Cluster D — Mesure le déplacement de l'axe culturel sectoriel post-LIVE. Compare…
 - `EVALUATE_OVERTON_READINESS` → campaign-tracker (sync) — Cluster D pré-LIVE — Tarsis évalue OvertonReadiness sur l'axe culturel ciblé. Ou…
 
-### INFRASTRUCTURE (375)
+### INFRASTRUCTURE (376)
 
 - `ADMIN_SET_USER_ROLE` → accounts (sync) — Console superviseur (Vague 7) : promotion/retrogradation du role d'un compte (en…
 - `SYNC_UPGRADERS_CANON` → canon-sync (sync) — Vague 10 : pousse le canon UPgraders 100% (8 piliers contrats COMPLETE) dans la …
@@ -1347,6 +1348,7 @@ Ces correspondances évitent la réinvention :
 - `VALIDATE_CREATIVE_PROPOSAL` → creative-proposal (sync) — Valide la direction créative → génère actions + briefs de production dans les fr…
 - `REJECT_CREATIVE_PROPOSAL` → creative-proposal (sync) — Rejette une Proposition Créative avec motif — n'amorce aucune production (ADR-01…
 - `DRAFT_CREATIVE_PROPOSAL_FROM_STRATEGY` → creative-proposal (sync) — Voie A IA — pré-remplit un BROUILLON de direction créative depuis l'ADVE (LLM vi…
+- `GUILD_SUBMIT_CREATIVE_PROPOSAL` → creative-proposal (sync) — Voie B La Guilde — un membre guilde assigné à une mission de la stratégie soumet…
 - `LEGACY_RESEARCH_WAVE_CREATE` → bureau-etudes (sync) — Création d'une vague d'étude (time-spine, acteur Bureau d'étude, ADR-0110).…
 - `LEGACY_RESEARCH_WAVE_RECORD` → bureau-etudes (sync) — Enregistrement de l'échantillon atteint d'une vague (ADR-0110).…
 - `LEGACY_SOURCE_SET_PROVENANCE` → bureau-etudes (sync) — Classe la provenance d'une source de marché pour fusion pondérée (ADR-0114).…

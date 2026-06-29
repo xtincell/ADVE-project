@@ -9,7 +9,7 @@ import {
   parseCreativeDirection,
   parseCreativeProposalVisuals,
 } from "@/lib/types/creative-proposal";
-import { toRouteInitiative, summarizeExecutionLevels } from "@/server/services/creative-proposal";
+import { toRouteInitiative, summarizeExecutionLevels, dedupeProposableStrategies } from "@/server/services/creative-proposal";
 import { routeInitiativeSet } from "@/lib/strategy/roadmap-routes";
 
 describe("creative-proposal — Data Contract (ADR-0120)", () => {
@@ -93,5 +93,21 @@ describe("creative-proposal — summarizeExecutionLevels (preview Voie A déterm
     expect([cons.actionCount, cons.totalBudget, cons.projectedGrowthPct]).toEqual([1, 100, null]); // short ; pas de stored
     expect([tgt.actionCount, tgt.totalBudget, tgt.projectedGrowthPct, tgt.selected]).toEqual([2, 300, 30, true]);
     expect([amb.actionCount, amb.totalBudget]).toEqual([3, 350]);
+  });
+});
+
+describe("creative-proposal — dedupeProposableStrategies (Voie B La Guilde)", () => {
+  it("dédoublonne les missions assignées en stratégies + compte", () => {
+    const out = dedupeProposableStrategies([
+      { strategyId: "s1", strategy: { name: "Marque A" } },
+      { strategyId: "s1", strategy: { name: "Marque A" } },
+      { strategyId: "s2", strategy: { name: "Marque B" } },
+    ]);
+    expect(out).toHaveLength(2);
+    expect(out.find((s) => s.strategyId === "s1")).toEqual({ strategyId: "s1", strategyName: "Marque A", missionCount: 2 });
+    expect(out.find((s) => s.strategyId === "s2")?.missionCount).toBe(1);
+  });
+  it("nom manquant → repli '—'", () => {
+    expect(dedupeProposableStrategies([{ strategyId: "s9", strategy: null }])[0]!.strategyName).toBe("—");
   });
 });
