@@ -194,18 +194,23 @@ export const campaignManagerRouter = createTRPCRouter({
       return cm.getCampaignChainHealth(input.campaignId);
     }),
 
-  /** explodeActionToMission — éclate une BrandAction en brief + mission (gouverné, voie unique). */
-  explodeActionToMission: governedProcedure({
-    kind: "LEGACY_CAMPAIGN_MANAGER_EXPLODE_ACTION",
+  /**
+   * generateBriefFromAction — étage « Actions → Briefs » : génère le brief de
+   * production d'une BrandAction et **s'arrête là** (DRAFT, éditable, à valider).
+   * La mission naît ensuite de la validation du brief (validateBriefAndCreateMission).
+   * Gouverné, voie unique.
+   */
+  generateBriefFromAction: governedProcedure({
+    kind: "LEGACY_CAMPAIGN_MANAGER_GENERATE_BRIEF_FROM_ACTION",
     inputSchema: z.object({ brandActionId: z.string() }),
-    caller: "campaign-manager:explodeActionToMission",
+    caller: "campaign-manager:generateBriefFromAction",
   }).mutation(async ({ ctx, input }) => {
     const ba = await ctx.db.brandAction.findUniqueOrThrow({
       where: { id: input.brandActionId },
       select: { campaignId: true },
     });
     if (ba.campaignId) await enforceCampaignAccess(ctx, ba.campaignId);
-    return cm.explodeBrandActionToMission(input.brandActionId);
+    return cm.generateBriefFromBrandAction(input.brandActionId);
   }),
 
   /** getKanban — grouped by state */
@@ -1233,40 +1238,16 @@ export const campaignManagerRouter = createTRPCRouter({
     caller: "campaign-manager:validateBriefAndCreateMission",
   })
     .mutation(async ({ ctx, input }) => {
+      // Étage « Briefs → [validation] → Missions » : la validation matérialise la
+      // mission liée (briefId + budget définitif du brief + brandActionId). Voie
+      // unique service `createMissionFromValidatedBrief` (idempotent par briefId).
       const brief = await ctx.db.campaignBrief.findUniqueOrThrow({
         where: { id: input.id },
-        include: { campaign: true },
+        select: { campaignId: true },
       });
-
-      const updatedBrief = await ctx.db.campaignBrief.update({
-        where: { id: input.id },
-        data: { status: "VALIDATED" },
-      });
-
-      const title = `Production - ${brief.title}`;
-      let mission = await ctx.db.mission.findFirst({
-        where: {
-          campaignId: brief.campaignId,
-          title: title,
-        },
-      });
-
-      if (!mission) {
-        mission = await ctx.db.mission.create({
-          data: {
-            title,
-            strategyId: brief.campaign.strategyId,
-            campaignId: brief.campaignId,
-            status: "DRAFT",
-            priority: 3,
-            budget: brief.campaign.budget ?? 0,
-            slaDeadline: brief.campaign.endDate,
-            briefData: brief.content as any,
-          },
-        });
-      }
-
-      return { success: true, briefId: brief.id, missionId: mission.id };
+      if (brief.campaignId) await enforceCampaignAccess(ctx, brief.campaignId);
+      const res = await cm.createMissionFromValidatedBrief(input.id);
+      return { success: true, briefId: res.briefId, missionId: res.missionId, created: res.created };
     }),
 
   getBriefTypes: protectedProcedure

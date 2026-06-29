@@ -1052,6 +1052,7 @@ model Mission {
   assigneeId  String?
   slaDeadline DateTime?
   briefData   Json?
+  briefId     String? // brief source (CampaignBrief) dont la validation a créé la mission — pipeline staged
   budget      Float?
 
   // ── La Guilde — portail public (ADR-0098) ──
@@ -1074,6 +1075,7 @@ model Mission {
   strategy     Strategy             @relation(fields: [strategyId], references: [id])
   driver       Driver?              @relation(fields: [driverId], references: [id])
   deliverables MissionDeliverable[]
+  activities   MissionActivity[]
   commissions  Commission[]
   applications MissionApplication[]
   escrows      Escrow[]
@@ -1105,9 +1107,44 @@ model MissionDeliverable {
   mission             Mission              @relation(fields: [missionId], references: [id])
   qualityReviews      QualityReview[]
   deliverableTracking DeliverableTracking?
+  activities          MissionActivity[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+/// Activité d'une mission — couche d'exécution pilotable par mission (pipeline
+/// staged). Chaque activité = création d'asset (ASSET_CREATION, liée à un
+/// MissionDeliverable) ou action terrain/prod (FIELD_ACTION), avec budget alloué
+/// + KPI (cible/réel). La complétion d'une activité fait progresser la mission ;
+/// une activité `concludesMission` clôt la mission. Chaque activité peut avoir
+/// son propre brief généré déterministiquement (`briefContent`, éditable).
+model MissionActivity {
+  id               String    @id @default(cuid())
+  missionId        String
+  type             String    @default("ASSET_CREATION") // ASSET_CREATION | FIELD_ACTION
+  title            String
+  description      String?   @db.Text
+  status           String    @default("PENDING") // PENDING | IN_PROGRESS | DONE | CANCELLED
+  order            Int       @default(0)
+  budgetAllocated  Float?
+  budgetCurrency   String    @default("XAF")
+  kpiLabel         String?
+  kpiTarget        Float?
+  kpiActual        Float     @default(0)
+  concludesMission Boolean   @default(false)
+  briefContent     Json? // brief propre de l'activité (généré déterministe, éditable avant exécution)
+  deliverableId    String?
+  completedAt      DateTime?
+
+  mission     Mission             @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  deliverable MissionDeliverable? @relation(fields: [deliverableId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([missionId])
+  @@index([missionId, status])
 }
 
 /// Vague 7 — candidature d'un talent/agence à une mission ouverte.
