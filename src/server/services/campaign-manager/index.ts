@@ -923,31 +923,63 @@ export async function explodeBrandActionToMission(brandActionId: string) {
     },
   });
 
-  // L'action passe de PROPOSED/ACCEPTED → SCHEDULED (matérialisée en mission).
-  await db.brandAction.update({ where: { id: brandActionId }, data: { status: "SCHEDULED" } });
+  // Pas de mutation de statut : « éclatée en mission » se détecte via la mission
+  // créée (briefData.brandActionId, cf. deriveExplodedActionIds), jamais via le
+  // statut calendaire SCHEDULED — qui sert aussi à dater une action sur le
+  // calendrier (autoSchedule/setTiming), sans mission. Surcharger SCHEDULED
+  // faisait passer des actions canon planifiées pour « éclatées » (faux 3/3).
 
   return { missionId: mission.id, briefId: brief.id, created: true };
 }
 
 /**
+ * IDs des actions réellement éclatées en mission : une action est éclatée ssi
+ * une mission de la campagne la référence via `briefData.brandActionId` (stampé
+ * par `explodeBrandActionToMission`). Pur, déterministe — découple « a une
+ * mission » du statut calendaire `SCHEDULED` (posé aussi par autoSchedule /
+ * setTiming, sans mission). Régression : une action planifiée au calendrier mais
+ * non éclatée ne doit JAMAIS compter comme éclatée.
+ */
+export function deriveExplodedActionIds(
+  campaignActionIds: Iterable<string>,
+  missions: ReadonlyArray<{ briefData: unknown }>,
+): string[] {
+  const valid = new Set(campaignActionIds);
+  const exploded = new Set<string>();
+  for (const m of missions) {
+    const bd = m.briefData as { brandActionId?: unknown } | null;
+    const id = bd && typeof bd.brandActionId === "string" ? bd.brandActionId : null;
+    if (id !== null && valid.has(id)) exploded.add(id);
+  }
+  return [...exploded];
+}
+
+/**
  * Diagnostic de chaîne d'une campagne (facilite le triage opérateur) :
  * combien d'actions stratégiques liées, combien éclatées en missions, combien
- * de briefs/missions. Déterministe, lecture seule.
+ * de briefs/missions. Déterministe, lecture seule. « Éclatée » = mission réelle
+ * liée (briefData.brandActionId), jamais le statut calendaire.
  */
 export async function getCampaignChainHealth(campaignId: string) {
-  const [brandActionsTotal, brandActionsScheduled, briefs, missions, campaignActions] = await Promise.all([
-    db.brandAction.count({ where: { campaignId } }),
-    db.brandAction.count({ where: { campaignId, status: "SCHEDULED" } }),
+  const [brandActionRows, briefs, missionRows, campaignActions] = await Promise.all([
+    db.brandAction.findMany({ where: { campaignId }, select: { id: true } }),
     db.campaignBrief.count({ where: { campaignId } }),
-    db.mission.count({ where: { campaignId } }),
+    db.mission.findMany({ where: { campaignId }, select: { briefData: true } }),
     db.campaignAction.count({ where: { campaignId } }),
   ]);
+  const explodedActionIds = deriveExplodedActionIds(
+    brandActionRows.map((a) => a.id),
+    missionRows,
+  );
+  const brandActionsTotal = brandActionRows.length;
+  const brandActionsExploded = explodedActionIds.length;
   return {
     brandActions: brandActionsTotal,
-    brandActionsExploded: brandActionsScheduled,
-    brandActionsPending: Math.max(0, brandActionsTotal - brandActionsScheduled),
+    brandActionsExploded,
+    brandActionsPending: Math.max(0, brandActionsTotal - brandActionsExploded),
+    explodedActionIds,
     briefs,
-    missions,
+    missions: missionRows.length,
     campaignActions,
   };
 }
