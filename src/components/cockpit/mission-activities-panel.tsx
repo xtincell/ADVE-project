@@ -27,6 +27,19 @@ const BLANK = {
   concludesMission: false,
 };
 
+const T0_SOURCE_LABEL: Record<string, string> = {
+  CAMPAIGN_LAUNCH: "lancement campagne",
+  SLA_DEADLINE: "échéance SLA",
+  TODAY_FALLBACK: "aujourd'hui (défaut)",
+  OVERRIDE: "date choisie",
+};
+
+function fmtDate(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
+}
+
 export function MissionActivitiesPanel({
   missionId,
   missionStatus,
@@ -55,6 +68,7 @@ export function MissionActivitiesPanel({
   const refresh = () => {
     utils.mission.listActivities.invalidate({ missionId });
     utils.mission.activityHealth.invalidate({ missionId });
+    utils.mission.retroplan.invalidate({ missionId });
     utils.mission.list.invalidate();
     onChanged?.();
   };
@@ -77,18 +91,22 @@ export function MissionActivitiesPanel({
   const updateBriefMut = trpc.mission.updateActivityBrief.useMutation({
     onSuccess: () => { refresh(); setOpenBrief(null); },
   });
+  const setDurationMut = trpc.mission.setActivityDuration.useMutation({ onSuccess: refresh });
 
   const terminalEarly = missionStatus === "COMPLETED" || missionStatus === "CANCELLED";
   const talentQuery = trpc.mission.suggestTalent.useQuery({ missionId }, { enabled: !terminalEarly });
   const candidates = (talentQuery.data ?? []) as Array<{ userId: string; displayName?: string | null; tier?: string | null }>;
   const candidateName = (uid: string | null | undefined): string =>
     (uid && candidates.find((c) => c.userId === uid)?.displayName) || (uid ? "Prestataire assigné" : "");
+  const retroQuery = trpc.mission.retroplan.useQuery({ missionId }, { enabled: !terminalEarly });
+  const retro = retroQuery.data;
 
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState(BLANK);
   const [kpiInputs, setKpiInputs] = useState<Record<string, string>>({});
   const [openBrief, setOpenBrief] = useState<string | null>(null);
   const [briefDraft, setBriefDraft] = useState<Record<string, string>>({});
+  const [durInputs, setDurInputs] = useState<Record<string, string>>({});
 
   const terminal = terminalEarly;
   const busyMission = completeMissionMut.isPending || cancelMissionMut.isPending || guildMut.isPending;
@@ -243,6 +261,20 @@ export function MissionActivitiesPanel({
                       ))}
                     </select>
                     {talentQuery.isLoading ? <span className="text-2xs text-foreground-muted">…</span> : null}
+                    <span className="ml-auto text-2xs uppercase text-foreground-muted">Durée (j)</span>
+                    <input
+                      className="w-14 rounded border border-border bg-background px-1 py-0.5 text-2xs text-foreground"
+                      placeholder="auto"
+                      inputMode="numeric"
+                      title="Durée fixée (jours). Vide ⇒ dérivée par type d'activité."
+                      value={durInputs[id] ?? (a.durationDays != null ? String(a.durationDays) : "")}
+                      onChange={(e) => setDurInputs((s) => ({ ...s, [id]: e.target.value }))}
+                      onBlur={(e) => {
+                        const v = e.target.value.trim();
+                        const n = v ? Number(v) : null;
+                        setDurationMut.mutate({ activityId: id, durationDays: n && n > 0 ? Math.round(n) : null });
+                      }}
+                    />
                   </div>
                 )}
 
@@ -281,6 +313,30 @@ export function MissionActivitiesPanel({
           })
         )}
       </div>
+
+      {/* Rétroplanning ancré sur T0 (déterministe) */}
+      {retro && retro.slots.length > 0 && (
+        <div className="rounded-lg border border-border bg-surface-raised p-3">
+          <div className="flex flex-wrap items-center justify-between gap-1">
+            <p className="text-2xs font-bold uppercase text-foreground-muted">Rétroplanning</p>
+            <p className="text-2xs text-foreground-muted">
+              T0 = {fmtDate(retro.t0)} ({T0_SOURCE_LABEL[retro.t0Source] ?? retro.t0Source}) · fenêtre {retro.totalDurationDays} j dès le {fmtDate(retro.startDate)}
+            </p>
+          </div>
+          <ul className="mt-2 space-y-1">
+            {retro.slots.map((s) => (
+              <li key={s.id} className="flex items-center gap-2 text-2xs">
+                <span className="min-w-0 flex-1 truncate text-foreground-secondary">{s.title ?? s.id}</span>
+                <span className="shrink-0 tabular-nums text-foreground-muted">J{s.startOffsetDays} → J{s.endOffsetDays}</span>
+                <span className="shrink-0 tabular-nums text-foreground-muted">{fmtDate(s.startDate)}–{fmtDate(s.endDate)}</span>
+                <span className={`shrink-0 tabular-nums ${s.durationDerived ? "text-foreground-muted" : "text-foreground"}`}>
+                  {s.durationDays} j{s.durationDerived ? " · auto" : ""}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Ajouter une activité */}
       {!terminal &&

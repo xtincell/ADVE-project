@@ -1138,6 +1138,10 @@ model MissionActivity {
   briefContent     Json? // brief propre de l'activité (généré déterministe, éditable avant exécution)
   deliverableId    String?
   assigneeId       String? // prestataire attribué à l'activité (User.id — scalaire, comme Mission.assigneeId)
+  // ADR-0120 PR-4b — durée FIXÉE (jours) pour le rétroplanning. Null ⇒ durée DÉRIVÉE
+  // déterministe par type d'activité (resolveActivityDurationDays). Les deux options
+  // sont possibles : l'opérateur fixe, sinon le moteur dérive.
+  durationDays     Int?
   completedAt      DateTime?
 
   mission     Mission             @relation(fields: [missionId], references: [id], onDelete: Cascade)

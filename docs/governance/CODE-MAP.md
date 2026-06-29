@@ -48,7 +48,7 @@ Ces correspondances évitent la réinvention :
 - **Campaign** (80 fields)
 - **Mission** (35 fields)
 - **MissionDeliverable** (12 fields)
-- **MissionActivity** (21 fields) — Activité d'une mission — couche d'exécution pilotable par mission (pipeline staged). Chaque activité = création d'asset 
+- **MissionActivity** (22 fields) — Activité d'une mission — couche d'exécution pilotable par mission (pipeline staged). Chaque activité = création d'asset 
 - **MissionApplication** (15 fields) — Vague 7 — candidature d'un talent/agence à une mission ouverte. Le flux remplace l'auto-acceptation : candidater → revue
 - **CrmContact** (16 fields) — Vague 7 — instantané followers/mentions par plateforme (traque unifiée). strategyId null = comptes propres de La Fusée /
 - **CrmMessage** (14 fields) — Message CRM (email transactionnel sortant ou note entrante consignée).
