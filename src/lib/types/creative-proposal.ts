@@ -39,6 +39,19 @@ export const creativeDirectionSchema = z.object({
 export type CreativeDirection = z.infer<typeof creativeDirectionSchema>;
 
 /**
+ * Schéma BROUILLON de direction (Voie A IA, ADR-0120) — tous champs lenient : le LLM
+ * pré-remplit ce qu'il déduit de l'ADVE, l'opérateur corrige avant le create
+ * déterministe. **Ne JAMAIS persister tel quel** (manual-first parity ADR-0060).
+ */
+export const creativeDirectionDraftSchema = z.object({
+  bigIdea: z.string().max(2000).default(""),
+  insight: z.string().max(2000).default(""),
+  axe: z.string().max(2000).default(""),
+  pistes: z.array(z.string().max(500)).max(20).default([]),
+});
+export type CreativeDirectionDraft = z.infer<typeof creativeDirectionDraftSchema>;
+
+/**
  * AssetRef — pointeur vers un visuel : un `BrandAsset` (Voie A généré via image API /
  * Voie B importé) et/ou une URL. Tolérant : au moins l'un de brandAssetId|url.
  */

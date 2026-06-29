@@ -10,6 +10,17 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.67 — feat(campaigns): Voie A IA — brouillon de direction créative depuis l'ADVE (ADR-0120 PR-5) (2026-06-29)
+
+Sort la **Voie A IA** du suivi déféré — dernière pièce LLM de la spec « Nouveau Pipeline de Production ». Un bouton **« Pré-remplir avec l'IA »** dans le formulaire de Proposition Créative génère un BROUILLON de direction (Big Idea / insight / axe / pistes) déduit de l'ADVE (piliers A/D/V) via le Gateway (`executeStructuredLLMCall`, ADR-0067).
+
+- **Manual-first parity (ADR-0060)** : le brouillon **ne persiste rien** — il pré-remplit les champs, l'opérateur corrige, puis le `create` déterministe. La Voie B (saisie manuelle) reste pleinement utilisable sans IA ; Gateway indisponible → échec propre, la saisie manuelle prend le relais. Mirroir du précédent béni `GUILD_DRAFT_MISSION_FROM_TEXT`.
+- `draftCreativeDirectionFromStrategy` (service) + `creativeDirectionDraftSchema` (Zod lenient, défauts vides) + Intent gouverné `DRAFT_CREATIVE_PROPOSAL_FROM_STRATEGY` + SLO + manifest (`LLM_CALL`) + tRPC `creativeProposal.draftDirection`.
+
+Seule entrée LLM du pipeline (le cœur reste déterministe). La génération de visuels (mockups/KV via image API) + le portail public La Guilde restent credential-gated (Ptah/Magnific). tsc 0 · eslint 0 · **2324 tests verts** (2 nouveaux) · 0 migration · 0 bypass. Cap APOGEE 7/7.
+
+---
+
 ## v6.27.66 — feat(cockpit): Macro Roadmap — timeline des campagnes (ADR-0120 PR-4c) (2026-06-29)
 
 PR-4c/4 — clôt la cascade aval du revamp. Vue **Macro Roadmap** sur la page Campagnes : timeline horizontale des campagnes de la stratégie (canon + ponctuelles), positionnées proportionnellement à leurs dates, ligne « aujourd'hui », always-on en bande jusqu'au bout de la fenêtre, campagnes sans date listées à part.

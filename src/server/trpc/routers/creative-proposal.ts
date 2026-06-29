@@ -69,4 +69,18 @@ export const creativeProposalRouter = createTRPCRouter({
     const { rejectCreativeProposal } = await import("@/server/services/creative-proposal");
     return rejectCreativeProposal(input.id, input.reason);
   }),
+
+  /**
+   * Voie A IA — pré-remplit un BROUILLON de direction depuis l'ADVE (LLM via Gateway).
+   * Ne persiste rien : l'opérateur corrige avant `create`. Gateway indispo → échec propre,
+   * la saisie manuelle (Voie B) prend le relais (manual-first parity ADR-0060).
+   */
+  draftDirection: governedProcedure({
+    kind: "DRAFT_CREATIVE_PROPOSAL_FROM_STRATEGY",
+    inputSchema: z.object({ strategyId: z.string() }),
+    caller: "creativeProposal:draftDirection",
+  }).mutation(async ({ input }) => {
+    const { draftCreativeDirectionFromStrategy } = await import("@/server/services/creative-proposal");
+    return draftCreativeDirectionFromStrategy(input.strategyId);
+  }),
 });
