@@ -980,6 +980,10 @@ export async function createMissionFromValidatedBrief(briefId: string) {
     },
   });
 
+  // Auto-génération déterministe des activités (asset/terrain + budget + KPI)
+  // dès la création de la mission — la décomposition n'est plus manuelle.
+  await seedDefaultMissionActivities(mission.id);
+
   return { briefId, missionId: mission.id, created: true };
 }
 
@@ -1261,6 +1265,92 @@ export async function getMissionActivityHealth(missionId: string) {
     select: { status: true, budgetAllocated: true, kpiTarget: true, kpiActual: true },
   });
   return computeMissionActivityHealth(acts);
+}
+
+/** Extrait une quantité (1er entier 1-5 chiffres) d'un libellé — pré-remplit la
+ *  cible KPI d'une activité de production (« 52 posts » → 52). Pur, déterministe. */
+export function extractLeadingQuantity(text: string): number | null {
+  const m = /\b(\d{1,5})\b/.exec(text);
+  return m ? Number(m[1]) : null;
+}
+
+/** Touchpoints offline ⇒ une activité « action terrain » distincte de la prod d'asset. */
+const FIELD_TOUCHPOINTS = ["EVENT", "OOH", "PLV", "RETAIL", "TERRAIN", "ACTIVATION", "PRINT", "RADIO", "TV", "STREET"];
+
+/**
+ * Auto-génère un jeu d'activités par défaut pour une mission, dérivé
+ * **déterministiquement** du brief/action (zéro LLM) : 1 activité Création d'asset
+ * (livrable principal) + 1 activité Action terrain si le touchpoint est offline.
+ * Budget réparti, cible KPI extraite du titre, KPI label depuis l'AARRR de
+ * l'action. **Idempotent** : ne seed que si la mission n'a aucune activité (le
+ * bouton « Régénérer » repart d'une mission vidée de ses activités).
+ */
+export async function seedDefaultMissionActivities(missionId: string) {
+  const existing = await db.missionActivity.count({ where: { missionId } });
+  if (existing > 0) return { created: 0, skipped: true as const };
+
+  const mission = await db.mission.findUniqueOrThrow({
+    where: { id: missionId },
+    select: { id: true, title: true, budget: true, briefData: true },
+  });
+  const bd = mission.briefData as { brandActionId?: unknown } | null;
+  const brandActionId = bd && typeof bd.brandActionId === "string" ? bd.brandActionId : null;
+  const action = brandActionId
+    ? await db.brandAction.findUnique({
+        where: { id: brandActionId },
+        select: { title: true, touchpoint: true, aarrrIntent: true, budgetMax: true, budgetMin: true, budgetCurrency: true },
+      })
+    : null;
+
+  const baseTitle = (action?.title ?? mission.title).replace(/^Mission — /, "").slice(0, 150);
+  const totalBudget = mission.budget ?? action?.budgetMax ?? action?.budgetMin ?? 0;
+  const currency = action?.budgetCurrency ?? "XAF";
+  const kpiLabel = action?.aarrrIntent ?? null;
+  const kpiTarget = extractLeadingQuantity(baseTitle);
+  const touchpoint = (action?.touchpoint ?? "").toUpperCase();
+  const isField = FIELD_TOUCHPOINTS.some((t) => touchpoint.includes(t));
+
+  const specs = isField
+    ? [
+        { type: "ASSET_CREATION", title: `Production des assets — ${baseTitle}`, budget: Math.round(totalBudget * 0.6), kpi: kpiTarget, concludes: false },
+        { type: "FIELD_ACTION", title: `Activation terrain — ${touchpoint || baseTitle}`, budget: Math.round(totalBudget * 0.4), kpi: null, concludes: true },
+      ]
+    : [{ type: "ASSET_CREATION", title: `Production — ${baseTitle}`, budget: totalBudget, kpi: kpiTarget, concludes: true }];
+
+  let order = 0;
+  for (const s of specs) {
+    await db.missionActivity.create({
+      data: {
+        missionId,
+        type: s.type,
+        title: s.title.slice(0, 200),
+        budgetAllocated: s.budget > 0 ? s.budget : null,
+        budgetCurrency: currency,
+        kpiLabel,
+        kpiTarget: s.kpi,
+        concludesMission: s.concludes,
+        order: order++,
+      },
+    });
+  }
+  return { created: specs.length, skipped: false as const };
+}
+
+/** Vide les activités d'une mission puis re-seed le jeu par défaut (déterministe). */
+export async function regenerateMissionActivities(missionId: string) {
+  await db.missionActivity.deleteMany({ where: { missionId } });
+  return seedDefaultMissionActivities(missionId);
+}
+
+/** Attribue (ou retire) un prestataire à une activité. Assigné ⇒ activité IN_PROGRESS. */
+export async function assignMissionActivity(activityId: string, assigneeId: string | null) {
+  return db.missionActivity.update({
+    where: { id: activityId },
+    data: {
+      assigneeId,
+      ...(assigneeId ? { status: "IN_PROGRESS" } : {}),
+    },
+  });
 }
 
 // ============================================================================

@@ -1137,6 +1137,7 @@ model MissionActivity {
   concludesMission Boolean   @default(false)
   briefContent     Json? // brief propre de l'activité (généré déterministe, éditable avant exécution)
   deliverableId    String?
+  assigneeId       String? // prestataire attribué à l'activité (User.id — scalaire, comme Mission.assigneeId)
   completedAt      DateTime?
 
   mission     Mission             @relation(fields: [missionId], references: [id], onDelete: Cascade)
@@ -1147,6 +1148,7 @@ model MissionActivity {
 
   @@index([missionId])
   @@index([missionId, status])
+  @@index([assigneeId])
 }
 
 /// Vague 7 — candidature d'un talent/agence à une mission ouverte.
