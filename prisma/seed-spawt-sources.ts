@@ -85,13 +85,13 @@ async function extractContent(absPath: string, fileType: SpawtSourceSpec["fileTy
   }
 
   if (fileType === "XLSX") {
-    const XLSX = await import("xlsx");
-    const workbook = XLSX.read(buffer, { type: "buffer" });
+    const { readXlsxWorkbook } = await import("@/server/services/utils/xlsx-read");
+    const workbook = await readXlsxWorkbook(buffer);
     const parts: string[] = [];
-    for (const name of workbook.SheetNames) {
-      const sheet = workbook.Sheets[name];
+    for (const name of workbook.sheetNames) {
+      const sheet = workbook.getSheet(name);
       if (!sheet) continue;
-      parts.push(`=== Feuille: ${name} ===\n${XLSX.utils.sheet_to_csv(sheet)}`);
+      parts.push(`=== Feuille: ${name} ===\n${sheet.csv}`);
     }
     return parts.join("\n\n");
   }

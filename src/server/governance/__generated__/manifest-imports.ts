@@ -13,19 +13,26 @@ import { manifest as approvalWorkflowManifest } from "@/server/services/approval
 import { manifest as artemisManifest } from "@/server/services/artemis/manifest";
 import { manifest as assetTaggerManifest } from "@/server/services/asset-tagger/manifest";
 import { manifest as auditTrailManifest } from "@/server/services/audit-trail/manifest";
+import { manifest as autoPromotionManifest } from "@/server/services/auto-promotion/manifest";
 import { manifest as boardExportManifest } from "@/server/services/board-export/manifest";
 import { manifest as bootSequenceManifest } from "@/server/services/boot-sequence/manifest";
 import { manifest as brandNodeManifest } from "@/server/services/brand-node/manifest";
 import { manifest as brandVaultManifest } from "@/server/services/brand-vault/manifest";
 import { manifest as briefIngestManifest } from "@/server/services/brief-ingest/manifest";
 import { manifest as budgetAllocatorManifest } from "@/server/services/budget-allocator/manifest";
+import { manifest as bureauEtudesManifest } from "@/server/services/bureau-etudes/manifest";
 import { manifest as campaignBudgetEngineManifest } from "@/server/services/campaign-budget-engine/manifest";
+import { manifest as campaignCanonManifest } from "@/server/services/campaign-canon/manifest";
 import { manifest as campaignChangeRequestManifest } from "@/server/services/campaign-change-request/manifest";
 import { manifest as campaignDeliverableManifest } from "@/server/services/campaign-deliverable/manifest";
 import { manifest as campaignManagerManifest } from "@/server/services/campaign-manager/manifest";
 import { manifest as campaignPlanGeneratorManifest } from "@/server/services/campaign-plan-generator/manifest";
+import { manifest as campaignTrackerManifest } from "@/server/services/campaign-tracker/manifest";
+import { manifest as canonManifest } from "@/server/services/canon/manifest";
 import { manifest as collabDocManifest } from "@/server/services/collab-doc/manifest";
 import { manifest as commissionEngineManifest } from "@/server/services/commission-engine/manifest";
+import { manifest as communityDashboardManifest } from "@/server/services/community-dashboard/manifest";
+import { manifest as consultingManifest } from "@/server/services/consulting/manifest";
 import { manifest as countryRegistryManifest } from "@/server/services/country-registry/manifest";
 import { manifest as crmEngineManifest } from "@/server/services/crm-engine/manifest";
 import { manifest as crossValidatorManifest } from "@/server/services/cross-validator/manifest";
@@ -39,6 +46,7 @@ import { manifest as driverEngineManifest } from "@/server/services/driver-engin
 import { manifest as ecosystemEngineManifest } from "@/server/services/ecosystem-engine/manifest";
 import { manifest as emailManifest } from "@/server/services/email/manifest";
 import { manifest as errorVaultManifest } from "@/server/services/error-vault/manifest";
+import { manifest as escrowArbitrationManifest } from "@/server/services/escrow-arbitration/manifest";
 import { manifest as feedbackLoopManifest } from "@/server/services/feedback-loop/manifest";
 import { manifest as feedbackProcessorManifest } from "@/server/services/feedback-processor/manifest";
 import { manifest as financialBrainManifest } from "@/server/services/financial-brain/manifest";
@@ -50,15 +58,22 @@ import { manifest as guidelinesRendererManifest } from "@/server/services/guidel
 import { manifest as imhotepManifest } from "@/server/services/imhotep/manifest";
 import { manifest as implementationGeneratorManifest } from "@/server/services/implementation-generator/manifest";
 import { manifest as ingestionPipelineManifest } from "@/server/services/ingestion-pipeline/manifest";
+import { manifest as intentionManifest } from "@/server/services/intention/manifest";
 import { manifest as jehutyManifest } from "@/server/services/jehuty/manifest";
 import { manifest as knowledgeAggregatorManifest } from "@/server/services/knowledge-aggregator/manifest";
 import { manifest as knowledgeCaptureManifest } from "@/server/services/knowledge-capture/manifest";
 import { manifest as knowledgeSeederManifest } from "@/server/services/knowledge-seeder/manifest";
 import { manifest as llmGatewayManifest } from "@/server/services/llm-gateway/manifest";
+import { manifest as marketCostManifest } from "@/server/services/market-cost/manifest";
 import { manifest as marketIntelligenceManifest } from "@/server/services/market-intelligence/manifest";
+import { manifest as marketLifecycleManifest } from "@/server/services/market-lifecycle/manifest";
+import { manifest as marketVisibilityManifest } from "@/server/services/market-visibility/manifest";
 import { manifest as matchingEngineManifest } from "@/server/services/matching-engine/manifest";
+import { manifest as mediaPerfManifest } from "@/server/services/media-perf/manifest";
+import { manifest as mediaPlanManifest } from "@/server/services/media-plan/manifest";
 import { manifest as mestorManifest } from "@/server/services/mestor/manifest";
 import { manifest as mfaManifest } from "@/server/services/mfa/manifest";
+import { manifest as missionQuoteManifest } from "@/server/services/mission-quote/manifest";
 import { manifest as missionTemplatesManifest } from "@/server/services/mission-templates/manifest";
 import { manifest as mobileMoneyManifest } from "@/server/services/mobile-money/manifest";
 import { manifest as modelPolicyManifest } from "@/server/services/model-policy/manifest";
@@ -70,6 +85,7 @@ import { manifest as nspManifest } from "@/server/services/nsp/manifest";
 import { manifest as oauthIntegrationsManifest } from "@/server/services/oauth-integrations/manifest";
 import { manifest as operatorActionManifest } from "@/server/services/operator-action/manifest";
 import { manifest as operatorIsolationManifest } from "@/server/services/operator-isolation/manifest";
+import { manifest as oracleSectionManifest } from "@/server/services/oracle-section/manifest";
 import { manifest as paymentProvidersManifest } from "@/server/services/payment-providers/manifest";
 import { manifest as pillarGatewayManifest } from "@/server/services/pillar-gateway/manifest";
 import { manifest as pillarMaturityManifest } from "@/server/services/pillar-maturity/manifest";
@@ -78,6 +94,7 @@ import { manifest as pillarVersioningManifest } from "@/server/services/pillar-v
 import { manifest as pipelineOrchestratorManifest } from "@/server/services/pipeline-orchestrator/manifest";
 import { manifest as playbookCapitalizationManifest } from "@/server/services/playbook-capitalization/manifest";
 import { manifest as processSchedulerManifest } from "@/server/services/process-scheduler/manifest";
+import { manifest as productionManifest } from "@/server/services/production/manifest";
 import { manifest as promptRegistryManifest } from "@/server/services/prompt-registry/manifest";
 import { manifest as ptahManifest } from "@/server/services/ptah/manifest";
 import { manifest as qcRouterManifest } from "@/server/services/qc-router/manifest";
@@ -94,22 +111,16 @@ import { manifest as stalenessPropagatorManifest } from "@/server/services/stale
 import { manifest as strategyArchiveManifest } from "@/server/services/strategy-archive/manifest";
 import { manifest as strategyPresentationManifest } from "@/server/services/strategy-presentation/manifest";
 import { manifest as talentEngineManifest } from "@/server/services/talent-engine/manifest";
+import { manifest as talentServicesManifest } from "@/server/services/talent-services/manifest";
 import { manifest as teamAllocatorManifest } from "@/server/services/team-allocator/manifest";
 import { manifest as tierEvaluatorManifest } from "@/server/services/tier-evaluator/manifest";
 import { manifest as translationManifest } from "@/server/services/translation/manifest";
 import { manifest as upsellDetectorManifest } from "@/server/services/upsell-detector/manifest";
+import { manifest as utilsManifest } from "@/server/services/utils/manifest";
 import { manifest as valueReportGeneratorManifest } from "@/server/services/value-report-generator/manifest";
 import { manifest as vaultEnrichmentManifest } from "@/server/services/vault-enrichment/manifest";
-import { manifest as canonManifest } from "@/server/services/canon/manifest";
-import { manifest as marketCostManifest } from "@/server/services/market-cost/manifest";
-import { manifest as oracleSectionManifest } from "@/server/services/oracle-section/manifest";
-import { manifest as utilsManifest } from "@/server/services/utils/manifest";
 
 export const MANIFESTS: readonly NeteruManifest[] = [
-  canonManifest,
-  marketCostManifest,
-  oracleSectionManifest,
-  utilsManifest,
   advertisConnectorsManifest,
   advertisScorerManifest,
   aiCostTrackerManifest,
@@ -118,19 +129,26 @@ export const MANIFESTS: readonly NeteruManifest[] = [
   artemisManifest,
   assetTaggerManifest,
   auditTrailManifest,
+  autoPromotionManifest,
   boardExportManifest,
   bootSequenceManifest,
   brandNodeManifest,
   brandVaultManifest,
   briefIngestManifest,
   budgetAllocatorManifest,
+  bureauEtudesManifest,
   campaignBudgetEngineManifest,
+  campaignCanonManifest,
   campaignChangeRequestManifest,
   campaignDeliverableManifest,
   campaignManagerManifest,
   campaignPlanGeneratorManifest,
+  campaignTrackerManifest,
+  canonManifest,
   collabDocManifest,
   commissionEngineManifest,
+  communityDashboardManifest,
+  consultingManifest,
   countryRegistryManifest,
   crmEngineManifest,
   crossValidatorManifest,
@@ -144,6 +162,7 @@ export const MANIFESTS: readonly NeteruManifest[] = [
   ecosystemEngineManifest,
   emailManifest,
   errorVaultManifest,
+  escrowArbitrationManifest,
   feedbackLoopManifest,
   feedbackProcessorManifest,
   financialBrainManifest,
@@ -155,15 +174,22 @@ export const MANIFESTS: readonly NeteruManifest[] = [
   imhotepManifest,
   implementationGeneratorManifest,
   ingestionPipelineManifest,
+  intentionManifest,
   jehutyManifest,
   knowledgeAggregatorManifest,
   knowledgeCaptureManifest,
   knowledgeSeederManifest,
   llmGatewayManifest,
+  marketCostManifest,
   marketIntelligenceManifest,
+  marketLifecycleManifest,
+  marketVisibilityManifest,
   matchingEngineManifest,
+  mediaPerfManifest,
+  mediaPlanManifest,
   mestorManifest,
   mfaManifest,
+  missionQuoteManifest,
   missionTemplatesManifest,
   mobileMoneyManifest,
   modelPolicyManifest,
@@ -175,6 +201,7 @@ export const MANIFESTS: readonly NeteruManifest[] = [
   oauthIntegrationsManifest,
   operatorActionManifest,
   operatorIsolationManifest,
+  oracleSectionManifest,
   paymentProvidersManifest,
   pillarGatewayManifest,
   pillarMaturityManifest,
@@ -183,6 +210,7 @@ export const MANIFESTS: readonly NeteruManifest[] = [
   pipelineOrchestratorManifest,
   playbookCapitalizationManifest,
   processSchedulerManifest,
+  productionManifest,
   promptRegistryManifest,
   ptahManifest,
   qcRouterManifest,
@@ -199,10 +227,12 @@ export const MANIFESTS: readonly NeteruManifest[] = [
   strategyArchiveManifest,
   strategyPresentationManifest,
   talentEngineManifest,
+  talentServicesManifest,
   teamAllocatorManifest,
   tierEvaluatorManifest,
   translationManifest,
   upsellDetectorManifest,
+  utilsManifest,
   valueReportGeneratorManifest,
   vaultEnrichmentManifest,
 ];

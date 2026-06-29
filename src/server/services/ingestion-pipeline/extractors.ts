@@ -5,6 +5,7 @@
 
 import { callLLM } from "@/server/services/llm-gateway";
 import { sanitizeInline, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
+import { readXlsxWorkbook } from "@/server/services/utils/xlsx-read";
 import type { ExtractionResult } from "./types";
 
 /**
@@ -41,20 +42,17 @@ export async function extractDOCX(buffer: Buffer): Promise<ExtractionResult> {
  * Extract structured data from an XLSX buffer
  */
 export async function extractXLSX(buffer: Buffer): Promise<ExtractionResult> {
-  const XLSX = await import("xlsx");
-  const workbook = XLSX.read(buffer, { type: "buffer" });
-  const sheets: string[] = workbook.SheetNames;
+  const workbook = await readXlsxWorkbook(buffer);
+  const sheets = workbook.sheetNames;
   const structured: Record<string, unknown> = {};
   const textParts: string[] = [];
 
   for (const name of sheets) {
-    const sheet = workbook.Sheets[name];
+    const sheet = workbook.getSheet(name);
     if (!sheet) continue;
-    const json = XLSX.utils.sheet_to_json(sheet) as Record<string, unknown>[];
-    structured[name] = json;
+    structured[name] = sheet.rows;
     // Convert to readable text for AI
-    const csv = XLSX.utils.sheet_to_csv(sheet);
-    textParts.push(`=== Feuille: ${name} ===\n${csv}`);
+    textParts.push(`=== Feuille: ${name} ===\n${sheet.csv}`);
   }
 
   const text = textParts.join("\n\n");
@@ -130,9 +128,17 @@ export async function extractAuto(
     const buf = Buffer.from(content, "base64");
     return extractDOCX(buf);
   }
-  if (ft === "XLSX" || ft === "XLS" || ft === "CSV") {
-    const buf = Buffer.from(content, "base64");
-    return extractXLSX(buf);
+  if (ft === "XLSX") {
+    return extractXLSX(Buffer.from(content, "base64"));
+  }
+  if (ft === "XLS") {
+    // exceljs ne lit pas le .xls binaire legacy (BIFF) — message clair plutôt
+    // qu'un échec cryptique. L'opérateur convertit en .xlsx ou .csv.
+    throw new Error("Format .xls (Excel legacy) non supporté — convertir en .xlsx ou .csv.");
+  }
+  if (ft === "CSV") {
+    // CSV = texte délimité ; pas besoin d'un moteur tableur.
+    return extractText(Buffer.from(content, "base64").toString("utf8"));
   }
   if (ft === "IMG" || ft === "PNG" || ft === "JPG" || ft === "JPEG" || ft === "WEBP" || ft === "GIF" || ft === "SVG") {
     return extractImage(content, strategyId);

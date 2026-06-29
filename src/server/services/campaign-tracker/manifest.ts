@@ -440,7 +440,7 @@ export const manifest = defineManifest({
       missionStep: 5,
     },
   ],
-  dependencies: ["mestor", "artemis", "thot", "seshat", "anubis", "imhotep"],
+  dependencies: ["mestor", "artemis", "financial-brain", "seshat", "anubis", "imhotep"],
   missionContribution: "CHAIN_VIA:multi",
   missionStep: 3,
   docs: {
