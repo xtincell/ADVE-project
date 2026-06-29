@@ -10,6 +10,19 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.64 — feat(cockpit): rétroplanning mission T0 + durée activité fixée/dérivée (ADR-0120 PR-4b) (2026-06-29)
+
+PR-4b/4 du revamp opérationnel — le moteur de rétroplanning ancré sur T0.
+
+- **Modèle de durée à 2 options** (décision opérateur) : `MissionActivity.durationDays` **FIXÉE** par l'opérateur, sinon **DÉRIVÉE** déterministiquement par type (`resolveActivityDurationDays` ; défauts ASSET_CREATION 5 j / FIELD_ACTION 3 j). Migration additive `20260629160000`.
+- **Moteur PUR `computeRetroplan`** (`retroplan.ts`, zéro LLM) : enchaîne les activités (ordre) dans une fenêtre **qui se termine à T0** (la dernière finit à T0, la 1ère démarre à T0 − total). Offsets J-N + dates ISO + flag dérivé par slot ; activités annulées ignorées.
+- **Service** `getMissionRetroplan(missionId, t0?)` : T0 = lancement campagne (`startDate`) → échéance SLA → aujourd'hui, ou override. `setMissionActivityDuration` bascule fixée/dérivée.
+- **tRPC** : query `mission.retroplan` + mutation `mission.setActivityDuration`. **UI** : section **Rétroplanning** dans la fiche mission (timeline J-N + dates + durée auto/fixée par activité) + input durée par activité.
+
+Macro Roadmap (timeline campagnes) = suivi. tsc 0 · eslint 0 · **2312 tests verts** (5 nouveaux) · 1 migration additive · 0 LLM · 0 bypass. Cap APOGEE 7/7.
+
+---
+
 ## v6.27.63 — feat(cockpit): fiche mission — auto-seed activités + assignation + brief éditable (ADR-0120 PR-4a) (2026-06-29)
 
 PR-4a/4 du revamp opérationnel — première tranche de la cascade aval. Surface + complète la couche **Activités** de la fiche mission (la WIP `mission-fiche-revamp` est repliée ici).

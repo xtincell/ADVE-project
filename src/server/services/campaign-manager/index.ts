@@ -1353,6 +1353,39 @@ export async function assignMissionActivity(activityId: string, assigneeId: stri
   });
 }
 
+/** Fixe (ou efface) la durée d'une activité — bascule entre durée FIXÉE et DÉRIVÉE (PR-4b). */
+export async function setMissionActivityDuration(activityId: string, durationDays: number | null) {
+  return db.missionActivity.update({
+    where: { id: activityId },
+    data: { durationDays: durationDays && durationDays > 0 ? Math.round(durationDays) : null },
+  });
+}
+
+/**
+ * Rétroplanning d'une mission ancré sur T0 = date de lancement (startDate de la
+ * campagne) → SLA deadline → aujourd'hui, ou override explicite. Charge les activités,
+ * résout les durées (fixées ou dérivées) et calcule la fenêtre de production qui se
+ * termine à T0. Déterministe, zéro LLM.
+ */
+export async function getMissionRetroplan(missionId: string, t0Override?: Date) {
+  const mission = await db.mission.findUniqueOrThrow({
+    where: { id: missionId },
+    select: { id: true, slaDeadline: true, campaign: { select: { startDate: true } } },
+  });
+  const acts = await db.missionActivity.findMany({
+    where: { missionId },
+    select: { id: true, order: true, type: true, durationDays: true, status: true, title: true },
+    orderBy: { order: "asc" },
+  });
+  const launch = mission.campaign?.startDate ?? null;
+  const t0 = t0Override ?? launch ?? mission.slaDeadline ?? new Date();
+  const t0Source = t0Override ? "OVERRIDE" : launch ? "CAMPAIGN_LAUNCH" : mission.slaDeadline ? "SLA_DEADLINE" : "TODAY_FALLBACK";
+  const { computeRetroplan } = await import("./retroplan");
+  const plan = computeRetroplan(acts, t0);
+  const titleById = new Map(acts.map((a) => [a.id, a.title]));
+  return { ...plan, t0Source, slots: plan.slots.map((s) => ({ ...s, title: titleById.get(s.id) ?? null })) };
+}
+
 // ============================================================================
 // REPORTS (3 procedures)
 // ============================================================================

@@ -740,4 +740,16 @@ export const missionRouter = createTRPCRouter({
     inputSchema: z.object({ activityId: z.string(), assigneeId: z.string().nullable() }),
     caller: "mission:assignActivity",
   }).mutation(({ input }) => cm.assignMissionActivity(input.activityId, input.assigneeId)),
+
+  /** Rétroplanning de la mission ancré sur T0 (date de lancement → SLA → aujourd'hui). Déterministe. */
+  retroplan: protectedProcedure
+    .input(z.object({ missionId: z.string(), t0: z.string().optional() }))
+    .query(({ input }) => cm.getMissionRetroplan(input.missionId, input.t0 ? new Date(input.t0) : undefined)),
+
+  /** Fixe (ou efface) la durée d'une activité — bascule FIXÉE/DÉRIVÉE pour le rétroplanning. */
+  setActivityDuration: governedProcedure({
+    kind: "LEGACY_MISSION_SET_ACTIVITY_DURATION",
+    inputSchema: z.object({ activityId: z.string(), durationDays: z.number().int().positive().nullable() }),
+    caller: "mission:setActivityDuration",
+  }).mutation(({ input }) => cm.setMissionActivityDuration(input.activityId, input.durationDays)),
 });
