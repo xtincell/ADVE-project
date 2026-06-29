@@ -278,3 +278,55 @@ export async function draftCreativeDirectionFromStrategy(strategyId: string): Pr
   });
   return data;
 }
+
+// ── La Guilde — Voie B : soumission par un membre guilde (ADR-0120) ──────────────
+// Un membre de la guilde ASSIGNÉ à ≥1 mission d'une stratégie peut soumettre une
+// direction créative pour cette stratégie. Elle atterrit SUBMITTED dans la file de
+// l'opérateur (cockpit), validée via la gate existante. Accès = lien mission : pas de
+// chicken-and-egg — la direction initiale reste opérateur/Voie A ; La Guilde propose
+// pour les marques qu'elle sert déjà. Déterministe, zéro LLM (la saisie est humaine).
+
+/** PUR — dédoublonne les missions assignées en stratégies proposables. Exporté pour test. */
+export function dedupeProposableStrategies(
+  missions: Array<{ strategyId: string; strategy: { name: string | null } | null }>,
+): Array<{ strategyId: string; strategyName: string; missionCount: number }> {
+  const map = new Map<string, { strategyId: string; strategyName: string; missionCount: number }>();
+  for (const m of missions) {
+    const cur = map.get(m.strategyId) ?? { strategyId: m.strategyId, strategyName: m.strategy?.name ?? "—", missionCount: 0 };
+    cur.missionCount++;
+    map.set(m.strategyId, cur);
+  }
+  return [...map.values()];
+}
+
+/** Stratégies pour lesquelles ce membre guilde peut proposer (≥1 mission assignée). */
+export async function listGuildProposableStrategies(userId: string) {
+  const missions = await db.mission.findMany({
+    where: { assigneeId: userId },
+    select: { strategyId: true, strategy: { select: { name: true } } },
+  });
+  return dedupeProposableStrategies(missions);
+}
+
+/** Soumet une Proposition Créative (Voie B guilde) → SUBMITTED. Accès gardé par lien mission. */
+export async function submitGuildCreativeProposal(
+  userId: string,
+  input: { strategyId: string; routeKey: RouteKey; direction: { bigIdea: string; insight?: string; axe?: string; pistes?: string[] } },
+) {
+  const linked = await db.mission.count({ where: { assigneeId: userId, strategyId: input.strategyId } });
+  if (linked === 0) {
+    throw new Error("Accès refusé : aucune mission de cette stratégie ne vous est attribuée.");
+  }
+  const created = await createCreativeProposal({
+    strategyId: input.strategyId,
+    routeKey: input.routeKey,
+    source: "LAGUILDE_HUMAN",
+    direction: {
+      bigIdea: input.direction.bigIdea,
+      insight: input.direction.insight ?? "",
+      axe: input.direction.axe ?? "",
+      pistes: input.direction.pistes ?? [],
+    },
+  });
+  return submitCreativeProposal(created.id);
+}

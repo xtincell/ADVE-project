@@ -19,6 +19,7 @@ export const manifest = defineManifest({
     "VALIDATE_CREATIVE_PROPOSAL",
     "REJECT_CREATIVE_PROPOSAL",
     "DRAFT_CREATIVE_PROPOSAL_FROM_STRATEGY",
+    "GUILD_SUBMIT_CREATIVE_PROPOSAL",
   ],
   capabilities: [
     { name: "createCreativeProposal", inputSchema: z.unknown(), outputSchema: z.unknown(), sideEffects: ["DB_WRITE"], idempotent: false },
@@ -26,6 +27,7 @@ export const manifest = defineManifest({
     { name: "validateCreativeProposal", inputSchema: z.unknown(), outputSchema: z.unknown(), sideEffects: ["DB_WRITE"], idempotent: true },
     { name: "rejectCreativeProposal", inputSchema: z.unknown(), outputSchema: z.unknown(), sideEffects: ["DB_WRITE"], idempotent: false },
     { name: "draftCreativeDirectionFromStrategy", inputSchema: z.unknown(), outputSchema: z.unknown(), sideEffects: ["LLM_CALL"], idempotent: false },
+    { name: "submitGuildCreativeProposal", inputSchema: z.unknown(), outputSchema: z.unknown(), sideEffects: ["DB_WRITE"], idempotent: false },
   ],
   dependencies: ["campaign-canon", "campaign-manager"],
   missionContribution: "CHAIN_VIA:campaign-tracker",

@@ -10,7 +10,8 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
-import { creativeProposalContractSchema } from "@/lib/types/creative-proposal";
+import { creativeProposalContractSchema, creativeDirectionSchema } from "@/lib/types/creative-proposal";
+import { ROADMAP_ROUTE_KEYS } from "@/lib/types/pillar-schemas";
 
 export const creativeProposalRouter = createTRPCRouter({
   listByStrategy: protectedProcedure
@@ -82,5 +83,30 @@ export const creativeProposalRouter = createTRPCRouter({
   }).mutation(async ({ input }) => {
     const { draftCreativeDirectionFromStrategy } = await import("@/server/services/creative-proposal");
     return draftCreativeDirectionFromStrategy(input.strategyId);
+  }),
+
+  // ── Voie B La Guilde — surface membre guilde (creator portal) ──
+
+  /** Stratégies pour lesquelles le membre guilde connecté peut proposer (≥1 mission assignée). */
+  guildProposableStrategies: protectedProcedure.query(async ({ ctx }) => {
+    const { listGuildProposableStrategies } = await import("@/server/services/creative-proposal");
+    return listGuildProposableStrategies(ctx.session.user.id);
+  }),
+
+  /**
+   * Voie B — un membre guilde soumet une direction créative pour une stratégie où il
+   * est missionné → SUBMITTED dans la file opérateur. Accès gardé côté service (lien mission).
+   */
+  submitGuildProposal: governedProcedure({
+    kind: "GUILD_SUBMIT_CREATIVE_PROPOSAL",
+    inputSchema: z.object({
+      strategyId: z.string(),
+      routeKey: z.enum(ROADMAP_ROUTE_KEYS),
+      direction: creativeDirectionSchema,
+    }),
+    caller: "creativeProposal:submitGuildProposal",
+  }).mutation(async ({ ctx, input }) => {
+    const { submitGuildCreativeProposal } = await import("@/server/services/creative-proposal");
+    return submitGuildCreativeProposal(ctx.session.user.id, input);
   }),
 });
