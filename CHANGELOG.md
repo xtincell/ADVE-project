@@ -10,6 +10,17 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.65 — feat(cockpit): Macro Roadmap — timeline des campagnes (ADR-0120 PR-4c) (2026-06-29)
+
+PR-4c/4 — clôt la cascade aval du revamp. Vue **Macro Roadmap** sur la page Campagnes : timeline horizontale des campagnes de la stratégie (canon + ponctuelles), positionnées proportionnellement à leurs dates, ligne « aujourd'hui », always-on en bande jusqu'au bout de la fenêtre, campagnes sans date listées à part.
+
+- Helper PUR `computeRoadmapLayout` (`lib/strategy/roadmap-layout.ts`, client-safe, zéro dépendance) : fenêtre min→max, `leftPct`/`widthPct` par campagne, `nowPct`. Testé (4 cas).
+- `MacroRoadmapPanel` (read-only) consomme `campaign.list` existant — réutilise les données, aucune nouvelle requête serveur. Tonalité de barre par statut (tokens sémantiques).
+
+Le micro-dashboard (santé d'activité) était déjà en place (PR-4a). **0 migration · 0 nouvel Intent · 0 LLM · 0 bypass**. tsc 0 · eslint 0 · **2316 tests verts** (4 nouveaux). Cap APOGEE 7/7. **PR-4 bouclé** ; suivi déféré (mandat minimiser-LLM) : Voie A IA (Glory direction-draft + KV image) + portail public La Guilde.
+
+---
+
 ## v6.27.64 — feat(cockpit): rétroplanning mission T0 + durée activité fixée/dérivée (ADR-0120 PR-4b) (2026-06-29)
 
 PR-4b/4 du revamp opérationnel — le moteur de rétroplanning ancré sur T0.
