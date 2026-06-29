@@ -23,6 +23,13 @@ const CANON_LABEL: Record<string, string> = {
   PUNCTUAL: "Ponctuelle (insight / Jehuty)",
 };
 
+// Niveau d'exécution (ADR-0089) dérivé de l'Advertis — Conservateur / Cible / Ambitieux.
+const ROUTE_LABEL: Record<string, string> = {
+  CONSERVATIVE: "Conservateur",
+  TARGET: "Cible",
+  AMBITIOUS: "Ambitieux",
+};
+
 function fmtBudget(n: number | null | undefined, currency: string | null | undefined): string {
   if (n == null || !Number.isFinite(n)) return "—";
   const cur = currency === "XAF" || currency === "XOF" ? "FCFA" : currency ?? "";
@@ -57,7 +64,7 @@ export function CanonCampaignsPanel() {
             <Sparkles className="h-4 w-4 text-accent" /> Campagnes canon (Pilier S)
           </h2>
           <p className="mt-0.5 text-xs text-foreground-muted">
-            30-60-90 · annuelle · always-on — ancrées sur la date de lancement. Ouvre une campagne pour ajuster ses actions et la <span className="text-foreground-secondary">démarrer</span> (étapes validées).
+            30-60-90 · annuelle · always-on — cadre stratégique ancré sur la date de lancement. Ouvre un frame pour choisir sa <span className="text-foreground-secondary">direction créative</span> ; les actions de production s'y rattachent ensuite.
           </p>
         </div>
         <div className="flex flex-wrap items-end gap-2">
@@ -103,8 +110,7 @@ export function CanonCampaignsPanel() {
         </p>
       ) : generate.data?.status === "OK" ? (
         <p className="mt-2 text-xs font-medium text-success">
-          {generate.data.campaigns.length} campagne(s) canon générée(s) ·{" "}
-          {generate.data.campaigns.reduce((n, c) => n + c.actionCount, 0)} action(s) rattachée(s).
+          {generate.data.campaigns.length} frame(s) canon amorcé(s) · cadre stratégique prêt. Les actions de production arrivent après validation de la direction créative.
         </p>
       ) : null}
 
@@ -112,7 +118,7 @@ export function CanonCampaignsPanel() {
         <p className="mt-4 text-xs text-foreground-muted">Chargement…</p>
       ) : campaigns.length === 0 ? (
         <p className="mt-4 text-xs text-foreground-muted">
-          Aucune campagne canon. Lance la génération : le Pilier S répartit les initiatives validées en 3 campagnes.
+          Aucun frame canon. Lance l'amorçage : le Pilier S projette le cadre (30-60-90 · annuelle · always-on). Les actions de production se rattachent ensuite à la validation de la direction créative.
         </p>
       ) : (
         <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -131,7 +137,7 @@ export function CanonCampaignsPanel() {
                 )}
               </div>
               <div className="mt-1 flex flex-wrap gap-1">
-                {c.routeKey ? <span className="rounded bg-white/5 px-1.5 py-0.5 text-[9px] text-foreground-muted">{c.routeKey}</span> : null}
+                {c.routeKey ? <span title="Niveau d'exécution (dérivé de l'Advertis)" className="rounded bg-white/5 px-1.5 py-0.5 text-[9px] text-foreground-muted">{ROUTE_LABEL[c.routeKey] ?? c.routeKey}</span> : null}
                 {c.aarrrPrimary ? <span className="rounded bg-accent/15 px-1.5 py-0.5 text-[9px] font-bold text-accent">{c.aarrrPrimary}</span> : null}
                 {c.aarrrSecondary ? <span className="rounded bg-white/5 px-1.5 py-0.5 text-[9px] text-foreground-muted">+{c.aarrrSecondary}</span> : null}
               </div>
@@ -142,18 +148,24 @@ export function CanonCampaignsPanel() {
                 {fmtDate(c.startDate)}{c.isAlwaysOn ? " → permanent" : c.endDate ? ` → ${fmtDate(c.endDate)}` : ""}
               </p>
               <div className="mt-2 border-t border-white/5 pt-2">
-                <p className="text-[9px] font-bold uppercase tracking-wide text-foreground-muted">{c.brandActions.length} action(s)</p>
-                <ul className="mt-1 space-y-0.5">
-                  {c.brandActions.slice(0, 6).map((a) => (
-                    <li key={a.id} className="truncate text-[11px] text-foreground-secondary">• {a.title}</li>
-                  ))}
-                  {c.brandActions.length > 6 ? (
-                    <li className="text-[10px] text-foreground-muted">+{c.brandActions.length - 6} autre(s)…</li>
-                  ) : null}
-                </ul>
+                {c.brandActions.length > 0 ? (
+                  <>
+                    <p className="text-[9px] font-bold uppercase tracking-wide text-foreground-muted">{c.brandActions.length} action(s) de production</p>
+                    <ul className="mt-1 space-y-0.5">
+                      {c.brandActions.slice(0, 6).map((a) => (
+                        <li key={a.id} className="truncate text-[11px] text-foreground-secondary">• {a.title}</li>
+                      ))}
+                      {c.brandActions.length > 6 ? (
+                        <li className="text-[10px] text-foreground-muted">+{c.brandActions.length - 6} autre(s)…</li>
+                      ) : null}
+                    </ul>
+                  </>
+                ) : (
+                  <p className="text-[10px] font-medium text-foreground-muted">En attente de direction créative — les actions de production se rattacheront après validation.</p>
+                )}
               </div>
               <span className="mt-2 flex items-center gap-1 text-[10px] font-semibold text-accent opacity-80 transition-opacity group-hover:opacity-100">
-                Ouvrir & démarrer <ArrowRight className="h-3 w-3" />
+                Ouvrir le frame <ArrowRight className="h-3 w-3" />
               </span>
             </Link>
           ))}
