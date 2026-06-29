@@ -1,0 +1,65 @@
+/**
+ * creativeProposal router — la gate de génération de production (ADR-0120).
+ *
+ * Lectures `protectedProcedure` ; mutations `governedProcedure` (traversent
+ * `mestor.emitIntent`). `validate` est la gate : génère actions + briefs de prod
+ * dans les frames canon au niveau d'exécution choisi. Voie A (IA) et Voie B (Guilde)
+ * appellent `create` avec le MÊME Data Contract — seul `source` diffère.
+ */
+
+import { z } from "zod";
+import { createTRPCRouter, protectedProcedure } from "../init";
+import { governedProcedure } from "@/server/governance/governed-procedure";
+import { creativeProposalContractSchema } from "@/lib/types/creative-proposal";
+
+export const creativeProposalRouter = createTRPCRouter({
+  listByStrategy: protectedProcedure
+    .input(z.object({ strategyId: z.string() }))
+    .query(async ({ input }) => {
+      const { listCreativeProposalsByStrategy } = await import("@/server/services/creative-proposal");
+      return listCreativeProposalsByStrategy(input.strategyId);
+    }),
+
+  getById: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ input }) => {
+      const { getCreativeProposal } = await import("@/server/services/creative-proposal");
+      return getCreativeProposal(input.id);
+    }),
+
+  create: governedProcedure({
+    kind: "CREATE_CREATIVE_PROPOSAL",
+    inputSchema: creativeProposalContractSchema,
+    caller: "creativeProposal:create",
+  }).mutation(async ({ input }) => {
+    const { createCreativeProposal } = await import("@/server/services/creative-proposal");
+    return createCreativeProposal(input);
+  }),
+
+  submit: governedProcedure({
+    kind: "SUBMIT_CREATIVE_PROPOSAL",
+    inputSchema: z.object({ id: z.string() }),
+    caller: "creativeProposal:submit",
+  }).mutation(async ({ input }) => {
+    const { submitCreativeProposal } = await import("@/server/services/creative-proposal");
+    return submitCreativeProposal(input.id);
+  }),
+
+  validate: governedProcedure({
+    kind: "VALIDATE_CREATIVE_PROPOSAL",
+    inputSchema: z.object({ id: z.string() }),
+    caller: "creativeProposal:validate",
+  }).mutation(async ({ ctx, input }) => {
+    const { validateCreativeProposal } = await import("@/server/services/creative-proposal");
+    return validateCreativeProposal(input.id, ctx.session.user.id);
+  }),
+
+  reject: governedProcedure({
+    kind: "REJECT_CREATIVE_PROPOSAL",
+    inputSchema: z.object({ id: z.string(), reason: z.string().min(1).max(2000) }),
+    caller: "creativeProposal:reject",
+  }).mutation(async ({ input }) => {
+    const { rejectCreativeProposal } = await import("@/server/services/creative-proposal");
+    return rejectCreativeProposal(input.id, input.reason);
+  }),
+});

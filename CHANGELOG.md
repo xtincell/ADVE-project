@@ -10,6 +10,19 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.61 — feat(campaigns): Proposition Créative — entité + Data Contract + gate (ADR-0120 PR-2) (2026-06-29)
+
+PR-2/4 du revamp opérationnel. Implémente l'entité-gate du Nouveau Pipeline de Production (ADR-0120) : la **Proposition Créative** — le seul élément vraiment neuf du revamp, tout le reste se rebranche.
+
+- **Modèle `CreativeProposal`** (migration additive `20260629140000_creative_proposal_gate`) : `strategyId`, `routeKey` (niveau d'exécution ADR-0089), `source` (LAFUSEE_AI/LAGUILDE_HUMAN), `status` (DRAFT/SUBMITTED/VALIDATED/REJECTED), `direction` JSON, `executionLevels` JSON, `visuals` JSON.
+- **Data Contract** (`src/lib/types/creative-proposal.ts`, Zod) : forme **identique** Voie A (La Fusée IA) et Voie B (La Guilde) — seul `source` diffère. C'est le contrat verrouillé exigé par la doctrine.
+- **Gate `validateCreativeProposal`** = la relocalisation du trigger : valider une direction **génère les actions + briefs de production dans les frames canon** au niveau d'exécution choisi (jeu d'initiatives de la route via `routeInitiativeSet` ADR-0089, brief via `generateBriefFromBrandAction`). Idempotent, déterministe, zéro LLM. Auto-amorçage des frames si absents.
+- 4 Intent kinds gouvernés (CREATE/SUBMIT/VALIDATE/REJECT_CREATIVE_PROPOSAL) + SLOs + manifest + router tRPC + UI panel cockpit (création manuelle = Voie B baseline + valider/soumettre/rejeter).
+
+Voie A (Glory IA auto-fill) + Voie B (portail La Guilde) + rétroplanning/dashboards = PR-3/4. tsc 0 · eslint 0 · **2304 tests verts** (5 nouveaux : Data Contract + jeu de route ADR-0089) · 1 migration additive · 0 LLM · 0 bypass. Cap APOGEE 7/7.
+
+---
+
 ## v6.27.60 — feat(campaigns): ADR-0120 « Nouveau Pipeline de Production » — frames canon découplés des actions (gate = direction créative) (2026-06-29)
 
 Première pierre du revamp opérationnel (de la validation stratégie à la demande de ticket / escalade). Diagnostic du « 3 campagnes canon · 0 action rattachée » : `generateCanonicalCampaigns` ne **crée** jamais d'action — il **rattachait** les `BrandAction` déjà `selected:true` (promues seulement à la synthèse S via `selectedFromI`). Le « 0 actions » n'était pas une mécanique absente mais une chaîne de promotion non déclenchée — et surtout un enchaînement doctrinalement à l'envers.
