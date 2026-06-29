@@ -478,7 +478,7 @@ function ActionsTab({ campaignId }: { campaignId: string }) {
         {brandActionsQuery.isLoading ? (
           <EmptyMsg text="Chargement..." />
         ) : brandActions.length === 0 ? (
-          <EmptyState icon={Zap} title="Aucune action strategique liee" description="Genere les campagnes canon depuis le Pilier S (page Campagnes → « Regenerer ») pour rattacher les initiatives, ou cree des actions via La Forge." />
+          <EmptyState icon={Zap} title="Aucune action strategique liee" description="La validation de la direction creative (Proposition Creative) rattachera les actions de production a ce frame canon, ou cree des actions via La Forge." />
         ) : (
           <div className="space-y-2">
             {brandActions.map((a) => {

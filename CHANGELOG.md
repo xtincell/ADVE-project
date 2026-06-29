@@ -10,6 +10,18 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.60 — feat(campaigns): ADR-0120 « Nouveau Pipeline de Production » — frames canon découplés des actions (gate = direction créative) (2026-06-29)
+
+Première pierre du revamp opérationnel (de la validation stratégie à la demande de ticket / escalade). Diagnostic du « 3 campagnes canon · 0 action rattachée » : `generateCanonicalCampaigns` ne **crée** jamais d'action — il **rattachait** les `BrandAction` déjà `selected:true` (promues seulement à la synthèse S via `selectedFromI`). Le « 0 actions » n'était pas une mécanique absente mais une chaîne de promotion non déclenchée — et surtout un enchaînement doctrinalement à l'envers.
+
+**Décision (ADR-0120, raffine ADR-0119)** : l'Advertis n'a plus le droit de créer des actions. Une stratégie complète amorce le **cadre** (3 frames canon × route + budget conseillé + AARRR + dates) mais **zéro action**. Le trigger de création (Actions + briefs de production) **déménage** vers la **validation de la direction créative** (Proposition Créative — Voie A La Fusée IA / Voie B La Guilde, **même Data Contract**). Les deux « 3 » orthogonaux sont distingués : 3 campagnes canon (cadre temporel) × 3 niveaux d'exécution (`computeRoadmapRoutes`, Advertis-dérivés).
+
+**PR-1 livrée** : `generateCanonicalCampaigns` n'attache plus d'action (le planner PUR garde `actionIds` pour le seul budget conseillé) ; UI honnête — un frame sans direction créative affiche « en attente de direction créative » au lieu de « 0 actions » ; `routeKey` libellé « niveau d'exécution » (Conservateur/Cible/Ambitieux). ADR-0120 documente tout le pipeline + le plan phasé PR-2..4 (entité Proposition + Data Contract + gate `VALIDATE_CREATIVE_PROPOSAL` ; relocalisation du trigger ; cascade Missions→Activités→briefs→rétroplanning T0 + dashboards).
+
+Anti-doublon : quasi toutes les primitives existent (routes ADR-0089, `Campaign.canonType×routeKey`, `CampaignBrief`, `BrandAsset` BIG_IDEA/KV, `CampaignDependency`, `launch-calendar` `anchorJ1`=T0, `Mission/MissionActivity`) — seule l'entité-gate Proposition Créative est neuve. tsc 0 · eslint 0 · tests verts (canon planner 7/7, ADR guards 4/4) · 0 migration · 0 LLM · 0 bypass. Cap APOGEE 7/7.
+
+---
+
 ## v6.27.59 — fix(roadmap/forge): generateProjectsFromActions rerouté sur le flux staged (brief DRAFT, plus de mission auto) (2026-06-29)
 
 Suite #367. Réconcilie le dernier flux qui contournait la gate de validation : `strategy.generateProjectsFromActions` (roadmap calendar + page Forge) créait un brief **auto-VALIDATED** + une mission directement, sautant la revue opérateur.
