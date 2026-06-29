@@ -14,7 +14,12 @@ vi.mock("@/lib/db", () => ({
   db: {},
 }));
 
-import { recommendActions, deriveExplodedActionIds } from "@/server/services/campaign-manager/index";
+import {
+  recommendActions,
+  deriveExplodedActionIds,
+  deriveActionBriefs,
+  computeMissionActivityHealth,
+} from "@/server/services/campaign-manager/index";
 
 // ============================================================
 // Machine d'Etat de Campagne
@@ -304,5 +309,71 @@ describe("Campaign Manager — deriveExplodedActionIds", () => {
 
   it("ignore un briefData.brandActionId non-string (robustesse)", () => {
     expect(deriveExplodedActionIds(["a1"], [{ briefData: { brandActionId: 42 } }])).toEqual([]);
+  });
+});
+
+// ============================================================
+// Pipeline staged — étage Actions → Briefs (deriveActionBriefs)
+// ============================================================
+describe("Campaign Manager — deriveActionBriefs", () => {
+  it("mappe action → son brief via content.brandActionId (+ statut)", () => {
+    const briefs = [
+      { id: "b1", status: "DRAFT", content: { brandActionId: "a1" } },
+      { id: "b2", status: "VALIDATED", content: { brandActionId: "a2" } },
+      { id: "b3", status: "DRAFT", content: { foo: 1 } },
+    ];
+    expect(deriveActionBriefs(["a1", "a2", "a3"], briefs)).toEqual({
+      a1: { briefId: "b1", status: "DRAFT" },
+      a2: { briefId: "b2", status: "VALIDATED" },
+    });
+  });
+
+  it("ignore un brandActionId hors campagne et garde le 1er brief par action", () => {
+    const briefs = [
+      { id: "b1", status: "DRAFT", content: { brandActionId: "a1" } },
+      { id: "b2", status: "VALIDATED", content: { brandActionId: "a1" } },
+      { id: "b3", status: "DRAFT", content: { brandActionId: "ailleurs" } },
+    ];
+    expect(deriveActionBriefs(["a1"], briefs)).toEqual({ a1: { briefId: "b1", status: "DRAFT" } });
+  });
+});
+
+// ============================================================
+// Fiche mission — avancement activités (computeMissionActivityHealth)
+// ============================================================
+describe("Campaign Manager — computeMissionActivityHealth", () => {
+  it("agrège progression + budget + KPI, hors activités annulées", () => {
+    const h = computeMissionActivityHealth([
+      { status: "DONE", budgetAllocated: 100, kpiTarget: 10, kpiActual: 8 },
+      { status: "PENDING", budgetAllocated: 50, kpiTarget: 5, kpiActual: 0 },
+      { status: "CANCELLED", budgetAllocated: 999, kpiTarget: 999, kpiActual: 999 },
+    ]);
+    expect(h.total).toBe(2);
+    expect(h.done).toBe(1);
+    expect(h.progressPct).toBe(50);
+    expect(h.budgetAllocated).toBe(150);
+    expect(h.kpiTarget).toBe(15);
+    expect(h.kpiActual).toBe(8);
+    expect(h.kpiPct).toBe(53);
+  });
+
+  it("0 activité → 0% sans division par zéro", () => {
+    expect(computeMissionActivityHealth([])).toEqual({
+      total: 0,
+      done: 0,
+      progressPct: 0,
+      budgetAllocated: 0,
+      kpiTarget: 0,
+      kpiActual: 0,
+      kpiPct: 0,
+    });
+  });
+
+  it("budget/KPI nuls traités comme 0", () => {
+    const h = computeMissionActivityHealth([
+      { status: "DONE", budgetAllocated: null, kpiTarget: null, kpiActual: null },
+    ]);
+    expect(h.budgetAllocated).toBe(0);
+    expect(h.kpiPct).toBe(0);
   });
 });

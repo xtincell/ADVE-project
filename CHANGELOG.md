@@ -10,6 +10,20 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.58 — feat(cockpit): pipeline staged Campagne→Actions→Briefs→[validation]→Missions→pipes + fiche mission (activités/budget/KPI) (2026-06-29)
+
+Suite de #366. On supprime les raccourcis qui collapsaient les étapes et on câble le flux staged bout-en-bout + la couche d'exécution par mission.
+
+- **Actions → Briefs** : « Éclater en mission » → **« Générer le brief »**. `generateBriefFromBrandAction` crée un `CampaignBrief` PRODUCTION `DRAFT` dérivé de l'action (stampé `content.brandActionId`) et **s'arrête là** (plus de mission auto). Brief **éditable manuellement** avant validation (`updateBrief` gated DRAFT) ; budget définitif fixable (`content.missionBudget`).
+- **Briefs → [validation] → Missions** : `createMissionFromValidatedBrief` (voie unique) valide (DRAFT→VALIDATED) + crée la **mission liée** (`Mission.briefId`, migration additive), budget = brief ?? action ?? campagne, propagation `brandActionId`. Idempotent par briefId.
+- **Fiche mission + Missions → pipes** : composant `MissionActivitiesPanel` (modal détail) — boutons **Terminer / Annuler** + **Soumettre à La Guilde** (pipe marketplace → modération opérateur) en plus de l'assignation crew (⚡ Imhotep existante).
+- **Activités par mission** (nouveau modèle `MissionActivity`) : `ASSET_CREATION` | `FIELD_ACTION`, budget alloué, KPI cible/réel, **brief propre** généré déterministe (`briefContent`, éditable). La complétion fait progresser la mission ; une activité `concludesMission` (ou toutes terminées) **conclut la mission**. Avancement agrégé (progression/budget/KPI) via `computeMissionActivityHealth`.
+- **chainHealth** réaligné staged : actions / briefs générés / validés / missions + maps `actionBriefs`/`explodedActionIds`.
+
+Backend déterministe (0 LLM) : service `campaign-manager` (pipeline + activités), routers `campaign-manager` (generateBriefFromAction, validate délégué) + `mission` (complete/cancel/submitToGuild + CRUD activités, gouvernés). **1 migration additive** (`Mission.briefId` + table `MissionActivity`, 0 destructif). Vérif : tsc 0 · eslint 0 erreur · tests verts (dont `deriveActionBriefs` + `computeMissionActivityHealth`). Cap APOGEE 7/7 (Imhotep = pipe crew, La Guilde = portail, aucun nouveau Neter).
+
+---
+
 ## v6.27.57 — fix(cockpit): « éclatée en mission » = mission réelle, pas statut calendaire (2026-06-29)
 
 Suite de v6.27.56. Bug : le détail d'une campagne canon affichait « ÉCLATÉES EN MISSION 3/3 » + badges « Mission creee » sur les 3 actions, alors que **MISSIONS = 0** (page Missions globale comprise) — le bouton « Éclater en mission » était masqué, **impossible de créer les missions**.

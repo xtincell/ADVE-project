@@ -260,9 +260,10 @@ function OverviewTab({ campaignId, strategyId, state, onRefresh }: { campaignId:
   });
 
   const chain = chainQuery.data as {
-    brandActions: number; brandActionsExploded: number; brandActionsPending: number;
+    brandActions: number; actionsWithBrief: number; actionsWithMission: number; brandActionsPending: number;
+    actionBriefs: Record<string, { briefId: string; status: string }>;
     explodedActionIds: string[];
-    briefs: number; missions: number; campaignActions: number;
+    briefs: number; briefsValidated: number; missions: number; campaignActions: number;
   } | null;
   const transitions = (transitionsQuery.data ?? []) as string[];
   const briefs = (briefsQuery.data ?? []) as Array<Record<string, unknown>>;
@@ -276,9 +277,9 @@ function OverviewTab({ campaignId, strategyId, state, onRefresh }: { campaignId:
       {/* Diagnostic de chaîne (campaign-scoped) : actions → briefs → missions */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          { label: "Actions strategiques", value: chain?.brandActions ?? 0 },
-          { label: "Eclatees en mission", value: `${chain?.brandActionsExploded ?? 0}/${chain?.brandActions ?? 0}` },
-          { label: "Briefs", value: chain?.briefs ?? 0 },
+          { label: "Actions", value: chain?.brandActions ?? 0 },
+          { label: "Briefs generes", value: `${chain?.actionsWithBrief ?? 0}/${chain?.brandActions ?? 0}` },
+          { label: "Briefs valides", value: chain?.briefsValidated ?? 0 },
           { label: "Missions", value: chain?.missions ?? 0 },
         ].map((s) => (
           <div key={s.label} className="rounded-lg border border-border bg-background/50 p-3">
@@ -292,9 +293,9 @@ function OverviewTab({ campaignId, strategyId, state, onRefresh }: { campaignId:
           Aucune action strategique liee a cette campagne. Genere les campagnes canon depuis le Pilier S (page Campagnes → « Regenerer »), ou ajoute des actions via La Forge.
         </div>
       )}
-      {chain && chain.brandActions > 0 && chain.brandActionsExploded < chain.brandActions && (
+      {chain && chain.brandActions > 0 && chain.actionsWithBrief < chain.brandActions && (
         <div className="rounded-lg border border-info/30 bg-info/5 p-3 text-xs text-info">
-          {chain.brandActionsPending} action(s) pas encore eclatee(s) en mission — onglet « Actions » → bouton « Eclater en mission ».
+          {chain.brandActionsPending} action(s) sans brief — onglet « Actions » → « Generer le brief », puis valide le brief (onglet Briefs) pour creer la mission.
         </div>
       )}
 
@@ -426,29 +427,31 @@ function ActionsTab({ campaignId }: { campaignId: string }) {
   const [showCreate, setShowCreate] = useState(false);
   const [filter, setFilter] = useState<string>("ALL");
   const [newAction, setNewAction] = useState({ actionTypeSlug: "", name: "", budget: "" });
-  const [explodingId, setExplodingId] = useState<string | null>(null);
+  const [generatingId, setGeneratingId] = useState<string | null>(null);
   const utils = trpc.useUtils();
 
   // ── PRIMAIRE : actions stratégiques (BrandAction, ADR-0094/0119) ──
   const brandActionsQuery = trpc.campaignManager.listBrandActions.useQuery({ campaignId });
-  const explodeMut = trpc.campaignManager.explodeActionToMission.useMutation({
+  const generateBriefMut = trpc.campaignManager.generateBriefFromAction.useMutation({
     onSuccess: () => {
       utils.campaignManager.listBrandActions.invalidate({ campaignId });
       utils.campaignManager.chainHealth.invalidate({ campaignId });
       utils.campaign.get.invalidate({ id: campaignId });
       utils.campaignManager.listBriefs.invalidate({ campaignId });
-      setExplodingId(null);
+      setGeneratingId(null);
     },
-    onError: () => setExplodingId(null),
+    onError: () => setGeneratingId(null),
   });
   const brandActions = (brandActionsQuery.data ?? []) as Array<Record<string, unknown>>;
 
-  // « Éclatée en mission » = mission réelle liée (chainHealth.explodedActionIds),
-  // jamais le statut calendaire SCHEDULED (posé aussi par la planification).
+  // Pipeline staged : action → brief (état via chainHealth.actionBriefs) →
+  // [validation onglet Briefs] → mission (chainHealth.explodedActionIds).
   const chainQuery = trpc.campaignManager.chainHealth.useQuery({ campaignId });
-  const explodedSet = new Set(
-    (chainQuery.data as { explodedActionIds?: string[] } | undefined)?.explodedActionIds ?? [],
-  );
+  const chainData = chainQuery.data as
+    | { actionBriefs?: Record<string, { briefId: string; status: string }>; explodedActionIds?: string[] }
+    | undefined;
+  const actionBriefs = chainData?.actionBriefs ?? {};
+  const missionSet = new Set(chainData?.explodedActionIds ?? []);
 
   // ── SECONDAIRE : plan média / exécution (CampaignAction ATL/BTL/TTL) ──
   const actionsQuery = trpc.campaignManager.listActions.useQuery({ campaignId, category: filter === "ALL" ? undefined : filter as any });
@@ -470,7 +473,7 @@ function ActionsTab({ campaignId }: { campaignId: string }) {
       {/* ── PRIMAIRE : Actions stratégiques (BrandAction) ── */}
       <Section title={`Actions strategiques (${brandActions.length})`} icon={Zap}>
         <p className="-mt-2 mb-3 text-xs text-foreground-muted">
-          Issues du Pilier S/I, rattachées à cette campagne. « Éclater en mission » dérive un brief de production déterministe de l&apos;action et crée la mission.
+          Issues du Pilier S/I, rattachées à cette campagne. « Générer le brief » dérive un brief de production déterministe de l&apos;action (éditable). On le valide ensuite dans l&apos;onglet Briefs pour créer la mission.
         </p>
         {brandActionsQuery.isLoading ? (
           <EmptyMsg text="Chargement..." />
@@ -481,7 +484,8 @@ function ActionsTab({ campaignId }: { campaignId: string }) {
             {brandActions.map((a) => {
               const id = a.id as string;
               const status = (a.status as string) ?? "PROPOSED";
-              const exploded = explodedSet.has(id);
+              const brief = actionBriefs[id];
+              const hasMission = missionSet.has(id);
               const budget = (a.budgetMax ?? a.budgetMin) as number | null;
               return (
                 <div key={id} className="rounded-lg border border-border bg-background/80 p-4">
@@ -500,15 +504,22 @@ function ActionsTab({ campaignId }: { campaignId: string }) {
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1.5">
                       <StatusBadge status={status} />
-                      {exploded ? (
+                      {hasMission ? (
                         <span className="flex items-center gap-1 text-2xs text-success"><CheckCircle className="h-3 w-3" /> Mission creee</span>
+                      ) : brief ? (
+                        <span className="flex flex-col items-end gap-0.5 text-2xs">
+                          <span className={`flex items-center gap-1 ${brief.status === "VALIDATED" ? "text-success" : "text-info"}`}>
+                            <CheckCircle className="h-3 w-3" /> Brief {brief.status === "VALIDATED" ? "valide" : "genere"}
+                          </span>
+                          <span className="text-foreground-muted">{brief.status === "VALIDATED" ? "→ creer la mission (Briefs)" : "→ onglet Briefs pour valider"}</span>
+                        </span>
                       ) : (
                         <MiniBtn
                           variant="primary"
-                          disabled={explodeMut.isPending}
-                          onClick={() => { setExplodingId(id); explodeMut.mutate({ brandActionId: id }); }}
+                          disabled={generateBriefMut.isPending}
+                          onClick={() => { setGeneratingId(id); generateBriefMut.mutate({ brandActionId: id }); }}
                         >
-                          {explodingId === id && explodeMut.isPending ? "Eclatement..." : "Eclater en mission"}
+                          {generatingId === id && generateBriefMut.isPending ? "Generation..." : "Generer le brief"}
                         </MiniBtn>
                       )}
                     </div>
@@ -518,7 +529,7 @@ function ActionsTab({ campaignId }: { campaignId: string }) {
             })}
           </div>
         )}
-        {explodeMut.isError && <p className="mt-2 text-xs text-error">{explodeMut.error.message}</p>}
+        {generateBriefMut.isError && <p className="mt-2 text-xs text-error">{generateBriefMut.error.message}</p>}
       </Section>
 
       {/* ── SECONDAIRE : Plan média / exécution (CampaignAction) ── */}
