@@ -5,6 +5,7 @@ vi.mock("@/lib/db", () => ({ db: {} }));
 
 import {
   creativeProposalContractSchema,
+  creativeDirectionDraftSchema,
   parseCreativeDirection,
   parseCreativeProposalVisuals,
 } from "@/lib/types/creative-proposal";
@@ -31,6 +32,18 @@ describe("creative-proposal — Data Contract (ADR-0120)", () => {
   it("parseurs tolérants — legacy/absent → défauts sans throw", () => {
     expect(parseCreativeDirection(null)).toEqual({ bigIdea: "", insight: "", axe: "", pistes: [] });
     expect(parseCreativeProposalVisuals(undefined)).toEqual({ mockups: [], socialSim: [], keyVisual: null });
+  });
+});
+
+describe("creative-proposal — creativeDirectionDraftSchema (Voie A IA, lenient)", () => {
+  it("applique des défauts vides — le LLM peut omettre des champs", () => {
+    expect(creativeDirectionDraftSchema.parse({})).toEqual({ bigIdea: "", insight: "", axe: "", pistes: [] });
+  });
+  it("accepte un brouillon partiel", () => {
+    const d = creativeDirectionDraftSchema.parse({ bigIdea: "Le rituel du matin", pistes: ["spot radio", "activation marché"] });
+    expect(d.bigIdea).toBe("Le rituel du matin");
+    expect(d.pistes).toHaveLength(2);
+    expect(d.insight).toBe("");
   });
 });
 

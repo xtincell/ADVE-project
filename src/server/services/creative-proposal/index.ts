@@ -17,10 +17,13 @@ import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import {
   creativeProposalContractSchema,
+  creativeDirectionDraftSchema,
   type CreativeProposalContract,
+  type CreativeDirectionDraft,
 } from "@/lib/types/creative-proposal";
 import { routeInitiativeSet, ROUTE_SPECS, type RouteKey } from "@/lib/strategy/roadmap-routes";
 import { canonTypeForTimeframe } from "@/server/services/campaign-canon/plan";
+import { executeStructuredLLMCall } from "@/server/services/utils/llm-structured";
 
 const CANON_TYPES = ["GTM_90", "ANNUAL", "ALWAYS_ON"] as const;
 
@@ -237,4 +240,41 @@ export async function getExecutionLevels(strategyId: string): Promise<ExecutionL
   const budgetById = new Map<string, number>(actions.map((a) => [a.id, (a.budgetMax ?? a.budgetMin ?? 0) || 0]));
   const initiatives = actions.map(toRouteInitiative);
   return summarizeExecutionLevels(initiatives, budgetById, storedByKey);
+}
+
+// ── Voie A IA — brouillon de direction depuis l'ADVE (ADR-0120) ──────────────────
+// SEULE entrée LLM du pipeline de proposition. Pré-remplit un BROUILLON (Big Idea /
+// insight / axe / pistes) déduit des piliers A/D/V via le Gateway (executeStructuredLLMCall,
+// ADR-0067). **Ne persiste RIEN** : l'opérateur corrige avant le create déterministe
+// (manual-first parity ADR-0060). Gateway indisponible (pas de clé / circuit ouvert) →
+// l'appel échoue proprement et la Voie B (saisie manuelle) prend le relais.
+
+export async function draftCreativeDirectionFromStrategy(strategyId: string): Promise<CreativeDirectionDraft> {
+  const [strategy, pillars] = await Promise.all([
+    db.strategy.findUniqueOrThrow({ where: { id: strategyId }, select: { name: true } }),
+    db.pillar.findMany({ where: { strategyId, key: { in: ["a", "d", "v"] } }, select: { key: true, content: true } }),
+  ]);
+  const byKey = new Map(pillars.map((p) => [p.key, p.content]));
+  const adve = {
+    audience: byKey.get("a") ?? null,
+    distinctif: byKey.get("d") ?? null,
+    valeur: byKey.get("v") ?? null,
+  };
+  const system = [
+    "Tu es un directeur de création senior (Afrique francophone). À partir de l'ADVE d'une marque",
+    "(A=Audience, D=Distinctif/identité, V=Valeur/proposition), tu proposes un BROUILLON de direction créative.",
+    "Règle absolue : appuie-toi UNIQUEMENT sur l'ADVE fourni — n'invente ni chiffres, ni promesses, ni faits absents.",
+    "Rédige en français, percutant et concret.",
+    "bigIdea = l'idée directrice (1-2 phrases, mémorable). insight = la tension/vérité consommateur qui la fonde.",
+    "axe = l'axe créatif (territoire d'expression). pistes = 2 à 4 pistes d'exécution concrètes.",
+  ].join("\n");
+  const { data } = await executeStructuredLLMCall({
+    system,
+    prompt: `Marque : ${strategy.name}\nADVE (JSON) :\n"""\n${JSON.stringify(adve).slice(0, 8000)}\n"""`,
+    schema: creativeDirectionDraftSchema,
+    caller: "creative-proposal:draftDirection",
+    schemaTitle: "CreativeDirectionDraft",
+    maxOutputTokens: 1500,
+  });
+  return data;
 }

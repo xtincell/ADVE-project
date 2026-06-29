@@ -18,7 +18,7 @@ import {
   CREATIVE_PROPOSAL_SOURCE_LABEL,
   type CreativeProposalSource,
 } from "@/lib/types/creative-proposal";
-import { Loader2, Lightbulb, CheckCircle2, Plus, XCircle, Send } from "lucide-react";
+import { Loader2, Lightbulb, CheckCircle2, Plus, XCircle, Send, Sparkles } from "lucide-react";
 
 const ROUTE_LABEL: Record<string, string> = {
   CONSERVATIVE: "Conservateur",
@@ -71,6 +71,14 @@ export function CreativeProposalPanel() {
   const validate = trpc.creativeProposal.validate.useMutation({ onSuccess: invalidate });
   const submit = trpc.creativeProposal.submit.useMutation({ onSuccess: invalidate });
   const reject = trpc.creativeProposal.reject.useMutation({ onSuccess: invalidate });
+  const draft = trpc.creativeProposal.draftDirection.useMutation({
+    onSuccess: (d) => {
+      if (d.bigIdea) setBigIdea(d.bigIdea);
+      if (d.insight) setInsight(d.insight);
+      if (d.axe) setAxe(d.axe);
+      if (Array.isArray(d.pistes) && d.pistes.length > 0) setPistes(d.pistes.join("\n"));
+    },
+  });
 
   const [open, setOpen] = useState(false);
   const [routeKey, setRouteKey] = useState<"CONSERVATIVE" | "TARGET" | "AMBITIOUS">("TARGET");
@@ -105,6 +113,16 @@ export function CreativeProposalPanel() {
 
       {open ? (
         <div className="mt-4 space-y-3 rounded-lg border border-white/10 bg-background/40 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-2xs text-foreground-muted">Voie A — l'IA propose une direction depuis l'ADVE ; tu corriges avant de créer.</p>
+            <Button size="sm" variant="outline" disabled={draft.isPending} onClick={() => draft.mutate({ strategyId })}>
+              {draft.isPending ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Sparkles className="mr-1 h-3.5 w-3.5" />}
+              Pré-remplir avec l'IA
+            </Button>
+          </div>
+          {draft.isError ? (
+            <p className="text-2xs text-error">IA indisponible — saisis la direction manuellement (Voie B). {draft.error.message}</p>
+          ) : null}
           <div>
             <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-foreground-muted">
               Niveau d'exécution <span className="font-normal normal-case text-foreground-muted/70">(dérivé de l'Advertis — preview des actions générées)</span>
