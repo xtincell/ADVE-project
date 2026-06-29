@@ -10,7 +10,7 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
-## v6.27.65 — feat(cockpit): Macro Roadmap — timeline des campagnes (ADR-0120 PR-4c) (2026-06-29)
+## v6.27.66 — feat(cockpit): Macro Roadmap — timeline des campagnes (ADR-0120 PR-4c) (2026-06-29)
 
 PR-4c/4 — clôt la cascade aval du revamp. Vue **Macro Roadmap** sur la page Campagnes : timeline horizontale des campagnes de la stratégie (canon + ponctuelles), positionnées proportionnellement à leurs dates, ligne « aujourd'hui », always-on en bande jusqu'au bout de la fenêtre, campagnes sans date listées à part.
 
@@ -18,6 +18,30 @@ PR-4c/4 — clôt la cascade aval du revamp. Vue **Macro Roadmap** sur la page C
 - `MacroRoadmapPanel` (read-only) consomme `campaign.list` existant — réutilise les données, aucune nouvelle requête serveur. Tonalité de barre par statut (tokens sémantiques).
 
 Le micro-dashboard (santé d'activité) était déjà en place (PR-4a). **0 migration · 0 nouvel Intent · 0 LLM · 0 bypass**. tsc 0 · eslint 0 · **2316 tests verts** (4 nouveaux). Cap APOGEE 7/7. **PR-4 bouclé** ; suivi déféré (mandat minimiser-LLM) : Voie A IA (Glory direction-draft + KV image) + portail public La Guilde.
+
+---
+
+## v6.27.65 — fix(intake): diagnostic ADVE « Load failed » réparé (route maxDuration + modèle owl-alpha) + feat(llm-gateway): owl-alpha par défaut, toggle premium, embeddings OpenRouter dégradables (2026-06-29)
+
+**Symptôme** : le diagnostic ADVE (méthode IMPORT → `/intake/[token]/ingest`) échouait sur « Load failed » au clic « Lancer le diagnostic ADVE ». Étalon : intake Xtincell (`folio-spark.vercel.app`) figé `IN_PROGRESS`, `updatedAt == createdAt`, réponses vides → la fonction serverless était **tuée avant sa première écriture DB**. L'intake LONG antérieur (sans URL) convertissait à moitié (A+V seuls, `classification=null`, pas de narratif) : `complete()` mourait au même plafond.
+
+**Causes de fond** (3) :
+1. **Aucun `maxDuration` sur `/api/trpc/[trpc]/route.ts`** → `processIngest` (scrape web + Brave + extraction LLM) ET surtout `quickIntake.complete` (~100-130 s) étaient coupés au plafond serverless par défaut → requête tranchée → « Load failed » navigateur + ligne intake à moitié écrite. La route SSE avait `maxDuration=300` depuis toujours ; la route tRPC ne l'avait jamais reçu.
+2. **Modèle fictif `gpt-5.5` codé en dur** dans `extractFromText` → tentative Anthropic vouée à l'échec (404) + 3 retries + ouverture du circuit-breaker AVANT d'atteindre owl-alpha/OpenRouter — gaspillait le maigre budget.
+3. **`AbortController` mort** (timeout 60 s jamais câblé au gateway) + scrape site / Brave / LLM **séquentiels**, leurs timeouts s'empilant.
+
+**Correctifs intake** :
+- `export const maxDuration = 300` + `runtime = "nodejs"` sur la route tRPC (plafond, pas réservation — les requêtes rapides répondent en ms). Couvre processIngest / processShort / processIngestPlus ET complete.
+- `extractFromText` : suppression de `model: "gpt-5.5"` (→ `purpose: "extraction"` résout le modèle de police, servi par le provider texte par défaut = owl-alpha) ; `responseFormat: "json_object"` (JSON fiable OpenRouter/Ollama) ; `signal` réel câblé (le bound 60 s devient effectif → dégrade vers les réponses brutes au lieu de pendre) ; parse robuste via `extractJSON`.
+- `processIngest` / `processIngestPlus` : scrape site + présence digitale (Brave) **concurrents et bornés** via helpers canoniques `fetchUrlAsText` / `fetchDigitalPresenceBlock` (de-dup du strip-HTML copié 3×, NEFER interdit n°1).
+
+**feat(llm-gateway) — La Fusée non-dépendante d'un LLM payant** (directive opérateur) :
+- **owl-alpha (OpenRouter) = modèle texte par DÉFAUT**. `resolveTextProviderOrder` (pur, testé) : `LLM_PRIMARY_PROVIDER` explicite > **premium ON (`LLM_PREMIUM_MODE`) → Anthropic d'abord** (Opus/Sonnet payants, une fois les crédits chargés) > **défaut (premium OFF) → OpenRouter/owl-alpha d'abord** (chemin nominal sans crédit payant ; Anthropic/Ollama en repli si owl tombe).
+- **Toggle premium** : `LLM_PREMIUM_MODE=1` quand les crédits Anthropic/OpenAI sont chargés ; sinon owl-alpha par défaut.
+- **Embeddings OpenRouter dégradables** : crédit OpenRouter épuisé (402/insufficient/429) → circuit « à sec » 24 h + **vecteurs vides (no-op)** au lieu d'un throw (le RAG dégrade en lexical, ADR-0108 : étage embeddings skippable). Symétrique du circuit OpenAI existant.
+- **Signal d'abandon** propagé à `generateText` (`abortSignal`) + arrêt du fallback providers sur abort (plus de backoff inutile).
+
+Validation : tsc 0 (src) · eslint 0 · gateway + intake + rate-policy + seshat-knowledge-gateway tests verts (nouveaux cas owl-default/premium) · scrape réel `folio-spark.vercel.app` 728 ms / 15 000 chars (contenu Xtincell). **0 migration, 0 nouveau Neter** (Cap APOGEE 7/7), **0 bypass governance**. Le chemin LLM end-to-end se valide en prod (clés owl/Brave configurées).
 
 ---
 

@@ -94,6 +94,14 @@ export interface GatewayCallOptions {
   responseFormat?: "text" | "json_object";
   /** Control the creativity and determinism of the output. 0.0 = deterministic/coercive, 1.0 = creative. */
   temperature?: number;
+  /**
+   * Optional abort signal forwarded to the underlying `generateText` call.
+   * Lets a caller bound a slow/hung provider with a real timeout (e.g. the
+   * public intake extraction, which must return well within the serverless
+   * budget). When it fires the provider attempt rejects and the gateway stops
+   * the provider fallback instead of wandering across vendors.
+   */
+  signal?: AbortSignal;
 }
 
 export interface GatewayResult {
@@ -290,6 +298,54 @@ function resolveOpenRouterModel(model: string): string {
   return process.env.OPENROUTER_MODEL ?? OPENROUTER_MODEL_MAP[model] ?? "anthropic/claude-sonnet-4";
 }
 
+/**
+ * Premium mode toggle (`LLM_PREMIUM_MODE`).
+ *
+ * La Fusée's DEFAULT text model is owl-alpha (free, served via OpenRouter) — the
+ * OS is non-dependent on paid LLM credits. When the operator loads Anthropic /
+ * OpenAI credits, flip `LLM_PREMIUM_MODE` ON to promote the paid Anthropic
+ * models (Opus / Sonnet) to the front of the provider order. OFF (default) →
+ * owl-alpha first. An explicit `LLM_PRIMARY_PROVIDER` always wins over both.
+ *
+ * Env-driven so it can be toggled per-deploy without a migration; reading it per
+ * call is free (env lookup). A future runtime (no-redeploy) toggle would live in
+ * the governed `ModelPolicy` table.
+ */
+export function isPremiumMode(): boolean {
+  return ["1", "true", "yes", "on"].includes((process.env.LLM_PREMIUM_MODE ?? "").trim().toLowerCase());
+}
+
+/**
+ * Resolve the text-provider try-order (pure). Encodes "owl-alpha by default,
+ * premium opt-in":
+ *   1. explicit `LLM_PRIMARY_PROVIDER` (when in candidates) → head (operator wins).
+ *   2. premium ON → candidates unchanged (Anthropic-first, historical order).
+ *   3. premium OFF (default) → OpenRouter (owl-alpha) to the head when present —
+ *      the nominal path touches no paid credit; Anthropic/Ollama stay as fallback.
+ */
+function resolveTextProviderOrder(
+  candidates: LLMProvider[],
+  opts: { premium: boolean; explicitPrimary?: LLMProvider },
+): LLMProvider[] {
+  const explicit =
+    opts.explicitPrimary && candidates.includes(opts.explicitPrimary) ? opts.explicitPrimary : undefined;
+  const fallbackPrimary: LLMProvider | undefined = opts.premium ? undefined : "openrouter";
+  const primary =
+    explicit ?? (fallbackPrimary && candidates.includes(fallbackPrimary) ? fallbackPrimary : undefined);
+  return primary ? [primary, ...candidates.filter((p) => p !== primary)] : candidates;
+}
+
+/** Test-only string-typed wrapper around `resolveTextProviderOrder`. */
+export function _resolveTextProviderOrderForTest(
+  candidates: string[],
+  opts: { premium: boolean; explicitPrimary?: string },
+): string[] {
+  return resolveTextProviderOrder(candidates as LLMProvider[], {
+    premium: opts.premium,
+    explicitPrimary: opts.explicitPrimary as LLMProvider | undefined,
+  });
+}
+
 // ── withRetry — Exponential backoff ─────────────────────────────────────────
 
 /**
@@ -310,7 +366,11 @@ export async function withRetry<T>(
     } catch (err) {
       lastError = err;
       const errStr = String(err instanceof Error ? err.message : err).toLowerCase();
-      const isHardFailure = errStr.includes("credit balance") || errStr.includes("insufficient_quota") || errStr.includes("429");
+      // An aborted call (caller's bounded timeout fired) fails fast — no backoff,
+      // no point retrying an already-cancelled signal.
+      const isHardFailure =
+        errStr.includes("credit balance") || errStr.includes("insufficient_quota") ||
+        errStr.includes("429") || errStr.includes("abort");
       if (isHardFailure) throw err; // Hard fail immediately, skip backoff
 
       if (attempt < maxRetries) {
@@ -524,16 +584,16 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
   // Ensure at least anthropic is tried as the last-resort fallback.
   if (providersToTry.length === 0) providersToTry.push("anthropic");
 
-  // ── Provider primaire opérateur (directive « tout sur OpenRouter ») ──────
-  // Quand `LLM_PRIMARY_PROVIDER` est fixé (ex. "openrouter" pour servir
-  // owl-alpha), ce provider passe en TÊTE de l'ordre d'essai — sinon Anthropic
-  // serait tenté d'abord et lèverait des erreurs alors qu'on est censé être
-  // 100 % OpenRouter. Non fixé → comportement historique inchangé.
-  const primary = process.env.LLM_PRIMARY_PROVIDER as LLMProvider | undefined;
-  const orderedProviders =
-    primary && providersToTry.includes(primary)
-      ? [primary, ...providersToTry.filter((p) => p !== primary)]
-      : providersToTry;
+  // ── Ordre des providers texte — owl-alpha par défaut, premium opt-in ──────
+  // Directive opérateur « La Fusée ne dépend d'aucun crédit LLM payant ». Ordre
+  // résolu par resolveTextProviderOrder : `LLM_PRIMARY_PROVIDER` explicite (ex.
+  // "openrouter" pour servir owl-alpha) > premium ON `LLM_PREMIUM_MODE`
+  // (Anthropic d'abord, une fois les crédits chargés) > défaut premium OFF
+  // (OpenRouter/owl-alpha d'abord, gratuit ; Anthropic/Ollama en repli sans coût).
+  const orderedProviders = resolveTextProviderOrder(providersToTry, {
+    premium: isPremiumMode(),
+    explicitPrimary: process.env.LLM_PRIMARY_PROVIDER as LLMProvider | undefined,
+  });
 
   const { acquireSlot, releaseSlot } = await import("./rate-policy");
 
@@ -630,6 +690,7 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
             prompt: hr.prompt,
             maxOutputTokens: options.maxOutputTokens ?? DEFAULT_MAX_TOKENS,
             temperature: options.temperature,
+            ...(options.signal ? { abortSignal: options.signal } : {}),
             ...(providerOptions ? { providerOptions } : {}),
           }));
         } finally {
@@ -657,6 +718,9 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
       const isHardFailure = errStr.includes("credit balance") || errStr.includes("insufficient_quota") || errStr.includes("429");
       recordProviderFailure(provider, isHardFailure);
       console.warn(`[llm-gateway] Provider ${provider} failed, trying next...`, err instanceof Error ? err.message : err);
+      // Caller-initiated abort (bounded timeout) — stop the fallback entirely;
+      // the caller asked us to give up, not to try another vendor.
+      if (errStr.includes("abort")) break;
     }
   }
 
@@ -712,6 +776,61 @@ export function _resetOpenAiEmbedCircuitForTest(): void {
   openaiEmbedDryUntil = 0;
 }
 
+// OpenRouter embeddings : même logique « à sec ». OpenRouter sert des embeddings
+// gratuits (directive opérateur), mais un crédit OpenRouter épuisé (402 /
+// insufficient / 429) ne doit PAS faire échouer l'indexation. On coupe alors
+// proprement les embeddings (no-op, vecteurs vides) et le RAG dégrade en mode
+// lexical. Doctrine ADR-0108 : l'étage embeddings est skippable, jamais sur le
+// chemin critique. Réessaie OpenRouter après la fenêtre.
+const OPENROUTER_EMBED_DRY_MS = 24 * 60 * 60 * 1000;
+let openrouterEmbedDryUntil = 0;
+function isOpenRouterEmbedDry(): boolean {
+  return openrouterEmbedDryUntil > Date.now();
+}
+function markOpenRouterEmbedDry(): void {
+  openrouterEmbedDryUntil = Date.now() + OPENROUTER_EMBED_DRY_MS;
+}
+/** Test-only reset. */
+export function _resetOpenRouterEmbedCircuitForTest(): void {
+  openrouterEmbedDryUntil = 0;
+}
+
+/** Épuisement de crédit / quota (402 / insufficient / 429) — pas un transient réseau. */
+function isCreditExhaustionError(err: unknown): boolean {
+  const s = String(err instanceof Error ? err.message : err).toLowerCase();
+  return (
+    s.includes("402") || s.includes("payment required") || s.includes("insufficient") ||
+    s.includes("credit") || s.includes("quota") || s.includes("429") || s.includes("rate limit")
+  );
+}
+
+/** Résultat embeddings no-op (vecteurs vides) — dégradation propre, jamais un throw. */
+function emptyEmbeddings(inputs: string[], model: string): EmbedResult {
+  return { embeddings: inputs.map(() => [] as number[]), dim: 0, model, provider: "none", inputTokens: 0 };
+}
+
+/**
+ * OpenRouter embeddings avec dégradation gracieuse : si OpenRouter est « à sec »
+ * (crédit épuisé) on renvoie des vecteurs vides (no-op) au lieu de lever ; un
+ * échec transitoire (réseau) est re-levé pour laisser l'appelant décider.
+ */
+async function embedViaOpenRouterGraceful(inputs: string[], model: string, caller: string): Promise<EmbedResult> {
+  if (isOpenRouterEmbedDry()) {
+    console.warn(`[llm-gateway.embed] OpenRouter embeddings désactivés (crédit épuisé) — vecteurs vides pour caller=${caller}`);
+    return emptyEmbeddings(inputs, model);
+  }
+  try {
+    return await embedViaOpenRouter(inputs, model);
+  } catch (err) {
+    if (isCreditExhaustionError(err)) {
+      markOpenRouterEmbedDry();
+      console.warn(`[llm-gateway.embed] OpenRouter embeddings à sec (${err instanceof Error ? err.message : err}) — désactivés 24h, vecteurs vides pour caller=${caller}`);
+      return emptyEmbeddings(inputs, model);
+    }
+    throw err;
+  }
+}
+
 export interface EmbedOptions {
   /** One or many texts to embed in a single batch */
   input: string | string[];
@@ -758,7 +877,7 @@ function selectEmbedProvider(override?: EmbedProvider): EmbedProvider {
   // OpenAI = chemin embeddings principal, SAUF s'il est en fenêtre « à sec » 24h
   // (auquel cas on passe à OpenRouter pour des embeddings gratuits).
   if (process.env.OPENAI_API_KEY && !isOpenAiEmbedDry()) return "openai";
-  if (process.env.OPENROUTER_API_KEY) return "openrouter";
+  if (process.env.OPENROUTER_API_KEY && !isOpenRouterEmbedDry()) return "openrouter";
   // OpenAI configuré mais « à sec » et pas d'OpenRouter : on tente quand même
   // OpenAI (la fenêtre finira par expirer) plutôt que de ne rien renvoyer.
   if (process.env.OPENAI_API_KEY) return "openai";
@@ -913,7 +1032,7 @@ export async function embed(options: EmbedOptions): Promise<EmbedResult> {
         console.warn(
           `[llm-gateway.embed] OpenAI embeddings à sec (${err instanceof Error ? err.message : err}) — bascule OpenRouter 24h pour caller=${options.caller}`,
         );
-        return embedViaOpenRouter(inputs, orModel);
+        return embedViaOpenRouterGraceful(inputs, orModel, options.caller);
       }
       throw err;
     }
@@ -935,14 +1054,14 @@ export async function embed(options: EmbedOptions): Promise<EmbedResult> {
         console.warn(
           `[llm-gateway.embed] Ollama failed (${err instanceof Error ? err.message : err}), falling back to OpenRouter for caller=${options.caller}`,
         );
-        return embedViaOpenRouter(inputs, orModel);
+        return embedViaOpenRouterGraceful(inputs, orModel, options.caller);
       }
       throw err;
     }
   }
 
   if (provider === "openrouter") {
-    return embedViaOpenRouter(inputs, options.model ?? orModel);
+    return embedViaOpenRouterGraceful(inputs, options.model ?? orModel, options.caller);
   }
 
   // provider === "openai" (avec bascule OpenRouter 24h si à sec)
