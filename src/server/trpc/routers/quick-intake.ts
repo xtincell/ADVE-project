@@ -24,9 +24,7 @@ import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS, type PillarStorageKey } from "@
 
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
-import { anthropic } from "@ai-sdk/anthropic";
-import { generateText } from "ai";
-import { callLLM } from "@/server/services/llm-gateway";
+import { callLLM, extractJSON } from "@/server/services/llm-gateway";
 import * as mestor from "@/server/services/mestor";
 import { emitIntent as mestorEmitIntent } from "@/server/services/mestor/intents";
 import { TRPCError } from "@trpc/server";
@@ -69,8 +67,6 @@ async function seedPillarFromIntake(
  * Used by SHORT, INGEST, and INGEST_PLUS methods.
  * Returns a responses object matching the same structure as the long questionnaire.
  */
-const MODEL = "claude-sonnet-4-20250514";
-
 async function extractFromText(
   text: string,
   companyName: string,
@@ -116,24 +112,28 @@ ${expectedSchema}
       system,
       prompt,
       caller: "quick-intake:extract",
+      // NO hardcoded vendor model. `purpose: "extraction"` resolves the policy
+      // model, which the gateway serves through the default text provider —
+      // owl-alpha via OpenRouter (free), Anthropic only in premium mode. The
+      // previous `model: "gpt-5.5"` was a non-existent model that forced a
+      // doomed Anthropic attempt + circuit trip before any real provider.
       purpose: "extraction",
-      model: "gpt-5.5", // La version ultime de GPT-5
+      // OpenAI-compatible providers (OpenRouter/Ollama) return strict JSON.
+      responseFormat: "json_object",
       maxOutputTokens: 4096,
+      // Make the 60s bound REAL — the AbortController above was dead code (never
+      // wired to the call). Now a slow/hung model can't run past the serverless
+      // budget: it aborts and we fall back to the raw responses (graceful).
+      signal: controller.signal,
     });
 
-    const responseText = (typeof out === "string" ? out.trim() : "");
-    console.log("[DEBUG] extractFromText LLM output:\n", responseText);
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error("No JSON in AI response");
-    }
+    // Robust parse — handles bare JSON, ```json fences, or JSON-in-prose.
+    const parsed = extractJSON((out ?? "").trim()) as Record<string, Record<string, unknown>>;
 
-    const parsed = JSON.parse(jsonMatch[0]) as Record<string, Record<string, unknown>>;
-
-    // Validate: keep only phases with at least 1 meaningful field
+    // Keep only phases with at least one meaningful field.
     const result: Record<string, Record<string, unknown>> = {};
     for (const [key, content] of Object.entries(parsed)) {
-      if (content && typeof content === "object" && Object.keys(content).length >= 1) {
+      if (content && typeof content === "object" && !Array.isArray(content) && Object.keys(content).length >= 1) {
         result[key] = content;
       }
     }
@@ -145,6 +145,65 @@ ${expectedSchema}
   } finally {
     clearTimeout(timeout);
   }
+}
+
+/** Strip tags + collapse whitespace from raw HTML into bounded plain text. */
+function stripHtmlToText(html: string, maxChars: number): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/\s{3,}/g, " ")
+    .trim()
+    .slice(0, maxChars);
+}
+
+/**
+ * Fetch a URL and return its visible text, bounded by a short timeout. Returns
+ * null on ANY failure (non-OK, network, timeout) so callers degrade gracefully.
+ * Single canonical intake web-fetch — de-dups the HTML-strip logic that was
+ * copy-pasted across processIngest + processIngestPlus (NEFER interdit n°1).
+ */
+async function fetchUrlAsText(
+  url: string,
+  opts: { maxChars?: number; timeoutMs?: number } = {},
+): Promise<string | null> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), opts.timeoutMs ?? 8000);
+  try {
+    const resp = await fetch(url, {
+      signal: controller.signal,
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; LaFusee-ADVE-Bot/1.0)" },
+    });
+    if (!resp.ok) return null;
+    return stripHtmlToText(await resp.text(), opts.maxChars ?? 15_000);
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/**
+ * Digital-presence grounding via the canonical Seshat/Brave access point
+ * (ADR-0108). Bounded best-effort: no BRAVE_API_KEY → DEFERRED → null; any
+ * error → null. Never throws, never blocks the intake.
+ */
+async function fetchDigitalPresenceBlock(companyName: string): Promise<string | null> {
+  try {
+    const { braveWebSearch } = await import("@/server/services/seshat/web-search");
+    const query = `"${companyName}" OR site:twitter.com OR site:linkedin.com OR site:tiktok.com`;
+    const search = await braveWebSearch(query, { count: 10, timeoutMs: 8000 });
+    if (search.status === "OK" && search.hits.length) {
+      const results = search.hits.map((h) => `- ${h.title}: ${h.description}`).join("\n");
+      return `[PRÉSENCE DIGITALE & RÉSEAUX SOCIAUX]\n${results}`;
+    }
+  } catch {
+    /* best-effort — presence grounding is optional */
+  }
+  return null;
 }
 
 export const quickIntakeRouter = createTRPCRouter({
@@ -884,38 +943,21 @@ export const quickIntakeRouter = createTRPCRouter({
         textParts.push(`[TEXTE FOURNI]\n${input.rawText}`);
       }
 
-      // 2. Website URL - Efficiently crawled
-      if (input.websiteUrl) {
-        try {
-          const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 15_000);
-          const resp = await fetch(input.websiteUrl, {
-            signal: controller.signal,
-            headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" },
-          });
-          clearTimeout(timeout);
+      // 2 + 4. Kick off network I/O CONCURRENTLY (website scrape + Seshat/Brave
+      // digital-presence search). These were previously serialized — each with
+      // its own multi-second timeout — so they stacked and, with the doomed
+      // gpt-5.5 LLM attempt, blew the serverless budget: the function was killed
+      // before its first DB write (the "Load failed" the founder saw, intake row
+      // left IN_PROGRESS). Both are bounded best-effort and never throw.
+      const sitePromise = input.websiteUrl
+        ? fetchUrlAsText(input.websiteUrl, { maxChars: 15_000 })
+        : Promise.resolve(null);
+      const presencePromise = intake.companyName
+        ? fetchDigitalPresenceBlock(intake.companyName)
+        : Promise.resolve(null);
 
-          if (resp.ok) {
-            const html = await resp.text();
-            const text = html
-              .replace(/<script[\s\S]*?<\/script>/gi, "")
-              .replace(/<style[\s\S]*?<\/style>/gi, "")
-              .replace(/<[^>]+>/g, " ")
-              .replace(/&nbsp;/g, " ")
-              .replace(/&amp;/g, "&")
-              .replace(/\s{3,}/g, " ")
-              .trim()
-              .slice(0, 15_000); // Take more text to ensure good coverage
-            textParts.push(`[SITE WEB: ${input.websiteUrl}]\n${text}`);
-          } else {
-            textParts.push(`[SITE WEB inaccessible: ${input.websiteUrl}]`);
-          }
-        } catch {
-          textParts.push(`[Erreur de lecture du SITE WEB: ${input.websiteUrl}]`);
-        }
-      }
-
-      // 3. Decode base64 files and extract text robustly
+      // 3. Decode base64 files and extract text robustly (CPU-bound — runs while
+      //    the network calls above are in flight).
       for (const f of input.files) {
         try {
           const buffer = Buffer.from(f.content, "base64");
@@ -944,18 +986,14 @@ export const quickIntakeRouter = createTRPCRouter({
         }
       }
 
-      // 4. Présence digitale & réseaux sociaux — point d'accès internet canonique
-      //    de Seshat (Brave). De-dup : plus de code Brave inline (ADR-0108). Sans
-      //    clé → DEFERRED, on continue sans bloc présence digitale.
-      if (intake.companyName) {
-        const { braveWebSearch } = await import("@/server/services/seshat/web-search");
-        const query = `"${intake.companyName}" OR site:twitter.com OR site:linkedin.com OR site:tiktok.com`;
-        const search = await braveWebSearch(query, { count: 10, timeoutMs: 10_000 });
-        if (search.status === "OK" && search.hits.length) {
-          const results = search.hits.map((h) => `- ${h.title}: ${h.description}`).join("\n");
-          textParts.push(`[PRÉSENCE DIGITALE & RÉSEAUX SOCIAUX]\n${results}`);
-        }
+      // Await the concurrent network I/O kicked off above and append in a stable
+      // order. Digital presence uses the canonical Seshat/Brave access point
+      // (ADR-0108) — no inline Brave code here.
+      const [siteText, presenceBlock] = await Promise.all([sitePromise, presencePromise]);
+      if (input.websiteUrl) {
+        textParts.push(siteText ? `[SITE WEB: ${input.websiteUrl}]\n${siteText}` : `[SITE WEB inaccessible: ${input.websiteUrl}]`);
       }
+      if (presenceBlock) textParts.push(presenceBlock);
 
       const allText = textParts.join("\n\n---\n\n");
 
@@ -981,9 +1019,20 @@ export const quickIntakeRouter = createTRPCRouter({
         data: { responses: responses as Prisma.InputJsonValue },
       });
 
-      // Méthode Hybride (Ghost Action) : On sauvegarde les réponses de l'IA
-      // mais on ne clôture PAS l'intake. On redirige vers le formulaire pré-rempli.
-      return { success: true, token: input.token };
+      // Direct-to-diagnostic (operator choice 2026-06-29) : run the full ADVE
+      // diagnostic now and send the founder straight to the result page. If the
+      // AI extraction came back empty/sparse (LLM unavailable or thin sources),
+      // complete() refuses to score — fall back to the pre-filled guided
+      // questionnaire so they finish manually instead of hitting a dead end.
+      try {
+        await quickIntakeService.complete(input.token);
+        return { completed: true, token: input.token };
+      } catch (err) {
+        if (err instanceof quickIntakeService.IncompleteIntakeError) {
+          return { completed: false, token: input.token };
+        }
+        throw err;
+      }
     }),
 
   /**
@@ -1024,36 +1073,16 @@ export const quickIntakeRouter = createTRPCRouter({
         }
       }
 
-      // Fetch URLs (simple text extraction)
+      // Fetch URLs CONCURRENTLY (bounded best-effort) instead of serially — same
+      // canonical web-fetch helper as processIngest.
       if (input.urls?.length) {
-        for (const url of input.urls) {
-          try {
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 15_000);
-            const resp = await fetch(url, {
-              signal: controller.signal,
-              headers: { "User-Agent": "LaFusee-ADVE-Bot/1.0" },
-            });
-            clearTimeout(timeout);
-
-            if (resp.ok) {
-              const html = await resp.text();
-              // Strip HTML tags, keep text
-              const text = html
-                .replace(/<script[\s\S]*?<\/script>/gi, "")
-                .replace(/<style[\s\S]*?<\/style>/gi, "")
-                .replace(/<[^>]+>/g, " ")
-                .replace(/&nbsp;/g, " ")
-                .replace(/&amp;/g, "&")
-                .replace(/\s{3,}/g, " ")
-                .trim()
-                .slice(0, 10_000); // Limit to 10k chars per URL
-              textParts.push(`[Source: ${url}]\n${text}`);
-            }
-          } catch {
-            textParts.push(`[URL inaccessible: ${url}]`);
-          }
-        }
+        const fetched = await Promise.all(
+          input.urls.map(async (url) => {
+            const text = await fetchUrlAsText(url, { maxChars: 10_000 });
+            return text ? `[Source: ${url}]\n${text}` : `[URL inaccessible: ${url}]`;
+          }),
+        );
+        textParts.push(...fetched);
       }
 
       const allText = textParts.join("\n\n---\n\n");
