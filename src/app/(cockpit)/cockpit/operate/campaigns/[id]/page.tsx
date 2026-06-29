@@ -261,6 +261,7 @@ function OverviewTab({ campaignId, strategyId, state, onRefresh }: { campaignId:
 
   const chain = chainQuery.data as {
     brandActions: number; brandActionsExploded: number; brandActionsPending: number;
+    explodedActionIds: string[];
     briefs: number; missions: number; campaignActions: number;
   } | null;
   const transitions = (transitionsQuery.data ?? []) as string[];
@@ -442,6 +443,13 @@ function ActionsTab({ campaignId }: { campaignId: string }) {
   });
   const brandActions = (brandActionsQuery.data ?? []) as Array<Record<string, unknown>>;
 
+  // « Éclatée en mission » = mission réelle liée (chainHealth.explodedActionIds),
+  // jamais le statut calendaire SCHEDULED (posé aussi par la planification).
+  const chainQuery = trpc.campaignManager.chainHealth.useQuery({ campaignId });
+  const explodedSet = new Set(
+    (chainQuery.data as { explodedActionIds?: string[] } | undefined)?.explodedActionIds ?? [],
+  );
+
   // ── SECONDAIRE : plan média / exécution (CampaignAction ATL/BTL/TTL) ──
   const actionsQuery = trpc.campaignManager.listActions.useQuery({ campaignId, category: filter === "ALL" ? undefined : filter as any });
   const typesQuery = trpc.campaignManager.getActionTypes.useQuery({ category: filter === "ALL" ? undefined : filter as any });
@@ -473,7 +481,7 @@ function ActionsTab({ campaignId }: { campaignId: string }) {
             {brandActions.map((a) => {
               const id = a.id as string;
               const status = (a.status as string) ?? "PROPOSED";
-              const exploded = status === "SCHEDULED" || status === "EXECUTED";
+              const exploded = explodedSet.has(id);
               const budget = (a.budgetMax ?? a.budgetMin) as number | null;
               return (
                 <div key={id} className="rounded-lg border border-border bg-background/80 p-4">

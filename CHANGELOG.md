@@ -10,6 +10,22 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.57 — fix(cockpit): « éclatée en mission » = mission réelle, pas statut calendaire (2026-06-29)
+
+Suite de v6.27.56. Bug : le détail d'une campagne canon affichait « ÉCLATÉES EN MISSION 3/3 » + badges « Mission creee » sur les 3 actions, alors que **MISSIONS = 0** (page Missions globale comprise) — le bouton « Éclater en mission » était masqué, **impossible de créer les missions**.
+
+Cause racine : **le statut `SCHEDULED` est surchargé**. Il marque une action *datée au calendrier* (`actions.setTiming` / `actions.autoSchedule`) ET était (à tort) lu comme « éclatée en mission » par `getCampaignChainHealth` (`count(status==="SCHEDULED")`) et le badge UI (`status === "SCHEDULED"`). Les actions canon, planifiées au calendrier par la génération canon, tombaient donc en faux positif. Incohérence connexe : `generateProjectsFromActions` posait `ACCEPTED` après avoir créé une mission → invisible pour ce même test.
+
+Fix (déterministe, **0 migration**, **0 LLM**) :
+- Nouvelle source de vérité : une action est *éclatée* ssi une mission de la campagne la référence via `Mission.briefData.brandActionId` (déjà stampé par `explodeBrandActionToMission`). Helper pur `deriveExplodedActionIds(actionIds, missions)`.
+- `getCampaignChainHealth` calcule `brandActionsExploded` + `explodedActionIds[]` depuis les missions réelles (plus depuis le statut).
+- UI onglet « Actions » : badge « Mission creee » / bouton « Éclater » pilotés par `chainHealth.explodedActionIds`, plus par `status`.
+- `explodeBrandActionToMission` n'écrase plus le statut calendaire avec `SCHEDULED` (le lien mission = vérité).
+
+Vérif : tsc 0 · eslint 0 · tests verts (dont 5 cas `deriveExplodedActionIds`, régression couverte). Réutilise `Mission.briefData` (0 modèle Prisma). Cap APOGEE 7/7.
+
+---
+
 ## v6.27.56 — fix(cockpit): unifie campagne → actions → briefs → missions (BrandAction canonique) (2026-06-29)
 
 Bug : le détail d'une campagne canon affichait `ACTIONS 0 / MISSIONS 0` alors que les cartes listaient des actions — impossible de démarrer/éclater les actions en missions.

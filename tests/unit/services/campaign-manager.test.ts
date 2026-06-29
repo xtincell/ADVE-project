@@ -14,7 +14,7 @@ vi.mock("@/lib/db", () => ({
   db: {},
 }));
 
-import { recommendActions } from "@/server/services/campaign-manager/index";
+import { recommendActions, deriveExplodedActionIds } from "@/server/services/campaign-manager/index";
 
 // ============================================================
 // Machine d'Etat de Campagne
@@ -271,5 +271,38 @@ describe("Campaign Manager — Recommandation d'actions", () => {
     for (let i = 1; i < result.length; i++) {
       expect(result[i - 1]!.relevance).toBeGreaterThanOrEqual(result[i]!.relevance);
     }
+  });
+});
+
+// ============================================================
+// Détection d'éclatement — mission réelle, jamais statut calendaire
+// (régression : actions canon planifiées affichées « 3/3 éclatées » sans mission)
+// ============================================================
+describe("Campaign Manager — deriveExplodedActionIds", () => {
+  it("ne compte une action éclatée que si une mission la référence (briefData.brandActionId)", () => {
+    const missions = [
+      { briefData: { brandActionId: "a1", source: "BRAND_ACTION_EXPLODE" } },
+      { briefData: { foo: "bar" } }, // mission sans lien action
+      { briefData: null }, // pas de briefData
+    ];
+    expect(deriveExplodedActionIds(["a1", "a2", "a3"], missions)).toEqual(["a1"]);
+  });
+
+  it("une action planifiée au calendrier mais SANS mission n'est PAS éclatée (cœur du bug)", () => {
+    // Aucune mission → aucune action éclatée, quel que soit son statut calendaire.
+    expect(deriveExplodedActionIds(["a1", "a2", "a3"], [])).toEqual([]);
+  });
+
+  it("ignore un brandActionId qui n'appartient pas à la campagne", () => {
+    expect(deriveExplodedActionIds(["a1"], [{ briefData: { brandActionId: "ailleurs" } }])).toEqual([]);
+  });
+
+  it("dédoublonne plusieurs missions pour la même action", () => {
+    const missions = [{ briefData: { brandActionId: "a1" } }, { briefData: { brandActionId: "a1" } }];
+    expect(deriveExplodedActionIds(["a1", "a2"], missions)).toEqual(["a1"]);
+  });
+
+  it("ignore un briefData.brandActionId non-string (robustesse)", () => {
+    expect(deriveExplodedActionIds(["a1"], [{ briefData: { brandActionId: 42 } }])).toEqual([]);
   });
 });
