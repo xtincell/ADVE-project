@@ -831,6 +831,127 @@ export function getBriefTypes() {
   return BRIEF_TYPES.map((bt) => ({ ...bt }));
 }
 
+/** P0..P3 (BrandAction) → priorité numérique Mission (0 = la plus haute). */
+function brandActionPriorityToMission(p: string | null | undefined): number {
+  switch (p) {
+    case "P0": return 0;
+    case "P1": return 1;
+    case "P3": return 3;
+    default: return 2; // P2 / null
+  }
+}
+
+/**
+ * Éclate une `BrandAction` (action stratégique canonique, ADR-0094/0119) en
+ * **mission exécutable**, en passant par un brief de production **dérivé de
+ * l'action** (zéro LLM, `buildCampaignBrief` avec `ctx.action`).
+ *
+ * C'est le chaînon unifié action → brief → mission qui manquait : le détail de
+ * campagne pouvait afficher des CampaignAction (média) mais jamais transformer
+ * les BrandAction listées en missions. Idempotent par (campaignId, titre dérivé).
+ * Gouverné (voie unique `campaignManager.explodeActionToMission`).
+ */
+export async function explodeBrandActionToMission(brandActionId: string) {
+  const action = await db.brandAction.findUniqueOrThrow({
+    where: { id: brandActionId },
+    include: { campaign: true },
+  });
+  if (!action.campaignId || !action.campaign) {
+    throw new Error(
+      "Action non rattachée à une campagne — génère les campagnes canon (Pilier S) d'abord.",
+    );
+  }
+  const strategy = await db.strategy.findUniqueOrThrow({
+    where: { id: action.strategyId },
+    include: { pillars: true },
+  });
+
+  // Idempotence : une mission par action (titre déterministe).
+  const missionTitle = `Mission — ${action.title}`.slice(0, 200);
+  const existingMission = await db.mission.findFirst({
+    where: { campaignId: action.campaignId, title: missionTitle },
+    select: { id: true, briefData: true },
+  });
+  if (existingMission) {
+    const bd = existingMission.briefData as { briefId?: string } | null;
+    return { missionId: existingMission.id, briefId: bd?.briefId ?? null, created: false };
+  }
+
+  // Brief PRODUCTION dérivé DE l'action (déterministe).
+  const content = buildCampaignBrief("PRODUCTION", {
+    campaign: action.campaign,
+    strategy,
+    action: {
+      title: action.title,
+      description: action.description,
+      persona: action.persona,
+      locality: action.locality,
+      touchpoint: action.touchpoint,
+      sku: action.sku,
+      budgetMin: action.budgetMin,
+      budgetMax: action.budgetMax,
+      budgetCurrency: action.budgetCurrency,
+      timingStart: action.timingStart,
+      timingEnd: action.timingEnd,
+    },
+  });
+
+  const brief = await db.campaignBrief.create({
+    data: {
+      campaignId: action.campaignId,
+      title: `Brief — ${action.title}`.slice(0, 200),
+      content: { ...content, brandActionId } as Prisma.InputJsonValue,
+      status: "DRAFT",
+      briefType: "PRODUCTION",
+      targetDriver: "PRODUCTION",
+      generatedBy: "brand-action-explode",
+      advertis_vector: action.campaign.advertis_vector as Prisma.InputJsonValue,
+    },
+  });
+
+  const mission = await db.mission.create({
+    data: {
+      title: missionTitle,
+      description: action.description ?? null,
+      strategyId: action.strategyId,
+      campaignId: action.campaignId,
+      status: "DRAFT",
+      priority: brandActionPriorityToMission(action.priority),
+      budget: action.budgetMax ?? action.budgetMin ?? action.campaign.budget ?? 0,
+      slaDeadline: action.timingEnd ?? action.campaign.endDate ?? null,
+      briefData: { brandActionId, briefId: brief.id, source: "BRAND_ACTION_EXPLODE" } as Prisma.InputJsonValue,
+    },
+  });
+
+  // L'action passe de PROPOSED/ACCEPTED → SCHEDULED (matérialisée en mission).
+  await db.brandAction.update({ where: { id: brandActionId }, data: { status: "SCHEDULED" } });
+
+  return { missionId: mission.id, briefId: brief.id, created: true };
+}
+
+/**
+ * Diagnostic de chaîne d'une campagne (facilite le triage opérateur) :
+ * combien d'actions stratégiques liées, combien éclatées en missions, combien
+ * de briefs/missions. Déterministe, lecture seule.
+ */
+export async function getCampaignChainHealth(campaignId: string) {
+  const [brandActionsTotal, brandActionsScheduled, briefs, missions, campaignActions] = await Promise.all([
+    db.brandAction.count({ where: { campaignId } }),
+    db.brandAction.count({ where: { campaignId, status: "SCHEDULED" } }),
+    db.campaignBrief.count({ where: { campaignId } }),
+    db.mission.count({ where: { campaignId } }),
+    db.campaignAction.count({ where: { campaignId } }),
+  ]);
+  return {
+    brandActions: brandActionsTotal,
+    brandActionsExploded: brandActionsScheduled,
+    brandActionsPending: Math.max(0, brandActionsTotal - brandActionsScheduled),
+    briefs,
+    missions,
+    campaignActions,
+  };
+}
+
 // ============================================================================
 // REPORTS (3 procedures)
 // ============================================================================
