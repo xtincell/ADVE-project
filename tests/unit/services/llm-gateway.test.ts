@@ -9,6 +9,8 @@ import {
   _recordProviderSuccessForTest,
   _CIRCUIT_BREAKER_THRESHOLD_FOR_TEST,
   _CIRCUIT_BREAKER_RESET_MS_FOR_TEST,
+  isPremiumMode,
+  _resolveTextProviderOrderForTest,
 } from "@/server/services/llm-gateway";
 
 // ---------------------------------------------------------------------------
@@ -282,5 +284,60 @@ describe("LLM gateway — circuit breaker", () => {
     // After reset window — anthropic is selectable again
     vi.setSystemTime(start + _CIRCUIT_BREAKER_RESET_MS_FOR_TEST + 100);
     expect(_selectProviderForTest()).toBe("anthropic");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// owl-alpha default + premium toggle (LLM_PREMIUM_MODE)
+// ---------------------------------------------------------------------------
+
+describe("LLM gateway — owl-alpha default + premium toggle", () => {
+  const prev = process.env.LLM_PREMIUM_MODE;
+  afterEach(() => {
+    if (prev === undefined) delete process.env.LLM_PREMIUM_MODE;
+    else process.env.LLM_PREMIUM_MODE = prev;
+  });
+
+  it("isPremiumMode is false by default — owl-alpha is the default model", () => {
+    delete process.env.LLM_PREMIUM_MODE;
+    expect(isPremiumMode()).toBe(false);
+  });
+
+  it("isPremiumMode honours truthy/falsy LLM_PREMIUM_MODE values", () => {
+    for (const v of ["1", "true", "YES", "on"]) {
+      process.env.LLM_PREMIUM_MODE = v;
+      expect(isPremiumMode()).toBe(true);
+    }
+    for (const v of ["0", "false", "", "off"]) {
+      process.env.LLM_PREMIUM_MODE = v;
+      expect(isPremiumMode()).toBe(false);
+    }
+  });
+
+  it("default (premium OFF) puts OpenRouter/owl-alpha first", () => {
+    expect(
+      _resolveTextProviderOrderForTest(["anthropic", "openrouter"], { premium: false }),
+    ).toEqual(["openrouter", "anthropic"]);
+  });
+
+  it("premium ON keeps the Anthropic-first historical order", () => {
+    expect(
+      _resolveTextProviderOrderForTest(["anthropic", "openrouter"], { premium: true }),
+    ).toEqual(["anthropic", "openrouter"]);
+  });
+
+  it("explicit LLM_PRIMARY_PROVIDER wins over both modes", () => {
+    expect(
+      _resolveTextProviderOrderForTest(["anthropic", "ollama", "openrouter"], {
+        premium: true,
+        explicitPrimary: "ollama",
+      }),
+    ).toEqual(["ollama", "anthropic", "openrouter"]);
+  });
+
+  it("premium OFF with no OpenRouter candidate leaves order unchanged (graceful)", () => {
+    expect(
+      _resolveTextProviderOrderForTest(["anthropic", "ollama"], { premium: false }),
+    ).toEqual(["anthropic", "ollama"]);
   });
 });
