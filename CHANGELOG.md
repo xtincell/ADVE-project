@@ -10,6 +10,21 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.56 — fix(cockpit): unifie campagne → actions → briefs → missions (BrandAction canonique) (2026-06-29)
+
+Bug : le détail d'une campagne canon affichait `ACTIONS 0 / MISSIONS 0` alors que les cartes listaient des actions — impossible de démarrer/éclater les actions en missions.
+
+Cause racine : **deux modèles d'« action » parallèles jamais reliés** — `BrandAction` (stratégique, Pilier S/I, ADR-0094/0119, rattaché par la génération canon + affiché par les cartes) vs `CampaignAction` (média ATL/BTL/TTL, seul connu du détail). Le détail surfait CampaignAction (vide), `getDashboard` ne comptait ni actions ni missions, `generateBrief` dérivait du pilier (pas des actions). Mécanique non-unifiée.
+
+Fix (unifié sur BrandAction, gouverné, **0 migration**) :
+- `campaignManager.getById` inclut les `brandActions` ; onglet « Actions » = BrandActions (bouton « Éclater en mission » par action) ; `CampaignAction` démoté en « Plan média ».
+- Service `explodeBrandActionToMission` : BrandAction → `CampaignBrief` PRODUCTION **dérivé de l'action** (`buildCampaignBrief(ctx.action)`) → `Mission` (liée, provenance `briefData`) → statut `SCHEDULED`. Idempotent. Procédure tRPC **gouvernée** (`governedProcedure`, IntentEmission hash-chaîné).
+- Diagnostic `chainHealth` (actions → briefs → missions) + compteurs Overview campaign-scoped (fin du 0/0) + empty-states honnêtes.
+
+Vérif : tsc 0 · eslint 0 · 2289 tests · build 0 · test fonctionnel explode OK · **test UI live authentifié** (3 actions affichées → « Éclater en mission » → mission créée → diagnostic 1/3). Réutilise `Mission.briefData`/`CampaignBrief.content`/`BrandAction.status` (0 modèle Prisma). Cap APOGEE 7/7.
+
+---
+
 ## v6.27.55 — chore(deps): retire wrangler + migrate xlsx→exceljs (npm audit 12→8, 0 high) (2026-06-29)
 
 Purge des vulnérabilités npm high (5 → 0) + tooling cross-platform.
