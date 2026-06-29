@@ -10,6 +10,17 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.62 — feat(campaigns): Voie A déterministe — preview des 3 niveaux d'exécution (ADR-0120 PR-3) (2026-06-29)
+
+PR-3/4 du revamp opérationnel. Surface le cœur **déterministe** de la Voie A : les **3 niveaux d'exécution** (Conservateur/Cible/Ambitieux, dérivés de l'Advertis via `computeRoadmapRoutes` ADR-0089) directement dans le formulaire de Proposition Créative.
+
+- `getExecutionLevels(strategyId)` + query tRPC `creativeProposal.executionLevels` : pour chaque niveau, le **compte + budget des actions que sa validation rattacherait réellement** (même calcul que `validateCreativeProposal` : `routeInitiativeSet` sur les `BrandAction` matérialisés) + le `projectedGrowthPct` du Pilier S. Helper pur `summarizeExecutionLevels` (testé).
+- UI : le sélecteur de route devient **3 cartes informatives** (label · X action(s) · +growth% · budget total · badge « conseillé ») — l'opérateur choisit un niveau en voyant ce qu'il génère.
+
+Choix mandat-aligné « minimiser le LLM » : cette décision-support est 100 % déterministe. La génération IA de la direction (Big Idea via Glory) + mockups/KV (image API) + portail public La Guilde restent à venir (Voie A LLM + Voie B portail). tsc 0 · eslint 0 · 2305 tests verts (1 nouveau) · 0 migration · 0 LLM · 0 bypass. Cap APOGEE 7/7.
+
+---
+
 ## v6.27.61 — feat(campaigns): Proposition Créative — entité + Data Contract + gate (ADR-0120 PR-2) (2026-06-29)
 
 PR-2/4 du revamp opérationnel. Implémente l'entité-gate du Nouveau Pipeline de Production (ADR-0120) : la **Proposition Créative** — le seul élément vraiment neuf du revamp, tout le reste se rebranche.

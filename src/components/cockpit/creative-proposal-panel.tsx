@@ -39,10 +39,26 @@ const STATUS_CLASS: Record<string, string> = {
   REJECTED: "bg-error/15 text-error",
 };
 
+function fmtBudget(n: number): string {
+  if (!n || !Number.isFinite(n)) return "—";
+  return `${new Intl.NumberFormat("fr-FR").format(Math.round(n))} FCFA`;
+}
+
+// Repli pendant le chargement des niveaux (toujours 3, ADR-0089).
+const FALLBACK_LEVELS = [
+  { key: "CONSERVATIVE", label: "Conservateur", recommended: false, selected: false, projectedGrowthPct: null as number | null, actionCount: 0, totalBudget: 0 },
+  { key: "TARGET", label: "Cible", recommended: true, selected: false, projectedGrowthPct: null as number | null, actionCount: 0, totalBudget: 0 },
+  { key: "AMBITIOUS", label: "Ambitieux", recommended: false, selected: false, projectedGrowthPct: null as number | null, actionCount: 0, totalBudget: 0 },
+];
+
 export function CreativeProposalPanel() {
   const strategyId = useCurrentStrategyId();
   const utils = trpc.useUtils();
   const { data: proposals, isLoading } = trpc.creativeProposal.listByStrategy.useQuery(
+    { strategyId: strategyId ?? "" },
+    { enabled: !!strategyId },
+  );
+  const { data: levels } = trpc.creativeProposal.executionLevels.useQuery(
     { strategyId: strategyId ?? "" },
     { enabled: !!strategyId },
   );
@@ -89,31 +105,44 @@ export function CreativeProposalPanel() {
 
       {open ? (
         <div className="mt-4 space-y-3 rounded-lg border border-white/10 bg-background/40 p-3">
-          <div className="flex flex-wrap gap-3">
-            <label className="flex flex-col gap-1 text-[9px] font-bold uppercase tracking-widest text-foreground-muted">
-              Niveau d'exécution
-              <select
-                value={routeKey}
-                onChange={(e) => setRouteKey(e.target.value as typeof routeKey)}
-                className="rounded-lg border border-white/10 bg-background px-2.5 py-1.5 text-xs text-foreground focus:border-accent/40 focus:outline-none"
-              >
-                <option value="CONSERVATIVE">Conservateur</option>
-                <option value="TARGET">Cible</option>
-                <option value="AMBITIOUS">Ambitieux</option>
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-[9px] font-bold uppercase tracking-widest text-foreground-muted">
-              Voie
-              <select
-                value={source}
-                onChange={(e) => setSource(e.target.value as CreativeProposalSource)}
-                className="rounded-lg border border-white/10 bg-background px-2.5 py-1.5 text-xs text-foreground focus:border-accent/40 focus:outline-none"
-              >
-                <option value="LAGUILDE_HUMAN">La Guilde (humain)</option>
-                <option value="LAFUSEE_AI">La Fusée (IA)</option>
-              </select>
-            </label>
+          <div>
+            <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-foreground-muted">
+              Niveau d'exécution <span className="font-normal normal-case text-foreground-muted/70">(dérivé de l'Advertis — preview des actions générées)</span>
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {(levels ?? FALLBACK_LEVELS).map((lvl) => {
+                const active = routeKey === lvl.key;
+                return (
+                  <button
+                    key={lvl.key}
+                    type="button"
+                    onClick={() => setRouteKey(lvl.key as typeof routeKey)}
+                    className={`rounded-lg border p-2 text-left transition-colors ${active ? "border-accent/50 bg-accent/10" : "border-white/10 bg-background hover:border-white/20"}`}
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs font-semibold text-foreground">{lvl.label}</span>
+                      {lvl.recommended ? <span className="rounded bg-accent/15 px-1 py-0.5 text-[8px] font-bold text-accent">conseillé</span> : null}
+                    </div>
+                    <p className="mt-0.5 text-[10px] text-foreground-muted">
+                      {lvl.actionCount} action(s){lvl.projectedGrowthPct != null ? ` · +${lvl.projectedGrowthPct}%` : ""}
+                    </p>
+                    <p className="text-[10px] text-foreground-secondary">{fmtBudget(lvl.totalBudget)}</p>
+                  </button>
+                );
+              })}
+            </div>
           </div>
+          <label className="flex w-fit flex-col gap-1 text-[9px] font-bold uppercase tracking-widest text-foreground-muted">
+            Voie
+            <select
+              value={source}
+              onChange={(e) => setSource(e.target.value as CreativeProposalSource)}
+              className="rounded-lg border border-white/10 bg-background px-2.5 py-1.5 text-xs text-foreground focus:border-accent/40 focus:outline-none"
+            >
+              <option value="LAGUILDE_HUMAN">La Guilde (humain)</option>
+              <option value="LAFUSEE_AI">La Fusée (IA)</option>
+            </select>
+          </label>
           <label className="flex flex-col gap-1 text-[9px] font-bold uppercase tracking-widest text-foreground-muted">
             Big Idea *
             <textarea
