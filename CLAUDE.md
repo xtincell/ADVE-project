@@ -271,6 +271,7 @@ Next.js 16 + React 19 + TypeScript 6 + Tailwind 4 + tRPC 11 + Prisma 7 (PostgreS
 - Pillar enum `["A","D","V","E","R","T","I","S"]` is being centralized in `src/domain/pillars.ts` (Phase 1). Do not hardcode.
 - Conventional Commits enforced via commitlint (Phase 0).
 - Migrations Prisma versionnées (`prisma migrate dev`) — pas de `db push` (Phase 5).
+- **JAMAIS `npm audit fix --force`** sur ce repo. Il downgrade `next` 16→9 (footgun SemVer-major) → Next 9 traîne un arbre webpack/babel/postcss ancien et l'audit explose (8 moderate → 94 vulns dont 1 critical). Les moderates restantes sont des transitives **dev/internes non exploitables en prod** (postcss interne next, `@hono` via `@prisma/dev`, uuid via exceljs). Pour corriger une transitive précise : champ `overrides` dans `package.json`, jamais `--force`. Cf. incident 2026-06-29 (PR #359 suite).
 
 ## Tone
 
