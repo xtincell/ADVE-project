@@ -417,7 +417,7 @@ export default function DeliverableForgePage() {
                     className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-background hover:bg-accent/90 disabled:opacity-50"
                   >
                     <Zap className="h-4 w-4" />
-                    {generateProjectsMutation.isPending ? "Création..." : `Forger ${selectedActionIds.length} projets`}
+                    {generateProjectsMutation.isPending ? "Génération..." : `Générer ${selectedActionIds.length} briefs`}
                   </button>
                 </div>
               </div>

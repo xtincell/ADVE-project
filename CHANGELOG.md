@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.59 — fix(roadmap/forge): generateProjectsFromActions rerouté sur le flux staged (brief DRAFT, plus de mission auto) (2026-06-29)
+
+Suite #367. Réconcilie le dernier flux qui contournait la gate de validation : `strategy.generateProjectsFromActions` (roadmap calendar + page Forge) créait un brief **auto-VALIDATED** + une mission directement, sautant la revue opérateur.
+
+Désormais, pour chaque action : rattachement à sa campagne (création campagne PUNCTUAL pour les orphelines — invariant ADR-0119 préservé) puis **génération du brief de production en DRAFT** via le générateur staged `generateBriefFromBrandAction` (stampé `brandActionId` → détecté par `chainHealth`/onglet Actions). **Plus de brief auto-VALIDATED ni de mission auto** : la mission naît de la validation opérateur (`createMissionFromValidatedBrief`). Forme de retour préservée (`projects[].campaignId`) → callers intacts (lien campagne roadmap + routage Guilde Forge) ; libellé Forge « Forger X projets » → « Générer X briefs ». Import `buildCampaignBrief` devenu inutile retiré.
+
+Les 3 flux action→mission (détail campagne / roadmap / Forge) sont désormais unifiés sur la même gate staged. tsc 0 · eslint 0 erreur · tests verts. 0 migration, 0 LLM. Cap APOGEE 7/7.
+
+---
+
 ## v6.27.58 — feat(cockpit): pipeline staged Campagne→Actions→Briefs→[validation]→Missions→pipes + fiche mission (activités/budget/KPI) (2026-06-29)
 
 Suite de #366. On supprime les raccourcis qui collapsaient les étapes et on câble le flux staged bout-en-bout + la couche d'exécution par mission.
