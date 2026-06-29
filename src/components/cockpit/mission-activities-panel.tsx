@@ -72,12 +72,25 @@ export function MissionActivitiesPanel({
   const completeMissionMut = trpc.mission.complete.useMutation({ onSuccess: refresh });
   const cancelMissionMut = trpc.mission.cancel.useMutation({ onSuccess: refresh });
   const guildMut = trpc.mission.submitToGuild.useMutation({ onSuccess: refresh });
+  const regenerateMut = trpc.mission.regenerateActivities.useMutation({ onSuccess: refresh });
+  const assignActMut = trpc.mission.assignActivity.useMutation({ onSuccess: refresh });
+  const updateBriefMut = trpc.mission.updateActivityBrief.useMutation({
+    onSuccess: () => { refresh(); setOpenBrief(null); },
+  });
+
+  const terminalEarly = missionStatus === "COMPLETED" || missionStatus === "CANCELLED";
+  const talentQuery = trpc.mission.suggestTalent.useQuery({ missionId }, { enabled: !terminalEarly });
+  const candidates = (talentQuery.data ?? []) as Array<{ userId: string; displayName?: string | null; tier?: string | null }>;
+  const candidateName = (uid: string | null | undefined): string =>
+    (uid && candidates.find((c) => c.userId === uid)?.displayName) || (uid ? "Prestataire assigné" : "");
 
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState(BLANK);
   const [kpiInputs, setKpiInputs] = useState<Record<string, string>>({});
+  const [openBrief, setOpenBrief] = useState<string | null>(null);
+  const [briefDraft, setBriefDraft] = useState<Record<string, string>>({});
 
-  const terminal = missionStatus === "COMPLETED" || missionStatus === "CANCELLED";
+  const terminal = terminalEarly;
   const busyMission = completeMissionMut.isPending || cancelMissionMut.isPending || guildMut.isPending;
 
   return (
@@ -160,7 +173,19 @@ export function MissionActivitiesPanel({
                           {a.kpiTarget != null ? (a.kpiTarget as number).toLocaleString("fr-FR") : "—"}
                         </span>
                       )}
-                      {!!a.briefContent && <span className="text-success">brief généré</span>}
+                      {!!a.briefContent && (
+                        <button
+                          type="button"
+                          className="text-success underline-offset-2 hover:underline"
+                          onClick={() => {
+                            setOpenBrief((cur) => (cur === id ? null : id));
+                            setBriefDraft((s) => ({ ...s, [id]: s[id] ?? JSON.stringify(a.briefContent, null, 2) }));
+                          }}
+                        >
+                          brief généré · voir / éditer
+                        </button>
+                      )}
+                      {!!a.assigneeId && <span className="text-foreground-secondary">⚡ {candidateName(a.assigneeId as string)}</span>}
                     </div>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1.5">
@@ -199,6 +224,58 @@ export function MissionActivitiesPanel({
                     )}
                   </div>
                 </div>
+
+                {/* Attribution prestataire (miroir de mission.assign, suggestTalent réutilisé) */}
+                {open && !terminal && (
+                  <div className="mt-2 flex items-center gap-2 border-t border-border pt-2">
+                    <span className="text-2xs uppercase text-foreground-muted">Prestataire</span>
+                    <select
+                      className="rounded border border-border bg-background px-2 py-0.5 text-2xs text-foreground"
+                      value={(a.assigneeId as string) ?? ""}
+                      disabled={assignActMut.isPending}
+                      onChange={(e) => assignActMut.mutate({ activityId: id, assigneeId: e.target.value || null })}
+                    >
+                      <option value="">— non attribué —</option>
+                      {candidates.map((c) => (
+                        <option key={c.userId} value={c.userId}>
+                          {(c.displayName ?? c.userId) + (c.tier ? ` · ${c.tier}` : "")}
+                        </option>
+                      ))}
+                    </select>
+                    {talentQuery.isLoading ? <span className="text-2xs text-foreground-muted">…</span> : null}
+                  </div>
+                )}
+
+                {/* Brief de l'activité — visible + éditable */}
+                {openBrief === id && (
+                  <div className="mt-2 space-y-2 border-t border-border pt-2">
+                    <textarea
+                      className="h-40 w-full rounded border border-border bg-background px-2 py-1 font-mono text-2xs text-foreground"
+                      value={briefDraft[id] ?? ""}
+                      onChange={(e) => setBriefDraft((s) => ({ ...s, [id]: e.target.value }))}
+                    />
+                    {!terminal && (
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="primary"
+                          disabled={updateBriefMut.isPending}
+                          onClick={() => {
+                            try {
+                              const parsed = JSON.parse(briefDraft[id] ?? "{}") as Record<string, unknown>;
+                              updateBriefMut.mutate({ activityId: id, briefContent: parsed });
+                            } catch {
+                              window.alert("Brief invalide : JSON mal formé.");
+                            }
+                          }}
+                        >
+                          Enregistrer le brief
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setOpenBrief(null)}>Fermer</Button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })
@@ -278,9 +355,23 @@ export function MissionActivitiesPanel({
             </div>
           </div>
         ) : (
-          <Button size="sm" variant="ghost" onClick={() => setShowAdd(true)}>
-            + Ajouter une activité
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="ghost" onClick={() => setShowAdd(true)}>
+              + Ajouter une activité
+            </Button>
+            {activities.length > 0 && (
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={regenerateMut.isPending}
+                onClick={() => {
+                  if (window.confirm("Régénérer les activités ? Les activités actuelles seront remplacées par le jeu par défaut (déterministe, dérivé du brief).")) regenerateMut.mutate({ missionId });
+                }}
+              >
+                ↻ Régénérer les activités
+              </Button>
+            )}
+          </div>
         ))}
     </div>
   );

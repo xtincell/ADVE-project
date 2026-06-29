@@ -726,4 +726,18 @@ export const missionRouter = createTRPCRouter({
     inputSchema: z.object({ activityId: z.string() }),
     caller: "mission:cancelActivity",
   }).mutation(({ input }) => cm.cancelMissionActivity(input.activityId)),
+
+  /** Régénère les activités par défaut (déterministe) — vide + re-seed depuis le brief/action. */
+  regenerateActivities: governedProcedure({
+    kind: "LEGACY_MISSION_REGENERATE_ACTIVITIES",
+    inputSchema: z.object({ missionId: z.string() }),
+    caller: "mission:regenerateActivities",
+  }).mutation(({ input }) => cm.regenerateMissionActivities(input.missionId)),
+
+  /** Attribue (ou retire) un prestataire à une activité (mirroir de mission.assign). */
+  assignActivity: governedProcedure({
+    kind: "LEGACY_MISSION_ASSIGN_ACTIVITY",
+    inputSchema: z.object({ activityId: z.string(), assigneeId: z.string().nullable() }),
+    caller: "mission:assignActivity",
+  }).mutation(({ input }) => cm.assignMissionActivity(input.activityId, input.assigneeId)),
 });

@@ -10,6 +10,20 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.63 — feat(cockpit): fiche mission — auto-seed activités + assignation + brief éditable (ADR-0120 PR-4a) (2026-06-29)
+
+PR-4a/4 du revamp opérationnel — première tranche de la cascade aval. Surface + complète la couche **Activités** de la fiche mission (la WIP `mission-fiche-revamp` est repliée ici).
+
+- **Auto-génération déterministe** : `createMissionFromValidatedBrief` appelle désormais `seedDefaultMissionActivities` — une mission validée naît avec ses activités (1 Création d'asset + 1 Action terrain si touchpoint offline), budget réparti, cible KPI extraite du titre, label KPI depuis l'AARRR. Zéro LLM, idempotent.
+- **Régénérer** (`regenerateMissionActivities`) : vide + re-seed le jeu par défaut.
+- **Assignation prestataire par activité** (`assignMissionActivity`, miroir de `mission.assign`) : réutilise `suggestTalent` ; select par activité ; assigné ⇒ activité `IN_PROGRESS`.
+- **Brief d'activité visible + éditable** : le « brief généré » devient cliquable → vue + édition (textarea, `updateActivityBrief`).
+- Schéma : `MissionActivity.assigneeId` (migration additive `20260629150000`). 2 Intent kinds LEGACY (regenerate/assign — exempts de registration, comme les autres `LEGACY_MISSION_*_ACTIVITY`).
+
+Rétroplanning T0 (`launch-calendar`, `anchorJ1`) + dashboards micro/macro = PR-4b. tsc 0 · eslint 0 · **2307 tests verts** (3 nouveaux) · 1 migration additive · 0 LLM · 0 bypass. Cap APOGEE 7/7.
+
+---
+
 ## v6.27.62 — feat(campaigns): Voie A déterministe — preview des 3 niveaux d'exécution (ADR-0120 PR-3) (2026-06-29)
 
 PR-3/4 du revamp opérationnel. Surface le cœur **déterministe** de la Voie A : les **3 niveaux d'exécution** (Conservateur/Cible/Ambitieux, dérivés de l'Advertis via `computeRoadmapRoutes` ADR-0089) directement dans le formulaire de Proposition Créative.

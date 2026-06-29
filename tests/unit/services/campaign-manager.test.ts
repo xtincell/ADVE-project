@@ -19,6 +19,7 @@ import {
   deriveExplodedActionIds,
   deriveActionBriefs,
   computeMissionActivityHealth,
+  extractLeadingQuantity,
 } from "@/server/services/campaign-manager/index";
 
 // ============================================================
@@ -375,5 +376,18 @@ describe("Campaign Manager — computeMissionActivityHealth", () => {
     ]);
     expect(h.budgetAllocated).toBe(0);
     expect(h.kpiPct).toBe(0);
+  });
+});
+
+// ============================================================
+// Auto-seed activités — extraction de cible KPI depuis le libellé
+// ============================================================
+describe("Campaign Manager — extractLeadingQuantity", () => {
+  it("extrait la 1ère quantité 1-5 chiffres comme cible KPI", () => {
+    expect(extractLeadingQuantity("52 posts Instagram")).toBe(52);
+    expect(extractLeadingQuantity("Série de 8 visuels")).toBe(8);
+  });
+  it("retourne null sans quantité", () => {
+    expect(extractLeadingQuantity("Production vidéo de marque")).toBeNull();
   });
 });
