@@ -59,11 +59,14 @@ DATABASE_URL="<direct session-mode URL, port 5432>" npx prisma migrate deploy
 ## Deploy
 
 ```bash
-npm run cf:deploy        # = wrangler deploy (builds the image, pushes, deploys)
+npx wrangler deploy        # builds the image, pushes, deploys
 ```
 
 `wrangler` builds the Docker image, pushes it to Cloudflare's registry, applies
-the Durable Object migration, and deploys the Worker.
+the Durable Object migration, and deploys the Worker. It is invoked on demand
+via `npx` — `wrangler` is **no longer a pinned dependency** (its transitive
+`esbuild`/`miniflare`/`undici`/`ws` CVEs polluted `npm audit` while Vercel, not
+Cloudflare, is the canonical deploy target).
 
 ## Notes
 

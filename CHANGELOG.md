@@ -10,6 +10,17 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.55 — chore(deps): retire wrangler + migrate xlsx→exceljs (npm audit 12→8, 0 high) (2026-06-29)
+
+Purge des vulnérabilités npm high (5 → 0) + tooling cross-platform.
+
+- **`wrangler` retiré** (devDep) + scripts `cf:*` + doc CF repointée sur `npx wrangler` : élimine 5 CVE **high** transitives (esbuild/miniflare/undici/ws) du CLI Cloudflare dev. CF reste déployable à la demande ; Vercel est la cible canonique.
+- **`xlsx` (SheetJS) → `exceljs`** : `xlsx@0.18.5` (dernière version npm) traînait 2 CVE high (prototype pollution + ReDoS) **sans correctif npm**, sur un parseur d'uploads attaquant-contrôlables (portfolio-bulk-import public + ingestion). Helper `xlsx-read` (exceljs, maintenu) ; 3 sites migrés (`xlsx-parser`, ingestion `extractors`, `seed-spawt-sources`). `.xls` binaire legacy → erreur claire ; `.csv` → texte.
+- **build** : script `typecheck` (purge `.next/dev` périmé que Next ré-injecte au tsconfig, puis tsc) ; lint cross-platform (`eslint src` — le glob simple-quote cassait sur Windows/cmd.exe).
+- Résultat : `npm audit` **12 → 8** (0 high, 0 low ; 8 moderate pré-existants/low-risk dont 1 `uuid` via exceljs, v4 non affecté). tsc 0 · lint 0 · 2289 tests verts.
+
+---
+
 ## v6.27.54 — fix(governance): 13 manifests Phase 24 + reroute auto-promotion & campaign-tracker (2026-06-29)
 
 Les 13 services Phase 24 livrés sans `manifest.ts` (drift `audit:governance`, 13 warns) reçoivent leur manifeste — gouverneur dérivé de la **source autoritaire `intent-kinds.ts`** (pas deviné).

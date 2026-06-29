@@ -5,11 +5,9 @@
  * alimenter `/launchpad/portfolio-bulk-import` sans forcer l'opérateur à
  * exporter manuellement en CSV.
  *
- * Le package `xlsx@0.18.5` est déjà installé (cf. package.json), utilisé
- * par 5 services (campaign-deliverable, ingestion-pipeline/extractors,
- * seshat/market-study-ingestion, source-classifier/mime-heuristics). Cet
- * endpoint expose le même pattern de parsing à la surface publique
- * portfolio-bulk-import.
+ * Le parsing `.xlsx` passe par le helper `xlsx-read` (basé sur `exceljs`,
+ * maintenu et sans CVE — remplace l'ancien `xlsx`/SheetJS). Cet endpoint
+ * expose le pattern de parsing à la surface publique portfolio-bulk-import.
  *
  * Sécurité :
  * - 5 MB cap sur le payload (xlsx réaliste : 17 KB → 745 KB observés)
@@ -21,6 +19,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, publicProcedure } from "../init";
+import { readXlsxWorkbook } from "@/server/services/utils/xlsx-read";
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 
@@ -51,10 +50,9 @@ export const xlsxParserRouter = createTRPCRouter({
         });
       }
 
-      const XLSX = await import("xlsx");
       let workbook;
       try {
-        workbook = XLSX.read(buffer, { type: "buffer" });
+        workbook = await readXlsxWorkbook(buffer, { fieldSep: "\t" });
       } catch (err) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -62,7 +60,7 @@ export const xlsxParserRouter = createTRPCRouter({
         });
       }
 
-      const sheetNames = workbook.SheetNames;
+      const sheetNames = workbook.sheetNames;
       if (sheetNames.length === 0) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -74,7 +72,7 @@ export const xlsxParserRouter = createTRPCRouter({
       const targetName = input.sheetName && sheetNames.includes(input.sheetName)
         ? input.sheetName
         : sheetNames[0]!;
-      const sheet = workbook.Sheets[targetName];
+      const sheet = workbook.getSheet(targetName);
       if (!sheet) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -85,15 +83,12 @@ export const xlsxParserRouter = createTRPCRouter({
       // Two outputs:
       //  - csv (TSV-friendly, populates textarea via setPasted)
       //  - rows (already structured for direct consumption)
-      const csv = XLSX.utils.sheet_to_csv(sheet, { FS: "\t" });
-      const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" }) as Record<string, unknown>[];
-
       return {
         sheetNames,
         activeSheet: targetName,
-        csv,
-        rows,
-        rowCount: rows.length,
+        csv: sheet.csv,
+        rows: sheet.rows,
+        rowCount: sheet.rows.length,
       };
     }),
 });
