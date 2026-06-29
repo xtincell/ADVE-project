@@ -9,7 +9,6 @@ import * as auditTrail from "@/server/services/audit-trail";
 import { canAccessStrategy, scopeStrategies } from "@/server/services/operator-isolation";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import * as strategyArchive from "@/server/services/strategy-archive";
-import { buildCampaignBrief } from "@/server/services/campaign-manager/brief-builder";
 import { emitIntent } from "@/server/services/mestor/intents";
 import { PILLAR_STORAGE_KEYS } from "@/domain";
 /* lafusee:governed-active */
@@ -852,7 +851,7 @@ export const strategyRouter = createTRPCRouter({
         throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé: cette stratégie appartient à un autre opérateur" });
       }
 
-      const { generateCampaignCode } = await import("@/server/services/campaign-manager");
+      const { generateCampaignCode, generateBriefFromBrandAction } = await import("@/server/services/campaign-manager");
 
       const strategy = await ctx.db.strategy.findUniqueOrThrow({
         where: { id: input.strategyId },
@@ -908,52 +907,24 @@ export const strategyRouter = createTRPCRouter({
         }
         const campaignCode = campaign.code;
 
-        // Brief déterministe (zéro LLM) — même constructeur que campaign-manager,
-        // combine direction créative + specs de production pour le projet.
-        const briefCtx = { campaign, strategy, action } as const;
-        const creative = buildCampaignBrief("CREATIVE", briefCtx);
-        const production = buildCampaignBrief("PRODUCTION", briefCtx);
-        const initialBriefContent = {
-          briefClient: creative.briefClient,
-          briefCreatif: creative.briefCreatif,
-          briefProduction: production.briefProduction,
-          caseStudy: {},
-          meta: production.meta,
-        };
-
-        await ctx.db.campaignBrief.create({
-          data: {
-            campaignId: campaign.id,
-            title: `Brief - ${campaign.name}`,
-            content: initialBriefContent as Prisma.InputJsonValue,
-            briefType: "CREATIVE",
-            status: "VALIDATED",
-          },
-        });
-
-        const mission = await ctx.db.mission.create({
-          data: {
-            title: `Production - ${action.title}`,
-            strategyId: input.strategyId,
-            campaignId: campaign.id,
-            status: "DRAFT",
-            priority: action.priority === "P0" ? 1 : action.priority === "P1" ? 3 : 5,
-            budget: budgetPlanned,
-            slaDeadline: action.timingEnd,
-            briefData: initialBriefContent as Prisma.InputJsonValue,
-          },
-        });
-
+        // Pipeline staged (ADR-0119 + suite #367) : on rattache l'action à sa
+        // campagne puis on génère son **brief de production en DRAFT** — et on
+        // s'arrête là. Plus de brief auto-VALIDATED ni de mission auto : la
+        // mission naît de la **validation opérateur** du brief (gate respectée,
+        // `createMissionFromValidatedBrief`). Même générateur staged que le détail
+        // de campagne ⇒ brief stampé `brandActionId`, détecté par chainHealth /
+        // l'onglet Actions.
         await ctx.db.brandAction.update({
           where: { id: action.id },
           data: { status: "ACCEPTED", selected: true, campaignId: campaign.id },
         });
+        const briefRes = await generateBriefFromBrandAction(action.id);
 
         results.push({
           actionId: action.id,
           campaignId: campaign.id,
           campaignCode,
-          missionId: mission.id,
+          briefId: briefRes.briefId,
         });
       }
 
