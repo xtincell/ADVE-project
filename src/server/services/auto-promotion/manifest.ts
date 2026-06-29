@@ -28,7 +28,7 @@ const ReadModeOutputSchema = z.object({
   mode: z.enum(["SOFT", "HARD"]),
 });
 
-export const autoPromotionManifest: NeteruManifest = {
+export const manifest: NeteruManifest = {
   service: "auto-promotion",
   version: "1.0.0",
   governor: "MESTOR",

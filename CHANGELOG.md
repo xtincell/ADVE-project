@@ -10,6 +10,17 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.54 — fix(governance): 13 manifests Phase 24 + reroute auto-promotion & campaign-tracker (2026-06-29)
+
+Les 13 services Phase 24 livrés sans `manifest.ts` (drift `audit:governance`, 13 warns) reçoivent leur manifeste — gouverneur dérivé de la **source autoritaire `intent-kinds.ts`** (pas deviné).
+
+- **13 manifests** : `bureau-etudes`, `consulting`, `market-visibility`, `media-plan`, `media-perf`, `campaign-canon`, `escrow-arbitration`, `mission-quote`, `talent-services`, `production` (INFRASTRUCTURE) · `market-lifecycle` (MESTOR) · `community-dashboard` (SESHAT) · `intention` (ARTEMIS). `acceptsIntents` = vrais kinds, dépendances réelles, `missionContribution` déclaré.
+- **`fix` auto-promotion** : exportait `autoPromotionManifest` au lieu de `manifest` → silencieusement absent du registry (entrée `undefined` qui faisait planter `manifests:audit`). Renommé `manifest`.
+- **`fix` campaign-tracker** : dépendance `thot` (slug inexistant, rename non fait) → `financial-brain`.
+- Vérif : `audit:governance` **0/0** (était 13 warns) · `manifests:audit` clean (114 enregistrés) · `audit:mission-drift` 0 drift · tsc 0 · 871 tests governance verts. Cap APOGEE 7/7.
+
+---
+
 ## v6.27.53 — fix: passe de debug NEFER (items différés) — badge saturation, boot complete, cadence H2 (2026-06-28)
 
 Clôture des 3 items volontairement différés de la passe de debug (v6.27.50→52).
