@@ -8,7 +8,7 @@ import {
   parseCreativeDirection,
   parseCreativeProposalVisuals,
 } from "@/lib/types/creative-proposal";
-import { toRouteInitiative } from "@/server/services/creative-proposal";
+import { toRouteInitiative, summarizeExecutionLevels } from "@/server/services/creative-proposal";
 import { routeInitiativeSet } from "@/lib/strategy/roadmap-routes";
 
 describe("creative-proposal — Data Contract (ADR-0120)", () => {
@@ -58,5 +58,27 @@ describe("creative-proposal — toRouteInitiative + jeu de route (ADR-0089)", ()
     expect(conservative).toEqual(["short"]);              // selected + court-terme uniquement
     expect(target.sort()).toEqual(["mid", "short"]);      // toutes les selected
     expect(ambitious.sort()).toEqual(["mid", "reco", "short"]); // selected + recommended
+  });
+});
+
+describe("creative-proposal — summarizeExecutionLevels (preview Voie A déterministe)", () => {
+  it("compte + budgète les actions par niveau + passe le growth stocké", () => {
+    const initiatives = [
+      { id: "short", status: "SELECTED_FOR_ROADMAP", timeframe: "SPRINT_90" },
+      { id: "mid", status: "SELECTED_FOR_ROADMAP", timeframe: "PHASE_2" },
+      { id: "reco", status: "RECOMMENDED", timeframe: "PHASE_1" },
+    ];
+    const budgetById = new Map([["short", 100], ["mid", 200], ["reco", 50]]);
+    const storedByKey = new Map<string, Record<string, unknown>>([["TARGET", { projectedGrowthPct: 30, selected: true }]]);
+
+    const levels = summarizeExecutionLevels(initiatives, budgetById, storedByKey);
+    expect(levels).toHaveLength(3);
+    const cons = levels.find((l) => l.key === "CONSERVATIVE")!;
+    const tgt = levels.find((l) => l.key === "TARGET")!;
+    const amb = levels.find((l) => l.key === "AMBITIOUS")!;
+
+    expect([cons.actionCount, cons.totalBudget, cons.projectedGrowthPct]).toEqual([1, 100, null]); // short ; pas de stored
+    expect([tgt.actionCount, tgt.totalBudget, tgt.projectedGrowthPct, tgt.selected]).toEqual([2, 300, 30, true]);
+    expect([amb.actionCount, amb.totalBudget]).toEqual([3, 350]);
   });
 });

@@ -27,6 +27,13 @@ export const creativeProposalRouter = createTRPCRouter({
       return getCreativeProposal(input.id);
     }),
 
+  executionLevels: protectedProcedure
+    .input(z.object({ strategyId: z.string() }))
+    .query(async ({ input }) => {
+      const { getExecutionLevels } = await import("@/server/services/creative-proposal");
+      return getExecutionLevels(input.strategyId);
+    }),
+
   create: governedProcedure({
     kind: "CREATE_CREATIVE_PROPOSAL",
     inputSchema: creativeProposalContractSchema,

@@ -19,7 +19,7 @@ import {
   creativeProposalContractSchema,
   type CreativeProposalContract,
 } from "@/lib/types/creative-proposal";
-import { routeInitiativeSet, type RouteKey } from "@/lib/strategy/roadmap-routes";
+import { routeInitiativeSet, ROUTE_SPECS, type RouteKey } from "@/lib/strategy/roadmap-routes";
 import { canonTypeForTimeframe } from "@/server/services/campaign-canon/plan";
 
 const CANON_TYPES = ["GTM_90", "ANNUAL", "ALWAYS_ON"] as const;
@@ -175,4 +175,66 @@ export async function listCreativeProposalsByStrategy(strategyId: string) {
 
 export async function getCreativeProposal(id: string) {
   return db.creativeProposal.findUnique({ where: { id } });
+}
+
+// ── Niveaux d'exécution (ADR-0089) — preview Voie A déterministe ─────────────────
+// Les 3 niveaux d'exécution sont « fonction des choix Advertis » : ce sont les routes
+// `computeRoadmapRoutes` (Pilier S). On affiche, pour chaque niveau, ce que sa
+// validation générerait RÉELLEMENT — le jeu d'initiatives de la route appliqué aux
+// `BrandAction` matérialisés (même calcul que `validateCreativeProposal`). Zéro LLM.
+
+export interface ExecutionLevel {
+  key: string;
+  label: string;
+  recommended: boolean;
+  selected: boolean;
+  /** Croissance projetée (Pilier S) si calculée, sinon null. */
+  projectedGrowthPct: number | null;
+  /** Nombre d'actions que la validation de ce niveau rattacherait aux frames. */
+  actionCount: number;
+  /** Budget total des actions de ce niveau (somme budgetMax ?? budgetMin). */
+  totalBudget: number;
+}
+
+/**
+ * PUR — agrège, par niveau d'exécution, le compte + budget des actions que ce niveau
+ * rattacherait (via `routeInitiativeSet`), enrichi du `projectedGrowthPct` stocké.
+ * Exporté pour test.
+ */
+export function summarizeExecutionLevels(
+  initiatives: Array<Record<string, unknown>>,
+  budgetById: Map<string, number>,
+  storedByKey: Map<string, Record<string, unknown>>,
+): ExecutionLevel[] {
+  return ROUTE_SPECS.map((spec) => {
+    const ids = routeInitiativeSet(spec.key, initiatives).map((r) => r.id as string);
+    const totalBudget = ids.reduce((sum, id) => sum + (budgetById.get(id) ?? 0), 0);
+    const stored = storedByKey.get(spec.key);
+    return {
+      key: spec.key,
+      label: spec.label,
+      recommended: spec.recommended,
+      selected: stored?.selected === true,
+      projectedGrowthPct: stored && typeof stored.projectedGrowthPct === "number" ? (stored.projectedGrowthPct as number) : null,
+      actionCount: ids.length,
+      totalBudget,
+    };
+  });
+}
+
+/** Les 3 niveaux d'exécution d'une stratégie, avec preview du jeu d'actions par niveau. */
+export async function getExecutionLevels(strategyId: string): Promise<ExecutionLevel[]> {
+  const [sPillar, actions] = await Promise.all([
+    db.pillar.findUnique({ where: { strategyId_key: { strategyId, key: "s" } }, select: { content: true } }),
+    db.brandAction.findMany({
+      where: { strategyId },
+      select: { id: true, selected: true, status: true, metadata: true, budgetMin: true, budgetMax: true },
+    }),
+  ]);
+  const computed = ((sPillar?.content as Record<string, unknown> | null)?.computed ?? {}) as Record<string, unknown>;
+  const storedRoutes = Array.isArray(computed.roadmapRoutes) ? (computed.roadmapRoutes as Array<Record<string, unknown>>) : [];
+  const storedByKey = new Map<string, Record<string, unknown>>(storedRoutes.map((r) => [String(r.key), r]));
+  const budgetById = new Map<string, number>(actions.map((a) => [a.id, (a.budgetMax ?? a.budgetMin ?? 0) || 0]));
+  const initiatives = actions.map(toRouteInitiative);
+  return summarizeExecutionLevels(initiatives, budgetById, storedByKey);
 }
