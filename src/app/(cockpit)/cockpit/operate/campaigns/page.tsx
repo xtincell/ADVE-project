@@ -27,6 +27,7 @@ import {
 } from "@/lib/operate-config";
 import { CampaignPipeline } from "@/components/cockpit/campaign-pipeline";
 import { CanonCampaignsPanel } from "@/components/cockpit/canon-campaigns-panel";
+import { CreativeProposalPanel } from "@/components/cockpit/creative-proposal-panel";
 import { CampaignStateBadge } from "@/components/cockpit/operate-status-badge";
 import {
   Megaphone,
@@ -205,6 +206,9 @@ export default function CampaignsPage() {
 
       {/* Campagnes canon générées par le Pilier S (ADR-0119) */}
       <CanonCampaignsPanel />
+
+      {/* Proposition Créative — gate de génération de production (ADR-0120) */}
+      <CreativeProposalPanel />
 
       {/* Stat cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

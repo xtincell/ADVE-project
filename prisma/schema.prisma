@@ -782,6 +782,8 @@ model Strategy {
   consultingEngagements ConsultingEngagement[]
   // Phase 24 (ADR-0094) — canonical queryable projection of I-pillar initiatives.
   brandActions       BrandAction[]
+  // Phase 24 (ADR-0120) — Propositions Créatives (gate de génération de production).
+  creativeProposals  CreativeProposal[]
   notoriaPipeline    Json? // { currentStage, stages[], startedAt }
   jehutyCurations    JehutyCuration[]
   // ADR-0029 — back-relation for QuickIntake.convertedTo (FK SetNull on Strategy purge).
@@ -2438,6 +2440,41 @@ model CampaignBrief {
   @@index([campaignId])
   @@index([sourceIngestedId])
   @@index([brandAssetId])
+}
+
+// ── ADR-0120 — Proposition Créative (gate de génération de production) ───────────
+// Unité-gate du Nouveau Pipeline de Production. Produite soit par La Fusée (IA, Voie
+// A : Glory sequences + tools) soit par La Guilde (humain, Voie B : formulaire +
+// import image) — MÊME Data Contract (src/lib/types/creative-proposal.ts). Sa
+// VALIDATION (statut VALIDATED) déclenche la génération des actions + briefs de
+// production dans les frames canon, au niveau d'exécution (routeKey) choisi : le
+// trigger de création a déménagé de « Advertis complet » vers ici.
+model CreativeProposal {
+  id              String    @id @default(cuid())
+  strategyId      String
+  /// Niveau d'exécution choisi (ADR-0089 : CONSERVATIVE | TARGET | AMBITIOUS).
+  routeKey        String
+  /// LAFUSEE_AI (Voie A) | LAGUILDE_HUMAN (Voie B).
+  source          String    @default("LAFUSEE_AI")
+  /// DRAFT | SUBMITTED | VALIDATED | REJECTED.
+  status          String    @default("DRAFT")
+  /// Direction créative — { bigIdea, insight, axe, pistes[] } (Data Contract).
+  direction       Json
+  /// Snapshot computeRoadmapRoutes (les 3 niveaux d'exécution) au moment de la proposition.
+  executionLevels Json?
+  /// Visuels — { mockups: AssetRef[], socialSim: AssetRef[], keyVisual: AssetRef|null }.
+  visuals         Json?
+  /// Audit de validation / rejet.
+  validatedAt     DateTime?
+  validatedBy     String?
+  rejectedReason  String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  strategy Strategy @relation(fields: [strategyId], references: [id])
+
+  @@index([strategyId])
+  @@index([strategyId, status])
 }
 
 model CampaignReport {
