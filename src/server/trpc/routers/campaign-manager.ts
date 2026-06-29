@@ -155,6 +155,10 @@ export const campaignManagerRouter = createTRPCRouter({
         include: {
           strategy: true,
           missions: true,
+          // BrandAction = action stratégique canonique (ADR-0094/0119) rattachée
+          // à la campagne. Les `actions` (CampaignAction ATL/BTL/TTL) sont la
+          // couche média/exécution — affichée en second.
+          brandActions: { orderBy: [{ priority: "asc" }, { createdAt: "asc" }] },
           actions: { include: { executions: true } },
           amplifications: true,
           teamMembers: { include: { user: { select: { id: true, name: true, email: true, image: true } } } },
@@ -170,6 +174,39 @@ export const campaignManagerRouter = createTRPCRouter({
         },
       });
     }),
+
+  /** listBrandActions — actions stratégiques (BrandAction, ADR-0094/0119) liées à la campagne. */
+  listBrandActions: protectedProcedure
+    .input(z.object({ campaignId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      await enforceCampaignAccess(ctx, input.campaignId);
+      return ctx.db.brandAction.findMany({
+        where: { campaignId: input.campaignId },
+        orderBy: [{ priority: "asc" }, { createdAt: "asc" }],
+      });
+    }),
+
+  /** chainHealth — diagnostic de chaîne actions → briefs → missions (lecture seule). */
+  chainHealth: protectedProcedure
+    .input(z.object({ campaignId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      await enforceCampaignAccess(ctx, input.campaignId);
+      return cm.getCampaignChainHealth(input.campaignId);
+    }),
+
+  /** explodeActionToMission — éclate une BrandAction en brief + mission (gouverné, voie unique). */
+  explodeActionToMission: governedProcedure({
+    kind: "LEGACY_CAMPAIGN_MANAGER_EXPLODE_ACTION",
+    inputSchema: z.object({ brandActionId: z.string() }),
+    caller: "campaign-manager:explodeActionToMission",
+  }).mutation(async ({ ctx, input }) => {
+    const ba = await ctx.db.brandAction.findUniqueOrThrow({
+      where: { id: input.brandActionId },
+      select: { campaignId: true },
+    });
+    if (ba.campaignId) await enforceCampaignAccess(ctx, ba.campaignId);
+    return cm.explodeBrandActionToMission(input.brandActionId);
+  }),
 
   /** getKanban — grouped by state */
   getKanban: protectedProcedure

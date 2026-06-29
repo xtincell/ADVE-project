@@ -227,7 +227,8 @@ function OverviewTab({ campaignId, strategyId, state, onRefresh }: { campaignId:
   const [transitionError, setTransitionError] = useState<string | null>(null);
   const [generatingBrief, setGeneratingBrief] = useState(false);
 
-  const dashboardQuery = trpc.campaignManager.dashboard.useQuery({ strategyId });
+  // Diagnostic campaign-scoped (actions → briefs → missions) — source des stats.
+  const chainQuery = trpc.campaignManager.chainHealth.useQuery({ campaignId });
   const transitionsQuery = trpc.campaignManager.availableTransitions.useQuery({ state });
   const briefsQuery = trpc.campaignManager.listBriefs.useQuery({ campaignId });
   const missionsQuery = trpc.campaign.get.useQuery({ id: campaignId });
@@ -242,7 +243,7 @@ function OverviewTab({ campaignId, strategyId, state, onRefresh }: { campaignId:
     onSuccess: () => {
       briefsQuery.refetch();
       missionsQuery.refetch();
-      dashboardQuery.refetch();
+      chainQuery.refetch();
       onRefresh();
     },
   });
@@ -258,7 +259,10 @@ function OverviewTab({ campaignId, strategyId, state, onRefresh }: { campaignId:
     }
   });
 
-  const dashboard = dashboardQuery.data as Record<string, unknown> | null;
+  const chain = chainQuery.data as {
+    brandActions: number; brandActionsExploded: number; brandActionsPending: number;
+    briefs: number; missions: number; campaignActions: number;
+  } | null;
   const transitions = (transitionsQuery.data ?? []) as string[];
   const briefs = (briefsQuery.data ?? []) as Array<Record<string, unknown>>;
   const missions = ((missionsQuery.data as Record<string, unknown>)?.missions ?? []) as Array<Record<string, unknown>>;
@@ -268,20 +272,28 @@ function OverviewTab({ campaignId, strategyId, state, onRefresh }: { campaignId:
 
   return (
     <div className="space-y-5">
-      {/* Dashboard stats */}
-      {dashboard && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {[
-            { label: "Missions", value: dashboard.totalMissions ?? 0 },
-            { label: "Actions", value: dashboard.totalActions ?? 0 },
-            { label: "Depense", value: `${((dashboard.totalSpent as number) ?? 0).toLocaleString("fr-FR")} XAF` },
-            { label: "Score", value: dashboard.overallScore ?? "—" },
-          ].map((s) => (
-            <div key={s.label} className="rounded-lg border border-border bg-background/50 p-3">
-              <p className="text-2xs uppercase text-foreground-muted">{s.label}</p>
-              <p className="text-lg font-bold text-white">{String(s.value)}</p>
-            </div>
-          ))}
+      {/* Diagnostic de chaîne (campaign-scoped) : actions → briefs → missions */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {[
+          { label: "Actions strategiques", value: chain?.brandActions ?? 0 },
+          { label: "Eclatees en mission", value: `${chain?.brandActionsExploded ?? 0}/${chain?.brandActions ?? 0}` },
+          { label: "Briefs", value: chain?.briefs ?? 0 },
+          { label: "Missions", value: chain?.missions ?? 0 },
+        ].map((s) => (
+          <div key={s.label} className="rounded-lg border border-border bg-background/50 p-3">
+            <p className="text-2xs uppercase text-foreground-muted">{s.label}</p>
+            <p className="text-lg font-bold text-white">{String(s.value)}</p>
+          </div>
+        ))}
+      </div>
+      {chain && chain.brandActions === 0 && (
+        <div className="rounded-lg border border-warning/30 bg-warning/5 p-3 text-xs text-warning">
+          Aucune action strategique liee a cette campagne. Genere les campagnes canon depuis le Pilier S (page Campagnes → « Regenerer »), ou ajoute des actions via La Forge.
+        </div>
+      )}
+      {chain && chain.brandActions > 0 && chain.brandActionsExploded < chain.brandActions && (
+        <div className="rounded-lg border border-info/30 bg-info/5 p-3 text-xs text-info">
+          {chain.brandActionsPending} action(s) pas encore eclatee(s) en mission — onglet « Actions » → bouton « Eclater en mission ».
         </div>
       )}
 
@@ -413,7 +425,24 @@ function ActionsTab({ campaignId }: { campaignId: string }) {
   const [showCreate, setShowCreate] = useState(false);
   const [filter, setFilter] = useState<string>("ALL");
   const [newAction, setNewAction] = useState({ actionTypeSlug: "", name: "", budget: "" });
+  const [explodingId, setExplodingId] = useState<string | null>(null);
+  const utils = trpc.useUtils();
 
+  // ── PRIMAIRE : actions stratégiques (BrandAction, ADR-0094/0119) ──
+  const brandActionsQuery = trpc.campaignManager.listBrandActions.useQuery({ campaignId });
+  const explodeMut = trpc.campaignManager.explodeActionToMission.useMutation({
+    onSuccess: () => {
+      utils.campaignManager.listBrandActions.invalidate({ campaignId });
+      utils.campaignManager.chainHealth.invalidate({ campaignId });
+      utils.campaign.get.invalidate({ id: campaignId });
+      utils.campaignManager.listBriefs.invalidate({ campaignId });
+      setExplodingId(null);
+    },
+    onError: () => setExplodingId(null),
+  });
+  const brandActions = (brandActionsQuery.data ?? []) as Array<Record<string, unknown>>;
+
+  // ── SECONDAIRE : plan média / exécution (CampaignAction ATL/BTL/TTL) ──
   const actionsQuery = trpc.campaignManager.listActions.useQuery({ campaignId, category: filter === "ALL" ? undefined : filter as any });
   const typesQuery = trpc.campaignManager.getActionTypes.useQuery({ category: filter === "ALL" ? undefined : filter as any });
   const createMut = trpc.campaignManager.createAction.useMutation({
@@ -423,11 +452,77 @@ function ActionsTab({ campaignId }: { campaignId: string }) {
   const actions = (actionsQuery.data ?? []) as unknown as Array<Record<string, unknown>>;
   const actionTypes = (typesQuery.data ?? []) as unknown as Array<Record<string, unknown>>;
 
+  const PRIORITY_COLORS: Record<string, string> = {
+    P0: "bg-error/20 text-error", P1: "bg-warning/20 text-warning",
+    P2: "bg-info/15 text-info", P3: "bg-surface-raised text-foreground-secondary",
+  };
+
   return (
-    <div className="space-y-5">
-      {/* Filter bar */}
-      <div className="flex items-center justify-between">
-        <div className="flex gap-2">
+    <div className="space-y-6">
+      {/* ── PRIMAIRE : Actions stratégiques (BrandAction) ── */}
+      <Section title={`Actions strategiques (${brandActions.length})`} icon={Zap}>
+        <p className="-mt-2 mb-3 text-xs text-foreground-muted">
+          Issues du Pilier S/I, rattachées à cette campagne. « Éclater en mission » dérive un brief de production déterministe de l&apos;action et crée la mission.
+        </p>
+        {brandActionsQuery.isLoading ? (
+          <EmptyMsg text="Chargement..." />
+        ) : brandActions.length === 0 ? (
+          <EmptyState icon={Zap} title="Aucune action strategique liee" description="Genere les campagnes canon depuis le Pilier S (page Campagnes → « Regenerer ») pour rattacher les initiatives, ou cree des actions via La Forge." />
+        ) : (
+          <div className="space-y-2">
+            {brandActions.map((a) => {
+              const id = a.id as string;
+              const status = (a.status as string) ?? "PROPOSED";
+              const exploded = status === "SCHEDULED" || status === "EXECUTED";
+              const budget = (a.budgetMax ?? a.budgetMin) as number | null;
+              return (
+                <div key={id} className="rounded-lg border border-border bg-background/80 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {!!a.priority && <span className={`rounded px-1.5 py-0.5 text-2xs font-bold ${PRIORITY_COLORS[a.priority as string] ?? ""}`}>{a.priority as string}</span>}
+                        <h4 className="text-sm font-medium text-white">{a.title as string}</h4>
+                      </div>
+                      {!!a.description && <p className="mt-1 text-xs text-foreground-muted line-clamp-2">{a.description as string}</p>}
+                      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-2xs text-foreground-muted">
+                        {!!a.touchpoint && <span className="rounded bg-white/5 px-1.5 py-0.5">{a.touchpoint as string}</span>}
+                        {!!a.aarrrIntent && <span className="rounded bg-accent/15 px-1.5 py-0.5 text-accent">{a.aarrrIntent as string}</span>}
+                        {!!budget && <span>{budget.toLocaleString("fr-FR")} {(a.budgetCurrency as string) ?? "XAF"}</span>}
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-1.5">
+                      <StatusBadge status={status} />
+                      {exploded ? (
+                        <span className="flex items-center gap-1 text-2xs text-success"><CheckCircle className="h-3 w-3" /> Mission creee</span>
+                      ) : (
+                        <MiniBtn
+                          variant="primary"
+                          disabled={explodeMut.isPending}
+                          onClick={() => { setExplodingId(id); explodeMut.mutate({ brandActionId: id }); }}
+                        >
+                          {explodingId === id && explodeMut.isPending ? "Eclatement..." : "Eclater en mission"}
+                        </MiniBtn>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {explodeMut.isError && <p className="mt-2 text-xs text-error">{explodeMut.error.message}</p>}
+      </Section>
+
+      {/* ── SECONDAIRE : Plan média / exécution (CampaignAction) ── */}
+      <Section
+        title={`Plan media — execution (${actions.length})`}
+        icon={Layers}
+        action={<MiniBtn onClick={() => setShowCreate(true)} variant="primary"><span className="flex items-center gap-1"><Plus className="h-3 w-3" /> Ajouter</span></MiniBtn>}
+      >
+        <p className="-mt-2 mb-3 text-xs text-foreground-muted">
+          Couche d&apos;exécution média (achats ATL/BTL/TTL/Digital) — optionnelle, complémentaire aux actions stratégiques.
+        </p>
+        <div className="mb-3 flex gap-2">
           {["ALL", "ATL", "BTL", "TTL", "DIGITAL"].map((cat) => (
             <button
               key={cat}
@@ -438,37 +533,32 @@ function ActionsTab({ campaignId }: { campaignId: string }) {
             </button>
           ))}
         </div>
-        <MiniBtn onClick={() => setShowCreate(true)} variant="primary">
-          <span className="flex items-center gap-1"><Plus className="h-3 w-3" /> Ajouter</span>
-        </MiniBtn>
-      </div>
-
-      {/* Actions list */}
-      {actionsQuery.isLoading ? (
-        <EmptyMsg text="Chargement..." />
-      ) : actions.length === 0 ? (
-        <EmptyState icon={Zap} title="Aucune action" description="Ajoutez des actions ATL/BTL/TTL a cette campagne." action={{ label: "Ajouter une action", onClick: () => setShowCreate(true) }} />
-      ) : (
-        <div className="space-y-2">
-          {actions.map((a) => (
-            <div key={a.id as string} className="rounded-lg border border-border bg-background/80 p-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className={`rounded px-1.5 py-0.5 text-2xs font-bold ${a.category === "ATL" ? "bg-info/15 text-info" : a.category === "BTL" ? "bg-success/15 text-success" : a.category === "TTL" ? "bg-accent/15 text-accent" : "bg-warning/15 text-warning"}`}>
-                      {a.category as string}
-                    </span>
-                    <h4 className="text-sm font-medium text-white">{a.label as string}</h4>
+        {actionsQuery.isLoading ? (
+          <EmptyMsg text="Chargement..." />
+        ) : actions.length === 0 ? (
+          <EmptyMsg text="Aucune action media. Optionnel — ajoute des achats ATL/BTL/TTL si besoin." />
+        ) : (
+          <div className="space-y-2">
+            {actions.map((a) => (
+              <div key={a.id as string} className="rounded-lg border border-border bg-background/80 p-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className={`rounded px-1.5 py-0.5 text-2xs font-bold ${a.category === "ATL" ? "bg-info/15 text-info" : a.category === "BTL" ? "bg-success/15 text-success" : a.category === "TTL" ? "bg-accent/15 text-accent" : "bg-warning/15 text-warning"}`}>
+                        {a.category as string}
+                      </span>
+                      <h4 className="text-sm font-medium text-white">{a.label as string}</h4>
+                    </div>
+                    <p className="mt-1 text-xs text-foreground-muted">{a.typeCode as string}</p>
+                    {!!a.kpiTarget && <p className="mt-1 text-xs text-foreground-secondary">KPI: {String(a.kpiTarget)}</p>}
                   </div>
-                  <p className="mt-1 text-xs text-foreground-muted">{a.typeCode as string}</p>
-                  {!!a.kpiTarget && <p className="mt-1 text-xs text-foreground-secondary">KPI: {String(a.kpiTarget)}</p>}
+                  <StatusBadge status={(a.status as string) ?? "PLANNED"} />
                 </div>
-                <StatusBadge status={(a.status as string) ?? "PLANNED"} />
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </Section>
 
       {/* Create modal */}
       <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Nouvelle action" size="md">
