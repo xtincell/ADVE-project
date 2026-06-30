@@ -181,3 +181,93 @@ Trancher : (a) `ADVE`/`RTIS`/lettres de piliers — vocabulaire client approuvé
 ## Annexe — Couverture
 
 8 clusters audités, 50 pages + shell + composants `components/cockpit/**` lus intégralement (pages lourdes : campaigns/[id] 2326, missions 1844, rtis 1324, sources 973, briefs 864, campaigns 841, assets 752, forge 702, dashboard 639). Audit statique (UX/contenu/IA) — pas d'exécution de l'app, pas de revue de correction de code. Les concerns de gouvernance/rôle serveur sont signalés comme risques à vérifier côté backend.
+
+---
+---
+
+# PARTIE 2 — Audit de flow bout-en-bout (logique métier)
+
+> Méthode : 5 traces verticales des journeys fondateur **à travers toute la pile** — Cockpit UI → procédure tRPC → `mestor.emitIntent()` → gate / service / state-machine → Prisma → retour UI. Chaque trace audite la *continuité du flow*, la *lisibilité des gates*, la *fidélité état/feedback*, l'*honnêteté* (actions no-op / mensongères), la *fermeture des boucles*, et la *conformité aux règles métier canon*. Cette partie corrige aussi 2 affirmations de la Partie 1 (cf. ⚠️).
+
+## 🔴 LE constat transverse (confirmé par 3 traces indépendantes) — le cockpit est construit pour un OPÉRATEUR, pas pour le fondateur à qui il est vendu
+
+La boucle cœur du produit est **verrouillée `operatorProcedure`** : un fondateur (rôle `USER`, sans `operatorId`) reçoit `FORBIDDEN`.
+
+- **Amendement ADVE canonique** (`OPERATOR_AMEND_PILLAR`) = operator-only → la modale « Modifier » du fondateur ne peuple même pas sa liste de champs (`pillar.amend`/`previewAmend`/`listEditableFields` operator-only, `pillar.ts:1014,1046,1170`). Le fondateur est silencieusement renvoyé vers un chemin legacy (`pillar.updatePartial`, `brand/edit`) qui **contourne le gate de cohérence + la confirmation de réécriture destructive**.
+- **Toute la boucle recommandation→amendement** (Notoria accept/apply/reject, Jehuty `applyRecommendation`, R+T, pipeline) = operator-only (`notoria.ts:451,479,123,127,134`). **Les boutons Accepter/Appliquer sont AFFICHÉS au fondateur** (non masqués par rôle, juste `disabled` pendant la mutation, `notoria-page.tsx:575-600`) → le fondateur clique et reçoit un toast `FORBIDDEN` (« Action réservée aux opérateurs »).
+- **L'assembleur Oracle manual-first** (ADR-0071, le chemin canon — `oracle.assembleOracle`/`generateSection`/`retrySection`) = operator-only (`oracle.ts:70,104,139`).
+
+**Conséquence : la boucle de mission (mesure → recommandation → stratégie) ne peut PAS se fermer dans le portail fondateur.** Elle ne se ferme que pour un opérateur UPgraders. Le cockpit appelle d'ailleurs le fondateur « operator » un peu partout (`layout.tsx:48`).
+
+**Décision produit requise (la plus structurante de tout l'audit)** : soit (a) le fondateur EST censé piloter ces actions → le gating `operatorProcedure` doit devenir un gate de **propriété tenant** (le fondateur possède la stratégie) ; soit (b) il ne l'est pas → l'UI ne doit PAS afficher ces contrôles et doit montrer un état « votre équipe UPgraders s'en occupe ». Aujourd'hui c'est **le pire des deux** : contrôles affichés, puis `FORBIDDEN` au clic.
+
+## Verdicts par flow
+
+### Flow 1 — Onboarding → première marque : ⚠️ MOITIÉ
+- **Le funnel self-serve TIENT** : `/intake` → `quickIntake.complete` (score) → paywall PDF → `activateBrand` (seed ADVE via gateway `writePillar`) → `/register` (claim stub user) → dashboard peuplé. Bonne couture.
+- **Tout ce qui passe par `/cockpit/new` est cassé** :
+  - **[P0]** Retour d'abonnement payé → `/cockpit/new` **largue le contexte** : `result/page.tsx:435,446` envoie `?tier=&intake=` mais `new/page.tsx` n'a pas de `useSearchParams` → la marque diagnostiquée + payée disparaît, le fondateur ressaisit tout.
+  - **[P0]** **Boot Sequence = cul-de-sac dans le cockpit** : `/cockpit/new` démarre une session boot puis redirige vers `/cockpit/brand/identity?boot=…` (un `PillarPage` statique qui ignore le param) ; le wizard n'existe QUE dans Console. La promesse « vous serez guidé à travers le Boot Sequence » (`new/page.tsx:386`) n'est jamais tenue. `?boot=${sessionId}` vaut **toujours `"started"`** (pas de champ `sessionId` retourné).
+  - **[P1]** Nouvelle marque **score 0 / « Latent »** malgré données déclarées : `strategy.create` seed mais ne score jamais (`scoreObject` jamais appelé, `strategy.ts:81-90,666`).
+  - **[P1]** Dashboard zéro-strategy = **squelette perpétuel** (pas de garde, pas de CTA « créer ma marque »).
+  - **[P1]** `activateBrand` est un `publicProcedure` → la création Operator/User/Client/Strategy **ne traverse pas `emitIntent`** (bypass governance au point de conversion payant).
+
+### Flow 2 — Cascade ADVE→RTIS→Oracle : ⚠️ TIENT POUR OPÉRATEUR, FRACTURÉ POUR FONDATEUR
+- **Côté écriture = sain** : gateway, versioning, cascade de staleness, scoring déterministe, feedback réel.
+- **Côté autorisation + surfaçage = cassé** : voir le constat transverse (amend canonique / recos / assembleur Oracle operator-only).
+- **[P1]** La page RTIS **ne rend aucune staleness** : `pillar.getAll` n'expose pas `staleAt` et `computeCurrentPhase` traite un pilier stale-mais-VALIDATED comme fait → **après un edit ADVE, la page RTIS affiche « Cascade COMPLETE » alors que R/T/I/S sont stale en base** (exactement le drift qu'ADR-0069 a corrigé pour Notoria, pas ici). `rtis/page.tsx:478,552,369-398`.
+- **[P2]** Staleness absente aussi du dashboard home, des Livrables, des Assets → le fondateur peut exporter un livrable périmé sans le savoir.
+
+### Flow 3 — Stratégie → production (S→Forge→Campagne→Briefs→Missions) : 🔴 NE TIENT PAS
+- **[P0]** **La Forge tab-2 (composeur de livrables) ne produit RIEN** : `composer.ts:115` jette `previewOnly` (`void input.previewOnly;`) → toujours `status:"PREVIEW"`, zéro écriture DB, zéro forge ; aucune UI n'envoie `previewOnly:false`. Le bouton « Lancer la production (PREVIEW) » affiche ensuite un vert « Composition complétée » — **succès simulé d'un no-op**.
+- **[P0]** **« Confirmer et passer à 100% de confiance » = footgun mensonger** : `forceConfidence:true` réécrit `Pillar.confidence=1.0`/`VALIDATED` via `db.pillar.update` direct (`strategy.ts:811`) — **bypasse le gateway + `OPERATOR_AMEND_PILLAR`**, transforme un pilier à 5% de confiance en 100% sans validation réelle.
+- **[P0]** **Le stepper riche `CampaignPipeline` est du code mort** : monté seulement dans `CampaignDetailModal`, gardé par `selectedCampaign` qui n'est **jamais set** (`campaigns/page.tsx:73,426`) ; le clic carte fait `router.push`. La page détail réelle redéfinit ses propres badges (incohérents avec `operate-config`) et des boutons de transition nus **sans `approverId`** → chaque arête à approbation (BRIEF_DRAFT→VALIDATED, APPROVAL→READY_TO_LAUNCH, READY_TO_LAUNCH→LIVE) renvoie « nécessite une approbation » **sans aucun chemin pour approuver**.
+- **[P0]** **Fuite de rôle** : `mission.list` (`protectedProcedure`, sans garde de propriété) inclut toujours `commissions{grossAmount,netAmount,commissionAmount}` → le fondateur voit la rémunération brut/net des exécutants + verdicts QC + scores de matching talent (`missions/page.tsx:828-835,874,651`).
+- **[P1]** `campaignManager.transition` est `operatorProcedure`, pas `governedProcedure` → les mutations du state-machine 12 états **sautent `emitIntent`/hash-chain** (viole Loi 1 conservation d'altitude).
+- **[P1]** Trou du gate brief-obligatoire : « Nouveau brief mission » appelle `mission.create` **sans `campaignId`** → `assertCampaignHasBrief` ne se déclenche jamais.
+- **[P1]** 5 surfaces « créer du travail » qui se chevauchent sans flow guidé (Forge / Brief→Actions / Roadmap / Séquences / Campagnes).
+
+### Flow 4 — Boucle de mesure → apprentissage : ⚠️ SE FERME POUR OPÉRATEUR, DEAD-END POUR FONDATEUR
+- ⚠️ **Correction Partie 1 (bonne nouvelle)** : les mécaniques pivots Phase 23 sont **réellement câblées sur de la vraie donnée** — Overton consomme le connecteur Tarsis **dé-mocké** (digests RSS réels, états DEGRADED/DEFERRED honnêtes), l'attribution superfan + la communauté utilisent des états `INSUFFICIENT_DATA`/vides honnêtes. **Le placebo Jaccard a disparu du chemin Overton canon.**
+- **[P0]** **Fabrication sur la surface la plus visible** : le **Devotion Ladder du dashboard home** rend des pourcentages **codés en dur** (35/25/20/12/5/3 %) comme distribution communautaire réelle, alors que la procédure renvoie honnêtement `null` (`page.tsx:162-169`). Violation directe « ne jamais inventer de données ».
+- **[P1]** Boucle = dead-end fondateur (constat transverse).
+- **[P1]** L'entonnoir AARRR terrain **somme les rapports NON validés** dans les totaux de tête (`getOperationalSummary`, `campaign-tracker.ts:924-932`) alors que le pair `getUnifiedAARRR` filtre VALIDATED.
+- **[P1]** `reportFieldProgress` fait un `db.campaignFieldReport.create` direct **sans `emitIntent`** alors que l'en-tête du routeur affirme « aucune mutation directe DB » (gap d'honnêteté Yggdrasil Q1).
+- **[P2]** Benchmarks : radar 8-piliers + top-performer **fabriqués depuis une formule sur les codes de caractères** à partir d'un seul scalaire réel (mitigé par la mention « données simulées »).
+
+### Flow 5 — Échange de valeur (livrable × tier × paiement) : 🔴 NE TIENT PAS
+- ⚠️ **Correction Partie 1** : l'export PDF Oracle (`/api/export/oracle/.../pdf`) ET le PDF de la fiche livrable (`deliverables/[key]`, jsPDF) sont **réels**, pas cassés. Seuls le bouton « PDF » des Rapports (→ `.txt`) et le « Télécharger le livrable complet » de la liste (→ JSON) sont mal-étiquetés.
+- **[P0]** **« Que paie le fondateur ? » sans réponse** : le paywall ne garde que 2 radars périphériques (`overtonSignal`, `getCommunityDashboard`) tandis que l'Oracle, son PDF, les briefs, la Forge, le RTIS, les share-links sont **tous gratuits** (`checkPaidTier` absent de `glory.ts`/`strategy-presentation.ts`).
+- **[P0]** **Le flow paiement manuel WhatsApp implique un accès non accordé** : `pricing-grid.tsx:62` redirige vers WhatsApp **sans dire** que l'abonnement est `pending_manual` et ne débloque rien avant validation opérateur (le serveur est honnête, l'UI ne le dit jamais). Viole le canon « ne jamais impliquer un accès non accordé ».
+- **[P0]** **Aucune surface d'abonnement dans le cockpit** : impossible de voir statut / pending / échéance / facture / résiliation. `payment.mySubscriptions` existe mais **aucune UI ne le consomme** ; Settings = session+langue+logout.
+- **[P1]** Les rails Stripe / mobile-money (`payment.initSubscription`) sont **inatteignables depuis l'UI** (seul `initManualSubscription` est câblé) → tout le monde est entonné vers WhatsApp manuel.
+- **[P2 / sécurité]** **IDOR** : `/api/export/oracle/[strategyId]/pdf` vérifie l'auth mais **pas la propriété** → tout utilisateur connecté peut télécharger l'Oracle de n'importe quelle stratégie par ID.
+
+## Patterns systémiques (couche flow) — distincts des 4 de la Partie 1
+
+1. **Mur d'autorisation opérateur/fondateur** — la boucle cœur est operator-only ; contrôles affichés puis `FORBIDDEN`. *(le plus structurant)*
+2. **Actions no-op / mensongères** — composeur Forge (succès simulé), footgun « 100% confiance », PDF→txt, export liste→JSON, modale `CampaignPipeline` morte.
+3. **Bypass governance aux coutures clés** — `activateBrand` (publicProcedure, conversion payante), `transition` (operatorProcedure non governed), `reportFieldProgress` (db direct, prétend hash-chain), `forceConfidence` + Forge (db.pillar.update direct hors gateway).
+4. **Gates illisibles / insatisfiables** — transitions campagne à approbation sans UI d'approbation ; veto cascade RTIS silencieux (mutations sans `onError`) ; tier-gate en `null` silencieux au lieu de CTA upgrade ; « validation S » qui est un footgun, pas un gate.
+5. **Fidélité état/feedback** — staleness non surfacée (page RTIS ment « COMPLETE », dashboard/livrables/assets) ; nouvelle marque non scorée « Latent ».
+6. **Données fabriquées sur surfaces de tête** — devotion ladder dashboard (P0), benchmarks (P2).
+7. **Fuite de rôle** — commissions/QC/matching crew dans le portail fondateur.
+8. **Coutures de handoff cassées** — funnel→cockpit (chemin payé), Boot Sequence (console-only), 2 trackers sans cross-link.
+
+## Addendum remédiation (flow) — priorité par blocage de boucle
+
+**Lot A — Débloquer la boucle fondateur (décision produit + auth)** : trancher founder-EST-opérateur ou non (constat transverse) ; si oui → re-gater `OPERATOR_AMEND_PILLAR` / `notoria.*` / `oracle.*` sur la **propriété tenant** ; si non → masquer ces contrôles + montrer « pris en charge par UPgraders ». Sans ça, le produit ne boucle pas pour son utilisateur.
+
+**Lot B — Arrêter les actions mensongères** : implémenter ou désactiver le composeur Forge (pas de vert « complété » sur un no-op) ; supprimer le footgun « 100% confiance » (router via gateway, ne forcer que le statut) ; corriger les libellés PDF/JSON ; supprimer la modale `CampaignPipeline` morte et **monter le stepper sur la page détail** + fournir un flow d'approbation.
+
+**Lot C — Refermer les bypass governance** : `activateBrand` + `transition` + `reportFieldProgress` + `forceConfidence` → via `emitIntent`/gateway.
+
+**Lot D — Honnêteté & feedback** : devotion ladder → EmptyState si pas de donnée ; staleness sur page RTIS + dashboard + livrables ; `onError` sur les actions batch ; scorer la marque à la création ; surfacer le statut d'abonnement + l'état `pending_manual` ; garde de propriété sur l'export Oracle (IDOR).
+
+**Lot E — Couture onboarding** : `/cockpit/new` lit `?intake=` (promeut la marque payée) ; construire le wizard Boot Sequence côté cockpit (ou retirer la promesse) ; garde zéro-strategy → CTA.
+
+**Lot F — Rôle & IA** : sortir commissions/QC/matching du portail fondateur ; clarifier le flow des 5 surfaces « produire ».
+
+## Annexe Partie 2 — Couverture flow
+
+5 traces verticales, lecture directe des couches : routeurs tRPC (`pillar`/`notoria`/`oracle`/`strategy`/`mission`/`campaign-manager`/`campaign-tracker`/`payment`/`cockpit-router`), gateway (`pillar-gateway`), gates (`governed-procedure`, `brief-gate`, `state-machine`, `tier-gate`), services (`operator-amend`, `notoria/lifecycle`, `boot-sequence`, `deliverable-orchestrator`/`composer`, `seshat/tarsis/connector`, `subscription-cycles`), + UI cockpit correspondante. Conformité C5 (`no-bare-pillar-content-write.test.ts`) vérifiée. Les corrections ⚠️ de la Partie 1 (PDF Oracle/livrable réels ; pivots Phase 23 sur vraie donnée) proviennent de traces directes de ces chemins. Risques de propriété/rôle serveur signalés là où la garde tenant manque (`mission.list`, export Oracle).
