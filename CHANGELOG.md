@@ -10,6 +10,20 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.71 — feat(ptah): OpenAI = générateur d'image exclusif (gpt-image-1, synchrone) (2026-06-30)
+
+Décision opérateur : **« l'API de génération d'image, c'est OpenAI exclusivement »**. Câble OpenAI Images comme provider Ptah canonique pour `forgeKind` image/icon (édition/vidéo/audio restent Magnific — ce n'est pas de la génération d'image). Débloque la forge d'images (était toute DEFERRED/mockée) + la future variante graphique de la Bible de Marque.
+
+- **Provider `openai`** : modèle `gpt-image-1` (vérifié **en live** sur le compte : dall-e-2/3 indisponibles, `response_format` rejeté → l'API renvoie du b64). Surchargeable `OPENAI_IMAGE_MODEL`, auth `OPENAI_API_KEY`.
+- **Synchrone** (pas de webhook) : nouveau flag `ForgeProvider.sync` → `forge()` génère + persiste l'image, pose l'URL dans `providerTaskId`, et `materializeBrief` **réconcilie inline** (markCompleted + AssetVersion + BrandAsset). `reconcile()` écho l'URL.
+- **Persistance b64 dual-mode** : `BLOB_STORAGE_PUT_URL_TEMPLATE` set → PUT binaire (mécanisme download-archiver) → URL durable ; sinon → **data URL** self-contained (marche out-of-box, jsPDF/`<img>` l'affichent). Zéro dépendance storage pour démarrer.
+- **Routing** : `KIND_TO_PROVIDER` image/icon → `["openai"]` **exclusif**.
+- **Robustesse ship-able sans clés (ADR-0021)** — corrige un angle mort de #386 : `selectProvider` LÈVE `NoAvailableProviderError` quand aucun provider du kind n'est configuré (la garde post-sélection de #386 était inatteignable). `materializeBrief` catch désormais ce throw → forge **différée** (task tracée + retriable) au lieu de crasher ; garde morte retirée.
+
+Test `ptah-openai-image-provider.test.ts` (enregistrement + sync + isAvailable + routing exclusif + deferral sans clé). Cap APOGEE 7/7 (OpenAI = provider, pas Neter). **tsc 0 · eslint 0 · 2342 tests verts**.
+
+---
+
 ## v6.27.70 — feat(artemis): Bible de Marque — deck 16:9 téléchargeable (2ᵉ livrable) (2026-06-30)
 
 Sort le **2ᵉ livrable canonique** (après l'Oracle) : la **Bible de Marque**, compilation des Glory tools BRAND-layer (séquence **BRANDBOOK-D**) en deck **16:9 téléchargeable**. Construit en réutilisant l'existant au maximum :
