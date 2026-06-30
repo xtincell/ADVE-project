@@ -159,13 +159,16 @@ export default function CockpitDashboard() {
   const cultIndex = Math.round(composite / 2);
 
   const devotion = devotionQuery.data;
+  // Honnêteté des données (canon : ne jamais inventer de données) — aucune
+  // distribution fabriquée tant qu'il n'y a pas de donnée réelle de communauté.
+  const hasDevotion = devotion != null;
   const devotionValues = {
-    spectateur: devotion?.spectateur ?? 35,
-    interesse: devotion?.interesse ?? 25,
-    participant: devotion?.participant ?? 20,
-    engage: devotion?.engage ?? 12,
-    ambassadeur: devotion?.ambassadeur ?? 5,
-    evangeliste: devotion?.evangeliste ?? 3,
+    spectateur: devotion?.spectateur ?? 0,
+    interesse: devotion?.interesse ?? 0,
+    participant: devotion?.participant ?? 0,
+    engage: devotion?.engage ?? 0,
+    ambassadeur: devotion?.ambassadeur ?? 0,
+    evangeliste: devotion?.evangeliste ?? 0,
   };
 
   const missions = missionsQuery.data ?? [];
@@ -417,7 +420,7 @@ export default function CockpitDashboard() {
           {showSection("devotion") && (
             <div className="ck-card">
               <div className="ck-card__head">
-                <h3 className="ck-card__t">Devotion Ladder</h3>
+                <h3 className="ck-card__t">Échelle d'engagement</h3>
                 <span className="ck-card__sub"><Heart />{superfanCountQuery.data?.active ?? 0} superfans actifs</span>
               </div>
               {devotionQuery.isLoading ? (
@@ -426,8 +429,10 @@ export default function CockpitDashboard() {
                     <div key={i} className="h-6 animate-[shimmer_2s_linear_infinite] rounded-full bg-surface-overlay" />
                   ))}
                 </div>
-              ) : (
+              ) : hasDevotion ? (
                 <DevotionLadder {...devotionValues} variant="pyramid" />
+              ) : (
+                <p className="ck-presc__empty">Pas encore de données de communauté — l&apos;échelle d&apos;engagement apparaîtra dès les premières interactions mesurées.</p>
               )}
             </div>
           )}
