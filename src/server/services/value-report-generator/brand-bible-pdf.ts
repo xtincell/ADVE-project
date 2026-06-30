@@ -22,7 +22,7 @@
  */
 
 import { jsPDF } from "jspdf";
-import { compileDeliverable } from "@/server/services/artemis/tools/deliverable-compiler";
+import { compileDeliverable, type DeliverableManifest } from "@/server/services/artemis/tools/deliverable-compiler";
 import { getSequence } from "@/server/services/artemis/tools/sequences";
 import { getGloryTool } from "@/server/services/artemis/tools/registry";
 
@@ -53,8 +53,11 @@ export interface BrandBiblePdfResult {
  * Rend la Bible de Marque en PDF 16:9. Réutilise les sorties Glory persistées
  * de la séquence BRANDBOOK-D. Renvoie un Buffer + métadonnées de complétude.
  */
-export async function exportBrandBibleAsPdf(strategyId: string): Promise<BrandBiblePdfResult> {
-  const manifest = await compileDeliverable(strategyId, "BRANDBOOK-D");
+export async function exportBrandBibleAsPdf(
+  strategyId: string,
+  opts?: { manifestOverride?: DeliverableManifest },
+): Promise<BrandBiblePdfResult> {
+  const manifest = opts?.manifestOverride ?? (await compileDeliverable(strategyId, "BRANDBOOK-D"));
   const seq = getSequence("BRANDBOOK-D");
   if (!seq) throw new Error("brand-bible: séquence BRANDBOOK-D introuvable");
 
@@ -147,13 +150,14 @@ function renderSectionSlide(
   doc.setFontSize(34);
   doc.text(truncate(s.title, 52), MARGIN, 100);
 
-  // Corps : contenu rendu, ou empty-state honnête.
-  const top = 196;
-  if (s.content == null) {
-    renderEmptyState(doc, top);
-  } else {
-    renderContent(doc, s.content, top);
-  }
+  // Corps : PLANCHE VISUELLE — cadre placeholder (image forgée OU prompt prêt)
+  // à gauche + directions du brief à droite. C'est la « mise en forme » : chaque
+  // planche porte son PROMPT laser dans le cadre, en attendant la forge
+  // gpt-image-1 (l'opérateur accepte les fails image → placeholder visible).
+  const prompt = buildPlatePrompt(s.title, s.content);
+  const forged = extractImageDataUrl(s.content);
+  renderVisualFrame(doc, MARGIN, 168, 684, H - 168 - 78, prompt, forged);
+  renderCaption(doc, 792, 196, W - 792 - MARGIN, s.content);
 
   // Pied de page : numéro + branding.
   doc.setTextColor(...C.muted);
@@ -166,52 +170,127 @@ function renderSectionSlide(
   doc.rect(MARGIN, H - 58, 48, 4, "F");
 }
 
-function renderEmptyState(doc: jsPDF, top: number): void {
-  doc.setTextColor(...C.muted);
-  doc.setFont("helvetica", "italic");
-  doc.setFontSize(22);
-  doc.text("Section à générer.", MARGIN, top + 12);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(16);
-  doc.text(
-    "Lance la séquence BRANDBOOK-D depuis le Cockpit pour produire ce volet.",
-    MARGIN,
-    top + 48,
-  );
+/** Prompt laser-focus de la planche (placeholder lisible si pas d'image forgée). */
+function buildPlatePrompt(title: string, content: Record<string, unknown> | null): string {
+  const base = `Planche « ${title} » — direction artistique de marque, rendu premium FMCG, cohérent avec l'identité VERROUILLÉE (logo, palette, système graphique, KV maître). Ne pas réinventer : enrichir la planche précédente.`;
+  if (!content) return `${base}\nÉléments : brief à générer (séquence BRANDBOOK-D).`;
+  const directions = flatten(content, 0)
+    .filter((l) => l.kind === "text")
+    .map((l) => l.text.replace(/^•\s*/, "").trim())
+    .filter(Boolean)
+    .slice(0, 6)
+    .join(" · ");
+  return directions ? `${base}\nÉléments obligatoires : ${directions}.` : base;
 }
 
-/**
- * Aplati le contenu Glory (JSON structuré) en lignes lisibles puis le pose sur
- * la slide. Cap de hauteur : ce qui dépasse est tronqué avec un repère « … ».
- */
-function renderContent(doc: jsPDF, content: Record<string, unknown>, top: number): void {
-  const lines = flatten(content, 0);
-  const maxWidth = W - MARGIN * 2;
-  const lineH = 22;
-  let y = top;
-  const bottom = H - 80;
+/** Détecte une image forgée (data URL ou http) attachée au contenu du brief. */
+function extractImageDataUrl(content: Record<string, unknown> | null): string | null {
+  if (!content) return null;
+  for (const key of ["imageUrl", "image", "forgedImageUrl", "url", "fileUrl"]) {
+    const v = content[key];
+    if (typeof v === "string" && /^(data:image\/|https?:\/\/)/.test(v)) return v;
+  }
+  return null;
+}
 
-  for (const ln of lines) {
-    if (y > bottom) {
+/** Cadre visuel : image forgée si dispo, sinon placeholder avec le PROMPT prêt. */
+function renderVisualFrame(
+  doc: jsPDF,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  prompt: string,
+  forgedUrl: string | null,
+): void {
+  if (forgedUrl) {
+    try {
+      const fmt = forgedUrl.includes("image/jpeg") || /\.jpe?g/i.test(forgedUrl) ? "JPEG" : "PNG";
+      doc.addImage(forgedUrl, fmt, x, y, w, h, undefined, "FAST");
+      doc.setDrawColor(...C.panda);
+      doc.setLineWidth(1.5);
+      doc.rect(x, y, w, h, "S");
+      return;
+    } catch {
+      /* image illisible → placeholder ci-dessous */
+    }
+  }
+  // Placeholder « cadre vide » avec le prompt dans le cadre.
+  doc.setFillColor(...C.white);
+  doc.setDrawColor(...C.corail);
+  doc.setLineWidth(2);
+  doc.rect(x, y, w, h, "FD");
+  doc.setFillColor(...C.corail);
+  doc.rect(x, y, 300, 32, "F");
+  doc.setTextColor(...C.white);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.text("VISUEL À FORGER · gpt-image-1 (1K)", x + 12, y + 21);
+  doc.setTextColor(...C.ink);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.text("PROMPT", x + 18, y + 68);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(12);
+  let ty = y + 90;
+  for (const para of prompt.split("\n")) {
+    for (const ln of doc.splitTextToSize(para, w - 36) as string[]) {
+      if (ty > y + h - 18) {
+        doc.setTextColor(...C.muted);
+        doc.text("…", x + 18, ty);
+        return;
+      }
+      doc.text(ln, x + 18, ty);
+      ty += 18;
+    }
+    ty += 6;
+  }
+}
+
+/** Directions du brief, condensées en colonne (à droite de la planche). */
+function renderCaption(
+  doc: jsPDF,
+  x: number,
+  y: number,
+  w: number,
+  content: Record<string, unknown> | null,
+): void {
+  doc.setTextColor(...C.corail);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.text("DIRECTIONS DU BRIEF", x, y);
+  let ty = y + 26;
+  const bottom = H - 80;
+  if (!content) {
+    doc.setTextColor(...C.muted);
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(12);
+    for (const ln of doc.splitTextToSize("Brief à générer (séquence BRANDBOOK-D).", w) as string[]) {
+      doc.text(ln, x, ty);
+      ty += 16;
+    }
+    return;
+  }
+  for (const ln of flatten(content, 0)) {
+    if (ty > bottom) {
       doc.setTextColor(...C.muted);
       doc.setFont("helvetica", "italic");
-      doc.setFontSize(14);
-      doc.text("… (détail complet dans le vault de marque)", MARGIN, y);
+      doc.setFontSize(11);
+      doc.text("… (détail dans le vault)", x, ty);
       return;
     }
     const isLabel = ln.kind === "label";
     const col = isLabel ? C.corail : C.ink;
     doc.setTextColor(col[0], col[1], col[2]);
     doc.setFont("helvetica", isLabel ? "bold" : "normal");
-    doc.setFontSize(isLabel ? 17 : 15);
-    const indent = MARGIN + ln.depth * 24;
-    const wrapped = doc.splitTextToSize(ln.text, maxWidth - ln.depth * 24) as string[];
-    for (const w of wrapped) {
-      if (y > bottom) break;
-      doc.text(w, indent, y);
-      y += lineH;
+    doc.setFontSize(isLabel ? 12 : 11);
+    const indent = x + ln.depth * 12;
+    for (const wln of doc.splitTextToSize(ln.text, w - ln.depth * 12) as string[]) {
+      if (ty > bottom) break;
+      doc.text(wln, indent, ty);
+      ty += 15;
     }
-    if (isLabel) y += 4;
+    if (isLabel) ty += 2;
   }
 }
 
