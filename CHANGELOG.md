@@ -10,6 +10,17 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.73 — feat(artemis): bible de marque — planches visuelles (placeholder + prompt) (2026-07-01)
+
+Sur demande opérateur (« c'est la mise en forme qui m'intéresse, mets des placeholders avec le prompt dans le cadre »). Le deck 16:9 de la Bible de Marque passe de slides texte à **planches visuelles** : chaque planche = un cadre placeholder **« VISUEL À FORGER · gpt-image-1 (1K) »** contenant le **PROMPT laser** de la planche (gauche) + colonne **« DIRECTIONS DU BRIEF »** (droite). Si une image forgée est attachée au brief (data URL / http), elle est **embarquée** dans le cadre à la place du placeholder.
+
+- `buildPlatePrompt` (prompt laser dérivé du brief, rappelle l'identité verrouillée « enrichir pas réinventer ») · `extractImageDataUrl` (embarque l'image forgée, jsPDF `addImage`) · `renderVisualFrame`/`renderCaption` (remplacent le rendu texte plein cadre).
+- `exportBrandBibleAsPdf(strategyId, { manifestOverride })` — rend un deck depuis un manifest fourni (démos / sources alternatives, sans DB).
+
+Échantillon « Mammy Watta » généré + livré à l'opérateur (13 planches). Cap APOGEE 7/7. **tsc 0 · eslint 0 · brand-bible tests verts.**
+
+---
+
 ## v6.27.72 — feat(ptah): gpt-image-1/2 + fix(llm-gateway) embeddings Ollama-aware (2026-06-30)
 
 Deux réglages modèles externes (directive opérateur) :
