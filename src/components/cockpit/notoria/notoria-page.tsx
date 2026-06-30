@@ -447,7 +447,7 @@ export function NotoriaPage() {
         <div className="ck-nz__health-head">
           <div className="ck-nz__brand">
             <span className="ck-nz__brand-ic"><Sparkles /></span>
-            <h1>Notoria</h1>
+            <h1>Recommandations</h1>
             <span className="ck-nz__brand-sub">Moteur de Recommandation</span>
           </div>
           {totalPending > 0 && <span className="ck-nz__pending-pill">{totalPending} en attente</span>}

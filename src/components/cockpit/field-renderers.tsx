@@ -92,7 +92,7 @@ const LABELS: Record<string, string> = {
   kpiDashboard: "KPI Dashboard", teamStructure: "Equipe mobilisee",
   budgetBreakdown: "Ventilation budget",
   // ── ADR-0037 PR-K — nouveaux fields canon manuel ADVE ──
-  messieFondateur: "Le Messie", competencesDivines: "Competences Divines",
+  messieFondateur: "Figure fondatrice", competencesDivines: "Compétences clés",
   preuvesAuthenticite: "Preuves d'authenticite", indexReputation: "Index de reputation",
   eNps: "eNPS", turnoverRate: "Turnover interne",
   missionStatement: "Mission Statement", originMyth: "Origin Myth",

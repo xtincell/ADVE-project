@@ -132,7 +132,7 @@ export default function CockpitDashboard() {
   if (strategyQuery.error) {
     return (
       <div className="ck-dash">
-        <h1 className="ck-ph__title">Cult Dashboard</h1>
+        <h1 className="ck-ph__title">Tableau de bord</h1>
         <div className="rounded-xl border border-destructive-subtle bg-destructive-subtle/20 p-6 text-center">
           <AlertTriangle className="mx-auto h-8 w-8 text-destructive" />
           <p className="mt-2 text-sm text-destructive">
@@ -274,7 +274,7 @@ export default function CockpitDashboard() {
       <div className="ck-ph">
         <div>
           <p className="ck-ph__bc">Cockpit / Dashboard</p>
-          <h1 className="ck-ph__title">Cult Dashboard</h1>
+          <h1 className="ck-ph__title">Tableau de bord</h1>
           <p className="ck-ph__desc">Marque : <span className="em">{strategy?.name ?? "…"}</span></p>
         </div>
         <div className="ck-views">
@@ -368,7 +368,7 @@ export default function CockpitDashboard() {
           {/* KPI grid */}
           <div className="ck-grid ck-grid--kpi">
             <div className="ck-kpi">
-              <div className="ck-kpi__top"><span className="ck-kpi__lbl">Cult Index</span><span className="ck-kpi__spark"><Sparkline data={cultTrend} width={60} height={20} /></span></div>
+              <div className="ck-kpi__top"><span className="ck-kpi__lbl">Indice d'attachement</span><span className="ck-kpi__spark"><Sparkline data={cultTrend} width={60} height={20} /></span></div>
               <p className="ck-kpi__val">{cultIndexQuery.data?.current ?? cultIndex}<span className="m">/100</span></p>
               {(() => {
                 const d = cultIndexQuery.data?.delta ?? 0;
@@ -437,7 +437,7 @@ export default function CockpitDashboard() {
       {/* Prescriptions Mestor */}
       {showSection("prescriptions") && (
         <div className="ck-presc">
-          <div className="ck-presc__head"><Brain /><h3>Prescriptions Mestor</h3><AiBadge /></div>
+          <div className="ck-presc__head"><Brain /><h3>Recommandations</h3><AiBadge /></div>
           {mestorInsightsQuery.isLoading ? (
             <div className="space-y-2">
               {Array.from({ length: 3 }).map((_, i) => (
@@ -476,7 +476,7 @@ export default function CockpitDashboard() {
               })}
             </div>
           ) : (
-            <p className="ck-presc__empty">Aucune prescription active — Mestor surveille votre marque.</p>
+            <p className="ck-presc__empty">Aucune recommandation active — l'assistant surveille votre marque.</p>
           )}
         </div>
       )}
@@ -584,7 +584,7 @@ function BatchActionsBar({ strategyId }: { strategyId: string }) {
           <span className="block">
             <strong className="block text-2xs font-bold text-accent">Enrichir ADVE</strong>
             <span className="mt-0.5 block text-2xs leading-snug">
-              Auto-remplit les 4 piliers fondateurs (Authenticité, Distinction, Valeur, Engagement) via vault de documents, calculs déductifs, puis IA pour les champs restants. Ne touche pas RTIS.
+              Auto-remplit les 4 piliers fondateurs (Authenticité, Distinction, Valeur, Engagement) via vault de documents, calculs déductifs, puis IA pour les champs restants. Ne touche pas les piliers dérivés.
             </span>
           </span>
         }
@@ -602,7 +602,7 @@ function BatchActionsBar({ strategyId }: { strategyId: string }) {
           <span className="block">
             <strong className="block text-2xs font-bold text-info">Lancer R + T</strong>
             <span className="mt-0.5 block text-2xs leading-snug">
-              Déclenche la cascade RTIS depuis ADVE : R (analyse risques + SWOT), T (triangulation marché via Market Intelligence), puis recos pour enrichir ADVE en retour. Requiert ADVE ENRICHED minimum.
+              Déclenche l'analyse stratégique (Risque, Marché) puis génère des recommandations pour enrichir votre fondation de marque. Requiert une fondation au moins enrichie.
             </span>
           </span>
         }
@@ -620,7 +620,7 @@ function BatchActionsBar({ strategyId }: { strategyId: string }) {
           <span className="block">
             <strong className="block text-2xs font-bold text-foreground">Enrichir depuis Sources</strong>
             <span className="mt-0.5 block text-2xs leading-snug">
-              Scanne les BrandDataSource (PDF, sites web, briefs ingérés) pour générer des recommandations granulaires sur tous les piliers. Les recos PENDING apparaissent dans Notoria pour validation.
+              Scanne vos sources (PDF, sites web, briefs ingérés) pour générer des recommandations granulaires sur tous les piliers. Les recommandations en attente apparaissent dans le panneau Recommandations pour validation.
             </span>
           </span>
         }

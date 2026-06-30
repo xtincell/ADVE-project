@@ -85,7 +85,7 @@ export function NotoriaStatusDock() {
       <button
         type="button"
         onClick={() => setExpanded(true)}
-        title="Notoria — moteur de recommandation"
+        title="Recommandations — votre moteur de reco"
         className="fixed bottom-4 right-4 z-40 flex items-center gap-2 rounded-full border border-white/10 bg-surface-raised/95 px-3 py-2 shadow-xl backdrop-blur transition-colors hover:bg-surface-raised"
       >
         <span className="relative flex h-2 w-2">
@@ -103,7 +103,7 @@ export function NotoriaStatusDock() {
           }`} />
         </span>
         <Sparkles className="h-3.5 w-3.5 text-warning" />
-        <span className="text-xs font-semibold text-white">Notoria</span>
+        <span className="text-xs font-semibold text-white">Recommandations</span>
         {totalPending > 0 ? (
           <span className="rounded-full bg-warning/20 px-1.5 py-0.5 text-2xs font-bold text-warning">
             {totalPending}
@@ -120,7 +120,7 @@ export function NotoriaStatusDock() {
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-warning" />
-          <span className="text-sm font-bold text-white">Notoria</span>
+          <span className="text-sm font-bold text-white">Recommandations</span>
           <span className="text-2xs text-foreground-muted">moteur de reco</span>
           {isLoading ? <Loader2 className="h-3 w-3 animate-spin text-info" /> : null}
         </div>

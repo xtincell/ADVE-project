@@ -174,9 +174,9 @@ export const fr = {
   "nav.pillar-i.role": "Potentiel",
   "nav.pillar-s.name": "Stratégie (S)",
   "nav.pillar-s.role": "Stratégie",
-  "nav.jehuty": "Jehuty",
-  "nav.jehuty.sub": "Organe de presse",
-  "nav.notoria": "Notoria",
+  "nav.jehuty": "La Gazette",
+  "nav.jehuty.sub": "Veille & signaux",
+  "nav.notoria": "Recommandations",
   "nav.notoria.sub": "Moteur de recommandation",
 
   // ── Landing — barre de navigation ────────────────────────────────────
