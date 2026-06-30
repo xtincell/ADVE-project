@@ -271,31 +271,51 @@ export const _recordProviderSuccessForTest: (provider: LLMProvider) => void = re
 export const _CIRCUIT_BREAKER_THRESHOLD_FOR_TEST = CIRCUIT_BREAKER_THRESHOLD;
 export const _CIRCUIT_BREAKER_RESET_MS_FOR_TEST = CIRCUIT_BREAKER_RESET_MS;
 
-// Model name mapping for OpenAI fallback
+// Model name mapping for OpenAI fallback.
+// CORRECTION résilience : les anciennes valeurs `gpt-5.5` / `gpt-5.5-mini`
+// cassaient le fallback — `gpt-5.5-mini` n'existe pas (404 "model does not
+// exist") et `gpt-5.5` rejette `max_tokens` (400, exige `max_completion_tokens`
+// que le SDK n'envoie pas via maxOutputTokens). Résultat : quand Anthropic
+// tombait (ex. crédits épuisés), TOUTE requête LLM échouait au lieu de basculer.
+// gpt-4o / gpt-4o-mini sont confirmés 200 avec le chemin d'appel courant.
 const OPENAI_MODEL_MAP: Record<string, string> = {
-  "claude-sonnet-4-20250514": "gpt-5.5",
-  "claude-sonnet-4-6": "gpt-5.5",
-  "claude-opus-4-6": "gpt-5.5",
-  "claude-opus-4-20250514": "gpt-5.5",
-  "claude-haiku-4-5": "gpt-5.5-mini",
-  "claude-haiku-4-5-20251001": "gpt-5.5-mini",
+  "claude-sonnet-4-20250514": "gpt-4o",
+  "claude-sonnet-4-6": "gpt-4o",
+  "claude-opus-4-6": "gpt-4o",
+  "claude-opus-4-7": "gpt-4o",
+  "claude-opus-4-8": "gpt-4o",
+  "claude-opus-4-20250514": "gpt-4o",
+  "claude-haiku-4-5": "gpt-4o-mini",
+  "claude-haiku-4-5-20251001": "gpt-4o-mini",
 };
 
-// OpenRouter (OpenAI-API-compatible) model mapping — used only when Anthropic +
-// OpenAI are both unavailable. OpenRouter slugs evolve over time, so the operator
-// can pin the exact slug via `OPENROUTER_MODEL`; otherwise we map the policy's
-// Claude model to a stable OpenRouter slug, falling back to a sane default.
-const OPENROUTER_MODEL_MAP: Record<string, string> = {
-  "claude-opus-4-20250514": "anthropic/claude-opus-4",
-  "claude-opus-4-6": "anthropic/claude-opus-4",
-  "claude-sonnet-4-20250514": "anthropic/claude-sonnet-4",
-  "claude-sonnet-4-6": "anthropic/claude-sonnet-4",
-  "claude-haiku-4-5": "anthropic/claude-3.5-haiku",
-  "claude-haiku-4-5-20251001": "anthropic/claude-3.5-haiku",
-};
+// ── DÉFAUT LLM CENTRALISÉ — owl-alpha via OpenRouter, PARTOUT ──────────────
+// Directive opérateur : provider texte primaire = OpenRouter, modèle par défaut =
+// owl-alpha PARTOUT (La Fusée ne dépend d'aucun crédit LLM payant). UNE seule
+// source de vérité, pinnable via `OPENROUTER_MODEL`. L'ancien OPENROUTER_MODEL_MAP
+// (routage par-modèle vers anthropic/claude-* payant) est supprimé : tout le texte
+// OpenRouter passe par owl-alpha. Slug confirmé live sur l'API : "openrouter/owl-alpha".
+export const DEFAULT_OPENROUTER_MODEL = process.env.OPENROUTER_MODEL ?? "openrouter/owl-alpha";
 
-function resolveOpenRouterModel(model: string): string {
-  return process.env.OPENROUTER_MODEL ?? OPENROUTER_MODEL_MAP[model] ?? "anthropic/claude-sonnet-4";
+// Chaîne de repli — modèles 100 % GRATUITS OpenRouter, testés live disponibles
+// (2026-06-30, real-output check). Parcourus dans l'ordre quand le modèle courant
+// n'a "aucun endpoint" / renvoie 404 / 429. Reste sur OpenRouter et GRATUIT
+// (doctrine « La Fusée ne dépend d'aucun crédit LLM payant »). owl-alpha reste le
+// défaut ; cette chaîne ne sert qu'en cas d'indisponibilité. Surchargeable via
+// OPENROUTER_FALLBACK_MODELS (CSV) — ex. pour pinner un modèle plus puissant.
+export const OPENROUTER_FALLBACK_MODELS: string[] = process.env.OPENROUTER_FALLBACK_MODELS
+  ? process.env.OPENROUTER_FALLBACK_MODELS.split(",").map((s) => s.trim()).filter(Boolean)
+  : [
+      "nvidia/nemotron-3-super-120b-a12b:free", // 120B MoE, ctx 1M, ~1.5s
+      "openai/gpt-oss-120b:free", // 120B, fort suivi d'instructions, ctx 131K
+      "google/gemma-4-26b-a4b-it:free", // Gemma 4, ctx 262K, rapide
+      "nvidia/nemotron-3-nano-30b-a3b:free", // 30B MoE, dernier recours rapide
+    ];
+
+function resolveOpenRouterModel(_policyModel: string): string {
+  // owl-alpha pour TOUT le texte — le modèle de police (anthropicModel) n'est
+  // consulté que sur le chemin premium (Anthropic réel), jamais ici.
+  return DEFAULT_OPENROUTER_MODEL;
 }
 
 /**
@@ -601,6 +621,7 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
     try {
       const result = await withRetry(async () => {
         let aiModel;
+        let orFallback: ((m: string) => unknown) | null = null;
         // Modèle effectivement servi — clé de la police de débit par modèle.
         let servedModel = anthropicModel;
         if (provider === "anthropic") {
@@ -636,12 +657,18 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
           });
           servedModel = resolveOpenRouterModel(anthropicModel);
           aiModel = openrouter(servedModel);
+          orFallback = (m: string) => openrouter(m); // repli intra-OpenRouter si owl-alpha sans endpoint
         } else {
-          // Ollama via OpenAI-compatible API. Critical: use the Ollama
-          // model name (per-call override > policy), NOT the Claude model name.
+          // Ollama — local OU Ollama Cloud (https://ollama.com/v1 + clé API).
+          // createOpenAI accepte une apiKey (requise pour le cloud ; le local
+          // accepte n'importe quelle valeur). Modèle : override par appel >
+          // OLLAMA_MODEL (ex. deepseek-v4-flash) > police > nom Claude.
           const { createOpenAI } = await import("@ai-sdk/openai");
-          const ollama = createOpenAI({ baseURL: process.env.OLLAMA_BASE_URL });
-          servedModel = options.ollamaModel ?? ollamaModel ?? anthropicModel;
+          const ollama = createOpenAI({
+            baseURL: process.env.OLLAMA_BASE_URL,
+            apiKey: process.env.OLLAMA_API_KEY ?? "ollama",
+          });
+          servedModel = options.ollamaModel ?? process.env.OLLAMA_MODEL ?? ollamaModel ?? anthropicModel;
           aiModel = ollama(servedModel);
         }
 
@@ -680,21 +707,60 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
         // Acquiert un créneau pour le modèle effectivement servi (ex. owl-alpha
         // sur OpenRouter) ; attend si la limite RPM/concurrence/RPS est atteinte
         // plutôt que de partir et de se prendre un 429. Local au process.
+        const callParams = {
+          system: hr.system,
+          prompt: hr.prompt,
+          maxOutputTokens: options.maxOutputTokens ?? DEFAULT_MAX_TOKENS,
+          temperature: options.temperature,
+          ...(options.signal ? { abortSignal: options.signal } : {}),
+          ...(providerOptions ? { providerOptions } : {}),
+        };
         const slotKey = await acquireSlot(servedModel);
-        let text: string;
-        let usage: Awaited<ReturnType<typeof generateText>>["usage"];
+        let text!: string;
+        let usage!: Awaited<ReturnType<typeof generateText>>["usage"];
+        let slotReleased = false;
         try {
           ({ text, usage } = await generateText({
             model: aiModel as Parameters<typeof generateText>[0]["model"],
-            system: hr.system,
-            prompt: hr.prompt,
-            maxOutputTokens: options.maxOutputTokens ?? DEFAULT_MAX_TOKENS,
-            temperature: options.temperature,
-            ...(options.signal ? { abortSignal: options.signal } : {}),
-            ...(providerOptions ? { providerOptions } : {}),
+            ...callParams,
           }));
-        } finally {
+        } catch (genErr) {
+          // Repli intra-OpenRouter : owl-alpha (ou un modèle gratuit) renvoie
+          // souvent "No endpoints found" / 404 / 429 sous charge → on parcourt la
+          // chaîne de modèles GRATUITS jusqu'à ce qu'un réponde, au lieu de tout
+          // faire échouer. Tout reste sur OpenRouter et gratuit.
+          const unavailable = (m: string) =>
+            /no endpoints found|not found|404|429|rate.?limit|provider returned error|overloaded|503|502/i.test(m);
           releaseSlot(slotKey);
+          slotReleased = true;
+          let lastErr: unknown = genErr;
+          if (provider !== "openrouter" || orFallback == null || !unavailable(String((genErr as Error)?.message ?? genErr))) {
+            throw genErr;
+          }
+          let recovered = false;
+          for (const fb of OPENROUTER_FALLBACK_MODELS) {
+            if (fb === servedModel) continue;
+            console.warn(`[llm-gateway] ${servedModel} KO → repli gratuit ${fb}`);
+            const fbSlot = await acquireSlot(fb);
+            try {
+              ({ text, usage } = await generateText({
+                model: orFallback!(fb) as Parameters<typeof generateText>[0]["model"],
+                ...callParams,
+              }));
+              servedModel = fb;
+              recovered = true;
+            } catch (e) {
+              lastErr = e;
+              // Erreur réelle du modèle (pas une indispo) → échec franc.
+              if (!unavailable(String((e as Error)?.message ?? e))) throw e;
+            } finally {
+              releaseSlot(fbSlot);
+            }
+            if (recovered) break;
+          }
+          if (!recovered) throw lastErr;
+        } finally {
+          if (!slotReleased) releaseSlot(slotKey);
         }
 
         const gatewayUsage = {
@@ -707,7 +773,13 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
         const billedModel = provider === "ollama" ? (options.ollamaModel ?? ollamaModel ?? anthropicModel) : anthropicModel;
         trackCost(options, gatewayUsage, billedModel);
 
-        return { text, usage: gatewayUsage };
+        // PostgreSQL jsonb refuse le null byte U+0000 ("unsupported Unicode escape
+        // sequence") — un modèle peut en émettre un (brut, ou un littéral qui le devient
+        // au JSON.parse aval) qui fait planter la persistance GloryOutput
+        // (DriverAdapterError, trouvé par le scan fonctionnel : brand-audit-scanner).
+        // On l'élimine à la source pour TOUS les consommateurs LLM.
+        const cleanText = text.split(String.fromCharCode(0)).join("").replace(/\\u0000/g, "");
+        return { text: cleanText, usage: gatewayUsage };
       });
 
       recordProviderSuccess(provider);

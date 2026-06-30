@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
@@ -92,14 +93,13 @@ export default function InvoicesPage() {
           { label: "Factures" },
         ]}
       >
-        <button
-          type="button"
-          disabled
-          title="Création manuelle de facture — UI dédiée à venir. Pour l'instant, les factures sont auto-générées depuis Contracts (cf. /console/socle/contracts)."
-          className="flex items-center gap-2 rounded-lg border border-border bg-background-subtle px-4 py-2 text-sm font-medium text-foreground-muted opacity-60 cursor-not-allowed"
+        <Link
+          href="/console/socle/contracts"
+          title="Les factures sont générées depuis les contrats."
+          className="flex items-center gap-2 rounded-lg border border-border bg-background-subtle px-4 py-2 text-sm font-medium text-foreground-muted transition-colors hover:text-foreground-secondary"
         >
           <Plus className="h-4 w-4" /> Nouvelle facture
-        </button>
+        </Link>
       </PageHeader>
 
       {/* Stat Cards */}

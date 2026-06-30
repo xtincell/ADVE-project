@@ -10,6 +10,20 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.69 — fix(os): healer pass — purge erreurs UI/fonctionnelles + résilience LLM + SEO (2026-06-30)
+
+Robot **« healer »** (`scripts/heal/`) + **scan fonctionnel complet** déclenchant TOUS les noeuds (Glory tools, sequences, frameworks) avec timeout par noeud et sortie jsonl live. Mandat opérateur : « ne laisser aucune erreur avant le passage public ». Correctifs transverses issus du scan :
+
+- **Résilience LLM** (`llm-gateway`) : OpenRouter ajouté en provider fallback (chaîne free + owl-alpha), Ollama Cloud (`deepseek-v4-flash`) en primaire local, **sanitisation des null-bytes** en sortie LLM (crashait le persist jsonb DriverAdapter), fix `OPENAI_MODEL_MAP` (`gpt-5.5` inexistant → `gpt-4o`).
+- **Sequences — « ne rien laisser en planifié »** : 9 Glory tools `COMPOSE` (`sequence-gap-tools.ts`) comblent les refs fantômes des séquences canon → 0 step « GLORY inconnu » ; 3 `planned()` clôturés ACTIVE (BAIN-NPS / IMHOTEP-CREW / ANUBIS-COMMS) ; 2 typos remappées. **Doctrine Artemis→Ptah respectée** : ce sont des générateurs de brief, aucun `forgeOutput`. Bindings recadrés sur champs canon réels (`d.personas`/`e.aarrr`) — évite d'introduire des requirements COMPLETE fantômes `v.cibles`/`s.metriquesCles` qui auraient plafonné le score V/S de **toutes** les marques.
+- **Oracle** : cascade de staleness branchée (`markAllSectionsStale` dans `writePillarAndScore`), writeback déterministe (`composeSectionDeterministic`) dans le handler, §32 Manipulation Matrix lit `evaluations`.
+- **SEO socle** : `sitemap.ts` dynamique (static + blog + missions Guilde + dossiers Argos PASS, chaque source en try/catch), `opengraph-image` branded 1200×630, metadata layout (metadataBase/template/OG/twitter/keywords) + JSON-LD Organization/WebSite.
+- **Outillage/UI** : fix `eslint-plugin-lafusee` (`isExempt` normalise les backslashes Windows — 18 faux warnings), command-palette routes (seshat/artemis), page-header breadcrumb guard `APP_ROUTES`, boutons disabled → Links, fixes hydration.
+
+Diagnostic consolidé : `docs/governance/heal-report-2026-06-30.md`. Cap APOGEE 7/7 préservé. **tsc 0 · eslint 0 · 2326 tests verts**.
+
+---
+
 ## v6.27.68 — feat(laguilde): Voie B — soumission de direction créative par un membre guilde (ADR-0120 PR-6) (2026-06-29)
 
 Branche **La Guilde comme Voie B** du pipeline de Proposition Créative (le portail était déféré ; voici l'intégration). Un membre guilde **assigné à ≥1 mission** d'une stratégie peut soumettre une direction créative (Big Idea/insight/axe/pistes) → la proposition arrive **SUBMITTED** dans la file de validation de l'opérateur (cockpit), traitée par la gate existante.
