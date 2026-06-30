@@ -62,6 +62,12 @@ const FUEL_STATE_STYLES: Record<string, { bg: string; text: string; ring: string
   },
 };
 
+const FUEL_STATE_LABELS: Record<string, string> = {
+  ALLOWED: "Sous contrôle",
+  WARN_AT_BURN_RATE: "Vigilance",
+  DENIED: "Budget critique",
+};
+
 function pct(n: number | null | undefined, fractionDigits = 0): string {
   if (n === null || n === undefined || Number.isNaN(n)) return "—";
   return `${(n * 100).toFixed(fractionDigits)}%`;
@@ -120,7 +126,7 @@ export default function CampaignTrackerPage() {
     return (
       <EmptyState
         icon={AlertCircle}
-        title="Campaign introuvable"
+        title="Campagne introuvable"
         description="L'identifiant de campagne est manquant dans l'URL."
       />
     );
@@ -131,8 +137,8 @@ export default function CampaignTrackerPage() {
     return (
       <EmptyState
         icon={AlertCircle}
-        title="Campaign introuvable"
-        description={`Aucune Campaign avec l'id ${campaignId}`}
+        title="Campagne introuvable"
+        description="Aucune campagne trouvée pour cet identifiant."
       />
     );
   }
@@ -151,17 +157,23 @@ export default function CampaignTrackerPage() {
   return (
     <div className="space-y-6 p-6">
       <PageHeader
-        title={`${campaign.name} — Trajectory tracker`}
-        description="Vue L2 Instrumental Phase 19 (ADR-0052 v2). Agrège trajectoire APOGEE (Cluster A) + cohérence narrative (Cluster B)."
+        title={`${campaign.name} — Trajectoire`}
+        description="Impact de cette campagne sur la trajectoire et la cohérence de votre marque."
+        breadcrumbs={[
+          { label: "Cockpit", href: "/cockpit" },
+          { label: "Campagnes", href: "/cockpit/operate/campaigns" },
+          { label: campaign.name, href: `/cockpit/operate/campaigns/${campaignId}` },
+          { label: "Trajectoire" },
+        ]}
       />
 
       {campaign.killTriggeredAt && (
         <div className="flex items-center gap-3 rounded-lg bg-error/10 p-4 ring-1 ring-inset ring-error/30">
           <PauseCircle className="h-5 w-5 text-error" />
           <div>
-            <div className="text-sm font-semibold text-error">Campaign paused — flame-out détecté</div>
+            <div className="text-sm font-semibold text-error">Campagne en pause — budget épuisé</div>
             <div className="text-xs text-error/70">
-              Triggered at {new Date(campaign.killTriggeredAt).toLocaleString("fr-FR")} (THOT_PAUSE_CAMPAIGN_FLAME_OUT)
+              Mise en pause le {new Date(campaign.killTriggeredAt).toLocaleString("fr-FR")}
             </div>
           </div>
         </div>
@@ -171,12 +183,12 @@ export default function CampaignTrackerPage() {
       <section className="space-y-3">
         <header className="flex items-center gap-2 text-sm font-semibold text-foreground-secondary">
           <Compass className="h-4 w-4" />
-          <span className="uppercase tracking-wide">Cluster A — Trajectoire & altitude</span>
+          <span className="uppercase tracking-wide">Trajectoire de la marque</span>
         </header>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           {/* Tier delta */}
-          <Card title="Tier brand delta" subtitle="Loi 1 conservation altitude">
+          <Card title="Évolution du palier" subtitle="Avant → après campagne">
             {tierSnap?.tier ? (
               <div className="space-y-1">
                 <div className="flex items-baseline gap-2">
@@ -192,47 +204,47 @@ export default function CampaignTrackerPage() {
                   <span className="text-2xl font-bold tracking-tight">
                     {tierDelta !== null ? (tierDelta > 0 ? "+" : "") + tierDelta.toFixed(1) : "—"}
                   </span>
-                  <span className="text-xs text-foreground-secondary">composite delta</span>
+                  <span className="text-xs text-foreground-secondary">points de maturité</span>
                 </div>
                 {campaign.altitudeRegression && (
                   <div className="rounded bg-warning/10 px-2 py-1 text-xs font-medium text-warning">
-                    LAW_1_SILENT_REGRESSION détecté — un pillar a régressé silencieusement
+                    Régression détectée — un pilier a baissé pendant la campagne
                   </div>
                 )}
               </div>
             ) : (
               <div className="text-sm text-foreground-secondary">
-                Pas de snapshot — Campaign pas encore LIVE ou snapshot manquant
+                Pas encore de mesure — la campagne n'est pas encore lancée
               </div>
             )}
           </Card>
 
           {/* Fuel burn rate */}
-          <Card title="Fuel burn rate" subtitle="Loi 3 — Thot">
+          <Card title="Consommation du budget" subtitle="Budget vs temps">
             {fuelQuery.isLoading ? (
               <div className="text-sm text-foreground-secondary">Chargement…</div>
             ) : fuelQuery.data?.ok ? (
               <FuelDisplay data={fuelQuery.data} />
             ) : (
-              <div className="text-sm text-foreground-secondary">Insuffisant données</div>
+              <div className="text-sm text-foreground-secondary">Données insuffisantes</div>
             )}
           </Card>
 
           {/* Regret-window */}
-          <Card title="Regret-window" subtitle="J+3 / J+7 / J+14 — Seshat">
+          <Card title="Fenêtre de vigilance" subtitle="J+3 / J+7 / J+14">
             {fuelQuery.data?.ok && fuelQuery.data.regretWindowFlag ? (
               <div className="flex items-center gap-2 text-sm font-medium text-warning">
                 <AlertTriangle className="h-4 w-4" />
-                Window active — vérifier KPIs vs targets
+                Vigilance active — comparez les résultats aux objectifs
               </div>
             ) : (
               <div className="flex items-center gap-2 text-sm text-foreground-secondary">
                 <CheckCircle2 className="h-4 w-4 text-success" />
-                Hors fenêtre regret
+                Hors fenêtre de vigilance
               </div>
             )}
             <div className="mt-1 text-xs text-foreground-secondary">
-              Time elapsed : {pct(fuelQuery.data?.ok ? fuelQuery.data.timeRatio : null, 1)}
+              Temps écoulé : {pct(fuelQuery.data?.ok ? fuelQuery.data.timeRatio : null, 1)}
             </div>
           </Card>
         </div>
@@ -242,12 +254,12 @@ export default function CampaignTrackerPage() {
       <section className="space-y-3">
         <header className="flex items-center gap-2 text-sm font-semibold text-foreground-secondary">
           <Target className="h-4 w-4" />
-          <span className="uppercase tracking-wide">Cluster B — Cohérence narrative</span>
+          <span className="uppercase tracking-wide">Cohérence de la marque</span>
         </header>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           {/* Cult index delta */}
-          <Card title="Cult Index delta" subtitle="Pré-LIVE → Post-Campaign">
+          <Card title="Évolution de l'attachement" subtitle="Avant → après campagne">
             {cultPre?.score ? (
               <div className="space-y-1">
                 <div className="flex items-baseline gap-2 text-xs text-foreground-secondary">
@@ -266,12 +278,12 @@ export default function CampaignTrackerPage() {
                 </div>
               </div>
             ) : (
-              <div className="text-sm text-foreground-secondary">Snapshot manquant (null-honest, ADR-0046)</div>
+              <div className="text-sm text-foreground-secondary">Mesure non disponible</div>
             )}
           </Card>
 
           {/* Cultural debt */}
-          <Card title="Cultural debt" subtitle="Gap Manifesto ↔ actions">
+          <Card title="Écart à la promesse" subtitle="Promesse ↔ actions">
             {debtQuery.isLoading ? (
               <div className="text-sm text-foreground-secondary">Chargement…</div>
             ) : debtQuery.data?.ok ? (
@@ -283,14 +295,7 @@ export default function CampaignTrackerPage() {
                   {debtQuery.data.actionsSampled} action{debtQuery.data.actionsSampled > 1 ? "s" : ""} échantillonnée
                   {debtQuery.data.actionsSampled > 1 ? "s" : ""}
                 </div>
-                {debtQuery.data.degradationCodes.map((code) => (
-                  <code
-                    key={code}
-                    className="mt-1 inline-block rounded bg-warning/10 px-1.5 py-0.5 text-2xs text-warning"
-                  >
-                    {code}
-                  </code>
-                ))}
+                {/* codes de diagnostic internes — non exposés au client */}
               </div>
             ) : (
               <div className="text-sm text-foreground-secondary">—</div>
@@ -298,7 +303,7 @@ export default function CampaignTrackerPage() {
           </Card>
 
           {/* Myth arc */}
-          <Card title="Myth arc continuity" subtitle="Cohérence inter-campagne Strategy">
+          <Card title="Continuité du récit" subtitle="Entre vos campagnes">
             {mythQuery.isLoading ? (
               <div className="text-sm text-foreground-secondary">Chargement…</div>
             ) : mythQuery.data?.ok && mythQuery.data.globalContinuityScore !== null ? (
@@ -309,13 +314,11 @@ export default function CampaignTrackerPage() {
                 <div className="text-xs text-foreground-secondary">
                   {mythQuery.data.pairs.length} paire{mythQuery.data.pairs.length > 1 ? "s" : ""} de chapitres
                 </div>
-                <div className="text-2xs text-foreground-secondary">
-                  Seuil continuité : 0.18 (Jaccard MVP)
-                </div>
+                {/* seuil de continuité interne — non exposé au client */}
               </div>
             ) : (
               <div className="text-sm text-foreground-secondary">
-                Insuffisant historique (≥2 campagnes requis)
+                Historique insuffisant (au moins 2 campagnes requises)
               </div>
             )}
           </Card>
@@ -329,16 +332,13 @@ export default function CampaignTrackerPage() {
           Pourquoi cette page existe ?
         </div>
         <p className="mt-2">
-          La trajectoire APOGEE de votre marque ne se mesure pas dans les KPIs marketing classiques (impressions,
+          La trajectoire de votre marque ne se mesure pas dans les KPIs marketing classiques (impressions,
           conversions, ROAS). Elle se mesure dans <strong>la production de prescripteurs</strong>, le{" "}
           <strong>déplacement de l'axe culturel sectoriel</strong>, et la <strong>cohérence du culte</strong>. Cette
           vue agrège les indicateurs L2 Instrumental qui répondent à <em>"cette campagne renforce-t-elle ou dilue-t-elle
           la marque iconique en construction ?"</em>.
         </p>
-        <p className="mt-2 text-2xs">
-          Vague 1 = Cluster A + B en mode MVP (Jaccard heuristic). Vagues 2 + 3 ajouteront superfan economy, signaux
-          faibles culturels, économie agence et negative space audit.
-        </p>
+        {/* note de roadmap interne retirée de la vue client */}
       </footer>
     </div>
   );
@@ -387,14 +387,14 @@ function FuelDisplay({
         className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${style.bg} ${style.text} ${style.ring}`}
       >
         <Icon className="h-3 w-3" />
-        {data.state}
+        {FUEL_STATE_LABELS[data.state] ?? data.state}
       </div>
       <div className="text-xs text-foreground-secondary">
-        Burn : <span className="font-mono text-foreground">{pct(data.burnRatio)}</span> / Time :{" "}
+        Conso : <span className="font-mono text-foreground">{pct(data.burnRatio)}</span> / Temps :{" "}
         <span className="font-mono text-foreground">{pct(data.timeRatio)}</span>
         {data.revenuePacing !== null && (
           <>
-            {" "}/ Revenue pacing : <span className="font-mono text-foreground">{data.revenuePacing.toFixed(2)}×</span>
+            {" "}/ Rythme revenus : <span className="font-mono text-foreground">{data.revenuePacing.toFixed(2)}×</span>
           </>
         )}
       </div>

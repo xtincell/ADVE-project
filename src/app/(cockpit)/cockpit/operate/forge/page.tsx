@@ -337,7 +337,7 @@ export default function DeliverableForgePage() {
                 <div className="space-y-1">
                   <h3 className="text-sm font-bold text-white">Validation du S requise</h3>
                   <p className="text-xs text-foreground-secondary leading-relaxed">
-                    La stratégie ADVE-RTIS de la marque <span className="font-semibold text-white">{strategy?.name}</span> n'a pas encore été validée. La validation de la synthèse est nécessaire pour verrouiller la stratégie et déclencher sa vie opérationnelle sous ADVERTIS.
+                    La stratégie de la marque <span className="font-semibold text-white">{strategy?.name}</span> n'a pas encore été validée. La validation de la synthèse est nécessaire pour verrouiller la stratégie et déclencher sa vie opérationnelle.
                   </p>
                 </div>
               </div>
@@ -380,7 +380,7 @@ export default function DeliverableForgePage() {
               <div className="flex items-center gap-3">
                 <ShieldCheck className="h-5 w-5 text-success" />
                 <div className="text-xs">
-                  <span className="font-semibold text-white">Stratégie Validée.</span> La vie de la marque sous ADVERTIS est active. Vous pouvez forger des projets ci-dessous.
+                  <span className="font-semibold text-white">Stratégie Validée.</span> La vie opérationnelle de la marque est active. Vous pouvez forger des projets ci-dessous.
                 </div>
               </div>
             </section>
@@ -562,7 +562,7 @@ export default function DeliverableForgePage() {
                   </h3>
                   <p className="mt-0.5 text-xs text-foreground-secondary">
                     Briefs upstream à fournir (depuis le vault) ou à générer. L'estimation coût
-                    inclut les LLM tools manquants + le forge Ptah final.
+                    inclut les éléments de production manquants.
                   </p>
                 </div>
               </div>

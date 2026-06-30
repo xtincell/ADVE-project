@@ -168,7 +168,7 @@ export default function NewsletterPage() {
     <div className="container mx-auto px-4 py-6 space-y-6">
       <PageHeader
         title="Newsletter Cockpit"
-        description="Gérez les listes d'abonnés de votre marque et actionnez des newsletters d'engagement via Anubis."
+        description="Gérez les listes d'abonnés de votre marque et actionnez des newsletters d'engagement."
         breadcrumbs={[
           { label: "Cockpit", href: "/cockpit" },
           { label: "Opérations" },
