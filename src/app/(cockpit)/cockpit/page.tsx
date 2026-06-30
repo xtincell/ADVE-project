@@ -12,10 +12,11 @@ import { Timeline } from "@/components/shared/timeline";
 import { Sparkline } from "@/components/shared/sparkline";
 import { PipelineProgress, buildPipelineSteps } from "@/components/shared/pipeline-progress";
 import { AiBadge } from "@/components/shared/ai-badge";
-import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
+import { useStrategy } from "@/components/cockpit/strategy-context";
 import { OvertonTeaser } from "@/components/cockpit/intelligence/overton-panel";
 import { buildPillarContentMap } from "@/components/shared/pillar-content-card";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Activity,
   Rocket,
@@ -73,7 +74,8 @@ const VIEW_MODE_LABELS: Record<ViewMode, string> = {
 
 export default function CockpitDashboard() {
   const [viewMode, setViewMode] = useState<ViewMode>("MARKETING");
-  const strategyId = useCurrentStrategyId();
+  const { strategyId, isLoading: strategiesLoading } = useStrategy();
+  const router = useRouter();
 
   const strategyQuery = trpc.strategy.getWithScore.useQuery(
     { id: strategyId! },
@@ -125,7 +127,26 @@ export default function CockpitDashboard() {
     { enabled: !!strategyId, staleTime: 5 * 60_000 },
   );
 
-  if (!strategyId || strategyQuery.isLoading) {
+  if (!strategyId && strategiesLoading) {
+    return <SkeletonPage />;
+  }
+
+  if (!strategyId) {
+    // Loaded, but the founder has no brand yet → onboarding CTA instead of an
+    // infinite skeleton (this was a first-run dead-end).
+    return (
+      <div className="ck-dash">
+        <EmptyState
+          icon={Rocket}
+          title="Créez votre première marque"
+          description="Lancez votre première fiche de marque pour activer votre cockpit : fondation, recommandations, livrables et campagnes."
+          action={{ label: "Créer ma marque", onClick: () => router.push("/cockpit/new") }}
+        />
+      </div>
+    );
+  }
+
+  if (strategyQuery.isLoading) {
     return <SkeletonPage />;
   }
 
