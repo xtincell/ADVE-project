@@ -13,7 +13,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { trpc } from "@/lib/trpc/client";
-import { Loader2, CheckCircle, XCircle, Sparkles, Hammer } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Sparkles, Hammer, KeyRound } from "lucide-react";
 
 type ForgeKindLabel = Record<string, string>;
 const KIND_LABELS: ForgeKindLabel = {
@@ -143,6 +143,9 @@ function StatusPill({ status }: { status: string }) {
     FAILED: { label: "Échec", bg: "bg-error/10", fg: "text-error", icon: XCircle },
     VETOED: { label: "Vetoé Thot", bg: "bg-error/10", fg: "text-error", icon: XCircle },
     EXPIRED: { label: "Expiré", bg: "bg-zinc-500/10", fg: "text-foreground-secondary", icon: XCircle },
+    // Provider non configuré (credentials manquantes) — forge différée, pas un
+    // échec : retriable une fois les clés saisies (Credentials Vault, ADR-0021).
+    DEFERRED: { label: "En attente de config.", bg: "bg-foreground-secondary/10", fg: "text-foreground-secondary", icon: KeyRound },
   };
   const c = config[status] ?? config.CREATED!;
   const Icon = c.icon;

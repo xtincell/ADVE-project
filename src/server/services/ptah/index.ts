@@ -25,6 +25,7 @@ import {
   findTaskByProviderTaskId,
   generateWebhookSecret,
   markCompleted,
+  markDeferred,
   markFailed,
   updateProviderHealth,
 } from "./task-store";
@@ -113,6 +114,27 @@ export async function materializeBrief(
     expectedSuperfans: budgetDecision.expectedSuperfans,
     webhookSecret,
   });
+
+  // Ship-able sans clés (ADR-0021) : si le provider sélectionné n'est pas
+  // configuré (credentials absentes), on NE lance PAS forge() — qui throwait
+  // (adobe/canva/figma sans creds) et marquait la task FAILED. On diffère
+  // proprement : task persistée (trace + retry), status DEFERRED, aucun throw.
+  // Magnific reste toujours disponible (mock fallback) → jamais différé ici.
+  // L'opérateur saisit les credentials (Credentials Vault) puis relance.
+  if (!(await provider.isAvailable())) {
+    await markDeferred(
+      task.id,
+      `AWAITING_CREDENTIALS: provider ${provider.name} non configuré — forge différée (ADR-0021).`,
+    );
+    return {
+      taskId: task.id,
+      provider: provider.name,
+      providerModel: payload.brief.forgeSpec.modelHint ?? "default",
+      estimatedCostUsd,
+      status: "DEFERRED",
+      webhookSecret,
+    };
+  }
 
   const webhookUrl = `${WEBHOOK_BASE}/api/ptah/webhook?taskId=${task.id}&secret=${webhookSecret}`;
 

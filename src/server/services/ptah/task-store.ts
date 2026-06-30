@@ -107,6 +107,22 @@ export async function markFailed(taskId: string, errorMessage: string) {
   });
 }
 
+/**
+ * Provider non configuré (credentials manquantes) → forge différée, PAS échouée.
+ * Ship-able sans clés (ADR-0021) : la task reste retriable une fois les
+ * credentials saisies (Credentials Vault). `errorMessage` porte la raison
+ * (préfixe `AWAITING_CREDENTIALS:`) — distinct d'un vrai FAILED runtime.
+ */
+export async function markDeferred(taskId: string, reason: string) {
+  return db.generativeTask.update({
+    where: { id: taskId },
+    data: {
+      status: "DEFERRED",
+      errorMessage: reason,
+    },
+  });
+}
+
 export async function findTaskByProviderTaskId(providerTaskId: string) {
   return db.generativeTask.findFirst({
     where: { providerTaskId },
