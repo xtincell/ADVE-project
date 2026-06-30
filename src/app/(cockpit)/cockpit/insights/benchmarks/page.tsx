@@ -90,8 +90,9 @@ export default function BenchmarksPage() {
   const sectorPillarAvg: Partial<Record<PillarKey, number>> = {};
   const pillarAvgBase = sectorAvg / 8;
   for (const k of PILLAR_KEYS) {
-    const variation = ((k.charCodeAt(0) % 7) - 3) * 0.8;
-    sectorPillarAvg[k] = Math.min(25, Math.max(0, pillarAvgBase + variation));
+    // No invented per-pillar differentiation — only the sector aggregate is real;
+    // show it spread evenly (the "simulé" notice below discloses the limitation).
+    sectorPillarAvg[k] = Math.min(25, Math.max(0, pillarAvgBase));
   }
 
   // Top performer scores derived from ranking
@@ -99,8 +100,8 @@ export default function BenchmarksPage() {
   if (topPerformer) {
     const topAvg = topPerformer.composite / 8;
     for (const k of PILLAR_KEYS) {
-      const variation = ((k.charCodeAt(0) % 5) - 2) * 0.6;
-      topVector[k] = Math.min(25, Math.max(0, topAvg + variation));
+      // Real aggregate only; no fabricated per-pillar spread (cf. notice).
+      topVector[k] = Math.min(25, Math.max(0, topAvg));
     }
   }
 

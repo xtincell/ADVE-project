@@ -194,10 +194,10 @@ export default function NewsletterPage() {
         />
         <StatCard
           title="Taux de délivrabilité"
-          value="100%"
+          value="—"
           icon={Sparkles}
           trend="flat"
-          trendValue="Anubis Delivery"
+          trendValue="Bientôt disponible"
         />
       </div>
 

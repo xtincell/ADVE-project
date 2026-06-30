@@ -345,20 +345,20 @@ export default function DeliverableForgePage() {
               {/* S-Validation checklist */}
               <div className="border border-border/60 bg-background/50 rounded-lg p-4 space-y-3">
                 <h4 className="text-2xs font-semibold text-foreground-secondary uppercase tracking-wider">
-                  Checklist de validation stratégique
+                  Critères de validation stratégique
                 </h4>
-                
+
                 <ul className="space-y-2 text-xs">
-                  <li className="flex items-center gap-2 text-white">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                  <li className="flex items-center gap-2 text-foreground-secondary">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-foreground-muted" />
                     Piliers A, D, V, E complétés et qualifiés
                   </li>
-                  <li className="flex items-center gap-2 text-white">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                  <li className="flex items-center gap-2 text-foreground-secondary">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-foreground-muted" />
                     Bilan des risques et opportunités (R+T) calculé
                   </li>
-                  <li className="flex items-center gap-2 text-white">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                  <li className="flex items-center gap-2 text-foreground-secondary">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-foreground-muted" />
                     Oracle stratégique validé et assemblé
                   </li>
                 </ul>
