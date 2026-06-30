@@ -945,6 +945,13 @@ const OPENAI_DIM_BY_MODEL: Record<string, number> = {
 
 function selectEmbedProvider(override?: EmbedProvider): EmbedProvider {
   if (override) return override;
+  // Pin explicite via env (ex. `EMBED_PROVIDER=openai`). Utile car Ollama Cloud
+  // n'héberge AUCUN modèle d'embedding (chat/code seulement, vérifié 2026-06-30) :
+  // sans ce pin, chaque embed tenterait Ollama (échec) avant de basculer OpenAI.
+  const envPref = process.env.EMBED_PROVIDER as EmbedProvider | undefined;
+  if (envPref && (["ollama", "openai", "openrouter", "none"] as const).includes(envPref)) {
+    return envPref;
+  }
   if (process.env.OLLAMA_BASE_URL) return "ollama";
   // OpenAI = chemin embeddings principal, SAUF s'il est en fenêtre « à sec » 24h
   // (auquel cas on passe à OpenRouter pour des embeddings gratuits).
@@ -1004,14 +1011,46 @@ async function embedViaOllama(
   model: string,
   caller: string,
 ): Promise<EmbedResult> {
-  const baseUrl = process.env.OLLAMA_BASE_URL!.replace(/\/$/, "");
+  const rawBase = process.env.OLLAMA_BASE_URL!.replace(/\/$/, "");
+  const apiKey = process.env.OLLAMA_API_KEY;
   const dim = OLLAMA_DIM_BY_MODEL[model] ?? 768;
-  const embeddings: number[][] = [];
+  const isV1 = /\/v1$/.test(rawBase);
 
-  // Ollama's /api/embeddings accepts one prompt at a time — loop sequentially.
-  // For batches >50 items consider parallelism, but keep it simple here.
+  // ── Ollama Cloud / endpoint OpenAI-compatible (/v1/embeddings + Bearer) ──
+  // NB (vérifié 2026-06-30) : ollama.com n'héberge QUE des modèles chat/code
+  // (35 modèles, aucun modèle d'embedding) → ce chemin échoue côté cloud
+  // ("path not found") et la chaîne bascule sur OpenAI. Il reste correct pour
+  // un Ollama self-host exposé en /v1 OU si le cloud ajoute un modèle d'embedding.
+  if (apiKey || isV1) {
+    const base = isV1 ? rawBase : `${rawBase}/v1`;
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+    const embeddings: number[][] = [];
+    const BATCH = 50;
+    for (let i = 0; i < inputs.length; i += BATCH) {
+      const res = await fetch(`${base}/embeddings`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ model, input: inputs.slice(i, i + BATCH) }),
+      });
+      if (!res.ok) {
+        const errText = await res.text().catch(() => res.statusText);
+        throw new Error(`Ollama embeddings ${res.status}: ${errText}`);
+      }
+      const json = (await res.json()) as { data?: Array<{ embedding: number[]; index: number }> };
+      const data = (json.data ?? []).slice().sort((a, b) => a.index - b.index);
+      for (const item of data) embeddings.push(item.embedding);
+    }
+    if (embeddings.length === 0) {
+      throw new Error(`Ollama returned no embeddings for caller=${caller}`);
+    }
+    return { embeddings, dim, model, provider: "ollama", inputTokens: 0 };
+  }
+
+  // ── Ollama natif local (/api/embeddings, un prompt à la fois) ──
+  const embeddings: number[][] = [];
   for (const text of inputs) {
-    const res = await fetch(`${baseUrl}/api/embeddings`, {
+    const res = await fetch(`${rawBase}/api/embeddings`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ model, prompt: text }),

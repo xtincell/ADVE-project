@@ -10,6 +10,17 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.72 — feat(ptah): gpt-image-1/2 + fix(llm-gateway) embeddings Ollama-aware (2026-06-30)
+
+Deux réglages modèles externes (directive opérateur) :
+
+- **gpt-image-1 (1K) défaut + gpt-image-2 (2K) opt-in** : workflow opérateur — 1K par défaut, passe 2K (même prompt) quand le rendu est validé. Pilotable par brief (`parameters.model` ou `parameters.resolution="2K"` → gpt-image-2 + 2048²). `estimateCost` factorise la passe 2K. Image = API OpenAI directe (plus de Magnific).
+- **Embeddings Ollama-aware + pin** : l'opérateur voulait Ollama Cloud pour les embeddings — **constat vérifié en live** : ollama.com n'héberge QUE des modèles chat/code (35 modèles, **aucun modèle d'embedding** ; `/v1/embeddings` → "path not found"). Les embeddings basculent donc sur OpenAI (clé opérateur, `text-embedding-3-small`, dim 1536). `embedViaOllama` gère désormais les deux modes (OpenAI-compatible `/v1/embeddings` + Bearer **et** natif `/api/embeddings`) → correct pour Ollama self-host/local ou futur modèle cloud. `selectEmbedProvider` lit `EMBED_PROVIDER` (pin, posé `openai`) pour éviter une tentative Ollama vouée à l'échec à chaque embed.
+
+tsc 0 · eslint 0 · provider tests verts.
+
+---
+
 ## v6.27.71 — feat(ptah): OpenAI = générateur d'image exclusif (gpt-image-1, synchrone) (2026-06-30)
 
 Décision opérateur : **« l'API de génération d'image, c'est OpenAI exclusivement »**. Câble OpenAI Images comme provider Ptah canonique pour `forgeKind` image/icon (édition/vidéo/audio restent Magnific — ce n'est pas de la génération d'image). Débloque la forge d'images (était toute DEFERRED/mockée) + la future variante graphique de la Bible de Marque.
