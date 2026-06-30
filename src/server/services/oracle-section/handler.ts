@@ -401,7 +401,22 @@ async function dispatchRunner(
   }
 
   try {
-    return await runLLMRunner();
+    const llmResult = await runLLMRunner();
+    // Le runner LLM stocke son résultat dans OracleSection.payload mais n'écrivait
+    // PAS le BrandAsset que le rendu (PDF / lien partagé / sections §22-35) consomme.
+    // Sans ce writeback, générer une section ne changeait rien au livrable délivré —
+    // cause racine du « Oracle pas parfait » (UI 35/35 COMPLETE, PDF inchangé). On
+    // garantit donc le writeback canonique via le composeur déterministe (forme
+    // correcte pour le renderer, keyé par sectionId) quand il existe.
+    if (hasDeterministicComposer(meta.id)) {
+      await composeSectionDeterministic(strategyId, meta).catch((err) => {
+        console.warn(
+          `[oracle-section] BrandAsset writeback (post-LLM) échoué pour §${meta.number}:`,
+          err instanceof Error ? err.message : err,
+        );
+      });
+    }
+    return llmResult;
   } catch (err) {
     if (hasDeterministicComposer(meta.id)) {
       const composed = await composeSectionDeterministic(strategyId, meta).catch(() => null);

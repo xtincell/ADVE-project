@@ -142,7 +142,10 @@ export async function assembleOracleHandler(
 
   // ── 4. Status global ───────────────────────────────────────────────
   const succeeded = results.filter((r) => r.status === "OK").length;
-  const failed = results.length - succeeded;
+  // VETOED (déjà COMPLETE+locked / déjà en génération) n'est PAS un échec — le
+  // compter comme `failed` affichait un faux rouge « X ratées » à l'opérateur sur
+  // un scope où des sections étaient simplement déjà à jour.
+  const failed = results.filter((r) => r.status === "FAILED" || r.status === "ERRORED").length;
   const overall = failed === 0 ? "COMPLETE" : succeeded === 0 ? "EMPTY" : "PARTIAL";
   const durationMs = Date.now() - startTime;
 

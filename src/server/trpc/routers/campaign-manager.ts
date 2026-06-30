@@ -1910,6 +1910,7 @@ export const campaignManagerRouter = createTRPCRouter({
       // ── Budget ──────────────────────────────────────────────────────────
       const totalPlanned = campaign.budgetLines.reduce((s, b) => s + (b.planned ?? 0), 0);
       const totalSpent   = campaign.budgetLines.reduce((s, b) => s + (b.actual ?? 0), 0);
+      // lafusee:allow-adhoc-completion -- variance budgétaire %, pas de complétude pilier ADVE
       const budgetVariance = totalPlanned > 0 ? ((totalSpent - totalPlanned) / totalPlanned) * 100 : 0;
 
       // ── Verdict AARRR — ratio métriques ayant atteint leur target ───────

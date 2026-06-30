@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { APP_ROUTES } from "@/lib/generated/app-routes";
 
 interface Breadcrumb {
   label: string;
@@ -32,13 +34,16 @@ export function PageHeader({
           {breadcrumbs.map((crumb, i) => (
             <span key={i} className="flex items-center gap-1">
               {i > 0 && <ChevronRight className="h-3.5 w-3.5" />}
-              {crumb.href ? (
-                <a
+              {/* Ne linkifier que les crumbs résolvant vers une vraie page : un
+                  href de conteneur de section sans page index (ex /console/governance)
+                  produit un 404 au clic. Même garde que navigation/breadcrumb.tsx. */}
+              {crumb.href && APP_ROUTES.has(crumb.href) ? (
+                <Link
                   href={crumb.href}
                   className="transition-colors hover:text-foreground-secondary"
                 >
                   {crumb.label}
-                </a>
+                </Link>
               ) : (
                 <span className="text-foreground-secondary">{crumb.label}</span>
               )}

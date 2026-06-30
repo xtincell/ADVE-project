@@ -3293,6 +3293,7 @@ import { MARKET_RESEARCH_TOOLS } from "./market-research-tools";
 // capture nom+téléphone CRM → escalade opérateur). Ajouté à EXTENDED_GLORY_TOOLS
 // (pas CORE) — préserve la cardinalité 56 du test `glory-tools.test.ts`.
 import { SALES_RESPONSE_TREE_TOOLS } from "./sales-response-tree-tools";
+import { SEQUENCE_GAP_TOOLS } from "./sequence-gap-tools";
 
 // ─── Exports ─────────────────────────────────────────────────────────────────
 
@@ -3325,6 +3326,7 @@ export const EXTENDED_GLORY_TOOLS: GloryToolDef[] = [
   ...PHASE19_TOOLS,
   ...MARKET_RESEARCH_TOOLS,
   ...SALES_RESPONSE_TREE_TOOLS,
+  ...SEQUENCE_GAP_TOOLS, // 6 outils comblant les refs fantômes des séquences (scan NEFER 2026-06-30)
 ];
 
 // Public API canonical export — `ALL_GLORY_TOOLS` = `CORE_GLORY_TOOLS` = 56 tools

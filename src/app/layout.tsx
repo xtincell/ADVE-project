@@ -30,11 +30,40 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+// Domaine canonique — surchargé en prod via NEXT_PUBLIC_BASE_URL. metadataBase
+// rend ABSOLUS les URLs OG/canonical (sinon Next warn + previews sociales cassées).
+const SITE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://lafusee-app.vercel.app";
+
 export const metadata: Metadata = {
-  title: "La Fusée — Industry OS",
-  description: "L'infrastructure méthodologique du marché créatif africain",
-  manifest: "/manifest.webmanifest",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "La Fusée — Industry OS du marché créatif africain",
+    template: "%s · La Fusée",
+  },
+  description:
+    "L'infrastructure méthodologique qui transforme les marques en icônes culturelles — méthode ADVE/RTIS, Oracle stratégique, pilotage de marque. Par UPgraders.",
   applicationName: "La Fusée",
+  manifest: "/manifest.webmanifest",
+  keywords: [
+    "stratégie de marque", "marketing Afrique", "marché créatif africain",
+    "ADVE", "branding", "UPgraders", "La Fusée", "agence créative",
+  ],
+  authors: [{ name: "UPgraders" }],
+  robots: { index: true, follow: true },
+  openGraph: {
+    type: "website",
+    siteName: "La Fusée",
+    locale: "fr_FR",
+    url: SITE_URL,
+    title: "La Fusée — Industry OS du marché créatif africain",
+    description:
+      "L'infrastructure méthodologique qui transforme les marques en icônes culturelles.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "La Fusée — Industry OS",
+    description: "L'infrastructure méthodologique du marché créatif africain.",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -52,9 +81,33 @@ export const viewport = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getServerLocale();
+  // JSON-LD sitewide — Organization (UPgraders) + WebSite (La Fusée) pour les
+  // rich results Google. Inoffensif sur les pages privées (noindex de toute façon).
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": `${SITE_URL}#org`,
+        name: "UPgraders",
+        url: SITE_URL,
+        description: "Agence et Industry OS du marché créatif africain — méthode ADVE/RTIS.",
+        brand: { "@type": "Brand", name: "La Fusée" },
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${SITE_URL}#website`,
+        url: SITE_URL,
+        name: "La Fusée",
+        inLanguage: "fr-FR",
+        publisher: { "@id": `${SITE_URL}#org` },
+      },
+    ],
+  };
   return (
     <html lang={locale} className={`${satoshi.variable} ${clashDisplay.variable} ${jetbrainsMono.variable} dark`}>
       <body className="min-h-screen font-sans antialiased">
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
         <Providers initialLocale={locale}>{children}</Providers>
         <Script id="register-sw" strategy="afterInteractive">
           {`
