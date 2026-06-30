@@ -14,6 +14,7 @@ import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
 
 import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc/client";
+import { useCanOperate } from "@/components/cockpit/use-can-operate";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 // ADR-0088 — reco review queue staged in the cockpit edit store (UI-local).
 import { useCockpitEditStore } from "@/lib/stores/cockpit-edit-store";
@@ -195,7 +196,7 @@ export function NotoriaPage() {
   // Founders are not operators (init.ts operatorProcedure) — accepting/applying
   // recommendations is handled by the UPgraders team. Surface that honestly:
   // disable the controls + show a read-only banner, instead of click→FORBIDDEN.
-  const canOperate = trpc.auth.me.useQuery().data?.canOperate ?? false;
+  const canOperate = useCanOperate();
   const isMutating = generateMutation.isPending || generateTypedMutation.isPending || generateFromVaultMutation.isPending || acceptMutation.isPending || rejectMutation.isPending || applyMutation.isPending || !canOperate;
 
   // Split recos: actionable (PENDING + ACCEPTED) vs history (APPLIED/REJECTED/REVERTED/EXPIRED)
