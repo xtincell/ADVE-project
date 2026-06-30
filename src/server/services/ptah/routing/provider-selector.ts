@@ -12,13 +12,16 @@ import { getProviderHealth } from "../task-store";
 import type { ForgeBrief, ForgeKind, ForgeProvider, ProviderName } from "../types";
 
 const KIND_TO_PROVIDER: Record<ForgeKind, ProviderName[]> = {
-  // image → Magnific d'abord (95% surface), Adobe Firefly fallback
-  image: ["magnific", "adobe"],
+  // GÉNÉRATION d'image → OpenAI EXCLUSIVEMENT (décision opérateur 2026-06-30).
+  // Pas de fallback : sans credentials OpenAI, la forge se DIFFÈRE (ADR-0021).
+  image: ["openai"],
+  icon: ["openai"],
+  // ÉDITION / autres médias → Magnific (OpenAI ne couvre pas upscale/inpaint/
+  // vidéo/audio ; ce ne sont pas de la « génération d'image »).
   refine: ["magnific"],
   transform: ["magnific"],
   video: ["magnific"],
   audio: ["magnific"],
-  icon: ["magnific"],
   classify: ["magnific"],
   stock: ["magnific"],
   // design → Figma + Adobe + Canva (préférer Figma car free + REST simple)

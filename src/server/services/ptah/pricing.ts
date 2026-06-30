@@ -111,6 +111,15 @@ const CANVA_PRICING: Record<string, number> = {
   "canva-design-export": 0.05,
 };
 
+// OpenAI Images (génération d'image canonique — décision opérateur 2026-06-30).
+// USD/image. dall-e-3 std 0.04 (1024²) ; les variantes taille/qualité sont
+// affinées par le provider lui-même (`OpenAIImagesProvider.estimateCost`).
+const OPENAI_PRICING: Record<string, number> = {
+  "dall-e-3": 0.04,
+  "dall-e-2": 0.02,
+  "gpt-image-1": 0.08,
+};
+
 /**
  * Estime le coût d'un brief — délégué au provider concret.
  * Provider-agnostic fallback : 0.10 USD si modèle inconnu (conservative).
@@ -121,6 +130,7 @@ export function estimateCostForModel(provider: ProviderName, model: string): num
     adobe: ADOBE_PRICING,
     figma: FIGMA_PRICING,
     canva: CANVA_PRICING,
+    openai: OPENAI_PRICING,
   };
   const table = tables[provider];
   return table[model] ?? 0.1;
