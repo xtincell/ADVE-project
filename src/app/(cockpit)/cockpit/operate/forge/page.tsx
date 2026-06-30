@@ -291,7 +291,7 @@ export default function DeliverableForgePage() {
                 className="flex items-center justify-center gap-2 rounded-xl border border-error/20 bg-error/5 px-4 py-3 text-sm font-medium text-error transition-colors hover:bg-error/10"
               >
                 <CheckCircle2 className="h-4 w-4" />
-                Confirmer et passer à 100% de confiance
+                Valider malgré la confiance faible
               </button>
             </div>
           </div>
@@ -637,12 +637,12 @@ export default function DeliverableForgePage() {
                 <div className="flex-1">
                   <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
                     <Sparkles className="h-4 w-4" />
-                    Lancer la production
+                    Aperçu de la cascade de production
                   </h3>
                   <p className="mt-0.5 text-xs text-foreground-secondary">
-                    Phase 17 mode PREVIEW : la composition est calculée et persistée hash-chained
-                    dans IntentEmission, sans encore déclencher de forge. Le dispatch async réel
-                    (avec streaming NSP des étapes) viendra dans un commit ultérieur.
+                    Cet aperçu calcule la cascade de briefs nécessaires à ce livrable, sans
+                    encore lancer la production. La production effective des assets est prise
+                    en charge par votre équipe UPgraders.
                   </p>
                 </div>
               </div>
@@ -655,7 +655,7 @@ export default function DeliverableForgePage() {
                   className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-background hover:bg-accent/90 disabled:opacity-50"
                 >
                   <Zap className="h-4 w-4" />
-                  {composeMutation.isPending ? "Composition…" : "Lancer la composition (PREVIEW)"}
+                  {composeMutation.isPending ? "Calcul…" : "Calculer l'aperçu"}
                 </button>
                 <button
                   type="button"
@@ -677,10 +677,7 @@ export default function DeliverableForgePage() {
                   <CheckCircle2 className="h-5 w-5" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-sm font-semibold text-foreground">Composition complétée</h3>
-                  <p className="mt-0.5 text-xs text-foreground-secondary">
-                    Status : <span className="font-semibold">{composition.status}</span>
-                  </p>
+                  <h3 className="text-sm font-semibold text-foreground">Aperçu de la cascade prêt</h3>
                   <p className="mt-2 text-xs text-foreground">{composition.summary}</p>
                 </div>
               </div>
