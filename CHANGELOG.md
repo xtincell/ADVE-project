@@ -10,6 +10,18 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.70 — feat(artemis): Bible de Marque — deck 16:9 téléchargeable (2ᵉ livrable) (2026-06-30)
+
+Sort le **2ᵉ livrable canonique** (après l'Oracle) : la **Bible de Marque**, compilation des Glory tools BRAND-layer (séquence **BRANDBOOK-D**) en deck **16:9 téléchargeable**. Construit en réutilisant l'existant au maximum :
+
+- **Données** via `compileDeliverable(strategyId, "BRANDBOOK-D")` (sorties Glory déjà persistées + sections manquantes), **rendu** via `jsPDF` (déjà en deps, serverless-safe — comme `export-oracle.ts`, pas de Chromium ni de page publique, route auth-gardée comme l'Oracle).
+- Deck = 1 couverture (panda/corail/or DS) + 1 slide par étape BRANDBOOK-D, **la séquence servant de colonne vertébrale** : section présente → contenu rendu (walk JSON lisible) ; absente → **empty-state honnête « section à générer »** (jamais de données inventées — doctrine PROPAGATION-MAP). **Doctrine Artemis→Ptah respectée** : compile des briefs textuels, ne forge pas d'image (variante slides graphiques Ptah = chantier distinct).
+- Surfaces : kind `BRAND_BIBLE` (+ `KIND_TO_PILLAR`→D) · exporter `value-report-generator/brand-bible-pdf.ts` · route `/api/export/brand-bible/[strategyId]/pdf` · bouton Cockpit (page proposition, à côté de l'Export Oracle). **0 migration** (`BrandAsset.kind` est un `String`).
+
+Test `brand-bible-deck.test.ts` : intégrité du spine (chaque slide résout un Glory tool) + rendu PDF réel (`%PDF-`, couverture + slides, édition partielle honnête). Cap APOGEE 7/7. **tsc 0 · eslint 0 · 3 nouveaux tests + 34 kind-tests verts**.
+
+---
+
 ## v6.27.69 — fix(os): healer pass — purge erreurs UI/fonctionnelles + résilience LLM + SEO (2026-06-30)
 
 Robot **« healer »** (`scripts/heal/`) + **scan fonctionnel complet** déclenchant TOUS les noeuds (Glory tools, sequences, frameworks) avec timeout par noeud et sortie jsonl live. Mandat opérateur : « ne laisser aucune erreur avant le passage public ». Correctifs transverses issus du scan :
