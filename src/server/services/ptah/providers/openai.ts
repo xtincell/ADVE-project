@@ -26,12 +26,17 @@ import type { ForgeBrief, ForgeProvider } from "../types";
 
 const OPENAI_IMAGES_URL = "https://api.openai.com/v1/images/generations";
 
-// gpt-image-1 : tailles supportées (≠ dall-e). 1536×1024 = paysage (le plus
-// proche d'un 16:9 disponible), utile pour les slides de bible de marque.
-const VALID_SIZES = new Set(["1024x1024", "1536x1024", "1024x1536", "auto"]);
 const VALID_QUALITY = new Set(["low", "medium", "high", "auto"]);
 
-function resolveModel(): string {
+/**
+ * Modèle : `gpt-image-1` = 1K (défaut opérateur). `gpt-image-2` = passe **2K**
+ * (même prompt) quand l'opérateur valide le rendu 1K et veut la haute résolution.
+ * Pilotable par `parameters.model` (explicite) ou `parameters.resolution="2K"`.
+ */
+function resolveModel(brief: ForgeBrief): string {
+  const p = brief.forgeSpec.parameters ?? {};
+  if (typeof p.model === "string" && p.model.trim()) return p.model.trim();
+  if (p.resolution === "2K") return "gpt-image-2";
   return process.env.OPENAI_IMAGE_MODEL ?? "gpt-image-1";
 }
 
@@ -42,8 +47,15 @@ function resolvePrompt(brief: ForgeBrief): string {
 }
 
 function resolveSize(brief: ForgeBrief): string {
-  const s = brief.forgeSpec.parameters?.size;
-  return typeof s === "string" && VALID_SIZES.has(s) ? s : "1024x1024";
+  const p = brief.forgeSpec.parameters ?? {};
+  // Confiance au caller (OpenAI valide la taille selon le modèle). Défaut : 1K,
+  // ou 2K (2048²) en passe haute résolution.
+  if (typeof p.size === "string" && p.size.trim()) return p.size.trim();
+  return p.resolution === "2K" ? "2048x2048" : "1024x1024";
+}
+
+function is2K(brief: ForgeBrief): boolean {
+  return resolveModel(brief) === "gpt-image-2" || brief.forgeSpec.parameters?.resolution === "2K";
 }
 
 function resolveQuality(brief: ForgeBrief): string {
@@ -80,8 +92,9 @@ class OpenAIImagesProvider implements ForgeProvider {
     // gpt-image-1 (USD/image, ~1024²) : low ≈ 0.02 / medium ≈ 0.06 / high ≈ 0.20.
     const q = resolveQuality(brief);
     const base = q === "low" ? 0.02 : q === "high" ? 0.2 : 0.06;
-    // Tailles paysage/portrait ≈ ×1.5.
-    return resolveSize(brief) === "1024x1024" ? base : Math.round(base * 1.5 * 1000) / 1000;
+    const sizeFactor = resolveSize(brief) === "1024x1024" ? 1 : 1.5;
+    const resFactor = is2K(brief) ? 4 : 1; // passe 2K gpt-image-2 ≈ ×4
+    return Math.round(base * sizeFactor * resFactor * 1000) / 1000;
   }
 
   async forge(brief: ForgeBrief, _webhookUrl?: string) {
@@ -89,7 +102,7 @@ class OpenAIImagesProvider implements ForgeProvider {
     if (!key) {
       throw new Error("OpenAI Images: OPENAI_API_KEY manquant (forge différée attendue via isAvailable).");
     }
-    const model = resolveModel();
+    const model = resolveModel(brief);
     const res = await fetch(OPENAI_IMAGES_URL, {
       method: "POST",
       headers: {
