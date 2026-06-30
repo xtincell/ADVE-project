@@ -23,6 +23,7 @@
 
 import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc/client";
+import { useCanOperate } from "@/components/cockpit/use-can-operate";
 import { useOracleStream } from "@/hooks/use-oracle-stream";
 import { SECTION_REGISTRY } from "@/server/services/strategy-presentation/types";
 import { OracleSectionCard, type SectionDbStatus } from "./section-card";
@@ -101,6 +102,10 @@ export function OracleProgressivePanel(props: OracleProgressivePanelProps): Reac
   const isAssemblerRunning = assembleMutation.isPending || stream.assemblerState.phase === "running";
   const anyMutationPending =
     generateMutation.isPending || retryMutation.isPending || assembleMutation.isPending;
+  // Founders are not operators: oracle.* generation is operator-only (init.ts).
+  // Disable the controls + show a read-only banner instead of click→FORBIDDEN.
+  // The legacy governed `enrichOracle` path on this page remains founder-usable.
+  const canOperate = useCanOperate();
 
   // ── Render ────────────────────────────────────────────────────────
   const failedSection = failureModalSectionId !== null ? sectionsById.get(failureModalSectionId) : null;
@@ -125,11 +130,17 @@ export function OracleProgressivePanel(props: OracleProgressivePanelProps): Reac
           </div>
         </div>
 
+        {!canOperate ? (
+          <p className="mt-3 rounded-lg border border-info/30 bg-info/10 px-3 py-2 text-xs text-foreground-secondary">
+            L&apos;assemblage de l&apos;Oracle est pris en charge par votre équipe UPgraders. Vous pouvez suivre l&apos;avancement ici en lecture seule.
+          </p>
+        ) : null}
+
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => assembleMutation.mutate({ strategyId, scope })}
-            disabled={anyMutationPending}
+            disabled={anyMutationPending || !canOperate}
             className="flex items-center gap-2 rounded-lg bg-error px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-error disabled:opacity-40"
             title={`Émet ASSEMBLE_ORACLE (scope=${scope}). L'Assembler boucle sur GENERATE_ORACLE_SECTION × N — chaque section traverse executeStructuredLLMCall (Zod strict + retry x2).`}
           >
@@ -149,7 +160,7 @@ export function OracleProgressivePanel(props: OracleProgressivePanelProps): Reac
             <button
               type="button"
               onClick={() => setScopeMenuOpen(!scopeMenuOpen)}
-              disabled={anyMutationPending}
+              disabled={anyMutationPending || !canOperate}
               className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium text-foreground-secondary transition-colors hover:bg-surface-raised disabled:opacity-40"
             >
               Scope: <span className="font-bold text-foreground">{SCOPE_OPTIONS.find((o) => o.value === scope)?.label}</span>
@@ -233,7 +244,7 @@ export function OracleProgressivePanel(props: OracleProgressivePanelProps): Reac
               confidence={streamConfidence ?? dbSection.confidence}
               lastError={dbSection.lastError as { errorCode?: string | null; errorMessage?: string | null } | null}
               isStale={dbSection.staleAt != null}
-              disabled={anyMutationPending && !isAssemblerRunning ? false : anyMutationPending}
+              disabled={!canOperate || (anyMutationPending && !isAssemblerRunning ? false : anyMutationPending)}
               onAction={(mode) => {
                 if (mode === "RETRY") {
                   retryMutation.mutate({ strategyId, sectionId: dbSection.sectionId });

@@ -199,12 +199,12 @@ export default function MestorPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Mestor AI"
-        description="Votre assistant Brand OS intelligent."
+        title="Assistant"
+        description="Votre assistant de marque intelligent."
         badge={<AiBadge />}
         breadcrumbs={[
           { label: "Cockpit", href: "/cockpit" },
-          { label: "Mestor" },
+          { label: "Assistant" },
         ]}
       >
         {messages.length > 0 && (
@@ -231,10 +231,10 @@ export default function MestorPage() {
                 <Sparkles className="h-10 w-10 text-accent" />
               </div>
               <h3 className="mt-4 text-lg font-semibold text-white">
-                Bienvenue sur Mestor AI
+                Bienvenue sur votre assistant
               </h3>
               <p className="mt-1 max-w-sm text-center text-sm text-foreground-secondary">
-                Je suis votre assistant Brand OS. Posez-moi vos questions sur
+                Je suis votre assistant de marque. Posez-moi vos questions sur
                 {strategyName ? ` ${strategyName},` : ""} vos guidelines, ou demandez un diagnostic.
               </p>
 
@@ -374,7 +374,7 @@ export default function MestorPage() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Posez une question a Mestor..."
+                placeholder="Posez une question à l'assistant..."
                 rows={1}
                 className="w-full resize-none rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-white placeholder-foreground-muted outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/30"
                 style={{ minHeight: 40, maxHeight: 120 }}
