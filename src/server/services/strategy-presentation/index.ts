@@ -87,7 +87,12 @@ function computePresentationEvidence(strategy: StrategyWithRelations): number {
 
 // ─── Prisma Include (single comprehensive query) ────────────────────────────
 
-const PRESENTATION_INCLUDE = {
+// Exporté : la voie calc des sequences ORACLE_DERIVED (sequence-executor.ts)
+// recharge la strategy avec CE MÊME include — les section-mappers sont
+// co-conçus avec lui (accès non gardés à user/client/missions.deliverables/
+// missions.driver/gloryOutputs). Un include minimal divergent re-créerait des
+// throws (DERIVED-PROD-LIV / DERIVED-CONDITIONS).
+export const PRESENTATION_INCLUDE = {
   user: { select: { name: true, email: true, image: true } },
   operator: { select: { name: true, slug: true } },
   client: { select: { id: true, name: true, sector: true, country: true, contactName: true, contactEmail: true } },
