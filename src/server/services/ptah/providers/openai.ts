@@ -83,6 +83,32 @@ async function persistImage(buffer: Buffer): Promise<string> {
   return `data:image/png;base64,${buffer.toString("base64")}`;
 }
 
+/**
+ * Références image (conditionnement) portées par `parameters.referenceImageUrls`
+ * — URLs http(s) OU data URLs. Cœur du système de dépendance du case study :
+ * chaque planche est forgée À PARTIR des assets verrouillés précédents (identité
+ * → pack → KV → déclinaisons) au lieu de les réinventer.
+ */
+function resolveReferenceUrls(brief: ForgeBrief): string[] {
+  const raw = brief.forgeSpec.parameters?.referenceImageUrls;
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((u): u is string => typeof u === "string" && u.trim().length > 0);
+}
+
+/** Charge une référence image : data URL décodée, sinon fetch http(s). */
+async function fetchRefBuffer(url: string): Promise<ArrayBuffer> {
+  if (url.startsWith("data:")) {
+    const b64 = url.slice(url.indexOf(",") + 1);
+    const buf = Buffer.from(b64, "base64");
+    return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
+  }
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`OpenAI Images: référence inaccessible ${res.status} ${url.slice(0, 80)}`);
+  }
+  return res.arrayBuffer();
+}
+
 class OpenAIImagesProvider implements ForgeProvider {
   readonly name = "openai" as const;
   readonly externalDomains = ["api.openai.com"];
@@ -103,21 +129,28 @@ class OpenAIImagesProvider implements ForgeProvider {
       throw new Error("OpenAI Images: OPENAI_API_KEY manquant (forge différée attendue via isAvailable).");
     }
     const model = resolveModel(brief);
-    const res = await fetch(OPENAI_IMAGES_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        prompt: resolvePrompt(brief),
-        n: 1,
-        size: resolveSize(brief),
-        quality: resolveQuality(brief),
-        // gpt-image-1 renvoie du b64 par défaut ; `response_format` est rejeté.
-      }),
-    });
+    const refUrls = resolveReferenceUrls(brief);
+
+    // Reference-conditioned (image + prompt → image cohérente) via /v1/images/edits
+    // quand des références sont fournies (case study : identité/pack/KV verrouillés) ;
+    // sinon text-to-image via /v1/images/generations (planches de fondation).
+    const res = refUrls.length > 0
+      ? await this.editWithReferences(key, model, brief, refUrls)
+      : await fetch(OPENAI_IMAGES_URL, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${key}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model,
+            prompt: resolvePrompt(brief),
+            n: 1,
+            size: resolveSize(brief),
+            quality: resolveQuality(brief),
+            // gpt-image-1 renvoie du b64 par défaut ; `response_format` est rejeté.
+          }),
+        });
     if (!res.ok) {
       const detail = await res.text().catch(() => res.statusText);
       throw new Error(`OpenAI Images ${res.status}: ${detail.slice(0, 300)}`);
@@ -137,6 +170,35 @@ class OpenAIImagesProvider implements ForgeProvider {
       estimatedCostUsd: this.estimateCost(brief),
       webhookSecret: "",
     };
+  }
+
+  /**
+   * /v1/images/edits (multipart) — conditionne la génération sur 1..16 images de
+   * référence (`image[]`) + le prompt. gpt-image-1/2 supportent l'input image
+   * (vérifié en live). Verrouille la cohérence visuelle entre planches du case
+   * study (« enrichir, pas réinventer »).
+   */
+  private async editWithReferences(
+    key: string,
+    model: string,
+    brief: ForgeBrief,
+    refUrls: string[],
+  ): Promise<Response> {
+    const fd = new FormData();
+    fd.append("model", model);
+    fd.append("prompt", resolvePrompt(brief));
+    fd.append("n", "1");
+    fd.append("size", resolveSize(brief));
+    fd.append("quality", resolveQuality(brief));
+    for (const u of refUrls.slice(0, 16)) {
+      const buf = await fetchRefBuffer(u);
+      fd.append("image[]", new Blob([buf], { type: "image/png" }), "ref.png");
+    }
+    return fetch("https://api.openai.com/v1/images/edits", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}` },
+      body: fd,
+    });
   }
 
   async reconcile(providerTaskId: string, _webhookPayload?: unknown) {

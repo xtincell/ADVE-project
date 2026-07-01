@@ -38,9 +38,16 @@ export class NoAvailableProviderError extends Error {
 }
 
 export async function selectProvider(brief: ForgeBrief): Promise<ForgeProvider> {
-  const candidates = brief.forgeSpec.providerHint
-    ? [brief.forgeSpec.providerHint, ...KIND_TO_PROVIDER[brief.forgeSpec.kind].filter((p) => p !== brief.forgeSpec.providerHint)]
-    : KIND_TO_PROVIDER[brief.forgeSpec.kind];
+  const allowed = KIND_TO_PROVIDER[brief.forgeSpec.kind];
+  const hint = brief.forgeSpec.providerHint;
+  // Le `providerHint` n'est honoré QUE s'il fait partie des providers autorisés
+  // pour ce kind. Ainsi un vieux `providerHint: "magnific"` posé sur un tool
+  // image/icon (registry historique) ne peut PAS court-circuiter le routage
+  // image→["openai"] EXCLUSIF (décision opérateur « plus de Magnific pour les
+  // images »). Le hint reste utile là où plusieurs providers sont autorisés (design).
+  const candidates = hint && allowed.includes(hint)
+    ? [hint, ...allowed.filter((p) => p !== hint)]
+    : allowed;
 
   for (const name of candidates) {
     const provider = getProvider(name);

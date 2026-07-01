@@ -10,6 +10,17 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.75 — feat(ptah): forge conditionnée par image de référence (gpt-image edits) + routing image exclusif (2026-07-01)
+
+Fondation du **système de dépendance** du case study (« réutiliser les images précédentes comme références » : identité → pack → KV → déclinaisons, sans réinventer). Audit du pipeline image/asset/brief : architecture saine (tools image, handoff brief→forge, création/récupération d'assets `AssetVersion`/`BrandAsset` vault, réutilisation via `requires` DAG, découplage Artemis↔Ptah) — **2 trous comblés** :
+
+- **Reference-image conditioning** (le trou critique) : `openai.ts` `forge()` route vers `/v1/images/edits` (multipart `image[]` + prompt, jusqu'à 16 références) dès qu'un brief porte `forgeSpec.parameters.referenceImageUrls` (URLs http OU data URLs) ; sinon `/v1/images/generations` (planches de fondation). Helpers `resolveReferenceUrls`/`fetchRefBuffer`. **Vérifié EN LIVE** bout-en-bout via le provider (gen → data URL → edit conditionné → image cohérente). gpt-image-1/2 supportent l'input image.
+- **Routing image exclusif** : `provider-selector` n'honore un `providerHint` que s'il est autorisé pour le kind. Corrige le registry historique où les tools image/icon portent `providerHint: "magnific"` — ce hint périmé court-circuitait le routage `image→["openai"]` exclusif (magnific mock `isAvailable=true`) → forge Magnific au lieu d'OpenAI. Désormais drop pour image/icon → OpenAI direct.
+
+Test `ptah-openai-image-provider.test.ts` (hint magnific périmé → openai exclusif). Cap APOGEE 7/7. tsc 0 · eslint 0 · **2343 tests verts**.
+
+---
+
 ## v6.27.74 — feat(llm-gateway): embeddings Ollama LOCAL + fix(campaigns) amorçage multi-axes (2026-07-01)
 
 Deux branchements demandés par l'opérateur :

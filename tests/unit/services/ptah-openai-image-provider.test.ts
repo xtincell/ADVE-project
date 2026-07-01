@@ -60,6 +60,14 @@ describe("Ptah — OpenAI image provider exclusif", () => {
     expect((await selectProvider(brief("icon"))).name).toBe("openai");
   });
 
+  it("un providerHint 'magnific' périmé sur une image est IGNORÉ → openai exclusif", async () => {
+    process.env.OPENAI_API_KEY = "sk-test";
+    const b = brief("image");
+    (b.forgeSpec as { providerHint?: string }).providerHint = "magnific";
+    // Le hint n'est pas dans les providers autorisés pour `image` (["openai"]) → drop.
+    expect((await selectProvider(b)).name).toBe("openai");
+  });
+
   it("sans clé, génération d'image → NoAvailableProviderError (→ forge différée en amont)", async () => {
     delete process.env.OPENAI_API_KEY;
     await expect(selectProvider(brief("image"))).rejects.toBeInstanceOf(NoAvailableProviderError);
