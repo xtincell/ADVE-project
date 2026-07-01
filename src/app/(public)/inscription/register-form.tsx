@@ -12,7 +12,12 @@ function FieldErrors({ errors }: { errors?: string[] }) {
   return <p className="text-sm font-medium text-coral-deep">{errors[0]}</p>;
 }
 
-export function RegisterForm() {
+export function RegisterForm({
+  lead,
+}: {
+  /** Lead du funnel à convertir (préremplit email + nom de marque). */
+  lead?: { id: string; email: string; brandName: string } | null;
+}) {
   const [state, formAction, isPending] = useActionState<FormState, FormData>(
     registerAction,
     null,
@@ -20,6 +25,7 @@ export function RegisterForm() {
 
   return (
     <form action={formAction} className="space-y-5" noValidate>
+      {lead ? <input type="hidden" name="leadId" value={lead.id} /> : null}
       {state?.formError ? (
         <p
           role="alert"
@@ -49,6 +55,7 @@ export function RegisterForm() {
           name="brandName"
           placeholder="Ma Marque"
           required
+          defaultValue={lead?.brandName}
           aria-invalid={state?.fieldErrors?.brandName ? true : undefined}
         />
         <FieldErrors errors={state?.fieldErrors?.brandName} />
@@ -63,6 +70,7 @@ export function RegisterForm() {
           autoComplete="email"
           placeholder="vous@exemple.com"
           required
+          defaultValue={lead?.email}
           aria-invalid={state?.fieldErrors?.email ? true : undefined}
         />
         <FieldErrors errors={state?.fieldErrors?.email} />

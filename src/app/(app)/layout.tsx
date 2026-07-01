@@ -12,8 +12,8 @@ export const dynamic = "force-dynamic";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen bg-ink text-bone">
-      <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col border-r border-line bg-ink-0 px-4 py-6">
+    <div className="flex min-h-screen bg-ink text-bone print:block print:min-h-0 print:bg-white print:text-ink">
+      <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col border-r border-line bg-ink-0 px-4 py-6 print:hidden">
         <Link href="/app" className="px-3" aria-label="La Fusée — ma marque">
           <span className="font-display text-lg font-semibold tracking-tight">
             La Fusée<span className="text-coral">·</span>
@@ -33,7 +33,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </form>
       </aside>
       <main className="min-w-0 flex-1">
-        <div className="mx-auto max-w-page px-gutter py-10">{children}</div>
+        <div className="mx-auto max-w-page px-gutter py-10 print:max-w-none print:px-0 print:py-0">
+          {children}
+        </div>
       </main>
     </div>
   );

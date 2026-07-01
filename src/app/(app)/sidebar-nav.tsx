@@ -6,7 +6,8 @@ import { CreditCard, Rocket, ScrollText } from "lucide-react";
 import { cva } from "class-variance-authority";
 
 const NAV_ITEMS = [
-  { href: "/app", label: "Ma marque", icon: Rocket, exact: true },
+  // Les pages piliers appartiennent à « Ma marque » (grille bento → éditeur).
+  { href: "/app", label: "Ma marque", icon: Rocket, exact: true, alsoPrefix: "/app/pilier" },
   { href: "/app/oracle", label: "Oracle", icon: ScrollText, exact: false },
   { href: "/app/facturation", label: "Facturation", icon: CreditCard, exact: false },
 ] as const;
@@ -29,9 +30,10 @@ export function SidebarNav() {
   return (
     <nav className="flex flex-col gap-1" aria-label="Navigation de l'espace marque">
       {NAV_ITEMS.map((item) => {
-        const active = item.exact
-          ? pathname === item.href
-          : pathname.startsWith(item.href);
+        const alsoPrefix = "alsoPrefix" in item ? item.alsoPrefix : undefined;
+        const active =
+          (item.exact ? pathname === item.href : pathname.startsWith(item.href)) ||
+          (alsoPrefix !== undefined && pathname.startsWith(alsoPrefix));
         return (
           <Link
             key={item.href}
