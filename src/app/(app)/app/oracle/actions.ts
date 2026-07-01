@@ -6,10 +6,15 @@ import type { FormState } from "@/lib/forms";
 import { readSession } from "@/lib/session";
 import { BrandError, getBrandForSession } from "@/server/brand";
 import { composeOracleDeliverable } from "@/server/deliverables";
+import { canComposeOracle } from "@/server/entitlements";
 
 /**
  * Compose (ou recompose) l'Oracle — mutation EXPLICITE uniquement : la page
  * ne persiste jamais rien en la visitant. Succès = null.
+ *
+ * Gated par plan (WP-007) : abonnement actif OU grâce découverte de 15 jours
+ * (`canComposeOracle`). La LECTURE d'un Oracle déjà composé reste libre —
+ * seul l'acte de composition est un droit payant.
  */
 export async function composeOracleAction(
   _prev: FormState,
@@ -21,6 +26,16 @@ export async function composeOracleAction(
   const brand = await getBrandForSession(session);
   if (!brand) {
     return { formError: "Aucune marque dans cet espace — commencez par le diagnostic d'entrée." };
+  }
+
+  const entitlement = await canComposeOracle(session.workspaceId);
+  if (!entitlement.allowed) {
+    return {
+      formError:
+        "Abonnement requis — votre période de découverte de 15 jours est terminée. " +
+        "Activez le plan Cockpit ou Retainer depuis la page Facturation (/app/facturation) " +
+        "pour composer l'Oracle. Votre Oracle déjà composé reste consultable.",
+    };
   }
 
   try {

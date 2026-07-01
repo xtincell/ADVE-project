@@ -19,7 +19,9 @@ import {
   type RevisionSnapshot,
 } from "@/components/pillars/field-history";
 import { ScoreBar } from "@/components/pillars/score-bar";
-import { amendFieldAction } from "./actions";
+import { aiAvailable } from "@/server/ai/gateway";
+import { amendFieldAction, draftAiFieldsAction } from "./actions";
+import { AiDraftPanel } from "./ai-draft-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -134,6 +136,17 @@ export default async function PillarPage({ params }: PageProps) {
 
       {derivationNote && !adve ? (
         <p className="text-sm italic text-smoke-2">Note de dérivation : {derivationNote}</p>
+      ) : null}
+
+      {/* IA OPTIONNELLE (WP-010) : le panneau n'existe que si un provider est
+          configuré ET que le pilier est ADVE ET qu'il reste des champs vides.
+          Sans clé env : rien ne s'affiche — pas de bouton mort. */}
+      {adve && pillarScore.missing.length > 0 && aiAvailable() ? (
+        <AiDraftPanel
+          action={draftAiFieldsAction}
+          pillarKey={key}
+          emptyCount={pillarScore.missing.length}
+        />
       ) : null}
 
       <section className="space-y-4" aria-label={`Champs du pilier ${PILLAR_LABELS[key]}`}>
