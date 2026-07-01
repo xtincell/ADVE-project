@@ -932,6 +932,11 @@ export interface EmbedResult {
 
 const OLLAMA_DIM_BY_MODEL: Record<string, number> = {
   "nomic-embed-text": 768,
+  // v2-moe : modèle d'embedding LOCAL (ollama pull) — PAS servi sur ollama.com
+  // (vérifié 2026-07-01 : /v1/embeddings "path not found" ; /api/embed
+  // "unauthorized" même pour un modèle chat servi → endpoint embeddings gaté
+  // côté cloud). Prêt si l'opérateur lance Ollama en local.
+  "nomic-embed-text-v2-moe": 768,
   "mxbai-embed-large": 1024,
   "bge-m3": 1024,
   "all-minilm": 384,
@@ -952,7 +957,7 @@ function selectEmbedProvider(override?: EmbedProvider): EmbedProvider {
   if (envPref && (["ollama", "openai", "openrouter", "none"] as const).includes(envPref)) {
     return envPref;
   }
-  if (process.env.OLLAMA_BASE_URL) return "ollama";
+  if (process.env.OLLAMA_EMBED_BASE_URL || process.env.OLLAMA_BASE_URL) return "ollama";
   // OpenAI = chemin embeddings principal, SAUF s'il est en fenêtre « à sec » 24h
   // (auquel cas on passe à OpenRouter pour des embeddings gratuits).
   if (process.env.OPENAI_API_KEY && !isOpenAiEmbedDry()) return "openai";
@@ -1011,8 +1016,20 @@ async function embedViaOllama(
   model: string,
   caller: string,
 ): Promise<EmbedResult> {
-  const rawBase = process.env.OLLAMA_BASE_URL!.replace(/\/$/, "");
-  const apiKey = process.env.OLLAMA_API_KEY;
+  // Endpoint embeddings DÉDIÉ, découplé du chat (`OLLAMA_EMBED_BASE_URL`). Le
+  // chat Ollama peut viser le cloud (ollama.com/v1 + clé) tandis que les
+  // embeddings visent un Ollama LOCAL (localhost:11434, sans auth) — le cloud
+  // n'héberge aucun modèle d'embedding (vérifié). Fallback sur la base chat.
+  const embedBase = process.env.OLLAMA_EMBED_BASE_URL;
+  const baseRaw = embedBase ?? process.env.OLLAMA_BASE_URL;
+  if (!baseRaw) {
+    throw new Error("embedViaOllama: ni OLLAMA_EMBED_BASE_URL ni OLLAMA_BASE_URL défini");
+  }
+  const rawBase = baseRaw.replace(/\/$/, "");
+  // Clé : dédiée embed si fournie ; sinon héritée du chat UNIQUEMENT quand aucune
+  // base embed dédiée n'est posée (une base dédiée = Ollama local sans clé — ne
+  // pas y router la clé cloud, sinon on force à tort le chemin /v1 Bearer).
+  const apiKey = process.env.OLLAMA_EMBED_API_KEY ?? (embedBase ? undefined : process.env.OLLAMA_API_KEY);
   const dim = OLLAMA_DIM_BY_MODEL[model] ?? 768;
   const isV1 = /\/v1$/.test(rawBase);
 
