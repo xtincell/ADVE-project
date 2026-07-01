@@ -10,6 +10,17 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.74 — feat(llm-gateway): embeddings Ollama LOCAL + fix(campaigns) amorçage multi-axes (2026-07-01)
+
+Deux branchements demandés par l'opérateur :
+
+- **Embeddings via Ollama LOCAL** (`nomic-embed-text-v2-moe`, dim 768) — l'opérateur lance Ollama en local le temps de migrer sur VPS. Ollama Cloud n'a **aucun** endpoint d'embedding (re-vérifié 3 façons : `/v1/embeddings` "path not found", `/api/embed` "unauthorized" MÊME pour un modèle chat servi, alors que `/api/tags`+`/v1/chat` marchent — `nomic-embed-text-v2-moe` est un modèle de **library** local, pas cloud-servi). Découplage réseau : nouvel `OLLAMA_EMBED_BASE_URL` (+ `OLLAMA_EMBED_API_KEY` opt.) → le **chat** Ollama vise le cloud (deepseek) pendant que les **embeddings** visent `localhost:11434` sans auth. Supersede le pin OpenAI de v6.27.72 sur le setup opérateur. Vérifié end-to-end via `embed()` : provider=ollama, dim=768. Env : `EMBED_PROVIDER=ollama`, `OLLAMA_EMBED_BASE_URL=http://localhost:11434`, `OLLAMA_EMBED_MODEL=nomic-embed-text-v2-moe`.
+- **Gate de direction créative — amorçage multi-axes** (fix) : constat opérateur (screenshot) — 3 campagnes canon générées mais la gate affiche « Aucune proposition créative ». Cause : les frames canon ne seedent aucune `CreativeProposal`. Fix `seedCreativeAxesIfEmpty` : si 0 proposition ET ≥1 frame canon, seed **2 axes créatifs distincts** (Premium/Aspirationnel vs Proximité/Vérité culturelle) via Voie A IA (nouveau `angleHint`) + fallback déterministe ; le panel auto-amorce à l'ouverture. L'opérateur n'a plus qu'à choisir l'axe 1 ou l'axe 2. Nouveau kind gouverné `SEED_CREATIVE_AXES`.
+
+Cap APOGEE 7/7. tsc 0 · eslint 0 · **2342 tests verts** · gouvernance 876 verts.
+
+---
+
 ## v6.27.73 — feat(artemis): bible de marque — planches visuelles (placeholder + prompt) (2026-07-01)
 
 Sur demande opérateur (« c'est la mise en forme qui m'intéresse, mets des placeholders avec le prompt dans le cadre »). Le deck 16:9 de la Bible de Marque passe de slides texte à **planches visuelles** : chaque planche = un cadre placeholder **« VISUEL À FORGER · gpt-image-1 (1K) »** contenant le **PROMPT laser** de la planche (gauche) + colonne **« DIRECTIONS DU BRIEF »** (droite). Si une image forgée est attachée au brief (data URL / http), elle est **embarquée** dans le cadre à la place du placeholder.

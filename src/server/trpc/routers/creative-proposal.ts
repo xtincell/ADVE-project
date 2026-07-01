@@ -85,6 +85,20 @@ export const creativeProposalRouter = createTRPCRouter({
     return draftCreativeDirectionFromStrategy(input.strategyId);
   }),
 
+  /**
+   * Amorçage multi-axes — si la gate est vide ET que des frames canon existent, seed
+   * 2 propositions DRAFT (2 axes créatifs distincts). Idempotent. Rend le « déjà
+   * amorcé » attendu : l'opérateur n'a plus qu'à choisir l'axe 1 ou l'axe 2 (ADR-0120).
+   */
+  seedAxesIfEmpty: governedProcedure({
+    kind: "SEED_CREATIVE_AXES",
+    inputSchema: z.object({ strategyId: z.string() }),
+    caller: "creativeProposal:seedAxesIfEmpty",
+  }).mutation(async ({ input }) => {
+    const { seedCreativeAxesIfEmpty } = await import("@/server/services/creative-proposal");
+    return seedCreativeAxesIfEmpty(input.strategyId);
+  }),
+
   // ── Voie B La Guilde — surface membre guilde (creator portal) ──
 
   /** Stratégies pour lesquelles le membre guilde connecté peut proposer (≥1 mission assignée). */

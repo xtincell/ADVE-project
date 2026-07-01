@@ -500,6 +500,7 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "REJECT_CREATIVE_PROPOSAL", p95LatencyMs: 4_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "DRAFT_CREATIVE_PROPOSAL_FROM_STRATEGY", p95LatencyMs: 12_000, errorRatePct: 0.06, costP95Usd: 0.05 },
   { kind: "GUILD_SUBMIT_CREATIVE_PROPOSAL", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "SEED_CREATIVE_AXES", p95LatencyMs: 20_000, errorRatePct: 0.1, costP95Usd: 0.1 },
   { kind: "LEGACY_RESEARCH_WAVE_CREATE", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_RESEARCH_WAVE_RECORD", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_SOURCE_SET_PROVENANCE", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
