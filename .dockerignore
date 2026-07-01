@@ -1,0 +1,8 @@
+legacy
+node_modules
+.next
+.git
+docs
+*.md
+!README.md
+.env*

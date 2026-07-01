@@ -1,0 +1,20 @@
+name: Deploy Coolify
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branche à déployer"
+        default: "claude/project-revamp-agent-safe-doc3ip"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Provision + deploy sur Coolify
+        env:
+          COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+          GIT_BRANCH: ${{ inputs.branch }}
+        run: bash scripts/deploy-coolify.sh
