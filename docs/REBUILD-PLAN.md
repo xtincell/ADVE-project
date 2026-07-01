@@ -64,14 +64,14 @@ non-dépendante du LLM » est une loi ici) ; secrets en env uniquement.
 | WP | Contenu | Dépend | Statut |
 |---|---|---|---|
 | **001** | Fondations : quarantaine legacy/, scaffold Next+TS+Tailwind+Prisma, domaine pillars, schéma tranche 1, CI verte | — | **SHIPPED** (session fondatrice) |
-| **002** | DS & shell : fonts Clash/Satoshi, tokens complets, primitives (Button/Card/Input/Badge), layouts des 3 espaces, landing réelle (copy legacy `landingintake`) | 001 | PENDING |
+| **002** | DS & shell : fonts Clash/Satoshi, tokens complets, primitives (Button/Card/Input/Badge), layouts des 3 espaces, landing réelle (copy legacy `landingintake`) | 001 | **SHIPPED** (landing + /tarifs + 8 primitives CVA + tokens/fonts ; layouts (app)/(admin) → WP-003) |
 | **003** | Identity : auth (credentials + Google), Workspace/Membership, middleware rôles, tRPC si besoin | 001 | PENDING |
 | **004** | Funnel intake : formulaire public → `IntakeLead` → diagnostic gratuit (scoring déterministe) → CTA conversion → seed workspace+brand+pillars | 002, 003 | PENDING |
-| **005** | Cœur marque : éditeur piliers ADVE (amendement opérateur, needsHuman INFERRED→DECLARED), dérivation RTIS, `PillarRevision` hash-chaînée, `BrandScore` (port scoring 8-dim simplifié) | 003 | PENDING |
+| **005** | Cœur marque : éditeur piliers ADVE (amendement opérateur, needsHuman INFERRED→DECLARED), dérivation RTIS, `PillarRevision` hash-chaînée, `BrandScore` (port scoring 8-dim simplifié) | 003 | moteurs domaine **SHIPPED** (pillar-fields 47 champs · scoring ADR-0102 · diagnostic · rtis · oracle 12 sections · 67 tests) — UI app PENDING |
 | **006** | Livrables : registre kinds, port des composers déterministes Oracle (sections prioritaires), rendu web + PDF, staleness simple (STALE au rewrite majeur) | 005 | PENDING |
 | **007** | Finance : plans + pricing par formule (zone-indices), souscription mobile money (Wave/OM/MTN/Moov) + **paiement manuel WhatsApp + file de validation admin** (l'acquis pragmatique), gating par plan | 003, 009 | PENDING |
 | **008** | Campagnes & missions : Campaign→Action→Brief→Mission (l'essence d'ADR-0119/0120 legacy, simplifiée), coûts d'action par marché | 005 | PENDING |
-| **009** | Référentiels : seeds pays/zones/coûts (port des seeds legacy), admin CRUD référentiels | 003 | PENDING |
+| **009** | Référentiels : seeds pays/zones/coûts (port des seeds legacy), admin CRUD référentiels | 003 | **SHIPPED** (seed.mjs : 18 pays + pricing formule réelle 8000 FCFA/mois + cost-of-living ; CRUD admin → WP-007/008) |
 | **010** | IA : gateway multi-provider (Anthropic→OpenAI→Ollama→OpenRouter) + structured call Zod + budget/coût par workspace ; branchée sur intake narratif + piliers draft | 004, 005 | PENDING |
 | **011** | Guilde : mur des missions public, inscription talents, candidatures (essence ADR-0098) | 008 | PENDING |
 | **012** | Déploiement Coolify : Dockerfile, healthcheck, env, migrations au deploy, domaine, staging | 001 | PENDING (besoin URL Coolify + token env — cf. §7) |
