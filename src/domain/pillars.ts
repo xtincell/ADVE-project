@@ -1,206 +1,35 @@
 /**
- * src/domain/pillars.ts — Single source of truth for ADVERTIS pillars.
- *
- * Layer 0 (domain). Pure module. NO Prisma, NO tRPC, NO NextAuth, NO LLM, NO React.
- * Imports allowed: zod only.
- *
- * Two surface forms exist for historical reasons:
- *   - Canonical (uppercase): "A","D","V","E","R","T","I","S" — used in Zod
- *     enums, IntentLog audit, public API surface, manifests.
- *   - Storage (lowercase):   "a","d","v","e","r","t","i","s" — used in DB
- *     `Pillar.key`, `AdvertisVector` numeric fields, legacy advertis-vector.
- *
- * Rule: NEW code uses canonical (uppercase). Storage form is a serialisation
- * detail and should only appear inside DB adapters and the legacy
- * advertis-vector module (which now re-exports from here for compat).
+ * Cœur de la méthode — cascade A→D→V→E→R→T→I→S.
+ * ADVE = socle déclaré/amendé par l'opérateur ; RTIS = dérivé, jamais édité à la main.
+ * Transplanté du legacy (src/domain/pillars.ts) — la méthode est l'actif, pas le code.
  */
+export const ADVE_PILLARS = ["A", "D", "V", "E"] as const;
+export const RTIS_PILLARS = ["R", "T", "I", "S"] as const;
+export const PILLARS = [...ADVE_PILLARS, ...RTIS_PILLARS] as const;
 
-import { z } from "zod";
+export type AdvePillarKey = (typeof ADVE_PILLARS)[number];
+export type RtisPillarKey = (typeof RTIS_PILLARS)[number];
+export type PillarKey = (typeof PILLARS)[number];
 
-// ── Canonical keys ────────────────────────────────────────────────────
-
-export const ADVE_KEYS = ["A", "D", "V", "E"] as const;
-export const RTIS_KEYS = ["R", "T", "I", "S"] as const;
-export const PILLAR_KEYS = [...ADVE_KEYS, ...RTIS_KEYS] as const;
-
-export type AdveKey = (typeof ADVE_KEYS)[number];
-export type RtisKey = (typeof RTIS_KEYS)[number];
-export type PillarKey = (typeof PILLAR_KEYS)[number];
-
-// ── Storage form (lowercase — DB column `Pillar.key`, legacy vector) ──
-
-export const ADVE_STORAGE_KEYS = ["a", "d", "v", "e"] as const;
-export const RTIS_STORAGE_KEYS = ["r", "t", "i", "s"] as const;
-export const PILLAR_STORAGE_KEYS = [
-  ...ADVE_STORAGE_KEYS,
-  ...RTIS_STORAGE_KEYS,
-] as const;
-
-export type AdveStorageKey = (typeof ADVE_STORAGE_KEYS)[number];
-export type RtisStorageKey = (typeof RTIS_STORAGE_KEYS)[number];
-export type PillarStorageKey = (typeof PILLAR_STORAGE_KEYS)[number];
-
-// ── Zod schemas ───────────────────────────────────────────────────────
-
-export const PillarKeySchema = z.enum(PILLAR_KEYS);
-export const AdveKeySchema = z.enum(ADVE_KEYS);
-export const RtisKeySchema = z.enum(RTIS_KEYS);
-export const PillarStorageKeySchema = z.enum(PILLAR_STORAGE_KEYS);
-
-// ── Phase semantics ───────────────────────────────────────────────────
-
-export type PillarPhase = "ADVE" | "RTIS";
-
-// ── Metadata (label + cascade order + storage round-trip) ─────────────
-
-export interface PillarMetadata {
-  /** Canonical uppercase key. */
-  readonly key: PillarKey;
-  /** Lowercase form used in DB and legacy vector type. */
-  readonly storageKey: PillarStorageKey;
-  /**
-   * Stable, unambiguous slug ("pillar-a" … "pillar-s"). Born from the
-   * 1-letter-key bugs (case-sensitivity ghosts) — use this for UI ids,
-   * i18n keys, CSS hooks and external references. Never collides, never
-   * needs `.toUpperCase()` gymnastics.
-   */
-  readonly slug: string;
-  /** Cascade phase. */
-  readonly phase: PillarPhase;
-  /** 0-indexed position in cascade A→D→V→E→R→T→I→S. */
-  readonly order: number;
-  /** Display label (FR) — legacy field, kept for backward-compat. */
-  readonly label: string;
-  /** Canonical pillar name (FR) — "Authenticité", "Risque", "Tracking", … */
-  readonly displayName: string;
-  /** Operational role (FR) — what the pillar covers : "Identité", "Diagnostic", … */
-  readonly role: string;
-  /** One-line semantic blurb (FR). */
-  readonly blurb: string;
+export function isAdve(key: PillarKey): key is AdvePillarKey {
+  return (ADVE_PILLARS as readonly string[]).includes(key);
 }
 
-export const PILLAR_METADATA: Readonly<Record<PillarKey, PillarMetadata>> = {
-  A: {
-    key: "A",
-    storageKey: "a",
-    slug: "pillar-a",
-    phase: "ADVE",
-    order: 0,
-    label: "Authenticité",
-    displayName: "Authenticité",
-    role: "Identité",
-    blurb: "Fondation du culte — qui est la marque, vraiment.",
-  },
-  D: {
-    key: "D",
-    storageKey: "d",
-    slug: "pillar-d",
-    phase: "ADVE",
-    order: 1,
-    label: "Distinction",
-    displayName: "Distinction",
-    role: "Positionnement",
-    blurb: "Ce qui différencie radicalement de la concurrence.",
-  },
-  V: {
-    key: "V",
-    storageKey: "v",
-    slug: "pillar-v",
-    phase: "ADVE",
-    order: 2,
-    label: "Valeur",
-    displayName: "Valeur",
-    role: "Offre & Pricing",
-    blurb: "Promesse économique et fonctionnelle livrée.",
-  },
-  E: {
-    key: "E",
-    storageKey: "e",
-    slug: "pillar-e",
-    phase: "ADVE",
-    order: 3,
-    label: "Engagement",
-    displayName: "Engagement",
-    role: "Expérience",
-    blurb: "Mécaniques relationnelles qui fidélisent.",
-  },
-  R: {
-    key: "R",
-    storageKey: "r",
-    slug: "pillar-r",
-    phase: "RTIS",
-    order: 4,
-    label: "Risk",
-    displayName: "Risque",
-    role: "Diagnostic",
-    blurb: "Diagnostic des risques sur ADVE.",
-  },
-  T: {
-    key: "T",
-    storageKey: "t",
-    slug: "pillar-t",
-    phase: "RTIS",
-    order: 5,
-    label: "Track",
-    displayName: "Tracking",
-    role: "Réalité Marché",
-    blurb: "Confrontation de ADVE+R à la réalité du marché.",
-  },
-  I: {
-    key: "I",
-    storageKey: "i",
-    slug: "pillar-i",
-    phase: "RTIS",
-    order: 6,
-    label: "Innovation",
-    displayName: "Innovation",
-    role: "Potentiel",
-    blurb: "Potentiel total de la marque, alimenté par ADVE+R+T.",
-  },
-  S: {
-    key: "S",
-    storageKey: "s",
-    slug: "pillar-s",
-    phase: "RTIS",
-    order: 7,
-    label: "Strategy",
-    displayName: "Stratégie",
-    role: "Stratégie",
-    blurb: "Roadmap qui pioche dans I → superfan.",
-  },
-};
+/**
+ * Paliers de maturité de marque, du sol à l'apex.
+ * Nommage canon v3.3 natif : LATENT (pas ZOMBIE) — le rename legacy est caduc ici.
+ */
+export const BRAND_LEVELS = [
+  "LATENT",
+  "FRAGILE",
+  "ORDINAIRE",
+  "FORTE",
+  "CULTE",
+  "ICONE",
+] as const;
 
-// ── Slug helpers ──────────────────────────────────────────────────────
+export type BrandLevel = (typeof BRAND_LEVELS)[number];
 
-/** "pillar-a" → "A" ; throws on unknown slug. */
-export const fromSlug = (slug: string): PillarKey => {
-  const hit = PILLAR_KEYS.find((k) => PILLAR_METADATA[k].slug === slug);
-  if (!hit) throw new Error(`Unknown pillar slug: ${slug}`);
-  return hit;
-};
-
-/** Canonical slug for a key in any form ("a"/"A" → "pillar-a"). */
-export const toSlug = (k: PillarKey | PillarStorageKey): string =>
-  PILLAR_METADATA[k.toUpperCase() as PillarKey].slug;
-
-// ── Helpers (pure) ────────────────────────────────────────────────────
-
-export const isAdve = (k: PillarKey): k is AdveKey =>
-  (ADVE_KEYS as readonly string[]).includes(k);
-
-export const isRtis = (k: PillarKey): k is RtisKey =>
-  (RTIS_KEYS as readonly string[]).includes(k);
-
-export const toCanonical = (k: PillarStorageKey | PillarKey): PillarKey =>
-  k.toUpperCase() as PillarKey;
-
-export const toStorage = (k: PillarKey | PillarStorageKey): PillarStorageKey =>
-  k.toLowerCase() as PillarStorageKey;
-
-/** Pillars that the given pillar depends on (everything strictly before it). */
-export const pillarDependencies = (k: PillarKey): readonly PillarKey[] =>
-  PILLAR_KEYS.slice(0, PILLAR_METADATA[k].order);
-
-/** Pillars that depend on the given pillar (everything strictly after it). */
-export const pillarDependents = (k: PillarKey): readonly PillarKey[] =>
-  PILLAR_KEYS.slice(PILLAR_METADATA[k].order + 1);
+export function compareLevels(a: BrandLevel, b: BrandLevel): number {
+  return BRAND_LEVELS.indexOf(a) - BRAND_LEVELS.indexOf(b);
+}

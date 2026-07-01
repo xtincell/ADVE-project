@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+/*
+ * UPgraders DS — tier 0 (référence), transplanté depuis legacy/docs/design-system/upgraders.
+ * Signature : panda noir/bone · corail fusée #E56458 · or #FACC15.
+ * Fonts Clash Display / Satoshi : portées au WP-002 (assets dans legacy/src/assets/fonts/upgraders).
+ */
+@theme {
+  --color-ink: #0a0a0a;
+  --color-bone: #f7f4ef;
+  --color-coral: #e56458;
+  --color-gold: #facc15;
+  --color-smoke: #6b6660;
+
+  --radius-bento-sm: 6px;
+  --radius-bento-lg: 36px;
+}
+
+body {
+  background: var(--color-bone);
+  color: var(--color-ink);
+  font-feature-settings: "ss01";
+}
