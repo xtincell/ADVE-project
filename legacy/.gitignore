@@ -1,0 +1,38 @@
+node_modules/
+tsconfig.tsbuildinfo
+.next/
+.env
+.env.local
+.DS_Store
+._*
+playwright-report/
+test-results/
+tests/e2e/screenshots/
+.claude/
+Customers/SPAWT/unpacked_spawt/
+Customers/SPAWT/xlsx_raw.txt
+
+# Runtime logs (not source)
+*.log
+logs/
+
+# Generated previews / lighthouse reports (heavy binaries)
+reports/
+
+# Wakanda coverage scan output (regénéré selon l'état de la base)
+scripts/seed-wakanda/coverage-report.json
+
+# macOS / iCloud sync artifacts (Finder duplicates)
+* 2.ts
+* 2.tsx
+* 2.js
+* 2.jsx
+* 2.json
+*.icloud
+.vercel
+.env*
+
+# Cloudflare (wrangler state + local secrets + generated worker types)
+.wrangler/
+.dev.vars
+worker-configuration.d.ts

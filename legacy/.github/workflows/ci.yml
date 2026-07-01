@@ -1,0 +1,190 @@
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DATABASE_URL: postgresql://stub:stub@localhost:5432/stub
+  NEXTAUTH_SECRET: ci-stub
+  AUTH_SECRET: ci-stub
+
+jobs:
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx tsc --noEmit
+
+  lint:
+    name: Lint (next lint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm run lint
+
+  lint-governance:
+    name: Lint (governance — lafusee/*)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm run lint:governance
+
+  unit:
+    name: Unit tests (vitest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm test -- --run
+
+  prisma-validate:
+    name: Prisma schema validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx prisma validate
+      - name: Schema diff vs migrations
+        run: |
+          npx prisma migrate diff \
+            --from-migrations prisma/migrations \
+            --to-schema prisma/schema.prisma \
+            --exit-code || (echo "::warning::schema.prisma is ahead of migrations — run prisma migrate dev locally" && exit 0)
+
+  governance-audit:
+    name: Governance audit (services + manifests + bypass)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run audit:governance
+
+  llm-node-audit:
+    name: LLM node guardrails (no regression)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      # Fails only on a NEW unguarded LLM node (output schema missing OR direct
+      # callLLM bypass) vs scripts/llm-audit-baseline.json. Doesn't require
+      # migrating the existing backlog. See docs/governance/llm-hardening-plan.md.
+      - run: npm run audit:llm:strict
+
+  dep-cycle:
+    name: Dependency cycles (madge)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx --yes madge --circular --extensions ts,tsx src/
+        continue-on-error: true
+        # Note: continue-on-error true tant que les cycles existants ne sont pas
+        # cassés (Phase 4 du plan de refonte). Passer à false dès que P4 lande.
+
+  commitlint:
+    name: Commit message lint
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Lint PR commits
+        run: |
+          npx commitlint --from=${{ github.event.pull_request.base.sha }} --to=HEAD --verbose
+
+  phase-label-check:
+    name: Phase label present (refonte)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/github-script@v9
+        with:
+          script: |
+            const labels = context.payload.pull_request.labels.map(l => l.name);
+            const phaseLabel = labels.find(l => /^phase\/\d+$/.test(l));
+            const oos = labels.includes('out-of-scope');
+            if (!phaseLabel && !oos) {
+              core.setFailed(
+                `PR is missing a phase label (phase/N) or 'out-of-scope'. ` +
+                `See docs/governance/REFACTOR-CODE-OF-CONDUCT.md §1.`
+              );
+            }
+            if (oos) {
+              const body = context.payload.pull_request.body || '';
+              if (!body.includes('Justification — out-of-scope')) {
+                core.setFailed(
+                  `'out-of-scope' label requires a section titled ` +
+                  `'Justification — out-of-scope' in the PR description. ` +
+                  `See REFACTOR-CODE-OF-CONDUCT.md §2.`
+                );
+              }
+            }
+
+  scope-drift-trace:
+    name: Scope drift log updated (out-of-scope only)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'out-of-scope')
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Verify scope-drift.md updated
+        run: |
+          if ! git diff --name-only origin/${{ github.base_ref }}..HEAD | grep -q '^docs/governance/scope-drift.md$'; then
+            echo "::error::PR labeled 'out-of-scope' but docs/governance/scope-drift.md was not updated."
+            exit 1
+          fi

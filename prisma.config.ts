@@ -1,20 +1,11 @@
 /**
- * Prisma config — migration depuis `package.json#prisma` (deprecated en 7).
- * Cf. https://pris.ly/prisma-config
- *
- * Prisma 7 requires `datasource.url` here pour les commandes migrate
- * (status/deploy/dev/reset). Sans ça → "datasource.url property is required".
- *
- * Prisma 7 ne charge PLUS `.env` automatiquement avant l'eval du config TS
- * (contrairement aux versions ≤6). On charge donc explicitement `.env.local`
- * puis `.env` (override en faveur du local pour dev).
+ * Prisma 7 exige `datasource.url` ici pour db push / migrate (le schéma n'a
+ * plus d'url — driver adapter côté runtime). Prisma 7 ne charge pas .env
+ * automatiquement : en dev, exporter DATABASE_URL ou utiliser un .env chargé
+ * par le shell ; en prod (Docker) l'env est déjà posée.
  */
 import path from "node:path";
-import { config as loadEnv } from "dotenv";
 import { defineConfig } from "prisma/config";
-
-loadEnv({ path: ".env.local" });
-loadEnv({ path: ".env" });
 
 export default defineConfig({
   schema: path.join("prisma", "schema.prisma"),
@@ -22,6 +13,6 @@ export default defineConfig({
     url: process.env.DATABASE_URL ?? "",
   },
   migrations: {
-    seed: "tsx prisma/seed.ts",
+    seed: "node prisma/seed.mjs",
   },
 });

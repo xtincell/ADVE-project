@@ -1,79 +1,33 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { AsyncLocalStorage } from "node:async_hooks";
 
-// ── Tenant context for RLS ──────────────────────────────────────────────
-// v4 — AsyncLocalStorage holds the current tenantId for automatic filtering.
-// Set via `runWithTenant(tenantId, fn)` in tRPC context setup.
+/**
+ * Singleton PrismaClient — Prisma 7 driver adapter (@prisma/adapter-pg).
+ * La connexion passe par le constructeur (jamais d'url dans schema.prisma).
+ *
+ * LAZY par doctrine : aucun accès DB (ni lecture de DATABASE_URL) au
+ * module-load — `next build` doit rester vert SANS DATABASE_URL. Le client
+ * n'est instancié qu'au premier appel de `getDb()`, c'est-à-dire au runtime
+ * d'une requête. Pattern globalThis dev-safe : le HMR de Next recharge les
+ * modules mais pas globalThis → une seule pool pg par process.
+ */
 
-export const tenantStorage = new AsyncLocalStorage<{ tenantId: string | null }>();
+const globalForPrisma = globalThis as unknown as { __lafuseePrisma?: PrismaClient };
 
-export function getCurrentTenantId(): string | null {
-  return tenantStorage.getStore()?.tenantId ?? null;
-}
-
-export function runWithTenant<T>(tenantId: string | null, fn: () => T): T {
-  return tenantStorage.run({ tenantId }, fn);
-}
-
-// ── Prisma client with PostgreSQL adapter (Prisma 7) ────────────────────
-// Prisma 7 retire `url` du schema datasource — la connexion DB passe par
-// un driver adapter injecté dans le constructeur. Cf. ADR Phase 12.2.
-//
-// Le `connectionString` est resolved au runtime depuis `DATABASE_URL` :
-// les seeds, scripts CLI et workers Vercel posent tous cette env.
-
-const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
-
-function createPrismaClient(): PrismaClient {
+function createClient(): PrismaClient {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
     throw new Error(
-      "DATABASE_URL is not set — Prisma 7 driver adapter requires it at construction time.",
+      "DATABASE_URL manquant — impossible d'ouvrir la connexion Postgres. " +
+        "Définir la variable d'environnement (jamais dans le code).",
     );
   }
-  // Pool borné — sur un pooler Supabase en *session mode* (pool_size 15 en
-  // free tier), un pg.Pool par défaut (max 10) suffit à saturer la limite dès
-  // qu'une 2ᵉ instance serverless chauffe → erreur EMAXCONNSESSION. On plafonne
-  // donc le pool et on relâche vite les connexions idle. Surchargeable via env
-  // pour les déploiements à plus forte concurrence (ou pooler transaction-mode,
-  // port 6543, cf. .env.example).
-  const max = Number(process.env.DB_POOL_MAX ?? "5") || 5;
-  const adapter = new PrismaPg({
-    connectionString,
-    max,
-    idleTimeoutMillis: Number(process.env.DB_POOL_IDLE_MS ?? "10000") || 10_000,
-    connectionTimeoutMillis: Number(process.env.DB_POOL_CONN_MS ?? "10000") || 10_000,
-  });
-  return new PrismaClient({ adapter });
+  return new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
 }
 
-/**
- * Lazy-initialized Prisma client. Uses a Proxy so the PrismaClient is only
- * constructed on first property access (at runtime), not at module evaluation
- * time. This prevents `npm run build` / Vercel's static page-data collection
- * phase from crashing when DATABASE_URL is absent (it's only available at
- * runtime in serverless functions).
- */
-function getDb(): PrismaClient {
-  if (!globalForPrisma.prisma) {
-    globalForPrisma.prisma = createPrismaClient();
+export function getDb(): PrismaClient {
+  if (!globalForPrisma.__lafuseePrisma) {
+    globalForPrisma.__lafuseePrisma = createClient();
   }
-  return globalForPrisma.prisma;
+  return globalForPrisma.__lafuseePrisma;
 }
-
-export const db: PrismaClient = new Proxy({} as PrismaClient, {
-  get(_target, prop, receiver) {
-    // Next.js and Webpack inspect these properties during build to resolve modules.
-    // By returning undefined for these without triggering `getDb()`, we ensure
-    // the PrismaClient is truly lazy and only initialized when a real query is made.
-    if (
-      typeof prop === "symbol" ||
-      ["then", "__esModule", "default", "$$typeof"].includes(prop as string)
-    ) {
-      return Reflect.get(_target, prop, receiver);
-    }
-    
-    return Reflect.get(getDb(), prop, receiver);
-  },
-});

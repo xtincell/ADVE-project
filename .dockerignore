@@ -1,31 +1,8 @@
-# Keep the build context small + reproducible.
+legacy
 node_modules
 .next
-.open-next
-.wrangler
 .git
-.github
-.env
-.env.*
-!.env.example
-npm-debug.log*
-
-# Tests / tooling / docs not needed to build or run the server.
-tests
-playwright-report
-test-results
-reports
-preview
-storybook-static
-.storybook
 docs
-_bmad
-_bmad-output
-Customers
-scratch
-
-# Local editor / OS noise
-.DS_Store
-._*
-*.log
-logs
+*.md
+!README.md
+.env*
