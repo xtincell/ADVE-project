@@ -65,7 +65,7 @@ non-dépendante du LLM » est une loi ici) ; secrets en env uniquement.
 |---|---|---|---|
 | **001** | Fondations : quarantaine legacy/, scaffold Next+TS+Tailwind+Prisma, domaine pillars, schéma tranche 1, CI verte | — | **SHIPPED** (session fondatrice) |
 | **002** | DS & shell : fonts Clash/Satoshi, tokens complets, primitives (Button/Card/Input/Badge), layouts des 3 espaces, landing réelle (copy legacy `landingintake`) | 001 | **SHIPPED** (landing + /tarifs + 8 primitives CVA + tokens/fonts ; layouts (app)/(admin) → WP-003) |
-| **003** | Identity : auth (credentials + Google), Workspace/Membership, middleware rôles, tRPC si besoin | 001 | PENDING |
+| **003** | Identity : auth (credentials + Google), Workspace/Membership, middleware rôles, tRPC si besoin | 001 | **SHIPPED** (credentials+bcrypt+JWT jose, middleware rôles JWT-pur, shells (app)/(admin), AuditLog chaîné + tx, opérateur bootstrap env, vérifié E2E sur Postgres jetable ; Google OAuth = post-launch) |
 | **004** | Funnel intake : formulaire public → `IntakeLead` → diagnostic gratuit (scoring déterministe) → CTA conversion → seed workspace+brand+pillars | 002, 003 | PENDING |
 | **005** | Cœur marque : éditeur piliers ADVE (amendement opérateur, needsHuman INFERRED→DECLARED), dérivation RTIS, `PillarRevision` hash-chaînée, `BrandScore` (port scoring 8-dim simplifié) | 003 | moteurs domaine **SHIPPED** (pillar-fields 47 champs · scoring ADR-0102 · diagnostic · rtis · oracle 12 sections · 67 tests) — UI app PENDING |
 | **006** | Livrables : registre kinds, port des composers déterministes Oracle (sections prioritaires), rendu web + PDF, staleness simple (STALE au rewrite majeur) | 005 | PENDING |
