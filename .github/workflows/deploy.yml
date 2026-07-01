@@ -10,7 +10,7 @@ on:
         description: "URL Coolify (fallback si secret COOLIFY_URL absent)"
         required: false
       coolify_token:
-        description: "Token API Coolify (fallback si secret absent — préférer le secret ; token à faire tourner après usage)"
+        description: "Token API Coolify (fallback si secret absent — à faire tourner après usage)"
         required: false
 
 jobs:
@@ -22,9 +22,18 @@ jobs:
           ref: ${{ inputs.branch }}
       - name: Provision + deploy sur Coolify
         env:
-          COOLIFY_URL: ${{ secrets.COOLIFY_URL || inputs.coolify_url }}
-          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN || inputs.coolify_token }}
+          SECRET_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+          SECRET_URL: ${{ secrets.COOLIFY_URL }}
           GIT_BRANCH: ${{ inputs.branch }}
         run: |
+          COOLIFY_TOKEN="$SECRET_TOKEN"
+          if [ -z "$COOLIFY_TOKEN" ]; then
+            COOLIFY_TOKEN=$(jq -r '.inputs.coolify_token // empty' "$GITHUB_EVENT_PATH")
+          fi
           echo "::add-mask::$COOLIFY_TOKEN"
+          COOLIFY_URL="$SECRET_URL"
+          if [ -z "$COOLIFY_URL" ]; then
+            COOLIFY_URL=$(jq -r '.inputs.coolify_url // empty' "$GITHUB_EVENT_PATH")
+          fi
+          export COOLIFY_TOKEN COOLIFY_URL
           bash scripts/deploy-coolify.sh
