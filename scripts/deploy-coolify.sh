@@ -1,65 +1,76 @@
 #!/usr/bin/env bash
-# Provisionne et déploie La Fusée v7 sur Coolify (idempotent).
-# Requis : COOLIFY_URL (ex: http://76.13.128.23:8000) + COOLIFY_TOKEN (API root, régénéré).
-# Optionnel : GIT_BRANCH (défaut: branche de rebuild), APP_DOMAIN.
-set -euo pipefail
+# Provisionne et déploie La Fusée v7 sur Coolify (idempotent, auto-diagnostiquant).
+# Requis : COOLIFY_URL + COOLIFY_TOKEN (env). Optionnel : GIT_BRANCH, APP_DOMAIN.
+set -uo pipefail
 : "${COOLIFY_URL:?COOLIFY_URL manquant}"
 : "${COOLIFY_TOKEN:?COOLIFY_TOKEN manquant}"
 BRANCH="${GIT_BRANCH:-claude/project-revamp-agent-safe-doc3ip}"
 REPO="https://github.com/xtincell/ADVE-project"
 API="$COOLIFY_URL/api/v1"
-H=(-H "Authorization: Bearer $COOLIFY_TOKEN" -H "Content-Type: application/json")
 
-req() { curl -sS --fail-with-body "${H[@]}" "$@"; }
+# GET/POST avec corps d'erreur TOUJOURS visible (le token n'apparaît jamais en sortie).
+call() { # method path [json]
+  local m="$1" p="$2" d="${3:-}" out code
+  if [ -n "$d" ]; then
+    out=$(curl -sS -X "$m" -H "Authorization: Bearer $COOLIFY_TOKEN" -H "Content-Type: application/json" -d "$d" -w $'\n%{http_code}' "$API$p")
+  else
+    out=$(curl -sS -X "$m" -H "Authorization: Bearer $COOLIFY_TOKEN" -w $'\n%{http_code}' "$API$p")
+  fi
+  code="${out##*$'\n'}"; body="${out%$'\n'*}"
+  echo "[$m $p → $code]" >&2
+  if [ "${code:0:1}" != "2" ]; then echo "  ↳ $body" >&2; return 1; fi
+  printf '%s' "$body"
+}
 
-echo "→ serveur"
-SERVER_UUID=$(req "$API/servers" | jq -r '.[0].uuid')
+echo "═ Découverte"
+SERVERS=$(call GET /servers) || exit 1
+SERVER_UUID=$(echo "$SERVERS" | jq -r 'if type=="array" then .[0].uuid else (.data[0].uuid // empty) end')
 echo "  server=$SERVER_UUID"
+PROJECTS=$(call GET /projects || echo "[]")
+echo "  projets: $(echo "$PROJECTS" | jq -c 'if type=="array" then [.[] | {name, uuid}] else . end' 2>/dev/null | head -c 400)"
+APPS=$(call GET /applications || echo "[]")
+echo "  apps: $(echo "$APPS" | jq -c 'if type=="array" then [.[] | {name, uuid}] else . end' 2>/dev/null | head -c 400)"
+DBS=$(call GET /databases || echo "[]")
+echo "  dbs: $(echo "$DBS" | jq -c 'if type=="array" then [.[] | {name, uuid}] else . end' 2>/dev/null | head -c 400)"
+for path in /sources /security/keys /private-keys /github-apps; do
+  echo "  découverte $path :"; call GET "$path" >/dev/null || true
+done
 
-echo "→ projet lafusee-v7"
-PROJECT_UUID=$(req "$API/projects" | jq -r '.[] | select(.name=="lafusee-v7") | .uuid' | head -1)
+echo "═ Projet lafusee-v7"
+PROJECT_UUID=$(echo "$PROJECTS" | jq -r 'if type=="array" then (.[] | select(.name=="lafusee-v7") | .uuid) else empty end' | head -1)
 if [ -z "$PROJECT_UUID" ]; then
-  PROJECT_UUID=$(req -X POST "$API/projects" -d '{"name":"lafusee-v7","description":"La Fusée v7 — rebuild"}' | jq -r '.uuid')
+  CREATED=$(call POST /projects '{"name":"lafusee-v7"}') || { echo "!! création projet impossible — corps ci-dessus"; exit 1; }
+  PROJECT_UUID=$(echo "$CREATED" | jq -r '.uuid // .data.uuid // empty')
 fi
 echo "  project=$PROJECT_UUID"
 
-echo "→ postgres"
-DB_UUID=$(req "$API/databases" | jq -r '.[] | select(.name=="lafusee-v7-db") | .uuid' | head -1)
+echo "═ Postgres lafusee-v7-db"
+DB_UUID=$(echo "$DBS" | jq -r 'if type=="array" then (.[] | select(.name=="lafusee-v7-db") | .uuid) else empty end' | head -1)
 if [ -z "$DB_UUID" ]; then
-  DB_UUID=$(req -X POST "$API/databases/postgresql" -d "{
-    \"server_uuid\":\"$SERVER_UUID\",\"project_uuid\":\"$PROJECT_UUID\",
-    \"environment_name\":\"production\",\"name\":\"lafusee-v7-db\",
-    \"postgres_user\":\"lafusee\",\"postgres_db\":\"lafusee\"}" | jq -r '.uuid')
+  CREATED=$(call POST /databases/postgresql "{\"server_uuid\":\"$SERVER_UUID\",\"project_uuid\":\"$PROJECT_UUID\",\"environment_name\":\"production\",\"name\":\"lafusee-v7-db\",\"postgres_user\":\"lafusee\",\"postgres_db\":\"lafusee\"}") || { echo "!! création DB impossible"; exit 1; }
+  DB_UUID=$(echo "$CREATED" | jq -r '.uuid // .data.uuid // empty')
 fi
-DB_URL=$(req "$API/databases/$DB_UUID" | jq -r '.internal_db_url // .external_db_url')
-echo "  db=$DB_UUID"
+DB_INFO=$(call GET "/databases/$DB_UUID") || exit 1
+DB_URL=$(echo "$DB_INFO" | jq -r '.internal_db_url // .external_db_url // empty')
+echo "  db=$DB_UUID (url interne: $([ -n "$DB_URL" ] && echo présent || echo ABSENT))"
 
-echo "→ application"
-APP_UUID=$(req "$API/applications" | jq -r '.[] | select(.name=="lafusee-v7") | .uuid' | head -1)
+echo "═ Application lafusee-v7"
+APP_UUID=$(echo "$APPS" | jq -r 'if type=="array" then (.[] | select(.name=="lafusee-v7") | .uuid) else empty end' | head -1)
 if [ -z "$APP_UUID" ]; then
-  GH_APP=$(req "$API/security/keys" >/dev/null 2>&1; req "$API/applications" >/dev/null 2>&1; echo "")
-  # Repo privé : nécessite une GitHub App Coolify déjà connectée (Sources dans l'UI).
-  GH_APP_UUID=$(req "$API/sources" 2>/dev/null | jq -r '.[0].uuid // empty' || true)
-  if [ -n "$GH_APP_UUID" ]; then
-    APP_UUID=$(req -X POST "$API/applications/private-github-app" -d "{
-      \"server_uuid\":\"$SERVER_UUID\",\"project_uuid\":\"$PROJECT_UUID\",
-      \"environment_name\":\"production\",\"name\":\"lafusee-v7\",
-      \"github_app_uuid\":\"$GH_APP_UUID\",\"git_repository\":\"$REPO\",
-      \"git_branch\":\"$BRANCH\",\"build_pack\":\"dockerfile\",\"ports_exposes\":\"3000\"}" | jq -r '.uuid')
-  else
-    echo "!! Aucune source GitHub connectée dans Coolify (UI → Sources → GitHub App)." >&2
-    echo "   Connecte la GitHub App puis relance ce script." >&2
-    exit 1
-  fi
+  # Repo public → build pack dockerfile depuis le repo public.
+  CREATED=$(call POST /applications/public "{\"server_uuid\":\"$SERVER_UUID\",\"project_uuid\":\"$PROJECT_UUID\",\"environment_name\":\"production\",\"name\":\"lafusee-v7\",\"git_repository\":\"$REPO\",\"git_branch\":\"$BRANCH\",\"build_pack\":\"dockerfile\",\"ports_exposes\":\"3000\",\"instant_deploy\":false}") || { echo "!! création app impossible — corps ci-dessus"; exit 1; }
+  APP_UUID=$(echo "$CREATED" | jq -r '.uuid // .data.uuid // empty')
 fi
 echo "  app=$APP_UUID"
 
-echo "→ env vars"
-req -X POST "$API/applications/$APP_UUID/envs" -d "{\"key\":\"DATABASE_URL\",\"value\":\"$DB_URL\",\"is_preview\":false}" >/dev/null || true
-req -X POST "$API/applications/$APP_UUID/envs" -d "{\"key\":\"AUTH_SECRET\",\"value\":\"$(openssl rand -hex 32)\",\"is_preview\":false}" >/dev/null || true
-req -X POST "$API/applications/$APP_UUID/envs" -d "{\"key\":\"RUN_SEED\",\"value\":\"1\",\"is_preview\":false}" >/dev/null || true
-[ -n "${APP_DOMAIN:-}" ] && req -X PATCH "$API/applications/$APP_UUID" -d "{\"domains\":\"$APP_DOMAIN\"}" >/dev/null || true
+echo "═ Env vars"
+setenv() { call POST "/applications/$APP_UUID/envs" "{\"key\":\"$1\",\"value\":\"$2\",\"is_preview\":false}" >/dev/null || call PATCH "/applications/$APP_UUID/envs" "{\"key\":\"$1\",\"value\":\"$2\",\"is_preview\":false}" >/dev/null || true; }
+[ -n "$DB_URL" ] && setenv DATABASE_URL "$DB_URL"
+setenv AUTH_SECRET "$(openssl rand -hex 32)"
+setenv RUN_SEED "1"
+setenv OPERATOR_EMAIL "xtincell@gmail.com"
+[ -n "${APP_DOMAIN:-}" ] && call PATCH "/applications/$APP_UUID" "{\"domains\":\"$APP_DOMAIN\"}" >/dev/null || true
 
-echo "→ deploy"
-req "$API/deploy?uuid=$APP_UUID&force=true" | jq -r '.message // .'
-echo "✓ déclenché. Suivi : $COOLIFY_URL → projet lafusee-v7."
+echo "═ Deploy"
+call GET "/deploy?uuid=$APP_UUID&force=true" | jq -r '.message // .' || call POST "/applications/$APP_UUID/start" "" | jq -r '.message // .' || true
+echo "✓ Fini. Suivi : $COOLIFY_URL → projet lafusee-v7 (app + db + logs de build)."
