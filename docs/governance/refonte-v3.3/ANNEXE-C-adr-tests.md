@@ -1,5 +1,17 @@
 # ANNEXE C — Registre des ADR & tests anti-drift de la refonte
 
+> **Note d'exécution 2026-07-01 ([ADR-0121](../adr/0121-refonte-v33-fleet-execution.md))** — les
+> numéros 0088-0095 ci-dessous, réservés à la rédaction du cahier (2026-05-31), sont **occupés**
+> depuis (repo à 0121+). Ils restent la référence **symbolique** ; le numéro réel = **premier
+> libre à la création** (règle first-come). Consigner ici la correspondance au fil de l'eau :
+>
+> | Symbolique (cahier) | Réel (créé) | Date |
+> |---|---|---|
+> | — | — | — |
+>
+> Cibles #20-24 : **ouvertes** dans closure-roadmap le 2026-07-01 (mandat carte blanche, DEC-1) —
+> la note du §C.4 est donc réalisée.
+
 ## C.1 — ADR à créer (un par cible neuve, avant dev — ledger closed-set)
 
 | ADR | Sujet | Chantier |

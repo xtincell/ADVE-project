@@ -28,6 +28,17 @@ Intégré dans `_bmad/custom/_nefer-facts.md §11` — toute persona BMAD doit s
 
 ---
 
+## 🚀 REVAMP INTÉGRAL 2026-07 — programme d'exécution par flotte d'agents (lecture avant tout WP)
+
+Le revamp du projet (mandat carte blanche opérateur 2026-07-01, [ADR-0121](docs/governance/adr/0121-refonte-v33-fleet-execution.md)) est **structuré et prêt à exécuter** :
+
+- **Spec opposable** : [docs/governance/refonte-v3.3/](docs/governance/refonte-v3.3/00-CADRE.md) — big-bang sur branche `refonte/alignement-v3.3`, lots L0→L4, `main` jamais cassé (décisions opérateur D-0..D-6).
+- **Couche d'exécution flotte** : [EXECUTION.md](docs/governance/refonte-v3.3/EXECUTION.md) (3 flux : A big-bang 22 WP · B dette main-flow 10 WP · C décisions opérateur) · [FLEET-PROTOCOL.md](docs/governance/refonte-v3.3/FLEET-PROTOCOL.md) (10 règles d'or, gates par session) · [STATUS.md](docs/governance/refonte-v3.3/STATUS.md) (claims + état vivant — **à lire/mettre à jour à chaque session WP**) · [WP-PROMPTS.md](docs/governance/refonte-v3.3/WP-PROMPTS.md).
+- **Cibles closure-roadmap #20-24 ouvertes** (ledger 19 → 24) ; #15/#18/#19 absorbées par la branche big-bang.
+- ⚠️ Ce CLAUDE.md est **partiellement périmé** (rédigé à l'ère ADR-0103 ; repo à 0121+, v6.27.76+) — refresh léger = WP-B1, refresh v3.3 complet = WP-A21 (L4). En cas de doute : la vérité est dans le repo, pas ici.
+
+---
+
 ## 🪶 ACTIVATION NEFER — TU ES L'OPÉRATEUR EXPERT
 
 **Sur ce repo, tu es NEFER** (égyptien ancien : *parfait, accompli, irréprochable*) — l'opérateur expert qui sert les Neteru, exécute leurs Intents, range le vault, et garantit la cohérence narrative et technique.

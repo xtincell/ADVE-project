@@ -10,6 +10,25 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.76 — docs(governance): revamp intégral — programme d'exécution par flotte d'agents (ADR-0121) (2026-07-01)
+
+Mandat carte blanche opérateur : structurer le revamp intégral pour qu'une **équipe d'agents le
+termine sans rien casser**. Audit ground-truth complet (corpus refonte-v3.3, RESIDUAL-DEBT,
+heal-report, closure-roadmap, ADRs 0104-0120, CI, baseline locale), puis livraison de la **couche
+d'exécution** de la refonte v3.3 (la spec 00-CADRE + 20 chantiers existait ; l'orchestration manquait) :
+
+- **[EXECUTION.md](docs/governance/refonte-v3.3/EXECUTION.md)** — 3 flux : **A** big-bang v3.3 en 22 WP (L0 alias/gates → L1 renames R1-R8 codemod-first → L2 socle E1-E3 → L3 chapitres C1-C9 en 3 vagues → L4 stabilisation+merge) sur branche `refonte/alignement-v3.3` ; **B** dette main-flow en 10 WP (réconciliation ledgers, Phase 17 closure, Oracle staleness, forge DISPATCHED, notification stack, DS tokens, hygiène, LOTs LLM 3/4, CI vérité) ; **C** 9 décisions opérateur (needsHuman → draft INFERRED).
+- **[FLEET-PROTOCOL.md](docs/governance/refonte-v3.3/FLEET-PROTOCOL.md)** — 10 règles d'or par session (claim avant code, cible de PR, codemod-first, typecheck+madge toujours verts, rouges-attendus consignés, zéro invention de données), cycle de vie WP mappé NEFER 8 phases, gates avec commandes exactes, escalade.
+- **[STATUS.md](docs/governance/refonte-v3.3/STATUS.md)** — board vivant (claims fichiers single-writer, rouges attendus de branche, ledger DEC) + baseline de référence.
+- **[WP-PROMPTS.md](docs/governance/refonte-v3.3/WP-PROMPTS.md)** — prompts prêts à coller (variantes rename / socle / chapitre / main-flow / L4).
+- **closure-roadmap : cibles #20-24 ouvertes** (19 → 24 targets, ANNEXE-C §C.4 réalisée, ratification DEC-1 en review) ; #15/#18/#19 absorbées par la branche big-bang.
+- **ANNEXE-C** : note de renumérotation ADR (0088-0095 symboliques — occupés depuis ; réel = premier libre, first-come) + table de correspondance.
+- Baseline vérifiée en session (`f8b4378`) : **tsc 0 · eslint 0 erreur · governance 876/876 · madge 0 cycle**. Fix env cloud documenté (download engines Prisma via curl derrière proxy TLS-intercepté).
+
+**0 code runtime touché** (docs + ledger uniquement). Cap APOGEE 7/7 préservé. Cf. [ADR-0121](docs/governance/adr/0121-refonte-v33-fleet-execution.md).
+
+---
+
 ## v6.27.75 — feat(ptah): forge conditionnée par image de référence (gpt-image edits) + routing image exclusif (2026-07-01)
 
 Fondation du **système de dépendance** du case study (« réutiliser les images précédentes comme références » : identité → pack → KV → déclinaisons, sans réinventer). Audit du pipeline image/asset/brief : architecture saine (tools image, handoff brief→forge, création/récupération d'assets `AssetVersion`/`BrandAsset` vault, réutilisation via `requires` DAG, découplage Artemis↔Ptah) — **2 trous comblés** :

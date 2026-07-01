@@ -9,6 +9,11 @@
 > `../CAHIER-REFONTE-ALIGNEMENT-V3.3.md` est devenu un stub de redirection.
 >
 > Nommage cible : **CANON v3.3**. État actuel du code désigné par l'ancien nom entre `code`.
+>
+> **Couche d'exécution (2026-07-01, [ADR-0121](../adr/0121-refonte-v33-fleet-execution.md))** : le
+> découpage en work packages pour flotte d'agents, les gates par session et l'état vivant sont dans
+> [EXECUTION.md](EXECUTION.md) · [FLEET-PROTOCOL.md](FLEET-PROTOCOL.md) · [STATUS.md](STATUS.md) ·
+> [WP-PROMPTS.md](WP-PROMPTS.md). Ce cadre reste la spec ; ces quatre fichiers ne la ré-écrivent pas.
 
 ---
 
