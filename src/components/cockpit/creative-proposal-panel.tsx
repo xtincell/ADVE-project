@@ -10,7 +10,7 @@
  * Fusée IA, Glory) pré-remplira ce formulaire dans une itération suivante.
  */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { Button } from "@/components/primitives/button";
@@ -79,6 +79,19 @@ export function CreativeProposalPanel() {
       if (Array.isArray(d.pistes) && d.pistes.length > 0) setPistes(d.pistes.join("\n"));
     },
   });
+
+  // Amorçage multi-axes (ADR-0120) : quand la gate est VIDE et que des frames canon
+  // existent, on seed 2 axes créatifs automatiquement (best-effort côté serveur ;
+  // no-op s'il n'y a pas de frame). Une fois par stratégie pour éviter la boucle.
+  const seedAxes = trpc.creativeProposal.seedAxesIfEmpty.useMutation({ onSuccess: () => invalidate() });
+  const seedTriedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!strategyId || isLoading) return;
+    if ((proposals?.length ?? 0) > 0) return;
+    if (seedTriedRef.current === strategyId || seedAxes.isPending) return;
+    seedTriedRef.current = strategyId;
+    seedAxes.mutate({ strategyId });
+  }, [strategyId, isLoading, proposals?.length, seedAxes]);
 
   const [open, setOpen] = useState(false);
   const [routeKey, setRouteKey] = useState<"CONSERVATIVE" | "TARGET" | "AMBITIOUS">("TARGET");
@@ -220,9 +233,15 @@ export function CreativeProposalPanel() {
       {isLoading ? (
         <p className="mt-4 text-xs text-foreground-muted">Chargement…</p>
       ) : list.length === 0 ? (
-        <p className="mt-4 text-xs text-foreground-muted">
-          Aucune proposition créative. Crée-en une pour choisir une direction et amorcer la production des frames canon.
-        </p>
+        seedAxes.isPending ? (
+          <p className="mt-4 flex items-center gap-2 text-xs text-foreground-muted">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Amorçage de 2 axes créatifs depuis l'ADVE… tu n'auras plus qu'à choisir.
+          </p>
+        ) : (
+          <p className="mt-4 text-xs text-foreground-muted">
+            Aucune proposition créative. Crée-en une pour choisir une direction et amorcer la production des frames canon.
+          </p>
+        )
       ) : (
         <ul className="mt-4 space-y-2">
           {list.map((p) => {

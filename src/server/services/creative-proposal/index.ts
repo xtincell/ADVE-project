@@ -249,7 +249,10 @@ export async function getExecutionLevels(strategyId: string): Promise<ExecutionL
 // (manual-first parity ADR-0060). Gateway indisponible (pas de clé / circuit ouvert) →
 // l'appel échoue proprement et la Voie B (saisie manuelle) prend le relais.
 
-export async function draftCreativeDirectionFromStrategy(strategyId: string): Promise<CreativeDirectionDraft> {
+export async function draftCreativeDirectionFromStrategy(
+  strategyId: string,
+  angleHint?: string,
+): Promise<CreativeDirectionDraft> {
   const [strategy, pillars] = await Promise.all([
     db.strategy.findUniqueOrThrow({ where: { id: strategyId }, select: { name: true } }),
     db.pillar.findMany({ where: { strategyId, key: { in: ["a", "d", "v"] } }, select: { key: true, content: true } }),
@@ -267,7 +270,10 @@ export async function draftCreativeDirectionFromStrategy(strategyId: string): Pr
     "Rédige en français, percutant et concret.",
     "bigIdea = l'idée directrice (1-2 phrases, mémorable). insight = la tension/vérité consommateur qui la fonde.",
     "axe = l'axe créatif (territoire d'expression). pistes = 2 à 4 pistes d'exécution concrètes.",
-  ].join("\n");
+    // Contrainte d'angle (amorçage multi-axes) : force une direction NETTEMENT
+    // distincte pour que 2 propositions seedées ne se ressemblent pas.
+    angleHint ? `Contrainte d'angle pour CETTE proposition : ${angleHint}` : "",
+  ].filter(Boolean).join("\n");
   const { data } = await executeStructuredLLMCall({
     system,
     prompt: `Marque : ${strategy.name}\nADVE (JSON) :\n"""\n${JSON.stringify(adve).slice(0, 8000)}\n"""`,
@@ -277,6 +283,52 @@ export async function draftCreativeDirectionFromStrategy(strategyId: string): Pr
     maxOutputTokens: 1500,
   });
   return data;
+}
+
+// ── Amorçage multi-axes (ADR-0120) — la gate n'est plus vide ─────────────────────
+// Si AUCUNE proposition n'existe pour la stratégie ET que des frames canon existent,
+// on seed 2 propositions DRAFT avec 2 axes créatifs NETTEMENT distincts (Voie A IA
+// best-effort ; fallback déterministe non vide si le Gateway est indispo). Idempotent
+// (no-op si ≥1 proposition). L'opérateur n'a plus qu'à CHOISIR l'axe 1 ou l'axe 2 et
+// valider — c'est le « déjà amorcé » attendu au lieu d'un formulaire vide.
+
+const SEED_AXES: ReadonlyArray<{ label: string; hint: string }> = [
+  { label: "Axe 1 — Premium / Aspirationnel", hint: "territoire premium et aspirationnel : désirabilité, montée en gamme, statut ; registre haut de gamme." },
+  { label: "Axe 2 — Proximité / Vérité culturelle", hint: "territoire de proximité et de vérité culturelle : ancrage local, complicité, quotidien réel de l'audience." },
+];
+
+export async function seedCreativeAxesIfEmpty(
+  strategyId: string,
+): Promise<{ seeded: number; alreadyPresent: boolean }> {
+  const existing = await db.creativeProposal.count({ where: { strategyId } });
+  if (existing > 0) return { seeded: 0, alreadyPresent: true };
+  // On n'amorce que s'il y a des frames canon à nourrir (sinon rien à choisir).
+  const frames = await db.campaign.count({ where: { strategyId, canonType: { not: null } } });
+  if (frames === 0) return { seeded: 0, alreadyPresent: false };
+
+  // 2 axes en parallèle : IA best-effort, fallback déterministe NON VIDE si indispo.
+  const drafts = await Promise.all(
+    SEED_AXES.map(async (a) => {
+      try {
+        const d = await draftCreativeDirectionFromStrategy(strategyId, a.hint);
+        return {
+          bigIdea: (d.bigIdea ?? "").trim() || a.label,
+          insight: (d.insight ?? "").trim(),
+          axe: (d.axe ?? "").trim() || a.label,
+          pistes: Array.isArray(d.pistes) ? d.pistes : [],
+        };
+      } catch {
+        return { bigIdea: a.label, insight: "", axe: a.hint, pistes: [] as string[] };
+      }
+    }),
+  );
+
+  let seeded = 0;
+  for (const direction of drafts) {
+    await createCreativeProposal({ strategyId, routeKey: "TARGET", source: "LAFUSEE_AI", direction });
+    seeded++;
+  }
+  return { seeded, alreadyPresent: false };
 }
 
 // ── La Guilde — Voie B : soumission par un membre guilde (ADR-0120) ──────────────
