@@ -23,14 +23,14 @@ Legacy : 253 pages · 112 routers tRPC · 115 services — v7 au 2026-07-02 : 36
 | //register | (auth) | À PORTER |
 | //reset-password | (auth) | À PORTER |
 | //cockpit | (cockpit) | À PORTER |
-| //cockpit/brand/assets | (cockpit) | À PORTER (vault BrandAsset — pas de table v7) |
+| //cockpit/brand/assets | (cockpit) | FUSIONNÉ → /app/vault (coffre `BrandAsset` tranche 4 : logos/couleurs/typos/documents/images STRUCTURÉS — value Json validée Zod par kind, palette rendue, CRUD transactionnel + AuditLog chaîné `vault.asset.*`, archive/restore ; upload binaire = résidu honnête `fileRef`, les liens font foi — WP-019) |
 | //cockpit/brand/deliverables | (cockpit) | FUSIONNÉ → /app/exports (hub Deliverable + fraîcheur calculée, WP-016) |
 | //cockpit/brand/deliverables/[key] | (cockpit) | FUSIONNÉ → /app/oracle (+ /app/oracle/print — seul kind au registre v7 ; le détail par kind suivra le registre) |
 | //cockpit/brand/diagnostic | (cockpit) | FUSIONNÉ → /app/diagnostic (historique BrandScore + delta, breakdown piliers, actions dérivées des manques, WP-016) |
 | //cockpit/brand/edit | (cockpit) | FUSIONNÉ → /app/pilier/[key] (éditeur par champ, WP-005) |
 | //cockpit/brand/engagement | (cockpit) | FUSIONNÉ → /app/pilier/e (page pilier E, WP-005) |
-| //cockpit/brand/guidelines | (cockpit) | À PORTER (guidelines-renderer — pas de table v7) |
-| //cockpit/brand/identity | (cockpit) | FUSIONNÉ → /app/pilier/a (page pilier A, WP-005) |
+| //cockpit/brand/guidelines | (cockpit) | FUSIONNÉ → /app/guidelines (charte dérivée DÉTERMINISTE à la lecture — jamais stockée : identité verbale = pilier E réel avec certitude par champ, identité visuelle + usages = coffre réel ; chaque section cite sa source ou déclare son manque, `domain/guidelines` pur testé — WP-019) |
+| //cockpit/brand/identity | (cockpit) | FUSIONNÉ → /app/pilier/a (page pilier A, WP-005) + /app/vault (le versant identité VISUELLE — logos, palette, typographies — vit au coffre, WP-019) |
 | //cockpit/brand/jehuty | (cockpit) | À PORTER (feed Jehuty — pas de table v7) |
 | //cockpit/brand/market | (cockpit) | FUSIONNÉ → /app/pilier/t (page pilier T, WP-005) |
 | //cockpit/brand/notoria | (cockpit) | À PORTER (recommandations Notoria — pas de table v7) |

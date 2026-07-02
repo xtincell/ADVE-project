@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Activity,
+  BookMarked,
   ClipboardList,
   Compass,
   CreditCard,
@@ -15,6 +16,7 @@ import {
   Package,
   Rocket,
   ScrollText,
+  Vault,
 } from "lucide-react";
 import { cva } from "class-variance-authority";
 
@@ -34,7 +36,7 @@ type NavGroup = { label: string | null; items: NavItem[] };
  * Navigation de l'espace marque. Groupes :
  *   pilotage   — dashboard piliers, diagnostic, dérivés RTIS (WP-005 + WP-016)
  *   vues       — regroupements éditoriaux par thème (WP-016, zéro donnée nouvelle)
- *   livrables  — Oracle (WP-006), hub exports et traçabilité (WP-016)
+ *   livrables  — Oracle (WP-006), coffre + charte (WP-019), hub exports et traçabilité (WP-016)
  *   production — pipeline campagnes → actions → briefs → missions (WP-008)
  *   compte     — facturation (WP-007)
  */
@@ -60,6 +62,8 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Livrables",
     items: [
       { href: "/app/oracle", label: "Oracle", icon: ScrollText },
+      { href: "/app/vault", label: "Coffre", icon: Vault },
+      { href: "/app/guidelines", label: "Charte", icon: BookMarked },
       { href: "/app/exports", label: "Exports", icon: FolderOutput },
       { href: "/app/revisions", label: "Révisions", icon: History },
     ],

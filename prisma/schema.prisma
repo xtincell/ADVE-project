@@ -95,6 +95,7 @@ model Brand {
   scores       BrandScore[]
   deliverables Deliverable[]
   campaigns    Campaign[]
+  assets       BrandAsset[] // coffre de marque (tranche 4, WP-019)
 
   @@unique([workspaceId, slug])
 }
@@ -406,6 +407,45 @@ model MissionApplication {
   @@unique([missionId, talentId]) // une candidature par talent et par mission
   @@index([missionId, status])
   @@index([talentId, status])
+}
+
+// ————— Coffre de marque (tranche 4, WP-019) —————
+// Le vault v7 ne garde que l'ESSENCE du BrandAsset legacy (ADR-0012, ~40 kinds,
+// state machine à 6 états) : des assets d'identité STRUCTURÉS — logos, palette,
+// typographies, documents, images — saisis/édités par l'opérateur, versionnés,
+// audités. `value` porte la structure par kind (hex+rôle, usage typo, lien),
+// validée Zod dans server/vault.ts ; `fileRef` RÉSERVE l'upload binaire d'une
+// vague future — AUCUN stockage de fichier cette vague (résidu honnête, les
+// liens font foi). La charte /app/guidelines se DÉRIVE de ces lignes à la
+// lecture — elle n'est jamais stockée.
+
+enum BrandAssetKind {
+  LOGO
+  COULEUR
+  TYPO
+  DOCUMENT
+  IMAGE
+}
+
+enum BrandAssetStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+model BrandAsset {
+  id        String           @id @default(cuid())
+  brandId   String
+  kind      BrandAssetKind
+  name      String
+  value     Json? // structure par kind — couleur {hex, role?} · typo {usage?, url?} · lien {url?, note?}
+  fileRef   String? // référence d'un fichier uploadé (vague future) — jamais de binaire en base
+  status    BrandAssetStatus @default(ACTIVE)
+  version   Int              @default(1)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  brand     Brand            @relation(fields: [brandId], references: [id])
+
+  @@index([brandId, kind, status])
 }
 
 // ————— Audit (remplace le bus Intents : une table, hash-chaînée, requêtable) —————

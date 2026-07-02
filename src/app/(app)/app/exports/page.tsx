@@ -1,10 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowRight, FolderOutput, Printer, TriangleAlert } from "lucide-react";
+import {
+  ArrowRight,
+  BookMarked,
+  FolderOutput,
+  Printer,
+  TriangleAlert,
+  Vault,
+} from "lucide-react";
 import { readSession } from "@/lib/session";
-import { getBrandDeliverables, getBrandForSession } from "@/server/brand";
+import { getBrandDeliverables, getBrandForSession, jsonRecord } from "@/server/brand";
 import { DELIVERABLE_KINDS, ORACLE_KIND, oracleIsStale } from "@/server/deliverables";
+import { listActiveAssets } from "@/server/vault";
+import { composeGuidelines, type VaultAssetKind } from "@/domain/guidelines";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -69,6 +78,24 @@ export default async function ExportsPage() {
 
   const deliverables = await getBrandDeliverables(brand.id);
   const kindCount = Object.keys(DELIVERABLE_KINDS).length;
+
+  // Coffre + charte (WP-019) : la charte n'est PAS un Deliverable stocké —
+  // elle se dérive à la lecture ; on n'expose ici que son état réel.
+  const vaultAssets = await listActiveAssets(brand.id);
+  const pillarE = brand.pillars.find((pillar) => pillar.key === "E") ?? null;
+  const guidelines = composeGuidelines({
+    brandName: brand.name,
+    pillarE:
+      pillarE !== null
+        ? { content: jsonRecord(pillarE.content), certainty: jsonRecord(pillarE.certainty) }
+        : null,
+    assets: vaultAssets.map((asset) => ({
+      kind: asset.kind as VaultAssetKind,
+      name: asset.name,
+      value: asset.value,
+      fileRef: asset.fileRef,
+    })),
+  });
 
   return (
     <div className="space-y-10">
@@ -158,6 +185,65 @@ export default async function ExportsPage() {
             })}
           </div>
         )}
+      </section>
+
+      {/* ── Coffre & charte (WP-019 — dérivée à la lecture, jamais stockée) ── */}
+      <section className="space-y-3" aria-label="Coffre et charte de marque">
+        <div>
+          <h2 className="font-display text-xl font-semibold">Coffre &amp; charte</h2>
+          <p className="text-sm text-sand">
+            Les actifs d&apos;identité structurés et la charte qui s&apos;en dérive — en direct,
+            jamais re-générée.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-bento sm:grid-cols-2">
+          <article className="rounded-lg border border-line bg-ink-2 p-5">
+            <div className="flex flex-wrap items-center gap-3">
+              <Vault aria-hidden className="size-5 text-sand" />
+              <h3 className="font-display text-lg font-semibold text-bone">Coffre de marque</h3>
+              <Badge variant={vaultAssets.length > 0 ? "gold" : "outline"}>
+                {vaultAssets.length} asset{vaultAssets.length > 1 ? "s" : ""} actif
+                {vaultAssets.length > 1 ? "s" : ""}
+              </Badge>
+            </div>
+            <p className="mt-2 text-sm text-sand">
+              Logos, palette, typographies, documents et images de référence — versionnés, audités.
+            </p>
+            <Link
+              href="/app/vault"
+              className={`mt-4 ${buttonVariants({ variant: "outline", size: "sm" })}`}
+            >
+              Ouvrir le coffre
+              <ArrowRight aria-hidden />
+            </Link>
+          </article>
+          <article className="rounded-lg border border-line bg-ink-2 p-5">
+            <div className="flex flex-wrap items-center gap-3">
+              <BookMarked aria-hidden className="size-5 text-sand" />
+              <h3 className="font-display text-lg font-semibold text-bone">Charte de marque</h3>
+              <Badge
+                variant={
+                  guidelines.completeness.ok === guidelines.completeness.total
+                    ? "gold"
+                    : "inverse"
+                }
+              >
+                {guidelines.completeness.ok}/{guidelines.completeness.total} sections
+              </Badge>
+            </div>
+            <p className="mt-2 text-sm text-sand">
+              Identité verbale (pilier E) + identité visuelle et usages (coffre) — composition
+              déterministe à la lecture, toujours à jour de vos données.
+            </p>
+            <Link
+              href="/app/guidelines"
+              className={`mt-4 ${buttonVariants({ variant: "outline", size: "sm" })}`}
+            >
+              Consulter la charte
+              <ArrowRight aria-hidden />
+            </Link>
+          </article>
+        </div>
       </section>
 
       {/* ── Registre des kinds (en code — jamais de kind fantôme) ──────── */}
