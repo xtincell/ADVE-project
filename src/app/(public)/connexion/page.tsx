@@ -38,6 +38,11 @@ export default async function ConnexionPage({
             Créer mon compte
           </Link>
         </p>
+        <p className="pt-2 text-center text-sm">
+          <Link href="/mot-de-passe-oublie" className="text-smoke underline-offset-4 hover:text-ink hover:underline">
+            Mot de passe oublié ?
+          </Link>
+        </p>
       </Card>
     </div>
   );

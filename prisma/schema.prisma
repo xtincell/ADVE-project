@@ -26,13 +26,32 @@ enum MemberRole {
 }
 
 model User {
-  id            String         @id @default(cuid())
-  email         String         @unique
+  id            String               @id @default(cuid())
+  email         String               @unique
   name          String?
   passwordHash  String?
-  createdAt     DateTime       @default(now())
+  createdAt     DateTime             @default(now())
   memberships   Membership[]
   talentProfile TalentProfile? // profil Guilde (WP-011) — au plus un par compte
+  resetTokens   PasswordResetToken[] // demandes de réinitialisation (WP-022)
+}
+
+// Réinitialisation de mot de passe (tranche 5, WP-022) — additive.
+// Le token en clair n'est JAMAIS stocké : seule son empreinte SHA-256 vit en
+// base. TTL 1 h, usage unique (usedAt). Sans provider email configuré
+// (réalité v7), le lien est transmis PAR L'OPÉRATEUR : /admin/utilisateurs
+// liste les demandes en attente et émet le lien à la demande (rotation du
+// hash — le clair ne s'affiche qu'une fois, à l'émission).
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique // SHA-256 hex du token — jamais le clair
+  expiresAt DateTime // créé/rotaté à +1 h (RESET_TOKEN_TTL_MS, server/identity.ts)
+  usedAt    DateTime? // posé à la consommation — un token ne sert qu'une fois
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
 }
 
 model Workspace {

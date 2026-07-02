@@ -16,6 +16,7 @@ import {
   Package,
   Rocket,
   ScrollText,
+  Settings,
   Vault,
 } from "lucide-react";
 import { cva } from "class-variance-authority";
@@ -77,7 +78,10 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: "Compte",
-    items: [{ href: "/app/facturation", label: "Facturation", icon: CreditCard }],
+    items: [
+      { href: "/app/facturation", label: "Facturation", icon: CreditCard },
+      { href: "/reglages", label: "Réglages", icon: Settings },
+    ],
   },
 ];
 

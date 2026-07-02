@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Search, Users } from "lucide-react";
 import { listUsers, parsePage } from "@/server/admin";
+import { listResetRequests } from "@/server/identity";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Pager } from "../../pager";
 import { ROLE_LABELS, ROLE_VARIANTS } from "../../roles";
+import { ResetRequestsSection, type ResetRequestView } from "./reset-requests";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Utilisateurs" };
@@ -15,6 +17,13 @@ const DATE_FORMAT = new Intl.DateTimeFormat("fr-FR", {
   day: "2-digit",
   month: "2-digit",
   year: "numeric",
+});
+
+const DATETIME_FORMAT = new Intl.DateTimeFormat("fr-FR", {
+  day: "2-digit",
+  month: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
 });
 
 type PageProps = { searchParams: Promise<{ q?: string; page?: string }> };
@@ -29,7 +38,21 @@ export default async function AdminUtilisateursPage({ searchParams }: PageProps)
   const { q, page: rawPage } = await searchParams;
   const page = parsePage(rawPage);
   const query = q?.trim() || undefined;
-  const { rows, total } = await listUsers({ query, page });
+  const [{ rows, total }, resetRequests] = await Promise.all([
+    listUsers({ query, page }),
+    listResetRequests(),
+  ]);
+  // File WP-022 : demandes de /mot-de-passe-oublie non consommées — le lien
+  // est ÉMIS ici par l'opérateur (pas de provider email en v7), puis transmis
+  // par WhatsApp. Section rendue uniquement quand il y a du travail.
+  const resetRequestViews: ResetRequestView[] = resetRequests.map((r) => ({
+    id: r.id,
+    email: r.email,
+    name: r.name,
+    requestedAt: DATETIME_FORMAT.format(r.createdAt),
+    expiresAt: DATETIME_FORMAT.format(r.expiresAt),
+    expired: r.state === "EXPIRED",
+  }));
 
   return (
     <div className="space-y-8">
@@ -41,6 +64,10 @@ export default async function AdminUtilisateursPage({ searchParams }: PageProps)
           et la dernière activité réelle (journal d&apos;audit).
         </p>
       </header>
+
+      {resetRequestViews.length > 0 ? (
+        <ResetRequestsSection requests={resetRequestViews} />
+      ) : null}
 
       <form method="GET" action="/admin/utilisateurs" className="flex max-w-md items-center gap-2">
         <div className="relative flex-1">
