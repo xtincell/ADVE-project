@@ -19,12 +19,15 @@ import {
 } from "@/domain/pillars";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { CLIENT_STRIP, STATS } from "@/components/marketing/site-data";
 
 /**
  * Landing publique — la promesse mission, le constat, la méthode ADVE→RTIS,
- * le process en 3 étapes, le CTA vers /intake (funnel WP-004).
+ * le process en 3 étapes, la preuve sociale (track record réel UPgraders),
+ * le bandeau vers les pages du site de marque, le CTA vers /intake.
  * Copy réécrite depuis legacy/(marketing)/landingintake — sans métriques
- * inventées (les « +250 dirigeants / 4,9/5 » du handoff n'ont pas de source).
+ * inventées (les « +250 dirigeants / 4,9/5 » du handoff n'ont pas de source) ;
+ * preuve sociale portée du canon legacy data.ts (STATS + CLIENT_STRIP réels).
  */
 
 const PILLAR_COPY: Record<PillarKey, { name: string; desc: string }> = {
@@ -143,6 +146,12 @@ function Methode() {
             recalcule à chaque évolution de votre marque. Rien n&apos;est figé,
             rien n&apos;est laissé au hasard.
           </p>
+          <Link
+            href="/methode"
+            className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-coral hover:underline"
+          >
+            La méthode en détail <ArrowRight className="size-4" aria-hidden="true" />
+          </Link>
         </div>
 
         <div
@@ -276,6 +285,121 @@ function Process() {
   );
 }
 
+function PreuveSociale() {
+  return (
+    <section className="border-y border-ink/8 bg-white">
+      <div className="mx-auto max-w-page px-gutter py-20 sm:py-28">
+        <div className="max-w-2xl">
+          <p className="eyebrow text-coral">La preuve</p>
+          <h2 className="font-display mt-4 text-4xl font-semibold leading-tight">
+            Une méthode née <span className="text-coral">sur le terrain</span>.
+          </h2>
+          <p className="mt-5 text-lg text-graphite">
+            La Fusée industrialise la méthode qu&apos;UPgraders applique en
+            agence depuis 2017. Les marques ci-dessous ont été bâties ou
+            propulsées par le cabinet et sa Guilde de talents.
+          </p>
+        </div>
+        <div className="mt-10 grid grid-cols-2 gap-bento md:grid-cols-4">
+          {STATS.map((s) => (
+            <div key={s.label} className="rounded-lg bg-bone p-6">
+              <p className="font-display text-3xl font-semibold tracking-tight text-coral">
+                {s.value}
+              </p>
+              <p className="eyebrow mt-1 text-smoke">{s.label}</p>
+            </div>
+          ))}
+        </div>
+        <ul
+          className="mt-8 flex flex-wrap gap-2"
+          aria-label="Marques accompagnées par UPgraders"
+        >
+          {CLIENT_STRIP.map((name) => (
+            <li
+              key={name}
+              className="rounded-xs border border-ink/12 px-3 py-1.5 font-mono text-xs text-graphite"
+            >
+              {name}
+            </li>
+          ))}
+        </ul>
+        <Link
+          href="/realisations"
+          className="mt-8 inline-flex items-center gap-1.5 text-sm font-semibold text-coral hover:underline"
+        >
+          Voir les réalisations <ArrowRight className="size-4" aria-hidden="true" />
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+const EXPLORE_LINKS = [
+  {
+    href: "/methode",
+    title: "La méthode",
+    desc: "ADVE/RTIS en détail : les 8 lettres, les paliers LATENT → ICONE, l'obligation d'effet.",
+  },
+  {
+    href: "/services",
+    title: "Les services",
+    desc: "Trois portes d'entrée : audit ADVE, mandat RTIS, marque blanche pour agences.",
+  },
+  {
+    href: "/realisations",
+    title: "Les réalisations",
+    desc: "Motion19, Universal Music Africa, Orange, Chococam, KOF… le track record du cabinet.",
+  },
+  {
+    href: "/la-guilde",
+    title: "La Guilde",
+    desc: "Le réseau de talents curatés — une cellule sur mesure pour chaque mission.",
+  },
+  {
+    href: "/agence",
+    title: "L'agence",
+    desc: "UPgraders depuis 2017 : le récit, l'équipe, les convictions, la trajectoire.",
+  },
+  {
+    href: "/blog",
+    title: "Le blog",
+    desc: "Les notes de cabinet — méthode, marché, modèle d'agence. Sans langue de bois.",
+  },
+] as const;
+
+function Explorer() {
+  return (
+    <section className="texture-geo bg-ink-0 text-bone">
+      <div className="mx-auto max-w-page px-gutter py-20 sm:py-24">
+        <div className="max-w-2xl">
+          <p className="eyebrow text-coral">Aller plus loin</p>
+          <h2 className="font-display mt-4 text-4xl font-semibold leading-tight">
+            La méthode, l&apos;agence, <span className="text-coral">les preuves</span>.
+          </h2>
+        </div>
+        <div className="mt-10 grid gap-bento sm:grid-cols-2 lg:grid-cols-3">
+          {EXPLORE_LINKS.map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              className="group rounded-xl border border-line bg-ink-2 p-6 transition-colors hover:border-coral/60"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="font-display text-lg font-semibold">{l.title}</h3>
+                <ArrowRight
+                  className="size-4 shrink-0 text-coral transition-transform group-hover:translate-x-1"
+                  aria-hidden="true"
+                />
+              </div>
+              <p className="mt-2 text-sm leading-relaxed text-sand">{l.desc}</p>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function FinalCta() {
   return (
     <section className="texture-geo relative overflow-hidden bg-ink text-bone">
@@ -316,6 +440,8 @@ export default function HomePage() {
       <Constat />
       <Methode />
       <Process />
+      <PreuveSociale />
+      <Explorer />
       <FinalCta />
     </>
   );
