@@ -26,12 +26,13 @@ enum MemberRole {
 }
 
 model User {
-  id           String       @id @default(cuid())
-  email        String       @unique
-  name         String?
-  passwordHash String?
-  createdAt    DateTime     @default(now())
-  memberships  Membership[]
+  id            String         @id @default(cuid())
+  email         String         @unique
+  name          String?
+  passwordHash  String?
+  createdAt     DateTime       @default(now())
+  memberships   Membership[]
+  talentProfile TalentProfile? // profil Guilde (WP-011) — au plus un par compte
 }
 
 model Workspace {
@@ -216,12 +217,13 @@ model Payment {
 // ————— Référentiel marché (tables seedées — jamais de barème en dur dans le code) —————
 
 model Country {
-  code      String     @id // ISO-3166 alpha-2
+  code      String          @id // ISO-3166 alpha-2
   name      String
   currency  String
   zone      String? // UEMOA | CEMAC | ...
   brands    Brand[]
   campaigns Campaign[]
+  talents   TalentProfile[]
 }
 
 model ZoneIndex {
@@ -320,19 +322,89 @@ model Brief {
 }
 
 model Mission {
-  id          String        @id @default(cuid())
-  briefId     String
-  title       String
-  status      MissionStatus @default(OPEN)
-  assignee    String? // talent assigné — nom/contact déclaré (TalentProfile & guilde = WP-011)
-  assignedAt  DateTime?
-  deliveredAt DateTime?
-  validatedAt DateTime?
-  createdAt   DateTime      @default(now())
-  brief       Brief         @relation(fields: [briefId], references: [id])
+  id               String               @id @default(cuid())
+  briefId          String
+  title            String
+  status           MissionStatus        @default(OPEN)
+  assignee         String? // talent assigné — nom/contact déclaré (fallback hors guilde)
+  // ── Guilde (tranche 3, WP-011 — champs ADDITIFS) ──
+  openToGuild      Boolean              @default(false) // publiée sur le mur des missions (gate opérateur)
+  assigneeTalentId String? // profil talent accepté via la Guilde (assignee = son nom, dénormalisé)
+  assignedAt       DateTime?
+  deliveredAt      DateTime?
+  validatedAt      DateTime?
+  createdAt        DateTime             @default(now())
+  brief            Brief                @relation(fields: [briefId], references: [id])
+  assigneeTalent   TalentProfile?       @relation(fields: [assigneeTalentId], references: [id])
+  applications     MissionApplication[]
 
   @@index([briefId, status])
   @@index([status, createdAt])
+  @@index([openToGuild, status])
+}
+
+// ————— Guilde (tranche 3, WP-011) —————
+// L'essence d'ADR-0098 legacy, simplifiée : le talent tient UN profil (voie
+// canonique de création — plus d'auto/seed), les missions ouvertes à la Guilde
+// par l'opérateur forment le mur (cross-workspace, projection SANS donnée de
+// marque), la candidature est unique par (mission, talent) et la décision
+// suit APPLIED → SHORTLISTED → ACCEPTED/DECLINED. Accepter = Mission ASSIGNED
+// + assigneeTalentId + candidatures sœurs DECLINED (transaction unique).
+
+enum TalentAvailability {
+  AVAILABLE // disponible pour de nouvelles missions
+  BUSY // en mission — visible mais à charge
+  UNAVAILABLE // indisponible (pause déclarée)
+}
+
+enum TalentVisibility {
+  VISIBLE // apparaît côté marque/admin avec ses candidatures
+  HIDDEN // profil retiré de la circulation (les candidatures passées restent)
+}
+
+enum ApplicationStatus {
+  APPLIED
+  SHORTLISTED
+  ACCEPTED
+  DECLINED
+}
+
+model TalentProfile {
+  id           String               @id @default(cuid())
+  userId       String               @unique // un compte = un profil talent
+  headline     String // « Photographe produit — Douala » : la ligne du mur
+  skills       String[]             @default([])
+  city         String
+  countryCode  String // référentiel Country — jamais de pays inventé
+  whatsapp     String? // contact mobile money/WhatsApp — montré côté marque à l'acceptation
+  portfolioUrl String?
+  availability TalentAvailability   @default(AVAILABLE)
+  visibility   TalentVisibility     @default(VISIBLE)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  user         User                 @relation(fields: [userId], references: [id])
+  country      Country              @relation(fields: [countryCode], references: [code])
+  applications MissionApplication[]
+  missions     Mission[] // missions gagnées via la Guilde (assigneeTalentId)
+
+  @@index([visibility, availability])
+}
+
+model MissionApplication {
+  id        String            @id @default(cuid())
+  missionId String
+  talentId  String // TalentProfile.id
+  pitch     String
+  status    ApplicationStatus @default(APPLIED)
+  decidedAt DateTime? // posée au flip ACCEPTED/DECLINED
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  mission   Mission           @relation(fields: [missionId], references: [id])
+  talent    TalentProfile     @relation(fields: [talentId], references: [id])
+
+  @@unique([missionId, talentId]) // une candidature par talent et par mission
+  @@index([missionId, status])
+  @@index([talentId, status])
 }
 
 // ————— Audit (remplace le bus Intents : une table, hash-chaînée, requêtable) —————
