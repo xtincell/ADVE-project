@@ -2,21 +2,41 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { getDb } from "@/lib/db";
+import { subscriptionFilterWhere } from "@/server/admin";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Admin" };
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 /**
- * Salle des opérations — 4 compteurs vivants (requêtes count simples),
- * chaque tuile mène à sa section. Server component par requête.
+ * Salle des opérations — compteurs vivants (requêtes count simples), chaque
+ * tuile mène à sa section. Server component par requête. Vague 1 console
+ * (WP-015) : utilisateurs, workspaces, abonnements, référentiels, audit.
  */
 export default async function AdminHomePage() {
   const db = getDb();
-  const [newLeads, pendingSubscriptions, brands, workspaces] = await Promise.all([
+  const now = new Date();
+  const [
+    newLeads,
+    pendingSubscriptions,
+    activeSubscriptions,
+    expiring7d,
+    brands,
+    workspaces,
+    users,
+    zoneIndexCount,
+    auditLast24h,
+  ] = await Promise.all([
     db.intakeLead.count({ where: { status: "NEW" } }),
     db.subscription.count({ where: { status: "pending_manual" } }),
+    db.subscription.count({ where: subscriptionFilterWhere("actifs", now) }),
+    db.subscription.count({ where: subscriptionFilterWhere("expirent_7j", now) }),
     db.brand.count(),
     db.workspace.count(),
+    db.user.count(),
+    db.zoneIndex.count(),
+    db.auditLog.count({ where: { createdAt: { gte: new Date(now.getTime() - DAY_MS) } } }),
   ]);
 
   const tiles = [
@@ -35,6 +55,16 @@ export default async function AdminHomePage() {
       urgent: pendingSubscriptions > 0,
     },
     {
+      label: "Abonnements actifs",
+      value: activeSubscriptions,
+      hint:
+        expiring7d > 0
+          ? `dont ${expiring7d} expirant sous 7 jours`
+          : "échéance strictement future",
+      href: "/admin/abonnements",
+      urgent: false,
+    },
+    {
       label: "Marques",
       value: brands,
       hint: "marques en base, tous paliers",
@@ -45,7 +75,28 @@ export default async function AdminHomePage() {
       label: "Workspaces",
       value: workspaces,
       hint: "espaces clients + agence",
-      href: "/admin/marques",
+      href: "/admin/workspaces",
+      urgent: false,
+    },
+    {
+      label: "Utilisateurs",
+      value: users,
+      hint: "comptes, tous rôles",
+      href: "/admin/utilisateurs",
+      urgent: false,
+    },
+    {
+      label: "Lignes référentiel",
+      value: zoneIndexCount,
+      hint: "indices de zone (pricing, coûts…)",
+      href: "/admin/referentiels",
+      urgent: zoneIndexCount === 0, // référentiel vide = pricing irrésoluble
+    },
+    {
+      label: "Audit — 24 h",
+      value: auditLast24h,
+      hint: "lignes hash-chaînées écrites",
+      href: "/admin/audit",
       urgent: false,
     },
   ];
@@ -86,7 +137,15 @@ export default async function AdminHomePage() {
         <Link href="/admin/paiements" className="font-semibold text-coral hover:underline">
           Paiements
         </Link>
-        . Chaque décision est tracée dans l&apos;AuditLog hash-chaîné.
+        . Les barèmes (pricing, cost-of-living) s&apos;éditent en base dans{" "}
+        <Link href="/admin/referentiels" className="font-semibold text-coral hover:underline">
+          Référentiels
+        </Link>{" "}
+        ; chaque mutation est tracée dans l&apos;
+        <Link href="/admin/audit" className="font-semibold text-coral hover:underline">
+          AuditLog hash-chaîné
+        </Link>{" "}
+        (vérification d&apos;intégrité incluse).
       </p>
     </div>
   );

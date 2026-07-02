@@ -1,0 +1,125 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { z } from "zod";
+import type { FormState } from "@/lib/forms";
+import { readSession } from "@/lib/session";
+import { getBrandForSession } from "@/server/brand";
+import {
+  assigneeSchema,
+  assignMission,
+  CampaignError,
+  deliverMission,
+  validateMission,
+} from "@/server/campaigns";
+
+/**
+ * Server actions du circuit mission : OPEN → ASSIGNED → DELIVERED → VALIDATED.
+ * Chaque transition est une gate (flip atomique côté service, message FR si
+ * l'état a bougé sous les pieds de l'opérateur).
+ */
+
+const idSchema = z.string().min(1, "Identifiant manquant — rechargez la page.");
+
+async function sessionBrand(next: string) {
+  const session = await readSession();
+  if (!session) redirect(`/connexion?next=${encodeURIComponent(next)}`);
+  const brand = await getBrandForSession(session);
+  if (!brand) {
+    return { error: "Aucune marque dans cet espace — commencez par le diagnostic." } as const;
+  }
+  return { brandId: brand.id, actorId: session.userId } as const;
+}
+
+function toFormError(err: unknown, logPrefix: string): FormState {
+  if (err instanceof CampaignError) return { formError: err.message };
+  console.error(`[campagnes] ${logPrefix}`, err);
+  return { formError: "L'opération a échoué pour une raison technique. Réessayez dans un instant." };
+}
+
+function parseIds(formData: FormData) {
+  const missionId = idSchema.safeParse(formData.get("missionId"));
+  const campaignId = idSchema.safeParse(formData.get("campaignId"));
+  if (!missionId.success || !campaignId.success) return null;
+  return { missionId: missionId.data, campaignId: campaignId.data };
+}
+
+function revalidateMissionPaths(campaignId: string, missionId: string) {
+  revalidatePath(`/campagnes/${campaignId}/mission/${missionId}`);
+  revalidatePath(`/campagnes/${campaignId}`);
+  revalidatePath("/missions");
+}
+
+/** OPEN → ASSIGNED : déclare le talent (nom/contact — la guilde arrive au WP-011). */
+export async function assignMissionAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const ctx = await sessionBrand("/missions");
+  if ("error" in ctx) return { formError: ctx.error };
+
+  const ids = parseIds(formData);
+  if (!ids) return { formError: "Identifiant manquant — rechargez la page." };
+
+  const assignee = assigneeSchema.safeParse(formData.get("assignee"));
+  if (!assignee.success) {
+    return { fieldErrors: { assignee: [assignee.error.issues[0]!.message] } };
+  }
+
+  try {
+    await assignMission({
+      brandId: ctx.brandId,
+      missionId: ids.missionId,
+      assignee: assignee.data,
+      actorId: ctx.actorId,
+    });
+  } catch (err) {
+    return toFormError(err, "assignMission a échoué :");
+  }
+
+  revalidateMissionPaths(ids.campaignId, ids.missionId);
+  return null;
+}
+
+/** ASSIGNED → DELIVERED : le talent a livré. */
+export async function deliverMissionAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const ctx = await sessionBrand("/missions");
+  if ("error" in ctx) return { formError: ctx.error };
+
+  const ids = parseIds(formData);
+  if (!ids) return { formError: "Identifiant manquant — rechargez la page." };
+
+  try {
+    await deliverMission({ brandId: ctx.brandId, missionId: ids.missionId, actorId: ctx.actorId });
+  } catch (err) {
+    return toFormError(err, "deliverMission a échoué :");
+  }
+
+  revalidateMissionPaths(ids.campaignId, ids.missionId);
+  return null;
+}
+
+/** DELIVERED → VALIDATED : livraison validée — fin du circuit. */
+export async function validateMissionAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const ctx = await sessionBrand("/missions");
+  if ("error" in ctx) return { formError: ctx.error };
+
+  const ids = parseIds(formData);
+  if (!ids) return { formError: "Identifiant manquant — rechargez la page." };
+
+  try {
+    await validateMission({ brandId: ctx.brandId, missionId: ids.missionId, actorId: ctx.actorId });
+  } catch (err) {
+    return toFormError(err, "validateMission a échoué :");
+  }
+
+  revalidateMissionPaths(ids.campaignId, ids.missionId);
+  return null;
+}

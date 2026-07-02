@@ -9,6 +9,8 @@
  *                           (legacy/src/server/services/monetization/compute-price.ts).
  *   3. ZoneIndex "cost-of-living" — indices coût de la vie par pays (CM = 100), portés de
  *                           legacy/src/server/services/financial-brain/action-costing/seed-data.ts.
+ *   4. ZoneIndex "action-cost" — coûts d'action indicatifs par archétype au marché de base CM
+ *                           (WP-008), portés du catalogue legacy action-costing/catalog.ts (ADR-0093).
  *
  * Doctrine (ADR-0087 legacy, reconduite v7) : jamais de barème en dur dans le code —
  * tout montant vit ici, en données, avec source + validFrom.
@@ -121,6 +123,36 @@ const COST_OF_LIVING_INDICES = [
 ].map((r) => ({ ...r, key: "general", source: COL_SOURCE }));
 
 // ————————————————————————————————————————————————————————————————————————
+// 4. ZoneIndex famille "action-cost" — coûts d'action indicatifs PAR ARCHÉTYPE
+//    au marché de base CM (baseZoneCode du catalogue legacy), en XAF (WP-008).
+//    Valeur = Σ des atomes du catalogue ADR-0093 (quantité × baseRate, atomes
+//    optionnels inclus — comportement par défaut de l'estimateur legacy),
+//    HT, hors marge/contingence/TVA. À la lecture, src/server/campaigns.ts
+//    met à l'échelle du marché de la campagne par le ratio cost-of-living
+//    (mécanique estimator.ts legacy) ; marché hors franc CFA ou sans indice
+//    → « à estimer », jamais de montant inventé.
+// ————————————————————————————————————————————————————————————————————————
+
+const ACTION_COST_SOURCE =
+  "legacy action-costing catalog ADR-0093 (UPgraders production survey 2026) — Σ atomes @ CM, HT hors marge/TVA";
+const ACTION_COST_BASE_MARKET = "CM";
+
+const ACTION_COST_INDICES = [
+  { key: "photo_session_half_day", value: 454000 },
+  { key: "video_shoot_1day", value: 1144000 },
+  { key: "social_content_batch", value: 273000 },
+  { key: "radio_spot_30s", value: 224000 },
+  { key: "tv_spot_30s", value: 3900000 },
+  { key: "event_activation_day", value: 1720000 },
+  { key: "ooh_campaign_panel", value: 670000 },
+  { key: "influencer_post", value: 296000 },
+  { key: "print_kv", value: 248000 },
+  { key: "pr_press_event", value: 1125000 },
+  { key: "packaging_design", value: 537000 },
+  { key: "landing_page", value: 696000 },
+].map((r) => ({ ...r, countryCode: ACTION_COST_BASE_MARKET, source: ACTION_COST_SOURCE }));
+
+// ————————————————————————————————————————————————————————————————————————
 // Mécanique de seed
 // ————————————————————————————————————————————————————————————————————————
 
@@ -171,12 +203,14 @@ async function main() {
   const countries = await seedCountries();
   const pricing = await seedZoneIndices("pricing", PRICING_INDICES);
   const col = await seedZoneIndices("cost-of-living", COST_OF_LIVING_INDICES);
+  const actionCosts = await seedZoneIndices("action-cost", ACTION_COST_INDICES);
 
   const fmt = (c) => `${c.created} créés · ${c.updated} mis à jour · ${c.unchanged} inchangés`;
-  console.log("[seed] Récapitulatif WP-009 (référentiels) :");
+  console.log("[seed] Récapitulatif WP-009 + WP-008 (référentiels) :");
   console.log(`[seed]   Country                    : ${countries} upserts (${COUNTRIES.length} pays)`);
   console.log(`[seed]   ZoneIndex pricing          : ${PRICING_INDICES.length} lignes — ${fmt(pricing)}`);
   console.log(`[seed]   ZoneIndex cost-of-living   : ${COST_OF_LIVING_INDICES.length} lignes — ${fmt(col)}`);
+  console.log(`[seed]   ZoneIndex action-cost      : ${ACTION_COST_INDICES.length} lignes — ${fmt(actionCosts)}`);
   console.log(
     `[seed]   Totaux en base             : ${await db.country.count()} Country · ${await db.zoneIndex.count()} ZoneIndex`,
   );

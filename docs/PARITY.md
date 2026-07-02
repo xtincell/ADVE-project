@@ -55,15 +55,15 @@ Legacy : 253 pages · 112 routers tRPC · 115 services — v7 au 2026-07-02 : 36
 | //cockpit/messages | (cockpit) | À PORTER |
 | //cockpit/mestor | (cockpit) | À PORTER |
 | //cockpit/new | (cockpit) | À PORTER |
-| //cockpit/operate/action-brief | (cockpit) | À PORTER |
-| //cockpit/operate/briefs | (cockpit) | À PORTER |
+| //cockpit/operate/action-brief | (cockpit) | FUSIONNÉ → gate « transformer en brief » (/campagnes/[id]/action/[actionId], WP-008) |
+| //cockpit/operate/briefs | (cockpit) | PORTÉ → /campagnes/[id]/brief/[briefId] (éditeur structuré + gate validation, WP-008) |
 | //cockpit/operate/calendar | (cockpit) | À PORTER |
-| //cockpit/operate/campaigns | (cockpit) | À PORTER |
-| //cockpit/operate/campaigns/[id] | (cockpit) | À PORTER |
+| //cockpit/operate/campaigns | (cockpit) | PORTÉ → /campagnes (WP-008) |
+| //cockpit/operate/campaigns/[id] | (cockpit) | PORTÉ → /campagnes/[id] (WP-008) |
 | //cockpit/operate/campaigns/[id]/tracker | (cockpit) | À PORTER |
 | //cockpit/operate/center | (cockpit) | À PORTER |
 | //cockpit/operate/forge | (cockpit) | À PORTER |
-| //cockpit/operate/missions | (cockpit) | À PORTER |
+| //cockpit/operate/missions | (cockpit) | PORTÉ → /missions (vue circuit) + /campagnes/[id]/mission/[missionId] (gates, WP-008) |
 | //cockpit/operate/newsletter | (cockpit) | À PORTER |
 | //cockpit/operate/requests | (cockpit) | À PORTER |
 | //cockpit/operate/roadmap | (cockpit) | À PORTER |
@@ -72,7 +72,7 @@ Legacy : 253 pages · 112 routers tRPC · 115 services — v7 au 2026-07-02 : 36
 | //cockpit/portfolio | (cockpit) | À PORTER |
 | //cockpit/portfolio/[corporateSlug] | (cockpit) | À PORTER |
 | //cockpit/settings | (cockpit) | À PORTER |
-| //console | (console) | À PORTER |
+| //console | (console) | FUSIONNÉ → /admin (vue d'ensemble, 8 compteurs vivants) |
 | //console/academie | (console) | À PORTER |
 | //console/academie/boutique | (console) | À PORTER |
 | //console/academie/certifications | (console) | À PORTER |
@@ -131,14 +131,14 @@ Legacy : 253 pages · 112 routers tRPC · 115 services — v7 au 2026-07-02 : 36
 | //console/fusee/pr | (console) | À PORTER |
 | //console/fusee/scheduler | (console) | À PORTER |
 | //console/fusee/social | (console) | À PORTER |
-| //console/governance/accounts | (console) | À PORTER |
+| //console/governance/accounts | (console) | FUSIONNÉ → /admin/utilisateurs (+ fiche : memberships/rôles, activité via AuditLog ; la promotion de rôle legacy visait User.role global — le rôle v7 est par workspace, édition à venir avec sa mécanique) |
 | //console/governance/campaign-tracker | (console) | À PORTER |
 | //console/governance/campaign-tracker/overton-delta-manual | (console) | À PORTER |
 | //console/governance/canon-sync | (console) | À PORTER |
 | //console/governance/design-system | (console) | À PORTER |
 | //console/governance/error-vault | (console) | À PORTER |
-| //console/governance/intents | (console) | À PORTER |
-| //console/governance/markets | (console) | À PORTER |
+| //console/governance/intents | (console) | FUSIONNÉ → /admin/audit (l'AuditLog hash-chaîné remplace le bus Intents : journal filtrable action/chaîne/dates + vérification d'intégrité par recalcul des selfHash) |
+| //console/governance/markets | (console) | FUSIONNÉ → /admin/referentiels (CRUD Country audité ; le kill-switch freeze/shadowban n'a pas d'équivalent schéma v7 — à re-statuer si le besoin revient) |
 | //console/governance/model-policy | (console) | À PORTER |
 | //console/governance/oracle-incidents | (console) | À PORTER |
 | //console/governance/phase-18-residuals | (console) | À PORTER |
@@ -175,10 +175,10 @@ Legacy : 253 pages · 112 routers tRPC · 115 services — v7 au 2026-07-02 : 36
 | //console/socle/contracts | (console) | À PORTER |
 | //console/socle/escrow | (console) | À PORTER |
 | //console/socle/invoices | (console) | À PORTER |
-| //console/socle/manual-subscriptions | (console) | À PORTER |
-| //console/socle/market-costs | (console) | À PORTER |
+| //console/socle/manual-subscriptions | (console) | FUSIONNÉ → /admin/paiements (file Valider/Rejeter, WP-007) + /admin/abonnements (cycle de vie cross-workspace, statuts dérivés finance.ts, filtres/échéances) |
+| //console/socle/market-costs | (console) | FUSIONNÉ → /admin/referentiels (familles ZoneIndex cost-of-living & co, éditables, source obligatoire) |
 | //console/socle/pipeline | (console) | À PORTER |
-| //console/socle/pricing | (console) | À PORTER |
+| //console/socle/pricing | (console) | FUSIONNÉ → /admin/referentiels (lignes ZoneIndex pricing éditables en base — nouvelle ligne validFrom = nouveau barème, mutation auditée ; remplace le barème seedé) |
 | //console/socle/revenue | (console) | À PORTER |
 | //console/socle/transactions | (console) | À PORTER |
 | //console/socle/value-reports | (console) | À PORTER |

@@ -1,7 +1,14 @@
-import type { Prisma, PrismaClient, Pillar, PillarRevision, BrandScore as BrandScoreRow } from "@prisma/client";
+import type {
+  Prisma,
+  PrismaClient,
+  Pillar,
+  PillarRevision,
+  BrandScore as BrandScoreRow,
+  Deliverable,
+} from "@prisma/client";
 import { getDb } from "@/lib/db";
 import type { SessionPayload } from "@/lib/session-token";
-import { ADVE_PILLARS, isAdve, RTIS_PILLARS, type PillarKey } from "@/domain/pillars";
+import { ADVE_PILLARS, isAdve, PILLARS, RTIS_PILLARS, type PillarKey } from "@/domain/pillars";
 import { getFieldDef, PILLAR_FIELDS, PILLAR_LABELS, type FieldDef } from "@/domain/pillar-fields";
 import {
   isFilled,
@@ -11,6 +18,7 @@ import {
   type BrandScore as DomainBrandScore,
 } from "@/domain/scoring";
 import { deriveRtisDraft, type AdvePillarsContent } from "@/domain/rtis";
+import { diffRevisionFields, type RevisionFieldDiff } from "@/domain/revision-diff";
 import { computeSelfHash } from "./audit-hash";
 import { logAudit } from "./audit";
 
@@ -392,4 +400,287 @@ export async function deriveRtis(input: DeriveRtisInput): Promise<DeriveRtisResu
     );
     return { score, derived: [...RTIS_PILLARS] };
   });
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Lectures cockpit (WP-016 — vues de profondeur). LECTURE SEULE :
+// aucune fonction ci-dessous n'écrit quoi que ce soit.
+// ══════════════════════════════════════════════════════════════════════
+
+// ── Historique BrandScore (/app/diagnostic) ───────────────────────────
+
+/** Historique des scores persistés, plus récents d'abord (append-only). */
+export async function getBrandScores(brandId: string, take = 24): Promise<BrandScoreRow[]> {
+  const db = getDb();
+  return db.brandScore.findMany({
+    where: { brandId },
+    orderBy: [{ computedAt: "desc" }, { id: "desc" }],
+    take,
+  });
+}
+
+/**
+ * Lecture tolérante de `BrandScore.dimensions` (Json) → score25 par pilier.
+ * La colonne persiste `scoreBrand().byPillar` ; on n'en relit que les nombres
+ * réellement présents — jamais de valeur par défaut inventée.
+ */
+export function scoreDimensions25(value: unknown): Partial<Record<PillarKey, number>> {
+  const out: Partial<Record<PillarKey, number>> = {};
+  const root = jsonRecord(value);
+  for (const key of PILLARS) {
+    const entry = root[key];
+    if (entry === null || typeof entry !== "object" || Array.isArray(entry)) continue;
+    const score25 = (entry as Record<string, unknown>)["score25"];
+    if (typeof score25 === "number" && Number.isFinite(score25)) out[key] = score25;
+  }
+  return out;
+}
+
+// ── Livrables (/app/exports) ──────────────────────────────────────────
+
+/** Tous les livrables d'une marque, plus récents d'abord. */
+export async function getBrandDeliverables(brandId: string): Promise<Deliverable[]> {
+  const db = getDb();
+  return db.deliverable.findMany({
+    where: { brandId },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+  });
+}
+
+// ── Vérification de la chaîne de hash des révisions (/app/revisions) ──
+//
+// La chaîne est PAR PILIER (cf. writePillarWithRevision) : chaque révision
+// pointe le selfHash de la précédente. La vérification recompose chaque
+// selfHash depuis les données stockées, avec le format d'enregistrement de
+// l'écrivain d'origine :
+//   - reason "intake" (funnel.ts, v1)            → action "pillar.revision",
+//     payload { version, reason, content }
+//   - autres reasons (brand.ts, ai/apply-draft)  → action "pillar.<reason>",
+//     payload { key, version, content }
+// Falsifier une révision a posteriori casse le recalcul ; réécrire la chaîne
+// casse le chaînage prevHash→selfHash suivant.
+
+export type RevisionCheckStatus = "ok" | "unsigned" | "broken_link" | "hash_mismatch";
+
+export type ChainRevisionInput = {
+  version: number;
+  reason: string;
+  actorId: string | null;
+  content: unknown;
+  prevHash: string | null;
+  selfHash: string | null;
+  createdAt: Date;
+};
+
+export type ChainStatus = "OK" | "RUPTURE" | "NON_SIGNEE" | "VIDE";
+
+export type ChainVerification = {
+  pillarKey: PillarKey;
+  revisionCount: number;
+  status: ChainStatus;
+  /** Première anomalie rencontrée (version + nature) — null si chaîne saine. */
+  firstBreak: { version: number; kind: RevisionCheckStatus } | null;
+  /** Statut par version (index aligné sur l'ordre chronologique). */
+  byRevision: Array<{ version: number; status: RevisionCheckStatus }>;
+};
+
+/** Record de hash d'une révision, au format de son écrivain d'origine. */
+function revisionHashRecord(
+  rev: ChainRevisionInput,
+  pillarId: string,
+  pillarKey: PillarKey,
+  workspaceId: string,
+) {
+  if (rev.reason === "intake") {
+    return {
+      workspaceId,
+      actorId: rev.actorId,
+      action: "pillar.revision",
+      entity: "Pillar",
+      entityId: pillarId,
+      payload: { version: rev.version, reason: rev.reason, content: rev.content },
+    };
+  }
+  return {
+    workspaceId,
+    actorId: rev.actorId,
+    action: `pillar.${rev.reason}`,
+    entity: "Pillar",
+    entityId: pillarId,
+    payload: { key: pillarKey, version: rev.version, content: rev.content },
+  };
+}
+
+/**
+ * Vérifie la chaîne d'un pilier — fonction PURE (zéro IO, testable sans DB).
+ * Deux contrôles par révision : le chaînage (prevHash = selfHash précédent)
+ * et l'intégrité (selfHash recalculé = selfHash stocké). Une révision sans
+ * selfHash est « non signée » : invérifiable, sans être une falsification.
+ */
+export function verifyRevisionChain(input: {
+  pillarId: string;
+  pillarKey: PillarKey;
+  workspaceId: string;
+  revisions: ChainRevisionInput[];
+}): ChainVerification {
+  const ordered = [...input.revisions].sort(
+    (a, b) => a.version - b.version || a.createdAt.getTime() - b.createdAt.getTime(),
+  );
+
+  const byRevision: Array<{ version: number; status: RevisionCheckStatus }> = [];
+  let firstBreak: ChainVerification["firstBreak"] = null;
+  let hasUnsigned = false;
+  let expectedPrev: string | null = null;
+
+  for (const rev of ordered) {
+    let status: RevisionCheckStatus = "ok";
+
+    if (rev.prevHash !== expectedPrev) {
+      status = "broken_link";
+    } else if (rev.selfHash === null) {
+      status = "unsigned";
+      hasUnsigned = true;
+    } else {
+      const recomputed = computeSelfHash(
+        rev.prevHash,
+        revisionHashRecord(rev, input.pillarId, input.pillarKey, input.workspaceId),
+      );
+      if (recomputed !== rev.selfHash) status = "hash_mismatch";
+    }
+
+    if ((status === "broken_link" || status === "hash_mismatch") && firstBreak === null) {
+      firstBreak = { version: rev.version, kind: status };
+    }
+    byRevision.push({ version: rev.version, status });
+    // La suite de la chaîne se juge contre ce que la DB affirme (selfHash
+    // stocké) — une rupture ne masque pas les suivantes.
+    expectedPrev = rev.selfHash;
+  }
+
+  const status: ChainStatus =
+    ordered.length === 0 ? "VIDE" : firstBreak !== null ? "RUPTURE" : hasUnsigned ? "NON_SIGNEE" : "OK";
+
+  return {
+    pillarKey: input.pillarKey,
+    revisionCount: ordered.length,
+    status,
+    firstBreak,
+    byRevision,
+  };
+}
+
+// ── Timeline cross-piliers + audit de chaîne (/app/revisions) ─────────
+
+export type BrandRevisionEntry = {
+  id: string;
+  pillarKey: PillarKey;
+  version: number;
+  reason: string;
+  createdAt: Date;
+  actorId: string | null;
+  /** Nom (ou email) de l'acteur — null si acteur inconnu/système. */
+  actorLabel: string | null;
+  /** Champs métier modifiés vs la révision précédente du même pilier. */
+  diff: RevisionFieldDiff;
+  /** Statut de vérification de CETTE révision dans sa chaîne. */
+  check: RevisionCheckStatus;
+  selfHash: string | null;
+};
+
+export type BrandRevisionAudit = {
+  /** Timeline cross-piliers, plus récentes d'abord. */
+  timeline: BrandRevisionEntry[];
+  /** Vérification de chaîne par pilier (piliers réellement écrits uniquement). */
+  chains: ChainVerification[];
+  /** Nombre total de révisions de la marque. */
+  total: number;
+};
+
+/**
+ * Timeline complète des révisions d'une marque + état réel des chaînes de
+ * hash. Charge TOUTES les révisions (le diff et la vérification exigent
+ * l'historique intégral) — volumes V1 faibles par construction (une marque,
+ * 8 piliers). Lecture seule.
+ */
+export async function getBrandRevisionAudit(brand: {
+  id: string;
+  workspaceId: string;
+}): Promise<BrandRevisionAudit> {
+  const db = getDb();
+  const rows = await db.pillarRevision.findMany({
+    where: { pillar: { brandId: brand.id } },
+    orderBy: [{ createdAt: "asc" }, { version: "asc" }],
+    include: { pillar: { select: { id: true, key: true } } },
+  });
+
+  // Acteurs : résolution des ids vers nom/email (affichage « qui »).
+  const actorIds = [...new Set(rows.map((r) => r.actorId).filter((id): id is string => !!id))];
+  const users =
+    actorIds.length > 0
+      ? await db.user.findMany({
+          where: { id: { in: actorIds } },
+          select: { id: true, name: true, email: true },
+        })
+      : [];
+  const actorLabels = new Map(users.map((u) => [u.id, u.name?.trim() || u.email]));
+
+  // Groupement par pilier (ordre chronologique conservé).
+  const byPillar = new Map<string, { key: PillarKey; rows: typeof rows }>();
+  for (const row of rows) {
+    const group = byPillar.get(row.pillar.id) ?? { key: row.pillar.key, rows: [] };
+    group.rows.push(row);
+    byPillar.set(row.pillar.id, group);
+  }
+
+  const checkByRevisionId = new Map<string, RevisionCheckStatus>();
+  const chains: ChainVerification[] = [];
+  const diffByRevisionId = new Map<string, RevisionFieldDiff>();
+
+  for (const [pillarId, group] of byPillar) {
+    const ordered = [...group.rows].sort(
+      (a, b) => a.version - b.version || a.createdAt.getTime() - b.createdAt.getTime(),
+    );
+    const verification = verifyRevisionChain({
+      pillarId,
+      pillarKey: group.key,
+      workspaceId: brand.workspaceId,
+      revisions: ordered.map((r) => ({
+        version: r.version,
+        reason: r.reason,
+        actorId: r.actorId,
+        content: r.content,
+        prevHash: r.prevHash,
+        selfHash: r.selfHash,
+        createdAt: r.createdAt,
+      })),
+    });
+    chains.push(verification);
+    ordered.forEach((row, i) => {
+      checkByRevisionId.set(row.id, verification.byRevision[i]?.status ?? "ok");
+      diffByRevisionId.set(
+        row.id,
+        diffRevisionFields(i > 0 ? ordered[i - 1]!.content : null, row.content),
+      );
+    });
+  }
+
+  // Chaînes triées dans l'ordre canonique des piliers.
+  chains.sort((a, b) => PILLARS.indexOf(a.pillarKey) - PILLARS.indexOf(b.pillarKey));
+
+  const timeline: BrandRevisionEntry[] = rows
+    .map((row) => ({
+      id: row.id,
+      pillarKey: row.pillar.key,
+      version: row.version,
+      reason: row.reason,
+      createdAt: row.createdAt,
+      actorId: row.actorId,
+      actorLabel: row.actorId ? (actorLabels.get(row.actorId) ?? null) : null,
+      diff: diffByRevisionId.get(row.id) ?? { added: [], changed: [], removed: [] },
+      check: checkByRevisionId.get(row.id) ?? "ok",
+      selfHash: row.selfHash,
+    }))
+    .reverse(); // rows est chargé ascendant → timeline descendante
+
+  return { timeline, chains, total: rows.length };
 }

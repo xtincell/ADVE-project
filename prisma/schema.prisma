@@ -93,6 +93,7 @@ model Brand {
   pillars      Pillar[]
   scores       BrandScore[]
   deliverables Deliverable[]
+  campaigns    Campaign[]
 
   @@unique([workspaceId, slug])
 }
@@ -215,11 +216,12 @@ model Payment {
 // ————— Référentiel marché (tables seedées — jamais de barème en dur dans le code) —————
 
 model Country {
-  code     String  @id // ISO-3166 alpha-2
-  name     String
-  currency String
-  zone     String? // UEMOA | CEMAC | ...
-  brands   Brand[]
+  code      String     @id // ISO-3166 alpha-2
+  name      String
+  currency  String
+  zone      String? // UEMOA | CEMAC | ...
+  brands    Brand[]
+  campaigns Campaign[]
 }
 
 model ZoneIndex {
@@ -233,6 +235,104 @@ model ZoneIndex {
   validUntil  DateTime?
 
   @@index([family, countryCode, key, validFrom])
+}
+
+// ————— Campagnes & production (tranche 2, WP-008) —————
+// Pipeline Campagne → Actions → Briefs → Missions — l'essence d'ADR-0119/0120
+// legacy, simplifiée : la campagne est le CADRE (les actions lui appartiennent,
+// jamais d'action orpheline — ADR-0119) ; chaque étape aval franchit une GATE
+// explicite (lancer la production, transformer en brief, valider le brief,
+// éclater en missions, assigner/livrer/valider — ADR-0120). Les coûts d'action
+// viennent du référentiel marché (ZoneIndex "action-cost" + "cost-of-living"),
+// jamais du code — une action hors référentiel est honnêtement « à estimer ».
+
+enum CampaignStatus {
+  DRAFT // cadre en cours (nom, objectif, marché, actions)
+  ACTIVE // production lancée — gate explicite, requiert au moins une action
+  ARCHIVED
+}
+
+enum CampaignActionStatus {
+  PLANNED // frame posé, coût estimé (ou à estimer)
+  BRIEFED // transformée en brief de production (gate)
+  CANCELLED
+}
+
+enum BriefStatus {
+  DRAFT
+  VALIDATED // gate explicite — condition d'éclatement en missions
+}
+
+enum MissionStatus {
+  OPEN
+  ASSIGNED
+  DELIVERED
+  VALIDATED
+}
+
+model Campaign {
+  id          String           @id @default(cuid())
+  brandId     String
+  name        String
+  objective   String // objectif déclaré par l'opérateur (registre client)
+  countryCode String // marché de la campagne — résout les coûts d'action par ZoneIndex
+  status      CampaignStatus   @default(DRAFT)
+  launchedAt  DateTime?
+  createdAt   DateTime         @default(now())
+  brand       Brand            @relation(fields: [brandId], references: [id])
+  country     Country          @relation(fields: [countryCode], references: [code])
+  actions     CampaignAction[]
+
+  @@index([brandId, status])
+}
+
+// Frame découplé (ADR-0120) : l'action est le CADRE de production ; le brief
+// est une entité séparée, créée seulement par la gate « transformer en brief ».
+model CampaignAction {
+  id            String               @id @default(cuid())
+  campaignId    String
+  name          String
+  kind          String // clé du référentiel de coûts (ZoneIndex "action-cost") ou "custom"
+  status        CampaignActionStatus @default(PLANNED)
+  estimatedCost Int? // résolu du référentiel à la création — null = « à estimer » (honnête)
+  costCurrency  String?
+  costSource    String? // traçabilité : lignes ZoneIndex consommées + méthode de mise à l'échelle
+  createdAt     DateTime             @default(now())
+  campaign      Campaign             @relation(fields: [campaignId], references: [id])
+  briefs        Brief[]
+
+  @@index([campaignId, status])
+}
+
+model Brief {
+  id          String         @id @default(cuid())
+  actionId    String
+  title       String
+  content     Json // brief structuré (objectif, livrable, specs, ton, échéance, contexte)
+  status      BriefStatus    @default(DRAFT)
+  version     Int            @default(1)
+  validatedAt DateTime?
+  createdAt   DateTime       @default(now())
+  action      CampaignAction @relation(fields: [actionId], references: [id])
+  missions    Mission[]
+
+  @@index([actionId, status])
+}
+
+model Mission {
+  id          String        @id @default(cuid())
+  briefId     String
+  title       String
+  status      MissionStatus @default(OPEN)
+  assignee    String? // talent assigné — nom/contact déclaré (TalentProfile & guilde = WP-011)
+  assignedAt  DateTime?
+  deliveredAt DateTime?
+  validatedAt DateTime?
+  createdAt   DateTime      @default(now())
+  brief       Brief         @relation(fields: [briefId], references: [id])
+
+  @@index([briefId, status])
+  @@index([status, createdAt])
 }
 
 // ————— Audit (remplace le bus Intents : une table, hash-chaînée, requêtable) —————
