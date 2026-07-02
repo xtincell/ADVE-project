@@ -28,13 +28,16 @@ export const metadata: Metadata = {
 };
 
 /**
- * /lafusee — LA vitrine PRODUIT (port de legacy/(marketing)/lafusee, qui
- * composait 13 sections marketing). La home reste la vitrine générale ; ici
- * on ne parle que de l'OS : doctrine (superfans × Overton), radar branché
- * sur le vrai moteur de scoring, features réellement livrées en v7
- * (diagnostic, cockpit piliers, Oracle, campagnes→missions, guilde),
- * paliers canon. Copy portée du legacy ; les métriques inventées du handoff
- * (compteurs telemetry, « 47 marques ») ne sont PAS reprises — règle n°6.
+ * /lafusee — LA vitrine PRODUIT autonome (port de legacy/(marketing)/lafusee,
+ * qui composait 13 sections marketing). Depuis WP-025 la home `/` est le site
+ * AGENCE et cet univers vit sur son sous-domaine (lafusee.<racine>, alias `/`
+ * — cf. src/lib/hosts.ts) avec sa sous-nav (layout.tsx) et ses tarifs
+ * (/lafusee/tarifs, montants ZoneIndex). Ici on ne parle que de l'OS :
+ * doctrine (superfans × Overton), radar branché sur le vrai moteur de
+ * scoring, features réellement livrées en v7 (diagnostic, cockpit piliers,
+ * Oracle, campagnes→missions, guilde), paliers canon. Copy portée du legacy ;
+ * les métriques inventées du handoff (compteurs telemetry, « 47 marques »)
+ * ne sont PAS reprises — règle n°6.
  */
 
 /* ── Hero ─────────────────────────────────────────────────────────────── */
@@ -62,7 +65,7 @@ function Hero() {
             Diagnostiquer ma marque <ArrowRight />
           </Link>
           <Link
-            href="/tarifs"
+            href="/lafusee/tarifs"
             className={buttonVariants({ variant: "outline", size: "lg" })}
           >
             Voir les offres
@@ -217,7 +220,7 @@ const FEATURES = [
     icon: FileText,
     title: "L'Oracle",
     desc: "Le document stratégique complet de la marque, composé déterministiquement depuis vos piliers. Sections re-composables, marquées périmées dès que le socle bouge, version imprimable.",
-    href: "/tarifs",
+    href: "/lafusee/tarifs",
     link: "Inclus au plan Cockpit",
   },
   {
@@ -364,7 +367,7 @@ function Acces() {
         <div className="flex flex-wrap items-center gap-3 pb-1">
           <Badge variant="coral">Cockpit · mensuel</Badge>
           <Badge variant="neutral">Retainer · trimestriel</Badge>
-          <Link href="/tarifs" className={buttonVariants({ variant: "outline", size: "sm" })}>
+          <Link href="/lafusee/tarifs" className={buttonVariants({ variant: "outline", size: "sm" })}>
             Les tarifs en détail <ArrowRight aria-hidden="true" />
           </Link>
         </div>

@@ -41,7 +41,7 @@ export default function CguPage() {
           </li>
           <li>
             Le titulaire répond de l&apos;exactitude des informations fournies — notamment le
-            pays/zone, qui détermine la tarification (<a href="/tarifs">/tarifs</a>) et le régime de
+            pays/zone, qui détermine la tarification (<a href="/lafusee/tarifs">/lafusee/tarifs</a>) et le régime de
             données applicable.
           </li>
         </ul>

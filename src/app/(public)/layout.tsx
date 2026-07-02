@@ -1,43 +1,45 @@
 import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { MobileNav } from "@/components/marketing/mobile-nav";
+import { IDENTITY } from "@/components/marketing/site-data";
+import { productSiteUrl } from "@/lib/hosts";
 
 /**
- * Shell public — header + footer du site de marque (landing, pages agence,
- * blog, tarifs, intake, légal). Nav complète ≥ xl, burger en dessous
- * (zéro dépendance). Le footer porte les trois colonnes produit / agence /
- * légal — les pages légales sont livrées par le WP conformité.
+ * Shell public — navigation à deux contextes (WP-025) :
+ *   · header = nav générale UPgraders (l'AGENCE : Agence, Méthode, Services,
+ *     Réalisations, Blog, Contact) + entrée distincte mise en avant
+ *     « La Fusée » → le sous-domaine produit (URL absolue, cf. lib/hosts) ;
+ *   · les pages /lafusee* ajoutent leur SOUS-nav produit (lafusee/layout.tsx).
+ * Footer trois colonnes : UPgraders (agence) · La Fusée (produit) · légal.
  */
 
 const NAV_LINKS = [
-  { href: "/", label: "Accueil" },
-  { href: "/lafusee", label: "La Fusée" },
+  { href: "/agence", label: "Agence" },
   { href: "/methode", label: "Méthode" },
   { href: "/services", label: "Services" },
   { href: "/realisations", label: "Réalisations" },
   { href: "/blog", label: "Blog" },
-  { href: "/tarifs", label: "Tarifs" },
-  { href: "/la-guilde", label: "La Guilde" },
   { href: "/contact", label: "Contact" },
 ] as const;
 
-const FOOTER_PRODUIT = [
-  { href: "/lafusee", label: "La Fusée — le produit" },
-  { href: "/intake", label: "Le diagnostic ADVE gratuit" },
-  { href: "/intake/score", label: "Le score de marque /200" },
-  { href: "/tarifs", label: "Tarifs" },
-  { href: "/la-guilde", label: "La Guilde" },
-  { href: "/portails", label: "Portails" },
-  { href: "/connexion", label: "Connexion" },
-] as const;
+/** Entrée produit mise en avant — absolue vers le sous-domaine (WP-025). */
+const PRODUCT_ENTRY = { href: productSiteUrl(), label: "La Fusée" } as const;
 
 const FOOTER_AGENCE = [
   { href: "/agence", label: "Qui sommes-nous" },
   { href: "/methode", label: "La méthode ADVE/RTIS" },
-  { href: "/services", label: "Services" },
+  { href: "/services", label: "Services — sur devis" },
   { href: "/realisations", label: "Réalisations" },
   { href: "/blog", label: "Blog" },
   { href: "/contact", label: "Contact" },
+] as const;
+
+const FOOTER_PRODUIT = [
+  { href: productSiteUrl(), label: "La Fusée — le produit" },
+  { href: productSiteUrl("/tarifs"), label: "Tarifs" },
+  { href: "/intake", label: "Le diagnostic ADVE gratuit" },
+  { href: "/la-guilde", label: "La Guilde" },
 ] as const;
 
 const FOOTER_LEGAL = [
@@ -76,6 +78,13 @@ function Header() {
               {l.label}
             </Link>
           ))}
+          <Link
+            href={PRODUCT_ENTRY.href}
+            className="inline-flex items-center gap-1 rounded-xs border border-coral/50 px-2.5 py-1 font-semibold text-coral transition-colors hover:border-coral hover:text-coral-hover"
+          >
+            {PRODUCT_ENTRY.label}
+            <ArrowUpRight className="size-3.5" aria-hidden="true" />
+          </Link>
         </nav>
         <div className="ml-auto flex items-center gap-3">
           <Link
@@ -93,7 +102,7 @@ function Header() {
           <Link href="/intake" className={buttonVariants({ variant: "primary", size: "sm" })}>
             Diagnostic gratuit
           </Link>
-          <MobileNav links={NAV_LINKS} />
+          <MobileNav links={NAV_LINKS} featured={PRODUCT_ENTRY} />
         </div>
       </div>
     </header>
@@ -131,17 +140,9 @@ function Footer() {
           <div className="space-y-3">
             <Wordmark className="text-bone" />
             <p className="text-sm leading-relaxed">
-              L&apos;OS de marque d&apos;Afrique francophone, par{" "}
-              <a
-                href="https://www.upgraders.pro"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-semibold text-bone hover:text-coral"
-              >
-                UPgraders
-              </a>
-              .<br />
-              La passion pour propulseur · Douala, Cameroun.
+              {IDENTITY.claim}
+              <br />
+              {IDENTITY.tagline} Douala · Abidjan.
             </p>
             <ul className="space-y-1.5 pt-2 text-sm">
               <li>
@@ -171,8 +172,8 @@ function Footer() {
               </li>
             </ul>
           </div>
-          <FooterColumn title="Produit" links={FOOTER_PRODUIT} />
-          <FooterColumn title="Agence" links={FOOTER_AGENCE} />
+          <FooterColumn title="UPgraders — l'agence" links={FOOTER_AGENCE} />
+          <FooterColumn title="La Fusée — le produit" links={FOOTER_PRODUIT} />
           <FooterColumn title="Légal" links={FOOTER_LEGAL} />
         </div>
         <p className="mt-12 border-t border-line-soft pt-6 text-xs text-smoke">

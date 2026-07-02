@@ -2,16 +2,23 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Menu, X } from "lucide-react";
+import { ArrowUpRight, Menu, X } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 
 /**
  * Menu burger du site public — zéro dépendance (React seul), fermé au clic.
- * Les liens principaux viennent du layout (source unique NAV_LINKS) ; les
- * entrées de session (Portails / Connexion / CTA) sont répétées ici car la
- * barre les masque sous `md`.
+ * Les liens principaux viennent du layout (source unique NAV_LINKS) ; l'entrée
+ * `featured` est le lien PRODUIT mis en avant (« La Fusée » → sous-domaine,
+ * WP-025) ; les entrées de session (Portails / Connexion / CTA) sont répétées
+ * ici car la barre les masque sous `md`.
  */
-export function MobileNav({ links }: { links: readonly { href: string; label: string }[] }) {
+export function MobileNav({
+  links,
+  featured,
+}: {
+  links: readonly { href: string; label: string }[];
+  featured?: { href: string; label: string };
+}) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
 
@@ -46,6 +53,18 @@ export function MobileNav({ links }: { links: readonly { href: string; label: st
                   </Link>
                 </li>
               ))}
+              {featured ? (
+                <li>
+                  <Link
+                    href={featured.href}
+                    onClick={close}
+                    className="mt-1 flex items-center gap-1.5 rounded-md border border-coral/50 px-3 py-2.5 text-[15px] font-semibold text-coral transition-colors hover:border-coral hover:bg-white/5"
+                  >
+                    {featured.label}
+                    <ArrowUpRight className="size-4" aria-hidden="true" />
+                  </Link>
+                </li>
+              ) : null}
             </ul>
             <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-line-soft px-3 pt-4">
               <Link href="/intake" onClick={close} className={buttonVariants({ size: "sm" })}>

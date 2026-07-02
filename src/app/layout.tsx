@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { rootSiteUrl } from "@/lib/hosts";
 import "./globals.css";
 
 /*
@@ -32,6 +33,9 @@ const satoshi = localFont({
 });
 
 export const metadata: Metadata = {
+  // Base des URLs relatives (OG, canonical) : la racine sous-domaines WP-025
+  // (env ROOT_DOMAIN via lib/hosts), NEXT_PUBLIC_APP_URL prime si posée.
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? rootSiteUrl()),
   title: {
     default: "UPgraders — l'agence qui transforme des marques en icônes",
     template: "%s · UPgraders",

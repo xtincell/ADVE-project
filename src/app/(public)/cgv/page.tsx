@@ -31,7 +31,7 @@ export default function CgvPage() {
     >
       <LegalSection title="1. Offres et prix — calcul localisé">
         <p>
-          Les offres sont publiées sur <a href="/tarifs">/tarifs</a> : diagnostic ADVE{" "}
+          Les offres sont publiées sur <a href="/lafusee/tarifs">/lafusee/tarifs</a> : diagnostic ADVE{" "}
           <strong>gratuit</strong>, abonnement <strong>Cockpit</strong> (mensuel),{" "}
           <strong>Retainer</strong> (trimestriel, accompagnement UPgraders) et dispositifs sur
           devis.

@@ -227,19 +227,19 @@ Legacy : 253 pages · 112 routers tRPC · 115 services — v7 au 2026-07-02 (vag
 | //launchpad/crew-bootstrap | (intake) | OBSOLÈTE — stub J10 Phase 18 : bootstrap d'une équipe nommée en dur ; la création réelle passait déjà par l'auth standard |
 | //launchpad/portfolio-bulk-import | (intake) | OBSOLÈTE — wizard d'import CSV du Brand Tree Phase 18 wipé (cf. lignes portfolio) |
 | //score | (intake) | PORTÉ → /intake/score (référence publique du score recâblée sur les constantes canon v7 : 6 paliers/bornes réelles, formule 15/7/3) + /intake/score/[leadId] (variante PARTAGEABLE du résultat — le modèle le permet : relecture `getLeadDiagnostic` par id, méta OG, zéro coordonnée, lien mort → redirect référence ; lien de partage exposé sur /intake/resultat, WP-017) |
-| / | (marketing) | PORTÉ (mécanique — à confirmer) |
+| / | (marketing) | PORTÉ → / (site AGENCE, séparation des univers WP-025 comme en prod legacy : hero « La passion pour propulseur », bandeau clients canon, 3 portes de l'offre SUR DEVIS, les 12 réalisations + STATS, méthode ADVE/RTIS en teaser, UNE section produit sobre « Notre OS : La Fusée » → sous-domaine lafusee.<racine>, blog en teaser, contact — aucun tarif produit sur la racine ; copy legacy home + data.ts, zéro invention) |
 | //agence | (marketing) | PORTÉ (mécanique — à confirmer) |
 | //blog | (marketing) | PORTÉ (mécanique — à confirmer) |
 | //blog/[slug] | (marketing) | FUSIONNÉ → /blog/[slug] (article statique rendu markdown-lite XSS-safe, WP-014) |
 | //contact | (marketing) | PORTÉ (mécanique — à confirmer) |
 | //la-guilde | (marketing) | PORTÉ → /la-guilde (vitrine + compte RÉEL des missions ouvertes du mur, nombre seul — WP-011) |
-| //lafusee | (marketing) | PORTÉ → /lafusee (vitrine PRODUIT : doctrine superfans×Overton, radar simulateur branché sur le vrai moteur `domain/scoring`, features réelles v7, paliers canon, CTA /intake — les métriques inventées du handoff non reprises, WP-017) |
+| //lafusee | (marketing) | PORTÉ → /lafusee (vitrine PRODUIT : doctrine superfans×Overton, radar simulateur branché sur le vrai moteur `domain/scoring`, features réelles v7, paliers canon, CTA /intake — les métriques inventées du handoff non reprises, WP-017) ; depuis WP-025 : univers AUTONOME servi sur lafusee.<racine> (alias `/`, middleware host-based), sous-nav produit Aperçu · Tarifs · Diagnostic gratuit · Connexion, tarifs dédiés /lafusee/tarifs |
 | //landingintake | (marketing) | PORTÉ → /landingintake (landing d'acquisition courte : hero/constat/3 étapes/protocole ADVE copy réelle legacy + preuve STATS/CLIENT_STRIP canon + formulaire express → /intake — témoignages et compteurs sans source non repris, WP-017) |
 | //methode | (marketing) | PORTÉ (mécanique — à confirmer) |
-| //pricing | (marketing) | FUSIONNÉ → /tarifs (même grille par zone, source ZoneIndex ; le double habillage La Fusée/UPgraders n'est pas repris) |
+| //pricing | (marketing) | FUSIONNÉ → /lafusee/tarifs (grille PRODUIT par zone, montants relus dans `ZoneIndex` via `getPlanPricing` à chaque requête — badge « à confirmer » sur source placeholder, absence dite si référentiel injoignable ; chrome produit = l'équivalent v7 du double habillage legacy : la grille vit dans l'univers La Fusée (lafusee.<racine>/tarifs), l'ancienne /tarifs répond 308 — WP-025) |
 | //realisations | (marketing) | PORTÉ (mécanique — à confirmer) |
 | //services | (marketing) | PORTÉ (mécanique — à confirmer) |
-| //tarifs | (marketing) | PORTÉ (mécanique — à confirmer) |
+| //tarifs | (marketing) | PORTÉ — l'esprit « deux logiques » du catalogue legacy est éclaté par univers (WP-025) : le produit self-serve → /lafusee/tarifs (grille ZoneIndex), les prestations agence SUR DEVIS → home §01 + /services (audit ADVE, mandat RTIS, marque blanche — « on ne vend pas des moyens, on gèle un état final mesuré ») ; /tarifs = redirect 308 permanent vers /lafusee/tarifs |
 | //LaGuilde | (public) | FUSIONNÉ → /la-guilde (compteur public) + /studio (mur complet, connecté) — doctrine v7 anti-fuite ADR-0098 : pas de détail mission public |
 | //LaGuilde/m/[slug] | (public) | OBSOLÈTE — détail public d'une mission : contredit la doctrine anti-fuite v7 (ADR-0098) déjà actée sur la ligne LaGuilde |
 | //LaGuilde/publier | (public) | OBSOLÈTE — dépôt public de mission par une marque : remplacé par l'ouverture au mur depuis le workspace (WP-011), plus rien à modérer |

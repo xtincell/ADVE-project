@@ -1,47 +1,40 @@
+import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  ArrowRight,
-  BatteryLow,
-  Check,
-  FileText,
-  Gauge,
-  Rocket,
-  Route,
-  Shuffle,
-} from "lucide-react";
-import {
-  ADVE_PILLARS,
-  BRAND_LEVELS,
-  PILLARS,
-  RTIS_PILLARS,
-  isAdve,
-  type PillarKey,
-} from "@/domain/pillars";
+import { ArrowRight, ArrowUpRight, MessageCircle, Rocket } from "lucide-react";
+import { ADVE_PILLARS, PILLARS, isAdve } from "@/domain/pillars";
+import { COMPOSITE_MAX_SCORE } from "@/domain/scoring";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CLIENT_STRIP, STATS } from "@/components/marketing/site-data";
+import { Section, SectionHeader } from "@/components/marketing/section";
+import {
+  CLIENT_STRIP,
+  CONTACT,
+  IDENTITY,
+  METHOD_STAGES,
+  REALISATIONS,
+  SERVICE_DOORS,
+  STATS,
+} from "@/components/marketing/site-data";
+import { formatPostDate, getAllPosts } from "@/components/marketing/blog-posts";
+import { productSiteUrl } from "@/lib/hosts";
+
+export const metadata: Metadata = {
+  title: { absolute: "UPgraders — cabinet de conseil & stratégie · La passion pour propulseur" },
+  description:
+    "UPgraders industrialise la production de marques en Afrique francophone. Conseil stratégique (ADVE/RTIS), réseau de talents curatés (La Guilde) et l'OS La Fusée. Depuis 2017, Douala · Abidjan.",
+};
 
 /**
- * Landing publique — la vitrine GÉNÉRALE : la promesse mission, le constat,
- * la méthode ADVE→RTIS, le process en 3 étapes, la hiérarchie produit
- * (La Fusée → /lafusee) vs agence (UPgraders → /agence), la preuve sociale
- * (track record réel UPgraders), le bandeau vers les pages du site de
- * marque, le CTA vers /intake. La vitrine PRODUIT dédiée est /lafusee.
- * Copy réécrite depuis legacy/(marketing)/landingintake — sans métriques
- * inventées (les « +250 dirigeants / 4,9/5 » du handoff n'ont pas de source) ;
- * preuve sociale portée du canon legacy data.ts (STATS + CLIENT_STRIP réels).
+ * `/` — le site d'AGENCE (WP-025). La racine appartient à UPgraders, comme en
+ * prod legacy : hero « La passion pour propulseur », les 3 portes de l'offre
+ * (sur devis), les 12 réalisations, la méthode en teaser, le blog en teaser,
+ * le contact — et UNE section produit sobre « Notre OS : La Fusée » qui renvoie
+ * vers le sous-domaine produit. Aucun tarif produit ici (ils vivent sur
+ * lafusee.<racine>/tarifs). Copy portée de legacy/(marketing)/page.tsx +
+ * site-data (canon legacy data.ts) — rien d'inventé.
  */
 
-const PILLAR_COPY: Record<PillarKey, { name: string; desc: string }> = {
-  A: { name: "Authenticité", desc: "L'ADN et la raison d'être — qui est la marque, vraiment." },
-  D: { name: "Distinction", desc: "Ce qui vous rend radicalement unique sur votre marché." },
-  V: { name: "Valeur", desc: "La promesse économique : offre, pricing, rentabilité." },
-  E: { name: "Engagement", desc: "Les mécaniques relationnelles qui fidélisent." },
-  R: { name: "Risque", desc: "Le diagnostic des menaces qui pèsent sur votre socle." },
-  T: { name: "Tracking", desc: "La confrontation de votre marque à la réalité du marché." },
-  I: { name: "Innovation", desc: "Le potentiel encore inexploité, révélé par les données." },
-  S: { name: "Stratégie", desc: "La feuille de route qui convertit le potentiel en superfans." },
-};
+/* ── Hero — l'agence ──────────────────────────────────────────────────── */
 
 function Hero() {
   return (
@@ -50,331 +43,71 @@ function Hero() {
         aria-hidden="true"
         className="pointer-events-none absolute -top-40 right-[-10%] h-[480px] w-[480px] rounded-full bg-coral/20 blur-3xl"
       />
-      <div className="relative mx-auto max-w-page px-gutter py-24 sm:py-32">
-        <p className="eyebrow text-coral">UPgraders · agence de transformation de marques — Afrique francophone</p>
-        <h1 className="font-display mt-5 max-w-3xl text-5xl font-semibold leading-[1.05] sm:text-6xl">
-          De marque locale à <span className="text-coral">icône culturelle</span>.
+      <div className="relative mx-auto max-w-page px-gutter pb-20 pt-14 sm:pb-28">
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-line-soft pb-4 font-mono text-xs uppercase tracking-widest text-smoke-2">
+          <span>Cabinet de conseil &amp; stratégie</span>
+          <span className="text-coral">·</span>
+          <span>Depuis {IDENTITY.founded}</span>
+          <span className="text-coral">·</span>
+          <span>Douala · Abidjan</span>
+          <span className="text-coral">·</span>
+          <span>IP — méthode ADVE/RTIS</span>
+        </p>
+        <p className="eyebrow mt-10 text-coral">UPgraders — l&apos;agence</p>
+        <h1 className="font-display mt-5 max-w-3xl text-5xl font-semibold leading-[1.02] sm:text-6xl">
+          La passion pour <span className="text-coral">propulseur</span>.
         </h1>
         <p className="mt-6 max-w-2xl text-lg leading-relaxed text-sand">
-          Notre OS, La Fusée, diagnostique votre marque sur 8 piliers, produit sa stratégie
-          complète — l&apos;Oracle — puis industrialise ce qui fait les icônes :
-          l&apos;accumulation de superfans qui font basculer votre secteur.
+          UPgraders <strong className="text-bone">industrialise la production de marques</strong>{" "}
+          en Afrique francophone. Un cabinet de conseil &amp; stratégie qui orchestre un réseau
+          de freelances et d&apos;agences partenaires pour transformer des marques en{" "}
+          <strong className="text-bone">phénomènes culturels</strong>.
         </p>
         <div className="mt-9 flex flex-wrap items-center gap-4">
-          <Link href="/intake" className={buttonVariants({ size: "lg" })}>
-            Démarrer le diagnostic gratuit <ArrowRight />
+          <Link href="/contact" className={buttonVariants({ size: "lg" })}>
+            Démarrer un projet <ArrowRight />
+          </Link>
+          <Link href="/methode" className={buttonVariants({ variant: "outline", size: "lg" })}>
+            Découvrir la méthode
           </Link>
           <Link
-            href="/tarifs"
-            className={buttonVariants({ variant: "outline", size: "lg" })}
+            href="/services"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-sand transition-colors hover:text-bone"
           >
-            Voir les tarifs
+            Nos services <ArrowRight className="size-4" aria-hidden="true" />
           </Link>
         </div>
-        <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-sand">
-          {["15 minutes", "Sans engagement", "Confidentiel"].map((t) => (
-            <li key={t} className="flex items-center gap-2">
-              <Check className="size-4 text-coral" aria-hidden="true" /> {t}
-            </li>
-          ))}
-        </ul>
-      </div>
-    </section>
-  );
-}
-
-function Constat() {
-  const items = [
-    {
-      icon: Shuffle,
-      title: "Des efforts dispersés",
-      desc: "Des actions marketing lancées sans cohérence : elles coûtent cher et rapportent peu.",
-    },
-    {
-      icon: Route,
-      title: "Un manque de clarté",
-      desc: "Une proposition de valeur diluée dans un marché saturé. Difficile de se démarquer.",
-    },
-    {
-      icon: BatteryLow,
-      title: "Tout repose sur vous",
-      desc: "Sans système, l'équipe ne peut pas prendre le relais — et le dirigeant s'épuise.",
-    },
-  ] as const;
-  return (
-    <section className="bg-bone">
-      <div className="mx-auto max-w-page px-gutter py-20 sm:py-28">
-        <div className="max-w-2xl">
-          <p className="eyebrow text-coral">Le constat</p>
-          <h2 className="font-display mt-4 text-4xl font-semibold leading-tight">
-            L&apos;intuition vous a mené loin.
-            <br />
-            <span className="text-coral">Il vous faut un système.</span>
-          </h2>
-          <p className="mt-5 text-lg text-graphite">
-            Diriger une marque en Afrique francophone demande une énergie
-            colossale. Naviguer à vue finit par coûter le plus précieux : une
-            marque pérenne, qui compte.
-          </p>
-        </div>
-        <div className="mt-12 grid gap-bento sm:grid-cols-3">
-          {items.map((it) => (
-            <div key={it.title} className="rounded-lg bg-white p-6 shadow-card">
-              <span className="inline-flex size-11 items-center justify-center rounded-md bg-coral/12 text-coral">
-                <it.icon className="size-5" aria-hidden="true" />
-              </span>
-              <h3 className="mt-4 text-lg font-bold">{it.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-smoke">{it.desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function Methode() {
-  return (
-    <section className="texture-geo bg-ink-0 text-bone">
-      <div className="mx-auto max-w-page px-gutter py-20 sm:py-28">
-        <div className="max-w-2xl">
-          <p className="eyebrow text-coral">La méthode</p>
-          <h2 className="font-display mt-4 text-4xl font-semibold leading-tight">
-            8 piliers. <span className="text-coral">4 déclarés, 4 dérivés.</span>
-          </h2>
-          <p className="mt-5 text-lg text-sand">
-            Vous déclarez le socle <strong className="text-bone">ADVE</strong> —
-            l&apos;OS dérive <strong className="text-bone">RTIS</strong> et le
-            recalcule à chaque évolution de votre marque. Rien n&apos;est figé,
-            rien n&apos;est laissé au hasard.
-          </p>
+        <p className="mt-4 font-mono text-xs uppercase tracking-widest text-smoke-2">
+          ↳ réponse sous 24 h · WhatsApp · Douala · Abidjan
+        </p>
+        <p className="mt-8 border-t border-dashed border-line-soft pt-4 font-mono text-xs text-smoke-2">
+          La Fusée — notre OS produit
+          <Link href="/intake" className="ml-3 text-sand transition-colors hover:text-coral">
+            → Diagnostic gratuit
+          </Link>
           <Link
-            href="/methode"
-            className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-coral hover:underline"
+            href={productSiteUrl()}
+            className="ml-3 text-sand transition-colors hover:text-coral"
           >
-            La méthode en détail <ArrowRight className="size-4" aria-hidden="true" />
+            → Découvrir l&apos;OS
           </Link>
-        </div>
-
-        <div
-          className="mt-10 flex flex-wrap items-center gap-2"
-          aria-label="Cascade A D V E vers R T I S"
-        >
-          {PILLARS.map((p, i) => (
-            <span key={p} className="flex items-center gap-2">
-              {i === ADVE_PILLARS.length && (
-                <ArrowRight className="size-5 text-coral" aria-hidden="true" />
-              )}
-              <span
-                className={`font-display flex size-12 items-center justify-center rounded-md text-lg font-semibold ${
-                  isAdve(p) ? "bg-coral text-white" : "border border-line bg-ink-2 text-sand-2"
-                }`}
-              >
-                {p}
-              </span>
-            </span>
-          ))}
-        </div>
-
-        <div className="mt-12 grid gap-bento sm:grid-cols-2">
-          <div className="rounded-xl border border-line bg-ink-2 p-7">
-            <Badge variant="coral">ADVE — votre socle</Badge>
-            <ul className="mt-5 space-y-4">
-              {ADVE_PILLARS.map((p) => (
-                <li key={p} className="flex gap-4">
-                  <span className="font-display mt-0.5 text-lg font-semibold text-coral">{p}</span>
-                  <div>
-                    <p className="font-bold">{PILLAR_COPY[p].name}</p>
-                    <p className="text-sm text-sand">{PILLAR_COPY[p].desc}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="rounded-xl border border-line bg-ink-2 p-7">
-            <Badge variant="inverse">RTIS — dérivé par l&apos;OS</Badge>
-            <ul className="mt-5 space-y-4">
-              {RTIS_PILLARS.map((p) => (
-                <li key={p} className="flex gap-4">
-                  <span className="font-display mt-0.5 text-lg font-semibold text-sand-2">{p}</span>
-                  <div>
-                    <p className="font-bold">{PILLAR_COPY[p].name}</p>
-                    <p className="text-sm text-sand">{PILLAR_COPY[p].desc}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
+        </p>
       </div>
     </section>
   );
 }
 
-function Process() {
-  const steps = [
-    {
-      icon: Gauge,
-      n: "1",
-      title: "Diagnostic gratuit",
-      desc: "Un questionnaire guidé de 15 minutes — ou vos documents importés. Score sur 100, pilier par pilier, avec vos forces et vos angles morts.",
-    },
-    {
-      icon: FileText,
-      n: "2",
-      title: "L'Oracle",
-      desc: "Le document stratégique complet de votre marque : 35 sections, du positionnement au plan d'action, mis à jour au rythme de vos décisions.",
-    },
-    {
-      icon: Rocket,
-      n: "3",
-      title: "Décollage",
-      desc: "Campagnes, missions, talents de la Guilde : vous exécutez la feuille de route avec UPgraders, et la trajectoire se mesure palier par palier.",
-    },
-  ] as const;
+/* ── Bandeau clients — preuve sociale canon ───────────────────────────── */
+
+function ClientsStrip() {
   return (
-    <section className="bg-bone">
-      <div className="mx-auto max-w-page px-gutter py-20 sm:py-28">
-        <div className="max-w-2xl">
-          <p className="eyebrow text-coral">Le process</p>
-          <h2 className="font-display mt-4 text-4xl font-semibold leading-tight">
-            Du diagnostic au décollage, <span className="text-coral">en trois étapes</span>.
-          </h2>
-        </div>
-        <ol className="mt-12 grid gap-bento sm:grid-cols-3">
-          {steps.map((s) => (
-            <li key={s.n} className="relative rounded-lg bg-white p-6 shadow-card">
-              <span className="font-display absolute right-5 top-4 text-4xl font-semibold text-bone-2">
-                {s.n}
-              </span>
-              <span className="inline-flex size-11 items-center justify-center rounded-md bg-coral/12 text-coral">
-                <s.icon className="size-5" aria-hidden="true" />
-              </span>
-              <h3 className="mt-4 text-lg font-bold">{s.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-smoke">{s.desc}</p>
-            </li>
-          ))}
-        </ol>
-        <div className="mt-14 rounded-xl border border-ink/10 bg-white p-7 shadow-card">
-          <p className="eyebrow text-smoke">La trajectoire mesurée</p>
-          <div
-            className="mt-4 flex flex-wrap items-center gap-2"
-            aria-label={`Paliers de marque : ${BRAND_LEVELS.join(", ")}`}
-          >
-            {BRAND_LEVELS.map((lvl, i) => (
-              <span key={lvl} className="flex items-center gap-2">
-                {i > 0 && <ArrowRight className="size-4 text-smoke-2" aria-hidden="true" />}
-                <span
-                  className={`rounded-xs px-2.5 py-1 text-xs font-bold uppercase tracking-wider ${
-                    i === BRAND_LEVELS.length - 1
-                      ? "bg-gold/20 text-gold-deep"
-                      : "bg-ink/6 text-graphite"
-                  }`}
-                >
-                  {lvl}
-                </span>
-              </span>
-            ))}
-          </div>
-          <p className="mt-4 max-w-2xl text-sm text-smoke">
-            Chaque marque est positionnée sur un palier, du sol (LATENT) à
-            l&apos;apex (ICONE) — le score dit où vous êtes, la stratégie dit
-            comment monter.
-          </p>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ── Le produit vs l'agence — la hiérarchie en une section ──────────── */
-
-const VISAGES = [
-  {
-    href: "/lafusee",
-    eyebrow: "Le produit",
-    title: "La Fusée",
-    desc: "L'OS de marque : diagnostic sur 8 piliers, score /200, l'Oracle stratégique, campagnes éclatées en missions, trajectoire mesurée palier par palier.",
-    cta: "Découvrir le produit",
-  },
-  {
-    href: "/agence",
-    eyebrow: "L'agence",
-    title: "UPgraders",
-    desc: "Le cabinet qui a codifié la méthode ADVE/RTIS depuis 2017 — et qui l'opère : conseil, mandats d'exécution, marque blanche, la Guilde de talents.",
-    cta: "Découvrir l'agence",
-  },
-] as const;
-
-function ProduitAgence() {
-  return (
-    <section className="texture-geo bg-ink-0 text-bone">
-      <div className="mx-auto max-w-page px-gutter py-20 sm:py-24">
-        <div className="max-w-2xl">
-          <p className="eyebrow text-coral">Qui fait quoi</p>
-          <h2 className="font-display mt-4 text-4xl font-semibold leading-tight">
-            Un produit. Une agence. <span className="text-coral">Une méthode.</span>
-          </h2>
-          <p className="mt-5 text-lg text-sand">
-            <strong className="text-bone">La Fusée</strong> est le produit —
-            l&apos;OS que vous pilotez. <strong className="text-bone">UPgraders</strong>{" "}
-            est l&apos;agence qui l&apos;a construit et qui l&apos;opère.
-          </p>
-        </div>
-        <div className="mt-10 grid gap-bento sm:grid-cols-2">
-          {VISAGES.map((v) => (
-            <Link
-              key={v.href}
-              href={v.href}
-              className="group rounded-xl border border-line bg-ink-2 p-7 transition-colors hover:border-coral/60"
-            >
-              <p className="eyebrow text-coral">{v.eyebrow}</p>
-              <h3 className="font-display mt-2 text-3xl font-semibold tracking-tight">
-                {v.title}
-              </h3>
-              <p className="mt-3 text-sm leading-relaxed text-sand">{v.desc}</p>
-              <p className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-coral">
-                {v.cta}{" "}
-                <ArrowRight
-                  className="size-4 transition-transform group-hover:translate-x-1"
-                  aria-hidden="true"
-                />
-              </p>
-            </Link>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function PreuveSociale() {
-  return (
-    <section className="border-y border-ink/8 bg-white">
-      <div className="mx-auto max-w-page px-gutter py-20 sm:py-28">
-        <div className="max-w-2xl">
-          <p className="eyebrow text-coral">La preuve</p>
-          <h2 className="font-display mt-4 text-4xl font-semibold leading-tight">
-            Une méthode née <span className="text-coral">sur le terrain</span>.
-          </h2>
-          <p className="mt-5 text-lg text-graphite">
-            La Fusée industrialise la méthode qu&apos;UPgraders applique en
-            agence depuis 2017. Les marques ci-dessous ont été bâties ou
-            propulsées par le cabinet et sa Guilde de talents.
-          </p>
-        </div>
-        <div className="mt-10 grid grid-cols-2 gap-bento md:grid-cols-4">
-          {STATS.map((s) => (
-            <div key={s.label} className="rounded-lg bg-bone p-6">
-              <p className="font-display text-3xl font-semibold tracking-tight text-coral">
-                {s.value}
-              </p>
-              <p className="eyebrow mt-1 text-smoke">{s.label}</p>
-            </div>
-          ))}
-        </div>
+    <section className="border-b border-ink/8 bg-white">
+      <div className="mx-auto max-w-page px-gutter py-8">
+        <p className="text-center font-mono text-xs uppercase tracking-widest text-smoke-2">
+          Des marques bâties ou propulsées par le cabinet
+        </p>
         <ul
-          className="mt-8 flex flex-wrap gap-2"
+          className="mt-5 flex flex-wrap justify-center gap-2"
           aria-label="Marques accompagnées par UPgraders"
         >
           {CLIENT_STRIP.map((name) => (
@@ -386,111 +119,344 @@ function PreuveSociale() {
             </li>
           ))}
         </ul>
+      </div>
+    </section>
+  );
+}
+
+/* ── 01 · L'offre — les 3 portes, sur devis ───────────────────────────── */
+
+function Offre() {
+  return (
+    <Section>
+      <div className="flex flex-wrap items-end justify-between gap-6">
+        <SectionHeader
+          num="01"
+          eyebrow="L'offre"
+          title={
+            <>
+              Trois portes, <span className="text-coral">une mécanique</span>.
+            </>
+          }
+          lede="On entre par un audit, un mandat complet ou une collaboration en marque blanche. Les prestations s'opèrent sur devis : on ne vend pas des moyens, on gèle un état final mesuré."
+        />
         <Link
-          href="/realisations"
-          className="mt-8 inline-flex items-center gap-1.5 text-sm font-semibold text-coral hover:underline"
+          href="/services"
+          className="inline-flex items-center gap-1.5 pb-1 text-sm font-semibold text-coral hover:underline"
         >
-          Voir les réalisations <ArrowRight className="size-4" aria-hidden="true" />
+          L&apos;offre en détail <ArrowRight className="size-4" aria-hidden="true" />
         </Link>
       </div>
-    </section>
+      <div className="mt-10 grid gap-bento lg:grid-cols-3">
+        {SERVICE_DOORS.map((s) => (
+          <div
+            key={s.mark}
+            className={`flex flex-col rounded-xl p-8 ${
+              s.featured
+                ? "bg-ink text-bone shadow-card-lg"
+                : "border border-ink/10 bg-white shadow-card"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <p
+                className={`font-mono text-xs font-semibold ${
+                  s.featured ? "text-gold" : "text-coral"
+                }`}
+              >
+                {s.mark}
+              </p>
+              {s.featured ? <Badge variant="coral">Formule reine</Badge> : null}
+            </div>
+            <h3 className="font-display mt-4 text-2xl font-semibold">{s.title}</h3>
+            <p className={`eyebrow mt-1 ${s.featured ? "text-sand" : "text-smoke-2"}`}>
+              {s.duration}
+            </p>
+            <p
+              className={`mt-4 flex-1 text-sm leading-relaxed ${
+                s.featured ? "text-sand" : "text-smoke"
+              }`}
+            >
+              {s.desc}
+            </p>
+            <p
+              className={`mt-6 flex items-center justify-between gap-3 border-t pt-4 text-sm font-bold ${
+                s.featured ? "border-line" : "border-ink/8"
+              }`}
+            >
+              <span>{s.tag}</span>
+              <span className={`eyebrow ${s.featured ? "text-gold" : "text-coral"}`}>
+                Sur devis
+              </span>
+            </p>
+          </div>
+        ))}
+      </div>
+      <p className="mt-6 text-sm text-smoke">
+        Chaque porte mobilise les cinq piliers du modèle — conseil, gestion déléguée, veille,
+        La Guilde, conciergerie —{" "}
+        <Link href="/contact" className="font-semibold text-coral hover:underline">
+          parlez-nous de votre projet
+        </Link>
+        .
+      </p>
+    </Section>
   );
 }
 
-const EXPLORE_LINKS = [
-  {
-    href: "/methode",
-    title: "La méthode",
-    desc: "ADVE/RTIS en détail : les 8 lettres, les paliers LATENT → ICONE, l'obligation d'effet.",
-  },
-  {
-    href: "/services",
-    title: "Les services",
-    desc: "Trois portes d'entrée : audit ADVE, mandat RTIS, marque blanche pour agences.",
-  },
-  {
-    href: "/realisations",
-    title: "Les réalisations",
-    desc: "Motion19, Universal Music Africa, Orange, Chococam, KOF… le track record du cabinet.",
-  },
-  {
-    href: "/la-guilde",
-    title: "La Guilde",
-    desc: "Le réseau de talents curatés — une cellule sur mesure pour chaque mission.",
-  },
-  {
-    href: "/agence",
-    title: "L'agence",
-    desc: "UPgraders depuis 2017 : le récit, l'équipe, les convictions, la trajectoire.",
-  },
-  {
-    href: "/blog",
-    title: "Le blog",
-    desc: "Les notes de cabinet — méthode, marché, modèle d'agence. Sans langue de bois.",
-  },
-] as const;
+/* ── 02 · Réalisations — les 12 cas du track record ───────────────────── */
 
-function Explorer() {
+function Realisations() {
   return (
-    <section className="texture-geo bg-ink-0 text-bone">
-      <div className="mx-auto max-w-page px-gutter py-20 sm:py-24">
-        <div className="max-w-2xl">
-          <p className="eyebrow text-coral">Aller plus loin</p>
-          <h2 className="font-display mt-4 text-4xl font-semibold leading-tight">
-            La méthode, l&apos;agence, <span className="text-coral">les preuves</span>.
-          </h2>
-        </div>
-        <div className="mt-10 grid gap-bento sm:grid-cols-2 lg:grid-cols-3">
-          {EXPLORE_LINKS.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className="group rounded-xl border border-line bg-ink-2 p-6 transition-colors hover:border-coral/60"
+    <Section tone="dark">
+      <div className="flex flex-wrap items-end justify-between gap-6">
+        <SectionHeader
+          tone="dark"
+          num="02"
+          eyebrow="Preuves"
+          title={
+            <>
+              Les marques <span className="text-coral">parlent</span>.
+            </>
+          }
+          lede="Sept ans de missions — brand build de bout en bout, direction artistique, production audiovisuelle, marque blanche. Le track record réel du cabinet et de La Guilde."
+        />
+        <Link
+          href="/realisations"
+          className="inline-flex items-center gap-1.5 pb-1 text-sm font-semibold text-coral hover:underline"
+        >
+          Toutes les réalisations <ArrowRight className="size-4" aria-hidden="true" />
+        </Link>
+      </div>
+      <div className="mt-10 grid gap-bento sm:grid-cols-2 lg:grid-cols-3">
+        {REALISATIONS.map((r) => (
+          <div key={r.name} className="flex flex-col gap-1.5 rounded-lg border border-line bg-ink-2 p-6">
+            <h3 className="font-display text-lg font-semibold">{r.name}</h3>
+            <p className="eyebrow text-coral">{r.sector}</p>
+            <p className="mt-1 text-sm leading-relaxed text-sand">{r.desc}</p>
+          </div>
+        ))}
+      </div>
+      <div className="mt-10 grid grid-cols-2 gap-bento md:grid-cols-4">
+        {STATS.map((s) => (
+          <div key={s.label} className="rounded-lg border border-line bg-ink-2 p-6">
+            <p className="font-display text-3xl font-semibold tracking-tight text-coral">
+              {s.value}
+            </p>
+            <p className="eyebrow mt-1 text-smoke-2">{s.label}</p>
+          </div>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+/* ── 03 · La méthode — teaser ADVE/RTIS ───────────────────────────────── */
+
+function MethodeTeaser() {
+  return (
+    <Section>
+      <SectionHeader
+        num="03"
+        eyebrow="Méthode propriétaire"
+        title={
+          <>
+            ADVE<span className="text-coral">/RTIS</span>.
+          </>
+        }
+        lede={
+          <>
+            Notre IP, formalisée sur sept ans. Un{" "}
+            <strong className="text-ink">socle</strong> qui définit l&apos;identité de la
+            marque, un <strong className="text-ink">propulseur</strong> qui la met en
+            mouvement. Réexécutable, versionnable, automatisable — c&apos;est ce qui permet
+            à La Fusée de tourner.
+          </>
+        }
+      />
+      <div
+        className="mt-10 flex flex-wrap items-center gap-2"
+        aria-label="Cascade A D V E vers R T I S"
+      >
+        {PILLARS.map((p, i) => (
+          <span key={p} className="flex items-center gap-2">
+            {i === ADVE_PILLARS.length && (
+              <ArrowRight className="size-5 text-coral" aria-hidden="true" />
+            )}
+            <span
+              className={`font-display flex size-12 items-center justify-center rounded-md text-lg font-semibold ${
+                isAdve(p) ? "bg-coral text-white" : "border border-ink/12 bg-white text-graphite"
+              }`}
             >
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="font-display text-lg font-semibold">{l.title}</h3>
-                <ArrowRight
-                  className="size-4 shrink-0 text-coral transition-transform group-hover:translate-x-1"
-                  aria-hidden="true"
-                />
-              </div>
-              <p className="mt-2 text-sm leading-relaxed text-sand">{l.desc}</p>
+              {p}
+            </span>
+          </span>
+        ))}
+      </div>
+      <div className="mt-10 grid gap-bento md:grid-cols-3">
+        {METHOD_STAGES.map((s) => (
+          <div key={s.name} className="rounded-lg bg-white p-6 shadow-card">
+            <p className="font-mono text-xs text-coral">{s.letters}</p>
+            <h3 className="font-display mt-2 text-xl font-semibold">{s.name}</h3>
+            <p className="mt-2 text-sm leading-relaxed text-smoke">{s.desc}</p>
+          </div>
+        ))}
+      </div>
+      <Link
+        href="/methode"
+        className="mt-8 inline-flex items-center gap-1.5 text-sm font-semibold text-coral hover:underline"
+      >
+        La méthode en détail <ArrowRight className="size-4" aria-hidden="true" />
+      </Link>
+    </Section>
+  );
+}
+
+/* ── 04 · Notre OS : La Fusée — LA section produit (sobre) ────────────── */
+
+function NotreOs() {
+  return (
+    <Section tone="dark">
+      <div className="grid gap-10 lg:grid-cols-[1.2fr_1fr] lg:items-center lg:gap-16">
+        <div>
+          <p className="eyebrow text-coral">
+            <span className="mr-2 font-mono normal-case tracking-normal opacity-70">04</span>
+            Le produit
+          </p>
+          <h2 className="font-display mt-4 text-3xl font-semibold leading-tight sm:text-4xl">
+            Notre OS : <span className="text-coral">La Fusée</span>.
+          </h2>
+          <p className="mt-5 text-lg leading-relaxed text-sand">
+            <strong className="text-bone">La Fusée</strong> est le produit — l&apos;OS que
+            vous pilotez. <strong className="text-bone">UPgraders</strong> est l&apos;agence
+            qui l&apos;a construit et qui l&apos;opère.
+          </p>
+          <p className="mt-4 text-sm leading-relaxed text-sand">
+            L&apos;OS de marque : diagnostic sur 8 piliers, score /{COMPOSITE_MAX_SCORE},
+            l&apos;Oracle stratégique, campagnes éclatées en missions, trajectoire mesurée
+            palier par palier.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center gap-4">
+            <Link href={productSiteUrl()} className={buttonVariants({ size: "md" })}>
+              Découvrir La Fusée <ArrowUpRight />
             </Link>
-          ))}
+            <Link
+              href="/intake"
+              className={buttonVariants({ variant: "outline", size: "md" })}
+            >
+              Diagnostic gratuit
+            </Link>
+          </div>
+        </div>
+        <div className="rounded-xl border border-line bg-ink-2 p-7">
+          <span className="inline-flex size-11 items-center justify-center rounded-md bg-coral/12 text-coral">
+            <Rocket className="size-5" aria-hidden="true" />
+          </span>
+          <p className="mt-4 text-sm leading-relaxed text-sand">
+            Le diagnostic ADVE est gratuit — 15 minutes, sans engagement, sans carte
+            bancaire. L&apos;univers produit (fonctionnalités, paliers, tarifs) vit sur son
+            propre site.
+          </p>
+          <Link
+            href={productSiteUrl()}
+            className="mt-4 inline-flex items-center gap-1.5 font-mono text-xs text-coral hover:underline"
+          >
+            lafusee — le site du produit <ArrowUpRight className="size-3.5" aria-hidden="true" />
+          </Link>
         </div>
       </div>
-    </section>
+    </Section>
   );
 }
 
-function FinalCta() {
+/* ── 05 · Notes de cabinet — le blog en teaser ────────────────────────── */
+
+function BlogTeaser() {
+  const posts = getAllPosts().slice(0, 3);
+  return (
+    <Section>
+      <div className="flex flex-wrap items-end justify-between gap-6">
+        <SectionHeader
+          num="05"
+          eyebrow="Notes de cabinet"
+          title={
+            <>
+              Le <span className="text-coral">blog</span>.
+            </>
+          }
+          lede="Ce qu'on apprend en bâtissant des marques en Afrique francophone — méthode, modèle d'agence, signaux de marché. Sans langue de bois."
+        />
+        <Link
+          href="/blog"
+          className="inline-flex items-center gap-1.5 pb-1 text-sm font-semibold text-coral hover:underline"
+        >
+          Tous les articles <ArrowRight className="size-4" aria-hidden="true" />
+        </Link>
+      </div>
+      <div className="mt-10 grid gap-bento sm:grid-cols-2 lg:grid-cols-3">
+        {posts.map((p) => (
+          <Link
+            key={p.slug}
+            href={`/blog/${p.slug}`}
+            className="group flex flex-col gap-2 rounded-lg bg-white p-6 shadow-card transition-shadow hover:shadow-card-lg"
+          >
+            <p className="eyebrow text-smoke-2">
+              <span className="text-coral">{p.category}</span>
+              <span className="mx-2">·</span>
+              {p.readingMinutes} min
+            </p>
+            <h3 className="font-display text-lg font-semibold leading-snug group-hover:text-coral">
+              {p.title}
+            </h3>
+            <p className="text-sm leading-relaxed text-smoke">{p.excerpt}</p>
+            <p className="mt-auto pt-3 text-xs text-smoke-2">{formatPostDate(p.date)}</p>
+          </Link>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+/* ── 06 · Travailler avec nous — contact ──────────────────────────────── */
+
+function Contact() {
+  const whatsappDouala = CONTACT.whatsapp[0];
   return (
     <section className="texture-geo relative overflow-hidden bg-ink text-bone">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute -bottom-44 left-1/2 h-[420px] w-[640px] -translate-x-1/2 rounded-full bg-coral/20 blur-3xl"
       />
-      <div className="relative mx-auto max-w-page px-gutter py-20 text-center sm:py-24">
-        <h2 className="font-display mx-auto max-w-2xl text-4xl font-semibold leading-tight">
-          Prêt à mettre votre marque <span className="text-coral">sur orbite</span> ?
-        </h2>
-        <p className="mx-auto mt-4 max-w-xl text-lg text-sand">
-          Commencez par le diagnostic offert. 15 minutes, sans engagement, sans
-          carte bancaire.
+      <div className="relative mx-auto max-w-page px-gutter py-20 sm:py-24">
+        <p className="eyebrow text-coral">
+          <span className="mr-2 font-mono normal-case tracking-normal opacity-70">06</span>
+          Travailler avec nous
         </p>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-          <Link href="/intake" className={buttonVariants({ size: "lg" })}>
-            Démarrer mon diagnostic <ArrowRight />
+        <h2 className="font-display mt-4 max-w-2xl text-4xl font-semibold leading-tight">
+          De la poussière <span className="text-coral">à l&apos;étoile</span>.
+        </h2>
+        <p className="mt-5 max-w-2xl text-lg text-sand">
+          Une marque à bâtir, une trajectoire à corriger, une mission à confier ?
+          Parlons-en. La première conversation est gratuite — la suite, c&apos;est nous qui
+          la portons. {IDENTITY.hashtags.join(" ")}
+        </p>
+        <div className="mt-8 flex flex-wrap items-center gap-4">
+          <Link href="/contact" className={buttonVariants({ size: "lg" })}>
+            Démarrer un projet <ArrowRight />
           </Link>
-          <a
-            href="https://wa.me/237694171799"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={buttonVariants({ variant: "outline", size: "lg" })}
-          >
-            Discuter sur WhatsApp
-          </a>
+          {whatsappDouala ? (
+            <a
+              href={whatsappDouala.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={buttonVariants({ variant: "outline", size: "lg" })}
+            >
+              <MessageCircle /> WhatsApp {whatsappDouala.label}
+            </a>
+          ) : null}
         </div>
+        <p className="mt-4 font-mono text-xs uppercase tracking-widest text-smoke-2">
+          ↳ réponse sous 24 h ouvrées · {CONTACT.email}
+        </p>
       </div>
     </section>
   );
@@ -500,13 +466,13 @@ export default function HomePage() {
   return (
     <>
       <Hero />
-      <Constat />
-      <Methode />
-      <Process />
-      <ProduitAgence />
-      <PreuveSociale />
-      <Explorer />
-      <FinalCta />
+      <ClientsStrip />
+      <Offre />
+      <Realisations />
+      <MethodeTeaser />
+      <NotreOs />
+      <BlogTeaser />
+      <Contact />
     </>
   );
 }

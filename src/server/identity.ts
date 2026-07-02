@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { compare, hash } from "bcryptjs";
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { getDb } from "@/lib/db";
+import { rootSiteUrl } from "@/lib/hosts";
 import type { SessionPayload } from "@/lib/session-token";
 import { logAudit } from "./audit";
 
@@ -269,13 +270,12 @@ export function resetTokenState(
   return "VALID";
 }
 
-/** Même fallback que robots.ts/sitemap.ts — l'instance Coolify WP-012. */
-const FALLBACK_APP_URL = "https://lafusee-v7.76-13-128-23.sslip.io";
-
-/** URL publique du formulaire de réinitialisation — pure (base explicite). */
+/** URL publique du formulaire de réinitialisation — pure (base explicite).
+ *  Même base que robots.ts/sitemap.ts : NEXT_PUBLIC_APP_URL, fallback la
+ *  racine sous-domaines (lib/hosts, WP-025). */
 export function buildResetUrl(
   token: string,
-  base: string = process.env.NEXT_PUBLIC_APP_URL ?? FALLBACK_APP_URL,
+  base: string = process.env.NEXT_PUBLIC_APP_URL ?? rootSiteUrl(),
 ): string {
   return `${base.replace(/\/+$/, "")}/reinitialiser/${encodeURIComponent(token)}`;
 }

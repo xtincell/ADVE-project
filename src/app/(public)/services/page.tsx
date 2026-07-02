@@ -31,8 +31,8 @@ export default function ServicesPage() {
         <Link href="/contact" className={buttonVariants({ size: "lg" })}>
           Démarrer un projet <ArrowRight />
         </Link>
-        <Link href="/tarifs" className={buttonVariants({ variant: "outline", size: "lg" })}>
-          Voir les tarifs
+        <Link href="/lafusee/tarifs" className={buttonVariants({ variant: "outline", size: "lg" })}>
+          Voir les tarifs La Fusée
         </Link>
       </PageHero>
 
@@ -88,10 +88,11 @@ export default function ServicesPage() {
           ))}
         </div>
         <p className="mt-6 text-sm text-smoke">
-          <Link href="/tarifs" className="font-semibold text-coral hover:underline">
-            ↳ Voir les tarifs
+          <Link href="/lafusee/tarifs" className="font-semibold text-coral hover:underline">
+            ↳ Voir les tarifs La Fusée
           </Link>{" "}
-          — La Fusée (prix résolu par zone, mobile money) + prestations agence sur devis.
+          — le produit (prix résolu par zone, mobile money) ; les prestations agence,
+          elles, sont sur devis.
         </p>
       </Section>
 
@@ -162,7 +163,7 @@ export default function ServicesPage() {
               <Link href="/intake" className={buttonVariants({ size: "md" })}>
                 Diagnostic gratuit <ArrowRight />
               </Link>
-              <Link href="/tarifs" className={buttonVariants({ variant: "outline", size: "md" })}>
+              <Link href="/lafusee/tarifs" className={buttonVariants({ variant: "outline", size: "md" })}>
                 Voir les tarifs
               </Link>
             </div>

@@ -6,7 +6,12 @@
 
 ## 0. État au moment du pont (2026-07-02)
 
-- **Prod** : https://lafusee-v7.76-13-128-23.sslip.io (Coolify, projet `lafusee-v7`, app + Postgres dédiés, seed au boot). L'ancienne app `lafusee` intacte.
+- **Prod** : https://upgraders.76-13-128-23.sslip.io (Coolify, projet `lafusee-v7`, app + Postgres
+  dédiés, seed au boot — si l'app sert encore l'ancien FQDN `lafusee-v7.*`, aligner le domaine côté
+  Coolify). L'ancienne app `lafusee` intacte. **Sous-domaines (WP-025, middleware host-based, env
+  `ROOT_DOMAIN`)** : `lafusee.<racine>` = univers produit (`/`→/lafusee, `/tarifs`→/lafusee/tarifs),
+  `laguilde.<racine>` → /la-guilde, `argos.<racine>` → /argos — sslip.io résout tout préfixe vers
+  l'IP, il suffit de déclarer les 4 FQDN au proxy Coolify.
 - **Branche** : `claude/project-revamp-agent-safe-doc3ip` (PR #401). `main` = ancienne app, intouchée.
 - **Parité** ([PARITY.md](PARITY.md)) : PORTÉ 32 · FUSIONNÉ 85+ · OBSOLÈTE 57 justifiées · À PORTER ~77 (P1 en tête de synthèse). Board : [REBUILD-PLAN.md §5](REBUILD-PLAN.md).
 - **Identité corrigée (2026-07-02)** : **UPgraders vend La Fusée** — UPgraders est la marque-mère

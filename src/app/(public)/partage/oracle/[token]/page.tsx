@@ -2,6 +2,7 @@ import { cache } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, LinkIcon, ScrollText } from "lucide-react";
+import { productSiteUrl } from "@/lib/hosts";
 import { resolveSharedOracle } from "@/server/share";
 import { MarkdownView } from "@/components/pillars/markdown-view";
 import { buttonVariants } from "@/components/ui/button";
@@ -61,7 +62,7 @@ export default async function PartageOraclePage({
             title="Ce lien de partage n'est plus valide"
             description="Les liens de partage de l'Oracle sont valables 30 jours après leur génération. Celui-ci a expiré, a été altéré, ou son document n'existe plus — demandez à la marque de générer un nouveau lien depuis son espace."
           >
-            <Link href="/lafusee" className={buttonVariants({ size: "md" })}>
+            <Link href={productSiteUrl()} className={buttonVariants({ size: "md" })}>
               Découvrir La Fusée <ArrowRight aria-hidden="true" />
             </Link>
           </EmptyState>
@@ -85,7 +86,7 @@ export default async function PartageOraclePage({
           </p>
           <p className="text-sm text-sand">
             généré avec{" "}
-            <Link href="/lafusee" className="font-semibold text-bone underline-offset-2 hover:text-coral hover:underline">
+            <Link href={productSiteUrl()} className="font-semibold text-bone underline-offset-2 hover:text-coral hover:underline">
               La Fusée
             </Link>{" "}
             <span className="text-smoke-2">· by UPgraders</span>
