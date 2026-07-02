@@ -23,31 +23,31 @@ Legacy : 253 pages · 112 routers tRPC · 115 services — v7 au 2026-07-02 : 36
 | //register | (auth) | À PORTER |
 | //reset-password | (auth) | À PORTER |
 | //cockpit | (cockpit) | À PORTER |
-| //cockpit/brand/assets | (cockpit) | À PORTER |
-| //cockpit/brand/deliverables | (cockpit) | À PORTER |
-| //cockpit/brand/deliverables/[key] | (cockpit) | À PORTER |
-| //cockpit/brand/diagnostic | (cockpit) | À PORTER |
-| //cockpit/brand/edit | (cockpit) | À PORTER |
-| //cockpit/brand/engagement | (cockpit) | À PORTER |
-| //cockpit/brand/guidelines | (cockpit) | À PORTER |
-| //cockpit/brand/identity | (cockpit) | À PORTER |
-| //cockpit/brand/jehuty | (cockpit) | À PORTER |
-| //cockpit/brand/market | (cockpit) | À PORTER |
-| //cockpit/brand/notoria | (cockpit) | À PORTER |
-| //cockpit/brand/offer | (cockpit) | À PORTER |
-| //cockpit/brand/positioning | (cockpit) | À PORTER |
-| //cockpit/brand/potential | (cockpit) | À PORTER |
-| //cockpit/brand/proposition | (cockpit) | À PORTER |
-| //cockpit/brand/roadmap | (cockpit) | À PORTER |
-| //cockpit/brand/rtis | (cockpit) | À PORTER |
-| //cockpit/brand/rtis/synthese | (cockpit) | À PORTER |
-| //cockpit/brand/sources | (cockpit) | À PORTER |
-| //cockpit/brand/strategy | (cockpit) | À PORTER |
-| //cockpit/insights/apogee-maintenance | (cockpit) | À PORTER |
-| //cockpit/insights/attribution | (cockpit) | À PORTER |
-| //cockpit/insights/benchmarks | (cockpit) | À PORTER |
-| //cockpit/insights/diagnostics | (cockpit) | À PORTER |
-| //cockpit/insights/reports | (cockpit) | À PORTER |
+| //cockpit/brand/assets | (cockpit) | À PORTER (vault BrandAsset — pas de table v7) |
+| //cockpit/brand/deliverables | (cockpit) | FUSIONNÉ → /app/exports (hub Deliverable + fraîcheur calculée, WP-016) |
+| //cockpit/brand/deliverables/[key] | (cockpit) | FUSIONNÉ → /app/oracle (+ /app/oracle/print — seul kind au registre v7 ; le détail par kind suivra le registre) |
+| //cockpit/brand/diagnostic | (cockpit) | FUSIONNÉ → /app/diagnostic (historique BrandScore + delta, breakdown piliers, actions dérivées des manques, WP-016) |
+| //cockpit/brand/edit | (cockpit) | FUSIONNÉ → /app/pilier/[key] (éditeur par champ, WP-005) |
+| //cockpit/brand/engagement | (cockpit) | FUSIONNÉ → /app/pilier/e (page pilier E, WP-005) |
+| //cockpit/brand/guidelines | (cockpit) | À PORTER (guidelines-renderer — pas de table v7) |
+| //cockpit/brand/identity | (cockpit) | FUSIONNÉ → /app/pilier/a (page pilier A, WP-005) |
+| //cockpit/brand/jehuty | (cockpit) | À PORTER (feed Jehuty — pas de table v7) |
+| //cockpit/brand/market | (cockpit) | FUSIONNÉ → /app/pilier/t (page pilier T, WP-005) |
+| //cockpit/brand/notoria | (cockpit) | À PORTER (recommandations Notoria — pas de table v7) |
+| //cockpit/brand/offer | (cockpit) | FUSIONNÉ → /app/offre (vue thématique V, WP-016) |
+| //cockpit/brand/positioning | (cockpit) | FUSIONNÉ → /app/positionnement (vue thématique A+D, WP-016) |
+| //cockpit/brand/potential | (cockpit) | FUSIONNÉ → /app/pilier/i (page pilier I, WP-005) |
+| //cockpit/brand/proposition | (cockpit) | FUSIONNÉ → /app/proposition (chaîne de promesses, WP-016) + /app/oracle (compilation, WP-006) |
+| //cockpit/brand/roadmap | (cockpit) | FUSIONNÉ → /app/pilier/s (page pilier S, WP-005) |
+| //cockpit/brand/rtis | (cockpit) | FUSIONNÉ → /app/rtis (dérivés + provenance + re-dérivation, WP-016) |
+| //cockpit/brand/rtis/synthese | (cockpit) | FUSIONNÉ → /app/rtis/synthese (composition déterministe des 4 dérivés, WP-016) |
+| //cockpit/brand/sources | (cockpit) | FUSIONNÉ → /app/revisions (esprit sources/history : timeline PillarRevision + chaîne de hash vérifiée, WP-016 ; upload de sources = pas de table v7, non porté) |
+| //cockpit/brand/strategy | (cockpit) | FUSIONNÉ → /app/pilier/s (le legacy redirigeait déjà vers roadmap) |
+| //cockpit/insights/apogee-maintenance | (cockpit) | À PORTER (sentinelles APOGEE — pas de table v7) |
+| //cockpit/insights/attribution | (cockpit) | À PORTER (signaux/attribution — pas de table v7) |
+| //cockpit/insights/benchmarks | (cockpit) | À PORTER (benchmarks sectoriels — pas de table v7) |
+| //cockpit/insights/diagnostics | (cockpit) | FUSIONNÉ → /app/diagnostic (score composite + breakdown par pilier, WP-016) |
+| //cockpit/insights/reports | (cockpit) | FUSIONNÉ → /app/diagnostic (historique BrandScore + deltas par pilier — l'essence des value reports, WP-016) |
 | //cockpit/intelligence/community | (cockpit) | À PORTER |
 | //cockpit/intelligence/market-studies | (cockpit) | À PORTER |
 | //cockpit/intelligence/overton | (cockpit) | À PORTER |
