@@ -7,6 +7,7 @@ import { cva } from "class-variance-authority";
 const NAV_ITEMS = [
   { href: "/admin/leads", label: "Leads" },
   { href: "/admin/paiements", label: "Paiements" },
+  { href: "/admin/commissions", label: "Commissions" },
   { href: "/admin/abonnements", label: "Abonnements" },
   { href: "/admin/marques", label: "Marques" },
   { href: "/admin/campagnes", label: "Campagnes" },

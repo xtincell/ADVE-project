@@ -11,6 +11,8 @@
  *                           legacy/src/server/services/financial-brain/action-costing/seed-data.ts.
  *   4. ZoneIndex "action-cost" — coûts d'action indicatifs par archétype au marché de base CM
  *                           (WP-008), portés du catalogue legacy action-costing/catalog.ts (ADR-0093).
+ *   5. ZoneIndex "commission" — taux de commission Guilde sur les gains talents (WP-024),
+ *                           consommé par src/server/payouts.ts à la validation de mission.
  *
  * Doctrine (ADR-0087 legacy, reconduite v7) : jamais de barème en dur dans le code —
  * tout montant vit ici, en données, avec source + validFrom.
@@ -153,6 +155,28 @@ const ACTION_COST_INDICES = [
 ].map((r) => ({ ...r, countryCode: ACTION_COST_BASE_MARKET, source: ACTION_COST_SOURCE }));
 
 // ————————————————————————————————————————————————————————————————————————
+// 5. ZoneIndex famille "commission" — taux de commission Guilde (WP-024).
+//    Granularité GLOBALE : countryCode porte le scope "GLOBAL" (un seul taux
+//    pour toute la Guilde en V1 — pas de FK, même convention que "pricing"
+//    qui met la zone monétaire dans countryCode). Valeur = fraction du brut
+//    (0.15 = 15 %), retenue par l'opérateur sur le gain avant reversement net.
+//
+//    ⚠ AUCUN taux plat n'existait en legacy : commission-engine/index.ts
+//    appliquait des taux PAR TIER de talent (part talent 60→75 %, soit
+//    commission 40 %→25 % — APPRENTI/COMPAGNON/MAITRE/ASSOCIE) et le canon
+//    évoquait un Hub-Escrow dégressif 20 %→8 % par palier de marque. Le
+//    modèle v7 n'a pas (encore) de tier talent : taux unique 0.15 posé en
+//    placeholder — à confirmer/éditer par l'opérateur dans /admin/referentiels.
+// ————————————————————————————————————————————————————————————————————————
+
+const COMMISSION_SOURCE =
+  "placeholder-operator-to-confirm (legacy sans taux plat : commission-engine 25–40 % par tier talent, Hub-Escrow 20 %→8 % par palier — taux unique v7 à confirmer)";
+
+const COMMISSION_INDICES = [
+  { countryCode: "GLOBAL", key: "guild.rate", value: 0.15, source: COMMISSION_SOURCE },
+];
+
+// ————————————————————————————————————————————————————————————————————————
 // Mécanique de seed
 // ————————————————————————————————————————————————————————————————————————
 
@@ -204,13 +228,15 @@ async function main() {
   const pricing = await seedZoneIndices("pricing", PRICING_INDICES);
   const col = await seedZoneIndices("cost-of-living", COST_OF_LIVING_INDICES);
   const actionCosts = await seedZoneIndices("action-cost", ACTION_COST_INDICES);
+  const commission = await seedZoneIndices("commission", COMMISSION_INDICES);
 
   const fmt = (c) => `${c.created} créés · ${c.updated} mis à jour · ${c.unchanged} inchangés`;
-  console.log("[seed] Récapitulatif WP-009 + WP-008 (référentiels) :");
+  console.log("[seed] Récapitulatif WP-009 + WP-008 + WP-024 (référentiels) :");
   console.log(`[seed]   Country                    : ${countries} upserts (${COUNTRIES.length} pays)`);
   console.log(`[seed]   ZoneIndex pricing          : ${PRICING_INDICES.length} lignes — ${fmt(pricing)}`);
   console.log(`[seed]   ZoneIndex cost-of-living   : ${COST_OF_LIVING_INDICES.length} lignes — ${fmt(col)}`);
   console.log(`[seed]   ZoneIndex action-cost      : ${ACTION_COST_INDICES.length} lignes — ${fmt(actionCosts)}`);
+  console.log(`[seed]   ZoneIndex commission       : ${COMMISSION_INDICES.length} ligne — ${fmt(commission)}`);
   console.log(
     `[seed]   Totaux en base             : ${await db.country.count()} Country · ${await db.zoneIndex.count()} ZoneIndex`,
   );

@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { CheckCircle2, ClipboardList, Megaphone, Send, Smartphone } from "lucide-react";
+import { CheckCircle2, ClipboardList, HandCoins, Megaphone, Send, Smartphone } from "lucide-react";
 import { readSession } from "@/lib/session";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DATE_FORMAT } from "@/components/campaigns/status";
 import { ApplicationStatusBadge, AvailabilityBadge, formatDailyRate } from "@/components/guild/status";
+import { formatMoney, formatRate, PayoutStatusBadge } from "@/components/payouts/status";
 import { MISSION_STATUS_LABELS } from "@/domain/campaign";
 import { VISIBILITY_LABELS } from "@/domain/guild";
 import {
@@ -15,6 +16,7 @@ import {
   listWallMissions,
 } from "@/server/guild";
 import { listMarkets } from "@/server/campaigns";
+import { listMyPayouts } from "@/server/payouts";
 import { ApplyToMissionForm } from "./apply-form";
 import { TalentProfileForm } from "./profile-form";
 
@@ -65,7 +67,9 @@ export default async function StudioPage() {
     listWallMissions(),
     listMyAppliedMissionIds(session.userId),
   ]);
-  const myApplications = profile ? await listMyApplications(session.userId) : [];
+  const [myApplications, myPayouts] = profile
+    ? await Promise.all([listMyApplications(session.userId), listMyPayouts(session.userId)])
+    : [[], []];
 
   return (
     <div className="space-y-10">
@@ -233,6 +237,67 @@ export default async function StudioPage() {
                       production.
                     </p>
                   ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      ) : null}
+
+      {/* ── Mes gains (WP-024 — ordres réels, rien avant la première mission validée) ── */}
+      {profile ? (
+        <section className="space-y-4" aria-label="Mes gains">
+          <div>
+            <h2 className="font-display text-xl font-semibold">
+              Mes gains
+              {myPayouts.length > 0 ? (
+                <span className="ml-2 text-sm font-normal text-smoke-2">({myPayouts.length})</span>
+              ) : null}
+            </h2>
+            <p className="text-sm text-sand">
+              À chaque mission validée par la marque, votre gain est calculé (brut, commission
+              Guilde déduite, net) et entre dans la file de paiement. Règlement manuel en mobile
+              money par l&apos;opérateur — sous 72&nbsp;h ouvrées après validation.
+            </p>
+          </div>
+          {myPayouts.length === 0 ? (
+            <EmptyState
+              icon={<HandCoins />}
+              title="Aucun gain pour l'instant"
+              description="Vos gains apparaissent ici dès qu'une marque valide une mission que vous avez gagnée via la Guilde : brut, commission, net à recevoir, puis la référence mobile money une fois payé. Rien d'inventé — uniquement des missions réellement validées."
+            />
+          ) : (
+            <ul className="space-y-2.5">
+              {myPayouts.map((payout) => (
+                <li key={payout.id} className="rounded-lg border border-line bg-ink-2 px-5 py-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <span className="min-w-0">
+                      <span className="block truncate font-display text-base font-semibold text-bone">
+                        {payout.missionTitle}
+                      </span>
+                      <span className="mt-0.5 block text-xs text-smoke-2">
+                        validée le {DATE_FORMAT.format(payout.createdAt)}
+                        {payout.paidAt
+                          ? ` · payée le ${DATE_FORMAT.format(payout.paidAt)}${payout.reference ? ` — réf. ${payout.reference}` : ""}`
+                          : ""}
+                      </span>
+                    </span>
+                    <span className="flex items-center gap-3">
+                      <span className="font-display text-base font-semibold text-bone">
+                        {formatMoney(payout.amountNet, payout.currency)}
+                      </span>
+                      <PayoutStatusBadge status={payout.status} />
+                    </span>
+                  </div>
+                  <p className="mt-2 font-mono text-[11px] text-smoke-2">
+                    brut {formatMoney(payout.amountGross, payout.currency)} · commission Guilde{" "}
+                    {formatRate(payout.commissionRate)} ={" "}
+                    {formatMoney(payout.commissionAmount, payout.currency)} · net{" "}
+                    {formatMoney(payout.amountNet, payout.currency)}
+                    {payout.status === "PENDING" || payout.status === "APPROVED"
+                      ? " · paiement manuel sous 72 h ouvrées"
+                      : ""}
+                  </p>
                 </li>
               ))}
             </ul>

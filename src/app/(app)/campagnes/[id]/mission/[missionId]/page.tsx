@@ -11,6 +11,7 @@ import {
   AvailabilityBadge,
   formatDailyRate,
 } from "@/components/guild/status";
+import { formatMoney, formatRate, PayoutStatusBadge } from "@/components/payouts/status";
 import {
   MISSION_STATUS_LABELS,
   MISSION_STATUSES,
@@ -18,8 +19,10 @@ import {
 } from "@/domain/campaign";
 import { getMissionDetail } from "@/server/campaigns";
 import { listMissionApplications } from "@/server/guild";
+import { getMissionPayoutContext } from "@/server/payouts";
 import { requireSessionAndBrand } from "../../../session-brand";
 import { AssignMissionForm } from "./assign-form";
+import { ValidateMissionForm } from "./validate-form";
 import {
   acceptApplicationAction,
   declineApplicationAction,
@@ -50,6 +53,8 @@ export default async function MissionDetailPage({ params }: PageProps) {
 
   const applications = await listMissionApplications(brand.id, mission.id);
   const acceptedApplication = applications.find((a) => a.status === "ACCEPTED");
+  // Gains talent (WP-024) : formulaire à la validation, récap une fois créé.
+  const payoutContext = await getMissionPayoutContext(mission);
 
   const campaign = mission.brief.action.campaign;
   const status = mission.status as MissionStatus;
@@ -352,26 +357,74 @@ export default async function MissionDetailPage({ params }: PageProps) {
             </h2>
             <p className="mt-1 text-sm text-sand">
               Dernière gate du circuit : la validation acte que le livrable est conforme au
-              brief. (Le paiement mobile money du talent arrive avec la guilde, WP-011.)
+              brief
+              {payoutContext.kind === "form"
+                ? " et crée l'ordre de gain du talent (commission Guilde déduite, règlement mobile money par l'opérateur)."
+                : "."}
             </p>
-            <GateForm
-              action={validateMissionAction}
-              hidden={{ missionId: mission.id, campaignId: campaign.id }}
-              label="Valider la livraison"
-              pendingLabel="Validation…"
-              variant="primary"
-              size="md"
-              className="mt-4"
-            />
+            {payoutContext.kind === "form" ? (
+              <div className="mt-4">
+                <ValidateMissionForm
+                  missionId={mission.id}
+                  campaignId={campaign.id}
+                  talentName={mission.assignee ?? "le talent"}
+                  currency={payoutContext.currency}
+                  dailyRate={payoutContext.dailyRate}
+                  days={payoutContext.days}
+                  estimatedGross={payoutContext.estimatedGross}
+                  rate={
+                    payoutContext.rate
+                      ? {
+                          value: payoutContext.rate.value,
+                          placeholder: payoutContext.rate.placeholder,
+                        }
+                      : null
+                  }
+                />
+              </div>
+            ) : (
+              <GateForm
+                action={validateMissionAction}
+                hidden={{ missionId: mission.id, campaignId: campaign.id }}
+                label="Valider la livraison"
+                pendingLabel="Validation…"
+                variant="primary"
+                size="md"
+                className="mt-4"
+                hint="Mission assignée hors Guilde (nom déclaré) : pas de compte talent à créditer — le règlement se fait de gré à gré, aucun ordre de gain n'est créé."
+              />
+            )}
           </>
         ) : null}
         {status === "VALIDATED" ? (
-          <p className="flex items-center gap-2 text-sm text-sand">
-            <Check className="size-4 text-gold" aria-hidden />
-            Mission validée le{" "}
-            {mission.validatedAt ? DATE_FORMAT.format(mission.validatedAt) : "—"} — circuit
-            terminé.
-          </p>
+          <div className="space-y-4">
+            <p className="flex items-center gap-2 text-sm text-sand">
+              <Check className="size-4 text-gold" aria-hidden />
+              Mission validée le{" "}
+              {mission.validatedAt ? DATE_FORMAT.format(mission.validatedAt) : "—"} — circuit
+              terminé.
+            </p>
+            {payoutContext.kind === "created" ? (
+              <div className="rounded-md border border-line-soft bg-ink-3/40 px-4 py-3">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <p className="text-sm font-semibold text-sand-2">
+                    Gain du talent — {mission.assignee ?? "talent Guilde"}
+                  </p>
+                  <PayoutStatusBadge status={payoutContext.payout.status} />
+                </div>
+                <p className="mt-1.5 font-mono text-[11px] text-smoke-2">
+                  brut {formatMoney(payoutContext.payout.amountGross, payoutContext.payout.currency)}{" "}
+                  · commission {formatRate(payoutContext.payout.commissionRate)} ={" "}
+                  {formatMoney(payoutContext.payout.commissionAmount, payoutContext.payout.currency)}{" "}
+                  · net{" "}
+                  {formatMoney(payoutContext.payout.amountNet, payoutContext.payout.currency)}
+                  {payoutContext.payout.paidAt
+                    ? ` · payé le ${DATE_FORMAT.format(payoutContext.payout.paidAt)}${payoutContext.payout.reference ? ` (réf. ${payoutContext.payout.reference})` : ""}`
+                    : " · règlement mobile money par l'opérateur"}
+                </p>
+              </div>
+            ) : null}
+          </div>
         ) : null}
       </section>
     </div>

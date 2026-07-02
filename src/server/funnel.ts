@@ -2,8 +2,9 @@ import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { getDb } from "@/lib/db";
 import { diagnose, type Diagnostic } from "@/domain/diagnostic";
-import { scoreBrand } from "@/domain/scoring";
-import { ADVE_PILLARS } from "@/domain/pillars";
+import { scoreBrand, type PillarContentScore } from "@/domain/scoring";
+import { ADVE_PILLARS, type AdvePillarKey } from "@/domain/pillars";
+import { PILLAR_FIELDS, PILLAR_LABELS, type FieldType } from "@/domain/pillar-fields";
 import { normalizeEmail } from "./identity";
 import { logAudit } from "./audit";
 import { computeSelfHash } from "./audit-hash";
@@ -201,6 +202,98 @@ export async function getLeadForPrefill(leadId: string): Promise<LeadPrefill | n
   if (!lead) return null;
   if (lead.status !== "NEW" && lead.status !== "QUALIFIED") return null;
   return { id: lead.id, email: lead.email, brandName: lead.brandName };
+}
+
+// ── 2-bis. Rapport ADVE complet (lecture seule — page /intake/rapport) ──
+
+export interface LeadReportField {
+  id: string;
+  label: string;
+  description: string;
+  needsHuman: boolean;
+  type: FieldType;
+  /** Le champ est-il réellement rempli dans les réponses du lead ? */
+  filled: boolean;
+  /** Réponse déclarée (texte trimé ou liste) — absente si champ vide. */
+  answer?: string | string[];
+}
+
+export interface LeadReportPillar {
+  key: AdvePillarKey;
+  label: string;
+  score: PillarContentScore;
+  fields: LeadReportField[];
+}
+
+export interface LeadReport extends LeadDiagnostic {
+  /** Constat champ par champ des 4 piliers ADVE — uniquement le déclaré. */
+  pillars: LeadReportPillar[];
+}
+
+/**
+ * Rapport complet d'un lead : le diagnostic (recalculé, comme partout) +
+ * le constat CHAMP PAR CHAMP du socle ADVE — chaque champ de la bible avec
+ * sa réponse déclarée s'il est rempli, sa description s'il est vide. Aucune
+ * analyse inventée : la seule matière est ce que le lead a déclaré.
+ * Null si lead inexistant. Extension LECTURE de `getLeadDiagnostic`.
+ */
+export async function getLeadReport(leadId: string): Promise<LeadReport | null> {
+  const db = getDb();
+  const lead = await db.intakeLead.findUnique({ where: { id: leadId } });
+  if (!lead) return null;
+
+  const payload = parseLeadPayload(lead.payload);
+  const mapped = mapIntakeAnswers(
+    withIdentityAnswers(payload.answers, {
+      brandName: lead.brandName,
+      secteur: payload.secteur,
+    }),
+  );
+  const diagnostic = diagnose({ answers: toDiagnosticAnswers(mapped) });
+
+  const pillars: LeadReportPillar[] = ADVE_PILLARS.map((key) => {
+    const content = mapped[key].content;
+    const score = diagnostic.byPillar[key];
+    const filledIds = new Set(score.filled);
+    return {
+      key,
+      label: PILLAR_LABELS[key],
+      score,
+      fields: PILLAR_FIELDS[key].map((field) => {
+        const value = content[field.id];
+        const answer =
+          typeof value === "string"
+            ? value
+            : Array.isArray(value)
+              ? value.filter((item): item is string => typeof item === "string")
+              : undefined;
+        const filled = filledIds.has(field.id);
+        return {
+          id: field.id,
+          label: field.label,
+          description: field.description,
+          needsHuman: field.needsHuman,
+          type: field.type,
+          filled,
+          ...(filled && answer !== undefined ? { answer } : {}),
+        };
+      }),
+    };
+  });
+
+  return {
+    lead: {
+      id: lead.id,
+      email: lead.email,
+      brandName: lead.brandName,
+      status: lead.status,
+      createdAt: lead.createdAt,
+    },
+    secteur: payload.secteur ?? null,
+    countryName: intakeCountryName(payload.countryCode),
+    diagnostic,
+    pillars,
+  };
 }
 
 // ── 3. Conversion post-inscription ─────────────────────────────────────

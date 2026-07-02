@@ -10,13 +10,13 @@ Legacy : 253 pages · 112 routers tRPC · 115 services — v7 au 2026-07-02 (vag
 | //agency/campaigns | (agency) | FUSIONNÉ → /espace-agence/campagnes (cross-flotte : statuts, marchés, budget = total réel des coûts d'actions PAR DEVISE, « à estimer » compté, WP-018) |
 | //agency/clients | (agency) | FUSIONNÉ → /espace-agence/clients (un client = un workspace BRAND de la flotte : score, palier, abonnement dérivé finance.ts, dernière activité AuditLog, WP-018) |
 | //agency/clients/[clientId] | (agency) | FUSIONNÉ → /espace-agence/clients/[id] (fiche tenancy-gated : marques, campagnes + budgets, missions en cours, derniers paiements, WP-018) |
-| //agency/commissions | (agency) | À PORTER (P2 — commissions flotte à générer/suivre/payer ; pas de table v7, carte « à venir » sur /espace-agence/revenus, WP-018) |
+| //agency/commissions | (agency) | FUSIONNÉ → /espace-agence/revenus § « Commissions talents » (ordres `TalentPayout` RÉELS générés par les missions Guilde validées de la flotte : compteurs par statut, commissions générées/encaissées et net talents dû PAR DEVISE — jamais additionnées ; la génération est automatique à la validation et le paiement est opérateur → /admin/commissions, WP-024) |
 | //agency/contracts | (agency) | À PORTER (P3 — suivi des contrats clients de la flotte ; pas de table v7) |
 | //agency/intake | (agency) | OBSOLÈTE — la création de clients PAR l'agence contredit le modèle v7 (intake public + rattachement par membership) ; la file des leads vit sur /admin/leads |
 | //agency/knowledge | (agency) | À PORTER (P3 — base de connaissance marché ; pas de table v7) |
 | //agency/messages | (agency) | À PORTER (P2 — messagerie interne vue agence ; pas de table v7, WhatsApp-first en attendant) |
 | //agency/missions | (agency) | FUSIONNÉ → /espace-agence/missions (cross-flotte groupée par étape du circuit OPEN→…→VALIDATED, provenance campagne→action, candidatures guilde en attente COMPTÉES depuis MissionApplication ; priorité/SLA legacy sans colonnes v7 = non montrés, WP-018) |
-| //agency/revenue | (agency) | FUSIONNÉ → /espace-agence/revenus (paiements `confirmed` réels par mois/devise ventilés par client + MRR simple = paiements encaissés des abos actifs normalisés 30 j, non-dérivable → ligne `unresolved` ; commissions non portées — pas de table, WP-018) |
+| //agency/revenue | (agency) | FUSIONNÉ → /espace-agence/revenus (paiements `confirmed` réels par mois/devise ventilés par client + MRR simple = paiements encaissés des abos actifs normalisés 30 j, non-dérivable → ligne `unresolved`, WP-018 ; commissions talents RÉELLES depuis WP-024 — cf. ligne //agency/commissions) |
 | //agency/signals | (agency) | À PORTER (P3 — signaux marché vue flotte ; pas de table Signal v7) |
 | //forgot-password | (auth) | PORTÉ → /mot-de-passe-oublie (demande par email, réponse identique compte existant ou non — anti-énumération ; SANS provider email v7 le comportement est honnête : lien généré (token SHA-256 en base, TTL 1 h, usage unique) TRANSMIS PAR L'OPÉRATEUR — file + émission manuelle du lien une-seule-fois dans /admin/utilisateurs, CTA WhatsApp côté demandeur ; OUTBOUND_EMAIL env-gated = résidu documenté, aucun fake envoi — WP-022) |
 | //login | (auth) | FUSIONNÉ → /connexion (credentials + redirect ?next=, WP-003 ; le bouton Google legacy = post-launch) |
@@ -171,10 +171,10 @@ Legacy : 253 pages · 112 routers tRPC · 115 services — v7 au 2026-07-02 (vag
 | //console/signal/market | (console) | OBSOLÈTE — stub de redirection vers /console/seshat/market (alias sans fonction propre) |
 | //console/signal/signals | (console) | OBSOLÈTE — stub de redirection vers /console/seshat/signals (alias sans fonction propre) |
 | //console/signal/tarsis | (console) | OBSOLÈTE — stub de redirection vers /console/seshat/tarsis (alias sans fonction propre) |
-| //console/socle/commissions | (console) | À PORTER (P1 — commissions talents : générer l'ordre, marquer payé — la boucle guilde→mobile money qui clôt le funnel ; pas de table v7) |
+| //console/socle/commissions | (console) | PORTÉ → /admin/commissions (table `TalentPayout` tranche 5, missionId UNIQUE : l'ordre naît À LA VALIDATION de la mission Guilde, dans la MÊME transaction que le flip DELIVERED→VALIDATED — brut = montant saisi par la marque au formulaire sinon dailyRate × jours dérivé (sinon refus honnête AMOUNT_REQUIRED), taux JAMAIS en dur : ZoneIndex famille "commission" clé guild.rate, seed 0.15 `placeholder-operator-to-confirm` (legacy n'avait AUCUN taux plat : commission-engine 25–40 % par tier talent, Hub-Escrow 20 %→8 %), brut/commission/net FIGÉS à la création ; file PENDING→APPROVED→PAID : l'opérateur paie en momo et saisit la référence (pattern /admin/paiements), totaux PAR DEVISE, flips atomiques, audit `payout.create|approve|reject|pay` chaîné dans le workspace payeur — WP-024) |
 | //console/socle/contracts | (console) | À PORTER (P3 — contrats : création, suivi, échéances ; pas de table v7) |
 | //console/socle/escrow | (console) | À PORTER (P3 — séquestre des missions guilde + arbitrage (essence ADR-0116 legacy) ; pas de table v7) |
-| //console/socle/invoices | (console) | À PORTER (P3 — projection factures des commissions talents ; dépend de la table commissions) |
+| //console/socle/invoices | (console) | À PORTER (P3 — projection factures des commissions talents ; la table `TalentPayout` existe depuis WP-024, reste la projection facture/justificatif) |
 | //console/socle/manual-subscriptions | (console) | FUSIONNÉ → /admin/paiements (file Valider/Rejeter, WP-007) + /admin/abonnements (cycle de vie cross-workspace, statuts dérivés finance.ts, filtres/échéances) |
 | //console/socle/market-costs | (console) | FUSIONNÉ → /admin/referentiels (familles ZoneIndex cost-of-living & co, éditables, source obligatoire) |
 | //console/socle/pipeline | (console) | À PORTER (P2 — pipeline commercial : conversion + prévision de revenus ; pas de table CRM v7) |
@@ -196,9 +196,9 @@ Legacy : 253 pages · 112 routers tRPC · 115 services — v7 au 2026-07-02 (vag
 | //creator | (creator) | FUSIONNÉ → /studio (hub créateur : profil talent, mur des missions, candidatures — WP-011) |
 | //creator/community/events | (creator) | À PORTER (P3 — inscription des talents aux événements ; pas de table v7) |
 | //creator/community/guild | (creator) | À PORTER (P3 — annuaire des membres de la guilde côté talent) |
-| //creator/earnings/history | (creator) | À PORTER (P2 — historique des gains du talent par mois ; dépend de la table commissions) |
+| //creator/earnings/history | (creator) | FUSIONNÉ → /studio § « Mes gains » (ordres réels par statut : brut, commission Guilde au taux du référentiel, net, référence momo une fois payé, échéance « paiement manuel sous 72 h ouvrées » ; le groupement PAR MOIS du legacy viendra avec le volume — WP-024) |
 | //creator/earnings/invoices | (creator) | À PORTER (P3 — factures/justificatifs des commissions payées) |
-| //creator/earnings/missions | (creator) | À PORTER (P3 — gains ventilés par mission) |
+| //creator/earnings/missions | (creator) | FUSIONNÉ → /studio § « Mes gains » (une ligne par mission validée : titre, brut/commission/net, statut du circuit, référence de paiement — WP-024) |
 | //creator/earnings/qc | (creator) | À PORTER (P3 — rémunération des revues QC effectuées) |
 | //creator/learn/adve | (creator) | PORTÉ → /studio/academie/adve-fondamentaux (8 piliers question+pédagogie portés verbatim ; échelle des paliers RECÂBLÉE sur `domain/scoring` — le legacy affichait 5 paliers, le canon v7 en a 6 avec bornes réelles ; progression localStorage par appareil, WP-020) |
 | //creator/learn/cases | (creator) | PORTÉ → /studio/academie/etudes-de-cas (les 3 cas d'école complets — contexte/défi/approche/application/résultats/enseignements — avec mention explicite « chiffres pédagogiques, pas des références client », WP-020) |
@@ -222,7 +222,7 @@ Legacy : 253 pages · 112 routers tRPC · 115 services — v7 au 2026-07-02 (vag
 | //intake/[token] | (intake) | À PORTER (P2 — questionnaire long par lien token avec reprise de session ; l'intake public v7 couvre le tronc, WP-004) |
 | //intake/[token]/ingest | (intake) | À PORTER (P1 — diagnostic depuis documents uploadés : extraction IA → score, fallback questionnaire jamais bloquant) |
 | //intake/[token]/ingest-plus | (intake) | À PORTER (P2 — variante documents + scan d'URL en ligne) |
-| //intake/[token]/result | (intake) | À PORTER (P1 — rapport ADVE complet du diagnostic (web + PDF) — l'actif de conversion ; v7 n'a que la jauge et le score partageable) |
+| //intake/[token]/result | (intake) | PORTÉ → /intake/rapport/[token] (rapport ADVE complet : score global + par pilier, constat CHAMP PAR CHAMP (déclaré vs vide) sur les seules données du lead, 3 actions, méthode expliquée depuis les constantes canon `domain/scoring`, CTA conversion ; même page imprimable print CSS pattern /app/oracle/print — le narratif LLM legacy n'est PAS reconduit (doctrine déterministe) ; token JWT jose HS256 AUTH_SECRET 30 j scope `share.rapport`, lien « Voir le rapport complet » exposé sur /intake/resultat, lien mort → page morte propre, noindex — WP-023) |
 | //intake/[token]/short | (intake) | À PORTER (P2 — diagnostic depuis texte collé (extraction IA)) |
 | //launchpad/crew-bootstrap | (intake) | OBSOLÈTE — stub J10 Phase 18 : bootstrap d'une équipe nommée en dur ; la création réelle passait déjà par l'auth standard |
 | //launchpad/portfolio-bulk-import | (intake) | OBSOLÈTE — wizard d'import CSV du Brand Tree Phase 18 wipé (cf. lignes portfolio) |
@@ -256,7 +256,7 @@ Legacy : 253 pages · 112 routers tRPC · 115 services — v7 au 2026-07-02 (vag
 | //sla | (public) | PORTÉ (mécanique — à confirmer) |
 | //status | (public) | PORTÉ (mécanique — à confirmer) |
 | //trust-center | (public) | PORTÉ (mécanique — à confirmer) |
-| //shared/strategy/[token] | (shared) | À PORTER (P1 — partage public du livrable Oracle par lien token révocable ; v7 n'a que /app/oracle/print) |
+| //shared/strategy/[token] | (shared) | PORTÉ → /partage/oracle/[token] (partage public de l'Oracle : bouton « Partager » sur /app/oracle → token JWT jose HS256 AUTH_SECRET 30 j scope `share.oracle` {deliverableId, brandId} + AuditLog `deliverable.share` à chaque génération ; page read-only bandeau « Oracle partagé par <marque> · généré avec La Fusée », noindex, token expiré/falsifié → page morte propre ; le lien montre la DERNIÈRE composition (Deliverable upserté). Écart assumé vs legacy « révocable » : stateless sans table ⇒ NON révocable pendant 30 j, dit en clair dans l'UI du bouton — la révocation = nonce persistable, tranche future — WP-023) |
 | /portals | root | FUSIONNÉ → /portails (hub role-aware des 3 espaces + console, session requise, WP-020) |
 | /unauthorized | root | OBSOLÈTE — page 403 dédiée : le middleware v7 redirige (/connexion ou /app) et chaque espace rend son refus en page |
 
@@ -306,9 +306,14 @@ redirection, multi-opérateurs licenciés…) ou duplique une capacité v7 sous 
 
 ### Top 10 À PORTER (les 8 P1, puis les 2 P2 de tête — ordonnés)
 
-1. **//shared/strategy/[token]** (P1) — partage public du livrable Oracle par lien : le livrable payé doit pouvoir circuler ; v7 n'a que /app/oracle/print.
-2. **//intake/[token]/result** (P1) — rapport ADVE complet du diagnostic (web + PDF) : l'actif de conversion du funnel ; v7 n'a que jauge + score partageable.
-3. **//console/socle/commissions** (P1) — commissions talents (générer l'ordre, marquer payé) : la boucle guilde→mobile money qui clôt le funnel produit.
+> Post-triage : les n°1 et n°2 ont été **PORTÉS par WP-023**, le n°3 **PORTÉ par WP-024**
+> (2026-07-02) — voir leurs lignes re-statuées ci-dessus. WP-024 a aussi FUSIONNÉ
+> //agency/commissions et //creator/earnings/{history,missions}. Compte courant : PORTÉ 35 ·
+> FUSIONNÉ 88 · À PORTER P1 5 (n°4-8) · P2 26 · P3 42. Le reste du top inchangé.
+
+1. ~~**//shared/strategy/[token]** (P1)~~ — **PORTÉ (WP-023)** → /partage/oracle/[token].
+2. ~~**//intake/[token]/result** (P1)~~ — **PORTÉ (WP-023)** → /intake/rapport/[token].
+3. ~~**//console/socle/commissions** (P1)~~ — **PORTÉ (WP-024)** → /admin/commissions : la boucle guilde→mobile money est fermée (`TalentPayout` à la validation, taux du référentiel, file momo + référence).
 4. **//cockpit/intelligence/community** (P1) — suivi superfans & santé communauté : le cœur de la doctrine (accumulation de superfans).
 5. **//console/arene/social-audit** (P1) — relevés followers + connecteurs sociaux : la donnée qui alimente le n°4.
 6. **//cockpit/intelligence/overton** (P1) — état de la fenêtre d'Overton sectorielle : l'autre moitié de la doctrine.

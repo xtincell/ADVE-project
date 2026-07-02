@@ -64,6 +64,7 @@ model Workspace {
   brands        Brand[]
   subscriptions Subscription[]
   payments      Payment[]
+  talentPayouts TalentPayout[] // gains talents dus par ce workspace (tranche 5, WP-024)
 }
 
 model Membership {
@@ -357,6 +358,7 @@ model Mission {
   brief            Brief                @relation(fields: [briefId], references: [id])
   assigneeTalent   TalentProfile?       @relation(fields: [assigneeTalentId], references: [id])
   applications     MissionApplication[]
+  payout           TalentPayout? // ordre de gain créé à la validation (tranche 5, WP-024)
 
   @@index([briefId, status])
   @@index([status, createdAt])
@@ -407,6 +409,7 @@ model TalentProfile {
   country      Country              @relation(fields: [countryCode], references: [code])
   applications MissionApplication[]
   missions     Mission[] // missions gagnées via la Guilde (assigneeTalentId)
+  payouts      TalentPayout[] // gains de mission (tranche 5, WP-024)
 
   @@index([visibility, availability])
 }
@@ -426,6 +429,52 @@ model MissionApplication {
   @@unique([missionId, talentId]) // une candidature par talent et par mission
   @@index([missionId, status])
   @@index([talentId, status])
+}
+
+// ————— Commissions talents (tranche 5, WP-024) —————
+// La boucle guilde → mobile money qui clôt le funnel : à la validation d'une
+// mission gagnée VIA LA GUILDE (assigneeTalentId posé), le service crée UN
+// ordre de gain (missionId unique) dans la même transaction que le flip
+// DELIVERED → VALIDATED. Le brut vient de dailyRate × jours (assignedAt →
+// deliveredAt) quand c'est dérivable, sinon du montant saisi par la marque au
+// formulaire de validation — jamais inventé. Le taux de commission vient du
+// référentiel `ZoneIndex` famille "commission" clé "guild.rate" (seedé,
+// éditable dans /admin/referentiels), JAMAIS du code ; brut/commission/net
+// sont FIGÉS à la création (un changement de barème ultérieur ne réécrit pas
+// les ordres passés). Circuit opérateur : PENDING → APPROVED → PAID (momo
+// manuel + référence saisie — pattern /admin/paiements), ou REJECTED.
+
+enum TalentPayoutStatus {
+  PENDING // créé à la validation de la mission — en attente d'approbation opérateur
+  APPROVED // approuvé — dans la file de paiement momo
+  PAID // payé (référence de transaction saisie par l'opérateur)
+  REJECTED // écarté (décision terminale, motivée dans l'audit)
+}
+
+model TalentPayout {
+  id               String             @id @default(cuid())
+  missionId        String             @unique // une mission validée = au plus un ordre de gain
+  talentId         String // TalentProfile.id — le bénéficiaire (toujours un talent Guilde)
+  workspaceId      String // workspace PAYEUR (celui de la marque dont la mission est validée)
+  amountGross      Int // brut dû au titre de la mission — unité mineure de currency
+  commissionRate   Float // taux appliqué à la création (référentiel "commission", figé ici)
+  commissionAmount Int // = round(amountGross × commissionRate)
+  amountNet        Int // = amountGross − commissionAmount (l'invariant est testé)
+  currency         String // devise du pays du profil talent (référentiel Country)
+  status           TalentPayoutStatus @default(PENDING)
+  method           String // momo | manual — rail doctrinal momo par défaut, confirmé par l'opérateur au paiement
+  reference        String? // référence de la transaction (momo/virement) saisie au passage PAID
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  approvedAt       DateTime?
+  paidAt           DateTime?
+  mission          Mission            @relation(fields: [missionId], references: [id])
+  talent           TalentProfile      @relation(fields: [talentId], references: [id])
+  workspace        Workspace          @relation(fields: [workspaceId], references: [id])
+
+  @@index([status, createdAt])
+  @@index([talentId, status])
+  @@index([workspaceId, createdAt])
 }
 
 // ————— Coffre de marque (tranche 4, WP-019) —————

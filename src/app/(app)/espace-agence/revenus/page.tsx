@@ -14,12 +14,13 @@ export const metadata: Metadata = { title: "Revenus — Espace agence" };
 
 /**
  * /espace-agence/revenus — port HONNÊTE de `(agency)/agency/revenue` legacy.
- * Le legacy affichait des commissions par mission (grossAmount, taux, fee
- * opérateur) — AUCUNE table de commission n'existe en v7 : cette partie reste
- * une carte « à venir », zéro chiffre inventé. Ce qui est réel et affiché :
- * les paiements `confirmed` de la flotte (totaux par mois et PAR DEVISE,
- * ventilés par client) et un MRR simple dérivé des abonnements actifs
- * (paiements réellement encaissés, normalisés 30 j par la période du plan).
+ * Ce qui est réel et affiché : les paiements `confirmed` de la flotte (totaux
+ * par mois et PAR DEVISE, ventilés par client), un MRR simple dérivé des
+ * abonnements actifs (paiements réellement encaissés, normalisés 30 j par la
+ * période du plan), et depuis WP-024 les COMMISSIONS TALENTS réelles — les
+ * ordres `TalentPayout` générés par les missions Guilde validées de la flotte
+ * (brut/commission/net figés à la création, taux du référentiel). Zéro
+ * projection, zéro conversion entre devises.
  */
 
 const NUMBER_FORMAT = new Intl.NumberFormat("fr-FR");
@@ -56,8 +57,20 @@ export default async function AgencyRevenuePage() {
   const revenue = await getFleetRevenue(session);
   if (!revenue) return <NoAgencyState title="Revenus" />;
 
-  const { agency, workspaceNames, months, confirmedPaymentCount, mrr, activeSubscriptions } =
-    revenue;
+  const {
+    agency,
+    workspaceNames,
+    months,
+    confirmedPaymentCount,
+    mrr,
+    activeSubscriptions,
+    commissions,
+  } = revenue;
+  const payoutTotal =
+    commissions.counts.PENDING +
+    commissions.counts.APPROVED +
+    commissions.counts.PAID +
+    commissions.counts.REJECTED;
 
   // Encaissé total par devise = repli des lignes mensuelles (déjà réelles).
   const grandTotals: Record<string, number> = {};
@@ -237,25 +250,64 @@ export default async function AgencyRevenuePage() {
         )}
       </section>
 
-      {/* ── Commissions (à venir — honnête) ────────────────────────────── */}
-      <section className="space-y-4" aria-label="Commissions d'agence">
-        <h2 className="font-display text-xl font-semibold">Commissions d&apos;agence</h2>
-        <div className="flex flex-col gap-3 rounded-lg border border-dashed border-line bg-ink-2/50 p-6">
-          <div className="flex items-center justify-between">
-            <span className="text-smoke-2 [&_svg]:size-5" aria-hidden>
-              <HandCoins />
-            </span>
-            <Badge variant="outline">À venir</Badge>
-          </div>
-          <h3 className="font-display text-base font-semibold text-bone">
-            Pas de table de commission en v7
-          </h3>
-          <p className="text-sm leading-relaxed text-sand">
-            L&apos;ancien portail calculait par mission un montant brut, un taux de commission et
-            un fee opérateur. Ce moteur reviendra branché sur de vraies tables — aucun chiffre ne
-            sera montré avant d&apos;être calculé sur des lignes réelles.
+      {/* ── Commissions talents (réelles — table TalentPayout, WP-024) ─── */}
+      <section className="space-y-4" aria-label="Commissions talents">
+        <div>
+          <h2 className="font-display text-xl font-semibold">Commissions talents</h2>
+          <p className="text-sm text-sand">
+            Les ordres de gain générés par les missions Guilde validées de la flotte — brut,
+            commission et net figés à la création (taux du référentiel). La file de paiement vit
+            côté opérateur.
           </p>
         </div>
+
+        {payoutTotal === 0 ? (
+          <EmptyState
+            icon={<HandCoins />}
+            title="Aucune commission générée"
+            description="Dès qu'une marque de la flotte valide une mission gagnée via la Guilde, l'ordre de gain du talent (brut, commission, net) apparaît ici — jamais avant, rien d'inventé."
+          />
+        ) : (
+          <div className="grid gap-bento sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-lg border border-line bg-ink-2 p-6">
+              <p className="text-sm font-medium text-sand">Ordres générés</p>
+              <p className="font-display mt-2 text-2xl font-semibold text-bone">
+                {payoutTotal - commissions.counts.REJECTED}
+              </p>
+              <p className="mt-1 text-xs text-smoke-2">
+                {commissions.counts.PENDING} en attente · {commissions.counts.APPROVED} approuvé
+                {commissions.counts.APPROVED > 1 ? "s" : ""} · {commissions.counts.PAID} payé
+                {commissions.counts.PAID > 1 ? "s" : ""}
+                {commissions.counts.REJECTED > 0
+                  ? ` (+ ${commissions.counts.REJECTED} écarté${commissions.counts.REJECTED > 1 ? "s" : ""})`
+                  : ""}
+              </p>
+            </div>
+            <div className="rounded-lg border border-line bg-ink-2 p-6">
+              <p className="text-sm font-medium text-sand">Commissions générées</p>
+              <p className="font-display mt-2 text-2xl font-semibold text-bone">
+                {totalsLine(commissions.generatedCommissionByCurrency)}
+              </p>
+              <p className="mt-1 text-xs text-smoke-2">ordres vivants, par devise</p>
+            </div>
+            <div className="rounded-lg border border-line bg-ink-2 p-6">
+              <p className="text-sm font-medium text-sand">Commissions encaissées</p>
+              <p className="font-display mt-2 text-2xl font-semibold text-bone">
+                {totalsLine(commissions.paidCommissionByCurrency)}
+              </p>
+              <p className="mt-1 text-xs text-smoke-2">ordres payés uniquement</p>
+            </div>
+            <div className="rounded-lg border border-line bg-ink-2 p-6">
+              <p className="text-sm font-medium text-sand">Net talents encore dû</p>
+              <p className="font-display mt-2 text-2xl font-semibold text-bone">
+                {totalsLine(commissions.dueNetByCurrency)}
+              </p>
+              <p className="mt-1 text-xs text-smoke-2">
+                en attente + approuvés — réglé en mobile money par l&apos;opérateur
+              </p>
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );

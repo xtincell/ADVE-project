@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Check, Rocket, X } from "lucide-react";
+import { ArrowRight, Check, FileText, Rocket, X } from "lucide-react";
 import { ADVE_PILLARS } from "@/domain/pillars";
 import { PILLAR_LABELS } from "@/domain/pillar-fields";
 import { LEVEL_DEFINITIONS, nextLevel } from "@/domain/scoring";
 import { getLeadDiagnostic } from "@/server/funnel";
+import { createRapportShareLink } from "@/server/share";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,6 +56,9 @@ export default async function ResultatPage({
   const { leadId } = await params;
   const result = await getLeadDiagnostic(leadId);
   if (!result) notFound();
+
+  // Lien signé (30 j) vers le rapport complet — pure signature, zéro écriture.
+  const rapport = await createRapportShareLink(leadId);
 
   const { lead, secteur, countryName, diagnostic } = result;
   const levelDef = LEVEL_DEFINITIONS[diagnostic.level];
@@ -135,7 +139,22 @@ export default async function ResultatPage({
             })}
           </div>
 
-          <p className="mt-8 font-mono text-xs leading-relaxed text-smoke-2">
+          {/* Rapport complet — l'actif de conversion (web + imprimable) */}
+          <div className="mt-10 flex flex-wrap items-center gap-4">
+            <Link
+              href={rapport.path}
+              className={buttonVariants({ variant: "outline", size: "md" })}
+            >
+              <FileText aria-hidden="true" />
+              Voir le rapport complet
+            </Link>
+            <p className="max-w-md text-xs leading-relaxed text-smoke-2">
+              Constat champ par champ, 3 actions, méthode expliquée — version
+              imprimable incluse. Lien valable 30 jours.
+            </p>
+          </div>
+
+          <p className="mt-6 font-mono text-xs leading-relaxed text-smoke-2">
             ↳ envie de le montrer ? Ce score a une{" "}
             <Link
               href={`/intake/score/${lead.id}`}

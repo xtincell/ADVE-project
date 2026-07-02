@@ -20,6 +20,7 @@ import {
   setMissionGuildOpen,
   shortlistApplication,
 } from "@/server/guild";
+import { declaredGrossSchema, PayoutError } from "@/server/payouts";
 
 /**
  * Server actions du circuit mission : OPEN → ASSIGNED → DELIVERED → VALIDATED,
@@ -42,7 +43,7 @@ async function sessionBrand(next: string) {
 }
 
 function toFormError(err: unknown, logPrefix: string): FormState {
-  if (err instanceof CampaignError || err instanceof GuildError) {
+  if (err instanceof CampaignError || err instanceof GuildError || err instanceof PayoutError) {
     return { formError: err.message };
   }
   console.error(`[campagnes] ${logPrefix}`, err);
@@ -116,7 +117,11 @@ export async function deliverMissionAction(
   return null;
 }
 
-/** DELIVERED → VALIDATED : livraison validée — fin du circuit. */
+/**
+ * DELIVERED → VALIDATED : livraison validée — fin du circuit. Mission gagnée
+ * via la Guilde : crée l'ordre de gain (WP-024) — `grossAmount` optionnel
+ * saisi par la marque (sinon dérivation dailyRate × jours côté service).
+ */
 export async function validateMissionAction(
   _prev: FormState,
   formData: FormData,
@@ -127,8 +132,18 @@ export async function validateMissionAction(
   const ids = parseIds(formData);
   if (!ids) return { formError: "Identifiant manquant — rechargez la page." };
 
+  const gross = declaredGrossSchema.safeParse(formData.get("grossAmount") ?? "");
+  if (!gross.success) {
+    return { fieldErrors: { grossAmount: [gross.error.issues[0]!.message] } };
+  }
+
   try {
-    await validateMission({ brandId: ctx.brandId, missionId: ids.missionId, actorId: ctx.actorId });
+    await validateMission({
+      brandId: ctx.brandId,
+      missionId: ids.missionId,
+      actorId: ctx.actorId,
+      declaredGross: gross.data,
+    });
   } catch (err) {
     return toFormError(err, "validateMission a échoué :");
   }

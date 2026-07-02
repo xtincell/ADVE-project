@@ -18,6 +18,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ActionForm } from "@/components/pillars/action-form";
 import { MarkdownView } from "@/components/pillars/markdown-view";
 import { composeOracleAction } from "./actions";
+import { ShareOracleButton } from "./share-button";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Oracle" };
@@ -110,6 +111,7 @@ export default async function OraclePage() {
               <Printer aria-hidden />
               Version imprimable
             </Link>
+            <ShareOracleButton />
             <ActionForm
               action={composeOracleAction}
               label="Recomposer l'Oracle"

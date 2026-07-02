@@ -7,6 +7,7 @@ import {
   type CampaignStatus,
   type MissionStatus,
 } from "@/domain/campaign";
+import { summarizePayouts, type PayoutStatus, type PayoutSummary } from "@/domain/payout";
 import { costSummary } from "./campaigns";
 import {
   PLAN_PERIOD_DAYS,
@@ -833,6 +834,9 @@ export type FleetRevenue = {
   /** MRR simple dérivé des abonnements actifs (paiements réels normalisés 30 j). */
   mrr: MrrSummary;
   activeSubscriptions: number;
+  /** Commissions talents générées par les missions Guilde de la flotte (WP-024) —
+   * agrégat pur `summarizePayouts` sur les ordres `TalentPayout` réels. */
+  commissions: PayoutSummary;
 };
 
 /**
@@ -863,10 +867,11 @@ export async function getFleetRevenue(
       confirmedPaymentCount: 0,
       mrr: { byCurrency: {}, contributions: [], unresolved: [] },
       activeSubscriptions: 0,
+      commissions: summarizePayouts([]),
     };
   }
 
-  const [payments, subscriptions] = await Promise.all([
+  const [payments, subscriptions, payoutRows] = await Promise.all([
     db.payment.findMany({
       where: { workspaceId: { in: workspaceIds }, status: "confirmed" },
       orderBy: { createdAt: "desc" },
@@ -881,6 +886,16 @@ export async function getFleetRevenue(
     db.subscription.findMany({
       where: { workspaceId: { in: workspaceIds } },
       select: { id: true, workspaceId: true, plan: true, status: true, expiresAt: true },
+    }),
+    db.talentPayout.findMany({
+      where: { workspaceId: { in: workspaceIds } },
+      select: {
+        status: true,
+        currency: true,
+        amountGross: true,
+        commissionAmount: true,
+        amountNet: true,
+      },
     }),
   ]);
 
@@ -914,6 +929,9 @@ export async function getFleetRevenue(
     confirmedPaymentCount: payments.length,
     mrr,
     activeSubscriptions: actives.length,
+    commissions: summarizePayouts(
+      payoutRows.map((row) => ({ ...row, status: row.status as PayoutStatus })),
+    ),
   };
 }
 

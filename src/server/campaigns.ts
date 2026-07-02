@@ -1,11 +1,5 @@
-import type {
-  Brief,
-  Campaign,
-  CampaignAction,
-  Country,
-  Mission,
-  Prisma,
-} from "@prisma/client";
+import { Prisma } from "@prisma/client";
+import type { Brief, Campaign, CampaignAction, Country, Mission } from "@prisma/client";
 import { z } from "zod";
 import { getDb } from "@/lib/db";
 import {
@@ -21,6 +15,7 @@ import {
   type BriefContent,
   type MissionStatus,
 } from "@/domain/campaign";
+import { insertPayout, prepareMissionPayout } from "./payouts";
 import { logAudit } from "./audit";
 
 /**
@@ -794,13 +789,87 @@ export async function deliverMission(input: MissionGateInput): Promise<Mission> 
   });
 }
 
-/** DELIVERED → VALIDATED : livraison validée par l'opérateur (fin du circuit). */
-export async function validateMission(input: MissionGateInput): Promise<Mission> {
-  return transitionMission(input.brandId, input.missionId, input.actorId, {
-    to: "VALIDATED",
-    auditAction: "mission.validate",
-    data: (now) => ({ validatedAt: now }),
+export type ValidateMissionInput = MissionGateInput & {
+  /** Montant brut saisi par la marque au formulaire — null = dériver du tarif (WP-024). */
+  declaredGross?: number | null;
+};
+
+/**
+ * DELIVERED → VALIDATED : livraison validée par l'opérateur (fin du circuit).
+ *
+ * WP-024 — si la mission a été gagnée VIA LA GUILDE (assigneeTalentId posé),
+ * la validation crée l'ordre de gain `TalentPayout` PENDING dans la MÊME
+ * transaction que le flip : brut = montant déclaré par la marque, sinon
+ * dailyRate × jours si dérivable (sinon la validation est refusée avec la
+ * marche à suivre) ; taux = référentiel ZoneIndex "commission" — jamais en
+ * dur, jamais inventé. Mission assignée hors Guilde (nom déclaré) : la
+ * validation passe sans ordre, il n'y a pas de compte talent à créditer.
+ */
+export async function validateMission(input: ValidateMissionInput): Promise<Mission> {
+  const { brandId, missionId, actorId } = input;
+  const mission = await requireMission(brandId, missionId);
+
+  const gate = canTransitionMission(mission.status as MissionStatus, "VALIDATED");
+  if (!gate.ok) throw gateRefused(gate.reason);
+
+  const workspaceId = mission.brief.action.campaign.brand.workspaceId;
+
+  // Ordre de gain préparé AVANT la transaction (lectures référentiel + talent,
+  // non mutantes) — null si la mission n'a pas de talent Guilde.
+  const payoutPlan = await prepareMissionPayout({
+    mission: {
+      id: mission.id,
+      assigneeTalentId: mission.assigneeTalentId,
+      assignedAt: mission.assignedAt,
+      deliveredAt: mission.deliveredAt,
+    },
+    workspaceId,
+    declaredGross: input.declaredGross ?? null,
   });
+
+  const db = getDb();
+  try {
+    return await db.$transaction(async (tx) => {
+      const flipped = await tx.mission.updateMany({
+        where: { id: mission.id, status: mission.status },
+        data: { status: "VALIDATED", validatedAt: new Date() },
+      });
+      if (flipped.count === 0) {
+        throw gateRefused("Cette mission vient de changer d'état — rechargez la page.");
+      }
+      await logAudit(
+        {
+          workspaceId,
+          actorId,
+          action: "mission.validate",
+          entity: "Mission",
+          entityId: mission.id,
+          payload: payoutPlan
+            ? {
+                payout: {
+                  basis: payoutPlan.basis,
+                  amountGross: payoutPlan.amountGross,
+                  amountNet: payoutPlan.amountNet,
+                  currency: payoutPlan.currency,
+                },
+              }
+            : undefined,
+        },
+        tx,
+      );
+      if (payoutPlan) {
+        await insertPayout(tx, payoutPlan, actorId);
+      }
+      return tx.mission.findUniqueOrThrow({ where: { id: mission.id } });
+    });
+  } catch (err) {
+    // Course perdue sur l'unicité missionId de TalentPayout (état incohérent
+    // ou double validation concurrente) — message actionnable, pas de 500.
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      throw gateRefused("Un ordre de gain existe déjà pour cette mission — rechargez la page.");
+    }
+    throw err;
+  }
 }
 
 // ── Lectures (pages /campagnes et /missions) ───────────────────────────

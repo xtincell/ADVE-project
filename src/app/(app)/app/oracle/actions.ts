@@ -7,6 +7,7 @@ import { readSession } from "@/lib/session";
 import { BrandError, getBrandForSession } from "@/server/brand";
 import { composeOracleDeliverable } from "@/server/deliverables";
 import { canComposeOracle } from "@/server/entitlements";
+import { createOracleShareLink } from "@/server/share";
 
 /**
  * Compose (ou recompose) l'Oracle — mutation EXPLICITE uniquement : la page
@@ -48,4 +49,47 @@ export async function composeOracleAction(
 
   revalidatePath("/app/oracle", "layout");
   return null;
+}
+
+/** État du bouton « Partager » — soit un lien généré, soit une erreur FR. */
+export type ShareOracleState =
+  | { path: string; expiresAt: string }
+  | { formError: string }
+  | null;
+
+/**
+ * Génère le lien PUBLIC de l'Oracle (mutation explicite : AuditLog
+ * `deliverable.share` à chaque génération). Pas de gate d'abonnement : la
+ * LECTURE d'un Oracle déjà composé est libre — partager, c'est faire lire.
+ * Limite V1 assumée : token stateless ⇒ lien valable 30 jours, non révocable
+ * (documenté dans l'UI du bouton).
+ */
+export async function shareOracleAction(
+  _prev: ShareOracleState,
+  _formData: FormData,
+): Promise<ShareOracleState> {
+  const session = await readSession();
+  if (!session) redirect("/connexion?next=/app/oracle");
+
+  const brand = await getBrandForSession(session);
+  if (!brand) {
+    return { formError: "Aucune marque dans cet espace — commencez par le diagnostic d'entrée." };
+  }
+
+  try {
+    const link = await createOracleShareLink({
+      brandId: brand.id,
+      workspaceId: session.workspaceId,
+      actorId: session.userId,
+    });
+    if (!link) {
+      return { formError: "Aucun Oracle composé à partager — composez-le d'abord." };
+    }
+    return { path: link.path, expiresAt: link.expiresAt.toISOString() };
+  } catch (err) {
+    console.error("[oracle] génération du lien de partage a échoué :", err);
+    return {
+      formError: "La génération du lien a échoué pour une raison technique. Réessayez dans un instant.",
+    };
+  }
 }
