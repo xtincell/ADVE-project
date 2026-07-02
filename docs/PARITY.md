@@ -2,7 +2,7 @@
 
 > Générée mécaniquement le 2026-07-02. **Règle : le rebuild n'est FINI que quand chaque ligne est PORTÉ, FUSIONNÉ (équivalent v7 à autre URL) ou OBSOLÈTE (justifié).** Chaque agent qui porte met à jour ses lignes dans sa PR. Board : docs/REBUILD-PLAN.md.
 
-Legacy : 253 pages · 112 routers tRPC · 115 services — v7 au 2026-07-02 : 36 pages.
+Legacy : 253 pages · 112 routers tRPC · 115 services — v7 au 2026-07-02 (vague 3) : 74 pages.
 
 | Route legacy | Groupe | Statut |
 |---|---|---|
@@ -73,11 +73,11 @@ Legacy : 253 pages · 112 routers tRPC · 115 services — v7 au 2026-07-02 : 36
 | //cockpit/portfolio/[corporateSlug] | (cockpit) | À PORTER |
 | //cockpit/settings | (cockpit) | À PORTER |
 | //console | (console) | FUSIONNÉ → /admin (vue d'ensemble, 8 compteurs vivants) |
-| //console/academie | (console) | À PORTER |
-| //console/academie/boutique | (console) | À PORTER |
-| //console/academie/certifications | (console) | À PORTER |
-| //console/academie/content | (console) | À PORTER |
-| //console/academie/courses | (console) | À PORTER |
+| //console/academie | (console) | FUSIONNÉ → /studio/academie (la page legacy était une pure redirection vers arene/academie — même sort, WP-020) |
+| //console/academie/boutique | (console) | À PORTER (pas de table BoutiqueItem v7 — vente de playbooks/templates à re-statuer ; la page legacy redirigeait vers arene) |
+| //console/academie/certifications | (console) | À PORTER (pas de table certification/enrollment v7 ; la page legacy redirigeait vers arene) |
+| //console/academie/content | (console) | FUSIONNÉ → /blog (« The Upgrade » éditorial : la page legacy n'était qu'un EmptyState à zéro contenu ; l'éditorial réel = 6 articles statiques portés WP-014) |
+| //console/academie/courses | (console) | FUSIONNÉ → /studio/academie (les 4 cours réellement seedés deviennent des modules statiques code-first — l'admin CRUD de cours n'a pas de table v7, le contenu s'édite en code, WP-020) |
 | //console/anubis | (console) | À PORTER |
 | //console/anubis/api-billing | (console) | À PORTER |
 | //console/anubis/blog | (console) | À PORTER |
@@ -85,25 +85,25 @@ Legacy : 253 pages · 112 routers tRPC · 115 services — v7 au 2026-07-02 : 36
 | //console/anubis/crm | (console) | À PORTER |
 | //console/anubis/mcp | (console) | À PORTER |
 | //console/anubis/notifications | (console) | À PORTER |
-| //console/arene/academie | (console) | À PORTER |
-| //console/arene/academie/boutique | (console) | À PORTER |
-| //console/arene/academie/certifications | (console) | À PORTER |
-| //console/arene/academie/content | (console) | À PORTER |
-| //console/arene/academie/courses | (console) | À PORTER |
+| //console/arene/academie | (console) | FUSIONNÉ → /studio/academie (hub Académie côté créateur : catalogue réel du seed legacy porté en modules statiques, leçons au corps réel ouvertes, autres « en cours de migration » ; compteurs admin de cours sans table v7 — WP-020) |
+| //console/arene/academie/boutique | (console) | À PORTER (pas de table BoutiqueItem v7 — vente de playbooks/templates à re-statuer) |
+| //console/arene/academie/certifications | (console) | À PORTER (pas de table certification/enrollment v7 — la certification par pilier reste un thème produit ouvert) |
+| //console/arene/academie/content | (console) | FUSIONNÉ → /blog (« The Upgrade » : EmptyState legacy sans table dédiée ; l'éditorial réel vit au blog statique WP-014) |
+| //console/arene/academie/courses | (console) | FUSIONNÉ → /studio/academie (le catalogue seedé = 5 modules dont « Études de cas » ; leçons sans corps legacy affichées « à migrer », rien d'inventé — WP-020) |
 | //console/arene/club | (console) | À PORTER |
 | //console/arene/events | (console) | À PORTER |
-| //console/arene/guild | (console) | À PORTER |
-| //console/arene/matching | (console) | À PORTER |
-| //console/arene/missions-guilde | (console) | À PORTER |
+| //console/arene/guild | (console) | FUSIONNÉ → /admin/talents (registre RÉEL des TalentProfile cross-flotte : marché, compétences, tarif indicatif, dispo/visibilité, candidatures/missions comptées ; le tier APPRENTI→ASSOCIE et le vecteur ADVERTIS legacy n'ont pas de colonnes v7 — non montrés, WP-020) |
+| //console/arene/matching | (console) | FUSIONNÉ → /admin/talents (file des candidatures) + page mission côté marque (WP-011) — le matching v7 est une DÉCISION HUMAINE sur candidatures (doctrine anti premier-arrivé) ; le moteur de matching auto legacy n'est pas reconduit |
+| //console/arene/missions-guilde | (console) | FUSIONNÉ → /admin/talents (candidatures cross-flotte) — la modération legacy visait le DÉPÔT PUBLIC de missions, qui n'existe pas en v7 : le mur se publie par la marque (gate openToGuild, WP-011), il n'y a rien à modérer |
 | //console/arene/orgs | (console) | À PORTER |
 | //console/arene/social-audit | (console) | À PORTER |
 | //console/artemis | (console) | À PORTER |
-| //console/artemis/campaigns | (console) | À PORTER |
+| //console/artemis/campaigns | (console) | FUSIONNÉ → /admin/campagnes (vue cross-workspace réelle : marque, marché, statut, actions dont briefées, missions par étape, budget par devise + « à estimer » compté — WP-020) |
 | //console/artemis/campaigns/[id]/postmortem | (console) | À PORTER |
 | //console/artemis/drivers | (console) | À PORTER |
 | //console/artemis/interventions | (console) | À PORTER |
 | //console/artemis/media | (console) | À PORTER |
-| //console/artemis/missions | (console) | À PORTER |
+| //console/artemis/missions | (console) | FUSIONNÉ → /admin/campagnes (missions comptées par étape du circuit, cross-workspace, WP-020) + /espace-agence/missions (vue groupée par étape sur la flotte, WP-018) |
 | //console/artemis/oracle-catalog | (console) | À PORTER |
 | //console/artemis/pr | (console) | À PORTER |
 | //console/artemis/scheduler | (console) | À PORTER |
@@ -122,12 +122,12 @@ Legacy : 253 pages · 112 routers tRPC · 115 services — v7 au 2026-07-02 : 36
 | //console/ecosystem/metrics | (console) | À PORTER |
 | //console/ecosystem/operators | (console) | À PORTER |
 | //console/ecosystem/scoring | (console) | À PORTER |
-| //console/fusee/campaigns | (console) | À PORTER |
+| //console/fusee/campaigns | (console) | FUSIONNÉ → /admin/campagnes (doublon legacy du panneau artemis/campaigns — même sort, WP-020) |
 | //console/fusee/drivers | (console) | À PORTER |
 | //console/fusee/glory | (console) | À PORTER |
 | //console/fusee/interventions | (console) | À PORTER |
 | //console/fusee/media | (console) | À PORTER |
-| //console/fusee/missions | (console) | À PORTER |
+| //console/fusee/missions | (console) | FUSIONNÉ → /admin/campagnes (doublon legacy du panneau artemis/missions — même sort, WP-020) |
 | //console/fusee/pr | (console) | À PORTER |
 | //console/fusee/scheduler | (console) | À PORTER |
 | //console/fusee/social | (console) | À PORTER |
@@ -148,11 +148,11 @@ Legacy : 253 pages · 112 routers tRPC · 115 services — v7 au 2026-07-02 : 36
 | //console/mestor/insights | (console) | À PORTER |
 | //console/mestor/plans | (console) | À PORTER |
 | //console/mestor/recos | (console) | À PORTER |
-| //console/operate/africa-portfolio | (console) | À PORTER |
+| //console/operate/africa-portfolio | (console) | FUSIONNÉ → /admin/exports (l'essence checklist livrables cross-flotte : statut persisté + fraîcheur RECALCULÉE, sections insuffisantes comptées, couverture marques — la matrice RAG/SKU×pays×langue legacy n'a pas de colonnes v7, non montrée, WP-020) |
 | //console/operate/africa-portfolio/deliverable/[id] | (console) | À PORTER |
 | //console/operate/morning-intake | (console) | À PORTER |
 | //console/operations | (console) | À PORTER |
-| //console/oracle/compilation | (console) | À PORTER |
+| //console/oracle/compilation | (console) | FUSIONNÉ → /admin/exports (état de composition cross-flotte ; la composition elle-même reste une action explicite du cockpit /app/oracle, WP-006) |
 | //console/seshat/argos | (console) | À PORTER |
 | //console/seshat/attribution | (console) | À PORTER |
 | //console/seshat/intelligence | (console) | À PORTER |
@@ -200,10 +200,10 @@ Legacy : 253 pages · 112 routers tRPC · 115 services — v7 au 2026-07-02 : 36
 | //creator/earnings/invoices | (creator) | À PORTER |
 | //creator/earnings/missions | (creator) | À PORTER |
 | //creator/earnings/qc | (creator) | À PORTER |
-| //creator/learn/adve | (creator) | À PORTER |
-| //creator/learn/cases | (creator) | À PORTER |
-| //creator/learn/drivers | (creator) | À PORTER |
-| //creator/learn/resources | (creator) | À PORTER |
+| //creator/learn/adve | (creator) | PORTÉ → /studio/academie/adve-fondamentaux (8 piliers question+pédagogie portés verbatim ; échelle des paliers RECÂBLÉE sur `domain/scoring` — le legacy affichait 5 paliers, le canon v7 en a 6 avec bornes réelles ; progression localStorage par appareil, WP-020) |
+| //creator/learn/cases | (creator) | PORTÉ → /studio/academie/etudes-de-cas (les 3 cas d'école complets — contexte/défi/approche/application/résultats/enseignements — avec mention explicite « chiffres pédagogiques, pas des références client », WP-020) |
+| //creator/learn/drivers | (creator) | PORTÉ → /studio/academie/maitriser-drivers (les 13 canaux réels + 4 familles, descriptions portées ; le seed annonçait « 20 canaux » — seuls les 13 documentés existent, rien d'ajouté, WP-020) |
+| //creator/learn/resources | (creator) | OBSOLÈTE (hub de LIENS vers des surfaces legacy wipées — Glory tools, QC, séquences, forum ; aucun contenu propre à porter, l'apprentissage réel vit dans les modules Académie WP-020) |
 | //creator/messages | (creator) | À PORTER |
 | //creator/missions/active | (creator) | FUSIONNÉ → /studio (mes candidatures : acceptée = mission assignée, étape du circuit visible — WP-011) |
 | //creator/missions/available | (creator) | FUSIONNÉ → /studio (mur des missions ouvertes à la Guilde, projection sans donnée de marque, candidature par pitch — WP-011) |
