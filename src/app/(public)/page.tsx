@@ -22,9 +22,11 @@ import { Badge } from "@/components/ui/badge";
 import { CLIENT_STRIP, STATS } from "@/components/marketing/site-data";
 
 /**
- * Landing publique — la promesse mission, le constat, la méthode ADVE→RTIS,
- * le process en 3 étapes, la preuve sociale (track record réel UPgraders),
- * le bandeau vers les pages du site de marque, le CTA vers /intake.
+ * Landing publique — la vitrine GÉNÉRALE : la promesse mission, le constat,
+ * la méthode ADVE→RTIS, le process en 3 étapes, la hiérarchie produit
+ * (La Fusée → /lafusee) vs agence (UPgraders → /agence), la preuve sociale
+ * (track record réel UPgraders), le bandeau vers les pages du site de
+ * marque, le CTA vers /intake. La vitrine PRODUIT dédiée est /lafusee.
  * Copy réécrite depuis legacy/(marketing)/landingintake — sans métriques
  * inventées (les « +250 dirigeants / 4,9/5 » du handoff n'ont pas de source) ;
  * preuve sociale portée du canon legacy data.ts (STATS + CLIENT_STRIP réels).
@@ -285,6 +287,67 @@ function Process() {
   );
 }
 
+/* ── Le produit vs l'agence — la hiérarchie en une section ──────────── */
+
+const VISAGES = [
+  {
+    href: "/lafusee",
+    eyebrow: "Le produit",
+    title: "La Fusée",
+    desc: "L'OS de marque : diagnostic sur 8 piliers, score /200, l'Oracle stratégique, campagnes éclatées en missions, trajectoire mesurée palier par palier.",
+    cta: "Découvrir le produit",
+  },
+  {
+    href: "/agence",
+    eyebrow: "L'agence",
+    title: "UPgraders",
+    desc: "Le cabinet qui a codifié la méthode ADVE/RTIS depuis 2017 — et qui l'opère : conseil, mandats d'exécution, marque blanche, la Guilde de talents.",
+    cta: "Découvrir l'agence",
+  },
+] as const;
+
+function ProduitAgence() {
+  return (
+    <section className="texture-geo bg-ink-0 text-bone">
+      <div className="mx-auto max-w-page px-gutter py-20 sm:py-24">
+        <div className="max-w-2xl">
+          <p className="eyebrow text-coral">Qui fait quoi</p>
+          <h2 className="font-display mt-4 text-4xl font-semibold leading-tight">
+            Un produit. Une agence. <span className="text-coral">Une méthode.</span>
+          </h2>
+          <p className="mt-5 text-lg text-sand">
+            <strong className="text-bone">La Fusée</strong> est le produit —
+            l&apos;OS que vous pilotez. <strong className="text-bone">UPgraders</strong>{" "}
+            est l&apos;agence qui l&apos;a construit et qui l&apos;opère.
+          </p>
+        </div>
+        <div className="mt-10 grid gap-bento sm:grid-cols-2">
+          {VISAGES.map((v) => (
+            <Link
+              key={v.href}
+              href={v.href}
+              className="group rounded-xl border border-line bg-ink-2 p-7 transition-colors hover:border-coral/60"
+            >
+              <p className="eyebrow text-coral">{v.eyebrow}</p>
+              <h3 className="font-display mt-2 text-3xl font-semibold tracking-tight">
+                {v.title}
+              </h3>
+              <p className="mt-3 text-sm leading-relaxed text-sand">{v.desc}</p>
+              <p className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-coral">
+                {v.cta}{" "}
+                <ArrowRight
+                  className="size-4 transition-transform group-hover:translate-x-1"
+                  aria-hidden="true"
+                />
+              </p>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function PreuveSociale() {
   return (
     <section className="border-y border-ink/8 bg-white">
@@ -440,6 +503,7 @@ export default function HomePage() {
       <Constat />
       <Methode />
       <Process />
+      <ProduitAgence />
       <PreuveSociale />
       <Explorer />
       <FinalCta />

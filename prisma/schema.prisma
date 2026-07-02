@@ -378,6 +378,7 @@ model TalentProfile {
   countryCode  String // référentiel Country — jamais de pays inventé
   whatsapp     String? // contact mobile money/WhatsApp — montré côté marque à l'acceptation
   portfolioUrl String?
+  dailyRate    Int? // tarif journalier indicatif DÉCLARÉ par le talent — devise du pays du profil (référentiel Country), null = non communiqué
   availability TalentAvailability   @default(AVAILABLE)
   visibility   TalentVisibility     @default(VISIBLE)
   createdAt    DateTime             @default(now())

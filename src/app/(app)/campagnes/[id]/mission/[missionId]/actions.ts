@@ -13,11 +13,20 @@ import {
   deliverMission,
   validateMission,
 } from "@/server/campaigns";
+import {
+  acceptApplication,
+  declineApplication,
+  GuildError,
+  setMissionGuildOpen,
+  shortlistApplication,
+} from "@/server/guild";
 
 /**
- * Server actions du circuit mission : OPEN → ASSIGNED → DELIVERED → VALIDATED.
- * Chaque transition est une gate (flip atomique côté service, message FR si
- * l'état a bougé sous les pieds de l'opérateur).
+ * Server actions du circuit mission : OPEN → ASSIGNED → DELIVERED → VALIDATED,
+ * plus la Guilde (WP-011) : publier/retirer la mission du mur et décider les
+ * candidatures (shortlist / accepter / décliner). Chaque transition est une
+ * gate (flip atomique côté service, message FR si l'état a bougé sous les
+ * pieds de l'opérateur).
  */
 
 const idSchema = z.string().min(1, "Identifiant manquant — rechargez la page.");
@@ -33,7 +42,9 @@ async function sessionBrand(next: string) {
 }
 
 function toFormError(err: unknown, logPrefix: string): FormState {
-  if (err instanceof CampaignError) return { formError: err.message };
+  if (err instanceof CampaignError || err instanceof GuildError) {
+    return { formError: err.message };
+  }
   console.error(`[campagnes] ${logPrefix}`, err);
   return { formError: "L'opération a échoué pour une raison technique. Réessayez dans un instant." };
 }
@@ -49,9 +60,11 @@ function revalidateMissionPaths(campaignId: string, missionId: string) {
   revalidatePath(`/campagnes/${campaignId}/mission/${missionId}`);
   revalidatePath(`/campagnes/${campaignId}`);
   revalidatePath("/missions");
+  // Le mur et les candidatures du Studio créateur reflètent ces décisions.
+  revalidatePath("/studio");
 }
 
-/** OPEN → ASSIGNED : déclare le talent (nom/contact — la guilde arrive au WP-011). */
+/** OPEN → ASSIGNED : assignation directe (nom/contact déclaré — fallback hors Guilde). */
 export async function assignMissionAction(
   _prev: FormState,
   formData: FormData,
@@ -122,4 +135,95 @@ export async function validateMissionAction(
 
   revalidateMissionPaths(ids.campaignId, ids.missionId);
   return null;
+}
+
+// ── Guilde (WP-011) : mur des missions + décisions de candidature ──────
+
+/** Publie la mission sur le mur de la Guilde, ou l'en retire (`open` caché). */
+export async function toggleGuildAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const ctx = await sessionBrand("/missions");
+  if ("error" in ctx) return { formError: ctx.error };
+
+  const ids = parseIds(formData);
+  if (!ids) return { formError: "Identifiant manquant — rechargez la page." };
+  const open = formData.get("open") === "true";
+
+  try {
+    await setMissionGuildOpen({
+      brandId: ctx.brandId,
+      missionId: ids.missionId,
+      open,
+      actorId: ctx.actorId,
+    });
+  } catch (err) {
+    return toFormError(err, "setMissionGuildOpen a échoué :");
+  }
+
+  revalidateMissionPaths(ids.campaignId, ids.missionId);
+  return null;
+}
+
+type ApplicationDecision = "shortlist" | "accept" | "decline";
+
+const DECIDERS: Record<
+  ApplicationDecision,
+  typeof shortlistApplication | typeof acceptApplication | typeof declineApplication
+> = {
+  shortlist: shortlistApplication,
+  accept: acceptApplication,
+  decline: declineApplication,
+};
+
+async function decideApplicationAction(
+  decision: ApplicationDecision,
+  formData: FormData,
+): Promise<FormState> {
+  const ctx = await sessionBrand("/missions");
+  if ("error" in ctx) return { formError: ctx.error };
+
+  const ids = parseIds(formData);
+  const applicationId = idSchema.safeParse(formData.get("applicationId"));
+  if (!ids || !applicationId.success) {
+    return { formError: "Identifiant manquant — rechargez la page." };
+  }
+
+  try {
+    await DECIDERS[decision]({
+      brandId: ctx.brandId,
+      applicationId: applicationId.data,
+      actorId: ctx.actorId,
+    });
+  } catch (err) {
+    return toFormError(err, `décision de candidature (${decision}) a échoué :`);
+  }
+
+  revalidateMissionPaths(ids.campaignId, ids.missionId);
+  return null;
+}
+
+/** APPLIED → SHORTLISTED : retenir la candidature pour arbitrage. */
+export async function shortlistApplicationAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  return decideApplicationAction("shortlist", formData);
+}
+
+/** Accepter = assigner la mission au talent (candidatures sœurs déclinées). */
+export async function acceptApplicationAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  return decideApplicationAction("accept", formData);
+}
+
+/** Décliner la candidature (décision terminale). */
+export async function declineApplicationAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  return decideApplicationAction("decline", formData);
 }

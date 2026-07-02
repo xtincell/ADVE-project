@@ -6,18 +6,18 @@ Legacy : 253 pages · 112 routers tRPC · 115 services — v7 au 2026-07-02 : 36
 
 | Route legacy | Groupe | Statut |
 |---|---|---|
-| //agency | (agency) | À PORTER |
-| //agency/campaigns | (agency) | À PORTER |
-| //agency/clients | (agency) | À PORTER |
-| //agency/clients/[clientId] | (agency) | À PORTER |
-| //agency/commissions | (agency) | À PORTER |
-| //agency/contracts | (agency) | À PORTER |
-| //agency/intake | (agency) | À PORTER |
-| //agency/knowledge | (agency) | À PORTER |
-| //agency/messages | (agency) | À PORTER |
-| //agency/missions | (agency) | À PORTER |
-| //agency/revenue | (agency) | À PORTER |
-| //agency/signals | (agency) | À PORTER |
+| //agency | (agency) | FUSIONNÉ → /espace-agence (dashboard flotte : compteurs santé + compteurs production vivants, onglets, WP-018) |
+| //agency/campaigns | (agency) | FUSIONNÉ → /espace-agence/campagnes (cross-flotte : statuts, marchés, budget = total réel des coûts d'actions PAR DEVISE, « à estimer » compté, WP-018) |
+| //agency/clients | (agency) | FUSIONNÉ → /espace-agence/clients (un client = un workspace BRAND de la flotte : score, palier, abonnement dérivé finance.ts, dernière activité AuditLog, WP-018) |
+| //agency/clients/[clientId] | (agency) | FUSIONNÉ → /espace-agence/clients/[id] (fiche tenancy-gated : marques, campagnes + budgets, missions en cours, derniers paiements, WP-018) |
+| //agency/commissions | (agency) | À PORTER (pas de table Commission v7 — trou affiché en carte « à venir » sur /espace-agence/revenus, zéro chiffre, WP-018) |
+| //agency/contracts | (agency) | À PORTER (pas de table contrat v7 — carte « à venir » sur /espace-agence) |
+| //agency/intake | (agency) | À PORTER (l'intake v7 est public ; pas de création de client PAR l'agence tant que le rattachement agence→marque reste la membership) |
+| //agency/knowledge | (agency) | À PORTER (pas de table base de connaissance v7) |
+| //agency/messages | (agency) | À PORTER (pas de table messagerie v7) |
+| //agency/missions | (agency) | FUSIONNÉ → /espace-agence/missions (cross-flotte groupée par étape du circuit OPEN→…→VALIDATED, provenance campagne→action, candidatures guilde en attente COMPTÉES depuis MissionApplication ; priorité/SLA legacy sans colonnes v7 = non montrés, WP-018) |
+| //agency/revenue | (agency) | FUSIONNÉ → /espace-agence/revenus (paiements `confirmed` réels par mois/devise ventilés par client + MRR simple = paiements encaissés des abos actifs normalisés 30 j, non-dérivable → ligne `unresolved` ; commissions non portées — pas de table, WP-018) |
+| //agency/signals | (agency) | À PORTER (pas de table de signaux v7) |
 | //forgot-password | (auth) | À PORTER |
 | //login | (auth) | À PORTER |
 | //register | (auth) | À PORTER |
@@ -193,7 +193,7 @@ Legacy : 253 pages · 112 routers tRPC · 115 services — v7 au 2026-07-02 : 36
 | //console/strategy-portfolio/clients/[strategyId] | (console) | À PORTER |
 | //console/strategy-portfolio/diagnostics | (console) | À PORTER |
 | //console/upgraders/economics | (console) | À PORTER |
-| //creator | (creator) | À PORTER |
+| //creator | (creator) | FUSIONNÉ → /studio (hub créateur : profil talent, mur des missions, candidatures — WP-011) |
 | //creator/community/events | (creator) | À PORTER |
 | //creator/community/guild | (creator) | À PORTER |
 | //creator/earnings/history | (creator) | À PORTER |
@@ -205,16 +205,16 @@ Legacy : 253 pages · 112 routers tRPC · 115 services — v7 au 2026-07-02 : 36
 | //creator/learn/drivers | (creator) | À PORTER |
 | //creator/learn/resources | (creator) | À PORTER |
 | //creator/messages | (creator) | À PORTER |
-| //creator/missions/active | (creator) | À PORTER |
-| //creator/missions/available | (creator) | À PORTER |
+| //creator/missions/active | (creator) | FUSIONNÉ → /studio (mes candidatures : acceptée = mission assignée, étape du circuit visible — WP-011) |
+| //creator/missions/available | (creator) | FUSIONNÉ → /studio (mur des missions ouvertes à la Guilde, projection sans donnée de marque, candidature par pitch — WP-011) |
 | //creator/missions/collab | (creator) | À PORTER |
 | //creator/profile/drivers | (creator) | À PORTER |
-| //creator/profile/portfolio | (creator) | À PORTER |
-| //creator/profile/skills | (creator) | À PORTER |
+| //creator/profile/portfolio | (creator) | FUSIONNÉ → /studio (profil talent : lien portfolio — WP-011 ; upload d'assets = pas de table v7, non porté) |
+| //creator/profile/skills | (creator) | FUSIONNÉ → /studio (profil talent : compétences normalisées, disponibilité/visibilité, tarif journalier indicatif — WP-011) |
 | //creator/progress/metrics | (creator) | À PORTER |
 | //creator/progress/path | (creator) | À PORTER |
 | //creator/progress/strengths | (creator) | À PORTER |
-| //creator/proposals | (creator) | À PORTER |
+| //creator/proposals | (creator) | FUSIONNÉ → /studio (candidatures envoyées + décisions envoyée/shortlistée/acceptée/déclinée — WP-011) |
 | //creator/qc/peer | (creator) | À PORTER |
 | //creator/qc/submitted | (creator) | À PORTER |
 | //creator/services | (creator) | À PORTER |
@@ -226,24 +226,24 @@ Legacy : 253 pages · 112 routers tRPC · 115 services — v7 au 2026-07-02 : 36
 | //intake/[token]/short | (intake) | À PORTER |
 | //launchpad/crew-bootstrap | (intake) | À PORTER |
 | //launchpad/portfolio-bulk-import | (intake) | À PORTER |
-| //score | (intake) | À PORTER |
+| //score | (intake) | PORTÉ → /intake/score (référence publique du score recâblée sur les constantes canon v7 : 6 paliers/bornes réelles, formule 15/7/3) + /intake/score/[leadId] (variante PARTAGEABLE du résultat — le modèle le permet : relecture `getLeadDiagnostic` par id, méta OG, zéro coordonnée, lien mort → redirect référence ; lien de partage exposé sur /intake/resultat, WP-017) |
 | / | (marketing) | PORTÉ (mécanique — à confirmer) |
 | //agence | (marketing) | PORTÉ (mécanique — à confirmer) |
 | //blog | (marketing) | PORTÉ (mécanique — à confirmer) |
 | //blog/[slug] | (marketing) | À PORTER |
 | //contact | (marketing) | PORTÉ (mécanique — à confirmer) |
-| //la-guilde | (marketing) | PORTÉ (mécanique — à confirmer) |
-| //lafusee | (marketing) | À PORTER |
-| //landingintake | (marketing) | À PORTER |
+| //la-guilde | (marketing) | PORTÉ → /la-guilde (vitrine + compte RÉEL des missions ouvertes du mur, nombre seul — WP-011) |
+| //lafusee | (marketing) | PORTÉ → /lafusee (vitrine PRODUIT : doctrine superfans×Overton, radar simulateur branché sur le vrai moteur `domain/scoring`, features réelles v7, paliers canon, CTA /intake — les métriques inventées du handoff non reprises, WP-017) |
+| //landingintake | (marketing) | PORTÉ → /landingintake (landing d'acquisition courte : hero/constat/3 étapes/protocole ADVE copy réelle legacy + preuve STATS/CLIENT_STRIP canon + formulaire express → /intake — témoignages et compteurs sans source non repris, WP-017) |
 | //methode | (marketing) | PORTÉ (mécanique — à confirmer) |
 | //pricing | (marketing) | À PORTER |
 | //realisations | (marketing) | PORTÉ (mécanique — à confirmer) |
 | //services | (marketing) | PORTÉ (mécanique — à confirmer) |
 | //tarifs | (marketing) | PORTÉ (mécanique — à confirmer) |
-| //LaGuilde | (public) | À PORTER |
+| //LaGuilde | (public) | FUSIONNÉ → /la-guilde (compteur public) + /studio (mur complet, connecté) — doctrine v7 anti-fuite ADR-0098 : pas de détail mission public |
 | //LaGuilde/m/[slug] | (public) | À PORTER |
 | //LaGuilde/publier | (public) | À PORTER |
-| //LaGuilde/rejoindre | (public) | À PORTER |
+| //LaGuilde/rejoindre | (public) | FUSIONNÉ → /studio (création du profil talent : compétences, pays référentiel, tarif indicatif, portfolio — WP-011) |
 | //LaGuilde/services | (public) | À PORTER |
 | //argos | (public) | PORTÉ (mécanique — à confirmer) |
 | //argos/[ref] | (public) | À PORTER |

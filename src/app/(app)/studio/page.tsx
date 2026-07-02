@@ -1,60 +1,57 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { Megaphone, Palette, Send, Smartphone } from "lucide-react";
+import { CheckCircle2, ClipboardList, Megaphone, Send, Smartphone } from "lucide-react";
 import { readSession } from "@/lib/session";
-import type { SessionPayload } from "@/lib/session-token";
-import { getDb } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
+import { DATE_FORMAT } from "@/components/campaigns/status";
+import { ApplicationStatusBadge, AvailabilityBadge, formatDailyRate } from "@/components/guild/status";
+import { MISSION_STATUS_LABELS } from "@/domain/campaign";
+import { VISIBILITY_LABELS } from "@/domain/guild";
+import {
+  getTalentProfile,
+  listMyApplications,
+  listMyAppliedMissionIds,
+  listWallMissions,
+} from "@/server/guild";
+import { listMarkets } from "@/server/campaigns";
+import { ApplyToMissionForm } from "./apply-form";
+import { TalentProfileForm } from "./profile-form";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Studio créateur" };
 
 /**
- * Studio créateur (/studio) — l'espace créateur v7, version honnête de
- * l'ancien portail Creator (legacy/src/app/(creator)/creator/). Le legacy
- * affichait missions, earnings, tiers de guilde : tout cela repose sur des
- * tables qui n'existent pas encore en v7 (guilde = WP-011, missions = WP-008).
- * Ici : le pitch de la Guilde, le profil réel du compte (nom, rôle, espace),
- * et l'état assumé « les missions ouvrent bientôt ». Zéro donnée inventée,
- * zéro tier fictif, zéro earnings à 0 FCFA qui ferait croire à un compteur.
+ * Studio créateur (/studio) — la Guilde RÉELLE (WP-011, essence d'ADR-0098
+ * legacy) : le talent tient son profil (compétences, pays du référentiel,
+ * tarif indicatif, portfolio), lit le mur des missions ouvertes à la Guilde
+ * (cross-workspace, projeté SANS donnée de marque) et candidate d'un pitch.
+ * La marque décide depuis son cockpit ; l'acceptation assigne la mission et
+ * ouvre la mise en relation WhatsApp. Zéro donnée inventée : mur vide =
+ * EmptyState, profil absent = onboarding.
  *
  * Garde : route hors matcher middleware — session vérifiée ici.
  */
 
-const DATE_FORMAT = new Intl.DateTimeFormat("fr-FR", {
-  day: "2-digit",
-  month: "long",
-  year: "numeric",
-});
-
-/** Rôles de membership en clair (registre client, pas de jargon technique). */
-const ROLE_LABELS: Record<SessionPayload["role"], string> = {
-  OWNER: "Propriétaire",
-  OPERATOR: "Opérateur",
-  MEMBER: "Collaborateur",
-  CLIENT: "Client",
-};
-
-/** La méthode, pas des données : comment la Guilde fonctionnera à l'ouverture. */
+/** La méthode, en clair — le circuit réel d'une mission de la Guilde. */
 const HOW_IT_WORKS = [
   {
     icon: Megaphone,
-    title: "Les marques publient des briefs",
+    title: "Les marques publient des missions",
     description:
-      "Chaque mission naît d'une campagne réelle d'une marque propulsée par La Fusée — un brief cadré, un budget, une échéance.",
+      "Chaque mission naît d'une campagne réelle d'une marque propulsée par La Fusée : un brief validé, éclaté en missions, publiées sur le mur par l'opérateur.",
   },
   {
     icon: Send,
     title: "Vous candidatez",
     description:
-      "Le mur des missions sera public : vous choisissez celles qui correspondent à votre pratique et déposez votre candidature.",
+      "Le mur est ici, dans le Studio : choisissez les missions qui correspondent à votre pratique et déposez votre pitch. Une candidature par mission, lue avec votre profil.",
   },
   {
     icon: Smartphone,
-    title: "Production validée, paiement mobile money",
+    title: "Acceptation, production, mobile money",
     description:
-      "Livraison validée par l'opérateur, règlement en FCFA via Wave, Orange Money, MTN MoMo ou Moov — pas de virement international à attendre.",
+      "La marque accepte une candidature : la mission vous est assignée et la mise en relation passe par WhatsApp. Livraison validée par l'opérateur, règlement en FCFA (Wave, Orange Money, MTN MoMo, Moov).",
   },
 ] as const;
 
@@ -62,17 +59,13 @@ export default async function StudioPage() {
   const session = await readSession();
   if (!session) redirect("/connexion?next=/studio");
 
-  const db = getDb();
-  const [user, workspace] = await Promise.all([
-    db.user.findUnique({
-      where: { id: session.userId },
-      select: { name: true, email: true, createdAt: true },
-    }),
-    db.workspace.findUnique({
-      where: { id: session.workspaceId },
-      select: { name: true },
-    }),
+  const [profile, countries, wall, appliedIds] = await Promise.all([
+    getTalentProfile(session.userId),
+    listMarkets(),
+    listWallMissions(),
+    listMyAppliedMissionIds(session.userId),
   ]);
+  const myApplications = profile ? await listMyApplications(session.userId) : [];
 
   return (
     <div className="space-y-10">
@@ -87,66 +80,170 @@ export default async function StudioPage() {
         </p>
       </header>
 
-      {/* ── Profil réel du compte — seules données affichées ─────────── */}
-      <section className="space-y-4" aria-label="Votre profil">
-        <h2 className="font-display text-xl font-semibold">Votre profil</h2>
-        <div className="rounded-lg border border-line bg-ink-2 p-6">
-          <div className="flex flex-wrap items-center gap-3">
-            <span
-              className="flex size-11 items-center justify-center rounded-sm bg-ember/15 text-ember [&_svg]:size-5"
-              aria-hidden
-            >
-              <Palette />
+      {/* ── Profil talent : onboarding ou édition (données réelles du compte) ── */}
+      <section className="space-y-4" aria-label="Votre profil talent">
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="font-display text-xl font-semibold">Votre profil talent</h2>
+          {profile ? (
+            <span className="flex items-center gap-2">
+              <AvailabilityBadge availability={profile.availability} />
+              <Badge variant={profile.visibility === "VISIBLE" ? "inverse" : "outline"}>
+                {VISIBILITY_LABELS[profile.visibility]}
+              </Badge>
             </span>
-            <div className="min-w-0">
-              <p className="truncate font-display text-lg font-semibold text-bone">
-                {user?.name?.trim() || user?.email || "Compte"}
-              </p>
-              {user?.name?.trim() && user.email ? (
-                <p className="truncate text-sm text-smoke-2">{user.email}</p>
-              ) : null}
-            </div>
-            <Badge variant="inverse" className="ml-auto">
-              {ROLE_LABELS[session.role]}
-            </Badge>
-          </div>
-          <dl className="mt-5 grid gap-4 border-t border-line-soft pt-5 text-sm sm:grid-cols-2">
-            <div>
-              <dt className="text-xs font-semibold uppercase tracking-wider text-smoke-2">
-                Espace de travail
-              </dt>
-              <dd className="mt-1 text-sand">{workspace?.name ?? "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-xs font-semibold uppercase tracking-wider text-smoke-2">
-                Membre depuis
-              </dt>
-              <dd className="mt-1 text-sand">
-                {user ? DATE_FORMAT.format(user.createdAt) : "—"}
-              </dd>
-            </div>
-          </dl>
-          <p className="mt-4 text-xs text-smoke-2">
-            Le profil créateur complet (spécialités, portfolio, disponibilités) ouvrira avec
-            les inscriptions à la Guilde.
-          </p>
+          ) : null}
         </div>
-      </section>
-
-      {/* ── État honnête : pas encore de missions ─────────────────────── */}
-      <section className="space-y-4" aria-label="Missions">
-        <h2 className="font-display text-xl font-semibold">Missions</h2>
-        <EmptyState
-          icon={<Megaphone />}
-          title="Les missions ouvrent bientôt"
-          description="Le mur des missions, les candidatures et le paiement mobile money sont le prochain chantier de la Guilde. Rien ne s'affichera ici avant d'être réel — pas de missions de démonstration."
+        {profile ? (
+          <p className="text-sm text-sand">
+            <span className="font-semibold text-sand-2">{profile.headline}</span> —{" "}
+            {profile.city}, {profile.country.name}
+            {profile.dailyRate !== null
+              ? ` · ${formatDailyRate(profile.dailyRate, profile.country.currency)}`
+              : ""}{" "}
+            · mis à jour le {DATE_FORMAT.format(profile.updatedAt)}. C&apos;est ce profil que la
+            marque lit avec chacune de vos candidatures.
+          </p>
+        ) : (
+          <p className="max-w-2xl text-sm text-sand">
+            Aucun profil pour l&apos;instant. Créez-le pour candidater aux missions : c&apos;est
+            lui que la marque lit avec votre pitch — accroche, compétences, ville et pays,
+            tarif indicatif, portfolio.
+          </p>
+        )}
+        <TalentProfileForm
+          profile={
+            profile
+              ? {
+                  headline: profile.headline,
+                  skills: profile.skills,
+                  city: profile.city,
+                  countryCode: profile.countryCode,
+                  whatsapp: profile.whatsapp,
+                  portfolioUrl: profile.portfolioUrl,
+                  dailyRate: profile.dailyRate,
+                  availability: profile.availability,
+                  visibility: profile.visibility,
+                }
+              : null
+          }
+          countries={countries.map((c) => ({ code: c.code, name: c.name, currency: c.currency }))}
         />
       </section>
 
-      {/* ── Comment ça marchera (la méthode, pas des chiffres) ────────── */}
-      <section className="space-y-4" aria-label="Comment ça marchera">
+      {/* ── Le mur des missions (cross-workspace, sans donnée de marque) ── */}
+      <section className="space-y-4" aria-label="Le mur des missions">
         <div>
-          <h2 className="font-display text-xl font-semibold">Comment ça marchera</h2>
+          <h2 className="font-display text-xl font-semibold">
+            Le mur des missions
+            {wall.length > 0 ? (
+              <span className="ml-2 text-sm font-normal text-smoke-2">({wall.length})</span>
+            ) : null}
+          </h2>
+          <p className="text-sm text-sand">
+            Les missions ouvertes à la Guilde par les marques. Le nom de la marque et sa
+            campagne restent confidentiels jusqu&apos;à la mise en relation.
+          </p>
+        </div>
+        {wall.length === 0 ? (
+          <EmptyState
+            icon={<Megaphone />}
+            title="Aucune mission ouverte en ce moment"
+            description="Les marques publient leurs missions ici quand leurs briefs sont validés. Rien d'inventé, rien de décoratif : le mur affiche uniquement des missions réelles. Complétez votre profil pour être prêt."
+          />
+        ) : (
+          <ul className="space-y-2.5">
+            {wall.map((mission) => {
+              const applied = appliedIds.has(mission.id);
+              return (
+                <li key={mission.id} className="rounded-lg border border-line bg-ink-2 px-5 py-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <span className="min-w-0">
+                      <span className="block truncate font-display text-base font-semibold text-bone">
+                        {mission.title}
+                      </span>
+                      <span className="mt-0.5 block text-xs text-smoke-2">
+                        {mission.kindLabel} · marché {mission.market} · publiée le{" "}
+                        {DATE_FORMAT.format(mission.createdAt)}
+                      </span>
+                    </span>
+                    {applied ? (
+                      <Badge variant="gold">
+                        <CheckCircle2 aria-hidden />
+                        Candidature envoyée
+                      </Badge>
+                    ) : null}
+                  </div>
+                  {applied ? null : profile ? (
+                    <ApplyToMissionForm missionId={mission.id} />
+                  ) : (
+                    <p className="mt-3 text-xs text-smoke-2">
+                      Créez votre profil talent ci-dessus pour candidater à cette mission.
+                    </p>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      {/* ── Mes candidatures (réelles — rien avant la première) ─────────── */}
+      {profile ? (
+        <section className="space-y-4" aria-label="Mes candidatures">
+          <h2 className="font-display text-xl font-semibold">
+            Mes candidatures
+            {myApplications.length > 0 ? (
+              <span className="ml-2 text-sm font-normal text-smoke-2">
+                ({myApplications.length})
+              </span>
+            ) : null}
+          </h2>
+          {myApplications.length === 0 ? (
+            <EmptyState
+              icon={<ClipboardList />}
+              title="Aucune candidature envoyée"
+              description="Vos candidatures et leurs décisions (envoyée, shortlistée, acceptée, déclinée) s'afficheront ici, avec l'étape de production des missions gagnées."
+            />
+          ) : (
+            <ul className="space-y-2.5">
+              {myApplications.map((application) => (
+                <li
+                  key={application.id}
+                  className="rounded-lg border border-line bg-ink-2 px-5 py-4"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <span className="min-w-0">
+                      <span className="block truncate font-display text-base font-semibold text-bone">
+                        {application.mission.title}
+                      </span>
+                      <span className="mt-0.5 block text-xs text-smoke-2">
+                        {application.mission.kindLabel} · marché {application.mission.market} ·
+                        envoyée le {DATE_FORMAT.format(application.createdAt)}
+                        {application.decidedAt
+                          ? ` · décidée le ${DATE_FORMAT.format(application.decidedAt)}`
+                          : ""}
+                      </span>
+                    </span>
+                    <ApplicationStatusBadge status={application.status} />
+                  </div>
+                  {application.status === "ACCEPTED" ? (
+                    <p className="mt-2 text-sm text-sand">
+                      Mission {MISSION_STATUS_LABELS[application.mission.status].toLowerCase()} —
+                      la marque vous contacte via le WhatsApp de votre profil pour cadrer la
+                      production.
+                    </p>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      ) : null}
+
+      {/* ── Comment ça marche (la méthode, pas des chiffres) ────────────── */}
+      <section className="space-y-4" aria-label="Comment ça marche">
+        <div>
+          <h2 className="font-display text-xl font-semibold">Comment ça marche</h2>
           <p className="text-sm text-sand">Le circuit d&apos;une mission, de la marque au créateur.</p>
         </div>
         <div className="grid gap-bento sm:grid-cols-3">

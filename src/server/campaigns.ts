@@ -943,6 +943,8 @@ export type MissionListRow = Mission & {
       campaign: Pick<Campaign, "id" | "name">;
     };
   };
+  /** Candidatures Guilde reçues (WP-011) — affiché sur la vue /missions. */
+  _count: { applications: number };
 };
 
 /** Toutes les missions de la marque (vue /missions), plus récentes d'abord. */
@@ -965,6 +967,7 @@ export async function listMissions(brandId: string): Promise<MissionListRow[]> {
           },
         },
       },
+      _count: { select: { applications: true } },
     },
   });
 }

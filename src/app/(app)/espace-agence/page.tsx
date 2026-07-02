@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Building2, FileText, Megaphone, Wallet } from "lucide-react";
+import { ArrowRight, Building2, FileText } from "lucide-react";
 import { readSession } from "@/lib/session";
-import { getAgencyFleet, type FleetSubscriptionSnapshot } from "@/server/agency";
+import { getAgencyFleet, getFleetPulse } from "@/server/agency";
 import { COMPOSITE_MAX_SCORE, LEVEL_DEFINITIONS } from "@/domain/scoring";
-import { Badge, type BadgeProps } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LevelBadge } from "@/components/pillars/level-badge";
+import { AgencyNav } from "./nav";
+import { NoAgencyState } from "./no-agency";
+import { SubscriptionBadge } from "./subscription-badge";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Espace agence" };
@@ -18,90 +20,21 @@ export const metadata: Metadata = { title: "Espace agence" };
  * (legacy/src/app/(agency)/agency/page.tsx : clients / marques / score moyen)
  * ramené à ce que les tables v7 savent servir : la flotte réelle (workspaces
  * BRAND où l'équipe de l'agence a une membership), paliers, derniers
- * BrandScore, état d'abonnement. Missions, revenus et contrats n'existent pas
- * encore en v7 → cartes « à venir » honnêtes (WP-008), zéro donnée inventée.
+ * BrandScore, état d'abonnement. WP-018 ajoute la profondeur : onglets
+ * clients / campagnes / missions / revenus + compteurs de production vivants
+ * (tables tranche 2). Les contrats n'ont toujours pas de table → carte
+ * « à venir » honnête, zéro donnée inventée.
  *
  * Garde : la route n'est pas couverte par le middleware (matcher /app + /admin
  * uniquement) — session vérifiée ici, appartenance agence vérifiée en DB.
  */
-
-const DATE_FORMAT = new Intl.DateTimeFormat("fr-FR", {
-  day: "2-digit",
-  month: "2-digit",
-  year: "numeric",
-});
-
-const SUB_BADGE: Record<FleetSubscriptionSnapshot["status"], BadgeProps["variant"]> = {
-  active: "coral",
-  pending: "inverse",
-  expired: "outline",
-  none: "outline",
-};
-
-const SUB_LABEL: Record<FleetSubscriptionSnapshot["status"], string> = {
-  active: "Actif",
-  pending: "En validation",
-  expired: "Échu",
-  none: "Aucun",
-};
-
-function subscriptionDetail(sub: FleetSubscriptionSnapshot): string | null {
-  if (sub.status === "active" && sub.expiresAt) {
-    return `jusqu'au ${DATE_FORMAT.format(sub.expiresAt)}`;
-  }
-  if (sub.status === "expired" && sub.expiresAt) {
-    return `le ${DATE_FORMAT.format(sub.expiresAt)}`;
-  }
-  return null;
-}
-
-/** Ce que le legacy servait et que v7 ne sait pas encore servir — affiché tel quel. */
-const UPCOMING = [
-  {
-    icon: Megaphone,
-    title: "Missions & campagnes",
-    description:
-      "Le pilotage Campagne → Action → Brief → Mission arrive avec le chantier campagnes — rien à afficher tant qu'il n'existe pas.",
-  },
-  {
-    icon: Wallet,
-    title: "Revenus & commissions",
-    description:
-      "Le suivi des revenus d'agence suivra les missions : aucun chiffre ne sera montré avant d'être calculé sur des données réelles.",
-  },
-  {
-    icon: FileText,
-    title: "Contrats & mandats",
-    description:
-      "La contractualisation des mandats clients n'est pas encore portée en v7.",
-  },
-] as const;
-
 export default async function AgencePage() {
   const session = await readSession();
   if (!session) redirect("/connexion?next=/espace-agence");
 
-  const fleet = await getAgencyFleet(session);
+  const [fleet, pulse] = await Promise.all([getAgencyFleet(session), getFleetPulse(session)]);
 
-  if (!fleet) {
-    return (
-      <div className="space-y-8">
-        <header className="space-y-1">
-          <p className="eyebrow text-coral">Espace agence</p>
-          <h1 className="font-display text-3xl font-semibold">Agence</h1>
-        </header>
-        <EmptyState
-          icon={<Building2 />}
-          title="Espace réservé aux agences partenaires"
-          description="Votre compte n'appartient à aucun workspace agence. Cet espace montre la flotte des marques qu'une agence accompagne — parlez-en à l'opérateur UPgraders si vous représentez une agence."
-        >
-          <Link href="/portails" className={buttonVariants({ variant: "outline", size: "sm" })}>
-            Voir mes espaces
-          </Link>
-        </EmptyState>
-      </div>
-    );
-  }
+  if (!fleet || !pulse) return <NoAgencyState title="Agence" />;
 
   const { agency, totals, workspaces, teamSize } = fleet;
   const brandRows = workspaces.flatMap((ws) =>
@@ -129,6 +62,34 @@ export default async function AgencePage() {
     },
   ];
 
+  /** Compteurs de production — chaque carte mène à son onglet. */
+  const productionCards = [
+    {
+      href: "/espace-agence/campagnes",
+      label: "Campagnes",
+      value: String(pulse.campaigns.total),
+      hint: `dont ${pulse.campaigns.active} en production`,
+    },
+    {
+      href: "/espace-agence/missions",
+      label: "Missions",
+      value: String(pulse.missions.total),
+      hint: `dont ${pulse.missions.inProgress} en cours`,
+    },
+    {
+      href: "/espace-agence/missions",
+      label: "Candidatures guilde",
+      value: String(pulse.pendingApplications),
+      hint: "en attente de décision",
+    },
+    {
+      href: "/espace-agence/revenus",
+      label: "Paiements confirmés",
+      value: String(pulse.confirmedPayments),
+      hint: "encaissés sur la flotte",
+    },
+  ];
+
   return (
     <div className="space-y-10">
       <header className="space-y-1">
@@ -140,6 +101,8 @@ export default async function AgencePage() {
         </p>
       </header>
 
+      <AgencyNav />
+
       {/* ── Compteurs ──────────────────────────────────────────────────── */}
       <section className="grid gap-bento sm:grid-cols-2 lg:grid-cols-4" aria-label="Compteurs de la flotte">
         {tiles.map((tile) => (
@@ -149,6 +112,35 @@ export default async function AgencePage() {
             <p className="mt-1 text-xs text-smoke-2">{tile.hint}</p>
           </div>
         ))}
+      </section>
+
+      {/* ── Production & revenus (compteurs vivants → onglets) ────────── */}
+      <section className="space-y-4" aria-label="Production et revenus">
+        <div>
+          <h2 className="font-display text-xl font-semibold">Production &amp; revenus</h2>
+          <p className="text-sm text-sand">
+            Comptés sur les tables réelles de la flotte — chaque carte ouvre sa vue détaillée.
+          </p>
+        </div>
+        <div className="grid gap-bento sm:grid-cols-2 lg:grid-cols-4">
+          {productionCards.map((card) => (
+            <Link
+              key={card.label}
+              href={card.href}
+              className="group rounded-lg border border-line bg-ink-2 p-6 transition-colors hover:border-coral/50"
+            >
+              <p className="flex items-center justify-between text-sm font-medium text-sand">
+                {card.label}
+                <ArrowRight
+                  className="size-3.5 text-coral opacity-0 transition-opacity group-hover:opacity-100"
+                  aria-hidden
+                />
+              </p>
+              <p className="font-display mt-2 text-4xl font-semibold text-bone">{card.value}</p>
+              <p className="mt-1 text-xs text-smoke-2">{card.hint}</p>
+            </Link>
+          ))}
+        </div>
       </section>
 
       {/* ── La flotte ──────────────────────────────────────────────────── */}
@@ -180,39 +172,36 @@ export default async function AgencePage() {
                 </tr>
               </thead>
               <tbody>
-                {brandRows.map(({ workspace, brand }) => {
-                  const detail = subscriptionDetail(workspace.subscription);
-                  return (
-                    <tr key={brand.id} className="border-b border-line-soft last:border-0">
-                      <td className="px-4 py-3">
-                        <p className="font-semibold text-bone">{brand.name}</p>
-                        {brand.sector ? (
-                          <p className="text-xs text-smoke-2">{brand.sector}</p>
-                        ) : null}
-                      </td>
-                      <td className="px-4 py-3 text-sand">
-                        {workspace.name}{" "}
-                        <span className="font-mono text-xs text-smoke-2">({workspace.slug})</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <LevelBadge level={brand.level} />
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-sand">
-                        {brand.score !== null
-                          ? `${Math.round(brand.score)} / ${COMPOSITE_MAX_SCORE}`
-                          : "—"}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3">
-                        <Badge variant={SUB_BADGE[workspace.subscription.status]}>
-                          {SUB_LABEL[workspace.subscription.status]}
-                        </Badge>
-                        {detail ? (
-                          <span className="ml-2 text-xs text-smoke-2">{detail}</span>
-                        ) : null}
-                      </td>
-                    </tr>
-                  );
-                })}
+                {brandRows.map(({ workspace, brand }) => (
+                  <tr key={brand.id} className="border-b border-line-soft last:border-0">
+                    <td className="px-4 py-3">
+                      <p className="font-semibold text-bone">{brand.name}</p>
+                      {brand.sector ? (
+                        <p className="text-xs text-smoke-2">{brand.sector}</p>
+                      ) : null}
+                    </td>
+                    <td className="px-4 py-3 text-sand">
+                      <Link
+                        href={`/espace-agence/clients/${workspace.id}`}
+                        className="transition-colors hover:text-coral"
+                      >
+                        {workspace.name}
+                      </Link>{" "}
+                      <span className="font-mono text-xs text-smoke-2">({workspace.slug})</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <LevelBadge level={brand.level} />
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-sand">
+                      {brand.score !== null
+                        ? `${Math.round(brand.score)} / ${COMPOSITE_MAX_SCORE}`
+                        : "—"}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <SubscriptionBadge subscription={workspace.subscription} />
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -231,26 +220,24 @@ export default async function AgencePage() {
         <div>
           <h2 className="font-display text-xl font-semibold">À venir</h2>
           <p className="text-sm text-sand">
-            Ces vues existaient dans l&apos;ancien portail agence — elles reviendront branchées
-            sur de vraies tables, pas sur des chiffres décoratifs.
+            Ce que l&apos;ancien portail agence servait et que v7 ne sait pas encore servir —
+            ça reviendra branché sur de vraies tables, pas sur des chiffres décoratifs.
           </p>
         </div>
         <div className="grid gap-bento sm:grid-cols-3">
-          {UPCOMING.map((item) => (
-            <div
-              key={item.title}
-              className="flex flex-col gap-3 rounded-lg border border-dashed border-line bg-ink-2/50 p-6"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-smoke-2 [&_svg]:size-5" aria-hidden>
-                  <item.icon />
-                </span>
-                <Badge variant="outline">À venir</Badge>
-              </div>
-              <h3 className="font-display text-base font-semibold text-bone">{item.title}</h3>
-              <p className="text-sm leading-relaxed text-sand">{item.description}</p>
+          <div className="flex flex-col gap-3 rounded-lg border border-dashed border-line bg-ink-2/50 p-6">
+            <div className="flex items-center justify-between">
+              <span className="text-smoke-2 [&_svg]:size-5" aria-hidden>
+                <FileText />
+              </span>
+              <Badge variant="outline">À venir</Badge>
             </div>
-          ))}
+            <h3 className="font-display text-base font-semibold text-bone">Contrats &amp; mandats</h3>
+            <p className="text-sm leading-relaxed text-sand">
+              La contractualisation des mandats clients n&apos;est pas encore portée en v7 — pas
+              de table, pas d&apos;écran.
+            </p>
+          </div>
         </div>
       </section>
     </div>

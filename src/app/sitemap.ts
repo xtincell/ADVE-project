@@ -20,8 +20,11 @@ const PUBLIC_ROUTES: Array<{
   priority: number;
 }> = [
   { path: "/", changeFrequency: "weekly", priority: 1 },
+  { path: "/lafusee", changeFrequency: "monthly", priority: 0.9 },
   { path: "/tarifs", changeFrequency: "monthly", priority: 0.9 },
   { path: "/intake", changeFrequency: "monthly", priority: 0.9 },
+  { path: "/landingintake", changeFrequency: "monthly", priority: 0.8 },
+  { path: "/intake/score", changeFrequency: "monthly", priority: 0.6 },
   { path: "/methode", changeFrequency: "monthly", priority: 0.8 },
   { path: "/services", changeFrequency: "monthly", priority: 0.8 },
   { path: "/realisations", changeFrequency: "monthly", priority: 0.7 },

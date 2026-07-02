@@ -85,6 +85,19 @@ export const talentProfileSchema = z.object({
     .refine((value) => value === "" || isHttpUrl(value), {
       message: "URL de portfolio invalide — collez un lien complet (https://…).",
     }),
+  /** Tarif journalier indicatif — devise du pays du profil, vide = non communiqué. */
+  dailyRate: z
+    .string()
+    .trim()
+    .default("")
+    .transform((value) => value.replace(/\s/g, "")) // tolère « 450 000 » (\s couvre les espaces fines)
+    .refine((value) => /^\d{0,9}$/.test(value), {
+      message: "Tarif indicatif invalide — un montant en chiffres (ex. 75000), sans devise.",
+    })
+    .transform((value) => (value === "" ? null : Number.parseInt(value, 10)))
+    .refine((value) => value === null || value > 0, {
+      message: "Tarif indicatif invalide — un montant positif, ou laissez le champ vide.",
+    }),
   availability: z.enum(TALENT_AVAILABILITIES),
   visibility: z.enum(TALENT_VISIBILITIES),
 });
@@ -164,6 +177,7 @@ export async function upsertTalentProfile(
     countryCode: data.countryCode,
     whatsapp: data.whatsapp || null,
     portfolioUrl: data.portfolioUrl || null,
+    dailyRate: data.dailyRate,
     availability: data.availability,
     visibility: data.visibility,
   };
@@ -184,6 +198,7 @@ export async function upsertTalentProfile(
           city: data.city,
           countryCode: data.countryCode,
           skills: data.skills,
+          dailyRate: data.dailyRate,
           availability: data.availability,
           visibility: data.visibility,
         },
@@ -194,10 +209,21 @@ export async function upsertTalentProfile(
   });
 }
 
-/** Profil talent du compte — null tant que l'onboarding n'est pas fait. */
-export async function getTalentProfile(userId: string): Promise<TalentProfile | null> {
+export type TalentProfileWithCountry = TalentProfile & {
+  country: { code: string; name: string; currency: string };
+};
+
+/**
+ * Profil talent du compte — null tant que l'onboarding n'est pas fait.
+ * Le pays du référentiel voyage avec (sa devise contextualise le tarif
+ * indicatif — jamais de devise en dur côté UI).
+ */
+export async function getTalentProfile(userId: string): Promise<TalentProfileWithCountry | null> {
   const db = getDb();
-  return db.talentProfile.findUnique({ where: { userId } });
+  return db.talentProfile.findUnique({
+    where: { userId },
+    include: { country: { select: { code: true, name: true, currency: true } } },
+  });
 }
 
 // ── Côté marque : ouvrir/fermer le mur + décider les candidatures ──────
@@ -722,6 +748,10 @@ export type MissionApplicationRow = {
     availability: TalentAvailability;
     visibility: TalentVisibility;
     portfolioUrl: string | null;
+    /** Tarif journalier indicatif déclaré — null = non communiqué. */
+    dailyRate: number | null;
+    /** Devise du pays du profil (référentiel Country) — contextualise le tarif. */
+    currency: string;
     /** Contact — servi UNIQUEMENT quand la candidature est ACCEPTED (mise en relation). */
     whatsapp: string | null;
   };
@@ -740,7 +770,14 @@ export async function listMissionApplications(
   const rows = await db.missionApplication.findMany({
     where: { missionId, mission: { brief: { action: { campaign: { brandId } } } } },
     orderBy: { createdAt: "asc" },
-    include: { talent: { include: { user: { select: { name: true } } } } },
+    include: {
+      talent: {
+        include: {
+          user: { select: { name: true } },
+          country: { select: { currency: true } },
+        },
+      },
+    },
   });
   return rows.map((row) => {
     const status = applicationStatus(row.status);
@@ -760,6 +797,8 @@ export async function listMissionApplications(
         availability: row.talent.availability as TalentAvailability,
         visibility: row.talent.visibility as TalentVisibility,
         portfolioUrl: row.talent.portfolioUrl,
+        dailyRate: row.talent.dailyRate,
+        currency: row.talent.country.currency,
         whatsapp: status === "ACCEPTED" ? row.talent.whatsapp : null,
       },
     };

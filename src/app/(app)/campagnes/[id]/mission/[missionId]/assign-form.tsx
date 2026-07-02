@@ -8,9 +8,10 @@ import type { FormState } from "@/lib/forms";
 import { assignMissionAction } from "./actions";
 
 /**
- * Gate OPEN → ASSIGNED : déclarer le talent assigné. Champ libre assumé en
- * V1 (nom / contact) — le matching guilde et les profils talents arrivent au
- * WP-011, on ne simule pas un annuaire qui n'existe pas.
+ * Gate OPEN → ASSIGNED : assignation DIRECTE (nom/contact déclaré) — le
+ * fallback hors Guilde, conservé pour les talents qui ne passent pas par le
+ * mur. La voie Guilde (candidatures → accepter) vit dans la section « La
+ * Guilde » de la page mission (WP-011).
  */
 export function AssignMissionForm({
   missionId,
@@ -29,12 +30,12 @@ export function AssignMissionForm({
       <input type="hidden" name="missionId" value={missionId} />
       <input type="hidden" name="campaignId" value={campaignId} />
       <label htmlFor="mission-assignee" className="block text-sm font-semibold text-sand">
-        Talent assigné
+        Assignation directe (hors Guilde)
       </label>
       <Input
         id="mission-assignee"
         name="assignee"
-        placeholder="Nom du talent (ou contact) — la guilde arrive au prochain chantier"
+        placeholder="Nom du talent (ou contact) si vous ne passez pas par le mur de la Guilde"
         required
         minLength={2}
         maxLength={120}

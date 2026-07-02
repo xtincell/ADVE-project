@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ClipboardList, Rocket } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   DATE_FORMAT,
@@ -115,12 +116,18 @@ export default async function MissionsPage() {
                         <span className="mt-0.5 block text-xs text-smoke-2">
                           {mission.brief.action.campaign.name} · {mission.brief.action.name}
                           {mission.assignee ? ` · ${mission.assignee}` : ""}
+                          {mission._count.applications > 0
+                            ? ` · ${mission._count.applications} candidature${mission._count.applications > 1 ? "s" : ""}`
+                            : ""}
                         </span>
                       </span>
                       <span className="flex items-center gap-3">
                         <span className="font-mono text-[11px] text-smoke-2">
                           {DATE_FORMAT.format(mission.createdAt)}
                         </span>
+                        {mission.openToGuild && mission.status === "OPEN" ? (
+                          <Badge variant="gold">Sur le mur</Badge>
+                        ) : null}
                         <MissionStatusBadge status={mission.status} />
                       </span>
                     </Link>

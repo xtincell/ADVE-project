@@ -134,6 +134,17 @@ export default async function ResultatPage({
               );
             })}
           </div>
+
+          <p className="mt-8 font-mono text-xs leading-relaxed text-smoke-2">
+            ↳ envie de le montrer ? Ce score a une{" "}
+            <Link
+              href={`/intake/score/${lead.id}`}
+              className="text-sand transition-colors hover:text-coral"
+            >
+              page publique partageable
+            </Link>{" "}
+            — score et palier uniquement, sans vos coordonnées.
+          </p>
         </div>
       </section>
 

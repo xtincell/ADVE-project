@@ -1,3 +1,5 @@
+import type { PillarKey } from "@/domain/pillars";
+
 /**
  * Site de marque — contenu canon, porté du legacy.
  *
@@ -9,6 +11,21 @@
  * Vocabulaire client = business uniquement. Le registre aéronautique
  * (Fusée, Cockpit, palier, trajectoire) est la signature produit et reste.
  */
+
+/* ── Les 8 questions d'accroche par pilier (copy réelle legacy
+      marketing-advertis / score) — consommées par le radar /lafusee et la
+      page référence /intake/score. ─────────────────────────────────────── */
+
+export const PILLAR_QUESTIONS: Record<PillarKey, string> = {
+  A: "Qui êtes-vous vraiment ?",
+  D: "Pourquoi vous et pas un autre ?",
+  V: "Que promettez-vous au monde ?",
+  E: "Comment créer des superfans ?",
+  R: "Quelles sont vos vulnérabilités ?",
+  T: "Que dit le marché ?",
+  I: "Quel potentiel inexploité ?",
+  S: "Comment aller de A à B ?",
+};
 
 /* ── Identité & contact (legacy IDENTITY / CONTACT) ─────────────────── */
 

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { PILLARS, type PillarKey } from "@/domain/pillars";
+import { PILLARS } from "@/domain/pillars";
 import {
   classifyLevel,
   COMPOSITE_MAX_SCORE,
@@ -12,6 +12,7 @@ import {
 } from "@/domain/scoring";
 import { PILLAR_LABELS } from "@/domain/pillar-fields";
 import { buttonVariants } from "@/components/ui/button";
+import { PILLAR_QUESTIONS } from "@/components/marketing/site-data";
 
 /**
  * Radar 8 piliers interactif — composition DS honnête de la page produit
@@ -20,19 +21,8 @@ import { buttonVariants } from "@/components/ui/button";
  * score composite et le palier sont recalculés par le VRAI moteur du
  * produit (`classifyLevel`, src/domain/scoring) — mêmes constantes, même
  * classification que le diagnostic réel. Aucune donnée client affichée.
+ * Questions d'accroche : PILLAR_QUESTIONS (site-data, copy legacy).
  */
-
-/** Question d'accroche par pilier (copy réelle legacy marketing-advertis). */
-const PILLAR_QUESTIONS: Record<PillarKey, string> = {
-  A: "Qui êtes-vous vraiment ?",
-  D: "Pourquoi vous et pas un autre ?",
-  V: "Que promettez-vous au monde ?",
-  E: "Comment créer des superfans ?",
-  R: "Quelles sont vos vulnérabilités ?",
-  T: "Que dit le marché ?",
-  I: "Quel potentiel inexploité ?",
-  S: "Comment aller de A à B ?",
-};
 
 /** Valeurs de départ du bac à sable (mêmes que la démo legacy). */
 const DEMO_VALUES = [18, 14, 20, 11, 16, 9, 12, 15];

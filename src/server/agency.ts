@@ -1,4 +1,4 @@
-import type { CampaignAction, Prisma, Subscription } from "@prisma/client";
+import type { ApplicationStatus, CampaignAction, Prisma, Subscription } from "@prisma/client";
 import { getDb } from "@/lib/db";
 import type { SessionPayload } from "@/lib/session-token";
 import type { BrandLevel } from "@/domain/pillars";
@@ -280,6 +280,9 @@ export async function getAgencyFleet(
 }
 
 // ═══ WP-018 — profondeur espace agence (PURES d'abord, loaders ensuite) ═══
+
+/** Candidatures guilde encore SANS décision (APPLIED/SHORTLISTED — WP-011). */
+const PENDING_APPLICATION_STATUSES: ApplicationStatus[] = ["APPLIED", "SHORTLISTED"];
 
 // ── Agrégations PURES (testables sans DB) ───────────────────────────────
 
@@ -685,6 +688,10 @@ export type FleetMissionRow = {
   brandName: string;
   workspaceId: string;
   workspaceName: string;
+  /** Publiée sur le mur de la guilde (gate opérateur, WP-011). */
+  openToGuild: boolean;
+  /** Candidatures guilde en attente de décision (APPLIED/SHORTLISTED) — comptées, jamais estimées. */
+  pendingApplications: number;
 };
 
 export type FleetMissions = { agency: AgencyRef; missions: FleetMissionRow[] };
@@ -712,6 +719,12 @@ export async function listFleetMissions(
       status: true,
       assignee: true,
       createdAt: true,
+      openToGuild: true,
+      _count: {
+        select: {
+          applications: { where: { status: { in: PENDING_APPLICATION_STATUSES } } },
+        },
+      },
       brief: {
         select: {
           action: {
@@ -748,6 +761,8 @@ export async function listFleetMissions(
       brandName: mission.brief.action.campaign.brand.name,
       workspaceId: mission.brief.action.campaign.brand.workspace.id,
       workspaceName: mission.brief.action.campaign.brand.workspace.name,
+      openToGuild: mission.openToGuild,
+      pendingApplications: mission._count.applications,
     })),
   };
 }
@@ -899,5 +914,65 @@ export async function getFleetRevenue(
     confirmedPaymentCount: payments.length,
     mrr,
     activeSubscriptions: actives.length,
+  };
+}
+
+// ── /espace-agence — compteurs de production (cartes vers les onglets) ──
+
+export type FleetPulse = {
+  agency: AgencyRef;
+  campaigns: { total: number; active: number };
+  /** inProgress = OPEN/ASSIGNED/DELIVERED (pas encore validées). */
+  missions: { total: number; inProgress: number };
+  /** Candidatures guilde en attente de décision sur les missions de la flotte. */
+  pendingApplications: number;
+  /** Paiements `confirmed` encaissés sur les workspaces de la flotte. */
+  confirmedPayments: number;
+};
+
+/**
+ * Compteurs vivants du dashboard agence — six `count` Prisma sur le MÊME
+ * périmètre flotte que le reste de l'espace, zéro agrégat inventé. Alimente
+ * les cartes qui mènent aux onglets campagnes / missions / revenus.
+ */
+export async function getFleetPulse(
+  session: Pick<SessionPayload, "userId" | "workspaceId">,
+): Promise<FleetPulse | null> {
+  const context = await getAgencyContext(session);
+  if (!context) return null;
+  const db = getDb();
+
+  const fleetWhere = fleetWorkspaceWhere(context.teamUserIds);
+  const campaignWhere: Prisma.CampaignWhereInput = { brand: { workspace: fleetWhere } };
+  const missionWhere: Prisma.MissionWhereInput = {
+    brief: { action: { campaign: campaignWhere } },
+  };
+
+  const [
+    campaignTotal,
+    campaignActive,
+    missionTotal,
+    missionInProgress,
+    pendingApplications,
+    confirmedPayments,
+  ] = await Promise.all([
+    db.campaign.count({ where: campaignWhere }),
+    db.campaign.count({ where: { ...campaignWhere, status: "ACTIVE" } }),
+    db.mission.count({ where: missionWhere }),
+    db.mission.count({
+      where: { ...missionWhere, status: { in: ["OPEN", "ASSIGNED", "DELIVERED"] } },
+    }),
+    db.missionApplication.count({
+      where: { mission: missionWhere, status: { in: PENDING_APPLICATION_STATUSES } },
+    }),
+    db.payment.count({ where: { workspace: fleetWhere, status: "confirmed" } }),
+  ]);
+
+  return {
+    agency: context.agency,
+    campaigns: { total: campaignTotal, active: campaignActive },
+    missions: { total: missionTotal, inProgress: missionInProgress },
+    pendingApplications,
+    confirmedPayments,
   };
 }

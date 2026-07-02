@@ -11,6 +11,7 @@ import { MobileNav } from "@/components/marketing/mobile-nav";
 
 const NAV_LINKS = [
   { href: "/", label: "Accueil" },
+  { href: "/lafusee", label: "La Fusée" },
   { href: "/methode", label: "Méthode" },
   { href: "/services", label: "Services" },
   { href: "/realisations", label: "Réalisations" },
@@ -21,7 +22,9 @@ const NAV_LINKS = [
 ] as const;
 
 const FOOTER_PRODUIT = [
+  { href: "/lafusee", label: "La Fusée — le produit" },
   { href: "/intake", label: "Le diagnostic ADVE gratuit" },
+  { href: "/intake/score", label: "Le score de marque /200" },
   { href: "/tarifs", label: "Tarifs" },
   { href: "/la-guilde", label: "La Guilde" },
   { href: "/portails", label: "Portails" },
