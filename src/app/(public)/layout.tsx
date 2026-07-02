@@ -55,7 +55,7 @@ const FOOTER_LEGAL = [
 function Wordmark({ className }: { className?: string }) {
   return (
     <span className={`font-display text-xl font-semibold tracking-tight ${className ?? ""}`}>
-      La Fusée<span className="text-coral">·</span>
+      UPgraders<span className="text-coral">·</span>
     </span>
   );
 }
@@ -64,7 +64,7 @@ function Header() {
   return (
     <header className="sticky top-0 z-50 border-b border-line-soft bg-ink/92 text-bone backdrop-blur-md">
       <div className="relative mx-auto flex h-16 max-w-page items-center gap-6 px-gutter">
-        <Link href="/" className="flex shrink-0 items-center" aria-label="La Fusée — accueil">
+        <Link href="/" className="flex shrink-0 items-center" aria-label="UPgraders — accueil">
           <Wordmark />
         </Link>
         <nav

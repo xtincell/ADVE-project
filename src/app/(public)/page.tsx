@@ -51,12 +51,12 @@ function Hero() {
         className="pointer-events-none absolute -top-40 right-[-10%] h-[480px] w-[480px] rounded-full bg-coral/20 blur-3xl"
       />
       <div className="relative mx-auto max-w-page px-gutter py-24 sm:py-32">
-        <p className="eyebrow text-coral">La Fusée · l&apos;OS de marque, par UPgraders</p>
+        <p className="eyebrow text-coral">UPgraders · agence de transformation de marques — Afrique francophone</p>
         <h1 className="font-display mt-5 max-w-3xl text-5xl font-semibold leading-[1.05] sm:text-6xl">
           De marque locale à <span className="text-coral">icône culturelle</span>.
         </h1>
         <p className="mt-6 max-w-2xl text-lg leading-relaxed text-sand">
-          La Fusée diagnostique votre marque sur 8 piliers, produit sa stratégie
+          Notre OS, La Fusée, diagnostique votre marque sur 8 piliers, produit sa stratégie
           complète — l&apos;Oracle — puis industrialise ce qui fait les icônes :
           l&apos;accumulation de superfans qui font basculer votre secteur.
         </p>

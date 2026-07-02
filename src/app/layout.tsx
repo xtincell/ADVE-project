@@ -33,11 +33,11 @@ const satoshi = localFont({
 
 export const metadata: Metadata = {
   title: {
-    default: "La Fusée — by UPgraders",
-    template: "%s · La Fusée",
+    default: "UPgraders — l'agence qui transforme des marques en icônes",
+    template: "%s · UPgraders",
   },
   description:
-    "L'OS qui transforme des marques d'Afrique francophone en icônes culturelles — diagnostic ADVE gratuit, Oracle stratégique, exécution.",
+    "UPgraders transforme des marques d'Afrique francophone en icônes culturelles — avec La Fusée, son OS de marque : diagnostic ADVE gratuit, Oracle stratégique, exécution.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

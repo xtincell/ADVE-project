@@ -8,11 +8,18 @@ casse donc rien par construction.
 
 ## Ce qu'est le produit
 
-**La Fusée** (par **UPgraders**) : l'OS qui transforme des marques d'Afrique francophone en icônes
+**Hiérarchie de marque (corrigée 2026-07-02) : UPgraders est la marque-mère — l'agence — et VEND
+La Fusée, son OS.** Le site, le domaine cible (upgraders.*), les titres : UPgraders d'abord ;
+La Fusée est LE produit (/lafusee). **La Fusée** : l'OS qui transforme des marques d'Afrique francophone en icônes
 culturelles, en industrialisant l'accumulation de superfans qui déplacent la fenêtre d'Overton de
 leur secteur. Le cœur méthodologique est la cascade **A→D→V→E→R→T→I→S** (ADVE déclaré par
 l'opérateur, RTIS dérivé) ; le funnel : intake public → diagnostic → workspace marque → livrables
 (dont l'Oracle) → campagnes/missions → guilde de talents → paiement mobile money (FCFA, Wave/OM/MTN/Moov).
+
+## Reprise depuis le VPS
+
+**[docs/PONT-VPS.md](docs/PONT-VPS.md)** : setup, récupération du Design System UPgraders canon
+(claude.ai/design, exige /design-login interactif), passe DS vague 6, deploy, vagues suivantes.
 
 ## Règles du rebuild (non négociables)
 
