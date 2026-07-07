@@ -21,9 +21,12 @@ COPY --from=build /app/.next/static ./.next/static
 COPY --from=build /app/public ./public
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/prisma.config.ts ./prisma.config.ts
-COPY --from=build /app/node_modules/prisma ./node_modules/prisma
-COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=build /app/node_modules/.bin ./node_modules/.bin
+# Next's standalone file-tracing (@vercel/nft) misses transitive deps required
+# lazily by @prisma/adapter-pg's pg driver tree (postgres-array, postgres-date...)
+# and by the prisma CLI used at boot (effect, c12, empathic...). Overlay the full
+# production node_modules from the build stage — these are hoisted top-level
+# packages that a partial @prisma/prisma/.bin copy does not carry.
+COPY --from=build /app/node_modules ./node_modules
 COPY docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh
 EXPOSE 3000
