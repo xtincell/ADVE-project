@@ -91,7 +91,31 @@ const PROTECTED_ROUTES: Array<{
   { prefix: "/launchpad", roles: ["ADMIN", "OPERATOR"] },
 ];
 
+// ---------------------------------------------------------------------------
+// Canonical domain redirect
+//
+// L'app Coolify répond sur 3 domaines (apex + www + lafuseev6.powerupgraders.com)
+// sans redirection entre eux. Conséquence concrète : tout ce qui est scopé par
+// origine (localStorage — cookie-consent.tsx, mais aussi tout futur usage de
+// cookies non-partagés entre sous-domaines) réapparaît à chaque atterrissage
+// sur une variante différente. Un seul domaine canonique = un seul localStorage.
+// ---------------------------------------------------------------------------
+const CANONICAL_HOST = process.env.CANONICAL_HOST || "powerupgraders.com";
+
 export async function proxy(request: NextRequest) {
+  // Ne s'applique qu'en prod (déployé derrière Coolify) — évite de rediriger
+  // localhost:3000 en dev où il n'y a qu'un seul host de toute façon.
+  if (process.env.NODE_ENV === "production") {
+    const host = request.headers.get("host");
+    if (host && host !== CANONICAL_HOST) {
+      const url = request.nextUrl.clone();
+      url.protocol = "https:";
+      url.host = CANONICAL_HOST;
+      url.port = "";
+      return NextResponse.redirect(url, 308);
+    }
+  }
+
   const path = request.nextUrl.pathname;
 
   // ----- Legacy redirects (exact match) -----
@@ -157,6 +181,10 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
+    // Canonical-domain redirect must run on every navigable path, not just
+    // the legacy/protected ones below — otherwise `/`, `/intake`, etc. never
+    // get canonicalized. Static assets + _next internals excluded.
+    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)",
     // Legacy redirect paths
     "/os/:path*",
     "/impulsion/:path*",
