@@ -113,22 +113,30 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Retrieve the JWT token from the request (next-auth v5 beta requires explicit secret)
-  const isProd = process.env.NODE_ENV === "production" || request.nextUrl.protocol === "https:";
-  let token = await getToken({
+  // Retrieve the JWT token from the request (next-auth v5 beta requires explicit secret).
+  //
+  // `secureCookie` decides BOTH the cookie name AND the decrypt salt inside
+  // `getToken()` (they default to the same value — Auth.js derives the salt
+  // from the cookie name). Passing an explicit `salt` without also pinning
+  // `cookieName` — as this used to do — desyncs the two: the lookup still
+  // read the `secureCookie`-derived cookie, but decrypted it with a
+  // mismatched salt, so the second (legacy `next-auth.*`) attempt always
+  // failed silently. Letting `getToken` derive both from `secureCookie`
+  // fixes that and is the documented-correct call shape.
+  //
+  // Behind a TLS-terminating reverse proxy (Coolify/Traefik), the backend
+  // connection is plain HTTP — `request.nextUrl.protocol` isn't guaranteed
+  // to reflect the client-facing scheme, so we also honor `x-forwarded-proto`.
+  const secureCookie =
+    process.env.NODE_ENV === "production" ||
+    request.nextUrl.protocol === "https:" ||
+    request.headers.get("x-forwarded-proto") === "https";
+
+  const token = await getToken({
     req: request,
     secret: process.env.NEXTAUTH_SECRET,
-    secureCookie: isProd,
-    salt: isProd ? "__Secure-authjs.session-token" : "authjs.session-token",
+    secureCookie,
   });
-  if (!token) {
-    token = await getToken({
-      req: request,
-      secret: process.env.NEXTAUTH_SECRET,
-      secureCookie: isProd,
-      salt: isProd ? "__Secure-next-auth.session-token" : "next-auth.session-token",
-    });
-  }
 
   if (!token) {
     // Not authenticated — redirect to login with callback URL
