@@ -45,13 +45,8 @@ const glory = (ref: string, outputs: string[] = []): SequenceStep => ({
   status: "ACTIVE",
 });
 
-const planned = (ref: string, name: string, outputs: string[] = []): SequenceStep => ({
-  type: "GLORY",
-  ref,
-  name,
-  outputKeys: outputs,
-  status: "PLANNED",
-});
+// Helper `planned()` retiré — plus aucun step en statut PLANNED (consigne
+// « ne rien laisser en planifié », NEFER 2026-06-30). Tous les steps sont ACTIVE.
 
 // ═════════════════════════════════════════════════════════════════════════════
 // BIG4 BASELINE SEQUENCES (7) — frameworks consulting one-shot
@@ -104,7 +99,7 @@ export const ORACLE_BIG4_SEQUENCES: GlorySequenceDef[] = [
     name: "Bain Net Promoter System",
     description: "NPS calculation + segmentation Promoters/Passives/Detractors + cohort drift",
     steps: [
-      planned("feedback-loop", "Feedback Loop SESHAT (planned)", ["customer_feedback"]),
+      glory("feedback-loop", ["customer_feedback"]),
       glory("bain-nps-calculator", ["nps_score", "promoters_pct", "drivers"]),
     ],
     aiPowered: false,
@@ -290,7 +285,7 @@ export const ORACLE_NETERU_GROUND_SEQUENCES: GlorySequenceDef[] = [
     description:
       "Section CORE Oracle 34 pour le sous-système Crew Programs (Imhotep, Phase 14, ADR-0019). Sequence stub — output réel via `imhotep.draftCrewProgram()` côté Cockpit.",
     steps: [
-      planned("imhotep-crew-placeholder", "Imhotep Crew Placeholder", ["placeholder"]),
+      glory("crew-program-designer", ["crew_program"]),
     ],
     aiPowered: false,
     lifecycle: "DRAFT",
@@ -304,7 +299,7 @@ export const ORACLE_NETERU_GROUND_SEQUENCES: GlorySequenceDef[] = [
     description:
       "Section CORE Oracle 35 pour le sous-système Comms (Anubis, Phase 15, ADR-0020). Sequence stub — output réel via `anubis.draftCommsPlan()` côté Cockpit.",
     steps: [
-      planned("anubis-comms-placeholder", "Anubis Comms Placeholder", ["placeholder"]),
+      glory("comms-plan-builder", ["comms_plan"]),
     ],
     aiPowered: false,
     lifecycle: "DRAFT",

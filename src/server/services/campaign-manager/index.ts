@@ -13,6 +13,7 @@ import { canTransition, requiresApproval, getAvailableTransitions, validateGates
 import { ACTION_TYPES, getActionType, getActionsByCategory, type ActionCategory } from "./action-types";
 import { assertCampaignHasBrief, getCampaignBriefStatus, BriefMissingError } from "./brief-gate";
 import { buildCampaignBrief, briefTitle, type CampaignBriefType } from "./brief-builder";
+import { slugifyMissionTitle } from "@/lib/types/guild-mission-brief";
 
 export { canTransition, requiresApproval, getAvailableTransitions } from "./state-machine";
 export { ACTION_TYPES, getActionType, getActionsByCategory, getActionsByDriver, searchActions } from "./action-types";
@@ -814,6 +815,11 @@ export async function listBriefs(campaignId: string) {
  */
 export async function updateBrief(id: string, content: Record<string, unknown>) {
   const existing = await db.campaignBrief.findUniqueOrThrow({ where: { id } });
+  // Édition manuelle autorisée AVANT validation uniquement (un brief VALIDATED a
+  // déjà matérialisé sa mission — il devient immuable).
+  if (existing.status === "VALIDATED") {
+    throw new Error("Brief déjà validé — non éditable. Éditez le brief avant de le valider.");
+  }
   return db.campaignBrief.update({
     where: { id },
     data: {
@@ -829,6 +835,556 @@ export async function updateBrief(id: string, content: Record<string, unknown>) 
  */
 export function getBriefTypes() {
   return BRIEF_TYPES.map((bt) => ({ ...bt }));
+}
+
+/** P0..P3 (BrandAction) → priorité numérique Mission (0 = la plus haute). */
+function brandActionPriorityToMission(p: string | null | undefined): number {
+  switch (p) {
+    case "P0": return 0;
+    case "P1": return 1;
+    case "P3": return 3;
+    default: return 2; // P2 / null
+  }
+}
+
+/**
+ * Étage « Actions → Briefs » du pipeline staged
+ * (Campagne → Actions → Briefs → [validation] → Missions → pipes).
+ *
+ * Génère le **brief de production** d'une `BrandAction` (action canonique
+ * ADR-0094/0119) et **s'arrête là** — dérivé déterministiquement de l'action
+ * (`buildCampaignBrief(ctx.action)`, zéro LLM), créé en `DRAFT`, stampé
+ * `content.brandActionId` (traçabilité action → brief). **Ne crée PAS de
+ * mission** : la mission naît de la validation opérateur du brief
+ * (`createMissionFromValidatedBrief`), jamais d'un raccourci. Idempotent par
+ * (campaignId, action).
+ */
+export async function generateBriefFromBrandAction(brandActionId: string) {
+  const action = await db.brandAction.findUniqueOrThrow({
+    where: { id: brandActionId },
+    include: { campaign: true },
+  });
+  if (!action.campaignId || !action.campaign) {
+    throw new Error(
+      "Action non rattachée à une campagne — génère les campagnes canon (Pilier S) d'abord.",
+    );
+  }
+
+  // Idempotence : un brief par action (stampé content.brandActionId).
+  const actionBriefs = await db.campaignBrief.findMany({
+    where: { campaignId: action.campaignId, generatedBy: "brand-action-brief" },
+    select: { id: true, status: true, content: true },
+  });
+  const already = actionBriefs.find((b) => {
+    const c = b.content as { brandActionId?: unknown } | null;
+    return !!c && c.brandActionId === brandActionId;
+  });
+  if (already) return { briefId: already.id, status: already.status, created: false };
+
+  const strategy = await db.strategy.findUniqueOrThrow({
+    where: { id: action.strategyId },
+    include: { pillars: true },
+  });
+
+  // Brief PRODUCTION dérivé DE l'action (déterministe).
+  const content = buildCampaignBrief("PRODUCTION", {
+    campaign: action.campaign,
+    strategy,
+    action: {
+      title: action.title,
+      description: action.description,
+      persona: action.persona,
+      locality: action.locality,
+      touchpoint: action.touchpoint,
+      sku: action.sku,
+      budgetMin: action.budgetMin,
+      budgetMax: action.budgetMax,
+      budgetCurrency: action.budgetCurrency,
+      timingStart: action.timingStart,
+      timingEnd: action.timingEnd,
+    },
+  });
+
+  const brief = await db.campaignBrief.create({
+    data: {
+      campaignId: action.campaignId,
+      title: `Brief — ${action.title}`.slice(0, 200),
+      content: { ...content, brandActionId } as Prisma.InputJsonValue,
+      status: "DRAFT",
+      briefType: "PRODUCTION",
+      targetDriver: "PRODUCTION",
+      generatedBy: "brand-action-brief",
+      advertis_vector: action.campaign.advertis_vector as Prisma.InputJsonValue,
+    },
+  });
+
+  return { briefId: brief.id, status: brief.status, created: true };
+}
+
+/**
+ * Étage « Briefs → [validation] → Missions ». Valide un brief
+ * (DRAFT → VALIDATED, gate opérateur) et matérialise la **mission liée**
+ * (`briefId` + propagation `brandActionId` dans `briefData`). Mission créée en
+ * `DRAFT` = « prête à dispatcher » ; un pipe (crew Imhotep / La Guilde) l'active
+ * ensuite (`mission.assign` → IN_PROGRESS, ou `submitMissionToGuild`). Idempotent
+ * par `briefId`. Déterministe, zéro LLM.
+ */
+export async function createMissionFromValidatedBrief(briefId: string) {
+  const brief = await db.campaignBrief.findUniqueOrThrow({
+    where: { id: briefId },
+    include: { campaign: true },
+  });
+  if (!brief.campaignId || !brief.campaign) {
+    throw new Error("Brief non rattaché à une campagne.");
+  }
+
+  if (brief.status !== "VALIDATED") {
+    await db.campaignBrief.update({ where: { id: briefId }, data: { status: "VALIDATED" } });
+  }
+
+  // Idempotence : une mission par brief (lien briefId).
+  const existing = await db.mission.findFirst({ where: { briefId }, select: { id: true } });
+  if (existing) return { briefId, missionId: existing.id, created: false };
+
+  const content = brief.content as Record<string, unknown> | null;
+  const brandActionId =
+    content && typeof content.brandActionId === "string" ? content.brandActionId : null;
+  const action = brandActionId
+    ? await db.brandAction.findUnique({
+        where: { id: brandActionId },
+        select: { priority: true, description: true, timingEnd: true, budgetMin: true, budgetMax: true },
+      })
+    : null;
+
+  // Budget définitif fixé AVANT validation (édité sur le brief via updateBrief →
+  // `content.missionBudget`), sinon budget de l'action, sinon budget campagne.
+  const explicitBudget =
+    content && typeof content.missionBudget === "number" ? content.missionBudget : null;
+  const baseTitle = brief.title.replace(/^Brief — /, "");
+  const mission = await db.mission.create({
+    data: {
+      title: `Mission — ${baseTitle}`.slice(0, 200),
+      description: action?.description ?? null,
+      strategyId: brief.campaign.strategyId,
+      campaignId: brief.campaignId,
+      status: "DRAFT",
+      priority: brandActionPriorityToMission(action?.priority),
+      budget: explicitBudget ?? action?.budgetMax ?? action?.budgetMin ?? brief.campaign.budget ?? 0,
+      slaDeadline: action?.timingEnd ?? brief.campaign.endDate ?? null,
+      briefId: brief.id,
+      briefData: {
+        ...(content ?? {}),
+        briefId: brief.id,
+        ...(brandActionId ? { brandActionId } : {}),
+      } as Prisma.InputJsonValue,
+    },
+  });
+
+  // Auto-génération déterministe des activités (asset/terrain + budget + KPI)
+  // dès la création de la mission — la décomposition n'est plus manuelle.
+  await seedDefaultMissionActivities(mission.id);
+
+  return { briefId, missionId: mission.id, created: true };
+}
+
+/**
+ * Étage « Missions → pipes » (pipe La Guilde). Soumet une mission au marketplace
+ * public : pose `guildSubmittedAt` + `publicSlug` → entre dans la file de
+ * modération opérateur (`/console/arene/missions-guilde`) avant publication sur
+ * le mur public (ADR-0098, `laguilde.publishMission`). Le pipe crew interne reste
+ * l'assignation directe (`mission.assign`). Idempotent.
+ */
+export async function submitMissionToGuild(missionId: string) {
+  const mission = await db.mission.findUniqueOrThrow({
+    where: { id: missionId },
+    select: { id: true, title: true, guildSubmittedAt: true },
+  });
+  if (mission.guildSubmittedAt) return { missionId, submitted: false, alreadySubmitted: true };
+
+  // Slug public unique déterministe.
+  let slug = slugifyMissionTitle(mission.title, missionId.slice(-6));
+  for (
+    let n = 1;
+    await db.mission.findUnique({ where: { publicSlug: slug }, select: { id: true } });
+    n++
+  ) {
+    slug = slugifyMissionTitle(mission.title, `${missionId.slice(-6)}-${n}`);
+  }
+
+  await db.mission.update({
+    where: { id: missionId },
+    data: { guildSubmittedAt: new Date(), publicSlug: slug, category: "PRODUCTION" },
+  });
+  return { missionId, submitted: true, alreadySubmitted: false };
+}
+
+/**
+ * IDs des actions réellement éclatées en mission : une action est éclatée ssi
+ * une mission de la campagne la référence via `briefData.brandActionId` (stampé
+ * par `explodeBrandActionToMission`). Pur, déterministe — découple « a une
+ * mission » du statut calendaire `SCHEDULED` (posé aussi par autoSchedule /
+ * setTiming, sans mission). Régression : une action planifiée au calendrier mais
+ * non éclatée ne doit JAMAIS compter comme éclatée.
+ */
+export function deriveExplodedActionIds(
+  campaignActionIds: Iterable<string>,
+  missions: ReadonlyArray<{ briefData: unknown }>,
+): string[] {
+  const valid = new Set(campaignActionIds);
+  const exploded = new Set<string>();
+  for (const m of missions) {
+    const bd = m.briefData as { brandActionId?: unknown } | null;
+    const id = bd && typeof bd.brandActionId === "string" ? bd.brandActionId : null;
+    if (id !== null && valid.has(id)) exploded.add(id);
+  }
+  return [...exploded];
+}
+
+/**
+ * Map action → son brief (étage « Actions → Briefs »). Un brief « appartient » à
+ * une action via `content.brandActionId` (stampé par `generateBriefFromBrandAction`).
+ * Pur, déterministe.
+ */
+export function deriveActionBriefs(
+  campaignActionIds: Iterable<string>,
+  briefs: ReadonlyArray<{ id: string; status: string; content: unknown }>,
+): Record<string, { briefId: string; status: string }> {
+  const valid = new Set(campaignActionIds);
+  const out: Record<string, { briefId: string; status: string }> = {};
+  for (const b of briefs) {
+    const c = b.content as { brandActionId?: unknown } | null;
+    const id = c && typeof c.brandActionId === "string" ? c.brandActionId : null;
+    if (id !== null && valid.has(id) && !out[id]) out[id] = { briefId: b.id, status: b.status };
+  }
+  return out;
+}
+
+/**
+ * Diagnostic de chaîne d'une campagne (triage opérateur), aligné sur le pipeline
+ * staged : combien d'actions, combien ont un brief, combien de briefs validés,
+ * combien de missions. Déterministe, lecture seule. Détection par lien réel
+ * (`brief.content.brandActionId`, `mission.briefData.brandActionId`), jamais par
+ * statut calendaire.
+ */
+export async function getCampaignChainHealth(campaignId: string) {
+  const [brandActionRows, briefRows, missionRows, campaignActions] = await Promise.all([
+    db.brandAction.findMany({ where: { campaignId }, select: { id: true } }),
+    db.campaignBrief.findMany({ where: { campaignId }, select: { id: true, status: true, content: true } }),
+    db.mission.findMany({ where: { campaignId }, select: { briefData: true } }),
+    db.campaignAction.count({ where: { campaignId } }),
+  ]);
+  const actionIds = brandActionRows.map((a) => a.id);
+  const actionBriefs = deriveActionBriefs(actionIds, briefRows);
+  const explodedActionIds = deriveExplodedActionIds(actionIds, missionRows);
+  const brandActionsTotal = brandActionRows.length;
+  const actionsWithBrief = Object.keys(actionBriefs).length;
+  return {
+    brandActions: brandActionsTotal,
+    actionsWithBrief,
+    actionsWithMission: explodedActionIds.length,
+    brandActionsPending: Math.max(0, brandActionsTotal - actionsWithBrief),
+    actionBriefs,
+    explodedActionIds,
+    briefs: briefRows.length,
+    briefsValidated: briefRows.filter((b) => b.status === "VALIDATED").length,
+    missions: missionRows.length,
+    campaignActions,
+  };
+}
+
+// ============================================================================
+// MISSION ACTIVITIES — couche d'exécution pilotable par mission
+// Chaque activité = création d'asset (ASSET_CREATION) ou action terrain/prod
+// (FIELD_ACTION), avec budget alloué + KPI (cible/réel) + brief propre. La
+// complétion d'une activité fait progresser la mission ; une activité
+// `concludesMission` (ou la complétion de toutes) clôt la mission. Déterministe.
+// ============================================================================
+
+export const MISSION_ACTIVITY_TYPES = ["ASSET_CREATION", "FIELD_ACTION"] as const;
+export type MissionActivityType = (typeof MISSION_ACTIVITY_TYPES)[number];
+
+/** Avancement agrégé d'une mission via ses activités (pur, déterministe). */
+export function computeMissionActivityHealth(
+  activities: ReadonlyArray<{
+    status: string;
+    budgetAllocated: number | null;
+    kpiTarget: number | null;
+    kpiActual: number | null;
+  }>,
+): {
+  total: number;
+  done: number;
+  progressPct: number;
+  budgetAllocated: number;
+  kpiTarget: number;
+  kpiActual: number;
+  kpiPct: number;
+} {
+  const active = activities.filter((a) => a.status !== "CANCELLED");
+  const done = active.filter((a) => a.status === "DONE").length;
+  const budgetAllocated = active.reduce((s, a) => s + (a.budgetAllocated ?? 0), 0);
+  const kpiTarget = active.reduce((s, a) => s + (a.kpiTarget ?? 0), 0);
+  const kpiActual = active.reduce((s, a) => s + (a.kpiActual ?? 0), 0);
+  return {
+    total: active.length,
+    done,
+    // lafusee:allow-adhoc-completion -- progression d'activités de campagne (done/total), pas de complétude pilier ADVE
+    progressPct: active.length ? Math.round((done / active.length) * 100) : 0,
+    budgetAllocated,
+    kpiTarget,
+    kpiActual,
+    kpiPct: kpiTarget > 0 ? Math.round((kpiActual / kpiTarget) * 100) : 0,
+  };
+}
+
+export async function listMissionActivities(missionId: string) {
+  return db.missionActivity.findMany({
+    where: { missionId },
+    orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+  });
+}
+
+export async function createMissionActivity(input: {
+  missionId: string;
+  type?: string;
+  title: string;
+  description?: string | null;
+  budgetAllocated?: number | null;
+  budgetCurrency?: string | null;
+  kpiLabel?: string | null;
+  kpiTarget?: number | null;
+  concludesMission?: boolean;
+}) {
+  const type = (MISSION_ACTIVITY_TYPES as readonly string[]).includes(input.type ?? "")
+    ? (input.type as MissionActivityType)
+    : "ASSET_CREATION";
+  const order = await db.missionActivity.count({ where: { missionId: input.missionId } });
+  return db.missionActivity.create({
+    data: {
+      missionId: input.missionId,
+      type,
+      title: input.title.slice(0, 200),
+      description: input.description ?? null,
+      budgetAllocated: input.budgetAllocated ?? null,
+      budgetCurrency: input.budgetCurrency ?? "XAF",
+      kpiLabel: input.kpiLabel ?? null,
+      kpiTarget: input.kpiTarget ?? null,
+      concludesMission: input.concludesMission ?? false,
+      order,
+    },
+  });
+}
+
+/**
+ * Génère le **brief propre** d'une activité (déterministe, dérivé de la mission +
+ * campagne + ADVE + l'activité), stocké dans `briefContent`, éditable ensuite via
+ * `updateMissionActivityBrief`. ASSET_CREATION → brief PRODUCTION ; FIELD_ACTION
+ * → brief VENDOR. Zéro LLM.
+ */
+export async function generateMissionActivityBrief(activityId: string) {
+  const activity = await db.missionActivity.findUniqueOrThrow({
+    where: { id: activityId },
+    include: { mission: { include: { campaign: true } } },
+  });
+  if (!activity.mission.campaign) throw new Error("Mission non rattachée à une campagne.");
+  const strategy = await db.strategy.findUniqueOrThrow({
+    where: { id: activity.mission.strategyId },
+    include: { pillars: true },
+  });
+  const briefType: CampaignBriefType = activity.type === "FIELD_ACTION" ? "VENDOR" : "PRODUCTION";
+  const content = buildCampaignBrief(briefType, {
+    campaign: activity.mission.campaign,
+    strategy,
+    action: {
+      title: activity.title,
+      description: activity.description,
+      budgetMin: activity.budgetAllocated,
+      budgetMax: activity.budgetAllocated,
+      budgetCurrency: activity.budgetCurrency,
+    },
+  });
+  return db.missionActivity.update({
+    where: { id: activityId },
+    data: { briefContent: { ...content, activityId } as Prisma.InputJsonValue },
+  });
+}
+
+/** Édition manuelle du brief d'une activité (avant exécution). */
+export async function updateMissionActivityBrief(
+  activityId: string,
+  briefContent: Record<string, unknown>,
+) {
+  return db.missionActivity.update({
+    where: { id: activityId },
+    data: { briefContent: briefContent as Prisma.InputJsonValue },
+  });
+}
+
+/**
+ * Complète une activité (+ KPI réel optionnel) et recalcule l'avancement mission.
+ * Si l'activité `concludesMission` OU si toutes les activités (hors annulées)
+ * sont terminées → la mission est **conclue** (COMPLETED). Sinon, une mission en
+ * DRAFT passe IN_PROGRESS (au moins une activité avancée).
+ */
+export async function completeMissionActivity(activityId: string, kpiActual?: number | null) {
+  const activity = await db.missionActivity.update({
+    where: { id: activityId },
+    data: {
+      status: "DONE",
+      completedAt: new Date(),
+      ...(kpiActual != null ? { kpiActual } : {}),
+    },
+  });
+  const siblings = await db.missionActivity.findMany({
+    where: { missionId: activity.missionId },
+    select: { status: true },
+  });
+  const active = siblings.filter((s) => s.status !== "CANCELLED");
+  const allDone = active.length > 0 && active.every((s) => s.status === "DONE");
+  const concluded = activity.concludesMission || allDone;
+  if (concluded) {
+    await db.mission.update({ where: { id: activity.missionId }, data: { status: "COMPLETED" } });
+  } else {
+    await db.mission.updateMany({
+      where: { id: activity.missionId, status: "DRAFT" },
+      data: { status: "IN_PROGRESS" },
+    });
+  }
+  return { activityId, missionId: activity.missionId, missionConcluded: concluded };
+}
+
+export async function cancelMissionActivity(activityId: string) {
+  return db.missionActivity.update({
+    where: { id: activityId },
+    data: { status: "CANCELLED" },
+  });
+}
+
+export async function getMissionActivityHealth(missionId: string) {
+  const acts = await db.missionActivity.findMany({
+    where: { missionId },
+    select: { status: true, budgetAllocated: true, kpiTarget: true, kpiActual: true },
+  });
+  return computeMissionActivityHealth(acts);
+}
+
+/** Extrait une quantité (1er entier 1-5 chiffres) d'un libellé — pré-remplit la
+ *  cible KPI d'une activité de production (« 52 posts » → 52). Pur, déterministe. */
+export function extractLeadingQuantity(text: string): number | null {
+  const m = /\b(\d{1,5})\b/.exec(text);
+  return m ? Number(m[1]) : null;
+}
+
+/** Touchpoints offline ⇒ une activité « action terrain » distincte de la prod d'asset. */
+const FIELD_TOUCHPOINTS = ["EVENT", "OOH", "PLV", "RETAIL", "TERRAIN", "ACTIVATION", "PRINT", "RADIO", "TV", "STREET"];
+
+/**
+ * Auto-génère un jeu d'activités par défaut pour une mission, dérivé
+ * **déterministiquement** du brief/action (zéro LLM) : 1 activité Création d'asset
+ * (livrable principal) + 1 activité Action terrain si le touchpoint est offline.
+ * Budget réparti, cible KPI extraite du titre, KPI label depuis l'AARRR de
+ * l'action. **Idempotent** : ne seed que si la mission n'a aucune activité (le
+ * bouton « Régénérer » repart d'une mission vidée de ses activités).
+ */
+export async function seedDefaultMissionActivities(missionId: string) {
+  const existing = await db.missionActivity.count({ where: { missionId } });
+  if (existing > 0) return { created: 0, skipped: true as const };
+
+  const mission = await db.mission.findUniqueOrThrow({
+    where: { id: missionId },
+    select: { id: true, title: true, budget: true, briefData: true },
+  });
+  const bd = mission.briefData as { brandActionId?: unknown } | null;
+  const brandActionId = bd && typeof bd.brandActionId === "string" ? bd.brandActionId : null;
+  const action = brandActionId
+    ? await db.brandAction.findUnique({
+        where: { id: brandActionId },
+        select: { title: true, touchpoint: true, aarrrIntent: true, budgetMax: true, budgetMin: true, budgetCurrency: true },
+      })
+    : null;
+
+  const baseTitle = (action?.title ?? mission.title).replace(/^Mission — /, "").slice(0, 150);
+  const totalBudget = mission.budget ?? action?.budgetMax ?? action?.budgetMin ?? 0;
+  const currency = action?.budgetCurrency ?? "XAF";
+  const kpiLabel = action?.aarrrIntent ?? null;
+  const kpiTarget = extractLeadingQuantity(baseTitle);
+  const touchpoint = (action?.touchpoint ?? "").toUpperCase();
+  const isField = FIELD_TOUCHPOINTS.some((t) => touchpoint.includes(t));
+
+  const specs = isField
+    ? [
+        { type: "ASSET_CREATION", title: `Production des assets — ${baseTitle}`, budget: Math.round(totalBudget * 0.6), kpi: kpiTarget, concludes: false },
+        { type: "FIELD_ACTION", title: `Activation terrain — ${touchpoint || baseTitle}`, budget: Math.round(totalBudget * 0.4), kpi: null, concludes: true },
+      ]
+    : [{ type: "ASSET_CREATION", title: `Production — ${baseTitle}`, budget: totalBudget, kpi: kpiTarget, concludes: true }];
+
+  let order = 0;
+  for (const s of specs) {
+    await db.missionActivity.create({
+      data: {
+        missionId,
+        type: s.type,
+        title: s.title.slice(0, 200),
+        budgetAllocated: s.budget > 0 ? s.budget : null,
+        budgetCurrency: currency,
+        kpiLabel,
+        kpiTarget: s.kpi,
+        concludesMission: s.concludes,
+        order: order++,
+      },
+    });
+  }
+  return { created: specs.length, skipped: false as const };
+}
+
+/** Vide les activités d'une mission puis re-seed le jeu par défaut (déterministe). */
+export async function regenerateMissionActivities(missionId: string) {
+  await db.missionActivity.deleteMany({ where: { missionId } });
+  return seedDefaultMissionActivities(missionId);
+}
+
+/** Attribue (ou retire) un prestataire à une activité. Assigné ⇒ activité IN_PROGRESS. */
+export async function assignMissionActivity(activityId: string, assigneeId: string | null) {
+  return db.missionActivity.update({
+    where: { id: activityId },
+    data: {
+      assigneeId,
+      ...(assigneeId ? { status: "IN_PROGRESS" } : {}),
+    },
+  });
+}
+
+/** Fixe (ou efface) la durée d'une activité — bascule entre durée FIXÉE et DÉRIVÉE (PR-4b). */
+export async function setMissionActivityDuration(activityId: string, durationDays: number | null) {
+  return db.missionActivity.update({
+    where: { id: activityId },
+    data: { durationDays: durationDays && durationDays > 0 ? Math.round(durationDays) : null },
+  });
+}
+
+/**
+ * Rétroplanning d'une mission ancré sur T0 = date de lancement (startDate de la
+ * campagne) → SLA deadline → aujourd'hui, ou override explicite. Charge les activités,
+ * résout les durées (fixées ou dérivées) et calcule la fenêtre de production qui se
+ * termine à T0. Déterministe, zéro LLM.
+ */
+export async function getMissionRetroplan(missionId: string, t0Override?: Date) {
+  const mission = await db.mission.findUniqueOrThrow({
+    where: { id: missionId },
+    select: { id: true, slaDeadline: true, campaign: { select: { startDate: true } } },
+  });
+  const acts = await db.missionActivity.findMany({
+    where: { missionId },
+    select: { id: true, order: true, type: true, durationDays: true, status: true, title: true },
+    orderBy: { order: "asc" },
+  });
+  const launch = mission.campaign?.startDate ?? null;
+  const t0 = t0Override ?? launch ?? mission.slaDeadline ?? new Date();
+  const t0Source = t0Override ? "OVERRIDE" : launch ? "CAMPAIGN_LAUNCH" : mission.slaDeadline ? "SLA_DEADLINE" : "TODAY_FALLBACK";
+  const { computeRetroplan } = await import("./retroplan");
+  const plan = computeRetroplan(acts, t0);
+  const titleById = new Map(acts.map((a) => [a.id, a.title]));
+  return { ...plan, t0Source, slots: plan.slots.map((s) => ({ ...s, title: titleById.get(s.id) ?? null })) };
 }
 
 // ============================================================================

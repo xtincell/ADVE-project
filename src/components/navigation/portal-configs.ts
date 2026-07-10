@@ -85,7 +85,7 @@ export const cockpitNavGroups: NavGroup[] = [
       { href: "/cockpit/operate/forge", label: "La Forge", sublabel: "S → Projets campagne", icon: Zap },
       { href: "/cockpit/operate/action-brief", label: "Brief → Actions", sublabel: "Idéation guidée", icon: Lightbulb },
       { href: "/cockpit/operate/roadmap", label: "Roadmap", sublabel: "Calendrier des actions", icon: Calendar },
-      { href: "/cockpit/operate/sequences", label: "Séquences Glory", sublabel: "Livrables IA", icon: PlayCircle },
+      { href: "/cockpit/operate/sequences", label: "Séquences", sublabel: "Livrables IA", icon: PlayCircle },
     ],
   },
   // ── Production & Livrables — du brief à la mise en ligne ─────────────────
@@ -128,8 +128,8 @@ export const cockpitNavGroups: NavGroup[] = [
     items: [
       { href: "/cockpit/brand/diagnostic", label: `${PILLAR_METADATA.R.displayName} (R)`, sublabel: PILLAR_METADATA.R.role, pillarSlug: "pillar-r", icon: Shield },
       { href: "/cockpit/brand/market", label: `${PILLAR_METADATA.T.displayName} (T)`, sublabel: PILLAR_METADATA.T.role, pillarSlug: "pillar-t", icon: TrendingUp },
-      { href: "/cockpit/brand/jehuty", label: "Jehuty", sublabel: "Organe de presse", labelKey: "nav.jehuty", sublabelKey: "nav.jehuty.sub", icon: Newspaper },
-      { href: "/cockpit/brand/notoria", label: "Notoria", sublabel: "Moteur de recommandation", labelKey: "nav.notoria", sublabelKey: "nav.notoria.sub", icon: Sparkles },
+      { href: "/cockpit/brand/jehuty", label: "La Gazette", sublabel: "Veille & signaux", labelKey: "nav.jehuty", sublabelKey: "nav.jehuty.sub", icon: Newspaper },
+      { href: "/cockpit/brand/notoria", label: "Recommandations", sublabel: "Moteur de recommandation", labelKey: "nav.notoria", sublabelKey: "nav.notoria.sub", icon: Sparkles },
       { href: "/cockpit/brand/potential", label: `${PILLAR_METADATA.I.displayName} (I)`, sublabel: PILLAR_METADATA.I.role, pillarSlug: "pillar-i", icon: Rocket },
       { href: "/cockpit/brand/roadmap", label: `${PILLAR_METADATA.S.displayName} (S)`, sublabel: PILLAR_METADATA.S.role, pillarSlug: "pillar-s", icon: Route },
     ],
@@ -182,6 +182,7 @@ export const creatorNavGroups: NavGroup[] = [
       { href: "/creator/missions/available", label: "Disponibles", icon: Inbox },
       { href: "/creator/missions/active", label: "En cours", icon: PlayCircle },
       { href: "/creator/missions/collab", label: "Collaboratives", icon: Users },
+      { href: "/creator/proposals", label: "Propositions", icon: Lightbulb },
     ],
   },
   {

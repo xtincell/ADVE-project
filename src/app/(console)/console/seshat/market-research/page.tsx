@@ -204,7 +204,7 @@ export default function MarketResearchPage() {
             value={sourceUrlsRaw}
             onChange={(e) => setSourceUrlsRaw(e.target.value)}
             rows={3}
-            placeholder="https://www.statista.com/...&#10;https://www.euromonitor.com/...&#10;https://...&#10;Laisser vide → mode mémoire-modèle (warning UI)"
+            placeholder="https://www.statista.com/... · https://www.euromonitor.com/... · vide → mode mémoire-modèle"
             className="w-full rounded border border-white/10 bg-white/5 px-3 py-2 text-xs text-white placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-rocket-red/30"
           />
           {sourceUrls.length === 0 ? (

@@ -291,7 +291,7 @@ export default function DeliverableForgePage() {
                 className="flex items-center justify-center gap-2 rounded-xl border border-error/20 bg-error/5 px-4 py-3 text-sm font-medium text-error transition-colors hover:bg-error/10"
               >
                 <CheckCircle2 className="h-4 w-4" />
-                Confirmer et passer à 100% de confiance
+                Valider malgré la confiance faible
               </button>
             </div>
           </div>
@@ -337,7 +337,7 @@ export default function DeliverableForgePage() {
                 <div className="space-y-1">
                   <h3 className="text-sm font-bold text-white">Validation du S requise</h3>
                   <p className="text-xs text-foreground-secondary leading-relaxed">
-                    La stratégie ADVE-RTIS de la marque <span className="font-semibold text-white">{strategy?.name}</span> n'a pas encore été validée. La validation de la synthèse est nécessaire pour verrouiller la stratégie et déclencher sa vie opérationnelle sous ADVERTIS.
+                    La stratégie de la marque <span className="font-semibold text-white">{strategy?.name}</span> n'a pas encore été validée. La validation de la synthèse est nécessaire pour verrouiller la stratégie et déclencher sa vie opérationnelle.
                   </p>
                 </div>
               </div>
@@ -345,20 +345,20 @@ export default function DeliverableForgePage() {
               {/* S-Validation checklist */}
               <div className="border border-border/60 bg-background/50 rounded-lg p-4 space-y-3">
                 <h4 className="text-2xs font-semibold text-foreground-secondary uppercase tracking-wider">
-                  Checklist de validation stratégique
+                  Critères de validation stratégique
                 </h4>
-                
+
                 <ul className="space-y-2 text-xs">
-                  <li className="flex items-center gap-2 text-white">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                  <li className="flex items-center gap-2 text-foreground-secondary">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-foreground-muted" />
                     Piliers A, D, V, E complétés et qualifiés
                   </li>
-                  <li className="flex items-center gap-2 text-white">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                  <li className="flex items-center gap-2 text-foreground-secondary">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-foreground-muted" />
                     Bilan des risques et opportunités (R+T) calculé
                   </li>
-                  <li className="flex items-center gap-2 text-white">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                  <li className="flex items-center gap-2 text-foreground-secondary">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-foreground-muted" />
                     Oracle stratégique validé et assemblé
                   </li>
                 </ul>
@@ -380,7 +380,7 @@ export default function DeliverableForgePage() {
               <div className="flex items-center gap-3">
                 <ShieldCheck className="h-5 w-5 text-success" />
                 <div className="text-xs">
-                  <span className="font-semibold text-white">Stratégie Validée.</span> La vie de la marque sous ADVERTIS est active. Vous pouvez forger des projets ci-dessous.
+                  <span className="font-semibold text-white">Stratégie Validée.</span> La vie opérationnelle de la marque est active. Vous pouvez forger des projets ci-dessous.
                 </div>
               </div>
             </section>
@@ -417,7 +417,7 @@ export default function DeliverableForgePage() {
                     className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-background hover:bg-accent/90 disabled:opacity-50"
                   >
                     <Zap className="h-4 w-4" />
-                    {generateProjectsMutation.isPending ? "Création..." : `Forger ${selectedActionIds.length} projets`}
+                    {generateProjectsMutation.isPending ? "Génération..." : `Générer ${selectedActionIds.length} briefs`}
                   </button>
                 </div>
               </div>
@@ -562,7 +562,7 @@ export default function DeliverableForgePage() {
                   </h3>
                   <p className="mt-0.5 text-xs text-foreground-secondary">
                     Briefs upstream à fournir (depuis le vault) ou à générer. L'estimation coût
-                    inclut les LLM tools manquants + le forge Ptah final.
+                    inclut les éléments de production manquants.
                   </p>
                 </div>
               </div>
@@ -637,12 +637,12 @@ export default function DeliverableForgePage() {
                 <div className="flex-1">
                   <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
                     <Sparkles className="h-4 w-4" />
-                    Lancer la production
+                    Aperçu de la cascade de production
                   </h3>
                   <p className="mt-0.5 text-xs text-foreground-secondary">
-                    Phase 17 mode PREVIEW : la composition est calculée et persistée hash-chained
-                    dans IntentEmission, sans encore déclencher de forge. Le dispatch async réel
-                    (avec streaming NSP des étapes) viendra dans un commit ultérieur.
+                    Cet aperçu calcule la cascade de briefs nécessaires à ce livrable, sans
+                    encore lancer la production. La production effective des assets est prise
+                    en charge par votre équipe UPgraders.
                   </p>
                 </div>
               </div>
@@ -655,7 +655,7 @@ export default function DeliverableForgePage() {
                   className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-background hover:bg-accent/90 disabled:opacity-50"
                 >
                   <Zap className="h-4 w-4" />
-                  {composeMutation.isPending ? "Composition…" : "Lancer la composition (PREVIEW)"}
+                  {composeMutation.isPending ? "Calcul…" : "Calculer l'aperçu"}
                 </button>
                 <button
                   type="button"
@@ -677,10 +677,7 @@ export default function DeliverableForgePage() {
                   <CheckCircle2 className="h-5 w-5" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-sm font-semibold text-foreground">Composition complétée</h3>
-                  <p className="mt-0.5 text-xs text-foreground-secondary">
-                    Status : <span className="font-semibold">{composition.status}</span>
-                  </p>
+                  <h3 className="text-sm font-semibold text-foreground">Aperçu de la cascade prêt</h3>
                   <p className="mt-2 text-xs text-foreground">{composition.summary}</p>
                 </div>
               </div>

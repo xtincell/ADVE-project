@@ -17,6 +17,7 @@ import { buildPillarContentMap, PILLAR_TAG_BG } from "@/components/shared/pillar
 import { PILLAR_NAMES, PILLAR_KEYS, type PillarKey } from "@/lib/types/advertis-vector";
 import { getFieldLabel } from "@/components/cockpit/field-renderers";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
+import { MissionActivitiesPanel } from "@/components/cockpit/mission-activities-panel";
 import { FormField } from "@/components/shared/form-field";
 import {
   Rocket,
@@ -954,6 +955,12 @@ export default function MissionsPage() {
               <div>
                 <p className="mb-2 text-xs font-medium text-foreground-muted uppercase">Progression</p>
                 <ProgressTimeline currentStatus={detailData.status} />
+              </div>
+
+              {/* Activités + pilotage (clôture / dispatch pipe) — étage « Missions → pipes » */}
+              <div>
+                <p className="mb-2 text-xs font-medium text-foreground-muted uppercase">Activités &amp; pilotage</p>
+                <MissionActivitiesPanel missionId={detailData.id} missionStatus={detailData.status} />
               </div>
 
               {/* Brief description */}

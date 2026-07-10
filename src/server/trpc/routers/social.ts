@@ -561,6 +561,25 @@ export const socialRouter = createTRPCRouter({
   }),
 
   // ════════════════════════════════════════════════════════════════════
+  // Re-scan de l'empreinte publique → pilier E (ADR-0121)
+  // ════════════════════════════════════════════════════════════════════
+
+  /**
+   * Re-collecte l'empreinte publique de la marque (footprint site + découverte
+   * Brave + followers Apify + presse RSS) et met à jour le pilier E via le
+   * gateway (author EXTERNAL_SAAS, provenance SOURCE/INFERRED — le guard
+   * protège les champs HUMAN). Parité manual-first du chemin intake auto.
+   */
+  rescanPublicFootprint: governedProcedure({
+    kind: "ENRICH_E_FROM_PUBLIC_FOOTPRINT",
+    inputSchema: z.object({ strategyId: z.string().min(1) }),
+    caller: "social:rescanPublicFootprint",
+  }).mutation(async ({ input }) => {
+    const { rerunPublicEnrichmentForStrategy } = await import("@/server/services/quick-intake/public-enrichment");
+    return rerunPublicEnrichmentForStrategy(input.strategyId);
+  }),
+
+  // ════════════════════════════════════════════════════════════════════
   // Gestion des connecteurs sociaux
   // ════════════════════════════════════════════════════════════════════
 

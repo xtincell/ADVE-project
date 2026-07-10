@@ -15,37 +15,37 @@ interface CommandItem {
 
 const PAGE_ITEMS: CommandItem[] = [
   // Cockpit
-  { id: "c-dash", label: "Tableau de bord", href: "/cockpit", section: "Brand OS", icon: BarChart3, keywords: "dashboard cockpit" },
-  { id: "c-missions", label: "Missions", href: "/cockpit/operate/missions", section: "Brand OS > Operations", icon: Target },
-  { id: "c-campaigns", label: "Campagnes", href: "/cockpit/operate/campaigns", section: "Brand OS > Operations", icon: Megaphone },
-  { id: "c-briefs", label: "Briefs", href: "/cockpit/operate/briefs", section: "Brand OS > Operations", icon: FileText },
-  { id: "c-identity", label: "Identite ADVE", href: "/cockpit/brand/identity", section: "Brand OS > Marque", icon: FileText, keywords: "profil marque pilier" },
-  { id: "c-guidelines", label: "Guidelines", href: "/cockpit/brand/guidelines", section: "Brand OS > Marque", icon: FileText },
-  { id: "c-assets", label: "Brand Vault", href: "/cockpit/brand/assets", section: "Brand OS > Marque", icon: FileText },
-  { id: "c-reports", label: "Value Reports", href: "/cockpit/insights/reports", section: "Brand OS > Insights", icon: BarChart3 },
-  { id: "c-diag", label: "Diagnostics", href: "/cockpit/insights/diagnostics", section: "Brand OS > Insights", icon: BarChart3, keywords: "artemis radar pilier" },
-  { id: "c-bench", label: "Benchmarks", href: "/cockpit/insights/benchmarks", section: "Brand OS > Insights", icon: BarChart3 },
+  { id: "c-dash", label: "Tableau de bord", href: "/cockpit", section: "Cockpit", icon: BarChart3, keywords: "dashboard cockpit" },
+  { id: "c-missions", label: "Missions", href: "/cockpit/operate/missions", section: "Cockpit > Operations", icon: Target },
+  { id: "c-campaigns", label: "Campagnes", href: "/cockpit/operate/campaigns", section: "Cockpit > Operations", icon: Megaphone },
+  { id: "c-briefs", label: "Briefs", href: "/cockpit/operate/briefs", section: "Cockpit > Operations", icon: FileText },
+  { id: "c-identity", label: "Identité de marque", href: "/cockpit/brand/identity", section: "Cockpit > Marque", icon: FileText, keywords: "profil marque pilier" },
+  { id: "c-guidelines", label: "Guidelines", href: "/cockpit/brand/guidelines", section: "Cockpit > Marque", icon: FileText },
+  { id: "c-assets", label: "Vault de marque", href: "/cockpit/brand/assets", section: "Cockpit > Marque", icon: FileText },
+  { id: "c-reports", label: "Value Reports", href: "/cockpit/insights/reports", section: "Cockpit > Insights", icon: BarChart3 },
+  { id: "c-diag", label: "Diagnostics", href: "/cockpit/insights/diagnostics", section: "Cockpit > Insights", icon: BarChart3, keywords: "radar pilier diagnostic" },
+  { id: "c-bench", label: "Benchmarks", href: "/cockpit/insights/benchmarks", section: "Cockpit > Insights", icon: BarChart3 },
   // Creator
-  { id: "cr-dash", label: "Tableau de bord", href: "/creator", section: "Guild OS", icon: BarChart3, keywords: "dashboard creator" },
-  { id: "cr-avail", label: "Missions disponibles", href: "/creator/missions/available", section: "Guild OS > Missions", icon: Target },
-  { id: "cr-active", label: "Missions en cours", href: "/creator/missions/active", section: "Guild OS > Missions", icon: Target },
-  { id: "cr-collab", label: "Missions collaboratives", href: "/creator/missions/collab", section: "Guild OS > Missions", icon: Users },
-  { id: "cr-metrics", label: "Metriques", href: "/creator/progress/metrics", section: "Guild OS > Progression", icon: BarChart3 },
-  { id: "cr-path", label: "Parcours", href: "/creator/progress/path", section: "Guild OS > Progression", icon: BarChart3, keywords: "tier apprenti compagnon" },
-  { id: "cr-earn", label: "Gains missions", href: "/creator/earnings/missions", section: "Guild OS > Gains", icon: BarChart3, keywords: "revenue facture" },
-  { id: "cr-learn", label: "Apprendre ADVE", href: "/creator/learn/adve", section: "Guild OS > Apprendre", icon: FileText },
+  { id: "cr-dash", label: "Tableau de bord", href: "/creator", section: "Espace créateur", icon: BarChart3, keywords: "dashboard creator" },
+  { id: "cr-avail", label: "Missions disponibles", href: "/creator/missions/available", section: "Espace créateur > Missions", icon: Target },
+  { id: "cr-active", label: "Missions en cours", href: "/creator/missions/active", section: "Espace créateur > Missions", icon: Target },
+  { id: "cr-collab", label: "Missions collaboratives", href: "/creator/missions/collab", section: "Espace créateur > Missions", icon: Users },
+  { id: "cr-metrics", label: "Metriques", href: "/creator/progress/metrics", section: "Espace créateur > Progression", icon: BarChart3 },
+  { id: "cr-path", label: "Parcours", href: "/creator/progress/path", section: "Espace créateur > Progression", icon: BarChart3, keywords: "tier apprenti compagnon" },
+  { id: "cr-earn", label: "Gains missions", href: "/creator/earnings/missions", section: "Espace créateur > Gains", icon: BarChart3, keywords: "revenue facture" },
+  { id: "cr-learn", label: "Apprendre ADVE", href: "/creator/learn/adve", section: "Espace créateur > Apprendre", icon: FileText },
   // Console
   { id: "co-dash", label: "Ecosysteme", href: "/console", section: "Console", icon: BarChart3, keywords: "dashboard fixer" },
   { id: "co-clients", label: "Clients", href: "/console/strategy-portfolio/clients", section: "Console > Portfolio Marques", icon: Building },
   { id: "co-intake", label: "Pipeline Intake", href: "/console/strategy-operations/intake", section: "Console > Strategy Ops", icon: Target, keywords: "prospect conversion" },
   { id: "co-boot", label: "Boot Sequence", href: "/console/strategy-operations/boot", section: "Console > Strategy Ops", icon: Target, keywords: "onboarding" },
-  { id: "co-intel", label: "Intelligence", href: "/console/signal/intelligence", section: "Console > Le Signal", icon: BarChart3 },
-  { id: "co-signals", label: "Signaux", href: "/console/signal/signals", section: "Console > Le Signal", icon: BarChart3 },
-  { id: "co-kg", label: "Knowledge Graph", href: "/console/signal/knowledge", section: "Console > Le Signal", icon: Layers },
+  { id: "co-intel", label: "Intelligence", href: "/console/seshat/intelligence", section: "Console > Le Signal", icon: BarChart3 },
+  { id: "co-signals", label: "Signaux", href: "/console/seshat/signals", section: "Console > Le Signal", icon: BarChart3 },
+  { id: "co-kg", label: "Knowledge Graph", href: "/console/seshat/knowledge", section: "Console > Le Signal", icon: Layers },
   { id: "co-guild", label: "Guilde", href: "/console/arene/guild", section: "Console > L'Arene", icon: Users, keywords: "creatif freelance" },
   { id: "co-match", label: "Matching", href: "/console/arene/matching", section: "Console > L'Arene", icon: Users },
-  { id: "co-miss", label: "Missions", href: "/console/fusee/missions", section: "Console > La Fusée", icon: Target },
-  { id: "co-camp", label: "Campagnes", href: "/console/fusee/campaigns", section: "Console > La Fusée", icon: Megaphone },
+  { id: "co-miss", label: "Missions", href: "/console/artemis/missions", section: "Console > La Fusée", icon: Target },
+  { id: "co-camp", label: "Campagnes", href: "/console/artemis/campaigns", section: "Console > La Fusée", icon: Megaphone },
   { id: "co-rev", label: "Revenus", href: "/console/socle/revenue", section: "Console > Le Socle", icon: BarChart3, keywords: "finance argent" },
   { id: "co-comm", label: "Commissions", href: "/console/socle/commissions", section: "Console > Le Socle", icon: BarChart3 },
 ];
@@ -157,7 +157,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
           <div className="max-h-80 overflow-y-auto p-2">
             {!query.trim() && recentItems.length === 0 && (
               <p className="px-3 py-6 text-center text-sm text-foreground-muted">
-                Tapez pour rechercher dans La Fusée
+                Tapez pour rechercher dans votre espace
               </p>
             )}
 

@@ -645,6 +645,18 @@ export async function writePillarAndScore(request: PillarWriteRequest): Promise<
     // pillar content goes through this function (LOI 1), so this single
     // point of recompute keeps the cache in sync with the content.
     await reconcileCompletionLevelCache(request.strategyId, request.pillarKey);
+    // Cascade staleness Oracle — un pilier ADVE/RTIS source a muté, donc les
+    // sections Oracle dérivées (§22-35, lues depuis BrandAsset) ne reflètent plus
+    // l'état courant. Corrige la cascade MORTE : `markAllSectionsStale` était défini
+    // mais JAMAIS appelé → amender un pilier ne marquait jamais l'Oracle stale.
+    // Idempotent (COMPLETE→STALE seulement) et conservateur : sur-invalider est sûr
+    // (régénération déterministe = même contenu), sous-invalider = le bug.
+    try {
+      const { markAllSectionsStale } = await import("@/server/services/oracle-section");
+      await markAllSectionsStale(request.strategyId);
+    } catch {
+      // Non-fatal — la staleness Oracle ne doit jamais casser l'écriture pilier.
+    }
     // D-6 — emit a pillar.written event so the phase resolver re-evaluates.
     const { eventBus } = await import("@/server/governance/event-bus");
     eventBus.publish("pillar.written", {

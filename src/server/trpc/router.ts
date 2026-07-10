@@ -32,6 +32,7 @@ import { interventionRouter } from "./routers/intervention";
 import { messagingRouter } from "./routers/messaging";
 // New routers
 import { campaignManagerRouter } from "./routers/campaign-manager";
+import { creativeProposalRouter } from "./routers/creative-proposal";
 import { frameworkRouter } from "./routers/framework";
 import { gloryRouter } from "./routers/glory";
 import { crmRouter } from "./routers/crm";
@@ -160,6 +161,7 @@ export const appRouter = createTRPCRouter({
   messaging: messagingRouter,
   // New routers
   campaignManager: campaignManagerRouter,
+  creativeProposal: creativeProposalRouter,
   framework: frameworkRouter,
   glory: gloryRouter,
   crm: crmRouter,

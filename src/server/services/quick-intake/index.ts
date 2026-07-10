@@ -68,6 +68,8 @@ export interface QuickIntakeStartInput {
   economicModel?: string;
   positioning?: string;
   source?: string;
+  /** Attribution funnel (vague E) : UTM/referrer/click-ids structurés. */
+  attribution?: Record<string, string>;
   method?: IntakeMethodType;
   /** Vague 10 — empreinte web publique (étape préliminaire du rapport). */
   websiteUrl?: string;
@@ -166,7 +168,8 @@ export async function start(input: QuickIntakeStartInput) {
       businessModel: input.businessModel,
       economicModel: input.economicModel,
       positioning: input.positioning,
-      source: input.source,
+      source: input.source ?? (input.attribution?.utm_source || input.attribution?.ref),
+      ...(input.attribution ? { attribution: input.attribution as Prisma.InputJsonValue } : {}),
       method: input.method ?? "LONG",
       responses: {} as Prisma.InputJsonValue,
       status: "IN_PROGRESS",
@@ -356,36 +359,14 @@ export async function complete(token: string) {
 
   emitIntakeStarted({ intakeToken: token, companyName: intake.companyName });
 
-  // ── Vague 10 — EMPREINTE WEB PUBLIQUE (étape préliminaire du rapport). ──
-  // Collecte déterministe (site déclaré + sociaux déclarés/découverts +
-  // articles) AVANT l'extraction : alimente fidèlement le pilier E.
-  // Best-effort borné 25 s — n'échoue jamais le complete().
-  let webFootprint: import("./web-footprint").WebFootprint | null =
-    (intake.webFootprint as unknown as import("./web-footprint").WebFootprint | null) ?? null;
-  if (!webFootprint && (intake.websiteUrl || intake.socialLinksRaw)) {
-    try {
-      const { collectWebFootprint } = await import("./web-footprint");
-      const declared = (intake.socialLinksRaw ?? "")
-        .split(/\r?\n|,|;/) 
-        .map((l) => l.trim())
-        .filter(Boolean);
-      webFootprint = await Promise.race([
-        collectWebFootprint({
-          websiteUrl: intake.websiteUrl,
-          declaredSocialUrls: declared,
-          companyName: intake.companyName,
-        }),
-        new Promise<null>((resolve) => setTimeout(() => resolve(null), 25_000)),
-      ]);
-      if (webFootprint) {
-        await db.quickIntake.update({
-          where: { id: intake.id },
-          data: { webFootprint: webFootprint as unknown as Prisma.InputJsonValue },
-        });
-      }
-    } catch (err) {
-      console.warn("[quick-intake] empreinte web non collectée (non bloquant):", err instanceof Error ? err.message : err);
-    }
+  // ── Vague 10 + ADR-0121 — EMPREINTE WEB PUBLIQUE ENRICHIE. ──
+  // Cache : un footprint enrichi déjà persisté (re-run) est réutilisé tel
+  // quel. La collecte elle-même est déplacée APRÈS la création de la
+  // Strategy (les FollowerSnapshot Apify portent le strategyId réel).
+  let webFootprint: import("./public-enrichment").EnrichedFootprint | null = null;
+  const cachedFootprint = intake.webFootprint as unknown as Record<string, unknown> | null;
+  if (cachedFootprint && "enrichment" in cachedFootprint) {
+    webFootprint = cachedFootprint as unknown as import("./public-enrichment").EnrichedFootprint;
   }
 
   // Wrap the rest in try/catch to emit intake_failed on any error. The error
@@ -467,11 +448,58 @@ export async function complete(token: string) {
     },
   });
 
+  // ── ADR-0121 — collecte de l'empreinte publique enrichie. ──
+  // Inconditionnelle (l'orchestrateur dégrade seul : découverte Brave si
+  // rien de déclaré, Apify si token, presse RSS sans clé). Best-effort
+  // borné 25 s — n'échoue JAMAIS le complete().
+  if (!webFootprint) {
+    try {
+      const { enrichPublicFootprint } = await import("./public-enrichment");
+      webFootprint = await Promise.race([
+        enrichPublicFootprint({
+          companyName: intake.companyName,
+          country: intake.country,
+          sector: intake.sector,
+          websiteUrl: intake.websiteUrl,
+          socialLinksRaw: intake.socialLinksRaw,
+          strategyId: strategy.id,
+          budgetMs: 20_000,
+        }),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 25_000)),
+      ]);
+      if (webFootprint) {
+        // Narratif du diagnostic (LLM court, fallback template déterministe) —
+        // best-effort : jamais bloquant, le rapport rend le score sans lui.
+        try {
+          const { narrateFootprint } = await import("./footprint-narrative");
+          webFootprint.narrative = await narrateFootprint(
+            webFootprint,
+            { companyName: intake.companyName, sector: intake.sector },
+            { timeoutMs: 8_000 },
+          );
+        } catch (err) {
+          console.warn("[quick-intake] narratif empreinte non généré (non bloquant):", err instanceof Error ? err.message : err);
+        }
+        await db.quickIntake.update({
+          where: { id: intake.id },
+          data: { webFootprint: webFootprint as unknown as Prisma.InputJsonValue },
+        });
+      }
+    } catch (err) {
+      console.warn("[quick-intake] empreinte publique non collectée (non bloquant):", err instanceof Error ? err.message : err);
+    }
+  }
+
   // Responses are structured as { "biz": {...}, "a": { "a_vision": "...", ... }, "d": { ... }, ... }
   const responses = intake.responses as Record<string, Record<string, unknown>>;
-  // Intake creates only ADVE pillars (RTIS are paid, created during boot-sequence)
-  // UPDATE for La Fusée: We now want to extract all 8 pillars if they are provided.
-  const pillars = [...PILLAR_STORAGE_KEYS];
+  // Intake ADVE-only (vague D) : l'intake extrait et ÉCRIT les 4 piliers
+  // fondateurs uniquement. Les RTIS sont DÉRIVÉS (doctrine ENRICH_* / rtis-draft
+  // V3 RAG-hybride plus bas) — l'ancienne extraction générique r/t/i/s « déduisait »
+  // du contenu marché sans donnée (contre ADR-0046) et était écrasée par le
+  // draft V3 juste après (4 appels LLM gaspillés). Les réponses r_*/t_*/i_*/s_*
+  // du questionnaire restent des INPUTS déclarés (consommées par rtis-draft
+  // et le rapport), jamais du Pillar.content direct.
+  const pillars = [...ADVE_STORAGE_KEYS];
 
   // ─────────────────────────────────────────────────────────────────────────
   // AI EXTRACTION: Transform raw Q&A into structured pillar content
@@ -493,8 +521,9 @@ export async function complete(token: string) {
   };
   const structuredContents = await extractStructuredPillarContent(responses, canonicalContext);
 
-  // Pre-create empty pillar rows so the Gateway can find them
-  for (const p of pillars) {
+  // Pre-create empty pillar rows so the Gateway can find them — les 8 (les
+  // rows RTIS restent vides ici : rtis-draft V3 / boot-sequence les remplira).
+  for (const p of PILLAR_STORAGE_KEYS) {
     await db.pillar.create({
       data: { strategyId: strategy.id, key: p, content: {} as Prisma.InputJsonValue, confidence: 0 },
     });
@@ -542,21 +571,37 @@ export async function complete(token: string) {
         ? sealCanonicalPillarFields(pillar, safeBase, canonicalContext)
         : safeBase;
 
-    // Vague 10 — l'empreinte web alimente le pilier E : touchpoints détectés
-    // (append-dédupliqués, le déclaré prime) + bloc webPresence factuel.
+    // Vague 10 + ADR-0121 — l'empreinte publique alimente le pilier E :
+    // touchpoints détectés (append-dédupliqués, le déclaré prime), bloc
+    // webPresence factuel avec compteurs followers RÉELS (Apify) + presse,
+    // primaryChannel inféré depuis la plus grande audience réelle.
+    let eInferredFields: string[] = [];
     if (pillar === "e" && webFootprint) {
-      const { mergeFootprintIntoPillarE } = await import("./web-footprint");
-      sealedContent = mergeFootprintIntoPillarE(sealedContent, webFootprint);
+      const { mergeEnrichedFootprintIntoPillarE } = await import("./public-enrichment");
+      const merged = mergeEnrichedFootprintIntoPillarE(sealedContent, webFootprint);
+      sealedContent = merged.content;
+      eInferredFields = merged.inferredFields;
     }
 
     if (sealedContent && Object.keys(sealedContent).length > 0) {
       const normalized = normalizePillarForIntake(pillar, sealedContent);
+      // Provenance des champs issus de l'empreinte publique : données
+      // observées = SOURCE, déductions = INFERRED (le guard du gateway
+      // empêche tout écrasement d'un champ HUMAN ultérieur).
+      const fieldProvenance =
+        pillar === "e" && webFootprint
+          ? ({
+              webPresence: "SOURCE",
+              touchpoints: "SOURCE",
+              ...(eInferredFields.includes("primaryChannel") ? { primaryChannel: "INFERRED" } : {}),
+            } as Record<string, import("@/domain/field-provenance").FieldProvenance>)
+          : undefined;
       await writeGateway({
         strategyId: strategy.id,
         pillarKey: pillar as import("@/lib/types/advertis-vector").PillarKey,
         operation: { type: "REPLACE_FULL", content: normalized as Record<string, unknown> },
         author: { system: "INGESTION", reason: `Quick intake conversion: pillar ${pillar}` },
-        options: { confidenceDelta: 0.05 },
+        options: { confidenceDelta: 0.05, ...(fieldProvenance ? { fieldProvenance } : {}) },
       });
       filledPillars.push(pillar);
     }
@@ -897,6 +942,35 @@ export async function complete(token: string) {
     console.warn("[quick-intake] Narrative report failed (non-blocking):", err instanceof Error ? err.message : err);
   }
 
+  // ── Composer déterministe (vague D) : le LLM a échoué → le payeur reçoit
+  // quand même un rapport restitué VERBATIM depuis ses piliers (zéro LLM,
+  // zéro invention — report-composer.ts). Jamais de page vide.
+  if (!narrativeReport) {
+    try {
+      const { composeDeterministicReport } = await import("./report-composer");
+      const rows = await db.pillar.findMany({
+        where: { strategyId: strategy.id },
+        select: { key: true, content: true },
+      });
+      const byKey = Object.fromEntries(rows.map((r) => [r.key, (r.content as Record<string, unknown> | null) ?? {}]));
+      narrativeReport = composeDeterministicReport({
+        companyName: intake.companyName,
+        classification,
+        extractedValues: {
+          a: byKey.a ?? {},
+          d: byKey.d ?? {},
+          v: byKey.v ?? {},
+          e: byKey.e ?? {},
+        },
+        rtisValues: { r: byKey.r, t: byKey.t, i: byKey.i, s: byKey.s },
+        compositeScore: adveComposite,
+      });
+      console.log("[quick-intake] rapport composé en déterministe (fallback zéro-LLM)");
+    } catch (err) {
+      console.warn("[quick-intake] composer déterministe échoué (non bloquant):", err instanceof Error ? err.message : err);
+    }
+  }
+
   // Jalon 3 : narrative report ADVE + RTIS produit (~50s)
   emitIntakeNarrativeDone({
     intakeToken: token,
@@ -1100,7 +1174,7 @@ export async function complete(token: string) {
  */
 export async function regenerateAnalysis(
   token: string,
-  options: { force?: boolean } = {},
+  options: { force?: boolean; premium?: boolean } = {},
 ): Promise<{ strategyId: string; classification: string; vector: Record<string, number> }> {
   const intake = await db.quickIntake.findUnique({
     where: { shareToken: token },
@@ -1137,12 +1211,15 @@ export async function regenerateAnalysis(
   // Re-extract structured pillar content with the canonical context now
   // baked into the prompt (prevents the original drift) and seal declared
   // fields on top so the LLM cannot ship contradictions.
-  const structuredContents = await extractStructuredPillarContent(responses, canonicalContext);
+  const structuredContents = await extractStructuredPillarContent(responses, canonicalContext, {
+    premium: options.premium,
+  });
 
   const isEmptyObject = (o: unknown): boolean =>
     !o || typeof o !== "object" || Object.keys(o as Record<string, unknown>).length === 0;
 
-  const targetPillars = PILLAR_STORAGE_KEYS;
+  // ADVE-only (vague D) — même doctrine que complete() : les RTIS sont dérivés.
+  const targetPillars = ADVE_STORAGE_KEYS;
   const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
   for (const pillar of targetPillars) {
     const baseContent = isEmptyObject(structuredContents[pillar])
@@ -1208,6 +1285,27 @@ export async function regenerateAnalysis(
     console.warn("[quick-intake.regen] narrative regeneration failed (non-blocking):", err instanceof Error ? err.message : err);
   }
 
+  // Composer déterministe (vague D) — même filet zéro-LLM qu'au complete().
+  if (!narrativeReport) {
+    try {
+      const { composeDeterministicReport } = await import("./report-composer");
+      const rows = await db.pillar.findMany({
+        where: { strategyId: strategy.id },
+        select: { key: true, content: true },
+      });
+      const byKey = Object.fromEntries(rows.map((r) => [r.key, (r.content as Record<string, unknown> | null) ?? {}]));
+      narrativeReport = composeDeterministicReport({
+        companyName: intake.companyName,
+        classification,
+        extractedValues: { a: byKey.a ?? {}, d: byKey.d ?? {}, v: byKey.v ?? {}, e: byKey.e ?? {} },
+        rtisValues: { r: byKey.r, t: byKey.t, i: byKey.i, s: byKey.s },
+        compositeScore: adveComposite,
+      });
+    } catch (err) {
+      console.warn("[quick-intake.regen] composer déterministe échoué (non bloquant):", err instanceof Error ? err.message : err);
+    }
+  }
+
   // Re-run brand-level evaluation (the previous one was wired off the stale data).
   let brandLevel: import("./brand-level-evaluator").BrandLevelEvaluation | null = null;
   try {
@@ -1255,6 +1353,39 @@ export async function regenerateAnalysis(
 }
 
 // ============================================================================
+// PREMIUM RE-EXTRACTION POST-PAIEMENT (vague D)
+// ============================================================================
+
+const premiumReextractInFlight = new Set<string>();
+
+/**
+ * Déclenchée par les webhooks paiement (Stripe/CinetPay/PayPal) quand un
+ * IntakePayment passe PAID : le founder a payé le rapport complet — on
+ * re-extrait les piliers ADVE avec le modèle PREMIUM (purpose final-report,
+ * budget doublé) puis on régénère rapport + brand level. Fire-and-forget :
+ * ne bloque JAMAIS la réponse webhook, ne throw jamais.
+ * Garde-fous : in-flight dédupliqué par token (retries webhook), et
+ * regenerateAnalysis refuse d'écraser une strategy déjà activée (force=false).
+ */
+export function premiumReextractAfterPayment(intakeToken: string): void {
+  if (premiumReextractInFlight.has(intakeToken)) return;
+  premiumReextractInFlight.add(intakeToken);
+  void regenerateAnalysis(intakeToken, { premium: true })
+    .then(() => {
+      console.log(`[quick-intake] re-extraction premium post-paiement OK (${intakeToken})`);
+    })
+    .catch((err) => {
+      console.warn(
+        `[quick-intake] re-extraction premium post-paiement sautée (${intakeToken}):`,
+        err instanceof Error ? err.message : err,
+      );
+    })
+    .finally(() => {
+      premiumReextractInFlight.delete(intakeToken);
+    });
+}
+
+// ============================================================================
 // AI EXTRACTION — Transform raw Q&A into structured pillar content
 // ============================================================================
 
@@ -1269,6 +1400,7 @@ export async function regenerateAnalysis(
 async function extractStructuredPillarContent(
   responses: Record<string, Record<string, unknown>>,
   ctx: CanonicalIntakeContext,
+  opts: { premium?: boolean } = {},
 ): Promise<Record<string, Record<string, unknown>>> {
   const { extractJSON } = await import("@/server/services/llm-gateway");
 
@@ -1279,7 +1411,10 @@ async function extractStructuredPillarContent(
     : "Non fourni";
 
     const system = mestor.getSystemPrompt("intake");
-    const targetPillars = PILLAR_STORAGE_KEYS;
+    // ADVE-only (vague D) : l'extraction ne cible que les piliers fondateurs.
+    // Les RTIS sont dérivés (rtis-draft V3 / ENRICH_*) — extraire du r/t/i/s
+    // depuis un questionnaire déclaratif fabriquait du contenu marché (ADR-0046).
+    const targetPillars = ADVE_STORAGE_KEYS;
 
   // Canonical declared facts — these are HARD CONSTRAINTS, not suggestions.
   // The LLM must produce content coherent with this context. The post-call
@@ -1347,16 +1482,19 @@ Réponds UNIQUEMENT avec un objet JSON contenant TOUS les champs du pilier ${upp
         // prompt (biz, réponses brutes, piliers déjà générés) sont balisés ci-dessus.
         system: `${UNTRUSTED_NOTICE}\n\n${system}`,
         prompt,
-        caller: `quick-intake:extract-${pillarKey}`,
-        purpose: "extraction",
+        caller: `quick-intake:extract-${pillarKey}${opts.premium ? ":premium" : ""}`,
+        // Mode premium (post-paiement, vague D) : le founder a payé le rapport
+        // complet — purpose final-report (modèle premium par policy), pas de
+        // substitution Ollama rapide, budget de sortie doublé.
+        purpose: opts.premium ? "final-report" : "extraction",
         // Extraction structurée (schéma pilier complet) : modèle Ollama rapide à
         // contexte 16K + json_object → JSON fiable sur le 8B local. Sans ça,
         // extractJSON échouait → fallback sur les réponses BRUTES (clés a_*) →
         // pilier A non canonique → tout l'aval (Oracle, scorer) le voit vide.
         // Inerte sans Ollama (le cloud ignore l'option).
-        ollamaModel: process.env.OLLAMA_STRUCTURED_MODEL ?? "hermes3-fast",
+        ...(opts.premium ? {} : { ollamaModel: process.env.OLLAMA_STRUCTURED_MODEL ?? "hermes3-fast" }),
         responseFormat: "json_object",
-        maxOutputTokens: 4096,
+        maxOutputTokens: opts.premium ? 8192 : 4096,
       });
 
       const parsed = extractJSON(text.trim()) as Record<string, unknown>;

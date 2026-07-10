@@ -271,7 +271,7 @@ export default function ReportsPage() {
                       }}
                       className="rounded border border-border px-2 py-0.5 text-xs text-foreground-secondary hover:bg-background hover:text-white transition-colors"
                     >
-                      <Download className="inline h-3 w-3" /> PDF
+                      <Download className="inline h-3 w-3" /> Texte
                     </button>
                     <button
                       onClick={(e) => {

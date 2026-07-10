@@ -105,6 +105,7 @@ jobs:
             hit /api/cron/feedback-loop "feedback-loop (signaux)"
             hit /api/cron/auto-promotion "auto-promotion (paliers)"
             hit /api/cron/ops-sweep "ops-sweep (abonnements + recos)"
+            hit /api/cron/external-feeds "external-feeds (digests marché pays×secteur)"
           fi
 
           if [ "$T" = "weekly" ] || [ "$T" = "all" ]; then

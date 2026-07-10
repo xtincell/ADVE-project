@@ -102,7 +102,7 @@ export default function OperationsCenter({ strategyId }: { strategyId: string })
           title="Campagnes Actives"
           value={campaigns.filter(c => c.state === "LIVE").length}
           icon={Target}
-          trend="up"
+          trend="flat"
           trendValue={`${campaigns.length} au total`}
         />
         <StatCard

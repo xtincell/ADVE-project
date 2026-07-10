@@ -14,7 +14,13 @@ vi.mock("@/lib/db", () => ({
   db: {},
 }));
 
-import { recommendActions } from "@/server/services/campaign-manager/index";
+import {
+  recommendActions,
+  deriveExplodedActionIds,
+  deriveActionBriefs,
+  computeMissionActivityHealth,
+  extractLeadingQuantity,
+} from "@/server/services/campaign-manager/index";
 
 // ============================================================
 // Machine d'Etat de Campagne
@@ -271,5 +277,117 @@ describe("Campaign Manager — Recommandation d'actions", () => {
     for (let i = 1; i < result.length; i++) {
       expect(result[i - 1]!.relevance).toBeGreaterThanOrEqual(result[i]!.relevance);
     }
+  });
+});
+
+// ============================================================
+// Détection d'éclatement — mission réelle, jamais statut calendaire
+// (régression : actions canon planifiées affichées « 3/3 éclatées » sans mission)
+// ============================================================
+describe("Campaign Manager — deriveExplodedActionIds", () => {
+  it("ne compte une action éclatée que si une mission la référence (briefData.brandActionId)", () => {
+    const missions = [
+      { briefData: { brandActionId: "a1", source: "BRAND_ACTION_EXPLODE" } },
+      { briefData: { foo: "bar" } }, // mission sans lien action
+      { briefData: null }, // pas de briefData
+    ];
+    expect(deriveExplodedActionIds(["a1", "a2", "a3"], missions)).toEqual(["a1"]);
+  });
+
+  it("une action planifiée au calendrier mais SANS mission n'est PAS éclatée (cœur du bug)", () => {
+    // Aucune mission → aucune action éclatée, quel que soit son statut calendaire.
+    expect(deriveExplodedActionIds(["a1", "a2", "a3"], [])).toEqual([]);
+  });
+
+  it("ignore un brandActionId qui n'appartient pas à la campagne", () => {
+    expect(deriveExplodedActionIds(["a1"], [{ briefData: { brandActionId: "ailleurs" } }])).toEqual([]);
+  });
+
+  it("dédoublonne plusieurs missions pour la même action", () => {
+    const missions = [{ briefData: { brandActionId: "a1" } }, { briefData: { brandActionId: "a1" } }];
+    expect(deriveExplodedActionIds(["a1", "a2"], missions)).toEqual(["a1"]);
+  });
+
+  it("ignore un briefData.brandActionId non-string (robustesse)", () => {
+    expect(deriveExplodedActionIds(["a1"], [{ briefData: { brandActionId: 42 } }])).toEqual([]);
+  });
+});
+
+// ============================================================
+// Pipeline staged — étage Actions → Briefs (deriveActionBriefs)
+// ============================================================
+describe("Campaign Manager — deriveActionBriefs", () => {
+  it("mappe action → son brief via content.brandActionId (+ statut)", () => {
+    const briefs = [
+      { id: "b1", status: "DRAFT", content: { brandActionId: "a1" } },
+      { id: "b2", status: "VALIDATED", content: { brandActionId: "a2" } },
+      { id: "b3", status: "DRAFT", content: { foo: 1 } },
+    ];
+    expect(deriveActionBriefs(["a1", "a2", "a3"], briefs)).toEqual({
+      a1: { briefId: "b1", status: "DRAFT" },
+      a2: { briefId: "b2", status: "VALIDATED" },
+    });
+  });
+
+  it("ignore un brandActionId hors campagne et garde le 1er brief par action", () => {
+    const briefs = [
+      { id: "b1", status: "DRAFT", content: { brandActionId: "a1" } },
+      { id: "b2", status: "VALIDATED", content: { brandActionId: "a1" } },
+      { id: "b3", status: "DRAFT", content: { brandActionId: "ailleurs" } },
+    ];
+    expect(deriveActionBriefs(["a1"], briefs)).toEqual({ a1: { briefId: "b1", status: "DRAFT" } });
+  });
+});
+
+// ============================================================
+// Fiche mission — avancement activités (computeMissionActivityHealth)
+// ============================================================
+describe("Campaign Manager — computeMissionActivityHealth", () => {
+  it("agrège progression + budget + KPI, hors activités annulées", () => {
+    const h = computeMissionActivityHealth([
+      { status: "DONE", budgetAllocated: 100, kpiTarget: 10, kpiActual: 8 },
+      { status: "PENDING", budgetAllocated: 50, kpiTarget: 5, kpiActual: 0 },
+      { status: "CANCELLED", budgetAllocated: 999, kpiTarget: 999, kpiActual: 999 },
+    ]);
+    expect(h.total).toBe(2);
+    expect(h.done).toBe(1);
+    expect(h.progressPct).toBe(50);
+    expect(h.budgetAllocated).toBe(150);
+    expect(h.kpiTarget).toBe(15);
+    expect(h.kpiActual).toBe(8);
+    expect(h.kpiPct).toBe(53);
+  });
+
+  it("0 activité → 0% sans division par zéro", () => {
+    expect(computeMissionActivityHealth([])).toEqual({
+      total: 0,
+      done: 0,
+      progressPct: 0,
+      budgetAllocated: 0,
+      kpiTarget: 0,
+      kpiActual: 0,
+      kpiPct: 0,
+    });
+  });
+
+  it("budget/KPI nuls traités comme 0", () => {
+    const h = computeMissionActivityHealth([
+      { status: "DONE", budgetAllocated: null, kpiTarget: null, kpiActual: null },
+    ]);
+    expect(h.budgetAllocated).toBe(0);
+    expect(h.kpiPct).toBe(0);
+  });
+});
+
+// ============================================================
+// Auto-seed activités — extraction de cible KPI depuis le libellé
+// ============================================================
+describe("Campaign Manager — extractLeadingQuantity", () => {
+  it("extrait la 1ère quantité 1-5 chiffres comme cible KPI", () => {
+    expect(extractLeadingQuantity("52 posts Instagram")).toBe(52);
+    expect(extractLeadingQuantity("Série de 8 visuels")).toBe(8);
+  });
+  it("retourne null sans quantité", () => {
+    expect(extractLeadingQuantity("Production vidéo de marque")).toBeNull();
   });
 });

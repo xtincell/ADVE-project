@@ -416,6 +416,12 @@ export default function StrategyDetailPage({
                         </span>
                       ))}
                     </div>
+                  ) : value !== null && typeof value === "object" ? (
+                    // Valeur objet imbriquée : String(value) rendait littéralement
+                    // "[object Object]" dans le DOM (bug trouvé par le crawler runtime).
+                    <pre className="whitespace-pre-wrap break-words text-xs leading-relaxed text-foreground-secondary">
+                      {JSON.stringify(value, null, 2)}
+                    </pre>
                   ) : (
                     <p className="text-sm leading-relaxed text-foreground">
                       {String(value ?? "-")}

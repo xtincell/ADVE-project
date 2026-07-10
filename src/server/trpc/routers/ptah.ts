@@ -122,7 +122,7 @@ export const ptahRouter = createTRPCRouter({
       z.object({
         strategyId: z.string().optional(),
         forgeKind: z.enum(FORGE_KINDS as readonly [string, ...string[]]).optional(),
-        status: z.enum(["CREATED", "IN_PROGRESS", "COMPLETED", "FAILED", "VETOED", "EXPIRED"]).optional(),
+        status: z.enum(["CREATED", "IN_PROGRESS", "COMPLETED", "FAILED", "VETOED", "EXPIRED", "DEFERRED"]).optional(),
         limit: z.number().int().min(1).max(100).default(20),
       }),
     )

@@ -782,6 +782,8 @@ model Strategy {
   consultingEngagements ConsultingEngagement[]
   // Phase 24 (ADR-0094) — canonical queryable projection of I-pillar initiatives.
   brandActions       BrandAction[]
+  // Phase 24 (ADR-0120) — Propositions Créatives (gate de génération de production).
+  creativeProposals  CreativeProposal[]
   notoriaPipeline    Json? // { currentStage, stages[], startedAt }
   jehutyCurations    JehutyCuration[]
   // ADR-0029 — back-relation for QuickIntake.convertedTo (FK SetNull on Strategy purge).
@@ -1052,6 +1054,7 @@ model Mission {
   assigneeId  String?
   slaDeadline DateTime?
   briefData   Json?
+  briefId     String? // brief source (CampaignBrief) dont la validation a créé la mission — pipeline staged
   budget      Float?
 
   // ── La Guilde — portail public (ADR-0098) ──
@@ -1074,6 +1077,7 @@ model Mission {
   strategy     Strategy             @relation(fields: [strategyId], references: [id])
   driver       Driver?              @relation(fields: [driverId], references: [id])
   deliverables MissionDeliverable[]
+  activities   MissionActivity[]
   commissions  Commission[]
   applications MissionApplication[]
   escrows      Escrow[]
@@ -1105,9 +1109,50 @@ model MissionDeliverable {
   mission             Mission              @relation(fields: [missionId], references: [id])
   qualityReviews      QualityReview[]
   deliverableTracking DeliverableTracking?
+  activities          MissionActivity[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+/// Activité d'une mission — couche d'exécution pilotable par mission (pipeline
+/// staged). Chaque activité = création d'asset (ASSET_CREATION, liée à un
+/// MissionDeliverable) ou action terrain/prod (FIELD_ACTION), avec budget alloué
+/// + KPI (cible/réel). La complétion d'une activité fait progresser la mission ;
+/// une activité `concludesMission` clôt la mission. Chaque activité peut avoir
+/// son propre brief généré déterministiquement (`briefContent`, éditable).
+model MissionActivity {
+  id               String    @id @default(cuid())
+  missionId        String
+  type             String    @default("ASSET_CREATION") // ASSET_CREATION | FIELD_ACTION
+  title            String
+  description      String?   @db.Text
+  status           String    @default("PENDING") // PENDING | IN_PROGRESS | DONE | CANCELLED
+  order            Int       @default(0)
+  budgetAllocated  Float?
+  budgetCurrency   String    @default("XAF")
+  kpiLabel         String?
+  kpiTarget        Float?
+  kpiActual        Float     @default(0)
+  concludesMission Boolean   @default(false)
+  briefContent     Json? // brief propre de l'activité (généré déterministe, éditable avant exécution)
+  deliverableId    String?
+  assigneeId       String? // prestataire attribué à l'activité (User.id — scalaire, comme Mission.assigneeId)
+  // ADR-0120 PR-4b — durée FIXÉE (jours) pour le rétroplanning. Null ⇒ durée DÉRIVÉE
+  // déterministe par type d'activité (resolveActivityDurationDays). Les deux options
+  // sont possibles : l'opérateur fixe, sinon le moteur dérive.
+  durationDays     Int?
+  completedAt      DateTime?
+
+  mission     Mission             @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  deliverable MissionDeliverable? @relation(fields: [deliverableId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([missionId])
+  @@index([missionId, status])
+  @@index([assigneeId])
 }
 
 /// Vague 7 — candidature d'un talent/agence à une mission ouverte.
@@ -1973,6 +2018,10 @@ model QuickIntake {
   // (delete_rule='SET NULL' filtered in loadFks).
   convertedTo        Strategy?         @relation("QuickIntakeConvertedTo", fields: [convertedToId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   source             String?
+  /// Attribution funnel (vague E) : UTM structurés + referrer + click ids
+  /// capturés au start — d'où vient CHAQUE prospect (utm_source/medium/
+  /// campaign/content/term, ref, gclid, fbclid, referrer, landingPath).
+  attribution        Json?
   brandNature        String?
   completedAt        DateTime?
 
@@ -2401,6 +2450,41 @@ model CampaignBrief {
   @@index([campaignId])
   @@index([sourceIngestedId])
   @@index([brandAssetId])
+}
+
+// ── ADR-0120 — Proposition Créative (gate de génération de production) ───────────
+// Unité-gate du Nouveau Pipeline de Production. Produite soit par La Fusée (IA, Voie
+// A : Glory sequences + tools) soit par La Guilde (humain, Voie B : formulaire +
+// import image) — MÊME Data Contract (src/lib/types/creative-proposal.ts). Sa
+// VALIDATION (statut VALIDATED) déclenche la génération des actions + briefs de
+// production dans les frames canon, au niveau d'exécution (routeKey) choisi : le
+// trigger de création a déménagé de « Advertis complet » vers ici.
+model CreativeProposal {
+  id              String    @id @default(cuid())
+  strategyId      String
+  /// Niveau d'exécution choisi (ADR-0089 : CONSERVATIVE | TARGET | AMBITIOUS).
+  routeKey        String
+  /// LAFUSEE_AI (Voie A) | LAGUILDE_HUMAN (Voie B).
+  source          String    @default("LAFUSEE_AI")
+  /// DRAFT | SUBMITTED | VALIDATED | REJECTED.
+  status          String    @default("DRAFT")
+  /// Direction créative — { bigIdea, insight, axe, pistes[] } (Data Contract).
+  direction       Json
+  /// Snapshot computeRoadmapRoutes (les 3 niveaux d'exécution) au moment de la proposition.
+  executionLevels Json?
+  /// Visuels — { mockups: AssetRef[], socialSim: AssetRef[], keyVisual: AssetRef|null }.
+  visuals         Json?
+  /// Audit de validation / rejet.
+  validatedAt     DateTime?
+  validatedBy     String?
+  rejectedReason  String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  strategy Strategy @relation(fields: [strategyId], references: [id])
+
+  @@index([strategyId])
+  @@index([strategyId, status])
 }
 
 model CampaignReport {

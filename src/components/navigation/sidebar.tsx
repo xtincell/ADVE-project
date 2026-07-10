@@ -232,7 +232,7 @@ export function Sidebar({ navGroups, portalAccentVar, headerContent, mobile = fa
         </Link>
         {!collapsed ? (
           <p className="mt-1 px-2 text-[9px] text-foreground-muted/40">
-            La Fusée v5.0 — NETERU
+            La Fusée v5.0
           </p>
         ) : null}
       </div>
