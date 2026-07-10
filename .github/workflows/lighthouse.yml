@@ -27,13 +27,19 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
       - run: npx prisma generate
       - run: npm run build
-      - name: Start production server
-        run: npm start &
+      # `output: standalone` (next.config.ts) : `next start` refuse de servir —
+      # on lance server.js émis par le build, avec static/ et public/ copiés à
+      # côté, exactement comme le Dockerfile de prod.
+      - name: Start production server (standalone)
+        run: |
+          cp -r .next/static .next/standalone/.next/static
+          cp -r public .next/standalone/public
+          node .next/standalone/server.js &
       - name: Wait for server
         run: npx --yes wait-on http://localhost:3000 --timeout 60000
       - name: Run Lighthouse mobile audit
