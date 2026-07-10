@@ -10,6 +10,199 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.83 — feat(funnel): clôture des résiduels vague E — attribution, intégrations, personnalisation (2026-07-10)
+
+Clôture des 6 résiduels vague E (mandat opérateur « ne rien laisser », interprétations proposées en draft dans la PR). Audit préalable : **3 des 6 étaient déjà shippés** — vrais PDF (routes `/api/intake/[token]/pdf` + `/api/export/oracle|brand-bible/[strategyId]/pdf`, puppeteer + chromium Dockerfile, bouton download câblé), Mestor cockpit (chat streaming `/api/chat` réel + `getInsights` consommé par le home), tuiles (home cockpit riche en données réelles : DevotionLadder/Timeline/Sparkline/OvertonTeaser). Construits ici :
+
+- **Attribution funnel** : colonne `QuickIntake.attribution Json?` (migration `20260710190000`) — UTM structurés (source/medium/campaign/content/term), `ref`, `gclid`, `fbclid`, referrer et landing path capturés au start de l'intake (bornés, backfill-safe, `source` legacy rempli en compat) ; colonne « Provenance » dans la liste intakes Console (badge utm_source·campaign > source > hostname referrer > « direct », JSON complet au survol).
+- **Intégrations** : `cockpitDashboard.getConnectedSources` (read-only, tenant-scoped, zéro LLM) + section « Sources de données connectées » dans `/cockpit/settings` — derniers relevés sociaux par plateforme avec provenance (relevé automatique/manuel + date), empreinte web collectée (site/canaux/presse/score), fraîcheur du digest marché pays×secteur. Chaque source absente est dite absente.
+- **Personnalisation** : la cover du rapport PDF porte l'identité visuelle DÉTECTÉE de la marque (og:image du site, déjà collectée par l'empreinte) — jamais un logo inventé, rien si non détectée.
+
+tsc 0 · eslint 0 · Prisma validate OK · **2434 tests verts**. 1 migration additive nullable. Cap APOGEE 7/7.
+
+---
+
+## v6.27.82 — feat(cockpit): abonnement & facturation founder (vague E, P0) (2026-07-10)
+
+Le backend deux-rails (ADR-0092 : `payment.mySubscriptions` / `cancelSubscription` / `initSubscription` / `initManualSubscription`) existait mais AUCUNE surface cockpit ne le rendait — le founder ne pouvait ni voir son plan, ni l'annuler, ni savoir qu'une demande manuelle attendait validation.
+
+- **`/cockpit/settings/billing`** : plan courant (tier, montant/période, mode de paiement carte/cycle manuel/compte équipe), statuts honnêtes (`active`/`trialing`/`pending_manual` avec bandeau « n'accorde l'accès qu'après validation opérateur »/`past_due`/`canceled`), annulation à fin de période avec confirmation inline, historique, CTA `/pricing` quand aucun abonnement.
+- Section « Abonnement & facturation » ajoutée à `/cockpit/settings`.
+
+Résiduels vague E re-spécifiés en session suivante (libellés du plan de session perdu avec le conteneur — ne pas inventer leur périmètre) : Mestor · attribution · vrais PDF · personnalisation · intégrations · tuiles. Le chat Mestor cockpit vérifié réel (streaming `/api/chat`), pas un stub.
+
+tsc 0 · eslint 0 · gouvernance 888/888.
+
+---
+
+## v6.27.81 — feat(intake): qualité du diagnostic — ADVE-only, C8, premium post-paiement, composer zéro-LLM (vague D) (2026-07-10)
+
+Cinq chantiers de qualité sur le produit n°1 :
+
+- **Intake ADVE-only** : `complete()` et `regenerateAnalysis()` n'extraient et n'écrivent QUE les 4 piliers fondateurs — l'ancienne extraction générique r/t/i/s « déduisait » du contenu marché depuis un questionnaire déclaratif (contre ADR-0046) puis était écrasée par le draft V3 (4 appels LLM gaspillés/intake). Les RTIS restent DÉRIVÉS (rtis-draft V3 / ENRICH_*) ; les réponses r_*/t_*/i_*/s_* du questionnaire restent des inputs déclarés. Les 8 lignes pilier restent pré-créées. Anti-drift : [`intake-adve-only.test.ts`](tests/unit/governance/intake-adve-only.test.ts).
+- **C8 clos (Seshat→T nom-vs-réalité)** : le draft T pouvait citer `marketSize.source: "Seshat"` sans jamais LIRE les digests marché réels. `loadMarketDigestForT` charge le `EXTERNAL_FEED_DIGEST` frais (pays résolu country-registry × secteur, rafraîchi par les crons vague C) et l'injecte comme SEULE base légitime du label « Seshat » ; garde déterministe `enforceSeshatProvenance` (zéro LLM) : sans digest, tout « Seshat » auto-proclamé est rétrogradé « inferred ». Le registre CLAUDE.md passe C8 → ✅.
+- **Questions V/E approfondies** : +4 questions V (best-seller, fourchette de prix, positionnement prix, canal de vente — alignées produitsCatalogue/productLadder/salesChannel du schéma) et +3 questions E (canaux actifs, fréquence de communication, portrait du superfan — alignées touchpoints/primaryChannel/superfanPortrait). Toutes optionnelles (aucun intake en cours bloqué) : matière DÉCLARÉE au lieu de laisser l'extraction deviner.
+- **Extraction premium post-paiement** : les 3 webhooks paiement (Stripe/CinetPay/PayPal) déclenchent `premiumReextractAfterPayment` fire-and-forget à l'encaissement — re-extraction ADVE en `purpose: final-report` (modèle premium par policy, budget ×2, sans substitution Ollama rapide) + régénération rapport et brand level via `regenerateAnalysis({premium: true})`. Dédupliqué in-flight, refuse d'écraser une strategy activée, ne bloque jamais l'ACK webhook.
+- **Composer déterministe du rapport** ([`report-composer.ts`](src/server/services/quick-intake/report-composer.ts), doctrine « Fusée non-dépendante du LLM ») : quand la génération LLM échoue, le payeur reçoit un NarrativeReport restitué VERBATIM depuis ses piliers (humanisation pure des champs, piliers vides dits honnêtement, RTIS V3 repris tel quel) — jamais de page vide, jamais d'invention. Câblé en filet dans `complete()` ET `regenerateAnalysis()`.
+- **Déclaré vs observé** (rapport) : tableau déterministe dans la section empreinte — ce que le founder déclare (communauté, bouche-à-oreille, fréquence) face à ce que la collecte publique mesure (canaux+abonnés, avis Google, presse). Rendu seulement quand les DEUX côtés existent.
+
+tsc 0 · eslint 0 · **2434 tests verts** (17 nouveaux : C8 garde+digest, ADVE-only+webhooks, composer). Cap APOGEE 7/7. 0 migration.
+
+---
+
+## v6.27.80 — fix(security): fuite commissions — lectures tenant-scoped (P1, vague E) (2026-07-10)
+
+**Fuite P1 close** : `commission.list` (et 4 lectures sœurs) étaient en `protectedProcedure` sans `where` — n'importe quel compte connecté (founder, freelance, guilde) lisait les montants, taux et talentIds de TOUTES les commissions de la plateforme (consommé tel quel par le portail Agency).
+
+- Helper `commissionScope` : **ADMIN** → tout · **user rattaché à un Operator** (portail Agency) → commissions des missions dont la Strategy appartient à SON operator · **sinon** (talent) → `talentId = self` uniquement.
+- `list` + `getByMission` scopés par ce périmètre ; `getByCreator` **refuse** (`FORBIDDEN` explicite, pas de remplacement silencieux) un `userId` tiers pour un non-admin ; `tierAtTime` (historique tier/commissions d'autrui, aucun consommateur UI) passe `operatorProcedure` ; `getAdjustedRate` : self/operator/admin.
+- Mutations inchangées (déjà `governedProcedure`). Anti-drift : [`commission-scoping.test.ts`](tests/unit/governance/commission-scoping.test.ts) verrouille le contrat par analyse source (7 assertions).
+
+tsc 0 · eslint 0 · **2417 tests verts**.
+
+---
+
+## v6.27.79 — fix(governance)+feat(ops): bootstrap au boot serveur + daemon cron in-process + feeds dynamiques (vague C) (2026-07-10)
+
+**Bug critique clos** : `bootstrapGovernance()` (event-bus Seshat/Thot/Tarsis + synchro phase D-6) portait le commentaire « imported once in init.ts » mais n'était importé NULLE PART au runtime → `observeIntent` (réparé v6.25.27 côté Seshat mais jamais branché au boot), `recordCost` Thot, `ingestSignal` Tarsis et `strategy.phase-changed` étaient **inertes en production**.
+
+- **`src/instrumentation.ts`** (hook Next natif, garde `NEXT_RUNTIME === "nodejs"`) : appelle `bootstrapGovernance()` une fois par process serveur (dev, standalone, pm2) — vérifié bundlé (`.next/server/instrumentation.js`).
+- **Daemon cron in-process** `src/lib/ops-daemon.ts` (démarré par l'instrumentation) : un self-host Coolify/pm2 n'a plus besoin de cron externe — self-fetch localhost des routes `/api/cron/*` (Bearer `CRON_SECRET`) aux cadences exactes de `scheduled-ops.yml` (frequent 15 min / sixhourly / weekly lundi 06h / monthly 1er). **Jamais de tir au boot** (armement au premier pas — un redeploy ne re-déclenche ni founder-digest ni sweep) ; tir au franchissement de frontière uniquement ; claim CAS Redis par bucket (vague B) pour le multi-pod ; `OPS_DAEMON=0|1` (défaut : ON en prod). Le workflow GitHub reste utilisable en ceinture+bretelles (claims + idempotence arbitrent).
+- **Feeds dynamiques** (`seshat/external-feeds`) : `listActiveFeedPairs()` — les paires pays×secteur sont dérivées des **stratégies réelles** (countryCode dénormalisé × businessContext.sector normalisé), dédupliquées derrière les `PRIORITY_PAIRS` statiques (marchés vitrine), plafonnées à 24/refresh (borne de coût), erreur DB → statique seul. `refreshAllPriorityPairs()` couvre désormais tout client réel — un founder Sénégal/cosmétique reçoit ses données marché sans édition de code.
+- **`/api/cron/external-feeds` enfin planifié** : ajouté au tick sixhourly de `scheduled-ops.yml` ET au daemon (la route existait depuis l'audit v6.25.27 mais AUCUN planificateur ne l'appelait — le pilier T retombait sur du LLM qualitatif).
+
+Cap APOGEE 7/7. 0 migration. tsc 0 · eslint 0 · `next build` vert · **2410 tests verts** (10 nouveaux : armement sans tir au boot, frontières frequent/weekly/monthly, Bearer+PORT, flags, paires dynamiques dédupliquées/plafonnées/fallback).
+
+---
+
+## v6.27.78 — feat(infra): coordination multi-pod Redis — NSP, caches, claims CAS (vague B) (2026-07-10)
+
+Clôt le résiduel Phase 18 « Cache Redis cross-pod » + la limite single-pod documentée d'ENV-VARS.md. **Opt-in `REDIS_URL`** — sans elle, dégradation single-pod honnête (comportement historique inchangé, zéro crash).
+
+- **`src/lib/redis.ts`** : client ioredis lazy (singleton hot-reload-safe pattern db.ts), `publishJson`/`subscribeJson` (enveloppe `origin: INSTANCE_ID`, self-filtering), `claimOnce` (SET NX EX — true sans Redis : rien à arbitrer en single-pod ; true aussi si Redis down : on préfère un double-run improbable à un cron gelé), `releaseClaim` (Lua compare-and-del). `enableOfflineQueue: false` — un Redis down ne bufferise pas en RAM.
+- **Broker NSP multi-pod** (`nsp/sse-broker.ts`, ADR-0025 chemin prévu) : les events publiés sur un pod sont relayés via `nsp:events` aux abonnés SSE des autres pods ; le pod émetteur filtre son propre origin (jamais de double livraison). Contrat public inchangé ; `publish()` retourne le compte de livraisons LOCALES.
+- **Caches cross-pod** : `brand-node/inheritance` — l'invalidation cascade diffuse la liste résolue des nodeIds (les pods récepteurs purgent sans re-walk DB) ; `market-visibility` — le kill-switch marché (NEUTRALIZE/REINSTATE/PURGE) purge immédiatement tous les pods, TTL 15 s en filet.
+- **Claims CAS cron** (`/api/cron/scheduler`) : claim de tick Redis (`cron:scheduler:tick`, TTL 240 s < intervalle 5 min) — un seul pod par tick + protection contre le chevauchement d'un tick lent ; **CAS DB par process** (updateMany gardé par status/nextRunAt + `runCount: {increment}`) — plus de double-exécution TRIGGERED/DAEMON/BATCH même sans Redis.
+- **Env/docs** : `REDIS_URL` dans `.env.example` + section « Multi-pod » d'[ENV-VARS.md](docs/deploy/ENV-VARS.md) (la note « limite connue single→multi-pod » devient l'instruction d'activation).
+
+Cap APOGEE 7/7 (Redis = infrastructure de transport, pas un Neter — même statut que NSP). 0 migration. tsc 0 · eslint 0 · **2400 tests verts** (8 nouveaux : fallback honnête sans Redis + self-filtering + bridge remote-pod + invalidations, ioredis mocké).
+
+---
+
+## v6.27.77 — feat(intake): empreinte digitale entière — vague A complète (score /100 + UI + narratif) (2026-07-10)
+
+**ADR-0121 vague A bouclée** — l'empreinte publique ne s'arrête plus aux réseaux sociaux et à la presse : le rapport discovery mesure, score et raconte l'empreinte digitale ENTIÈRE de la marque.
+
+- **Collecteurs** `quick-intake/footprint-collectors/` (commit précédent, complétés ici par leurs tests) : Google Business/avis (Apify opt-in `APIFY_MAPS_ACTOR_ID`), YouTube Data API v3 (`YOUTUBE_API_KEY`), domaine RDAP (sans clé), email MX/SPF/DMARC (node:dns, sans clé), PageSpeed (`PAGESPEED_API_KEY`), pubs Meta (`APIFY_ADS_ACTOR_ID`). Tous time-boxés, best-effort, statuts honnêtes.
+- **Score /100** `footprint-score.ts` : renormalisé sur les dimensions réellement mesurées — une dimension sans clé sort du dénominateur (jamais un faux zéro) ; une dimension mesurée faible compte. `total: null` si rien de mesurable.
+- **UI rapport** : nouveau composant [`result/footprint-section.tsx`](src/app/(intake)/intake/[token]/result/footprint-section.tsx) — badge score /100 + barres par dimension (avec lignes « non mesuré — raison » honnêtes) + sous-blocs factuels (avis Google, YouTube, domaine, email pro, performance, pubs Meta, badges tech/SEO du site) + narratif. Remplace le bloc inline de `page.tsx` (print-safe conservé).
+- **Narratif** `footprint-narrative.ts` : 2-4 phrases pour le rapport — LLM gateway (purpose `intermediate`, time-box 8 s, garde anti-hallucination : doit citer marque + score) avec **fallback template 100 % déterministe** (`buildFootprintNarrativeTemplate`). Câblé best-effort dans `complete()` avant la persistance du `webFootprint`.
+- **Apify par défaut élargi** : TikTok + Facebook tournent désormais dès que `APIFY_TOKEN` existe (actors par défaut) ; opt-out par plateforme via `APIFY_*_ACTOR_ID="off"` (convention alignée sur maps/ads).
+- **Env** : `.env.example` + [ENV-VARS.md](docs/deploy/ENV-VARS.md) enrichis (`YOUTUBE_API_KEY`, `PAGESPEED_API_KEY`, `APIFY_MAPS_ACTOR_ID`, `APIFY_ADS_ACTOR_ID`, sémantique `"off"`).
+
+Cap APOGEE 7/7 (tout est connector). 0 migration Prisma. tsc 0 · eslint 0 · **2392 tests verts** (67 nouveaux : footprint-collectors 25 + footprint-score/narrative 10 + social-audit defaults 2 + suite existante).
+
+---
+
+## v6.27.76 — feat(intake): enrichissement public du pilier E (Brave + Apify + presse RSS) + P0 ship Coolify (2026-07-10)
+
+**[ADR-0121](docs/governance/adr/0121-intake-public-footprint-enrichment.md)** — l'intake (produit n°1, funnel `/landingintake` → paywall → PDF payant) collecte désormais les **données publiques du client par tous les moyens légaux** pour combler le pilier E du rapport, même quand le founder ne déclare NI site NI liens sociaux :
+
+- **Orchestrateur** `quick-intake/public-enrichment.ts` (`enrichPublicFootprint`, zéro LLM, time-boxé 20 s, best-effort) : footprint site déclaré (Vague 10, existant) → **découverte Brave** des profils sociaux par nom de marque si rien trouvé (garde anti-faux-positif déterministe) → **compteurs followers RÉELS via Apify** (IG par défaut, TikTok/FB opt-in par env actor, ~0,001 $/profil) → **mentions presse Google News RSS** (`brandPressFeedFor`, sans clé). Câblé inconditionnellement dans `complete()` après `strategy.create` (les `FollowerSnapshot` source APIFY portent le vrai strategyId).
+- **Tokens système ADR-0075** : `resolveApifyCredentials` (vault opérateur > env `APIFY_TOKEN`) + nouvelle façade `fetchPublicFollowers` multi-plateforme (table `APIFY_ACTORS`, skip sans dépense forcée) ; `fetchThirdPartyFollowers` refactorée sur le runner partagé, signature inchangée.
+- **Pilier E** : merge pur `mergeEnrichedFootprintIntoPillarE` — compteur réel à côté du hint dans `webPresence.socials[]`, `webPresence.press`, `primaryChannel` inféré UNIQUEMENT depuis la plus grande audience réelle et si absent. Écrit via gateway avec `fieldProvenance` SOURCE/INFERRED (le guard protège les champs HUMAN — ADVE reste founder-owned). Pas de KPI de remplissage (ADR-0046).
+- **Re-run opérateur** (parité manual-first ADR-0060) : kind gouverné **`ENRICH_E_FROM_PUBLIC_FOOTPRINT`** (governor SESHAT) + `social.rescanPublicFootprint` + `rerunPublicEnrichmentForStrategy` (SET_FIELDS, author EXTERNAL_SAAS). `activateBrand` chemin de récupération réinjecte l'empreinte dans le re-seed E.
+- **Rapport payant** : bloc « Empreinte web publique » affiche `X abonnés` réels (prioritaires sur `~hints`) + sous-bloc « Mentions presse » ; rien trouvé → masqué (honnête). PDF inchangé (rend la même page).
+- **P0 ship Coolify** : `scripts/docker-entrypoint.sh` (`prisma migrate deploy` au boot, opt-out `SKIP_MIGRATE_ON_BOOT=1`) + Dockerfile copie CLI prisma/migrations/dotenv ; CI Node 20→22 (9 jobs) ; **[docs/deploy/ENV-VARS.md](docs/deploy/ENV-VARS.md)** (table env × dégradation + minimum viable Coolify), linké depuis SELF-HOST.md ; `.env.example` enrichi (`BRAVE_API_KEY`, `APIFY_TOKEN`, `APIFY_*_ACTOR_ID`).
+
+Matrice de dégradation honnête (aucune clé → footprint déclaré seul, jamais de fabrication). Cap APOGEE 7/7 (Brave/Apify = connectors). 0 migration Prisma. tsc 0 · eslint 0 · **2383 tests verts** (30 nouveaux : public-enrichment + social-audit-credentials).
+
+---
+
+## v6.27.75 — feat(ptah): forge conditionnée par image de référence (gpt-image edits) + routing image exclusif (2026-07-01)
+
+Fondation du **système de dépendance** du case study (« réutiliser les images précédentes comme références » : identité → pack → KV → déclinaisons, sans réinventer). Audit du pipeline image/asset/brief : architecture saine (tools image, handoff brief→forge, création/récupération d'assets `AssetVersion`/`BrandAsset` vault, réutilisation via `requires` DAG, découplage Artemis↔Ptah) — **2 trous comblés** :
+
+- **Reference-image conditioning** (le trou critique) : `openai.ts` `forge()` route vers `/v1/images/edits` (multipart `image[]` + prompt, jusqu'à 16 références) dès qu'un brief porte `forgeSpec.parameters.referenceImageUrls` (URLs http OU data URLs) ; sinon `/v1/images/generations` (planches de fondation). Helpers `resolveReferenceUrls`/`fetchRefBuffer`. **Vérifié EN LIVE** bout-en-bout via le provider (gen → data URL → edit conditionné → image cohérente). gpt-image-1/2 supportent l'input image.
+- **Routing image exclusif** : `provider-selector` n'honore un `providerHint` que s'il est autorisé pour le kind. Corrige le registry historique où les tools image/icon portent `providerHint: "magnific"` — ce hint périmé court-circuitait le routage `image→["openai"]` exclusif (magnific mock `isAvailable=true`) → forge Magnific au lieu d'OpenAI. Désormais drop pour image/icon → OpenAI direct.
+
+Test `ptah-openai-image-provider.test.ts` (hint magnific périmé → openai exclusif). Cap APOGEE 7/7. tsc 0 · eslint 0 · **2343 tests verts**.
+
+---
+
+## v6.27.74 — feat(llm-gateway): embeddings Ollama LOCAL + fix(campaigns) amorçage multi-axes (2026-07-01)
+
+Deux branchements demandés par l'opérateur :
+
+- **Embeddings via Ollama LOCAL** (`nomic-embed-text-v2-moe`, dim 768) — l'opérateur lance Ollama en local le temps de migrer sur VPS. Ollama Cloud n'a **aucun** endpoint d'embedding (re-vérifié 3 façons : `/v1/embeddings` "path not found", `/api/embed` "unauthorized" MÊME pour un modèle chat servi, alors que `/api/tags`+`/v1/chat` marchent — `nomic-embed-text-v2-moe` est un modèle de **library** local, pas cloud-servi). Découplage réseau : nouvel `EMBED_SERVICE_URL` (+ `EMBED_API_KEY` opt.) → le **chat** Ollama vise le cloud (deepseek) pendant que les **embeddings** visent `localhost:11434` sans auth. Supersede le pin OpenAI de v6.27.72 sur le setup opérateur. Vérifié end-to-end via `embed()` : provider=ollama, dim=768. Env : `EMBED_PROVIDER=ollama`, `EMBED_SERVICE_URL=http://localhost:11434`, `EMBED_MODEL_NAME=nomic-embed-text-v2-moe`.
+- **Gate de direction créative — amorçage multi-axes** (fix) : constat opérateur (screenshot) — 3 campagnes canon générées mais la gate affiche « Aucune proposition créative ». Cause : les frames canon ne seedent aucune `CreativeProposal`. Fix `seedCreativeAxesIfEmpty` : si 0 proposition ET ≥1 frame canon, seed **2 axes créatifs distincts** (Premium/Aspirationnel vs Proximité/Vérité culturelle) via Voie A IA (nouveau `angleHint`) + fallback déterministe ; le panel auto-amorce à l'ouverture. L'opérateur n'a plus qu'à choisir l'axe 1 ou l'axe 2. Nouveau kind gouverné `SEED_CREATIVE_AXES`.
+
+Cap APOGEE 7/7. tsc 0 · eslint 0 · **2342 tests verts** · gouvernance 876 verts.
+
+---
+
+## v6.27.73 — feat(artemis): bible de marque — planches visuelles (placeholder + prompt) (2026-07-01)
+
+Sur demande opérateur (« c'est la mise en forme qui m'intéresse, mets des placeholders avec le prompt dans le cadre »). Le deck 16:9 de la Bible de Marque passe de slides texte à **planches visuelles** : chaque planche = un cadre placeholder **« VISUEL À FORGER · gpt-image-1 (1K) »** contenant le **PROMPT laser** de la planche (gauche) + colonne **« DIRECTIONS DU BRIEF »** (droite). Si une image forgée est attachée au brief (data URL / http), elle est **embarquée** dans le cadre à la place du placeholder.
+
+- `buildPlatePrompt` (prompt laser dérivé du brief, rappelle l'identité verrouillée « enrichir pas réinventer ») · `extractImageDataUrl` (embarque l'image forgée, jsPDF `addImage`) · `renderVisualFrame`/`renderCaption` (remplacent le rendu texte plein cadre).
+- `exportBrandBibleAsPdf(strategyId, { manifestOverride })` — rend un deck depuis un manifest fourni (démos / sources alternatives, sans DB).
+
+Échantillon « Mammy Watta » généré + livré à l'opérateur (13 planches). Cap APOGEE 7/7. **tsc 0 · eslint 0 · brand-bible tests verts.**
+
+---
+
+## v6.27.72 — feat(ptah): gpt-image-1/2 + fix(llm-gateway) embeddings Ollama-aware (2026-06-30)
+
+Deux réglages modèles externes (directive opérateur) :
+
+- **gpt-image-1 (1K) défaut + gpt-image-2 (2K) opt-in** : workflow opérateur — 1K par défaut, passe 2K (même prompt) quand le rendu est validé. Pilotable par brief (`parameters.model` ou `parameters.resolution="2K"` → gpt-image-2 + 2048²). `estimateCost` factorise la passe 2K. Image = API OpenAI directe (plus de Magnific).
+- **Embeddings Ollama-aware + pin** : l'opérateur voulait Ollama Cloud pour les embeddings — **constat vérifié en live** : ollama.com n'héberge QUE des modèles chat/code (35 modèles, **aucun modèle d'embedding** ; `/v1/embeddings` → "path not found"). Les embeddings basculent donc sur OpenAI (clé opérateur, `text-embedding-3-small`, dim 1536). `embedViaOllama` gère désormais les deux modes (OpenAI-compatible `/v1/embeddings` + Bearer **et** natif `/api/embeddings`) → correct pour Ollama self-host/local ou futur modèle cloud. `selectEmbedProvider` lit `EMBED_PROVIDER` (pin, posé `openai`) pour éviter une tentative Ollama vouée à l'échec à chaque embed.
+
+tsc 0 · eslint 0 · provider tests verts.
+
+---
+
+## v6.27.71 — feat(ptah): OpenAI = générateur d'image exclusif (gpt-image-1, synchrone) (2026-06-30)
+
+Décision opérateur : **« l'API de génération d'image, c'est OpenAI exclusivement »**. Câble OpenAI Images comme provider Ptah canonique pour `forgeKind` image/icon (édition/vidéo/audio restent Magnific — ce n'est pas de la génération d'image). Débloque la forge d'images (était toute DEFERRED/mockée) + la future variante graphique de la Bible de Marque.
+
+- **Provider `openai`** : modèle `gpt-image-1` (vérifié **en live** sur le compte : dall-e-2/3 indisponibles, `response_format` rejeté → l'API renvoie du b64). Surchargeable `OPENAI_IMAGE_MODEL`, auth `OPENAI_API_KEY`.
+- **Synchrone** (pas de webhook) : nouveau flag `ForgeProvider.sync` → `forge()` génère + persiste l'image, pose l'URL dans `providerTaskId`, et `materializeBrief` **réconcilie inline** (markCompleted + AssetVersion + BrandAsset). `reconcile()` écho l'URL.
+- **Persistance b64 dual-mode** : `BLOB_STORAGE_PUT_URL_TEMPLATE` set → PUT binaire (mécanisme download-archiver) → URL durable ; sinon → **data URL** self-contained (marche out-of-box, jsPDF/`<img>` l'affichent). Zéro dépendance storage pour démarrer.
+- **Routing** : `KIND_TO_PROVIDER` image/icon → `["openai"]` **exclusif**.
+- **Robustesse ship-able sans clés (ADR-0021)** — corrige un angle mort de #386 : `selectProvider` LÈVE `NoAvailableProviderError` quand aucun provider du kind n'est configuré (la garde post-sélection de #386 était inatteignable). `materializeBrief` catch désormais ce throw → forge **différée** (task tracée + retriable) au lieu de crasher ; garde morte retirée.
+
+Test `ptah-openai-image-provider.test.ts` (enregistrement + sync + isAvailable + routing exclusif + deferral sans clé). Cap APOGEE 7/7 (OpenAI = provider, pas Neter). **tsc 0 · eslint 0 · 2342 tests verts**.
+
+---
+
+## v6.27.70 — feat(artemis): Bible de Marque — deck 16:9 téléchargeable (2ᵉ livrable) (2026-06-30)
+
+Sort le **2ᵉ livrable canonique** (après l'Oracle) : la **Bible de Marque**, compilation des Glory tools BRAND-layer (séquence **BRANDBOOK-D**) en deck **16:9 téléchargeable**. Construit en réutilisant l'existant au maximum :
+
+- **Données** via `compileDeliverable(strategyId, "BRANDBOOK-D")` (sorties Glory déjà persistées + sections manquantes), **rendu** via `jsPDF` (déjà en deps, serverless-safe — comme `export-oracle.ts`, pas de Chromium ni de page publique, route auth-gardée comme l'Oracle).
+- Deck = 1 couverture (panda/corail/or DS) + 1 slide par étape BRANDBOOK-D, **la séquence servant de colonne vertébrale** : section présente → contenu rendu (walk JSON lisible) ; absente → **empty-state honnête « section à générer »** (jamais de données inventées — doctrine PROPAGATION-MAP). **Doctrine Artemis→Ptah respectée** : compile des briefs textuels, ne forge pas d'image (variante slides graphiques Ptah = chantier distinct).
+- Surfaces : kind `BRAND_BIBLE` (+ `KIND_TO_PILLAR`→D) · exporter `value-report-generator/brand-bible-pdf.ts` · route `/api/export/brand-bible/[strategyId]/pdf` · bouton Cockpit (page proposition, à côté de l'Export Oracle). **0 migration** (`BrandAsset.kind` est un `String`).
+
+Test `brand-bible-deck.test.ts` : intégrité du spine (chaque slide résout un Glory tool) + rendu PDF réel (`%PDF-`, couverture + slides, édition partielle honnête). Cap APOGEE 7/7. **tsc 0 · eslint 0 · 3 nouveaux tests + 34 kind-tests verts**.
+
+---
+
+## v6.27.69 — fix(os): healer pass — purge erreurs UI/fonctionnelles + résilience LLM + SEO (2026-06-30)
+
+Robot **« healer »** (`scripts/heal/`) + **scan fonctionnel complet** déclenchant TOUS les noeuds (Glory tools, sequences, frameworks) avec timeout par noeud et sortie jsonl live. Mandat opérateur : « ne laisser aucune erreur avant le passage public ». Correctifs transverses issus du scan :
+
+- **Résilience LLM** (`llm-gateway`) : OpenRouter ajouté en provider fallback (chaîne free + owl-alpha), Ollama Cloud (`deepseek-v4-flash`) en primaire local, **sanitisation des null-bytes** en sortie LLM (crashait le persist jsonb DriverAdapter), fix `OPENAI_MODEL_MAP` (`gpt-5.5` inexistant → `gpt-4o`).
+- **Sequences — « ne rien laisser en planifié »** : 9 Glory tools `COMPOSE` (`sequence-gap-tools.ts`) comblent les refs fantômes des séquences canon → 0 step « GLORY inconnu » ; 3 `planned()` clôturés ACTIVE (BAIN-NPS / IMHOTEP-CREW / ANUBIS-COMMS) ; 2 typos remappées. **Doctrine Artemis→Ptah respectée** : ce sont des générateurs de brief, aucun `forgeOutput`. Bindings recadrés sur champs canon réels (`d.personas`/`e.aarrr`) — évite d'introduire des requirements COMPLETE fantômes `v.cibles`/`s.metriquesCles` qui auraient plafonné le score V/S de **toutes** les marques.
+- **Oracle** : cascade de staleness branchée (`markAllSectionsStale` dans `writePillarAndScore`), writeback déterministe (`composeSectionDeterministic`) dans le handler, §32 Manipulation Matrix lit `evaluations`.
+- **SEO socle** : `sitemap.ts` dynamique (static + blog + missions Guilde + dossiers Argos PASS, chaque source en try/catch), `opengraph-image` branded 1200×630, metadata layout (metadataBase/template/OG/twitter/keywords) + JSON-LD Organization/WebSite.
+- **Outillage/UI** : fix `eslint-plugin-lafusee` (`isExempt` normalise les backslashes Windows — 18 faux warnings), command-palette routes (seshat/artemis), page-header breadcrumb guard `APP_ROUTES`, boutons disabled → Links, fixes hydration.
+
+Diagnostic consolidé : `docs/governance/heal-report-2026-06-30.md`. Cap APOGEE 7/7 préservé. **tsc 0 · eslint 0 · 2326 tests verts**.
+
+---
+
 ## v6.27.68 — feat(laguilde): Voie B — soumission de direction créative par un membre guilde (ADR-0120 PR-6) (2026-06-29)
 
 Branche **La Guilde comme Voie B** du pipeline de Proposition Créative (le portail était déféré ; voici l'intégration). Un membre guilde **assigné à ≥1 mission** d'une stratégie peut soumettre une direction créative (Big Idea/insight/axe/pistes) → la proposition arrive **SUBMITTED** dans la file de validation de l'opérateur (cockpit), traitée par la gate existante.

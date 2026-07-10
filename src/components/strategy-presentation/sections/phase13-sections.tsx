@@ -647,7 +647,14 @@ export function CultIndex({ data }: Props) {
 }
 
 export function ManipulationMatrix({ data, strategyId }: Props) {
-  const mm = data.manipulationMatrix as { evaluations?: unknown[]; summary?: Record<string, unknown> } | null;
+  const mm = data.manipulationMatrix as {
+    evaluations?: Array<{ mode?: string; weight?: number; observed?: string }>;
+    summary?: { dominantMode?: string; mixSource?: string } & Record<string, unknown>;
+  } | null;
+  // Le composeur écrit les données par mode dans `evaluations` (mode → weight +
+  // observed) ; lire `summary[mode]` (clés inexistantes) affichait "—" partout.
+  const byMode = new Map((mm?.evaluations ?? []).map((ev) => [String(ev.mode), ev]));
+  const dominantMode = mm?.summary?.dominantMode;
   return (
     <SectionShell
       tier="DISTINCTIVE"
@@ -657,18 +664,22 @@ export function ManipulationMatrix({ data, strategyId }: Props) {
       {mm ? (
         <Stack direction="col" gap={3}>
           <Grid cols={4} gap={2}>
-            {(["peddler", "dealer", "facilitator", "entertainer"] as const).map((mode) => (
-              <Card key={mode} surface="outlined">
-                <CardBody>
-                  <Heading level={5}>{mode}</Heading>
-                  <Text variant="caption" tone="muted">
-                    {mm.summary && (mm.summary as Record<string, unknown>)[mode]
-                      ? String((mm.summary as Record<string, unknown>)[mode]).slice(0, 60)
-                      : "—"}
-                  </Text>
-                </CardBody>
-              </Card>
-            ))}
+            {(["peddler", "dealer", "facilitator", "entertainer"] as const).map((mode) => {
+              const ev = byMode.get(mode);
+              const pct = typeof ev?.weight === "number" ? Math.round(ev.weight * 100) : null;
+              const isDominant = dominantMode === mode;
+              return (
+                <Card key={mode} surface="outlined">
+                  <CardBody>
+                    <Heading level={5}>{isDominant ? `★ ${mode}` : mode}</Heading>
+                    <Text variant="caption" tone="muted">
+                      {pct !== null ? `${pct}% du mix` : "—"}
+                      {ev?.observed ? ` · ${String(ev.observed)}` : ""}
+                    </Text>
+                  </CardBody>
+                </Card>
+              );
+            })}
           </Grid>
           <Banner tone="neutral">
             Visualisation de la matrice générable à la demande.

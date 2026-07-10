@@ -6,6 +6,7 @@ import { adobeProvider } from "./adobe";
 import { canvaProvider } from "./canva";
 import { figmaProvider } from "./figma";
 import { magnificProvider } from "./magnific";
+import { openaiImagesProvider } from "./openai";
 import type { ForgeProvider, ProviderName } from "../types";
 
 export const PROVIDERS: Record<ProviderName, ForgeProvider> = {
@@ -13,6 +14,7 @@ export const PROVIDERS: Record<ProviderName, ForgeProvider> = {
   adobe: adobeProvider,
   figma: figmaProvider,
   canva: canvaProvider,
+  openai: openaiImagesProvider,
 };
 
 export function getProvider(name: ProviderName): ForgeProvider {

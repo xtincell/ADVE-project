@@ -78,7 +78,7 @@ Ces correspondances évitent la réinvention :
 - **DeliverableTracking** (10 fields)
 - **Conversation** (14 fields)
 - **Message** (12 fields)
-- **QuickIntake** (30 fields)
+- **QuickIntake** (31 fields)
 - **MediaPlan** (13 fields)
 - **MediaPlanLine** (18 fields)
 - **CampaignAction** (29 fields)
@@ -551,7 +551,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 253 (par deck)
+## Pages — 254 (par deck)
 
 ### Agency (12)
 
@@ -568,7 +568,7 @@ Ces correspondances évitent la réinvention :
 - `/agency/revenue`
 - `/agency/signals`
 
-### Cockpit (50)
+### Cockpit (51)
 
 - `/cockpit`
 - `/cockpit/brand/assets`
@@ -620,6 +620,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/portfolio`
 - `/cockpit/portfolio/[corporateSlug]`
 - `/cockpit/settings`
+- `/cockpit/settings/billing`
 
 ### Console (121)
 
@@ -994,7 +995,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 545 (par governor)
+## Intent kinds — 547 (par governor)
 
 ### MESTOR (79)
 
@@ -1097,7 +1098,7 @@ Ces correspondances évitent la réinvention :
 - `PROPOSE_SEQUENCE_PROMOTION_FROM_CAMPAIGN` → campaign-tracker (sync) — Cluster E — Si campagne réussie (tierDelta>0 + cultIndexDelta>0 + altitudeRegres…
 - `TOGGLE_QUALITY_GATE_MODE` → auto-promotion (sync) — Bascule le mode quality-gate entre SOFT (warning-only) et HARD (block-on-fail). …
 
-### SESHAT (17)
+### SESHAT (18)
 
 - `RANK_PEERS` → seshat (sync) — Generic peer ranking via context-store ranker.…
 - `SEARCH_BRAND_CONTEXT` → seshat (sync) — Search across strategies / find peers / search within a strategy.…
@@ -1105,6 +1106,7 @@ Ces correspondances évitent la réinvention :
 - `INGEST_MARKET_STUDY` → market-study-ingestion (async) — Ingest an operator-uploaded market study (PDF/DOCX/XLSX) and decompose it into N…
 - `FETCH_EXTERNAL_FEED` → external-feeds (async) — Fetch and persist an EXTERNAL_FEED_DIGEST KnowledgeEntry for a (countryCode, sec…
 - `SESHAT_TRACK_ASSET_IMPACTS` → market-intelligence (sync) — Mesure cultIndexDeltaObserved des AssetVersions matures (>=24h). Manual-first (A…
+- `ENRICH_E_FROM_PUBLIC_FOOTPRINT` → quick-intake (sync) — Re-scanne l'empreinte publique d'une marque (site déclaré, découverte Brave, com…
 - `COLLECT_WEB_FOOTPRINT` → quick-intake (async) — Vague 10 : collecte deterministe de l empreinte web publique du prospect (site, …
 - `RE_EXTRACT_MARKET_STUDY` → market-study-ingestion (async) — Re-extract a previously ingested market study from its archived RAW entry, dropp…
 - `JEHUTY_FEED_REFRESH` → jehuty (sync) — Refresh Jehuty feed (signals + recos + diagnostics).…
@@ -1117,7 +1119,7 @@ Ces correspondances évitent la réinvention :
 - `MEASURE_OVERTON_SHIFT` → campaign-tracker (async) — Cluster D — Mesure le déplacement de l'axe culturel sectoriel post-LIVE. Compare…
 - `EVALUATE_OVERTON_READINESS` → campaign-tracker (sync) — Cluster D pré-LIVE — Tarsis évalue OvertonReadiness sur l'axe culturel ciblé. Ou…
 
-### INFRASTRUCTURE (376)
+### INFRASTRUCTURE (377)
 
 - `ADMIN_SET_USER_ROLE` → accounts (sync) — Console superviseur (Vague 7) : promotion/retrogradation du role d'un compte (en…
 - `SYNC_UPGRADERS_CANON` → canon-sync (sync) — Vague 10 : pousse le canon UPgraders 100% (8 piliers contrats COMPLETE) dans la …
@@ -1349,6 +1351,7 @@ Ces correspondances évitent la réinvention :
 - `REJECT_CREATIVE_PROPOSAL` → creative-proposal (sync) — Rejette une Proposition Créative avec motif — n'amorce aucune production (ADR-01…
 - `DRAFT_CREATIVE_PROPOSAL_FROM_STRATEGY` → creative-proposal (sync) — Voie A IA — pré-remplit un BROUILLON de direction créative depuis l'ADVE (LLM vi…
 - `GUILD_SUBMIT_CREATIVE_PROPOSAL` → creative-proposal (sync) — Voie B La Guilde — un membre guilde assigné à une mission de la stratégie soumet…
+- `SEED_CREATIVE_AXES` → creative-proposal (sync) — Amorçage multi-axes — seed 2 propositions DRAFT (2 axes créatifs distincts, Voie…
 - `LEGACY_RESEARCH_WAVE_CREATE` → bureau-etudes (sync) — Création d'une vague d'étude (time-spine, acteur Bureau d'étude, ADR-0110).…
 - `LEGACY_RESEARCH_WAVE_RECORD` → bureau-etudes (sync) — Enregistrement de l'échantillon atteint d'une vague (ADR-0110).…
 - `LEGACY_SOURCE_SET_PROVENANCE` → bureau-etudes (sync) — Classe la provenance d'une source de marché pour fusion pondérée (ADR-0114).…

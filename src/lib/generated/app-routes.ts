@@ -209,6 +209,7 @@ export const APP_ROUTES: ReadonlySet<string> = new Set([
   "/creator/progress/metrics",
   "/creator/progress/path",
   "/creator/progress/strengths",
+  "/creator/proposals",
   "/creator/qc/peer",
   "/creator/qc/submitted",
   "/creator/services",

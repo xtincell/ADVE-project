@@ -117,6 +117,12 @@ export const BRAND_ASSET_KINDS = [
    *  Le PDF lui-même reste régénéré à la volée (puppeteer). Ce kind sert à
    *  tracer l'asset dans le vault de la marque, sans dupliquer le blob. */
   "INTAKE_REPORT",
+
+  // ── Bible de Marque — 2ᵉ livrable canonique (compilation BRANDBOOK-D) ──────
+  /** Deck 16:9 compilant les sorties Glory BRAND-layer (séquence BRANDBOOK-D)
+   *  en bible de marque téléchargeable. family=CONCEPTUAL, rendu PDF à la volée
+   *  via `value-report-generator/brand-bible-pdf.ts` (jsPDF, comme l'Oracle). */
+  "BRAND_BIBLE",
 ] as const;
 
 export type BrandAssetKind = (typeof BRAND_ASSET_KINDS)[number];

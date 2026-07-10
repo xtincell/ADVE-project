@@ -271,31 +271,51 @@ export const _recordProviderSuccessForTest: (provider: LLMProvider) => void = re
 export const _CIRCUIT_BREAKER_THRESHOLD_FOR_TEST = CIRCUIT_BREAKER_THRESHOLD;
 export const _CIRCUIT_BREAKER_RESET_MS_FOR_TEST = CIRCUIT_BREAKER_RESET_MS;
 
-// Model name mapping for OpenAI fallback
+// Model name mapping for OpenAI fallback.
+// CORRECTION résilience : les anciennes valeurs `gpt-5.5` / `gpt-5.5-mini`
+// cassaient le fallback — `gpt-5.5-mini` n'existe pas (404 "model does not
+// exist") et `gpt-5.5` rejette `max_tokens` (400, exige `max_completion_tokens`
+// que le SDK n'envoie pas via maxOutputTokens). Résultat : quand Anthropic
+// tombait (ex. crédits épuisés), TOUTE requête LLM échouait au lieu de basculer.
+// gpt-4o / gpt-4o-mini sont confirmés 200 avec le chemin d'appel courant.
 const OPENAI_MODEL_MAP: Record<string, string> = {
-  "claude-sonnet-4-20250514": "gpt-5.5",
-  "claude-sonnet-4-6": "gpt-5.5",
-  "claude-opus-4-6": "gpt-5.5",
-  "claude-opus-4-20250514": "gpt-5.5",
-  "claude-haiku-4-5": "gpt-5.5-mini",
-  "claude-haiku-4-5-20251001": "gpt-5.5-mini",
+  "claude-sonnet-4-20250514": "gpt-4o",
+  "claude-sonnet-4-6": "gpt-4o",
+  "claude-opus-4-6": "gpt-4o",
+  "claude-opus-4-7": "gpt-4o",
+  "claude-opus-4-8": "gpt-4o",
+  "claude-opus-4-20250514": "gpt-4o",
+  "claude-haiku-4-5": "gpt-4o-mini",
+  "claude-haiku-4-5-20251001": "gpt-4o-mini",
 };
 
-// OpenRouter (OpenAI-API-compatible) model mapping — used only when Anthropic +
-// OpenAI are both unavailable. OpenRouter slugs evolve over time, so the operator
-// can pin the exact slug via `OPENROUTER_MODEL`; otherwise we map the policy's
-// Claude model to a stable OpenRouter slug, falling back to a sane default.
-const OPENROUTER_MODEL_MAP: Record<string, string> = {
-  "claude-opus-4-20250514": "anthropic/claude-opus-4",
-  "claude-opus-4-6": "anthropic/claude-opus-4",
-  "claude-sonnet-4-20250514": "anthropic/claude-sonnet-4",
-  "claude-sonnet-4-6": "anthropic/claude-sonnet-4",
-  "claude-haiku-4-5": "anthropic/claude-3.5-haiku",
-  "claude-haiku-4-5-20251001": "anthropic/claude-3.5-haiku",
-};
+// ── DÉFAUT LLM CENTRALISÉ — owl-alpha via OpenRouter, PARTOUT ──────────────
+// Directive opérateur : provider texte primaire = OpenRouter, modèle par défaut =
+// owl-alpha PARTOUT (La Fusée ne dépend d'aucun crédit LLM payant). UNE seule
+// source de vérité, pinnable via `OPENROUTER_MODEL`. L'ancien OPENROUTER_MODEL_MAP
+// (routage par-modèle vers anthropic/claude-* payant) est supprimé : tout le texte
+// OpenRouter passe par owl-alpha. Slug confirmé live sur l'API : "openrouter/owl-alpha".
+export const DEFAULT_OPENROUTER_MODEL = process.env.OPENROUTER_MODEL ?? "openrouter/owl-alpha";
 
-function resolveOpenRouterModel(model: string): string {
-  return process.env.OPENROUTER_MODEL ?? OPENROUTER_MODEL_MAP[model] ?? "anthropic/claude-sonnet-4";
+// Chaîne de repli — modèles 100 % GRATUITS OpenRouter, testés live disponibles
+// (2026-06-30, real-output check). Parcourus dans l'ordre quand le modèle courant
+// n'a "aucun endpoint" / renvoie 404 / 429. Reste sur OpenRouter et GRATUIT
+// (doctrine « La Fusée ne dépend d'aucun crédit LLM payant »). owl-alpha reste le
+// défaut ; cette chaîne ne sert qu'en cas d'indisponibilité. Surchargeable via
+// OPENROUTER_FALLBACK_MODELS (CSV) — ex. pour pinner un modèle plus puissant.
+export const OPENROUTER_FALLBACK_MODELS: string[] = process.env.OPENROUTER_FALLBACK_MODELS
+  ? process.env.OPENROUTER_FALLBACK_MODELS.split(",").map((s) => s.trim()).filter(Boolean)
+  : [
+      "nvidia/nemotron-3-super-120b-a12b:free", // 120B MoE, ctx 1M, ~1.5s
+      "openai/gpt-oss-120b:free", // 120B, fort suivi d'instructions, ctx 131K
+      "google/gemma-4-26b-a4b-it:free", // Gemma 4, ctx 262K, rapide
+      "nvidia/nemotron-3-nano-30b-a3b:free", // 30B MoE, dernier recours rapide
+    ];
+
+function resolveOpenRouterModel(_policyModel: string): string {
+  // owl-alpha pour TOUT le texte — le modèle de police (anthropicModel) n'est
+  // consulté que sur le chemin premium (Anthropic réel), jamais ici.
+  return DEFAULT_OPENROUTER_MODEL;
 }
 
 /**
@@ -601,6 +621,7 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
     try {
       const result = await withRetry(async () => {
         let aiModel;
+        let orFallback: ((m: string) => unknown) | null = null;
         // Modèle effectivement servi — clé de la police de débit par modèle.
         let servedModel = anthropicModel;
         if (provider === "anthropic") {
@@ -636,12 +657,18 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
           });
           servedModel = resolveOpenRouterModel(anthropicModel);
           aiModel = openrouter(servedModel);
+          orFallback = (m: string) => openrouter(m); // repli intra-OpenRouter si owl-alpha sans endpoint
         } else {
-          // Ollama via OpenAI-compatible API. Critical: use the Ollama
-          // model name (per-call override > policy), NOT the Claude model name.
+          // Ollama — local OU Ollama Cloud (https://ollama.com/v1 + clé API).
+          // createOpenAI accepte une apiKey (requise pour le cloud ; le local
+          // accepte n'importe quelle valeur). Modèle : override par appel >
+          // OLLAMA_MODEL (ex. deepseek-v4-flash) > police > nom Claude.
           const { createOpenAI } = await import("@ai-sdk/openai");
-          const ollama = createOpenAI({ baseURL: process.env.OLLAMA_BASE_URL });
-          servedModel = options.ollamaModel ?? ollamaModel ?? anthropicModel;
+          const ollama = createOpenAI({
+            baseURL: process.env.OLLAMA_BASE_URL,
+            apiKey: process.env.OLLAMA_API_KEY ?? "ollama",
+          });
+          servedModel = options.ollamaModel ?? process.env.OLLAMA_MODEL ?? ollamaModel ?? anthropicModel;
           aiModel = ollama(servedModel);
         }
 
@@ -680,21 +707,60 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
         // Acquiert un créneau pour le modèle effectivement servi (ex. owl-alpha
         // sur OpenRouter) ; attend si la limite RPM/concurrence/RPS est atteinte
         // plutôt que de partir et de se prendre un 429. Local au process.
+        const callParams = {
+          system: hr.system,
+          prompt: hr.prompt,
+          maxOutputTokens: options.maxOutputTokens ?? DEFAULT_MAX_TOKENS,
+          temperature: options.temperature,
+          ...(options.signal ? { abortSignal: options.signal } : {}),
+          ...(providerOptions ? { providerOptions } : {}),
+        };
         const slotKey = await acquireSlot(servedModel);
-        let text: string;
-        let usage: Awaited<ReturnType<typeof generateText>>["usage"];
+        let text!: string;
+        let usage!: Awaited<ReturnType<typeof generateText>>["usage"];
+        let slotReleased = false;
         try {
           ({ text, usage } = await generateText({
             model: aiModel as Parameters<typeof generateText>[0]["model"],
-            system: hr.system,
-            prompt: hr.prompt,
-            maxOutputTokens: options.maxOutputTokens ?? DEFAULT_MAX_TOKENS,
-            temperature: options.temperature,
-            ...(options.signal ? { abortSignal: options.signal } : {}),
-            ...(providerOptions ? { providerOptions } : {}),
+            ...callParams,
           }));
-        } finally {
+        } catch (genErr) {
+          // Repli intra-OpenRouter : owl-alpha (ou un modèle gratuit) renvoie
+          // souvent "No endpoints found" / 404 / 429 sous charge → on parcourt la
+          // chaîne de modèles GRATUITS jusqu'à ce qu'un réponde, au lieu de tout
+          // faire échouer. Tout reste sur OpenRouter et gratuit.
+          const unavailable = (m: string) =>
+            /no endpoints found|not found|404|429|rate.?limit|provider returned error|overloaded|503|502/i.test(m);
           releaseSlot(slotKey);
+          slotReleased = true;
+          let lastErr: unknown = genErr;
+          if (provider !== "openrouter" || orFallback == null || !unavailable(String((genErr as Error)?.message ?? genErr))) {
+            throw genErr;
+          }
+          let recovered = false;
+          for (const fb of OPENROUTER_FALLBACK_MODELS) {
+            if (fb === servedModel) continue;
+            console.warn(`[llm-gateway] ${servedModel} KO → repli gratuit ${fb}`);
+            const fbSlot = await acquireSlot(fb);
+            try {
+              ({ text, usage } = await generateText({
+                model: orFallback!(fb) as Parameters<typeof generateText>[0]["model"],
+                ...callParams,
+              }));
+              servedModel = fb;
+              recovered = true;
+            } catch (e) {
+              lastErr = e;
+              // Erreur réelle du modèle (pas une indispo) → échec franc.
+              if (!unavailable(String((e as Error)?.message ?? e))) throw e;
+            } finally {
+              releaseSlot(fbSlot);
+            }
+            if (recovered) break;
+          }
+          if (!recovered) throw lastErr;
+        } finally {
+          if (!slotReleased) releaseSlot(slotKey);
         }
 
         const gatewayUsage = {
@@ -707,7 +773,13 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
         const billedModel = provider === "ollama" ? (options.ollamaModel ?? ollamaModel ?? anthropicModel) : anthropicModel;
         trackCost(options, gatewayUsage, billedModel);
 
-        return { text, usage: gatewayUsage };
+        // PostgreSQL jsonb refuse le null byte U+0000 ("unsupported Unicode escape
+        // sequence") — un modèle peut en émettre un (brut, ou un littéral qui le devient
+        // au JSON.parse aval) qui fait planter la persistance GloryOutput
+        // (DriverAdapterError, trouvé par le scan fonctionnel : brand-audit-scanner).
+        // On l'élimine à la source pour TOUS les consommateurs LLM.
+        const cleanText = text.split(String.fromCharCode(0)).join("").replace(/\\u0000/g, "");
+        return { text: cleanText, usage: gatewayUsage };
       });
 
       recordProviderSuccess(provider);
@@ -839,7 +911,7 @@ export interface EmbedOptions {
   /** Provider override. Default: auto-select Ollama → OpenAI → none. */
   provider?: EmbedProvider;
   /**
-   * Model override. If omitted: uses OLLAMA_EMBED_MODEL env (Ollama path,
+   * Model override. If omitted: uses EMBED_MODEL_NAME env (Ollama path,
    * default "nomic-embed-text") or "text-embedding-3-small" (OpenAI path).
    */
   model?: string;
@@ -860,6 +932,13 @@ export interface EmbedResult {
 
 const OLLAMA_DIM_BY_MODEL: Record<string, number> = {
   "nomic-embed-text": 768,
+
+  "nomic-embed-text:v1.5": 768,
+  // v2-moe : modèle d'embedding LOCAL (ollama pull) — PAS servi sur ollama.com
+  // (vérifié 2026-07-01 : /v1/embeddings "path not found" ; /api/embed
+  // "unauthorized" même pour un modèle chat servi → endpoint embeddings gaté
+  // côté cloud). Prêt si l'opérateur lance Ollama en local.
+  "nomic-embed-text-v2-moe": 768,
   "mxbai-embed-large": 1024,
   "bge-m3": 1024,
   "all-minilm": 384,
@@ -873,7 +952,14 @@ const OPENAI_DIM_BY_MODEL: Record<string, number> = {
 
 function selectEmbedProvider(override?: EmbedProvider): EmbedProvider {
   if (override) return override;
-  if (process.env.OLLAMA_BASE_URL) return "ollama";
+  // Pin explicite via env (ex. `EMBED_PROVIDER=openai`). Utile car Ollama Cloud
+  // n'héberge AUCUN modèle d'embedding (chat/code seulement, vérifié 2026-06-30) :
+  // sans ce pin, chaque embed tenterait Ollama (échec) avant de basculer OpenAI.
+  const envPref = process.env.EMBED_PROVIDER as EmbedProvider | undefined;
+  if (envPref && (["ollama", "openai", "openrouter", "none"] as const).includes(envPref)) {
+    return envPref;
+  }
+  if (process.env.EMBED_SERVICE_URL) return "ollama";
   // OpenAI = chemin embeddings principal, SAUF s'il est en fenêtre « à sec » 24h
   // (auquel cas on passe à OpenRouter pour des embeddings gratuits).
   if (process.env.OPENAI_API_KEY && !isOpenAiEmbedDry()) return "openai";
@@ -932,14 +1018,58 @@ async function embedViaOllama(
   model: string,
   caller: string,
 ): Promise<EmbedResult> {
-  const baseUrl = process.env.OLLAMA_BASE_URL!.replace(/\/$/, "");
+  // Endpoint embeddings DÉDIÉ, découplé du chat (`EMBED_SERVICE_URL`). Le
+  // chat Ollama peut viser le cloud (ollama.com/v1 + clé) tandis que les
+  // embeddings visent un Ollama LOCAL (localhost:11434, sans auth) — le cloud
+  // n'héberge aucun modèle d'embedding (vérifié). Endpoint embed dédié, sans repli sur le chat.
+  const embedBase = process.env.EMBED_SERVICE_URL;
+  const baseRaw = embedBase;
+  if (!baseRaw) {
+    throw new Error("embedViaOllama: EMBED_SERVICE_URL non défini");
+  }
+  const rawBase = baseRaw.replace(/\/$/, "");
+  // Clé : uniquement EMBED_API_KEY si l'endpoint embed est authentifié.
+  // Un Ollama local n'a pas d'auth → clé absente → chemin natif /api/embed.
+  // Jamais la clé du chat cloud (endpoints découplés).
+  const apiKey = process.env.EMBED_API_KEY;
   const dim = OLLAMA_DIM_BY_MODEL[model] ?? 768;
-  const embeddings: number[][] = [];
+  const isV1 = /\/v1$/.test(rawBase);
 
-  // Ollama's /api/embeddings accepts one prompt at a time — loop sequentially.
-  // For batches >50 items consider parallelism, but keep it simple here.
+  // ── Ollama Cloud / endpoint OpenAI-compatible (/v1/embeddings + Bearer) ──
+  // NB (vérifié 2026-06-30) : ollama.com n'héberge QUE des modèles chat/code
+  // (35 modèles, aucun modèle d'embedding) → ce chemin échoue côté cloud
+  // ("path not found") et la chaîne bascule sur OpenAI. Il reste correct pour
+  // un Ollama self-host exposé en /v1 OU si le cloud ajoute un modèle d'embedding.
+  if (apiKey || isV1) {
+    const base = isV1 ? rawBase : `${rawBase}/v1`;
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+    const embeddings: number[][] = [];
+    const BATCH = 50;
+    for (let i = 0; i < inputs.length; i += BATCH) {
+      const res = await fetch(`${base}/embeddings`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ model, input: inputs.slice(i, i + BATCH) }),
+      });
+      if (!res.ok) {
+        const errText = await res.text().catch(() => res.statusText);
+        throw new Error(`Ollama embeddings ${res.status}: ${errText}`);
+      }
+      const json = (await res.json()) as { data?: Array<{ embedding: number[]; index: number }> };
+      const data = (json.data ?? []).slice().sort((a, b) => a.index - b.index);
+      for (const item of data) embeddings.push(item.embedding);
+    }
+    if (embeddings.length === 0) {
+      throw new Error(`Ollama returned no embeddings for caller=${caller}`);
+    }
+    return { embeddings, dim, model, provider: "ollama", inputTokens: 0 };
+  }
+
+  // ── Ollama natif local (/api/embeddings, un prompt à la fois) ──
+  const embeddings: number[][] = [];
   for (const text of inputs) {
-    const res = await fetch(`${baseUrl}/api/embeddings`, {
+    const res = await fetch(`${rawBase}/api/embeddings`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ model, prompt: text }),
@@ -1007,7 +1137,7 @@ export async function embed(options: EmbedOptions): Promise<EmbedResult> {
 
   if (provider === "none") {
     console.warn(
-      `[llm-gateway.embed] No embedding provider configured (set OLLAMA_BASE_URL or OPENAI_API_KEY) — returning empty embeddings for caller=${options.caller}`,
+      `[llm-gateway.embed] No embedding provider configured (set EMBED_SERVICE_URL or OPENAI_API_KEY) — returning empty embeddings for caller=${options.caller}`,
     );
     const fallbackModel = options.model ?? "none";
     return {
@@ -1039,7 +1169,7 @@ export async function embed(options: EmbedOptions): Promise<EmbedResult> {
   };
 
   if (provider === "ollama") {
-    const model = options.model ?? process.env.OLLAMA_EMBED_MODEL ?? "nomic-embed-text";
+    const model = options.model ?? process.env.EMBED_MODEL_NAME ?? "nomic-embed-text:v1.5";
     try {
       return await embedViaOllama(inputs, model, options.caller);
     } catch (err) {

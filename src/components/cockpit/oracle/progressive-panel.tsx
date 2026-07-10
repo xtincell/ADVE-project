@@ -244,7 +244,7 @@ export function OracleProgressivePanel(props: OracleProgressivePanelProps): Reac
               confidence={streamConfidence ?? dbSection.confidence}
               lastError={dbSection.lastError as { errorCode?: string | null; errorMessage?: string | null } | null}
               isStale={dbSection.staleAt != null}
-              disabled={!canOperate || (anyMutationPending && !isAssemblerRunning ? false : anyMutationPending)}
+              disabled={!canOperate || anyMutationPending || isAssemblerRunning}
               onAction={(mode) => {
                 if (mode === "RETRY") {
                   retryMutation.mutate({ strategyId, sectionId: dbSection.sectionId });

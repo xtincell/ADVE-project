@@ -314,7 +314,8 @@ export async function checkPrerequisites(
           unmet.push(req);
           break;
         }
-        // Check maturity via confidence threshold
+        // Check maturity via confidence threshold.
+        // lafusee:allow-adhoc-completion -- pré-flight gate de séquence sur un pilier déjà chargé, distinct de l'affichage de complétude UI (notoria consomme la readiness canonique)
         const isComplete = (pillar.confidence ?? 0) >= 0.6 || pillar.validationStatus === "VALIDATED";
         const isEnriched = (pillar.confidence ?? 0) >= 0.3 || isComplete;
 

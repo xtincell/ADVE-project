@@ -17,9 +17,13 @@ const SETS = [
 ];
 
 function isExempt(filename) {
+  // Normaliser les séparateurs (Windows backslash → forward slash) sinon les
+  // exemptions échouent localement (faux positifs sur src/domain/, qui EST la
+  // maison canonique des littéraux de piliers). CI Linux était correct.
+  const f = filename.replace(/\\/g, "/");
   return (
-    filename.includes("/src/domain/") ||
-    filename.includes("/eslint-plugin-lafusee/")
+    f.includes("/src/domain/") ||
+    f.includes("/eslint-plugin-lafusee/")
   );
 }
 

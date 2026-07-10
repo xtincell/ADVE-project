@@ -9,11 +9,14 @@
  * `Client.country = "Wakanda"`). Les clients sont rattachés via leurs stratégies.
  *
  * Résultat caché (TTL court) — le statut marché change rarement ; les Intents du
- * kill-switch invalident explicitement le cache.
+ * kill-switch invalident explicitement le cache. Multi-pod (vague B) :
+ * l'invalidation est diffusée via Redis pub/sub (opt-in `REDIS_URL`) — le TTL
+ * 15 s reste le filet de sécurité quand Redis est absent ou down.
  */
 
 import { Prisma } from "@prisma/client";
 import type { PrismaClient } from "@prisma/client";
+import { publishJson, subscribeJson, isRedisConfigured } from "@/lib/redis";
 
 export interface MarketVisibility {
   /** Codes ISO-2 des marchés invisibles (SHADOWBANNED + PURGED). */
@@ -40,9 +43,24 @@ const EMPTY: MarketVisibility = {
 const TTL_MS = 15_000;
 let cache: { value: MarketVisibility; at: number } | null = null;
 
+const INVALIDATION_CHANNEL = "cache:market-visibility:invalidate";
+let bridgeStarted = false;
+
+/** Écoute (une fois) les invalidations kill-switch émises par les autres pods. */
+function ensureInvalidationBridge(): void {
+  if (bridgeStarted || !isRedisConfigured()) return;
+  bridgeStarted = true;
+  subscribeJson(INVALIDATION_CHANNEL, () => {
+    cache = null;
+  });
+}
+
 /** Invalide le cache — appelé par les handlers NEUTRALIZE/REINSTATE/PURGE_MARKET. */
 export function invalidateMarketVisibility(): void {
   cache = null;
+  // Kill-switch marché = sécurité : les autres pods doivent purger tout de
+  // suite, pas au prochain TTL. No-op sans REDIS_URL (TTL 15 s en filet).
+  publishJson(INVALIDATION_CHANNEL, { at: Date.now() });
 }
 
 function nonNull(values: (string | null)[]): string[] {
@@ -50,6 +68,7 @@ function nonNull(values: (string | null)[]): string[] {
 }
 
 export async function resolveMarketVisibility(rawDb: PrismaClient): Promise<MarketVisibility> {
+  ensureInvalidationBridge();
   const nowMs = Date.now();
   if (cache && nowMs - cache.at < TTL_MS) return cache.value;
 

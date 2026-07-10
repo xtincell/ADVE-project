@@ -1128,6 +1128,7 @@ export function computeMissionActivityHealth(
   return {
     total: active.length,
     done,
+    // lafusee:allow-adhoc-completion -- progression d'activités de campagne (done/total), pas de complétude pilier ADVE
     progressPct: active.length ? Math.round((done / active.length) * 100) : 0,
     budgetAllocated,
     kpiTarget,

@@ -20,6 +20,7 @@ export const manifest = defineManifest({
     "REJECT_CREATIVE_PROPOSAL",
     "DRAFT_CREATIVE_PROPOSAL_FROM_STRATEGY",
     "GUILD_SUBMIT_CREATIVE_PROPOSAL",
+    "SEED_CREATIVE_AXES",
   ],
   capabilities: [
     { name: "createCreativeProposal", inputSchema: z.unknown(), outputSchema: z.unknown(), sideEffects: ["DB_WRITE"], idempotent: false },

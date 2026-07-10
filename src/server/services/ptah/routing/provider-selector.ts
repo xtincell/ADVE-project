@@ -12,13 +12,16 @@ import { getProviderHealth } from "../task-store";
 import type { ForgeBrief, ForgeKind, ForgeProvider, ProviderName } from "../types";
 
 const KIND_TO_PROVIDER: Record<ForgeKind, ProviderName[]> = {
-  // image → Magnific d'abord (95% surface), Adobe Firefly fallback
-  image: ["magnific", "adobe"],
+  // GÉNÉRATION d'image → OpenAI EXCLUSIVEMENT (décision opérateur 2026-06-30).
+  // Pas de fallback : sans credentials OpenAI, la forge se DIFFÈRE (ADR-0021).
+  image: ["openai"],
+  icon: ["openai"],
+  // ÉDITION / autres médias → Magnific (OpenAI ne couvre pas upscale/inpaint/
+  // vidéo/audio ; ce ne sont pas de la « génération d'image »).
   refine: ["magnific"],
   transform: ["magnific"],
   video: ["magnific"],
   audio: ["magnific"],
-  icon: ["magnific"],
   classify: ["magnific"],
   stock: ["magnific"],
   // design → Figma + Adobe + Canva (préférer Figma car free + REST simple)
@@ -35,9 +38,16 @@ export class NoAvailableProviderError extends Error {
 }
 
 export async function selectProvider(brief: ForgeBrief): Promise<ForgeProvider> {
-  const candidates = brief.forgeSpec.providerHint
-    ? [brief.forgeSpec.providerHint, ...KIND_TO_PROVIDER[brief.forgeSpec.kind].filter((p) => p !== brief.forgeSpec.providerHint)]
-    : KIND_TO_PROVIDER[brief.forgeSpec.kind];
+  const allowed = KIND_TO_PROVIDER[brief.forgeSpec.kind];
+  const hint = brief.forgeSpec.providerHint;
+  // Le `providerHint` n'est honoré QUE s'il fait partie des providers autorisés
+  // pour ce kind. Ainsi un vieux `providerHint: "magnific"` posé sur un tool
+  // image/icon (registry historique) ne peut PAS court-circuiter le routage
+  // image→["openai"] EXCLUSIF (décision opérateur « plus de Magnific pour les
+  // images »). Le hint reste utile là où plusieurs providers sont autorisés (design).
+  const candidates = hint && allowed.includes(hint)
+    ? [hint, ...allowed.filter((p) => p !== hint)]
+    : allowed;
 
   for (const name of candidates) {
     const provider = getProvider(name);

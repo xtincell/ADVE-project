@@ -219,6 +219,9 @@ export const quickIntakeRouter = createTRPCRouter({
       economicModel: z.string().optional(),
       positioning: z.string().optional(),
       source: z.string().optional(),
+      // Attribution funnel (vague E) : UTM/referrer/click-ids structurés,
+      // bornés (12 clés max côté client, valeurs ≤ 300 chars).
+      attribution: z.record(z.string().max(40), z.string().max(300)).optional(),
       method: z.enum(["GUIDED", "IMPORT", "LONG", "SHORT", "INGEST", "INGEST_PLUS"]).optional(),
       // Vague 10 — empreinte web publique (alimente le pilier E)
       websiteUrl: z.string().max(300).optional(),
@@ -443,7 +446,7 @@ export const quickIntakeRouter = createTRPCRouter({
           contactName: true, contactEmail: true, contactPhone: true,
           companyName: true, sector: true, country: true,
           businessModel: true, positioning: true, rawText: true,
-          responses: true, advertis_vector: true,
+          responses: true, advertis_vector: true, webFootprint: true,
         },
       });
       if (!intake) throw new TRPCError({ code: "NOT_FOUND", message: "Intake introuvable" });
@@ -534,7 +537,27 @@ export const quickIntakeRouter = createTRPCRouter({
         const responses = intake.responses as Record<string, unknown> | null;
         const vector = (intake.advertis_vector ?? {}) as Record<string, number>;
         for (const key of PILLAR_STORAGE_KEYS) {
-          await seedPillarFromIntake(strategy.id, key, responses?.[key], (vector.confidence ?? 0.4) * 0.8);
+          let content = responses?.[key];
+          // ADR-0121 — le chemin de récupération (temp strategy purgée) re-seed
+          // depuis les réponses brutes : réinjecter l'empreinte publique dans E
+          // pour ne pas perdre webPresence/compteurs (le chemin nominal promeut
+          // la temp strategy, où le merge a déjà eu lieu).
+          if (key === "e" && intake.webFootprint && content && typeof content === "object") {
+            const { mergeEnrichedFootprintIntoPillarE } = await import("@/server/services/quick-intake/public-enrichment");
+            const fp = intake.webFootprint as unknown as import("@/server/services/quick-intake/public-enrichment").EnrichedFootprint;
+            if (Array.isArray(fp.socials)) {
+              // Rétro-compat : un webFootprint legacy (shape Vague 10) n'a pas
+              // les champs enrichis — défauts vides, jamais de fabrication.
+              content = mergeEnrichedFootprintIntoPillarE(content as Record<string, unknown>, {
+                ...fp,
+                followerCounts: fp.followerCounts ?? [],
+                press: fp.press ?? [],
+                discovery: fp.discovery ?? { attempted: false, queries: [], status: "SKIPPED_DECLARED" },
+                enrichment: fp.enrichment ?? { apify: "SKIPPED", press: "EMPTY", totalMs: 0, errors: [] },
+              }).content;
+            }
+          }
+          await seedPillarFromIntake(strategy.id, key, content, (vector.confidence ?? 0.4) * 0.8);
         }
       }
 

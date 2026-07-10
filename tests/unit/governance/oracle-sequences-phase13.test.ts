@@ -6,8 +6,8 @@
  * Verrouille :
  * 1. Les 14 séquences Phase 13 sont déclarées (7 Big4 + 5 Distinctifs + 2 Neteru Ground)
  * 2. Toutes atteignables via getSequence() runtime lookup
- * 3. Les 2 séquences Neteru Ground (Imhotep/Anubis) utilisent uniquement des steps
- *    PLANNED — sequence stub, output réel hors-sequence côté Cockpit
+ * 3. Les 2 séquences Neteru Ground (Imhotep/Anubis) ont des steps ACTIVE résolus
+ *    (clôturées 2026-06-30 « ferme tout » : crew-program-designer / comms-plan-builder)
  * 4. requires/preconditions cohérents (séquencement étages Loi 2 APOGEE)
  * 5. families correctes (ORACLE_BIG4 / ORACLE_DISTINCTIVE / ORACLE_NETERU_GROUND)
  *
@@ -26,6 +26,7 @@ import {
   ORACLE_DISTINCTIVE_SEQUENCES,
   ORACLE_NETERU_GROUND_SEQUENCES,
 } from "@/server/services/artemis/tools/phase13-oracle-sequences";
+import { getGloryTool } from "@/server/services/artemis/tools/registry";
 
 describe("Phase 13 Oracle Glory sequences completeness (B3)", () => {
   const PHASE13_KEYS: GlorySequenceKey[] = [
@@ -130,11 +131,14 @@ describe("Phase 13 Oracle Glory sequences completeness (B3)", () => {
       expect(anubis.tier).toBe(0);
     });
 
-    it("Neteru Ground stubs have only PLANNED steps (output réel hors-sequence)", () => {
+    it("Neteru Ground sequences — steps ACTIVE et résolus (clôture « ferme tout » 2026-06-30)", () => {
       for (const seq of ORACLE_NETERU_GROUND_SEQUENCES) {
         expect(seq.steps.length).toBeGreaterThan(0);
         for (const step of seq.steps) {
-          expect(step.status, `${seq.key} step ${step.ref} should be PLANNED`).toBe("PLANNED");
+          expect(step.status, `${seq.key} step ${step.ref} should be ACTIVE`).toBe("ACTIVE");
+          if (step.type === "GLORY") {
+            expect(getGloryTool(step.ref), `${seq.key} GLORY ${step.ref} doit résoudre`).toBeTruthy();
+          }
         }
       }
     });
