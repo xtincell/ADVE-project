@@ -310,9 +310,9 @@ export function PillarAFields({
           <Equipe items={v.equipeDirigeante} status={st("equipeDirigeante")} />
           <ObjCard title="Complémentarité de l'équipe" value={v.equipeComplementarite} status={st("equipeComplementarite")}
             fields={[["scoreGlobal", "Score global /10"], ["capaciteExecution", "Capacité d'exécution"], ["lacunes", "Lacunes"], ["verdict", "Verdict"]]} />
-          <ObjCard title="Messie fondateur" value={v.messieFondateur} status={st("messieFondateur")}
+          <ObjCard title="Figure fondatrice" value={v.messieFondateur} status={st("messieFondateur")}
             fields={[["nom", "Nom"], ["role", "Rôle"], ["narrative", "Narration"]]} />
-          <ProofList title="Compétences divines" items={v.competencesDivines} status={st("competencesDivines")}
+          <ProofList title="Compétences clés" items={v.competencesDivines} status={st("competencesDivines")}
             cols={[["competence", "Compétence"], ["justification", "Justification"], ["exclusivityProof", "Preuve d'exclusivité"]]} />
         </div>
       </Section>

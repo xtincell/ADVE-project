@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/config";
 import { exportStrategyData, exportAsCsv } from "@/server/services/data-export";
+import { canAccessStrategy } from "@/server/services/operator-isolation";
 
 export async function GET(
   request: Request,
@@ -14,6 +15,18 @@ export async function GET(
   }
 
   const { strategyId } = await params;
+
+  // Operator isolation — prevent IDOR: only ADMIN, the strategy owner, or the
+  // same operator may export this brand's data. Mirrors the strategy router.
+  const hasAccess = await canAccessStrategy(strategyId, {
+    operatorId: (session.user as unknown as Record<string, unknown>).operatorId as string | null ?? null,
+    userId: session.user.id,
+    role: session.user.role ?? "USER",
+  });
+  if (!hasAccess) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const url = new URL(request.url);
   const format = url.searchParams.get("format") ?? "json";
 

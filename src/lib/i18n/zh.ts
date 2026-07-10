@@ -172,9 +172,9 @@ export const zh = {
   "nav.pillar-i.role": "潜力",
   "nav.pillar-s.name": "战略 (S)",
   "nav.pillar-s.role": "战略",
-  "nav.jehuty": "Jehuty",
-  "nav.jehuty.sub": "新闻机构",
-  "nav.notoria": "Notoria",
+  "nav.jehuty": "公报",
+  "nav.jehuty.sub": "情报与信号",
+  "nav.notoria": "推荐",
   "nav.notoria.sub": "推荐引擎",
 
   // ── Landing — navigation bar ─────────────────────────────────────────

@@ -115,7 +115,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "no reference_id on event" }, { status: 400 });
   }
 
-  await db.intakePayment.update({
+  const payment = await db.intakePayment.update({
     where: { reference },
     data: {
       status: "PAID",
@@ -124,7 +124,15 @@ export async function POST(req: Request) {
     },
   }).catch((err) => {
     console.error("[paypal-webhook] update failed:", err);
+    return null;
   });
+
+  // Vague D — re-extraction ADVE premium + régénération rapport pour le
+  // payeur, fire-and-forget (jamais bloquant pour l'ACK webhook).
+  if (payment?.intakeToken) {
+    const { premiumReextractAfterPayment } = await import("@/server/services/quick-intake");
+    premiumReextractAfterPayment(payment.intakeToken);
+  }
 
   // Cycle d'abonnement manuel (Vague 5) — extension de période à l'encaissement.
   const { applySubscriptionCycleIfPaid } = await import(
