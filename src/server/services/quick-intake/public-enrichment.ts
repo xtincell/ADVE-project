@@ -57,6 +57,16 @@ export interface EnrichedFootprint extends WebFootprint {
     totalMs: number;
     errors: string[];
   };
+  // ── ADR-0121 vague A — empreinte ENTIÈRE (tous optionnels : rétro-compat
+  // avec les webFootprint JSON déjà persistés). Chaque bloc porte son statut.
+  maps?: import("./footprint-collectors").MapsPresence;
+  youtube?: import("./footprint-collectors").YouTubeStats;
+  domain?: import("./footprint-collectors").DomainInfo;
+  emailInfra?: import("./footprint-collectors").EmailInfra;
+  performance?: import("./footprint-collectors").SitePerformance;
+  ads?: import("./footprint-collectors").AdsPresence;
+  score?: import("./footprint-score").FootprintScore;
+  narrative?: { text: string; source: "LLM" | "TEMPLATE" };
 }
 
 export interface EnrichPublicFootprintInput {
@@ -262,8 +272,67 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
     }
   }
 
-  return {
+  // ── 5. Empreinte entière — collecteurs parallèles (ADR-0121 vague A). ──
+  // Read-only, chacun time-boxé et honnête ; l'échec d'un collecteur
+  // n'affecte pas les autres.
+  const enrichedExtras: Pick<EnrichedFootprint, "maps" | "youtube" | "domain" | "emailInfra" | "performance" | "ads"> = {};
+  if (remaining() > 3_000) {
+    try {
+      const collectors = await import("./footprint-collectors");
+      const domainName = input.websiteUrl ? collectors.registrableDomain(input.websiteUrl) : null;
+      const ytProfile = footprint.socials.find((s) => s.platform === "YOUTUBE" && s.handle);
+      const stageBudget = Math.min(20_000, remaining());
+
+      const [maps, youtube, domain, emailInfra, performance, ads] = await Promise.all([
+        collectors.fetchGoogleBusinessPresence(input.companyName, input.country, { timeoutMs: Math.min(stageBudget, 18_000) }),
+        ytProfile
+          ? collectors.fetchYouTubeChannelStats(ytProfile.handle!, { timeoutMs: Math.min(stageBudget, 6_000) })
+          : Promise.resolve(null),
+        collectors.fetchDomainInfo(input.websiteUrl, { timeoutMs: Math.min(stageBudget, 6_000) }),
+        collectors.checkEmailInfrastructure(domainName, { timeoutMs: Math.min(stageBudget, 5_000) }),
+        collectors.fetchSitePerformance(footprint.site?.reachable ? footprint.site.url : null, { timeoutMs: Math.min(stageBudget, 18_000) }),
+        collectors.fetchAdsPresence(input.companyName, { timeoutMs: Math.min(stageBudget, 15_000) }),
+      ]);
+
+      // Garde anti-faux-positif : une fiche Maps qui ne mentionne pas la
+      // marque est rejetée (NOT_FOUND honnête, jamais les avis d'un autre).
+      enrichedExtras.maps =
+        maps.status === "LIVE" && maps.placeName && !mentionsBrand(maps.placeName, input.companyName)
+          ? { ...maps, status: "NOT_FOUND", placeName: null, rating: null, reviewCount: null, address: null, topReviews: [] }
+          : maps;
+      if (youtube) {
+        enrichedExtras.youtube = youtube;
+        // Audience YouTube mesurée → FollowerSnapshot (même sémantique que le
+        // chemin Apify ; source CONNECTOR, plateforme dans l'enum Prisma).
+        if (youtube.status === "LIVE" && youtube.subscriberCount !== null && input.strategyId) {
+          try {
+            const { db } = await import("@/lib/db");
+            await db.followerSnapshot.create({
+              data: {
+                strategyId: input.strategyId,
+                platform: "YOUTUBE",
+                handle: (youtube.handle ?? ytProfile?.handle ?? "").replace(/^@/, ""),
+                followerCount: youtube.subscriberCount,
+                source: "CONNECTOR",
+              },
+            });
+          } catch (err) {
+            errors.push(`youtube-snapshot: ${err instanceof Error ? err.message : String(err)}`);
+          }
+        }
+      }
+      enrichedExtras.domain = domain;
+      enrichedExtras.emailInfra = emailInfra;
+      enrichedExtras.performance = performance;
+      enrichedExtras.ads = ads;
+    } catch (err) {
+      errors.push(`collectors: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  const enriched: EnrichedFootprint = {
     ...footprint,
+    ...enrichedExtras,
     followerCounts,
     press,
     discovery,
@@ -274,6 +343,16 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
       errors: [...footprint.errors, ...errors],
     },
   };
+
+  // ── 6. Score d'empreinte /100 (déterministe, renormalisé sur le mesuré). ──
+  try {
+    const { computeFootprintScore } = await import("./footprint-score");
+    enriched.score = computeFootprintScore(enriched);
+  } catch (err) {
+    enriched.enrichment.errors.push(`score: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+  return enriched;
 }
 
 /**
@@ -413,11 +492,50 @@ export function mergeEnrichedFootprintIntoPillarE(
   if (enriched.press.length > 0) {
     webPresence.press = enriched.press;
   }
+
+  // ── ADR-0121 vague A — empreinte ENTIÈRE dans webPresence (provenance
+  // SOURCE via l'appel gateway). N'AJOUTE que ce qui a été réellement mesuré
+  // (statut LIVE/NOT_FOUND) ; les blocs DEFERRED/ERROR/SKIPPED sont omis pour
+  // ne jamais présenter une absence de mesure comme un fait (ADR-0046).
+  if (enriched.maps && (enriched.maps.status === "LIVE" || enriched.maps.status === "NOT_FOUND")) {
+    webPresence.maps = enriched.maps;
+  }
+  if (enriched.youtube && enriched.youtube.status === "LIVE") {
+    webPresence.youtube = enriched.youtube;
+  }
+  if (enriched.domain && enriched.domain.status === "LIVE") {
+    webPresence.domain = enriched.domain;
+  }
+  if (enriched.emailInfra && enriched.emailInfra.status === "LIVE") {
+    webPresence.emailInfra = enriched.emailInfra;
+  }
+  if (enriched.performance && enriched.performance.status === "LIVE") {
+    webPresence.performance = enriched.performance;
+  }
+  if (enriched.ads && enriched.ads.status === "LIVE") {
+    webPresence.ads = enriched.ads;
+  }
+  if (enriched.site?.tech) {
+    const site = (webPresence.site ?? {}) as Record<string, unknown>;
+    site.tech = enriched.site.tech;
+    webPresence.site = site;
+  }
+  if (enriched.score) {
+    webPresence.footprintScore = enriched.score;
+  }
   out.webPresence = webPresence;
 
-  // primaryChannel : plus grande audience RÉELLE, seulement si absent.
-  if (!out.primaryChannel && enriched.followerCounts.length > 0) {
-    const biggest = [...enriched.followerCounts].sort((a, b) => b.followerCount - a.followerCount)[0]!;
+  // primaryChannel : plus grande audience RÉELLE (Apify + YouTube), seulement
+  // si absent. Jamais d'écrasement (le guard de provenance protège en aval).
+  const audiences: Array<{ platform: string; count: number }> = enriched.followerCounts.map((c) => ({
+    platform: c.platform,
+    count: c.followerCount,
+  }));
+  if (enriched.youtube?.status === "LIVE" && enriched.youtube.subscriberCount) {
+    audiences.push({ platform: "YOUTUBE", count: enriched.youtube.subscriberCount });
+  }
+  if (!out.primaryChannel && audiences.length > 0) {
+    const biggest = audiences.sort((a, b) => b.count - a.count)[0]!;
     const channel = PLATFORM_TO_CHANNEL[biggest.platform];
     if (channel) {
       out.primaryChannel = channel;
