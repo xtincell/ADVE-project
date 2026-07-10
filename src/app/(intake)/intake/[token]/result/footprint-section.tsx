@@ -109,7 +109,62 @@ function TechBadge({ on, label }: { on: boolean | null | undefined; label: strin
   );
 }
 
-export function FootprintSection({ footprint, companyName }: { footprint: unknown; companyName: string }) {
+/**
+ * « Déclaré vs Observé » (vague D) — juxtaposition déterministe, sans
+ * jugement : ce que le founder a déclaré au questionnaire (pilier E) face à
+ * ce que la collecte publique a réellement mesuré. Rendu seulement quand les
+ * DEUX côtés existent — jamais de comparaison fabriquée.
+ */
+function buildDeclaredVsObserved(
+  declaredE: Record<string, unknown> | null,
+  fp: WebFootprintJson,
+): Array<{ label: string; declared: string; observed: string }> {
+  if (!declaredE) return [];
+  const rows: Array<{ label: string; declared: string; observed: string }> = [];
+
+  const totalAudience =
+    (fp.followerCounts ?? []).reduce((s, c) => s + c.followerCount, 0) +
+    (fp.youtube?.status === "LIVE" && fp.youtube.subscriberCount ? fp.youtube.subscriberCount : 0);
+  const community = typeof declaredE.e_community === "string" ? declaredE.e_community : null;
+  if (community && (totalAudience > 0 || (fp.socials ?? []).length > 0)) {
+    rows.push({
+      label: "Communauté",
+      declared: community,
+      observed: `${(fp.socials ?? []).length} canal(aux) détecté(s)${totalAudience > 0 ? ` · ${nf.format(totalAudience)} abonnés mesurés` : ""}`,
+    });
+  }
+
+  const advocates = typeof declaredE.e_advocates === "string" ? declaredE.e_advocates : null;
+  if (advocates && fp.maps?.status === "LIVE" && fp.maps.rating !== null) {
+    rows.push({
+      label: "Recommandation",
+      declared: `Bouche-à-oreille : ${advocates.toLowerCase()}`,
+      observed: `${fp.maps.rating}/5 · ${nf.format(fp.maps.reviewCount ?? 0)} avis Google publics`,
+    });
+  }
+
+  const frequency = typeof declaredE.e_frequency === "string" ? declaredE.e_frequency : null;
+  if (frequency && (fp.press ?? []).length > 0) {
+    rows.push({
+      label: "Rayonnement",
+      declared: `Communication : ${frequency.toLowerCase()}`,
+      observed: `${(fp.press ?? []).length} mention(s) presse récente(s)`,
+    });
+  }
+
+  return rows;
+}
+
+export function FootprintSection({
+  footprint,
+  companyName,
+  declaredE = null,
+}: {
+  footprint: unknown;
+  companyName: string;
+  /** Réponses déclarées du pilier E (intake.responses.e) — optionnel. */
+  declaredE?: Record<string, unknown> | null;
+}) {
   const fp = footprint as WebFootprintJson | null;
   const hasAnything =
     fp &&
@@ -126,6 +181,7 @@ export function FootprintSection({ footprint, companyName }: { footprint: unknow
   const score = fp.score;
   const dims = score?.dimensions ?? [];
   const measuredDims = dims.filter((d) => d.measured && d.score !== null);
+  const declaredVsObserved = buildDeclaredVsObserved(declaredE, fp);
 
   return (
     <section className="mb-8 rounded-2xl border border-border bg-card p-6 print:rounded-none print:border-0 print:p-0 print:mb-8">
@@ -335,6 +391,38 @@ export function FootprintSection({ footprint, companyName }: { footprint: unknow
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {/* ── Déclaré vs Observé (vague D) — juxtaposition honnête ── */}
+      {declaredVsObserved.length > 0 && (
+        <div className="mt-4">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-foreground-secondary">
+            Déclaré vs observé
+          </p>
+          <div className="overflow-hidden rounded-lg border border-border-subtle print:rounded-none">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border-subtle bg-background-raised text-left">
+                  <th className="px-3 py-1.5 font-medium text-foreground-muted"> </th>
+                  <th className="px-3 py-1.5 font-medium text-foreground-muted">Vous déclarez</th>
+                  <th className="px-3 py-1.5 font-medium text-foreground-muted">La collecte publique observe</th>
+                </tr>
+              </thead>
+              <tbody>
+                {declaredVsObserved.map((row) => (
+                  <tr key={row.label} className="border-b border-border-subtle last:border-0">
+                    <td className="px-3 py-2 font-medium text-foreground">{row.label}</td>
+                    <td className="px-3 py-2 text-foreground-secondary">{row.declared}</td>
+                    <td className="px-3 py-2 text-foreground">{row.observed}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-1 text-[10px] text-foreground-muted">
+            Juxtaposition factuelle — la collecte publique ne voit qu'une partie de votre réalité (le hors-ligne lui échappe).
+          </p>
         </div>
       )}
 

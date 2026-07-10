@@ -10,6 +10,21 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.81 — feat(intake): qualité du diagnostic — ADVE-only, C8, premium post-paiement, composer zéro-LLM (vague D) (2026-07-10)
+
+Cinq chantiers de qualité sur le produit n°1 :
+
+- **Intake ADVE-only** : `complete()` et `regenerateAnalysis()` n'extraient et n'écrivent QUE les 4 piliers fondateurs — l'ancienne extraction générique r/t/i/s « déduisait » du contenu marché depuis un questionnaire déclaratif (contre ADR-0046) puis était écrasée par le draft V3 (4 appels LLM gaspillés/intake). Les RTIS restent DÉRIVÉS (rtis-draft V3 / ENRICH_*) ; les réponses r_*/t_*/i_*/s_* du questionnaire restent des inputs déclarés. Les 8 lignes pilier restent pré-créées. Anti-drift : [`intake-adve-only.test.ts`](tests/unit/governance/intake-adve-only.test.ts).
+- **C8 clos (Seshat→T nom-vs-réalité)** : le draft T pouvait citer `marketSize.source: "Seshat"` sans jamais LIRE les digests marché réels. `loadMarketDigestForT` charge le `EXTERNAL_FEED_DIGEST` frais (pays résolu country-registry × secteur, rafraîchi par les crons vague C) et l'injecte comme SEULE base légitime du label « Seshat » ; garde déterministe `enforceSeshatProvenance` (zéro LLM) : sans digest, tout « Seshat » auto-proclamé est rétrogradé « inferred ». Le registre CLAUDE.md passe C8 → ✅.
+- **Questions V/E approfondies** : +4 questions V (best-seller, fourchette de prix, positionnement prix, canal de vente — alignées produitsCatalogue/productLadder/salesChannel du schéma) et +3 questions E (canaux actifs, fréquence de communication, portrait du superfan — alignées touchpoints/primaryChannel/superfanPortrait). Toutes optionnelles (aucun intake en cours bloqué) : matière DÉCLARÉE au lieu de laisser l'extraction deviner.
+- **Extraction premium post-paiement** : les 3 webhooks paiement (Stripe/CinetPay/PayPal) déclenchent `premiumReextractAfterPayment` fire-and-forget à l'encaissement — re-extraction ADVE en `purpose: final-report` (modèle premium par policy, budget ×2, sans substitution Ollama rapide) + régénération rapport et brand level via `regenerateAnalysis({premium: true})`. Dédupliqué in-flight, refuse d'écraser une strategy activée, ne bloque jamais l'ACK webhook.
+- **Composer déterministe du rapport** ([`report-composer.ts`](src/server/services/quick-intake/report-composer.ts), doctrine « Fusée non-dépendante du LLM ») : quand la génération LLM échoue, le payeur reçoit un NarrativeReport restitué VERBATIM depuis ses piliers (humanisation pure des champs, piliers vides dits honnêtement, RTIS V3 repris tel quel) — jamais de page vide, jamais d'invention. Câblé en filet dans `complete()` ET `regenerateAnalysis()`.
+- **Déclaré vs observé** (rapport) : tableau déterministe dans la section empreinte — ce que le founder déclare (communauté, bouche-à-oreille, fréquence) face à ce que la collecte publique mesure (canaux+abonnés, avis Google, presse). Rendu seulement quand les DEUX côtés existent.
+
+tsc 0 · eslint 0 · **2434 tests verts** (17 nouveaux : C8 garde+digest, ADVE-only+webhooks, composer). Cap APOGEE 7/7. 0 migration.
+
+---
+
 ## v6.27.80 — fix(security): fuite commissions — lectures tenant-scoped (P1, vague E) (2026-07-10)
 
 **Fuite P1 close** : `commission.list` (et 4 lectures sœurs) étaient en `protectedProcedure` sans `where` — n'importe quel compte connecté (founder, freelance, guilde) lisait les montants, taux et talentIds de TOUTES les commissions de la plateforme (consommé tel quel par le portail Agency).

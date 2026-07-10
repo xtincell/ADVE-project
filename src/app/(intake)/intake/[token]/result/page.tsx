@@ -791,6 +791,9 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         <FootprintSection
           footprint={(intake as { webFootprint?: unknown }).webFootprint ?? null}
           companyName={intake.companyName}
+          declaredE={
+            ((intake.responses as Record<string, unknown> | null)?.e as Record<string, unknown> | undefined) ?? null
+          }
         />
 
 
