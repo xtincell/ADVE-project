@@ -14,6 +14,7 @@ import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
 
 import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc/client";
+import { useCanOperate } from "@/components/cockpit/use-can-operate";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 // ADR-0088 — reco review queue staged in the cockpit edit store (UI-local).
 import { useCockpitEditStore } from "@/lib/stores/cockpit-edit-store";
@@ -192,7 +193,11 @@ export function NotoriaPage() {
   const pipeline = pipelineQuery.data;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const batches: any[] = batchesQuery.data ?? [];
-  const isMutating = generateMutation.isPending || generateTypedMutation.isPending || generateFromVaultMutation.isPending || acceptMutation.isPending || rejectMutation.isPending || applyMutation.isPending;
+  // Founders are not operators (init.ts operatorProcedure) — accepting/applying
+  // recommendations is handled by the UPgraders team. Surface that honestly:
+  // disable the controls + show a read-only banner, instead of click→FORBIDDEN.
+  const canOperate = useCanOperate();
+  const isMutating = generateMutation.isPending || generateTypedMutation.isPending || generateFromVaultMutation.isPending || acceptMutation.isPending || rejectMutation.isPending || applyMutation.isPending || !canOperate;
 
   // Split recos: actionable (PENDING + ACCEPTED) vs history (APPLIED/REJECTED/REVERTED/EXPIRED)
   const actionableRecos = allRecos.filter((r) => r.status === "PENDING" || r.status === "ACCEPTED");
@@ -298,7 +303,7 @@ export function NotoriaPage() {
   const goIcon = generateMutation.isPending || pipelineMutation.isPending || actualizeRTMutation.isPending || advanceMutation.isPending
     ? <Loader2 className="h-4 w-4 animate-spin" />
     : null;
-  const anyPending = generateMutation.isPending || pipelineMutation.isPending || actualizeRTMutation.isPending || advanceMutation.isPending;
+  const anyPending = generateMutation.isPending || pipelineMutation.isPending || actualizeRTMutation.isPending || advanceMutation.isPending || !canOperate;
 
   let primary: PrimaryAction;
   if (currentStep === 1) {
@@ -447,7 +452,7 @@ export function NotoriaPage() {
         <div className="ck-nz__health-head">
           <div className="ck-nz__brand">
             <span className="ck-nz__brand-ic"><Sparkles /></span>
-            <h1>Notoria</h1>
+            <h1>Recommandations</h1>
             <span className="ck-nz__brand-sub">Moteur de Recommandation</span>
           </div>
           {totalPending > 0 && <span className="ck-nz__pending-pill">{totalPending} en attente</span>}
@@ -501,6 +506,13 @@ export function NotoriaPage() {
             <AlertTriangle />
             <span>{rtVetoMessage}</span>
             <button onClick={() => setRtVetoMessage(null)}>✕</button>
+          </div>
+        ) : null}
+
+        {!canOperate ? (
+          <div className="ck-nz__veto">
+            <Sparkles />
+            <span>Ces recommandations sont préparées et validées par votre équipe UPgraders. Vous pouvez les consulter ici en lecture seule.</span>
           </div>
         ) : null}
 

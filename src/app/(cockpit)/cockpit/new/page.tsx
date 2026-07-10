@@ -119,14 +119,16 @@ export default function NewBrandPage() {
 
       // Auto-launch Boot Sequence
       try {
-        const boot = await startBoot.mutateAsync({ strategyId: result.id });
-        router.push(`/cockpit/brand/identity?boot=${(boot as unknown as Record<string, unknown>).sessionId ?? "started"}`);
+        await startBoot.mutateAsync({ strategyId: result.id });
+        // Land on the brand foundation (a real page). Deep onboarding is run by
+        // the UPgraders team — no founder-facing boot wizard exists in the cockpit.
+        router.push("/cockpit/brand/identity");
       } catch (bootErr) {
         // Boot failed — show error with option to continue
         setBootError(
           bootErr instanceof Error
             ? bootErr.message
-            : "Le Boot Sequence n'a pas pu demarrer. Vous pouvez continuer vers le dashboard.",
+            : "L'initialisation n'a pas pu démarrer. Vous pouvez continuer vers votre tableau de bord.",
         );
       }
     } catch (err) {
@@ -383,7 +385,7 @@ export default function NewBrandPage() {
             <div className="rounded-lg border border-accent/30 bg-accent/10 p-4">
               <p className="text-sm text-accent">
                 <Rocket className="inline h-4 w-4 mr-1" />
-                Apres la creation, vous serez guide a travers le <strong>Boot Sequence</strong> pour remplir les 8 piliers ADVE-RTIS de votre marque.
+                Après la création, vous arrivez sur la fiche de votre marque. Votre équipe UPgraders vous accompagne ensuite pour compléter en profondeur les piliers de votre stratégie.
               </p>
             </div>
 
@@ -395,7 +397,7 @@ export default function NewBrandPage() {
 
             {bootError && (
               <div className="rounded-lg border border-warning/30 bg-warning/20 p-4">
-                <p className="text-sm font-medium text-warning">Le Boot Sequence n'a pas demarre</p>
+                <p className="text-sm font-medium text-warning">L&apos;initialisation n&apos;a pas pu démarrer</p>
                 <p className="mt-1 text-xs text-warning/80">{bootError}</p>
                 <button
                   onClick={() => router.push("/cockpit")}

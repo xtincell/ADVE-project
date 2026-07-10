@@ -109,7 +109,7 @@ export default function MarketStudiesPage() {
     <div className="space-y-6 p-6">
       <PageHeader
         title="Études de marché"
-        description="Injecte une étude (PDF / DOCX / XLSX) — Statista, Nielsen, Kantar, BCG, Euromonitor — et le moteur Tarsis l'absorbe en KnowledgeEntry country + sector exploitables par le pilier T."
+        description="Injectez une étude (PDF / DOCX / XLSX) — Statista, Nielsen, Kantar, BCG, Euromonitor — et notre moteur d'analyse l'intègre à votre veille marché, par pays et par secteur."
       >
         <button
           type="button"
@@ -236,7 +236,7 @@ export default function MarketStudiesPage() {
 
           {state.status === "confirmed" && (
             <div className="flex items-center gap-2 rounded-lg bg-success/10 p-3 text-sm text-success">
-              <CheckCircle className="h-4 w-4" /> Étude ingérée. Le pilier T des brands de ce pays / secteur va l'absorber au prochain enrich.
+              <CheckCircle className="h-4 w-4" /> Étude intégrée. Elle enrichira l'analyse marché des marques de ce pays / secteur.
             </div>
           )}
 

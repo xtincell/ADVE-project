@@ -244,7 +244,7 @@ export function PillarDFields({ content, certainty }: { content: Rec; certainty:
         <div className="ck-a-grid">
           <TonDeVoix value={v.tonDeVoix} status={st("tonDeVoix")} />
           <AssetsLinguistiques value={v.assetsLinguistiques} status={st("assetsLinguistiques")} />
-          <ObjCard title="Direction artistique (GLORY)" value={v.directionArtistique} status={st("directionArtistique")} span
+          <ObjCard title="Direction artistique" value={v.directionArtistique} status={st("directionArtistique")} span
             fields={[["semioticAnalysis", "Analyse sémiotique"], ["moodboard", "Moodboard"], ["chromaticStrategy", "Stratégie chromatique"], ["typographySystem", "Système typographique"], ["logoTypeRecommendation", "Reco logotype"], ["motionIdentity", "Identité motion"], ["brandGuidelines", "Brand guidelines"]]} />
           <SacredObjects items={v.sacredObjects} status={st("sacredObjects")} />
           <ProofList title="Proof points" items={v.proofPoints} status={st("proofPoints")}

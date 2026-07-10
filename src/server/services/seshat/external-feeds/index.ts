@@ -33,6 +33,53 @@ export const PRIORITY_PAIRS: Array<{ countryCode: string; sector: string }> = [
   { countryCode: "MA", sector: "fmcg" },
 ];
 
+/** Plafond de paires par refresh — borne le coût (RSS gratuit mais LLM fallback payant). */
+const MAX_PAIRS_PER_REFRESH = 24;
+
+/** Normalise un secteur libre ("FMCG / Agroalimentaire") en clé de paire. */
+export function normalizeSectorKey(sector: string): string | null {
+  const s = sector.trim().toLowerCase().replace(/\s+/g, " ");
+  return s.length >= 3 ? s : null;
+}
+
+/**
+ * Feeds DYNAMIQUES (vague C) : les paires pays×secteur sont dérivées des
+ * stratégies RÉELLES en base (countryCode dénormalisé + businessContext.sector),
+ * pas seulement de la liste statique — un client au Sénégal en cosmétique
+ * reçoit ses données marché sans édition de code. Les PRIORITY_PAIRS restent
+ * en tête (marchés vitrine), la dérive est dédupliquée et plafonnée.
+ * Best-effort : toute erreur DB → statique seul (jamais de throw).
+ */
+export async function listActiveFeedPairs(): Promise<Array<{ countryCode: string; sector: string }>> {
+  const seen = new Set(PRIORITY_PAIRS.map((p) => `${p.countryCode}::${p.sector}`));
+  const pairs = [...PRIORITY_PAIRS];
+  try {
+    const strategies = await db.strategy.findMany({
+      where: {
+        countryCode: { not: null },
+        status: { not: "ARCHIVED" },
+      },
+      select: { countryCode: true, businessContext: true },
+      orderBy: { updatedAt: "desc" },
+      take: 500,
+    });
+    for (const s of strategies) {
+      if (pairs.length >= MAX_PAIRS_PER_REFRESH) break;
+      const ctx = (s.businessContext ?? {}) as Record<string, unknown>;
+      const rawSector = typeof ctx.sector === "string" ? ctx.sector : null;
+      const sector = rawSector ? normalizeSectorKey(rawSector) : null;
+      if (!s.countryCode || !sector) continue;
+      const key = `${s.countryCode.toUpperCase()}::${sector}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      pairs.push({ countryCode: s.countryCode.toUpperCase(), sector });
+    }
+  } catch (err) {
+    console.warn("[external-feeds] dérivation des paires dynamiques impossible (statique seul):", err instanceof Error ? err.message : err);
+  }
+  return pairs.slice(0, MAX_PAIRS_PER_REFRESH);
+}
+
 export interface FetchFeedResult {
   status: "OK" | "LLM_FAILED" | "VALIDATION_FAILED";
   /** Voie qui a produit le digest : RSS (déterministe, primaire) ou LLM (fallback). */
@@ -214,11 +261,14 @@ Format JSON strict (UNIQUEMENT ces deux clés) :
 }
 
 /**
- * Refresh all priority pairs in sequence. Used by the daily cron.
+ * Refresh all feed pairs in sequence. Used by the cron `/api/cron/external-feeds`
+ * (daemon in-process ou scheduled-ops.yml). Vague C : couvre les paires
+ * DYNAMIQUES dérivées des stratégies actives, plus la liste statique.
  */
 export async function refreshAllPriorityPairs(): Promise<FetchFeedResult[]> {
   const results: FetchFeedResult[] = [];
-  for (const pair of PRIORITY_PAIRS) {
+  const pairs = await listActiveFeedPairs();
+  for (const pair of pairs) {
     try {
       const r = await fetchAndPersistFeedDigest(pair.countryCode, pair.sector);
       results.push(r);

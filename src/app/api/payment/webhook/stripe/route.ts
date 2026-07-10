@@ -132,7 +132,7 @@ export async function POST(request: Request) {
     }
     const paid = session.payment_status === "paid";
     try {
-      await db.intakePayment.update({
+      const payment = await db.intakePayment.update({
         where: { reference },
         data: paid
           ? {
@@ -147,6 +147,13 @@ export async function POST(request: Request) {
               providerEventId: event.id,
             },
       });
+      // Vague D — le payeur a droit au rapport PREMIUM : re-extraction ADVE
+      // modèle premium + régénération rapport, fire-and-forget (jamais
+      // bloquant pour l'ACK webhook).
+      if (paid && payment.intakeToken) {
+        const { premiumReextractAfterPayment } = await import("@/server/services/quick-intake");
+        premiumReextractAfterPayment(payment.intakeToken);
+      }
     } catch {
       return NextResponse.json({ error: "Unknown reference" }, { status: 404 });
     }

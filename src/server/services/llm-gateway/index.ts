@@ -911,7 +911,7 @@ export interface EmbedOptions {
   /** Provider override. Default: auto-select Ollama → OpenAI → none. */
   provider?: EmbedProvider;
   /**
-   * Model override. If omitted: uses OLLAMA_EMBED_MODEL env (Ollama path,
+   * Model override. If omitted: uses EMBED_MODEL_NAME env (Ollama path,
    * default "nomic-embed-text") or "text-embedding-3-small" (OpenAI path).
    */
   model?: string;
@@ -932,6 +932,8 @@ export interface EmbedResult {
 
 const OLLAMA_DIM_BY_MODEL: Record<string, number> = {
   "nomic-embed-text": 768,
+
+  "nomic-embed-text:v1.5": 768,
   // v2-moe : modèle d'embedding LOCAL (ollama pull) — PAS servi sur ollama.com
   // (vérifié 2026-07-01 : /v1/embeddings "path not found" ; /api/embed
   // "unauthorized" même pour un modèle chat servi → endpoint embeddings gaté
@@ -957,7 +959,7 @@ function selectEmbedProvider(override?: EmbedProvider): EmbedProvider {
   if (envPref && (["ollama", "openai", "openrouter", "none"] as const).includes(envPref)) {
     return envPref;
   }
-  if (process.env.OLLAMA_EMBED_BASE_URL || process.env.OLLAMA_BASE_URL) return "ollama";
+  if (process.env.EMBED_SERVICE_URL) return "ollama";
   // OpenAI = chemin embeddings principal, SAUF s'il est en fenêtre « à sec » 24h
   // (auquel cas on passe à OpenRouter pour des embeddings gratuits).
   if (process.env.OPENAI_API_KEY && !isOpenAiEmbedDry()) return "openai";
@@ -1016,20 +1018,20 @@ async function embedViaOllama(
   model: string,
   caller: string,
 ): Promise<EmbedResult> {
-  // Endpoint embeddings DÉDIÉ, découplé du chat (`OLLAMA_EMBED_BASE_URL`). Le
+  // Endpoint embeddings DÉDIÉ, découplé du chat (`EMBED_SERVICE_URL`). Le
   // chat Ollama peut viser le cloud (ollama.com/v1 + clé) tandis que les
   // embeddings visent un Ollama LOCAL (localhost:11434, sans auth) — le cloud
-  // n'héberge aucun modèle d'embedding (vérifié). Fallback sur la base chat.
-  const embedBase = process.env.OLLAMA_EMBED_BASE_URL;
-  const baseRaw = embedBase ?? process.env.OLLAMA_BASE_URL;
+  // n'héberge aucun modèle d'embedding (vérifié). Endpoint embed dédié, sans repli sur le chat.
+  const embedBase = process.env.EMBED_SERVICE_URL;
+  const baseRaw = embedBase;
   if (!baseRaw) {
-    throw new Error("embedViaOllama: ni OLLAMA_EMBED_BASE_URL ni OLLAMA_BASE_URL défini");
+    throw new Error("embedViaOllama: EMBED_SERVICE_URL non défini");
   }
   const rawBase = baseRaw.replace(/\/$/, "");
-  // Clé : dédiée embed si fournie ; sinon héritée du chat UNIQUEMENT quand aucune
-  // base embed dédiée n'est posée (une base dédiée = Ollama local sans clé — ne
-  // pas y router la clé cloud, sinon on force à tort le chemin /v1 Bearer).
-  const apiKey = process.env.OLLAMA_EMBED_API_KEY ?? (embedBase ? undefined : process.env.OLLAMA_API_KEY);
+  // Clé : uniquement EMBED_API_KEY si l'endpoint embed est authentifié.
+  // Un Ollama local n'a pas d'auth → clé absente → chemin natif /api/embed.
+  // Jamais la clé du chat cloud (endpoints découplés).
+  const apiKey = process.env.EMBED_API_KEY;
   const dim = OLLAMA_DIM_BY_MODEL[model] ?? 768;
   const isV1 = /\/v1$/.test(rawBase);
 
@@ -1135,7 +1137,7 @@ export async function embed(options: EmbedOptions): Promise<EmbedResult> {
 
   if (provider === "none") {
     console.warn(
-      `[llm-gateway.embed] No embedding provider configured (set OLLAMA_BASE_URL or OPENAI_API_KEY) — returning empty embeddings for caller=${options.caller}`,
+      `[llm-gateway.embed] No embedding provider configured (set EMBED_SERVICE_URL or OPENAI_API_KEY) — returning empty embeddings for caller=${options.caller}`,
     );
     const fallbackModel = options.model ?? "none";
     return {
@@ -1167,7 +1169,7 @@ export async function embed(options: EmbedOptions): Promise<EmbedResult> {
   };
 
   if (provider === "ollama") {
-    const model = options.model ?? process.env.OLLAMA_EMBED_MODEL ?? "nomic-embed-text";
+    const model = options.model ?? process.env.EMBED_MODEL_NAME ?? "nomic-embed-text:v1.5";
     try {
       return await embedViaOllama(inputs, model, options.caller);
     } catch (err) {

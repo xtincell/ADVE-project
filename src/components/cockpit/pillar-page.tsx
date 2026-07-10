@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { AmendPillarModal } from "@/components/pillars/amend-pillar-modal";
+import { useCanOperate } from "@/components/cockpit/use-can-operate";
 import { RecalculateRtisButton } from "@/components/pillars/recalculate-rtis-button";
 import { ActionDatabasePanel } from "@/components/cockpit/action-database-panel";
 import { BESPOKE_PILLAR_RENDERERS } from "@/components/cockpit/pillars";
@@ -110,6 +111,10 @@ export function PillarPage({ pageKey }: PillarPageProps) {
   const utils = trpc.useUtils();
 
   const isAdve = config.type === "adve";
+  // Founders are not operators: OPERATOR_AMEND_PILLAR is operator-only. Route
+  // founders to their working editor (/cockpit/brand/edit) instead of the
+  // operator amend modal that would fail on open with FORBIDDEN.
+  const canOperate = useCanOperate();
   const [amendOpen, setAmendOpen] = useState(false);
   const [amendField, setAmendField] = useState<string | null>(null);
   const adveKey = config.pillarKey.toUpperCase() as "A" | "D" | "V" | "E";
@@ -411,17 +416,29 @@ export function PillarPage({ pageKey }: PillarPageProps) {
             ) : null}
           </div>
           <div className="flex items-center gap-2">
-            {/* ADR-0023 — manual operator amend (ADVE only) */}
+            {/* ADR-0023 — manual amend (ADVE only). Operator-only Intent → for
+                founders, link to the founder editor instead of the amend modal. */}
             {isAdve && strategyId ? (
-              <button
-                type="button"
-                onClick={openAmendBlank}
-                className="flex items-center gap-1.5 rounded-lg bg-white/5 px-3 py-1.5 text-xs font-medium text-foreground-secondary transition-colors hover:bg-white/10 hover:text-foreground"
-                title="Amender un champ ADVE (OPERATOR_AMEND_PILLAR)"
-              >
-                <Pencil className="h-3.5 w-3.5" />
-                Modifier
-              </button>
+              canOperate ? (
+                <button
+                  type="button"
+                  onClick={openAmendBlank}
+                  className="flex items-center gap-1.5 rounded-lg bg-white/5 px-3 py-1.5 text-xs font-medium text-foreground-secondary transition-colors hover:bg-white/10 hover:text-foreground"
+                  title="Amender un champ de la fiche de marque"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  Modifier
+                </button>
+              ) : (
+                <Link
+                  href="/cockpit/brand/edit"
+                  className="flex items-center gap-1.5 rounded-lg bg-white/5 px-3 py-1.5 text-xs font-medium text-foreground-secondary transition-colors hover:bg-white/10 hover:text-foreground"
+                  title="Modifier votre fiche de marque"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  Modifier
+                </Link>
+              )
             ) : null}
             {/* RTIS recalculation goes through ENRICH_*, never manual edit. */}
             {!isAdve && strategyId ? (

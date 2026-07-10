@@ -12,10 +12,11 @@ import { Timeline } from "@/components/shared/timeline";
 import { Sparkline } from "@/components/shared/sparkline";
 import { PipelineProgress, buildPipelineSteps } from "@/components/shared/pipeline-progress";
 import { AiBadge } from "@/components/shared/ai-badge";
-import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
+import { useStrategy } from "@/components/cockpit/strategy-context";
 import { OvertonTeaser } from "@/components/cockpit/intelligence/overton-panel";
 import { buildPillarContentMap } from "@/components/shared/pillar-content-card";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Activity,
   Rocket,
@@ -73,7 +74,8 @@ const VIEW_MODE_LABELS: Record<ViewMode, string> = {
 
 export default function CockpitDashboard() {
   const [viewMode, setViewMode] = useState<ViewMode>("MARKETING");
-  const strategyId = useCurrentStrategyId();
+  const { strategyId, isLoading: strategiesLoading } = useStrategy();
+  const router = useRouter();
 
   const strategyQuery = trpc.strategy.getWithScore.useQuery(
     { id: strategyId! },
@@ -125,14 +127,33 @@ export default function CockpitDashboard() {
     { enabled: !!strategyId, staleTime: 5 * 60_000 },
   );
 
-  if (!strategyId || strategyQuery.isLoading) {
+  if (!strategyId && strategiesLoading) {
+    return <SkeletonPage />;
+  }
+
+  if (!strategyId) {
+    // Loaded, but the founder has no brand yet → onboarding CTA instead of an
+    // infinite skeleton (this was a first-run dead-end).
+    return (
+      <div className="ck-dash">
+        <EmptyState
+          icon={Rocket}
+          title="Créez votre première marque"
+          description="Lancez votre première fiche de marque pour activer votre cockpit : fondation, recommandations, livrables et campagnes."
+          action={{ label: "Créer ma marque", onClick: () => router.push("/cockpit/new") }}
+        />
+      </div>
+    );
+  }
+
+  if (strategyQuery.isLoading) {
     return <SkeletonPage />;
   }
 
   if (strategyQuery.error) {
     return (
       <div className="ck-dash">
-        <h1 className="ck-ph__title">Cult Dashboard</h1>
+        <h1 className="ck-ph__title">Tableau de bord</h1>
         <div className="rounded-xl border border-destructive-subtle bg-destructive-subtle/20 p-6 text-center">
           <AlertTriangle className="mx-auto h-8 w-8 text-destructive" />
           <p className="mt-2 text-sm text-destructive">
@@ -159,13 +180,16 @@ export default function CockpitDashboard() {
   const cultIndex = Math.round(composite / 2);
 
   const devotion = devotionQuery.data;
+  // Honnêteté des données (canon : ne jamais inventer de données) — aucune
+  // distribution fabriquée tant qu'il n'y a pas de donnée réelle de communauté.
+  const hasDevotion = devotion != null;
   const devotionValues = {
-    spectateur: devotion?.spectateur ?? 35,
-    interesse: devotion?.interesse ?? 25,
-    participant: devotion?.participant ?? 20,
-    engage: devotion?.engage ?? 12,
-    ambassadeur: devotion?.ambassadeur ?? 5,
-    evangeliste: devotion?.evangeliste ?? 3,
+    spectateur: devotion?.spectateur ?? 0,
+    interesse: devotion?.interesse ?? 0,
+    participant: devotion?.participant ?? 0,
+    engage: devotion?.engage ?? 0,
+    ambassadeur: devotion?.ambassadeur ?? 0,
+    evangeliste: devotion?.evangeliste ?? 0,
   };
 
   const missions = missionsQuery.data ?? [];
@@ -274,7 +298,7 @@ export default function CockpitDashboard() {
       <div className="ck-ph">
         <div>
           <p className="ck-ph__bc">Cockpit / Dashboard</p>
-          <h1 className="ck-ph__title">Cult Dashboard</h1>
+          <h1 className="ck-ph__title">Tableau de bord</h1>
           <p className="ck-ph__desc">Marque : <span className="em">{strategy?.name ?? "…"}</span></p>
         </div>
         <div className="ck-views">
@@ -368,7 +392,7 @@ export default function CockpitDashboard() {
           {/* KPI grid */}
           <div className="ck-grid ck-grid--kpi">
             <div className="ck-kpi">
-              <div className="ck-kpi__top"><span className="ck-kpi__lbl">Cult Index</span><span className="ck-kpi__spark"><Sparkline data={cultTrend} width={60} height={20} /></span></div>
+              <div className="ck-kpi__top"><span className="ck-kpi__lbl">Indice d'attachement</span><span className="ck-kpi__spark"><Sparkline data={cultTrend} width={60} height={20} /></span></div>
               <p className="ck-kpi__val">{cultIndexQuery.data?.current ?? cultIndex}<span className="m">/100</span></p>
               {(() => {
                 const d = cultIndexQuery.data?.delta ?? 0;
@@ -417,7 +441,7 @@ export default function CockpitDashboard() {
           {showSection("devotion") && (
             <div className="ck-card">
               <div className="ck-card__head">
-                <h3 className="ck-card__t">Devotion Ladder</h3>
+                <h3 className="ck-card__t">Échelle d'engagement</h3>
                 <span className="ck-card__sub"><Heart />{superfanCountQuery.data?.active ?? 0} superfans actifs</span>
               </div>
               {devotionQuery.isLoading ? (
@@ -426,8 +450,10 @@ export default function CockpitDashboard() {
                     <div key={i} className="h-6 animate-[shimmer_2s_linear_infinite] rounded-full bg-surface-overlay" />
                   ))}
                 </div>
-              ) : (
+              ) : hasDevotion ? (
                 <DevotionLadder {...devotionValues} variant="pyramid" />
+              ) : (
+                <p className="ck-presc__empty">Pas encore de données de communauté — l&apos;échelle d&apos;engagement apparaîtra dès les premières interactions mesurées.</p>
               )}
             </div>
           )}
@@ -437,7 +463,7 @@ export default function CockpitDashboard() {
       {/* Prescriptions Mestor */}
       {showSection("prescriptions") && (
         <div className="ck-presc">
-          <div className="ck-presc__head"><Brain /><h3>Prescriptions Mestor</h3><AiBadge /></div>
+          <div className="ck-presc__head"><Brain /><h3>Recommandations</h3><AiBadge /></div>
           {mestorInsightsQuery.isLoading ? (
             <div className="space-y-2">
               {Array.from({ length: 3 }).map((_, i) => (
@@ -476,7 +502,7 @@ export default function CockpitDashboard() {
               })}
             </div>
           ) : (
-            <p className="ck-presc__empty">Aucune prescription active — Mestor surveille votre marque.</p>
+            <p className="ck-presc__empty">Aucune recommandation active — l'assistant surveille votre marque.</p>
           )}
         </div>
       )}
@@ -584,7 +610,7 @@ function BatchActionsBar({ strategyId }: { strategyId: string }) {
           <span className="block">
             <strong className="block text-2xs font-bold text-accent">Enrichir ADVE</strong>
             <span className="mt-0.5 block text-2xs leading-snug">
-              Auto-remplit les 4 piliers fondateurs (Authenticité, Distinction, Valeur, Engagement) via vault de documents, calculs déductifs, puis IA pour les champs restants. Ne touche pas RTIS.
+              Auto-remplit les 4 piliers fondateurs (Authenticité, Distinction, Valeur, Engagement) via vault de documents, calculs déductifs, puis IA pour les champs restants. Ne touche pas les piliers dérivés.
             </span>
           </span>
         }
@@ -602,7 +628,7 @@ function BatchActionsBar({ strategyId }: { strategyId: string }) {
           <span className="block">
             <strong className="block text-2xs font-bold text-info">Lancer R + T</strong>
             <span className="mt-0.5 block text-2xs leading-snug">
-              Déclenche la cascade RTIS depuis ADVE : R (analyse risques + SWOT), T (triangulation marché via Market Intelligence), puis recos pour enrichir ADVE en retour. Requiert ADVE ENRICHED minimum.
+              Déclenche l'analyse stratégique (Risque, Marché) puis génère des recommandations pour enrichir votre fondation de marque. Requiert une fondation au moins enrichie.
             </span>
           </span>
         }
@@ -620,7 +646,7 @@ function BatchActionsBar({ strategyId }: { strategyId: string }) {
           <span className="block">
             <strong className="block text-2xs font-bold text-foreground">Enrichir depuis Sources</strong>
             <span className="mt-0.5 block text-2xs leading-snug">
-              Scanne les BrandDataSource (PDF, sites web, briefs ingérés) pour générer des recommandations granulaires sur tous les piliers. Les recos PENDING apparaissent dans Notoria pour validation.
+              Scanne vos sources (PDF, sites web, briefs ingérés) pour générer des recommandations granulaires sur tous les piliers. Les recommandations en attente apparaissent dans le panneau Recommandations pour validation.
             </span>
           </span>
         }
