@@ -140,7 +140,7 @@ export function Topbar({
               ? "text-primary animate-[pulse-glow_2s_ease-in-out_infinite]"
               : "text-foreground-muted hover:bg-background-overlay hover:text-foreground"
           }`}
-          aria-label="Ouvrir Mestor AI"
+          aria-label="Ouvrir l'assistant"
         >
           <Brain className="h-4 w-4" />
           {mestorHasSuggestions && (

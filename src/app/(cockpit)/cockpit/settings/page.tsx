@@ -17,6 +17,24 @@ import { LocaleToggle } from "@/components/i18n/locale-toggle";
 import { trpc } from "@/lib/trpc/client";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 
+const SUB_STATUS_LABELS: Record<string, string> = {
+  active: "Actif",
+  trialing: "Essai",
+  pending_manual: "En attente de validation",
+  past_due: "Paiement en retard",
+  canceled: "Résilié",
+  unpaid: "Impayé",
+};
+
+const TIER_LABELS: Record<string, string> = {
+  COCKPIT_MONTHLY: "Cockpit (mensuel)",
+  ORACLE_FULL: "Oracle complet",
+  INTAKE_PDF: "Diagnostic PDF",
+  RETAINER_BASE: "Accompagnement",
+  RETAINER_GROWTH: "Accompagnement Growth",
+  RETAINER_SCALE: "Accompagnement Scale",
+};
+
 /**
  * Intégrations (vague E) — état honnête des sources de données connectées à
  * la marque : relevés sociaux réels, empreinte web collectée, fraîcheur du
@@ -103,6 +121,8 @@ export default function CockpitSettingsPage() {
   }
 
   const user = session?.user;
+  const subsQuery = trpc.payment.mySubscriptions.useQuery();
+  const sub = (subsQuery.data ?? [])[0];
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6">
@@ -160,6 +180,52 @@ export default function CockpitSettingsPage() {
         >
           Gérer mon abonnement
         </Link>
+      </section>
+
+      <section className="rounded-lg border border-border bg-background-raised p-6">
+        <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">
+          <CreditCard className="h-4 w-4 text-foreground-muted" />
+          Abonnement
+        </h2>
+        {subsQuery.isLoading ? (
+          <p className="mt-3 text-sm text-foreground-muted">Chargement…</p>
+        ) : !sub ? (
+          <div className="mt-3 space-y-3">
+            <p className="text-sm text-foreground-muted">Aucun abonnement actif.</p>
+            <a
+              href="/pricing"
+              className="inline-flex w-fit rounded-lg border border-border px-4 py-2 text-sm text-foreground-secondary transition-colors hover:border-accent hover:text-accent"
+            >
+              Voir les offres
+            </a>
+          </div>
+        ) : (
+          <div className="mt-3 space-y-3">
+            {sub.status === "pending_manual" && (
+              <p className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
+                Paiement en cours de validation — votre accès sera activé dès confirmation par notre équipe.
+              </p>
+            )}
+            <dl className="space-y-2 text-sm">
+              <div className="flex justify-between gap-3">
+                <dt className="text-foreground-muted">Offre</dt>
+                <dd className="text-foreground">{TIER_LABELS[sub.tierKey] ?? sub.tierKey}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-foreground-muted">Statut</dt>
+                <dd className="text-foreground">{SUB_STATUS_LABELS[sub.status] ?? sub.status}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-foreground-muted">Montant</dt>
+                <dd className="text-foreground">{sub.amountPerPeriod.toLocaleString("fr-FR")} {sub.currency} / période</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-foreground-muted">Échéance</dt>
+                <dd className="text-foreground">{sub.currentPeriodEnd ? new Date(sub.currentPeriodEnd).toLocaleDateString("fr-FR") : "—"}</dd>
+              </div>
+            </dl>
+          </div>
+        )}
       </section>
 
       <section className="rounded-lg border border-border bg-background-raised p-6">

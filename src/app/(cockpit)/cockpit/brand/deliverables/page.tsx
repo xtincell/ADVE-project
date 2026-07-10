@@ -388,7 +388,7 @@ export default function BrandDeliverablesPage() {
                   className="flex items-center gap-1.5 rounded-lg bg-success px-4 py-2 text-xs font-semibold text-white hover:bg-success disabled:opacity-50"
                 >
                   <Download className="h-3.5 w-3.5" />
-                  {exportMutation.isPending ? "Export en cours..." : "Telecharger le livrable complet"}
+                  {exportMutation.isPending ? "Export en cours…" : "Exporter le livrable (JSON)"}
                 </button>
               </div>
 
