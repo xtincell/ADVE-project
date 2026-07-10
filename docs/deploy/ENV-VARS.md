@@ -73,6 +73,12 @@ Le score d'empreinte /100 est renormalisé sur les dimensions réellement mesur�
 | `BLOB_STORAGE_PUT_URL_TEMPLATE` | archivage assets Ptah | dry-run |
 | `KNOWLEDGE_HASH_SALT`, `INTEGRATION_TOKEN_KEY` | hash k-anonymity / chiffrement tokens | défauts dev — à poser en prod |
 
+## ⚪ Multi-pod (plusieurs répliques)
+
+| Var | Rôle | Sans elle |
+|---|---|---|
+| `REDIS_URL` | pont pub/sub NSP SSE inter-pods + invalidation cross-pod des caches (brand-node inheritance, market-visibility kill-switch) + claims CAS des ticks cron | mode single-pod honnête : SSE et caches process-local, ticks non arbitrés — correct à 1 réplique, à poser dès la 2ᵉ |
+
 ## Minimum viable Coolify (funnel payant, single-pod)
 
 ```
@@ -83,6 +89,6 @@ CRON_SECRET,
 MANUAL_PAYMENT_WHATSAPP_NUMBER         # ou STRIPE/CINETPAY pour l'auto-pay
 ```
 
-Limite connue single→multi-pod : NSP (SSE) et le cache pillars sont
-**in-memory** — passer à plusieurs replicas exige Redis (closure-roadmap #2).
-Un seul pod : rien à faire.
+Passage multi-pod : poser `REDIS_URL` (vague B) — le pont NSP SSE,
+l'invalidation cross-pod des caches et les claims CAS des crons s'activent
+seuls. Un seul pod : rien à faire (fallback single-pod honnête).

@@ -10,6 +10,20 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.78 — feat(infra): coordination multi-pod Redis — NSP, caches, claims CAS (vague B) (2026-07-10)
+
+Clôt le résiduel Phase 18 « Cache Redis cross-pod » + la limite single-pod documentée d'ENV-VARS.md. **Opt-in `REDIS_URL`** — sans elle, dégradation single-pod honnête (comportement historique inchangé, zéro crash).
+
+- **`src/lib/redis.ts`** : client ioredis lazy (singleton hot-reload-safe pattern db.ts), `publishJson`/`subscribeJson` (enveloppe `origin: INSTANCE_ID`, self-filtering), `claimOnce` (SET NX EX — true sans Redis : rien à arbitrer en single-pod ; true aussi si Redis down : on préfère un double-run improbable à un cron gelé), `releaseClaim` (Lua compare-and-del). `enableOfflineQueue: false` — un Redis down ne bufferise pas en RAM.
+- **Broker NSP multi-pod** (`nsp/sse-broker.ts`, ADR-0025 chemin prévu) : les events publiés sur un pod sont relayés via `nsp:events` aux abonnés SSE des autres pods ; le pod émetteur filtre son propre origin (jamais de double livraison). Contrat public inchangé ; `publish()` retourne le compte de livraisons LOCALES.
+- **Caches cross-pod** : `brand-node/inheritance` — l'invalidation cascade diffuse la liste résolue des nodeIds (les pods récepteurs purgent sans re-walk DB) ; `market-visibility` — le kill-switch marché (NEUTRALIZE/REINSTATE/PURGE) purge immédiatement tous les pods, TTL 15 s en filet.
+- **Claims CAS cron** (`/api/cron/scheduler`) : claim de tick Redis (`cron:scheduler:tick`, TTL 240 s < intervalle 5 min) — un seul pod par tick + protection contre le chevauchement d'un tick lent ; **CAS DB par process** (updateMany gardé par status/nextRunAt + `runCount: {increment}`) — plus de double-exécution TRIGGERED/DAEMON/BATCH même sans Redis.
+- **Env/docs** : `REDIS_URL` dans `.env.example` + section « Multi-pod » d'[ENV-VARS.md](docs/deploy/ENV-VARS.md) (la note « limite connue single→multi-pod » devient l'instruction d'activation).
+
+Cap APOGEE 7/7 (Redis = infrastructure de transport, pas un Neter — même statut que NSP). 0 migration. tsc 0 · eslint 0 · **2400 tests verts** (8 nouveaux : fallback honnête sans Redis + self-filtering + bridge remote-pod + invalidations, ioredis mocké).
+
+---
+
 ## v6.27.77 — feat(intake): empreinte digitale entière — vague A complète (score /100 + UI + narratif) (2026-07-10)
 
 **ADR-0121 vague A bouclée** — l'empreinte publique ne s'arrête plus aux réseaux sociaux et à la presse : le rapport discovery mesure, score et raconte l'empreinte digitale ENTIÈRE de la marque.
