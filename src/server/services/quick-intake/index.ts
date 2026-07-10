@@ -68,6 +68,8 @@ export interface QuickIntakeStartInput {
   economicModel?: string;
   positioning?: string;
   source?: string;
+  /** Attribution funnel (vague E) : UTM/referrer/click-ids structurés. */
+  attribution?: Record<string, string>;
   method?: IntakeMethodType;
   /** Vague 10 — empreinte web publique (étape préliminaire du rapport). */
   websiteUrl?: string;
@@ -166,7 +168,8 @@ export async function start(input: QuickIntakeStartInput) {
       businessModel: input.businessModel,
       economicModel: input.economicModel,
       positioning: input.positioning,
-      source: input.source,
+      source: input.source ?? (input.attribution?.utm_source || input.attribution?.ref),
+      ...(input.attribution ? { attribution: input.attribution as Prisma.InputJsonValue } : {}),
       method: input.method ?? "LONG",
       responses: {} as Prisma.InputJsonValue,
       status: "IN_PROGRESS",

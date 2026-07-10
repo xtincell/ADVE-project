@@ -10,6 +10,18 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.83 — feat(funnel): clôture des résiduels vague E — attribution, intégrations, personnalisation (2026-07-10)
+
+Clôture des 6 résiduels vague E (mandat opérateur « ne rien laisser », interprétations proposées en draft dans la PR). Audit préalable : **3 des 6 étaient déjà shippés** — vrais PDF (routes `/api/intake/[token]/pdf` + `/api/export/oracle|brand-bible/[strategyId]/pdf`, puppeteer + chromium Dockerfile, bouton download câblé), Mestor cockpit (chat streaming `/api/chat` réel + `getInsights` consommé par le home), tuiles (home cockpit riche en données réelles : DevotionLadder/Timeline/Sparkline/OvertonTeaser). Construits ici :
+
+- **Attribution funnel** : colonne `QuickIntake.attribution Json?` (migration `20260710190000`) — UTM structurés (source/medium/campaign/content/term), `ref`, `gclid`, `fbclid`, referrer et landing path capturés au start de l'intake (bornés, backfill-safe, `source` legacy rempli en compat) ; colonne « Provenance » dans la liste intakes Console (badge utm_source·campaign > source > hostname referrer > « direct », JSON complet au survol).
+- **Intégrations** : `cockpitDashboard.getConnectedSources` (read-only, tenant-scoped, zéro LLM) + section « Sources de données connectées » dans `/cockpit/settings` — derniers relevés sociaux par plateforme avec provenance (relevé automatique/manuel + date), empreinte web collectée (site/canaux/presse/score), fraîcheur du digest marché pays×secteur. Chaque source absente est dite absente.
+- **Personnalisation** : la cover du rapport PDF porte l'identité visuelle DÉTECTÉE de la marque (og:image du site, déjà collectée par l'empreinte) — jamais un logo inventé, rien si non détectée.
+
+tsc 0 · eslint 0 · Prisma validate OK · **2434 tests verts**. 1 migration additive nullable. Cap APOGEE 7/7.
+
+---
+
 ## v6.27.82 — feat(cockpit): abonnement & facturation founder (vague E, P0) (2026-07-10)
 
 Le backend deux-rails (ADR-0092 : `payment.mySubscriptions` / `cancelSubscription` / `initSubscription` / `initManualSubscription`) existait mais AUCUNE surface cockpit ne le rendait — le founder ne pouvait ni voir son plan, ni l'annuler, ni savoir qu'une demande manuelle attendait validation.

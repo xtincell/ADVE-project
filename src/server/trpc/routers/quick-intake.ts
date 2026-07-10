@@ -219,6 +219,9 @@ export const quickIntakeRouter = createTRPCRouter({
       economicModel: z.string().optional(),
       positioning: z.string().optional(),
       source: z.string().optional(),
+      // Attribution funnel (vague E) : UTM/referrer/click-ids structurés,
+      // bornés (12 clés max côté client, valeurs ≤ 300 chars).
+      attribution: z.record(z.string().max(40), z.string().max(300)).optional(),
       method: z.enum(["GUIDED", "IMPORT", "LONG", "SHORT", "INGEST", "INGEST_PLUS"]).optional(),
       // Vague 10 — empreinte web publique (alimente le pilier E)
       websiteUrl: z.string().max(300).optional(),

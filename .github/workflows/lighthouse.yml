@@ -40,6 +40,12 @@ jobs:
       AUTH_SECRET: ci-stub
       NEXTAUTH_URL: http://localhost:3000
       NEXT_TELEMETRY_DISABLED: 1
+      # Le serveur standalone tourne en NODE_ENV=production → le middleware
+      # proxy.ts redirige (308) tout host ≠ CANONICAL_HOST vers
+      # https://powerupgraders.com. Sans override, `wait-on http://localhost:3000`
+      # est renvoyé vers la prod et time-out. On déclare localhost canonique
+      # pour que le build LOCAL soit servi + audité directement.
+      CANONICAL_HOST: localhost:3000
 
     steps:
       - uses: actions/checkout@v6

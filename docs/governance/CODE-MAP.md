@@ -78,7 +78,7 @@ Ces correspondances évitent la réinvention :
 - **DeliverableTracking** (10 fields)
 - **Conversation** (14 fields)
 - **Message** (12 fields)
-- **QuickIntake** (30 fields)
+- **QuickIntake** (31 fields)
 - **MediaPlan** (13 fields)
 - **MediaPlanLine** (18 fields)
 - **CampaignAction** (29 fields)
