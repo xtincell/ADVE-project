@@ -356,36 +356,14 @@ export async function complete(token: string) {
 
   emitIntakeStarted({ intakeToken: token, companyName: intake.companyName });
 
-  // ── Vague 10 — EMPREINTE WEB PUBLIQUE (étape préliminaire du rapport). ──
-  // Collecte déterministe (site déclaré + sociaux déclarés/découverts +
-  // articles) AVANT l'extraction : alimente fidèlement le pilier E.
-  // Best-effort borné 25 s — n'échoue jamais le complete().
-  let webFootprint: import("./web-footprint").WebFootprint | null =
-    (intake.webFootprint as unknown as import("./web-footprint").WebFootprint | null) ?? null;
-  if (!webFootprint && (intake.websiteUrl || intake.socialLinksRaw)) {
-    try {
-      const { collectWebFootprint } = await import("./web-footprint");
-      const declared = (intake.socialLinksRaw ?? "")
-        .split(/\r?\n|,|;/) 
-        .map((l) => l.trim())
-        .filter(Boolean);
-      webFootprint = await Promise.race([
-        collectWebFootprint({
-          websiteUrl: intake.websiteUrl,
-          declaredSocialUrls: declared,
-          companyName: intake.companyName,
-        }),
-        new Promise<null>((resolve) => setTimeout(() => resolve(null), 25_000)),
-      ]);
-      if (webFootprint) {
-        await db.quickIntake.update({
-          where: { id: intake.id },
-          data: { webFootprint: webFootprint as unknown as Prisma.InputJsonValue },
-        });
-      }
-    } catch (err) {
-      console.warn("[quick-intake] empreinte web non collectée (non bloquant):", err instanceof Error ? err.message : err);
-    }
+  // ── Vague 10 + ADR-0121 — EMPREINTE WEB PUBLIQUE ENRICHIE. ──
+  // Cache : un footprint enrichi déjà persisté (re-run) est réutilisé tel
+  // quel. La collecte elle-même est déplacée APRÈS la création de la
+  // Strategy (les FollowerSnapshot Apify portent le strategyId réel).
+  let webFootprint: import("./public-enrichment").EnrichedFootprint | null = null;
+  const cachedFootprint = intake.webFootprint as unknown as Record<string, unknown> | null;
+  if (cachedFootprint && "enrichment" in cachedFootprint) {
+    webFootprint = cachedFootprint as unknown as import("./public-enrichment").EnrichedFootprint;
   }
 
   // Wrap the rest in try/catch to emit intake_failed on any error. The error
@@ -467,6 +445,36 @@ export async function complete(token: string) {
     },
   });
 
+  // ── ADR-0121 — collecte de l'empreinte publique enrichie. ──
+  // Inconditionnelle (l'orchestrateur dégrade seul : découverte Brave si
+  // rien de déclaré, Apify si token, presse RSS sans clé). Best-effort
+  // borné 25 s — n'échoue JAMAIS le complete().
+  if (!webFootprint) {
+    try {
+      const { enrichPublicFootprint } = await import("./public-enrichment");
+      webFootprint = await Promise.race([
+        enrichPublicFootprint({
+          companyName: intake.companyName,
+          country: intake.country,
+          sector: intake.sector,
+          websiteUrl: intake.websiteUrl,
+          socialLinksRaw: intake.socialLinksRaw,
+          strategyId: strategy.id,
+          budgetMs: 20_000,
+        }),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 25_000)),
+      ]);
+      if (webFootprint) {
+        await db.quickIntake.update({
+          where: { id: intake.id },
+          data: { webFootprint: webFootprint as unknown as Prisma.InputJsonValue },
+        });
+      }
+    } catch (err) {
+      console.warn("[quick-intake] empreinte publique non collectée (non bloquant):", err instanceof Error ? err.message : err);
+    }
+  }
+
   // Responses are structured as { "biz": {...}, "a": { "a_vision": "...", ... }, "d": { ... }, ... }
   const responses = intake.responses as Record<string, Record<string, unknown>>;
   // Intake creates only ADVE pillars (RTIS are paid, created during boot-sequence)
@@ -542,21 +550,37 @@ export async function complete(token: string) {
         ? sealCanonicalPillarFields(pillar, safeBase, canonicalContext)
         : safeBase;
 
-    // Vague 10 — l'empreinte web alimente le pilier E : touchpoints détectés
-    // (append-dédupliqués, le déclaré prime) + bloc webPresence factuel.
+    // Vague 10 + ADR-0121 — l'empreinte publique alimente le pilier E :
+    // touchpoints détectés (append-dédupliqués, le déclaré prime), bloc
+    // webPresence factuel avec compteurs followers RÉELS (Apify) + presse,
+    // primaryChannel inféré depuis la plus grande audience réelle.
+    let eInferredFields: string[] = [];
     if (pillar === "e" && webFootprint) {
-      const { mergeFootprintIntoPillarE } = await import("./web-footprint");
-      sealedContent = mergeFootprintIntoPillarE(sealedContent, webFootprint);
+      const { mergeEnrichedFootprintIntoPillarE } = await import("./public-enrichment");
+      const merged = mergeEnrichedFootprintIntoPillarE(sealedContent, webFootprint);
+      sealedContent = merged.content;
+      eInferredFields = merged.inferredFields;
     }
 
     if (sealedContent && Object.keys(sealedContent).length > 0) {
       const normalized = normalizePillarForIntake(pillar, sealedContent);
+      // Provenance des champs issus de l'empreinte publique : données
+      // observées = SOURCE, déductions = INFERRED (le guard du gateway
+      // empêche tout écrasement d'un champ HUMAN ultérieur).
+      const fieldProvenance =
+        pillar === "e" && webFootprint
+          ? ({
+              webPresence: "SOURCE",
+              touchpoints: "SOURCE",
+              ...(eInferredFields.includes("primaryChannel") ? { primaryChannel: "INFERRED" } : {}),
+            } as Record<string, import("@/domain/field-provenance").FieldProvenance>)
+          : undefined;
       await writeGateway({
         strategyId: strategy.id,
         pillarKey: pillar as import("@/lib/types/advertis-vector").PillarKey,
         operation: { type: "REPLACE_FULL", content: normalized as Record<string, unknown> },
         author: { system: "INGESTION", reason: `Quick intake conversion: pillar ${pillar}` },
-        options: { confidenceDelta: 0.05 },
+        options: { confidenceDelta: 0.05, ...(fieldProvenance ? { fieldProvenance } : {}) },
       });
       filledPillars.push(pillar);
     }

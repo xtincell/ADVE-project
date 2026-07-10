@@ -10,6 +10,21 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.76 — feat(intake): enrichissement public du pilier E (Brave + Apify + presse RSS) + P0 ship Coolify (2026-07-10)
+
+**[ADR-0121](docs/governance/adr/0121-intake-public-footprint-enrichment.md)** — l'intake (produit n°1, funnel `/landingintake` → paywall → PDF payant) collecte désormais les **données publiques du client par tous les moyens légaux** pour combler le pilier E du rapport, même quand le founder ne déclare NI site NI liens sociaux :
+
+- **Orchestrateur** `quick-intake/public-enrichment.ts` (`enrichPublicFootprint`, zéro LLM, time-boxé 20 s, best-effort) : footprint site déclaré (Vague 10, existant) → **découverte Brave** des profils sociaux par nom de marque si rien trouvé (garde anti-faux-positif déterministe) → **compteurs followers RÉELS via Apify** (IG par défaut, TikTok/FB opt-in par env actor, ~0,001 $/profil) → **mentions presse Google News RSS** (`brandPressFeedFor`, sans clé). Câblé inconditionnellement dans `complete()` après `strategy.create` (les `FollowerSnapshot` source APIFY portent le vrai strategyId).
+- **Tokens système ADR-0075** : `resolveApifyCredentials` (vault opérateur > env `APIFY_TOKEN`) + nouvelle façade `fetchPublicFollowers` multi-plateforme (table `APIFY_ACTORS`, skip sans dépense forcée) ; `fetchThirdPartyFollowers` refactorée sur le runner partagé, signature inchangée.
+- **Pilier E** : merge pur `mergeEnrichedFootprintIntoPillarE` — compteur réel à côté du hint dans `webPresence.socials[]`, `webPresence.press`, `primaryChannel` inféré UNIQUEMENT depuis la plus grande audience réelle et si absent. Écrit via gateway avec `fieldProvenance` SOURCE/INFERRED (le guard protège les champs HUMAN — ADVE reste founder-owned). Pas de KPI de remplissage (ADR-0046).
+- **Re-run opérateur** (parité manual-first ADR-0060) : kind gouverné **`ENRICH_E_FROM_PUBLIC_FOOTPRINT`** (governor SESHAT) + `social.rescanPublicFootprint` + `rerunPublicEnrichmentForStrategy` (SET_FIELDS, author EXTERNAL_SAAS). `activateBrand` chemin de récupération réinjecte l'empreinte dans le re-seed E.
+- **Rapport payant** : bloc « Empreinte web publique » affiche `X abonnés` réels (prioritaires sur `~hints`) + sous-bloc « Mentions presse » ; rien trouvé → masqué (honnête). PDF inchangé (rend la même page).
+- **P0 ship Coolify** : `scripts/docker-entrypoint.sh` (`prisma migrate deploy` au boot, opt-out `SKIP_MIGRATE_ON_BOOT=1`) + Dockerfile copie CLI prisma/migrations/dotenv ; CI Node 20→22 (9 jobs) ; **[docs/deploy/ENV-VARS.md](docs/deploy/ENV-VARS.md)** (table env × dégradation + minimum viable Coolify), linké depuis SELF-HOST.md ; `.env.example` enrichi (`BRAVE_API_KEY`, `APIFY_TOKEN`, `APIFY_*_ACTOR_ID`).
+
+Matrice de dégradation honnête (aucune clé → footprint déclaré seul, jamais de fabrication). Cap APOGEE 7/7 (Brave/Apify = connectors). 0 migration Prisma. tsc 0 · eslint 0 · **2383 tests verts** (30 nouveaux : public-enrichment + social-audit-credentials).
+
+---
+
 ## v6.27.75 — feat(ptah): forge conditionnée par image de référence (gpt-image edits) + routing image exclusif (2026-07-01)
 
 Fondation du **système de dépendance** du case study (« réutiliser les images précédentes comme références » : identité → pack → KV → déclinaisons, sans réinventer). Audit du pipeline image/asset/brief : architecture saine (tools image, handoff brief→forge, création/récupération d'assets `AssetVersion`/`BrandAsset` vault, réutilisation via `requires` DAG, découplage Artemis↔Ptah) — **2 trous comblés** :
