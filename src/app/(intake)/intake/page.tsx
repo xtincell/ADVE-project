@@ -89,8 +89,10 @@ function IntakeLandingContent() {
   });
   const [error, setError] = useState("");
 
-  // UTM tracking
+  // Attribution funnel (vague E) : UTM structurés + referrer + click ids —
+  // d'où vient CHAQUE prospect. `source` reste la synthèse lisible (compat).
   const [utmSource, setUtmSource] = useState<string | undefined>();
+  const [attribution, setAttribution] = useState<Record<string, string> | undefined>();
   useEffect(() => {
     const source = searchParams.get("utm_source")
       ?? searchParams.get("source")
@@ -100,6 +102,14 @@ function IntakeLandingContent() {
     if (source) {
       setUtmSource(campaign ? `${source}::${campaign}` : source);
     }
+    const attr: Record<string, string> = {};
+    for (const key of ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "ref", "gclid", "fbclid"]) {
+      const v = searchParams.get(key);
+      if (v) attr[key] = v.slice(0, 200);
+    }
+    if (typeof document !== "undefined" && document.referrer) attr.referrer = document.referrer.slice(0, 300);
+    if (typeof window !== "undefined") attr.landingPath = window.location.pathname.slice(0, 200);
+    if (Object.keys(attr).length > 0) setAttribution(attr);
   }, [searchParams]);
 
   // Social proof
@@ -169,6 +179,7 @@ function IntakeLandingContent() {
       websiteUrl: form.websiteUrl.trim() || undefined,
       socialLinksRaw: form.socialLinksRaw.trim() || undefined,
       source: utmSource,
+      attribution,
       method: selectedMethod,
     });
   };
