@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { PricingTiers, OracleTeaser, RapportPdfPreview } from "@/components/neteru";
 import { Modal } from "@/components/shared/modal";
+import { FootprintSection } from "./footprint-section";
 
 // ── Types matching the narrative-report service ────────────────────
 interface AdvePillarReport {
@@ -783,91 +784,15 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         )}
 
         {/* ════════════════════════════════════════════════════════════
-            EMPREINTE WEB PUBLIQUE (Vague 10) — preuve de l'étape
-            préliminaire : ce que La Fusée a réellement observé en ligne.
+            EMPREINTE DIGITALE PUBLIQUE (ADR-0121) — score /100 + barres
+            par dimension + sous-blocs mesurés + narratif. Honnête : les
+            dimensions non mesurées sont dites, jamais fabriquées.
         ════════════════════════════════════════════════════════════ */}
-        {(() => {
-          const fp = (intake as { webFootprint?: unknown }).webFootprint as {
-            site?: { url: string; reachable: boolean; title: string | null; description: string | null } | null;
-            socials?: Array<{ platform: string; url: string; handle: string | null; followersHint?: number | null }>;
-            articles?: Array<{ url: string; title: string | null }>;
-            followerCounts?: Array<{ platform: string; handle: string; followerCount: number }>;
-            press?: Array<{ title: string; url: string; sourceName: string | null; publishedAt: string | null }>;
-            collectedAt?: string;
-          } | null;
-          if (!fp || (!fp.site && (fp.socials ?? []).length === 0 && (fp.press ?? []).length === 0)) return null;
-          // Compteurs RÉELS (Apify) indexés par plateforme:handle — priment sur les hints.
-          const realCounts = new Map(
-            (fp.followerCounts ?? []).map((c) => [`${c.platform}:${c.handle.toLowerCase()}`, c.followerCount]),
-          );
-          return (
-            <section className="mb-8 rounded-2xl border border-border bg-card p-6 print:rounded-none print:border-0 print:p-0 print:mb-8">
-              <h2 className="mb-1 text-sm font-semibold uppercase tracking-wider text-primary">
-                Empreinte web publique détectée
-              </h2>
-              <p className="mb-4 text-xs text-foreground-muted">
-                Collectée automatiquement avant la rédaction du rapport{fp.collectedAt ? ` (${new Date(fp.collectedAt).toLocaleDateString("fr-FR")})` : ""} —
-                elle ancre le diagnostic Engagement dans votre présence réelle.
-              </p>
-              {fp.site && (
-                <div className="mb-3 rounded-lg border border-border-subtle bg-background-raised p-3">
-                  <p className="text-sm font-medium text-foreground">
-                    {fp.site.title ?? fp.site.url}{" "}
-                    {!fp.site.reachable && <span className="text-xs text-warning">(site injoignable lors de la collecte)</span>}
-                  </p>
-                  {fp.site.description && <p className="mt-0.5 text-xs text-foreground-muted">{fp.site.description}</p>}
-                  <a href={fp.site.url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">{fp.site.url}</a>
-                </div>
-              )}
-              {(fp.socials ?? []).length > 0 && (
-                <div className="mb-3 flex flex-wrap gap-2">
-                  {fp.socials!.map((so) => {
-                    const real = so.handle ? realCounts.get(`${so.platform}:${so.handle.toLowerCase()}`) : undefined;
-                    const countLabel = real
-                      ? ` · ${new Intl.NumberFormat("fr-FR").format(real)} abonnés`
-                      : so.followersHint
-                        ? ` · ~${new Intl.NumberFormat("fr-FR").format(so.followersHint)} abonnés`
-                        : "";
-                    return (
-                      <a key={so.url} href={so.url} target="_blank" rel="noopener noreferrer"
-                        className="rounded-full border border-border bg-background-raised px-3 py-1 text-xs text-foreground hover:border-primary">
-                        {so.platform}{so.handle ? ` · @${so.handle}` : ""}{countLabel}
-                      </a>
-                    );
-                  })}
-                </div>
-              )}
-              {(fp.articles ?? []).length > 0 && (
-                <ul className="space-y-1">
-                  {fp.articles!.slice(0, 5).map((a) => (
-                    <li key={a.url} className="text-xs">
-                      <a href={a.url} target="_blank" rel="noopener noreferrer" className="text-foreground-secondary hover:text-primary hover:underline">
-                        ▸ {a.title ?? a.url}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {(fp.press ?? []).length > 0 && (
-                <div className="mt-3">
-                  <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-foreground-secondary">
-                    Mentions presse
-                  </p>
-                  <ul className="space-y-1">
-                    {fp.press!.slice(0, 5).map((p) => (
-                      <li key={p.url} className="text-xs">
-                        <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-foreground-secondary hover:text-primary hover:underline">
-                          ▸ {p.title}
-                        </a>
-                        {p.sourceName && <span className="text-foreground-muted"> — {p.sourceName}</span>}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </section>
-          );
-        })()}
+        <FootprintSection
+          footprint={(intake as { webFootprint?: unknown }).webFootprint ?? null}
+          companyName={intake.companyName}
+        />
+
 
         {/* ════════════════════════════════════════════════════════════
             PATH TO ICONE — visible on page (the promise)

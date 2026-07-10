@@ -465,6 +465,18 @@ export async function complete(token: string) {
         new Promise<null>((resolve) => setTimeout(() => resolve(null), 25_000)),
       ]);
       if (webFootprint) {
+        // Narratif du diagnostic (LLM court, fallback template déterministe) —
+        // best-effort : jamais bloquant, le rapport rend le score sans lui.
+        try {
+          const { narrateFootprint } = await import("./footprint-narrative");
+          webFootprint.narrative = await narrateFootprint(
+            webFootprint,
+            { companyName: intake.companyName, sector: intake.sector },
+            { timeoutMs: 8_000 },
+          );
+        } catch (err) {
+          console.warn("[quick-intake] narratif empreinte non généré (non bloquant):", err instanceof Error ? err.message : err);
+        }
         await db.quickIntake.update({
           where: { id: intake.id },
           data: { webFootprint: webFootprint as unknown as Prisma.InputJsonValue },

@@ -228,9 +228,10 @@ export async function resolveApifyCredentials(operatorId: string | null): Promis
 }
 
 /**
- * Table de dispatch par plateforme. Instagram tourne dès qu'un token existe ;
- * TikTok/Facebook sont opt-in via leur env var d'actor (pas de dépense
- * forcée). LinkedIn : pas d'actor fiable sans cookies — hint footprint only.
+ * Table de dispatch par plateforme. Instagram, TikTok et Facebook tournent
+ * dès qu'un `APIFY_TOKEN` existe (actors par défaut ci-dessous, ~0,001 $/
+ * profil) ; mettre l'env var d'actor à "off" désactive une plateforme.
+ * LinkedIn : pas d'actor fiable sans cookies — hint footprint only.
  */
 const APIFY_ACTORS: Record<
   "INSTAGRAM" | "TIKTOK" | "FACEBOOK",
@@ -262,7 +263,7 @@ const APIFY_ACTORS: Record<
   TIKTOK: {
     envVar: "APIFY_TIKTOK_ACTOR_ID",
     defaultActorId: "clockworks~tiktok-profile-scraper",
-    enabledWithoutEnv: false,
+    enabledWithoutEnv: true,
     buildInput: (handles) => ({ profiles: handles, resultsPerPage: 1 }),
     parseItem: (item) => {
       const meta = (item.authorMeta as Record<string, unknown> | undefined) ?? item;
@@ -275,7 +276,7 @@ const APIFY_ACTORS: Record<
   FACEBOOK: {
     envVar: "APIFY_FB_ACTOR_ID",
     defaultActorId: "apify~facebook-pages-scraper",
-    enabledWithoutEnv: false,
+    enabledWithoutEnv: true,
     buildInput: (handles) => ({
       startUrls: handles.map((h) => ({ url: `https://www.facebook.com/${h}` })),
     }),
@@ -380,8 +381,9 @@ export async function fetchThirdPartyFollowers(
 
 /**
  * Façade publique (intake, pré-opérateur) — token système `APIFY_TOKEN` (env,
- * ADR-0075), multi-plateforme via APIFY_ACTORS. Chaque plateforme non activée
- * (pas de handle, ou TikTok/FB sans env var d'actor) est SKIPPÉE, pas
+ * ADR-0075), multi-plateforme via APIFY_ACTORS. IG/TikTok/FB tournent par
+ * défaut dès que le token existe (vague A) ; opt-out par plateforme via
+ * `APIFY_*_ACTOR_ID="off"`. Une plateforme sans handle est SKIPPÉE, pas
  * DEGRADED — aucune dépense forcée. Time-box court par défaut (intake).
  */
 export async function fetchPublicFollowers(
@@ -400,7 +402,9 @@ export async function fetchPublicFollowers(
 
   for (const platform of ["INSTAGRAM", "TIKTOK", "FACEBOOK"] as const) {
     const spec = APIFY_ACTORS[platform];
-    const envActor = process.env[spec.envVar];
+    const rawEnvActor = process.env[spec.envVar];
+    if (rawEnvActor === "off") continue; // opt-out explicite (même convention que maps/ads)
+    const envActor = rawEnvActor || undefined;
     if (!spec.enabledWithoutEnv && !envActor) continue;
 
     const platformHandles = handles

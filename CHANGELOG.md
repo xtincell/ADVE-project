@@ -10,6 +10,21 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.77 — feat(intake): empreinte digitale entière — vague A complète (score /100 + UI + narratif) (2026-07-10)
+
+**ADR-0121 vague A bouclée** — l'empreinte publique ne s'arrête plus aux réseaux sociaux et à la presse : le rapport discovery mesure, score et raconte l'empreinte digitale ENTIÈRE de la marque.
+
+- **Collecteurs** `quick-intake/footprint-collectors/` (commit précédent, complétés ici par leurs tests) : Google Business/avis (Apify opt-in `APIFY_MAPS_ACTOR_ID`), YouTube Data API v3 (`YOUTUBE_API_KEY`), domaine RDAP (sans clé), email MX/SPF/DMARC (node:dns, sans clé), PageSpeed (`PAGESPEED_API_KEY`), pubs Meta (`APIFY_ADS_ACTOR_ID`). Tous time-boxés, best-effort, statuts honnêtes.
+- **Score /100** `footprint-score.ts` : renormalisé sur les dimensions réellement mesurées — une dimension sans clé sort du dénominateur (jamais un faux zéro) ; une dimension mesurée faible compte. `total: null` si rien de mesurable.
+- **UI rapport** : nouveau composant [`result/footprint-section.tsx`](src/app/(intake)/intake/[token]/result/footprint-section.tsx) — badge score /100 + barres par dimension (avec lignes « non mesuré — raison » honnêtes) + sous-blocs factuels (avis Google, YouTube, domaine, email pro, performance, pubs Meta, badges tech/SEO du site) + narratif. Remplace le bloc inline de `page.tsx` (print-safe conservé).
+- **Narratif** `footprint-narrative.ts` : 2-4 phrases pour le rapport — LLM gateway (purpose `intermediate`, time-box 8 s, garde anti-hallucination : doit citer marque + score) avec **fallback template 100 % déterministe** (`buildFootprintNarrativeTemplate`). Câblé best-effort dans `complete()` avant la persistance du `webFootprint`.
+- **Apify par défaut élargi** : TikTok + Facebook tournent désormais dès que `APIFY_TOKEN` existe (actors par défaut) ; opt-out par plateforme via `APIFY_*_ACTOR_ID="off"` (convention alignée sur maps/ads).
+- **Env** : `.env.example` + [ENV-VARS.md](docs/deploy/ENV-VARS.md) enrichis (`YOUTUBE_API_KEY`, `PAGESPEED_API_KEY`, `APIFY_MAPS_ACTOR_ID`, `APIFY_ADS_ACTOR_ID`, sémantique `"off"`).
+
+Cap APOGEE 7/7 (tout est connector). 0 migration Prisma. tsc 0 · eslint 0 · **2392 tests verts** (67 nouveaux : footprint-collectors 25 + footprint-score/narrative 10 + social-audit defaults 2 + suite existante).
+
+---
+
 ## v6.27.76 — feat(intake): enrichissement public du pilier E (Brave + Apify + presse RSS) + P0 ship Coolify (2026-07-10)
 
 **[ADR-0121](docs/governance/adr/0121-intake-public-footprint-enrichment.md)** — l'intake (produit n°1, funnel `/landingintake` → paywall → PDF payant) collecte désormais les **données publiques du client par tous les moyens légaux** pour combler le pilier E du rapport, même quand le founder ne déclare NI site NI liens sociaux :

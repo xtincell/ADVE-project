@@ -36,11 +36,16 @@ Note migrations : l'image Docker exécute `prisma migrate deploy` au boot
 |---|---|---|
 | `BRAVE_API_KEY` | découverte des profils sociaux (free tier ~2 000 req/mois — <https://brave.com/search/api/>) | découverte skippée : seuls les liens déclarés par le client sont exploités |
 | `APIFY_TOKEN` | compteurs followers réels (~0,001 $/profil, 5 $/mois gratuit — <https://apify.com>) | hints OG approximatifs conservés (souvent absents sur IG/TikTok) |
-| `APIFY_IG_ACTOR_ID` | override actor Instagram | défaut `apify~instagram-profile-scraper` |
-| `APIFY_TIKTOK_ACTOR_ID` | opt-in TikTok (`clockworks~tiktok-profile-scraper`) | TikTok skippé |
-| `APIFY_FB_ACTOR_ID` | opt-in Facebook (`apify~facebook-pages-scraper`) | Facebook skippé |
+| `APIFY_IG_ACTOR_ID` | override actor Instagram (`"off"` désactive) | défaut `apify~instagram-profile-scraper` |
+| `APIFY_TIKTOK_ACTOR_ID` | override actor TikTok (`"off"` désactive) | défaut `clockworks~tiktok-profile-scraper` |
+| `APIFY_FB_ACTOR_ID` | override actor Facebook (`"off"` désactive) | défaut `apify~facebook-pages-scraper` |
+| `YOUTUBE_API_KEY` | stats de chaîne YouTube (Data API v3, gratuite 10 000 unités/j) | bloc YouTube « non mesuré » |
+| `PAGESPEED_API_KEY` | performance mobile du site (PSI, gratuite 25 000 req/j) | dimension performance « non mesurée » |
+| `APIFY_MAPS_ACTOR_ID` | opt-in avis Google Business (`compass~crawler-google-places`, `"off"` désactive) | dimension avis « non mesurée » |
+| `APIFY_ADS_ACTOR_ID` | opt-in transparence pubs Meta (actor Ad Library, `"off"` désactive) | bloc pubs omis |
 
-Presse (Google News RSS) : aucune clé requise, toujours actif.
+Presse (Google News RSS), domaine (RDAP) et email MX/SPF/DMARC (node:dns) : aucune clé requise, toujours actifs.
+Le score d'empreinte /100 est renormalisé sur les dimensions réellement mesurées — une dimension sans clé est exclue du dénominateur, jamais comptée à 0.
 
 ## 🟡 Paiements (paywall intake + abonnements)
 

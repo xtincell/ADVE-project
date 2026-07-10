@@ -95,7 +95,7 @@ describe("fetchPublicFollowers — dégradations honnêtes (P22-1)", () => {
     );
   });
 
-  it("TikTok/Facebook skippés sans env var d'actor (pas de dépense forcée, pas de DEGRADED)", async () => {
+  it("TikTok/Facebook tournent par défaut avec le token (actors par défaut, vague A)", async () => {
     process.env.APIFY_TOKEN = "env-token";
     const fetchSpy = vi.fn().mockResolvedValue({
       ok: true,
@@ -108,7 +108,29 @@ describe("fetchPublicFollowers — dégradations honnêtes (P22-1)", () => {
       { platform: "TIKTOK", handle: "marque" },
       { platform: "FACEBOOK", handle: "marque" },
     ]);
-    // Un seul run d'actor : Instagram. TikTok/FB opt-in via APIFY_*_ACTOR_ID.
+    // Trois runs d'actor : IG + TikTok + FB (défauts APIFY_ACTORS).
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+    const urls = fetchSpy.mock.calls.map((c) => String(c[0]));
+    expect(urls.some((u) => u.includes("instagram-profile-scraper"))).toBe(true);
+    expect(urls.some((u) => u.includes("tiktok-profile-scraper"))).toBe(true);
+    expect(urls.some((u) => u.includes("facebook-pages-scraper"))).toBe(true);
+  });
+
+  it("une plateforme se désactive avec l'env var d'actor à \"off\" (opt-out)", async () => {
+    process.env.APIFY_TOKEN = "env-token";
+    process.env.APIFY_TIKTOK_ACTOR_ID = "off";
+    process.env.APIFY_FB_ACTOR_ID = "off";
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => [{ username: "marque", followersCount: 100 }],
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+    await fetchPublicFollowers(null, [
+      { platform: "INSTAGRAM", handle: "marque" },
+      { platform: "TIKTOK", handle: "marque" },
+      { platform: "FACEBOOK", handle: "marque" },
+    ]);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(String(fetchSpy.mock.calls[0]![0])).toContain("instagram-profile-scraper");
   });
