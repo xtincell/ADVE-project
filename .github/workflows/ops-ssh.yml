@@ -1,0 +1,45 @@
+# Ops SSH — bras d'exécution vers le VPS Coolify (incident prod / réconciliation
+# migrations). Le conteneur de session Claude n'a d'egress que sur 443 : les
+# opérations docker/DB passent par un runner GitHub (egress libre).
+#
+# Sécurité : la clé transite en input workflow_dispatch (repo privé — payload
+# visible des seuls collaborateurs) et est masquée dès la première ligne.
+# Après l'incident : révoquer/rotater la clé et le token Coolify exposés.
+name: ops-ssh
+
+on:
+  workflow_dispatch:
+    inputs:
+      b64key:
+        description: "Clé privée SSH (PEM complet) encodée base64"
+        required: true
+      cmd:
+        description: "Commande à exécuter sur le VPS"
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ops-ssh
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Exécute sur le VPS
+        env:
+          B64KEY: ${{ inputs.b64key }}
+          REMOTE_CMD: ${{ inputs.cmd }}
+        run: |
+          echo "::add-mask::$B64KEY"
+          mkdir -p ~/.ssh
+          printf '%s' "$B64KEY" | base64 -d > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh -i ~/.ssh/id_ed25519 \
+              -o StrictHostKeyChecking=no \
+              -o UserKnownHostsFile=/dev/null \
+              -o ConnectTimeout=15 \
+              root@76.13.128.23 "$REMOTE_CMD"
