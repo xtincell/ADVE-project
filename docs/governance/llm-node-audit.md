@@ -2,7 +2,7 @@
 
 > Auto-généré par `npm run audit:llm` (`scripts/audit-llm-nodes.ts`). Ne pas éditer à la main.
 
-Généré le 2026-06-28.
+Généré le 2026-07-10.
 
 Deux contrats vérifiés par nœud : **sortie** (validation Zod stricte) et **entrée** (pas d'appel LLM direct qui court-circuite la validation et concatène l'entrée brute).
 
@@ -12,10 +12,10 @@ Deux contrats vérifiés par nœud : **sortie** (validation Zod stricte) et **en
 |---|---|---|---|---|
 | Glory tools (LLM/HYBRID) | 76 | 76 | 100% | 0 |
 | Frameworks | 28 | 28 | 100% | 0 |
-| Appels LLM directs (bypass wrapper) | 41 | 41 (entrée durcie) | 100% | 0 bruts |
+| Appels LLM directs (bypass wrapper) | 42 | 42 (entrée durcie) | 100% | 0 bruts |
 
 
-Entrée durcie = 39 fichiers `FENCED` (neutralisation `wrapUntrusted`/`sanitizeInline`) + 2 `INTERNAL` (annotés `@llm-input-internal` — entrée 100% interne). 55 appels directs au total.
+Entrée durcie = 40 fichiers `FENCED` (neutralisation `wrapUntrusted`/`sanitizeInline`) + 2 `INTERNAL` (annotés `@llm-input-internal` — entrée 100% interne). 56 appels directs au total.
 
 ## SORTIE — nœuds sans contrat de validation
 
@@ -40,7 +40,7 @@ Ces points appellent `callLLM`/`callLLMAndParse` sans passer par `executeStructu
 | `src/server/services/feedback-loop/index.ts` | 245 | 1 | ✅ FENCED | non |
 | `src/server/services/implementation-generator/index.ts` | 104, 117, 143, 162 | 4 | ✅ FENCED | non |
 | `src/server/services/ingestion-pipeline/ai-filler.ts` | 151, 250, 431 | 3 | ✅ FENCED | non |
-| `src/server/services/ingestion-pipeline/extractors.ts` | 88 | 1 | ✅ FENCED | non |
+| `src/server/services/ingestion-pipeline/extractors.ts` | 86 | 1 | ✅ FENCED | non |
 | `src/server/services/mestor/commandant.ts` | 96, 172, 220 | 3 | ✅ FENCED | non |
 | `src/server/services/mestor/i-pillar-sequenced.ts` | 131 | 1 | ✅ FENCED | non |
 | `src/server/services/mestor/insights.ts` | 251 | 1 | ✅ FENCED | non |
@@ -50,19 +50,20 @@ Ces points appellent `callLLM`/`callLLMAndParse` sans passer par `executeStructu
 | `src/server/services/qc-router/automated-qc.ts` | 151 | 1 | ✅ FENCED | non |
 | `src/server/services/quick-intake/brand-level-evaluator.ts` | 224 | 1 | ✅ FENCED | non |
 | `src/server/services/quick-intake/deduce-adve.ts` | 147, 173 | 2 | ✅ FENCED | non |
-| `src/server/services/quick-intake/index.ts` | 1345 | 1 | ✅ FENCED | non |
+| `src/server/services/quick-intake/footprint-narrative.ts` | 143 | 1 | ✅ FENCED | non |
+| `src/server/services/quick-intake/index.ts` | 1477 | 1 | ✅ FENCED | non |
 | `src/server/services/quick-intake/multi-agent-orchestrator.ts` | 65, 102 | 2 | ✅ FENCED | non |
 | `src/server/services/quick-intake/narrate-adve.ts` | 169 | 1 | ✅ FENCED | non |
 | `src/server/services/quick-intake/narrative-report-v2.ts` | 112, 179 | 2 | ✅ FENCED | non |
 | `src/server/services/quick-intake/narrative-report-v3.ts` | 184, 316 | 2 | ✅ FENCED | non |
 | `src/server/services/quick-intake/narrative-report.ts` | 239, 247 | 2 | ✅ FENCED | non |
-| `src/server/services/quick-intake/question-bank.ts` | 316 | 1 | ✅ FENCED | non |
-| `src/server/services/quick-intake/rtis-draft.ts` | 208 | 1 | ✅ FENCED | non |
+| `src/server/services/quick-intake/question-bank.ts` | 328 | 1 | ✅ FENCED | non |
+| `src/server/services/quick-intake/rtis-draft.ts` | 296 | 1 | ✅ FENCED | non |
 | `src/server/services/rtis-protocols/innovation.ts` | 86 | 1 | ✅ FENCED | non |
 | `src/server/services/rtis-protocols/risk.ts` | 219 | 1 | ✅ FENCED | non |
 | `src/server/services/rtis-protocols/strategy.ts` | 112 | 1 | ✅ FENCED | non |
 | `src/server/services/rtis-protocols/track.ts` | 234 | 1 | ✅ FENCED | non |
-| `src/server/services/seshat/external-feeds/index.ts` | 158 | 1 | ✅ FENCED | non |
+| `src/server/services/seshat/external-feeds/index.ts` | 205 | 1 | ✅ FENCED | non |
 | `src/server/services/seshat/market-study-ingestion/extractor-llm.ts` | 68 | 1 | ✅ FENCED | non |
 | `src/server/services/seshat/tarsis/index.ts` | 247 | 1 | ✅ FENCED | non |
 | `src/server/services/seshat/tarsis/signal-collector.ts` | 185 | 1 | ✅ FENCED | non |

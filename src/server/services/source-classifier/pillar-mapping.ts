@@ -31,6 +31,8 @@ export const KIND_TO_PILLAR: Record<BrandAssetKind, PillarKey> = {
   KV_VISUAL: "D",
   CHROMATIC_STRATEGY: "D",
   TYPOGRAPHY_SYSTEM: "D",
+  // Bible de Marque = compilation BRANDBOOK-D (système visuel pilier Distinction).
+  BRAND_BIBLE: "D",
 
   // ── Value (V) ──
   VALUE_PROPOSITION: "V",

@@ -41,6 +41,15 @@ export interface FootprintArticle {
   source: "SITEMAP" | "SITE_LINK";
 }
 
+export interface SiteTech {
+  cms: string | null;
+  https: boolean;
+  hasMetaDescription: boolean;
+  hasOgTags: boolean;
+  hasRobotsTxt: boolean | null;
+  hasSitemap: boolean | null;
+}
+
 export interface WebFootprint {
   site: {
     url: string;
@@ -49,6 +58,8 @@ export interface WebFootprint {
     description: string | null;
     ogImage: string | null;
     language: string | null;
+    /** ADR-0121 vague A — analyse tech/SEO déterministe du site. */
+    tech?: SiteTech;
   } | null;
   socials: SocialProfile[];
   articles: FootprintArticle[];
@@ -141,6 +152,35 @@ export function parseFollowersHint(description: string | null): number | null {
   if (!m) return null;
   const n = parseInt(m[1]!.replace(/[\s.,]/g, ""), 10);
   return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+const CMS_SIGNATURES: Array<{ cms: string; re: RegExp }> = [
+  { cms: "WordPress", re: /wp-content|wp-includes|<meta[^>]+generator[^>]+wordpress/i },
+  { cms: "Shopify", re: /cdn\.shopify\.com|Shopify\.theme/i },
+  { cms: "Wix", re: /static\.wixstatic\.com|wix\.com\/website/i },
+  { cms: "Webflow", re: /assets(?:-global)?\.website-files\.com|<meta[^>]+generator[^>]+webflow/i },
+  { cms: "Squarespace", re: /static1?\.squarespace\.com|<meta[^>]+generator[^>]+squarespace/i },
+  { cms: "PrestaShop", re: /<meta[^>]+generator[^>]+prestashop|prestashop/i },
+  { cms: "Joomla", re: /<meta[^>]+generator[^>]+joomla/i },
+  { cms: "Drupal", re: /<meta[^>]+generator[^>]+drupal|\/sites\/default\/files/i },
+  { cms: "Next.js", re: /__NEXT_DATA__|\/_next\//i },
+];
+
+/**
+ * ADR-0121 vague A — analyse tech/SEO déterministe (regex sur l'HTML déjà
+ * fetché). Pur : robots/sitemap sont renseignés par l'appelant (fetchs
+ * séparés) — null = non vérifié.
+ */
+export function analyzeSiteTech(html: string, siteUrl: string): SiteTech {
+  const cms = CMS_SIGNATURES.find(({ re }) => re.test(html))?.cms ?? null;
+  return {
+    cms,
+    https: siteUrl.startsWith("https://"),
+    hasMetaDescription: /<meta[^>]+(?:name|property)=["']description["']/i.test(html) || /<meta[^>]+(?:name|property)=["']og:description["']/i.test(html),
+    hasOgTags: /<meta[^>]+property=["']og:/i.test(html),
+    hasRobotsTxt: null,
+    hasSitemap: null,
+  };
 }
 
 export function extractSitemapUrls(xml: string): string[] {
@@ -298,7 +338,15 @@ export async function collectWebFootprint(input: CollectFootprintInput): Promise
       const res = await budgetedFetch(normalized);
       const meta = parseHtmlMeta(res.body);
       siteHost = new URL(normalized).hostname.replace(/^www\./, "");
-      footprint.site = { url: normalized, reachable: res.ok, ...meta };
+      const tech = analyzeSiteTech(res.body, normalized);
+      // robots.txt : 1 fetch bon marché (best-effort, null = non vérifié)
+      try {
+        const robots = await budgetedFetch(new URL("/robots.txt", normalized).toString());
+        tech.hasRobotsTxt = robots.ok;
+      } catch {
+        /* non vérifié */
+      }
+      footprint.site = { url: normalized, reachable: res.ok, ...meta, tech };
 
       // 1b. Sociaux découverts SUR le site (footer/header)
       for (const p of detectSocialLinks(res.body)) addSocial(p);
@@ -308,6 +356,7 @@ export async function collectWebFootprint(input: CollectFootprintInput): Promise
       let articleUrls: Array<{ url: string; source: FootprintArticle["source"] }> = [];
       try {
         const sm = await budgetedFetch(new URL("/sitemap.xml", normalized).toString());
+        tech.hasSitemap = sm.ok && sm.body.includes("<loc>");
         if (sm.ok && sm.body.includes("<loc>")) {
           articleUrls = pickArticleCandidates(extractSitemapUrls(sm.body), siteHost).map((u) => ({ url: u, source: "SITEMAP" as const }));
         }

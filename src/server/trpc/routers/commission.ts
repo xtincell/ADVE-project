@@ -20,10 +20,30 @@
 // ============================================================================
 
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { TRPCError } from "@trpc/server";
+import { createTRPCRouter, protectedProcedure, adminProcedure, operatorProcedure } from "../init";
 import { calculate as engineCalculate, generatePaymentOrder as engineGeneratePaymentOrder } from "@/server/services/commission-engine";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
+
+/**
+ * Périmètre du caller pour les lectures commission (fix fuite P1) :
+ *   - ADMIN → tout ;
+ *   - user rattaché à un Operator (portail Agency) → commissions des missions
+ *     dont la Strategy appartient à SON operator ;
+ *   - sinon (talent/founder) → ses propres commissions uniquement.
+ * Les montants/talentIds de la plateforme entière ne sont plus lisibles par
+ * n'importe quel compte connecté.
+ */
+async function commissionScope(ctx: {
+  session: { user: { id: string; role?: string | null } };
+  db: { user: { findUnique: (args: { where: { id: string }; select: { operatorId: true } }) => Promise<{ operatorId: string | null } | null> } };
+}): Promise<{ isAdmin: boolean; operatorId: string | null; userId: string }> {
+  const userId = ctx.session.user.id;
+  if (ctx.session.user.role === "ADMIN") return { isAdmin: true, operatorId: null, userId };
+  const user = await ctx.db.user.findUnique({ where: { id: userId }, select: { operatorId: true } });
+  return { isAdmin: false, operatorId: user?.operatorId ?? null, userId };
+}
 
 /** Default commission rates by tier — overridable via BrandOSConfig */
 const DEFAULT_COMMISSION_RATES: Record<string, number> = {
@@ -82,7 +102,13 @@ export const commissionRouter = createTRPCRouter({
   list: protectedProcedure
     .input(z.object({ limit: z.number().default(50), cursor: z.string().optional() }))
     .query(async ({ ctx, input }) => {
+      const scope = await commissionScope(ctx);
       const items = await ctx.db.commission.findMany({
+        where: scope.isAdmin
+          ? {}
+          : scope.operatorId
+            ? { mission: { strategy: { operatorId: scope.operatorId } } }
+            : { talentId: scope.userId },
         take: input.limit + 1,
         cursor: input.cursor ? { id: input.cursor } : undefined,
         orderBy: { createdAt: "desc" },
@@ -95,14 +121,31 @@ export const commissionRouter = createTRPCRouter({
   getByMission: protectedProcedure
     .input(z.object({ missionId: z.string() }))
     .query(async ({ ctx, input }) => {
-      return ctx.db.commission.findMany({ where: { missionId: input.missionId } });
+      const scope = await commissionScope(ctx);
+      return ctx.db.commission.findMany({
+        where: {
+          missionId: input.missionId,
+          ...(scope.isAdmin
+            ? {}
+            : scope.operatorId
+              ? { mission: { strategy: { operatorId: scope.operatorId } } }
+              : { talentId: scope.userId }),
+        },
+      });
     }),
 
   getByCreator: protectedProcedure
     .input(z.object({ userId: z.string().optional() }))
     .query(async ({ ctx, input }) => {
+      // Un compte non-ADMIN ne lit QUE ses propres commissions — l'input
+      // userId d'autrui est refusé, pas silencieusement remplacé.
+      const scope = await commissionScope(ctx);
+      const target = input.userId ?? scope.userId;
+      if (!scope.isAdmin && target !== scope.userId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Lecture des commissions d'un autre compte réservée aux administrateurs" });
+      }
       return ctx.db.commission.findMany({
-        where: { talentId: input.userId ?? ctx.session.user.id },
+        where: { talentId: target },
         orderBy: { createdAt: "desc" },
       });
     }),
@@ -152,7 +195,9 @@ export const commissionRouter = createTRPCRouter({
     }),
 
   // ── REQ-4: tierAtTime — find creator tier at a specific date ─────────────
-  tierAtTime: protectedProcedure
+  // Historique tier/commissions d'un creator arbitraire : réservé au calcul
+  // rétroactif opérateur/console (fix fuite P1 — était protectedProcedure).
+  tierAtTime: operatorProcedure
     .input(z.object({ creatorId: z.string(), date: z.string() }))
     .query(async ({ ctx, input }) => {
       const targetDate = new Date(input.date);
@@ -295,6 +340,12 @@ export const commissionRouter = createTRPCRouter({
   getAdjustedRate: protectedProcedure
     .input(z.object({ creatorId: z.string() }))
     .query(async ({ ctx, input }) => {
+      // Taux/membership d'un creator : soi-même, ou ADMIN/opérateur (agences
+      // travaillent avec les talents) — jamais un talent tiers arbitraire.
+      const scope = await commissionScope(ctx);
+      if (!scope.isAdmin && !scope.operatorId && input.creatorId !== scope.userId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Lecture du taux d'un autre talent réservée aux opérateurs" });
+      }
       const profile = await ctx.db.talentProfile.findUnique({
         where: { userId: input.creatorId },
         include: { memberships: { where: { status: "ACTIVE" }, take: 1 } },

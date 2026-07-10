@@ -15,7 +15,7 @@ import {
   ensurePillarSource,
 } from "./governance";
 import { evaluateBudget, BudgetGateVetoError } from "./routing/budget-gate";
-import { selectProvider } from "./routing/provider-selector";
+import { selectProvider, NoAvailableProviderError } from "./routing/provider-selector";
 import {
   attachProviderTask,
   createAssetVersion,
@@ -25,6 +25,7 @@ import {
   findTaskByProviderTaskId,
   generateWebhookSecret,
   markCompleted,
+  markDeferred,
   markFailed,
   updateProviderHealth,
 } from "./task-store";
@@ -76,7 +77,47 @@ export async function materializeBrief(
       .catch(() => {});
   }
 
-  const provider = await selectProvider(payload.brief);
+  // Ship-able sans clés (ADR-0021) : `selectProvider` LÈVE
+  // `NoAvailableProviderError` quand aucun provider du kind n'est configuré
+  // (ex. génération d'image sans `OPENAI_API_KEY` — routing exclusif OpenAI).
+  // On convertit ce throw en forge DIFFÉRÉE (task tracée + retriable), au lieu
+  // de crasher la cascade. Magnific (mock fallback) reste toujours disponible
+  // pour ses kinds, donc ce chemin ne déclenche que pour openai/adobe/canva/figma
+  // sans credentials.
+  let provider: Awaited<ReturnType<typeof selectProvider>>;
+  try {
+    provider = await selectProvider(payload.brief);
+  } catch (e) {
+    if (e instanceof NoAvailableProviderError) {
+      const nominal: ProviderName = e.tried[0] ?? "magnific";
+      const deferredSecret = generateWebhookSecret();
+      const deferredTask = await createGenerativeTask({
+        intentId: ctx.intentId,
+        sourceIntentId: payload.sourceIntentId,
+        operatorId: ctx.operatorId,
+        strategyId: payload.strategyId,
+        brief: payload.brief,
+        provider: nominal,
+        providerModel: payload.brief.forgeSpec.modelHint ?? "default",
+        estimatedCostUsd: 0,
+        expectedSuperfans: 0,
+        webhookSecret: deferredSecret,
+      });
+      await markDeferred(
+        deferredTask.id,
+        `AWAITING_CREDENTIALS: aucun provider disponible pour le kind "${payload.brief.forgeSpec.kind}" (essayés: ${e.tried.join(", ")}) — ADR-0021.`,
+      );
+      return {
+        taskId: deferredTask.id,
+        provider: nominal,
+        providerModel: payload.brief.forgeSpec.modelHint ?? "default",
+        estimatedCostUsd: 0,
+        status: "DEFERRED",
+        webhookSecret: deferredSecret,
+      };
+    }
+    throw e;
+  }
   const estimatedCostUsd = provider.estimateCost(payload.brief);
 
   // Téléologie : Thot ROI gate
@@ -114,6 +155,10 @@ export async function materializeBrief(
     webhookSecret,
   });
 
+  // NB : le deferral « ship-able sans clés » (ADR-0021) est désormais traité EN
+  // AMONT via le catch `NoAvailableProviderError` autour de `selectProvider`
+  // (qui filtre déjà par `isAvailable`). Ici le provider est garanti disponible.
+
   const webhookUrl = `${WEBHOOK_BASE}/api/ptah/webhook?taskId=${task.id}&secret=${webhookSecret}`;
 
   try {
@@ -128,6 +173,20 @@ export async function materializeBrief(
       data: { providerModel: result.providerModel, estimatedCostUsd: result.estimatedCostUsd },
     });
     await updateProviderHealth(provider.name, { success: true });
+
+    // Provider SYNCHRONE (OpenAI Images) : le résultat est déjà prêt
+    // (providerTaskId = URL). Aucun webhook ne viendra → on réconcilie inline
+    // pour matérialiser l'asset (markCompleted + AssetVersion + BrandAsset).
+    // Le forge ayant réussi, un échec de réconciliation n'est PAS fatal :
+    // l'URL est stockée, la task reste réconciliable plus tard.
+    if (provider.sync) {
+      await reconcileTask(task.id, null).catch((e) => {
+        console.warn(
+          `[ptah] inline reconcile (sync provider ${provider.name}) failed:`,
+          e instanceof Error ? e.message : e,
+        );
+      });
+    }
 
     return {
       taskId: task.id,
@@ -168,7 +227,7 @@ export async function reconcileTask(
   }
 
   const provider = (await import("./providers")).getProvider(
-    task.provider as "magnific" | "adobe" | "figma" | "canva",
+    task.provider as "magnific" | "adobe" | "figma" | "canva" | "openai",
   );
 
   let result;

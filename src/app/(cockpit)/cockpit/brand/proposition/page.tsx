@@ -500,6 +500,33 @@ export default function PropositionPage() {
         >
           <FileText className="h-4 w-4" /> Export PDF
         </button>
+        <button
+          onClick={async () => {
+            if (!strategyId) return;
+            try {
+              const res = await fetch(`/api/export/brand-bible/${strategyId}/pdf`);
+              if (!res.ok) {
+                const err = await res.json().catch(() => ({ error: res.statusText }));
+                throw new Error(err.error ?? "Export failed");
+              }
+              const blob = await res.blob();
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = res.headers.get("content-disposition")?.match(/filename="([^"]+)"/)?.[1] ?? "bible-de-marque.pdf";
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+              setTimeout(() => URL.revokeObjectURL(url), 2000);
+            } catch (e) {
+              console.error("[export-brand-bible] failed:", e);
+              alert("Téléchargement de la bible a échoué. Voir la console.");
+            }
+          }}
+          className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-foreground-secondary hover:bg-background"
+        >
+          <FileText className="h-4 w-4" /> Bible de marque (16:9)
+        </button>
       </div>
 
       <ArtemisLaunchModal

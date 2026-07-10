@@ -43,15 +43,20 @@ function isCompletionIdent(node) {
 }
 
 function isExempt(filename) {
+  // Normaliser les séparateurs : sur Windows, ESLint fournit des chemins en
+  // backslash → les `.includes("/src/...")` échouaient et la règle se déclenchait
+  // à tort sur des fichiers pourtant exemptés (governance, pillar-maturity,
+  // domain). Faux positifs Windows-only (CI Linux était correct).
+  const f = filename.replace(/\\/g, "/");
   return (
-    filename.includes("/src/server/governance/") ||
-    filename.includes("/src/server/services/pillar-gateway/") ||
-    filename.includes("/src/server/services/pillar-maturity/") ||
-    filename.includes("/src/server/services/advertis-scorer/") ||
-    filename.includes("/src/domain/") ||
-    filename.includes("/eslint-plugin-lafusee/") ||
-    filename.includes("/__tests__/") ||
-    filename.includes("/tests/")
+    f.includes("/src/server/governance/") ||
+    f.includes("/src/server/services/pillar-gateway/") ||
+    f.includes("/src/server/services/pillar-maturity/") ||
+    f.includes("/src/server/services/advertis-scorer/") ||
+    f.includes("/src/domain/") ||
+    f.includes("/eslint-plugin-lafusee/") ||
+    f.includes("/__tests__/") ||
+    f.includes("/tests/")
   );
 }
 

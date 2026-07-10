@@ -13,7 +13,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { trpc } from "@/lib/trpc/client";
-import { Loader2, CheckCircle, XCircle, Sparkles, Hammer } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Sparkles, Hammer, KeyRound } from "lucide-react";
 
 type ForgeKindLabel = Record<string, string>;
 const KIND_LABELS: ForgeKindLabel = {
@@ -137,12 +137,15 @@ export function PtahForgeRunner({ taskId, pollIntervalMs = 2000, onComplete }: P
 
 function StatusPill({ status }: { status: string }) {
   const config: Record<string, { label: string; bg: string; fg: string; icon: typeof Loader2 }> = {
-    CREATED: { label: "Créé", bg: "bg-amber-500/10", fg: "text-amber-300", icon: Sparkles },
-    IN_PROGRESS: { label: "En forge", bg: "bg-amber-500/10", fg: "text-amber-300", icon: Loader2 },
-    COMPLETED: { label: "Forgé", bg: "bg-emerald-500/10", fg: "text-emerald-300", icon: CheckCircle },
+    CREATED: { label: "Créé", bg: "bg-warning/10", fg: "text-warning", icon: Sparkles },
+    IN_PROGRESS: { label: "En forge", bg: "bg-warning/10", fg: "text-warning", icon: Loader2 },
+    COMPLETED: { label: "Forgé", bg: "bg-success/10", fg: "text-success", icon: CheckCircle },
     FAILED: { label: "Échec", bg: "bg-error/10", fg: "text-error", icon: XCircle },
     VETOED: { label: "Vetoé Thot", bg: "bg-error/10", fg: "text-error", icon: XCircle },
-    EXPIRED: { label: "Expiré", bg: "bg-zinc-500/10", fg: "text-foreground-secondary", icon: XCircle },
+    EXPIRED: { label: "Expiré", bg: "bg-foreground-secondary/10", fg: "text-foreground-secondary", icon: XCircle },
+    // Provider non configuré (credentials manquantes) — forge différée, pas un
+    // échec : retriable une fois les clés saisies (Credentials Vault, ADR-0021).
+    DEFERRED: { label: "En attente de config.", bg: "bg-foreground-secondary/10", fg: "text-foreground-secondary", icon: KeyRound },
   };
   const c = config[status] ?? config.CREATED!;
   const Icon = c.icon;

@@ -23,3 +23,17 @@ export function feedSourcesFor(countryCode: string, sector: string, countryName?
     },
   ];
 }
+
+/**
+ * Flux presse pour une MARQUE nommée (mentions presse, intake pilier E).
+ * Même mécanique Google News RSS, requête exacte sur le nom de marque.
+ */
+export function brandPressFeedFor(companyName: string, countryCode?: string | null): FeedSource {
+  const cc = (countryCode ?? "CM").toUpperCase();
+  const locale = `hl=fr&gl=${cc}&ceid=${cc}:fr`;
+  const q = encodeURIComponent(`"${companyName}"`);
+  return {
+    url: `https://news.google.com/rss/search?q=${q}&${locale}`,
+    name: `google-news:brand:${companyName.toLowerCase()}:${cc}`,
+  };
+}

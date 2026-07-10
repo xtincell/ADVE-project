@@ -9,6 +9,7 @@ import * as commissionEngine from "@/server/services/commission-engine";
 import * as auditTrail from "@/server/services/audit-trail";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { assertCampaignHasBrief } from "@/server/services/campaign-manager/brief-gate";
+import * as cm from "@/server/services/campaign-manager";
 /* lafusee:governed-active */
 
 export const missionRouter = createTRPCRouter({
@@ -627,4 +628,128 @@ export const missionRouter = createTRPCRouter({
       }
       return alerts.sort((a, b) => a.hoursRemaining - b.hoursRemaining);
     }),
+
+  // ==========================================================================
+  // Fiche mission — clôture + dispatch pipe (étage « Missions → pipes »)
+  // ==========================================================================
+
+  /** Terminer la mission (statut COMPLETED). */
+  complete: governedProcedure({
+    kind: "LEGACY_MISSION_COMPLETE",
+    inputSchema: z.object({ id: z.string() }),
+    caller: "mission:complete",
+  }).mutation(async ({ ctx, input }) => {
+    return ctx.db.mission.update({ where: { id: input.id }, data: { status: "COMPLETED" } });
+  }),
+
+  /** Annuler la mission (statut CANCELLED, motif tracé dans briefData). */
+  cancel: governedProcedure({
+    kind: "LEGACY_MISSION_CANCEL",
+    inputSchema: z.object({ id: z.string(), reason: z.string().max(500).optional() }),
+    caller: "mission:cancel",
+  }).mutation(async ({ ctx, input }) => {
+    const m = await ctx.db.mission.findUniqueOrThrow({ where: { id: input.id }, select: { briefData: true } });
+    const bd = (m.briefData ?? {}) as Record<string, unknown>;
+    return ctx.db.mission.update({
+      where: { id: input.id },
+      data: {
+        status: "CANCELLED",
+        briefData: { ...bd, cancelReason: input.reason ?? null, cancelledAt: new Date().toISOString() } as Prisma.InputJsonValue,
+      },
+    });
+  }),
+
+  /** Soumettre la mission à La Guilde (pipe marketplace public — modération opérateur). */
+  submitToGuild: governedProcedure({
+    kind: "LEGACY_MISSION_SUBMIT_TO_GUILD",
+    inputSchema: z.object({ id: z.string() }),
+    caller: "mission:submitToGuild",
+  }).mutation(async ({ input }) => {
+    return cm.submitMissionToGuild(input.id);
+  }),
+
+  // ==========================================================================
+  // Activités de mission — couche d'exécution (asset/terrain + budget + KPI)
+  // ==========================================================================
+
+  /** Liste les activités d'une mission. */
+  listActivities: protectedProcedure
+    .input(z.object({ missionId: z.string() }))
+    .query(({ input }) => cm.listMissionActivities(input.missionId)),
+
+  /** Avancement agrégé via activités (progression + budget + KPI). */
+  activityHealth: protectedProcedure
+    .input(z.object({ missionId: z.string() }))
+    .query(({ input }) => cm.getMissionActivityHealth(input.missionId)),
+
+  /** Crée une activité (asset/terrain, budget, KPI). */
+  createActivity: governedProcedure({
+    kind: "LEGACY_MISSION_CREATE_ACTIVITY",
+    inputSchema: z.object({
+      missionId: z.string(),
+      type: z.enum(["ASSET_CREATION", "FIELD_ACTION"]).optional(),
+      title: z.string().min(1).max(200),
+      description: z.string().max(2000).optional(),
+      budgetAllocated: z.number().nonnegative().optional(),
+      budgetCurrency: z.string().max(8).optional(),
+      kpiLabel: z.string().max(80).optional(),
+      kpiTarget: z.number().nonnegative().optional(),
+      concludesMission: z.boolean().optional(),
+    }),
+    caller: "mission:createActivity",
+  }).mutation(({ input }) => cm.createMissionActivity(input)),
+
+  /** Génère le brief propre d'une activité (déterministe). */
+  generateActivityBrief: governedProcedure({
+    kind: "LEGACY_MISSION_GENERATE_ACTIVITY_BRIEF",
+    inputSchema: z.object({ activityId: z.string() }),
+    caller: "mission:generateActivityBrief",
+  }).mutation(({ input }) => cm.generateMissionActivityBrief(input.activityId)),
+
+  /** Édite le brief d'une activité (manuel, avant exécution). */
+  updateActivityBrief: governedProcedure({
+    kind: "LEGACY_MISSION_UPDATE_ACTIVITY_BRIEF",
+    inputSchema: z.object({ activityId: z.string(), briefContent: z.record(z.string(), z.unknown()) }),
+    caller: "mission:updateActivityBrief",
+  }).mutation(({ input }) => cm.updateMissionActivityBrief(input.activityId, input.briefContent)),
+
+  /** Complète une activité (+ KPI réel) → progression / conclusion mission. */
+  completeActivity: governedProcedure({
+    kind: "LEGACY_MISSION_COMPLETE_ACTIVITY",
+    inputSchema: z.object({ activityId: z.string(), kpiActual: z.number().nonnegative().optional() }),
+    caller: "mission:completeActivity",
+  }).mutation(({ input }) => cm.completeMissionActivity(input.activityId, input.kpiActual)),
+
+  /** Annule une activité. */
+  cancelActivity: governedProcedure({
+    kind: "LEGACY_MISSION_CANCEL_ACTIVITY",
+    inputSchema: z.object({ activityId: z.string() }),
+    caller: "mission:cancelActivity",
+  }).mutation(({ input }) => cm.cancelMissionActivity(input.activityId)),
+
+  /** Régénère les activités par défaut (déterministe) — vide + re-seed depuis le brief/action. */
+  regenerateActivities: governedProcedure({
+    kind: "LEGACY_MISSION_REGENERATE_ACTIVITIES",
+    inputSchema: z.object({ missionId: z.string() }),
+    caller: "mission:regenerateActivities",
+  }).mutation(({ input }) => cm.regenerateMissionActivities(input.missionId)),
+
+  /** Attribue (ou retire) un prestataire à une activité (mirroir de mission.assign). */
+  assignActivity: governedProcedure({
+    kind: "LEGACY_MISSION_ASSIGN_ACTIVITY",
+    inputSchema: z.object({ activityId: z.string(), assigneeId: z.string().nullable() }),
+    caller: "mission:assignActivity",
+  }).mutation(({ input }) => cm.assignMissionActivity(input.activityId, input.assigneeId)),
+
+  /** Rétroplanning de la mission ancré sur T0 (date de lancement → SLA → aujourd'hui). Déterministe. */
+  retroplan: protectedProcedure
+    .input(z.object({ missionId: z.string(), t0: z.string().optional() }))
+    .query(({ input }) => cm.getMissionRetroplan(input.missionId, input.t0 ? new Date(input.t0) : undefined)),
+
+  /** Fixe (ou efface) la durée d'une activité — bascule FIXÉE/DÉRIVÉE pour le rétroplanning. */
+  setActivityDuration: governedProcedure({
+    kind: "LEGACY_MISSION_SET_ACTIVITY_DURATION",
+    inputSchema: z.object({ activityId: z.string(), durationDays: z.number().int().positive().nullable() }),
+    caller: "mission:setActivityDuration",
+  }).mutation(({ input }) => cm.setMissionActivityDuration(input.activityId, input.durationDays)),
 });

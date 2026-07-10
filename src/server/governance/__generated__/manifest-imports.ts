@@ -34,6 +34,7 @@ import { manifest as commissionEngineManifest } from "@/server/services/commissi
 import { manifest as communityDashboardManifest } from "@/server/services/community-dashboard/manifest";
 import { manifest as consultingManifest } from "@/server/services/consulting/manifest";
 import { manifest as countryRegistryManifest } from "@/server/services/country-registry/manifest";
+import { manifest as creativeProposalManifest } from "@/server/services/creative-proposal/manifest";
 import { manifest as crmEngineManifest } from "@/server/services/crm-engine/manifest";
 import { manifest as crossValidatorManifest } from "@/server/services/cross-validator/manifest";
 import { manifest as cultIndexEngineManifest } from "@/server/services/cult-index-engine/manifest";
@@ -150,6 +151,7 @@ export const MANIFESTS: readonly NeteruManifest[] = [
   communityDashboardManifest,
   consultingManifest,
   countryRegistryManifest,
+  creativeProposalManifest,
   crmEngineManifest,
   crossValidatorManifest,
   cultIndexEngineManifest,

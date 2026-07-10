@@ -155,6 +155,10 @@ export const campaignManagerRouter = createTRPCRouter({
         include: {
           strategy: true,
           missions: true,
+          // BrandAction = action stratégique canonique (ADR-0094/0119) rattachée
+          // à la campagne. Les `actions` (CampaignAction ATL/BTL/TTL) sont la
+          // couche média/exécution — affichée en second.
+          brandActions: { orderBy: [{ priority: "asc" }, { createdAt: "asc" }] },
           actions: { include: { executions: true } },
           amplifications: true,
           teamMembers: { include: { user: { select: { id: true, name: true, email: true, image: true } } } },
@@ -170,6 +174,44 @@ export const campaignManagerRouter = createTRPCRouter({
         },
       });
     }),
+
+  /** listBrandActions — actions stratégiques (BrandAction, ADR-0094/0119) liées à la campagne. */
+  listBrandActions: protectedProcedure
+    .input(z.object({ campaignId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      await enforceCampaignAccess(ctx, input.campaignId);
+      return ctx.db.brandAction.findMany({
+        where: { campaignId: input.campaignId },
+        orderBy: [{ priority: "asc" }, { createdAt: "asc" }],
+      });
+    }),
+
+  /** chainHealth — diagnostic de chaîne actions → briefs → missions (lecture seule). */
+  chainHealth: protectedProcedure
+    .input(z.object({ campaignId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      await enforceCampaignAccess(ctx, input.campaignId);
+      return cm.getCampaignChainHealth(input.campaignId);
+    }),
+
+  /**
+   * generateBriefFromAction — étage « Actions → Briefs » : génère le brief de
+   * production d'une BrandAction et **s'arrête là** (DRAFT, éditable, à valider).
+   * La mission naît ensuite de la validation du brief (validateBriefAndCreateMission).
+   * Gouverné, voie unique.
+   */
+  generateBriefFromAction: governedProcedure({
+    kind: "LEGACY_CAMPAIGN_MANAGER_GENERATE_BRIEF_FROM_ACTION",
+    inputSchema: z.object({ brandActionId: z.string() }),
+    caller: "campaign-manager:generateBriefFromAction",
+  }).mutation(async ({ ctx, input }) => {
+    const ba = await ctx.db.brandAction.findUniqueOrThrow({
+      where: { id: input.brandActionId },
+      select: { campaignId: true },
+    });
+    if (ba.campaignId) await enforceCampaignAccess(ctx, ba.campaignId);
+    return cm.generateBriefFromBrandAction(input.brandActionId);
+  }),
 
   /** getKanban — grouped by state */
   getKanban: protectedProcedure
@@ -1196,40 +1238,16 @@ export const campaignManagerRouter = createTRPCRouter({
     caller: "campaign-manager:validateBriefAndCreateMission",
   })
     .mutation(async ({ ctx, input }) => {
+      // Étage « Briefs → [validation] → Missions » : la validation matérialise la
+      // mission liée (briefId + budget définitif du brief + brandActionId). Voie
+      // unique service `createMissionFromValidatedBrief` (idempotent par briefId).
       const brief = await ctx.db.campaignBrief.findUniqueOrThrow({
         where: { id: input.id },
-        include: { campaign: true },
+        select: { campaignId: true },
       });
-
-      const updatedBrief = await ctx.db.campaignBrief.update({
-        where: { id: input.id },
-        data: { status: "VALIDATED" },
-      });
-
-      const title = `Production - ${brief.title}`;
-      let mission = await ctx.db.mission.findFirst({
-        where: {
-          campaignId: brief.campaignId,
-          title: title,
-        },
-      });
-
-      if (!mission) {
-        mission = await ctx.db.mission.create({
-          data: {
-            title,
-            strategyId: brief.campaign.strategyId,
-            campaignId: brief.campaignId,
-            status: "DRAFT",
-            priority: 3,
-            budget: brief.campaign.budget ?? 0,
-            slaDeadline: brief.campaign.endDate,
-            briefData: brief.content as any,
-          },
-        });
-      }
-
-      return { success: true, briefId: brief.id, missionId: mission.id };
+      if (brief.campaignId) await enforceCampaignAccess(ctx, brief.campaignId);
+      const res = await cm.createMissionFromValidatedBrief(input.id);
+      return { success: true, briefId: res.briefId, missionId: res.missionId, created: res.created };
     }),
 
   getBriefTypes: protectedProcedure
@@ -1892,6 +1910,7 @@ export const campaignManagerRouter = createTRPCRouter({
       // ── Budget ──────────────────────────────────────────────────────────
       const totalPlanned = campaign.budgetLines.reduce((s, b) => s + (b.planned ?? 0), 0);
       const totalSpent   = campaign.budgetLines.reduce((s, b) => s + (b.actual ?? 0), 0);
+      // lafusee:allow-adhoc-completion -- variance budgétaire %, pas de complétude pilier ADVE
       const budgetVariance = totalPlanned > 0 ? ((totalSpent - totalPlanned) / totalPlanned) * 100 : 0;
 
       // ── Verdict AARRR — ratio métriques ayant atteint leur target ───────

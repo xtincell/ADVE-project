@@ -47,10 +47,11 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
   );
 
   const processIngestMutation = trpc.quickIntake.processIngest.useMutation({
-    onSuccess: () => {
-      // Méthode Hybride: On redirige vers le formulaire pré-rempli
-      // au lieu du résultat final pour permettre la vérification humaine.
-      router.push(`/intake/${token}`);
+    onSuccess: (data) => {
+      // Direct-to-diagnostic: straight to the result page when the AI extracted
+      // enough. If extraction was empty/sparse, the server returns completed:false
+      // and we fall back to the pre-filled guided questionnaire (never stranded).
+      router.push(data.completed ? `/intake/${token}/result` : `/intake/${token}`);
     },
     onError: (err) => setError(err.message),
   });

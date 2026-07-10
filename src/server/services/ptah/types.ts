@@ -38,13 +38,14 @@ export const FORGE_KINDS: readonly ForgeKind[] = [
   "design",
 ] as const;
 
-export type ProviderName = "magnific" | "adobe" | "figma" | "canva";
+export type ProviderName = "magnific" | "adobe" | "figma" | "canva" | "openai";
 
 export const PROVIDER_NAMES: readonly ProviderName[] = [
   "magnific",
   "adobe",
   "figma",
   "canva",
+  "openai",
 ] as const;
 
 /**
@@ -99,7 +100,12 @@ export interface ForgeTaskCreated {
   provider: ProviderName;
   providerModel: string;
   estimatedCostUsd: number;
-  status: "CREATED" | "IN_PROGRESS";
+  /**
+   * DEFERRED = provider non configuré (credentials manquantes). La task est
+   * persistée (trace + retry) mais forge() n'est PAS appelé — ship-able sans
+   * clés (ADR-0021). L'opérateur saisit les credentials puis relance.
+   */
+  status: "CREATED" | "IN_PROGRESS" | "DEFERRED";
   /** Pour webhook providers (Magnific) — secret unique de cette task. */
   webhookSecret: string;
 }
@@ -159,6 +165,12 @@ export interface ForgeProvider {
    * Disponibilité (circuit breaker, quota provider, etc.).
    */
   isAvailable(): Promise<boolean>;
+  /**
+   * Provider SYNCHRONE : `forge()` produit le résultat immédiatement (pas de
+   * webhook). Dans ce cas `forge()` pose l'URL résultat dans `providerTaskId`
+   * et `materializeBrief` réconcilie inline (OpenAI images). Async par défaut.
+   */
+  readonly sync?: boolean;
 }
 
 /**
@@ -170,4 +182,7 @@ export type ForgeTaskStatus =
   | "COMPLETED"
   | "FAILED"
   | "VETOED"
-  | "EXPIRED";
+  | "EXPIRED"
+  // Provider non configuré (credentials manquantes) — forge différée, retriable
+  // une fois les credentials saisies (Credentials Vault, ADR-0021).
+  | "DEFERRED";

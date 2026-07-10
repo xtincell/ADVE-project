@@ -1,11 +1,17 @@
 /**
- * campaign-canon/ — Génération des campagnes canon depuis le Pilier S (ADR-0119).
+ * campaign-canon/ — Amorçage des campagnes canon depuis le Pilier S (ADR-0119,
+ * ré-câblé ADR-0120 « Nouveau Pipeline de Production »).
  *
  * AUTOMATIQUE & déterministe (exception explicite à STOP-à-Jehuty : projection
  * aval, pas écriture ADVE). Lit les initiatives I + les templates seedés + le tier
- * de marque, planifie les 3 campagnes (plan.ts PUR), persiste les `Campaign` et
- * rattache les `BrandAction` (campaignId). Zéro LLM. Manual-first : l'opérateur
- * peut éditer ensuite campagnes & actions.
+ * de marque, planifie les 3 frames canon (plan.ts PUR) et persiste les `Campaign`
+ * comme CADRE stratégique (budget conseillé + AARRR + dates). Zéro LLM.
+ *
+ * ADR-0120 — le frame ne rattache PLUS d'action à l'amorçage. Les actions + briefs
+ * de production naissent à la VALIDATION de la direction créative (Proposition
+ * Créative), pas depuis l'Advertis : le trigger a déménagé de « Advertis complet »
+ * vers « direction créative validée ». Le frame préfillé attend cette direction.
+ * Manual-first : l'opérateur édite ensuite campagnes & frames.
  */
 
 import { db } from "@/lib/db";
@@ -46,7 +52,13 @@ export interface GenerateCanonResult {
   status: "OK" | "DEFERRED";
   reason?: string;
   routeKey: string;
-  campaigns: Array<{ id: string; canonType: string; recommendedBudget: number; actionCount: number }>;
+  /**
+   * Frames canon amorcés (cadre stratégique). PAS d'action rattachée ici : depuis
+   * ADR-0120 les actions + briefs de production naissent à la validation de la
+   * direction créative. Le frame porte budget conseillé + AARRR + dates et attend
+   * la direction créative.
+   */
+  campaigns: Array<{ id: string; canonType: string; recommendedBudget: number }>;
 }
 
 /**
@@ -107,14 +119,12 @@ export async function generateCanonicalCampaigns(input: {
   const out: GenerateCanonResult["campaigns"] = [];
   for (const p of planned) {
     const campaign = await upsertCanonCampaign(input.strategyId, routeKey, currency, p);
-    // Rattache les actions de cette campagne (invariant ADR-0119).
-    if (p.actionIds.length > 0) {
-      await db.brandAction.updateMany({
-        where: { id: { in: p.actionIds }, strategyId: input.strategyId },
-        data: { campaignId: campaign.id },
-      });
-    }
-    out.push({ id: campaign.id, canonType: p.canonType, recommendedBudget: p.recommendedBudget, actionCount: p.actionIds.length });
+    // ADR-0120 — DÉCOUPLAGE : l'amorçage canon ne rattache plus d'action. Le frame
+    // est le cadre stratégique (budget conseillé + AARRR + dates), préfillé depuis
+    // l'Advertis et en attente de la direction créative. Les actions + briefs de
+    // production sont générés à la validation de la Proposition Créative. `p.actionIds`
+    // sert encore au planner PUR pour le budget conseillé — jamais à l'attache ici.
+    out.push({ id: campaign.id, canonType: p.canonType, recommendedBudget: p.recommendedBudget });
   }
 
   return { status: "OK", routeKey, campaigns: out };

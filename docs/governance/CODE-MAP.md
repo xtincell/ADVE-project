@@ -32,7 +32,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 181 models, 67 enums
+## Prisma — 202 models, 70 enums
 
 ### Models
 
@@ -43,16 +43,20 @@ Ces correspondances évitent la réinvention :
 - **Operator** (30 fields)
 - **ClientAllocation** (14 fields)
 - **Client** (17 fields)
-- **Strategy** (67 fields)
-- **Campaign** (72 fields)
-- **Mission** (31 fields)
-- **MissionDeliverable** (11 fields)
+- **Strategy** (70 fields)
+- **Intention** (14 fields)
+- **Campaign** (80 fields)
+- **Mission** (35 fields)
+- **MissionDeliverable** (12 fields)
+- **MissionActivity** (22 fields) — Activité d'une mission — couche d'exécution pilotable par mission (pipeline staged). Chaque activité = création d'asset 
 - **MissionApplication** (15 fields) — Vague 7 — candidature d'un talent/agence à une mission ouverte. Le flux remplace l'auto-acceptation : candidater → revue
 - **CrmContact** (16 fields) — Vague 7 — instantané followers/mentions par plateforme (traque unifiée). strategyId null = comptes propres de La Fusée /
 - **CrmMessage** (14 fields) — Message CRM (email transactionnel sortant ou note entrante consignée).
 - **NewsletterCampaign** (12 fields) — Campagne newsletter (The Upgrade) — composer, tester, envoyer aux opt-in.
 - **FollowerSnapshot** (9 fields)
-- **TalentProfile** (24 fields)
+- **TalentProfile** (27 fields)
+- **MissionQuote** (17 fields)
+- **TalentService** (13 fields)
 - **Signal** (9 fields)
 - **SequenceExecution** (22 fields)
 - **GloryOutput** (12 fields)
@@ -74,15 +78,23 @@ Ces correspondances évitent la réinvention :
 - **DeliverableTracking** (10 fields)
 - **Conversation** (14 fields)
 - **Message** (12 fields)
-- **QuickIntake** (30 fields)
+- **QuickIntake** (31 fields)
+- **MediaPlan** (13 fields)
+- **MediaPlanLine** (18 fields)
 - **CampaignAction** (29 fields)
-- **CampaignExecution** (18 fields)
+- **CampaignExecution** (20 fields)
+- **AicpSectionReference** (8 fields)
+- **AicpLineItem** (11 fields)
+- **DeliverableSpec** (18 fields)
+- **ChannelSpecReference** (16 fields)
+- **UsageGrant** (16 fields)
 - **CampaignAmplification** (25 fields)
 - **CampaignTeamMember** (9 fields)
 - **CampaignMilestone** (12 fields)
 - **CampaignApproval** (13 fields)
 - **CampaignAsset** (14 fields)
 - **CampaignBrief** (17 fields)
+- **CreativeProposal** (14 fields)
 - **CampaignReport** (9 fields)
 - **CampaignDependency** (7 fields)
 - **CampaignLink** (7 fields)
@@ -110,17 +122,19 @@ Ces correspondances évitent la réinvention :
 - **PressClipping** (13 fields)
 - **MediaContact** (11 fields)
 - **Contract** (16 fields)
-- **Escrow** (10 fields)
+- **Escrow** (15 fields)
 - **EscrowCondition** (7 fields)
 - **PaymentOrder** (14 fields)
 - **IntakePayment** (15 fields)
 - **Subscription** (15 fields) — Subscription for monthly tiers (COCKPIT_MONTHLY / RETAINER_*).
 - **Deal** (18 fields)
 - **FunnelMapping** (7 fields)
-- **MarketStudy** (12 fields)
-- **MarketSource** (10 fields)
+- **MarketStudy** (15 fields)
+- **ResearchWave** (13 fields)
+- **MethodologyReference** (13 fields)
+- **MarketSource** (11 fields)
 - **MarketSynthesis** (8 fields)
-- **CompetitorSnapshot** (10 fields)
+- **CompetitorSnapshot** (12 fields)
 - **InsightReport** (9 fields)
 - **AttributionEvent** (13 fields)
 - **CohortSnapshot** (11 fields)
@@ -164,8 +178,15 @@ Ces correspondances évitent la réinvention :
 - **VariableStoreConfig** (7 fields)
 - **OrchestrationPlan** (13 fields)
 - **OrchestrationStep** (17 fields)
-- **Recommendation** (40 fields)
+- **Recommendation** (46 fields)
 - **RecommendationBatch** (17 fields)
+- **BrandMoment** (11 fields)
+- **CampaignCanonTemplate** (12 fields)
+- **RiceScale** (8 fields)
+- **FrameworkReference** (9 fields)
+- **ConsultingEngagement** (9 fields)
+- **Hypothesis** (9 fields)
+- **Evidence** (11 fields)
 - **JehutyCuration** (9 fields)
 - **PromptVersion** (8 fields)
 - **ExternalConnector** (13 fields)
@@ -187,7 +208,7 @@ Ces correspondances évitent la réinvention :
 - **MarketDocument** (12 fields)
 - **BrandContextNode** (19 fields)
 - **MarketContextNode** (10 fields)
-- **BrandAction** (35 fields)
+- **BrandAction** (37 fields)
 - **CostDecision** (12 fields) — Cost gate decision per Intent — Thot's audit trail (separate from IntentEmission so Thot's reasoning is queryable indepe
 - **Sector** (10 fields) — Sector — first-class entity. Overton lives within a sector. Each sector has its own cultural axis modelable as orientati
 - **StrategyDoc** (9 fields) — CRDT doc for real-time collab on long-form pillar / Oracle text. Phase 5 (NSP + Yjs). Stored as opaque BLOB; client reco
@@ -276,7 +297,10 @@ Ces correspondances évitent la réinvention :
 - **AuditAction** : CREATE | UPDATE | DELETE | LOGIN | LOGOUT | APPROVE | REJECT | ESCALATE | EXPORT
 - **CampaignTeamRole** : ACCOUNT_DIRECTOR | ACCOUNT_MANAGER | STRATEGIC_PLANNER | CREATIVE_DIRECTOR | ART_DIRECTOR | COPYWRITER | MEDIA_PLANNER | MEDIA_BUYER | SOCIAL_MANAGER | PRODUCTION_MANAGER | PROJECT_MANAGER | DATA_ANALYST | CLIENT
 - **NotificationChannel** : IN_APP | EMAIL | SMS | PUSH
+- **IntentionType** : PRODUCT_LAUNCH | REPOSITION | MARKET_ENTRY | CAMPAIGN | PLATFORM | PARTNERSHIP | OTHER
+- **IntentionStatus** : CAPTURED | BRIEF_GENERATED | BRIEF_VALIDATED | CONVERTED | ARCHIVED
 - **BrandAssetState** : DRAFT | CANDIDATE | SELECTED | ACTIVE | SUPERSEDED | ARCHIVED | REJECTED
+- **MediaPlanStatus** : PLANNED | BOOKED | LIVE | RECONCILED
 - **MarketStatus** : ACTIVE | FROZEN | SHADOWBANNED | PURGED
 - **ErrorSeverity** : TRACE | DEBUG | INFO | WARN | ERROR | CRITICAL
 - **ErrorSource** : SERVER | CLIENT | PRISMA | NSP | PTAH | STRESS_TEST | CRON | WEBHOOK | UNKNOWN
@@ -290,7 +314,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Services backend — 104
+## Services backend — 115
 
 - `src/server/services/advertis-connectors/` ✓ manifest
 - `src/server/services/advertis-scorer/` ✓ manifest
@@ -307,7 +331,9 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/brand-vault/` ✓ manifest
 - `src/server/services/brief-ingest/` ✓ manifest
 - `src/server/services/budget-allocator/` ✓ manifest
+- `src/server/services/bureau-etudes/` ✓ manifest
 - `src/server/services/campaign-budget-engine/` ✓ manifest
+- `src/server/services/campaign-canon/` ✓ manifest
 - `src/server/services/campaign-change-request/` ✓ manifest
 - `src/server/services/campaign-deliverable/` ✓ manifest
 - `src/server/services/campaign-manager/` ✓ manifest
@@ -316,8 +342,10 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/canon/` ✓ manifest
 - `src/server/services/collab-doc/` ✓ manifest
 - `src/server/services/commission-engine/` ✓ manifest
-- `src/server/services/community-dashboard/`
+- `src/server/services/community-dashboard/` ✓ manifest
+- `src/server/services/consulting/` ✓ manifest
 - `src/server/services/country-registry/` ✓ manifest
+- `src/server/services/creative-proposal/` ✓ manifest
 - `src/server/services/crm-engine/` ✓ manifest
 - `src/server/services/cross-validator/` ✓ manifest
 - `src/server/services/cult-index-engine/` ✓ manifest
@@ -330,6 +358,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/ecosystem-engine/` ✓ manifest
 - `src/server/services/email/` ✓ manifest
 - `src/server/services/error-vault/` ✓ manifest
+- `src/server/services/escrow-arbitration/` ✓ manifest
 - `src/server/services/feedback-loop/` ✓ manifest
 - `src/server/services/feedback-processor/` ✓ manifest
 - `src/server/services/financial-brain/` ✓ manifest
@@ -341,6 +370,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/imhotep/` ✓ manifest
 - `src/server/services/implementation-generator/` ✓ manifest
 - `src/server/services/ingestion-pipeline/` ✓ manifest
+- `src/server/services/intention/` ✓ manifest
 - `src/server/services/jehuty/` ✓ manifest
 - `src/server/services/knowledge-aggregator/` ✓ manifest
 - `src/server/services/knowledge-capture/` ✓ manifest
@@ -348,11 +378,14 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/llm-gateway/` ✓ manifest
 - `src/server/services/market-cost/` ✓ manifest
 - `src/server/services/market-intelligence/` ✓ manifest
-- `src/server/services/market-lifecycle/`
-- `src/server/services/market-visibility/`
+- `src/server/services/market-lifecycle/` ✓ manifest
+- `src/server/services/market-visibility/` ✓ manifest
 - `src/server/services/matching-engine/` ✓ manifest
+- `src/server/services/media-perf/` ✓ manifest
+- `src/server/services/media-plan/` ✓ manifest
 - `src/server/services/mestor/` ✓ manifest
 - `src/server/services/mfa/` ✓ manifest
+- `src/server/services/mission-quote/` ✓ manifest
 - `src/server/services/mission-templates/` ✓ manifest
 - `src/server/services/mobile-money/` ✓ manifest
 - `src/server/services/model-policy/` ✓ manifest
@@ -373,6 +406,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/pipeline-orchestrator/` ✓ manifest
 - `src/server/services/playbook-capitalization/` ✓ manifest
 - `src/server/services/process-scheduler/` ✓ manifest
+- `src/server/services/production/` ✓ manifest
 - `src/server/services/prompt-registry/` ✓ manifest
 - `src/server/services/ptah/` ✓ manifest
 - `src/server/services/qc-router/` ✓ manifest
@@ -389,6 +423,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/strategy-archive/` ✓ manifest
 - `src/server/services/strategy-presentation/` ✓ manifest
 - `src/server/services/talent-engine/` ✓ manifest
+- `src/server/services/talent-services/` ✓ manifest
 - `src/server/services/team-allocator/` ✓ manifest
 - `src/server/services/tier-evaluator/` ✓ manifest
 - `src/server/services/translation/` ✓ manifest
@@ -399,7 +434,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 103
+## tRPC routers — 112
 
 - `accounts` (`src/server/trpc/routers/accounts.ts`)
 - `actions` (`src/server/trpc/routers/actions.ts`)
@@ -416,6 +451,7 @@ Ces correspondances évitent la réinvention :
 - `brand-node` (`src/server/trpc/routers/brand-node.ts`)
 - `brand-vault` (`src/server/trpc/routers/brand-vault.ts`)
 - `brief-ingest` (`src/server/trpc/routers/brief-ingest.ts`)
+- `bureau-etudes` (`src/server/trpc/routers/bureau-etudes.ts`)
 - `campaign` (`src/server/trpc/routers/campaign.ts`)
 - `campaign-change-request` (`src/server/trpc/routers/campaign-change-request.ts`)
 - `campaign-deliverable` (`src/server/trpc/routers/campaign-deliverable.ts`)
@@ -428,7 +464,9 @@ Ces correspondances évitent la réinvention :
 - `cohort` (`src/server/trpc/routers/cohort.ts`)
 - `commission` (`src/server/trpc/routers/commission.ts`)
 - `connectors` (`src/server/trpc/routers/connectors.ts`)
+- `consulting` (`src/server/trpc/routers/consulting.ts`)
 - `contract` (`src/server/trpc/routers/contract.ts`)
+- `creative-proposal` (`src/server/trpc/routers/creative-proposal.ts`)
 - `crm` (`src/server/trpc/routers/crm.ts`)
 - `crm-contacts` (`src/server/trpc/routers/crm-contacts.ts`)
 - `cult-index` (`src/server/trpc/routers/cult-index.ts`)
@@ -438,6 +476,7 @@ Ces correspondances évitent la réinvention :
 - `driver` (`src/server/trpc/routers/driver.ts`)
 - `editorial` (`src/server/trpc/routers/editorial.ts`)
 - `error-vault` (`src/server/trpc/routers/error-vault.ts`)
+- `escrow-arbitration` (`src/server/trpc/routers/escrow-arbitration.ts`)
 - `event` (`src/server/trpc/routers/event.ts`)
 - `framework` (`src/server/trpc/routers/framework.ts`)
 - `glory` (`src/server/trpc/routers/glory.ts`)
@@ -449,6 +488,7 @@ Ces correspondances évitent la réinvention :
 - `imhotep` (`src/server/trpc/routers/imhotep.ts`)
 - `implementation-generator` (`src/server/trpc/routers/implementation-generator.ts`)
 - `ingestion` (`src/server/trpc/routers/ingestion.ts`)
+- `intention` (`src/server/trpc/routers/intention.ts`)
 - `intervention` (`src/server/trpc/routers/intervention.ts`)
 - `jehuty` (`src/server/trpc/routers/jehuty.ts`)
 - `knowledge-graph` (`src/server/trpc/routers/knowledge-graph.ts`)
@@ -463,11 +503,13 @@ Ces correspondances évitent la réinvention :
 - `matching` (`src/server/trpc/routers/matching.ts`)
 - `mcp-billing` (`src/server/trpc/routers/mcp-billing.ts`)
 - `media-buying` (`src/server/trpc/routers/media-buying.ts`)
+- `media-plan` (`src/server/trpc/routers/media-plan.ts`)
 - `membership` (`src/server/trpc/routers/membership.ts`)
 - `messaging` (`src/server/trpc/routers/messaging.ts`)
 - `mestor-router` (`src/server/trpc/routers/mestor-router.ts`)
 - `mission` (`src/server/trpc/routers/mission.ts`)
 - `mission-applications` (`src/server/trpc/routers/mission-applications.ts`)
+- `mission-quote` (`src/server/trpc/routers/mission-quote.ts`)
 - `mobile-money` (`src/server/trpc/routers/mobile-money.ts`)
 - `monetization` (`src/server/trpc/routers/monetization.ts`)
 - `morning-batch` (`src/server/trpc/routers/morning-batch.ts`)
@@ -484,6 +526,7 @@ Ces correspondances évitent la réinvention :
 - `pillar` (`src/server/trpc/routers/pillar.ts`)
 - `pr` (`src/server/trpc/routers/pr.ts`)
 - `process` (`src/server/trpc/routers/process.ts`)
+- `production` (`src/server/trpc/routers/production.ts`)
 - `ptah` (`src/server/trpc/routers/ptah.ts`)
 - `publication` (`src/server/trpc/routers/publication.ts`)
 - `quality-review` (`src/server/trpc/routers/quality-review.ts`)
@@ -499,6 +542,7 @@ Ces correspondances évitent la réinvention :
 - `strategy-presentation` (`src/server/trpc/routers/strategy-presentation.ts`)
 - `superfan` (`src/server/trpc/routers/superfan.ts`)
 - `system-config` (`src/server/trpc/routers/system-config.ts`)
+- `talent-services` (`src/server/trpc/routers/talent-services.ts`)
 - `thot` (`src/server/trpc/routers/thot.ts`)
 - `translation` (`src/server/trpc/routers/translation.ts`)
 - `upsell` (`src/server/trpc/routers/upsell.ts`)
@@ -507,7 +551,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 249 (par deck)
+## Pages — 254 (par deck)
 
 ### Agency (12)
 
@@ -524,7 +568,7 @@ Ces correspondances évitent la réinvention :
 - `/agency/revenue`
 - `/agency/signals`
 
-### Cockpit (50)
+### Cockpit (51)
 
 - `/cockpit`
 - `/cockpit/brand/assets`
@@ -576,8 +620,9 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/portfolio`
 - `/cockpit/portfolio/[corporateSlug]`
 - `/cockpit/settings`
+- `/cockpit/settings/billing`
 
-### Console (120)
+### Console (121)
 
 - `/console`
 - `/console/academie`
@@ -668,6 +713,7 @@ Ces correspondances évitent la réinvention :
 - `/console/seshat/market`
 - `/console/seshat/market-research`
 - `/console/seshat/market-studies`
+- `/console/seshat/marketplace`
 - `/console/seshat/search`
 - `/console/seshat/signals`
 - `/console/seshat/tarsis`
@@ -700,7 +746,7 @@ Ces correspondances évitent la réinvention :
 - `/console/strategy-portfolio/diagnostics`
 - `/console/upgraders/economics`
 
-### Creator (23)
+### Creator (25)
 
 - `/creator`
 - `/creator/community/events`
@@ -723,8 +769,10 @@ Ces correspondances évitent la réinvention :
 - `/creator/progress/metrics`
 - `/creator/progress/path`
 - `/creator/progress/strengths`
+- `/creator/proposals`
 - `/creator/qc/peer`
 - `/creator/qc/submitted`
+- `/creator/services`
 
 ### Launchpad (9)
 
@@ -738,7 +786,7 @@ Ces correspondances évitent la réinvention :
 - `/launchpad/portfolio-bulk-import`
 - `/score`
 
-### Public (35)
+### Public (36)
 
 - `/(marketing)`
 - `/agence`
@@ -758,6 +806,7 @@ Ces correspondances évitent la réinvention :
 - `/LaGuilde/m/[slug]`
 - `/LaGuilde/publier`
 - `/LaGuilde/rejoindre`
+- `/LaGuilde/services`
 - `/landingintake`
 - `/login`
 - `/mentions-legales`
@@ -946,7 +995,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 509 (par governor)
+## Intent kinds — 547 (par governor)
 
 ### MESTOR (79)
 
@@ -1049,7 +1098,7 @@ Ces correspondances évitent la réinvention :
 - `PROPOSE_SEQUENCE_PROMOTION_FROM_CAMPAIGN` → campaign-tracker (sync) — Cluster E — Si campagne réussie (tierDelta>0 + cultIndexDelta>0 + altitudeRegres…
 - `TOGGLE_QUALITY_GATE_MODE` → auto-promotion (sync) — Bascule le mode quality-gate entre SOFT (warning-only) et HARD (block-on-fail). …
 
-### SESHAT (17)
+### SESHAT (18)
 
 - `RANK_PEERS` → seshat (sync) — Generic peer ranking via context-store ranker.…
 - `SEARCH_BRAND_CONTEXT` → seshat (sync) — Search across strategies / find peers / search within a strategy.…
@@ -1057,6 +1106,7 @@ Ces correspondances évitent la réinvention :
 - `INGEST_MARKET_STUDY` → market-study-ingestion (async) — Ingest an operator-uploaded market study (PDF/DOCX/XLSX) and decompose it into N…
 - `FETCH_EXTERNAL_FEED` → external-feeds (async) — Fetch and persist an EXTERNAL_FEED_DIGEST KnowledgeEntry for a (countryCode, sec…
 - `SESHAT_TRACK_ASSET_IMPACTS` → market-intelligence (sync) — Mesure cultIndexDeltaObserved des AssetVersions matures (>=24h). Manual-first (A…
+- `ENRICH_E_FROM_PUBLIC_FOOTPRINT` → quick-intake (sync) — Re-scanne l'empreinte publique d'une marque (site déclaré, découverte Brave, com…
 - `COLLECT_WEB_FOOTPRINT` → quick-intake (async) — Vague 10 : collecte deterministe de l empreinte web publique du prospect (site, …
 - `RE_EXTRACT_MARKET_STUDY` → market-study-ingestion (async) — Re-extract a previously ingested market study from its archived RAW entry, dropp…
 - `JEHUTY_FEED_REFRESH` → jehuty (sync) — Refresh Jehuty feed (signals + recos + diagnostics).…
@@ -1069,7 +1119,7 @@ Ces correspondances évitent la réinvention :
 - `MEASURE_OVERTON_SHIFT` → campaign-tracker (async) — Cluster D — Mesure le déplacement de l'axe culturel sectoriel post-LIVE. Compare…
 - `EVALUATE_OVERTON_READINESS` → campaign-tracker (sync) — Cluster D pré-LIVE — Tarsis évalue OvertonReadiness sur l'axe culturel ciblé. Ou…
 
-### INFRASTRUCTURE (340)
+### INFRASTRUCTURE (377)
 
 - `ADMIN_SET_USER_ROLE` → accounts (sync) — Console superviseur (Vague 7) : promotion/retrogradation du role d'un compte (en…
 - `SYNC_UPGRADERS_CANON` → canon-sync (sync) — Vague 10 : pousse le canon UPgraders 100% (8 piliers contrats COMPLETE) dans la …
@@ -1276,6 +1326,43 @@ Ces correspondances évitent la réinvention :
 - `LEGACY_MARKET_INTELLIGENCE_RUN` → market-intelligence (sync) — Strangler-promoted mutation 'run' from router 'market-intelligence'.…
 - `LEGACY_MARKET_INTELLIGENCE_STOP_COLLECTOR` → market-intelligence (sync) — Strangler-promoted mutation 'stopCollector' from router 'market-intelligence'.…
 - `LEGACY_MARKET_STUDY_CREATE` → market-study (sync) — Strangler-promoted mutation 'create' from router 'market-study'.…
+- `LEGACY_MEDIA_PLAN_CREATE` → media-plan (sync) — Création d'un plan média ATL/BTL/TTL (ADR-0107).…
+- `LEGACY_MEDIA_PLAN_ADD_LINE` → media-plan (sync) — Ajout d'une ligne média prévue à un plan (ADR-0107).…
+- `LEGACY_MEDIA_PLAN_RECORD_ACTUALS` → media-plan (sync) — Enregistrement du réalisé d'une ligne média (post-buy/PCA, ADR-0107).…
+- `LEGACY_MEDIA_PERF_INGEST_MANUAL` → media-perf (sync) — Ingestion manuelle de perf média réelle → CampaignAmplification (acteur Média, A…
+- `LEGACY_ESCROW_HOLD` → escrow-arbitration (sync) — Met les fonds d'une mission sous séquestre (Guilde, ADR-0116).…
+- `LEGACY_ESCROW_MEET_CONDITION` → escrow-arbitration (sync) — L'arbitre marque une condition d'escrow remplie (ADR-0116).…
+- `LEGACY_ESCROW_RELEASE` → escrow-arbitration (sync) — Libération arbitrée du séquestre + payout momo PENDING (ADR-0116).…
+- `LEGACY_ESCROW_REFUND` → escrow-arbitration (sync) — Rejet arbitré : remboursement marque (ADR-0116).…
+- `LEGACY_ESCROW_DISPUTE` → escrow-arbitration (sync) — Mise en litige d'un escrow (file d'arbitrage, ADR-0116).…
+- `LEGACY_PAYOUT_CAPTURE_MANUAL` → escrow-arbitration (sync) — Capture manuelle d'un payout momo (référence de transaction → COMPLETED, ADR-011…
+- `LEGACY_PAYOUT_MARK_FAILED` → escrow-arbitration (sync) — Marque un payout en échec (ADR-0116).…
+- `LEGACY_TALENT_SERVICE_CREATE` → talent-services (sync) — Création d'un gig prestataire (listing de service, ADR-0117).…
+- `LEGACY_TALENT_SERVICE_UPDATE` → talent-services (sync) — Mise à jour d'un gig prestataire (ADR-0117).…
+- `LEGACY_TALENT_SERVICE_TOGGLE` → talent-services (sync) — Activation/désactivation d'un gig prestataire (ADR-0117).…
+- `LEGACY_MISSION_QUOTE_SUBMIT` → mission-quote (sync) — Soumission d'un devis structuré prestataire → marque (ADR-0118).…
+- `LEGACY_MISSION_QUOTE_DECIDE` → mission-quote (sync) — Décision marque sur un devis (accepté/rejeté, ADR-0118).…
+- `LEGACY_RECOMMENDATION_SET_RICE` → consulting-rice (sync) — Priorisation RICE déterministe d'une recommandation (acteur Conseil, ADR-0109).…
+- `GENERATE_CANONICAL_CAMPAIGNS` → campaign-canon (sync) — Génère les 3 campagnes canon (30-60-90/annuelle/always-on) d'une route depuis le…
+- `CREATE_PUNCTUAL_CAMPAIGN` → campaign-canon (sync) — Crée une campagne ponctuelle (hors canon) déclenchée par un insight externe / Je…
+- `CREATE_CREATIVE_PROPOSAL` → creative-proposal (sync) — Crée une Proposition Créative DRAFT (direction Big Idea/insight/axe/pistes + niv…
+- `SUBMIT_CREATIVE_PROPOSAL` → creative-proposal (sync) — Soumet une Proposition Créative pour validation opérateur (DRAFT → SUBMITTED, AD…
+- `VALIDATE_CREATIVE_PROPOSAL` → creative-proposal (sync) — Valide la direction créative → génère actions + briefs de production dans les fr…
+- `REJECT_CREATIVE_PROPOSAL` → creative-proposal (sync) — Rejette une Proposition Créative avec motif — n'amorce aucune production (ADR-01…
+- `DRAFT_CREATIVE_PROPOSAL_FROM_STRATEGY` → creative-proposal (sync) — Voie A IA — pré-remplit un BROUILLON de direction créative depuis l'ADVE (LLM vi…
+- `GUILD_SUBMIT_CREATIVE_PROPOSAL` → creative-proposal (sync) — Voie B La Guilde — un membre guilde assigné à une mission de la stratégie soumet…
+- `SEED_CREATIVE_AXES` → creative-proposal (sync) — Amorçage multi-axes — seed 2 propositions DRAFT (2 axes créatifs distincts, Voie…
+- `LEGACY_RESEARCH_WAVE_CREATE` → bureau-etudes (sync) — Création d'une vague d'étude (time-spine, acteur Bureau d'étude, ADR-0110).…
+- `LEGACY_RESEARCH_WAVE_RECORD` → bureau-etudes (sync) — Enregistrement de l'échantillon atteint d'une vague (ADR-0110).…
+- `LEGACY_SOURCE_SET_PROVENANCE` → bureau-etudes (sync) — Classe la provenance d'une source de marché pour fusion pondérée (ADR-0114).…
+- `LEGACY_DELIVERABLE_FANOUT` → production (sync) — Fan-out d'une exécution en specs de livrable depuis le catalogue (acteur Product…
+- `LEGACY_USAGE_GRANT_CREATE` → production (sync) — Création d'un droit d'usage (talent × livrable) avec gate d'expiration (ADR-0111…
+- `LEGACY_AICP_ADD_LINE` → production (sync) — Ajout d'une ligne de devis AICP prévue (acteur Production, ADR-0112).…
+- `LEGACY_AICP_RECORD_ACTUAL` → production (sync) — Enregistrement du réalisé d'une ligne AICP + variance (ADR-0112).…
+- `LEGACY_CONSULTING_CREATE_ENGAGEMENT` → consulting (sync) — Création d'une mission de conseil (chaîne de preuve, ADR-0113).…
+- `LEGACY_CONSULTING_ADD_HYPOTHESIS` → consulting (sync) — Ajout d'une hypothèse à une mission de conseil (ADR-0113).…
+- `LEGACY_CONSULTING_ADD_EVIDENCE` → consulting (sync) — Ajout d'une évidence + recalcul déterministe du statut d'hypothèse (ADR-0113).…
+- `LEGACY_CONSULTING_LINK_RECO` → consulting (sync) — Lie une recommandation à une hypothèse (traçabilité, ADR-0113).…
 - `LEGACY_MATCHING_OVERRIDE` → matching (sync) — Strangler-promoted mutation 'override' from router 'matching'.…
 - `LEGACY_MEDIA_BUYING_DETECT_ANOMALIES` → media-buying (sync) — Strangler-promoted mutation 'detectAnomalies' from router 'media-buying'.…
 - `LEGACY_MEDIA_BUYING_PUSH_BENCHMARKS` → media-buying (sync) — Strangler-promoted mutation 'pushBenchmarks' from router 'media-buying'.…

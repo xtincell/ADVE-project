@@ -605,29 +605,19 @@ async function executeSectionDraftCalc(
 ): Promise<Record<string, unknown>> {
   const mappers = await import("@/server/services/strategy-presentation/section-mappers");
   const advertis = await import("@/lib/types/advertis-vector");
+  const { PRESENTATION_INCLUDE } = await import("@/server/services/strategy-presentation");
 
-  // Charger la strategy avec includes minimaux nécessaires aux mappers.
-  // Ne PAS reuse PRESENTATION_INCLUDE complet (qui est privé) — on charge
-  // ce dont chaque mapper a besoin selon l'audit section-mappers.ts.
+  // Charge la strategy avec le MÊME include que l'assembleur Oracle. Les
+  // section-mappers sont co-conçus avec PRESENTATION_INCLUDE et accèdent SANS
+  // garde à user/client/missions.deliverables/missions.driver/gloryOutputs.
+  // L'ancien include minimal hand-rollé omettait ces relations → throws sur
+  // mapProductionLivrables (m.deliverables.map / strategy.gloryOutputs) et
+  // mapConditionsEtapes (strategy.user.name) → DERIVED-PROD-LIV /
+  // DERIVED-CONDITIONS PARTIAL au scan fonctionnel. Réutiliser l'include
+  // canonique (superset prouvé par la voie enrich prod) ferme la classe entière.
   const strategy = await db.strategy.findUnique({
     where: { id: strategyId },
-    include: {
-      pillars: true,
-      campaigns: {
-        include: {
-          actions: true,
-          milestones: true,
-          teamMembers: { include: { user: { select: { name: true, email: true, image: true } } } },
-          budgetLines: true,
-        },
-      },
-      missions: true,
-      drivers: { where: { deletedAt: null } },
-      brandVariables: true,
-      cultIndexSnapshots: { orderBy: { measuredAt: "desc" }, take: 5 },
-      devotionSnapshots: { orderBy: { measuredAt: "desc" }, take: 5 },
-      superfanProfiles: true,
-    },
+    include: PRESENTATION_INCLUDE,
   });
   if (!strategy) return { section_draft: "{}" };
 

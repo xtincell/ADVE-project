@@ -352,6 +352,11 @@ export async function getOracleBrandContextByQuery(
     NOT: { embeddedAt: null },
     embeddingDim: queryDim,
   };
+  // Same dim is necessary but not sufficient — two models can both emit 768-dim
+  // vectors with incompatible geometries. Pin the model too so a mixed store
+  // never silently blends geometries into one cosine ranking (matches the
+  // "enforce same model" intent stated above, which dim alone did not honor).
+  if (embedResult.model) where.embeddingModel = embedResult.model;
   if (options.pillarKey) {
     // BRAND_SOURCE chunks are pillar-neutral — keep them in the candidate
     // pool when sources are requested so a pillar query can still surface

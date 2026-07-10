@@ -201,6 +201,7 @@ function QuickIntakeTab() {
                   <th className="px-4 py-3">Entreprise</th>
                   <th className="px-4 py-3">Contact</th>
                   <th className="px-4 py-3">Secteur</th>
+                  <th className="px-4 py-3">Provenance</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Date</th>
                   <th className="px-4 py-3">Actions</th>
@@ -215,6 +216,23 @@ function QuickIntakeTab() {
                       <td className="px-4 py-3 font-medium text-foreground">{String(intake.companyName || "—")}</td>
                       <td className="px-4 py-3 text-foreground-muted">{String(intake.contactEmail || "—")}</td>
                       <td className="px-4 py-3 text-foreground-muted">{String(intake.sector || "—")}</td>
+                      {/* Attribution funnel (vague E) : utm_source > source legacy > referrer > direct */}
+                      <td className="px-4 py-3 text-foreground-muted" title={intake.attribution ? JSON.stringify(intake.attribution) : undefined}>
+                        {(() => {
+                          const attr = (intake.attribution ?? null) as Record<string, string> | null;
+                          const label =
+                            attr?.utm_source ??
+                            (intake.source ? String(intake.source) : null) ??
+                            (attr?.referrer ? (() => { try { return new URL(attr.referrer!).hostname; } catch { return "referrer"; } })() : null);
+                          return label ? (
+                            <span className="rounded-full border border-border-subtle px-2 py-0.5 text-[10px]">
+                              {label.slice(0, 40)}{attr?.utm_campaign ? ` · ${attr.utm_campaign.slice(0, 24)}` : ""}
+                            </span>
+                          ) : (
+                            <span className="text-[10px]">direct</span>
+                          );
+                        })()}
+                      </td>
                       <td className="px-4 py-3"><StatusBadge status={String(intake.status)} /></td>
                       <td className="px-4 py-3 text-foreground-muted">{intake.createdAt ? new Date(String(intake.createdAt)).toLocaleDateString("fr") : "—"}</td>
                       <td className="px-4 py-3">
