@@ -10,6 +10,19 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.82 — feat(cockpit): abonnement & facturation founder (vague E, P0) (2026-07-10)
+
+Le backend deux-rails (ADR-0092 : `payment.mySubscriptions` / `cancelSubscription` / `initSubscription` / `initManualSubscription`) existait mais AUCUNE surface cockpit ne le rendait — le founder ne pouvait ni voir son plan, ni l'annuler, ni savoir qu'une demande manuelle attendait validation.
+
+- **`/cockpit/settings/billing`** : plan courant (tier, montant/période, mode de paiement carte/cycle manuel/compte équipe), statuts honnêtes (`active`/`trialing`/`pending_manual` avec bandeau « n'accorde l'accès qu'après validation opérateur »/`past_due`/`canceled`), annulation à fin de période avec confirmation inline, historique, CTA `/pricing` quand aucun abonnement.
+- Section « Abonnement & facturation » ajoutée à `/cockpit/settings`.
+
+Résiduels vague E re-spécifiés en session suivante (libellés du plan de session perdu avec le conteneur — ne pas inventer leur périmètre) : Mestor · attribution · vrais PDF · personnalisation · intégrations · tuiles. Le chat Mestor cockpit vérifié réel (streaming `/api/chat`), pas un stub.
+
+tsc 0 · eslint 0 · gouvernance 888/888.
+
+---
+
 ## v6.27.81 — feat(intake): qualité du diagnostic — ADVE-only, C8, premium post-paiement, composer zéro-LLM (vague D) (2026-07-10)
 
 Cinq chantiers de qualité sur le produit n°1 :
