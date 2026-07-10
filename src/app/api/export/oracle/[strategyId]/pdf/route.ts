@@ -19,6 +19,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/config";
 import { exportOracleAsPdf } from "@/server/services/strategy-presentation/export-oracle";
+import { canAccessStrategy } from "@/server/services/operator-isolation";
 import { db } from "@/lib/db";
 
 export async function GET(
@@ -31,6 +32,17 @@ export async function GET(
   }
 
   const { strategyId } = await params;
+
+  // Operator isolation — prevent IDOR: only ADMIN, the strategy owner, or the
+  // same operator may download this brand's Oracle. Mirrors the strategy router.
+  const hasAccess = await canAccessStrategy(strategyId, {
+    operatorId: (session.user as unknown as Record<string, unknown>).operatorId as string | null ?? null,
+    userId: session.user.id,
+    role: session.user.role ?? "USER",
+  });
+  if (!hasAccess) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const strategy = await db.strategy.findUnique({
     where: { id: strategyId },

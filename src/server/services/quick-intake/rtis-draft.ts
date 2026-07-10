@@ -90,6 +90,88 @@ Ta synthèse RÉSOUT la tension entre R, T, I, et l'ancrage ADVE. Tu produis un 
 
 // SHAPE_PER_PILLAR vit désormais dans ./pillar-shapes (importé en tête).
 
+// ── C8 (Seshat→T nom-vs-réalité, vague D) ─────────────────────────────
+// Le draft T citait `marketSize.source: "Seshat"` sans jamais LIRE les
+// digests marché réels (EXTERNAL_FEED_DIGEST : RSS/World Bank, rafraîchis
+// par /api/cron/external-feeds). On charge le digest frais du couple
+// (pays, secteur) et on l'injecte comme SEULE base légitime du label
+// "Seshat" ; sans digest, la garde déterministe ci-dessous rétrograde tout
+// "Seshat" auto-proclamé en "inferred" (jamais de fausse provenance).
+
+interface MarketDigestBlock {
+  found: boolean;
+  block: string;
+}
+
+export async function loadMarketDigestForT(
+  market: string | null | undefined,
+  sector: string | null | undefined,
+): Promise<MarketDigestBlock> {
+  if (!market && !sector) return { found: false, block: "" };
+  try {
+    // Le pays intake est un nom libre ("Cameroun") ou un ISO-2 — même
+    // résolution que complete() via country-registry.
+    let countryCode: string | null = null;
+    if (market) {
+      if (/^[A-Za-z]{2}$/.test(market.trim())) {
+        countryCode = market.trim().toUpperCase();
+      } else {
+        const { lookupCountry } = await import("@/server/services/country-registry");
+        countryCode = (await lookupCountry(market))?.code ?? null;
+      }
+    }
+    const entry = await db.knowledgeEntry.findFirst({
+      where: {
+        entryType: "EXTERNAL_FEED_DIGEST",
+        ...(countryCode ? { countryCode } : {}),
+        ...(sector ? { sector: { contains: sector.trim().toLowerCase().slice(0, 40), mode: "insensitive" } } : {}),
+      },
+      orderBy: { createdAt: "desc" },
+      select: { data: true, countryCode: true, sector: true, createdAt: true },
+    });
+    if (!entry) return { found: false, block: "" };
+
+    const data = (entry.data ?? {}) as Record<string, unknown>;
+    const lines: string[] = [];
+    const macro = Array.isArray(data.macroSignals) ? (data.macroSignals as Array<Record<string, unknown>>) : [];
+    for (const m of macro.slice(0, 6)) {
+      const label = typeof m.label === "string" ? m.label : typeof m.signal === "string" ? m.signal : null;
+      const value = typeof m.value === "string" || typeof m.value === "number" ? String(m.value) : "";
+      if (label) lines.push(`- ${label}${value ? ` : ${value}` : ""}`);
+    }
+    const tt = (data.trendTracker ?? {}) as Record<string, unknown>;
+    const ttLines = Object.entries(tt)
+      .filter(([, v]) => v !== null && v !== undefined && v !== "")
+      .slice(0, 8)
+      .map(([k, v]) => `- ${k}: ${typeof v === "object" ? JSON.stringify(v).slice(0, 120) : String(v).slice(0, 120)}`);
+    lines.push(...ttLines);
+
+    if (lines.length === 0) return { found: false, block: "" };
+    return {
+      found: true,
+      block: `DONNÉES MARCHÉ RÉELLES (Seshat external-feeds, ${entry.countryCode ?? "?"}/${entry.sector ?? "?"}, ${entry.createdAt.toISOString().slice(0, 10)}) :\n${lines.join("\n")}\n\nRÈGLE : marque \"source\": \"Seshat\" UNIQUEMENT pour un chiffre présent dans ce bloc. Tout autre chiffre → \"source\": \"inferred\".`,
+    };
+  } catch {
+    return { found: false, block: "" };
+  }
+}
+
+/**
+ * Garde d'honnêteté C8 (déterministe, zéro LLM) : sans digest chargé, un
+ * `marketSize.source === "Seshat"` auto-proclamé est rétrogradé "inferred".
+ */
+export function enforceSeshatProvenance(
+  tDraft: Record<string, unknown>,
+  digestFound: boolean,
+): Record<string, unknown> {
+  if (digestFound) return tDraft;
+  const marketSize = tDraft.marketSize as Record<string, unknown> | undefined;
+  if (marketSize && marketSize.source === "Seshat") {
+    return { ...tDraft, marketSize: { ...marketSize, source: "inferred" } };
+  }
+  return tDraft;
+}
+
 interface DraftInput {
   strategyId: string;
   companyName: string;
@@ -173,6 +255,12 @@ async function draftPillar(
     }
   }
 
+  // 3-bis. C8 — données marché RÉELLES pour T (digest external-feeds frais).
+  let marketDigest: MarketDigestBlock = { found: false, block: "" };
+  if (pillar === "t") {
+    marketDigest = await loadMarketDigestForT(input.market, input.sector);
+  }
+
   // 4. ADVE context (verbatim values).
   const adveBlock = await loadAdveCompact(input.strategyId);
 
@@ -192,7 +280,7 @@ ${adveBlock}
 
 CONTEXTE HYBRIDE SESHAT :
 ${hybridBlock}
-${seshatRefs ? `\nRÉFÉRENCES SECTORIELLES :\n${seshatRefs}` : ""}${comparablesBlock ? `\n\nMARQUES COMPARABLES (cross-brand) :\n${comparablesBlock}` : ""}${upstreamBlock ? `\n\nRTIS AMONT :\n${upstreamBlock}` : ""}`;
+${marketDigest.found ? `\n${marketDigest.block}` : ""}${seshatRefs ? `\nRÉFÉRENCES SECTORIELLES :\n${seshatRefs}` : ""}${comparablesBlock ? `\n\nMARQUES COMPARABLES (cross-brand) :\n${comparablesBlock}` : ""}${upstreamBlock ? `\n\nRTIS AMONT :\n${upstreamBlock}` : ""}`;
 
   if (pillar === "i") {
     const { generatePillarIMultiAgent } = await import("./multi-agent-orchestrator");
@@ -215,6 +303,11 @@ ${SHAPE_PER_PILLAR[pillar]}`;
   const parsed = extractJSON(text);
   if (!parsed || typeof parsed !== "object") {
     throw new Error(`rtis-draft[${pillar}]: shape JSON invalide`);
+  }
+  // C8 — provenance honnête : "Seshat" seulement si un digest a réellement
+  // été injecté dans le prompt (garde déterministe, zéro LLM).
+  if (pillar === "t") {
+    return enforceSeshatProvenance(parsed as Record<string, unknown>, marketDigest.found);
   }
   return parsed as Record<string, unknown>;
 }

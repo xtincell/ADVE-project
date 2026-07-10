@@ -178,10 +178,10 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
           className="font-display font-semibold tracking-tighter leading-[0.9] text-foreground"
           style={{ fontSize: "var(--text-display)" }}
         >
-          Jehuty.
+          La Gazette.
         </h1>
         <p className="mt-3 text-foreground-secondary max-w-[60ch]" style={{ fontSize: "var(--text-lg)" }}>
-          La gazette stratégique de la marque — <span className="font-serif italic">recommandations, signaux, diagnostics</span>, lus chaque matin par les opérateurs avant qu&rsquo;ils ne décident quoi forger.
+          La gazette stratégique de votre marque — <span className="font-serif italic">recommandations, signaux, diagnostics</span>, mise à jour en continu.
         </p>
       </section>
 

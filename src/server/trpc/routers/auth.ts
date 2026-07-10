@@ -141,11 +141,21 @@ export const authRouter = createTRPCRouter({
   /**
    * Get current user info (returns null if not authenticated).
    */
-  me: publicProcedure.query(({ ctx }) => {
+  me: publicProcedure.query(async ({ ctx }) => {
     if (!ctx.session?.user) return null;
-    return {
-      id: ctx.session.user.id,
-      role: ctx.session.user.role ?? "USER",
-    };
+    const role = ctx.session.user.role ?? "USER";
+    // canOperate mirrors operatorProcedure (init.ts): ADMIN, or any user linked
+    // to an Operator. Exposed so the client can render operator-only controls
+    // honestly — shown enabled only when usable — instead of failing on click
+    // with FORBIDDEN (founders are not operators; UPgraders operates the OS).
+    let canOperate = role === "ADMIN";
+    if (!canOperate) {
+      const user = await ctx.db.user.findUnique({
+        where: { id: ctx.session.user.id },
+        select: { operatorId: true },
+      });
+      canOperate = !!user?.operatorId;
+    }
+    return { id: ctx.session.user.id, role, canOperate };
   }),
 });

@@ -62,7 +62,12 @@ export interface RankerFilter {
 
 // ── Internal: build Prisma where clause from filter ──────────────────
 
-function buildWhere(filter: RankerFilter, mustHaveEmbedding: boolean, dimMatch?: number) {
+function buildWhere(
+  filter: RankerFilter,
+  mustHaveEmbedding: boolean,
+  dimMatch?: number,
+  modelMatch?: string | null,
+) {
   const where: Record<string, unknown> = {};
   if (filter.strategyId) where.strategyId = filter.strategyId;
   if (filter.excludeStrategyId) where.strategyId = { not: filter.excludeStrategyId };
@@ -70,6 +75,10 @@ function buildWhere(filter: RankerFilter, mustHaveEmbedding: boolean, dimMatch?:
   if (filter.pillarKey) where.pillarKey = filter.pillarKey;
   if (mustHaveEmbedding) where.NOT = { embeddedAt: null };
   if (dimMatch != null) where.embeddingDim = dimMatch;
+  // Same dimension is necessary but NOT sufficient: two different models can
+  // both emit 768-dim vectors whose geometries are incompatible. Filtering on
+  // dim alone silently mixes them and degrades ranking. Pin the model too.
+  if (modelMatch) where.embeddingModel = modelMatch;
   // Metadata filter (Prisma JSON path). Apply as separate ANDs.
   const metaConds: Array<Record<string, unknown>> = [];
   for (const [k, v] of Object.entries(filter.metadata ?? {})) {
@@ -102,7 +111,7 @@ export async function searchByQuery(
   const qVec = embedResult.embeddings[0] ?? [];
   if (qVec.length === 0) return []; // No provider — graceful empty
 
-  const where = buildWhere(filter, /*mustHaveEmbedding*/ true, qVec.length);
+  const where = buildWhere(filter, /*mustHaveEmbedding*/ true, qVec.length, embedResult.model);
 
   const candidates = await db.brandContextNode.findMany({
     where: where as Prisma.BrandContextNodeWhereInput,

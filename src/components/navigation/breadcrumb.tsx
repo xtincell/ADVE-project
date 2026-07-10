@@ -6,8 +6,8 @@ import { ChevronRight } from "lucide-react";
 import { APP_ROUTES } from "@/lib/generated/app-routes";
 
 const SEGMENT_LABELS: Record<string, string> = {
-  cockpit: "Brand OS",
-  creator: "Guild OS",
+  cockpit: "Cockpit",
+  creator: "Espace créateur",
   console: "Console",
   operate: "Operations",
   brand: "Marque",
@@ -24,7 +24,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   benchmarks: "Benchmarks",
   attribution: "Attribution",
   messages: "Messages",
-  mestor: "Mestor AI",
+  mestor: "Assistant",
   available: "Disponibles",
   active: "En cours",
   collab: "Collaboratives",
@@ -56,7 +56,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   socle: "Le Socle",
   clients: "Clients",
   intake: "Pipeline Intake",
-  boot: "Boot Sequence",
+  boot: "Démarrage",
   intelligence: "Intelligence",
   signals: "Signaux",
   knowledge: "Knowledge Graph",

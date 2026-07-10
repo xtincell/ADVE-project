@@ -12,11 +12,14 @@
  *      c. Sinon : remonter à `parentNodeId` (récursion) → source = `INHERITED_FROM:<ancestorId>`
  *      d. Si racine atteinte sans résolution → source = `DEFAULT_EMPTY`
  *
- * **Cache** : `Map<nodeId, ResolvedPillars>` simple en mémoire (process-local).
- * Pour Phase 18 noyau full : remplacer par Redis avec TTL + invalidation cross-process.
- * En MVP, le cache est invalidé via `invalidateNodeAndDescendants(nodeId)` à
- * chaque mutation pertinente (OPERATOR_AMEND_PILLAR, OPERATOR_UPDATE_BRAND_NODE
- * avec pillarOverrides modifié, OPERATOR_MOVE_BRAND_NODE).
+ * **Cache** : `Map<nodeId, ResolvedPillars>` en mémoire (process-local),
+ * invalidé via `invalidateNodeAndDescendants(nodeId)` à chaque mutation
+ * pertinente (OPERATOR_AMEND_PILLAR, OPERATOR_UPDATE_BRAND_NODE avec
+ * pillarOverrides modifié, OPERATOR_MOVE_BRAND_NODE).
+ * **Multi-pod (vague B, résiduel Phase 18)** : l'invalidation est diffusée
+ * aux autres pods via Redis pub/sub (`@/lib/redis`, opt-in `REDIS_URL`) — le
+ * pod émetteur envoie la liste résolue des nodeIds, les récepteurs purgent
+ * localement sans refaire le walk DB. Sans Redis : single-pod historique.
  *
  * **Loi 1 APOGEE** (conservation altitude) : la résolution ne mute jamais l'arbre.
  * C'est uniquement une lecture cumulée. Les overrides explicites passent par
@@ -25,6 +28,7 @@
 
 import type { BrandNode, Pillar, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
+import { publishJson, subscribeJson, isRedisConfigured } from "@/lib/redis";
 import { PILLAR_STORAGE_KEYS, type PillarStorageKey } from "@/domain/pillars";
 
 export type PillarResolutionSource =
@@ -61,6 +65,25 @@ export interface ResolvedPillars {
 
 const cache = new Map<string, ResolvedPillars>();
 
+const INVALIDATION_CHANNEL = "cache:brand-node:invalidate";
+let bridgeStarted = false;
+
+/** Écoute (une fois) les invalidations émises par les autres pods. */
+function ensureInvalidationBridge(): void {
+  if (bridgeStarted || !isRedisConfigured()) return;
+  bridgeStarted = true;
+  subscribeJson(INVALIDATION_CHANNEL, (payload) => {
+    if (payload.all === true) {
+      cache.clear();
+      return;
+    }
+    const nodeIds = Array.isArray(payload.nodeIds) ? payload.nodeIds : [];
+    for (const id of nodeIds) {
+      if (typeof id === "string") cache.delete(id);
+    }
+  });
+}
+
 /** Pour les tests anti-drift / hot-reload — clear total du cache. */
 export function clearAllInheritanceCache(): void {
   cache.clear();
@@ -93,6 +116,7 @@ export async function resolveEffectivePillars(
   nodeId: string,
   opts: { bypassCache?: boolean } = {},
 ): Promise<ResolvedPillars> {
+  ensureInvalidationBridge();
   if (!opts.bypassCache) {
     const cached = cache.get(nodeId);
     if (cached) return cached;
@@ -228,10 +252,14 @@ async function loadAncestorChain(nodeId: string): Promise<ChainNode[]> {
  */
 export async function invalidateNodeAndDescendants(nodeId: string): Promise<number> {
   const descendants = await loadDescendantIds(nodeId);
+  const ids = [nodeId, ...descendants];
   let invalidated = 0;
-  for (const id of [nodeId, ...descendants]) {
+  for (const id of ids) {
     if (cache.delete(id)) invalidated++;
   }
+  // Multi-pod : diffuse la liste RÉSOLUE — les autres pods purgent localement
+  // sans refaire le walk DB. No-op sans REDIS_URL.
+  publishJson(INVALIDATION_CHANNEL, { nodeIds: ids });
   return invalidated;
 }
 
