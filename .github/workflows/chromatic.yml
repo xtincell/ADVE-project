@@ -29,7 +29,7 @@ jobs:
           fi
       - name: Publish to Chromatic
         if: steps.token_check.outputs.configured == 'true'
-        uses: chromaui/action@v17
+        uses: chromaui/action@v18
         with:
           projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
           onlyChanged: true
