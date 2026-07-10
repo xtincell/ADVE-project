@@ -10,6 +10,19 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.79 — fix(governance)+feat(ops): bootstrap au boot serveur + daemon cron in-process + feeds dynamiques (vague C) (2026-07-10)
+
+**Bug critique clos** : `bootstrapGovernance()` (event-bus Seshat/Thot/Tarsis + synchro phase D-6) portait le commentaire « imported once in init.ts » mais n'était importé NULLE PART au runtime → `observeIntent` (réparé v6.25.27 côté Seshat mais jamais branché au boot), `recordCost` Thot, `ingestSignal` Tarsis et `strategy.phase-changed` étaient **inertes en production**.
+
+- **`src/instrumentation.ts`** (hook Next natif, garde `NEXT_RUNTIME === "nodejs"`) : appelle `bootstrapGovernance()` une fois par process serveur (dev, standalone, pm2) — vérifié bundlé (`.next/server/instrumentation.js`).
+- **Daemon cron in-process** `src/lib/ops-daemon.ts` (démarré par l'instrumentation) : un self-host Coolify/pm2 n'a plus besoin de cron externe — self-fetch localhost des routes `/api/cron/*` (Bearer `CRON_SECRET`) aux cadences exactes de `scheduled-ops.yml` (frequent 15 min / sixhourly / weekly lundi 06h / monthly 1er). **Jamais de tir au boot** (armement au premier pas — un redeploy ne re-déclenche ni founder-digest ni sweep) ; tir au franchissement de frontière uniquement ; claim CAS Redis par bucket (vague B) pour le multi-pod ; `OPS_DAEMON=0|1` (défaut : ON en prod). Le workflow GitHub reste utilisable en ceinture+bretelles (claims + idempotence arbitrent).
+- **Feeds dynamiques** (`seshat/external-feeds`) : `listActiveFeedPairs()` — les paires pays×secteur sont dérivées des **stratégies réelles** (countryCode dénormalisé × businessContext.sector normalisé), dédupliquées derrière les `PRIORITY_PAIRS` statiques (marchés vitrine), plafonnées à 24/refresh (borne de coût), erreur DB → statique seul. `refreshAllPriorityPairs()` couvre désormais tout client réel — un founder Sénégal/cosmétique reçoit ses données marché sans édition de code.
+- **`/api/cron/external-feeds` enfin planifié** : ajouté au tick sixhourly de `scheduled-ops.yml` ET au daemon (la route existait depuis l'audit v6.25.27 mais AUCUN planificateur ne l'appelait — le pilier T retombait sur du LLM qualitatif).
+
+Cap APOGEE 7/7. 0 migration. tsc 0 · eslint 0 · `next build` vert · **2410 tests verts** (10 nouveaux : armement sans tir au boot, frontières frequent/weekly/monthly, Bearer+PORT, flags, paires dynamiques dédupliquées/plafonnées/fallback).
+
+---
+
 ## v6.27.78 — feat(infra): coordination multi-pod Redis — NSP, caches, claims CAS (vague B) (2026-07-10)
 
 Clôt le résiduel Phase 18 « Cache Redis cross-pod » + la limite single-pod documentée d'ENV-VARS.md. **Opt-in `REDIS_URL`** — sans elle, dégradation single-pod honnête (comportement historique inchangé, zéro crash).
