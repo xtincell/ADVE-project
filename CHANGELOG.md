@@ -10,6 +10,18 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.80 — fix(security): fuite commissions — lectures tenant-scoped (P1, vague E) (2026-07-10)
+
+**Fuite P1 close** : `commission.list` (et 4 lectures sœurs) étaient en `protectedProcedure` sans `where` — n'importe quel compte connecté (founder, freelance, guilde) lisait les montants, taux et talentIds de TOUTES les commissions de la plateforme (consommé tel quel par le portail Agency).
+
+- Helper `commissionScope` : **ADMIN** → tout · **user rattaché à un Operator** (portail Agency) → commissions des missions dont la Strategy appartient à SON operator · **sinon** (talent) → `talentId = self` uniquement.
+- `list` + `getByMission` scopés par ce périmètre ; `getByCreator` **refuse** (`FORBIDDEN` explicite, pas de remplacement silencieux) un `userId` tiers pour un non-admin ; `tierAtTime` (historique tier/commissions d'autrui, aucun consommateur UI) passe `operatorProcedure` ; `getAdjustedRate` : self/operator/admin.
+- Mutations inchangées (déjà `governedProcedure`). Anti-drift : [`commission-scoping.test.ts`](tests/unit/governance/commission-scoping.test.ts) verrouille le contrat par analyse source (7 assertions).
+
+tsc 0 · eslint 0 · **2417 tests verts**.
+
+---
+
 ## v6.27.79 — fix(governance)+feat(ops): bootstrap au boot serveur + daemon cron in-process + feeds dynamiques (vague C) (2026-07-10)
 
 **Bug critique clos** : `bootstrapGovernance()` (event-bus Seshat/Thot/Tarsis + synchro phase D-6) portait le commentaire « imported once in init.ts » mais n'était importé NULLE PART au runtime → `observeIntent` (réparé v6.25.27 côté Seshat mais jamais branché au boot), `recordCost` Thot, `ingestSignal` Tarsis et `strategy.phase-changed` étaient **inertes en production**.
