@@ -131,16 +131,23 @@ export async function narrateFootprint(
   const timeoutMs = opts?.timeoutMs ?? 8_000;
   try {
     const { callLLM } = await import("@/server/services/llm-gateway");
+    // Entrée non fiable neutralisée (LOT 1e) : le nom/secteur sont déclarés
+    // par le dirigeant (saisie libre) et les faits contiennent du contenu
+    // scrapé du web public (titres de pages, avis, presse) — surface
+    // d'injection. sanitizeInline + wrapUntrusted + UNTRUSTED_NOTICE.
+    const { sanitizeInline, wrapUntrusted, UNTRUSTED_NOTICE } = await import(
+      "@/server/services/utils/untrusted-content"
+    );
+    const brand = sanitizeInline(ctx.companyName, { max: 120 });
+    const sector = ctx.sector ? sanitizeInline(ctx.sector, { max: 80 }) : null;
     const call = callLLM({
       caller: "quick-intake:footprint-narrative",
       purpose: "intermediate",
-      system:
-        "Tu es l'analyste discovery de La Fusée. Tu rédiges en français, ton professionnel et direct. Tu t'appuies EXCLUSIVEMENT sur les faits fournis — aucune invention, aucun chiffre qui n'y figure pas, aucune recommandation commerciale.",
-      prompt: `Marque : ${ctx.companyName}${ctx.sector ? ` (secteur : ${ctx.sector})` : ""}.
+      system: `${UNTRUSTED_NOTICE}\n\nTu es l'analyste discovery de La Fusée. Tu rédiges en français, ton professionnel et direct. Tu t'appuies EXCLUSIVEMENT sur les faits fournis — aucune invention, aucun chiffre qui n'y figure pas, aucune recommandation commerciale.`,
+      prompt: `Marque : ${brand}${sector ? ` (secteur : ${sector})` : ""}.
 Score d'empreinte digitale publique : ${f.score.total}/100 (sur les dimensions mesurées uniquement).
 
-Faits mesurés :
-${facts.map((fact) => `- ${fact}`).join("\n")}
+${wrapUntrusted("FAITS MESURÉS (collecte publique)", facts.map((fact) => `- ${fact}`).join("\n"), { max: 4000 })}
 
 Rédige 2 à 4 phrases qui synthétisent cette empreinte pour un rapport de diagnostic de marque. Cite le score. Reste strictement factuel. Réponds avec le paragraphe seul, sans titre ni liste.`,
       maxOutputTokens: 400,
