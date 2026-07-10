@@ -20,6 +20,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Claim CAS multi-pod (vague B) : un seul pod exécute un tick donné —
+  // protège aussi contre le chevauchement d'un tick lent avec le suivant.
+  // Sans REDIS_URL : claim toujours accordé (single-pod historique).
+  const { claimOnce } = await import("@/lib/redis");
+  if (!(await claimOnce("cron:scheduler:tick", 240))) {
+    return NextResponse.json({ skipped: "tick-claimed-by-another-pod" });
+  }
+
   const results = {
     processesExecuted: 0,
     feedbackLoopsRun: 0,
@@ -48,14 +56,17 @@ export async function GET(request: Request) {
 
     for (const proc of pendingTriggered) {
       try {
-        await db.process.update({
-          where: { id: proc.id },
+        // CAS DB : le flip RUNNING→COMPLETED n'est exécuté que par UN pod
+        // (count=0 ⇒ un autre pod l'a déjà pris — on passe).
+        const claimed = await db.process.updateMany({
+          where: { id: proc.id, status: "RUNNING" },
           data: {
             status: "COMPLETED",
             lastRunAt: new Date(),
-            runCount: proc.runCount + 1,
+            runCount: { increment: 1 },
           },
         });
+        if (claimed.count === 0) continue;
         results.processesExecuted++;
       } catch (error) {
         results.errors.push(`Process ${proc.id}: ${error instanceof Error ? error.message : "unknown"}`);
@@ -75,6 +86,19 @@ export async function GET(request: Request) {
       try {
         const frequency = daemon.frequency ?? "daily";
         const nextRun = computeNextRun(frequency);
+
+        // CAS DB : on avance nextRunAt AVANT le travail — un seul pod
+        // remporte le claim (count=0 ⇒ déjà pris), et le daemon avance
+        // même si le playbook échoue (sémantique historique conservée).
+        const claimed = await db.process.updateMany({
+          where: { id: daemon.id, nextRunAt: { lte: new Date() } },
+          data: {
+            lastRunAt: new Date(),
+            nextRunAt: nextRun,
+            runCount: { increment: 1 },
+          },
+        });
+        if (claimed.count === 0) continue;
 
         // Dispatch market signal collection DAEMONs
         const playbook = daemon.playbook as Record<string, unknown> | null;
@@ -102,14 +126,6 @@ export async function GET(request: Request) {
           }
         }
 
-        await db.process.update({
-          where: { id: daemon.id },
-          data: {
-            lastRunAt: new Date(),
-            nextRunAt: nextRun,
-            runCount: daemon.runCount + 1,
-          },
-        });
         results.processesExecuted++;
       } catch (error) {
         results.errors.push(`Daemon ${daemon.id}: ${error instanceof Error ? error.message : "unknown"}`);
@@ -127,14 +143,15 @@ export async function GET(request: Request) {
 
     for (const batch of batches) {
       try {
-        await db.process.update({
-          where: { id: batch.id },
+        const claimed = await db.process.updateMany({
+          where: { id: batch.id, status: "RUNNING" },
           data: {
             status: "COMPLETED",
             lastRunAt: new Date(),
-            runCount: batch.runCount + 1,
+            runCount: { increment: 1 },
           },
         });
+        if (claimed.count === 0) continue;
         results.processesExecuted++;
       } catch (error) {
         results.errors.push(`Batch ${batch.id}: ${error instanceof Error ? error.message : "unknown"}`);

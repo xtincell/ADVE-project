@@ -17,23 +17,49 @@ jobs:
   lighthouse:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    # Les pages auditées (/ et /intake) sont dynamiques et lisent la DB : sans
+    # Postgres réel elles ne répondent jamais 200 → wait-on timeout. Même
+    # setup service+migrate+seed que golden-path.yml.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: lafusee
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
-      DATABASE_URL: postgresql://stub:stub@localhost:5432/stub
+      DATABASE_URL: postgresql://postgres:password@localhost:5432/lafusee
       NEXTAUTH_SECRET: ci-stub
       AUTH_SECRET: ci-stub
+      NEXTAUTH_URL: http://localhost:3000
       NEXT_TELEMETRY_DISABLED: 1
 
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
       - run: npx prisma generate
+      - run: npx prisma migrate deploy
+      - run: npm run db:seed
       - run: npm run build
-      - name: Start production server
-        run: npm start &
+      # `output: standalone` (next.config.ts) : `next start` refuse de servir —
+      # on lance server.js émis par le build, avec static/ et public/ copiés à
+      # côté, exactement comme le Dockerfile de prod.
+      - name: Start production server (standalone)
+        run: |
+          cp -r .next/static .next/standalone/.next/static
+          cp -r public .next/standalone/public
+          node .next/standalone/server.js &
       - name: Wait for server
         run: npx --yes wait-on http://localhost:3000 --timeout 60000
       - name: Run Lighthouse mobile audit

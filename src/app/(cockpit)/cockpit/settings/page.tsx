@@ -9,8 +9,9 @@
  */
 "use client";
 
+import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { LogOut, User as UserIcon, Mail, Shield, Languages } from "lucide-react";
+import { LogOut, User as UserIcon, Mail, Shield, Languages, CreditCard } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { LocaleToggle } from "@/components/i18n/locale-toggle";
 
@@ -68,6 +69,22 @@ export default function CockpitSettingsPage() {
           </dl>
         </section>
       )}
+
+      <section className="rounded-lg border border-border bg-background-raised p-6">
+        <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">
+          <CreditCard className="h-4 w-4 text-foreground-muted" />
+          Abonnement & facturation
+        </h2>
+        <p className="mb-4 mt-2 text-sm text-foreground-muted">
+          Votre plan, sa période en cours, l&apos;annulation et l&apos;historique.
+        </p>
+        <Link
+          href="/cockpit/settings/billing"
+          className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-foreground transition-colors hover:border-primary"
+        >
+          Gérer mon abonnement
+        </Link>
+      </section>
 
       <section className="rounded-lg border border-border bg-background-raised p-6">
         <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">

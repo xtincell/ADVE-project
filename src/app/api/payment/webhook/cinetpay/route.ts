@@ -87,15 +87,24 @@ export async function POST(request: Request) {
 
   const isPaid = verified.accepted || payload.cpm_trans_status === "ACCEPTED";
 
+  let intakeToken: string | null = null;
   try {
-    await db.intakePayment.update({
+    const payment = await db.intakePayment.update({
       where: { reference },
       data: isPaid
         ? { status: "PAID", paidAt: new Date(), providerRef: payload.cpm_payid ?? null }
         : { status: "FAILED", failureReason: payload.cpm_trans_status ?? "REFUSED" },
     });
+    intakeToken = payment.intakeToken;
   } catch {
     return NextResponse.json({ error: "Unknown reference" }, { status: 404 });
+  }
+
+  // Vague D — re-extraction ADVE premium + régénération rapport pour le
+  // payeur, fire-and-forget (jamais bloquant pour l'ACK webhook).
+  if (isPaid && intakeToken) {
+    const { premiumReextractAfterPayment } = await import("@/server/services/quick-intake");
+    premiumReextractAfterPayment(intakeToken);
   }
 
   // Cycle d'abonnement manuel (Vague 5) : un paiement lié à une Subscription

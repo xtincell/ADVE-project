@@ -51,6 +51,10 @@ git checkout main          # ou la branche déployée
 
 ## 2. Variables d'environnement
 
+**Référence canonique : [ENV-VARS.md](ENV-VARS.md)** — table complète var ×
+comportement de dégradation (ce qui s'éteint proprement sans quelle clé) +
+minimum viable Coolify.
+
 Next charge automatiquement `.env.local` (jamais committé) au runtime. Copie le
 gabarit et remplis-le :
 
