@@ -260,4 +260,92 @@ export const cockpitRouter = createTRPCRouter({
 
       return { state: "OK", data };
     }),
+
+  /**
+   * Intégrations (vague E) — état HONNÊTE des sources de données connectées
+   * à la marque du founder : derniers relevés sociaux (FollowerSnapshot par
+   * plateforme + provenance), empreinte web collectée (pilier E), fraîcheur
+   * du digest marché pays×secteur. Read-only, tenant-scoped, zéro LLM —
+   * chaque source absente est dite absente, jamais simulée.
+   */
+  getConnectedSources: protectedProcedure
+    .input(z.object({ strategyId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const strategy = await ctx.db.strategy.findUnique({
+        where: { id: input.strategyId },
+        select: {
+          id: true,
+          userId: true,
+          countryCode: true,
+          businessContext: true,
+          pillars: { where: { key: "e" }, select: { content: true } },
+        },
+      });
+      if (!strategy) throw new TRPCError({ code: "NOT_FOUND", message: "Strategy introuvable" });
+      const isPrivileged = ctx.session.user.role === "ADMIN";
+      if (!isPrivileged && strategy.userId !== ctx.session.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Cette marque ne vous appartient pas" });
+      }
+
+      // Dernier relevé social par plateforme (toutes provenances confondues).
+      const snaps = await ctx.db.followerSnapshot.findMany({
+        where: { strategyId: strategy.id },
+        orderBy: { capturedAt: "desc" },
+        take: 100,
+        select: { platform: true, handle: true, followerCount: true, source: true, capturedAt: true },
+      });
+      const latestByPlatform = new Map<string, (typeof snaps)[number]>();
+      for (const s of snaps) {
+        if (!latestByPlatform.has(String(s.platform))) latestByPlatform.set(String(s.platform), s);
+      }
+
+      // Empreinte web du pilier E (webPresence écrit par l'enrichissement).
+      const eContent = (strategy.pillars[0]?.content ?? {}) as Record<string, unknown>;
+      const webPresence = (eContent.webPresence ?? null) as {
+        site?: { url?: string; reachable?: boolean } | null;
+        socials?: unknown[];
+        press?: unknown[];
+        footprintScore?: { total: number | null };
+      } | null;
+
+      // Fraîcheur du digest marché pays×secteur (feeds vague C).
+      const sector = ((strategy.businessContext ?? {}) as Record<string, unknown>).sector;
+      let marketFeedAt: Date | null = null;
+      if (strategy.countryCode && typeof sector === "string" && sector.length >= 3) {
+        const digest = await ctx.db.knowledgeEntry.findFirst({
+          where: {
+            entryType: "EXTERNAL_FEED_DIGEST",
+            countryCode: strategy.countryCode,
+            sector: { contains: sector.trim().toLowerCase().slice(0, 40), mode: "insensitive" },
+          },
+          orderBy: { createdAt: "desc" },
+          select: { createdAt: true },
+        });
+        marketFeedAt = digest?.createdAt ?? null;
+      }
+
+      return {
+        socials: [...latestByPlatform.values()].map((s) => ({
+          platform: String(s.platform),
+          handle: s.handle,
+          followerCount: s.followerCount,
+          source: s.source,
+          capturedAt: s.capturedAt.toISOString(),
+        })),
+        webPresence: webPresence
+          ? {
+              siteUrl: webPresence.site?.url ?? null,
+              siteReachable: webPresence.site?.reachable ?? null,
+              socialsDetected: Array.isArray(webPresence.socials) ? webPresence.socials.length : 0,
+              pressMentions: Array.isArray(webPresence.press) ? webPresence.press.length : 0,
+              footprintScore: webPresence.footprintScore?.total ?? null,
+            }
+          : null,
+        marketFeed: {
+          countryCode: strategy.countryCode,
+          sector: typeof sector === "string" ? sector : null,
+          lastDigestAt: marketFeedAt?.toISOString() ?? null,
+        },
+      };
+    }),
 });

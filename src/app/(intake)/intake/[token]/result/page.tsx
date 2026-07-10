@@ -564,6 +564,16 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
               La Fusee — Industry OS
             </p>
             <h1 className="mt-2 text-4xl font-bold text-foreground">Rapport ADVE complet</h1>
+            {/* Personnalisation (vague E) : identité visuelle DÉTECTÉE de la
+                marque (og:image du site, déjà collectée) — jamais un logo
+                inventé, rien si non détectée. */}
+            {(() => {
+              const og = ((intake as { webFootprint?: { site?: { ogImage?: string | null } | null } }).webFootprint?.site?.ogImage ?? null);
+              return og ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={og} alt={intake.companyName} className="mt-4 max-h-20 w-auto max-w-[240px] object-contain" />
+              ) : null;
+            })()}
             <p className="mt-2 text-lg text-foreground-secondary">{intake.companyName}</p>
             <p className="mt-1 text-sm text-foreground-muted">
               {classification} · Score {composite}/100 · {reportDate}

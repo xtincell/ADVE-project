@@ -2018,6 +2018,10 @@ model QuickIntake {
   // (delete_rule='SET NULL' filtered in loadFks).
   convertedTo        Strategy?         @relation("QuickIntakeConvertedTo", fields: [convertedToId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   source             String?
+  /// Attribution funnel (vague E) : UTM structurés + referrer + click ids
+  /// capturés au start — d'où vient CHAQUE prospect (utm_source/medium/
+  /// campaign/content/term, ref, gclid, fbclid, referrer, landingPath).
+  attribution        Json?
   brandNature        String?
   completedAt        DateTime?
 
