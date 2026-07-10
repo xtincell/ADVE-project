@@ -91,7 +91,31 @@ const PROTECTED_ROUTES: Array<{
   { prefix: "/launchpad", roles: ["ADMIN", "OPERATOR"] },
 ];
 
+// ---------------------------------------------------------------------------
+// Canonical domain redirect
+//
+// L'app Coolify répond sur 3 domaines (apex + www + lafuseev6.powerupgraders.com)
+// sans redirection entre eux. Conséquence concrète : tout ce qui est scopé par
+// origine (localStorage — cookie-consent.tsx, mais aussi tout futur usage de
+// cookies non-partagés entre sous-domaines) réapparaît à chaque atterrissage
+// sur une variante différente. Un seul domaine canonique = un seul localStorage.
+// ---------------------------------------------------------------------------
+const CANONICAL_HOST = process.env.CANONICAL_HOST || "powerupgraders.com";
+
 export async function proxy(request: NextRequest) {
+  // Ne s'applique qu'en prod (déployé derrière Coolify) — évite de rediriger
+  // localhost:3000 en dev où il n'y a qu'un seul host de toute façon.
+  if (process.env.NODE_ENV === "production") {
+    const host = request.headers.get("host");
+    if (host && host !== CANONICAL_HOST) {
+      const url = request.nextUrl.clone();
+      url.protocol = "https:";
+      url.host = CANONICAL_HOST;
+      url.port = "";
+      return NextResponse.redirect(url, 308);
+    }
+  }
+
   const path = request.nextUrl.pathname;
 
   // ----- Legacy redirects (exact match) -----
@@ -113,22 +137,30 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Retrieve the JWT token from the request (next-auth v5 beta requires explicit secret)
-  const isProd = process.env.NODE_ENV === "production" || request.nextUrl.protocol === "https:";
-  let token = await getToken({
+  // Retrieve the JWT token from the request (next-auth v5 beta requires explicit secret).
+  //
+  // `secureCookie` decides BOTH the cookie name AND the decrypt salt inside
+  // `getToken()` (they default to the same value — Auth.js derives the salt
+  // from the cookie name). Passing an explicit `salt` without also pinning
+  // `cookieName` — as this used to do — desyncs the two: the lookup still
+  // read the `secureCookie`-derived cookie, but decrypted it with a
+  // mismatched salt, so the second (legacy `next-auth.*`) attempt always
+  // failed silently. Letting `getToken` derive both from `secureCookie`
+  // fixes that and is the documented-correct call shape.
+  //
+  // Behind a TLS-terminating reverse proxy (Coolify/Traefik), the backend
+  // connection is plain HTTP — `request.nextUrl.protocol` isn't guaranteed
+  // to reflect the client-facing scheme, so we also honor `x-forwarded-proto`.
+  const secureCookie =
+    process.env.NODE_ENV === "production" ||
+    request.nextUrl.protocol === "https:" ||
+    request.headers.get("x-forwarded-proto") === "https";
+
+  const token = await getToken({
     req: request,
     secret: process.env.NEXTAUTH_SECRET,
-    secureCookie: isProd,
-    salt: isProd ? "__Secure-authjs.session-token" : "authjs.session-token",
+    secureCookie,
   });
-  if (!token) {
-    token = await getToken({
-      req: request,
-      secret: process.env.NEXTAUTH_SECRET,
-      secureCookie: isProd,
-      salt: isProd ? "__Secure-next-auth.session-token" : "next-auth.session-token",
-    });
-  }
 
   if (!token) {
     // Not authenticated — redirect to login with callback URL
@@ -149,6 +181,10 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
+    // Canonical-domain redirect must run on every navigable path, not just
+    // the legacy/protected ones below — otherwise `/`, `/intake`, etc. never
+    // get canonicalized. Static assets + _next internals excluded.
+    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)",
     // Legacy redirect paths
     "/os/:path*",
     "/impulsion/:path*",

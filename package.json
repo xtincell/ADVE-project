@@ -109,6 +109,7 @@
     "exceljs": "^4.4.0",
     "headroom-ai": "^0.22.4",
     "html2canvas": "^1.4.1",
+    "ioredis": "^5.11.1",
     "jspdf": "^4.2.1",
     "lucide-react": "^1.14.0",
     "mammoth": "^1.12.0",
