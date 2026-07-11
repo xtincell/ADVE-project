@@ -70,14 +70,14 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 
-# Prisma CLI + schema + migrations so the entrypoint can `migrate deploy` on
-# boot (Coolify/self-host has no other hook; missed migration = runtime schema
-# errors). `prisma.config.ts` imports dotenv, hence the extra copy.
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/dotenv ./node_modules/dotenv
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
+# Migrations Prisma + applicateur maison. Le CLI Prisma N'EST PAS fiable dans
+# l'image standalone (trace élaguée → WASM + deps `@prisma/config`/`effect`
+# manquants ; cf. incidents 2026-07-10/11). L'entrypoint applique donc les
+# migrations via `scripts/apply-migrations.mjs` — ZÉRO dep, juste `pg` (déjà
+# tracé, l'app en dépend). On copie les fichiers de migration + le runner +
+# l'entrypoint ; pas besoin du CLI Prisma ni de `prisma.config.ts` au runtime.
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
-COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./prisma.config.ts
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/apply-migrations.mjs ./scripts/apply-migrations.mjs
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/docker-entrypoint.sh ./scripts/docker-entrypoint.sh
 RUN chmod +x ./scripts/docker-entrypoint.sh
 

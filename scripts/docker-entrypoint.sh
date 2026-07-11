@@ -2,34 +2,43 @@
 # La Fusée OS — container entrypoint.
 #
 # Applique les migrations Prisma AVANT de démarrer le serveur : sur les cibles
-# non-Vercel (Coolify/self-host), `prisma migrate deploy` n'a aucun autre point
-# d'accroche — une migration manquée = erreurs de schéma au runtime.
+# non-Vercel (Coolify/self-host), il n'y a aucun autre point d'accroche — une
+# migration manquée = erreurs de schéma au runtime.
 #
-# ⚠️ INCIDENT 2026-07-10 (503 post-merge #442) : l'image standalone Next embarque
-# un `node_modules` élagué (trace standalone) qui N'INCLUT PAS le moteur WASM du
-# CLI Prisma (`prisma_schema_build_bg.wasm`) → `prisma migrate deploy` crashait
-# (ENOENT) → `set -e` tuait le conteneur → crash-loop → 503. Correctif :
-# migrate-on-boot est désormais **best-effort** — un échec est loggé bruyamment
-# mais NE FAIT JAMAIS tomber le serveur. Une panne totale est pire qu'une
-# dégradation partielle sur le money-path.
+# ⚠️ INCIDENTS 2026-07-10 (503 money-path #442) + 2026-07-11 (dashboard cockpit
+# vide, colonne marketScale non migrée) : le CLI Prisma N'EST PAS fonctionnel
+# dans l'image standalone Next. Le trace élague `node_modules` → il manque (a)
+# le WASM (`.bin/prisma` est un symlink déréférencé par Docker COPY → cherche
+# `prisma_schema_build_bg.wasm` au mauvais endroit) ET (b) les deps de
+# `@prisma/config` que `prisma.config.ts` charge (`effect` 34 Mo, `c12`, …).
+# Recopier tout l'arbre CLI est fragile et lourd (à contre-emploi du standalone).
 #
-# Flow migrations recommandé (le CLI ne tourne pas dans l'image standalone) :
-#   - appliquer les migrations hors-bande (env complet / job dédié / ops-ssh),
-#   - garder SKIP_MIGRATE_ON_BOOT=1 en prod standalone.
-# Opt-out explicite : SKIP_MIGRATE_ON_BOOT=1.
+# CORRECTIF RACINE (2026-07-11) : on n'utilise plus le CLI Prisma au boot. Un
+# applicateur maison `scripts/apply-migrations.mjs` — ZÉRO dep, juste `pg`
+# (déjà tracé, l'app en dépend) — reproduit `migrate deploy` (pending en ordre,
+# suivi `_prisma_migrations` + checksum sha256). Cf. l'en-tête de ce fichier.
+#
+# Best-effort (défense) : un échec est loggé bruyamment mais NE FAIT JAMAIS
+# tomber le serveur — une panne totale est pire qu'une dégradation sur le
+# money-path. Opt-out explicite : SKIP_MIGRATE_ON_BOOT=1.
 set -e
 
-if [ "${SKIP_MIGRATE_ON_BOOT:-0}" != "1" ]; then
-  echo "[entrypoint] prisma migrate deploy… (best-effort)"
-  # Non-fatal : on capture l'échec au lieu de laisser `set -e` tuer le boot.
-  if npx prisma migrate deploy; then
-    echo "[entrypoint] migrations appliquées."
-  else
-    echo "[entrypoint] ⚠️ prisma migrate deploy a échoué (code $?) — DÉMARRAGE QUAND MÊME."
-    echo "[entrypoint] ⚠️ Applique les migrations hors-bande puis vérifie le schéma. Le serveur tourne sur le schéma existant."
-  fi
+MIGRATE_RUNNER="scripts/apply-migrations.mjs"
+
+if [ "${SKIP_MIGRATE_ON_BOOT:-0}" = "1" ]; then
+  echo "[entrypoint] SKIP_MIGRATE_ON_BOOT=1 — migrations non appliquées ici."
+elif [ ! -f "$MIGRATE_RUNNER" ]; then
+  echo "[entrypoint] ⚠️ $MIGRATE_RUNNER introuvable — migrations non appliquées. DÉMARRAGE QUAND MÊME."
 else
-  echo "[entrypoint] SKIP_MIGRATE_ON_BOOT=1 — migrations non appliquées ici (attendu en prod standalone)."
+  echo "[entrypoint] application des migrations (runner pg maison, best-effort)…"
+  # Non-fatal : on capture l'échec au lieu de laisser `set -e` tuer le boot.
+  if node "$MIGRATE_RUNNER"; then
+    echo "[entrypoint] migrations à jour."
+  else
+    code=$?
+    echo "[entrypoint] ⚠️ migrations en échec (code $code) — DÉMARRAGE QUAND MÊME."
+    echo "[entrypoint] ⚠️ Applique-les à la main : node $MIGRATE_RUNNER. Le serveur tourne sur le schéma existant."
+  fi
 fi
 
 exec node server.js

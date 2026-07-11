@@ -10,6 +10,17 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.99 — fix(build): migrate-on-boot par runner pg maison (le CLI Prisma est mort en standalone) (2026-07-11)
+
+**Root cause des DEUX incidents de migration (2026-07-10 money-path 503, 2026-07-11 dashboard cockpit vide) : le CLI Prisma n'est PAS fonctionnel dans l'image standalone Next.**
+
+- **Diagnostic (vérifié dans le conteneur prod)** : `npx prisma migrate deploy` → `ENOENT prisma_schema_build_bg.wasm` (le `Dockerfile` copiait `node_modules/.bin/prisma`, or `COPY` **déréférence** le symlink → le CLI cherche le WASM à côté de lui dans `.bin/` au lieu de `prisma/build/`). Contourné par le vrai chemin → mur suivant : `@prisma/config` (qui charge `prisma.config.ts`) réclame `effect` (34 Mo), `c12`, … **tous élagués par le trace standalone**. Recopier cet arbre est fragile et lourd.
+- `fix(build)` **Runner de migration maison, ZÉRO dépendance CLI** : `scripts/apply-migrations.mjs` n'utilise que `pg` (déjà tracé, l'app en dépend via `@prisma/adapter-pg`) et reproduit `migrate deploy` — applique les `migration.sql` pending en ordre lexical (= chronologique), suit `_prisma_migrations` avec un **checksum sha256 identique à celui du CLI Prisma** (vérifié byte-à-byte), idempotent. L'entrypoint appelle ce runner au lieu du CLI. Le `Dockerfile` ne copie plus le CLI ni le shim `.bin/prisma` cassé (juste `prisma/migrations` + le runner). Best-effort conservé (`SKIP_MIGRATE_ON_BOOT`, échec ≠ crash boot).
+- **Vérifié end-to-end** contre un Postgres 16 éphémère : 60 migrations appliquées from-scratch (enums, `DO $$`, tables), idempotent au 2ᵉ run, colonnes `Strategy.marketScale`/`addressableAudience`/`brandFoundedYear` + table `SectorPolityAxis` créées, `_prisma_migrations` tracké. 7 verrous `migrate-on-boot-runner`.
+- **Effet** : le drift schéma marketScale (v6.27.98) se répare tout seul au prochain déploiement Coolify — le runner applique ADR-0126 + ADR-0127 au boot. Fini le contournement manuel à chaque migration.
+
+---
+
 ## v6.27.98 — fix(cockpit): dashboard vide = drift de schéma prod (colonne marketScale non migrée), pas le sélecteur (2026-07-11)
 
 **Vérification RUNTIME (login réel sur prod + appel des deux endpoints du cockpit) : la contradiction picker-plein / dashboard-vide n'est NI le sélecteur NI un problème de compte — c'est un drift de schéma.**
