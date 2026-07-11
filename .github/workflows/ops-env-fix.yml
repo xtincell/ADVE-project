@@ -1,0 +1,75 @@
+# Correctif d'urgence : NEXTAUTH_URL/AUTH_URL pointaient sur le domaine
+# sslip.io interne (http) → signIn() bloqué par le navigateur (mixed content)
+# + cookies auth posés sans préfixe __Secure-. Ce workflow pose les URLs
+# canoniques sur l'app Coolify et redémarre le conteneur.
+#
+# Dispatch-only. Sans secrets COOLIFY_TOKEN/COOLIFY_URL → no-op explicite.
+# À supprimer (ou garder comme outil d'ops) une fois le correctif appliqué.
+
+name: ops-env-fix
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_uuid:
+        description: "UUID de l'app Coolify"
+        default: "rfkgtj7us50jlbaiz1tjke2a"
+      base_url:
+        description: "Origine publique canonique"
+        default: "https://powerupgraders.com"
+
+permissions: {}
+
+jobs:
+  envfix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Poser NEXTAUTH_URL/AUTH_URL + restart
+        env:
+          TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+          COOLIFY: ${{ secrets.COOLIFY_URL }}
+          APP: ${{ inputs.app_uuid }}
+          BASE: ${{ inputs.base_url }}
+        run: |
+          if [ -z "$TOKEN" ] || [ -z "$COOLIFY" ]; then
+            echo "::warning::secrets COOLIFY_TOKEN / COOLIFY_URL absents — no-op."
+            echo "RESULT=NO_SECRETS"
+            exit 0
+          fi
+          API="${COOLIFY%/}/api/v1"
+          AUTH="Authorization: Bearer $TOKEN"
+
+          echo "== envs actuelles (clés seules) =="
+          curl -sS -H "$AUTH" "$API/applications/$APP/envs" | jq -r '.[].key' | sort
+
+          upsert() {
+            KEY="$1"; VAL="$2"
+            CODE=$(curl -sS -o /tmp/r.json -w "%{http_code}" -X PATCH \
+              -H "$AUTH" -H "Content-Type: application/json" \
+              -d "{\"key\":\"$KEY\",\"value\":\"$VAL\",\"is_preview\":false}" \
+              "$API/applications/$APP/envs")
+            if [ "$CODE" -ge 400 ]; then
+              CODE=$(curl -sS -o /tmp/r.json -w "%{http_code}" -X POST \
+                -H "$AUTH" -H "Content-Type: application/json" \
+                -d "{\"key\":\"$KEY\",\"value\":\"$VAL\",\"is_preview\":false}" \
+                "$API/applications/$APP/envs")
+            fi
+            echo "$KEY -> HTTP $CODE"
+          }
+
+          upsert NEXTAUTH_URL "$BASE"
+          upsert AUTH_URL "$BASE"
+          upsert NEXT_PUBLIC_BASE_URL "$BASE"
+
+          echo "== restart =="
+          CODE=$(curl -sS -o /tmp/r.json -w "%{http_code}" -X POST -H "$AUTH" \
+            "$API/applications/$APP/restart")
+          echo "restart -> HTTP $CODE"
+          if [ "$CODE" -ge 400 ]; then
+            echo "restart en échec, tentative deploy…"
+            CODE=$(curl -sS -o /tmp/r.json -w "%{http_code}" -H "$AUTH" \
+              "$API/deploy?uuid=$APP")
+            echo "deploy -> HTTP $CODE"
+          fi
+          echo "RESULT=DONE"
