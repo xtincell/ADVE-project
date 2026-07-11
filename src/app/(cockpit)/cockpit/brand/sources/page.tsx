@@ -935,7 +935,7 @@ export default function SourcesPage() {
                 Cette opération va <strong>supprimer</strong> la source <code className="rounded bg-white/10 px-1.5 py-0.5 text-xs">{purgeTarget.sourceLabel}</code>, supprimer le rapport ADVE associé, réinitialiser les piliers <strong>A/D/V/E</strong> de la marque, puis recréer une source fraîche depuis les réponses originales du formulaire d&apos;intake.
               </p>
               <p className="text-foreground-muted">
-                Les éditions opérateur sur les piliers A/D/V/E seront perdues. Les piliers RTIS sont préservés (mais marqués <em>stale</em> automatiquement par le prochain ENRICH).
+                Les éditions opérateur sur les piliers A/D/V/E seront perdues. Les piliers stratégiques sont préservés (ils seront recalculés au prochain enrichissement).
               </p>
               <div className="rounded-md border border-warning/40 bg-warning/5 p-3">
                 <p className="mb-2 text-xs font-medium uppercase tracking-wider text-warning">

@@ -777,7 +777,7 @@ export default function BriefsPage() {
             />
           </FormField>
 
-          <FormField label="Piliers prioritaires ADVE-RTIS">
+          <FormField label="Piliers prioritaires">
             <div className="flex flex-wrap gap-2">
               {PILLAR_KEYS.map((k) => {
                 const sel = briefForm.pillarPriority.includes(k);

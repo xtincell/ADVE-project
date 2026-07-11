@@ -120,12 +120,12 @@ export default function PillarEditorPage() {
     return (
       <div className="space-y-6">
         <PageHeader
-          title="Editeur Fiche ADVE"
+          title="Éditeur de fiche de marque"
           description="Editez chaque pilier de votre strategie de marque"
           breadcrumbs={[
             { label: "Cockpit", href: "/cockpit" },
             { label: "Brand", href: "/cockpit/brand/identity" },
-            { label: "Editeur ADVE" },
+            { label: "Éditeur" },
           ]}
         />
         <EmptyState
@@ -216,12 +216,12 @@ export default function PillarEditorPage() {
       )}
 
       <PageHeader
-        title={focusMode ? "Completer les champs manquants" : "Editeur Fiche ADVE"}
+        title={focusMode ? "Compléter les champs manquants" : "Éditeur de fiche de marque"}
         description={focusMode ? `${focusPaths.length} champs requis pour la sequence ${focusSeqKey}` : "Editez chaque pilier de votre strategie de marque"}
         breadcrumbs={[
           { label: "Cockpit", href: "/cockpit" },
           { label: "Brand", href: "/cockpit/brand/identity" },
-          { label: focusMode ? "Completion" : "Editeur ADVE" },
+          { label: focusMode ? "Complétion" : "Éditeur" },
         ]}
       />
 

@@ -393,7 +393,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
           onApplied={(res) => {
             setEnrichResult({
               type: "success",
-              message: `Pilier amendé v${res.version}. ${res.stalePillars.length} piliers RTIS marqués stale, ${res.staleAssets} assets à régénérer.`,
+              message: `Pilier amendé v${res.version}. ${res.stalePillars.length} pilier(s) stratégique(s) à rafraîchir, ${res.staleAssets} asset(s) à régénérer.`,
             });
             assessQuery.refetch();
           }}
@@ -510,13 +510,13 @@ export function PillarPage({ pageKey }: PillarPageProps) {
               : enrichedPct >= 80
                 ? "text-warning"
                 : "text-foreground-muted";
-            const sufBg = enrichedReached ? "#34d399" : enrichedPct >= 80 ? "#f59e0b" : "#a78bfa";
+            const sufBg = enrichedReached ? "var(--color-success)" : enrichedPct >= 80 ? "var(--color-warning)" : "var(--color-info)";
             const cplClass = completeReached
               ? "text-success"
               : completePct >= 95
                 ? "text-warning"
                 : "text-foreground-muted";
-            const cplBg = completeReached ? "#34d399" : completePct >= 95 ? "#f59e0b" : "#a78bfa";
+            const cplBg = completeReached ? "var(--color-success)" : completePct >= 95 ? "var(--color-warning)" : "var(--color-info)";
             return (
               <>
                 <div className="flex items-center gap-1.5">
@@ -678,7 +678,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
               <p className="mt-1 text-2xs text-foreground-muted">
                 {isAdve
                   ? "Clique sur "
-                  : "La cascade RTIS s'alimente à partir d'ADVE. "}
+                  : "Les piliers stratégiques se dérivent de votre fondation. "}
                 <strong>Enrichir</strong>
                 {isAdve
                   ? " pour démarrer l'auto-remplissage via vault, calculs et IA."

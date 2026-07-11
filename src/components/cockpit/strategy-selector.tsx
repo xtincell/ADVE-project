@@ -78,7 +78,7 @@ export function StrategySelector() {
       >
         <Building2 className="h-3.5 w-3.5 text-accent" />
         <span className="max-w-[220px] truncate font-medium text-white">
-          {current?.name ?? "Selectionner une marque"}
+          {current?.name ?? "Sélectionner une marque"}
         </span>
         <ChevronDown className="h-3 w-3 text-foreground-muted" />
       </button>

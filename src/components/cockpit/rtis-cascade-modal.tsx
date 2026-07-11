@@ -163,7 +163,7 @@ export function RtisCascadeModal({
       title={
         <span className="flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-accent" />
-          Cascade RTIS — préparer Oracle à compiler
+          Préparer la stratégie — l'Oracle pourra compiler
         </span>
       }
       description={
@@ -173,7 +173,7 @@ export function RtisCascadeModal({
             ? "Génération en cours — chaque pilier prend 20 à 40 secondes (LLM)."
             : phase === "DONE"
               ? "Oracle est maintenant prêt à compiler sans sections vides."
-              : "Certains piliers n'ont pas pu être remplis. Tu peux ré-essayer ou compiler quand même (Oracle aura des sections RTIS partielles)."
+              : "Certains piliers n'ont pas pu être remplis. Vous pouvez réessayer ou compiler quand même (l'Oracle aura des sections stratégiques partielles)."
       }
     >
       {/* CONFIRM phase */}
@@ -262,7 +262,7 @@ export function RtisCascadeModal({
               <strong className="text-warning">Plus long que prévu.</strong>{" "}
               Le LLM travaille toujours. Tu peux fermer cette fenêtre — la cascade
               continue en arrière-plan, le bouton d'assemblage virera vert
-              quand RTIS sera prêt.
+              quand la stratégie sera prête.
             </div>
           )}
         </div>
@@ -275,7 +275,7 @@ export function RtisCascadeModal({
             <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
             <div className="space-y-1">
               <p className="text-sm font-semibold text-success">
-                Cascade RTIS terminée — vos 8 piliers sont prêts.
+                Préparation terminée — vos 8 piliers sont prêts.
               </p>
               <p className="text-xs text-foreground-secondary">
                 Oracle peut maintenant compiler ses 35 sections sans risque de
@@ -393,7 +393,7 @@ export function RtisCascadeModal({
               className="flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent disabled:opacity-50"
             >
               <Sparkles className="h-4 w-4" />
-              Déclencher la cascade RTIS
+              Dériver les piliers stratégiques
               <ArrowRight className="h-4 w-4" />
             </button>
           </>

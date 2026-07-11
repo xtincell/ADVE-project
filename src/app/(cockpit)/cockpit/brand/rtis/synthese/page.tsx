@@ -170,7 +170,7 @@ export default function SynthesePage() {
           </div>
           <div className="flex flex-wrap gap-6">
             <div className="text-right">
-              <p className="text-2xs font-medium uppercase text-foreground-muted">Evangelistes</p>
+              <p className="text-2xs font-medium uppercase text-foreground-muted">Prescripteurs</p>
               <p className="text-lg font-bold text-accent">{superfanCountQuery.data?.evangelistes ?? 0}</p>
             </div>
             <div className="text-right">

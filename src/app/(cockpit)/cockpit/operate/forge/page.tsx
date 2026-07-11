@@ -197,7 +197,7 @@ export default function DeliverableForgePage() {
     <div className="container mx-auto px-4 py-6 space-y-6">
       <PageHeader
         title="La Forge"
-        description="Le creuset opérationnel de transformation. Validez votre stratégie ADVE-RTIS, générez les projets associés et matérialisez vos livrables."
+        description="Le creuset opérationnel de transformation. Validez votre stratégie, générez les projets associés et matérialisez vos livrables."
       />
 
       {/* ── Bannière confiance Pilier S ──────────────────────────────────── */}
@@ -274,7 +274,7 @@ export default function DeliverableForgePage() {
             </p>
             <div className="rounded-lg border border-error/20 bg-error/5 p-3 text-xs text-error">
               <strong>Risque :</strong> les briefs et KPI générés seront basés sur des hypothèses non validées.
-              Nous recommandons de revoir l'ADVE-RTIS avant de procéder.
+              Nous recommandons de revoir votre fondation de marque avant de procéder.
             </div>
             <div className="flex flex-col gap-2 pt-2">
               <a
@@ -283,7 +283,7 @@ export default function DeliverableForgePage() {
                 className="flex items-center justify-center gap-2 rounded-xl border border-accent/30 bg-accent/10 px-4 py-3 text-sm font-semibold text-accent transition-colors hover:bg-accent/20"
               >
                 <BookOpen className="h-4 w-4" />
-                Relire et compléter l'ADVE-RTIS
+                Relire et compléter la fondation
               </a>
               <button
                 type="button"

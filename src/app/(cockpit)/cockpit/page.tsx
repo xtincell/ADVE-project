@@ -164,7 +164,7 @@ export default function CockpitDashboard() {
             onClick={() => strategyQuery.refetch()}
             className="mt-3 rounded-lg bg-background-overlay px-4 py-2 text-sm text-foreground hover:bg-border"
           >
-            Reessayer
+            Réessayer
           </button>
         </div>
       </div>
@@ -379,7 +379,7 @@ export default function CockpitDashboard() {
                 </div>
               </div>
               <div className="ck-north__stats">
-                <div className="ck-north__stat"><p className="sk">Évangélistes</p><p className="sv gold">{superfanCountQuery.data?.evangelistes ?? 0}</p></div>
+                <div className="ck-north__stat"><p className="sk">Prescripteurs</p><p className="sv gold">{superfanCountQuery.data?.evangelistes ?? 0}</p></div>
                 <div className="ck-north__stat"><p className="sk">Ratio superfan</p><p className="sv accent">{superfanCountQuery.data?.ratio ?? 0}%</p></div>
                 <div className="ck-north__stat"><p className="sk">Vélocité /30j</p><p className={`sv ${superfanVelocityQuery.data?.trend === "up" ? "up" : ""}`}>
                   {superfanVelocityQuery.data?.trend === "up" && <TrendingUp />}

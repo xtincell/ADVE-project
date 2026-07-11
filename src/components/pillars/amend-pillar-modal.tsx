@@ -298,7 +298,7 @@ export function AmendPillarModal({
               <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
               <div>
                 Mode destructif. Tous les BrandAssets ACTIVE liés à ce pilier seront marqués <code>staleAt</code> pour
-                régénération suggérée. Les piliers RTIS dépendants passeront <code>staleAt=now()</code>.
+                régénération suggérée. Les piliers stratégiques dépendants devront être recalculés.
               </div>
             </div>
           ) : null}
@@ -344,7 +344,7 @@ export function AmendPillarModal({
           doApply();
         }}
         title="Confirmer le STRATEGIC_REWRITE"
-        message="Cette action est destructive. Les BrandAssets ACTIVE liés seront marqués stale et les piliers RTIS dépendants seront invalidés. Confirmer ?"
+        message="Cette action est destructive. Les assets actifs liés devront être régénérés et les piliers stratégiques dépendants seront invalidés. Confirmer ?"
         confirmLabel="Oui, amender"
         variant="danger"
       />

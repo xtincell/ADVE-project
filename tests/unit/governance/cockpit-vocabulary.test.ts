@@ -13,9 +13,11 @@
  * puis on cherche les motifs interdits dans les LITTÉRAUX DE CHAÎNE et le
  * TEXTE JSX uniquement. Toute nouvelle occurrence casse le build.
  *
- * NB : le statut client des lettres de piliers (ADVE / RTIS / A…S) est une
- * décision canon DÉFÉRÉE (Lot 0 de l'audit 2026-06-29) — ces motifs ne sont
- * volontairement PAS testés ici.
+ * Lot 0 (ADR-0123, résolution partielle réversible) : « ADVE » reste
+ * client-facing (méthode vendue, glosée « Architecture des Expériences ») ;
+ * « RTIS » / « ADVE-RTIS » sortent des chaînes client (arbre interne, KB §12)
+ * — motif testé ci-dessous. Les lettres individuelles A…S restent en badge
+ * (initiales des noms business affichés) et ne sont pas testées.
  */
 
 import { describe, it, expect } from "vitest";
@@ -26,6 +28,7 @@ const ROOT = join(__dirname, "../../..");
 const SCAN_DIRS = [
   join(ROOT, "src/app/(cockpit)"),
   join(ROOT, "src/components/cockpit"),
+  join(ROOT, "src/components/pillars"),
 ];
 // Composants hors components/cockpit mais rendus dans le portail founder.
 const EXTRA_FILES = [join(ROOT, "src/components/neteru/overton-radar.tsx")];
@@ -37,6 +40,8 @@ const EXTRA_FILES = [join(ROOT, "src/components/neteru/overton-radar.tsx")];
  */
 const OPERATOR_GATED_ALLOWLIST: ReadonlyArray<string> = [
   "src/app/(cockpit)/cockpit/insights/apogee-maintenance/page.tsx", // « Loi 4 APOGEE » — surface sentinelle opérateur
+  "src/app/(cockpit)/cockpit/brand/rtis/page.tsx", // workflow RTIS legacy — surface opérateur (lot 12), purge = lot 13/15
+  "src/app/(cockpit)/cockpit/brand/rtis/synthese/page.tsx", // idem
 ];
 
 const FORBIDDEN: Array<{ name: string; re: RegExp }> = [
@@ -44,7 +49,15 @@ const FORBIDDEN: Array<{ name: string; re: RegExp }> = [
   { name: "plomberie IntentEmission", re: /\bIntentEmission\b/ },
   { name: "réf ADR", re: /\bADR-\d{4}\b/ },
   { name: "function-calling", re: /function-calling/ },
+  { name: "RTIS (Lot 0 — ADR-0123)", re: /\bADVE-RTIS\b|\bRTIS\b/ },
 ];
+
+/**
+ * Chunks « identifiants » à ignorer : littéraux qui détectent des codes
+ * backend (`readiness/RTIS_CASCADE`, kinds `*_RTIS*`) — jamais rendus tels
+ * quels, ce sont des comparaisons de messages d'erreur.
+ */
+const IDENTIFIER_CHUNK = /RTIS_|_RTIS|readiness\//;
 
 function walk(dir: string, acc: string[] = []): string[] {
   if (!existsSync(dir)) return acc;
@@ -95,6 +108,7 @@ describe("Cockpit — vocabulaire client (lot 11, T1)", () => {
       if (OPERATOR_GATED_ALLOWLIST.includes(rel)) continue;
       const src = stripComments(readFileSync(file, "utf-8"));
       for (const { chunk, line } of renderableChunks(src)) {
+        if (IDENTIFIER_CHUNK.test(chunk)) continue;
         for (const { name, re } of FORBIDDEN) {
           const m = chunk.match(re);
           if (m) violations.push(`${rel}:${line} [${name}] → ${m[0]} dans ${chunk.slice(0, 80)}`);
