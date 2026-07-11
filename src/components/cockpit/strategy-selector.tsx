@@ -23,7 +23,9 @@ import Link from "next/link";
  *               et badges. C'est ce que le user a demandé explicitement.
  *
  * Le bouton header est minimal — il affiche juste la marque active +
- * chevron. Click → ouvre le modal pleine largeur. Cmd+K aussi.
+ * chevron. Click → ouvre le modal pleine largeur. Cmd+O aussi (Cmd+K est
+ * réservé à la Command Palette — collision résolue lot 10, audit
+ * 2026-07-11 [M01-05]).
  *
  * Strict niveau marque : CORPORATE / MASTER_BRAND / STANDALONE_BRAND.
  * Les regions (REGIONAL_BRAND) sont accessibles via le
@@ -38,10 +40,10 @@ export function StrategySelector() {
     { staleTime: 30_000 },
   );
 
-  // Cmd+K opens modal
+  // Cmd+O (Open brand) ouvre le modal — Cmd+K reste à la Command Palette.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "o") {
         e.preventDefault();
         setOpen((v) => !v);
       }
@@ -72,7 +74,7 @@ export function StrategySelector() {
       <button
         onClick={() => setOpen(true)}
         className="flex items-center gap-2 rounded-lg border border-border bg-background/80 px-3 py-2 text-sm transition-colors hover:border-border-strong hover:bg-background"
-        title="Cmd+K pour changer de marque"
+        title="Cmd+O pour changer de marque"
       >
         <Building2 className="h-3.5 w-3.5 text-accent" />
         <span className="max-w-[220px] truncate font-medium text-white">
@@ -404,7 +406,7 @@ function BrandPickerModal({ tree, onClose }: { tree: BrandTreeData; onClose: () 
               </button>
             )}
             <span className="hidden sm:inline-flex items-center gap-0.5 rounded bg-foreground-muted/10 px-1.5 py-0.5 text-2xs font-mono text-foreground-muted">
-              ⌘K
+              ⌘O
             </span>
           </div>
 

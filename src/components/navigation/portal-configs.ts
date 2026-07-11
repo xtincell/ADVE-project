@@ -64,107 +64,153 @@ import {
 import type { NavGroup } from "./types";
 import { PILLAR_METADATA } from "@/domain";
 
+/**
+ * Nav Cockpit — arbre founder (lot 10, audit UX 2026-07-11 §B).
+ *
+ * 20 items / 6 groupes orientés jobs founder (voir ma marque / recevoir mes
+ * livrables / suivre mon activité / comprendre mon marché / gérer mon
+ * compte). Les surfaces de PRODUCTION (Operations Center, Forge, Séquences,
+ * Brief→Actions, Missions, Portfolio, éditeur ADVE, RTIS legacy, Trend
+ * Tracker, apogee-maintenance) sortent de la nav founder : leurs routes
+ * restent joignables mais sont gardées par <OperatorSurface> (lot 12).
+ *
+ * Les 8 pages piliers ne bougent pas d'URL — elles s'atteignent via les 2
+ * hubs « Fondation » / « Stratégie » et allument leur hub via
+ * `activePrefixes`. « L'Oracle » reste nommé ainsi : c'est un nom de
+ * livrable VENDU (KB UPgraders §1), pas une fuite de vocabulaire interne.
+ */
 export const cockpitNavGroups: NavGroup[] = [
   {
     title: "",
     items: [
-      { href: "/cockpit", label: "Tableau de bord", icon: LayoutDashboard },
-    ],
-  },
-  // ── Operations — Hub central ──────────────────────────────────────────────
-  {
-    title: "Opérations",
-    items: [
-      { href: "/cockpit/operate/center", label: "Operations Center", sublabel: "Hub quotidien", icon: Building },
-    ],
-  },
-  // ── Stratégie → Actions — du S validé aux projets forgés ─────────────────
-  {
-    title: "Stratégie → Actions",
-    items: [
-      { href: "/cockpit/operate/forge", label: "La Forge", sublabel: "S → Projets campagne", icon: Zap },
-      { href: "/cockpit/operate/action-brief", label: "Brief → Actions", sublabel: "Idéation guidée", icon: Lightbulb },
-      { href: "/cockpit/operate/roadmap", label: "Roadmap", sublabel: "Calendrier des actions", icon: Calendar },
-      { href: "/cockpit/operate/sequences", label: "Séquences", sublabel: "Livrables IA", icon: PlayCircle },
-    ],
-  },
-  // ── Production & Livrables — du brief à la mise en ligne ─────────────────
-  {
-    title: "Production",
-    items: [
-      { href: "/cockpit/operate/campaigns", label: "Campagnes", sublabel: "Pipeline 12 états", icon: Megaphone },
-      { href: "/cockpit/operate/briefs", label: "Briefs", sublabel: "Client · Créa · Prod", icon: FileText },
-      { href: "/cockpit/operate/missions", label: "Missions", sublabel: "Équipe & Guilde", icon: Target },
-    ],
-  },
-  // ── Lancement & Mesure — LIVE, terrain, résultats ────────────────────────
-  {
-    title: "Lancement & Mesure",
-    items: [
-      { href: "/cockpit/operate/calendar", label: "Calendrier Lancement", sublabel: "Prélancement digital", icon: CalendarDays },
-      { href: "/cockpit/operate/tracker", label: "Campaign Tracker", sublabel: "AARRR & clôture", icon: Activity },
-      { href: "/cockpit/operate/newsletter", label: "Newsletter", sublabel: "CRM & envois", icon: Mail },
-      { href: "/cockpit/operate/requests", label: "Demandes", sublabel: "Tickets & escalades", icon: MessageCircle },
+      {
+        href: "/cockpit", label: "Tableau de bord", labelKey: "nav.dashboard",
+        icon: LayoutDashboard, mobileTab: true,
+        activePrefixes: ["/cockpit/new"],
+      },
     ],
   },
   {
-    // ADVE — Fondation. Labels dérivés de PILLAR_METADATA (slug "pillar-a" …)
-    // pour une seule source de vérité ; format "Nom (Lettre)" + rôle en sous-titre.
-    title: "Marque — Fondation",
-    titleKey: "nav.group.fondation",
+    title: "Ma marque",
+    titleKey: "nav.group.marque",
     items: [
-      { href: "/cockpit/brand/identity", label: `${PILLAR_METADATA.A.displayName} (A)`, sublabel: PILLAR_METADATA.A.role, pillarSlug: "pillar-a", icon: Fingerprint },
-      { href: "/cockpit/brand/positioning", label: `${PILLAR_METADATA.D.displayName} (D)`, sublabel: PILLAR_METADATA.D.role, pillarSlug: "pillar-d", icon: Target },
-      { href: "/cockpit/brand/offer", label: `${PILLAR_METADATA.V.displayName} (V)`, sublabel: PILLAR_METADATA.V.role, pillarSlug: "pillar-v", icon: Tags },
-      { href: "/cockpit/brand/engagement", label: `${PILLAR_METADATA.E.displayName} (E)`, sublabel: PILLAR_METADATA.E.role, pillarSlug: "pillar-e", icon: Users },
-    ],
-  },
-  {
-    // RTIS — Stratégie. Ordre canon : R → T s'exécutent, PUIS Jehuty (organe
-    // de presse) + Notoria (moteur de reco) coordonnent les recommandations
-    // qui impactent I puis S.
-    title: "Marque — Strategie",
-    titleKey: "nav.group.strategie",
-    items: [
-      { href: "/cockpit/brand/diagnostic", label: `${PILLAR_METADATA.R.displayName} (R)`, sublabel: PILLAR_METADATA.R.role, pillarSlug: "pillar-r", icon: Shield },
-      { href: "/cockpit/brand/market", label: `${PILLAR_METADATA.T.displayName} (T)`, sublabel: PILLAR_METADATA.T.role, pillarSlug: "pillar-t", icon: TrendingUp },
-      { href: "/cockpit/brand/jehuty", label: "La Gazette", sublabel: "Veille & signaux", labelKey: "nav.jehuty", sublabelKey: "nav.jehuty.sub", icon: Newspaper },
+      {
+        href: "/cockpit/brand/fondation", label: "Fondation", sublabel: "Les 4 piliers fondateurs",
+        labelKey: "nav.fondation", sublabelKey: "nav.fondation.sub",
+        icon: Fingerprint, mobileTab: true,
+        activePrefixes: [
+          "/cockpit/brand/identity",
+          "/cockpit/brand/positioning",
+          "/cockpit/brand/offer",
+          "/cockpit/brand/engagement",
+          "/cockpit/brand/edit",
+        ],
+      },
+      {
+        href: "/cockpit/brand/strategie", label: "Stratégie", sublabel: "Du diagnostic au plan",
+        labelKey: "nav.strategie", sublabelKey: "nav.strategie.sub",
+        icon: Route,
+        activePrefixes: [
+          "/cockpit/brand/diagnostic",
+          "/cockpit/brand/market",
+          "/cockpit/brand/potential",
+          "/cockpit/brand/roadmap",
+          "/cockpit/brand/rtis",
+          "/cockpit/brand/strategy",
+        ],
+      },
       { href: "/cockpit/brand/notoria", label: "Recommandations", sublabel: "Moteur de recommandation", labelKey: "nav.notoria", sublabelKey: "nav.notoria.sub", icon: Sparkles },
-      { href: "/cockpit/brand/potential", label: `${PILLAR_METADATA.I.displayName} (I)`, sublabel: PILLAR_METADATA.I.role, pillarSlug: "pillar-i", icon: Rocket },
-      { href: "/cockpit/brand/roadmap", label: `${PILLAR_METADATA.S.displayName} (S)`, sublabel: PILLAR_METADATA.S.role, pillarSlug: "pillar-s", icon: Route },
+      { href: "/cockpit/brand/jehuty", label: "La Gazette", sublabel: "Veille & signaux", labelKey: "nav.jehuty", sublabelKey: "nav.jehuty.sub", icon: Newspaper },
     ],
   },
   {
-    title: "Livrables & Sources",
+    title: "Mes livrables",
+    titleKey: "nav.group.livrables",
     items: [
-      { href: "/cockpit/brand/proposition", label: "L'Oracle", icon: Brain },
-      { href: "/cockpit/brand/deliverables", label: "Mes Livrables", icon: FileText },
-      { href: "/cockpit/brand/guidelines", label: "Guidelines", icon: BookOpen },
-      { href: "/cockpit/brand/assets", label: "Assets", icon: Image },
-      { href: "/cockpit/brand/sources", label: "Sources", icon: Layers },
+      {
+        href: "/cockpit/brand/proposition", label: "L'Oracle", sublabel: "Votre stratégie complète",
+        labelKey: "nav.proposition", sublabelKey: "nav.proposition.sub", icon: FileSignature,
+      },
+      {
+        href: "/cockpit/brand/deliverables", label: "Livrables", sublabel: "Chartes · Assets · Exports",
+        labelKey: "nav.livrables", sublabelKey: "nav.livrables.sub", icon: FileText,
+        activePrefixes: ["/cockpit/brand/guidelines", "/cockpit/brand/assets"],
+      },
+      {
+        href: "/cockpit/brand/sources", label: "Sources", sublabel: "Vos documents & données",
+        labelKey: "nav.sources", sublabelKey: "nav.sources.sub", icon: Layers,
+      },
     ],
   },
   {
-    title: "Insights",
+    title: "Mon activité",
+    titleKey: "nav.group.activite",
     items: [
-      { href: "/cockpit/insights/reports", label: "Rapports", icon: BarChart3 },
-      { href: "/cockpit/insights/diagnostics", label: "Diagnostics", icon: Activity },
-      { href: "/cockpit/insights/benchmarks", label: "Benchmarks", icon: TrendingUp },
-      { href: "/cockpit/insights/attribution", label: "Attribution", icon: GitBranch },
+      {
+        href: "/cockpit/operate/campaigns", label: "Campagnes", sublabel: "Suivi de vos campagnes",
+        labelKey: "nav.campagnes", sublabelKey: "nav.campagnes.sub",
+        icon: Megaphone, mobileTab: true,
+        activePrefixes: ["/cockpit/operate/briefs"],
+      },
+      {
+        href: "/cockpit/operate/calendar", label: "Calendrier", sublabel: "Lancements & actions",
+        labelKey: "nav.calendrier", sublabelKey: "nav.calendrier.sub", icon: CalendarDays,
+        activePrefixes: ["/cockpit/operate/roadmap"],
+      },
+      {
+        href: "/cockpit/operate/tracker", label: "Résultats", sublabel: "Performance des campagnes",
+        labelKey: "nav.resultats", sublabelKey: "nav.resultats.sub", icon: Activity,
+      },
+      {
+        href: "/cockpit/operate/newsletter", label: "Newsletter", sublabel: "Vos envois & abonnés",
+        labelKey: "nav.newsletter", sublabelKey: "nav.newsletter.sub", icon: Mail,
+      },
+      {
+        href: "/cockpit/operate/requests", label: "Demandes", sublabel: "Demandes à votre équipe",
+        labelKey: "nav.demandes", sublabelKey: "nav.demandes.sub", icon: MessageCircle,
+      },
     ],
   },
   {
-    // Phase 23 Epic 7 Story 7.7 — durable path to the sectoral Overton surface.
-    title: "Intelligence",
+    title: "Mon marché",
+    titleKey: "nav.group.marche",
     items: [
-      { href: "/cockpit/intelligence/overton", label: "Overton sectoriel", icon: Radar },
-      { href: "/cockpit/intelligence/community", label: "Communauté", icon: Users },
+      {
+        href: "/cockpit/intelligence/overton", label: "Radar sectoriel", sublabel: "Votre position dans le secteur",
+        labelKey: "nav.overton", sublabelKey: "nav.overton.sub", icon: Radar,
+      },
+      {
+        href: "/cockpit/intelligence/market-studies", label: "Études de marché", sublabel: "Vos études ingérées",
+        labelKey: "nav.market-studies", sublabelKey: "nav.market-studies.sub", icon: Search,
+      },
+      {
+        href: "/cockpit/intelligence/community", label: "Communauté", sublabel: "Superfans & engagement",
+        labelKey: "nav.communaute", sublabelKey: "nav.communaute.sub", icon: Users,
+      },
+      {
+        href: "/cockpit/insights/reports", label: "Rapports & analyses", sublabel: "Santé · Benchmarks · Attribution",
+        labelKey: "nav.rapports", sublabelKey: "nav.rapports.sub", icon: BarChart3,
+        activePrefixes: [
+          "/cockpit/insights/diagnostics",
+          "/cockpit/insights/benchmarks",
+          "/cockpit/insights/attribution",
+          "/cockpit/insights/apogee-maintenance",
+        ],
+      },
+    ],
+  },
+  {
+    title: "Mon compte",
+    titleKey: "nav.group.compte",
+    items: [
+      { href: "/cockpit/settings/billing", label: "Abonnement", labelKey: "nav.abonnement", icon: CreditCard },
+      { href: "/cockpit/settings", label: "Réglages", labelKey: "nav.reglages", icon: Settings },
     ],
   },
   {
     title: "",
     items: [
-      { href: "/cockpit/messages", label: "Messages", icon: MessageSquare },
+      { href: "/cockpit/messages", label: "Messages", labelKey: "nav.messages", icon: MessageSquare, mobileTab: true },
     ],
   },
 ];

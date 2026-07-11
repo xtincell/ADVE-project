@@ -13,12 +13,17 @@ import type { PortalId } from "./types";
 interface TopbarProps {
   currentPortal: PortalId;
   onOpenCommandPalette?: () => void;
-  onToggleMestor?: () => void;
+  /**
+   * Page assistant du portail (ex. /cockpit/mestor). Quand absent, le bouton
+   * n'est pas rendu — fin du bouton no-op qui togglait un état jamais
+   * consommé (lot 10, audit 2026-07-11 [M01-04]).
+   */
+  assistantHref?: string;
   /** Ouvre le tiroir de navigation mobile (md:hidden). */
   onOpenMobileNav?: () => void;
   /** @deprecated — branché live via NotificationBell (ADR-0025). */
   notificationCount?: number;
-  mestorHasSuggestions?: boolean;
+  assistantHasSuggestions?: boolean;
   userName?: string;
 }
 
@@ -43,9 +48,9 @@ function settingsPathForPortal(portal: PortalId): string {
 export function Topbar({
   currentPortal,
   onOpenCommandPalette,
-  onToggleMestor,
+  assistantHref,
   onOpenMobileNav,
-  mestorHasSuggestions = false,
+  assistantHasSuggestions = false,
   userName = "Utilisateur",
 }: TopbarProps) {
   const router = useRouter();
@@ -57,14 +62,14 @@ export function Topbar({
         e.preventDefault();
         onOpenCommandPalette?.();
       }
-      if ((e.metaKey || e.ctrlKey) && e.key === ".") {
+      if ((e.metaKey || e.ctrlKey) && e.key === "." && assistantHref) {
         e.preventDefault();
-        onToggleMestor?.();
+        router.push(assistantHref);
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [onOpenCommandPalette, onToggleMestor]);
+  }, [onOpenCommandPalette, assistantHref, router]);
 
   useEffect(() => {
     if (!userMenuOpen) return;
@@ -131,22 +136,24 @@ export function Topbar({
         {/* Notifications — live SSE + dropdown (ADR-0025) */}
         <NotificationBell />
 
-        {/* Mestor toggle */}
-        <button
-          data-tour-step="mestor"
-          onClick={onToggleMestor}
-          className={`relative flex h-8 w-8 items-center justify-center rounded-md transition-colors ${
-            mestorHasSuggestions
-              ? "text-primary animate-[pulse-glow_2s_ease-in-out_infinite]"
-              : "text-foreground-muted hover:bg-background-overlay hover:text-foreground"
-          }`}
-          aria-label="Ouvrir l'assistant"
-        >
-          <Brain className="h-4 w-4" />
-          {mestorHasSuggestions && (
-            <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-primary" />
-          )}
-        </button>
+        {/* Assistant — lien vers la page assistant du portail (Cmd+.) */}
+        {assistantHref ? (
+          <button
+            data-tour-step="mestor"
+            onClick={() => router.push(assistantHref)}
+            className={`relative flex h-8 w-8 items-center justify-center rounded-md transition-colors ${
+              assistantHasSuggestions
+                ? "text-primary animate-[pulse-glow_2s_ease-in-out_infinite]"
+                : "text-foreground-muted hover:bg-background-overlay hover:text-foreground"
+            }`}
+            aria-label="Ouvrir l'assistant"
+          >
+            <Brain className="h-4 w-4" />
+            {assistantHasSuggestions && (
+              <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-primary" />
+            )}
+          </button>
+        ) : null}
 
         {/* User menu */}
         <div className="relative" data-user-menu>
