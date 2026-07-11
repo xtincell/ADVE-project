@@ -65,8 +65,12 @@ export function StrategyProvider({ children }: { children: ReactNode }) {
   // Use selected (deep-link ?strategy= > sélection persistée), else fall back
   // to first. Une sélection persistée qui ne résout plus (marque supprimée /
   // autre compte) est ignorée par le fallback — pas d'état cassé.
-  const activeStrategies = strategies.filter((s) => s.status !== "DELETED" && s.status !== "ARCHIVED");
-  const selectedStillExists = selectedId != null && strategies.some((s) => s.id === selectedId);
+  // QUICK_INTAKE exclus du fallback : un lead non converti (résolu côté
+  // Console) ne doit jamais devenir la marque active par défaut du Cockpit.
+  const activeStrategies = strategies.filter(
+    (s) => s.status !== "DELETED" && s.status !== "ARCHIVED" && s.status !== "QUICK_INTAKE",
+  );
+  const selectedStillExists = selectedId != null && activeStrategies.some((s) => s.id === selectedId);
   const strategyId = (selectedStillExists ? selectedId : null) ?? activeStrategies[0]?.id ?? strategies[0]?.id ?? null;
 
   const setStrategyId = useCallback((id: string) => {

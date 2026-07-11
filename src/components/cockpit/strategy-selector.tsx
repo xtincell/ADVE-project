@@ -32,12 +32,15 @@ import Link from "next/link";
  * `<BrandMarketCommutator>` à l'intérieur de chaque page brand.
  */
 export function StrategySelector() {
-  const { strategyId } = useStrategy();
+  const { strategyId, strategies } = useStrategy();
   const [open, setOpen] = useState(false);
 
-  const { data: tree, isLoading } = trpc.strategy.brandTreeForSelector.useQuery(
+  // Lazy loading (fix 2026-07-11) : l'arbre ne se charge QU'À l'ouverture du
+  // modal. Le label du bouton vient du StrategyProvider (déjà chargé pour
+  // tout le cockpit) — plus de requête arbre sur chaque page.
+  const { data: tree, isLoading, isError } = trpc.strategy.brandTreeForSelector.useQuery(
     {},
-    { staleTime: 30_000 },
+    { staleTime: 30_000, enabled: open },
   );
 
   // Cmd+O (Open brand) ouvre le modal — Cmd+K reste à la Command Palette.
@@ -53,36 +56,30 @@ export function StrategySelector() {
     return () => window.removeEventListener("keydown", handler);
   }, [open]);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center gap-2 rounded-lg border border-border bg-background/80 px-3 py-2 text-sm">
-        <Building2 className="h-3.5 w-3.5 text-foreground-muted animate-pulse" />
-        <span className="text-foreground-muted">Chargement...</span>
-      </div>
-    );
-  }
-
-  // Resolve current label
-  const current = tree
-    ? [...tree.nodes.map((n) => n.strategy ? { id: n.strategy.id, name: n.name } : null), ...tree.standaloneStrategies]
-        .filter((x): x is { id: string; name: string } => !!x)
-        .find((x) => x.id === strategyId)
-    : undefined;
+  const current = strategies.find((s) => s.id === strategyId);
 
   return (
     <>
       <button
+        type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 rounded-lg border border-border bg-background/80 px-3 py-2 text-sm transition-colors hover:border-border-strong hover:bg-background"
+        className="flex w-full min-w-0 items-center gap-2 rounded-lg border border-border bg-background/80 px-3 py-2 text-sm transition-colors hover:border-border-strong hover:bg-background"
         title="Cmd+O pour changer de marque"
       >
-        <Building2 className="h-3.5 w-3.5 text-accent" />
-        <span className="max-w-[220px] truncate font-medium text-white">
+        <Building2 className="h-3.5 w-3.5 flex-shrink-0 text-accent" />
+        <span className="min-w-0 flex-1 truncate text-left font-medium text-white">
           {current?.name ?? "Sélectionner une marque"}
         </span>
-        <ChevronDown className="h-3 w-3 text-foreground-muted" />
+        <ChevronDown className="h-3 w-3 flex-shrink-0 text-foreground-muted" />
       </button>
-      {open && tree && <BrandPickerModal tree={tree} onClose={() => setOpen(false)} />}
+      {open && (
+        <BrandPickerModal
+          tree={tree ?? null}
+          isLoading={isLoading}
+          isError={isError}
+          onClose={() => setOpen(false)}
+        />
+      )}
     </>
   );
 }
@@ -147,7 +144,17 @@ function classifyComposite(c: number | null): BrandClassification | null {
   return classifyTier(c);
 }
 
-function BrandPickerModal({ tree, onClose }: { tree: BrandTreeData; onClose: () => void }) {
+function BrandPickerModal({
+  tree,
+  isLoading,
+  isError,
+  onClose,
+}: {
+  tree: BrandTreeData | null;
+  isLoading: boolean;
+  isError: boolean;
+  onClose: () => void;
+}) {
   const { strategyId, setStrategyId } = useStrategy();
   const [query, setQuery] = useState("");
   const [filterKind, setFilterKind] = useState<"ALL" | "CORPORATE" | "MASTER_BRAND" | "STANDALONE_BRAND" | "PRODUCT_LINE">("ALL");
@@ -173,31 +180,41 @@ function BrandPickerModal({ tree, onClose }: { tree: BrandTreeData; onClose: () 
     };
   }, []);
 
-  // Build tiles from brand nodes + standalone strategies
+  // Build tiles from brand nodes + standalone strategies.
+  // Dédupe (fix 2026-07-11) : si plusieurs nodes référencent la MÊME
+  // Strategy (data Phase 18 possible), seule la PREMIÈRE tuile porte le
+  // strategyId — fini les coches « actives » multiples pour une marque.
   const tiles = useMemo<Tile[]>(() => {
+    if (!tree) return [];
     const nodesById = new Map(tree.nodes.map((n) => [n.id, n]));
     const out: Tile[] = [];
+    const seenStrategyIds = new Set<string>();
 
     for (const n of tree.nodes) {
       const parent = n.parentNodeId ? nodesById.get(n.parentNodeId) : null;
       const composite = readComposite(n.strategy?.advertis_vector);
+      const isDuplicate = !!n.strategy && seenStrategyIds.has(n.strategy.id);
+      if (n.strategy && !isDuplicate) seenStrategyIds.add(n.strategy.id);
+      const effectiveStrategy = isDuplicate ? null : n.strategy;
       out.push({
         key: `node-${n.id}`,
         nodeId: n.id,
         parentId: n.parentNodeId,
-        strategyId: n.strategy?.id ?? null,
-        strategyStatus: n.strategy?.status ?? null,
-        composite,
-        classification: classifyComposite(composite),
+        strategyId: effectiveStrategy?.id ?? null,
+        strategyStatus: effectiveStrategy?.status ?? null,
+        composite: isDuplicate ? null : composite,
+        classification: isDuplicate ? null : classifyComposite(composite),
         name: n.name,
         slug: n.slug,
         nodeKind: n.nodeKind,
         parentName: parent?.name ?? null,
-        action: n.strategy ? "ACTIVATE_STRATEGY" : "GO_PORTFOLIO",
-        href: n.strategy ? null : `/cockpit/portfolio/${n.slug}`,
+        action: effectiveStrategy ? "ACTIVATE_STRATEGY" : "GO_PORTFOLIO",
+        href: effectiveStrategy ? null : `/cockpit/portfolio/${n.slug}`,
       });
     }
     for (const s of tree.standaloneStrategies) {
+      if (seenStrategyIds.has(s.id)) continue;
+      seenStrategyIds.add(s.id);
       const composite = readComposite(s.advertis_vector);
       out.push({
         key: `standalone-${s.id}`,
@@ -430,7 +447,18 @@ function BrandPickerModal({ tree, onClose }: { tree: BrandTreeData; onClose: () 
 
         {/* Body — groupes unifiés (umbrella + children) collapsibles */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
-          {grouped.groups.length === 0 ? (
+          {isLoading ? (
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 py-4" aria-busy="true">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="h-24 animate-pulse rounded-lg border border-border/40 bg-background-overlay/40" />
+              ))}
+            </div>
+          ) : isError ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-2 py-20 text-sm text-foreground-muted">
+              <p>Impossible de charger vos marques pour le moment.</p>
+              <p className="text-2xs">Réessayez dans un instant — si le problème persiste, contactez votre équipe.</p>
+            </div>
+          ) : grouped.groups.length === 0 ? (
             <div className="flex flex-1 items-center justify-center py-20 text-sm text-foreground-muted">
               Aucune marque ne correspond aux filtres.
             </div>
@@ -486,6 +514,7 @@ function BrandPickerModal({ tree, onClose }: { tree: BrandTreeData; onClose: () 
 function FilterPill({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       className={`rounded-full border px-2.5 py-0.5 text-2xs font-medium transition-colors ${
         active
@@ -778,7 +807,7 @@ function BrandTile({
   }
 
   return (
-    <button onClick={() => onSelect(tile)} className={baseClass}>
+    <button type="button" onClick={() => onSelect(tile)} className={baseClass}>
       {inner}
     </button>
   );
