@@ -121,7 +121,7 @@ La Fusée est un OS, traité comme tel. 8 couches concrètes :
 | 3 | **Protocoles** | Intent bus (`mestor.emitIntent`) · NSP SSE · hash-chain SHA256 · MCP bidirectionnel · OAuth 2.1 device flow · `ConnectorResult<T>` · Pattern P22-* | ✅ |
 | 4 | **Substrats** | Yggdrasil per-brand · tenantScopedDb isolation · layering cascade (ADR-0002) · BrandContextNode tree · Variable Bible | ✅ |
 | 5 | **Services système (daemons)** | 7 Neteru + INFRASTRUCTURE | ✅ |
-| 6 | **APIs** | tRPC routers (112) · Glory tools (56 CORE / 149 registry) · Frameworks (28) · Sequences (94 dont 91 DRAFT) · Intent kinds (546) — recompte 2026-07-11 sur les registres code (`INTENT_KINDS`, `CORE_GLORY_TOOLS`/`EXTENDED_GLORY_TOOLS`, `ALL_SEQUENCES`, `FRAMEWORKS`) | ✅ |
+| 6 | **APIs** | tRPC routers (112) · Glory tools (56 CORE / 149 registry) · Frameworks (28) · Sequences (94 dont 91 DRAFT) · Intent kinds (548) — recompte 2026-07-11 PM sur les registres code (`INTENT_KINDS`, `CORE_GLORY_TOOLS`/`EXTENDED_GLORY_TOOLS`, `ALL_SEQUENCES`, `FRAMEWORKS`) | ✅ |
 | 7 | **Applications** | Cockpit · Console · Agency · Creator · Intake · Argos (planifié) | 🟡 (3 surfaces manquantes) |
 | 8 | **Funnel commercial** | Wow-effect onboarding · free analysis · paid PDF · CTA retainer · Cockpit subscription | 🟡 (metrics absents) |
 
