@@ -13,6 +13,7 @@ import { Sparkline } from "@/components/shared/sparkline";
 import { PipelineProgress, buildPipelineSteps } from "@/components/shared/pipeline-progress";
 import { AiBadge } from "@/components/shared/ai-badge";
 import { useStrategy } from "@/components/cockpit/strategy-context";
+import { useCanOperate } from "@/components/cockpit/use-can-operate";
 import { OvertonTeaser } from "@/components/cockpit/intelligence/overton-panel";
 import { buildPillarContentMap } from "@/components/shared/pillar-content-card";
 import Link from "next/link";
@@ -573,6 +574,9 @@ export default function CockpitDashboard() {
 
 function BatchActionsBar({ strategyId }: { strategyId: string }) {
   const utils = trpc.useUtils();
+  // Gestes opérateur (enrichissement batch, cascade, sources) — jamais
+  // rendus au founder : UX-DR16 + fin du clic→FORBIDDEN (audit [M02-01]).
+  const canOperate = useCanOperate();
 
   const autoFillAll = trpc.pillar.autoFillAll.useMutation({
     onSuccess: () => {
@@ -598,6 +602,8 @@ function BatchActionsBar({ strategyId }: { strategyId: string }) {
   });
 
   const anyLoading = autoFillAll.isPending || cascadeRTIS.isPending || enrichAll.isPending;
+
+  if (!canOperate) return null;
 
   return (
     <div className="ck-batch">

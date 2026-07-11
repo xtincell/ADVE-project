@@ -23,7 +23,7 @@
 import { TRPCError } from "@trpc/server";
 import type { Prisma } from "@prisma/client";
 import type { Context } from "@/server/trpc/context";
-import { protectedProcedure, adminProcedure } from "@/server/trpc/init";
+import { protectedProcedure, adminProcedure, operatorProcedure } from "@/server/trpc/init";
 import { eventBus } from "./event-bus";
 import { computeSelfHash } from "./hash-chain";
 import { assertReadyFor, ReadinessVetoError } from "./pillar-readiness";
@@ -84,8 +84,12 @@ interface GovernedOptions<I extends AnyZod, O extends AnyZod> {
   outputSchema?: O;
   caller?: string;
   /**
-   * Set to true to require the user to be linked to an Operator. Defaults
-   * to true (governance is multi-tenant by default).
+   * Set to true to restrict the mutation to ADMIN / operator-linked users
+   * (mirrors `operatorProcedure`). Defaults to false — call sites opt in
+   * explicitly. Le flag était historiquement inerte (deux branches
+   * identiques) avec une JSDoc promettant un défaut `true` jamais appliqué ;
+   * le durcissement site-par-site du défaut est tracé dans RESIDUAL-DEBT
+   * (audit UX cockpit 2026-07-11, finding [M02-01]).
    */
   requireOperator?: boolean;
   /**
@@ -113,7 +117,7 @@ interface GovernedOptions<I extends AnyZod, O extends AnyZod> {
 export function governedProcedure<I extends AnyZod, O extends AnyZod>(
   opts: GovernedOptions<I, O>,
 ) {
-  const base = opts.requireOperator === false ? protectedProcedure : protectedProcedure;
+  const base = opts.requireOperator === true ? operatorProcedure : protectedProcedure;
   return base.input(opts.inputSchema).use(async ({ ctx, input, next }) => {
     const intentId = await preEmitIntent(ctx, opts.kind, input, opts.caller ?? "governed");
 

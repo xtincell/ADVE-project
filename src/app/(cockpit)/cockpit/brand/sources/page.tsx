@@ -20,6 +20,7 @@ import { useState, useEffect } from "react";
 
 import { trpc } from "@/lib/trpc/client";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
+import { useCanOperate } from "@/components/cockpit/use-can-operate";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { Modal } from "@/components/shared/modal";
 import {
@@ -72,14 +73,29 @@ function CertaintyBadge({
   current,
   onChange,
   pending,
+  readOnly = false,
 }: {
   sourceId: string;
   current: SourceCertainty;
   onChange: (next: SourceCertainty) => void;
   pending: boolean;
+  /** Founder : le niveau de certitude reste lisible mais n'est plus éditable
+   *  (lot 12, audit 2026-07-11 [M05-05]). */
+  readOnly?: boolean;
 }): React.ReactNode {
   const visual = CERTAINTY_VISUAL[current];
   const Icon = visual.icon;
+  if (readOnly) {
+    return (
+      <span
+        className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-2xs font-medium ${visual.color}`}
+        title={SOURCE_CERTAINTY_DESCRIPTION[current]}
+      >
+        <Icon className="h-3 w-3" />
+        <span>{SOURCE_CERTAINTY_LABEL[current]}</span>
+      </span>
+    );
+  }
   return (
     <label
       className={`relative inline-flex cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 text-2xs font-medium transition ${visual.color} ${pending ? "opacity-50" : "hover:brightness-110"}`}
@@ -138,6 +154,9 @@ function ProposalsPanel({
 }): React.ReactNode {
   const [open, setOpen] = useState(false);
   const utils = trpc.useUtils();
+  // Triage du filtreur (accepter/rejeter des propositions vault) = geste
+  // opérateur — le panneau entier disparaît pour un founder (lot 12).
+  const canOperate = useCanOperate();
   const draftsQuery = trpc.brandVault.listDraftsFromSource.useQuery(
     { strategyId, sourceDataSourceId: sourceId },
     { enabled: open },
@@ -173,6 +192,8 @@ function ProposalsPanel({
     metadata: unknown;
   }>;
   const kinds = (kindsQuery.data ?? []) as readonly string[];
+
+  if (!canOperate) return null;
 
   return (
     <div className="mt-3 rounded-lg border border-accent/15 bg-accent/5">
@@ -637,6 +658,9 @@ function SourceEditModal({
 
 export default function SourcesPage() {
   const strategyId = useCurrentStrategyId();
+  // Founder = lecture (liste + certitude) ; édition/purge/suppression =
+  // gestes opérateur (lot 12, audit 2026-07-11 [M05-05]).
+  const canOperate = useCanOperate();
   const [showAddForm, setShowAddForm] = useState(false);
   const [noteTitle, setNoteTitle] = useState("");
   const [noteContent, setNoteContent] = useState("");
@@ -800,6 +824,7 @@ export default function SourcesPage() {
                         sourceId={source.id}
                         current={(source.certainty as SourceCertainty | undefined) ?? "DECLARED"}
                         pending={updateSourceMutation.isPending}
+                        readOnly={!canOperate}
                         onChange={(next) =>
                           updateSourceMutation.mutate({ id: source.id as string, certainty: next })
                         }
@@ -811,7 +836,7 @@ export default function SourcesPage() {
                     </div>
                     {/* Édition de source (titre + contenu) — toute source est
                         éditable. updateSource passe par le gateway d'ingestion. */}
-                    {typeof source.id === "string" ? (
+                    {canOperate && typeof source.id === "string" ? (
                       <button
                         onClick={(e) => { e.stopPropagation(); setEditSourceId(source.id as string); }}
                         className="rounded p-1 text-foreground-muted/40 hover:text-accent hover:bg-accent/10 transition-colors"
@@ -823,7 +848,7 @@ export default function SourcesPage() {
                     {/* PR-B (ADR-0033) — Re-ingest button, only on intake-origin
                         sources. The full purge happens server-side via Mestor
                         Intent ; this button just opens the confirm modal. */}
-                    {typeof source.origin === "string" && source.origin.startsWith("intake:") ? (
+                    {canOperate && typeof source.origin === "string" && source.origin.startsWith("intake:") ? (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -839,7 +864,7 @@ export default function SourcesPage() {
                         <RefreshCw className="h-3.5 w-3.5" />
                       </button>
                     ) : null}
-                    {source.sourceType === "MANUAL_INPUT" ? (
+                    {canOperate && source.sourceType === "MANUAL_INPUT" ? (
                       <button
                         onClick={(e) => { e.stopPropagation(); deleteMutation.mutate({ id: source.id as string }); }}
                         className="rounded p-1 text-foreground-muted/40 hover:text-error hover:bg-error/10 transition-colors"
