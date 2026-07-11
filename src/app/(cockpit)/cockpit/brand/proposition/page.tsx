@@ -5,6 +5,7 @@ import { ADVE_STORAGE_KEYS } from "@/domain";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { useCanOperate } from "@/components/cockpit/use-can-operate";
+import { useToast } from "@/components/shared/notification-toast";
 import { trpc } from "@/lib/trpc/client";
 import {
   FileText,
@@ -39,6 +40,7 @@ const STATUS_CONFIG = {
 
 export default function PropositionPage() {
   const strategyId = useCurrentStrategyId();
+  const toast = useToast();
   // Assemblage/cascade = gestes opérateur ; le founder lit et exporte
   // (UX-DR16, lot 12 — cohérence avec le panel progressif déjà gardé).
   const canOperate = useCanOperate();
@@ -249,7 +251,7 @@ export default function PropositionPage() {
         : "Complétez A·D·V·E (au moins ENRICHED) : c'est le socle qui nourrit toute la cascade.",
     },
     {
-      key: "rtis", title: "Dérivés RTIS",
+      key: "rtis", title: "Piliers stratégiques",
       ready: rtisReady,
       body: rtisReady
         ? "R·T·I·S dérivés depuis ADVE — diagnostic, marché, potentiel et stratégie consolidés."
@@ -260,7 +262,7 @@ export default function PropositionPage() {
       ready: oracleReadyToCompile,
       body: oracleReadyToCompile
         ? `${completeSections}/${totalSections} sections — le livrable peut être compilé sans heurt.`
-        : `${totalSections - completeSections} sections restantes — préparez ADVE + RTIS pour débloquer l'assemblage.`,
+        : `${totalSections - completeSections} sections restantes — préparez fondation et stratégie pour débloquer l'assemblage.`,
     },
   ];
 
@@ -314,12 +316,15 @@ export default function PropositionPage() {
         })}
       </div>
 
-      {/* ─ Assembleur Artemis + console live ─ */}
+      {/* ─ Assembleur + console live. Lot 13 (audit 2026-07-11 [M05-01]) :
+          une seule surface d'assemblage visible du founder — l'outillage
+          (console, tracker, partage personas) est opérateur-only ; le
+          founder garde stats, « Ouvrir le livrable » et le panel progressif. ─ */}
       <div className="ck-orc">
         <div className="ck-orc__head">
           <div className="ck-orc__head-l">
-            <h3>Assembler L&apos;Oracle</h3>
-            <span className="ck-orc__adr">{pct}% assemblé · méthode ADVE-RTIS</span>
+            <h3>{canOperate ? <>Assembler L&apos;Oracle</> : <>Votre livrable</>}</h3>
+            <span className="ck-orc__adr">{pct}% assemblé · méthode ADVE</span>
             <AiBadge />
           </div>
           <div className="ck-orc__tally">
@@ -339,10 +344,10 @@ export default function PropositionPage() {
             disabled={enrichMutation.isPending}
             title={
               oracleReadyToCompile
-                ? "ADVE + RTIS prêts — Oracle peut compiler les 35 sections sans heurt."
+                ? "Fondation et stratégie prêtes — l'Oracle peut compiler les 35 sections sans heurt."
                 : !adveAllComplete
                   ? "Vos 4 fondations ADVE ne sont pas encore enrichies. Un clic ouvre la préparation automatique."
-                  : "RTIS pas encore dérivés — un clic ouvre la cascade RTIS pour préparer Oracle."
+                  : "Piliers stratégiques pas encore dérivés — un clic ouvre la préparation pour l'Oracle."
             }
             onClick={() => {
               if (!adveAllComplete) { setExternalBlockers(undefined); setLaunchModalOpen(true); return; }
@@ -372,8 +377,8 @@ export default function PropositionPage() {
           </div>
         )}
 
-        {/* Console live (enrichLog réel) */}
-        {enrichLog.length > 0 && (
+        {/* Console live (enrichLog réel) — outillage opérateur */}
+        {canOperate && enrichLog.length > 0 && (
           <div className="ck-orc__console">
             <div className="ck-orc__console-head"><span className="dot" /> Console live · télémétrie d&apos;assemblage</div>
             {enrichLog.map((line, i) => {
@@ -419,9 +424,13 @@ export default function PropositionPage() {
             (events stockés dans IntentEmissionEvent). Le polling completeness
             alimente le fallback live-pendant-mutation (le vrai pre-completion
             streaming nécessite refactor background queue, hors scope sprint). */}
-        <OracleEnrichmentTracker intentId={lastIntentId} completenessReport={completeness.data ?? undefined} />
+        {canOperate ? (
+          <OracleEnrichmentTracker intentId={lastIntentId} completenessReport={completeness.data ?? undefined} />
+        ) : null}
 
-        {/* ─ Lien public / partage (strategyPresentation.shareLink) ─ */}
+        {/* ─ Lien public / partage (strategyPresentation.shareLink) — geste
+            opérateur (vues persona destinées au partage vers le client). ─ */}
+        {canOperate ? (
         <div className="ck-orc__share">
           <div className="ck-orc__share-l">
             <span className="ck-orc__share-h"><Share2 /> Page générée — lien public</span>
@@ -444,6 +453,7 @@ export default function PropositionPage() {
             </div>
           )}
         </div>
+        ) : null}
       </div>
 
       {/* Phase 21 F-F (ADR-0073) — Génération progressive avec stream SSE (granulaire). */}
@@ -500,7 +510,7 @@ export default function PropositionPage() {
               setTimeout(() => URL.revokeObjectURL(url), 2000);
             } catch (e) {
               console.error("[export-pdf] failed:", e);
-              alert("Export PDF a échoué. Voir la console.");
+              toast.error("L'export PDF a échoué. Réessayez dans un instant.");
             }
           }}
           className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-foreground-secondary hover:bg-background"
@@ -527,7 +537,7 @@ export default function PropositionPage() {
               setTimeout(() => URL.revokeObjectURL(url), 2000);
             } catch (e) {
               console.error("[export-brand-bible] failed:", e);
-              alert("Téléchargement de la bible a échoué. Voir la console.");
+              toast.error("Le téléchargement de la bible de marque a échoué. Réessayez dans un instant.");
             }
           }}
           className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-foreground-secondary hover:bg-background"
