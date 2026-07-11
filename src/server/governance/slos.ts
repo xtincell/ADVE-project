@@ -121,7 +121,6 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "JEHUTY_CURATE", p95LatencyMs: 800, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "HYPERVISEUR_PEER_INSIGHTS", p95LatencyMs: 2_500, errorRatePct: 0.02, costP95Usd: 0.02 },
   { kind: "LIFT_INTAKE_TO_STRATEGY", p95LatencyMs: 60_000, errorRatePct: 0.05, costP95Usd: 0.5 },
-  { kind: "ENRICH_ORACLE", p95LatencyMs: 60_000, errorRatePct: 0.05, costP95Usd: 0.8 },
   { kind: "EXPORT_ORACLE", p95LatencyMs: 45_000, errorRatePct: 0.02, costP95Usd: 0.4 },
   { kind: "INVOKE_GLORY_TOOL", p95LatencyMs: 15_000, errorRatePct: 0.04, costP95Usd: 0.1 },
   { kind: "EXECUTE_GLORY_SEQUENCE", p95LatencyMs: 90_000, errorRatePct: 0.05, costP95Usd: 1.5 },

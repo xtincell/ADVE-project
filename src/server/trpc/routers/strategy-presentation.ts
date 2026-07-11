@@ -12,7 +12,6 @@ import {
   checkCompleteness,
 } from "@/server/services/strategy-presentation";
 import { generateBudgetPlan } from "@/server/services/budget-allocator";
-import { enrichAllSections, enrichAllSectionsNeteru } from "@/server/services/strategy-presentation/enrich-oracle";
 import { auditedProcedure, governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
 
@@ -59,31 +58,6 @@ export const strategyPresentationRouter = createTRPCRouter({
       return checkCompleteness(input.strategyId);
     }),
 
-  /** Enrich ALL empty/partial Oracle sections by filling pillar gaps via LLM.
-   *
-   *  Phase 13 R2 — exposition intentId dans le result pour streaming/replay
-   *  NSP côté frontend (cf. <OracleEnrichmentTracker intentId={...} />).
-   *  L'intentId est créé par governedProcedure preEmitIntent AVANT le handler. */
-  enrichOracle: governedProcedure({
-    kind: "ENRICH_ORACLE",
-    inputSchema: z.object({ strategyId: z.string() }),
-    preconditions: ["ORACLE_ENRICH"],
-  }).mutation(async ({ input, ctx }) => {
-    const result = await enrichAllSections(input.strategyId);
-    return { ...result, intentId: (ctx as { intentId?: string }).intentId ?? null };
-  }),
-
-  /** NETERU v2: Enrich Oracle via the full trio (Seshat→Mestor→Artemis).
-   *  R2 — idem enrichOracle : intentId exposé dans le result. */
-  enrichOracleNeteru: governedProcedure({
-    kind: "ENRICH_ORACLE",
-    inputSchema: z.object({ strategyId: z.string() }),
-    preconditions: ["ORACLE_ENRICH"],
-  }).mutation(async ({ input, ctx }) => {
-    const result = await enrichAllSectionsNeteru(input.strategyId);
-    return { ...result, intentId: (ctx as { intentId?: string }).intentId ?? null };
-  }),
-
   /**
    * Phase 13 (B8, ADR-0014) — Ptah forge à la demande pour une section Oracle.
    *
@@ -126,7 +100,7 @@ export const strategyPresentationRouter = createTRPCRouter({
     if (!brandAsset) {
       throw new Error(
         `Aucun BrandAsset DRAFT (kind=${input.brandAssetKind}) pour la section ${input.sectionId}. ` +
-          `Lancez d'abord enrich-oracle pour produire le brief.`,
+          `Lancez d'abord l'assemblage de la section (panel de génération Oracle) pour produire le brief.`,
       );
     }
 

@@ -10,6 +10,20 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.91 — fix(governance,cockpit): intégration #447×#448 + résiduels (a)-(f) audit UX (2026-07-11)
+
+Merge de la PR #448 (audit UX Cockpit v2, lots 10-15) dans #447 avec résolution des collisions first-come (ADR-0122 nav conservé, ADR spine → [ADR-0124](docs/governance/adr/0124-emission-spine-unified.md) ; leurs entrées CHANGELOG 84-88 → 86-90) ; `requireOperator` (lot 12) composé avec le spine d'émission. Puis clôture des résiduels tracés :
+
+- **(a) `requireOperator` durci sur 51 sites** après audit fonctionnel des 390 `governedProcedure` / 85 routers (Tier 1 : governance/canon-sync/operator/monetization-admin/system-config/staleness/process/migrateToV4 ; Tier 1b défense en profondeur ; Tier 2 console-only dont `missionApplication.decide` qui n'avait AUCUN garde). Guilde, candidatures, paiements, édition ADVE cockpit, brand-node portfolio : confirmés non-opérateur avec preuve de surface. + 2 gardes d'ownership : `strategy.delete` et `monetization.cancelSubscription` (tout authentifié pouvait archiver/résilier par id).
+- **(c) Allowlist vocabulaire vidée** : `brand/rtis(+synthese)` → redirects hub Stratégie (1 790 lignes legacy retirées, capacités couvertes) ; `apogee-maintenance` purgée (vigies, registre aéronautique conservé).
+- **(d) Funnel public aligné [ADR-0123](docs/governance/adr/0123-cockpit-client-vocabulary-adve-rtis.md)** : pricing-tiers (« Rapport ADVE & stratégie », mythologie → business), pages intake résultat/score/short/launchpad, easter-eggs du processing screen. Verrou CI étendu au funnel ((intake), components/intake, pricing-tiers, dashboard apogée) + filtre identifiants SCREAMING_SNAKE.
+- **(e) 0 dialogue natif dans (cockpit)** : les 2 `window.prompt()` restants (canon-campaigns titre ponctuelle, creative-proposal motif de rejet) → Modal DS.
+- **(f) Legacy `enrichOracle` DÉPOSÉ** ([ADR-0125](docs/governance/adr/0125-depose-legacy-enrich-oracle.md), Option A après audit de couverture 18 capacités) : ~2 300 lignes (v1+v2+tracker+tests legacy) retirées, kind `ENRICH_ORACLE` désenregistré, page proposition rebranchée sur `oracle.assembleOracle` (manual-first ADR-0071) — le panel progressif est la voie unique. Gap assumé : enrichissement auto fw→pilier (frameworks lançables manuellement). D-6.3 → résolu.
+
+tsc 0 · eslint 0 · **2417 tests verts (213 fichiers)** dont `cockpit-vocabulary` sur périmètre étendu. Cap APOGEE 7/7.
+
+---
+
 ## v6.27.90 — feat(governance): Lot 0 partiel — RTIS hors chaînes client, ADR-0123 (2026-07-11)
 
 Résolution **partielle et réversible** de la décision déférée par les deux audits UX ([ADR-0123](docs/governance/adr/0123-cockpit-client-vocabulary-adve-rtis.md)) : **« ADVE » reste client-facing** (méthode vendue, glosée « Architecture des Expériences », déjà sur la landing) ; **« RTIS » / « ADVE-RTIS » sortent de toutes les chaînes rendues du Cockpit** (~25 chaînes : proposition, forge, briefs, campagnes, missions, guidelines, assets, diagnostics, benchmarks, sources, portfolio, dock « Fond./Strat. », modals cascade/amendement — en tuant au passage les fuites « staleAt », « stale », « Seshat » et un tutoiement) ; **les lettres A…S restent en badge**. Verrou : motif `RTIS|ADVE-RTIS` ajouté au test HARD vocabulaire, périmètre étendu à `components/pillars`, filtre des littéraux-identifiants (`readiness/RTIS_CASCADE`), allowlist justifiée des pages RTIS legacy opérateur-gated. Aucun identifiant de code, API ou URL modifié — réversible en une PR. Dette : aligner `/pricing` (« Rapport ADVE+RTIS » dans `pricing-tiers.ts`).

@@ -2,7 +2,7 @@
 
 import { ADVE_STORAGE_KEYS } from "@/domain";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { useCanOperate } from "@/components/cockpit/use-can-operate";
 import { useToast } from "@/components/shared/notification-toast";
@@ -20,7 +20,6 @@ import {
   Sparkles,
 } from "lucide-react";
 import { AiBadge } from "@/components/shared/ai-badge";
-import { OracleEnrichmentTracker } from "@/components/neteru/oracle-enrichment-tracker";
 import { ArtemisLaunchModal } from "@/components/cockpit/artemis-launch-modal";
 import { RtisCascadeModal } from "@/components/cockpit/rtis-cascade-modal";
 import { OracleProgressivePanel } from "@/components/cockpit/oracle/progressive-panel";
@@ -46,21 +45,12 @@ export default function PropositionPage() {
   const canOperate = useCanOperate();
   const [copied, setCopied] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
-  const [isArtemisRunning, setIsArtemisRunning] = useState(false);
-  const [enrichLog, setEnrichLog] = useState<string[]>([]);
-  const [enrichResult, setEnrichResult] = useState<{
-    enriched: string[]; failed: string[]; seeded: string[]; total: number;
-    frameworksExecuted: number; finalScore: string; finalComplete: number; finalPartial: number; finalEmpty: number;
-    sectionFeedback: Record<string, { before: string; after: string; action: string }>;
-    message: string;
-    /** Phase 13 R2 — intentId exposé pour streaming/replay NSP. */
-    intentId?: string | null;
-  } | null>(null);
-  /** Phase 13 R2 — last known IntentEmission id pour le tracker NSP replay. */
-  const [lastIntentId, setLastIntentId] = useState<string | null>(null);
+  // Dépose du legacy enrichOracle (ADR-0125) : l'assemblage passe par
+  // l'orchestrateur manual-first `oracle.assembleOracle` (ADR-0071) ; le
+  // détail par section vit dans le panel progressif SSE (ADR-0073).
+  const [isAssembling, setIsAssembling] = useState(false);
   const [prevReport, setPrevReport] = useState<Record<string, string>>({});
   const [changedSections, setChangedSections] = useState<Set<string>>(new Set());
-  const logEndRef = useRef<HTMLDivElement>(null);
   const [launchModalOpen, setLaunchModalOpen] = useState(false);
   const [cascadeModalOpen, setCascadeModalOpen] = useState(false);
   const [externalBlockers, setExternalBlockers] = useState<BlockerHint[] | undefined>(undefined);
@@ -74,7 +64,7 @@ export default function PropositionPage() {
       // production-livrables, budget, timeline-gouvernance, conditions-etapes)
       // pass to "complete" naturellement quand leur données amont changent
       // (campagnes créées sur /cockpit/operate, contracts ajoutés, etc.).
-      refetchInterval: isArtemisRunning ? 3000 : 60000,
+      refetchInterval: isAssembling ? 3000 : 60000,
       // Refetch on window focus : si user édite des données dans un autre tab
       // puis revient sur Oracle, le report se met à jour immédiatement.
       refetchOnWindowFocus: true,
@@ -139,8 +129,6 @@ export default function PropositionPage() {
       for (const [id, status] of Object.entries(report)) {
         if (prevReport[id] && prevReport[id] !== status) {
           newChanges.add(id);
-          const section = SECTION_REGISTRY.find((s) => s.id === id);
-          setEnrichLog((prev) => [...prev, `${section?.number ?? ""} ${section?.title ?? id}: ${prevReport[id]} → ${status}`]);
         }
       }
       setChangedSections(newChanges);
@@ -148,77 +136,26 @@ export default function PropositionPage() {
     setPrevReport(report);
   }, [completeness.data]);
 
-  // Auto-scroll log
-  useEffect(() => {
-    logEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [enrichLog]);
-
-  const enrichMutation = trpc.strategyPresentation.enrichOracle.useMutation({
+  const assembleMutation = trpc.oracle.assembleOracle.useMutation({
     onMutate: () => {
-      setIsArtemisRunning(true);
-      setEnrichResult(null);
+      setIsAssembling(true);
       setChangedSections(new Set());
-      setEnrichLog(["Assemblage démarré — analyse des sections incomplètes..."]);
     },
     onSuccess: (data) => {
-      setEnrichResult(data);
-      setIsArtemisRunning(false);
-      // Phase 13 R2 — capture intentId pour tracker NSP replay (post-completion)
-      if (data.intentId) setLastIntentId(data.intentId);
       completeness.refetch();
-      setEnrichLog((prev) => [
-        ...prev,
-        `--- Termine: ${data.finalScore} ---`,
-        // data.message couvre les cas "0 framework applicable" / "Oracle complet"
-        // qui sont invisibles dans les compteurs. Toujours surfacé en clair.
-        data.message,
-        `${data.enriched.length} enrichies, ${data.frameworksExecuted} frameworks, ${data.seeded.length} metriques seedees`,
-        ...(data.skipped.length > 0
-          ? [`${data.skipped.length} sections sans framework applicable (derivées) : ${data.skipped.slice(0, 5).join(", ")}${data.skipped.length > 5 ? "…" : ""}`]
-          : []),
-        ...(data.intentId ? [`Réf. d'exécution : ${data.intentId.slice(0, 16)}…`] : []),
-        ...(data.failed.length > 0 ? [`Echecs: ${data.failed.join(", ")}`] : []),
-      ]);
+      const d = data as { status?: string; generated?: number; failed?: number };
+      if (d.status === "EMPTY") {
+        toast.info("Rien à assembler — toutes les sections ciblées sont déjà à jour.");
+      } else if (typeof d.failed === "number" && d.failed > 0) {
+        toast.error(`Assemblage terminé avec ${d.failed} section(s) en échec — voir le panel de génération ci-dessous.`);
+      } else {
+        toast.success("Assemblage terminé — les sections sont à jour.");
+      }
     },
     onError: (err) => {
-      setIsArtemisRunning(false);
-      // ADR-0022: Oracle errors carry a structured cause { code, governor,
-      // remediation, recoverable, context } via TRPCError.cause.
-      const cause = (err as unknown as {
-        data?: {
-          cause?: {
-            code?: string;
-            governor?: string;
-            remediation?: string;
-            recoverable?: boolean;
-            context?: { blockers?: BlockerHint[] };
-          };
-        };
-      }).data?.cause;
-      const code = cause?.code;
-      const governor = cause?.governor;
-      const remediation = cause?.remediation;
-      const blockers = cause?.context?.blockers;
-
-      // ORACLE-101 = piliers ADVE pas prêts. On rouvre le modal de préparation
-      // avec les blockers du serveur pour que l'user puisse réparer.
-      if (code === "ORACLE-101") {
-        setExternalBlockers(blockers);
-        setLaunchModalOpen(true);
-        setEnrichLog((prev) => [...prev, "Préparation du vault nécessaire — voir le modal."]);
-        return;
-      }
-
-      const lines: string[] = [];
-      if (code && governor) {
-        lines.push(`ERREUR ${code} — ${err.message.replace(/^\[ORACLE-\d+\]\s*/, "")}`);
-        if (remediation) lines.push(`→ ${remediation}`);
-        lines.push(`→ Signalé à votre équipe pour analyse.`);
-      } else {
-        lines.push(`ERREUR: ${err.message}`);
-      }
-      setEnrichLog((prev) => [...prev, ...lines]);
+      toast.error(`L'assemblage a échoué : ${err.message}`);
     },
+    onSettled: () => setIsAssembling(false),
   });
 
   const shareMutation = trpc.strategyPresentation.shareLink.useMutation({
@@ -292,7 +229,7 @@ export default function PropositionPage() {
         </h2>
         <p className="ck-oracle-hero__p">
           L&apos;Oracle est un livrable consulting de {totalSections} sections, assemblé et réévalué en continu par votre équipe (méthode ADVE-RTIS).
-          {isArtemisRunning ? " Assemblage en cours — les sections se mettent à jour en temps réel." : ` ${totalSections - completeSections} section(s) restantes.`}
+          {isAssembling ? " Assemblage en cours — les sections se mettent à jour en temps réel." : ` ${totalSections - completeSections} section(s) restantes.`}
         </p>
         <div className="ck-oracle-hero__stats">
           <div><span className="k">Complètes</span><b className="text-success">{completeSections}/{totalSections}</b></div>
@@ -341,7 +278,7 @@ export default function PropositionPage() {
           <button
             className="ck-orc__assemble"
             data-variant={oracleReadyToCompile ? "ready" : undefined}
-            disabled={enrichMutation.isPending}
+            disabled={assembleMutation.isPending}
             title={
               oracleReadyToCompile
                 ? "Fondation et stratégie prêtes — l'Oracle peut compiler les 35 sections sans heurt."
@@ -355,7 +292,7 @@ export default function PropositionPage() {
               setExternalBlockers(undefined); setLaunchModalOpen(true);
             }}
           >
-            {enrichMutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Assemblage en cours…</>
+            {assembleMutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Assemblage en cours…</>
               : oracleReadyToCompile ? <><Sparkles /> Assembler la proposition</>
               : !adveAllComplete ? <><AlertCircle /> Préparer la fondation d&apos;abord</>
               : <><AlertCircle /> Préparer la stratégie d&apos;abord</>}
@@ -370,63 +307,12 @@ export default function PropositionPage() {
         </div>
 
         {/* Progress (pendant Artemis) */}
-        {isArtemisRunning && (
+        {isAssembling && (
           <div className="ck-orc__progress">
             <div className="ck-orc__progress-meta"><span>{completeSections}/{totalSections} sections</span><span>Assemblage en cours</span></div>
             <div className="ck-orc__progress-track"><div className="ck-orc__progress-fill" style={{ width: `${pct}%` }} /></div>
           </div>
         )}
-
-        {/* Console live (enrichLog réel) — outillage opérateur */}
-        {canOperate && enrichLog.length > 0 && (
-          <div className="ck-orc__console">
-            <div className="ck-orc__console-head"><span className="dot" /> Console live · télémétrie d&apos;assemblage</div>
-            {enrichLog.map((line, i) => {
-              const tone = line.startsWith("ERREUR") ? "fail" : line.startsWith("---") ? "ok" : undefined;
-              return (
-                <div className="ck-orc__line" data-tone={tone} key={i}>
-                  <span className="ck-orc__line-t">[{String(i).padStart(2, "0")}]</span>
-                  <span className="ck-orc__line-m">{line}</span>
-                </div>
-              );
-            })}
-            <div ref={logEndRef} />
-          </div>
-        )}
-
-        {/* Final result details */}
-        {enrichResult && !isArtemisRunning && (
-          <div className="space-y-2">
-            <p className="text-sm font-semibold text-accent">{enrichResult.finalScore} — {enrichResult.message}</p>
-            {enrichResult.seeded.length > 0 && (
-              <p className="text-xs text-success">Métriques seedées : {enrichResult.seeded.join(", ")}</p>
-            )}
-            <details className="text-xs text-foreground-muted" open>
-              <summary className="cursor-pointer hover:text-foreground-secondary">Détail par section</summary>
-              <div className="mt-1 max-h-48 overflow-y-auto rounded border border-border bg-background/50 p-2">
-                {Object.entries(enrichResult.sectionFeedback).map(([id, fb]) => (
-                  <div key={id} className="flex items-center justify-between border-b border-border/30 py-1 last:border-0">
-                    <span className="text-foreground-secondary">{id}</span>
-                    <span className={fb.after === "complete" ? "text-success" : fb.after === "partial" ? "text-warning" : "text-foreground-muted"}>
-                      {fb.after} <span className="text-foreground-muted">({fb.action})</span>
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </details>
-          </div>
-        )}
-
-        {enrichMutation.error && <p className="text-xs text-error">{enrichMutation.error.message}</p>}
-
-        {/* Phase 13 (B7 + R2) — NSP streaming tracker (35 sections, tier groups).
-            R2 : intentId capturé après mutation enrichOracle pour replay NSP
-            (events stockés dans IntentEmissionEvent). Le polling completeness
-            alimente le fallback live-pendant-mutation (le vrai pre-completion
-            streaming nécessite refactor background queue, hors scope sprint). */}
-        {canOperate ? (
-          <OracleEnrichmentTracker intentId={lastIntentId} completenessReport={completeness.data ?? undefined} />
-        ) : null}
 
         {/* ─ Lien public / partage (strategyPresentation.shareLink) — geste
             opérateur (vues persona destinées au partage vers le client). ─ */}
@@ -550,7 +436,7 @@ export default function PropositionPage() {
         open={launchModalOpen}
         onOpenChange={setLaunchModalOpen}
         strategyId={strategyId}
-        onLaunch={() => enrichMutation.mutate({ strategyId })}
+        onLaunch={() => assembleMutation.mutate({ strategyId, scope: "MISSING" })}
         externalBlockers={externalBlockers}
       />
 

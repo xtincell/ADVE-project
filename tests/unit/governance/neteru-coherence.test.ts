@@ -116,10 +116,8 @@ describe("neteru-coherence — anti-drift across 7 sources of truth", () => {
     // est un drift narratif silencieux (NEFER §3 interdit n°3).
     const surfaces = [
       "src/server/services/strategy-presentation/types.ts",
-      "src/server/services/strategy-presentation/enrich-oracle.ts",
       "src/components/strategy-presentation/sections/phase13-sections.tsx",
       "src/components/strategy-presentation/presentation-layout.tsx",
-      "src/components/neteru/oracle-enrichment-tracker.tsx",
       "src/server/services/artemis/tools/sequences.ts",
       "src/server/services/artemis/tools/phase13-oracle-sequences.ts",
     ];

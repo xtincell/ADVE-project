@@ -8,28 +8,9 @@ export const manifest = defineManifest({
   service: "strategy-presentation",
   governor: "ARTEMIS",
   version: "5.2.0",
-  acceptsIntents: ["ENRICH_ORACLE", "EXPORT_ORACLE"],
+  acceptsIntents: ["EXPORT_ORACLE"],
   emits: ["ORACLE_SECTION_COMPLETED", "ORACLE_SNAPSHOT_TAKEN"],
   capabilities: [
-    {
-      name: "enrichOracleNeteru",
-      inputSchema: z.object({
-        strategyId: z.string(),
-        sections: z.array(z.string()).optional(),
-        lang: z.enum(["fr", "en"]).optional(),
-      }),
-      outputSchema: z.object({
-        enriched: z.array(z.string()),
-        costUsd: z.number(),
-      }),
-      sideEffects: ["DB_WRITE", "LLM_CALL", "EVENT_EMIT"],
-      qualityTier: "S",
-      latencyBudgetMs: 60000,
-      // Refuse to start if ADVE pillars are not at least ENRICHED.
-      // This is the structural fix for the "UI says complet, sequence
-      // bails out" bug class.
-      preconditions: ["ORACLE_ENRICH"],
-    },
     {
       name: "exportOracleAsPdf",
       inputSchema: z.object({

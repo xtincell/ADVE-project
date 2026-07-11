@@ -18,7 +18,7 @@ describe("governance registry", () => {
   it("findCapability resolves the V5.4 ranker intents", () => {
     expect(findCapability("RANK_PEERS")?.service).toBe("seshat");
     expect(findCapability("JEHUTY_FEED_REFRESH")?.service).toBe("jehuty");
-    expect(findCapability("ENRICH_ORACLE")?.service).toBe("strategy-presentation");
+    expect(findCapability("EXPORT_ORACLE")?.service).toBe("strategy-presentation");
     expect(findCapability("EXPORT_ORACLE")?.service).toBe("strategy-presentation");
   });
 

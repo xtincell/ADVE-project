@@ -188,30 +188,15 @@ describe("ADR-0041 — Robustness loop helpers", () => {
   });
 });
 
-describe("ADR-0040 — F2 mutex + F3 promotion BrandAsset uniforme", () => {
-  it("F2 — getSectionEnrichmentValidation détecte les ambiguïtés frameworks ∪ _glorySequence", async () => {
-    const { getSectionEnrichmentValidation } = await import(
-      "@/server/services/strategy-presentation/enrich-oracle"
-    );
-    const result = getSectionEnrichmentValidation();
-    // Pas d'ambiguïté actuelle dans SECTION_ENRICHMENT (pas d'entry avec
-    // les deux non-vides). Ce test verrouille l'invariant : si une PR
-    // ajoute un entry avec les deux, le warning apparaît dans result.warnings.
-    expect(Array.isArray(result.warnings)).toBe(true);
-    // territoire-creatif a `frameworks: []` + `_glorySequence: "BRAND"`
-    // → hasFrameworks false donc pas d'ambiguïté.
-    for (const w of result.warnings) {
-      expect(w).toMatch(/SECTION_ENRICHMENT.*ambig/);
-    }
-  });
-
+describe("ADR-0040 — F3 promotion BrandAsset uniforme", () => {
+  // F2 (getSectionEnrichmentValidation) déposé avec le legacy enrich-oracle
+  // (ADR-0125) : la map SECTION_ENRICHMENT n'existe plus — les runners par
+  // section vivent dans SECTION_REGISTRY (oracle-section, ADR-0068).
   it("F3 — promoteSectionToBrandAsset helper exporté et idempotent (Loi 1)", async () => {
-    // On vérifie juste que le helper est présent + sa signature stable.
-    // Test runtime DB-dépendant en intégration.
-    const enrichOracle = await import(
-      "@/server/services/strategy-presentation/enrich-oracle"
+    const writeback = await import(
+      "@/server/services/strategy-presentation/section-writeback"
     );
-    expect(typeof enrichOracle.getSectionEnrichmentValidation).toBe("function");
+    expect(typeof writeback.promoteSectionToBrandAsset).toBe("function");
   });
 });
 
