@@ -175,6 +175,19 @@ enum BrandNature {
   PERSONAL // Marque personnelle / personal branding
 }
 
+/// Échelle de marché déclarée d'une marque (ADR-0126, enfant ADR-0086).
+/// Miroir Prisma du canon src/domain/market-scale.ts — étalonne les cibles
+/// du plafond d'évidence CULTE/ICONE. Distinct de marketScopedDb (ADR-0105,
+/// visibilité des marchés gelés) — aucun lien.
+enum MarketScale {
+  QUARTIER // Marque de proximité (quartier, voisinage)
+  VILLE // Une ville / agglomération
+  REGION // Une région / un cluster de villes
+  NATION // Un pays (== cibles historiques du plafond d'évidence)
+  CONTINENT // Multi-pays / continental
+  MONDE // International / global
+}
+
 // --- Campaign Manager 360 ---
 
 enum CampaignState {
@@ -738,6 +751,16 @@ model Strategy {
   status            String         @default("ACTIVE")
   brandNature       BrandNature?
   primaryChannel    DriverChannel?
+  /// Échelle de marché DÉCLARÉE de la marque (ADR-0126) — étalonne les cibles
+  /// du plafond d'évidence CULTE/ICONE. null = non qualifiée (fallback cibles
+  /// historiques, cf. src/domain/market-scale.ts).
+  marketScale         MarketScale?
+  /// Audience adressable déclarée (personnes atteignables sur cette échelle).
+  /// Active la saturation par densité du bras superfans (ADR-0126).
+  addressableAudience Int?
+  /// Année de fondation DÉCLARÉE de la marque — source honnête du bras
+  /// « patrimoine » de l'évidence (avant ADR-0126 : createdAt du compte).
+  brandFoundedYear    Int?
   /// ISO-2 country code — indexed lookup; mirrors businessContext.country.
   /// Single source of truth for currency / market benchmarks routing.
   countryCode       String?        @db.VarChar(2)

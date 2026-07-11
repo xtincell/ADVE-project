@@ -10,6 +10,19 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.94 — feat(seshat): scoring conscient de l'échelle de marché (ADR-0126) (2026-07-11)
+
+**Le score cesse d'être aveugle à l'échelle : une marque de quartier et un monopole national ne sont plus étalonnés sur les mêmes cibles absolues — et 40 % du cult-index cessent d'être saturés par un bug d'unités.**
+
+- `feat(seshat)` **Échelle déclarée** ([ADR-0126](docs/governance/adr/0126-market-scale-aware-scoring.md), enfant ADR-0086) : 3 champs additifs nullable sur `Strategy` (`marketScale` enum QUARTIER→MONDE, `addressableAudience`, `brandFoundedYear`) + migration backfill-safe + canon domaine `src/domain/market-scale.ts` (cibles d'évidence par échelle — NATION == constantes historiques 1000/20, continuité Loi 1 ; saturation par densité à 5 % de l'audience adressable, bornée — jamais d'évidence gratuite pour les gros footprints).
+- `feat(seshat)` **Plafond d'évidence scale-aware** : `computeEvidenceScore` résout ses cibles via `resolveEvidenceTargets` (fini les 1000 superfans / 20 signaux universels) et calcule le patrimoine sur l'**année de fondation déclarée** de la marque (avant : `createdAt` du compte La Fusée — proxy mensonger). Poids, seuils CULTE/ICONE et bandes `classifyTier` inchangés.
+- `fix(seshat)` **Bug d'unités devotion→cult** : les champs `DevotionSnapshot` (pourcentages 0-100) étaient lus comme des fractions (×100/×200/×300/×500) → `engagementDepth`/`ritualAdoption`/`evangelismScore` saturaient à 100 dès ~1 % de dévotion. Corrigé dans `calculateAndSnapshot` + `connectDevotionToCultIndex`. + `ugcGenerationRate` (source non branchée) sort du dénominateur (`computeCultIndex(dims, unavailable)`) au lieu de compter un 0 fabriqué.
+- `feat(cockpit)` **Référentiel affiché** : le KPI « Score de marque » porte désormais son échelle (« Forte — échelle nationale » / « échelle non déclarée » — jamais masquée), via `formatTierReferential`.
+- Hors périmètre tranché + tracé RESIDUAL-DEBT : Overton par polity (re-clé `Sector` × portée géo), writer gouverné `SuperfanProfile`, UI d'édition des champs, leaderboard segmenté, référentiel EFR.
+- 16 tests anti-drift (`scoring-scale-aware.test.ts`) : continuité NATION==legacy, monotonie, cap densité, purge multiplicateurs, exclusion UGC, bandes figées, LOI 9. Cap APOGEE 7/7 (aucun Neter, mesure sous SESHAT).
+
+---
+
 ## v6.27.93 — feat(nefer): skills rigides + configuration finale agent autonome (2026-07-11)
 
 **Le protocole NEFER 8+1 phases est compilé en 7 skills exécutables à zéro latitude — la base de travail de l'agent autonome de maintenance.**

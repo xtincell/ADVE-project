@@ -501,6 +501,8 @@ Le score multi-dimensions étalonne la maturité d'une marque sur sa trajectoire
 | **Campaign Performance** | ROI moyen pondéré sur cycle écoulé | `campaign-tracker/` | ✅ |
 | **Production Quality** | Glory tool QC moyen sur cycle | `qc-router/` | 🟡 |
 
+**Calibration par échelle (ADR-0126, 2026-07-11)** : les dimensions de preuve culturelle (superfans, signaux) ne s'étalonnent plus sur des cibles absolues universelles mais sur l'**échelle de marché déclarée** (`Strategy.marketScale`, QUARTIER→MONDE) + la densité d'audience adressable — cf. `src/domain/market-scale.ts`. Le palier ne s'affiche jamais sans son référentiel d'échelle. L'Overton par polity (axe sectoriel × portée géo) reste un chantier séparé (registre RESIDUAL-DEBT).
+
 ### 12.3 Utilisations du score
 
 1. **Notoria** : score informe la confidence des Recommendations
@@ -1847,6 +1849,9 @@ Divergence entre l'état déclaré (manifests, ADRs) et l'état réel (code, DB)
 
 ### **Évangéliste**
 Palier supérieur de la Devotion Ladder. Superfan qui recrute activement d'autres superfans, défend la brand, internalise sa mythologie. Source de la propagation auto-entretenue.
+
+### **Échelle de marché (marketScale)**
+Portée DÉCLARÉE du terrain de jeu d'une marque — QUARTIER → VILLE → REGION → NATION → CONTINENT → MONDE (`Strategy.marketScale`, + `addressableAudience` et `brandFoundedYear`). Étalonne les cibles du plafond d'évidence CULTE/ICONE (une masse absolue ne prouve pas la même chose selon le terrain) et le référentiel affiché du palier (« Forte — échelle nationale »). Canon : `src/domain/market-scale.ts` (ADR-0126, enfant ADR-0086). Sans échelle déclarée : cibles historiques (bande NATION) + « échelle non déclarée » affiché honnêtement. Distinct de `marketScopedDb` (ADR-0105 — visibilité des marchés gelés).
 
 ### **Founder**
 Le porteur (CEO / fondateur) d'une brand. Pilote son Cockpit. Doit devenir **premier superfan** de sa propre marque. Cf. `founder-psychology` service + `<FounderRitual>` UI.

@@ -32,7 +32,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 202 models, 70 enums
+## Prisma — 202 models, 71 enums
 
 ### Models
 
@@ -43,7 +43,7 @@ Ces correspondances évitent la réinvention :
 - **Operator** (30 fields)
 - **ClientAllocation** (14 fields)
 - **Client** (17 fields)
-- **Strategy** (70 fields)
+- **Strategy** (73 fields)
 - **Intention** (14 fields)
 - **Campaign** (80 fields)
 - **Mission** (35 fields)
@@ -260,6 +260,7 @@ Ces correspondances évitent la réinvention :
 - **QuickIntakeStatus** : IN_PROGRESS | COMPLETED | CONVERTED | EXPIRED
 - **IntakeMethod** : GUIDED | IMPORT | LONG | SHORT | INGEST | INGEST_PLUS
 - **BrandNature** : PRODUCT | SERVICE | CHARACTER_IP | FESTIVAL_IP | MEDIA_IP | RETAIL_SPACE | PLATFORM | INSTITUTION | PERSONAL
+- **MarketScale** : QUARTIER | VILLE | REGION | NATION | CONTINENT | MONDE
 - **CampaignState** : BRIEF_DRAFT | BRIEF_VALIDATED | PLANNING | CREATIVE_DEV | PRODUCTION | PRE_PRODUCTION | APPROVAL | READY_TO_LAUNCH | LIVE | POST_CAMPAIGN | ARCHIVED | CANCELLED
 - **CreativeProductionStatus** : BRIEF_RECU | BRIEF_QUALIFIE | EN_PRODUCTION | BLOQUE | LIVRE
 - **ClientReviewStatus** : PENDING | BRAINSTORMING | EN_ATTENTE_FEEDBACK | RETOUR_RECU | TOOL_KIT_A_EXECUTER | EN_ATTENTE_PACKAGING | VALIDE | REJETE
