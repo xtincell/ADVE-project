@@ -14,6 +14,7 @@ import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { Button } from "@/components/primitives/button";
+import { Modal } from "@/components/shared/modal";
 import { Loader2, Sparkles, Infinity as InfinityIcon, CalendarRange, Plus, ArrowRight } from "lucide-react";
 
 const CANON_LABEL: Record<string, string> = {
@@ -44,6 +45,10 @@ function fmtDate(d: string | Date | null | undefined): string {
 export function CanonCampaignsPanel() {
   const strategyId = useCurrentStrategyId();
   const [start, setStart] = useState(() => new Date().toISOString().slice(0, 10));
+  // Dialogue DS pour la campagne ponctuelle (dette (e) audit UX 2026-07-11 —
+  // dernier window.prompt() natif du portail founder).
+  const [punctualOpen, setPunctualOpen] = useState(false);
+  const [punctualTitle, setPunctualTitle] = useState("");
   const utils = trpc.useUtils();
   const { data: canon, isLoading } = trpc.campaign.canonByStrategy.useQuery(
     { strategyId: strategyId ?? "" },
@@ -83,8 +88,8 @@ export function CanonCampaignsPanel() {
             variant="outline"
             disabled={punctual.isPending}
             onClick={() => {
-              const title = window.prompt("Titre de la campagne ponctuelle (signal de veille) :");
-              if (title && title.trim().length >= 3) punctual.mutate({ strategyId, title: title.trim(), insightSource: "EXTERNAL_INSIGHT" });
+              setPunctualTitle("");
+              setPunctualOpen(true);
             }}
           >
             {punctual.isPending ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Plus className="mr-1 h-3.5 w-3.5" />}
@@ -171,6 +176,48 @@ export function CanonCampaignsPanel() {
           ))}
         </div>
       )}
+
+      <Modal
+        open={punctualOpen}
+        onClose={() => setPunctualOpen(false)}
+        title="Nouvelle campagne ponctuelle"
+        size="sm"
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const title = punctualTitle.trim();
+            if (title.length < 3 || !strategyId) return;
+            punctual.mutate({ strategyId, title, insightSource: "EXTERNAL_INSIGHT" });
+            setPunctualOpen(false);
+          }}
+          className="flex flex-col gap-4"
+        >
+          <label className="flex flex-col gap-1.5 text-xs font-medium text-foreground-secondary">
+            Titre (signal de veille)
+            <input
+              autoFocus
+              type="text"
+              value={punctualTitle}
+              onChange={(e) => setPunctualTitle(e.target.value)}
+              placeholder="Ex : Réaction au lancement concurrent X"
+              className="rounded-lg border border-white/10 bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground-muted focus:border-accent/40 focus:outline-none"
+            />
+          </label>
+          <p className="text-[11px] text-foreground-muted">
+            3 caractères minimum. La campagne s&rsquo;ouvre en frame ponctuel, rattachée au signal de veille.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button type="button" size="sm" variant="outline" onClick={() => setPunctualOpen(false)}>
+              Annuler
+            </Button>
+            <Button type="submit" size="sm" variant="primary" disabled={punctualTitle.trim().length < 3 || punctual.isPending}>
+              {punctual.isPending ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Plus className="mr-1 h-3.5 w-3.5" />}
+              Créer
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </section>
   );
 }

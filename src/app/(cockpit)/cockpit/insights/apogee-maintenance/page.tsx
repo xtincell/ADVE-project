@@ -82,7 +82,7 @@ export default function ApogeeMaintenancePage() {
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-6)" }}>
       <PageHeader
         title="Maintien d'apogée"
-        description="Loi 4 APOGEE — trois sentinels défendent la masse en orbite. Cette page rend leurs runs visibles."
+        description="Trois vigies automatiques défendent votre position au sommet. Cette page rend leurs passages visibles."
       />
       <ApogeeMaintenanceDashboard
         strategyId={strategyId}

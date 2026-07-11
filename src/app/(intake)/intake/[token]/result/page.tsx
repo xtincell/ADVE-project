@@ -170,11 +170,11 @@ const CLASSIFICATION_RETAINER_PITCH: Record<string, string> = {
   LATENT:
     "La Fusee accompagne en priorite les marques qui doivent (re)poser les bases. Notre retainer demarrage couvre la consolidation des piliers ADVE en 8 semaines : audit, ateliers fondateur, livrables identitaires, premier plan d'engagement.",
   FRAGILE:
-    "La Fusee accompagne les marques en phase de stabilisation. Notre retainer 'Cap structurel' tient sur 12 semaines : verrouillage des piliers ADVE, mise en coherence verbal/visuel, plan RTIS execute.",
+    "La Fusee accompagne les marques en phase de stabilisation. Notre retainer 'Cap structurel' tient sur 12 semaines : verrouillage des piliers ADVE, mise en coherence verbal/visuel, plan strategique execute.",
   ORDINAIRE:
-    "La Fusee accompagne les marques en quete de differenciation. Notre retainer 'Distinction' (12 semaines) cible la position concurrentielle, le territoire d'expression et la cascade RTIS pour ouvrir un avantage durable.",
+    "La Fusee accompagne les marques en quete de differenciation. Notre retainer 'Distinction' (12 semaines) cible la position concurrentielle, le territoire d'expression et la cascade strategique pour ouvrir un avantage durable.",
   FORTE:
-    "La Fusee accompagne les marques fortes a passer un cap. Notre retainer 'Acceleration' (16 semaines) industrialise vos forces existantes et active la cascade RTIS pour amplifier la traction commerciale.",
+    "La Fusee accompagne les marques fortes a passer un cap. Notre retainer 'Acceleration' (16 semaines) industrialise vos forces existantes et active la cascade strategique pour amplifier la traction commerciale.",
   CULTE:
     "La Fusee accompagne les marques cultes a transformer leur communaute en mouvement durable. Retainer 'Transmission' : structure operationnelle, programme ambassadeurs, codification des rituels.",
   ICONE:
@@ -1018,7 +1018,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         {report?.rtis && (
           <section className="mb-10 print:hidden">
             <header className="mb-2 flex items-center justify-between gap-3">
-              <h2 className="text-lg font-bold text-foreground">Proposition strategique RTIS</h2>
+              <h2 className="text-lg font-bold text-foreground">Proposition strategique</h2>
               <span className="rounded-full border border-border-subtle bg-card px-2 py-0.5 text-xs text-foreground-muted">
                 Apercu — analyse complete dans le PDF
               </span>
@@ -1061,7 +1061,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         ════════════════════════════════════════════════════════════ */}
         {report?.rtis && (
           <section className="hidden print:block print:mb-8 print:break-after-page">
-            <h2 className="mb-3 text-2xl font-bold text-foreground">6. Proposition strategique RTIS</h2>
+            <h2 className="mb-3 text-2xl font-bold text-foreground">6. Proposition strategique</h2>
             <p className="mb-4 text-sm italic text-foreground-secondary">{report.rtis.framing}</p>
             <div className="space-y-6">
               {report.rtis.pillars.map((p) => (
@@ -1097,7 +1097,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             <header className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
               <div>
                 <p className="text-2xs font-bold uppercase tracking-[0.25em] text-amber-400 print:text-foreground-muted">
-                  Recommandation stratégique — Mestor
+                  Recommandation stratégique
                 </p>
                 <h2 className="mt-1 text-xl font-bold text-foreground sm:text-2xl print:text-2xl">
                   {report.recommendation.strategicMove}
@@ -1215,7 +1215,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
           <div className="mt-6 rounded-lg border-2 border-primary p-5">
             <h3 className="mb-2 text-base font-bold text-foreground">Activons votre plan</h3>
             <p className="mb-4 text-sm leading-relaxed text-foreground-secondary">
-              Le diagnostic ADVE livre la photographie. La cascade RTIS et l'execution sont la valeur ajoutee de l'accompagnement La Fusee. Premier echange offert pour cadrer le besoin.
+              Le diagnostic ADVE livre la photographie. La cascade strategique et l'execution sont la valeur ajoutee de l'accompagnement La Fusee. Premier echange offert pour cadrer le besoin.
             </p>
             <dl className="space-y-1 text-sm">
               <div className="grid grid-cols-[100px_1fr] gap-2">
@@ -1426,7 +1426,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
               </li>
               <li className="flex items-start gap-2">
                 <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                La cascade RTIS (R·T·I·S) est lancee sur votre cockpit
+                La cascade strategique (R·T·I·S) est lancee sur votre cockpit
               </li>
               <li className="flex items-start gap-2">
                 <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />

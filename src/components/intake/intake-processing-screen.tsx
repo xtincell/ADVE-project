@@ -76,13 +76,13 @@ const FACTS: Fact[] = [
   { kind: "atelier", text: "Faire vrai coute moins cher que faire pro. Et convertit dix fois plus." },
 
   // ── Easter eggs Neteru (cosmologie produit) ────────────────────
-  { kind: "lafusee", text: "Mestor relit chacune de vos reponses avant de laisser passer le diagnostic." },
-  { kind: "lafusee", text: "Artemis tient la plume. Ptah fond les assets. Seshat observe en silence." },
-  { kind: "lafusee", text: "Thot compte le carburant. Sans carburant, pas de mise en orbite." },
-  { kind: "lafusee", text: "Imhotep cherche l'equipage. Anubis porte le message a l'audience." },
-  { kind: "lafusee", text: "ADVE est le sol. RTIS est l'orbite. Vous etes ici sur le sol." },
+  { kind: "lafusee", text: "Notre moteur de gouvernance relit chacune de vos reponses avant de laisser passer le diagnostic." },
+  { kind: "lafusee", text: "Un moteur tient la plume, un autre fond les assets, un troisieme observe en silence." },
+  { kind: "lafusee", text: "Le moteur financier compte le carburant. Sans carburant, pas de mise en orbite." },
+  { kind: "lafusee", text: "Un moteur assemble l'equipage, un autre porte le message a l'audience." },
+  { kind: "lafusee", text: "ADVE est le sol. La strategie est l'orbite. Vous etes ici sur le sol." },
   { kind: "lafusee", text: "Nous classons votre marque sur 7 paliers : de Latent a Icone. Beaucoup tiennent dans Fragile." },
-  { kind: "lafusee", text: "La methode ADVERTIS cascade A vers D vers V vers E. Sauter une etape coute cher en aval." },
+  { kind: "lafusee", text: "La methode ADVE cascade A vers D vers V vers E. Sauter une etape coute cher en aval." },
 ];
 
 function shuffle<T>(arr: T[]): T[] {

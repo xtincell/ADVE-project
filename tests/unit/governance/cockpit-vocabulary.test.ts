@@ -29,20 +29,28 @@ const SCAN_DIRS = [
   join(ROOT, "src/app/(cockpit)"),
   join(ROOT, "src/components/cockpit"),
   join(ROOT, "src/components/pillars"),
+  // Dette (d) audit UX 2026-07-11 — le FUNNEL PUBLIC parle au prospect le
+  // même langage que le Cockpit au founder (ADR-0123) : intake + composants
+  // du funnel sous verrou.
+  join(ROOT, "src/app/(intake)"),
+  join(ROOT, "src/components/intake"),
 ];
-// Composants hors components/cockpit mais rendus dans le portail founder.
-const EXTRA_FILES = [join(ROOT, "src/components/neteru/overton-radar.tsx")];
+// Composants hors components/cockpit mais rendus dans le portail founder,
+// + sources de chaînes rendues au prospect (grille /pricing).
+const EXTRA_FILES = [
+  join(ROOT, "src/components/neteru/overton-radar.tsx"),
+  join(ROOT, "src/components/neteru/apogee-maintenance-dashboard.tsx"),
+  join(ROOT, "src/server/services/monetization/pricing-tiers.ts"),
+];
 
 /**
- * Surfaces gardées `<OperatorSurface>` (lot 12) — le founder ne les voit pas,
- * la purge de leur vocabulaire est de la dette P2 (lots 13/15), pas un trou
- * client. Chaque entrée doit rester justifiée ; retirer dès purge.
+ * Surfaces gardées `<OperatorSurface>` — le founder ne les voit pas, la purge
+ * de leur vocabulaire est tolérée le temps d'être faite. Dette (c) audit UX
+ * 2026-07-11 : allowlist VIDÉE — `brand/rtis(+synthese)` sont devenues des
+ * redirects vers le hub Stratégie, `apogee-maintenance` a été purgée. Toute
+ * nouvelle entrée doit porter une justification.
  */
-const OPERATOR_GATED_ALLOWLIST: ReadonlyArray<string> = [
-  "src/app/(cockpit)/cockpit/insights/apogee-maintenance/page.tsx", // « Loi 4 APOGEE » — surface sentinelle opérateur
-  "src/app/(cockpit)/cockpit/brand/rtis/page.tsx", // workflow RTIS legacy — surface opérateur (lot 12), purge = lot 13/15
-  "src/app/(cockpit)/cockpit/brand/rtis/synthese/page.tsx", // idem
-];
+const OPERATOR_GATED_ALLOWLIST: ReadonlyArray<string> = [];
 
 const FORBIDDEN: Array<{ name: string; re: RegExp }> = [
   { name: "mythologie/mécanisme", re: /\b(ADVERTIS|APOGEE|Jehuty|Notoria|Mestor|Artemis|Seshat|Ptah|Anubis|Imhotep|Thot|Tarsis|NETERU)\b/ },
@@ -54,10 +62,11 @@ const FORBIDDEN: Array<{ name: string; re: RegExp }> = [
 
 /**
  * Chunks « identifiants » à ignorer : littéraux qui détectent des codes
- * backend (`readiness/RTIS_CASCADE`, kinds `*_RTIS*`) — jamais rendus tels
- * quels, ce sont des comparaisons de messages d'erreur.
+ * backend (`readiness/RTIS_CASCADE`, kinds `*_RTIS*`, kinds SCREAMING_SNAKE
+ * comme `MAINTAIN_APOGEE`) — jamais rendus tels quels, ce sont des
+ * comparaisons de kinds ou de messages d'erreur.
  */
-const IDENTIFIER_CHUNK = /RTIS_|_RTIS|readiness\//;
+const IDENTIFIER_CHUNK = /RTIS_|_RTIS|readiness\/|^["'`][A-Z][A-Z0-9_]{2,}["'`]$/;
 
 function walk(dir: string, acc: string[] = []): string[] {
   if (!existsSync(dir)) return acc;
@@ -65,7 +74,7 @@ function walk(dir: string, acc: string[] = []): string[] {
     const p = join(dir, entry);
     const s = statSync(p);
     if (s.isDirectory()) walk(p, acc);
-    else if (/\.tsx$/.test(entry) && !entry.endsWith(".test.tsx") && !entry.endsWith(".stories.tsx")) acc.push(p);
+    else if (/\.tsx?$/.test(entry) && !/\.(test|stories)\.tsx?$/.test(entry)) acc.push(p);
   }
   return acc;
 }

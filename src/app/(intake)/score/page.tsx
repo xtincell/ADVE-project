@@ -81,7 +81,7 @@ export default function PublicScorePage() {
             </div>
           </div>
           <h1 className="text-3xl font-bold text-foreground sm:text-4xl">
-            Score ADVE-RTIS <span className="text-gradient-star">/200</span>
+            Score de marque <span className="text-gradient-star">/200</span>
           </h1>
           <p className="mt-3 text-lg leading-relaxed text-foreground-secondary">
             Le standard de mesure de la force de marque. 8 piliers, un score composite,
@@ -123,7 +123,7 @@ export default function PublicScorePage() {
           <h2 className="mb-6 text-center text-xl font-bold text-foreground">Les 8 piliers</h2>
           <p className="mx-auto mb-8 max-w-lg text-center text-sm text-foreground-muted">
             Chaque pilier est note sur 25 points. Les 4 premiers (ADVE) definissent l'ADN de votre marque.
-            Les 4 suivants (RTIS) mesurent sa capacite d'execution.
+            Les 4 suivants (R, T, I, S) mesurent sa capacite d'execution.
           </p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {PILLARS.map((p) => {

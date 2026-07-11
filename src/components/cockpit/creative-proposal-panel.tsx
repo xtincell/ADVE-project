@@ -14,6 +14,7 @@ import { useEffect, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { Button } from "@/components/primitives/button";
+import { Modal } from "@/components/shared/modal";
 import {
   CREATIVE_PROPOSAL_SOURCE_LABEL,
   type CreativeProposalSource,
@@ -53,6 +54,10 @@ const FALLBACK_LEVELS = [
 
 export function CreativeProposalPanel() {
   const strategyId = useCurrentStrategyId();
+  // Dialogue DS pour le motif de rejet (dette (e) audit UX 2026-07-11 —
+  // remplace le window.prompt() natif).
+  const [rejectTarget, setRejectTarget] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
   const utils = trpc.useUtils();
   const { data: proposals, isLoading } = trpc.creativeProposal.listByStrategy.useQuery(
     { strategyId: strategyId ?? "" },
@@ -271,7 +276,7 @@ export function CreativeProposalPanel() {
                         <Send className="mr-1 h-3.5 w-3.5" /> Soumettre
                       </Button>
                     ) : null}
-                    <Button size="sm" variant="ghost" disabled={reject.isPending} onClick={() => { const r = window.prompt("Motif du rejet :"); if (r && r.trim()) reject.mutate({ id: p.id, reason: r.trim() }); }}>
+                    <Button size="sm" variant="ghost" disabled={reject.isPending} onClick={() => { setRejectReason(""); setRejectTarget(p.id); }}>
                       <XCircle className="mr-1 h-3.5 w-3.5" /> Rejeter
                     </Button>
                   </div>
@@ -283,6 +288,45 @@ export function CreativeProposalPanel() {
           })}
         </ul>
       )}
+
+      <Modal
+        open={rejectTarget !== null}
+        onClose={() => setRejectTarget(null)}
+        title="Rejeter la direction créative"
+        size="sm"
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const reason = rejectReason.trim();
+            if (!reason || !rejectTarget) return;
+            reject.mutate({ id: rejectTarget, reason });
+            setRejectTarget(null);
+          }}
+          className="flex flex-col gap-4"
+        >
+          <label className="flex flex-col gap-1.5 text-xs font-medium text-foreground-secondary">
+            Motif du rejet
+            <textarea
+              autoFocus
+              rows={3}
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Ex : le territoire visuel ne correspond pas au positionnement"
+              className="rounded-lg border border-white/10 bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground-muted focus:border-accent/40 focus:outline-none"
+            />
+          </label>
+          <div className="flex justify-end gap-2">
+            <Button type="button" size="sm" variant="outline" onClick={() => setRejectTarget(null)}>
+              Annuler
+            </Button>
+            <Button type="submit" size="sm" variant="primary" disabled={rejectReason.trim().length === 0 || reject.isPending}>
+              {reject.isPending ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <XCircle className="mr-1 h-3.5 w-3.5" />}
+              Rejeter
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </section>
   );
 }
