@@ -31,6 +31,7 @@ export const processRouter = createTRPCRouter({
   create: governedProcedure({
 
     kind: "LEGACY_PROCESS_CREATE",
+    requireOperator: true,
 
     inputSchema: z.object({
       name: z.string().min(1),
@@ -60,6 +61,7 @@ export const processRouter = createTRPCRouter({
 
 
     kind: "LEGACY_PROCESS_UPDATE",
+    requireOperator: true,
 
 
     inputSchema: z.object({
@@ -87,6 +89,7 @@ export const processRouter = createTRPCRouter({
 
 
     kind: "LEGACY_PROCESS_DELETE",
+    requireOperator: true,
 
 
     inputSchema: z.object({ id: z.string() }),
@@ -119,6 +122,7 @@ export const processRouter = createTRPCRouter({
 
 
     kind: "LEGACY_PROCESS_START",
+    requireOperator: true,
 
 
     inputSchema: z.object({ id: z.string() }),
@@ -137,6 +141,7 @@ export const processRouter = createTRPCRouter({
 
 
     kind: "LEGACY_PROCESS_PAUSE",
+    requireOperator: true,
 
 
     inputSchema: z.object({ id: z.string() }),
@@ -155,6 +160,7 @@ export const processRouter = createTRPCRouter({
 
 
     kind: "LEGACY_PROCESS_STOP",
+    requireOperator: true,
 
 
     inputSchema: z.object({ id: z.string() }),
@@ -188,6 +194,7 @@ export const processRouter = createTRPCRouter({
   scheduleDaemon: governedProcedure({
 
     kind: "LEGACY_PROCESS_SCHEDULE_DAEMON",
+    requireOperator: true,
 
     inputSchema: z.object({
       processId: z.string(),
@@ -221,6 +228,7 @@ export const processRouter = createTRPCRouter({
   triggerOnSignal: governedProcedure({
 
     kind: "LEGACY_PROCESS_TRIGGER_ON_SIGNAL",
+    requireOperator: true,
 
     inputSchema: z.object({
       processId: z.string(),
@@ -245,6 +253,7 @@ export const processRouter = createTRPCRouter({
   runBatch: governedProcedure({
 
     kind: "LEGACY_PROCESS_RUN_BATCH",
+    requireOperator: true,
 
     inputSchema: z.object({
       strategyId: z.string(),

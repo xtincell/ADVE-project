@@ -35,7 +35,7 @@ export default function CrewBootstrapPage() {
           <Users className="h-6 w-6" /> Crew Bootstrap — {operator.name}
         </h1>
         <p className="mt-1 text-sm text-foreground-secondary">
-          Phase 18 (ADR-0059) — Pré-import de l'équipe créa Matanga confirmée 2026-05-06.
+          Pré-import de l'équipe créa Matanga confirmée 2026-05-06.
           La création de chaque membre nécessite un User existant (créé via auth flow). Ce wizard
           documente l'intention et fournit les liens directs.
         </p>
@@ -61,7 +61,7 @@ export default function CrewBootstrapPage() {
                 href={`/console/imhotep`}
                 className="inline-flex items-center gap-1 rounded border border-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-800"
               >
-                Imhotep <ExternalLink className="h-3 w-3" />
+                Équipe & talents <ExternalLink className="h-3 w-3" />
               </Link>
             </li>
           ))}
@@ -99,7 +99,7 @@ export default function CrewBootstrapPage() {
             </p>
             <div className="mt-2 flex gap-2">
               <Link href="/console/imhotep" className="rounded bg-emerald-500/20 px-3 py-1 text-xs text-emerald-300 hover:bg-emerald-500/30">
-                Console Imhotep →
+                Console équipe →
               </Link>
               <Link href="/cockpit/portfolio" className="rounded bg-emerald-500/20 px-3 py-1 text-xs text-emerald-300 hover:bg-emerald-500/30">
                 Portfolio Brand Tree →

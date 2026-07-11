@@ -6,7 +6,9 @@
  */
 
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, publicProcedure, adminProcedure } from "../init";
+import { canAccessStrategy } from "@/server/services/operator-isolation";
 import {
   buildTierGrid,
   resolvePrice,
@@ -102,6 +104,7 @@ export const monetizationRouter = createTRPCRouter({
 
 
     kind: "LEGACY_MONETIZATION_ADMIN_UPSERT_OVERRIDE",
+    requireOperator: true,
 
 
     inputSchema: z.object({
@@ -156,6 +159,7 @@ export const monetizationRouter = createTRPCRouter({
 
 
     kind: "LEGACY_MONETIZATION_ADMIN_DELETE_OVERRIDE",
+    requireOperator: true,
 
 
     inputSchema: z.object({ id: z.string() }),
@@ -180,6 +184,7 @@ export const monetizationRouter = createTRPCRouter({
 
 
     kind: "LEGACY_MONETIZATION_ADMIN_UPDATE_PROVIDER_CONFIG",
+    requireOperator: true,
 
 
     inputSchema: z.object({
@@ -333,6 +338,20 @@ export const monetizationRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const sub = await ctx.db.subscription.findUnique({ where: { id: input.subscriptionId } });
       if (!sub) throw new Error("Subscription introuvable");
+      // Garde d'ownership (audit requireOperator 2026-07-11, Table E) : sans
+      // elle, tout utilisateur authentifié pouvait résilier n'importe quel
+      // abonnement par id. Ancrage = stratégie (founder) ou operator (tenant).
+      const role = ctx.session.user.role ?? "USER";
+      if (role !== "ADMIN") {
+        const operatorId = (ctx.session.user as unknown as Record<string, unknown>).operatorId as string | null ?? null;
+        const ownsViaStrategy = sub.strategyId
+          ? await canAccessStrategy(sub.strategyId, { operatorId, userId: ctx.session.user.id, role })
+          : false;
+        const ownsViaOperator = sub.operatorId !== null && sub.operatorId === operatorId;
+        if (!ownsViaStrategy && !ownsViaOperator) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé" });
+        }
+      }
       await cancelStripeSubscription(sub.providerSubscriptionId);
       await ctx.db.subscription.update({
         where: { id: sub.id },

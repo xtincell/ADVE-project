@@ -39,6 +39,7 @@ export const sequenceVaultRouter = createTRPCRouter({
   accept: governedProcedure({
 
     kind: "LEGACY_SEQUENCE_VAULT_ACCEPT",
+    requireOperator: true,
 
     inputSchema: z.object({
       executionId: z.string(),
@@ -56,6 +57,7 @@ export const sequenceVaultRouter = createTRPCRouter({
   reject: governedProcedure({
 
     kind: "LEGACY_SEQUENCE_VAULT_REJECT",
+    requireOperator: true,
 
     inputSchema: z.object({
       executionId: z.string(),
@@ -73,6 +75,7 @@ export const sequenceVaultRouter = createTRPCRouter({
   delete: governedProcedure({
 
     kind: "LEGACY_SEQUENCE_VAULT_DELETE",
+    requireOperator: true,
 
     inputSchema: z.object({ executionId: z.string() }),
 

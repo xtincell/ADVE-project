@@ -24,7 +24,7 @@ import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS, type PillarStorageKey } from "@
 
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
-import { callLLM, extractJSON } from "@/server/services/llm-gateway";
+import { callLLM, extractJSON, isTextLLMAvailable } from "@/server/services/llm-gateway";
 import * as mestor from "@/server/services/mestor";
 import { emitIntent as mestorEmitIntent } from "@/server/services/mestor/intents";
 import { TRPCError } from "@trpc/server";
@@ -65,13 +65,26 @@ async function seedPillarFromIntake(
 /**
  * Extract structured ADVE-RTIS responses from free text using AI.
  * Used by SHORT, INGEST, and INGEST_PLUS methods.
- * Returns a responses object matching the same structure as the long questionnaire.
+ * Returns a responses object matching the same structure as the long
+ * questionnaire, keeping ONLY the slices that carry at least one substantive
+ * answer (same predicate as advance()/complete()).
+ *
+ * Returns `null` when the extraction step itself is impossible: no healthy
+ * text provider (clés absentes, crédits épuisés, circuit ouvert), erreur LLM,
+ * ou sortie néanmoins imparsable après retry. Les callers DOIVENT dégrader
+ * honnêtement (questionnaire pré-rempli / erreur explicite) — jamais persister
+ * un squelette tout-vide `{biz:{},a:{},…}` : c'est exactement la classe de row
+ * que les gardes `hasSubstantiveAnswer` de advance()/complete() interdisent.
  */
 async function extractFromText(
   text: string,
   companyName: string,
   sector?: string | null,
-): Promise<Record<string, Record<string, unknown>>> {
+): Promise<Record<string, Record<string, unknown>> | null> {
+  // Pré-flight : tous les providers texte down → inutile de tenter (et de
+  // brûler le budget serverless), on dégrade tout de suite.
+  if (!isTextLLMAvailable()) return null;
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 60_000);
 
@@ -101,47 +114,71 @@ ${text.slice(0, 100_000)}
 REGLES STRICTES:
 1. Remplis les champs attendus ci-dessous. Si le texte source ne permet pas de repondre a une question et que la marque est peu connue, omets la cle.
 2. CRITIQUE : Pour les marques matures et très connues (ex: ${companyName}), si l'information n'est pas dans le texte, UTILISE TES PROPRES CONNAISSANCES pour remplir un maximum de champs avec la vraie réalité de la marque (ses produits, ses engagements, etc). Ne laisse pas de trous si tu connais la marque !
-3. Reponds UNIQUEMENT par un objet JSON valide. Aucun texte avant ou apres.
+3. Sois concis : 1 a 2 phrases par champ texte, MAXIMUM. La sortie complete doit rester un JSON compact.
+4. Reponds UNIQUEMENT par un objet JSON valide. Aucun texte avant ou apres.
 
 SCHEMA ATTENDU (Utilise EXACTEMENT ces clefs, n'invente pas de nouvelles clefs) :
 {
 ${expectedSchema}
 }`;
 
-    const { text: out } = await callLLM({
-      system,
-      prompt,
-      caller: "quick-intake:extract",
-      // NO hardcoded vendor model. `purpose: "extraction"` resolves the policy
-      // model, which the gateway serves through the default text provider —
-      // owl-alpha via OpenRouter (free), Anthropic only in premium mode. The
-      // previous `model: "gpt-5.5"` was a non-existent model that forced a
-      // doomed Anthropic attempt + circuit trip before any real provider.
-      purpose: "extraction",
-      // OpenAI-compatible providers (OpenRouter/Ollama) return strict JSON.
-      responseFormat: "json_object",
-      maxOutputTokens: 4096,
-      // Make the 60s bound REAL — the AbortController above was dead code (never
-      // wired to the call). Now a slow/hung model can't run past the serverless
-      // budget: it aborts and we fall back to the raw responses (graceful).
-      signal: controller.signal,
-    });
+    // 2 tentatives dans le même budget 60 s : un JSON tronqué/malformé est
+    // stochastique (le retry a du sens), un provider down ne l'est pas
+    // (re-check isTextLLMAvailable entre les deux — si le circuit vient de
+    // s'ouvrir, on arrête).
+    let lastErr: unknown;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (controller.signal.aborted) break;
+      if (attempt > 0 && !isTextLLMAvailable()) break;
+      try {
+        const { text: out } = await callLLM({
+          system,
+          prompt,
+          caller: "quick-intake:extract",
+          // NO hardcoded vendor model. `purpose: "extraction"` resolves the policy
+          // model, which the gateway serves through the default text provider —
+          // owl-alpha via OpenRouter (free), Anthropic only in premium mode. The
+          // previous `model: "gpt-5.5"` was a non-existent model that forced a
+          // doomed Anthropic attempt + circuit trip before any real provider.
+          purpose: "extraction",
+          // OpenAI-compatible providers (OpenRouter/Ollama) return strict JSON.
+          responseFormat: "json_object",
+          // 57 champs attendus : 4096 tronquait le JSON des sources riches
+          // (accolades jamais équilibrées → parse impossible → intake « vide »
+          // → bascule muette vers le questionnaire long).
+          maxOutputTokens: 8192,
+          // Make the 60s bound REAL — the AbortController above was dead code (never
+          // wired to the call). Now a slow/hung model can't run past the serverless
+          // budget: it aborts and we fall back gracefully.
+          signal: controller.signal,
+        });
 
-    // Robust parse — handles bare JSON, ```json fences, or JSON-in-prose.
-    const parsed = extractJSON((out ?? "").trim()) as Record<string, Record<string, unknown>>;
+        // Robust parse — handles bare JSON, ```json fences, or JSON-in-prose.
+        const parsed = extractJSON((out ?? "").trim()) as Record<string, Record<string, unknown>>;
 
-    // Keep only phases with at least one meaningful field.
-    const result: Record<string, Record<string, unknown>> = {};
-    for (const [key, content] of Object.entries(parsed)) {
-      if (content && typeof content === "object" && !Array.isArray(content) && Object.keys(content).length >= 1) {
-        result[key] = content;
+        // Keep only phases with at least one SUBSTANTIVE field — a slice of
+        // chaînes vides ne doit jamais marquer une phase comme répondue.
+        const result: Record<string, Record<string, unknown>> = {};
+        for (const [key, content] of Object.entries(parsed)) {
+          if (
+            content && typeof content === "object" && !Array.isArray(content) &&
+            quickIntakeService.hasSubstantiveAnswer(content)
+          ) {
+            result[key] = content;
+          }
+        }
+
+        return result;
+      } catch (err) {
+        lastErr = err;
       }
     }
 
-    return result;
+    console.warn("[quick-intake] extractFromText failed:", lastErr instanceof Error ? lastErr.message : lastErr);
+    return null;
   } catch (err) {
     console.warn("[quick-intake] extractFromText failed:", err instanceof Error ? err.message : err);
-    return { biz: {}, a: {}, d: {}, v: {}, e: {}, r: {}, t: {}, i: {}, s: {} };
+    return null;
   } finally {
     clearTimeout(timeout);
   }
@@ -358,8 +395,15 @@ export const quickIntakeRouter = createTRPCRouter({
       // Determine which pillar to fetch questions for
       let targetPillar: string | undefined = input.pillar ?? undefined;
       if (!targetPillar) {
-        // Auto-detect: find first unanswered step
-        const answeredSteps = new Set(Object.keys(responses));
+        // Auto-detect: find first unanswered step. Same substantive-answer
+        // predicate as advance()/complete() — une slice vide persistée (row
+        // legacy) ne doit pas marquer une phase comme répondue ni renvoyer
+        // readyToComplete sur un intake vide.
+        const answeredSteps = new Set(
+          Object.entries(responses)
+            .filter(([, v]) => quickIntakeService.hasSubstantiveAnswer(v))
+            .map(([key]) => key.split("_")[0]),
+        );
         targetPillar = allSteps.find((p) => !answeredSteps.has(p));
       }
 
@@ -927,14 +971,38 @@ export const quickIntakeRouter = createTRPCRouter({
 
       // Use the complete() flow with pre-populated responses from AI extraction
       const responses = await extractFromText(input.text, intake.companyName, intake.sector);
+      if (responses === null) {
+        // Extraction impossible (providers down / crédits épuisés) — erreur
+        // explicite en français : le texte de l'utilisateur est déjà persisté,
+        // il peut réessayer plus tard ou passer par le questionnaire guidé.
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message:
+            "L'analyse automatique est momentanément indisponible. Votre texte est conservé — réessayez dans quelques minutes, ou passez par le questionnaire guidé.",
+        });
+      }
 
+      // Merge substantive slices only — never overwrite existing answers with
+      // an empty skeleton.
+      const existingResponses = (intake.responses as Record<string, unknown>) ?? {};
       await ctx.db.quickIntake.update({
         where: { id: intake.id },
-        data: { responses: responses as Prisma.InputJsonValue },
+        data: { responses: { ...existingResponses, ...responses } as Prisma.InputJsonValue },
       });
 
       // Now complete the intake (scores, classifies, creates deal)
-      return quickIntakeService.complete(input.token);
+      try {
+        return await quickIntakeService.complete(input.token);
+      } catch (err) {
+        if (err instanceof quickIntakeService.IncompleteIntakeError) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message:
+              "Le texte fourni n'a pas permis d'extraire assez d'informations pour un diagnostic fiable. Enrichissez la description (produits, clients, différenciation, engagement) ou passez par le questionnaire guidé.",
+          });
+        }
+        throw err;
+      }
     }),
 
   /**
@@ -958,6 +1026,37 @@ export const quickIntakeRouter = createTRPCRouter({
       if (!intake) throw new Error("Intake not found");
       if (intake.status !== "IN_PROGRESS") throw new Error("Intake already completed");
 
+      // Le site déclaré à l'étape contact (landing) reste la source par défaut :
+      // le champ de la page ingest est pré-rempli côté UI, mais s'il revient
+      // vide on ne DÉTRUIT pas la déclaration initiale — on la réutilise.
+      const effectiveWebsiteUrl = input.websiteUrl ?? intake.websiteUrl?.trim() ?? undefined;
+
+      // Persist source info FIRST — même si l'extraction échoue ensuite, rien
+      // de ce que l'utilisateur a fourni n'est perdu. `undefined` = champ non
+      // touché : on n'écrase JAMAIS une valeur déclarée par null.
+      const sourceNames = [
+        input.rawText ? "texte" : null,
+        effectiveWebsiteUrl ?? null,
+        ...input.files.map((f) => f.name),
+      ].filter(Boolean);
+
+      await ctx.db.quickIntake.update({
+        where: { id: intake.id },
+        data: {
+          rawText: input.rawText ?? undefined,
+          websiteUrl: input.websiteUrl ?? undefined,
+          documentUrl: sourceNames.join(", "),
+        },
+      });
+
+      // Pré-flight LLM : providers texte down (clés absentes, crédits épuisés,
+      // circuit ouvert) → on n'entame ni scrape ni décodage, on route tout de
+      // suite vers le questionnaire pré-rempli avec une raison explicite.
+      // JAMAIS de bascule muette.
+      if (!isTextLLMAvailable()) {
+        return { completed: false as const, reason: "llm_unavailable" as const, token: input.token };
+      }
+
       // Collect all text sources
       const textParts: string[] = [];
 
@@ -972,8 +1071,8 @@ export const quickIntakeRouter = createTRPCRouter({
       // gpt-5.5 LLM attempt, blew the serverless budget: the function was killed
       // before its first DB write (the "Load failed" the founder saw, intake row
       // left IN_PROGRESS). Both are bounded best-effort and never throw.
-      const sitePromise = input.websiteUrl
-        ? fetchUrlAsText(input.websiteUrl, { maxChars: 15_000 })
+      const sitePromise = effectiveWebsiteUrl
+        ? fetchUrlAsText(effectiveWebsiteUrl, { maxChars: 15_000 })
         : Promise.resolve(null);
       const presencePromise = intake.companyName
         ? fetchDigitalPresenceBlock(intake.companyName)
@@ -1013,46 +1112,40 @@ export const quickIntakeRouter = createTRPCRouter({
       // order. Digital presence uses the canonical Seshat/Brave access point
       // (ADR-0108) — no inline Brave code here.
       const [siteText, presenceBlock] = await Promise.all([sitePromise, presencePromise]);
-      if (input.websiteUrl) {
-        textParts.push(siteText ? `[SITE WEB: ${input.websiteUrl}]\n${siteText}` : `[SITE WEB inaccessible: ${input.websiteUrl}]`);
+      if (effectiveWebsiteUrl) {
+        textParts.push(siteText ? `[SITE WEB: ${effectiveWebsiteUrl}]\n${siteText}` : `[SITE WEB inaccessible: ${effectiveWebsiteUrl}]`);
       }
       if (presenceBlock) textParts.push(presenceBlock);
 
       const allText = textParts.join("\n\n---\n\n");
 
-      // Update intake with source info
-      const sourceNames = [
-        input.rawText ? "texte" : null,
-        input.websiteUrl ? input.websiteUrl : null,
-        ...input.files.map((f) => f.name),
-      ].filter(Boolean);
-
-      await ctx.db.quickIntake.update({
-        where: { id: intake.id },
-        data: {
-          rawText: input.rawText ?? null,
-          websiteUrl: input.websiteUrl ?? null,
-          documentUrl: sourceNames.join(", "),
-        },
-      });
-
       const responses = await extractFromText(allText, intake.companyName, intake.sector);
-      await ctx.db.quickIntake.update({
-        where: { id: intake.id },
-        data: { responses: responses as Prisma.InputJsonValue },
-      });
+      if (responses === null) {
+        // Extraction impossible (erreur LLM / sortie imparsable après retry).
+        // Les sources sont persistées, rien n'est perdu — bascule explicite.
+        return { completed: false as const, reason: "llm_unavailable" as const, token: input.token };
+      }
+      if (Object.keys(responses).length > 0) {
+        // Merge substantive slices only — jamais d'écrasement par un squelette
+        // vide (classe de bug interdite par hasSubstantiveAnswer).
+        const existingResponses = (intake.responses as Record<string, unknown>) ?? {};
+        await ctx.db.quickIntake.update({
+          where: { id: intake.id },
+          data: { responses: { ...existingResponses, ...responses } as Prisma.InputJsonValue },
+        });
+      }
 
       // Direct-to-diagnostic (operator choice 2026-06-29) : run the full ADVE
       // diagnostic now and send the founder straight to the result page. If the
-      // AI extraction came back empty/sparse (LLM unavailable or thin sources),
-      // complete() refuses to score — fall back to the pre-filled guided
-      // questionnaire so they finish manually instead of hitting a dead end.
+      // AI extraction came back empty/sparse (thin sources), complete() refuses
+      // to score — fall back to the pre-filled guided questionnaire WITH an
+      // explicit reason so the front can explain the switch (never silent).
       try {
         await quickIntakeService.complete(input.token);
-        return { completed: true, token: input.token };
+        return { completed: true as const, token: input.token };
       } catch (err) {
         if (err instanceof quickIntakeService.IncompleteIntakeError) {
-          return { completed: false, token: input.token };
+          return { completed: false as const, reason: "extraction" as const, token: input.token };
         }
         throw err;
       }
@@ -1113,16 +1206,28 @@ export const quickIntakeRouter = createTRPCRouter({
       await ctx.db.quickIntake.update({
         where: { id: intake.id },
         data: {
-          documentUrl: input.files?.map((f) => f.name).join(", ") ?? null,
-          websiteUrl: input.urls?.[0] ?? null,
+          // `undefined` = champ non touché — ne jamais écraser une déclaration
+          // antérieure (landing) par null.
+          documentUrl: input.files?.map((f) => f.name).join(", ") ?? undefined,
+          websiteUrl: input.urls?.[0] ?? undefined,
         },
       });
 
       const responses = await extractFromText(allText, intake.companyName, intake.sector);
-      await ctx.db.quickIntake.update({
-        where: { id: intake.id },
-        data: { responses: responses as Prisma.InputJsonValue },
-      });
+      if (responses === null) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message:
+            "L'analyse automatique est momentanément indisponible. Vos sources sont conservées — réessayez dans quelques minutes.",
+        });
+      }
+      if (Object.keys(responses).length > 0) {
+        const existingResponses = (intake.responses as Record<string, unknown>) ?? {};
+        await ctx.db.quickIntake.update({
+          where: { id: intake.id },
+          data: { responses: { ...existingResponses, ...responses } as Prisma.InputJsonValue },
+        });
+      }
 
       return quickIntakeService.complete(input.token);
     }),

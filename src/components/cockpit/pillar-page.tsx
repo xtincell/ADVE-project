@@ -295,7 +295,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
         if (needsHumanAfter.length > 0) parts.push(`${needsHumanAfter.length} champ(s) nécessitent une saisie réelle (données opérateur, ex: traction)`);
         if (failedCount > 0) parts.push(`${failedCount} champ(s) non remplis (LLM insuffisant — relance Enrichir ou ajoute des sources)`);
         if (parts.length === 0) parts.push("Tous les champs dérivables sont déjà remplis");
-        parts.push("Pour challenger : « Générer depuis les sources » dans Notoria");
+        parts.push("Pour challenger : « Générer depuis les sources » dans Recommandations");
         setEnrichResult({ type: filledCount > 0 ? "success" : "warning", message: parts.join(" · ") });
         return;
       }
@@ -344,7 +344,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
       if (needsHumanAfter.length > 0) parts.push(`${needsHumanAfter.length} champ(s) nécessitent une saisie réelle (données opérateur, ex: traction)`);
       if (totalFailed > 0) parts.push(`${totalFailed} champ(s) non remplis (LLM insuffisant — relance Enrichir ou ajoute des sources)`);
       if (parts.length === 0) parts.push("Tous les champs dérivables sont déjà remplis");
-      parts.push("Pour challenger : « Générer depuis les sources » dans Notoria");
+      parts.push("Pour challenger : « Générer depuis les sources » dans Recommandations");
       setEnrichResult({ type: totalFilled > 0 ? "success" : "warning", message: parts.join(" · ") });
     } catch (err) {
       setEnrichResult({ type: "error", message: err instanceof Error ? err.message : String(err) });
@@ -393,7 +393,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
           onApplied={(res) => {
             setEnrichResult({
               type: "success",
-              message: `Pilier amendé v${res.version}. ${res.stalePillars.length} piliers RTIS marqués stale, ${res.staleAssets} assets à régénérer.`,
+              message: `Pilier amendé v${res.version}. ${res.stalePillars.length} pilier(s) stratégique(s) à rafraîchir, ${res.staleAssets} asset(s) à régénérer.`,
             });
             assessQuery.refetch();
           }}
@@ -451,7 +451,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
               <button
                 onClick={handleRegenerate}
                 disabled={isRegenerating}
-                title="Lancer l'étude de marché sur le web et mettre à jour Seshat."
+                title="Lancer l'étude de marché sur le web et mettre à jour votre veille marché."
                 className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors bg-info/20 text-info hover:bg-info/30 disabled:opacity-50"
               >
                 {isRegenerating ? (
@@ -510,13 +510,13 @@ export function PillarPage({ pageKey }: PillarPageProps) {
               : enrichedPct >= 80
                 ? "text-warning"
                 : "text-foreground-muted";
-            const sufBg = enrichedReached ? "#34d399" : enrichedPct >= 80 ? "#f59e0b" : "#a78bfa";
+            const sufBg = enrichedReached ? "var(--color-success)" : enrichedPct >= 80 ? "var(--color-warning)" : "var(--color-info)";
             const cplClass = completeReached
               ? "text-success"
               : completePct >= 95
                 ? "text-warning"
                 : "text-foreground-muted";
-            const cplBg = completeReached ? "#34d399" : completePct >= 95 ? "#f59e0b" : "#a78bfa";
+            const cplBg = completeReached ? "var(--color-success)" : completePct >= 95 ? "var(--color-warning)" : "var(--color-info)";
             return (
               <>
                 <div className="flex items-center gap-1.5">
@@ -678,7 +678,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
               <p className="mt-1 text-2xs text-foreground-muted">
                 {isAdve
                   ? "Clique sur "
-                  : "La cascade RTIS s'alimente à partir d'ADVE. "}
+                  : "Les piliers stratégiques se dérivent de votre fondation. "}
                 <strong>Enrichir</strong>
                 {isAdve
                   ? " pour démarrer l'auto-remplissage via vault, calculs et IA."
@@ -724,7 +724,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                       <span className="text-xs font-medium text-white">{getFieldLabel(path)}</span>
                       <span className="ml-2 font-mono text-2xs text-foreground-muted/60">{path}</span>
                       {hasReco ? (
-                        <span className="ml-2 inline-flex items-center gap-0.5 rounded bg-info/15 px-1.5 py-0.5 text-[9px] font-bold text-info" title="Une recommandation Notoria existe pour ce champ">
+                        <span className="ml-2 inline-flex items-center gap-0.5 rounded bg-info/15 px-1.5 py-0.5 text-[9px] font-bold text-info" title="Une recommandation existe pour ce champ">
                           <Sparkles className="h-2.5 w-2.5" />
                           reco IA
                         </span>
@@ -875,7 +875,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                 <ThumbsDown className="h-3 w-3" /> Rejeter
               </button>
               <Link href="/cockpit/brand/notoria" className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-warning/10 text-warning hover:bg-warning/20 ml-auto">
-                <Sparkles className="h-3 w-3" /> Notoria
+                <Sparkles className="h-3 w-3" /> Recommandations
               </Link>
             </div>
           </div>
@@ -963,7 +963,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
               </span>
             </div>
             <Link href="/cockpit/brand/notoria" className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-warning/20 text-warning hover:bg-warning/30">
-              <Sparkles className="h-3 w-3" /> Voir dans Notoria
+              <Sparkles className="h-3 w-3" /> Voir dans Recommandations
             </Link>
           </div>
           <div className="space-y-2">

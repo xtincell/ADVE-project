@@ -11,6 +11,8 @@ const SEGMENT_LABELS: Record<string, string> = {
   console: "Console",
   operate: "Operations",
   brand: "Marque",
+  fondation: "Fondation",
+  strategie: "Stratégie",
   insights: "Insights",
   missions: "Missions",
   campaigns: "Campagnes",

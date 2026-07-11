@@ -551,7 +551,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 254 (par deck)
+## Pages — 256 (par deck)
 
 ### Agency (12)
 
@@ -568,7 +568,7 @@ Ces correspondances évitent la réinvention :
 - `/agency/revenue`
 - `/agency/signals`
 
-### Cockpit (51)
+### Cockpit (53)
 
 - `/cockpit`
 - `/cockpit/brand/assets`
@@ -577,6 +577,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/brand/diagnostic`
 - `/cockpit/brand/edit`
 - `/cockpit/brand/engagement`
+- `/cockpit/brand/fondation`
 - `/cockpit/brand/guidelines`
 - `/cockpit/brand/identity`
 - `/cockpit/brand/jehuty`
@@ -590,6 +591,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/brand/rtis`
 - `/cockpit/brand/rtis/synthese`
 - `/cockpit/brand/sources`
+- `/cockpit/brand/strategie`
 - `/cockpit/brand/strategy`
 - `/cockpit/insights/apogee-maintenance`
 - `/cockpit/insights/attribution`
@@ -995,7 +997,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 547 (par governor)
+## Intent kinds — 546 (par governor)
 
 ### MESTOR (79)
 
@@ -1079,13 +1081,12 @@ Ces correspondances évitent la réinvention :
 - `SUPERSEDE_BRAND_ASSET` → brand-vault (sync) — Remplace un BrandAsset ACTIVE par une nouvelle version. L'ancien passe SUPERSEDE…
 - `ARCHIVE_BRAND_ASSET` → brand-vault (sync) — Archive un BrandAsset (mort rituelle — lecture seule). Lineage préservée.…
 
-### ARTEMIS (16)
+### ARTEMIS (15)
 
 - `RUN_ORACLE_SEQUENCE` → artemis (async) — Run a Glory sequence on a strategy via the governed path (renamed from RUN_ORACL…
 - `PROMOTE_SEQUENCE_LIFECYCLE` → artemis (sync) — Promote a sequence DRAFT → STABLE → DEPRECATED. Recalcule promptHash sur promoti…
 - `GENERATE_ORACLE_SECTION` → oracle-section (async) — Génère une section Oracle individuelle (1..35) via son runner (GLORY_SEQUENCE/GL…
 - `ASSEMBLE_ORACLE` → oracle-section (async) — Orchestre la génération de N sections Oracle (scope ALL/MISSING/STALE/explicit l…
-- `ENRICH_ORACLE` → strategy-presentation (async) — Enrich the 21 Oracle sections via Mestor→Artemis→Seshat pipeline.…
 - `EXPORT_ORACLE` → strategy-presentation (async) — Export Oracle as PDF or Markdown.…
 - `INVOKE_GLORY_TOOL` → glory-tools (sync) — Invoke a single atomic GLORY tool.…
 - `EXECUTE_GLORY_SEQUENCE` → artemis (async) — Run the Artemis sequenceur over a curated chain of GLORY tools.…

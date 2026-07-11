@@ -27,6 +27,7 @@ const StatusEnum = z.enum(["PENDING", "IN_PROGRESS", "RESOLVED", "REJECTED", "ES
 export const campaignChangeRequestRouter = createTRPCRouter({
   create: governedProcedure({
     kind: "OPERATOR_CREATE_CHANGE_REQUEST",
+    requireOperator: true,
     inputSchema: z.object({
       strategyId: StringId,
       operatorId: StringId,
@@ -56,6 +57,7 @@ export const campaignChangeRequestRouter = createTRPCRouter({
 
   update: governedProcedure({
     kind: "OPERATOR_UPDATE_CHANGE_REQUEST",
+    requireOperator: true,
     inputSchema: z.object({
       strategyId: StringId,
       operatorId: StringId,
@@ -82,6 +84,7 @@ export const campaignChangeRequestRouter = createTRPCRouter({
 
   resolve: governedProcedure({
     kind: "OPERATOR_RESOLVE_CHANGE_REQUEST",
+    requireOperator: true,
     inputSchema: z.object({
       strategyId: StringId,
       operatorId: StringId,
@@ -103,6 +106,7 @@ export const campaignChangeRequestRouter = createTRPCRouter({
 
   escalate: governedProcedure({
     kind: "OPERATOR_ESCALATE_CHANGE_REQUEST",
+    requireOperator: true,
     inputSchema: z.object({
       strategyId: StringId,
       operatorId: StringId,

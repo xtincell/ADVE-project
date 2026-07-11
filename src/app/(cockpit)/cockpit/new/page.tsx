@@ -19,11 +19,11 @@ const BUSINESS_MODELS = [
   { key: "SERVICES", label: "Services", desc: "Vend du conseil, du temps, de l'expertise", icon: Users },
   { key: "ABONNEMENT", label: "Abonnement", desc: "Revenus recurrents (SaaS, media, box)", icon: Zap },
   { key: "PLATEFORME", label: "Plateforme", desc: "Connecte acheteurs et vendeurs", icon: Globe },
-  { key: "HYBRIDE", label: "Hybride", desc: "Mix de plusieurs modeles", icon: Radio },
+  { key: "HYBRIDE", label: "Hybride", desc: "Mix de plusieurs modèles", icon: Radio },
 ];
 
 const POSITIONING = [
-  { key: "ULTRA_LUXE", label: "Ultra Luxe", desc: "Le plus cher du marche, exclusif" },
+  { key: "ULTRA_LUXE", label: "Ultra Luxe", desc: "Le plus cher du marché, exclusif" },
   { key: "LUXE", label: "Luxe", desc: "Premium, prestigieux" },
   { key: "PREMIUM", label: "Premium", desc: "Qualite superieure, prix justifie" },
   { key: "MASSTIGE", label: "Masstige", desc: "Premium accessible, masse + prestige" },
@@ -80,8 +80,8 @@ export default function NewBrandPage() {
 
   const STEPS = [
     { title: "La marque", icon: Sparkles },
-    { title: "Le marche", icon: Globe },
-    { title: "Le modele", icon: DollarSign },
+    { title: "Le marché", icon: Globe },
+    { title: "Le modèle", icon: DollarSign },
     { title: "Confirmation", icon: Check },
   ];
 
@@ -142,7 +142,7 @@ export default function NewBrandPage() {
     <div className="mx-auto max-w-2xl space-y-6">
       <PageHeader
         title="Nouvelle marque"
-        description="Creez une nouvelle fiche de marque ADVE-RTIS"
+        description="Créez une nouvelle fiche de marque"
         breadcrumbs={[
           { label: "Cockpit", href: "/cockpit" },
           { label: "Nouvelle marque" },
@@ -208,7 +208,7 @@ export default function NewBrandPage() {
           <div className="space-y-5">
             <div>
               <h3 className="text-lg font-semibold text-white mb-1">Ou opere cette marque ?</h3>
-              <p className="text-sm text-foreground-secondary">Secteur d'activite et marche principal.</p>
+              <p className="text-sm text-foreground-secondary">Secteur d'activité et marché principal.</p>
             </div>
             <div>
               <label className="text-xs font-medium text-foreground-secondary block mb-1.5">Secteur *</label>
@@ -252,7 +252,7 @@ export default function NewBrandPage() {
         {step === 2 && (
           <div className="space-y-5">
             <div>
-              <h3 className="text-lg font-semibold text-white mb-1">Quel est le modele d'affaires ?</h3>
+              <h3 className="text-lg font-semibold text-white mb-1">Quel est le modèle d'affaires ?</h3>
               <p className="text-sm text-foreground-secondary">Comment la marque gagne de l'argent et se positionne.</p>
             </div>
             <div>
@@ -444,7 +444,7 @@ export default function NewBrandPage() {
             ) : (
               <>
                 <Rocket className="h-4 w-4" />
-                Creer la marque
+                Créer la marque
               </>
             )}
           </button>

@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { StatCard } from "@/components/shared/stat-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Modal } from "@/components/shared/modal";
+import { useToast } from "@/components/shared/notification-toast";
 import { FormField } from "@/components/shared/form-field";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { PILLAR_KEYS, PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
@@ -47,6 +48,7 @@ type AssetType = (typeof ASSET_TYPES)[number]["value"];
 
 export default function AssetsPage() {
   const strategyId = useCurrentStrategyId();
+  const toast = useToast();
   const [search, setSearch] = useState("");
   const [pillarFilter, setPillarFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("");
@@ -68,7 +70,7 @@ export default function AssetsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 10 * 1024 * 1024) {
-      alert("Fichier trop volumineux (max 10 MB)");
+      toast.warning("Fichier trop volumineux — 10 Mo maximum.");
       return;
     }
     // Auto-fill name if empty
@@ -198,7 +200,7 @@ export default function AssetsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Assets"
-        description="Vos assets de marque organises par pilier ADVE-RTIS."
+        description="Vos assets de marque organisés par pilier."
         breadcrumbs={[
           { label: "Cockpit", href: "/cockpit" },
           { label: "Marque" },

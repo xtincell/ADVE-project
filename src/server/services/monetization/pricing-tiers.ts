@@ -10,7 +10,7 @@ import { ADVE_KEYS } from "@/domain";
  *
  * Tiers map 1:1 to APOGEE phases of the founder funnel:
  *   - INTAKE_FREE     → free showcase (no SPU, no paywall)
- *   - INTAKE_PDF      → ADVE+RTIS shareable PDF
+ *   - INTAKE_PDF      → rapport ADVE & stratégie (PDF partageable)
  *   - ORACLE_FULL     → 35-section dynamic Oracle deliverable
  *   - COCKPIT_MONTHLY → portail brand editable + recompute
  *   - RETAINER_BASE   → continuous reco + monthly value report
@@ -58,7 +58,7 @@ export const PRICING_TIERS: Readonly<Record<PricingTierKey, PricingTierDefinitio
     inclusions: [
       "ADVE complet (4 piliers déduits par IA)",
       "Score composite + palier",
-      "3 recommandations preview (RTIS)",
+      "3 recommandations stratégiques en aperçu",
       "Trajectoire vers ICONE",
     ],
     unlocksMissionStep: 1,
@@ -68,11 +68,11 @@ export const PRICING_TIERS: Readonly<Record<PricingTierKey, PricingTierDefinitio
     key: "INTAKE_PDF",
     amountSpu: 49,
     billing: "ONE_TIME",
-    label: "Rapport ADVE+RTIS",
-    summary: "PDF brandé, partageable, ADVE+RTIS complet.",
+    label: "Rapport ADVE & stratégie",
+    summary: "PDF brandé, partageable — fondation ADVE + stratégie complète.",
     inclusions: [
       "Tout l'audit gratuit",
-      "RTIS complet (R, T, I, S — risques, marché, innovations, stratégie)",
+      "Piliers stratégiques complets (R, T, I, S — risques, marché, innovations, stratégie)",
       "Score détaillé par pilier",
       "Plan d'action 90 jours",
       "PDF haute qualité, partageable",
@@ -88,7 +88,7 @@ export const PRICING_TIERS: Readonly<Record<PricingTierKey, PricingTierDefinitio
     label: "Oracle complet",
     summary: "Le livrable conseil dynamique. 35 sections, niveau top mondial.",
     inclusions: [
-      "Tout le rapport ADVE+RTIS",
+      "Tout le rapport ADVE & stratégie",
       "35 sections de stratégie de marque",
       "Synthèse exécutive + plateforme stratégique",
       "Catalogue d'actions priorisé",
@@ -127,10 +127,10 @@ export const PRICING_TIERS: Readonly<Record<PricingTierKey, PricingTierDefinitio
     summary: "Suivi reco continues + rapport mensuel de valeur.",
     inclusions: [
       "Tout le Cockpit",
-      "Notoria reco continues (4 cycles/mois)",
-      "Mestor chat consultatif",
+      "Recommandations continues (4 cycles/mois)",
+      "Assistant strategique (chat consultatif)",
       "Rapport mensuel de valeur livré (PDF)",
-      "Tarsis weak-signals secteur",
+      "Signaux faibles sectoriels",
       "Support email 48h",
     ],
     includes: "COCKPIT_MONTHLY",
@@ -142,13 +142,13 @@ export const PRICING_TIERS: Readonly<Record<PricingTierKey, PricingTierDefinitio
     amountSpu: 999,
     billing: "MONTHLY",
     label: "Retainer Pro",
-    summary: "Mestor consultatif + media planning + Glory tools premium.",
+    summary: "Conseil strategique + media planning + outils premium.",
     inclusions: [
       "Tout le Retainer Base",
-      "Glory tools tier S/PREMIUM (concept-generator, kv-prompts, brand-bible)",
+      "Outils premium tier S (générateur de concepts, prompts visuels, bible de marque)",
       "Plan media + budget allocator",
-      "Sentinel Intents (MAINTAIN_APOGEE, DEFEND_OVERTON)",
-      "Sessions Mestor en direct (2/mois)",
+      "Vigies automatiques (maintien d'apogée, défense Overton)",
+      "Sessions de conseil en direct (2/mois)",
       "Support priorité 24h",
     ],
     includes: "RETAINER_BASE",
@@ -160,11 +160,11 @@ export const PRICING_TIERS: Readonly<Record<PricingTierKey, PricingTierDefinitio
     amountSpu: 2999,
     billing: "MONTHLY",
     label: "Retainer Enterprise",
-    summary: "Multi-brand, dedicated Artemis sequences, cross-sector playbook.",
+    summary: "Multi-marques, sequences de production dediees, playbook cross-secteur.",
     inclusions: [
       "Tout le Retainer Pro",
       "Multi-brand orchestration (jusqu'à 5 marques)",
-      "Glory sequences custom dédiées",
+      "Séquences de production custom dédiées",
       "Playbook capitalization cross-sector",
       "Equipe creator/agence dédiée",
       "Support 24/7 + SLA contractuel",

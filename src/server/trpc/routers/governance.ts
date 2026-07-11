@@ -92,6 +92,7 @@ export const governanceRouter = createTRPCRouter({
 
   compensate: governedProcedure({
     kind: "CORRECT_INTENT",
+    requireOperator: true,
     inputSchema: z.object({
       originalIntentId: z.string(),
       reason: z.string().min(3).max(500),
@@ -106,22 +107,24 @@ export const governanceRouter = createTRPCRouter({
       const reverseStrategyId = typeof reverseIntent.strategyId === "string"
         ? reverseIntent.strategyId
         : "(none)";
-      // Record the compensating action as a first-class IntentEmission row.
-      // Downstream services subscribing to `intent.compensated` events will
-      // perform the actual reversal (rollback DB writes, etc.).
-      await ctx.db.intentEmission.create({
-        data: {
-          id: `cmp_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
-          intentKind: built.reverseKind,
-          strategyId: reverseStrategyId,
-          payload: {
-            compensatedFrom: input.originalIntentId,
-            originalKind: built.originalKind,
-            reason: input.reason,
-          },
-          caller: "console:governance:compensate",
-          status: "OK",
+      // Record the compensating action as a first-class IntentEmission row —
+      // via le spine canonique (ADR-0124) : l'Intent compensateur (Loi 1) est
+      // hash-chaîné et observable comme toute autre combustion.
+      const { openEmission, closeEmission } = await import("@/server/governance/emission-spine");
+      const compensationId = await openEmission({
+        kind: built.reverseKind,
+        strategyId: reverseStrategyId,
+        payload: {
+          compensatedFrom: input.originalIntentId,
+          originalKind: built.originalKind,
+          reason: input.reason,
         },
+        caller: "console:governance:compensate",
+      });
+      await closeEmission({
+        intentId: compensationId,
+        result: { compensatedFrom: input.originalIntentId, originalKind: built.originalKind },
+        status: "OK",
       });
       return { ok: true, reverseKind: built.reverseKind, originalKind: built.originalKind };
     } catch (err) {
@@ -151,6 +154,7 @@ export const governanceRouter = createTRPCRouter({
 
   modelPolicyUpdate: governedProcedure({
     kind: "UPDATE_MODEL_POLICY",
+    requireOperator: true,
     inputSchema: z.object({
       purpose: z.enum(["final-report", "agent", "intermediate", "intake-followup", "extraction"]),
       anthropicModel: z.string().min(1),
@@ -194,6 +198,7 @@ export const governanceRouter = createTRPCRouter({
    */
   autoPromotionEvaluate: governedProcedure({
     kind: "AUTO_PROMOTION_EVALUATE",
+    requireOperator: true,
     inputSchema: z.object({
       dryRun: z.boolean().default(true),
     }),

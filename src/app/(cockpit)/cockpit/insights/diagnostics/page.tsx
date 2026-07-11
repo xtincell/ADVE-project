@@ -111,7 +111,7 @@ export default function DiagnosticsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Diagnostics ADVE"
-        description="Analyse pilier par pilier du vecteur ADVE-RTIS"
+        description="Analyse pilier par pilier de votre marque"
         badge={<AiBadge />}
         breadcrumbs={[
           { label: "Cockpit", href: "/cockpit" },
@@ -148,7 +148,7 @@ export default function DiagnosticsPage() {
       {/* Radar - large centered */}
       <div className="rounded-xl border border-border bg-background/80 p-6">
         <h3 className="mb-4 text-center font-semibold text-white">
-          Vecteur ADVE-RTIS actuel
+          Vos huit piliers aujourd'hui
         </h3>
         <AdvertisRadar scores={scores} size={400} className="flex justify-center" />
       </div>

@@ -30,6 +30,7 @@ export const campaignDeliverableRouter = createTRPCRouter({
   // ── Mutations governées ──────────────────────────────────────────────
   create: governedProcedure({
     kind: "OPERATOR_CREATE_CAMPAIGN_DELIVERABLE",
+    requireOperator: true,
     inputSchema: z.object({
       strategyId: StringId, // pivot via Campaign.strategyId
       operatorId: StringId,
@@ -67,6 +68,7 @@ export const campaignDeliverableRouter = createTRPCRouter({
 
   update: governedProcedure({
     kind: "OPERATOR_UPDATE_CAMPAIGN_DELIVERABLE",
+    requireOperator: true,
     inputSchema: z.object({
       strategyId: StringId,
       operatorId: StringId,
@@ -95,6 +97,7 @@ export const campaignDeliverableRouter = createTRPCRouter({
 
   delete: governedProcedure({
     kind: "OPERATOR_DELETE_CAMPAIGN_DELIVERABLE",
+    requireOperator: true,
     inputSchema: z.object({
       strategyId: StringId,
       operatorId: StringId,
@@ -114,6 +117,7 @@ export const campaignDeliverableRouter = createTRPCRouter({
 
   overrideRag: governedProcedure({
     kind: "OPERATOR_OVERRIDE_RAG",
+    requireOperator: true,
     inputSchema: z.object({
       strategyId: StringId,
       operatorId: StringId,

@@ -15,6 +15,7 @@ export const matchingRouter = createTRPCRouter({
 
 
     kind: "LEGACY_MATCHING_OVERRIDE",
+    requireOperator: true,
 
 
     inputSchema: z.object({ missionId: z.string(), talentProfileId: z.string() }),

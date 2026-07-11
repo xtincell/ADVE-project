@@ -756,7 +756,7 @@ function CampaignDetailModal({ campaign, pillarContentMap, onClose, onTransition
         {/* ADVE Radar */}
         {meta && Object.keys(scores).some((k) => (scores[k as PillarKey] ?? 0) > 0) && (
           <div className="rounded-lg border border-border bg-background/50 p-4">
-            <h4 className="mb-3 text-sm font-medium text-foreground-secondary">Radar ADVE-RTIS</h4>
+            <h4 className="mb-3 text-sm font-medium text-foreground-secondary">Radar de marque</h4>
             <AdvertisRadar scores={scores} className="flex justify-center" />
           </div>
         )}

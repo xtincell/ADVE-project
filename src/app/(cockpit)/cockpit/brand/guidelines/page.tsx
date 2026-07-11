@@ -214,7 +214,7 @@ export default function GuidelinesPage() {
     <div className="space-y-6">
       <PageHeader
         title="Guidelines de marque"
-        description="Vos guidelines vivantes, generees a partir de votre profil ADVE-RTIS."
+        description="Vos guidelines vivantes, générées à partir de votre profil de marque."
         breadcrumbs={[
           { label: "Cockpit", href: "/cockpit" },
           { label: "Marque" },

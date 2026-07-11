@@ -21,6 +21,8 @@ import { NodeBreadcrumb } from "@/components/portfolio/NodeBreadcrumb";
 import { ADVE_STORAGE_KEYS, RTIS_STORAGE_KEYS } from "@/domain/pillars";
 import { useStrategy } from "@/components/cockpit/strategy-context";
 import { Plus, Edit3, Archive, MapPin, Tag, Calendar, Rocket, Sparkles } from "lucide-react";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { useToast } from "@/components/shared/notification-toast";
 
 export default function PortfolioNodeDetailPage() {
   const params = useParams<{ corporateSlug: string }>();
@@ -55,8 +57,9 @@ export default function PortfolioNodeDetailPage() {
     );
   }
 
-  const handleArchive = async () => {
-    if (!confirm(`Archiver "${node.name}" ? L'archive est réversible mais les descendants ACTIVE doivent être archivés en premier.`)) return;
+  const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
+  const doArchive = async () => {
+    setArchiveConfirmOpen(false);
     await archiveMutation.mutateAsync({
       strategyId: node.strategyId ?? `audit:${operator.id}`,
       operatorId: operator.id,
@@ -103,12 +106,21 @@ export default function PortfolioNodeDetailPage() {
               <Plus className="h-4 w-4" /> Ajouter enfant
             </button>
             <button
-              onClick={handleArchive}
+              onClick={() => setArchiveConfirmOpen(true)}
               disabled={archiveMutation.isPending}
               className="inline-flex items-center gap-1 rounded border border-error/40 px-3 py-1.5 text-sm text-error hover:bg-error/10 disabled:opacity-50"
             >
               <Archive className="h-4 w-4" /> Archiver
             </button>
+            <ConfirmDialog
+              open={archiveConfirmOpen}
+              onClose={() => setArchiveConfirmOpen(false)}
+              onConfirm={() => void doArchive()}
+              variant="warning"
+              title={`Archiver « ${node.name} » ?`}
+              message="L'archivage est réversible, mais les descendants actifs doivent être archivés en premier."
+              confirmLabel="Archiver"
+            />
           </div>
         </div>
       </header>
@@ -207,6 +219,8 @@ function BrandPlatformCta({
   const router = useRouter();
   const { setStrategyId } = useStrategy();
   const utils = trpc.useUtils();
+  const toast = useToast();
+  const [createConfirmOpen, setCreateConfirmOpen] = useState(false);
 
   const createStrategy = trpc.strategy.create.useMutation();
   const attachStrategy = trpc.brandNode.attachStrategy.useMutation();
@@ -231,11 +245,7 @@ function BrandPlatformCta({
   }
 
   const handleCreate = async () => {
-    if (!confirm(
-      `Créer la plateforme de marque pour "${nodeName}" ?\n\n` +
-      `Cela génère une Strategy ADVE-RTIS attachée au BrandNode (${nodeKind}). ` +
-      `Tu pourras ensuite éditer les piliers, lancer Artemis, et générer l'Oracle.`,
-    )) return;
+    setCreateConfirmOpen(false);
     try {
       const newStrategy = await createStrategy.mutateAsync({
         name: nodeName,
@@ -248,21 +258,32 @@ function BrandPlatformCta({
       setStrategyId(newStrategy.id);
       router.push("/cockpit/brand/strategy");
     } catch (err) {
-      alert(`Création échouée : ${err instanceof Error ? err.message : String(err)}`);
+      toast.error(`Création échouée : ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 
   return (
-    <button
-      type="button"
-      onClick={handleCreate}
-      disabled={isPending}
-      className="inline-flex items-center gap-1.5 rounded border border-accent/50 bg-accent/10 px-3 py-1.5 text-sm font-medium text-accent hover:border-accent hover:bg-accent/20 disabled:opacity-50"
-      title={`Créer la plateforme de marque pour ${nodeName}`}
-    >
-      <Sparkles className="h-4 w-4" />
-      {isPending ? "Création…" : "Créer la plateforme de marque"}
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={() => setCreateConfirmOpen(true)}
+        disabled={isPending}
+        className="inline-flex items-center gap-1.5 rounded border border-accent/50 bg-accent/10 px-3 py-1.5 text-sm font-medium text-accent hover:border-accent hover:bg-accent/20 disabled:opacity-50"
+        title={`Créer la plateforme de marque pour ${nodeName}`}
+      >
+        <Sparkles className="h-4 w-4" />
+        {isPending ? "Création…" : "Créer la plateforme de marque"}
+      </button>
+      <ConfirmDialog
+        open={createConfirmOpen}
+        onClose={() => setCreateConfirmOpen(false)}
+        onConfirm={() => void handleCreate()}
+        variant="info"
+        title={`Créer la plateforme de marque pour « ${nodeName} » ?`}
+        message="Vous pourrez ensuite éditer les piliers et générer l'Oracle."
+        confirmLabel="Créer"
+      />
+    </>
   );
 }
 
@@ -294,7 +315,7 @@ function InheritanceSection({ nodeId }: { nodeId: string }) {
     <section className="rounded border border-border">
       <header className="border-b border-border px-4 py-2 flex items-center gap-2">
         <h2 className="text-sm font-medium uppercase tracking-wide">
-          Piliers ADVE/RTIS résolus (héritage)
+          Piliers résolus (héritage)
         </h2>
         <span className="text-xs text-foreground-secondary">
           Phase 18-N1 — résolution remontée arbre
@@ -325,7 +346,7 @@ function InheritanceSection({ nodeId }: { nodeId: string }) {
       </div>
       <div className="border-t border-border-subtle px-4 py-2">
         <div className="text-2xs uppercase tracking-wide text-foreground-secondary">
-          RTIS (dérivés ADR-0023 — recalculés via ENRICH_*)
+          Piliers stratégiques (dérivés — recalculés automatiquement)
         </div>
         <div className="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-4">
           {RTIS.map((key) => {

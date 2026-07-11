@@ -107,8 +107,8 @@ export function ApogeeMaintenanceDashboard(props: ApogeeMaintenanceDashboardProp
       </header>
 
       <p style={{ margin: 0, color: "var(--color-muted)" }}>
-        Loi 4 — la fenêtre d&rsquo;Overton n&rsquo;est pas acquise. Trois sentinels
-        tournent en arrière-plan pour défendre la masse en orbite.
+        La fenêtre d&rsquo;Overton n&rsquo;est jamais acquise. Trois vigies automatiques
+        tournent en arrière-plan pour défendre votre position au sommet.
         {driftCount > 0 ? (
           <>
             {" "}

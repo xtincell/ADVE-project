@@ -83,7 +83,7 @@ export function RecalculateRtisButton({
         type="button"
         onClick={handleClick}
         disabled={actualize.isPending}
-        title={pillarKey === "T" ? "Calculer le pilier T sur la base de ADVE + R + Seshat + sources." : `Re-générer ${PILLAR_LABELS[pillarKey]} depuis ADVE${pillarKey !== "R" ? " + RTIS amont" : ""}.`}
+        title={pillarKey === "T" ? "Calculer le pilier T sur la base de votre fondation, du diagnostic, de la veille et de vos sources." : `Re-générer ${PILLAR_LABELS[pillarKey]} depuis la fondation${pillarKey !== "R" ? " et les piliers amont" : ""}.`}
         className="flex items-center gap-1.5 rounded-lg bg-sky-600/20 px-3 py-1.5 text-xs font-medium text-sky-300 hover:bg-sky-600/30 disabled:opacity-50"
       >
         {actualize.isPending ? (

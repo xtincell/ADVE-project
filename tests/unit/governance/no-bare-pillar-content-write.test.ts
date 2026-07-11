@@ -90,7 +90,7 @@ const ALLOWED_BARE_PILLAR_CONTENT_WRITES: ReadonlyArray<AcceptedBareWrite> = [
   //   part). Entrée C2 retirée (le content write brut n'existe plus).
   {
     file: "src/server/trpc/routers/canon-sync.ts",
-    line: 144,
+    line: 145,
     hole: "C3",
     reason:
       "Canon-sync god-mode : écrit le pilier S (bloc computed) direct après recompute. Best-effort, push manuel god-mode. Reroute via gateway souhaitable mais basse priorité.",
@@ -98,7 +98,7 @@ const ALLOWED_BARE_PILLAR_CONTENT_WRITES: ReadonlyArray<AcceptedBareWrite> = [
   },
   {
     file: "src/server/trpc/routers/canon-sync.ts",
-    line: 154,
+    line: 155,
     hole: "C3",
     reason:
       "Canon-sync god-mode : matérialise le vecteur de score dans un pilier pseudo-`vector` (pas un pilier ADVE/RTIS canonique — projection de score). Légitime hors gateway (le gateway ne gère que les 8 piliers métier).",

@@ -501,6 +501,7 @@ export const laGuildeRouter = createTRPCRouter({
   /** Décision opérateur : publier sur le mur ou rejeter (motivé). */
   publishMission: governedProcedure({
     kind: "GUILD_PUBLISH_MISSION",
+    requireOperator: true,
     inputSchema: z.object({
       missionId: z.string(),
       decision: z.enum(["PUBLISH", "REJECT"]),

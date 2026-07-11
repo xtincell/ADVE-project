@@ -17,6 +17,7 @@ export const stalenessRouter = createTRPCRouter({
   propagate: governedProcedure({
 
     kind: "LEGACY_STALENESS_PROPAGATE",
+    requireOperator: true,
 
     inputSchema: z.object({
       strategyId: z.string(),
@@ -32,6 +33,7 @@ export const stalenessRouter = createTRPCRouter({
 
   auditAll: governedProcedure({
     kind: "LEGACY_STALENESS_AUDIT_ALL",
+    requireOperator: true,
     inputSchema: z.object({}),
     caller: "staleness:auditAll",
   }).mutation(async () => {
@@ -56,6 +58,7 @@ export const stalenessRouter = createTRPCRouter({
 
 
     kind: "LEGACY_STALENESS_UPDATE_CONFIG",
+    requireOperator: true,
 
 
     inputSchema: z.object({

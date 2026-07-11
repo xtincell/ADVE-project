@@ -30,17 +30,29 @@ const StrategyContext = createContext<StrategyContextValue>({
   setStrategyId: () => {},
 });
 
+/** Persistance de la marque active (lot 10, audit 2026-07-11 [M01-06]) —
+ *  même pattern que `lf-sidebar-collapsed` : un reload/nouvel onglet ne
+ *  retombe plus silencieusement sur la première marque. */
+const ACTIVE_STRATEGY_STORAGE_KEY = "lf-active-strategy";
+
 export function StrategyProvider({ children }: { children: ReactNode }) {
   const { data, isLoading } = trpc.strategy.list.useQuery({});
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  // Deep-link Console → Cockpit : `?strategy=<id>` sélectionne la marque cible.
-  // La Console adresse les marques par id ; sans ça le Cockpit retombait sur la
-  // 1re marque (branchement cassé). Lu côté client (pas `useSearchParams` →
-  // évite le bail-out CSR/Suspense au prerender) au montage du Cockpit.
+  // Deep-link Console → Cockpit : `?strategy=<id>` sélectionne la marque cible
+  // (prioritaire sur la sélection persistée). La Console adresse les marques
+  // par id ; sans ça le Cockpit retombait sur la 1re marque (branchement
+  // cassé). Lu côté client (pas `useSearchParams` → évite le bail-out
+  // CSR/Suspense au prerender) au montage du Cockpit.
   useEffect(() => {
     const fromUrl = new URLSearchParams(window.location.search).get("strategy");
-    if (fromUrl) setSelectedId(fromUrl);
+    if (fromUrl) {
+      setSelectedId(fromUrl);
+      localStorage.setItem(ACTIVE_STRATEGY_STORAGE_KEY, fromUrl);
+      return;
+    }
+    const stored = localStorage.getItem(ACTIVE_STRATEGY_STORAGE_KEY);
+    if (stored) setSelectedId(stored);
   }, []);
 
   const strategies: StrategyOption[] = (data ?? []).map((s) => ({
@@ -50,12 +62,16 @@ export function StrategyProvider({ children }: { children: ReactNode }) {
     brandNode: (s as { brandNode?: StrategyOption["brandNode"] }).brandNode ?? null,
   }));
 
-  // Use selected (incl. the ?strategy= deep-link), else fall back to first.
+  // Use selected (deep-link ?strategy= > sélection persistée), else fall back
+  // to first. Une sélection persistée qui ne résout plus (marque supprimée /
+  // autre compte) est ignorée par le fallback — pas d'état cassé.
   const activeStrategies = strategies.filter((s) => s.status !== "DELETED" && s.status !== "ARCHIVED");
-  const strategyId = selectedId ?? activeStrategies[0]?.id ?? strategies[0]?.id ?? null;
+  const selectedStillExists = selectedId != null && strategies.some((s) => s.id === selectedId);
+  const strategyId = (selectedStillExists ? selectedId : null) ?? activeStrategies[0]?.id ?? strategies[0]?.id ?? null;
 
   const setStrategyId = useCallback((id: string) => {
     setSelectedId(id);
+    localStorage.setItem(ACTIVE_STRATEGY_STORAGE_KEY, id);
   }, []);
 
   return (

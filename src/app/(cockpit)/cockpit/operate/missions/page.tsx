@@ -812,7 +812,7 @@ export default function MissionsPage() {
                               )}
                               {workload && (
                                 <span className={`inline-block mt-1 px-1.5 py-px rounded border text-[9px] font-semibold uppercase ${
-                                  workload === "HIGH" ? "text-error border-error/20 bg-error/5" : workload === "MEDIUM" ? "text-warning border-warning/20 bg-warning/5" : "text-emerald-400 border-emerald-500/20 bg-emerald-500/5"
+                                  workload === "HIGH" ? "text-error border-error/20 bg-error/5" : workload === "MEDIUM" ? "text-warning border-warning/20 bg-warning/5" : "text-success border-success/20 bg-success/5"
                                 }`}>
                                   {workload === "HIGH" ? "Surcharge" : workload === "MEDIUM" ? "Soutenue" : "Fluide"}
                                 </span>
@@ -1131,7 +1131,7 @@ export default function MissionsPage() {
               {missionPillars && Object.keys(missionPillars).length > 0 && (
                 <div>
                   <p className="mb-2 text-xs font-medium text-foreground-muted uppercase">
-                    Impact ADVE-RTIS
+                    Impact piliers
                   </p>
                   <div className="space-y-1.5">
                     {Object.entries(missionPillars)
@@ -1703,7 +1703,7 @@ export default function MissionsPage() {
 
           {/* Pillar scores (compact) */}
           <div>
-            <p className="mb-2 text-xs font-medium text-foreground-muted uppercase">Scores piliers ADVE-RTIS (optionnel)</p>
+            <p className="mb-2 text-xs font-medium text-foreground-muted uppercase">Scores piliers (optionnel)</p>
             <div className="grid grid-cols-4 gap-2">
               {[...PILLAR_STORAGE_KEYS].map((pk) => (
                 <div key={pk}>

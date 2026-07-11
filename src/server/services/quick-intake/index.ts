@@ -197,8 +197,12 @@ export async function start(input: QuickIntakeStartInput) {
  * or by a defensive code path) and `advance()` would happily mark phase "a" as
  * done. That class of bug is exactly what produced
  * `responses = { a: {}, d: {}, v: {}, e: {}, biz: {} }` in production.
+ *
+ * Exported: the tRPC router applies the SAME predicate to LLM-extraction
+ * results (processShort/processIngest) and to `getQuestions` auto-detection,
+ * so no code path can persist or count an empty skeleton slice.
  */
-function hasSubstantiveAnswer(value: unknown): boolean {
+export function hasSubstantiveAnswer(value: unknown): boolean {
   if (value === null || value === undefined) return false;
   if (typeof value === "string") return value.trim().length > 0;
   if (typeof value === "number") return Number.isFinite(value);

@@ -346,7 +346,7 @@ export default function RequestsPage() {
                 options={ASSIGNEE_OPTIONS}
                 value={form.assignee}
                 onChange={(v) => setForm({ ...form, assignee: v as string })}
-                placeholder="Selectionner une equipe..."
+                placeholder="Sélectionner une équipe..."
               />
             </FormField>
 

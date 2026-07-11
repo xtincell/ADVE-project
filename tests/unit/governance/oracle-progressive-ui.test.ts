@@ -8,7 +8,7 @@
  * 3. Hook subscribe sur les 6 sub-kinds NSP exhaustivement.
  * 4. Panel consomme `oracle.listSections` + `oracle.generateSection` +
  *    `oracle.retrySection` + `oracle.assembleOracle`.
- * 5. Page `proposition/page.tsx` insère le panel + garde le legacy `enrichOracle`.
+ * 5. Page `proposition/page.tsx` insère le panel — voie unique (legacy déposé, ADR-0125).
  * 6. SectionCard a précédence stream "generating" > dbStatus pour UI feedback.
  */
 
@@ -161,9 +161,4 @@ describe("ADR-0073 — proposition/page.tsx integration", () => {
     expect(src).toContain("<OracleProgressivePanel");
   });
 
-  it("preserves legacy enrichOracle button (cohabitation)", () => {
-    const src = fs.readFileSync(PROPOSITION_PAGE, "utf8");
-    expect(src).toContain("enrichOracle");
-    expect(src).toContain("Lancer Artemis");
-  });
 });

@@ -15,11 +15,11 @@ interface DevotionLadderProps {
 }
 
 const LEVELS = [
-  { key: "evangeliste" as const, label: "Evangeliste", color: "var(--color-devotion-evangeliste)", icon: "★" },
+  { key: "evangeliste" as const, label: "Prescripteur", color: "var(--color-devotion-evangeliste)", icon: "★" },
   { key: "ambassadeur" as const, label: "Ambassadeur", color: "var(--color-devotion-ambassadeur)", icon: "◆" },
-  { key: "engage" as const, label: "Engage", color: "var(--color-devotion-engage)", icon: "●" },
+  { key: "engage" as const, label: "Engagé", color: "var(--color-devotion-engage)", icon: "●" },
   { key: "participant" as const, label: "Participant", color: "var(--color-devotion-participant)", icon: "▲" },
-  { key: "interesse" as const, label: "Interesse", color: "var(--color-devotion-interesse)", icon: "◇" },
+  { key: "interesse" as const, label: "Intéressé", color: "var(--color-devotion-interesse)", icon: "◇" },
   { key: "spectateur" as const, label: "Spectateur", color: "var(--color-devotion-spectateur)", icon: "○" },
 ];
 
@@ -42,7 +42,7 @@ export function DevotionLadder({
 
   if (variant === "bars") {
     return (
-      <div className={`space-y-2 ${className ?? ""}`} role="img" aria-label="Devotion Ladder">
+      <div className={`space-y-2 ${className ?? ""}`} role="img" aria-label="Échelle d'engagement">
         {LEVELS.map(({ key, label, color }) => {
           const value = values[key];
           return (

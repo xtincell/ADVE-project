@@ -12,7 +12,6 @@ export { SeshatTimeline } from "./seshat-timeline";
 export { ThotBudgetMeter } from "./thot-budget-meter";
 export { NeteruActivityRail } from "./neteru-activity-rail";
 export { CascadeProgress } from "./cascade-progress";
-export { OracleEnrichmentTracker } from "./oracle-enrichment-tracker";
 export { PartialContentReveal } from "./partial-content-reveal";
 export { IntentReplayButton } from "./intent-replay-button";
 export { CostMeter } from "./cost-meter";

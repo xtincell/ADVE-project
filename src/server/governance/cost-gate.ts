@@ -139,3 +139,44 @@ export async function assertCostGate(
   }
   return result;
 }
+
+/** Vue structurelle minimale du client Prisma pour l'audit CostDecision. */
+export interface CostDecisionDbLike {
+  costDecision: {
+    create(args: { data: Record<string, unknown> }): Promise<unknown>;
+  };
+}
+
+/**
+ * Persist the gate outcome in the `CostDecision` audit table (best-effort —
+ * the IntentEmission row already records the verdict). Shared by BOTH entry
+ * paths (governed-procedure tRPC + mestor.emitIntent bus, ADR-0124) so the
+ * Thot audit trail is queryable regardless of how the Intent entered.
+ */
+export async function persistCostDecision(
+  db: CostDecisionDbLike,
+  intentEmissionId: string,
+  intentKind: string,
+  operatorId: string,
+  decision: CostDecisionResult,
+  capability: Capability,
+): Promise<void> {
+  await db.costDecision
+    .create({
+      data: {
+        intentEmissionId,
+        intentKind,
+        operatorId,
+        decision: decision.decision,
+        estimatedUsd: decision.estimatedUsd,
+        remainingBudgetUsd: decision.remainingBudgetUsd,
+        downgradeFromTier: decision.downgradeTo ? capability.qualityTier ?? null : null,
+        downgradeToTier: decision.downgradeTo?.qualityTier ?? null,
+        reason: decision.reason,
+      },
+    })
+    .catch(() => {
+      // Don't fail the request if the audit row can't be written —
+      // the IntentEmission row already records the gate outcome.
+    });
+}

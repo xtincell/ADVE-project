@@ -225,7 +225,7 @@ export default function BrandDeliverablesPage() {
         <EmptyState
           icon={FileText}
           title="Aucun livrable"
-          description="Lancez des sequences GLORY ou le plan de lancement pour generer des livrables."
+          description="Lancez une génération ou le plan de lancement pour créer vos livrables."
         />
       )}
 
@@ -247,7 +247,7 @@ export default function BrandDeliverablesPage() {
           <BookOpen className="h-5 w-5 text-foreground-secondary" />
           <div>
             <p className="text-sm font-medium text-foreground">Brand Guidelines</p>
-            <p className="text-2xs text-foreground-muted">Issu de la sequence BRANDBOOK-D</p>
+            <p className="text-2xs text-foreground-muted">Issu de votre charte de marque</p>
           </div>
         </a>
         <a href="/cockpit/brand/assets" className="flex items-center gap-3 rounded-xl border border-border bg-surface-raised p-4 hover:border-accent/40 transition-colors">

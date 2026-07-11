@@ -17,6 +17,20 @@ export interface NavItem {
   /** Explicit i18n keys (non-pillar items: Jehuty, Notoria, …). */
   labelKey?: string;
   sublabelKey?: string;
+  /**
+   * Préfixes de routes supplémentaires qui allument cet item (hubs et
+   * onglets : les pages piliers allument « Fondation », guidelines/assets
+   * allument « Livrables », …). L'item actif est celui dont le préfixe
+   * correspondant est le plus long — un href imbriqué (settings/billing
+   * sous settings) gagne donc sur son parent. Lot 10, audit 2026-07-11 §B.
+   */
+  activePrefixes?: string[];
+  /**
+   * Slot explicite de la tabbar mobile (4 max, ordre de déclaration) —
+   * remplace l'ancien `slice(0, 4)` qui promouvait les 4 premiers items
+   * de la sidebar quels qu'ils soient.
+   */
+  mobileTab?: boolean;
 }
 
 export interface NavGroup {

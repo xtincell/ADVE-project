@@ -93,7 +93,7 @@ export default function ShortIntakePage({ params }: { params: Promise<{ token: s
             Analyse de texte <AiBadge />
           </h1>
           <p className="mt-2 text-sm text-foreground-secondary">
-            Collez un texte qui decrit <span className="font-semibold text-primary">{intake.companyName}</span> et l'IA extraira les informations ADVE-RTIS.
+            Collez un texte qui decrit <span className="font-semibold text-primary">{intake.companyName}</span> et l'IA en extraira votre profil de marque ADVE.
           </p>
         </div>
 

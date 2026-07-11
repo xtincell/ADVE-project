@@ -1201,7 +1201,7 @@ Inventaire exhaustif des drifts identifiés post-audit complet 2026-05-16.
 |-------|----------|-------------|
 | **D-6.1** 24 wrappers WRAP-FW + 65 sequences DRAFT Phase 17 résidus | L | Promotion STABLE en attente |
 | **D-6.2** 0 sequences DEPRECATED pattern | L | ADR-0085 deprecation pattern à institutionnaliser |
-| **D-6.3** `enrichOracle` renamed `enrichOracleNeteru` cohabitation | L | Migration plan documenté MISSION.md Dérive #5 |
+| **D-6.3** `enrichOracle` cohabitation | L | ✅ RÉSOLU 2026-07-11 — legacy déposé ([ADR-0125](adr/0125-depose-legacy-enrich-oracle.md)), voie unique = ASSEMBLE_ORACLE + panel progressif |
 | **D-6.4** tRPC `thot.calc.*` router 2 procédures seulement | M | Les calculators existants pas exposés UI |
 | **D-6.5** Intent kinds Hub-Escrow absent | H | À créer (§16) |
 

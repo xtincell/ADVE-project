@@ -43,6 +43,7 @@ export const operatorRouter = createTRPCRouter({
 
 
     kind: "LEGACY_OPERATOR_CREATE",
+    requireOperator: true,
 
 
     inputSchema: z.object({
@@ -88,6 +89,7 @@ export const operatorRouter = createTRPCRouter({
 
 
     kind: "LEGACY_OPERATOR_UPDATE",
+    requireOperator: true,
 
 
     inputSchema: z.object({
@@ -120,6 +122,7 @@ export const operatorRouter = createTRPCRouter({
 
 
     kind: "LEGACY_OPERATOR_SUSPEND",
+    requireOperator: true,
 
 
     inputSchema: z.object({ id: z.string() }),
@@ -137,6 +140,7 @@ export const operatorRouter = createTRPCRouter({
 
 
     kind: "LEGACY_OPERATOR_REACTIVATE",
+    requireOperator: true,
 
 
     inputSchema: z.object({ id: z.string() }),
@@ -166,6 +170,7 @@ export const operatorRouter = createTRPCRouter({
   allocateClient: governedProcedure({
 
     kind: "LEGACY_OPERATOR_ALLOCATE_CLIENT",
+    requireOperator: true,
 
     inputSchema: z.object({
       clientId: z.string(),
@@ -194,6 +199,7 @@ export const operatorRouter = createTRPCRouter({
 
 
     kind: "LEGACY_OPERATOR_DEALLOCATE_CLIENT",
+    requireOperator: true,
 
 
     inputSchema: z.object({ clientId: z.string(), operatorId: z.string() }),

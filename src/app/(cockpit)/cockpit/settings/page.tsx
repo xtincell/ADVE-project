@@ -16,24 +16,7 @@ import { useLocale } from "@/lib/i18n/locale-context";
 import { LocaleToggle } from "@/components/i18n/locale-toggle";
 import { trpc } from "@/lib/trpc/client";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
-
-const SUB_STATUS_LABELS: Record<string, string> = {
-  active: "Actif",
-  trialing: "Essai",
-  pending_manual: "En attente de validation",
-  past_due: "Paiement en retard",
-  canceled: "Résilié",
-  unpaid: "Impayé",
-};
-
-const TIER_LABELS: Record<string, string> = {
-  COCKPIT_MONTHLY: "Cockpit (mensuel)",
-  ORACLE_FULL: "Oracle complet",
-  INTAKE_PDF: "Diagnostic PDF",
-  RETAINER_BASE: "Accompagnement",
-  RETAINER_GROWTH: "Accompagnement Growth",
-  RETAINER_SCALE: "Accompagnement Scale",
-};
+import { TIER_LABELS, SUBSCRIPTION_STATUS_LABELS } from "@/lib/billing/subscription-labels";
 
 /**
  * Intégrations (vague E) — état honnête des sources de données connectées à
@@ -166,22 +149,9 @@ export default function CockpitSettingsPage() {
 
       <ConnectedSourcesSection />
 
-      <section className="rounded-lg border border-border bg-background-raised p-6">
-        <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">
-          <CreditCard className="h-4 w-4 text-foreground-muted" />
-          Abonnement & facturation
-        </h2>
-        <p className="mb-4 mt-2 text-sm text-foreground-muted">
-          Votre plan, sa période en cours, l&apos;annulation et l&apos;historique.
-        </p>
-        <Link
-          href="/cockpit/settings/billing"
-          className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-foreground transition-colors hover:border-primary"
-        >
-          Gérer mon abonnement
-        </Link>
-      </section>
-
+      {/* Lot 13 (audit 2026-07-11 [M11-02]) — UNE seule section Abonnement :
+          l'essentiel (offre + statut) ici, le détail (montants, échéances,
+          historique) vit sur /cockpit/settings/billing. */}
       <section className="rounded-lg border border-border bg-background-raised p-6">
         <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">
           <CreditCard className="h-4 w-4 text-foreground-muted" />
@@ -213,17 +183,15 @@ export default function CockpitSettingsPage() {
               </div>
               <div className="flex justify-between gap-3">
                 <dt className="text-foreground-muted">Statut</dt>
-                <dd className="text-foreground">{SUB_STATUS_LABELS[sub.status] ?? sub.status}</dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt className="text-foreground-muted">Montant</dt>
-                <dd className="text-foreground">{sub.amountPerPeriod.toLocaleString("fr-FR")} {sub.currency} / période</dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt className="text-foreground-muted">Échéance</dt>
-                <dd className="text-foreground">{sub.currentPeriodEnd ? new Date(sub.currentPeriodEnd).toLocaleDateString("fr-FR") : "—"}</dd>
+                <dd className="text-foreground">{SUBSCRIPTION_STATUS_LABELS[sub.status]?.label ?? sub.status}</dd>
               </div>
             </dl>
+            <Link
+              href="/cockpit/settings/billing"
+              className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-foreground transition-colors hover:border-primary"
+            >
+              Gérer mon abonnement
+            </Link>
           </div>
         )}
       </section>
@@ -244,7 +212,7 @@ export default function CockpitSettingsPage() {
           Session
         </h2>
         <p className="mt-2 text-sm text-foreground-muted">
-          Déconnecte cet appareil. Tu seras redirigé vers la page de connexion.
+          Déconnecte cet appareil. Vous serez redirigé vers la page de connexion.
         </p>
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}

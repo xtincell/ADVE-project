@@ -13,6 +13,7 @@ import { Sparkline } from "@/components/shared/sparkline";
 import { PipelineProgress, buildPipelineSteps } from "@/components/shared/pipeline-progress";
 import { AiBadge } from "@/components/shared/ai-badge";
 import { useStrategy } from "@/components/cockpit/strategy-context";
+import { useCanOperate } from "@/components/cockpit/use-can-operate";
 import { OvertonTeaser } from "@/components/cockpit/intelligence/overton-panel";
 import { buildPillarContentMap } from "@/components/shared/pillar-content-card";
 import Link from "next/link";
@@ -66,10 +67,10 @@ function safeString(val: unknown): string {
 type ViewMode = "EXECUTIVE" | "MARKETING" | "FOUNDER" | "MINIMAL";
 
 const VIEW_MODE_LABELS: Record<ViewMode, string> = {
-  EXECUTIVE: "Executive",
+  EXECUTIVE: "Synthèse",
   MARKETING: "Marketing",
-  FOUNDER: "Founder",
-  MINIMAL: "Minimal",
+  FOUNDER: "Complète",
+  MINIMAL: "Essentielle",
 };
 
 export default function CockpitDashboard() {
@@ -163,7 +164,7 @@ export default function CockpitDashboard() {
             onClick={() => strategyQuery.refetch()}
             className="mt-3 rounded-lg bg-background-overlay px-4 py-2 text-sm text-foreground hover:bg-border"
           >
-            Reessayer
+            Réessayer
           </button>
         </div>
       </div>
@@ -297,7 +298,7 @@ export default function CockpitDashboard() {
       {/* Header + view modes */}
       <div className="ck-ph">
         <div>
-          <p className="ck-ph__bc">Cockpit / Dashboard</p>
+          {/* Fil d'Ariane retiré — la topbar porte déjà le breadcrumb ([M01-11]). */}
           <h1 className="ck-ph__title">Tableau de bord</h1>
           <p className="ck-ph__desc">Marque : <span className="em">{strategy?.name ?? "…"}</span></p>
         </div>
@@ -370,7 +371,7 @@ export default function CockpitDashboard() {
               <div className="ck-north__lead">
                 <span className="ck-north__crown"><Crown /></span>
                 <div>
-                  <p className="ck-north__k">Northstar</p>
+                  <p className="ck-north__k">Cap superfans</p>
                   <div className="ck-north__big">
                     <span className="ck-north__n">{superfanCountQuery.data?.active ?? "—"}</span>
                     <span className="ck-north__lbl">superfans actifs</span>
@@ -378,7 +379,7 @@ export default function CockpitDashboard() {
                 </div>
               </div>
               <div className="ck-north__stats">
-                <div className="ck-north__stat"><p className="sk">Évangélistes</p><p className="sv gold">{superfanCountQuery.data?.evangelistes ?? 0}</p></div>
+                <div className="ck-north__stat"><p className="sk">Prescripteurs</p><p className="sv gold">{superfanCountQuery.data?.evangelistes ?? 0}</p></div>
                 <div className="ck-north__stat"><p className="sk">Ratio superfan</p><p className="sv accent">{superfanCountQuery.data?.ratio ?? 0}%</p></div>
                 <div className="ck-north__stat"><p className="sk">Vélocité /30j</p><p className={`sv ${superfanVelocityQuery.data?.trend === "up" ? "up" : ""}`}>
                   {superfanVelocityQuery.data?.trend === "up" && <TrendingUp />}
@@ -410,7 +411,7 @@ export default function CockpitDashboard() {
               <span className="ck-kpi__delta">{alertSignals.length} prescription{alertSignals.length > 1 ? "s" : ""}</span>
             </div>
             <div className="ck-kpi">
-              <div className="ck-kpi__top"><span className="ck-kpi__lbl">Score ADVE-RTIS</span><span className="ck-kpi__spark"><Sparkline data={scoreTrend} width={60} height={20} /></span></div>
+              <div className="ck-kpi__top"><span className="ck-kpi__lbl">Score de marque</span><span className="ck-kpi__spark"><Sparkline data={scoreTrend} width={60} height={20} /></span></div>
               <p className="ck-kpi__val">{Math.round(composite)}<span className="m">/200</span></p>
             </div>
           </div>
@@ -573,6 +574,9 @@ export default function CockpitDashboard() {
 
 function BatchActionsBar({ strategyId }: { strategyId: string }) {
   const utils = trpc.useUtils();
+  // Gestes opérateur (enrichissement batch, cascade, sources) — jamais
+  // rendus au founder : UX-DR16 + fin du clic→FORBIDDEN (audit [M02-01]).
+  const canOperate = useCanOperate();
 
   const autoFillAll = trpc.pillar.autoFillAll.useMutation({
     onSuccess: () => {
@@ -598,6 +602,8 @@ function BatchActionsBar({ strategyId }: { strategyId: string }) {
   });
 
   const anyLoading = autoFillAll.isPending || cascadeRTIS.isPending || enrichAll.isPending;
+
+  if (!canOperate) return null;
 
   return (
     <div className="ck-batch">

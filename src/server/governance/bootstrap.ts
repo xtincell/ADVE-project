@@ -27,23 +27,30 @@ export function bootstrapGovernance(): void {
     for (const i of audit.issues) console.error(`  - ${i}`);
   }
 
-  // Seshat — observe completed intents (fire-and-forget; failures swallowed).
-  // Capability detection is dynamic: services may not yet export the hooks
-  // (Phase 3 introduces them gradually).
-  eventBus.subscribe("intent.completed", async (e) => {
+  // Seshat — observe terminal intents (fire-and-forget; failures swallowed).
+  // ADR-0124 : la boucle couvre TOUS les états terminaux, pas seulement
+  // `completed` — le prédicat pur `nextObservationStatus` route OK/DOWNGRADED
+  // → OBSERVED et FAILED/VETOED → NOT_APPLICABLE ; ne souscrire que
+  // `completed` laissait les émissions échouées/vetoed/downgraded en
+  // PENDING_OBSERVATION à vie.
+  const observeTerminal = async (intentId: string, result?: unknown) => {
     try {
-      const mod = (await import("@/server/services/seshat")) as { observeIntent?: (id: string, r: unknown) => Promise<unknown> };
-      await mod.observeIntent?.(e.intentId, e.result);
+      const mod = (await import("@/server/services/seshat")) as { observeIntent?: (id: string, r?: unknown) => Promise<unknown> };
+      await mod.observeIntent?.(intentId, result);
     } catch {
       // Seshat-down must not break the pipeline.
     }
-  });
+  };
+  eventBus.subscribe("intent.completed", (e) => observeTerminal(e.intentId, e.result));
+  eventBus.subscribe("intent.failed", (e) => observeTerminal(e.intentId));
+  eventBus.subscribe("intent.vetoed", (e) => observeTerminal(e.intentId));
+  eventBus.subscribe("intent.downgraded", (e) => observeTerminal(e.intentId));
 
   // Thot — record realised cost.
   eventBus.subscribe("intent.completed", async (e) => {
     if (typeof e.costUsd !== "number") return;
     try {
-      const mod = (await import("@/server/services/financial-brain")) as { recordCost?: (args: { intentId: string; costUsd: number }) => Promise<void> };
+      const mod = (await import("@/server/services/financial-brain")) as { recordCost?: (args: { intentId: string; costUsd: number }) => Promise<unknown> };
       await mod.recordCost?.({ intentId: e.intentId, costUsd: e.costUsd });
     } catch {
       // Cost-tracking failure is recoverable.

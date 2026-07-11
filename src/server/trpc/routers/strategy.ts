@@ -639,6 +639,16 @@ export const strategyRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      // Garde d'ownership (audit requireOperator 2026-07-11, Table E) : sans
+      // elle, tout utilisateur authentifié pouvait archiver N'IMPORTE quelle
+      // stratégie par id. Même garde que archive/restore/purge.
+      const hasAccess = await canAccessStrategy(input.id, {
+        operatorId: (ctx.session.user as unknown as Record<string, unknown>).operatorId as string | null ?? null,
+        userId: ctx.session.user.id,
+        role: ctx.session.user.role ?? "USER",
+      });
+      if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé" });
+
       const result = await ctx.db.strategy.update({
         where: { id: input.id },
         data: { status: "ARCHIVED" },
@@ -673,6 +683,7 @@ export const strategyRouter = createTRPCRouter({
   // Admin: migrate existing strategies to v4 pillar structure
   migrateToV4: governedProcedure({
     kind: "LEGACY_STRATEGY_MIGRATE_TO_V4",
+    requireOperator: true,
     inputSchema: z.object({}),
     caller: "strategy:migrateToV4",
   }).mutation(async () => {
