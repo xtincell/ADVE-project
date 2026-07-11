@@ -6,7 +6,7 @@
 
 "use client";
 
-import { useState, useRef, use } from "react";
+import { useState, useRef, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/lib/trpc/client";
 import { Upload, FileUp, File, X, ArrowLeft, AlertCircle, CheckCircle } from "lucide-react";
@@ -40,18 +40,39 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [error, setError] = useState("");
   const [dragActive, setDragActive] = useState(false);
+  // Raison de bascule renvoyée par le serveur (extraction impossible/insuffisante).
+  // Pilote l'interstitiel honnête — jamais l'écran « Terminé 100 % » avant un
+  // renvoi vers le questionnaire.
+  const [fallbackReason, setFallbackReason] = useState<string | null>(null);
+  const websitePrefilledRef = useRef(false);
 
   const { data: intake, isLoading } = trpc.quickIntake.getByToken.useQuery(
     { token },
     { enabled: !!token }
   );
 
+  // Le site web déclaré à l'étape contact est pré-rempli — on ne le redemande
+  // jamais « à vide ». L'utilisateur peut le corriger ou l'effacer (le serveur
+  // retombe alors sur la valeur déclarée, jamais de perte).
+  useEffect(() => {
+    if (!websitePrefilledRef.current && intake?.websiteUrl) {
+      websitePrefilledRef.current = true;
+      setWebsiteUrl(intake.websiteUrl);
+    }
+  }, [intake]);
+
   const processIngestMutation = trpc.quickIntake.processIngest.useMutation({
     onSuccess: (data) => {
-      // Direct-to-diagnostic: straight to the result page when the AI extracted
-      // enough. If extraction was empty/sparse, the server returns completed:false
-      // and we fall back to the pre-filled guided questionnaire (never stranded).
-      router.push(data.completed ? `/intake/${token}/result` : `/intake/${token}`);
+      if (data.completed) {
+        // Direct-to-diagnostic: straight to the result page.
+        router.push(`/intake/${token}/result`);
+        return;
+      }
+      // Extraction impossible ou insuffisante — bascule EXPLIQUÉE vers le
+      // questionnaire pré-rempli (la raison alimente le bandeau côté long).
+      const reason = data.reason ?? "extraction";
+      setFallbackReason(reason);
+      router.push(`/intake/${token}?fallback=${reason}`);
     },
     onError: (err) => setError(err.message),
   });
@@ -75,6 +96,26 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
   if (intake.status === "COMPLETED" || intake.status === "CONVERTED") {
     router.push(`/intake/${token}/result`);
     return null;
+  }
+
+  // Bascule vers le questionnaire : interstitiel honnête pendant la redirection
+  // (surtout PAS l'écran de succès « Terminé 100 % » suivi d'un saut muet).
+  if (fallbackReason) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center bg-background px-5">
+        <div className="w-full max-w-md rounded-2xl border border-warning/30 bg-warning/10 p-6 text-center">
+          <p className="text-sm font-semibold text-foreground">
+            {fallbackReason === "llm_unavailable"
+              ? "Analyse automatique momentanément indisponible"
+              : "Vos sources n'ont pas suffi pour un diagnostic complet"}
+          </p>
+          <p className="mt-2 text-sm leading-relaxed text-foreground-secondary">
+            Rien n&apos;est perdu — ouverture du questionnaire pré-rempli…
+          </p>
+          <div className="mx-auto mt-4 h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        </div>
+      </main>
+    );
   }
 
   if (processIngestMutation.isPending || processIngestMutation.isSuccess) {
@@ -151,13 +192,14 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
   return (
     <main className="flex min-h-screen flex-col bg-background">
       <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-5 py-8 sm:px-8">
-        {/* Back */}
+        {/* Back — vers le questionnaire guidé du MÊME intake (le retour vers
+            /intake recréait un intake vierge : contact + site re-saisis). */}
         <button
-          onClick={() => router.push("/intake")}
+          onClick={() => router.push(`/intake/${token}`)}
           className="mb-6 flex items-center gap-1.5 text-sm text-foreground-muted transition-colors hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
-          Changer de methode
+          Passer au questionnaire guide
         </button>
 
         {/* Header */}

@@ -122,7 +122,15 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
   const [initialized, setInitialized] = useState(false);
   const [loadingQuestions, setLoadingQuestions] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+  // Bascule depuis l'import intelligent (?fallback=extraction|llm_unavailable) :
+  // on EXPLIQUE pourquoi l'utilisateur atterrit ici au lieu du résultat.
+  const [fallbackNotice, setFallbackNotice] = useState<string | null>(null);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const fallback = new URLSearchParams(window.location.search).get("fallback");
+    if (fallback) setFallbackNotice(fallback);
+  }, []);
 
   // Fetch intake data
   const { data: intake, isLoading } = trpc.quickIntake.getByToken.useQuery(
@@ -548,6 +556,32 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
         >
           {currentPhase === "biz" ? "?" : currentPhase.toUpperCase()}
         </div>
+
+        {/* Bandeau bascule import → questionnaire (jamais de saut muet) */}
+        {fallbackNotice && (
+          <div className="mb-6 rounded-xl border border-warning/30 bg-warning/10 px-4 py-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-warning">
+                  {fallbackNotice === "llm_unavailable"
+                    ? "L'analyse automatique est momentanément indisponible."
+                    : "L'import n'a pas extrait assez d'informations pour un diagnostic fiable."}
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-foreground-secondary">
+                  Rien n&apos;est perdu : vos informations sont conservées et les champs déjà
+                  connus sont pré-remplis. Répondez aux questions pour obtenir votre score.
+                </p>
+              </div>
+              <button
+                onClick={() => setFallbackNotice(null)}
+                className="shrink-0 rounded-lg p-1 text-foreground-muted transition-colors hover:bg-background-overlay hover:text-foreground"
+                aria-label="Fermer"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Phase header */}
         <div className="mb-6">

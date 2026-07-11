@@ -10,6 +10,19 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.84 — fix(intake): chemin court honnête — plus de bascule muette, plus de site demandé deux fois (2026-07-11)
+
+Deux soucis UX signalés par l'opérateur sur le funnel public (`/intake`), vérifiés en code puis corrigés :
+
+- **Bascule muette chemin court → questionnaire long éliminée.** `extractFromText` renvoyait un squelette tout-vide `{biz:{},a:{},…}` sur TOUTE erreur LLM (crédits épuisés, providers down, JSON tronqué) → persisté → `IncompleteIntakeError` → redirection silencieuse vers le questionnaire, après un écran « Terminé 100 % » mensonger. Désormais : pré-flight `isTextLLMAvailable()` (skip propre quand aucun provider texte n'est sain — cas « à court de crédits »), retry ×2 dans le budget 60 s, `maxOutputTokens` 4096→8192 (le JSON de 57 champs tronquait → parse impossible), consigne de concision dans le prompt, contrat `null` = extraction impossible (jamais de squelette persisté, merge des slices substantielles uniquement), et raison explicite (`llm_unavailable`/`extraction`) remontée au front : interstitiel honnête côté ingest + bandeau d'explication `?fallback=` sur le questionnaire pré-rempli. `processShort` renvoie des erreurs françaises actionnables au lieu du message serveur brut.
+- **Site web demandé deux fois + destruction de la déclaration.** La page ingest redemandait le site déjà déclaré à l'étape contact, champ vide — et `processIngest` écrasait la valeur déclarée par `null` si laissé vide (l'empreinte publique perdait sa source). Désormais : champ pré-rempli depuis `intake.websiteUrl`, coalesce serveur `input ?? intake.websiteUrl` pour le scrape ET la persistance (`?? undefined`, jamais de null-erase — idem `rawText`/`documentUrl`, idem `processIngestPlus`).
+- **Connexes** : `getQuestions` auto-détection alignée sur `hasSubstantiveAnswer` (exporté — les slices vides legacy ne marquent plus une phase comme répondue) ; « Changer de méthode » sur la page ingest pointait vers `/intake` vierge (nouvel intake, contact re-saisi) → pointe vers le questionnaire du MÊME token ; sources persistées AVANT extraction (un échec LLM ne perd plus rien).
+- **Test anti-drift HARD** `intake-no-empty-skeleton.test.ts` (8 tests) : interdit le squelette vide, le pattern `?? null` sur les champs déclarés, impose pré-flight + raisons de bascule + parité `hasSubstantiveAnswer`.
+
+tsc 0 · eslint 0 · gouvernance 896/896 · services 1247/1247. Zéro migration, zéro nouveau modèle. Cap APOGEE 7/7.
+
+---
+
 ## v6.27.83 — feat(funnel): clôture des résiduels vague E — attribution, intégrations, personnalisation (2026-07-10)
 
 Clôture des 6 résiduels vague E (mandat opérateur « ne rien laisser », interprétations proposées en draft dans la PR). Audit préalable : **3 des 6 étaient déjà shippés** — vrais PDF (routes `/api/intake/[token]/pdf` + `/api/export/oracle|brand-bible/[strategyId]/pdf`, puppeteer + chromium Dockerfile, bouton download câblé), Mestor cockpit (chat streaming `/api/chat` réel + `getInsights` consommé par le home), tuiles (home cockpit riche en données réelles : DevotionLadder/Timeline/Sparkline/OvertonTeaser). Construits ici :
