@@ -15,11 +15,11 @@
  *   4. Pillar.validationStatus — DB state machine (DRAFT/VALIDATED/LOCKED).
  *   5. Ad-hoc UI maths (filledCount / SECTIONS.length).
  *
- * Concrete bug surface: Mestor partially fills a pillar → Zod-partial
- * reports 100% (only checks presence) → UI shows "complet" → user clicks
- * "Enrich Oracle" → enrichOracleNeteru proceeds, depends on a deeper
- * COMPLETE-stage path that is missing → silent failure or downstream
- * error far from the cause.
+ * Concrete bug surface (historical, pre-unification): Mestor partially fills
+ * a pillar → Zod-partial reports 100% (only checks presence) → UI shows
+ * "complet" → operator launches the Oracle assembly → generation proceeds,
+ * depends on a deeper COMPLETE-stage path that is missing → silent failure
+ * or downstream error far from the cause.
  *
  * Contract from now on
  * --------------------

@@ -164,7 +164,8 @@ export const SECTION_REGISTRY: SectionMeta[] = [
   // les BIG4/DISTINCTIVE — donc le loader phase13Sections dans index.ts inclut
   // ces deux ids même si leur tier reste CORE. Depuis l'audit Oracle 2026-06-11,
   // leur contenu réel est produit par `imhotep.draftCrewProgram` /
-  // `anubis.draftCommsPlan` appelés directement par enrich-oracle (plus de stub).
+  // `anubis.draftCommsPlan` via la génération de section (sequenceKey
+  // IMHOTEP-CREW / ANUBIS-COMMS — plus de stub ; legacy déposé ADR-0125).
   { id: "imhotep-crew-program", number: "22", title: "Crew Program (Imhotep)", personas: ["consultant"], tier: "CORE", brandAssetKind: "GENERIC", sequenceKey: "IMHOTEP-CREW" },
   { id: "anubis-plan-comms", number: "23", title: "Plan Comms (Anubis)", personas: ["consultant"], tier: "CORE", brandAssetKind: "GENERIC", sequenceKey: "ANUBIS-COMMS" },
 

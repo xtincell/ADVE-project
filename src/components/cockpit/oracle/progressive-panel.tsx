@@ -15,8 +15,9 @@
  *   └─ Grid 35 sections (OracleSectionCard)
  *       └─ Modal erreur Zod sur clic FAILED (OracleSectionFailureModal)
  *
- * Cohabitation avec le legacy `enrichOracle` button : ce panel est
- * additionnel ; pas de remplacement automatique du legacy en F-F.
+ * Voie unique depuis la dépose du legacy `enrichOracle` (ADR-0125) : ce panel
+ * est la surface de détail canonique ; le bouton « Assembler » de la page
+ * proposition déclenche `oracle.assembleOracle` (orchestrateur manual-first).
  */
 
 "use client";
@@ -104,7 +105,7 @@ export function OracleProgressivePanel(props: OracleProgressivePanelProps): Reac
     generateMutation.isPending || retryMutation.isPending || assembleMutation.isPending;
   // Founders are not operators: oracle.* generation is operator-only (init.ts).
   // Disable the controls + show a read-only banner instead of click→FORBIDDEN.
-  // The legacy governed `enrichOracle` path on this page remains founder-usable.
+  // Since ADR-0125 there is no legacy founder-triggerable generation path.
   const canOperate = useCanOperate();
 
   // ── Render ────────────────────────────────────────────────────────

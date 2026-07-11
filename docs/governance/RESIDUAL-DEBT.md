@@ -1,6 +1,12 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
-## Audit UX Cockpit v2 — lots 10-15 + Lot 0 partiel shippés (2026-07-11, NEFER)
+## Vérité unique documentaire (2026-07-11 PM, NEFER)
+
+Purge des incohérences doctrine/code (bible 11 anchors, contextes, i18n, commentaires mensongers, comptes canoniques recalculés sur les registres : 112 routers · 115 services · 56/149 Glory tools · 94 séquences (91 DRAFT) · 28 frameworks · 546 Intent kinds). Résidu tracé :
+
+- **Reclassification ROUTER-MAP / SERVICE-MAP** : 34 routers + 23 services post-Phase 19 listés en § « À classifier » des deux maps (couverture honnête, zéro classification inventée). Chantier : attribuer Sous-système APOGEE + Tier + statut governance/Governor à chaque entrée, puis re-fusionner dans les tables et refaire les synthèses. Bornage : mécanique, ~1 session dédiée.
+- **Contrat writeback→renderer section 33 (Devotion Ladder)** : le tool `devotion-levels-mapper` (unifié canon 6 rungs cette vague — était sur une échelle 5-rungs fantôme) sort `devotion_levels` + `current_distribution`, mais le renderer `DevotionLadder` (phase13-sections) ne lit que `distribution[{niveau, valeur}]`/`conversionTriggers` (forme du composer déterministe `composeDevotionLadder`). Le chemin LLM de la section produit donc du contenu qui rend EmptyState (honnête, pas de donnée inventée). Brancher = mapper la sortie tool → forme composer dans `section-writeback` OU apprendre les deux formes au renderer.
+- **Cycle madge quick-intake (pré-existant, non-bloquant)** : `footprint-score.ts ↔ public-enrichment.ts` — 1 circular dependency signalée par `npm run audit:cycles` (exit 0, CI madge verte — tolérée). À casser par extraction du type/helper partagé.
 
 Réf : [docs/audits/COCKPIT-UX-AUDIT-2026-07-11.md](../audits/COCKPIT-UX-AUDIT-2026-07-11.md) §F + [ADR-0122](adr/0122-cockpit-founder-nav-ia.md) + [ADR-0123](adr/0123-cockpit-client-vocabulary-adve-rtis.md). Shippés : **lot 12** (frontière founder/opérateur — `requireOperator` réparé opt-in, `BatchActionsBar` gardée, 10 segments `<OperatorSurface>`, sources founder-lecture), **lot 10** (nav 35→20 items / 6 groupes, hubs piliers, `activePrefixes`, tabbar `mobileTab` + i18n, persistance marque, Cmd+O, assistant réel), **lot 11** (vocabulaire corps-de-page + test HARD `cockpit-vocabulary.test.ts`), **lot 13** (Oracle surface unique founder, settings dédoublonné, Calendrier unique + 308 roadmap), **lot 14** (module `subscription-labels` unique, lexique T7 tranché, 10 `alert()/confirm()` → DS), **lot 15** (couleurs brutes → tokens, accents), **Lot 0 partiel** (ADR-0123 : ADVE client-facing glosé, RTIS hors chaînes client + verrou CI, lettres en badge — réversible).
 

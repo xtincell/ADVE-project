@@ -224,7 +224,8 @@ export async function assemblePresentation(strategyId: string): Promise<Strategy
   // For each (kind, sectionId) pair, prefer ACTIVE over DRAFT. We pick the
   // most recent ACTIVE; if no ACTIVE row exists, fall back to most recent
   // DRAFT. This keeps the published Oracle stable when an operator promotes
-  // ACTIVE while a fresher DRAFT is being written by enrich-oracle.
+  // ACTIVE while a fresher DRAFT is being written by the section generation
+  // path (oracle-section handler → section-writeback.ts).
   const phase13Assets = (() => {
     const byKey = new Map<string, typeof phase13AssetsRaw[number]>();
     for (const a of phase13AssetsRaw) {
@@ -428,11 +429,12 @@ export async function resolveShareToken(token: string): Promise<string | null> {
 // ─── Completeness ────────────────────────────────────────────────────────────
 
 /**
- * Returns a 35-entry completeness report. Phase 1-3 (21 CORE sections) are
- * derived from the assembled presentation document. Phase 13 (14 BIG4 /
- * DISTINCTIVE / DORMANT sections) are derived from BrandAsset state lookups
- * since they are materialized via Glory sequences and promoted in the
- * BrandVault (cf. ADR-0012, ADR-0014, [enrich-oracle.ts:promoteSectionToBrandAsset]).
+ * Returns a 35-entry completeness report (canon 35 = 23 CORE + 7 BIG4_BASELINE
+ * + 5 DISTINCTIVE, ADR-0014/0045). Document-derived sections are read from the
+ * assembled presentation; the BrandAsset-driven ones (BIG4_BASELINE +
+ * DISTINCTIVE + the two Neteru Ground CORE sections) are derived from
+ * BrandAsset state lookups since they are materialized via Glory sequences and
+ * promoted in the BrandVault (cf. ADR-0012, ADR-0014, section-writeback.ts).
  *
  * Without the Phase 13 augment, the UI counter is stuck at 21/35 even when
  * the Oracle has compiled (or never compiles), creating a misleading score.

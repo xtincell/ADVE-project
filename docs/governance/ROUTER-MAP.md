@@ -1,6 +1,6 @@
 # ROUTER-MAP — Tous les routers tRPC mappés sur APOGEE
 
-**71 routers** sous `src/server/trpc/routers/` (+ `ptah.ts` à créer Phase 9 : procédures `materializeBrief`, `getForge`, `listForges`, `getAssetVersion`). Chacun classé par **Sous-système APOGEE** + **Tier**.
+**112 routers** sous `src/server/trpc/routers/` (recompte 2026-07-11). Les tables ci-dessous classifient le recensement historique (71 routers, pré-Phase 19) par **Sous-système APOGEE** + **Tier** ; les **34 routers apparus depuis** sont listés en fin de document (§ « À classifier ») en attendant leur classification — ne pas les considérer couverts par la synthèse.
 
 Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
@@ -56,7 +56,7 @@ Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE
 | `mestor-router.ts` | Mestor chat + Intent dispatch | M | governed |
 | `pillar.ts` | Pillars CRUD (35KB — pire offender bypass) | M | bypass (priorité P3) |
 | `strategy.ts` | Strategy CRUD + comparables | M | bypass (mixed governed) |
-| `strategy-presentation.ts` | Oracle 21 sections | M | governed (`enrichOracle`, `enrichOracleNeteru`) |
+| `strategy-presentation.ts` | Oracle 35 sections (assemblage read-time + exports ; génération via router `oracle` — legacy `enrichOracle` déposé ADR-0125) | M | governed |
 | `framework.ts` | Frameworks Artemis | M | bypass |
 | `guidelines.ts` | Brand guidelines render | M | bypass |
 | `boot-sequence.ts` | Boot sequence trigger | M | bypass |
@@ -214,3 +214,11 @@ Selon l'extension framework, certains routers viendront en P3-P8 :
 | `compensating-intent.ts` | Sustainment | P3 | Reverse maneuvers exposed |
 | `oracle-history.ts` | Telemetry | P7 | Time travel queries |
 | `plugin-registry.ts` | Admin | P2.7 | Plugin management |
+
+---
+
+## À classifier (delta post-recensement Phase 19 — recompte 2026-07-11)
+
+34 routers présents sur le filesystem mais absents des tables ci-dessus. Couverture honnête : listés, **pas encore classifiés** (Sous-système APOGEE + Tier + statut governance à attribuer — chantier tracé [RESIDUAL-DEBT.md](RESIDUAL-DEBT.md)).
+
+`accounts` · `actions` · `anubis` · `argos` · `blog` · `brand-node` · `bureau-etudes` · `campaign-change-request` · `campaign-deliverable` · `canon-sync` · `consulting` · `creative-proposal` · `crm-contacts` · `escrow-arbitration` · `imhotep` · `intention` · `laguilde` · `market-cost` · `market-study-ingestion` · `markets` · `mcp-billing` · `media-plan` · `mission-applications` · `mission-quote` · `monetization` · `morning-batch` · `newsletter` · `operations-overview` · `operator-action` · `phase18-residuals` · `source-classifier` · `talent-services` · `thot` · `xlsx-parser`

@@ -83,7 +83,7 @@ export const ORACLE_BIG4_SEQUENCES: GlorySequenceDef[] = [
       glory("competitive-analysis-builder", ["content"]),
       glory("bcg-portfolio-plotter", ["bcg_quadrants", "portfolio_health_score", "prompt"]),
       // Note : forgeOutput design/Figma sur bcg-portfolio-plotter — court-circuité
-      // pendant enrichOracle (B4 oracleEnrichmentMode=true), déclenché manuellement B8.
+      // en mode ENRICHMENT (oracleEnrichmentMode=true, ADR-0042), déclenché manuellement B8.
     ],
     aiPowered: true,
     lifecycle: "DRAFT",
@@ -138,7 +138,7 @@ export const ORACLE_BIG4_SEQUENCES: GlorySequenceDef[] = [
     description: "Mapping H1 core / H2 emerging / H3 transformational",
     steps: [
       glory("mckinsey-3-horizons-mapper", ["h1", "h2", "h3", "allocation_percentages", "prompt"]),
-      // forgeOutput design/Figma — court-circuité pendant enrichOracle, manuel B8
+      // forgeOutput design/Figma — court-circuité en mode ENRICHMENT, manuel B8
     ],
     aiPowered: true,
     lifecycle: "DRAFT",
@@ -206,7 +206,7 @@ export const ORACLE_DISTINCTIVE_SEQUENCES: GlorySequenceDef[] = [
     steps: [
       glory("creative-evaluation-matrix", ["evaluations", "matrix_summary", "prompt"]),
       // forgeOutput image/Banana sur creative-evaluation-matrix (extension B2) —
-      // court-circuité pendant enrichOracle (oracleEnrichmentMode=true), déclenché manuellement B8
+      // court-circuité en mode ENRICHMENT (oracleEnrichmentMode=true), déclenché manuellement B8
     ],
     aiPowered: true,
     lifecycle: "DRAFT",
@@ -270,11 +270,11 @@ export const ORACLE_DISTINCTIVE_SEQUENCES: GlorySequenceDef[] = [
 // NETERU GROUND SEQUENCES (2) — Imhotep + Anubis writeback-only stubs
 // (Phase 14/15 actifs ADR-0019 + ADR-0020 ; ex-DORMANT promu CORE par ADR-0045)
 //
-// Ces sequences restent des stubs : leur output réel est produit côté Cockpit
-// via appels directs `imhotep.draftCrewProgram()` / `anubis.draftCommsPlan()`.
-// L'enrich-oracle les invoque en mode `_skipSequenceExecution: true` — seul le
-// writeback statique tourne, la sequence n'est pas exécutée. Wire-up complet
-// sequence → handler : Sprint C (post-cleanup).
+// Ces sequences restent des stubs : leur output réel est produit par
+// `imhotep.draftCrewProgram()` / `anubis.draftCommsPlan()` (cf. SECTION_REGISTRY
+// sections 22-23). Le legacy qui les court-circuitait (`_skipSequenceExecution`)
+// est déposé (ADR-0125) ; seul le writeback statique reste pertinent. Wire-up
+// complet sequence → handler : Sprint C (post-cleanup).
 // ═════════════════════════════════════════════════════════════════════════════
 
 export const ORACLE_NETERU_GROUND_SEQUENCES: GlorySequenceDef[] = [

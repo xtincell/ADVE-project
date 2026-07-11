@@ -208,7 +208,7 @@ jobs:
 
 **Tests à exiger** (P5/P6 du plan) :
 - `cascade-full.spec.ts` — strategy → fill ADVE → trigger RTIS, asserte 8+ IntentEmission rows en ordre.
-- `oracle-enrichment-streaming.spec.ts` — `enrichOracleNeteru` rend les 21 sections progressivement.
+- `oracle-assembly-streaming.spec.ts` — `ASSEMBLE_ORACLE` rend les 35 sections progressivement (NSP ; legacy `enrichOracleNeteru` déposé ADR-0125).
 - `governance-bypass.spec.ts` — un router test qui appelle un service en direct doit fail au build.
 - `tenant-isolation.spec.ts` — operator A ne peut pas lire les rows de operator B.
 

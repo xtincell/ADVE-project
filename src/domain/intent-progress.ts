@@ -3,9 +3,9 @@
  *
  * Layer 0. Pure module.
  *
- * The shape that NSP (Neteru Streaming Protocol — Phase 5) will stream to
- * the client. Defined now in domain so manifests/services/UI can type-import
- * it without circular deps the moment Phase 5 lands.
+ * The shape NSP (Neteru Streaming Protocol — SSE broker, shipped Phase 16,
+ * ADR-0025) streams to the client. Lives in domain so manifests/services/UI
+ * can type-import it without circular deps.
  */
 
 import { z } from "zod";
@@ -15,7 +15,7 @@ export const INTENT_PHASES = [
   "DELIBERATED",  // Mestor decided plan.
   "DISPATCHED",   // Artemis received plan.
   "EXECUTING",    // Artemis running tools/frameworks (may stream sub-steps).
-  "OBSERVED",     // Seshat indexed/measured the result.
+  "OBSERVED",     // Seshat flipped IntentEmission.observationStatus on a terminal event (ADR-0124).
   "COMPLETED",
   "FAILED",
   "VETOED",       // Thot or Mestor refused.

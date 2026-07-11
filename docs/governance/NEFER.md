@@ -301,14 +301,14 @@ Module **`src/server/services/auto-promotion/`** qui automatise les transitions 
 | Fichier | Contenu | Lecture |
 |---|---|---|
 | `~/.claude/projects/<repo-slug>/memory/MEMORY.md` | Index + pointeurs vers tous les memory files | Auto-loaded |
-| `architecture_neteru.md` | Panthéon 5+2 Neteru | Auto-loaded |
+| `architecture_neteru.md` | Panthéon 7/7 Neteru actifs | Auto-loaded |
 | `architecture_ptah_forge.md` | Détails Ptah Phase 9 | Auto-loaded |
 | `architecture_manipulation_matrix.md` | 4 modes | Auto-loaded |
 | `feedback_governance_no_drift.md` | Lessons learned anti-drift | Auto-loaded |
 | `architecture_console_levels.md` | 4 portails | Auto-loaded |
 | `adve_rtis_pillars.md` | I=Innovation, S=Strategy | Auto-loaded |
 | `philosophy_adve_rtis.md` | Superfan + Overton | Auto-loaded |
-| `architecture_llm_decision.md` | LLM Gateway v5 | Auto-loaded |
+| `architecture_llm_decision.md` | LLM Gateway central (multi-provider, cascade Anthropic→OpenAI→Ollama→OpenRouter) | Auto-loaded |
 | `feedback_root_cause_no_shortcuts.md` | Pas de bandaids | Auto-loaded |
 | `project_resume_context_*.md` | Résumés de session | Auto-loaded |
 
@@ -570,18 +570,15 @@ Si capability ajoutée, déclarer dans le manifest :
 
 ### PHASE 7 — Commit + Push
 
-**7.0 NEFER vise toujours `main`. Jamais de branche.** ⚠️ Règle structurelle absolue.
+**7.0 Lane de livraison — décision AUTOMATIQUE selon le contexte d'exécution.** ⚠️ Règle structurelle (amendée 2026-07-11 — configuration agent autonome ; l'ancienne formulation « toujours main, jamais de branche » ne couvrait pas les sessions managées).
 
-NEFER est le **seul LLM** autorisé à committer directement sur `main`. Les autres agents (PRs review-only, sub-agents type Explore/Plan, agents externes) **doivent** passer par une branche feature + PR. NEFER, lui, exécute le protocole 8 phases qui *est* la rigueur — la PR review n'apporte rien de plus que ce que les 8 phases garantissent déjà (grep CODE-MAP, audit doublon, tests anti-drift, drift narratif, RESIDUAL-DEBT update). Donc :
+NEFER exécute le protocole 8+1 phases qui *est* la rigueur — la PR review humaine n'apporte rien que les phases ne garantissent déjà (grep CODE-MAP, audit doublon, tests anti-drift, drift narratif, RESIDUAL-DEBT). La conséquence diffère selon la lane :
 
-- **Workflow par défaut** : `git checkout main && git pull --ff-only && [travail] && git commit && git push origin main`
-- **Pas de branche feature**, pas de PR, pas de worktree pour les changes de NEFER. Le worktree est un artefact d'exécution Claude Code (le système le crée), mais le commit final atterrit toujours sur `main`.
-- **Si un worktree a été créé automatiquement par le système** (cas Claude Code en mode auto) → NEFER rebase la branche du worktree sur `origin/main`, puis fast-forward push `main` vers le HEAD rebased (ou `git push origin <worktree-branch>:main`). Pas de PR intermédiaire.
-- **Exception unique** : si l'utilisateur demande explicitement « ouvre une PR » ou « ne push pas direct sur main ». Sinon par défaut → main.
+- **Lane locale (CLI opérateur, aucune branche imposée par l'environnement)** : `main` direct. `git checkout main && git pull --ff-only && [travail] && git commit && git push origin main`. Pas de branche feature, pas de PR, pas de worktree résiduel (si le système en crée un → rebase sur `origin/main` puis fast-forward `main`). Exception unique : l'opérateur demande explicitement une PR.
+- **Lane managée (Claude Code web/remote/Action — le harness désigne une branche)** : la branche désignée est LA branche — jamais une autre. Push (`git push -u origin <branche>`, retries réseau 2 s/4 s/8 s/16 s) → **PR draft** avec label `phase/N` ou `out-of-scope` (+ ligne `scope-drift.md` dans le diff si out-of-scope) → subscribe aux événements → **CI 100 % verte → ready → NEFER merge lui-même immédiatement** (merge-commit). La PR n'est pas une review humaine : c'est le véhicule du protocole dans cet environnement, et un PR qui traîne n'est pas un livrable. Post-merge : fermer les PRs absorbés, redémarrer la branche depuis `origin/main` (`git checkout -B <branche> origin/main`), dérouler Phase 9.
+- Les **autres agents** (sub-agents Explore/Plan, agents externes sans le protocole) restent gated par branche + PR, quelles que soient les lanes — ils n'ont pas les 8 phases.
 
-**Pourquoi cette règle ?** Le seul LLM = le seul à porter la rigueur de bout en bout. Multiplier les PRs pour NEFER ralentit sans ajouter de valeur (la PR review humaine n'est pas dans la boucle pour les fixes NEFER ; le test plan vit dans le commit message). Les autres LLMs n'ont pas le protocole 8 phases → ils restent gated par PR.
-
-**Implication pratique** : si rebase sur main introduit un conflit de version (parallel commits, ex : v6.19.20 déjà pris), NEFER bump à `vX.Y.Z+1` immédiatement et continue. Pas de débat.
+**Implication pratique** : si le rebase/merge introduit un conflit de version (parallel commits, ex : v6.19.20 déjà pris), NEFER bump à `vX.Y.Z+1` immédiatement et continue. Pas de débat. Collision de numéro d'ADR entre branches → first-come par date : leur ADR garde le numéro, le tien est renuméroté.
 
 **7.1 Stager explicitement** (jamais `git add -A`)
 
@@ -595,10 +592,10 @@ NEFER est le **seul LLM** autorisé à committer directement sur `main`. Les aut
 Verify : <résultats audits>
 Résidus : <ouvert ou "aucun">
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+Co-Authored-By: <signature du modèle courant fournie par l'environnement de session>
 ```
+
+(La signature `Co-Authored-By` n'est **jamais** codée en dur dans ce doc — elle vient de l'environnement de la session, pour que le protocole survive aux changements de modèle. Aucun identifiant technique de modèle dans les artefacts du repo.)
 
 **7.3 Push direct sur `main`** + mettre à jour `RESIDUAL-DEBT.md` si lessons learned.
 
@@ -816,8 +813,8 @@ Si NEFER se surprend à :
 - [ ] **Phase 6.3** — `missionContribution` déclaré
 - [ ] **Phase 7.1** — stager explicite (pas `-A`)
 - [ ] **Phase 7.2** — commit message Conventional Commits **toutes lignes ≤100 chars** (header + body) avec verify + résidus
-- [ ] **Phase 7.3** — push + RESIDUAL-DEBT mis à jour si lessons learned
-- [ ] **Phase 7.4** — PR créée avec label `phase/N` ou `out-of-scope` (CI bloque sinon, cf. `.github/workflows/ci.yml` job `Phase label present`)
+- [ ] **Phase 7.3** — push selon la lane (§7.0 : locale → main direct ; managée → branche désignée) + RESIDUAL-DEBT mis à jour si lessons learned
+- [ ] **Phase 7.4** — (lane managée) PR draft avec label `phase/N` ou `out-of-scope` + scope-drift si applicable (CI bloque sinon), puis **merge par NEFER dès CI verte**
 
 **Si une seule case n'est pas cochée → ne pas committer.**
 
@@ -878,6 +875,29 @@ Si NEFER se surprend à :
 ### Tactique opérationnelle
 
 - [REFONTE-PLAN.md](REFONTE-PLAN.md), [RESIDUAL-DEBT.md](RESIDUAL-DEBT.md), [RUNBOOKS.md](RUNBOOKS.md)
+
+---
+
+## 11. Skills exécutables — la forme opérationnelle du protocole (agent autonome)
+
+**Configuration finale 2026-07-11** : le protocole 8+1 phases est compilé en **7 skills rigides** sous [`.claude/skills/`](../../.claude/skills/). Chaque skill est une procédure impérative (étapes numérotées, commandes exactes, MUST/NEVER, conditions STOP) — **zéro latitude créative sur la MANIÈRE de travailler**. La créativité de NEFER vit dans le contenu produit, jamais dans le contournement de la procédure.
+
+| Skill | Phases couvertes | Invoquer quand |
+|---|---|---|
+| [`nefer-boot`](../../.claude/skills/nefer-boot/SKILL.md) | Phase 0 | Début de TOUTE session ; après un pull qui change main |
+| [`nefer-mutation`](../../.claude/skills/nefer-mutation/SKILL.md) | Phases 1-4 + §3 interdits | Avant la première ligne de toute modification |
+| [`nefer-ship`](../../.claude/skills/nefer-ship/SKILL.md) | Phases 5-7 (+ lanes §7.0) | Modification prête → vérification, commit, livraison |
+| [`nefer-docs`](../../.claude/skills/nefer-docs/SKILL.md) | Phase 6 + propagation 7 sources | Vocabulaire/concept/entité/compte/ADR/CHANGELOG touché |
+| [`nefer-ds`](../../.claude/skills/nefer-ds/SKILL.md) | Design System (ADR-0097) | Avant de toucher toute surface UI |
+| [`nefer-vocab`](../../.claude/skills/nefer-vocab/SKILL.md) | Vocabulaire client (ADR-0123) | Toute chaîne rendue à un client ; extension du test HARD |
+| [`nefer-postmerge`](../../.claude/skills/nefer-postmerge/SKILL.md) | Phase 9 | Après CHAQUE merge sur main ; « le X est à jour ? » |
+
+**Règles d'arbitrage** :
+
+1. **L'agent DOIT invoquer le skill de la phase courante** — travailler « de mémoire » sans le skill = drift signal (§7), Phase 8 immédiate.
+2. En cas de divergence entre un skill et ce document : **les skills priment sur l'exécution** (commandes, ordre, formats), **NEFER.md prime sur le fond** (doctrine, interdits, périmètres). Une divergence constatée = drift à réconcilier dans le même commit.
+3. Toute évolution du protocole se fait **dans les deux** (NEFER.md + skill concerné), même commit — sinon c'est un drift narratif silencieux (interdit n°3).
+4. Les skills sont **rigides par conception** : on ne les « adapte » pas à la volée. Si une situation sort du cadre, c'est une évolution ritualisée (ADR ou décision opérateur), pas une improvisation.
 
 ---
 

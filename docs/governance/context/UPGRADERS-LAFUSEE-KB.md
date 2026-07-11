@@ -227,7 +227,11 @@ La rupture n°1 — *l'agence à obligation d'effet* :
   palier visé **+** score cible **+** horizon. Gelés et tracés (journal immuable) à la signature.
 - **Obligation d'effet tracé** : **résultat ferme** sur ce que l'Agence contrôle ; **effort
   prouvé** sur ce qu'elle co-détermine. L'effort devient une grandeur **auditée**.
-- **Score cible par palier :** FRAGILE 80 · ORDINAIRE 100 · FORTE 120 · CULTE 160 · ICONE 180 (/200).
+- **Score cible par palier = seuil d'entrée de la bande canon** (`classifyTier`, `src/domain/brand-tier.ts`) :
+  FRAGILE > 40 · ORDINAIRE > 80 · FORTE > 120 · CULTE > 160 · ICONE > 180 (/200). Un EFR « palier P »
+  n'est atteint que si le score composite **entre dans la bande de P** — jamais la borne haute du
+  palier précédent (l'ancienne table FRAGILE 80 · ORDINAIRE 100 · FORTE 120 · CULTE 160 · ICONE 180
+  classifiait un point SOUS le palier promis).
 - **ICP (Indice de Co-Pilotage)** : la part de co-responsabilité (founder/marché).
 - Échec **calculé** (score + journal), **4 recours** (remédiation / renégociation / geste /
   sortie) ; l'altitude acquise reste acquise. Le moat : **la flotte + la trace**.

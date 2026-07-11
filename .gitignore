@@ -8,7 +8,9 @@ tsconfig.tsbuildinfo
 playwright-report/
 test-results/
 tests/e2e/screenshots/
-.claude/
+# .claude : réglages locaux ignorés, SAUF les skills NEFER versionnés (NEFER.md §11)
+.claude/*
+!.claude/skills/
 Customers/SPAWT/unpacked_spawt/
 Customers/SPAWT/xlsx_raw.txt
 

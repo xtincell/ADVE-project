@@ -25,9 +25,9 @@ import { db } from "@/lib/db";
 import { collectInitiatives } from "@/lib/types/pillar-schemas";
 import { resolveCultIndexTier } from "@/domain/cult-index-tier";
 import type { SectionMeta } from "./types";
-// section-writeback (pas enrich-oracle) — évite le cycle index → composers →
-// enrich-oracle → index, ce qui autorise assemblePresentation à composer en
-// read-time fallback (audit galileo).
+// Import depuis section-writeback (module feuille) : cassait le cycle
+// index → composers → (legacy enrich-oracle, déposé ADR-0125) → index, ce qui
+// autorise assemblePresentation à composer en read-time fallback (audit galileo).
 import { promoteSectionToBrandAsset } from "./section-writeback";
 
 // ── Disponibilité LLM (check déterministe, zéro réseau) ───────────────

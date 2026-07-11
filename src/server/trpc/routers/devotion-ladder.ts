@@ -9,10 +9,10 @@
 // [x] REQ-2  list, getByStrategy — query snapshots
 // [x] REQ-3  setObjective(strategyId, targetLevel) — set devotion growth target
 // [x] REQ-4  compare(strategyId, date1, date2) — compare snapshots over time
-// [x] REQ-5  6 levels: Spectateur → Curieux → Fidèle → Ambassadeur → Évangéliste → Apôtre
+// [x] REQ-5  6 levels (canon src/domain/devotion-ladder.ts): Spectateur → Intéressé → Participant → Engagé → Ambassadeur → Évangéliste
 // [x] REQ-6  DevotionSnapshot model in Prisma (audience distribution per level)
 // [x] REQ-7  Connexion to Cult Index (devotion distribution feeds cult score)
-// [x] REQ-8  AmbassadorProgram reconciliation (ambassadors = level 4-5)
+// [x] REQ-8  AmbassadorProgram reconciliation (ambassadors = levels 5-6)
 // [x] REQ-9  Visualization in /cockpit Cult Dashboard (heroic ladder display)
 //
 // PROCEDURES: snapshot, list, getByStrategy, setObjective, compare,
@@ -25,14 +25,14 @@ import { createTRPCRouter, protectedProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
 
-// ── REQ-5: The 6 devotion levels ────────────────────────────────────────────
+// ── REQ-5: The 6 devotion levels (canon: src/domain/devotion-ladder.ts) ─────
 const DEVOTION_LEVELS = [
-  { level: 1, key: "spectateur",   label: "Spectateur",   description: "Observe passivement la marque, aucun engagement actif.", color: "#94a3b8", minScore: 0 },
-  { level: 2, key: "curieux",      label: "Curieux",      description: "S'interesse, suit les contenus, premiers signaux d'interet.", color: "#60a5fa", minScore: 15 },
-  { level: 3, key: "fidele",       label: "Fidele",       description: "Achete regulierement, consomme les contenus, engagement modere.", color: "#34d399", minScore: 35 },
-  { level: 4, key: "ambassadeur",  label: "Ambassadeur",  description: "Recommande activement, cree du contenu UGC, defend la marque.", color: "#fbbf24", minScore: 55 },
-  { level: 5, key: "evangeliste",  label: "Evangeliste",   description: "Recrute de nouveaux fideles, participe aux programmes, influence.", color: "#f97316", minScore: 75 },
-  { level: 6, key: "apotre",       label: "Apotre",       description: "Devouement total, identite fusionnee avec la marque, leader communautaire.", color: "#ef4444", minScore: 90 },
+  { level: 1, key: "spectateur",   label: "Spectateur",   description: "Connaissance passive : vue/scroll, aucune interaction.", color: "#94a3b8", minScore: 0 },
+  { level: 2, key: "interesse",    label: "Intéressé",    description: "Engagement minimal : like, follow, lecture d'article.", color: "#60a5fa", minScore: 15 },
+  { level: 3, key: "participant",  label: "Participant",  description: "Interaction productive : commentaire, question, save.", color: "#34d399", minScore: 35 },
+  { level: 4, key: "engage",       label: "Engagé",       description: "Achat, inscription, participation rituelle.", color: "#fbbf24", minScore: 55 },
+  { level: 5, key: "ambassadeur",  label: "Ambassadeur",  description: "Recommandation organique : UGC, mention spontanée, défense de la marque.", color: "#f97316", minScore: 75 },
+  { level: 6, key: "evangeliste",  label: "Prescripteur", description: "Porte-parole proactif : recrute, défend, fait rayonner la marque (superfan).", color: "#ef4444", minScore: 90 },
 ] as const;
 
 export const devotionLadderRouter = createTRPCRouter({
@@ -209,7 +209,7 @@ export const devotionLadderRouter = createTRPCRouter({
         orderBy: { measuredAt: "desc" },
       });
 
-      // Map ambassador tiers to devotion levels 4-5
+      // Map ambassador tiers to devotion levels 5-6 (canon: ambassadeur=5, evangeliste=6)
       const reconciled = programs.map((p) => {
         const ambassadorCount = p.members.length;
         return {
@@ -217,7 +217,7 @@ export const devotionLadderRouter = createTRPCRouter({
           programName: p.name,
           ambassadorCount,
           mappedLevel: ambassadorCount > 50 ? "evangeliste" : "ambassadeur",
-          levelNumber: ambassadorCount > 50 ? 5 : 4,
+          levelNumber: ambassadorCount > 50 ? 6 : 5,
         };
       });
 
@@ -229,7 +229,7 @@ export const devotionLadderRouter = createTRPCRouter({
         totalAmbassadors,
         currentDevotionScore: latest?.devotionScore ?? 0,
         recommendation: totalAmbassadors > 100
-          ? "Programme ambassadeur fort — focus sur conversion Evangeliste→Apotre"
+          ? "Programme ambassadeur fort — focus sur conversion Ambassadeur→Prescripteur"
           : totalAmbassadors > 20
             ? "Bon programme — augmenter l'engagement des Ambassadeurs"
             : "Programme naissant — recruter plus d'Ambassadeurs",
@@ -260,11 +260,11 @@ export const devotionLadderRouter = createTRPCRouter({
       const ladderData = latest
         ? [
             { level: "Spectateur", value: latest.spectateur, color: "#94a3b8" },
-            { level: "Curieux", value: latest.interesse, color: "#60a5fa" },
-            { level: "Fidele", value: latest.participant, color: "#34d399" },
-            { level: "Engage", value: latest.engage, color: "#fbbf24" },
+            { level: "Intéressé", value: latest.interesse, color: "#60a5fa" },
+            { level: "Participant", value: latest.participant, color: "#34d399" },
+            { level: "Engagé", value: latest.engage, color: "#fbbf24" },
             { level: "Ambassadeur", value: latest.ambassadeur, color: "#f97316" },
-            { level: "Evangeliste", value: latest.evangeliste, color: "#ef4444" },
+            { level: "Prescripteur", value: latest.evangeliste, color: "#ef4444" },
           ]
         : [];
 

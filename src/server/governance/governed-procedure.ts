@@ -381,8 +381,8 @@ export function auditedProcedure<P extends typeof protectedProcedure>(
     const intentId = await preEmitIntent(ctx, kindToEmit, rawInput ?? {}, caller);
 
     // Preconditions: only inherit from the manifest capability whose `name`
-    // matches the tRPC path. This avoids the "shareLink inherits ORACLE_ENRICH
-    // because enrichOracleNeteru is the highest-cost capability" trap, where
+    // matches the tRPC path. This avoids the historical "shareLink inherits
+    // ORACLE_ENRICH because the highest-cost capability wins" trap, where
     // a cheap mutation gets veto'd by a gate meant for an expensive sibling.
     // Explicit gating should migrate to `governedProcedure({preconditions})`.
     const matchedCapability = manifest && path
