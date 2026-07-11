@@ -77,7 +77,10 @@ describe("Phase 13 R2 — capture intentId pour NSP replay", () => {
     });
 
     it("enrichLog inclut l'intentId dans le log info post-completion", () => {
-      expect(propositionSource).toMatch(/IntentEmission:.*data\.intentId/);
+      // Lot 11 (audit UX 2026-07-11) : le libellé client est « Réf. d'exécution »
+      // (« IntentEmission » = plomberie interne, interdite à l'écran founder) ;
+      // l'invariant testé reste : l'intentId est surfacé dans le log.
+      expect(propositionSource).toMatch(/Réf\. d'exécution.*data\.intentId/);
     });
   });
 

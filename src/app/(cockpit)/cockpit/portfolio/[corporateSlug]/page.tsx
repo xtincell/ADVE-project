@@ -234,7 +234,7 @@ function BrandPlatformCta({
     if (!confirm(
       `Créer la plateforme de marque pour "${nodeName}" ?\n\n` +
       `Cela génère une Strategy ADVE-RTIS attachée au BrandNode (${nodeKind}). ` +
-      `Tu pourras ensuite éditer les piliers, lancer Artemis, et générer l'Oracle.`,
+      `Vous pourrez ensuite éditer les piliers et générer l'Oracle.`,
     )) return;
     try {
       const newStrategy = await createStrategy.mutateAsync({
@@ -325,7 +325,7 @@ function InheritanceSection({ nodeId }: { nodeId: string }) {
       </div>
       <div className="border-t border-border-subtle px-4 py-2">
         <div className="text-2xs uppercase tracking-wide text-foreground-secondary">
-          RTIS (dérivés ADR-0023 — recalculés via ENRICH_*)
+          RTIS (piliers dérivés — recalculés automatiquement)
         </div>
         <div className="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-4">
           {RTIS.map((key) => {

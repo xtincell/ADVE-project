@@ -31,7 +31,7 @@ const SOURCE_PRESENTATION: Record<
   ProvenanceSource,
   { label: string; Icon: typeof Info; linkLabel: string }
 > = {
-  "tarsis-signal": { label: "Signal Tarsis", Icon: Radio, linkLabel: "Voir la source du signal" },
+  "tarsis-signal": { label: "Signal de veille sectorielle", Icon: Radio, linkLabel: "Voir la source du signal" },
   "crm-signal": { label: "Signal CRM", Icon: Users, linkLabel: "Voir la source CRM" },
   "calibration-snapshot": {
     label: "Snapshot de calibration",

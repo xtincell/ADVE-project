@@ -43,7 +43,7 @@ function getQuickPrompts(brandName?: string) {
     {
       icon: BookOpen,
       label: "Recommandations",
-      prompt: `Quelles sont tes recommandations pour ameliorer le Cult Index de ${name} ?`,
+      prompt: `Quelles sont tes recommandations pour améliorer l'indice d'attachement de ${name} ?`,
     },
     {
       icon: Lightbulb,
@@ -108,7 +108,7 @@ export default function MestorPage() {
         }),
       });
 
-      if (!response.ok) throw new Error("Erreur API Mestor");
+      if (!response.ok) throw new Error("Erreur de l'assistant");
 
       // Handle streaming response
       const reader = response.body?.getReader();

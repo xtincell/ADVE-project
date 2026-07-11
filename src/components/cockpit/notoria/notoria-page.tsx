@@ -51,10 +51,22 @@ const OP_RESKIN: Record<string, { label: string; c: string }> = {
 const URG_RESKIN: Record<string, { label: string; c: string }> = {
   NOW: { label: "Urgent", c: "ko" }, SOON: { label: "Recommandé", c: "warn" }, LATER: { label: "Optionnel", c: "muted" },
 };
-// Cascade canon (operator) : ADVE → R+T → Jehuty → Notoria → I → S.
+// Statuts de reco traduits — plus d'enum brut à l'écran (lot 11, [M04-03]).
+const STATUS_RESKIN: Record<string, string> = {
+  PENDING: "En attente", ACCEPTED: "Acceptée", APPLIED: "Appliquée",
+  REJECTED: "Rejetée", DISMISSED: "Écartée", EXPIRED: "Expirée",
+};
+const MISSION_TYPE_RESKIN: Record<string, string> = {
+  ADVE_UPDATE: "Amélioration fondation",
+  I_GENERATION: "Génération Potentiel (I)",
+  S_SYNTHESIS: "Synthèse Stratégie (S)",
+};
+// Cascade canon (interne : ADVE → R+T → Jehuty → Notoria → I → S) — libellés
+// client business (lot 11, [M04-01]) ; les lettres ADVE/R/T/I/S restent en
+// attente de la décision Lot 0 (statut client des lettres de piliers).
 const NZ_CELLFLOW: Array<{ label: string; on?: boolean; passive?: boolean }> = [
-  { label: "ADVE" }, { label: "R + T" }, { label: "Jehuty", passive: true },
-  { label: "Notoria", on: true }, { label: "I" }, { label: "S" },
+  { label: "Fondation" }, { label: "R + T" }, { label: "Gazette", passive: true },
+  { label: "Recos", on: true }, { label: "I" }, { label: "S" },
 ];
 
 // ── Component ─────────────────────────────────────────────────────
@@ -115,7 +127,7 @@ export function NotoriaPage() {
       dashboardQuery.refetch();
       setApplyFeedback(
         data.count > 0
-          ? { type: "success", message: `${data.count} recommandation(s) ciblée(s) générée(s) (function-calling).` }
+          ? { type: "success", message: `${data.count} recommandation(s) ciblée(s) générée(s).` }
           : { type: "warning", message: "Aucune recommandation ciblée à générer (modèle déjà cohérent)." },
       );
     },
@@ -321,7 +333,7 @@ export function NotoriaPage() {
     } else if (stage === 0) {
       // ADVE prêt mais pipeline pas démarré → option de raffiner ADVE via Notoria.
       primary = {
-        label: "Démarrer le pipeline ADVERTIS",
+        label: "Démarrer l'analyse complète",
         icon: goIcon ?? <Zap className="h-4 w-4" />,
         onClick: () => pipelineMutation.mutate({ strategyId: strategyId! }),
         disabled: anyPending,
@@ -430,10 +442,10 @@ export function NotoriaPage() {
 
   // ── Engine Health note (canon cascade guidance) ──
   const healthNote = !adveReady
-    ? <>ADVE pas encore consolidé. <b>{firstAdveGapKey?.toUpperCase()}</b> bloque la cascade R+T — complétez-le pour débloquer le pipeline.</>
+    ? <>Fondation pas encore consolidée. <b>{firstAdveGapKey?.toUpperCase()}</b> bloque l&apos;analyse R+T — complétez-le pour débloquer la suite.</>
     : !rtReady
-      ? <>ADVE consolidé. Lancez la <b>veille R + T</b> pour nourrir Jehuty puis Notoria.</>
-      : <>Cascade ouverte — Notoria applique les recommandations issues de <b>R+T</b> vers I puis S.</>;
+      ? <>Fondation consolidée. Lancez la <b>veille R + T</b> pour alimenter la Gazette puis les recommandations.</>
+      : <>Cascade ouverte — les recommandations issues de <b>R+T</b> s&apos;appliquent vers I puis S.</>;
 
   return (
     <div className="ck-nz">
@@ -535,7 +547,7 @@ export function NotoriaPage() {
               </button>
               {/* ADR-0088 — function-calling generation (typed mutations by id) */}
               <button onClick={() => generateTypedMutation.mutate({ strategyId: strategyId! })} disabled={anyPending || generateTypedMutation.isPending}>
-                <Zap style={{ color: "var(--accent)" }} />Générer recos ciblées (function-calling)
+                <Zap style={{ color: "var(--accent)" }} />Générer des recommandations ciblées
               </button>
               {/* Recos ancrées dans les sources importées (vault) */}
               <button onClick={() => generateFromVaultMutation.mutate({ strategyId: strategyId! })} disabled={anyPending || generateFromVaultMutation.isPending}>
@@ -647,11 +659,11 @@ export function NotoriaPage() {
                       {typeof reco.weightedScore === "number" && (
                         <span
                           className="ck-nz__reco-score" data-s={reco.weightedScore >= 70 ? "hi" : reco.weightedScore >= 50 ? "mid" : "lo"}
-                          title={`Score pondéré ADR-0090 — ruler ${reco.rulerScore ?? "?"}/100 · impact ${reco.scoreImpactEstimate != null ? (reco.scoreImpactEstimate >= 0 ? "+" : "") + reco.scoreImpactEstimate : "n/a"} pts composite`}
+                          title={`Score de priorité — qualité ${reco.rulerScore ?? "?"}/100 · impact ${reco.scoreImpactEstimate != null ? (reco.scoreImpactEstimate >= 0 ? "+" : "") + reco.scoreImpactEstimate : "n/a"} pts sur le score de marque`}
                         >◈ {Math.round(reco.weightedScore)}</span>
                       )}
                       {reco.validationWarning && <span title={reco.validationWarning}><AlertTriangle className="h-3 w-3 text-warning" /></span>}
-                      <span className="ck-nz__status" data-s={reco.status}>{reco.status}</span>
+                      <span className="ck-nz__status" data-s={reco.status}>{STATUS_RESKIN[reco.status] ?? reco.status}</span>
                     </div>
 
                     <p className="ck-nz__reco-explain">{reco.explain}</p>
@@ -694,7 +706,7 @@ export function NotoriaPage() {
           {batches.map((batch) => (
             <div key={batch.id} className="ck-nz__batchrow">
               <div>
-                <span className="ck-nz__batch-type">{batch.missionType}</span>
+                <span className="ck-nz__batch-type">{MISSION_TYPE_RESKIN[batch.missionType] ?? batch.missionType}</span>
                 <span className="ck-nz__batch-date">{new Date(batch.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
               </div>
               <div className="ck-nz__batch-stats">

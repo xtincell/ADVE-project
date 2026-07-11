@@ -4,6 +4,7 @@ import { ADVE_STORAGE_KEYS } from "@/domain";
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
+import { useCanOperate } from "@/components/cockpit/use-can-operate";
 import { trpc } from "@/lib/trpc/client";
 import {
   FileText,
@@ -38,6 +39,9 @@ const STATUS_CONFIG = {
 
 export default function PropositionPage() {
   const strategyId = useCurrentStrategyId();
+  // Assemblage/cascade = gestes opérateur ; le founder lit et exporte
+  // (UX-DR16, lot 12 — cohérence avec le panel progressif déjà gardé).
+  const canOperate = useCanOperate();
   const [copied, setCopied] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [isArtemisRunning, setIsArtemisRunning] = useState(false);
@@ -152,7 +156,7 @@ export default function PropositionPage() {
       setIsArtemisRunning(true);
       setEnrichResult(null);
       setChangedSections(new Set());
-      setEnrichLog(["Artemis demarre — analyse des sections incompletes..."]);
+      setEnrichLog(["Assemblage démarré — analyse des sections incomplètes..."]);
     },
     onSuccess: (data) => {
       setEnrichResult(data);
@@ -170,7 +174,7 @@ export default function PropositionPage() {
         ...(data.skipped.length > 0
           ? [`${data.skipped.length} sections sans framework applicable (derivées) : ${data.skipped.slice(0, 5).join(", ")}${data.skipped.length > 5 ? "…" : ""}`]
           : []),
-        ...(data.intentId ? [`IntentEmission: ${data.intentId.slice(0, 16)}…`] : []),
+        ...(data.intentId ? [`Réf. d'exécution : ${data.intentId.slice(0, 16)}…`] : []),
         ...(data.failed.length > 0 ? [`Echecs: ${data.failed.join(", ")}`] : []),
       ]);
     },
@@ -205,9 +209,9 @@ export default function PropositionPage() {
 
       const lines: string[] = [];
       if (code && governor) {
-        lines.push(`ERREUR ${code} (${governor}) — ${err.message.replace(/^\[ORACLE-\d+\]\s*/, "")}`);
+        lines.push(`ERREUR ${code} — ${err.message.replace(/^\[ORACLE-\d+\]\s*/, "")}`);
         if (remediation) lines.push(`→ ${remediation}`);
-        lines.push(`→ Voir /console/governance/oracle-incidents pour le triage.`);
+        lines.push(`→ Signalé à votre équipe pour analyse.`);
       } else {
         lines.push(`ERREUR: ${err.message}`);
       }
@@ -255,7 +259,7 @@ export default function PropositionPage() {
       key: "oracle", title: "Assemblage Oracle",
       ready: oracleReadyToCompile,
       body: oracleReadyToCompile
-        ? `${completeSections}/${totalSections} sections — Artemis peut compiler le livrable sans heurt.`
+        ? `${completeSections}/${totalSections} sections — le livrable peut être compilé sans heurt.`
         : `${totalSections - completeSections} sections restantes — préparez ADVE + RTIS pour débloquer l'assemblage.`,
     },
   ];
@@ -269,7 +273,7 @@ export default function PropositionPage() {
           L&apos;Oracle — Proposition Stratégique
         </h1>
         <p className="mt-1 text-sm text-foreground-muted">
-          Document vivant assemblé depuis vos piliers ADVE-RTIS, Artemis et outils Glory.
+          Document vivant assemblé depuis vos piliers de marque et vos analyses.
         </p>
       </div>
 
@@ -285,8 +289,8 @@ export default function PropositionPage() {
             : <>Votre proposition s&apos;assemble en continu — <span className="hl">{pct}%</span> du livrable est consolidé.</>}
         </h2>
         <p className="ck-oracle-hero__p">
-          L&apos;Oracle est un livrable consulting de {totalSections} sections, assemblé et réévalué par Mestor (méthode ADVE-RTIS).
-          {isArtemisRunning ? " Artemis exécute les frameworks — les sections se mettent à jour en temps réel." : ` ${totalSections - completeSections} section(s) restantes.`}
+          L&apos;Oracle est un livrable consulting de {totalSections} sections, assemblé et réévalué en continu par votre équipe (méthode ADVE-RTIS).
+          {isArtemisRunning ? " Assemblage en cours — les sections se mettent à jour en temps réel." : ` ${totalSections - completeSections} section(s) restantes.`}
         </p>
         <div className="ck-oracle-hero__stats">
           <div><span className="k">Complètes</span><b className="text-success">{completeSections}/{totalSections}</b></div>
@@ -325,8 +329,10 @@ export default function PropositionPage() {
           </div>
         </div>
 
-        {/* ADR — bouton contextuel (préparer ADVE / RTIS / lancer Artemis) — wiring inchangé */}
+        {/* ADR — bouton contextuel (préparer ADVE / RTIS / assembler) — wiring
+            inchangé ; rendu opérateur uniquement (le founder lit + exporte). */}
         <div className="ck-orc__controls">
+          {canOperate ? (
           <button
             className="ck-orc__assemble"
             data-variant={oracleReadyToCompile ? "ready" : undefined}
@@ -344,11 +350,12 @@ export default function PropositionPage() {
               setExternalBlockers(undefined); setLaunchModalOpen(true);
             }}
           >
-            {enrichMutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Artemis en cours…</>
-              : oracleReadyToCompile ? <><Sparkles /> Lancer Artemis</>
-              : !adveAllComplete ? <><AlertCircle /> Préparer ADVE d&apos;abord</>
-              : <><AlertCircle /> Préparer RTIS d&apos;abord</>}
+            {enrichMutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Assemblage en cours…</>
+              : oracleReadyToCompile ? <><Sparkles /> Assembler la proposition</>
+              : !adveAllComplete ? <><AlertCircle /> Préparer la fondation d&apos;abord</>
+              : <><AlertCircle /> Préparer la stratégie d&apos;abord</>}
           </button>
+          ) : null}
           <button
             className="ck-orc__preview"
             onClick={() => { if (shareUrl) window.open(shareUrl, "_blank"); else shareMutation.mutate({ strategyId: strategyId! }); }}
@@ -360,7 +367,7 @@ export default function PropositionPage() {
         {/* Progress (pendant Artemis) */}
         {isArtemisRunning && (
           <div className="ck-orc__progress">
-            <div className="ck-orc__progress-meta"><span>{completeSections}/{totalSections} sections</span><span>Artemis en cours</span></div>
+            <div className="ck-orc__progress-meta"><span>{completeSections}/{totalSections} sections</span><span>Assemblage en cours</span></div>
             <div className="ck-orc__progress-track"><div className="ck-orc__progress-fill" style={{ width: `${pct}%` }} /></div>
           </div>
         )}

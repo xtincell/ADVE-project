@@ -67,10 +67,10 @@ function safeString(val: unknown): string {
 type ViewMode = "EXECUTIVE" | "MARKETING" | "FOUNDER" | "MINIMAL";
 
 const VIEW_MODE_LABELS: Record<ViewMode, string> = {
-  EXECUTIVE: "Executive",
+  EXECUTIVE: "Synthèse",
   MARKETING: "Marketing",
-  FOUNDER: "Founder",
-  MINIMAL: "Minimal",
+  FOUNDER: "Complète",
+  MINIMAL: "Essentielle",
 };
 
 export default function CockpitDashboard() {
@@ -298,7 +298,7 @@ export default function CockpitDashboard() {
       {/* Header + view modes */}
       <div className="ck-ph">
         <div>
-          <p className="ck-ph__bc">Cockpit / Dashboard</p>
+          {/* Fil d'Ariane retiré — la topbar porte déjà le breadcrumb ([M01-11]). */}
           <h1 className="ck-ph__title">Tableau de bord</h1>
           <p className="ck-ph__desc">Marque : <span className="em">{strategy?.name ?? "…"}</span></p>
         </div>
@@ -371,7 +371,7 @@ export default function CockpitDashboard() {
               <div className="ck-north__lead">
                 <span className="ck-north__crown"><Crown /></span>
                 <div>
-                  <p className="ck-north__k">Northstar</p>
+                  <p className="ck-north__k">Cap superfans</p>
                   <div className="ck-north__big">
                     <span className="ck-north__n">{superfanCountQuery.data?.active ?? "—"}</span>
                     <span className="ck-north__lbl">superfans actifs</span>
@@ -411,7 +411,7 @@ export default function CockpitDashboard() {
               <span className="ck-kpi__delta">{alertSignals.length} prescription{alertSignals.length > 1 ? "s" : ""}</span>
             </div>
             <div className="ck-kpi">
-              <div className="ck-kpi__top"><span className="ck-kpi__lbl">Score ADVE-RTIS</span><span className="ck-kpi__spark"><Sparkline data={scoreTrend} width={60} height={20} /></span></div>
+              <div className="ck-kpi__top"><span className="ck-kpi__lbl">Score de marque</span><span className="ck-kpi__spark"><Sparkline data={scoreTrend} width={60} height={20} /></span></div>
               <p className="ck-kpi__val">{Math.round(composite)}<span className="m">/200</span></p>
             </div>
           </div>

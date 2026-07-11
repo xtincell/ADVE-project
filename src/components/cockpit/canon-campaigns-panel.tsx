@@ -20,7 +20,7 @@ const CANON_LABEL: Record<string, string> = {
   GTM_90: "Go-to-market 30-60-90",
   ANNUAL: "Campagne annuelle",
   ALWAYS_ON: "Always-on (permanent)",
-  PUNCTUAL: "Ponctuelle (insight / Jehuty)",
+  PUNCTUAL: "Ponctuelle (signal de veille)",
 };
 
 // Niveau d'exécution (ADR-0089) dérivé de l'Advertis — Conservateur / Cible / Ambitieux.
@@ -83,7 +83,7 @@ export function CanonCampaignsPanel() {
             variant="outline"
             disabled={punctual.isPending}
             onClick={() => {
-              const title = window.prompt("Titre de la campagne ponctuelle (insight externe / Jehuty) :");
+              const title = window.prompt("Titre de la campagne ponctuelle (signal de veille) :");
               if (title && title.trim().length >= 3) punctual.mutate({ strategyId, title: title.trim(), insightSource: "EXTERNAL_INSIGHT" });
             }}
           >

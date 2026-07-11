@@ -84,7 +84,7 @@ interface OvertonRadarProps extends VariantProps<typeof overtonRadarVariants> {
 const DEFERRED_COPY = {
   title: "Source signal en attente d'activation",
   description:
-    "Le radar Overton s'allume dès que la source de signal sectoriel (Tarsis) est activée pour votre marque. Vos équipes UPgraders s'en chargent.",
+    "Le radar s'allume dès que la source de signal sectoriel est activée pour votre marque. Vos équipes UPgraders s'en chargent.",
 } as const;
 
 const DEGRADED_COPY: Record<ConnectorDegradationReason, { title: string; description: string; icon: typeof CloudOff }> = {
@@ -198,7 +198,7 @@ function RadarPlot({
         instance={instance}
         icon={Timer}
         title={DEGRADED_COPY.INSUFFICIENT_DATA.title}
-        description="Aucune donnée sectorielle observée pour l'instant. Le radar se dessine dès les premières observations Tarsis."
+        description="Aucune donnée sectorielle observée pour l'instant. Le radar se dessine dès les premières observations de votre secteur."
       />
     );
   }
@@ -415,7 +415,7 @@ export function OvertonRadar({ signal, instance, density, className }: OvertonRa
           Overton sectoriel
         </h3>
         <div className="text-[10px] uppercase tracking-wider text-foreground-muted">
-          {mocked ? "Démo" : observedAt ? `Tarsis · ${new Date(observedAt).toLocaleDateString()}` : "—"}
+          {mocked ? "Démo" : observedAt ? `Veille sectorielle · ${new Date(observedAt).toLocaleDateString()}` : "—"}
         </div>
       </header>
       {body}

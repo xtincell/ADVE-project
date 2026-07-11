@@ -197,13 +197,13 @@ export function ArtemisLaunchModal({
       title={
         <span className="flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-accent" />
-          Préparer le lancement d'Artemis
+          Préparer l'assemblage de l'Oracle
         </span>
       }
       description={
         phase === "DIAGNOSE" || phase === "PREPARING"
-          ? "Avant qu'Artemis enrichisse les 35 sections de l'Oracle, vos 4 fondations stratégiques doivent être prêtes. Les champs comblés par l'IA sont marqués « Inféré » pour que vous les validiez plus tard."
-          : "Vos fondations sont prêtes. Artemis peut enrichir l'Oracle."
+          ? "Avant d'enrichir les 35 sections de l'Oracle, vos 4 fondations stratégiques doivent être prêtes. Les champs comblés par l'IA sont marqués « Inféré » pour que vous les validiez plus tard."
+          : "Vos fondations sont prêtes. L'Oracle peut être enrichi."
       }
     >
       {/* Loading initial readiness */}
@@ -223,7 +223,7 @@ export function ArtemisLaunchModal({
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                 <p>
                   Le lancement précédent a été interrompu : votre vault stratégique manque de matière
-                  pour qu'Artemis puisse enrichir l'Oracle proprement.
+                  pour que l'Oracle puisse être enrichi proprement.
                 </p>
               </div>
             </div>
@@ -239,7 +239,7 @@ export function ArtemisLaunchModal({
             <p>
               <strong className="text-foreground-secondary">Préparation automatique :</strong>{" "}
               nous comblons d'abord ce qui se déduit de votre vault (calculs, références croisées),
-              puis Artemis génère ce qui manque encore. Vous pouvez ensuite réviser, éditer ou relancer.
+              puis la génération comble ce qui manque encore. Vous pouvez ensuite réviser, éditer ou relancer.
             </p>
           </div>
         </>
@@ -324,7 +324,7 @@ export function ArtemisLaunchModal({
                 Vos 4 fondations sont prêtes.
               </p>
               <p className="text-xs text-foreground-secondary">
-                Artemis va enrichir les 35 sections de l'Oracle en s'appuyant sur votre vault.
+                L'assemblage va enrichir les 35 sections de l'Oracle en s'appuyant sur vos sources.
                 Vous suivrez la progression en temps réel sur la page proposition.
               </p>
             </div>
@@ -439,7 +439,7 @@ export function ArtemisLaunchModal({
               }}
               className="flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent"
             >
-              <Sparkles className="h-4 w-4" /> Lancer Artemis maintenant
+              <Sparkles className="h-4 w-4" /> Lancer l'assemblage maintenant
               <ArrowRight className="h-4 w-4" />
             </button>
           </>

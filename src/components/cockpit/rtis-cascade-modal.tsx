@@ -168,7 +168,7 @@ export function RtisCascadeModal({
       }
       description={
         phase === "CONFIRM"
-          ? "Vos 4 fondations ADVE sont complètes. Pour qu'Artemis compile l'Oracle sans sections vides, il faut maintenant dériver les 4 piliers dynamiques (Risk, Track, Innovation, Strategy) à partir d'ADVE. Cette étape n'a lieu qu'une fois."
+          ? "Vos 4 fondations sont complètes. Pour compiler l'Oracle sans sections vides, il faut maintenant dériver les 4 piliers stratégiques (diagnostic, marché, innovation, plan) à partir de votre fondation. Cette étape n'a lieu qu'une fois."
           : phase === "RUNNING"
             ? "Génération en cours — chaque pilier prend 20 à 40 secondes (LLM)."
             : phase === "DONE"
@@ -198,7 +198,7 @@ export function RtisCascadeModal({
             <p>
               <strong className="text-foreground-secondary">Durée typique :</strong> 1 à 2 minutes.
               La cascade tourne en série pour respecter l'ordre de dérivation
-              (R d'abord, puis T qui s'appuie sur R + signaux Seshat, puis I,
+              (R d'abord, puis T qui s'appuie sur R + signaux de veille, puis I,
               puis S).
             </p>
           </div>
@@ -261,7 +261,7 @@ export function RtisCascadeModal({
             <div className="rounded-lg border border-warning/40 bg-warning/5 p-3 text-xs text-foreground-secondary">
               <strong className="text-warning">Plus long que prévu.</strong>{" "}
               Le LLM travaille toujours. Tu peux fermer cette fenêtre — la cascade
-              continue en arrière-plan, le bouton « Lancer Artemis » virera vert
+              continue en arrière-plan, le bouton d'assemblage virera vert
               quand RTIS sera prêt.
             </div>
           )}
@@ -279,7 +279,7 @@ export function RtisCascadeModal({
               </p>
               <p className="text-xs text-foreground-secondary">
                 Oracle peut maintenant compiler ses 35 sections sans risque de
-                sections RTIS vides. Le bouton « Lancer Artemis » est passé au
+                sections stratégiques vides. Le bouton d'assemblage est passé au
                 vert sur la page proposition.
               </p>
             </div>

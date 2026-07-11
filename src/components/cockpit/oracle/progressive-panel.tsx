@@ -119,7 +119,7 @@ export function OracleProgressivePanel(props: OracleProgressivePanelProps): Reac
           <div className="flex items-center gap-2 text-sm">
             <h3 className="font-semibold text-foreground">Génération progressive</h3>
             <span className="rounded-full bg-info/15 px-2 py-0.5 text-2xs font-bold uppercase tracking-wider text-info">
-              ADR-0073
+              Section par section
             </span>
           </div>
           <div className="flex items-center gap-3 text-xs">
@@ -142,7 +142,7 @@ export function OracleProgressivePanel(props: OracleProgressivePanelProps): Reac
             onClick={() => assembleMutation.mutate({ strategyId, scope })}
             disabled={anyMutationPending || !canOperate}
             className="flex items-center gap-2 rounded-lg bg-error px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-error disabled:opacity-40"
-            title={`Émet ASSEMBLE_ORACLE (scope=${scope}). L'Assembler boucle sur GENERATE_ORACLE_SECTION × N — chaque section traverse executeStructuredLLMCall (Zod strict + retry x2).`}
+            title={`Assemble les sections (portée : ${scope === "ALL" ? "toutes" : scope === "MISSING" ? "manquantes" : "à rafraîchir"}) — chaque section est générée puis validée individuellement.`}
           >
             {isAssemblerRunning ? (
               <>
