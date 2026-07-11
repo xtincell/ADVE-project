@@ -18,6 +18,7 @@ import { readFileSync } from "node:fs";
 const routerSrc = readFileSync("src/server/trpc/routers/strategy.ts", "utf8");
 const selectorSrc = readFileSync("src/components/cockpit/strategy-selector.tsx", "utf8");
 const contextSrc = readFileSync("src/components/cockpit/strategy-context.tsx", "utf8");
+const dashboardSrc = readFileSync("src/app/(cockpit)/cockpit/page.tsx", "utf8");
 
 describe("brandTreeForSelector — scope tenant (fuite cross-tenant fermée)", () => {
   it("le chemin founder USER existe (nodes = SES stratégies + ancêtres, jamais tout)", () => {
@@ -50,6 +51,15 @@ describe("StrategySelector — lazy loading + états honnêtes", () => {
     expect(selectorSrc).toContain("seenStrategyIds");
   });
 
+  it("une tuile NON pilotée n'affiche jamais de coche active (fini le null === null)", () => {
+    // Sans marque active, `x.strategyId === activeStrategyId` valait
+    // `null === null` → toutes les tuiles « Pas encore piloté » cochées.
+    expect(selectorSrc).toContain("const active = isActive && isPiloted");
+    expect(selectorSrc).toContain("{active && <Check");
+    // La coche ne doit plus être pilotée par `isActive` brut.
+    expect(selectorSrc).not.toContain("{isActive && <Check");
+  });
+
   it("le bouton déclencheur ne déborde plus (largeur fluide + truncate)", () => {
     expect(selectorSrc).not.toContain("max-w-[220px]");
     expect(selectorSrc).toContain("min-w-0 flex-1 truncate");
@@ -60,5 +70,27 @@ describe("StrategyProvider — fallback de marque active", () => {
   it("un QUICK_INTAKE ne devient jamais la marque active (ni fallback, ni sélection persistée)", () => {
     expect(contextSrc).toContain('s.status !== "QUICK_INTAKE"');
     expect(contextSrc).toContain("activeStrategies.some((s) => s.id === selectedId)");
+  });
+});
+
+describe("Dégradation honnête — une panne de strategy.list ne ment plus", () => {
+  it("le provider expose isError (query échouée ≠ zéro marque)", () => {
+    // Le fix de la « colonne Strategy.marketScale n'existe pas » (drift de
+    // schéma prod 2026-07-11) : strategy.list 500 → data undefined → le
+    // cockpit affichait « Créez votre première marque » alors que le founder
+    // A des marques. Le provider doit distinguer erreur de vide.
+    expect(contextSrc).toContain("const { data, isLoading, isError }");
+    expect(contextSrc).toContain("isError");
+  });
+
+  it("le dashboard affiche une erreur (pas l'onboarding) quand la liste échoue", () => {
+    expect(dashboardSrc).toContain("isError: strategiesError");
+    expect(dashboardSrc).toContain("!strategyId && strategiesError");
+    expect(dashboardSrc).toContain("Impossible de charger vos marques");
+    // La garde d'erreur DOIT précéder la CTA d'onboarding « no brand ».
+    const errIdx = dashboardSrc.indexOf("!strategyId && strategiesError");
+    const ctaIdx = dashboardSrc.indexOf("Créez votre première marque");
+    expect(errIdx).toBeGreaterThan(-1);
+    expect(errIdx).toBeLessThan(ctaIdx);
   });
 });
