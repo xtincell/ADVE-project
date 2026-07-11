@@ -277,6 +277,10 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   // Sync DB write (single row update) + Mestor hash-chained IntentEmission ;
   // no LLM, near-zero cost. Same envelope as other OPERATOR_* sync mutations.
   { kind: "OPERATOR_TAG_OVERTON_DELTA", p95LatencyMs: 500, errorRatePct: 0.01, costP95Usd: 0 },
+  // ADR-0127 — upsert d'axe polity (write 1 row + résolution) ; sync, zéro LLM.
+  { kind: "SESHAT_UPSERT_POLITY_AXIS", p95LatencyMs: 800, errorRatePct: 0.01, costP95Usd: 0 },
+  // ADR-0126 — naissance gouvernée d'un SuperfanProfile (upsert dédupliqué) ; sync, zéro LLM.
+  { kind: "SESHAT_REGISTER_SUPERFAN", p95LatencyMs: 500, errorRatePct: 0.01, costP95Usd: 0 },
 
   // ── AUTOGEN: legacy-intent-kinds — DO NOT EDIT MANUALLY ──
   // 329 legacy mutation SLOs (defaults — tighten per-mutation as needed).

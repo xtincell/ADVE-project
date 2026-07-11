@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { classifyTier } from "@/domain";
+import { classifyTier, MarketScaleSchema } from "@/domain";
 import type { Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, adminProcedure, operatorProcedure } from "../init";
@@ -250,6 +250,10 @@ export const strategyRouter = createTRPCRouter({
       name: z.string().optional(),
       description: z.string().optional(),
       status: z.string().optional(),
+      // ADR-0126 — échelle de marché DÉCLARÉE (étalonne le plafond d'évidence).
+      marketScale: MarketScaleSchema.nullable().optional(),
+      addressableAudience: z.number().int().positive().max(8_000_000_000).nullable().optional(),
+      brandFoundedYear: z.number().int().min(1800).max(new Date().getFullYear()).nullable().optional(),
       advertis_vector: z.record(z.string(), z.number()).optional(),
       recalculateScore: z.boolean().optional(),
     }),

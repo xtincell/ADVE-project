@@ -1,6 +1,6 @@
 "use client";
 
-import { PILLAR_STORAGE_KEYS } from "@/domain";
+import { PILLAR_STORAGE_KEYS, classifyTier, formatTierReferential } from "@/domain";
 
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
@@ -413,6 +413,8 @@ export default function CockpitDashboard() {
             <div className="ck-kpi">
               <div className="ck-kpi__top"><span className="ck-kpi__lbl">Score de marque</span><span className="ck-kpi__spark"><Sparkline data={scoreTrend} width={60} height={20} /></span></div>
               <p className="ck-kpi__val">{Math.round(composite)}<span className="m">/200</span></p>
+              {/* ADR-0126 — le palier ne s'affiche jamais sans son référentiel d'échelle. */}
+              <span className="ck-kpi__delta">{formatTierReferential(classifyTier(composite), strategy?.marketScale ?? null)}</span>
             </div>
           </div>
         </>

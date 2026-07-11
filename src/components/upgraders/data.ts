@@ -315,7 +315,7 @@ export const PRODUCTS: ProductOffer[] = [
     kind: "Prestation",
     tagline: "ADVE en entrée, propulseur RTIS en exécution : positionnement, roadmap, direction créative déléguée.",
     priceLabel: "À partir de — sur devis",
-    priceNote: "En mandat (retainer 6 à 24 mois) ou à la mission. Périmètre, palier visé et score cible gelés à la signature (EFR).",
+    priceNote: "En mandat (retainer 6 à 24 mois) ou à la mission. Périmètre, palier visé, score cible et échelle de marché gelés à la signature (EFR).",
     inclusions: [
       "Socle ADVE + roadmap RTIS dynamique",
       "Positionnement & plateforme de marque",
@@ -459,7 +459,7 @@ export const PRODUCTS: ProductOffer[] = [
 export const EFR_POINTS: { title: string; desc: string }[] = [
   {
     title: "On ne vend pas des moyens",
-    desc: "On vend un état final mesuré : palier visé + score cible + horizon. Gelés et tracés à la signature.",
+    desc: "On vend un état final mesuré : palier visé + score cible + horizon — à votre échelle de marché déclarée (quartier, ville, nation…). Gelés et tracés à la signature.",
   },
   {
     title: "Obligation d'effet tracé",

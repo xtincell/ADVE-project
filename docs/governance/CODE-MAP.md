@@ -32,7 +32,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 202 models, 70 enums
+## Prisma — 203 models, 71 enums
 
 ### Models
 
@@ -43,7 +43,7 @@ Ces correspondances évitent la réinvention :
 - **Operator** (30 fields)
 - **ClientAllocation** (14 fields)
 - **Client** (17 fields)
-- **Strategy** (70 fields)
+- **Strategy** (73 fields)
 - **Intention** (14 fields)
 - **Campaign** (80 fields)
 - **Mission** (35 fields)
@@ -211,6 +211,7 @@ Ces correspondances évitent la réinvention :
 - **BrandAction** (37 fields)
 - **CostDecision** (12 fields) — Cost gate decision per Intent — Thot's audit trail (separate from IntentEmission so Thot's reasoning is queryable indepe
 - **Sector** (10 fields) — Sector — first-class entity. Overton lives within a sector. Each sector has its own cultural axis modelable as orientati
+- **SectorPolityAxis** (10 fields) — ADR-0127 — Axe culturel sectoriel PAR POLITY (échelle de marché × pays). Complète le Sector global (qui reste le fallbac
 - **StrategyDoc** (9 fields) — CRDT doc for real-time collab on long-form pillar / Oracle text. Phase 5 (NSP + Yjs). Stored as opaque BLOB; client reco
 - **PricingOverride** (12 fields) — Per-tier per-market price override. Allows admins to adjust SPU values OR direct local-currency amounts without code cha
 - **PaymentProviderConfig** (7 fields) — Provider configuration (non-secret) — let admins toggle providers, set the standard country override, etc., without env 
@@ -260,6 +261,7 @@ Ces correspondances évitent la réinvention :
 - **QuickIntakeStatus** : IN_PROGRESS | COMPLETED | CONVERTED | EXPIRED
 - **IntakeMethod** : GUIDED | IMPORT | LONG | SHORT | INGEST | INGEST_PLUS
 - **BrandNature** : PRODUCT | SERVICE | CHARACTER_IP | FESTIVAL_IP | MEDIA_IP | RETAIL_SPACE | PLATFORM | INSTITUTION | PERSONAL
+- **MarketScale** : QUARTIER | VILLE | REGION | NATION | CONTINENT | MONDE
 - **CampaignState** : BRIEF_DRAFT | BRIEF_VALIDATED | PLANNING | CREATIVE_DEV | PRODUCTION | PRE_PRODUCTION | APPROVAL | READY_TO_LAUNCH | LIVE | POST_CAMPAIGN | ARCHIVED | CANCELLED
 - **CreativeProductionStatus** : BRIEF_RECU | BRIEF_QUALIFIE | EN_PRODUCTION | BLOQUE | LIVRE
 - **ClientReviewStatus** : PENDING | BRAINSTORMING | EN_ATTENTE_FEEDBACK | RETOUR_RECU | TOOL_KIT_A_EXECUTER | EN_ATTENTE_PACKAGING | VALIDE | REJETE
@@ -997,7 +999,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 546 (par governor)
+## Intent kinds — 548 (par governor)
 
 ### MESTOR (79)
 
@@ -1099,8 +1101,10 @@ Ces correspondances évitent la réinvention :
 - `PROPOSE_SEQUENCE_PROMOTION_FROM_CAMPAIGN` → campaign-tracker (sync) — Cluster E — Si campagne réussie (tierDelta>0 + cultIndexDelta>0 + altitudeRegres…
 - `TOGGLE_QUALITY_GATE_MODE` → auto-promotion (sync) — Bascule le mode quality-gate entre SOFT (warning-only) et HARD (block-on-fail). …
 
-### SESHAT (18)
+### SESHAT (20)
 
+- `SESHAT_UPSERT_POLITY_AXIS` → sector-intelligence (sync) — Upsert d'un axe culturel sectoriel PAR POLITY (SectorPolityAxis — échelle de mar…
+- `SESHAT_REGISTER_SUPERFAN` → superfan (sync) — Enregistre/actualise UN SuperfanProfile (upsert par (strategyId, platform, handl…
 - `RANK_PEERS` → seshat (sync) — Generic peer ranking via context-store ranker.…
 - `SEARCH_BRAND_CONTEXT` → seshat (sync) — Search across strategies / find peers / search within a strategy.…
 - `INDEX_BRAND_SOURCE` → seshat (async) — Index a single BrandDataSource into BRAND_SOURCE chunks for RAG retrieval (opera…

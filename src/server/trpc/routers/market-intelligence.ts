@@ -14,11 +14,60 @@ import {
   type SignalFrequency,
 } from "@/server/services/market-intelligence/signal-collector";
 import { analyzeWeakSignals, buildSearchContext } from "@/server/services/market-intelligence/weak-signal-analyzer";
+import { getSectorAxisForPolity, upsertPolityAxis } from "@/server/services/sector-intelligence";
+import { MarketScaleSchema } from "@/domain";
 import { db } from "@/lib/db";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
 
 export const marketIntelligenceRouter = createTRPCRouter({
+  /**
+   * ADR-0127 — seed/refresh d'un axe Overton PAR POLITY (échelle × pays).
+   * Voie gouvernée unique d'écriture des axes polity — opérateur uniquement
+   * (manual-first : les signaux sont fournis, jamais fabriqués ici).
+   */
+  upsertPolityAxis: governedProcedure({
+
+    kind: "SESHAT_UPSERT_POLITY_AXIS",
+
+    requireOperator: true,
+
+    inputSchema: z.object({
+      slug: z.string().min(1),
+      marketScale: MarketScaleSchema,
+      countryCode: z.string().length(2).nullable().optional(),
+      signals: z.array(z.object({
+        tags: z.record(z.string(), z.number()).optional(),
+        narrative: z.string().optional(),
+        weight: z.number().optional(),
+      })).min(1),
+    }),
+
+    caller: "market-intelligence:upsertPolityAxis",
+
+  })
+    .mutation(async ({ input }) => {
+      return upsertPolityAxis({
+        slug: input.slug,
+        marketScale: input.marketScale,
+        countryCode: input.countryCode ?? null,
+        signals: input.signals,
+      });
+    }),
+
+  /** ADR-0127 — lecture de l'axe résolu pour une polity (niveau de résolution honnête). */
+  getAxisForPolity: protectedProcedure
+    .input(z.object({
+      slug: z.string().min(1),
+      marketScale: MarketScaleSchema.nullable().optional(),
+      countryCode: z.string().max(2).nullable().optional(),
+    }))
+    .query(async ({ input }) => {
+      return getSectorAxisForPolity(input.slug, {
+        marketScale: input.marketScale ?? null,
+        countryCode: input.countryCode ?? null,
+      });
+    }),
   /** Run full market intelligence pipeline for T pillar */
   run: governedProcedure({
 

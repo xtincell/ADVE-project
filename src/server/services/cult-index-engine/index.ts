@@ -56,13 +56,26 @@ const WEIGHTS: Record<keyof CultDimensions, number> = {
   evangelismScore: 0.05,
 };
 
-export function computeCultIndex(dimensions: CultDimensions): number {
+/**
+ * Weighted composite over the AVAILABLE dimensions (ADR-0126). `unavailable`
+ * lists dimensions with no wired data source (e.g. `ugcGenerationRate` before
+ * social integration) : leur poids sort du dénominateur au lieu de compter un
+ * 0 fabriqué — l'absence de mesure n'est pas une mesure de zéro.
+ */
+export function computeCultIndex(
+  dimensions: CultDimensions,
+  unavailable: readonly (keyof CultDimensions)[] = [],
+): number {
   let score = 0;
+  let weightSum = 0;
   for (const [key, weight] of Object.entries(WEIGHTS) as [keyof CultDimensions, number][]) {
+    if (unavailable.includes(key)) continue;
     const value = Math.max(0, Math.min(100, dimensions[key]));
     score += value * weight;
+    weightSum += weight;
   }
-  return Math.round(score * 100) / 100;
+  if (weightSum === 0) return 0;
+  return Math.round((score / weightSum) * 100) / 100;
 }
 
 /** @deprecated alias of `getCultIndexTier` (domain). Kept for callsite compat. */
@@ -86,10 +99,16 @@ export async function calculateAndSnapshot(strategyId: string): Promise<{
 
   const latestDevotion = devotionSnapshots[0];
 
-  // Calculate dimensions from available data
+  // Calculate dimensions from available data.
+  //
+  // ADR-0126 (fix d'unités) : les champs DevotionSnapshot sont des POURCENTAGES
+  // 0-100 (devotion-engine « Distribution as percentages », router z.max(100)).
+  // Les anciennes formules (×100 / ×200 / ×500) les traitaient comme des
+  // fractions 0-1 → engagementDepth/ritualAdoption/evangelismScore saturaient à
+  // 100 dès ~1 % de dévotion (40 % du poids du cult-index quasi binaire).
   const dimensions: CultDimensions = {
     engagementDepth: latestDevotion
-      ? (latestDevotion.participant + latestDevotion.engage + latestDevotion.ambassadeur + latestDevotion.evangeliste) * 100
+      ? latestDevotion.participant + latestDevotion.engage + latestDevotion.ambassadeur + latestDevotion.evangeliste
       : 0,
     superfanVelocity: superfanProfiles.length > 0
       // lafusee:allow-adhoc-completion: cult index 7-component composite scoring (component weight, not pillar)
@@ -102,9 +121,9 @@ export async function calculateAndSnapshot(strategyId: string): Promise<{
     brandDefenseRate: superfanProfiles.filter((s) => s.segment === "EVANGELISTE").length > 0
       ? Math.min(100, (superfanProfiles.filter((s) => s.segment === "EVANGELISTE").length / Math.max(1, superfanProfiles.length)) * 200)
       : 0,
-    ugcGenerationRate: 0, // Requires social data integration
-    ritualAdoption: latestDevotion ? latestDevotion.engage * 200 : 0,
-    evangelismScore: latestDevotion ? latestDevotion.evangeliste * 500 : 0,
+    ugcGenerationRate: 0, // No social data integration wired — EXCLUDED from the composite below
+    ritualAdoption: latestDevotion ? latestDevotion.engage * 2 : 0,
+    evangelismScore: latestDevotion ? latestDevotion.evangeliste * 5 : 0,
   };
 
   // Clamp all dimensions to 0-100
@@ -112,7 +131,9 @@ export async function calculateAndSnapshot(strategyId: string): Promise<{
     dimensions[key] = Math.max(0, Math.min(100, dimensions[key]));
   }
 
-  const score = computeCultIndex(dimensions);
+  // ugcGenerationRate n'a pas de source branchée : poids renormalisé plutôt
+  // qu'un 0 fabriqué qui tirait ~10 % du score vers le bas (ADR-0126).
+  const score = computeCultIndex(dimensions, ["ugcGenerationRate"]);
   const tier = getCultTier(score);
 
   // Get the previous snapshot to compare tiers
@@ -190,12 +211,22 @@ export async function calculateAndSnapshot(strategyId: string): Promise<{
 /**
  * Get Cult Index history for a strategy
  */
+/**
+ * ADR-0126 — date du fix d'unités devotion→cult. Les snapshots antérieurs
+ * portent des dimensions saturées par le bug (×100/×200/×500 sur des
+ * pourcentages) : ils restent immuables (Loi 1) mais toute comparaison
+ * temporelle traversant cette date doit le savoir.
+ */
+export const CULT_UNITS_FIX_DATE = new Date("2026-07-11T00:00:00Z");
+
 export async function getCultIndexHistory(strategyId: string, limit = 30) {
-  return db.cultIndexSnapshot.findMany({
+  const rows = await db.cultIndexSnapshot.findMany({
     where: { strategyId },
     orderBy: { measuredAt: "desc" },
     take: limit,
   });
+  // Annotation honnête : mesuré AVANT le fix d'unités (échelle non comparable).
+  return rows.map((r) => ({ ...r, preUnitsFix: r.measuredAt < CULT_UNITS_FIX_DATE }));
 }
 
 /**
@@ -294,14 +325,17 @@ export async function connectDevotionToCultIndex(strategyId: string): Promise<{
 
   if (!latestDevotion) return { dimensions, devotionBoost: 0 };
 
-  // Map devotion levels to cult dimensions
-  const activeRatio = latestDevotion.participant + latestDevotion.engage +
+  // Map devotion levels to cult dimensions.
+  // ADR-0126 (fix d'unités) : les champs DevotionSnapshot sont des POURCENTAGES
+  // 0-100 — les anciens multiplicateurs (×100/×200/×300/×500) les lisaient
+  // comme des fractions 0-1 et saturaient tout à 100.
+  const activePct = latestDevotion.participant + latestDevotion.engage +
     latestDevotion.ambassadeur + latestDevotion.evangeliste;
-  dimensions.engagementDepth = Math.min(100, activeRatio * 100);
-  dimensions.superfanVelocity = Math.min(100, (latestDevotion.ambassadeur + latestDevotion.evangeliste) * 200);
-  dimensions.evangelismScore = Math.min(100, latestDevotion.evangeliste * 500);
-  dimensions.ritualAdoption = Math.min(100, latestDevotion.engage * 200);
-  dimensions.brandDefenseRate = Math.min(100, latestDevotion.ambassadeur * 300);
+  dimensions.engagementDepth = Math.min(100, activePct);
+  dimensions.superfanVelocity = Math.min(100, (latestDevotion.ambassadeur + latestDevotion.evangeliste) * 2);
+  dimensions.evangelismScore = Math.min(100, latestDevotion.evangeliste * 5);
+  dimensions.ritualAdoption = Math.min(100, latestDevotion.engage * 2);
+  dimensions.brandDefenseRate = Math.min(100, latestDevotion.ambassadeur * 3);
 
   const devotionBoost = latestDevotion.devotionScore;
 

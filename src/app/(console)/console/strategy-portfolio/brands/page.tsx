@@ -1,6 +1,6 @@
 "use client";
 
-import { PILLAR_STORAGE_KEYS, classifyTier } from "@/domain";
+import { PILLAR_STORAGE_KEYS, classifyTier, MARKET_SCALES, MARKET_SCALE_LABELS, type MarketScale } from "@/domain";
 
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
@@ -20,6 +20,14 @@ import { ArchivedStrategiesModal } from "@/components/strategy/archived-strategi
 const CLASSIFICATIONS = ["ALL", "LATENT", "FRAGILE", "ORDINAIRE", "FORTE", "CULTE", "ICONE"] as const;
 type Classification = (typeof CLASSIFICATIONS)[number];
 
+// ADR-0126 — le classement ne compare qu'à échelle comparable.
+const SCALE_FILTERS = ["ALL", ...MARKET_SCALES, "NONE"] as const;
+type ScaleFilter = (typeof SCALE_FILTERS)[number];
+const SCALE_SHORT: Record<MarketScale, string> = {
+  QUARTIER: "Quartier", VILLE: "Ville", REGION: "Région",
+  NATION: "Nation", CONTINENT: "Continent", MONDE: "Monde",
+};
+
 const CLASS_COLORS: Record<string, string> = {
   LATENT: "bg-error/15 text-error",
   FRAGILE: "bg-orange-500/15 text-orange-300",
@@ -35,6 +43,7 @@ function getClassification(composite: number): string {
 
 export default function MarquesPage() {
   const [filter, setFilter] = useState<Classification>("ALL");
+  const [scaleFilter, setScaleFilter] = useState<ScaleFilter>("ALL");
   const [driftOnly, setDriftOnly] = useState(false);
   const [search, setSearch] = useState("");
   const [archiveModalOpen, setArchiveModalOpen] = useState(false);
@@ -80,6 +89,12 @@ export default function MarquesPage() {
   // Filter
   let filtered = allBrands;
   if (filter !== "ALL") filtered = filtered.filter(b => b.classification === filter);
+  // ADR-0126 — segmentation par échelle déclarée (NONE = non déclarée).
+  if (scaleFilter !== "ALL") {
+    filtered = filtered.filter(b =>
+      scaleFilter === "NONE" ? b.marketScale == null : b.marketScale === scaleFilter,
+    );
+  }
   if (driftOnly) filtered = filtered.filter(b => b.isDrift);
   if (search) {
     const q = search.toLowerCase();
@@ -196,6 +211,29 @@ export default function MarquesPage() {
         </button>
       </div>
 
+      {/* ADR-0126 — filtre échelle : on ne classe qu'à échelle comparable */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-2xs font-medium uppercase tracking-wide text-foreground-muted">Échelle</span>
+        {SCALE_FILTERS.map((sf) => (
+          <button
+            key={sf}
+            onClick={() => setScaleFilter(sf)}
+            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+              scaleFilter === sf
+                ? "bg-accent text-white"
+                : "bg-card text-foreground-muted hover:text-foreground border border-border-subtle"
+            }`}
+          >
+            {sf === "ALL" ? "Toutes" : sf === "NONE" ? "Non déclarée" : SCALE_SHORT[sf]}
+          </button>
+        ))}
+        {scaleFilter === "ALL" ? (
+          <span className="text-2xs text-foreground-muted">
+            Les scores ne se comparent qu&apos;à échelle comparable — filtrez pour un classement honnête.
+          </span>
+        ) : null}
+      </div>
+
       {/* Brands grid */}
       {filtered.length === 0 ? (
         <EmptyState
@@ -227,6 +265,10 @@ export default function MarquesPage() {
                       <h3 className="text-sm font-semibold text-foreground truncate">{brand.name}</h3>
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${CLASS_COLORS[brand.classification] ?? "bg-zinc-500/15 text-foreground-secondary"}`}>
                         {brand.classification}
+                      </span>
+                      {/* ADR-0126 — le palier ne se lit qu'avec son référentiel d'échelle */}
+                      <span className="rounded-full border border-border-subtle px-2 py-0.5 text-[10px] font-medium text-foreground-muted">
+                        {brand.marketScale ? MARKET_SCALE_LABELS[brand.marketScale as MarketScale] : "échelle non déclarée"}
                       </span>
                       {/* Status badge */}
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${

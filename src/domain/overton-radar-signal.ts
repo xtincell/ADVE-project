@@ -59,4 +59,11 @@ export interface OvertonRadarSignal {
   readonly fadedNarratives?: ReadonlyArray<string>;
   /** `true` when the upstream returned deterministic mock data (no real SDK). */
   readonly mocked?: boolean;
+  /**
+   * ADR-0127 — how specifically the sector axis was resolved for the brand's
+   * polity: "EXACT" (scale + country), "SCALE_ONLY" (supra-national axis of
+   * the scale), "GLOBAL_FALLBACK" (legacy global sector axis — no polity
+   * observation exists yet). `null`/absent = axis missing entirely.
+   */
+  readonly axisPolityResolution?: "EXACT" | "SCALE_ONLY" | "GLOBAL_FALLBACK" | null;
 }

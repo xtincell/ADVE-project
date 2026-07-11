@@ -23,6 +23,7 @@ import {
   getPillarChipStatus,
   type PillarReadinessProjection,
 } from "@/components/cockpit/notoria/lib/pillar-chip-status";
+import { MarketScaleCard } from "@/components/cockpit/market-scale-card";
 
 const FONDATION_PILLARS: ReadonlyArray<{ key: "A" | "D" | "V" | "E"; href: string; icon: LucideIcon }> = [
   { key: "A", href: "/cockpit/brand/identity", icon: Fingerprint },
@@ -91,6 +92,9 @@ export default function FondationHubPage() {
           );
         })}
       </div>
+
+      {/* ADR-0126 — déclaration de l'échelle : la fondation dit AUSSI sur quel terrain la marque joue. */}
+      <MarketScaleCard strategyId={strategyId} />
 
       <p className="text-sm text-foreground-muted">
         Ces quatre piliers sont enrichis et tenus à jour par votre équipe UPgraders à partir de vos

@@ -22,7 +22,7 @@
 
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
-import type { ConnectorResult } from "@/domain";
+import type { ConnectorResult, MarketScale } from "@/domain";
 import type { TarsisSignal } from "@/server/services/seshat/tarsis/connector";
 
 // ── Types ─────────────────────────────────────────────────────────────
@@ -75,6 +75,112 @@ export async function getSectorAxis(slug: string): Promise<SectorAxis | null> {
   const sector = await db.sector.findUnique({ where: { slug }, select: { culturalAxis: true } });
   if (!sector?.culturalAxis) return null;
   return sector.culturalAxis as unknown as SectorAxis;
+}
+
+// ── ADR-0127 — Overton par polity (secteur × échelle × pays) ──────────
+
+/**
+ * Niveau de résolution d'un axe : dit HONNÊTEMENT quelle fenêtre a réellement
+ * été observée. `EXACT` = polity (échelle + pays) ; `SCALE_ONLY` = axe
+ * supra-national de l'échelle ; `GLOBAL_FALLBACK` = l'axe Sector global
+ * historique (aucune observation polity — jamais masqué en aval).
+ */
+export type PolityAxisResolutionLevel = "EXACT" | "SCALE_ONLY" | "GLOBAL_FALLBACK";
+
+export interface PolityAxisResolution {
+  readonly axis: SectorAxis;
+  readonly resolution: PolityAxisResolutionLevel;
+  readonly polity: { readonly marketScale: MarketScale; readonly countryCode: string | null } | null;
+  readonly lastObservedAt: string | null;
+}
+
+/**
+ * Résout l'axe culturel le plus spécifique disponible pour la polity d'une
+ * marque : (échelle + pays) → (échelle, supra-national) → Sector global.
+ * Retourne `null` si AUCUN axe n'existe (même global) — l'aval rend son
+ * EmptyState honnête. Aucune donnée inventée à aucun niveau (ADR-0046).
+ */
+export async function getSectorAxisForPolity(
+  slug: string,
+  polity: { marketScale: MarketScale | null | undefined; countryCode: string | null | undefined },
+): Promise<PolityAxisResolution | null> {
+  if (polity.marketScale) {
+    const cc = (polity.countryCode ?? "").toUpperCase();
+    const candidates = await db.sectorPolityAxis.findMany({
+      where: {
+        sectorSlug: slug,
+        marketScale: polity.marketScale,
+        countryCode: { in: cc ? [cc, ""] : [""] },
+      },
+    });
+    const exact = cc ? candidates.find((c) => c.countryCode === cc) : undefined;
+    const scaleOnly = candidates.find((c) => c.countryCode === "");
+    const hit = exact ?? scaleOnly;
+    if (hit?.culturalAxis) {
+      return {
+        axis: hit.culturalAxis as unknown as SectorAxis,
+        resolution: exact?.culturalAxis ? "EXACT" : "SCALE_ONLY",
+        polity: { marketScale: hit.marketScale as MarketScale, countryCode: hit.countryCode || null },
+        lastObservedAt: hit.lastObservedAt?.toISOString() ?? null,
+      };
+    }
+  }
+  const globalAxis = await getSectorAxis(slug);
+  if (!globalAxis) return null;
+  const sector = await db.sector.findUnique({ where: { slug }, select: { lastObservedAt: true } });
+  return {
+    axis: globalAxis,
+    resolution: "GLOBAL_FALLBACK",
+    polity: null,
+    lastObservedAt: sector?.lastObservedAt?.toISOString() ?? null,
+  };
+}
+
+/**
+ * Voie d'écriture UNIQUE des axes polity (Intent `SESHAT_UPSERT_POLITY_AXIS`).
+ * Seed opérateur manuel (manual-first ADR-0060) ou ingestion Tarsis scoped —
+ * dans les deux cas l'axe est fourni, jamais fabriqué ici.
+ */
+export async function upsertPolityAxis(input: {
+  readonly slug: string;
+  readonly marketScale: MarketScale;
+  readonly countryCode?: string | null;
+  readonly signals: readonly { tags?: Record<string, number>; narrative?: string; weight?: number }[];
+}) {
+  const sector = await db.sector.findUnique({ where: { slug: input.slug } });
+  if (!sector) {
+    throw new Error(`sector-intelligence: sector '${input.slug}' not found`);
+  }
+  const axis = computeAxisFromSignals(input.signals);
+  const narratives = computeNarratives(input.signals);
+  const takenAt = new Date().toISOString();
+  const snapshot: OvertonSnapshot = { takenAt, axis, narratives };
+  const countryCode = (input.countryCode ?? "").toUpperCase();
+
+  return db.sectorPolityAxis.upsert({
+    where: {
+      sectorSlug_marketScale_countryCode: {
+        sectorSlug: input.slug,
+        marketScale: input.marketScale,
+        countryCode,
+      },
+    },
+    create: {
+      sectorSlug: input.slug,
+      marketScale: input.marketScale,
+      countryCode,
+      culturalAxis: axis as unknown as Prisma.InputJsonValue,
+      dominantNarratives: narratives.map((n) => n.narrative),
+      overtonState: snapshot as unknown as Prisma.InputJsonValue,
+      lastObservedAt: new Date(takenAt),
+    },
+    update: {
+      culturalAxis: axis as unknown as Prisma.InputJsonValue,
+      dominantNarratives: narratives.map((n) => n.narrative),
+      overtonState: snapshot as unknown as Prisma.InputJsonValue,
+      lastObservedAt: new Date(takenAt),
+    },
+  });
 }
 
 export async function getDominantNarratives(slug: string): Promise<string[]> {

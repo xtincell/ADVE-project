@@ -20,7 +20,7 @@ export const manifest = defineManifest({
   service: "sector-intelligence",
   governor: "SESHAT",
   version: "1.0.0",
-  acceptsIntents: ["DEFEND_OVERTON", "PROCESS_SESHAT_SIGNAL"],
+  acceptsIntents: ["DEFEND_OVERTON", "PROCESS_SESHAT_SIGNAL", "SESHAT_UPSERT_POLITY_AXIS"],
   emits: ["DEFEND_OVERTON"],
   capabilities: [
     {
@@ -31,6 +31,48 @@ export const manifest = defineManifest({
       idempotent: true,
       missionContribution: "DIRECT_OVERTON",
       missionStep: 4,
+    },
+    {
+      // ADR-0127 — résolution polity honnête (EXACT → SCALE_ONLY → GLOBAL_FALLBACK).
+      name: "getSectorAxisForPolity",
+      inputSchema: z.object({
+        slug: z.string(),
+        marketScale: z.enum(["QUARTIER", "VILLE", "REGION", "NATION", "CONTINENT", "MONDE"]).nullable(),
+        countryCode: z.string().max(2).nullable(),
+      }),
+      outputSchema: z.object({
+        axis: SectorAxisSchema,
+        resolution: z.enum(["EXACT", "SCALE_ONLY", "GLOBAL_FALLBACK"]),
+        polity: z.object({
+          marketScale: z.enum(["QUARTIER", "VILLE", "REGION", "NATION", "CONTINENT", "MONDE"]),
+          countryCode: z.string().nullable(),
+        }).nullable(),
+        lastObservedAt: z.string().nullable(),
+      }).nullable(),
+      sideEffects: ["DB_READ"],
+      idempotent: true,
+      missionContribution: "DIRECT_OVERTON",
+      missionStep: 4,
+    },
+    {
+      // ADR-0127 — voie d'écriture unique des axes polity (Intent SESHAT_UPSERT_POLITY_AXIS).
+      name: "upsertPolityAxis",
+      inputSchema: z.object({
+        slug: z.string(),
+        marketScale: z.enum(["QUARTIER", "VILLE", "REGION", "NATION", "CONTINENT", "MONDE"]),
+        countryCode: z.string().max(2).nullable().optional(),
+        signals: z.array(z.object({
+          tags: z.record(z.string(), z.number()).optional(),
+          narrative: z.string().optional(),
+          weight: z.number().optional(),
+        })),
+      }),
+      outputSchema: z.object({ id: z.string() }).passthrough(),
+      sideEffects: ["DB_WRITE", "DB_READ"],
+      qualityTier: "B",
+      latencyBudgetMs: 8000,
+      missionContribution: "DIRECT_OVERTON",
+      missionStep: 5,
     },
     {
       name: "refreshSectorOverton",

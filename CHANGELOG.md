@@ -10,6 +10,33 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.95 — feat(seshat): le reste du chantier échelle — Overton par polity + writer gouverné + surfaces (2026-07-11)
+
+**« Shippe tout le reste mais fais ça bien » : les 5 résidus de l'ADR-0126 sont clos — la fenêtre d'Overton a désormais une polity, les superfans une naissance gouvernée, l'échelle une UI de déclaration, le classement un référentiel, l'EFR son terrain.**
+
+- `feat(seshat)` **Overton par polity** ([ADR-0127](docs/governance/adr/0127-overton-polity-axes.md)) : modèle additif `SectorPolityAxis` (secteur × échelle × pays, unicité DB, migration `20260711150000`, zéro backfill — aucune donnée inventée) ; résolveur `getSectorAxisForPolity` à 3 niveaux HONNÊTES (`EXACT` → `SCALE_ONLY` → `GLOBAL_FALLBACK`, le Sector global reste le fallback) ; Intent gouverné `SESHAT_UPSERT_POLITY_AXIS` + `market-intelligence.upsertPolityAxis` (`requireOperator`, manual-first) + lecture `getAxisForPolity` ; **radar founder câblé** (`overtonSignal` résout par la polity de la marque et surface `axisPolityResolution` sur `OvertonRadarSignal` — « fenêtre observée à votre échelle » ≠ « axe global »). Harvesting Tarsis auto par polity : chemin d'écriture prêt, branchement contract-gated (connector `_mocked`) ; pondération CULTE/ICONE par largeur de fenêtre : infra prête, activation gated sur calibration validée (pattern Phase 23).
+- `feat(seshat)` **Naissance gouvernée des SuperfanProfile** : Intent `SESHAT_REGISTER_SUPERFAN` + `superfan.register` (`requireOperator`, upsert dédupliqué par la clé unique du modèle, provenance déclarée MANUAL/CRM/CAMPAIGN) — **test HARD single-writer** (aucun `superfanProfile.create/upsert` hors de cette voie). Le vecteur d'inflation d'évidence par ingestion CRM est fermé AVANT le premier branchement.
+- `feat(cockpit)` **UI de déclaration d'échelle** : `MarketScaleCard` sur le hub Fondation (founder-editable — la déclaration appartient au porteur ; garde d'ownership existante) — échelle, audience adressable, année de fondation, vocabulaire business.
+- `feat(console)` **Classement à échelle comparable** : page Marques — filtre Échelle (Quartier→Monde + Non déclarée), chip référentiel sur chaque carte, note « les scores ne se comparent qu'à échelle comparable ».
+- `feat(seshat)` **Annotation des snapshots pré-fix** : `getCultIndexHistory` marque `preUnitsFix` (mesuré avant le fix d'unités du 2026-07-11 — comparaisons temporelles honnêtes, snapshots immuables Loi 1).
+- `docs(governance)` **EFR avec référentiel** : la promesse d'obligation d'effet porte l'échelle déclarée partout où elle s'écrit (KB §9, blocs marketing UPgraders — « palier visé + score cible + horizon + échelle de marché, gelés à la signature »).
+- 6 nouveaux verrous anti-drift (`scoring-scale-aware.test.ts` → 22 tests) : single-writer superfan, kinds+SLOs+manifest catalogués, modèle+unicité polity, 3 niveaux de résolution, câblage radar. `strategy.update` étendu (3 champs déclarés, validation Zod bornée). Cap APOGEE 7/7 · 0 LLM · 2 kinds · 1 modèle additif.
+
+---
+
+## v6.27.94 — feat(seshat): scoring conscient de l'échelle de marché (ADR-0126) (2026-07-11)
+
+**Le score cesse d'être aveugle à l'échelle : une marque de quartier et un monopole national ne sont plus étalonnés sur les mêmes cibles absolues — et 40 % du cult-index cessent d'être saturés par un bug d'unités.**
+
+- `feat(seshat)` **Échelle déclarée** ([ADR-0126](docs/governance/adr/0126-market-scale-aware-scoring.md), enfant ADR-0086) : 3 champs additifs nullable sur `Strategy` (`marketScale` enum QUARTIER→MONDE, `addressableAudience`, `brandFoundedYear`) + migration backfill-safe + canon domaine `src/domain/market-scale.ts` (cibles d'évidence par échelle — NATION == constantes historiques 1000/20, continuité Loi 1 ; saturation par densité à 5 % de l'audience adressable, bornée — jamais d'évidence gratuite pour les gros footprints).
+- `feat(seshat)` **Plafond d'évidence scale-aware** : `computeEvidenceScore` résout ses cibles via `resolveEvidenceTargets` (fini les 1000 superfans / 20 signaux universels) et calcule le patrimoine sur l'**année de fondation déclarée** de la marque (avant : `createdAt` du compte La Fusée — proxy mensonger). Poids, seuils CULTE/ICONE et bandes `classifyTier` inchangés.
+- `fix(seshat)` **Bug d'unités devotion→cult** : les champs `DevotionSnapshot` (pourcentages 0-100) étaient lus comme des fractions (×100/×200/×300/×500) → `engagementDepth`/`ritualAdoption`/`evangelismScore` saturaient à 100 dès ~1 % de dévotion. Corrigé dans `calculateAndSnapshot` + `connectDevotionToCultIndex`. + `ugcGenerationRate` (source non branchée) sort du dénominateur (`computeCultIndex(dims, unavailable)`) au lieu de compter un 0 fabriqué.
+- `feat(cockpit)` **Référentiel affiché** : le KPI « Score de marque » porte désormais son échelle (« Forte — échelle nationale » / « échelle non déclarée » — jamais masquée), via `formatTierReferential`.
+- Hors périmètre tranché + tracé RESIDUAL-DEBT : Overton par polity (re-clé `Sector` × portée géo), writer gouverné `SuperfanProfile`, UI d'édition des champs, leaderboard segmenté, référentiel EFR.
+- 16 tests anti-drift (`scoring-scale-aware.test.ts`) : continuité NATION==legacy, monotonie, cap densité, purge multiplicateurs, exclusion UGC, bandes figées, LOI 9. Cap APOGEE 7/7 (aucun Neter, mesure sous SESHAT).
+
+---
+
 ## v6.27.93 — feat(nefer): skills rigides + configuration finale agent autonome (2026-07-11)
 
 **Le protocole NEFER 8+1 phases est compilé en 7 skills exécutables à zéro latitude — la base de travail de l'agent autonome de maintenance.**
