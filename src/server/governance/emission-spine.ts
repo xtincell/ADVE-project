@@ -63,7 +63,7 @@ export class EmissionPersistError extends Error {
 
 /** Vue structurelle minimale du client Prisma — injectable en test. */
 export interface EmissionTxLike {
-  $queryRaw(strings: TemplateStringsArray, ...values: unknown[]): Promise<unknown>;
+  $executeRaw(strings: TemplateStringsArray, ...values: unknown[]): Promise<number>;
   intentEmission: {
     findFirst(args: {
       where: { strategyId: string; selfHash: { not: null } };
@@ -126,7 +126,12 @@ export async function openEmission(args: OpenEmissionArgs): Promise<string> {
     await db.$transaction(async (tx) => {
       // Sérialise les ouvertures de la même stratégie — sans quoi deux
       // émissions concurrentes fourchent la chaîne (même prevHash).
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${strategyId}))`;
+      // `$executeRaw` (et non `$queryRaw`) : `pg_advisory_xact_lock` renvoie
+      // `void` ; `$queryRaw` tente de désérialiser la colonne void et échoue
+      // sous Prisma 7 + adapter pg (« Failed to deserialize column of type
+      // 'void' »). `$executeRaw` exécute sans lire de result set — le lock est
+      // bien pris dans la transaction.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${strategyId}))`;
 
       // Dernière row HASHÉE — les rows legacy (selfHash null) sont enjambées
       // pour ne pas réamorcer la chaîne à null.
