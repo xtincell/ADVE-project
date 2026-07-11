@@ -740,12 +740,17 @@ function BrandTile({
   emphasized?: boolean;
 }) {
   const isPiloted = !!tile.strategyId;
+  // Fix 2026-07-11 : une tuile NON pilotée (strategyId null) ne doit JAMAIS
+  // s'afficher active. Sans cette garde, quand aucune marque n'est active
+  // (activeStrategyId null), la comparaison `null === null` cochait toutes
+  // les tuiles « Pas encore piloté » (coches multiples fantômes).
+  const active = isActive && isPiloted;
   const classifBadge = tile.classification ? CLASSIF_BADGES[tile.classification] : null;
   const ClassifIcon = classifBadge?.icon ?? null;
 
   const padding = emphasized ? "p-5" : "p-4";
   const baseClass = `group flex h-full flex-col gap-2 rounded-lg border ${padding} text-left transition-all ${
-    isActive
+    active
       ? "border-accent bg-accent/10 ring-1 ring-accent"
       : emphasized
         ? "border-accent/40 bg-accent/5 hover:border-accent/70 hover:bg-accent/10"
@@ -762,7 +767,7 @@ function BrandTile({
             {tile.parentName && ` · ${tile.parentName}`}
           </p>
         </div>
-        {isActive && <Check className="h-4 w-4 flex-shrink-0 text-accent" />}
+        {active && <Check className="h-4 w-4 flex-shrink-0 text-accent" />}
       </div>
 
       {/* Score line */}

@@ -10,6 +10,15 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.97 — fix(cockpit): sélecteur — coches fantômes sur les tuiles non pilotées (null === null) (2026-07-11)
+
+**Deuxième passe sur le picker (suite v6.27.96) : les ✓ multiples que l'opérateur voyait venaient d'une comparaison `null === null`.**
+
+- `fix(cockpit)` Quand AUCUNE marque n'est active (`activeStrategyId === null`), la comparaison `tile.strategyId === activeStrategyId` valait `null === null` → **toutes** les tuiles « Pas encore piloté » (strategyId null) s'affichaient cochées/actives (les « sélections multiples » signalées). Garde single-point dans `BrandTile` : `const active = isActive && isPiloted` — une tuile non pilotée n'est jamais active. 9 verrous `brand-selector-scope`.
+- **Note** : la contradiction picker-plein / dashboard-vide des captures opérateur est la signature de l'ancien code (fuite cross-tenant v6.27.96) — le picker fuyait les marques d'autres tenants pendant que `strategy.list` (scopé) renvoyait 0 marque au dashboard. Résolu par v6.27.96, à déployer.
+
+---
+
 ## v6.27.96 — fix(cockpit): sélecteur de marque — fuite cross-tenant + quick intakes + lazy loading + overflow (2026-07-11)
 
 **Le picker de marque Cockpit exposait l'arbre de marque de TOUS les clients à n'importe quel founder — et quatre défauts UX rapportés par l'opérateur sont clos.**

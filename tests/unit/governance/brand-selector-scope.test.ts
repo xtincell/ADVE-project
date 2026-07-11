@@ -50,6 +50,15 @@ describe("StrategySelector — lazy loading + états honnêtes", () => {
     expect(selectorSrc).toContain("seenStrategyIds");
   });
 
+  it("une tuile NON pilotée n'affiche jamais de coche active (fini le null === null)", () => {
+    // Sans marque active, `x.strategyId === activeStrategyId` valait
+    // `null === null` → toutes les tuiles « Pas encore piloté » cochées.
+    expect(selectorSrc).toContain("const active = isActive && isPiloted");
+    expect(selectorSrc).toContain("{active && <Check");
+    // La coche ne doit plus être pilotée par `isActive` brut.
+    expect(selectorSrc).not.toContain("{isActive && <Check");
+  });
+
   it("le bouton déclencheur ne déborde plus (largeur fluide + truncate)", () => {
     expect(selectorSrc).not.toContain("max-w-[220px]");
     expect(selectorSrc).toContain("min-w-0 flex-1 truncate");
