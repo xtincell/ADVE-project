@@ -10,6 +10,19 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.96 — fix(cockpit): sélecteur de marque — fuite cross-tenant + quick intakes + lazy loading + overflow (2026-07-11)
+
+**Le picker de marque Cockpit exposait l'arbre de marque de TOUS les clients à n'importe quel founder — et quatre défauts UX rapportés par l'opérateur sont clos.**
+
+- `fix(cockpit)` **Fuite cross-tenant fermée** : `brandTreeForSelector` ne scopait pas les `BrandNode` pour un founder USER (filtre opérateur vide → holdings/marques/gammes de tous les tenants visibles, tuiles « non pilotées » cliquables vers des portfolios étrangers — cause racine du « sélections multiples / impossible d'ouvrir »). Le scope des nodes est désormais le MIROIR du scope stratégie : ADMIN = tout · membre opérateur = son opérateur · founder = uniquement les nodes porteurs de SES stratégies + leurs ancêtres (clôture bornée à 7 niveaux, cascade FMCG).
+- `fix(cockpit)` **QUICK_INTAKE hors du Cockpit** : les leads non convertis (résolus côté Console → « intakes à convertir ») n'apparaissent plus dans le picker, ne deviennent jamais la marque active (fallback ET sélection persistée les ignorent).
+- `fix(cockpit)` **Lazy loading réel** : l'arbre ne se charge qu'à l'ouverture du modal (`enabled: open`) — le label du bouton vient du `StrategyProvider` déjà chargé. Une erreur de chargement est désormais AFFICHÉE dans le modal (avant : `{open && tree && …}` → bouton muet, échec silencieux).
+- `fix(cockpit)` **Overflow du bouton** : `max-w-[220px]` fixe (débordait de la sidebar) → largeur fluide `w-full min-w-0` + truncate.
+- `fix(cockpit)` **Dédupe des coches** : une Strategy référencée par plusieurs nodes ne porte plus qu'une seule tuile active. + `type="button"` sur tous les boutons du picker.
+- 10 verrous anti-régression (`brand-selector-scope.test.ts`).
+
+---
+
 ## v6.27.95 — feat(seshat): le reste du chantier échelle — Overton par polity + writer gouverné + surfaces (2026-07-11)
 
 **« Shippe tout le reste mais fais ça bien » : les 5 résidus de l'ADR-0126 sont clos — la fenêtre d'Overton a désormais une polity, les superfans une naissance gouvernée, l'échelle une UI de déclaration, le classement un référentiel, l'EFR son terrain.**

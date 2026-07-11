@@ -361,10 +361,6 @@ export const strategyRouter = createTRPCRouter({
       const userRole = ctx.session.user.role ?? "USER";
       const userOperatorId = (ctx.session.user as unknown as Record<string, unknown>).operatorId as string | null ?? null;
       const operatorScope = scopeStrategies({ operatorId: userOperatorId, userId: ctx.session.user.id, role: userRole });
-      const operatorIdFilter: { operatorId?: string } = {};
-      if ((operatorScope as { operatorId?: string }).operatorId) {
-        operatorIdFilter.operatorId = (operatorScope as { operatorId: string }).operatorId;
-      }
 
       // BRAND-LEVEL nodes : holdings, filiales, marques-mères, gammes
       // (= plateformes de marque). Cf. ADR-0061 + user correction du
@@ -378,42 +374,92 @@ export const strategyRouter = createTRPCRouter({
         "STANDALONE_BRAND",
         "PRODUCT_LINE",
       ] as const;
+      const nodeSelect = {
+        id: true, name: true, slug: true, nodeKind: true, nodeNature: true,
+        countryCode: true, parentNodeId: true, strategyId: true, lifecycle: true,
+      } as const;
 
-      const [nodes, strategies] = await Promise.all([
-        ctx.db.brandNode.findMany({
-          where: {
-            ...operatorIdFilter,
-            archivedAt: null,
-            nodeKind: { in: [...BRAND_LEVEL_KINDS] },
-          },
-          select: {
-            id: true, name: true, slug: true, nodeKind: true, nodeNature: true,
-            countryCode: true, parentNodeId: true, strategyId: true, lifecycle: true,
-          },
-          orderBy: [{ nodeKind: "asc" }, { name: "asc" }],
-        }),
-        ctx.db.strategy.findMany({
-          where: { ...operatorScope, archivedAt: null },
-          select: { id: true, name: true, status: true, advertis_vector: true },
-          orderBy: { updatedAt: "desc" },
-        }),
-      ]);
+      // Les QUICK_INTAKE ne sont PAS des marques pilotables : ce sont des
+      // leads non convertis, résolus côté Console (portfolio → « intakes à
+      // convertir »). Ils n'apparaissent jamais dans le picker Cockpit.
+      const strategies = await ctx.db.strategy.findMany({
+        where: { ...operatorScope, archivedAt: null, status: { not: "QUICK_INTAKE" } },
+        select: { id: true, name: true, status: true, advertis_vector: true },
+        orderBy: { updatedAt: "desc" },
+      });
+      const ownStrategyIds = strategies.map((s) => s.id);
+
+      // Scope des BrandNodes — MIROIR du scope stratégie (fix fuite
+      // cross-tenant 2026-07-11) :
+      //   ADMIN            → tous les nodes.
+      //   membre opérateur → les nodes de SON opérateur.
+      //   founder USER     → UNIQUEMENT les nodes porteurs d'une de SES
+      //     stratégies + leurs ANCÊTRES (nécessaires au regroupement
+      //     hiérarchique). Avant ce fix, le filtre restait vide pour un
+      //     USER → le picker exposait l'arbre de marque de TOUS les
+      //     clients (noms de holdings/marques d'autres tenants).
+      let nodes: Array<{
+        id: string; name: string; slug: string; nodeKind: string; nodeNature: string | null;
+        countryCode: string | null; parentNodeId: string | null; strategyId: string | null; lifecycle: string;
+      }>;
+      let linkedStrategyIds: Set<string>;
+
+      if (userRole === "ADMIN" || userOperatorId) {
+        const operatorIdFilter = userOperatorId ? { operatorId: userOperatorId } : {};
+        const [scopedNodes, allLinkedRows] = await Promise.all([
+          ctx.db.brandNode.findMany({
+            where: { ...operatorIdFilter, archivedAt: null, nodeKind: { in: [...BRAND_LEVEL_KINDS] } },
+            select: nodeSelect,
+            orderBy: [{ nodeKind: "asc" }, { name: "asc" }],
+          }),
+          ctx.db.brandNode.findMany({
+            where: { ...operatorIdFilter, archivedAt: null, strategyId: { not: null } },
+            select: { strategyId: true },
+          }),
+        ]);
+        nodes = scopedNodes;
+        linkedStrategyIds = new Set(
+          allLinkedRows.map((r) => r.strategyId).filter((id): id is string => typeof id === "string"),
+        );
+      } else {
+        // Founder : nodes porteurs de ses stratégies…
+        const ownNodes = ownStrategyIds.length > 0
+          ? await ctx.db.brandNode.findMany({
+              where: { archivedAt: null, strategyId: { in: ownStrategyIds } },
+              select: nodeSelect,
+            })
+          : [];
+        // …+ clôture des ancêtres (profondeur bornée par la cascade FMCG : 7).
+        const seen = new Set(ownNodes.map((n) => n.id));
+        const collected = [...ownNodes];
+        let frontier = [...new Set(
+          ownNodes.map((n) => n.parentNodeId).filter((id): id is string => !!id && !seen.has(id)),
+        )];
+        for (let depth = 0; depth < 7 && frontier.length > 0; depth++) {
+          const parents = await ctx.db.brandNode.findMany({
+            where: { id: { in: frontier }, archivedAt: null },
+            select: nodeSelect,
+          });
+          frontier = [];
+          for (const p of parents) {
+            if (seen.has(p.id)) continue;
+            seen.add(p.id);
+            collected.push(p);
+            if (p.parentNodeId && !seen.has(p.parentNodeId)) frontier.push(p.parentNodeId);
+          }
+        }
+        nodes = collected
+          .filter((n) => (BRAND_LEVEL_KINDS as readonly string[]).includes(n.nodeKind))
+          .sort((a, b) => a.nodeKind.localeCompare(b.nodeKind) || a.name.localeCompare(b.name));
+        linkedStrategyIds = new Set(
+          ownNodes.map((n) => n.strategyId).filter((id): id is string => typeof id === "string"),
+        );
+      }
 
       const strategyById = new Map(strategies.map((s) => [s.id, s]));
 
-      // Identify which Strategies are attached to *any* BrandNode (incl.
-      // regional/SKU non-brand-level). A Strategy attached to a regional
-      // brand should NOT appear as standalone in the selector — it belongs
-      // to its master via the parent chain. Query separately to avoid
-      // pulling all non-brand-level nodes.
-      const allLinkedRows = await ctx.db.brandNode.findMany({
-        where: { ...operatorIdFilter, archivedAt: null, strategyId: { not: null } },
-        select: { strategyId: true },
-      });
-      const linkedStrategyIds = new Set(
-        allLinkedRows.map((r) => r.strategyId).filter((id): id is string => typeof id === "string"),
-      );
-
+      // Une Strategy attachée à un node (même régional/SKU hors brand-level)
+      // n'apparaît PAS en standalone — elle appartient à sa chaîne parent.
       const standaloneStrategies = strategies.filter((s) => !linkedStrategyIds.has(s.id));
 
       return {
