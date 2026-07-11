@@ -92,6 +92,7 @@ export const governanceRouter = createTRPCRouter({
 
   compensate: governedProcedure({
     kind: "CORRECT_INTENT",
+    requireOperator: true,
     inputSchema: z.object({
       originalIntentId: z.string(),
       reason: z.string().min(3).max(500),
@@ -153,6 +154,7 @@ export const governanceRouter = createTRPCRouter({
 
   modelPolicyUpdate: governedProcedure({
     kind: "UPDATE_MODEL_POLICY",
+    requireOperator: true,
     inputSchema: z.object({
       purpose: z.enum(["final-report", "agent", "intermediate", "intake-followup", "extraction"]),
       anthropicModel: z.string().min(1),
@@ -196,6 +198,7 @@ export const governanceRouter = createTRPCRouter({
    */
   autoPromotionEvaluate: governedProcedure({
     kind: "AUTO_PROMOTION_EVALUATE",
+    requireOperator: true,
     inputSchema: z.object({
       dryRun: z.boolean().default(true),
     }),

@@ -33,6 +33,7 @@ export const argosRouter = createTRPCRouter({
   // ── Hunter (LLM via Gateway) ──────────────────────────────────────────────
   hunt: governedProcedure({
     kind: "SESHAT_HARVEST_REFERENCE",
+    requireOperator: true,
     inputSchema: z.object({
       brand: z.string().min(1).max(160),
       campaign: z.string().max(200).optional(),
@@ -49,6 +50,7 @@ export const argosRouter = createTRPCRouter({
   // ── Création manuelle (parité manual-first, zéro LLM) ─────────────────────
   createManual: governedProcedure({
     kind: "OPERATOR_CREATE_REFERENCE_DOSSIER",
+    requireOperator: true,
     inputSchema: manualDossierInputSchema,
     caller: "argos:createManual",
   }).mutation(async ({ ctx, input }) => {

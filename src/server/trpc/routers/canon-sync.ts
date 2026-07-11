@@ -35,6 +35,7 @@ export const canonSyncRouter = createTRPCRouter({
    */
   syncUpgraders: governedProcedure({
     kind: "SYNC_UPGRADERS_CANON",
+    requireOperator: true,
     inputSchema: z.object({}),
   }).mutation(async ({ ctx }) => {
     const {

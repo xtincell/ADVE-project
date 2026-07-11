@@ -64,6 +64,7 @@ export const marketCostRouter = createTRPCRouter({
   /** Upsert opérateur d'un coût daté (gouverné THOT). */
   upsert: governedProcedure({
     kind: "UPSERT_MARKET_COST_SNAPSHOT",
+    requireOperator: true,
     inputSchema: z.object({
       countryCode: z.string().length(2),
       sector: z.string().max(120).optional(),

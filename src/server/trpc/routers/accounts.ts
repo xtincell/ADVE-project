@@ -85,6 +85,7 @@ export const accountsRouter = createTRPCRouter({
    */
   setRole: governedProcedure({
     kind: "ADMIN_SET_USER_ROLE",
+    requireOperator: true,
     inputSchema: z.object({
       userId: z.string(),
       role: z.enum(ASSIGNABLE_ROLES),

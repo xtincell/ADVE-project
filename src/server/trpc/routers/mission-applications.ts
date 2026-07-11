@@ -125,6 +125,7 @@ export const missionApplicationRouter = createTRPCRouter({
    */
   decide: governedProcedure({
     kind: "DECIDE_MISSION_APPLICATION",
+    requireOperator: true,
     inputSchema: z.object({
       applicationId: z.string(),
       decision: z.enum(["ACCEPTED", "REJECTED"]),

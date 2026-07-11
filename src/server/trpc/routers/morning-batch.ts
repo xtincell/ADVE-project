@@ -29,6 +29,7 @@ const SourceKindEnum = z.enum(["EMAIL", "SLACK", "WHATSAPP", "MANUAL_PASTE", "FI
 export const morningBatchRouter = createTRPCRouter({
   preview: governedProcedure({
     kind: "MORNING_BRIEF_BATCH_PREVIEW",
+    requireOperator: true,
     inputSchema: z.object({
       strategyId: StringId,
       operatorId: StringId,
@@ -48,6 +49,7 @@ export const morningBatchRouter = createTRPCRouter({
 
   updateDraft: governedProcedure({
     kind: "BRIEF_DRAFT_UPDATE_FIELDS",
+    requireOperator: true,
     inputSchema: z.object({
       strategyId: StringId,
       operatorId: StringId,
@@ -84,6 +86,7 @@ export const morningBatchRouter = createTRPCRouter({
 
   reanalyze: governedProcedure({
     kind: "BRIEF_DRAFT_REQUEST_REANALYSIS",
+    requireOperator: true,
     inputSchema: z.object({
       strategyId: StringId,
       operatorId: StringId,
@@ -106,6 +109,7 @@ export const morningBatchRouter = createTRPCRouter({
 
   confirm: governedProcedure({
     kind: "MORNING_BRIEF_BATCH_CONFIRM",
+    requireOperator: true,
     inputSchema: z.object({
       strategyId: StringId,
       operatorId: StringId,
@@ -131,6 +135,7 @@ export const morningBatchRouter = createTRPCRouter({
   // Manual-first parity (ADR-0060)
   createSourceManual: governedProcedure({
     kind: "OPERATOR_CREATE_INGESTED_SOURCE",
+    requireOperator: true,
     inputSchema: z.object({
       strategyId: StringId,
       operatorId: StringId,
@@ -165,6 +170,7 @@ export const morningBatchRouter = createTRPCRouter({
 
   createDraftManual: governedProcedure({
     kind: "OPERATOR_CREATE_BRIEF_DRAFT",
+    requireOperator: true,
     inputSchema: z.object({
       strategyId: StringId,
       operatorId: StringId,

@@ -23,6 +23,7 @@ export const systemConfigRouter = createTRPCRouter({
   upsert: governedProcedure({
 
     kind: "LEGACY_SYSTEM_CONFIG_UPSERT",
+    requireOperator: true,
 
     inputSchema: z.object({ key: z.string(), config: z.record(z.string(), z.unknown()) }),
 
