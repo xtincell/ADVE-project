@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.98 — fix(cockpit): dashboard vide = drift de schéma prod (colonne marketScale non migrée), pas le sélecteur (2026-07-11)
+
+**Vérification RUNTIME (login réel sur prod + appel des deux endpoints du cockpit) : la contradiction picker-plein / dashboard-vide n'est NI le sélecteur NI un problème de compte — c'est un drift de schéma.**
+
+- **Diagnostic (vérifié en live, pas par lecture de code)** : `strategy.brandTreeForSelector` → 200 (le picker montre les marques, car il `select` uniquement d'anciennes colonnes) ; `strategy.list` → **500 `The column Strategy.marketScale does not exist in the current database`**. Le `StrategyProvider` alimente le dashboard ET le label du bouton depuis `strategy.list` → query en erreur → `strategies = []` → `strategyId` null → écran « Créez votre première marque » alors que le founder A des marques. Cause racine : la migration `20260711130000_adr0126_market_scale_additive` (ADR-0126, v6.27.94) **est dans l'image déployée** (`c482ab9e`) mais n'a **jamais été appliquée** sur la base Coolify — `prisma migrate deploy` on-boot est best-effort et soit skippé (`SKIP_MIGRATE_ON_BOOT=1`) soit en échec silencieux. Le code lit une colonne que la DB n'a pas. Ni le login, ni les autorisations, ni la logique du picker.
+- `fix(cockpit)` **Dégradation honnête** : le `StrategyProvider` expose désormais `isError` (query échouée ≠ zéro marque). Le dashboard affiche une carte d'erreur explicite (« Impossible de charger vos marques — incident technique », bouton Réessayer) au lieu du faux vide d'onboarding quand `strategy.list` échoue. Ce faux vide masquait la panne. 13 verrous `brand-selector-scope`.
+- **Déblocage prod requis (action ops, hors de portée de cette session — pas d'accès à la DB Coolify)** : appliquer les migrations en attente. Dans le conteneur : `npx prisma migrate deploy` (applique ADR-0126 + ADR-0127 et les enregistre). Vérifier `SKIP_MIGRATE_ON_BOOT` dans l'env Coolify. Cf. body PR pour le SQL idempotent de secours.
+
+---
+
 ## v6.27.97 — fix(cockpit): sélecteur — coches fantômes sur les tuiles non pilotées (null === null) (2026-07-11)
 
 **Deuxième passe sur le picker (suite v6.27.96) : les ✓ multiples que l'opérateur voyait venaient d'une comparaison `null === null`.**

@@ -75,7 +75,7 @@ const VIEW_MODE_LABELS: Record<ViewMode, string> = {
 
 export default function CockpitDashboard() {
   const [viewMode, setViewMode] = useState<ViewMode>("MARKETING");
-  const { strategyId, isLoading: strategiesLoading } = useStrategy();
+  const { strategyId, isLoading: strategiesLoading, isError: strategiesError } = useStrategy();
   const router = useRouter();
 
   const strategyQuery = trpc.strategy.getWithScore.useQuery(
@@ -130,6 +130,32 @@ export default function CockpitDashboard() {
 
   if (!strategyId && strategiesLoading) {
     return <SkeletonPage />;
+  }
+
+  if (!strategyId && strategiesError) {
+    // La liste des marques a ÉCHOUÉ (backend down, drift de schéma…). Sans ce
+    // garde, un `strategy.list` en erreur → `strategyId` null → on tombait sur
+    // « Créez votre première marque » alors que le founder A des marques. Ce
+    // faux vide masquait la panne (ex : colonne migrée non appliquée en prod).
+    return (
+      <div className="ck-dash">
+        <h1 className="ck-ph__title">Tableau de bord</h1>
+        <div className="rounded-xl border border-destructive-subtle bg-destructive-subtle/20 p-6 text-center">
+          <AlertTriangle className="mx-auto h-8 w-8 text-destructive" />
+          <p className="mt-3 font-medium">Impossible de charger vos marques pour le moment.</p>
+          <p className="mt-1 text-sm text-foreground-secondary">
+            Un incident technique empêche l&apos;affichage de votre portefeuille. Réessayez dans un
+            instant — si le problème persiste, votre équipe est déjà notifiée.
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 rounded-lg border border-border-strong px-4 py-2 text-sm hover:border-accent hover:text-accent transition-colors"
+          >
+            Réessayer
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (!strategyId) {

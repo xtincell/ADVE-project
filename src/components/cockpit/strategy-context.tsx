@@ -20,6 +20,11 @@ interface StrategyContextValue {
   strategyId: string | null;
   strategies: StrategyOption[];
   isLoading: boolean;
+  /** `strategy.list` a échoué (backend down, drift de schéma…). Distinct de
+   *  « aucune marque » : sans ce flag, une query en erreur → `strategies = []`
+   *  → le cockpit affiche « Créez votre première marque » alors que le founder
+   *  A des marques (mensonge). Le consommateur doit afficher une erreur. */
+  isError: boolean;
   setStrategyId: (id: string) => void;
 }
 
@@ -27,6 +32,7 @@ const StrategyContext = createContext<StrategyContextValue>({
   strategyId: null,
   strategies: [],
   isLoading: true,
+  isError: false,
   setStrategyId: () => {},
 });
 
@@ -36,7 +42,7 @@ const StrategyContext = createContext<StrategyContextValue>({
 const ACTIVE_STRATEGY_STORAGE_KEY = "lf-active-strategy";
 
 export function StrategyProvider({ children }: { children: ReactNode }) {
-  const { data, isLoading } = trpc.strategy.list.useQuery({});
+  const { data, isLoading, isError } = trpc.strategy.list.useQuery({});
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   // Deep-link Console → Cockpit : `?strategy=<id>` sélectionne la marque cible
@@ -79,7 +85,7 @@ export function StrategyProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <StrategyContext.Provider value={{ strategyId, strategies, isLoading, setStrategyId }}>
+    <StrategyContext.Provider value={{ strategyId, strategies, isLoading, isError, setStrategyId }}>
       {children}
     </StrategyContext.Provider>
   );
