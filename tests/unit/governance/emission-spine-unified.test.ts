@@ -105,7 +105,7 @@ function makeMockDb(opts: {
 }): { db: EmissionDbLike; calls: MockCalls } {
   const calls: MockCalls = { findFirstArgs: [], created: [], updated: [] };
   const tx: EmissionTxLike = {
-    $queryRaw: async () => [],
+    $executeRaw: async () => 1,
     intentEmission: {
       findFirst: async (args) => {
         calls.findFirstArgs.push(args);

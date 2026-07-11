@@ -10,6 +10,24 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.101 — fix(governance): emission-spine — advisory lock via $executeRaw (colonne void non désérialisable) (2026-07-12)
+
+`openEmission` (spine d'émission unifié ADR-0122, commit 7f9b3591) sérialisait
+les ouvertures d'une même stratégie avec `tx.$queryRaw` sur
+`SELECT pg_advisory_xact_lock(hashtext(...))`. `pg_advisory_xact_lock` renvoie
+`void` ; sous Prisma 7 + adapter pg, `$queryRaw` tente de désérialiser la colonne
+`void` du result set et jette « Failed to deserialize column of type 'void' ».
+Comme `openEmission` est le point d'entrée de TOUTE mutation gouvernée, l'échec
+(fail-closed `EMISSION_PERSIST_FAILED`) bloquait la persistance de
+l'`IntentEmission` — donc le dispatch du handler — pour chaque Intent atteignant
+ce chemin (observé sur `SEED_CREATIVE_AXES`, `strategy=spawt-strategy-001`).
+
+- `tx.$queryRaw` → `tx.$executeRaw` : exécute le lock sans lire de result set,
+  la colonne void n'est jamais désérialisée. Le verrou est toujours pris dans la
+  transaction (comportement inchangé). Remède standard Prisma pour les advisory
+  locks. Seam `EmissionTxLike.$queryRaw` → `$executeRaw` + mock de test alignés.
+- 18 verrous emission-spine + yggdrasil verts. Seul site `pg_advisory` du repo.
+
 ## v6.27.99 — fix(build): migrate-on-boot par runner pg maison (le CLI Prisma est mort en standalone) (2026-07-11)
 
 **Root cause des DEUX incidents de migration (2026-07-10 money-path 503, 2026-07-11 dashboard cockpit vide) : le CLI Prisma n'est PAS fonctionnel dans l'image standalone Next.**
