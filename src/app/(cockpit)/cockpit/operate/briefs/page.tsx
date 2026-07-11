@@ -671,7 +671,7 @@ export default function BriefsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Briefs"
-        description="Briefs de campagne (ADR-0049) — socle obligatoire de toute production. Importez un brief existant ou générez-en un par campagne."
+        description="Briefs de campagne — socle obligatoire de toute production. Importez un brief existant ou générez-en un par campagne."
         breadcrumbs={[
           { label: "Cockpit", href: "/cockpit" },
           { label: "Opérations" },
@@ -704,7 +704,7 @@ export default function BriefsPage() {
           <EmptyState
             icon={FileText}
             title="Aucun brief de campagne"
-            description="Importez un brief existant (PDF/DOCX) ou générez-en un depuis une campagne. Sans brief, aucune action ne peut être lancée (ADR-0049)."
+            description="Importez un brief existant (PDF/DOCX) ou générez-en un depuis une campagne. Sans brief, aucune action ne peut être lancée."
             action={{ label: "Importer un brief", onClick: () => setShowImport(true) }}
           />
         ) : (
@@ -777,7 +777,7 @@ export default function BriefsPage() {
             />
           </FormField>
 
-          <FormField label="Piliers prioritaires ADVE-RTIS">
+          <FormField label="Piliers prioritaires">
             <div className="flex flex-wrap gap-2">
               {PILLAR_KEYS.map((k) => {
                 const sel = briefForm.pillarPriority.includes(k);

@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { StatCard } from "@/components/shared/stat-card";
 import { Modal } from "@/components/shared/modal";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { FormField } from "@/components/shared/form-field";
 import { Tabs } from "@/components/shared/tabs";
 import {
@@ -150,13 +151,18 @@ export default function NewsletterPage() {
     });
   };
 
-  const handleSendNewsletter = async (newsletterId: string) => {
-    if (confirm("Confirmez-vous l'envoi de cette newsletter à l'ensemble des abonnés opt-in ?")) {
-      await sendNewsletterMutation.mutateAsync({
-        newsletterId,
-        strategyId,
-      });
-    }
+  // Envoi en masse = acte conséquent → confirmation DS explicite (UX-DR14),
+  // plus de confirm() navigateur (lot 14, audit 2026-07-11 T4).
+  const [sendTarget, setSendTarget] = useState<string | null>(null);
+  const handleSendNewsletter = (newsletterId: string) => setSendTarget(newsletterId);
+  const confirmSendNewsletter = async () => {
+    if (!sendTarget) return;
+    const newsletterId = sendTarget;
+    setSendTarget(null);
+    await sendNewsletterMutation.mutateAsync({
+      newsletterId,
+      strategyId,
+    });
   };
 
   const tabs = [
@@ -306,7 +312,7 @@ export default function NewsletterPage() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className={cn(
                             "text-[10px] font-semibold px-2 py-0.5 rounded border uppercase tracking-wider",
-                            isDraft && "bg-zinc-500/20 text-foreground-secondary border-zinc-500/30",
+                            isDraft && "bg-foreground-muted/15 text-foreground-secondary border-foreground-muted/30",
                             isSending && "bg-info/20 text-info border-info/30 animate-pulse",
                             isSent && "bg-success/15 text-success border-success/30"
                           )}>
@@ -325,7 +331,7 @@ export default function NewsletterPage() {
                         {isSent && (
                           <div className="flex items-center gap-4 text-2xs text-foreground-muted flex-wrap">
                             <span>Destinataires : <strong className="text-white">{camp.recipientCount}</strong></span>
-                            <span>Succès : <strong className="text-emerald-400">{camp.sentCount}</strong></span>
+                            <span>Succès : <strong className="text-success">{camp.sentCount}</strong></span>
                             {camp.failedCount > 0 && (
                               <span className="text-error">Échecs : <strong>{camp.failedCount}</strong></span>
                             )}
@@ -514,6 +520,16 @@ export default function NewsletterPage() {
           </div>
         )}
       </Modal>
+
+      <ConfirmDialog
+        open={sendTarget !== null}
+        onClose={() => setSendTarget(null)}
+        onConfirm={() => void confirmSendNewsletter()}
+        variant="warning"
+        title="Envoyer cette newsletter ?"
+        message="Elle partira immédiatement à l'ensemble des abonnés opt-in. Cet envoi ne peut pas être rappelé."
+        confirmLabel="Envoyer"
+      />
     </div>
   );
 }

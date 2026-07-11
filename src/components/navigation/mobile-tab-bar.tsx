@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { MoreHorizontal } from "lucide-react";
 import { useState } from "react";
 import type { NavGroup, NavItem } from "./types";
+import { resolveActiveHref, navItemLabel } from "./nav-active";
+import { useLocale } from "@/lib/i18n/locale-context";
 
 interface MobileTabBarProps {
   navGroups: NavGroup[];
@@ -14,19 +16,20 @@ interface MobileTabBarProps {
 
 export function MobileTabBar({ navGroups, portalAccentVar, maxTabs = 4 }: MobileTabBarProps) {
   const pathname = usePathname();
+  const { t } = useLocale();
   const [moreOpen, setMoreOpen] = useState(false);
 
   const allItems = navGroups.flatMap((g) => g.items);
-  const basePath = allItems[0]?.href || "/";
 
-  const isActive = (href: string) => {
-    if (href === basePath) return pathname === basePath;
-    return pathname.startsWith(href);
-  };
+  // Même résolution d'item actif que la sidebar (préfixe le plus long gagne).
+  const activeHref = resolveActiveHref(navGroups, pathname);
+  const isActive = (item: NavItem) => item.href === activeHref;
 
-  // Show first N items as tabs, rest in "More" sheet (regroupé par section).
-  const visibleItems = allItems.slice(0, maxTabs);
-  const hasOverflow = allItems.length > maxTabs;
+  // Onglets = slots explicites `mobileTab` (lot 10) ; fallback sur les N
+  // premiers items pour les portails qui n'ont pas encore déclaré leurs slots.
+  const flagged = allItems.filter((i) => i.mobileTab);
+  const visibleItems = (flagged.length > 0 ? flagged : allItems).slice(0, maxTabs);
+  const hasOverflow = allItems.length > visibleItems.length;
   const overflowHrefs = new Set(visibleItems.map((i) => i.href));
   const overflowGroups = navGroups
     .map((g) => ({ ...g, items: g.items.filter((it) => !overflowHrefs.has(it.href)) }))
@@ -41,7 +44,7 @@ export function MobileTabBar({ navGroups, portalAccentVar, maxTabs = 4 }: Mobile
         aria-label="Navigation mobile"
       >
         {visibleItems.map((item) => {
-          const active = isActive(item.href);
+          const active = isActive(item);
           const Icon = item.icon;
           return (
             <Link
@@ -53,7 +56,7 @@ export function MobileTabBar({ navGroups, portalAccentVar, maxTabs = 4 }: Mobile
               }`}
             >
               <Icon className="h-5 w-5" style={active ? { color: portalAccentVar } : undefined} />
-              <span className="text-2xs font-medium leading-none">{item.label}</span>
+              <span className="text-2xs font-medium leading-none">{navItemLabel(item, t)}</span>
             </Link>
           );
         })}
@@ -86,12 +89,12 @@ export function MobileTabBar({ navGroups, portalAccentVar, maxTabs = 4 }: Mobile
               <div key={gi} className={gi > 0 ? "mt-4" : ""}>
                 {group.title && (
                   <p className="mb-1.5 px-1 text-2xs font-semibold uppercase tracking-[0.05em] text-foreground-muted">
-                    {group.title}
+                    {group.titleKey ? t(group.titleKey) : group.title}
                   </p>
                 )}
                 <div className="grid grid-cols-3 gap-2">
                   {group.items.map((item) => {
-                    const active = isActive(item.href);
+                    const active = isActive(item);
                     const Icon = item.icon;
                     return (
                       <Link
@@ -103,7 +106,7 @@ export function MobileTabBar({ navGroups, portalAccentVar, maxTabs = 4 }: Mobile
                         }`}
                       >
                         <Icon className="h-5 w-5" style={active ? { color: portalAccentVar } : undefined} />
-                        <span className="text-center text-2xs font-medium text-foreground-secondary">{item.label}</span>
+                        <span className="text-center text-2xs font-medium text-foreground-secondary">{navItemLabel(item, t)}</span>
                       </Link>
                     );
                   })}

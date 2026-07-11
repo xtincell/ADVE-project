@@ -28,14 +28,17 @@ export function AppShell({
   notificationCount = 0,
 }: AppShellProps) {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
-  const [mestorOpen, setMestorOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const handleOpenCommandPalette = useCallback(() => setCommandPaletteOpen(true), []);
   const handleCloseCommandPalette = useCallback(() => setCommandPaletteOpen(false), []);
-  const handleToggleMestor = useCallback(() => setMestorOpen((o) => !o), []);
   const handleOpenMobileNav = useCallback(() => setMobileNavOpen(true), []);
   const handleCloseMobileNav = useCallback(() => setMobileNavOpen(false), []);
+
+  // Page assistant par portail. Seul le Cockpit en a une aujourd'hui — sur
+  // les autres portails le bouton topbar n'est pas rendu (l'ancien toggle
+  // `mestorOpen` n'était consommé par aucun panneau — lot 10, [M01-04]).
+  const assistantHref = portal === "cockpit" ? "/cockpit/mestor" : undefined;
 
   // Tiroir mobile : ESC ferme + verrou de scroll du fond (anti-bleed).
   useEffect(() => {
@@ -53,7 +56,7 @@ export function AppShell({
       <Topbar
         currentPortal={portal}
         onOpenCommandPalette={handleOpenCommandPalette}
-        onToggleMestor={handleToggleMestor}
+        assistantHref={assistantHref}
         onOpenMobileNav={handleOpenMobileNav}
         notificationCount={notificationCount}
         userName={userName}

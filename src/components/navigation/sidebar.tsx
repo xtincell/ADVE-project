@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PanelLeftClose, PanelLeft, Star, Home } from "lucide-react";
 import type { NavGroup, NavItem } from "./types";
+import { resolveActiveHref, navItemLabel, navItemSublabel } from "./nav-active";
 import { useLocale } from "@/lib/i18n/locale-context";
 
 interface SidebarProps {
@@ -26,13 +27,10 @@ export function Sidebar({ navGroups, portalAccentVar, headerContent, mobile = fa
   const setCollapsed = setCollapsedState;
   const [favorites, setFavorites] = useState<string[]>([]);
 
-  // Locale-aware label resolution — pillar items translate via their slug
-  // ("pillar-a" → nav.pillar-a.name/.role), other items via explicit i18n
-  // keys, else the literal FR label/sublabel.
-  const itemLabel = (item: NavItem): string =>
-    item.pillarSlug ? t(`nav.${item.pillarSlug}.name`) : item.labelKey ? t(item.labelKey) : item.label;
-  const itemSublabel = (item: NavItem): string | undefined =>
-    item.pillarSlug ? t(`nav.${item.pillarSlug}.role`) : item.sublabelKey ? t(item.sublabelKey) : item.sublabel;
+  // Locale-aware label resolution — partagée avec la tabbar mobile
+  // (nav-active.ts) pour que desktop et mobile affichent les mêmes libellés.
+  const itemLabel = (item: NavItem): string => navItemLabel(item, t);
+  const itemSublabel = (item: NavItem): string | undefined => navItemSublabel(item, t);
 
   useEffect(() => {
     const stored = localStorage.getItem("lf-sidebar-collapsed");
@@ -56,10 +54,10 @@ export function Sidebar({ navGroups, portalAccentVar, headerContent, mobile = fa
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  const isActive = (href: string, basePath: string) => {
-    if (href === basePath) return pathname === basePath;
-    return pathname.startsWith(href);
-  };
+  // Un seul item actif — celui dont le préfixe matché (href ou
+  // activePrefixes) est le plus long. Cf. nav-active.ts (lot 10).
+  const activeHref = resolveActiveHref(navGroups, pathname);
+  const isActive = (item: NavItem) => item.href === activeHref;
 
   const basePath = navGroups[0]?.items[0]?.href || "/";
 
@@ -111,7 +109,7 @@ export function Sidebar({ navGroups, portalAccentVar, headerContent, mobile = fa
             Favoris
           </p>
           {favoriteItems.map((item) => {
-            const active = isActive(item.href, basePath);
+            const active = isActive(item);
             const Icon = item.icon;
             return (
               <Link
@@ -147,7 +145,7 @@ export function Sidebar({ navGroups, portalAccentVar, headerContent, mobile = fa
             {collapsed && group.title && <div className="mx-auto my-2 h-px w-6 bg-border-subtle" />}
             <div className="flex flex-col gap-0.5">
               {group.items.map((item) => {
-                const active = isActive(item.href, basePath);
+                const active = isActive(item);
                 const Icon = item.icon;
                 const isFav = favorites.includes(item.href);
 
@@ -220,10 +218,11 @@ export function Sidebar({ navGroups, portalAccentVar, headerContent, mobile = fa
         ))}
       </nav>
 
-      {/* Footer — Home link + version */}
+      {/* Footer — retour à la racine du portail (jamais la landing publique :
+          un client connecté ne doit pas être éjecté du produit — lot 10). */}
       <div className="mt-auto border-t border-border-subtle px-3 py-2">
         <Link
-          href="/"
+          href={basePath}
           onClick={onNavigate}
           className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-foreground-muted transition-colors hover:bg-background-overlay hover:text-foreground"
         >

@@ -4,6 +4,8 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { Button } from "@/components/primitives";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { useToast } from "@/components/shared/notification-toast";
 
 /**
  * Fiche mission — couche d'exécution pilotable (pipeline staged).
@@ -50,6 +52,8 @@ export function MissionActivitiesPanel({
   onChanged?: () => void;
 }) {
   const utils = trpc.useUtils();
+  const toast = useToast();
+  const [regenConfirmOpen, setRegenConfirmOpen] = useState(false);
   const activitiesQuery = trpc.mission.listActivities.useQuery({ missionId });
   const healthQuery = trpc.mission.activityHealth.useQuery({ missionId });
   const activities = (activitiesQuery.data ?? []) as Array<Record<string, unknown>>;
@@ -297,7 +301,7 @@ export function MissionActivitiesPanel({
                               const parsed = JSON.parse(briefDraft[id] ?? "{}") as Record<string, unknown>;
                               updateBriefMut.mutate({ activityId: id, briefContent: parsed });
                             } catch {
-                              window.alert("Brief invalide : JSON mal formé.");
+                              toast.error("Brief invalide : le JSON est mal formé.");
                             }
                           }}
                         >
@@ -420,15 +424,26 @@ export function MissionActivitiesPanel({
                 size="sm"
                 variant="ghost"
                 disabled={regenerateMut.isPending}
-                onClick={() => {
-                  if (window.confirm("Régénérer les activités ? Les activités actuelles seront remplacées par le jeu par défaut (déterministe, dérivé du brief).")) regenerateMut.mutate({ missionId });
-                }}
+                onClick={() => setRegenConfirmOpen(true)}
               >
                 ↻ Régénérer les activités
               </Button>
             )}
           </div>
         ))}
+
+      <ConfirmDialog
+        open={regenConfirmOpen}
+        onClose={() => setRegenConfirmOpen(false)}
+        onConfirm={() => {
+          setRegenConfirmOpen(false);
+          regenerateMut.mutate({ missionId });
+        }}
+        variant="warning"
+        title="Régénérer les activités ?"
+        message="Les activités actuelles seront remplacées par le jeu par défaut, dérivé du brief."
+        confirmLabel="Régénérer"
+      />
     </div>
   );
 }

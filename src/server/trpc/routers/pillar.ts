@@ -631,6 +631,9 @@ export const pillarRouter = createTRPCRouter({
 
   cascadeRTIS: governedProcedure({
     kind: "RUN_RTIS_CASCADE",
+    // Geste opérateur (relance la dérivation RTIS complète) — le founder
+    // consulte, l'équipe UPgraders opère (UX-DR16, audit 2026-07-11 [M02-01]).
+    requireOperator: true,
     inputSchema: z.object({
       strategyId: z.string(),
       updateADVE: z.boolean().optional(),
@@ -900,6 +903,10 @@ export const pillarRouter = createTRPCRouter({
   enrichAllFromVault: governedProcedure({
 
     kind: "LEGACY_PILLAR_ENRICH_ALL_FROM_VAULT",
+
+    // Geste opérateur (ré-enrichit les 8 piliers depuis le dossier de
+    // sources) — UX-DR16, audit 2026-07-11 [M02-01].
+    requireOperator: true,
 
     inputSchema: z.object({ strategyId: z.string() }),
 

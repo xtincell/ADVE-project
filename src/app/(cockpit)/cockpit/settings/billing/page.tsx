@@ -14,22 +14,13 @@ import { useState } from "react";
 import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
 import { CreditCard, Loader2, ArrowRight, XCircle } from "lucide-react";
+import {
+  TIER_LABELS,
+  SUBSCRIPTION_STATUS_LABELS,
+} from "@/lib/billing/subscription-labels";
 
-const STATUS_LABEL: Record<string, { label: string; tone: "ok" | "warn" | "muted" }> = {
-  active: { label: "Actif", tone: "ok" },
-  trialing: { label: "Période d'essai", tone: "ok" },
-  pending_manual: { label: "En attente de validation opérateur", tone: "warn" },
-  past_due: { label: "Paiement en retard", tone: "warn" },
-  unpaid: { label: "Impayé", tone: "warn" },
-  canceled: { label: "Annulé", tone: "muted" },
-};
-
-const TIER_LABEL: Record<string, string> = {
-  COCKPIT_MONTHLY: "Cockpit mensuel",
-  RETAINER_BASE: "Retainer Base",
-  RETAINER_PRO: "Retainer Pro",
-  RETAINER_ENTERPRISE: "Retainer Enterprise",
-};
+const STATUS_LABEL = SUBSCRIPTION_STATUS_LABELS;
+const TIER_LABEL = TIER_LABELS;
 
 function formatAmount(amount: number, currency: string): string {
   // Stripe stocke les devises carte en centimes ; FCFA/mobile money en unités.

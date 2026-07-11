@@ -1,5 +1,5 @@
 /**
- * Anti-drift — ADR-0122 : spine d'émission unifié (Q1/Q2/Loi 1/Loi 3).
+ * Anti-drift — ADR-0124 : spine d'émission unifié (Q1/Q2/Loi 1/Loi 3).
  *
  * # Le trou que ce test verrouille
  *
@@ -140,7 +140,7 @@ function collectEvents(names: string[]): { events: Array<{ name: string; payload
   return { events, off: () => offs.forEach((o) => o()) };
 }
 
-describe("ADR-0122 — openEmission (Loi 1 : hash-chain, Q1 : trace d'abord)", () => {
+describe("ADR-0124 — openEmission (Loi 1 : hash-chain, Q1 : trace d'abord)", () => {
   it("chaîne sur le selfHash de la dernière row HASHÉE et scelle avec result:null", async () => {
     const { db, calls } = makeMockDb({ lastSelfHash: "aaaa1111" });
     const { events, off } = collectEvents(["intent.proposed"]);
@@ -199,7 +199,7 @@ describe("ADR-0122 — openEmission (Loi 1 : hash-chain, Q1 : trace d'abord)", (
   });
 });
 
-describe("ADR-0122 — closeEmission (statuts + événements terminaux + costUsd)", () => {
+describe("ADR-0124 — closeEmission (statuts + événements terminaux + costUsd)", () => {
   it("OK → update status/result/completedAt + publie intent.completed (costUsd si connu)", async () => {
     const { db, calls } = makeMockDb({});
     const { events, off } = collectEvents(["intent.completed"]);
@@ -240,7 +240,7 @@ describe("ADR-0122 — closeEmission (statuts + événements terminaux + costUsd
   });
 });
 
-describe("ADR-0122 — verifyChain scelle l'émission, pas la complétion", () => {
+describe("ADR-0124 — verifyChain scelle l'émission, pas la complétion", () => {
   it("une chaîne dont les results ont été écrits à la complétion reste VALIDE", () => {
     // Construire 2 rows comme openEmission le fait (hash sur result:null)…
     const r1 = {
@@ -281,7 +281,7 @@ describe("ADR-0122 — verifyChain scelle l'émission, pas la complétion", () =
   });
 });
 
-describe("ADR-0122 — les deux chemins consomment le spine (source-scan HARD)", () => {
+describe("ADR-0124 — les deux chemins consomment le spine (source-scan HARD)", () => {
   const intents = read("src/server/services/mestor/intents.ts");
   const governed = read("src/server/governance/governed-procedure.ts");
   const bootstrap = read("src/server/governance/bootstrap.ts");
@@ -316,7 +316,7 @@ describe("ADR-0122 — les deux chemins consomment le spine (source-scan HARD)",
   });
 });
 
-describe("ADR-0122 — aucun intentEmission.create nu hors spine (allowlist purgeable)", () => {
+describe("ADR-0124 — aucun intentEmission.create nu hors spine (allowlist purgeable)", () => {
   it("tout create nu est déclaré « à mes risques et périls », toute entrée périmée est purgée", () => {
     const files = walk(SRC);
     const found = new Map<string, number>();

@@ -164,6 +164,9 @@ describe("ADR-0073 — proposition/page.tsx integration", () => {
   it("preserves legacy enrichOracle button (cohabitation)", () => {
     const src = fs.readFileSync(PROPOSITION_PAGE, "utf8");
     expect(src).toContain("enrichOracle");
-    expect(src).toContain("Lancer Artemis");
+    // Lot 11 (audit UX 2026-07-11) : libellé client « Assembler la proposition »
+    // (« Artemis » = nom interne, interdit à l'écran founder). La cohabitation
+    // ADR-0073 testée ici est inchangée : le chemin legacy reste câblé.
+    expect(src).toContain("Assembler la proposition");
   });
 });

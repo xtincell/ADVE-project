@@ -1,5 +1,5 @@
 /**
- * Thot — ledger de coût réalisé par IntentEmission (ADR-0122).
+ * Thot — ledger de coût réalisé par IntentEmission (ADR-0124).
  *
  * # Le chemin mort que ce module ferme
  *

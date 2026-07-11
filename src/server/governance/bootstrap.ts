@@ -28,7 +28,7 @@ export function bootstrapGovernance(): void {
   }
 
   // Seshat — observe terminal intents (fire-and-forget; failures swallowed).
-  // ADR-0122 : la boucle couvre TOUS les états terminaux, pas seulement
+  // ADR-0124 : la boucle couvre TOUS les états terminaux, pas seulement
   // `completed` — le prédicat pur `nextObservationStatus` route OK/DOWNGRADED
   // → OBSERVED et FAILED/VETOED → NOT_APPLICABLE ; ne souscrire que
   // `completed` laissait les émissions échouées/vetoed/downgraded en

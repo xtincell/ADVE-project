@@ -4,6 +4,8 @@ import { ADVE_STORAGE_KEYS } from "@/domain";
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
+import { useCanOperate } from "@/components/cockpit/use-can-operate";
+import { useToast } from "@/components/shared/notification-toast";
 import { trpc } from "@/lib/trpc/client";
 import {
   FileText,
@@ -38,6 +40,10 @@ const STATUS_CONFIG = {
 
 export default function PropositionPage() {
   const strategyId = useCurrentStrategyId();
+  const toast = useToast();
+  // Assemblage/cascade = gestes opérateur ; le founder lit et exporte
+  // (UX-DR16, lot 12 — cohérence avec le panel progressif déjà gardé).
+  const canOperate = useCanOperate();
   const [copied, setCopied] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [isArtemisRunning, setIsArtemisRunning] = useState(false);
@@ -152,7 +158,7 @@ export default function PropositionPage() {
       setIsArtemisRunning(true);
       setEnrichResult(null);
       setChangedSections(new Set());
-      setEnrichLog(["Artemis demarre — analyse des sections incompletes..."]);
+      setEnrichLog(["Assemblage démarré — analyse des sections incomplètes..."]);
     },
     onSuccess: (data) => {
       setEnrichResult(data);
@@ -170,7 +176,7 @@ export default function PropositionPage() {
         ...(data.skipped.length > 0
           ? [`${data.skipped.length} sections sans framework applicable (derivées) : ${data.skipped.slice(0, 5).join(", ")}${data.skipped.length > 5 ? "…" : ""}`]
           : []),
-        ...(data.intentId ? [`IntentEmission: ${data.intentId.slice(0, 16)}…`] : []),
+        ...(data.intentId ? [`Réf. d'exécution : ${data.intentId.slice(0, 16)}…`] : []),
         ...(data.failed.length > 0 ? [`Echecs: ${data.failed.join(", ")}`] : []),
       ]);
     },
@@ -205,9 +211,9 @@ export default function PropositionPage() {
 
       const lines: string[] = [];
       if (code && governor) {
-        lines.push(`ERREUR ${code} (${governor}) — ${err.message.replace(/^\[ORACLE-\d+\]\s*/, "")}`);
+        lines.push(`ERREUR ${code} — ${err.message.replace(/^\[ORACLE-\d+\]\s*/, "")}`);
         if (remediation) lines.push(`→ ${remediation}`);
-        lines.push(`→ Voir /console/governance/oracle-incidents pour le triage.`);
+        lines.push(`→ Signalé à votre équipe pour analyse.`);
       } else {
         lines.push(`ERREUR: ${err.message}`);
       }
@@ -245,7 +251,7 @@ export default function PropositionPage() {
         : "Complétez A·D·V·E (au moins ENRICHED) : c'est le socle qui nourrit toute la cascade.",
     },
     {
-      key: "rtis", title: "Dérivés RTIS",
+      key: "rtis", title: "Piliers stratégiques",
       ready: rtisReady,
       body: rtisReady
         ? "R·T·I·S dérivés depuis ADVE — diagnostic, marché, potentiel et stratégie consolidés."
@@ -255,8 +261,8 @@ export default function PropositionPage() {
       key: "oracle", title: "Assemblage Oracle",
       ready: oracleReadyToCompile,
       body: oracleReadyToCompile
-        ? `${completeSections}/${totalSections} sections — Artemis peut compiler le livrable sans heurt.`
-        : `${totalSections - completeSections} sections restantes — préparez ADVE + RTIS pour débloquer l'assemblage.`,
+        ? `${completeSections}/${totalSections} sections — le livrable peut être compilé sans heurt.`
+        : `${totalSections - completeSections} sections restantes — préparez fondation et stratégie pour débloquer l'assemblage.`,
     },
   ];
 
@@ -269,7 +275,7 @@ export default function PropositionPage() {
           L&apos;Oracle — Proposition Stratégique
         </h1>
         <p className="mt-1 text-sm text-foreground-muted">
-          Document vivant assemblé depuis vos piliers ADVE-RTIS, Artemis et outils Glory.
+          Document vivant assemblé depuis vos piliers de marque et vos analyses.
         </p>
       </div>
 
@@ -285,8 +291,8 @@ export default function PropositionPage() {
             : <>Votre proposition s&apos;assemble en continu — <span className="hl">{pct}%</span> du livrable est consolidé.</>}
         </h2>
         <p className="ck-oracle-hero__p">
-          L&apos;Oracle est un livrable consulting de {totalSections} sections, assemblé et réévalué par Mestor (méthode ADVE-RTIS).
-          {isArtemisRunning ? " Artemis exécute les frameworks — les sections se mettent à jour en temps réel." : ` ${totalSections - completeSections} section(s) restantes.`}
+          L&apos;Oracle est un livrable consulting de {totalSections} sections, assemblé et réévalué en continu par votre équipe (méthode ADVE-RTIS).
+          {isArtemisRunning ? " Assemblage en cours — les sections se mettent à jour en temps réel." : ` ${totalSections - completeSections} section(s) restantes.`}
         </p>
         <div className="ck-oracle-hero__stats">
           <div><span className="k">Complètes</span><b className="text-success">{completeSections}/{totalSections}</b></div>
@@ -310,12 +316,15 @@ export default function PropositionPage() {
         })}
       </div>
 
-      {/* ─ Assembleur Artemis + console live ─ */}
+      {/* ─ Assembleur + console live. Lot 13 (audit 2026-07-11 [M05-01]) :
+          une seule surface d'assemblage visible du founder — l'outillage
+          (console, tracker, partage personas) est opérateur-only ; le
+          founder garde stats, « Ouvrir le livrable » et le panel progressif. ─ */}
       <div className="ck-orc">
         <div className="ck-orc__head">
           <div className="ck-orc__head-l">
-            <h3>Assembler L&apos;Oracle</h3>
-            <span className="ck-orc__adr">{pct}% assemblé · méthode ADVE-RTIS</span>
+            <h3>{canOperate ? <>Assembler L&apos;Oracle</> : <>Votre livrable</>}</h3>
+            <span className="ck-orc__adr">{pct}% assemblé · méthode ADVE</span>
             <AiBadge />
           </div>
           <div className="ck-orc__tally">
@@ -325,18 +334,20 @@ export default function PropositionPage() {
           </div>
         </div>
 
-        {/* ADR — bouton contextuel (préparer ADVE / RTIS / lancer Artemis) — wiring inchangé */}
+        {/* ADR — bouton contextuel (préparer ADVE / RTIS / assembler) — wiring
+            inchangé ; rendu opérateur uniquement (le founder lit + exporte). */}
         <div className="ck-orc__controls">
+          {canOperate ? (
           <button
             className="ck-orc__assemble"
             data-variant={oracleReadyToCompile ? "ready" : undefined}
             disabled={enrichMutation.isPending}
             title={
               oracleReadyToCompile
-                ? "ADVE + RTIS prêts — Oracle peut compiler les 35 sections sans heurt."
+                ? "Fondation et stratégie prêtes — l'Oracle peut compiler les 35 sections sans heurt."
                 : !adveAllComplete
                   ? "Vos 4 fondations ADVE ne sont pas encore enrichies. Un clic ouvre la préparation automatique."
-                  : "RTIS pas encore dérivés — un clic ouvre la cascade RTIS pour préparer Oracle."
+                  : "Piliers stratégiques pas encore dérivés — un clic ouvre la préparation pour l'Oracle."
             }
             onClick={() => {
               if (!adveAllComplete) { setExternalBlockers(undefined); setLaunchModalOpen(true); return; }
@@ -344,11 +355,12 @@ export default function PropositionPage() {
               setExternalBlockers(undefined); setLaunchModalOpen(true);
             }}
           >
-            {enrichMutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Artemis en cours…</>
-              : oracleReadyToCompile ? <><Sparkles /> Lancer Artemis</>
-              : !adveAllComplete ? <><AlertCircle /> Préparer ADVE d&apos;abord</>
-              : <><AlertCircle /> Préparer RTIS d&apos;abord</>}
+            {enrichMutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Assemblage en cours…</>
+              : oracleReadyToCompile ? <><Sparkles /> Assembler la proposition</>
+              : !adveAllComplete ? <><AlertCircle /> Préparer la fondation d&apos;abord</>
+              : <><AlertCircle /> Préparer la stratégie d&apos;abord</>}
           </button>
+          ) : null}
           <button
             className="ck-orc__preview"
             onClick={() => { if (shareUrl) window.open(shareUrl, "_blank"); else shareMutation.mutate({ strategyId: strategyId! }); }}
@@ -360,13 +372,13 @@ export default function PropositionPage() {
         {/* Progress (pendant Artemis) */}
         {isArtemisRunning && (
           <div className="ck-orc__progress">
-            <div className="ck-orc__progress-meta"><span>{completeSections}/{totalSections} sections</span><span>Artemis en cours</span></div>
+            <div className="ck-orc__progress-meta"><span>{completeSections}/{totalSections} sections</span><span>Assemblage en cours</span></div>
             <div className="ck-orc__progress-track"><div className="ck-orc__progress-fill" style={{ width: `${pct}%` }} /></div>
           </div>
         )}
 
-        {/* Console live (enrichLog réel) */}
-        {enrichLog.length > 0 && (
+        {/* Console live (enrichLog réel) — outillage opérateur */}
+        {canOperate && enrichLog.length > 0 && (
           <div className="ck-orc__console">
             <div className="ck-orc__console-head"><span className="dot" /> Console live · télémétrie d&apos;assemblage</div>
             {enrichLog.map((line, i) => {
@@ -412,9 +424,13 @@ export default function PropositionPage() {
             (events stockés dans IntentEmissionEvent). Le polling completeness
             alimente le fallback live-pendant-mutation (le vrai pre-completion
             streaming nécessite refactor background queue, hors scope sprint). */}
-        <OracleEnrichmentTracker intentId={lastIntentId} completenessReport={completeness.data ?? undefined} />
+        {canOperate ? (
+          <OracleEnrichmentTracker intentId={lastIntentId} completenessReport={completeness.data ?? undefined} />
+        ) : null}
 
-        {/* ─ Lien public / partage (strategyPresentation.shareLink) ─ */}
+        {/* ─ Lien public / partage (strategyPresentation.shareLink) — geste
+            opérateur (vues persona destinées au partage vers le client). ─ */}
+        {canOperate ? (
         <div className="ck-orc__share">
           <div className="ck-orc__share-l">
             <span className="ck-orc__share-h"><Share2 /> Page générée — lien public</span>
@@ -437,6 +453,7 @@ export default function PropositionPage() {
             </div>
           )}
         </div>
+        ) : null}
       </div>
 
       {/* Phase 21 F-F (ADR-0073) — Génération progressive avec stream SSE (granulaire). */}
@@ -493,7 +510,7 @@ export default function PropositionPage() {
               setTimeout(() => URL.revokeObjectURL(url), 2000);
             } catch (e) {
               console.error("[export-pdf] failed:", e);
-              alert("Export PDF a échoué. Voir la console.");
+              toast.error("L'export PDF a échoué. Réessayez dans un instant.");
             }
           }}
           className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-foreground-secondary hover:bg-background"
@@ -520,7 +537,7 @@ export default function PropositionPage() {
               setTimeout(() => URL.revokeObjectURL(url), 2000);
             } catch (e) {
               console.error("[export-brand-bible] failed:", e);
-              alert("Téléchargement de la bible a échoué. Voir la console.");
+              toast.error("Le téléchargement de la bible de marque a échoué. Réessayez dans un instant.");
             }
           }}
           className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-foreground-secondary hover:bg-background"

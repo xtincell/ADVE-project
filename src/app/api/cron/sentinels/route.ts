@@ -121,7 +121,7 @@ export async function GET(request: Request) {
 
 async function emit(s: SentinelEmission): Promise<void> {
   try {
-    // ADR-0122 — spine canonique : la row sentinelle est hash-chaînée et
+    // ADR-0124 — spine canonique : la row sentinelle est hash-chaînée et
     // publie `intent.proposed` comme toute autre émission (elle reste PENDING
     // jusqu'à consommation par les services sentinelles).
     await openEmission({

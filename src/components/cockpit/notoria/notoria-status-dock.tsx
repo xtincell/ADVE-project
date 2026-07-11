@@ -151,8 +151,8 @@ export function NotoriaStatusDock() {
       {/* Chips piliers — 2 lignes ADVE / RTIS */}
       <div className="mb-3 space-y-1.5">
         {[
-          { keys: ADVE_STORAGE_KEYS, label: "ADVE" },
-          { keys: RTIS_STORAGE_KEYS, label: "RTIS" },
+          { keys: ADVE_STORAGE_KEYS, label: "Fond." },
+          { keys: RTIS_STORAGE_KEYS, label: "Strat." },
         ].map((row) => (
           <div key={row.label} className="flex items-center gap-1.5">
             <span className="w-9 text-[9px] font-semibold uppercase text-foreground-muted">{row.label}</span>

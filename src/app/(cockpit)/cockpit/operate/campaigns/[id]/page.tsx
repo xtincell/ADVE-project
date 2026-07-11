@@ -588,7 +588,7 @@ function ActionsTab({ campaignId }: { campaignId: string }) {
               onChange={(e) => setNewAction({ ...newAction, actionTypeSlug: e.target.value })}
               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong"
             >
-              <option value="">Selectionner un type...</option>
+              <option value="">Sélectionner un type...</option>
               {actionTypes.map((t) => (
                 <option key={t.slug as string} value={t.slug as string}>{(t.name as string) ?? (t.label as string) ?? (t.slug as string)}</option>
               ))}
@@ -1002,7 +1002,7 @@ function BudgetTab({ campaignId }: { campaignId: string }) {
           <FormField label="Categorie" required>
             <select value={newLine.category} onChange={(e) => setNewLine({ ...newLine, category: e.target.value })}
               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong">
-              <option value="">Selectionner...</option>
+              <option value="">Sélectionner...</option>
               {["MEDIA", "PRODUCTION", "TALENT", "LOGISTICS", "TECHNOLOGY", "LEGAL", "CONTINGENCY", "AGENCY_FEE"].map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </FormField>

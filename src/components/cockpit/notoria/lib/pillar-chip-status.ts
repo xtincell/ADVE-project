@@ -95,7 +95,9 @@ export function getPillarChipStatus(p: PillarReadinessProjection): PillarChipSta
   }
   if (p.completionLevel === "FULL") {
     return {
-      label: "FULL",
+      // Libellé client FR (lot 14, audit 2026-07-11 T7) — l'enum interne
+      // reste "FULL", seul l'affichage change.
+      label: "OPTIMAL",
       className: "bg-success/15 text-success",
       variant: "full",
       isReadyForCascade: p.rtisCascadeReady,

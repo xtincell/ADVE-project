@@ -1,4 +1,4 @@
-# ADR-0122 — Spine d'émission unifié : `emitIntent` porte la même gouvernance que `governedProcedure`
+# ADR-0124 — Spine d'émission unifié : `emitIntent` porte la même gouvernance que `governedProcedure`
 
 **Status** : Accepted
 **Date** : 2026-07-11

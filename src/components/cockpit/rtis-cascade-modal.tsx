@@ -163,17 +163,17 @@ export function RtisCascadeModal({
       title={
         <span className="flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-accent" />
-          Cascade RTIS — préparer Oracle à compiler
+          Préparer la stratégie — l'Oracle pourra compiler
         </span>
       }
       description={
         phase === "CONFIRM"
-          ? "Vos 4 fondations ADVE sont complètes. Pour qu'Artemis compile l'Oracle sans sections vides, il faut maintenant dériver les 4 piliers dynamiques (Risk, Track, Innovation, Strategy) à partir d'ADVE. Cette étape n'a lieu qu'une fois."
+          ? "Vos 4 fondations sont complètes. Pour compiler l'Oracle sans sections vides, il faut maintenant dériver les 4 piliers stratégiques (diagnostic, marché, innovation, plan) à partir de votre fondation. Cette étape n'a lieu qu'une fois."
           : phase === "RUNNING"
             ? "Génération en cours — chaque pilier prend 20 à 40 secondes (LLM)."
             : phase === "DONE"
               ? "Oracle est maintenant prêt à compiler sans sections vides."
-              : "Certains piliers n'ont pas pu être remplis. Tu peux ré-essayer ou compiler quand même (Oracle aura des sections RTIS partielles)."
+              : "Certains piliers n'ont pas pu être remplis. Vous pouvez réessayer ou compiler quand même (l'Oracle aura des sections stratégiques partielles)."
       }
     >
       {/* CONFIRM phase */}
@@ -198,7 +198,7 @@ export function RtisCascadeModal({
             <p>
               <strong className="text-foreground-secondary">Durée typique :</strong> 1 à 2 minutes.
               La cascade tourne en série pour respecter l'ordre de dérivation
-              (R d'abord, puis T qui s'appuie sur R + signaux Seshat, puis I,
+              (R d'abord, puis T qui s'appuie sur R + signaux de veille, puis I,
               puis S).
             </p>
           </div>
@@ -261,8 +261,8 @@ export function RtisCascadeModal({
             <div className="rounded-lg border border-warning/40 bg-warning/5 p-3 text-xs text-foreground-secondary">
               <strong className="text-warning">Plus long que prévu.</strong>{" "}
               Le LLM travaille toujours. Tu peux fermer cette fenêtre — la cascade
-              continue en arrière-plan, le bouton « Lancer Artemis » virera vert
-              quand RTIS sera prêt.
+              continue en arrière-plan, le bouton d'assemblage virera vert
+              quand la stratégie sera prête.
             </div>
           )}
         </div>
@@ -275,11 +275,11 @@ export function RtisCascadeModal({
             <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
             <div className="space-y-1">
               <p className="text-sm font-semibold text-success">
-                Cascade RTIS terminée — vos 8 piliers sont prêts.
+                Préparation terminée — vos 8 piliers sont prêts.
               </p>
               <p className="text-xs text-foreground-secondary">
                 Oracle peut maintenant compiler ses 35 sections sans risque de
-                sections RTIS vides. Le bouton « Lancer Artemis » est passé au
+                sections stratégiques vides. Le bouton d'assemblage est passé au
                 vert sur la page proposition.
               </p>
             </div>
@@ -393,7 +393,7 @@ export function RtisCascadeModal({
               className="flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent disabled:opacity-50"
             >
               <Sparkles className="h-4 w-4" />
-              Déclencher la cascade RTIS
+              Dériver les piliers stratégiques
               <ArrowRight className="h-4 w-4" />
             </button>
           </>

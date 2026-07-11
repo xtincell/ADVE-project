@@ -9,7 +9,7 @@
  *   - `governed-procedure.ts` (chemin tRPC — preEmitIntent/postEmitIntent)
  *   - `mestor/intents.ts` `emitIntent()` (chemin bus — services/spawn/boot)
  *
- * # Le trou que ce module ferme (ADR-0122)
+ * # Le trou que ce module ferme (ADR-0124)
  *
  * Avant unification, `emitIntent` écrivait ses rows en best-effort SANS
  * prevHash/selfHash, SANS statut, SANS événement : ses émissions étaient

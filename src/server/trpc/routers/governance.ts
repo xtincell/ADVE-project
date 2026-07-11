@@ -107,7 +107,7 @@ export const governanceRouter = createTRPCRouter({
         ? reverseIntent.strategyId
         : "(none)";
       // Record the compensating action as a first-class IntentEmission row —
-      // via le spine canonique (ADR-0122) : l'Intent compensateur (Loi 1) est
+      // via le spine canonique (ADR-0124) : l'Intent compensateur (Loi 1) est
       // hash-chaîné et observable comme toute autre combustion.
       const { openEmission, closeEmission } = await import("@/server/governance/emission-spine");
       const compensationId = await openEmission({

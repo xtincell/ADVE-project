@@ -223,7 +223,7 @@ export default function CampaignTrackerPage() {
             <div className="space-y-3 max-h-[360px] overflow-y-auto pr-1">
               {fieldOps.map((op) => {
                 const statusColors: Record<string, string> = {
-                  PLANNED: "bg-zinc-500/20 text-foreground-secondary border-zinc-500/30",
+                  PLANNED: "bg-foreground-muted/15 text-foreground-secondary border-foreground-muted/30",
                   IN_PROGRESS: "bg-accent/20 text-accent border-accent/30",
                   COMPLETED: "bg-success/15 text-success border-success/30",
                 };

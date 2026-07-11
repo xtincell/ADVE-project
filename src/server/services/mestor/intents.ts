@@ -1363,7 +1363,7 @@ async function preflightMarketStatus(
 // ── emitIntent — single entry point ───────────────────────────────────
 
 /**
- * ADR-0122 — Thot cost-gate sur le chemin bus (Loi 3, parité chemin tRPC).
+ * ADR-0124 — Thot cost-gate sur le chemin bus (Loi 3, parité chemin tRPC).
  *
  * L'operatorId vient des options du caller OU du payload de l'Intent (nombre
  * de kinds le portent déjà : OPERATOR_AMEND_PILLAR, IMHOTEP_*, …). Sans
@@ -1422,10 +1422,10 @@ function extractOperatorId(intent: Intent): string | null {
 
 /**
  * Emit an intent. Mestor logs it (émission hash-chaînée via le spine canonique,
- * ADR-0122), consulte Thot (cost-gate), passe les pre-flight gates, then hands
+ * ADR-0124), consulte Thot (cost-gate), passe les pre-flight gates, then hands
  * off to Artemis.commandant.execute().
  *
- * # Invariants (ADR-0122 — parité totale avec le chemin governed-procedure)
+ * # Invariants (ADR-0124 — parité totale avec le chemin governed-procedure)
  *
  * - **Q1 fail-closed** : émission impossible à persister ⇒ AUCUN dispatch.
  *   Le résultat est FAILED reason=EMISSION_PERSIST_FAILED. Pas de trace ⇒
@@ -1514,7 +1514,7 @@ export async function emitIntent(
     return result;
   }
   // DOWNGRADED (override opérateur) — plus jamais avalé : tracé sur le
-  // compteur stratégique + surfacé en warning après dispatch (ADR-0122).
+  // compteur stratégique + surfacé en warning après dispatch (ADR-0124).
   const mixDowngradeReason = mixCheck?.status === "DOWNGRADED" ? mixCheck.reason : null;
   if (mixDowngradeReason) {
     await db.strategy
@@ -1563,7 +1563,7 @@ export async function emitIntent(
     return result;
   }
 
-  // ── ADR-0122 — Thot cost-gate (Loi 3) — parité chemin governed-procedure ──
+  // ── ADR-0124 — Thot cost-gate (Loi 3) — parité chemin governed-procedure ──
   const operatorId = options.operatorId ?? extractOperatorId(intent);
   const costDecision = await evaluateBusCostGate(intent, emissionId, operatorId);
   if (costDecision?.decision === "VETO") {

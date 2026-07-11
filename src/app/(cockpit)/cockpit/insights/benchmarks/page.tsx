@@ -409,7 +409,7 @@ export default function BenchmarksPage() {
           Distribution des classifications
         </h3>
         <p className="mb-6 text-xs text-foreground-secondary">
-          Repartition des marques du secteur par classification ADVE-RTIS
+          Répartition des marques du secteur par classification
         </p>
         <div className="space-y-3">
           {classifications.map((c) => {

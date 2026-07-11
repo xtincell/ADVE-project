@@ -551,7 +551,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 254 (par deck)
+## Pages — 256 (par deck)
 
 ### Agency (12)
 
@@ -568,7 +568,7 @@ Ces correspondances évitent la réinvention :
 - `/agency/revenue`
 - `/agency/signals`
 
-### Cockpit (51)
+### Cockpit (53)
 
 - `/cockpit`
 - `/cockpit/brand/assets`
@@ -577,6 +577,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/brand/diagnostic`
 - `/cockpit/brand/edit`
 - `/cockpit/brand/engagement`
+- `/cockpit/brand/fondation`
 - `/cockpit/brand/guidelines`
 - `/cockpit/brand/identity`
 - `/cockpit/brand/jehuty`
@@ -590,6 +591,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/brand/rtis`
 - `/cockpit/brand/rtis/synthese`
 - `/cockpit/brand/sources`
+- `/cockpit/brand/strategie`
 - `/cockpit/brand/strategy`
 - `/cockpit/insights/apogee-maintenance`
 - `/cockpit/insights/attribution`

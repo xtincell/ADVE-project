@@ -150,7 +150,7 @@ export interface CostDecisionDbLike {
 /**
  * Persist the gate outcome in the `CostDecision` audit table (best-effort —
  * the IntentEmission row already records the verdict). Shared by BOTH entry
- * paths (governed-procedure tRPC + mestor.emitIntent bus, ADR-0122) so the
+ * paths (governed-procedure tRPC + mestor.emitIntent bus, ADR-0124) so the
  * Thot audit trail is queryable regardless of how the Intent entered.
  */
 export async function persistCostDecision(

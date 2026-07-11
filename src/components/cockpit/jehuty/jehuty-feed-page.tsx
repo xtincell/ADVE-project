@@ -168,7 +168,7 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
             <span className="opacity-50">·</span>
             <span>{items.length} dépêches</span>
           </div>
-          <span className="text-foreground-muted/60">Jehuty · Sous tutelle Seshat</span>
+          <span className="text-foreground-muted/60">La Gazette · votre veille de marque</span>
         </div>
       </header>
 
@@ -206,7 +206,7 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
         <Indicator
           label="Santé marché"
           value={`${Math.round(dashboard?.marketHealthScore ?? 0)}`}
-          hint="Index Seshat · /100"
+          hint="Indice marché · /100"
         />
       </section>
 
@@ -255,7 +255,7 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
         <div className="py-24 text-center border-y border-border-subtle">
           <p className="font-serif italic text-2xl text-foreground-secondary">Le journal est vide ce matin.</p>
           <p className="font-mono text-2xs uppercase tracking-widest text-foreground-muted mt-3">
-            Les signaux et recommandations apparaîtront ici dès que Seshat les capture.
+            Les signaux et recommandations apparaîtront ici dès que votre veille les capture.
           </p>
         </div>
       )}
@@ -320,7 +320,7 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
       {/* ═══ Footer / colophon ═════════════════════════════════════ */}
       <footer className="border-t border-border-subtle pt-6 mt-12 flex items-center justify-between flex-wrap gap-4">
         <p className="font-mono text-2xs uppercase tracking-widest text-foreground-muted/60">
-          Jehuty · Telemetry sous Seshat · Les dépêches se rafraîchissent toutes les 30s.
+          La Gazette · veille automatique · Les dépêches se rafraîchissent toutes les 30s.
         </p>
         <p className="font-serif italic text-sm text-foreground-muted">
           « Avant de forger, lire le monde. »
@@ -408,7 +408,7 @@ function DispatchActions({
           className="flex items-center gap-1.5 text-accent hover:opacity-80 transition-opacity disabled:opacity-40"
         >
           {isNotoriaPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
-          Activer Notoria
+          Générer une recommandation
         </button>
       )}
       {item.sourceType === "RECOMMENDATION" && !isTriggered && onApply && (
@@ -416,7 +416,7 @@ function DispatchActions({
           onClick={onApply}
           disabled={isApplyPending}
           className="flex items-center gap-1.5 text-accent hover:opacity-80 transition-opacity disabled:opacity-40"
-          title="Accepte et applique cette recommandation au pilier (gate de remplacement ADR-0090 actif)"
+          title="Accepte et applique cette recommandation au pilier (contrôle qualité de remplacement actif)"
         >
           {isApplyPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
           Appliquer au pilier
@@ -580,7 +580,7 @@ function LeadStory({
 
       {isTriggered && (
         <div className="lg:col-span-2 border-t border-border-subtle pt-4 -mt-2 font-mono text-2xs uppercase tracking-widest text-accent flex items-center gap-2">
-          <Zap className="h-3 w-3" /> Notoria activée — recommandation en cours d&rsquo;exécution
+          <Zap className="h-3 w-3" /> Recommandation en cours d&rsquo;exécution
         </div>
       )}
     </article>
@@ -684,7 +684,7 @@ function Dispatch({
 
       {isTriggered && (
         <div className="mt-2 font-mono text-2xs uppercase tracking-widest text-accent flex items-center gap-1.5">
-          <Zap className="h-3 w-3" /> Notoria activée
+          <Zap className="h-3 w-3" /> Recommandation lancée
         </div>
       )}
     </article>

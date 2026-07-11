@@ -264,7 +264,7 @@ export function ActionDatabasePanel({ strategyId, canSync = true }: Props) {
                       <span className="rounded bg-white/5 px-1.5 py-0.5 text-[9px] text-foreground-muted">{a.aarrrIntent}</span>
                     ) : null}
                     {a.costTemplateKey ? (
-                      <span className="rounded bg-white/5 px-1.5 py-0.5 text-[9px] text-foreground-muted" title="Archétype de coût Thot (ADR-0093)">
+                      <span className="rounded bg-white/5 px-1.5 py-0.5 text-[9px] text-foreground-muted" title="Archétype de coût par marché">
                         💰 {a.costTemplateKey}
                       </span>
                     ) : null}
