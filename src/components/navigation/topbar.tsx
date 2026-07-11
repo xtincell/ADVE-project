@@ -182,7 +182,7 @@ export function Topbar({
                 className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-foreground-secondary transition-colors hover:bg-background-overlay hover:text-foreground"
               >
                 <Settings className="h-4 w-4" />
-                Parametres
+                Paramètres
               </button>
               <button
                 onClick={() => {
@@ -192,7 +192,7 @@ export function Topbar({
                 className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-destructive transition-colors hover:bg-destructive-subtle"
               >
                 <LogOut className="h-4 w-4" />
-                Deconnexion
+                Déconnexion
               </button>
             </div>
           )}

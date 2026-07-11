@@ -67,7 +67,10 @@ describe("getPillarChipStatus — variant precedence", () => {
   it("FULL not stale → variant full", () => {
     const out = getPillarChipStatus({ ...baseComplete, completionLevel: "FULL" });
     expect(out.variant).toBe("full");
-    expect(out.label).toBe("FULL");
+    // Lot 14 (audit UX 2026-07-11 T7) : libellé client FR « OPTIMAL » —
+    // l'enum interne reste "FULL", l'invariant testé (variant/precedence)
+    // est inchangé.
+    expect(out.label).toBe("OPTIMAL");
     expect(out.shouldRegenerate).toBe(false);
   });
 

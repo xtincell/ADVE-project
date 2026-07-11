@@ -152,7 +152,7 @@ export default function OperationsCenter({ strategyId }: { strategyId: string })
                 CRITIQUE: "border-error text-error bg-error/10",
                 HAUTE: "border-warning text-warning bg-warning/10",
                 MOYENNE: "border-accent text-accent bg-accent/10",
-                BASSE: "border-zinc-500 text-foreground-secondary bg-zinc-500/10"
+                BASSE: "border-foreground-muted text-foreground-secondary bg-foreground-muted/10"
               };
 
               return (
@@ -268,10 +268,10 @@ export default function OperationsCenter({ strategyId }: { strategyId: string })
               
               // Status color mapping
               const statusColors: Record<string, string> = {
-                BRIEF_DRAFT: "bg-zinc-500/20 text-foreground-secondary border-zinc-500/30",
-                LIVE: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
-                PLANNING: "bg-sky-500/20 text-sky-400 border-sky-500/30",
-                PRODUCTION: "bg-amber-500/20 text-amber-400 border-amber-500/30"
+                BRIEF_DRAFT: "bg-foreground-muted/15 text-foreground-secondary border-foreground-muted/30",
+                LIVE: "bg-success/15 text-success border-success/30",
+                PLANNING: "bg-info/15 text-info border-info/30",
+                PRODUCTION: "bg-warning/15 text-warning border-warning/30"
               };
 
               return (
@@ -341,8 +341,8 @@ export default function OperationsCenter({ strategyId }: { strategyId: string })
                 <tbody className="divide-y divide-border">
                   {workload.map((member) => {
                     const statusConfig = {
-                      LOW: { label: "Fluide", color: "text-emerald-400 border-emerald-500/20 bg-emerald-500/5" },
-                      MEDIUM: { label: "Soutenue", color: "text-amber-400 border-amber-500/20 bg-amber-500/5" },
+                      LOW: { label: "Fluide", color: "text-success border-success/20 bg-success/5" },
+                      MEDIUM: { label: "Soutenue", color: "text-warning border-warning/20 bg-warning/5" },
                       HIGH: { label: "Surcharge", color: "text-error border-error/20 bg-error/5" }
                     };
                     const cfg = statusConfig[member.workloadLevel] ?? statusConfig.LOW;
@@ -404,7 +404,7 @@ export default function OperationsCenter({ strategyId }: { strategyId: string })
                 </div>
                 <div>
                   <p className="text-2xs text-foreground-secondary">Restant</p>
-                  <p className="text-sm font-bold text-emerald-400">{totalRemaining.toLocaleString()} XAF</p>
+                  <p className="text-sm font-bold text-success">{totalRemaining.toLocaleString()} XAF</p>
                 </div>
               </div>
 

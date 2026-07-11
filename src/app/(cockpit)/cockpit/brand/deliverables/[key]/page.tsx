@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { trpc } from "@/lib/trpc/client";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
+import { useToast } from "@/components/shared/notification-toast";
 import { ArrowLeft, Download, Loader2, FileText, CheckCircle } from "lucide-react";
 import { getFieldLabel } from "@/components/cockpit/field-renderers";
 
@@ -23,6 +24,7 @@ const SOURCE_COLORS: Record<string, string> = {
 
 export default function DeliverableViewPage() {
   const params = useParams();
+  const toast = useToast();
   const router = useRouter();
   const strategyId = useCurrentStrategyId();
   const key = params.key as string;
@@ -76,7 +78,7 @@ export default function DeliverableViewPage() {
       pdf.save(fileName);
     } catch (err) {
       console.error("PDF export failed:", err);
-      alert("Erreur lors de l'export PDF. Verifiez la console.");
+      toast.error("L'export PDF a échoué. Réessayez dans un instant.");
     } finally {
       setExporting(false);
     }

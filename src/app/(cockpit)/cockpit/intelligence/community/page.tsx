@@ -22,7 +22,7 @@ export default function CockpitCommunityPage() {
           Suivi communauté
         </h1>
         <p className="mt-1 max-w-2xl text-sm text-foreground-secondary">
-          Vos superfans, l'échelle de dévotion et la santé de votre communauté, réunis.
+          Vos superfans, l'échelle d'engagement et la santé de votre communauté, réunis.
           La masse stratégique qui fait basculer votre secteur — suivie au fil du temps.
         </p>
       </header>
