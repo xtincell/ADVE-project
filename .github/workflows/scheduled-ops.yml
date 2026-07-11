@@ -1,12 +1,12 @@
 # Crons applicatifs via GitHub Actions (Vague 10).
 #
-# Le plan Vercel hobby n'offre pas de crons : ce workflow appelle les routes
-# /api/cron/* (auth Bearer CRON_SECRET) sur des planifications groupées —
-# UNE exécution par tick = N curls, pour économiser les minutes Actions.
+# L'hôte Coolify/self-host n'a pas de crons applicatifs intégrés : ce workflow
+# appelle les routes /api/cron/* (auth Bearer CRON_SECRET) sur des planifications
+# groupées — UNE exécution par tick = N curls, pour économiser les minutes Actions.
 #
 # Secrets repo requis (Settings → Secrets and variables → Actions) :
-#   PROD_BASE_URL   ex: https://lafusee.vercel.app   (sans slash final)
-#   CRON_SECRET     identique à la variable d'env Vercel CRON_SECRET
+#   PROD_BASE_URL   ex: https://powerupgraders.com   (sans slash final)
+#   CRON_SECRET     identique à la variable d'env CRON_SECRET côté Coolify
 #
 # Notes plan gratuit :
 #   - GitHub n'exécute pas les schedules < 5 min et peut décaler de

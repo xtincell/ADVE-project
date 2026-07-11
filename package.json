@@ -1,6 +1,6 @@
 {
   "name": "lafusee",
-  "version": "6.27.101",
+  "version": "6.27.102",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
@@ -45,7 +45,7 @@
     "stress:forges": "tsx scripts/stress-test.ts --forges",
     "stress:state": "tsx scripts/stress-test.ts --state",
     "probe": "tsx scripts/site-prober/index.ts",
-    "probe:prod": "PROBE_BASE_URL=https://lafusee-app.vercel.app tsx scripts/site-prober/index.ts",
+    "probe:prod": "PROBE_BASE_URL=https://powerupgraders.com tsx scripts/site-prober/index.ts",
     "probe:quick": "tsx scripts/site-prober/index.ts --quick --no-browser",
     "probe:burst": "tsx scripts/site-prober/index.ts --burst 3",
     "db:generate": "prisma generate",
