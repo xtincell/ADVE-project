@@ -142,6 +142,9 @@ export const cockpitRouter = createTRPCRouter({
           userId: true,
           operatorId: true,
           businessContext: true,
+          // ADR-0127 — polity de la marque pour la résolution d'axe.
+          marketScale: true,
+          countryCode: true,
           pillars: { where: { key: "d" }, select: { content: true } },
         },
       });
@@ -172,17 +175,26 @@ export const cockpitRouter = createTRPCRouter({
         case "DEGRADED":
           return signal;
         case "LIVE": {
-          const { getSectorAxis } = await import("@/server/services/sector-intelligence");
-          const axis = await getSectorAxis(sectorSlug);
+          // ADR-0127 — l'axe est résolu pour la POLITY de la marque (échelle ×
+          // pays), avec fallback honnête vers l'axe global du secteur. Le
+          // niveau de résolution est surfacé — jamais masqué.
+          const { getSectorAxisForPolity } = await import("@/server/services/sector-intelligence");
+          const resolved = await getSectorAxisForPolity(sectorSlug, {
+            marketScale: strategy.marketScale,
+            countryCode: strategy.countryCode,
+          });
           const brandTags = extractBrandTags(strategy.pillars[0]?.content);
           const data: OvertonRadarSignal = {
-            sectorAxis: axis ? { tags: axis.tags, confidence: axis.confidence, samples: axis.samples } : null,
+            sectorAxis: resolved
+              ? { tags: resolved.axis.tags, confidence: resolved.axis.confidence, samples: resolved.axis.samples }
+              : null,
             brandTags,
             vocabularyOverlap: signal.data.vocabularyOverlap,
             embeddingDelta: signal.data.embeddingDelta,
             claimImitations: signal.data.claimImitations,
             unpaidPress: signal.data.unpaidPress,
             mocked: signal.data._mocked,
+            axisPolityResolution: resolved?.resolution ?? null,
           };
           return { state: "LIVE", data, observedAt: signal.observedAt };
         }

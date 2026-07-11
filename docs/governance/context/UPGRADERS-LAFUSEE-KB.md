@@ -224,7 +224,9 @@ de prix ferme hors mandat** → `/pricing` ou escalade.
 La rupture n°1 — *l'agence à obligation d'effet* :
 
 - **EFR = État Final Recherché** : *« On ne vend pas des moyens, on vend un état final mesuré »* =
-  palier visé **+** score cible **+** horizon. Gelés et tracés (journal immuable) à la signature.
+  palier visé **+** score cible **+** horizon **+ échelle de marché déclarée** (ADR-0126 — le palier
+  promis se mesure sur SON terrain : quartier ≠ nation ≠ monde ; sans référentiel d'échelle au
+  contrat, l'obligation d'effet serait juridiquement floue). Gelés et tracés (journal immuable) à la signature.
 - **Obligation d'effet tracé** : **résultat ferme** sur ce que l'Agence contrôle ; **effort
   prouvé** sur ce qu'elle co-détermine. L'effort devient une grandeur **auditée**.
 - **Score cible par palier = seuil d'entrée de la bande canon** (`classifyTier`, `src/domain/brand-tier.ts`) :

@@ -501,7 +501,7 @@ Le score multi-dimensions étalonne la maturité d'une marque sur sa trajectoire
 | **Campaign Performance** | ROI moyen pondéré sur cycle écoulé | `campaign-tracker/` | ✅ |
 | **Production Quality** | Glory tool QC moyen sur cycle | `qc-router/` | 🟡 |
 
-**Calibration par échelle (ADR-0126, 2026-07-11)** : les dimensions de preuve culturelle (superfans, signaux) ne s'étalonnent plus sur des cibles absolues universelles mais sur l'**échelle de marché déclarée** (`Strategy.marketScale`, QUARTIER→MONDE) + la densité d'audience adressable — cf. `src/domain/market-scale.ts`. Le palier ne s'affiche jamais sans son référentiel d'échelle. L'Overton par polity (axe sectoriel × portée géo) reste un chantier séparé (registre RESIDUAL-DEBT).
+**Calibration par échelle (ADR-0126 + ADR-0127, 2026-07-11)** : les dimensions de preuve culturelle (superfans, signaux) ne s'étalonnent plus sur des cibles absolues universelles mais sur l'**échelle de marché déclarée** (`Strategy.marketScale`, QUARTIER→MONDE) + la densité d'audience adressable — cf. `src/domain/market-scale.ts`. Le palier ne s'affiche jamais sans son référentiel d'échelle, l'EFR le gèle à la signature, et le classement console ne compare qu'à échelle comparable. **L'Overton a une polity** (`SectorPolityAxis` secteur × échelle × pays, résolution honnête EXACT → SCALE_ONLY → GLOBAL_FALLBACK — le radar founder dit quelle fenêtre a réellement été observée) ; la naissance des `SuperfanProfile` est gouvernée (`SESHAT_REGISTER_SUPERFAN`, single-writer HARD).
 
 ### 12.3 Utilisations du score
 

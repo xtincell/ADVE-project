@@ -6,11 +6,61 @@
 
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
+import { governedProcedure } from "@/server/governance/governed-procedure";
+import { DEVOTION_LADDER_TIERS } from "@/domain/devotion-ladder";
 import { db } from "@/lib/db";
+/* lafusee:governed-active */
 
 const ACTIVE_SUPERFAN_THRESHOLD = 0.65; // ambassadeur+ (devotion engine: ≥0.65 = ambassadeur, ≥0.85 = evangeliste)
 
 export const superfanRouter = createTRPCRouter({
+  /**
+   * ADR-0126 — voie gouvernée UNIQUE de naissance d'un SuperfanProfile.
+   * Upsert dédupliqué par (strategyId, platform, handle) — la clé unique du
+   * modèle. Toute ingestion (CRM, campagne, saisie manuelle) passe ici :
+   * les rows nourrissent le bras superfans du plafond d'évidence CULTE/ICONE,
+   * un chemin non gouverné = vecteur d'inflation par simple footprint.
+   * Verrou : test HARD single-writer (scoring-scale-aware.test.ts).
+   */
+  register: governedProcedure({
+
+    kind: "SESHAT_REGISTER_SUPERFAN",
+
+    requireOperator: true,
+
+    inputSchema: z.object({
+      strategyId: z.string(),
+      platform: z.string().min(1).max(40),
+      handle: z.string().min(1).max(120),
+      segment: z.enum(DEVOTION_LADDER_TIERS),
+      engagementDepth: z.number().min(0).max(1),
+      interactions: z.number().int().nonnegative().optional(),
+      lastActiveAt: z.coerce.date().optional(),
+      /** Provenance déclarée — audit de l'origine des rows d'évidence. */
+      source: z.enum(["MANUAL", "CRM", "CAMPAIGN"]).default("MANUAL"),
+    }),
+
+    caller: "superfan:register",
+
+  })
+    .mutation(async ({ ctx, input }) => {
+      const { strategyId, platform, handle, segment, engagementDepth, interactions, lastActiveAt, source } = input;
+      return ctx.db.superfanProfile.upsert({
+        where: { strategyId_platform_handle: { strategyId, platform, handle } },
+        create: {
+          strategyId, platform, handle, segment, engagementDepth,
+          interactions: interactions ?? 0,
+          lastActiveAt: lastActiveAt ?? null,
+          metadata: { source },
+        },
+        update: {
+          segment, engagementDepth,
+          ...(interactions != null ? { interactions } : {}),
+          ...(lastActiveAt ? { lastActiveAt } : {}),
+          metadata: { source },
+        },
+      });
+    }),
   /** Count active superfans for a strategy (THE northstar) */
   count: protectedProcedure
     .input(z.object({ strategyId: z.string() }))

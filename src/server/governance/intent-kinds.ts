@@ -63,6 +63,12 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   // ── Phase 23 (ADR-0078 + ADR-0060) — Manual operator-tagged Overton delta ──
   { kind: "OPERATOR_TAG_OVERTON_DELTA", governor: "MESTOR", handler: "campaign-tracker", async: false, description: "Operator tags an overtonDeltaManual value on a CampaignAction — the manual-first peer (FR26) to the algorithmic embeddings path (FR13). Persists to CampaignAction.overtonDeltaManual ; downstream measureOvertonShift consumes the manual value when non-null and stamps degradationCodes with MANUAL_OPERATOR_DELTA. Hash-chained ; IntentEmission.payload carries source MANUAL_OPERATOR for audit. Range validated [-1, 1] + tenant guard." },
 
+  // ── ADR-0127 — Overton par polity (secteur × échelle × pays) ──
+  { kind: "SESHAT_UPSERT_POLITY_AXIS", governor: "SESHAT", handler: "sector-intelligence", async: false, description: "Upsert d'un axe culturel sectoriel PAR POLITY (SectorPolityAxis — échelle de marché × pays, countryCode vide = supra-national). Voie gouvernée UNIQUE d'écriture des axes polity : seed opérateur manuel ou ingestion Tarsis scoped. Le Sector global reste le fallback de résolution (getSectorAxisForPolity : EXACT → SCALE_ONLY → GLOBAL_FALLBACK) — jamais d'axe polity inventé (ADR-0127)." },
+
+  // ── ADR-0126 — naissance gouvernée des SuperfanProfile (anti-inflation d'évidence) ──
+  { kind: "SESHAT_REGISTER_SUPERFAN", governor: "SESHAT", handler: "superfan", async: false, description: "Enregistre/actualise UN SuperfanProfile (upsert par (strategyId, platform, handle) — dédup naturelle du modèle). Voie gouvernée UNIQUE de naissance des superfans trackés : toute ingestion (CRM, campagne, manuelle) passe ici, sinon le bras superfans du plafond d'évidence CULTE/ICONE (ADR-0126) devient inflatable par simple footprint. Verrou : test HARD single-writer." },
+
   // ── Phase 18 (ADR-0059) — Brand Tree CRUD governé Mestor ──
   { kind: "OPERATOR_CREATE_BRAND_NODE", governor: "MESTOR", handler: "brand-node", async: false, description: "Crée un BrandNode avec validation NATURE_TRANSITION_VALIDITY contre BRAND_NATURE_ARCHETYPES (ADR-0061). Refuse les transitions parent→child absurdes (SKU→CORPORATE etc.)." },
   { kind: "OPERATOR_UPDATE_BRAND_NODE", governor: "MESTOR", handler: "brand-node", async: false, description: "Modifie name/slug/nodeRole/clusterTag/countryCode/lifecycle d'un BrandNode existant. nodeKind et nodeNature sont immutables (utiliser MOVE pour changer la position structurelle)." },

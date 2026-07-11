@@ -211,12 +211,22 @@ export async function calculateAndSnapshot(strategyId: string): Promise<{
 /**
  * Get Cult Index history for a strategy
  */
+/**
+ * ADR-0126 — date du fix d'unités devotion→cult. Les snapshots antérieurs
+ * portent des dimensions saturées par le bug (×100/×200/×500 sur des
+ * pourcentages) : ils restent immuables (Loi 1) mais toute comparaison
+ * temporelle traversant cette date doit le savoir.
+ */
+export const CULT_UNITS_FIX_DATE = new Date("2026-07-11T00:00:00Z");
+
 export async function getCultIndexHistory(strategyId: string, limit = 30) {
-  return db.cultIndexSnapshot.findMany({
+  const rows = await db.cultIndexSnapshot.findMany({
     where: { strategyId },
     orderBy: { measuredAt: "desc" },
     take: limit,
   });
+  // Annotation honnête : mesuré AVANT le fix d'unités (échelle non comparable).
+  return rows.map((r) => ({ ...r, preUnitsFix: r.measuredAt < CULT_UNITS_FIX_DATE }));
 }
 
 /**

@@ -171,3 +171,57 @@ describe("ADR-0126 — schéma et migration additive", () => {
     ).toBe(true);
   });
 });
+
+describe("ADR-0126 — naissance gouvernée des SuperfanProfile (single-writer HARD)", () => {
+  it("aucun writer superfanProfile hors de la voie gouvernée superfan.register", () => {
+    // Les rows SuperfanProfile nourrissent le bras superfans du plafond
+    // d'évidence : tout chemin de création non gouverné = vecteur d'inflation.
+    const { execSync } = require("node:child_process") as typeof import("node:child_process");
+    const out = execSync(
+      "grep -rln 'superfanProfile\\.\\(create\\|upsert\\|createMany\\)' src/ --include='*.ts' --include='*.tsx' || true",
+      { encoding: "utf8" },
+    ).trim();
+    const files = out ? out.split("\n") : [];
+    const allowed = ["src/server/trpc/routers/superfan.ts"];
+    const offenders = files.filter((f) => !allowed.includes(f));
+    expect(offenders, `writers SuperfanProfile non gouvernés :\n${offenders.join("\n")}`).toEqual([]);
+  });
+
+  it("le kind SESHAT_REGISTER_SUPERFAN est catalogué avec son SLO", () => {
+    expect(read("src/server/governance/intent-kinds.ts")).toContain('kind: "SESHAT_REGISTER_SUPERFAN"');
+    expect(read("src/server/governance/slos.ts")).toContain('kind: "SESHAT_REGISTER_SUPERFAN"');
+  });
+});
+
+describe("ADR-0127 — Overton par polity (résolution honnête)", () => {
+  const schema = read("prisma/schema.prisma");
+  const sectorSrc = read("src/server/services/sector-intelligence/index.ts");
+  const cockpitSrc = read("src/server/trpc/routers/cockpit-router.ts");
+
+  it("le modèle SectorPolityAxis existe (unicité secteur × échelle × pays) + migration", () => {
+    expect(schema).toContain("model SectorPolityAxis {");
+    expect(schema).toContain("@@unique([sectorSlug, marketScale, countryCode])");
+    expect(
+      existsSync("prisma/migrations/20260711150000_adr0127_sector_polity_axis/migration.sql"),
+    ).toBe(true);
+  });
+
+  it("le résolveur expose les 3 niveaux de résolution — jamais d'axe inventé", () => {
+    expect(sectorSrc).toContain("getSectorAxisForPolity");
+    for (const level of ['"EXACT"', '"SCALE_ONLY"', '"GLOBAL_FALLBACK"']) {
+      expect(sectorSrc).toContain(level);
+    }
+  });
+
+  it("le kind SESHAT_UPSERT_POLITY_AXIS est catalogué avec son SLO + manifest", () => {
+    expect(read("src/server/governance/intent-kinds.ts")).toContain('kind: "SESHAT_UPSERT_POLITY_AXIS"');
+    expect(read("src/server/governance/slos.ts")).toContain('kind: "SESHAT_UPSERT_POLITY_AXIS"');
+    expect(read("src/server/services/sector-intelligence/manifest.ts")).toContain("SESHAT_UPSERT_POLITY_AXIS");
+  });
+
+  it("le radar founder résout l'axe PAR POLITY et surface le niveau de résolution", () => {
+    expect(cockpitSrc).toContain("getSectorAxisForPolity");
+    expect(cockpitSrc).toContain("axisPolityResolution");
+    expect(read("src/domain/overton-radar-signal.ts")).toContain("axisPolityResolution");
+  });
+});

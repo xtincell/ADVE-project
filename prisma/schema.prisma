@@ -5047,6 +5047,29 @@ model Sector {
   updatedAt          DateTime  @updatedAt
 }
 
+/// ADR-0127 — Axe culturel sectoriel PAR POLITY (échelle de marché × pays).
+/// Complète le Sector global (qui reste le fallback honnête) : déplacer la
+/// fenêtre d'Overton d'un quartier n'est pas la déplacer d'un continent.
+/// countryCode "" (vide) = axe supra-national de cette échelle (sentinel
+/// documenté — permet l'unicité DB, Postgres traite les NULL comme distincts).
+model SectorPolityAxis {
+  id                 String      @id @default(cuid())
+  sectorSlug         String
+  marketScale        MarketScale
+  countryCode        String      @default("") @db.VarChar(2)
+  /// JSON SectorAxis { tags, confidence, samples } — même forme que Sector.culturalAxis
+  culturalAxis       Json?
+  dominantNarratives String[]
+  /// JSON OvertonSnapshot — même forme que Sector.overtonState
+  overtonState       Json?
+  lastObservedAt     DateTime?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  @@unique([sectorSlug, marketScale, countryCode])
+  @@index([sectorSlug])
+}
+
 /// CRDT doc for real-time collab on long-form pillar / Oracle text.
 /// Phase 5 (NSP + Yjs). Stored as opaque BLOB; client reconciles via Yjs.
 model StrategyDoc {
