@@ -10,6 +10,21 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.85 — fix(governance): spine d'émission unifié — emitIntent hash-chaîné, fail-closed, cost-gated ([ADR-0122](docs/governance/adr/0122-emission-spine-unified.md)) (2026-07-11)
+
+Réparation du **problème de fond** révélé par l'inspection du noyau (mandat opérateur « va plus loin, même si effort net ») : il existait DEUX chemins de mutation de force inégale — `governedProcedure` (hash-chain + cost-gate + événements + post-conditions) et `mestor.emitIntent`, le point que la doctrine sacralise, qui n'avait RIEN de tout ça (persist best-effort sans hash ni statut ni événement → jamais vérifié anti-tamper, jamais observé par Seshat, jamais coûté par Thot).
+
+- **Spine canonique unique** `governance/emission-spine.ts` (`openEmission`/`closeEmission`) consommé par les DEUX chemins : hash-chain sur le périmètre scellé à l'émission, advisory lock per-strategy (les `spawnedIntents` concurrents ne fourchent plus la chaîne), chaînage par-dessus les rows legacy (plus de réamorçage à null), statuts + événements terminaux systématiques.
+- **`emitIntent` fail-closed (Q1)** : émission impersistable ⇒ aucun dispatch (`EMISSION_PERSIST_FAILED`). **Cost-gate Thot (Loi 3)** sur le chemin bus (operatorId des options ou du payload, VETO refuse, DOWNGRADE trace). **Verdict `DOWNGRADED` du manipulation-gate plus jamais avalé** (warning + incrément `mixViolationOverrideCount`).
+- **Vérificateur de chaîne réparé** : `verifyChain` recomputait avec le `result` post-complétion — chaque intent complété aurait été flaggé « altéré » (mécanisme mort-né). Il recompute désormais sur `result: null` (la chaîne scelle l'émission ; le result, mutable par design, est hors périmètre — dit honnêtement). Commentaire mensonger de `hash-chain.ts` corrigé.
+- **Boucle d'observation complète** : `observeIntent` souscrit aux 4 états terminaux (FAILED/VETOED/DOWNGRADED ne restent plus `PENDING_OBSERVATION` à vie). **Ledger Thot vivant** : `financial-brain.recordCost` créé (le subscriber bootstrap appelait une fonction inexistante avec un champ jamais publié) ; le spine publie `costUsd` quand réellement connu — producteur par-intent = trou déclaré, aucun chiffre inventé.
+- **Writers directs reroutés** (cron sentinels, governance `compensate` — les Intents compensateurs Loi 1 sont eux-mêmes chaînés) ; ledgers restants (artemis/tools, brand-vault, founder-psychology) sous **allowlist « à mes risques » purgeable** (pattern C5, `reroutePlanned`).
+- **Test anti-drift HARD** `emission-spine-unified.test.ts` (11 tests : runtime spine mocké + régression vérificateur + source-scan deux-chemins + allowlist) ; C7 `yggdrasil-three-invariants` Q1 renforcé.
+
+Changement de comportement assumé : une panne DB à l'émission REFUSE la mutation (avant : mutation non tracée). tsc 0 · eslint 0 · **2453 tests verts** (215 fichiers). Zéro migration (colonnes existantes). Cap APOGEE 7/7.
+
+---
+
 ## v6.27.84 — fix(intake): chemin court honnête — plus de bascule muette, plus de site demandé deux fois (2026-07-11)
 
 Deux soucis UX signalés par l'opérateur sur le funnel public (`/intake`), vérifiés en code puis corrigés :

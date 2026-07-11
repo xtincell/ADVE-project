@@ -21,13 +21,11 @@
  */
 
 import { TRPCError } from "@trpc/server";
-import type { Prisma } from "@prisma/client";
 import type { Context } from "@/server/trpc/context";
 import { protectedProcedure, adminProcedure } from "@/server/trpc/init";
-import { eventBus } from "./event-bus";
-import { computeSelfHash } from "./hash-chain";
+import { openEmission, closeEmission, type EmissionStatus } from "./emission-spine";
 import { assertReadyFor, ReadinessVetoError } from "./pillar-readiness";
-import { assertCostGate, CostVetoError, type CostDecisionResult } from "./cost-gate";
+import { assertCostGate, CostVetoError, persistCostDecision, type CostDecisionResult } from "./cost-gate";
 import { makeDefaultCapacityReader } from "./default-capacity-reader";
 import { findCapability, getManifest } from "./registry";
 import { intentKindExists } from "./intent-kinds";
@@ -287,43 +285,15 @@ async function evaluateCostGateForIntent(
       { intentId, intentKind, operatorId, capability, manifest },
       reader,
     );
-    await persistCostDecision(ctx, intentId, intentKind, operatorId, decision, capability);
+    await persistCostDecision(ctx.db, intentId, intentKind, operatorId, decision, capability);
     return decision;
   } catch (err) {
     if (err instanceof CostVetoError) {
-      await persistCostDecision(ctx, intentId, intentKind, operatorId, err.result, capability);
+      await persistCostDecision(ctx.db, intentId, intentKind, operatorId, err.result, capability);
       return err.result;
     }
     throw err;
   }
-}
-
-async function persistCostDecision(
-  ctx: Context,
-  intentEmissionId: string,
-  intentKind: string,
-  operatorId: string,
-  decision: CostDecisionResult,
-  capability: Capability,
-): Promise<void> {
-  await ctx.db.costDecision
-    .create({
-      data: {
-        intentEmissionId,
-        intentKind,
-        operatorId,
-        decision: decision.decision,
-        estimatedUsd: decision.estimatedUsd,
-        remainingBudgetUsd: decision.remainingBudgetUsd,
-        downgradeFromTier: decision.downgradeTo ? capability.qualityTier ?? null : null,
-        downgradeToTier: decision.downgradeTo?.qualityTier ?? null,
-        reason: decision.reason,
-      },
-    })
-    .catch(() => {
-      // Don't fail the request if the audit row can't be written —
-      // the IntentEmission row already records the gate outcome.
-    });
 }
 
 function extractStrategyId(input: unknown): string | null {
@@ -442,10 +412,10 @@ export function auditedProcedure<P extends typeof protectedProcedure>(
         const reader = makeDefaultCapacityReader(ctx.db);
         try {
           costDecision = await assertCostGate({ intentId, intentKind: "LEGACY_MUTATION", operatorId, capability, manifest }, reader);
-          await persistCostDecision(ctx, intentId, "LEGACY_MUTATION", operatorId, costDecision, capability);
+          await persistCostDecision(ctx.db, intentId, "LEGACY_MUTATION", operatorId, costDecision, capability);
         } catch (err) {
           if (err instanceof CostVetoError) {
-            await persistCostDecision(ctx, intentId, "LEGACY_MUTATION", operatorId, err.result, capability);
+            await persistCostDecision(ctx.db, intentId, "LEGACY_MUTATION", operatorId, err.result, capability);
             await postEmitIntent(ctx, intentId, { error: err.result.reason, costDecision: err.result }, "VETOED");
             throw new TRPCError({ code: "PRECONDITION_FAILED", message: err.result.reason });
           }
@@ -519,70 +489,19 @@ async function preEmitIntent(
       ? (payload as { strategyId: string }).strategyId
       : undefined) ?? "(none)";
 
-  // Last hash for this strategy, to chain.
-  const last = await ctx.db.intentEmission.findFirst({
-    where: { strategyId },
-    orderBy: { emittedAt: "desc" },
-    select: { selfHash: true },
-  }).catch(() => null);
-  const prevHash = (last as { selfHash?: string | null } | null)?.selfHash ?? null;
-
-  const id = cryptoRandomId();
-  const emittedAt = new Date();
-  const selfHash = computeSelfHash({
-    id,
-    intentKind: kind,
-    strategyId,
-    payload,
-    result: null,
-    caller,
-    emittedAt,
-    prevHash,
-  });
-
-  await ctx.db.intentEmission.create({
-    data: {
-      id,
-      intentKind: kind,
-      strategyId,
-      payload: payload as Prisma.InputJsonValue,
-      caller,
-      emittedAt,
-      prevHash,
-      selfHash,
-      status: "PENDING",
-      startedAt: emittedAt,
-    },
-  });
-
-  eventBus.publish("intent.proposed", { intentId: id, kind, ctx: { caller, strategyId } });
-  return id;
+  // Canonical emission spine (ADR-0122) — hash-chain + PENDING row +
+  // intent.proposed. Throws EmissionPersistError on failure : fail-closed,
+  // Q1 (pas de trace ⇒ pas de mutation), remonte en tRPC 500.
+  return openEmission({ kind, strategyId, payload, caller });
 }
 
 async function postEmitIntent(
-  ctx: Context,
+  _ctx: Context,
   intentId: string,
   result: unknown,
-  status: "OK" | "FAILED" | "VETOED" | "DOWNGRADED" | "QUEUED",
+  status: EmissionStatus,
 ): Promise<void> {
-  const completedAt = new Date();
-  await ctx.db.intentEmission.update({
-    where: { id: intentId },
-    data: {
-      result: result as Prisma.InputJsonValue,
-      completedAt,
-      status,
-    },
-  });
-  if (status === "OK") {
-    eventBus.publish("intent.completed", { intentId, result });
-  } else if (status === "FAILED") {
-    eventBus.publish("intent.failed", { intentId, error: String(result) });
-  } else if (status === "VETOED") {
-    eventBus.publish("intent.vetoed", { intentId, reason: String(result) });
-  } else if (status === "DOWNGRADED") {
-    eventBus.publish("intent.downgraded", { intentId, reason: String(result) });
-  }
+  await closeEmission({ intentId, result, status });
 }
 
 async function resolveOperatorId(ctx: Context): Promise<string | null> {
@@ -595,10 +514,3 @@ async function resolveOperatorId(ctx: Context): Promise<string | null> {
   return user?.operatorId ?? null;
 }
 
-function cryptoRandomId(): string {
-  const a = "0123456789abcdef";
-  let out = "c";
-  for (let i = 0; i < 24; i++)
-    out += a[Math.floor(Math.random() * 16)];
-  return out;
-}

@@ -19,7 +19,6 @@ import { ADVE_STORAGE_KEYS } from "@/domain";
  */
 
 import type { PillarKey } from "@/lib/types/advertis-vector";
-import type { Prisma } from "@prisma/client";
 
 // ── Phase enum ────────────────────────────────────────────────────────
 
@@ -1364,39 +1363,136 @@ async function preflightMarketStatus(
 // ── emitIntent — single entry point ───────────────────────────────────
 
 /**
- * Emit an intent. Mestor logs it, optionally consults Thot, then hands off
- * to Artemis.commandant.execute().
+ * ADR-0122 — Thot cost-gate sur le chemin bus (Loi 3, parité chemin tRPC).
  *
- * In passthrough mode (Phase 0), the dispatcher routes to existing tools
- * with no behavior change. Subsequent phases enrich the dispatch logic.
+ * L'operatorId vient des options du caller OU du payload de l'Intent (nombre
+ * de kinds le portent déjà : OPERATOR_AMEND_PILLAR, IMHOTEP_*, …). Sans
+ * operator résolvable, la gate est sautée — même semantics que
+ * `evaluateCostGateForIntent` côté governed-procedure (le budget est
+ * per-operator ; rien d'honnête à gater sans operator).
+ */
+async function evaluateBusCostGate(
+  intent: Intent,
+  emissionId: string,
+  operatorId: string | null,
+): Promise<import("@/server/governance/cost-gate").CostDecisionResult | null> {
+  if (!operatorId) return null;
+  // Lazy imports — registry agrège les manifests services (cycle sinon).
+  const { findCapability, getManifest } = await import("@/server/governance/registry");
+  const handler = findCapability(intent.kind);
+  if (!handler) return null;
+  const manifest = getManifest(handler.service);
+  if (!manifest) return null;
+  const capability = manifest.capabilities.find((c) => c.name === handler.capability);
+  if (!capability) return null;
+  if (!capability.costEstimateUsd || capability.costEstimateUsd <= 0) return null;
+
+  const { db } = await import("@/lib/db");
+  const { assertCostGate, CostVetoError, persistCostDecision } = await import(
+    "@/server/governance/cost-gate"
+  );
+  const { makeDefaultCapacityReader } = await import(
+    "@/server/governance/default-capacity-reader"
+  );
+  const reader = makeDefaultCapacityReader(db);
+  try {
+    const decision = await assertCostGate(
+      { intentId: emissionId, intentKind: intent.kind, operatorId, capability, manifest },
+      reader,
+    );
+    await persistCostDecision(db, emissionId, intent.kind, operatorId, decision, capability);
+    return decision;
+  } catch (err) {
+    if (err instanceof CostVetoError) {
+      await persistCostDecision(db, emissionId, intent.kind, operatorId, err.result, capability);
+      return err.result;
+    }
+    throw err;
+  }
+}
+
+/** Extrait l'operatorId du payload quand le kind le porte (string non vide). */
+function extractOperatorId(intent: Intent): string | null {
+  if ("operatorId" in intent) {
+    const v = (intent as { operatorId?: unknown }).operatorId;
+    if (typeof v === "string" && v.length > 0) return v;
+  }
+  return null;
+}
+
+/**
+ * Emit an intent. Mestor logs it (émission hash-chaînée via le spine canonique,
+ * ADR-0122), consulte Thot (cost-gate), passe les pre-flight gates, then hands
+ * off to Artemis.commandant.execute().
+ *
+ * # Invariants (ADR-0122 — parité totale avec le chemin governed-procedure)
+ *
+ * - **Q1 fail-closed** : émission impossible à persister ⇒ AUCUN dispatch.
+ *   Le résultat est FAILED reason=EMISSION_PERSIST_FAILED. Pas de trace ⇒
+ *   pas de mutation (fin du best-effort historique).
+ * - **Loi 1** : la row est hash-chaînée (prevHash/selfHash) par `openEmission`.
+ * - **Loi 3** : cost-gate Thot quand un operatorId est résolvable (options ou
+ *   payload) ET que la capability manifest déclare un coût — VETO refuse le
+ *   dispatch, DOWNGRADE laisse passer et marque l'émission DOWNGRADED.
+ * - **Q2** : la fermeture publie l'événement terminal (completed/failed/
+ *   vetoed/downgraded) — la boucle d'observation Seshat couvre ce chemin.
+ * - Le verdict DOWNGRADED du manipulation-gate n'est plus avalé : warning sur
+ *   le résultat + incrément `Strategy.mixViolationOverrideCount`.
  */
 export async function emitIntent(
   intent: Intent,
-  options: { caller: string } = { caller: "unknown" },
+  options: { caller: string; operatorId?: string } = { caller: "unknown" },
 ): Promise<IntentResult> {
   const startedAt = new Date().toISOString();
 
   // Lazy imports to avoid circular dependencies
   const { db } = await import("@/lib/db");
   const { execute } = await import("@/server/services/artemis/commandant");
+  const { openEmission, closeEmission } = await import(
+    "@/server/governance/emission-spine"
+  );
 
-  // Persist emission (best-effort — never block the dispatch)
-  let emissionId: string | null = null;
+  // Fermeture best-effort : la mutation a déjà eu lieu — un échec d'écriture
+  // de la complétion ne détruit pas le résultat, il laisse la row PENDING
+  // (le cron staleness la flaggera — échec de trace visible, pas silencieux).
+  const close = async (
+    emissionId: string,
+    result: IntentResult,
+    status: "OK" | "FAILED" | "VETOED" | "DOWNGRADED" | "QUEUED",
+  ): Promise<void> => {
+    try {
+      await closeEmission({ intentId: emissionId, result, status });
+    } catch (err) {
+      console.error(
+        `[mestor.emitIntent] could not close emission ${emissionId} (${intent.kind}) — row left PENDING:`,
+        err instanceof Error ? err.message : err,
+      );
+    }
+  };
+
+  // ── Q1 fail-closed — émission hash-chaînée AVANT toute délibération ──
+  let emissionId: string;
   try {
-    const row = await db.intentEmission.create({
-      data: {
-        intentKind: intent.kind,
-        strategyId: intent.strategyId,
-        payload: intent as unknown as Prisma.InputJsonValue,
-        caller: options.caller,
-      },
+    emissionId = await openEmission({
+      kind: intent.kind,
+      strategyId: intent.strategyId,
+      payload: intent,
+      caller: options.caller,
     });
-    emissionId = row.id;
   } catch (err) {
-    console.warn(
-      "[mestor.emitIntent] could not persist IntentEmission (table may not exist yet):",
+    console.error(
+      "[mestor.emitIntent] EMISSION_PERSIST_FAILED — refusing dispatch (Q1 fail-closed):",
       err instanceof Error ? err.message : err,
     );
+    return {
+      intentKind: intent.kind,
+      strategyId: intent.strategyId,
+      status: "FAILED",
+      summary: `Emission could not be persisted — dispatch refused (no trace ⇒ no mutation). ${err instanceof Error ? err.message : String(err)}`,
+      reason: "EMISSION_PERSIST_FAILED",
+      startedAt,
+      completedAt: new Date().toISOString(),
+    };
   }
 
   // ── ADR-0038 Phase 16-bis — MANIPULATION_COHERENCE pre-flight ────────
@@ -1414,17 +1510,21 @@ export async function emitIntent(
       completedAt: new Date().toISOString(),
       reason: "MANIPULATION_COHERENCE",
     };
-    if (emissionId) {
-      try {
-        await db.intentEmission.update({
-          where: { id: emissionId },
-          data: { result: result as unknown as Prisma.InputJsonValue, status: "VETOED", completedAt: new Date() },
-        });
-      } catch {
-        /* best-effort */
-      }
-    }
+    await close(emissionId, result, "VETOED");
     return result;
+  }
+  // DOWNGRADED (override opérateur) — plus jamais avalé : tracé sur le
+  // compteur stratégique + surfacé en warning après dispatch (ADR-0122).
+  const mixDowngradeReason = mixCheck?.status === "DOWNGRADED" ? mixCheck.reason : null;
+  if (mixDowngradeReason) {
+    await db.strategy
+      .update({
+        where: { id: intent.strategyId },
+        data: { mixViolationOverrideCount: { increment: 1 } },
+      })
+      .catch(() => {
+        /* pivot MARKET:<code> ou stratégie absente — compteur non applicable */
+      });
   }
 
   // ── ADR-0080/0081 Phase 23 Epic 6 — CALIBRATION_SNAPSHOT_REQUIRED pre-flight ──
@@ -1443,16 +1543,7 @@ export async function emitIntent(
       completedAt: new Date().toISOString(),
       reason: "CALIBRATION_SNAPSHOT_REQUIRED",
     };
-    if (emissionId) {
-      try {
-        await db.intentEmission.update({
-          where: { id: emissionId },
-          data: { result: result as unknown as Prisma.InputJsonValue, status: "VETOED", completedAt: new Date() },
-        });
-      } catch {
-        /* best-effort */
-      }
-    }
+    await close(emissionId, result, "VETOED");
     return result;
   }
 
@@ -1468,16 +1559,24 @@ export async function emitIntent(
       completedAt: new Date().toISOString(),
       reason: "MARKET_STATUS",
     };
-    if (emissionId) {
-      try {
-        await db.intentEmission.update({
-          where: { id: emissionId },
-          data: { result: result as unknown as Prisma.InputJsonValue, status: "VETOED", completedAt: new Date() },
-        });
-      } catch {
-        /* best-effort */
-      }
-    }
+    await close(emissionId, result, "VETOED");
+    return result;
+  }
+
+  // ── ADR-0122 — Thot cost-gate (Loi 3) — parité chemin governed-procedure ──
+  const operatorId = options.operatorId ?? extractOperatorId(intent);
+  const costDecision = await evaluateBusCostGate(intent, emissionId, operatorId);
+  if (costDecision?.decision === "VETO") {
+    const result: IntentResult = {
+      intentKind: intent.kind,
+      strategyId: intent.strategyId,
+      status: "VETOED",
+      summary: costDecision.reason,
+      startedAt,
+      completedAt: new Date().toISOString(),
+      reason: "COST_GATE",
+    };
+    await close(emissionId, result, "VETOED");
     return result;
   }
 
@@ -1505,18 +1604,22 @@ export async function emitIntent(
   if (briefCoherenceWarning) {
     result.warnings = [...(result.warnings ?? []), briefCoherenceWarning];
   }
-
-  // Update emission record with result
-  if (emissionId) {
-    try {
-      await db.intentEmission.update({
-        where: { id: emissionId },
-        data: { result: result as unknown as Prisma.InputJsonValue, completedAt: new Date() },
-      });
-    } catch {
-      /* best-effort */
-    }
+  // Surface manipulation-gate DOWNGRADE + cost-gate DOWNGRADE (non-blocking).
+  if (mixDowngradeReason) {
+    result.warnings = [...(result.warnings ?? []), `MANIPULATION_COHERENCE downgraded: ${mixDowngradeReason}`];
   }
+  if (costDecision?.decision === "DOWNGRADE") {
+    result.warnings = [...(result.warnings ?? []), `COST_GATE downgraded: ${costDecision.reason}`];
+  }
+
+  // Statut de la ROW d'émission : un dispatch OK sous downgrade (Thot ou
+  // manipulation) est marqué DOWNGRADED — même règle que le chemin
+  // governed-procedure. Le statut du RÉSULTAT rendu au caller reste celui du
+  // handler (les flows emitIntentTyped ne cassent pas sur un override assumé).
+  const gateDowngraded = mixDowngradeReason !== null || costDecision?.decision === "DOWNGRADE";
+  const emissionStatus =
+    result.status === "OK" && gateDowngraded ? "DOWNGRADED" : result.status;
+  await close(emissionId, result, emissionStatus);
 
   // Fire-and-forget spawned intents (Artemis-decided side-effects — async indexing,
   // PILLAR sequences in preview mode, etc.). The caller's response is NOT delayed.

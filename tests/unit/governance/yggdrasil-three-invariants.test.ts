@@ -35,10 +35,14 @@ describe("C7 — Yggdrasil Q1 : traçabilité (IntentEmission hash-chaînée)", 
     expect(model).toContain("selfHash");
   });
 
-  it("emitIntent persists an IntentEmission row for every combustion", () => {
+  it("emitIntent persists an IntentEmission row for every combustion — via le spine hash-chaîné (ADR-0122)", () => {
     const intents = read("src/server/services/mestor/intents.ts");
     expect(intents).toContain("export async function emitIntent");
-    expect(intents).toContain("intentEmission.create");
+    // Depuis l'unification ADR-0122, la persistance passe par openEmission
+    // (hash-chain + fail-closed) — plus jamais un create nu best-effort.
+    expect(intents).toContain("openEmission({");
+    expect(intents).toContain("EMISSION_PERSIST_FAILED");
+    expect(intents).not.toContain("intentEmission.create");
   });
 });
 

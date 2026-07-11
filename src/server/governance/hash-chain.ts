@@ -1,10 +1,21 @@
 /**
  * src/server/governance/hash-chain.ts — IntentEmission tamper-evidence.
  *
- * Layer 2. Pure helpers; the actual chain rows are written from
- * `mestor.emitIntent`. Each new IntentEmission row receives `selfHash`,
- * computed from the row body + the previous row's `selfHash` (scoped to the
- * same `strategyId` to keep the chain partitioned and indexable).
+ * Layer 2. Pure helpers; the actual chain rows are written from the canonical
+ * emission spine (`governance/emission-spine.ts` — `openEmission`), consumed by
+ * BOTH entry paths: `governed-procedure.ts` (tRPC) and `mestor.emitIntent`
+ * (bus). Each new IntentEmission row receives `selfHash`, computed from the
+ * row body + the previous HASHED row's `selfHash` (scoped to the same
+ * `strategyId` to keep the chain partitioned and indexable).
+ *
+ * # Périmètre scellé — émission, pas complétion
+ *
+ * `selfHash` est calculé À L'ÉMISSION avec `result: null` : il scelle l'ordre,
+ * le kind, le payload et le caller. Le `result` est écrit PLUS TARD par
+ * `closeEmission` — il est mutable par design et HORS du périmètre scellé.
+ * `verifyChain` recompute donc toujours avec `result: null` ; recomputer avec
+ * le result post-complétion flaggerait chaque intent complété comme altéré
+ * (bug historique du vérificateur, corrigé avec l'unification du spine).
  *
  * Verification (run weekly via governance-drift cron):
  *   SELECT id, strategyId, prevHash, selfHash FROM "IntentEmission"
@@ -62,7 +73,9 @@ export function verifyChain(
         count: rows.length,
       };
     }
-    const recomputed = computeSelfHash({ ...row, prevHash: prev });
+    // Recompute over the EMISSION-time snapshot: result is written later by
+    // closeEmission and is outside the sealed perimeter (see header).
+    const recomputed = computeSelfHash({ ...row, result: null, prevHash: prev });
     if (recomputed !== row.selfHash) {
       return {
         ok: false,

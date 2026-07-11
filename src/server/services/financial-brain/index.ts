@@ -45,6 +45,9 @@ export {
 // ─── Fee Structures ─────────────────────────────────────────────────────────
 export { calculateFee, compareFeeModels, COMMISSION_RATES } from "./fee-structures";
 
+// ─── Realised-cost ledger (ADR-0122 — subscriber Thot sur intent.completed) ──
+export { recordCost } from "./record-cost";
+
 // ─── Actor Engines ──────────────────────────────────────────────────────────
 export {
   analyzeAdvertiser,

@@ -14,9 +14,9 @@ export const dynamic = "force-dynamic";
  */
 
 import { db } from "@/lib/db";
-import type { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { verifyCronSecret } from "@/lib/cron-auth";
+import { openEmission } from "@/server/governance/emission-spine";
 
 interface SentinelEmission {
   kind: string;
@@ -121,15 +121,14 @@ export async function GET(request: Request) {
 
 async function emit(s: SentinelEmission): Promise<void> {
   try {
-    await db.intentEmission.create({
-      data: {
-        id: `sentinel_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
-        intentKind: s.kind,
-        strategyId: s.strategyId,
-        payload: s.payload as Prisma.InputJsonValue,
-        caller: "cron:sentinels",
-        status: "PENDING",
-      },
+    // ADR-0122 — spine canonique : la row sentinelle est hash-chaînée et
+    // publie `intent.proposed` comme toute autre émission (elle reste PENDING
+    // jusqu'à consommation par les services sentinelles).
+    await openEmission({
+      kind: s.kind,
+      strategyId: s.strategyId,
+      payload: s.payload,
+      caller: "cron:sentinels",
     });
   } catch (err) {
     console.warn(`[cron:sentinels] failed to emit ${s.kind} for ${s.strategyId}:`, err);
