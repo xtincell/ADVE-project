@@ -221,7 +221,7 @@ NEFER consulte ces sources dans l'ordre, sans skip, à chaque session :
 | Document | Contenu | Auto-régen |
 |---|---|---|
 | [CODE-MAP.md](CODE-MAP.md) | **Knowledge graph** — synonymes mot-du-métier ↔ entité, tous models Prisma, services, routers, pages, Glory tools, séquences, intent kinds | ✓ pre-commit hook |
-| [INTENT-CATALOG.md](INTENT-CATALOG.md) | 546 Intent kinds (recompte 2026-07-11 — registre `INTENT_KINDS`) avec governor/handler/SLO/description | ✓ `npx tsx scripts/gen-intent-catalog.ts` |
+| [INTENT-CATALOG.md](INTENT-CATALOG.md) | 548 Intent kinds (recompte 2026-07-11 PM — registre `INTENT_KINDS`) avec governor/handler/SLO/description | ✓ `npx tsx scripts/gen-intent-catalog.ts` |
 | [glory-tools-inventory.md](glory-tools-inventory.md) | Glory tools indexés par layer — 56 CORE / 149 au registre étendu (recompte 2026-07-11 ; décomposition CORE : 40 legacy + 9 P13 + 4 P14 + 3 P15) | ✓ `npm run glory:inventory` |
 | [SERVICE-MAP.md](SERVICE-MAP.md) | 115 répertoires services backend par sous-système APOGEE (recompte 2026-07-11 ; 23 « À classifier ») | manuel |
 | [ROUTER-MAP.md](ROUTER-MAP.md) | 112 routers tRPC par sous-système (recompte 2026-07-11 ; 34 « À classifier ») | manuel |
