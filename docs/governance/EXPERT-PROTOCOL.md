@@ -336,9 +336,7 @@ Format Conventional Commits (commitlint enforced) :
 Verify : <résultats des audits>
 Résidus : <résidus laissés ou "aucun">
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+Co-Authored-By: <signature du modèle courant fournie par l'environnement de session>
 ```
 
 types autorisés : `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `perf`

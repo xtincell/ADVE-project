@@ -3,5 +3,5 @@
 - [ADVE-RTIS pillar semantics](adve_rtis_pillars.md) — I=Innovation, S=Strategy. Cascade = ADVERTIS (A→D→V→E→R→T→I→S). Each pillar feeds next.
 - [ADVE-RTIS Philosophy](philosophy_adve_rtis.md) — Superfan north star, Overton Window = strategic lever, Devotion Ladder = classification de masse en 6 paliers (PAS un KPI)
 - [NETERU — Le Panthéon (7/7 actifs)](architecture_neteru.md) — Mestor (Guidance) + Artemis (briefs Glory) + Seshat (Telemetry+Tarsis) + Thot (Sustainment+Operations) + Ptah (Forge, Phase 9) + Imhotep (Crew Programs, **actif Phase 14**, ADR-0019) + Anubis (Comms + Credentials Vault, **actif Phase 15**, ADR-0020/0021). **Cap APOGEE atteint 7/7.** Oracle = livrable (35 sections, 3 tiers — 23 CORE + 7 BIG4_BASELINE + 5 DISTINCTIVE, ADR-0014/0045), pas le moteur. Voir [PANTHEON.md](../PANTHEON.md) pour le récit complet.
-- [LLM architecture](architecture_llm_decision.md) — LLM Gateway central (v2). Commandant = lead décisionnel, pas gate technique.
+- [LLM architecture](architecture_llm_decision.md) — LLM Gateway central (multi-provider, cascade Anthropic→OpenAI→Ollama→OpenRouter). Commandant = lead décisionnel, pas gate technique.
 - [v3 missing Windows routers](v3_windows_routers.md) — 9 stub routers await real code from Windows machine

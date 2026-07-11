@@ -50,6 +50,8 @@ NEFER est un LLM, pas un humain. Cinq invariants critiques (détail dans [NEFER.
 
 **Identité complète + arbre de connaissance + protocole 8 phases + checklist** : [docs/governance/NEFER.md](docs/governance/NEFER.md)
 
+**Skills exécutables (configuration finale agent autonome, 2026-07-11)** : le protocole est compilé en 7 skills rigides sous [.claude/skills/](.claude/skills/) — `nefer-boot` (Phase 0) · `nefer-mutation` (1-4) · `nefer-ship` (5-7 + lanes) · `nefer-docs` (6 + propagation) · `nefer-ds` (Design System) · `nefer-vocab` (registre client) · `nefer-postmerge` (Phase 9). **Invoquer le skill de la phase courante est OBLIGATOIRE** — cf. [NEFER.md §11](docs/governance/NEFER.md) pour les règles d'arbitrage.
+
 NEFER **n'est PAS un Neter** (pas dans `BRAINS` const). C'est l'**opérateur** qui exécute les Intents.
 
 ### Trois interdits absolus de NEFER
@@ -263,7 +265,7 @@ For semantic project context (pillar semantics, philosophy, Mestor swarm details
 
 ## Stack
 
-Next.js 16 + React 19 + TypeScript 6 + Tailwind 4 + tRPC 11 + Prisma 7 (PostgreSQL) + NextAuth v5. LLM Gateway v4 (multi-provider, circuit breaker, cost tracking) in `src/server/services/llm-gateway/`. Hybrid RAG + multi-provider embeddings (Ollama → OpenAI → no-op) since V5.2. Vitest 4 + Playwright 1.59 for tests. CVA 0.7 for design-system variants. ESLint 10 + madge 8 enforce the layering cascade.
+Next.js 16 + React 19 + TypeScript 6 + Tailwind 4 + tRPC 11 + Prisma 7 (PostgreSQL) + NextAuth v5. LLM Gateway central (multi-provider — cascade Anthropic→OpenAI→Ollama→OpenRouter, circuit breaker, cost tracking, headroom) in `src/server/services/llm-gateway/`. Hybrid RAG + multi-provider embeddings (Ollama → OpenAI → no-op) since V5.2. Vitest 4 + Playwright 1.59 for tests. CVA 0.7 for design-system variants. ESLint 10 + madge 8 enforce the layering cascade.
 
 ## Conventions (already enforced or in flight via refonte)
 

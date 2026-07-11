@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.93 — feat(nefer): skills rigides + configuration finale agent autonome (2026-07-11)
+
+**Le protocole NEFER 8+1 phases est compilé en 7 skills exécutables à zéro latitude — la base de travail de l'agent autonome de maintenance.**
+
+- `feat(nefer)` **Suite `.claude/skills/` (7 skills)** : `nefer-boot` (Phase 0 — statement d'activation, sync git exact, 7 sources de vérité, reformulation LEXICON, drift-test MISSION, conditions STOP) · `nefer-mutation` (Phases 1-4 — 3 interdits verbatim, greps anti-doublon exacts, table des voies UNIQUES de mutation : spine ADR-0124, gateway C5, OPERATOR_AMEND_PILLAR, RTIS dérivés, executeStructuredLLMCall) · `nefer-ship` (Phases 5-7 — gauntlet exact, format commit, commitlint ≤100, **deux lanes** locale/managée avec merge-par-NEFER dès CI verte, gates CI nommées) · `nefer-docs` (Phase 6 — format CHANGELOG, matrice docs, propagation 7 sources, régen auto, format ADR + collisions first-come, règle anti-drift des comptes avec commande de recompte registres) · `nefer-ds` (cascade 4 tiers, 3 interdits DS, CVA, patterns warning/EmptyState, greps de vérification du diff) · `nefer-vocab` (deux registres, motifs interdits ↔ remplacements business, lexique T7 « Prescripteur », protocole d'extension du test HARD) · `nefer-postmerge` (Phase 9 — version unique, compteurs registre-vs-prose, états de transition, anti-jargon, critères de sortie). Chaque skill : étapes numérotées impératives, MUST/NEVER, conditions STOP, clause « AUCUNE improvisation — déviation = drift → Phase 8 ».
+- `docs(governance)` **NEFER.md configuration finale** : §7.0 réécrit en **deux lanes** (locale = main direct inchangé ; managée = branche désignée + PR draft + labels/scope-drift + **merge immédiat par NEFER après CI verte** — résout la contradiction avec les sessions remote) ; signature commit `Co-Authored-By` **générique** (fournie par l'environnement — plus jamais un nom de modèle codé en dur) ; **§11 Skills exécutables** (table + 4 règles d'arbitrage : skill obligatoire par phase, skills priment sur l'exécution / NEFER.md sur le fond, évolution dans les deux même commit, rigidité par conception) ; fixes de passage (« Panthéon 5+2 » → 7/7, « Gateway v5/v2/v4 » → sans numéro, cohérent code).
+- `docs(governance)` CLAUDE.md : section ACTIVATION NEFER pointe les skills (invocation obligatoire) ; Stack unifiée sur le Gateway sans numéro de version.
+
+---
+
 ## v6.27.92 — docs(governance): vérité unique — purge des incohérences doctrine/code (2026-07-11)
 
 Mandat opérateur post-merge #447 : « corrige la documentation (commentaire de code inclus) pour unifier le savoir — purge tout pour ramener à une vérité unique ». Inventaire issu de l'inspection noyau (15 tensions), chaque anchor re-vérifié avant édit, comptes recalculés sur les registres code vivants.
