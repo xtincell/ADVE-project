@@ -221,10 +221,10 @@ NEFER consulte ces sources dans l'ordre, sans skip, à chaque session :
 | Document | Contenu | Auto-régen |
 |---|---|---|
 | [CODE-MAP.md](CODE-MAP.md) | **Knowledge graph** — synonymes mot-du-métier ↔ entité, tous models Prisma, services, routers, pages, Glory tools, séquences, intent kinds | ✓ pre-commit hook |
-| [INTENT-CATALOG.md](INTENT-CATALOG.md) | 350+ Intent kinds avec governor/handler/SLO/description (incl. 7 Imhotep + 10 Anubis Phase 14/15) | ✓ `npx tsx scripts/gen-intent-catalog.ts` |
-| [glory-tools-inventory.md](glory-tools-inventory.md) | 56 Glory tools indexés par layer (40 legacy + 9 Phase 13 Oracle + 4 Phase 14 Imhotep + 3 Phase 15 Anubis ; vérifié par test `glory-tools.test.ts`) | ✓ `npm run glory:inventory` |
-| [SERVICE-MAP.md](SERVICE-MAP.md) | 85+ services backend par sous-système APOGEE | manuel |
-| [ROUTER-MAP.md](ROUTER-MAP.md) | 75+ routers tRPC par sous-système | manuel |
+| [INTENT-CATALOG.md](INTENT-CATALOG.md) | 546 Intent kinds (recompte 2026-07-11 — registre `INTENT_KINDS`) avec governor/handler/SLO/description | ✓ `npx tsx scripts/gen-intent-catalog.ts` |
+| [glory-tools-inventory.md](glory-tools-inventory.md) | Glory tools indexés par layer — 56 CORE / 149 au registre étendu (recompte 2026-07-11 ; décomposition CORE : 40 legacy + 9 P13 + 4 P14 + 3 P15) | ✓ `npm run glory:inventory` |
+| [SERVICE-MAP.md](SERVICE-MAP.md) | 115 répertoires services backend par sous-système APOGEE (recompte 2026-07-11 ; 23 « À classifier ») | manuel |
+| [ROUTER-MAP.md](ROUTER-MAP.md) | 112 routers tRPC par sous-système (recompte 2026-07-11 ; 34 « À classifier ») | manuel |
 | [PAGE-MAP.md](PAGE-MAP.md) | 165+ pages par deck (Console/Cockpit/Agency/Creator/Launchpad) | manuel |
 
 ### 4.3 Code source — surfaces structurelles à connaître

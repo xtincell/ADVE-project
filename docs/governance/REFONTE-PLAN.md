@@ -1077,9 +1077,9 @@ Aucun nouveau Neter. Phase 18 = sous-domaine de Mestor governance (Brand Tree CR
 
 ---
 
-## Phase 22 — Argos by LaFusée (Seshat reference harvester + propriété média indépendante) — 📋 PLANNED
+## Phase 22 — Argos by LaFusée (Seshat reference harvester + propriété média indépendante) — 🟢 backend + app publique shippés (ADR-0100)
 
-**Status** : conçu et testé hors-repo, **pas encore porté dans `src/`**. Code de référence vendorisé dans [`docs/external-design/argos-hunter-v1/`](../external-design/argos-hunter-v1/) (2026-05-15) — lire [VENDOR-NOTICE.md](../external-design/argos-hunter-v1/VENDOR-NOTICE.md) avant toute interaction. `research-dossier-v1` generator, ~1640 lignes JSX + mock server Node + README architectural. Décisions de fondation verrouillées 2026-05-15 (cf. session NEFER). **NE PAS auto-shiper** — attendre demande explicite Alexandre.
+**Status** : porté SOUS gouvernance le 2026-06-14 ([ADR-0100](adr/0100-argos-hunter-backend-port.md), v6.25.27-31) — modèle `CampaignReferenceDossier` + Hunter via LLM Gateway + manual-first + verdict sûreté déterministe + app publique `src/app/(public)/argos` + console. Le code de référence vendorisé reste gelé intact dans [`docs/external-design/argos-hunter-v1/`](../external-design/argos-hunter-v1/) — lire [VENDOR-NOTICE.md](../external-design/argos-hunter-v1/VENDOR-NOTICE.md) (3 interdits) avant toute interaction avec le vendor. Restant : A4 newsletter (post-MVP).
 
 ### Mission contribution (north star)
 
