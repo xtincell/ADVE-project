@@ -149,7 +149,16 @@ jobs:
   phase-label-check:
     name: Phase label present (refonte)
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    # Ne PAS juger sur `opened`/`reopened` : l'API create-PR ne peut pas poser
+    # de label à la création, donc le label arrive TOUJOURS juste après → un run
+    # `opened` échouerait systématiquement (faux négatif rouge à chaque PR). On
+    # ne juge que sur `labeled`/`unlabeled`/`synchronize` : le 1er run voit donc
+    # déjà le label → vert. Une PR jamais labellisée ne produit jamais de run
+    # vert → la gate tient (statut « en attente », pas un faux vert).
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action != 'opened' &&
+      github.event.action != 'reopened'
     steps:
       - uses: actions/github-script@v9
         with:

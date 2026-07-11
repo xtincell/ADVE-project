@@ -62,13 +62,23 @@ Co-Authored-By: <signature modèle fournie par l'environnement de session>
 | Contexte d'exécution | Lane | Procédure |
 |---|---|---|
 | **NEFER local (CLI opérateur, aucune branche imposée)** | `main` direct | `git checkout main && git pull --ff-only` → travail → commit → `git push origin main`. Pas de branche, pas de PR (NEFER.md §7.0 — le protocole EST la review). Exception unique : l'opérateur demande explicitement une PR. |
-| **Session managée (Claude Code web/remote — le harness désigne une branche)** | branche désignée + PR | 1. Développer sur LA branche désignée (la créer si absente ; **NEVER pousser ailleurs**). 2. `git push -u origin <branche>` — sur échec réseau uniquement : retries 2 s/4 s/8 s/16 s. 3. Ouvrir un **PR draft** avec label **`phase/N`** ou **`out-of-scope`** ; si out-of-scope → ligne ajoutée à `docs/governance/scope-drift.md` DANS le diff (gate CI). 4. S'abonner aux événements du PR (subscribe). 5. **CI 100 % verte → marquer ready → MERGER soi-même immédiatement** (méthode merge-commit — style du repo). Un PR qui traîne n'est pas un livrable. 6. Post-merge : fermer les PRs absorbés, `git fetch origin main && git checkout -B <branche> origin/main`, puis skill `nefer-postmerge`. |
+| **Session managée (Claude Code web/remote — le harness désigne une branche)** | branche désignée + PR | 1. Développer sur LA branche désignée (la créer si absente ; **NEVER pousser ailleurs**). 2. `git push -u origin <branche>` — sur échec réseau uniquement : retries 2 s/4 s/8 s/16 s. 3. Ouvrir le **PR draft** → **récupérer le vrai `#N`** (ne JAMAIS deviner le numéro). 4. Si out-of-scope : écrire la ligne `docs/governance/scope-drift.md` avec ce `#N` réel + committer + push (synchronize) — la ligne DOIT être dans le diff (gate CI). 5. Poser le label **`phase/N`** ou **`out-of-scope`** ; s'assurer que le body porte la section **`Justification — out-of-scope`** (gate). 6. S'abonner (subscribe). 7. **CI 100 % verte → marquer ready → MERGER soi-même** (merge-commit — style du repo). Un PR qui traîne n'est pas un livrable. 8. Post-merge : fermer les PRs absorbés, `git fetch origin main && git checkout -B <branche> origin/main`, puis skill `nefer-postmerge`. |
 
 ### 7.4 Gates CI à connaître (et ne jamais contourner)
 
 `Commit message lint` (≤100) · `Phase label present` · `Scope drift log updated` · `Typecheck` · `Lint` ×2 · `Unit tests` · `Governance audit` · `Dependency cycles` · `Prisma validate` · `LLM node guardrails` · `Mission contribution audit` · `Golden Path E2E`.
 
 - Un check rouge → diagnostiquer via les logs du job, corriger, re-push. **Deux échecs consécutifs du même check sans cause comprise → STOP, diagnostic complet avant tout re-push** (jamais de re-kick aveugle en boucle).
+
+### 7.5 Pièges récurrents — DÉJÀ ENCODÉS (ne pas les re-découvrir à chaque PR)
+
+Ces faux négatifs / répétitions coûteuses sont connus. **Ne pas les ré-investiguer ni les narrer comme neufs** — appliquer la parade directement.
+
+- **`Phase label present` rouge sur run `opened`** → corrigé À LA SOURCE (`ci.yml` : le job saute `opened`/`reopened`, l'API create-PR ne pouvant pas poser de label). Le 1er run est celui de `labeled` → vert. Si un vieux run `opened` rouge subsiste, il est **superseded** (concurrency `cancel-in-progress`) — le run le plus récent fait foi. Ne PAS re-diagnostiquer.
+- **Numéro de PR dans `scope-drift.md`** → créer le PR AVANT d'écrire le numéro (7.3 étapes 3-4). Deviner = ligne fausse à corriger. Ne plus deviner.
+- **Version unique** (`nefer-postmerge` §9.2) → 4 emplacements : `package.json`, `package-lock.json` (**2 lignes**), `src/components/landing/marketing-footer.tsx`, tête du `CHANGELOG.md`. Utiliser `node scripts/bump-version.mjs <x.y.z>` (bump atomique + garde-fou). Bump préventif dans le PR qui ship.
+- **Commit de merge GitHub signalé par le stop-hook** (committer `noreply@github.com`) → c'est la signature de l'API merge de GitHub ET c'est `origin/main`. **NE JAMAIS l'amender/rebaser** (réécrit l'historique partagé) ; fast-forward le pointeur de branche, point.
+- **Migrations en image standalone** → le CLI Prisma est MORT dans l'image (WASM + `@prisma/config`/`effect` élagués par le trace). Le boot applique via `scripts/apply-migrations.mjs` (runner `pg` zéro-dep). Une nouvelle migration se propage donc au prochain déploiement Coolify — ne PAS suggérer `prisma migrate deploy` dans le conteneur (échoue). Cf. `migrate-on-boot-runner.test.ts`.
 
 ## Conditions STOP
 
