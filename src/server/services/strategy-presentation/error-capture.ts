@@ -6,8 +6,8 @@
  *
  * Used by:
  *   - `governed-procedure` (top-level wrapper for all governed mutations)
- *   - `enrich-oracle` section-level circuit breakers (per-framework, per-section
- *     failures that must NOT abort the rest of the pipeline)
+ *   - the Oracle section generation path (per-section/per-runner failures
+ *     that must NOT abort the rest of the pipeline — ADR-0070/0071)
  */
 
 import { OracleError, toOracleError, type OracleErrorCode } from "./error-codes";

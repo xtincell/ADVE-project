@@ -10,6 +10,23 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.92 — docs(governance): vérité unique — purge des incohérences doctrine/code (2026-07-11)
+
+Mandat opérateur post-merge #447 : « corrige la documentation (commentaire de code inclus) pour unifier le savoir — purge tout pour ramener à une vérité unique ». Inventaire issu de l'inspection noyau (15 tensions), chaque anchor re-vérifié avant édit, comptes recalculés sur les registres code vivants.
+
+- **Bible `STATE_FINAL_BLUEPRINT.md` (11 fixes)** : suffixe mission non-négociable ajouté à l'annexe MI (« — via la méthode ADVE/RTIS ») ; Devotion Ladder unifiée 6 rungs canon (l'annexe APOGEE §4.1 portait une échelle 5-rungs fantôme avec « superfan » en rung) ; Overton Delta = « déflection via proxies, jamais mesure directe » (§12.2 contredisait l'annexe MI §2.2) ; note ADR-0082 « à amender » → « amendée ✅ 2026-05-16 » ; test yggdrasil « 📋 à créer » → « ✅ shippé PR #258 » ; `LEGENDARY` (terme orphelin, zéro occurrence code) → palier ICONE ; « ex-« LATENT » » auto-référentiel → « ex-« ZOMBIE » » (`brand-tier.ts`) ; **comptes couche 6 + lexique + §4.1 recalculés** : 112 routers · 56 CORE/149 registry Glory tools · 94 séquences (91 DRAFT) · 28 frameworks · 546 Intent kinds (recompte 2026-07-11 sur `INTENT_KINDS`/`CORE_GLORY_TOOLS`/`EXTENDED_GLORY_TOOLS`/`ALL_SEQUENCES`/`FRAMEWORKS` — les valeurs écrites divergeaient jusqu'à 3.6×).
+- **Contextes** : `philosophy_adve_rtis.md` (Oracle 21 → 35 sections/3 tiers ; R+T = « piliers dérivés qui fonctionnent comme outils de diagnostic » — réconcilie l'ontologie ; auto-trigger → cascade staleness + Intents explicites STOP-Jehuty ; 24 → 28 frameworks) ; `MEMORY.md` (« Devotion Ladder = KPI » → classification de masse PAS un KPI ; « 4 tiers » → 3) ; `UPGRADERS-LAFUSEE-KB.md` (**scores cibles EFR corrigés en seuils d'entrée de bande `classifyTier`** — l'ancienne table promettait un palier avec un score qui classifiait un point SOUS le palier promis).
+- **Commentaires de code mensongers** : `intent-progress.ts` (NSP « Phase 5 will stream » → shippé Phase 16 ; OBSERVED = flip `observationStatus` ADR-0124) ; `strategy-presentation/index.ts` (docstring completeness 21 CORE → canon 23/7/5 + `section-writeback.ts`) ; sweep présent-tense `enrichOracle` (12 fichiers src — pillar-gateway consumers, progressive-panel, launch-modal, export-oracle, pillar-readiness, governed-procedure, pillar router, sequences/tools B4 → mode ENRICHMENT ADR-0042 ; références historiques conservées) ; REFONTE-PLAN (5 lignes enrichOracleNeteru → ASSEMBLE_ORACLE, tracker → panel progressif) + GITHUB-ACTIONS-GUIDE.
+- **Router `devotion-ladder` aligné canon** : `DEVOTION_LEVELS` keys/labels 6 rungs (était Spectateur/Curieux/Fidèle/Ambassadeur/Évangéliste/Apôtre — contredisait son propre input schema), labels client registre T7 (« Prescripteur »), reconcileAmbassadors levels 5-6.
+- **Glory tool `devotion-levels-mapper` unifié** : prompt + Zod enum passaient au LLM l'échelle 5-rungs fantôme (visiteur/suiveur/fan/superfan/ambassadeur) → 6 rungs canon + `current_distribution` 6 clés plurielles pillarE. Trou de contrat writeback→renderer section 33 inscrit au registre (RESIDUAL-DEBT).
+- **i18n ×3 langues** : `oracle.section.empty` ordonnait de « lancer un enrich-oracle » (chemin supprimé + vocabulaire interne exposé au client) → « assemblage de la proposition » ; `oracle.tier.core` 21 → 23.
+- **Maps** : ROUTER-MAP (« 71 routers » → 112 réels) + SERVICE-MAP (« 92 » → 115) — headers honnêtes + § « À classifier » (34 routers + 23 services listés mécaniquement, zéro classification inventée, chantier tracé RESIDUAL-DEBT) ; rows `strategy-presentation` (procédures supprimées) et `sequence-vault` (57 → 94) corrigées.
+- **CLAUDE.md** : entrées phase-status PR #447 (merged, CI 15/15) + cette vague.
+
+tsc 0 · tests ciblés verts (cockpit-vocabulary, glory-zod, oracle-coverage, hybrid). Cap APOGEE 7/7 (aucune entité nouvelle).
+
+---
+
 ## v6.27.91 — fix(governance,cockpit): intégration #447×#448 + résiduels (a)-(f) audit UX (2026-07-11)
 
 Merge de la PR #448 (audit UX Cockpit v2, lots 10-15) dans #447 avec résolution des collisions first-come (ADR-0122 nav conservé, ADR spine → [ADR-0124](docs/governance/adr/0124-emission-spine-unified.md) ; leurs entrées CHANGELOG 84-88 → 86-90) ; `requireOperator` (lot 12) composé avec le spine d'émission. Puis clôture des résiduels tracés :

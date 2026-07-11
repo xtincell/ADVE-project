@@ -15,7 +15,8 @@
  *   8. SIGNAL  — Si changement significatif, crée un Signal
  *
  * Consumers: pillar.ts router, RTIS protocols, GLORY tools, auto-filler,
- *            ingestion pipeline, enrich-oracle — tous passent par ici.
+ *            ingestion pipeline, quick-intake seed (C1), infer-needs-human (C2)
+ *            — tous passent par ici (keystone C5, ADR posé PR #258).
  */
 
 import { db } from "@/lib/db";

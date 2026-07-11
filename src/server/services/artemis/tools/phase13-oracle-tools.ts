@@ -14,8 +14,9 @@
  * Cascade hash-chain Glory→Brief→Forge (commit f9cd9de) préservée :
  * - Outputs avec `forgeOutput` (3 tools : bcg-portfolio-plotter, mckinsey-3-horizons-mapper,
  *   creative-evaluation-matrix étendu B2 in-place) déclenchent `chainGloryToPtah`
- * - Pendant `enrichAllSectionsNeteru()` (B4), le flag `oracleEnrichmentMode: true`
- *   court-circuite l'auto-trigger Ptah → forge déclenché manuellement via boutons B8
+ * - En mode ENRICHMENT (SequenceMode ADR-0042 — posé par le runner de section
+ *   Oracle), le flag `oracleEnrichmentMode: true` court-circuite l'auto-trigger
+ *   Ptah → forge déclenché manuellement via boutons B8
  *
  * Tous les tools réutilisent les services existants (anti-doublon NEFER §3) :
  * - cult-index-scorer → invoque `cult-index-engine` SESHAT (`src/server/services/cult-index-engine/`)
@@ -474,7 +475,7 @@ Règles : signals MIN 5, MAX 12 (JAMAIS vide). category/horizon/action : STRICTE
     requiredDrivers: [],
     dependencies: [],
     description:
-      "Cartographie l'échelle de devotion (visiteur → suiveur → fan → superfan → ambassadeur) avec triggers, expériences clés et taux de conversion par palier — section distinctive DEVOTION-LADDER.",
+      "Cartographie l'échelle de devotion canon 6 paliers (spectateur → intéressé → participant → engagé → ambassadeur → évangéliste, cf. src/domain/devotion-ladder.ts) avec triggers, expériences clés et taux de conversion par palier — section distinctive DEVOTION-LADDER.",
     inputFields: ["devotion_data", "personas", "touchpoints", "cult_signals", "current_devotion_score"],
     pillarBindings: {
       devotion_data: "e.rituels",
@@ -485,9 +486,9 @@ Règles : signals MIN 5, MAX 12 (JAMAIS vide). category/horizon/action : STRICTE
     },
     outputFormat: "devotion_levels",
         outputSchema: z.object({
-      devotion_levels: z.array(z.object({ palier: z.enum(['visiteur','suiveur','fan','superfan','ambassadeur']), definition: z.string(), trigger: z.string(), experience: z.string(), conversionPct: z.number(), kpis: z.array(z.string()), drifts: z.array(z.string()) })),
+      devotion_levels: z.array(z.object({ palier: z.enum(['spectateur','interesse','participant','engage','ambassadeur','evangeliste']), definition: z.string(), trigger: z.string(), experience: z.string(), conversionPct: z.number(), kpis: z.array(z.string()), drifts: z.array(z.string()) })),
       summary: z.string(),
-      current_distribution: z.object({ visiteurs: z.number(), suiveurs: z.number(), fans: z.number(), superfans: z.number(), ambassadeurs: z.number() })
+      current_distribution: z.object({ spectateurs: z.number(), interesses: z.number(), participants: z.number(), engages: z.number(), ambassadeurs: z.number(), evangelistes: z.number() })
     }),
     promptTemplate: `Mapping devotion ladder pour la marque (invocation devotion-engine SESHAT) :
 
@@ -503,7 +504,7 @@ Schéma EXACT :
 {
   "devotion_levels": [
     {
-      "palier":        "visiteur" | "suiveur" | "fan" | "superfan" | "ambassadeur",
+      "palier":        "spectateur" | "interesse" | "participant" | "engage" | "ambassadeur" | "evangeliste",
       "definition":    "<qui en fait partie — 1 phrase>",
       "trigger":       "<événement déclencheur>",
       "experience":    "<expérience clé>",
@@ -514,15 +515,16 @@ Schéma EXACT :
   ],
   "summary": "<synthèse 2-3 phrases sur la maturité actuelle de la ladder>",
   "current_distribution": {
-    "visiteurs":     <0-100>,
-    "suiveurs":      <0-100>,
-    "fans":          <0-100>,
-    "superfans":     <0-100>,
-    "ambassadeurs":  <0-100>
+    "spectateurs":   <0-100>,
+    "interesses":    <0-100>,
+    "participants":  <0-100>,
+    "engages":       <0-100>,
+    "ambassadeurs":  <0-100>,
+    "evangelistes":  <0-100>
   }
 }
 
-Règles : devotion_levels EXACTEMENT 5 entrées (visiteur → suiveur → fan → superfan → ambassadeur). palier : STRICTEMENT une des 5 valeurs énumérées. conversionPct : taux conversion vers palier SUIVANT (ambassadeur = 0 ou taux d'évangélisation). kpis MIN 3, MAX 5 par palier. drifts MIN 1, MAX 3. current_distribution : 5 clés OBLIGATOIRES, somme proche 100 (pyramide typique 70/20/7/2/1). summary JAMAIS vide. Si manquant : "à enrichir" pour strings. Pas de wrapper. Pas de champ supplémentaire.`,
+Règles : devotion_levels EXACTEMENT 6 entrées, dans l'ordre canon (spectateur → interesse → participant → engage → ambassadeur → evangeliste — Devotion Ladder canonique, les 2 derniers paliers = superfans). palier : STRICTEMENT une des 6 valeurs énumérées, en minuscules sans accent. conversionPct : taux conversion vers palier SUIVANT (evangeliste = 0 ou taux d'évangélisation). kpis MIN 3, MAX 5 par palier. drifts MIN 1, MAX 3. current_distribution : 6 clés OBLIGATOIRES, somme proche 100 (pyramide typique 60/20/10/6/3/1). summary JAMAIS vide. Si manquant : "à enrichir" pour strings. Pas de wrapper. Pas de champ supplémentaire.`,
     status: "ACTIVE",
   }),
 

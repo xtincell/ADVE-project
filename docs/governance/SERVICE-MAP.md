@@ -1,6 +1,6 @@
 # SERVICE-MAP — Tous les services backend mappés sur APOGEE
 
-**92 répertoires** sous `src/server/services/` (recensement Phase 19 — incl. `imhotep/`, `anubis/`, `ptah/`, `error-vault/`, `deliverable-orchestrator/` Phase 17b, `campaign-tracker/` Phase 19, et services Phase 13). Dont **91 services métier** classifiés par **Sous-système APOGEE** + **Tier**, et **1 répertoire helper** (`utils/`) hors classification. Le **Governor Neteru** indique sous quelle gouvernance le service tombe : MESTOR / ARTEMIS / SESHAT / THOT / **PTAH** (Phase 9) / **IMHOTEP** (Phase 14, ADR-0019) / **ANUBIS** (Phase 15, ADR-0020) / INFRASTRUCTURE.
+**115 répertoires** sous `src/server/services/` (recompte 2026-07-11). Les tables ci-dessous classifient le recensement historique Phase 19 (92 répertoires — incl. `imhotep/`, `anubis/`, `ptah/`, `error-vault/`, `deliverable-orchestrator/` Phase 17b, `campaign-tracker/` Phase 19, et services Phase 13) : **91 services métier** classifiés par **Sous-système APOGEE** + **Tier**, et **1 répertoire helper** (`utils/`) hors classification. Les **23 services apparus depuis** sont listés en fin de document (§ « À classifier »). Le **Governor Neteru** indique sous quelle gouvernance le service tombe : MESTOR / ARTEMIS / SESHAT / THOT / **PTAH** (Phase 9) / **IMHOTEP** (Phase 14, ADR-0019) / **ANUBIS** (Phase 15, ADR-0020) / INFRASTRUCTURE.
 
 **Cap APOGEE atteint — 7/7 Neteru actifs** depuis Phase 14/15.
 
@@ -102,7 +102,7 @@ Génèrent la poussée vers l'apogée. **14 services briefs (ARTEMIS, incl. `del
 |---|---|---|---|
 | `artemis/` | Thrust controller — exécute Glory tools, séquences GLORY | ARTEMIS | ✅ existant |
 | `glory-tools/` | Catalogue + métadonnées des 56 thrusters (40 legacy + 9 P13 + 4 P14 + 3 P15) | ARTEMIS | ✅ existant |
-| `sequence-vault/` | Bibliothèque des 57 séquences GLORY (skill tree, post Phase 13 ORACLE_*) | ARTEMIS | ✅ existant |
+| `sequence-vault/` | Bibliothèque des séquences GLORY (94 au registre `ALL_SEQUENCES`, recompte 2026-07-11 — skill tree, post Phase 13 ORACLE_*) | ARTEMIS | ✅ existant |
 | `pipeline-orchestrator/` | Orchestration topo-triée des séquences | ARTEMIS | ✅ existant |
 | `notoria/` | Pipeline production des livrables | ARTEMIS | ✅ existant |
 | `driver-engine/` | Drivers d'engagement (E pillar tactics) | ARTEMIS | ✅ existant |
@@ -315,3 +315,11 @@ Services restant à anticiper (extension framework) :
 | `notification/` | Comms | P5+ | Notification center cross-channel (actuellement via `nsp/` transport + `anubis/` broadcast) |
 
 Ces 3 services optionnels arriveront uniquement si pattern d'extraction émerge — ils ne sont pas bloquants pour la complétude APOGEE. La cap 7/7 Neteru actifs reste maintenue (pas de 8ème Neter).
+
+---
+
+## À classifier (delta post-recensement Phase 19 — recompte 2026-07-11)
+
+23 services présents sur le filesystem mais absents des tables ci-dessus. Couverture honnête : listés, **pas encore classifiés** (Sous-système APOGEE + Tier + Governor à attribuer — chantier tracé [RESIDUAL-DEBT.md](RESIDUAL-DEBT.md)).
+
+`auto-promotion` · `brand-node` · `bureau-etudes` · `campaign-canon` · `campaign-change-request` · `campaign-deliverable` · `canon` · `community-dashboard` · `consulting` · `creative-proposal` · `escrow-arbitration` · `intention` · `market-cost` · `market-lifecycle` · `market-visibility` · `media-perf` · `media-plan` · `mission-quote` · `morning-batch` · `operator-action` · `oracle-section` · `production` · `talent-services`

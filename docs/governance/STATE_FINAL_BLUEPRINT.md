@@ -121,7 +121,7 @@ La Fusée est un OS, traité comme tel. 8 couches concrètes :
 | 3 | **Protocoles** | Intent bus (`mestor.emitIntent`) · NSP SSE · hash-chain SHA256 · MCP bidirectionnel · OAuth 2.1 device flow · `ConnectorResult<T>` · Pattern P22-* | ✅ |
 | 4 | **Substrats** | Yggdrasil per-brand · tenantScopedDb isolation · layering cascade (ADR-0002) · BrandContextNode tree · Variable Bible | ✅ |
 | 5 | **Services système (daemons)** | 7 Neteru + INFRASTRUCTURE | ✅ |
-| 6 | **APIs** | tRPC routers (89) · Glory tools (56 CORE / 105 registry) · Frameworks (28) · Sequences (100 dont 65 DRAFT) · Intent kinds (150+) | ✅ |
+| 6 | **APIs** | tRPC routers (112) · Glory tools (56 CORE / 149 registry) · Frameworks (28) · Sequences (94 dont 91 DRAFT) · Intent kinds (546) — recompte 2026-07-11 sur les registres code (`INTENT_KINDS`, `CORE_GLORY_TOOLS`/`EXTENDED_GLORY_TOOLS`, `ALL_SEQUENCES`, `FRAMEWORKS`) | ✅ |
 | 7 | **Applications** | Cockpit · Console · Agency · Creator · Intake · Argos (planifié) | 🟡 (3 surfaces manquantes) |
 | 8 | **Funnel commercial** | Wow-effect onboarding · free analysis · paid PDF · CTA retainer · Cockpit subscription | 🟡 (metrics absents) |
 
@@ -201,7 +201,7 @@ Yggdrasil = **système racinaire** qui draw depuis le noyau ADVE de chaque marqu
 
 **Aucune.** Yggdrasil n'est pas gouverné par un Neter. C'est un substrat organique comme NSP, comme la layering cascade. Il transporte, il ne décide pas. Les **gates** (= valves) appartiennent à Mestor (Guidance).
 
-**Note ADR-0082** : à amender pour retirer "gouverné par Mestor" → "traverse Mestor mais ungoverned substrate".
+**Note ADR-0082** : amendée ✅ 2026-05-16 — "gouverné par Mestor" retiré → "traverse Mestor mais ungoverned substrate".
 
 ### 5.3 Les 8 rôles canoniques
 
@@ -231,7 +231,7 @@ Yggdrasil n'est pas un module — c'est la composition de :
 - **Q2 observabilité** — chaque flux émet `NspEvent` (SSE temps-réel)
 - **Q3 non-bypass** — passage obligé par `mestor.emitIntent()`
 
-**Test anti-drift** `yggdrasil-three-invariants.test.ts` 📋 à créer (mentionné ADR-0082, jamais shippé).
+**Test anti-drift** `yggdrasil-three-invariants.test.ts` ✅ shippé (PR #258, 2026-06-19 — Q1/Q2/Q3 runtime-vérifiés).
 
 ---
 
@@ -494,7 +494,7 @@ Le score multi-dimensions étalonne la maturité d'une marque sur sa trajectoire
 |-----------|--------|---------------------|--------|
 | **Cult Index** | 0-100 sur 7 sous-dimensions (engagement, superfan velocity, cohésion, etc.) | `cult-index-engine/` | ✅ |
 | **Devotion Distribution** | Pyramide 6 paliers (Spectateur→Évangéliste) | `devotion-engine/` | ✅ |
-| **Overton Delta** | Déplacement axe sectoriel mesuré | `sector-intelligence/` | ✅ |
+| **Overton Delta** | Déflection de l'axe sectoriel via proxies (`computeBrandDeflection`) — l'Overton lui-même n'est jamais mesuré directement (cf. annexe MI §2.2) | `sector-intelligence/` | ✅ |
 | **Superfan Velocity** | Taux croissance superfans nominaux par période | `cult-index-engine/` | ✅ |
 | **Brand Asset Maturity** | % BrandAsset.kind ACTIVE / kinds applicables | `brand-vault/` | 🟡 |
 | **Pillar Completeness** | % piliers ADVE/RTIS COMPLETE non-stale | `pillar-readiness.ts` | ✅ |
@@ -1825,7 +1825,7 @@ Le vocabulaire de La Fusée. Ce doc tranche les définitions canoniques. Toute d
 ## A — Termes mission
 
 ### **Apogée**
-Point culminant d'une trajectoire orbitale. Dans La Fusée : état LEGENDARY (palier ICONE) où la brand a accumulé assez de masse superfan pour générer son propre champ gravitationnel culturel et déplacer l'Overton dans son secteur. Cf. [MISSION.md §2.2](MISSION.md).
+Point culminant d'une trajectoire orbitale. Dans La Fusée : palier ICONE, où la brand a accumulé assez de masse superfan pour générer son propre champ gravitationnel culturel et déplacer l'Overton dans son secteur. Cf. [MISSION.md §2.2](MISSION.md).
 
 ### **Brand**
 Entité réelle (la marque). À distinguer de **Strategy** qui est sa représentation DB.
@@ -1852,10 +1852,10 @@ Palier supérieur de la Devotion Ladder. Superfan qui recrute activement d'autre
 Le porteur (CEO / fondateur) d'une brand. Pilote son Cockpit. Doit devenir **premier superfan** de sa propre marque. Cf. `founder-psychology` service + `<FounderRitual>` UI.
 
 ### **Glory tools**
-**56 outils** de production Artemis (40 legacy + 9 Phase 13 Oracle + 4 Phase 14 Imhotep + 3 Phase 15 Anubis ; count verrouillé par test `glory-tools.test.ts`). Chaque tool = thruster spécialisé (concept-generator, crew-matcher, ad-copy-generator, etc.). Catalogue dans `src/server/services/artemis/tools/registry.ts`. Inventory auto-régénéré : [glory-tools-inventory.md](glory-tools-inventory.md).
+**56 outils CORE / 149 au registre étendu** de production Artemis (recompte 2026-07-11 — `CORE_GLORY_TOOLS`/`EXTENDED_GLORY_TOOLS` ; décomposition CORE historique : 40 legacy + 9 Phase 13 Oracle + 4 Phase 14 Imhotep + 3 Phase 15 Anubis). Chaque tool = thruster spécialisé (concept-generator, crew-matcher, ad-copy-generator, etc.). Catalogue dans `src/server/services/artemis/tools/registry.ts`. Inventory auto-régénéré : [glory-tools-inventory.md](glory-tools-inventory.md).
 
 ### **Glory sequence**
-Enchaînement topologiquement trié de Glory tools (skill tree). **57 séquences** cataloguées (count via union type `GlorySequenceKey`). Source : `sequence-vault` + `artemis/tools/sequences.ts`.
+Enchaînement topologiquement trié de Glory tools (skill tree). **94 séquences** cataloguées dont 91 en lifecycle DRAFT (recompte 2026-07-11 — `ALL_SEQUENCES`). Source : `sequence-vault` + `artemis/tools/sequences.ts`.
 
 ### **Deliverable Forge** *(Phase 17b, ADR-0050 — anciennement ADR-0037)*
 Surface output-first du composer : le founder pointe un `BrandAsset.kind` matériel cible (KV_VISUAL, PRINT_AD_SPEC, …) et l'OS résout en arrière la cascade Glory→Brief→Forge complète — DAG des briefs requis (via `GloryToolForgeOutput.requires`), scan vault pour réutilisation ACTIVE/STALE_REFRESH, composition complète avec estimation coût. Inversion du flow input-first historique (où le founder devait choisir un brief en amont). Page : [/cockpit/operate/forge](../../src/app/(cockpit)/cockpit/operate/forge/page.tsx). Service : [deliverable-orchestrator/](../../src/server/services/deliverable-orchestrator/index.ts) — Propulsion / Artemis governor / `CHAIN_VIA:artemis`. Intent : `COMPOSE_DELIVERABLE` (sync dispatcher, ré-émet `INVOKE_GLORY_TOOL` + `PTAH_MATERIALIZE_BRIEF` + `PROMOTE_BRAND_ASSET_TO_ACTIVE`). Mode actuel : PREVIEW (read-only) — le mode DISPATCHED async (avec NSP streaming) viendra dans un commit ultérieur.
@@ -2734,7 +2734,7 @@ La trajectoire passe par 6 paliers de classification (score composite /200, cf. 
 
 | Palier | Score /200 | Réalité |
 |---|---|---|
-| **LATENT** | ≤ 40 | Sol — barely existing, indistinct (ex-« LATENT », terme déprécié) |
+| **LATENT** | ≤ 40 | Sol — barely existing, indistinct (ex-« ZOMBIE », terme déprécié — cf. `src/domain/brand-tier.ts`) |
 | **FRAGILE** | 41-80 | Décollage instable — existe mais précaire |
 | **ORDINAIRE** | 81-120 | Propulsion basique — fonctionnel, générique |
 | **FORTE** | 121-160 | Montée en orbite basse — distincte, leveraged |
@@ -2825,12 +2825,12 @@ Tout ce qui ajoute de l'altitude à la brand. Layer 3 du layering technique. **D
 | Composant | Rôle propulsion |
 |---|---|
 | **ADVERTIS cascade** | La trajectoire à 8 étages — booster (ADVE) → intermédiaire (RT) → supérieur (IS) |
-| **GLORY tools (91)** (Artemis) | Thrusters spécialisés rédactionnels. Chaque tool est un moteur orienté (concept-generator pousse sur D+I, kv-prompt sur V+I, etc.). Output = brief texte structuré. Tools `brief-to-forge` produisent un `ForgeBrief` avec `forgeSpec` qui handoff downstream à Ptah. |
-| **GLORY sequences (31)** (Artemis) | Manœuvres orchestrées — combinaisons de thrusters dans un ordre topologique (skill tree) |
+| **GLORY tools (56 CORE / 149 registre)** (Artemis) | Thrusters spécialisés rédactionnels. Chaque tool est un moteur orienté (concept-generator pousse sur D+I, kv-prompt sur V+I, etc.). Output = brief texte structuré. Tools `brief-to-forge` produisent un `ForgeBrief` avec `forgeSpec` qui handoff downstream à Ptah. |
+| **GLORY sequences (94)** (Artemis) | Manœuvres orchestrées — combinaisons de thrusters dans un ordre topologique (skill tree) |
 | **Forge Ptah** (NOUVEAU, ADR-0009) | **Phase de matérialisation downstream Artemis**. Consomme les `ForgeBrief` Artemis et produit les assets concrets (image/vidéo/audio/icône/design layered/stock ingéré/asset refiné/asset classifié) via providers externes (Magnific, Adobe Firefly, Figma, Canva). Cf. `src/server/services/ptah/`. |
 | **Notoria pipeline** | Chaîne de production des livrables — assemble les outputs avant insertion en mission |
 | **Superfans** | **Le propellant cumulatif**. Pas un KPI, une masse réactive. Plus la brand en accumule, plus elle peut atteindre des orbites hautes (effet Overton). Le seul propellant qui s'auto-régénère organiquement. |
-| **Devotion Ladder** | Métrique de propellant — niveaux d'engagement des fans (visiteur → suiveur → fan → superfan → ambassadeur). |
+| **Devotion Ladder** | Classification de la masse propellant en 6 paliers canon (Spectateur → Intéressé → Participant → Engagé → Ambassadeur → Évangéliste ; les 2 derniers = superfans). PAS un KPI (cf. §2.1 annexe MI + `src/domain/devotion-ladder.ts`). |
 | **Brand actions** | Touchpoints qui transforment l'audience en propellant (campagnes, contenu, expériences). Chaque BrandAction porte un `expectedManipulationMode` ([MANIPULATION-MATRIX.md](MANIPULATION-MATRIX.md)). |
 
 ### 4.2 — GUIDANCE (ce qui dirige)
@@ -3255,7 +3255,7 @@ Ce document est l'**ancre**. Si toute autre doc te paraît contradictoire, ambig
 
 ## 1. La Fusée en une phrase
 
-> **La Fusée transforme des marques en icônes culturelles, en industrialisant l'accumulation de superfans qui font basculer la fenêtre d'Overton dans leur secteur.**
+> **La Fusée transforme des marques en icônes culturelles, en industrialisant l'accumulation de superfans qui font basculer la fenêtre d'Overton dans leur secteur — via la méthode ADVE/RTIS.**
 
 Tout le reste — l'OS, les **7 Neteru actifs** (Mestor, Artemis, Seshat, Thot, Ptah, Imhotep Phase 14, Anubis Phase 15 — cap APOGEE atteint), l'Oracle, les Glory tools, ADVERTIS, APOGEE, les 4 portails, les manifests, NSP, la **Manipulation Matrix** — n'existe que pour servir cette phrase. Quand un module ne contribue pas (directement ou via une chaîne explicite) à cette mécanique, il dérive.
 

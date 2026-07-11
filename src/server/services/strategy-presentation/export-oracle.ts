@@ -212,7 +212,8 @@ export async function exportOracleAsPdf(
  * snapshot (même hash), retourne `{ snapshotId: existingId }` sans dupliquer.
  *
  * Appelé :
- * - À la fin de chaque ENRICH_ORACLE intent (time-travel utilisateur)
+ * - À la fin d'un assemblage Oracle (ASSEMBLE_ORACLE / génération de sections
+ *   — time-travel utilisateur ; legacy ENRICH_ORACLE déposé ADR-0125)
  * - Pre-export PDF/Markdown via `ensureSnapshotForExport` (B6)
  *
  * Loi 1 (Conservation altitude) : aucun snapshot vide ne peut être créé

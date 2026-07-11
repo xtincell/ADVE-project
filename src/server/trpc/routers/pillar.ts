@@ -639,8 +639,8 @@ export const pillarRouter = createTRPCRouter({
       updateADVE: z.boolean().optional(),
       skipT: z.boolean().optional(),
       /** Phase 16 — short-circuit when RTIS is already at stage ENRICHED+ and
-       *  !stale. Used by <RtisCascadeModal> + enrich-oracle fallback so we
-       *  don't re-LLM when nothing changed. */
+       *  !stale. Used by <RtisCascadeModal> so we don't re-LLM when nothing
+       *  changed (legacy enrich-oracle caller deposed, ADR-0125). */
       skipIfReady: z.boolean().optional(),
     }),
     /** ADR-0023 — RTIS dérive d'ADVE. La cascade est refusée si ADVE n'est

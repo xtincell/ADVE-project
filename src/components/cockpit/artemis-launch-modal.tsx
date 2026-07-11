@@ -76,8 +76,9 @@ export interface ArtemisLaunchModalProps {
   /** Called when the user confirms launch — page handles the actual mutation. */
   onLaunch: () => void;
   /**
-   * Pre-seed blockers when the modal is opened reactively (after enrichOracle
-   * threw ORACLE-101). Lets us show the same flow without re-querying.
+   * Pre-seed blockers when the modal is opened reactively (after a launch
+   * attempt was refused with ORACLE-101 readiness blockers). Lets us show the
+   * same flow without re-querying.
    */
   externalBlockers?: readonly ExternalBlocker[];
 }

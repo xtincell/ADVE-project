@@ -142,8 +142,8 @@ export const en = {
   "oracle.forge.result.heading": "Last forge",
   "oracle.forge.result.async_note":
     "AssetVersion will be available once the provider webhook is reconciled (PTAH_RECONCILE_TASK async). See BrandVault → material assets.",
-  "oracle.section.empty": "Section not yet enriched. Run an enrich-oracle.",
-  "oracle.tier.core": "Core (21)",
+  "oracle.section.empty": "Section not yet generated. Run the proposal assembly.",
+  "oracle.tier.core": "Core (23)",
   "oracle.tier.big4": "Big4 baseline (7)",
   "oracle.tier.distinctive": "Distinctives (5)",
   "oracle.tier.dormant": "Dormants (2)",

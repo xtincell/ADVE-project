@@ -487,7 +487,8 @@ Règles : evaluations MIN 1, MAX 8 (si pas de proposals : 1 entry "à enrichir" 
     status: "ACTIVE",
     // Phase 13 (B2) — forgeOutput déclenché manuellement via bouton "Forge now" B8
     // sur section manipulation-matrix (Oracle section 30, kind=MANIPULATION_MATRIX).
-    // Pendant enrichOracle (B4), oracleEnrichmentMode=true court-circuite l'auto-forge.
+    // En mode ENRICHMENT (SequenceMode ADR-0042), oracleEnrichmentMode=true
+    // court-circuite l'auto-forge.
     forgeOutput: {
       forgeKind: "image",
       providerHint: "magnific",

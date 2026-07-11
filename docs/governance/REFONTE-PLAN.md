@@ -35,7 +35,7 @@ Liste explicite des problèmes "vrais" qu'un plan prudent aurait poussés en bac
 
 6. **Le multi-LLM routing est dumb** — LLM Gateway choisit par fallback (Anthropic → OpenAI → Ollama) sans considérer l'Intent kind. Un `EXPORT_ORACLE` n'a pas la même contrainte qu'un `RANK_PEERS`. **Phase 5 (couplé NSP) introduit une routing matrix** — chaque manifest capability déclare `qualityTier`, `latencyBudgetMs`, `costCeilingUsd`. LLM Gateway route en fonction.
 
-7. **L'Oracle est une photo, pas un film** — V5.4 enrichit les sections, mais pas de time-travel. **Phase 7 ajoute Oracle History** : chaque enrichOracleNeteru produit un snapshot versionné, l'utilisateur peut voir l'Oracle "au 15 mars" et diff vs aujourd'hui. Repose sur `IntentEmissionEvent` (P5) + `OracleSnapshot` table.
+7. **L'Oracle est une photo, pas un film** — V5.4 enrichit les sections, mais pas de time-travel. **Phase 7 ajoute Oracle History** : chaque assemblage (`ASSEMBLE_ORACLE`, ADR-0071 — legacy déposé ADR-0125) produit un snapshot versionné, l'utilisateur peut voir l'Oracle "au 15 mars" et diff vs aujourd'hui. Repose sur `IntentEmissionEvent` (P5) + `OracleSnapshot` table.
 
 8. **Pas de collaboration temps réel** — deux opérateurs sur la même strategy = race condition. **Phase 5 (NSP) introduit Yjs ou TipTap collab** sur les champs textuels Oracle + sur le Mestor chat. Conflict-free CRDT.
 
@@ -437,7 +437,7 @@ Nouveau répertoire `src/components/neteru/` :
 | `<ThotBudgetMeter>` | Compteur live du coût + capacité restante | Persistant en topbar pendant intents coûteux |
 | `<NeteruActivityRail>` | Rail latéral global qui montre quel Neteru est actif maintenant (pulse + label) | Persistent dans tous les portails |
 | `<CascadeProgress>` | 8 nœuds A→D→V→E→R→T→I→S qui s'allument selon avancement | Pages cascade ADVE→RTIS |
-| `<OracleEnrichmentTracker>` | Grille 21 sections avec état (queued/in-progress/done/failed) | Page Oracle pendant `enrichOracleNeteru` |
+| `<OracleProgressivePanel>` (a remplacé `<OracleEnrichmentTracker>`, ADR-0073/0125) | Grille 35 sections avec état (queued/in-progress/done/failed) + console live NSP | Page proposition pendant l'assemblage |
 | `<PartialContentReveal>` | Stream tokens dans une section au fur et à mesure | Sections Oracle en cours de rédaction |
 | `<IntentReplayButton>` | Bouton pour replay un intent depuis IntentEmissionEvent | Console admin, debug |
 | `<CostMeter>` | Coût USD courant du flow utilisateur | Topbar Console, Cockpit |
@@ -466,7 +466,7 @@ const handleClick = () => {
 Remplacer **toutes** les pages qui actuellement font un fetch long sans feedback :
 - `/console/strategy-operations/intake` (PDF parse + scoring)
 - `/cockpit/brand/proposition` (livrable Oracle dynamique pour le founder)
-- `/console/strategy-portfolio/clients/[id]` (enrichOracleNeteru — pilotage opérateur d'une fiche client)
+- `/console/strategy-portfolio/clients/[id]` (assemblage Oracle — pilotage opérateur d'une fiche client)
 - `/console/seshat/search` (ranker queries — court mais skeleton requis)
 - `/cockpit/insights/benchmarks` (peer insights via ranker)
 - `/console/mestor` (chat pattern — déjà streamé partiellement, à harmoniser)
@@ -611,11 +611,11 @@ Nouvelles sections proposées (12 actuelles → 14, dont 4 ré-architecturées) 
    - **Thot** — gouvernance budgétaire + Operations (avec capacity meter)
    - **Ptah** — forge des assets matériels (avec gallery image/vidéo/audio générés ; Phase 9 ADR-0009)
    - Note historique : Imhotep + Anubis étaient pré-réservés au moment de Phase 7 (la PR landing). Ils sont **actifs depuis Phase 14/15** (ADR-0019/0020). Cap APOGEE 7/7 atteint — landing à actualiser pour refléter le panthéon plein.
-6. **`OracleShowcase` (NOUVELLE)** — montre l'Oracle dynamique : un strategyId public sample, les 21 sections rendues, la possibilité d'expand chaque section, la mention "schema v2 — replay supported". Lien vers démo live.
+6. **`OracleShowcase` (NOUVELLE)** — montre l'Oracle dynamique : un strategyId public sample, les 35 sections rendues (3 tiers, ADR-0014/0045), la possibilité d'expand chaque section, la mention "schema v2 — replay supported". Lien vers démo live.
 7. **`CrossBrandIntelligence` (NOUVELLE — V5.3/V5.4)** — explique le ranker, Jehuty cross-brand insights, comparables. Avec démo : "Choisis un secteur → voir 3 marques peers anonymisées + leur score ADVERTIS".
 8. **`ScoreShowcase` (mis à jour — 8 piliers V5)** — radar interactif ADVERTIS, vocabulaire aligné avec `domain/pillars.ts` (cf. P1). Tooltip pédagogique par pilier.
 9. **`PortalsSection` (étoffée — 5 portails)** — Console, Agency, Creator, Cockpit + **Intake public** (route group `(intake)`). Pour chaque portail : 1 capture, 3 cas d'usage chiffrés, 1 témoignage si dispo.
-10. **`SocialProof`** — étoffé : marques diagnostiquées (anonymisables), nombre de freelances, nombre d'agences. Si pas encore de chiffres, snapshot interne du repo (ex: "56 GLORY tools, 57 séquences" — chiffres canoniques verrouillés par tests, post Phase 14/15).
+10. **`SocialProof`** — étoffé : marques diagnostiquées (anonymisables), nombre de freelances, nombre d'agences. Si pas encore de chiffres, snapshot interne du repo (recompter au moment de l'implémentation sur les registres code — au 2026-07-11 : 56 GLORY tools CORE / 149 registre, 94 séquences).
 11. **`PricingSection` (revue)** — alignée business model V5.4 : intake gratuit, paywall sur Oracle, retainer post-conversion. Comparatif transparent vs Havas/Publicis Africa.
 12. **`Architecture` (NOUVELLE)** — section technique courte pour les CTO/founders : "OS modulaire, governance Neteru, NSP streaming, Intent dispatcher v2". Lien vers `/docs/governance/ARCHITECTURE.md`.
 13. **`FaqSection`** — Q&A étendues : Thot, Oracle dynamique, ranker, NSP, gouvernance, sécurité, multi-tenant.
@@ -642,7 +642,7 @@ Pages annexes nouvelles :
 
 **Oracle Time Travel** :
 - Nouvelle table `OracleSnapshot { id, strategyId, takenAt, snapshotJson, schemaVersion, parentIntentId }`.
-- Chaque `enrichOracleNeteru` produit un snapshot atomique en fin d'intent.
+- Chaque `ASSEMBLE_ORACLE` produit un snapshot atomique en fin d'intent (shippé ADR-0016 pour les exports ; legacy déposé ADR-0125).
 - UI `/cockpit/brand/[id]/oracle/history` : timeline de tous les snapshots, clic = preview, "compare avec courant" = diff visuel section par section.
 - Replay : "exporter l'Oracle au 15 mars" génère le PDF/MD à partir du snapshot.
 - Permet à un founder de voir l'évolution (LATENT → FRAGILE → ORDINAIRE → FORTE → CULTE → ICONE) avec dates et drivers.
@@ -839,7 +839,7 @@ Mesurées avant/après (cf. baseline P0) :
 | SLOs définis par Intent kind | 0 | 100% |
 | Lighthouse mobile perf score (5 pages critiques) | inconnu | ≥85 |
 | Plugins externes installables via SDK | 0 | ≥1 (démo loyalty) |
-| Oracle snapshots time-travel disponibles | 0 | tous les enrichOracleNeteru |
+| Oracle snapshots time-travel disponibles | 0 | tous les assemblages `ASSEMBLE_ORACLE` |
 | PRs avec label `out-of-scope` mergées sans justif écrite | n/a | 0 |
 
 ---
