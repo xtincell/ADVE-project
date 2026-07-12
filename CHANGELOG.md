@@ -10,6 +10,26 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.108 — feat(seed): les 4 logos officiels EXTRAITS du Brand Book Motion19 + règles de contenu §09 complètes (2026-07-12)
+
+**Le PDF n'était ingéré qu'en texte — ses images embarquées entrent au coffre (remarque opérateur légitime).**
+
+- **Extraction des images du PDF** (pypdf) : 10 images embarquées, dont les
+  déclinaisons officielles du logo (§05). 4 fichiers versionnés
+  `prisma/seed-assets/motion19/` → BrandAsset `LOGO_FINAL` en data-URL :
+  **wordmark fond clair = ACTIVE** (le logo canonique du dashboard),
+  wordmark réserve blanche + monogramme M19 clair/blanc = SELECTED.
+  L'ancien fichier scrapé du CDN du site passe **SUPERSEDED** (lineage
+  préservée — Loi 1). La photo de style (§07) est du stock d'illustration,
+  pas un actif propriétaire — non ingérée (décision documentée).
+- **Tuile logo fond blanc constant** (carte identité + sidebar) : le wordmark
+  anthracite officiel reste lisible en mode nuit comme en mode jour — clôt
+  aussi le résiduel « logo blanc sur fond blanc ».
+- **Canon complété §09** : les 7 phrases signatures intégrales + les 3 paires
+  « à faire / à éviter » + le principe (« parler depuis le bénéfice du
+  lecteur ») dans `assetsLinguistiques` ; `extractedFields` du brand book
+  enrichi (logosExtraits: 4, phrasesSignatures: 7, reglesDeContenu: 3).
+
 ## v6.27.107 — feat(cockpit): double dashboard stratégique/opérationnel + mode jour + zones d'écriture par rôle (ADR-0131) (2026-07-12)
 
 **Le cockpit gagne sa vue « Suivi du jour », son mode jour, et les collaborateurs délégués n'écrivent QUE dans leur métier.**

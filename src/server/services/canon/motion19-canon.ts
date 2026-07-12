@@ -217,7 +217,24 @@ export const PILLAR_D = {
     tagline: "La Boutique Des Créatifs (bio X) · « Donnez vie à chaque image » (H1 du site)",
     naming: "Motion19 en un mot, le « 19 » porte toujours le bleu ; monogramme M19 pour les usages réduits ; « Motion19 Academy » pour la pédagogie ; les « Setups » comme grammaire d'offre.",
     lexique: ["Talent", "Créatif", "Créateur", "Concept", "Idée", "Solution", "Imagination", "Inspiration", "Audace", "Potentiel", "Expression", "Exploration", "Improvisation", "Curiosité", "Liberté", "Qualité", "Expertise", "Maîtrise", "Plaisir", "Partage", "#FeelFreeToCreate", "#MadeForCreators"],
-  }, // OFFICIEL — lexique propriétaire du Brand Book §09 (+ phrases signatures : « Pensez à un audit de votre matériel », « Quel est le prochain projet que vous allez monter ? »)
+    phrasesSignatures: [
+      "Nous serons toujours à votre disposition.",
+      "Pensez à un audit de votre matériel.",
+      "Quel est le prochain projet que vous allez monter ?",
+      "De quel type de matériel avez-vous besoin ?",
+      "Quelques astuces pour être plus créatif.",
+      "Explorer de nouveaux terrains favorise l'inspiration.",
+      "L'expertise de Motion19 est au service de sa communauté.",
+    ],
+    reglesDeContenu: {
+      principe: "Parler depuis le bénéfice du lecteur, jamais depuis le confort de la marque. Phrases courtes, clarté, et une valeur réelle à chaque sortie (Brand Book §09).",
+      aFaireAEviter: [
+        { aFaire: "Cette statistique repose sur une étude menée auprès de 100 photographes africains.", aEviter: "100 photographes africains sont d'accord avec cette statistique." },
+        { aFaire: "Vous trouverez toujours de quoi exprimer votre créativité dans votre boutique favorite.", aEviter: "Notre compagnie est heureuse d'avoir toujours le matériel qu'il vous faut." },
+        { aFaire: "Prenez part à notre prochain atelier de photographie le JJ/MM/AAAA.", aEviter: "Nous organisons un atelier de photographie le JJ/MM/AAAA." },
+      ],
+    },
+  }, // OFFICIEL — lexique propriétaire + 7 phrases signatures + règles de contenu intégrales du Brand Book §09
   paysageConcurrentiel: [
     { name: "Glotelho (glotelho.cm)", avantagesCompetitifs: ["leader e-commerce local (Akwa)", "notoriété et trafic", "retrait agence + paiement à la livraison"], partDeMarcheEstimee: "forte sur le e-commerce généraliste", faiblesses: ["généraliste : la catégorie photo/caméra est un rayon parmi d'autres", "zéro conseil spécialiste AV"], strategiePos: "Le battre sur l'expertise, la profondeur de catalogue AV et le conseil — pas sur le trafic généraliste.", distinctiveAssets: ["la marque e-commerce installée"] },
     { name: "NowTech Center / KAMKA TECH / iziway", avantagesCompetitifs: ["présence en ligne", "rayons appareils photo"], partDeMarcheEstimee: "diffuse", faiblesses: ["high-tech généraliste, catalogue AV superficiel", "pas de verticales créateurs"], strategiePos: "Occuper la catégorie « spécialiste » qu'ils ne peuvent pas revendiquer.", distinctiveAssets: ["référencement high-tech"] },

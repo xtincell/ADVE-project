@@ -478,13 +478,55 @@ export async function seedMotion19BrandVault(prisma: PrismaClient): Promise<void
     });
   }
 
-  // ── Logo : enrichir le résumé avec le système complet (wordmark + M19) ──
+  // ── Déclinaisons officielles du logo (images EXTRAITES du Brand Book §05,
+  //    fichiers prisma/seed-assets/motion19/ → data URLs). Le wordmark fond
+  //    clair devient l'ACTIVE canonique ; l'ancien fichier CDN du site passe
+  //    SUPERSEDED (lineage préservée — Loi 1). Idempotent par (strategyId, name).
+  const LOGO_SYSTEM_SUMMARY =
+    "Système logo officiel (Brand Book §05) : wordmark MOTION19 (le O devient objectif, ligne métier Photo · Vidéo · Audio · Lumière) + monogramme M19 (M en barres verticales — égaliseur et rideau de lumière) pour les usages réduits. Le « 19 » porte toujours le bleu.";
+  const { readFileSync } = await import("node:fs");
+  const { join } = await import("node:path");
+  const assetDir = join(process.cwd(), "prisma", "seed-assets", "motion19");
+  const logoVariants: Array<{ file: string; name: string; state: "ACTIVE" | "SELECTED"; usage: string }> = [
+    { file: "logo-wordmark-clair.png", name: "Logo — wordmark (fond clair)", state: "ACTIVE", usage: "logotype principal, fonds clairs" },
+    { file: "logo-wordmark-blanc.png", name: "Logo — wordmark (réserve blanche)", state: "SELECTED", usage: "fonds sombres et photos" },
+    { file: "logo-monogramme-clair.png", name: "Monogramme M19 (fond clair)", state: "SELECTED", usage: "usages réduits (favicon, avatar, cachet)" },
+    { file: "logo-monogramme-blanc.png", name: "Monogramme M19 (réserve blanche)", state: "SELECTED", usage: "usages réduits sur fonds sombres" },
+  ];
+  for (const v of logoVariants) {
+    const dataUrl = `data:image/png;base64,${readFileSync(join(assetDir, v.file)).toString("base64")}`;
+    const existing = await prisma.brandAsset.findFirst({
+      where: { strategyId: strategy.id, kind: "LOGO_FINAL", name: v.name },
+    });
+    if (existing) {
+      await prisma.brandAsset.update({
+        where: { id: existing.id },
+        data: { fileUrl: dataUrl, state: v.state, summary: `${LOGO_SYSTEM_SUMMARY} Usage : ${v.usage}.` },
+      });
+    } else {
+      await prisma.brandAsset.create({
+        data: {
+          strategyId: strategy.id,
+          name: v.name,
+          kind: "LOGO_FINAL",
+          family: "MATERIAL",
+          fileUrl: dataUrl,
+          mimeType: "image/png",
+          summary: `${LOGO_SYSTEM_SUMMARY} Usage : ${v.usage}.`,
+          state: v.state,
+          pillarSource: "D",
+          metadata: {
+            provenance: "image extraite du PDF officiel Motion19_BrandBook 2026 V2 §05 (upload opérateur 12/07/2026)",
+            usage: v.usage,
+          } as Prisma.InputJsonValue,
+        },
+      });
+    }
+  }
+  // L'ancien logo scrapé du site (posé vague 1) cède la place canonique.
   await prisma.brandAsset.updateMany({
-    where: { strategyId: strategy.id, kind: "LOGO_FINAL" },
-    data: {
-      summary:
-        "Système logo officiel (Brand Book §05) : wordmark MOTION19 (le O devient objectif, ligne métier Photo · Vidéo · Audio · Lumière) + monogramme M19 (M en barres verticales — égaliseur et rideau de lumière) pour les usages réduits. Le « 19 » porte toujours le bleu. Fichier : wordmark noir officiel (CDN motion19.com).",
-    },
+    where: { strategyId: strategy.id, kind: "LOGO_FINAL", name: MOTION19_LOGO.name, state: "ACTIVE" },
+    data: { state: "SUPERSEDED", summary: `${LOGO_SYSTEM_SUMMARY} Fichier : version CDN du site (remplacée par les fichiers officiels du Brand Book).` },
   });
 
   // ── Brand book intégral au vault des sources (certainty OFFICIAL) ──
@@ -509,6 +551,9 @@ export async function seedMotion19BrandVault(prisma: PrismaClient): Promise<void
           typographie: MOTION19_TYPOGRAPHY,
           contact: MOTION19_CONTACT,
           reseauxOfficiels: ["Instagram @motion19store", "X @motion19store", "Facebook /motion19store"],
+          logosExtraits: 4, // wordmark clair/blanc + monogramme M19 clair/blanc (§05, images du PDF)
+          phrasesSignatures: 7,
+          reglesDeContenu: 3, // paires à faire / à éviter (§09)
         } as unknown as Prisma.InputJsonValue,
       },
     });
@@ -527,5 +572,5 @@ export async function seedMotion19BrandVault(prisma: PrismaClient): Promise<void
     });
   }
 
-  console.log("[OK] Vault identité : palette + typo + logo système + brand book (OFFICIAL) + coordonnées officielles");
+  console.log("[OK] Vault identité : palette + typo + 4 logos officiels du Brand Book (wordmark ACTIVE) + brand book OFFICIAL + coordonnées");
 }

@@ -56,7 +56,7 @@
 .ck-id__grid { display: flex; gap: 20px; align-items: flex-start; justify-content: space-between; }
 .ck-id__main { flex: 1; min-width: 0; }
 .ck-id__side { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; max-width: 150px; }
-.ck-id__logo { max-width: 132px; max-height: 72px; object-fit: contain; padding: 10px 14px; border-radius: var(--radius-lg); background: var(--surface-raised); border: 1px solid var(--border-subtle); }
+.ck-id__logo { max-width: 132px; max-height: 72px; object-fit: contain; padding: 10px 14px; border-radius: var(--radius-lg); background: #ffffff; border: 1px solid var(--border-subtle); }
 .ck-id__logo-cta { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 18px; border: 1px dashed color-mix(in srgb, var(--accent) 45%, var(--border)); border-radius: var(--radius-lg); background: var(--surface-raised); color: var(--text-muted); font-size: 11px; font-weight: 600; text-decoration: none; text-align: center; transition: color var(--dur-fast), border-color var(--dur-fast); }
 .ck-id__logo-cta:hover { color: var(--accent); border-color: var(--accent); }
 .ck-id__logo-cta svg { width: 16px; height: 16px; color: var(--accent); }
@@ -209,7 +209,7 @@ a.ck-feed__item:hover { background: var(--surface-raised); }
 @media (max-width: 700px) { .ck-camp__body { flex-direction: column; } .ck-camp__visual { width: 100%; height: 120px; } }
 
 /* Logo de marque en tête de sidebar (layout cockpit) */
-.ck-side-logo { width: 30px; height: 30px; object-fit: contain; border-radius: var(--radius-md); background: var(--surface-raised); border: 1px solid var(--border-subtle); padding: 2px; }
+.ck-side-logo { width: 30px; height: 30px; object-fit: contain; border-radius: var(--radius-md); background: #ffffff; border: 1px solid var(--border-subtle); padding: 2px; }
 
 /* Bascule mode jour / nuit */
 .ck-theme-toggle { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); background: var(--surface-raised); color: var(--text-muted); cursor: pointer; transition: color var(--dur-fast), border-color var(--dur-fast); }
