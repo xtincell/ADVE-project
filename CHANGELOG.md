@@ -10,6 +10,18 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.114 — feat(cockpit): suggestion d'audience adressable — relevés réels, déclaration au porteur (ADR-0126 amendée) (2026-07-12)
+
+**« Câble la suggestion » : le champ audience adressable se pré-remplit depuis la communauté MESURÉE — et c'est toujours le porteur qui déclare.**
+
+- `computeAudienceSuggestion` (domaine pur) : somme + plancher des derniers relevés réels par
+  réseau (recouvrement inconnu → les deux bornes), null sans donnée — zéro estimation inventée.
+- Query lecture `strategy.getAudienceSuggestion` (tenant-gardée) + carte Échelle de marché :
+  « Votre communauté mesurée : X (FB · IG · TikTok) — Utiliser cette valeur » → remplit le champ ;
+  seul « Enregistrer » écrit (doctrine ADR-0085/0126 : le système ne note pas son propre devoir).
+- 3 verrous CI `audience-suggestion.test.ts` (calcul pur · un seul chemin d'écriture · lecture
+  protégée). Le pilier T garde son rôle d'ANALYSE de marché — l'ancre de score reste déclarée.
+
 ## v6.27.113 — feat(anubis): suite sociale pilotable v1 — inbox, publication, statistiques, notifications, CGU ([ADR-0133](docs/governance/adr/0133-social-suite-pilot.md)) (2026-07-12)
 
 **Mandat opérateur « rival Sprout » exécuté : commentaires, stats, rapports, publier, planifier, notifications — tout depuis l'app, et la promesse légale alignée pour ne pas faire mentir le produit.**
