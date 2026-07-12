@@ -87,17 +87,22 @@ describe("P1 — sync des publications (SocialPost premier écrivain)", () => {
     expect(enrich).toMatch(/followerSource = real\.source/);
   });
 
-  it("(8) frontière PII : jamais le contenu/l'identité des tiers, jamais un scope non accordé", () => {
+  it("(8) la boucle passive ne stocke rien des tiers — l'engagement tiers arrive par l'Inbox (S3), pas ici", () => {
     const svc = read("src/server/services/anubis/social-connect.ts");
-    // Pas de lecture du texte des commentaires ni des listes d'abonnés :
-    // uniquement des compteurs agrégés (summary/total_count).
+    // CE service (télémétrie de fond) se limite aux compteurs agrégés
+    // (summary/total_count) : pas de texte de commentaire, pas de liste
+    // d'abonnés, pas de DM. L'Inbox S3 (rival Sprout — commentaires/DM/
+    // mentions AVEC identités) vivra dans SON service avec SES scopes ;
+    // ces verrous-ci restent donc vrais pour social-connect à jamais.
     expect(svc).not.toMatch(/\/comments\?fields=/);
     expect(svc).not.toMatch(/fields=message/);
     expect(svc).not.toMatch(/\/(followers|friends|conversations|subscribers)\b/);
-    // Pas d'appel Insights (read_insights / instagram_manage_insights non
-    // accordés — les demander viendrait APRÈS l'App Review de base).
+    // Pas d'appel Insights ici (read_insights / instagram_manage_insights
+    // arrivent avec la 2ᵉ soumission App Review, groupée avec les scopes
+    // publishing/engagement — cf. RESIDUAL-DEBT §ADR-0128).
     expect(svc).not.toMatch(/\/insights/);
-    // La doctrine est écrite dans le module (registre du service).
-    expect(svc).toMatch(/JAMAIS le contenu ni l'identité des tiers/);
+    // La doctrine à deux étages est écrite dans le module.
+    expect(svc).toMatch(/rien des tiers ICI/);
+    expect(svc).toMatch(/Inbox unifiée/);
   });
 });

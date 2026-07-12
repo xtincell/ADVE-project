@@ -25,9 +25,12 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 - **Le pilier E reçoit l'exact** : bloc `webPresence.connectedProfiles` (bio/site/catégorie/volumes,
   source CONNECTOR) + fix provenance — `followerSource` reflète la vraie source (CONNECTOR|APIFY),
   plus jamais étiqueté « APIFY » en dur.
-- **Frontière PII posée en dur (test 8)** : données DE LA MARQUE uniquement — jamais le contenu ni
-  l'identité des tiers (commentaires, abonnés, DM), jamais un appel `/insights` (scope non accordé).
-  Conforme /data-deletion + minimisation RGPD ; protège l'App Review Meta en cours.
+- **Frontière posée en dur (test 8), au bon niveau** : la boucle passive de télémétrie ne stocke
+  rien des tiers (ni texte de commentaire, ni identité d'abonné, ni `/insights` sans scope) — mais
+  l'engagement des tiers est un organe produit à part entière : l'**Inbox unifiée S3** (doctrine
+  « rival Sprout » confirmée opérateur — commentaires/DM/mentions AVEC identités, scopes dédiés,
+  rôle processor, copy /privacy + /data-deletion mise à jour à son arrivée). Le verrou protège
+  l'App Review en cours, pas le produit.
 - **Drift schéma réparé à la source** : `StrategyCollaborator` annoté `onDelete: Cascade` (aligné
   migration manuscrite 20260712150000) + `CampaignAction.pillarServed @default([])` — sans quoi
   toute future migration aurait « corrigé » la prod vers RESTRICT/DROP DEFAULT à notre insu.

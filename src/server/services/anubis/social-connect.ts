@@ -16,11 +16,19 @@
  *     token expiré/révoqué → DEGRADED AUTH_REVOKED + statut ERROR sur la ligne.
  *   - La collecte écrit des `FollowerSnapshot` source="CONNECTOR" — le
  *     community-dashboard et `getConnectedSources` les ventilent déjà.
- *   - Périmètre de collecte = MAXIMAL sous les scopes accordés, mais données
- *     DE LA MARQUE uniquement (ses pages, ses publications, ses métriques,
- *     son profil public). JAMAIS le contenu ni l'identité des tiers
- *     (commentaires, abonnés, DM) — engagement publié sur /data-deletion +
- *     minimisation RGPD ; l'ingérer torpillerait aussi l'App Review Meta.
+ *   - Périmètre de CE service (boucle passive de télémétrie) : données DE LA
+ *     MARQUE (pages, publications, métriques, profil public) au MAXIMUM des
+ *     scopes accordés — et rien des tiers ICI (pas de texte de commentaire,
+ *     pas d'identité d'abonné, pas de DM dans la boucle de fond : on ne
+ *     stocke pas ce qu'aucune surface ne consomme, et /data-deletion décrit
+ *     ce périmètre-là).
+ *   - L'engagement des tiers (commentaires, DM, mentions AVEC identités) est
+ *     un ORGANE PRODUIT distinct — l'Inbox unifiée (benchmark §S3,
+ *     `SocialInboxItem`, doctrine « rival Sprout » confirmée opérateur) : il
+ *     arrivera avec ses scopes dédiés (pages_manage_engagement,
+ *     instagram_manage_comments, messaging), son propre service, la surface
+ *     d'assignation ADR-0129, et la mise à jour de /privacy + /data-deletion
+ *     (rôle processor pour le compte de la marque — le modèle Sprout).
  */
 
 import type { Prisma, SocialPlatform } from "@prisma/client";
