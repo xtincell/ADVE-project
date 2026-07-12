@@ -14,7 +14,7 @@ export default function CguPage() {
   return (
     <LegalShell
       title="Conditions Générales d'Utilisation"
-      updated="12 juin 2026"
+      updated="12 juillet 2026"
       intro={
         <>
           Les présentes CGU régissent l&apos;accès aux portails de La Fusée (Launchpad public, Cockpit, Console,
@@ -73,7 +73,23 @@ export default function CguPage() {
         </ul>
       </LegalSection>
 
-      <LegalSection title="5. Disponibilité et évolution">
+      <LegalSection title="5. Réseaux sociaux connectés — mandat de gestion">
+        <p>
+          Le client (ou son délégué autorisé) peut connecter les comptes sociaux et boutiques de sa marque
+          via OAuth. En connectant un compte, il <strong>mandate la plateforme</strong> pour, en son nom et
+          sur ses instructions : lire les statistiques et publications de ses comptes, collecter les
+          interactions publiques adressées à sa marque (commentaires, mentions), y répondre, et publier ou
+          planifier des contenus qu&apos;il a rédigés ou approuvés.
+        </p>
+        <ul>
+          <li>Les jetons d&apos;accès sont chiffrés (AES-256-GCM), jamais exposés, révocables à tout instant depuis Mon compte → Connexions ou depuis la plateforme d&apos;origine.</li>
+          <li>Le client reste seul responsable éditorial des contenus publiés et des réponses envoyées en son nom ; il garantit leur licéité et respecte les règles de chaque plateforme.</li>
+          <li>Pour les données des tiers traitées à cette occasion (auteurs de commentaires, messages adressés à la marque), le client est responsable de traitement et UPgraders sous-traitant — périmètre, durées et droits détaillés dans la <a href="/privacy" className="text-accent hover:underline">Politique de confidentialité</a> et le <a href="/dpa" className="text-accent hover:underline">DPA</a>.</li>
+          <li>Certaines capacités dépendent des autorisations accordées par les plateformes (Meta, Google, LinkedIn…) ; la plateforme affiche honnêtement ce qui est actif, en attente de reconnexion, ou indisponible.</li>
+        </ul>
+      </LegalSection>
+
+      <LegalSection title="6. Disponibilité et évolution">
         <p>
           Le service est fourni en mode SaaS avec des objectifs de niveau de service publiés sur{" "}
           <a href="/sla" className="text-accent hover:underline">/sla</a> et un état de la plateforme sur{" "}
@@ -83,14 +99,14 @@ export default function CguPage() {
         </p>
       </LegalSection>
 
-      <LegalSection title="6. Suspension et résiliation">
+      <LegalSection title="7. Suspension et résiliation">
         <ul>
           <li>UPgraders peut suspendre un compte en cas de violation grave des présentes (fraude, contournement, impayé persistant), après notification motivée sauf urgence.</li>
           <li>La résiliation n&apos;ampute jamais le patrimoine du client : export et portabilité selon les CGV (art. 8) et le <a href="/dpa" className="text-accent hover:underline">DPA</a>.</li>
         </ul>
       </LegalSection>
 
-      <LegalSection title="7. Contact">
+      <LegalSection title="8. Contact">
         <p>
           Questions sur les présentes :{" "}
           <a href="mailto:legal@lafusee.upgraders.io" className="text-accent hover:underline">legal@lafusee.upgraders.io</a>.

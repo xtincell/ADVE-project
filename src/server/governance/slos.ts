@@ -116,6 +116,9 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "ANUBIS_SOCIAL_DISCONNECT_ACCOUNT", p95LatencyMs: 1_000, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "ANUBIS_SOCIAL_SYNC_FOLLOWERS", p95LatencyMs: 20_000, errorRatePct: 0.10, costP95Usd: 0 },
   { kind: "ANUBIS_SYNC_SOCIAL_POSTS", p95LatencyMs: 30_000, errorRatePct: 0.10, costP95Usd: 0 },
+  { kind: "ANUBIS_SYNC_INBOX", p95LatencyMs: 30_000, errorRatePct: 0.10, costP95Usd: 0 },
+  { kind: "ANUBIS_REPLY_COMMENT", p95LatencyMs: 10_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "ANUBIS_PUBLISH_SOCIAL_POST", p95LatencyMs: 25_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "ANUBIS_COMMERCE_CONNECT_SHOP", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "ANUBIS_SYNC_COMMERCE", p95LatencyMs: 25_000, errorRatePct: 0.10, costP95Usd: 0 },
   // ADR-0121 — re-scan empreinte publique → pilier E (footprint + Brave + Apify + RSS, zéro LLM).

@@ -794,6 +794,7 @@ model Strategy {
   communitySnapshots CommunitySnapshot[]
   socialConnections  SocialConnection[]
   socialPosts        SocialPost[]
+  socialInboxItems   SocialInboxItem[]
   collaborators      StrategyCollaborator[]
   mediaConnections   MediaPlatformConnection[]
   pressReleases      PressRelease[]
@@ -2168,7 +2169,7 @@ model CampaignAction {
   // Phase 19 Vague 3 — Campaign tracker (ADR-0052 Cluster H — Negative space audit).
   // PostgreSQL native String[] — pillars ADVERTIS servis par cette action.
   // Audit "obligations brand non-couvertes" croise avec Manifesto.beliefs[] obligations.
-  pillarServed String[] // ["A", "D", "V", "E", "R", "T", "I", "S"] subset
+  pillarServed String[] @default([]) // ["A","D","V","E","R","T","I","S"] subset — default aligné migration 20260506000000
 
   // Phase 23 (ADR-0078) — Manual-first Overton delta mode (FR26 peer to FR13).
   // When non-null, culture.overtonShift consumes this operator-tagged delta
@@ -2417,8 +2418,12 @@ model StrategyCollaborator {
   revokedAt  DateTime?
   note       String?
 
-  strategy  Strategy @relation(fields: [strategyId], references: [id])
-  user      User     @relation("StrategyCollaboratorUser", fields: [userId], references: [id])
+  // onDelete aligné sur la migration manuscrite 20260712150000 (CASCADE) :
+  // les lignes de délégation sont des lignes de jointure — elles suivent la
+  // marque/le compte supprimé. Sans l'annotation, Prisma tenterait de
+  // « corriger » la prod vers RESTRICT à la prochaine migration.
+  strategy  Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  user      User     @relation("StrategyCollaboratorUser", fields: [userId], references: [id], onDelete: Cascade)
   grantedBy User?    @relation("StrategyCollaboratorGrantedBy", fields: [grantedByUserId], references: [id])
 
   createdAt DateTime @default(now())
@@ -2935,9 +2940,10 @@ model SocialConnection {
   status       MediaSyncStatus @default(ACTIVE)
   metadata     Json?
 
-  strategy Strategy     @relation(fields: [strategyId], references: [id])
-  user     User         @relation(fields: [userId], references: [id])
-  posts    SocialPost[]
+  strategy   Strategy          @relation(fields: [strategyId], references: [id])
+  user       User              @relation(fields: [userId], references: [id])
+  posts      SocialPost[]
+  inboxItems SocialInboxItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2959,6 +2965,15 @@ model SocialPost {
   engagementRate Float?
   sentiment      Float?
   pillarTags     Json?
+  /// Type de média rapporté par la plateforme (IMAGE / VIDEO / CAROUSEL_ALBUM…).
+  mediaType      String?
+  /// Lien public vers la publication chez la plateforme (permalink).
+  permalinkUrl   String?
+  /// Visuel de la publication (image ou miniature) fourni par la plateforme.
+  mediaUrl       String?
+  /// Métriques privées par post (Insights) quand le scope est accordé :
+  /// { impressions, reach, saved, plays, … }. Null = non mesuré (jamais 0 fabriqué).
+  insights       Json?
 
   connection SocialConnection @relation(fields: [connectionId], references: [id])
   strategy   Strategy         @relation(fields: [strategyId], references: [id])
@@ -2968,6 +2983,46 @@ model SocialPost {
 
   @@unique([connectionId, externalPostId])
   @@index([strategyId])
+}
+
+/// Interaction d'un TIERS adressée à la marque sur un réseau connecté —
+/// l'unité de l'Inbox unifiée (doctrine « rival Sprout », ADR-0133).
+/// PII de tiers assumée et ENCADRÉE : rôle processor pour le compte de la
+/// marque, copy /privacy + /cgu + /data-deletion alignée, purge avec la
+/// déconnexion/suppression de compte. Écrivains UNIQUEMENT via Intents gouvernés.
+model SocialInboxItem {
+  id               String         @id @default(cuid())
+  strategyId       String
+  connectionId     String
+  platform         SocialPlatform
+  /// COMMENT | MENTION | MESSAGE | REVIEW (v1 : COMMENT).
+  kind             String         @default("COMMENT")
+  externalId       String
+  /// Post/média porteur (externalPostId du SocialPost correspondant).
+  parentExternalId String?
+  authorName       String?
+  authorHandle     String?
+  authorExternalId String?
+  text             String?        @db.Text
+  likeCount        Int            @default(0)
+  permalinkUrl     String?
+  publishedAt      DateTime?
+  /// OPEN | REPLIED | DISMISSED
+  status           String         @default("OPEN")
+  repliedAt        DateTime?
+  replyText        String?        @db.Text
+  replyExternalId  String?
+  sentiment        Float?
+
+  connection SocialConnection @relation(fields: [connectionId], references: [id])
+  strategy   Strategy         @relation(fields: [strategyId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([connectionId, externalId])
+  @@index([strategyId, status, publishedAt])
+  @@index([strategyId, platform])
 }
 
 model MediaPlatformConnection {

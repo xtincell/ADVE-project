@@ -23,6 +23,7 @@ import {
   exchangeMetaLongLivedToken,
   fetchUserInfo,
   getProviderConfig,
+  getPublicBaseUrl,
   unpackState,
 } from "@/server/services/oauth-integrations";
 import {
@@ -77,7 +78,9 @@ export async function GET(
 ) {
   const { provider } = await context.params;
   const url = new URL(request.url);
-  const baseUrl = `${url.protocol}//${url.host}`;
+  // MÊME base publique que le start : le redirect_uri de l'échange de code
+  // doit être STRICTEMENT identique à celui envoyé à l'autorisation.
+  const baseUrl = getPublicBaseUrl(request);
   const code = url.searchParams.get("code");
   const stateParam = url.searchParams.get("state");
   const errorParam = url.searchParams.get("error");

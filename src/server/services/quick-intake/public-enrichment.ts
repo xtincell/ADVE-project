@@ -43,8 +43,26 @@ export interface PressMention {
   publishedAt: string | null;
 }
 
+/**
+ * Profil public de la marque tel que publié sur un réseau CONNECTÉ (OAuth
+ * ADR-0128, `SocialConnection.metadata.profile`) — donnée exacte de l'API,
+ * pas une estimation scrapée. Alimente le pilier E (empreinte publique).
+ */
+export interface ConnectedProfileEntry {
+  platform: string;
+  accountName: string;
+  bio: string | null;
+  website: string | null;
+  category: string | null;
+  location: string | null;
+  mediaCount: number | null;
+  totalViews: number | null;
+}
+
 export interface EnrichedFootprint extends WebFootprint {
   followerCounts: FollowerCountEntry[];
+  /** Profils publics exacts des réseaux connectés (source CONNECTOR). */
+  connectedProfiles?: ConnectedProfileEntry[];
   press: PressMention[];
   discovery: {
     attempted: boolean;
@@ -215,6 +233,7 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
   //     préfère au scraping Apify (estimation) — plateformes couvertes
   //     retirées de la liste à scraper, provenance SOURCE conservée.
   const followerCounts: FollowerCountEntry[] = [];
+  const connectedProfiles: ConnectedProfileEntry[] = [];
   const connectorCovered = new Set<string>();
   try {
     const { db } = await import("@/lib/db");
@@ -237,6 +256,30 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
         followerCount: snap.followerCount,
         source: "CONNECTOR",
         capturedAt: snap.capturedAt.toISOString(),
+      });
+    }
+    // Profils publics exacts des réseaux connectés (collecte élargie) : bio,
+    // site, catégorie, localisation, volumes — donnée API, pas scraping.
+    // Uniquement quand la Strategy existe (jamais un scan cross-marques).
+    const conns = input.strategyId
+      ? await db.socialConnection.findMany({
+          where: { strategyId: input.strategyId, status: "ACTIVE" },
+          select: { platform: true, accountName: true, metadata: true },
+        })
+      : [];
+    for (const c of conns) {
+      const meta = (c.metadata ?? {}) as Record<string, unknown>;
+      const p = meta.profile as Record<string, unknown> | null | undefined;
+      if (!p || typeof p !== "object") continue;
+      connectedProfiles.push({
+        platform: String(c.platform),
+        accountName: c.accountName,
+        bio: typeof p.bio === "string" ? p.bio : null,
+        website: typeof p.website === "string" ? p.website : null,
+        category: typeof p.category === "string" ? p.category : null,
+        location: typeof p.location === "string" ? p.location : null,
+        mediaCount: typeof p.mediaCount === "number" ? p.mediaCount : null,
+        totalViews: typeof p.totalViews === "number" ? p.totalViews : null,
       });
     }
   } catch {
@@ -369,6 +412,7 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
     ...footprint,
     ...enrichedExtras,
     followerCounts,
+    ...(connectedProfiles.length > 0 ? { connectedProfiles } : {}),
     press,
     discovery,
     enrichment: {
@@ -520,12 +564,19 @@ export function mergeEnrichedFootprintIntoPillarE(
     const real = byHandle.get(key);
     if (real) {
       s.followerCount = real.followerCount;
-      s.followerSource = "APIFY";
+      // Provenance réelle du relevé (CONNECTOR = compteur exact OAuth,
+      // APIFY = estimation scrapée) — ne plus étiqueter tout « APIFY ».
+      s.followerSource = real.source;
       s.capturedAt = real.capturedAt;
     }
   }
   if (enriched.press.length > 0) {
     webPresence.press = enriched.press;
+  }
+  // Profils publics exacts des réseaux connectés — mesure réelle (API),
+  // même règle ADR-0046 : on n'écrit que ce qui a été effectivement lu.
+  if (enriched.connectedProfiles && enriched.connectedProfiles.length > 0) {
+    webPresence.connectedProfiles = enriched.connectedProfiles;
   }
 
   // ── ADR-0121 vague A — empreinte ENTIÈRE dans webPresence (provenance

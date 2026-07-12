@@ -50,4 +50,59 @@ describe("P1 — sync des publications (SocialPost premier écrivain)", () => {
     expect(router).toMatch(/syncPosts: governedProcedure\(\{\s*kind: "ANUBIS_SYNC_SOCIAL_POSTS"/);
     expect(router).toMatch(/syncPosts[\s\S]{0,400}assertStrategyAccess/);
   });
+
+  // ── Collecte élargie (mandat « la fusée devrait tout récupérer ») ────────
+  it("(6) posts riches : permalink + visuel + type de média, 25 par sync, colonnes en schéma", () => {
+    const svc = read("src/server/services/anubis/social-connect.ts");
+    // FB : permalink, image pleine, type d'attachement
+    expect(svc).toContain("permalink_url");
+    expect(svc).toContain("full_picture");
+    expect(svc).toContain("attachments{media_type}");
+    // IG : média riches (URL, miniature, permalink)
+    expect(svc).toMatch(/media_type,media_url,thumbnail_url,permalink/);
+    // YT : lien watch + miniature
+    expect(svc).toContain("youtube.com/watch?v=");
+    expect(svc).toMatch(/const POSTS_PER_SYNC = 25/);
+    const schema = read("prisma/schema.prisma");
+    const socialPost = schema.slice(schema.indexOf("model SocialPost"), schema.indexOf("model MediaPlatformConnection"));
+    for (const col of ["mediaType", "permalinkUrl", "mediaUrl"]) {
+      expect(socialPost).toContain(col);
+    }
+  });
+
+  it("(7) profil public de la marque collecté et persisté (metadata.profile + followingCount)", () => {
+    const svc = read("src/server/services/anubis/social-connect.ts");
+    // FB Page : about/catégorie/site/localisation · IG : bio/volumes
+    expect(svc).toMatch(/about,category,website/);
+    expect(svc).toContain("biography");
+    expect(svc).toContain("follows_count");
+    // Persistance : profil dans metadata (connect + refresh au sync)
+    expect(svc).toMatch(/profile: account\.profile/);
+    expect(svc).toMatch(/nextMeta\.profile = result\.profile/);
+    // Le suivi (following) rempli dans FollowerSnapshot quand fourni
+    expect(svc).toMatch(/followingCount: (account|result)\.followingCount/);
+    // Et le pilier E le reçoit (empreinte publique, provenance réelle)
+    const enrich = read("src/server/services/quick-intake/public-enrichment.ts");
+    expect(enrich).toContain("connectedProfiles");
+    expect(enrich).toMatch(/followerSource = real\.source/);
+  });
+
+  it("(8) la boucle passive ne stocke rien des tiers — l'engagement tiers arrive par l'Inbox (S3), pas ici", () => {
+    const svc = read("src/server/services/anubis/social-connect.ts");
+    // CE service (télémétrie de fond) se limite aux compteurs agrégés
+    // (summary/total_count) : pas de texte de commentaire, pas de liste
+    // d'abonnés, pas de DM. L'Inbox S3 (rival Sprout — commentaires/DM/
+    // mentions AVEC identités) vivra dans SON service avec SES scopes ;
+    // ces verrous-ci restent donc vrais pour social-connect à jamais.
+    expect(svc).not.toMatch(/\/comments\?fields=/);
+    expect(svc).not.toMatch(/fields=message/);
+    expect(svc).not.toMatch(/\/(followers|friends|conversations|subscribers)\b/);
+    // Pas d'appel Insights ici (read_insights / instagram_manage_insights
+    // arrivent avec la 2ᵉ soumission App Review, groupée avec les scopes
+    // publishing/engagement — cf. RESIDUAL-DEBT §ADR-0128).
+    expect(svc).not.toMatch(/\/insights/);
+    // La doctrine à deux étages est écrite dans le module.
+    expect(svc).toMatch(/rien des tiers ICI/);
+    expect(svc).toMatch(/Inbox unifiée/);
+  });
 });

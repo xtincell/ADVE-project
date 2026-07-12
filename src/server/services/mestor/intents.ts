@@ -538,10 +538,28 @@ export type Intent =
         accountName: string;
         handle: string | null;
         followerCount: number | null;
+        followingCount: number | null;
+        /** Profil public de la marque (bio/site/catégorie/volumes) — non-secret. */
+        profile: import("@/server/services/anubis/social-connect").AccountProfile | null;
         encryptedTokens: string;
         tokenExpiresAt: string | null;
       }>;
       scopes: string[];
+    }
+  // ── Anubis suite sociale pilotable (ADR-0133) ─────────────────────
+  // NB : ANUBIS_SYNC_INBOX / ANUBIS_REPLY_COMMENT ne vivent QUE via
+  // governedProcedure (handler inline router, même lane que SYNC_FOLLOWERS)
+  // — seul PUBLISH est aussi ré-émis par le cron (emitIntentTyped).
+  | {
+      kind: "ANUBIS_PUBLISH_SOCIAL_POST";
+      strategyId: string;
+      userId: string;
+      targets: string[];
+      text: string;
+      linkUrl?: string | null;
+      imageUrl?: string | null;
+      scheduleAt?: string | null;
+      brandActionId?: string | null;
     }
   // ── Anubis boutique de la marque — Shopify OAuth founder (vague 2026-07-12) ──
   | {
@@ -1192,6 +1210,9 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     // credentials + snapshots d'observation, aucune mutation de pilier.
     case "ANUBIS_SOCIAL_CONNECT_ACCOUNT":
     case "ANUBIS_COMMERCE_CONNECT_SHOP":
+    // ADR-0133 — publication sociale : comms, zéro pilier (inbox/réponse =
+    // governedProcedure inline, hors union typée comme SYNC_FOLLOWERS).
+    case "ANUBIS_PUBLISH_SOCIAL_POST":
     // Phase 17 (ADR-0037) — Deliverable Forge dispatcher. Le composer consomme
     // les piliers ADVE en lecture seule pour résoudre le DAG ; les mutations
     // vault sont déléguées en aval à PTAH_MATERIALIZE_BRIEF +

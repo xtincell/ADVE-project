@@ -12,6 +12,7 @@ import {
   BarChart3,
   Activity,
   TrendingUp,
+  Send,
   GitBranch,
   Inbox,
   PlayCircle,
@@ -163,6 +164,14 @@ export const cockpitNavGroups: NavGroup[] = [
         activePrefixes: ["/cockpit/operate/roadmap"],
       },
       {
+        href: "/cockpit/operate/inbox", label: "Boîte de réception", sublabel: "Commentaires & messages reçus",
+        labelKey: "nav.inbox", sublabelKey: "nav.inbox.sub", icon: Inbox,
+      },
+      {
+        href: "/cockpit/operate/publish", label: "Publier", sublabel: "Publier sur vos réseaux",
+        labelKey: "nav.publier", sublabelKey: "nav.publier.sub", icon: Send,
+      },
+      {
         href: "/cockpit/operate/tracker", label: "Résultats", sublabel: "Performance des campagnes",
         labelKey: "nav.resultats", sublabelKey: "nav.resultats.sub", icon: Activity,
       },
@@ -187,6 +196,10 @@ export const cockpitNavGroups: NavGroup[] = [
       {
         href: "/cockpit/intelligence/market-studies", label: "Études de marché", sublabel: "Vos études ingérées",
         labelKey: "nav.market-studies", sublabelKey: "nav.market-studies.sub", icon: Search,
+      },
+      {
+        href: "/cockpit/intelligence/social", label: "Performance sociale", sublabel: "Vos réseaux en chiffres réels",
+        labelKey: "nav.social-perf", sublabelKey: "nav.social-perf.sub", icon: TrendingUp,
       },
       {
         href: "/cockpit/intelligence/community", label: "Communauté", sublabel: "Superfans & engagement",

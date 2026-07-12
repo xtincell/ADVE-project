@@ -10,6 +10,74 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.113 — feat(anubis): suite sociale pilotable v1 — inbox, publication, statistiques, notifications, CGU ([ADR-0133](docs/governance/adr/0133-social-suite-pilot.md)) (2026-07-12)
+
+**Mandat opérateur « rival Sprout » exécuté : commentaires, stats, rapports, publier, planifier, notifications — tout depuis l'app, et la promesse légale alignée pour ne pas faire mentir le produit.**
+
+- **Scopes de pilotage canon** : meta += manage_posts/manage_engagement/read_insights/
+  content_publish/manage_comments/manage_insights · google += yt-analytics.readonly · linkedin +=
+  w_member_social. Actifs immédiatement en mode testeurs (App Review = ouverture au public
+  uniquement). Connexions antérieures → badge « Reconnecter » (`scopesOutdated`), jamais de casse.
+  Interdits maintenus par test : ads, messaging/DM, upload vidéo.
+- **Inbox unifiée** (`SocialInboxItem` + service distinct `social-inbox`) : commentaires FB/IG des
+  posts récents, réponse AU NOM de la marque (SCOPE_MISSING explicite sinon), classement. Surface
+  `/cockpit/operate/inbox` (onglets À traiter/Répondues/Classées), délégable zone social. 2 kinds
+  gouvernés `ANUBIS_SYNC_INBOX` + `ANUBIS_REPLY_COMMENT`.
+- **Publier + planifier** (`ANUBIS_PUBLISH_SOCIAL_POST` + `social-publish`) : FB texte/lien/photo,
+  IG image+légende (container), LinkedIn membre. **Calendrier unique** : planifier = BrandAction
+  SCHEDULED, le cron `?mode=publish` ré-émet l'Intent à l'échéance (spine + cost-gate) ; X/TikTok/
+  YT = UNSUPPORTED motivés. Composer `/cockpit/operate/publish` (cibles honnêtes par connexion).
+- **Statistiques réelles par post** (`SocialPost.insights` + `social-insights`) : FB impressions/
+  portée/clics, IG reach/saved — UNIQUEMENT quand le scope est porté, jamais un zéro inventé ;
+  `reach` promu depuis la mesure. **Rapport** déterministe 30/90 j `/cockpit/intelligence/social`
+  (totaux, par-réseau, top posts, inbox, « connecté sans donnée »).
+- **Notifications** : fan-out canonique ADR-0025 réutilisé (in-app + push, préférences) — nouvelles
+  interactions groupées + résultats de publication (succès ET échecs) vers porteur + délégués.
+- **Promesse légale** : CGU §5 « mandat de gestion » (client responsable de traitement, UPgraders
+  sous-traitant), /privacy interactions adressées à la marque, /data-deletion périmètre inbox +
+  droits des auteurs. Nav + i18n ×3. Migration additive `20260713000000` (1 modèle + 1 colonne).
+  8 verrous CI `social-suite-pilot.test.ts`. Cap APOGEE 7/7 préservé.
+- **Fix OAuth prod « les URI échouent »** : derrière le proxy Coolify, `next start` voit la
+  connexion interne en HTTP → `redirect_uri=http://…` ≠ URIs https déclarées → Meta/Google/
+  LinkedIn refusaient tous. `getPublicBaseUrl` (x-forwarded-proto/host, https forcé hors
+  localhost) sur start + callback — même base STRICTE aux deux étapes. 3 tests dédiés.
+
+## v6.27.112 — feat(anubis): collecte sociale maximale sous scopes accordés — posts riches, profils publics, provenance honnête (2026-07-12)
+
+**« La fusée devrait tout récupérer » : la boucle de lecture passe de l'échantillon au plein régime — tout ce que les APIs donnent avec les scopes actuels, rien des tiers.**
+
+- **Posts riches ×25** (au lieu de 10) : FB `permalink_url`/`full_picture`/`attachments{media_type}`,
+  IG `media_type`/`media_url`/`thumbnail_url`/`permalink`, YT lien watch + miniature. 3 colonnes
+  additives `SocialPost.mediaType/permalinkUrl/mediaUrl` (migration `20260712230000`). Le
+  « Suivi du jour » affiche le visuel réel et ouvre la publication (lien sortant).
+- **Profil public de la marque collecté et rafraîchi à chaque sync** : FB about/catégorie/site/
+  localisation, IG bio/site/volumes (`follows_count`, `media_count`), YT description/pays/vues
+  cumulées/nb vidéos, X et TikTok câblés (bio, liens, volumes — actifs dès leurs creds). Persisté
+  `SocialConnection.metadata.profile` (non-secret), `FollowerSnapshot.followingCount` enfin rempli.
+- **Le pilier E reçoit l'exact** : bloc `webPresence.connectedProfiles` (bio/site/catégorie/volumes,
+  source CONNECTOR) + fix provenance — `followerSource` reflète la vraie source (CONNECTOR|APIFY),
+  plus jamais étiqueté « APIFY » en dur.
+- **Frontière posée en dur (test 8), au bon niveau** : la boucle passive de télémétrie ne stocke
+  rien des tiers (ni texte de commentaire, ni identité d'abonné, ni `/insights` sans scope) — mais
+  l'engagement des tiers est un organe produit à part entière : l'**Inbox unifiée S3** (doctrine
+  « rival Sprout » confirmée opérateur — commentaires/DM/mentions AVEC identités, scopes dédiés,
+  rôle processor, copy /privacy + /data-deletion mise à jour à son arrivée). Le verrou protège
+  l'App Review en cours, pas le produit.
+- **Drift schéma réparé à la source** : `StrategyCollaborator` annoté `onDelete: Cascade` (aligné
+  migration manuscrite 20260712150000) + `CampaignAction.pillarServed @default([])` — sans quoi
+  toute future migration aurait « corrigé » la prod vers RESTRICT/DROP DEFAULT à notre insu.
+- Gated (RESIDUAL-DEBT §ADR-0128) : reach/impressions/saves par post = `read_insights` +
+  `instagram_manage_insights` (2ᵉ App Review), YT Analytics (scope dédié), LinkedIn produit CM,
+  X payant, TikTok `video.list` + client secret.
+- **Fix CI Golden Path E2E (régression v6.27.111)** : la redirection domaine-canonique du proxy
+  s'armait sur `NODE_ENV=production` — vrai aussi en CI (`next start` sur localhost:3000) → tout
+  le parcours E2E partait en 308 vers powerupgraders.com. Garde `isLocalHost` posée ; zéro impact
+  prod (seuls les domaines Coolify atteignent l'app déployée).
+- **Webhook LinkedIn** (`/api/integrations/linkedin/webhook`) : validation challenge du portail
+  dev (HMAC-SHA256 hex du `challengeCode`, client secret) + événements signés `X-LI-Signature`
+  vérifiés `timingSafeEqual`. v1 ACK sans persistance (on ne stocke pas une donnée membre
+  qu'aucune surface ne consomme). Débloque « Test this URL » du dialogue Create a webhook.
+
 ## v6.27.111 — fix(cockpit): le logo enfin visible — kind d'upload réparé, seed en un clic, doctrine domaines corrigée, ADVERTIS Xtincell sourcé (2026-07-12)
 
 **Réponse à « il te manque quoi ? » : trois chaînons réels, tous fermés.**

@@ -686,6 +686,7 @@ export const cockpitRouter = createTRPCRouter({
           select: {
             id: true, content: true, publishedAt: true,
             likes: true, comments: true, shares: true, reach: true,
+            mediaType: true, permalinkUrl: true, mediaUrl: true,
             connection: { select: { platform: true } },
           },
         }),
@@ -732,6 +733,9 @@ export const cockpitRouter = createTRPCRouter({
         publishedAt: p.publishedAt?.toISOString() ?? null,
         likes: p.likes, comments: p.comments, shares: p.shares, reach: p.reach,
         engagement: p.likes + p.comments + p.shares,
+        mediaType: p.mediaType,
+        permalinkUrl: p.permalinkUrl,
+        mediaUrl: p.mediaUrl,
       }));
       const totalReach = posts.reduce((n, p) => n + p.reach, 0);
       const totalEngagement = posts.reduce((n, p) => n + p.engagement, 0);

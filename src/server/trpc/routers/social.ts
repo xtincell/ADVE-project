@@ -658,7 +658,11 @@ export const socialRouter = createTRPCRouter({
     return syncStrategySocialFollowers(input.strategyId);
   }),
 
-  /** P1 (plan validé) — collecte des publications + métriques publiques par post. */
+  /**
+   * P1 (plan validé) — collecte des publications + métriques publiques par
+   * post, puis Insights privés best-effort (ADR-0133) quand la connexion
+   * porte le scope (read_insights / instagram_manage_insights).
+   */
   syncPosts: governedProcedure({
     kind: "ANUBIS_SYNC_SOCIAL_POSTS",
     inputSchema: z.object({ strategyId: z.string().min(1) }),
@@ -666,8 +670,108 @@ export const socialRouter = createTRPCRouter({
   }).mutation(async ({ ctx, input }) => {
     await assertStrategyAccess(ctx, input.strategyId);
     const { syncStrategySocialPosts } = await import("@/server/services/anubis/social-connect");
-    return syncStrategySocialPosts(input.strategyId);
+    const result = await syncStrategySocialPosts(input.strategyId);
+    const { enrichRecentPostInsights } = await import("@/server/services/anubis/social-insights");
+    const insights = await enrichRecentPostInsights(input.strategyId).catch(
+      () => ({ state: "DEGRADED", reason: "VENDOR_OUTAGE" }) as const,
+    );
+    return { ...result, insights };
   }),
+
+  // ════════════════════════════════════════════════════════════════════
+  // ADR-0133 — Suite sociale pilotable : inbox, réponse, publication, rapport
+  // ════════════════════════════════════════════════════════════════════
+
+  /** Boîte de réception : interactions des tiers adressées à la marque. */
+  getInbox: protectedProcedure
+    .input(z.object({
+      strategyId: z.string().min(1),
+      status: z.enum(["OPEN", "REPLIED", "DISMISSED"]).optional(),
+      platform: z.string().optional(),
+    }))
+    .query(async ({ ctx, input }) => {
+      await assertStrategyAccess(ctx, input.strategyId);
+      const { listInboxItems } = await import("@/server/services/anubis/social-inbox");
+      return listInboxItems(input.strategyId, { status: input.status, platform: input.platform });
+    }),
+
+  /** Balaye les commentaires des publications récentes (FB/IG). */
+  syncInbox: governedProcedure({
+    kind: "ANUBIS_SYNC_INBOX",
+    inputSchema: z.object({ strategyId: z.string().min(1) }),
+    caller: "social:syncInbox",
+  }).mutation(async ({ ctx, input }) => {
+    await assertStrategyAccess(ctx, input.strategyId);
+    const { syncStrategyInbox } = await import("@/server/services/anubis/social-inbox");
+    return syncStrategyInbox(input.strategyId);
+  }),
+
+  /** Répond à un commentaire au nom de la marque. */
+  replyToComment: governedProcedure({
+    kind: "ANUBIS_REPLY_COMMENT",
+    inputSchema: z.object({
+      strategyId: z.string().min(1),
+      itemId: z.string().min(1),
+      text: z.string().min(1).max(2000),
+    }),
+    caller: "social:replyToComment",
+  }).mutation(async ({ ctx, input }) => {
+    await assertStrategyAccess(ctx, input.strategyId);
+    const { replyToInboxItem } = await import("@/server/services/anubis/social-inbox");
+    return replyToInboxItem({ strategyId: input.strategyId, itemId: input.itemId, text: input.text });
+  }),
+
+  /** Classe une interaction sans réponse (lecture seule côté plateforme). */
+  dismissInboxItem: protectedProcedure
+    .input(z.object({ strategyId: z.string().min(1), itemId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      await assertStrategyAccess(ctx, input.strategyId);
+      const { dismissInboxItem } = await import("@/server/services/anubis/social-inbox");
+      await dismissInboxItem(input.strategyId, input.itemId);
+      return { ok: true };
+    }),
+
+  /** Publie (ou planifie via le calendrier) au nom de la marque. */
+  publishPost: governedProcedure({
+    kind: "ANUBIS_PUBLISH_SOCIAL_POST",
+    inputSchema: z.object({
+      strategyId: z.string().min(1),
+      targets: z.array(z.string().min(1)).min(1).max(6),
+      text: z.string().max(4000),
+      linkUrl: z.string().url().optional().nullable(),
+      imageUrl: z.string().url().optional().nullable(),
+      scheduleAt: z.string().datetime().optional().nullable(),
+    }),
+    caller: "social:publishPost",
+  }).mutation(async ({ ctx, input }) => {
+    await assertStrategyAccess(ctx, input.strategyId);
+    const { publishSocialPost } = await import("@/server/services/anubis/social-publish");
+    return publishSocialPost({
+      strategyId: input.strategyId,
+      userId: ctx.session.user.id,
+      targets: input.targets,
+      text: input.text,
+      linkUrl: input.linkUrl ?? null,
+      imageUrl: input.imageUrl ?? null,
+      scheduleAt: input.scheduleAt ?? null,
+    });
+  }),
+
+  /**
+   * Rapport de performance social (30/90 j) — déterministe, zéro LLM :
+   * publications (volumes, engagement, portée quand mesurée), audience
+   * (dernier relevé + delta), meilleures publications.
+   */
+  getSocialReport: protectedProcedure
+    .input(z.object({
+      strategyId: z.string().min(1),
+      days: z.union([z.literal(30), z.literal(90)]).default(30),
+    }))
+    .query(async ({ ctx, input }) => {
+      await assertStrategyAccess(ctx, input.strategyId);
+      const { buildSocialReport } = await import("@/server/services/anubis/social-report");
+      return buildSocialReport(input.strategyId, input.days);
+    }),
 });
 
 /**
