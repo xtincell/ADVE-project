@@ -20,6 +20,7 @@ import {
   buildAuthorizeUrl,
   generatePkcePair,
   getProviderConfig,
+  getPublicBaseUrl,
   packState,
 } from "@/server/services/oauth-integrations";
 import {
@@ -52,7 +53,9 @@ export async function GET(
   }
   const { provider } = await context.params;
   const url = new URL(request.url);
-  const baseUrl = `${url.protocol}//${url.host}`;
+  // Proto/host PUBLICS (x-forwarded-*) — le redirect_uri doit matcher les
+  // URIs https déclarées chez les providers, pas la connexion interne.
+  const baseUrl = getPublicBaseUrl(request);
   const isSocial = url.searchParams.get("social") === "1";
   const isCommerce = url.searchParams.get("commerce") === "1";
 

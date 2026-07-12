@@ -203,6 +203,31 @@ function getEncryptionKey(): Buffer {
 }
 
 /**
+ * Base URL PUBLIQUE de la requête — fiable derrière le reverse-proxy.
+ *
+ * Derrière Coolify/Traefik, `next start` voit la connexion interne en HTTP :
+ * `new URL(request.url).protocol` vaut `http:` alors que le client est en
+ * HTTPS. Un `redirect_uri` construit là-dessus (`http://powerupgraders.com/…`)
+ * ne matche JAMAIS les URIs déclarées chez Meta/Google/LinkedIn (https) —
+ * les trois providers refusent. On honore donc `x-forwarded-proto`/`-host`
+ * (posés par le proxy) avec repli sur l'URL brute (dev/CI localhost).
+ */
+export function getPublicBaseUrl(request: Request): string {
+  const url = new URL(request.url);
+  const host =
+    request.headers.get("x-forwarded-host")?.split(",")[0]?.trim() ||
+    request.headers.get("host") ||
+    url.host;
+  const bare = host.split(":")[0] ?? "";
+  const isLocal =
+    bare === "localhost" || bare === "127.0.0.1" || bare === "0.0.0.0" || bare.endsWith(".local");
+  const proto =
+    request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() ||
+    (isLocal ? url.protocol.replace(":", "") : "https");
+  return `${proto}://${host}`;
+}
+
+/**
  * Réponse au challenge de validation des webhooks LinkedIn : HMAC-SHA256 hex
  * du `challengeCode` signé avec le client secret de l'app (forme exigée par
  * le portail dev — « Test this URL »). Même primitive pour vérifier la

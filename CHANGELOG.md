@@ -37,6 +37,10 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
   sous-traitant), /privacy interactions adressées à la marque, /data-deletion périmètre inbox +
   droits des auteurs. Nav + i18n ×3. Migration additive `20260713000000` (1 modèle + 1 colonne).
   8 verrous CI `social-suite-pilot.test.ts`. Cap APOGEE 7/7 préservé.
+- **Fix OAuth prod « les URI échouent »** : derrière le proxy Coolify, `next start` voit la
+  connexion interne en HTTP → `redirect_uri=http://…` ≠ URIs https déclarées → Meta/Google/
+  LinkedIn refusaient tous. `getPublicBaseUrl` (x-forwarded-proto/host, https forcé hors
+  localhost) sur start + callback — même base STRICTE aux deux étapes. 3 tests dédiés.
 
 ## v6.27.112 — feat(anubis): collecte sociale maximale sous scopes accordés — posts riches, profils publics, provenance honnête (2026-07-12)
 

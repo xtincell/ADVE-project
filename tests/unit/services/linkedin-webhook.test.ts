@@ -39,3 +39,30 @@ describe("webhook LinkedIn — challenge + doctrine", () => {
     expect(ROUTE).not.toMatch(/from "@\/lib\/db"|prisma|db\./);
   });
 });
+
+// ── getPublicBaseUrl — redirect_uri fiable derrière le reverse-proxy ─────────
+import { getPublicBaseUrl } from "@/server/services/oauth-integrations";
+
+describe("getPublicBaseUrl (proxy-aware)", () => {
+  const make = (url: string, headers: Record<string, string>) =>
+    new Request(url, { headers });
+
+  it("honore x-forwarded-proto/host derrière Coolify (https public, http interne)", () => {
+    const req = make("http://10.0.1.5:3000/api/integrations/oauth/linkedin/start", {
+      "x-forwarded-proto": "https",
+      "x-forwarded-host": "powerupgraders.com",
+      host: "10.0.1.5:3000",
+    });
+    expect(getPublicBaseUrl(req)).toBe("https://powerupgraders.com");
+  });
+
+  it("force https pour un hôte public même sans header forwarded", () => {
+    const req = make("http://powerupgraders.com/api/x", { host: "powerupgraders.com" });
+    expect(getPublicBaseUrl(req)).toBe("https://powerupgraders.com");
+  });
+
+  it("préserve http pour localhost (dev + CI Golden Path)", () => {
+    const req = make("http://localhost:3000/api/x", { host: "localhost:3000" });
+    expect(getPublicBaseUrl(req)).toBe("http://localhost:3000");
+  });
+});
