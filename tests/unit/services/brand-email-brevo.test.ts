@@ -38,7 +38,7 @@ describe("sendViaBrevo", () => {
       expect(res.provider).toBe("BREVO");
       expect(res.providerRef).toBe("<msg-123@brevo>");
     }
-    const [url, init] = spy.mock.calls[0];
+    const [url, init] = spy.mock.calls[0]!;
     expect(url).toBe("https://api.brevo.com/v3/smtp/email");
     expect((init.headers as Record<string, string>)["api-key"]).toBe("xkeysib-test-key-longenough-000000");
     const payload = JSON.parse(init.body as string);
