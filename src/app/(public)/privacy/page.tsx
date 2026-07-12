@@ -52,7 +52,7 @@ export default function PrivacyPage() {
         <div>
           <h2 className="text-foreground text-xl font-semibold mb-3">Tes droits</h2>
           <p>
-            Accès, rectification, effacement, portabilité, opposition. Pour exercer : écrire à <a href="mailto:privacy@lafusee.upgraders.io" className="text-accent hover:underline">privacy@lafusee.upgraders.io</a> avec une preuve d&apos;identité.
+            Accès, rectification, effacement, portabilité, opposition. Pour exercer : écrire à <a href="mailto:privacy@lafusee.upgraders.io" className="text-accent hover:underline">privacy@lafusee.upgraders.io</a> avec une preuve d&apos;identité. Pour supprimer les données de tes comptes sociaux connectés : voir <Link href="/data-deletion" className="text-accent hover:underline">Suppression des données</Link>.
           </p>
         </div>
 
