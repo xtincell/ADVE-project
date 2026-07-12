@@ -34,6 +34,10 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 - Gated (RESIDUAL-DEBT §ADR-0128) : reach/impressions/saves par post = `read_insights` +
   `instagram_manage_insights` (2ᵉ App Review), YT Analytics (scope dédié), LinkedIn produit CM,
   X payant, TikTok `video.list` + client secret.
+- **Webhook LinkedIn** (`/api/integrations/linkedin/webhook`) : validation challenge du portail
+  dev (HMAC-SHA256 hex du `challengeCode`, client secret) + événements signés `X-LI-Signature`
+  vérifiés `timingSafeEqual`. v1 ACK sans persistance (on ne stocke pas une donnée membre
+  qu'aucune surface ne consomme). Débloque « Test this URL » du dialogue Create a webhook.
 
 ## v6.27.111 — fix(cockpit): le logo enfin visible — kind d'upload réparé, seed en un clic, doctrine domaines corrigée, ADVERTIS Xtincell sourcé (2026-07-12)
 

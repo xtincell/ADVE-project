@@ -202,6 +202,16 @@ function getEncryptionKey(): Buffer {
   return crypto.createHash("sha256").update(raw).digest();
 }
 
+/**
+ * Réponse au challenge de validation des webhooks LinkedIn : HMAC-SHA256 hex
+ * du `challengeCode` signé avec le client secret de l'app (forme exigée par
+ * le portail dev — « Test this URL »). Même primitive pour vérifier la
+ * signature `X-LI-Signature` des événements entrants.
+ */
+export function computeLinkedInChallengeResponse(challengeCode: string, secret: string): string {
+  return crypto.createHmac("sha256", secret).update(challengeCode).digest("hex");
+}
+
 export function encryptTokenPayload(payload: object): string {
   const key = getEncryptionKey();
   const iv = crypto.randomBytes(12);
