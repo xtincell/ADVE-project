@@ -75,9 +75,11 @@ export interface PaymentProviderGuideProps {
 }
 
 export function PaymentProviderGuide(props: PaymentProviderGuideProps): React.ReactElement | null {
+  // useState AVANT le guard `if (!guide) return null` — sinon Rules of Hooks
+  // violée (React #310 : le hook serait sauté quand guide est introuvable).
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const guide = GUIDES.find((g) => g.id === props.providerId);
   if (!guide) return null;
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const baseUrl = props.baseUrl ?? (typeof window !== "undefined" ? window.location.origin : "");
   const fullWebhookUrl = baseUrl ? `${baseUrl}${guide.webhookPath}` : guide.webhookPath;
 

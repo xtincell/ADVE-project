@@ -98,8 +98,6 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
     onSuccess: () => feedQuery.refetch(),
   });
 
-  if (mode === "brand" && !strategyId) return <SkeletonPage />;
-
   const items: JehutyFeedItem[] = feedQuery.data ?? [];
   const dashboard = dashboardQuery.data;
 
@@ -152,6 +150,10 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
   }, [today]);
 
   // ── Render ──
+  // Garde APRÈS tous les hooks (useMemo lead/byCategory + editionNumber) —
+  // sinon Rules of Hooks violée (React #310) car ce return sautait les useMemo
+  // au premier rendu quand strategyId est absent.
+  if (mode === "brand" && !strategyId) return <SkeletonPage />;
 
   return (
     <article className="mx-auto max-w-[var(--maxw-content,1200px)] px-[var(--pad-page,1.5rem)] py-8 md:py-12">

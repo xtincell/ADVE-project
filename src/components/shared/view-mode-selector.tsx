@@ -83,22 +83,23 @@ export function ViewModeProvider({ children }: { children: React.ReactNode }) {
 
 export function useViewMode(): ViewModeContextValue {
   const ctx = useContext(ViewModeContext);
-  if (!ctx) {
-    // Fallback for usage outside provider: standalone localStorage-based state
-    const [mode, setModeState] = useState<ViewMode>(() => {
-      if (typeof window === "undefined") return "EXECUTIVE";
-      const stored = localStorage.getItem(STORAGE_KEY) as ViewMode | null;
-      return stored && VIEW_MODES.some((m) => m.value === stored)
-        ? stored
-        : "EXECUTIVE";
-    });
-    const setMode = useCallback((next: ViewMode) => {
-      setModeState(next);
-      localStorage.setItem(STORAGE_KEY, next);
-    }, []);
-    return { mode, setMode };
-  }
-  return ctx;
+  // Fallback pour usage hors provider : état localStorage autonome. Les hooks
+  // sont TOUJOURS appelés (Rules of Hooks — pas de useState/useCallback derrière
+  // le `if (!ctx)`, sinon React #310) ; on ne renvoie le fallback que si aucun
+  // provider n'est monté.
+  const [fallbackMode, setFallbackModeState] = useState<ViewMode>(() => {
+    if (typeof window === "undefined") return "EXECUTIVE";
+    const stored = localStorage.getItem(STORAGE_KEY) as ViewMode | null;
+    return stored && VIEW_MODES.some((m) => m.value === stored)
+      ? stored
+      : "EXECUTIVE";
+  });
+  const setFallbackMode = useCallback((next: ViewMode) => {
+    setFallbackModeState(next);
+    localStorage.setItem(STORAGE_KEY, next);
+  }, []);
+  if (ctx) return ctx;
+  return { mode: fallbackMode, setMode: setFallbackMode };
 }
 
 // ---------------------------------------------------------------------------

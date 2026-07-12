@@ -10,6 +10,29 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.103 — fix(cockpit): crash React #310 (hook après early return) sur 7 surfaces + garde CI rules-of-hooks (2026-07-12)
+
+`/cockpit/operate/newsletter` tombait sur l'error boundary (« Une erreur est
+survenue »). Cause runtime (console prod) : **React #310 — « rendered more
+hooks than during the previous render »**. Un `useState` était déclaré APRÈS
+les early returns `!strategyId`/`isLoading` → au premier rendu (sans marque) le
+composant appelait moins de hooks qu'au rendu suivant, cassant l'ordre des
+hooks. Introduit par le lot 14 (« fin des dialogues natifs ») quand le
+remplacement `confirm()` → `ConfirmDialog` a ajouté un hook d'état à son point
+d'usage au lieu du bloc de hooks en tête.
+
+- **7 surfaces corrigées** (hook hissé au-dessus de tout early return) :
+  newsletter, jehuty-feed (La Gazette, 2 `useMemo`), notoria (`useCanOperate`),
+  payment-provider-guide (`useState`), view-mode-selector (`useViewMode` rendu
+  inconditionnel), guidelines (`useMemo`), portfolio `[corporateSlug]`
+  (`useState`). Toutes étaient des React #310 latents.
+- **Garde durable** : le job CI « Lint » exécute `eslint.config.mjs` (pas
+  `next lint`) où `react-hooks` n'était PAS enregistré → la classe passait la
+  CI. Plugin `react-hooks` enregistré + `rules-of-hooks: error` (stories
+  exclues). `eslint-plugin-react-hooks` (7.1.1) est déjà résolu par le lockfile
+  (transitif d'`eslint-config-next`, hissé dans `node_modules`). `eslint src`
+  = 0 violation rules-of-hooks.
+
 ## v6.27.102 — chore(deploy): Coolify seule cible — purge Vercel du repo (2026-07-12)
 
 Déploiement 100 % Coolify (VPS Hostinger) — Vercel retiré du processus.
