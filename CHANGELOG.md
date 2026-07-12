@@ -10,6 +10,17 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.115 — fix(anubis): dialecte OAuth Meta — config_id « Login for Business », purge des params Google (2026-07-12)
+
+**« Sorry, something went wrong » post-login Facebook : l'app Business exige une Configuration — support câblé, à une variable d'env près.**
+
+- Sondage anonyme du dialogue FB : les 3 jeux de scopes passent (302 login) → l'échec est POST-login,
+  donc côté app. Cause n°1 : les apps Meta Business récentes (« Facebook Login for Business »)
+  rejettent le `scope` brut et exigent `config_id` — support ajouté (`META_LOGIN_CONFIG_ID` env
+  optionnelle : posée → `config_id` envoyé, scope retiré ; absente → scope classique inchangé).
+- Purge dialecte : `access_type`/`prompt` sont des paramètres GOOGLE — ils ne sont plus envoyés
+  qu'à Google (Facebook/LinkedIn ne les définissent pas). 3 tests dialectes par provider.
+
 ## v6.27.114 — feat(cockpit): suggestion d'audience adressable — relevés réels, déclaration au porteur (ADR-0126 amendée) (2026-07-12)
 
 **« Câble la suggestion » : le champ audience adressable se pré-remplit depuis la communauté MESURÉE — et c'est toujours le porteur qui déclare.**

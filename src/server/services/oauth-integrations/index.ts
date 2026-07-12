@@ -292,11 +292,26 @@ export function buildAuthorizeUrl(opts: {
     scope: (opts.scopes ?? opts.config.defaultScopes).join(opts.config.scopeDelimiter ?? " "),
     state: opts.state,
   });
-  // Google honore access_type/prompt ; les autres providers les ignorent ou
-  // les rejettent (TikTok) — on ne les émet que pour les flows qui les lisent.
-  if (opts.config.id === "google" || opts.config.id === "linkedin" || opts.config.id === "meta") {
+  // Google honore access_type/prompt — LES AUTRES NON : Facebook ne définit
+  // pas ces paramètres (dialecte Google) et les apps « Facebook Login for
+  // Business » sont notoirement strictes post-login ; on n'émet que pour
+  // Google, qui les lit réellement.
+  if (opts.config.id === "google") {
     params.set("access_type", "offline");
     params.set("prompt", "consent");
+  }
+  // Meta « Facebook Login for Business » : les apps Business récentes EXIGENT
+  // une Configuration (dashboard → Facebook Login for Business →
+  // Configurations) passée en config_id — le paramètre scope brut y est
+  // rejeté APRÈS login avec la page générique « Sorry, something went
+  // wrong ». Env optionnelle : sans META_LOGIN_CONFIG_ID on reste en scope
+  // classique (apps Consumer / Facebook Login standard).
+  if (opts.config.id === "meta") {
+    const configId = process.env.META_LOGIN_CONFIG_ID ?? "";
+    if (configId.length > 0) {
+      params.set("config_id", configId);
+      params.delete("scope");
+    }
   }
   if (opts.config.usePkce) {
     if (!opts.pkceChallenge) throw new Error(`${opts.config.id} requires a PKCE challenge`);
