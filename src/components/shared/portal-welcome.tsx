@@ -32,6 +32,12 @@ interface PortalCopy {
   accentVar: string;
 }
 
+/** Registres (ADR-0123) : cockpit/creator/agency parlent à des externes
+ *  (founder, freelance, partenaire) → business uniquement, jamais de noms
+ *  mythologiques ni « RTIS » en chaîne rendue. Seul le bloc `console`
+ *  (opérateur UPgraders interne) garde le registre interne — raison pour
+ *  laquelle ce fichier multi-portails reste HORS du scan
+ *  cockpit-vocabulary.test.ts. */
 const COPY: Record<PortalKind, PortalCopy> = {
   cockpit: {
     badge: "Brand OS",
@@ -47,12 +53,12 @@ const COPY: Record<PortalKind, PortalCopy> = {
       {
         icon: Sparkles,
         title: "Big Idea + briefs créatifs",
-        body: "De l'insight à l'asset : transforme ta stratégie en briefs Artemis, puis matérialise en KV/manifesto/oracle via la forge Ptah.",
+        body: "De l'insight à l'asset : transforme ta stratégie en briefs créatifs, puis matérialise-les en visuels clés, manifesto ou rapport stratégique.",
       },
       {
         icon: Zap,
-        title: "Cascade RTIS automatique",
-        body: "Une fois ADVE renseigné, les piliers Risk/Track/Innovation/Strategy se calculent sans effort — tu pilotes, le système orchestre.",
+        title: "Du diagnostic au plan d'action",
+        body: "Une fois l'ADVE renseigné, tes piliers stratégiques (R, T, I, S) se calculent sans effort — tu pilotes, le système orchestre.",
       },
     ],
     cta: "Entrer dans le cockpit",
@@ -72,7 +78,7 @@ const COPY: Record<PortalKind, PortalCopy> = {
       {
         icon: Shield,
         title: "Profil + portfolio",
-        body: "Soigne ta vitrine : skills, drivers de motivation, réalisations passées. Imhotep matche en fonction.",
+        body: "Soigne ta vitrine : compétences, motivations, réalisations passées. Le matching des missions s'appuie dessus.",
       },
       {
         icon: Wallet,
@@ -122,12 +128,12 @@ const COPY: Record<PortalKind, PortalCopy> = {
       {
         icon: Briefcase,
         title: "Campagnes coordonnées",
-        body: "Coordination des campagnes inter-marques, accès au réseau Imhotep pour staffer les missions.",
+        body: "Coordination des campagnes inter-marques, accès au vivier de talents pour staffer les missions.",
       },
       {
         icon: BarChart3,
         title: "Facturation + analytics",
-        body: "Reporting Thot par client, marges agence, attribution canal, performance par mission.",
+        body: "Reporting financier par client, marges agence, attribution canal, performance par mission.",
       },
     ],
     cta: "Ouvrir la console agence",

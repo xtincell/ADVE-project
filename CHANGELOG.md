@@ -55,6 +55,12 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 - 1 migration additive (`20260712150000_strategy_collaborator`) · 1 modèle ·
   2 Intent kinds (+SLOs) · +6 tests gouvernance (`strategy-collaborator`) ·
   cap APOGEE 7/7 (Crew = IMHOTEP, mesure = SESHAT, 0 nouveau Neter).
+- **Suivi CI** : expectations `operator-isolation.test.ts` alignées sur la
+  nouvelle forme canonique `scopeStrategies` (OR owner/collaborateur ACTIVE —
+  le changement est le comportement VOULU d'ADR-0129) ; purge vocabulaire
+  ADR-0123 des blocs client de `portal-welcome.tsx` (cockpit/creator/agency —
+  « briefs Artemis »/« forge Ptah »/« Cascade RTIS »/Imhotep/Thot → registre
+  business ; le bloc console garde légitimement le registre interne).
 
 ## v6.27.105 — feat(cockpit): dashboard de marque complété — logo & actifs, « Mes réseaux » (OAuth founder), veille articles réels + seed Motion19 (2026-07-12)
 

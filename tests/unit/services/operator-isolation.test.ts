@@ -72,12 +72,17 @@ describe("Operator Isolation", () => {
       });
     });
 
-    it("sans operatorId retourne le filtre userId", () => {
+    it("sans operatorId retourne owner OU collaboration ACTIVE (ADR-0129)", () => {
       const ctx = { operatorId: null, userId: "user-99", role: "USER" };
 
       const result = scopeStrategies(ctx);
 
-      expect(result).toEqual({ userId: "user-99" });
+      expect(result).toEqual({
+        OR: [
+          { userId: "user-99" },
+          { collaborators: { some: { userId: "user-99", status: "ACTIVE" } } },
+        ],
+      });
     });
   });
 
@@ -105,12 +110,19 @@ describe("Operator Isolation", () => {
       });
     });
 
-    it("sans operatorId filtre par userId via strategy", () => {
+    it("sans operatorId filtre owner/collaborateur via strategy (ADR-0129)", () => {
       const ctx = { operatorId: null, userId: "user-5", role: "USER" };
 
       const result = scopeCampaigns(ctx);
 
-      expect(result).toEqual({ strategy: { userId: "user-5" } });
+      expect(result).toEqual({
+        strategy: {
+          OR: [
+            { userId: "user-5" },
+            { collaborators: { some: { userId: "user-5", status: "ACTIVE" } } },
+          ],
+        },
+      });
     });
   });
 
@@ -138,12 +150,19 @@ describe("Operator Isolation", () => {
       });
     });
 
-    it("sans operatorId filtre par userId via strategy", () => {
+    it("sans operatorId filtre owner/collaborateur via strategy (ADR-0129)", () => {
       const ctx = { operatorId: null, userId: "user-7", role: "USER" };
 
       const result = scopeMissions(ctx);
 
-      expect(result).toEqual({ strategy: { userId: "user-7" } });
+      expect(result).toEqual({
+        strategy: {
+          OR: [
+            { userId: "user-7" },
+            { collaborators: { some: { userId: "user-7", status: "ACTIVE" } } },
+          ],
+        },
+      });
     });
   });
 
