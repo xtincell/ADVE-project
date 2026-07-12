@@ -181,3 +181,79 @@ a.ck-feed__item:hover { background: var(--surface-raised); }
 .ck-presc__desc { font-size: 12px; line-height: 1.5; color: var(--text-secondary); margin: 3px 0 0; }
 .ck-presc__action { font-size: 12px; font-weight: 600; color: var(--warning); margin: 4px 0 0; }
 .ck-presc__empty { font-size: 12px; color: var(--text-muted); }
+
+/* ── Vague « plus vivant » (2026-07-12) : vitrine campagne + créations,
+   logo de marque en sidebar, bascule mode jour. Tokens uniquement —
+   le mode jour est porté par [data-theme="light"] (system.css/upgraders.css). */
+.ck-camp { display: flex; flex-direction: column; gap: 10px; }
+.ck-camp--loading { min-height: 132px; opacity: 0.45; }
+.ck-camp__body { display: flex; gap: 14px; align-items: stretch; }
+.ck-camp__visual { flex: none; width: 132px; height: 96px; object-fit: cover; border-radius: var(--radius-lg); border: 1px solid var(--border-subtle); background: var(--surface-raised); }
+.ck-camp__visual--empty { display: grid; place-items: center; color: var(--accent); background: linear-gradient(135deg, var(--accent-fill), var(--surface-raised)); }
+.ck-camp__visual--empty svg { width: 22px; height: 22px; opacity: 0.75; }
+.ck-camp__meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.ck-camp__name { font-family: var(--font-display); font-size: 17px; font-weight: 600; color: var(--text-primary); margin: 0; }
+.ck-camp__state { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0; }
+.ck-camp__chip { font-family: var(--font-mono); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 3px 8px; border-radius: var(--radius-pill); background: var(--accent-fill); color: var(--accent); }
+.ck-camp__chip[data-health="AMBER"] { background: color-mix(in srgb, var(--warning) 14%, transparent); color: var(--warning); }
+.ck-camp__chip[data-health="RED"] { background: color-mix(in srgb, var(--danger) 14%, transparent); color: var(--danger); }
+.ck-camp[data-live="1"] .ck-camp__chip { background: color-mix(in srgb, var(--success) 16%, transparent); color: var(--success); }
+.ck-camp__dates { font-size: 12px; color: var(--text-secondary); }
+.ck-camp__empty { display: flex; flex-direction: column; gap: 4px; padding: 8px 2px; }
+.ck-camp__empty p { margin: 0; font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.ck-camp__empty .ck-camp__empty-sub { font-size: 12px; font-weight: 400; color: var(--text-muted); line-height: 1.5; }
+.ck-camp__empty .ck-card__link { margin-top: 6px; }
+.ck-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.ck-gallery__thumb { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); background: var(--surface-raised); transition: transform var(--dur-fast); }
+.ck-gallery__thumb:hover { transform: scale(1.03); }
+@media (max-width: 700px) { .ck-camp__body { flex-direction: column; } .ck-camp__visual { width: 100%; height: 120px; } }
+
+/* Logo de marque en tête de sidebar (layout cockpit) */
+.ck-side-logo { width: 30px; height: 30px; object-fit: contain; border-radius: var(--radius-md); background: var(--surface-raised); border: 1px solid var(--border-subtle); padding: 2px; }
+
+/* Bascule mode jour / nuit */
+.ck-theme-toggle { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); background: var(--surface-raised); color: var(--text-muted); cursor: pointer; transition: color var(--dur-fast), border-color var(--dur-fast); }
+.ck-theme-toggle:hover { color: var(--accent); border-color: var(--accent); }
+.ck-theme-toggle svg { width: 14px; height: 14px; }
+
+/* ── Dashboard opérationnel (vague 5 — vue « ce qui se passe aujourd'hui »).
+   Densité INFJ : un signal par carte, hiérarchie nette, rien de caché mais
+   rien d'entassé. Couleurs de séries via tokens sémantiques uniquement. */
+.ck-ops__tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: var(--bento-gap); }
+.ck-ops__tile { display: flex; flex-direction: column; gap: 6px; }
+.ck-ops__tile-k { display: flex; align-items: center; gap: 7px; font-family: var(--font-mono); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin: 0; }
+.ck-ops__tile-k svg { width: 13px; height: 13px; color: var(--accent); }
+.ck-ops__tile-v { font-family: var(--font-display); font-size: 30px; font-weight: 600; color: var(--text-primary); margin: 0; line-height: 1.1; }
+.ck-ops__tile-v--muted { font-size: 16px; color: var(--text-muted); font-style: italic; padding-top: 6px; }
+.ck-ops__tile-d { font-size: 11.5px; color: var(--text-muted); margin: 0; }
+.ck-ops__tile--deferred { border-style: dashed; }
+.ck-ops__delta[data-up="1"] { color: var(--success); font-weight: 600; }
+.ck-ops__delta[data-up="0"] { color: var(--danger); font-weight: 600; }
+.ck-ops__chart { width: 100%; height: auto; }
+.ck-ops__line--1 path { stroke: var(--accent); } .ck-ops__line--1 circle { fill: var(--accent); }
+.ck-ops__line--2 path { stroke: var(--success); } .ck-ops__line--2 circle { fill: var(--success); }
+.ck-ops__line--3 path { stroke: var(--warning); } .ck-ops__line--3 circle { fill: var(--warning); }
+.ck-ops__line--4 path { stroke: var(--info); } .ck-ops__line--4 circle { fill: var(--info); }
+.ck-ops__note { font-size: 12.5px; line-height: 1.6; color: var(--text-muted); margin: 0; }
+.ck-ops__split { display: flex; flex-direction: column; gap: 9px; }
+.ck-ops__split-row { display: grid; grid-template-columns: 84px 1fr auto; align-items: center; gap: 10px; }
+.ck-ops__split-name { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+.ck-ops__split-bar { height: 7px; border-radius: var(--radius-pill); background: var(--surface-raised); overflow: hidden; }
+.ck-ops__split-bar > span { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
+.ck-ops__split-val { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+.ck-ops__list { display: flex; flex-direction: column; gap: 7px; }
+.ck-ops__row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--radius-md); background: var(--surface-raised); }
+.ck-ops__row-date { flex: none; font-family: var(--font-mono); font-size: 10.5px; color: var(--text-muted); width: 52px; }
+.ck-ops__row-title { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 500; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ck-ops__row-chip { flex: none; font-family: var(--font-mono); font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 2px 7px; border-radius: var(--radius-pill); }
+.ck-ops__row-chip[data-k="next"] { background: var(--accent-fill); color: var(--accent); }
+.ck-ops__row-chip[data-k="done"] { background: color-mix(in srgb, var(--success) 14%, transparent); color: var(--success); }
+
+/* Chip lecture seule (accès collaborateur par zone, ADR-0131) */
+.ck-readonly-chip { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 3px 9px; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--warning) 12%, transparent); color: var(--warning); }
+.ck-readonly-chip svg { width: 11px; height: 11px; }
+
+/* Switcher stratégique ↔ opérationnel */
+.ck-dash-switch { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--accent); text-decoration: none; padding: 6px 12px; border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); border-radius: var(--radius-pill); transition: background var(--dur-fast); }
+.ck-dash-switch:hover { background: var(--accent-fill); }
+.ck-dash-switch svg { width: 13px; height: 13px; }

@@ -60,6 +60,8 @@ export default function CreatorDashboard() {
   const missions = trpc.mission.list.useQuery({ limit: 10 });
   const commissions = trpc.commission.getByCreator.useQuery({});
   const reviews = trpc.qualityReview.list.useQuery({ limit: 5 });
+  // ADR-0131 — mini console : marques en opération, accès cockpit, candidatures.
+  const engagements = trpc.strategy.myDelegatedBrands.useQuery();
 
   if (profile.isLoading) return <SkeletonPage />;
 
@@ -91,6 +93,65 @@ export default function CreatorDashboard() {
       >
         <TierBadge tier={tier} size="lg" />
       </PageHeader>
+
+      {/* ── Mes marques & accès (mini console, ADR-0131) ──────────────
+          Une ligne par réalité : cockpit délégué (avec le métier), mission
+          en cours, candidature. Limpide, sans surcharge — le détail vit sur
+          les surfaces dédiées. */}
+      {((engagements.data?.cockpits.length ?? 0) > 0 ||
+        (engagements.data?.missions.length ?? 0) > 0 ||
+        (engagements.data?.applications.length ?? 0) > 0) && (
+        <div className="rounded-xl border border-border bg-card p-5">
+          <div className="mb-3 flex items-center gap-2">
+            <Briefcase className="h-4 w-4 text-accent" />
+            <h3 className="text-sm font-semibold text-foreground">Mes marques & accès</h3>
+          </div>
+          <div className="space-y-2">
+            {engagements.data?.cockpits.map((c) => (
+              <div key={c.strategyId} className="flex items-center gap-3 rounded-lg bg-background-raised/50 px-4 py-2.5">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-foreground">{c.brandName}</p>
+                  <p className="text-xs text-foreground-muted">
+                    {c.roleLabel} — écriture : {c.writeZones.length > 0 ? "calendrier, publications & réseaux" : "lecture seule"}
+                  </p>
+                </div>
+                <Link
+                  href={`/cockpit?strategy=${c.strategyId}`}
+                  className="flex shrink-0 items-center gap-1 rounded-lg border border-border-strong px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-accent hover:text-accent"
+                >
+                  Ouvrir le cockpit <ArrowRight className="h-3 w-3" />
+                </Link>
+              </div>
+            ))}
+            {engagements.data?.missions.map((m) => (
+              <div key={m.id} className="flex items-center gap-3 rounded-lg bg-background-raised/50 px-4 py-2.5">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-foreground">{m.title}</p>
+                  <p className="text-xs text-foreground-muted">
+                    {m.brandName ? `${m.brandName} — ` : ""}mission en cours
+                    {m.budget ? ` · ${Math.round(m.budget).toLocaleString("fr-FR")} FCFA` : ""}
+                  </p>
+                </div>
+                <StatusBadge status={m.status} />
+              </div>
+            ))}
+            {engagements.data?.applications
+              .filter((a) => a.status === "PENDING")
+              .map((a) => (
+                <div key={a.id} className="flex items-center gap-3 rounded-lg bg-background-raised/50 px-4 py-2.5">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-foreground">{a.missionTitle}</p>
+                    <p className="text-xs text-foreground-muted">
+                      {a.brandName ? `${a.brandName} — ` : ""}candidature envoyée
+                      {a.proposedRate ? ` · ${Math.round(a.proposedRate).toLocaleString("fr-FR")} ${a.currency}/mois proposés` : ""}
+                    </p>
+                  </div>
+                  <StatusBadge status="PENDING" />
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
 
       {/* Tier Progression */}
       {thresholds.next && (

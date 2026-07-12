@@ -520,4 +520,220 @@ export const cockpitRouter = createTRPCRouter({
         },
       };
     }),
+
+  /**
+   * Vague 4 (mandat « plus vivant ») — vitrine visuelle du dashboard :
+   * campagne courante (la plus avancée hors ARCHIVED/CANCELLED) + visuels
+   * récents réels (AssetVersion images de la forge, actifs du coffre avec
+   * fichier — hors identité déjà affichée). Aucun visuel inventé : pas de
+   * campagne → null, pas de visuel → tableau vide (EmptyState honnête).
+   */
+  getCampaignShowcase: protectedProcedure
+    .input(z.object({ strategyId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const strategy = await ctx.db.strategy.findUnique({
+        where: { id: input.strategyId },
+        select: { id: true, userId: true },
+      });
+      if (!strategy) throw new TRPCError({ code: "NOT_FOUND", message: "Strategy introuvable" });
+      if (ctx.session.user.role !== "ADMIN" && strategy.userId !== ctx.session.user.id) {
+        const opCtx = await getOperatorContext(ctx.session.user.id);
+        if (!(await canAccessStrategy(input.strategyId, opCtx))) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Cette marque ne vous appartient pas" });
+        }
+      }
+
+      const [campaigns, versions, vaultVisuals] = await Promise.all([
+        ctx.db.campaign.findMany({
+          where: { strategyId: strategy.id, state: { notIn: ["ARCHIVED", "CANCELLED"] } },
+          orderBy: [{ startDate: "desc" }, { createdAt: "desc" }],
+          take: 5,
+          select: {
+            id: true, name: true, state: true, healthSignal: true,
+            startDate: true, endDate: true, budget: true, budgetCurrency: true,
+          },
+        }),
+        ctx.db.assetVersion.findMany({
+          where: { strategyId: strategy.id, kind: "image" },
+          orderBy: { createdAt: "desc" },
+          take: 12,
+          select: { id: true, url: true, cdnUrl: true, createdAt: true, metadata: true },
+        }),
+        ctx.db.brandAsset.findMany({
+          where: {
+            strategyId: strategy.id,
+            fileUrl: { not: null },
+            kind: { notIn: ["LOGO_FINAL", "LOGO_IDEA", "TYPOGRAPHY_SYSTEM", "CHROMATIC_STRATEGY"] },
+            state: { notIn: ["ARCHIVED", "REJECTED"] },
+          },
+          orderBy: { createdAt: "desc" },
+          take: 12,
+          select: { id: true, name: true, kind: true, fileUrl: true, createdAt: true },
+        }),
+      ]);
+
+      // La campagne « du moment » : la plus avancée dans le pipeline.
+      const STATE_RANK: Record<string, number> = {
+        LIVE: 10, READY_TO_LAUNCH: 9, APPROVAL: 8, PRODUCTION: 7, PRE_PRODUCTION: 6,
+        CREATIVE_DEV: 5, PLANNING: 4, BRIEF_VALIDATED: 3, BRIEF_DRAFT: 2, POST_CAMPAIGN: 1,
+      };
+      const campaign = [...campaigns].sort(
+        (a, b) => (STATE_RANK[String(b.state)] ?? 0) - (STATE_RANK[String(a.state)] ?? 0),
+      )[0] ?? null;
+
+      // Visuels : URLs http(s) uniquement (elles partent dans des <img>).
+      const httpOnly = (u: string | null | undefined): u is string =>
+        typeof u === "string" && /^https?:\/\//.test(u);
+      const seen = new Set<string>();
+      const visuals: Array<{ url: string; label: string; source: "forge" | "vault"; at: string }> = [];
+      for (const v of versions) {
+        const url = v.cdnUrl ?? v.url;
+        if (!httpOnly(url) || seen.has(url)) continue;
+        seen.add(url);
+        const meta = v.metadata as Record<string, unknown> | null;
+        visuals.push({
+          url,
+          label: (typeof meta?.label === "string" && meta.label) || "Création studio",
+          source: "forge",
+          at: v.createdAt.toISOString(),
+        });
+      }
+      for (const a of vaultVisuals) {
+        if (!httpOnly(a.fileUrl) || seen.has(a.fileUrl)) continue;
+        seen.add(a.fileUrl);
+        visuals.push({ url: a.fileUrl, label: a.name, source: "vault", at: a.createdAt.toISOString() });
+      }
+      visuals.sort((x, y) => y.at.localeCompare(x.at));
+
+      return {
+        campaign: campaign
+          ? {
+              id: campaign.id,
+              name: campaign.name,
+              state: String(campaign.state),
+              healthSignal: campaign.healthSignal,
+              startDate: campaign.startDate?.toISOString() ?? null,
+              endDate: campaign.endDate?.toISOString() ?? null,
+            }
+          : null,
+        activeCount: campaigns.filter((c) => String(c.state) === "LIVE").length,
+        visuals: visuals.slice(0, 10),
+      };
+    }),
+
+  /**
+   * Dashboard OPÉRATIONNEL (« ce qui se passe aujourd'hui ») — agrégat réel :
+   * communauté (FollowerSnapshot : total, Δ, répartition, historique),
+   * actions du calendrier éditorial (à venir / récentes), missions ouvertes.
+   * Ce qui n'a pas de source branchée (portée/engagement par post, ventes)
+   * n'est PAS retourné — les cartes correspondantes affichent leur état
+   * honnête côté client (connexion des réseaux requise / canal non branché).
+   */
+  getOperationsSnapshot: protectedProcedure
+    .input(z.object({ strategyId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const strategy = await ctx.db.strategy.findUnique({
+        where: { id: input.strategyId },
+        select: { id: true, userId: true },
+      });
+      if (!strategy) throw new TRPCError({ code: "NOT_FOUND", message: "Strategy introuvable" });
+      if (ctx.session.user.role !== "ADMIN" && strategy.userId !== ctx.session.user.id) {
+        const opCtx = await getOperatorContext(ctx.session.user.id);
+        if (!(await canAccessStrategy(input.strategyId, opCtx))) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Cette marque ne vous appartient pas" });
+        }
+      }
+
+      const now = new Date();
+      const in14d = new Date(now.getTime() + 14 * 86_400_000);
+      const past90d = new Date(now.getTime() - 90 * 86_400_000);
+      const past7d = new Date(now.getTime() - 7 * 86_400_000);
+
+      const [snapshots, upcomingActions, recentActions, openMissions] = await Promise.all([
+        ctx.db.followerSnapshot.findMany({
+          where: { strategyId: strategy.id, capturedAt: { gte: past90d } },
+          orderBy: { capturedAt: "asc" },
+          select: { platform: true, handle: true, followerCount: true, capturedAt: true, source: true },
+        }),
+        ctx.db.brandAction.findMany({
+          where: {
+            strategyId: strategy.id,
+            status: { in: ["ACCEPTED", "SCHEDULED"] },
+            timingStart: { gte: now, lte: in14d },
+          },
+          orderBy: { timingStart: "asc" },
+          take: 6,
+          select: { id: true, title: true, status: true, touchpoint: true, timingStart: true },
+        }),
+        ctx.db.brandAction.findMany({
+          where: {
+            strategyId: strategy.id,
+            status: "EXECUTED",
+            timingEnd: { gte: past7d },
+          },
+          orderBy: { timingEnd: "desc" },
+          take: 6,
+          select: { id: true, title: true, status: true, touchpoint: true, timingEnd: true },
+        }),
+        ctx.db.mission.count({
+          where: { strategyId: strategy.id, status: { in: ["OPEN", "IN_PROGRESS"] } },
+        }),
+      ]);
+
+      // Dernier + précédent relevé par plateforme → total, Δ et répartition.
+      const byPlatform = new Map<string, { latest: number; previous: number | null; handle: string; at: string; source: string }>();
+      for (const s of snapshots) {
+        const key = String(s.platform);
+        const cur = byPlatform.get(key);
+        byPlatform.set(key, {
+          latest: s.followerCount,
+          previous: cur ? cur.latest : null,
+          handle: s.handle,
+          at: s.capturedAt.toISOString(),
+          source: s.source,
+        });
+      }
+      const platforms = [...byPlatform.entries()].map(([platform, v]) => ({
+        platform,
+        handle: v.handle,
+        followers: v.latest,
+        delta: v.previous != null ? v.latest - v.previous : null,
+        capturedAt: v.at,
+        source: v.source,
+      })).sort((a, b) => b.followers - a.followers);
+      const totalFollowers = platforms.reduce((sum, p) => sum + p.followers, 0);
+      const totalDelta = platforms.some((p) => p.delta != null)
+        ? platforms.reduce((sum, p) => sum + (p.delta ?? 0), 0)
+        : null;
+
+      // Série pour la courbe (points datés par plateforme — le client trace).
+      const series = snapshots.map((s) => ({
+        platform: String(s.platform),
+        followers: s.followerCount,
+        at: s.capturedAt.toISOString(),
+      }));
+
+      return {
+        community: {
+          totalFollowers,
+          totalDelta,
+          platforms,
+          series,
+          // 1 seul relevé par plateforme → la courbe n'a pas d'histoire à
+          // montrer ; le client affiche « l'historique se construit ».
+          hasHistory: series.length > platforms.length,
+        },
+        calendar: {
+          upcoming: upcomingActions.map((a) => ({
+            id: a.id, title: a.title, status: a.status, touchpoint: a.touchpoint,
+            at: a.timingStart?.toISOString() ?? null,
+          })),
+          recent: recentActions.map((a) => ({
+            id: a.id, title: a.title, status: a.status, touchpoint: a.touchpoint,
+            at: a.timingEnd?.toISOString() ?? null,
+          })),
+        },
+        openMissions,
+      };
+    }),
 });

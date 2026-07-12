@@ -21,6 +21,16 @@ Vagues [ADR-0129](adr/0129-strategy-collaborator-delegated-access.md) (StrategyC
 - **Balayage des routers strategy-scopés restants en checks inline** (boot-sequence, etc.) vers `canAccessStrategy` — même mouvement que les 5 checks de cockpit-router déjà bascule.
 - **Garde-fou contraste theming** : l'accent vient du brand book du client (choisi pour l'écran) ; un rejet automatique des accents illisibles sur fond sombre (+ fallback corail) reste à poser (ADR-0130 §Conséquences).
 - **Benchmark → plan d'upgrade suite sociale** : vagues S1→S5 priorisées dans [docs/audits/SOCIAL-SUITE-BENCHMARK-2026-07-12.md](../audits/SOCIAL-SUITE-BENCHMARK-2026-07-12.md) (métriques par post, publishing, inbox unifié, heures optimales, trio Meta/audits plateformes). Chaque vague est un chantier futur distinct — rien d'implicite.
+- **Pont relevés → pilier E/traction** : les relevés d'audience (`FollowerSnapshot`) restent en silo mesure — la déclaration de traction dans l'ADVE reste un geste opérateur (doctrine ADR-0085, jamais d'auto-write). Pont candidat : afficher le dernier relevé en SUGGESTION dans l'éditeur du pilier E (source DECLARED après validation humaine).
+
+## Zones par rôle + double dashboard — ADR-0131 (2026-07-12, NEFER)
+
+Vague [ADR-0131](adr/0131-collaborator-role-zones-dual-dashboard.md) shippée (v6.27.107) : zones d'écriture par rôle DENY-par-défaut (firewall d'émission ×2 voies + gardes calendrier), mini console Guilde, double dashboard stratégique/« Suivi du jour », mode jour. Restes réels :
+
+- **Cartographie kind→zone à étendre** : `COLLABORATOR_KIND_ZONES` couvre la zone digitale (calendar/social/publications) ; les kinds campagnes/newsletter du DIGITAL_DIRECTOR restent à cataloguer kind par kind (deny par défaut en attendant — sûr mais restrictif).
+- **Masquage fin des gestes hors zone** : le firewall serveur veto proprement (message business) ; le masquage préventif des boutons d'écriture sur les surfaces secondaires (campagnes, demandes) via `getMyAccess.writeZones` reste à poser (le dashboard/calendrier/réseaux sont couverts).
+- **Sweep light-mode page-par-page** : les deux dashboards sont vérifiés (captures) ; les autres surfaces cockpit héritent des tokens — passer chaque page en mode jour à l'occasion (même pattern que la passe responsive mobile).
+- **Logo blanc sur fond blanc (sidebar, mode jour)** : le tile logo sidebar est fond `--surface-raised` — un logo blanc peut s'y fondre en mode jour ; poser un fond damier ou une détection de luminance à l'occasion.
 
 ## Vérité unique documentaire (2026-07-11 PM, NEFER)
 

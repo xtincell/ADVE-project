@@ -42,10 +42,12 @@ describe("ADR-0129 — StrategyCollaborator (accès délégué par marque)", () 
 
   it("(3) la zone digitale est gardée par-marque (calendrier + publications)", () => {
     const actions = read("src/server/trpc/routers/actions.ts");
-    // 6 procédures founder-facing (byStrategy, summary, propose, setSelected,
-    // setTiming, autoSchedule) — chacune appelle la garde.
-    const guarded = actions.split("assertCalendarAccess(ctx.session.user.id").length - 1;
-    expect(guarded).toBeGreaterThanOrEqual(6);
+    // 6 procédures founder-facing (byStrategy, summary = lecture ;
+    // propose, setSelected, setTiming, autoSchedule = écriture zonée
+    // ADR-0131) — chacune appelle SA garde.
+    const guardedReads = actions.split("assertCalendarAccess(ctx.session.user.id").length - 1;
+    const guardedWrites = actions.split("assertCalendarWrite(ctx.session.user.id").length - 1;
+    expect(guardedReads + guardedWrites).toBeGreaterThanOrEqual(6);
     expect(actions).toContain("canAccessStrategy");
 
     const publication = read("src/server/trpc/routers/publication.ts");
@@ -83,5 +85,40 @@ describe("ADR-0129 — StrategyCollaborator (accès délégué par marque)", () 
     expect(router).toMatch(/HEX = \/\^#\[0-9a-fA-F\]\{6\}\$\//);
     const theme = read("src/components/cockpit/brand-theme.tsx");
     expect(theme).toContain("HEX.test(accent)");
+  });
+});
+
+describe("ADR-0131 — zones d'écriture par rôle (collaborateur = métier, pas passe-partout)", () => {
+  it("(7) la table domaine est DENY par défaut et borne le SOCIAL_MANAGER à son métier", async () => {
+    const { collaboratorCanWrite, collaboratorWriteZones, collaboratorZoneForKind } =
+      await import("@/domain/collaborator-access");
+    expect(collaboratorCanWrite("SOCIAL_MANAGER", "calendar")).toBe(true);
+    expect(collaboratorCanWrite("SOCIAL_MANAGER", "publications")).toBe(true);
+    expect(collaboratorCanWrite("SOCIAL_MANAGER", "social")).toBe(true);
+    expect(collaboratorCanWrite("SOCIAL_MANAGER", "campaigns")).toBe(false);
+    expect(collaboratorCanWrite("SOCIAL_MANAGER", "newsletter")).toBe(false);
+    // Rôle inconnu / non cartographié → lecture seule intégrale.
+    expect(collaboratorWriteZones("ART_DIRECTOR")).toHaveLength(0);
+    expect(collaboratorWriteZones(null)).toHaveLength(0);
+    // Kind non catalogué → non délégable (deny par défaut).
+    expect(collaboratorZoneForKind("OPERATOR_AMEND_PILLAR")).toBeNull();
+    expect(collaboratorZoneForKind("ANUBIS_SOCIAL_SYNC_FOLLOWERS")).toBe("social");
+  });
+
+  it("(8) le firewall collaborateur est branché sur LES DEUX voies gouvernées", () => {
+    const gp = read("src/server/governance/governed-procedure.ts");
+    // Voie explicite governedProcedure + voie strangler auditedProcedure :
+    const hits = gp.split("assertCollaboratorMayEmit(").length - 1;
+    expect(hits).toBeGreaterThanOrEqual(2);
+    expect(gp).toContain("CollaboratorWriteVetoError");
+    expect(gp).toMatch(/COLLABORATOR_ZONE_VETO[\s\S]{0,200}VETOED/);
+  });
+
+  it("(9) le calendrier distingue lecture (accès marque) et écriture (zone métier)", () => {
+    const actions = read("src/server/trpc/routers/actions.ts");
+    // 4 écritures founder-facing → garde de zone ; les lectures gardent l'accès simple.
+    expect(actions.split("assertCalendarWrite(ctx.session.user.id").length - 1).toBeGreaterThanOrEqual(4);
+    expect(actions.split("assertCalendarAccess(ctx.session.user.id").length - 1).toBeGreaterThanOrEqual(2);
+    expect(actions).toContain('collaboratorCanWrite(role, "calendar")');
   });
 });

@@ -17,6 +17,7 @@ import { useCanOperate } from "@/components/cockpit/use-can-operate";
 import { OvertonTeaser } from "@/components/cockpit/intelligence/overton-panel";
 import { SocialHubCard } from "@/components/cockpit/social/social-hub-card";
 import { MarketFeedCard } from "@/components/cockpit/social/market-feed-card";
+import { CampaignShowcase } from "@/components/cockpit/campaign-showcase";
 import { buildPillarContentMap } from "@/components/shared/pillar-content-card";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -39,6 +40,7 @@ import {
   Database,
   Loader2,
   CheckCircle,
+  Gauge,
 } from "lucide-react";
 import { PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
 import { Tooltip } from "@/components/primitives/tooltip";
@@ -315,11 +317,11 @@ export default function CockpitDashboard() {
   const weakestPillar = pillarEntries.reduce((min, [k, v]) => (v < min[1] ? [k, v] : min), pillarEntries[0]!);
   const strongestPillar = pillarEntries.reduce((max, [k, v]) => (v > max[1] ? [k, v] : max), pillarEntries[0]!);
 
-  const showSection = (section: "kpi" | "radar" | "devotion" | "prescriptions" | "missions" | "timeline" | "sources") => {
+  const showSection = (section: "kpi" | "radar" | "devotion" | "prescriptions" | "missions" | "timeline" | "sources" | "visuals") => {
     switch (viewMode) {
-      case "EXECUTIVE": return ["kpi", "devotion", "prescriptions", "sources"].includes(section);
+      case "EXECUTIVE": return ["kpi", "devotion", "prescriptions", "sources", "visuals"].includes(section);
       case "MARKETING": return true;
-      case "FOUNDER": return ["kpi", "radar", "prescriptions", "sources"].includes(section);
+      case "FOUNDER": return ["kpi", "radar", "prescriptions", "sources", "visuals"].includes(section);
       case "MINIMAL": return ["prescriptions", "missions"].includes(section);
     }
   };
@@ -338,6 +340,7 @@ export default function CockpitDashboard() {
           <p className="ck-ph__desc">Marque : <span className="em">{strategy?.name ?? "…"}</span></p>
         </div>
         <div className="ck-views">
+          <Link href="/cockpit/operate/center" className="ck-dash-switch"><Gauge />Suivi du jour</Link>
           {(Object.keys(VIEW_MODE_LABELS) as ViewMode[]).map((mode) => (
             <button key={mode} data-on={viewMode === mode ? 1 : 0} onClick={() => setViewMode(mode)}>{VIEW_MODE_LABELS[mode]}</button>
           ))}
@@ -420,6 +423,9 @@ export default function CockpitDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Campagne du moment + créations récentes (vague « plus vivant ») */}
+      {showSection("visuals") && <CampaignShowcase strategyId={strategyId} />}
 
       {/* NORTHSTAR + KPIs */}
       {showSection("kpi") && (

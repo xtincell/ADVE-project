@@ -30,6 +30,7 @@ import { makeDefaultCapacityReader } from "./default-capacity-reader";
 import { findCapability, getManifest } from "./registry";
 import { intentKindExists } from "./intent-kinds";
 import { assertPostConditions, PostconditionFailedError } from "./post-conditions";
+import { assertCollaboratorMayEmit, CollaboratorWriteVetoError } from "./collaborator-firewall";
 import type { Capability, NeteruManifest, ReadinessGateName } from "./manifest";
 import {
   OracleError,
@@ -118,6 +119,24 @@ export function governedProcedure<I extends AnyZod, O extends AnyZod>(
   const base = opts.requireOperator === true ? operatorProcedure : protectedProcedure;
   return base.input(opts.inputSchema).use(async ({ ctx, input, next }) => {
     const intentId = await preEmitIntent(ctx, opts.kind, input, opts.caller ?? "governed");
+
+    // ── ADR-0131 — firewall d'écriture collaborateur (DENY par défaut) ──
+    // Un délégué par marque (ADR-0129) lit tout mais n'émet que les kinds
+    // de sa zone métier. Veto AUDITÉ (même pattern que les readiness gates).
+    try {
+      await assertCollaboratorMayEmit({
+        userId: ctx.session?.user?.id,
+        role: ctx.session?.user?.role,
+        strategyId: extractStrategyId(input),
+        kind: opts.kind,
+      });
+    } catch (err) {
+      if (err instanceof CollaboratorWriteVetoError) {
+        await postEmitIntent(ctx, intentId, { error: "COLLABORATOR_ZONE_VETO", kind: opts.kind, role: err.role }, "VETOED");
+        throw new TRPCError({ code: "FORBIDDEN", message: err.message });
+      }
+      throw err;
+    }
 
     // Pre-condition gates — evaluated AFTER the IntentEmission row exists
     // so the veto is recorded in the audit trail with a clear reason.
@@ -379,6 +398,22 @@ export function auditedProcedure<P extends typeof protectedProcedure>(
     const dedicatedKind = path ? buildLegacyKind(routerName, path) : null;
     const kindToEmit = dedicatedKind && intentKindExists(dedicatedKind) ? dedicatedKind : "LEGACY_MUTATION";
     const intentId = await preEmitIntent(ctx, kindToEmit, rawInput ?? {}, caller);
+
+    // ── ADR-0131 — firewall d'écriture collaborateur (voie strangler) ──
+    try {
+      await assertCollaboratorMayEmit({
+        userId: ctx.session?.user?.id,
+        role: ctx.session?.user?.role,
+        strategyId: extractStrategyId(rawInput),
+        kind: kindToEmit,
+      });
+    } catch (err) {
+      if (err instanceof CollaboratorWriteVetoError) {
+        await postEmitIntent(ctx, intentId, { error: "COLLABORATOR_ZONE_VETO", kind: kindToEmit, role: err.role }, "VETOED");
+        throw new TRPCError({ code: "FORBIDDEN", message: err.message });
+      }
+      throw err;
+    }
 
     // Preconditions: only inherit from the manifest capability whose `name`
     // matches the tRPC path. This avoids the historical "shareLink inherits

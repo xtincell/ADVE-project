@@ -10,6 +10,40 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.107 — feat(cockpit): double dashboard stratégique/opérationnel + mode jour + zones d'écriture par rôle (ADR-0131) (2026-07-12)
+
+**Le cockpit gagne sa vue « Suivi du jour », son mode jour, et les collaborateurs délégués n'écrivent QUE dans leur métier.**
+
+- **[ADR-0131](docs/governance/adr/0131-collaborator-role-zones-dual-dashboard.md)**
+  — réponse aux mandats « Maximus est juste social media manager » + « un
+  Dashboard stratégique et un Dashboard opérationnel » + « lisible pour une
+  INFJ ».
+- **Zones d'écriture par rôle (DENY par défaut)** : canon domaine
+  `collaborator-access.ts` (rôle → zones ; kind → zone en liste blanche) +
+  **firewall d'émission** branché sur les DEUX voies gouvernées
+  (`governedProcedure` + strangler) avec veto audité `COLLABORATOR_ZONE_VETO`
+  — la sur-délégation silencieuse d'ADR-0129 v1 est fermée. Calendrier :
+  split lecture/écriture (4 procédures zonées). `strategy.getMyAccess` +
+  chip sidebar « Accès délégué — {métier} ». Seed Maximus → `SOCIAL_MANAGER`.
+- **Dashboard opérationnel « Suivi du jour »** (`/cockpit/operate/center`
+  rebranché — on étend, on ne double pas) : campagne du moment + créations
+  (`getCampaignShowcase`), tuiles d'activité réelles (communauté FollowerSnapshot
+  total/Δ, publications ±14 j, missions), courbe + répartition par réseau,
+  états honnêtes (« Portée : à connecter », « Ventes : non branché »), réseaux
+  + veille. Garde de segment lot 12 retirée, pilotage détaillé (charge/budgets)
+  reste opérateur (`canOperate`). Nav « Suivi du jour » (i18n FR/EN/ZH) +
+  switchers croisés avec la vue stratégique.
+- **Dashboard stratégique plus vivant** : logo de marque en tête de sidebar,
+  vitrine campagne/créations (données réelles uniquement), **mode jour**
+  (`CockpitThemeToggle` — stamp `data-theme="light"` persisté, tokens light
+  déjà canon system.css/upgraders.css, cleanup à la sortie du portail).
+- **Mini console Guilde** (`/creator`) : « Mes marques & accès » —
+  cockpits délégués (métier + zones + Ouvrir le cockpit), missions en cours
+  (retainers), candidatures (`strategy.myDelegatedBrands`).
+- Vocabulaire client purgé au passage sur `portal-welcome` (blocs
+  cockpit/creator/agency) ; E2E Playwright ×2 (NEFER : dark/light/persistance/
+  ops · Maximus : mini console, chip, accent, ops) ; gouvernance 920/920.
+
 ## v6.27.106 — feat(guilde+cockpit): mission Motion19 + accès délégué par marque (ADR-0129) + cockpit aux couleurs de la marque (ADR-0130) + brand book officiel (2026-07-12)
 
 **Un freelance recruté via La Guilde opère la zone digitale d'UNE marque — et le cockpit porte les couleurs officielles de cette marque.**

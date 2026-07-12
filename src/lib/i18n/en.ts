@@ -199,6 +199,8 @@ export const en = {
   "nav.campagnes.sub": "Follow your campaigns",
   "nav.calendrier": "Calendar",
   "nav.calendrier.sub": "Launches & actions",
+  "nav.operations": "Today's activity",
+  "nav.operations.sub": "What's happening today",
   "nav.resultats": "Results",
   "nav.resultats.sub": "Campaign performance",
   "nav.newsletter": "Newsletter",

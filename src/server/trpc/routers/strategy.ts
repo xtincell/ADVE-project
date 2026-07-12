@@ -1068,6 +1068,107 @@ export const strategyRouter = createTRPCRouter({
     }),
 
   /**
+   * ADR-0131 — mini console du membre de Guilde : les marques où j'opère.
+   * Trois réalités agrégées : accès cockpit délégués (collaborations ACTIVE),
+   * missions où je suis assigné (en cours / retainers), candidatures et leur
+   * statut. Aucune donnée de contact de la marque n'est exposée au-delà du
+   * nom — le brief complet reste sur la mission.
+   */
+  myDelegatedBrands: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.session.user.id;
+    const { collaboratorWriteZones, COLLABORATOR_ROLE_LABELS } = await import("@/domain/collaborator-access");
+    const [collaborations, assignedMissions, applications] = await Promise.all([
+      ctx.db.strategyCollaborator.findMany({
+        where: { userId, status: "ACTIVE" },
+        orderBy: { createdAt: "asc" },
+        select: {
+          role: true,
+          createdAt: true,
+          strategy: { select: { id: true, name: true, status: true } },
+        },
+      }),
+      ctx.db.mission.findMany({
+        where: { assigneeId: userId, status: { in: ["OPEN", "IN_PROGRESS", "REVIEW"] } },
+        orderBy: { updatedAt: "desc" },
+        take: 12,
+        select: {
+          id: true, title: true, status: true, budget: true,
+          strategy: { select: { id: true, name: true } },
+        },
+      }),
+      ctx.db.missionApplication.findMany({
+        where: { applicantId: userId },
+        orderBy: { createdAt: "desc" },
+        take: 12,
+        select: {
+          id: true, status: true, proposedRate: true, currency: true, createdAt: true,
+          mission: { select: { id: true, title: true, publicSlug: true, strategy: { select: { name: true } } } },
+        },
+      }),
+    ]);
+    return {
+      cockpits: collaborations.map((c) => ({
+        strategyId: c.strategy.id,
+        brandName: c.strategy.name,
+        role: String(c.role),
+        roleLabel: COLLABORATOR_ROLE_LABELS[String(c.role)] ?? String(c.role),
+        writeZones: [...collaboratorWriteZones(String(c.role))],
+        since: c.createdAt.toISOString(),
+      })),
+      missions: assignedMissions.map((m) => ({
+        id: m.id, title: m.title, status: m.status, budget: m.budget,
+        brandName: m.strategy?.name ?? null,
+      })),
+      applications: applications.map((a) => ({
+        id: a.id, status: a.status, proposedRate: a.proposedRate, currency: a.currency,
+        missionTitle: a.mission.title,
+        brandName: a.mission.strategy?.name ?? null,
+        at: a.createdAt.toISOString(),
+      })),
+    };
+  }),
+
+  /**
+   * ADR-0131 — la nature de MON accès à cette marque (pour l'UI : chip
+   * « accès délégué », masquage des gestes hors zone). Jamais de credential.
+   */
+  getMyAccess: protectedProcedure
+    .input(z.object({ strategyId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const { collaboratorWriteZones, COLLABORATOR_ROLE_LABELS } = await import("@/domain/collaborator-access");
+      const userId = ctx.session.user.id;
+      if (ctx.session.user.role === "ADMIN") {
+        return { access: "admin" as const, role: null, roleLabel: null, writeZones: ["*"] };
+      }
+      const strategy = await ctx.db.strategy.findUnique({
+        where: { id: input.strategyId },
+        select: { userId: true, operatorId: true, client: { select: { operatorId: true } } },
+      });
+      if (!strategy) throw new TRPCError({ code: "NOT_FOUND", message: "Strategy introuvable" });
+      if (strategy.userId === userId) {
+        return { access: "owner" as const, role: null, roleLabel: null, writeZones: ["*"] };
+      }
+      const me = await ctx.db.user.findUnique({ where: { id: userId }, select: { operatorId: true } });
+      if (me?.operatorId && (me.operatorId === strategy.operatorId || me.operatorId === strategy.client?.operatorId)) {
+        return { access: "operator" as const, role: null, roleLabel: null, writeZones: ["*"] };
+      }
+      const collab = await ctx.db.strategyCollaborator.findUnique({
+        where: { strategyId_userId: { strategyId: input.strategyId, userId } },
+        select: { status: true, role: true },
+      });
+      if (collab?.status === "ACTIVE") {
+        const role = String(collab.role);
+        return {
+          access: "collaborator" as const,
+          role,
+          roleLabel: COLLABORATOR_ROLE_LABELS[role] ?? role,
+          writeZones: [...collaboratorWriteZones(role)],
+        };
+      }
+      return { access: "none" as const, role: null, roleLabel: null, writeZones: [] };
+    }),
+
+  /**
    * Accorde un accès délégué (rôle d'équipe) sur UNE marque à un user existant
    * (talent Guilde, freelance, agence). Décision opérateur — requireOperator.
    * Upsert (strategyId, userId) : re-granter réactive une ligne révoquée.

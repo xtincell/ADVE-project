@@ -407,18 +407,18 @@ export async function seedMotion19Guild(prisma: PrismaClient): Promise<{
   // reproduit son effet (upsert (strategyId, userId), status ACTIVE).
   await prisma.strategyCollaborator.upsert({
     where: { strategyId_userId: { strategyId: strategy.id, userId: maximus.id } },
-    update: { role: "DIGITAL_DIRECTOR", scopes: ["digital"] as unknown as Prisma.InputJsonValue, status: "ACTIVE", revokedAt: null, grantedByUserId: strategy.userId },
+    update: { role: "SOCIAL_MANAGER", scopes: ["calendar", "publications", "social"] as unknown as Prisma.InputJsonValue, status: "ACTIVE", revokedAt: null, grantedByUserId: strategy.userId },
     create: {
       strategyId: strategy.id,
       userId: maximus.id,
-      role: "DIGITAL_DIRECTOR",
-      scopes: ["digital"] as unknown as Prisma.InputJsonValue,
+      role: "SOCIAL_MANAGER",
+      scopes: ["calendar", "publications", "social"] as unknown as Prisma.InputJsonValue,
       status: "ACTIVE",
       grantedByUserId: strategy.userId,
       note: "Directeur du digital délégué — voir/publier + calendrier éditorial (instruction opérateur 2026-07-12, ADR-0129)",
     },
   });
-  console.log("[OK] Accès délégué : Maximus = DIGITAL_DIRECTOR de Motion19 (cockpit scoppé à cette marque)");
+  console.log("[OK] Accès délégué : Maximus = SOCIAL_MANAGER de Motion19 (écriture : calendrier/publications/réseaux — ADR-0131)");
 
   return { missionId: mission.id, missionSlug: mission.publicSlug, maximusUserId: maximus.id };
 }

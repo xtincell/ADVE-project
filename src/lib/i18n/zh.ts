@@ -198,6 +198,8 @@ export const zh = {
   "nav.campagnes.sub": "跟进您的活动",
   "nav.calendrier": "日历",
   "nav.calendrier.sub": "发布与行动",
+  "nav.operations": "今日跟进",
+  "nav.operations.sub": "今天的品牌动态",
   "nav.resultats": "成果",
   "nav.resultats.sub": "活动绩效",
   "nav.newsletter": "邮件通讯",
