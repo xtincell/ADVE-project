@@ -10,6 +10,33 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.104 — feat(newsletter): envoi email RÉEL par marque via Brevo (BrandEmailConnector, Vault par-marque) (2026-07-12)
+
+`newslettersSend` **simulait** l'envoi (rows `crmMessage` marquées SENT sans
+aucun email parti). Câblage d'un envoi réel, scopé par marque, sans clé en dur.
+
+- **Modèle `BrandEmailConnector`** (1 par Strategy, additif, migration
+  `20260712120000`) : la marque envoie via SON PROPRE compte fournisseur (Brevo),
+  clé en DB (pattern Vault ADR-0021, **jamais** en dur/env, **jamais** renvoyée
+  au client tRPC). Distinct de l'email SYSTÈME transactionnel (email-sender.ts,
+  clés env, ADR-0075). La clé d'une marque n'envoie QUE ses propres newsletters
+  (multi-tenant).
+- **Brevo transactionnel réel** : `sendViaBrevo` (POST `api.brevo.com/v3/smtp/email`,
+  header `api-key`) ajouté à `email-sender.ts` (+ cascade système `BREVO_API_KEY`).
+  `brand-email.ts` résout le connecteur ACTIVE → envoi via la clé de la marque,
+  sinon bascule email système, sinon **DEFERRED explicite** (jamais simulé).
+- **`newslettersSend` réel** : pré-vol refuse l'envoi si aucun provider armé
+  (reste DRAFT, message clair) ; chaque `crmMessage` reflète le VRAI statut
+  (SENT/FAILED) + `providerRef` + raison ; en-tête `List-Unsubscribe` un-clic
+  (RFC 8058) via le token de désinscription existant.
+- **4 procédures tRPC** (`emailProviderGet/Set/Test/SendTest`) : `Set` valide la
+  clé EN RÉEL (`/v3/account` + senders) et **refuse un expéditeur non vérifié**
+  chez Brevo avant d'activer (sinon l'envoi serait rejeté). Aucune activation
+  optimiste. La clé n'est jamais projetée au client.
+- **Panneau opérateur** `EmailProviderCard` sur la page Newsletter (clé + sender
+  + test + envoi de test), masqué pour les fondateurs (`useCanOperate`).
+- 4 tests d'intégration Brevo (fetch-mock, 0 succès simulé). tsc 0 · lint 0.
+
 ## v6.27.103 — fix(cockpit): crash React #310 (hook après early return) sur 7 surfaces + garde CI rules-of-hooks (2026-07-12)
 
 `/cockpit/operate/newsletter` tombait sur l'error boundary (« Une erreur est
