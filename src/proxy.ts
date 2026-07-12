@@ -112,22 +112,11 @@ export async function proxy(request: NextRequest) {
   // localhost:3000 en dev où il n'y a qu'un seul host de toute façon.
   if (process.env.NODE_ENV === "production") {
     const host = request.headers.get("host");
-    // ── Pages publiques de marque par sous-domaine (vague « cockpit qui
-    //    ramène tout », 2026-07-12) : <slug>.powerupgraders.com → /b/<slug>.
-    //    Le slug est STRICTEMENT validé ([a-z0-9-], 3-40) et les hôtes
-    //    techniques (www, lafuseev6) restent canonicalisés comme avant.
-    //    Gate ops : DNS wildcard + domaine ajouté dans Coolify.
-    const brandSub = host?.match(/^([a-z0-9][a-z0-9-]{1,38}[a-z0-9])\.powerupgraders\.com$/)?.[1];
-    if (brandSub && !["www", "lafuseev6"].includes(brandSub)) {
-      const url = request.nextUrl.clone();
-      // Tout le sous-domaine sert la page de marque (assets Next passent tels quels).
-      if (!url.pathname.startsWith("/_next") && !url.pathname.startsWith("/api")
-          && !url.pathname.startsWith("/brand") && !url.pathname.startsWith("/favicon")) {
-        url.pathname = `/b/${brandSub}`;
-        return NextResponse.rewrite(url);
-      }
-      return NextResponse.next();
-    }
+    // Doctrine domaines (correction opérateur 2026-07-12) : les byproducts de
+    // La Fusée vivent en SOUS-PAGES du domaine canonique (/b/<slug>), JAMAIS
+    // en sous-domaines — les sous-domaines existants (ex. la page personnelle
+    // xtincell.powerupgraders.com) sont des sites indépendants qu'on ne
+    // détourne pas ; ils servent de SOURCES à l'ADVE.
     if (host && host !== CANONICAL_HOST) {
       const url = request.nextUrl.clone();
       url.protocol = "https:";

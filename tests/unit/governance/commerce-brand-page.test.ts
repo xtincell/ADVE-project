@@ -46,11 +46,13 @@ describe("Boutique de la marque (Shopify) + page publique", () => {
     expect(intents).not.toMatch(/ANUBIS_COMMERCE_CONNECT_SHOP[\s\S]{0,400}accessToken/);
   });
 
-  it("(5) proxy : sous-domaine de marque → /b/<slug>, hôtes techniques épargnés", () => {
+  it("(5) doctrine domaines : byproducts en SOUS-PAGES (/b/<slug>), JAMAIS de détournement de sous-domaine", () => {
     const proxy = read("src/proxy.ts");
-    expect(proxy).toMatch(/powerupgraders\\.com/);
-    expect(proxy).toContain('["www", "lafuseev6"]');
-    expect(proxy).toMatch(/\/b\/\$\{brandSub\}/);
+    // Le proxy ne réécrit AUCUN sous-domaine vers /b — les sous-domaines
+    // existants (ex. la page personnelle du porteur) sont des SOURCES.
+    expect(proxy).not.toMatch(/brandSub/);
+    expect(proxy).toMatch(/SOUS-PAGES/);
+    expect(existsSync(join(ROOT, "src/app/(public-brand)/b/[slug]/page.tsx"))).toBe(true);
   });
 
   it("(6) publicSlug unique + page publique sans donnée privée", () => {

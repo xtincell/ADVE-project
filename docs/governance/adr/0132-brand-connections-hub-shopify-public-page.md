@@ -1,6 +1,6 @@
 # ADR-0132 — Le cockpit ramène tout : hub Connexions, boutique Shopify par marque, page publique de marque
 
-- **Status** : Accepted
+- **Status** : Accepted · **Amended 2026-07-12 (soir)** — doctrine domaines : byproducts en SOUS-PAGES (/b/<slug>) uniquement, réécriture sous-domaines RETIRÉE (les sous-domaines existants sont des SOURCES d'ADVE, ex. xtincell.powerupgraders.com) ; gate DNS wildcard caduque.
 - **Date** : 2026-07-12
 - **Phase** : train P1→P6 validé (mandat opérateur — « on crée un cockpit qui ramène tout, c'est l'utilisateur qui autorise » · « Motion19 a une boutique Shopify… corrige ça aussi » · « crée ma page Xtincell via xtincell.powerupgraders.com »)
 - **Depends on** : ADR-0128 (réseaux founder OAuth), ADR-0129/0131 (accès délégué + zones), ADR-0021 (Credentials Vault), ADR-0124 (spine)

@@ -27,6 +27,10 @@ export const brandVaultRouter = createTRPCRouter({
       strategyId: z.string(),
       name: z.string(),
       fileUrl: z.string().optional(),
+      /** Type UI (Mes actifs) → kind canonique — sans lui, tout upload
+       *  tombait en kind GENERIC et le dashboard (LOGO_FINAL/LOGO_IDEA)
+       *  ne voyait JAMAIS un logo uploadé par le founder (bug 12/07). */
+      type: z.enum(["LOGO", "FONT", "COLOR", "IMAGE", "DOCUMENT"]).optional(),
       level: z.enum(["system", "operator", "production"]).default("production"),
       pillarTags: z.record(z.string(), z.number()).optional(),
       expiresAt: z.string().optional(),
@@ -36,10 +40,35 @@ export const brandVaultRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const { level, expiresAt, pillarTags, ...rest } = input;
+      const { level, expiresAt, pillarTags, type, ...rest } = input;
+      // Type UI → kind canonique (source de vérité domain/brand-asset-kinds).
+      const KIND_FOR_TYPE: Record<string, string> = {
+        LOGO: "LOGO_FINAL",
+        FONT: "TYPOGRAPHY_SYSTEM",
+        COLOR: "CHROMATIC_STRATEGY",
+        IMAGE: "KV_VISUAL",
+        DOCUMENT: "GENERIC",
+      };
+      const kind = type ? KIND_FOR_TYPE[type] ?? "GENERIC" : "GENERIC";
+      // Premier logo actif de la marque → ACTIVE (le dashboard l'affiche
+      // immédiatement) ; sinon SELECTED (variante, le porteur arbitre).
+      let state: "ACTIVE" | "SELECTED" | undefined;
+      if (kind === "LOGO_FINAL") {
+        const activeLogo = await ctx.db.brandAsset.findFirst({
+          where: { strategyId: input.strategyId, kind: "LOGO_FINAL", state: "ACTIVE" },
+          select: { id: true },
+        });
+        state = activeLogo ? "SELECTED" : "ACTIVE";
+      }
+      const mimeType = input.fileUrl?.startsWith("data:")
+        ? input.fileUrl.slice(5, input.fileUrl.indexOf(";")) || undefined
+        : undefined;
       const asset = await ctx.db.brandAsset.create({
         data: {
           ...rest,
+          kind,
+          ...(state ? { state } : {}),
+          ...(mimeType ? { mimeType } : {}),
           pillarTags: {
             ...((pillarTags ?? {}) as Record<string, unknown>),
             level,

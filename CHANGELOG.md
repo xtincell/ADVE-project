@@ -10,6 +10,31 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.111 — fix(cockpit): le logo enfin visible — kind d'upload réparé, seed en un clic, doctrine domaines corrigée, ADVERTIS Xtincell sourcé (2026-07-12)
+
+**Réponse à « il te manque quoi ? » : trois chaînons réels, tous fermés.**
+
+- **BUG RACINE upload** : `brandVault.create` n'écrivait AUCUN `kind` — tout
+  upload founder tombait en `GENERIC`, invisible du dashboard (qui cherche
+  `LOGO_FINAL`/`LOGO_IDEA`). Fix : mapping type UI → kind canonique
+  (LOGO→LOGO_FINAL ACTIVE si premier logo sinon SELECTED, FONT→TYPOGRAPHY_SYSTEM,
+  COLOR→CHROMATIC_STRATEGY, IMAGE→KV_VISUAL) + mimeType + invalidations
+  dashboard — un logo uploadé s'affiche immédiatement, sans seed.
+- **Seed en un clic** : `POST /api/admin/seed-brands` (ADMIN) + carte
+  « Marques de démo » sur `/console/governance/accounts` — installe Motion19
+  complet + Xtincell côté serveur, idempotent, **fin de l'étape SSH**.
+- **Doctrine domaines corrigée** (mandat opérateur) : les byproducts La Fusée
+  vivent en SOUS-PAGES (`/b/<slug>`), JAMAIS en sous-domaines — la réécriture
+  proxy `<slug>.powerupgraders.com` est retirée (les sous-domaines existants,
+  ex. la page personnelle du porteur, sont des SOURCES, pas des cibles).
+  Verrou (5) de `commerce-brand-page.test.ts` inversé en conséquence.
+- **ADVERTIS Xtincell sourcé** depuis https://xtincell.powerupgraders.com
+  (VER 15.0, lu le 12/07) : piliers A/D/E réels (identité Brand Architect,
+  tagline « Je ne crée pas de l'art. Je systémise le succès. », rôles CEO
+  UPgraders + DC&A MATANGA, réseaux @xtincell, presse Iwaria/Créapreneur) —
+  certitude **DECLARED** (page officielle du porteur), source URL au vault,
+  jamais d'écrasement d'un pilier déjà travaillé.
+
 ## v6.27.110 — feat(cockpit): le cockpit ramène tout — hub Connexions, boutique Shopify OAuth, pages publiques de marque (ADR-0132) (2026-07-12)
 
 **« On crée un cockpit qui ramène tout, c'est l'utilisateur qui autorise » — boutique comprise, page publique comprise.**
