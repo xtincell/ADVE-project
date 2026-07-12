@@ -30,7 +30,7 @@ Vague [ADR-0131](adr/0131-collaborator-role-zones-dual-dashboard.md) shippée (v
 - **Cartographie kind→zone à étendre** : `COLLABORATOR_KIND_ZONES` couvre la zone digitale (calendar/social/publications) ; les kinds campagnes/newsletter du DIGITAL_DIRECTOR restent à cataloguer kind par kind (deny par défaut en attendant — sûr mais restrictif).
 - **Masquage fin des gestes hors zone** : le firewall serveur veto proprement (message business) ; le masquage préventif des boutons d'écriture sur les surfaces secondaires (campagnes, demandes) via `getMyAccess.writeZones` reste à poser (le dashboard/calendrier/réseaux sont couverts).
 - **Sweep light-mode page-par-page** : les deux dashboards sont vérifiés (captures) ; les autres surfaces cockpit héritent des tokens — passer chaque page en mode jour à l'occasion (même pattern que la passe responsive mobile).
-- **Logo blanc sur fond blanc (sidebar, mode jour)** : le tile logo sidebar est fond `--surface-raised` — un logo blanc peut s'y fondre en mode jour ; poser un fond damier ou une détection de luminance à l'occasion.
+- ~~Logo blanc sur fond blanc (sidebar, mode jour)~~ — **clos le 12/07 (v6.27.108)** : tuile logo fond blanc constant + le logo ACTIVE est désormais le wordmark officiel fond clair extrait du Brand Book (les déclinaisons réserve blanche restent SELECTED au coffre pour les fonds sombres).
 
 ## Vérité unique documentaire (2026-07-11 PM, NEFER)
 
