@@ -17,6 +17,7 @@ import boundaries from "eslint-plugin-boundaries";
 import tsParser from "@typescript-eslint/parser";
 import tsPlugin from "@typescript-eslint/eslint-plugin";
 import nextPlugin from "@next/eslint-plugin-next";
+import reactHooks from "eslint-plugin-react-hooks";
 
 export default [
   {
@@ -30,6 +31,12 @@ export default [
       // governance config keeps them silent.
       "@typescript-eslint": tsPlugin,
       "@next/next": nextPlugin,
+      // Rules of Hooks — ENFORCED. Le job CI « Lint » exécute CE fichier (pas
+      // `next lint`), et `react-hooks` n'y était pas enregistré → la classe
+      // « hook après un early return » (React #310, crash runtime) passait la
+      // CI. Incident 2026-07-12 : /cockpit/operate/newsletter + 6 autres
+      // surfaces. On enregistre le plugin et on met rules-of-hooks en error.
+      "react-hooks": reactHooks,
     },
     languageOptions: {
       // Phase 11.1 (ADR-0022) — flat config requires explicit TS parser.
@@ -73,6 +80,10 @@ export default [
       "lafusee/no-adhoc-completion-math": "warn",
       "lafusee/no-vi-mock-toplevel-var": "error",
 
+      // Crash-class : un hook appelé conditionnellement / après un early return
+      // casse l'ordre des hooks au rendu suivant (React #310). Error dès j0.
+      "react-hooks/rules-of-hooks": "error",
+
       // Layering — strict downward imports only. Severity is "warn" until
       // end-of-Phase-4, then escalates to "error" via the override above.
       // v6 syntax : `{ from: { type }, allow: { to: { type: [...] } } }`
@@ -99,6 +110,14 @@ export default [
         },
       ],
     },
+  },
+  {
+    // Storybook CSF : `render: () => { const [s] = useState() }` déclenche le
+    // heuristique de nommage de rules-of-hooks (fonction `render` non-PascalCase)
+    // sans être un composant runtime shippé. Hors périmètre de la garde.
+    files: ["**/*.stories.tsx"],
+    plugins: { "react-hooks": reactHooks },
+    rules: { "react-hooks/rules-of-hooks": "off" },
   },
   {
     ignores: [

@@ -117,10 +117,6 @@ export default function GuidelinesPage() {
     onSuccess: (data) => setShareUrl(data.shareUrl),
   });
 
-  if (!strategyId) {
-    return <SkeletonPage />;
-  }
-
   const guidelines = guidelinesQuery.data;
   const htmlContent =
     typeof guidelines === "string"
@@ -140,6 +136,12 @@ export default function GuidelinesPage() {
     }
     return filled;
   }, [htmlContent]);
+
+  // Garde APRÈS tous les hooks (useMemo sectionFilled) — sinon Rules of Hooks
+  // violée (React #310 : useMemo sauté au rendu !strategyId).
+  if (!strategyId) {
+    return <SkeletonPage />;
+  }
 
   const filledCount = Object.values(sectionFilled).filter(Boolean).length;
   // lafusee:allow-adhoc-completion: UI section completion ratio (display-only, derived from server query result; not the canonical completion gate)

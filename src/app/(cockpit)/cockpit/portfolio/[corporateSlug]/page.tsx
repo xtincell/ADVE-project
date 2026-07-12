@@ -30,6 +30,9 @@ export default function PortfolioNodeDetailPage() {
   const slug = params.corporateSlug;
 
   const [mode, setMode] = useState<"VIEW" | "EDIT" | "CREATE_CHILD">("VIEW");
+  // Déclaré ICI avec les autres hooks, AVANT les early returns isLoading/!node
+  // plus bas — sinon Rules of Hooks violée (React #310).
+  const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
 
   const { data: operator } = trpc.operator.getOwn.useQuery();
   const { data: node, isLoading } = trpc.brandNode.getBySlug.useQuery(
@@ -57,7 +60,6 @@ export default function PortfolioNodeDetailPage() {
     );
   }
 
-  const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
   const doArchive = async () => {
     setArchiveConfirmOpen(false);
     await archiveMutation.mutateAsync({

@@ -197,6 +197,11 @@ export function NotoriaPage() {
     },
   });
 
+  // Founders are not operators (init.ts operatorProcedure) — declared ICI avec
+  // les autres hooks, AVANT l'early return, sinon Rules of Hooks violée
+  // (React #310 : useCanOperate sauté au rendu !strategyId).
+  const canOperate = useCanOperate();
+
   if (!strategyId) return <SkeletonPage />;
 
   const dashboard = dashboardQuery.data;
@@ -208,7 +213,7 @@ export function NotoriaPage() {
   // Founders are not operators (init.ts operatorProcedure) — accepting/applying
   // recommendations is handled by the UPgraders team. Surface that honestly:
   // disable the controls + show a read-only banner, instead of click→FORBIDDEN.
-  const canOperate = useCanOperate();
+  // (`canOperate` déclaré plus haut avec les autres hooks — Rules of Hooks.)
   const isMutating = generateMutation.isPending || generateTypedMutation.isPending || generateFromVaultMutation.isPending || acceptMutation.isPending || rejectMutation.isPending || applyMutation.isPending || !canOperate;
 
   // Split recos: actionable (PENDING + ACCEPTED) vs history (APPLIED/REJECTED/REVERTED/EXPIRED)

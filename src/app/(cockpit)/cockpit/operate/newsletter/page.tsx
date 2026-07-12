@@ -34,6 +34,13 @@ export default function NewsletterPage() {
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [showCreateNewsletter, setShowCreateNewsletter] = useState(false);
   const [selectedNewsletterId, setSelectedNewsletterId] = useState<string | null>(null);
+  // Envoi en masse = acte conséquent → confirmation DS explicite (UX-DR14),
+  // plus de confirm() navigateur (lot 14, audit 2026-07-11 T4). Déclaré ICI
+  // (avec les autres hooks, avant tout early return) — sinon Rules of Hooks
+  // violée (React #310 : « rendered more hooks than during the previous
+  // render ») car les early returns !strategyId / isLoading plus bas sautaient
+  // ce useState au premier rendu.
+  const [sendTarget, setSendTarget] = useState<string | null>(null);
 
   // Forms state
   const [contactForm, setContactForm] = useState({ email: "", name: "", tags: "" });
@@ -151,9 +158,6 @@ export default function NewsletterPage() {
     });
   };
 
-  // Envoi en masse = acte conséquent → confirmation DS explicite (UX-DR14),
-  // plus de confirm() navigateur (lot 14, audit 2026-07-11 T4).
-  const [sendTarget, setSendTarget] = useState<string | null>(null);
   const handleSendNewsletter = (newsletterId: string) => setSendTarget(newsletterId);
   const confirmSendNewsletter = async () => {
     if (!sendTarget) return;

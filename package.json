@@ -1,6 +1,6 @@
 {
   "name": "lafusee",
-  "version": "6.27.102",
+  "version": "6.27.103",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
@@ -141,6 +141,7 @@
     "eslint-config-next": "^16.2.10",
     "eslint-plugin-boundaries": "^7.0.0",
     "eslint-plugin-lafusee": "file:./eslint-plugin-lafusee",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "husky": "^9.0.0",
     "madge": "^8.0.0",
     "postcss": "^8.5.13",
