@@ -13,11 +13,20 @@ export const maxDuration = 120;
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
+import { verifyCronSecret } from "@/lib/cron-auth";
 
-export async function POST() {
+export async function POST(request: Request) {
+  // Deux voies d'autorisation, même privilège : (1) session ADMIN (bouton
+  // console) ; (2) bearer CRON_SECRET (déclenchement serveur-à-serveur /
+  // ops, même niveau de confiance que le cron). L'une OU l'autre suffit.
   const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Réservé aux administrateurs" }, { status: 403 });
+  const isAdmin = session?.user?.role === "ADMIN";
+  const isCron = verifyCronSecret(request);
+  if (!isAdmin && !isCron) {
+    return NextResponse.json(
+      { error: "Réservé aux administrateurs (session ADMIN ou bearer CRON_SECRET)" },
+      { status: 403 },
+    );
   }
 
   const log: string[] = [];

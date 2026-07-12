@@ -41,8 +41,9 @@ export function getProviderConfig(provider: string): ProviderConfig | null {
   const env = process.env;
   switch (provider) {
     case "google": {
-      const clientId = env.GOOGLE_OAUTH_CLIENT_ID;
-      const clientSecret = env.GOOGLE_OAUTH_CLIENT_SECRET;
+      // Alias : GOOGLE_CLIENT_ID/SECRET (noms Google Console usuels) acceptés.
+      const clientId = env.GOOGLE_OAUTH_CLIENT_ID ?? env.GOOGLE_CLIENT_ID;
+      const clientSecret = env.GOOGLE_OAUTH_CLIENT_SECRET ?? env.GOOGLE_CLIENT_SECRET;
       if (!clientId || !clientSecret) return null;
       return {
         id: "google",
@@ -55,8 +56,9 @@ export function getProviderConfig(provider: string): ProviderConfig | null {
       };
     }
     case "linkedin": {
-      const clientId = env.LINKEDIN_OAUTH_CLIENT_ID;
-      const clientSecret = env.LINKEDIN_OAUTH_CLIENT_SECRET;
+      // Alias : LINKEDIN_CLIENT_ID/SECRET acceptés.
+      const clientId = env.LINKEDIN_OAUTH_CLIENT_ID ?? env.LINKEDIN_CLIENT_ID;
+      const clientSecret = env.LINKEDIN_OAUTH_CLIENT_SECRET ?? env.LINKEDIN_CLIENT_SECRET;
       if (!clientId || !clientSecret) return null;
       return {
         id: "linkedin",
@@ -69,8 +71,9 @@ export function getProviderConfig(provider: string): ProviderConfig | null {
       };
     }
     case "meta": {
-      const clientId = env.META_OAUTH_CLIENT_ID;
-      const clientSecret = env.META_OAUTH_CLIENT_SECRET;
+      // Alias : META_APP_ID/META_APP_SECRET (noms du dashboard Meta) acceptés.
+      const clientId = env.META_OAUTH_CLIENT_ID ?? env.META_APP_ID;
+      const clientSecret = env.META_OAUTH_CLIENT_SECRET ?? env.META_APP_SECRET;
       if (!clientId || !clientSecret) return null;
       return {
         id: "meta",
@@ -100,8 +103,9 @@ export function getProviderConfig(provider: string): ProviderConfig | null {
       };
     }
     case "tiktok": {
-      const clientId = env.TIKTOK_OAUTH_CLIENT_ID;
-      const clientSecret = env.TIKTOK_OAUTH_CLIENT_SECRET;
+      // Alias : TIKTOK_CLIENT_KEY/TIKTOK_CLIENT_SECRET (noms TikTok Developers).
+      const clientId = env.TIKTOK_OAUTH_CLIENT_ID ?? env.TIKTOK_CLIENT_KEY;
+      const clientSecret = env.TIKTOK_OAUTH_CLIENT_SECRET ?? env.TIKTOK_CLIENT_SECRET;
       if (!clientId || !clientSecret) return null;
       return {
         id: "tiktok",
