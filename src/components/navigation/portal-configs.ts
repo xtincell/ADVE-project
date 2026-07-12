@@ -208,6 +208,7 @@ export const cockpitNavGroups: NavGroup[] = [
     title: "Mon compte",
     titleKey: "nav.group.compte",
     items: [
+      { href: "/cockpit/settings/connections", label: "Connexions", sublabel: "Réseaux · Boutique · Comptes", labelKey: "nav.connexions", sublabelKey: "nav.connexions.sub", icon: Plug },
       { href: "/cockpit/settings/billing", label: "Abonnement", labelKey: "nav.abonnement", icon: CreditCard },
       { href: "/cockpit/settings", label: "Réglages", labelKey: "nav.reglages", icon: Settings },
     ],

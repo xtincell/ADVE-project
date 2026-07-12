@@ -10,6 +10,32 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.110 — feat(cockpit): le cockpit ramène tout — hub Connexions, boutique Shopify OAuth, pages publiques de marque (ADR-0132) (2026-07-12)
+
+**« On crée un cockpit qui ramène tout, c'est l'utilisateur qui autorise » — boutique comprise, page publique comprise.**
+
+- **[ADR-0132](docs/governance/adr/0132-brand-connections-hub-shopify-public-page.md)** :
+  provider OAuth `shopify` (endpoints PAR BOUTIQUE, domaine `*.myshopify.com`
+  strictement validé, scopes lecture `read_products,read_orders`), branche
+  `?commerce=1` sur start/callback, token offline **chiffré AVANT l'émission**
+  (`ANUBIS_COMMERCE_CONNECT_SHOP`). Anti-doublon : `MediaPlatformConnection`
+  (modèle dormant) reçoit son premier écrivain — zéro migration connexion ;
+  ventes en `Signal type=COMMERCE_METRICS` (`ANUBIS_SYNC_COMMERCE` : commandes
+  7 j, CA, top produits, P22-1). **Non délégable** (DENY firewall ADR-0131).
+- **Hub « Connexions »** `/cockpit/settings/connections` (nav Mon compte,
+  i18n ×3) : réseaux + boutique + à-venir — l'onglet unique où le porteur
+  autorise/révoque. Carte « Ventes & commandes » du Suivi du jour branchée
+  réel (commandes/CA/top produits) avec CTA « Connecter ma boutique ».
+- **Pages publiques de marque** : `Strategy.publicSlug @unique` (migration
+  additive) + `/b/[slug]` (server component, données PUBLIQUES uniquement)
+  + réécriture proxy `<slug>.powerupgraders.com → /b/<slug>` (www/lafuseev6
+  épargnés). Seeds : `motion19` (vérifiée locale — nom, tagline, 3 réseaux
+  réels) + `xtincell` (marque PERSONAL du porteur, créée au seed prod).
+- **Cron `social-sync` étendu** : audience + publications + ventes, y compris
+  marques boutique-seule. +7 verrous (`commerce-brand-page.test.ts`).
+- Gates ops : app Shopify Partner (env `SHOPIFY_OAUTH_CLIENT_ID/SECRET`),
+  DNS wildcard `*.powerupgraders.com` + domaines Coolify.
+
 ## v6.27.109 — feat(social): P1 — collecte des publications + cron quotidien + pont pilier E (plan validé) (2026-07-12)
 
 **Première phase du train P1→P6 validé : la boucle sociale de LECTURE se complète.**

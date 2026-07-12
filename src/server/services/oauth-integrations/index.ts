@@ -12,7 +12,7 @@
 
 import crypto from "node:crypto";
 
-export type SupportedProvider = "google" | "linkedin" | "meta" | "x" | "tiktok";
+export type SupportedProvider = "google" | "linkedin" | "meta" | "x" | "tiktok" | "shopify";
 
 export interface ProviderConfig {
   readonly id: SupportedProvider;
@@ -29,8 +29,12 @@ export interface ProviderConfig {
   readonly clientIdParam?: "client_id" | "client_key";
   /** Authentification du token endpoint : corps (défaut) ou header Basic (X confidential client). */
   readonly tokenAuth?: "body" | "basic";
-  /** Délimiteur de scopes dans l'URL d'autorisation (TikTok = virgule). */
+  /** Délimiteur de scopes dans l'URL d'autorisation (TikTok = virgule, Shopify aussi). */
   readonly scopeDelimiter?: " " | ",";
+  /** Endpoints par boutique (Shopify) : `{shop}` est remplacé par le domaine
+   *  myshopify validé au start — buildAuthorizeUrl/exchangeCode exigent alors
+   *  l'option `shop`. */
+  readonly perShopEndpoints?: boolean;
 }
 
 export function getProviderConfig(provider: string): ProviderConfig | null {
@@ -110,6 +114,24 @@ export function getProviderConfig(provider: string): ProviderConfig | null {
         scopeDelimiter: ",",
       };
     }
+    // ── Boutique de la marque (vague « cockpit qui ramène tout ») ────────
+    case "shopify": {
+      const clientId = env.SHOPIFY_OAUTH_CLIENT_ID;
+      const clientSecret = env.SHOPIFY_OAUTH_CLIENT_SECRET;
+      if (!clientId || !clientSecret) return null;
+      return {
+        id: "shopify",
+        // `{shop}` = domaine *.myshopify.com STRICTEMENT validé au start.
+        authorizationEndpoint: "https://{shop}/admin/oauth/authorize",
+        tokenEndpoint: "https://{shop}/admin/oauth/access_token",
+        clientId,
+        clientSecret,
+        // Lecture seule commerce : produits + commandes (jamais write en v1).
+        defaultScopes: ["read_products", "read_orders"],
+        scopeDelimiter: ",",
+        perShopEndpoints: true,
+      };
+    }
     default:
       return null;
   }
@@ -136,9 +158,11 @@ interface OAuthState {
    * le callback écrit des `SocialConnection` scopées à la Strategy au lieu
    * d'une `IntegrationConnection` opérateur. Champs absents = flow legacy.
    */
-  intent?: "social";
+  intent?: "social" | "commerce";
   strategyId?: string;
   userId?: string;
+  /** Boutique Shopify (*.myshopify.com) — flow commerce uniquement. */
+  shop?: string;
 }
 
 const STATE_TTL_MS = 10 * 60 * 1000;
@@ -198,6 +222,19 @@ export function decryptTokenPayload<T = unknown>(encoded: string): T {
 
 // ── Authorize URL builder ─────────────────────────────────────────────
 
+/** Domaine boutique Shopify STRICT : <handle>.myshopify.com uniquement. */
+export function isValidShopDomain(shop: string): boolean {
+  return /^[a-z0-9][a-z0-9-]{1,58}[a-z0-9]\.myshopify\.com$/.test(shop);
+}
+
+function resolveEndpoint(template: string, config: ProviderConfig, shop?: string): string {
+  if (!config.perShopEndpoints) return template;
+  if (!shop || !isValidShopDomain(shop)) {
+    throw new Error(`${config.id} requires a valid *.myshopify.com shop domain`);
+  }
+  return template.replace("{shop}", shop);
+}
+
 export function buildAuthorizeUrl(opts: {
   config: ProviderConfig;
   redirectUri: string;
@@ -205,6 +242,8 @@ export function buildAuthorizeUrl(opts: {
   scopes?: readonly string[];
   /** PKCE challenge (S256) — requis quand `config.usePkce`. */
   pkceChallenge?: string;
+  /** Domaine *.myshopify.com — requis quand `config.perShopEndpoints`. */
+  shop?: string;
 }): string {
   const clientParam = opts.config.clientIdParam ?? "client_id";
   const params = new URLSearchParams({
@@ -225,7 +264,7 @@ export function buildAuthorizeUrl(opts: {
     params.set("code_challenge", opts.pkceChallenge);
     params.set("code_challenge_method", "S256");
   }
-  return `${opts.config.authorizationEndpoint}?${params.toString()}`;
+  return `${resolveEndpoint(opts.config.authorizationEndpoint, opts.config, opts.shop)}?${params.toString()}`;
 }
 
 // ── Token exchange ────────────────────────────────────────────────────
@@ -244,6 +283,8 @@ export async function exchangeCode(opts: {
   redirectUri: string;
   /** PKCE verifier — requis quand `config.usePkce`. */
   pkceVerifier?: string;
+  /** Domaine *.myshopify.com — requis quand `config.perShopEndpoints`. */
+  shop?: string;
 }): Promise<TokenResponse> {
   const clientParam = opts.config.clientIdParam ?? "client_id";
   const body = new URLSearchParams({
@@ -266,7 +307,7 @@ export async function exchangeCode(opts: {
     if (!opts.pkceVerifier) throw new Error(`${opts.config.id} requires a PKCE verifier`);
     body.set("code_verifier", opts.pkceVerifier);
   }
-  const res = await fetch(opts.config.tokenEndpoint, {
+  const res = await fetch(resolveEndpoint(opts.config.tokenEndpoint, opts.config, opts.shop), {
     method: "POST",
     headers,
     body,

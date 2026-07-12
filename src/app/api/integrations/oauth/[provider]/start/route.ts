@@ -54,6 +54,7 @@ export async function GET(
   const url = new URL(request.url);
   const baseUrl = `${url.protocol}//${url.host}`;
   const isSocial = url.searchParams.get("social") === "1";
+  const isCommerce = url.searchParams.get("commerce") === "1";
 
   const config = getProviderConfig(provider);
 
@@ -138,6 +139,58 @@ export async function GET(
       });
     }
     return response;
+  }
+
+  // ── Branche « boutique de la marque » (Shopify, vague cockpit-qui-ramène-tout) ──
+  if (isCommerce) {
+    if (provider !== "shopify") {
+      return cockpitRedirect(baseUrl, "fournisseur_inconnu", provider);
+    }
+    if (!config) {
+      return cockpitRedirect(baseUrl, "indisponible", provider);
+    }
+    if (!integrationKeyReady()) {
+      return cockpitRedirect(baseUrl, "chiffrement_manquant", provider);
+    }
+    const strategyId = url.searchParams.get("strategyId");
+    const shop = (url.searchParams.get("shop") ?? "").trim().toLowerCase();
+    if (!strategyId) return cockpitRedirect(baseUrl, "marque_manquante", provider);
+    const { isValidShopDomain } = await import("@/server/services/oauth-integrations");
+    if (!isValidShopDomain(shop)) {
+      return cockpitRedirect(baseUrl, "boutique_invalide", provider);
+    }
+    const strategy = await db.strategy.findUnique({
+      where: { id: strategyId },
+      select: { id: true, userId: true },
+    });
+    if (!strategy) return cockpitRedirect(baseUrl, "marque_introuvable", provider);
+    if (session.user.role !== "ADMIN" && strategy.userId !== session.user.id) {
+      const u = await db.user.findUnique({
+        where: { id: session.user.id },
+        select: { operatorId: true },
+      });
+      if (!u?.operatorId) return cockpitRedirect(baseUrl, "acces_refuse", provider);
+    }
+
+    const returnUrlRaw = url.searchParams.get("returnUrl") ?? "/cockpit/settings/connections";
+    const returnUrl = returnUrlRaw.startsWith("/") ? returnUrlRaw : "/cockpit/settings/connections";
+    const redirectUri = `${baseUrl}/api/integrations/oauth/${provider}/callback`;
+    const state = packState(
+      {
+        operatorId: "SOCIAL",
+        provider: config.id,
+        returnUrl,
+        nonce: crypto.randomUUID(),
+        ts: Date.now(),
+        intent: "commerce",
+        strategyId,
+        userId: session.user.id,
+        shop,
+      },
+      signingKey(),
+    );
+    const authorizeUrl = buildAuthorizeUrl({ config, redirectUri, state, shop });
+    return NextResponse.redirect(authorizeUrl);
   }
 
   // ── Branche legacy opérateur (inchangée) ────────────────────────────────

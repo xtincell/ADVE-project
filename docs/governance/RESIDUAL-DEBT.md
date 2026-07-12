@@ -24,6 +24,15 @@ Vagues [ADR-0129](adr/0129-strategy-collaborator-delegated-access.md) (StrategyC
 - **Benchmark → plan d'upgrade suite sociale** : vagues S1→S5 priorisées dans [docs/audits/SOCIAL-SUITE-BENCHMARK-2026-07-12.md](../audits/SOCIAL-SUITE-BENCHMARK-2026-07-12.md) (métriques par post, publishing, inbox unifié, heures optimales, trio Meta/audits plateformes). Chaque vague est un chantier futur distinct — rien d'implicite.
 - **Pont relevés → pilier E/traction** : les relevés d'audience (`FollowerSnapshot`) restent en silo mesure — la déclaration de traction dans l'ADVE reste un geste opérateur (doctrine ADR-0085, jamais d'auto-write). Pont candidat : afficher le dernier relevé en SUGGESTION dans l'éditeur du pilier E (source DECLARED après validation humaine).
 
+## Cockpit qui ramène tout — ADR-0132 (2026-07-12, NEFER)
+
+Vague [ADR-0132](adr/0132-brand-connections-hub-shopify-public-page.md) shippée (v6.27.110) : hub Connexions, boutique Shopify OAuth (lecture), pages publiques de marque par sous-domaine, cron ventes. Restes réels :
+
+- **Écriture boutique** (gestion produits/prix depuis le cockpit) : décision dédiée — scopes write Shopify + UI, jamais implicite.
+- **Page publique enrichie** (galerie de créations, CTA contact, thème par marque) : chantier Personal Brand Cockpit (blueprint) — la v1 est volontairement minimale.
+- **GBP + WhatsApp dans Connexions** : arrivent avec P2/P3 du train validé.
+- **Gates ops posées sur l'opérateur** : app Shopify Partner (env), DNS wildcard `*.powerupgraders.com` + domaines Coolify pour les sous-domaines de marque.
+
 ## Zones par rôle + double dashboard — ADR-0131 (2026-07-12, NEFER)
 
 Vague [ADR-0131](adr/0131-collaborator-role-zones-dual-dashboard.md) shippée (v6.27.107) : zones d'écriture par rôle DENY-par-défaut (firewall d'émission ×2 voies + gardes calendrier), mini console Guilde, double dashboard stratégique/« Suivi du jour », mode jour. Restes réels :

@@ -543,6 +543,17 @@ export type Intent =
       }>;
       scopes: string[];
     }
+  // ── Anubis boutique de la marque — Shopify OAuth founder (vague 2026-07-12) ──
+  | {
+      kind: "ANUBIS_COMMERCE_CONNECT_SHOP";
+      strategyId: string;
+      userId: string;
+      shopDomain: string;
+      shopName: string | null;
+      /** Token offline déjà chiffré AES-GCM — aucun secret en clair. */
+      encryptedToken: string;
+      scopes: string[];
+    }
   // ── Auto-promotion (ADR-0054) — Sprint 9 v6.18.22 ──────────────────
   | {
       kind: "AUTO_PROMOTION_EVALUATE";
@@ -1180,6 +1191,7 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     // ADR-0128 — connexion réseaux de la marque : pure persistence de
     // credentials + snapshots d'observation, aucune mutation de pilier.
     case "ANUBIS_SOCIAL_CONNECT_ACCOUNT":
+    case "ANUBIS_COMMERCE_CONNECT_SHOP":
     // Phase 17 (ADR-0037) — Deliverable Forge dispatcher. Le composer consomme
     // les piliers ADVE en lecture seule pour résoudre le DAG ; les mutations
     // vault sont déléguées en aval à PTAH_MATERIALIZE_BRIEF +

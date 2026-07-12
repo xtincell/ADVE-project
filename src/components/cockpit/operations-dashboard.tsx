@@ -79,6 +79,8 @@ export function OperationsDashboard({ strategyId }: { strategyId: string }) {
     { strategyId },
     { staleTime: 60_000 },
   );
+  // Boutique (Shopify) — dernier relevé Signal COMMERCE_METRICS.
+  const shop = trpc.commerce.getShopStatus.useQuery({ strategyId }, { staleTime: 60_000 }).data;
 
   const community = data?.community;
   const calendar = data?.calendar;
@@ -215,13 +217,42 @@ export function OperationsDashboard({ strategyId }: { strategyId: string }) {
         </div>
         <div className="ck-card">
           <p className="ck-card__eyebrow"><ShoppingCart />Ventes & commandes</p>
-          <p className="ck-ops__note">
-            Votre canal de vente n&apos;est pas encore relié — quand il le sera,
-            vos commandes du jour et vos meilleures ventes vivront ici.
-          </p>
-          <Link href="/cockpit/operate/requests" className="ck-card__link">
-            Demander le branchement <ArrowRight />
-          </Link>
+          {shop?.connected && shop.metrics ? (
+            <div className="ck-ops__list">
+              <div className="ck-ops__row">
+                <span className="ck-ops__row-title">Commandes (7 jours)</span>
+                <span className="ck-ops__split-val">{String((shop.metrics as Record<string, unknown>).ordersLast7d ?? 0)}</span>
+              </div>
+              <div className="ck-ops__row">
+                <span className="ck-ops__row-title">Chiffre d&apos;affaires (7 jours)</span>
+                <span className="ck-ops__split-val">
+                  {Number((shop.metrics as Record<string, unknown>).revenueLast7d ?? 0).toLocaleString("fr-FR")} {String((shop.metrics as Record<string, unknown>).currency ?? "")}
+                </span>
+              </div>
+              {(((shop.metrics as Record<string, unknown>).topProducts as Array<{ title: string; quantity: number }> | undefined) ?? []).slice(0, 3).map((tp) => (
+                <div className="ck-ops__row" key={tp.title}>
+                  <span className="ck-ops__row-date">top</span>
+                  <span className="ck-ops__row-title">{tp.title}</span>
+                  <span className="ck-ops__split-val">×{tp.quantity}</span>
+                </div>
+              ))}
+            </div>
+          ) : shop?.connected ? (
+            <p className="ck-ops__note">
+              Boutique reliée — le premier relevé de ventes arrive à la prochaine
+              actualisation (bouton dans Connexions, puis quotidien).
+            </p>
+          ) : (
+            <>
+              <p className="ck-ops__note">
+                Votre canal de vente n&apos;est pas encore relié — connectez votre
+                boutique pour voir vos commandes du jour et vos meilleures ventes ici.
+              </p>
+              <Link href="/cockpit/settings/connections" className="ck-card__link">
+                Connecter ma boutique <ArrowRight />
+              </Link>
+            </>
+          )}
         </div>
       </div>
 

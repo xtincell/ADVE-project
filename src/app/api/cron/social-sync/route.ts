@@ -21,32 +21,41 @@ import {
   syncStrategySocialFollowers,
   syncStrategySocialPosts,
 } from "@/server/services/anubis/social-connect";
+import { syncStrategyShopifyOrders } from "@/server/services/anubis/commerce-connect";
 
 export async function GET(request: Request) {
   if (!verifyCronSecret(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   try {
-    const strategies = await db.socialConnection.groupBy({
-      by: ["strategyId"],
-      where: { status: "ACTIVE" },
-    });
+    const [social, shops] = await Promise.all([
+      db.socialConnection.groupBy({ by: ["strategyId"], where: { status: "ACTIVE" } }),
+      db.mediaPlatformConnection.groupBy({
+        by: ["strategyId"],
+        where: { status: "ACTIVE", platform: "SHOPIFY" },
+      }),
+    ]);
+    const strategies = [...new Set([...social, ...shops].map((r) => r.strategyId))]
+      .map((strategyId) => ({ strategyId }));
 
     const results: Array<{
       strategyId: string;
       followers: string;
       posts: string;
+      commerce: string;
     }> = [];
 
     for (const s of strategies) {
-      const [followers, posts] = await Promise.all([
+      const [followers, posts, commerce] = await Promise.all([
         syncStrategySocialFollowers(s.strategyId).catch(() => ({ state: "DEGRADED" as const, reason: "VENDOR_OUTAGE" as const })),
         syncStrategySocialPosts(s.strategyId).catch(() => ({ state: "DEGRADED" as const, reason: "VENDOR_OUTAGE" as const })),
+        syncStrategyShopifyOrders(s.strategyId).catch(() => ({ state: "DEGRADED" as const, reason: "VENDOR_OUTAGE" as const })),
       ]);
       results.push({
         strategyId: s.strategyId,
         followers: followers.state,
         posts: posts.state,
+        commerce: commerce.state,
       });
     }
 

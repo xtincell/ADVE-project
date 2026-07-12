@@ -281,6 +281,22 @@ export async function execute(intent: Intent): Promise<IntentResult> {
       }
 
       // ── Anubis réseaux de la marque — founder OAuth (ADR-0128) ─────
+      case "ANUBIS_COMMERCE_CONNECT_SHOP": {
+        const { handleCommerceConnectShop } = await import("@/server/services/anubis/commerce-connect");
+        const out = await handleCommerceConnectShop({
+          strategyId: intent.strategyId,
+          shopDomain: intent.shopDomain,
+          shopName: intent.shopName,
+          encryptedToken: intent.encryptedToken,
+          scopes: intent.scopes,
+        });
+        return wrap({
+          ...base,
+          status: "OK",
+          summary: `Boutique ${intent.shopDomain} connectée`,
+          output: out,
+        });
+      }
       case "ANUBIS_SOCIAL_CONNECT_ACCOUNT": {
         const { connectSocialAccounts } = await import("@/server/services/anubis/social-connect");
         const out = await connectSocialAccounts({

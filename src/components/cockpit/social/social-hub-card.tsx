@@ -33,6 +33,8 @@ const PLATFORM_LABELS: Record<string, { label: string; mono: string }> = {
 const PLATFORM_ORDER = ["FACEBOOK", "INSTAGRAM", "TIKTOK", "YOUTUBE", "TWITTER", "LINKEDIN"];
 
 const FLAG_MESSAGES: Record<string, { kind: "success" | "info" | "error"; text: string }> = {
+  boutique_connectee: { kind: "success", text: "Boutique connectée — vos ventes arrivent dans le Suivi du jour." },
+  boutique_invalide: { kind: "error", text: "Domaine de boutique invalide — utilisez votre-boutique.myshopify.com." },
   connecte: { kind: "success", text: "Réseau connecté — vos données d'audience arrivent." },
   refuse: { kind: "info", text: "Connexion annulée depuis le réseau social." },
   aucun_compte: { kind: "info", text: "Aucune page ou compte accessible trouvé sur ce réseau." },
