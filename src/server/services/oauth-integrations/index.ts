@@ -12,7 +12,7 @@
 
 import crypto from "node:crypto";
 
-export type SupportedProvider = "google" | "linkedin" | "meta";
+export type SupportedProvider = "google" | "linkedin" | "meta" | "x" | "tiktok";
 
 export interface ProviderConfig {
   readonly id: SupportedProvider;
@@ -23,6 +23,14 @@ export interface ProviderConfig {
   readonly defaultScopes: readonly string[];
   /** How to identify the connected user from token response (optional userinfo endpoint). */
   readonly userInfoEndpoint?: string;
+  /** PKCE S256 obligatoire (X/Twitter). Le code_verifier voyage en cookie httpOnly, jamais dans le state. */
+  readonly usePkce?: boolean;
+  /** Nom du paramètre client (TikTok utilise `client_key` au lieu de `client_id`). */
+  readonly clientIdParam?: "client_id" | "client_key";
+  /** Authentification du token endpoint : corps (défaut) ou header Basic (X confidential client). */
+  readonly tokenAuth?: "body" | "basic";
+  /** Délimiteur de scopes dans l'URL d'autorisation (TikTok = virgule). */
+  readonly scopeDelimiter?: " " | ",";
 }
 
 export function getProviderConfig(provider: string): ProviderConfig | null {
@@ -70,9 +78,49 @@ export function getProviderConfig(provider: string): ProviderConfig | null {
         userInfoEndpoint: "https://graph.facebook.com/me?fields=id,name,email",
       };
     }
+    // ── Réseaux propres de la marque (connexions founder, ADR-0128) ──────
+    case "x": {
+      const clientId = env.X_OAUTH_CLIENT_ID;
+      const clientSecret = env.X_OAUTH_CLIENT_SECRET;
+      if (!clientId || !clientSecret) return null;
+      return {
+        id: "x",
+        authorizationEndpoint: "https://twitter.com/i/oauth2/authorize",
+        tokenEndpoint: "https://api.twitter.com/2/oauth2/token",
+        clientId,
+        clientSecret,
+        defaultScopes: ["tweet.read", "users.read", "offline.access"],
+        userInfoEndpoint: "https://api.twitter.com/2/users/me",
+        usePkce: true,
+        tokenAuth: "basic",
+      };
+    }
+    case "tiktok": {
+      const clientId = env.TIKTOK_OAUTH_CLIENT_ID;
+      const clientSecret = env.TIKTOK_OAUTH_CLIENT_SECRET;
+      if (!clientId || !clientSecret) return null;
+      return {
+        id: "tiktok",
+        authorizationEndpoint: "https://www.tiktok.com/v2/auth/authorize/",
+        tokenEndpoint: "https://open.tiktokapis.com/v2/oauth/token/",
+        clientId,
+        clientSecret,
+        defaultScopes: ["user.info.basic", "user.info.profile", "user.info.stats"],
+        clientIdParam: "client_key",
+        scopeDelimiter: ",",
+      };
+    }
     default:
       return null;
   }
+}
+
+// ── PKCE (RFC 7636) ───────────────────────────────────────────────────
+
+export function generatePkcePair(): { verifier: string; challenge: string } {
+  const verifier = crypto.randomBytes(32).toString("base64url");
+  const challenge = crypto.createHash("sha256").update(verifier).digest("base64url");
+  return { verifier, challenge };
 }
 
 // ── State management (CSRF protection) ────────────────────────────────
@@ -83,6 +131,14 @@ interface OAuthState {
   returnUrl: string;
   nonce: string;
   ts: number;
+  /**
+   * Connexion « réseaux de la marque » (ADR-0128) : quand `intent === "social"`,
+   * le callback écrit des `SocialConnection` scopées à la Strategy au lieu
+   * d'une `IntegrationConnection` opérateur. Champs absents = flow legacy.
+   */
+  intent?: "social";
+  strategyId?: string;
+  userId?: string;
 }
 
 const STATE_TTL_MS = 10 * 60 * 1000;
@@ -147,16 +203,28 @@ export function buildAuthorizeUrl(opts: {
   redirectUri: string;
   state: string;
   scopes?: readonly string[];
+  /** PKCE challenge (S256) — requis quand `config.usePkce`. */
+  pkceChallenge?: string;
 }): string {
+  const clientParam = opts.config.clientIdParam ?? "client_id";
   const params = new URLSearchParams({
     response_type: "code",
-    client_id: opts.config.clientId,
+    [clientParam]: opts.config.clientId,
     redirect_uri: opts.redirectUri,
-    scope: (opts.scopes ?? opts.config.defaultScopes).join(" "),
+    scope: (opts.scopes ?? opts.config.defaultScopes).join(opts.config.scopeDelimiter ?? " "),
     state: opts.state,
-    access_type: "offline",
-    prompt: "consent",
   });
+  // Google honore access_type/prompt ; les autres providers les ignorent ou
+  // les rejettent (TikTok) — on ne les émet que pour les flows qui les lisent.
+  if (opts.config.id === "google" || opts.config.id === "linkedin" || opts.config.id === "meta") {
+    params.set("access_type", "offline");
+    params.set("prompt", "consent");
+  }
+  if (opts.config.usePkce) {
+    if (!opts.pkceChallenge) throw new Error(`${opts.config.id} requires a PKCE challenge`);
+    params.set("code_challenge", opts.pkceChallenge);
+    params.set("code_challenge_method", "S256");
+  }
   return `${opts.config.authorizationEndpoint}?${params.toString()}`;
 }
 
@@ -174,24 +242,68 @@ export async function exchangeCode(opts: {
   config: ProviderConfig;
   code: string;
   redirectUri: string;
+  /** PKCE verifier — requis quand `config.usePkce`. */
+  pkceVerifier?: string;
 }): Promise<TokenResponse> {
+  const clientParam = opts.config.clientIdParam ?? "client_id";
   const body = new URLSearchParams({
     grant_type: "authorization_code",
     code: opts.code,
-    client_id: opts.config.clientId,
-    client_secret: opts.config.clientSecret,
+    [clientParam]: opts.config.clientId,
     redirect_uri: opts.redirectUri,
   });
+  const headers: Record<string, string> = {
+    "Content-Type": "application/x-www-form-urlencoded",
+    Accept: "application/json",
+  };
+  if (opts.config.tokenAuth === "basic") {
+    headers.Authorization =
+      "Basic " + Buffer.from(`${opts.config.clientId}:${opts.config.clientSecret}`).toString("base64");
+  } else {
+    body.set("client_secret", opts.config.clientSecret);
+  }
+  if (opts.config.usePkce) {
+    if (!opts.pkceVerifier) throw new Error(`${opts.config.id} requires a PKCE verifier`);
+    body.set("code_verifier", opts.pkceVerifier);
+  }
   const res = await fetch(opts.config.tokenEndpoint, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
+    headers,
     body,
+    signal: AbortSignal.timeout(10_000),
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(`OAuth token exchange failed (${res.status}): ${text.slice(0, 200)}`);
   }
   return res.json() as Promise<TokenResponse>;
+}
+
+/**
+ * Échange un user token Meta court (≈1h) contre un long-lived (≈60j).
+ * Best-effort : en cas d'échec on garde le token court (le sync signalera
+ * AUTH_REVOKED à expiration — jamais de faux succès).
+ */
+export async function exchangeMetaLongLivedToken(
+  config: ProviderConfig,
+  shortLivedToken: string,
+): Promise<TokenResponse | null> {
+  if (config.id !== "meta") return null;
+  const params = new URLSearchParams({
+    grant_type: "fb_exchange_token",
+    client_id: config.clientId,
+    client_secret: config.clientSecret,
+    fb_exchange_token: shortLivedToken,
+  });
+  try {
+    const res = await fetch(`${config.tokenEndpoint}?${params.toString()}`, {
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as TokenResponse;
+  } catch {
+    return null;
+  }
 }
 
 // ── Userinfo (for externalUserId) ─────────────────────────────────────

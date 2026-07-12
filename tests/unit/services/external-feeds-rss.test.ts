@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseRssItems, buildDigestFromItems } from "@/server/services/seshat/external-feeds/rss";
+import { parseRssItems, buildDigestFromItems, toFeedItems } from "@/server/services/seshat/external-feeds/rss";
 import { feedSourcesFor } from "@/server/services/seshat/external-feeds/feed-sources";
 
 const RSS = `<?xml version="1.0"?><rss version="2.0"><channel>
@@ -50,5 +50,30 @@ describe("External feeds — RSS déterministe (ADR-0099 suite)", () => {
     expect(src!.url).toContain("news.google.com/rss/search");
     expect(src!.url).toContain("gl=CM");
     expect(src!.url).toMatch(/q=fintech/i);
+  });
+});
+
+// ── Articles de veille (ADR-0128 — items[] du digest, surfacés au cockpit) ────
+
+describe("toFeedItems (ADR-0128)", () => {
+  it("déduplique par titre, extrait la source Google News, cap au plafond", () => {
+    const items = [
+      { title: "Godox arrive au Cameroun - Journal du Cameroun", link: "https://ex.com/1", pubDate: "Wed, 10 Jun 2026 10:00:00 GMT", summary: "" },
+      { title: "Godox arrive au Cameroun - Journal du Cameroun", link: "https://ex.com/dup", pubDate: "", summary: "" },
+      { title: "Court", link: "https://ex.com/2", pubDate: "", summary: "" },
+    ];
+    const out = toFeedItems(items, 12);
+    expect(out).toHaveLength(2);
+    expect(out[0]!.title).toBe("Godox arrive au Cameroun");
+    expect(out[0]!.source).toBe("Journal du Cameroun");
+    expect(out[0]!.publishedAt).toContain("2026");
+    // Titre court sans suffixe média : pas de source inventée, pas de date inventée.
+    expect(out[1]!.source).toBeUndefined();
+    expect(out[1]!.publishedAt).toBeUndefined();
+  });
+
+  it("respecte la limite (jamais plus que le plafond du schéma digest)", () => {
+    const many = Array.from({ length: 30 }, (_, i) => ({ title: `Article ${i}`, link: `https://ex.com/${i}`, pubDate: "", summary: "" }));
+    expect(toFeedItems(many, 12)).toHaveLength(12);
   });
 });

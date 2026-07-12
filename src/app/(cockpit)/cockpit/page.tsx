@@ -15,6 +15,8 @@ import { AiBadge } from "@/components/shared/ai-badge";
 import { useStrategy } from "@/components/cockpit/strategy-context";
 import { useCanOperate } from "@/components/cockpit/use-can-operate";
 import { OvertonTeaser } from "@/components/cockpit/intelligence/overton-panel";
+import { SocialHubCard } from "@/components/cockpit/social/social-hub-card";
+import { MarketFeedCard } from "@/components/cockpit/social/market-feed-card";
 import { buildPillarContentMap } from "@/components/shared/pillar-content-card";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -124,6 +126,11 @@ export default function CockpitDashboard() {
   );
 
   const mestorInsightsQuery = trpc.mestor.getInsights.useQuery(
+    { strategyId: strategyId! },
+    { enabled: !!strategyId, staleTime: 5 * 60_000 },
+  );
+
+  const brandIdentityQuery = trpc.cockpitDashboard.getBrandIdentity.useQuery(
     { strategyId: strategyId! },
     { enabled: !!strategyId, staleTime: 5 * 60_000 },
   );
@@ -308,14 +315,16 @@ export default function CockpitDashboard() {
   const weakestPillar = pillarEntries.reduce((min, [k, v]) => (v < min[1] ? [k, v] : min), pillarEntries[0]!);
   const strongestPillar = pillarEntries.reduce((max, [k, v]) => (v > max[1] ? [k, v] : max), pillarEntries[0]!);
 
-  const showSection = (section: "kpi" | "radar" | "devotion" | "prescriptions" | "missions" | "timeline") => {
+  const showSection = (section: "kpi" | "radar" | "devotion" | "prescriptions" | "missions" | "timeline" | "sources") => {
     switch (viewMode) {
-      case "EXECUTIVE": return ["kpi", "devotion", "prescriptions"].includes(section);
+      case "EXECUTIVE": return ["kpi", "devotion", "prescriptions", "sources"].includes(section);
       case "MARKETING": return true;
-      case "FOUNDER": return ["kpi", "radar", "prescriptions"].includes(section);
+      case "FOUNDER": return ["kpi", "radar", "prescriptions", "sources"].includes(section);
       case "MINIMAL": return ["prescriptions", "missions"].includes(section);
     }
   };
+
+  const identity = brandIdentityQuery.data;
 
   return (
     <div className="ck-dash">
@@ -340,27 +349,50 @@ export default function CockpitDashboard() {
 
       {/* Brand Story Hero */}
       <div className="ck-grid ck-grid--hero">
-        {/* Identité & Positionnement */}
+        {/* Identité & Positionnement — logo + actifs du coffre de marque (ADR-0128) */}
         <div className="ck-id">
-          <p className="ck-id__eyebrow"><Fingerprint />Identité de marque</p>
-          {authContent?.noyauIdentitaire || authContent?.prophecy ? (
-            <p className="ck-id__noyau">{safeString(authContent.noyauIdentitaire || authContent.prophecy)}</p>
-          ) : (
-            <p className="ck-id__noyau" style={{ fontStyle: "italic", color: "var(--text-muted)", fontSize: 14 }}>Noyau identitaire non défini — remplissez le pilier A (Authenticité)</p>
-          )}
-          {!!distContent?.positionnement && (
-            <p className="ck-id__row"><span className="k">Positionnement :</span> {safeString(distContent.positionnement)}</p>
-          )}
-          {!!distContent?.promesseMaitre && (
-            <p className="ck-id__promise">« {safeString(distContent.promesseMaitre)} »</p>
-          )}
-          {!!authContent?.valeurs && Array.isArray(authContent.valeurs) && (
-            <div className="ck-id__values">
-              {(authContent.valeurs as Array<Record<string, unknown>>).slice(0, 6).map((v, i) => (
-                <span className="ck-val" key={i}>{safeString(v.customName || v.value || v)}</span>
-              ))}
+          <div className="ck-id__grid">
+            <div className="ck-id__main">
+              <p className="ck-id__eyebrow"><Fingerprint />Identité de marque</p>
+              {authContent?.noyauIdentitaire || authContent?.prophecy ? (
+                <p className="ck-id__noyau">{safeString(authContent.noyauIdentitaire || authContent.prophecy)}</p>
+              ) : (
+                <p className="ck-id__noyau" style={{ fontStyle: "italic", color: "var(--text-muted)", fontSize: 14 }}>Noyau identitaire non défini — remplissez le pilier A (Authenticité)</p>
+              )}
+              {!!distContent?.positionnement && (
+                <p className="ck-id__row"><span className="k">Positionnement :</span> {safeString(distContent.positionnement)}</p>
+              )}
+              {!!distContent?.promesseMaitre && (
+                <p className="ck-id__promise">« {safeString(distContent.promesseMaitre)} »</p>
+              )}
+              {!!authContent?.valeurs && Array.isArray(authContent.valeurs) && (
+                <div className="ck-id__values">
+                  {(authContent.valeurs as Array<Record<string, unknown>>).slice(0, 6).map((v, i) => (
+                    <span className="ck-val" key={i}>{safeString(v.customName || v.value || v)}</span>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
+            <div className="ck-id__side">
+              {identity?.logo ? (
+                // eslint-disable-next-line @next/next/no-img-element -- fileUrl externe (coffre de marque), pattern identique à brand/assets
+                <img className="ck-id__logo" src={identity.logo.url} alt={`Logo ${identity.brandName}`} />
+              ) : (
+                <Link href="/cockpit/brand/assets" className="ck-id__logo-cta" title="Déposez votre logo dans vos actifs de marque">
+                  <Sparkles />
+                  <span>Ajouter votre logo</span>
+                </Link>
+              )}
+              <div className="ck-id__assets">
+                {identity ? (
+                  <p className="ck-id__assets-line">
+                    {identity.assetCounts.logos} logo{identity.assetCounts.logos > 1 ? "s" : ""} · {identity.assetCounts.typographies} typo{identity.assetCounts.typographies > 1 ? "s" : ""} · {identity.assetCounts.palettes} palette{identity.assetCounts.palettes > 1 ? "s" : ""}
+                  </p>
+                ) : null}
+                <Link href="/cockpit/brand/assets" className="ck-card__link">Mes actifs de marque →</Link>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Focus Stratégique */}
@@ -444,6 +476,14 @@ export default function CockpitDashboard() {
             </div>
           </div>
         </>
+      )}
+
+      {/* Mes réseaux + Veille (ADR-0128 — connexions sociales founder & flux marché) */}
+      {showSection("sources") && (
+        <div className="ck-grid ck-grid--2">
+          <SocialHubCard strategyId={strategyId} />
+          <MarketFeedCard strategyId={strategyId} />
+        </div>
       )}
 
       {/* Pipeline + Devotion */}

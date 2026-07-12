@@ -121,6 +121,34 @@ export function buildDigestFromItems(
   return { macroSignals, weakSignals };
 }
 
+/**
+ * Articles bruts → items de veille (ADR-0128). Pur, déterministe :
+ * déduplication par titre (insensible à la casse), cap `limit`, extraction de
+ * la source lisible depuis le suffixe Google News (« Titre - Média »). Aucune
+ * invention — l'absence de date/source reste absente.
+ */
+export function toFeedItems(
+  items: RssItem[],
+  limit = 12,
+): Array<{ title: string; link: string; source?: string; publishedAt?: string }> {
+  const seen = new Set<string>();
+  const out: Array<{ title: string; link: string; source?: string; publishedAt?: string }> = [];
+  for (const it of items) {
+    const key = it.title.toLowerCase();
+    if (!it.title || seen.has(key)) continue;
+    seen.add(key);
+    const dash = it.title.lastIndexOf(" - ");
+    out.push({
+      title: dash > 20 ? it.title.slice(0, dash).trim() : it.title,
+      link: it.link,
+      ...(dash > 20 ? { source: it.title.slice(dash + 3).trim() } : {}),
+      ...(it.pubDate ? { publishedAt: it.pubDate } : {}),
+    });
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
 // ── Fetch durci (https-only, timeout, cap taille) ──────────────────────────────
 
 const MAX_BYTES = 1_500_000;

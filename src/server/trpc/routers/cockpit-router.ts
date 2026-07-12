@@ -360,4 +360,127 @@ export const cockpitRouter = createTRPCRouter({
         },
       };
     }),
+
+  /**
+   * ADR-0128 — Veille marché du founder (à la Feedly). Lit le DERNIER digest
+   * `EXTERNAL_FEED_DIGEST` du couple (pays × secteur) de la marque et en
+   * expose les articles réels + signaux. Read-only, tenant-scoped, zéro LLM.
+   * Pas de digest → `articles: []` + `lastDigestAt: null` (EmptyState honnête,
+   * jamais de flux fabriqué).
+   */
+  getMarketFeed: protectedProcedure
+    .input(z.object({ strategyId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const strategy = await ctx.db.strategy.findUnique({
+        where: { id: input.strategyId },
+        select: { id: true, userId: true, countryCode: true, businessContext: true },
+      });
+      if (!strategy) throw new TRPCError({ code: "NOT_FOUND", message: "Strategy introuvable" });
+      const isPrivileged = ctx.session.user.role === "ADMIN";
+      if (!isPrivileged && strategy.userId !== ctx.session.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Cette marque ne vous appartient pas" });
+      }
+
+      const sector = extractSectorSlug(strategy.businessContext);
+      const empty = {
+        countryCode: strategy.countryCode,
+        sector,
+        lastDigestAt: null as string | null,
+        articles: [] as Array<{ title: string; link: string; source: string | null; publishedAt: string | null }>,
+        themes: [] as string[],
+        configured: Boolean(strategy.countryCode && sector),
+      };
+      if (!strategy.countryCode || !sector || sector.length < 3) return empty;
+
+      const digest = await ctx.db.knowledgeEntry.findFirst({
+        where: {
+          entryType: "EXTERNAL_FEED_DIGEST",
+          countryCode: strategy.countryCode,
+          sector: { contains: sector.trim().toLowerCase().slice(0, 40), mode: "insensitive" },
+        },
+        orderBy: { createdAt: "desc" },
+        select: { createdAt: true, data: true },
+      });
+      if (!digest) return empty;
+
+      const data = (digest.data ?? {}) as {
+        items?: Array<{ title?: string; link?: string; source?: string; publishedAt?: string }>;
+        macroSignals?: Array<{ trend?: string }>;
+      };
+      return {
+        ...empty,
+        lastDigestAt: digest.createdAt.toISOString(),
+        articles: (Array.isArray(data.items) ? data.items : [])
+          .filter((it) => typeof it.title === "string" && it.title.length > 0)
+          .slice(0, 12)
+          .map((it) => ({
+            title: it.title as string,
+            link: typeof it.link === "string" ? it.link : "",
+            source: typeof it.source === "string" ? it.source : null,
+            publishedAt: typeof it.publishedAt === "string" ? it.publishedAt : null,
+          })),
+        themes: (Array.isArray(data.macroSignals) ? data.macroSignals : [])
+          .map((s) => (typeof s.trend === "string" ? s.trend : ""))
+          .filter((t) => t.length > 0)
+          .slice(0, 5),
+      };
+    }),
+
+  /**
+   * ADR-0128 — Identité visuelle de la marque pour le dashboard : logo actif
+   * (BrandAsset kind LOGO_FINAL, fallback LOGO_IDEA), inventaire des actifs
+   * d'identité (typographies, palettes) et total du coffre. Chaque absence
+   * est dite absente — le dashboard affiche alors le CTA d'upload, jamais un
+   * placeholder déguisé en logo.
+   */
+  getBrandIdentity: protectedProcedure
+    .input(z.object({ strategyId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const strategy = await ctx.db.strategy.findUnique({
+        where: { id: input.strategyId },
+        select: { id: true, userId: true, name: true },
+      });
+      if (!strategy) throw new TRPCError({ code: "NOT_FOUND", message: "Strategy introuvable" });
+      const isPrivileged = ctx.session.user.role === "ADMIN";
+      if (!isPrivileged && strategy.userId !== ctx.session.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Cette marque ne vous appartient pas" });
+      }
+
+      const [logos, typographyCount, chromaticCount, vaultTotal] = await Promise.all([
+        ctx.db.brandAsset.findMany({
+          where: {
+            strategyId: strategy.id,
+            kind: { in: ["LOGO_FINAL", "LOGO_IDEA"] },
+            fileUrl: { not: null },
+            state: { notIn: ["ARCHIVED", "REJECTED"] },
+          },
+          orderBy: { createdAt: "desc" },
+          take: 12,
+          select: { id: true, kind: true, name: true, fileUrl: true, state: true },
+        }),
+        ctx.db.brandAsset.count({
+          where: { strategyId: strategy.id, kind: "TYPOGRAPHY_SYSTEM", state: { notIn: ["ARCHIVED", "REJECTED"] } },
+        }),
+        ctx.db.brandAsset.count({
+          where: { strategyId: strategy.id, kind: "CHROMATIC_STRATEGY", state: { notIn: ["ARCHIVED", "REJECTED"] } },
+        }),
+        ctx.db.brandAsset.count({ where: { strategyId: strategy.id } }),
+      ]);
+
+      // Logo actif : LOGO_FINAL ACTIVE > LOGO_FINAL récent > LOGO_IDEA récent.
+      const finals = logos.filter((l) => l.kind === "LOGO_FINAL");
+      const logo =
+        finals.find((l) => l.state === "ACTIVE") ?? finals[0] ?? logos[0] ?? null;
+
+      return {
+        brandName: strategy.name,
+        logo: logo ? { url: logo.fileUrl as string, name: logo.name, state: String(logo.state) } : null,
+        assetCounts: {
+          logos: finals.length,
+          typographies: typographyCount,
+          palettes: chromaticCount,
+          total: vaultTotal,
+        },
+      };
+    }),
 });

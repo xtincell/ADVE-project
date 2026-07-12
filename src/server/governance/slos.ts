@@ -108,6 +108,10 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "RECORD_FOLLOWER_SNAPSHOT", p95LatencyMs: 800, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "SOCIAL_AUDIT_FETCH_OFFICIAL", p95LatencyMs: 10_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "SOCIAL_AUDIT_FETCH_THIRD_PARTY", p95LatencyMs: 90_000, errorRatePct: 0.10, costP95Usd: 0.002 },
+  // ADR-0128 — connexions « réseaux de la marque » (founder OAuth).
+  { kind: "ANUBIS_SOCIAL_CONNECT_ACCOUNT", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "ANUBIS_SOCIAL_DISCONNECT_ACCOUNT", p95LatencyMs: 1_000, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "ANUBIS_SOCIAL_SYNC_FOLLOWERS", p95LatencyMs: 20_000, errorRatePct: 0.10, costP95Usd: 0 },
   // ADR-0121 — re-scan empreinte publique → pilier E (footprint + Brave + Apify + RSS, zéro LLM).
   { kind: "ENRICH_E_FROM_PUBLIC_FOOTPRINT", p95LatencyMs: 35_000, errorRatePct: 0.10, costP95Usd: 0.005 },
   { kind: "SYNC_UPGRADERS_CANON", p95LatencyMs: 30_000, errorRatePct: 0.01, costP95Usd: 0 },

@@ -10,6 +10,47 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.105 — feat(cockpit): dashboard de marque complété — logo & actifs, « Mes réseaux » (OAuth founder), veille articles réels + seed Motion19 (2026-07-12)
+
+**Le founder connecte lui-même les réseaux de sa marque (à la Sprout Social), voit son logo et lit sa veille sectorielle — en réconciliant 5 briques qui existaient sans se parler (ADR-0128).**
+
+- **Anti-doublon radical** : zéro nouveau modèle, zéro nouvelle roue. Le flow
+  OAuth réel mais orphelin d'UI (`oauth-integrations` — state HMAC, AES-GCM,
+  routes start/callback) est étendu (providers `x` PKCE + `tiktok` client_key,
+  branche `?social=1&strategyId=`) et branche ENFIN le modèle dormant
+  `SocialConnection` (zéro écrivain jusqu'ici) ; la ventilation réutilise
+  `FollowerSnapshot` → suivi communauté existant.
+- **3 Intent kinds ANUBIS** (`ANUBIS_SOCIAL_CONNECT_ACCOUNT` dispatché Mestor
+  depuis le callback · `_DISCONNECT_ACCOUNT` · `_SYNC_FOLLOWERS` en
+  `governedProcedure`) + SLOs + payload typé + case commandant. Tokens
+  **chiffrés AVANT l'émission** — jamais un secret en clair dans
+  l'IntentEmission hash-chaînée. Sync = contract P22-1 (LIVE/DEGRADED/DEFERRED,
+  refresh transparent google/x/tiktok, status ERROR sur AUTH_REVOKED).
+- **Dashboard cockpit** (vocabulaire client ADR-0123, tokens DS 4 tiers) :
+  carte Identité affiche le **logo du coffre** (`LOGO_FINAL`→`LOGO_IDEA` via
+  `getBrandIdentity`) + inventaire actifs + CTA d'upload ; panel **« Mes
+  réseaux »** 6 plateformes états honnêtes (Connecté / Connecter / « Bientôt
+  disponible » sans env creds / Reconnexion requise) + relevés étiquetés
+  manuel/auto + ConfirmDialog de déconnexion ; panel **« Veille & actualités »**
+  — le digest RSS (pays×secteur) expose désormais ses **articles réels**
+  (`items[]` additif max 12, mode RSS seul — le fallback LLM n'invente jamais
+  d'URL) via `getMarketFeed`, thèmes + fraîcheur + EmptyStates honnêtes.
+- **Seed Motion19** (`npm run db:seed:motion19`, exécuté vert sur PG local) :
+  MOTION 19 SARL (équipement audiovisuel, Akwa Douala) — ADVE complet depuis
+  SOURCES PUBLIQUES (catalogue Shopify 373 produits/157 collections, RDAP,
+  DataReportal 2026), piliers `DRAFT` + **fieldCertainty INFERRED sur tous les
+  jugements** (doctrine needsHuman — l'opérateur valide → DECLARED), zéro
+  traction inventée, relevés d'audience publics (FB 4 252 · IG 1 753 · TikTok
+  1 308, source MANUAL), logo officiel au coffre (ACTIVE), score structurel
+  calculé 160/200, `marketScale`/`addressableAudience`/`brandFoundedYear`
+  laissés à DÉCLARER (ADR-0126).
+- Env documentés (`.env.example`) : `GOOGLE/META/LINKEDIN/X/TIKTOK_OAUTH_CLIENT_ID/SECRET`
+  (redirect URI unique `/api/integrations/oauth/<provider>/callback`).
+  PROPAGATION-MAP : entrée **A13** (réseaux de la marque → telemetry seulement,
+  jamais piliers). Intent kinds au registre : **551** (recompte 2026-07-12).
+  Restes tracés RESIDUAL-DEBT §ADR-0128 (sync SocialPost app-review-gated,
+  LinkedIn org, cron de sync, supervision console).
+
 ## v6.27.104 — feat(newsletter): envoi email RÉEL par marque via Brevo (BrandEmailConnector, Vault par-marque) (2026-07-12)
 
 `newslettersSend` **simulait** l'envoi (rows `crmMessage` marquées SENT sans

@@ -280,6 +280,24 @@ export async function execute(intent: Intent): Promise<IntentResult> {
         return wrap({ ...base, status: "OK", summary: `OAuth poll for ${intent.serverName}`, output: out });
       }
 
+      // ── Anubis réseaux de la marque — founder OAuth (ADR-0128) ─────
+      case "ANUBIS_SOCIAL_CONNECT_ACCOUNT": {
+        const { connectSocialAccounts } = await import("@/server/services/anubis/social-connect");
+        const out = await connectSocialAccounts({
+          strategyId: intent.strategyId,
+          userId: intent.userId,
+          provider: intent.provider,
+          accounts: intent.accounts,
+          scopes: intent.scopes,
+        });
+        return wrap({
+          ...base,
+          status: "OK",
+          summary: `Réseaux connectés (${intent.provider}) : ${out.connected.map((c) => c.platform).join(", ") || "aucun"} — ${out.snapshotsCreated} relevé(s) d'audience`,
+          output: out,
+        });
+      }
+
       // ── Auto-promotion (ADR-0054) — Sprint 9 v6.18.22 ─────────────
       case "AUTO_PROMOTION_EVALUATE": {
         const { runAutoPromotion } = await import("@/server/services/auto-promotion");

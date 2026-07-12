@@ -609,4 +609,78 @@ export const socialRouter = createTRPCRouter({
         config: input.config,
       });
     }),
+
+  // ════════════════════════════════════════════════════════════════════
+  // ADR-0128 — Réseaux de la marque (connexions OAuth par le founder)
+  // ════════════════════════════════════════════════════════════════════
+
+  /**
+   * État des réseaux de la marque pour le cockpit : par plateforme —
+   * connexion (SocialConnection), dernier relevé d'audience
+   * (FollowerSnapshot toutes provenances) et disponibilité du fournisseur
+   * (env creds + clé de chiffrement). Read-only, tenant-scoped, zéro
+   * secret exposé (les tokens ne quittent JAMAIS le serveur).
+   */
+  getBrandSocialHub: protectedProcedure
+    .input(z.object({ strategyId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      await assertStrategyAccess(ctx, input.strategyId);
+      const { getBrandSocialHubData } = await import("@/server/services/anubis/social-connect");
+      return getBrandSocialHubData(input.strategyId);
+    }),
+
+  /** Déconnecte un compte social de la marque (tokens purgés, historique conservé). */
+  disconnectSocial: governedProcedure({
+    kind: "ANUBIS_SOCIAL_DISCONNECT_ACCOUNT",
+    inputSchema: z.object({
+      strategyId: z.string().min(1),
+      connectionId: z.string().min(1),
+    }),
+    caller: "social:disconnectSocial",
+  }).mutation(async ({ ctx, input }) => {
+    await assertStrategyAccess(ctx, input.strategyId);
+    const { disconnectSocialConnection } = await import("@/server/services/anubis/social-connect");
+    return disconnectSocialConnection(input.strategyId, input.connectionId);
+  }),
+
+  /**
+   * Actualise l'audience des comptes connectés de la marque (refresh token
+   * transparent + fetch par plateforme + FollowerSnapshot source=CONNECTOR).
+   * Contract P22-1 : LIVE / DEGRADED / DEFERRED — l'UI affiche l'état tel quel.
+   */
+  syncSocial: governedProcedure({
+    kind: "ANUBIS_SOCIAL_SYNC_FOLLOWERS",
+    inputSchema: z.object({ strategyId: z.string().min(1) }),
+    caller: "social:syncSocial",
+  }).mutation(async ({ ctx, input }) => {
+    await assertStrategyAccess(ctx, input.strategyId);
+    const { syncStrategySocialFollowers } = await import("@/server/services/anubis/social-connect");
+    return syncStrategySocialFollowers(input.strategyId);
+  }),
 });
+
+/**
+ * Garde d'ownership founder (parité cockpit-router) : la marque doit
+ * appartenir au user de session, sauf ADMIN ou user lié à un opérateur.
+ */
+async function assertStrategyAccess(
+  ctx: { db: typeof import("@/lib/db").db; session: { user: { id: string; role?: string | null } } },
+  strategyId: string,
+): Promise<void> {
+  const strategy = await ctx.db.strategy.findUnique({
+    where: { id: strategyId },
+    select: { id: true, userId: true },
+  });
+  if (!strategy) {
+    throw new Error("Marque introuvable");
+  }
+  if (ctx.session.user.role === "ADMIN") return;
+  if (strategy.userId === ctx.session.user.id) return;
+  const u = await ctx.db.user.findUnique({
+    where: { id: ctx.session.user.id },
+    select: { operatorId: true },
+  });
+  if (!u?.operatorId) {
+    throw new Error("Cette marque ne vous appartient pas");
+  }
+}

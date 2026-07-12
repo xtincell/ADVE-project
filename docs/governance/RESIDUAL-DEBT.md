@@ -1,5 +1,16 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
+## Réseaux de la marque — ADR-0128 (2026-07-12, NEFER)
+
+Vague [ADR-0128](adr/0128-brand-social-connections-founder-oauth.md) shippée (v6.27.105) : OAuth founder 5 providers → `SocialConnection` branché (1er écrivain de production), sync followers P22-1 → `FollowerSnapshot`, dashboard cockpit complété (logo/actifs + « Mes réseaux » + « Veille & actualités » articles réels), seed Motion19 exécuté. Restes réels (dépendances externes — pas du code refusé) :
+
+- **Sync des publications (`SocialPost`)** : likes/commentaires/reach par post exigent les app-reviews avancées des plateformes (Meta `pages_read_user_content`, X payant, TikTok display API). Le modèle existe, la boucle Signal `SOCIAL_METRICS` existe — brancher quand les apps seront approuvées. App-review-gated.
+- **Compteurs LinkedIn organisation** : exige le produit LinkedIn Community Management sur l'app OAuth — la connexion profil fonctionne, le compteur reste honnêtement `null`. Contract-gated.
+- **X free-tier** : `users/me` (profil propre) uniquement — suffisant pour les followers du compte connecté ; toute lecture élargie est payante. Documenté dans la carte (« relevé auto »).
+- **Cron de sync périodique** : aujourd'hui la sync est manuelle (bouton founder « Actualiser l'audience ») + relevé initial à la connexion. Ajouter la paire au scheduler (pattern `external-feeds` cron) quand la fréquence par tier sera tranchée (bible §11.3). Effort : ~1 session.
+- **Supervision console opérateur** : liste cross-marques des `SocialConnection` (états ERROR, tokens expirés) — surface console à poser à l'occasion (lecture seule, faible effort).
+- **Fiche Motion19** : `marketScale`/`addressableAudience`/`brandFoundedYear` à DÉCLARER par l'opérateur (hub Fondation), jugements INFERRED à valider → DECLARED, données internes (ventes, panier, marge) à brancher avant tout pilotage chiffré (cf. pilier T « non communiqué »).
+
 ## Vérité unique documentaire (2026-07-11 PM, NEFER)
 
 Purge des incohérences doctrine/code (bible 11 anchors, contextes, i18n, commentaires mensongers, comptes canoniques recalculés sur les registres : 112 routers · 115 services · 56/149 Glory tools · 94 séquences (91 DRAFT) · 28 frameworks · 546 Intent kinds). Résidu tracé :

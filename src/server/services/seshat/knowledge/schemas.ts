@@ -110,10 +110,25 @@ export const MarketStudySegmentDataSchema = ConsumerSegmentSchema.extend({
   publisher: z.string().optional(),
 });
 
+/**
+ * Article brut du flux (mode RSS uniquement — le fallback LLM n'en produit
+ * jamais : un modèle ne doit pas inventer des URLs de presse). Additif
+ * ADR-0128 : surfacé tel quel dans la veille du cockpit, à la Feedly.
+ */
+export const FeedItemSchema = z.object({
+  title: z.string(),
+  link: z.string().default(""),
+  source: z.string().optional(),
+  publishedAt: z.string().optional(),
+});
+export type FeedItem = z.infer<typeof FeedItemSchema>;
+
 export const ExternalFeedDigestDataSchema = z.object({
   macroSignals: z.array(MacroSignalSchema).default([]),
   weakSignals: z.array(WeakSignalLitelSchema).default([]),
   trendTracker: TrendTrackerExtractionSchema.optional(),
+  /** Articles réels du flux (max 12) — absent en mode LLM/legacy. */
+  items: z.array(FeedItemSchema).max(12).optional(),
   generatedAt: z.string(),
   feedSource: z.string().optional(),
 });
