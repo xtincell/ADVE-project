@@ -10,6 +10,31 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.112 — feat(anubis): collecte sociale maximale sous scopes accordés — posts riches, profils publics, provenance honnête (2026-07-12)
+
+**« La fusée devrait tout récupérer » : la boucle de lecture passe de l'échantillon au plein régime — tout ce que les APIs donnent avec les scopes actuels, rien des tiers.**
+
+- **Posts riches ×25** (au lieu de 10) : FB `permalink_url`/`full_picture`/`attachments{media_type}`,
+  IG `media_type`/`media_url`/`thumbnail_url`/`permalink`, YT lien watch + miniature. 3 colonnes
+  additives `SocialPost.mediaType/permalinkUrl/mediaUrl` (migration `20260712230000`). Le
+  « Suivi du jour » affiche le visuel réel et ouvre la publication (lien sortant).
+- **Profil public de la marque collecté et rafraîchi à chaque sync** : FB about/catégorie/site/
+  localisation, IG bio/site/volumes (`follows_count`, `media_count`), YT description/pays/vues
+  cumulées/nb vidéos, X et TikTok câblés (bio, liens, volumes — actifs dès leurs creds). Persisté
+  `SocialConnection.metadata.profile` (non-secret), `FollowerSnapshot.followingCount` enfin rempli.
+- **Le pilier E reçoit l'exact** : bloc `webPresence.connectedProfiles` (bio/site/catégorie/volumes,
+  source CONNECTOR) + fix provenance — `followerSource` reflète la vraie source (CONNECTOR|APIFY),
+  plus jamais étiqueté « APIFY » en dur.
+- **Frontière PII posée en dur (test 8)** : données DE LA MARQUE uniquement — jamais le contenu ni
+  l'identité des tiers (commentaires, abonnés, DM), jamais un appel `/insights` (scope non accordé).
+  Conforme /data-deletion + minimisation RGPD ; protège l'App Review Meta en cours.
+- **Drift schéma réparé à la source** : `StrategyCollaborator` annoté `onDelete: Cascade` (aligné
+  migration manuscrite 20260712150000) + `CampaignAction.pillarServed @default([])` — sans quoi
+  toute future migration aurait « corrigé » la prod vers RESTRICT/DROP DEFAULT à notre insu.
+- Gated (RESIDUAL-DEBT §ADR-0128) : reach/impressions/saves par post = `read_insights` +
+  `instagram_manage_insights` (2ᵉ App Review), YT Analytics (scope dédié), LinkedIn produit CM,
+  X payant, TikTok `video.list` + client secret.
+
 ## v6.27.111 — fix(cockpit): le logo enfin visible — kind d'upload réparé, seed en un clic, doctrine domaines corrigée, ADVERTIS Xtincell sourcé (2026-07-12)
 
 **Réponse à « il te manque quoi ? » : trois chaînons réels, tous fermés.**

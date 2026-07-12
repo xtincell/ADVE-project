@@ -97,6 +97,17 @@ describe("encryptDiscoveredAccounts", () => {
     accountName: "Motion19",
     handle: "motion19store",
     followerCount: 4252,
+    followingCount: null,
+    profile: {
+      bio: "Équipement audiovisuel à Douala",
+      website: "https://motion19.com",
+      category: "Retail",
+      location: "Douala, Cameroon",
+      followingCount: null,
+      mediaCount: null,
+      totalViews: null,
+      pictureUrl: null,
+    },
     tokens: { access_token: "SECRET-PAGE-TOKEN-XYZ", refresh_token: null, obtainedAt: 1, expiresAt: null },
   };
 

@@ -2168,7 +2168,7 @@ model CampaignAction {
   // Phase 19 Vague 3 — Campaign tracker (ADR-0052 Cluster H — Negative space audit).
   // PostgreSQL native String[] — pillars ADVERTIS servis par cette action.
   // Audit "obligations brand non-couvertes" croise avec Manifesto.beliefs[] obligations.
-  pillarServed String[] // ["A", "D", "V", "E", "R", "T", "I", "S"] subset
+  pillarServed String[] @default([]) // ["A","D","V","E","R","T","I","S"] subset — default aligné migration 20260506000000
 
   // Phase 23 (ADR-0078) — Manual-first Overton delta mode (FR26 peer to FR13).
   // When non-null, culture.overtonShift consumes this operator-tagged delta
@@ -2417,8 +2417,12 @@ model StrategyCollaborator {
   revokedAt  DateTime?
   note       String?
 
-  strategy  Strategy @relation(fields: [strategyId], references: [id])
-  user      User     @relation("StrategyCollaboratorUser", fields: [userId], references: [id])
+  // onDelete aligné sur la migration manuscrite 20260712150000 (CASCADE) :
+  // les lignes de délégation sont des lignes de jointure — elles suivent la
+  // marque/le compte supprimé. Sans l'annotation, Prisma tenterait de
+  // « corriger » la prod vers RESTRICT à la prochaine migration.
+  strategy  Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  user      User     @relation("StrategyCollaboratorUser", fields: [userId], references: [id], onDelete: Cascade)
   grantedBy User?    @relation("StrategyCollaboratorGrantedBy", fields: [grantedByUserId], references: [id])
 
   createdAt DateTime @default(now())
@@ -2959,6 +2963,12 @@ model SocialPost {
   engagementRate Float?
   sentiment      Float?
   pillarTags     Json?
+  /// Type de média rapporté par la plateforme (IMAGE / VIDEO / CAROUSEL_ALBUM…).
+  mediaType      String?
+  /// Lien public vers la publication chez la plateforme (permalink).
+  permalinkUrl   String?
+  /// Visuel de la publication (image ou miniature) fourni par la plateforme.
+  mediaUrl       String?
 
   connection SocialConnection @relation(fields: [connectionId], references: [id])
   strategy   Strategy         @relation(fields: [strategyId], references: [id])

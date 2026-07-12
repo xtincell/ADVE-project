@@ -16,6 +16,11 @@
  *     token expiré/révoqué → DEGRADED AUTH_REVOKED + statut ERROR sur la ligne.
  *   - La collecte écrit des `FollowerSnapshot` source="CONNECTOR" — le
  *     community-dashboard et `getConnectedSources` les ventilent déjà.
+ *   - Périmètre de collecte = MAXIMAL sous les scopes accordés, mais données
+ *     DE LA MARQUE uniquement (ses pages, ses publications, ses métriques,
+ *     son profil public). JAMAIS le contenu ni l'identité des tiers
+ *     (commentaires, abonnés, DM) — engagement publié sur /data-deletion +
+ *     minimisation RGPD ; l'ingérer torpillerait aussi l'App Review Meta.
  */
 
 import type { Prisma, SocialPlatform } from "@prisma/client";
@@ -71,6 +76,30 @@ export interface SocialTokenPayload {
   expiresAt?: number | null;
 }
 
+/**
+ * Profil public DE LA MARQUE tel que la plateforme le publie — alimente le
+ * pilier E (empreinte publique) et le dashboard. Tout est nullable : une
+ * plateforme qui ne fournit pas un champ = null, jamais une valeur fabriquée.
+ */
+export interface AccountProfile {
+  /** Bio / à-propos publié par la marque (FB about, IG biography, YT description…). */
+  bio: string | null;
+  /** Site web déclaré sur le profil. */
+  website: string | null;
+  /** Catégorie déclarée (FB Page category). */
+  category: string | null;
+  /** Localisation publiée (ville, pays) quand la plateforme l'expose. */
+  location: string | null;
+  /** Comptes suivis par la marque. */
+  followingCount: number | null;
+  /** Nombre de publications/médias/vidéos publiés. */
+  mediaCount: number | null;
+  /** Vues cumulées de la chaîne/du compte (YT viewCount, TikTok likes_count). */
+  totalViews: number | null;
+  /** Avatar/photo de profil publié. */
+  pictureUrl: string | null;
+}
+
 /** Compte découvert chez le provider juste après l'échange OAuth. */
 export interface DiscoveredSocialAccount {
   platform: "FACEBOOK" | "INSTAGRAM" | "YOUTUBE" | "LINKEDIN" | "TWITTER" | "TIKTOK";
@@ -78,6 +107,8 @@ export interface DiscoveredSocialAccount {
   accountName: string;
   handle: string | null;
   followerCount: number | null;
+  followingCount: number | null;
+  profile: AccountProfile | null;
   tokens: SocialTokenPayload;
 }
 
@@ -88,6 +119,9 @@ export interface EncryptedSocialAccount {
   accountName: string;
   handle: string | null;
   followerCount: number | null;
+  followingCount: number | null;
+  /** Profil public de la marque — non-secret, voyage en clair dans l'Intent. */
+  profile: AccountProfile | null;
   encryptedTokens: string;
   tokenExpiresAt: string | null;
 }
@@ -121,9 +155,35 @@ export function encryptDiscoveredAccounts(
     accountName: a.accountName,
     handle: a.handle,
     followerCount: a.followerCount,
+    followingCount: a.followingCount,
+    profile: a.profile,
     encryptedTokens: encryptTokenPayload(a.tokens),
     tokenExpiresAt: a.tokens.expiresAt ? new Date(a.tokens.expiresAt).toISOString() : null,
   }));
+}
+
+/** Normalise un profil : null si la plateforme n'a rien fourni du tout. */
+function toProfile(p: Partial<AccountProfile>): AccountProfile | null {
+  const profile: AccountProfile = {
+    bio: p.bio ?? null,
+    website: p.website ?? null,
+    category: p.category ?? null,
+    location: p.location ?? null,
+    followingCount: p.followingCount ?? null,
+    mediaCount: p.mediaCount ?? null,
+    totalViews: p.totalViews ?? null,
+    pictureUrl: p.pictureUrl ?? null,
+  };
+  return Object.values(profile).every((v) => v == null) ? null : profile;
+}
+
+function asStr(v: unknown): string | null {
+  return typeof v === "string" && v.trim().length > 0 ? v : null;
+}
+
+function asNum(v: unknown): number | null {
+  const n = typeof v === "string" ? Number(v) : v;
+  return typeof n === "number" && Number.isFinite(n) ? n : null;
 }
 
 // ── Découverte de comptes par provider (fetch déterministes, tolérants) ──────
@@ -162,8 +222,15 @@ export async function discoverSocialAccounts(
   const user = baseTokens(tokens);
 
   if (config.id === "meta") {
+    // Collecte maximale sous pages_show_list + pages_read_engagement +
+    // instagram_basic : identité, audience ET profil public de chaque Page /
+    // compte IG Business (about, catégorie, site, localisation, volumes).
+    const FB_PAGE_FIELDS =
+      "id,name,username,access_token,fan_count,followers_count,about,category,website,link,location{city,country}";
+    const IG_FIELDS =
+      "instagram_business_account{id,username,name,followers_count,follows_count,media_count,biography,website,profile_picture_url}";
     const json = await jsonFetch(
-      `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,username,access_token,fan_count,followers_count,instagram_business_account%7Bid,username,followers_count%7D&limit=25&access_token=${encodeURIComponent(tokens.access_token)}`,
+      `https://graph.facebook.com/v21.0/me/accounts?fields=${encodeURIComponent(`${FB_PAGE_FIELDS},${IG_FIELDS}`)}&limit=25&access_token=${encodeURIComponent(tokens.access_token)}`,
     );
     const pages = (json?.data as Array<Record<string, unknown>> | undefined) ?? [];
     for (const page of pages) {
@@ -177,6 +244,7 @@ export async function discoverSocialAccounts(
         obtainedAt: Date.now(),
         expiresAt: null,
       };
+      const loc = (page.location ?? null) as Record<string, unknown> | null;
       accounts.push({
         platform: "FACEBOOK",
         accountId: pageId,
@@ -188,6 +256,13 @@ export async function discoverSocialAccounts(
             : typeof page.fan_count === "number"
               ? page.fan_count
               : null,
+        followingCount: null,
+        profile: toProfile({
+          bio: asStr(page.about),
+          category: asStr(page.category),
+          website: asStr(page.website) ?? asStr(page.link),
+          location: loc ? [asStr(loc.city), asStr(loc.country)].filter(Boolean).join(", ") || null : null,
+        }),
         tokens: pageTokens,
       });
       const ig = page.instagram_business_account as Record<string, unknown> | undefined;
@@ -195,14 +270,24 @@ export async function discoverSocialAccounts(
         accounts.push({
           platform: "INSTAGRAM",
           accountId: ig.id,
-          accountName: String(ig.username ?? ig.id),
+          accountName: String(ig.name ?? ig.username ?? ig.id),
           handle: typeof ig.username === "string" ? ig.username : null,
           followerCount: typeof ig.followers_count === "number" ? ig.followers_count : null,
+          followingCount: asNum(ig.follows_count),
+          profile: toProfile({
+            bio: asStr(ig.biography),
+            website: asStr(ig.website),
+            followingCount: asNum(ig.follows_count),
+            mediaCount: asNum(ig.media_count),
+            pictureUrl: asStr(ig.profile_picture_url),
+          }),
           tokens: pageTokens,
         });
       }
     }
   } else if (config.id === "google") {
+    // youtube.readonly : identité + audience + statistiques CUMULÉES de la
+    // chaîne (vues totales, nombre de vidéos) + description/pays.
     const json = await jsonFetch(
       "https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true",
       { headers: { Authorization: `Bearer ${tokens.access_token}` } },
@@ -211,6 +296,7 @@ export async function discoverSocialAccounts(
     for (const ch of items) {
       const snippet = (ch.snippet ?? {}) as Record<string, unknown>;
       const stats = (ch.statistics ?? {}) as Record<string, unknown>;
+      const thumbs = (snippet.thumbnails ?? {}) as Record<string, Record<string, unknown>>;
       const hidden = stats.hiddenSubscriberCount === true;
       accounts.push({
         platform: "YOUTUBE",
@@ -218,12 +304,20 @@ export async function discoverSocialAccounts(
         accountName: String(snippet.title ?? "Chaîne YouTube"),
         handle: typeof snippet.customUrl === "string" ? snippet.customUrl.replace(/^@/, "") : null,
         followerCount: !hidden && stats.subscriberCount != null ? Number(stats.subscriberCount) : null,
+        followingCount: null,
+        profile: toProfile({
+          bio: asStr(snippet.description),
+          location: asStr(snippet.country),
+          mediaCount: asNum(stats.videoCount),
+          totalViews: asNum(stats.viewCount),
+          pictureUrl: asStr(thumbs.medium?.url) ?? asStr(thumbs.default?.url),
+        }),
         tokens: user,
       });
     }
   } else if (config.id === "x") {
     const json = await jsonFetch(
-      "https://api.twitter.com/2/users/me?user.fields=public_metrics,username,name",
+      "https://api.twitter.com/2/users/me?user.fields=public_metrics,username,name,description,url,location,profile_image_url",
       { headers: { Authorization: `Bearer ${tokens.access_token}` } },
     );
     const data = json?.data as Record<string, unknown> | undefined;
@@ -235,12 +329,23 @@ export async function discoverSocialAccounts(
         accountName: String(data.name ?? data.username ?? data.id),
         handle: typeof data.username === "string" ? data.username : null,
         followerCount: typeof metrics.followers_count === "number" ? metrics.followers_count : null,
+        followingCount: asNum(metrics.following_count),
+        profile: toProfile({
+          bio: asStr(data.description),
+          website: asStr(data.url),
+          location: asStr(data.location),
+          followingCount: asNum(metrics.following_count),
+          mediaCount: asNum(metrics.tweet_count),
+          pictureUrl: asStr(data.profile_image_url),
+        }),
         tokens: user,
       });
     }
   } else if (config.id === "tiktok") {
+    // user.info.basic + user.info.profile + user.info.stats : tout le profil
+    // public (bio, lien profond, avatar) + volumes (vidéos, likes cumulés).
     const json = await jsonFetch(
-      "https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name,username,follower_count",
+      "https://open.tiktokapis.com/v2/user/info/?fields=open_id,union_id,display_name,username,bio_description,profile_deep_link,avatar_url,follower_count,following_count,likes_count,video_count",
       { headers: { Authorization: `Bearer ${tokens.access_token}` } },
     );
     const u = ((json?.data as Record<string, unknown> | undefined)?.user ?? null) as
@@ -253,6 +358,15 @@ export async function discoverSocialAccounts(
         accountName: String(u.display_name ?? u.username ?? "Compte TikTok"),
         handle: typeof u.username === "string" ? u.username : null,
         followerCount: typeof u.follower_count === "number" ? u.follower_count : null,
+        followingCount: asNum(u.following_count),
+        profile: toProfile({
+          bio: asStr(u.bio_description),
+          website: asStr(u.profile_deep_link),
+          followingCount: asNum(u.following_count),
+          mediaCount: asNum(u.video_count),
+          totalViews: asNum(u.likes_count),
+          pictureUrl: asStr(u.avatar_url),
+        }),
         tokens: user,
       });
     }
@@ -269,6 +383,8 @@ export async function discoverSocialAccounts(
         // Le compteur d'abonnés organisation exige le produit Community
         // Management — absent = null, jamais 0 fabriqué.
         followerCount: null,
+        followingCount: null,
+        profile: toProfile({ pictureUrl: asStr(json.picture) }),
         tokens: user,
       });
     }
@@ -311,6 +427,9 @@ export async function connectSocialAccounts(
       encrypted: true,
       connectedByUserId: input.userId,
       lastSyncAt: new Date().toISOString(),
+      // Profil public de la marque tel que publié par la plateforme —
+      // alimente pilier E + dashboard. Non-secret par construction.
+      profile: account.profile ?? null,
     };
     await db.socialConnection.upsert({
       where: {
@@ -350,6 +469,7 @@ export async function connectSocialAccounts(
           platform: account.platform as SocialPlatform,
           handle: (account.handle ?? account.accountName).replace(/^@/, ""),
           followerCount: account.followerCount,
+          followingCount: account.followingCount,
           source: "CONNECTOR",
         },
       });
@@ -434,11 +554,19 @@ export interface SyncedFollowerRow {
   followerCount: number;
 }
 
+interface FollowerFetchResult {
+  handle: string | null;
+  followerCount: number | null;
+  followingCount: number | null;
+  /** Profil public rafraîchi à chaque sync (bio/site/catégorie/volumes). */
+  profile: AccountProfile | null;
+}
+
 async function fetchFollowersForConnection(
   platform: string,
   accountId: string,
   accessToken: string,
-): Promise<{ handle: string | null; followerCount: number | null } | "AUTH" | "OUTAGE"> {
+): Promise<FollowerFetchResult | "AUTH" | "OUTAGE"> {
   const guard = async (url: string, init?: RequestInit) => {
     try {
       const res = await fetch(url, { ...init, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
@@ -452,9 +580,10 @@ async function fetchFollowersForConnection(
 
   if (platform === "FACEBOOK") {
     const json = await guard(
-      `https://graph.facebook.com/v21.0/${encodeURIComponent(accountId)}?fields=name,username,fan_count,followers_count&access_token=${encodeURIComponent(accessToken)}`,
+      `https://graph.facebook.com/v21.0/${encodeURIComponent(accountId)}?fields=${encodeURIComponent("name,username,fan_count,followers_count,about,category,website,link,location{city,country}")}&access_token=${encodeURIComponent(accessToken)}`,
     );
     if (json === "AUTH" || json === "OUTAGE") return json;
+    const loc = (json.location ?? null) as Record<string, unknown> | null;
     return {
       handle: typeof json.username === "string" ? json.username : null,
       followerCount:
@@ -463,16 +592,31 @@ async function fetchFollowersForConnection(
           : typeof json.fan_count === "number"
             ? json.fan_count
             : null,
+      followingCount: null,
+      profile: toProfile({
+        bio: asStr(json.about),
+        category: asStr(json.category),
+        website: asStr(json.website) ?? asStr(json.link),
+        location: loc ? [asStr(loc.city), asStr(loc.country)].filter(Boolean).join(", ") || null : null,
+      }),
     };
   }
   if (platform === "INSTAGRAM") {
     const json = await guard(
-      `https://graph.facebook.com/v21.0/${encodeURIComponent(accountId)}?fields=username,followers_count&access_token=${encodeURIComponent(accessToken)}`,
+      `https://graph.facebook.com/v21.0/${encodeURIComponent(accountId)}?fields=username,name,followers_count,follows_count,media_count,biography,website,profile_picture_url&access_token=${encodeURIComponent(accessToken)}`,
     );
     if (json === "AUTH" || json === "OUTAGE") return json;
     return {
       handle: typeof json.username === "string" ? json.username : null,
       followerCount: typeof json.followers_count === "number" ? json.followers_count : null,
+      followingCount: asNum(json.follows_count),
+      profile: toProfile({
+        bio: asStr(json.biography),
+        website: asStr(json.website),
+        followingCount: asNum(json.follows_count),
+        mediaCount: asNum(json.media_count),
+        pictureUrl: asStr(json.profile_picture_url),
+      }),
     };
   }
   if (platform === "YOUTUBE") {
@@ -482,20 +626,29 @@ async function fetchFollowersForConnection(
     );
     if (json === "AUTH" || json === "OUTAGE") return json;
     const ch = ((json.items as Array<Record<string, unknown>> | undefined) ?? [])[0];
-    if (!ch) return { handle: null, followerCount: null };
+    if (!ch) return { handle: null, followerCount: null, followingCount: null, profile: null };
     const snippet = (ch.snippet ?? {}) as Record<string, unknown>;
     const stats = (ch.statistics ?? {}) as Record<string, unknown>;
+    const thumbs = (snippet.thumbnails ?? {}) as Record<string, Record<string, unknown>>;
     return {
       handle: typeof snippet.customUrl === "string" ? snippet.customUrl.replace(/^@/, "") : null,
       followerCount:
         stats.hiddenSubscriberCount !== true && stats.subscriberCount != null
           ? Number(stats.subscriberCount)
           : null,
+      followingCount: null,
+      profile: toProfile({
+        bio: asStr(snippet.description),
+        location: asStr(snippet.country),
+        mediaCount: asNum(stats.videoCount),
+        totalViews: asNum(stats.viewCount),
+        pictureUrl: asStr(thumbs.medium?.url) ?? asStr(thumbs.default?.url),
+      }),
     };
   }
   if (platform === "TWITTER") {
     const json = await guard(
-      "https://api.twitter.com/2/users/me?user.fields=public_metrics,username",
+      "https://api.twitter.com/2/users/me?user.fields=public_metrics,username,description,url,location,profile_image_url",
       { headers: { Authorization: `Bearer ${accessToken}` } },
     );
     if (json === "AUTH" || json === "OUTAGE") return json;
@@ -504,11 +657,20 @@ async function fetchFollowersForConnection(
     return {
       handle: typeof data.username === "string" ? data.username : null,
       followerCount: typeof metrics.followers_count === "number" ? metrics.followers_count : null,
+      followingCount: asNum(metrics.following_count),
+      profile: toProfile({
+        bio: asStr(data.description),
+        website: asStr(data.url),
+        location: asStr(data.location),
+        followingCount: asNum(metrics.following_count),
+        mediaCount: asNum(metrics.tweet_count),
+        pictureUrl: asStr(data.profile_image_url),
+      }),
     };
   }
   if (platform === "TIKTOK") {
     const json = await guard(
-      "https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name,username,follower_count",
+      "https://open.tiktokapis.com/v2/user/info/?fields=open_id,union_id,display_name,username,bio_description,profile_deep_link,avatar_url,follower_count,following_count,likes_count,video_count",
       { headers: { Authorization: `Bearer ${accessToken}` } },
     );
     if (json === "AUTH" || json === "OUTAGE") return json;
@@ -516,10 +678,19 @@ async function fetchFollowersForConnection(
     return {
       handle: typeof u.username === "string" ? u.username : null,
       followerCount: typeof u.follower_count === "number" ? u.follower_count : null,
+      followingCount: asNum(u.following_count),
+      profile: toProfile({
+        bio: asStr(u.bio_description),
+        website: asStr(u.profile_deep_link),
+        followingCount: asNum(u.following_count),
+        mediaCount: asNum(u.video_count),
+        totalViews: asNum(u.likes_count),
+        pictureUrl: asStr(u.avatar_url),
+      }),
     };
   }
   // LINKEDIN : compteur organisation non accessible sans produit dédié.
-  return { handle: null, followerCount: null };
+  return { handle: null, followerCount: null, followingCount: null, profile: null };
 }
 
 /**
@@ -596,11 +767,13 @@ export async function syncStrategySocialFollowers(
       continue;
     }
 
+    // Profil public rafraîchi à chaque sync — on ne l'efface jamais avec un
+    // null si la plateforme a répondu partiellement.
+    const nextMeta: Record<string, unknown> = { ...meta, lastSyncAt: new Date().toISOString() };
+    if (result.profile) nextMeta.profile = result.profile;
     await db.socialConnection.update({
       where: { id: conn.id },
-      data: {
-        metadata: { ...meta, lastSyncAt: new Date().toISOString() } as Prisma.InputJsonValue,
-      },
+      data: { metadata: nextMeta as Prisma.InputJsonValue },
     });
 
     if (result.followerCount != null) {
@@ -611,6 +784,7 @@ export async function syncStrategySocialFollowers(
           platform: conn.platform,
           handle,
           followerCount: result.followerCount,
+          followingCount: result.followingCount,
           source: "CONNECTOR",
         },
       });
@@ -651,9 +825,15 @@ interface FetchedPost {
   shares: number;
   /** Vues/impressions quand la plateforme les publie (YT viewCount). */
   reach: number;
+  /** Type de média (IMAGE/VIDEO/CAROUSEL_ALBUM/…) quand publié. */
+  mediaType: string | null;
+  /** Permalink public de la publication. */
+  permalinkUrl: string | null;
+  /** Visuel (image ou miniature) publié par la plateforme. */
+  mediaUrl: string | null;
 }
 
-const POSTS_PER_SYNC = 10;
+const POSTS_PER_SYNC = 25;
 
 function toCount(v: unknown): number {
   const n = typeof v === "string" ? Number(v) : v;
@@ -678,7 +858,7 @@ async function fetchPostsForConnection(
 
   if (platform === "FACEBOOK") {
     const json = await guard(
-      `https://graph.facebook.com/v21.0/${encodeURIComponent(accountId)}/posts?fields=id,message,created_time,shares,likes.summary(true).limit(0),comments.summary(true).limit(0)&limit=${POSTS_PER_SYNC}&access_token=${encodeURIComponent(accessToken)}`,
+      `https://graph.facebook.com/v21.0/${encodeURIComponent(accountId)}/posts?fields=${encodeURIComponent("id,message,created_time,permalink_url,full_picture,attachments{media_type},shares,likes.summary(true).limit(0),comments.summary(true).limit(0)")}&limit=${POSTS_PER_SYNC}&access_token=${encodeURIComponent(accessToken)}`,
     );
     if (json === "AUTH" || json === "OUTAGE") return json;
     const items = (json.data as Array<Record<string, unknown>> | undefined) ?? [];
@@ -686,6 +866,7 @@ async function fetchPostsForConnection(
       const likes = ((p.likes as Record<string, unknown> | undefined)?.summary ?? {}) as Record<string, unknown>;
       const comments = ((p.comments as Record<string, unknown> | undefined)?.summary ?? {}) as Record<string, unknown>;
       const shares = (p.shares ?? {}) as Record<string, unknown>;
+      const att = (((p.attachments as Record<string, unknown> | undefined)?.data ?? []) as Array<Record<string, unknown>>)[0];
       return {
         externalPostId: String(p.id ?? ""),
         content: typeof p.message === "string" ? p.message.slice(0, 500) : null,
@@ -694,13 +875,16 @@ async function fetchPostsForConnection(
         comments: toCount(comments.total_count),
         shares: toCount(shares.count),
         reach: 0,
+        mediaType: att && typeof att.media_type === "string" ? att.media_type.toUpperCase() : null,
+        permalinkUrl: asStr(p.permalink_url),
+        mediaUrl: asStr(p.full_picture),
       };
     }).filter((p) => p.externalPostId);
   }
 
   if (platform === "INSTAGRAM") {
     const json = await guard(
-      `https://graph.facebook.com/v21.0/${encodeURIComponent(accountId)}/media?fields=id,caption,timestamp,like_count,comments_count&limit=${POSTS_PER_SYNC}&access_token=${encodeURIComponent(accessToken)}`,
+      `https://graph.facebook.com/v21.0/${encodeURIComponent(accountId)}/media?fields=id,caption,timestamp,like_count,comments_count,media_type,media_url,thumbnail_url,permalink&limit=${POSTS_PER_SYNC}&access_token=${encodeURIComponent(accessToken)}`,
     );
     if (json === "AUTH" || json === "OUTAGE") return json;
     const items = (json.data as Array<Record<string, unknown>> | undefined) ?? [];
@@ -712,6 +896,10 @@ async function fetchPostsForConnection(
       comments: toCount(m.comments_count),
       shares: 0,
       reach: 0,
+      mediaType: asStr(m.media_type),
+      permalinkUrl: asStr(m.permalink),
+      // media_url absent sur certaines vidéos (droits musique) → miniature.
+      mediaUrl: asStr(m.media_url) ?? asStr(m.thumbnail_url),
     })).filter((p) => p.externalPostId);
   }
 
@@ -744,14 +932,19 @@ async function fetchPostsForConnection(
     return (((vids.items as Array<Record<string, unknown>> | undefined) ?? []).map((v) => {
       const sn = (v.snippet ?? {}) as Record<string, unknown>;
       const st = (v.statistics ?? {}) as Record<string, unknown>;
+      const th = (sn.thumbnails ?? {}) as Record<string, Record<string, unknown>>;
+      const id = String(v.id ?? "");
       return {
-        externalPostId: String(v.id ?? ""),
+        externalPostId: id,
         content: typeof sn.title === "string" ? sn.title.slice(0, 500) : null,
         publishedAt: typeof sn.publishedAt === "string" ? sn.publishedAt : null,
         likes: toCount(st.likeCount),
         comments: toCount(st.commentCount),
         shares: 0,
         reach: toCount(st.viewCount),
+        mediaType: "VIDEO",
+        permalinkUrl: id ? `https://www.youtube.com/watch?v=${id}` : null,
+        mediaUrl: asStr(th.medium?.url) ?? asStr(th.default?.url),
       };
     })).filter((p) => p.externalPostId);
   }
@@ -846,6 +1039,9 @@ export async function syncStrategySocialPosts(
           shares: p.shares,
           reach: p.reach,
           engagementRate: followers && followers > 0 ? engagement / followers : null,
+          mediaType: p.mediaType,
+          permalinkUrl: p.permalinkUrl,
+          mediaUrl: p.mediaUrl,
         },
         create: {
           connectionId: conn.id,
@@ -858,6 +1054,9 @@ export async function syncStrategySocialPosts(
           shares: p.shares,
           reach: p.reach,
           engagementRate: followers && followers > 0 ? engagement / followers : null,
+          mediaType: p.mediaType,
+          permalinkUrl: p.permalinkUrl,
+          mediaUrl: p.mediaUrl,
         },
       });
       upserted++;

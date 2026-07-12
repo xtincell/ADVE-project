@@ -178,8 +178,24 @@ export function OperationsDashboard({ strategyId }: { strategyId: string }) {
           <div className="ck-ops__list">
             {data.posts.top.map((p) => (
               <div className="ck-ops__row" key={p.id}>
+                {p.mediaUrl ? (
+                  // Visuel réel publié par la plateforme (miniature/photo).
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img className="ck-ops__thumb" src={p.mediaUrl} alt="" loading="lazy" />
+                ) : null}
                 <span className="ck-ops__row-date">{PLATFORM_LABELS[p.platform] ?? p.platform}</span>
-                <span className="ck-ops__row-title">{p.content ?? "(sans texte)"}</span>
+                {p.permalinkUrl ? (
+                  <a
+                    className="ck-ops__row-title ck-ops__row-link"
+                    href={p.permalinkUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {p.content ?? "(sans texte)"}
+                  </a>
+                ) : (
+                  <span className="ck-ops__row-title">{p.content ?? "(sans texte)"}</span>
+                )}
                 <span className="ck-ops__split-val">
                   {fmtCount(p.engagement)} interactions{p.reach > 0 ? ` · ${fmtCount(p.reach)} vues` : ""}
                 </span>

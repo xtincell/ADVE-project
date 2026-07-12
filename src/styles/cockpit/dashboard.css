@@ -248,6 +248,10 @@ a.ck-feed__item:hover { background: var(--surface-raised); }
 .ck-ops__row-chip { flex: none; font-family: var(--font-mono); font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 2px 7px; border-radius: var(--radius-pill); }
 .ck-ops__row-chip[data-k="next"] { background: var(--accent-fill); color: var(--accent); }
 .ck-ops__row-chip[data-k="done"] { background: color-mix(in srgb, var(--success) 14%, transparent); color: var(--success); }
+/* Visuel réel de la publication (miniature plateforme, collecte élargie) */
+.ck-ops__thumb { flex: none; width: 34px; height: 34px; border-radius: var(--radius-sm); object-fit: cover; background: var(--surface-sunken); }
+.ck-ops__row-link { text-decoration: none; }
+.ck-ops__row-link:hover { color: var(--accent); text-decoration: underline; }
 
 /* Chip lecture seule (accès collaborateur par zone, ADR-0131) */
 .ck-readonly-chip { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 3px 9px; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--warning) 12%, transparent); color: var(--warning); }

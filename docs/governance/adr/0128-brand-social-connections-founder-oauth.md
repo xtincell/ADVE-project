@@ -1,6 +1,6 @@
 # ADR-0128 — Réseaux de la marque : connexions OAuth par le founder (SocialConnection branché)
 
-- **Status** : Accepted
+- **Status** : Accepted · **Amended 2026-07-12 (nuit)** — mandat « la fusée devrait tout récupérer » : collecte portée au MAXIMUM des scopes accordés (v6.27.112). Posts riches ×25 (permalink/visuel/type de média — colonnes additives `SocialPost.mediaType/permalinkUrl/mediaUrl`), profil public de la marque collecté à la connexion ET rafraîchi à chaque sync (`SocialConnection.metadata.profile` : bio/site/catégorie/localisation/volumes ; `FollowerSnapshot.followingCount` rempli), pilier E enrichi (`webPresence.connectedProfiles` + provenance `followerSource` honnête CONNECTOR|APIFY). **Frontière PII inchangée et testée en dur** : données DE LA MARQUE uniquement — jamais contenu/identité des tiers (commentaires, abonnés, DM), jamais `/insights` sans le scope. Le reste est credential/review-gated (RESIDUAL-DEBT §ADR-0128).
 - **Date** : 2026-07-12
 - **Phase** : post-Phase 23 (dashboard cockpit — demande opérateur « connecter leurs réseaux eux-mêmes, comme Sprout Social »)
 - **Depends on** : ADR-0021 (Credentials Vault), ADR-0060 (manual-first parity), ADR-0123 (vocabulaire client), ADR-0124 (spine d'émission), ADR-0126 (échelle déclarée)

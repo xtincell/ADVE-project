@@ -538,6 +538,9 @@ export type Intent =
         accountName: string;
         handle: string | null;
         followerCount: number | null;
+        followingCount: number | null;
+        /** Profil public de la marque (bio/site/catégorie/volumes) — non-secret. */
+        profile: import("@/server/services/anubis/social-connect").AccountProfile | null;
         encryptedTokens: string;
         tokenExpiresAt: string | null;
       }>;

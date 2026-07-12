@@ -115,7 +115,7 @@ Ces correspondances évitent la réinvention :
 - **VariableHistory** (8 fields)
 - **ScoreSnapshot** (8 fields)
 - **SocialConnection** (16 fields)
-- **SocialPost** (17 fields)
+- **SocialPost** (20 fields)
 - **MediaPlatformConnection** (11 fields)
 - **MediaPerformanceSync** (15 fields)
 - **PressRelease** (12 fields)
