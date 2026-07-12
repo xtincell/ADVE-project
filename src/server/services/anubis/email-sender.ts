@@ -21,8 +21,10 @@ export interface SendEmailInput {
   headers?: Record<string, string>;
 }
 
+export type EmailProviderName = "RESEND" | "MAILGUN" | "SENDGRID" | "BREVO";
+
 export type SendEmailResult =
-  | { ok: true; provider: "RESEND" | "MAILGUN" | "SENDGRID"; providerRef: string | null }
+  | { ok: true; provider: EmailProviderName; providerRef: string | null }
   | { ok: false; provider: string | null; error: string; deferred?: boolean };
 
 const TIMEOUT_MS = 10_000;
@@ -118,6 +120,42 @@ function parseSender(sender: string): { email: string; name?: string } {
 }
 
 /**
+ * Brevo (ex-Sendinblue) transactional — POST api.brevo.com/v3/smtp/email,
+ * header `api-key`. Exporté (avec la clé en argument) pour l'envoi PAR MARQUE
+ * (BrandEmailConnector, clé du compte du client) autant que pour la cascade
+ * système (env `BREVO_API_KEY`). N'accepte QUE le sender passé — le sender doit
+ * être vérifié côté Brevo, sinon l'API refuse (échec explicite, pas simulé).
+ */
+export async function sendViaBrevo(
+  input: SendEmailInput,
+  sender: string,
+  apiKey: string,
+): Promise<SendEmailResult> {
+  const { email, name } = parseSender(sender);
+  const res = await timedFetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "api-key": apiKey,
+      "Content-Type": "application/json",
+      accept: "application/json",
+    },
+    body: JSON.stringify({
+      sender: name ? { email, name } : { email },
+      to: [{ email: input.to }],
+      subject: input.subject,
+      htmlContent: input.html,
+      ...(input.text ? { textContent: input.text } : {}),
+      ...(input.headers ? { headers: input.headers } : {}),
+    }),
+  });
+  const data = (await res.json().catch(() => ({}))) as { messageId?: string; message?: string };
+  if (!res.ok) {
+    return { ok: false, provider: "BREVO", error: `Brevo ${res.status}: ${data.message ?? "refusé"}` };
+  }
+  return { ok: true, provider: "BREVO", providerRef: data.messageId ?? null };
+}
+
+/**
  * Envoie un email via le premier provider configuré ; bascule sur le suivant
  * en cas d'échec. DEFERRED explicite si aucun provider n'est armé.
  */
@@ -131,6 +169,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
     { enabled: Boolean(process.env.RESEND_API_KEY), fn: () => viaResend(input, sender) },
     { enabled: Boolean(process.env.MAILGUN_API_KEY && process.env.MAILGUN_DOMAIN), fn: () => viaMailgun(input, sender) },
     { enabled: Boolean(process.env.SENDGRID_API_KEY), fn: () => viaSendgrid(input, sender) },
+    { enabled: Boolean(process.env.BREVO_API_KEY), fn: () => sendViaBrevo(input, sender, process.env.BREVO_API_KEY!) },
   ];
 
   const armed = chain.filter((c) => c.enabled);
@@ -139,7 +178,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
       ok: false,
       provider: null,
       deferred: true,
-      error: "DEFERRED_AWAITING_CREDENTIALS: aucun provider email configuré (RESEND_API_KEY | MAILGUN_API_KEY+MAILGUN_DOMAIN | SENDGRID_API_KEY).",
+      error: "DEFERRED_AWAITING_CREDENTIALS: aucun provider email configuré (RESEND_API_KEY | MAILGUN_API_KEY+MAILGUN_DOMAIN | SENDGRID_API_KEY | BREVO_API_KEY).",
     };
   }
 

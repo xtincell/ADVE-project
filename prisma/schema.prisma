@@ -825,6 +825,12 @@ model Strategy {
   // (insight/opportunité/envie) croisées avec l'ADVE → brief validé → projets.
   intentions Intention[]
 
+  // Newsletter — connecteur email PAR MARQUE (clé du propre compte du client,
+  // ex: Brevo). Pattern Vault ADR-0021 (clé en DB, jamais en dur/env, jamais
+  // renvoyée au client). Distinct de l'email SYSTÈME (email-sender.ts, env,
+  // ADR-0075) : la clé de la marque n'envoie QUE ses propres newsletters.
+  emailConnector BrandEmailConnector?
+
   // v4 — LLM budget governance
   llmBudget       Float? // Monthly USD cap for LLM calls on this strategy
   llmBudgetAlerts Json? // { "75": false, "90": false, "100": false }
@@ -4405,6 +4411,30 @@ model ExternalConnector {
   updatedAt DateTime @updatedAt
 
   @@unique([operatorId, connectorType])
+  @@index([status])
+}
+
+// Connecteur email PAR MARQUE — la marque envoie ses newsletters via SON PROPRE
+// compte fournisseur (ex: Brevo), sender vérifié chez le fournisseur. Pattern
+// Vault (ADR-0021) : la clé vit en DB (jamais en dur/env, jamais renvoyée au
+// client tRPC), scopée à la Strategy → la clé d'une marque n'envoie QUE ses
+// propres newsletters (multi-tenant). Distinct de l'email SYSTÈME transactionnel
+// (email-sender.ts, clés en env, ADR-0075).
+model BrandEmailConnector {
+  id         String    @id @default(cuid())
+  strategyId String    @unique
+  provider   String    @default("BREVO") // BREVO (extensible : RESEND, MAILGUN…)
+  apiKey     String // clé du compte du client — Vault ADR-0021 (DB, jamais exposée)
+  fromEmail  String // sender vérifié chez le fournisseur (ex: spawt.ci@gmail.com)
+  fromName   String?
+  status     String    @default("INACTIVE") // ACTIVE | INACTIVE | ERROR
+  lastTestAt DateTime?
+  lastError  String? // dernière raison d'échec de test/envoi (diagnostic opérateur)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  strategy Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+
   @@index([status])
 }
 

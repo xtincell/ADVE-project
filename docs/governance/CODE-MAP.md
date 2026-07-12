@@ -32,7 +32,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 203 models, 71 enums
+## Prisma — 204 models, 71 enums
 
 ### Models
 
@@ -43,7 +43,7 @@ Ces correspondances évitent la réinvention :
 - **Operator** (30 fields)
 - **ClientAllocation** (14 fields)
 - **Client** (17 fields)
-- **Strategy** (73 fields)
+- **Strategy** (74 fields)
 - **Intention** (14 fields)
 - **Campaign** (80 fields)
 - **Mission** (35 fields)
@@ -190,6 +190,7 @@ Ces correspondances évitent la réinvention :
 - **JehutyCuration** (9 fields)
 - **PromptVersion** (8 fields)
 - **ExternalConnector** (13 fields)
+- **BrandEmailConnector** (12 fields)
 - **IntentEmission** (20 fields)
 - **IntentEmissionEvent** (10 fields)
 - **IntentQueue** (10 fields)
