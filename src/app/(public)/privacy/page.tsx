@@ -36,6 +36,14 @@ export default function PrivacyPage() {
             <li>Marque : URL, réseaux sociaux, brief PDF, contenu fourni au diagnostic.</li>
             <li>Usage : pages consultées, actions OS (audit trail IntentEmission gouvernance).</li>
             <li>Paiement : opéré par prestataires tiers (Stripe / mobile-money) — La Fusée ne stocke pas les numéros de carte.</li>
+            <li>
+              Réseaux connectés : statistiques et publications des comptes de la marque (jetons chiffrés
+              AES-256-GCM), et — quand la marque active sa boîte de réception — les <strong>interactions
+              publiques adressées à la marque</strong> (commentaires : texte, nom/pseudo public de
+              l&apos;auteur, horodatage) afin de les afficher et d&apos;y répondre. La marque est responsable de
+              ce traitement, La Fusée agit en sous-traitant (<Link href="/dpa" className="text-accent hover:underline">DPA</Link>).
+              Jamais de mots de passe sociaux, jamais de contenu privé non adressé à la marque.
+            </li>
           </ul>
         </div>
 

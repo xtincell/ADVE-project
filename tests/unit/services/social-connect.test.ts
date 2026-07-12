@@ -67,11 +67,15 @@ describe("PROVIDER_FOR_PLATFORM", () => {
   });
 });
 
-// ── (2) Scopes lecture-audience uniquement ───────────────────────────────────
+// ── (2) Scopes de pilotage (ADR-0133) — bornés, jamais publicitaires ─────────
 
 describe("SOCIAL_SCOPES", () => {
-  it("ne demande JAMAIS de scope publicitaire ou d'écriture", () => {
-    const forbidden = [/ads/i, /publish/i, /write/i, /manage_posts/i, /video.upload/i];
+  it("ne demande JAMAIS de scope publicitaire, de messagerie privée ni d'upload vidéo", () => {
+    // Mandat « rival Sprout » : les scopes de PILOTAGE (publier, répondre,
+    // mesurer) sont désormais canon. Restent interdits : la pub (ads), les
+    // DM (messaging — vague ultérieure, consentement dédié) et l'upload
+    // vidéo YouTube (audit).
+    const forbidden = [/ads/i, /messaging/i, /manage_messages/i, /video.upload/i, /youtube.upload/i];
     for (const provider of BRAND_SOCIAL_PROVIDERS) {
       for (const scope of SOCIAL_SCOPES[provider]) {
         for (const pattern of forbidden) {
@@ -79,6 +83,21 @@ describe("SOCIAL_SCOPES", () => {
         }
       }
     }
+  });
+
+  it("porte les scopes de pilotage attendus (publier / répondre / mesurer)", () => {
+    for (const s of [
+      "pages_manage_posts",
+      "pages_manage_engagement",
+      "read_insights",
+      "instagram_content_publish",
+      "instagram_manage_comments",
+      "instagram_manage_insights",
+    ]) {
+      expect(SOCIAL_SCOPES.meta).toContain(s);
+    }
+    expect(SOCIAL_SCOPES.linkedin).toContain("w_member_social");
+    expect(SOCIAL_SCOPES.google.join(" ")).toContain("yt-analytics.readonly");
   });
 
   it("couvre chaque provider de la liste", () => {

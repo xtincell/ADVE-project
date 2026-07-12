@@ -32,7 +32,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 205 models, 71 enums
+## Prisma — 206 models, 71 enums
 
 ### Models
 
@@ -43,7 +43,7 @@ Ces correspondances évitent la réinvention :
 - **Operator** (30 fields)
 - **ClientAllocation** (14 fields)
 - **Client** (17 fields)
-- **Strategy** (76 fields)
+- **Strategy** (77 fields)
 - **Intention** (14 fields)
 - **Campaign** (80 fields)
 - **Mission** (35 fields)
@@ -114,8 +114,9 @@ Ces correspondances évitent la réinvention :
 - **BrandVariable** (9 fields)
 - **VariableHistory** (8 fields)
 - **ScoreSnapshot** (8 fields)
-- **SocialConnection** (16 fields)
-- **SocialPost** (20 fields)
+- **SocialConnection** (17 fields)
+- **SocialPost** (21 fields)
+- **SocialInboxItem** (23 fields) — Interaction d'un TIERS adressée à la marque sur un réseau connecté — l'unité de l'Inbox unifiée (doctrine « rival Sprout
 - **MediaPlatformConnection** (11 fields)
 - **MediaPerformanceSync** (15 fields)
 - **PressRelease** (12 fields)
@@ -556,7 +557,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 259 (par deck)
+## Pages — 262 (par deck)
 
 ### Agency (12)
 
@@ -573,7 +574,7 @@ Ces correspondances évitent la réinvention :
 - `/agency/revenue`
 - `/agency/signals`
 
-### Cockpit (54)
+### Cockpit (57)
 
 - `/cockpit`
 - `/cockpit/brand/assets`
@@ -606,6 +607,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/intelligence/community`
 - `/cockpit/intelligence/market-studies`
 - `/cockpit/intelligence/overton`
+- `/cockpit/intelligence/social`
 - `/cockpit/intelligence/track`
 - `/cockpit/messages`
 - `/cockpit/mestor`
@@ -618,8 +620,10 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/operate/campaigns/[id]/tracker`
 - `/cockpit/operate/center`
 - `/cockpit/operate/forge`
+- `/cockpit/operate/inbox`
 - `/cockpit/operate/missions`
 - `/cockpit/operate/newsletter`
+- `/cockpit/operate/publish`
 - `/cockpit/operate/requests`
 - `/cockpit/operate/roadmap`
 - `/cockpit/operate/sequences`
@@ -1005,7 +1009,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 556 (par governor)
+## Intent kinds — 559 (par governor)
 
 ### MESTOR (79)
 
@@ -1532,7 +1536,7 @@ Ces correspondances évitent la réinvention :
 - `IMHOTEP_QC_DELIVERABLE` → imhotep (sync) — Route un MissionDeliverable vers QC (AUTOMATED via qc-router.automatedQc, ou ASS…
 - `IMHOTEP_RECOMMEND_FORMATION` → imhotep (sync) — Propose top 3 Courses pour combler un skill gap (filtre par pillarFocus si fourn…
 
-### ANUBIS (35)
+### ANUBIS (38)
 
 - `RECORD_FOLLOWER_SNAPSHOT` → social (sync) — Vague 7 : instantane followers/mentions par plateforme (traque unifiee — comptes…
 - `SOCIAL_AUDIT_FETCH_OFFICIAL` → social (async) — Declenche une collecte de followers via l API officielle Meta (Page/User Access …
@@ -1541,6 +1545,9 @@ Ces correspondances évitent la réinvention :
 - `ANUBIS_SOCIAL_DISCONNECT_ACCOUNT` → anubis (sync) — Déconnecte un compte social de la marque (SocialConnection.status=DISCONNECTED +…
 - `ANUBIS_SOCIAL_SYNC_FOLLOWERS` → anubis (sync) — Rafraîchit l'audience des connexions sociales ACTIVE d'une marque (refresh token…
 - `ANUBIS_SYNC_SOCIAL_POSTS` → anubis (sync) — Collecte les publications récentes des connexions sociales ACTIVE d'une marque (…
+- `ANUBIS_SYNC_INBOX` → anubis (sync) — Balaie les commentaires des publications récentes des connexions sociales ACTIVE…
+- `ANUBIS_REPLY_COMMENT` → anubis (sync) — Répond à un commentaire AU NOM de la marque (FB pages_manage_engagement, IG inst…
+- `ANUBIS_PUBLISH_SOCIAL_POST` → anubis (sync) — Publie (ou planifie via BrandAction SCHEDULED + cron — calendrier unique) un pos…
 - `ANUBIS_COMMERCE_CONNECT_SHOP` → anubis (sync) — Persiste la connexion boutique Shopify d'une marque (OAuth founder — token offli…
 - `ANUBIS_SYNC_COMMERCE` → anubis (sync) — Collecte les commandes Shopify des 7 derniers jours (nombre, CA, top produits, c…
 - `CRM_SEND_MESSAGE` → crm (sync) — Vague 10 : envoi d un message CRM transactionnel (email) a un contact — sender r…

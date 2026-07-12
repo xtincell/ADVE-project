@@ -210,6 +210,9 @@ Le founder allume des thrusters.
 | `/cockpit/operate/briefs/page.tsx` | Propulsion | M | active | Briefs sortants |
 | `/cockpit/settings/connections/page.tsx` | Comms | G | active | **Connexions** — l'onglet qui ramène tout (réseaux ADR-0128 + boutique Shopify ADR-0132, l'utilisateur autorise) |
 | `/b/[slug]/page.tsx` | Comms | G | active | **Page publique de marque** — `<slug>.powerupgraders.com` (ADR-0132, données publiques uniquement) |
+| `/cockpit/operate/inbox/page.tsx` | Comms | G | active | **Boîte de réception** — interactions des tiers adressées à la marque (ADR-0133 : commentaires FB/IG, réponse au nom de la marque, classement ; délégable zone social) |
+| `/cockpit/operate/publish/page.tsx` | Comms | G | active | **Publier** — composer multi-réseaux (ADR-0133 : FB/IG/LinkedIn, planification via calendrier unique, cibles honnêtes par état de connexion) |
+| `/cockpit/intelligence/social/page.tsx` | Telemetry | M | active | **Performance sociale** — rapport déterministe 30/90 j (ADR-0133 : totaux, par-réseau, portée mesurée seulement, top posts, inbox) |
 | `/cockpit/operate/center/page.tsx` | Operations | M | active | **Suivi du jour** — dashboard opérationnel founder (ADR-0131 : campagne du moment, tuiles réelles, communauté, réseaux, veille) + pilotage détaillé opérateur (`canOperate`) |
 | `/cockpit/operate/forge/page.tsx` | Propulsion | M | active | **Deliverable Forge** — output-first composition (Phase 17b, ADR-0050 — anciennement ADR-0037). Pointer un `BrandAsset.kind` matériel cible → DAG briefs requis + scan vault → composition PREVIEW |
 | `/cockpit/operate/campaigns/page.tsx` | Propulsion | M | active | Campagnes founder |

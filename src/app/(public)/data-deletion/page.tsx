@@ -37,8 +37,9 @@ export default function DataDeletionPage() {
           <h2 className="text-foreground text-xl font-semibold mb-3">Ce que nous conservons</h2>
           <ul className="list-disc pl-6 space-y-1.5">
             <li>Le jeton d&apos;accès délégué de chaque compte connecté — <strong>chiffré (AES-256-GCM)</strong>, jamais lisible en clair, jamais partagé.</li>
-            <li>Les relevés publics d&apos;audience (nombre d&apos;abonnés) et les métriques publiques de vos publications (mentions J&apos;aime, commentaires, vues) — pour votre tableau de bord.</li>
-            <li>Aucun mot de passe de compte social, aucun contenu privé, aucune donnée de vos abonnés.</li>
+            <li>Les relevés publics d&apos;audience (nombre d&apos;abonnés) et les métriques de vos publications (mentions J&apos;aime, commentaires, vues, portée quand vous l&apos;autorisez) — pour votre tableau de bord.</li>
+            <li>Si vous activez la boîte de réception : les <strong>commentaires publics adressés à votre marque</strong> (texte, nom/pseudo public de l&apos;auteur, horodatage) et vos réponses — pour que vous puissiez y répondre depuis l&apos;app. Vous en êtes responsable de traitement ; nous les traitons pour votre compte.</li>
+            <li>Aucun mot de passe de compte social, aucun message privé non adressé à votre marque, jamais de collecte sur les profils de vos abonnés.</li>
           </ul>
         </div>
 
@@ -48,8 +49,10 @@ export default function DataDeletionPage() {
             Dans votre cockpit, ouvrez <span className="font-mono text-foreground">Mon compte → Connexions</span>,
             puis cliquez <span className="font-mono text-foreground">Déconnecter</span> sur le réseau concerné.
             La déconnexion <strong>purge immédiatement le jeton chiffré</strong> de nos serveurs et arrête toute
-            collecte. Les relevés d&apos;audience déjà agrégés restent (statistiques historiques anonymisées au
-            compte) — pour les effacer aussi, demandez la suppression de compte ci-dessous.
+            collecte — statistiques comme boîte de réception. Les relevés d&apos;audience déjà agrégés et les
+            interactions déjà collectées restent (historique de votre marque) — pour les effacer aussi,
+            demandez la suppression de compte ci-dessous ; un auteur de commentaire peut aussi demander la
+            suppression de ses données via <a href="mailto:privacy@lafusee.upgraders.io" className="text-accent hover:underline">privacy@lafusee.upgraders.io</a>.
           </p>
         </div>
 

@@ -66,14 +66,51 @@ export const PROVIDER_FOR_PLATFORM: Record<string, BrandSocialProvider> = {
   TIKTOK: "tiktok",
 };
 
-/** Scopes lecture-audience par provider (jamais de scope d'écriture/ads ici). */
+/**
+ * Scopes par provider — mandat « tout depuis l'app » (ADR-0133) : lecture
+ * d'audience + PILOTAGE (publier, répondre, mesurer). En mode développement
+ * Meta/Google, ces scopes fonctionnent immédiatement pour les comptes
+ * testeurs ; l'App Review (soumission groupée, RESIDUAL-DEBT §ADR-0128)
+ * n'est requise que pour ouvrir au public. JAMAIS de scope publicitaire
+ * (/ads/), ni messaging (DM = vague ultérieure), ni upload vidéo YT.
+ */
 export const SOCIAL_SCOPES: Record<BrandSocialProvider, readonly string[]> = {
-  meta: ["public_profile", "pages_show_list", "pages_read_engagement", "instagram_basic"],
-  google: ["openid", "email", "https://www.googleapis.com/auth/youtube.readonly"],
-  linkedin: ["openid", "profile", "email"],
+  meta: [
+    "public_profile",
+    "pages_show_list",
+    "pages_read_engagement",
+    "instagram_basic",
+    "pages_manage_posts",
+    "pages_manage_engagement",
+    "read_insights",
+    "instagram_content_publish",
+    "instagram_manage_comments",
+    "instagram_manage_insights",
+  ],
+  google: [
+    "openid",
+    "email",
+    "https://www.googleapis.com/auth/youtube.readonly",
+    "https://www.googleapis.com/auth/yt-analytics.readonly",
+  ],
+  linkedin: ["openid", "profile", "email", "w_member_social"],
   x: ["tweet.read", "users.read", "offline.access"],
   tiktok: ["user.info.basic", "user.info.profile", "user.info.stats"],
 };
+
+/**
+ * True ssi la connexion stockée porte déjà tous les scopes courants du
+ * provider — sinon l'UI propose « Reconnecter » pour activer les nouvelles
+ * capacités (publier/répondre/mesurer) sans jamais casser l'existant.
+ */
+export function hasAllCurrentScopes(
+  provider: BrandSocialProvider,
+  storedScopes: unknown,
+): boolean {
+  if (!Array.isArray(storedScopes)) return false;
+  const stored = new Set(storedScopes.map((s) => String(s).toLowerCase()));
+  return SOCIAL_SCOPES[provider].every((s) => stored.has(s.toLowerCase()));
+}
 
 /** Payload de tokens tel que chiffré dans `SocialConnection.accessToken`. */
 export interface SocialTokenPayload {
@@ -1094,6 +1131,8 @@ export interface BrandSocialHubRow {
   followerCapturedAt: string | null;
   lastSyncAt: string | null;
   connectionId: string | null;
+  /** true = la connexion date d'avant les scopes de pilotage → « Reconnecter ». */
+  scopesOutdated: boolean;
 }
 
 export async function getBrandSocialHubData(strategyId: string): Promise<{
@@ -1154,6 +1193,8 @@ export async function getBrandSocialHubData(strategyId: string): Promise<{
         followerCapturedAt: snap?.capturedAt.toISOString() ?? null,
         lastSyncAt: typeof meta.lastSyncAt === "string" ? meta.lastSyncAt : null,
         connectionId: conn?.id ?? null,
+        scopesOutdated:
+          state === "CONNECTED" && !hasAllCurrentScopes(provider, meta.scopes),
       };
     },
   );

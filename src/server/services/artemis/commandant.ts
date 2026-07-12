@@ -314,6 +314,32 @@ export async function execute(intent: Intent): Promise<IntentResult> {
         });
       }
 
+      case "ANUBIS_PUBLISH_SOCIAL_POST": {
+        // Chemin cron des publications planifiées (échéance calendrier) —
+        // le chemin interactif passe par governedProcedure côté router.
+        const { publishSocialPost } = await import("@/server/services/anubis/social-publish");
+        const out = await publishSocialPost({
+          strategyId: intent.strategyId,
+          userId: intent.userId,
+          targets: intent.targets,
+          text: intent.text,
+          linkUrl: intent.linkUrl ?? null,
+          imageUrl: intent.imageUrl ?? null,
+          scheduleAt: intent.scheduleAt ?? null,
+          brandActionId: intent.brandActionId ?? null,
+        });
+        const okCount = out.results.filter((r) => r.state === "PUBLISHED").length;
+        return wrap({
+          ...base,
+          status: "OK",
+          summary:
+            out.mode === "SCHEDULED"
+              ? `Publication planifiée (action ${out.brandActionId})`
+              : `Publication : ${okCount}/${out.results.length} plateforme(s) OK`,
+          output: out,
+        });
+      }
+
       // ── Auto-promotion (ADR-0054) — Sprint 9 v6.18.22 ─────────────
       case "AUTO_PROMOTION_EVALUATE": {
         const { runAutoPromotion } = await import("@/server/services/auto-promotion");

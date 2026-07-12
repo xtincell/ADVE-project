@@ -10,6 +10,34 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.113 — feat(anubis): suite sociale pilotable v1 — inbox, publication, statistiques, notifications, CGU ([ADR-0133](docs/governance/adr/0133-social-suite-pilot.md)) (2026-07-12)
+
+**Mandat opérateur « rival Sprout » exécuté : commentaires, stats, rapports, publier, planifier, notifications — tout depuis l'app, et la promesse légale alignée pour ne pas faire mentir le produit.**
+
+- **Scopes de pilotage canon** : meta += manage_posts/manage_engagement/read_insights/
+  content_publish/manage_comments/manage_insights · google += yt-analytics.readonly · linkedin +=
+  w_member_social. Actifs immédiatement en mode testeurs (App Review = ouverture au public
+  uniquement). Connexions antérieures → badge « Reconnecter » (`scopesOutdated`), jamais de casse.
+  Interdits maintenus par test : ads, messaging/DM, upload vidéo.
+- **Inbox unifiée** (`SocialInboxItem` + service distinct `social-inbox`) : commentaires FB/IG des
+  posts récents, réponse AU NOM de la marque (SCOPE_MISSING explicite sinon), classement. Surface
+  `/cockpit/operate/inbox` (onglets À traiter/Répondues/Classées), délégable zone social. 2 kinds
+  gouvernés `ANUBIS_SYNC_INBOX` + `ANUBIS_REPLY_COMMENT`.
+- **Publier + planifier** (`ANUBIS_PUBLISH_SOCIAL_POST` + `social-publish`) : FB texte/lien/photo,
+  IG image+légende (container), LinkedIn membre. **Calendrier unique** : planifier = BrandAction
+  SCHEDULED, le cron `?mode=publish` ré-émet l'Intent à l'échéance (spine + cost-gate) ; X/TikTok/
+  YT = UNSUPPORTED motivés. Composer `/cockpit/operate/publish` (cibles honnêtes par connexion).
+- **Statistiques réelles par post** (`SocialPost.insights` + `social-insights`) : FB impressions/
+  portée/clics, IG reach/saved — UNIQUEMENT quand le scope est porté, jamais un zéro inventé ;
+  `reach` promu depuis la mesure. **Rapport** déterministe 30/90 j `/cockpit/intelligence/social`
+  (totaux, par-réseau, top posts, inbox, « connecté sans donnée »).
+- **Notifications** : fan-out canonique ADR-0025 réutilisé (in-app + push, préférences) — nouvelles
+  interactions groupées + résultats de publication (succès ET échecs) vers porteur + délégués.
+- **Promesse légale** : CGU §5 « mandat de gestion » (client responsable de traitement, UPgraders
+  sous-traitant), /privacy interactions adressées à la marque, /data-deletion périmètre inbox +
+  droits des auteurs. Nav + i18n ×3. Migration additive `20260713000000` (1 modèle + 1 colonne).
+  8 verrous CI `social-suite-pilot.test.ts`. Cap APOGEE 7/7 préservé.
+
 ## v6.27.112 — feat(anubis): collecte sociale maximale sous scopes accordés — posts riches, profils publics, provenance honnête (2026-07-12)
 
 **« La fusée devrait tout récupérer » : la boucle de lecture passe de l'échantillon au plein régime — tout ce que les APIs donnent avec les scopes actuels, rien des tiers.**

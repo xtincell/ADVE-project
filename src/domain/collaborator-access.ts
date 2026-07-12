@@ -74,6 +74,9 @@ export const COLLABORATOR_KIND_ZONES: Readonly<Record<string, CockpitZone>> = {
   ANUBIS_SOCIAL_DISCONNECT_ACCOUNT: "social",
   ANUBIS_SOCIAL_SYNC_FOLLOWERS: "social",
   ANUBIS_SYNC_SOCIAL_POSTS: "social",
+  ANUBIS_SYNC_INBOX: "social",
+  ANUBIS_REPLY_COMMENT: "social",
+  ANUBIS_PUBLISH_SOCIAL_POST: "social",
   LEGACY_PUBLICATION_DELETE: "publications",
 };
 
