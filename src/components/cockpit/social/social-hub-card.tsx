@@ -95,8 +95,22 @@ export function SocialHubCard({ strategyId }: { strategyId: string }) {
       }
       utils.social.getBrandSocialHub.invalidate({ strategyId });
       utils.cockpitDashboard.getCommunityDashboard.invalidate({ strategyId });
+      // P1 — dans la foulée de l'audience : collecte des publications
+      // (SocialPost). Best-effort silencieux, le « Suivi du jour » se rafraîchit.
+      syncPosts.mutate({ strategyId });
     },
     onError: () => toast.error("L'actualisation a échoué. Réessayez."),
+  });
+
+  const syncPosts = trpc.social.syncPosts.useMutation({
+    onSuccess: (res) => {
+      if (res.state === "LIVE") {
+        const total = res.data.reduce((n, r) => n + r.upserted, 0);
+        if (total > 0) toast.success(`${total} publication${total > 1 ? "s" : ""} collectée${total > 1 ? "s" : ""}.`);
+      }
+      utils.cockpitDashboard.getOperationsSnapshot.invalidate({ strategyId });
+    },
+    onError: () => { /* best-effort — l'audience a déjà son retour */ },
   });
 
   // Retour de redirection OAuth : message unique + nettoyage de l'URL.

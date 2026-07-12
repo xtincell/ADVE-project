@@ -32,7 +32,7 @@ export interface FollowerCountEntry {
   platform: string;
   handle: string;
   followerCount: number;
-  source: "APIFY";
+  source: "APIFY" | "CONNECTOR";
   capturedAt: string;
 }
 
@@ -209,10 +209,45 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
     }
   }
 
-  // ── 3. Compteurs followers réels (Apify, token système env) ──
+  // ── 3.0 P1 (plan validé) — les relevés CONNECTOR d'abord : quand la marque
+  //     a CONNECTÉ ses réseaux (OAuth ADR-0128), les compteurs exacts existent
+  //     déjà en base (FollowerSnapshot source=CONNECTOR, < 48 h). On les
+  //     préfère au scraping Apify (estimation) — plateformes couvertes
+  //     retirées de la liste à scraper, provenance SOURCE conservée.
   const followerCounts: FollowerCountEntry[] = [];
+  const connectorCovered = new Set<string>();
+  try {
+    const { db } = await import("@/lib/db");
+    const recent = await db.followerSnapshot.findMany({
+      where: {
+        strategyId: input.strategyId,
+        source: "CONNECTOR",
+        capturedAt: { gte: new Date(Date.now() - 48 * 3_600_000) },
+      },
+      orderBy: { capturedAt: "desc" },
+      select: { platform: true, handle: true, followerCount: true, capturedAt: true },
+    });
+    for (const snap of recent) {
+      const key = String(snap.platform);
+      if (connectorCovered.has(key)) continue; // dernier relevé par plateforme
+      connectorCovered.add(key);
+      followerCounts.push({
+        platform: key,
+        handle: snap.handle,
+        followerCount: snap.followerCount,
+        source: "CONNECTOR",
+        capturedAt: snap.capturedAt.toISOString(),
+      });
+    }
+  } catch {
+    // best-effort — l'absence de connexion ne dégrade rien, Apify prend le relais
+  }
+
+  // ── 3. Compteurs followers réels (Apify, token système env) ──
   let apifyStatus: EnrichedFootprint["enrichment"]["apify"] = "SKIPPED";
-  const handles = toSocialHandles(footprint.socials);
+  const handles = toSocialHandles(footprint.socials).filter(
+    (h) => !connectorCovered.has(String(h.platform)),
+  );
   if (handles.length > 0 && remaining() > 3_000) {
     try {
       const { fetchPublicFollowers } = await import("@/server/services/anubis/social-audit");

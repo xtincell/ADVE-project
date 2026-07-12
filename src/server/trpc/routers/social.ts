@@ -657,6 +657,17 @@ export const socialRouter = createTRPCRouter({
     const { syncStrategySocialFollowers } = await import("@/server/services/anubis/social-connect");
     return syncStrategySocialFollowers(input.strategyId);
   }),
+
+  /** P1 (plan validé) — collecte des publications + métriques publiques par post. */
+  syncPosts: governedProcedure({
+    kind: "ANUBIS_SYNC_SOCIAL_POSTS",
+    inputSchema: z.object({ strategyId: z.string().min(1) }),
+    caller: "social:syncPosts",
+  }).mutation(async ({ ctx, input }) => {
+    await assertStrategyAccess(ctx, input.strategyId);
+    const { syncStrategySocialPosts } = await import("@/server/services/anubis/social-connect");
+    return syncStrategySocialPosts(input.strategyId);
+  }),
 });
 
 /**

@@ -112,13 +112,24 @@ export function OperationsDashboard({ strategyId }: { strategyId: string }) {
           <p className="ck-ops__tile-v">{isLoading ? "…" : data?.openMissions ?? 0}</p>
           <p className="ck-ops__tile-d">confiées à votre équipe</p>
         </div>
-        <div className="ck-card ck-ops__tile ck-ops__tile--deferred">
-          <p className="ck-ops__tile-k"><TrendingUp />Portée & engagement</p>
-          <p className="ck-ops__tile-v ck-ops__tile-v--muted">à connecter</p>
-          <p className="ck-ops__tile-d">
-            <Link href="/cockpit#reseaux" className="ck-card__link">Connectez vos réseaux <ArrowRight /></Link>
-          </p>
-        </div>
+        {data?.posts && data.posts.count > 0 ? (
+          <div className="ck-card ck-ops__tile">
+            <p className="ck-ops__tile-k"><TrendingUp />Engagement récent</p>
+            <p className="ck-ops__tile-v">{fmtCount(data.posts.totalEngagement)}</p>
+            <p className="ck-ops__tile-d">
+              sur {data.posts.count} publications collectées
+              {data.posts.totalReach > 0 ? ` · ${fmtCount(data.posts.totalReach)} vues` : ""}
+            </p>
+          </div>
+        ) : (
+          <div className="ck-card ck-ops__tile ck-ops__tile--deferred">
+            <p className="ck-ops__tile-k"><TrendingUp />Portée & engagement</p>
+            <p className="ck-ops__tile-v ck-ops__tile-v--muted">à connecter</p>
+            <p className="ck-ops__tile-d">
+              <Link href="/cockpit#reseaux" className="ck-card__link">Connectez vos réseaux <ArrowRight /></Link>
+            </p>
+          </div>
+        )}
       </div>
 
       {/* ── Courbe communauté + répartition par réseau ──────────── */}
@@ -157,6 +168,24 @@ export function OperationsDashboard({ strategyId }: { strategyId: string }) {
           )}
         </div>
       </div>
+
+      {/* ── Meilleures publications (réelles — dès la première collecte) ── */}
+      {data?.posts && data.posts.top.length > 0 && (
+        <div className="ck-card">
+          <p className="ck-card__eyebrow"><TrendingUp />Meilleures publications</p>
+          <div className="ck-ops__list">
+            {data.posts.top.map((p) => (
+              <div className="ck-ops__row" key={p.id}>
+                <span className="ck-ops__row-date">{PLATFORM_LABELS[p.platform] ?? p.platform}</span>
+                <span className="ck-ops__row-title">{p.content ?? "(sans texte)"}</span>
+                <span className="ck-ops__split-val">
+                  {fmtCount(p.engagement)} interactions{p.reach > 0 ? ` · ${fmtCount(p.reach)} vues` : ""}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Calendrier éditorial (réel) + Ventes (non branché, honnête) ── */}
       <div className="ck-grid ck-grid--2">
