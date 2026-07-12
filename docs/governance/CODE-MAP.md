@@ -556,7 +556,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 258 (par deck)
+## Pages — 259 (par deck)
 
 ### Agency (12)
 
@@ -794,7 +794,7 @@ Ces correspondances évitent la réinvention :
 - `/launchpad/portfolio-bulk-import`
 - `/score`
 
-### Public (37)
+### Public (38)
 
 - `/(marketing)`
 - `/agence`
@@ -807,6 +807,7 @@ Ces correspondances évitent la réinvention :
 - `/cgv`
 - `/changelog`
 - `/contact`
+- `/data-deletion`
 - `/dpa`
 - `/forgot-password`
 - `/la-guilde`
