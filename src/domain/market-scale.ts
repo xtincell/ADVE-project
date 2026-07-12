@@ -90,6 +90,41 @@ export const ADDRESSABLE_SATURATION_SHARE = 0.05;
 /** Plancher : en-dessous, le comptage n'est plus significatif. */
 export const MIN_SUPERFANS_TARGET = 25;
 
+// ── Suggestion d'audience adressable (amendement ADR-0126, 2026-07-12) ──────
+//
+// L'audience adressable reste DÉCLARÉE par le porteur — jamais auto-écrite
+// (le système ne note pas son propre devoir). Mais on peut lui PROPOSER un
+// plancher factuel : sa communauté déjà mesurée sur les réseaux connectés.
+// Zéro estimation inventée — uniquement des relevés réels ; le recouvrement
+// entre réseaux étant inconnu, on livre la somme (haut) ET le plus grand
+// réseau (bas). Le clic du porteur fait la déclaration, pas ce module.
+
+export interface AudienceSuggestionRow {
+  platform: string;
+  followerCount: number;
+}
+
+export interface AudienceSuggestion {
+  /** Somme des derniers relevés par réseau (recouvrement possible). */
+  suggested: number;
+  /** Borne basse certaine : le plus grand réseau à lui seul. */
+  floor: number;
+  /** Détail par réseau, trié décroissant. */
+  perPlatform: AudienceSuggestionRow[];
+}
+
+export function computeAudienceSuggestion(
+  rows: readonly AudienceSuggestionRow[],
+): AudienceSuggestion | null {
+  const clean = rows
+    .filter((r) => Number.isFinite(r.followerCount) && r.followerCount > 0)
+    .map((r) => ({ platform: r.platform, followerCount: Math.round(r.followerCount) }))
+    .sort((a, b) => b.followerCount - a.followerCount);
+  if (clean.length === 0) return null;
+  const suggested = clean.reduce((n, r) => n + r.followerCount, 0);
+  return { suggested, floor: clean[0]!.followerCount, perPlatform: clean };
+}
+
 /**
  * Résolution déterministe des cibles d'évidence.
  *

@@ -1,6 +1,6 @@
 # ADR-0126 — Scoring conscient de l'échelle de marché (marketScale + évidence par densité)
 
-**Status** : Accepted
+**Status** : Accepted · **Amended 2026-07-12 (nuit)** — suggestion d'audience adressable (mandat opérateur « câble la suggestion ») : `computeAudienceSuggestion` (domaine pur — somme + plancher des DERNIERS relevés réels par réseau, null sans donnée), query lecture `strategy.getAudienceSuggestion` tenant-gardée, et pré-remplissage du champ sur la carte Échelle de marché. La doctrine est INCHANGÉE : la valeur reste DÉCLARÉE — le clic « Utiliser cette valeur » remplit le champ, seul « Enregistrer » du porteur écrit (verrous `audience-suggestion.test.ts` : un seul chemin d'écriture, module domaine pur, suggestion affichée seulement tant que rien n'est déclaré).
 **Date** : 2026-07-11
 **Phase** : hors plan séquencé (carte blanche opérateur) — s'inscrit dans l'implémentation du score canonique (ADR-0086 / Phase 24 closure-target #15)
 **Depends on** : ADR-0086 (8 dimensions canoniques), ADR-0102 (base structurelle figée — non touchée), ADR-0046/0047 (cult-index), ADR-0085 (STOP Jehuty — les champs sont DÉCLARÉS, jamais auto-écrits)

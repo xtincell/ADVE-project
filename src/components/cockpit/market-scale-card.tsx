@@ -30,10 +30,20 @@ const SCALE_OPTIONS: ReadonlyArray<{ value: MarketScale; label: string }> = [
 const inputCls =
   "w-full rounded-lg border border-border-subtle bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-accent";
 
+const PLATFORM_SHORT: Record<string, string> = {
+  FACEBOOK: "FB", INSTAGRAM: "IG", TIKTOK: "TikTok",
+  YOUTUBE: "YT", TWITTER: "X", LINKEDIN: "LinkedIn",
+};
+
 export function MarketScaleCard({ strategyId }: { strategyId: string }) {
   const toast = useToast();
   const utils = trpc.useUtils();
   const strategyQuery = trpc.strategy.getWithScore.useQuery({ id: strategyId }, { enabled: !!strategyId });
+  // Suggestion issue des relevés RÉELS des réseaux connectés — lecture pure.
+  const suggestion = trpc.strategy.getAudienceSuggestion.useQuery(
+    { strategyId },
+    { enabled: !!strategyId },
+  );
 
   const [scale, setScale] = useState<MarketScale | "">("");
   const [audience, setAudience] = useState<string>("");
@@ -115,6 +125,23 @@ export function MarketScaleCard({ strategyId }: { strategyId: string }) {
             className={inputCls}
           />
           {audienceInvalid ? <span className="mt-1 block text-2xs text-error">Entier positif attendu.</span> : null}
+          {/* Suggestion factuelle (amendement ADR-0126) : PRÉ-REMPLIT le champ,
+              c'est le bouton Enregistrer du porteur qui déclare — jamais
+              d'écriture automatique. */}
+          {suggestion.data && s?.addressableAudience == null ? (
+            <span className="mt-1 block text-2xs text-foreground-muted">
+              Votre communauté mesurée : <strong>{suggestion.data.suggested.toLocaleString("fr-FR")}</strong>
+              {" "}({suggestion.data.perPlatform.map((p) => `${PLATFORM_SHORT[p.platform] ?? p.platform} ${p.followerCount.toLocaleString("fr-FR")}`).join(" · ")})
+              — un plancher réel pour votre audience adressable.{" "}
+              <button
+                type="button"
+                className="text-accent underline-offset-2 hover:underline"
+                onClick={() => setAudience(String(suggestion.data!.suggested))}
+              >
+                Utiliser cette valeur
+              </button>
+            </span>
+          ) : null}
         </label>
         <label className="block">
           <span className="mb-1 block text-2xs font-medium uppercase tracking-wide text-foreground-muted">Année de fondation</span>

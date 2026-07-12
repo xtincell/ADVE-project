@@ -716,6 +716,43 @@ export const strategyRouter = createTRPCRouter({
       return result;
     }),
 
+  /**
+   * Suggestion d'audience adressable (amendement ADR-0126) : plancher factuel
+   * depuis les DERNIERS relevés réels par réseau (FollowerSnapshot). Lecture
+   * pure — la déclaration reste le clic du porteur (jamais d'auto-write).
+   */
+  getAudienceSuggestion: protectedProcedure
+    .input(z.object({ strategyId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const { canAccessStrategy, getOperatorContext } = await import("@/server/services/operator-isolation");
+      const opCtx = await getOperatorContext(ctx.session.user.id);
+      if (!(await canAccessStrategy(input.strategyId, opCtx))) {
+        throw new Error("Cette marque ne vous appartient pas");
+      }
+      const snapshots = await ctx.db.followerSnapshot.findMany({
+        where: { strategyId: input.strategyId },
+        orderBy: { capturedAt: "desc" },
+        take: 60,
+        select: { platform: true, followerCount: true, capturedAt: true },
+      });
+      const latest = new Map<string, { platform: string; followerCount: number; capturedAt: Date }>();
+      for (const snap of snapshots) {
+        const key = String(snap.platform);
+        if (!latest.has(key)) latest.set(key, { platform: key, followerCount: snap.followerCount, capturedAt: snap.capturedAt });
+      }
+      const { computeAudienceSuggestion } = await import("@/domain");
+      const suggestion = computeAudienceSuggestion([...latest.values()]);
+      return suggestion
+        ? {
+            ...suggestion,
+            capturedAt: [...latest.values()]
+              .map((v) => v.capturedAt.toISOString())
+              .sort()
+              .at(-1) ?? null,
+          }
+        : null;
+    }),
+
   getWithScore: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
