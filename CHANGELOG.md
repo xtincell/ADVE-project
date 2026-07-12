@@ -10,6 +10,23 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.102 — chore(deploy): Coolify seule cible — purge Vercel du repo (2026-07-12)
+
+Déploiement 100 % Coolify (VPS Hostinger) — Vercel retiré du processus.
+
+- `vercel.json` supprimé (buildCommand Vercel-only ; Coolify build via `Dockerfile`).
+- `next.config.ts` : commentaire `output: "standalone"` recadré sur l'image Docker Coolify (plus de mention Cloudflare/Vercel).
+- `package.json` : `probe:prod` pointe désormais `https://powerupgraders.com` (au lieu de `lafusee-app.vercel.app`).
+- `.github/workflows/scheduled-ops.yml` : commentaires + exemple `PROD_BASE_URL` recadrés Coolify/`powerupgraders.com`.
+
+Remédiation ops associée (prod powerupgraders.com, hors code) : les 2 migrations
+en attente (ADR-0126 `Strategy.marketScale`, ADR-0127 `SectorPolityAxis`) appliquées
+à la main sur la DB Coolify via `scripts/apply-migrations.mjs` → dashboard cockpit
+qui listait `strategy.list` en 500 (« column Strategy.marketScale does not exist »)
+de nouveau fonctionnel. `SKIP_MIGRATE_ON_BOOT` passé de `1` → `0` (scope runtime prod)
+côté env Coolify : les prochains déploiements ré-appliquent les migrations au boot
+(runner best-effort, ne fait jamais tomber le serveur).
+
 ## v6.27.101 — fix(governance): emission-spine — advisory lock via $executeRaw (colonne void non désérialisable) (2026-07-12)
 
 `openEmission` (spine d'émission unifié ADR-0122, commit 7f9b3591) sérialisait

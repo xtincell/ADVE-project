@@ -53,7 +53,7 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["web-push", "puppeteer"],
   // Standalone output — produces `.next/standalone/server.js`, a minimal
   // self-contained Node server (deps traced via nft). This is what the
-  // Cloudflare Container image runs (`node server.js`). Ignored by Vercel.
+  // Coolify Docker image runs (`node server.js`, cf. Dockerfile).
   output: "standalone",
   images: {
     // Ptah forge providers + mock fallback domains. Required for next/image
