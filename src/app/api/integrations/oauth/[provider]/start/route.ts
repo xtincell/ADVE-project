@@ -3,8 +3,14 @@ export const dynamic = "force-dynamic";
  * GET /api/integrations/oauth/:provider/start
  *
  * Initiates an OAuth Authorization-Code flow for the given provider.
- * Requires admin or operator-bound session. Stores a signed state token
- * for CSRF + return-url tracking.
+ *
+ * Deux usages :
+ *  - Legacy opérateur (défaut) : intégrations outbound → `IntegrationConnection`.
+ *    Requires admin or operator-bound session.
+ *  - `?social=1&strategyId=…` (ADR-0128) : le founder connecte les réseaux de
+ *    SA marque → le callback écrit des `SocialConnection` via Intent gouverné.
+ *    Ownership de la Strategy exigé. Sans env creds provider ou sans
+ *    INTEGRATION_TOKEN_KEY → redirection honnête vers le cockpit (pas de 500).
  */
 
 import { NextResponse } from "next/server";
@@ -12,12 +18,28 @@ import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import {
   buildAuthorizeUrl,
+  generatePkcePair,
   getProviderConfig,
   packState,
 } from "@/server/services/oauth-integrations";
+import {
+  BRAND_SOCIAL_PROVIDERS,
+  integrationKeyReady,
+  SOCIAL_SCOPES,
+  type BrandSocialProvider,
+} from "@/server/services/anubis/social-connect";
 
 function signingKey(): string {
   return process.env.NEXTAUTH_SECRET ?? "lafusee-dev-fallback-32-chars-minimum";
+}
+
+const PKCE_COOKIE = "lf_oauth_pkce";
+
+function cockpitRedirect(baseUrl: string, flag: string, provider: string): NextResponse {
+  const u = new URL("/cockpit", baseUrl);
+  u.searchParams.set("reseau", flag);
+  u.searchParams.set("fournisseur", provider);
+  return NextResponse.redirect(u);
 }
 
 export async function GET(
@@ -29,7 +51,104 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { provider } = await context.params;
+  const url = new URL(request.url);
+  const baseUrl = `${url.protocol}//${url.host}`;
+  const isSocial = url.searchParams.get("social") === "1";
+
   const config = getProviderConfig(provider);
+
+  // ── Branche « réseaux de la marque » (founder self-connect, ADR-0128) ──
+  if (isSocial) {
+    if (!BRAND_SOCIAL_PROVIDERS.includes(provider as BrandSocialProvider)) {
+      return cockpitRedirect(baseUrl, "fournisseur_inconnu", provider);
+    }
+    if (!config) {
+      // Env creds absentes — état honnête, l'UI l'affiche déjà comme
+      // « bientôt disponible » ; on ne dispatch jamais un redirect cassé.
+      return cockpitRedirect(baseUrl, "indisponible", provider);
+    }
+    if (!integrationKeyReady()) {
+      return cockpitRedirect(baseUrl, "chiffrement_manquant", provider);
+    }
+    const strategyId = url.searchParams.get("strategyId");
+    if (!strategyId) {
+      return cockpitRedirect(baseUrl, "marque_manquante", provider);
+    }
+    const strategy = await db.strategy.findUnique({
+      where: { id: strategyId },
+      select: { id: true, userId: true },
+    });
+    if (!strategy) {
+      return cockpitRedirect(baseUrl, "marque_introuvable", provider);
+    }
+    const isPrivileged = session.user.role === "ADMIN";
+    if (!isPrivileged && strategy.userId !== session.user.id) {
+      // Opérateur lié ? (parité console — un opérateur peut connecter pour un client)
+      const u = await db.user.findUnique({
+        where: { id: session.user.id },
+        select: { operatorId: true },
+      });
+      if (!u?.operatorId) {
+        return cockpitRedirect(baseUrl, "acces_refuse", provider);
+      }
+    }
+
+    const returnUrlRaw = url.searchParams.get("returnUrl") ?? "/cockpit";
+    const returnUrl = returnUrlRaw.startsWith("/") ? returnUrlRaw : "/cockpit";
+    const redirectUri = `${baseUrl}/api/integrations/oauth/${provider}/callback`;
+    const state = packState(
+      {
+        operatorId: "SOCIAL",
+        provider: config.id,
+        returnUrl,
+        nonce: crypto.randomUUID(),
+        ts: Date.now(),
+        intent: "social",
+        strategyId,
+        userId: session.user.id,
+      },
+      signingKey(),
+    );
+
+    let pkceChallenge: string | undefined;
+    let pkceVerifier: string | undefined;
+    if (config.usePkce) {
+      const pair = generatePkcePair();
+      pkceChallenge = pair.challenge;
+      pkceVerifier = pair.verifier;
+    }
+
+    const authorizeUrl = buildAuthorizeUrl({
+      config,
+      redirectUri,
+      state,
+      scopes: SOCIAL_SCOPES[provider as BrandSocialProvider],
+      pkceChallenge,
+    });
+    const response = NextResponse.redirect(authorizeUrl);
+    if (pkceVerifier) {
+      // Le verifier ne voyage JAMAIS dans le state (visible dans l'URL) —
+      // cookie httpOnly court, scoppé aux routes OAuth.
+      response.cookies.set(PKCE_COOKIE, pkceVerifier, {
+        httpOnly: true,
+        secure: url.protocol === "https:",
+        sameSite: "lax",
+        maxAge: 600,
+        path: "/api/integrations/oauth",
+      });
+    }
+    return response;
+  }
+
+  // ── Branche legacy opérateur (inchangée) ────────────────────────────────
+  // X/TikTok (PKCE / client_key) ne sont câblés que pour le flow social —
+  // le flow outbound opérateur reste google/linkedin/meta.
+  if (provider === "x" || provider === "tiktok") {
+    return NextResponse.json(
+      { error: "provider_social_only", provider, hint: "Use ?social=1&strategyId=…" },
+      { status: 400 },
+    );
+  }
   if (!config) {
     return NextResponse.json(
       {
@@ -59,9 +178,7 @@ export async function GET(
     operatorId = u.operatorId;
   }
 
-  const url = new URL(request.url);
   const returnUrl = url.searchParams.get("returnUrl") ?? "/console/config/integrations";
-  const baseUrl = `${url.protocol}//${url.host}`;
   const redirectUri = `${baseUrl}/api/integrations/oauth/${provider}/callback`;
 
   const state = packState(

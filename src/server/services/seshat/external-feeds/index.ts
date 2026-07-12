@@ -20,7 +20,7 @@ import type { Prisma } from "@prisma/client";
 import { ExternalFeedDigestDataSchema } from "@/server/services/seshat/knowledge/schemas";
 import { collectTrendTracker, countTrendTrackerCovered } from "./trend-collector";
 import { feedSourcesFor } from "./feed-sources";
-import { fetchRssText, parseRssItems, buildDigestFromItems, type RssItem } from "./rss";
+import { fetchRssText, parseRssItems, buildDigestFromItems, toFeedItems, type RssItem } from "./rss";
 
 export const PRIORITY_PAIRS: Array<{ countryCode: string; sector: string }> = [
   { countryCode: "CM", sector: "fmcg" },
@@ -139,10 +139,14 @@ export async function fetchAndPersistFeedDigest(
   }
   if (items.length > 0) {
     const { macroSignals, weakSignals } = buildDigestFromItems(items, { sector });
+    // ADR-0128 — articles réels conservés dans le digest (max 12, dédupliqués,
+    // source extraite du suffixe Google News) pour la veille cockpit.
+    const feedItems = toFeedItems(items, 12);
     const digest = ExternalFeedDigestDataSchema.safeParse({
       macroSignals,
       weakSignals,
       ...(ttCovered > 0 ? { trendTracker } : {}),
+      items: feedItems,
       generatedAt: new Date().toISOString(),
       feedSource: `rss:${sources.map((s) => s.name).join(",")}`,
     });

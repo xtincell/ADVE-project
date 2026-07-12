@@ -3,6 +3,7 @@
  */
 
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
 import * as gloryTools from "@/server/services/glory-tools";
 import { governedProcedure } from "@/server/governance/governed-procedure";
@@ -443,6 +444,14 @@ export const gloryRouter = createTRPCRouter({
   launchCalendar: protectedProcedure
     .input(z.object({ strategyId: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
+      // ADR-0129 - garde par-marque (owner / operateur / ADMIN / collaborateur delegue).
+      {
+        const { canAccessStrategy, getOperatorContext } = await import("@/server/services/operator-isolation");
+        const opCtx = await getOperatorContext(ctx.session.user.id);
+        if (!(await canAccessStrategy(input.strategyId, opCtx))) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Cette marque ne vous appartient pas" });
+        }
+      }
       const rows = await ctx.db.gloryOutput.findMany({
         where: {
           strategyId: input.strategyId,

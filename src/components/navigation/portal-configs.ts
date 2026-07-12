@@ -1,4 +1,5 @@
 import {
+  Gauge,
   Mail,
   LayoutDashboard,
   Target,
@@ -146,6 +147,10 @@ export const cockpitNavGroups: NavGroup[] = [
     title: "Mon activité",
     titleKey: "nav.group.activite",
     items: [
+      {
+        href: "/cockpit/operate/center", label: "Suivi du jour", sublabel: "Votre activité aujourd'hui",
+        labelKey: "nav.operations", sublabelKey: "nav.operations.sub", icon: Gauge,
+      },
       {
         href: "/cockpit/operate/campaigns", label: "Campagnes", sublabel: "Suivi de vos campagnes",
         labelKey: "nav.campagnes", sublabelKey: "nav.campagnes.sub",

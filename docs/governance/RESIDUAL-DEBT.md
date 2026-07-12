@@ -1,5 +1,37 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
+## Réseaux de la marque — ADR-0128 (2026-07-12, NEFER)
+
+Vague [ADR-0128](adr/0128-brand-social-connections-founder-oauth.md) shippée (v6.27.105) : OAuth founder 5 providers → `SocialConnection` branché (1er écrivain de production), sync followers P22-1 → `FollowerSnapshot`, dashboard cockpit complété (logo/actifs + « Mes réseaux » + « Veille & actualités » articles réels), seed Motion19 exécuté. Restes réels (dépendances externes — pas du code refusé) :
+
+- **Sync des publications (`SocialPost`)** : likes/commentaires/reach par post exigent les app-reviews avancées des plateformes (Meta `pages_read_user_content`, X payant, TikTok display API). Le modèle existe, la boucle Signal `SOCIAL_METRICS` existe — brancher quand les apps seront approuvées. App-review-gated.
+- **Compteurs LinkedIn organisation** : exige le produit LinkedIn Community Management sur l'app OAuth — la connexion profil fonctionne, le compteur reste honnêtement `null`. Contract-gated.
+- **X free-tier** : `users/me` (profil propre) uniquement — suffisant pour les followers du compte connecté ; toute lecture élargie est payante. Documenté dans la carte (« relevé auto »).
+- **Cron de sync périodique** : aujourd'hui la sync est manuelle (bouton founder « Actualiser l'audience ») + relevé initial à la connexion. Ajouter la paire au scheduler (pattern `external-feeds` cron) quand la fréquence par tier sera tranchée (bible §11.3). Effort : ~1 session.
+- **Supervision console opérateur** : liste cross-marques des `SocialConnection` (états ERROR, tokens expirés) — surface console à poser à l'occasion (lecture seule, faible effort).
+- **Fiche Motion19** : `marketScale`/`addressableAudience`/`brandFoundedYear` à DÉCLARER par l'opérateur (hub Fondation), jugements INFERRED à valider → DECLARED, données internes (ventes, panier, marge) à brancher avant tout pilotage chiffré (cf. pilier T « non communiqué »).
+
+## Accès délégué par marque + theming — ADR-0129/0130 (2026-07-12, NEFER)
+
+Vagues [ADR-0129](adr/0129-strategy-collaborator-delegated-access.md) (StrategyCollaborator appliqué par le chokepoint, zone digitale gardée ×10 procédures, FREELANCE/CREATOR au cockpit, grant/revoke gouvernés IMHOTEP) et [ADR-0130](adr/0130-cockpit-brand-accent-theming.md) (accent cockpit depuis la palette du coffre, hex validés serveur+client) shippées — vérifiées E2E (Maximus/Motion19 : portefeuille = Motion19 seule, calendrier éditorial opérable, `--accent` #3384FF). Restes réels :
+
+- **UI de gestion des collaborateurs** : grant/revoke passent par les Intents (`strategy.grantCollaborator`/`revokeCollaborator`, requireOperator) — pas encore de surface console/cockpit dédiée. Poser une section « Équipe » (liste, rôle, révocation ConfirmDialog) sur la fiche marque console. Effort : ~½ session.
+- **Gating fin par `scopes`** : v1 accorde l'accès marque entier sur les surfaces couvertes ; le champ `scopes Json` (["digital"]) est stocké mais pas encore consommé par surface (helper `getStrategyCollaboratorRole` prêt). À activer quand un 2ᵉ rôle délégué réel apparaîtra.
+- **Délégation newsletter** : l'envoi reste `operatorProcedure` (hors périmètre v1 directeur du digital — décision ADR-0129 §6).
+- **Balayage des routers strategy-scopés restants en checks inline** (boot-sequence, etc.) vers `canAccessStrategy` — même mouvement que les 5 checks de cockpit-router déjà bascule.
+- **Garde-fou contraste theming** : l'accent vient du brand book du client (choisi pour l'écran) ; un rejet automatique des accents illisibles sur fond sombre (+ fallback corail) reste à poser (ADR-0130 §Conséquences).
+- **Benchmark → plan d'upgrade suite sociale** : vagues S1→S5 priorisées dans [docs/audits/SOCIAL-SUITE-BENCHMARK-2026-07-12.md](../audits/SOCIAL-SUITE-BENCHMARK-2026-07-12.md) (métriques par post, publishing, inbox unifié, heures optimales, trio Meta/audits plateformes). Chaque vague est un chantier futur distinct — rien d'implicite.
+- **Pont relevés → pilier E/traction** : les relevés d'audience (`FollowerSnapshot`) restent en silo mesure — la déclaration de traction dans l'ADVE reste un geste opérateur (doctrine ADR-0085, jamais d'auto-write). Pont candidat : afficher le dernier relevé en SUGGESTION dans l'éditeur du pilier E (source DECLARED après validation humaine).
+
+## Zones par rôle + double dashboard — ADR-0131 (2026-07-12, NEFER)
+
+Vague [ADR-0131](adr/0131-collaborator-role-zones-dual-dashboard.md) shippée (v6.27.107) : zones d'écriture par rôle DENY-par-défaut (firewall d'émission ×2 voies + gardes calendrier), mini console Guilde, double dashboard stratégique/« Suivi du jour », mode jour. Restes réels :
+
+- **Cartographie kind→zone à étendre** : `COLLABORATOR_KIND_ZONES` couvre la zone digitale (calendar/social/publications) ; les kinds campagnes/newsletter du DIGITAL_DIRECTOR restent à cataloguer kind par kind (deny par défaut en attendant — sûr mais restrictif).
+- **Masquage fin des gestes hors zone** : le firewall serveur veto proprement (message business) ; le masquage préventif des boutons d'écriture sur les surfaces secondaires (campagnes, demandes) via `getMyAccess.writeZones` reste à poser (le dashboard/calendrier/réseaux sont couverts).
+- **Sweep light-mode page-par-page** : les deux dashboards sont vérifiés (captures) ; les autres surfaces cockpit héritent des tokens — passer chaque page en mode jour à l'occasion (même pattern que la passe responsive mobile).
+- ~~Logo blanc sur fond blanc (sidebar, mode jour)~~ — **clos le 12/07 (v6.27.108)** : tuile logo fond blanc constant + le logo ACTIVE est désormais le wordmark officiel fond clair extrait du Brand Book (les déclinaisons réserve blanche restent SELECTED au coffre pour les fonds sombres).
+
 ## Vérité unique documentaire (2026-07-11 PM, NEFER)
 
 Purge des incohérences doctrine/code (bible 11 anchors, contextes, i18n, commentaires mensongers, comptes canoniques recalculés sur les registres : 112 routers · 115 services · 56/149 Glory tools · 94 séquences (91 DRAFT) · 28 frameworks · 546 Intent kinds). Résidu tracé :

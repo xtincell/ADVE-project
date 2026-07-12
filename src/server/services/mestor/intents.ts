@@ -525,6 +525,24 @@ export type Intent =
       operatorId: string;
       serverName: string;
     }
+  // ── Anubis réseaux de la marque — founder OAuth (ADR-0128) ─────────
+  | {
+      kind: "ANUBIS_SOCIAL_CONNECT_ACCOUNT";
+      strategyId: string;
+      userId: string;
+      provider: "meta" | "google" | "linkedin" | "x" | "tiktok";
+      /** Tokens déjà chiffrés AES-GCM — aucun secret en clair dans l'émission. */
+      accounts: Array<{
+        platform: "FACEBOOK" | "INSTAGRAM" | "YOUTUBE" | "LINKEDIN" | "TWITTER" | "TIKTOK";
+        accountId: string;
+        accountName: string;
+        handle: string | null;
+        followerCount: number | null;
+        encryptedTokens: string;
+        tokenExpiresAt: string | null;
+      }>;
+      scopes: string[];
+    }
   // ── Auto-promotion (ADR-0054) — Sprint 9 v6.18.22 ──────────────────
   | {
       kind: "AUTO_PROMOTION_EVALUATE";
@@ -1159,6 +1177,9 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     case "ANUBIS_MCP_INVOKE_TOOL":
     case "ANUBIS_OAUTH_DEVICE_FLOW_START":
     case "ANUBIS_OAUTH_DEVICE_FLOW_POLL":
+    // ADR-0128 — connexion réseaux de la marque : pure persistence de
+    // credentials + snapshots d'observation, aucune mutation de pilier.
+    case "ANUBIS_SOCIAL_CONNECT_ACCOUNT":
     // Phase 17 (ADR-0037) — Deliverable Forge dispatcher. Le composer consomme
     // les piliers ADVE en lecture seule pour résoudre le DAG ; les mutations
     // vault sont déléguées en aval à PTAH_MATERIALIZE_BRIEF +

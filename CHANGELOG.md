@@ -10,6 +10,153 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.108 — feat(seed): les 4 logos officiels EXTRAITS du Brand Book Motion19 + règles de contenu §09 complètes (2026-07-12)
+
+**Le PDF n'était ingéré qu'en texte — ses images embarquées entrent au coffre (remarque opérateur légitime).**
+
+- **Extraction des images du PDF** (pypdf) : 10 images embarquées, dont les
+  déclinaisons officielles du logo (§05). 4 fichiers versionnés
+  `prisma/seed-assets/motion19/` → BrandAsset `LOGO_FINAL` en data-URL :
+  **wordmark fond clair = ACTIVE** (le logo canonique du dashboard),
+  wordmark réserve blanche + monogramme M19 clair/blanc = SELECTED.
+  L'ancien fichier scrapé du CDN du site passe **SUPERSEDED** (lineage
+  préservée — Loi 1). La photo de style (§07) est du stock d'illustration,
+  pas un actif propriétaire — non ingérée (décision documentée).
+- **Tuile logo fond blanc constant** (carte identité + sidebar) : le wordmark
+  anthracite officiel reste lisible en mode nuit comme en mode jour — clôt
+  aussi le résiduel « logo blanc sur fond blanc ».
+- **Canon complété §09** : les 7 phrases signatures intégrales + les 3 paires
+  « à faire / à éviter » + le principe (« parler depuis le bénéfice du
+  lecteur ») dans `assetsLinguistiques` ; `extractedFields` du brand book
+  enrichi (logosExtraits: 4, phrasesSignatures: 7, reglesDeContenu: 3).
+
+## v6.27.107 — feat(cockpit): double dashboard stratégique/opérationnel + mode jour + zones d'écriture par rôle (ADR-0131) (2026-07-12)
+
+**Le cockpit gagne sa vue « Suivi du jour », son mode jour, et les collaborateurs délégués n'écrivent QUE dans leur métier.**
+
+- **[ADR-0131](docs/governance/adr/0131-collaborator-role-zones-dual-dashboard.md)**
+  — réponse aux mandats « Maximus est juste social media manager » + « un
+  Dashboard stratégique et un Dashboard opérationnel » + « lisible pour une
+  INFJ ».
+- **Zones d'écriture par rôle (DENY par défaut)** : canon domaine
+  `collaborator-access.ts` (rôle → zones ; kind → zone en liste blanche) +
+  **firewall d'émission** branché sur les DEUX voies gouvernées
+  (`governedProcedure` + strangler) avec veto audité `COLLABORATOR_ZONE_VETO`
+  — la sur-délégation silencieuse d'ADR-0129 v1 est fermée. Calendrier :
+  split lecture/écriture (4 procédures zonées). `strategy.getMyAccess` +
+  chip sidebar « Accès délégué — {métier} ». Seed Maximus → `SOCIAL_MANAGER`.
+- **Dashboard opérationnel « Suivi du jour »** (`/cockpit/operate/center`
+  rebranché — on étend, on ne double pas) : campagne du moment + créations
+  (`getCampaignShowcase`), tuiles d'activité réelles (communauté FollowerSnapshot
+  total/Δ, publications ±14 j, missions), courbe + répartition par réseau,
+  états honnêtes (« Portée : à connecter », « Ventes : non branché »), réseaux
+  + veille. Garde de segment lot 12 retirée, pilotage détaillé (charge/budgets)
+  reste opérateur (`canOperate`). Nav « Suivi du jour » (i18n FR/EN/ZH) +
+  switchers croisés avec la vue stratégique.
+- **Dashboard stratégique plus vivant** : logo de marque en tête de sidebar,
+  vitrine campagne/créations (données réelles uniquement), **mode jour**
+  (`CockpitThemeToggle` — stamp `data-theme="light"` persisté, tokens light
+  déjà canon system.css/upgraders.css, cleanup à la sortie du portail).
+- **Mini console Guilde** (`/creator`) : « Mes marques & accès » —
+  cockpits délégués (métier + zones + Ouvrir le cockpit), missions en cours
+  (retainers), candidatures (`strategy.myDelegatedBrands`).
+- Vocabulaire client purgé au passage sur `portal-welcome` (blocs
+  cockpit/creator/agency) ; E2E Playwright ×2 (NEFER : dark/light/persistance/
+  ops · Maximus : mini console, chip, accent, ops) ; gouvernance 920/920.
+
+## v6.27.106 — feat(guilde+cockpit): mission Motion19 + accès délégué par marque (ADR-0129) + cockpit aux couleurs de la marque (ADR-0130) + brand book officiel (2026-07-12)
+
+**Un freelance recruté via La Guilde opère la zone digitale d'UNE marque — et le cockpit porte les couleurs officielles de cette marque.**
+
+- **Guilde** : mission « Gestion du Digital — Motion19 » publiée (200 000 FCFA/mois,
+  brief complet `guildMissionBriefSchema`, 5 livrables, slug public) via seed
+  reproduisant `GUILD_POST_MISSION`+`GUILD_PUBLISH_MISSION` (une mission pour
+  marque EXISTANTE — postMission ne cible pas de strategyId, décision opérateur
+  documentée). Compte freelance **Maximus** (`maximus@upgraders.io`, FREELANCE,
+  TalentProfile) + candidature PENDING 200 000 XAF/mois.
+- **[ADR-0129](docs/governance/adr/0129-strategy-collaborator-delegated-access.md)**
+  — modèle additif `StrategyCollaborator` (unique strategyId+userId, rôle =
+  enum `CampaignTeamRole` étendu `DIGITAL_DIRECTOR` — pas de 2ᵉ vocabulaire),
+  appliqué par le **chokepoint canonique** (`canAccessStrategy` +
+  `scopeStrategies` OR collaborators ACTIVE) — jamais du descriptif
+  (anti-pattern CampaignTeamMember). **Trou pré-existant fermé** : calendrier
+  éditorial (`actions.*` ×6) + `publication.*` ×3 + `glory.launchCalendar`
+  étaient en `protectedProcedure` NU (tout authentifié lisait/écrivait toute
+  marque) → gardes par-marque posées AVANT d'ouvrir le cockpit aux rôles
+  FREELANCE/CREATOR (middleware). Grant/revoke = Intents gouvernés IMHOTEP
+  (`GRANT/REVOKE_STRATEGY_COLLABORATOR`, requireOperator, révocation soft
+  Loi 1). Vérifié E2E : Maximus voit UNIQUEMENT Motion19, opère le calendrier.
+- **[ADR-0130](docs/governance/adr/0130-cockpit-brand-accent-theming.md)** —
+  le cockpit puise dans le code couleur de la marque : `getBrandIdentity`
+  projette la palette du coffre (`CHROMATIC_STRATEGY`) avec **validation
+  stricte #RRGGBB**, `<BrandAccentVars/>` rebinde `--accent`/`--accent-fill`
+  (CSSOM, cleanup au démontage) — Motion19 → bleu digital officiel `#3384FF`,
+  marques sans palette → corail canon. DS 4 tiers intact (2 tokens System
+  rebindés, zéro couleur en dur).
+- **Brand book Motion19 officiel** (PDF « Motion19_BrandBook 2026 V2 » ingéré) :
+  canon corrigé — accroche « Feel free to create », mission/vision/personas/ton
+  officiels, palette #4867B0/#3384FF/#1D1D1D/#B5B5B5 + Exo 2/Roboto ; 4 champs
+  flippés INFERRED→OFFICIAL ; coffre alimenté (`CHROMATIC_STRATEGY` +
+  `TYPOGRAPHY_SYSTEM` ACTIVE pillarSource D, source FILE certainty OFFICIAL,
+  contacts officiels BP 5245 Douala).
+- **Benchmark suites sociales** ([docs/audits/SOCIAL-SUITE-BENCHMARK-2026-07-12.md](docs/audits/SOCIAL-SUITE-BENCHMARK-2026-07-12.md)) :
+  Sprout Social + Zoho Social décortiqués sur sources officielles (5 recherches),
+  réalité des APIs 2026 pour SaaS indépendant (trio Meta review, X pay-per-use,
+  TikTok audit SELF_ONLY, LinkedIn vetting, YouTube/GBP self-serve, WhatsApp
+  Cloud direct) → **plan d'upgrade S1→S5 priorisé** (métriques par post →
+  publishing → inbox unifié → heures optimales → échelle) + réutilisation
+  intake (empreinte digitale ADR-0121 ↔ OAuth connect).
+- 1 migration additive (`20260712150000_strategy_collaborator`) · 1 modèle ·
+  2 Intent kinds (+SLOs) · +6 tests gouvernance (`strategy-collaborator`) ·
+  cap APOGEE 7/7 (Crew = IMHOTEP, mesure = SESHAT, 0 nouveau Neter).
+- **Suivi CI** : expectations `operator-isolation.test.ts` alignées sur la
+  nouvelle forme canonique `scopeStrategies` (OR owner/collaborateur ACTIVE —
+  le changement est le comportement VOULU d'ADR-0129) ; purge vocabulaire
+  ADR-0123 des blocs client de `portal-welcome.tsx` (cockpit/creator/agency —
+  « briefs Artemis »/« forge Ptah »/« Cascade RTIS »/Imhotep/Thot → registre
+  business ; le bloc console garde légitimement le registre interne).
+
+## v6.27.105 — feat(cockpit): dashboard de marque complété — logo & actifs, « Mes réseaux » (OAuth founder), veille articles réels + seed Motion19 (2026-07-12)
+
+**Le founder connecte lui-même les réseaux de sa marque (à la Sprout Social), voit son logo et lit sa veille sectorielle — en réconciliant 5 briques qui existaient sans se parler (ADR-0128).**
+
+- **Anti-doublon radical** : zéro nouveau modèle, zéro nouvelle roue. Le flow
+  OAuth réel mais orphelin d'UI (`oauth-integrations` — state HMAC, AES-GCM,
+  routes start/callback) est étendu (providers `x` PKCE + `tiktok` client_key,
+  branche `?social=1&strategyId=`) et branche ENFIN le modèle dormant
+  `SocialConnection` (zéro écrivain jusqu'ici) ; la ventilation réutilise
+  `FollowerSnapshot` → suivi communauté existant.
+- **3 Intent kinds ANUBIS** (`ANUBIS_SOCIAL_CONNECT_ACCOUNT` dispatché Mestor
+  depuis le callback · `_DISCONNECT_ACCOUNT` · `_SYNC_FOLLOWERS` en
+  `governedProcedure`) + SLOs + payload typé + case commandant. Tokens
+  **chiffrés AVANT l'émission** — jamais un secret en clair dans
+  l'IntentEmission hash-chaînée. Sync = contract P22-1 (LIVE/DEGRADED/DEFERRED,
+  refresh transparent google/x/tiktok, status ERROR sur AUTH_REVOKED).
+- **Dashboard cockpit** (vocabulaire client ADR-0123, tokens DS 4 tiers) :
+  carte Identité affiche le **logo du coffre** (`LOGO_FINAL`→`LOGO_IDEA` via
+  `getBrandIdentity`) + inventaire actifs + CTA d'upload ; panel **« Mes
+  réseaux »** 6 plateformes états honnêtes (Connecté / Connecter / « Bientôt
+  disponible » sans env creds / Reconnexion requise) + relevés étiquetés
+  manuel/auto + ConfirmDialog de déconnexion ; panel **« Veille & actualités »**
+  — le digest RSS (pays×secteur) expose désormais ses **articles réels**
+  (`items[]` additif max 12, mode RSS seul — le fallback LLM n'invente jamais
+  d'URL) via `getMarketFeed`, thèmes + fraîcheur + EmptyStates honnêtes.
+- **Seed Motion19** (`npm run db:seed:motion19`, exécuté vert sur PG local) :
+  MOTION 19 SARL (équipement audiovisuel, Akwa Douala) — ADVE complet depuis
+  SOURCES PUBLIQUES (catalogue Shopify 373 produits/157 collections, RDAP,
+  DataReportal 2026), piliers `DRAFT` + **fieldCertainty INFERRED sur tous les
+  jugements** (doctrine needsHuman — l'opérateur valide → DECLARED), zéro
+  traction inventée, relevés d'audience publics (FB 4 252 · IG 1 753 · TikTok
+  1 308, source MANUAL), logo officiel au coffre (ACTIVE), score structurel
+  calculé 160/200, `marketScale`/`addressableAudience`/`brandFoundedYear`
+  laissés à DÉCLARER (ADR-0126).
+- Env documentés (`.env.example`) : `GOOGLE/META/LINKEDIN/X/TIKTOK_OAUTH_CLIENT_ID/SECRET`
+  (redirect URI unique `/api/integrations/oauth/<provider>/callback`).
+  PROPAGATION-MAP : entrée **A13** (réseaux de la marque → telemetry seulement,
+  jamais piliers). Intent kinds au registre : **551** (recompte 2026-07-12).
+  Restes tracés RESIDUAL-DEBT §ADR-0128 (sync SocialPost app-review-gated,
+  LinkedIn org, cron de sync, supervision console).
+
 ## v6.27.104 — feat(newsletter): envoi email RÉEL par marque via Brevo (BrandEmailConnector, Vault par-marque) (2026-07-12)
 
 `newslettersSend` **simulait** l'envoi (rows `crmMessage` marquées SENT sans

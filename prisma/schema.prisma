@@ -549,6 +549,8 @@ enum CampaignTeamRole {
   PROJECT_MANAGER
   DATA_ANALYST
   CLIENT
+  /// ADR-0129 — direction du digital déléguée par marque (StrategyCollaborator)
+  DIGITAL_DIRECTOR
 }
 
 // --- Notification ---
@@ -633,6 +635,10 @@ model User {
 
   // Vague 7 — candidatures aux missions ouvertes (créas/agences)
   missionApplications MissionApplication[]
+
+  // ADR-0129 — accès délégué par marque (collaborateur externe, ex. directeur du digital)
+  strategyCollaborations StrategyCollaborator[] @relation("StrategyCollaboratorUser")
+  collaboratorGrants     StrategyCollaborator[] @relation("StrategyCollaboratorGrantedBy")
 
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
@@ -785,6 +791,7 @@ model Strategy {
   communitySnapshots CommunitySnapshot[]
   socialConnections  SocialConnection[]
   socialPosts        SocialPost[]
+  collaborators      StrategyCollaborator[]
   mediaConnections   MediaPlatformConnection[]
   pressReleases      PressRelease[]
   pressClippings     PressClipping[]
@@ -2385,6 +2392,37 @@ model CampaignTeamMember {
 
   @@unique([campaignId, userId])
   @@index([delegatedToOperatorId])
+}
+
+/// ADR-0129 — Accès délégué PAR MARQUE (sœur strategy-scopée de CampaignTeamMember).
+/// Un collaborateur externe (ex. freelance « directeur du digital » recruté via
+/// La Guilde) obtient l'accès cockpit à UNE Strategy précise — jamais
+/// opérateur-large. Appliqué par canAccessStrategy/scopeStrategies
+/// (operator-isolation) : c'est de l'AUTHZ réelle, pas du descriptif.
+/// Écrit UNIQUEMENT via les Intents gouvernés GRANT/REVOKE_STRATEGY_COLLABORATOR.
+model StrategyCollaborator {
+  id         String           @id @default(cuid())
+  strategyId String
+  userId     String
+  role       CampaignTeamRole
+  /// Zones d'accès nommées (v1 : ["digital"]). Absent = accès lecture/écriture
+  /// des surfaces couvertes par canAccessStrategy — le grain par-zone est
+  /// documenté ADR-0129 §Conséquences.
+  scopes     Json?
+  status     String           @default("ACTIVE") // ACTIVE | REVOKED
+  grantedByUserId String?
+  revokedAt  DateTime?
+  note       String?
+
+  strategy  Strategy @relation(fields: [strategyId], references: [id])
+  user      User     @relation("StrategyCollaboratorUser", fields: [userId], references: [id])
+  grantedBy User?    @relation("StrategyCollaboratorGrantedBy", fields: [grantedByUserId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([strategyId, userId])
+  @@index([userId, status])
 }
 
 model CampaignMilestone {

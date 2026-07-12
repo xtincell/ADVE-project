@@ -100,6 +100,9 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "GUILD_REGISTER_ORGANIZATION", p95LatencyMs: 1_500, errorRatePct: 0.02, costP95Usd: 0 },
   // Assist LLM optionnel (pré-remplissage) — seul kind Guilde avec coût modèle.
   { kind: "GUILD_DRAFT_MISSION_FROM_TEXT", p95LatencyMs: 12_000, errorRatePct: 0.06, costP95Usd: 0.05 },
+  // ADR-0129 — accès délégué par marque (DB-only, zéro LLM).
+  { kind: "GRANT_STRATEGY_COLLABORATOR", p95LatencyMs: 1_000, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "REVOKE_STRATEGY_COLLABORATOR", p95LatencyMs: 800, errorRatePct: 0.01, costP95Usd: 0 },
   // ADR-0099 — base de coûts marché historisés (DB-only, zéro LLM).
   { kind: "UPSERT_MARKET_COST_SNAPSHOT", p95LatencyMs: 1_000, errorRatePct: 0.01, costP95Usd: 0 },
   // Argos by LaFusée (ADR-0100). Hunter = LLM via Gateway ; manual = DB-only.
@@ -108,6 +111,10 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "RECORD_FOLLOWER_SNAPSHOT", p95LatencyMs: 800, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "SOCIAL_AUDIT_FETCH_OFFICIAL", p95LatencyMs: 10_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "SOCIAL_AUDIT_FETCH_THIRD_PARTY", p95LatencyMs: 90_000, errorRatePct: 0.10, costP95Usd: 0.002 },
+  // ADR-0128 — connexions « réseaux de la marque » (founder OAuth).
+  { kind: "ANUBIS_SOCIAL_CONNECT_ACCOUNT", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "ANUBIS_SOCIAL_DISCONNECT_ACCOUNT", p95LatencyMs: 1_000, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "ANUBIS_SOCIAL_SYNC_FOLLOWERS", p95LatencyMs: 20_000, errorRatePct: 0.10, costP95Usd: 0 },
   // ADR-0121 — re-scan empreinte publique → pilier E (footprint + Brave + Apify + RSS, zéro LLM).
   { kind: "ENRICH_E_FROM_PUBLIC_FOOTPRINT", p95LatencyMs: 35_000, errorRatePct: 0.10, costP95Usd: 0.005 },
   { kind: "SYNC_UPGRADERS_CANON", p95LatencyMs: 30_000, errorRatePct: 0.01, costP95Usd: 0 },

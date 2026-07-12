@@ -75,7 +75,15 @@ export function scopeStrategies(ctx: OperatorContext): Prisma.StrategyWhereInput
       { operatorId: ctx.operatorId },
     ],
   };
-  return { ...demoClause, userId: ctx.userId };
+  return {
+    ...demoClause,
+    OR: [
+      { userId: ctx.userId },
+      // ADR-0129 — collaborateur externe par marque (ex. directeur du digital) :
+      // la marque déléguée apparaît dans son portefeuille cockpit.
+      { collaborators: { some: { userId: ctx.userId, status: "ACTIVE" } } },
+    ],
+  };
 }
 
 /**
@@ -145,7 +153,31 @@ export async function canAccessStrategy(
   // Same operator can access
   if (ctx.operatorId && strategy.operatorId === ctx.operatorId) return true;
 
+  // ADR-0129 — collaborateur délégué par marque (grant gouverné, révocable).
+  // Scopé à UNE strategy — jamais opérateur-large.
+  const collab = await db.strategyCollaborator.findUnique({
+    where: { strategyId_userId: { strategyId, userId: ctx.userId } },
+    select: { status: true },
+  });
+  if (collab?.status === "ACTIVE") return true;
+
   return false;
+}
+
+/**
+ * ADR-0129 — rôle de collaboration délégué de l'user sur cette marque
+ * (null si ni collaborateur ACTIVE). Pour le gating fin par surface
+ * (ex. n'ouvrir la zone digital qu'aux DIGITAL_DIRECTOR/SOCIAL_MANAGER).
+ */
+export async function getStrategyCollaboratorRole(
+  strategyId: string,
+  userId: string,
+): Promise<string | null> {
+  const collab = await db.strategyCollaborator.findUnique({
+    where: { strategyId_userId: { strategyId, userId } },
+    select: { status: true, role: true },
+  });
+  return collab?.status === "ACTIVE" ? String(collab.role) : null;
 }
 
 /**

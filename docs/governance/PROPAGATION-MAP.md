@@ -46,6 +46,7 @@ Réseau fini. `G` = passe par le chemin gouverné (`emitIntent` et/ou gateway). 
 | **A10 Brand tree** | overrides de nœud | `pillarOverrides` | résolution (lecture) + overrides via gateway | G | `brand-node/inheritance.ts:92` |
 | **A11 Connecteurs (Vault)** | CRM, ad networks, Tarsis API | `ConnectorResult<T>` | **telemetry/signal seulement — jamais piliers** | G (read-only) | `anubis/providers/*` |
 | **A12 Seeds / canon-sync / infer** | bootstrap & god-mode | objets piliers pré-fabriqués | `Pillar.content` **direct** | direct ⚠️ | `prisma/seed-*.ts`, `canon-sync.ts:144`, `infer-needs-human-fields.ts:451` |
+| **A13 Réseaux de la marque (OAuth founder)** | comptes sociaux connectés par le porteur (ADR-0128) | tokens OAuth chiffrés AES-GCM + compteurs d'audience | `SocialConnection` + `FollowerSnapshot` (**telemetry/communauté seulement — jamais piliers** ; E atteint via rescan footprint A1/ADR-0121) | G (`ANUBIS_SOCIAL_CONNECT_ACCOUNT` emitIntent + governedProcedure sync/disconnect) | `oauth-integrations/`, `anubis/social-connect.ts`, `api/integrations/oauth/*` |
 
 ---
 

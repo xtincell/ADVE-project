@@ -18,8 +18,12 @@
    mutation). Business mutations stay on the blob via ADR-0088 reco payloads. */
 
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
+import { db } from "@/lib/db";
 import { syncBrandActionsFromBlob } from "@/server/services/artemis/action-db/materializer";
+import { canAccessStrategy, getOperatorContext, getStrategyCollaboratorRole } from "@/server/services/operator-isolation";
+import { collaboratorCanWrite } from "@/domain/collaborator-access";
 
 const filters = z.object({
   strategyId: z.string().min(1),
@@ -28,9 +32,47 @@ const filters = z.object({
   selected: z.boolean().optional(),
 });
 
+/**
+ * ADR-0129 — garde par-marque du calendrier éditorial (BrandAction).
+ * Ces procédures étaient `protectedProcedure` sans AUCUN contrôle d'ownership
+ * (trou pré-existant) ; désormais chaque lecture/écriture vérifie l'accès à la
+ * Strategy via le point de passage canonique (owner / opérateur / ADMIN /
+ * collaborateur délégué ACTIVE — ex. directeur du digital).
+ */
+async function assertCalendarAccess(userId: string, strategyId: string): Promise<void> {
+  const opCtx = await getOperatorContext(userId);
+  if (!(await canAccessStrategy(strategyId, opCtx))) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Cette marque ne vous appartient pas" });
+  }
+}
+
+/**
+ * ADR-0131 — écriture du calendrier : owner/opérateur/ADMIN, OU collaborateur
+ * dont le métier ouvre la zone "calendar" (ex. SOCIAL_MANAGER). Un
+ * collaborateur hors zone lit le calendrier mais ne le modifie pas.
+ */
+async function assertCalendarWrite(userId: string, strategyId: string): Promise<void> {
+  const opCtx = await getOperatorContext(userId);
+  if (opCtx.role === "ADMIN") return;
+  const strategy = await db.strategy.findUnique({
+    where: { id: strategyId },
+    select: { userId: true, operatorId: true, client: { select: { operatorId: true } } },
+  });
+  if (!strategy) throw new TRPCError({ code: "NOT_FOUND", message: "Strategy introuvable" });
+  if (strategy.userId === userId) return;
+  if (opCtx.operatorId && (opCtx.operatorId === strategy.operatorId || opCtx.operatorId === strategy.client?.operatorId)) return;
+  const role = await getStrategyCollaboratorRole(strategyId, userId);
+  if (role && collaboratorCanWrite(role, "calendar")) return;
+  throw new TRPCError({
+    code: "FORBIDDEN",
+    message: "Votre rôle sur cette marque est en lecture seule sur le calendrier.",
+  });
+}
+
 export const actionsRouter = createTRPCRouter({
   /** Flat, homogeneous list of the strategy's actions (optionally filtered). */
   byStrategy: protectedProcedure.input(filters).query(async ({ ctx, input }) => {
+    await assertCalendarAccess(ctx.session.user.id, input.strategyId);
     return ctx.db.brandAction.findMany({
       where: {
         strategyId: input.strategyId,
@@ -46,6 +88,7 @@ export const actionsRouter = createTRPCRouter({
   summary: protectedProcedure
     .input(z.object({ strategyId: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
+      await assertCalendarAccess(ctx.session.user.id, input.strategyId);
       const rows = await ctx.db.brandAction.findMany({
         where: { strategyId: input.strategyId },
         select: { touchpoint: true, status: true, selected: true, budgetMin: true, costTemplateKey: true },
@@ -114,6 +157,7 @@ export const actionsRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      await assertCalendarWrite(ctx.session.user.id, input.strategyId);
       const { emitIntent } = await import("@/server/services/mestor/intents");
       const result = await emitIntent(
         { kind: "PROPOSE_BRAND_ACTIONS", ...input, operatorId: ctx.session?.user?.id ?? undefined },
@@ -132,6 +176,7 @@ export const actionsRouter = createTRPCRouter({
   setSelected: protectedProcedure
     .input(z.object({ strategyId: z.string().min(1), actionId: z.string().min(1), selected: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
+      await assertCalendarWrite(ctx.session.user.id, input.strategyId);
       const updated = await ctx.db.brandAction.updateMany({
         where: { id: input.actionId, strategyId: input.strategyId },
         data: { selected: input.selected, status: input.selected ? "ACCEPTED" : "PROPOSED" },
@@ -154,6 +199,7 @@ export const actionsRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      await assertCalendarWrite(ctx.session.user.id, input.strategyId);
       const updated = await ctx.db.brandAction.updateMany({
         where: { id: input.actionId, strategyId: input.strategyId },
         data: {
@@ -181,6 +227,7 @@ export const actionsRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      await assertCalendarWrite(ctx.session.user.id, input.strategyId);
       const cadence = input.cadenceDays ?? 14;
       const start = input.startDate ? new Date(input.startDate) : new Date();
       const rows = await ctx.db.brandAction.findMany({
