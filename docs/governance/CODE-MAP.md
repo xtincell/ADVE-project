@@ -43,7 +43,7 @@ Ces correspondances évitent la réinvention :
 - **Operator** (30 fields)
 - **ClientAllocation** (14 fields)
 - **Client** (17 fields)
-- **Strategy** (75 fields)
+- **Strategy** (76 fields)
 - **Intention** (14 fields)
 - **Campaign** (80 fields)
 - **Mission** (35 fields)
@@ -438,7 +438,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 112
+## tRPC routers — 113
 
 - `accounts` (`src/server/trpc/routers/accounts.ts`)
 - `actions` (`src/server/trpc/routers/actions.ts`)
@@ -466,6 +466,7 @@ Ces correspondances évitent la réinvention :
 - `club` (`src/server/trpc/routers/club.ts`)
 - `cockpit-router` (`src/server/trpc/routers/cockpit-router.ts`)
 - `cohort` (`src/server/trpc/routers/cohort.ts`)
+- `commerce` (`src/server/trpc/routers/commerce.ts`)
 - `commission` (`src/server/trpc/routers/commission.ts`)
 - `connectors` (`src/server/trpc/routers/connectors.ts`)
 - `consulting` (`src/server/trpc/routers/consulting.ts`)
@@ -555,7 +556,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 256 (par deck)
+## Pages — 258 (par deck)
 
 ### Agency (12)
 
@@ -572,7 +573,7 @@ Ces correspondances évitent la réinvention :
 - `/agency/revenue`
 - `/agency/signals`
 
-### Cockpit (53)
+### Cockpit (54)
 
 - `/cockpit`
 - `/cockpit/brand/assets`
@@ -627,6 +628,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/portfolio/[corporateSlug]`
 - `/cockpit/settings`
 - `/cockpit/settings/billing`
+- `/cockpit/settings/connections`
 
 ### Console (121)
 
@@ -792,12 +794,13 @@ Ces correspondances évitent la réinvention :
 - `/launchpad/portfolio-bulk-import`
 - `/score`
 
-### Public (36)
+### Public (37)
 
 - `/(marketing)`
 - `/agence`
 - `/argos`
 - `/argos/[ref]`
+- `/b/[slug]`
 - `/blog`
 - `/blog/[slug]`
 - `/cgu`
@@ -1001,7 +1004,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 553 (par governor)
+## Intent kinds — 556 (par governor)
 
 ### MESTOR (79)
 
@@ -1528,7 +1531,7 @@ Ces correspondances évitent la réinvention :
 - `IMHOTEP_QC_DELIVERABLE` → imhotep (sync) — Route un MissionDeliverable vers QC (AUTOMATED via qc-router.automatedQc, ou ASS…
 - `IMHOTEP_RECOMMEND_FORMATION` → imhotep (sync) — Propose top 3 Courses pour combler un skill gap (filtre par pillarFocus si fourn…
 
-### ANUBIS (32)
+### ANUBIS (35)
 
 - `RECORD_FOLLOWER_SNAPSHOT` → social (sync) — Vague 7 : instantane followers/mentions par plateforme (traque unifiee — comptes…
 - `SOCIAL_AUDIT_FETCH_OFFICIAL` → social (async) — Declenche une collecte de followers via l API officielle Meta (Page/User Access …
@@ -1536,6 +1539,9 @@ Ces correspondances évitent la réinvention :
 - `ANUBIS_SOCIAL_CONNECT_ACCOUNT` → anubis (sync) — Persiste les comptes sociaux découverts après un OAuth founder (SocialConnection…
 - `ANUBIS_SOCIAL_DISCONNECT_ACCOUNT` → anubis (sync) — Déconnecte un compte social de la marque (SocialConnection.status=DISCONNECTED +…
 - `ANUBIS_SOCIAL_SYNC_FOLLOWERS` → anubis (sync) — Rafraîchit l'audience des connexions sociales ACTIVE d'une marque (refresh token…
+- `ANUBIS_SYNC_SOCIAL_POSTS` → anubis (sync) — Collecte les publications récentes des connexions sociales ACTIVE d'une marque (…
+- `ANUBIS_COMMERCE_CONNECT_SHOP` → anubis (sync) — Persiste la connexion boutique Shopify d'une marque (OAuth founder — token offli…
+- `ANUBIS_SYNC_COMMERCE` → anubis (sync) — Collecte les commandes Shopify des 7 derniers jours (nombre, CA, top produits, c…
 - `CRM_SEND_MESSAGE` → crm (sync) — Vague 10 : envoi d un message CRM transactionnel (email) a un contact — sender r…
 - `NEWSLETTER_SEND_CAMPAIGN` → crm (async) — Vague 10 : envoi d une campagne newsletter aux contacts opt-in (batch, lien de d…
 - `CRM_SEGMENT_CAPTURE_SUPERFANS_FROM_CAMPAIGN` → campaign-tracker (sync) — Cluster C — À POST_CAMPAIGN → ARCHIVED, crée segment CRM nominal `superfans-{cam…

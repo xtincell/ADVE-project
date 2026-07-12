@@ -33,6 +33,8 @@ const PLATFORM_LABELS: Record<string, { label: string; mono: string }> = {
 const PLATFORM_ORDER = ["FACEBOOK", "INSTAGRAM", "TIKTOK", "YOUTUBE", "TWITTER", "LINKEDIN"];
 
 const FLAG_MESSAGES: Record<string, { kind: "success" | "info" | "error"; text: string }> = {
+  boutique_connectee: { kind: "success", text: "Boutique connectée — vos ventes arrivent dans le Suivi du jour." },
+  boutique_invalide: { kind: "error", text: "Domaine de boutique invalide — utilisez votre-boutique.myshopify.com." },
   connecte: { kind: "success", text: "Réseau connecté — vos données d'audience arrivent." },
   refuse: { kind: "info", text: "Connexion annulée depuis le réseau social." },
   aucun_compte: { kind: "info", text: "Aucune page ou compte accessible trouvé sur ce réseau." },
@@ -95,8 +97,22 @@ export function SocialHubCard({ strategyId }: { strategyId: string }) {
       }
       utils.social.getBrandSocialHub.invalidate({ strategyId });
       utils.cockpitDashboard.getCommunityDashboard.invalidate({ strategyId });
+      // P1 — dans la foulée de l'audience : collecte des publications
+      // (SocialPost). Best-effort silencieux, le « Suivi du jour » se rafraîchit.
+      syncPosts.mutate({ strategyId });
     },
     onError: () => toast.error("L'actualisation a échoué. Réessayez."),
+  });
+
+  const syncPosts = trpc.social.syncPosts.useMutation({
+    onSuccess: (res) => {
+      if (res.state === "LIVE") {
+        const total = res.data.reduce((n, r) => n + r.upserted, 0);
+        if (total > 0) toast.success(`${total} publication${total > 1 ? "s" : ""} collectée${total > 1 ? "s" : ""}.`);
+      }
+      utils.cockpitDashboard.getOperationsSnapshot.invalidate({ strategyId });
+    },
+    onError: () => { /* best-effort — l'audience a déjà son retour */ },
   });
 
   // Retour de redirection OAuth : message unique + nettoyage de l'URL.

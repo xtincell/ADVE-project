@@ -649,7 +649,7 @@ export const cockpitRouter = createTRPCRouter({
       const past90d = new Date(now.getTime() - 90 * 86_400_000);
       const past7d = new Date(now.getTime() - 7 * 86_400_000);
 
-      const [snapshots, upcomingActions, recentActions, openMissions] = await Promise.all([
+      const [snapshots, upcomingActions, recentActions, openMissions, topPosts] = await Promise.all([
         ctx.db.followerSnapshot.findMany({
           where: { strategyId: strategy.id, capturedAt: { gte: past90d } },
           orderBy: { capturedAt: "asc" },
@@ -677,6 +677,17 @@ export const cockpitRouter = createTRPCRouter({
         }),
         ctx.db.mission.count({
           where: { strategyId: strategy.id, status: { in: ["OPEN", "IN_PROGRESS"] } },
+        }),
+        // P1 — publications réelles collectées (SocialPost, sync connectors).
+        ctx.db.socialPost.findMany({
+          where: { strategyId: strategy.id },
+          orderBy: [{ publishedAt: "desc" }],
+          take: 20,
+          select: {
+            id: true, content: true, publishedAt: true,
+            likes: true, comments: true, shares: true, reach: true,
+            connection: { select: { platform: true } },
+          },
         }),
       ]);
 
@@ -713,7 +724,25 @@ export const cockpitRouter = createTRPCRouter({
         at: s.capturedAt.toISOString(),
       }));
 
+      // Top posts par engagement (réels — vide tant que rien n'est collecté).
+      const posts = topPosts.map((p) => ({
+        id: p.id,
+        platform: String(p.connection.platform),
+        content: p.content ? p.content.slice(0, 120) : null,
+        publishedAt: p.publishedAt?.toISOString() ?? null,
+        likes: p.likes, comments: p.comments, shares: p.shares, reach: p.reach,
+        engagement: p.likes + p.comments + p.shares,
+      }));
+      const totalReach = posts.reduce((n, p) => n + p.reach, 0);
+      const totalEngagement = posts.reduce((n, p) => n + p.engagement, 0);
+
       return {
+        posts: {
+          top: [...posts].sort((a, b) => b.engagement - a.engagement).slice(0, 5),
+          count: posts.length,
+          totalReach,
+          totalEngagement,
+        },
         community: {
           totalFollowers,
           totalDelta,

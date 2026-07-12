@@ -86,6 +86,7 @@ export default function AssetsPage() {
     reader.readAsDataURL(file);
   };
 
+  const utils = trpc.useUtils();
   const assetsQuery = trpc.brandVault.list.useQuery(
     {
       strategyId: strategyId!,
@@ -102,6 +103,11 @@ export default function AssetsPage() {
   const uploadMutation = trpc.brandVault.create.useMutation({
     onSuccess: () => {
       assetsQuery.refetch();
+      // Le dashboard (logo/actifs/vitrine) reflète l'upload immédiatement.
+      if (strategyId) {
+        utils.cockpitDashboard.getBrandIdentity.invalidate({ strategyId });
+        utils.cockpitDashboard.getCampaignShowcase.invalidate({ strategyId });
+      }
       setShowUpload(false);
       setUploadForm({ name: "", type: "IMAGE", fileUrl: "", pillarTags: {} });
       setFilePreview(null);
@@ -178,6 +184,7 @@ export default function AssetsPage() {
     uploadMutation.mutate({
       strategyId,
       name: uploadForm.name,
+      type: uploadForm.type,
       fileUrl: uploadForm.fileUrl || undefined,
       pillarTags: {
         ...uploadForm.pillarTags,

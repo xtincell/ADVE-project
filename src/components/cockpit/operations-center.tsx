@@ -126,11 +126,11 @@ export default function OperationsCenter({ strategyId }: { strategyId: string })
         <div className="flex items-center justify-between border-b border-border pb-3">
           <div className="flex items-center gap-2">
             <ClipboardList className="h-5 w-5 text-accent" />
-            <h2 className="text-base font-bold text-white">Ma Journée (SLA & Actions prioritaires)</h2>
+            <h2 className="text-base font-bold text-foreground">Ma Journée (SLA & Actions prioritaires)</h2>
           </div>
           <button
             onClick={() => setShowDoneActions(!showDoneActions)}
-            className="text-xs text-foreground-secondary hover:text-white transition-colors"
+            className="text-xs text-foreground-secondary hover:text-foreground transition-colors"
           >
             {showDoneActions ? "Masquer les tâches finies" : "Afficher l'historique de la journée"}
           </button>
@@ -197,7 +197,7 @@ export default function OperationsCenter({ strategyId }: { strategyId: string })
                           </span>
                         )}
                       </div>
-                      <p className={cn("text-sm font-medium text-white break-words", isCompleted && "line-through text-foreground-muted")}>
+                      <p className={cn("text-sm font-medium text-foreground break-words", isCompleted && "line-through text-foreground-muted")}>
                         {action.title}
                       </p>
                       {action.dueDate && (
@@ -232,7 +232,7 @@ export default function OperationsCenter({ strategyId }: { strategyId: string })
                     {isMission && (
                       <Link
                         href={`/cockpit/operate/missions?id=${action.id}`}
-                        className="p-1 rounded hover:bg-background text-foreground-secondary hover:text-white transition-colors"
+                        className="p-1 rounded hover:bg-background text-foreground-secondary hover:text-foreground transition-colors"
                       >
                         <ExternalLink className="h-4 w-4" />
                       </Link>
@@ -250,7 +250,7 @@ export default function OperationsCenter({ strategyId }: { strategyId: string })
         <div className="flex items-center justify-between border-b border-border pb-3">
           <div className="flex items-center gap-2">
             <Target className="h-5 w-5 text-accent" />
-            <h2 className="text-base font-bold text-white">Campagnes & Projets Actifs</h2>
+            <h2 className="text-base font-bold text-foreground">Campagnes & Projets Actifs</h2>
           </div>
         </div>
 
@@ -286,7 +286,7 @@ export default function OperationsCenter({ strategyId }: { strategyId: string })
                       </span>
                     </div>
 
-                    <h3 className="text-sm font-bold text-white line-clamp-1">
+                    <h3 className="text-sm font-bold text-foreground line-clamp-1">
                       {camp.name}
                     </h3>
                     <p className="text-xs text-foreground-secondary line-clamp-2">
@@ -296,7 +296,7 @@ export default function OperationsCenter({ strategyId }: { strategyId: string })
 
                   <div className="mt-4 pt-3 border-t border-border flex items-center justify-between text-xs text-foreground-secondary">
                     <div>
-                      <span className="font-semibold text-white">{activeMissions}</span>/{missionsCount} missions actives
+                      <span className="font-semibold text-foreground">{activeMissions}</span>/{missionsCount} missions actives
                     </div>
                     
                     <Link
@@ -318,7 +318,7 @@ export default function OperationsCenter({ strategyId }: { strategyId: string })
         <section className="rounded-xl border border-border bg-background/80 p-5 space-y-4">
           <div className="flex items-center gap-2 border-b border-border pb-3">
             <Users className="h-5 w-5 text-accent" />
-            <h2 className="text-base font-bold text-white">Gestion de Charge de l'Équipe</h2>
+            <h2 className="text-base font-bold text-foreground">Gestion de Charge de l'Équipe</h2>
           </div>
 
           {workload.length === 0 ? (
@@ -358,12 +358,12 @@ export default function OperationsCenter({ strategyId }: { strategyId: string })
                             </div>
                           )}
                           <div>
-                            <p className="font-semibold text-white">{member.user.name}</p>
+                            <p className="font-semibold text-foreground">{member.user.name}</p>
                             <p className="text-2xs text-foreground-muted">{member.user.email}</p>
                           </div>
                         </td>
-                        <td className="py-3 text-center text-white">{member.campaignCount}</td>
-                        <td className="py-3 text-center text-white">{member.activeMissionsCount}</td>
+                        <td className="py-3 text-center text-foreground">{member.campaignCount}</td>
+                        <td className="py-3 text-center text-foreground">{member.activeMissionsCount}</td>
                         <td className="py-3 text-right">
                           <span className={cn("px-2 py-0.5 rounded border text-3xs font-semibold uppercase tracking-wider", cfg.color)}>
                             {cfg.label}
@@ -382,7 +382,7 @@ export default function OperationsCenter({ strategyId }: { strategyId: string })
         <section className="rounded-xl border border-border bg-background/80 p-5 space-y-4">
           <div className="flex items-center gap-2 border-b border-border pb-3">
             <DollarSign className="h-5 w-5 text-accent" />
-            <h2 className="text-base font-bold text-white">Consolidation Budgétaire</h2>
+            <h2 className="text-base font-bold text-foreground">Consolidation Budgétaire</h2>
           </div>
 
           {budgetLines.length === 0 ? (
@@ -396,7 +396,7 @@ export default function OperationsCenter({ strategyId }: { strategyId: string })
               <div className="grid grid-cols-3 gap-2 border border-border bg-background/40 p-3 rounded-lg text-center">
                 <div>
                   <p className="text-2xs text-foreground-secondary">Enveloppe prévue</p>
-                  <p className="text-sm font-bold text-white">{totalPlanned.toLocaleString()} XAF</p>
+                  <p className="text-sm font-bold text-foreground">{totalPlanned.toLocaleString()} XAF</p>
                 </div>
                 <div>
                   <p className="text-2xs text-foreground-secondary">Dépensé live</p>
@@ -415,7 +415,7 @@ export default function OperationsCenter({ strategyId }: { strategyId: string })
                   return (
                     <div key={b.id} className="space-y-1">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="font-semibold text-white">{b.name}</span>
+                        <span className="font-semibold text-foreground">{b.name}</span>
                         <span className="text-foreground-secondary">
                           {b.spent.toLocaleString()} / {b.planned.toLocaleString()} XAF
                         </span>

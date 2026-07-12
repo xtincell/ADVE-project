@@ -767,6 +767,9 @@ model Strategy {
   /// Année de fondation DÉCLARÉE de la marque — source honnête du bras
   /// « patrimoine » de l'évidence (avant ADR-0126 : createdAt du compte).
   brandFoundedYear    Int?
+  /// Slug public de la page de marque (<slug>.powerupgraders.com → /b/<slug>).
+  /// Posé par l'opérateur/seed uniquement — null = pas de page publique.
+  publicSlug          String?      @unique
   /// ISO-2 country code — indexed lookup; mirrors businessContext.country.
   /// Single source of truth for currency / market benchmarks routing.
   countryCode       String?        @db.VarChar(2)

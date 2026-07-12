@@ -4,10 +4,10 @@
 
 Vague [ADR-0128](adr/0128-brand-social-connections-founder-oauth.md) shippée (v6.27.105) : OAuth founder 5 providers → `SocialConnection` branché (1er écrivain de production), sync followers P22-1 → `FollowerSnapshot`, dashboard cockpit complété (logo/actifs + « Mes réseaux » + « Veille & actualités » articles réels), seed Motion19 exécuté. Restes réels (dépendances externes — pas du code refusé) :
 
-- **Sync des publications (`SocialPost`)** : likes/commentaires/reach par post exigent les app-reviews avancées des plateformes (Meta `pages_read_user_content`, X payant, TikTok display API). Le modèle existe, la boucle Signal `SOCIAL_METRICS` existe — brancher quand les apps seront approuvées. App-review-gated.
+- ~~Sync des publications (`SocialPost`)~~ — **partiellement clos le 12/07 (v6.27.109, P1)** : FB Page/IG Business/YouTube collectés (métriques publiques, mode testeurs suffisant), cron quotidien posé. Restent gated : X (payant PPU — P5), TikTok video.list (audit), LinkedIn (produit CM), et les insights privés Meta (reach par post) derrière le trio App Review.
 - **Compteurs LinkedIn organisation** : exige le produit LinkedIn Community Management sur l'app OAuth — la connexion profil fonctionne, le compteur reste honnêtement `null`. Contract-gated.
 - **X free-tier** : `users/me` (profil propre) uniquement — suffisant pour les followers du compte connecté ; toute lecture élargie est payante. Documenté dans la carte (« relevé auto »).
-- **Cron de sync périodique** : aujourd'hui la sync est manuelle (bouton founder « Actualiser l'audience ») + relevé initial à la connexion. Ajouter la paire au scheduler (pattern `external-feeds` cron) quand la fréquence par tier sera tranchée (bible §11.3). Effort : ~1 session.
+- ~~Cron de sync périodique~~ — **clos le 12/07 (v6.27.109, P1)** : `/api/cron/social-sync` quotidien (audience + publications, best-effort par marque). Ajouter l'appel au scheduler serveur (curl CRON_SECRET) côté ops.
 - **Supervision console opérateur** : liste cross-marques des `SocialConnection` (états ERROR, tokens expirés) — surface console à poser à l'occasion (lecture seule, faible effort).
 - **Fiche Motion19** : `marketScale`/`addressableAudience`/`brandFoundedYear` à DÉCLARER par l'opérateur (hub Fondation), jugements INFERRED à valider → DECLARED, données internes (ventes, panier, marge) à brancher avant tout pilotage chiffré (cf. pilier T « non communiqué »).
 
@@ -20,8 +20,18 @@ Vagues [ADR-0129](adr/0129-strategy-collaborator-delegated-access.md) (StrategyC
 - **Délégation newsletter** : l'envoi reste `operatorProcedure` (hors périmètre v1 directeur du digital — décision ADR-0129 §6).
 - **Balayage des routers strategy-scopés restants en checks inline** (boot-sequence, etc.) vers `canAccessStrategy` — même mouvement que les 5 checks de cockpit-router déjà bascule.
 - **Garde-fou contraste theming** : l'accent vient du brand book du client (choisi pour l'écran) ; un rejet automatique des accents illisibles sur fond sombre (+ fallback corail) reste à poser (ADR-0130 §Conséquences).
+- **Veille multi-sources PAR MARQUE** : les feeds actuels sont des paires pays×secteur globales — des sources curées par marque = nouvelle entité (ADR dédié), planifiée P2 avec le bouton intake. 
 - **Benchmark → plan d'upgrade suite sociale** : vagues S1→S5 priorisées dans [docs/audits/SOCIAL-SUITE-BENCHMARK-2026-07-12.md](../audits/SOCIAL-SUITE-BENCHMARK-2026-07-12.md) (métriques par post, publishing, inbox unifié, heures optimales, trio Meta/audits plateformes). Chaque vague est un chantier futur distinct — rien d'implicite.
 - **Pont relevés → pilier E/traction** : les relevés d'audience (`FollowerSnapshot`) restent en silo mesure — la déclaration de traction dans l'ADVE reste un geste opérateur (doctrine ADR-0085, jamais d'auto-write). Pont candidat : afficher le dernier relevé en SUGGESTION dans l'éditeur du pilier E (source DECLARED après validation humaine).
+
+## Cockpit qui ramène tout — ADR-0132 (2026-07-12, NEFER)
+
+Vague [ADR-0132](adr/0132-brand-connections-hub-shopify-public-page.md) shippée (v6.27.110) : hub Connexions, boutique Shopify OAuth (lecture), pages publiques de marque par sous-domaine, cron ventes. Restes réels :
+
+- **Écriture boutique** (gestion produits/prix depuis le cockpit) : décision dédiée — scopes write Shopify + UI, jamais implicite.
+- **Page publique enrichie** (galerie de créations, CTA contact, thème par marque) : chantier Personal Brand Cockpit (blueprint) — la v1 est volontairement minimale.
+- **GBP + WhatsApp dans Connexions** : arrivent avec P2/P3 du train validé.
+- **Gates ops posées sur l'opérateur** : app Shopify Partner (env), DNS wildcard `*.powerupgraders.com` + domaines Coolify pour les sous-domaines de marque.
 
 ## Zones par rôle + double dashboard — ADR-0131 (2026-07-12, NEFER)
 

@@ -10,6 +10,86 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.111 — fix(cockpit): le logo enfin visible — kind d'upload réparé, seed en un clic, doctrine domaines corrigée, ADVERTIS Xtincell sourcé (2026-07-12)
+
+**Réponse à « il te manque quoi ? » : trois chaînons réels, tous fermés.**
+
+- **BUG RACINE upload** : `brandVault.create` n'écrivait AUCUN `kind` — tout
+  upload founder tombait en `GENERIC`, invisible du dashboard (qui cherche
+  `LOGO_FINAL`/`LOGO_IDEA`). Fix : mapping type UI → kind canonique
+  (LOGO→LOGO_FINAL ACTIVE si premier logo sinon SELECTED, FONT→TYPOGRAPHY_SYSTEM,
+  COLOR→CHROMATIC_STRATEGY, IMAGE→KV_VISUAL) + mimeType + invalidations
+  dashboard — un logo uploadé s'affiche immédiatement, sans seed.
+- **Seed en un clic** : `POST /api/admin/seed-brands` (ADMIN) + carte
+  « Marques de démo » sur `/console/governance/accounts` — installe Motion19
+  complet + Xtincell côté serveur, idempotent, **fin de l'étape SSH**.
+- **Doctrine domaines corrigée** (mandat opérateur) : les byproducts La Fusée
+  vivent en SOUS-PAGES (`/b/<slug>`), JAMAIS en sous-domaines — la réécriture
+  proxy `<slug>.powerupgraders.com` est retirée (les sous-domaines existants,
+  ex. la page personnelle du porteur, sont des SOURCES, pas des cibles).
+  Verrou (5) de `commerce-brand-page.test.ts` inversé en conséquence.
+- **ADVERTIS Xtincell sourcé** depuis https://xtincell.powerupgraders.com
+  (VER 15.0, lu le 12/07) : piliers A/D/E réels (identité Brand Architect,
+  tagline « Je ne crée pas de l'art. Je systémise le succès. », rôles CEO
+  UPgraders + DC&A MATANGA, réseaux @xtincell, presse Iwaria/Créapreneur) —
+  certitude **DECLARED** (page officielle du porteur), source URL au vault,
+  jamais d'écrasement d'un pilier déjà travaillé.
+
+## v6.27.110 — feat(cockpit): le cockpit ramène tout — hub Connexions, boutique Shopify OAuth, pages publiques de marque (ADR-0132) (2026-07-12)
+
+**« On crée un cockpit qui ramène tout, c'est l'utilisateur qui autorise » — boutique comprise, page publique comprise.**
+
+- **[ADR-0132](docs/governance/adr/0132-brand-connections-hub-shopify-public-page.md)** :
+  provider OAuth `shopify` (endpoints PAR BOUTIQUE, domaine `*.myshopify.com`
+  strictement validé, scopes lecture `read_products,read_orders`), branche
+  `?commerce=1` sur start/callback, token offline **chiffré AVANT l'émission**
+  (`ANUBIS_COMMERCE_CONNECT_SHOP`). Anti-doublon : `MediaPlatformConnection`
+  (modèle dormant) reçoit son premier écrivain — zéro migration connexion ;
+  ventes en `Signal type=COMMERCE_METRICS` (`ANUBIS_SYNC_COMMERCE` : commandes
+  7 j, CA, top produits, P22-1). **Non délégable** (DENY firewall ADR-0131).
+- **Hub « Connexions »** `/cockpit/settings/connections` (nav Mon compte,
+  i18n ×3) : réseaux + boutique + à-venir — l'onglet unique où le porteur
+  autorise/révoque. Carte « Ventes & commandes » du Suivi du jour branchée
+  réel (commandes/CA/top produits) avec CTA « Connecter ma boutique ».
+- **Pages publiques de marque** : `Strategy.publicSlug @unique` (migration
+  additive) + `/b/[slug]` (server component, données PUBLIQUES uniquement)
+  + réécriture proxy `<slug>.powerupgraders.com → /b/<slug>` (www/lafuseev6
+  épargnés). Seeds : `motion19` (vérifiée locale — nom, tagline, 3 réseaux
+  réels) + `xtincell` (marque PERSONAL du porteur, créée au seed prod).
+- **Cron `social-sync` étendu** : audience + publications + ventes, y compris
+  marques boutique-seule. +7 verrous (`commerce-brand-page.test.ts`).
+- Gates ops : app Shopify Partner (env `SHOPIFY_OAUTH_CLIENT_ID/SECRET`),
+  DNS wildcard `*.powerupgraders.com` + domaines Coolify.
+
+## v6.27.109 — feat(social): P1 — collecte des publications + cron quotidien + pont pilier E (plan validé) (2026-07-12)
+
+**Première phase du train P1→P6 validé : la boucle sociale de LECTURE se complète.**
+
+- **SocialPost reçoit son premier écrivain de production** (même geste que
+  SocialConnection en ADR-0128) : `syncStrategySocialPosts` collecte les
+  métriques publiques par post — FB Page (likes/commentaires/partages),
+  IG Business (likes/commentaires), YouTube (vues/likes/commentaires via
+  playlist uploads) — upsert par (connectionId, externalPostId), taux
+  d'engagement vs dernier relevé d'audience. X (payant PPU — P5), TikTok
+  (scope video.list non demandé) et LinkedIn (produit CM requis) déclarés
+  UNSUPPORTED — jamais un zéro silencieux. Kind gouverné
+  `ANUBIS_SYNC_SOCIAL_POSTS` (+SLO), délégable zone "social" (ADR-0131),
+  tRPC `social.syncPosts`, chaîné au bouton « Actualiser l'audience » du hub.
+- **Cron quotidien `/api/cron/social-sync`** (CRON_SECRET, pattern
+  external-feeds) : audience + publications pour chaque marque connectée,
+  best-effort par marque — la sync manuelle devient un rattrapage.
+- **« Suivi du jour » branché sur le réel** : tuile « Engagement récent »
+  (interactions + vues des publications collectées — remplace « à
+  connecter » dès la première collecte) + carte « Meilleures publications »
+  (top 5 par engagement).
+- **Pont pilier E (doctrine ADR-0085 respectée)** : le collecteur gouverné
+  `ENRICH_E_FROM_PUBLIC_FOOTPRINT` (ADR-0121) préfère désormais les relevés
+  CONNECTOR (< 48 h, OAuth exacts) au scraping Apify — plateformes couvertes
+  retirées de la liste à scraper, écriture toujours via gateway/provenance.
+- **Mode jour** : 14 `text-white` d'OperationsCenter → `text-foreground`
+  (titres lisibles en jour comme en nuit).
+- +5 verrous gouvernance (`social-posts-sync.test.ts`) — 941 verts.
+
 ## v6.27.108 — feat(seed): les 4 logos officiels EXTRAITS du Brand Book Motion19 + règles de contenu §09 complètes (2026-07-12)
 
 **Le PDF n'était ingéré qu'en texte — ses images embarquées entrent au coffre (remarque opérateur légitime).**

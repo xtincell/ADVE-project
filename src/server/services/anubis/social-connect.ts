@@ -626,6 +626,253 @@ export async function syncStrategySocialFollowers(
   return { state: "DEGRADED", reason: "INSUFFICIENT_DATA" };
 }
 
+// ── Sync des publications (handler de ANUBIS_SYNC_SOCIAL_POSTS — P1 validé) ──
+//
+// Donne au modèle dormant `SocialPost` son premier écrivain de production
+// (même geste que SocialConnection en vague ADR-0128). Lecture seule des
+// métriques PUBLIQUES par post (likes/commentaires/partages/vues) sur les
+// plateformes accessibles sans review supplémentaire en mode testeurs :
+// Facebook Page, Instagram Business, YouTube. X (payant à l'appel — P5),
+// TikTok (scope video.list non demandé) et LinkedIn (produit CM requis)
+// sont déclarés UNSUPPORTED — jamais un zéro silencieux.
+
+export interface SyncedPostsRow {
+  platform: string;
+  fetched: number;
+  upserted: number;
+}
+
+interface FetchedPost {
+  externalPostId: string;
+  content: string | null;
+  publishedAt: string | null;
+  likes: number;
+  comments: number;
+  shares: number;
+  /** Vues/impressions quand la plateforme les publie (YT viewCount). */
+  reach: number;
+}
+
+const POSTS_PER_SYNC = 10;
+
+function toCount(v: unknown): number {
+  const n = typeof v === "string" ? Number(v) : v;
+  return typeof n === "number" && Number.isFinite(n) && n >= 0 ? Math.round(n) : 0;
+}
+
+async function fetchPostsForConnection(
+  platform: string,
+  accountId: string,
+  accessToken: string,
+): Promise<FetchedPost[] | "AUTH" | "OUTAGE" | "UNSUPPORTED"> {
+  const guard = async (url: string, init?: RequestInit) => {
+    try {
+      const res = await fetch(url, { ...init, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+      if (res.status === 401 || res.status === 403) return "AUTH" as const;
+      if (!res.ok) return "OUTAGE" as const;
+      return (await res.json()) as Record<string, unknown>;
+    } catch {
+      return "OUTAGE" as const;
+    }
+  };
+
+  if (platform === "FACEBOOK") {
+    const json = await guard(
+      `https://graph.facebook.com/v21.0/${encodeURIComponent(accountId)}/posts?fields=id,message,created_time,shares,likes.summary(true).limit(0),comments.summary(true).limit(0)&limit=${POSTS_PER_SYNC}&access_token=${encodeURIComponent(accessToken)}`,
+    );
+    if (json === "AUTH" || json === "OUTAGE") return json;
+    const items = (json.data as Array<Record<string, unknown>> | undefined) ?? [];
+    return items.map((p) => {
+      const likes = ((p.likes as Record<string, unknown> | undefined)?.summary ?? {}) as Record<string, unknown>;
+      const comments = ((p.comments as Record<string, unknown> | undefined)?.summary ?? {}) as Record<string, unknown>;
+      const shares = (p.shares ?? {}) as Record<string, unknown>;
+      return {
+        externalPostId: String(p.id ?? ""),
+        content: typeof p.message === "string" ? p.message.slice(0, 500) : null,
+        publishedAt: typeof p.created_time === "string" ? p.created_time : null,
+        likes: toCount(likes.total_count),
+        comments: toCount(comments.total_count),
+        shares: toCount(shares.count),
+        reach: 0,
+      };
+    }).filter((p) => p.externalPostId);
+  }
+
+  if (platform === "INSTAGRAM") {
+    const json = await guard(
+      `https://graph.facebook.com/v21.0/${encodeURIComponent(accountId)}/media?fields=id,caption,timestamp,like_count,comments_count&limit=${POSTS_PER_SYNC}&access_token=${encodeURIComponent(accessToken)}`,
+    );
+    if (json === "AUTH" || json === "OUTAGE") return json;
+    const items = (json.data as Array<Record<string, unknown>> | undefined) ?? [];
+    return items.map((m) => ({
+      externalPostId: String(m.id ?? ""),
+      content: typeof m.caption === "string" ? m.caption.slice(0, 500) : null,
+      publishedAt: typeof m.timestamp === "string" ? m.timestamp : null,
+      likes: toCount(m.like_count),
+      comments: toCount(m.comments_count),
+      shares: 0,
+      reach: 0,
+    })).filter((p) => p.externalPostId);
+  }
+
+  if (platform === "YOUTUBE") {
+    // 1. Playlist « uploads » de la chaîne → 2. items récents → 3. statistiques.
+    const chan = await guard(
+      "https://www.googleapis.com/youtube/v3/channels?part=contentDetails&mine=true",
+      { headers: { Authorization: `Bearer ${accessToken}` } },
+    );
+    if (chan === "AUTH" || chan === "OUTAGE") return chan;
+    const uploads = (((((chan.items as Array<Record<string, unknown>> | undefined) ?? [])[0]
+      ?.contentDetails as Record<string, unknown> | undefined)
+      ?.relatedPlaylists as Record<string, unknown> | undefined)
+      ?.uploads) as string | undefined;
+    if (!uploads) return [];
+    const list = await guard(
+      `https://www.googleapis.com/youtube/v3/playlistItems?part=contentDetails&playlistId=${encodeURIComponent(uploads)}&maxResults=${POSTS_PER_SYNC}`,
+      { headers: { Authorization: `Bearer ${accessToken}` } },
+    );
+    if (list === "AUTH" || list === "OUTAGE") return list;
+    const videoIds = (((list.items as Array<Record<string, unknown>> | undefined) ?? [])
+      .map((i) => ((i.contentDetails ?? {}) as Record<string, unknown>).videoId)
+      .filter((v): v is string => typeof v === "string"));
+    if (videoIds.length === 0) return [];
+    const vids = await guard(
+      `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${videoIds.map(encodeURIComponent).join(",")}`,
+      { headers: { Authorization: `Bearer ${accessToken}` } },
+    );
+    if (vids === "AUTH" || vids === "OUTAGE") return vids;
+    return (((vids.items as Array<Record<string, unknown>> | undefined) ?? []).map((v) => {
+      const sn = (v.snippet ?? {}) as Record<string, unknown>;
+      const st = (v.statistics ?? {}) as Record<string, unknown>;
+      return {
+        externalPostId: String(v.id ?? ""),
+        content: typeof sn.title === "string" ? sn.title.slice(0, 500) : null,
+        publishedAt: typeof sn.publishedAt === "string" ? sn.publishedAt : null,
+        likes: toCount(st.likeCount),
+        comments: toCount(st.commentCount),
+        shares: 0,
+        reach: toCount(st.viewCount),
+      };
+    })).filter((p) => p.externalPostId);
+  }
+
+  // X = payant à l'appel (pay-per-use, plan P5) · TikTok = scope video.list
+  // non demandé en v1 · LinkedIn = produit Community Management requis.
+  return "UNSUPPORTED";
+}
+
+/**
+ * Collecte les publications récentes de toutes les connexions ACTIVE d'une
+ * marque et upsert `SocialPost` (unique connectionId+externalPostId).
+ * Contract P22-1 — les plateformes non couvertes sont dites UNSUPPORTED,
+ * jamais comptées à zéro.
+ */
+export async function syncStrategySocialPosts(
+  strategyId: string,
+): Promise<ConnectorResult<SyncedPostsRow[]>> {
+  const connections = await db.socialConnection.findMany({
+    where: { strategyId, status: "ACTIVE" },
+  });
+  if (connections.length === 0) {
+    return { state: "DEGRADED", reason: "INSUFFICIENT_DATA" };
+  }
+  if (!integrationKeyReady()) {
+    return { state: "DEFERRED_AWAITING_CREDENTIALS", connectorId: "INTEGRATION_TOKEN_KEY" };
+  }
+
+  const rows: SyncedPostsRow[] = [];
+  let sawAuthFailure = false;
+  let sawOutage = false;
+
+  for (const conn of connections) {
+    if (!conn.accessToken) { sawAuthFailure = true; continue; }
+    let payload: SocialTokenPayload;
+    try {
+      payload = decryptTokenPayload<SocialTokenPayload>(conn.accessToken);
+    } catch { sawAuthFailure = true; continue; }
+
+    const meta = (conn.metadata ?? {}) as Record<string, unknown>;
+    const provider =
+      (meta.provider as BrandSocialProvider | undefined) ??
+      PROVIDER_FOR_PLATFORM[String(conn.platform)];
+
+    if (payload.expiresAt && payload.expiresAt < Date.now() + 60_000) {
+      const refreshed = provider ? await refreshTokens(provider, payload) : null;
+      if (refreshed) {
+        payload = refreshed;
+        await db.socialConnection.update({
+          where: { id: conn.id },
+          data: {
+            accessToken: encryptTokenPayload(refreshed),
+            tokenExpiry: refreshed.expiresAt ? new Date(refreshed.expiresAt) : null,
+          },
+        });
+      } else {
+        await db.socialConnection.update({ where: { id: conn.id }, data: { status: "ERROR" } });
+        sawAuthFailure = true;
+        continue;
+      }
+    }
+
+    const fetched = await fetchPostsForConnection(
+      String(conn.platform),
+      conn.accountId,
+      payload.access_token,
+    );
+    if (fetched === "AUTH") {
+      await db.socialConnection.update({ where: { id: conn.id }, data: { status: "ERROR" } });
+      sawAuthFailure = true;
+      continue;
+    }
+    if (fetched === "OUTAGE") { sawOutage = true; continue; }
+    if (fetched === "UNSUPPORTED") continue;
+
+    // Taux d'engagement vs dernier relevé d'audience de la plateforme (si connu).
+    const lastSnapshot = await db.followerSnapshot.findFirst({
+      where: { strategyId, platform: conn.platform },
+      orderBy: { capturedAt: "desc" },
+      select: { followerCount: true },
+    });
+    const followers = lastSnapshot?.followerCount ?? null;
+
+    let upserted = 0;
+    for (const p of fetched) {
+      const engagement = p.likes + p.comments + p.shares;
+      await db.socialPost.upsert({
+        where: { connectionId_externalPostId: { connectionId: conn.id, externalPostId: p.externalPostId } },
+        update: {
+          likes: p.likes,
+          comments: p.comments,
+          shares: p.shares,
+          reach: p.reach,
+          engagementRate: followers && followers > 0 ? engagement / followers : null,
+        },
+        create: {
+          connectionId: conn.id,
+          strategyId,
+          externalPostId: p.externalPostId,
+          content: p.content,
+          publishedAt: p.publishedAt ? new Date(p.publishedAt) : null,
+          likes: p.likes,
+          comments: p.comments,
+          shares: p.shares,
+          reach: p.reach,
+          engagementRate: followers && followers > 0 ? engagement / followers : null,
+        },
+      });
+      upserted++;
+    }
+    rows.push({ platform: String(conn.platform), fetched: fetched.length, upserted });
+  }
+
+  if (rows.length > 0) {
+    return { state: "LIVE", data: rows, observedAt: new Date().toISOString() };
+  }
+  if (sawAuthFailure) return { state: "DEGRADED", reason: "AUTH_REVOKED" };
+  if (sawOutage) return { state: "DEGRADED", reason: "VENDOR_OUTAGE" };
+  return { state: "DEGRADED", reason: "INSUFFICIENT_DATA" };
+}
+
 // ── Lecture composée pour le cockpit (read-only, zéro secret) ────────────────
 
 export interface BrandSocialHubRow {

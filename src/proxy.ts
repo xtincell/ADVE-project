@@ -112,6 +112,11 @@ export async function proxy(request: NextRequest) {
   // localhost:3000 en dev où il n'y a qu'un seul host de toute façon.
   if (process.env.NODE_ENV === "production") {
     const host = request.headers.get("host");
+    // Doctrine domaines (correction opérateur 2026-07-12) : les byproducts de
+    // La Fusée vivent en SOUS-PAGES du domaine canonique (/b/<slug>), JAMAIS
+    // en sous-domaines — les sous-domaines existants (ex. la page personnelle
+    // xtincell.powerupgraders.com) sont des sites indépendants qu'on ne
+    // détourne pas ; ils servent de SOURCES à l'ADVE.
     if (host && host !== CANONICAL_HOST) {
       const url = request.nextUrl.clone();
       url.protocol = "https:";

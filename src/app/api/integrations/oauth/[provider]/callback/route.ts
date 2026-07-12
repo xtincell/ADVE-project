@@ -118,10 +118,11 @@ export async function GET(
       code,
       redirectUri,
       pkceVerifier: config.usePkce ? readPkceCookie(request) : undefined,
+      shop: state.shop,
     });
   } catch (err) {
     console.error("[oauth-callback]", provider, err);
-    if (state.intent === "social") {
+    if (state.intent === "social" || state.intent === "commerce") {
       return socialRedirect(baseUrl, state.returnUrl, "echec_echange", provider);
     }
     return redirectWithFlag(state.returnUrl, "error_token_exchange", provider);
@@ -174,6 +175,41 @@ export async function GET(
       provider,
       accounts.map((a) => a.platform),
     );
+  }
+
+  // ── Branche « boutique de la marque » (Shopify) ─────────────────────────
+  if (state.intent === "commerce") {
+    if (!state.strategyId || !state.userId || !state.shop) {
+      return socialRedirect(baseUrl, state.returnUrl, "etat_invalide", provider);
+    }
+    // Vérification réelle du token : lecture du shop (nom public).
+    let shopName: string | null = null;
+    try {
+      const res = await fetch(`https://${state.shop}/admin/api/2025-01/shop.json`, {
+        headers: { "X-Shopify-Access-Token": tokens.access_token },
+        signal: AbortSignal.timeout(8_000),
+      });
+      if (res.ok) {
+        const json = (await res.json()) as { shop?: { name?: string; domain?: string } };
+        shopName = json.shop?.name ?? null;
+      }
+    } catch { /* le nom est cosmétique — la connexion reste valable */ }
+
+    try {
+      const { connectShopifyStore } = await import("@/server/services/anubis/commerce-connect");
+      await connectShopifyStore({
+        strategyId: state.strategyId,
+        shopDomain: state.shop,
+        shopName,
+        accessToken: tokens.access_token,
+        scopes: tokens.scope ? tokens.scope.split(/[\s,]+/) : Array.from(config.defaultScopes),
+        userId: state.userId,
+      });
+    } catch (err) {
+      console.error("[oauth-callback:commerce] connect failed", err);
+      return socialRedirect(baseUrl, state.returnUrl, "echec_enregistrement", provider);
+    }
+    return socialRedirect(baseUrl, state.returnUrl, "boutique_connectee", provider);
   }
 
   // ── Branche legacy opérateur (inchangée) ────────────────────────────────

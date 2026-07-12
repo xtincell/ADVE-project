@@ -257,3 +257,26 @@ a.ck-feed__item:hover { background: var(--surface-raised); }
 .ck-dash-switch { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--accent); text-decoration: none; padding: 6px 12px; border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); border-radius: var(--radius-pill); transition: background var(--dur-fast); }
 .ck-dash-switch:hover { background: var(--accent-fill); }
 .ck-dash-switch svg { width: 13px; height: 13px; }
+
+/* Connexions — bloc boutique (vague « cockpit qui ramène tout ») */
+.ck-shop-connect { display: flex; flex-direction: column; gap: 10px; }
+.ck-shop-connect__row { display: flex; gap: 8px; }
+.ck-shop-connect__input { flex: 1; min-width: 0; padding: 8px 12px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--surface-raised); color: var(--text-primary); font-family: var(--font-mono); font-size: 12.5px; outline: none; }
+.ck-shop-connect__input:focus { border-color: var(--accent); }
+.ck-shop-connect__hint { font-size: 11px; color: var(--warning); margin: 0; }
+
+/* Page publique de marque (/b/[slug] — <slug>.powerupgraders.com) */
+.pb-page { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: var(--surface-page); }
+.pb-card { width: min(560px, 100%); display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 40px 32px; border-radius: var(--radius-2xl, 24px); background: var(--surface-card); border: 1px solid var(--border-subtle); text-align: center; }
+.pb-logo { max-width: 220px; max-height: 96px; object-fit: contain; background: #ffffff; border-radius: var(--radius-lg); padding: 10px 16px; border: 1px solid var(--border-subtle); }
+.pb-logo--placeholder { display: grid; place-items: center; width: 72px; height: 72px; font-family: var(--font-display); font-size: 32px; color: var(--accent); }
+.pb-name { font-family: var(--font-display); font-size: 30px; font-weight: 600; color: var(--text-primary); margin: 0; }
+.pb-tagline { font-size: 16px; font-style: italic; color: var(--accent); margin: 0; }
+.pb-positioning { font-size: 13.5px; line-height: 1.65; color: var(--text-secondary); margin: 0; }
+.pb-networks { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 6px; }
+.pb-network { display: inline-flex; align-items: center; gap: 7px; padding: 7px 13px; border-radius: var(--radius-pill); border: 1px solid var(--border); background: var(--surface-raised); text-decoration: none; transition: border-color var(--dur-fast); }
+.pb-network:hover { border-color: var(--accent); }
+.pb-network__platform { font-size: 12px; font-weight: 700; color: var(--text-primary); }
+.pb-network__handle { font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); }
+.pb-network__count { font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--accent); }
+.pb-footer { margin-top: 14px; font-size: 10.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }

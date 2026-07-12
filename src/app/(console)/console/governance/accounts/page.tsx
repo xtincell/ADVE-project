@@ -65,6 +65,9 @@ export default function AccountsSupervisorPage() {
         ]}
       />
 
+      {/* Marques de démo — seed serveur en un clic (fin du SSH, 12/07). */}
+      <SeedBrandsCard />
+
       {/* Répartition par rôle */}
       <div className="flex flex-wrap gap-2">
         {Object.entries(stats ?? {}).map(([role, count]) => (
@@ -146,6 +149,49 @@ export default function AccountsSupervisorPage() {
         )}
       </div>
       {setRole.error && <p className="text-xs text-error">{setRole.error.message}</p>}
+    </div>
+  );
+}
+
+
+/** Installe/actualise les marques de démo (Motion19 + Xtincell) côté serveur.
+ *  Idempotent — remplace l'étape SSH `npm run db:seed:motion19`. */
+function SeedBrandsCard() {
+  const [running, setRunning] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+  const run = async () => {
+    setRunning(true);
+    setResult(null);
+    try {
+      const res = await fetch("/api/admin/seed-brands", { method: "POST" });
+      const json = (await res.json()) as { ok: boolean; log?: string[]; error?: string };
+      setResult(json.ok
+        ? `OK — ${(json.log ?? []).filter((l) => l.startsWith("[OK]")).length} étapes vertes. Ouvrez le cockpit Motion19.`
+        : `Échec : ${json.error ?? "inconnu"}`);
+    } catch (e) {
+      setResult(`Échec : ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setRunning(false);
+    }
+  };
+  return (
+    <div className="rounded-xl border border-border bg-card p-4 flex flex-wrap items-center gap-3">
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-foreground">Marques de démo (Motion19 + Xtincell)</p>
+        <p className="text-xs text-foreground-muted">
+          Installe/actualise sur CE serveur : ADVE Motion19, logos officiels, mission Guilde,
+          compte Maximus, marque Xtincell sourcée. Idempotent — aucun SSH requis.
+        </p>
+        {result && <p className="mt-1 text-xs font-mono text-foreground-secondary">{result}</p>}
+      </div>
+      <button
+        type="button"
+        onClick={run}
+        disabled={running}
+        className="rounded-lg border border-border-strong px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
+      >
+        {running ? "Installation…" : "Installer / actualiser"}
+      </button>
     </div>
   );
 }

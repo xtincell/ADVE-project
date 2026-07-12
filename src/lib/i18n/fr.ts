@@ -200,6 +200,8 @@ export const fr = {
   "nav.campagnes.sub": "Suivi de vos campagnes",
   "nav.calendrier": "Calendrier",
   "nav.calendrier.sub": "Lancements & actions",
+  "nav.connexions": "Connexions",
+  "nav.connexions.sub": "Réseaux · Boutique · Comptes",
   "nav.operations": "Suivi du jour",
   "nav.operations.sub": "Votre activité aujourd'hui",
   "nav.resultats": "Résultats",

@@ -75,6 +75,12 @@ export async function seedMotion19(prisma: PrismaClient): Promise<void> {
   let strategy = await prisma.strategy.findFirst({
     where: { operatorId: operator.id, name: MOTION19_STRATEGY_NAME },
   });
+  if (strategy && !strategy.publicSlug) {
+    strategy = await prisma.strategy.update({
+      where: { id: strategy.id },
+      data: { publicSlug: "motion19" },
+    });
+  }
   if (!strategy) {
     strategy = await prisma.strategy.create({
       data: {
@@ -86,6 +92,7 @@ export async function seedMotion19(prisma: PrismaClient): Promise<void> {
         userId: owner.id,
         operatorId: operator.id,
         brandNature: "RETAIL_SPACE",
+        publicSlug: "motion19",
         countryCode: "CM",
         currencyCode: "XAF",
         businessContext: MOTION19_BUSINESS_CONTEXT as unknown as Prisma.InputJsonValue,

@@ -21,6 +21,7 @@ const prisma = makeClient();
 seedMotion19(prisma)
   .then(() => seedMotion19BrandVault(prisma))
   .then(() => seedMotion19Guild(prisma))
+  .then(async () => { const { seedXtincell } = await import("./seed-xtincell"); await seedXtincell(prisma); })
   .then(async () => {
     await prisma.$disconnect();
     console.log("[seed-motion19] Terminé (marque + guilde + Maximus).");

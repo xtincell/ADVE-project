@@ -222,3 +222,5 @@ Selon l'extension framework, certains routers viendront en P3-P8 :
 34 routers présents sur le filesystem mais absents des tables ci-dessus. Couverture honnête : listés, **pas encore classifiés** (Sous-système APOGEE + Tier + statut governance à attribuer — chantier tracé [RESIDUAL-DEBT.md](RESIDUAL-DEBT.md)).
 
 `accounts` · `actions` · `anubis` · `argos` · `blog` · `brand-node` · `bureau-etudes` · `campaign-change-request` · `campaign-deliverable` · `canon-sync` · `consulting` · `creative-proposal` · `crm-contacts` · `escrow-arbitration` · `imhotep` · `intention` · `laguilde` · `market-cost` · `market-study-ingestion` · `markets` · `mcp-billing` · `media-plan` · `mission-applications` · `mission-quote` · `monetization` · `morning-batch` · `newsletter` · `operations-overview` · `operator-action` · `phase18-residuals` · `source-classifier` · `talent-services` · `thot` · `xlsx-parser`
+
+| `commerce.ts` | Comms (ANUBIS) | boutique Shopify par marque : status zéro-secret, sync ventes gouvernée, disconnect (ADR-0132) |
