@@ -107,9 +107,17 @@ const PROTECTED_ROUTES: Array<{
 // ---------------------------------------------------------------------------
 const CANONICAL_HOST = process.env.CANONICAL_HOST || "powerupgraders.com";
 
+/** Hôtes locaux (dev, CI Golden Path en `next start`) — jamais canonicalisés. */
+function isLocalHost(host: string): boolean {
+  const bare = host.split(":")[0] ?? "";
+  return bare === "localhost" || bare === "127.0.0.1" || bare === "0.0.0.0" || bare.endsWith(".local");
+}
+
 export async function proxy(request: NextRequest) {
-  // Ne s'applique qu'en prod (déployé derrière Coolify) — évite de rediriger
-  // localhost:3000 en dev où il n'y a qu'un seul host de toute façon.
+  // Ne s'applique qu'aux hôtes publics. NODE_ENV=production ne signifie PAS
+  // « derrière Coolify » : le job CI Golden Path fait tourner `next start`
+  // (production) sur localhost:3000 — le canonicaliser cassait tout le
+  // parcours E2E (régression v6.27.111, réparée v6.27.112).
   if (process.env.NODE_ENV === "production") {
     const host = request.headers.get("host");
     // Doctrine domaines (correction opérateur 2026-07-12) : les byproducts de
@@ -117,7 +125,7 @@ export async function proxy(request: NextRequest) {
     // en sous-domaines — les sous-domaines existants (ex. la page personnelle
     // xtincell.powerupgraders.com) sont des sites indépendants qu'on ne
     // détourne pas ; ils servent de SOURCES à l'ADVE.
-    if (host && host !== CANONICAL_HOST) {
+    if (host && host !== CANONICAL_HOST && !isLocalHost(host)) {
       const url = request.nextUrl.clone();
       url.protocol = "https:";
       url.host = CANONICAL_HOST;

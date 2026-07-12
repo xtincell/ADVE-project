@@ -37,6 +37,10 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 - Gated (RESIDUAL-DEBT §ADR-0128) : reach/impressions/saves par post = `read_insights` +
   `instagram_manage_insights` (2ᵉ App Review), YT Analytics (scope dédié), LinkedIn produit CM,
   X payant, TikTok `video.list` + client secret.
+- **Fix CI Golden Path E2E (régression v6.27.111)** : la redirection domaine-canonique du proxy
+  s'armait sur `NODE_ENV=production` — vrai aussi en CI (`next start` sur localhost:3000) → tout
+  le parcours E2E partait en 308 vers powerupgraders.com. Garde `isLocalHost` posée ; zéro impact
+  prod (seuls les domaines Coolify atteignent l'app déployée).
 - **Webhook LinkedIn** (`/api/integrations/linkedin/webhook`) : validation challenge du portail
   dev (HMAC-SHA256 hex du `challengeCode`, client secret) + événements signés `X-LI-Signature`
   vérifiés `timingSafeEqual`. v1 ACK sans persistance (on ne stocke pas une donnée membre
