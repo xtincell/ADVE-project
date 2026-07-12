@@ -32,18 +32,18 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 204 models, 71 enums
+## Prisma — 205 models, 71 enums
 
 ### Models
 
 - **Account** (13 fields)
 - **Session** (5 fields)
 - **VerificationToken** (3 fields)
-- **User** (27 fields)
+- **User** (29 fields)
 - **Operator** (30 fields)
 - **ClientAllocation** (14 fields)
 - **Client** (17 fields)
-- **Strategy** (74 fields)
+- **Strategy** (75 fields)
 - **Intention** (14 fields)
 - **Campaign** (80 fields)
 - **Mission** (35 fields)
@@ -90,6 +90,7 @@ Ces correspondances évitent la réinvention :
 - **UsageGrant** (16 fields)
 - **CampaignAmplification** (25 fields)
 - **CampaignTeamMember** (9 fields)
+- **StrategyCollaborator** (14 fields) — ADR-0129 — Accès délégué PAR MARQUE (sœur strategy-scopée de CampaignTeamMember). Un collaborateur externe (ex. freelanc
 - **CampaignMilestone** (12 fields)
 - **CampaignApproval** (13 fields)
 - **CampaignAsset** (14 fields)
@@ -298,7 +299,7 @@ Ces correspondances évitent la réinvention :
 - **EnrollmentStatus** : ENROLLED | IN_PROGRESS | COMPLETED | DROPPED
 - **AmbassadorTier** : BRONZE | SILVER | GOLD | PLATINUM | DIAMOND
 - **AuditAction** : CREATE | UPDATE | DELETE | LOGIN | LOGOUT | APPROVE | REJECT | ESCALATE | EXPORT
-- **CampaignTeamRole** : ACCOUNT_DIRECTOR | ACCOUNT_MANAGER | STRATEGIC_PLANNER | CREATIVE_DIRECTOR | ART_DIRECTOR | COPYWRITER | MEDIA_PLANNER | MEDIA_BUYER | SOCIAL_MANAGER | PRODUCTION_MANAGER | PROJECT_MANAGER | DATA_ANALYST | CLIENT
+- **CampaignTeamRole** : ACCOUNT_DIRECTOR | ACCOUNT_MANAGER | STRATEGIC_PLANNER | CREATIVE_DIRECTOR | ART_DIRECTOR | COPYWRITER | MEDIA_PLANNER | MEDIA_BUYER | SOCIAL_MANAGER | PRODUCTION_MANAGER | PROJECT_MANAGER | DATA_ANALYST | CLIENT | DIGITAL_DIRECTOR
 - **NotificationChannel** : IN_APP | EMAIL | SMS | PUSH
 - **IntentionType** : PRODUCT_LAUNCH | REPOSITION | MARKET_ENTRY | CAMPAIGN | PLATFORM | PARTNERSHIP | OTHER
 - **IntentionStatus** : CAPTURED | BRIEF_GENERATED | BRIEF_VALIDATED | CONVERTED | ARCHIVED
@@ -1000,7 +1001,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 551 (par governor)
+## Intent kinds — 553 (par governor)
 
 ### MESTOR (79)
 
@@ -1505,7 +1506,7 @@ Ces correspondances évitent la réinvention :
 - `LEGACY_TRANSLATION_CREATE` → translation (sync) — Strangler-promoted mutation 'create' from router 'translation'.…
 - `LEGACY_UPSELL_DISMISS` → upsell (sync) — Strangler-promoted mutation 'dismiss' from router 'upsell'.…
 
-### IMHOTEP (17)
+### IMHOTEP (19)
 
 - `APPLY_TO_MISSION` → mission-applications (sync) — Vague 7 : un talent/agence candidate a une mission ouverte (statut PENDING, mess…
 - `DECIDE_MISSION_APPLICATION` → mission-applications (sync) — Vague 7 : decision operateur sur une candidature — ACCEPTED assigne la mission e…
@@ -1514,6 +1515,8 @@ Ces correspondances évitent la réinvention :
 - `GUILD_REGISTER_TALENT` → laguilde (sync) — La Guilde : inscription d'un freelance/createur. Cree/upsert un TalentProfile (d…
 - `GUILD_REGISTER_ORGANIZATION` → laguilde (sync) — La Guilde : inscription d'une agence / boite de prod. Cree une GuildOrganization…
 - `GUILD_DRAFT_MISSION_FROM_TEXT` → laguilde (sync) — La Guilde : assist LLM OPTIONNEL (ADR-0098). A partir d'une description libre d'…
+- `GRANT_STRATEGY_COLLABORATOR` → strategy (sync) — ADR-0129 : accorde à un user (talent Guilde, freelance, agence) un accès délégué…
+- `REVOKE_STRATEGY_COLLABORATOR` → strategy (sync) — ADR-0129 : révoque l'accès délégué d'un collaborateur sur une Strategy (status=R…
 - `EVALUATE_CREW_PERFORMANCE` → campaign-tracker (sync) — Cluster E — À POST_CAMPAIGN, score qualité par dimension pour chaque CampaignTea…
 - `EVALUATE_RESOURCE_SATURATION` → campaign-tracker (sync) — Cluster F — Imhotep agrège CampaignTeamMember[] × dates × disponibilité crew. Ou…
 - `IMHOTEP_DRAFT_CREW_PROGRAM` → imhotep (sync) — Draft un programme crew (rôles + budget estimé) pour une stratégie. Phase 14+ re…

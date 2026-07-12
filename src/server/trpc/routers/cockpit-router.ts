@@ -2,6 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { checkPaidTier } from "@/server/services/glory-tools/tier-gate";
+import { canAccessStrategy, getOperatorContext } from "@/server/services/operator-isolation";
 import {
   shapeCommunityDashboard,
   latestFollowerPerPlatform,
@@ -153,7 +154,11 @@ export const cockpitRouter = createTRPCRouter({
       // Tenant scope (FR32) — founder owns the strategy, or an operator/admin.
       const isPrivileged = ctx.session.user.role === "ADMIN";
       if (!isPrivileged && strategy.userId !== ctx.session.user.id) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Cette marque ne vous appartient pas" });
+        // ADR-0129 - operateur de la marque ou collaborateur delegue ACTIVE.
+        const opCtx = await getOperatorContext(ctx.session.user.id);
+        if (!(await canAccessStrategy(input.strategyId, opCtx))) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Cette marque ne vous appartient pas" });
+        }
       }
 
       const sectorSlug = extractSectorSlug(strategy.businessContext);
@@ -223,7 +228,11 @@ export const cockpitRouter = createTRPCRouter({
       if (!strategy) throw new TRPCError({ code: "NOT_FOUND", message: "Strategy introuvable" });
       const isPrivileged = ctx.session.user.role === "ADMIN";
       if (!isPrivileged && strategy.userId !== ctx.session.user.id) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Cette marque ne vous appartient pas" });
+        // ADR-0129 - operateur de la marque ou collaborateur delegue ACTIVE.
+        const opCtx = await getOperatorContext(ctx.session.user.id);
+        if (!(await canAccessStrategy(input.strategyId, opCtx))) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Cette marque ne vous appartient pas" });
+        }
       }
 
       const strategyId = input.strategyId;
@@ -296,7 +305,11 @@ export const cockpitRouter = createTRPCRouter({
       if (!strategy) throw new TRPCError({ code: "NOT_FOUND", message: "Strategy introuvable" });
       const isPrivileged = ctx.session.user.role === "ADMIN";
       if (!isPrivileged && strategy.userId !== ctx.session.user.id) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Cette marque ne vous appartient pas" });
+        // ADR-0129 - operateur de la marque ou collaborateur delegue ACTIVE.
+        const opCtx = await getOperatorContext(ctx.session.user.id);
+        if (!(await canAccessStrategy(input.strategyId, opCtx))) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Cette marque ne vous appartient pas" });
+        }
       }
 
       // Dernier relevé social par plateforme (toutes provenances confondues).
@@ -378,7 +391,11 @@ export const cockpitRouter = createTRPCRouter({
       if (!strategy) throw new TRPCError({ code: "NOT_FOUND", message: "Strategy introuvable" });
       const isPrivileged = ctx.session.user.role === "ADMIN";
       if (!isPrivileged && strategy.userId !== ctx.session.user.id) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Cette marque ne vous appartient pas" });
+        // ADR-0129 - operateur de la marque ou collaborateur delegue ACTIVE.
+        const opCtx = await getOperatorContext(ctx.session.user.id);
+        if (!(await canAccessStrategy(input.strategyId, opCtx))) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Cette marque ne vous appartient pas" });
+        }
       }
 
       const sector = extractSectorSlug(strategy.businessContext);
@@ -443,10 +460,14 @@ export const cockpitRouter = createTRPCRouter({
       if (!strategy) throw new TRPCError({ code: "NOT_FOUND", message: "Strategy introuvable" });
       const isPrivileged = ctx.session.user.role === "ADMIN";
       if (!isPrivileged && strategy.userId !== ctx.session.user.id) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Cette marque ne vous appartient pas" });
+        // ADR-0129 - operateur de la marque ou collaborateur delegue ACTIVE.
+        const opCtx = await getOperatorContext(ctx.session.user.id);
+        if (!(await canAccessStrategy(input.strategyId, opCtx))) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Cette marque ne vous appartient pas" });
+        }
       }
 
-      const [logos, typographyCount, chromaticCount, vaultTotal] = await Promise.all([
+      const [logos, typographyCount, chromatics, vaultTotal] = await Promise.all([
         ctx.db.brandAsset.findMany({
           where: {
             strategyId: strategy.id,
@@ -461,8 +482,11 @@ export const cockpitRouter = createTRPCRouter({
         ctx.db.brandAsset.count({
           where: { strategyId: strategy.id, kind: "TYPOGRAPHY_SYSTEM", state: { notIn: ["ARCHIVED", "REJECTED"] } },
         }),
-        ctx.db.brandAsset.count({
+        ctx.db.brandAsset.findMany({
           where: { strategyId: strategy.id, kind: "CHROMATIC_STRATEGY", state: { notIn: ["ARCHIVED", "REJECTED"] } },
+          orderBy: { createdAt: "desc" },
+          take: 4,
+          select: { content: true, state: true },
         }),
         ctx.db.brandAsset.count({ where: { strategyId: strategy.id } }),
       ]);
@@ -472,13 +496,26 @@ export const cockpitRouter = createTRPCRouter({
       const logo =
         finals.find((l) => l.state === "ACTIVE") ?? finals[0] ?? logos[0] ?? null;
 
+      // ADR-0130 — palette de la marque (actif CHROMATIC_STRATEGY structuré).
+      // Hex STRICTEMENT validés avant de sortir (ils finissent en CSS custom
+      // properties côté client — jamais de chaîne libre injectée).
+      const HEX = /^#[0-9a-fA-F]{6}$/;
+      const chromaticContent = (chromatics.find((c) => c.state === "ACTIVE") ?? chromatics[0])?.content as
+        | { accent?: unknown; primary?: unknown }
+        | null
+        | undefined;
+      const accent = typeof chromaticContent?.accent === "string" && HEX.test(chromaticContent.accent) ? chromaticContent.accent : null;
+      const primary = typeof chromaticContent?.primary === "string" && HEX.test(chromaticContent.primary) ? chromaticContent.primary : null;
+
       return {
         brandName: strategy.name,
         logo: logo ? { url: logo.fileUrl as string, name: logo.name, state: String(logo.state) } : null,
+        // null = pas de palette déclarée → le cockpit garde le thème par défaut.
+        palette: accent || primary ? { accent: accent ?? primary, primary: primary ?? accent } : null,
         assetCounts: {
           logos: finals.length,
           typographies: typographyCount,
-          palettes: chromaticCount,
+          palettes: chromatics.length,
           total: vaultTotal,
         },
       };

@@ -6,7 +6,7 @@
 
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { seedMotion19 } from "./seed-motion19";
+import { seedMotion19, seedMotion19BrandVault, seedMotion19Guild } from "./seed-motion19";
 
 function makeClient(): PrismaClient {
   const connectionString = process.env.DATABASE_URL;
@@ -19,9 +19,11 @@ function makeClient(): PrismaClient {
 const prisma = makeClient();
 
 seedMotion19(prisma)
+  .then(() => seedMotion19BrandVault(prisma))
+  .then(() => seedMotion19Guild(prisma))
   .then(async () => {
     await prisma.$disconnect();
-    console.log("[seed-motion19] Terminé.");
+    console.log("[seed-motion19] Terminé (marque + guilde + Maximus).");
   })
   .catch(async (e) => {
     console.error("[seed-motion19] Échec :", e);

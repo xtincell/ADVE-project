@@ -29,7 +29,7 @@
 
 export const PILLAR_A = {
   nomMarque: "Motion19",
-  accroche: "Donnez vie à chaque image",
+  accroche: "Feel free to create", // tagline officielle (Brand Book Édition 2026 V2, fourni par l'opérateur 12/07/2026)
   description:
     "Motion19 est la boutique spécialisée de l'équipement photo, vidéo, audio et drone au Cameroun — un magasin à Akwa (Douala) doublé d'un e-commerce (motion19.com, 373 produits / 157 collections, juillet 2026). Plus qu'un revendeur : un équipementier qui conseille, garantit l'authenticité des produits (distributeurs officiels) et accompagne chaque projet créatif, du débutant ambitieux au professionnel exigeant.",
   secteur: "Équipement audiovisuel & créateurs",
@@ -47,7 +47,7 @@ export const PILLAR_A = {
   promesseFondamentale:
     "T'équiper comme un pro sans te tromper : le bon matériel pour ton usage et ton budget, authentique, garanti, livré au Cameroun — avec un conseil humain avant, pendant et après l'achat.",
   missionStatement:
-    "Rendre accessibles au Cameroun et en Afrique centrale les équipements professionnels photo, vidéo, audio et drone des plus grandes marques mondiales, et faire grandir la génération de créateurs qui documentera la culture de la région (mission affichée motion19.com/pages/a-propos).",
+    "Fournir un matériel de qualité, en quantité, aux créatifs tout au long de leur parcours professionnel — et rendre accessibles au Cameroun et en Afrique centrale (zone de référence CEMAC) les équipements professionnels photo, vidéo, audio et drone (Brand Book 2026 V2 + motion19.com/pages/a-propos).",
   doctrine: {
     texte:
       "Le créatif d'abord, le carton ensuite : Motion19 vend par l'usage (Setup Podcast, Setup YouTube, Setup Créateur Mobile…) et par le palier de budget, pas par la fiche technique brute. Produits authentiques via distributeurs officiels — jamais de gris douteux. Le conseil est gratuit, le paiement se fait à la livraison : la confiance précède la transaction.",
@@ -59,11 +59,11 @@ export const PILLAR_A = {
     ],
   }, // doctrine synthétisée des pratiques observées — INFERRED
   valeurs: [
-    { valeur: "Fiabilité", justification: "Produits authentiques, garantie assurée, SAV — l'antidote à l'import douteux.", rang: 1 },
-    { valeur: "Accessibilité", justification: "Prix en FCFA du premier accessoire (15 000 F) au plateau broadcast, guides par palier de budget.", rang: 2 },
-    { valeur: "Pédagogie", justification: "Motion19 Academy (blog), recommandations par niveau, conseil WhatsApp personnalisé.", rang: 3 },
-    { valeur: "Passion créative", justification: "#FeelFreeToCreate / #MadeForCreators — la boutique se vit comme un allié des créateurs, pas un comptoir.", rang: 4 },
-  ], // INFERRED — dérivées de la communication observée
+    { valeur: "Professionnelle", justification: "Expertise technique et maîtrise de l'information fournie — sans en faire trop (Brand Book §Voix).", rang: 1 },
+    { valeur: "Inspirante", justification: "Motiver la cible à développer des projets créatifs, ou à les partager (Brand Book §Voix).", rang: 2 },
+    { valeur: "Sympathique", justification: "Créer un lien de proximité au-delà de la relation vendeur-client (Brand Book §Voix).", rang: 3 },
+    { valeur: "Fiabilité", justification: "Produits authentiques, garantie, SAV et conseil de proximité — l'antidote à l'import douteux (niche déclarée + site).", rang: 4 },
+  ], // OFFICIEL — les 3 valeurs de voix viennent du Brand Book 2026 V2
   herosJourney: [
     { actNumber: 1, title: "Le créatif bloqué", narrative: "Un créateur camerounais veut produire mieux : entre l'import cross-border risqué, les généralistes qui vendent de tout et les prix en devises, il ne sait pas à qui faire confiance.", emotionalArc: "ambition → méfiance", causalLink: "Le problème n'est pas l'envie, c'est l'accès fiable à l'outil." },
     { actNumber: 2, title: "La découverte de la boutique", narrative: "Il découvre Motion19 — un spécialiste qui parle son langage (setup par usage, budget en FCFA) et répond sur WhatsApp.", emotionalArc: "méfiance → curiosité", causalLink: "Un spécialiste local qui conseille avant de vendre inverse le rapport de confiance." },
@@ -92,7 +92,7 @@ export const PILLAR_A = {
     fraternityFuel: "Les créateurs qui ont déjà perdu de l'argent dans du matériel douteux se reconnaissent immédiatement.",
   }, // INFERRED — cadrage stratégique proposé
   prophecy: {
-    vision: "Le Cameroun qui filme, photographie et podcast en qualité pro — et Motion19 comme maison d'équipement de cette génération, de Douala vers l'Afrique centrale.",
+    vision: "« Devenir un acteur majeur de la valorisation du travail des créatifs africains » (vision officielle, Brand Book 2026 V2) — le Cameroun puis la CEMAC qui filment, photographient et podcastent en qualité pro, équipés par Motion19.",
     worldTransformed:
       "Un écosystème où chaque église, chaque studio, chaque créateur de quartier accède à l'outil professionnel authentique avec un conseil local — et où la production audiovisuelle camerounaise rivalise en qualité avec Lagos ou Abidjan.",
     horizon: "2026-2030",
@@ -169,7 +169,7 @@ export const PILLAR_A = {
 
 export const PILLAR_D = {
   positionnement:
-    "Le spécialiste de l'équipement audiovisuel au Cameroun — la seule boutique dédiée aux créateurs d'image et de son identifiée sur le marché : là où les généralistes vendent des cartons, Motion19 vend des setups, du conseil et de la garantie.", // INFERRED
+    "Pour les professionnels de l'audiovisuel et celles et ceux qui veulent explorer leur créativité, Motion19 s'engage à fournir l'accompagnement humain et technique nécessaire pour explorer, avec conviction, tout leur potentiel créatif. (Positionnement officiel — Brand Book 2026 V2 §02.)", // OFFICIEL
   positionnementEmotionnel:
     "La sérénité de l'achat sûr : « je sais que c'est le bon matériel, au bon prix, et que quelqu'un répond si ça se passe mal » — et la fierté d'appartenir au cercle des créatifs équipés sérieusement.", // INFERRED
   promesseMaitre:
@@ -182,42 +182,42 @@ export const PILLAR_D = {
   ],
   personas: [
     {
-      nom: "Le créateur de contenu (YouTube/TikTok, 20-35 ans)",
-      insightCle: "Il monétise peu ou pas (TikTok Creator Rewards fermé au Cameroun) : chaque franc investi doit être le bon — il achète par palier et veut être rassuré.",
-      motivations: ["passer un cap de qualité visible", "un setup complet cohérent (pas des pièces au hasard)", "payer à la livraison"],
-      barriers: ["budget serré autofinancé", "peur de l'arnaque et de la contrefaçon"],
+      nom: "L'amateur (étudiant / passionné)",
+      insightCle: "Il a atteint les limites du téléphone et cherche un premier matériel professionnel accessible — besoin : MONTER EN GAMME (persona officiel, Brand Book §04).",
+      motivations: ["progresser", "un premier équipement pro accessible", "être guidé sans jargon"],
+      barriers: ["budget d'entrée", "peur de se tromper de matériel"],
     },
     {
-      nom: "Le vidéaste / photographe professionnel",
-      insightCle: "Son matériel est son gagne-pain : la panne ou le faux coûtent des contrats — il paie pour l'authentique, la dispo et le SAV.",
-      motivations: ["marques pro (Sony, Canon, DJI, Godox)", "disponibilité immédiate ou précommande fiable", "relation fournisseur durable"],
-      barriers: ["comparaison avec les prix d'import", "besoin de facture et de garantie réelles"],
+      nom: "L'entrepreneur du web",
+      insightCle: "Peu intéressé par l'audiovisuel en soi, mais il en a besoin pour se vendre : podcast, vidéo, photo — besoin : PERSONAL BRANDING (persona officiel, Brand Book §04).",
+      motivations: ["un setup clé en main qui rend crédible", "un palier de qualité visible", "aller vite"],
+      barriers: ["pas de culture matériel", "arbitrage budget business"],
     },
     {
-      nom: "Le responsable média d'église",
-      insightCle: "Les églises s'équipent en multicam/streaming pour leurs cultes — un projet d'équipement collectif avec budget validé en conseil.",
-      motivations: ["solution clé en main (caméras PTZ, mélangeur, micros, éclairage)", "accompagnement à l'installation", "fournisseur de confiance recommandé"],
-      barriers: ["cycles de décision longs", "besoin de devis et de pédagogie non technique"],
+      nom: "Le professionnel",
+      insightCle: "Il maîtrise la technique et n'a plus peur des défis ; sa seule limite est la DISPONIBILITÉ d'un matériel de qualité — besoin : DISPONIBILITÉ & DÉFI (persona officiel, Brand Book §04).",
+      motivations: ["disponibilité immédiate ou précommande fiable", "matériel digne de ses ambitions", "relation fournisseur durable"],
+      barriers: ["ruptures de stock", "comparaison import"],
     },
     {
-      nom: "L'entreprise / agence média (B2B)",
-      insightCle: "Studios, agences, assurances et TV (logos affichés : Balafon Media, Chanas Assurances, Dash Media…) équipent des équipes entières et reviennent pour le parc.",
-      motivations: ["compte fournisseur sérieux (facturation, volume)", "matériel broadcast et parc homogène", "délais tenus"],
-      barriers: ["appels d'offres et concurrence import", "exigence de SAV professionnel"],
+      nom: "L'organisation (église, école, entreprise, média)",
+      insightCle: "Projets d'équipement collectifs (multicam, streaming, plateaux) avec cycles de décision longs — segment observé (collections verticales + 7 logos B2B affichés).",
+      motivations: ["solution clé en main + devis", "accompagnement à l'installation", "compte fournisseur sérieux"],
+      barriers: ["budgets validés en comité", "exigence de SAV professionnel"],
     },
-  ], // INFERRED — personas reconstitués des segments observés (setups, verticales, logos B2B)
+  ], // OFFICIEL — 3 personas du Brand Book 2026 V2 §04 (+ 1 segment B2B observé, marqué inféré)
   tonDeVoix: {
-    personnalite: ["Chaleureux-pro", "Pédagogue", "Enthousiaste sans survendre", "Local et fier de l'être"],
-    onDit: ["créatif / créateur", "setup", "donne vie à chaque image", "équipe-toi comme un pro", "authentique / garanti", "en FCFA, payé à la livraison"],
-    onNeDitPas: ["du jargon technique sans traduction d'usage", "des promesses de prix « imbattables » à l'import", "un vouvoiement corporate froid sur TikTok (le tutoiement y est la norme observée)"],
-  },
+    personnalite: ["Inspirante", "Professionnelle", "Sympathique", "Encourageante, sérieuse, agréable, enthousiaste, positive (ton, Brand Book §08)"],
+    onDit: ["Talent", "Créatif / Créateur", "Concept, Idée, Solution", "Imagination, Inspiration, Audace", "Potentiel, Expression, Exploration", "Curiosité, Liberté, Qualité, Expertise, Maîtrise, Plaisir, Partage"],
+    onNeDitPas: ["la négation (tournures positives — règle officielle)", "le jargon inutile (sauf audience experte)", "parler depuis le confort de la marque (toujours depuis le bénéfice du lecteur)", "la voix passive (voix active, toujours, à l'écrit)"],
+  }, // OFFICIEL — voix/ton/règles de contenu du Brand Book §08-09
   assetsLinguistiques: {
     languePrincipale: "fr",
-    slogan: "Donnez vie à chaque image",
-    tagline: "La Boutique Des Créatifs",
-    naming: "Motion19 en un mot, le « 19 » en bleu vif ; « Motion19 Academy » pour la pédagogie ; les « Setups » comme grammaire d'offre.",
-    lexique: ["Motion19", "La Boutique Des Créatifs", "#FeelFreeToCreate", "#MadeForCreators", "Motion19 Academy", "Setup Podcast / YouTube / Créateur Mobile / Drone / Livestream / TikTok / Photographe / Vidéaste"],
-  },
+    slogan: "Feel free to create",
+    tagline: "La Boutique Des Créatifs (bio X) · « Donnez vie à chaque image » (H1 du site)",
+    naming: "Motion19 en un mot, le « 19 » porte toujours le bleu ; monogramme M19 pour les usages réduits ; « Motion19 Academy » pour la pédagogie ; les « Setups » comme grammaire d'offre.",
+    lexique: ["Talent", "Créatif", "Créateur", "Concept", "Idée", "Solution", "Imagination", "Inspiration", "Audace", "Potentiel", "Expression", "Exploration", "Improvisation", "Curiosité", "Liberté", "Qualité", "Expertise", "Maîtrise", "Plaisir", "Partage", "#FeelFreeToCreate", "#MadeForCreators"],
+  }, // OFFICIEL — lexique propriétaire du Brand Book §09 (+ phrases signatures : « Pensez à un audit de votre matériel », « Quel est le prochain projet que vous allez monter ? »)
   paysageConcurrentiel: [
     { name: "Glotelho (glotelho.cm)", avantagesCompetitifs: ["leader e-commerce local (Akwa)", "notoriété et trafic", "retrait agence + paiement à la livraison"], partDeMarcheEstimee: "forte sur le e-commerce généraliste", faiblesses: ["généraliste : la catégorie photo/caméra est un rayon parmi d'autres", "zéro conseil spécialiste AV"], strategiePos: "Le battre sur l'expertise, la profondeur de catalogue AV et le conseil — pas sur le trafic généraliste.", distinctiveAssets: ["la marque e-commerce installée"] },
     { name: "NowTech Center / KAMKA TECH / iziway", avantagesCompetitifs: ["présence en ligne", "rayons appareils photo"], partDeMarcheEstimee: "diffuse", faiblesses: ["high-tech généraliste, catalogue AV superficiel", "pas de verticales créateurs"], strategiePos: "Occuper la catégorie « spécialiste » qu'ils ne peuvent pas revendiquer.", distinctiveAssets: ["référencement high-tech"] },
@@ -236,14 +236,14 @@ export const PILLAR_D = {
     { barrier: "Le capital de confiance local", defensibility: "Boutique physique Akwa + 5 ans d'activité + paiement à la livraison : la confiance se construit en années.", expectedDuration: "structurelle", category: "marque / confiance" },
   ],
   archetypalExpression: {
-    visualTranslation: "Le Sage-Créateur en image : le O de MOTION en objectif/bouton record (l'œil qui enregistre), wordmark anthracite sobre + « 19 » bleu vif — la rigueur du pro, l'étincelle du créatif.",
-    verbalTranslation: "Le Sage conseille (« Quel matériel pour YouTube en 2026 ? », paliers de budget) ; le Créateur encourage (« Inspire ta créativité », #FeelFreeToCreate).",
-    emotionalRegister: "Complicité de plateau : on parle d'égal à égal avec le créateur, on célèbre ses sorties (« Hello, Septembre 🍂 On démarre le mois avec du neuf dans les rayons ✨🛒 »).",
-  }, // INFERRED
+    visualTranslation: "Le Sage-Créateur en image : wordmark au O-objectif + monogramme M19 (M en barres verticales — égaliseur et rideau de lumière), « 19 » toujours bleu, trame isométrique de matériel en filigrane (Brand Book §05-07).",
+    verbalTranslation: "Le Sage conseille (expertise, information à jour) ; le Créateur inspire (« Feel free to create », valorisation de la créativité — pivot officiel du discours).",
+    emotionalRegister: "Inspirante-professionnelle-sympathique : proximité au-delà de la relation vendeur-client, sans en faire trop (Brand Book §08).",
+  }, // INFERRED (lecture archétypale NEFER) sur matière OFFICIELLE (Brand Book)
   directionArtistique: {
-    univers: "Sobriété pro + énergie créative : wordmark MOTION19 anthracite au O-objectif (disque + anneau + point), « 19 » bleu vif, fond clair e-commerce, photos produits propres (logo : motion19.com/cdn/shop/files/logo_motion19_black.png)",
-    principes: ["Le produit au centre, fond neutre — l'e-commerce d'abord", "Le bleu Motion19 comme accent unique sur base anthracite/blanc", "Montrer l'usage (setups en situation) autant que l'objet"],
-  },
+    univers: "Palette signature officielle (Brand Book §06) : Bleu profond #4867B0 (aplats, print/CMYK) · Bleu digital #3384FF (le « 19 », accent écran) · Anthracite #1D1D1D · Gris #B5B5B5 — proportions ~62 % anthracite / ~26 % bleu / ~12 % gris. Typographie : Exo 2 (titrage, Regular→ExtraBold) + Roboto (texte courant). Motif : trame isométrique de matériel (caméras, optiques, trépieds, lumière).",
+    principes: ["Deux bleus, deux rôles : #4867B0 structure, #3384FF accentue à l'écran", "Style d'image : sympathique, inspirant, professionnel — produit isolé, lumière propre", "Monogramme M19 en réserve blanche sur les supports (cartes, sacs, signalétique)"],
+  }, // OFFICIEL — couleurs/typo/motif du Brand Book §06-07
   proofPoints: [
     "373 produits / 157 collections publiés, 30+ marques mondiales distribuées (catalogue Shopify, 12/07/2026).",
     "5 ans d'activité continue (domaine et premiers produits mars 2021 ; X actif de nov. 2021 à sept. 2025 au moins).",
@@ -393,10 +393,10 @@ export const PILLAR_E = {
     { canal: "Boutique physique (1203 Bvd de la Liberté, Akwa)", type: "Showroom + conseil + retrait", stadeAarrr: "Activation" },
     { canal: "motion19.com (e-commerce)", type: "Catalogue + commande + précommandes", stadeAarrr: "Acquisition" },
     { canal: "WhatsApp Business", type: "Conseil personnalisé + commande + SAV", stadeAarrr: "Retention" },
-    { canal: "Instagram @motion19store (1 602 posts)", type: "Vitrine produits + nouveautés", stadeAarrr: "Acquisition" },
-    { canal: "TikTok @motion19sarl (136 vidéos)", type: "Contenu créateurs + démos", stadeAarrr: "Acquisition" },
-    { canal: "Facebook /motion19store (4 252 likes)", type: "Communauté locale + annonces", stadeAarrr: "Acquisition" },
-    { canal: "X @motion19store", type: "Marronniers & nouveautés (#FeelFreeToCreate)", stadeAarrr: "Retention" },
+    { canal: "Instagram @motion19store (1 602 posts)", type: "« La vitrine du faire » — partage de travail créatif et d'inspiration (rôle officiel, Brand Book §10)", stadeAarrr: "Acquisition" },
+    { canal: "TikTok @motion19sarl (136 vidéos)", type: "Contenu créateurs + démos (canal observé, hors Brand Book)", stadeAarrr: "Acquisition" },
+    { canal: "Facebook /motion19store (4 252 likes)", type: "Développement de la communauté créative (rôle officiel, Brand Book §10)", stadeAarrr: "Acquisition" },
+    { canal: "X @motion19store", type: "Mise en avant de l'expertise + engagement direct (rôle officiel, Brand Book §10)", stadeAarrr: "Retention" },
     { canal: "Motion19 Academy (blog)", type: "Guides par budget et par usage", stadeAarrr: "Acquisition" },
   ],
   channelTouchpointMap: [
@@ -864,26 +864,26 @@ export const MOTION19_BUSINESS_CONTEXT = {
  * adresse, réseaux, dates) ne sont PAS marqués : ils sont sourcés, pas inférés.
  * Format identique à infer-needs-human-fields.ts : `{ "<pillar>.<field>": "INFERRED" }`.
  */
-export const MOTION19_FIELD_CERTAINTY: Record<"a" | "d" | "v" | "e", Record<string, "INFERRED">> = {
+export const MOTION19_FIELD_CERTAINTY: Record<"a" | "d" | "v" | "e", Record<string, "INFERRED" | "OFFICIAL">> = {
   a: {
     "a.archetype": "INFERRED",
     "a.archetypeSecondary": "INFERRED",
     "a.noyauIdentitaire": "INFERRED",
     "a.doctrine": "INFERRED",
-    "a.valeurs": "INFERRED",
+    "a.valeurs": "OFFICIAL", // Brand Book 2026 V2 §08 (voix)
     "a.herosJourney": "INFERRED",
     "a.ikigai": "INFERRED",
     "a.enemy": "INFERRED",
-    "a.prophecy": "INFERRED",
+    "a.prophecy": "OFFICIAL", // vision officielle, Brand Book §01
     "a.livingMythology": "INFERRED",
     "a.equipeComplementarite": "INFERRED",
     "a.hierarchieCommunautaire": "INFERRED",
   },
   d: {
-    "d.positionnement": "INFERRED",
+    "d.positionnement": "OFFICIAL", // Brand Book §02
     "d.positionnementEmotionnel": "INFERRED",
     "d.promesseMaitre": "INFERRED",
-    "d.personas": "INFERRED",
+    "d.personas": "OFFICIAL", // Brand Book §04 (3 personas canon)
     "d.archetypalExpression": "INFERRED",
   },
   v: {
@@ -932,4 +932,358 @@ export const MOTION19_LOGO = {
   fileUrl: "https://motion19.com/cdn/shop/files/logo_motion19_black.png",
   summary:
     "Wordmark « MOTION19 » : MOTION en anthracite graisse fine, le O de TION stylisé en objectif/bouton record (disque + anneau + point), barre au-dessus du I, « 19 » en bleu vif gras. Source : motion19.com (CDN Shopify), relevé 12/07/2026.",
+} as const;
+
+/**
+ * Palette signature OFFICIELLE (Brand Book Édition 2026 V2 §06, fourni par
+ * l'opérateur le 12/07/2026). Deux bleus, deux rôles : #4867B0 structure
+ * (print/aplats), #3384FF accentue à l'écran (le « 19 » du logo).
+ * Consommée par : BrandAsset CHROMATIC_STRATEGY (seed) + le theming cockpit
+ * de la marque (ADR-0130 — le cockpit puise dans le code couleur de la marque).
+ */
+export const MOTION19_BRAND_PALETTE = {
+  primary: "#4867B0",
+  accent: "#3384FF",
+  anthracite: "#1D1D1D",
+  grey: "#B5B5B5",
+  proportions: { anthracite: 0.62, bleu: 0.26, gris: 0.12 },
+  roles: {
+    "#4867B0": "Bleu signature — aplats et grandes surfaces (print, CMYK 59·41·0·31)",
+    "#3384FF": "Bleu digital — accent vif à l'écran : le « 19 », les traits, les points d'appui",
+    "#1D1D1D": "Anthracite — base (~62 %)",
+    "#B5B5B5": "Gris — respiration (~12 %)",
+  },
+  provenance: "Brand Book Motion19 Édition 2026 V2 §06 (OFFICIAL)",
+} as const;
+
+/** Système typographique OFFICIEL (Brand Book §06). */
+export const MOTION19_TYPOGRAPHY = {
+  display: { family: "Exo 2", weights: ["Regular", "SemiBold", "Bold", "ExtraBold"], usage: "Titrage et intertitres" },
+  text: { family: "Roboto", usage: "Texte courant — lisibilité à toutes les tailles, écran comme impression" },
+  provenance: "Brand Book Motion19 Édition 2026 V2 §06 (OFFICIAL)",
+} as const;
+
+/** Coordonnées OFFICIELLES (Brand Book §10 — Présence & contact). */
+export const MOTION19_CONTACT = {
+  boutique: "1203, Boulevard de la Liberté — Akwa, Douala, Cameroun",
+  bp: "BP 5245 Douala",
+  telephones: ["+237 656 999 989", "+237 654 546 554"],
+  email: "info@motion19.com",
+  site: "motion19.com",
+  handleUnifie: "@motion19store (Facebook · Instagram · X)",
+  provenance: "Brand Book Motion19 Édition 2026 V2 §10 (OFFICIAL)",
+} as const;
+
+/**
+ * Brand book intégral (texte extrait du PDF fourni par l'opérateur) — posé au
+ * VAULT DES SOURCES (BrandDataSource, certainty OFFICIAL) par le seed : le
+ * coffre contient la pièce maîtresse de l'identité, l'enrichissement et la
+ * cascade peuvent la citer.
+ */
+export const MOTION19_BRANDBOOK = {
+  fileName: "Motion19_BrandBook_2026_V2.pdf",
+  title: "Brand Book Motion19 — Édition 2026 · V2 (plateforme de marque, identité visuelle & système éditorial)",
+  origin: "upload:motion19-brandbook-2026v2",
+  extractedText: `B R A N D B O O K 	É D I T I O N 2 0 2 6 · V 2
+Feel free to create. Plateforme de marque, identité visuelle
+& système éditorial
+
+-- 1 of 16 --
+
+S O M M A I R E
+Ce que contient
+ce document.
+01 — La marque · définition
+02 — Positionnement
+03 — Stratégie & marché
+04 — Personas
+05 — Logo & déclinaisons
+06 — Couleurs & typographie
+07 — Motif, image & supports
+08 — Voix & ton
+09 — Règles de contenu & lexique
+10 — Présence & contact
+M O T I O N 1 9 · B R A N D B O O K 	0 2
+
+-- 2 of 16 --
+
+L A M A R Q U E
+Définition
+Le socle de marque de Motion19 : qui nous
+sommes, ce que nous promettons, et la
+conviction qui guide chacune de nos prises
+de parole.
+TA G L I N E 	Feel free to create
+V I S I O N 	Devenir un acteur majeur de la valorisation du travail des créatifs africains.
+M I S S I O N 	Fournir un matériel de qualité, en quantité, aux créatifs tout au long de leur
+parcours professionnel.
+V A L E U R S 	Une marque professionnelle, inspirante et sympathique.
+N I C H E 	Le matériel audiovisuel — boîtiers, optiques, lumière, son — adossé à un service
+après-vente et un conseil de proximité.
+0 1 · L A M A R Q U E 	0 3
+
+-- 3 of 16 --
+
+P O S I T I O N N E M E N T
+Pour les professionnels de l’audiovisuel et celles et
+ceux qui veulent explorer leur créativité, Motion19
+s’engage à fournir l’accompagnement humain et
+technique nécessaire pour explorer, avec conviction,
+tout leur potentiel créatif.
+C I B L E 	E N G A G E M E N T 	B É N É F I C E
+0 2 · P O S I T I O N N E M E N T 	0 4
+
+-- 4 of 16 --
+
+S T R A T É G I E
+Marché, cible & positionnement produit
+0 1
+Marché
+L’ensemble des professionnels de
+l’audiovisuel de la sous-région Afrique
+centrale en quête d’un matériel de qualité
+pour mener à bien leurs activités.
+0 2
+Cible
+Trois profils complémentaires : les
+amateurs et étudiants, les entrepreneurs du
+web, et les professionnels de l’audiovisuel.
+0 3
+Positionnement produit
+Le partenaire majeur des créatifs dans leur
+cheminement, par la mise à disposition
+continue d’un matériel digne de leurs
+ambitions.
+3
+PROFILS CIBLES
+CEMAC
+ZONE DE RÉFÉRENCE
+Photo · Vidéo · Audio
+PÉRIMÈTRE MATÉRIEL
+0 3 · S T R A T É G I E 	0 5
+
+-- 5 of 16 --
+
+P E R S O N A S
+À qui nous parlons
+L’amateur
+Étudiant ou passionné, probablement en
+photographie. Au tout début de son
+parcours, il a atteint les limites du
+téléphone et cherche un premier matériel
+professionnel accessible. Il a besoin de
+progresser.
+BESOIN — MONTER EN GAMME
+L’entrepreneur du web
+Peu intéressé par l’audiovisuel en soi, mais
+il en a besoin pour se vendre. Podcast,
+vidéo, photo : améliorer son personal
+branding passe par un matériel de qualité.
+Un palier important.
+BESOIN — PERSONAL BRANDING
+Le professionnel
+Il a roulé sa bosse, maîtrise la technique et
+n’a plus peur des défis. Sa seule limite : la
+disponibilité d’un matériel de qualité. Plus il
+y accède, plus il élargit ses horizons.
+BESOIN — DISPONIBILITÉ & DÉFI
+0 4 · P E R S O N A S 	0 6
+
+-- 6 of 16 --
+
+I D E N T I T É · L O G O
+Le logotype
+Deux formes, un seul système. Le wordmark : la lettre « O » devient un objectif, et la ligne Photo ·
+Vidéo · Audio · Lumière ancre le métier. Le monogramme M19 — un « M » en barres verticales,
+égaliseur et rideau de lumière — sert les usages réduits. Le bloc « 19 » porte toujours le bleu.
+M O N O GRAM M E · FO N D C LAI R
+M O N O GRAM M E · FO N D S O M BRE
+M O N O C H RO M E · S U R P H O T O
+RÉ S E RVE BLAN C H E · AP LAT
+0 5 · L O G O 	0 7
+
+-- 7 of 16 --
+
+I D E N T I T É · C O U L E U R S
+Palette signature
+RGB 72 · 103 · 176
+HSL 222 · 59 · 49
+CMYK 59 · 41 · 0 · 31
+RGB 29 · 29 · 29
+HSL 0 · 0 · 11
+CMYK 0 · 0 · 0 · 89
+RGB 181 · 181 · 181
+HSL 0 · 0 · 71
+CMYK 0 · 0 · 0 · 29
+P R O P O R T I O N S D ’ U S A G E
+Anthracite ~62% 	Bleu ~26% 	Gris ~12%
+Deux bleus, deux rôles. Le bleu profond #4867B0 structure les aplats et grandes surfaces (print, CMYK). Le bleu digital #3384FF — celui du logo — sert
+d’accent vif à l’écran : le « 19 », les traits, les points d’appui.
+B L E U S I G N AT U R E
+#4867B0
+A N T H R A C I T E
+#1D1D1D
+G R I S
+#B5B5B5
+#4867B0 	#3384FF
+0 6 · C O U L E U R S 	0 8
+
+-- 8 of 16 --
+
+I D E N T I T É · T Y P O G R A P H I E
+Deux voix
+typographiques
+T I T R A G E
+Exo 2
+Aa Bb Cc · 0123456789
+Regular SemiBold Bold ExtraBold
+T E X T E C O U R A N T
+Roboto
+Aa Bb Cc · 0123456789
+H I É R A R C H I E
+Titre — Exo 2
+Intertitre — Exo 2 SemiBold
+Le corps de texte est composé en Roboto pour sa
+lisibilité à toutes les tailles, à l’écran comme à
+l’impression. Phrases courtes, voix active, registre clair :
+la typographie soutient la promesse — rendre la création
+accessible.
+0 6 · T Y P O G R A P H I E 	0 9
+
+-- 9 of 16 --
+
+I D E N T I T É · A P P L I C A T I O N
+Motif, image & supports
+Motif
+Trame isométrique de matériel — caméras,
+optiques, trépieds, lumière. Texture discrète
+des fonds et supports imprimés.
+Style d’image
+Sympathique, inspirant, professionnel. Le
+produit isolé, lumière propre, qualité
+technique irréprochable.
+Supports
+Cartes, sacs, signalétique boutique. Le bleu
+en aplat, le motif en filigrane, le monogramme
+M19 en réserve blanche.
+0 7 · A P P L I C A T I O N 	1 0
+
+-- 10 of 16 --
+
+V E R B E · V O I X
+La voix de Motion19
+La voix porte directement nos valeurs. Elle garde la cohérence sur toutes nos sorties, quelle que soit
+la forme. Pivot de tout le discours : la valorisation de la créativité.
+Inspirante
+Pour motiver la cible à développer des
+projets créatifs, ou à les partager.
+Professionnelle
+Pour mettre en avant l’expertise technique
+et la maîtrise de l’information fournie —
+sans en faire trop.
+Sympathique
+Pour créer un lien de proximité entre la cible
+et Motion19, au-delà de la relation vendeur-
+client.
+0 8 · V O I X 	1 1
+
+-- 11 of 16 --
+
+V E R B E · T O N
+Le ton se module
+Le ton varie selon la situation, mais reste encadré. Règle simple : plus la cible est experte, plus le
+caractère professionnel peut s’affirmer dans les termes employés.
+Encourageant 	Sérieux 	Agréable 	Enthousiaste 	Positif
+Expert 	Rigoureux
+Voix active
+Toujours, à l’écrit.
+Zéro jargon inutile
+Sauf audience experte.
+Tournures positives
+Éviter la négation.
+Information à jour
+Sinon, corriger vite.
+0 8 · T O N 	1 2
+
+-- 12 of 16 --
+
+V E R B E · R È G L E S D E C O N T E N U
+Écrire pour la cible
+À F A I R E
+Cette statistique repose sur une étude menée auprès de 100 photographes
+africains.
+À É V I T E R
+100 photographes africains sont d’accord avec cette statistique.
+À F A I R E
+Vous trouverez toujours de quoi exprimer votre créativité dans votre boutique
+favorite.
+À É V I T E R
+Notre compagnie est heureuse d’avoir toujours le matériel qu’il vous faut.
+À F A I R E
+Prenez part à notre prochain atelier de photographie le JJ/MM/AAAA.
+À É V I T E R
+Nous organisons un atelier de photographie le JJ/MM/AAAA.
+Principe : parler depuis le bénéfice du lecteur, jamais depuis le confort de la marque. Phrases courtes, clarté, et une valeur réelle à chaque sortie.
+0 9 · C O N T E N U 	1 3
+
+-- 13 of 16 --
+
+V E R B E · L E X I Q U E
+Mots & expressions
+Le vocabulaire propriétaire de Motion19 — à puiser dans chaque prise de
+parole.
+Talent 	Créatif 	Créateur 	Concept 	Idée
+Solution 	Imagination 	Inspiration 	Audace
+Potentiel 	Expression 	Exploration 	Improvisation
+Curiosité 	Liberté 	Qualité 	Expertise 	Maîtrise
+Plaisir 	Partage
+P H R A S E S S I G N A T U R E S
+Nous serons toujours à votre disposition.
+Pensez à un audit de votre matériel.
+Quel est le prochain projet que vous allez monter ?
+De quel type de matériel avez-vous besoin ?
+Quelques astuces pour être plus créatif.
+Explorer de nouveaux terrains favorise l’inspiration.
+L’expertise de Motion19 est au service de sa communauté.
+0 9 · L E X I Q U E 	1 4
+
+-- 14 of 16 --
+
+P R É S E N C E · S O C I A L M E D I A
+Trois canaux, trois rôles
+Instagram
+Partage de travail créatif et d’inspiration. La
+vitrine du faire.
+@motion19store
+Twitter / X
+Mise en avant de l’expertise et engagement
+direct avec les cibles.
+@motion19store
+Facebook
+Développement de la communauté créative
+autour de Motion19.
+/motion19store
+Objectifs transverses — bâtir une communauté · promouvoir la créativité · présenter le matériel · servir les passionnés. Priorité à l’engagement : commentaires et avis d’abord, partages ensuite.
+1 0 · P R É S E N C E 	1 5
+
+-- 15 of 16 --
+
+P R É S E N C E · C O N T A C T
+Nous trouver
+B O U T I Q U E
+1203, Boulevard de la Liberté
+Akwa, Douala — Cameroun
+BP 5245 Douala
+C O M M E R C I A L
+(+237) 656 999 989
+(+237) 654 546 554
+info@motion19.com
+E N L I G N E
+motion19.com
+@motion19store
+Facebook · Instagram · X
+Feel free to create.
+1 6
+
+-- 16 of 16 --`,
 } as const;

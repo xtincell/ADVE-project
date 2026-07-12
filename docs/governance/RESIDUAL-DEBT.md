@@ -11,6 +11,17 @@ Vague [ADR-0128](adr/0128-brand-social-connections-founder-oauth.md) shippée (v
 - **Supervision console opérateur** : liste cross-marques des `SocialConnection` (états ERROR, tokens expirés) — surface console à poser à l'occasion (lecture seule, faible effort).
 - **Fiche Motion19** : `marketScale`/`addressableAudience`/`brandFoundedYear` à DÉCLARER par l'opérateur (hub Fondation), jugements INFERRED à valider → DECLARED, données internes (ventes, panier, marge) à brancher avant tout pilotage chiffré (cf. pilier T « non communiqué »).
 
+## Accès délégué par marque + theming — ADR-0129/0130 (2026-07-12, NEFER)
+
+Vagues [ADR-0129](adr/0129-strategy-collaborator-delegated-access.md) (StrategyCollaborator appliqué par le chokepoint, zone digitale gardée ×10 procédures, FREELANCE/CREATOR au cockpit, grant/revoke gouvernés IMHOTEP) et [ADR-0130](adr/0130-cockpit-brand-accent-theming.md) (accent cockpit depuis la palette du coffre, hex validés serveur+client) shippées — vérifiées E2E (Maximus/Motion19 : portefeuille = Motion19 seule, calendrier éditorial opérable, `--accent` #3384FF). Restes réels :
+
+- **UI de gestion des collaborateurs** : grant/revoke passent par les Intents (`strategy.grantCollaborator`/`revokeCollaborator`, requireOperator) — pas encore de surface console/cockpit dédiée. Poser une section « Équipe » (liste, rôle, révocation ConfirmDialog) sur la fiche marque console. Effort : ~½ session.
+- **Gating fin par `scopes`** : v1 accorde l'accès marque entier sur les surfaces couvertes ; le champ `scopes Json` (["digital"]) est stocké mais pas encore consommé par surface (helper `getStrategyCollaboratorRole` prêt). À activer quand un 2ᵉ rôle délégué réel apparaîtra.
+- **Délégation newsletter** : l'envoi reste `operatorProcedure` (hors périmètre v1 directeur du digital — décision ADR-0129 §6).
+- **Balayage des routers strategy-scopés restants en checks inline** (boot-sequence, etc.) vers `canAccessStrategy` — même mouvement que les 5 checks de cockpit-router déjà bascule.
+- **Garde-fou contraste theming** : l'accent vient du brand book du client (choisi pour l'écran) ; un rejet automatique des accents illisibles sur fond sombre (+ fallback corail) reste à poser (ADR-0130 §Conséquences).
+- **Benchmark → plan d'upgrade suite sociale** : vagues S1→S5 priorisées dans [docs/audits/SOCIAL-SUITE-BENCHMARK-2026-07-12.md](../audits/SOCIAL-SUITE-BENCHMARK-2026-07-12.md) (métriques par post, publishing, inbox unifié, heures optimales, trio Meta/audits plateformes). Chaque vague est un chantier futur distinct — rien d'implicite.
+
 ## Vérité unique documentaire (2026-07-11 PM, NEFER)
 
 Purge des incohérences doctrine/code (bible 11 anchors, contextes, i18n, commentaires mensongers, comptes canoniques recalculés sur les registres : 112 routers · 115 services · 56/149 Glory tools · 94 séquences (91 DRAFT) · 28 frameworks · 546 Intent kinds). Résidu tracé :

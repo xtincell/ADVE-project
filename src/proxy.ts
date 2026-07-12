@@ -66,6 +66,11 @@ const COCKPIT_ROLES = [
   "BRAND",
   "CLIENT_RETAINER",
   "CLIENT_STATIC",
+  // ADR-0129 — un talent délégué sur une marque (StrategyCollaborator, ex.
+  // directeur du digital) entre au cockpit ; ses DONNÉES restent scoppées par
+  // canAccessStrategy/scopeStrategies (sans grant ACTIVE : portefeuille vide).
+  "CREATOR",
+  "FREELANCE",
 ];
 const CREATOR_ROLES = [
   "ADMIN",

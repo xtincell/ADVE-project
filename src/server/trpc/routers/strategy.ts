@@ -1034,6 +1034,106 @@ export const strategyRouter = createTRPCRouter({
     const { createPunctualCampaign } = await import("@/server/services/campaign-canon");
     return createPunctualCampaign(input);
   }),
+
+  // ════════════════════════════════════════════════════════════════════
+  // ADR-0129 — Accès délégué par marque (StrategyCollaborator)
+  // ════════════════════════════════════════════════════════════════════
+
+  /**
+   * Collaborateurs délégués d'une marque (lecture). Owner / opérateur / ADMIN.
+   * Ne renvoie jamais d'information de credential — uniquement l'équipe.
+   */
+  listCollaborators: protectedProcedure
+    .input(z.object({ strategyId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const { getOperatorContext } = await import("@/server/services/operator-isolation");
+      const opCtx = await getOperatorContext(ctx.session.user.id);
+      if (!(await canAccessStrategy(input.strategyId, opCtx))) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Cette marque ne vous appartient pas" });
+      }
+      return ctx.db.strategyCollaborator.findMany({
+        where: { strategyId: input.strategyId },
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          role: true,
+          scopes: true,
+          status: true,
+          createdAt: true,
+          revokedAt: true,
+          note: true,
+          user: { select: { id: true, name: true, email: true, role: true } },
+        },
+      });
+    }),
+
+  /**
+   * Accorde un accès délégué (rôle d'équipe) sur UNE marque à un user existant
+   * (talent Guilde, freelance, agence). Décision opérateur — requireOperator.
+   * Upsert (strategyId, userId) : re-granter réactive une ligne révoquée.
+   */
+  grantCollaborator: governedProcedure({
+    kind: "GRANT_STRATEGY_COLLABORATOR",
+    inputSchema: z.object({
+      strategyId: z.string().min(1),
+      userEmail: z.string().email(),
+      role: z.enum([
+        "ACCOUNT_DIRECTOR", "ACCOUNT_MANAGER", "STRATEGIC_PLANNER", "CREATIVE_DIRECTOR",
+        "ART_DIRECTOR", "COPYWRITER", "MEDIA_PLANNER", "MEDIA_BUYER", "SOCIAL_MANAGER",
+        "PRODUCTION_MANAGER", "PROJECT_MANAGER", "DATA_ANALYST", "CLIENT", "DIGITAL_DIRECTOR",
+      ]),
+      scopes: z.array(z.string().max(40)).max(10).optional(),
+      note: z.string().max(500).optional(),
+    }),
+    caller: "strategy:grantCollaborator",
+    requireOperator: true,
+  }).mutation(async ({ ctx, input }) => {
+    const target = await ctx.db.user.findUnique({ where: { email: input.userEmail }, select: { id: true, name: true } });
+    if (!target) throw new TRPCError({ code: "NOT_FOUND", message: "Aucun compte avec cet email" });
+    const strategy = await ctx.db.strategy.findUnique({ where: { id: input.strategyId }, select: { id: true, name: true } });
+    if (!strategy) throw new TRPCError({ code: "NOT_FOUND", message: "Marque introuvable" });
+    const row = await ctx.db.strategyCollaborator.upsert({
+      where: { strategyId_userId: { strategyId: input.strategyId, userId: target.id } },
+      update: {
+        role: input.role,
+        scopes: (input.scopes ?? []) as Prisma.InputJsonValue,
+        status: "ACTIVE",
+        revokedAt: null,
+        grantedByUserId: ctx.session.user.id,
+        ...(input.note ? { note: input.note } : {}),
+      },
+      create: {
+        strategyId: input.strategyId,
+        userId: target.id,
+        role: input.role,
+        scopes: (input.scopes ?? []) as Prisma.InputJsonValue,
+        status: "ACTIVE",
+        grantedByUserId: ctx.session.user.id,
+        note: input.note ?? null,
+      },
+      select: { id: true, role: true, status: true },
+    });
+    return { ...row, userName: target.name, strategyName: strategy.name };
+  }),
+
+  /** Révoque un accès délégué (ligne conservée pour l'audit — Loi 1). */
+  revokeCollaborator: governedProcedure({
+    kind: "REVOKE_STRATEGY_COLLABORATOR",
+    inputSchema: z.object({ strategyId: z.string().min(1), collaboratorId: z.string().min(1) }),
+    caller: "strategy:revokeCollaborator",
+    requireOperator: true,
+  }).mutation(async ({ ctx, input }) => {
+    const row = await ctx.db.strategyCollaborator.findFirst({
+      where: { id: input.collaboratorId, strategyId: input.strategyId },
+      select: { id: true },
+    });
+    if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "Collaborateur introuvable pour cette marque" });
+    await ctx.db.strategyCollaborator.update({
+      where: { id: row.id },
+      data: { status: "REVOKED", revokedAt: new Date() },
+    });
+    return { revoked: true };
+  }),
 });
 
 function classifyScore(composite: number): string {

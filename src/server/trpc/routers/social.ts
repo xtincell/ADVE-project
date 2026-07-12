@@ -667,20 +667,12 @@ async function assertStrategyAccess(
   ctx: { db: typeof import("@/lib/db").db; session: { user: { id: string; role?: string | null } } },
   strategyId: string,
 ): Promise<void> {
-  const strategy = await ctx.db.strategy.findUnique({
-    where: { id: strategyId },
-    select: { id: true, userId: true },
-  });
-  if (!strategy) {
-    throw new Error("Marque introuvable");
-  }
-  if (ctx.session.user.role === "ADMIN") return;
-  if (strategy.userId === ctx.session.user.id) return;
-  const u = await ctx.db.user.findUnique({
-    where: { id: ctx.session.user.id },
-    select: { operatorId: true },
-  });
-  if (!u?.operatorId) {
+  // ADR-0129 - point de passage canonique : owner / MEME operateur / ADMIN /
+  // collaborateur delegue ACTIVE. (Corrige aussi la garde faible initiale qui
+  // acceptait n'importe quel user porteur d'un operatorId quelconque.)
+  const { canAccessStrategy, getOperatorContext } = await import("@/server/services/operator-isolation");
+  const opCtx = await getOperatorContext(ctx.session.user.id);
+  if (!(await canAccessStrategy(strategyId, opCtx))) {
     throw new Error("Cette marque ne vous appartient pas");
   }
 }

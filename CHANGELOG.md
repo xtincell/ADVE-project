@@ -10,6 +10,52 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.106 — feat(guilde+cockpit): mission Motion19 + accès délégué par marque (ADR-0129) + cockpit aux couleurs de la marque (ADR-0130) + brand book officiel (2026-07-12)
+
+**Un freelance recruté via La Guilde opère la zone digitale d'UNE marque — et le cockpit porte les couleurs officielles de cette marque.**
+
+- **Guilde** : mission « Gestion du Digital — Motion19 » publiée (200 000 FCFA/mois,
+  brief complet `guildMissionBriefSchema`, 5 livrables, slug public) via seed
+  reproduisant `GUILD_POST_MISSION`+`GUILD_PUBLISH_MISSION` (une mission pour
+  marque EXISTANTE — postMission ne cible pas de strategyId, décision opérateur
+  documentée). Compte freelance **Maximus** (`maximus@upgraders.io`, FREELANCE,
+  TalentProfile) + candidature PENDING 200 000 XAF/mois.
+- **[ADR-0129](docs/governance/adr/0129-strategy-collaborator-delegated-access.md)**
+  — modèle additif `StrategyCollaborator` (unique strategyId+userId, rôle =
+  enum `CampaignTeamRole` étendu `DIGITAL_DIRECTOR` — pas de 2ᵉ vocabulaire),
+  appliqué par le **chokepoint canonique** (`canAccessStrategy` +
+  `scopeStrategies` OR collaborators ACTIVE) — jamais du descriptif
+  (anti-pattern CampaignTeamMember). **Trou pré-existant fermé** : calendrier
+  éditorial (`actions.*` ×6) + `publication.*` ×3 + `glory.launchCalendar`
+  étaient en `protectedProcedure` NU (tout authentifié lisait/écrivait toute
+  marque) → gardes par-marque posées AVANT d'ouvrir le cockpit aux rôles
+  FREELANCE/CREATOR (middleware). Grant/revoke = Intents gouvernés IMHOTEP
+  (`GRANT/REVOKE_STRATEGY_COLLABORATOR`, requireOperator, révocation soft
+  Loi 1). Vérifié E2E : Maximus voit UNIQUEMENT Motion19, opère le calendrier.
+- **[ADR-0130](docs/governance/adr/0130-cockpit-brand-accent-theming.md)** —
+  le cockpit puise dans le code couleur de la marque : `getBrandIdentity`
+  projette la palette du coffre (`CHROMATIC_STRATEGY`) avec **validation
+  stricte #RRGGBB**, `<BrandAccentVars/>` rebinde `--accent`/`--accent-fill`
+  (CSSOM, cleanup au démontage) — Motion19 → bleu digital officiel `#3384FF`,
+  marques sans palette → corail canon. DS 4 tiers intact (2 tokens System
+  rebindés, zéro couleur en dur).
+- **Brand book Motion19 officiel** (PDF « Motion19_BrandBook 2026 V2 » ingéré) :
+  canon corrigé — accroche « Feel free to create », mission/vision/personas/ton
+  officiels, palette #4867B0/#3384FF/#1D1D1D/#B5B5B5 + Exo 2/Roboto ; 4 champs
+  flippés INFERRED→OFFICIAL ; coffre alimenté (`CHROMATIC_STRATEGY` +
+  `TYPOGRAPHY_SYSTEM` ACTIVE pillarSource D, source FILE certainty OFFICIAL,
+  contacts officiels BP 5245 Douala).
+- **Benchmark suites sociales** ([docs/audits/SOCIAL-SUITE-BENCHMARK-2026-07-12.md](docs/audits/SOCIAL-SUITE-BENCHMARK-2026-07-12.md)) :
+  Sprout Social + Zoho Social décortiqués sur sources officielles (5 recherches),
+  réalité des APIs 2026 pour SaaS indépendant (trio Meta review, X pay-per-use,
+  TikTok audit SELF_ONLY, LinkedIn vetting, YouTube/GBP self-serve, WhatsApp
+  Cloud direct) → **plan d'upgrade S1→S5 priorisé** (métriques par post →
+  publishing → inbox unifié → heures optimales → échelle) + réutilisation
+  intake (empreinte digitale ADR-0121 ↔ OAuth connect).
+- 1 migration additive (`20260712150000_strategy_collaborator`) · 1 modèle ·
+  2 Intent kinds (+SLOs) · +6 tests gouvernance (`strategy-collaborator`) ·
+  cap APOGEE 7/7 (Crew = IMHOTEP, mesure = SESHAT, 0 nouveau Neter).
+
 ## v6.27.105 — feat(cockpit): dashboard de marque complété — logo & actifs, « Mes réseaux » (OAuth founder), veille articles réels + seed Motion19 (2026-07-12)
 
 **Le founder connecte lui-même les réseaux de sa marque (à la Sprout Social), voit son logo et lit sa veille sectorielle — en réconciliant 5 briques qui existaient sans se parler (ADR-0128).**

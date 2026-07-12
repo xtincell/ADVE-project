@@ -4,6 +4,7 @@ import { AppShell, cockpitNavGroups } from "@/components/navigation";
 import { Sparkles } from "lucide-react";
 import { StrategyProvider, useStrategy } from "@/components/cockpit/strategy-context";
 import { StrategySelector } from "@/components/cockpit/strategy-selector";
+import { BrandAccentVars } from "@/components/cockpit/brand-theme";
 import { PortalWelcome } from "@/components/shared/portal-welcome";
 import { PortalTourHost } from "@/components/shared/portal-tour";
 import { NotoriaStatusDock } from "@/components/cockpit/notoria/notoria-status-dock";
@@ -34,6 +35,8 @@ export default function CockpitLayout({ children }: { children: React.ReactNode 
   return (
     <div data-density="comfortable" data-portal="cockpit" className="contents">
       <StrategyProvider>
+        {/* ADR-0130 — le cockpit puise dans le code couleur de la marque active. */}
+        <BrandAccentVars />
         <AppShell
           portal="cockpit"
           navGroups={cockpitNavGroups}

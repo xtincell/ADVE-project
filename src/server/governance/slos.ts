@@ -100,6 +100,9 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "GUILD_REGISTER_ORGANIZATION", p95LatencyMs: 1_500, errorRatePct: 0.02, costP95Usd: 0 },
   // Assist LLM optionnel (pré-remplissage) — seul kind Guilde avec coût modèle.
   { kind: "GUILD_DRAFT_MISSION_FROM_TEXT", p95LatencyMs: 12_000, errorRatePct: 0.06, costP95Usd: 0.05 },
+  // ADR-0129 — accès délégué par marque (DB-only, zéro LLM).
+  { kind: "GRANT_STRATEGY_COLLABORATOR", p95LatencyMs: 1_000, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "REVOKE_STRATEGY_COLLABORATOR", p95LatencyMs: 800, errorRatePct: 0.01, costP95Usd: 0 },
   // ADR-0099 — base de coûts marché historisés (DB-only, zéro LLM).
   { kind: "UPSERT_MARKET_COST_SNAPSHOT", p95LatencyMs: 1_000, errorRatePct: 0.01, costP95Usd: 0 },
   // Argos by LaFusée (ADR-0100). Hunter = LLM via Gateway ; manual = DB-only.
