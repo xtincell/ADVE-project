@@ -10,6 +10,26 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.119 — docs(governance): audit Brief→Oracle·scoring·pivot + hygiène V0 (registres à jour, stubs §09 supprimés) (2026-07-13)
+
+**Audit ground-truth complet ([docs/audits/BRIEF-ORACLE-SCORING-PIVOT-AUDIT-2026-07-13.md](docs/audits/BRIEF-ORACLE-SCORING-PIVOT-AUDIT-2026-07-13.md), 18 trous T1-T18) + première vague d'hygiène (V0).**
+
+- **Rapport d'audit** : chaîne Brief→Forge→Livrable→Oracle (SOLIDE, sauf `COMPOSE_DELIVERABLE`
+  figé PREVIEW — T3), scoring/calibration (structurel SOLIDE ; attribution structurellement morte
+  — `devotionTransitionsObserved` sans writer, T7), provenance des mécaniques pivot (devotion/cult
+  MANUEL/VIDE pendant que followers/posts/inbox/ventes/RSS sont collectés chaque jour).
+- **Registres remis à la vérité** : Tarsis décrit `_mocked`/contract-gated alors qu'il est
+  **dé-mocké depuis 2026-06-14** (PROPAGATION-MAP H4 🟢 + RESIDUAL-DEBT corrigés — T11) ;
+  § « cohabitation enrichOracle » contradictoire avec la dépose ADR-0125 → clos historique (T12).
+- **Stubs mensongers supprimés** (§09 Signaux) : `mestorInsights`/`seshatReferences` hardcodés `[]`
+  depuis leur naissance — retirés du mapper, du type et du renderer (branche morte « Prescriptions
+  Mestor », jargon interne, jamais rendue) (T2).
+- **Headers corrigés** : 6 fichiers `deliverable-orchestrator/` citaient « ADR-0037 » (qui est
+  l'ADR country-scoped KB) au lieu d'ADR-0050 (T13).
+- **Nouvelles dettes tracées** (§ Audit 2026-07-13 de RESIDUAL-DEBT) : dispatch COMPOSE_DELIVERABLE,
+  dérivation honnête des labels d'attribution, Signal TARSIS sans writer, refresh auto STALE,
+  91/94 séquences DRAFT, PDF Oracle brut, `ugcGenerationRate`.
+
 ## v6.27.118 — fix(cockpit): réseaux — afficher TOUTES les Pages connectées (fin du dédoublonnage qui cachait la bonne) (2026-07-13)
 
 **« Ça m'a connecté à Office Inn » : en réalité le hub n'affichait qu'UNE Page par réseau — les autres (dont la bonne) étaient connectées mais masquées.**

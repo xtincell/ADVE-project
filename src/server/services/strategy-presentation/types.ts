@@ -634,8 +634,6 @@ export interface SwotExterneSection {
 export interface SignauxOpportunitesSection {
   signauxFaibles: Array<{ signal: string; source: string; severity: string; detectedAt: string }>;
   opportunitesPriseDeParole: Array<{ contexte: string; canal: string; timing: string; impact: string }>;
-  mestorInsights: Array<{ type: string; title: string; description: string; actionable: boolean }>;
-  seshatReferences: Array<{ title: string; type: string; relevance: number; excerpt: string }>;
 }
 
 export interface CatalogueActionsSection {

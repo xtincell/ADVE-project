@@ -110,7 +110,7 @@ Sévérité : 🔴 à corriger · 🟡 par-design mais flaggé honnête · 🟢 
 | **H7** | NPS proxy depuis Devotion Ladder | 🟡 flaggé | `deterministic-composers.ts:326-365` |
 | **H8** | deux topologies de dépendance pilier divergentes (`domain/pillars.ts` linéaire vs `staleness-propagator` canonique) — dormante (réf. seulement par test) | 🔴 ouvert · réconcilier | `domain/pillars.ts:200-206` |
 | **H9** | prompts Glory sans garde de staleness → peut lire un RTIS périmé | 🟡 ouvert | `artemis/tools/engine.ts:49-95` |
-| **H4** | Tarsis weak signals = intel marché externe | ⚪ par-design (`_mocked` honnête) | `seshat/tarsis/connector.ts` |
+| **H4** | Tarsis weak signals = intel marché externe | 🟢 **dé-mocké** (2026-06-14) : signal réel dérivé des digests RSS `EXTERNAL_FEED_DIGEST`, zéro credential requise ; **câblé au cron** (2026-07-13, ADR-0134) : registre `Sector` provisionné + refresh sectoriel via `refreshSectorsFromRecentDigests` (external-feeds). Restent absents (honnêtes) : `vocabularyOverlap`/`embeddingDelta` (embeddings requis) | `seshat/tarsis/connector.ts` · `seshat/tarsis/sector-refresh.ts` |
 
 ### 6b. Trous de circuit (entrées / gouvernance) — Q3 non-bypass affaibli
 
