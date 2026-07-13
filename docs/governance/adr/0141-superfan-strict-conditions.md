@@ -44,6 +44,20 @@ Les conditions franchies + leur preuve (`{ source, at?, note? }`) vivent dans `S
 
 La voie gouvernée unique (`superfan.register`, `SESHAT_REGISTER_SUPERFAN`, `requireOperator`) accepte désormais `conditions`. Le **registre clients manuel** = `register` avec `conditions: { PAID: { source: "MANUAL", note } }` — marche sans intégration paiement (cohérent avec SPAWT : services vendus hors-app), aucune donnée fabriquée. Le lien automatique `Subscription → fan` (dérivation `PAID` sans saisie) et les instruments per-personne « a partagé / a recommandé » (partages/referrals sociaux) sont des incréments suivants tracés en dette : ils exigent que les payeurs/partageurs soient identifiables côté social, ce qui n'est pas le cas aujourd'hui.
 
+### 5. Chaque gate est traçable MANUELLEMENT ou AUTOMATIQUEMENT (source map)
+
+Le champ `ConditionEvidence.source` fait qu'un gate porte toujours SON origine : `MANUAL` (saisie opérateur) OU une source automatique. Manuel-first parity (ADR-0060) par construction. Carte canonique des sources par gate (« vu toutes les sources de suivi ») :
+
+| Gate (comportement AARRR) | Manuel | Automatique — source | Par-personne aujourd'hui ? | Contrainte doctrine |
+|---|---|---|---|---|
+| VIEWED (Acquisition) | `register` | `FollowerSnapshot` / reach | ❌ **agrégat** (pas d'identité par vue) | — |
+| INTERACTED (Activation) | `register` | `SocialInboxItem` (COMMENT/MESSAGE/MENTION/REVIEW), cron social-sync | ✅ (`authorHandle`) | plafond footprint 0,60 |
+| PAID (Revenue) | **registre clients** (`register` + `PAID`) | commerce (Shopify) / `Subscription` **si** le payeur se relie à un handle ; sinon push d'une source externe | ⚠️ **bridge d'identité requis** (les clients d'une marque ne sont pas dans La Fusée — ex. SPAWT) → reste manuel par défaut | ENGAGE ≤ 0,45 |
+| RECOMMENDED (Referral) | `register` (opérateur vérifie) | attribution de **lien de parrainage** si instrumenté | ⚠️ non collecté | **advocacy VÉRIFIÉE only** — jamais un mention/footprint brut |
+| SHARED (Referral) | `register` | événement de **partage/UGC** si collecté | ⚠️ non collecté | **advocacy VÉRIFIÉE only** |
+
+**Règle des sources automatiques (ADR-0126)** : une source auto ne fait qu'**ENRICHIR un profil existant** (comme le cron), elle ne **CRÉE JAMAIS** un superfan — un handle inconnu remonte en *candidat à revue*, la naissance reste un clic humain. C'est le seul garde-fou contre l'inflation par footprint. Aujourd'hui la seule source auto per-personne réellement branchée est l'inbox (→ INTERACTED) ; le reste est agrégat, exige un bridge d'identité, ou une preuve d'advocacy vérifiée — on ne fabrique aucun lien qui n'existe pas.
+
 ## Conséquences
 
 - **Doctrine anti-inflation ADR-0126 préservée.** `PAID` s'arrête à ENGAGE (0,45 < 0,65) → ne gonfle jamais le bras d'évidence CULTE/ICONE. `RECOMMENDED`/`SHARED` franchissent le seuil actif : ils exigent une **preuve d'advocacy vérifiée** (déclaration opérateur ou instrument dédié), JAMAIS du simple footprint public — le cap dur 0,60 sur la preuve « commentaires seuls » (`computeInboxEngagementDepth`) reste intact.
