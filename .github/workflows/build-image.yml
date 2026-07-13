@@ -1,0 +1,160 @@
+# Build-deport — construit l'image sur les runners GitHub (CPU/RAM libres),
+# la BOOTE contre un Postgres jetable, puis la pousse sur ghcr.io.
+#
+# POURQUOI : jusqu'ici Coolify faisait `next build` SUR LE VPS de prod. Chaque
+# déploiement saturait la RAM de l'hôte (OOM) → 15-20 min de blackout total
+# (app + proxy + Coolify), reproduit 3× la nuit du 2026-07-12. En déportant le
+# build ici, le VPS ne fait plus qu'un `docker pull` + swap de conteneur :
+# aucun blackout. Cf. docs/deploy/BUILD-DEPORT.md pour la bascule Coolify.
+#
+# GARDE-FOU : l'image n'est poussée QUE si elle démarre et sert /login (200)
+# contre un Postgres neuf — une image cassée n'atteint jamais le registre.
+name: Build image (ghcr)
+
+on:
+  push:
+    branches: [main]
+    # Ne rebuild que si le runtime bouge — la doc/les tests seuls ne rebuild pas.
+    paths:
+      - "src/**"
+      - "prisma/**"
+      - "public/**"
+      - "scripts/apply-migrations.mjs"
+      - "scripts/docker-entrypoint.sh"
+      - "Dockerfile"
+      - ".dockerignore"
+      - "package.json"
+      - "package-lock.json"
+      - "next.config.ts"
+      - ".github/workflows/build-image.yml"
+  workflow_dispatch:
+    inputs:
+      notify_coolify:
+        description: "Déclencher un redeploy Coolify après le push (si source = Docker Image)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: build-image-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Image name en minuscules (ghcr l'exige)
+        id: img
+        run: echo "ref=$(echo '${{ env.IMAGE }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - name: Version depuis package.json
+        id: ver
+        run: echo "v=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Login ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 1) Build + chargement LOCAL (pas encore poussé) avec cache gha.
+      - name: Build (load local)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: lafusee:candidate
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # 2) Smoke-test de démarrage : Postgres neuf → l'entrypoint applique les
+      #    migrations → le serveur doit répondre 200 sur /login. Si l'image ne
+      #    boote pas, on échoue AVANT de pousser.
+      - name: Boot smoke-test (migrations + /login 200)
+        run: |
+          set -euo pipefail
+          docker network create lf-smoke
+          docker run -d --name pg --network lf-smoke \
+            -e POSTGRES_USER=lafusee -e POSTGRES_PASSWORD=lafusee -e POSTGRES_DB=lafusee \
+            postgres:16-alpine
+          echo "Attente Postgres…"
+          for i in $(seq 1 30); do
+            if docker exec pg pg_isready -U lafusee >/dev/null 2>&1; then break; fi
+            sleep 2
+          done
+          docker run -d --name app --network lf-smoke -p 3000:3000 \
+            -e DATABASE_URL="postgresql://lafusee:lafusee@pg:5432/lafusee?schema=public" \
+            -e NEXTAUTH_SECRET="ci-smoke-secret-ci-smoke-secret-32ch" \
+            -e AUTH_SECRET="ci-smoke-secret-ci-smoke-secret-32ch" \
+            -e NEXTAUTH_URL="http://localhost:3000" \
+            -e AUTH_URL="http://localhost:3000" \
+            -e INTEGRATION_TOKEN_KEY="ci-smoke-integration-key-32-characters" \
+            lafusee:candidate
+          echo "Attente du serveur (migrations au boot incluses)…"
+          ok=0
+          for i in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/login || echo 000)
+            echo "  t=$((i*3))s /login=$code"
+            if [ "$code" = "200" ]; then ok=1; break; fi
+            sleep 3
+          done
+          if [ "$ok" != "1" ]; then
+            echo "::error::L'image ne sert pas /login — logs conteneur :"
+            docker logs app | tail -80
+            exit 1
+          fi
+          echo "✓ image saine — démarre, migre, sert /login."
+          docker rm -f app pg >/dev/null 2>&1 || true
+
+      # 3) Push (cache chaud → quasi instantané) : latest + version + sha.
+      - name: Push ghcr
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ steps.img.outputs.ref }}:latest
+            ${{ steps.img.outputs.ref }}:v${{ steps.ver.outputs.v }}
+            ${{ steps.img.outputs.ref }}:sha-${{ github.sha }}
+          cache-from: type=gha
+
+      # 4) (Optionnel, guardé) : une fois Coolify basculé en source « Docker
+      #    Image », un redeploy = pull de :latest + swap, sans build VPS.
+      - name: Redeploy Coolify (si demandé + secrets présents)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.notify_coolify }}
+        env:
+          COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+          COOLIFY_APP_UUID: ${{ secrets.COOLIFY_APP_UUID }}
+        run: |
+          set -euo pipefail
+          if [ -z "${COOLIFY_URL:-}" ] || [ -z "${COOLIFY_TOKEN:-}" ] || [ -z "${COOLIFY_APP_UUID:-}" ]; then
+            echo "Secrets Coolify absents — push effectué, redeploy à déclencher manuellement."
+            exit 0
+          fi
+          curl -sf -X POST "${COOLIFY_URL%/}/api/v1/deploy?uuid=${COOLIFY_APP_UUID}" \
+            -H "Authorization: Bearer ${COOLIFY_TOKEN}" && echo "Redeploy Coolify déclenché."
+
+      - name: Résumé
+        run: |
+          {
+            echo "## Image publiée"
+            echo ""
+            echo '`${{ steps.img.outputs.ref }}:latest`'
+            echo '`${{ steps.img.outputs.ref }}:v${{ steps.ver.outputs.v }}`'
+            echo ""
+            echo "Build déporté (runners GitHub) — le VPS ne fait plus de \`next build\`."
+            echo "Bascule Coolify : voir \`docs/deploy/BUILD-DEPORT.md\`."
+          } >> "$GITHUB_STEP_SUMMARY"
