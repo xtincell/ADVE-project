@@ -99,6 +99,7 @@ export async function GET(request: Request) {
       insights: string;
       inbox: string;
       commerce: string;
+      community: string;
     }> = [];
 
     for (const s of strategies) {
@@ -114,6 +115,21 @@ export async function GET(request: Request) {
         enrichRecentPostInsights(s.strategyId).catch(() => DEGRADED),
         syncStrategyInbox(s.strategyId).catch(() => DEGRADED),
       ]);
+      // Mesure communautaire APRÈS toute la collecte du jour (ADR-0134) —
+      // ré-émise via le spine (emitIntent), jamais un appel service direct :
+      // chaîne community → devotion → cult sur la donnée fraîche.
+      const community = await (async () => {
+        try {
+          const { emitIntentTyped } = await import("@/server/services/mestor/intents");
+          const out = await emitIntentTyped<{ capture: { state: string } }>(
+            { kind: "SESHAT_CAPTURE_COMMUNITY_SNAPSHOT", strategyId: s.strategyId },
+            { caller: "cron:social-sync:community" },
+          );
+          return { state: out.capture.state };
+        } catch {
+          return DEGRADED;
+        }
+      })();
       results.push({
         strategyId: s.strategyId,
         followers: followers.state,
@@ -121,6 +137,7 @@ export async function GET(request: Request) {
         insights: insights.state,
         inbox: inbox.state,
         commerce: commerce.state,
+        community: community.state,
       });
     }
 

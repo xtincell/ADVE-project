@@ -148,7 +148,8 @@ function CommunityPanelInner({ strategyId }: { strategyId: string }) {
           </SectionCard>
         )}
 
-        {/* Community health snapshot */}
+        {/* Community health snapshot — les métriques non mesurées (null) sont
+            masquées, jamais rendues « 0 % » (P22-2, ADR-0134). */}
         {community && (
           <SectionCard title={`Santé communauté · ${community.platform}`} icon={Heart}>
             <dl className="grid grid-cols-2 gap-4">
@@ -156,18 +157,24 @@ function CommunityPanelInner({ strategyId }: { strategyId: string }) {
                 <dt className="text-xs text-foreground-secondary">Taille</dt>
                 <dd className="text-lg font-bold text-foreground">{community.size.toLocaleString("fr-FR")}</dd>
               </div>
-              <div>
-                <dt className="text-xs text-foreground-secondary">Sentiment</dt>
-                <dd className="text-lg font-bold text-foreground">{pct(community.sentiment)}%</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-foreground-secondary">Santé</dt>
-                <dd className="text-lg font-bold text-foreground">{pct(community.health)}%</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-foreground-secondary">Taux actif</dt>
-                <dd className="text-lg font-bold text-foreground">{pct(community.activeRate)}%</dd>
-              </div>
+              {community.sentiment !== null && (
+                <div>
+                  <dt className="text-xs text-foreground-secondary">Sentiment</dt>
+                  <dd className="text-lg font-bold text-foreground">{pct(community.sentiment)}%</dd>
+                </div>
+              )}
+              {community.health !== null && (
+                <div>
+                  <dt className="text-xs text-foreground-secondary">Engagement moyen</dt>
+                  <dd className="text-lg font-bold text-foreground">{pct(community.health)}%</dd>
+                </div>
+              )}
+              {community.activeRate !== null && (
+                <div>
+                  <dt className="text-xs text-foreground-secondary">Taux actif</dt>
+                  <dd className="text-lg font-bold text-foreground">{pct(community.activeRate)}%</dd>
+                </div>
+              )}
             </dl>
           </SectionCard>
         )}

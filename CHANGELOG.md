@@ -10,6 +10,34 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.121 — feat(seshat): mesure communautaire RÉELLE — écrivain de production CommunitySnapshot + chaîne quotidienne community→devotion→cult ([ADR-0134](docs/governance/adr/0134-mesure-communautaire-reelle-et-ponts-overton.md)) (2026-07-13)
+
+**Le cult index tournait sur du seed : `CommunitySnapshot` n'avait AUCUN écrivain de production (T8) pendant que followers/posts/commentaires étaient collectés chaque jour. Branché.**
+
+- **Écrivain de production** `cult-index-engine/community-snapshot-writer.ts` (pure + I/O,
+  zéro LLM) : par plateforme suivie — `size` = dernier FollowerSnapshot ≤90 j (pas de base →
+  pas de row), `velocity` = croissance vs ~J-30, `health` = engagement moyen par post 30 j,
+  `activeRate` = commentateurs uniques inbox/followers (null hors couverture FB/IG),
+  `sentiment` = null v1 (aucune source). **Null = non mesuré, jamais 0 fabriqué (P22-2).**
+- **Unités canoniques** (fractions 0-1) + migration relaxante additive
+  (`20260713100000` : 4 DROP NOT NULL + colonne `source` MANUAL|CONNECTOR).
+- **Nouveau kind `SESHAT_CAPTURE_COMMUNITY_SNAPSHOT`** (SESHAT, sync, SLO 15 s/0 $) —
+  catalogue + union + case commandant ; le handler enchaîne la **chaîne de mesure**
+  community → devotion (`trigger="social-sync"`) → cult, UNIQUEMENT sur mesure LIVE.
+  Le moteur devotion a enfin un déclencheur de production (T17).
+- **Étape cron `social-sync`** : émission via le spine (`emitIntentTyped`,
+  `caller:"cron:social-sync:community"`) après la collecte du jour — champ `community`
+  au rapport du cron.
+- **Lecteurs corrigés** : cult `communityCohesion` borné ≤90 j/12 relevés, moyenne sur
+  `health` mesurés only, dimension **hors dénominateur** si rien de mesuré (mécanisme
+  ADR-0126) ; devotion : bug d'unités `/100` corrigé (T16, garde intérimaire) ;
+  dashboard communauté : types nullables + métriques non mesurées masquées.
+- **§B2 tranché** : `ugcGenerationRate` reste EXCLU (mentions jamais collectées,
+  normalisation = constante à sign-off) — décision négative explicite + registre.
+- Tests : `community-snapshot-writer.test.ts` (6 formules pures) +
+  `community-measure-chain.test.ts` (6 invariants dont single-writer d'écriture) ;
+  assertion ADR-0126 mise au niveau (`unavailable` deux branches).
+
 ## v6.27.120 — fix(oracle): cascade staleness dans writePillar (chemin commun) + verrou anti-alias (2026-07-13)
 
 **Audit 2026-07-13 T4/T5 : amender un pilier par un caller bare n'invalidait jamais l'Oracle.**

@@ -34,10 +34,11 @@ export interface CommunityDevotion {
 export interface CommunityHealth {
   readonly platform: string;
   readonly size: number;
-  readonly sentiment: number;
-  readonly health: number;
-  readonly velocity: number;
-  readonly activeRate: number;
+  /** Fractions 0-1 (unités canon ADR-0134). Null = non mesuré → masqué UI. */
+  readonly sentiment: number | null;
+  readonly health: number | null;
+  readonly velocity: number | null;
+  readonly activeRate: number | null;
   readonly measuredAt: string;
 }
 
@@ -78,10 +79,10 @@ export interface DevotionRow {
 export interface CommunityRow {
   platform: string;
   size: number;
-  sentiment: number;
-  health: number;
-  velocity: number;
-  activeRate: number;
+  sentiment: number | null;
+  health: number | null;
+  velocity: number | null;
+  activeRate: number | null;
   measuredAt: Date;
 }
 

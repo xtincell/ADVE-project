@@ -294,6 +294,8 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "SESHAT_UPSERT_POLITY_AXIS", p95LatencyMs: 800, errorRatePct: 0.01, costP95Usd: 0 },
   // ADR-0126 — naissance gouvernée d'un SuperfanProfile (upsert dédupliqué) ; sync, zéro LLM.
   { kind: "SESHAT_REGISTER_SUPERFAN", p95LatencyMs: 500, errorRatePct: 0.01, costP95Usd: 0 },
+  // ADR-0134 — mesure communautaire (3 findMany + N creates + chaîne devotion/cult) ; sync, zéro LLM.
+  { kind: "SESHAT_CAPTURE_COMMUNITY_SNAPSHOT", p95LatencyMs: 15_000, errorRatePct: 0.05, costP95Usd: 0 },
 
   // ── AUTOGEN: legacy-intent-kinds — DO NOT EDIT MANUALLY ──
   // 329 legacy mutation SLOs (defaults — tighten per-mutation as needed).

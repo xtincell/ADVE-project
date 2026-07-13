@@ -561,6 +561,14 @@ export type Intent =
       scheduleAt?: string | null;
       brandActionId?: string | null;
     }
+  // ── ADR-0134 — mesure communautaire réelle (chaîne community→devotion→cult) ──
+  // Émis par le cron social-sync quotidien (emitIntentTyped, caller
+  // "cron:social-sync:community"). Pure mesure : lit FollowerSnapshot/
+  // SocialPost/SocialInboxItem, écrit CommunitySnapshot + snapshots dérivés.
+  | {
+      kind: "SESHAT_CAPTURE_COMMUNITY_SNAPSHOT";
+      strategyId: string;
+    }
   // ── Anubis boutique de la marque — Shopify OAuth founder (vague 2026-07-12) ──
   | {
       kind: "ANUBIS_COMMERCE_CONNECT_SHOP";
@@ -1213,6 +1221,9 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     // ADR-0133 — publication sociale : comms, zéro pilier (inbox/réponse =
     // governedProcedure inline, hors union typée comme SYNC_FOLLOWERS).
     case "ANUBIS_PUBLISH_SOCIAL_POST":
+    // ADR-0134 — mesure communautaire : écrit CommunitySnapshot + snapshots
+    // dérivés (devotion/cult), jamais un pilier.
+    case "SESHAT_CAPTURE_COMMUNITY_SNAPSHOT":
     // Phase 17 (ADR-0037) — Deliverable Forge dispatcher. Le composer consomme
     // les piliers ADVE en lecture seule pour résoudre le DAG ; les mutations
     // vault sont déléguées en aval à PTAH_MATERIALIZE_BRIEF +

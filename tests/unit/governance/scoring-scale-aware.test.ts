@@ -111,7 +111,13 @@ describe("ADR-0126 — fix d'unités cult-index (devotion = pourcentages 0-100)"
   });
 
   it("ugcGenerationRate (sans source branchée) est EXCLU du composite, pas compté 0", () => {
-    expect(engineSrc).toContain('computeCultIndex(dimensions, ["ugcGenerationRate"])');
+    // ADR-0134 : l'appel est passé d'une liste littérale à `unavailable`
+    // (communityCohesion sort aussi du dénominateur quand rien n'est mesuré).
+    // L'invariant ADR-0126 tenu ici : ugcGenerationRate est exclu dans TOUTES
+    // les branches — jamais compté comme un 0 fabriqué.
+    expect(engineSrc).toContain("computeCultIndex(dimensions, unavailable)");
+    expect(engineSrc).toContain('? ["ugcGenerationRate"]');
+    expect(engineSrc).toContain(': ["ugcGenerationRate", "communityCohesion"]');
   });
 
   it("renormalisation : l'exclusion retire le poids du dénominateur", () => {

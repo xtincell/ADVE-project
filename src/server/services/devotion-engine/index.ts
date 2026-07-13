@@ -133,10 +133,14 @@ export async function calculateDevotion(strategyId: string): Promise<DevotionMet
   const recentSignals = signals.length;
   tierCounts.interesse += Math.floor(recentSignals / 5);
 
-  // Community health boosts: high activeRate suggests more participants
+  // Community health boosts: high activeRate suggests more participants.
+  // ADR-0134 : activeRate est désormais nullable (null = non mesuré) ET en
+  // fraction 0-1 canonique — l'ancienne lecture `/100` supposait un
+  // pourcentage (bug d'unités T16). Boost remplacé par l'audience réelle en
+  // V3 (base followers/inbox) ; garde intérimaire null-safe + unités canon.
   const latestCommunity = communitySnapshots[0];
-  if (latestCommunity) {
-    const communityBoost = Math.floor(latestCommunity.size * latestCommunity.activeRate / 100);
+  if (latestCommunity && latestCommunity.activeRate !== null) {
+    const communityBoost = Math.floor(latestCommunity.size * latestCommunity.activeRate);
     tierCounts.participant += communityBoost;
   }
 

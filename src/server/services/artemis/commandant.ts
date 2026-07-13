@@ -314,6 +314,43 @@ export async function execute(intent: Intent): Promise<IntentResult> {
         });
       }
 
+      case "SESHAT_CAPTURE_COMMUNITY_SNAPSHOT": {
+        // Chemin cron de la mesure communautaire quotidienne (ADR-0134).
+        // Chaîne : mesure community → devotion → cult. La chaîne aval ne
+        // tourne QUE sur mesure LIVE (une marque sans base sociale mesurée
+        // garde son comportement historique — pas de snapshot fabriqué).
+        const { captureCommunitySnapshots } = await import(
+          "@/server/services/cult-index-engine/community-snapshot-writer"
+        );
+        const capture = await captureCommunitySnapshots(intent.strategyId);
+        let chain: { devotion: boolean; cult: boolean } = { devotion: false, cult: false };
+        if (capture.state === "LIVE") {
+          try {
+            const devotionEngine = await import("@/server/services/devotion-engine");
+            await devotionEngine.calculateAndSnapshot(intent.strategyId, "social-sync");
+            chain = { ...chain, devotion: true };
+          } catch {
+            // Best-effort : la mesure community reste valide sans le dérivé.
+          }
+          try {
+            const cultEngine = await import("@/server/services/cult-index-engine");
+            await cultEngine.calculateAndSnapshot(intent.strategyId);
+            chain = { ...chain, cult: true };
+          } catch {
+            // Idem — le cult composite se recalculera à la prochaine passe.
+          }
+        }
+        return wrap({
+          ...base,
+          status: "OK",
+          summary:
+            capture.state === "LIVE"
+              ? `Mesure communauté : ${capture.platforms.join(", ")} — dérivés devotion=${chain.devotion} cult=${chain.cult}`
+              : "Mesure communauté : aucune base sociale mesurée (INSUFFICIENT_DATA — pas de snapshot fabriqué)",
+          output: { capture, chain },
+        });
+      }
+
       case "ANUBIS_PUBLISH_SOCIAL_POST": {
         // Chemin cron des publications planifiées (échéance calendrier) —
         // le chemin interactif passe par governedProcedure côté router.
