@@ -8,11 +8,28 @@
  */
 
 import { z } from "zod";
+import bcrypt from "bcryptjs";
+import type { Prisma } from "@prisma/client";
+import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, adminProcedure } from "../init";
 import { db } from "@/lib/db";
 import { governedProcedure } from "@/server/governance/governed-procedure";
+import { openEmission, closeEmission } from "@/server/governance/emission-spine";
 import * as auditTrail from "@/server/services/audit-trail";
 /* lafusee:governed-active */
+
+/** Rôles d'équipe délégués (CampaignTeamRole) — scopent les zones d'écriture du
+ *  login de marque via le firewall collaborateur (ADR-0131). */
+const TEAM_ROLES = [
+  "ACCOUNT_DIRECTOR", "ACCOUNT_MANAGER", "STRATEGIC_PLANNER", "CREATIVE_DIRECTOR",
+  "ART_DIRECTOR", "COPYWRITER", "MEDIA_PLANNER", "MEDIA_BUYER", "SOCIAL_MANAGER",
+  "PRODUCTION_MANAGER", "PROJECT_MANAGER", "DATA_ANALYST", "CLIENT", "DIGITAL_DIRECTOR",
+] as const;
+
+/** Rôles de compte (User.role) éligibles à un login de marque (accès cockpit). */
+const BRAND_LOGIN_ACCOUNT_ROLES = [
+  "FOUNDER", "BRAND", "CREATOR", "FREELANCE", "CLIENT_RETAINER", "CLIENT_STATIC",
+] as const;
 
 /** Rôles assignables depuis la console superviseur. */
 export const ASSIGNABLE_ROLES = [
@@ -127,4 +144,155 @@ export const accountsRouter = createTRPCRouter({
 
     return updated;
   }),
+
+  /** Marques (Strategy) pour le sélecteur du formulaire de login. */
+  brands: adminProcedure
+    .input(
+      z.object({
+        search: z.string().max(120).optional(),
+        limit: z.number().int().min(1).max(300).default(200),
+      }),
+    )
+    .query(async ({ input }) => {
+      return db.strategy.findMany({
+        where: input.search
+          ? {
+              OR: [
+                { name: { contains: input.search, mode: "insensitive" as const } },
+                { companyName: { contains: input.search, mode: "insensitive" as const } },
+              ],
+            }
+          : {},
+        select: { id: true, name: true },
+        orderBy: { createdAt: "desc" },
+        take: input.limit,
+      });
+    }),
+
+  /**
+   * Crée un login personnalisé pour UNE marque : compte (email + mot de passe
+   * bcrypt coût 12, parité `auth.register`) rattaché à la Strategy via
+   * `StrategyCollaborator` (ADR-0129 ; zones scopées par teamRole, ADR-0131).
+   *
+   * Un seul acte, gouverné + audité. On N'UTILISE PAS `governedProcedure` :
+   * il persisterait l'input verbatim (donc le mot de passe EN CLAIR) dans
+   * l'IntentEmission hash-chaînée. On émet donc manuellement via le spine
+   * (ADR-0124) avec un payload REDACTÉ (jamais le mot de passe).
+   *
+   * Refus : email déjà pourvu d'un mot de passe (on ne réinitialise pas ici).
+   */
+  createBrandLogin: adminProcedure
+    .input(
+      z.object({
+        strategyId: z.string().min(1),
+        email: z.string().email(),
+        name: z.string().min(1).max(120),
+        password: z.string().min(8).max(200),
+        teamRole: z.enum(TEAM_ROLES).default("DIGITAL_DIRECTOR"),
+        accountRole: z.enum(BRAND_LOGIN_ACCOUNT_ROLES).default("FOUNDER"),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const actor = ctx.session.user;
+      const email = input.email.toLowerCase();
+
+      const strategy = await db.strategy.findUnique({
+        where: { id: input.strategyId },
+        select: { id: true, name: true },
+      });
+      if (!strategy) throw new TRPCError({ code: "NOT_FOUND", message: "Marque introuvable." });
+
+      const existing = await db.user.findUnique({
+        where: { email },
+        select: { id: true, hashedPassword: true },
+      });
+      if (existing?.hashedPassword) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message:
+            "Un compte avec cet email a déjà un mot de passe. Choisissez un autre email, ou utilisez « mot de passe oublié ».",
+        });
+      }
+
+      // Émission gouvernée — payload REDACTÉ (spine ADR-0124). Le mot de passe
+      // en clair ne doit JAMAIS entrer dans l'IntentEmission hash-chaînée.
+      const intentId = await openEmission({
+        kind: "ADMIN_CREATE_BRAND_LOGIN",
+        strategyId: strategy.id,
+        payload: {
+          strategyId: strategy.id,
+          email,
+          name: input.name,
+          teamRole: input.teamRole,
+          accountRole: input.accountRole,
+          actor: actor.id,
+        },
+        caller: "accounts:createBrandLogin",
+      });
+
+      try {
+        const hashedPassword = await bcrypt.hash(input.password, 12);
+
+        // Crée le compte, ou réclame un stub sans mot de passe (parité auth.register).
+        const user = existing
+          ? await db.user.update({
+              where: { id: existing.id },
+              data: { name: input.name, hashedPassword, role: input.accountRole },
+              select: { id: true, email: true },
+            })
+          : await db.user.create({
+              data: { name: input.name, email, hashedPassword, role: input.accountRole },
+              select: { id: true, email: true },
+            });
+
+        // Rattache le login à la marque — upsert ACTIVE (ADR-0129).
+        const collab = await db.strategyCollaborator.upsert({
+          where: { strategyId_userId: { strategyId: strategy.id, userId: user.id } },
+          update: { role: input.teamRole, status: "ACTIVE", revokedAt: null, grantedByUserId: actor.id },
+          create: {
+            strategyId: strategy.id,
+            userId: user.id,
+            role: input.teamRole,
+            scopes: [] as unknown as Prisma.InputJsonValue,
+            status: "ACTIVE",
+            grantedByUserId: actor.id,
+          },
+          select: { id: true, role: true, status: true },
+        });
+
+        auditTrail
+          .log({
+            action: "CREATE",
+            entityType: "User",
+            entityId: user.id,
+            newValue: {
+              email,
+              accountRole: input.accountRole,
+              brand: strategy.name,
+              teamRole: collab.role,
+              claimed: Boolean(existing),
+              actor: actor.id,
+            },
+          })
+          .catch(() => undefined);
+
+        const result = {
+          userId: user.id,
+          email: user.email,
+          brandName: strategy.name ?? strategy.id,
+          teamRole: collab.role,
+          accountRole: input.accountRole,
+          claimed: Boolean(existing),
+        };
+        await closeEmission({ intentId, result, status: "OK" });
+        return result;
+      } catch (err) {
+        await closeEmission({
+          intentId,
+          result: { error: err instanceof Error ? err.message : String(err) },
+          status: "FAILED",
+        });
+        throw err;
+      }
+    }),
 });

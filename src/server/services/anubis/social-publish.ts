@@ -332,9 +332,10 @@ export async function publishSocialPost(
   const failed = results.filter((r) => r.state === "FAILED" || r.state === "SCOPE_MISSING");
   const strategy = await db.strategy.findUnique({
     where: { id: input.strategyId },
-    select: { userId: true, companyName: true },
+    select: { userId: true, name: true },
   });
   if (strategy) {
+    const brandName = strategy.name;
     const collaborators = await db.strategyCollaborator.findMany({
       where: { strategyId: input.strategyId, status: "ACTIVE" },
       select: { userId: true },
@@ -346,8 +347,8 @@ export async function publishSocialPost(
         : "Publication non envoyée";
     const body =
       failed.length > 0
-        ? `${strategy.companyName} : ${published.length} réseau(x) OK, ${failed.length} en échec — ${failed[0]!.detail ?? failed[0]!.platform}`
-        : `${strategy.companyName} : « ${text.slice(0, 80)} »`;
+        ? `${brandName} : ${published.length} réseau(x) OK, ${failed.length} en échec — ${failed[0]!.detail ?? failed[0]!.platform}`
+        : `${brandName} : « ${text.slice(0, 80)} »`;
     await Promise.all(
       recipients.map((userId) =>
         pushNotification({
