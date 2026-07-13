@@ -1282,8 +1282,10 @@ export function mapSignauxOpportunites(strategy: any): SignauxOpportunitesSectio
   return {
     signauxFaibles: weakSignals,
     opportunitesPriseDeParole: opportunities,
-    mestorInsights: [],
-    seshatReferences: [],
+    // `mestorInsights`/`seshatReferences` supprimés (audit 2026-07-13, T2) : deux
+    // champs promis par le type mais hardcodés [] depuis leur naissance — un
+    // placeholder mensonger n'est pas un EmptyState. Réintroduction = source
+    // réelle branchée d'abord.
   };
 }
 

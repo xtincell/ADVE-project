@@ -2861,15 +2861,27 @@ model SuperfanProfile {
   @@index([strategyId])
 }
 
+/// Relevé de santé communautaire par plateforme. Unités canoniques (ADR-0134) :
+/// `size` = compte absolu ; `health`/`sentiment`/`activeRate` = fractions 0-1 ;
+/// `velocity` = fraction de croissance sur ~30 j (négative possible).
+/// Null = non mesuré (jamais un 0 fabriqué — P22-2). Écrivain de production :
+/// `cult-index-engine/community-snapshot-writer.ts` (Intent
+/// SESHAT_CAPTURE_COMMUNITY_SNAPSHOT, cron social-sync quotidien).
 model CommunitySnapshot {
   id         String   @id @default(cuid())
   strategyId String
   platform   String
   size       Int
-  health     Float
-  sentiment  Float
-  velocity   Float
-  activeRate Float
+  /// Taux d'engagement moyen par publication (engagement/followers), fraction 0-1.
+  health     Float?
+  /// Aucune source mesurée v1 — reste null (réservé sentiment inbox futur).
+  sentiment  Float?
+  /// Croissance followers vs référence ~J-30, fraction (clamp ≥ -1).
+  velocity   Float?
+  /// Auteurs uniques inbox 30 j / followers, fraction 0-1. Null hors couverture inbox.
+  activeRate Float?
+  /// MANUAL (seed/console) | CONNECTOR (mesure réelle). Null = rows historiques.
+  source     String?
   measuredAt DateTime @default(now())
 
   strategy Strategy @relation(fields: [strategyId], references: [id])

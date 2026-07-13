@@ -5,9 +5,13 @@
  */
 
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "../init";
+import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { DEVOTION_LADDER_TIERS } from "@/domain/devotion-ladder";
+import {
+  registerSuperfanProfile,
+  listSuperfanCandidates,
+} from "@/server/services/seshat/superfan-ingest";
 import { db } from "@/lib/db";
 /* lafusee:governed-active */
 
@@ -17,9 +21,13 @@ export const superfanRouter = createTRPCRouter({
   /**
    * ADR-0126 — voie gouvernée UNIQUE de naissance d'un SuperfanProfile.
    * Upsert dédupliqué par (strategyId, platform, handle) — la clé unique du
-   * modèle. Toute ingestion (CRM, campagne, saisie manuelle) passe ici :
-   * les rows nourrissent le bras superfans du plafond d'évidence CULTE/ICONE,
-   * un chemin non gouverné = vecteur d'inflation par simple footprint.
+   * modèle. Toute ingestion (CRM, campagne, saisie manuelle, mesure sociale)
+   * passe ici : les rows nourrissent le bras superfans du plafond d'évidence
+   * CULTE/ICONE, un chemin non gouverné = vecteur d'inflation par simple
+   * footprint.
+   * ADR-0134 §B4 : le corps d'écriture vit dans `seshat/superfan-ingest.ts`
+   * (single-writer, metadata MERGE) — ce router et le case commandant (chemin
+   * cron, mise à jour des profils déjà nés) sont deux portes du MÊME kind.
    * Verrou : test HARD single-writer (scoring-scale-aware.test.ts).
    */
   register: governedProcedure({
@@ -37,29 +45,32 @@ export const superfanRouter = createTRPCRouter({
       interactions: z.number().int().nonnegative().optional(),
       lastActiveAt: z.coerce.date().optional(),
       /** Provenance déclarée — audit de l'origine des rows d'évidence. */
-      source: z.enum(["MANUAL", "CRM", "CAMPAIGN"]).default("MANUAL"),
+      source: z.enum(["MANUAL", "CRM", "CAMPAIGN", "SOCIAL"]).default("MANUAL"),
+      /** Nom d'affichage public (mesure inbox) — optionnel. */
+      displayName: z.string().max(160).nullish(),
     }),
 
     caller: "superfan:register",
 
   })
     .mutation(async ({ ctx, input }) => {
-      const { strategyId, platform, handle, segment, engagementDepth, interactions, lastActiveAt, source } = input;
-      return ctx.db.superfanProfile.upsert({
-        where: { strategyId_platform_handle: { strategyId, platform, handle } },
-        create: {
-          strategyId, platform, handle, segment, engagementDepth,
-          interactions: interactions ?? 0,
-          lastActiveAt: lastActiveAt ?? null,
-          metadata: { source },
-        },
-        update: {
-          segment, engagementDepth,
-          ...(interactions != null ? { interactions } : {}),
-          ...(lastActiveAt ? { lastActiveAt } : {}),
-          metadata: { source },
-        },
+      return registerSuperfanProfile(ctx.db, {
+        ...input,
+        displayName: input.displayName ?? null,
       });
+    }),
+
+  /**
+   * ADR-0134 §B4 — fans détectés dans les interactions réelles (inbox), PAS
+   * ENCORE suivis. Calcul à la volée (aucun modèle), seuil conservateur
+   * (≥3 interactions, ≥2 jours actifs). `operatorProcedure` : la liste porte
+   * des identités publiques de tiers (PII) et la naissance d'un superfan est
+   * un geste opérateur — le clic « Suivre » émet `superfan.register`.
+   */
+  candidates: operatorProcedure
+    .input(z.object({ strategyId: z.string(), windowDays: z.number().int().min(7).max(365).optional() }))
+    .query(async ({ input }) => {
+      return listSuperfanCandidates(input.strategyId, input.windowDays);
     }),
   /** Count active superfans for a strategy (THE northstar) */
   count: protectedProcedure

@@ -60,8 +60,10 @@ Réseau fini. `G` = passe par le chemin gouverné (`emitIntent` et/ou gateway). 
 | Staleness propagator | pilier amendé → dépendants `staleAt` (A/D/V/E→[R,I,S] ; R/T→[I,S] ; I→[S]) | `staleness-propagator/index.ts:33-42` |
 | `resolveEffectivePillars` | nœud + arbre → piliers effectifs + provenance | `brand-node/inheritance.ts:92-187` |
 | Glory tools + LLM engine | contexte piliers → brief/asset (Zod-enforced, ADR-0067) | `artemis/tools/engine.ts:27-103` |
-| Oracle composers/mappers | piliers + Seshat/Sector + snapshots → 35 sections | `strategy-presentation/{section-mappers,deterministic-composers}.ts` |
+| Oracle composers/mappers | piliers + Seshat/Sector + snapshots → 35 sections (dont §34 `realSignal` mesuré, ADR-0134 §B7) | `strategy-presentation/{section-mappers,deterministic-composers}.ts` |
 | Notoria | piliers/scores → recommandations → appliquées via gateway | `notoria/lifecycle.ts`, `apply-payload.ts:25` |
+| **Chaîne de mesure communautaire** (ADR-0134, quotidienne) | collecte A13 (`FollowerSnapshot`/`SocialPost`/`SocialInboxItem`) → `CommunitySnapshot` mesurés (fractions 0-1, null honnête) → devotion sur audience réelle (`trigger="social-sync"`) → cult index → plafond d'évidence CULTE/ICONE ; superfans : actualisation des profils nés (jamais-dégrader, cap 0.60) + candidats à revue humaine | `cult-index-engine/community-snapshot-writer.ts` · `devotion-engine/index.ts` · `seshat/superfan-ingest.ts` · cron `social-sync` |
+| **Chaîne sectorielle Overton** (ADR-0134 §B6, quotidienne) | digests RSS `EXTERNAL_FEED_DIGEST` → registre `Sector` + pont Tarsis (`bridgeTarsisToSectorIntelligence` — caller posé) → `Sector.overtonState` → radar founder + Oracle §34 | `seshat/tarsis/sector-refresh.ts` · cron `external-feeds` |
 
 ---
 
@@ -110,7 +112,7 @@ Sévérité : 🔴 à corriger · 🟡 par-design mais flaggé honnête · 🟢 
 | **H7** | NPS proxy depuis Devotion Ladder | 🟡 flaggé | `deterministic-composers.ts:326-365` |
 | **H8** | deux topologies de dépendance pilier divergentes (`domain/pillars.ts` linéaire vs `staleness-propagator` canonique) — dormante (réf. seulement par test) | 🔴 ouvert · réconcilier | `domain/pillars.ts:200-206` |
 | **H9** | prompts Glory sans garde de staleness → peut lire un RTIS périmé | 🟡 ouvert | `artemis/tools/engine.ts:49-95` |
-| **H4** | Tarsis weak signals = intel marché externe | ⚪ par-design (`_mocked` honnête) | `seshat/tarsis/connector.ts` |
+| **H4** | Tarsis weak signals = intel marché externe | 🟢 **dé-mocké** (2026-06-14) : signal réel dérivé des digests RSS `EXTERNAL_FEED_DIGEST`, zéro credential requise ; **câblé au cron** (2026-07-13, ADR-0134) : registre `Sector` provisionné + refresh sectoriel via `refreshSectorsFromRecentDigests` (external-feeds). Restent absents (honnêtes) : `vocabularyOverlap`/`embeddingDelta` (embeddings requis) | `seshat/tarsis/connector.ts` · `seshat/tarsis/sector-refresh.ts` |
 
 ### 6b. Trous de circuit (entrées / gouvernance) — Q3 non-bypass affaibli
 

@@ -314,6 +314,72 @@ export async function execute(intent: Intent): Promise<IntentResult> {
         });
       }
 
+      case "SESHAT_REGISTER_SUPERFAN": {
+        // Chemin cron/emitIntent (ADR-0134 §B4) — actualisation des profils
+        // DÉJÀ nés depuis les interactions réelles ; la voie interactive passe
+        // par governedProcedure côté router (même kind, même writer service).
+        const { registerSuperfanProfile } = await import(
+          "@/server/services/seshat/superfan-ingest"
+        );
+        const profile = await registerSuperfanProfile(
+          (await import("@/lib/db")).db,
+          {
+            strategyId: intent.strategyId,
+            platform: intent.platform,
+            handle: intent.handle,
+            segment: intent.segment,
+            engagementDepth: intent.engagementDepth,
+            interactions: intent.interactions,
+            lastActiveAt: intent.lastActiveAt ? new Date(intent.lastActiveAt) : undefined,
+            source: intent.source,
+            displayName: intent.displayName ?? null,
+          },
+        );
+        return wrap({
+          ...base,
+          status: "OK",
+          summary: `Superfan ${intent.platform}/${intent.handle} → ${intent.segment} (depth ${intent.engagementDepth.toFixed(2)}, source ${intent.source})`,
+          output: { id: profile.id, segment: profile.segment, engagementDepth: profile.engagementDepth },
+        });
+      }
+
+      case "SESHAT_CAPTURE_COMMUNITY_SNAPSHOT": {
+        // Chemin cron de la mesure communautaire quotidienne (ADR-0134).
+        // Chaîne : mesure community → devotion → cult. La chaîne aval ne
+        // tourne QUE sur mesure LIVE (une marque sans base sociale mesurée
+        // garde son comportement historique — pas de snapshot fabriqué).
+        const { captureCommunitySnapshots } = await import(
+          "@/server/services/cult-index-engine/community-snapshot-writer"
+        );
+        const capture = await captureCommunitySnapshots(intent.strategyId);
+        let chain: { devotion: boolean; cult: boolean } = { devotion: false, cult: false };
+        if (capture.state === "LIVE") {
+          try {
+            const devotionEngine = await import("@/server/services/devotion-engine");
+            await devotionEngine.calculateAndSnapshot(intent.strategyId, "social-sync");
+            chain = { ...chain, devotion: true };
+          } catch {
+            // Best-effort : la mesure community reste valide sans le dérivé.
+          }
+          try {
+            const cultEngine = await import("@/server/services/cult-index-engine");
+            await cultEngine.calculateAndSnapshot(intent.strategyId);
+            chain = { ...chain, cult: true };
+          } catch {
+            // Idem — le cult composite se recalculera à la prochaine passe.
+          }
+        }
+        return wrap({
+          ...base,
+          status: "OK",
+          summary:
+            capture.state === "LIVE"
+              ? `Mesure communauté : ${capture.platforms.join(", ")} — dérivés devotion=${chain.devotion} cult=${chain.cult}`
+              : "Mesure communauté : aucune base sociale mesurée (INSUFFICIENT_DATA — pas de snapshot fabriqué)",
+          output: { capture, chain },
+        });
+      }
+
       case "ANUBIS_PUBLISH_SOCIAL_POST": {
         // Chemin cron des publications planifiées (échéance calendrier) —
         // le chemin interactif passe par governedProcedure côté router.

@@ -23,6 +23,7 @@ import { MetricCard } from "@/components/shared/metric-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Skeleton } from "@/components/primitives/skeleton";
 import { PricingModal } from "@/components/cockpit/pricing-modal";
+import { SuperfanCandidatesPanel } from "./superfan-candidates-panel";
 
 const DEVOTION_RUNGS: ReadonlyArray<{ key: keyof CommunityDistribution; label: string }> = [
   { key: "spectateur", label: "Spectateur" },
@@ -154,7 +155,8 @@ function CommunityPanelInner({ strategyId }: { strategyId: string }) {
           </SectionCard>
         )}
 
-        {/* Community health snapshot */}
+        {/* Community health snapshot — les métriques non mesurées (null) sont
+            masquées, jamais rendues « 0 % » (P22-2, ADR-0134). */}
         {community && (
           <SectionCard title={`Santé communauté · ${community.platform}`} icon={Heart}>
             <dl className="grid grid-cols-2 gap-4">
@@ -162,18 +164,24 @@ function CommunityPanelInner({ strategyId }: { strategyId: string }) {
                 <dt className="text-xs text-foreground-secondary">Taille</dt>
                 <dd className="text-lg font-bold text-foreground">{community.size.toLocaleString("fr-FR")}</dd>
               </div>
-              <div>
-                <dt className="text-xs text-foreground-secondary">Sentiment</dt>
-                <dd className="text-lg font-bold text-foreground">{pct(community.sentiment)}%</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-foreground-secondary">Santé</dt>
-                <dd className="text-lg font-bold text-foreground">{pct(community.health)}%</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-foreground-secondary">Taux actif</dt>
-                <dd className="text-lg font-bold text-foreground">{pct(community.activeRate)}%</dd>
-              </div>
+              {community.sentiment !== null && (
+                <div>
+                  <dt className="text-xs text-foreground-secondary">Sentiment</dt>
+                  <dd className="text-lg font-bold text-foreground">{pct(community.sentiment)}%</dd>
+                </div>
+              )}
+              {community.health !== null && (
+                <div>
+                  <dt className="text-xs text-foreground-secondary">Engagement moyen</dt>
+                  <dd className="text-lg font-bold text-foreground">{pct(community.health)}%</dd>
+                </div>
+              )}
+              {community.activeRate !== null && (
+                <div>
+                  <dt className="text-xs text-foreground-secondary">Taux actif</dt>
+                  <dd className="text-lg font-bold text-foreground">{pct(community.activeRate)}%</dd>
+                </div>
+              )}
             </dl>
           </SectionCard>
         )}
@@ -197,6 +205,10 @@ function CommunityPanelInner({ strategyId }: { strategyId: string }) {
             </ul>
           </SectionCard>
         )}
+
+        {/* Fans détectés dans les interactions réelles — s'auto-masque hors
+            opérateur et sans candidat (revue humaine, jamais de naissance auto). */}
+        <SuperfanCandidatesPanel strategyId={strategyId} />
 
         {/* Superfan base summary */}
         <SectionCard title="Base superfans" icon={TrendingUp}>

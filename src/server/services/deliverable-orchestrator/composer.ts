@@ -1,7 +1,7 @@
 import { ADVE_STORAGE_KEYS } from "@/domain";
 
 /**
- * Deliverable Orchestrator — Composer (Phase 17, ADR-0037).
+ * Deliverable Orchestrator — Composer (Phase 17b, ADR-0050 — anciennement ADR-0037).
  *
  * Public handler appelé depuis Artemis commandant pour l'Intent
  * `COMPOSE_DELIVERABLE`. Phase 17 commit 3 implémente le mode PREVIEW :

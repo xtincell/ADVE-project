@@ -99,6 +99,8 @@ export async function GET(request: Request) {
       insights: string;
       inbox: string;
       commerce: string;
+      superfans: string;
+      community: string;
     }> = [];
 
     for (const s of strategies) {
@@ -114,6 +116,36 @@ export async function GET(request: Request) {
         enrichRecentPostInsights(s.strategyId).catch(() => DEGRADED),
         syncStrategyInbox(s.strategyId).catch(() => DEGRADED),
       ]);
+      // Actualisation des superfans DÉJÀ suivis depuis l'inbox fraîche
+      // (ADR-0134 §B4) — chaque écriture est ré-émise par le service via le
+      // spine (SESHAT_REGISTER_SUPERFAN, source SOCIAL). Jamais de création.
+      // AVANT la chaîne community→devotion→cult pour que la dévotion du jour
+      // intègre les profondeurs actualisées.
+      const superfans = await (async () => {
+        try {
+          const { updateKnownSuperfansFromInbox } = await import(
+            "@/server/services/seshat/superfan-ingest"
+          );
+          return await updateKnownSuperfansFromInbox(s.strategyId);
+        } catch {
+          return DEGRADED;
+        }
+      })();
+      // Mesure communautaire APRÈS toute la collecte du jour (ADR-0134) —
+      // ré-émise via le spine (emitIntent), jamais un appel service direct :
+      // chaîne community → devotion → cult sur la donnée fraîche.
+      const community = await (async () => {
+        try {
+          const { emitIntentTyped } = await import("@/server/services/mestor/intents");
+          const out = await emitIntentTyped<{ capture: { state: string } }>(
+            { kind: "SESHAT_CAPTURE_COMMUNITY_SNAPSHOT", strategyId: s.strategyId },
+            { caller: "cron:social-sync:community" },
+          );
+          return { state: out.capture.state };
+        } catch {
+          return DEGRADED;
+        }
+      })();
       results.push({
         strategyId: s.strategyId,
         followers: followers.state,
@@ -121,6 +153,8 @@ export async function GET(request: Request) {
         insights: insights.state,
         inbox: inbox.state,
         commerce: commerce.state,
+        superfans: superfans.state,
+        community: community.state,
       });
     }
 

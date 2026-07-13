@@ -585,14 +585,13 @@ function composeDevotionLadder(ctx: ComposerContext): Blob {
   };
 }
 
-function composeOverton(ctx: ComposerContext): Blob {
+async function composeOverton(ctx: ComposerContext): Promise<Blob> {
   const s = ctx.pillars.s ?? {};
   const d = ctx.pillars.d ?? {};
   const fo = (s.fenetreOverton ?? {}) as Blob;
   const current = str(fo.perceptionActuelle, 300);
   const target = str(fo.perceptionCible, 300);
   const positionnement = str(d.positionnement, 300);
-  if (!current && !target && !positionnement) return {};
 
   const axes: Array<Blob> = [];
   if (current || target) {
@@ -613,7 +612,35 @@ function composeOverton(ctx: ComposerContext): Blob {
   }
   const maneuvers = arr(fo.strategieDeplacment ?? fo.strategieDeplacement);
 
-  return { overtonDistinctive: { axes, maneuvers } };
+  // ADR-0134 §B7 (audit 2026-07-13, T1) — signal Overton MESURÉ (Phase 23) :
+  // `buildOvertonRealSignalForOracle` était défini + testé + rendu par l'UI,
+  // mais n'avait AUCUN caller de production. Import lazy (anti-cycle
+  // strategy-presentation ↔ campaign-tracker) ; échec transitoire → omission
+  // honnête ; le builder rend son propre INSUFFICIENT_DATA discriminé (P22-2),
+  // jamais un chiffre fabriqué.
+  let realSignal: Awaited<
+    ReturnType<typeof import("./overton-real-signal").buildOvertonRealSignalForOracle>
+  > | null = null;
+  try {
+    const { buildOvertonRealSignalForOracle } = await import("./overton-real-signal");
+    realSignal = await buildOvertonRealSignalForOracle(ctx.strategy.id, "SYSTEM:oracle-composer");
+  } catch {
+    realSignal = null;
+  }
+
+  // Garde writeback : rien de déclaré ET pas de mesure exploitable → EmptyState
+  // inchangé (pas de BrandAsset fabriqué pour porter un signal vide).
+  const hasDeclared = axes.length > 0 || maneuvers.length > 0;
+  const hasMeasured = realSignal !== null && realSignal.state === "OK";
+  if (!hasDeclared && !hasMeasured) return {};
+
+  return {
+    overtonDistinctive: {
+      axes,
+      maneuvers,
+      ...(realSignal ? { realSignal } : {}),
+    },
+  };
 }
 
 function composeTarsisSignals(ctx: ComposerContext): Blob {

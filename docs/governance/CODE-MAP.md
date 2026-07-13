@@ -110,7 +110,7 @@ Ces correspondances évitent la réinvention :
 - **FrameworkResult** (13 fields)
 - **CultIndexSnapshot** (13 fields)
 - **SuperfanProfile** (12 fields)
-- **CommunitySnapshot** (10 fields)
+- **CommunitySnapshot** (11 fields) — Relevé de santé communautaire par plateforme. Unités canoniques (ADR-0134) : `size` = compte absolu ; `health`/`sentimen
 - **BrandVariable** (9 fields)
 - **VariableHistory** (8 fields)
 - **ScoreSnapshot** (8 fields)
@@ -1009,7 +1009,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 560 (par governor)
+## Intent kinds — 561 (par governor)
 
 ### MESTOR (79)
 
@@ -1111,10 +1111,11 @@ Ces correspondances évitent la réinvention :
 - `PROPOSE_SEQUENCE_PROMOTION_FROM_CAMPAIGN` → campaign-tracker (sync) — Cluster E — Si campagne réussie (tierDelta>0 + cultIndexDelta>0 + altitudeRegres…
 - `TOGGLE_QUALITY_GATE_MODE` → auto-promotion (sync) — Bascule le mode quality-gate entre SOFT (warning-only) et HARD (block-on-fail). …
 
-### SESHAT (20)
+### SESHAT (21)
 
 - `SESHAT_UPSERT_POLITY_AXIS` → sector-intelligence (sync) — Upsert d'un axe culturel sectoriel PAR POLITY (SectorPolityAxis — échelle de mar…
 - `SESHAT_REGISTER_SUPERFAN` → superfan (sync) — Enregistre/actualise UN SuperfanProfile (upsert par (strategyId, platform, handl…
+- `SESHAT_CAPTURE_COMMUNITY_SNAPSHOT` → cult-index-engine (sync) — Mesure et persiste UN CommunitySnapshot par plateforme suivie depuis la donnée R…
 - `RANK_PEERS` → seshat (sync) — Generic peer ranking via context-store ranker.…
 - `SEARCH_BRAND_CONTEXT` → seshat (sync) — Search across strategies / find peers / search within a strategy.…
 - `INDEX_BRAND_SOURCE` → seshat (async) — Index a single BrandDataSource into BRAND_SOURCE chunks for RAG retrieval (opera…
