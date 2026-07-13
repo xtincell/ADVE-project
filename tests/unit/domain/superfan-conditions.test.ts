@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   SUPERFAN_CONDITIONS,
   CONDITION_TO_TIER,
+  CONDITION_TO_AARRR,
   TIER_MIN_DEPTH,
   deriveTierFromConditions,
   conditionFloorDepth,
@@ -9,6 +10,7 @@ import {
   metConditions,
 } from "@/domain/superfan-conditions";
 import { DEVOTION_LADDER_TIERS } from "@/domain/devotion-ladder";
+import { AARRR_INTENTS } from "@/domain/touchpoints";
 
 describe("ADR-0141 — superfan à conditions strictes", () => {
   it("les 5 conditions canoniques sont couvertes", () => {
@@ -52,6 +54,21 @@ describe("ADR-0141 — superfan à conditions strictes", () => {
       expect(d).toBeGreaterThanOrEqual(prev);
       prev = d;
     }
+  });
+
+  it("les 5 conditions sont les 5 comportements AARRR (ADR-0142)", () => {
+    for (const c of SUPERFAN_CONDITIONS) {
+      expect(AARRR_INTENTS).toContain(CONDITION_TO_AARRR[c]);
+    }
+    // Mapping canonique — la forme varie, le type de comportement non.
+    expect(CONDITION_TO_AARRR.VIEWED).toBe("ACQUISITION");
+    expect(CONDITION_TO_AARRR.INTERACTED).toBe("ACTIVATION");
+    expect(CONDITION_TO_AARRR.PAID).toBe("REVENUE");
+    expect(CONDITION_TO_AARRR.RECOMMENDED).toBe("REFERRAL");
+    expect(CONDITION_TO_AARRR.SHARED).toBe("REFERRAL");
+    // RETENTION n'a pas de gate one-shot (comportement récurrent, mesuré à part).
+    const mapped = new Set(Object.values(CONDITION_TO_AARRR));
+    expect(mapped.has("RETENTION")).toBe(false);
   });
 
   it("isSuperfanCondition / metConditions filtrent le bruit", () => {

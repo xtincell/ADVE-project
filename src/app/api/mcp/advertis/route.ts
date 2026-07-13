@@ -1,0 +1,38 @@
+export const dynamic = "force-dynamic";
+import { NextResponse } from "next/server";
+import { authenticateMcpRequest, meterAndRun } from "@/server/services/anubis/mcp-billing";
+import { tools as advertisTools } from "@/server/mcp/advertis";
+
+// ADVERTIS (outbound) — expose une marque à un agent (ADR-0142). Lecture seule.
+
+const toolMap = Object.fromEntries(advertisTools.map((t) => [t.name, t.handler]));
+
+export async function POST(request: Request) {
+  const gate = await authenticateMcpRequest(request, "advertis");
+  if (!gate.ok) return gate.response!;
+
+  let body: { tool?: string; params?: Record<string, unknown> };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+  const tool = body.tool ?? "";
+  const handler = toolMap[tool];
+  if (!handler) {
+    return NextResponse.json(
+      { error: `Unknown tool: ${tool}`, availableTools: Object.keys(toolMap) },
+      { status: 400 },
+    );
+  }
+  return meterAndRun(gate, "advertis", tool, () => handler(body.params ?? {}));
+}
+
+export async function GET(request: Request) {
+  const gate = await authenticateMcpRequest(request, "advertis");
+  if (!gate.ok) return NextResponse.json({ server: "advertis", status: "ok" });
+  return NextResponse.json({
+    server: "advertis",
+    tools: advertisTools.map((t) => t.name),
+  });
+}

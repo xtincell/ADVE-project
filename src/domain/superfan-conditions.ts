@@ -29,6 +29,7 @@
  */
 
 import { DEVOTION_LADDER_TIERS, type DevotionLadderTier } from "./devotion-ladder";
+import type { AarrrIntent } from "./touchpoints";
 
 /** Les 5 conditions strictes et trackables d'un superfan. */
 export const SUPERFAN_CONDITIONS = [
@@ -64,6 +65,22 @@ export const TIER_MIN_DEPTH: Record<DevotionLadderTier, number> = {
   ENGAGE: 0.45,
   AMBASSADEUR: 0.65,
   EVANGELISTE: 0.85,
+};
+
+/**
+ * Condition → étape AARRR (les 5 comportements canoniques, `touchpoints.ts`).
+ * Les 5 conditions strictes SONT les 5 comportements AARRR — la forme du signal
+ * varie par marque, le type de comportement traqué ne varie pas. `RETENTION`
+ * n'a pas de gate one-shot : c'est un comportement RÉCURRENT (revient + répète),
+ * mesuré à part (récence + volume d'interactions), pas une condition franchie
+ * une fois.
+ */
+export const CONDITION_TO_AARRR: Record<SuperfanCondition, AarrrIntent> = {
+  VIEWED: "ACQUISITION",
+  INTERACTED: "ACTIVATION",
+  PAID: "REVENUE",
+  RECOMMENDED: "REFERRAL",
+  SHARED: "REFERRAL",
 };
 
 /** True ssi `c` est une condition superfan canonique. */

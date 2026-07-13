@@ -65,6 +65,7 @@ async function loadServer(name: string): Promise<McpServerModule | null> {
 // elle est exclue de l'agrégateur tools. Pour exposer ses resources via le
 // manifest MCP, étendre `loadServer` avec un branch resource-aware.
 const MCP_SERVER_NAMES = [
+  "advertis",
   "advertis-inbound",
   "artemis",
   "creative",
