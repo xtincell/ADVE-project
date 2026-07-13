@@ -188,7 +188,10 @@ describe("ADR-0126 — naissance gouvernée des SuperfanProfile (single-writer H
       { encoding: "utf8" },
     ).trim();
     const files = out ? out.split("\n") : [];
-    const allowed = ["src/server/trpc/routers/superfan.ts"];
+    // ADR-0134 §B4 : le corps d'écriture a déménagé du router vers le service
+    // de mesure Seshat — UN seul fichier writer, deux portes gouvernées du
+    // même kind (tRPC superfan.register + case commandant chemin cron).
+    const allowed = ["src/server/services/seshat/superfan-ingest.ts"];
     const offenders = files.filter((f) => !allowed.includes(f));
     expect(offenders, `writers SuperfanProfile non gouvernés :\n${offenders.join("\n")}`).toEqual([]);
   });

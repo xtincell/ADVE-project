@@ -10,6 +10,32 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.123 — feat(seshat): superfans depuis les interactions RÉELLES — actualisation gouvernée + fans détectés à revue humaine (ADR-0134 §B4) (2026-07-13)
+
+**Les SuperfanProfile n'étaient jamais nourris par les vraies interactions : l'inbox (commentaires avec identités, ADR-0133) dormait à côté. Branché — sans jamais ouvrir un vecteur d'inflation.**
+
+- **Single-writer déplacé** : le corps d'upsert vit dans `seshat/superfan-ingest.ts`
+  (`registerSuperfanProfile`, **metadata MERGE** — l'ancien router écrasait la provenance à
+  chaque update, T18). Deux portes gouvernées du MÊME kind `SESHAT_REGISTER_SUPERFAN` :
+  tRPC `superfan.register` (geste opérateur) + case commandant (chemin cron). Verrou HARD
+  single-writer mis à jour (un seul fichier writer).
+- **Actualisation quotidienne des profils DÉJÀ nés** : `updateKnownSuperfansFromInbox`
+  (étape cron social-sync AVANT la chaîne dévotion) — agrégats par auteur
+  (`authorHandle ?? authorExternalId`, asymétrie FB/IG), sémantique **jamais-dégrader**
+  (max depth/interactions/récence, segment ne recule pas), chaque écriture ré-émise via le
+  spine (`source: "SOCIAL"`). **AUCUNE création automatique.**
+- **Cap anti-inflation DUR** : `computeInboxEngagementDepth` ≤ **0.60** — la preuve
+  « commentaires seuls » ne peut JAMAIS franchir le seuil superfan actif (0.65) ; le bras
+  d'évidence CULTE/ICONE reste inatteignable par simple footprint (ADR-0126 renforcé).
+- **Fans détectés (revue humaine)** : query `superfan.candidates` (`operatorProcedure`,
+  calcul à la volée, seuil ≥3 interactions & ≥2 jours actifs, top 20) + panel « Fans
+  détectés » sur le suivi communauté (masqué hors opérateur/sans candidat, DS tokens,
+  vocabulaire client — « Prescripteur ») : **la naissance reste un clic humain** →
+  `superfan.register`.
+- Enum provenance : + `SOCIAL` ; union Intent + case commandant + touchesPillars.
+- Test `superfan-ingest.test.ts` (7 invariants : cap dur, formule, mapping monotone,
+  zéro création cron, délégation router, ordre cron).
+
 ## v6.27.122 — feat(seshat): devotion ladder sur audience RÉELLE — followers = spectateurs, commentateurs = participants (ADR-0134 §B3) (2026-07-13)
 
 **La pyramide de dévotion ne comptait que les SuperfanProfile saisis à la main (+boosts internes) : 5 profils = 100 % de l'« audience ». Elle reflète désormais la vraie masse.**

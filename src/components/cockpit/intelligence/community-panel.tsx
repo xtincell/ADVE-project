@@ -22,6 +22,7 @@ import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { MetricCard } from "@/components/shared/metric-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Skeleton } from "@/components/primitives/skeleton";
+import { SuperfanCandidatesPanel } from "./superfan-candidates-panel";
 
 const DEVOTION_RUNGS: ReadonlyArray<{ key: keyof CommunityDistribution; label: string }> = [
   { key: "spectateur", label: "Spectateur" },
@@ -198,6 +199,10 @@ function CommunityPanelInner({ strategyId }: { strategyId: string }) {
             </ul>
           </SectionCard>
         )}
+
+        {/* Fans détectés dans les interactions réelles — s'auto-masque hors
+            opérateur et sans candidat (revue humaine, jamais de naissance auto). */}
+        <SuperfanCandidatesPanel strategyId={strategyId} />
 
         {/* Superfan base summary */}
         <SectionCard title="Base superfans" icon={TrendingUp}>

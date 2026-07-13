@@ -314,6 +314,35 @@ export async function execute(intent: Intent): Promise<IntentResult> {
         });
       }
 
+      case "SESHAT_REGISTER_SUPERFAN": {
+        // Chemin cron/emitIntent (ADR-0134 §B4) — actualisation des profils
+        // DÉJÀ nés depuis les interactions réelles ; la voie interactive passe
+        // par governedProcedure côté router (même kind, même writer service).
+        const { registerSuperfanProfile } = await import(
+          "@/server/services/seshat/superfan-ingest"
+        );
+        const profile = await registerSuperfanProfile(
+          (await import("@/lib/db")).db,
+          {
+            strategyId: intent.strategyId,
+            platform: intent.platform,
+            handle: intent.handle,
+            segment: intent.segment,
+            engagementDepth: intent.engagementDepth,
+            interactions: intent.interactions,
+            lastActiveAt: intent.lastActiveAt ? new Date(intent.lastActiveAt) : undefined,
+            source: intent.source,
+            displayName: intent.displayName ?? null,
+          },
+        );
+        return wrap({
+          ...base,
+          status: "OK",
+          summary: `Superfan ${intent.platform}/${intent.handle} → ${intent.segment} (depth ${intent.engagementDepth.toFixed(2)}, source ${intent.source})`,
+          output: { id: profile.id, segment: profile.segment, engagementDepth: profile.engagementDepth },
+        });
+      }
+
       case "SESHAT_CAPTURE_COMMUNITY_SNAPSHOT": {
         // Chemin cron de la mesure communautaire quotidienne (ADR-0134).
         // Chaîne : mesure community → devotion → cult. La chaîne aval ne
