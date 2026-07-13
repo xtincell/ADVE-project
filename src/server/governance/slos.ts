@@ -114,6 +114,7 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   // ADR-0128 — connexions « réseaux de la marque » (founder OAuth).
   { kind: "ANUBIS_SOCIAL_CONNECT_ACCOUNT", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "ANUBIS_SOCIAL_DISCONNECT_ACCOUNT", p95LatencyMs: 1_000, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "ANUBIS_SOCIAL_SET_PRIMARY_ACCOUNT", p95LatencyMs: 1_500, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "ANUBIS_SOCIAL_SYNC_FOLLOWERS", p95LatencyMs: 20_000, errorRatePct: 0.10, costP95Usd: 0 },
   { kind: "ANUBIS_SYNC_SOCIAL_POSTS", p95LatencyMs: 30_000, errorRatePct: 0.10, costP95Usd: 0 },
   { kind: "ANUBIS_SYNC_INBOX", p95LatencyMs: 30_000, errorRatePct: 0.10, costP95Usd: 0 },

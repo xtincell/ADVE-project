@@ -10,6 +10,21 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.119 — feat(cockpit): réseaux — une ligne par réseau, une Page de TRAVAIL choisie (compact + modal) (2026-07-13)
+
+**Demande opérateur : « je ne veux voir que la Page sur laquelle je travaille, une ligne par réseau, et le modal au clic pour choisir — pas toutes les Pages en désordre. »**
+
+- **Compact retrouvé** : une seule ligne par réseau (fini l'affichage à plat de toutes les Pages).
+  La ligne montre la **Page de travail** (active) et son audience.
+- **Modal de choix** (icône Gérer / « Choisir ma Page (N) ») : liste les Pages connectées du réseau,
+  radio pour désigner **celle sur laquelle on travaille**, déconnexion par Page, « Connecter une autre Page ».
+- **Seule la Page active est comptée** : nouveau kind gouverné `ANUBIS_SOCIAL_SET_PRIMARY_ACCOUNT`
+  (la choisie → ACTIVE, ses sœurs → réserve PAUSED) ; la sync/collecte ne touche QUE l'active. À la
+  connexion, les Pages arrivent en **réserve** (auto-active si une seule) — plus d'auto-comptage de
+  toutes les Pages. Relevé initial uniquement pour la Page active.
+- État honnête `NEEDS_CHOICE` quand des Pages sont connectées sans qu'une soit choisie. Zone déléguée
+  `social`. 0 migration (réutilise le statut PAUSED). 946 tests gouvernance verts.
+
 ## v6.27.118 — fix(cockpit): réseaux — afficher TOUTES les Pages connectées (fin du dédoublonnage qui cachait la bonne) (2026-07-13)
 
 **« Ça m'a connecté à Office Inn » : en réalité le hub n'affichait qu'UNE Page par réseau — les autres (dont la bonne) étaient connectées mais masquées.**
