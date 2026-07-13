@@ -19,6 +19,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { useToast } from "@/components/shared/notification-toast";
 import { Button, Input, Textarea } from "@/components/primitives";
 import { Send, CalendarClock, ArrowRight, PenSquare } from "lucide-react";
+import { PublicationManagerPanel } from "@/components/cockpit/social/publication-manager-panel";
 
 const PLATFORM_META: Record<string, { label: string; publishable: boolean; note?: string }> = {
   FACEBOOK: { label: "Facebook", publishable: true },
@@ -210,6 +211,12 @@ export default function PublishPage() {
               </div>
             ) : null}
           </div>
+        </div>
+      )}
+
+      {strategyId && (
+        <div className="mt-8">
+          <PublicationManagerPanel strategyId={strategyId} />
         </div>
       )}
     </div>

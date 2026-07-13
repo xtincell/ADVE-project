@@ -10,6 +10,24 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.135 — feat(social): gestion par publication — voir, éditer, importer l'image, changer l'heure, déclencher, annuler (2026-07-13)
+
+**Increment 2a du sprint SPAWT (mandat : « l'outil de feedback doit marcher pour CHAQUE publication, pour voir et corriger : importer l'image, changer l'heure, déclencher maintenant, modifier le texte »).**
+
+- **Panneau `PublicationManagerPanel`** (page Publier) : liste toutes les publications de la marque
+  (planifiées + récentes) avec leur **brief** (direction créative), **copy du visuel**, légende,
+  cibles, heure, statut et **état par réseau**. Pour chaque publication : **Modifier** (texte /
+  URL d'image / heure), **Déclencher maintenant**, **Annuler** — le tout avec confirmation DS.
+- **Réutilise `publishPost`** pour éditer / replanifier / déclencher (via `brandActionId`, scopé à
+  la marque côté service) — pas de nouveau chemin de publication. Nouveau kind gouverné
+  `ANUBIS_CANCEL_SCHEDULED_POST` (zone `publications`) pour l'annulation ; nouvelles procédures
+  `social.listPublications` (lecture) + `social.cancelPublication`.
+- L'import d'image se fait par **URL du visuel** (le visuel se forge depuis le brief, puis se
+  rattache ici) — l'upload de fichier viendra ensuite.
+- Vérifié : tsc 0 · lint 0 · gouvernance 1004/1004 (catalogue Intent régénéré). 0 nouveau modèle,
+  0 nouveau Neter (cap 7/7). Increment 2b à suivre (mot de passe + Sécurité + mode jour Stéphanie +
+  assets équipe → ADVE + surface App Store).
+
 ## v6.27.134 — feat(spawt): pack lancement — accès god-mode, publication avec brief, GTM v2 injecté, J0 armée aujourd'hui (2026-07-13)
 
 **Sprint de lancement SPAWT (app découverte food Abidjan, cycle 13/07→01/09). Increment 1 : accès débloqué + mécanique de publication complète + GTM injecté + J0 armée pour aujourd'hui.**
