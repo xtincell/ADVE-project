@@ -366,3 +366,22 @@ a.ck-feed__item:hover { background: var(--surface-raised); }
 .ck-devgate { border-style: dashed; }
 .ck-devgate__chip { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 10px; padding: 4px 11px; border-radius: var(--radius-pill); font-family: var(--font-mono); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; background: color-mix(in srgb, var(--warning) 14%, transparent); color: var(--warning); }
 .ck-devgate__chip svg { width: 12px; height: 12px; }
+
+/* ── Gestion par publication (PublicationManagerPanel, 2026-07-13) ─────────── */
+.ck-pub { display: flex; flex-direction: column; gap: 10px; }
+.ck-pub__head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 0.8rem; }
+.ck-pub__when { display: inline-flex; align-items: center; gap: 4px; color: var(--color-text-secondary); }
+.ck-pub__when svg { width: 13px; height: 13px; }
+.ck-pub__targets { color: var(--color-text-muted); font-family: var(--font-mono, monospace); font-size: 0.72rem; }
+.ck-pub__brief { border-left: 2px solid var(--accent); padding-left: 10px; display: flex; flex-direction: column; gap: 4px; }
+.ck-pub__brief p { font-size: 0.8rem; color: var(--color-text-secondary); line-height: 1.4; }
+.ck-pub__brief b { color: var(--color-text); display: inline-flex; align-items: center; gap: 4px; }
+.ck-pub__brief svg { width: 13px; height: 13px; }
+.ck-pub__text { font-size: 0.88rem; color: var(--color-text); white-space: pre-wrap; line-height: 1.45; }
+.ck-pub__img { display: inline-flex; align-items: center; gap: 5px; font-size: 0.78rem; color: var(--color-success, var(--accent)); }
+.ck-pub__img svg, .ck-pub__noimg svg { width: 13px; height: 13px; }
+.ck-pub__noimg { font-size: 0.78rem; color: var(--color-text-muted); font-style: italic; }
+.ck-pub__results { font-size: 0.76rem; color: var(--color-text-secondary); font-family: var(--font-mono, monospace); }
+.ck-pub__actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+.ck-pub__edit { display: flex; flex-direction: column; gap: 8px; }
+.ck-pub__when-edit { display: flex; flex-direction: column; gap: 4px; font-size: 0.78rem; color: var(--color-text-secondary); }

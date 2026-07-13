@@ -759,6 +759,9 @@ export const socialRouter = createTRPCRouter({
       // quoi produire) — persistés sur l'action, jamais envoyés au réseau.
       brief: z.string().max(4000).optional().nullable(),
       visualCopy: z.string().max(2000).optional().nullable(),
+      // Gestion par publication : édite/replanifie/déclenche une publication
+      // EXISTANTE (scopée à la marque via where {id, strategyId} côté service).
+      brandActionId: z.string().optional().nullable(),
     }),
     caller: "social:publishPost",
   }).mutation(async ({ ctx, input }) => {
@@ -774,6 +777,7 @@ export const socialRouter = createTRPCRouter({
       scheduleAt: input.scheduleAt ?? null,
       brief: input.brief ?? null,
       visualCopy: input.visualCopy ?? null,
+      brandActionId: input.brandActionId ?? null,
     });
   }),
 
@@ -792,6 +796,33 @@ export const socialRouter = createTRPCRouter({
       const { buildSocialReport } = await import("@/server/services/anubis/social-report");
       return buildSocialReport(input.strategyId, input.days);
     }),
+
+  /**
+   * Gestion par publication (mandat 2026-07-13) — liste les publications de la
+   * marque (planifiées + récentes) avec leur brief / copy / résultats, pour le
+   * panneau de revue et correction.
+   */
+  listPublications: protectedProcedure
+    .input(z.object({ strategyId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      await assertStrategyAccess(ctx, input.strategyId);
+      const { listScheduledPublications } = await import("@/server/services/anubis/social-publish");
+      return listScheduledPublications(input.strategyId);
+    }),
+
+  /** Annule une publication planifiée (le cron ne la reprend plus). */
+  cancelPublication: governedProcedure({
+    kind: "ANUBIS_CANCEL_SCHEDULED_POST",
+    inputSchema: z.object({
+      strategyId: z.string().min(1),
+      brandActionId: z.string().min(1),
+    }),
+    caller: "social:cancelPublication",
+  }).mutation(async ({ ctx, input }) => {
+    await assertStrategyAccess(ctx, input.strategyId);
+    const { cancelScheduledPublication } = await import("@/server/services/anubis/social-publish");
+    return cancelScheduledPublication(input.strategyId, input.brandActionId);
+  }),
 });
 
 /**

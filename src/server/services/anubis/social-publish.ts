@@ -19,7 +19,7 @@
  * calendriers : la publication sociale EST une action du plan.
  */
 
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { decryptTokenPayload } from "@/server/services/oauth-integrations";
 import type { SocialTokenPayload } from "./social-connect";
@@ -449,4 +449,90 @@ export async function listDueScheduledPublications(): Promise<
     });
   }
   return out;
+}
+
+// ── Gestion par publication (mandat 2026-07-13 : voir / corriger CHAQUE
+//    publication — éditer, importer l'image, changer l'heure, déclencher,
+//    annuler). L'édition/replanification/déclenchement RÉUTILISENT
+//    `publishSocialPost` (brandActionId) — pas de nouveau kind. Ici : lister
+//    + annuler. ──────────────────────────────────────────────────────────────
+
+export interface BrandPublicationView {
+  brandActionId: string;
+  status: string; // SCHEDULED | EXECUTED | CANCELLED
+  scheduledAt: string | null; // timingStart ISO
+  targets: string[];
+  text: string;
+  linkUrl: string | null;
+  imageUrl: string | null;
+  brief: string | null;
+  visualCopy: string | null;
+  pending: boolean;
+  results: PublishTargetResult[];
+}
+
+/**
+ * Liste les publications sociales de la marque (planifiées + récentes) pour le
+ * panneau de gestion. Toute BrandAction qui porte un `metadata.socialPublish`,
+ * triée par échéance décroissante. Déterministe, lecture seule.
+ */
+export async function listScheduledPublications(
+  strategyId: string,
+  limit = 50,
+): Promise<BrandPublicationView[]> {
+  const actions = await db.brandAction.findMany({
+    where: {
+      strategyId,
+      metadata: { path: ["socialPublish", "requestedByUserId"], not: Prisma.JsonNull },
+    },
+    select: { id: true, status: true, timingStart: true, metadata: true },
+    orderBy: { timingStart: "desc" },
+    take: limit,
+  });
+  const out: BrandPublicationView[] = [];
+  for (const a of actions) {
+    const sp = ((a.metadata ?? {}) as Record<string, unknown>).socialPublish as
+      | Record<string, unknown>
+      | undefined;
+    if (!sp) continue;
+    out.push({
+      brandActionId: a.id,
+      status: a.status,
+      scheduledAt: a.timingStart ? a.timingStart.toISOString() : null,
+      targets: Array.isArray(sp.targets) ? sp.targets.map(String) : [],
+      text: typeof sp.text === "string" ? sp.text : "",
+      linkUrl: typeof sp.linkUrl === "string" ? sp.linkUrl : null,
+      imageUrl: typeof sp.imageUrl === "string" ? sp.imageUrl : null,
+      brief: typeof sp.brief === "string" ? sp.brief : null,
+      visualCopy: typeof sp.visualCopy === "string" ? sp.visualCopy : null,
+      pending: sp.pending === true,
+      results: Array.isArray(sp.results) ? (sp.results as PublishTargetResult[]) : [],
+    });
+  }
+  return out;
+}
+
+/**
+ * Annule une publication planifiée : `status=CANCELLED`, `pending=false` — le
+ * cron ne la reprendra plus. L'historique est conservé (Loi 1). Idempotent.
+ */
+export async function cancelScheduledPublication(
+  strategyId: string,
+  brandActionId: string,
+): Promise<{ ok: boolean }> {
+  const action = await db.brandAction.findFirst({
+    where: { id: brandActionId, strategyId },
+    select: { id: true, metadata: true, status: true },
+  });
+  if (!action) throw new Error("Publication introuvable");
+  const meta = (action.metadata ?? {}) as Record<string, unknown>;
+  const sp = (meta.socialPublish ?? {}) as Record<string, unknown>;
+  await db.brandAction.update({
+    where: { id: action.id },
+    data: {
+      status: "CANCELLED",
+      metadata: { ...meta, socialPublish: { ...sp, pending: false } } as Prisma.InputJsonValue,
+    },
+  });
+  return { ok: true };
 }
