@@ -755,6 +755,10 @@ export const socialRouter = createTRPCRouter({
       linkUrl: z.string().url().optional().nullable(),
       imageUrl: z.string().url().optional().nullable(),
       scheduleAt: z.string().datetime().optional().nullable(),
+      // Brief créatif intégré + copy du visuel (le générateur/designer sait
+      // quoi produire) — persistés sur l'action, jamais envoyés au réseau.
+      brief: z.string().max(4000).optional().nullable(),
+      visualCopy: z.string().max(2000).optional().nullable(),
     }),
     caller: "social:publishPost",
   }).mutation(async ({ ctx, input }) => {
@@ -768,6 +772,8 @@ export const socialRouter = createTRPCRouter({
       linkUrl: input.linkUrl ?? null,
       imageUrl: input.imageUrl ?? null,
       scheduleAt: input.scheduleAt ?? null,
+      brief: input.brief ?? null,
+      visualCopy: input.visualCopy ?? null,
     });
   }),
 

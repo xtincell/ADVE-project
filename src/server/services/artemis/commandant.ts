@@ -408,6 +408,8 @@ export async function execute(intent: Intent): Promise<IntentResult> {
           imageUrl: intent.imageUrl ?? null,
           scheduleAt: intent.scheduleAt ?? null,
           brandActionId: intent.brandActionId ?? null,
+          brief: intent.brief ?? null,
+          visualCopy: intent.visualCopy ?? null,
         });
         const okCount = out.results.filter((r) => r.state === "PUBLISHED").length;
         return wrap({

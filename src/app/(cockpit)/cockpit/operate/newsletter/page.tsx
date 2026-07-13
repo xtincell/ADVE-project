@@ -10,7 +10,6 @@ import { Modal } from "@/components/shared/modal";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { FormField } from "@/components/shared/form-field";
 import { Tabs } from "@/components/shared/tabs";
-import { EmailProviderCard } from "@/components/cockpit/newsletter/email-provider-card";
 import {
   Mail,
   Users,
@@ -212,9 +211,9 @@ export default function NewsletterPage() {
         />
       </div>
 
-      {/* Configuration du fournisseur email (opérateur uniquement — la carte
-          se masque d'elle-même pour les fondateurs). */}
-      <EmailProviderCard strategyId={strategyId} />
+      {/* La configuration du fournisseur email (« API et test ») a rejoint la
+          zone Réglages → Connexions, avec les autres canaux. Cet onglet reste
+          opérationnel : abonnés, campagnes, envois. */}
 
       <div className="flex justify-between items-center flex-wrap gap-2">
         <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
