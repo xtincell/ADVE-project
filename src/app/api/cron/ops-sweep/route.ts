@@ -74,10 +74,49 @@ export async function GET(request: Request) {
       }
     }
 
+    // ── 4. Refresh nocturne des sections Oracle STALE (ADR-0137) ──
+    // La cascade de staleness (ADR-0134) marque les sections COMPLETE→STALE
+    // quand un pilier mute ; personne ne les régénérait automatiquement.
+    // On ré-assemble scope=STALE UNIQUEMENT pour les stratégies qui ont des
+    // sections périmées (ciblé, pas de balayage à vide). ASSEMBLE_ORACLE émet
+    // GENERATE_ORACLE_SECTION × N (fallback composers déterministes ADR-0091
+    // sans clés LLM). Best-effort par stratégie.
+    const staleGroups = await db.oracleSection.groupBy({
+      by: ["strategyId"],
+      where: { status: "STALE" },
+    });
+    const oracleRefresh = { strategies: staleGroups.length, emitted: 0, skipped: 0, failed: 0 };
+    if (staleGroups.length > 0) {
+      const { emitIntent } = await import("@/server/services/mestor/intents");
+      const strategies = await db.strategy.findMany({
+        where: { id: { in: staleGroups.map((g) => g.strategyId) } },
+        select: { id: true, operatorId: true },
+      });
+      const operatorById = new Map(strategies.map((s) => [s.id, s.operatorId]));
+      for (const g of staleGroups) {
+        const operatorId = operatorById.get(g.strategyId);
+        if (!operatorId) {
+          // Pas d'operator → pas de contexte d'assemblage (skip honnête).
+          oracleRefresh.skipped += 1;
+          continue;
+        }
+        try {
+          await emitIntent(
+            { kind: "ASSEMBLE_ORACLE", strategyId: g.strategyId, scope: "STALE", operatorId },
+            { caller: "cron:ops-sweep:oracle-stale" },
+          );
+          oracleRefresh.emitted += 1;
+        } catch {
+          oracleRefresh.failed += 1;
+        }
+      }
+    }
+
     return NextResponse.json({
       ok: true,
       subscriptionsPastDue: pastDue.count,
       recommendationsExpired: expiredRecos.count,
+      oracleStaleRefresh: oracleRefresh,
       ...(statements ? { mcpStatements: statements } : {}),
     });
   } catch (err) {
