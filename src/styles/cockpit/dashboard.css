@@ -332,3 +332,16 @@ a.ck-feed__item:hover { background: var(--surface-raised); }
 .ck-report__row { display: grid; grid-template-columns: 1.4fr repeat(7, 1fr); gap: 8px; padding: 7px 10px; border-radius: var(--radius-md); font-size: 12px; color: var(--text-secondary); min-width: 640px; }
 .ck-report__row--head { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
 .ck-report__row:not(.ck-report__row--head) { background: var(--surface-raised); }
+
+/* Modal « choisir ma Page de travail » (une Page active par réseau) */
+.ck-pagepick { display: flex; flex-direction: column; gap: 8px; }
+.ck-pagepick__row { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: var(--radius-md); background: var(--surface-raised); border: 1px solid transparent; }
+.ck-pagepick__row[data-on="1"] { border-color: color-mix(in srgb, var(--accent) 40%, transparent); background: var(--accent-fill); }
+.ck-pagepick__choose { flex: 1; display: flex; align-items: center; gap: 10px; border: 0; background: transparent; cursor: pointer; text-align: left; padding: 0; }
+.ck-pagepick__choose:disabled { cursor: default; }
+.ck-pagepick__radio { flex: none; width: 20px; height: 20px; border-radius: var(--radius-pill); border: 2px solid var(--border-strong); display: inline-flex; align-items: center; justify-content: center; color: var(--accent); }
+.ck-pagepick__radio[data-on="1"] { border-color: var(--accent); }
+.ck-pagepick__radio svg { width: 13px; height: 13px; }
+.ck-pagepick__body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.ck-pagepick__name { font-size: 13px; font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ck-pagepick__meta { font-size: 11px; color: var(--text-muted); }
