@@ -222,6 +222,22 @@ Dispatch réel `COMPOSE_DELIVERABLE` (T3 — chantier dédié) · dérivation ho
 
 ---
 
+## 6. Vérification comportementale (post-remédiation, même session)
+
+Exécutée sur PostgreSQL 16 local (migrations 0→HEAD dont `20260713100000` appliquées propres, `npm run db:seed` + `db:seed:motion19` verts), en simulant exactement les chemins de production (émissions via le spine, mêmes callers que les crons) :
+
+| Chaîne | Résultat observé |
+|---|---|
+| Mesure community (spine, caller `cron:social-sync:community`) | `LIVE` sur les 3 plateformes de Motion19 (relevés réels seedés 4 252/1 753/1 308) — FACEBOOK `activeRate` 0.00047 (2 commentateurs uniques/4 252), INSTAGRAM `activeRate` 0 (**scannée, mesure réelle**), TIKTOK `activeRate` null (**hors couverture inbox v1**), `health`/`velocity` null (pas de posts mesurés/pas de référence J-30 — honnête), `sentiment` null, `source` CONNECTOR |
+| Chaîne dérivée | `{devotion: true, cult: true}` — DevotionSnapshot `trigger="social-sync"`, pyramide réelle **99,96 % spectateurs / 0,03 % participants / 0,01 % engagés** (2 décimales — l'arrondi entier aurait tout écrasé) ; CultIndexSnapshot GHOST 0.01 (densité de dévotion honnête d'une marque à 7,3 k followers et 2 commentateurs), `communityCohesion` hors dénominateur (aucun health mesuré) |
+| Candidats superfans | Alice (4 interactions/3 jours actifs) détectée → depth proposé 0.48/ENGAGE ; Bob (1 interaction) filtré sous seuil ; clic simulé → profil créé `metadata {source: SOCIAL, displayName}` ; `updateKnownSuperfansFromInbox` → `matched 1, updated 0` (jamais-dégrader idempotent) ; liste candidats vidée après enregistrement |
+| Staleness Oracle | `writePillar` **bare** (auteur OPERATOR) → section 1 `COMPLETE → STALE` + `staleAt` posé (T5 fermé, vérifié en base) |
+| Refresh sectoriel | digest RSS créé → row `Sector` provisionnée (registre) + `REFRESHED via SECTOR_ONLY` (Motion19 sans campagne — fallback correct), `overtonState` peuplé depuis le signal réel ; **2ᵉ passe → `SKIPPED ALREADY_FRESH`** (idempotence) |
+
+Gauntlet final : tsc 0 · eslint 0 erreur · madge = 1 cycle pré-existant toléré (inchangé) · **2574 tests verts** (232 fichiers) · `prisma validate` + `migrate deploy` OK.
+
+---
+
 ## Annexe — fichiers clés de l'audit
 
 `campaign-manager/brief-builder.ts` · `campaign-manager/brief-gate.ts` · `ptah/index.ts` · `mestor/gates/brief-vs-adve-coherence.ts` · `deliverable-orchestrator/{composer,resolver,vault-matcher}.ts` · `strategy-presentation/{types,section-mappers,deterministic-composers,overton-real-signal,export-oracle}.ts` · `oracle-section/{index,handler,assembler}.ts` · `pillar-gateway/index.ts` · `src/lib/utils/scoring.ts` · `src/domain/{brand-tier,market-scale,devotion-ladder,overton-radar-signal,connector-result}.ts` · `advertis-scorer/index.ts` · `cult-index-engine/index.ts` · `devotion-engine/index.ts` · `campaign-tracker/{superfan-attribution,superfan-economy,calibration,signals-culture,operator-tag-overton-delta}.ts` · `sector-intelligence/index.ts` · `seshat/tarsis/connector.ts` · `seshat/external-feeds/` · `anubis/{social-connect,social-inbox,social-insights,social-report,commerce-connect}.ts` · `anubis/providers/crm-provider.ts` · `trpc/routers/{superfan,cockpit-router,campaign-tracker}.ts` · `api/cron/{social-sync,external-feeds}/route.ts` · seeds.
