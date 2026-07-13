@@ -10,6 +10,26 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.137 — feat(spawt): coffre de marque exploité — kit officiel dans le vault + logo/palette/J0 câblés (2026-07-13)
+
+**Mandat opérateur : « assure-toi d'exploiter les assets de marque. tu les as tous. » (5 zips : iconographie, icônes, mascottes, photos, social).**
+
+- **Kit officiel committé** dans `public/brand/spawt/` (logos, mascotte Moka ×25 poses,
+  151 icônes UI, photos, boards social) — 55 Mo, servis par l'app.
+- **Seed `scripts/seed-spawt-assets.ts`** (`npm run db:seed:spawt-assets`, idempotent, honnête
+  — ne crée un actif que si le fichier existe) inscrit **52 `BrandAsset`** dans le coffre de
+  `spawt-strategy` : logo principal **LOGO_FINAL ACTIVE** (→ dashboard/sidebar/page publique via
+  `getBrandIdentity`), 16 variantes de logo, Moka ×25 (KV_VISUAL), photos + social, jeu d'icônes
+  (1 « pack »), **bible de personnage Moka** (PERSONA), et **palette CHROMATIC_STRATEGY ACTIVE**
+  (`accent #D4AF37` or / `primary #0A0A0A` noir) → accent cockpit SPAWT (ADR-0130).
+- **Publication J0 câblée sur son vrai visuel** : `post-quiz-1.png` (le quiz « archétype foodie »)
+  rattaché à `metadata.socialPublish.imageUrl` — **débloque l'Instagram** (IG exige une image,
+  l'ancien `null` l'aurait rejetée).
+- **Fix handler `social-publish.ts`** : `toAbsoluteImageUrl` résout un visuel du coffre
+  (chemin relatif `/brand/…`) en URL absolue publique avant l'appel Meta/Graph (qui récupère
+  l'image par URL) ; une URL déjà absolue (CDN) passe telle quelle. Bénéficie à toute publication.
+- Cap APOGEE 7/7 préservé (données de coffre + robustesse handler ; 0 nouveau modèle, 0 Neter).
+
 ## v6.27.136 — feat(console): opérations de production en 3 temps (page + skill nefer-ops) (2026-07-13)
 
 **Mandat opérateur : « Y a aucun moyen de gérer en 3 temps via injection, déploiement et action sur déployé ? Dédie-toi une page pour ça. Et fais-en un skill. »**

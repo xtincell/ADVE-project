@@ -1,6 +1,6 @@
 {
   "name": "lafusee",
-  "version": "6.27.136",
+  "version": "6.27.137",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
@@ -55,6 +55,7 @@
     "db:seed:demo": "node --env-file-if-exists=.env.local --import tsx prisma/seed-demo.ts",
     "db:seed:spawt": "node --env-file-if-exists=.env.local --import tsx scripts/seed-spawt-complete.ts",
     "db:seed:spawt-gtm": "node --env-file-if-exists=.env.local --import tsx scripts/seed-spawt-gtm.ts",
+    "db:seed:spawt-assets": "node --env-file-if-exists=.env.local --import tsx scripts/seed-spawt-assets.ts",
     "db:seed:motion19": "node --env-file-if-exists=.env.local --import tsx prisma/seed-motion19-run.ts",
     "db:seed:countries": "node --env-file-if-exists=.env.local --import tsx prisma/seed-countries.ts",
     "db:seed:action-costs": "node --env-file-if-exists=.env.local --import tsx prisma/seed-action-costs.ts",
