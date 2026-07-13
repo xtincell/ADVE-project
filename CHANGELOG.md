@@ -10,6 +10,25 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.129 — feat(forge): COMPOSE_DELIVERABLE passe de l'aperçu au forge réel ([ADR-0136](docs/governance/adr/0136-compose-deliverable-dispatch.md)) (2026-07-13)
+
+**Bloc B du mandat. `COMPOSE_DELIVERABLE` (ADR-0050) était figé en PREVIEW — inputs `void`és, « commit 4 » jamais livré (T3). Le composant analytique était complet mais ne déclenchait JAMAIS un forge.**
+
+- **Mode DISPATCHED réel** (`deliverable-orchestrator/composer.ts` `dispatchForge`) : exécute le Glory
+  tool producteur du livrable cible (`executeTool`), puis chaîne vers Ptah (`chainGloryToPtah`
+  exporté) pour matérialiser l'asset. **Réutilise les primitives éprouvées, SANS refactor du moteur
+  `executeSequence`** (rayon d'impact minimal — toutes les générations Oracle en dépendent).
+- **Livrable brief-only** (sans forgeOutput) → dispatch valide sans forge ; **livrable matériel** →
+  forge Ptah (`taskId`) ou **DEFERRED honnête** sans clés provider (jamais un faux succès).
+- **Backward-compatible** : dispatch uniquement sur `previewOnly === false` explicite ; le défaut
+  reste PREVIEW (router + page forge inchangés, chemin dormant jusqu'à opt-in).
+- **Surface founder/opérateur** : `/cockpit/operate/forge` affiche l'aperçu (UX output-first) puis
+  un bouton **« Forger réellement ce livrable »** (ConfirmDialog coût, résultat honnête).
+- **Limite v1 assumée + tracée** : le tool cible produit avec le contexte disponible ; la génération
+  auto des briefs upstream MANQUANTS (dérouler tout le DAG) exige un refactor du moteur de séquence
+  + un env à clés pour vérifier le happy-path — RESIDUAL-DEBT.
+- 0 modèle Prisma, 0 kind (réutilise `PTAH_MATERIALIZE_BRIEF`), cap 7/7. tsc 0 · lint 0 ·
+  **2587 tests verts** · DS+vocab verts. Test `deliverable-dispatch.test.ts` (5 assertions).
 ## v6.27.128 — fix(cockpit): fin des cadenas god-mode + modale formules + portail « en construction » (2026-07-13)
 
 **Audit complet des 54 surfaces cockpit founder : les gates redirigent → une modale de consultation des formules, le seul stub passe derrière un portail honnête, et le compte ADMIN ne voit plus jamais un cadenas.**
@@ -29,7 +48,6 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 - **Audit 3 agents** : 50 routes DÉVELOPPÉES (données tRPC réelles), 3 gates abonnement (→ modale),
   1 stub (`benchmarks`, portaillé). États honnêtes « à connecter / Bientôt » conservés tels quels
   (KPI newsletter, connexion boutique, X payant à l'appel).
-
 ## v6.27.127 — feat(seshat): attribution des transitions de dévotion — la calibration morte reprend vie ([ADR-0135](docs/governance/adr/0135-devotion-transition-attribution.md)) (2026-07-13)
 
 **Bloc A du mandat « finis les constructibles ». La chaîne d'attribution/calibration lisait `CampaignAction.devotionTransitionsObserved` — un champ que PERSONNE n'écrivait (T7). Maintenant que la mesure de dévotion est quotidienne (ADR-0134), les montées de rang réelles deviennent la matière première d'une attribution honnête.**
