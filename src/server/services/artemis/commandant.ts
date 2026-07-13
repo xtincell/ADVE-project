@@ -1195,9 +1195,15 @@ async function promoteSequenceLifecycle(
     }
   }
 
+  // STUB honnête (cf. commentaire d'en-tête + ADR-0139) : cette émission
+  // consigne la transition dans l'audit trail (IntentEmission hash-chained)
+  // mais NE PERSISTE PAS le lifecycle — celui-ci vit dans le code
+  // (sequences.ts) jusqu'au store `SequenceLifecycleState` jamais construit
+  // (Chantier D-bis). On surface `persisted: false` pour que l'appelant
+  // (cron auto-promotion) ne compte JAMAIS une promotion fantôme.
   return {
     status: "OK",
-    summary: `Sequence ${sequenceKey} ${fromLifecycle} → ${toLifecycle}`,
+    summary: `Sequence ${sequenceKey} ${fromLifecycle}→${toLifecycle} — émission d'audit enregistrée (lifecycle non persisté, cf. ADR-0139)`,
     tool: `artemis:lifecycle:${sequenceKey}`,
     output: {
       sequenceKey,
@@ -1206,6 +1212,9 @@ async function promoteSequenceLifecycle(
       promptHash: newPromptHash,
       justification,
       operatorId: intent.operatorId,
+      persisted: false,
+      persistenceNote:
+        "Audit-only. Le lifecycle persiste dans sequences.ts (code) jusqu'au store SequenceLifecycleState (Chantier D-bis, ADR-0139). Aucune promotion runtime effectuée.",
     },
   };
 }

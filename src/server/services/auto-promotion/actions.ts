@@ -50,13 +50,37 @@ export async function promoteSequence(
     { caller: "auto-promotion:promote-sequence" },
   );
 
+  if (intentResult.status !== "OK") {
+    return {
+      evaluation: result,
+      action: "SKIP",
+      reason: `Intent failed : ${intentResult.summary}`,
+      emittedIntentId: intentResult.intentKind,
+    };
+  }
+
+  // Honnêteté (ADR-0139 / audit T14) : le handler PROMOTE_SEQUENCE_LIFECYCLE
+  // est un stub d'audit qui NE PERSISTE PAS le lifecycle (il vit dans
+  // sequences.ts). Tant qu'il retourne `persisted: false`, on rapporte SKIP,
+  // pas PROMOTE — sinon `totalPromoted` mentirait sur un changement d'état
+  // qui n'a jamais eu lieu (aucune séquence ne quitte réellement DRAFT).
+  const persisted =
+    (intentResult.output as { persisted?: boolean } | undefined)?.persisted === true;
+
+  if (!persisted) {
+    return {
+      evaluation: result,
+      action: "SKIP",
+      reason:
+        "Émission d'audit enregistrée mais lifecycle NON persisté (handler stub — ADR-0139). Aucune promotion runtime : le lifecycle vit dans le code (sequences.ts).",
+      emittedIntentId: intentResult.intentKind,
+    };
+  }
+
   return {
     evaluation: result,
-    action: intentResult.status === "OK" ? "PROMOTE" : "SKIP",
-    reason:
-      intentResult.status === "OK"
-        ? "PROMOTE_SEQUENCE_LIFECYCLE emitted successfully"
-        : `Intent failed : ${intentResult.summary}`,
+    action: "PROMOTE",
+    reason: "PROMOTE_SEQUENCE_LIFECYCLE emitted and persisted",
     emittedIntentId: intentResult.intentKind,
   };
 }
