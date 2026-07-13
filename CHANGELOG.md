@@ -34,6 +34,11 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
   honnête `NOT_CONNECTED` sans page FB locale). 0 modèle Prisma, 1 kind, cap 7/7.
 - **CLAUDE.md** : note d'obsolescence corrigée — la base est sur **Coolify** (self-host, depuis
   2026-07-05), plus Supabase (`docs/deploy/DATABASE.md`).
+- **Finaliseur prod** `/api/admin/prod-finish` (guardé `CRON_SECRET`, esprit `seed-brands`) : la base
+  Coolify a un hostname interne non joignable depuis un sandbox → cet endpoint provisionne le login
+  Lionel→Motion19 (idempotent) **et** planifie un post texte sur la page FB d'une marque via l'Intent
+  gouverné `ANUBIS_PUBLISH_SOCIAL_POST` (scheduleAt futur → le cron `social-sync?mode=publish` publie à
+  l'échéance ; skip honnête si la page n'est pas connectée). Aucune fabrication.
 - tsc 0 · lint 0 · 2294 tests verts (client Prisma régénéré).
 
 ## v6.27.132 — fix(auto-promotion): diagnostic définitif T14 + fin des promotions fantômes ([ADR-0139](docs/governance/adr/0139-sequence-lifecycle-stub-honest-diagnosis.md)) (2026-07-13)
