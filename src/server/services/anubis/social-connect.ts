@@ -462,7 +462,7 @@ export async function connectSocialAccounts(
   input: ConnectSocialAccountsInput,
 ): Promise<ConnectSocialAccountsResult> {
   const connected: ConnectSocialAccountsResult["connected"] = [];
-  let snapshotsCreated = 0;
+  const touchedPlatforms = new Set<string>();
 
   for (const account of input.accounts) {
     const metadata = {
@@ -476,6 +476,11 @@ export async function connectSocialAccounts(
       // alimente pilier E + dashboard. Non-secret par construction.
       profile: account.profile ?? null,
     };
+    // NOUVEAU (2026-07-13) : on ne rend PAS toutes les Pages actives d'office.
+    // À la création, une Page arrive en RÉSERVE (PAUSED) ; l'utilisateur
+    // choisit ensuite SA Page de travail (une seule active/comptée par
+    // réseau). Sur update, on NE touche PAS au statut (pas de ré-activation
+    // silencieuse d'une Page mise en réserve).
     await db.socialConnection.upsert({
       where: {
         strategyId_platform_accountId: {
@@ -489,7 +494,6 @@ export async function connectSocialAccounts(
         accessToken: account.encryptedTokens,
         refreshToken: null,
         tokenExpiry: account.tokenExpiresAt ? new Date(account.tokenExpiresAt) : null,
-        status: "ACTIVE",
         metadata: metadata as Prisma.InputJsonValue,
       },
       create: {
@@ -501,28 +505,85 @@ export async function connectSocialAccounts(
         accessToken: account.encryptedTokens,
         refreshToken: null,
         tokenExpiry: account.tokenExpiresAt ? new Date(account.tokenExpiresAt) : null,
-        status: "ACTIVE",
+        status: "PAUSED",
         metadata: metadata as Prisma.InputJsonValue,
       },
     });
     connected.push({ platform: account.platform, accountName: account.accountName });
+    touchedPlatforms.add(account.platform);
+  }
 
-    if (account.followerCount != null) {
-      await db.followerSnapshot.create({
-        data: {
-          strategyId: input.strategyId,
-          platform: account.platform as SocialPlatform,
-          handle: (account.handle ?? account.accountName).replace(/^@/, ""),
-          followerCount: account.followerCount,
-          followingCount: account.followingCount,
-          source: "CONNECTOR",
-        },
-      });
-      snapshotsCreated++;
+  // Auto-sélection : si un réseau n'a AUCUNE Page active et une SEULE Page
+  // connectée → on l'active (pas de choix à faire). Sinon, tout reste en
+  // réserve — l'utilisateur choisit sa Page de travail dans le modal.
+  for (const platform of touchedPlatforms) {
+    const conns = await db.socialConnection.findMany({
+      where: { strategyId: input.strategyId, platform: platform as SocialPlatform, status: { in: ["ACTIVE", "PAUSED"] } },
+      select: { id: true, status: true },
+    });
+    if (!conns.some((c) => c.status === "ACTIVE") && conns.length === 1) {
+      await db.socialConnection.update({ where: { id: conns[0]!.id }, data: { status: "ACTIVE" } });
     }
   }
 
+  // Relevé initial : UNIQUEMENT pour la Page active (de travail) — on ne
+  // compte jamais les infos des Pages en réserve (demande opérateur 13/07).
+  let snapshotsCreated = 0;
+  for (const account of input.accounts) {
+    if (account.followerCount == null) continue;
+    const conn = await db.socialConnection.findUnique({
+      where: {
+        strategyId_platform_accountId: {
+          strategyId: input.strategyId,
+          platform: account.platform as SocialPlatform,
+          accountId: account.accountId,
+        },
+      },
+      select: { status: true },
+    });
+    if (conn?.status !== "ACTIVE") continue;
+    await db.followerSnapshot.create({
+      data: {
+        strategyId: input.strategyId,
+        platform: account.platform as SocialPlatform,
+        handle: (account.handle ?? account.accountName).replace(/^@/, ""),
+        followerCount: account.followerCount,
+        followingCount: account.followingCount,
+        source: "CONNECTOR",
+      },
+    });
+    snapshotsCreated++;
+  }
+
   return { connected, snapshotsCreated };
+}
+
+/**
+ * Définit la Page de TRAVAIL d'un réseau (ADR-0128 amendé 2026-07-13) : la
+ * connexion choisie passe ACTIVE, ses sœurs (même réseau) repassent en
+ * réserve (PAUSED). Seule la Page active est synchronisée et comptée.
+ * Appelé via governedProcedure (ANUBIS_SOCIAL_SET_PRIMARY_ACCOUNT).
+ */
+export async function setWorkingSocialAccount(
+  strategyId: string,
+  connectionId: string,
+): Promise<{ platform: string; accountName: string }> {
+  const target = await db.socialConnection.findFirst({
+    where: { id: connectionId, strategyId },
+    select: { id: true, platform: true, accountName: true },
+  });
+  if (!target) throw new Error("Compte introuvable pour cette marque");
+  await db.socialConnection.updateMany({
+    where: {
+      strategyId,
+      platform: target.platform,
+      status: { in: ["ACTIVE", "PAUSED"] },
+      id: { not: target.id },
+    },
+    data: { status: "PAUSED" },
+  });
+  await db.socialConnection.update({ where: { id: target.id }, data: { status: "ACTIVE" } });
+  return { platform: String(target.platform), accountName: target.accountName };
 }
 
 // ── Déconnexion ──────────────────────────────────────────────────────────────
@@ -1119,11 +1180,26 @@ export async function syncStrategySocialPosts(
 
 // ── Lecture composée pour le cockpit (read-only, zéro secret) ────────────────
 
+/** Une Page/compte connecté d'un réseau (pour le modal de choix). */
+export interface BrandSocialAccount {
+  connectionId: string;
+  accountName: string;
+  handle: string | null;
+  followerCount: number | null;
+  /** true = c'est la Page de travail (active, synchronisée, comptée). */
+  working: boolean;
+}
+
 export interface BrandSocialHubRow {
   platform: string;
   provider: BrandSocialProvider;
-  /** État honnête de la plateforme pour CETTE marque. */
-  state: "CONNECTED" | "ERROR" | "DISCONNECTED" | "NOT_CONNECTED" | "PROVIDER_UNAVAILABLE";
+  /**
+   * État honnête de la plateforme pour CETTE marque.
+   * NEEDS_CHOICE = des Pages sont connectées mais aucune n'est choisie comme
+   * Page de travail (l'utilisateur doit ouvrir le modal et choisir).
+   */
+  state: "CONNECTED" | "NEEDS_CHOICE" | "ERROR" | "DISCONNECTED" | "NOT_CONNECTED" | "PROVIDER_UNAVAILABLE";
+  /** Page de TRAVAIL (active) affichée sur la ligne compacte — null si NEEDS_CHOICE. */
   accountName: string | null;
   handle: string | null;
   followerCount: number | null;
@@ -1131,8 +1207,11 @@ export interface BrandSocialHubRow {
   followerCapturedAt: string | null;
   lastSyncAt: string | null;
   connectionId: string | null;
-  /** true = la connexion date d'avant les scopes de pilotage → « Reconnecter ». */
   scopesOutdated: boolean;
+  /** Nombre total de Pages connectées pour ce réseau (active + réserve). */
+  connectedCount: number;
+  /** Toutes les Pages connectées — alimente le modal « choisir ma Page ». */
+  accounts: BrandSocialAccount[];
 }
 
 export async function getBrandSocialHubData(strategyId: string): Promise<{
@@ -1183,55 +1262,79 @@ export async function getBrandSocialHubData(strategyId: string): Promise<{
     connByPlatform.set(p, arr);
   }
 
+  const followerOf = (platform: string, handle: string | null) => {
+    const s = handle ? snapByAccount.get(`${platform}:${handle.toLowerCase()}`) : undefined;
+    return s?.followerCount ?? null;
+  };
+
   const rows: BrandSocialHubRow[] = [];
   for (const [platform, provider] of Object.entries(PROVIDER_FOR_PLATFORM)) {
     const conns = connByPlatform.get(platform) ?? [];
-    // Comptes « vivants » = ACTIVE ou ERROR (à reconnecter) — un par ligne.
-    const live = conns.filter((c) => c.status === "ACTIVE" || c.status === "ERROR");
-    if (live.length > 0) {
-      for (const conn of live) {
-        const meta = (conn.metadata ?? {}) as Record<string, unknown>;
-        const handle = typeof meta.handle === "string" ? meta.handle : null;
-        const snap =
-          (handle ? snapByAccount.get(`${platform}:${handle.toLowerCase()}`) : undefined) ??
-          (live.length === 1 ? latestSnap.get(platform) : undefined);
-        rows.push({
-          platform,
-          provider,
-          state: conn.status === "ACTIVE" ? "CONNECTED" : "ERROR",
-          accountName: conn.accountName ?? null,
-          handle: handle ?? snap?.handle ?? null,
-          followerCount: snap?.followerCount ?? null,
-          followerSource: snap?.source ?? null,
-          followerCapturedAt: snap?.capturedAt.toISOString() ?? null,
-          lastSyncAt: typeof meta.lastSyncAt === "string" ? meta.lastSyncAt : null,
-          connectionId: conn.id,
-          scopesOutdated:
-            conn.status === "ACTIVE" && !hasAllCurrentScopes(provider, meta.scopes),
-        });
-      }
-    } else {
-      // Aucun compte vivant → une ligne d'état (à connecter / bientôt / déco).
-      const disc = conns.find((c) => c.status === "DISCONNECTED" || c.status === "PAUSED");
+    // Pages « connectées » = active (ACTIVE) OU en réserve (PAUSED) OU à
+    // reconnecter (ERROR). Une seule est la Page de TRAVAIL (active).
+    const live = conns.filter(
+      (c) => c.status === "ACTIVE" || c.status === "PAUSED" || c.status === "ERROR",
+    );
+    const accounts: BrandSocialAccount[] = live.map((c) => {
+      const meta = (c.metadata ?? {}) as Record<string, unknown>;
+      const handle = typeof meta.handle === "string" ? meta.handle : null;
+      return {
+        connectionId: c.id,
+        accountName: c.accountName,
+        handle,
+        followerCount: followerOf(platform, handle),
+        working: c.status === "ACTIVE",
+      };
+    });
+
+    if (live.length === 0) {
+      // Rien de vivant → ligne d'état (à connecter / bientôt / déco).
+      const disc = conns.find((c) => c.status === "DISCONNECTED");
       const snap = latestSnap.get(platform);
       rows.push({
-        platform,
-        provider,
-        state: disc
-          ? "DISCONNECTED"
-          : !readiness[provider]
-            ? "PROVIDER_UNAVAILABLE"
-            : "NOT_CONNECTED",
-        accountName: null,
-        handle: snap?.handle ?? null,
-        followerCount: snap?.followerCount ?? null,
-        followerSource: snap?.source ?? null,
-        followerCapturedAt: snap?.capturedAt.toISOString() ?? null,
-        lastSyncAt: null,
-        connectionId: null,
-        scopesOutdated: false,
+        platform, provider,
+        state: disc ? "DISCONNECTED" : !readiness[provider] ? "PROVIDER_UNAVAILABLE" : "NOT_CONNECTED",
+        accountName: null, handle: snap?.handle ?? null, followerCount: null,
+        followerSource: null, followerCapturedAt: null, lastSyncAt: null,
+        connectionId: null, scopesOutdated: false, connectedCount: 0, accounts: [],
       });
+      continue;
     }
+
+    // La Page de travail = l'ACTIVE (ou l'ERROR à reconnecter). S'il n'y en a
+    // pas mais des réserves existent → NEEDS_CHOICE (choisir dans le modal).
+    const workingConn =
+      live.find((c) => c.status === "ACTIVE") ?? live.find((c) => c.status === "ERROR") ?? null;
+    if (!workingConn) {
+      rows.push({
+        platform, provider, state: "NEEDS_CHOICE",
+        accountName: null, handle: null, followerCount: null,
+        followerSource: null, followerCapturedAt: null, lastSyncAt: null,
+        connectionId: null, scopesOutdated: false,
+        connectedCount: live.length, accounts,
+      });
+      continue;
+    }
+
+    const meta = (workingConn.metadata ?? {}) as Record<string, unknown>;
+    const handle = typeof meta.handle === "string" ? meta.handle : null;
+    const snap =
+      (handle ? snapByAccount.get(`${platform}:${handle.toLowerCase()}`) : undefined) ??
+      (live.length === 1 ? latestSnap.get(platform) : undefined);
+    rows.push({
+      platform, provider,
+      state: workingConn.status === "ACTIVE" ? "CONNECTED" : "ERROR",
+      accountName: workingConn.accountName ?? null,
+      handle: handle ?? snap?.handle ?? null,
+      followerCount: snap?.followerCount ?? null,
+      followerSource: snap?.source ?? null,
+      followerCapturedAt: snap?.capturedAt.toISOString() ?? null,
+      lastSyncAt: typeof meta.lastSyncAt === "string" ? meta.lastSyncAt : null,
+      connectionId: workingConn.id,
+      scopesOutdated: workingConn.status === "ACTIVE" && !hasAllCurrentScopes(provider, meta.scopes),
+      connectedCount: live.length,
+      accounts,
+    });
   }
 
   return {

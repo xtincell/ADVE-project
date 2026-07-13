@@ -629,6 +629,20 @@ export const socialRouter = createTRPCRouter({
       return getBrandSocialHubData(input.strategyId);
     }),
 
+  /** Définit la Page de travail (active) d'un réseau — les sœurs passent en réserve. */
+  setWorkingAccount: governedProcedure({
+    kind: "ANUBIS_SOCIAL_SET_PRIMARY_ACCOUNT",
+    inputSchema: z.object({
+      strategyId: z.string().min(1),
+      connectionId: z.string().min(1),
+    }),
+    caller: "social:setWorkingAccount",
+  }).mutation(async ({ ctx, input }) => {
+    await assertStrategyAccess(ctx, input.strategyId);
+    const { setWorkingSocialAccount } = await import("@/server/services/anubis/social-connect");
+    return setWorkingSocialAccount(input.strategyId, input.connectionId);
+  }),
+
   /** Déconnecte un compte social de la marque (tokens purgés, historique conservé). */
   disconnectSocial: governedProcedure({
     kind: "ANUBIS_SOCIAL_DISCONNECT_ACCOUNT",

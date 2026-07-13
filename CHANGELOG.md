@@ -10,7 +10,7 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
-## v6.27.125 — feat(oracle): le signal Overton MESURÉ atteint l'Oracle §34 (ADR-0134 §B7) (2026-07-13)
+## v6.27.126 — feat(oracle): le signal Overton MESURÉ atteint l'Oracle §34 (ADR-0134 §B7) (2026-07-13)
 
 **`buildOvertonRealSignalForOracle` (Phase 23 Story 3.6) était défini, testé, rendu par l'UI… et n'avait AUCUN caller de production (T1) — la section §34 ne montrait que le déclaré des piliers S/D.**
 
@@ -25,7 +25,7 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
   discriminés P22-2) n'est plus morte.
 - Test `overton-real-signal-wired.test.ts` (4 invariants).
 
-## v6.27.124 — feat(seshat): l'axe Overton sectoriel devient RÉEL — registre Sector + caller du pont RSS (ADR-0134 §B6) (2026-07-13)
+## v6.27.125 — feat(seshat): l'axe Overton sectoriel devient RÉEL — registre Sector + caller du pont RSS (ADR-0134 §B6) (2026-07-13)
 
 **Le pont RSS→axe Overton (Phase 23) était codé et testé mais JAMAIS appelé (T10), et la table `Sector` n'avait AUCUN writer — le refresh répondait SECTOR_NOT_FOUND à vie. L'axe sectoriel du radar ne pouvait venir que d'un seed manuel.**
 
@@ -44,7 +44,7 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
   mesures culture.* campaign-tracker.
 - Test `tarsis-sector-bridge-wiring.test.ts` (5 invariants).
 
-## v6.27.123 — feat(seshat): superfans depuis les interactions RÉELLES — actualisation gouvernée + fans détectés à revue humaine (ADR-0134 §B4) (2026-07-13)
+## v6.27.124 — feat(seshat): superfans depuis les interactions RÉELLES — actualisation gouvernée + fans détectés à revue humaine (ADR-0134 §B4) (2026-07-13)
 
 **Les SuperfanProfile n'étaient jamais nourris par les vraies interactions : l'inbox (commentaires avec identités, ADR-0133) dormait à côté. Branché — sans jamais ouvrir un vecteur d'inflation.**
 
@@ -70,7 +70,7 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 - Test `superfan-ingest.test.ts` (7 invariants : cap dur, formule, mapping monotone,
   zéro création cron, délégation router, ordre cron).
 
-## v6.27.122 — feat(seshat): devotion ladder sur audience RÉELLE — followers = spectateurs, commentateurs = participants (ADR-0134 §B3) (2026-07-13)
+## v6.27.123 — feat(seshat): devotion ladder sur audience RÉELLE — followers = spectateurs, commentateurs = participants (ADR-0134 §B3) (2026-07-13)
 
 **La pyramide de dévotion ne comptait que les SuperfanProfile saisis à la main (+boosts internes) : 5 profils = 100 % de l'« audience ». Elle reflète désormais la vraie masse.**
 
@@ -91,7 +91,7 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 - Test `devotion-real-audience.test.ts` (7 invariants : dilution, jamais-négatif,
   jamais-régression, annotation, garde plancher, purge T16, alignement %).
 
-## v6.27.121 — feat(seshat): mesure communautaire RÉELLE — écrivain de production CommunitySnapshot + chaîne quotidienne community→devotion→cult ([ADR-0134](docs/governance/adr/0134-mesure-communautaire-reelle-et-ponts-overton.md)) (2026-07-13)
+## v6.27.122 — feat(seshat): mesure communautaire RÉELLE — écrivain de production CommunitySnapshot + chaîne quotidienne community→devotion→cult ([ADR-0134](docs/governance/adr/0134-mesure-communautaire-reelle-et-ponts-overton.md)) (2026-07-13)
 
 **Le cult index tournait sur du seed : `CommunitySnapshot` n'avait AUCUN écrivain de production (T8) pendant que followers/posts/commentaires étaient collectés chaque jour. Branché.**
 
@@ -119,7 +119,7 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
   `community-measure-chain.test.ts` (6 invariants dont single-writer d'écriture) ;
   assertion ADR-0126 mise au niveau (`unavailable` deux branches).
 
-## v6.27.120 — fix(oracle): cascade staleness dans writePillar (chemin commun) + verrou anti-alias (2026-07-13)
+## v6.27.121 — fix(oracle): cascade staleness dans writePillar (chemin commun) + verrou anti-alias (2026-07-13)
 
 **Audit 2026-07-13 T4/T5 : amender un pilier par un caller bare n'invalidait jamais l'Oracle.**
 
@@ -136,7 +136,7 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 - Test neuf `oracle-staleness-cascade.test.ts` (4 invariants : cascade dans le chemin commun,
   pas de double invalidation, variante ciblée non réintroduite, import lazy anti-cycle).
 
-## v6.27.119 — docs(governance): audit Brief→Oracle·scoring·pivot + hygiène V0 (registres à jour, stubs §09 supprimés) (2026-07-13)
+## v6.27.120 — docs(governance): audit Brief→Oracle·scoring·pivot + hygiène V0 (registres à jour, stubs §09 supprimés) (2026-07-13)
 
 **Audit ground-truth complet ([docs/audits/BRIEF-ORACLE-SCORING-PIVOT-AUDIT-2026-07-13.md](docs/audits/BRIEF-ORACLE-SCORING-PIVOT-AUDIT-2026-07-13.md), 18 trous T1-T18) + première vague d'hygiène (V0).**
 
@@ -155,6 +155,20 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 - **Nouvelles dettes tracées** (§ Audit 2026-07-13 de RESIDUAL-DEBT) : dispatch COMPOSE_DELIVERABLE,
   dérivation honnête des labels d'attribution, Signal TARSIS sans writer, refresh auto STALE,
   91/94 séquences DRAFT, PDF Oracle brut, `ugcGenerationRate`.
+## v6.27.119 — feat(cockpit): réseaux — une ligne par réseau, une Page de TRAVAIL choisie (compact + modal) (2026-07-13)
+
+**Demande opérateur : « je ne veux voir que la Page sur laquelle je travaille, une ligne par réseau, et le modal au clic pour choisir — pas toutes les Pages en désordre. »**
+
+- **Compact retrouvé** : une seule ligne par réseau (fini l'affichage à plat de toutes les Pages).
+  La ligne montre la **Page de travail** (active) et son audience.
+- **Modal de choix** (icône Gérer / « Choisir ma Page (N) ») : liste les Pages connectées du réseau,
+  radio pour désigner **celle sur laquelle on travaille**, déconnexion par Page, « Connecter une autre Page ».
+- **Seule la Page active est comptée** : nouveau kind gouverné `ANUBIS_SOCIAL_SET_PRIMARY_ACCOUNT`
+  (la choisie → ACTIVE, ses sœurs → réserve PAUSED) ; la sync/collecte ne touche QUE l'active. À la
+  connexion, les Pages arrivent en **réserve** (auto-active si une seule) — plus d'auto-comptage de
+  toutes les Pages. Relevé initial uniquement pour la Page active.
+- État honnête `NEEDS_CHOICE` quand des Pages sont connectées sans qu'une soit choisie. Zone déléguée
+  `social`. 0 migration (réutilise le statut PAUSED). 946 tests gouvernance verts.
 
 ## v6.27.118 — fix(cockpit): réseaux — afficher TOUTES les Pages connectées (fin du dédoublonnage qui cachait la bonne) (2026-07-13)
 

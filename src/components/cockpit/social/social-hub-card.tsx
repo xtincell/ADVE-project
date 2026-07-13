@@ -16,10 +16,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Loader2, Plug, RefreshCw, Unplug, Users } from "lucide-react";
+import { Check, Loader2, Plug, RefreshCw, Settings2, Unplug, Users } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { useToast } from "@/components/shared/notification-toast";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { Dialog } from "@/components/primitives";
+import type { BrandSocialHubRow } from "@/server/services/anubis/social-connect";
 
 const PLATFORM_LABELS: Record<string, { label: string; mono: string }> = {
   FACEBOOK: { label: "Facebook", mono: "Fb" },
@@ -73,6 +75,8 @@ export function SocialHubCard({ strategyId }: { strategyId: string }) {
   const hubQuery = trpc.social.getBrandSocialHub.useQuery({ strategyId });
 
   const [toDisconnect, setToDisconnect] = useState<{ id: string; name: string } | null>(null);
+  // Réseau dont on gère les Pages (modal de choix de la Page de travail).
+  const [manageRow, setManageRow] = useState<BrandSocialHubRow | null>(null);
   // Bandeau de vérification après une connexion Meta : Facebook peut connecter
   // le mauvais compte (profil perso au lieu de la Page). On invite à vérifier
   // le NOM affiché et à reconnecter en choisissant la bonne Page si besoin.
@@ -82,8 +86,18 @@ export function SocialHubCard({ strategyId }: { strategyId: string }) {
     onSuccess: (res) => {
       toast.success(`${PLATFORM_LABELS[res.platform]?.label ?? res.platform} déconnecté. Vos relevés passés sont conservés.`);
       utils.social.getBrandSocialHub.invalidate({ strategyId });
+      setManageRow(null);
     },
     onError: () => toast.error("La déconnexion a échoué. Réessayez."),
+  });
+
+  const setWorking = trpc.social.setWorkingAccount.useMutation({
+    onSuccess: (res) => {
+      toast.success(`« ${res.accountName} » est votre Page de travail — seule celle-ci est suivie.`);
+      utils.social.getBrandSocialHub.invalidate({ strategyId });
+      setManageRow(null);
+    },
+    onError: () => toast.error("Le changement de Page a échoué. Réessayez."),
   });
 
   const sync = trpc.social.syncSocial.useMutation({
@@ -223,6 +237,8 @@ export function SocialHubCard({ strategyId }: { strategyId: string }) {
                           {src ? ` · ${src}` : ""}
                           {freshness ? ` · ${freshness}` : ""}
                         </>
+                      ) : row.state === "NEEDS_CHOICE" ? (
+                        `${row.connectedCount} Page${row.connectedCount > 1 ? "s" : ""} connectée${row.connectedCount > 1 ? "s" : ""} — choisissez celle à suivre`
                       ) : row.state === "CONNECTED" ? (
                         "connecté — en attente du premier relevé"
                       ) : (
@@ -233,19 +249,39 @@ export function SocialHubCard({ strategyId }: { strategyId: string }) {
                   {row.state === "CONNECTED" ? (
                     <div className="ck-social__actions">
                       <span className="ck-social__chip ck-social__chip--ok">Connecté</span>
-                      <button
-                        type="button"
-                        className="ck-social__icon-btn"
-                        title="Déconnecter ce compte"
-                        aria-label={`Déconnecter ${info.label}`}
-                        onClick={() =>
-                          row.connectionId &&
-                          setToDisconnect({ id: row.connectionId, name: row.accountName ?? info.label })
-                        }
-                      >
-                        <Unplug />
-                      </button>
+                      {row.connectedCount > 1 ? (
+                        <button
+                          type="button"
+                          className="ck-social__icon-btn"
+                          title={`Choisir parmi ${row.connectedCount} Pages`}
+                          aria-label={`Gérer les Pages ${info.label}`}
+                          onClick={() => setManageRow(row)}
+                        >
+                          <Settings2 />
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="ck-social__icon-btn"
+                          title="Déconnecter ce compte"
+                          aria-label={`Déconnecter ${info.label}`}
+                          onClick={() =>
+                            row.connectionId &&
+                            setToDisconnect({ id: row.connectionId, name: row.accountName ?? info.label })
+                          }
+                        >
+                          <Unplug />
+                        </button>
+                      )}
                     </div>
+                  ) : row.state === "NEEDS_CHOICE" ? (
+                    <button
+                      type="button"
+                      className="ck-social__btn ck-social__btn--accent"
+                      onClick={() => setManageRow(row)}
+                    >
+                      <Settings2 /> Choisir ma Page ({row.connectedCount})
+                    </button>
                   ) : row.state === "ERROR" ? (
                     <a className="ck-social__btn ck-social__btn--warn" href={connectHref}>
                       <Plug /> Reconnecter
@@ -302,6 +338,57 @@ export function SocialHubCard({ strategyId }: { strategyId: string }) {
         confirmLabel="Déconnecter"
         variant="warning"
       />
+
+      {/* Modal : choisir la Page de TRAVAIL du réseau (seule elle est suivie). */}
+      <Dialog
+        open={manageRow !== null}
+        onOpenChange={(o) => { if (!o) setManageRow(null); }}
+        title={manageRow ? `Vos Pages ${PLATFORM_LABELS[manageRow.platform]?.label ?? manageRow.platform}` : ""}
+        description="Choisissez la Page sur laquelle vous travaillez. Seule celle-ci est suivie et comptée — les autres restent en réserve."
+      >
+        {manageRow ? (
+          <div className="ck-pagepick">
+            {manageRow.accounts.map((a) => (
+              <div className="ck-pagepick__row" key={a.connectionId} data-on={a.working ? 1 : 0}>
+                <button
+                  type="button"
+                  className="ck-pagepick__choose"
+                  disabled={a.working || setWorking.isPending}
+                  onClick={() => setWorking.mutate({ strategyId, connectionId: a.connectionId })}
+                >
+                  <span className="ck-pagepick__radio" data-on={a.working ? 1 : 0}>
+                    {a.working ? <Check /> : null}
+                  </span>
+                  <span className="ck-pagepick__body">
+                    <span className="ck-pagepick__name">{a.accountName}</span>
+                    <span className="ck-pagepick__meta">
+                      {a.handle ? `@${a.handle}` : ""}
+                      {a.followerCount != null ? `${a.handle ? " · " : ""}${a.followerCount.toLocaleString("fr-FR")} abonnés` : ""}
+                      {a.working ? `${a.handle || a.followerCount != null ? " · " : ""}Page de travail` : ""}
+                    </span>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className="ck-social__icon-btn"
+                  title="Déconnecter cette Page"
+                  aria-label={`Déconnecter ${a.accountName}`}
+                  onClick={() => disconnect.mutate({ strategyId, connectionId: a.connectionId })}
+                  disabled={disconnect.isPending}
+                >
+                  <Unplug />
+                </button>
+              </div>
+            ))}
+            <a
+              className="ck-social__btn"
+              href={`/api/integrations/oauth/${manageRow.provider}/start?social=1&strategyId=${encodeURIComponent(strategyId)}&returnUrl=%2Fcockpit`}
+            >
+              <Plug /> Connecter une autre Page
+            </a>
+          </div>
+        ) : null}
+      </Dialog>
     </div>
   );
 }
