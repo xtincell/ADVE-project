@@ -15,13 +15,14 @@
  * fabricated zero). Zero LLM.
  */
 
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Users, Crown, Activity, Heart, Share2, Lock, TrendingUp } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { MetricCard } from "@/components/shared/metric-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Skeleton } from "@/components/primitives/skeleton";
+import { PricingModal } from "@/components/cockpit/pricing-modal";
 import { SuperfanCandidatesPanel } from "./superfan-candidates-panel";
 
 const DEVOTION_RUNGS: ReadonlyArray<{ key: keyof CommunityDistribution; label: string }> = [
@@ -81,7 +82,7 @@ function SectionCard({
 }
 
 function CommunityPanelInner({ strategyId }: { strategyId: string }) {
-  const router = useRouter();
+  const [showPricing, setShowPricing] = useState(false);
   const { data, isLoading } = trpc.cockpitDashboard.getCommunityDashboard.useQuery(
     { strategyId },
     { enabled: !!strategyId },
@@ -90,13 +91,18 @@ function CommunityPanelInner({ strategyId }: { strategyId: string }) {
   if (isLoading || !data) return <CommunityPanelSkeleton />;
 
   if (data.state === "TIER_GATE_DENIED") {
+    // Modale de consultation des formules — jamais une redirection immédiate
+    // (mandat opérateur 2026-07-13).
     return (
-      <EmptyState
-        icon={Lock}
-        title="Suivi communauté — réservé aux abonnements"
-        description="Suivez vos superfans, l'échelle d'engagement et la santé de votre communauté en activant votre abonnement."
-        action={{ label: "Découvrir les formules", onClick: () => router.push(data.configureUrl) }}
-      />
+      <>
+        <EmptyState
+          icon={Lock}
+          title="Suivi communauté — réservé aux abonnements"
+          description="Suivez vos superfans, l'échelle d'engagement et la santé de votre communauté en activant votre abonnement."
+          action={{ label: "Découvrir les formules", onClick: () => setShowPricing(true) }}
+        />
+        <PricingModal open={showPricing} onClose={() => setShowPricing(false)} featureLabel="Le suivi communauté" />
+      </>
     );
   }
 

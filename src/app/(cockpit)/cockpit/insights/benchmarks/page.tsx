@@ -14,6 +14,7 @@ import {
 } from "@/lib/types/advertis-vector";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { BrandComparablesPanel } from "@/components/shared/brand-comparables-panel";
+import { DevelopmentGate } from "@/components/cockpit/development-gate";
 import { AlertTriangle, BarChart3, Info, Medal, Target } from "lucide-react";
 
 const CLASSIFICATION_COLORS: Record<BrandClassification, string> = {
@@ -125,6 +126,10 @@ export default function BenchmarksPage() {
   const maxClassCount = Math.max(...classifications.map((c) => c.count), 1);
   const myClassification = classifyBrand(composite);
 
+  // Portail « en construction » (mandat opérateur 2026-07-13) : la comparaison
+  // par pilier et la distribution sectorielle sont encore dérivées d'agrégats
+  // étalés uniformément — pas confirmé fiable → invisible des comptes clients
+  // tant que les comparaisons réelles ne sont pas branchées.
   return (
     <div className="space-y-6">
       <PageHeader
@@ -136,6 +141,8 @@ export default function BenchmarksPage() {
           { label: "Benchmarks" },
         ]}
       />
+
+      <DevelopmentGate feature="Le benchmark sectoriel">
 
       {/* Synthetic data notice */}
       <div className="flex items-start gap-3 rounded-lg border border-border bg-background/50 px-4 py-3">
@@ -458,6 +465,8 @@ export default function BenchmarksPage() {
 
       {/* V5.4 — Comparables sémantiques (Seshat ranker) */}
       {strategyId && <BrandComparablesPanel strategyId={strategyId} topK={6} />}
+
+      </DevelopmentGate>
     </div>
   );
 }

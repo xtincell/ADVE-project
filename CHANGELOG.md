@@ -10,7 +10,7 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
-## v6.27.128 — feat(forge): COMPOSE_DELIVERABLE passe de l'aperçu au forge réel ([ADR-0136](docs/governance/adr/0136-compose-deliverable-dispatch.md)) (2026-07-13)
+## v6.27.129 — feat(forge): COMPOSE_DELIVERABLE passe de l'aperçu au forge réel ([ADR-0136](docs/governance/adr/0136-compose-deliverable-dispatch.md)) (2026-07-13)
 
 **Bloc B du mandat. `COMPOSE_DELIVERABLE` (ADR-0050) était figé en PREVIEW — inputs `void`és, « commit 4 » jamais livré (T3). Le composant analytique était complet mais ne déclenchait JAMAIS un forge.**
 
@@ -29,7 +29,25 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
   + un env à clés pour vérifier le happy-path — RESIDUAL-DEBT.
 - 0 modèle Prisma, 0 kind (réutilise `PTAH_MATERIALIZE_BRIEF`), cap 7/7. tsc 0 · lint 0 ·
   **2587 tests verts** · DS+vocab verts. Test `deliverable-dispatch.test.ts` (5 assertions).
+## v6.27.128 — fix(cockpit): fin des cadenas god-mode + modale formules + portail « en construction » (2026-07-13)
 
+**Audit complet des 54 surfaces cockpit founder : les gates redirigent → une modale de consultation des formules, le seul stub passe derrière un portail honnête, et le compte ADMIN ne voit plus jamais un cadenas.**
+
+- **Fix god-mode tier-gate** (bug rapporté opérateur : cadenas « réservé aux abonnements » vu par
+  le compte ADMIN) : `checkPaidTier` reçoit un `User.id` (Strategy.userId) sur les chemins cockpit
+  mais le bypass ADMIN ne cherchait que `User.operatorId` → il ne s'appliquait JAMAIS. Lookup corrigé
+  `OR: [{id}, {operatorId}]` + rôle ADMIN + allowlist god-mode (`tier-gate.ts`).
+- **`<PricingModal>`** (nouveau, mandat opérateur) : « Découvrir les formules » ouvre une modale —
+  3 formules côte à côte (prix pays via `payment.getTierGrid`, avantages, CTA choisir) + bouton
+  « Voir toutes les formules et options » vers /pricing. **Plus aucune redirection immédiate.**
+  Recâblé sur les 3 sites TIER_GATE_DENIED : suivi communauté, radar Overton, lignée prescripteur.
+- **`<DevelopmentGate>`** (nouveau) : portail « en construction » pour les fonctionnalités pas encore
+  confirmées fiables — le client voit un écran honnête sans données ; le compte interne voit le
+  contenu réel + chip « Aperçu interne ». Appliqué à `/cockpit/insights/benchmarks` (comparaisons
+  par pilier et distribution sectorielle encore dérivées d'agrégats étalés — pas fiable).
+- **Audit 3 agents** : 50 routes DÉVELOPPÉES (données tRPC réelles), 3 gates abonnement (→ modale),
+  1 stub (`benchmarks`, portaillé). États honnêtes « à connecter / Bientôt » conservés tels quels
+  (KPI newsletter, connexion boutique, X payant à l'appel).
 ## v6.27.127 — feat(seshat): attribution des transitions de dévotion — la calibration morte reprend vie ([ADR-0135](docs/governance/adr/0135-devotion-transition-attribution.md)) (2026-07-13)
 
 **Bloc A du mandat « finis les constructibles ». La chaîne d'attribution/calibration lisait `CampaignAction.devotionTransitionsObserved` — un champ que PERSONNE n'écrivait (T7). Maintenant que la mesure de dévotion est quotidienne (ADR-0134), les montées de rang réelles deviennent la matière première d'une attribution honnête.**
