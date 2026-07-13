@@ -439,7 +439,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 113
+## tRPC routers — 114
 
 - `accounts` (`src/server/trpc/routers/accounts.ts`)
 - `actions` (`src/server/trpc/routers/actions.ts`)
@@ -532,6 +532,7 @@ Ces correspondances évitent la réinvention :
 - `pillar` (`src/server/trpc/routers/pillar.ts`)
 - `pr` (`src/server/trpc/routers/pr.ts`)
 - `process` (`src/server/trpc/routers/process.ts`)
+- `prod-ops` (`src/server/trpc/routers/prod-ops.ts`)
 - `production` (`src/server/trpc/routers/production.ts`)
 - `ptah` (`src/server/trpc/routers/ptah.ts`)
 - `publication` (`src/server/trpc/routers/publication.ts`)
@@ -557,7 +558,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 262 (par deck)
+## Pages — 263 (par deck)
 
 ### Agency (12)
 
@@ -634,7 +635,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/settings/billing`
 - `/cockpit/settings/connections`
 
-### Console (121)
+### Console (122)
 
 - `/console`
 - `/console/academie`
@@ -743,6 +744,7 @@ Ces correspondances évitent la réinvention :
 - `/console/socle/market-costs`
 - `/console/socle/pipeline`
 - `/console/socle/pricing`
+- `/console/socle/prod-ops`
 - `/console/socle/revenue`
 - `/console/socle/transactions`
 - `/console/socle/value-reports`

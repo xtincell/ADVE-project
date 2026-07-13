@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { APP_VERSION } from "@/lib/version";
 
 function NewsletterBox() {
   const [email, setEmail] = useState("");
@@ -101,7 +102,7 @@ export function MarketingFooter() {
       </div>
       <div className="mx-auto max-w-[var(--maxw-content)] px-[var(--pad-page)] mt-6 flex gap-6 font-mono text-2xs text-foreground-muted flex-wrap">
         <span>UPgraders / La Fusée SARL — 2026</span>
-        <span>v6.27.135 · 2026-07-13</span>
+        <span>v{APP_VERSION} · 2026-07-13</span>
         <span>Tous droits réservés.</span>
         <span aria-label="Propriété éditoriale sœur de La Fusée">
           <a href="/argos" className="hover:text-accent transition-colors">

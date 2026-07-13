@@ -10,6 +10,28 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.136 — feat(console): opérations de production en 3 temps (page + skill nefer-ops) (2026-07-13)
+
+**Mandat opérateur : « Y a aucun moyen de gérer en 3 temps via injection, déploiement et action sur déployé ? Dédie-toi une page pour ça. Et fais-en un skill. »**
+
+- **Page `/console/socle/prod-ops`** (Le Socle, `adminProcedure` — god-mode inclus) qui surface le
+  cycle : **TEMPS 1 Injection** (registre des seeds + commande exacte + « ce que ça crée » ; copier,
+  jamais de shell-out d'une requête web — l'exécution prod reste un geste opérateur, frontière
+  affichée honnêtement), **TEMPS 2 Déploiement** (bouton Coolify + version de cette instance vs
+  version servie en ligne, poll même-origine qui suit le swap de conteneur), **TEMPS 3 Action sur
+  déployé** (crons gardés du catalogue fermé + finaliseur d'installation, self-fetch localhost
+  Bearer `CRON_SECRET`).
+- **Skill `.claude/skills/nefer-ops/`** : le protocole des 3 temps codifié en procédure rigide
+  (idempotence, zéro-secret-committé, vérification locale avant prod, frontière NEFER/opérateur).
+- **Infra `src/lib/prod-ops.ts`** (couche lib, zéro import service) : `SEED_REGISTRY`, `CRON_ACTIONS`
+  (whitelist par `key`, anti-SSRF), `triggerDeploy` / `triggerCron` / `triggerProdFinish`. Aucun
+  secret renvoyé au client — readiness booléenne ; credential absent = `DEFERRED_AWAITING_CREDENTIALS`
+  honnête (Coolify/CRON_SECRET à renseigner en env).
+- **Version unique runtime `src/lib/version.ts`** (`APP_VERSION`) : le footer marketing +
+  nouvel endpoint public `/api/version` en dérivent (fin du numéro en dur dans le footer) ;
+  `scripts/bump-version.mjs` maintient la constante. Débloque le watcher de déploiement.
+- Cap APOGEE 7/7 préservé (actes d'infrastructure, pas de mutation métier ni nouveau Neter).
+
 ## v6.27.135 — feat(social): gestion par publication — voir, éditer, importer l'image, changer l'heure, déclencher, annuler (2026-07-13)
 
 **Increment 2a du sprint SPAWT (mandat : « l'outil de feedback doit marcher pour CHAQUE publication, pour voir et corriger : importer l'image, changer l'heure, déclencher maintenant, modifier le texte »).**

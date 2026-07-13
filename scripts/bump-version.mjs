@@ -3,7 +3,9 @@
  * Bump atomique de la VERSION UNIQUE de l'app (NEFER §9.2 version-unique).
  *
  * La version vit à 4 endroits qui doivent rester synchrones — les tenir à la
- * main est répétitif et source de drift (oubli du `package-lock`, du footer…).
+ * main est répétitif et source de drift (oubli du `package-lock`, de la
+ * constante runtime…). Le footer marketing + `/api/version` DÉRIVENT désormais
+ * de `src/lib/version.ts` (source unique), donc ne sont plus édités ici.
  * Ce script les met à jour d'un coup et échoue si un emplacement n'est pas au
  * numéro attendu (garde-fou anti-désync).
  *
@@ -19,7 +21,7 @@ if (!next || !/^\d+\.\d+\.\d+$/.test(next)) {
   process.exit(1);
 }
 
-const FOOTER = "src/components/landing/marketing-footer.tsx";
+const VERSION_TS = "src/lib/version.ts";
 
 // Version courante = celle de package.json (source de référence).
 const pkg = JSON.parse(readFileSync("package.json", "utf8"));
@@ -49,14 +51,15 @@ changed++;
   changed += n;
 }
 
-// 3) footer landing — `v<x.y.z> · <date>` (on ne touche QUE le numéro).
+// 3) src/lib/version.ts — constante APP_VERSION (source runtime unique ; le
+//    footer marketing et /api/version la consomment, plus de numéro en dur).
 {
-  const before = readFileSync(FOOTER, "utf8");
-  if (!before.includes(`v${cur}`)) {
-    console.error(`⚠ ${FOOTER} ne contient pas v${cur} — désync. Corrige à la main.`);
+  const before = readFileSync(VERSION_TS, "utf8");
+  if (!before.includes(`"${cur}"`)) {
+    console.error(`⚠ ${VERSION_TS} ne contient pas "${cur}" — désync. Corrige à la main.`);
     process.exit(1);
   }
-  writeFileSync(FOOTER, before.replace(`v${cur}`, `v${next}`));
+  writeFileSync(VERSION_TS, before.replace(`"${cur}"`, `"${next}"`));
   changed++;
 }
 
