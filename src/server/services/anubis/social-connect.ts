@@ -1162,42 +1162,77 @@ export async function getBrandSocialHubData(strategyId: string): Promise<{
     }),
   ]);
 
+  // Relevé le plus récent par compte (platform + handle) ET par plateforme
+  // (repli quand un seul compte). Facebook peut connecter PLUSIEURS Pages —
+  // chacune a son propre relevé.
+  const snapByAccount = new Map<string, (typeof snapshots)[number]>();
   const latestSnap = new Map<string, (typeof snapshots)[number]>();
   for (const s of snapshots) {
-    if (!latestSnap.has(String(s.platform))) latestSnap.set(String(s.platform), s);
+    const p = String(s.platform);
+    const key = `${p}:${String(s.handle).toLowerCase()}`;
+    if (!snapByAccount.has(key)) snapByAccount.set(key, s);
+    if (!latestSnap.has(p)) latestSnap.set(p, s);
   }
-  const latestConn = new Map<string, (typeof connections)[number]>();
+  // Toutes les connexions groupées par plateforme (une marque peut avoir
+  // plusieurs Pages Facebook connectées — on ne dédoublonne PLUS).
+  const connByPlatform = new Map<string, (typeof connections)>();
   for (const c of connections) {
-    if (!latestConn.has(String(c.platform))) latestConn.set(String(c.platform), c);
+    const p = String(c.platform);
+    const arr = connByPlatform.get(p) ?? [];
+    arr.push(c);
+    connByPlatform.set(p, arr);
   }
 
-  const rows: BrandSocialHubRow[] = Object.entries(PROVIDER_FOR_PLATFORM).map(
-    ([platform, provider]) => {
-      const conn = latestConn.get(platform);
+  const rows: BrandSocialHubRow[] = [];
+  for (const [platform, provider] of Object.entries(PROVIDER_FOR_PLATFORM)) {
+    const conns = connByPlatform.get(platform) ?? [];
+    // Comptes « vivants » = ACTIVE ou ERROR (à reconnecter) — un par ligne.
+    const live = conns.filter((c) => c.status === "ACTIVE" || c.status === "ERROR");
+    if (live.length > 0) {
+      for (const conn of live) {
+        const meta = (conn.metadata ?? {}) as Record<string, unknown>;
+        const handle = typeof meta.handle === "string" ? meta.handle : null;
+        const snap =
+          (handle ? snapByAccount.get(`${platform}:${handle.toLowerCase()}`) : undefined) ??
+          (live.length === 1 ? latestSnap.get(platform) : undefined);
+        rows.push({
+          platform,
+          provider,
+          state: conn.status === "ACTIVE" ? "CONNECTED" : "ERROR",
+          accountName: conn.accountName ?? null,
+          handle: handle ?? snap?.handle ?? null,
+          followerCount: snap?.followerCount ?? null,
+          followerSource: snap?.source ?? null,
+          followerCapturedAt: snap?.capturedAt.toISOString() ?? null,
+          lastSyncAt: typeof meta.lastSyncAt === "string" ? meta.lastSyncAt : null,
+          connectionId: conn.id,
+          scopesOutdated:
+            conn.status === "ACTIVE" && !hasAllCurrentScopes(provider, meta.scopes),
+        });
+      }
+    } else {
+      // Aucun compte vivant → une ligne d'état (à connecter / bientôt / déco).
+      const disc = conns.find((c) => c.status === "DISCONNECTED" || c.status === "PAUSED");
       const snap = latestSnap.get(platform);
-      const meta = (conn?.metadata ?? {}) as Record<string, unknown>;
-      let state: BrandSocialHubRow["state"];
-      if (conn?.status === "ACTIVE") state = "CONNECTED";
-      else if (conn?.status === "ERROR") state = "ERROR";
-      else if (conn?.status === "DISCONNECTED" || conn?.status === "PAUSED") state = "DISCONNECTED";
-      else if (!readiness[provider]) state = "PROVIDER_UNAVAILABLE";
-      else state = "NOT_CONNECTED";
-      return {
+      rows.push({
         platform,
         provider,
-        state,
-        accountName: conn?.accountName ?? null,
-        handle: (typeof meta.handle === "string" ? meta.handle : null) ?? snap?.handle ?? null,
+        state: disc
+          ? "DISCONNECTED"
+          : !readiness[provider]
+            ? "PROVIDER_UNAVAILABLE"
+            : "NOT_CONNECTED",
+        accountName: null,
+        handle: snap?.handle ?? null,
         followerCount: snap?.followerCount ?? null,
         followerSource: snap?.source ?? null,
         followerCapturedAt: snap?.capturedAt.toISOString() ?? null,
-        lastSyncAt: typeof meta.lastSyncAt === "string" ? meta.lastSyncAt : null,
-        connectionId: conn?.id ?? null,
-        scopesOutdated:
-          state === "CONNECTED" && !hasAllCurrentScopes(provider, meta.scopes),
-      };
-    },
-  );
+        lastSyncAt: null,
+        connectionId: null,
+        scopesOutdated: false,
+      });
+    }
+  }
 
   return {
     rows,
