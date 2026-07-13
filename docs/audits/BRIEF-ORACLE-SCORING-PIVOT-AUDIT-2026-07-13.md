@@ -81,6 +81,8 @@ Trois objets « brief » distincts, aucun confondu :
 
 3 séquences STABLE sur 94 (91 DRAFT, dont les 24 wrappers `WRAP-FW-*` générés DRAFT en dur) ~2 mois après l'échéance de promotion D+30. Quality gate désormais dynamique HARD/SOFT (auto-promotion ADR-0066) — mais la promotion ne franchit pas la barre ou ne tourne pas. → **T14, tracé au registre par cette PR.**
 
+> **Diagnostic définitif (bloc E, [ADR-0139](../governance/adr/0139-sequence-lifecycle-stub-honest-diagnosis.md))** : la cause déterminante n'est ni la barre ni le cron, mais que le handler `PROMOTE_SEQUENCE_LIFECYCLE` (`commandant.ts`) est un **STUB qui ne persiste rien** — le `lifecycle` vit dans le code (`sequences.ts`), lu tel quel par `listDraftSequences`/`getStaticLifecycle`. Même live, aucune promotion ne déplacerait le compte (store `SequenceLifecycleState` / Chantier D-bis jamais construit). S'ajoutent : cron en dry-run (secondaire) + barre d'éligibilité qui refuse — à raison — les séquences jamais exercées (les composers déterministes ADR-0091 ont remplacé les séquences comme chemin runtime). **Réalité fonctionnelle** : DRAFT ≠ défaut (`sequence-hash.ts:65` — la séquence s'exécute identiquement ; STABLE n'ajoute que le gel du prompt). **Décision** : promotion de masse **refusée** (certifier « stress-testé » du code non exercé = inflation malhonnête, posture T9) ; seul correctif shippé = le stub ne rapporte plus de promotion fantôme (`persisted:false → SKIP`, `totalPromoted` honnêtement 0). T14 requalifié « diagnostiqué — pas d'action ».
+
 ---
 
 ## 2. Partie II — Scoring & calibration
@@ -218,7 +220,7 @@ Invariants tenus sur toute la remédiation : zéro LLM dans la mesure · aucune 
 
 ### 5.2 Déféré explicitement (tracé RESIDUAL-DEBT, pas de demi-ship)
 
-Dispatch réel `COMPOSE_DELIVERABLE` (T3 — chantier dédié) · dérivation honnête de `devotionTransitionsObserved` (T7 — à concevoir : transitions observées entre snapshots devotion datés × fenêtres de campagne, jamais fabriquées) · refresh auto des STALE (T6) · promotion des 91 séquences DRAFT (T14) · mise en forme PDF Oracle (T15) · `ugcGenerationRate` (B2 — attend mentions collectées + constante validée direction) · `vocabularyOverlap`/`embeddingDelta` (embeddings).
+Dispatch réel `COMPOSE_DELIVERABLE` (T3 — chantier dédié) · dérivation honnête de `devotionTransitionsObserved` (T7 — à concevoir : transitions observées entre snapshots devotion datés × fenêtres de campagne, jamais fabriquées) · store DB `SequenceLifecycleState` / Chantier D-bis (T14 — **déféré, aucun consommateur** ; promotion de masse **refusée** honnêtement, [ADR-0139](../governance/adr/0139-sequence-lifecycle-stub-honest-diagnosis.md)) · `ugcGenerationRate` (B2 — attend mentions collectées + constante validée direction) · `vocabularyOverlap`/`embeddingDelta` (embeddings).
 
 ---
 

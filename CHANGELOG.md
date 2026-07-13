@@ -10,6 +10,32 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.132 — fix(auto-promotion): diagnostic définitif T14 + fin des promotions fantômes ([ADR-0139](docs/governance/adr/0139-sequence-lifecycle-stub-honest-diagnosis.md)) (2026-07-13)
+
+**Bloc E (dernier bloc du mandat « Tout, dans l'ordre de valeur »). Pourquoi 91/94 séquences restent DRAFT ~2 mois après l'échéance D+30 (T14) — et pourquoi il n'y a AUCUNE promotion honnête à faire.**
+
+- **Diagnostic définitif** : le handler `PROMOTE_SEQUENCE_LIFECYCLE` (`commandant.ts`) est un
+  **STUB qui ne persiste rien** — le `lifecycle` vit dans le code (`sequences.ts`), lu tel quel par
+  `listDraftSequences`/`getStaticLifecycle` (store `SequenceLifecycleState` / Chantier D-bis jamais
+  construit). Même une exécution live parfaite ne déplace **aucune** des 91. S'ajoutent : cron en
+  dry-run (secondaire, `AUTO_PROMOTION_LIVE` jamais posé) + barre d'éligibilité qui refuse — à raison
+  — l'inexercé (les composers déterministes ADR-0091 ont remplacé les séquences comme chemin runtime
+  Oracle). **Réalité fonctionnelle** : DRAFT ≠ défaut (`sequence-hash.ts:65` — exécution identique ;
+  STABLE n'ajoute que le gel du prompt).
+- **Refus honnête de la promotion de masse** : éditer 91× `lifecycle:"STABLE"` certifierait
+  « stress-testé » du code jamais exercé = inflation malhonnête (même posture que le refus T9, ADR-0137).
+- **Seul correctif shippé** : le stub ne rapporte plus de **promotion fantôme**. Il surface
+  `persisted:false` ; `promoteSequence` retourne alors `SKIP` (pas `PROMOTE`) → `totalPromoted` reste
+  honnêtement **0** au lieu de mentir sur un changement d'état inexistant. Contrat
+  `persisted:true → PROMOTE` posé pour le futur Chantier D-bis.
+- **T14 requalifié** « diagnostiqué — pas d'action » (RESIDUAL-DEBT + rapport d'audit).
+  0 modèle, 0 kind, 0 LLM, cap 7/7. Test neuf `auto-promotion-stub-honesty.test.ts` (5 assertions).
+- **Incident réparé (commit séparé)** : cycle d'import **pré-existant** (main, blocs sociaux du 12/07)
+  `footprint-score.ts` ↔ `public-enrichment.ts` rompu par extraction des types partagés dans un module
+  feuille `footprint-types.ts` (type-only, re-exports rétro-compat, **zéro changement runtime**).
+  `audit:cycles` de nouveau **vert**.
+- tsc 0 · lint 0 · **2602 tests verts** · audit:cycles ✔.
+
 ## v6.27.131 — feat(oracle): export lisible — fin du dump JSON par section ([ADR-0138](docs/governance/adr/0138-oracle-export-readable-render.md)) (2026-07-13)
 
 **Bloc D du mandat. Le PDF/Markdown Oracle « livrable client » rendait un `JSON.stringify` brut par section (T15) — accolades, guillemets, clés camelCase.**
