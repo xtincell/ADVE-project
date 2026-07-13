@@ -10,6 +10,25 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.130 — feat(oracle): refresh nocturne des sections STALE + refus honnête du câblage plafond Tarsis ([ADR-0137](docs/governance/adr/0137-oracle-stale-refresh-and-tarsis-evidence.md)) (2026-07-13)
+
+**Bloc C du mandat. #2 (refresh STALE) livré ; #3 (Signal TARSIS) REFUSÉ par honnêteté — le seul câblage possible inflaterait le plafond sur du bruit sectoriel.**
+
+- **Refresh auto STALE (T6)** : la cascade de staleness (ADR-0134) marque les sections
+  COMPLETE→STALE mais rien ne les régénérait. Étape nocturne `ops-sweep` : `groupBy` sur les
+  sections STALE → `ASSEMBLE_ORACLE scope=STALE` via le spine, **ciblé** (uniquement les
+  stratégies périmées, pas de balayage à vide), composers déterministes (ADR-0091) sans clés,
+  skip honnête sans operator. Résultat remonté au rapport.
+- **Bras Tarsis du plafond (T9) — câblage REFUSÉ, tracé** : `advertis-scorer` compte
+  `Signal type contains "TARSIS"` (vide en prod). Le seul writer weak-signal émet
+  `WEAK_SIGNAL_ALERT` = tendances de **marché** (« la demande LED monte »), PAS le pull culturel
+  de la marque. Le câbler gonflerait le palier CULTE/ICONE sur le bruit du **secteur** —
+  inflation malhonnête (contraire ADR-0126). **Refusé** ; requalifié « attend une source
+  brand-specific » (presse citant la marque, imitations de claims, UGC). Décision négative
+  explicite, RESIDUAL-DEBT.
+- 0 modèle, 0 kind (réutilise `ASSEMBLE_ORACLE`), cap 7/7. tsc 0 · lint 0 · **2590 tests
+  verts**. Test `oracle-stale-refresh.test.ts` + query `groupBy STALE` vérifiée sur PG local.
+
 ## v6.27.129 — feat(forge): COMPOSE_DELIVERABLE passe de l'aperçu au forge réel ([ADR-0136](docs/governance/adr/0136-compose-deliverable-dispatch.md)) (2026-07-13)
 
 **Bloc B du mandat. `COMPOSE_DELIVERABLE` (ADR-0050) était figé en PREVIEW — inputs `void`és, « commit 4 » jamais livré (T3). Le composant analytique était complet mais ne déclenchait JAMAIS un forge.**
