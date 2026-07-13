@@ -10,6 +10,27 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.122 — feat(seshat): devotion ladder sur audience RÉELLE — followers = spectateurs, commentateurs = participants (ADR-0134 §B3) (2026-07-13)
+
+**La pyramide de dévotion ne comptait que les SuperfanProfile saisis à la main (+boosts internes) : 5 profils = 100 % de l'« audience ». Elle reflète désormais la vraie masse.**
+
+- **Base d'audience mesurée** : `loadMeasuredAudienceBase` (Σ dernier FollowerSnapshot par
+  plateforme ≤90 j + auteurs uniques inbox 30 j) → helper pur exporté
+  `applyMeasuredAudienceBase` : `spectateur` = followers − rungs supérieurs, `participant` =
+  max(classés, commentateurs réels), **rungs hauts INTOUCHÉS** (la base sociale ne peut pas
+  gonfler engage/ambassadeur/évangéliste — anti-inflation ADR-0126).
+- **Garde plancher** : aucun relevé follower ≤90 j → comportement legacy STRICTEMENT inchangé
+  (arrondi entier historique compris) ; pourcentages à 2 décimales en mode mesuré
+  (90/45 000 = 0,2 % ne s'écrase plus à 0).
+- **Loi 1** : dilution honnête assumée et annotée — `DEVOTION_AUDIENCE_BASE_DATE` exportée,
+  `getDevotionTrend` annote `preAudienceBase` (pattern `preUnitsFix` ADR-0126) ; historique
+  immuable.
+- **T16 purgé** : le boost CommunitySnapshot du moteur devotion (lecture `/100` d'une
+  fraction) est supprimé — remplacé par les commentateurs réels ; `reconcileAmbassadors`
+  aligné pourcentages (fallbacks 50/20/15/8, clamp 100 — résidu monde fraction).
+- Test `devotion-real-audience.test.ts` (7 invariants : dilution, jamais-négatif,
+  jamais-régression, annotation, garde plancher, purge T16, alignement %).
+
 ## v6.27.121 — feat(seshat): mesure communautaire RÉELLE — écrivain de production CommunitySnapshot + chaîne quotidienne community→devotion→cult ([ADR-0134](docs/governance/adr/0134-mesure-communautaire-reelle-et-ponts-overton.md)) (2026-07-13)
 
 **Le cult index tournait sur du seed : `CommunitySnapshot` n'avait AUCUN écrivain de production (T8) pendant que followers/posts/commentaires étaient collectés chaque jour. Branché.**

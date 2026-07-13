@@ -402,21 +402,26 @@ export async function reconcileAmbassadors(strategyId: string): Promise<{
     orderBy: { measuredAt: "desc" },
   });
 
-  // Create a reconciled snapshot incorporating ambassador data
+  // Create a reconciled snapshot incorporating ambassador data.
+  // ADR-0134 (résidu ADR-0126 T16) : DevotionSnapshot est en POURCENTAGES
+  // 0-100 — les fallbacks fractions (0.5/0.2/…) et le clamp à 1
+  // dataient du monde pré-fix. Alignés en points de % ; magnitude de
+  // l'incrément préservée (totalBase ≈ 100 en monde %, ≈ totalBase×100 en
+  // monde fraction — même dénominateur).
   const baseAmbassadeur = currentSnapshot?.ambassadeur ?? 0;
   const baseEvangeliste = currentSnapshot?.evangeliste ?? 0;
-  const totalBase = (currentSnapshot?.spectateur ?? 0.5) + (currentSnapshot?.interesse ?? 0.2) +
-    (currentSnapshot?.participant ?? 0.15) + (currentSnapshot?.engage ?? 0.08) +
+  const totalBase = (currentSnapshot?.spectateur ?? 50) + (currentSnapshot?.interesse ?? 20) +
+    (currentSnapshot?.participant ?? 15) + (currentSnapshot?.engage ?? 8) +
     baseAmbassadeur + baseEvangeliste;
 
-  const adjustedAmbassadeur = Math.min(1, baseAmbassadeur + (ambassadeurCount / Math.max(1, totalBase * 100)) * 0.5);
-  const adjustedEvangeliste = Math.min(1, baseEvangeliste + (evangelisteCount / Math.max(1, totalBase * 100)) * 0.5);
+  const adjustedAmbassadeur = Math.min(100, baseAmbassadeur + (ambassadeurCount / Math.max(1, totalBase)) * 0.5);
+  const adjustedEvangeliste = Math.min(100, baseEvangeliste + (evangelisteCount / Math.max(1, totalBase)) * 0.5);
 
   await captureDevotionSnapshot(strategyId, {
-    spectateur: currentSnapshot?.spectateur ?? 0.5,
-    interesse: currentSnapshot?.interesse ?? 0.2,
-    participant: currentSnapshot?.participant ?? 0.15,
-    engage: currentSnapshot?.engage ?? 0.08,
+    spectateur: currentSnapshot?.spectateur ?? 50,
+    interesse: currentSnapshot?.interesse ?? 20,
+    participant: currentSnapshot?.participant ?? 15,
+    engage: currentSnapshot?.engage ?? 8,
     ambassadeur: adjustedAmbassadeur,
     evangeliste: adjustedEvangeliste,
   }, "ambassador_reconciliation");
