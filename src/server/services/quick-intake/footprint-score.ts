@@ -8,24 +8,17 @@
  * n'est mesurable → total null (« non mesuré »), jamais un faux zéro.
  */
 
-import type { EnrichedFootprint } from "./public-enrichment";
+// Types importés depuis le module feuille `footprint-types` (et non depuis
+// `public-enrichment`) : rompt le cycle d'import statique. Re-export pour la
+// rétro-compat des consommateurs qui importaient d'ici (footprint-narrative,
+// footprint-section).
+import type {
+  EnrichedFootprint,
+  FootprintDimension,
+  FootprintScore,
+} from "./footprint-types";
 
-export interface FootprintDimension {
-  key: "site" | "social" | "reviews" | "press" | "email" | "domain" | "perf";
-  label: string;
-  weight: number;
-  measured: boolean;
-  /** 0-100 sur la dimension, null si non mesurée. */
-  score: number | null;
-  details: string;
-}
-
-export interface FootprintScore {
-  total: number | null;
-  outOf: 100;
-  measuredWeight: number;
-  dimensions: FootprintDimension[];
-}
+export type { FootprintDimension, FootprintScore } from "./footprint-types";
 
 const clamp = (n: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, Math.round(n)));
 
