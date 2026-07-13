@@ -48,6 +48,8 @@ async function runDuePublications(): Promise<Array<{ brandActionId: string; stat
           imageUrl: job.input.imageUrl,
           scheduleAt: null,
           brandActionId: job.brandActionId,
+          brief: job.input.brief,
+          visualCopy: job.input.visualCopy,
         },
         { caller: "cron:social-sync:publish" },
       );

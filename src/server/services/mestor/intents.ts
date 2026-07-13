@@ -560,6 +560,10 @@ export type Intent =
       imageUrl?: string | null;
       scheduleAt?: string | null;
       brandActionId?: string | null;
+      /** Brief créatif intégré (direction pour illustrer). */
+      brief?: string | null;
+      /** Copy du visuel (texte DANS l'image). */
+      visualCopy?: string | null;
     }
   // ── ADR-0134 — mesure communautaire réelle (chaîne community→devotion→cult) ──
   // Émis par le cron social-sync quotidien (emitIntentTyped, caller

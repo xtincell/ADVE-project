@@ -38,6 +38,7 @@ export interface PublishSocialPostInput {
   strategyId: string;
   userId: string;
   targets: string[];
+  /** Copy de PUBLICATION (légende du post). */
   text: string;
   linkUrl?: string | null;
   imageUrl?: string | null;
@@ -45,6 +46,13 @@ export interface PublishSocialPostInput {
   scheduleAt?: string | null;
   /** Ré-émission par le cron : action déjà matérialisée. */
   brandActionId?: string | null;
+  /**
+   * Brief créatif intégré — direction pour ILLUSTRER (le générateur/designer
+   * sait quoi produire). Persisté sur l'action ; ne part jamais au réseau.
+   */
+  brief?: string | null;
+  /** Copy du VISUEL — le texte à intégrer DANS l'image (≠ légende). */
+  visualCopy?: string | null;
 }
 
 export interface PublishTargetResult {
@@ -195,6 +203,11 @@ async function upsertPublishAction(
     scheduleAt: input.scheduleAt ?? null,
     requestedByUserId: input.userId,
     pending: mode === "SCHEDULED",
+    // Brief intégré : direction créative pour illustrer + copy du visuel.
+    // Le générateur (Ptah) ou un designer humain sait quoi produire ; ces
+    // champs ne partent jamais au réseau (seuls text/imageUrl le font).
+    brief: input.brief ?? null,
+    visualCopy: input.visualCopy ?? null,
     results: (results ?? []) as unknown as Prisma.InputJsonValue,
   };
 
@@ -225,6 +238,10 @@ async function upsertPublishAction(
       touchpoint: "DIGITAL",
       source: "OPERATOR_MANUAL",
       status: mode === "PUBLISHED" ? "EXECUTED" : "SCHEDULED",
+      // `selected: true` — la publication planifiée DOIT être visible dans le
+      // calendrier « Plan d'actions » (qui filtre selected:true). Sans ça elle
+      // était créée invisible alors que la notif y renvoie (gap 2026-07-13).
+      selected: true,
       timingStart: input.scheduleAt ? new Date(input.scheduleAt) : new Date(),
       timingEnd: mode === "PUBLISHED" ? new Date() : null,
       metadata: { socialPublish } as Prisma.InputJsonValue,
@@ -325,7 +342,28 @@ export async function publishSocialPost(
     }
   }
 
-  const brandActionId = await upsertPublishAction(input, "PUBLISHED", results);
+  // Décision de matérialisation — le keystone du « cron synchronisé avec le
+  // calendrier » (mandat 2026-07-13). Une publication PLANIFIÉE ré-émise par le
+  // cron (`brandActionId` présent) qui ne trouve AUCUNE connexion active RESTE
+  // EN ATTENTE (SCHEDULED + pending=true) au lieu d'être consommée à vide :
+  // elle repartira au prochain tick dès que l'opérateur aura connecté le réseau.
+  // Sinon (au moins un réseau a publié, ou échec réel) l'action est consommée.
+  const anyPublished = results.some((r) => r.state === "PUBLISHED");
+  const waitingForConnection =
+    !anyPublished && results.some((r) => r.state === "NOT_CONNECTED");
+  const keepWaiting = Boolean(input.brandActionId) && waitingForConnection;
+
+  const brandActionId = await upsertPublishAction(
+    input,
+    keepWaiting ? "SCHEDULED" : "PUBLISHED",
+    results,
+  );
+
+  // En attente de connexion : pas de notification (sinon spam à chaque tick).
+  // Le calendrier montre l'action toujours planifiée avec le motif NOT_CONNECTED.
+  if (keepWaiting) {
+    return { mode: "SCHEDULED", brandActionId, results };
+  }
 
   // Notification honnête (succès ET échecs) au porteur + délégués.
   const published = results.filter((r) => r.state === "PUBLISHED").map((r) => r.platform);
@@ -402,6 +440,10 @@ export async function listDueScheduledPublications(): Promise<
         imageUrl: typeof sp.imageUrl === "string" ? sp.imageUrl : null,
         scheduleAt: null, // échéance atteinte → publication immédiate
         brandActionId: action.id,
+        // Préservés à la ré-émission : sinon le brief/copy visuel seraient nullés
+        // quand le cron reconstruit socialPublish (perte de la direction créative).
+        brief: typeof sp.brief === "string" ? sp.brief : null,
+        visualCopy: typeof sp.visualCopy === "string" ? sp.visualCopy : null,
       },
     });
   }

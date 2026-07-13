@@ -15,6 +15,7 @@ import { useToast } from "@/components/shared/notification-toast";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { trpc } from "@/lib/trpc/client";
 import { SocialHubCard } from "@/components/cockpit/social/social-hub-card";
+import { EmailProviderCard } from "@/components/cockpit/newsletter/email-provider-card";
 import { Plug, Store, RefreshCw, Unlink, ArrowRight } from "lucide-react";
 
 const SHOP_RE = /^[a-z0-9][a-z0-9-]{1,58}[a-z0-9]\.myshopify\.com$/;
@@ -156,12 +157,15 @@ export default function ConnectionsPage() {
           <SocialHubCard strategyId={strategyId} />
           <div className="space-y-4">
             <ShopCard strategyId={strategyId} />
+            {/* Fournisseur email de la Newsletter (« API et test ») — sa place
+                est ici, dans la zone Connexions, avec les autres canaux. La
+                carte se masque d'elle-même pour les fondateurs (opérateur only). */}
+            <EmailProviderCard strategyId={strategyId} />
             <div className="ck-card">
               <p className="ck-card__eyebrow"><Plug />À venir</p>
               <p className="ck-ops__note">
-                Fiche Google Business (avis clients), WhatsApp Business (messages),
-                newsletter — chaque canal arrivera ici, toujours avec votre
-                autorisation explicite.
+                Fiche Google Business (avis clients) et WhatsApp Business (messages)
+                arriveront ici, toujours avec votre autorisation explicite.
               </p>
             </div>
           </div>

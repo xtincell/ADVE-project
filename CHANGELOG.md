@@ -10,6 +10,35 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.133 — feat(spawt): pack lancement — accès god-mode, publication avec brief, GTM v2 injecté, J0 armée aujourd'hui (2026-07-13)
+
+**Sprint de lancement SPAWT (app découverte food Abidjan, cycle 13/07→01/09). Increment 1 : accès débloqué + mécanique de publication complète + GTM injecté + J0 armée pour aujourd'hui.**
+
+- **Fix god-mode `getOperatorContext`** : le fondateur god-mode était refusé sur toute marque qu'il
+  ne possède pas (SPAWT seedé sous un autre compte → surfaces vides « aucun moyen de connexion »).
+  `getOperatorContext` sélectionne `email` + force `role=ADMIN` via `isGodModeEmail` → ~15 routers de
+  surfaces marque débloqués d'un coup. Verrou `god-mode-operator-context.test.ts`.
+- **Publication = brief intégré** (mandat : « chaque publication doit avoir son brief pour illustrer +
+  copy visuel + copy publication ») : `metadata.socialPublish` porte désormais `brief` (direction
+  créative) + `visualCopy` (texte du visuel) + `text` (légende), câblés bout-en-bout
+  (procédure `social.publishPost` → Intent → handler → cron, préservés à la ré-émission).
+- **Calendrier ↔ cron fonctionnel** (mandat) : (1) une publication planifiée est créée `selected:true`
+  → **visible dans le calendrier « Plan d'actions »** (elle était invisible avant) ; (2) si aucune
+  connexion active à l'échéance, la publication **reste EN ATTENTE** (SCHEDULED+pending) au lieu
+  d'être consommée à vide → elle **partira dès que les réseaux seront connectés** (le cron réessaie,
+  sans spam de notification).
+- **Newsletter** : la config du fournisseur email (« API et test ») remonte dans Réglages →
+  Connexions avec les autres canaux ; l'onglet Newsletter reste opérationnel.
+- **Seed GTM SPAWT v2** (`npm run db:seed:spawt-gtm`, idempotent) : 18 actions calendrier (phases
+  S0-S7, jalons), boîte à outils/accès (quiz/app/admin), **publication J0 armée AUJOURD'HUI**
+  (FACEBOOK+INSTAGRAM, lien quizz.spawt.online, brief flip-card Moka 1080×1350 + copy visuel + copy
+  publication). **Stéphanie Bidje = OWNER** (fondatrice, full accès, login `stephanie@spawt.online`) ;
+  head of growth = co-auteur DIGITAL_DIRECTOR (paternité partagée). Brevo : connecteur existant
+  honoré (jamais de clé committée ; sinon `SPAWT_BREVO_API_KEY` ou saisie UI).
+- Vérifié : tsc 0 · lint 0 · gouvernance 1004/1004 · seed exécuté (cron trouve J0, idempotent).
+  0 nouveau modèle, 0 nouveau Neter (cap 7/7). Increment 2 à suivre (gestion par publication
+  éditer/replanifier/déclencher/image · invitation mot de passe + Sécurité · surface App Store).
+
 ## v6.27.132 — fix(auto-promotion): diagnostic définitif T14 + fin des promotions fantômes ([ADR-0139](docs/governance/adr/0139-sequence-lifecycle-stub-honest-diagnosis.md)) (2026-07-13)
 
 **Bloc E (dernier bloc du mandat « Tout, dans l'ordre de valeur »). Pourquoi 91/94 séquences restent DRAFT ~2 mois après l'échéance D+30 (T14) — et pourquoi il n'y a AUCUNE promotion honnête à faire.**

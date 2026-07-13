@@ -1,4 +1,5 @@
 import { PILLAR_STORAGE_KEYS } from "@/domain";
+import { isGodModeEmail } from "@/lib/auth/god-mode";
 
 // ============================================================================
 // MODULE M05 — Operator Isolation (Multi-tenant)
@@ -231,13 +232,23 @@ export async function canAccessMission(
 export async function getOperatorContext(userId: string): Promise<OperatorContext> {
   const user = await db.user.findUnique({
     where: { id: userId },
-    select: { id: true, role: true, operatorId: true },
+    select: { id: true, email: true, role: true, operatorId: true },
   });
+
+  // God-mode par email (cf. lib/auth/god-mode) : le fondateur est traité comme
+  // ADMIN quel que soit le rôle STOCKÉ en base. L'élévation au sign-in vit dans
+  // le JWT (aucune écriture DB), donc TOUTES les gardes qui relisent le rôle
+  // depuis la base (canAccessStrategy/Campaign/Mission, scope*) doivent consulter
+  // l'allowlist ICI — sinon le compte god-mode ne voit QUE ses propres marques
+  // et se fait refuser sur toute marque seed/déléguée (bug rapporté : SPAWT,
+  // détenu par alexandre@upgraders.com, affichait des surfaces vides pour
+  // xtincell@gmail.com). Même classe que le fix tier-gate god-mode 2026-07-13.
+  const role = isGodModeEmail(user?.email) ? "ADMIN" : (user?.role ?? "USER");
 
   return {
     operatorId: user?.operatorId ?? null,
     userId,
-    role: user?.role ?? "USER",
+    role,
   };
 }
 
