@@ -416,7 +416,7 @@ function extractCandidates(
  * Force la lineage : sourceIntentId = IntentEmission du Glory tool (lookup
  * par outputId pour reconstituer le lien dans Seshat).
  */
-async function chainGloryToPtah(args: {
+export async function chainGloryToPtah(args: {
   tool: NonNullable<ReturnType<typeof getGloryTool>>;
   toolOutput: Record<string, unknown>;
   sourceIntentId: string;

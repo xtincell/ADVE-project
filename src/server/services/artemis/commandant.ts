@@ -624,6 +624,11 @@ export async function execute(intent: Intent): Promise<IntentResult> {
           ...base,
           status: result.status === "MISSING_PRECONDITIONS" ? "VETOED" : "OK",
           summary: result.summary,
+          output: {
+            status: result.status,
+            sequenceExecutionId: result.sequenceExecutionId,
+            targetKind: result.composition.targetKind,
+          },
         });
       }
     }

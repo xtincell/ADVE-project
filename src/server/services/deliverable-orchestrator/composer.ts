@@ -56,6 +56,8 @@ interface ComposeDeliverableInput {
   readonly campaignId?: string;
   readonly overrideManipulationMode?: "peddler" | "dealer" | "facilitator" | "entertainer";
   readonly previewOnly?: boolean;
+  /** Émission parente (COMPOSE_DELIVERABLE) — lignée de la forge (ADR-0136). */
+  readonly sourceIntentId?: string;
 }
 
 /**
@@ -109,20 +111,91 @@ export async function composeDeliverable(
     };
   }
 
-  // Phase 17 commit 3 : toujours PREVIEW — pas de dispatch DB-write encore.
-  // (le flag `previewOnly` est honoré pour l'avenir mais le résultat actuel
-  // est identique avec ou sans).
-  void input.previewOnly;
-  void input.operatorId;
-  void input.campaignId;
-  void input.overrideManipulationMode;
-  void getGloryTool; // évite tree-shaking si déclaration future utilise
+  // PREVIEW par défaut (backward-compatible) : le dispatch réel n'a lieu que
+  // sur `previewOnly === false` EXPLICITE. Les callers existants passent
+  // `previewOnly: true` (router + page forge) → comportement inchangé.
+  if (input.previewOnly !== false) {
+    void input.operatorId;
+    return {
+      composition,
+      status: "PREVIEW",
+      sequenceExecutionId: null,
+      summary: buildPreviewSummary(composition),
+    };
+  }
+
+  // ── DISPATCHED (ADR-0136) — matérialisation réelle du livrable cible ──
+  return dispatchForge(composition, input, targetSlug);
+}
+
+/**
+ * Mode DISPATCHED (ADR-0136) — exécute le Glory tool producteur du livrable
+ * cible, puis chaîne vers Ptah pour matérialiser l'asset (réutilise les
+ * primitives éprouvées `executeTool` + `chainGloryToPtah`, PAS de refactor du
+ * moteur de séquence). Honnête sans clés provider : la forge Ptah remonte
+ * `DEFERRED_AWAITING_CREDENTIALS` (taskId absent) et le statut le reflète.
+ *
+ * Portée v1 : le tool cible produit son brief avec le contexte disponible
+ * (piliers + briefs upstream réutilisables). La génération automatique des
+ * briefs upstream MANQUANTS reste tracée (chantier env-avec-clés, ADR-0136).
+ */
+async function dispatchForge(
+  composition: DeliverableComposition,
+  input: ComposeDeliverableInput,
+  targetSlug: string,
+): Promise<ComposeDeliverableOutput> {
+  const tool = getGloryTool(targetSlug);
+  if (!tool) {
+    throw new TargetNotForgeableError(composition.targetKind);
+  }
+
+  const { executeTool } = await import("@/server/services/artemis/tools/engine");
+  const { shouldChainPtahForge, chainGloryToPtah } = await import(
+    "@/server/services/artemis/tools/sequence-executor"
+  );
+
+  // 1. Exécute le tool producteur (produit le brief + promeut le BrandAsset).
+  const run = await executeTool(targetSlug, input.strategyId, {});
+
+  // 2. Livrable brief-only (pas de forgeOutput) : la sortie du tool EST le
+  //    livrable — pas de matérialisation Ptah. Dispatch réussi sans taskId.
+  const chain = shouldChainPtahForge({
+    hasForgeOutput: !!tool.forgeOutput,
+    oracleEnrichmentMode: false,
+  });
+  if (!chain.shouldChain) {
+    return {
+      composition,
+      status: "DISPATCHED",
+      sequenceExecutionId: null,
+      summary:
+        `Livrable ${composition.targetKind} produit (brief-only via ${targetSlug}, ` +
+        `asset ${run.outputId || "—"}) — pas de forge Ptah requise.`,
+    };
+  }
+
+  // 3. Forge : chaîne vers Ptah (matérialisation via provider). Sans clés →
+  //    DEFERRED (taskId absent), honnête.
+  const context: Record<string, unknown> = {};
+  if (input.overrideManipulationMode) context._manipulationMode = input.overrideManipulationMode;
+  if (input.campaignId) context._campaignId = input.campaignId;
+
+  const taskId = await chainGloryToPtah({
+    tool,
+    toolOutput: run.output,
+    sourceIntentId: run.intentId ?? input.sourceIntentId ?? `compose:${composition.targetKind}`,
+    strategyId: input.strategyId,
+    context,
+  });
 
   return {
     composition,
-    status: "PREVIEW",
-    sequenceExecutionId: null,
-    summary: buildPreviewSummary(composition),
+    status: "DISPATCHED",
+    sequenceExecutionId: taskId ?? null,
+    summary: taskId
+      ? `Forge lancée pour ${composition.targetKind} (tool ${targetSlug}, tâche Ptah ${taskId}).`
+      : `Forge de ${composition.targetKind} différée (provider non configuré — DEFERRED). ` +
+        `Le brief est produit ; la matérialisation reprendra dès que les clés seront présentes.`,
   };
 }
 

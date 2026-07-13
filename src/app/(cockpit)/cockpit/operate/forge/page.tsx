@@ -5,6 +5,7 @@ import { trpc } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Modal } from "@/components/shared/modal";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { formatConfidence } from "@/lib/operate-config";
 import {
@@ -56,6 +57,9 @@ export default function DeliverableForgePage() {
   // Tab 2: Deliverable Forge States
   const [targetKind, setTargetKind] = useState<string>("");
   const [confirmedDispatch, setConfirmedDispatch] = useState(false);
+  // ADR-0136 — forge réelle (previewOnly:false) après l'aperçu.
+  const [confirmForge, setConfirmForge] = useState(false);
+  const [forgeLaunched, setForgeLaunched] = useState(false);
 
   // tRPC Queries & Mutations
   const strategyQuery = trpc.strategy.get.useQuery(
@@ -135,7 +139,16 @@ export default function DeliverableForgePage() {
   function handleReset() {
     setTargetKind("");
     setConfirmedDispatch(false);
+    setForgeLaunched(false);
     composeMutation.reset();
+  }
+
+  // ADR-0136 — lance la forge RÉELLE (previewOnly:false) après confirmation.
+  function handleForge() {
+    if (!strategyId || !targetKind) return;
+    setConfirmForge(false);
+    setForgeLaunched(true);
+    composeMutation.mutate({ strategyId, targetKind, previewOnly: false });
   }
 
   async function handleValidateStrategy() {
@@ -677,23 +690,48 @@ export default function DeliverableForgePage() {
                   <CheckCircle2 className="h-5 w-5" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-sm font-semibold text-foreground">Aperçu de la cascade prêt</h3>
+                  <h3 className="text-sm font-semibold text-foreground">
+                    {forgeLaunched ? "Livrable lancé" : "Aperçu de la cascade prêt"}
+                  </h3>
                   <p className="mt-2 text-xs text-foreground">{composition.summary}</p>
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={handleReset}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background/40 px-3 py-2 text-xs text-foreground-secondary hover:border-foreground-muted"
-              >
-                <ChevronRight className="h-3.5 w-3.5" />
-                Composer un autre livrable
-              </button>
+              <div className="flex flex-wrap gap-2">
+                {!forgeLaunched && (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmForge(true)}
+                    disabled={composeMutation.isPending}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-xs font-medium text-accent hover:bg-accent/15 disabled:opacity-40"
+                  >
+                    <Hammer className="h-3.5 w-3.5" />
+                    Forger réellement ce livrable
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background/40 px-3 py-2 text-xs text-foreground-secondary hover:border-foreground-muted"
+                >
+                  <ChevronRight className="h-3.5 w-3.5" />
+                  Composer un autre livrable
+                </button>
+              </div>
             </section>
           )}
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmForge}
+        onClose={() => setConfirmForge(false)}
+        onConfirm={handleForge}
+        title="Forger réellement ce livrable"
+        message="La production réelle exécute l'outil de génération puis matérialise le livrable. Elle consomme du crédit. Continuer ?"
+        confirmLabel="Forger"
+        variant="info"
+      />
     </div>
   );
 }
