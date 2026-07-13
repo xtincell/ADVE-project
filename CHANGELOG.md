@@ -10,6 +10,26 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.120 — fix(cockpit): fin des cadenas god-mode + modale formules + portail « en construction » (2026-07-13)
+
+**Audit complet des 54 surfaces cockpit founder : les gates redirigent → une modale de consultation des formules, le seul stub passe derrière un portail honnête, et le compte ADMIN ne voit plus jamais un cadenas.**
+
+- **Fix god-mode tier-gate** (bug rapporté opérateur : cadenas « réservé aux abonnements » vu par
+  le compte ADMIN) : `checkPaidTier` reçoit un `User.id` (Strategy.userId) sur les chemins cockpit
+  mais le bypass ADMIN ne cherchait que `User.operatorId` → il ne s'appliquait JAMAIS. Lookup corrigé
+  `OR: [{id}, {operatorId}]` + rôle ADMIN + allowlist god-mode (`tier-gate.ts`).
+- **`<PricingModal>`** (nouveau, mandat opérateur) : « Découvrir les formules » ouvre une modale —
+  3 formules côte à côte (prix pays via `payment.getTierGrid`, avantages, CTA choisir) + bouton
+  « Voir toutes les formules et options » vers /pricing. **Plus aucune redirection immédiate.**
+  Recâblé sur les 3 sites TIER_GATE_DENIED : suivi communauté, radar Overton, lignée prescripteur.
+- **`<DevelopmentGate>`** (nouveau) : portail « en construction » pour les fonctionnalités pas encore
+  confirmées fiables — le client voit un écran honnête sans données ; le compte interne voit le
+  contenu réel + chip « Aperçu interne ». Appliqué à `/cockpit/insights/benchmarks` (comparaisons
+  par pilier et distribution sectorielle encore dérivées d'agrégats étalés — pas fiable).
+- **Audit 3 agents** : 50 routes DÉVELOPPÉES (données tRPC réelles), 3 gates abonnement (→ modale),
+  1 stub (`benchmarks`, portaillé). États honnêtes « à connecter / Bientôt » conservés tels quels
+  (KPI newsletter, connexion boutique, X payant à l'appel).
+
 ## v6.27.119 — feat(cockpit): réseaux — une ligne par réseau, une Page de TRAVAIL choisie (compact + modal) (2026-07-13)
 
 **Demande opérateur : « je ne veux voir que la Page sur laquelle je travaille, une ligne par réseau, et le modal au clic pour choisir — pas toutes les Pages en désordre. »**

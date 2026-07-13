@@ -72,9 +72,16 @@ export async function checkPaidTier(
     // God mode — un operator piloté par un founder de l'allowlist n'est jamais
     // bloqué par un tier gate (résolu seulement ici, au moment du refus, pour
     // ne pas alourdir le chemin nominal des abonnés payants).
+    // FIX 2026-07-13 : le paramètre `operatorId` est en pratique un User.id
+    // (Strategy.userId) sur les chemins cockpit — l'ancien lookup ne matchait
+    // que `User.operatorId` → le bypass ADMIN ne s'appliquait JAMAIS et le
+    // compte god-mode voyait les cadenas (bug rapporté opérateur).
     const { isGodModeEmail } = await import("@/lib/auth/god-mode");
     const godUser = await db.user.findFirst({
-      where: { operatorId, role: "ADMIN" },
+      where: {
+        OR: [{ id: operatorId }, { operatorId }],
+        role: "ADMIN",
+      },
       select: { email: true },
     });
     if (isGodModeEmail(godUser?.email)) {
