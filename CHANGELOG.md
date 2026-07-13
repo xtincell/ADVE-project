@@ -10,6 +10,23 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.140 — feat(scorer): les actifs de l'équipe dirigeante comptent dans l'ADVE (pilier A) (2026-07-13)
+
+**Increment 2b SPAWT part 3/3 (mandat : « l'équipe vient avec des assets de valeur — diplômes, compétences, faits marquants — qui devraient avoir un impact dans l'ADVE, en plus de leur titre »).**
+
+- **Nouveau composant « Équipe » dans `scoreA`** (scoreur sémantique, pilier A où vit
+  `equipeDirigeante`) : crédite **la présence** (0,5/membre, plafond 3) **ET la profondeur
+  d'actifs** — part des membres portant au moins un `credentials` / `competencesCles` /
+  `experiencePasse`. Borné à 3, déterministe, zéro LLM.
+- **Aucune régression silencieuse (Loi 1)** : le score de pilier est plafonné à 25 en absolu
+  (pas de dénominateur normalisé) → une marque sans équipe garde **0** sur ce composant ; seules
+  les marques dotées d'une équipe montent. Ajouté APRÈS le composant Qualité pour ne pas perturber
+  son bonus. Le scoreur structurel canon ADR-0102 est un autre chemin — non touché.
+- **Vérifié** : SPAWT (Stéphanie PRINCE2/Jumia · Kidam 10+ apps/React Native · Alexandre
+  UPgraders/ADVE) → composant Équipe **3/3** sur données réelles ; test `team-assets-scoring`
+  (dotée > titres-only, 0 sans équipe, borné à 3) ; scoring canon 35 tests verts.
+- Cap APOGEE 7/7 préservé (scoreur sémantique ; 0 modèle, 0 Neter, 0 migration).
+
 ## v6.27.139 — feat(cockpit): surface Applications mobiles (App Store / Play Store) dans Connexions (2026-07-13)
 
 **Increment 2b SPAWT part 2/3 (mandat : « raccorder les pages de l'app mobile pour traquer téléchargements/avis ; prépare déjà la surface + l'espace credentials + un message qui invite à les renseigner »).**

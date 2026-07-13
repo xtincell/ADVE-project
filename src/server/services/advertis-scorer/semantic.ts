@@ -111,6 +111,22 @@ function scoreA(c: Record<string, unknown>, b: ScoreBreakdown[]): number {
   b.push({ component: "Extensions A", score: Math.min(4.5, art), maxScore: 4.5, details: "" }); t += Math.min(4.5, art);
   const q = Math.min(2, (t / 19) * 2);
   b.push({ component: "Qualite", score: Math.round(q*10)/10, maxScore: 2, details: "" }); t += q;
+  // Équipe dirigeante — crédite la présence ET les actifs de valeur (diplômes,
+  // compétences, faits marquants), pas seulement le titre (mandat opérateur
+  // 2026-07-13 : « l'équipe vient avec des assets de valeur qui devraient avoir
+  // un impact dans l'ADVE, en plus de leur titre »). Déterministe, borné (3).
+  // Additif : le score du pilier est plafonné à 25 en absolu → une marque sans
+  // équipe garde 0 sur ce composant (aucune régression silencieuse, Loi 1).
+  // Ajouté APRÈS le composant Qualité pour ne pas perturber son bonus (t/19).
+  const team = Array.isArray(c.equipeDirigeante) ? (c.equipeDirigeante as Record<string, unknown>[]) : [];
+  const members = team.length;
+  const presence = Math.min(1.5, members * 0.5); // 0,5 / membre, plafond à 3 membres
+  const withAssets = team.filter(
+    (m) => arrLen(m.credentials) >= 1 || arrLen(m.competencesCles) >= 1 || arrLen(m.experiencePasse) >= 1,
+  ).length;
+  const depth = members > 0 ? Math.min(1.5, (withAssets / members) * 1.5) : 0; // part des membres portant ≥1 actif
+  const teamScore = Math.round((presence + depth) * 10) / 10;
+  b.push({ component: "Équipe", score: teamScore, maxScore: 3, details: `${members} membres · ${withAssets} avec actifs` }); t += teamScore;
   return t;
 }
 
