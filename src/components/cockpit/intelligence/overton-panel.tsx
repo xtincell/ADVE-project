@@ -17,15 +17,15 @@
  * while fetching and never blocks the Cockpit shell (NFR2).
  */
 
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { trpc } from "@/lib/trpc/client";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { OvertonRadar } from "@/components/neteru/overton-radar";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Skeleton } from "@/components/primitives/skeleton";
 import { Radar, Lock } from "lucide-react";
+import { PricingModal } from "@/components/cockpit/pricing-modal";
 
 function OvertonPanelSkeleton() {
   return (
@@ -44,7 +44,7 @@ function OvertonPanelSkeleton() {
 }
 
 function OvertonPanelInner({ strategyId }: { strategyId: string }) {
-  const router = useRouter();
+  const [showPricing, setShowPricing] = useState(false);
   const { data, isLoading } = trpc.cockpitDashboard.overtonSignal.useQuery(
     { strategyId },
     { enabled: !!strategyId },
@@ -53,14 +53,19 @@ function OvertonPanelInner({ strategyId }: { strategyId: string }) {
   if (isLoading || !data) return <OvertonPanelSkeleton />;
 
   // Paid-tier gate (FR32) — server-enforced; render the upgrade CTA, not a blank.
+  // Modale de consultation des formules — jamais une redirection immédiate
+  // (mandat opérateur 2026-07-13).
   if (data.state === "TIER_GATE_DENIED") {
     return (
-      <EmptyState
-        icon={Lock}
-        title="Radar Overton — réservé aux abonnements"
-        description="Visualisez comment votre secteur se redéfinit autour de votre marque en activant votre abonnement."
-        action={{ label: "Découvrir les formules", onClick: () => router.push(data.configureUrl) }}
-      />
+      <>
+        <EmptyState
+          icon={Lock}
+          title="Radar Overton — réservé aux abonnements"
+          description="Visualisez comment votre secteur se redéfinit autour de votre marque en activant votre abonnement."
+          action={{ label: "Découvrir les formules", onClick: () => setShowPricing(true) }}
+        />
+        <PricingModal open={showPricing} onClose={() => setShowPricing(false)} featureLabel="Le radar Overton" />
+      </>
     );
   }
 

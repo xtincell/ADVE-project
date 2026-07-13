@@ -21,12 +21,12 @@
  */
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { Sparkles, GitBranch, Lock, Users, Calendar } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { StatCard } from "@/components/shared/stat-card";
 import { EmptyState } from "@/components/shared/empty-state";
+import { PricingModal } from "@/components/cockpit/pricing-modal";
 
 /** Internal attribution alphabet → founder-facing French rungs (no jargon leak). */
 const RUNG_LABEL_FR: Record<string, string> = {
@@ -41,7 +41,7 @@ function LineagePanel({ strategyId, campaignId }: { strategyId: string; campaign
     { strategyId, campaignId },
     { enabled: !!strategyId && !!campaignId },
   );
-  const router = useRouter();
+  const [showPricing, setShowPricing] = useState(false);
 
   if (isLoading || !data) {
     return (
@@ -52,13 +52,18 @@ function LineagePanel({ strategyId, campaignId }: { strategyId: string; campaign
   }
 
   if (data.state === "TIER_GATE_DENIED") {
+    // Modale de consultation des formules — jamais une redirection immédiate
+    // (mandat opérateur 2026-07-13).
     return (
-      <EmptyState
-        icon={Lock}
-        title="Lignée prescripteur — réservée aux abonnements"
-        description="Visualisez quelles campagnes transforment vos fans en ambassadeurs et prescripteurs en activant votre abonnement."
-        action={{ label: "Découvrir les formules", onClick: () => router.push(data.configureUrl) }}
-      />
+      <>
+        <EmptyState
+          icon={Lock}
+          title="Lignée prescripteur — réservée aux abonnements"
+          description="Visualisez quelles campagnes transforment vos fans en ambassadeurs et prescripteurs en activant votre abonnement."
+          action={{ label: "Découvrir les formules", onClick: () => setShowPricing(true) }}
+        />
+        <PricingModal open={showPricing} onClose={() => setShowPricing(false)} featureLabel="La lignée prescripteur" />
+      </>
     );
   }
 
