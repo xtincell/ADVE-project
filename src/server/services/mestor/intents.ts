@@ -569,6 +569,13 @@ export type Intent =
       kind: "SESHAT_CAPTURE_COMMUNITY_SNAPSHOT";
       strategyId: string;
     }
+  // ── ADR-0135 — attribution des transitions de dévotion observées ──
+  // Émis par le cron social-sync après l'actualisation des superfans.
+  // Reconstruit CampaignAction.devotionTransitionsObserved (temporal join).
+  | {
+      kind: "SESHAT_ATTRIBUTE_DEVOTION_TRANSITIONS";
+      strategyId: string;
+    }
   // ── ADR-0126/0134 — naissance + actualisation gouvernées des SuperfanProfile ──
   // Deux portes du MÊME kind : tRPC `superfan.register` (geste opérateur,
   // governedProcedure inline) et ce chemin emitIntent (cron — mise à jour des
@@ -1241,6 +1248,9 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     // ADR-0134 — mesure communautaire : écrit CommunitySnapshot + snapshots
     // dérivés (devotion/cult), jamais un pilier.
     case "SESHAT_CAPTURE_COMMUNITY_SNAPSHOT":
+    // ADR-0135 — attribution : écrit CampaignAction.devotionTransitionsObserved,
+    // jamais un pilier.
+    case "SESHAT_ATTRIBUTE_DEVOTION_TRANSITIONS":
     // ADR-0126/0134 — écrit un SuperfanProfile (mesure), jamais un pilier.
     case "SESHAT_REGISTER_SUPERFAN":
     // Phase 17 (ADR-0037) — Deliverable Forge dispatcher. Le composer consomme

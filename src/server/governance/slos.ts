@@ -297,6 +297,8 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "SESHAT_REGISTER_SUPERFAN", p95LatencyMs: 500, errorRatePct: 0.01, costP95Usd: 0 },
   // ADR-0134 — mesure communautaire (3 findMany + N creates + chaîne devotion/cult) ; sync, zéro LLM.
   { kind: "SESHAT_CAPTURE_COMMUNITY_SNAPSHOT", p95LatencyMs: 15_000, errorRatePct: 0.05, costP95Usd: 0 },
+  // ADR-0135 — attribution transitions dévotion (2 findMany + N updates, temporal join pur) ; sync, zéro LLM.
+  { kind: "SESHAT_ATTRIBUTE_DEVOTION_TRANSITIONS", p95LatencyMs: 10_000, errorRatePct: 0.05, costP95Usd: 0 },
 
   // ── AUTOGEN: legacy-intent-kinds — DO NOT EDIT MANUALLY ──
   // 329 legacy mutation SLOs (defaults — tighten per-mutation as needed).

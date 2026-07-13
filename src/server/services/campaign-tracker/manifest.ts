@@ -169,6 +169,8 @@ export const manifest = defineManifest({
   governor: "MESTOR",
   version: "0.1.0",
   acceptsIntents: [
+    // ADR-0135 — attribution des transitions de dévotion observées.
+    "SESHAT_ATTRIBUTE_DEVOTION_TRANSITIONS",
     // Vague 1 — Cluster A + B
     "SNAPSHOT_CAMPAIGN_TRAJECTORY_PRE_LIVE",
     "CHECK_CAMPAIGN_FUEL_BURN_RATE",
