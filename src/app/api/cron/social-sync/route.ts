@@ -100,6 +100,7 @@ export async function GET(request: Request) {
       inbox: string;
       commerce: string;
       superfans: string;
+      attribution: string;
       community: string;
     }> = [];
 
@@ -131,6 +132,22 @@ export async function GET(request: Request) {
           return DEGRADED;
         }
       })();
+      // Attribution des transitions de dévotion (ADR-0135) — APRÈS
+      // l'actualisation des superfans (qui a enregistré les transitions du
+      // jour) : rattache chaque transition observée à l'action de campagne
+      // qui a pu la produire (last-touch). Ré-émis via le spine.
+      const attribution = await (async () => {
+        try {
+          const { emitIntentTyped } = await import("@/server/services/mestor/intents");
+          const out = await emitIntentTyped<{ actionsUpdated: number }>(
+            { kind: "SESHAT_ATTRIBUTE_DEVOTION_TRANSITIONS", strategyId: s.strategyId },
+            { caller: "cron:social-sync:attribution" },
+          );
+          return { state: "LIVE" as const, actionsUpdated: out.actionsUpdated };
+        } catch {
+          return DEGRADED;
+        }
+      })();
       // Mesure communautaire APRÈS toute la collecte du jour (ADR-0134) —
       // ré-émise via le spine (emitIntent), jamais un appel service direct :
       // chaîne community → devotion → cult sur la donnée fraîche.
@@ -154,6 +171,7 @@ export async function GET(request: Request) {
         inbox: inbox.state,
         commerce: commerce.state,
         superfans: superfans.state,
+        attribution: attribution.state,
         community: community.state,
       });
     }
