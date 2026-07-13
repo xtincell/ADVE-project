@@ -10,6 +10,18 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.131 — feat(oracle): export lisible — fin du dump JSON par section ([ADR-0138](docs/governance/adr/0138-oracle-export-readable-render.md)) (2026-07-13)
+
+**Bloc D du mandat. Le PDF/Markdown Oracle « livrable client » rendait un `JSON.stringify` brut par section (T15) — accolades, guillemets, clés camelCase.**
+
+- **Renderer structuré** (`export-oracle.ts` `renderValue`/`sectionDataToBody`, pur, récursif borné) :
+  objet plat → `Label : valeur` (clés humanisées sentence-case) ; objet imbriqué → sous-titre
+  `## Label` + indentation ; tableau → puces `• ` ; valeurs vides ignorées, clés internes `_*`
+  masquées. Consommé par MD **et** PDF.
+- **PDF** : titre de section + sous-titres `##` en **gras**, puces indentées (jsPDF inchangé sinon).
+- 0 modèle, 0 kind, cap 7/7. Test `oracle-export-render.test.ts` (7 assertions) + vérifié PG local
+  (Motion19 : export MD 53 k chars, **0 fuite JSON**). tsc 0 · lint 0 · **2597 tests verts**.
+
 ## v6.27.130 — feat(oracle): refresh nocturne des sections STALE + refus honnête du câblage plafond Tarsis ([ADR-0137](docs/governance/adr/0137-oracle-stale-refresh-and-tarsis-evidence.md)) (2026-07-13)
 
 **Bloc C du mandat. #2 (refresh STALE) livré ; #3 (Signal TARSIS) REFUSÉ par honnêteté — le seul câblage possible inflaterait le plafond sur du bruit sectoriel.**

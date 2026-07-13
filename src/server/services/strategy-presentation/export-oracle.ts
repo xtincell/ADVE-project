@@ -46,18 +46,85 @@ interface OracleSection {
 }
 
 /**
- * Phase 13 (B6, ADR-0016) — sérialise une section data vers texte.
- * Heuristique simple : si string, retourne ; sinon JSON.stringify pretty.
+ * Humanise une clé camelCase/snake_case en libellé lisible.
+ * `perceptionActuelle` → « Perception actuelle », `tam_sam_som` → « Tam sam som ».
  */
-function sectionDataToBody(data: unknown): string {
-  if (data == null) return "(empty)";
+function humanizeKey(key: string): string {
+  const spaced = key
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .trim()
+    .toLowerCase(); // sentence-case (« Perception actuelle »), pas title-case
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+function isEmptyValue(v: unknown): boolean {
+  if (v == null) return true;
+  if (typeof v === "string") return v.trim().length === 0;
+  if (Array.isArray(v)) return v.length === 0;
+  if (typeof v === "object") return Object.keys(v as object).length === 0;
+  return false;
+}
+
+/**
+ * Rend une valeur arbitraire en lignes de texte LISIBLES (Markdown-flavored) —
+ * remplace le `JSON.stringify` brut (audit 2026-07-13, T15). Récursif, borné en
+ * profondeur. Titres de sous-objets en `## `, listes en `• `, clé-valeur en
+ * `Label : valeur`. Les clés internes (préfixe `_`) sont ignorées.
+ */
+export function renderValue(value: unknown, indent = "", depth = 0): string[] {
+  if (isEmptyValue(value)) return [];
+  if (depth > 6) return [`${indent}…`];
+
+  if (typeof value === "string") return [`${indent}${value}`];
+  if (typeof value === "number" || typeof value === "boolean") {
+    return [`${indent}${String(value)}`];
+  }
+
+  if (Array.isArray(value)) {
+    const lines: string[] = [];
+    for (const item of value) {
+      if (isEmptyValue(item)) continue;
+      if (item != null && typeof item === "object") {
+        // Élément structuré → bloc puce + champs indentés.
+        const inner = renderValue(item, `${indent}  `, depth + 1);
+        if (inner.length > 0) {
+          lines.push(`${indent}• ${inner[0]!.trim()}`);
+          lines.push(...inner.slice(1));
+        }
+      } else {
+        lines.push(`${indent}• ${String(item)}`);
+      }
+    }
+    return lines;
+  }
+
+  // Objet : chaque champ non-vide, non-interne.
+  const lines: string[] = [];
+  for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+    if (k.startsWith("_") || isEmptyValue(v)) continue;
+    const label = humanizeKey(k);
+    if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") {
+      lines.push(`${indent}${label} : ${String(v)}`);
+    } else {
+      lines.push(`${indent}## ${label}`);
+      lines.push(...renderValue(v, `${indent}  `, depth + 1));
+    }
+  }
+  return lines;
+}
+
+/**
+ * Phase 13 (B6, ADR-0016) — sérialise une section data vers texte LISIBLE
+ * (ADR-0138, T15) : plus de `JSON.stringify` brut, un rendu structuré
+ * consommé à la fois par l'export Markdown et le PDF.
+ */
+export function sectionDataToBody(data: unknown): string {
+  if (isEmptyValue(data)) return "(section vide)";
   if (typeof data === "string") return data;
   if (typeof data === "number" || typeof data === "boolean") return String(data);
-  try {
-    return JSON.stringify(data, null, 2);
-  } catch {
-    return "(unserializable)";
-  }
+  const lines = renderValue(data);
+  return lines.length > 0 ? lines.join("\n") : "(section vide)";
 }
 
 async function loadOracle(strategyId: string, opts: ExportOpts): Promise<OracleSection[]> {
@@ -186,17 +253,28 @@ export async function exportOracleAsPdf(
       y = margin;
     }
     doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
     doc.text(s.title, margin, y);
+    doc.setFont("helvetica", "normal");
     y += lineHeight * 1.5;
     doc.setFontSize(10);
-    const wrapped = doc.splitTextToSize(s.body || "(empty)", 500);
-    for (const line of wrapped) {
-      if (y > pageHeight - margin) {
-        doc.addPage();
-        y = margin;
+    // ADR-0138 (T15) — rendu par ligne du corps structuré : `## ` = sous-titre
+    // gras, `• ` = puce légèrement indentée, sinon paragraphe. Plus de dump JSON.
+    for (const rawLine of (s.body || "(section vide)").split("\n")) {
+      const isHeading = rawLine.startsWith("## ");
+      const text = isHeading ? rawLine.slice(3) : rawLine;
+      const lineIndent = rawLine.startsWith("  ") ? 12 : 0;
+      const wrapped = doc.splitTextToSize(text, 500 - lineIndent);
+      if (isHeading) doc.setFont("helvetica", "bold");
+      for (const line of wrapped) {
+        if (y > pageHeight - margin) {
+          doc.addPage();
+          y = margin;
+        }
+        doc.text(line, margin + lineIndent, y);
+        y += lineHeight;
       }
-      doc.text(line, margin, y);
-      y += lineHeight;
+      if (isHeading) doc.setFont("helvetica", "normal");
     }
     y += lineHeight;
   }
