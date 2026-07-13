@@ -10,6 +10,19 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.118 — fix(cockpit): réseaux — afficher TOUTES les Pages connectées (fin du dédoublonnage qui cachait la bonne) (2026-07-13)
+
+**« Ça m'a connecté à Office Inn » : en réalité le hub n'affichait qu'UNE Page par réseau — les autres (dont la bonne) étaient connectées mais masquées.**
+
+- `getBrandSocialHubData` + la carte « Mes réseaux » : **une ligne par compte connecté** (plusieurs
+  Pages Facebook possibles), chacune avec son nom et son bouton Débrancher — le dédoublonnage
+  par plateforme (service ET composant) est retiré. Relevés d'audience rattachés par compte.
+- Le founder voit enfin toutes ses Pages et **garde/débranche** celle qu'il veut — plus besoin que
+  Facebook « choisisse » à sa place.
+- Bandeau Meta mis à jour : si la Page voulue n'apparaît pas, révoquer l'accès côté Facebook
+  (Paramètres → Applications/Intégrations Business) puis reconnecter (Facebook mémorise le choix
+  précédent — `auth_type=reauthorize` ne suffit pas à re-déclencher le sélecteur en Login for Business).
+
 ## v6.27.117 — fix(anubis): connexion Meta — l'utilisateur CHOISIT sa Page (fin du « compte perso auto-connecté ») (2026-07-12)
 
 **Bug rapporté : Facebook connectait le profil perso, pas la Page, sans laisser le choix. Corrigé aux trois endroits.**

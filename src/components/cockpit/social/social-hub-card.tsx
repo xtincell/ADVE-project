@@ -140,10 +140,13 @@ export function SocialHubCard({ strategyId }: { strategyId: string }) {
   }, [searchParams, toast, router, utils, strategyId]);
 
   const rows = useMemo(() => {
-    const byPlatform = new Map((hubQuery.data?.rows ?? []).map((r) => [r.platform, r]));
-    return PLATFORM_ORDER.map((p) => byPlatform.get(p)).filter(
-      (r): r is NonNullable<typeof r> => Boolean(r),
-    );
+    // On affiche TOUTES les lignes (plusieurs Pages Facebook possibles pour une
+    // même marque) — triées par ordre de plateforme, sans dédoublonnage.
+    const order = (p: string) => {
+      const i = PLATFORM_ORDER.indexOf(p);
+      return i === -1 ? 99 : i;
+    };
+    return [...(hubQuery.data?.rows ?? [])].sort((a, b) => order(a.platform) - order(b.platform));
   }, [hubQuery.data]);
 
   const connectedCount = rows.filter((r) => r.state === "CONNECTED").length;
@@ -162,15 +165,16 @@ export function SocialHubCard({ strategyId }: { strategyId: string }) {
 
       {metaJustConnected ? (
         <div className="ck-social__notice" role="status">
-          <p className="ck-social__notice-t">Vérifiez le compte connecté ci-dessous</p>
+          <p className="ck-social__notice-t">Vérifiez la ou les Pages connectées ci-dessous</p>
           <p className="ck-social__notice-b">
-            Facebook connecte parfois le <b>mauvais compte</b> (votre profil au lieu de votre Page).
-            Regardez le <b>nom affiché</b> sur la ligne Facebook / Instagram. Ce n&apos;est pas votre
-            Page&nbsp;? <a
+            Toutes vos Pages Facebook connectées apparaissent maintenant, chacune avec son <b>nom</b>.
+            <b> Débranchez</b> (icône à droite) celles que vous ne voulez pas garder. Votre Page
+            n&apos;apparaît pas&nbsp;? Facebook a mémorisé votre choix précédent — révoquez l&apos;accès
+            dans <b>Facebook → Paramètres → Applications et sites web / Intégrations Business</b>,
+            puis <a
               className="ck-social__notice-link"
               href={`/api/integrations/oauth/meta/start?social=1&strategyId=${encodeURIComponent(strategyId)}&returnUrl=%2Fcockpit`}
-            >Reconnectez et choisissez votre Page</a> sur l&apos;écran Facebook. Si elle n&apos;y
-            apparaît pas, elle doit d&apos;abord être rattachée à votre espace professionnel Meta.
+            >reconnectez</a> pour re-choisir vos Pages.
           </p>
           <button
             type="button"
@@ -198,7 +202,7 @@ export function SocialHubCard({ strategyId }: { strategyId: string }) {
               const freshness = relativeDays(row.followerCapturedAt);
               const src = sourceLabel(row.followerSource);
               return (
-                <div className="ck-social__row" key={row.platform}>
+                <div className="ck-social__row" key={row.connectionId ?? row.platform}>
                   <span className="ck-social__mono" data-on={row.state === "CONNECTED" ? 1 : 0}>
                     {info.mono}
                   </span>
