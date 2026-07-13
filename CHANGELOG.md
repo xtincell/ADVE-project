@@ -10,6 +10,21 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.125 — feat(oracle): le signal Overton MESURÉ atteint l'Oracle §34 (ADR-0134 §B7) (2026-07-13)
+
+**`buildOvertonRealSignalForOracle` (Phase 23 Story 3.6) était défini, testé, rendu par l'UI… et n'avait AUCUN caller de production (T1) — la section §34 ne montrait que le déclaré des piliers S/D.**
+
+- `composeOverton` devient async (la map des composers accepte les Promise) et appelle le
+  builder en **import lazy** (anti-cycle strategy-presentation ↔ campaign-tracker) —
+  operatorId sentinel (ignoré par le connecteur).
+- **Garde writeback** : rien de déclaré ET pas de mesure OK → `{}` (EmptyState inchangé,
+  pas de BrandAsset fabriqué pour porter un signal vide) ; échec transitoire du builder →
+  omission honnête (jamais un throw dans la composition déterministe).
+- Le composer servant les DEUX chemins (génération `GENERATE_ORACLE_SECTION` + read-time),
+  un seul point d'injection suffit ; la branche UI `realSignal` (états OK / INSUFFICIENT_DATA
+  discriminés P22-2) n'est plus morte.
+- Test `overton-real-signal-wired.test.ts` (4 invariants).
+
 ## v6.27.124 — feat(seshat): l'axe Overton sectoriel devient RÉEL — registre Sector + caller du pont RSS (ADR-0134 §B6) (2026-07-13)
 
 **Le pont RSS→axe Overton (Phase 23) était codé et testé mais JAMAIS appelé (T10), et la table `Sector` n'avait AUCUN writer — le refresh répondait SECTOR_NOT_FOUND à vie. L'axe sectoriel du radar ne pouvait venir que d'un seed manuel.**
