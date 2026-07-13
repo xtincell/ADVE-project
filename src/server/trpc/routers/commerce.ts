@@ -1,11 +1,13 @@
 /**
- * commerce — boutique de la marque (Shopify) : état, sync, déconnexion.
- * Vague « le cockpit ramène tout, l'utilisateur autorise » (2026-07-12).
- * La CONNEXION passe par le flow OAuth (/api/integrations/oauth/shopify/
- * start?commerce=1) — jamais par tRPC. Lecture = chokepoint canonique
- * ADR-0129 (owner / opérateur / ADMIN / collaborateur ACTIVE) ; écritures
- * gouvernées, non délégables en v1 (la boutique n'est pas une zone métier
- * du SOCIAL_MANAGER — DENY par défaut du firewall ADR-0131).
+ * commerce — connecteurs `MediaPlatformConnection` de la marque : boutique
+ * Shopify (état, sync, déconnexion) + liens des apps mobiles (App Store /
+ * Play Store, Increment 2b). Vague « le cockpit ramène tout, l'utilisateur
+ * autorise » (2026-07-12). La CONNEXION Shopify passe par le flow OAuth
+ * (/api/integrations/oauth/shopify/start?commerce=1) — jamais par tRPC ;
+ * les liens d'app (URLs publiques, aucun secret) se posent par tRPC gouverné.
+ * Lecture = chokepoint canonique ADR-0129 (owner / opérateur / ADMIN /
+ * collaborateur ACTIVE) ; écritures gouvernées, non délégables en v1 (DENY
+ * par défaut du firewall ADR-0131).
  */
 
 import { z } from "zod";
@@ -62,6 +64,45 @@ export const commerceRouter = createTRPCRouter({
     await assertAccess(ctx.session.user.id, input.strategyId);
     const { disconnectShop } = await import("@/server/services/anubis/commerce-connect");
     await disconnectShop(input.strategyId);
+    return { ok: true };
+  }),
+
+  // ── Apps mobiles de la marque (App Store / Play Store) — Increment 2b ──
+
+  /** Liens des apps + disponibilité des métriques (téléchargements/avis). */
+  getMobileAppStatus: protectedProcedure
+    .input(z.object({ strategyId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      await assertAccess(ctx.session.user.id, input.strategyId);
+      const { getMobileAppStatus } = await import("@/server/services/anubis/mobile-app-connect");
+      return getMobileAppStatus(input.strategyId);
+    }),
+
+  /** Pose/actualise les liens d'app (URLs publiques ; null délie un store). */
+  linkMobileApp: governedProcedure({
+    kind: "ANUBIS_LINK_MOBILE_APP",
+    inputSchema: z.object({
+      strategyId: z.string().min(1),
+      appStoreUrl: z
+        .union([z.string().trim().regex(/^https:\/\/apps\.apple\.com\/\S+$/i, "URL App Store invalide"), z.null()])
+        .default(null),
+      playStoreUrl: z
+        .union([
+          z.string().trim().regex(/^https:\/\/play\.google\.com\/store\/apps\/details\?id=\S+$/i, "URL Play Store invalide"),
+          z.null(),
+        ])
+        .default(null),
+    }),
+    caller: "commerce:linkMobileApp",
+  }).mutation(async ({ ctx, input }) => {
+    await assertAccess(ctx.session.user.id, input.strategyId);
+    const { linkMobileApp } = await import("@/server/services/anubis/mobile-app-connect");
+    await linkMobileApp({
+      strategyId: input.strategyId,
+      userId: ctx.session.user.id,
+      appStoreUrl: input.appStoreUrl,
+      playStoreUrl: input.playStoreUrl,
+    });
     return { ok: true };
   }),
 });
