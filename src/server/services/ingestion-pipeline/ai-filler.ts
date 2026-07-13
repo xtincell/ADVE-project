@@ -444,9 +444,11 @@ Reponds en JSON valide. Sois precis et actionnable. Base tes recommandations sur
 
   const validation = validatePillarPartial(pillarKey, content);
 
-  // Persist via Gateway
-  const { writePillar: writePillarRTIS } = await import("@/server/services/pillar-gateway");
-  await writePillarRTIS({
+  // Persist via Gateway — bare writePillar VOLONTAIRE (draft RTIS d'ingestion,
+  // scoré à l'activation — famille C1/C2). Import NON aliasé : l'alias
+  // `writePillarRTIS` échappait au test HARD no-bare-writepillar (T5).
+  const { writePillar } = await import("@/server/services/pillar-gateway");
+  await writePillar({
     strategyId,
     pillarKey: pillarKey as import("@/lib/types/advertis-vector").PillarKey,
     operation: { type: "MERGE_DEEP", patch: content },

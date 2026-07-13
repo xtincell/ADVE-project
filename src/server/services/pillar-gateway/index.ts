@@ -272,7 +272,7 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
   });
 
   try {
-    return await db.$transaction(async (tx) => {
+    const result = await db.$transaction(async (tx) => {
       // ── Load current pillar ──────────────────────────────────────
       const pillar = await tx.pillar.findUnique({
         where: { strategyId_key: { strategyId, key: pillarKey } },
@@ -608,6 +608,23 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
       timeout: 30_000,
       maxWait: 15_000,
     });
+
+    // ── STALE: cascade Oracle post-commit (audit 2026-07-13, T5) ─────
+    // Un pilier a muté → les OracleSection dérivées ne reflètent plus l'état
+    // courant. Vivait dans writePillarAndScore seulement : les callers bare
+    // légitimes (intake C1, infer C2, ai-filler) n'invalidaient jamais
+    // l'Oracle. Le chemin commun est ici. Idempotent (COMPLETE→STALE
+    // uniquement — no-op à l'intake où aucune section n'existe) et
+    // conservateur : sur-invalider est sûr, sous-invalider était le bug.
+    if (result.success) {
+      try {
+        const { markAllSectionsStale } = await import("@/server/services/oracle-section");
+        await markAllSectionsStale(strategyId);
+      } catch {
+        // Non-fatal — la staleness Oracle ne doit jamais casser l'écriture pilier.
+      }
+    }
+    return result;
   } catch (err) {
     return {
       success: false,
@@ -646,18 +663,8 @@ export async function writePillarAndScore(request: PillarWriteRequest): Promise<
     // pillar content goes through this function (LOI 1), so this single
     // point of recompute keeps the cache in sync with the content.
     await reconcileCompletionLevelCache(request.strategyId, request.pillarKey);
-    // Cascade staleness Oracle — un pilier ADVE/RTIS source a muté, donc les
-    // sections Oracle dérivées (§22-35, lues depuis BrandAsset) ne reflètent plus
-    // l'état courant. Corrige la cascade MORTE : `markAllSectionsStale` était défini
-    // mais JAMAIS appelé → amender un pilier ne marquait jamais l'Oracle stale.
-    // Idempotent (COMPLETE→STALE seulement) et conservateur : sur-invalider est sûr
-    // (régénération déterministe = même contenu), sous-invalider = le bug.
-    try {
-      const { markAllSectionsStale } = await import("@/server/services/oracle-section");
-      await markAllSectionsStale(request.strategyId);
-    } catch {
-      // Non-fatal — la staleness Oracle ne doit jamais casser l'écriture pilier.
-    }
+    // Cascade staleness Oracle : désormais dans writePillar (chemin commun à
+    // TOUS les callers, bare inclus — audit 2026-07-13 T5), plus ici.
     // D-6 — emit a pillar.written event so the phase resolver re-evaluates.
     const { eventBus } = await import("@/server/governance/event-bus");
     eventBus.publish("pillar.written", {

@@ -113,8 +113,9 @@ describe("ADR-0068 — oracle-section service public API", () => {
     expect(typeof mod.recordGenerationSuccess).toBe("function");
     expect(typeof mod.recordGenerationFailure).toBe("function");
     expect(typeof mod.releaseGenerationLock).toBe("function");
-    expect(typeof mod.markSectionsStale).toBe("function");
     expect(typeof mod.markAllSectionsStale).toBe("function");
+    // `markSectionsStale` (ciblé) déposé — audit 2026-07-13 T4 (code mort).
+    expect((mod as Record<string, unknown>).markSectionsStale).toBeUndefined();
     expect(typeof mod.forgetGenerationProgress).toBe("function");
     expect(typeof mod.snapshotStrategy).toBe("function");
   });

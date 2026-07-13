@@ -10,6 +10,23 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.120 — fix(oracle): cascade staleness dans writePillar (chemin commun) + verrou anti-alias (2026-07-13)
+
+**Audit 2026-07-13 T4/T5 : amender un pilier par un caller bare n'invalidait jamais l'Oracle.**
+
+- **Cascade déplacée dans `writePillar`** (post-commit de transaction, non-fatale) : les 35
+  `OracleSection` passent COMPLETE→STALE sur TOUTE mutation de pilier — y compris les callers
+  bare légitimes (intake C1, infer C2, ai-filler ingestion) qui n'invalidaient rien.
+  `writePillarAndScore` hérite (son doublon est retiré — une seule invalidation).
+- **`markSectionsStale` ciblé DÉPOSÉ** (T4) : code mort sans caller — l'invalidation ciblée
+  exigerait une map pilier→sections qui n'existe pas ; le bloc conservateur est la voie canon.
+- **Évasion fermée** : `ai-filler.ts` importait `writePillar` sous l'alias `writePillarRTIS`,
+  invisible au test HARD `no-bare-writepillar` → dé-aliasé + catalogué à l'allowlist (rationale
+  draft-RTIS-d'ingestion) + **nouveau verrou anti-renommage** (détection `writePillar: alias` /
+  `writePillar as alias` en contexte d'import).
+- Test neuf `oracle-staleness-cascade.test.ts` (4 invariants : cascade dans le chemin commun,
+  pas de double invalidation, variante ciblée non réintroduite, import lazy anti-cycle).
+
 ## v6.27.119 — docs(governance): audit Brief→Oracle·scoring·pivot + hygiène V0 (registres à jour, stubs §09 supprimés) (2026-07-13)
 
 **Audit ground-truth complet ([docs/audits/BRIEF-ORACLE-SCORING-PIVOT-AUDIT-2026-07-13.md](docs/audits/BRIEF-ORACLE-SCORING-PIVOT-AUDIT-2026-07-13.md), 18 trous T1-T18) + première vague d'hygiène (V0).**
