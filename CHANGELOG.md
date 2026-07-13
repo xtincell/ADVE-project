@@ -10,6 +10,25 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.124 — feat(seshat): l'axe Overton sectoriel devient RÉEL — registre Sector + caller du pont RSS (ADR-0134 §B6) (2026-07-13)
+
+**Le pont RSS→axe Overton (Phase 23) était codé et testé mais JAMAIS appelé (T10), et la table `Sector` n'avait AUCUN writer — le refresh répondait SECTOR_NOT_FOUND à vie. L'axe sectoriel du radar ne pouvait venir que d'un seed manuel.**
+
+- **`seshat/tarsis/sector-refresh.ts`** : `ensureSectorRegistryRows` (rows de REGISTRE
+  slug/nom/pays — `culturalAxis`/`overtonState` JAMAIS inventés) + `refreshSectorsFromRecentDigests`
+  (digests `EXTERNAL_FEED_DIGEST` ≤48 h → secteurs des stratégies couvertes ; idempotence
+  `ALREADY_FRESH` sur `lastObservedAt`).
+- **LE caller du pont** : stratégie porteuse de campagne → `bridgeTarsisToSectorIntelligence`
+  (couture Phase 23, import dynamique — aucune arête statique inverse) ; secteur sans
+  campagne → connector + `refreshSectorOvertonFromConnector` directs (`SECTOR_ONLY`,
+  alimente le fallback global du radar).
+- **Ancrage cron `external-feeds`** après l'ingestion des digests, best-effort ; états
+  SKIPPED remontés au rapport (`sectorsRefreshed`/`sectorsSkipped` — P22-1, jamais avalés).
+- Chaîne complète désormais : flux RSS réels → digests → signal sectoriel Tarsis →
+  axe `Sector.overtonState` → radar founder (`getSectorAxisForPolity` fallback global) +
+  mesures culture.* campaign-tracker.
+- Test `tarsis-sector-bridge-wiring.test.ts` (5 invariants).
+
 ## v6.27.123 — feat(seshat): superfans depuis les interactions RÉELLES — actualisation gouvernée + fans détectés à revue humaine (ADR-0134 §B4) (2026-07-13)
 
 **Les SuperfanProfile n'étaient jamais nourris par les vraies interactions : l'inbox (commentaires avec identités, ADR-0133) dormait à côté. Branché — sans jamais ouvrir un vecteur d'inflation.**
