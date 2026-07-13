@@ -107,6 +107,15 @@ describe("buildAuthorizeUrl — dialectes provider", () => {
     delete process.env.META_LOGIN_CONFIG_ID;
   });
 
+  it("Meta + forceReselect : auth_type=reauthorize (impose l'écran de choix de Page)", () => {
+    delete process.env.META_LOGIN_CONFIG_ID;
+    const config = getProviderConfig("meta")!;
+    const withReselect = new URL(buildAuthorizeUrl({ config, redirectUri: "https://x/cb", state: "s", forceReselect: true }));
+    expect(withReselect.searchParams.get("auth_type")).toBe("reauthorize");
+    const without = new URL(buildAuthorizeUrl({ config, redirectUri: "https://x/cb", state: "s" }));
+    expect(without.searchParams.get("auth_type")).toBeNull();
+  });
+
   it("Google : access_type/prompt conservés (il les lit réellement)", () => {
     const config = getProviderConfig("google")!;
     const url = new URL(buildAuthorizeUrl({ config, redirectUri: "https://x/cb", state: "s" }));

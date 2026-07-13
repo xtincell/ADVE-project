@@ -1,5 +1,16 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
+## Build déporté — bascule Coolify en attente (2026-07-12, carte blanche)
+
+CI d'image posée (`build-image.yml` → ghcr, boot smoke-test) + runbook
+[`docs/deploy/BUILD-DEPORT.md`]. **Action opérateur restante (une fois, réversible)** :
+basculer Coolify en source « Docker Image » (`ghcr.io/xtincell/adve-project:latest`,
+port 3000) — c'est ce qui supprime définitivement le `next build` sur le VPS et
+les blackouts OOM. À faire **hors pic**, idéalement au moment du merge de la PR
+(le merge peut déclencher un dernier build VPS). Optionnel : rendre l'image ghcr
+publique OU ajouter un registry ghcr dans Coolify + secrets GitHub `COOLIFY_URL/
+TOKEN/APP_UUID` pour le redeploy auto. Rollback = repasser en source « Dockerfile ».
+
 ## Réseaux de la marque — ADR-0128 (2026-07-12, NEFER)
 
 Vague [ADR-0128](adr/0128-brand-social-connections-founder-oauth.md) shippée (v6.27.105) : OAuth founder 5 providers → `SocialConnection` branché (1er écrivain de production), sync followers P22-1 → `FollowerSnapshot`, dashboard cockpit complété (logo/actifs + « Mes réseaux » + « Veille & actualités » articles réels), seed Motion19 exécuté. **Amendée v6.27.112 (« la fusée devrait tout récupérer »)** : collecte portée au maximum des scopes accordés — posts riches ×25 (permalink/visuel/type), profil public de marque (`metadata.profile`), `followingCount`, pilier E `connectedProfiles`, provenance `followerSource` honnête. Restes réels (dépendances externes — pas du code refusé) :

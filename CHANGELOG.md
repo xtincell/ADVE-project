@@ -10,6 +10,33 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.117 — fix(anubis): connexion Meta — l'utilisateur CHOISIT sa Page (fin du « compte perso auto-connecté ») (2026-07-12)
+
+**Bug rapporté : Facebook connectait le profil perso, pas la Page, sans laisser le choix. Corrigé aux trois endroits.**
+
+- **Écran de choix imposé** : `buildAuthorizeUrl` ajoute `auth_type=reauthorize` pour Meta
+  (`forceReselect`, ON sur toute connexion réseau) → Facebook RÉ-AFFICHE la sélection de Page/actif
+  au lieu d'auto-résoudre en silence. Le founder doit désigner sa Page.
+- **Visibilité** : la carte « Mes réseaux » affiche enfin le **nom exact du compte connecté**
+  (`accountName`) sur la ligne — on voyait juste « Facebook », impossible de repérer le mauvais compte.
+- **Guidage** : bandeau de vérification après une connexion Meta (« Ce n'est pas votre Page ?
+  Reconnectez et choisissez-la ; si elle n'apparaît pas, rattachez-la à votre espace pro Meta »).
+- Reste opérateur : la Page pro doit être accessible à l'app Meta (portefeuille Business + les 10
+  permissions dans la Configuration `911980637844363`) — sinon Facebook ne la propose pas au choix.
+
+## v6.27.116 — ci(ops): build déporté — l'image se construit en CI, le VPS ne fait que la tirer (2026-07-12)
+
+**La cause racine des 3 blackouts de la soirée : `next build` tournait SUR le VPS de prod (OOM). Le build passe sur les runners GitHub.**
+
+- Workflow `build-image.yml` : construit l'image standalone (Dockerfile inchangé) sur les runners
+  GitHub, la BOOTE contre un Postgres jetable (garde-fou : image qui ne sert pas /login = jamais
+  poussée), puis publie `ghcr.io/xtincell/adve-project:latest|vX.Y.Z|sha-…`.
+- Après bascule Coolify en source « Docker Image », un déploiement = `docker pull` + swap de
+  conteneur : plus aucun `next build` sur le VPS → plus de blackout. Runbook opérateur
+  `docs/deploy/BUILD-DEPORT.md` (bascule réversible, une seule action dashboard).
+- **NE PAS auto-mergé** : un merge sur main peut déclencher un dernier build VPS — à faire
+  délibérément, hors pic, en même temps que la bascule Coolify. Après ça, plus jamais.
+
 ## v6.27.115 — fix(anubis): dialecte OAuth Meta — config_id « Login for Business », purge des params Google (2026-07-12)
 
 **« Sorry, something went wrong » post-login Facebook : l'app Business exige une Configuration — support câblé, à une variable d'env près.**

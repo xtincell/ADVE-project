@@ -73,6 +73,10 @@ export function SocialHubCard({ strategyId }: { strategyId: string }) {
   const hubQuery = trpc.social.getBrandSocialHub.useQuery({ strategyId });
 
   const [toDisconnect, setToDisconnect] = useState<{ id: string; name: string } | null>(null);
+  // Bandeau de vérification après une connexion Meta : Facebook peut connecter
+  // le mauvais compte (profil perso au lieu de la Page). On invite à vérifier
+  // le NOM affiché et à reconnecter en choisissant la bonne Page si besoin.
+  const [metaJustConnected, setMetaJustConnected] = useState(false);
 
   const disconnect = trpc.social.disconnectSocial.useMutation({
     onSuccess: (res) => {
@@ -122,6 +126,11 @@ export function SocialHubCard({ strategyId }: { strategyId: string }) {
     flagHandled.current = true;
     const msg = FLAG_MESSAGES[flag];
     if (msg) toast[msg.kind](msg.text);
+    // Connexion Meta réussie → bandeau de vérification (le compte connecté
+    // peut ne pas être la bonne Page). Persiste jusqu'à fermeture manuelle.
+    if (flag === "connecte" && searchParams.get("fournisseur") === "meta") {
+      setMetaJustConnected(true);
+    }
     utils.social.getBrandSocialHub.invalidate({ strategyId });
     const clean = new URLSearchParams(searchParams.toString());
     clean.delete("reseau");
@@ -151,6 +160,29 @@ export function SocialHubCard({ strategyId }: { strategyId: string }) {
         </span>
       </div>
 
+      {metaJustConnected ? (
+        <div className="ck-social__notice" role="status">
+          <p className="ck-social__notice-t">Vérifiez le compte connecté ci-dessous</p>
+          <p className="ck-social__notice-b">
+            Facebook connecte parfois le <b>mauvais compte</b> (votre profil au lieu de votre Page).
+            Regardez le <b>nom affiché</b> sur la ligne Facebook / Instagram. Ce n&apos;est pas votre
+            Page&nbsp;? <a
+              className="ck-social__notice-link"
+              href={`/api/integrations/oauth/meta/start?social=1&strategyId=${encodeURIComponent(strategyId)}&returnUrl=%2Fcockpit`}
+            >Reconnectez et choisissez votre Page</a> sur l&apos;écran Facebook. Si elle n&apos;y
+            apparaît pas, elle doit d&apos;abord être rattachée à votre espace professionnel Meta.
+          </p>
+          <button
+            type="button"
+            className="ck-social__notice-x"
+            aria-label="Fermer"
+            onClick={() => setMetaJustConnected(false)}
+          >
+            ✕
+          </button>
+        </div>
+      ) : null}
+
       {hubQuery.isLoading ? (
         <div className="space-y-2">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -173,6 +205,11 @@ export function SocialHubCard({ strategyId }: { strategyId: string }) {
                   <div className="ck-social__body">
                     <p className="ck-social__name">
                       {info.label}
+                      {/* Nom EXACT du compte connecté — pour repérer d'un coup
+                          d'œil si c'est la bonne Page ou le mauvais compte. */}
+                      {row.state === "CONNECTED" && row.accountName ? (
+                        <span className="ck-social__acct">· {row.accountName}</span>
+                      ) : null}
                       {row.handle ? <span className="ck-social__handle">@{row.handle}</span> : null}
                     </p>
                     <p className="ck-social__meta">
