@@ -234,14 +234,16 @@ export const accountsRouter = createTRPCRouter({
         const hashedPassword = await bcrypt.hash(input.password, 12);
 
         // Crée le compte, ou réclame un stub sans mot de passe (parité auth.register).
+        // Mot de passe posé par l'admin = provisoire → invitation à le
+        // personnaliser (dismissable), levée au 1er changement (Increment 2b).
         const user = existing
           ? await db.user.update({
               where: { id: existing.id },
-              data: { name: input.name, hashedPassword, role: input.accountRole },
+              data: { name: input.name, hashedPassword, role: input.accountRole, passwordChangeInvited: true },
               select: { id: true, email: true },
             })
           : await db.user.create({
-              data: { name: input.name, email, hashedPassword, role: input.accountRole },
+              data: { name: input.name, email, hashedPassword, role: input.accountRole, passwordChangeInvited: true },
               select: { id: true, email: true },
             });
 

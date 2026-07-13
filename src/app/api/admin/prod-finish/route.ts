@@ -74,11 +74,11 @@ export async function POST(request: Request) {
         const user = existing
           ? await db.user.update({
               where: { id: existing.id },
-              data: { name: loginName, hashedPassword, role: "FOUNDER" },
+              data: { name: loginName, hashedPassword, role: "FOUNDER", passwordChangeInvited: true },
               select: { id: true },
             })
           : await db.user.create({
-              data: { name: loginName, email: loginEmail, hashedPassword, role: "FOUNDER" },
+              data: { name: loginName, email: loginEmail, hashedPassword, role: "FOUNDER", passwordChangeInvited: true },
               select: { id: true },
             });
         await db.strategyCollaborator.upsert({

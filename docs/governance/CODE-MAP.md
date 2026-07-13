@@ -39,7 +39,7 @@ Ces correspondances évitent la réinvention :
 - **Account** (13 fields)
 - **Session** (5 fields)
 - **VerificationToken** (3 fields)
-- **User** (29 fields)
+- **User** (31 fields)
 - **Operator** (30 fields)
 - **ClientAllocation** (14 fields)
 - **Client** (17 fields)
