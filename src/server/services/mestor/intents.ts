@@ -608,6 +608,15 @@ export type Intent =
       encryptedToken: string;
       scopes: string[];
     }
+  // ── Anubis apps mobiles de la marque — liens App Store / Play Store ──
+  | {
+      kind: "ANUBIS_LINK_MOBILE_APP";
+      strategyId: string;
+      userId: string;
+      /** URLs publiques de fiche (aucun secret) — null délie le store. */
+      appStoreUrl: string | null;
+      playStoreUrl: string | null;
+    }
   // ── Auto-promotion (ADR-0054) — Sprint 9 v6.18.22 ──────────────────
   | {
       kind: "AUTO_PROMOTION_EVALUATE";
@@ -1246,6 +1255,8 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     // credentials + snapshots d'observation, aucune mutation de pilier.
     case "ANUBIS_SOCIAL_CONNECT_ACCOUNT":
     case "ANUBIS_COMMERCE_CONNECT_SHOP":
+    // Liens App Store / Play Store — pure persistence de connecteurs, zéro pilier.
+    case "ANUBIS_LINK_MOBILE_APP":
     // ADR-0133 — publication sociale : comms, zéro pilier (inbox/réponse =
     // governedProcedure inline, hors union typée comme SYNC_FOLLOWERS).
     case "ANUBIS_PUBLISH_SOCIAL_POST":

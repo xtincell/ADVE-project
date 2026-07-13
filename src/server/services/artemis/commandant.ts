@@ -297,6 +297,20 @@ export async function execute(intent: Intent): Promise<IntentResult> {
           output: out,
         });
       }
+      case "ANUBIS_LINK_MOBILE_APP": {
+        const { handleLinkMobileApp } = await import("@/server/services/anubis/mobile-app-connect");
+        const out = await handleLinkMobileApp({
+          strategyId: intent.strategyId,
+          appStoreUrl: intent.appStoreUrl,
+          playStoreUrl: intent.playStoreUrl,
+        });
+        return wrap({
+          ...base,
+          status: "OK",
+          summary: `Apps mobiles liées (App Store: ${out.appStore ? "oui" : "non"}, Play Store: ${out.playStore ? "oui" : "non"})`,
+          output: out,
+        });
+      }
       case "ANUBIS_SOCIAL_CONNECT_ACCOUNT": {
         const { connectSocialAccounts } = await import("@/server/services/anubis/social-connect");
         const out = await connectSocialAccounts({

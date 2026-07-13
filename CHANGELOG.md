@@ -10,6 +10,23 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.139 — feat(cockpit): surface Applications mobiles (App Store / Play Store) dans Connexions (2026-07-13)
+
+**Increment 2b SPAWT part 2/3 (mandat : « raccorder les pages de l'app mobile pour traquer téléchargements/avis ; prépare déjà la surface + l'espace credentials + un message qui invite à les renseigner »).**
+
+- **Carte « Applications mobiles »** dans `/cockpit/settings/connections` : le founder relie les
+  fiches **App Store (iOS)** + **Play Store (Android)** (URLs publiques validées). Le suivi des
+  téléchargements et des avis affiche un **état honnête** : « en attente des accès API (App Store
+  Connect · Google Play Console) — à brancher par votre équipe » tant que les credentials
+  opérateur ne sont pas en environnement.
+- **Connecteur `mobile-app-connect.ts`** (ANUBIS, zéro LLM) : réutilise le modèle générique
+  `MediaPlatformConnection` (platforms `APP_STORE`/`PLAY_STORE`, accountId = URL, aucun secret) —
+  anti-doublon, comme commerce/social. `mobileMetricsProviderReady()` lit l'env ; sans accès →
+  `DEFERRED_AWAITING_CREDENTIALS`, jamais un zéro fabriqué.
+- **1 Intent gouverné `ANUBIS_LINK_MOBILE_APP`** (+ SLO) : pose/actualise les liens (null délie un
+  store) via `commerce.linkMobileApp` ; lecture `commerce.getMobileAppStatus` (chokepoint ADR-0129).
+- Cap APOGEE 7/7 préservé (connecteur externe sous ANUBIS ; 0 nouveau modèle, 0 Neter, 0 migration).
+
 ## v6.27.138 — feat(cockpit): sécurité fondateur — changer son mot de passe + mode jour par défaut (2026-07-13)
 
 **Increment 2b SPAWT (mandat : « accès pour Stéphanie mdp 12345678 avec invitation dismissable à changer + section sécurité » · « lumineux, mode jour par défaut pour elle »).**

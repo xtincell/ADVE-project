@@ -16,9 +16,95 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { trpc } from "@/lib/trpc/client";
 import { SocialHubCard } from "@/components/cockpit/social/social-hub-card";
 import { EmailProviderCard } from "@/components/cockpit/newsletter/email-provider-card";
-import { Plug, Store, RefreshCw, Unlink, ArrowRight } from "lucide-react";
+import { Button, Input } from "@/components/primitives";
+import { Plug, Store, RefreshCw, Unlink, ArrowRight, Smartphone } from "lucide-react";
 
 const SHOP_RE = /^[a-z0-9][a-z0-9-]{1,58}[a-z0-9]\.myshopify\.com$/;
+const APP_STORE_RE = /^https:\/\/apps\.apple\.com\/\S+$/i;
+const PLAY_STORE_RE = /^https:\/\/play\.google\.com\/store\/apps\/details\?id=\S+$/i;
+
+/**
+ * Applications mobiles — liens App Store / Play Store posés par le founder,
+ * pour préparer le suivi des téléchargements et des avis (Increment 2b). Le
+ * lien est une donnée publique ; les métriques attendent les accès API
+ * (App Store Connect / Google Play) — état affiché honnêtement.
+ */
+function MobileAppCard({ strategyId }: { strategyId: string }) {
+  const toast = useToast();
+  const utils = trpc.useUtils();
+  const { data, isLoading } = trpc.commerce.getMobileAppStatus.useQuery({ strategyId });
+  const [ios, setIos] = useState<string | null>(null);
+  const [android, setAndroid] = useState<string | null>(null);
+
+  // Valeurs éditées (fallback sur l'état serveur tant qu'on n'a pas touché).
+  const iosVal = ios ?? data?.appStoreUrl ?? "";
+  const androidVal = android ?? data?.playStoreUrl ?? "";
+  const iosInvalid = iosVal.trim().length > 0 && !APP_STORE_RE.test(iosVal.trim());
+  const androidInvalid = androidVal.trim().length > 0 && !PLAY_STORE_RE.test(androidVal.trim());
+
+  const save = trpc.commerce.linkMobileApp.useMutation({
+    onSuccess: () => {
+      toast.success("Liens des applications enregistrés.");
+      setIos(null); setAndroid(null);
+      utils.commerce.getMobileAppStatus.invalidate({ strategyId });
+    },
+    onError: (e) => toast.error(e.message || "Enregistrement impossible."),
+  });
+
+  const metricsReady = data?.metricsReady;
+  const anyMetrics = Boolean(metricsReady?.ios || metricsReady?.android);
+
+  return (
+    <div className="ck-card">
+      <p className="ck-card__eyebrow"><Smartphone />Applications mobiles</p>
+      {isLoading ? (
+        <p className="ck-ops__note">Chargement…</p>
+      ) : (
+        <div className="space-y-3">
+          <p className="ck-ops__note">
+            Reliez les fiches de votre app pour préparer le suivi des téléchargements et des avis.
+            Le lien est public ; les chiffres s&apos;afficheront dès que les accès API seront branchés.
+          </p>
+          <div className="space-y-2">
+            <Input
+              placeholder="Fiche App Store (iOS) — https://apps.apple.com/…"
+              value={iosVal}
+              onChange={(e) => setIos(e.target.value)}
+              spellCheck={false}
+            />
+            {iosInvalid && <p className="ck-shop-connect__hint">Le lien doit commencer par https://apps.apple.com/.</p>}
+            <Input
+              placeholder="Fiche Play Store (Android) — https://play.google.com/store/apps/details?id=…"
+              value={androidVal}
+              onChange={(e) => setAndroid(e.target.value)}
+              spellCheck={false}
+            />
+            {androidInvalid && <p className="ck-shop-connect__hint">Le lien doit être une fiche play.google.com (…details?id=…).</p>}
+          </div>
+          <Button
+            disabled={save.isPending || iosInvalid || androidInvalid}
+            onClick={() =>
+              save.mutate({
+                strategyId,
+                appStoreUrl: iosVal.trim() ? iosVal.trim() : null,
+                playStoreUrl: androidVal.trim() ? androidVal.trim() : null,
+              })
+            }
+          >
+            {save.isPending ? "Enregistrement…" : "Enregistrer les liens"}
+          </Button>
+          <div className="rounded-lg border border-warning/30 bg-warning/10 p-3">
+            <p className="text-xs text-warning">
+              {anyMetrics
+                ? "Accès API détectés — le suivi des téléchargements et des avis s'activera à la prochaine synchronisation."
+                : "Suivi des téléchargements et des avis : en attente des accès API (App Store Connect · Google Play Console) — à brancher par votre équipe."}
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function ShopCard({ strategyId }: { strategyId: string }) {
   const toast = useToast();
@@ -161,6 +247,7 @@ export default function ConnectionsPage() {
                 est ici, dans la zone Connexions, avec les autres canaux. La
                 carte se masque d'elle-même pour les fondateurs (opérateur only). */}
             <EmailProviderCard strategyId={strategyId} />
+            <MobileAppCard strategyId={strategyId} />
             <div className="ck-card">
               <p className="ck-card__eyebrow"><Plug />À venir</p>
               <p className="ck-ops__note">
