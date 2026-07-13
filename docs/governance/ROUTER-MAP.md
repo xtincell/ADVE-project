@@ -1,6 +1,6 @@
 # ROUTER-MAP — Tous les routers tRPC mappés sur APOGEE
 
-**112 routers** sous `src/server/trpc/routers/` (recompte 2026-07-11). Les tables ci-dessous classifient le recensement historique (71 routers, pré-Phase 19) par **Sous-système APOGEE** + **Tier** ; les **34 routers apparus depuis** sont listés en fin de document (§ « À classifier ») en attendant leur classification — ne pas les considérer couverts par la synthèse.
+**114 routers** sous `src/server/trpc/routers/` (recompte 2026-07-13). Les tables ci-dessous classifient le recensement historique (71 routers, pré-Phase 19) par **Sous-système APOGEE** + **Tier** ; les routers apparus depuis sont listés en fin de document (§ « À classifier ») en attendant leur classification — ne pas les considérer couverts par la synthèse.
 
 Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
@@ -224,3 +224,4 @@ Selon l'extension framework, certains routers viendront en P3-P8 :
 `accounts` · `actions` · `anubis` · `argos` · `blog` · `brand-node` · `bureau-etudes` · `campaign-change-request` · `campaign-deliverable` · `canon-sync` · `consulting` · `creative-proposal` · `crm-contacts` · `escrow-arbitration` · `imhotep` · `intention` · `laguilde` · `market-cost` · `market-study-ingestion` · `markets` · `mcp-billing` · `media-plan` · `mission-applications` · `mission-quote` · `monetization` · `morning-batch` · `newsletter` · `operations-overview` · `operator-action` · `phase18-residuals` · `source-classifier` · `talent-services` · `thot` · `xlsx-parser`
 
 | `commerce.ts` | Comms (ANUBIS) | boutique Shopify par marque : status zéro-secret, sync ventes gouvernée, disconnect (ADR-0132) |
+| `prod-ops.ts` | Admin (INFRASTRUCTURE) | cycle prod en 3 temps (skill `nefer-ops`) : registre seeds + déclenche Coolify + crons/finaliseur gardés ; `adminProcedure` (infra, pas de mutation métier), zéro secret exposé |
