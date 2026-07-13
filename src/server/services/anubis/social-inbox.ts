@@ -227,9 +227,10 @@ export async function syncStrategyInbox(
 async function notifyInboxRecipients(strategyId: string, count: number): Promise<void> {
   const strategy = await db.strategy.findUnique({
     where: { id: strategyId },
-    select: { userId: true, companyName: true },
+    select: { userId: true, name: true },
   });
   if (!strategy) return;
+  const brandName = strategy.name;
   const collaborators = await db.strategyCollaborator.findMany({
     where: { strategyId, status: "ACTIVE" },
     select: { userId: true },
@@ -241,7 +242,7 @@ async function notifyInboxRecipients(strategyId: string, count: number): Promise
         userId,
         type: "SOCIAL_INBOX",
         title: `${count} nouvelle${count > 1 ? "s" : ""} interaction${count > 1 ? "s" : ""}`,
-        body: `${strategy.companyName} : ${count} commentaire${count > 1 ? "s" : ""} à traiter dans votre boîte de réception.`,
+        body: `${brandName} : ${count} commentaire${count > 1 ? "s" : ""} à traiter dans votre boîte de réception.`,
         link: "/cockpit/operate/inbox",
         entityType: "SocialInboxItem",
         entityId: strategyId,

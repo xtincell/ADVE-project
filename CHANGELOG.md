@@ -10,6 +10,37 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.133 — feat(accounts): login personnalisé par marque + fix bug de publication FB ([ADR-0140](docs/governance/adr/0140-per-brand-login-provisioning.md)) (2026-07-13)
+
+**Demande opérateur : « crée un compte et un login personnalisé par marque » (premier : Lionel → Motion19) + « teste la chaîne ADVE → publication sociale planifiée ».**
+
+- **Feature console opérateur `createBrandLogin`** (`/console/governance/accounts`) : crée (ou réclame
+  un stub) un `User` (email + `bcrypt.hash(pwd, 12)`, parité `auth.register`) **et** le rattache à UNE
+  marque via `StrategyCollaborator` ACTIVE (ADR-0129 ; zones scopées par `CampaignTeamRole`, ADR-0131).
+  Nouvel Intent kind gouverné `ADMIN_CREATE_BRAND_LOGIN` (governor INFRASTRUCTURE) + SLO.
+- **Secret jamais journalisé** : `governedProcedure` persiste l'input verbatim (le mot de passe
+  fuirait dans l'`IntentEmission`) → on émet via le **spine** (`openEmission`/`closeEmission`, ADR-0124)
+  avec un **payload redacté**. Vérifié : le mot de passe est absent de l'émission.
+- **Bug pré-existant corrigé** (chemin de publication FB testé par l'opérateur) : `social-publish.ts`
+  + `social-inbox.ts` sélectionnaient `Strategy.companyName` — champ **inexistant** sur `Strategy` ;
+  le client Prisma local périmé masquait l'erreur à `tsc`, mais au runtime la notification **plantait**.
+  Rebasculé sur `Strategy.name`.
+- **Chaîne ADVE → publication planifiée tracée + prouvée** : ADVE → BrandAction (calendrier, doctrine
+  « la publication sociale EST une action du plan ») → `SCHEDULED` + `socialPublish.pending` → cron
+  `social-sync?mode=publish` → **ré-émission gouvernée** `ANUBIS_PUBLISH_SOCIAL_POST` (spine + cost-gate)
+  → `publishSocialPost` → `POST graph.facebook.com/{page}/feed`. Post texte = cas nominal (`/feed`).
+- Vérifs locales : `scripts/verify-brand-login.ts` (bcrypt OK · collaborator ACTIVE · `canAccessStrategy`
+  scopé · zéro fuite) + `scripts/verify-social-pipe.ts` (planif → cron → ré-émission → publication,
+  honnête `NOT_CONNECTED` sans page FB locale). 0 modèle Prisma, 1 kind, cap 7/7.
+- **CLAUDE.md** : note d'obsolescence corrigée — la base est sur **Coolify** (self-host, depuis
+  2026-07-05), plus Supabase (`docs/deploy/DATABASE.md`).
+- **Finaliseur prod** `/api/admin/prod-finish` (guardé `CRON_SECRET`, esprit `seed-brands`) : la base
+  Coolify a un hostname interne non joignable depuis un sandbox → cet endpoint provisionne le login
+  Lionel→Motion19 (idempotent) **et** planifie un post texte sur la page FB d'une marque via l'Intent
+  gouverné `ANUBIS_PUBLISH_SOCIAL_POST` (scheduleAt futur → le cron `social-sync?mode=publish` publie à
+  l'échéance ; skip honnête si la page n'est pas connectée). Aucune fabrication.
+- tsc 0 · lint 0 · 2294 tests verts (client Prisma régénéré).
+
 ## v6.27.132 — fix(auto-promotion): diagnostic définitif T14 + fin des promotions fantômes ([ADR-0139](docs/governance/adr/0139-sequence-lifecycle-stub-honest-diagnosis.md)) (2026-07-13)
 
 **Bloc E (dernier bloc du mandat « Tout, dans l'ordre de valeur »). Pourquoi 91/94 séquences restent DRAFT ~2 mois après l'échéance D+30 (T14) — et pourquoi il n'y a AUCUNE promotion honnête à faire.**

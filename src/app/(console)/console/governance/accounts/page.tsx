@@ -68,6 +68,9 @@ export default function AccountsSupervisorPage() {
       {/* Marques de démo — seed serveur en un clic (fin du SSH, 12/07). */}
       <SeedBrandsCard />
 
+      {/* Login personnalisé par marque — feature opérateur réutilisable. */}
+      <CreateBrandLoginCard />
+
       {/* Répartition par rôle */}
       <div className="flex flex-wrap gap-2">
         {Object.entries(stats ?? {}).map(([role, count]) => (
@@ -192,6 +195,158 @@ function SeedBrandsCard() {
       >
         {running ? "Installation…" : "Installer / actualiser"}
       </button>
+    </div>
+  );
+}
+
+/** Rôles délégués sur la marque (sous-ensemble lisible de CampaignTeamRole). */
+const TEAM_ROLE_OPTIONS = [
+  { value: "DIGITAL_DIRECTOR", label: "Direction digitale (accès large)" },
+  { value: "SOCIAL_MANAGER", label: "Social media manager" },
+  { value: "ACCOUNT_DIRECTOR", label: "Directeur de clientèle" },
+  { value: "PROJECT_MANAGER", label: "Chef de projet" },
+  { value: "CREATIVE_DIRECTOR", label: "Directeur créatif" },
+  { value: "DATA_ANALYST", label: "Analyste data" },
+  { value: "CLIENT", label: "Client (lecture large)" },
+] as const;
+
+/** Type de compte (User.role) — accès cockpit. */
+const ACCOUNT_ROLE_OPTIONS = [
+  { value: "FOUNDER", label: "Entrepreneur (founder)" },
+  { value: "CREATOR", label: "Créateur" },
+  { value: "FREELANCE", label: "Freelance" },
+  { value: "BRAND", label: "Marque" },
+  { value: "CLIENT_RETAINER", label: "Client retainer" },
+  { value: "CLIENT_STATIC", label: "Client one-shot" },
+] as const;
+
+/**
+ * Crée un login (email + mot de passe) rattaché à UNE marque. La personne se
+ * connecte sur /login et ne voit que cette marque dans son cockpit. Acte
+ * gouverné + audité ; le mot de passe n'est jamais journalisé (payload redacté).
+ */
+function CreateBrandLoginCard() {
+  const utils = trpc.useUtils();
+  const [brandSearch, setBrandSearch] = useState("");
+  const { data: brands } = trpc.accounts.brands.useQuery({ search: brandSearch || undefined });
+  const [strategyId, setStrategyId] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [teamRole, setTeamRole] = useState<(typeof TEAM_ROLE_OPTIONS)[number]["value"]>("DIGITAL_DIRECTOR");
+  const [accountRole, setAccountRole] = useState<(typeof ACCOUNT_ROLE_OPTIONS)[number]["value"]>("FOUNDER");
+  const [ok, setOk] = useState<string | null>(null);
+
+  const create = trpc.accounts.createBrandLogin.useMutation({
+    onSuccess: (r) => {
+      setOk(
+        `Login créé : ${r.email} → ${r.brandName} (${r.teamRole})${r.claimed ? " · compte existant réclamé" : ""}. La personne peut se connecter sur /login.`,
+      );
+      setName("");
+      setEmail("");
+      setPassword("");
+      utils.accounts.list.invalidate();
+      utils.accounts.roleStats.invalidate();
+    },
+  });
+
+  const disabled = create.isPending || !strategyId || !email || !name || password.length < 8;
+
+  const inputCls = "rounded-lg border border-border bg-bg px-2 py-1.5 text-sm text-foreground";
+  const labelCls = "flex flex-col gap-1 text-xs text-foreground-muted";
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-4">
+      <p className="text-sm font-semibold text-foreground">Créer un login de marque</p>
+      <p className="mt-0.5 text-xs text-foreground-muted">
+        Un compte (email + mot de passe) rattaché à une marque. La personne se connecte
+        sur <span className="font-mono">/login</span> et ne pilote que cette marque. Acte
+        gouverné + audité — le mot de passe n&apos;est jamais journalisé.
+      </p>
+
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <label className={labelCls}>
+          Marque
+          <input
+            value={brandSearch}
+            onChange={(e) => setBrandSearch(e.target.value)}
+            placeholder="Filtrer les marques…"
+            className={`${inputCls} mb-1`}
+          />
+          <select value={strategyId} onChange={(e) => setStrategyId(e.target.value)} className={inputCls}>
+            <option value="">— choisir une marque —</option>
+            {(brands ?? []).map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name ?? b.id}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className={labelCls}>
+          Nom affiché
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Lionel" className={inputCls} />
+        </label>
+        <label className={labelCls}>
+          Email de connexion
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="lionel@motion19.cm"
+            className={inputCls}
+          />
+        </label>
+        <label className={labelCls}>
+          Mot de passe (≥ 8 caractères)
+          <input
+            type="text"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="au moins 8 caractères"
+            className={inputCls}
+          />
+        </label>
+        <label className={labelCls}>
+          Rôle sur la marque
+          <select value={teamRole} onChange={(e) => setTeamRole(e.target.value as typeof teamRole)} className={inputCls}>
+            {TEAM_ROLE_OPTIONS.map((r) => (
+              <option key={r.value} value={r.value}>
+                {r.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className={labelCls}>
+          Type de compte
+          <select
+            value={accountRole}
+            onChange={(e) => setAccountRole(e.target.value as typeof accountRole)}
+            className={inputCls}
+          >
+            {ACCOUNT_ROLE_OPTIONS.map((r) => (
+              <option key={r.value} value={r.value}>
+                {r.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={() => {
+            setOk(null);
+            create.mutate({ strategyId, email, name, password, teamRole, accountRole });
+          }}
+          disabled={disabled}
+          className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground hover:opacity-90 disabled:opacity-40"
+        >
+          {create.isPending ? "Création…" : "Créer le login"}
+        </button>
+        {ok && <p className="text-xs text-success">{ok}</p>}
+        {create.error && <p className="text-xs text-error">{create.error.message}</p>}
+      </div>
     </div>
   );
 }
