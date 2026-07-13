@@ -10,6 +10,20 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.117 — fix(anubis): connexion Meta — l'utilisateur CHOISIT sa Page (fin du « compte perso auto-connecté ») (2026-07-12)
+
+**Bug rapporté : Facebook connectait le profil perso, pas la Page, sans laisser le choix. Corrigé aux trois endroits.**
+
+- **Écran de choix imposé** : `buildAuthorizeUrl` ajoute `auth_type=reauthorize` pour Meta
+  (`forceReselect`, ON sur toute connexion réseau) → Facebook RÉ-AFFICHE la sélection de Page/actif
+  au lieu d'auto-résoudre en silence. Le founder doit désigner sa Page.
+- **Visibilité** : la carte « Mes réseaux » affiche enfin le **nom exact du compte connecté**
+  (`accountName`) sur la ligne — on voyait juste « Facebook », impossible de repérer le mauvais compte.
+- **Guidage** : bandeau de vérification après une connexion Meta (« Ce n'est pas votre Page ?
+  Reconnectez et choisissez-la ; si elle n'apparaît pas, rattachez-la à votre espace pro Meta »).
+- Reste opérateur : la Page pro doit être accessible à l'app Meta (portefeuille Business + les 10
+  permissions dans la Configuration `911980637844363`) — sinon Facebook ne la propose pas au choix.
+
 ## v6.27.116 — ci(ops): build déporté — l'image se construit en CI, le VPS ne fait que la tirer (2026-07-12)
 
 **La cause racine des 3 blackouts de la soirée : `next build` tournait SUR le VPS de prod (OOM). Le build passe sur les runners GitHub.**

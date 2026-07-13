@@ -128,6 +128,9 @@ export async function GET(
       state,
       scopes: SOCIAL_SCOPES[provider as BrandSocialProvider],
       pkceChallenge,
+      // Meta : impose l'écran de sélection de Page (le founder DOIT choisir sa
+      // Page pro, jamais son profil auto-résolu — bug « pas eu le choix »).
+      forceReselect: config.id === "meta",
     });
     const response = NextResponse.redirect(authorizeUrl);
     if (pkceVerifier) {

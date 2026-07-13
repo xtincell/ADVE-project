@@ -283,6 +283,13 @@ export function buildAuthorizeUrl(opts: {
   pkceChallenge?: string;
   /** Domaine *.myshopify.com — requis quand `config.perShopEndpoints`. */
   shop?: string;
+  /**
+   * Meta : force le RÉ-AFFICHAGE de l'écran de sélection Page/actif
+   * (`auth_type=reauthorize`). Sans ça, Facebook « re-consent » en silence et
+   * l'utilisateur ne peut PAS choisir sa Page — il repart avec ce que Meta
+   * a auto-résolu (souvent son profil perso). ON pour toute connexion réseau.
+   */
+  forceReselect?: boolean;
 }): string {
   const clientParam = opts.config.clientIdParam ?? "client_id";
   const params = new URLSearchParams({
@@ -312,6 +319,9 @@ export function buildAuthorizeUrl(opts: {
       params.set("config_id", configId);
       params.delete("scope");
     }
+    // Force l'écran « quelle Page connecter ? » à chaque fois — sinon Facebook
+    // auto-résout et l'utilisateur n'a pas le choix (bug rapporté 2026-07-12).
+    if (opts.forceReselect) params.set("auth_type", "reauthorize");
   }
   if (opts.config.usePkce) {
     if (!opts.pkceChallenge) throw new Error(`${opts.config.id} requires a PKCE challenge`);
