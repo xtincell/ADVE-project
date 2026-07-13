@@ -1,40 +1,31 @@
 /**
- * ADVERTIS (outbound) MCP Server — expose UNE marque à un agent (ADR-0142).
+ * ADVERTIS (outbound) MCP Server — expose la STRATÉGIE d'une marque à un agent
+ * (ADR-0142).
  *
- * Contrepartie lecture de `advertis-inbound` (qui INGÈRE des signaux vers les
- * piliers). Ce serveur EXPOSE la marque à un agent externe : sa carte
- * d'identité ADVERTIS, ses 5 comportements AARRR (mesurés depuis la donnée
- * réelle — les gates superfan d'ADR-0141), et son échelle d'engagement.
+ * Contrepartie lecture d'`advertis-inbound` (qui INGÈRE des signaux vers les
+ * piliers). Ce serveur EXPOSE l'ADVERTIS — la stratégie ADVE-RTIS (les 8
+ * piliers) — à un agent externe, pour qu'il raisonne/agisse sur la marque.
  *
- * Doctrine :
- *   - Lecture seule, scopée à `strategyId`. Zéro mutation, zéro LLM.
- *   - Les 5 comportements AARRR sont LE cœur exposé (mandat opérateur : « ces
- *     métriques sont les 5 métriques AARRR, la forme varie, le type de
- *     comportement non »). Chacun porte son état honnête (MEASURED /
- *     DECLARED_ONLY / NOT_INSTRUMENTED) — jamais un chiffre fabriqué (P22-2).
- *   - La valeur mesurée dérive des `SuperfanProfile` (gates VIEWED/INTERACTED/
- *     PAID/RECOMMENDED/SHARED) : le gate « a payé » = les clients réels du
- *     registre manuel (ADR-0141).
+ * Frontière de domaine (précisée par l'opérateur 2026-07-13) :
+ *   - Le MCP `advertis` = LA STRATÉGIE (ADVE-RTIS). C'est SON périmètre.
+ *   - Le SUIVI DES SUPERFANS (framework AARRR, déterministe zéro LLM,
+ *     ADR-0141) est un AUTRE domaine (Seshat/superfan) — surfacé par le MCP
+ *     `pulse` + le cockpit, PAS ici.
+ *   - La FENÊTRE D'OVERTON est encore un AUTRE domaine (culture/Seshat) —
+ *     PAS ici.
  *
- * TURNKEY restant (dette, ADR-0142) : le jeton agent scopé-marque (aujourd'hui
- * l'accès MCP est ADMIN ou clé-serveur — un agent passe `strategyId` en
- * paramètre ; le scoping par marque via jeton dédié est l'incrément suivant).
+ * Doctrine : lecture seule, scopée à `strategyId`, zéro mutation, zéro LLM,
+ * aucune donnée fabriquée (P22-2).
  */
 
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { classifyTier } from "@/domain/brand-tier";
-import { AARRR_INTENTS, type AarrrIntent } from "@/domain/touchpoints";
-import {
-  CONDITION_TO_AARRR,
-  metConditions,
-  type SuperfanCondition,
-  type SuperfanConditionMap,
-} from "@/domain/superfan-conditions";
+import { PILLAR_KEYS, PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
 
 export const serverName = "advertis";
 export const serverDescription =
-  "Serveur MCP Advertis (sortant) — expose une marque à un agent : carte d'identité ADVERTIS, 5 comportements AARRR mesurés (gates superfan), échelle d'engagement. Lecture seule, scopée à strategyId.";
+  "Serveur MCP Advertis (sortant) — expose la stratégie ADVE-RTIS d'une marque à un agent : carte d'identité + les 8 piliers (Authenticité, Distinction, Valeur, Engagement, Risk, Track, Innovation, Strategy). Lecture seule, scopée à strategyId.";
 
 export interface ToolDefinition {
   name: string;
@@ -50,24 +41,34 @@ function asRecord(v: unknown): Record<string, unknown> {
 }
 
 async function loadPillar(strategyId: string, key: string): Promise<Record<string, unknown>> {
-  const p = await db.pillar.findFirst({
-    where: { strategyId, key },
-    select: { content: true },
-  });
+  const p = await db.pillar.findFirst({ where: { strategyId, key }, select: { content: true } });
   return asRecord(p?.content);
 }
 
-/** État honnête d'un comportement AARRR exposé. */
-type BehaviorState = "MEASURED" | "DECLARED_ONLY" | "NOT_INSTRUMENTED";
+/**
+ * Résumé lisible d'un pilier : les premiers champs texte de tête (déterministe,
+ * aucun nom de champ codé en dur — robuste à la forme de n'importe quelle
+ * marque). Tronqué pour rester une carte, pas un dump.
+ */
+function pillarHeadline(content: Record<string, unknown>, max = 4): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(content)) {
+    if (Object.keys(out).length >= max) break;
+    if (typeof v === "string" && v.trim().length > 0) {
+      out[k] = v.length > 280 ? `${v.slice(0, 280)}…` : v;
+    }
+  }
+  return out;
+}
 
 // ── Tools ────────────────────────────────────────────────────────────────
 
 export const tools: ToolDefinition[] = [
-  // ---- Brand card (identité ADVERTIS) ----
+  // ---- Carte d'identité ADVERTIS ----
   {
     name: "getBrandCard",
     description:
-      "Carte d'identité ADVERTIS de la marque : nom, secteur, archétype, positionnement, palier de maturité + score composite. Lecture seule.",
+      "Carte d'identité ADVERTIS de la marque : nom, secteur, archétype, accroche, positionnement, promesse maître, palier de maturité + score composite. Lecture seule.",
     inputSchema: z.object({ strategyId: z.string().describe("ID de la marque") }),
     handler: async (input) => {
       const strategyId = input.strategyId as string;
@@ -96,117 +97,52 @@ export const tools: ToolDefinition[] = [
     },
   },
 
-  // ---- 5 comportements AARRR (le cœur exposé) ----
+  // ---- La stratégie ADVE-RTIS (les 8 piliers) — le cœur exposé ----
   {
-    name: "getAarrrBehaviors",
+    name: "getAdveRtis",
     description:
-      "Les 5 comportements AARRR de la marque (Acquisition, Activation, Rétention, Revenue, Referral). Pour chacun : la définition déclarée (pilier E), la valeur MESURÉE depuis la donnée réelle (gates superfan) et son état honnête (MEASURED / DECLARED_ONLY / NOT_INSTRUMENTED). C'est le cœur de l'exposition d'une marque à un agent.",
-    inputSchema: z.object({ strategyId: z.string().describe("ID de la marque") }),
+      "La stratégie ADVE-RTIS de la marque : les 8 piliers (A Authenticité, D Distinction, V Valeur, E Engagement, R Risk, T Track, I Innovation, S Strategy). Pour chaque pilier : son nom, un résumé lisible et son score. C'est le cœur de l'exposition de l'ADVERTIS à un agent.",
+    inputSchema: z.object({
+      strategyId: z.string().describe("ID de la marque"),
+      keys: z
+        .array(z.enum(PILLAR_KEYS as unknown as [PillarKey, ...PillarKey[]]))
+        .optional()
+        .describe("Piliers à renvoyer (défaut : les 8)"),
+    }),
     handler: async (input) => {
       const strategyId = input.strategyId as string;
-      const strategy = await db.strategy.findUnique({ where: { id: strategyId }, select: { id: true } });
+      const strategy = await db.strategy.findUnique({
+        where: { id: strategyId },
+        select: { id: true, advertis_vector: true },
+      });
       if (!strategy) return { error: "NOT_FOUND", strategyId };
 
-      const pillarE = await loadPillar(strategyId, "e");
-      const declared = asRecord(pillarE.aarrr);
-
-      const profiles = await db.superfanProfile.findMany({
-        where: { strategyId },
-        select: { segment: true, interactions: true, lastActiveAt: true, metadata: true },
+      const requested = (input.keys as PillarKey[] | undefined) ?? (PILLAR_KEYS as readonly PillarKey[]);
+      const rows = await db.pillar.findMany({
+        where: { strategyId, key: { in: requested as string[] } },
+        select: { key: true, content: true },
       });
+      const byKey = new Map(rows.map((r) => [r.key, asRecord(r.content)]));
+      const vec = asRecord(strategy.advertis_vector);
 
-      // Comptes par gate franchi (dérivés de la donnée réelle, ADR-0141).
-      const gateCount: Record<SuperfanCondition, number> = {
-        VIEWED: 0, INTERACTED: 0, PAID: 0, RECOMMENDED: 0, SHARED: 0,
-      };
-      let retained = 0; // RÉTENTION : comportement récurrent (répète + revient récemment).
-      const sixtyDaysAgo = Date.now() - 60 * 86_400_000;
-      for (const p of profiles) {
-        const conds = metConditions(asRecord(p.metadata).conditions as SuperfanConditionMap);
-        for (const c of conds) gateCount[c] += 1;
-        if (p.interactions >= 2 && p.lastActiveAt && p.lastActiveAt.getTime() >= sixtyDaysAgo) {
-          retained += 1;
-        }
-      }
-
-      // Valeur mesurée + état par étape AARRR.
-      const measuredByStage = (stage: AarrrIntent): { value: number | null; state: BehaviorState } => {
-        // Gates dont le comportement mappe sur cette étape (ADR-0141).
-        const gates = (Object.keys(CONDITION_TO_AARRR) as SuperfanCondition[]).filter(
-          (c) => CONDITION_TO_AARRR[c] === stage,
-        );
-        if (stage === "RETENTION") {
-          // Pas de gate one-shot : comportement récurrent mesuré à part.
-          return { value: retained, state: profiles.length > 0 ? "MEASURED" : "NOT_INSTRUMENTED" };
-        }
-        if (stage === "ACQUISITION") {
-          // « a vu » per-personne n'est pas instrumenté (audience = agrégat
-          // followers, pas un gate par personne) — honnête.
-          const seen = profiles.length;
-          return { value: seen, state: seen > 0 ? "MEASURED" : "NOT_INSTRUMENTED" };
-        }
-        const value = gates.reduce((n, g) => n + gateCount[g], 0);
-        return { value, state: value > 0 ? "MEASURED" : "NOT_INSTRUMENTED" };
-      };
-
-      const stageKey: Record<AarrrIntent, string> = {
-        ACQUISITION: "acquisition",
-        ACTIVATION: "activation",
-        RETENTION: "retention",
-        REVENUE: "revenue",
-        REFERRAL: "referral",
-      };
-
-      const behaviors = AARRR_INTENTS.map((stage) => {
-        const declaredText = typeof declared[stageKey[stage]] === "string" ? (declared[stageKey[stage]] as string) : null;
-        const m = measuredByStage(stage);
-        // Si rien mesuré mais une définition déclarée existe → DECLARED_ONLY.
-        const state: BehaviorState =
-          m.state === "MEASURED" ? "MEASURED" : declaredText ? "DECLARED_ONLY" : "NOT_INSTRUMENTED";
+      const pillars = requested.map((key) => {
+        const content = byKey.get(key) ?? {};
+        const score = typeof vec[key] === "number" ? (vec[key] as number) : null;
         return {
-          stage,
-          declared: declaredText,
-          measuredPeople: m.value,
-          state,
+          key,
+          name: PILLAR_NAMES[key],
+          score,
+          present: Object.keys(content).length > 0,
+          headline: pillarHeadline(content),
         };
       });
 
       return {
         strategyId,
-        framework: "AARRR",
-        trackedPeople: profiles.length,
-        behaviors,
-        note:
-          "measuredPeople = personnes trackées ayant franchi le comportement (gates superfan, ADR-0141). " +
-          "REVENUE = clients réels (registre manuel). ACQUISITION per-personne non instrumentée (audience = agrégat).",
+        method: "ADVE-RTIS",
+        compositeScore: typeof vec.compositeScore === "number" ? vec.compositeScore : null,
+        pillars,
       };
-    },
-  },
-
-  // ---- Échelle d'engagement (Devotion Ladder) ----
-  {
-    name: "getEngagementLadder",
-    description:
-      "Distribution de l'audience trackée sur l'échelle d'engagement (6 rungs, du spectateur à l'évangéliste) + nombre de superfans actifs.",
-    inputSchema: z.object({ strategyId: z.string().describe("ID de la marque") }),
-    handler: async (input) => {
-      const strategyId = input.strategyId as string;
-      const profiles = await db.superfanProfile.findMany({
-        where: { strategyId },
-        select: { engagementDepth: true },
-      });
-      const rungs = { SPECTATEUR: 0, INTERESSE: 0, PARTICIPANT: 0, ENGAGE: 0, AMBASSADEUR: 0, EVANGELISTE: 0 };
-      for (const p of profiles) {
-        const d = p.engagementDepth;
-        if (d >= 0.85) rungs.EVANGELISTE += 1;
-        else if (d >= 0.65) rungs.AMBASSADEUR += 1;
-        else if (d >= 0.45) rungs.ENGAGE += 1;
-        else if (d >= 0.25) rungs.PARTICIPANT += 1;
-        else if (d >= 0.1) rungs.INTERESSE += 1;
-        else rungs.SPECTATEUR += 1;
-      }
-      const activeSuperfans = rungs.AMBASSADEUR + rungs.EVANGELISTE; // ≥ 0.65
-      return { strategyId, total: profiles.length, rungs, activeSuperfans };
     },
   },
 ];

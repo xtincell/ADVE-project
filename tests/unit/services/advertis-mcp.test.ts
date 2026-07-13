@@ -5,14 +5,16 @@ import { serverName, serverDescription, tools } from "@/server/mcp/advertis";
 describe("ADR-0142 — MCP Advertis (outbound) : expose une marque à un agent", () => {
   it("s'identifie comme le serveur 'advertis'", () => {
     expect(serverName).toBe("advertis");
-    expect(serverDescription).toMatch(/AARRR/);
+    expect(serverDescription).toMatch(/ADVE-RTIS/);
   });
 
-  it("expose la carte marque, les comportements AARRR et l'échelle d'engagement", () => {
+  it("expose la stratégie ADVE-RTIS (carte + 8 piliers), PAS le domaine superfan", () => {
     const names = tools.map((t) => t.name);
     expect(names).toContain("getBrandCard");
-    expect(names).toContain("getAarrrBehaviors");
-    expect(names).toContain("getEngagementLadder");
+    expect(names).toContain("getAdveRtis");
+    // Frontière de domaine : le suivi superfan (AARRR) et Overton NE sont PAS ici.
+    expect(names).not.toContain("getAarrrBehaviors");
+    expect(names).not.toContain("getEngagementLadder");
   });
 
   it("chaque tool est scopé à strategyId (lecture par marque)", () => {
