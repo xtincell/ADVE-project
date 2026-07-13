@@ -1,5 +1,17 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
+## Audit brief/livrable/Oracle · scoring · pivot — ADR-0134 (2026-07-13, NEFER)
+
+Audit ground-truth complet : [docs/audits/BRIEF-ORACLE-SCORING-PIVOT-AUDIT-2026-07-13.md](../audits/BRIEF-ORACLE-SCORING-PIVOT-AUDIT-2026-07-13.md) (18 trous T1-T18, tracés vs non-tracés). Vague de remédiation [ADR-0134](adr/0134-mesure-communautaire-reelle-et-ponts-overton.md) shippée même session : écrivain de production `CommunitySnapshot` + chaîne de mesure quotidienne (community→devotion→cult) au cron social-sync, devotion sur audience réelle (followers/inbox), mise à jour des superfans connus depuis l'inbox + file de candidats à revue humaine (cap 0.60), caller du pont RSS→axe Overton (registre `Sector` provisionné), `realSignal` §34 câblé, cascade staleness Oracle déplacée dans `writePillar`. Résidus DÉFÉRÉS explicitement (pas de demi-ship) :
+
+- **Dispatch réel `COMPOSE_DELIVERABLE` (T3)** : le composer ADR-0050 est figé en mode PREVIEW (`deliverable-orchestrator/composer.ts` — inputs `void`és, « commit 4 » jamais livré) ; DAG + vault-match + coûts réels mais aucune émission forge. Chantier dédié : construire le mode DISPATCHED (GlorySequence runtime → sequence-executor → `INVOKE_GLORY_TOOL`/`PTAH_MATERIALIZE_BRIEF`/`PROMOTE_BRAND_ASSET_TO_ACTIVE`). Bornage : ~1 session, ADR enfant de 0050.
+- **Dérivation honnête de `devotionTransitionsObserved` (T7)** : le champ n'a AUCUN writer — toute la chaîne attribution/lineage (Phase 19 heuristique + Phase 23 régression + `getFounderAttributionLineage`) lit du vide (INSUFFICIENT_DATA 0/30 permanent). NE PAS fabriquer de labels. Design candidat : transitions observées = deltas de segment entre `DevotionSnapshot` datés (désormais quotidiens post-ADR-0134) × fenêtres d'exécution des `CampaignAction`, proposées à l'opérateur pour confirmation (parité manual-first), jamais auto-attribuées. Débloque la calibration réelle (min 30 échantillons) puis le sign-off direction ROC AUC/RMSE déjà tracé §Phase 23.
+- **`Signal` type TARSIS sans writer de production (T9)** : le bras « signaux » du plafond d'évidence CULTE/ICONE (`advertis-scorer`) ne peut venir que de seeds. Candidat : dériver des `TarsisCaptureSession`/weak signals digest un `Signal` gouverné — à concevoir avec Seshat (ne pas confondre avec le pont sectoriel posé par ADR-0134).
+- **Refresh automatique des sections Oracle STALE (T6)** : marquage désormais complet (cascade `writePillar`), rafraîchissement toujours manuel (assemble scope=STALE) — atténué : §01-21 lues live, §22-35 recomposées read-time. Déjà esquissé §Growth carry-overs (re-calibration cron). Candidat : étape cron nocturne `ASSEMBLE_ORACLE scope=STALE` par stratégie active.
+- **91/94 séquences DRAFT (T14)** : ~2 mois après l'échéance de promotion D+30 (ADR-0039/0041), seules 3 STABLE. Vérifier pourquoi l'auto-promotion (ADR-0066) ne promeut pas (barre qualité ? cron ?) puis promouvoir par lots stress-testés.
+- **PDF Oracle = dump JSON par section (T15)** : `export-oracle.ts` `sectionDataToBody` fait un `JSON.stringify` pretty — fonctionnel, pas un document client mis en forme. Candidat : renderers par forme de section (tables/listes) dans le générateur jsPDF.
+- **`ugcGenerationRate` cult index (B2)** : exclusion MAINTENUE par ADR-0134 §B2 (mentions jamais remplies par le connecteur — `FollowerSnapshot.mentionsCount` = saisie console uniquement ; inbox v1 = COMMENT only). Dérivation future : inbox v2 `kind="MENTION"` + mentions connecteur + constante de normalisation validée direction (pattern Phase 23).
+
 ## Build déporté — bascule Coolify en attente (2026-07-12, carte blanche)
 
 CI d'image posée (`build-image.yml` → ghcr, boot smoke-test) + runbook
@@ -68,7 +80,7 @@ Vague [ADR-0126](adr/0126-market-scale-aware-scoring.md) shippée, puis **« tou
 
 Restes réels (dépendances externes ou calibration — pas du code refusé) :
 
-- **Harvesting Tarsis automatique PAR POLITY** : le chemin d'écriture gouverné existe (`SESHAT_UPSERT_POLITY_AXIS`) ; le branchement auto dépend du connector Tarsis réel (contract-gated — `_mocked` aujourd'hui, cf. registre « credential/contract-gated »).
+- **Harvesting Tarsis automatique PAR POLITY** : le chemin d'écriture gouverné existe (`SESHAT_UPSERT_POLITY_AXIS`). ~~dépend du connector Tarsis réel (contract-gated — `_mocked`)~~ **Correction d'audit 2026-07-13** : le connector est **dé-mocké depuis le 2026-06-14** (`seshat/tarsis/connector.ts` — signal réel dérivé des digests RSS `EXTERNAL_FEED_DIGEST`, plus aucune credential requise) ; le niveau SECTEUR GLOBAL est désormais **câblé** (ADR-0134 : registre `Sector` provisionné + `refreshSectorsFromRecentDigests` au cron external-feeds). Reste réellement : la granularité PAR POLITY (`SectorPolityAxis` × pays/échelle) — l'écriture auto par polity exige une résolution digest→polity qui n'existe pas encore.
 - **Pondération CULTE/ICONE par largeur de fenêtre déplacée** : infra polity prête ; l'activation exige des seuils calibrés validés par la direction (pattern Phase 23 — jamais de constantes inventées).
 - **Chip d'échelle sur la console Argos** : la sélection Argos est safety-verdict-driven (pas score-driven) — chip purement informative à poser à l'occasion de la prochaine passe Argos.
 
@@ -137,13 +149,9 @@ Restant (non-bloquant, traçable) :
 
 **Status** : Mégasprint **closed**. 7 sub-phases livrées sur main direct (NEFER doctrine). 125 tests anti-drift passing. Cap APOGEE 7/7 préservé.
 
-### Cohabitation legacy `enrichOracle`
+### ~~Cohabitation legacy `enrichOracle`~~ — CLOS (dépose ADR-0125, 2026-07-11)
 
-Le legacy `enrichOracle` (~1300 lignes inline dispatch dans `strategy-presentation/enrich-oracle.ts`) **reste fonctionnel** pour cohabitation post-F-F. Le bouton "Lancer Artemis" classique sur `proposition/page.tsx` est conservé. `OracleProgressivePanel` (F-F) est ajouté **en dessous** sans remplacement.
-
-**Deprecation formelle prévue** après :
-- Audit completion (vérifier qu'`enrichOracle` n'a pas de surface unique non migrable).
-- Annotation `outputSchema` complète (cf. ci-dessous).
+Section historique : le legacy `enrichOracle` (~2 300 lignes) a été **déposé et supprimé** ([ADR-0125](adr/0125-depose-legacy-enrich-oracle.md)) ; la page proposition est rebranchée sur `oracle.assembleOracle` (manual-first F-D). La « deprecation formelle prévue » ci-dessous est donc accomplie — entrée conservée pour l'historique de la Phase 21, ne plus s'y référer (incohérence relevée par l'audit 2026-07-13, T12).
 
 ### Résidus consolidés (post-mégasprint)
 

@@ -111,7 +111,13 @@ describe("ADR-0126 — fix d'unités cult-index (devotion = pourcentages 0-100)"
   });
 
   it("ugcGenerationRate (sans source branchée) est EXCLU du composite, pas compté 0", () => {
-    expect(engineSrc).toContain('computeCultIndex(dimensions, ["ugcGenerationRate"])');
+    // ADR-0134 : l'appel est passé d'une liste littérale à `unavailable`
+    // (communityCohesion sort aussi du dénominateur quand rien n'est mesuré).
+    // L'invariant ADR-0126 tenu ici : ugcGenerationRate est exclu dans TOUTES
+    // les branches — jamais compté comme un 0 fabriqué.
+    expect(engineSrc).toContain("computeCultIndex(dimensions, unavailable)");
+    expect(engineSrc).toContain('? ["ugcGenerationRate"]');
+    expect(engineSrc).toContain(': ["ugcGenerationRate", "communityCohesion"]');
   });
 
   it("renormalisation : l'exclusion retire le poids du dénominateur", () => {
@@ -182,7 +188,10 @@ describe("ADR-0126 — naissance gouvernée des SuperfanProfile (single-writer H
       { encoding: "utf8" },
     ).trim();
     const files = out ? out.split("\n") : [];
-    const allowed = ["src/server/trpc/routers/superfan.ts"];
+    // ADR-0134 §B4 : le corps d'écriture a déménagé du router vers le service
+    // de mesure Seshat — UN seul fichier writer, deux portes gouvernées du
+    // même kind (tRPC superfan.register + case commandant chemin cron).
+    const allowed = ["src/server/services/seshat/superfan-ingest.ts"];
     const offenders = files.filter((f) => !allowed.includes(f));
     expect(offenders, `writers SuperfanProfile non gouvernés :\n${offenders.join("\n")}`).toEqual([]);
   });

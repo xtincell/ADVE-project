@@ -10,6 +10,151 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.126 — feat(oracle): le signal Overton MESURÉ atteint l'Oracle §34 (ADR-0134 §B7) (2026-07-13)
+
+**`buildOvertonRealSignalForOracle` (Phase 23 Story 3.6) était défini, testé, rendu par l'UI… et n'avait AUCUN caller de production (T1) — la section §34 ne montrait que le déclaré des piliers S/D.**
+
+- `composeOverton` devient async (la map des composers accepte les Promise) et appelle le
+  builder en **import lazy** (anti-cycle strategy-presentation ↔ campaign-tracker) —
+  operatorId sentinel (ignoré par le connecteur).
+- **Garde writeback** : rien de déclaré ET pas de mesure OK → `{}` (EmptyState inchangé,
+  pas de BrandAsset fabriqué pour porter un signal vide) ; échec transitoire du builder →
+  omission honnête (jamais un throw dans la composition déterministe).
+- Le composer servant les DEUX chemins (génération `GENERATE_ORACLE_SECTION` + read-time),
+  un seul point d'injection suffit ; la branche UI `realSignal` (états OK / INSUFFICIENT_DATA
+  discriminés P22-2) n'est plus morte.
+- Test `overton-real-signal-wired.test.ts` (4 invariants).
+
+## v6.27.125 — feat(seshat): l'axe Overton sectoriel devient RÉEL — registre Sector + caller du pont RSS (ADR-0134 §B6) (2026-07-13)
+
+**Le pont RSS→axe Overton (Phase 23) était codé et testé mais JAMAIS appelé (T10), et la table `Sector` n'avait AUCUN writer — le refresh répondait SECTOR_NOT_FOUND à vie. L'axe sectoriel du radar ne pouvait venir que d'un seed manuel.**
+
+- **`seshat/tarsis/sector-refresh.ts`** : `ensureSectorRegistryRows` (rows de REGISTRE
+  slug/nom/pays — `culturalAxis`/`overtonState` JAMAIS inventés) + `refreshSectorsFromRecentDigests`
+  (digests `EXTERNAL_FEED_DIGEST` ≤48 h → secteurs des stratégies couvertes ; idempotence
+  `ALREADY_FRESH` sur `lastObservedAt`).
+- **LE caller du pont** : stratégie porteuse de campagne → `bridgeTarsisToSectorIntelligence`
+  (couture Phase 23, import dynamique — aucune arête statique inverse) ; secteur sans
+  campagne → connector + `refreshSectorOvertonFromConnector` directs (`SECTOR_ONLY`,
+  alimente le fallback global du radar).
+- **Ancrage cron `external-feeds`** après l'ingestion des digests, best-effort ; états
+  SKIPPED remontés au rapport (`sectorsRefreshed`/`sectorsSkipped` — P22-1, jamais avalés).
+- Chaîne complète désormais : flux RSS réels → digests → signal sectoriel Tarsis →
+  axe `Sector.overtonState` → radar founder (`getSectorAxisForPolity` fallback global) +
+  mesures culture.* campaign-tracker.
+- Test `tarsis-sector-bridge-wiring.test.ts` (5 invariants).
+
+## v6.27.124 — feat(seshat): superfans depuis les interactions RÉELLES — actualisation gouvernée + fans détectés à revue humaine (ADR-0134 §B4) (2026-07-13)
+
+**Les SuperfanProfile n'étaient jamais nourris par les vraies interactions : l'inbox (commentaires avec identités, ADR-0133) dormait à côté. Branché — sans jamais ouvrir un vecteur d'inflation.**
+
+- **Single-writer déplacé** : le corps d'upsert vit dans `seshat/superfan-ingest.ts`
+  (`registerSuperfanProfile`, **metadata MERGE** — l'ancien router écrasait la provenance à
+  chaque update, T18). Deux portes gouvernées du MÊME kind `SESHAT_REGISTER_SUPERFAN` :
+  tRPC `superfan.register` (geste opérateur) + case commandant (chemin cron). Verrou HARD
+  single-writer mis à jour (un seul fichier writer).
+- **Actualisation quotidienne des profils DÉJÀ nés** : `updateKnownSuperfansFromInbox`
+  (étape cron social-sync AVANT la chaîne dévotion) — agrégats par auteur
+  (`authorHandle ?? authorExternalId`, asymétrie FB/IG), sémantique **jamais-dégrader**
+  (max depth/interactions/récence, segment ne recule pas), chaque écriture ré-émise via le
+  spine (`source: "SOCIAL"`). **AUCUNE création automatique.**
+- **Cap anti-inflation DUR** : `computeInboxEngagementDepth` ≤ **0.60** — la preuve
+  « commentaires seuls » ne peut JAMAIS franchir le seuil superfan actif (0.65) ; le bras
+  d'évidence CULTE/ICONE reste inatteignable par simple footprint (ADR-0126 renforcé).
+- **Fans détectés (revue humaine)** : query `superfan.candidates` (`operatorProcedure`,
+  calcul à la volée, seuil ≥3 interactions & ≥2 jours actifs, top 20) + panel « Fans
+  détectés » sur le suivi communauté (masqué hors opérateur/sans candidat, DS tokens,
+  vocabulaire client — « Prescripteur ») : **la naissance reste un clic humain** →
+  `superfan.register`.
+- Enum provenance : + `SOCIAL` ; union Intent + case commandant + touchesPillars.
+- Test `superfan-ingest.test.ts` (7 invariants : cap dur, formule, mapping monotone,
+  zéro création cron, délégation router, ordre cron).
+
+## v6.27.123 — feat(seshat): devotion ladder sur audience RÉELLE — followers = spectateurs, commentateurs = participants (ADR-0134 §B3) (2026-07-13)
+
+**La pyramide de dévotion ne comptait que les SuperfanProfile saisis à la main (+boosts internes) : 5 profils = 100 % de l'« audience ». Elle reflète désormais la vraie masse.**
+
+- **Base d'audience mesurée** : `loadMeasuredAudienceBase` (Σ dernier FollowerSnapshot par
+  plateforme ≤90 j + auteurs uniques inbox 30 j) → helper pur exporté
+  `applyMeasuredAudienceBase` : `spectateur` = followers − rungs supérieurs, `participant` =
+  max(classés, commentateurs réels), **rungs hauts INTOUCHÉS** (la base sociale ne peut pas
+  gonfler engage/ambassadeur/évangéliste — anti-inflation ADR-0126).
+- **Garde plancher** : aucun relevé follower ≤90 j → comportement legacy STRICTEMENT inchangé
+  (arrondi entier historique compris) ; pourcentages à 2 décimales en mode mesuré
+  (90/45 000 = 0,2 % ne s'écrase plus à 0).
+- **Loi 1** : dilution honnête assumée et annotée — `DEVOTION_AUDIENCE_BASE_DATE` exportée,
+  `getDevotionTrend` annote `preAudienceBase` (pattern `preUnitsFix` ADR-0126) ; historique
+  immuable.
+- **T16 purgé** : le boost CommunitySnapshot du moteur devotion (lecture `/100` d'une
+  fraction) est supprimé — remplacé par les commentateurs réels ; `reconcileAmbassadors`
+  aligné pourcentages (fallbacks 50/20/15/8, clamp 100 — résidu monde fraction).
+- Test `devotion-real-audience.test.ts` (7 invariants : dilution, jamais-négatif,
+  jamais-régression, annotation, garde plancher, purge T16, alignement %).
+
+## v6.27.122 — feat(seshat): mesure communautaire RÉELLE — écrivain de production CommunitySnapshot + chaîne quotidienne community→devotion→cult ([ADR-0134](docs/governance/adr/0134-mesure-communautaire-reelle-et-ponts-overton.md)) (2026-07-13)
+
+**Le cult index tournait sur du seed : `CommunitySnapshot` n'avait AUCUN écrivain de production (T8) pendant que followers/posts/commentaires étaient collectés chaque jour. Branché.**
+
+- **Écrivain de production** `cult-index-engine/community-snapshot-writer.ts` (pure + I/O,
+  zéro LLM) : par plateforme suivie — `size` = dernier FollowerSnapshot ≤90 j (pas de base →
+  pas de row), `velocity` = croissance vs ~J-30, `health` = engagement moyen par post 30 j,
+  `activeRate` = commentateurs uniques inbox/followers (null hors couverture FB/IG),
+  `sentiment` = null v1 (aucune source). **Null = non mesuré, jamais 0 fabriqué (P22-2).**
+- **Unités canoniques** (fractions 0-1) + migration relaxante additive
+  (`20260713100000` : 4 DROP NOT NULL + colonne `source` MANUAL|CONNECTOR).
+- **Nouveau kind `SESHAT_CAPTURE_COMMUNITY_SNAPSHOT`** (SESHAT, sync, SLO 15 s/0 $) —
+  catalogue + union + case commandant ; le handler enchaîne la **chaîne de mesure**
+  community → devotion (`trigger="social-sync"`) → cult, UNIQUEMENT sur mesure LIVE.
+  Le moteur devotion a enfin un déclencheur de production (T17).
+- **Étape cron `social-sync`** : émission via le spine (`emitIntentTyped`,
+  `caller:"cron:social-sync:community"`) après la collecte du jour — champ `community`
+  au rapport du cron.
+- **Lecteurs corrigés** : cult `communityCohesion` borné ≤90 j/12 relevés, moyenne sur
+  `health` mesurés only, dimension **hors dénominateur** si rien de mesuré (mécanisme
+  ADR-0126) ; devotion : bug d'unités `/100` corrigé (T16, garde intérimaire) ;
+  dashboard communauté : types nullables + métriques non mesurées masquées.
+- **§B2 tranché** : `ugcGenerationRate` reste EXCLU (mentions jamais collectées,
+  normalisation = constante à sign-off) — décision négative explicite + registre.
+- Tests : `community-snapshot-writer.test.ts` (6 formules pures) +
+  `community-measure-chain.test.ts` (6 invariants dont single-writer d'écriture) ;
+  assertion ADR-0126 mise au niveau (`unavailable` deux branches).
+
+## v6.27.121 — fix(oracle): cascade staleness dans writePillar (chemin commun) + verrou anti-alias (2026-07-13)
+
+**Audit 2026-07-13 T4/T5 : amender un pilier par un caller bare n'invalidait jamais l'Oracle.**
+
+- **Cascade déplacée dans `writePillar`** (post-commit de transaction, non-fatale) : les 35
+  `OracleSection` passent COMPLETE→STALE sur TOUTE mutation de pilier — y compris les callers
+  bare légitimes (intake C1, infer C2, ai-filler ingestion) qui n'invalidaient rien.
+  `writePillarAndScore` hérite (son doublon est retiré — une seule invalidation).
+- **`markSectionsStale` ciblé DÉPOSÉ** (T4) : code mort sans caller — l'invalidation ciblée
+  exigerait une map pilier→sections qui n'existe pas ; le bloc conservateur est la voie canon.
+- **Évasion fermée** : `ai-filler.ts` importait `writePillar` sous l'alias `writePillarRTIS`,
+  invisible au test HARD `no-bare-writepillar` → dé-aliasé + catalogué à l'allowlist (rationale
+  draft-RTIS-d'ingestion) + **nouveau verrou anti-renommage** (détection `writePillar: alias` /
+  `writePillar as alias` en contexte d'import).
+- Test neuf `oracle-staleness-cascade.test.ts` (4 invariants : cascade dans le chemin commun,
+  pas de double invalidation, variante ciblée non réintroduite, import lazy anti-cycle).
+
+## v6.27.120 — docs(governance): audit Brief→Oracle·scoring·pivot + hygiène V0 (registres à jour, stubs §09 supprimés) (2026-07-13)
+
+**Audit ground-truth complet ([docs/audits/BRIEF-ORACLE-SCORING-PIVOT-AUDIT-2026-07-13.md](docs/audits/BRIEF-ORACLE-SCORING-PIVOT-AUDIT-2026-07-13.md), 18 trous T1-T18) + première vague d'hygiène (V0).**
+
+- **Rapport d'audit** : chaîne Brief→Forge→Livrable→Oracle (SOLIDE, sauf `COMPOSE_DELIVERABLE`
+  figé PREVIEW — T3), scoring/calibration (structurel SOLIDE ; attribution structurellement morte
+  — `devotionTransitionsObserved` sans writer, T7), provenance des mécaniques pivot (devotion/cult
+  MANUEL/VIDE pendant que followers/posts/inbox/ventes/RSS sont collectés chaque jour).
+- **Registres remis à la vérité** : Tarsis décrit `_mocked`/contract-gated alors qu'il est
+  **dé-mocké depuis 2026-06-14** (PROPAGATION-MAP H4 🟢 + RESIDUAL-DEBT corrigés — T11) ;
+  § « cohabitation enrichOracle » contradictoire avec la dépose ADR-0125 → clos historique (T12).
+- **Stubs mensongers supprimés** (§09 Signaux) : `mestorInsights`/`seshatReferences` hardcodés `[]`
+  depuis leur naissance — retirés du mapper, du type et du renderer (branche morte « Prescriptions
+  Mestor », jargon interne, jamais rendue) (T2).
+- **Headers corrigés** : 6 fichiers `deliverable-orchestrator/` citaient « ADR-0037 » (qui est
+  l'ADR country-scoped KB) au lieu d'ADR-0050 (T13).
+- **Nouvelles dettes tracées** (§ Audit 2026-07-13 de RESIDUAL-DEBT) : dispatch COMPOSE_DELIVERABLE,
+  dérivation honnête des labels d'attribution, Signal TARSIS sans writer, refresh auto STALE,
+  91/94 séquences DRAFT, PDF Oracle brut, `ugcGenerationRate`.
 ## v6.27.119 — feat(cockpit): réseaux — une ligne par réseau, une Page de TRAVAIL choisie (compact + modal) (2026-07-13)
 
 **Demande opérateur : « je ne veux voir que la Page sur laquelle je travaille, une ligne par réseau, et le modal au clic pour choisir — pas toutes les Pages en désordre. »**

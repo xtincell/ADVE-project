@@ -2,9 +2,24 @@
  * Devotion Engine — Calculates devotion tier distribution from engagement data
  * Maps real engagement metrics to the 6-level devotion hierarchy:
  * SPECTATEUR → INTERESSE → PARTICIPANT → ENGAGE → AMBASSADEUR → EVANGELISTE
+ *
+ * ADR-0134 §B3 — base d'audience RÉELLE : quand la marque a une base sociale
+ * mesurée (FollowerSnapshot ≤90 j), la pyramide reflète la vraie masse —
+ * followers = spectateurs, commentateurs uniques inbox 30 j = plancher de
+ * participants, rungs hauts = SuperfanProfile gouvernés. Sans base mesurée,
+ * comportement historique STRICTEMENT inchangé (garde plancher).
  */
 
 import { db } from "@/lib/db";
+
+/**
+ * Loi 1 (ADR-0134, pattern `preUnitsFix` d'ADR-0126) : date d'activation de la
+ * base d'audience réelle. Les DevotionSnapshot antérieurs ont été calculés sur
+ * la seule population SuperfanProfile (+boosts internes) — leurs pourcentages
+ * hauts sont mécaniquement plus flatteurs. `getDevotionTrend` les annote
+ * `preAudienceBase` ; l'historique reste immuable.
+ */
+export const DEVOTION_AUDIENCE_BASE_DATE = new Date("2026-07-13T00:00:00.000Z");
 
 interface DevotionDistribution {
   spectateur: number;    // Passive audience (views, impressions)
@@ -57,6 +72,81 @@ function classifyEngagement(engagementDepth: number): keyof DevotionDistribution
   return "spectateur";
 }
 
+/** Base d'audience mesurée (ADR-0134 §B3). Null = pas de base → mode legacy. */
+export interface MeasuredAudienceBase {
+  /** Σ dernier FollowerSnapshot par plateforme, relevés ≤ 90 j. */
+  totalFollowers: number;
+  /** Auteurs uniques SocialInboxItem ≤ 30 j (identité authorExternalId ?? authorHandle). */
+  inboxParticipants30d: number;
+}
+
+/**
+ * Intègre la base d'audience réelle dans les comptes de rungs. Pure (testable
+ * sans DB), déterministe :
+ *   - `participant` = max(classés, commentateurs réels) — un commentaire
+ *     public est une participation observée (canon devotion-ladder) ;
+ *   - `spectateur` = max(classés, followers − rungs supérieurs) — l'audience
+ *     passive réelle, jamais négative ;
+ *   - les rungs hauts (engage/ambassadeur/evangeliste) restent la seule
+ *     affaire des SuperfanProfile gouvernés (+boosts internes) — la base
+ *     sociale ne peut PAS les gonfler (anti-inflation ADR-0126).
+ */
+export function applyMeasuredAudienceBase(
+  counts: DevotionDistribution,
+  base: MeasuredAudienceBase,
+): DevotionDistribution {
+  const participant = Math.max(counts.participant, base.inboxParticipants30d);
+  const higherRungs =
+    counts.interesse + participant + counts.engage + counts.ambassadeur + counts.evangeliste;
+  const spectateur = Math.max(
+    counts.spectateur,
+    Math.max(0, base.totalFollowers - higherRungs),
+  );
+  return { ...counts, participant, spectateur };
+}
+
+/**
+ * Charge la base d'audience mesurée. Null si AUCUN relevé follower ≤ 90 j —
+ * la garde plancher qui préserve le comportement historique des marques sans
+ * réseaux mesurés (relevé MANUAL ou CONNECTOR : une mesure déclarée compte).
+ */
+async function loadMeasuredAudienceBase(
+  strategyId: string,
+): Promise<MeasuredAudienceBase | null> {
+  const followerFloor = new Date(Date.now() - 90 * 86_400_000);
+  const inboxFloor = new Date(Date.now() - 30 * 86_400_000);
+  const [followerRows, inboxItems] = await Promise.all([
+    db.followerSnapshot.findMany({
+      where: { strategyId, capturedAt: { gte: followerFloor } },
+      orderBy: { capturedAt: "desc" },
+      select: { platform: true, followerCount: true },
+    }),
+    db.socialInboxItem.findMany({
+      where: { strategyId, publishedAt: { gte: inboxFloor } },
+      select: { authorExternalId: true, authorHandle: true },
+    }),
+  ]);
+  if (followerRows.length === 0) return null;
+
+  // Dernier relevé par plateforme (rows triées desc — première occurrence gagne).
+  const seenPlatforms = new Set<string>();
+  let totalFollowers = 0;
+  for (const r of followerRows) {
+    const key = r.platform as string;
+    if (seenPlatforms.has(key)) continue;
+    seenPlatforms.add(key);
+    totalFollowers += r.followerCount;
+  }
+  if (totalFollowers <= 0) return null;
+
+  const authors = new Set<string>();
+  for (const item of inboxItems) {
+    const identity = item.authorExternalId ?? item.authorHandle;
+    if (identity) authors.add(identity);
+  }
+  return { totalFollowers, inboxParticipants30d: authors.size };
+}
+
 /**
  * Calculate devotion metrics for a strategy based on real engagement data
  */
@@ -66,7 +156,6 @@ export async function calculateDevotion(strategyId: string): Promise<DevotionMet
     missions,
     signals,
     reviews,
-    communitySnapshots,
     previousSnapshot,
   ] = await Promise.all([
     // Superfan profiles linked to strategy
@@ -90,13 +179,6 @@ export async function calculateDevotion(strategyId: string): Promise<DevotionMet
     db.qualityReview.findMany({
       where: { deliverable: { mission: { strategyId } } },
       select: { overallScore: true, reviewerId: true },
-    }),
-
-    // Community health data
-    db.communitySnapshot.findMany({
-      where: { strategyId },
-      orderBy: { measuredAt: "desc" },
-      take: 1,
     }),
 
     // Previous devotion snapshot for momentum calculation
@@ -133,40 +215,46 @@ export async function calculateDevotion(strategyId: string): Promise<DevotionMet
   const recentSignals = signals.length;
   tierCounts.interesse += Math.floor(recentSignals / 5);
 
-  // Community health boosts: high activeRate suggests more participants
-  const latestCommunity = communitySnapshots[0];
-  if (latestCommunity) {
-    const communityBoost = Math.floor(latestCommunity.size * latestCommunity.activeRate / 100);
-    tierCounts.participant += communityBoost;
-  }
+  // ADR-0134 §B3 — base d'audience RÉELLE. Remplace l'ancien boost
+  // CommunitySnapshot (bug d'unités T16, lecture `/100` d'une fraction) :
+  // followers mesurés = spectateurs, commentateurs uniques inbox = plancher
+  // de participants. Sans base mesurée → comportement legacy STRICT.
+  const audienceBase = await loadMeasuredAudienceBase(strategyId);
+  const finalCounts = audienceBase
+    ? applyMeasuredAudienceBase(tierCounts, audienceBase)
+    : tierCounts;
 
   // Total audience
-  const totalAudience = Object.values(tierCounts).reduce((sum, v) => sum + v, 0) || 1;
+  const totalAudience = Object.values(finalCounts).reduce((sum, v) => sum + v, 0) || 1;
 
-  // Distribution as percentages
+  // Distribution as percentages — 2 décimales en mode mesuré (un arrondi
+  // entier écraserait 90 participants / 45 000 followers = 0,2 % à 0 —
+  // perte de signal) ; arrondi entier historique en mode legacy (parité).
+  const roundPct = (n: number): number =>
+    audienceBase ? Math.round(n * 100) / 100 : Math.round(n);
   const distribution: DevotionDistribution = {
     // lafusee:allow-adhoc-completion: devotion tier audience distribution (spectateur/intéressé/.../évangéliste %, not pillar)
-    spectateur: Math.round((tierCounts.spectateur / totalAudience) * 100),
+    spectateur: roundPct((finalCounts.spectateur / totalAudience) * 100),
     // lafusee:allow-adhoc-completion: devotion tier audience distribution (spectateur/intéressé/.../évangéliste %, not pillar)
-    interesse: Math.round((tierCounts.interesse / totalAudience) * 100),
+    interesse: roundPct((finalCounts.interesse / totalAudience) * 100),
     // lafusee:allow-adhoc-completion: devotion tier audience distribution (spectateur/intéressé/.../évangéliste %, not pillar)
-    participant: Math.round((tierCounts.participant / totalAudience) * 100),
+    participant: roundPct((finalCounts.participant / totalAudience) * 100),
     // lafusee:allow-adhoc-completion: devotion tier audience distribution (spectateur/intéressé/.../évangéliste %, not pillar)
-    engage: Math.round((tierCounts.engage / totalAudience) * 100),
+    engage: roundPct((finalCounts.engage / totalAudience) * 100),
     // lafusee:allow-adhoc-completion: devotion tier audience distribution (spectateur/intéressé/.../évangéliste %, not pillar)
-    ambassadeur: Math.round((tierCounts.ambassadeur / totalAudience) * 100),
+    ambassadeur: roundPct((finalCounts.ambassadeur / totalAudience) * 100),
     // lafusee:allow-adhoc-completion: devotion tier audience distribution (spectateur/intéressé/.../évangéliste %, not pillar)
-    evangeliste: Math.round((tierCounts.evangeliste / totalAudience) * 100),
+    evangeliste: roundPct((finalCounts.evangeliste / totalAudience) * 100),
   };
 
   // Weighted devotion score (higher tiers contribute more)
   const rawScore =
-    (tierCounts.spectateur * TIER_WEIGHTS.spectateur +
-     tierCounts.interesse * TIER_WEIGHTS.interesse +
-     tierCounts.participant * TIER_WEIGHTS.participant +
-     tierCounts.engage * TIER_WEIGHTS.engage +
-     tierCounts.ambassadeur * TIER_WEIGHTS.ambassadeur +
-     tierCounts.evangeliste * TIER_WEIGHTS.evangeliste) /
+    (finalCounts.spectateur * TIER_WEIGHTS.spectateur +
+     finalCounts.interesse * TIER_WEIGHTS.interesse +
+     finalCounts.participant * TIER_WEIGHTS.participant +
+     finalCounts.engage * TIER_WEIGHTS.engage +
+     finalCounts.ambassadeur * TIER_WEIGHTS.ambassadeur +
+     finalCounts.evangeliste * TIER_WEIGHTS.evangeliste) /
     Math.max(1, totalAudience) * 100;
 
   const score = Math.min(100, Math.round(rawScore));
@@ -226,7 +314,7 @@ export async function calculateAndSnapshot(
 export async function getDevotionTrend(
   strategyId: string,
   periods = 6
-): Promise<Array<{ date: string; score: number; distribution: DevotionDistribution }>> {
+): Promise<Array<{ date: string; score: number; distribution: DevotionDistribution; preAudienceBase: boolean }>> {
   const snapshots = await db.devotionSnapshot.findMany({
     where: { strategyId },
     orderBy: { measuredAt: "desc" },
@@ -236,6 +324,9 @@ export async function getDevotionTrend(
   return snapshots.reverse().map((s) => ({
     date: s.measuredAt.toISOString(),
     score: s.devotionScore,
+    // Loi 1 (ADR-0134) : les snapshots antérieurs à la base d'audience réelle
+    // sont annotés — comparés à référentiel connu, jamais réécrits.
+    preAudienceBase: s.measuredAt < DEVOTION_AUDIENCE_BASE_DATE,
     distribution: {
       spectateur: s.spectateur,
       interesse: s.interesse,

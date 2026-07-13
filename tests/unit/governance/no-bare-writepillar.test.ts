@@ -35,8 +35,14 @@ const SRC = join(ROOT, "src");
 const ALLOWED_BARE_CALLERS: ReadonlyArray<{ file: string; line: number; reason: string }> = [
   {
     file: "src/server/services/pillar-gateway/index.ts",
-    line: 641,
+    line: 658,
     reason: "Implémentation interne de writePillarAndScore — appelle writePillar puis cache reconcile + scoring + event.",
+  },
+  {
+    file: "src/server/services/ingestion-pipeline/ai-filler.ts",
+    line: 451,
+    reason:
+      "AI RTIS filler (ingestion) — bare writePillar VOLONTAIRE : draft AI_PROPOSED MERGE_DEEP mi-ingestion, scoré à l'activation comme C1/C2. Site historique qui échappait au test via l'alias `writePillarRTIS` (audit 2026-07-13, T5) — dé-aliasé et catalogué ; la cascade staleness Oracle s'applique désormais dans writePillar lui-même.",
   },
   {
     file: "src/server/trpc/routers/quick-intake.ts",
@@ -94,6 +100,29 @@ function findBareCallers(): BareCall[] {
   return out;
 }
 
+/**
+ * Évasion par renommage (audit 2026-07-13, T5) : `const { writePillar: alias }`
+ * ou `import { writePillar as alias }` rendait le call-site invisible à la
+ * regex `await writePillar(` — c'est arrivé (`ai-filler.ts` / `writePillarRTIS`).
+ * Détection ligne-à-ligne restreinte aux contextes d'import/destructuring pour
+ * ne pas matcher les mentions en commentaire (ex. manifest pillar-gateway).
+ */
+function findRenamedImports(): BareCall[] {
+  const out: BareCall[] = [];
+  const rename = /\bwritePillar\s*(?::\s*\w+|as\s+\w+)/;
+  for (const file of walkFiles(SRC)) {
+    const text = readFileSync(file, "utf-8");
+    const lines = text.split("\n");
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]!;
+      if (!rename.test(line)) continue;
+      if (!/\bimport\b|\brequire\s*\(/.test(line)) continue;
+      out.push({ file: relative(ROOT, file).replace(/\\/g, "/"), line: i + 1 });
+    }
+  }
+  return out;
+}
+
 describe("anti-drift: no bare writePillar()", () => {
   it("no bare `await writePillar(` outside the allowlist", () => {
     const callers = findBareCallers();
@@ -115,6 +144,19 @@ describe("anti-drift: no bare writePillar()", () => {
       );
     }
     expect(unexpected).toEqual([]);
+  });
+
+  it("no renamed import of writePillar (évasion par alias interdite)", () => {
+    const renamed = findRenamedImports();
+    if (renamed.length > 0) {
+      const msg = renamed.map((c) => `  ${c.file}:${c.line}`).join("\n");
+      throw new Error(
+        `${renamed.length} import(s) renommé(s) de writePillar détecté(s) :\n${msg}\n\n` +
+          `→ Importer sous son nom canonique \`writePillar\` (le renommage rend le call-site\n` +
+          `  invisible au verrou bare-caller — précédent : writePillarRTIS, T5 audit 2026-07-13).`,
+      );
+    }
+    expect(renamed).toEqual([]);
   });
 
   it("allowlist entries actually exist (no stale exception)", () => {

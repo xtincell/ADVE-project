@@ -9,7 +9,7 @@
  *      │                                                                          │
  *      └──forgetGenerationProgress (operator override) ──────────────────────────┤
  *                                                                                 │
- *   COMPLETE ──markSectionsStale (cascade pillar amend) ──▶ STALE                 │
+ *   COMPLETE ──markAllSectionsStale (cascade writePillar) ─▶ STALE                │
  *                                                            │                     │
  *   STALE / FAILED ──acquireGenerationLock──▶ GENERATING ────┴─────────────────────┘
  *
@@ -353,33 +353,16 @@ export async function releaseGenerationLock(
 }
 
 /**
- * Mark sections as STALE — used by cascade hooks when piliers ADVE source
- * mutent. Only transitions COMPLETE → STALE (PENDING/FAILED stay as-is,
- * GENERATING is left untouched to avoid race with active generation).
- */
-export async function markSectionsStale(
-  strategyId: string,
-  sectionIds: readonly number[],
-): Promise<{ count: number }> {
-  if (sectionIds.length === 0) return { count: 0 };
-  const result = await db.oracleSection.updateMany({
-    where: {
-      strategyId,
-      sectionId: { in: [...sectionIds] },
-      status: "COMPLETE",
-    },
-    data: {
-      status: "STALE",
-      staleAt: new Date(),
-    },
-  });
-  return { count: result.count };
-}
-
-/**
- * Mark ALL sections as STALE for a strategy — used when an upstream change
- * touches every downstream (rare, e.g. major brand pivot). Caller's
- * responsibility to decide if this is appropriate.
+ * Mark ALL sections as STALE for a strategy. Cascade canonique appelée par
+ * `writePillar` (pillar-gateway) à chaque mutation de pilier — chemin commun
+ * à tous les callers depuis l'audit 2026-07-13 (T5). Only transitions
+ * COMPLETE → STALE (PENDING/FAILED stay as-is, GENERATING is left untouched
+ * to avoid race with active generation).
+ *
+ * La variante ciblée `markSectionsStale(sectionIds)` a été DÉPOSÉE (T4,
+ * audit 2026-07-13) : code mort sans caller — une invalidation ciblée
+ * exigerait une map pilier→sections qui n'existe pas ; l'invalidation en
+ * bloc est conservatrice et sûre (régénération déterministe).
  */
 export async function markAllSectionsStale(strategyId: string): Promise<{ count: number }> {
   const result = await db.oracleSection.updateMany({

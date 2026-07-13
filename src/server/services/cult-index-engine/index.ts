@@ -90,10 +90,17 @@ export async function calculateAndSnapshot(strategyId: string): Promise<{
   dimensions: CultDimensions;
   snapshotId: string;
 }> {
-  // Gather data from various sources
+  // Gather data from various sources.
+  // CommunitySnapshot : fenêtre bornée ≤90 j / 12 relevés (ADR-0134) — avec un
+  // écrivain quotidien, une moyenne sur tout l'historique se figerait sur le
+  // passé au lieu de mesurer l'état courant.
   const [devotionSnapshots, communitySnapshots, superfanProfiles] = await Promise.all([
     db.devotionSnapshot.findMany({ where: { strategyId }, orderBy: { measuredAt: "desc" }, take: 1 }),
-    db.communitySnapshot.findMany({ where: { strategyId }, orderBy: { measuredAt: "desc" } }),
+    db.communitySnapshot.findMany({
+      where: { strategyId, measuredAt: { gte: new Date(Date.now() - 90 * 86_400_000) } },
+      orderBy: { measuredAt: "desc" },
+      take: 12,
+    }),
     db.superfanProfile.findMany({ where: { strategyId } }),
   ]);
 
@@ -114,14 +121,27 @@ export async function calculateAndSnapshot(strategyId: string): Promise<{
       // lafusee:allow-adhoc-completion: cult index 7-component composite scoring (component weight, not pillar)
       ? Math.min(100, (superfanProfiles.filter((s) => s.segment !== "SPECTATEUR").length / superfanProfiles.length) * 100)
       : 0,
-    communityCohesion: communitySnapshots.length > 0
+    // communityCohesion : moyenne des `health` MESURÉS uniquement (null = non
+    // mesuré, exclu — jamais compté 0). Unités canon ADR-0134 : fraction 0-1.
+    communityCohesion: (() => {
+      const measured = communitySnapshots
+        .map((c) => c.health)
+        .filter((h): h is number => h !== null);
+      if (measured.length === 0) return 0; // exclu du composite via `unavailable` ci-dessous
       // lafusee:allow-adhoc-completion: cult index 7-component composite scoring (component weight, not pillar)
-      ? communitySnapshots.reduce((sum, c) => sum + c.health, 0) / communitySnapshots.length * 100
-      : 0,
+      return (measured.reduce((sum, h) => sum + h, 0) / measured.length) * 100;
+    })(),
     brandDefenseRate: superfanProfiles.filter((s) => s.segment === "EVANGELISTE").length > 0
       ? Math.min(100, (superfanProfiles.filter((s) => s.segment === "EVANGELISTE").length / Math.max(1, superfanProfiles.length)) * 200)
       : 0,
-    ugcGenerationRate: 0, // No social data integration wired — EXCLUDED from the composite below
+    // ugcGenerationRate : exclusion MAINTENUE (décision ADR-0134 §B2, audit
+    // 2026-07-13) — les mentions ne sont jamais remplies par le connecteur
+    // (FollowerSnapshot.mentionsCount = saisie console ; inbox v1 = COMMENT
+    // only) et toute normalisation count→0-100 serait une constante inventée
+    // (pattern Phase 23 : seuils calibrés à sign-off direction). Dérivation
+    // future tracée RESIDUAL-DEBT §Audit 2026-07-13.
+    ugcGenerationRate: 0, // EXCLUDED from the composite below
+
     ritualAdoption: latestDevotion ? latestDevotion.engage * 2 : 0,
     evangelismScore: latestDevotion ? latestDevotion.evangeliste * 5 : 0,
   };
@@ -133,7 +153,13 @@ export async function calculateAndSnapshot(strategyId: string): Promise<{
 
   // ugcGenerationRate n'a pas de source branchée : poids renormalisé plutôt
   // qu'un 0 fabriqué qui tirait ~10 % du score vers le bas (ADR-0126).
-  const score = computeCultIndex(dimensions, ["ugcGenerationRate"]);
+  // communityCohesion : même mécanisme quand AUCUN health n'est mesuré sur la
+  // fenêtre (ADR-0134) — l'absence de mesure sort du dénominateur.
+  const hasMeasuredCohesion = communitySnapshots.some((c) => c.health !== null);
+  const unavailable: (keyof CultDimensions)[] = hasMeasuredCohesion
+    ? ["ugcGenerationRate"]
+    : ["ugcGenerationRate", "communityCohesion"];
+  const score = computeCultIndex(dimensions, unavailable);
   const tier = getCultTier(score);
 
   // Get the previous snapshot to compare tiers
@@ -376,21 +402,26 @@ export async function reconcileAmbassadors(strategyId: string): Promise<{
     orderBy: { measuredAt: "desc" },
   });
 
-  // Create a reconciled snapshot incorporating ambassador data
+  // Create a reconciled snapshot incorporating ambassador data.
+  // ADR-0134 (résidu ADR-0126 T16) : DevotionSnapshot est en POURCENTAGES
+  // 0-100 — les fallbacks fractions (0.5/0.2/…) et le clamp à 1
+  // dataient du monde pré-fix. Alignés en points de % ; magnitude de
+  // l'incrément préservée (totalBase ≈ 100 en monde %, ≈ totalBase×100 en
+  // monde fraction — même dénominateur).
   const baseAmbassadeur = currentSnapshot?.ambassadeur ?? 0;
   const baseEvangeliste = currentSnapshot?.evangeliste ?? 0;
-  const totalBase = (currentSnapshot?.spectateur ?? 0.5) + (currentSnapshot?.interesse ?? 0.2) +
-    (currentSnapshot?.participant ?? 0.15) + (currentSnapshot?.engage ?? 0.08) +
+  const totalBase = (currentSnapshot?.spectateur ?? 50) + (currentSnapshot?.interesse ?? 20) +
+    (currentSnapshot?.participant ?? 15) + (currentSnapshot?.engage ?? 8) +
     baseAmbassadeur + baseEvangeliste;
 
-  const adjustedAmbassadeur = Math.min(1, baseAmbassadeur + (ambassadeurCount / Math.max(1, totalBase * 100)) * 0.5);
-  const adjustedEvangeliste = Math.min(1, baseEvangeliste + (evangelisteCount / Math.max(1, totalBase * 100)) * 0.5);
+  const adjustedAmbassadeur = Math.min(100, baseAmbassadeur + (ambassadeurCount / Math.max(1, totalBase)) * 0.5);
+  const adjustedEvangeliste = Math.min(100, baseEvangeliste + (evangelisteCount / Math.max(1, totalBase)) * 0.5);
 
   await captureDevotionSnapshot(strategyId, {
-    spectateur: currentSnapshot?.spectateur ?? 0.5,
-    interesse: currentSnapshot?.interesse ?? 0.2,
-    participant: currentSnapshot?.participant ?? 0.15,
-    engage: currentSnapshot?.engage ?? 0.08,
+    spectateur: currentSnapshot?.spectateur ?? 50,
+    interesse: currentSnapshot?.interesse ?? 20,
+    participant: currentSnapshot?.participant ?? 15,
+    engage: currentSnapshot?.engage ?? 8,
     ambassadeur: adjustedAmbassadeur,
     evangeliste: adjustedEvangeliste,
   }, "ambassador_reconciliation");

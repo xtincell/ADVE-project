@@ -1,5 +1,5 @@
 /**
- * Deliverable Orchestrator — Public API (Phase 17, ADR-0037).
+ * Deliverable Orchestrator — Public API (Phase 17b, ADR-0050 — anciennement ADR-0037).
  *
  * Service Propulsion gouverné par Artemis. Output-first deliverable
  * composition : prend un `BrandAsset.kind` matériel cible et résout en

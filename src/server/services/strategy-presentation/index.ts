@@ -347,7 +347,7 @@ export async function assemblePresentation(strategyId: string): Promise<Strategy
       // Phase 2: R+T
       swotInterne: safeMap("swot-interne", () => mapSwotInterne(strategy), { forces: [], faiblesses: [], menaces: [], opportunites: [], mitigations: [], resilienceScore: null, artemisResults: [] }),
       swotExterne: safeMap("swot-externe", () => mapSwotExterne(strategy), { marche: { tam: null, sam: null, som: null, growth: null }, concurrents: [], tendances: [], brandMarketFit: null, validationTerrain: null }),
-      signaux: safeMap("signaux-opportunites", () => mapSignauxOpportunites(strategy), { signauxFaibles: [], opportunitesPriseDeParole: [], mestorInsights: [], seshatReferences: [] }),
+      signaux: safeMap("signaux-opportunites", () => mapSignauxOpportunites(strategy), { signauxFaibles: [], opportunitesPriseDeParole: [] }),
       // Phase 3: I+S
       catalogueActions: safeMap("catalogue-actions", () => mapCatalogueActions(strategy), { parCanal: {}, parPilier: {}, totalActions: 0, drivers: [] }),
       planActivation: safeMap("plan-activation", () => mapPlanActivation(strategy), { campaigns: [], aarrr: {}, touchpoints: [], rituels: [], drivers: [] }),

@@ -49,24 +49,6 @@ export function SignauxOpportunites({ data }: Props) {
         </div>
       )}
 
-      {data.mestorInsights.length > 0 && (
-        <div>
-          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">
-            Prescriptions Mestor <AiBadge />
-          </h3>
-          <div className="space-y-2">
-            {data.mestorInsights.map((ins, i) => (
-              <div key={i} className="rounded-lg border border-border bg-background/50 p-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-amber-400">{ins.type}</span>
-                  <span className="text-sm font-medium text-foreground">{ins.title}</span>
-                </div>
-                <p className="mt-1 text-xs text-foreground-secondary">{ins.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
