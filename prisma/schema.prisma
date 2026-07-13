@@ -618,6 +618,10 @@ model User {
   resetToken       String?   @unique
   resetTokenExpiry DateTime?
 
+  // Préférences / sécurité compte (Increment 2b — expérience fondateur)
+  themePreference       String?  // "light" | "dark" — défaut cockpit par utilisateur (fondateur → jour)
+  passwordChangeInvited Boolean  @default(false) // invitation dismissable à changer un mot de passe provisoire
+
   operator          Operator?            @relation(fields: [operatorId], references: [id])
   accounts          Account[]
   sessions          Session[]

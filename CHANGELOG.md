@@ -10,6 +10,25 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.138 — feat(cockpit): sécurité fondateur — changer son mot de passe + mode jour par défaut (2026-07-13)
+
+**Increment 2b SPAWT (mandat : « accès pour Stéphanie mdp 12345678 avec invitation dismissable à changer + section sécurité » · « lumineux, mode jour par défaut pour elle »).**
+
+- **Section « Sécurité »** au paramétrage cockpit : formulaire de changement de mot de passe
+  (mutation `auth.changePassword` — vérifie le mot de passe actuel côté serveur, bcrypt 12) +
+  **invitation dismissable** quand le compte utilise un mot de passe provisoire
+  (`auth.dismissPasswordInvite`) — « maintenant, ou plus tard via Réglages ».
+- **Mode jour par défaut par utilisateur** : `auth.setThemePreference` + le sélecteur de thème
+  résout local explicite > préférence compte (fondateur → jour) > nuit. La fondatrice ouvre son
+  cockpit lumineux, le toggle nuit reste dispo.
+- **Modèle** : 2 champs additifs nullable sur `User` (`themePreference`, `passwordChangeInvited`,
+  migration backfill-safe `20260713110000_founder_security_theme`). Les logins créés par un admin
+  (`accounts.createBrandLogin`, endpoint `prod-finish`) portent l'invitation ; elle se lève au
+  1ᵉʳ changement ou au dismiss.
+- **Seed SPAWT** : Stéphanie → `themePreference="light"` + invitation active **tant que** le mot de
+  passe provisoire « 12345678 » est en usage (jamais de nag après personnalisation).
+- Cap APOGEE 7/7 préservé (compte utilisateur, pas de mutation métier de marque ; 0 Neter).
+
 ## v6.27.137 — feat(spawt): coffre de marque exploité — kit officiel dans le vault + logo/palette/J0 câblés (2026-07-13)
 
 **Mandat opérateur : « assure-toi d'exploiter les assets de marque. tu les as tous. » (5 zips : iconographie, icônes, mascottes, photos, social).**

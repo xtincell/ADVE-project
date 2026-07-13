@@ -137,14 +137,24 @@ async function main() {
   // partagée. Mot de passe initial de Stéphanie « 12345678 » (invitation à le
   // changer ensuite). ADR-0129/0131.
   const stephanieEmail = "stephanie@spawt.online";
+  // Invitation à personnaliser le mot de passe : active TANT QUE le mot de passe
+  // provisoire « 12345678 » est en usage (jamais de nag après personnalisation).
+  const existingSteph = await db.user.findUnique({ where: { email: stephanieEmail }, select: { hashedPassword: true } });
+  const stillTempPwd = existingSteph?.hashedPassword
+    ? await bcrypt.compare("12345678", existingSteph.hashedPassword)
+    : true;
   const stephanie = await db.user.upsert({
     where: { email: stephanieEmail },
-    update: {},
+    // Re-seed : garantit le mode jour par défaut ; l'invitation ne persiste que
+    // si le mot de passe provisoire est toujours actif (Increment 2b).
+    update: { themePreference: "light", passwordChangeInvited: stillTempPwd },
     create: {
       email: stephanieEmail,
       name: "Stéphanie Bidje",
       hashedPassword: await bcrypt.hash("12345678", 12),
       role: "USER",
+      themePreference: "light", // fondatrice → cockpit lumineux par défaut
+      passwordChangeInvited: true, // mot de passe provisoire « 12345678 » à personnaliser
     },
     select: { id: true },
   });

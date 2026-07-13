@@ -2,7 +2,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { TRPCError } from "@trpc/server";
-import { createTRPCRouter, publicProcedure } from "../init";
+import { createTRPCRouter, publicProcedure, protectedProcedure } from "../init";
 
 /* lafusee:public-auth — strangler N/A on publicProcedure (no operator binding pre-auth) */
 
@@ -139,6 +139,58 @@ export const authRouter = createTRPCRouter({
     }),
 
   /**
+   * Change son propre mot de passe (compte authentifié). Vérifie le mot de
+   * passe courant puis pose le nouveau (bcrypt 12) et lève l'invitation
+   * provisoire. Compte sécurité perso — pas une mutation métier de marque.
+   */
+  changePassword: protectedProcedure
+    .input(
+      z.object({
+        currentPassword: z.string().min(1),
+        newPassword: z.string().min(8),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const user = await ctx.db.user.findUnique({
+        where: { id: ctx.session.user.id },
+        select: { id: true, hashedPassword: true },
+      });
+      if (!user?.hashedPassword) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Aucun mot de passe défini sur ce compte." });
+      }
+      const ok = await bcrypt.compare(input.currentPassword, user.hashedPassword);
+      if (!ok) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Le mot de passe actuel est incorrect." });
+      }
+      const hashedPassword = await bcrypt.hash(input.newPassword, 12);
+      await ctx.db.user.update({
+        where: { id: user.id },
+        data: { hashedPassword, passwordChangeInvited: false },
+      });
+      return { success: true };
+    }),
+
+  /** Écarte l'invitation à changer de mot de passe (elle peut le faire plus tard). */
+  dismissPasswordInvite: protectedProcedure.mutation(async ({ ctx }) => {
+    await ctx.db.user.update({
+      where: { id: ctx.session.user.id },
+      data: { passwordChangeInvited: false },
+    });
+    return { success: true };
+  }),
+
+  /** Enregistre la préférence de thème (mode jour/nuit) de l'utilisateur. */
+  setThemePreference: protectedProcedure
+    .input(z.object({ theme: z.enum(["light", "dark"]) }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db.user.update({
+        where: { id: ctx.session.user.id },
+        data: { themePreference: input.theme },
+      });
+      return { success: true };
+    }),
+
+  /**
    * Get current user info (returns null if not authenticated).
    */
   me: publicProcedure.query(async ({ ctx }) => {
@@ -148,14 +200,17 @@ export const authRouter = createTRPCRouter({
     // to an Operator. Exposed so the client can render operator-only controls
     // honestly — shown enabled only when usable — instead of failing on click
     // with FORBIDDEN (founders are not operators; UPgraders operates the OS).
-    let canOperate = role === "ADMIN";
-    if (!canOperate) {
-      const user = await ctx.db.user.findUnique({
-        where: { id: ctx.session.user.id },
-        select: { operatorId: true },
-      });
-      canOperate = !!user?.operatorId;
-    }
-    return { id: ctx.session.user.id, role, canOperate };
+    const user = await ctx.db.user.findUnique({
+      where: { id: ctx.session.user.id },
+      select: { operatorId: true, themePreference: true, passwordChangeInvited: true },
+    });
+    const canOperate = role === "ADMIN" || !!user?.operatorId;
+    return {
+      id: ctx.session.user.id,
+      role,
+      canOperate,
+      themePreference: user?.themePreference ?? null,
+      passwordChangeInvited: user?.passwordChangeInvited ?? false,
+    };
   }),
 });

@@ -10,13 +10,105 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
-import { LogOut, User as UserIcon, Mail, Shield, Languages, CreditCard, Plug } from "lucide-react";
+import { LogOut, User as UserIcon, Mail, Shield, Languages, CreditCard, Plug, KeyRound, X } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { LocaleToggle } from "@/components/i18n/locale-toggle";
 import { trpc } from "@/lib/trpc/client";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
+import { useToast } from "@/components/shared/notification-toast";
+import { Button, Input } from "@/components/primitives";
 import { TIER_LABELS, SUBSCRIPTION_STATUS_LABELS } from "@/lib/billing/subscription-labels";
+
+/**
+ * Sécurité — changement de mot de passe + invitation dismissable (Increment 2b).
+ * Un compte créé avec un mot de passe provisoire (`passwordChangeInvited`) voit
+ * une invitation à le personnaliser, qu'il peut faire maintenant ou écarter
+ * pour plus tard. Le changement vérifie le mot de passe actuel côté serveur.
+ */
+function SecuritySection() {
+  const toast = useToast();
+  const utils = trpc.useUtils();
+  const me = trpc.auth.me.useQuery();
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirm, setConfirm] = useState("");
+
+  const change = trpc.auth.changePassword.useMutation({
+    onSuccess: () => {
+      toast.success("Mot de passe mis à jour.");
+      setCurrent(""); setNext(""); setConfirm("");
+      void utils.auth.me.invalidate();
+    },
+    onError: (e) => toast.error(e.message || "Changement impossible."),
+  });
+  const dismiss = trpc.auth.dismissPasswordInvite.useMutation({
+    onSuccess: () => void utils.auth.me.invalidate(),
+  });
+
+  const invited = me.data?.passwordChangeInvited ?? false;
+  const mismatch = confirm.length > 0 && next !== confirm;
+  const canSubmit = current.length > 0 && next.length >= 8 && next === confirm && !change.isPending;
+
+  return (
+    <section className="space-y-4 rounded-lg border border-border bg-background-raised p-6">
+      <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">
+        <KeyRound className="h-4 w-4 text-foreground-muted" />
+        Sécurité
+      </h2>
+
+      {invited && (
+        <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/10 p-3">
+          <p className="flex-1 text-sm text-warning">
+            Votre compte utilise un mot de passe provisoire. Personnalisez-le ci-dessous pour sécuriser votre accès.
+          </p>
+          <button
+            type="button"
+            aria-label="Plus tard"
+            title="Plus tard"
+            onClick={() => dismiss.mutate()}
+            className="rounded-md p-1 text-foreground-muted transition-colors hover:bg-secondary"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      <p className="text-sm text-foreground-muted">Changez votre mot de passe à tout moment.</p>
+      <div className="grid gap-3 sm:max-w-sm">
+        <Input
+          type="password"
+          autoComplete="current-password"
+          placeholder="Mot de passe actuel"
+          value={current}
+          onChange={(e) => setCurrent(e.target.value)}
+        />
+        <Input
+          type="password"
+          autoComplete="new-password"
+          placeholder="Nouveau mot de passe (8 caractères min.)"
+          value={next}
+          onChange={(e) => setNext(e.target.value)}
+        />
+        <Input
+          type="password"
+          autoComplete="new-password"
+          placeholder="Confirmez le nouveau mot de passe"
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+        />
+        {mismatch && <p className="text-xs text-error">Les deux mots de passe ne correspondent pas.</p>}
+        <Button
+          disabled={!canSubmit}
+          onClick={() => change.mutate({ currentPassword: current, newPassword: next })}
+        >
+          {change.isPending ? "Enregistrement…" : "Changer le mot de passe"}
+        </Button>
+      </div>
+    </section>
+  );
+}
 
 /**
  * Intégrations (vague E) — état honnête des sources de données connectées à
@@ -146,6 +238,8 @@ export default function CockpitSettingsPage() {
           </dl>
         </section>
       )}
+
+      <SecuritySection />
 
       <ConnectedSourcesSection />
 
