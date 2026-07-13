@@ -256,11 +256,29 @@ async function upsertPublishAction(
  * Mestor (kind ANUBIS_PUBLISH_SOCIAL_POST) — spine + cost-gate + firewall
  * zones (délégable "social", ADR-0131).
  */
+/**
+ * Meta/LinkedIn récupèrent le visuel par URL → il doit être ABSOLU et public.
+ * Un actif du coffre est stocké en chemin relatif (`/brand/…`) : on le résout
+ * sur l'URL publique de l'app avant l'appel plateforme. Une URL déjà absolue
+ * (CDN, etc.) passe telle quelle.
+ */
+function toAbsoluteImageUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (/^https?:\/\//i.test(url)) return url;
+  const base = (
+    process.env.NEXTAUTH_URL ??
+    process.env.NEXT_PUBLIC_BASE_URL ??
+    "https://powerupgraders.com"
+  ).replace(/\/$/, "");
+  return url.startsWith("/") ? `${base}${url}` : `${base}/${url}`;
+}
+
 export async function publishSocialPost(
   input: PublishSocialPostInput,
 ): Promise<PublishSocialPostResult> {
   const text = input.text.trim();
   if (!text && !input.imageUrl) throw new Error("Publication vide — texte ou visuel requis");
+  const pubImageUrl = toAbsoluteImageUrl(input.imageUrl);
   const targets = [...new Set(input.targets.map((t) => t.toUpperCase()))];
   if (targets.length === 0) throw new Error("Aucune plateforme ciblée");
 
@@ -330,9 +348,9 @@ export async function publishSocialPost(
 
     const out =
       platform === "FACEBOOK"
-        ? await publishToFacebook(conn.accountId, payload.access_token, text, input.linkUrl ?? null, input.imageUrl ?? null)
+        ? await publishToFacebook(conn.accountId, payload.access_token, text, input.linkUrl ?? null, pubImageUrl)
         : platform === "INSTAGRAM"
-          ? await publishToInstagram(conn.accountId, payload.access_token, text, input.imageUrl!)
+          ? await publishToInstagram(conn.accountId, payload.access_token, text, pubImageUrl!)
           : await publishToLinkedIn(conn.accountId, payload.access_token, text, input.linkUrl ?? null);
 
     if (typeof out === "string") {

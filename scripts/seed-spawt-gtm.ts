@@ -245,7 +245,7 @@ async function main() {
     targets: J0_PUBLICATION.targets,
     text: J0_PUBLICATION.text,
     linkUrl: J0_PUBLICATION.linkUrl,
-    imageUrl: null, // le visuel sera forgé depuis le brief puis rattaché
+    imageUrl: "/brand/spawt/social/post-quiz-1.png", // visuel officiel du quiz J0 (kit de marque) — requis pour Instagram
     scheduleAt: scheduleAt.toISOString(),
     requestedByUserId: stephanie.id, // la fondatrice/owner porte la publication
     pending: true,
