@@ -10,8 +10,7 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
-<<<<<<< HEAD
-## v6.27.127 — fix(cockpit): fin des cadenas god-mode + modale formules + portail « en construction » (2026-07-13)
+## v6.27.128 — fix(cockpit): fin des cadenas god-mode + modale formules + portail « en construction » (2026-07-13)
 
 **Audit complet des 54 surfaces cockpit founder : les gates redirigent → une modale de consultation des formules, le seul stub passe derrière un portail honnête, et le compte ADMIN ne voit plus jamais un cadenas.**
 
@@ -31,7 +30,29 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
   1 stub (`benchmarks`, portaillé). États honnêtes « à connecter / Bientôt » conservés tels quels
   (KPI newsletter, connexion boutique, X payant à l'appel).
 
-=======
+## v6.27.127 — feat(seshat): attribution des transitions de dévotion — la calibration morte reprend vie ([ADR-0135](docs/governance/adr/0135-devotion-transition-attribution.md)) (2026-07-13)
+
+**Bloc A du mandat « finis les constructibles ». La chaîne d'attribution/calibration lisait `CampaignAction.devotionTransitionsObserved` — un champ que PERSONNE n'écrivait (T7). Maintenant que la mesure de dévotion est quotidienne (ADR-0134), les montées de rang réelles deviennent la matière première d'une attribution honnête.**
+
+- **Enregistrement de la transition mesurée** : dans le single-writer `superfan-ingest`, quand un
+  profil EXISTANT monte de rang, un `Signal DEVOTION_TRANSITION` daté est écrit (une naissance
+  n'est PAS une transition ; provenance stampée). Même pattern que `CULT_TIER_UPGRADE`.
+- **Attribution temporelle « last-touch dans la fenêtre »** (`devotion-attribution.ts`) : chaque
+  transition observée est rattachée à l'action de campagne la plus récemment active avant
+  l'observation (rappel 45 j + latence d'effet 14 j) ; **non rattachable → non forcée**.
+  Reconstruit `devotionTransitionsObserved` (forme `{from,to,count}` lue sans changement par les
+  deux lecteurs Phase 19 + Phase 23), idempotent, **préserve la saisie manuelle**.
+- **Nouveau kind `SESHAT_ATTRIBUTE_DEVOTION_TRANSITIONS`** (SESHAT, sync, SLO 10 s/0 $) émis par le
+  cron social-sync après l'actualisation des superfans.
+- **Doctrine, pas de fabrication** : la transition est *mesurée*, l'association temporelle est
+  *l'hypothèse que teste la régression* — si elle n'a pas de signal, le ROC-AUC tombe vers 0.5 et
+  le gate refuse la promotion. 100 % déterministe, zéro LLM. Fiabilité PRODUCTION toujours gated
+  sur le sign-off direction (inchangé).
+- **Vérifié bout-en-bout** (PG local, Motion19) : promotion d'un fan → `Signal` écrit → attribution
+  → `devotionTransitionsObserved` peuplé → **`extractLabel` passe de toujours-0 à 1** (la régression
+  lit enfin un label réel) → idempotence confirmée.
+- 0 nouveau modèle Prisma, 1 kind, cap 7/7. Test `devotion-attribution.test.ts` (8 assertions).
+
 ## v6.27.126 — feat(oracle): le signal Overton MESURÉ atteint l'Oracle §34 (ADR-0134 §B7) (2026-07-13)
 
 **`buildOvertonRealSignalForOracle` (Phase 23 Story 3.6) était défini, testé, rendu par l'UI… et n'avait AUCUN caller de production (T1) — la section §34 ne montrait que le déclaré des piliers S/D.**
@@ -177,7 +198,6 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 - **Nouvelles dettes tracées** (§ Audit 2026-07-13 de RESIDUAL-DEBT) : dispatch COMPOSE_DELIVERABLE,
   dérivation honnête des labels d'attribution, Signal TARSIS sans writer, refresh auto STALE,
   91/94 séquences DRAFT, PDF Oracle brut, `ugcGenerationRate`.
->>>>>>> origin/main
 ## v6.27.119 — feat(cockpit): réseaux — une ligne par réseau, une Page de TRAVAIL choisie (compact + modal) (2026-07-13)
 
 **Demande opérateur : « je ne veux voir que la Page sur laquelle je travaille, une ligne par réseau, et le modal au clic pour choisir — pas toutes les Pages en désordre. »**

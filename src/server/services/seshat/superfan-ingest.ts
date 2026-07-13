@@ -93,7 +93,7 @@ export async function registerSuperfanProfile(
   const { strategyId, platform, handle, segment, engagementDepth, interactions, lastActiveAt, source, displayName } = input;
   const existing = await client.superfanProfile.findUnique({
     where: { strategyId_platform_handle: { strategyId, platform, handle } },
-    select: { metadata: true },
+    select: { metadata: true, segment: true },
   });
   const previousMeta =
     existing?.metadata && typeof existing.metadata === "object" && !Array.isArray(existing.metadata)
@@ -105,7 +105,7 @@ export async function registerSuperfanProfile(
     ...(displayName ? { displayName } : {}),
   };
 
-  return client.superfanProfile.upsert({
+  const profile = await client.superfanProfile.upsert({
     where: { strategyId_platform_handle: { strategyId, platform, handle } },
     create: {
       strategyId, platform, handle, segment, engagementDepth,
@@ -118,6 +118,56 @@ export async function registerSuperfanProfile(
       ...(interactions != null ? { interactions } : {}),
       ...(lastActiveAt ? { lastActiveAt } : {}),
       metadata,
+    },
+  });
+
+  // ADR-0135 §A — enregistrement de la transition RÉELLE quand un profil
+  // EXISTANT monte de rung. Une naissance (pas d'`existing`) n'est PAS une
+  // transition observée (c'est une classification initiale). L'événement est
+  // mesuré ; c'est l'attribution temporelle en aval qui l'associe à une
+  // action de campagne. Best-effort : n'échoue jamais l'enregistrement.
+  if (existing) {
+    const from = (DEVOTION_LADDER_TIERS as readonly string[]).includes(existing.segment)
+      ? (existing.segment as DevotionLadderTier)
+      : "SPECTATEUR";
+    if (devotionLadderPosition(segment) > devotionLadderPosition(from)) {
+      await recordDevotionTransition({ strategyId, handle, platform, from, to: segment, source }).catch(
+        () => {},
+      );
+    }
+  }
+
+  return profile;
+}
+
+/** Type de Signal portant une transition de dévotion observée (ADR-0135). */
+export const DEVOTION_TRANSITION_SIGNAL = "DEVOTION_TRANSITION" as const;
+
+/**
+ * Enregistre une transition de dévotion mesurée comme `Signal` daté (même
+ * pattern que `CULT_TIER_UPGRADE`). `Signal.createdAt` EST l'horodatage de
+ * l'observation, consommé par l'attribution temporelle. `source` stampé pour
+ * l'audit (MANUAL/SOCIAL/CRM/CAMPAIGN) — jamais fabriqué.
+ */
+export async function recordDevotionTransition(input: {
+  strategyId: string;
+  handle: string;
+  platform: string;
+  from: DevotionLadderTier;
+  to: DevotionLadderTier;
+  source: RegisterSuperfanInput["source"];
+}): Promise<void> {
+  await db.signal.create({
+    data: {
+      strategyId: input.strategyId,
+      type: DEVOTION_TRANSITION_SIGNAL,
+      data: {
+        handle: input.handle,
+        platform: input.platform,
+        from: input.from,
+        to: input.to,
+        source: input.source,
+      },
     },
   });
 }

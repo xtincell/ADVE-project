@@ -343,6 +343,21 @@ export async function execute(intent: Intent): Promise<IntentResult> {
         });
       }
 
+      case "SESHAT_ATTRIBUTE_DEVOTION_TRANSITIONS": {
+        // ADR-0135 — reconstruit CampaignAction.devotionTransitionsObserved
+        // depuis les transitions de dévotion mesurées (temporal join pur).
+        const { rebuildActionTransitions } = await import(
+          "@/server/services/campaign-tracker/devotion-attribution"
+        );
+        const out = await rebuildActionTransitions(intent.strategyId);
+        return wrap({
+          ...base,
+          status: "OK",
+          summary: `Attribution dévotion : ${out.transitionsAttributed}/${out.transitionsSeen} transitions rattachées, ${out.actionsUpdated} action(s) mise(s) à jour`,
+          output: out,
+        });
+      }
+
       case "SESHAT_CAPTURE_COMMUNITY_SNAPSHOT": {
         // Chemin cron de la mesure communautaire quotidienne (ADR-0134).
         // Chaîne : mesure community → devotion → cult. La chaîne aval ne
