@@ -8,6 +8,7 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { DEVOTION_LADDER_TIERS } from "@/domain/devotion-ladder";
+import { SUPERFAN_CONDITIONS } from "@/domain/superfan-conditions";
 import {
   registerSuperfanProfile,
   listSuperfanCandidates,
@@ -48,6 +49,20 @@ export const superfanRouter = createTRPCRouter({
       source: z.enum(["MANUAL", "CRM", "CAMPAIGN", "SOCIAL"]).default("MANUAL"),
       /** Nom d'affichage public (mesure inbox) — optionnel. */
       displayName: z.string().max(160).nullish(),
+      /**
+       * Conditions strictes franchies + preuve (ADR-0141). Le registre clients
+       * manuel = register avec `conditions: { PAID: { source: "MANUAL", note } }`.
+       */
+      conditions: z
+        .record(
+          z.enum(SUPERFAN_CONDITIONS),
+          z.object({
+            source: z.string().min(1).max(40),
+            at: z.string().datetime().optional(),
+            note: z.string().max(280).optional(),
+          }),
+        )
+        .optional(),
     }),
 
     caller: "superfan:register",
