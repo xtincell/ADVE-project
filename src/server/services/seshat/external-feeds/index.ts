@@ -1,20 +1,20 @@
 /**
- * Tarsis external feeds (ADR-0037 PR-G).
+ * Tarsis external feeds (ADR-0037 PR-G → RSS réel ADR-0099 → RSS-pur ADR-0143).
  *
- * Generates an `EXTERNAL_FEED_DIGEST` KnowledgeEntry country+sector for
- * each priority pair, populating macroSignals + weakSignals + the Trend
- * Tracker 49 variables. Fed by LLM synthesis with the CONTEXTE PAYS
- * constraint block (PR-D pattern). Future iteration : replace LLM
- * synthesis with real RSS / Google News / Statista API once API keys
- * are provisioned via the Anubis Credentials Vault (ADR-0021).
+ * Génère un `EXTERNAL_FEED_DIGEST` KnowledgeEntry par couple pays×secteur :
+ *   - articles réels + signaux dérivés depuis les vrais flux RSS (Google News,
+ *     déterministe, zéro clé, MULTILINGUE par pays) ;
+ *   - Trend Tracker macro (World Bank, déterministe) injecté à part.
  *
- * Cron orchestration : the Anubis scheduler can register one DAEMON per
- * priority pair. Out of scope for this PR — the service is callable
- * synchronously via FETCH_EXTERNAL_FEED intent.
+ * ADR-0143 — le fallback LLM (« synthèse qualitative » quand le RSS est vide)
+ * a été RETIRÉ : doctrine « dépendre au minimum des LLMs ». RSS vide = état
+ * vide HONNÊTE (macro déterministe conservé, articles absents), jamais une
+ * invention. La recherche d'actualité est donc 100 % déterministe.
+ *
+ * Cron orchestration : `/api/cron/external-feeds` (quotidien) appelle
+ * `refreshAllPriorityPairs()` ; callable aussi via FETCH_EXTERNAL_FEED intent.
  */
 
-import { callLLM } from "@/server/services/llm-gateway";
-import { UNTRUSTED_NOTICE, sanitizeInline } from "@/server/services/utils/untrusted-content";
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { ExternalFeedDigestDataSchema } from "@/server/services/seshat/knowledge/schemas";
@@ -81,9 +81,10 @@ export async function listActiveFeedPairs(): Promise<Array<{ countryCode: string
 }
 
 export interface FetchFeedResult {
-  status: "OK" | "LLM_FAILED" | "VALIDATION_FAILED";
-  /** Voie qui a produit le digest : RSS (déterministe, primaire) ou LLM (fallback). */
-  mode?: "RSS" | "LLM" | "CACHED";
+  status: "OK" | "FETCH_FAILED" | "VALIDATION_FAILED";
+  /** Voie qui a produit le digest : RSS (articles réels), RSS_EMPTY (flux vide
+   *  → macro déterministe seul, zéro LLM) ou CACHED (digest du jour déjà présent). */
+  mode?: "RSS" | "RSS_EMPTY" | "CACHED";
   feedSource?: string;
   countryCode: string;
   sector: string;
@@ -104,8 +105,6 @@ export async function fetchAndPersistFeedDigest(
 ): Promise<FetchFeedResult> {
   const country = await db.country.findUnique({ where: { code: countryCode } });
   const countryName = country?.name ?? countryCode;
-  const region = country?.region ?? "?";
-  const ppp = country?.purchasingPowerIndex;
 
   // Idempotence : skip if a digest exists for today.
   const today = new Date();
@@ -174,93 +173,47 @@ export async function fetchAndPersistFeedDigest(
       };
     }
   }
-  // ── Fallback LLM (uniquement si RSS injoignable/vide — réseau bloqué, etc.) ───
-  // Les 49 variables Trend Tracker (macro chiffrés pays×secteur : PIB, inflation,
-  // pénétration mobile…) ne sont PAS demandées au LLM : un modèle ne doit jamais
-  // deviner un agrégat macro-économique. Elles sont COLLECTÉES de façon
-  // déterministe (World Bank — trend-collector.ts) puis injectées plus bas,
-  // identiquement en mode RSS et LLM. Le LLM ne produit ici qu'une synthèse
-  // QUALITATIVE des signaux.
 
-  // LOT 1e — entrée non fiable neutralisée (anti-injection). Les vrais items
-  // RSS (vecteur attaquant) ne transitent PAS par cet appel : ils passent par
-  // la voie déterministe `buildDigestFromItems` qui court-circuite avant ce
-  // fallback. Restent ici `sector`/`countryName` (params intent / dérivés
-  // saisie), neutralisés inline ; `countryCode`/`region`/`ppp` viennent de la
-  // table Country (taxonomie interne).
-  const sectorSafe = sanitizeInline(sector, { max: 120 });
-  const countryNameSafe = sanitizeInline(countryName, { max: 120 });
-  const systemPrompt = `${UNTRUSTED_NOTICE}
-
-Tu es un agrégateur de feed sectoriel. Tu produis un digest qualitatif macro/micro pour un pays + secteur donné.
-
-CONTEXTE PAYS — CONTRAINTE DURE :
-- Pays : ${countryNameSafe} (${countryCode}) — région ${region}${ppp !== undefined ? ` — PPP ${ppp}` : ""}
-- Secteur : ${sectorSafe}
-- Tous les signaux DOIVENT être plausibles dans ${countryNameSafe} pour ${sectorSafe}.
-- N'invente AUCUN chiffre précis (PIB, taux, montants, parts de marché). Décris des tendances QUALITATIVES. Si tu n'as pas de tendance fiable, retourne MOINS de signaux plutôt que d'en inventer.
-
-Format JSON strict (UNIQUEMENT ces deux clés) :
-{
-  "macroSignals": [{ "trend": "...", "evidence": "...", "timeHorizon": "SHORT|MEDIUM|LONG" }] (3-6),
-  "weakSignals": [{ "event": "...", "causalChain": ["...", "..."], "impactCategory": "...", "urgency": "LOW|MEDIUM|HIGH|CRITICAL" }] (1-3)
-}`;
-
-  const llmResult = await callLLM({
-    system: systemPrompt,
-    prompt: `Synthétise le digest qualitatif ${countryCode} × ${sectorSafe}. JSON uniquement, les deux clés macroSignals et weakSignals.`,
-    caller: "seshat:external-feeds",
-    maxOutputTokens: 2000,
-  });
-
-  const raw = llmResult.text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "");
-  const match = raw.match(/\{[\s\S]*\}/);
-  if (!match) {
-    return { status: "LLM_FAILED", countryCode, sector, signalsCreated: 0, trendTrackerVarsCovered: 0, error: "No JSON in LLM response" };
+  // ── RSS injoignable/vide → état vide HONNÊTE, ZÉRO LLM (ADR-0143) ────────────
+  // Doctrine « dépendre au minimum des LLMs » : plus de synthèse qualitative par
+  // modèle quand le flux est vide. Le pilier Track garde les agrégats macro
+  // DÉTERMINISTES (World Bank — trendTracker) ; les articles restent ABSENTS
+  // (l'absence est un état first-class, pas une invention). Si même le
+  // trendTracker est vide → on ne persiste rien (retry au prochain passage du
+  // cron), plutôt qu'une entrée creuse.
+  if (ttCovered === 0) {
+    return { status: "OK", mode: "RSS_EMPTY", countryCode, sector, signalsCreated: 0, trendTrackerVarsCovered: 0 };
   }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(match[0]);
-  } catch (err) {
-    return { status: "LLM_FAILED", countryCode, sector, signalsCreated: 0, trendTrackerVarsCovered: 0, error: err instanceof Error ? err.message : String(err) };
-  }
-
-  const validated = ExternalFeedDigestDataSchema.safeParse({
-    ...((parsed as Record<string, unknown>) ?? {}),
-    // trendTracker = déterministe (World Bank), jamais issu du LLM. Injecté APRÈS
-    // le spread pour écraser tout chiffre que le modèle aurait émis par erreur.
-    ...(ttCovered > 0 ? { trendTracker } : {}),
+  const emptyDigest = ExternalFeedDigestDataSchema.safeParse({
+    macroSignals: [],
+    weakSignals: [],
+    trendTracker,
+    items: [],
     generatedAt: new Date().toISOString(),
-    feedSource: "tarsis-llm-synthesis",
+    feedSource: "rss:empty",
   });
-  if (!validated.success) {
-    return { status: "VALIDATION_FAILED", countryCode, sector, signalsCreated: 0, trendTrackerVarsCovered: 0, error: validated.error.message.slice(0, 200) };
+  if (!emptyDigest.success) {
+    return { status: "VALIDATION_FAILED", countryCode, sector, signalsCreated: 0, trendTrackerVarsCovered: ttCovered, error: emptyDigest.error.message.slice(0, 200) };
   }
-
-  const trendTrackerVarsCovered = ttCovered;
-  const signalsCreated = (validated.data.macroSignals?.length ?? 0) + (validated.data.weakSignals?.length ?? 0);
-
-  const entry = await db.knowledgeEntry.create({
+  const emptyEntry = await db.knowledgeEntry.create({
     data: {
       entryType: "EXTERNAL_FEED_DIGEST",
       sector,
       countryCode,
       market: countryCode,
-      data: JSON.parse(JSON.stringify(validated.data)) as Prisma.InputJsonValue,
-      sampleSize: signalsCreated,
+      data: JSON.parse(JSON.stringify(emptyDigest.data)) as Prisma.InputJsonValue,
+      sampleSize: 0,
     },
   });
-
   return {
     status: "OK",
-    mode: "LLM",
-    feedSource: "tarsis-llm-synthesis",
+    mode: "RSS_EMPTY",
+    feedSource: "rss:empty",
     countryCode,
     sector,
-    entryId: entry.id,
-    signalsCreated,
-    trendTrackerVarsCovered,
+    entryId: emptyEntry.id,
+    signalsCreated: 0,
+    trendTrackerVarsCovered: ttCovered,
   };
 }
 
@@ -278,7 +231,7 @@ export async function refreshAllPriorityPairs(): Promise<FetchFeedResult[]> {
       results.push(r);
     } catch (err) {
       results.push({
-        status: "LLM_FAILED",
+        status: "FETCH_FAILED",
         countryCode: pair.countryCode,
         sector: pair.sector,
         signalsCreated: 0,

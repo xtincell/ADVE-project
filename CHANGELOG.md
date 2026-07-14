@@ -10,6 +10,18 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.152 — feat(seshat): veille d'actualité par marque — multi-sujets, multi-langue, pertinence déterministe, zéro LLM (2026-07-14)
+
+**Le traqueur d'actualité par marque était vide (SPAWT/foodtech) : requête = positionnement marketing (0 résultat Google News), langue codée en dur (`hl=fr`), et un fallback LLM inutile sur un chemin d'actualité. Refonte 100 % déterministe (ADR-0143).**
+
+- **Terme-tête searchable** (`sectorHeadTerm`) : « foodtech / découverte culinaire communautaire » → « foodtech ». Fini la phrase marketing qui ne matche aucun article.
+- **La langue n'est PAS un filtre** : chaque sujet est interrogé dans plusieurs langues (`SEARCH_LOCALES` fr/en/ar/pt) — on peut parler d'une marque partout ; forcer `fr` faisait rater les mentions étrangères (et cassait NG/ZA anglophones).
+- **Filtre de pertinence DÉTERMINISTE** (`relevance.ts`, zéro LLM) : recouvrement mots-clés article↔sujets, phrase exacte pondérée, fraîcheur, **marque pondérée 2×** (« on parle de MOI » prime sur l'actu sectorielle).
+- **Veille MULTI-SUJETS par marque** (`brand-feed.ts`) : sujets = la marque + son secteur (+ extras) → collecte multi-langue → tri pertinence → cache journalier read-through (`KnowledgeEntry market="brand:<id>"`, **0 migration**), préchauffé par le cron. `getMarketFeed` lit cette veille.
+- **Fallback LLM RETIRÉ** du chemin feed : RSS vide → digest honnête (macro World Bank déterministe conservé, `items: []`), jamais d'invention. L'erreur prod `model: claude-sonnet-4-…` venait de ce fallback, pas de la recherche d'actu.
+- **Verrou HARD** `external-feeds-relevance.test.ts` (25 assertions) : aucun fichier du chemin feed n'importe/appelle le LLM Gateway.
+- **Suivi séparé** (RESIDUAL-DEBT) : routeur LLM central « cloud par défaut, puis Sonnet 5, plus Sonnet 4 » — l'ordre cloud-first est déjà le défaut runtime ; le modèle vit dans la table `ModelPolicy` (prod) → config gouvernée distincte.
+
 ## v6.27.151 — feat(seed): SPAWT — assets visuels (logos/mascottes) branchés dans l'endpoint (2026-07-14)
 
 **Les assets de marque SPAWT (logos, 25 poses de Moka, palette) étaient un seed séparé jamais branché dans l'endpoint : `?only=spawt` ne posait que l'ADVE, pas les visuels.**

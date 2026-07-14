@@ -13,6 +13,27 @@ Audit ground-truth complet : [docs/audits/BRIEF-ORACLE-SCORING-PIVOT-AUDIT-2026-
 - ~~**PDF Oracle = dump JSON par section (T15)**~~ — **shippé [ADR-0138](adr/0138-oracle-export-readable-render.md)** : `sectionDataToBody` rend du texte structuré lisible (titres/puces/clé-valeur humanisés, clés internes masquées) pour MD + PDF ; rendu gras léger côté PDF. Vérifié PG local (0 fuite JSON).
 - **`ugcGenerationRate` cult index (B2)** : exclusion MAINTENUE par ADR-0134 §B2 (mentions jamais remplies par le connecteur — `FollowerSnapshot.mentionsCount` = saisie console uniquement ; inbox v1 = COMMENT only). Dérivation future : inbox v2 `kind="MENTION"` + mentions connecteur + constante de normalisation validée direction (pattern Phase 23).
 
+## Routeur LLM — « cloud par défaut, puis Sonnet 5 » (ADR-0143 suite, 2026-07-14)
+
+Directive opérateur : le LLM de La Fusée doit être **cloud (Ollama) par défaut, puis
+Sonnet 5, plus Sonnet 4**. État constaté (lecture `llm-gateway/index.ts`) :
+
+- **Cloud-first = DÉJÀ le défaut runtime.** `resolveTextProviderOrder` : hors premium
+  (`LLM_PREMIUM_MODE` off) et OpenRouter absent (clé non posée en prod), l'ordre = les
+  candidats tels quels, or `providersToTry` met **Ollama en tête** dès que la police
+  autorise la substitution (cas par défaut « agent »). Rien à changer côté ordre.
+- **Modèle Sonnet 4 → Sonnet 5 = à faire, en 2 endroits :**
+  1. **Code défauts** (`DEFAULT_MODEL`, `FALLBACK_POLICY`, `MODEL_PRIORITY`,
+     `OPENAI_MODEL_MAP`, commentaire « Sonnet 4 ») — `claude-sonnet-4-*` → `claude-sonnet-5`.
+     N'affecte que le chemin **DB-down** (le fallback en dur).
+  2. **Table `ModelPolicy` (prod)** — `resolvePolicy(purpose)` lit les modèles depuis la
+     **base**, pas le code. C'est de là que vient le `claude-sonnet-4-20250514` observé.
+     → mutation gouvernée `UPDATE_MODEL_POLICY` (ou re-seed) contre la base Coolify.
+- **Bornage** : changement de config **gouverné**, distinct du feed (ADR-0143). À faire
+  en un commit code (défauts + seed) + une action ops (intent/DB). Vérifier ensuite que
+  la cascade Ollama-cloud→Sonnet 5 ne hard-fail plus (l'erreur `model: claude-sonnet-4-…`
+  venait de ce couple : Ollama-cloud KO + Sonnet 4 inaccessible).
+
 ## Build déporté — bascule Coolify en attente (2026-07-12, carte blanche)
 
 CI d'image posée (`build-image.yml` → ghcr, boot smoke-test) + runbook
