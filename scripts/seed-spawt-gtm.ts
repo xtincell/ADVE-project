@@ -153,7 +153,7 @@ const J0_PUBLICATION = {
     "Décliner en 1-2 variantes d'archétypes pour les stories.",
 };
 
-async function main() {
+export async function seedSpawtGtm() {
   const strategy = await db.strategy.findUnique({
     where: { id: SPAWT_STRATEGY_ID },
     select: { id: true, userId: true, name: true, currencyCode: true },
@@ -489,10 +489,19 @@ async function upsertAction(a: UpsertActionArgs) {
   });
 }
 
-main()
-  .then(() => db.$disconnect())
-  .catch(async (e) => {
-    console.error("❌ seed-spawt-gtm:", e);
-    await db.$disconnect();
-    process.exit(1);
-  });
+// Runner CLI (`npm run db:seed:spawt-gtm`) — jamais à l'import (endpoint tunnel).
+if (
+  typeof process !== "undefined" &&
+  Array.isArray(process.argv) &&
+  typeof process.argv[1] === "string" &&
+  /seed-spawt-gtm/.test(process.argv[1])
+) {
+  seedSpawtGtm()
+    .then(() => db.$disconnect())
+    .then(() => process.exit(0))
+    .catch(async (e) => {
+      console.error("❌ seed-spawt-gtm:", e);
+      await db.$disconnect();
+      process.exit(1);
+    });
+}
