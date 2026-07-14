@@ -183,6 +183,31 @@ describe("discoverSocialAccounts", () => {
     expect(ig.tokens.access_token).toBe("PAGE-TOKEN-111");
   });
 
+  it("meta : `me/accounts` OMET l'IG → le fallback par-Page le récupère (quirk Meta, fix « FB oui, IG non »)", async () => {
+    vi.stubEnv("META_OAUTH_CLIENT_ID", "meta-id");
+    vi.stubEnv("META_OAUTH_CLIENT_SECRET", "meta-secret");
+    const fetchMock = vi
+      .fn()
+      // 1) agrégat me/accounts : la Page SANS instagram_business_account
+      .mockResolvedValueOnce(
+        jsonResponse(200, {
+          data: [{ id: "111", name: "SPAWT", username: "spawt.ci", access_token: "PAGE-TOKEN-111", fan_count: 4252 }],
+        }),
+      )
+      // 2) fallback direct sur la Page (token de PAGE) : renvoie le compte IG
+      .mockResolvedValueOnce(
+        jsonResponse(200, { instagram_business_account: { id: "ig-9", username: "spawt.ci", followers_count: 1753 } }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const accounts = await discoverSocialAccounts(getProviderConfig("meta")!, tokens);
+    expect(accounts.map((a) => a.platform).sort()).toEqual(["FACEBOOK", "INSTAGRAM"]);
+    const ig = accounts.find((a) => a.platform === "INSTAGRAM")!;
+    expect(ig.accountId).toBe("ig-9");
+    expect(ig.followerCount).toBe(1753);
+    expect(ig.tokens.access_token).toBe("PAGE-TOKEN-111"); // token de PAGE, pas user
+    expect(fetchMock).toHaveBeenCalledTimes(2); // agrégat + fallback par-Page
+  });
+
   it("google : compteur d'abonnés masqué (hiddenSubscriberCount) → followerCount null, jamais 0 fabriqué", async () => {
     vi.stubEnv("GOOGLE_OAUTH_CLIENT_ID", "g-id");
     vi.stubEnv("GOOGLE_OAUTH_CLIENT_SECRET", "g-secret");

@@ -278,6 +278,29 @@ export async function discoverSocialAccounts(
       `https://graph.facebook.com/v21.0/me/accounts?fields=${encodeURIComponent(`${FB_PAGE_FIELDS},${IG_FIELDS}`)}&limit=25&access_token=${encodeURIComponent(tokens.access_token)}`,
     );
     const pages = (json?.data as Array<Record<string, unknown>> | undefined) ?? [];
+    // Construit + empile un compte IG Business à partir de l'objet renvoyé par
+    // Graph. Réutilisé pour le résultat agrégé ET le fallback par-Page.
+    let igCount = 0;
+    const maybePushIg = (ig: Record<string, unknown> | undefined, pageTokens: SocialTokenPayload): boolean => {
+      if (!ig || typeof ig.id !== "string") return false;
+      accounts.push({
+        platform: "INSTAGRAM",
+        accountId: ig.id,
+        accountName: String(ig.name ?? ig.username ?? ig.id),
+        handle: typeof ig.username === "string" ? ig.username : null,
+        followerCount: typeof ig.followers_count === "number" ? ig.followers_count : null,
+        followingCount: asNum(ig.follows_count),
+        profile: toProfile({
+          bio: asStr(ig.biography),
+          website: asStr(ig.website),
+          followingCount: asNum(ig.follows_count),
+          mediaCount: asNum(ig.media_count),
+          pictureUrl: asStr(ig.profile_picture_url),
+        }),
+        tokens: pageTokens,
+      });
+      return true;
+    };
     for (const page of pages) {
       const pageId = String(page.id ?? "");
       if (!pageId) continue;
@@ -310,25 +333,32 @@ export async function discoverSocialAccounts(
         }),
         tokens: pageTokens,
       });
-      const ig = page.instagram_business_account as Record<string, unknown> | undefined;
-      if (ig && typeof ig.id === "string") {
-        accounts.push({
-          platform: "INSTAGRAM",
-          accountId: ig.id,
-          accountName: String(ig.name ?? ig.username ?? ig.id),
-          handle: typeof ig.username === "string" ? ig.username : null,
-          followerCount: typeof ig.followers_count === "number" ? ig.followers_count : null,
-          followingCount: asNum(ig.follows_count),
-          profile: toProfile({
-            bio: asStr(ig.biography),
-            website: asStr(ig.website),
-            followingCount: asNum(ig.follows_count),
-            mediaCount: asNum(ig.media_count),
-            pictureUrl: asStr(ig.profile_picture_url),
-          }),
-          tokens: pageTokens,
-        });
+      // 1) Compte IG rattaché renvoyé par l'agrégat `me/accounts`.
+      let igAdded = maybePushIg(page.instagram_business_account as Record<string, unknown> | undefined, pageTokens);
+      // 2) Fallback : `me/accounts` OMET fréquemment `instagram_business_account`
+      //    (quirk Meta bien connu) — on interroge la Page DIRECTEMENT avec SON
+      //    token, résolution la plus fiable de l'edge IG Business. Même exigence
+      //    de permission (`instagram_basic`) : si le token ne l'a pas, l'edge
+      //    reste vide (pas de fausse connexion).
+      if (!igAdded) {
+        const direct = await jsonFetch(
+          `https://graph.facebook.com/v21.0/${encodeURIComponent(pageId)}?fields=${encodeURIComponent(IG_FIELDS)}&access_token=${encodeURIComponent(pageToken)}`,
+        );
+        igAdded = maybePushIg(direct?.instagram_business_account as Record<string, unknown> | undefined, pageTokens);
       }
+      if (igAdded) igCount++;
+    }
+    // Diagnostic honnête : des Pages existent mais AUCUN compte IG Business
+    // rattaché n'a pu être lu → cause côté setup Meta (jamais un zéro fabriqué,
+    // aucune fausse connexion IG créée). Éclaire « FB connecte, IG non ».
+    if (pages.length > 0 && igCount === 0) {
+      console.warn(
+        `[social-connect] Meta : ${pages.length} Page(s) trouvée(s), 0 compte Instagram Business lu. ` +
+          "Causes probables : (1) le compte IG n'est pas en mode Business/Créateur ET rattaché à la Page ; " +
+          "(2) la permission `instagram_basic` n'est pas accordée — si META_LOGIN_CONFIG_ID est utilisé " +
+          "(Facebook Login for Business), les scopes SOCIAL_SCOPES sont ignorés : ajouter instagram_basic + " +
+          "instagram_content_publish + instagram_manage_insights à la Configuration côté Meta.",
+      );
     }
   } else if (config.id === "google") {
     // youtube.readonly : identité + audience + statistiques CUMULÉES de la

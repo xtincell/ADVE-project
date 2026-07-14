@@ -10,6 +10,25 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.141 — fix(anubis): connexion Instagram robuste — fallback par-Page + diagnostic honnête (2026-07-14)
+
+**Rapport opérateur : « Facebook connecte mais pas Instagram, le problème semble côté Fusée. »**
+
+- **Fallback de découverte IG par-Page** (`social-connect.discoverSocialAccounts`) : l'agrégat
+  `me/accounts?fields=…instagram_business_account{…}` **omet fréquemment** le compte IG (quirk Meta
+  connu). Quand c'est le cas, on interroge désormais la Page **directement avec SON token**
+  (`/{pageId}?fields=instagram_business_account{…}`) — résolution la plus fiable de l'edge IG. La FB
+  se créait, l'IG se perdait ; le fallback la récupère.
+- **Diagnostic honnête** : si des Pages existent mais **0 compte IG** n'est lu, un log serveur
+  explicite la cause probable (IG pas en Business/Créateur ET rattaché à la Page ; ou permission
+  `instagram_basic` absente). **Aucune fausse connexion IG** n'est jamais créée.
+- **Note importante côté Meta** : la face founder demande bien `instagram_basic` +
+  `instagram_content_publish` + `instagram_manage_insights` (`SOCIAL_SCOPES.meta`), MAIS si
+  `META_LOGIN_CONFIG_ID` est utilisé (« Facebook Login for Business »), ces scopes sont **ignorés**
+  au profit de la **Configuration** Meta — laquelle doit alors inclure ces permissions IG. C'est la
+  cause n°1 de « FB oui, IG non » sur ce type d'app.
+- 18 tests `social-connect` (dont le nouveau cas fallback). Cap APOGEE 7/7 (0 modèle, 0 Neter).
+
 ## v6.27.140 — feat(scorer): les actifs de l'équipe dirigeante comptent dans l'ADVE (pilier A) (2026-07-13)
 
 **Increment 2b SPAWT part 3/3 (mandat : « l'équipe vient avec des assets de valeur — diplômes, compétences, faits marquants — qui devraient avoir un impact dans l'ADVE, en plus de leur titre »).**
