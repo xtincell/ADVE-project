@@ -10,6 +10,14 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.148 — feat(seed): SPAWT seedable dans le runtime app (endpoint, sans tsx) (2026-07-14)
+
+**Le seed SPAWT ne pouvait pas tourner en prod : `tsx` (dev-dep) est absent de l'image, et le conteneur hardened (user `nextjs`) refuse `npm install` (EACCES). Rendu exécutable DANS l'app.**
+
+- **`scripts/seed-spawt-complete.ts` rendu importable** : `main()` → `export async function seedSpawtComplete(db)` (client Prisma **injecté**, plus d'instanciation top-level, plus de `process.exit`/`$disconnect` dans le corps — sinon l'import tuerait le serveur Next). Garde CLI en bas (`argv[1]` match) : `npm run db:seed:spawt` marche toujours en local ; l'import par l'app ne s'auto-exécute pas. Scorer via alias `@/` (bundle-safe webpack + tsx, remplace le `require("../src/…")` fragile) — même pattern que le seed Motion19.
+- **`/api/admin/seed-brands` branche SPAWT** : `?only=spawt|motion19|xtincell` cible une marque (absent → toutes). Exécution dans le runtime app avec le `db` partagé — **ni `tsx`, ni terminal, ni npm install**. ADMIN session OU bearer CRON_SECRET (inchangé).
+- **Débloque** : après déploiement, `POST /api/admin/seed-brands?only=spawt` (bouton console god-mode ou cron secret) seede SPAWT complet — avec les champs pays `CI` + secteur (v6.27.147) → la veille actualité se remplit au prochain `/api/cron/external-feeds`.
+
 ## v6.27.147 — fix(seed): SPAWT — pays + secteur pour la veille actualité (feed vide) (2026-07-14)
 
 **Le traqueur d'actualité par marque était vide pour SPAWT : sa fiche n'avait ni pays ni secteur — les deux clés dont dépend la veille (Google News RSS, gratuit, sans API).**

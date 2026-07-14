@@ -21,9 +21,6 @@ function makeClient() {
   return new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
 }
 
-
-const db = makeClient();
-
 // Semantic scorer — try dynamic import, fallback to inline if @/ paths don't resolve
 type ScorerResult = { pillarScores: Array<{ pillarKey: string; score: number }>; composite: number; classification: string };
 type ScorerFn = (pillars: Array<{ key: string; content: unknown }>) => ScorerResult;
@@ -42,8 +39,11 @@ function fallbackScorer(pillars: Array<{ key: string; content: unknown }>): Scor
 
 async function loadScorer(): Promise<ScorerFn> {
   try {
-    const mod = require("../src/server/services/advertis-scorer/semantic");
-    return mod.scoreAllPillarsSemantic;
+    // Alias @/ : résolu par webpack (bundle app quand le seed est appelé par
+    // l'endpoint /api/admin/seed-brands) ET par tsx (CLI + tsconfig paths).
+    // Remplace l'ancien require("../src/...") relatif, fragile au bundling.
+    const mod = await import("@/server/services/advertis-scorer/semantic");
+    return mod.scoreAllPillarsSemantic as ScorerFn;
   } catch {
     console.warn("⚠  Semantic scorer not importable — using fallback scorer");
     return fallbackScorer;
@@ -1587,9 +1587,15 @@ const PILLAR_S = {
   },
 };
 
-// ── Main ───────────────────────────────────────────────────────────────────
+// ── Seed (importable) ────────────────────────────────────────────────────────
+//
+// Exporté pour être appelé DANS le runtime de l'app (endpoint
+// /api/admin/seed-brands) avec le client Prisma partagé — pas besoin de `tsx`
+// ni d'accès terminal en prod. Le client est INJECTÉ : la fonction ne crée ni
+// ne ferme la connexion, et n'appelle JAMAIS process.exit (tuerait le serveur).
+// L'exécution CLI standalone est gérée par le garde en bas de fichier.
 
-async function main() {
+export async function seedSpawtComplete(db: PrismaClient) {
   console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   console.log("SEED SPAWT — Documentation ADVE-RTIS Complète (Schema-Compliant)");
   console.log("Sources : SPAWT_Presentation_Fevrier_2026_V2-2.docx + FORMULAIRE ADVE SPAWT REVISE-3.xlsx");
@@ -2485,13 +2491,27 @@ async function main() {
   console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   console.log(`  ✓  SPAWT DOCUMENTÉ — ${scoreResult.classification} (${scoreResult.composite.toFixed(1)}/200)`);
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
-
-  await db.$disconnect();
-  process.exit(0);
 }
 
-main().catch((e) => {
-  console.error("\n[ERREUR]", e.message);
-  console.error(e.stack?.split("\n").slice(0, 8).join("\n"));
-  process.exit(1);
-});
+// ── Runner CLI ───────────────────────────────────────────────────────────────
+// Exécution directe seulement (`npm run db:seed:spawt` / `tsx …seed-spawt-complete`).
+// À l'IMPORT (endpoint app), `argv[1]` est le serveur Next → ne matche pas → le
+// seed ne s'auto-exécute pas et ne fait pas process.exit (serveur préservé).
+const invokedDirectly =
+  typeof process !== "undefined" &&
+  Array.isArray(process.argv) &&
+  typeof process.argv[1] === "string" &&
+  /seed-spawt-complete/.test(process.argv[1]);
+
+if (invokedDirectly) {
+  const cliDb = makeClient();
+  seedSpawtComplete(cliDb)
+    .then(() => cliDb.$disconnect())
+    .then(() => process.exit(0))
+    .catch((e: unknown) => {
+      const err = e as Error;
+      console.error("\n[ERREUR]", err.message);
+      console.error(err.stack?.split("\n").slice(0, 8).join("\n"));
+      process.exit(1);
+    });
+}
