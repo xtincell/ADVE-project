@@ -438,6 +438,13 @@ export async function execute(intent: Intent): Promise<IntentResult> {
         });
       }
 
+      // ── Ingestion métrique externe agnostique (ADR-0146) ──────────
+      // Émis par /api/ingest/metrics (token MCP scopé) ou le cron interne.
+      case "INGEST_EXTERNAL_METRIC": {
+        const { ingestExternalMetric } = await import("@/server/services/anubis/metric-ingest");
+        return wrap({ ...base, ...(await ingestExternalMetric(intent)) });
+      }
+
       // ── Auto-promotion (ADR-0054) — Sprint 9 v6.18.22 ─────────────
       case "AUTO_PROMOTION_EVALUATE": {
         const { runAutoPromotion } = await import("@/server/services/auto-promotion");

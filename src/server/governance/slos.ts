@@ -125,6 +125,8 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "ANUBIS_COMMERCE_CONNECT_SHOP", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "ANUBIS_LINK_MOBILE_APP", p95LatencyMs: 3_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "ANUBIS_SYNC_COMMERCE", p95LatencyMs: 25_000, errorRatePct: 0.10, costP95Usd: 0 },
+  // ADR-0146 — ingestion métrique externe agnostique (push, zéro LLM, DB only).
+  { kind: "INGEST_EXTERNAL_METRIC", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   // ADR-0121 — re-scan empreinte publique → pilier E (footprint + Brave + Apify + RSS, zéro LLM).
   { kind: "ENRICH_E_FROM_PUBLIC_FOOTPRINT", p95LatencyMs: 35_000, errorRatePct: 0.10, costP95Usd: 0.005 },
   { kind: "SYNC_UPGRADERS_CANON", p95LatencyMs: 30_000, errorRatePct: 0.01, costP95Usd: 0 },

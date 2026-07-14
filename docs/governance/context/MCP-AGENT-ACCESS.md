@@ -61,7 +61,37 @@ admin `POST /api/admin/seed-brands?op=patch` (header `Authorization: Bearer <CRO
 édite par lots (voir `src/app/api/admin/seed-brands/route.ts`). Exposition en outil MCP
 scopé = résidu tracé (ADR-0145).
 
-## 5. Sécurité
+## 5. Pousser des métriques d'activité (ingestion agnostique, ADR-0146)
+
+Une source externe (quiz, app, CRM, newsletter, terrain, webhook) pousse des chiffres
+RÉELS dans le tracker de campagne + les KPI de mission. Le **même token scopé** sert
+(serveur `ingest` ou `*` ; un token BRAND ne pousse QUE sa marque).
+
+`POST https://powerupgraders.com/api/ingest/metrics` — header `x-api-key: lfk_…` :
+
+```bash
+curl -sS -X POST https://powerupgraders.com/api/ingest/metrics \
+  -H "x-api-key: lfk_xxx" -H "Content-Type: application/json" \
+  -d '{"strategyId":"spawt-strategy-001","sourceType":"QUIZ",
+       "sourceLabel":"quizz.spawt.online","campaignId":"spawt-campaign-lancement",
+       "period":"2026-07",
+       "metrics":[
+         {"stage":"ACQUISITION","metric":"quiz_starts","value":420},
+         {"stage":"ACTIVATION","metric":"quiz_completions","value":180,"target":250},
+         {"kpiActivityId":"mission-activity-id","metric":"leads","value":180}
+       ]}'
+```
+
+- `stage` (AARRR) **+** `campaignId` → écrit une `CampaignAARRMetric` (idempotent : ré-émettre
+  la même métrique/période **écrase** la valeur, ne duplique pas).
+- `kpiActivityId` → met à jour `MissionActivity.kpiActual` (gardé : l'activité doit être de
+  cette marque).
+- Chaque appel écrit **toujours** une provenance ; la fiche mission affiche alors
+  « Dernière remontée le … » (fini le « bientôt »).
+- Sources internes (cron/pull) : header `Authorization: Bearer <CRON_SECRET>` au lieu de
+  `x-api-key` (portée SYSTEM, non facturé).
+
+## 6. Sécurité
 
 - Seul le **hash SHA-256** du token est stocké ; le secret n'est jamais re-dérivable.
 - Un token **révoqué**/expiré/roté est refusé à l'auth.
