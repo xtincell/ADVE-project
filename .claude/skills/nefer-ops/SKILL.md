@@ -49,24 +49,17 @@ Puis livrer le code+seed par la lane normale (skill `nefer-ship`).
 
 ---
 
-## TEMPS 2 — DÉPLOIEMENT (le code arrive en ligne)
+## TEMPS 2 — DÉPLOIEMENT (le code arrive en ligne — AUTOMATIQUE)
 
-Après merge sur `main` (lane `nefer-ship`), l'instance ne bascule pas seule — déclencher + surveiller.
+**Le déploiement est AUTOMATIQUE au merge sur `main`** (webhook Coolify ; l'opérateur en lance parfois un aussi de son côté). **NEVER déclencher un déploiement manuel** (`POST /api/v1/deploy`) : il fait un **build EN DOUBLE** de la même image — et sur ce VPS où `next build` OOM, deux (ou trois) builds concurrents = fenêtre d'indispo multipliée + charge serveur inutile. Incident 2026-07-14, consigne opérateur explicite : « le déploiement est automatique après le merge […] ça fait beaucoup d'action sur le serveur ». **Le merge suffit. On attend, on ne pousse pas de build.**
 
-```bash
-# Déclencher le build/déploiement Coolify (token = env opérateur COOLIFY_DEPLOY_TOKEN ;
-# ne JAMAIS committer le token — le lire de l'environnement de session) :
-curl -sS -X POST "$COOLIFY_DEPLOY_URL" -H "Authorization: Bearer $COOLIFY_DEPLOY_TOKEN"
-# → { "deployments":[{ "message":"… deployment queued." }] }
-```
-- **Marqueur de version** : le pied de page porte `v<MAJEURE>.<PHASE>.<ITER>`. Surveiller en tâche de fond (jamais `sleep` bloquant en boucle) :
+- **Surveiller PASSIVEMENT** la bascule via l'endpoint version (simple GET, zéro charge) — jamais `sleep` bloquant en boucle ; un timer background qui ré-réveille le turn :
   ```bash
-  for i in $(seq 1 30); do sleep 60;
-    v=$(curl -sS --max-time 10 https://powerupgraders.com/pricing | grep -oE 'v6\.[0-9.]+' | head -1);
-    [ "$v" = "vX.Y.Z" ] && { echo "LIVE"; exit 0; }; done
+  curl -sS --max-time 15 https://powerupgraders.com/api/version   # → {"version":"6.27.XYZ"}
   ```
-  Lancer avec `run_in_background: true` — le turn est re-réveillé à la sortie.
-- **Blackout OOM** : `next build` sur le VPS de prod peut OOM (7-20 min). Bascule build-déporté (image CI, VPS tire seulement) = runbook `docs/deploy/BUILD-DEPORT.md` (action opérateur, réversible). Ne pas paniquer sur une fenêtre d'indispo pendant un build serial.
+  Comparer à `src/lib/version.ts` (`APP_VERSION`). Version servie == version mergée → image en ligne → enchaîner TEMPS 3.
+- **Blackout OOM** : `next build` sur le VPS peut OOM (7-20 min, se rétablit seul). Bascule build-déporté (image CI, VPS tire seulement) = runbook `docs/deploy/BUILD-DEPORT.md` (action opérateur, réversible). Ne pas paniquer sur une fenêtre d'indispo pendant un build.
+- **Exception — déploiement manuel autorisé UNIQUEMENT si** l'auto-déploiement a échoué / ne s'est pas déclenché, ET après confirmation opérateur explicite. Jamais « pour être sûr » en doublon.
 - **Migrations** : le CLI Prisma est mort dans l'image standalone ; le boot applique via `scripts/apply-migrations.mjs`. Une migration se propage donc au **prochain déploiement** — ne pas suggérer `prisma migrate deploy` dans le conteneur.
 
 ---

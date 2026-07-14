@@ -10,6 +10,20 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.151 — feat(seed): SPAWT — assets visuels (logos/mascottes) branchés dans l'endpoint (2026-07-14)
+
+**Les assets de marque SPAWT (logos, 25 poses de Moka, palette) étaient un seed séparé jamais branché dans l'endpoint : `?only=spawt` ne posait que l'ADVE, pas les visuels.**
+
+- **`scripts/seed-spawt-assets.ts` rendu importable** : `main()` → `export seedSpawtAssets(db)` (client injecté, plus de `process.exit`/`$disconnect`, garde CLI en bas). Absences (strategy manquante, `public/brand/spawt` non lisible au runtime standalone) → `note` honnête retourné, JAMAIS un STOP qui tue le serveur.
+- **`/api/admin/seed-brands`** : `?only=spawt` lance désormais complete **puis** assets (après la strategy) ; `?only=spawt-assets` pour rejouer le coffre seul. Le compte créés/présents (+ note éventuelle) est journalisé dans la réponse.
+- **Caveat runtime** : en image standalone, `public/` peut ne pas être au cwd → les fichiers sont servis en HTTP mais non énumérables par `readdir` ; dans ce cas les assets sont honnêtement « non enrôlés » (note), à corriger côté Dockerfile si besoin.
+
+## v6.27.150 — docs(nefer-ops): déploiement automatique au merge — pas de deploy manuel (2026-07-14)
+
+**Consigne opérateur : le déploiement est automatique après le merge ; déclencher un `POST /api/v1/deploy` en plus fait un build en double et surcharge le VPS.**
+
+- **Skill `nefer-ops` TEMPS 2 réécrit** : déploiement AUTOMATIQUE au merge sur `main` (webhook Coolify) → **`POST /api/v1/deploy` manuel INTERDIT** (double/triple build concurrent sur un VPS où `next build` OOM = indispo multipliée). On surveille passivement `/api/version` (GET, zéro charge) et on enchaîne les actions TEMPS 3 (seed/cron) qui sont de simples requêtes HTTP à l'app, pas des rebuilds. Exception : manuel autorisé UNIQUEMENT si l'auto-deploy a échoué + accord opérateur.
+
 ## v6.27.149 — fix(seed): SPAWT — propriétaire résolu dynamiquement (FK prod) (2026-07-14)
 
 **Le seed SPAWT via l'endpoint échouait en prod sur `Strategy_userId_fkey` : l'ID admin était hardcodé sur un compte du seed DEV, absent en prod.**

@@ -60,6 +60,18 @@ export async function POST(request: Request) {
       // `tsx`, pas de terminal. Rendu importable 2026-07-14 (feed veille vide).
       const { seedSpawtComplete } = await import("../../../../../scripts/seed-spawt-complete");
       await seedSpawtComplete(prisma);
+      // Assets visuels du coffre (logos/mascottes/palette) — APRÈS le complete
+      // (a besoin de la strategy `spawt-strategy`). Dégradation honnête si
+      // public/brand/spawt n'est pas lisible au runtime standalone.
+      const { seedSpawtAssets } = await import("../../../../../scripts/seed-spawt-assets");
+      const a = await seedSpawtAssets(prisma);
+      capture(`assets SPAWT : ${a.created} créé(s), ${a.skipped} présent(s)${a.note ? ` — ${a.note}` : ""}`);
+    }
+    if (only === "spawt-assets") {
+      // Assets seuls (strategy déjà seedée) — utile pour rejouer le coffre.
+      const { seedSpawtAssets } = await import("../../../../../scripts/seed-spawt-assets");
+      const a = await seedSpawtAssets(prisma);
+      capture(`assets SPAWT : ${a.created} créé(s), ${a.skipped} présent(s)${a.note ? ` — ${a.note}` : ""}`);
     }
     return NextResponse.json({ ok: true, only: only ?? "all", log });
   } catch (err) {
