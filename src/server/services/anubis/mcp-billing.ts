@@ -36,6 +36,10 @@ export interface McpAuthResult {
   ratePerCallUsd?: number;
   /** Présent si authentifié par session ADMIN (call interne, non facturé). */
   userId?: string;
+  /** Portée d'accès (ADR-0145). SYSTEM = tout l'OS ; BRAND = une seule marque. */
+  scopeKind?: "SYSTEM" | "BRAND";
+  /** Si scopeKind=BRAND : la seule stratégie touchable (sinon null/absent). */
+  scopeStrategyId?: string | null;
 }
 
 /**
@@ -50,7 +54,7 @@ export async function authenticateMcpRequest(
   // 1) Session ADMIN (Console / opérateur interne)
   const session = await auth();
   if (session?.user?.role === "ADMIN") {
-    return { ok: true, userId: session.user.id };
+    return { ok: true, userId: session.user.id, scopeKind: "SYSTEM" };
   }
 
   // 2) x-api-key (client externe facturé)
@@ -67,7 +71,13 @@ export async function authenticateMcpRequest(
       db.mcpApiKey
         .update({ where: { id: record.id }, data: { lastUsedAt: new Date() } })
         .catch(() => {});
-      return { ok: true, apiKeyId: record.id, ratePerCallUsd: record.ratePerCallUsd };
+      return {
+        ok: true,
+        apiKeyId: record.id,
+        ratePerCallUsd: record.ratePerCallUsd,
+        scopeKind: record.scopeKind === "BRAND" ? "BRAND" : "SYSTEM",
+        scopeStrategyId: record.scopeStrategyId,
+      };
     }
   }
 
@@ -252,9 +262,12 @@ export async function createApiKey(input: {
   includedMonthlyCalls?: number;
   ownerEmail?: string;
   expiresAt?: Date;
+  scopeKind?: "SYSTEM" | "BRAND";
+  scopeStrategyId?: string | null;
 }): Promise<{ id: string; plaintextKey: string }> {
   const plaintextKey = `lfk_${randomBytes(24).toString("hex")}`;
   const keyHash = createHash("sha256").update(plaintextKey).digest("hex");
+  const scopeKind = input.scopeKind === "BRAND" ? "BRAND" : "SYSTEM";
   const record = await db.mcpApiKey.create({
     data: {
       name: input.name,
@@ -264,7 +277,44 @@ export async function createApiKey(input: {
       includedMonthlyCalls: input.includedMonthlyCalls ?? 100,
       ownerEmail: input.ownerEmail ?? null,
       expiresAt: input.expiresAt ?? null,
+      scopeKind,
+      // BRAND sans marque = incohérent → on refuse silencieusement le scope (reste SYSTEM serait pire) ;
+      // le routeur valide la présence de scopeStrategyId AVANT d'appeler (source de vérité de la garde).
+      scopeStrategyId: scopeKind === "BRAND" ? input.scopeStrategyId ?? null : null,
     },
   });
   return { id: record.id, plaintextKey };
+}
+
+/**
+ * Rotation (ADR-0145) : mint un NOUVEAU secret en copiant la config de l'ancien
+ * (name/server/scope/billing/expiry), puis désactive l'ancien et inscrit son
+ * lineage (rotatedToId/rotatedAt). Le nouveau secret n'est retourné qu'UNE fois.
+ * Transaction — jamais deux clés actives pour la même rotation.
+ */
+export async function rotateApiKey(keyId: string): Promise<{ id: string; plaintextKey: string }> {
+  const old = await db.mcpApiKey.findUniqueOrThrow({ where: { id: keyId } });
+  const plaintextKey = `lfk_${randomBytes(24).toString("hex")}`;
+  const keyHash = createHash("sha256").update(plaintextKey).digest("hex");
+  const created = await db.$transaction(async (tx) => {
+    const fresh = await tx.mcpApiKey.create({
+      data: {
+        name: old.name,
+        keyHash,
+        server: old.server,
+        ratePerCallUsd: old.ratePerCallUsd,
+        includedMonthlyCalls: old.includedMonthlyCalls,
+        ownerEmail: old.ownerEmail,
+        expiresAt: old.expiresAt,
+        scopeKind: old.scopeKind,
+        scopeStrategyId: old.scopeStrategyId,
+      },
+    });
+    await tx.mcpApiKey.update({
+      where: { id: old.id },
+      data: { isActive: false, rotatedToId: fresh.id, rotatedAt: new Date() },
+    });
+    return fresh;
+  });
+  return { id: created.id, plaintextKey };
 }

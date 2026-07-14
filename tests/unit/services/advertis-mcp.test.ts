@@ -17,13 +17,18 @@ describe("ADR-0142 — MCP Advertis (outbound) : expose une marque à un agent",
     expect(names).not.toContain("getEngagementLadder");
   });
 
-  it("chaque tool est scopé à strategyId (lecture par marque)", () => {
+  it("chaque tool est scopé à strategyId (strategyId requis)", () => {
+    // Entrée valide complète : les tools de LECTURE n'ont besoin que de
+    // strategyId (les clés en trop sont strippées par Zod) ; le tool d'ÉCRITURE
+    // amendPillar exige aussi pillarKey/field/proposedValue/reason.
+    const full = { strategyId: "s1", pillarKey: "A", field: "nomMarque", proposedValue: "x", reason: "raison suffisante pour le test" };
+    const noStrategy = { pillarKey: "A", field: "nomMarque", proposedValue: "x", reason: "raison suffisante pour le test" };
     for (const t of tools) {
       expect(t.inputSchema).toBeInstanceOf(z.ZodType);
-      const parsed = (t.inputSchema as z.ZodType).safeParse({ strategyId: "s1" });
-      expect(parsed.success).toBe(true);
-      const missing = (t.inputSchema as z.ZodType).safeParse({});
-      expect(missing.success).toBe(false);
+      // Une entrée valide complète passe pour tout tool.
+      expect((t.inputSchema as z.ZodType).safeParse(full).success).toBe(true);
+      // strategyId est REQUIS partout (scopage par marque).
+      expect((t.inputSchema as z.ZodType).safeParse(noStrategy).success).toBe(false);
     }
   });
 

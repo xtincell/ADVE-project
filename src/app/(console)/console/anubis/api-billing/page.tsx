@@ -12,10 +12,11 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
-import { Key, Plus, Copy, Power, Receipt, CheckCircle2, BadgeDollarSign } from "lucide-react";
+import { Key, Plus, Copy, Power, Receipt, CheckCircle2, BadgeDollarSign, RefreshCw, Globe, Building2 } from "lucide-react";
 
 const MCP_SERVERS = [
   "*",
+  "advertis",
   "advertis-inbound",
   "artemis",
   "creative",
@@ -45,6 +46,12 @@ export default function McpApiBillingPage() {
   const setActive = trpc.mcpBilling.setKeyActive.useMutation({
     onSuccess: () => utils.mcpBilling.listKeys.invalidate(),
   });
+  const rotate = trpc.mcpBilling.rotateKey.useMutation({
+    onSuccess: (res) => {
+      setFreshKey(res.plaintextKey);
+      utils.mcpBilling.listKeys.invalidate();
+    },
+  });
   const issue = trpc.mcpBilling.issueStatement.useMutation({
     onSuccess: () => {
       utils.mcpBilling.listStatements.invalidate();
@@ -62,6 +69,9 @@ export default function McpApiBillingPage() {
     ratePerCallUsd: "0.002",
     includedMonthlyCalls: "100",
     ownerEmail: "",
+    scopeKind: "SYSTEM" as "SYSTEM" | "BRAND",
+    scopeStrategyId: "",
+    foreverToken: true,
   });
   const [issuePeriod, setIssuePeriod] = useState<string>(() => {
     // Défaut : le mois précédent (le mois clos à facturer).
@@ -131,8 +141,22 @@ export default function McpApiBillingPage() {
                     <span className="rounded-full bg-bg-subtle px-2 py-0.5 font-mono text-[10px] text-foreground-muted">
                       {k.server}
                     </span>
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                        k.scopeKind === "BRAND" ? "bg-warning/15 text-warning" : "bg-info/15 text-info"
+                      }`}
+                      title={k.scopeKind === "BRAND" ? `Limitée à la marque ${k.scopeStrategyId ?? ""}` : "Accès système entier"}
+                    >
+                      {k.scopeKind === "BRAND" ? <Building2 className="h-2.5 w-2.5" /> : <Globe className="h-2.5 w-2.5" />}
+                      {k.scopeKind === "BRAND" ? `marque ${(k.scopeStrategyId ?? "").slice(0, 14)}` : "SYSTÈME"}
+                    </span>
+                    {!k.expiresAt && (
+                      <span className="rounded-full bg-bg-subtle px-2 py-0.5 text-[10px] text-foreground-muted" title="Aucune expiration">∞</span>
+                    )}
                     {!k.isActive && (
-                      <span className="rounded-full bg-error/15 px-2 py-0.5 text-[10px] font-bold text-error">RÉVOQUÉE</span>
+                      <span className="rounded-full bg-error/15 px-2 py-0.5 text-[10px] font-bold text-error">
+                        {k.rotatedToId ? "ROTÉE" : "RÉVOQUÉE"}
+                      </span>
                     )}
                   </div>
                   <p className="text-xs text-foreground-muted">
@@ -159,6 +183,16 @@ export default function McpApiBillingPage() {
                 >
                   <Receipt className="h-3 w-3" /> Émettre {issuePeriod}
                 </button>
+                {k.isActive && (
+                  <button
+                    onClick={() => rotate.mutate({ keyId: k.id })}
+                    disabled={rotate.isPending}
+                    title="Générer un nouveau secret et révoquer l'ancien (config conservée)"
+                    className="flex items-center gap-1 rounded-lg border border-border bg-card px-3 py-1.5 text-xs hover:bg-card-hover disabled:opacity-40"
+                  >
+                    <RefreshCw className="h-3 w-3" /> Roter
+                  </button>
+                )}
                 <button
                   onClick={() => setActive.mutate({ keyId: k.id, isActive: !k.isActive })}
                   className={`flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs ${
@@ -229,6 +263,32 @@ export default function McpApiBillingPage() {
             className="rounded-lg border border-border bg-bg px-3 py-2 text-sm"
           />
         </div>
+
+        {/* Portée d'accès + durée (ADR-0145) */}
+        <div className="mt-3 flex flex-wrap items-center gap-4 rounded-lg border border-border bg-bg-subtle p-3">
+          <span className="text-xs font-semibold text-foreground">Accès</span>
+          <label className="flex cursor-pointer items-center gap-1.5 text-xs text-foreground">
+            <input type="radio" name="scopeKind" checked={form.scopeKind === "SYSTEM"} onChange={() => setForm({ ...form, scopeKind: "SYSTEM" })} />
+            <Globe className="h-3.5 w-3.5" /> Système entier
+          </label>
+          <label className="flex cursor-pointer items-center gap-1.5 text-xs text-foreground">
+            <input type="radio" name="scopeKind" checked={form.scopeKind === "BRAND"} onChange={() => setForm({ ...form, scopeKind: "BRAND" })} />
+            <Building2 className="h-3.5 w-3.5" /> Une seule marque
+          </label>
+          {form.scopeKind === "BRAND" && (
+            <input
+              placeholder="ID de la marque (strategyId)"
+              value={form.scopeStrategyId}
+              onChange={(e) => setForm({ ...form, scopeStrategyId: e.target.value })}
+              className="min-w-[16rem] flex-1 rounded-lg border border-border bg-bg px-3 py-1.5 font-mono text-xs"
+            />
+          )}
+          <label className="ml-auto flex cursor-pointer items-center gap-1.5 text-xs text-foreground-muted" title="Décoché = expire dans 90 jours">
+            <input type="checkbox" checked={form.foreverToken} onChange={(e) => setForm({ ...form, foreverToken: e.target.checked })} />
+            ∞ valable pour toujours
+          </label>
+        </div>
+
         <div className="mt-3 flex items-center justify-between">
           {createKey.error && <p className="text-xs text-error">{createKey.error.message}</p>}
           <button
@@ -239,9 +299,16 @@ export default function McpApiBillingPage() {
                 ratePerCallUsd: Number(form.ratePerCallUsd) || 0.002,
                 includedMonthlyCalls: Number(form.includedMonthlyCalls) || 0,
                 ownerEmail: form.ownerEmail || undefined,
+                scopeKind: form.scopeKind,
+                scopeStrategyId: form.scopeKind === "BRAND" ? form.scopeStrategyId.trim() || undefined : undefined,
+                expiresAt: form.foreverToken ? undefined : new Date(Date.now() + 90 * 864e5),
               })
             }
-            disabled={createKey.isPending || form.name.trim().length < 2}
+            disabled={
+              createKey.isPending ||
+              form.name.trim().length < 2 ||
+              (form.scopeKind === "BRAND" && form.scopeStrategyId.trim().length < 3)
+            }
             className="ml-auto rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-foreground hover:opacity-90 disabled:opacity-40"
           >
             Créer la clé
