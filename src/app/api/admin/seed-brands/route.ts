@@ -37,17 +37,31 @@ export async function POST(request: Request) {
     origLog(...args);
   };
 
+  // `?only=spawt|motion19|xtincell` cible UNE marque (utile pour re-seeder
+  // SPAWT seul sans retoucher les autres). Absent → toutes les marques de démo.
+  const only = new URL(request.url).searchParams.get("only");
+
   try {
     const prisma = db;
-    const { seedMotion19, seedMotion19BrandVault, seedMotion19Guild } = await import(
-      "../../../../../prisma/seed-motion19"
-    );
-    const { seedXtincell } = await import("../../../../../prisma/seed-xtincell");
-    await seedMotion19(prisma);
-    await seedMotion19BrandVault(prisma);
-    await seedMotion19Guild(prisma);
-    await seedXtincell(prisma);
-    return NextResponse.json({ ok: true, log });
+    if (!only || only === "motion19") {
+      const { seedMotion19, seedMotion19BrandVault, seedMotion19Guild } = await import(
+        "../../../../../prisma/seed-motion19"
+      );
+      await seedMotion19(prisma);
+      await seedMotion19BrandVault(prisma);
+      await seedMotion19Guild(prisma);
+    }
+    if (!only || only === "xtincell") {
+      const { seedXtincell } = await import("../../../../../prisma/seed-xtincell");
+      await seedXtincell(prisma);
+    }
+    if (!only || only === "spawt") {
+      // Seed SPAWT exécuté DANS le runtime de l'app (client injecté) — pas de
+      // `tsx`, pas de terminal. Rendu importable 2026-07-14 (feed veille vide).
+      const { seedSpawtComplete } = await import("../../../../../scripts/seed-spawt-complete");
+      await seedSpawtComplete(prisma);
+    }
+    return NextResponse.json({ ok: true, only: only ?? "all", log });
   } catch (err) {
     return NextResponse.json(
       { ok: false, log, error: err instanceof Error ? err.message : String(err) },
