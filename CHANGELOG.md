@@ -10,6 +10,14 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.149 — fix(seed): SPAWT — propriétaire résolu dynamiquement (FK prod) (2026-07-14)
+
+**Le seed SPAWT via l'endpoint échouait en prod sur `Strategy_userId_fkey` : l'ID admin était hardcodé sur un compte du seed DEV, absent en prod.**
+
+- **Propriétaire résolu dynamiquement** (comme le seed Motion19) : compte god-mode (email opérateur) → 1er `ADMIN` → fallback ID dev. Fini le `ADMIN_USER_ID` hardcodé qui violait la FK sur une base prod fraîche.
+- **`alexandreUser` (TalentProfile Guilde) tolérant** : `alexandre@upgraders.com` → sinon le propriétaire admin résolu ; ne `throw` que si AUCUN compte n'existe (impossible en prod). Avant, un email dev absent avortait le seed à l'étape 6/8.
+- Scan complet du seed : plus aucune référence FK/ID incompatible prod (3 lookups, tous `??`-fallback ; 1 `throw` résiduel jamais atteint en prod). Débloque le seed complet via `POST /api/admin/seed-brands?only=spawt`.
+
 ## v6.27.148 — feat(seed): SPAWT seedable dans le runtime app (endpoint, sans tsx) (2026-07-14)
 
 **Le seed SPAWT ne pouvait pas tourner en prod : `tsx` (dev-dep) est absent de l'image, et le conteneur hardened (user `nextjs`) refuse `npm install` (EACCES). Rendu exécutable DANS l'app.**
