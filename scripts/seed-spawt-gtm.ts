@@ -38,6 +38,42 @@ const db = makeDb();
 const SPAWT_STRATEGY_ID = "spawt-strategy";
 const QUIZ_URL = "https://quizz.spawt.online";
 
+/**
+ * Cadre canon de la campagne Go-To-Market (ADR-0119). Le GTM v2 n'était injecté
+ * que comme `BrandAction`s (calendrier) — il n'apparaissait donc PAS dans
+ * l'onglet Campagnes (qui liste des `Campaign`). On matérialise ici la campagne
+ * canon `GTM_90` et on lui rattache toutes les actions + les jalons datés.
+ * Idempotent par (strategyId, canonType, routeKey).
+ */
+const GTM_CAMPAIGN = {
+  name: "Go-To-Market — Lancement La Meute",
+  routeKey: "SPAWT_GTM_V2",
+  canonType: "GTM_90",
+  code: "GTM-SPAWT-V2",
+  startDate: "2026-07-13", // J0 — soft launch
+  endDate: "2026-09-01", // Bilan de cycle
+  aarrrPrimary: "ACQUISITION", // waitlist / leads via le quiz La Meute
+  aarrrSecondary: "REFERRAL", // parrainage / k-factor > 0,3 (objectif GTM)
+};
+
+/**
+ * Jalons datés (les « échéances » attendues dans la vue campagne). Dérivés des
+ * rituels de gouvernance + décisions du GTM v2. `isGateReview` = décision
+ * go/no-go structurante.
+ */
+interface GtmMilestone {
+  title: string;
+  dueDate: string;
+  phase: string;
+  isGateReview: boolean;
+}
+const GTM_MILESTONES: GtmMilestone[] = [
+  { title: "SPAWT REVIEW — owners, budget mkt, scope V1.1", dueDate: "2026-07-16", phase: "S1 · Soft launch", isGateReview: false },
+  { title: "BETA FERMÉE — invitations waitlist → app (50-100)", dueDate: "2026-07-31", phase: "S2-3 · Amplification", isGateReview: false },
+  { title: "SPAWT REVIEW PRÉSENTIEL — go/no-go ouverture publique", dueDate: "2026-08-13", phase: "S4-5 · Sprint Abidjan", isGateReview: true },
+  { title: "BILAN DE CYCLE — scale ou itérer", dueDate: "2026-09-01", phase: "S6-7 · Bilan", isGateReview: true },
+];
+
 /** Propriétés numériques SPAWT (GTM slide 12 « Liens & accès »). Publiques. */
 const SPAWT_PROPERTIES = [
   { key: "quiz", label: "Quiz La Meute (acquisition / waitlist)", url: QUIZ_URL },
@@ -120,7 +156,7 @@ const J0_PUBLICATION = {
 async function main() {
   const strategy = await db.strategy.findUnique({
     where: { id: SPAWT_STRATEGY_ID },
-    select: { id: true, userId: true, name: true },
+    select: { id: true, userId: true, name: true, currencyCode: true },
   });
   if (!strategy) {
     throw new Error(
@@ -184,6 +220,14 @@ async function main() {
       `ancien propriétaire = co-auteur DIGITAL_DIRECTOR.`,
   );
 
+  // ── 0.5 Campagne canon GTM_90 (la campagne visible dans l'onglet Campagnes) ─
+  // Sans ce cadre `Campaign`, le GTM n'existait qu'en `BrandAction`s (calendrier)
+  // et n'apparaissait donc PAS dans l'onglet Campagnes. On matérialise la campagne
+  // canon (ADR-0119) puis on lui rattache les actions + jalons.
+  const currency = strategy.currencyCode ?? "XAF";
+  const campaignId = await upsertGtmCampaign(currency);
+  console.log(`→ Campagne canon GTM_90 « ${GTM_CAMPAIGN.name} » (${campaignId})`);
+
   // ── 1. Fournisseur email Brevo ─────────────────────────────────────────────
   // On HONORE un connecteur déjà renseigné (par l'UI Connexions) — on n'écrase
   // jamais une clé saisie à la main. On ne (ré)écrit QUE si SPAWT_BREVO_API_KEY
@@ -218,6 +262,7 @@ async function main() {
   const propsList = SPAWT_PROPERTIES.map((p) => `• ${p.label} : ${p.url}`).join("\n");
   await upsertAction({
     strategyId: SPAWT_STRATEGY_ID,
+    campaignId,
     sourceInitiativeId: "gtm-v2-toolbox-acces",
     title: "Boîte à outils & accès SPAWT (GTM v2)",
     description: `Liens & accès de l'équipe (GTM slide 12) :\n${propsList}`,
@@ -234,6 +279,7 @@ async function main() {
   for (const a of GTM_ACTIONS) {
     await upsertAction({
       strategyId: SPAWT_STRATEGY_ID,
+      campaignId,
       sourceInitiativeId: `gtm-v2-${a.key}`,
       title: a.title,
       description: a.description,
@@ -274,11 +320,13 @@ async function main() {
     update: {
       status: "SCHEDULED",
       selected: true,
+      campaignId,
       timingStart: scheduleAt,
       metadata: { socialPublish, phase: "S1 · Soft launch", channel: "SOCIAL" } as Prisma.InputJsonValue,
     },
     create: {
       strategyId: SPAWT_STRATEGY_ID,
+      campaignId,
       sourceInitiativeId: J0_PUBLICATION.sourceInitiativeId,
       title,
       description: J0_PUBLICATION.text.slice(0, 500),
@@ -299,11 +347,103 @@ async function main() {
       "sans connexion la publication reste EN ATTENTE et partira dès que tu connectes (le cron réessaie).",
   );
 
-  console.log("\n✅ GTM SPAWT v2 injecté. Le cron social-sync ?mode=publish fera partir J0.");
+  // ── 5. Jalons datés de la campagne (les « échéances » de la vue campagne) ───
+  let msCount = 0;
+  for (const m of GTM_MILESTONES) {
+    await upsertMilestone(campaignId, m);
+    msCount += 1;
+  }
+  console.log(`→ Jalons campagne posés (${msCount} échéances : SPAWT REVIEWs, beta, go/no-go, bilan)`);
+
+  // ── 6. Filet de sécurité : rattache TOUTE action GTM restée orpheline ───────
+  // (idempotence — au cas où une action gtm-v2-* aurait été créée avant ce cadre).
+  const attached = await db.brandAction.updateMany({
+    where: { strategyId: SPAWT_STRATEGY_ID, sourceInitiativeId: { startsWith: "gtm-v2-" }, campaignId: null },
+    data: { campaignId },
+  });
+  if (attached.count > 0) {
+    console.log(`→ ${attached.count} action(s) GTM orpheline(s) rattachée(s) à la campagne.`);
+  }
+
+  console.log(
+    "\n✅ GTM SPAWT v2 injecté + campagne canon visible dans l'onglet Campagnes. " +
+      "Le cron social-sync ?mode=publish fera partir J0.",
+  );
+}
+
+/**
+ * Upsert idempotent de la campagne canon GTM_90 (par strategyId + canonType +
+ * routeKey). Budget volontairement laissé null : aucun budget global agrégé
+ * n'est déclaré dans le GTM v2 (honnêteté — on n'invente pas de chiffre).
+ */
+async function upsertGtmCampaign(currency: string): Promise<string> {
+  const data = {
+    name: GTM_CAMPAIGN.name,
+    canonType: GTM_CAMPAIGN.canonType,
+    routeKey: GTM_CAMPAIGN.routeKey,
+    aarrrPrimary: GTM_CAMPAIGN.aarrrPrimary,
+    aarrrSecondary: GTM_CAMPAIGN.aarrrSecondary,
+    isAlwaysOn: false,
+    budgetCurrency: currency,
+    startDate: new Date(GTM_CAMPAIGN.startDate),
+    endDate: new Date(GTM_CAMPAIGN.endDate),
+    objectives: {
+      description:
+        "Lancement de La Meute à Abidjan (cycle 13/07 → 01/09) : quiz d'acquisition, " +
+        "soft launch, beta fermée, sprint terrain semaine de l'indépendance, puis bilan de cycle.",
+      primary: "Acquisition — waitlist / leads via le quiz La Meute",
+      secondary: "Parrainage — k-factor > 0,3 (croissance organique)",
+    } as Prisma.InputJsonValue,
+  };
+  const existing = await db.campaign.findFirst({
+    where: {
+      strategyId: SPAWT_STRATEGY_ID,
+      canonType: GTM_CAMPAIGN.canonType,
+      routeKey: GTM_CAMPAIGN.routeKey,
+    },
+    select: { id: true },
+  });
+  if (existing) {
+    await db.campaign.update({ where: { id: existing.id }, data });
+    return existing.id;
+  }
+  const created = await db.campaign.create({
+    data: {
+      strategyId: SPAWT_STRATEGY_ID,
+      ...data,
+      code: GTM_CAMPAIGN.code,
+      // Soft launch en cours (J0 = 13/07) → la campagne est active.
+      state: "LIVE",
+      status: "ACTIVE",
+    },
+    select: { id: true },
+  });
+  return created.id;
+}
+
+/** Upsert idempotent d'un jalon (par campaignId + titre). */
+async function upsertMilestone(campaignId: string, m: GtmMilestone): Promise<void> {
+  const existing = await db.campaignMilestone.findFirst({
+    where: { campaignId, title: m.title },
+    select: { id: true },
+  });
+  const data = {
+    dueDate: new Date(m.dueDate),
+    phase: m.phase,
+    isGateReview: m.isGateReview,
+  };
+  if (existing) {
+    await db.campaignMilestone.update({ where: { id: existing.id }, data });
+    return;
+  }
+  await db.campaignMilestone.create({
+    data: { campaignId, title: m.title, status: "PENDING", ...data },
+  });
 }
 
 interface UpsertActionArgs {
   strategyId: string;
+  campaignId: string;
   sourceInitiativeId: string;
   title: string;
   description: string;
@@ -326,6 +466,7 @@ async function upsertAction(a: UpsertActionArgs) {
       description: a.description,
       status: a.status,
       selected: true,
+      campaignId: a.campaignId,
       touchpoint: a.touchpoint,
       timingStart: new Date(a.start),
       timingEnd: a.end ? new Date(a.end) : null,
@@ -333,6 +474,7 @@ async function upsertAction(a: UpsertActionArgs) {
     },
     create: {
       strategyId: a.strategyId,
+      campaignId: a.campaignId,
       sourceInitiativeId: a.sourceInitiativeId,
       title: a.title,
       description: a.description,

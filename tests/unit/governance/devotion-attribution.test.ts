@@ -107,8 +107,10 @@ describe("ADR-0135 — câblage gouverné", () => {
   it("l'enregistrement de transition ne concerne QUE les montées de rang de profils existants", () => {
     const ingest = read("src/server/services/seshat/superfan-ingest.ts");
     // Garde `if (existing)` + comparaison de position monotone.
+    // ADR-0141 : la comparaison porte sur le segment FINAL (dérivé des conditions
+    // + de la profondeur plancher), pas sur le segment brut fourni en entrée.
     expect(ingest).toContain("if (existing) {");
-    expect(ingest).toContain("devotionLadderPosition(segment) > devotionLadderPosition(from)");
+    expect(ingest).toContain("devotionLadderPosition(finalSegment) > devotionLadderPosition(from)");
     expect(ingest).toContain("recordDevotionTransition");
   });
 });

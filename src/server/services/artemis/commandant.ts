@@ -347,6 +347,7 @@ export async function execute(intent: Intent): Promise<IntentResult> {
             lastActiveAt: intent.lastActiveAt ? new Date(intent.lastActiveAt) : undefined,
             source: intent.source,
             displayName: intent.displayName ?? null,
+            conditions: intent.conditions,
           },
         );
         return wrap({

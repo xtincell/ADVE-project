@@ -83,6 +83,9 @@
 .ck-social__notice-x:hover { color: var(--text-primary); }
 .ck-social__meta { font-size: 11.5px; color: var(--text-secondary); margin: 1px 0 0; }
 .ck-social__meta b { font-family: var(--font-mono); font-weight: 700; color: var(--text-primary); }
+/* Aide contextuelle (ex : Instagram doit être un compte Pro relié à la Page FB) */
+.ck-social__hint { font-size: 11px; line-height: 1.4; color: var(--text-muted); margin: 3px 0 0; }
+.ck-social__hint b { font-weight: 600; color: var(--text-secondary); }
 .ck-social__actions { display: inline-flex; align-items: center; gap: 6px; }
 .ck-social__chip { flex: none; padding: 4px 10px; border-radius: var(--radius-pill); font-size: 10.5px; font-weight: 700; background: var(--surface-overlay); color: var(--text-muted); white-space: nowrap; }
 .ck-social__chip--ok { background: var(--success-fill); color: var(--success); }

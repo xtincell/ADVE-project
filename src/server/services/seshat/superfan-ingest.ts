@@ -23,12 +23,19 @@
  * une valeur fabriquée (P22-2).
  */
 
+import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import {
   DEVOTION_LADDER_TIERS,
   devotionLadderPosition,
   type DevotionLadderTier,
 } from "@/domain/devotion-ladder";
+import {
+  conditionFloorDepth,
+  metConditions,
+  TIER_MIN_DEPTH,
+  type SuperfanConditionMap,
+} from "@/domain/superfan-conditions";
 
 /** Client Prisma minimal — accepte `db` global ou le `ctx.db` tenant-scoped. */
 type SuperfanDbClient = {
@@ -79,6 +86,14 @@ export interface RegisterSuperfanInput {
   source: "MANUAL" | "CRM" | "CAMPAIGN" | "SOCIAL";
   /** Nom d'affichage public capté par la mesure (inbox) — jamais requis. */
   displayName?: string | null;
+  /**
+   * Conditions strictes franchies + leur preuve (ADR-0141). Chaque gate plancher
+   * le rung ET la profondeur (PAID → ENGAGE, etc.). Mergé avec l'existant
+   * (jamais-dégrader : une condition franchie ne se retire pas par une écriture
+   * qui l'omet). C'est LA voie du gate « a payé » : un client = register avec
+   * `conditions: { PAID: {...} }`.
+   */
+  conditions?: SuperfanConditionMap;
 }
 
 /**
@@ -90,7 +105,7 @@ export async function registerSuperfanProfile(
   client: SuperfanDbClient,
   input: RegisterSuperfanInput,
 ) {
-  const { strategyId, platform, handle, segment, engagementDepth, interactions, lastActiveAt, source, displayName } = input;
+  const { strategyId, platform, handle, segment, engagementDepth, interactions, lastActiveAt, source, displayName, conditions } = input;
   const existing = await client.superfanProfile.findUnique({
     where: { strategyId_platform_handle: { strategyId, platform, handle } },
     select: { metadata: true, segment: true },
@@ -99,22 +114,46 @@ export async function registerSuperfanProfile(
     existing?.metadata && typeof existing.metadata === "object" && !Array.isArray(existing.metadata)
       ? (existing.metadata as Record<string, unknown>)
       : {};
+
+  // ── ADR-0141 : conditions strictes (gate-gated) ────────────────────────────
+  // Union avec l'existant (jamais-dégrader : une écriture qui omet une condition
+  // ne la retire pas). Chaque gate franchi plancher le rung ET la profondeur —
+  // ainsi un client qui a payé remonte à ENGAGE même sans commentaire, et toutes
+  // les requêtes northstar (indexées sur engagementDepth) le reflètent.
+  const previousConditions = (previousMeta.conditions ?? {}) as SuperfanConditionMap;
+  const mergedConditions: SuperfanConditionMap = { ...previousConditions, ...(conditions ?? {}) };
+  const met = metConditions(mergedConditions);
+
+  // Profondeur finale = max(mesure fournie, plancher des conditions, plancher du
+  // segment déclaré). Le segment est recalculé de la profondeur finale — une
+  // seule échelle, cohérente avec les consommateurs existants.
+  const finalDepth = Math.max(
+    engagementDepth,
+    conditionFloorDepth(met),
+    TIER_MIN_DEPTH[segment] ?? 0,
+  );
+  const finalSegment = tierFromEngagementDepth(finalDepth);
+
   const metadata = {
     ...previousMeta,
     source,
     ...(displayName ? { displayName } : {}),
-  };
+    ...(met.length > 0 ? { conditions: mergedConditions } : {}),
+  } as unknown as Prisma.InputJsonValue;
 
   const profile = await client.superfanProfile.upsert({
     where: { strategyId_platform_handle: { strategyId, platform, handle } },
     create: {
-      strategyId, platform, handle, segment, engagementDepth,
+      strategyId, platform, handle,
+      segment: finalSegment,
+      engagementDepth: finalDepth,
       interactions: interactions ?? 0,
       lastActiveAt: lastActiveAt ?? null,
       metadata,
     },
     update: {
-      segment, engagementDepth,
+      segment: finalSegment,
+      engagementDepth: finalDepth,
       ...(interactions != null ? { interactions } : {}),
       ...(lastActiveAt ? { lastActiveAt } : {}),
       metadata,
@@ -130,8 +169,8 @@ export async function registerSuperfanProfile(
     const from = (DEVOTION_LADDER_TIERS as readonly string[]).includes(existing.segment)
       ? (existing.segment as DevotionLadderTier)
       : "SPECTATEUR";
-    if (devotionLadderPosition(segment) > devotionLadderPosition(from)) {
-      await recordDevotionTransition({ strategyId, handle, platform, from, to: segment, source }).catch(
+    if (devotionLadderPosition(finalSegment) > devotionLadderPosition(from)) {
+      await recordDevotionTransition({ strategyId, handle, platform, from, to: finalSegment, source }).catch(
         () => {},
       );
     }
@@ -341,6 +380,8 @@ export async function updateKnownSuperfansFromInbox(
           lastActiveAt: finalLastActive.toISOString(),
           source: "SOCIAL",
           displayName: agg.displayName,
+          // Preuve du gate « a interagi » (commentaires inbox) — ADR-0141.
+          conditions: { INTERACTED: { source: "SOCIAL", at: finalLastActive.toISOString() } },
         },
         { caller: "cron:social-sync:superfans" },
       );

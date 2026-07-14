@@ -596,6 +596,8 @@ export type Intent =
       lastActiveAt?: string;
       source: "MANUAL" | "CRM" | "CAMPAIGN" | "SOCIAL";
       displayName?: string | null;
+      // ADR-0141 — conditions strictes franchies + preuve (gate « a payé » inclus).
+      conditions?: import("@/domain/superfan-conditions").SuperfanConditionMap;
     }
   // ── Anubis boutique de la marque — Shopify OAuth founder (vague 2026-07-12) ──
   | {

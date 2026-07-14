@@ -10,6 +10,57 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.145 — fix(mcp): recentrer le MCP Advertis sur la stratégie ADVE-RTIS (frontière de domaine) (2026-07-13)
+
+**Précision opérateur : « le MCP que je voulais était pour l'ADVERTIS ; les AARRR c'est le suivi des superfans (zéro LLM), un autre domaine ; Overton et les superfans sont encore d'autres domaines. »**
+
+Correction de cadrage d'ADR-0142 : le MCP `advertis` avait été centré à tort sur les comportements AARRR (domaine superfan). Il expose désormais ce pour quoi il est fait — **l'ADVERTIS, c.-à-d. la stratégie ADVE-RTIS**.
+
+- **Frontière de domaine canonisée** ([ADR-0142](docs/governance/adr/0142-advertis-outbound-mcp-brand-exposure.md) §Frontière) : (1) **ADVERTIS** = stratégie ADVE-RTIS → MCP `advertis` ; (2) **Superfans** = framework AARRR, déterministe zéro LLM (ADR-0141) → domaine Seshat/superfan, surfacé par le MCP `pulse` + le cockpit ; (3) **Overton** = domaine culture/Seshat. Trois domaines distincts.
+- **MCP `advertis` recentré** : `getBrandCard` (identité) + **`getAdveRtis`** (les 8 piliers A/D/V/E/R/T/I/S, résumé lisible déterministe + score). Les tools superfan (`getAarrrBehaviors`/`getEngagementLadder`) retirés — ils relèvent du domaine superfan (déjà surfacé par `pulse`). Le funnel AARRR *déclaré* (pilier E) transite naturellement via `getAdveRtis` ; la *mesure* AARRR reste côté superfan.
+- `CONDITION_TO_AARRR` conservé dans `domain/superfan-conditions.ts` comme canon du **domaine superfan** (les 5 conditions strictes = les 5 comportements AARRR), pas comme dépendance du MCP.
+
+Cap APOGEE 7/7 préservé. 0 migration, 0 LLM. tsc 0 · lint 0 · tests verts.
+
+---
+
+## v6.27.144 — feat(mcp): serveur Advertis sortant — exposer une marque à un agent (2026-07-13)
+
+**Mandat opérateur : « le MCP de l'Advertis doit permettre d'exposer une marque à un agent — ses fondations existent mais jamais achevé/livré clé en main. »** *(Recentré ensuite sur l'ADVE-RTIS, cf. v6.27.145.)*
+
+Les fondations MCP existaient (9 serveurs agrégés, ADR-0026) dont `advertis-inbound` (qui **ingère** des signaux). Mais aucun serveur n'**exposait** une marque à un agent : le symétrique lecture n'avait jamais été livré.
+
+- **[ADR-0142](docs/governance/adr/0142-advertis-outbound-mcp-brand-exposure.md)** — serveur MCP sortant `advertis` (`src/server/mcp/advertis/`), contrepartie lecture d'`advertis-inbound`. Lecture seule, scopé à `strategyId`, 0 mutation, 0 LLM. Enregistré dans `MCP_SERVER_NAMES` → découvrable via `/api/mcp` + exécutable via `/api/mcp/advertis`, auth + metering réutilisés (billable). Aucune donnée fabriquée.
+
+Cap APOGEE 7/7 préservé. 0 migration, 0 LLM.
+
+---
+
+## v6.27.143 — feat(domain): superfan à conditions strictes (5 gates trackés + gate « a payé ») (2026-07-13)
+
+**Mandat opérateur : « un superfan doit avoir une définition stricte et des conditions trackables : a vu, a interagi, a payé, a recommandé, a partagé » — refonte système + ADR d'emblée.**
+
+La **définition** canon était déjà stricte (les 6 rungs du Devotion Ladder encodent les 5 conditions) mais la **mesure** ne la respectait pas — un seul scalaire `engagementDepth` dérivé des commentaires inbox uniquement. Conséquence : le gate **« a payé » sans signal** → rung ENGAGE inatteignable → **les clients étaient invisibles dans le ladder** (trou SPAWT : app gratuite, services payants hors-app).
+
+- **[ADR-0141](docs/governance/adr/0141-superfan-strict-conditions.md)** — `src/domain/superfan-conditions.ts` : 5 conditions (`VIEWED`/`INTERACTED`/`PAID`/`RECOMMENDED`/`SHARED`) mappées gate-gated sur les rungs.
+- **Le rung mesuré honore les conditions** : le single-writer `registerSuperfanProfile` floore `engagementDepth` + segment sur la condition la plus haute → **un client qui a payé remonte à ENGAGE (0,45 < 0,65 actif)** sans commentaire, reflété par toutes les vues northstar sans réécriture. Anti-inflation footprint (ADR-0126) intact.
+- **Gate « a payé » branché (registre clients manuel)** : `superfan.register` + `conditions: { PAID }`. Provenance par gate dans `metadata.conditions` — **0 migration, 0 nouveau Intent kind, 0 LLM**. §5 ADR : carte des sources manuel × automatique par gate.
+
+Cap APOGEE 7/7 préservé.
+
+---
+
+## v6.27.142 — fix(spawt): campagne GTM visible dans l'onglet Campagnes + aide connexion Instagram (2026-07-13)
+
+**Mandat opérateur : « la campagne Go-To-Market est bien ventilée mais n'apparaît pas dans l'onglet Campagnes — régularise. Je n'arrive pas à raccorder l'Instagram de SPAWT (j'ai les accès Meta). »**
+
+- **Campagne GTM régularisée** — le GTM v2 n'était injecté que comme `BrandAction`s (calendrier), l'onglet Campagnes liste des `Campaign` → rien n'apparaissait. `scripts/seed-spawt-gtm.ts` matérialise la **campagne canon `GTM_90`** ([ADR-0119](docs/governance/adr/0119-campaign-canon-from-s.md)), rattache toutes les actions (`BrandAction.campaignId`, publication J0 incluse) et pose 4 jalons datés (`CampaignMilestone`). Idempotent, budget null (rien d'inventé).
+- **Aide connexion Instagram** — IG passe par la même autorisation Meta que Facebook et n'est découvert que si compte Professionnel relié à la Page FB. La carte « Mes réseaux » affiche une aide honnête quand la Page FB est connectée mais qu'Instagram ne remonte pas.
+
+Cap APOGEE 7/7 préservé. 0 modèle Prisma, 0 Intent kind, 0 LLM.
+
+---
+
 ## v6.27.141 — fix(anubis): connexion Instagram robuste — fallback par-Page + diagnostic honnête (2026-07-14)
 
 **Rapport opérateur : « Facebook connecte mais pas Instagram, le problème semble côté Fusée. »**
