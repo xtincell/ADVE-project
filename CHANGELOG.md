@@ -10,6 +10,12 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.158 — feat(cockpit): tunnel `?diag` renvoie le détail campagnes + missions (ids) (2026-07-14)
+
+**Le diag ne donnait que des compteurs ; pour piloter un reparentage/réconciliation via `?op=patch` il faut les ids. `?diag` renvoie désormais `campaignList` (id/name/canonType/routeKey/state) + `missionList` (id/title/status/campaignId/priority) par stratégie. Générique, lecture seule.**
+
+- Débloque la réconciliation LIVE de SPAWT sur la vraie stratégie (`spawt-strategy-001`) : identifier la campagne canon + où sont rattachées les missions, puis `?op=patch` (missions[]/actions[]/archiveCampaigns[]) précis.
+
 ## v6.27.157 — feat(cockpit): fiche mission founder single-pane — pilotage + tâches datées + saisie perf ([ADR-0144](docs/governance/adr/0144-cockpit-founder-mission-single-pane.md)) (2026-07-14)
 
 **Le fondateur pilote enfin sa mission DANS le cockpit : il lit le brief, démarre la mission, coche ses tâches datées et saisit ses vrais chiffres — au même endroit. Réponse à « missions non cliquables / briefs non consultables / je ne sais pas quelles tâches et quand / démarrer au clic / valider mes tâches ».**

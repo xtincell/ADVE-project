@@ -59,10 +59,22 @@ export async function POST(request: Request) {
       const report = [];
       for (const s of strategies) {
         const ctx = (s.businessContext ?? {}) as Record<string, unknown>;
-        const [assetsByKind, campaigns, pillars] = await Promise.all([
+        const [assetsByKind, campaigns, pillars, campaignList, missionList] = await Promise.all([
           prisma.brandAsset.groupBy({ by: ["kind", "state"], where: { strategyId: s.id }, _count: { _all: true } }),
           prisma.campaign.count({ where: { strategyId: s.id } }),
           prisma.pillar.count({ where: { strategyId: s.id } }),
+          // Détail campagnes + missions (générique) — nécessaire pour piloter un
+          // reparentage/réconciliation par le tunnel `?op=patch` (on a besoin des ids).
+          prisma.campaign.findMany({
+            where: { strategyId: s.id },
+            select: { id: true, name: true, canonType: true, routeKey: true, state: true, status: true },
+            orderBy: { createdAt: "asc" },
+          }),
+          prisma.mission.findMany({
+            where: { strategyId: s.id },
+            select: { id: true, title: true, status: true, campaignId: true, priority: true },
+            orderBy: { priority: "asc" },
+          }),
         ]);
         report.push({
           id: s.id,
@@ -73,6 +85,8 @@ export async function POST(request: Request) {
           campaigns,
           pillars,
           assets: assetsByKind.map((a) => ({ kind: a.kind, state: a.state, n: a._count._all })),
+          campaignList,
+          missionList,
         });
       }
       return NextResponse.json({ ok: true, diag: sid, strategyCount: report.length, strategies: report });
