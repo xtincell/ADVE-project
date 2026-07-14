@@ -10,6 +10,22 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.155 — fix(cockpit): tunnel ciblable + re-parentage — SPAWT identité/campagnes sur la bonne stratégie (doublon) (2026-07-14)
+
+**Le diagnostic (`?diag=spawt`) a révélé DEUX stratégies SPAWT : `spawt-strategy-001` (celle du dashboard : ADVE + Glory, mais 0 logo/palette/typo/campagne) et `spawt-strategy` (le doublon créé par le seed, qui portait tout). Le tunnel écrivait sur le mauvais.**
+
+- **Tunnel ciblable** : `seedSpawtAssets(db, targetStrategyId?)` + `?only=spawt-assets&target=<id>` → (re)crée l'identité canon (logo/palette/typo/fonts/brandbook) sur la VRAIE stratégie, pas le doublon.
+- **Re-parentage** : `?reparent=<fromId>&to=<toId>` déplace campagnes + `BrandAction` du doublon vers la stratégie réelle (les actifs d'identité sont re-créés au canon à jour, pas déplacés).
+- **Résolution SPAWT** : `?only=spawt-assets&target=spawt-strategy-001` + `?reparent=spawt-strategy&to=spawt-strategy-001` → logo/palette/typo/fonts/brandbook + GTM enfin visibles sur le dashboard.
+
+## v6.27.154 — feat(cockpit): brand book officiel SPAWT ingéré dans le canon (BRAND_GUIDELINES, livrable majeur pair de l'Oracle) (2026-07-14)
+
+**Le brand book officiel SPAWT v1.0 (40 pages) ingéré dans le canon brandbook de La Fusée — le kind `BRAND_GUIDELINES` existe déjà (pair de `ORACLE_DOCUMENT`), il lui manquait le document officiel.**
+
+- **Actif `BRAND_GUIDELINES` ACTIVE/OFFICIAL** : PDF officiel (`public/brand/spawt/SPAWT-brandbook-v2.pdf`) + canon structuré extrait (mission/vision/positionnement/valeurs/personnalité/couleurs/typo/logo/mascotte/12 sections). Source FILE/OFFICIAL — pas un draft LLM.
+- **Livrable majeur** : le brandbook est un livrable de premier rang au même titre que l'Oracle (Oracle = `ORACLE_DOCUMENT` auto-composé ; Brandbook = `BRAND_GUIDELINES`, cf. Glory tool `BRANDBOOK-D` qui le compose depuis le pilier D).
+- **Anti-doublon** : rien de neuf créé — le canon existait (`brand-vault/engine.ts` mappe `brand_guidelines → BRAND_GUIDELINES`) ; on y ingère le document officiel de SPAWT.
+
 ## v6.27.153 — feat(spawt+ops): identité de marque canon (palette/typo/fonts) + tunnel data-ops vault + import campagnes (2026-07-14)
 
 **SPAWT en prod : logo/typo/palette « 0 » + GTM absent. Cause : le vault n'expose ni le système typographique ni les fonts, la palette portait des valeurs inférées (fausses), et les campagnes (GTM v2) n'étaient jamais importées en prod. Corrigé sur données du brand book officiel, + tunnel gouverné pour ne plus être « coincé dehors ».**
