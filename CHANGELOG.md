@@ -10,6 +10,12 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.150 — docs(nefer-ops): déploiement automatique au merge — pas de deploy manuel (2026-07-14)
+
+**Consigne opérateur : le déploiement est automatique après le merge ; déclencher un `POST /api/v1/deploy` en plus fait un build en double et surcharge le VPS.**
+
+- **Skill `nefer-ops` TEMPS 2 réécrit** : déploiement AUTOMATIQUE au merge sur `main` (webhook Coolify) → **`POST /api/v1/deploy` manuel INTERDIT** (double/triple build concurrent sur un VPS où `next build` OOM = indispo multipliée). On surveille passivement `/api/version` (GET, zéro charge) et on enchaîne les actions TEMPS 3 (seed/cron) qui sont de simples requêtes HTTP à l'app, pas des rebuilds. Exception : manuel autorisé UNIQUEMENT si l'auto-deploy a échoué + accord opérateur.
+
 ## v6.27.149 — fix(seed): SPAWT — propriétaire résolu dynamiquement (FK prod) (2026-07-14)
 
 **Le seed SPAWT via l'endpoint échouait en prod sur `Strategy_userId_fkey` : l'ID admin était hardcodé sur un compte du seed DEV, absent en prod.**
