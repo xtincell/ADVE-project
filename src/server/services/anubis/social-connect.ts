@@ -38,6 +38,7 @@ import {
   decryptTokenPayload,
   encryptTokenPayload,
   getProviderConfig,
+  refreshInstagramLongLivedToken,
   type ProviderConfig,
   type SupportedProvider,
   type TokenResponse,
@@ -46,20 +47,29 @@ import {
 // ── Types ────────────────────────────────────────────────────────────────────
 
 /** Providers OAuth ouverts aux marques (sous-ensemble de SupportedProvider). */
-export type BrandSocialProvider = "meta" | "google" | "linkedin" | "x" | "tiktok";
+export type BrandSocialProvider = "meta" | "instagram" | "google" | "linkedin" | "x" | "tiktok";
 
 export const BRAND_SOCIAL_PROVIDERS: readonly BrandSocialProvider[] = [
   "meta",
+  "instagram",
   "google",
   "linkedin",
   "x",
   "tiktok",
 ];
 
-/** Plateforme (enum Prisma) → provider OAuth qui la porte. */
+/**
+ * Plateforme (enum Prisma) → provider OAuth qui la porte.
+ *
+ * INSTAGRAM passe désormais par son PROPRE provider (« Instagram Business
+ * Login », ADR-0128 amendé 2026-07-14) et non plus par `meta`/Facebook Login :
+ * la connexion directe ne dépend plus d'une Page FB liée. Les connexions IG
+ * héritées (découvertes sous `meta` via l'edge FB-Page) restent lisibles —
+ * leur `metadata.provider="meta"` route la collecte vers graph.facebook.com.
+ */
 export const PROVIDER_FOR_PLATFORM: Record<string, BrandSocialProvider> = {
   FACEBOOK: "meta",
-  INSTAGRAM: "meta",
+  INSTAGRAM: "instagram",
   YOUTUBE: "google",
   LINKEDIN: "linkedin",
   TWITTER: "x",
@@ -86,6 +96,14 @@ export const SOCIAL_SCOPES: Record<BrandSocialProvider, readonly string[]> = {
     "instagram_content_publish",
     "instagram_manage_comments",
     "instagram_manage_insights",
+  ],
+  // Instagram Business Login — scopes « instagram_business_* » (les nus sont
+  // dépréciés depuis 2025-01-27). Basic = profil/audience/médias ;
+  // content_publish = publier ; manage_comments = inbox (vague ultérieure).
+  instagram: [
+    "instagram_business_basic",
+    "instagram_business_content_publish",
+    "instagram_business_manage_comments",
   ],
   google: [
     "openid",
@@ -359,6 +377,37 @@ export async function discoverSocialAccounts(
           "(Facebook Login for Business), les scopes SOCIAL_SCOPES sont ignorés : ajouter instagram_basic + " +
           "instagram_content_publish + instagram_manage_insights à la Configuration côté Meta.",
       );
+    }
+  } else if (config.id === "instagram") {
+    // Instagram Business Login : un SEUL compte (le compte pro autorisé) —
+    // profil + audience + volumes lus sur graph.instagram.com/me avec le token
+    // long-lived. Aucune Page FB requise (c'est tout l'intérêt du flow dédié).
+    const IG_ME_FIELDS =
+      "user_id,username,name,account_type,followers_count,follows_count,media_count,biography,website,profile_picture_url";
+    const json = await jsonFetch(
+      `https://graph.instagram.com/me?fields=${encodeURIComponent(IG_ME_FIELDS)}&access_token=${encodeURIComponent(tokens.access_token)}`,
+    );
+    // user_id peut arriver en nombre OU en chaîne selon la version — coercition
+    // défensive (jamais un id vide, jamais un compte fabriqué).
+    const rawIgId = json?.user_id ?? json?.id;
+    const igId = rawIgId == null ? null : String(rawIgId);
+    if (json && igId) {
+      accounts.push({
+        platform: "INSTAGRAM",
+        accountId: igId,
+        accountName: String(json.name ?? json.username ?? igId),
+        handle: asStr(json.username),
+        followerCount: asNum(json.followers_count),
+        followingCount: asNum(json.follows_count),
+        profile: toProfile({
+          bio: asStr(json.biography),
+          website: asStr(json.website),
+          followingCount: asNum(json.follows_count),
+          mediaCount: asNum(json.media_count),
+          pictureUrl: asStr(json.profile_picture_url),
+        }),
+        tokens: user,
+      });
     }
   } else if (config.id === "google") {
     // youtube.readonly : identité + audience + statistiques CUMULÉES de la
@@ -640,6 +689,18 @@ async function refreshTokens(
   provider: BrandSocialProvider,
   payload: SocialTokenPayload,
 ): Promise<SocialTokenPayload | null> {
+  // Instagram : self-refresh du long-lived (~60j) — PAS de refresh_token, on
+  // présente le token lui-même à graph.instagram.com/refresh_access_token.
+  if (provider === "instagram") {
+    const refreshed = await refreshInstagramLongLivedToken(payload.access_token);
+    if (!refreshed?.access_token) return null;
+    return {
+      access_token: refreshed.access_token,
+      refresh_token: null,
+      obtainedAt: Date.now(),
+      expiresAt: refreshed.expires_in ? Date.now() + refreshed.expires_in * 1000 : null,
+    };
+  }
   if (!payload.refresh_token) return null;
   const config = getProviderConfig(provider as SupportedProvider);
   if (!config) return null;
@@ -702,6 +763,7 @@ async function fetchFollowersForConnection(
   platform: string,
   accountId: string,
   accessToken: string,
+  provider?: BrandSocialProvider,
 ): Promise<FollowerFetchResult | "AUTH" | "OUTAGE"> {
   const guard = async (url: string, init?: RequestInit) => {
     try {
@@ -738,8 +800,13 @@ async function fetchFollowersForConnection(
     };
   }
   if (platform === "INSTAGRAM") {
+    // provider="instagram" (Business Login) → graph.instagram.com avec le token
+    // IG. provider="meta" (edge FB-Page hérité) → graph.facebook.com avec le
+    // page token. Mêmes champs — seul l'hôte change.
+    const igBase =
+      provider === "instagram" ? "https://graph.instagram.com" : "https://graph.facebook.com/v21.0";
     const json = await guard(
-      `https://graph.facebook.com/v21.0/${encodeURIComponent(accountId)}?fields=username,name,followers_count,follows_count,media_count,biography,website,profile_picture_url&access_token=${encodeURIComponent(accessToken)}`,
+      `${igBase}/${encodeURIComponent(accountId)}?fields=username,name,followers_count,follows_count,media_count,biography,website,profile_picture_url&access_token=${encodeURIComponent(accessToken)}`,
     );
     if (json === "AUTH" || json === "OUTAGE") return json;
     return {
@@ -892,6 +959,7 @@ export async function syncStrategySocialFollowers(
       String(conn.platform),
       conn.accountId,
       payload.access_token,
+      provider,
     );
     if (result === "AUTH") {
       await db.socialConnection.update({ where: { id: conn.id }, data: { status: "ERROR" } });
@@ -980,6 +1048,7 @@ async function fetchPostsForConnection(
   platform: string,
   accountId: string,
   accessToken: string,
+  provider?: BrandSocialProvider,
 ): Promise<FetchedPost[] | "AUTH" | "OUTAGE" | "UNSUPPORTED"> {
   const guard = async (url: string, init?: RequestInit) => {
     try {
@@ -1019,8 +1088,11 @@ async function fetchPostsForConnection(
   }
 
   if (platform === "INSTAGRAM") {
+    // Même arbitrage d'hôte que les followers : Business Login → graph.instagram.com.
+    const igBase =
+      provider === "instagram" ? "https://graph.instagram.com" : "https://graph.facebook.com/v21.0";
     const json = await guard(
-      `https://graph.facebook.com/v21.0/${encodeURIComponent(accountId)}/media?fields=id,caption,timestamp,like_count,comments_count,media_type,media_url,thumbnail_url,permalink&limit=${POSTS_PER_SYNC}&access_token=${encodeURIComponent(accessToken)}`,
+      `${igBase}/${encodeURIComponent(accountId)}/media?fields=id,caption,timestamp,like_count,comments_count,media_type,media_url,thumbnail_url,permalink&limit=${POSTS_PER_SYNC}&access_token=${encodeURIComponent(accessToken)}`,
     );
     if (json === "AUTH" || json === "OUTAGE") return json;
     const items = (json.data as Array<Record<string, unknown>> | undefined) ?? [];
@@ -1147,6 +1219,7 @@ export async function syncStrategySocialPosts(
       String(conn.platform),
       conn.accountId,
       payload.access_token,
+      provider,
     );
     if (fetched === "AUTH") {
       await db.socialConnection.update({ where: { id: conn.id }, data: { status: "ERROR" } });

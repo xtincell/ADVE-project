@@ -530,7 +530,7 @@ export type Intent =
       kind: "ANUBIS_SOCIAL_CONNECT_ACCOUNT";
       strategyId: string;
       userId: string;
-      provider: "meta" | "google" | "linkedin" | "x" | "tiktok";
+      provider: "meta" | "instagram" | "google" | "linkedin" | "x" | "tiktok";
       /** Tokens déjà chiffrés AES-GCM — aucun secret en clair dans l'émission. */
       accounts: Array<{
         platform: "FACEBOOK" | "INSTAGRAM" | "YOUTUBE" | "LINKEDIN" | "TWITTER" | "TIKTOK";

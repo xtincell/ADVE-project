@@ -10,6 +10,15 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.146 — feat(anubis): Instagram Business Login — provider dédié (connexion directe, sans Page FB) (2026-07-14)
+
+**« Facebook connecte mais pas Instagram » → « il faut un tout autre code pour Instagram » : provider `instagram` propre (Instagram Business Login), la connexion IG ne dépend plus d'une Page Facebook.**
+
+- **Nouveau provider `instagram`** ([ADR-0128](docs/governance/adr/0128-brand-social-connections-founder-oauth.md) amendé 2026-07-14) — « Instagram API with Instagram Login » (Business Login, GA 2024) : autorise sur `instagram.com/oauth/authorize` (`enable_fb_login=0`, scopes séparés par virgule), échange sur `api.instagram.com` (réponse **ENVELOPPÉE** `{data:[{access_token,user_id,permissions}]}` — déballée par `parseInstagramShortTokenResponse`), long-lived `ig_exchange_token` + self-refresh `ig_refresh_token`, découverte/collecte/publication sur `graph.instagram.com`. `client_id` = Instagram App ID (défaut PUBLIC `1548627253622815`, surchargeable) ; secret `INSTAGRAM_OAUTH_CLIENT_SECRET` EN ENV uniquement.
+- **Cause du blocage** : FB + IG passaient par le SEUL provider `meta` ; IG n'était découvert que via l'edge FB-Page `instagram_business_account` — vide si le compte n'est pas rattaché / permission absente → « FB oui, IG non ». La connexion directe supprime cette dépendance.
+- **On étend, on ne double pas** : socle `oauth-integrations` (state HMAC, AES-GCM, PKCE, routes start/callback), Intent `ANUBIS_SOCIAL_CONNECT_ACCOUNT`, `SocialConnection`, `FollowerSnapshot`, hub « Mes réseaux » — tous réutilisés. `PROVIDER_FOR_PLATFORM.INSTAGRAM` : `meta → instagram`. Connexions IG héritées (`metadata.provider="meta"`) restent lisibles via `graph.facebook.com` (Loi 1) ; collecte/publication choisissent l'hôte selon le provider stocké. La publication accepte `instagram_content_publish` (héritée) OU `instagram_business_content_publish` (nouvelle).
+- **Vérif** : tsc 0 · lint 0 · `social-connect.test.ts` 28/28 (10 cas Instagram : config provider, `enable_fb_login=0`, scopes virgule, déballage enveloppe, découverte `/me`, réponse vide → 0 compte). **Restes** ([RESIDUAL-DEBT §ADR-0128](docs/governance/RESIDUAL-DEBT.md)) : inbox/insights encore `graph.facebook.com` (provider-aware = vague Inbox S3) ; App Review Meta pour le public ; poser `INSTAGRAM_OAUTH_CLIENT_SECRET` côté ops. Cap APOGEE 7/7 préservé.
+
 ## v6.27.145 — fix(mcp): recentrer le MCP Advertis sur la stratégie ADVE-RTIS (frontière de domaine) (2026-07-13)
 
 **Précision opérateur : « le MCP que je voulais était pour l'ADVERTIS ; les AARRR c'est le suivi des superfans (zéro LLM), un autre domaine ; Overton et les superfans sont encore d'autres domaines. »**

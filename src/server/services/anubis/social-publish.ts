@@ -68,10 +68,16 @@ export interface PublishSocialPostResult {
   results: PublishTargetResult[];
 }
 
-function requiredScopeFor(platform: string): string | null {
-  if (platform === "FACEBOOK") return "pages_manage_posts";
-  if (platform === "INSTAGRAM") return "instagram_content_publish";
-  if (platform === "LINKEDIN") return "w_member_social";
+/**
+ * Scope(s) de publication requis par plateforme — sémantique « n'importe
+ * lequel suffit ». Instagram accepte `instagram_content_publish` (flow
+ * meta/Facebook Login) OU `instagram_business_content_publish` (flow Instagram
+ * Business Login, ADR-0128 amendé 2026-07-14).
+ */
+function requiredScopesFor(platform: string): string[] | null {
+  if (platform === "FACEBOOK") return ["pages_manage_posts"];
+  if (platform === "INSTAGRAM") return ["instagram_content_publish", "instagram_business_content_publish"];
+  if (platform === "LINKEDIN") return ["w_member_social"];
   return null;
 }
 
@@ -117,8 +123,15 @@ async function publishToInstagram(
   accessToken: string,
   text: string,
   imageUrl: string,
+  viaInstagramGraph: boolean,
 ): Promise<{ id: string | null } | string> {
-  const base = `https://graph.facebook.com/v21.0/${encodeURIComponent(igUserId)}`;
+  // Instagram Business Login (token IG) publie sur graph.instagram.com ; l'edge
+  // FB-Page hérité (token de Page) publie sur graph.facebook.com. Même geste
+  // (container /media → /media_publish), seul l'hôte diffère.
+  const graphBase = viaInstagramGraph
+    ? "https://graph.instagram.com"
+    : "https://graph.facebook.com/v21.0";
+  const base = `${graphBase}/${encodeURIComponent(igUserId)}`;
   try {
     const create = await fetch(`${base}/media`, {
       method: "POST",
@@ -318,8 +331,8 @@ export async function publishSocialPost(
     }
     const meta = (conn.metadata ?? {}) as Record<string, unknown>;
     const scopes = Array.isArray(meta.scopes) ? meta.scopes.map(String) : [];
-    const needed = requiredScopeFor(platform);
-    if (needed && !scopes.includes(needed)) {
+    const needed = requiredScopesFor(platform);
+    if (needed && !needed.some((s) => scopes.includes(s))) {
       results.push({
         platform,
         state: "SCOPE_MISSING",
@@ -350,7 +363,14 @@ export async function publishSocialPost(
       platform === "FACEBOOK"
         ? await publishToFacebook(conn.accountId, payload.access_token, text, input.linkUrl ?? null, pubImageUrl)
         : platform === "INSTAGRAM"
-          ? await publishToInstagram(conn.accountId, payload.access_token, text, pubImageUrl!)
+          ? await publishToInstagram(
+              conn.accountId,
+              payload.access_token,
+              text,
+              pubImageUrl!,
+              // Business Login (token IG) → graph.instagram.com ; edge FB-Page → graph.facebook.com.
+              meta.provider === "instagram",
+            )
           : await publishToLinkedIn(conn.accountId, payload.access_token, text, input.linkUrl ?? null);
 
     if (typeof out === "string") {

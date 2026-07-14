@@ -130,7 +130,9 @@ export async function GET(
       pkceChallenge,
       // Meta : impose l'écran de sélection de Page (le founder DOIT choisir sa
       // Page pro, jamais son profil auto-résolu — bug « pas eu le choix »).
-      forceReselect: config.id === "meta",
+      // Instagram : ré-affiche l'écran de compte (force_reauth) pour permettre
+      // d'en choisir un autre (`enable_fb_login=0` est posé côté builder).
+      forceReselect: config.id === "meta" || config.id === "instagram",
     });
     const response = NextResponse.redirect(authorizeUrl);
     if (pkceVerifier) {

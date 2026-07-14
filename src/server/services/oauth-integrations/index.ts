@@ -12,7 +12,14 @@
 
 import crypto from "node:crypto";
 
-export type SupportedProvider = "google" | "linkedin" | "meta" | "x" | "tiktok" | "shopify";
+export type SupportedProvider =
+  | "google"
+  | "linkedin"
+  | "meta"
+  | "instagram"
+  | "x"
+  | "tiktok"
+  | "shopify";
 
 export interface ProviderConfig {
   readonly id: SupportedProvider;
@@ -83,6 +90,40 @@ export function getProviderConfig(provider: string): ProviderConfig | null {
         clientSecret,
         defaultScopes: ["pages_show_list", "pages_read_engagement", "ads_management"],
         userInfoEndpoint: "https://graph.facebook.com/me?fields=id,name,email",
+      };
+    }
+    case "instagram": {
+      // « Instagram API with Instagram Login » (Business Login, GA 2024) — un
+      // flow PROPRE, distinct du provider `meta`/Facebook Login : autorise sur
+      // instagram.com, échange sur api.instagram.com, appelle graph.instagram.com.
+      // AUCUN concept de config_id ici : `client_id` EST l'Instagram App ID (≠
+      // Meta App ID). Répond au blocage « Facebook connecte mais pas Instagram »
+      // (2026-07-14) — l'edge FB-Page → instagram_business_account restait vide ;
+      // la connexion directe Instagram Business ne dépend plus d'une Page FB.
+      // App ID PUBLIC (visible dans l'URL d'autorisation, jamais un secret) —
+      // défaut = la valeur fournie par l'opérateur, surchargée par env si besoin.
+      // `||` (pas `??`) : une env VIDE ("") retombe aussi sur le défaut.
+      const clientId = env.INSTAGRAM_OAUTH_CLIENT_ID || "1548627253622815";
+      // Le SECRET, lui, ne vit QUE en env (jamais commité). Sans lui → provider
+      // indisponible (l'UI affiche « bientôt disponible », pas un redirect cassé).
+      const clientSecret = env.INSTAGRAM_OAUTH_CLIENT_SECRET ?? env.INSTAGRAM_APP_SECRET;
+      if (!clientSecret) return null;
+      return {
+        id: "instagram",
+        authorizationEndpoint: "https://www.instagram.com/oauth/authorize",
+        tokenEndpoint: "https://api.instagram.com/oauth/access_token",
+        clientId,
+        clientSecret,
+        // Scopes « instagram_business_* » (les « business_* » nus sont dépréciés
+        // depuis le 2025-01-27). Basic = profil/médias ; content_publish =
+        // publier ; manage_comments/messages = inbox (vague ultérieure).
+        defaultScopes: [
+          "instagram_business_basic",
+          "instagram_business_content_publish",
+          "instagram_business_manage_comments",
+        ],
+        // Instagram délimite les scopes par VIRGULE dans l'URL d'autorisation.
+        scopeDelimiter: ",",
       };
     }
     // ── Réseaux propres de la marque (connexions founder, ADR-0128) ──────
@@ -323,6 +364,14 @@ export function buildAuthorizeUrl(opts: {
     // auto-résout et l'utilisateur n'a pas le choix (bug rapporté 2026-07-12).
     if (opts.forceReselect) params.set("auth_type", "reauthorize");
   }
+  // Instagram Business Login : `enable_fb_login=0` impose le login PUREMENT
+  // Instagram (pas d'interstitiel Facebook) — c'est LE point qui débloque les
+  // comptes non rattachés à une Page FB. `force_reauth` ré-affiche l'écran de
+  // compte pour permettre d'en choisir un autre (parité `forceReselect` Meta).
+  if (opts.config.id === "instagram") {
+    params.set("enable_fb_login", "0");
+    if (opts.forceReselect) params.set("force_reauth", "true");
+  }
   if (opts.config.usePkce) {
     if (!opts.pkceChallenge) throw new Error(`${opts.config.id} requires a PKCE challenge`);
     params.set("code_challenge", opts.pkceChallenge);
@@ -406,6 +455,122 @@ export async function exchangeMetaLongLivedToken(
     });
     if (!res.ok) return null;
     return (await res.json()) as TokenResponse;
+  } catch {
+    return null;
+  }
+}
+
+// ── Instagram Business Login — flow dédié (« tout autre code ») ────────
+//
+// Le token exchange Instagram NE renvoie PAS la forme OAuth standard : la
+// réponse est ENVELOPPÉE `{ data: [{ access_token, user_id, permissions }] }`
+// (permissions = liste de scopes séparée par des virgules). Le parseur
+// ci-dessous déballe l'enveloppe ET tolère une forme plate défensive.
+
+export interface InstagramShortToken {
+  access_token: string;
+  /** Identifiant utilisateur Instagram (sert d'accountId à la découverte). */
+  user_id: string | null;
+  /** Permissions accordées, jointes en chaîne (alias `scope` côté TokenResponse). */
+  scope: string | null;
+}
+
+export function parseInstagramShortTokenResponse(json: unknown): InstagramShortToken | null {
+  if (!json || typeof json !== "object") return null;
+  const root = json as Record<string, unknown>;
+  // Forme canonique enveloppée : { data: [ { access_token, user_id, permissions } ] }.
+  const dataArr = Array.isArray(root.data) ? (root.data as Array<Record<string, unknown>>) : null;
+  const node = dataArr && dataArr.length > 0 ? dataArr[0]! : root;
+  const token = node.access_token;
+  if (typeof token !== "string" || token.length === 0) return null;
+  const uid = node.user_id;
+  const perms = node.permissions;
+  return {
+    access_token: token,
+    user_id: uid == null ? null : String(uid),
+    scope: Array.isArray(perms) ? perms.join(",") : typeof perms === "string" ? perms : null,
+  };
+}
+
+/**
+ * Échange le code d'autorisation Instagram contre un token COURT (~1h).
+ * POST api.instagram.com/oauth/access_token (client_id/secret + code +
+ * redirect_uri) — réponse enveloppée déballée par `parseInstagramShortTokenResponse`.
+ */
+export async function exchangeInstagramCode(opts: {
+  config: ProviderConfig;
+  code: string;
+  redirectUri: string;
+}): Promise<TokenResponse & { user_id: string | null }> {
+  const body = new URLSearchParams({
+    client_id: opts.config.clientId,
+    client_secret: opts.config.clientSecret,
+    grant_type: "authorization_code",
+    redirect_uri: opts.redirectUri,
+    code: opts.code,
+  });
+  const res = await fetch(opts.config.tokenEndpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Accept: "application/json",
+    },
+    body,
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Instagram token exchange failed (${res.status}): ${text.slice(0, 200)}`);
+  }
+  const parsed = parseInstagramShortTokenResponse(await res.json().catch(() => null));
+  if (!parsed) throw new Error("Instagram token exchange: réponse inattendue (pas d'access_token)");
+  return { access_token: parsed.access_token, scope: parsed.scope ?? undefined, user_id: parsed.user_id };
+}
+
+/**
+ * Troque le token court Instagram (~1h) contre un long-lived (~60j).
+ * GET graph.instagram.com/access_token?grant_type=ig_exchange_token. Best-effort :
+ * en cas d'échec on garde le token court (le sync signalera AUTH à expiration).
+ */
+export async function exchangeInstagramLongLivedToken(
+  config: ProviderConfig,
+  shortLivedToken: string,
+): Promise<TokenResponse | null> {
+  if (config.id !== "instagram") return null;
+  const params = new URLSearchParams({
+    grant_type: "ig_exchange_token",
+    client_secret: config.clientSecret,
+    access_token: shortLivedToken,
+  });
+  try {
+    const res = await fetch(`https://graph.instagram.com/access_token?${params.toString()}`, {
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as TokenResponse;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Rafraîchit un long-lived Instagram (self-refresh — PAS de refresh_token :
+ * on présente le token lui-même). GET graph.instagram.com/refresh_access_token.
+ */
+export async function refreshInstagramLongLivedToken(
+  longLivedToken: string,
+): Promise<TokenResponse | null> {
+  const params = new URLSearchParams({
+    grant_type: "ig_refresh_token",
+    access_token: longLivedToken,
+  });
+  try {
+    const res = await fetch(`https://graph.instagram.com/refresh_access_token?${params.toString()}`, {
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as TokenResponse;
+    return json.access_token ? json : null;
   } catch {
     return null;
   }

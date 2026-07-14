@@ -20,6 +20,8 @@ import { db } from "@/lib/db";
 import {
   encryptTokenPayload,
   exchangeCode,
+  exchangeInstagramCode,
+  exchangeInstagramLongLivedToken,
   exchangeMetaLongLivedToken,
   fetchUserInfo,
   getProviderConfig,
@@ -116,13 +118,19 @@ export async function GET(
 
   let tokens;
   try {
-    tokens = await exchangeCode({
-      config,
-      code,
-      redirectUri,
-      pkceVerifier: config.usePkce ? readPkceCookie(request) : undefined,
-      shop: state.shop,
-    });
+    // Instagram Business Login = « tout autre code » : token exchange dédié
+    // (réponse enveloppée {data:[{access_token,user_id,permissions}]}, hôte
+    // api.instagram.com) — le flow générique OAuth échouerait à lire l'access_token.
+    tokens =
+      config.id === "instagram"
+        ? await exchangeInstagramCode({ config, code, redirectUri })
+        : await exchangeCode({
+            config,
+            code,
+            redirectUri,
+            pkceVerifier: config.usePkce ? readPkceCookie(request) : undefined,
+            shop: state.shop,
+          });
   } catch (err) {
     console.error("[oauth-callback]", provider, err);
     if (state.intent === "social" || state.intent === "commerce") {
@@ -141,6 +149,13 @@ export async function GET(
     // AVANT la découverte — les page tokens dérivés n'expirent alors pas.
     if (config.id === "meta") {
       const longLived = await exchangeMetaLongLivedToken(config, tokens.access_token);
+      if (longLived?.access_token) {
+        tokens = { ...tokens, ...longLived };
+      }
+    }
+    // Instagram : même logique, long-lived ~60j via ig_exchange_token.
+    else if (config.id === "instagram") {
+      const longLived = await exchangeInstagramLongLivedToken(config, tokens.access_token);
       if (longLived?.access_token) {
         tokens = { ...tokens, ...longLived };
       }

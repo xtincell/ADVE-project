@@ -24,7 +24,7 @@ les blackouts OOM. À faire **hors pic**, idéalement au moment du merge de la P
 publique OU ajouter un registry ghcr dans Coolify + secrets GitHub `COOLIFY_URL/
 TOKEN/APP_UUID` pour le redeploy auto. Rollback = repasser en source « Dockerfile ».
 
-## Réseaux de la marque — ADR-0128 (2026-07-12, NEFER)
+## Réseaux de la marque — ADR-0128 (2026-07-12 · amendé 2026-07-14, NEFER)
 
 Vague [ADR-0128](adr/0128-brand-social-connections-founder-oauth.md) shippée (v6.27.105) : OAuth founder 5 providers → `SocialConnection` branché (1er écrivain de production), sync followers P22-1 → `FollowerSnapshot`, dashboard cockpit complété (logo/actifs + « Mes réseaux » + « Veille & actualités » articles réels), seed Motion19 exécuté. **Amendée v6.27.112 (« la fusée devrait tout récupérer »)** : collecte portée au maximum des scopes accordés — posts riches ×25 (permalink/visuel/type), profil public de marque (`metadata.profile`), `followingCount`, pilier E `connectedProfiles`, provenance `followerSource` honnête. Restes réels (dépendances externes — pas du code refusé) :
 
@@ -34,6 +34,7 @@ Vague [ADR-0128](adr/0128-brand-social-connections-founder-oauth.md) shippée (v
 - **X free-tier** : `users/me` (profil propre) uniquement — suffisant pour les followers du compte connecté ; toute lecture élargie est payante. Documenté dans la carte (« relevé auto »).
 - ~~Cron de sync périodique~~ — **clos le 12/07 (v6.27.109, P1)** : `/api/cron/social-sync` quotidien (audience + publications, best-effort par marque). Ajouter l'appel au scheduler serveur (curl CRON_SECRET) côté ops.
 - **Supervision console opérateur** : liste cross-marques des `SocialConnection` (états ERROR, tokens expirés) — surface console à poser à l'occasion (lecture seule, faible effort).
+- **Instagram Business Login — provider `instagram` dédié (amendé v6.27.146, 2026-07-14)** : la connexion IG DIRECTE (`instagram.com/oauth/authorize` → `api.instagram.com` → `graph.instagram.com`, sans Page FB), la collecte followers/posts et la publication sont provider-aware (hôte choisi selon `metadata.provider`). Réponse au blocage « Facebook connecte mais pas Instagram ». **Restent codés `graph.facebook.com`** : l'inbox commentaires (`social-inbox`) et les insights privés (`social-insights`) — une connexion `instagram` y dégrade honnêtement (AUTH/OUTAGE), à rendre provider-aware dans la vague Inbox S3. **Ops** : poser `INSTAGRAM_OAUTH_CLIENT_SECRET` (Coolify) ; **App Review Meta** pour ouvrir la connexion IG directe hors comptes testeurs.
 - **Fiche Motion19** : `marketScale`/`addressableAudience`/`brandFoundedYear` à DÉCLARER par l'opérateur (hub Fondation), jugements INFERRED à valider → DECLARED, données internes (ventes, panier, marge) à brancher avant tout pilotage chiffré (cf. pilier T « non communiqué »).
 
 ## Accès délégué par marque + theming — ADR-0129/0130 (2026-07-12, NEFER)

@@ -30,6 +30,7 @@ import {
   exchangeCode,
   generatePkcePair,
   getProviderConfig,
+  parseInstagramShortTokenResponse,
 } from "@/server/services/oauth-integrations";
 
 const TEST_KEY = "test-integration-token-key-0123456789abcdef";
@@ -61,9 +62,10 @@ describe("PROVIDER_FOR_PLATFORM", () => {
     for (const provider of Object.values(PROVIDER_FOR_PLATFORM)) {
       expect(BRAND_SOCIAL_PROVIDERS).toContain(provider);
     }
-    // FB et IG passent par la même app Meta (une connexion → deux plateformes).
+    // FB via Meta/Facebook Login ; IG via son PROPRE flow « Instagram Business
+    // Login » (ADR-0128 amendé 2026-07-14 — connexion directe, sans Page FB).
     expect(PROVIDER_FOR_PLATFORM.FACEBOOK).toBe("meta");
-    expect(PROVIDER_FOR_PLATFORM.INSTAGRAM).toBe("meta");
+    expect(PROVIDER_FOR_PLATFORM.INSTAGRAM).toBe("instagram");
   });
 });
 
@@ -333,5 +335,128 @@ describe("oauth-integrations — adaptations x / tiktok", () => {
     const body = init.body as URLSearchParams;
     expect(body.get("code_verifier")).toBe("v3rifier");
     expect(body.get("client_secret")).toBeNull(); // jamais en corps quand Basic
+  });
+});
+
+// ── (7) Instagram Business Login — flow dédié (ADR-0128 amendé 2026-07-14) ────
+// « il faut un tout autre code pour instagram » : provider PROPRE, distinct de
+// meta. instagram.com/oauth/authorize · api.instagram.com (réponse enveloppée)
+// · graph.instagram.com. Répond au blocage « Facebook connecte, pas Instagram ».
+
+describe("Instagram Business Login (provider dédié)", () => {
+  it("provider config : endpoints instagram.com/api.instagram.com, scopes business, App ID par défaut", () => {
+    vi.stubEnv("INSTAGRAM_OAUTH_CLIENT_SECRET", "ig-secret");
+    const config = getProviderConfig("instagram")!;
+    expect(config).not.toBeNull();
+    expect(config.authorizationEndpoint).toBe("https://www.instagram.com/oauth/authorize");
+    expect(config.tokenEndpoint).toBe("https://api.instagram.com/oauth/access_token");
+    expect(config.scopeDelimiter).toBe(",");
+    // App ID PUBLIC par défaut (visible dans l'URL, jamais un secret) — surchargé par env.
+    expect(config.clientId).toBe("1548627253622815");
+    expect(config.defaultScopes).toContain("instagram_business_basic");
+    expect(config.defaultScopes).toContain("instagram_business_content_publish");
+  });
+
+  it("sans INSTAGRAM_OAUTH_CLIENT_SECRET → provider indisponible (null, UI « bientôt disponible »)", () => {
+    expect(getProviderConfig("instagram")).toBeNull();
+  });
+
+  it("INSTAGRAM_OAUTH_CLIENT_ID surcharge le défaut", () => {
+    vi.stubEnv("INSTAGRAM_OAUTH_CLIENT_ID", "override-app-id");
+    vi.stubEnv("INSTAGRAM_OAUTH_CLIENT_SECRET", "ig-secret");
+    expect(getProviderConfig("instagram")!.clientId).toBe("override-app-id");
+  });
+
+  it("URL d'autorisation : instagram.com/oauth/authorize + enable_fb_login=0 + scopes virgule", () => {
+    vi.stubEnv("INSTAGRAM_OAUTH_CLIENT_SECRET", "ig-secret");
+    const config = getProviderConfig("instagram")!;
+    const url = buildAuthorizeUrl({
+      config,
+      redirectUri: "https://app/cb",
+      state: "s",
+      scopes: SOCIAL_SCOPES.instagram,
+    });
+    expect(url).toContain("https://www.instagram.com/oauth/authorize");
+    expect(url).toContain("client_id=1548627253622815");
+    expect(url).toContain("enable_fb_login=0"); // login PUREMENT Instagram (pas d'interstitiel FB)
+    expect(decodeURIComponent(url)).toContain(
+      "instagram_business_basic,instagram_business_content_publish,instagram_business_manage_comments",
+    );
+  });
+
+  it("force_reauth n'est posé QUE si forceReselect (ré-affiche l'écran de compte)", () => {
+    vi.stubEnv("INSTAGRAM_OAUTH_CLIENT_SECRET", "ig-secret");
+    const config = getProviderConfig("instagram")!;
+    const withReselect = buildAuthorizeUrl({ config, redirectUri: "https://app/cb", state: "s", forceReselect: true });
+    const without = buildAuthorizeUrl({ config, redirectUri: "https://app/cb", state: "s" });
+    expect(withReselect).toContain("force_reauth=true");
+    expect(without).not.toContain("force_reauth");
+  });
+
+  it("parseInstagramShortTokenResponse : déballe l'enveloppe {data:[…]} + permissions → scope", () => {
+    // Forme RÉELLE de api.instagram.com/oauth/access_token (≠ OAuth standard).
+    const wrapped = {
+      data: [
+        {
+          access_token: "IGAA-short",
+          user_id: 178414,
+          permissions: "instagram_business_basic,instagram_business_content_publish",
+        },
+      ],
+    };
+    const parsed = parseInstagramShortTokenResponse(wrapped)!;
+    expect(parsed.access_token).toBe("IGAA-short");
+    expect(parsed.user_id).toBe("178414"); // coercition number → string
+    expect(parsed.scope).toBe("instagram_business_basic,instagram_business_content_publish");
+  });
+
+  it("parseInstagramShortTokenResponse : tolère une forme plate + permissions en tableau", () => {
+    const parsed = parseInstagramShortTokenResponse({
+      access_token: "IGAA-flat",
+      user_id: "42",
+      permissions: ["a", "b"],
+    })!;
+    expect(parsed.access_token).toBe("IGAA-flat");
+    expect(parsed.scope).toBe("a,b");
+  });
+
+  it("parseInstagramShortTokenResponse : pas d'access_token → null (jamais un token vide)", () => {
+    expect(parseInstagramShortTokenResponse({ data: [{ user_id: "1" }] })).toBeNull();
+    expect(parseInstagramShortTokenResponse(null)).toBeNull();
+    expect(parseInstagramShortTokenResponse({})).toBeNull();
+  });
+
+  it("discoverSocialAccounts instagram : /me → 1 compte INSTAGRAM, compteurs réels, token long-lived conservé", async () => {
+    vi.stubEnv("INSTAGRAM_OAUTH_CLIENT_SECRET", "ig-secret");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        jsonResponse(200, {
+          user_id: "17841400000000000",
+          username: "spawt.ci",
+          name: "SPAWT",
+          followers_count: 1753,
+          follows_count: 12,
+          media_count: 87,
+          biography: "La boutique",
+        }),
+      ),
+    );
+    const config = getProviderConfig("instagram")!;
+    const accounts = await discoverSocialAccounts(config, { access_token: "ig-long-token", expires_in: 5183944 });
+    expect(accounts).toHaveLength(1);
+    const ig = accounts[0]!;
+    expect(ig.platform).toBe("INSTAGRAM");
+    expect(ig.accountId).toBe("17841400000000000");
+    expect(ig.handle).toBe("spawt.ci");
+    expect(ig.followerCount).toBe(1753);
+    expect(ig.tokens.access_token).toBe("ig-long-token");
+  });
+
+  it("discoverSocialAccounts instagram : réponse vide → aucun compte (pas d'invention)", async () => {
+    vi.stubEnv("INSTAGRAM_OAUTH_CLIENT_SECRET", "ig-secret");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(200, {})));
+    const accounts = await discoverSocialAccounts(getProviderConfig("instagram")!, { access_token: "t" });
+    expect(accounts).toHaveLength(0);
   });
 });
