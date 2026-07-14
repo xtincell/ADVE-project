@@ -164,13 +164,6 @@ export function SocialHubCard({ strategyId }: { strategyId: string }) {
   }, [hubQuery.data]);
 
   const connectedCount = rows.filter((r) => r.state === "CONNECTED").length;
-  // Instagram passe par la connexion Facebook (même autorisation Meta) : il n'est
-  // découvert QUE si c'est un compte Professionnel relié à la Page connectée. Si
-  // la Page Facebook est bien là mais qu'Instagram ne remonte pas, on l'explique
-  // au lieu de laisser un bouton « Connecter » qui semble ne rien faire.
-  const fbConnected = rows.some(
-    (r) => r.platform === "FACEBOOK" && (r.state === "CONNECTED" || r.state === "NEEDS_CHOICE" || r.state === "ERROR"),
-  );
 
   return (
     <div className="ck-card">
@@ -252,12 +245,12 @@ export function SocialHubCard({ strategyId }: { strategyId: string }) {
                         "aucun relevé d'audience"
                       )}
                     </p>
-                    {row.platform === "INSTAGRAM" && row.state === "NOT_CONNECTED" && fbConnected ? (
+                    {row.platform === "INSTAGRAM" && row.state === "NOT_CONNECTED" ? (
                       <p className="ck-social__hint">
-                        Instagram se connecte <b>avec votre Page Facebook</b>. Il n&apos;apparaît que si
-                        le compte est <b>Professionnel</b> (Business ou Créateur) et <b>relié à votre Page</b>.
-                        Passez-le en compte pro dans l&apos;app Instagram, reliez-le à la Page dans{" "}
-                        <b>Facebook → Paramètres de la Page → Comptes liés → Instagram</b>, puis reconnectez.
+                        Instagram se connecte <b>directement</b> (bouton ci-contre), sans passer par
+                        Facebook. Votre compte doit être <b>Professionnel</b> (Business ou Créateur)&nbsp;:
+                        activez-le dans <b>Instagram → Paramètres → Type de compte et outils</b>, puis
+                        connectez.
                       </p>
                     ) : null}
                   </div>
