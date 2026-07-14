@@ -496,15 +496,17 @@ const PILLAR_D = {
   // Direction artistique — 10 slots possibles: semioticAnalysis, visualLandscape, moodboard, chromaticStrategy, typographySystem, logoTypeRecommendation, logoValidation, designTokens, motionIdentity, brandGuidelines
   directionArtistique: {
     chromaticStrategy: {
-      primaire: "#0A0A0A (Noir profond — sophistication + mystère du chat)",
-      secondaire: "#D4AF37 (Or — statut + sélection premium)",
-      accent: "#50C878 (Vert Yeux de Chat — le vivant, l'instinct, le find)",
-      neutre: "#F8F6F0 (Blanc cassé — authenticité, pas stérilité corporate)",
+      // Brand book officiel v1.0 (2026) — remplace les valeurs inférées.
+      primaire: "#0A0A0A (SPAWT Black — dominante, sophistication + mystère du chat)",
+      secondaire: "#C8A44E (SPAWT Gold — statut, tagline, étoiles, sélection premium)",
+      accent: "#2D6B4F (Chat Green — le vivant, l'instinct, la trouvaille)",
+      neutre: "#FAFAF8 (Blanc cassé — authenticité, pas stérilité corporate)",
     },
     typographySystem: {
-      principale: "Playfair Display (titres — élégance food porn éditoriale)",
-      secondaire: "DM Sans (corps — lisibilité mobile-first)",
-      technique: "JetBrains Mono (données, scores, métriques — précision tech)",
+      // Klinsman = police EXCLUSIVE (tout) ; Gotham = support texte/UI. Brand book v1.0.
+      principale: "Klinsman (police exclusive SPAWT — titres, corps, UI, wordmark, archétypes)",
+      secondaire: "Gotham (corps de texte, paragraphes, UI, légendes — mobile→print)",
+      technique: "Gotham (données & légendes) — Klinsman reste l'unique police de titre",
     },
     visualLandscape: {
       style: "Food porn authentique — éclairage naturel, textures réelles, pas de studio froid. Pinterest aesthetic mais ancré local ivoirien. Plats de rue et gastronomie ont la même dignité photographique.",

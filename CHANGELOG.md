@@ -10,6 +10,17 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.153 — feat(spawt+ops): identité de marque canon (palette/typo/fonts) + tunnel data-ops vault + import campagnes (2026-07-14)
+
+**SPAWT en prod : logo/typo/palette « 0 » + GTM absent. Cause : le vault n'expose ni le système typographique ni les fonts, la palette portait des valeurs inférées (fausses), et les campagnes (GTM v2) n'étaient jamais importées en prod. Corrigé sur données du brand book officiel, + tunnel gouverné pour ne plus être « coincé dehors ».**
+
+- **Fonts officielles ingérées** : Klinsman (police EXCLUSIVE — titres/corps/UI/wordmark) + Gotham (support) sous `public/brand/spawt/fonts/` (embarquées dans l'image). Fin des placeholders Playfair/DM Sans/JetBrains.
+- **Palette corrigée au canon brand book v1.0** : Gold `#C8A44E` (était `#D4AF37`), Chat Green `#2D6B4F` (était `#50C878`), Blanc cassé `#FAFAF8` — dans l'ADVE pilier D **et** l'actif `CHROMATIC_STRATEGY` (accent cockpit ADR-0130).
+- **Système typographique matérialisé** : nouvel actif `TYPOGRAPHY_SYSTEM` (Klinsman + Gotham + URLs des fichiers) + 6 fichiers de police en actifs `GENERIC`/MATERIAL → la zone « typo » du dashboard se peuple enfin.
+- **Import campagnes sans SSH** : `seed-spawt-gtm` rendu importable (idempotent, upsert par `canonType`+`routeKey`) et branché dans `?only=spawt` → la campagne canon GTM v2 (LIVE) + calendrier remontent en prod.
+- **Tunnel data-ops du vault** : `POST /api/admin/seed-brands?diag=<strategyId|spawt>` = **lecture seule** de l'état réel (actifs par kind+state, campagnes, piliers) pour diagnostiquer sans accès shell. Répond à « tu ne dois pas être coincé dehors ».
+- **Comportement encodé** (`nefer-ops`) : le **MCP / les endpoints gardés** sont la voie canonique pour faire circuler l'information prod (lire/écrire), jamais le shell ni la base directe. Un tunnel manquant se conçoit, se merge, se redéploie.
+
 ## v6.27.152 — feat(seshat): veille d'actualité par marque — multi-sujets, multi-langue, pertinence déterministe, zéro LLM (2026-07-14)
 
 **Le traqueur d'actualité par marque était vide (SPAWT/foodtech) : requête = positionnement marketing (0 résultat Google News), langue codée en dur (`hl=fr`), et un fallback LLM inutile sur un chemin d'actualité. Refonte 100 % déterministe (ADR-0143).**

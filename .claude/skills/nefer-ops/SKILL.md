@@ -70,6 +70,8 @@ Le code + la donnée sont en ligne — reste à **agir sur l'instance prod** : y
 
 ### Ce que NEFER PEUT faire à distance (endpoints gardés)
 
+- **MCP = voie CANONIQUE pour faire circuler l'information** (directive opérateur 2026-07-14) : pour LIRE ou ÉCRIRE l'état prod, passer par le serveur MCP de l'app (`/api/mcp`, ADR-0026) et/ou les endpoints admin gardés — **jamais** le shell/la base directe (inaccessibles depuis la session ; l'hôte DB Coolify est un nom interne non résolvable). **NEFER ne doit jamais être « coincé dehors » pour un fix de données** : si un diagnostic ou un import prod est nécessaire, il passe par un **tunnel gouverné** (endpoint ou tool MCP), idempotent, gardé, réutilisable — pas un one-shot manuel, pas un « je n'ai pas accès ». Manque un tunnel pour l'acte voulu ? On le **conçoit** (endpoint + à terme tool MCP) dans le même PR, on merge, on redéploie.
+- **Tunnel data-ops du vault** : `POST /api/admin/seed-brands` (gardé ADMIN **ou** `CRON_SECRET`) — `?diag=<strategyId|spawt>` = **LECTURE SEULE** de l'état réel (actifs par `kind`+`state`, nb de campagnes, nb de piliers) pour voir ce qui est vraiment en base ; `?only=<marque>` = (ré)import **idempotent** de l'ADVE + des assets (logo/palette/typo/fonts) + des **campagnes** (GTM). Étendre CE tunnel pour tout import répétable.
 - **Finaliseur prod** : `POST /api/admin/prod-finish` (gardé `CRON_SECRET`) — actes ponctuels gouvernés (créer un login, planifier un post via `ANUBIS_PUBLISH_SOCIAL_POST`). Étendre CET endpoint pour un nouvel acte prod répétable plutôt qu'un one-shot manuel.
 - **Crons** : `/api/cron/*` (gardés `CRON_SECRET`) déclenchables par `curl` (ex. `social-sync?mode=publish` fait partir les publications dues).
 

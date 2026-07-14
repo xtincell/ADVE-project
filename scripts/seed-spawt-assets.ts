@@ -99,11 +99,22 @@ const SOCIAL_LABELS: Record<string, string> = {
 
 /** Palette officielle SPAWT (déclarée en pilier V + bible Moka + logo). */
 const PALETTE = {
-  accent: "#D4AF37", // or — CTAs, tagline, étoiles
-  primary: "#0A0A0A", // noir profond — dominante
-  full: ["#0A0A0A", "#D4AF37", "#50C878", "#F8F6F0"],
-  note: "Noir profond + or + émeraude + crème (source : ADVE pilier V + bible Moka).",
+  accent: "#C8A44E", // SPAWT Gold — CTAs, tagline, étoiles, accent cockpit (ADR-0130)
+  primary: "#0A0A0A", // SPAWT Black — dominante
+  full: ["#0A0A0A", "#C8A44E", "#2D6B4F", "#FAFAF8", "#E89A39", "#EFE8DC"],
+  note: "SPAWT Black + Gold + Chat Green + Blanc cassé (+ Amber, Crème). Source : brand book officiel v1.0 (2026).",
 };
+
+// Système typographique officiel (brand book v1.0) : Klinsman = police EXCLUSIVE
+// (titres, corps, UI, wordmark, archétypes) ; Gotham = support (texte, légendes).
+const FONT_FILES: Array<{ file: string; family: "Klinsman" | "Gotham"; weight: string; mime: string }> = [
+  { file: "Klinsman-Light.otf", family: "Klinsman", weight: "Light 300", mime: "font/otf" },
+  { file: "Klinsman-Regular.otf", family: "Klinsman", weight: "Regular 400", mime: "font/otf" },
+  { file: "Klinsman-Bold.otf", family: "Klinsman", weight: "Bold 700", mime: "font/otf" },
+  { file: "Gotham-Book.ttf", family: "Gotham", weight: "Book 400", mime: "font/ttf" },
+  { file: "Gotham-Medium.ttf", family: "Gotham", weight: "Medium 500", mime: "font/ttf" },
+  { file: "Gotham-Bold.ttf", family: "Gotham", weight: "Bold 700", mime: "font/ttf" },
+];
 
 const MOKA_BIBLE = `# Moka — bible de personnage (mascotte SPAWT)
 
@@ -317,6 +328,53 @@ export async function seedSpawtAssets(
       pillarSource: "V",
       summary: "Palette officielle SPAWT : noir profond dominant, or (accent), émeraude, crème.",
       content: { accent: PALETTE.accent, primary: PALETTE.primary, full: PALETTE.full, note: PALETTE.note } as Prisma.InputJsonValue,
+    }),
+  );
+
+  // ── 8. Fichiers de police (MATERIAL) — servis en HTTP, téléchargeables ──
+  for (const f of FONT_FILES) {
+    bump(
+      await ensureAsset(db, {
+        name: `Police ${f.family} — ${f.weight}`,
+        kind: "GENERIC",
+        family: "MATERIAL",
+        state: "ACTIVE",
+        pillarSource: "D",
+        fileUrl: `${URL_BASE}/fonts/${f.file}`,
+        mimeType: f.mime,
+        summary: `Fichier de police officiel SPAWT — ${f.family} ${f.weight} (brand book v1.0).`,
+      }),
+    );
+  }
+
+  // ── 9. Système typographique (TYPOGRAPHY_SYSTEM ACTIVE) → zone « typo » ──
+  const fontUrls = (fam: "Klinsman" | "Gotham") =>
+    FONT_FILES.filter((f) => f.family === fam).map((f) => `${URL_BASE}/fonts/${f.file}`);
+  bump(
+    await ensureAsset(db, {
+      name: "Système typographique SPAWT — Klinsman + Gotham",
+      kind: "TYPOGRAPHY_SYSTEM",
+      family: "INTELLECTUAL",
+      state: "ACTIVE",
+      pillarSource: "D",
+      summary:
+        "Klinsman = police EXCLUSIVE (titres, corps, UI, wordmark, archétypes). Gotham = support (texte, légendes). Brand book v1.0.",
+      content: {
+        primary: {
+          family: "Klinsman",
+          role: "Police exclusive — titres, corps, UI, wordmark, archétypes",
+          weights: ["Light 300", "Regular 400", "Bold 700"],
+          files: fontUrls("Klinsman"),
+        },
+        secondary: {
+          family: "Gotham",
+          role: "Support — corps, paragraphes, UI, légendes",
+          weights: ["Book 400", "Medium 500", "Bold 700"],
+          files: fontUrls("Gotham"),
+        },
+        baseUrl: `${URL_BASE}/fonts/`,
+        source: "Brand book officiel SPAWT v1.0 (2026)",
+      } as Prisma.InputJsonValue,
     }),
   );
 
