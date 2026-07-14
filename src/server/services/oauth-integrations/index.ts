@@ -103,7 +103,7 @@ export function getProviderConfig(provider: string): ProviderConfig | null {
       // App ID PUBLIC (visible dans l'URL d'autorisation, jamais un secret) —
       // défaut = la valeur fournie par l'opérateur, surchargée par env si besoin.
       // `||` (pas `??`) : une env VIDE ("") retombe aussi sur le défaut.
-      const clientId = env.INSTAGRAM_OAUTH_CLIENT_ID || "1548627253622815";
+      const clientId = env.INSTAGRAM_OAUTH_CLIENT_ID || "1274394400786813";
       // Le SECRET, lui, ne vit QUE en env (jamais commité). Sans lui → provider
       // indisponible (l'UI affiche « bientôt disponible », pas un redirect cassé).
       const clientSecret = env.INSTAGRAM_OAUTH_CLIENT_SECRET ?? env.INSTAGRAM_APP_SECRET;

@@ -352,7 +352,8 @@ describe("Instagram Business Login (provider dédié)", () => {
     expect(config.tokenEndpoint).toBe("https://api.instagram.com/oauth/access_token");
     expect(config.scopeDelimiter).toBe(",");
     // App ID PUBLIC par défaut (visible dans l'URL, jamais un secret) — surchargé par env.
-    expect(config.clientId).toBe("1548627253622815");
+    // = Instagram App ID (« LaFusee_ADVE-IG »), PAS un ID de configuration Login-for-Business.
+    expect(config.clientId).toBe("1274394400786813");
     expect(config.defaultScopes).toContain("instagram_business_basic");
     expect(config.defaultScopes).toContain("instagram_business_content_publish");
   });
@@ -377,7 +378,7 @@ describe("Instagram Business Login (provider dédié)", () => {
       scopes: SOCIAL_SCOPES.instagram,
     });
     expect(url).toContain("https://www.instagram.com/oauth/authorize");
-    expect(url).toContain("client_id=1548627253622815");
+    expect(url).toContain("client_id=1274394400786813");
     expect(url).toContain("enable_fb_login=0"); // login PUREMENT Instagram (pas d'interstitiel FB)
     expect(decodeURIComponent(url)).toContain(
       "instagram_business_basic,instagram_business_content_publish,instagram_business_manage_comments",
