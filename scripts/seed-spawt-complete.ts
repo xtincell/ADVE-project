@@ -1611,6 +1611,17 @@ export async function seedSpawtComplete(db: PrismaClient) {
   console.log(`        ✓ ${deleted.count} doublon(s) SPAWT supprimé(s), ${deletedApple.count} stratégie(s) Apple Inc. supprimée(s)`);
 
   console.log("\n[ 2/4 ] Upsert Strategy (ID fixe: spawt-strategy)...");
+  // L'ID admin dev hardcodé (ADMIN_USER_ID) n'existe PAS en prod → FK
+  // `Strategy_userId_fkey` violée. On résout le VRAI propriétaire : compte
+  // god-mode (email opérateur) ou 1er ADMIN, sinon fallback dev. Stéphanie
+  // accède ensuite via StrategyCollaborator (accès délégué, ADR-0129).
+  const owner =
+    (await db.user.findFirst({ where: { email: "xtincell@gmail.com" }, select: { id: true } })) ??
+    (await db.user.findFirst({ where: { role: "ADMIN" }, orderBy: { createdAt: "asc" }, select: { id: true } }));
+  const adminUserId = owner?.id ?? ADMIN_USER_ID;
+  if (!owner) {
+    console.warn(`        ⚠  Aucun ADMIN en base — fallback ID dev ${ADMIN_USER_ID} (échouera s'il est absent)`);
+  }
   const strategy = await db.strategy.upsert({
     where: { id: "spawt-strategy" },
     update: {
@@ -1635,7 +1646,7 @@ export async function seedSpawtComplete(db: PrismaClient) {
       id: "spawt-strategy",
       name: "SPAWT",
       description: "Stratégie ADVE-RTIS complète — SPAWT (App identité culinaire, Abidjan). Mission 1 COMPLÉTÉE.",
-      userId: ADMIN_USER_ID,
+      userId: adminUserId,
       countryCode: "CI",
       businessContext: {
         businessModel: "PLATEFORME",
@@ -1768,8 +1779,13 @@ export async function seedSpawtComplete(db: PrismaClient) {
 
   // ── 6. Alexandre "xtincell" — TalentProfile (Guilde) ───────────────────
   console.log("\n[ 6/8 ] Talent Alexandre 'xtincell'...");
-  const alexandreUser = await db.user.findUnique({ where: { email: "alexandre@upgraders.com" } });
-  if (!alexandreUser) throw new Error("Admin user alexandre@upgraders.com introuvable — lancer prisma/seed.ts d'abord");
+  // Alexandre = l'opérateur ; en prod son email peut différer du seed dev →
+  // fallback sur le propriétaire admin résolu plus haut (owner). Ne throw que
+  // si AUCUN compte n'existe (impossible en prod : le god-mode est présent).
+  const alexandreUser =
+    (await db.user.findUnique({ where: { email: "alexandre@upgraders.com" }, select: { id: true } })) ??
+    owner;
+  if (!alexandreUser) throw new Error("Aucun compte propriétaire (Alexandre ni admin) en base — seed SPAWT impossible");
 
   await db.talentProfile.upsert({
     where: { userId: alexandreUser.id },
