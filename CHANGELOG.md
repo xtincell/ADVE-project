@@ -10,6 +10,14 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.156 — feat(cockpit): tunnel data-ops général `?op=patch` (éditer sans redéployer) (2026-07-14)
+
+**La modif de données de marque (campagnes, tâches, contexte stratégie) doit être possible via un tunnel gouverné réutilisable — pas un redéploiement à chaque fois. Réponse à « la modif des données devrait t'être possible via le MCP désormais ».**
+
+- **`POST /api/admin/seed-brands?op=patch`** (gardé ADMIN **ou** `CRON_SECRET`, corps JSON) — édite en direct, champs WHITELISTÉS : `campaigns[]` (name/code/state/status/budget/budgetCurrency/startDate/endDate/objectives/canonType/routeKey), `archiveCampaigns[]`, `actions[]` (BrandAction upsert par `id` ou `strategyId`+`sourceInitiativeId`), `strategies[]` (mergeBusinessContext + name/countryCode/publicSlug).
+- **Coercition de dates** déterministe (champs date → `new Date`), idempotent, aucune écriture hors whitelist. Réutilisable pour tout import répétable (skill `nefer-ops` TEMPS 3).
+- **Pourquoi** : NEFER ne doit jamais être « coincé dehors » pour un fix de données ; le tunnel EST l'interface data-ops (à exposer aussi en tool MCP).
+
 ## v6.27.155 — fix(cockpit): tunnel ciblable + re-parentage — SPAWT identité/campagnes sur la bonne stratégie (doublon) (2026-07-14)
 
 **Le diagnostic (`?diag=spawt`) a révélé DEUX stratégies SPAWT : `spawt-strategy-001` (celle du dashboard : ADVE + Glory, mais 0 logo/palette/typo/campagne) et `spawt-strategy` (le doublon créé par le seed, qui portait tout). Le tunnel écrivait sur le mauvais.**
