@@ -77,6 +77,27 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, diag: sid, strategyCount: report.length, strategies: report });
     }
 
+    // ── Tunnel de RE-PARENTAGE — un doublon de stratégie a été créé (le seed a
+    // écrit sur "spawt-strategy" alors que la marque vit sur "spawt-strategy-001").
+    // `?reparent=<fromId>&to=<toId>` déplace campagnes + actions de la marque du
+    // doublon vers la vraie stratégie (les actifs d'identité sont RE-CRÉÉS via
+    // `?only=spawt-assets&target=<toId>`, pas déplacés, pour prendre le canon à jour).
+    const reparentFrom = new URL(request.url).searchParams.get("reparent");
+    if (reparentFrom) {
+      const to = new URL(request.url).searchParams.get("to");
+      if (!to) {
+        return NextResponse.json({ ok: false, error: "reparent requires &to=<strategyId>" }, { status: 400 });
+      }
+      const [campaigns, actions] = await Promise.all([
+        prisma.campaign.updateMany({ where: { strategyId: reparentFrom }, data: { strategyId: to } }),
+        prisma.brandAction.updateMany({ where: { strategyId: reparentFrom }, data: { strategyId: to } }),
+      ]);
+      return NextResponse.json({
+        ok: true,
+        reparent: { from: reparentFrom, to, campaigns: campaigns.count, actions: actions.count },
+      });
+    }
+
     if (!only || only === "motion19") {
       const { seedMotion19, seedMotion19BrandVault, seedMotion19Guild } = await import(
         "../../../../../prisma/seed-motion19"
@@ -108,10 +129,12 @@ export async function POST(request: Request) {
       capture("GTM SPAWT v2 : campagne canon LIVE + calendrier importés");
     }
     if (only === "spawt-assets") {
-      // Assets seuls (strategy déjà seedée) — utile pour rejouer le coffre.
+      // Assets seuls (strategy déjà seedée) — utile pour rejouer le coffre OU
+      // pour viser la VRAIE stratégie via `&target=<id>` (cas doublon).
+      const target = new URL(request.url).searchParams.get("target") ?? undefined;
       const { seedSpawtAssets } = await import("../../../../../scripts/seed-spawt-assets");
-      const a = await seedSpawtAssets(prisma);
-      capture(`assets SPAWT : ${a.created} créé(s), ${a.skipped} présent(s)${a.note ? ` — ${a.note}` : ""}`);
+      const a = await seedSpawtAssets(prisma, target);
+      capture(`assets SPAWT (${target ?? "spawt-strategy"}) : ${a.created} créé(s), ${a.skipped} présent(s)${a.note ? ` — ${a.note}` : ""}`);
     }
     return NextResponse.json({ ok: true, only: only ?? "all", log });
   } catch (err) {

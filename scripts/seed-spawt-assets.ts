@@ -25,7 +25,10 @@ import { PrismaClient, BrandAssetState } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import type { Prisma } from "@prisma/client";
 
-const STRATEGY_ID = "spawt-strategy";
+// Cible par défaut = "spawt-strategy" ; surchargeable par `seedSpawtAssets(db, id)`
+// (le tunnel peut viser la VRAIE stratégie de la marque, ex. "spawt-strategy-001",
+// quand un doublon a été créé). `let` volontaire — réassigné à l'entrée de la fn.
+let STRATEGY_ID = "spawt-strategy";
 const PUBLIC_DIR = path.join(process.cwd(), "public", "brand", "spawt");
 const URL_BASE = "/brand/spawt";
 
@@ -191,7 +194,9 @@ function humanize(s: string): string {
 // au runtime standalone) retournent un `note` honnête au lieu d'un STOP.
 export async function seedSpawtAssets(
   db: PrismaClient,
+  targetStrategyId?: string,
 ): Promise<{ created: number; skipped: number; note?: string }> {
+  if (targetStrategyId) STRATEGY_ID = targetStrategyId;
   console.log(`\n[SPAWT assets] strategy=${STRATEGY_ID} · source=${PUBLIC_DIR}`);
 
   const strategy = await db.strategy.findUnique({ where: { id: STRATEGY_ID }, select: { id: true, name: true } });
