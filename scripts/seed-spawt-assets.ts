@@ -378,6 +378,55 @@ export async function seedSpawtAssets(
     }),
   );
 
+  // ── 10. Brand book officiel (BRAND_GUIDELINES) — livrable MAJEUR, pair de
+  // l'Oracle (ORACLE_DOCUMENT). Le PDF officiel v1.0 (40 pages) ingéré tel quel
+  // (source FILE/OFFICIAL, pas un draft LLM) + le canon structuré extrait. ──
+  bump(
+    await ensureAsset(db, {
+      name: "Brand book officiel SPAWT — v1.0",
+      kind: "BRAND_GUIDELINES",
+      family: "INTELLECTUAL",
+      state: "ACTIVE",
+      pillarSource: "D",
+      fileUrl: `${URL_BASE}/SPAWT-brandbook-v2.pdf`,
+      mimeType: "application/pdf",
+      summary:
+        "Brand book officiel SPAWT v1.0 (40 pages) : brand story, contrat SPAWT, dialecte, voix & ton, système Palais, 13 archétypes, 5 stades de maturité, 3 modes UX, personas, identité visuelle (logo, palette, typo Klinsman+Gotham). Document de référence — livrable majeur pair de l'Oracle.",
+      content: {
+        version: "v1.0 (2026)",
+        source: "Brand book officiel fourni par l'opératrice (PDF 40 pages)",
+        mission: "Nous tuons le temps perdu à chercher où sortir manger.",
+        vision: "Ne plus jamais regretter un restaurant. Plus jamais le goumin d'un mauvais restau.",
+        positioning:
+          "Pour les foodies urbains d'Abidjan qui en ont marre de perdre du temps à chercher où manger, SPAWT est le compagnon de découverte culinaire communautaire qui recommande le bon lieu au bon moment grâce au Palais.",
+        values: ["Sécurité", "Universalisme", "Bienveillance", "Stimulation"],
+        personality: ["Direct", "Complice", "Curieux", "Indépendant", "Authentique"],
+        colors: {
+          primary: "#0A0A0A (SPAWT Black)",
+          gold: "#C8A44E (SPAWT Gold)",
+          green: "#2D6B4F (Chat Green)",
+          offWhite: "#FAFAF8 (Blanc cassé)",
+          amber: "#E89A39 (Amber Warm)",
+          sand: "#EFE8DC (Crème Sable)",
+        },
+        typography: { primary: "Klinsman (exclusive)", secondary: "Gotham (support)" },
+        logo: {
+          primary: "Vertical Carte (standard) — wordmark Klinsman + tagline dorée",
+          icon: "Icône Carte + 3 étoiles (favicons/app)",
+          alternate: "Calico (mascotte) — usages spéciaux/événements",
+          clearSpace: "1.5× hauteur du 'S' ; min print 20mm / digital 64px",
+        },
+        mascot: "Moka — chatte calico (tricolore), 23 poses canoniques",
+        sections: [
+          "01 Brand Story", "02 Le Contrat SPAWT", "03 Le Dialecte", "04 Brand Voice & Tone",
+          "05 Système Palais", "06 Les 13 Archétypes", "07 Les 5 Stades de Maturité",
+          "08 Les 3 Modes UX", "09 Personas", "10 Logo Guidelines", "11 Color Palette", "12 Typography",
+        ],
+      } as Prisma.InputJsonValue,
+      metadata: { provenance: "Brand book officiel SPAWT v1.0 — PDF fourni par l'opératrice (2026-07-14)", source: "OFFICIAL" },
+    }),
+  );
+
   console.log(`[OK] SPAWT assets : ${created} créé(s), ${skipped} déjà présent(s).`);
   const total = await db.brandAsset.count({ where: { strategyId: STRATEGY_ID } });
   console.log(`[OK] Coffre SPAWT : ${total} actif(s) au total.`);
