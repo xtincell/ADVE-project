@@ -4,11 +4,13 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Section, EmptyMsg, type CampaignState } from "./shared";
+import { MissionDetailModal } from "./mission-detail-modal";
 import { ArrowRight, Briefcase, ClipboardList, Layers, ShieldAlert, Sparkles } from "lucide-react";
 
 export function OverviewTab({ campaignId, strategyId, state, onRefresh }: { campaignId: string; strategyId: string; state: CampaignState; onRefresh: () => void }) {
   const [transitionError, setTransitionError] = useState<string | null>(null);
   const [generatingBrief, setGeneratingBrief] = useState(false);
+  const [openMission, setOpenMission] = useState<Record<string, unknown> | null>(null);
 
   // Diagnostic campaign-scoped (actions → briefs → missions) — source des stats.
   const chainQuery = trpc.campaignManager.chainHealth.useQuery({ campaignId });
@@ -166,7 +168,11 @@ export function OverviewTab({ campaignId, strategyId, state, onRefresh }: { camp
         ) : (
           <div className="space-y-2">
             {missions.map((m) => (
-              <div key={m.id as string} className="flex items-center justify-between rounded-lg border border-border bg-background/50 p-3">
+              <button
+                key={m.id as string}
+                onClick={() => setOpenMission(m)}
+                className="flex w-full items-center justify-between rounded-lg border border-border bg-background/50 p-3 text-left transition-colors hover:border-accent/40 hover:bg-surface-raised"
+              >
                 <div className="flex items-center gap-2">
                   {typeof m.priority === "number" && (
                     <span className={`flex h-5 w-5 items-center justify-center rounded-full text-2xs font-bold ${m.priority <= 1 ? "bg-error/20 text-error" : m.priority <= 3 ? "bg-warning/20 text-warning" : "bg-surface-raised text-foreground-secondary"}`}>
@@ -178,12 +184,23 @@ export function OverviewTab({ campaignId, strategyId, state, onRefresh }: { camp
                     {!!m.description && <p className="text-xs text-foreground-muted line-clamp-1">{m.description as string}</p>}
                   </div>
                 </div>
-                <StatusBadge status={m.status as string} />
-              </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <StatusBadge status={m.status as string} />
+                  <ArrowRight className="h-4 w-4 text-foreground-muted" />
+                </div>
+              </button>
             ))}
           </div>
         )}
       </Section>
+
+      <MissionDetailModal
+        campaignId={campaignId}
+        mission={openMission}
+        open={!!openMission}
+        onClose={() => setOpenMission(null)}
+        onRefresh={() => { missionsQuery.refetch(); onRefresh(); }}
+      />
 
       {/* Dependencies */}
       {deps.length > 0 && (

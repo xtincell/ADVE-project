@@ -10,6 +10,17 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.157 — feat(cockpit): fiche mission founder single-pane — pilotage + tâches datées + saisie perf ([ADR-0144](docs/governance/adr/0144-cockpit-founder-mission-single-pane.md)) (2026-07-14)
+
+**Le fondateur pilote enfin sa mission DANS le cockpit : il lit le brief, démarre la mission, coche ses tâches datées et saisit ses vrais chiffres — au même endroit. Réponse à « missions non cliquables / briefs non consultables / je ne sais pas quelles tâches et quand / démarrer au clic / valider mes tâches ».**
+
+- **2 Intent kinds founder-safe** (governor INFRASTRUCTURE, ownership-scopés, zéro LLM) : `START_CAMPAIGN_MISSION` (`mission.start` — DRAFT→IN_PROGRESS, idempotent Loi 1) + `SET_BRAND_ACTION_STATUS` (`campaignManager.setBrandActionStatus` — cocher une tâche datée). `transition` campagne restait `operatorProcedure` (interdit au founder) : le founder a désormais son bouton **« Démarrer la mission »**.
+- **`campaignManager.getMissionCockpit`** (read, `enforceCampaignAccess`) compose : tâches datées de la mission (BrandAction rattachées via `metadata.missionKey`, dates réelles), métriques AARRR de la campagne, et **état HONNÊTE des sources** (connecté / à connecter — jamais un zéro fabriqué). **Durcissement** : `recordAARRMetric` reçoit `enforceCampaignAccess` (trou d'ownership pré-existant fermé).
+- **UI** (DS + vocabulaire client) : `mission-detail-modal.tsx` (brief complet consultable, démarrer, rétroplanning coché, saisie KPI, bandeau sources) ; missions **cliquables** dans la vue d'ensemble ; **« Consulter »** le brief AVANT validation (fin du `line-clamp-3`) ; **micro-interaction** de carte campagne (feedback survol/clic/focus).
+- **Tunnel data-ops** : `?op=patch` gagne une op générique `missions[]` (reparentage/édition Mission — n'était pas couvert).
+- **Seed SPAWT (data only, code agnostique)** : `seed-spawt-gtm.ts` réconcilie les 2 campagnes sur GTM_90 (missions rattachées, Sprint Abidjan S4-5 → Mission 2 via `missionKey`, placeholder « 12 Mois » archivé).
+- **Zéro nouveau modèle Prisma, zéro migration.** Cap APOGEE 7/7 préservé. tsc 0 · lint 0 · gouvernance verte (intent-kinds/SLO, DS×3, cockpit-vocabulary). Résidus (FK `BrandAction.missionId`, re-datation 7–21 août via tunnel, ingestion générique) tracés RESIDUAL-DEBT.
+
 ## v6.27.156 — feat(cockpit): tunnel data-ops général `?op=patch` (éditer sans redéployer) (2026-07-14)
 
 **La modif de données de marque (campagnes, tâches, contexte stratégie) doit être possible via un tunnel gouverné réutilisable — pas un redéploiement à chaque fois. Réponse à « la modif des données devrait t'être possible via le MCP désormais ».**

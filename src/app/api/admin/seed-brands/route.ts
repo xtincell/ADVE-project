@@ -110,12 +110,14 @@ export async function POST(request: Request) {
         campaigns?: Array<{ id: string; data: Record<string, unknown> }>;
         archiveCampaigns?: string[];
         actions?: Array<{ where: { id?: string; strategyId?: string; sourceInitiativeId?: string }; data: Record<string, unknown> }>;
+        missions?: Array<{ id: string; data: Record<string, unknown> }>;
         strategies?: Array<{ id: string; mergeBusinessContext?: Record<string, unknown>; data?: Record<string, unknown> }>;
       };
       const result: Record<string, unknown> = {};
       const CAMPAIGN_FIELDS = new Set(["name", "code", "state", "status", "budget", "budgetCurrency", "startDate", "endDate", "objectives", "canonType", "routeKey"]);
       const ACTION_FIELDS = new Set(["title", "description", "timingStart", "timingEnd", "status", "touchpoint", "campaignId", "source", "selected", "metadata"]);
-      const DATE_FIELDS = new Set(["startDate", "endDate", "timingStart", "timingEnd"]);
+      const MISSION_FIELDS = new Set(["campaignId", "status", "title", "description", "priority", "briefData", "slaDeadline", "budget"]);
+      const DATE_FIELDS = new Set(["startDate", "endDate", "timingStart", "timingEnd", "slaDeadline"]);
       const coerce = (obj: Record<string, unknown>, allowed: Set<string>) => {
         const out: Record<string, unknown> = {};
         for (const [k, v] of Object.entries(obj ?? {})) {
@@ -163,6 +165,20 @@ export async function POST(request: Request) {
           upserted++;
         }
         result.actionsUpserted = upserted;
+      }
+      if (Array.isArray(body.missions)) {
+        // Reparentage / édition de Mission (le tunnel campagnes/actions ne couvrait
+        // pas les missions). Générique : campaignId/status/title/briefData/…
+        const updated: string[] = [];
+        for (const m of body.missions) {
+          if (!m?.id) continue;
+          const data = coerce(m.data ?? {}, MISSION_FIELDS);
+          if (Object.keys(data).length) {
+            await prisma.mission.update({ where: { id: m.id }, data: data as Prisma.MissionUpdateInput });
+            updated.push(m.id);
+          }
+        }
+        result.missionsUpdated = updated;
       }
       if (Array.isArray(body.strategies)) {
         const STRAT_FIELDS = new Set(["name", "countryCode", "publicSlug"]);

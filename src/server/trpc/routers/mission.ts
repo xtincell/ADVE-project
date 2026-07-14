@@ -10,7 +10,22 @@ import * as auditTrail from "@/server/services/audit-trail";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { assertCampaignHasBrief } from "@/server/services/campaign-manager/brief-gate";
 import * as cm from "@/server/services/campaign-manager";
+import { canAccessStrategy } from "@/server/services/operator-isolation";
+import { TRPCError } from "@trpc/server";
 /* lafusee:governed-active */
+
+/** Founder-safe ownership guard (ADR-0144) — résout mission/activité → marque. */
+async function enforceStrategyAccess(
+  ctx: { session: { user: { id: string; role: string; operatorId?: string | null } } },
+  strategyId: string,
+) {
+  const ok = await canAccessStrategy(strategyId, {
+    operatorId: ctx.session.user.operatorId ?? null,
+    userId: ctx.session.user.id,
+    role: ctx.session.user.role,
+  });
+  if (!ok) throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé : cette marque appartient à un autre compte." });
+}
 
 export const missionRouter = createTRPCRouter({
   create: governedProcedure({
@@ -183,6 +198,38 @@ export const missionRouter = createTRPCRouter({
         }).catch((err) => { console.warn("[feedback-loop] mission completion signal failed:", err instanceof Error ? err.message : err); });
       }
 
+      return updated;
+    }),
+
+  /**
+   * ADR-0144 — Le fondateur LANCE sa mission (DRAFT → IN_PROGRESS). Founder-safe
+   * (governedProcedure sans requireOperator) + ownership-scopé. Idempotent : si
+   * déjà lancée/terminée, renvoie l'état courant sans régression (Loi 1).
+   */
+  start: governedProcedure({
+    kind: "START_CAMPAIGN_MISSION",
+    inputSchema: z.object({ missionId: z.string() }),
+    caller: "mission:start",
+  })
+    .mutation(async ({ ctx, input }) => {
+      const mission = await ctx.db.mission.findUniqueOrThrow({
+        where: { id: input.missionId },
+        select: { id: true, strategyId: true, status: true, title: true },
+      });
+      await enforceStrategyAccess(ctx, mission.strategyId);
+      if (mission.status !== "DRAFT") return mission; // déjà lancée/close — no-op honnête
+      const updated = await ctx.db.mission.update({
+        where: { id: mission.id },
+        data: { status: "IN_PROGRESS" },
+      });
+      auditTrail.log({
+        userId: ctx.session.user.id,
+        action: "UPDATE",
+        entityType: "Mission",
+        entityId: mission.id,
+        oldValue: { status: "DRAFT" },
+        newValue: { status: "IN_PROGRESS" },
+      }).catch((err) => { console.warn("[audit-trail] mission start log failed:", err instanceof Error ? err.message : err); });
       return updated;
     }),
 
