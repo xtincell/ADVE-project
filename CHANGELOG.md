@@ -10,6 +10,14 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.147 — fix(seed): SPAWT — pays + secteur pour la veille actualité (feed vide) (2026-07-14)
+
+**Le traqueur d'actualité par marque était vide pour SPAWT : sa fiche n'avait ni pays ni secteur — les deux clés dont dépend la veille (Google News RSS, gratuit, sans API).**
+
+- **Cause** : le seed `scripts/seed-spawt-complete.ts` ne posait pas `Strategy.countryCode` ni `businessContext.sector`. Or le générateur de digest (`external-feeds.listActiveFeedPairs`) **saute** toute marque sans ces deux champs (`if (!countryCode || !sector) continue`), et le résolveur cockpit (`getMarketFeed`) renvoie `configured:false` → EmptyState « complétez votre fiche ». Motion19 marche précisément parce qu'il a `countryCode:"CM"` + `businessContext.sector`.
+- **Fix** : le seed pose désormais `countryCode:"CI"` (Abidjan) + `businessContext.sector:"FoodTech / Restauration"` (create ET update), calqué sur Motion19. Aucune API payante requise — la veille lit des flux RSS Google News publics ; le LLM n'est qu'un fallback.
+- **Restes** : la ligne SPAWT déjà en prod doit être re-seedée (ou les 2 champs posés) puis le cron `/api/cron/external-feeds` déclenché pour générer le digest. Le bouton « Compléter ma fiche » mène à `/cockpit/brand/fondation` qui n'expose PAS encore pays/secteur (cul-de-sac à fermer — éditeur self-serve à venir).
+
 ## v6.27.146 — feat(anubis): Instagram Business Login — provider dédié (connexion directe, sans Page FB) (2026-07-14)
 
 **« Facebook connecte mais pas Instagram » → « il faut un tout autre code pour Instagram » : provider `instagram` propre (Instagram Business Login), la connexion IG ne dépend plus d'une Page Facebook.**
