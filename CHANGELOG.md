@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.160 — feat(anubis): ingestion de métriques externes agnostique (quiz/app/CRM/email) — les sources deviennent réelles ([ADR-0146](docs/governance/adr/0146-external-metric-ingestion-agnostic.md)) (2026-07-14)
+
+**« Les outils doivent être agnostiques : une autre marque peut vouloir piloter un quizz. » Une source d'activité (quiz, app, CRM, newsletter, terrain, webhook) pousse ses chiffres RÉELS dans le tracker AARRR + les KPI d'activité de mission, avec une provenance honnête — la fiche mission dit « Dernière remontée le … » au lieu de « bientôt ». Zéro migration, zéro LLM, zéro forme codée en dur pour une marque.**
+
+- **Intent** `INGEST_EXTERNAL_METRIC` (governor ANUBIS, déterministe) + SLO + dispatch commandant. Émis par l'endpoint brut `POST /api/ingest/metrics`.
+- **Handler** `anubis/metric-ingest.ts` — routage par cellule : `stage` AARRR + `campaignId` → upsert `CampaignAARRMetric` **idempotent** (clé logique campagne × stage × metric × période, ré-émettre écrase) ; `kpiActivityId` → `MissionActivity.kpiActual` (garde de portée marque/mission) ; **TOUJOURS** un `Signal type=EXTERNAL_METRIC` de provenance.
+- **Auth réutilisée d'ADR-0145** : token MCP scopé `x-api-key` (serveur `ingest`/`*`) ou ADMIN — un token **BRAND ne pousse QUE sa marque** (fail-closed `SCOPE_DENIED`), facturé ; sinon `CRON_SECRET` pour une source interne SYSTEM. La route émet l'Intent (spine + cost-gate + audit) — elle n'écrit rien elle-même.
+- **Fiche mission** (`getMissionCockpit`) : QUIZ/APP/CRM/EMAIL « connectés » = **remontée réelle sur 30 j** (« Dernière remontée le … »), fini le « bientôt » figé. Aucun zéro fabriqué.
+- **0 migration Prisma** (`CampaignAARRMetric`/`MissionActivity`/`Signal` réutilisés — on étend, on ne double pas). Cap APOGEE 7/7 préservé. Test `external-metric-ingest.test.ts`. Résidus (pull Brevo/CRM, exposition outil MCP scopé) tracés RESIDUAL-DEBT.
+
 ## v6.27.159 — feat(anubis): portail de tokens API MCP scopés (marque/système) + rotation + édition ADVE via agent ([ADR-0145](docs/governance/adr/0145-mcp-api-tokens-scoped-rotation.md)) (2026-07-14)
 
 **Un agent distant (NEFER, tiers) lit ET édite n'importe quel ADVE avec un token scopé — plus jamais « coincé dehors ». Générateur dans la console : accès MARQUE (une stratégie) ou SYSTÈME (tout l'OS), token « pour toujours », rotation en un clic. Zéro nouveau modèle — on étend `McpApiKey` + la console `/console/anubis/api-billing` existants.**

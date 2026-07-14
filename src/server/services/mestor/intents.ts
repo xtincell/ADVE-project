@@ -565,6 +565,35 @@ export type Intent =
       /** Copy du visuel (texte DANS l'image). */
       visualCopy?: string | null;
     }
+  // ── ADR-0146 — ingestion métrique externe agnostique (quiz/app/CRM/email/terrain) ──
+  // Émis par l'endpoint raw /api/ingest/metrics (token MCP scopé) OU le cron
+  // interne (CRON_SECRET). N'écrit AUCUN pilier — CampaignAARRMetric /
+  // MissionActivity.kpiActual / Signal type=EXTERNAL_METRIC uniquement.
+  | {
+      kind: "INGEST_EXTERNAL_METRIC";
+      strategyId: string;
+      operatorId: string;
+      /** Source agnostique de la remontée (n'importe quelle marque, n'importe quel canal). */
+      sourceType: "QUIZ" | "APP" | "CRM" | "EMAIL" | "FIELD" | "WEBHOOK" | "MANUAL";
+      /** Étiquette libre lisible (ex. "quizz.spawt.online"). */
+      sourceLabel?: string | null;
+      /** Cible AARRR : requis pour écrire une CampaignAARRMetric. */
+      campaignId?: string | null;
+      /** Cible KPI d'activité de mission (garde de portée sur strategyId). */
+      missionId?: string | null;
+      /** Période comptable "YYYY-MM" (défaut : mois courant UTC). */
+      period?: string | null;
+      /** Cellules de mesure — chacune routée indépendamment, jamais fabriquée. */
+      metrics: Array<{
+        /** Étage du funnel AARRR — route vers CampaignAARRMetric si + campaignId. */
+        stage?: "ACQUISITION" | "ACTIVATION" | "RETENTION" | "REVENUE" | "REFERRAL" | null;
+        metric: string;
+        value: number;
+        target?: number | null;
+        /** MissionActivity.id à mettre à jour (kpiActual = value). */
+        kpiActivityId?: string | null;
+      }>;
+    }
   // ── ADR-0134 — mesure communautaire réelle (chaîne community→devotion→cult) ──
   // Émis par le cron social-sync quotidien (emitIntentTyped, caller
   // "cron:social-sync:community"). Pure mesure : lit FollowerSnapshot/
@@ -1270,6 +1299,9 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     case "SESHAT_ATTRIBUTE_DEVOTION_TRANSITIONS":
     // ADR-0126/0134 — écrit un SuperfanProfile (mesure), jamais un pilier.
     case "SESHAT_REGISTER_SUPERFAN":
+    // ADR-0146 — ingestion métrique externe : écrit CampaignAARRMetric /
+    // MissionActivity.kpiActual / Signal, jamais un pilier ADVE.
+    case "INGEST_EXTERNAL_METRIC":
     // Phase 17 (ADR-0037) — Deliverable Forge dispatcher. Le composer consomme
     // les piliers ADVE en lecture seule pour résoudre le DAG ; les mutations
     // vault sont déléguées en aval à PTAH_MATERIALIZE_BRIEF +
