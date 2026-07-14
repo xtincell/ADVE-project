@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { checkPaidTier } from "@/server/services/glory-tools/tier-gate";
 import { canAccessStrategy, getOperatorContext } from "@/server/services/operator-isolation";
+import { getOrBuildBrandFeed } from "@/server/services/seshat/external-feeds/brand-feed";
 import {
   shapeCommunityDashboard,
   latestFollowerPerPlatform,
@@ -386,7 +387,7 @@ export const cockpitRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const strategy = await ctx.db.strategy.findUnique({
         where: { id: input.strategyId },
-        select: { id: true, userId: true, countryCode: true, businessContext: true },
+        select: { id: true, name: true, userId: true, countryCode: true, businessContext: true },
       });
       if (!strategy) throw new TRPCError({ code: "NOT_FOUND", message: "Strategy introuvable" });
       const isPrivileged = ctx.session.user.role === "ADMIN";
@@ -405,41 +406,32 @@ export const cockpitRouter = createTRPCRouter({
         lastDigestAt: null as string | null,
         articles: [] as Array<{ title: string; link: string; source: string | null; publishedAt: string | null }>,
         themes: [] as string[],
-        configured: Boolean(strategy.countryCode && sector),
+        configured: Boolean(strategy.countryCode),
       };
-      if (!strategy.countryCode || !sector || sector.length < 3) return empty;
 
-      const digest = await ctx.db.knowledgeEntry.findFirst({
-        where: {
-          entryType: "EXTERNAL_FEED_DIGEST",
-          countryCode: strategy.countryCode,
-          sector: { contains: sector.trim().toLowerCase().slice(0, 40), mode: "insensitive" },
-        },
-        orderBy: { createdAt: "desc" },
-        select: { createdAt: true, data: true },
-      });
-      if (!digest) return empty;
+      // ADR-0143 — veille MULTI-SUJETS par marque (la marque elle-même + son
+      // secteur), interrogée multi-langue puis filtrée par pertinence
+      // DÉTERMINISTE (relevance.ts) : ZÉRO LLM. Cache journalier read-through
+      // (préchauffé par le cron external-feeds). `countryCode` absent → défaut
+      // géographique côté source, mais on signale `configured: false`.
+      const feed = await getOrBuildBrandFeed(ctx.db, {
+        strategyId: strategy.id,
+        name: strategy.name,
+        countryCode: strategy.countryCode ?? "CM",
+        sector,
+      }).catch(() => null);
+      if (!feed) return empty;
 
-      const data = (digest.data ?? {}) as {
-        items?: Array<{ title?: string; link?: string; source?: string; publishedAt?: string }>;
-        macroSignals?: Array<{ trend?: string }>;
-      };
       return {
         ...empty,
-        lastDigestAt: digest.createdAt.toISOString(),
-        articles: (Array.isArray(data.items) ? data.items : [])
-          .filter((it) => typeof it.title === "string" && it.title.length > 0)
-          .slice(0, 12)
-          .map((it) => ({
-            title: it.title as string,
-            link: typeof it.link === "string" ? it.link : "",
-            source: typeof it.source === "string" ? it.source : null,
-            publishedAt: typeof it.publishedAt === "string" ? it.publishedAt : null,
-          })),
-        themes: (Array.isArray(data.macroSignals) ? data.macroSignals : [])
-          .map((s) => (typeof s.trend === "string" ? s.trend : ""))
-          .filter((t) => t.length > 0)
-          .slice(0, 5),
+        lastDigestAt: feed.generatedAt,
+        articles: feed.articles.map((a) => ({
+          title: a.title,
+          link: a.link,
+          source: a.source ?? null,
+          publishedAt: a.publishedAt ?? null,
+        })),
+        themes: feed.subjects.slice(0, 6),
       };
     }),
 

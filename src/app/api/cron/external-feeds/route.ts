@@ -17,7 +17,9 @@ export const dynamic = "force-dynamic";
  */
 import { NextResponse } from "next/server";
 import { verifyCronSecret } from "@/lib/cron-auth";
+import { db } from "@/lib/db";
 import { refreshAllPriorityPairs } from "@/server/services/seshat/external-feeds";
+import { refreshActiveBrandFeeds } from "@/server/services/seshat/external-feeds/brand-feed";
 import { refreshSectorsFromRecentDigests } from "@/server/services/seshat/tarsis/sector-refresh";
 
 export async function GET(request: Request) {
@@ -33,14 +35,20 @@ export async function GET(request: Request) {
     const sectors = await refreshSectorsFromRecentDigests().catch(
       () => [] as Awaited<ReturnType<typeof refreshSectorsFromRecentDigests>>,
     );
+    // ADR-0143 — préchauffe la veille MULTI-SUJETS par marque (marque + secteur,
+    // multi-langue, pertinence déterministe) → le dashboard sert du cache.
+    const brandFeeds = await refreshActiveBrandFeeds(db).catch(() => ({ built: 0, skipped: 0 }));
     const summary = {
       pairs: results.length,
       okPairs: results.filter((r) => r.status === "OK").length,
       cached: results.filter((r) => r.mode === "CACHED").length,
       rss: results.filter((r) => r.mode === "RSS").length,
-      llm: results.filter((r) => r.mode === "LLM").length,
+      // ADR-0143 — plus de fallback LLM : RSS vide → macro déterministe seul.
+      rssEmpty: results.filter((r) => r.mode === "RSS_EMPTY").length,
       trendTrackerVarsTotal: results.reduce((n, r) => n + (r.trendTrackerVarsCovered ?? 0), 0),
       errors: results.filter((r) => r.error).map((r) => `${r.countryCode}/${r.sector}: ${r.error}`),
+      brandFeedsBuilt: brandFeeds.built,
+      brandFeedsSkipped: brandFeeds.skipped,
       sectorsRefreshed: sectors.filter((s) => s.state === "REFRESHED").length,
       sectorsSkipped: sectors
         .filter((s) => s.state === "SKIPPED")
