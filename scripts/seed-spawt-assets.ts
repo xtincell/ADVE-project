@@ -21,7 +21,7 @@
 
 import { readdirSync, existsSync } from "node:fs";
 import path from "node:path";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, BrandAssetState } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import type { Prisma } from "@prisma/client";
 
@@ -145,7 +145,7 @@ async function ensureAsset(
       name: a.name,
       kind: a.kind,
       family: a.family,
-      state: a.state,
+      state: a.state as BrandAssetState,
       pillarSource: a.pillarSource,
       fileUrl: a.fileUrl ?? null,
       mimeType: a.mimeType ?? null,
@@ -174,20 +174,27 @@ function humanize(s: string): string {
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
-async function main() {
-  const db = makeDb();
+// Exportée pour l'endpoint /api/admin/seed-brands (runtime app, client injecté).
+// Ne crée pas/ne ferme pas la connexion, n'appelle JAMAIS process.exit
+// (tuerait le serveur) : les absences (strategy manquante, dossier non lisible
+// au runtime standalone) retournent un `note` honnête au lieu d'un STOP.
+export async function seedSpawtAssets(
+  db: PrismaClient,
+): Promise<{ created: number; skipped: number; note?: string }> {
   console.log(`\n[SPAWT assets] strategy=${STRATEGY_ID} · source=${PUBLIC_DIR}`);
 
   const strategy = await db.strategy.findUnique({ where: { id: STRATEGY_ID }, select: { id: true, name: true } });
   if (!strategy) {
-    console.error(`[STOP] Strategy "${STRATEGY_ID}" introuvable — lance d'abord \`npm run db:seed:spawt\`.`);
-    await db.$disconnect();
-    process.exit(1);
+    const note = `Strategy "${STRATEGY_ID}" absente — lancer le seed complet d'abord`;
+    console.warn(`[SKIP] ${note}`);
+    return { created: 0, skipped: 0, note };
   }
   if (!existsSync(PUBLIC_DIR)) {
-    console.error(`[STOP] ${PUBLIC_DIR} introuvable — exécute ce seed depuis la racine du repo (les assets sont committés dans public/brand/spawt/).`);
-    await db.$disconnect();
-    process.exit(1);
+    // En image standalone, public/ peut ne pas être au cwd → non énumérable ici
+    // (les fichiers sont servis en HTTP mais pas lisibles par readdir).
+    const note = `${PUBLIC_DIR} introuvable au runtime — assets non enrôlés`;
+    console.warn(`[SKIP] ${note}`);
+    return { created: 0, skipped: 0, note };
   }
 
   let created = 0;
@@ -316,10 +323,22 @@ async function main() {
   console.log(`[OK] SPAWT assets : ${created} créé(s), ${skipped} déjà présent(s).`);
   const total = await db.brandAsset.count({ where: { strategyId: STRATEGY_ID } });
   console.log(`[OK] Coffre SPAWT : ${total} actif(s) au total.`);
-  await db.$disconnect();
+  return { created, skipped };
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+// Runner CLI (`npm run db:seed:spawt-assets`) — jamais à l'import (endpoint).
+if (
+  typeof process !== "undefined" &&
+  Array.isArray(process.argv) &&
+  typeof process.argv[1] === "string" &&
+  /seed-spawt-assets/.test(process.argv[1])
+) {
+  const cliDb = makeDb();
+  seedSpawtAssets(cliDb)
+    .then(() => cliDb.$disconnect())
+    .then(() => process.exit(0))
+    .catch((e: unknown) => {
+      console.error(e);
+      process.exit(1);
+    });
+}

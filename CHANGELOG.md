@@ -10,6 +10,14 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.151 — feat(seed): SPAWT — assets visuels (logos/mascottes) branchés dans l'endpoint (2026-07-14)
+
+**Les assets de marque SPAWT (logos, 25 poses de Moka, palette) étaient un seed séparé jamais branché dans l'endpoint : `?only=spawt` ne posait que l'ADVE, pas les visuels.**
+
+- **`scripts/seed-spawt-assets.ts` rendu importable** : `main()` → `export seedSpawtAssets(db)` (client injecté, plus de `process.exit`/`$disconnect`, garde CLI en bas). Absences (strategy manquante, `public/brand/spawt` non lisible au runtime standalone) → `note` honnête retourné, JAMAIS un STOP qui tue le serveur.
+- **`/api/admin/seed-brands`** : `?only=spawt` lance désormais complete **puis** assets (après la strategy) ; `?only=spawt-assets` pour rejouer le coffre seul. Le compte créés/présents (+ note éventuelle) est journalisé dans la réponse.
+- **Caveat runtime** : en image standalone, `public/` peut ne pas être au cwd → les fichiers sont servis en HTTP mais non énumérables par `readdir` ; dans ce cas les assets sont honnêtement « non enrôlés » (note), à corriger côté Dockerfile si besoin.
+
 ## v6.27.150 — docs(nefer-ops): déploiement automatique au merge — pas de deploy manuel (2026-07-14)
 
 **Consigne opérateur : le déploiement est automatique après le merge ; déclencher un `POST /api/v1/deploy` en plus fait un build en double et surcharge le VPS.**
