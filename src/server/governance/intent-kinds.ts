@@ -340,6 +340,10 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "CAPTURE_ERROR_EVENT", governor: "INFRASTRUCTURE", handler: "error-vault", async: false, description: "Capture une erreur runtime (server/client/Prisma/NSP/Ptah/cron/webhook/stress-test) avec dedup par signature." },
   { kind: "RESOLVE_ERROR_EVENT", governor: "INFRASTRUCTURE", handler: "error-vault", async: false, description: "Marque un ErrorEvent comme résolu (ou false-positive connu — auto-resolve futurs occurrences)." },
 
+  // ── Cockpit mission (ADR-0144) — pilotage founder-safe d'une mission de campagne. ──
+  { kind: "START_CAMPAIGN_MISSION", governor: "INFRASTRUCTURE", handler: "mission", async: false, description: "Le fondateur lance une mission de campagne (DRAFT → IN_PROGRESS). Founder-safe, ownership-scopé (enforceStrategyAccess). Pas de régression silencieuse (Loi 1)." },
+  { kind: "SET_BRAND_ACTION_STATUS", governor: "INFRASTRUCTURE", handler: "campaign-manager", async: false, description: "Le fondateur coche/valide une tâche datée du rétroplanning (BrandAction.status ∈ PROPOSED/ACCEPTED/SCHEDULED/EXECUTED/CANCELLED). Founder-safe, ownership-scopé." },
+
 // ── AUTOGEN: legacy-intent-kinds — DO NOT EDIT MANUALLY ──
   // 329 legacy mutation kinds auto-generated from strangler routers.
   // Source : scripts/generate-legacy-intent-kinds.ts. Re-run after any router mutation rename.

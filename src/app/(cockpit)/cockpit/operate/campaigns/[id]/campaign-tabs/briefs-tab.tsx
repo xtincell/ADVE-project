@@ -6,12 +6,46 @@ import { Modal } from "@/components/shared/modal";
 import { FormField } from "@/components/shared/form-field";
 import { getFieldLabel } from "@/components/cockpit/field-renderers";
 import { Section, MiniBtn, EmptyMsg } from "./shared";
-import { ClipboardList, FileText, Plus } from "lucide-react";
+import { ClipboardList, FileText, Plus, Eye } from "lucide-react";
+
+/** Rendu LISIBLE et COMPLET d'un contenu de brief (string ou objet structuré). */
+function BriefContentView({ content }: { content: unknown }) {
+  if (content == null) return <p className="text-sm text-foreground-muted">Aucun contenu.</p>;
+  if (typeof content === "string") return <p className="whitespace-pre-wrap text-sm text-white">{content}</p>;
+  if (typeof content === "object") {
+    return (
+      <div className="space-y-3">
+        {Object.entries(content as Record<string, unknown>).map(([k, v]) => (
+          <div key={k}>
+            <p className="text-2xs font-semibold uppercase tracking-wide text-foreground-muted">{getFieldLabel(k)}</p>
+            <div className="mt-0.5 text-sm text-white">
+              {Array.isArray(v) ? (
+                <ul className="list-disc space-y-0.5 pl-4">
+                  {v.map((x, i) => <li key={i}>{typeof x === "object" ? JSON.stringify(x) : String(x)}</li>)}
+                </ul>
+              ) : typeof v === "object" && v !== null ? (
+                <div className="space-y-1 rounded-lg border border-border/50 bg-background/60 p-2">
+                  {Object.entries(v as Record<string, unknown>).map(([kk, vv]) => (
+                    <p key={kk} className="text-xs"><span className="text-foreground-muted">{getFieldLabel(kk)} : </span>{typeof vv === "object" ? JSON.stringify(vv) : String(vv)}</p>
+                  ))}
+                </div>
+              ) : (
+                <span className="whitespace-pre-wrap">{String(v)}</span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return <p className="text-sm text-white">{String(content)}</p>;
+}
 
 export function BriefsTab({ campaignId, strategyId }: { campaignId: string; strategyId: string }) {
   const [showCreate, setShowCreate] = useState(false);
   const [newBrief, setNewBrief] = useState({ briefType: "CREATIVE", title: "", content: "" });
   const [generating, setGenerating] = useState<string | null>(null);
+  const [viewBrief, setViewBrief] = useState<Record<string, unknown> | null>(null);
 
   const briefsQuery = trpc.campaignManager.listBriefs.useQuery({ campaignId });
   const typesQuery = trpc.campaignManager.getBriefTypes.useQuery();
@@ -99,6 +133,9 @@ export function BriefsTab({ campaignId, strategyId }: { campaignId: string; stra
                     {!!b.version && <p className="mt-0.5 text-xs text-foreground-muted">v{b.version as number}</p>}
                   </div>
                   <div className="flex items-center gap-3">
+                    <MiniBtn onClick={() => setViewBrief(b)}>
+                      <span className="flex items-center gap-1"><Eye className="h-3 w-3" /> Consulter</span>
+                    </MiniBtn>
                     {b.status !== "VALIDATED" && (
                       <div className="flex flex-col items-end gap-1">
                         <MiniBtn
@@ -157,6 +194,23 @@ export function BriefsTab({ campaignId, strategyId }: { campaignId: string; stra
             }} disabled={createMut.isPending}>Creer</MiniBtn>
           </div>
         </div>
+      </Modal>
+
+      {/* Consultation complète du brief AVANT validation */}
+      <Modal open={!!viewBrief} onClose={() => setViewBrief(null)} title={(viewBrief?.title as string) ?? "Brief"} size="lg">
+        <BriefContentView content={viewBrief?.content} />
+        {viewBrief && viewBrief.status !== "VALIDATED" && (
+          <div className="mt-5 flex items-center justify-end gap-2 border-t border-border pt-4">
+            <MiniBtn onClick={() => setViewBrief(null)}>Fermer</MiniBtn>
+            <MiniBtn
+              variant="primary"
+              disabled={validateBriefMut.isPending}
+              onClick={() => { const id = viewBrief.id as string; setViewBrief(null); validateBriefMut.mutate({ id }); }}
+            >
+              {validateBriefMut.isPending ? "Validation..." : "Valider & Créer la Mission"}
+            </MiniBtn>
+          </div>
+        )}
       </Modal>
     </div>
   );

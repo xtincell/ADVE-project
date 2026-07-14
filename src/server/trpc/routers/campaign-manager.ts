@@ -1658,7 +1658,82 @@ export const campaignManagerRouter = createTRPCRouter({
 
 
   })
-    .mutation(async ({ ctx, input }) => ctx.db.campaignAARRMetric.create({ data: input })),
+    .mutation(async ({ ctx, input }) => {
+      // ADR-0144 — durcissement ownership (ce writer founder-safe n'était pas scopé).
+      await enforceCampaignAccess(ctx, input.campaignId);
+      return ctx.db.campaignAARRMetric.create({ data: input });
+    }),
+
+  /**
+   * ADR-0144 — Le fondateur coche/valide une tâche datée du rétroplanning
+   * (BrandAction.status). Founder-safe + ownership-scopé via la marque de l'action.
+   */
+  setBrandActionStatus: governedProcedure({
+    kind: "SET_BRAND_ACTION_STATUS",
+    inputSchema: z.object({
+      brandActionId: z.string(),
+      status: z.enum(["PROPOSED", "ACCEPTED", "SCHEDULED", "EXECUTED", "CANCELLED"]),
+    }),
+    caller: "campaign-manager:setBrandActionStatus",
+  })
+    .mutation(async ({ ctx, input }) => {
+      const action = await ctx.db.brandAction.findUniqueOrThrow({
+        where: { id: input.brandActionId },
+        select: { id: true, strategyId: true },
+      });
+      await enforceStrategyAccess(ctx, action.strategyId);
+      return ctx.db.brandAction.update({
+        where: { id: input.brandActionId },
+        data: { status: input.status },
+      });
+    }),
+
+  /**
+   * ADR-0144 — Vue « single-pane » du fondateur pour une mission (lecture,
+   * ownership-scopée). Additive au panel d'activités existant : elle apporte
+   * les métriques AARRR de la campagne + l'état HONNÊTE des sources de données
+   * (connecté / à connecter). Zéro invention : une source non branchée est dite,
+   * jamais un zéro fabriqué. Les tâches/activités viennent du panel de mission.
+   */
+  getMissionCockpit: protectedProcedure
+    .input(z.object({ campaignId: z.string(), missionId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      await enforceCampaignAccess(ctx, input.campaignId);
+      const mission = await ctx.db.mission.findUniqueOrThrow({
+        where: { id: input.missionId },
+        select: { id: true, strategyId: true },
+      });
+      const [allActions, metrics, socialCount, email] = await Promise.all([
+        ctx.db.brandAction.findMany({
+          where: { campaignId: input.campaignId },
+          select: {
+            id: true, title: true, description: true, status: true, touchpoint: true,
+            timingStart: true, timingEnd: true, metadata: true,
+          },
+          orderBy: { timingStart: "asc" },
+        }),
+        ctx.db.campaignAARRMetric.findMany({
+          where: { campaignId: input.campaignId },
+          orderBy: { measuredAt: "desc" },
+        }),
+        ctx.db.socialConnection.count({ where: { strategyId: mission.strategyId, status: "ACTIVE" } }),
+        ctx.db.brandEmailConnector.findUnique({ where: { strategyId: mission.strategyId }, select: { status: true } }),
+      ]);
+      // Tâches datées de la mission = BrandActions du calendrier rattachées via
+      // metadata.missionKey (dates réelles timingStart/End = le rétroplanning).
+      const tasks = allActions.filter(
+        (a) => (a.metadata as Record<string, unknown> | null)?.missionKey === input.missionId,
+      );
+      const done = tasks.filter((t) => t.status === "EXECUTED").length;
+      const sources = [
+        { key: "SOCIAL", label: "Réseaux sociaux", connected: socialCount > 0, note: socialCount > 0 ? null : "Connecte tes comptes dans Réglages → Connexions." },
+        { key: "EMAIL", label: "Email / newsletter", connected: email?.status === "ACTIVE", note: email?.status === "ACTIVE" ? null : "Renseigne ta clé email dans Réglages → Connexions." },
+        { key: "QUIZ", label: "Quiz / acquisition", connected: false, note: "Remontée automatique des chiffres — bientôt." },
+        { key: "APP", label: "Application", connected: false, note: "Remontée automatique des chiffres — bientôt." },
+        { key: "CRM", label: "CRM", connected: false, note: "Remontée automatique des chiffres — bientôt." },
+      ];
+      return { tasks, execution: { total: tasks.length, done }, metrics, sources };
+    }),
 
   getAARRReport: protectedProcedure
     .input(z.object({ campaignId: z.string() }))

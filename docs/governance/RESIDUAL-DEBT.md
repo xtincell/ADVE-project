@@ -1,5 +1,14 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
+## Cockpit mission founder single-pane — ADR-0144 (2026-07-14, NEFER)
+
+Fiche mission founder shippée (v6.27.157, [ADR-0144](adr/0144-cockpit-founder-mission-single-pane.md)) : brief consultable, « Démarrer la mission », tâches datées cochables, saisie perf réelle, sources honnêtes. Résidus DÉFÉRÉS explicitement :
+
+- **FK durable `BrandAction.missionId`** : le lien mission ↔ tâche datée passe par `BrandAction.metadata.missionKey` (JSON, zéro migration) — stopgap. Un filtre JSON-path est non-indexé/fragile pour « les tâches d'une mission ». Bornage : champ nullable `BrandAction.missionId` + relation `onDelete: SetNull` + backfill depuis `metadata.missionKey` (migration additive). Le read `getMissionCockpit` accepte déjà `missionId ?? metadata.missionKey`.
+- **Re-datation Sprint Abidjan sur la fenêtre opérateur (7–21 août)** : le seed lie le Sprint Abidjan (S4-5) à la Mission 2 aux dates GTM canon (4–18 août). La fenêtre RÉELLE (Abidjan 7–21 août) est un choix opérationnel, à poser en LIVE via le tunnel `?op=patch actions[]` (timingStart/End) post-deploy — pas dans le seed (fidèle au GTM v2).
+- **Ingestion externe générique + Brevo pull (PR-B, ADR-0145 à créer)** : la « remontée automatique » des chiffres (quiz/app/CRM push + Brevo pull) n'est pas encore construite — les sources autres que Réseaux/Email s'affichent honnêtement « à connecter — bientôt ». Chantier : `INGEST_EXTERNAL_METRIC` (governor ANUBIS) + `POST /api/ingest/metrics` (token par stratégie via `MediaPlatformConnection`) + cron `metrics-pull` Brevo — tout agnostique.
+- **Réconciliation live SPAWT sur la bonne stratégie** : le seed cible `spawt-strategy` ; la marque vit sur `spawt-strategy-001` (doublon historique). Le fix live (reparent missions → GTM_90, archive placeholder) se fait via le tunnel `?op=patch missions[]`/`archiveCampaigns[]` post-deploy après `?diag`.
+
 ## Audit brief/livrable/Oracle · scoring · pivot — ADR-0134 (2026-07-13, NEFER)
 
 Audit ground-truth complet : [docs/audits/BRIEF-ORACLE-SCORING-PIVOT-AUDIT-2026-07-13.md](../audits/BRIEF-ORACLE-SCORING-PIVOT-AUDIT-2026-07-13.md) (18 trous T1-T18, tracés vs non-tracés). Vague de remédiation [ADR-0134](adr/0134-mesure-communautaire-reelle-et-ponts-overton.md) shippée même session : écrivain de production `CommunitySnapshot` + chaîne de mesure quotidienne (community→devotion→cult) au cron social-sync, devotion sur audience réelle (followers/inbox), mise à jour des superfans connus depuis l'inbox + file de candidats à revue humaine (cap 0.60), caller du pont RSS→axe Overton (registre `Sector` provisionné), `realSignal` §34 câblé, cascade staleness Oracle déplacée dans `writePillar`. Résidus DÉFÉRÉS explicitement (pas de demi-ship) :

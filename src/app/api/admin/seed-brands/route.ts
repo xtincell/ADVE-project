@@ -11,6 +11,7 @@ export const maxDuration = 120;
  * métier d'une marque cliente réelle (précédent : scripts prisma/seed-*).
  */
 import { NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { verifyCronSecret } from "@/lib/cron-auth";
@@ -96,6 +97,108 @@ export async function POST(request: Request) {
         ok: true,
         reparent: { from: reparentFrom, to, campaigns: campaigns.count, actions: actions.count },
       });
+    }
+
+    // ── Tunnel DATA-OPS GÉNÉRAL (`?op=patch`, corps JSON POST) — éditer les
+    // données SANS redéploiement. Réutilisable pour toujours : campagnes,
+    // actions/tâches (BrandAction), stratégie (businessContext). Champs
+    // WHITELISTÉS. C'est le « clé en main » de la modif de données via agent
+    // distant — le tunnel EST l'interface data-ops (à exposer aussi en tool MCP).
+    const op = new URL(request.url).searchParams.get("op");
+    if (op === "patch") {
+      const body = (await request.json().catch(() => ({}))) as {
+        campaigns?: Array<{ id: string; data: Record<string, unknown> }>;
+        archiveCampaigns?: string[];
+        actions?: Array<{ where: { id?: string; strategyId?: string; sourceInitiativeId?: string }; data: Record<string, unknown> }>;
+        missions?: Array<{ id: string; data: Record<string, unknown> }>;
+        strategies?: Array<{ id: string; mergeBusinessContext?: Record<string, unknown>; data?: Record<string, unknown> }>;
+      };
+      const result: Record<string, unknown> = {};
+      const CAMPAIGN_FIELDS = new Set(["name", "code", "state", "status", "budget", "budgetCurrency", "startDate", "endDate", "objectives", "canonType", "routeKey"]);
+      const ACTION_FIELDS = new Set(["title", "description", "timingStart", "timingEnd", "status", "touchpoint", "campaignId", "source", "selected", "metadata"]);
+      const MISSION_FIELDS = new Set(["campaignId", "status", "title", "description", "priority", "briefData", "slaDeadline", "budget"]);
+      const DATE_FIELDS = new Set(["startDate", "endDate", "timingStart", "timingEnd", "slaDeadline"]);
+      const coerce = (obj: Record<string, unknown>, allowed: Set<string>) => {
+        const out: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(obj ?? {})) {
+          if (!allowed.has(k)) continue;
+          out[k] = DATE_FIELDS.has(k) && typeof v === "string" ? new Date(v) : v;
+        }
+        return out;
+      };
+
+      if (Array.isArray(body.campaigns)) {
+        const updated: string[] = [];
+        for (const c of body.campaigns) {
+          if (!c?.id) continue;
+          const data = coerce(c.data ?? {}, CAMPAIGN_FIELDS);
+          if (Object.keys(data).length) {
+            await prisma.campaign.update({ where: { id: c.id }, data: data as Prisma.CampaignUpdateInput });
+            updated.push(c.id);
+          }
+        }
+        result.campaignsUpdated = updated;
+      }
+      if (Array.isArray(body.archiveCampaigns) && body.archiveCampaigns.length) {
+        const r = await prisma.campaign.updateMany({ where: { id: { in: body.archiveCampaigns } }, data: { state: "ARCHIVED", status: "ARCHIVED" } });
+        result.campaignsArchived = r.count;
+      }
+      if (Array.isArray(body.actions)) {
+        let upserted = 0;
+        for (const a of body.actions) {
+          const data = coerce(a?.data ?? {}, ACTION_FIELDS);
+          if (a?.where?.id) {
+            await prisma.brandAction.update({ where: { id: a.where.id }, data: data as Prisma.BrandActionUpdateInput });
+          } else if (a?.where?.strategyId && a?.where?.sourceInitiativeId) {
+            const existing = await prisma.brandAction.findFirst({
+              where: { strategyId: a.where.strategyId, sourceInitiativeId: a.where.sourceInitiativeId },
+              select: { id: true },
+            });
+            if (existing) {
+              await prisma.brandAction.update({ where: { id: existing.id }, data: data as Prisma.BrandActionUpdateInput });
+            } else {
+              await prisma.brandAction.create({
+                data: { strategyId: a.where.strategyId, sourceInitiativeId: a.where.sourceInitiativeId, ...data } as unknown as Prisma.BrandActionUncheckedCreateInput,
+              });
+            }
+          } else continue;
+          upserted++;
+        }
+        result.actionsUpserted = upserted;
+      }
+      if (Array.isArray(body.missions)) {
+        // Reparentage / édition de Mission (le tunnel campagnes/actions ne couvrait
+        // pas les missions). Générique : campaignId/status/title/briefData/…
+        const updated: string[] = [];
+        for (const m of body.missions) {
+          if (!m?.id) continue;
+          const data = coerce(m.data ?? {}, MISSION_FIELDS);
+          if (Object.keys(data).length) {
+            await prisma.mission.update({ where: { id: m.id }, data: data as Prisma.MissionUpdateInput });
+            updated.push(m.id);
+          }
+        }
+        result.missionsUpdated = updated;
+      }
+      if (Array.isArray(body.strategies)) {
+        const STRAT_FIELDS = new Set(["name", "countryCode", "publicSlug"]);
+        const touched: string[] = [];
+        for (const s of body.strategies) {
+          if (!s?.id) continue;
+          const data: Record<string, unknown> = {};
+          for (const [k, v] of Object.entries(s.data ?? {})) if (STRAT_FIELDS.has(k)) data[k] = v;
+          if (s.mergeBusinessContext) {
+            const cur = await prisma.strategy.findUnique({ where: { id: s.id }, select: { businessContext: true } });
+            data.businessContext = { ...((cur?.businessContext ?? {}) as Record<string, unknown>), ...s.mergeBusinessContext };
+          }
+          if (Object.keys(data).length) {
+            await prisma.strategy.update({ where: { id: s.id }, data: data as Prisma.StrategyUpdateInput });
+            touched.push(s.id);
+          }
+        }
+        result.strategiesUpdated = touched;
+      }
+      return NextResponse.json({ ok: true, op: "patch", ...result });
     }
 
     if (!only || only === "motion19") {

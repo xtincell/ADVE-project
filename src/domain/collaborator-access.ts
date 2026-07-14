@@ -80,6 +80,9 @@ export const COLLABORATOR_KIND_ZONES: Readonly<Record<string, CockpitZone>> = {
   ANUBIS_REPLY_COMMENT: "social",
   ANUBIS_PUBLISH_SOCIAL_POST: "social",
   LEGACY_PUBLICATION_DELETE: "publications",
+  // ADR-0144 — cockpit mission : pilotage délégable (Direction du digital).
+  START_CAMPAIGN_MISSION: "campaigns",
+  SET_BRAND_ACTION_STATUS: "calendar",
 };
 
 /** Zone d'un kind pour un collaborateur — null = kind non délégable. */

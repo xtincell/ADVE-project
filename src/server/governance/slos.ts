@@ -302,6 +302,9 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "SESHAT_CAPTURE_COMMUNITY_SNAPSHOT", p95LatencyMs: 15_000, errorRatePct: 0.05, costP95Usd: 0 },
   // ADR-0135 — attribution transitions dévotion (2 findMany + N updates, temporal join pur) ; sync, zéro LLM.
   { kind: "SESHAT_ATTRIBUTE_DEVOTION_TRANSITIONS", p95LatencyMs: 10_000, errorRatePct: 0.05, costP95Usd: 0 },
+  // ADR-0144 — cockpit mission founder-safe (writes directs, sync, zéro LLM).
+  { kind: "START_CAMPAIGN_MISSION", p95LatencyMs: 800, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "SET_BRAND_ACTION_STATUS", p95LatencyMs: 500, errorRatePct: 0.02, costP95Usd: 0 },
 
   // ── AUTOGEN: legacy-intent-kinds — DO NOT EDIT MANUALLY ──
   // 329 legacy mutation SLOs (defaults — tighten per-mutation as needed).

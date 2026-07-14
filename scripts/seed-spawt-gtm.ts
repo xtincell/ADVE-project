@@ -365,6 +365,41 @@ export async function seedSpawtGtm() {
     console.log(`→ ${attached.count} action(s) GTM orpheline(s) rattachée(s) à la campagne.`);
   }
 
+  // ── 7. Réconciliation des deux campagnes SPAWT (ADR-0144) ──────────────────
+  // Le seed historique a créé une campagne « 12 Mois » placeholder (données
+  // inventées LIVE / 30M / jan-déc) portant 3 Missions, EN PLUS de cette
+  // campagne GTM canon (dates + budget réels). On réconcilie sur GTM_90 : les
+  // missions y sont rattachées, les tâches du Sprint Abidjan (S4-5) sont liées à
+  // la Mission 2 (metadata.missionKey → rétroplanning founder cliquable), et le
+  // placeholder aux données inventées est archivé. Idempotent.
+  const MISSION_IDS = [
+    "spawt-mission-1-cadrage",
+    "spawt-mission-2-activation",
+    "spawt-mission-3-consolidation",
+  ];
+  const reparented = await db.mission.updateMany({
+    where: { id: { in: MISSION_IDS }, strategyId: SPAWT_STRATEGY_ID },
+    data: { campaignId },
+  });
+  const M2 = "spawt-mission-2-activation";
+  const sprintActions = await db.brandAction.findMany({
+    where: { strategyId: SPAWT_STRATEGY_ID, sourceInitiativeId: { startsWith: "gtm-v2-s45-" } },
+    select: { id: true, metadata: true },
+  });
+  for (const a of sprintActions) {
+    const meta = { ...((a.metadata ?? {}) as Record<string, unknown>), missionKey: M2 };
+    await db.brandAction.update({ where: { id: a.id }, data: { metadata: meta as Prisma.InputJsonValue } });
+  }
+  const archived = await db.campaign.updateMany({
+    where: { id: "spawt-campaign-lancement" },
+    data: { state: "ARCHIVED", status: "ARCHIVED" },
+  });
+  console.log(
+    `→ Réconciliation : ${reparented.count} mission(s) → GTM_90 ; ` +
+      `${sprintActions.length} tâche(s) Sprint Abidjan → Mission 2 ; ` +
+      `${archived.count} placeholder « 12 Mois » archivé(s).`,
+  );
+
   console.log(
     "\n✅ GTM SPAWT v2 injecté + campagne canon visible dans l'onglet Campagnes. " +
       "Le cron social-sync ?mode=publish fera partir J0.",

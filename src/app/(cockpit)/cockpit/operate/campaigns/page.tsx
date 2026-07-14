@@ -334,7 +334,7 @@ export default function CampaignsPage() {
               <button
                 key={c.id}
                 onClick={() => router.push(`/cockpit/operate/campaigns/${c.id}`)}
-                className="w-full rounded-xl border border-border bg-background/80 p-4 text-left transition-colors hover:border-border"
+                className="w-full rounded-xl border border-border bg-background/80 p-4 text-left transition-all duration-150 hover:-translate-y-0.5 hover:border-accent/50 hover:bg-surface-raised hover:shadow-lg active:translate-y-0 active:scale-[0.995] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">
