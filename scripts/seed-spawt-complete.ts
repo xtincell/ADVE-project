@@ -1610,6 +1610,11 @@ async function main() {
     update: {
       name: "SPAWT",
       description: "Stratégie ADVE-RTIS complète — SPAWT (App identité culinaire, Abidjan). Mission 1 COMPLÉTÉE.",
+      // Pays + secteur : les DEUX clés qu'exploitent la veille actualité
+      // (external-feeds Google News), l'intelligence sectorielle et l'axe
+      // Overton. Sans elles, la marque est SAUTÉE par le générateur de digest
+      // et le cockpit affiche « complétez votre fiche » (bug feed vide 07/14).
+      countryCode: "CI",
       businessContext: {
         businessModel: "PLATEFORME",
         economicModels: ["FREEMIUM", "ABONNEMENT"],
@@ -1617,6 +1622,7 @@ async function main() {
         salesChannel: "DIRECT",
         positionalGoodFlag: false,
         premiumScope: "PARTIAL",
+        sector: "FoodTech / Restauration",
       } as Prisma.InputJsonValue,
     },
     create: {
@@ -1624,6 +1630,7 @@ async function main() {
       name: "SPAWT",
       description: "Stratégie ADVE-RTIS complète — SPAWT (App identité culinaire, Abidjan). Mission 1 COMPLÉTÉE.",
       userId: ADMIN_USER_ID,
+      countryCode: "CI",
       businessContext: {
         businessModel: "PLATEFORME",
         economicModels: ["FREEMIUM", "ABONNEMENT"],
@@ -1631,6 +1638,7 @@ async function main() {
         salesChannel: "DIRECT",
         positionalGoodFlag: false,
         premiumScope: "PARTIAL",
+        sector: "FoodTech / Restauration",
       } as Prisma.InputJsonValue,
     },
   });
