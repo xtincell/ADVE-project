@@ -10,6 +10,18 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.159 — feat(anubis): portail de tokens API MCP scopés (marque/système) + rotation + édition ADVE via agent ([ADR-0145](docs/governance/adr/0145-mcp-api-tokens-scoped-rotation.md)) (2026-07-14)
+
+**Un agent distant (NEFER, tiers) lit ET édite n'importe quel ADVE avec un token scopé — plus jamais « coincé dehors ». Générateur dans la console : accès MARQUE (une stratégie) ou SYSTÈME (tout l'OS), token « pour toujours », rotation en un clic. Zéro nouveau modèle — on étend `McpApiKey` + la console `/console/anubis/api-billing` existants.**
+
+- **Modèle** `McpApiKey` (migration additive) : `scopeKind` (SYSTEM défaut | BRAND) + `scopeStrategyId` + `rotatedToId`/`rotatedAt`. `expiresAt` existait → **null = pour toujours** réutilisé.
+- **Auth** `authenticateMcpRequest` renvoie la portée (ADMIN = SYSTEM) ; les 2 routes (`/api/mcp` agrégé + per-server) **injectent** le contexte de portée dans les params de l'outil (après le spread → pas d'usurpation client).
+- **Service/tRPC** : `createApiKey` prend la portée ; **`rotateApiKey`** (transaction : nouveau secret + ancien révoqué + lineage) ; `mcpBilling.rotateKey`. `listKeys` expose la portée.
+- **Console** : radio Système/Une marque + champ marque + case ∞ pour toujours + bouton **Roter** (secret affiché une seule fois).
+- **Outil d'édition ADVE** : serveur `advertis` gagne **`amendPillar`** → voie gouvernée `OPERATOR_AMEND_PILLAR` (gate cohérence + versioning + audit gratis). **Fail-closed** : token BRAND refuse une autre marque ; sans portée injectée → refus. R/T/I/S non éditables (dérivent).
+- **Params** documentés : [docs/governance/context/MCP-AGENT-ACCESS.md](docs/governance/context/MCP-AGENT-ACCESS.md) — endpoint `/api/mcp`, header `x-api-key: lfk_…`.
+- Cap APOGEE 7/7 préservé (aucun Neter ; édition via Intent Mestor existant). tsc 0. Résidus (picker marque, outils MCP campagne/asset) tracés.
+
 ## v6.27.158 — feat(cockpit): tunnel `?diag` renvoie le détail campagnes + missions (ids) (2026-07-14)
 
 **Le diag ne donnait que des compteurs ; pour piloter un reparentage/réconciliation via `?op=patch` il faut les ids. `?diag` renvoie désormais `campaignList` (id/name/canonType/routeKey/state) + `missionList` (id/title/status/campaignId/priority) par stratégie. Générique, lecture seule.**

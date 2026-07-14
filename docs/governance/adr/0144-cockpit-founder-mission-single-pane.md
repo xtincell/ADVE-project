@@ -76,7 +76,7 @@ campagnes/actions/stratégies.
 - Cap APOGEE 7/7 préservé (kinds INFRASTRUCTURE, pas de Neter).
 - **La perf non branchée reste honnête** : les sources « à connecter » (quiz/app/CRM) sont
   dites, pas remplies de zéros. L'ingestion automatique générique (`INGEST_EXTERNAL_METRIC`
-  + `/api/ingest/metrics` + Brevo pull) est le chantier suivant (ADR-0145, PR-B).
+  + `/api/ingest/metrics` + Brevo pull) est le chantier suivant (ADR-0146, PR-B).
 - Tests anti-drift créés : couverts par `intent-kinds.test.ts` (pairing SLO),
   `cockpit-vocabulary.test.ts` (registre client), les 3 tests DS.
 
@@ -84,4 +84,4 @@ campagnes/actions/stratégies.
 
 - FK durable `BrandAction.missionId` (le pont `metadata.missionKey` est le stopgap).
 - Re-datation du Sprint Abidjan sur la fenêtre opérateur (7–21 août) via tunnel post-deploy.
-- Ingestion externe générique + Brevo pull → PR-B (ADR-0145).
+- Ingestion externe générique + Brevo pull → PR-B (ADR-0146).

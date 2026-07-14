@@ -154,7 +154,7 @@ Ces correspondances évitent la réinvention :
 - **TranslationDocument** (10 fields)
 - **AuditLog** (11 fields)
 - **AICostLog** (11 fields)
-- **McpApiKey** (15 fields)
+- **McpApiKey** (19 fields)
 - **McpApiCall** (10 fields) — Un call API MCP à la frontière HTTP (billable si apiKeyId, tracé sinon). Source de vérité unique du metering — les state
 - **McpUsageStatement** (14 fields) — Relevé mensuel gelé à l'émission : billable = max(0, calls − franchise) × tarif.
 - **BrandOSConfig** (8 fields)

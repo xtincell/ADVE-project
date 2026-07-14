@@ -46,5 +46,17 @@ export async function POST(request: Request) {
 
   const server = body.server;
   const tool = body.tool;
-  return meterAndRun(gate, server, tool, () => dispatchTool(server, tool, body.params ?? {}));
+  // Injecte la portée du token (ADR-0145) — les outils d'écriture (amendPillar)
+  // l'exigent (fail-closed). Écrit APRÈS le spread → pas d'usurpation client.
+  return meterAndRun(gate, server, tool, () =>
+    dispatchTool(server, tool, {
+      ...(body.params ?? {}),
+      __auth: {
+        scopeKind: gate.scopeKind ?? null,
+        scopeStrategyId: gate.scopeStrategyId ?? null,
+        userId: gate.userId ?? null,
+        apiKeyId: gate.apiKeyId ?? null,
+      },
+    }),
+  );
 }

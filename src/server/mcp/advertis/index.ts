@@ -22,6 +22,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { classifyTier } from "@/domain/brand-tier";
 import { PILLAR_KEYS, PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
+import { ADVE_KEYS } from "@/domain";
 
 export const serverName = "advertis";
 export const serverDescription =
@@ -143,6 +144,55 @@ export const tools: ToolDefinition[] = [
         compositeScore: typeof vec.compositeScore === "number" ? vec.compositeScore : null,
         pillars,
       };
+    },
+  },
+
+  // ---- Édition gouvernée d'un pilier ADVE (write) — scopée au token (ADR-0145) ----
+  {
+    name: "amendPillar",
+    description:
+      "Édite un pilier ADVE (a/d/v/e) d'une marque via la voie gouvernée OPERATOR_AMEND_PILLAR (gate de cohérence + versioning + audit). R/T/I/S ne sont PAS éditables (ils dérivent). Nécessite un token dont la portée couvre la marque (SYSTEM, ou BRAND=cette marque). Modes : PATCH_DIRECT (valeur brute) | STRATEGIC_REWRITE (raison ≥20 car.).",
+    inputSchema: z.object({
+      strategyId: z.string().describe("ID de la marque"),
+      pillarKey: z.enum(ADVE_KEYS as unknown as [string, ...string[]]).describe("Pilier ADVE (A/D/V/E)"),
+      field: z.string().describe("Chemin dans Pillar.content (ex. 'nomMarque', 'personas[0].name')"),
+      proposedValue: z.unknown().describe("Nouvelle valeur"),
+      mode: z.enum(["PATCH_DIRECT", "STRATEGIC_REWRITE"]).default("PATCH_DIRECT"),
+      reason: z.string().min(1).describe("Raison de l'édition (≥20 car. si STRATEGIC_REWRITE)"),
+    }),
+    handler: async (input) => {
+      // Contexte d'auth injecté par la route (jamais par le client — override après spread).
+      const authCtx = asRecord(input.__auth);
+      const scopeKind =
+        authCtx.scopeKind === "BRAND" ? "BRAND" : authCtx.scopeKind === "SYSTEM" ? "SYSTEM" : null;
+      // Fail-closed : sans portée injectée → refus (aucune écriture hors route gardée).
+      if (!scopeKind) return { ok: false, error: "SCOPE_CONTEXT_MISSING" };
+      const strategyId = String(input.strategyId ?? "");
+      if (!strategyId) return { ok: false, error: "MISSING_STRATEGY_ID" };
+      if (scopeKind === "BRAND" && authCtx.scopeStrategyId !== strategyId) {
+        return { ok: false, error: "SCOPE_DENIED", detail: "Ce token est limité à une autre marque." };
+      }
+      const operatorId =
+        typeof authCtx.userId === "string" && authCtx.userId
+          ? authCtx.userId
+          : `mcp:${typeof authCtx.apiKeyId === "string" ? authCtx.apiKeyId : "agent"}`;
+      const mode = input.mode === "STRATEGIC_REWRITE" ? "STRATEGIC_REWRITE" : "PATCH_DIRECT";
+      // Lazy import : intents.ts est un hub gouvernance (évite tout cycle compile-time).
+      const { emitIntent } = await import("@/server/services/mestor/intents");
+      const result = await emitIntent(
+        {
+          kind: "OPERATOR_AMEND_PILLAR",
+          strategyId,
+          operatorId,
+          pillarKey: String(input.pillarKey ?? "").toLowerCase() as "a" | "d" | "v" | "e",
+          mode,
+          field: String(input.field ?? ""),
+          proposedValue: input.proposedValue,
+          reason: String(input.reason ?? "MCP agent amend"),
+        },
+        { caller: "mcp:advertis:amendPillar", operatorId },
+      );
+      return { ok: result.status === "OK", result };
     },
   },
 ];
