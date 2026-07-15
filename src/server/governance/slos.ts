@@ -298,6 +298,9 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "SESHAT_UPSERT_POLITY_AXIS", p95LatencyMs: 800, errorRatePct: 0.01, costP95Usd: 0 },
   // ADR-0126 — naissance gouvernée d'un SuperfanProfile (upsert dédupliqué) ; sync, zéro LLM.
   { kind: "SESHAT_REGISTER_SUPERFAN", p95LatencyMs: 500, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "SESHAT_UPSERT_PERSON_IDENTIFIER", p95LatencyMs: 800, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "SESHAT_MERGE_PERSONS", p95LatencyMs: 1_500, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "SESHAT_SPLIT_PERSON", p95LatencyMs: 800, errorRatePct: 0.01, costP95Usd: 0 },
   // ADR-0134 — mesure communautaire (3 findMany + N creates + chaîne devotion/cult) ; sync, zéro LLM.
   { kind: "SESHAT_CAPTURE_COMMUNITY_SNAPSHOT", p95LatencyMs: 15_000, errorRatePct: 0.05, costP95Usd: 0 },
   // ADR-0135 — attribution transitions dévotion (2 findMany + N updates, temporal join pur) ; sync, zéro LLM.

@@ -795,6 +795,7 @@ model Strategy {
   pillars            Pillar[]
   cultIndexSnapshots CultIndexSnapshot[]
   superfanProfiles   SuperfanProfile[]
+  personIdentities   PersonIdentity[]
   communitySnapshots CommunitySnapshot[]
   socialConnections  SocialConnection[]
   socialPosts        SocialPost[]
@@ -2856,13 +2857,75 @@ model SuperfanProfile {
   lastActiveAt    DateTime?
   metadata        Json?
 
-  strategy Strategy @relation(fields: [strategyId], references: [id])
+  /// ADR-0145 Identity Graph — la personne unifiée derrière cette observation par
+  /// réseau. Nullable + additif : le profil reste l'observation (clé strategyId·
+  /// platform·handle inchangée), la personne est l'unification par-dessus.
+  personId String?
+
+  strategy Strategy      @relation(fields: [strategyId], references: [id])
+  person   PersonIdentity? @relation(fields: [personId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([strategyId, platform, handle])
   @@index([strategyId])
+  @@index([personId])
+}
+
+/// ADR-0145 — Identity Graph. Une personne canonique, scopée à la marque
+/// (JAMAIS cross-marque). Réconcilie N handles / N réseaux / emails en une seule
+/// entité pour fermer le double-comptage superfan et ouvrir le gate PAID par email
+/// de commande. Domaine Seshat, single-writer, mutations gouvernées.
+model PersonIdentity {
+  id            String  @id @default(cuid())
+  strategyId    String
+  displayName   String?
+  primaryHandle String?
+  /// Audit de fusion — pointe la personne survivante ; permet le split (unmerge).
+  /// Non-null ⇒ cette entité est fusionnée (tombstone réversible).
+  mergedIntoId  String?
+
+  strategy    Strategy           @relation(fields: [strategyId], references: [id])
+  mergedInto  PersonIdentity?    @relation("PersonMerge", fields: [mergedIntoId], references: [id])
+  mergedFrom  PersonIdentity[]   @relation("PersonMerge")
+  identifiers PersonIdentifier[]
+  profiles    SuperfanProfile[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([strategyId])
+  @@index([mergedIntoId])
+}
+
+/// ADR-0145 — arête d'identité (un email / téléphone / handle rattaché à une
+/// personne). PII : `matchHash` = HMAC-SHA256 déterministe de la valeur normalisée
+/// (pour matcher, jamais réversible) ; `displayCipher` = AES-256-GCM de la valeur
+/// (pour afficher). La valeur en clair n'est JAMAIS persistée.
+model PersonIdentifier {
+  id         String  @id @default(cuid())
+  personId   String
+  strategyId String
+  kind       String // EMAIL | PHONE | HANDLE | EXTERNAL_ID | DEVICE
+  /// HMAC-SHA256(INTEGRATION_TOKEN_KEY, kind·platform·normalizedValue) — hex.
+  matchHash  String
+  /// AES-256-GCM de la valeur normalisée (affichage opérateur), jamais en clair.
+  displayCipher String?
+  platform   String? // pour kind=HANDLE (IG/FB/TikTok…)
+  source     String // MANUAL | CONNECTOR | CRM | COMMERCE | IMPORT
+  confidence String // DECLARED | VERIFIED | INFERRED
+
+  person PersonIdentity @relation(fields: [personId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// Un identifiant fort (matchHash) est unique par marque : deux profils qui le
+  /// partagent sont la même personne (pivot de fusion VERIFIED).
+  @@unique([strategyId, kind, matchHash])
+  @@index([personId])
+  @@index([strategyId, kind])
 }
 
 /// Relevé de santé communautaire par plateforme. Unités canoniques (ADR-0134) :

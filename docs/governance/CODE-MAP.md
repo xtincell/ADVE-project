@@ -32,7 +32,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 206 models, 71 enums
+## Prisma — 208 models, 71 enums
 
 ### Models
 
@@ -43,7 +43,7 @@ Ces correspondances évitent la réinvention :
 - **Operator** (30 fields)
 - **ClientAllocation** (14 fields)
 - **Client** (17 fields)
-- **Strategy** (77 fields)
+- **Strategy** (78 fields)
 - **Intention** (14 fields)
 - **Campaign** (80 fields)
 - **Mission** (35 fields)
@@ -109,7 +109,9 @@ Ces correspondances évitent la réinvention :
 - **FrameworkExecution** (12 fields)
 - **FrameworkResult** (13 fields)
 - **CultIndexSnapshot** (13 fields)
-- **SuperfanProfile** (12 fields)
+- **SuperfanProfile** (14 fields)
+- **PersonIdentity** (12 fields) — ADR-0145 — Identity Graph. Une personne canonique, scopée à la marque (JAMAIS cross-marque). Réconcilie N handles / N ré
+- **PersonIdentifier** (12 fields) — ADR-0145 — arête d'identité (un email / téléphone / handle rattaché à une personne). PII : `matchHash` = HMAC-SHA256 dét
 - **CommunitySnapshot** (11 fields) — Relevé de santé communautaire par plateforme. Unités canoniques (ADR-0134) : `size` = compte absolu ; `health`/`sentimen
 - **BrandVariable** (9 fields)
 - **VariableHistory** (8 fields)
@@ -439,7 +441,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 114
+## tRPC routers — 115
 
 - `accounts` (`src/server/trpc/routers/accounts.ts`)
 - `actions` (`src/server/trpc/routers/actions.ts`)
@@ -491,6 +493,7 @@ Ces correspondances évitent la réinvention :
 - `guild-org` (`src/server/trpc/routers/guild-org.ts`)
 - `guild-tier` (`src/server/trpc/routers/guild-tier.ts`)
 - `guilde` (`src/server/trpc/routers/guilde.ts`)
+- `identity` (`src/server/trpc/routers/identity.ts`)
 - `imhotep` (`src/server/trpc/routers/imhotep.ts`)
 - `implementation-generator` (`src/server/trpc/routers/implementation-generator.ts`)
 - `ingestion` (`src/server/trpc/routers/ingestion.ts`)
@@ -1011,7 +1014,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 567 (par governor)
+## Intent kinds — 570 (par governor)
 
 ### MESTOR (79)
 
@@ -1113,10 +1116,13 @@ Ces correspondances évitent la réinvention :
 - `PROPOSE_SEQUENCE_PROMOTION_FROM_CAMPAIGN` → campaign-tracker (sync) — Cluster E — Si campagne réussie (tierDelta>0 + cultIndexDelta>0 + altitudeRegres…
 - `TOGGLE_QUALITY_GATE_MODE` → auto-promotion (sync) — Bascule le mode quality-gate entre SOFT (warning-only) et HARD (block-on-fail). …
 
-### SESHAT (22)
+### SESHAT (25)
 
 - `SESHAT_UPSERT_POLITY_AXIS` → sector-intelligence (sync) — Upsert d'un axe culturel sectoriel PAR POLITY (SectorPolityAxis — échelle de mar…
 - `SESHAT_REGISTER_SUPERFAN` → superfan (sync) — Enregistre/actualise UN SuperfanProfile (upsert par (strategyId, platform, handl…
+- `SESHAT_UPSERT_PERSON_IDENTIFIER` → identity-graph (sync) — Identity Graph (ADR-0145) : ajoute/résout un identifiant (email/tel/handle/exter…
+- `SESHAT_MERGE_PERSONS` → identity-graph (sync) — Identity Graph (ADR-0145) : fusionne deux personnes (auto si preuve VERIFIED, re…
+- `SESHAT_SPLIT_PERSON` → identity-graph (sync) — Identity Graph (ADR-0145) : dé-fusionne une personne (ré-active le tombstone). T…
 - `SESHAT_CAPTURE_COMMUNITY_SNAPSHOT` → cult-index-engine (sync) — Mesure et persiste UN CommunitySnapshot par plateforme suivie depuis la donnée R…
 - `SESHAT_ATTRIBUTE_DEVOTION_TRANSITIONS` → campaign-tracker (sync) — Reconstruit CampaignAction.devotionTransitionsObserved d'une stratégie depuis le…
 - `RANK_PEERS` → seshat (sync) — Generic peer ranking via context-store ranker.…
