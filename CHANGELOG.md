@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.168 — feat(scoreur): l'historique mesuré compte — footprint → arènes A (attention) + V (croissance) (ADR-0153) (2026-07-15)
+
+**Réponse à « le tracking dans le temps ne prend pas en compte l'historique de la marque ? tout le monde commence au même niveau ? ». Oui, c'était le cas — la force révélée ne lisait QUE les épreuves observées, et `FollowerSnapshot` (historique horodaté, collecté quotidiennement) n'était jamais converti. On le branche, déterministe, sans rien inventer.**
+
+- **Arène A (attention)** : audience cumulée mesurée (dernier count par plateforme) vs **plancher d'audience de la ligue** (`EVIDENCE_TARGETS_BY_SCALE.audienceFloor`, ~50× la cible superfans). WIN au-dessus, LOSS sinon. `proofWeight` fort si audience tenue ≥ 60 j.
+- **Arène V (croissance)** : dès **≥ 2 relevés espacés ≥ 30 j**, compare le total du 1er jour au dernier → WIN si tenu/en hausse, LOSS si en déclin. C'est le tracking **dans le temps** : l'arène s'allume à mesure que le cron quotidien accumule des relevés.
+- **Distinction doctrinale** : audience = attention (A), **pas** dévotion (E, réservée aux superfans identifiés). Ce n'est pas créditer un attribut déclaré mais une preuve **observée répétée** (mesure horodatée) — même patron que l'arène E existante. Pas de relevé ⇒ pas d'épreuve (P22-2). 2 items Rasch ajoutés (`item-a-audience-floor`, `item-v-growth`), **aucun must-have** → gating de palier inchangé.
+- **Vérifié E2E** : Motion19 passe de **19.6/200 · 20 %** → **39/200 · 40 %** (arène A depuis son footprint réel 7 313 followers, LOSS vs plancher NATION 50 000 — honnête : modeste pour une échelle nationale). Croissance A/V WIN prouvée sur série temporelle synthétique (1000→8060 sur 40 j). Distinct du /100 anonyme (`/scorer`, ADR-0151, éphémère). Cap APOGEE 7/7 · 0 LLM · 0 migration · tsc 0 · lint 0 · **1123 tests verts**.
+- Déféré (RESIDUAL-DEBT) : planchers d'audience ratifiables par marché (ADR-0150) ; arène D depuis les avis mesurés ; reconstruction d'historique documenté des marques iconiques = **ancres** (θ fixé), pas scoring.
+
 ## v6.27.167 — feat(scoreur): taxonomie de secteurs canonique + moulinette Motion19/Panzani jusqu'au leaderboard (ADR-0152) (2026-07-15)
 
 **Mandat opérateur : « fais passer Motion19 (@motion19store, Cameroun) puis Panzani Cameroun dans la moulinette jusqu'au leaderboard, et ajuste le parcours selon les frictions ». Frictions rencontrées → corrigées, dont la mécanique de ligue elle-même (le slug de secteur n'était pas universel).**

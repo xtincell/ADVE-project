@@ -37,17 +37,29 @@ describe("ADR-0126 — domaine échelle de marché", () => {
   });
 
   it("NATION == constantes historiques du plafond d'évidence (continuité Loi 1)", () => {
-    expect(EVIDENCE_TARGETS_BY_SCALE.NATION).toEqual({ superfansTarget: 1000, tarsisTarget: 20 });
+    // superfans/signaux inchangés (Loi 1) ; audienceFloor ajouté (ADR-0153).
+    expect(EVIDENCE_TARGETS_BY_SCALE.NATION.superfansTarget).toBe(1000);
+    expect(EVIDENCE_TARGETS_BY_SCALE.NATION.tarsisTarget).toBe(20);
     expect(LEGACY_EVIDENCE_TARGETS).toEqual(EVIDENCE_TARGETS_BY_SCALE.NATION);
   });
 
-  it("cibles strictement croissantes avec l'échelle (superfans ET signaux)", () => {
+  it("cibles strictement croissantes avec l'échelle (superfans, signaux, audience)", () => {
     for (let i = 1; i < MARKET_SCALES.length; i++) {
       const prev = EVIDENCE_TARGETS_BY_SCALE[MARKET_SCALES[i - 1]!];
       const curr = EVIDENCE_TARGETS_BY_SCALE[MARKET_SCALES[i]!];
       expect(curr.superfansTarget).toBeGreaterThan(prev.superfansTarget);
       expect(curr.tarsisTarget).toBeGreaterThan(prev.tarsisTarget);
+      expect(curr.audienceFloor).toBeGreaterThan(prev.audienceFloor);
     }
+  });
+
+  it("ADR-0153 — audienceFloor présent par échelle + propagé par resolveEvidenceTargets", () => {
+    for (const scale of MARKET_SCALES) {
+      expect(EVIDENCE_TARGETS_BY_SCALE[scale].audienceFloor).toBeGreaterThan(0);
+    }
+    // Le plancher d'audience n'est PAS plafonné par l'adressable (contrairement aux superfans).
+    const r = resolveEvidenceTargets({ marketScale: "NATION", addressableAudience: 100 });
+    expect(r.audienceFloor).toBe(EVIDENCE_TARGETS_BY_SCALE.NATION.audienceFloor);
   });
 
   it("échelle absente → cibles historiques exactes (zéro régression silencieuse)", () => {
@@ -61,17 +73,17 @@ describe("ADR-0126 — domaine échelle de marché", () => {
     // Marque de quartier, 3 000 personnes adressables → 5 % = 150, mais la
     // bande QUARTIER (50) reste le plafond : min(50, max(25, 150)) = 50.
     expect(resolveEvidenceTargets({ marketScale: "QUARTIER", addressableAudience: 3000 }))
-      .toEqual({ superfansTarget: 50, tarsisTarget: 5 });
+      .toEqual({ superfansTarget: 50, tarsisTarget: 5, audienceFloor: 2_500 });
     // Petite audience → le 5 % descend la cible sous la bande, plancher 25.
     expect(resolveEvidenceTargets({ marketScale: "VILLE", addressableAudience: 900 }))
-      .toEqual({ superfansTarget: 45, tarsisTarget: 8 });
+      .toEqual({ superfansTarget: 45, tarsisTarget: 8, audienceFloor: 7_500 });
     expect(
       resolveEvidenceTargets({ marketScale: "VILLE", addressableAudience: 100 }).superfansTarget,
     ).toBe(MIN_SUPERFANS_TARGET);
     // Footprint énorme (monopole national, 10 M adressables) : la densité ne
     // GONFLE jamais la cible au-delà de la bande — pas d'évidence gratuite.
     expect(resolveEvidenceTargets({ marketScale: "NATION", addressableAudience: 10_000_000 }))
-      .toEqual({ superfansTarget: 1000, tarsisTarget: 20 });
+      .toEqual({ superfansTarget: 1000, tarsisTarget: 20, audienceFloor: 50_000 });
     // Adressable invalide → ignoré.
     expect(resolveEvidenceTargets({ marketScale: "NATION", addressableAudience: -5 }))
       .toEqual(EVIDENCE_TARGETS_BY_SCALE.NATION);

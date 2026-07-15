@@ -54,6 +54,13 @@ export interface EvidenceTargets {
   superfansTarget: number;
   /** Nombre de signaux faibles captés au-delà duquel le bras « signaux » sature. */
   tarsisTarget: number;
+  /**
+   * Plancher d'audience (followers cumulés, tous réseaux) au-dessus duquel la
+   * marque gagne l'épreuve d'ATTENTION (arène A) de sa ligue. ADR-0153. Canon
+   * PROPOSÉ (~50× la cible superfans — les followers sont bien plus larges que
+   * les fans dévoués), ratifiable a posteriori.
+   */
+  audienceFloor: number;
 }
 
 /**
@@ -67,12 +74,12 @@ export interface EvidenceTargets {
  * fond à l'échelle d'un continent).
  */
 export const EVIDENCE_TARGETS_BY_SCALE: Record<MarketScale, EvidenceTargets> = {
-  QUARTIER: { superfansTarget: 50, tarsisTarget: 5 },
-  VILLE: { superfansTarget: 150, tarsisTarget: 8 },
-  REGION: { superfansTarget: 400, tarsisTarget: 12 },
-  NATION: { superfansTarget: 1000, tarsisTarget: 20 },
-  CONTINENT: { superfansTarget: 3000, tarsisTarget: 30 },
-  MONDE: { superfansTarget: 8000, tarsisTarget: 40 },
+  QUARTIER: { superfansTarget: 50, tarsisTarget: 5, audienceFloor: 2_500 },
+  VILLE: { superfansTarget: 150, tarsisTarget: 8, audienceFloor: 7_500 },
+  REGION: { superfansTarget: 400, tarsisTarget: 12, audienceFloor: 20_000 },
+  NATION: { superfansTarget: 1000, tarsisTarget: 20, audienceFloor: 50_000 },
+  CONTINENT: { superfansTarget: 3000, tarsisTarget: 30, audienceFloor: 150_000 },
+  MONDE: { superfansTarget: 8000, tarsisTarget: 40, audienceFloor: 400_000 },
 };
 
 /** Fallback historique (== NATION) pour les stratégies sans échelle déclarée. */
@@ -152,7 +159,7 @@ export function resolveEvidenceTargets(input: {
     base.superfansTarget,
     Math.max(MIN_SUPERFANS_TARGET, densityTarget),
   );
-  return { superfansTarget, tarsisTarget: base.tarsisTarget };
+  return { superfansTarget, tarsisTarget: base.tarsisTarget, audienceFloor: base.audienceFloor };
 }
 
 /**

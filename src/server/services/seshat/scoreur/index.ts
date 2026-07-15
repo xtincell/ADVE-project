@@ -185,6 +185,7 @@ export async function scoreBrand(
     strategyId,
     nowIso,
     superfanFloor: targets.superfansTarget,
+    audienceFloor: targets.audienceFloor,
   });
   const persistedRows = await db.epreuve.findMany({
     where: { subjectStrategyId: strategyId },

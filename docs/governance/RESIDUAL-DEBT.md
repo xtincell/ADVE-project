@@ -873,3 +873,8 @@ profondeur, pas de la largeur.**
 ### Taxonomie de secteurs canonique (ADR-0152, 2026-07-15)
 - **Writers `Client.sector` non couverts à l'écriture** : le chokepoint canonique posé = `QuickIntake.create` (voie intake). Restent à canonicaliser à l'écriture : `laguilde.ts` (dépôt guilde), `brief-ingest/brand-resolver.ts`, `client.ts` router (create/update), `quick-intake.ts` router (client.create ×2 — héritent déjà d'`intake.sector` canonicalisé, donc OK en pratique). **Non bloquant** : `resolveLeagueForStrategy` canonicalise à la LECTURE → la ligue reste correcte quelle que soit la valeur stockée. Durcir chaque writer via `classifyCanonicalSector(x).code` dans une passe dédiée.
 - **`scoreBrandRef()` absent** : le scoreur ne score qu'une `Strategy` ; une marque externe (Panzani) doit passer par une Strategy shell (`scripts/onboard-external-brand.ts`). Un orchestrateur `scoreBrandRef` (arènes A/D/V registre + items, sans E/T strategyId-keyés) lèverait ce détour.
+
+### Historique mesuré → épreuves (ADR-0153, 2026-07-15)
+- **Planchers d'audience** (`EVIDENCE_TARGETS_BY_SCALE.audienceFloor`) = canon PROPOSÉ (~50× cible superfans). À ratifier / rendre éditables par marché (pattern ADR-0150), comme la jauge et les items.
+- **Arène D (désirabilité)** : même patron que A/V, depuis les avis/notes mesurés — quand les reviews seront persistées par-marque dans le temps (`FollowerSnapshot`-like pour reviews).
+- **Ancres de marques iconiques** (Apple/Coca/Nike…) : θ fixé déclaré (BrandRef kind=ANCHOR), placement « ICONE day 0 » — relève des étalons (ADR-0149/0150), pas du scoring d'un sujet. Reconstruction d'historique documenté (ADVE INFERRED + épreuves sourcées) = ingestion research-assistée avec revue, hors chemin de scoring zéro-LLM.
