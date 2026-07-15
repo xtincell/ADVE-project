@@ -55,6 +55,9 @@ import { ingestionRouter } from "./routers/ingestion";
 import { sourceClassifierRouter } from "./routers/source-classifier";
 import { superfanRouter } from "./routers/superfan";
 import { marketIntelligenceRouter } from "./routers/market-intelligence";
+import { identityRouter } from "./routers/identity";
+import { overtonRouter } from "./routers/overton";
+import { scoreurRouter } from "./routers/scoreur";
 import { implementationGeneratorRouter } from "./routers/implementation-generator";
 import { clientRouter } from "./routers/client";
 import { authRouter } from "./routers/auth";
@@ -186,6 +189,9 @@ export const appRouter = createTRPCRouter({
   sourceClassifier: sourceClassifierRouter,
   superfan: superfanRouter,
   marketIntelligence: marketIntelligenceRouter,
+  identity: identityRouter,
+  overton: overtonRouter,
+  scoreur: scoreurRouter,
   implementationGenerator: implementationGeneratorRouter,
   brandClient: clientRouter,
   auth: authRouter,

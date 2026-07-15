@@ -795,6 +795,7 @@ model Strategy {
   pillars            Pillar[]
   cultIndexSnapshots CultIndexSnapshot[]
   superfanProfiles   SuperfanProfile[]
+  personIdentities   PersonIdentity[]
   communitySnapshots CommunitySnapshot[]
   socialConnections  SocialConnection[]
   socialPosts        SocialPost[]
@@ -2856,13 +2857,215 @@ model SuperfanProfile {
   lastActiveAt    DateTime?
   metadata        Json?
 
-  strategy Strategy @relation(fields: [strategyId], references: [id])
+  /// ADR-0145 Identity Graph — la personne unifiée derrière cette observation par
+  /// réseau. Nullable + additif : le profil reste l'observation (clé strategyId·
+  /// platform·handle inchangée), la personne est l'unification par-dessus.
+  personId String?
+
+  strategy Strategy      @relation(fields: [strategyId], references: [id])
+  person   PersonIdentity? @relation(fields: [personId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([strategyId, platform, handle])
   @@index([strategyId])
+  @@index([personId])
+}
+
+/// ADR-0145 — Identity Graph. Une personne canonique, scopée à la marque
+/// (JAMAIS cross-marque). Réconcilie N handles / N réseaux / emails en une seule
+/// entité pour fermer le double-comptage superfan et ouvrir le gate PAID par email
+/// de commande. Domaine Seshat, single-writer, mutations gouvernées.
+model PersonIdentity {
+  id            String  @id @default(cuid())
+  strategyId    String
+  displayName   String?
+  primaryHandle String?
+  /// Audit de fusion — pointe la personne survivante ; permet le split (unmerge).
+  /// Non-null ⇒ cette entité est fusionnée (tombstone réversible).
+  mergedIntoId  String?
+
+  strategy    Strategy           @relation(fields: [strategyId], references: [id])
+  mergedInto  PersonIdentity?    @relation("PersonMerge", fields: [mergedIntoId], references: [id])
+  mergedFrom  PersonIdentity[]   @relation("PersonMerge")
+  identifiers PersonIdentifier[]
+  profiles    SuperfanProfile[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([strategyId])
+  @@index([mergedIntoId])
+}
+
+/// ADR-0145 — arête d'identité (un email / téléphone / handle rattaché à une
+/// personne). PII : `matchHash` = HMAC-SHA256 déterministe de la valeur normalisée
+/// (pour matcher, jamais réversible) ; `displayCipher` = AES-256-GCM de la valeur
+/// (pour afficher). La valeur en clair n'est JAMAIS persistée.
+model PersonIdentifier {
+  id         String  @id @default(cuid())
+  personId   String
+  strategyId String
+  kind       String // EMAIL | PHONE | HANDLE | EXTERNAL_ID | DEVICE
+  /// HMAC-SHA256(INTEGRATION_TOKEN_KEY, kind·platform·normalizedValue) — hex.
+  matchHash  String
+  /// AES-256-GCM de la valeur normalisée (affichage opérateur), jamais en clair.
+  displayCipher String?
+  platform   String? // pour kind=HANDLE (IG/FB/TikTok…)
+  source     String // MANUAL | CONNECTOR | CRM | COMMERCE | IMPORT
+  confidence String // DECLARED | VERIFIED | INFERRED
+
+  person PersonIdentity @relation(fields: [personId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// Un identifiant fort (matchHash) est unique par marque : deux profils qui le
+  /// partagent sont la même personne (pivot de fusion VERIFIED).
+  @@unique([strategyId, kind, matchHash])
+  @@index([personId])
+  @@index([strategyId, kind])
+}
+
+/// ADR-0146 — Overton Graph. Une POSITION tenue dans un débat sectoriel, avec sa
+/// zone d'acceptabilité PAR POLITY (secteur × échelle × pays — résolution honnête
+/// EXACT/SCALE_ONLY/GLOBAL_FALLBACK côté lecture). zone null = pas de preuve
+/// (jamais fabriquée, P22-2). Domaine Seshat, single-writer, mutations gouvernées.
+model OvertonPosition {
+  id          String       @id @default(cuid())
+  /// null = position au niveau secteur (pas rattachée à une seule marque).
+  strategyId  String?
+  sectorSlug  String
+  marketScale MarketScale?
+  countryCode String?      @db.VarChar(2)
+  statement   String
+  /// UNTHINKABLE | RADICAL | ACCEPTABLE | SENSIBLE | POPULAR | POLICY — null sans preuve.
+  zone           String?
+  evidenceCount  Int       @default(0)
+  lastEvidenceAt DateTime?
+  evidence       Json? // signaux datés qui la soutiennent
+
+  actors      OvertonActorLink[]
+  transitions OvertonZoneTransition[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sectorSlug, marketScale, countryCode])
+  @@index([strategyId])
+}
+
+/// ADR-0146 — arête acteur→position (qui tient / propage / oppose / déplace).
+model OvertonActorLink {
+  id         String  @id @default(cuid())
+  positionId String
+  actorKind  String // BRAND | COMPETITOR | SUPERFAN | INSTITUTION | MEDIA
+  /// SUPERFAN → PersonIdentity.id ; COMPETITOR → nom (pilier D) ; BRAND → strategyId.
+  actorRef   String?
+  edgeKind   String // HOLDS | PROPAGATES | OPPOSES | SHIFTS_TOWARD
+  datedAt    DateTime?
+  evidence   Json?
+
+  position OvertonPosition @relation(fields: [positionId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([positionId])
+  @@index([actorKind, actorRef])
+}
+
+/// ADR-0146 — le Δ MESURÉ : une position migre de zone, daté + attribué (last-touch
+/// ADR-0135). C'est la seule « mesure » de la fenêtre — jamais un score de fenêtre.
+model OvertonZoneTransition {
+  id                  String   @id @default(cuid())
+  positionId          String
+  fromZone            String?
+  toZone              String
+  occurredAt          DateTime
+  evidence            Json?
+  attributedActorKind String?
+  attributedActorRef  String?
+  attributionModel    String   @default("LAST_TOUCH_45D")
+
+  position OvertonPosition @relation(fields: [positionId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([positionId, occurredAt])
+}
+
+/// ADR-0147 — Scoreur : marque hors-plateforme (rival, ancre-étalon, ou item
+/// canon). PAS un `Strategy` (brief §5.1) — registre léger pour les adversaires
+/// d'épreuve. `fixedTheta` = θ jaugé pour les ancres/items (la seule main humaine).
+model BrandRef {
+  id          String       @id @default(cuid())
+  kind        String // RIVAL | ANCHOR | ITEM
+  slug        String       @unique
+  name        String
+  sectorSlug  String?
+  marketScale MarketScale?
+  countryCode String?      @db.VarChar(2)
+  /// θ fixé (ancre/item) — jauge de ligue. null pour un rival estimé.
+  fixedTheta  Float?
+  source      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([kind])
+  @@index([sectorSlug, marketScale, countryCode])
+}
+
+/// ADR-0147 — le REGISTRE d'épreuves (append-only). LA seule donnée du scoreur :
+/// un résultat dyadique OBSERVÉ (jamais estimé), par arène, par ligue (polity),
+/// avec sa source et sa date. Chaque row cite sa collecte.
+model Epreuve {
+  id                 String       @id @default(cuid())
+  subjectStrategyId  String?
+  subjectBrandRefId  String?
+  opponentBrandRefId String?
+  opponentStrategyId String?
+  arena              String // A | D | V | E | T
+  sectorSlug         String
+  marketScale        MarketScale?
+  countryCode        String?      @db.VarChar(2)
+  result             String // WIN | LOSS | DRAW
+  /// Fiabilité de la PREUVE (volume, autorité de source) — pas une opinion.
+  proofWeight        Float
+  source             String
+  occurredAt         DateTime
+
+  createdAt DateTime @default(now())
+
+  @@index([subjectStrategyId, arena])
+  @@index([subjectBrandRefId, arena])
+  @@index([sectorSlug, marketScale, countryCode, arena])
+}
+
+/// ADR-0147 — snapshot de verdict (leaderboard public + trajectoire pour la tenue).
+model ScoreVerdict {
+  id                String       @id @default(cuid())
+  subjectStrategyId String?
+  subjectBrandRefId String?
+  subjectLabel      String
+  sectorSlug        String
+  marketScale       MarketScale?
+  countryCode       String?      @db.VarChar(2)
+  force             Float
+  tier              String
+  coherence         Float
+  coveragePct       Int
+  arenas            Json // ArenaEstimate[]
+  gates             Json
+  cappedReason      String?
+  epreuveCount      Int          @default(0)
+
+  computedAt DateTime @default(now())
+
+  @@index([sectorSlug, marketScale, countryCode, force])
+  @@index([subjectStrategyId, computedAt])
+  @@index([tier])
 }
 
 /// Relevé de santé communautaire par plateforme. Unités canoniques (ADR-0134) :
