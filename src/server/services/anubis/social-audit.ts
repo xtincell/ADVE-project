@@ -232,6 +232,39 @@ export async function resolveApifyCredentials(operatorId: string | null): Promis
 }
 
 /**
+ * Teste une clé Apify (bouton « Test » du Credentials Vault). Lit le token du
+ * connecteur — QUEL QUE SOIT son statut, car il est INACTIVE à l'instant du test
+ * (fallback env `APIFY_TOKEN`) — puis valide contre `/v2/users/me`. Contrairement
+ * aux ProviderFaçade broadcast, Apify n'a pas de provider `getProvider()` : ce test
+ * dédié fait passer le connecteur ACTIVE sur succès, ce qui débloque
+ * `resolveApifyCredentials` (qui ignore les INACTIVE).
+ */
+export async function testApifyConnection(
+  operatorId: string,
+): Promise<{ success: boolean; reason?: string }> {
+  const connector = await db.externalConnector.findUnique({
+    where: { operatorId_connectorType: { operatorId, connectorType: SOCIAL_CONNECTOR_APIFY } },
+  });
+  const config = (connector?.config ?? {}) as Record<string, unknown>;
+  const apiKey = (config.apiKey as string | undefined) ?? process.env.APIFY_TOKEN;
+  if (!apiKey) return { success: false, reason: "Aucune clé Apify enregistrée." };
+
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8_000);
+    const res = await fetch(`https://api.apify.com/v2/users/me?token=${encodeURIComponent(apiKey)}`, {
+      signal: ctrl.signal,
+    });
+    clearTimeout(timer);
+    if (res.status === 401 || res.status === 403) return { success: false, reason: "Clé Apify rejetée (401/403)." };
+    if (!res.ok) return { success: false, reason: `Apify a répondu ${res.status}.` };
+    return { success: true };
+  } catch (e) {
+    return { success: false, reason: `Apify injoignable : ${e instanceof Error ? e.message : String(e)}` };
+  }
+}
+
+/**
  * Table de dispatch par plateforme. Instagram, TikTok et Facebook tournent
  * dès qu'un `APIFY_TOKEN` existe (actors par défaut ci-dessous, ~0,001 $/
  * profil) ; mettre l'env var d'actor à "off" désactive une plateforme.

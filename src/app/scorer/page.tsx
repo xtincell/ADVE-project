@@ -88,8 +88,37 @@ export default function ScorerPage() {
   const totalFollowers = followers?.reduce((s, f) => s + f.followerCount, 0) ?? 0;
 
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-6 px-5 py-10">
-      <header className="flex flex-col gap-2">
+    <>
+      {/* En-tête léger — la page /scorer est autonome (hors layout marketing) :
+          sans ça, aucun logo ni retour. Logo → La Fusée, + accès classement/connexion. */}
+      <nav className="sticky top-0 z-[var(--z-topbar)] border-b border-border-subtle bg-background/70 backdrop-blur-md">
+        <div className="mx-auto flex max-w-2xl items-center justify-between px-5 py-3">
+          <Link href="/lafusee" className="flex items-center gap-2" aria-label="La Fusée — accueil">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/logos/lafusee-logo.png" alt="" aria-hidden="true" className="h-6 w-auto" />
+            <span className="text-sm font-semibold tracking-tight text-foreground">
+              La Fusée<span className="text-[color:var(--color-accent)]">.</span>
+            </span>
+          </Link>
+          <div className="flex items-center gap-4 text-sm">
+            <Link href="/leaderboard" className="text-foreground-secondary transition-colors hover:text-foreground">
+              Classement
+            </Link>
+            <Link href="/lafusee" className="hidden text-foreground-secondary transition-colors hover:text-foreground sm:inline">
+              L&apos;OS
+            </Link>
+            <Link
+              href="/login"
+              className="font-medium text-[color:var(--color-accent)] transition-colors hover:underline"
+            >
+              Connexion
+            </Link>
+          </div>
+        </div>
+      </nav>
+
+      <main className="mx-auto flex max-w-2xl flex-col gap-6 px-5 py-10">
+        <header className="flex flex-col gap-2">
         <Text className="font-mono text-xs uppercase tracking-widest text-[color:var(--color-accent)]">
           La Fusée · score gratuit · sans email
         </Text>
@@ -291,6 +320,7 @@ export default function ScorerPage() {
           </CardBody>
         </Card>
       ) : null}
-    </main>
+      </main>
+    </>
   );
 }

@@ -10,6 +10,14 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.172 — fix(scorer): en-tête nav /scorer + Ollama Cloud aux clés système + Apify activable depuis le Credentials Vault (2026-07-15)
+
+**Suivi go-live opérateur : trois manques repérés en prod.**
+
+- **Navigation sur `/scorer`** : la page était autonome (hors des layouts marketing) → aucun logo, aucun retour possible. Ajout d'un en-tête léger sticky (logo La Fusée → `/lafusee`, liens Classement / L'OS / Connexion), DS-conforme.
+- **Ollama Cloud** au panneau « Clés système » : le panneau ne montrait que `OLLAMA_BASE_URL` ; ajout de `OLLAMA_API_KEY` (clé API Ollama Cloud, utilisée par le LLM Gateway) — configuré/manquant, booléen only (ADR-0075).
+- **Apify activable depuis le Credentials Vault** (méthode alternative à l'env `APIFY_TOKEN`) : l'entrée « Apify » ajoutée au vault en v6.27.171 était **inerte** — `testChannel` n'avait pas de provider `APIFY_SOCIAL`, le connecteur restait INACTIVE, et `resolveApifyCredentials` ignore les INACTIVE. Fix : `testApifyConnection` valide réellement la clé contre `/v2/users/me` (timeout 8 s, 401/403 → rejet honnête) et fait passer le connecteur ACTIVE sur succès → la clé posée par l'UI est enfin lue. Round-trip register → Test → ACTIVE → résolue.
+
 ## v6.27.171 — feat(golive): rapport scorer dense & factuel + CTA scorer + publicSlug `LFA-` + calendrier J-0 armable + hub Connexions MCP + vault trouvable (2026-07-15)
 
 **Punch list go-live (l'opérateur teste la prod). Aucun nouveau modèle Prisma, cap APOGEE 7/7, 0 LLM sur tout le périmètre.**

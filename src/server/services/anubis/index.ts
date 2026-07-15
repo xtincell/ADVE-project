@@ -328,6 +328,18 @@ export async function testChannel(
     };
   }
 
+  // Apify (scraping followers) : pas de ProviderFaçade broadcast → test dédié
+  // qui valide la clé contre l'API Apify puis active le connecteur (ce qui
+  // débloque `resolveApifyCredentials`, qui ignore les INACTIVE).
+  if (payload.connectorType === "APIFY_SOCIAL") {
+    const { testApifyConnection } = await import("@/server/services/anubis/social-audit");
+    const result = await testApifyConnection(payload.operatorId);
+    if (result.success) {
+      await credentialVault.markActive(payload.operatorId, payload.connectorType);
+    }
+    return { success: result.success, connectorType: payload.connectorType, reason: result.reason };
+  }
+
   const provider = getProvider(payload.connectorType);
   if (!provider) {
     return {
