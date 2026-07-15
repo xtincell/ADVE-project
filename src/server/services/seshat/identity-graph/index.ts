@@ -1,5 +1,5 @@
 /**
- * ADR-0145 — Identity Graph : LE single-writer de `PersonIdentity` /
+ * ADR-0147 — Identity Graph : LE single-writer de `PersonIdentity` /
  * `PersonIdentifier` (sous-domaine SESHAT, mesure). Réconcilie une personne à
  * travers ses réseaux, ferme le double-comptage superfan et ouvre le gate PAID
  * par email de commande.
@@ -226,7 +226,7 @@ export async function mergePersons(
 }
 
 /** Dé-fusionne : ré-active la personne fusionnée (ne re-scinde pas les arêtes déjà
- * re-pointées manuellement — audit-safe minimal, dette ADR-0145 pour split fin). */
+ * re-pointées manuellement — audit-safe minimal, dette ADR-0147 pour split fin). */
 export async function splitPerson(
   client: IdentityDbClient,
   input: SplitPersonInput,

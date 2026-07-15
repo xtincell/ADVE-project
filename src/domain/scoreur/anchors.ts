@@ -1,5 +1,5 @@
 /**
- * ADR-0147 — ancres-étalons + jauge de ligue (canon, θ fixé — la seule main
+ * ADR-0149 — ancres-étalons + jauge de ligue (canon, θ fixé — la seule main
  * humaine du système, brief §D3). Les ancres jaugent l'échelle : tout le reste est
  * estimé par le registre d'épreuves. Valeurs PROPOSÉES — ratification opérateur.
  */

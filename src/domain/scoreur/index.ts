@@ -1,5 +1,5 @@
 /**
- * ADR-0147 — Scoreur à force révélée : orchestrateur PUR (Layer 0, déterministe).
+ * ADR-0149 — Scoreur à force révélée : orchestrateur PUR (Layer 0, déterministe).
  *
  * Entrée = les épreuves compilées + la jauge d'ancres + les items franchis.
  * Sortie = le verdict (palmarès). Aucune IO, aucun LLM, ordre-indépendant : deux

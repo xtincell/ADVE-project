@@ -7,10 +7,12 @@
  */
 
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, adminProcedure } from "../init";
 import { db } from "@/lib/db";
 import {
   createApiKey,
+  rotateApiKey,
   getCurrentUsage,
   issueStatement,
   settleStatement,
@@ -29,13 +31,25 @@ export const mcpBillingRouter = createTRPCRouter({
         ratePerCallUsd: z.number().min(0).max(10).default(0.002),
         includedMonthlyCalls: z.number().int().min(0).max(1_000_000).default(100),
         ownerEmail: z.string().email().optional(),
+        // expiresAt absent = valable POUR TOUJOURS (ADR-0145).
         expiresAt: z.coerce.date().optional(),
+        // Portée d'accès (ADR-0145) : SYSTEM = tout l'OS ; BRAND = une seule marque.
+        scopeKind: z.enum(["SYSTEM", "BRAND"]).default("SYSTEM"),
+        scopeStrategyId: z.string().optional(),
       }),
     )
     .mutation(async ({ input }) => {
+      if (input.scopeKind === "BRAND" && !input.scopeStrategyId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Une clé « une marque » exige de choisir la marque." });
+      }
       // plaintextKey affichée UNE fois — jamais re-dérivable depuis le hash.
       return createApiKey(input);
     }),
+
+  /** Rotation (ADR-0145) : nouveau secret, ancien révoqué, config conservée. */
+  rotateKey: adminProcedure
+    .input(z.object({ keyId: z.string() }))
+    .mutation(({ input }) => rotateApiKey(input.keyId)),
 
   listKeys: adminProcedure.query(async () => {
     const period = currentPeriod();
@@ -52,6 +66,9 @@ export const mcpBillingRouter = createTRPCRouter({
         includedMonthlyCalls: true,
         ownerEmail: true,
         createdAt: true,
+        scopeKind: true,
+        scopeStrategyId: true,
+        rotatedToId: true,
       },
     });
     const usages = await Promise.all(

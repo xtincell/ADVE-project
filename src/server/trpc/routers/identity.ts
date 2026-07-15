@@ -1,5 +1,5 @@
 /**
- * ADR-0145 — Identity Graph : portes gouvernées (domaine SESHAT).
+ * ADR-0147 — Identity Graph : portes gouvernées (domaine SESHAT).
  *
  * `upsertIdentifier` porte de la PII (email/tel) → émission via le SPINE
  * (ADR-0124) avec payload REDACTÉ (fingerprint du matchHash, jamais la valeur en

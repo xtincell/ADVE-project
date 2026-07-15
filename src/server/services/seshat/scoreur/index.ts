@@ -1,5 +1,5 @@
 /**
- * ADR-0147 — Scoreur à force révélée : LE single-writer d'`Epreuve` / `BrandRef` /
+ * ADR-0149 — Scoreur à force révélée : LE single-writer d'`Epreuve` / `BrandRef` /
  * `ScoreVerdict` + l'orchestrateur `scoreBrand` (sous-domaine SESHAT).
  *
  * Le registre est append-only ; l'estimation est 100 % déterministe (domaine pur

@@ -1,5 +1,5 @@
 /**
- * ADR-0147 — estimateur Bradley-Terry / Rasch (pur TS, déterministe, zéro-LLM).
+ * ADR-0149 — estimateur Bradley-Terry / Rasch (pur TS, déterministe, zéro-LLM).
  *
  * `P(i bat j) = 1 / (1 + 10^((θj − θi)/400))` — même loi qu'Elo. θ̂ maximise la
  * log-vraisemblance pondérée des résultats observés (MLE batch, convexe,

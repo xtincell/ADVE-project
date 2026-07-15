@@ -25,7 +25,19 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-  return meterAndRun(gate, "advertis", tool, () => handler(body.params ?? {}));
+  // Injecte la portée du token (ADR-0145) pour les outils d'écriture (amendPillar).
+  // Écrit APRÈS le spread → un client ne peut pas usurper __auth.
+  return meterAndRun(gate, "advertis", tool, () =>
+    handler({
+      ...(body.params ?? {}),
+      __auth: {
+        scopeKind: gate.scopeKind ?? null,
+        scopeStrategyId: gate.scopeStrategyId ?? null,
+        userId: gate.userId ?? null,
+        apiKeyId: gate.apiKeyId ?? null,
+      },
+    }),
+  );
 }
 
 export async function GET(request: Request) {

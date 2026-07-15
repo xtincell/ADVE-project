@@ -1,5 +1,5 @@
 /**
- * ADR-0147 — Scoreur à force révélée : cœur déterministe (tests purs).
+ * ADR-0149 — Scoreur à force révélée : cœur déterministe (tests purs).
  * Acceptance C3 : θ reproductibles (2 runs = même sortie), palier gaté, couverture.
  */
 import { describe, it, expect } from "vitest";

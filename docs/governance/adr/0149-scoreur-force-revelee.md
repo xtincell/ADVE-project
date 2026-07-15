@@ -1,9 +1,9 @@
-# ADR-0147 — Scoreur à force révélée (Bradley-Terry/Rasch, zéro-LLM)
+# ADR-0149 — Scoreur à force révélée (Bradley-Terry/Rasch, zéro-LLM)
 
 - **Status** : Accepted
 - **Date** : 2026-07-15
 - **Phase** : Chantier « Graphes & Scoreur à force révélée » (C3/3) — brief opérateur 137f4f21. Cœur : l'unité de mesure des marques. Consomme C1 (arène E) + C2 (arène T).
-- **Depends on** : ADR-0145 (Identity Graph, arène E), ADR-0146 (Overton Graph, arène T), ADR-0126 (échelle de marché / plancher), ADR-0127 (polity), ADR-0135 (last-touch), ADR-0102 (complétude structurelle — INTACTE), ADR-0124 (spine), ADR-0046 (P22-2)
+- **Depends on** : ADR-0147 (Identity Graph, arène E), ADR-0148 (Overton Graph, arène T), ADR-0126 (échelle de marché / plancher), ADR-0127 (polity), ADR-0135 (last-touch), ADR-0102 (complétude structurelle — INTACTE), ADR-0124 (spine), ADR-0046 (P22-2)
 - **Supersedes** : —
 
 ## Contexte

@@ -1,5 +1,5 @@
 /**
- * ADR-0147 — démo E2E du scoreur à force révélée. Seed 3 marques dans une ligue
+ * ADR-0149 — démo E2E du scoreur à force révélée. Seed 3 marques dans une ligue
  * (audiovisuel × QUARTIER × CM), leur pose des épreuves (E/T MESURÉES via Identity
  * + Overton, A/D/V au registre), les score et historise le verdict → leaderboard.
  *

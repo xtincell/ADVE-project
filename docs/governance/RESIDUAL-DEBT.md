@@ -1,10 +1,10 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
-## Graphes & Scoreur à force révélée — ADR-0145/0146/0147 (2026-07-15, NEFER)
+## Graphes & Scoreur à force révélée — ADR-0147/0148/0149 (2026-07-15, NEFER)
 
-Chantier shippé (v6.27.159). Résidus DÉFÉRÉS explicitement :
+Chantier shippé (v6.27.162). Résidus DÉFÉRÉS explicitement :
 
-- **Ratification opérateur des valeurs canon (brief §8 a/b)** — la table θ des ancres-étalons (`ANCHOR_REGISTRY` + `GAUGE_BY_SCALE`, `src/domain/scoreur/anchors.ts`) et la liste des items must-have par palier (`MUST_HAVE_ITEMS`, `palier.ts`) sont PROPOSÉES. À trancher par l'opérateur au déploiement — puis figer par amendement ADR-0147.
+- **Ratification opérateur des valeurs canon (brief §8 a/b)** — la table θ des ancres-étalons (`ANCHOR_REGISTRY` + `GAUGE_BY_SCALE`, `src/domain/scoreur/anchors.ts`) et la liste des items must-have par palier (`MUST_HAVE_ITEMS`, `palier.ts`) sont PROPOSÉES. À trancher par l'opérateur au déploiement — puis figer par amendement ADR-0149.
 - **Scrappeur légit A/D/V** (credential/ToS-gated) — Google Trends, autocomplete, Trustpilot/G2/App Store, Wikipédia, presse, registres awards. Aujourd'hui A/D/V arrivent en épreuves persistées sourcées (`recordEpreuve`) ; le collecteur automatique reste à brancher (pattern `ConnectorResult<T>` P22-1, dégradation honnête LIVE/DEGRADED/DEFERRED). E + T sont déjà compilés du mesuré (Identity/Overton).
 - **Tenue (trajectoire de θ)** — les snapshots `ScoreVerdict` sont datés ; la fenêtre glissante « durée au-dessus de la bande CULTE » (item ICONE) reste à câbler sur l'historique.
 - **Duel de vocabulaire branché aux corpus feeds** — helper `measureVocabularyDuel` prêt (déterministe) ; l'alimentation par flux culture RSS / Argos reste à poser.
@@ -18,7 +18,7 @@ Fiche mission founder shippée (v6.27.157, [ADR-0144](adr/0144-cockpit-founder-m
 
 - **FK durable `BrandAction.missionId`** : le lien mission ↔ tâche datée passe par `BrandAction.metadata.missionKey` (JSON, zéro migration) — stopgap. Un filtre JSON-path est non-indexé/fragile pour « les tâches d'une mission ». Bornage : champ nullable `BrandAction.missionId` + relation `onDelete: SetNull` + backfill depuis `metadata.missionKey` (migration additive). Le read `getMissionCockpit` accepte déjà `missionId ?? metadata.missionKey`.
 - **Re-datation Sprint Abidjan sur la fenêtre opérateur (7–21 août)** : le seed lie le Sprint Abidjan (S4-5) à la Mission 2 aux dates GTM canon (4–18 août). La fenêtre RÉELLE (Abidjan 7–21 août) est un choix opérationnel, à poser en LIVE via le tunnel `?op=patch actions[]` (timingStart/End) post-deploy — pas dans le seed (fidèle au GTM v2).
-- **Ingestion externe générique + Brevo pull (PR-B, ADR à créer — prochain numéro libre ; 0145 pris par Identity Graph 2026-07-15)** : la « remontée automatique » des chiffres (quiz/app/CRM push + Brevo pull) n'est pas encore construite — les sources autres que Réseaux/Email s'affichent honnêtement « à connecter — bientôt ». Chantier : `INGEST_EXTERNAL_METRIC` (governor ANUBIS) + `POST /api/ingest/metrics` (token par stratégie via `MediaPlatformConnection`) + cron `metrics-pull` Brevo — tout agnostique.
+- ~~**Ingestion externe générique push (PR-B)**~~ — **shippé ([ADR-0146](adr/0146-external-metric-ingestion-agnostic.md), v6.27.160)** : `INGEST_EXTERNAL_METRIC` (governor ANUBIS, zéro LLM) + `POST /api/ingest/metrics` (token MCP scopé ADR-0145 : BRAND ne pousse que sa marque, ou CRON_SECRET interne) → route par cellule vers `CampaignAARRMetric` (idempotent), `MissionActivity.kpiActual` (garde de portée) et un `Signal type=EXTERNAL_METRIC` de provenance. La fiche mission affiche « Dernière remontée le … » (récence réelle 30 j), fini le « bientôt ». Agnostique (aucune forme de marque codée en dur), 0 migration. **Reste déféré** : (1) le **pull** (aller chercher chez le fournisseur — Brevo, un CRM) — le motif push est prêt, un cron `verifyCronSecret` peut pousser en interne, mais le connecteur pull par provider exige un choix opérateur (clés Brevo/HubSpot) ; (2) l'**exposition de l'ingestion comme outil MCP scopé** (au lieu de l'endpoint brut) — même chemin qu'ADR-0145 §4.
 - **Réconciliation live SPAWT sur la bonne stratégie** : le seed cible `spawt-strategy` ; la marque vit sur `spawt-strategy-001` (doublon historique). Le fix live (reparent missions → GTM_90, archive placeholder) se fait via le tunnel `?op=patch missions[]`/`archiveCampaigns[]` post-deploy après `?diag`.
 
 ## Audit brief/livrable/Oracle · scoring · pivot — ADR-0134 (2026-07-13, NEFER)

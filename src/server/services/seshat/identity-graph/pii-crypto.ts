@@ -1,5 +1,5 @@
 /**
- * ADR-0145 — chiffrement PII de l'Identity Graph.
+ * ADR-0147 — chiffrement PII de l'Identity Graph.
  *
  * Deux primitives, une seule clé (env `INTEGRATION_TOKEN_KEY`, même dérivation que
  * les tokens OAuth — `sha256(key)`), zéro dépendance externe :
@@ -16,7 +16,7 @@ function derivedKey(): Buffer {
   const raw = process.env.INTEGRATION_TOKEN_KEY ?? "";
   if (raw.length < 32) {
     throw new Error(
-      "INTEGRATION_TOKEN_KEY must be at least 32 characters (PII crypto, ADR-0145)",
+      "INTEGRATION_TOKEN_KEY must be at least 32 characters (PII crypto, ADR-0147)",
     );
   }
   return crypto.createHash("sha256").update(raw).digest();

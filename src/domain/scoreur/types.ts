@@ -1,5 +1,5 @@
 /**
- * ADR-0147 — Scoreur à force révélée : types canon (Layer 0, pur).
+ * ADR-0149 — Scoreur à force révélée : types canon (Layer 0, pur).
  *
  * Une seule primitive : l'épreuve dyadique. Deux formes (duel vs rival réel / item
  * vs must-have canon), un estimateur (Bradley-Terry = Rasch). La force θ est le

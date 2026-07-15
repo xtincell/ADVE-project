@@ -1,8 +1,8 @@
-# ADR-0145 — Identity Graph : réconciliation déterministe d'une personne
+# ADR-0147 — Identity Graph : réconciliation déterministe d'une personne
 
 - **Status** : Accepted
 - **Date** : 2026-07-15
-- **Phase** : Chantier « Graphes & Scoreur à force révélée » (C1/3) — brief opérateur 137f4f21. Fonde l'arène E du scoreur (ADR-0147) : superfans dédupliqués par personne.
+- **Phase** : Chantier « Graphes & Scoreur à force révélée » (C1/3) — brief opérateur 137f4f21. Fonde l'arène E du scoreur (ADR-0149) : superfans dédupliqués par personne.
 - **Depends on** : ADR-0141 (gates superfan stricts), ADR-0126 (anti-inflation), ADR-0124 (spine d'émission), ADR-0060 (manual-first), ADR-0046 (no-magic-fallback / P22-2)
 - **Supersedes** : —
 

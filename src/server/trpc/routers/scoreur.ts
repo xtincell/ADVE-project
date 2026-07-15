@@ -1,5 +1,5 @@
 /**
- * ADR-0147 — Scoreur à force révélée : portes gouvernées + LEADERBOARD PUBLIC.
+ * ADR-0149 — Scoreur à force révélée : portes gouvernées + LEADERBOARD PUBLIC.
  *
  * `recordEpreuve` / `scoreBrand` : governedProcedure requireOperator (spine
  * ADR-0124). `leaderboard` / `verdict` : publicProcedure (le palmarès est public —

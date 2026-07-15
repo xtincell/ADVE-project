@@ -1,9 +1,9 @@
-# ADR-0146 — Overton Graph : positions, migrations de zone, attribution
+# ADR-0148 — Overton Graph : positions, migrations de zone, attribution
 
 - **Status** : Accepted
 - **Date** : 2026-07-15
-- **Phase** : Chantier « Graphes & Scoreur à force révélée » (C2/3) — brief opérateur 137f4f21. Fonde l'arène T du scoreur (ADR-0147) : duels de cadre.
-- **Depends on** : ADR-0127 (polity SectorPolityAxis), ADR-0126 (échelle de marché), ADR-0135 (attribution last-touch), ADR-0124 (spine), ADR-0046 (no-magic-fallback / P22-2), ADR-0145 (Identity Graph — acteur SUPERFAN)
+- **Phase** : Chantier « Graphes & Scoreur à force révélée » (C2/3) — brief opérateur 137f4f21. Fonde l'arène T du scoreur (ADR-0149) : duels de cadre.
+- **Depends on** : ADR-0127 (polity SectorPolityAxis), ADR-0126 (échelle de marché), ADR-0135 (attribution last-touch), ADR-0124 (spine), ADR-0046 (no-magic-fallback / P22-2), ADR-0147 (Identity Graph — acteur SUPERFAN)
 - **Supersedes** : —
 
 ## Contexte

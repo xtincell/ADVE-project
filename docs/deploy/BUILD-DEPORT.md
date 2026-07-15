@@ -38,11 +38,17 @@ sont **inchangés** — c'est la même image, construite ailleurs.
    runtime (DATABASE_URL, NEXTAUTH_SECRET, INTEGRATION_TOKEN_KEY, META_LOGIN_CONFIG_ID,
    les OAuth…). L'image ne les contient pas.
 
-3. **Secrets GitHub pour le redeploy auto** (facultatif mais recommandé) : repo →
+3. **Secrets GitHub pour le redeploy auto** (requis pour l'automatisme) : repo →
    *Settings* → *Secrets and variables* → *Actions* → ajouter `COOLIFY_URL`
    (`https://coolify.powerupgraders.com`), `COOLIFY_TOKEN`, `COOLIFY_APP_UUID`
-   (`rfkgtj7us50jlbaiz1tjke2a`). Le workflow déclenche alors le redeploy après
-   chaque push (option `notify_coolify`).
+   (`rfkgtj7us50jlbaiz1tjke2a`). **Dès que ces 3 secrets sont présents, le workflow
+   notifie Coolify AUTOMATIQUEMENT à chaque push sur `main`** (l'image vient d'être
+   smoke-testée + poussée) → Coolify tire `:latest` + swap. Sans les secrets, l'étape
+   est un no-op silencieux (le push ghcr a lieu, le redeploy reste manuel). Le
+   `workflow_dispatch` avec `notify_coolify` reste possible pour un redeploy à la
+   demande. **⚠ Pré-requis** : Build Pack = « Docker Image » (étape 2) — sinon la
+   notification déclenche un `next build` sur le VPS (OOM). N'active les secrets
+   qu'APRÈS la bascule Docker Image.
 
 ## Le cycle après bascule
 

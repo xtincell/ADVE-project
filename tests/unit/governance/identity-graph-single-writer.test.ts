@@ -1,5 +1,5 @@
 /**
- * ADR-0145 — Identity Graph : verrou HARD single-writer.
+ * ADR-0147 — Identity Graph : verrou HARD single-writer.
  *
  * `PersonIdentity` / `PersonIdentifier` ne se créent QUE dans le service
  * `seshat/identity-graph/index.ts`, et le rattachement `SuperfanProfile.personId`
@@ -32,7 +32,7 @@ const GUARDED_PATTERNS: ReadonlyArray<{ label: string; re: RegExp }> = [
   { label: "superfanProfile.updateMany({ personId })", re: /superfanProfile\s*\.\s*updateMany[\s\S]{0,120}?personId/ },
 ];
 
-describe("ADR-0145 — single-writer PersonIdentity/PersonIdentifier", () => {
+describe("ADR-0147 — single-writer PersonIdentity/PersonIdentifier", () => {
   it("aucune création/rattachement hors du service identity-graph", () => {
     const violations: string[] = [];
     for (const file of walk(SRC)) {

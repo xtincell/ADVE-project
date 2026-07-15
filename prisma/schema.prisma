@@ -3984,6 +3984,13 @@ model McpApiKey {
   lastUsedAt  DateTime?
   expiresAt   DateTime?
 
+  // ── Portée d'accès (ADR-0146) — un token vaut pour UNE marque OU tout le système ──
+  scopeKind       String  @default("SYSTEM") // "SYSTEM" (tout l'OS) | "BRAND" (une stratégie)
+  scopeStrategyId String? // renseigné ssi scopeKind=BRAND — la seule marque touchable
+  // ── Rotation (ADR-0146) — regénérer le secret, révoquer l'ancien, garder la config ──
+  rotatedToId String? // si ce token a été roté : l'id du token successeur (lineage)
+  rotatedAt   DateTime? // horodatage de la rotation
+
   // ── Facturation API (Vague 5 — MCP billable) ──
   ratePerCallUsd       Float   @default(0.002) // tarif déterministe par call
   includedMonthlyCalls Int     @default(100) // franchise mensuelle offerte

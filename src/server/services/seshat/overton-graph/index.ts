@@ -1,10 +1,10 @@
 /**
- * ADR-0146 — Overton Graph : LE single-writer de `OvertonPosition` /
+ * ADR-0148 — Overton Graph : LE single-writer de `OvertonPosition` /
  * `OvertonActorLink` / `OvertonZoneTransition` (sous-domaine SESHAT, mesure).
  *
  * On ne lit jamais « la fenêtre » : on trace des positions qui migrent de zone,
  * par polity, et on attribue les migrations (last-touch ADR-0135). Alimente
- * l'arène T du scoreur (ADR-0147) : duels de cadre + adoption de vocabulaire.
+ * l'arène T du scoreur (ADR-0149) : duels de cadre + adoption de vocabulaire.
  *
  * 100 % déterministe, zéro LLM (LOI 9). Position sans preuve → zone null, jamais
  * fabriquée (P22-2). Verrou HARD `overton-graph-single-writer.test.ts`.

@@ -1,5 +1,5 @@
 /**
- * ADR-0145 — Identity Graph : cœur déterministe (tests purs, zéro-IO).
+ * ADR-0147 — Identity Graph : cœur déterministe (tests purs, zéro-IO).
  */
 import { describe, it, expect } from "vitest";
 import {

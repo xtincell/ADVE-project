@@ -1,5 +1,5 @@
 /**
- * ADR-0146 — Overton Graph : cœur déterministe (tests purs).
+ * ADR-0148 — Overton Graph : cœur déterministe (tests purs).
  */
 import { describe, it, expect } from "vitest";
 import {

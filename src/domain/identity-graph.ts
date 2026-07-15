@@ -1,5 +1,5 @@
 /**
- * ADR-0145 — Identity Graph : cœur déterministe (Layer 0, pur, zéro-LLM, zéro-IO).
+ * ADR-0147 — Identity Graph : cœur déterministe (Layer 0, pur, zéro-LLM, zéro-IO).
  *
  * Réconcilie une personne à travers ses réseaux/identifiants. Ce module ne fait
  * QUE de la logique pure : normalisation des identifiants et échelle de précédence

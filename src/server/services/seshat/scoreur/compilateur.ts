@@ -1,5 +1,5 @@
 /**
- * ADR-0147 — compilateur : signaux mesurés → épreuves (la « matrice » canon).
+ * ADR-0149 — compilateur : signaux mesurés → épreuves (la « matrice » canon).
  *
  * Ne compile QUE ce qui est réellement mesuré en base (zéro fabrication, P22-2) :
  *  - arène E ← Identity Graph (superfans dédupliqués par personne) vs plancher de

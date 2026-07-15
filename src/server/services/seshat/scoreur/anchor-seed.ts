@@ -1,5 +1,5 @@
 /**
- * ADR-0147 — seed du canon jauge : ancres-étalons (θ fixé) + opponents-items
+ * ADR-0149 — seed du canon jauge : ancres-étalons (θ fixé) + opponents-items
  * (must-have Rasch à difficulté fixée). Idempotent (upsert par slug). PROPOSÉ —
  * ratification opérateur des θ.
  */
@@ -31,7 +31,7 @@ export async function seedScoreurCanon(): Promise<{ anchors: number; items: numb
       name: a.label,
       marketScale: a.scale,
       fixedTheta: a.theta,
-      source: "ADR-0147 anchor registry",
+      source: "ADR-0149 anchor registry",
     });
     anchors++;
   }
@@ -44,7 +44,7 @@ export async function seedScoreurCanon(): Promise<{ anchors: number; items: numb
       slug: `item-${item.id}`,
       name: item.label,
       fixedTheta: ITEM_DIFFICULTY_BY_TIER[item.tier],
-      source: "ADR-0147 must-have item",
+      source: "ADR-0149 must-have item",
     });
     items++;
   }
@@ -55,7 +55,7 @@ export async function seedScoreurCanon(): Promise<{ anchors: number; items: numb
       slug,
       name: slug,
       fixedTheta: MEASURED_ITEM_THETA,
-      source: "ADR-0147 measured item",
+      source: "ADR-0149 measured item",
     });
     items++;
   }

@@ -1,10 +1,10 @@
 /**
- * ADR-0146 — Overton Graph : cœur déterministe (Layer 0, pur, zéro-LLM zéro-IO).
+ * ADR-0148 — Overton Graph : cœur déterministe (Layer 0, pur, zéro-LLM zéro-IO).
  *
  * La fenêtre d'Overton ne se mesure JAMAIS directement — c'est une déflexion. On
  * trace des POSITIONS qui migrent entre 6 zones d'acceptabilité, par polity, et on
  * ATTRIBUE les migrations (même méca last-touch qu'ADR-0135). Signal clé pour
- * l'arène T du scoreur (ADR-0147) : l'adoption de vocabulaire (comptage
+ * l'arène T du scoreur (ADR-0149) : l'adoption de vocabulaire (comptage
  * déterministe de tokens — le dialecte de la marque remplace-t-il celui de
  * l'incumbent dans les flux datés ?).
  */

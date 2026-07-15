@@ -1,5 +1,5 @@
 /**
- * ADR-0146 — Overton Graph : portes gouvernées (domaine SESHAT). Pas de PII →
+ * ADR-0148 — Overton Graph : portes gouvernées (domaine SESHAT). Pas de PII →
  * `governedProcedure` classique (spine ADR-0124), requireOperator : les signaux
  * sont fournis par les feeds/Argos/opérateur, jamais fabriqués ici.
  */

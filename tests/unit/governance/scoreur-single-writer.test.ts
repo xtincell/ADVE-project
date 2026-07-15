@@ -1,5 +1,5 @@
 /**
- * ADR-0147 — Scoreur : verrous HARD.
+ * ADR-0149 — Scoreur : verrous HARD.
  *  1. Single-writer : Epreuve / ScoreVerdict / BrandRef ne s'écrivent QUE dans le
  *     service `seshat/scoreur/`.
  *  2. D9 — deux scores jamais fusionnés : le domaine du scoreur ne touche PAS
@@ -29,7 +29,7 @@ const GUARDED: ReadonlyArray<{ label: string; re: RegExp }> = [
   { label: "brandRef.upsert/create", re: /\bbrandRef\s*\.\s*(upsert|create)\s*\(/ },
 ];
 
-describe("ADR-0147 — single-writer scoreur", () => {
+describe("ADR-0149 — single-writer scoreur", () => {
   it("aucune écriture Epreuve/ScoreVerdict/BrandRef hors du service scoreur", () => {
     const violations: string[] = [];
     for (const file of walk(SRC)) {
@@ -44,7 +44,7 @@ describe("ADR-0147 — single-writer scoreur", () => {
   });
 });
 
-describe("ADR-0147 D9 — force révélée ≠ complétude structurelle (ADR-0102)", () => {
+describe("ADR-0149 D9 — force révélée ≠ complétude structurelle (ADR-0102)", () => {
   it("le domaine scoreur ne référence pas STRUCTURAL_WEIGHTS / computeComposite", () => {
     const scoreurDomain = join(SRC, "domain", "scoreur");
     const violations: string[] = [];

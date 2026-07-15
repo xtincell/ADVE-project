@@ -1,5 +1,5 @@
 /**
- * ADR-0146 — Overton Graph : verrou HARD single-writer. Positions, arêtes acteur
+ * ADR-0148 — Overton Graph : verrou HARD single-writer. Positions, arêtes acteur
  * et transitions de zone ne se créent QUE dans `seshat/overton-graph/index.ts`.
  */
 import { describe, it, expect } from "vitest";
@@ -26,7 +26,7 @@ const GUARDED: ReadonlyArray<{ label: string; re: RegExp }> = [
   { label: "overtonZoneTransition.create", re: /\bovertonZoneTransition\s*\.\s*create\s*\(/ },
 ];
 
-describe("ADR-0146 — single-writer Overton Graph", () => {
+describe("ADR-0148 — single-writer Overton Graph", () => {
   it("aucune création hors du service overton-graph", () => {
     const violations: string[] = [];
     for (const file of walk(SRC)) {

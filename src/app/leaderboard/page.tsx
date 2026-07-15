@@ -1,5 +1,5 @@
 /**
- * ADR-0147 — Leaderboard PUBLIC de la force révélée. Historise le dernier verdict
+ * ADR-0149 — Leaderboard PUBLIC de la force révélée. Historise le dernier verdict
  * par marque, classé par force, PAR LIGUE (polity). Données de verdict seulement
  * (aucune PII). Server component, lecture directe (comme /b/[slug]).
  */

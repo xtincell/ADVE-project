@@ -1,5 +1,5 @@
 /**
- * ADR-0147 — modulateurs (cohérence R, tenue) + palier = min(bande, items).
+ * ADR-0149 — modulateurs (cohérence R, tenue) + palier = min(bande, items).
  *
  * Les items sont les must-have Michelin, calibrés sur les ancres de ligue (jamais
  * waivable). `palier = min(bande(force,tenue), items(gates))`. Canon PROPOSÉ —

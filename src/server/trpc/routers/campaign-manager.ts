@@ -1703,7 +1703,11 @@ export const campaignManagerRouter = createTRPCRouter({
         where: { id: input.missionId },
         select: { id: true, strategyId: true },
       });
-      const [allActions, metrics, socialCount, email] = await Promise.all([
+      // Récence RÉELLE des remontées externes (ADR-0146) : une source est dite
+      // « connectée » si elle a poussé une métrique dans les 30 derniers jours,
+      // jamais un « bientôt » figé ni un zéro fabriqué.
+      const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const [allActions, metrics, socialCount, email, externalSignals] = await Promise.all([
         ctx.db.brandAction.findMany({
           where: { campaignId: input.campaignId },
           select: {
@@ -1718,6 +1722,12 @@ export const campaignManagerRouter = createTRPCRouter({
         }),
         ctx.db.socialConnection.count({ where: { strategyId: mission.strategyId, status: "ACTIVE" } }),
         ctx.db.brandEmailConnector.findUnique({ where: { strategyId: mission.strategyId }, select: { status: true } }),
+        ctx.db.signal.findMany({
+          where: { strategyId: mission.strategyId, type: "EXTERNAL_METRIC", createdAt: { gte: since } },
+          select: { data: true, createdAt: true },
+          orderBy: { createdAt: "desc" },
+          take: 200,
+        }),
       ]);
       // Tâches datées de la mission = BrandActions du calendrier rattachées via
       // metadata.missionKey (dates réelles timingStart/End = le rétroplanning).
@@ -1725,12 +1735,23 @@ export const campaignManagerRouter = createTRPCRouter({
         (a) => (a.metadata as Record<string, unknown> | null)?.missionKey === input.missionId,
       );
       const done = tasks.filter((t) => t.status === "EXECUTED").length;
+      // Dernière remontée par type de source (la plus récente en tête).
+      const pushedByType = new Map<string, Date>();
+      for (const s of externalSignals) {
+        const st = (s.data as Record<string, unknown> | null)?.sourceType;
+        if (typeof st === "string" && !pushedByType.has(st)) pushedByType.set(st, s.createdAt);
+      }
+      const lastPush = (key: string): string | null => {
+        const d = pushedByType.get(key);
+        return d ? `Dernière remontée le ${d.toLocaleDateString("fr-FR")}.` : null;
+      };
+      const emailConnected = email?.status === "ACTIVE" || pushedByType.has("EMAIL");
       const sources = [
         { key: "SOCIAL", label: "Réseaux sociaux", connected: socialCount > 0, note: socialCount > 0 ? null : "Connecte tes comptes dans Réglages → Connexions." },
-        { key: "EMAIL", label: "Email / newsletter", connected: email?.status === "ACTIVE", note: email?.status === "ACTIVE" ? null : "Renseigne ta clé email dans Réglages → Connexions." },
-        { key: "QUIZ", label: "Quiz / acquisition", connected: false, note: "Remontée automatique des chiffres — bientôt." },
-        { key: "APP", label: "Application", connected: false, note: "Remontée automatique des chiffres — bientôt." },
-        { key: "CRM", label: "CRM", connected: false, note: "Remontée automatique des chiffres — bientôt." },
+        { key: "EMAIL", label: "Email / newsletter", connected: emailConnected, note: emailConnected ? lastPush("EMAIL") : "Renseigne ta clé email dans Réglages → Connexions." },
+        { key: "QUIZ", label: "Quiz / acquisition", connected: pushedByType.has("QUIZ"), note: lastPush("QUIZ") ?? "Aucune remontée automatique pour l'instant." },
+        { key: "APP", label: "Application", connected: pushedByType.has("APP"), note: lastPush("APP") ?? "Aucune remontée automatique pour l'instant." },
+        { key: "CRM", label: "CRM", connected: pushedByType.has("CRM"), note: lastPush("CRM") ?? "Aucune remontée automatique pour l'instant." },
       ];
       return { tasks, execution: { total: tasks.length, done }, metrics, sources };
     }),
