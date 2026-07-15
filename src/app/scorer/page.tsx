@@ -52,6 +52,27 @@ const PLATFORM_LABELS: Record<string, string> = {
 
 const fmt = (n: number) => new Intl.NumberFormat("fr-FR").format(n);
 
+/** Ce que chaque signal non mesuré attend — en clair pour un prospect (pas de jargon interne). */
+const LEAD_HINT: Record<string, string> = {
+  site: "Ajoutez votre site web",
+  email: "Nécessite votre site web",
+  domain: "Nécessite votre site web",
+  perf: "Nécessite votre site web",
+  reviews: "Votre fiche Google (avis)",
+  press: "Aucune retombée presse trouvée pour l'instant",
+  social: "Ajoutez vos réseaux sociaux",
+};
+/** Dimensions qui se débloquent en fournissant un site web. */
+const NEEDS_SITE = new Set(["site", "email", "domain", "perf"]);
+
+/** Verdict en langage clair du /100 (le prospect comprend ce que ça VEUT dire). */
+function scoreVerdict(total: number): string {
+  if (total >= 80) return "Votre présence en ligne est forte — une bonne base pour bâtir une marque culte.";
+  if (total >= 60) return "Votre présence en ligne est solide, mais il reste des leviers à activer.";
+  if (total >= 40) return "Votre présence en ligne est en construction — plusieurs signaux clés manquent encore.";
+  return "Votre présence en ligne est encore fragile — c'est justement là qu'on intervient.";
+}
+
 export default function ScorerPage() {
   const [brandName, setBrandName] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
@@ -143,11 +164,16 @@ export default function ScorerPage() {
               onChange={(e) => setBrandName(e.target.value)}
               required
             />
-            <Input
-              placeholder="Site web (https://…)"
-              value={websiteUrl}
-              onChange={(e) => setWebsiteUrl(e.target.value)}
-            />
+            <div className="flex flex-col gap-1">
+              <Input
+                placeholder="Site web (https://…) — recommandé"
+                value={websiteUrl}
+                onChange={(e) => setWebsiteUrl(e.target.value)}
+              />
+              <Text className="text-xs text-[color:var(--color-foreground-muted)]">
+                Votre site débloque 4 signaux de plus (domaine, email, performance…).
+              </Text>
+            </div>
             <textarea
               placeholder="Réseaux sociaux (un lien par ligne : Instagram, Facebook, TikTok…)"
               value={socialLinksRaw}
@@ -167,11 +193,10 @@ export default function ScorerPage() {
       {result ? (
         <Card>
           <CardHeader>
-            <CardTitle>Votre score d&apos;empreinte digitale</CardTitle>
+            <CardTitle>Votre présence en ligne, mesurée</CardTitle>
             <CardDescription>
-              Voici <strong>exactement</strong> ce qu&apos;on a mesuré publiquement, et la part
-              de chaque signal dans votre score. Rien de gonflé : une dimension non
-              mesurable est exclue du calcul, jamais comptée à zéro en douce.
+              Voici ce qu&apos;on a trouvé sur vous <strong>publiquement</strong>, en 30 secondes.
+              On ne note que ce qu&apos;on peut vérifier — rien n&apos;est inventé.
             </CardDescription>
             {result.capturedAt ? (
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[color:var(--color-foreground-muted)]">
@@ -213,9 +238,14 @@ export default function ScorerPage() {
                     </Text>
                   </div>
                 )}
+                {result.total !== null ? (
+                  <Text className="max-w-[42ch] text-center text-sm text-foreground">
+                    {scoreVerdict(result.total)}
+                  </Text>
+                ) : null}
                 <Text className="text-center text-xs text-[color:var(--color-foreground-muted)]">
-                  Score calculé sur <strong>{measuredDims.length}</strong> dimension(s) mesurée(s)
-                  {unmeasuredDims.length > 0 ? ` · ${unmeasuredDims.length} non mesurée(s)` : ""}.
+                  Basé sur <strong>{measuredDims.length}</strong> signal(aux) trouvé(s) sur vous
+                  {unmeasuredDims.length > 0 ? ` · ${unmeasuredDims.length} restant(s) à débloquer` : ""}.
                 </Text>
               </div>
 
@@ -245,53 +275,84 @@ export default function ScorerPage() {
                 </div>
               ) : null}
 
-              {/* Détail factuel par dimension : la preuve puis la contribution */}
-              <div className="flex flex-col gap-2">
-                <Text className="font-semibold">Ce qu&apos;on a mesuré</Text>
+              {/* Ce qu'on a trouvé : la preuve, en clair (pas de « poids » ni jargon) */}
+              {measuredDims.length > 0 ? (
                 <div className="flex flex-col gap-2">
-                  {measuredDims.map((d) => (
-                    <div
-                      key={d.key}
-                      className="flex flex-col gap-0.5 rounded-md border px-3 py-2"
-                      style={{ borderColor: "var(--color-border)" }}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <Text className="font-medium">{d.label ?? DIMENSION_LABELS[d.key] ?? d.key}</Text>
-                        <Text className="font-mono text-sm">
-                          {d.score !== null ? `${Math.round(d.score)}/100` : "—"}
-                          <span className="text-xs text-[color:var(--color-foreground-muted)]"> · poids {d.weight}%</span>
-                        </Text>
-                      </div>
-                      {d.details ? (
-                        <Text className="text-xs text-[color:var(--color-foreground-muted)]">{d.details}</Text>
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Non mesuré : transparent sur les angles morts et pourquoi */}
-              {unmeasuredDims.length > 0 ? (
-                <div className="flex flex-col gap-2">
-                  <Text className="font-semibold text-[color:var(--color-foreground-muted)]">
-                    Non mesuré
-                  </Text>
-                  <div className="flex flex-col gap-1.5">
-                    {unmeasuredDims.map((d) => (
-                      <div key={d.key} className="flex items-center justify-between gap-3 text-sm">
-                        <Text className="text-[color:var(--color-foreground-muted)]">
-                          {d.label ?? DIMENSION_LABELS[d.key] ?? d.key}
-                        </Text>
-                        <Text className="text-xs text-[color:var(--color-foreground-muted)]">
-                          {d.details ?? "non mesuré"}
-                        </Text>
+                  <Text className="font-semibold">Ce qu&apos;on a trouvé sur vous</Text>
+                  <div className="flex flex-col gap-2">
+                    {measuredDims.map((d) => (
+                      <div
+                        key={d.key}
+                        className="flex flex-col gap-0.5 rounded-md border px-3 py-2"
+                        style={{ borderColor: "var(--color-border)" }}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <Text className="font-medium">{d.label ?? DIMENSION_LABELS[d.key] ?? d.key}</Text>
+                          <Text className="font-mono text-sm text-foreground">
+                            {d.score !== null ? `${Math.round(d.score)}/100` : "—"}
+                          </Text>
+                        </div>
+                        {d.details ? (
+                          <Text className="text-xs text-[color:var(--color-foreground-muted)]">{d.details}</Text>
+                        ) : null}
                       </div>
                     ))}
                   </div>
-                  <Text className="text-xs text-[color:var(--color-foreground-muted)]">
-                    Ces dimensions n&apos;ont pas pénalisé votre score : elles sont exclues du
-                    calcul tant qu&apos;on ne peut pas les vérifier.
-                  </Text>
+                </div>
+              ) : null}
+
+              {/* À débloquer : action claire (surtout : ajouter le site), zéro jargon */}
+              {unmeasuredDims.length > 0 ? (
+                <div className="flex flex-col gap-3">
+                  {/* Si le site manque → le levier n°1, mis en avant avec re-score inline */}
+                  {unmeasuredDims.some((d) => d.key === "site") ? (
+                    <div className="flex flex-col gap-2 rounded-lg border border-accent/30 bg-accent/[0.05] p-3">
+                      <Text className="text-sm font-semibold text-foreground">
+                        Ajoutez votre site web pour un score plus complet
+                      </Text>
+                      <Text className="text-xs text-[color:var(--color-foreground-muted)]">
+                        Il débloque d&apos;un coup 4 signaux (domaine, email, performance…).
+                      </Text>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Input
+                          placeholder="https://votre-site.com"
+                          value={websiteUrl}
+                          onChange={(e) => setWebsiteUrl(e.target.value)}
+                        />
+                        <Button
+                          size="sm"
+                          disabled={score.isPending || !websiteUrl.trim()}
+                          onClick={() => run(true)}
+                        >
+                          {score.isPending ? "…" : "Re-scorer"}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {/* Le reste, en une ligne claire chacun (jamais les raisons internes) */}
+                  <div className="flex flex-col gap-1">
+                    <Text className="text-xs font-semibold text-[color:var(--color-foreground-muted)]">
+                      Encore à mesurer
+                    </Text>
+                    {unmeasuredDims
+                      .filter((d) => d.key !== "site")
+                      .map((d) => (
+                        <div key={d.key} className="flex items-center justify-between gap-3 text-sm">
+                          <Text className="text-[color:var(--color-foreground-muted)]">
+                            {d.label ?? DIMENSION_LABELS[d.key] ?? d.key}
+                          </Text>
+                          <Text className="text-xs text-[color:var(--color-foreground-muted)]">
+                            {NEEDS_SITE.has(d.key) && unmeasuredDims.some((x) => x.key === "site")
+                              ? "↑ via votre site"
+                              : LEAD_HINT[d.key] ?? "à mesurer"}
+                          </Text>
+                        </div>
+                      ))}
+                    <Text className="mt-1 text-xs text-[color:var(--color-foreground-muted)]">
+                      Ces signaux n&apos;ont pas baissé votre score — ils sont juste en attente.
+                    </Text>
+                  </div>
                 </div>
               ) : null}
             </div>
