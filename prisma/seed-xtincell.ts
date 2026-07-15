@@ -15,8 +15,10 @@
  */
 
 import type { PrismaClient, Prisma } from "@prisma/client";
+import { brandPublicSlug } from "@/domain/brand-slug";
 
 const SOURCE = "https://xtincell.powerupgraders.com (VER 15.0 — 2026, lu le 12/07/2026)";
+const XTINCELL_PUBLIC_SLUG = brandPublicSlug("xtincell"); // LFA-xtincell
 
 const PILLAR_A = {
   nomMarque: "Xtincell",
@@ -71,27 +73,33 @@ export async function seedXtincell(prisma: PrismaClient): Promise<void> {
   const operator = await prisma.operator.findUnique({ where: { slug: "upgraders" } });
 
   let strategy = await prisma.strategy.findFirst({
-    where: { OR: [{ publicSlug: "xtincell" }, { userId: owner.id, name: "Xtincell" }] },
+    where: {
+      OR: [
+        { publicSlug: XTINCELL_PUBLIC_SLUG },
+        { publicSlug: "xtincell" },
+        { userId: owner.id, name: "Xtincell" },
+      ],
+    },
   });
   if (!strategy) {
     strategy = await prisma.strategy.create({
       data: {
         name: "Xtincell",
         description:
-          "Marque personnelle d'Alexandre Djengue (Brand Architect) — ADVE sourcé depuis sa page officielle xtincell.powerupgraders.com (DECLARED). Page publique La Fusée : /b/xtincell.",
+          "Marque personnelle d'Alexandre Djengue (Brand Architect) — ADVE sourcé depuis sa page officielle xtincell.powerupgraders.com (DECLARED). Page publique La Fusée : /b/LFA-xtincell.",
         status: "ACTIVE",
         userId: owner.id,
         operatorId: operator?.id ?? null,
         brandNature: "PERSONAL",
-        publicSlug: "xtincell",
+        publicSlug: XTINCELL_PUBLIC_SLUG,
         countryCode: "CM",
         currencyCode: "XAF",
       },
     });
-  } else if (!strategy.publicSlug) {
+  } else if (strategy.publicSlug !== XTINCELL_PUBLIC_SLUG) {
     strategy = await prisma.strategy.update({
       where: { id: strategy.id },
-      data: { publicSlug: "xtincell" },
+      data: { publicSlug: XTINCELL_PUBLIC_SLUG },
     });
   }
 

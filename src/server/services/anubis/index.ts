@@ -47,6 +47,13 @@ import type {
 
 export { manifest } from "./manifest";
 
+// ── État des clés système (env, booléens only — go-live panel) ──────────────
+export {
+  getSystemKeyStatus,
+  type SystemKeyStatus,
+  type SystemKeyGroup,
+} from "./system-keys";
+
 // ── Notification real-time + MCP bidirectionnel handlers (ADR-0025, ADR-0026) ──
 export {
   pushNotification,

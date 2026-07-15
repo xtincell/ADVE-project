@@ -17,7 +17,8 @@ import { trpc } from "@/lib/trpc/client";
 import { SocialHubCard } from "@/components/cockpit/social/social-hub-card";
 import { EmailProviderCard } from "@/components/cockpit/newsletter/email-provider-card";
 import { Button, Input } from "@/components/primitives";
-import { Plug, Store, RefreshCw, Unlink, ArrowRight, Smartphone } from "lucide-react";
+import { CopyButton } from "@/components/shared/copy-button";
+import { Plug, Store, RefreshCw, Unlink, ArrowRight, Smartphone, Plug2, KeyRound, Trash2 } from "lucide-react";
 
 const SHOP_RE = /^[a-z0-9][a-z0-9-]{1,58}[a-z0-9]\.myshopify\.com$/;
 const APP_STORE_RE = /^https:\/\/apps\.apple\.com\/\S+$/i;
@@ -215,6 +216,126 @@ function ShopCard({ strategyId }: { strategyId: string }) {
   );
 }
 
+/**
+ * Point de connexion MCP — le founder récupère l'endpoint `/api/mcp` + génère
+ * une clé scopée à SA marque, à coller dans Claude (Desktop / autre client MCP).
+ * La clé en clair n'apparaît qu'une fois (ADR-0145). Réutilise `brandMcp`.
+ */
+function McpCard({ strategyId }: { strategyId: string }) {
+  const toast = useToast();
+  const utils = trpc.useUtils();
+  const { data, isLoading } = trpc.brandMcp.info.useQuery({ strategyId });
+  const [name, setName] = useState("");
+  const [freshKey, setFreshKey] = useState<string | null>(null);
+  const [revokeId, setRevokeId] = useState<string | null>(null);
+
+  const create = trpc.brandMcp.createKey.useMutation({
+    onSuccess: (res) => {
+      setFreshKey(res.plaintextKey);
+      setName("");
+      toast.success("Clé MCP générée. Copiez-la maintenant — elle ne sera plus affichée.");
+      utils.brandMcp.info.invalidate({ strategyId });
+    },
+    onError: (e) => toast.error(e.message || "Génération impossible."),
+  });
+  const revoke = trpc.brandMcp.revokeKey.useMutation({
+    onSuccess: () => {
+      toast.success("Clé révoquée.");
+      utils.brandMcp.info.invalidate({ strategyId });
+    },
+    onError: (e) => toast.error(e.message || "Révocation impossible."),
+  });
+
+  return (
+    <div className="ck-card">
+      <p className="ck-card__eyebrow"><Plug2 />Connexion à Claude (MCP)</p>
+      {isLoading ? (
+        <p className="ck-ops__note">Chargement…</p>
+      ) : (
+        <div className="space-y-3">
+          <p className="ck-ops__note">
+            Branchez votre marque à Claude (ou un autre assistant compatible MCP) : donnez-lui
+            l&apos;adresse ci-dessous et une clé. Il pourra alors travailler sur votre marque.
+          </p>
+
+          {/* Endpoint */}
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2">
+            <span className="min-w-0 flex-1 truncate font-mono text-xs text-foreground">{data?.endpoint}</span>
+            {data?.endpoint ? <CopyButton value={data.endpoint} label="" /> : null}
+          </div>
+
+          {/* Clé fraîche (une seule fois) */}
+          {freshKey ? (
+            <div className="rounded-lg border border-success/40 bg-success/10 p-3">
+              <p className="text-2xs font-semibold text-success">Votre nouvelle clé (copiez-la, elle ne sera plus affichée) :</p>
+              <div className="mt-1.5 flex items-center gap-2">
+                <code className="min-w-0 flex-1 truncate font-mono text-xs text-foreground">{freshKey}</code>
+                <CopyButton value={freshKey} label="" />
+              </div>
+            </div>
+          ) : null}
+
+          {/* Génération */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              placeholder="Nom de la clé (ex. Claude Desktop)"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <Button
+              disabled={create.isPending || name.trim().length < 2}
+              onClick={() => create.mutate({ strategyId, name: name.trim() })}
+            >
+              <KeyRound className="h-4 w-4" />
+              {create.isPending ? "Génération…" : "Générer une clé"}
+            </Button>
+          </div>
+
+          {/* Clés existantes */}
+          {data && data.keys.length > 0 ? (
+            <ul className="space-y-1.5">
+              {data.keys.map((k) => (
+                <li key={k.id} className="flex items-center justify-between gap-3 rounded-lg border border-border-subtle px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-medium text-foreground">
+                      {k.name}
+                      {!k.isActive ? <span className="ml-2 text-foreground-muted">(révoquée)</span> : null}
+                    </p>
+                    <p className="text-2xs text-foreground-muted">
+                      {k.lastUsedAt ? `Dernière utilisation ${new Date(k.lastUsedAt).toLocaleDateString("fr-FR")}` : "Jamais utilisée"}
+                    </p>
+                  </div>
+                  {k.isActive ? (
+                    <button
+                      type="button"
+                      className="ck-theme-toggle"
+                      title="Révoquer la clé"
+                      aria-label="Révoquer la clé"
+                      onClick={() => setRevokeId(k.id)}
+                    >
+                      <Trash2 />
+                    </button>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          <ConfirmDialog
+            open={revokeId !== null}
+            onClose={() => setRevokeId(null)}
+            title="Révoquer cette clé ?"
+            message="Les assistants qui l'utilisent perdront l'accès immédiatement. Cette action est définitive."
+            confirmLabel="Révoquer"
+            variant="warning"
+            onConfirm={() => { const id = revokeId; setRevokeId(null); if (id) revoke.mutate({ strategyId, keyId: id }); }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ConnectionsPage() {
   const strategyId = useCurrentStrategyId();
 
@@ -247,6 +368,7 @@ export default function ConnectionsPage() {
                 est ici, dans la zone Connexions, avec les autres canaux. La
                 carte se masque d'elle-même pour les fondateurs (opérateur only). */}
             <EmailProviderCard strategyId={strategyId} />
+            <McpCard strategyId={strategyId} />
             <MobileAppCard strategyId={strategyId} />
             <div className="ck-card">
               <p className="ck-card__eyebrow"><Plug />À venir</p>

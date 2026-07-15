@@ -116,7 +116,7 @@ export function AppShell({
       <MobileTabBar navGroups={navGroups} portalAccentVar={portalAccentVar} />
 
       {/* Command Palette */}
-      <CommandPalette open={commandPaletteOpen} onClose={handleCloseCommandPalette} />
+      <CommandPalette open={commandPaletteOpen} onClose={handleCloseCommandPalette} navGroups={navGroups} portal={portal} />
 
       {/* Remontée feedback / bug testeurs (ADR-0155) */}
       <FeedbackButton />

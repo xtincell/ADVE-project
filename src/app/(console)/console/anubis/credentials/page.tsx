@@ -4,7 +4,7 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
-import { CheckCircle2, XCircle, AlertCircle, RefreshCw, Trash2, Key, Plus } from "lucide-react";
+import { CheckCircle2, XCircle, AlertCircle, RefreshCw, Trash2, Key, Plus, MinusCircle } from "lucide-react";
 
 const KNOWN_CONNECTOR_TYPES = [
   { type: "meta-ads", label: "Meta Ads (Facebook + Instagram)", fields: ["accessToken", "businessAccountId", "adAccountId"] },
@@ -18,6 +18,10 @@ const KNOWN_CONNECTOR_TYPES = [
   // superfan.* sub-clusters with sectoral / cohort signal via ConnectorResult<T>.
   { type: "tarsis-monitoring", label: "Tarsis monitoring API (sectoral signal)", fields: ["apiKey", "endpointOverride", "accountScope"] },
   { type: "crm-provider", label: "CRM provider (cohort retention)", fields: ["apiKey", "endpointOverride", "accountId"] },
+  // Apify — scraping des relevés d'audience publics (followers) pour le scorer /
+  // l'empreinte. Vault-first (opérateur > env `APIFY_TOKEN`), lu par
+  // `resolveApifyCredentials`. Même connectorType que la page social-audit.
+  { type: "APIFY_SOCIAL", label: "Apify (scraping followers publics)", fields: ["apiKey"] },
 ] as const;
 
 function StatusIcon({ status }: { status: string }) {
@@ -29,6 +33,7 @@ function StatusIcon({ status }: { status: string }) {
 export default function AnubisCredentialsPage() {
   const utils = trpc.useUtils();
   const { data: credentials, isLoading } = trpc.anubis.listCredentials.useQuery();
+  const { data: systemKeys } = trpc.anubis.systemKeyStatus.useQuery();
   const register = trpc.anubis.registerCredential.useMutation({
     onSuccess: () => utils.anubis.listCredentials.invalidate(),
   });
@@ -58,6 +63,47 @@ export default function AnubisCredentialsPage() {
           { label: "Credentials" },
         ]}
       />
+
+      {/* Clés système (env) — lecture seule, booléens only (ADR-0075) */}
+      <div className="rounded-xl border border-border bg-card">
+        <div className="border-b border-border p-4">
+          <h2 className="text-sm font-semibold text-foreground">Clés système (variables d&apos;environnement)</h2>
+          <p className="mt-1 text-xs text-foreground-muted">
+            Clés SYSTEM-WIDE posées dans Coolify (jamais en base — ADR-0075). On affiche
+            seulement configuré / manquant, jamais la valeur. Différent du Credentials Vault
+            ci-dessous (clés par-opérateur).
+          </p>
+        </div>
+        <div className="divide-y divide-border">
+          {(systemKeys ?? []).map((grp) => (
+            <div key={grp.group} className="p-4">
+              <div className="flex items-baseline justify-between gap-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground">{grp.group}</h3>
+                <span className="text-2xs text-foreground-muted">
+                  {grp.keys.filter((k) => k.configured).length}/{grp.keys.length} configuré(s)
+                </span>
+              </div>
+              <p className="mt-1 text-2xs text-foreground-muted">{grp.hint}</p>
+              <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                {grp.keys.map((k) => (
+                  <div key={k.key} className="flex items-center gap-2 rounded-lg border border-border-subtle px-2.5 py-1.5">
+                    {k.configured ? (
+                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-success" />
+                    ) : (
+                      <MinusCircle className="h-3.5 w-3.5 shrink-0 text-foreground-muted" />
+                    )}
+                    <span className="min-w-0 flex-1 truncate text-xs text-foreground">{k.label}</span>
+                    <code className="text-2xs text-foreground-muted">{k.key}</code>
+                    <span className={`text-2xs font-medium ${k.configured ? "text-success" : "text-foreground-muted"}`}>
+                      {k.configured ? "posée" : "manquante"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* Liste des credentials existantes */}
       <div className="rounded-xl border border-border bg-card">

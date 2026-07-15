@@ -94,7 +94,14 @@ export default async function LeaderboardPage() {
         </div>
 
         {leagues.length === 0 ? (
-          <div className="lb__empty">Aucun verdict historisé pour l&apos;instant.</div>
+          <div className="lb__empty">
+            <strong>Le championnat n&apos;a pas encore de participants.</strong>
+            <span>
+              Le classement se remplit dès qu&apos;une marque est mesurée par une épreuve du réel.
+              Scorez la vôtre — vous y apparaîtrez avec votre couverture d&apos;épreuves.
+            </span>
+            <a href="/scorer" className="lb__ctabtn">Scorer ma marque — gratuit</a>
+          </div>
         ) : (
           leagues.map((league) => {
             const first = league.rows[0]!;

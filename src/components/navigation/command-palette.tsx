@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Search, ArrowRight, Clock, FileText, Target, Users, BarChart3, Megaphone, Building, Layers, X } from "lucide-react";
+import { Search, ArrowRight, Clock, X, FileText } from "lucide-react";
+import type { NavGroup } from "./types";
 
 interface CommandItem {
   id: string;
@@ -13,49 +14,65 @@ interface CommandItem {
   keywords?: string;
 }
 
-const PAGE_ITEMS: CommandItem[] = [
-  // Cockpit
-  { id: "c-dash", label: "Tableau de bord", href: "/cockpit", section: "Cockpit", icon: BarChart3, keywords: "dashboard cockpit" },
-  { id: "c-missions", label: "Missions", href: "/cockpit/operate/missions", section: "Cockpit > Operations", icon: Target },
-  { id: "c-campaigns", label: "Campagnes", href: "/cockpit/operate/campaigns", section: "Cockpit > Operations", icon: Megaphone },
-  { id: "c-briefs", label: "Briefs", href: "/cockpit/operate/briefs", section: "Cockpit > Operations", icon: FileText },
-  { id: "c-identity", label: "Identité de marque", href: "/cockpit/brand/identity", section: "Cockpit > Marque", icon: FileText, keywords: "profil marque pilier" },
-  { id: "c-guidelines", label: "Guidelines", href: "/cockpit/brand/guidelines", section: "Cockpit > Marque", icon: FileText },
-  { id: "c-assets", label: "Vault de marque", href: "/cockpit/brand/assets", section: "Cockpit > Marque", icon: FileText },
-  { id: "c-reports", label: "Value Reports", href: "/cockpit/insights/reports", section: "Cockpit > Insights", icon: BarChart3 },
-  { id: "c-diag", label: "Diagnostics", href: "/cockpit/insights/diagnostics", section: "Cockpit > Insights", icon: BarChart3, keywords: "radar pilier diagnostic" },
-  { id: "c-bench", label: "Benchmarks", href: "/cockpit/insights/benchmarks", section: "Cockpit > Insights", icon: BarChart3 },
-  // Creator
-  { id: "cr-dash", label: "Tableau de bord", href: "/creator", section: "Espace créateur", icon: BarChart3, keywords: "dashboard creator" },
-  { id: "cr-avail", label: "Missions disponibles", href: "/creator/missions/available", section: "Espace créateur > Missions", icon: Target },
-  { id: "cr-active", label: "Missions en cours", href: "/creator/missions/active", section: "Espace créateur > Missions", icon: Target },
-  { id: "cr-collab", label: "Missions collaboratives", href: "/creator/missions/collab", section: "Espace créateur > Missions", icon: Users },
-  { id: "cr-metrics", label: "Metriques", href: "/creator/progress/metrics", section: "Espace créateur > Progression", icon: BarChart3 },
-  { id: "cr-path", label: "Parcours", href: "/creator/progress/path", section: "Espace créateur > Progression", icon: BarChart3, keywords: "tier apprenti compagnon" },
-  { id: "cr-earn", label: "Gains missions", href: "/creator/earnings/missions", section: "Espace créateur > Gains", icon: BarChart3, keywords: "revenue facture" },
-  { id: "cr-learn", label: "Apprendre ADVE", href: "/creator/learn/adve", section: "Espace créateur > Apprendre", icon: FileText },
-  // Console
-  { id: "co-dash", label: "Ecosysteme", href: "/console", section: "Console", icon: BarChart3, keywords: "dashboard fixer" },
-  { id: "co-clients", label: "Clients", href: "/console/strategy-portfolio/clients", section: "Console > Portfolio Marques", icon: Building },
-  { id: "co-intake", label: "Pipeline Intake", href: "/console/strategy-operations/intake", section: "Console > Strategy Ops", icon: Target, keywords: "prospect conversion" },
-  { id: "co-boot", label: "Boot Sequence", href: "/console/strategy-operations/boot", section: "Console > Strategy Ops", icon: Target, keywords: "onboarding" },
-  { id: "co-intel", label: "Intelligence", href: "/console/seshat/intelligence", section: "Console > Le Signal", icon: BarChart3 },
-  { id: "co-signals", label: "Signaux", href: "/console/seshat/signals", section: "Console > Le Signal", icon: BarChart3 },
-  { id: "co-kg", label: "Knowledge Graph", href: "/console/seshat/knowledge", section: "Console > Le Signal", icon: Layers },
-  { id: "co-guild", label: "Guilde", href: "/console/arene/guild", section: "Console > L'Arene", icon: Users, keywords: "creatif freelance" },
-  { id: "co-match", label: "Matching", href: "/console/arene/matching", section: "Console > L'Arene", icon: Users },
-  { id: "co-miss", label: "Missions", href: "/console/artemis/missions", section: "Console > La Fusée", icon: Target },
-  { id: "co-camp", label: "Campagnes", href: "/console/artemis/campaigns", section: "Console > La Fusée", icon: Megaphone },
-  { id: "co-rev", label: "Revenus", href: "/console/socle/revenue", section: "Console > Le Socle", icon: BarChart3, keywords: "finance argent" },
-  { id: "co-comm", label: "Commissions", href: "/console/socle/commissions", section: "Console > Le Socle", icon: BarChart3 },
-];
+/**
+ * Mots-clés d'appoint par href — pour que les pages « invisibles au nom » se
+ * trouvent quand même (le Credentials Vault sous « api », « clés », « apify »…).
+ * Le reste de l'index est DÉRIVÉ de la nav du portail courant (plus de liste
+ * figée qui oublie des pages — mandat go-live : « je ne trouve même pas mes
+ * clés avec le moteur de recherche »).
+ */
+const KEYWORD_HINTS: Record<string, string> = {
+  "/console/anubis/credentials": "api clés cles secrets tokens connecteurs apify vault coffre credentials",
+  "/console/anubis/api-billing": "api clé mcp facturation billing metering endpoint",
+  "/console/socle/pricing": "clés paiement stripe providers env secrets abonnement",
+  "/console/signal/prospect-scoring": "scorer prospect concurrent leaderboard force révélée",
+  "/console/socle/feedback": "bug retours testeurs remontées support",
+  "/cockpit/settings/connections": "connexions réseaux oauth social shopify mcp clé api login",
+  "/console/socle/manual-subscriptions": "abonnement manuel whatsapp paiement validation",
+};
+
+/** Aplati les nav-groups du portail courant en items de recherche. */
+function itemsFromNavGroups(groups: NavGroup[], portalLabel: string): CommandItem[] {
+  const out: CommandItem[] = [];
+  const seen = new Set<string>();
+  for (const g of groups) {
+    for (const it of g.items) {
+      if (seen.has(it.href)) continue;
+      seen.add(it.href);
+      const section = g.title ? `${portalLabel} › ${g.title}` : portalLabel;
+      out.push({
+        id: it.href,
+        label: it.label,
+        href: it.href,
+        section,
+        icon: it.icon ?? FileText,
+        keywords: [it.sublabel, KEYWORD_HINTS[it.href]].filter(Boolean).join(" ") || undefined,
+      });
+    }
+  }
+  return out;
+}
+
+const PORTAL_LABELS: Record<string, string> = {
+  cockpit: "Cockpit",
+  creator: "Espace créateur",
+  console: "Console",
+  agency: "Agence",
+};
 
 interface CommandPaletteProps {
   open: boolean;
   onClose: () => void;
+  /** Nav-groups du portail courant — source de l'index (scoping + exhaustivité). */
+  navGroups?: NavGroup[];
+  portal?: string;
 }
 
-export function CommandPalette({ open, onClose }: CommandPaletteProps) {
+export function CommandPalette({ open, onClose, navGroups, portal }: CommandPaletteProps) {
+  const PAGE_ITEMS = useMemo(
+    () => itemsFromNavGroups(navGroups ?? [], PORTAL_LABELS[portal ?? ""] ?? "Menu"),
+    [navGroups, portal],
+  );
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [recentPaths, setRecentPaths] = useState<string[]>([]);

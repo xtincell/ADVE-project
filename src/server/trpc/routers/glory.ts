@@ -493,4 +493,83 @@ export const gloryRouter = createTRPCRouter({
         generatedAt: generatedAt ? generatedAt.toISOString() : null,
       };
     }),
+
+  /**
+   * « Armer les publications » — matérialise le calendrier de lancement en vraies
+   * publications planifiées à partir d'un J-0 choisi (défaut : aujourd'hui). Chaque
+   * post publiable (FB/IG/LinkedIn) est ré-ancré sur `startDate` puis émis en
+   * `ANUBIS_PUBLISH_SOCIAL_POST` avec `scheduleAt` futur → BrandAction SCHEDULED
+   * que le cron `social-sync` publie à échéance. Zéro écriture nue (spine + firewall
+   * zones ADR-0131 par publication). Les plateformes non connectables (TikTok/X/
+   * YouTube) sont comptées « non armées » — honnête, jamais un faux planifié.
+   */
+  armLaunchCalendar: protectedProcedure
+    .input(
+      z.object({
+        strategyId: z.string().min(1),
+        /** J-0 du lancement (ISO). Le rétroplan est ré-ancré dessus. */
+        startDate: z.string().datetime(),
+        weeks: z.number().int().min(1).max(12).optional(),
+        /** Heure de publication (UTC, 0–23) — défaut 9h. */
+        hourUtc: z.number().int().min(0).max(23).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { canAccessStrategy, getOperatorContext } = await import("@/server/services/operator-isolation");
+      const opCtx = await getOperatorContext(ctx.session.user.id);
+      if (!(await canAccessStrategy(input.strategyId, opCtx))) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Cette marque ne vous appartient pas" });
+      }
+
+      const calRow = await ctx.db.gloryOutput.findFirst({
+        where: { strategyId: input.strategyId, toolSlug: "content-calendar-strategist" },
+        orderBy: { createdAt: "desc" },
+        select: { output: true },
+      });
+      const calendar = parseContentCalendar(calRow?.output ?? null);
+      if (!calendar) {
+        return { armed: 0, skippedPast: 0, skippedUnsupported: 0, byPlatform: {} as Record<string, number>, reason: "NO_CALENDAR" as const };
+      }
+
+      const startISO = input.startDate.slice(0, 10); // YYYY-MM-DD → ancre déterministe
+      const posts = deriveDatedPosts(calendar, startISO, input.weeks ?? 4);
+
+      // Plateformes réellement publiables (le reste = UNSUPPORTED honnête).
+      const PLATFORM_CODE: Record<string, string> = {
+        facebook: "FACEBOOK", instagram: "INSTAGRAM", linkedin: "LINKEDIN",
+        tiktok: "TIKTOK", youtube: "YOUTUBE", x: "TWITTER", twitter: "TWITTER",
+      };
+      const PUBLISHABLE = new Set(["FACEBOOK", "INSTAGRAM", "LINKEDIN"]);
+      const hour = input.hourUtc ?? 9;
+      const now = Date.now();
+
+      const { emitIntentTyped } = await import("@/server/services/mestor/intents");
+      let armed = 0, skippedPast = 0, skippedUnsupported = 0;
+      const byPlatform: Record<string, number> = {};
+
+      for (const p of posts) {
+        const code = PLATFORM_CODE[p.platform.trim().toLowerCase()] ?? p.platform.trim().toUpperCase();
+        if (!PUBLISHABLE.has(code)) { skippedUnsupported++; continue; }
+        const at = new Date(`${p.date}T${String(hour).padStart(2, "0")}:00:00Z`);
+        if (Number.isNaN(at.getTime()) || at.getTime() <= now + 2 * 60_000) { skippedPast++; continue; }
+        const text = (p.caption ?? p.theme ?? p.angle ?? "").trim();
+        if (!text) { skippedPast++; continue; }
+        await emitIntentTyped(
+          {
+            kind: "ANUBIS_PUBLISH_SOCIAL_POST",
+            strategyId: input.strategyId,
+            userId: ctx.session.user.id,
+            targets: [code],
+            text,
+            scheduleAt: at.toISOString(),
+            brief: p.illustration ?? null,
+          },
+          { caller: "glory.armLaunchCalendar" },
+        );
+        armed++;
+        byPlatform[code] = (byPlatform[code] ?? 0) + 1;
+      }
+
+      return { armed, skippedPast, skippedUnsupported, byPlatform, reason: null };
+    }),
 });

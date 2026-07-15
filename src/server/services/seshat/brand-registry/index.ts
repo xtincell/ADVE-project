@@ -20,6 +20,10 @@ export const FOOTPRINT_STALE_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
 
 export interface FootprintDimensionRow {
   key: string;
+  /** Libellé lisible (« Site web », « Réseaux sociaux »…) — persisté pour le rapport factuel. */
+  label?: string;
+  /** Preuve factuelle mesurée (« 6 an(s) · registrar », « MX · SPF · DMARC »…). Sur quoi le score se base. */
+  details?: string;
   measured: boolean;
   score: number | null;
   weight: number;
@@ -97,6 +101,8 @@ function toDimensions(value: unknown): FootprintDimensionRow[] {
     .filter((d): d is Record<string, unknown> => !!d && typeof d === "object")
     .map((d) => ({
       key: String(d.key ?? ""),
+      label: typeof d.label === "string" ? d.label : undefined,
+      details: typeof d.details === "string" ? d.details : undefined,
       measured: Boolean(d.measured),
       score: typeof d.score === "number" ? d.score : null,
       weight: typeof d.weight === "number" ? d.weight : 0,

@@ -39,6 +39,9 @@ import {
   MOTION19_BRANDBOOK,
   PILLAR_S,
 } from "@/server/services/canon/motion19-canon";
+import { brandPublicSlug } from "@/domain/brand-slug";
+
+const MOTION19_PUBLIC_SLUG = brandPublicSlug("motion19"); // LFA-motion19
 import { guildMissionBriefSchema, slugifyMissionTitle } from "@/lib/types/guild-mission-brief";
 
 export async function seedMotion19(prisma: PrismaClient): Promise<void> {
@@ -75,10 +78,10 @@ export async function seedMotion19(prisma: PrismaClient): Promise<void> {
   let strategy = await prisma.strategy.findFirst({
     where: { operatorId: operator.id, name: MOTION19_STRATEGY_NAME },
   });
-  if (strategy && !strategy.publicSlug) {
+  if (strategy && strategy.publicSlug !== MOTION19_PUBLIC_SLUG) {
     strategy = await prisma.strategy.update({
       where: { id: strategy.id },
-      data: { publicSlug: "motion19" },
+      data: { publicSlug: MOTION19_PUBLIC_SLUG },
     });
   }
   if (!strategy) {
@@ -92,7 +95,7 @@ export async function seedMotion19(prisma: PrismaClient): Promise<void> {
         userId: owner.id,
         operatorId: operator.id,
         brandNature: "RETAIL_SPACE",
-        publicSlug: "motion19",
+        publicSlug: MOTION19_PUBLIC_SLUG,
         countryCode: "CM",
         currencyCode: "XAF",
         businessContext: MOTION19_BUSINESS_CONTEXT as unknown as Prisma.InputJsonValue,

@@ -22,6 +22,9 @@ import {
   SPAWT_BUSINESS_CONTEXT,
   PILLAR_S,
 } from "@/server/services/canon/spawt-canon";
+import { brandPublicSlug } from "@/domain/brand-slug";
+
+const SPAWT_PUBLIC_SLUG = brandPublicSlug("spawt"); // LFA-spawt
 
 export async function seedSpawt(prisma: PrismaClient): Promise<void> {
   const operator = await prisma.operator.findUnique({ where: { slug: "upgraders" } });
@@ -64,12 +67,18 @@ export async function seedSpawt(prisma: PrismaClient): Promise<void> {
         userId: owner.id,
         operatorId: operator.id,
         brandNature: "PLATFORM",
+        publicSlug: SPAWT_PUBLIC_SLUG,
         countryCode: "CI",
         businessContext: SPAWT_BUSINESS_CONTEXT as unknown as Prisma.InputJsonValue,
       },
     });
+  } else if (strategy.publicSlug !== SPAWT_PUBLIC_SLUG) {
+    strategy = await prisma.strategy.update({
+      where: { id: strategy.id },
+      data: { publicSlug: SPAWT_PUBLIC_SLUG },
+    });
   }
-  console.log(`[OK] Strategy SPAWT: ${strategy.name} (${strategy.id})`);
+  console.log(`[OK] Strategy SPAWT: ${strategy.name} (${strategy.id}) · /b/${SPAWT_PUBLIC_SLUG}`);
 
   // ── A → I : upsert canon (la base sur laquelle S se calcule) ──
   for (const p of SPAWT_CANON_PILLARS) {

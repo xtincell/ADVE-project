@@ -9,12 +9,12 @@
  */
 
 import { useState } from "react";
-import { type LucideIcon, CalendarDays, Flag, Radio, Hash, Ban, CheckCircle2, Megaphone, Sparkles, AtSign, Quote, Link2, Star, ChevronDown, MessageSquareText, Image as ImageIcon } from "lucide-react";
+import { type LucideIcon, CalendarDays, Flag, Radio, Hash, Ban, CheckCircle2, Megaphone, Sparkles, AtSign, Quote, Link2, Star, ChevronDown, MessageSquareText, Image as ImageIcon, Rocket } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { CopyButton } from "@/components/shared/copy-button";
-import type { LaunchTimelineWeek, SocialNaming, SocialCopy, ContentPost } from "@/lib/types/launch-calendar";
+import { deriveDatedPosts, type LaunchTimelineWeek, type SocialNaming, type SocialCopy, type ContentPost } from "@/lib/types/launch-calendar";
 
 /** Locale d'affichage des dates — source unique. */
 const LOCALE = "fr-FR";
@@ -78,12 +78,24 @@ function isGate(kpi: string): boolean {
   return /gate|go\s*\/\s*no[- ]?go/i.test(kpi);
 }
 
+function todayISO(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export function LaunchCalendarPanel() {
   const strategyId = useCurrentStrategyId();
   const query = trpc.glory.launchCalendar.useQuery(
     { strategyId: strategyId ?? "" },
     { enabled: !!strategyId },
   );
+  const utils = trpc.useUtils();
+  const [j0, setJ0] = useState(todayISO());
+  const [weeks, setWeeks] = useState(4);
+  const arm = trpc.glory.armLaunchCalendar.useMutation({
+    onSuccess: () => {
+      void utils.glory.launchCalendar.invalidate();
+    },
+  });
 
   if (!strategyId) return <SkeletonPage />;
 
@@ -95,6 +107,13 @@ export function LaunchCalendarPanel() {
   const brand = timeline?.brand ?? calendar?.brand ?? naming?.brandName ?? social?.brand ?? "";
   const generatedAt = data?.generatedAt ? new Date(data.generatedAt) : null;
   const isEmpty = !query.isLoading && !timeline && !calendar && !naming && !social;
+
+  // Rétroplan ré-ancré sur le J-0 choisi (déterministe, pur) — l'affichage
+  // colle à ce qui sera réellement armé.
+  const datedPosts: ContentPost[] =
+    calendar && Object.keys(calendar.cadenceParCanal).length > 0
+      ? deriveDatedPosts(calendar, j0, weeks)
+      : calendar?.posts ?? [];
 
   return (
     <article className="mx-auto max-w-[var(--maxw-content,1200px)] px-[var(--pad-page,1.5rem)] py-8 md:py-12">
@@ -115,6 +134,75 @@ export function LaunchCalendarPanel() {
       </header>
 
       {query.isLoading ? <SkeletonPage /> : null}
+
+      {/* ═══ J-0 + armement des publications ══════════════════════ */}
+      {calendar && !isEmpty ? (
+        <div className="mb-10 rounded-xl border border-accent/25 bg-accent/[0.04] p-4 md:p-5">
+          <div className="flex items-center gap-2 font-mono text-2xs uppercase tracking-widest text-accent">
+            <Rocket className="h-3.5 w-3.5" />
+            Démarrer le lancement
+          </div>
+          <p className="mt-1.5 text-xs text-foreground-secondary max-w-[70ch]">
+            Choisissez le jour J-0 (défaut&nbsp;: aujourd&apos;hui). Le rétroplan ci-dessous se
+            recale dessus. « Armer&nbsp;» planifie les publications (Facebook, Instagram,
+            LinkedIn) — le système les publie automatiquement à la date prévue.
+          </p>
+          <div className="mt-3 flex flex-wrap items-end gap-3">
+            <label className="flex flex-col gap-1 text-2xs font-medium text-foreground-muted">
+              Jour J-0
+              <input
+                type="date"
+                value={j0}
+                onChange={(e) => setJ0(e.target.value || todayISO())}
+                className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-2xs font-medium text-foreground-muted">
+              Durée
+              <select
+                value={weeks}
+                onChange={(e) => setWeeks(Number(e.target.value))}
+                className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground"
+              >
+                {[2, 4, 6, 8, 12].map((w) => (
+                  <option key={w} value={w}>{w} semaines</option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              onClick={() =>
+                arm.mutate({
+                  strategyId,
+                  startDate: new Date(`${j0}T09:00:00Z`).toISOString(),
+                  weeks,
+                })
+              }
+              disabled={arm.isPending}
+              className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition-colors hover:opacity-90 disabled:opacity-50"
+            >
+              <Rocket className="h-4 w-4" />
+              {arm.isPending ? "Armement…" : "Armer les publications"}
+            </button>
+          </div>
+          {arm.data ? (
+            <p className="mt-3 text-xs text-success">
+              {arm.data.armed} publication{arm.data.armed > 1 ? "s" : ""} armée{arm.data.armed > 1 ? "s" : ""} à partir du{" "}
+              {new Date(`${j0}T00:00:00Z`).toLocaleDateString(LOCALE, { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })}.
+              {arm.data.skippedUnsupported > 0 ? (
+                <span className="text-foreground-muted">
+                  {" "}{arm.data.skippedUnsupported} post{arm.data.skippedUnsupported > 1 ? "s" : ""} sur plateforme non
+                  connectable (TikTok, X, YouTube) — non armé.
+                </span>
+              ) : null}
+              {arm.data.reason === "NO_CALENDAR" ? " Aucun calendrier à armer." : null}
+            </p>
+          ) : null}
+          {arm.error ? (
+            <p className="mt-3 text-xs text-error">{arm.error.message}</p>
+          ) : null}
+        </div>
+      ) : null}
 
       {isEmpty ? (
         <div className="rounded-lg border border-dashed border-white/10 bg-white/[0.02] px-6 py-16 text-center">
@@ -185,11 +273,11 @@ export function LaunchCalendarPanel() {
             </div>
           ) : null}
 
-          {calendar.posts.length > 0 ? (
+          {datedPosts.length > 0 ? (
             <div>
-              <SectionHeader icon={CalendarDays} label={COPY.sections.posts} suffix={COPY.counts.posts(calendar.posts.length)} />
+              <SectionHeader icon={CalendarDays} label={COPY.sections.posts} suffix={COPY.counts.posts(datedPosts.length)} />
               <div className="space-y-6">
-                {groupPostsByWeek(calendar.posts).map(([week, posts]) => (
+                {groupPostsByWeek(datedPosts).map(([week, posts]) => (
                   <div key={week}>
                     <div className="mb-2 font-mono text-2xs uppercase tracking-widest text-accent">{week}</div>
                     <ol className="space-y-1.5">
