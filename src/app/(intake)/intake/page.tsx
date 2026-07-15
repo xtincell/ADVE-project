@@ -110,6 +110,23 @@ function IntakeLandingContent() {
     if (typeof document !== "undefined" && document.referrer) attr.referrer = document.referrer.slice(0, 300);
     if (typeof window !== "undefined") attr.landingPath = window.location.pathname.slice(0, 200);
     if (Object.keys(attr).length > 0) setAttribution(attr);
+
+    // Préremplissage funnel (hero / mini-modale / /scorer) — capture sans re-saisie.
+    const company = searchParams.get("company") ?? searchParams.get("brand");
+    const email = searchParams.get("email");
+    const website = searchParams.get("website") ?? searchParams.get("websiteUrl");
+    const social = searchParams.get("social") ?? searchParams.get("socialLinksRaw");
+    const contactName = searchParams.get("name");
+    if (company || email || website || social || contactName) {
+      setForm((f) => ({
+        ...f,
+        companyName: company?.slice(0, 200) ?? f.companyName,
+        contactEmail: email?.slice(0, 200) ?? f.contactEmail,
+        contactName: contactName?.slice(0, 200) ?? f.contactName,
+        websiteUrl: website?.slice(0, 300) ?? f.websiteUrl,
+        socialLinksRaw: social?.slice(0, 1000) ?? f.socialLinksRaw,
+      }));
+    }
   }, [searchParams]);
 
   // Social proof

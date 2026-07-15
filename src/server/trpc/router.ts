@@ -58,6 +58,7 @@ import { marketIntelligenceRouter } from "./routers/market-intelligence";
 import { identityRouter } from "./routers/identity";
 import { overtonRouter } from "./routers/overton";
 import { scoreurRouter } from "./routers/scoreur";
+import { footprintRouter } from "./routers/footprint";
 import { implementationGeneratorRouter } from "./routers/implementation-generator";
 import { clientRouter } from "./routers/client";
 import { authRouter } from "./routers/auth";
@@ -192,6 +193,7 @@ export const appRouter = createTRPCRouter({
   identity: identityRouter,
   overton: overtonRouter,
   scoreur: scoreurRouter,
+  footprint: footprintRouter,
   implementationGenerator: implementationGeneratorRouter,
   brandClient: clientRouter,
   auth: authRouter,

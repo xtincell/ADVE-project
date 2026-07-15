@@ -104,6 +104,7 @@ function Hero({ onStart }: { onStart: () => void }) {
           </p>
           <div className="hero__cta">
             <button className="lf-btn lf-btn--primary lf-btn--lg" onClick={onStart}>Démarrer mon diagnostic — offert <ArrowRight /></button>
+            <a className="lf-btn lf-btn--outline lf-btn--lg" href="/scorer">Scorer ma marque — 30s, gratuit</a>
             <a className="lf-btn lf-btn--outline lf-btn--lg" href={WA_LINK} target="_blank" rel="noopener noreferrer"><Wa /> Parler sur WhatsApp</a>
           </div>
           <div className="hero__reassure">

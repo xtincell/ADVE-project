@@ -54,3 +54,8 @@
 .lb__method h3 { margin: 0 0 6px; font-family: ui-monospace, "JetBrains Mono", monospace; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--lb-accent-ink); }
 .lb__method p { margin: 0.3em 0; color: var(--lb-fg2); font-size: 13.5px; line-height: 1.5; }
 .lb__empty { margin-top: 40px; padding: 24px; border: 1px dashed var(--lb-hair); border-radius: 12px; color: var(--lb-fg3); text-align: center; }
+.lb__cta { margin-top: 28px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; padding: 18px 22px; border: 1px solid color-mix(in srgb, var(--lb-accent) 40%, var(--lb-hair)); border-radius: 14px; background: color-mix(in srgb, var(--lb-accent) 7%, var(--lb-panel)); }
+.lb__cta-txt strong { display: block; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 16px; color: var(--lb-fg); }
+.lb__cta-txt span { font-size: 13.5px; color: var(--lb-fg2); }
+.lb__ctabtn { display: inline-block; font-weight: 600; font-size: 14px; padding: 10px 18px; border-radius: 999px; background: var(--lb-accent); color: #fff; text-decoration: none; white-space: nowrap; }
+.lb__ctabtn:hover { filter: brightness(1.05); }

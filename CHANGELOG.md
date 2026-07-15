@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.164 — feat(funnel): « Scorer ma marque » — hook d'acquisition + capture de lead branchée sur l'intake (2026-07-15)
+
+**Réponse à « niveau UX / capture de lead / séquençage funnel ». Le leaderboard était une page isolée sans capture — on branche la couche d'acquisition : un prospect score sa marque instantanément (empreinte /100, sans email), puis son diagnostic ADVE complet l'attend via l'intake pré-rempli (capture). Teste d'abord, l'intake est l'onboarding.**
+
+- **Score instantané public + éphémère** : `footprint.scoreInstant` (`publicProcedure`, rate-limité par IP) → `enrichPublicFootprint({ strategyId: null })` + `computeFootprintScore` → **/100 de présence digitale**, honnête (dimension non mesurée exclue, total null si rien). **Zéro écriture** (vérifié : 0 `followerSnapshot` écrit), zéro LLM, zéro compte.
+- **Page hook `/scorer`** (publique) : nom + site + réseaux → score /100 animé (`ScoreBadge`) + ventilation par dimension → CTA « Diagnostic complet — offert ».
+- **Capture branchée sur l'intake** : le CTA pousse vers `/intake` **pré-rempli** (nom/site/réseaux) — l'intake lit désormais les params `company`/`website`/`social`/`email`/`name` (le lead se capte à l'email de l'intake, sans re-saisie). Fin de la page leaderboard isolée.
+- **Séquençage funnel** : entrée hero `/landingintake` (« Scorer ma marque — 30s, gratuit ») + CTA sur `/leaderboard` (« Où se classe VOTRE marque ? ») → `/scorer` → intake → démo. Le /100 (présence) est le teaser ; la force révélée /200 (leaderboard, ADR-0149) est ce vers quoi on grimpe.
+- Cap APOGEE 7/7 préservé (lecture publique, aucune mutation → pas d'Intent). tsc 0 · lint 0 · 1011 tests gouvernance verts. Vérifié E2E (score réel /100 sur marque publique, pages 200, 0 write).
+
 ## v6.27.163 — feat(seshat): canon du scoreur éditable par l'opérateur, sans redéploiement ([ADR-0150](docs/governance/adr/0150-scoreur-canon-operator-editable.md)) (2026-07-15)
 
 **Réponse à « possible de modifier les θ des ancres et les items must-have dans un écran a posteriori ? ». Oui : les valeurs canon du scoreur (ADR-0149) — θ des étalons, jauge par échelle, portes must-have — deviennent ratifiables et ajustables depuis la console, sans redéploiement. Ferme la dette « ratification opérateur » du brief §8. Zéro LLM, `scoring.ts` (ADR-0102) intact (D9).**

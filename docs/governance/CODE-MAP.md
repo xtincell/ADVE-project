@@ -448,7 +448,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 117
+## tRPC routers — 118
 
 - `accounts` (`src/server/trpc/routers/accounts.ts`)
 - `actions` (`src/server/trpc/routers/actions.ts`)
@@ -493,6 +493,7 @@ Ces correspondances évitent la réinvention :
 - `error-vault` (`src/server/trpc/routers/error-vault.ts`)
 - `escrow-arbitration` (`src/server/trpc/routers/escrow-arbitration.ts`)
 - `event` (`src/server/trpc/routers/event.ts`)
+- `footprint` (`src/server/trpc/routers/footprint.ts`)
 - `framework` (`src/server/trpc/routers/framework.ts`)
 - `glory` (`src/server/trpc/routers/glory.ts`)
 - `governance` (`src/server/trpc/routers/governance.ts`)
@@ -570,7 +571,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 265 (par deck)
+## Pages — 266 (par deck)
 
 ### Agency (12)
 
@@ -813,7 +814,7 @@ Ces correspondances évitent la réinvention :
 - `/launchpad/portfolio-bulk-import`
 - `/score`
 
-### Public (39)
+### Public (40)
 
 - `/(marketing)`
 - `/agence`
@@ -847,6 +848,7 @@ Ces correspondances évitent la réinvention :
 - `/realisations`
 - `/register`
 - `/reset-password`
+- `/scorer`
 - `/services`
 - `/shared/strategy/[token]`
 - `/sla`
