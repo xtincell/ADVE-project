@@ -10,6 +10,14 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.165 — fix(funnel): éphéméralité réelle du score anonyme — plus d'orphelin `FollowerSnapshot` (2026-07-15)
+
+**Correction du seul vrai trou trouvé en vérifiant « la conversion est-elle fluide » : le /100 anonyme s'annonçait 100 % éphémère, mais `persistSnapshot` écrivait quand même une ligne `FollowerSnapshot` avec `strategyId=null` dès que `APIFY_TOKEN` était présent en prod (le chemin Apify tournait pour un prospect anonyme et persistait des orphelins). La promesse « rien n'est enregistré à cette étape » était donc fausse une fois le token en prod.**
+
+- **Garde au niveau de l'écrivain** (`anubis/social-audit.ts` `persistSnapshot`) : `if (!strategyId) return;` — un snapshot sans marque n'appartient à personne, on ne persiste jamais d'orphelin. La façade `fetchPublicFollowers` renvoie toujours les followers en mémoire (`LIVE`), seule l'écriture est supprimée. Couvre tous les appelants (funnel + tout appel futur à `strategyId` null).
+- **Effet** : le /scorer public reste vraiment zéro-écriture même avec le token Apify en prod ; la ligne CHANGELOG v6.27.164 « 0 followerSnapshot écrit » devient structurellement vraie (garde au writer, pas au caller).
+- **Coût par scrape marque inchangé** (Apify ~0,002–0,005 $/profil × ≤3 plateformes ≈ 0,006–0,015 $/marque avec réseaux déclarés ; Brave ~0,003–0,005 $ seulement si aucun réseau déclaré ; reste gratuit). tsc 0.
+
 ## v6.27.164 — feat(funnel): « Scorer ma marque » — hook d'acquisition + capture de lead branchée sur l'intake (2026-07-15)
 
 **Réponse à « niveau UX / capture de lead / séquençage funnel ». Le leaderboard était une page isolée sans capture — on branche la couche d'acquisition : un prospect score sa marque instantanément (empreinte /100, sans email), puis son diagnostic ADVE complet l'attend via l'intake pré-rempli (capture). Teste d'abord, l'intake est l'onboarding.**

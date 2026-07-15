@@ -60,6 +60,10 @@ async function persistSnapshot(
   data: SocialFollowerData,
   source: string,
 ): Promise<void> {
+  // Éphémère : un snapshot sans marque (funnel /scorer anonyme, strategyId=null)
+  // n'appartient à personne — on ne persiste JAMAIS d'orphelin. La façade renvoie
+  // quand même les followers en mémoire (LIVE), seule l'écriture est supprimée.
+  if (!strategyId) return;
   await db.followerSnapshot.create({
     data: {
       strategyId,
