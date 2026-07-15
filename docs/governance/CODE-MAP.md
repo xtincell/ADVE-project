@@ -32,7 +32,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 211 models, 71 enums
+## Prisma — 214 models, 71 enums
 
 ### Models
 
@@ -115,6 +115,9 @@ Ces correspondances évitent la réinvention :
 - **OvertonPosition** (14 fields) — ADR-0146 — Overton Graph. Une POSITION tenue dans un débat sectoriel, avec sa zone d'acceptabilité PAR POLITY (secteur ×
 - **OvertonActorLink** (9 fields) — ADR-0146 — arête acteur→position (qui tient / propage / oppose / déplace).
 - **OvertonZoneTransition** (11 fields) — ADR-0146 — le Δ MESURÉ : une position migre de zone, daté + attribué (last-touch ADR-0135). C'est la seule « mesure » de
+- **BrandRef** (11 fields) — ADR-0147 — Scoreur : marque hors-plateforme (rival, ancre-étalon, ou item canon). PAS un `Strategy` (brief §5.1) — regis
+- **Epreuve** (14 fields) — ADR-0147 — le REGISTRE d'épreuves (append-only). LA seule donnée du scoreur : un résultat dyadique OBSERVÉ (jamais estim
+- **ScoreVerdict** (16 fields) — ADR-0147 — snapshot de verdict (leaderboard public + trajectoire pour la tenue).
 - **CommunitySnapshot** (11 fields) — Relevé de santé communautaire par plateforme. Unités canoniques (ADR-0134) : `size` = compte absolu ; `health`/`sentimen
 - **BrandVariable** (9 fields)
 - **VariableHistory** (8 fields)
@@ -444,7 +447,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 116
+## tRPC routers — 117
 
 - `accounts` (`src/server/trpc/routers/accounts.ts`)
 - `actions` (`src/server/trpc/routers/actions.ts`)
@@ -545,6 +548,7 @@ Ces correspondances évitent la réinvention :
 - `publication` (`src/server/trpc/routers/publication.ts`)
 - `quality-review` (`src/server/trpc/routers/quality-review.ts`)
 - `quick-intake` (`src/server/trpc/routers/quick-intake.ts`)
+- `scoreur` (`src/server/trpc/routers/scoreur.ts`)
 - `sequence-vault` (`src/server/trpc/routers/sequence-vault.ts`)
 - `seshat-search` (`src/server/trpc/routers/seshat-search.ts`)
 - `signal` (`src/server/trpc/routers/signal.ts`)
@@ -565,7 +569,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 263 (par deck)
+## Pages — 264 (par deck)
 
 ### Agency (12)
 
@@ -807,7 +811,7 @@ Ces correspondances évitent la réinvention :
 - `/launchpad/portfolio-bulk-import`
 - `/score`
 
-### Public (38)
+### Public (39)
 
 - `/(marketing)`
 - `/agence`
@@ -831,6 +835,7 @@ Ces correspondances évitent la réinvention :
 - `/LaGuilde/rejoindre`
 - `/LaGuilde/services`
 - `/landingintake`
+- `/leaderboard`
 - `/login`
 - `/mentions-legales`
 - `/methode`
@@ -1018,7 +1023,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 573 (par governor)
+## Intent kinds — 575 (par governor)
 
 ### MESTOR (79)
 
@@ -1120,7 +1125,7 @@ Ces correspondances évitent la réinvention :
 - `PROPOSE_SEQUENCE_PROMOTION_FROM_CAMPAIGN` → campaign-tracker (sync) — Cluster E — Si campagne réussie (tierDelta>0 + cultIndexDelta>0 + altitudeRegres…
 - `TOGGLE_QUALITY_GATE_MODE` → auto-promotion (sync) — Bascule le mode quality-gate entre SOFT (warning-only) et HARD (block-on-fail). …
 
-### SESHAT (28)
+### SESHAT (30)
 
 - `SESHAT_UPSERT_POLITY_AXIS` → sector-intelligence (sync) — Upsert d'un axe culturel sectoriel PAR POLITY (SectorPolityAxis — échelle de mar…
 - `SESHAT_REGISTER_SUPERFAN` → superfan (sync) — Enregistre/actualise UN SuperfanProfile (upsert par (strategyId, platform, handl…
@@ -1130,6 +1135,8 @@ Ces correspondances évitent la réinvention :
 - `SESHAT_UPSERT_OVERTON_POSITION` → overton-graph (sync) — Overton Graph (ADR-0146) : upsert d'une position tenue dans un débat sectoriel +…
 - `SESHAT_RECORD_ZONE_TRANSITION` → overton-graph (sync) — Overton Graph (ADR-0146) : enregistre une migration de zone datée d'une position…
 - `SESHAT_LINK_ACTOR_TO_POSITION` → overton-graph (sync) — Overton Graph (ADR-0146) : relie un acteur (BRAND/COMPETITOR/SUPERFAN/INSTITUTIO…
+- `SESHAT_RECORD_EPREUVE` → scoreur (sync) — Scoreur à force révélée (ADR-0147) : enregistre UNE épreuve dyadique OBSERVÉE (a…
+- `SESHAT_SCORE_BRAND` → scoreur (sync) — Scoreur à force révélée (ADR-0147) : estime la force θ ± RD par arène (Bradley-T…
 - `SESHAT_CAPTURE_COMMUNITY_SNAPSHOT` → cult-index-engine (sync) — Mesure et persiste UN CommunitySnapshot par plateforme suivie depuis la donnée R…
 - `SESHAT_ATTRIBUTE_DEVOTION_TRANSITIONS` → campaign-tracker (sync) — Reconstruit CampaignAction.devotionTransitionsObserved d'une stratégie depuis le…
 - `RANK_PEERS` → seshat (sync) — Generic peer ranking via context-store ranker.…

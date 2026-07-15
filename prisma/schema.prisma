@@ -2995,6 +2995,79 @@ model OvertonZoneTransition {
   @@index([positionId, occurredAt])
 }
 
+/// ADR-0147 — Scoreur : marque hors-plateforme (rival, ancre-étalon, ou item
+/// canon). PAS un `Strategy` (brief §5.1) — registre léger pour les adversaires
+/// d'épreuve. `fixedTheta` = θ jaugé pour les ancres/items (la seule main humaine).
+model BrandRef {
+  id          String       @id @default(cuid())
+  kind        String // RIVAL | ANCHOR | ITEM
+  slug        String       @unique
+  name        String
+  sectorSlug  String?
+  marketScale MarketScale?
+  countryCode String?      @db.VarChar(2)
+  /// θ fixé (ancre/item) — jauge de ligue. null pour un rival estimé.
+  fixedTheta  Float?
+  source      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([kind])
+  @@index([sectorSlug, marketScale, countryCode])
+}
+
+/// ADR-0147 — le REGISTRE d'épreuves (append-only). LA seule donnée du scoreur :
+/// un résultat dyadique OBSERVÉ (jamais estimé), par arène, par ligue (polity),
+/// avec sa source et sa date. Chaque row cite sa collecte.
+model Epreuve {
+  id                 String       @id @default(cuid())
+  subjectStrategyId  String?
+  subjectBrandRefId  String?
+  opponentBrandRefId String?
+  opponentStrategyId String?
+  arena              String // A | D | V | E | T
+  sectorSlug         String
+  marketScale        MarketScale?
+  countryCode        String?      @db.VarChar(2)
+  result             String // WIN | LOSS | DRAW
+  /// Fiabilité de la PREUVE (volume, autorité de source) — pas une opinion.
+  proofWeight        Float
+  source             String
+  occurredAt         DateTime
+
+  createdAt DateTime @default(now())
+
+  @@index([subjectStrategyId, arena])
+  @@index([subjectBrandRefId, arena])
+  @@index([sectorSlug, marketScale, countryCode, arena])
+}
+
+/// ADR-0147 — snapshot de verdict (leaderboard public + trajectoire pour la tenue).
+model ScoreVerdict {
+  id                String       @id @default(cuid())
+  subjectStrategyId String?
+  subjectBrandRefId String?
+  subjectLabel      String
+  sectorSlug        String
+  marketScale       MarketScale?
+  countryCode       String?      @db.VarChar(2)
+  force             Float
+  tier              String
+  coherence         Float
+  coveragePct       Int
+  arenas            Json // ArenaEstimate[]
+  gates             Json
+  cappedReason      String?
+  epreuveCount      Int          @default(0)
+
+  computedAt DateTime @default(now())
+
+  @@index([sectorSlug, marketScale, countryCode, force])
+  @@index([subjectStrategyId, computedAt])
+  @@index([tier])
+}
+
 /// Relevé de santé communautaire par plateforme. Unités canoniques (ADR-0134) :
 /// `size` = compte absolu ; `health`/`sentiment`/`activeRate` = fractions 0-1 ;
 /// `velocity` = fraction de croissance sur ~30 j (négative possible).
