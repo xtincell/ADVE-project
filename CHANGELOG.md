@@ -10,6 +10,13 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.172 — fix(scorer): en-tête de navigation sur /scorer + Ollama Cloud au panneau clés système (2026-07-15)
+
+**Suivi go-live opérateur : deux manques repérés en prod.**
+
+- **Navigation sur `/scorer`** : la page était autonome (hors des layouts marketing) → aucun logo, aucun retour possible. Ajout d'un en-tête léger sticky (logo La Fusée → `/lafusee`, liens Classement / L'OS / Connexion), DS-conforme.
+- **Ollama Cloud** au panneau « Clés système » : le panneau ne montrait que `OLLAMA_BASE_URL` ; ajout de `OLLAMA_API_KEY` (clé API Ollama Cloud, utilisée par le LLM Gateway) — configuré/manquant, booléen only (ADR-0075).
+
 ## v6.27.171 — feat(golive): rapport scorer dense & factuel + CTA scorer + publicSlug `LFA-` + calendrier J-0 armable + hub Connexions MCP + vault trouvable (2026-07-15)
 
 **Punch list go-live (l'opérateur teste la prod). Aucun nouveau modèle Prisma, cap APOGEE 7/7, 0 LLM sur tout le périmètre.**

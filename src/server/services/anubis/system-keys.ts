@@ -53,7 +53,8 @@ export function getSystemKeyStatus(): SystemKeyGroup[] {
         { key: "ANTHROPIC_API_KEY", label: "Anthropic (primaire)", configured: has("ANTHROPIC_API_KEY") },
         { key: "OPENAI_API_KEY", label: "OpenAI (fallback)", configured: has("OPENAI_API_KEY") },
         { key: "OPENROUTER_API_KEY", label: "OpenRouter (fallback)", configured: has("OPENROUTER_API_KEY") },
-        { key: "OLLAMA_BASE_URL", label: "Ollama (local, optionnel)", configured: has("OLLAMA_BASE_URL") },
+        { key: "OLLAMA_API_KEY", label: "Ollama Cloud (clé API)", configured: has("OLLAMA_API_KEY") },
+        { key: "OLLAMA_BASE_URL", label: "Ollama (URL — cloud ou local)", configured: has("OLLAMA_BASE_URL") },
       ],
     },
     {
