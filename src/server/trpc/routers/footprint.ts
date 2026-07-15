@@ -12,9 +12,15 @@
 
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { createTRPCRouter, publicProcedure } from "../init";
+import { createTRPCRouter, publicProcedure, operatorProcedure } from "../init";
 import { enrichPublicFootprint } from "@/server/services/quick-intake/public-enrichment";
 import { computeFootprintScore } from "@/server/services/quick-intake/footprint-score";
+import {
+  normalizeBrandKey,
+  lookupLatestFootprint,
+  recordFootprintObservation,
+  listBrandDirectory,
+} from "@/server/services/seshat/brand-registry";
 
 // ── Rate-limit best-effort en mémoire (par instance) ─────────────────────────
 const WINDOW_MS = 60_000;
@@ -46,9 +52,36 @@ export const footprintRouter = createTRPCRouter({
         websiteUrl: z.string().max(300).optional(),
         socialLinksRaw: z.string().max(1000).optional(),
         country: z.string().max(2).optional(),
+        /** Force un nouveau scan même si une observation récente existe. */
+        refresh: z.boolean().optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      const brandKey = normalizeBrandKey({
+        name: input.brandName,
+        websiteUrl: input.websiteUrl,
+        countryCode: input.country,
+      });
+
+      // ── Cache instantané : une marque déjà observée revient sans re-scanner ──
+      // (sauf `refresh`). La donnée de Seshat sert le prospect immédiatement.
+      if (!input.refresh) {
+        const cached = await lookupLatestFootprint(brandKey);
+        if (cached) {
+          return {
+            total: cached.total,
+            outOf: 100,
+            measuredWeight: cached.measuredWeight,
+            dimensions: cached.dimensions,
+            followerCounts: cached.followerCounts ?? null,
+            cached: true,
+            capturedAt: cached.capturedAt.toISOString(),
+            stale: cached.stale,
+          };
+        }
+      }
+
+      // Un vrai scan (ou un refresh) consomme le budget → rate-limité par IP.
       const ip = ctx.headers?.get("x-forwarded-for")?.split(",")[0]?.trim() || "anon";
       if (!rateLimit(ip)) {
         throw new TRPCError({
@@ -62,22 +95,46 @@ export const footprintRouter = createTRPCRouter({
         websiteUrl: input.websiteUrl?.trim() || null,
         socialLinksRaw: input.socialLinksRaw?.trim() || null,
         country: input.country?.trim() || null,
-        strategyId: null, // éphémère — aucune écriture
+        strategyId: null, // pas de FollowerSnapshot par-client — persistance via le répertoire Seshat
         budgetMs: 8_000,
       });
       const score = computeFootprintScore(enriched);
+      const dimensions = score.dimensions.map((d) => ({
+        key: d.key,
+        measured: d.measured,
+        score: d.score,
+        weight: d.weight,
+      }));
+
+      // ── Persistance dans la base de marques de Seshat (jamais perdu) ─────────
+      const saved = await recordFootprintObservation({
+        name: input.brandName,
+        websiteUrl: input.websiteUrl,
+        countryCode: input.country,
+        sectorSlug: null, // le /scorer ne collecte pas le secteur — honnête (jamais deviné)
+        total: score.total,
+        measuredWeight: score.measuredWeight,
+        dimensions,
+        followerCounts: enriched.followerCounts,
+      });
 
       return {
         total: score.total, // number | null
         outOf: score.outOf, // 100
         measuredWeight: score.measuredWeight,
-        dimensions: score.dimensions.map((d) => ({
-          key: d.key,
-          measured: d.measured,
-          score: d.score,
-          weight: d.weight,
-        })),
+        dimensions,
         followerCounts: enriched.followerCounts ?? null,
+        cached: false,
+        capturedAt: (saved?.capturedAt ?? new Date()).toISOString(),
+        stale: false,
       };
+    }),
+
+  /** Console (opérateur) : la base de marques de Seshat — dernière observation par marque. */
+  directory: operatorProcedure
+    .input(z.object({ limit: z.number().min(1).max(500).optional() }).optional())
+    .query(async ({ input }) => {
+      const rows = await listBrandDirectory(input?.limit ?? 200);
+      return rows.map((r) => ({ ...r, lastCapturedAt: r.lastCapturedAt.toISOString() }));
     }),
 });

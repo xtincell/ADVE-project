@@ -43,14 +43,19 @@ export default function ScorerPage() {
   const score = trpc.footprint.scoreInstant.useMutation();
   const result = score.data;
 
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
+  function run(refresh: boolean) {
     if (!brandName.trim()) return;
     score.mutate({
       brandName: brandName.trim(),
       websiteUrl: websiteUrl.trim() || undefined,
       socialLinksRaw: socialLinksRaw.trim() || undefined,
+      refresh,
     });
+  }
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    run(false);
   }
 
   const intakeHref =
@@ -115,6 +120,31 @@ export default function ScorerPage() {
               Mesure de votre présence publique aujourd&apos;hui. Chaque dimension non
               mesurable est exclue — le score est honnête, jamais gonflé.
             </CardDescription>
+            {result.capturedAt ? (
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[color:var(--color-foreground-muted)]">
+                <span>
+                  {result.cached ? "Dernier scan" : "Scanné"} le{" "}
+                  {new Date(result.capturedAt).toLocaleDateString("fr-FR", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </span>
+                {result.stale ? (
+                  <Badge tone="warning">Donnée à rafraîchir</Badge>
+                ) : result.cached ? (
+                  <Badge tone="neutral">Depuis le cache</Badge>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => run(true)}
+                  disabled={score.isPending}
+                  className="font-medium text-[color:var(--color-accent)] underline-offset-2 hover:underline disabled:opacity-50"
+                >
+                  {score.isPending ? "Actualisation…" : "Actualiser"}
+                </button>
+              </div>
+            ) : null}
           </CardHeader>
           <CardBody>
             {result.total === null ? (

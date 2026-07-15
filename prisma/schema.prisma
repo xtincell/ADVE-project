@@ -1319,6 +1319,35 @@ model FollowerSnapshot {
   @@index([handle, capturedAt])
 }
 
+/// ADR-0151 — base de marques de Seshat (répertoire d'empreintes publiques).
+/// Chaque recherche `/scorer` (marque hors-plateforme, pas un `Strategy`) est
+/// conservée ici comme OBSERVATION append-only — la donnée n'est jamais perdue.
+/// « Dernière par `brandKey` » = le cache instantané servi aux recherches
+/// répétées ; toutes les rows = l'historique. Distinct de `FollowerSnapshot`
+/// (par-client), du leaderboard `ScoreVerdict` (force révélée /200, D9) et de
+/// `BrandRef` (registre scoreur). Sans PII : une marque n'est pas une personne.
+model BrandFootprintSnapshot {
+  id             String  @id @default(cuid())
+  /// Clé de dédup canonique : host du domaine (sans www), sinon slug(nom|pays).
+  brandKey       String
+  name           String
+  websiteUrl     String?
+  countryCode    String? @db.VarChar(2)
+  sectorSlug     String?
+  /// Empreinte /100 (null si rien de mesurable — honnête, jamais gonflé).
+  total          Int?
+  measuredWeight Float?
+  /// Ventilation par dimension (site/social/reviews/press/…), telle qu'affichée.
+  dimensions     Json
+  followerCounts Json?
+  source         String  @default("SCORER_FUNNEL")
+
+  capturedAt DateTime @default(now())
+
+  @@index([brandKey, capturedAt])
+  @@index([sectorSlug, countryCode, capturedAt])
+}
+
 model TalentProfile {
   id                  String    @id @default(cuid())
   userId              String    @unique

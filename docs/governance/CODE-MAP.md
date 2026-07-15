@@ -32,7 +32,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 215 models, 71 enums
+## Prisma — 216 models, 71 enums
 
 ### Models
 
@@ -54,6 +54,7 @@ Ces correspondances évitent la réinvention :
 - **CrmMessage** (14 fields) — Message CRM (email transactionnel sortant ou note entrante consignée).
 - **NewsletterCampaign** (12 fields) — Campagne newsletter (The Upgrade) — composer, tester, envoyer aux opt-in.
 - **FollowerSnapshot** (9 fields)
+- **BrandFootprintSnapshot** (12 fields) — ADR-0151 — base de marques de Seshat (répertoire d'empreintes publiques). Chaque recherche `/scorer` (marque hors-platef
 - **TalentProfile** (27 fields)
 - **MissionQuote** (17 fields)
 - **TalentService** (13 fields)
@@ -571,7 +572,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 266 (par deck)
+## Pages — 267 (par deck)
 
 ### Agency (12)
 
@@ -648,7 +649,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/settings/billing`
 - `/cockpit/settings/connections`
 
-### Console (123)
+### Console (124)
 
 - `/console`
 - `/console/academie`
@@ -744,6 +745,7 @@ Ces correspondances évitent la réinvention :
 - `/console/seshat/signals`
 - `/console/seshat/tarsis`
 - `/console/signal/attribution`
+- `/console/signal/brand-directory`
 - `/console/signal/intelligence`
 - `/console/signal/knowledge`
 - `/console/signal/market`

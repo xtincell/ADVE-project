@@ -10,6 +10,17 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.166 — feat(seshat): base de marques — chaque recherche `/scorer` conservée + cache instantané (ADR-0151) (2026-07-15)
+
+**Réponse à « Seshat doit construire sa base de données de marque, je ne veux pas que ces données de recherche soient perdues » + « une re-recherche d'une marque déjà scrapée doit être instantanée (date du dernier snapshot + Actualiser) ». La correction v6.27.165 (éphéméralité) empêchait de polluer les données PAR-CLIENT ; ici on donne aux recherches un VRAI foyer : le répertoire d'empreintes de Seshat.**
+
+- **Nouveau modèle `BrandFootprintSnapshot`** (ADR-0151) — répertoire append-only des empreintes publiques observées. Anti-doublon justifié : `Signal` exige un `strategyId` (client-only), `BrandRef` est couplé au scoreur (D9), `FollowerSnapshot` est par-client — aucun ne convient. Clé de dédup `brandKey` déterministe (host du domaine sans `www`, sinon slug+pays). Sans PII (une marque n'est pas une personne).
+- **Cache instantané** : `footprint.scoreInstant` fait un lookup par `brandKey` AVANT de scanner — une marque déjà observée revient **tout de suite** avec `capturedAt` + `stale`. `refresh: true` force un nouveau scan. Le rate-limit IP ne frappe que les scans réels (le cache est gratuit → **réduit** le coût Apify sur les recherches répétées).
+- **UI `/scorer`** : « Dernier scan le … » + badge « Depuis le cache » / « Donnée à rafraîchir » (au-delà de 7 j) + bouton **Actualiser**.
+- **Single-writer + observabilité** : LE seul writer est `seshat/brand-registry/` (verrou HARD `brand-registry-single-writer.test.ts`, qui vérifie AUSSI que la garde d'éphéméralité `FollowerSnapshot` tient). Écriture directe best-effort (jamais throw), lane d'observabilité Seshat (précédent `persistSnapshot`) — pas une mutation gouvernée.
+- **Console `/console/signal/brand-directory`** (opérateur, lecture seule) : rend la base visible (dernière observation par marque + nombre d'observations) — jamais un magasin silencieux.
+- **Séparation maintenue** : le /100 (empreinte, base Seshat) n'entre PAS dans le leaderboard /200 (force révélée, D9). Entrée PROPAGATION-MAP **A14**. 1 migration additive (`20260715103150`), 0 LLM, cap APOGEE 7/7. Vérifié E2E (record → cache hit → staleness 7 j → directory). tsc 0 · lint 0 · tests verts.
+
 ## v6.27.165 — fix(funnel): éphéméralité réelle du score anonyme — plus d'orphelin `FollowerSnapshot` (2026-07-15)
 
 **Correction du seul vrai trou trouvé en vérifiant « la conversion est-elle fluide » : le /100 anonyme s'annonçait 100 % éphémère, mais `persistSnapshot` écrivait quand même une ligne `FollowerSnapshot` avec `strategyId=null` dès que `APIFY_TOKEN` était présent en prod (le chemin Apify tournait pour un prospect anonyme et persistait des orphelins). La promesse « rien n'est enregistré à cette étape » était donc fausse une fois le token en prod.**

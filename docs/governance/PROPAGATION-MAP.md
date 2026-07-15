@@ -47,6 +47,7 @@ Réseau fini. `G` = passe par le chemin gouverné (`emitIntent` et/ou gateway). 
 | **A11 Connecteurs (Vault)** | CRM, ad networks, Tarsis API | `ConnectorResult<T>` | **telemetry/signal seulement — jamais piliers** | G (read-only) | `anubis/providers/*` |
 | **A12 Seeds / canon-sync / infer** | bootstrap & god-mode | objets piliers pré-fabriqués | `Pillar.content` **direct** | direct ⚠️ | `prisma/seed-*.ts`, `canon-sync.ts:144`, `infer-needs-human-fields.ts:451` |
 | **A13 Réseaux de la marque (OAuth founder)** | comptes sociaux connectés par le porteur (ADR-0128) | tokens OAuth chiffrés AES-GCM + compteurs d'audience | `SocialConnection` + `FollowerSnapshot` (**telemetry/communauté seulement — jamais piliers** ; E atteint via rescan footprint A1/ADR-0121) | G (`ANUBIS_SOCIAL_CONNECT_ACCOUNT` emitIntent + governedProcedure sync/disconnect) | `oauth-integrations/`, `anubis/social-connect.ts`, `api/integrations/oauth/*` |
+| **A14 Recherche `/scorer` (empreinte publique)** | marque hors-plateforme scorée par un prospect (ADR-0151) | empreinte /100 + ventilation dimensions + compteurs followers (Apify) | `BrandFootprintSnapshot` (**base marché Seshat — jamais piliers, jamais leaderboard /200 D9** ; cache instantané par `brandKey`) | observabilité (single-writer `seshat/brand-registry/`, best-effort, non gouverné — précédent `persistSnapshot`) | `seshat/brand-registry/`, `trpc/routers/footprint.ts`, `/console/signal/brand-directory` |
 
 ---
 
