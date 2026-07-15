@@ -4299,6 +4299,28 @@ model Notification {
   @@index([createdAt])
 }
 
+/// ADR-0155 — remontée feedback / bug d'un testeur. Canal dédié (distinct de
+/// InterventionRequest interne, de la messagerie, du CRM). Cycle de tri propre
+/// NEW→TRIAGED→RESOLVED. Single-writer `services/infrastructure/feedback/`.
+model Feedback {
+  id         String    @id @default(cuid())
+  userId     String?
+  operatorId String?
+  email      String?
+  kind       String    @default("BUG") // BUG | IDEA | OTHER
+  message    String
+  pageUrl    String?
+  userAgent  String?
+  status     String    @default("NEW") // NEW | TRIAGED | RESOLVED
+  resolvedBy String?
+  resolvedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([status, createdAt])
+  @@index([operatorId, status])
+}
+
 model PushSubscription {
   id         String    @id @default(cuid())
   userId     String

@@ -11,26 +11,16 @@
 # contre un Postgres neuf — une image cassée n'atteint jamais le registre.
 name: Build image (ghcr)
 
+# DÉPLOIEMENT 100 % MANUEL (décision opérateur 2026-07-15) : aucun trigger
+# automatique. Le push sur `main` ne construit PLUS d'image et ne redéploie PLUS.
+# Pour livrer en prod : lancer CE workflow à la main (workflow_dispatch), cocher
+# `notify_coolify` pour déclencher le swap Coolify — ou `deploy.yml`, ou le
+# dashboard Coolify. Cf. docs/deploy/BUILD-DEPORT.md.
 on:
-  push:
-    branches: [main]
-    # Ne rebuild que si le runtime bouge — la doc/les tests seuls ne rebuild pas.
-    paths:
-      - "src/**"
-      - "prisma/**"
-      - "public/**"
-      - "scripts/apply-migrations.mjs"
-      - "scripts/docker-entrypoint.sh"
-      - "Dockerfile"
-      - ".dockerignore"
-      - "package.json"
-      - "package-lock.json"
-      - "next.config.ts"
-      - ".github/workflows/build-image.yml"
   workflow_dispatch:
     inputs:
       notify_coolify:
-        description: "Déclencher un redeploy Coolify après le push (si source = Docker Image)"
+        description: "Déclencher un redeploy Coolify après le build (source = Docker Image)"
         type: boolean
         default: false
 
@@ -130,14 +120,13 @@ jobs:
             ${{ steps.img.outputs.ref }}:sha-${{ github.sha }}
           cache-from: type=gha
 
-      # 4) Notifier Coolify de TIRER la nouvelle image (BUILD-DEPORT.md §3 :
-      #    « déclenche le redeploy après chaque push »). En source « Docker
-      #    Image », un redeploy = pull de :latest + swap, sans build VPS → zéro
-      #    OOM. Se déclenche automatiquement à chaque push sur main (l'image
-      #    vient d'être smoke-testée + poussée juste au-dessus) OU sur un
-      #    workflow_dispatch explicite. No-op gardé si les secrets sont absents.
-      - name: Redeploy Coolify (auto sur push + secrets présents)
-        if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.notify_coolify) }}
+      # 4) Notifier Coolify de TIRER la nouvelle image. En source « Docker Image »,
+      #    un redeploy = pull de :latest + swap, sans build VPS → zéro OOM.
+      #    DÉPLOIEMENT MANUEL UNIQUEMENT (2026-07-15) : ne se déclenche QUE sur un
+      #    workflow_dispatch explicite avec `notify_coolify` coché. Le push sur
+      #    main ne redéploie plus. No-op gardé si les secrets sont absents.
+      - name: Redeploy Coolify (manuel — dispatch + notify_coolify)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.notify_coolify }}
         env:
           COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}

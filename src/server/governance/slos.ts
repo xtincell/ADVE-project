@@ -91,6 +91,8 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   // ADR-0091 — mesure DB-only (deltas CultIndex), zéro LLM : latence batch 100 versions.
   { kind: "SESHAT_TRACK_ASSET_IMPACTS", p95LatencyMs: 20_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "ADMIN_SET_USER_ROLE", p95LatencyMs: 800, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "SUBMIT_FEEDBACK", p95LatencyMs: 800, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "TRIAGE_FEEDBACK", p95LatencyMs: 500, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "ADMIN_CREATE_BRAND_LOGIN", p95LatencyMs: 1_200, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "APPLY_TO_MISSION", p95LatencyMs: 1_000, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "DECIDE_MISSION_APPLICATION", p95LatencyMs: 1_500, errorRatePct: 0.01, costP95Usd: 0 },

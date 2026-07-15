@@ -5,6 +5,7 @@ import { Topbar } from "./topbar";
 import { Sidebar } from "./sidebar";
 import { MobileTabBar } from "./mobile-tab-bar";
 import { CommandPalette } from "./command-palette";
+import { FeedbackButton } from "@/components/shared/feedback-button";
 import { X } from "lucide-react";
 import type { PortalId, NavGroup } from "./types";
 
@@ -116,6 +117,9 @@ export function AppShell({
 
       {/* Command Palette */}
       <CommandPalette open={commandPaletteOpen} onClose={handleCloseCommandPalette} />
+
+      {/* Remontée feedback / bug testeurs (ADR-0155) */}
+      <FeedbackButton />
     </div>
   );
 }

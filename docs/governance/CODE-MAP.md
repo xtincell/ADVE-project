@@ -32,7 +32,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 217 models, 71 enums
+## Prisma — 218 models, 71 enums
 
 ### Models
 
@@ -179,6 +179,7 @@ Ces correspondances évitent la réinvention :
 - **GuildOrganizationMetric** (10 fields)
 - **NotificationPreference** (7 fields)
 - **Notification** (15 fields)
+- **Feedback** (12 fields) — ADR-0155 — remontée feedback / bug d'un testeur. Canal dédié (distinct de InterventionRequest interne, de la messagerie,
 - **PushSubscription** (9 fields)
 - **NotificationTemplate** (11 fields)
 - **McpRegistry** (12 fields)
@@ -330,7 +331,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Services backend — 115
+## Services backend — 116
 
 - `src/server/services/advertis-connectors/` ✓ manifest
 - `src/server/services/advertis-scorer/` ✓ manifest
@@ -441,6 +442,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/talent-engine/` ✓ manifest
 - `src/server/services/talent-services/` ✓ manifest
 - `src/server/services/team-allocator/` ✓ manifest
+- `src/server/services/tester-feedback/`
 - `src/server/services/tier-evaluator/` ✓ manifest
 - `src/server/services/translation/` ✓ manifest
 - `src/server/services/upsell-detector/` ✓ manifest
@@ -450,7 +452,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 118
+## tRPC routers — 119
 
 - `accounts` (`src/server/trpc/routers/accounts.ts`)
 - `actions` (`src/server/trpc/routers/actions.ts`)
@@ -495,6 +497,7 @@ Ces correspondances évitent la réinvention :
 - `error-vault` (`src/server/trpc/routers/error-vault.ts`)
 - `escrow-arbitration` (`src/server/trpc/routers/escrow-arbitration.ts`)
 - `event` (`src/server/trpc/routers/event.ts`)
+- `feedback` (`src/server/trpc/routers/feedback.ts`)
 - `footprint` (`src/server/trpc/routers/footprint.ts`)
 - `framework` (`src/server/trpc/routers/framework.ts`)
 - `glory` (`src/server/trpc/routers/glory.ts`)
@@ -573,7 +576,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 268 (par deck)
+## Pages — 269 (par deck)
 
 ### Agency (12)
 
@@ -650,7 +653,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/settings/billing`
 - `/cockpit/settings/connections`
 
-### Console (125)
+### Console (126)
 
 - `/console`
 - `/console/academie`
@@ -757,6 +760,7 @@ Ces correspondances évitent la réinvention :
 - `/console/socle/commissions`
 - `/console/socle/contracts`
 - `/console/socle/escrow`
+- `/console/socle/feedback`
 - `/console/socle/invoices`
 - `/console/socle/manual-subscriptions`
 - `/console/socle/market-costs`
@@ -1031,7 +1035,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 581 (par governor)
+## Intent kinds — 583 (par governor)
 
 ### MESTOR (79)
 
@@ -1171,9 +1175,11 @@ Ces correspondances évitent la réinvention :
 - `MEASURE_OVERTON_SHIFT` → campaign-tracker (async) — Cluster D — Mesure le déplacement de l'axe culturel sectoriel post-LIVE. Compare…
 - `EVALUATE_OVERTON_READINESS` → campaign-tracker (sync) — Cluster D pré-LIVE — Tarsis évalue OvertonReadiness sur l'axe culturel ciblé. Ou…
 
-### INFRASTRUCTURE (380)
+### INFRASTRUCTURE (382)
 
 - `ADMIN_SET_USER_ROLE` → accounts (sync) — Console superviseur (Vague 7) : promotion/retrogradation du role d'un compte (en…
+- `SUBMIT_FEEDBACK` → tester-feedback (sync) — Canal feedback testeur (ADR-0155) : un utilisateur connecté remonte un bug/idée/…
+- `TRIAGE_FEEDBACK` → tester-feedback (sync) — Inbox feedback (ADR-0155) : l'opérateur change le statut d'une remontée (TRIAGED…
 - `ADMIN_CREATE_BRAND_LOGIN` → accounts (sync) — Console superviseur : cree (ou reclame un stub) un login personnalise pour UNE m…
 - `SYNC_UPGRADERS_CANON` → canon-sync (sync) — Vague 10 : pousse le canon UPgraders 100% (8 piliers contrats COMPLETE) dans la …
 - `SCORE_PILLAR` → advertis-scorer (sync) — Score a pillar without writing — used by validation flows.…

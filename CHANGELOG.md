@@ -10,6 +10,18 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.170 — chore(deploy): déploiement 100 % manuel + feat(feedback): canal de remontée bug/retour des testeurs (ADR-0155) (2026-07-15)
+
+**Deux demandes « passage en prod » : (1) couper tout déploiement automatique — l'opérateur déploiera manuellement ; (2) permettre aux testeurs de remonter les bugs.**
+
+- **Déploiement 100 % manuel** : `.github/workflows/build-image.yml` n'a **plus aucun trigger automatique** — le `on: push:[main]` est retiré (→ `workflow_dispatch` seul) et l'étape « Redeploy Coolify » ne se déclenche **que** sur dispatch explicite avec `notify_coolify` coché (fin de la branche `github.event_name == 'push'`). Le push sur `main` ne construit plus d'image et ne redéploie plus. Périmètre : **déploiement seul** — CI/tests, crons ops (`scheduled-ops`), migrate-on-boot, release-sur-tag **intacts**. Docs `BUILD-DEPORT.md` mises à jour (+ rappel : désactiver aussi l'auto-deploy côté dashboard Coolify — non pilotable depuis le repo). Livrer en prod = lancer `build-image` (notify) **ou** `deploy.yml` **ou** redeploy Coolify, à la main.
+- **Canal feedback testeurs (ADR-0155)** : aujourd'hui **rien n'existait** (audit : 0 bouton, 0 modèle, 0 inbox). Ajout d'un canal dédié, gouverné, **0 LLM** :
+  - **Bouton flottant** « Un souci ? Un retour ? » monté une fois dans `AppShell` → présent sur **tous les portails authentifiés** (les testeurs sont dans le cockpit). Modal : type (bug/idée/autre) + message ; **page + user-agent capturés automatiquement**. DS strict.
+  - **1 modèle additif `Feedback`** (`kind` BUG|IDEA|OTHER, message, pageUrl, statut NEW→TRIAGED→RESOLVED) — dédié (anti-doublon justifié vs `InterventionRequest`/messagerie/CRM, grep-négatif). Single-writer `services/tester-feedback/`.
+  - **2 kinds gouvernés INFRASTRUCTURE** : `SUBMIT_FEEDBACK` (testeur connecté, sans requireOperator ; **Notification best-effort aux admins** — réutilise `pushNotification`) · `TRIAGE_FEEDBACK` (opérateur, statut).
+  - **Inbox opérateur `/console/socle/feedback`** (groupe Le Socle) : onglets par statut, « Pris en compte » / « Résolu », badge non-lus. Jamais exposée au client.
+  - Vérifié E2E : submit (BUG, statut NEW) → liste NEW → count +1 → triage TRIAGED → RESOLVED (horodaté) → count revenu à l'initial. **2 verrous** (`feedback.test.ts` : single-writer `Feedback` + kinds catalogués INFRASTRUCTURE avec SLO). Cap APOGEE 7/7 · 1 migration additive · PROPAGATION-MAP A16 · tsc 0 · lint 0 · **1131 tests verts**.
+
 ## v6.27.169 — feat(scorer): surface gouvernée « Prospect Scoring » + canon des trois scores (ADR-0154) (2026-07-15)
 
 **Réponse à « je veux scorer un prospect qui m'intéresse (ou son concurrent) et le placer sur le leaderboard pour lui donner envie de se positionner — Buffalo Grill Abidjan vs Burger King ». On remplace les scripts de dev jetables (`run-moulinette`/`onboard-external-brand`) par une VOIE PRODUIT gouvernée, en réutilisant l'existant. LLM cantonné à un seul point.**

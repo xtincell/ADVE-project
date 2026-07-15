@@ -38,23 +38,26 @@ sont **inchangés** — c'est la même image, construite ailleurs.
    runtime (DATABASE_URL, NEXTAUTH_SECRET, INTEGRATION_TOKEN_KEY, META_LOGIN_CONFIG_ID,
    les OAuth…). L'image ne les contient pas.
 
-3. **Secrets GitHub pour le redeploy auto** (requis pour l'automatisme) : repo →
-   *Settings* → *Secrets and variables* → *Actions* → ajouter `COOLIFY_URL`
-   (`https://coolify.powerupgraders.com`), `COOLIFY_TOKEN`, `COOLIFY_APP_UUID`
-   (`rfkgtj7us50jlbaiz1tjke2a`). **Dès que ces 3 secrets sont présents, le workflow
-   notifie Coolify AUTOMATIQUEMENT à chaque push sur `main`** (l'image vient d'être
-   smoke-testée + poussée) → Coolify tire `:latest` + swap. Sans les secrets, l'étape
-   est un no-op silencieux (le push ghcr a lieu, le redeploy reste manuel). Le
-   `workflow_dispatch` avec `notify_coolify` reste possible pour un redeploy à la
-   demande. **⚠ Pré-requis** : Build Pack = « Docker Image » (étape 2) — sinon la
-   notification déclenche un `next build` sur le VPS (OOM). N'active les secrets
-   qu'APRÈS la bascule Docker Image.
+3. **Secrets GitHub pour le redeploy** : repo → *Settings* → *Secrets and
+   variables* → *Actions* → ajouter `COOLIFY_URL` (`https://coolify.powerupgraders.com`),
+   `COOLIFY_TOKEN`, `COOLIFY_APP_UUID` (`rfkgtj7us50jlbaiz1tjke2a`). Ils servent
+   au redeploy **manuel** (`workflow_dispatch` avec `notify_coolify` coché). **⚠
+   Pré-requis** : Build Pack = « Docker Image » (étape 2) — sinon la notification
+   déclenche un `next build` sur le VPS (OOM).
 
-## Le cycle après bascule
+> **DÉPLOIEMENT 100 % MANUEL (décision opérateur 2026-07-15).** `build-image.yml`
+> n'a **plus aucun trigger automatique** : le push sur `main` ne construit plus
+> d'image et ne redéploie plus. Pour livrer en prod : lancer `build-image` à la
+> main (Actions → *Build image (ghcr)* → *Run workflow*, cocher `notify_coolify`)
+> **ou** `deploy.yml` **ou** un redeploy depuis le dashboard Coolify. **Vérifier
+> aussi côté Coolify** que l'auto-deploy de l'app (webhook git / watch registry)
+> est désactivé — le repo ne peut pas le couper à distance.
+
+## Le cycle (déploiement manuel)
 
 ```
-push main → build-image.yml (runners GitHub) → boot smoke-test → push ghcr:latest
-          → [option] redeploy Coolify → docker pull + swap sur le VPS (secondes)
+[opérateur] Run workflow build-image (notify_coolify) → boot smoke-test →
+            push ghcr:latest → redeploy Coolify → docker pull + swap (secondes)
 ```
 
 Le VPS ne compile plus jamais. Un déploiement devient un pull de quelques secondes.

@@ -181,6 +181,7 @@ export const APP_ROUTES: ReadonlySet<string> = new Set([
   "/console/socle/commissions",
   "/console/socle/contracts",
   "/console/socle/escrow",
+  "/console/socle/feedback",
   "/console/socle/invoices",
   "/console/socle/manual-subscriptions",
   "/console/socle/market-costs",

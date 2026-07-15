@@ -883,3 +883,7 @@ profondeur, pas de la largeur.**
 - **Hunter victoires (LLM) contract-gated** : sans clé LLM/Brave → `SESHAT_HUNT_VICTORIES` renvoie DEFERRED honnête (0 candidate). En prod avec clé : à observer (qualité des victoires proposées, taux d'auto-REJECT sans source).
 - **Rival = nom libre** : `EpreuveCandidate.rivalName` ; le lien `rivalStrategyId`/`rivalBrandRefId` est optionnel (rempli quand le rival est aussi onboardé). Une passe future pourrait dédup les rivaux vers `BrandRef`.
 - **Orchestration client** : la séquence par-marque vit dans la page console (pas d'Intent orchestrateur serveur, par choix — les kinds sont governedProcedure-lane). Si un flux serveur unifié devient nécessaire (batch, cron), promouvoir les kinds en bus Intents serait le préalable.
+
+### Déploiement manuel + canal feedback (2026-07-15)
+- **Auto-deploy coupé côté repo** (`build-image.yml` = workflow_dispatch seul). **Action opérateur restante** : désactiver l'auto-deploy de l'app dans le dashboard Coolify (webhook git / watch registry) — non pilotable depuis le repo.
+- **Feedback (ADR-0155)** : pièce jointe / capture d'écran = post-MVP. Bouton sur surfaces **publiques** (non authentifiées) = voie anonyme rate-limitée à ajouter (patron `footprint.scoreInstant`) si besoin.
