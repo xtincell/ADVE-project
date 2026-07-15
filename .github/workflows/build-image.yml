@@ -130,10 +130,14 @@ jobs:
             ${{ steps.img.outputs.ref }}:sha-${{ github.sha }}
           cache-from: type=gha
 
-      # 4) (Optionnel, guardé) : une fois Coolify basculé en source « Docker
-      #    Image », un redeploy = pull de :latest + swap, sans build VPS.
-      - name: Redeploy Coolify (si demandé + secrets présents)
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.notify_coolify }}
+      # 4) Notifier Coolify de TIRER la nouvelle image (BUILD-DEPORT.md §3 :
+      #    « déclenche le redeploy après chaque push »). En source « Docker
+      #    Image », un redeploy = pull de :latest + swap, sans build VPS → zéro
+      #    OOM. Se déclenche automatiquement à chaque push sur main (l'image
+      #    vient d'être smoke-testée + poussée juste au-dessus) OU sur un
+      #    workflow_dispatch explicite. No-op gardé si les secrets sont absents.
+      - name: Redeploy Coolify (auto sur push + secrets présents)
+        if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.notify_coolify) }}
         env:
           COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}

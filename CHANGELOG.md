@@ -10,6 +10,15 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.161 — fix(ci): l'image ghcr notifie Coolify de tirer à CHAQUE merge (déploiement auto réparé) (2026-07-15)
+
+**Le chaînon manquant du déploiement : le workflow construisait et poussait l'image sur ghcr à chaque merge, mais l'étape « Redeploy Coolify » était gardée `if: workflow_dispatch` — jamais déclenchée sur un push. L'image atterrissait, mais rien ne disait à Coolify de la tirer → prod bloquée (6.27.158 pendant que 159/160 attendaient). `BUILD-DEPORT.md §3` promettait pourtant « redeploy après chaque push ». Le code fait enfin ce que la doc dit.**
+
+- **`build-image.yml`** : la notification Coolify (`POST /api/v1/deploy`) se déclenche désormais **automatiquement sur tout push `main`** (l'image vient d'être smoke-testée `/login=200` + poussée juste au-dessus) — plus seulement sur un `workflow_dispatch` manuel. No-op silencieux gardé si les secrets `COOLIFY_*` sont absents.
+- **En mode « Docker Image »** (Build Pack Coolify, cf. BUILD-DEPORT.md §2), ce redeploy = `docker pull :latest` + swap de conteneur — **zéro `next build` VPS, zéro OOM**. Pré-requis rappelé dans la doc : n'activer les secrets qu'APRÈS la bascule Docker Image.
+- Diagnostic vérifié : image `ghcr.io/xtincell/adve-project:latest` **publique** (pull anonyme HTTP 200) → la visibilité n'était pas le blocage ; c'était bien l'absence de notification au merge.
+- Image ghcr inchangée (Dockerfile/entrypoint/migrations-au-boot identiques) — seul le **déclencheur** du redeploy change.
+
 ## v6.27.160 — feat(anubis): ingestion de métriques externes agnostique (quiz/app/CRM/email) — les sources deviennent réelles ([ADR-0146](docs/governance/adr/0146-external-metric-ingestion-agnostic.md)) (2026-07-14)
 
 **« Les outils doivent être agnostiques : une autre marque peut vouloir piloter un quizz. » Une source d'activité (quiz, app, CRM, newsletter, terrain, webhook) pousse ses chiffres RÉELS dans le tracker AARRR + les KPI d'activité de mission, avec une provenance honnête — la fiche mission dit « Dernière remontée le … » au lieu de « bientôt ». Zéro migration, zéro LLM, zéro forme codée en dur pour une marque.**
