@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.173 — fix(scorer): rapport lead-friendly (fin du jargon « non mesuré », levier site en avant) (2026-07-15)
+
+**Retour opérateur : « les leads trouvent ça vide et incompréhensible ».** Capture prod — un prospect qui a mis ses réseaux mais PAS de site voyait 5 lignes sur 7 en « Non mesuré » avec des raisons INTERNES (« collecteur non configuré », « domaine non vérifiable », « flux presse indisponible ») → ça lisait comme un bug, pas comme un rapport.
+
+- **En-tête + score** en langage clair : titre « Votre présence en ligne, mesurée » ; verdict en une phrase sous le score (« solide, mais il reste des leviers… ») au lieu de « 2 dimensions mesurées ».
+- **Section mesurée** : « Ce qu'on a trouvé sur vous » ; retrait du jargon « poids 30 % » (le lead n'en a rien à faire) — on garde la preuve + le score/100.
+- **Fin du dump « Non mesuré »** : les raisons internes sont remplacées par de l'ACTION. Si le site manque (cause n°1 : domaine/email/perf en dépendent), un bloc mis en avant « Ajoutez votre site web » avec champ + **re-score inline**. Le reste : une ligne claire par signal (« ↑ via votre site » / « Votre fiche Google (avis) »), jamais la raison technique.
+- **Formulaire** : champ site marqué « recommandé » + note « débloque 4 signaux de plus ».
+- Zéro nouveau backend, DS-conforme, vocab client (ADR-0123). tsc 0 · lint 0.
+
 ## v6.27.172 — fix(scorer): en-tête nav /scorer + Ollama Cloud aux clés système + Apify activable depuis le Credentials Vault (2026-07-15)
 
 **Suivi go-live opérateur : trois manques repérés en prod.**
