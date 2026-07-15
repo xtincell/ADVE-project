@@ -7,7 +7,7 @@
  */
 
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure, protectedProcedure, adminProcedure } from "../init";
+import { createTRPCRouter, publicProcedure, protectedProcedure, adminProcedure, operatorProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { db } from "@/lib/db";
 import { MarketScaleSchema } from "@/domain/market-scale";
@@ -16,6 +16,10 @@ import {
   recordEpreuve,
   scoreBrand,
 } from "@/server/services/seshat/scoreur";
+import { scoreProspect } from "@/server/services/seshat/scoreur/prospect";
+import { decideCandidate, listCandidates } from "@/server/services/seshat/scoreur/candidates";
+import { huntVictories } from "@/server/services/seshat/argos/victory-hunt";
+import { TRPCError } from "@trpc/server";
 import { seedScoreurCanon } from "@/server/services/seshat/scoreur/anchor-seed";
 import {
   getCanonForConsole,
@@ -135,6 +139,90 @@ export const scoreurRouter = createTRPCRouter({
   }).mutation(async ({ input }) => {
     return resetCanonOverride({ kind: input.kind, key: input.key });
   }),
+
+  // ── ADR-0154 : Prospect Scoring (surface gouvernée) ──────────────────────────
+
+  /** Place UNE marque externe sur le leaderboard : shell → footprint → score. 0 LLM. */
+  scoreProspect: governedProcedure({
+    kind: "SESHAT_SCORE_PROSPECT",
+    requireOperator: true,
+    inputSchema: z.object({
+      name: z.string().min(1).max(160),
+      sectorRaw: z.string().max(160).nullish(),
+      countryCode: z.string().max(2).nullish(),
+      marketScale: MarketScaleSchema.nullish(),
+      websiteUrl: z.string().max(300).nullish(),
+      socialLinksRaw: z.string().max(1000).nullish(),
+    }),
+    caller: "scoreur:scoreProspect",
+  }).mutation(async ({ input, ctx }) => {
+    const user = ctx.session!.user;
+    const operatorId = (user as unknown as Record<string, unknown>).operatorId as string | null ?? null;
+    if (!operatorId) throw new TRPCError({ code: "BAD_REQUEST", message: "Aucun opérateur associé" });
+    return scoreProspect({
+      operatorId,
+      ownerUserId: user.id,
+      name: input.name,
+      sectorRaw: input.sectorRaw ?? null,
+      countryCode: input.countryCode ?? null,
+      marketScale: input.marketScale ?? null,
+      websiteUrl: input.websiteUrl ?? null,
+      socialLinksRaw: input.socialLinksRaw ?? null,
+    });
+  }),
+
+  /** Hunter (LLM) : cherche des victoires documentées sujet↔rival → quarantaine. */
+  huntVictories: governedProcedure({
+    kind: "SESHAT_HUNT_VICTORIES",
+    requireOperator: true,
+    inputSchema: z.object({
+      subjectStrategyId: z.string().min(1),
+      rivalName: z.string().min(1).max(160),
+      rivalStrategyId: z.string().nullish(),
+    }),
+    caller: "scoreur:huntVictories",
+  }).mutation(async ({ input }) => {
+    const strat = await db.strategy.findUnique({
+      where: { id: input.subjectStrategyId },
+      select: { name: true, countryCode: true, client: { select: { sector: true } } },
+    });
+    if (!strat) throw new TRPCError({ code: "NOT_FOUND", message: "Stratégie sujet introuvable" });
+    return huntVictories({
+      subjectStrategyId: input.subjectStrategyId,
+      subjectName: strat.name,
+      rivalName: input.rivalName,
+      rivalStrategyId: input.rivalStrategyId ?? null,
+      sector: strat.client?.sector ?? null,
+      market: strat.countryCode ?? null,
+    });
+  }),
+
+  /** Décision opérateur sur une victoire candidate (APPROVE→recordEpreuve / REJECT). */
+  decideCandidate: governedProcedure({
+    kind: "SESHAT_DECIDE_EPREUVE_CANDIDATE",
+    requireOperator: true,
+    inputSchema: z.object({
+      candidateId: z.string().min(1),
+      decision: z.enum(["APPROVE", "REJECT"]),
+    }),
+    caller: "scoreur:decideCandidate",
+  }).mutation(async ({ input, ctx }) => {
+    return decideCandidate({
+      candidateId: input.candidateId,
+      decision: input.decision,
+      reviewedBy: ctx.session?.user?.id ?? "operator",
+    });
+  }),
+
+  /** File de revue : victoires candidates (opérateur, lecture). */
+  listCandidates: operatorProcedure
+    .input(z.object({ subjectStrategyId: z.string().nullish(), status: z.string().nullish() }).optional())
+    .query(async ({ input }) => {
+      return listCandidates({
+        subjectStrategyId: input?.subjectStrategyId ?? undefined,
+        status: input?.status ?? undefined,
+      });
+    }),
 
   /** Preview d'impact : re-score une marque SANS persister (voir l'effet d'un edit). */
   previewBrand: protectedProcedure

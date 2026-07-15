@@ -3097,6 +3097,37 @@ model ScoreVerdict {
   @@index([tier])
 }
 
+/// ADR-0154 — quarantaine des victoires proposées par Hunter (LLM) AVANT revue.
+/// SÉPARÉE d'`Epreuve` (le registre du scoreur, lu intégralement par le
+/// compilateur) : une victoire non approuvée ne DOIT jamais pouvoir entrer dans un
+/// score (P22-2). APPROVE → `SESHAT_RECORD_EPREUVE` crée l'`Epreuve` réelle.
+/// Garde déterministe : sans `sourceUrl` → auto-REJECT. Single-writer
+/// `seshat/scoreur/candidates.ts`.
+model EpreuveCandidate {
+  id                String    @id @default(cuid())
+  subjectStrategyId String
+  rivalName         String
+  rivalStrategyId   String?
+  rivalBrandRefId   String?
+  arena             String // A | D | V
+  proposedResult    String // WIN | LOSS
+  claim             String
+  sourceUrl         String?
+  sourceTitle       String?
+  confidence        Float?
+  status            String    @default("PENDING") // PENDING | APPROVED | REJECTED
+  reviewedBy        String?
+  reviewedAt        DateTime?
+  recordedEpreuveId String?
+  /// Hash de dédup : subject+rival+arena+claim normalisés (anti-doublon récolte).
+  dedupHash         String    @unique
+  intentEmissionId  String?
+
+  createdAt DateTime @default(now())
+
+  @@index([subjectStrategyId, status])
+}
+
 /// ADR-0150 — canon éditable du scoreur (ratification opérateur a posteriori).
 /// Override de donnée par-dessus les DÉFAUTS canon en code (`anchors.ts`/`palier.ts`).
 /// Absent ⇒ la valeur code s'applique ; présent ⇒ il gagne. Permet d'ajuster la

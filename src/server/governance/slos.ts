@@ -310,6 +310,10 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "SESHAT_SCORE_BRAND", p95LatencyMs: 3_000, errorRatePct: 0.02, costP95Usd: 0 },
   { kind: "SESHAT_EDIT_SCOREUR_CANON", p95LatencyMs: 800, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "SESHAT_RESET_SCOREUR_CANON", p95LatencyMs: 800, errorRatePct: 0.01, costP95Usd: 0 },
+  // ADR-0154 — prospect scoring. SCORE_PROSPECT ≈ ENRICH_E (Apify) + score ; sync, zéro LLM.
+  { kind: "SESHAT_SCORE_PROSPECT", p95LatencyMs: 40_000, errorRatePct: 0.10, costP95Usd: 0.015 },
+  { kind: "SESHAT_HUNT_VICTORIES", p95LatencyMs: 20_000, errorRatePct: 0.15, costP95Usd: 0.05 },
+  { kind: "SESHAT_DECIDE_EPREUVE_CANDIDATE", p95LatencyMs: 800, errorRatePct: 0.01, costP95Usd: 0 },
   // ADR-0134 — mesure communautaire (3 findMany + N creates + chaîne devotion/cult) ; sync, zéro LLM.
   { kind: "SESHAT_CAPTURE_COMMUNITY_SNAPSHOT", p95LatencyMs: 15_000, errorRatePct: 0.05, costP95Usd: 0 },
   // ADR-0135 — attribution transitions dévotion (2 findMany + N updates, temporal join pur) ; sync, zéro LLM.

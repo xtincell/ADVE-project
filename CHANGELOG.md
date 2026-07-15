@@ -10,6 +10,17 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.169 — feat(scorer): surface gouvernée « Prospect Scoring » + canon des trois scores (ADR-0154) (2026-07-15)
+
+**Réponse à « je veux scorer un prospect qui m'intéresse (ou son concurrent) et le placer sur le leaderboard pour lui donner envie de se positionner — Buffalo Grill Abidjan vs Burger King ». On remplace les scripts de dev jetables (`run-moulinette`/`onboard-external-brand`) par une VOIE PRODUIT gouvernée, en réutilisant l'existant. LLM cantonné à un seul point.**
+
+- **Canon des trois scores** (ADR-0154, source de vérité) : **complétude /200** (ADR-0102, interne) · **empreinte /100** (ADR-0151, `/scorer`, public anonyme, quick-win du funnel) · **force révélée /200** (ADR-0149, `/leaderboard`, public **mérité**, pour les engagés — le prospect y est *placé par l'opérateur*). Jamais fusionnés (D9). Le scoreur ne lit **jamais** l'ADVE : classer un prospect n'exige pas de remplir son ADVE (données publiques : footprint + victoires).
+- **3 kinds gouvernés SESHAT** (`requireOperator`, governedProcedure-lane comme `SESHAT_SCORE_BRAND`) : `SESHAT_SCORE_PROSPECT` (sync, **0 LLM** — shell Client+Strategy ADR-0098 → footprint `ENRICH_E`→arènes A/V → `scoreBrand`, idempotent) · `SESHAT_HUNT_VICTORIES` (**seul point LLM** — Hunter/Argos cherche des victoires dyadiques documentées **sourcées** via Gateway+Brave → quarantaine) · `SESHAT_DECIDE_EPREUVE_CANDIDATE` (sync, 0 LLM — APPROVE→`recordEpreuve` / REJECT).
+- **Décision d'archi** : pas d'orchestrateur bus (ces kinds ne sont pas des `Intent` union — promotion fragile). **Orchestration côté client, par-marque** : le bouton « Mesurer et placer » boucle une mutation gouvernée par marque (audit granulaire), pas de NSP.
+- **1 modèle additif `EpreuveCandidate`** (la quarantaine) : une victoire LLM n'entre JAMAIS directement dans `Epreuve` (lu intégralement par le compilateur, P22-2). Garde déterministe : **sans `sourceUrl` → auto-REJECT** ; dédup `dedupHash`. Single-writer `scoreur/candidates.ts`.
+- **Console** `/console/signal/prospect-scoring` (groupe Seshat) : placer prospect + concurrents (secteur→**chip canon en direct**), **tête-à-tête** dans la ligue + lien leaderboard, **file de revue** des victoires (Valider/Refuser). **Vérifié E2E** : Buffalo Grill Abidjan & Burger King CI → même ligue `tourisme·NATION·CI` ; candidate sans source auto-rejetée ; candidate PENDING **ne compte pas** (19.6/200) → **APPROVE → l'épreuve compte** (39.2/200, +1). Hunter DEFERRED honnête sans clé.
+- **5 verrous CI HARD** (`prospect-scoring.test.ts`) : single-writer candidate · quarantaine étanche (le score ne lit jamais `epreuveCandidate`) · hunt n'écrit jamais `Epreuve` · source obligatoire · manual-first (`recordEpreuve` voie unique). Cost-gate Thot sur `SESHAT_HUNT_VICTORIES` (manifest LLM). Cap APOGEE 7/7 · 1 migration additive · PROPAGATION-MAP A15 · tsc 0 · lint 0 · **1128 tests verts**.
+
 ## v6.27.168 — feat(scoreur): l'historique mesuré compte — footprint → arènes A (attention) + V (croissance) (ADR-0153) (2026-07-15)
 
 **Réponse à « le tracking dans le temps ne prend pas en compte l'historique de la marque ? tout le monde commence au même niveau ? ». Oui, c'était le cas — la force révélée ne lisait QUE les épreuves observées, et `FollowerSnapshot` (historique horodaté, collecté quotidiennement) n'était jamais converti. On le branche, déterministe, sans rien inventer.**

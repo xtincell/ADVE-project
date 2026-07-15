@@ -174,6 +174,7 @@ export const APP_ROUTES: ReadonlySet<string> = new Set([
   "/console/signal/intelligence",
   "/console/signal/knowledge",
   "/console/signal/market",
+  "/console/signal/prospect-scoring",
   "/console/signal/scoreur-canon",
   "/console/signal/signals",
   "/console/signal/tarsis",

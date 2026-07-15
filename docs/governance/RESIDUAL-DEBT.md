@@ -878,3 +878,8 @@ profondeur, pas de la largeur.**
 - **Planchers d'audience** (`EVIDENCE_TARGETS_BY_SCALE.audienceFloor`) = canon PROPOSÉ (~50× cible superfans). À ratifier / rendre éditables par marché (pattern ADR-0150), comme la jauge et les items.
 - **Arène D (désirabilité)** : même patron que A/V, depuis les avis/notes mesurés — quand les reviews seront persistées par-marque dans le temps (`FollowerSnapshot`-like pour reviews).
 - **Ancres de marques iconiques** (Apple/Coca/Nike…) : θ fixé déclaré (BrandRef kind=ANCHOR), placement « ICONE day 0 » — relève des étalons (ADR-0149/0150), pas du scoring d'un sujet. Reconstruction d'historique documenté (ADVE INFERRED + épreuves sourcées) = ingestion research-assistée avec revue, hors chemin de scoring zéro-LLM.
+
+### Prospect Scoring (ADR-0154, 2026-07-15)
+- **Hunter victoires (LLM) contract-gated** : sans clé LLM/Brave → `SESHAT_HUNT_VICTORIES` renvoie DEFERRED honnête (0 candidate). En prod avec clé : à observer (qualité des victoires proposées, taux d'auto-REJECT sans source).
+- **Rival = nom libre** : `EpreuveCandidate.rivalName` ; le lien `rivalStrategyId`/`rivalBrandRefId` est optionnel (rempli quand le rival est aussi onboardé). Une passe future pourrait dédup les rivaux vers `BrandRef`.
+- **Orchestration client** : la séquence par-marque vit dans la page console (pas d'Intent orchestrateur serveur, par choix — les kinds sont governedProcedure-lane). Si un flux serveur unifié devient nécessaire (batch, cron), promouvoir les kinds en bus Intents serait le préalable.

@@ -32,7 +32,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 216 models, 71 enums
+## Prisma — 217 models, 71 enums
 
 ### Models
 
@@ -119,6 +119,7 @@ Ces correspondances évitent la réinvention :
 - **BrandRef** (11 fields) — ADR-0149 — Scoreur : marque hors-plateforme (rival, ancre-étalon, ou item canon). PAS un `Strategy` (brief §5.1) — regis
 - **Epreuve** (14 fields) — ADR-0149 — le REGISTRE d'épreuves (append-only). LA seule donnée du scoreur : un résultat dyadique OBSERVÉ (jamais estim
 - **ScoreVerdict** (16 fields) — ADR-0149 — snapshot de verdict (leaderboard public + trajectoire pour la tenue).
+- **EpreuveCandidate** (18 fields) — ADR-0154 — quarantaine des victoires proposées par Hunter (LLM) AVANT revue. SÉPARÉE d'`Epreuve` (le registre du scoreur
 - **ScoreurCanonOverride** (8 fields) — ADR-0150 — canon éditable du scoreur (ratification opérateur a posteriori). Override de donnée par-dessus les DÉFAUTS ca
 - **CommunitySnapshot** (11 fields) — Relevé de santé communautaire par plateforme. Unités canoniques (ADR-0134) : `size` = compte absolu ; `health`/`sentimen
 - **BrandVariable** (9 fields)
@@ -572,7 +573,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 267 (par deck)
+## Pages — 268 (par deck)
 
 ### Agency (12)
 
@@ -649,7 +650,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/settings/billing`
 - `/cockpit/settings/connections`
 
-### Console (124)
+### Console (125)
 
 - `/console`
 - `/console/academie`
@@ -749,6 +750,7 @@ Ces correspondances évitent la réinvention :
 - `/console/signal/intelligence`
 - `/console/signal/knowledge`
 - `/console/signal/market`
+- `/console/signal/prospect-scoring`
 - `/console/signal/scoreur-canon`
 - `/console/signal/signals`
 - `/console/signal/tarsis`
@@ -1029,7 +1031,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 578 (par governor)
+## Intent kinds — 581 (par governor)
 
 ### MESTOR (79)
 
@@ -1131,7 +1133,7 @@ Ces correspondances évitent la réinvention :
 - `PROPOSE_SEQUENCE_PROMOTION_FROM_CAMPAIGN` → campaign-tracker (sync) — Cluster E — Si campagne réussie (tierDelta>0 + cultIndexDelta>0 + altitudeRegres…
 - `TOGGLE_QUALITY_GATE_MODE` → auto-promotion (sync) — Bascule le mode quality-gate entre SOFT (warning-only) et HARD (block-on-fail). …
 
-### SESHAT (32)
+### SESHAT (35)
 
 - `SESHAT_UPSERT_POLITY_AXIS` → sector-intelligence (sync) — Upsert d'un axe culturel sectoriel PAR POLITY (SectorPolityAxis — échelle de mar…
 - `SESHAT_REGISTER_SUPERFAN` → superfan (sync) — Enregistre/actualise UN SuperfanProfile (upsert par (strategyId, platform, handl…
@@ -1145,6 +1147,9 @@ Ces correspondances évitent la réinvention :
 - `SESHAT_SCORE_BRAND` → scoreur (sync) — Scoreur à force révélée (ADR-0149) : estime la force θ ± RD par arène (Bradley-T…
 - `SESHAT_EDIT_SCOREUR_CANON` → scoreur (sync) — Scoreur (ADR-0150) : édite le canon a posteriori SANS redéploiement — op ∈ SET_G…
 - `SESHAT_RESET_SCOREUR_CANON` → scoreur (sync) — Scoreur (ADR-0150) : réinitialise un override de canon (GAUGE|ITEM par clé) — re…
+- `SESHAT_SCORE_PROSPECT` → scoreur (sync) — Prospect Scoring (ADR-0154) : pour UNE marque externe — assure la Strategy shell…
+- `SESHAT_HUNT_VICTORIES` → argos (sync) — Prospect Scoring (ADR-0154) : Hunter (LLM via Gateway, executeStructuredLLMCall …
+- `SESHAT_DECIDE_EPREUVE_CANDIDATE` → scoreur (sync) — Prospect Scoring (ADR-0154) : décision opérateur sur une victoire candidate — AP…
 - `SESHAT_CAPTURE_COMMUNITY_SNAPSHOT` → cult-index-engine (sync) — Mesure et persiste UN CommunitySnapshot par plateforme suivie depuis la donnée R…
 - `SESHAT_ATTRIBUTE_DEVOTION_TRANSITIONS` → campaign-tracker (sync) — Reconstruit CampaignAction.devotionTransitionsObserved d'une stratégie depuis le…
 - `RANK_PEERS` → seshat (sync) — Generic peer ranking via context-store ranker.…
