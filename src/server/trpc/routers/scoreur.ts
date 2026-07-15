@@ -7,7 +7,7 @@
  */
 
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure, adminProcedure } from "../init";
+import { createTRPCRouter, publicProcedure, protectedProcedure, adminProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { db } from "@/lib/db";
 import { MarketScaleSchema } from "@/domain/market-scale";
@@ -17,6 +17,15 @@ import {
   scoreBrand,
 } from "@/server/services/seshat/scoreur";
 import { seedScoreurCanon } from "@/server/services/seshat/scoreur/anchor-seed";
+import {
+  getCanonForConsole,
+  upsertGaugeOverride,
+  upsertItemOverride,
+  removeItemOverride,
+  resetCanonOverride,
+  updateAnchorTheta,
+} from "@/server/services/seshat/scoreur/canon";
+import { BRAND_TIERS } from "@/domain/brand-tier";
 
 const leagueSchema = z.object({
   sectorSlug: z.string().min(1),
@@ -71,6 +80,69 @@ export const scoreurRouter = createTRPCRouter({
   seedCanon: adminProcedure.mutation(async () => {
     return seedScoreurCanon();
   }),
+
+  // ── ADR-0150 : canon éditable a posteriori (ratification opérateur) ──────────
+
+  /** Lecture opérateur : ancres/items (θ) + jauge + items résolus. */
+  getCanon: protectedProcedure.query(async () => {
+    return getCanonForConsole();
+  }),
+
+  /** Édite le canon (jauge / item / θ d'ancre). Op discriminée. */
+  editCanon: governedProcedure({
+    kind: "SESHAT_EDIT_SCOREUR_CANON",
+    requireOperator: true,
+    inputSchema: z.discriminatedUnion("op", [
+      z.object({
+        op: z.literal("SET_GAUGE"),
+        marketScale: MarketScaleSchema,
+        floor: z.number(),
+        icone: z.number(),
+      }),
+      z.object({
+        op: z.literal("SET_ITEM"),
+        itemId: z.string().min(1).regex(/^[a-z0-9-]+$/),
+        tier: z.enum(BRAND_TIERS),
+        label: z.string().min(1),
+        arena: z.enum(["A", "D", "V", "E", "T", "R", "TENURE"]),
+        order: z.number().int().optional(),
+      }),
+      z.object({ op: z.literal("REMOVE_ITEM"), itemId: z.string().min(1) }),
+      z.object({ op: z.literal("SET_ANCHOR_THETA"), slug: z.string().min(1), fixedTheta: z.number() }),
+    ]),
+    caller: "scoreur:editCanon",
+  }).mutation(async ({ input, ctx }) => {
+    const userId = ctx.session?.user?.id ?? null;
+    switch (input.op) {
+      case "SET_GAUGE":
+        if (input.icone <= input.floor) throw new Error("icone doit être > floor");
+        return upsertGaugeOverride({ marketScale: input.marketScale, floor: input.floor, icone: input.icone, userId });
+      case "SET_ITEM":
+        return upsertItemOverride({ itemId: input.itemId, tier: input.tier, label: input.label, arena: input.arena, order: input.order, userId });
+      case "REMOVE_ITEM":
+        return removeItemOverride({ itemId: input.itemId, userId });
+      case "SET_ANCHOR_THETA":
+        return updateAnchorTheta({ slug: input.slug, fixedTheta: input.fixedTheta });
+    }
+  }),
+
+  /** Réinitialise un override (retour au défaut code). */
+  resetCanon: governedProcedure({
+    kind: "SESHAT_RESET_SCOREUR_CANON",
+    requireOperator: true,
+    inputSchema: z.object({ kind: z.enum(["GAUGE", "ITEM"]), key: z.string().min(1) }),
+    caller: "scoreur:resetCanon",
+  }).mutation(async ({ input }) => {
+    return resetCanonOverride({ kind: input.kind, key: input.key });
+  }),
+
+  /** Preview d'impact : re-score une marque SANS persister (voir l'effet d'un edit). */
+  previewBrand: protectedProcedure
+    .input(z.object({ strategyId: z.string().min(1) }))
+    .mutation(async ({ input }) => {
+      const r = await scoreBrand(input.strategyId, { persist: false });
+      return { verdict: r.verdict, epreuveCount: r.epreuveCount, superfanCount: r.superfanCount };
+    }),
 
   /** LEADERBOARD PUBLIC : dernier verdict par marque dans une ligue, classé force. */
   leaderboard: publicProcedure

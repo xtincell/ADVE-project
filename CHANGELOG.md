@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.163 — feat(seshat): canon du scoreur éditable par l'opérateur, sans redéploiement ([ADR-0150](docs/governance/adr/0150-scoreur-canon-operator-editable.md)) (2026-07-15)
+
+**Réponse à « possible de modifier les θ des ancres et les items must-have dans un écran a posteriori ? ». Oui : les valeurs canon du scoreur (ADR-0149) — θ des étalons, jauge par échelle, portes must-have — deviennent ratifiables et ajustables depuis la console, sans redéploiement. Ferme la dette « ratification opérateur » du brief §8. Zéro LLM, `scoring.ts` (ADR-0102) intact (D9).**
+
+- **Cœur pur injectable** : `thetaToForce`/`gaugeForScale`/`itemsTier`/`computeVerdict`/`scoreFromEpreuves` acceptent un canon optionnel (`gauge`, `items`) — **défaut = constante code** (comportement historique inchangé, tests verts).
+- **Override donnée par-dessus le défaut code** : modèle additif `ScoreurCanonOverride` (GAUGE|ITEM) + `resolveScoreurCanon()` (fusion). Les θ des ancres/items vivent déjà sur `BrandRef.fixedTheta` — édités en place (0 nouveau modèle pour eux). Absent ⇒ défaut code (P22-2 : pas de valeur fabriquée).
+- **Écriture gouvernée SESHAT** : 2 Intent kinds `requireOperator` (`SESHAT_EDIT_SCOREUR_CANON` op SET_GAUGE/SET_ITEM/REMOVE_ITEM/SET_ANCHOR_THETA + `SESHAT_RESET_SCOREUR_CANON`) ; `scoreBrand` injecte le canon résolu ; `scoreur.previewBrand` re-score sans persister.
+- **Écran opérateur** `/console/signal/scoreur-canon` : édite θ étalons + jauge + portes (ajout/retrait/déplacement de palier/reset) + preview d'impact. GROUND_INFRASTRUCTURE (jamais exposé au client).
+- **Vérifié E2E** (`npm run verify:scoreur-canon`) : éditer la jauge change la force d'une marque déjà scorée (106.8 → 112.9), reset la restaure — réversible, sans redeploy. Cap APOGEE 7/7 préservé. tsc 0 · lint 0 · 24 tests scoreur/canon verts.
+
 ## v6.27.162 — feat(seshat): Graphes & Scoreur à force révélée — Identity + Overton + le scoreur ([ADR-0147](docs/governance/adr/0147-identity-graph-person-reconciliation.md) / [0148](docs/governance/adr/0148-overton-graph-position-migration.md) / [0149](docs/governance/adr/0149-scoreur-force-revelee.md)) (2026-07-15)
 
 **La force d'une marque ne se note pas — elle se révèle. Nouveau chantier en 3 incréments : on ne note plus des attributs, on compte des victoires. La force θ est le nombre qui explique le mieux l'ensemble des résultats observés (Bradley-Terry/Rasch, comme Elo aux échecs). 100 % déterministe, zéro LLM ; la complétude structurelle (ADR-0102) reste intacte — deux scores, deux rôles, jamais fusionnés (D9).**

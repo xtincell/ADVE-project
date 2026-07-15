@@ -32,7 +32,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 214 models, 71 enums
+## Prisma — 215 models, 71 enums
 
 ### Models
 
@@ -110,14 +110,15 @@ Ces correspondances évitent la réinvention :
 - **FrameworkResult** (13 fields)
 - **CultIndexSnapshot** (13 fields)
 - **SuperfanProfile** (14 fields)
-- **PersonIdentity** (12 fields) — ADR-0145 — Identity Graph. Une personne canonique, scopée à la marque (JAMAIS cross-marque). Réconcilie N handles / N ré
-- **PersonIdentifier** (12 fields) — ADR-0145 — arête d'identité (un email / téléphone / handle rattaché à une personne). PII : `matchHash` = HMAC-SHA256 dét
-- **OvertonPosition** (14 fields) — ADR-0146 — Overton Graph. Une POSITION tenue dans un débat sectoriel, avec sa zone d'acceptabilité PAR POLITY (secteur ×
-- **OvertonActorLink** (9 fields) — ADR-0146 — arête acteur→position (qui tient / propage / oppose / déplace).
-- **OvertonZoneTransition** (11 fields) — ADR-0146 — le Δ MESURÉ : une position migre de zone, daté + attribué (last-touch ADR-0135). C'est la seule « mesure » de
-- **BrandRef** (11 fields) — ADR-0147 — Scoreur : marque hors-plateforme (rival, ancre-étalon, ou item canon). PAS un `Strategy` (brief §5.1) — regis
-- **Epreuve** (14 fields) — ADR-0147 — le REGISTRE d'épreuves (append-only). LA seule donnée du scoreur : un résultat dyadique OBSERVÉ (jamais estim
-- **ScoreVerdict** (16 fields) — ADR-0147 — snapshot de verdict (leaderboard public + trajectoire pour la tenue).
+- **PersonIdentity** (12 fields) — ADR-0147 — Identity Graph. Une personne canonique, scopée à la marque (JAMAIS cross-marque). Réconcilie N handles / N ré
+- **PersonIdentifier** (12 fields) — ADR-0147 — arête d'identité (un email / téléphone / handle rattaché à une personne). PII : `matchHash` = HMAC-SHA256 dét
+- **OvertonPosition** (14 fields) — ADR-0148 — Overton Graph. Une POSITION tenue dans un débat sectoriel, avec sa zone d'acceptabilité PAR POLITY (secteur ×
+- **OvertonActorLink** (9 fields) — ADR-0148 — arête acteur→position (qui tient / propage / oppose / déplace).
+- **OvertonZoneTransition** (11 fields) — ADR-0148 — le Δ MESURÉ : une position migre de zone, daté + attribué (last-touch ADR-0135). C'est la seule « mesure » de
+- **BrandRef** (11 fields) — ADR-0149 — Scoreur : marque hors-plateforme (rival, ancre-étalon, ou item canon). PAS un `Strategy` (brief §5.1) — regis
+- **Epreuve** (14 fields) — ADR-0149 — le REGISTRE d'épreuves (append-only). LA seule donnée du scoreur : un résultat dyadique OBSERVÉ (jamais estim
+- **ScoreVerdict** (16 fields) — ADR-0149 — snapshot de verdict (leaderboard public + trajectoire pour la tenue).
+- **ScoreurCanonOverride** (8 fields) — ADR-0150 — canon éditable du scoreur (ratification opérateur a posteriori). Override de donnée par-dessus les DÉFAUTS ca
 - **CommunitySnapshot** (11 fields) — Relevé de santé communautaire par plateforme. Unités canoniques (ADR-0134) : `size` = compte absolu ; `health`/`sentimen
 - **BrandVariable** (9 fields)
 - **VariableHistory** (8 fields)
@@ -569,7 +570,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 264 (par deck)
+## Pages — 265 (par deck)
 
 ### Agency (12)
 
@@ -646,7 +647,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/settings/billing`
 - `/cockpit/settings/connections`
 
-### Console (122)
+### Console (123)
 
 - `/console`
 - `/console/academie`
@@ -745,6 +746,7 @@ Ces correspondances évitent la réinvention :
 - `/console/signal/intelligence`
 - `/console/signal/knowledge`
 - `/console/signal/market`
+- `/console/signal/scoreur-canon`
 - `/console/signal/signals`
 - `/console/signal/tarsis`
 - `/console/socle/commissions`
@@ -1023,7 +1025,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 576 (par governor)
+## Intent kinds — 578 (par governor)
 
 ### MESTOR (79)
 
@@ -1125,7 +1127,7 @@ Ces correspondances évitent la réinvention :
 - `PROPOSE_SEQUENCE_PROMOTION_FROM_CAMPAIGN` → campaign-tracker (sync) — Cluster E — Si campagne réussie (tierDelta>0 + cultIndexDelta>0 + altitudeRegres…
 - `TOGGLE_QUALITY_GATE_MODE` → auto-promotion (sync) — Bascule le mode quality-gate entre SOFT (warning-only) et HARD (block-on-fail). …
 
-### SESHAT (30)
+### SESHAT (32)
 
 - `SESHAT_UPSERT_POLITY_AXIS` → sector-intelligence (sync) — Upsert d'un axe culturel sectoriel PAR POLITY (SectorPolityAxis — échelle de mar…
 - `SESHAT_REGISTER_SUPERFAN` → superfan (sync) — Enregistre/actualise UN SuperfanProfile (upsert par (strategyId, platform, handl…
@@ -1137,6 +1139,8 @@ Ces correspondances évitent la réinvention :
 - `SESHAT_LINK_ACTOR_TO_POSITION` → overton-graph (sync) — Overton Graph (ADR-0148) : relie un acteur (BRAND/COMPETITOR/SUPERFAN/INSTITUTIO…
 - `SESHAT_RECORD_EPREUVE` → scoreur (sync) — Scoreur à force révélée (ADR-0149) : enregistre UNE épreuve dyadique OBSERVÉE (a…
 - `SESHAT_SCORE_BRAND` → scoreur (sync) — Scoreur à force révélée (ADR-0149) : estime la force θ ± RD par arène (Bradley-T…
+- `SESHAT_EDIT_SCOREUR_CANON` → scoreur (sync) — Scoreur (ADR-0150) : édite le canon a posteriori SANS redéploiement — op ∈ SET_G…
+- `SESHAT_RESET_SCOREUR_CANON` → scoreur (sync) — Scoreur (ADR-0150) : réinitialise un override de canon (GAUGE|ITEM par clé) — re…
 - `SESHAT_CAPTURE_COMMUNITY_SNAPSHOT` → cult-index-engine (sync) — Mesure et persiste UN CommunitySnapshot par plateforme suivie depuis la donnée R…
 - `SESHAT_ATTRIBUTE_DEVOTION_TRANSITIONS` → campaign-tracker (sync) — Reconstruit CampaignAction.devotionTransitionsObserved d'une stratégie depuis le…
 - `RANK_PEERS` → seshat (sync) — Generic peer ranking via context-store ranker.…

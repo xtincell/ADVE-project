@@ -22,6 +22,7 @@ import {
   type ScoreurArena,
 } from "@/domain/scoreur";
 import { compileMeasuredEpreuves, ITEM_OPPONENTS } from "./compilateur";
+import { resolveScoreurCanon } from "./canon";
 
 // ── single-writers ───────────────────────────────────────────────────────────
 
@@ -210,10 +211,13 @@ export async function scoreBrand(
     favorableOverton: measured.favorableOverton,
   });
 
+  // Canon éditable a posteriori (ADR-0150) : override DB par-dessus les défauts code.
+  const canon = await resolveScoreurCanon();
+
   // 1er passage → cohérence ; ajoute l'item coherence-seuil si R ≥ seuil.
-  const first = scoreFromEpreuves({ subjectRef: strategyId, league, epreuves, anchors, itemsMet });
+  const first = scoreFromEpreuves({ subjectRef: strategyId, league, epreuves, anchors, itemsMet, canon });
   if (first.coherence >= COHERENCE_THRESHOLD) itemsMet.add("coherence-seuil");
-  const verdict = scoreFromEpreuves({ subjectRef: strategyId, league, epreuves, anchors, itemsMet });
+  const verdict = scoreFromEpreuves({ subjectRef: strategyId, league, epreuves, anchors, itemsMet, canon });
 
   let verdictId = "";
   if (opts.persist !== false) {

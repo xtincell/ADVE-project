@@ -64,11 +64,15 @@ export function computeCoherence(arenas: readonly ArenaEstimate[]): number {
 }
 
 /** Le plus haut palier atteint par les ITEMS (escalade stricte, jamais waivable). */
-export function itemsTier(itemsMet: ReadonlySet<string>): BrandTier {
+export function itemsTier(
+  itemsMet: ReadonlySet<string>,
+  items: readonly MustHaveItem[] = MUST_HAVE_ITEMS,
+): BrandTier {
   let reached: BrandTier = "LATENT";
   for (const tier of BRAND_TIERS) {
     if (tier === "LATENT") continue;
-    const required = MUST_HAVE_ITEMS.filter((i) => i.tier === tier);
+    const required = items.filter((i) => i.tier === tier);
+    // Un palier sans item requis n'est pas une porte — on le franchit librement.
     const allMet = required.every((i) => itemsMet.has(i.id));
     if (allMet) reached = tier;
     else break; // escalade stricte : un trou stoppe la montée
@@ -81,25 +85,28 @@ export interface VerdictInput {
   readonly league: LeagueKey;
   readonly coherence: number;
   readonly itemsMet: ReadonlySet<string>;
+  /** Liste d'items canon (défaut code, override opérateur ADR-0150). */
+  readonly items?: readonly MustHaveItem[];
 }
 
 /** Assemble le verdict : force pondérée par R, palier = min(bande, items), couverture. */
 export function computeVerdict(input: VerdictInput): ScoreVerdict {
+  const itemList = input.items ?? MUST_HAVE_ITEMS;
   const composite = input.arenas.reduce((s, a) => s + a.force, 0); // 0..200
   const force = Math.max(0, Math.min(200, composite * input.coherence));
   const bande = classifyTier(force, 200);
-  const items = itemsTier(input.itemsMet);
+  const items = itemsTier(input.itemsMet, itemList);
   // palier = min(bande, items)
   const tier: BrandTier = compareTiers(bande, items) <= 0 ? bande : items;
 
   const measuredCount = input.arenas.filter((a) => a.epreuveCount > 0).length;
   const coveragePct = Math.round((measuredCount / SCOREUR_ARENAS.length) * 100);
 
-  const gates = MUST_HAVE_ITEMS.map((i) => ({ label: i.label, ok: input.itemsMet.has(i.id) }));
+  const gates = itemList.map((i) => ({ label: i.label, ok: input.itemsMet.has(i.id) }));
 
   let cappedReason: string | null = null;
   if (tierIndex(items) < tierIndex(bande)) {
-    const missing = MUST_HAVE_ITEMS.filter(
+    const missing = itemList.filter(
       (i) => tierIndex(i.tier) <= tierIndex(bande) && !input.itemsMet.has(i.id),
     ).map((i) => i.label);
     cappedReason = `plafonné à ${items} — items non franchis : ${missing.join(", ")}`;
