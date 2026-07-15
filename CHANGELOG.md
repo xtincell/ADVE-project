@@ -10,6 +10,18 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.171 — feat(golive): rapport scorer dense & factuel + CTA scorer + publicSlug `LFA-` + calendrier J-0 armable + hub Connexions MCP + vault trouvable (2026-07-15)
+
+**Punch list go-live (l'opérateur teste la prod). Aucun nouveau modèle Prisma, cap APOGEE 7/7, 0 LLM sur tout le périmètre.**
+
+- **Scorer = rapport DENSE & FACTUEL** (priorité opérateur : « un simple score sans les info traqué ça sonne trop arbitraire »). `computeFootprintScore` produit déjà une PREUVE par dimension (`details` : « 6 an(s) · registrar », « MX · SPF · DMARC », « 2 canal(aux) · 1 753 abonnés mesurés ») — le router les jetait. Fix : `FootprintDimensionRow` élargi (`label`+`details`, Json existant = 0 migration, persisté → cache ET scan frais cohérents), `footprint.scoreInstant` renvoie la preuve + `followerCounts` normalisés. `/scorer` réécrit : audience réelle par plateforme, chaque dimension mesurée AVEC son fait + sa contribution (score/100 · poids %), section « Non mesuré » honnête (jamais un vide, jamais un faux zéro). Le /100 devient transparent et sourcé.
+- **CTA scorer** ajouté sur `/lafusee` (hero) et la racine marketing UPgraders (`→ Scorer ma marque · 30s`) — n'existaient que sur `/landingintake` et `/leaderboard`.
+- **`publicSlug` format canon `LFA-<brandshortname>`** (`src/domain/brand-slug.ts` : `brandPublicSlug` + `isBrandPublicSlug`, regex `^LFA-[a-z0-9](-[a-z0-9]+)*$`). SPAWT posé (`LFA-spawt`, 2 seeds), motion19/xtincell reslugués (seeds + update idempotent). Script prod idempotent `npm run db:migrate:brand-slugs` (collision-safe). Ne touche PAS `Mission.publicSlug` (La Guilde, format libre).
+- **Calendrier — J-0 réglable + « Armer les publications »** (le « surtout » : « on commence aujourd'hui et les publications doivent être armées pour la suite »). Onglet Lancement : sélecteur de jour J-0 (défaut aujourd'hui) + durée → rétroplan ré-ancré déterministe (`deriveDatedPosts`, pur) + bouton qui **matérialise** les posts publiables (FB/IG/LinkedIn) en `ANUBIS_PUBLISH_SOCIAL_POST` `scheduleAt` futur → BrandAction SCHEDULED → cron `social-sync` publie. Zéro écriture nue (spine + firewall zones ADR-0131 par publication) ; plateformes non connectables (TikTok/X/YouTube) comptées « non armées » (honnête). Mutation gouvernée `glory.armLaunchCalendar`.
+- **Hub Connexions standardisé — onglet MCP** (`/cockpit/settings/connections`) : le founder récupère l'endpoint `/api/mcp` + génère/révoque une clé scopée à SA marque (à coller dans Claude). Router `brandMcp` (info/createKey/revokeKey, `canAccessStrategy`) qui réutilise le mécanisme de clés `mcpApiKey` `scopeKind:BRAND` (ADR-0145) ; clé en clair montrée une seule fois.
+- **Vault trouvable + clés système** : le command-palette (Cmd+K) **dérive désormais l'index de la nav du portail courant** (fin de la liste figée qui oubliait des pages — le Credentials Vault était introuvable) + mots-clés d'appoint (api/clés/apify). Apify (`APIFY_SOCIAL`) ajouté au Credentials Vault. Panneau **« Clés système (env) »** (booléens only, jamais la valeur — ADR-0075 ; `anubis.systemKeyStatus`) : Apify/Brave/PageSpeed/LLM/paiement/email → configuré ou manquant. Leaderboard vide → EmptyState clair (au lieu du vide brut).
+- Cap APOGEE 7/7 · 0 nouveau modèle · tsc 0 · lint 0 · **1142 tests verts** (11 neufs : `brand-slug` + `system-keys`).
+
 ## v6.27.170 — chore(deploy): déploiement 100 % manuel + feat(feedback): canal de remontée bug/retour des testeurs (ADR-0155) (2026-07-15)
 
 **Deux demandes « passage en prod » : (1) couper tout déploiement automatique — l'opérateur déploiera manuellement ; (2) permettre aux testeurs de remonter les bugs.**

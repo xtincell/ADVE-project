@@ -84,6 +84,7 @@ import { ptahRouter } from "./routers/ptah";
 import { imhotepRouter } from "./routers/imhotep";
 import { anubisRouter } from "./routers/anubis";
 import { mcpBillingRouter } from "./routers/mcp-billing";
+import { brandMcpRouter } from "./routers/brand-mcp";
 import { missionApplicationRouter } from "./routers/mission-applications";
 // La Guilde — portail public (ADR-0098) : mur des missions + dépôt marque + inscription guilde
 import { laGuildeRouter } from "./routers/laguilde";
@@ -228,6 +229,7 @@ export const appRouter = createTRPCRouter({
   // Phase 15 — Anubis Comms (ADR-0020) — orchestrateur broadcast/ad-networks/notification/credentials
   anubis: anubisRouter,
   mcpBilling: mcpBillingRouter,
+  brandMcp: brandMcpRouter,
   missionApplication: missionApplicationRouter,
   // La Guilde — portail public (ADR-0098) : guild marketplace public face
   laGuilde: laGuildeRouter,

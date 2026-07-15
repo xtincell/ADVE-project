@@ -185,6 +185,12 @@ export const anubisRouter = createTRPCRouter({
     return creds;
   }),
 
+  /**
+   * État des clés système (env). Booléens only — jamais la valeur (ADR-0075).
+   * Surface le panneau « Clés système » du Credentials Vault (go-live).
+   */
+  systemKeyStatus: operatorProcedure.query(() => anubis.getSystemKeyStatus()),
+
   listCommsPlans: protectedProcedure
     .input(z.object({ strategyId: z.string().optional(), status: z.string().optional() }).optional())
     .query(async ({ ctx, input }) => {

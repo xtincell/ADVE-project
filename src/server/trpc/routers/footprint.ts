@@ -15,6 +15,25 @@ import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, publicProcedure, operatorProcedure } from "../init";
 import { enrichPublicFootprint } from "@/server/services/quick-intake/public-enrichment";
 import { computeFootprintScore } from "@/server/services/quick-intake/footprint-score";
+import type { FollowerCountEntry } from "@/server/services/quick-intake/footprint-types";
+
+/**
+ * Normalise les relevés d'audience (stockés en Json `unknown` côté cache, typés
+ * côté scan frais) vers une forme stable pour le front — jamais `unknown`.
+ */
+function asFollowerCounts(value: unknown): FollowerCountEntry[] | null {
+  if (!Array.isArray(value)) return null;
+  const out = value
+    .filter((e): e is Record<string, unknown> => !!e && typeof e === "object")
+    .map((e) => ({
+      platform: String(e.platform ?? ""),
+      handle: String(e.handle ?? ""),
+      followerCount: typeof e.followerCount === "number" ? e.followerCount : 0,
+      source: (e.source === "CONNECTOR" ? "CONNECTOR" : "APIFY") as "APIFY" | "CONNECTOR",
+      capturedAt: String(e.capturedAt ?? ""),
+    }));
+  return out.length > 0 ? out : null;
+}
 import {
   normalizeBrandKey,
   lookupLatestFootprint,
@@ -73,7 +92,7 @@ export const footprintRouter = createTRPCRouter({
             outOf: 100,
             measuredWeight: cached.measuredWeight,
             dimensions: cached.dimensions,
-            followerCounts: cached.followerCounts ?? null,
+            followerCounts: asFollowerCounts(cached.followerCounts),
             cached: true,
             capturedAt: cached.capturedAt.toISOString(),
             stale: cached.stale,
@@ -99,8 +118,12 @@ export const footprintRouter = createTRPCRouter({
         budgetMs: 8_000,
       });
       const score = computeFootprintScore(enriched);
+      // On garde `label` + `details` (la preuve factuelle « sur quoi ça se base »)
+      // — persistés dans le snapshot et renvoyés au front pour le rapport dense.
       const dimensions = score.dimensions.map((d) => ({
         key: d.key,
+        label: d.label,
+        details: d.details,
         measured: d.measured,
         score: d.score,
         weight: d.weight,
@@ -123,7 +146,7 @@ export const footprintRouter = createTRPCRouter({
         outOf: score.outOf, // 100
         measuredWeight: score.measuredWeight,
         dimensions,
-        followerCounts: enriched.followerCounts ?? null,
+        followerCounts: asFollowerCounts(enriched.followerCounts),
         cached: false,
         capturedAt: (saved?.capturedAt ?? new Date()).toISOString(),
         stale: false,

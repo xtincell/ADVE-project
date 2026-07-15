@@ -452,7 +452,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 119
+## tRPC routers — 120
 
 - `accounts` (`src/server/trpc/routers/accounts.ts`)
 - `actions` (`src/server/trpc/routers/actions.ts`)
@@ -466,6 +466,7 @@ Ces correspondances évitent la réinvention :
 - `blog` (`src/server/trpc/routers/blog.ts`)
 - `boot-sequence` (`src/server/trpc/routers/boot-sequence.ts`)
 - `boutique` (`src/server/trpc/routers/boutique.ts`)
+- `brand-mcp` (`src/server/trpc/routers/brand-mcp.ts`)
 - `brand-node` (`src/server/trpc/routers/brand-node.ts`)
 - `brand-vault` (`src/server/trpc/routers/brand-vault.ts`)
 - `brief-ingest` (`src/server/trpc/routers/brief-ingest.ts`)

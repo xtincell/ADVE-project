@@ -1629,6 +1629,9 @@ export async function seedSpawtComplete(db: PrismaClient) {
     update: {
       name: "SPAWT",
       description: "Stratégie ADVE-RTIS complète — SPAWT (App identité culinaire, Abidjan). Mission 1 COMPLÉTÉE.",
+      // Format canonique `LFA-<brandshortname>` (src/domain/brand-slug.ts) — inline
+      // ici car ce script standalone évite les imports @/ (résolution runtime).
+      publicSlug: "LFA-spawt",
       // Pays + secteur : les DEUX clés qu'exploitent la veille actualité
       // (external-feeds Google News), l'intelligence sectorielle et l'axe
       // Overton. Sans elles, la marque est SAUTÉE par le générateur de digest
@@ -1649,6 +1652,7 @@ export async function seedSpawtComplete(db: PrismaClient) {
       name: "SPAWT",
       description: "Stratégie ADVE-RTIS complète — SPAWT (App identité culinaire, Abidjan). Mission 1 COMPLÉTÉE.",
       userId: adminUserId,
+      publicSlug: "LFA-spawt", // format canonique (src/domain/brand-slug.ts)
       countryCode: "CI",
       businessContext: {
         businessModel: "PLATEFORME",
