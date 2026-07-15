@@ -2928,6 +2928,73 @@ model PersonIdentifier {
   @@index([strategyId, kind])
 }
 
+/// ADR-0146 — Overton Graph. Une POSITION tenue dans un débat sectoriel, avec sa
+/// zone d'acceptabilité PAR POLITY (secteur × échelle × pays — résolution honnête
+/// EXACT/SCALE_ONLY/GLOBAL_FALLBACK côté lecture). zone null = pas de preuve
+/// (jamais fabriquée, P22-2). Domaine Seshat, single-writer, mutations gouvernées.
+model OvertonPosition {
+  id          String       @id @default(cuid())
+  /// null = position au niveau secteur (pas rattachée à une seule marque).
+  strategyId  String?
+  sectorSlug  String
+  marketScale MarketScale?
+  countryCode String?      @db.VarChar(2)
+  statement   String
+  /// UNTHINKABLE | RADICAL | ACCEPTABLE | SENSIBLE | POPULAR | POLICY — null sans preuve.
+  zone           String?
+  evidenceCount  Int       @default(0)
+  lastEvidenceAt DateTime?
+  evidence       Json? // signaux datés qui la soutiennent
+
+  actors      OvertonActorLink[]
+  transitions OvertonZoneTransition[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sectorSlug, marketScale, countryCode])
+  @@index([strategyId])
+}
+
+/// ADR-0146 — arête acteur→position (qui tient / propage / oppose / déplace).
+model OvertonActorLink {
+  id         String  @id @default(cuid())
+  positionId String
+  actorKind  String // BRAND | COMPETITOR | SUPERFAN | INSTITUTION | MEDIA
+  /// SUPERFAN → PersonIdentity.id ; COMPETITOR → nom (pilier D) ; BRAND → strategyId.
+  actorRef   String?
+  edgeKind   String // HOLDS | PROPAGATES | OPPOSES | SHIFTS_TOWARD
+  datedAt    DateTime?
+  evidence   Json?
+
+  position OvertonPosition @relation(fields: [positionId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([positionId])
+  @@index([actorKind, actorRef])
+}
+
+/// ADR-0146 — le Δ MESURÉ : une position migre de zone, daté + attribué (last-touch
+/// ADR-0135). C'est la seule « mesure » de la fenêtre — jamais un score de fenêtre.
+model OvertonZoneTransition {
+  id                  String   @id @default(cuid())
+  positionId          String
+  fromZone            String?
+  toZone              String
+  occurredAt          DateTime
+  evidence            Json?
+  attributedActorKind String?
+  attributedActorRef  String?
+  attributionModel    String   @default("LAST_TOUCH_45D")
+
+  position OvertonPosition @relation(fields: [positionId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([positionId, occurredAt])
+}
+
 /// Relevé de santé communautaire par plateforme. Unités canoniques (ADR-0134) :
 /// `size` = compte absolu ; `health`/`sentiment`/`activeRate` = fractions 0-1 ;
 /// `velocity` = fraction de croissance sur ~30 j (négative possible).
