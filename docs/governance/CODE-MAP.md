@@ -32,7 +32,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 215 models, 71 enums
+## Prisma — 218 models, 71 enums
 
 ### Models
 
@@ -54,6 +54,7 @@ Ces correspondances évitent la réinvention :
 - **CrmMessage** (14 fields) — Message CRM (email transactionnel sortant ou note entrante consignée).
 - **NewsletterCampaign** (12 fields) — Campagne newsletter (The Upgrade) — composer, tester, envoyer aux opt-in.
 - **FollowerSnapshot** (9 fields)
+- **BrandFootprintSnapshot** (12 fields) — ADR-0151 — base de marques de Seshat (répertoire d'empreintes publiques). Chaque recherche `/scorer` (marque hors-platef
 - **TalentProfile** (27 fields)
 - **MissionQuote** (17 fields)
 - **TalentService** (13 fields)
@@ -118,6 +119,7 @@ Ces correspondances évitent la réinvention :
 - **BrandRef** (11 fields) — ADR-0149 — Scoreur : marque hors-plateforme (rival, ancre-étalon, ou item canon). PAS un `Strategy` (brief §5.1) — regis
 - **Epreuve** (14 fields) — ADR-0149 — le REGISTRE d'épreuves (append-only). LA seule donnée du scoreur : un résultat dyadique OBSERVÉ (jamais estim
 - **ScoreVerdict** (16 fields) — ADR-0149 — snapshot de verdict (leaderboard public + trajectoire pour la tenue).
+- **EpreuveCandidate** (18 fields) — ADR-0154 — quarantaine des victoires proposées par Hunter (LLM) AVANT revue. SÉPARÉE d'`Epreuve` (le registre du scoreur
 - **ScoreurCanonOverride** (8 fields) — ADR-0150 — canon éditable du scoreur (ratification opérateur a posteriori). Override de donnée par-dessus les DÉFAUTS ca
 - **CommunitySnapshot** (11 fields) — Relevé de santé communautaire par plateforme. Unités canoniques (ADR-0134) : `size` = compte absolu ; `health`/`sentimen
 - **BrandVariable** (9 fields)
@@ -177,6 +179,7 @@ Ces correspondances évitent la réinvention :
 - **GuildOrganizationMetric** (10 fields)
 - **NotificationPreference** (7 fields)
 - **Notification** (15 fields)
+- **Feedback** (12 fields) — ADR-0155 — remontée feedback / bug d'un testeur. Canal dédié (distinct de InterventionRequest interne, de la messagerie,
 - **PushSubscription** (9 fields)
 - **NotificationTemplate** (11 fields)
 - **McpRegistry** (12 fields)
@@ -328,7 +331,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Services backend — 115
+## Services backend — 116
 
 - `src/server/services/advertis-connectors/` ✓ manifest
 - `src/server/services/advertis-scorer/` ✓ manifest
@@ -439,6 +442,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/talent-engine/` ✓ manifest
 - `src/server/services/talent-services/` ✓ manifest
 - `src/server/services/team-allocator/` ✓ manifest
+- `src/server/services/tester-feedback/`
 - `src/server/services/tier-evaluator/` ✓ manifest
 - `src/server/services/translation/` ✓ manifest
 - `src/server/services/upsell-detector/` ✓ manifest
@@ -448,7 +452,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 117
+## tRPC routers — 119
 
 - `accounts` (`src/server/trpc/routers/accounts.ts`)
 - `actions` (`src/server/trpc/routers/actions.ts`)
@@ -493,6 +497,8 @@ Ces correspondances évitent la réinvention :
 - `error-vault` (`src/server/trpc/routers/error-vault.ts`)
 - `escrow-arbitration` (`src/server/trpc/routers/escrow-arbitration.ts`)
 - `event` (`src/server/trpc/routers/event.ts`)
+- `feedback` (`src/server/trpc/routers/feedback.ts`)
+- `footprint` (`src/server/trpc/routers/footprint.ts`)
 - `framework` (`src/server/trpc/routers/framework.ts`)
 - `glory` (`src/server/trpc/routers/glory.ts`)
 - `governance` (`src/server/trpc/routers/governance.ts`)
@@ -570,7 +576,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 265 (par deck)
+## Pages — 269 (par deck)
 
 ### Agency (12)
 
@@ -647,7 +653,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/settings/billing`
 - `/cockpit/settings/connections`
 
-### Console (123)
+### Console (126)
 
 - `/console`
 - `/console/academie`
@@ -743,15 +749,18 @@ Ces correspondances évitent la réinvention :
 - `/console/seshat/signals`
 - `/console/seshat/tarsis`
 - `/console/signal/attribution`
+- `/console/signal/brand-directory`
 - `/console/signal/intelligence`
 - `/console/signal/knowledge`
 - `/console/signal/market`
+- `/console/signal/prospect-scoring`
 - `/console/signal/scoreur-canon`
 - `/console/signal/signals`
 - `/console/signal/tarsis`
 - `/console/socle/commissions`
 - `/console/socle/contracts`
 - `/console/socle/escrow`
+- `/console/socle/feedback`
 - `/console/socle/invoices`
 - `/console/socle/manual-subscriptions`
 - `/console/socle/market-costs`
@@ -813,7 +822,7 @@ Ces correspondances évitent la réinvention :
 - `/launchpad/portfolio-bulk-import`
 - `/score`
 
-### Public (39)
+### Public (40)
 
 - `/(marketing)`
 - `/agence`
@@ -847,6 +856,7 @@ Ces correspondances évitent la réinvention :
 - `/realisations`
 - `/register`
 - `/reset-password`
+- `/scorer`
 - `/services`
 - `/shared/strategy/[token]`
 - `/sla`
@@ -1025,7 +1035,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 578 (par governor)
+## Intent kinds — 583 (par governor)
 
 ### MESTOR (79)
 
@@ -1127,7 +1137,7 @@ Ces correspondances évitent la réinvention :
 - `PROPOSE_SEQUENCE_PROMOTION_FROM_CAMPAIGN` → campaign-tracker (sync) — Cluster E — Si campagne réussie (tierDelta>0 + cultIndexDelta>0 + altitudeRegres…
 - `TOGGLE_QUALITY_GATE_MODE` → auto-promotion (sync) — Bascule le mode quality-gate entre SOFT (warning-only) et HARD (block-on-fail). …
 
-### SESHAT (32)
+### SESHAT (35)
 
 - `SESHAT_UPSERT_POLITY_AXIS` → sector-intelligence (sync) — Upsert d'un axe culturel sectoriel PAR POLITY (SectorPolityAxis — échelle de mar…
 - `SESHAT_REGISTER_SUPERFAN` → superfan (sync) — Enregistre/actualise UN SuperfanProfile (upsert par (strategyId, platform, handl…
@@ -1141,6 +1151,9 @@ Ces correspondances évitent la réinvention :
 - `SESHAT_SCORE_BRAND` → scoreur (sync) — Scoreur à force révélée (ADR-0149) : estime la force θ ± RD par arène (Bradley-T…
 - `SESHAT_EDIT_SCOREUR_CANON` → scoreur (sync) — Scoreur (ADR-0150) : édite le canon a posteriori SANS redéploiement — op ∈ SET_G…
 - `SESHAT_RESET_SCOREUR_CANON` → scoreur (sync) — Scoreur (ADR-0150) : réinitialise un override de canon (GAUGE|ITEM par clé) — re…
+- `SESHAT_SCORE_PROSPECT` → scoreur (sync) — Prospect Scoring (ADR-0154) : pour UNE marque externe — assure la Strategy shell…
+- `SESHAT_HUNT_VICTORIES` → argos (sync) — Prospect Scoring (ADR-0154) : Hunter (LLM via Gateway, executeStructuredLLMCall …
+- `SESHAT_DECIDE_EPREUVE_CANDIDATE` → scoreur (sync) — Prospect Scoring (ADR-0154) : décision opérateur sur une victoire candidate — AP…
 - `SESHAT_CAPTURE_COMMUNITY_SNAPSHOT` → cult-index-engine (sync) — Mesure et persiste UN CommunitySnapshot par plateforme suivie depuis la donnée R…
 - `SESHAT_ATTRIBUTE_DEVOTION_TRANSITIONS` → campaign-tracker (sync) — Reconstruit CampaignAction.devotionTransitionsObserved d'une stratégie depuis le…
 - `RANK_PEERS` → seshat (sync) — Generic peer ranking via context-store ranker.…
@@ -1162,9 +1175,11 @@ Ces correspondances évitent la réinvention :
 - `MEASURE_OVERTON_SHIFT` → campaign-tracker (async) — Cluster D — Mesure le déplacement de l'axe culturel sectoriel post-LIVE. Compare…
 - `EVALUATE_OVERTON_READINESS` → campaign-tracker (sync) — Cluster D pré-LIVE — Tarsis évalue OvertonReadiness sur l'axe culturel ciblé. Ou…
 
-### INFRASTRUCTURE (380)
+### INFRASTRUCTURE (382)
 
 - `ADMIN_SET_USER_ROLE` → accounts (sync) — Console superviseur (Vague 7) : promotion/retrogradation du role d'un compte (en…
+- `SUBMIT_FEEDBACK` → tester-feedback (sync) — Canal feedback testeur (ADR-0155) : un utilisateur connecté remonte un bug/idée/…
+- `TRIAGE_FEEDBACK` → tester-feedback (sync) — Inbox feedback (ADR-0155) : l'opérateur change le statut d'une remontée (TRIAGED…
 - `ADMIN_CREATE_BRAND_LOGIN` → accounts (sync) — Console superviseur : cree (ou reclame un stub) un login personnalise pour UNE m…
 - `SYNC_UPGRADERS_CANON` → canon-sync (sync) — Vague 10 : pousse le canon UPgraders 100% (8 piliers contrats COMPLETE) dans la …
 - `SCORE_PILLAR` → advertis-scorer (sync) — Score a pillar without writing — used by validation flows.…

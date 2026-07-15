@@ -21,7 +21,7 @@ import {
 } from "@/server/services/seshat/overton-graph";
 import type { LeagueKey } from "@/domain/scoreur";
 
-const LEAGUE: LeagueKey = { sectorSlug: "audiovisuel", marketScale: "QUARTIER", countryCode: "CM" };
+const LEAGUE: LeagueKey = { sectorSlug: "culture", marketScale: "QUARTIER", countryCode: "CM" };
 const NOW = "2026-07-15T00:00:00.000Z";
 const OWNER_EMAIL = "scoreur-demo@lafusee.local";
 
@@ -97,11 +97,11 @@ async function ensureBrand(
 ): Promise<string> {
   const client = await db.client.upsert({
     where: { id: `demo-client-${brand.key}` },
-    update: { sector: "audiovisuel" },
+    update: { sector: "CULTURE" },
     create: {
       id: `demo-client-${brand.key}`,
       name: brand.name,
-      sector: "audiovisuel",
+      sector: "CULTURE",
       operatorId: owner.operatorId,
     },
     select: { id: true },

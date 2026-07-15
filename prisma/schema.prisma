@@ -1319,6 +1319,35 @@ model FollowerSnapshot {
   @@index([handle, capturedAt])
 }
 
+/// ADR-0151 — base de marques de Seshat (répertoire d'empreintes publiques).
+/// Chaque recherche `/scorer` (marque hors-plateforme, pas un `Strategy`) est
+/// conservée ici comme OBSERVATION append-only — la donnée n'est jamais perdue.
+/// « Dernière par `brandKey` » = le cache instantané servi aux recherches
+/// répétées ; toutes les rows = l'historique. Distinct de `FollowerSnapshot`
+/// (par-client), du leaderboard `ScoreVerdict` (force révélée /200, D9) et de
+/// `BrandRef` (registre scoreur). Sans PII : une marque n'est pas une personne.
+model BrandFootprintSnapshot {
+  id             String  @id @default(cuid())
+  /// Clé de dédup canonique : host du domaine (sans www), sinon slug(nom|pays).
+  brandKey       String
+  name           String
+  websiteUrl     String?
+  countryCode    String? @db.VarChar(2)
+  sectorSlug     String?
+  /// Empreinte /100 (null si rien de mesurable — honnête, jamais gonflé).
+  total          Int?
+  measuredWeight Float?
+  /// Ventilation par dimension (site/social/reviews/press/…), telle qu'affichée.
+  dimensions     Json
+  followerCounts Json?
+  source         String  @default("SCORER_FUNNEL")
+
+  capturedAt DateTime @default(now())
+
+  @@index([brandKey, capturedAt])
+  @@index([sectorSlug, countryCode, capturedAt])
+}
+
 model TalentProfile {
   id                  String    @id @default(cuid())
   userId              String    @unique
@@ -3068,6 +3097,37 @@ model ScoreVerdict {
   @@index([tier])
 }
 
+/// ADR-0154 — quarantaine des victoires proposées par Hunter (LLM) AVANT revue.
+/// SÉPARÉE d'`Epreuve` (le registre du scoreur, lu intégralement par le
+/// compilateur) : une victoire non approuvée ne DOIT jamais pouvoir entrer dans un
+/// score (P22-2). APPROVE → `SESHAT_RECORD_EPREUVE` crée l'`Epreuve` réelle.
+/// Garde déterministe : sans `sourceUrl` → auto-REJECT. Single-writer
+/// `seshat/scoreur/candidates.ts`.
+model EpreuveCandidate {
+  id                String    @id @default(cuid())
+  subjectStrategyId String
+  rivalName         String
+  rivalStrategyId   String?
+  rivalBrandRefId   String?
+  arena             String // A | D | V
+  proposedResult    String // WIN | LOSS
+  claim             String
+  sourceUrl         String?
+  sourceTitle       String?
+  confidence        Float?
+  status            String    @default("PENDING") // PENDING | APPROVED | REJECTED
+  reviewedBy        String?
+  reviewedAt        DateTime?
+  recordedEpreuveId String?
+  /// Hash de dédup : subject+rival+arena+claim normalisés (anti-doublon récolte).
+  dedupHash         String    @unique
+  intentEmissionId  String?
+
+  createdAt DateTime @default(now())
+
+  @@index([subjectStrategyId, status])
+}
+
 /// ADR-0150 — canon éditable du scoreur (ratification opérateur a posteriori).
 /// Override de donnée par-dessus les DÉFAUTS canon en code (`anchors.ts`/`palier.ts`).
 /// Absent ⇒ la valeur code s'applique ; présent ⇒ il gagne. Permet d'ajuster la
@@ -4237,6 +4297,28 @@ model Notification {
   @@index([operatorId, isRead])
   @@index([type, createdAt])
   @@index([createdAt])
+}
+
+/// ADR-0155 — remontée feedback / bug d'un testeur. Canal dédié (distinct de
+/// InterventionRequest interne, de la messagerie, du CRM). Cycle de tri propre
+/// NEW→TRIAGED→RESOLVED. Single-writer `services/infrastructure/feedback/`.
+model Feedback {
+  id         String    @id @default(cuid())
+  userId     String?
+  operatorId String?
+  email      String?
+  kind       String    @default("BUG") // BUG | IDEA | OTHER
+  message    String
+  pageUrl    String?
+  userAgent  String?
+  status     String    @default("NEW") // NEW | TRIAGED | RESOLVED
+  resolvedBy String?
+  resolvedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([status, createdAt])
+  @@index([operatorId, status])
 }
 
 model PushSubscription {

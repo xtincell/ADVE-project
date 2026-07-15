@@ -11,6 +11,7 @@
 import { db } from "@/lib/db";
 import type { MarketScale } from "@/domain/market-scale";
 import { resolveEvidenceTargets } from "@/domain/market-scale";
+import { canonicalSectorSlug } from "@/domain/sector-taxonomy";
 import {
   COHERENCE_THRESHOLD,
   defaultThetaForScale,
@@ -120,8 +121,7 @@ export async function resolveLeagueForStrategy(strategyId: string): Promise<Leag
     where: { id: strategyId },
     select: { name: true, marketScale: true, countryCode: true, client: { select: { sector: true } } },
   });
-  const rawSector = strategy?.client?.sector?.trim() || "general";
-  const sectorSlug = rawSector.toLowerCase().replace(/\s+/g, "-");
+  const sectorSlug = canonicalSectorSlug(strategy?.client?.sector);
   return {
     sectorSlug,
     marketScale: strategy?.marketScale ?? null,
@@ -185,6 +185,7 @@ export async function scoreBrand(
     strategyId,
     nowIso,
     superfanFloor: targets.superfansTarget,
+    audienceFloor: targets.audienceFloor,
   });
   const persistedRows = await db.epreuve.findMany({
     where: { subjectStrategyId: strategyId },

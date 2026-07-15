@@ -85,6 +85,14 @@ export default async function LeaderboardPage() {
           ancré sur les étalons). Chaque score se lit avec sa couverture d&apos;épreuves.
         </p>
 
+        <div className="lb__cta">
+          <div className="lb__cta-txt">
+            <strong>Où se classe VOTRE marque ?</strong>
+            <span>Scorez-la gratuitement en 30 secondes — sans email.</span>
+          </div>
+          <a href="/scorer" className="lb__ctabtn">Scorer ma marque</a>
+        </div>
+
         {leagues.length === 0 ? (
           <div className="lb__empty">Aucun verdict historisé pour l&apos;instant.</div>
         ) : (

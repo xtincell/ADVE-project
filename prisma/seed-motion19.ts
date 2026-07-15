@@ -59,7 +59,7 @@ export async function seedMotion19(prisma: PrismaClient): Promise<void> {
     client = await prisma.client.create({
       data: {
         name: "Motion19",
-        sector: "Équipement audiovisuel & créateurs",
+        sector: "CULTURE", // canon (INTAKE_SECTORS) — équipement audiovisuel & créateurs → Culture & créativité
         country: "CM",
         contactName: "MOTION 19 SARL (direction à documenter)",
         contactEmail: "hello@motion19.com",
@@ -347,7 +347,7 @@ export async function seedMotion19Guild(prisma: PrismaClient): Promise<{
         guildSubmittedAt: new Date(),
         guildPublishedAt: new Date(),
         postedByUserId: strategy.userId,
-        sector: "Équipement audiovisuel & créateurs",
+        sector: "CULTURE", // canon (INTAKE_SECTORS) — équipement audiovisuel & créateurs → Culture & créativité
         location: "Douala, Cameroun (hybride — boutique Akwa + à distance)",
         category: "CONTENT",
       },

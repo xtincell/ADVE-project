@@ -8,9 +8,20 @@ export const manifest = defineManifest({
   service: "seshat",
   governor: "SESHAT",
   version: "1.0.0",
-  acceptsIntents: ["OBSERVE_INTENT", "RANK_PEERS", "SEARCH_BRAND_CONTEXT"],
+  acceptsIntents: ["OBSERVE_INTENT", "RANK_PEERS", "SEARCH_BRAND_CONTEXT", "SESHAT_HUNT_VICTORIES"],
   emits: ["TARSIS_SIGNAL_DETECTED"],
   capabilities: [
+    {
+      // ADR-0154 — Hunter cherche des victoires dyadiques documentées (LLM via
+      // Gateway) → EpreuveCandidate en quarantaine. LLM_CALL déclaré → cost-gate
+      // Thot (Loi 3) sur le seul kind coûteux du flux prospect-scoring.
+      name: "huntVictories",
+      inputSchema: z.object({ strategyId: z.string(), rivalName: z.string() }).passthrough(),
+      outputSchema: z.object({ candidates: z.number(), deferred: z.boolean() }),
+      sideEffects: ["LLM_CALL", "DB_WRITE"],
+      qualityTier: "B",
+      latencyBudgetMs: 20_000,
+    },
     {
       name: "rank",
       inputSchema: z.object({ candidates: z.array(z.unknown()) }).passthrough(),

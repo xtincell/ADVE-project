@@ -42,6 +42,28 @@ export const harvestOutputSchema = z.object({
 });
 export type HarvestOutput = z.infer<typeof harvestOutputSchema>;
 
+/**
+ * ADR-0154 — sortie du Hunter « chasse aux victoires » (LLM via Gateway). Chaque
+ * victoire est dyadique (sujet vs rival), par arène, avec un claim et une URL
+ * source. `sourceUrl` optionnel côté LLM mais une candidate sans source est
+ * auto-REJECT en aval (garde déterministe `candidates.ts`).
+ */
+export const victoryHarvestSchema = z.object({
+  victories: z
+    .array(
+      z.object({
+        arena: z.enum(["A", "D", "V"]),
+        rivalName: z.string().min(1).max(160),
+        proposedResult: z.enum(["WIN", "LOSS"]),
+        claim: z.string().min(1).max(600),
+        sourceUrl: z.string().max(2000).optional(),
+      }),
+    )
+    .max(12)
+    .default([]),
+});
+export type VictoryHarvest = z.infer<typeof victoryHarvestSchema>;
+
 /** Entrée de création manuelle (parité manual-first, ADR-0060). */
 export const manualDossierInputSchema = z.object({
   brand: z.string().min(1).max(160),
