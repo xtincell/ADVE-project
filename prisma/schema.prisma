@@ -2873,7 +2873,7 @@ model SuperfanProfile {
   @@index([personId])
 }
 
-/// ADR-0145 — Identity Graph. Une personne canonique, scopée à la marque
+/// ADR-0147 — Identity Graph. Une personne canonique, scopée à la marque
 /// (JAMAIS cross-marque). Réconcilie N handles / N réseaux / emails en une seule
 /// entité pour fermer le double-comptage superfan et ouvrir le gate PAID par email
 /// de commande. Domaine Seshat, single-writer, mutations gouvernées.
@@ -2899,7 +2899,7 @@ model PersonIdentity {
   @@index([mergedIntoId])
 }
 
-/// ADR-0145 — arête d'identité (un email / téléphone / handle rattaché à une
+/// ADR-0147 — arête d'identité (un email / téléphone / handle rattaché à une
 /// personne). PII : `matchHash` = HMAC-SHA256 déterministe de la valeur normalisée
 /// (pour matcher, jamais réversible) ; `displayCipher` = AES-256-GCM de la valeur
 /// (pour afficher). La valeur en clair n'est JAMAIS persistée.
@@ -2928,7 +2928,7 @@ model PersonIdentifier {
   @@index([strategyId, kind])
 }
 
-/// ADR-0146 — Overton Graph. Une POSITION tenue dans un débat sectoriel, avec sa
+/// ADR-0148 — Overton Graph. Une POSITION tenue dans un débat sectoriel, avec sa
 /// zone d'acceptabilité PAR POLITY (secteur × échelle × pays — résolution honnête
 /// EXACT/SCALE_ONLY/GLOBAL_FALLBACK côté lecture). zone null = pas de preuve
 /// (jamais fabriquée, P22-2). Domaine Seshat, single-writer, mutations gouvernées.
@@ -2956,7 +2956,7 @@ model OvertonPosition {
   @@index([strategyId])
 }
 
-/// ADR-0146 — arête acteur→position (qui tient / propage / oppose / déplace).
+/// ADR-0148 — arête acteur→position (qui tient / propage / oppose / déplace).
 model OvertonActorLink {
   id         String  @id @default(cuid())
   positionId String
@@ -2975,7 +2975,7 @@ model OvertonActorLink {
   @@index([actorKind, actorRef])
 }
 
-/// ADR-0146 — le Δ MESURÉ : une position migre de zone, daté + attribué (last-touch
+/// ADR-0148 — le Δ MESURÉ : une position migre de zone, daté + attribué (last-touch
 /// ADR-0135). C'est la seule « mesure » de la fenêtre — jamais un score de fenêtre.
 model OvertonZoneTransition {
   id                  String   @id @default(cuid())
@@ -2995,7 +2995,7 @@ model OvertonZoneTransition {
   @@index([positionId, occurredAt])
 }
 
-/// ADR-0147 — Scoreur : marque hors-plateforme (rival, ancre-étalon, ou item
+/// ADR-0149 — Scoreur : marque hors-plateforme (rival, ancre-étalon, ou item
 /// canon). PAS un `Strategy` (brief §5.1) — registre léger pour les adversaires
 /// d'épreuve. `fixedTheta` = θ jaugé pour les ancres/items (la seule main humaine).
 model BrandRef {
@@ -3017,7 +3017,7 @@ model BrandRef {
   @@index([sectorSlug, marketScale, countryCode])
 }
 
-/// ADR-0147 — le REGISTRE d'épreuves (append-only). LA seule donnée du scoreur :
+/// ADR-0149 — le REGISTRE d'épreuves (append-only). LA seule donnée du scoreur :
 /// un résultat dyadique OBSERVÉ (jamais estimé), par arène, par ligue (polity),
 /// avec sa source et sa date. Chaque row cite sa collecte.
 model Epreuve {
@@ -3043,7 +3043,7 @@ model Epreuve {
   @@index([sectorSlug, marketScale, countryCode, arena])
 }
 
-/// ADR-0147 — snapshot de verdict (leaderboard public + trajectoire pour la tenue).
+/// ADR-0149 — snapshot de verdict (leaderboard public + trajectoire pour la tenue).
 model ScoreVerdict {
   id                String       @id @default(cuid())
   subjectStrategyId String?
@@ -3066,6 +3066,28 @@ model ScoreVerdict {
   @@index([sectorSlug, marketScale, countryCode, force])
   @@index([subjectStrategyId, computedAt])
   @@index([tier])
+}
+
+/// ADR-0150 — canon éditable du scoreur (ratification opérateur a posteriori).
+/// Override de donnée par-dessus les DÉFAUTS canon en code (`anchors.ts`/`palier.ts`).
+/// Absent ⇒ la valeur code s'applique ; présent ⇒ il gagne. Permet d'ajuster la
+/// jauge et les items must-have SANS redéploiement (les θ des ancres/items vivent
+/// déjà sur `BrandRef.fixedTheta`, éditables en place). Écriture gouvernée SESHAT.
+model ScoreurCanonOverride {
+  id              String  @id @default(cuid())
+  kind            String // GAUGE | ITEM
+  /// GAUGE → MarketScale (QUARTIER…MONDE) ; ITEM → id d'item (dirigeant-identifiable…).
+  key             String
+  /// GAUGE → { floor, icone } ; ITEM → { tier, label, arena, difficulty, order }.
+  data            Json
+  active          Boolean @default(true)
+  updatedByUserId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([kind, key])
+  @@index([kind])
 }
 
 /// Relevé de santé communautaire par plateforme. Unités canoniques (ADR-0134) :

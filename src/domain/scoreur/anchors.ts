@@ -63,13 +63,23 @@ export const DEFAULT_GAUGE = GAUGE_BY_SCALE.NATION;
 /** Force max par arène (5 arènes × 40 = 200, aligné sur l'échelle de palier /200). */
 export const ARENA_FORCE_MAX = 40;
 
-export function gaugeForScale(scale: MarketScale | null | undefined): { floor: number; icone: number } {
-  return scale ? GAUGE_BY_SCALE[scale] : DEFAULT_GAUGE;
+/** Jauge éditable a posteriori (ADR-0150) : override partiel par-dessus le canon code. */
+export type GaugeMap = Record<MarketScale, { floor: number; icone: number }>;
+
+export function gaugeForScale(
+  scale: MarketScale | null | undefined,
+  gauge: GaugeMap = GAUGE_BY_SCALE,
+): { floor: number; icone: number } {
+  return scale ? gauge[scale] : gauge.NATION ?? DEFAULT_GAUGE;
 }
 
 /** Mappe un θ (Elo) sur la force d'arène 0..ARENA_FORCE_MAX, via la jauge de ligue. */
-export function thetaToForce(theta: number, scale: MarketScale | null | undefined): number {
-  const g = gaugeForScale(scale);
+export function thetaToForce(
+  theta: number,
+  scale: MarketScale | null | undefined,
+  gauge: GaugeMap = GAUGE_BY_SCALE,
+): number {
+  const g = gaugeForScale(scale, gauge);
   const span = g.icone - g.floor;
   if (span <= 0) return 0;
   const f = ((theta - g.floor) / span) * ARENA_FORCE_MAX;
@@ -77,8 +87,11 @@ export function thetaToForce(theta: number, scale: MarketScale | null | undefine
 }
 
 /** θ de départ des nœuds libres = médiane de la jauge de ligue. */
-export function defaultThetaForScale(scale: MarketScale | null | undefined): number {
-  const g = gaugeForScale(scale);
+export function defaultThetaForScale(
+  scale: MarketScale | null | undefined,
+  gauge: GaugeMap = GAUGE_BY_SCALE,
+): number {
+  const g = gaugeForScale(scale, gauge);
   return (g.floor + g.icone) / 2;
 }
 

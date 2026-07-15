@@ -8,8 +8,8 @@
 
 import type { MarketScale } from "../market-scale";
 import { fitBradleyTerry, toPairwise } from "./bradley-terry";
-import { defaultThetaForScale, thetaToForce } from "./anchors";
-import { computeCoherence, computeVerdict } from "./palier";
+import { defaultThetaForScale, thetaToForce, GAUGE_BY_SCALE, type GaugeMap } from "./anchors";
+import { computeCoherence, computeVerdict, MUST_HAVE_ITEMS, type MustHaveItem } from "./palier";
 import {
   SCOREUR_ARENAS,
   type ArenaEstimate,
@@ -31,6 +31,8 @@ export interface ScoreInput {
   /** θ fixés des ancres + items (la jauge). */
   readonly anchors: Readonly<Record<string, number>>;
   readonly itemsMet: ReadonlySet<string>;
+  /** Canon éditable a posteriori (ADR-0150) — défaut = constantes code. */
+  readonly canon?: { gauge?: GaugeMap; items?: readonly MustHaveItem[] };
 }
 
 /** Estime une arène : θ ± RD du sujet, mappé en force via la jauge de ligue. */
@@ -40,6 +42,7 @@ function estimateArena(
   epreuves: readonly CompiledEpreuve[],
   anchors: Readonly<Record<string, number>>,
   scale: MarketScale | null | undefined,
+  gauge: GaugeMap,
 ): ArenaEstimate {
   const arenaEpreuves = epreuves.filter((e) => e.arena === arena);
   const wins = arenaEpreuves.filter((e) => e.result === "WIN").length;
@@ -49,7 +52,7 @@ function estimateArena(
     // Absence honnête : force 0, RD max, aucune fabrication.
     return {
       arena,
-      theta: defaultThetaForScale(scale),
+      theta: defaultThetaForScale(scale, gauge),
       rd: 350,
       force: 0,
       epreuveCount: 0,
@@ -72,15 +75,15 @@ function estimateArena(
 
   const { theta, rd } = fitBradleyTerry(
     { nodes: [...nodeSet], anchors: relevantAnchors, pairwise: toPairwise(arenaEpreuves) },
-    { defaultTheta: defaultThetaForScale(scale) },
+    { defaultTheta: defaultThetaForScale(scale, gauge) },
   );
 
-  const subjTheta = theta[subjectRef] ?? defaultThetaForScale(scale);
+  const subjTheta = theta[subjectRef] ?? defaultThetaForScale(scale, gauge);
   return {
     arena,
     theta: Math.round(subjTheta),
     rd: Math.round(rd[subjectRef] ?? 350),
-    force: Math.round(thetaToForce(subjTheta, scale) * 10) / 10,
+    force: Math.round(thetaToForce(subjTheta, scale, gauge) * 10) / 10,
     epreuveCount: arenaEpreuves.length,
     wins,
     losses,
@@ -90,9 +93,11 @@ function estimateArena(
 /** Le calcul complet : épreuves → θ par arène → cohérence → palier → verdict. */
 export function scoreFromEpreuves(input: ScoreInput): ScoreVerdict {
   const scale = (input.league.marketScale ?? null) as MarketScale | null;
+  const gauge = input.canon?.gauge ?? GAUGE_BY_SCALE;
+  const items = input.canon?.items ?? MUST_HAVE_ITEMS;
   const arenas: ArenaEstimate[] = SCOREUR_ARENAS.map((arena) =>
-    estimateArena(arena, input.subjectRef, input.epreuves, input.anchors, scale),
+    estimateArena(arena, input.subjectRef, input.epreuves, input.anchors, scale, gauge),
   );
   const coherence = computeCoherence(arenas);
-  return computeVerdict({ arenas, league: input.league, coherence, itemsMet: input.itemsMet });
+  return computeVerdict({ arenas, league: input.league, coherence, itemsMet: input.itemsMet, items });
 }
