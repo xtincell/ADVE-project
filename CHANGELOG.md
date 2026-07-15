@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.167 — feat(scoreur): taxonomie de secteurs canonique + moulinette Motion19/Panzani jusqu'au leaderboard (ADR-0152) (2026-07-15)
+
+**Mandat opérateur : « fais passer Motion19 (@motion19store, Cameroun) puis Panzani Cameroun dans la moulinette jusqu'au leaderboard, et ajuste le parcours selon les frictions ». Frictions rencontrées → corrigées, dont la mécanique de ligue elle-même (le slug de secteur n'était pas universel).**
+
+- **Mécanique de ligue changée (le cœur)** — le scoreur classait par ligue en slugifiant le **texte libre** `Client.sector` (« Équipement audiovisuel & créateurs » → slug idiosyncrasique) → chaque marque seule dans sa micro-ligue = un « championnat » de 1. Nouvelle **taxonomie canonique universelle à mots-clés** (`src/domain/sector-taxonomy.ts`, 24 codes alignés `INTAKE_SECTORS`, déterministe, 0 LLM, matching par mot entier `art ⊄ carte`). `resolveLeagueForStrategy` utilise `canonicalSectorSlug(client.sector)` → deux concurrents réels partagent une ligue. `normalizeSectorSlug` (slugify intermédiaire) supprimé.
+- **Populate canonique (n'injecte plus de non-canonique)** — chokepoint `QuickIntake.create` : `sector = classifyCanonicalSector(input.sector).code` (null reste null) ; toute la voie intake→Client en hérite. Fixtures (seed Motion19, seed scoreur démo) passées en codes canon. Filet de sécurité : la **lecture** canonicalise, donc même un writer non couvert ne fausse pas la ligue (autres writers à durcir → RESIDUAL-DEBT).
+- **Parcours turnkey** — `scripts/run-moulinette.ts <strategyId> [scale] [audience]` (déclare l'échelle opérateur ADR-0126 si absente → `scoreBrand` persist → placement leaderboard) + `scripts/onboard-external-brand.ts` (Strategy shell ADR-0098 pour une marque externe, secteur canonicalisé).
+- **Résultat vérifié E2E** — **Motion19** → ligue `culture · NATION · CM` · **Panzani Cameroun** → ligue `food · NATION · CM` · les 3 marques démo re-scorées en `culture · QUARTIER · CM` (106.8/78/56.9 — vrai championnat à 3). Motion19 & Panzani honnêtement **19.6/200, LATENT, 20 %** (seule l'arène E joue, 0 superfan identifié vs plancher ; A/D/V/T vides — la force se révèle par les victoires, jamais fabriquée, P22-2).
+- **Frictions traitées** : F1 seed order (base `upgraders` requise), F2 échelle non déclarée (déclaration opérateur via la moulinette), F3 slug non universel (taxonomie canon). Friction déférée : le scoreur ne score qu'une `Strategy`, pas un pur `BrandRef` (marque externe → Strategy shell ; `scoreBrandRef()` lèverait ce besoin). Cap APOGEE 7/7. tsc 0 · lint 0 · **1122 tests verts**.
+
 ## v6.27.166 — feat(seshat): base de marques — chaque recherche `/scorer` conservée + cache instantané (ADR-0151) (2026-07-15)
 
 **Réponse à « Seshat doit construire sa base de données de marque, je ne veux pas que ces données de recherche soient perdues » + « une re-recherche d'une marque déjà scrapée doit être instantanée (date du dernier snapshot + Actualiser) ». La correction v6.27.165 (éphéméralité) empêchait de polluer les données PAR-CLIENT ; ici on donne aux recherches un VRAI foyer : le répertoire d'empreintes de Seshat.**

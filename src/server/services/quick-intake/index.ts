@@ -1,4 +1,5 @@
 import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
+import { classifyCanonicalSector } from "@/domain/sector-taxonomy";
 
 // ============================================================================
 // MODULE M16 — Quick Intake Engine
@@ -163,7 +164,9 @@ export async function start(input: QuickIntakeStartInput) {
       websiteUrl: input.websiteUrl?.trim() || undefined,
       socialLinksRaw: input.socialLinksRaw?.trim() || undefined,
       companyName: input.companyName,
-      sector: input.sector,
+      // Canonicalise à l'écriture : le champ ne stocke JAMAIS de secteur non
+      // canonique (texte libre → code canon par mots-clés). null reste null.
+      sector: input.sector ? classifyCanonicalSector(input.sector).code : input.sector,
       country: input.country,
       businessModel: input.businessModel,
       economicModel: input.economicModel,

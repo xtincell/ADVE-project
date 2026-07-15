@@ -24,6 +24,7 @@ export * from "./anchors";
 export * from "./palier";
 export * from "./bradley-terry";
 
+
 export interface ScoreInput {
   readonly subjectRef: string;
   readonly league: LeagueKey;

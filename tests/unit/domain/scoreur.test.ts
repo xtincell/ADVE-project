@@ -148,3 +148,4 @@ describe("cohérence R", () => {
     expect(flat).toBeGreaterThan(spread);
   });
 });
+

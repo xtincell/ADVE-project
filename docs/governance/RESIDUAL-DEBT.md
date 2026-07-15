@@ -869,3 +869,7 @@ profondeur, pas de la largeur.**
 - ~~2 erreurs `tsc puppeteer`~~ : résolues par `npm install` (puppeteer déjà en deps, juste node_modules absent au moment de l'audit précédent).
 - 4 erreurs `tsc` primitives DS (Alert/Dialog/Sheet/Toast `title: ReactNode`) → fix via `Omit<HTMLAttributes, "title">`.
 - 5 erreurs `tsc` storybook → exclude `**/*.stories.{ts,tsx}` du tsconfig principal.
+
+### Taxonomie de secteurs canonique (ADR-0152, 2026-07-15)
+- **Writers `Client.sector` non couverts à l'écriture** : le chokepoint canonique posé = `QuickIntake.create` (voie intake). Restent à canonicaliser à l'écriture : `laguilde.ts` (dépôt guilde), `brief-ingest/brand-resolver.ts`, `client.ts` router (create/update), `quick-intake.ts` router (client.create ×2 — héritent déjà d'`intake.sector` canonicalisé, donc OK en pratique). **Non bloquant** : `resolveLeagueForStrategy` canonicalise à la LECTURE → la ligue reste correcte quelle que soit la valeur stockée. Durcir chaque writer via `classifyCanonicalSector(x).code` dans une passe dédiée.
+- **`scoreBrandRef()` absent** : le scoreur ne score qu'une `Strategy` ; une marque externe (Panzani) doit passer par une Strategy shell (`scripts/onboard-external-brand.ts`). Un orchestrateur `scoreBrandRef` (arènes A/D/V registre + items, sans E/T strategyId-keyés) lèverait ce détour.
