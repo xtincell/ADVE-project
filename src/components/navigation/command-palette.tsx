@@ -26,6 +26,8 @@ const KEYWORD_HINTS: Record<string, string> = {
   "/console/anubis/api-billing": "api clé mcp facturation billing metering endpoint",
   "/console/socle/pricing": "clés paiement stripe providers env secrets abonnement",
   "/console/signal/prospect-scoring": "scorer prospect concurrent leaderboard force révélée",
+  "/console/signal/brand-directory": "base de marques répertoire empreintes observées annuaire directory",
+  "/console/signal/scoreur-canon": "canon scoreur jauge ancres items ratification étalons",
   "/console/socle/feedback": "bug retours testeurs remontées support",
   "/cockpit/settings/connections": "connexions réseaux oauth social shopify mcp clé api login",
   "/console/socle/manual-subscriptions": "abonnement manuel whatsapp paiement validation",

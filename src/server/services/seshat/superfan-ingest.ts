@@ -176,6 +176,31 @@ export async function registerSuperfanProfile(
     }
   }
 
+  // Identity Graph bridge (audit 2026-07-16 `identity-graph-sans-porte-ni-
+  // bridge`) : le graphe C1 (ADR-0147) n'avait AUCUN writer automatique — la
+  // déduplication anti double-comptage ne dédupliquait rien en prod (graphe
+  // vide, silencieusement). Chaque naissance/upsert de profil enregistre son
+  // handle comme identifiant INFERRED (import dynamique — pas de cycle
+  // statique : identity-graph importe déjà superfan-ingest pour le pont PAID).
+  // Best-effort : n'échoue jamais l'enregistrement du profil.
+  try {
+    const { upsertPersonIdentifier, linkSuperfanProfileToPerson } = await import("./identity-graph");
+    const result = await upsertPersonIdentifier(db, {
+      strategyId,
+      kind: "HANDLE",
+      value: handle,
+      platform,
+      source: "CONNECTOR",
+      confidence: "INFERRED",
+      displayName: displayName ?? null,
+    });
+    if (result.status === "OK" && result.personId && !profile.personId) {
+      await linkSuperfanProfileToPerson(db, profile.id, result.personId);
+    }
+  } catch (err) {
+    console.warn("[superfan-ingest] bridge identity-graph échoué:", err instanceof Error ? err.message : err);
+  }
+
   return profile;
 }
 

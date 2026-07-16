@@ -10,6 +10,19 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.184 — fix(console): Vague 10 audit plateforme — console/forge/social (pages orphelines, mock Ptah, inbox IG, page publique, identity graph) — **audit 78/78 clos** (2026-07-16)
+
+**Vague 10 (finale) de l'audit intention/exécution : 7 findings (2 CRITICAL). Les 78 findings confirmés des deux passes sont désormais tous corrigés (V1→V10, PRs #539→#548).**
+
+- **Pages console dé-orphelinées** (`console-orphan-brand-directory-scoreur-canon`, CRITICAL) : `/console/signal/brand-directory` (base de marques) et `/console/signal/scoreur-canon` (ratification du canon) fonctionnaient mais n'étaient dans AUCUNE nav ni palette — accessibles uniquement en tapant l'URL de mémoire. Entrées nav Seshat + hints Cmd+K + liens croisés depuis prospect-scoring.
+- **Fini le mock livré comme réel** (`ptah-magnific-mock-delivered-as-real`, CRITICAL) : sans clé API, le provider Magnific fabriquait un faux webhook « completed » et livrait une image picsum ALÉATOIRE comme asset — indiscernable en aval, jusqu'à la vitrine founder « Création studio ». Sans clé → `DEFERRED_AWAITING_CREDENTIALS` honnête (ADR-0021) ; le mode démo survit derrière `PTAH_ALLOW_MOCK_FORGE=1` explicite.
+- **Les faits du scan prospect entrent au répertoire** (`prospect-scan-facts-lost`) : `scoreProspect` collectait presse/domaine/MX/maps/perf puis JETAIT tout — `recordFootprintObservation(source: PROSPECT_SCORING)` best-effort : les faits sont persistés et le prospect mesuré entre dans la base de marques Seshat.
+- **Inbox Instagram réparée** (`ig-business-inbox-host-and-scope`) : la collecte de commentaires tapait toujours graph.facebook.com (token Business Login invalide → échec silencieux avalé par le cron) et la garde de réponse exigeait la mauvaise variante de scope (SCOPE_MISSING permanent). Arbitrage d'hôte propagé (même règle que connect/publish) + les deux variantes de scope acceptées.
+- **Échec d'envoi affiché comme tel** (`publish-failed-shown-as-published`) : une publication dont TOUS les envois échouaient affichait « Publiée », sans motif ni retry. Le chip dérive des résultats (« Échec d'envoi »), le motif réel de chaque plateforme est rendu, Modifier/Déclencher restent disponibles.
+- **La page publique a une surface founder** (`public-page-no-founder-surface`) : seuls les seeds écrivaient `publicSlug` — aucun founder ne pouvait activer sa page ni connaître son URL. Carte « Page publique » au hub Connexions (activation via `strategy.update` gouverné, slug canon `LFA-`, URL + copie + lien).
+- **Identity Graph enfin alimenté** (`identity-graph-sans-porte-ni-bridge`) : le graphe C1 (ADR-0147) n'avait aucun writer automatique — la déduplication anti double-comptage ne dédupliquait RIEN en prod. Chaque naissance/upsert de profil superfan enregistre son handle (INFERRED) et rattache le profil à sa personne (helper `linkSuperfanProfileToPerson` dans le single-writer). Pont PAID extrait en `identity-graph/paid-bridge.ts` (cycle d'import cassé, `audit:cycles` vert).
+- tsc 0 · lint 0 · cycles 0 · 1024 tests gouvernance verts. **Audit doc : 78/78 ✅.**
+
 ## v6.27.183 — fix(oracle): Vague 9 audit plateforme — le livrable parle client (jargon purgé, LLM dead-end tranché, statuts réconciliés) (2026-07-16)
 
 **Vague 9 de l'audit intention/exécution : 4 findings Oracle (1 CRITICAL)** :

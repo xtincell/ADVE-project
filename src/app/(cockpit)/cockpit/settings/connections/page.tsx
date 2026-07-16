@@ -336,6 +336,62 @@ function McpCard({ strategyId }: { strategyId: string }) {
   );
 }
 
+/**
+ * Page publique de marque (`/b/<slug>`) — audit 2026-07-16
+ * `public-page-no-founder-surface` : seuls les seeds écrivaient `publicSlug`,
+ * aucun lien UI n'existait — le founder ne pouvait ni activer sa page ni en
+ * connaître l'URL. Activation via `strategy.update` (voie gouvernée existante).
+ */
+function PublicPageCard({ strategyId }: { strategyId: string }) {
+  const toast = useToast();
+  const utils = trpc.useUtils();
+  const strategy = trpc.strategy.get.useQuery({ id: strategyId }, { enabled: !!strategyId });
+  const update = trpc.strategy.update.useMutation({
+    onSuccess: () => {
+      utils.strategy.get.invalidate({ id: strategyId });
+      toast.success("Page publique activée");
+    },
+    onError: () => toast.error("Activation impossible — réessayez ou contactez-nous."),
+  });
+
+  const slug = strategy.data?.publicSlug ?? null;
+  const url = slug && typeof window !== "undefined" ? `${window.location.origin}/b/${slug}` : null;
+
+  return (
+    <div className="ck-card">
+      <p className="ck-card__eyebrow"><ArrowRight />Page publique</p>
+      {slug ? (
+        <div className="space-y-2">
+          <p className="ck-ops__note">
+            Votre marque a sa page publique — partagez-la, elle montre votre identité et vos
+            réseaux (données publiques uniquement).
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <a href={`/b/${slug}`} target="_blank" rel="noreferrer" className="text-sm text-accent underline-offset-2 hover:underline">
+              /b/{slug}
+            </a>
+            {url && <CopyButton value={url} />}
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <p className="ck-ops__note">
+            Activez la page publique de votre marque : une URL propre à partager
+            (identité, logo, réseaux — données publiques uniquement).
+          </p>
+          <Button
+            size="sm"
+            disabled={update.isPending || strategy.isLoading}
+            onClick={() => update.mutate({ id: strategyId, enablePublicPage: true, recalculateScore: false })}
+          >
+            {update.isPending ? "Activation…" : "Activer ma page publique"}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ConnectionsPage() {
   const strategyId = useCurrentStrategyId();
 
@@ -370,6 +426,7 @@ export default function ConnectionsPage() {
             <EmailProviderCard strategyId={strategyId} />
             <McpCard strategyId={strategyId} />
             <MobileAppCard strategyId={strategyId} />
+            <PublicPageCard strategyId={strategyId} />
             <div className="ck-card">
               <p className="ck-card__eyebrow"><Plug />À venir</p>
               <p className="ck-ops__note">

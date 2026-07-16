@@ -72,6 +72,7 @@ async function fetchCommentsForPost(
   platform: string,
   externalPostId: string,
   accessToken: string,
+  provider?: string,
 ): Promise<FetchedComment[] | "AUTH" | "OUTAGE" | "UNSUPPORTED"> {
   if (platform === "FACEBOOK") {
     const json = await guard(
@@ -98,8 +99,13 @@ async function fetchCommentsForPost(
   }
 
   if (platform === "INSTAGRAM") {
+    // Arbitrage d'hôte (audit 2026-07-16 `ig-business-inbox-host-and-scope`) :
+    // provider="instagram" (Business Login) → graph.instagram.com — un token IG
+    // est INVALIDE sur graph.facebook.com (la collecte échouait en silence pour
+    // toute connexion du flow canonique). Même règle que social-connect/publish.
+    const igBase = provider === "instagram" ? "https://graph.instagram.com" : "https://graph.facebook.com/v21.0";
     const json = await guard(
-      `https://graph.facebook.com/v21.0/${encodeURIComponent(externalPostId)}/comments?fields=id,text,username,timestamp,like_count&limit=${COMMENTS_PER_POST}&access_token=${encodeURIComponent(accessToken)}`,
+      `${igBase}/${encodeURIComponent(externalPostId)}/comments?fields=id,text,username,timestamp,like_count&limit=${COMMENTS_PER_POST}&access_token=${encodeURIComponent(accessToken)}`,
     );
     if (json === "AUTH" || json === "OUTAGE") return json;
     const items = (json.data as Array<Record<string, unknown>> | undefined) ?? [];
@@ -169,6 +175,9 @@ export async function syncStrategyInbox(
         String(conn.platform),
         post.externalPostId,
         payload.access_token,
+        typeof (conn.metadata as Record<string, unknown> | null)?.provider === "string"
+          ? String((conn.metadata as Record<string, unknown>).provider)
+          : undefined,
       );
       if (fetched === "AUTH") { sawAuthFailure = true; break; }
       if (fetched === "OUTAGE") { sawOutage = true; continue; }
@@ -284,18 +293,25 @@ export async function replyToInboxItem(input: {
 
   const meta = (conn.metadata ?? {}) as Record<string, unknown>;
   const scopes = Array.isArray(meta.scopes) ? meta.scopes.map(String) : [];
-  const needed = item.platform === "FACEBOOK" ? "pages_manage_engagement" : "instagram_manage_comments";
-  if (!scopes.includes(needed)) {
+  // Les deux variantes IG sont valides : le flow Business Login accorde
+  // `instagram_business_manage_comments` (audit 2026-07-16 — l'ancienne garde
+  // exigeait l'autre variante → SCOPE_MISSING permanent avec conseil trompeur).
+  const neededAny = item.platform === "FACEBOOK"
+    ? ["pages_manage_engagement"]
+    : ["instagram_manage_comments", "instagram_business_manage_comments"];
+  if (!neededAny.some((sc) => scopes.includes(sc))) {
     throw new Error(
       `SCOPE_MISSING: la connexion ${item.platform} date d'avant les capacités de réponse — reconnectez le réseau pour les activer`,
     );
   }
 
   const payload = decryptTokenPayload<SocialTokenPayload>(conn.accessToken);
+  const replyProvider = typeof meta.provider === "string" ? meta.provider : undefined;
+  const igReplyBase = replyProvider === "instagram" ? "https://graph.instagram.com" : "https://graph.facebook.com/v21.0";
   const endpoint =
     item.platform === "FACEBOOK"
       ? `https://graph.facebook.com/v21.0/${encodeURIComponent(item.externalId)}/comments`
-      : `https://graph.facebook.com/v21.0/${encodeURIComponent(item.externalId)}/replies`;
+      : `${igReplyBase}/${encodeURIComponent(item.externalId)}/replies`;
 
   const res = await fetch(endpoint, {
     method: "POST",

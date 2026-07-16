@@ -2,7 +2,7 @@
 
 **Mandat opérateur (carte blanche)** : « inspecte profondément le gap entre l'intention et l'exécution, étendu à toute la plateforme, absolument tout ». Méthode : 12 agents d'audit (un par surface) armés de la grille à 6 familles issue du bug /scorer (collecté-mais-jeté · promis-mais-pas-branché · jargon-face-client · état-vide-malhonnête · chaîne-cassée · persistance-perdue), puis contre-vérification adversariale de chaque finding CRITICAL/MAJOR (le vérificateur devait RÉFUTER en suivant la chaîne de code bout en bout). 126 gaps rapportés → **39 confirmés** (5 CRITICAL · 33 MAJOR · 1 MINOR) · 40 MINOR non vérifiés · 1 faux positif écarté.
 
-Remédiation trackée par vagues (V1 funnel-honnêteté #539 → V2 valeur payée/intake #540 → V3 cockpit #541 → V4 leaderboard/oracle #542 — **toutes mergées, 39/39 première passe corrigés**). Deuxième passe de vérification (workflow complet, 98 agents) : **+39 findings confirmés** (§ deuxième passe), remédiation V5+. Statut mis à jour au fil des PRs.
+Remédiation trackée par vagues (V1 funnel-honnêteté #539 → V2 valeur payée/intake #540 → V3 cockpit #541 → V4 leaderboard/oracle #542 — **toutes mergées, 39/39 première passe corrigés**). Deuxième passe de vérification (workflow complet, 98 agents) : **+39 findings confirmés** (§ deuxième passe), remédiés V5→V10 (#543-#548). **78/78 findings confirmés corrigés — audit clos 2026-07-16.** Restent les ~40 MINOR (liste en fin de document, non bloquants).
 
 ---
 
@@ -524,7 +524,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : Les deux pages existent et fonctionnent mais sont des ORPHELINES : aucune entrée dans portal-configs.ts (la section Seshat liste 11 items, ni brand-directory ni scoreur-canon), aucune entrée command-palette, aucun cross-link depuis prospect-scoring ou /scorer. Un grep repo-wide sur « brand-directory|scoreur-canon » hors des pages elles-mêmes ne retourne QUE le fichier généré app-routes.ts. L'opérateur ne peut y accéder qu'en tapant l'URL de mémoire — la base de marques reste un magasin silencieux en pratique, et l'écran de ratification du canon est introuvable.
 - **Preuve** : src/components/navigation/portal-configs.ts:404-421 (section Seshat sans les deux routes) ; src/components/navigation/command-palette.tsx:28-31 (prospect-scoring et manual-subscriptions présents, pas brand-directory/scoreur-canon) ; grep « brand-directory\|scoreur-canon » hors pages = 0 hit hors src/lib/generated/app-routes.ts:173,178
 - **Fix esquissé** : Ajouter 2 items à la section Seshat de portal-configs.ts (« Base de marques », « Canon du scoreur ») + 2 entrées command-palette ; ajouter un lien croisé depuis la page prospect-scoring.
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V10 console/forge/social (v6.27.184)
 
 ### [CRITICAL] `creator-active-missions-unscoped-and-deliverable-no-assignee-guard` — guilde-creator
 
@@ -623,7 +623,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : Sans FREEPIK_API_KEY/MAGNIFIC_API_KEY, le provider magnific ne retourne PAS DEFERRED : il fabrique un task_id mock, programme un faux webhook « status: completed » à 5s et livre picsum.photos (image aléatoire) ou BigBuckBunny.mp4 comme asset. Aucun flag `mocked` en aval : l'AssetVersion est indiscernable d'une vraie forge et remonte dans la vitrine dashboard `getCampaignShowcase` avec le label « Création studio » (cockpit-router.ts:588). Le commentaire assume : « pour démos client ».
 - **Preuve** : src/server/services/ptah/providers/magnific.ts:105-121 (mock fallback si !apiKey), :169-188 (fireMockWebhook status completed), :191-207 (picsum/BigBuckBunny) ; src/server/services/ptah/index.ts:84 (« Magnific (mock fallback) reste toujours disponible ») ; src/app/(cockpit)/cockpit/operate/forge/page.tsx:151 (previewOnly:false founder-triggered)
 - **Fix esquissé** : Aligner magnific sur ADR-0021 : !apiKey → GenerativeTask DEFERRED_AWAITING_CREDENTIALS (comme le chemin NoAvailableProviderError de index.ts) ; si le mode démo doit survivre, le gater derrière un env explicite + flag `mocked` propagé jusqu'à AssetVersion.metadata et exclu de la vitrine.
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V10 console/forge/social (v6.27.184)
 
 ### [MAJOR] `axis-polity-resolution-dropped-in-ui` — cockpit-intelligence
 
@@ -686,7 +686,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : `scoreProspect` appelle `enrichPublicFootprint` (presse, domaine/âge, MX/SPF, maps, perf, YouTube collectés) mais n'en garde QUE `enrichment.apify` pour le statut ; seuls les FollowerSnapshots survivent. Ni `recordFootprintObservation` (la marque scannée n'entre PAS dans la base de marques Seshat — recordFootprintObservation n'est appelé que par footprint.scoreInstant), ni `buildFootprintFacts`, ni writeback pilier E (contrairement au chemin ENRICH_E rerunPublicEnrichmentForStrategy). Les faits coûteux du scan opérateur sont re-payables et perdus, et la base Seshat ne s'enrichit pas des prospects mesurés.
 - **Preuve** : src/server/services/seshat/scoreur/prospect.ts:99-112 (`footprintStatus = enriched.enrichment.apify === "DEFERRED" ? ... : "OK"` — enriched jeté ensuite) ; recordFootprintObservation appelé uniquement dans src/server/trpc/routers/footprint.ts:143 ; comparaison : public-enrichment.ts:401-475 persiste tout dans pilier E sur le chemin ENRICH_E
 - **Fix esquissé** : Dans scoreProspect, après enrichissement, appeler `recordFootprintObservation({... facts: buildFootprintFacts(enriched), source: "PROSPECT_SCORING"})` — un appel, persiste les faits ET inscrit le prospect au répertoire Seshat.
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V10 console/forge/social (v6.27.184)
 
 ### [MAJOR] `victory-approve-stale-leaderboard` — console-operator
 
@@ -794,7 +794,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : social-inbox n'arbitre JAMAIS l'hôte : fetchCommentsForPost et replyToInboxItem tapent toujours graph.facebook.com/v21.0 — un token Instagram Business Login y est invalide → collecte de commentaires IG en échec silencieux (OUTAGE→DEGRADED avalé par le cron) pour toute connexion du flow canonique. En plus, replyToInboxItem exige le scope `instagram_manage_comments` alors que le flow instagram accorde `instagram_business_manage_comments` (SOCIAL_SCOPES.instagram) → SCOPE_MISSING permanent avec un conseil trompeur (« reconnectez » ne changera rien). Blast radius : inbox vide → superfans « participants » (superfan-ingest.ts:236) et CommunitySnapshot (community-snapshot-writer.ts:134) dégradés pour IG.
 - **Preuve** : src/server/services/anubis/social-inbox.ts:100-102 (hôte fixe graph.facebook.com pour INSTAGRAM), :287 (needed="instagram_manage_comments"), :296-298 (endpoint reply fixe) vs src/server/services/anubis/social-connect.ts:806-807 (arbitrage `provider === "instagram" ? graph.instagram.com : …`) et :103-107 (scopes instagram_business_*).
 - **Fix esquissé** : Propager `meta.provider` dans social-inbox comme dans social-connect/publish (hôte graph.instagram.com pour Business Login) et accepter les deux variantes de scope (`instagram_manage_comments` OU `instagram_business_manage_comments`) dans la garde de réponse.
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V10 console/forge/social (v6.27.184)
 
 ### [MAJOR] `public-page-no-founder-surface` — social-chain
 
@@ -803,7 +803,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : Aucune surface produit ne crée, n'affiche ni ne lie la page publique : les seuls écrivains de Strategy.publicSlug sont les seeds (motion19/xtincell/spawt), scripts/migrate-brand-slugs.ts et /api/admin/seed-brands ; grep `/b/` dans src/app+src/components → zéro lien UI ; le sitemap n'expose que les missions Guilde. Un founder ne peut ni activer sa page ni en connaître l'URL — le livrable est invisible (et, cumulé avec b-slug-lfa-regex-404, mort).
 - **Preuve** : grep publicSlug (src) : writers = prisma/seed-*.ts, scripts/migrate-brand-slugs.ts, src/app/api/admin/seed-brands/route.ts:198 ; lecteurs UI : aucun (src/app/sitemap.ts:66-72 = missions seulement ; aucun href /b/ hors la page elle-même).
 - **Fix esquissé** : Ajouter au hub Connexions (ou au dashboard) une carte « Page publique » : générer le slug via brandPublicSlug(strategy.name) (Intent gouverné), afficher l'URL + CopyButton + lien, et lister les pages dans le sitemap.
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V10 console/forge/social (v6.27.184)
 
 ### [MAJOR] `publish-failed-shown-as-published` — social-chain
 
@@ -812,7 +812,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : Une publication planifiée dont TOUS les envois échouent à l'échéance (erreur plateforme ≠ NOT_CONNECTED, ex. token invalide, image refusée) est matérialisée `status=EXECUTED` (keepWaiting ne couvre que NOT_CONNECTED) → le panel affiche le chip « Publiée » alors que chaque résultat est en échec ; le `detail` persisté (message d'erreur réel de la plateforme) est collecté-mais-jeté (le panel ne rend que RESULT_LABEL « échec ») ; et comme `editable` exige SCHEDULED, il n'y a NI retry NI correction possible depuis le panel. Le vrai motif n'a existé que dans un toast éphémère.
 - **Preuve** : src/server/services/anubis/social-publish.ts:389-398 (anyPublished=false + FAILED → mode "PUBLISHED"/EXECUTED) ; src/components/cockpit/social/publication-manager-panel.tsx:25 (EXECUTED→« Publiée »), :145 (`RESULT_LABEL[r.state]` — r.detail jamais rendu), :100 (`editable = p.status === "SCHEDULED"`).
 - **Fix esquissé** : Dériver le libellé du chip des `results` (« Échec d'envoi » si 0 PUBLISHED), rendre `r.detail` sous chaque plateforme en échec, et autoriser Modifier/Déclencher sur une action EXECUTED-tout-échec (ou la laisser SCHEDULED pending=false avec motif).
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V10 console/forge/social (v6.27.184)
 
 ### [MAJOR] `footprint-riche-invisible-founder` — transverse-scan
 
@@ -830,7 +830,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : Le router `identity` (upsertIdentifier/mergePersons/splitPerson, operatorProcedure) n'a aucun consommateur UI, et aucun service interne n'appelle upsertPersonIdentifier (superfan-ingest ne bridge pas, le CRM non plus) — seul le compilateur Scoreur LIT le graphe. En prod le graphe est vide : la déduplication anti double-comptage annoncée ne déduplique rien, silencieusement (l'arène E recompte les doublons).
 - **Preuve** : src/server/trpc/routers/identity.ts:28-45 (portes sans UI) ; grep upsertPersonIdentifier hors identity-graph/ : uniquement compilateur (lecture) ; grep trpc.identity. dans app/components : zéro
 - **Fix esquissé** : Brancher un writer automatique : superfan-ingest et CRM-ingest émettent upsertIdentifier (email/handle) à chaque naissance/upsert de profil ; à défaut, exposer une UI console et surfacer « graphe vide » dans le verdict Scoreur.
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V10 console/forge/social (v6.27.184)
 
 ### [MAJOR] `superfan-identities-counts-only` — transverse-scan
 

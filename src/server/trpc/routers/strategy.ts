@@ -262,6 +262,10 @@ export const strategyRouter = createTRPCRouter({
       sector: z.string().max(120).nullable().optional(),
       advertis_vector: z.record(z.string(), z.number()).optional(),
       recalculateScore: z.boolean().optional(),
+      // Audit 2026-07-16 `public-page-no-founder-surface` : aucune surface
+      // produit n'écrivait publicSlug (seeds/scripts uniquement) — le founder
+      // ne pouvait ni activer sa page publique ni en connaître l'URL.
+      enablePublicPage: z.boolean().optional(),
     }),
 
 
@@ -270,7 +274,7 @@ export const strategyRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const { id, advertis_vector, recalculateScore, sector, ...data } = input;
+      const { id, advertis_vector, recalculateScore, sector, enablePublicPage, ...data } = input;
 
       // Enforce operator isolation
       const hasAccess = await canAccessStrategy(id, {
@@ -289,12 +293,19 @@ export const strategyRouter = createTRPCRouter({
               sector,
             } as Prisma.InputJsonValue)
           : undefined;
+      // Page publique : slug canonique dérivé du nom (format LFA-, idempotent).
+      let publicSlugPatch: { publicSlug: string } | undefined;
+      if (enablePublicPage && !previous.publicSlug) {
+        const { brandPublicSlug } = await import("@/domain/brand-slug");
+        publicSlugPatch = { publicSlug: brandPublicSlug(previous.name) };
+      }
       const updated = await ctx.db.strategy.update({
         where: { id },
         data: {
           ...data,
           ...(advertis_vector ? { advertis_vector: advertis_vector as Prisma.InputJsonValue } : {}),
           ...(mergedBusinessContext !== undefined ? { businessContext: mergedBusinessContext } : {}),
+          ...(publicSlugPatch ?? {}),
         },
       });
 

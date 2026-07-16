@@ -187,6 +187,10 @@ export default function ProspectScoringPage() {
               {sameLeague ? `Même ligue : ${leagueOfSubject}` : "Ligues différentes (échelle/secteur/pays distincts)."}
               {" · "}
               <Link href="/leaderboard" className="text-[color:var(--color-accent)] underline-offset-2 hover:underline">Voir le leaderboard public →</Link>
+              {" · "}
+              <Link href="/console/signal/brand-directory" className="text-[color:var(--color-accent)] underline-offset-2 hover:underline">Base de marques</Link>
+              {" · "}
+              <Link href="/console/signal/scoreur-canon" className="text-[color:var(--color-accent)] underline-offset-2 hover:underline">Canon du scoreur</Link>
             </CardDescription>
           </CardHeader>
           <CardBody>
