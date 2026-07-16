@@ -535,17 +535,19 @@ export function mapKpisMesure(strategy: any): KpisMesureSection {
     })).filter((k: any) => k.name);
   }
 
-  const devSnap = strategy.devotionSnapshots[0] ?? null;
-  const cultSnap = strategy.cultIndexSnapshots[0] ?? null;
+  // Défensif : si l'appelant charge la strategy avec un include partiel, on
+  // dégrade en « pas de mesure » au lieu de crasher (bug prod §16, 2026-07-16).
+  const devSnap = (strategy.devotionSnapshots ?? [])[0] ?? null;
+  const cultSnap = (strategy.cultIndexSnapshots ?? [])[0] ?? null;
 
-  const superfans = strategy.superfanProfiles.map((sf: any) => ({
+  const superfans = (strategy.superfanProfiles ?? []).map((sf: any) => ({
     platform: sf.platform,
     handle: sf.handle,
     engagementDepth: sf.engagementDepth,
     segment: sf.segment,
   }));
 
-  const communitySnapshots = strategy.communitySnapshots.map((cs: any) => ({
+  const communitySnapshots = (strategy.communitySnapshots ?? []).map((cs: any) => ({
     platform: cs.platform,
     size: cs.size,
     engagement: cs.health,

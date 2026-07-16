@@ -120,7 +120,11 @@ export const footprintRouter = createTRPCRouter({
         socialLinksRaw: input.socialLinksRaw?.trim() || null,
         country: input.country?.trim() || null,
         strategyId: null, // pas de FollowerSnapshot par-client — persistance via le répertoire Seshat
-        budgetMs: 8_000,
+        // Bug prod 2026-07-16 : 8s de budget total → le fetch du site pouvait
+        // tout consommer et l'étage des signaux GRATUITS (domaine/email/perf,
+        // gardé par remaining()>3s) sautait en silence — score 0 « Critique »
+        // avec un site renseigné. La copy promet 30 secondes : on les donne.
+        budgetMs: 25_000,
       });
       const score = computeFootprintScore(enriched);
       // On garde `label` + `details` (la preuve factuelle « sur quoi ça se base »)

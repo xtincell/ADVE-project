@@ -292,33 +292,15 @@ async function dispatchRunner(
 ): Promise<{ payload: unknown; confidence: number | null }> {
   if (runner.kind === "PURE_MAPPER") {
     // Phase 21.5 — 0ms LLM Pure mapping branch (ADR-0075)
-    // 1. Fetch full strategy with relations (mirroring PRESENTATION_INCLUDE)
+    // 1. Fetch full strategy avec LE MÊME include que assemblePresentation.
+    // (Bug prod 2026-07-16 : la copie locale de l'include avait drifté —
+    // `communitySnapshots` absent → `mapKpisMesure` crashait « Cannot read
+    // properties of undefined (reading 'map') » sur §16. Une seule source.)
     const { db } = await import("@/lib/db");
+    const { PRESENTATION_INCLUDE } = await import("@/server/services/strategy-presentation");
     const strategy = await db.strategy.findUnique({
       where: { id: strategyId },
-      include: {
-        user: { select: { name: true, email: true, image: true } },
-        operator: { select: { name: true, slug: true } },
-        client: { select: { id: true, name: true, sector: true, country: true, contactName: true, contactEmail: true } },
-        pillars: true,
-        drivers: { where: { deletedAt: null } },
-        campaigns: {
-          include: {
-            actions: true,
-            executions: true,
-            teamMembers: { include: { user: { select: { name: true, email: true, image: true } } } },
-            milestones: { orderBy: { dueDate: "asc" as const } },
-            budgetLines: true,
-          },
-        },
-        cultIndexSnapshots: { orderBy: { measuredAt: "desc" }, take: 1 },
-        devotionSnapshots: { orderBy: { measuredAt: "desc" }, take: 1 },
-        superfanProfiles: true,
-        signals: true,
-        gloryOutputs: true,
-        missions: { include: { deliverables: true } },
-        contracts: true,
-      },
+      include: PRESENTATION_INCLUDE,
     });
 
     if (!strategy) {

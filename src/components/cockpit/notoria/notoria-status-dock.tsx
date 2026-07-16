@@ -86,7 +86,7 @@ export function NotoriaStatusDock() {
         type="button"
         onClick={() => setExpanded(true)}
         title="Recommandations — votre moteur de reco"
-        className="fixed bottom-4 right-4 z-40 flex items-center gap-2 rounded-full border border-white/10 bg-surface-raised/95 px-3 py-2 shadow-xl backdrop-blur transition-colors hover:bg-surface-raised"
+        className="fixed bottom-[calc(var(--mobile-tab-height,0px)+env(safe-area-inset-bottom)+68px)] right-4 z-40 flex items-center gap-2 md:bottom-20 rounded-full border border-white/10 bg-surface-raised/95 px-3 py-2 shadow-xl backdrop-blur transition-colors hover:bg-surface-raised"
       >
         <span className="relative flex h-2 w-2">
           <span className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${
@@ -116,7 +116,7 @@ export function NotoriaStatusDock() {
 
   // ── Expanded panel ───────────────────────────────────────────────
   return (
-    <div className="fixed bottom-4 right-4 z-40 w-80 max-w-[calc(100vw-2rem)] rounded-lg border border-white/10 bg-surface-raised/95 p-3 shadow-2xl backdrop-blur">
+    <div className="fixed bottom-[calc(var(--mobile-tab-height,0px)+env(safe-area-inset-bottom)+68px)] right-4 z-40 w-80 md:bottom-20 max-w-[calc(100vw-2rem)] rounded-lg border border-white/10 bg-surface-raised/95 p-3 shadow-2xl backdrop-blur">
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-warning" />
