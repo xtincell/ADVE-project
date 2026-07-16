@@ -163,6 +163,11 @@ export const footprintRouter = createTRPCRouter({
         dimensions,
         followerCounts: asFollowerCounts(enriched.followerCounts),
         facts,
+        // POURQUOI l'audience n'est pas relevée (remontée opérateur 2026-07-16 :
+        // « pourquoi ça ne récupère pas les réseaux ? ») — DEFERRED = clé de
+        // collecte non configurée côté plateforme ; DEGRADED = collecte tentée
+        // mais en échec/timeout ; LIVE = relevée ; SKIPPED = aucun compte.
+        audienceStatus: enriched.enrichment.apify,
         cached: false,
         capturedAt: (saved?.capturedAt ?? new Date()).toISOString(),
         stale: false,

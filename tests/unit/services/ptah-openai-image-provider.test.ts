@@ -75,7 +75,14 @@ describe("Ptah — OpenAI image provider exclusif", () => {
 
   it("les autres médias (édition/vidéo/audio) ne routent PAS vers openai", async () => {
     process.env.OPENAI_API_KEY = "sk-test";
-    // refine = édition d'image (upscale) → Magnific, pas génération.
-    expect((await selectProvider(brief("refine"))).name).not.toBe("openai");
+    // Depuis l'audit 2026-07-16, Magnific sans clé est indisponible (fini le
+    // mock livré comme réel) — on active le mode démo explicite pour tester
+    // le ROUTAGE (refine = édition d'image → Magnific, jamais openai).
+    process.env.PTAH_ALLOW_MOCK_FORGE = "1";
+    try {
+      expect((await selectProvider(brief("refine"))).name).not.toBe("openai");
+    } finally {
+      delete process.env.PTAH_ALLOW_MOCK_FORGE;
+    }
   });
 });
