@@ -105,8 +105,10 @@ export default function ScorerPage() {
   const dims = result?.dimensions ?? [];
   const measuredDims = dims.filter((d) => d.measured);
   const unmeasuredDims = dims.filter((d) => !d.measured);
-  const followers = result?.followerCounts ?? null;
-  const totalFollowers = followers?.reduce((s, f) => s + f.followerCount, 0) ?? 0;
+  const facts = result?.facts ?? null;
+  const factSocials = facts?.socials ?? [];
+  const totalFollowers = factSocials.reduce((s, f) => s + (f.followerCount ?? 0), 0);
+  const coveragePct = result?.measuredWeight ?? 0;
 
   return (
     <>
@@ -244,33 +246,85 @@ export default function ScorerPage() {
                   </Text>
                 ) : null}
                 <Text className="text-center text-xs text-[color:var(--color-foreground-muted)]">
-                  Basé sur <strong>{measuredDims.length}</strong> signal(aux) trouvé(s) sur vous
-                  {unmeasuredDims.length > 0 ? ` · ${unmeasuredDims.length} restant(s) à débloquer` : ""}.
+                  Basé sur <strong>{measuredDims.length}</strong> signal(aux) vérifié(s)
+                  {coveragePct > 0 && coveragePct < 100 ? ` · ${Math.round(coveragePct)} % du spectre public mesuré` : ""}.
                 </Text>
               </div>
 
-              {/* Audience réelle par plateforme — la preuve la plus parlante */}
-              {followers && followers.length > 0 ? (
+              {/* Vos réseaux — chaque compte détecté, avec l'audience quand mesurée */}
+              {factSocials.length > 0 ? (
                 <div className="flex flex-col gap-2">
                   <Text className="font-semibold">
-                    Audience mesurée · {fmt(totalFollowers)} abonnés
+                    Vos réseaux{totalFollowers > 0 ? ` · ${fmt(totalFollowers)} abonnés mesurés` : ""}
                   </Text>
                   <div className="flex flex-col gap-1.5">
-                    {followers.map((f, i) => (
+                    {factSocials.map((f, i) => (
                       <div
-                        key={`${f.platform}-${f.handle}-${i}`}
-                        className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
+                        key={`${f.platform}-${f.handle ?? i}`}
+                        className="flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm"
                         style={{ borderColor: "var(--color-border)" }}
                       >
-                        <span>
+                        <span className="min-w-0 truncate">
                           {PLATFORM_LABELS[f.platform.toLowerCase()] ?? f.platform}
                           {f.handle ? (
-                            <span className="text-[color:var(--color-foreground-muted)]"> · {f.handle}</span>
+                            f.url ? (
+                              <a href={f.url} target="_blank" rel="noreferrer" className="text-[color:var(--color-foreground-muted)] underline-offset-2 hover:underline"> @{f.handle}</a>
+                            ) : (
+                              <span className="text-[color:var(--color-foreground-muted)]"> @{f.handle}</span>
+                            )
                           ) : null}
                         </span>
-                        <span className="font-mono font-semibold">{fmt(f.followerCount)}</span>
+                        {f.followerCount !== null ? (
+                          <span className="shrink-0 font-mono font-semibold">{fmt(f.followerCount)}</span>
+                        ) : (
+                          <span className="shrink-0 text-xs text-[color:var(--color-foreground-muted)]">compte détecté · audience non relevée</span>
+                        )}
                       </div>
                     ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Presse — les mentions elles-mêmes, vérifiables (titre + source + lien) */}
+              {facts && facts.press.length > 0 ? (
+                <div className="flex flex-col gap-2">
+                  <Text className="font-semibold">On parle de vous · {facts.press.length} mention(s)</Text>
+                  <div className="flex flex-col gap-1.5">
+                    {facts.press.map((p, i) => (
+                      <a
+                        key={`${p.url}-${i}`}
+                        href={p.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex flex-col gap-0.5 rounded-md border px-3 py-2 transition-colors hover:border-[color:var(--color-accent)]"
+                        style={{ borderColor: "var(--color-border)" }}
+                      >
+                        <span className="text-sm text-foreground">{p.title}</span>
+                        <span className="text-xs text-[color:var(--color-foreground-muted)]">
+                          {p.sourceName ?? "presse"}
+                          {p.publishedAt ? ` · ${new Date(p.publishedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}` : ""}
+                        </span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Avis Google — la fiche trouvée, note réelle */}
+              {facts?.reviews ? (
+                <div className="flex flex-col gap-2">
+                  <Text className="font-semibold">Vos avis clients</Text>
+                  <div
+                    className="flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm"
+                    style={{ borderColor: "var(--color-border)" }}
+                  >
+                    <span className="min-w-0 truncate">{facts.reviews.placeName ?? "Fiche Google"}</span>
+                    <span className="shrink-0 font-mono font-semibold">
+                      {facts.reviews.rating}/5
+                      {facts.reviews.reviewCount !== null ? (
+                        <span className="text-xs font-normal text-[color:var(--color-foreground-muted)]"> · {fmt(facts.reviews.reviewCount)} avis</span>
+                      ) : null}
+                    </span>
                   </div>
                 </div>
               ) : null}

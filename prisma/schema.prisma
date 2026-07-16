@@ -1340,6 +1340,10 @@ model BrandFootprintSnapshot {
   /// Ventilation par dimension (site/social/reviews/press/…), telle qu'affichée.
   dimensions     Json
   followerCounts Json?
+  /// Faits observés (FootprintFacts : réseaux+handles+audiences, presse titres+liens,
+  /// domaine, email, avis, perf) — la PREUVE du score, persistée pour que le chemin
+  /// cache montre la même chose qu'un scan frais (ADR-0151 « jamais perdu »).
+  facts          Json?
   source         String  @default("SCORER_FUNNEL")
 
   capturedAt DateTime @default(now())

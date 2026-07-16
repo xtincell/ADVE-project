@@ -38,6 +38,8 @@ export interface RecordFootprintInput {
   measuredWeight: number | null;
   dimensions: FootprintDimensionRow[];
   followerCounts?: unknown;
+  /** Faits observés (FootprintFacts) — la preuve du score, jamais perdue (ADR-0151). */
+  facts?: unknown;
   source?: string;
 }
 
@@ -53,6 +55,8 @@ export interface FootprintObservation {
   measuredWeight: number | null;
   dimensions: FootprintDimensionRow[];
   followerCounts: unknown;
+  /** Faits observés persistés (FootprintFacts) — null sur les snapshots legacy. */
+  facts: unknown;
   capturedAt: Date;
   /** true si plus vieux que `FOOTPRINT_STALE_AFTER_MS` → l'UI propose d'actualiser. */
   stale: boolean;
@@ -126,6 +130,7 @@ export async function lookupLatestFootprint(
     measuredWeight: row.measuredWeight,
     dimensions: toDimensions(row.dimensions),
     followerCounts: row.followerCounts,
+    facts: row.facts,
     capturedAt: row.capturedAt,
     stale: now - row.capturedAt.getTime() > FOOTPRINT_STALE_AFTER_MS,
   };
@@ -152,6 +157,7 @@ export async function recordFootprintObservation(
         measuredWeight: input.measuredWeight,
         dimensions: input.dimensions as unknown as Prisma.InputJsonValue,
         followerCounts: toJson(input.followerCounts),
+        facts: toJson(input.facts),
         source: input.source ?? "SCORER_FUNNEL",
       },
     });
@@ -162,6 +168,7 @@ export async function recordFootprintObservation(
       measuredWeight: row.measuredWeight,
       dimensions: toDimensions(row.dimensions),
       followerCounts: row.followerCounts,
+      facts: row.facts,
       capturedAt: row.capturedAt,
       stale: false,
     };

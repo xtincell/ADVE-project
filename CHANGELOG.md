@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.174 — fix(scorer): la PREUVE du score — faits observés renvoyés, persistés, rendus (gap intention/exécution) (2026-07-16)
+
+**Mandat opérateur : « inspecte profondément le gap entre l'intention et l'exécution ». Verdict de l'audit : le pipeline collectait tout puis jetait tout.** `enrichPublicFootprint` récolte les faits riches (handles sociaux par plateforme, titres presse + liens, âge/registrar du domaine, MX/SPF/DMARC, note + volume d'avis Google, stats YouTube) mais (G1) `footprint.scoreInstant` ne renvoyait que des résumés texte (« 3 canal(aux) », « 5 mention(s) ») ; (G2) `recordFootprintObservation` ne persistait PAS les faits — la base de marques « jamais perdu » (ADR-0151) perdait 90 % de la récolte ; (G3) le chemin cache re-servait un rapport encore plus pauvre (snapshots legacy sans détail).
+
+- **`footprint-facts.ts`** (nouveau module pur, 0 IO, 0 LLM) : `buildFootprintFacts` projette l'empreinte en faits sérialisables — réseaux (plateforme + handle + lien + audience mesurée OU `null` honnête), presse (titre + source + lien + date, max 8), domaine, email, avis, perf, YouTube. Uniquement les blocs LIVE (ADR-0046).
+- **Persistance** : champ additif `BrandFootprintSnapshot.facts` (migration `footprint_snapshot_facts`) — la preuve est stockée avec le score ; le cache montre EXACTEMENT la même chose qu'un scan frais. Un snapshot legacy sans faits = cache miss → re-scan (jamais servir un rapport sans preuve).
+- **Rendu `/scorer`** : « Vos réseaux » (chaque compte détecté, lien cliquable, audience mesurée ou « compte détecté · audience non relevée » — les 20 pts prudents ne passent plus pour une mesure) · « On parle de vous » (les mentions presse ELLES-MÊMES, cliquables — le lead vérifie que c'est bien lui, garde-fou homonymes) · « Vos avis clients » (fiche + note réelle) · couverture affichée (« X % du spectre public mesuré » — un 70 sur 40 % du spectre ne se lit plus comme un 70 plein).
+- **Scoring** : détail social nominatif (« instagram, facebook, tiktok · audience non relevée ») au lieu de « 3 canal(aux) » opaque. Barème inchangé (canon ADR-0121).
+- 18 tests (8 neufs `footprint-facts`). tsc 0 · lint 0.
+
 ## v6.27.173 — fix(scorer): rapport lead-friendly (fin du jargon « non mesuré », levier site en avant) (2026-07-15)
 
 **Retour opérateur : « les leads trouvent ça vide et incompréhensible ».** Capture prod — un prospect qui a mis ses réseaux mais PAS de site voyait 5 lignes sur 7 en « Non mesuré » avec des raisons INTERNES (« collecteur non configuré », « domaine non vérifiable », « flux presse indisponible ») → ça lisait comme un bug, pas comme un rapport.
