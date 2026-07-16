@@ -34,6 +34,19 @@ import { BESPOKE_PILLAR_RENDERERS } from "@/components/cockpit/pillars";
 
 // ── Pillar config ─────────────────────────────────────────────────────
 
+/**
+ * Étapes de complétude en langage client — les enums bruts (EMPTY/INTAKE/
+ * ENRICHED/COMPLETE) étaient rendus tels quels au founder (audit 2026-07-16,
+ * `pillar-page-technical-statuses-founder`).
+ */
+const STAGE_LABELS: Record<string, string> = {
+  EMPTY: "À compléter",
+  INTAKE: "Ébauche",
+  ENRICHED: "Suffisant",
+  COMPLETE: "Complet",
+};
+const stageLabel = (s: string | null | undefined) => (s ? STAGE_LABELS[s] ?? s : STAGE_LABELS.EMPTY!);
+
 const PILLAR_CONFIG: Record<string, {
   title: string;
   subtitle: string;
@@ -293,7 +306,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
         const parts: string[] = [];
         if (filledCount > 0) parts.push(`${filledCount} champ(s) rempli(s) depuis les sources`);
         if (needsHumanAfter.length > 0) parts.push(`${needsHumanAfter.length} champ(s) nécessitent une saisie réelle (données opérateur, ex: traction)`);
-        if (failedCount > 0) parts.push(`${failedCount} champ(s) non remplis (LLM insuffisant — relance Enrichir ou ajoute des sources)`);
+        if (failedCount > 0) parts.push(`${failedCount} champ(s) non remplis (sources insuffisantes — relancez Enrichir ou ajoutez des sources)`);
         if (parts.length === 0) parts.push("Tous les champs dérivables sont déjà remplis");
         parts.push("Pour challenger : « Générer depuis les sources » dans Recommandations");
         setEnrichResult({ type: filledCount > 0 ? "success" : "warning", message: parts.join(" · ") });
@@ -342,7 +355,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
       const parts: string[] = [];
       if (totalFilled > 0) parts.push(`${totalFilled} champ(s) rempli(s) depuis les sources`);
       if (needsHumanAfter.length > 0) parts.push(`${needsHumanAfter.length} champ(s) nécessitent une saisie réelle (données opérateur, ex: traction)`);
-      if (totalFailed > 0) parts.push(`${totalFailed} champ(s) non remplis (LLM insuffisant — relance Enrichir ou ajoute des sources)`);
+      if (totalFailed > 0) parts.push(`${totalFailed} champ(s) non remplis (sources insuffisantes — relancez Enrichir ou ajoutez des sources)`);
       if (parts.length === 0) parts.push("Tous les champs dérivables sont déjà remplis");
       parts.push("Pour challenger : « Générer depuis les sources » dans Recommandations");
       setEnrichResult({ type: totalFilled > 0 ? "success" : "warning", message: parts.join(" · ") });
@@ -447,7 +460,10 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                 pillarKey={config.pillarKey.toUpperCase() as "R" | "T" | "I" | "S"}
               />
             ) : null}
-            {config.pillarKey === "t" ? (
+            {/* Enrichir/étude = pillar.autoFill (operatorProcedure) : masqué
+                hors canOperate — le founder recevait un FORBIDDEN brut au clic
+                (audit 2026-07-16, CRITICAL pillar-page-founder-forbidden). */}
+            {!canOperate ? null : config.pillarKey === "t" ? (
               <button
                 onClick={handleRegenerate}
                 disabled={isRegenerating}
@@ -472,7 +488,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                 disabled={isRegenerating}
                 title={
                   (assess?.needsHuman?.length ?? 0) > 0
-                    ? `Enrichir remplit les ${assess?.derivable?.length ?? 0} champ(s) dérivable(s). ${assess?.needsHuman?.length} champ(s) nécessitent ta saisie — voir liste ci-dessous.`
+                    ? `Enrichir remplit les ${assess?.derivable?.length ?? 0} champ(s) dérivable(s). ${assess?.needsHuman?.length} champ(s) nécessitent votre saisie — voir liste ci-dessous.`
                     : "Enrichir auto-remplit les champs manquants via vault, calculs et IA."
                 }
                 className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
@@ -553,7 +569,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
               assess.currentStage === "ENRICHED" ? "bg-info/15 text-info" :
               assess.currentStage === "INTAKE" ? "bg-warning/15 text-warning" :
               "bg-white/5 text-foreground-muted"
-            }`}>{assess.currentStage}</span>
+            }`}>{stageLabel(assess.currentStage)}</span>
           )}
         </div>
       </div>
@@ -708,11 +724,11 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                   {assess.needsHuman.length} champ{assess.needsHuman.length > 1 ? "s" : ""} essentiel{assess.needsHuman.length > 1 ? "s" : ""} à saisir
                 </div>
                 <p className="mt-1 text-2xs text-foreground-muted">
-                  Ces champs forment le socle identitaire de la marque. L'IA pré-remplit un draft à l'activation (badge orange ci-dessous), à toi de le valider ou réécrire.
+                  Ces champs forment le socle identitaire de la marque. L'IA pré-remplit un draft à l'activation (badge orange ci-dessous), à vous de le valider ou de le réécrire.
                 </p>
               </div>
               <span className="rounded-full bg-warning/15 px-2 py-0.5 text-2xs font-bold text-warning whitespace-nowrap">
-                Stage : {assess.currentStage ?? "EMPTY"}
+                {stageLabel(assess.currentStage)}
               </span>
             </div>
             <div className="space-y-1.5">
@@ -722,7 +738,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                   <div key={path} className="flex items-center justify-between gap-2 rounded border border-white/5 bg-white/[0.02] px-3 py-2">
                     <div className="min-w-0 flex-1">
                       <span className="text-xs font-medium text-white">{getFieldLabel(path)}</span>
-                      <span className="ml-2 font-mono text-2xs text-foreground-muted/60">{path}</span>
+                      {canOperate ? <span className="ml-2 font-mono text-2xs text-foreground-muted/60">{path}</span> : null}
                       {hasReco ? (
                         <span className="ml-2 inline-flex items-center gap-0.5 rounded bg-info/15 px-1.5 py-0.5 text-[9px] font-bold text-info" title="Une recommandation existe pour ce champ">
                           <Sparkles className="h-2.5 w-2.5" />
@@ -730,14 +746,24 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                         </span>
                       ) : null}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => openAmendOnField(path)}
-                      className="flex items-center gap-1 rounded-md bg-warning/15 px-2.5 py-1 text-2xs font-medium text-warning transition-colors hover:bg-warning/25"
-                    >
-                      <Pencil className="h-3 w-3" />
-                      Saisir
-                    </button>
+                    {canOperate ? (
+                      <button
+                        type="button"
+                        onClick={() => openAmendOnField(path)}
+                        className="flex items-center gap-1 rounded-md bg-warning/15 px-2.5 py-1 text-2xs font-medium text-warning transition-colors hover:bg-warning/25"
+                      >
+                        <Pencil className="h-3 w-3" />
+                        Saisir
+                      </button>
+                    ) : (
+                      <Link
+                        href="/cockpit/brand/edit"
+                        className="flex items-center gap-1 rounded-md bg-warning/15 px-2.5 py-1 text-2xs font-medium text-warning transition-colors hover:bg-warning/25"
+                      >
+                        <Pencil className="h-3 w-3" />
+                        Compléter
+                      </Link>
+                    )}
                   </div>
                 );
               })}
@@ -785,7 +811,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                 </p>
               </div>
               <span className="rounded-full bg-warning/15 px-2 py-0.5 text-2xs font-bold text-warning whitespace-nowrap">
-                Certainty : INFERRED
+                Proposé par l’IA — à valider
               </span>
             </div>
             <div className="space-y-1.5">
@@ -797,22 +823,33 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-medium text-white">{getFieldLabel(path)}</span>
-                        <span className="font-mono text-2xs text-foreground-muted/60">{path}</span>
+                        {canOperate ? <span className="font-mono text-2xs text-foreground-muted/60">{path}</span> : null}
                       </div>
                       <div className="mt-0.5 truncate text-2xs italic text-foreground-muted/80">
                         {renderPreview(value)}
                       </div>
                     </div>
                     <div className="flex shrink-0 gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => openAmendOnField(path)}
-                        className="flex items-center gap-1 rounded-md border border-white/10 px-2 py-1 text-2xs text-foreground-muted transition-colors hover:border-warning/40 hover:text-warning"
-                        title="Réécrire ce champ"
-                      >
-                        <Pencil className="h-3 w-3" />
-                        Saisir
-                      </button>
+                      {canOperate ? (
+                        <button
+                          type="button"
+                          onClick={() => openAmendOnField(path)}
+                          className="flex items-center gap-1 rounded-md border border-white/10 px-2 py-1 text-2xs text-foreground-muted transition-colors hover:border-warning/40 hover:text-warning"
+                          title="Réécrire ce champ"
+                        >
+                          <Pencil className="h-3 w-3" />
+                          Saisir
+                        </button>
+                      ) : (
+                        <Link
+                          href="/cockpit/brand/edit"
+                          className="flex items-center gap-1 rounded-md border border-white/10 px-2 py-1 text-2xs text-foreground-muted transition-colors hover:border-warning/40 hover:text-warning"
+                          title="Réécrire ce champ dans votre éditeur"
+                        >
+                          <Pencil className="h-3 w-3" />
+                          Compléter
+                        </Link>
+                      )}
                       <button
                         type="button"
                         disabled={pending || !strategyId}

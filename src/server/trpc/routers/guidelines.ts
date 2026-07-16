@@ -1,5 +1,4 @@
 import { z } from "zod";
-import crypto from "crypto";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import * as guidelinesService from "@/server/services/guidelines-renderer";
 import { governedProcedure } from "@/server/governance/governed-procedure";
@@ -54,15 +53,14 @@ export const guidelinesRouter = createTRPCRouter({
 
   })
     .mutation(async ({ input }) => {
-      // Generate a deterministic share token from strategyId + secret so it's
-      // reproducible without DB storage and stable across calls.
-      const secret = process.env.NEXTAUTH_SECRET ?? "default-secret";
-      const token = crypto
-        .createHmac("sha256", secret)
-        .update(input.strategyId)
-        .digest("base64url");
+      // UNE seule implémentation de token : celle du service (persistée dans
+      // businessContext.guidelinesShareToken), résolue par la route publique
+      // /shared/guidelines/[token]. L'ancien HMAC local fabriquait un lien
+      // qui 404ait chez le destinataire (audit 2026-07-16,
+      // `guidelines-share-dead-route` — aucune route ne le résolvait).
+      const link = await guidelinesService.getShareableLink(input.strategyId);
       return {
-        shareUrl: `/shared/guidelines/${token}`,
+        shareUrl: link.url,
         expiresAt: input.expiresIn
           ? new Date(Date.now() + input.expiresIn * 1000).toISOString()
           : null,

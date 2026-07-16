@@ -577,7 +577,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 269 (par deck)
+## Pages — 270 (par deck)
 
 ### Agency (12)
 
@@ -823,7 +823,7 @@ Ces correspondances évitent la réinvention :
 - `/launchpad/portfolio-bulk-import`
 - `/score`
 
-### Public (40)
+### Public (41)
 
 - `/(marketing)`
 - `/agence`
@@ -859,6 +859,7 @@ Ces correspondances évitent la réinvention :
 - `/reset-password`
 - `/scorer`
 - `/services`
+- `/shared/guidelines/[token]`
 - `/shared/strategy/[token]`
 - `/sla`
 - `/status`

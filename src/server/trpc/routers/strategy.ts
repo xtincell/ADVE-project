@@ -254,6 +254,12 @@ export const strategyRouter = createTRPCRouter({
       marketScale: MarketScaleSchema.nullable().optional(),
       addressableAudience: z.number().int().positive().max(8_000_000_000).nullable().optional(),
       brandFoundedYear: z.number().int().min(1800).max(new Date().getFullYear()).nullable().optional(),
+      // Audit 2026-07-16 (`market-feed-cta-dead-end-sector`) : pays + secteur
+      // sont LES clés de la veille marché (external-feeds, intelligence
+      // sectorielle, axe Overton) mais aucune surface ne permettait de les
+      // poser sur une marque existante — veille définitivement morte.
+      countryCode: z.string().length(2).nullable().optional(),
+      sector: z.string().max(120).nullable().optional(),
       advertis_vector: z.record(z.string(), z.number()).optional(),
       recalculateScore: z.boolean().optional(),
     }),
@@ -264,7 +270,7 @@ export const strategyRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const { id, advertis_vector, recalculateScore, ...data } = input;
+      const { id, advertis_vector, recalculateScore, sector, ...data } = input;
 
       // Enforce operator isolation
       const hasAccess = await canAccessStrategy(id, {
@@ -275,11 +281,20 @@ export const strategyRouter = createTRPCRouter({
       if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé" });
 
       const previous = await ctx.db.strategy.findUniqueOrThrow({ where: { id } });
+      // Secteur : MERGE dans businessContext (jamais un écrasement du JSON).
+      const mergedBusinessContext =
+        sector !== undefined
+          ? ({
+              ...((previous.businessContext as Record<string, unknown> | null) ?? {}),
+              sector,
+            } as Prisma.InputJsonValue)
+          : undefined;
       const updated = await ctx.db.strategy.update({
         where: { id },
         data: {
           ...data,
           ...(advertis_vector ? { advertis_vector: advertis_vector as Prisma.InputJsonValue } : {}),
+          ...(mergedBusinessContext !== undefined ? { businessContext: mergedBusinessContext } : {}),
         },
       });
 

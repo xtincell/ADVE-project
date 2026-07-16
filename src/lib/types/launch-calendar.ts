@@ -154,6 +154,28 @@ export interface PostBrandVoice {
   lexique?: string[];
 }
 
+/**
+ * Extrait la voix de marque du pilier D (mêmes chemins que le composer
+ * `composeContentCalendar` : `tonDeVoix.personnalite` + `assetsLinguistiques.
+ * lexique`). Pure. Audit 2026-07-16 (`arm-discards-adve-brand-voice`) : le
+ * ré-ancrage J-0 re-dérivait les posts SANS la voix — captions génériques,
+ * lexique ADVE perdu.
+ */
+export function brandVoiceFromPillarD(content: unknown): PostBrandVoice {
+  const d = (content ?? {}) as Record<string, unknown>;
+  const ling = (d.assetsLinguistiques ?? {}) as Record<string, unknown>;
+  const ton = (d.tonDeVoix ?? {}) as Record<string, unknown>;
+  const lexique = Array.isArray(ling.lexique)
+    ? ling.lexique.filter((x): x is string => typeof x === "string")
+    : [];
+  const pers = Array.isArray(ton.personnalite)
+    ? ton.personnalite.filter((x): x is string => typeof x === "string")
+    : typeof ton.personnalite === "string" && ton.personnalite
+      ? [ton.personnalite]
+      : [];
+  return { voice: pers.length ? pers.join(", ") : null, lexique };
+}
+
 /** Caption draft déterministe depuis les champs éditoriaux d'un post. Pure. */
 export function derivePostCaption(
   p: Pick<ContentPost, "platform" | "theme" | "angle" | "hashtags">,

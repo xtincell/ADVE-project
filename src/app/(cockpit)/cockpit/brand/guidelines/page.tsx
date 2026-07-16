@@ -104,6 +104,7 @@ export default function GuidelinesPage() {
   const [showRegenerateConfirm, setShowRegenerateConfirm] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
+  const utils = trpc.useUtils();
   const guidelinesQuery = trpc.guidelines.get.useQuery(
     { strategyId: strategyId! },
     { enabled: !!strategyId },
@@ -161,12 +162,25 @@ export default function GuidelinesPage() {
     }
   };
 
-  const handleExportHtml = () => {
-    if (strategyId) {
-      window.open(
-        `/api/trpc/guidelines.export?input=${encodeURIComponent(JSON.stringify({ strategyId, format: "html" }))}`,
-        "_blank",
-      );
+  // Export via le client tRPC (superjson) puis téléchargement Blob — l'ancien
+  // window.open sur /api/trpc avec input JSON brut échouait à la
+  // désérialisation et affichait une page d'erreur au founder (audit
+  // 2026-07-16, `guidelines-export-html-raw-trpc`).
+  const handleExportHtml = async () => {
+    if (!strategyId) return;
+    try {
+      const html = await utils.client.guidelines.export.query({ strategyId, format: "html" });
+      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "guidelines-marque.html";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch {
+      /* le bouton reste silencieux plutôt qu'une page d'erreur brute */
     }
   };
 

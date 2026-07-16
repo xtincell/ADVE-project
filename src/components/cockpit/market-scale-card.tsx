@@ -48,9 +48,14 @@ export function MarketScaleCard({ strategyId }: { strategyId: string }) {
   const [scale, setScale] = useState<MarketScale | "">("");
   const [audience, setAudience] = useState<string>("");
   const [founded, setFounded] = useState<string>("");
+  // Pays + secteur — LES clés de la veille marché (external-feeds, intelligence
+  // sectorielle, axe Overton). Aucune surface cockpit ne permettait de les
+  // poser sur une marque existante (audit 2026-07-16) : veille morte.
+  const [country, setCountry] = useState<string>("");
+  const [sector, setSector] = useState<string>("");
 
   const s = strategyQuery.data as
-    | { marketScale?: MarketScale | null; addressableAudience?: number | null; brandFoundedYear?: number | null }
+    | { marketScale?: MarketScale | null; addressableAudience?: number | null; brandFoundedYear?: number | null; countryCode?: string | null; businessContext?: unknown }
     | undefined;
 
   useEffect(() => {
@@ -58,6 +63,9 @@ export function MarketScaleCard({ strategyId }: { strategyId: string }) {
     setScale(s.marketScale ?? "");
     setAudience(s.addressableAudience != null ? String(s.addressableAudience) : "");
     setFounded(s.brandFoundedYear != null ? String(s.brandFoundedYear) : "");
+    setCountry(s.countryCode ?? "");
+    const bc = (s.businessContext ?? null) as { sector?: unknown } | null;
+    setSector(typeof bc?.sector === "string" ? bc.sector : "");
   }, [s]);
 
   const updateMutation = trpc.strategy.update.useMutation({
@@ -73,14 +81,17 @@ export function MarketScaleCard({ strategyId }: { strategyId: string }) {
   const foundedNum = founded.trim() === "" ? null : Number(founded);
   const audienceInvalid = audienceNum != null && (!Number.isInteger(audienceNum) || audienceNum <= 0);
   const foundedInvalid = foundedNum != null && (!Number.isInteger(foundedNum) || foundedNum < 1800 || foundedNum > currentYear);
+  const countryInvalid = country.trim() !== "" && !/^[A-Za-z]{2}$/.test(country.trim());
 
   const save = () => {
-    if (audienceInvalid || foundedInvalid) return;
+    if (audienceInvalid || foundedInvalid || countryInvalid) return;
     updateMutation.mutate({
       id: strategyId,
       marketScale: scale === "" ? null : scale,
       addressableAudience: audienceNum,
       brandFoundedYear: foundedNum,
+      countryCode: country.trim() === "" ? null : country.trim().toUpperCase(),
+      sector: sector.trim() === "" ? null : sector.trim(),
     });
   };
 
@@ -157,6 +168,32 @@ export function MarketScaleCard({ strategyId }: { strategyId: string }) {
           />
           {foundedInvalid ? <span className="mt-1 block text-2xs text-error">Entre 1800 et {currentYear}.</span> : null}
         </label>
+        <label className="block">
+          <span className="mb-1 block text-2xs font-medium uppercase tracking-wide text-foreground-muted">Pays (code)</span>
+          <input
+            type="text"
+            maxLength={2}
+            value={country}
+            onChange={(e) => setCountry(e.target.value.toUpperCase())}
+            placeholder="ex. CM"
+            className={inputCls}
+          />
+          {countryInvalid ? <span className="mt-1 block text-2xs text-error">Code pays à 2 lettres (ex. CM, CI).</span> : null}
+        </label>
+        <label className="block sm:col-span-2">
+          <span className="mb-1 block text-2xs font-medium uppercase tracking-wide text-foreground-muted">Secteur</span>
+          <input
+            type="text"
+            maxLength={120}
+            value={sector}
+            onChange={(e) => setSector(e.target.value)}
+            placeholder="ex. Équipement audiovisuel"
+            className={inputCls}
+          />
+          <span className="mt-1 block text-2xs text-foreground-muted">
+            Pays + secteur activent votre veille marché et votre intelligence sectorielle.
+          </span>
+        </label>
       </div>
 
       <div className="mt-4 flex items-center justify-end gap-3">
@@ -165,7 +202,7 @@ export function MarketScaleCard({ strategyId }: { strategyId: string }) {
         ) : (
           <button
             onClick={save}
-            disabled={updateMutation.isPending || audienceInvalid || foundedInvalid}
+            disabled={updateMutation.isPending || audienceInvalid || foundedInvalid || countryInvalid}
             className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
           >
             {updateMutation.isPending ? "Enregistrement…" : "Enregistrer"}

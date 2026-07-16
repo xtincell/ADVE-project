@@ -7,7 +7,7 @@ import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
 import * as gloryTools from "@/server/services/glory-tools";
 import { governedProcedure } from "@/server/governance/governed-procedure";
-import { parseLaunchTimeline, parseContentCalendar, parseSocialNaming, parseSocialCopy, deriveDatedPosts } from "@/lib/types/launch-calendar";
+import { parseLaunchTimeline, parseContentCalendar, parseSocialNaming, parseSocialCopy, deriveDatedPosts, brandVoiceFromPillarD } from "@/lib/types/launch-calendar";
 import { estimateSequenceCost } from "@/server/services/artemis/tools/sequence-cost";
 /* lafusee:governed-active */
 
@@ -478,11 +478,18 @@ export const gloryRouter = createTRPCRouter({
 
       const timeline = parseLaunchTimeline(timelineRow?.output ?? null);
       const calendar = parseContentCalendar(calendarRow?.output ?? null);
+      // Voix de marque (pilier D) — exposée pour que le panel re-dérive les
+      // posts AVEC le lexique/ton ADVE au ré-ancrage J-0 (audit 2026-07-16).
+      const pillarD = await ctx.db.pillar.findFirst({
+        where: { strategyId: input.strategyId, key: "d" },
+        select: { content: true },
+      });
+      const brandVoice = brandVoiceFromPillarD(pillarD?.content ?? null);
       // Read-side fallback: outputs predating the posts[] field (or hand-written
       // deterministic seeds) get a dated post-by-post calendar derived from their
       // cadence, anchored on the launch timeline J1. Pure + deterministic.
       if (calendar && calendar.posts.length === 0) {
-        calendar.posts = deriveDatedPosts(calendar, timeline?.anchorJ1 ?? null, 4);
+        calendar.posts = deriveDatedPosts(calendar, timeline?.anchorJ1 ?? null, 4, brandVoice);
       }
 
       return {
@@ -490,6 +497,7 @@ export const gloryRouter = createTRPCRouter({
         calendar,
         naming: parseSocialNaming(namingRow?.output ?? null),
         social: parseSocialCopy(socialRow?.output ?? null),
+        brandVoice,
         generatedAt: generatedAt ? generatedAt.toISOString() : null,
       };
     }),
@@ -528,32 +536,62 @@ export const gloryRouter = createTRPCRouter({
       });
       const calendar = parseContentCalendar(calRow?.output ?? null);
       if (!calendar) {
-        return { armed: 0, skippedPast: 0, skippedUnsupported: 0, byPlatform: {} as Record<string, number>, reason: "NO_CALENDAR" as const };
+        return { armed: 0, skippedPast: 0, skippedUnsupported: 0, skippedNeedsVisual: 0, alreadyArmed: 0, byPlatform: {} as Record<string, number>, reason: "NO_CALENDAR" as const };
       }
 
-      const startISO = input.startDate.slice(0, 10); // YYYY-MM-DD → ancre déterministe
-      const posts = deriveDatedPosts(calendar, startISO, input.weeks ?? 4);
+      // Voix de marque (pilier D) — les captions armées gardent le lexique/ton
+      // ADVE, identiques à l'affichage (audit 2026-07-16).
+      const pillarD = await ctx.db.pillar.findFirst({
+        where: { strategyId: input.strategyId, key: "d" },
+        select: { content: true },
+      });
+      const brandVoice = brandVoiceFromPillarD(pillarD?.content ?? null);
 
-      // Plateformes réellement publiables (le reste = UNSUPPORTED honnête).
+      const startISO = input.startDate.slice(0, 10); // YYYY-MM-DD → ancre déterministe
+      const posts = deriveDatedPosts(calendar, startISO, input.weeks ?? 4, brandVoice);
+
+      // Garde anti-doublon (audit 2026-07-16) : armer 2× (double-clic,
+      // re-visite) dupliquait TOUTES les publications. On indexe les
+      // publications déjà armées par (plateforme, date, texte).
+      const existing = await ctx.db.brandAction.findMany({
+        where: { strategyId: input.strategyId, status: "SCHEDULED" },
+        select: { metadata: true, timingStart: true },
+      });
+      const armedKeys = new Set<string>();
+      for (const a of existing) {
+        const sp = (a.metadata as Record<string, unknown> | null)?.socialPublish as
+          | { targets?: string[]; text?: string }
+          | undefined;
+        if (!sp?.targets?.length || !a.timingStart) continue;
+        const day = a.timingStart.toISOString().slice(0, 10);
+        for (const t of sp.targets) armedKeys.add(`${t}|${day}|${(sp.text ?? "").trim()}`);
+      }
+
+      // Plateformes réellement publiables SANS visuel : FB + LinkedIn.
+      // Instagram EXIGE une image (publishSocialPost → UNSUPPORTED sans) — armer
+      // un post IG sans visuel le faisait CONSOMMER en silence (EXECUTED sans
+      // publication, audit 2026-07-16 CRITICAL) : compté « visuel requis ».
       const PLATFORM_CODE: Record<string, string> = {
         facebook: "FACEBOOK", instagram: "INSTAGRAM", linkedin: "LINKEDIN",
         tiktok: "TIKTOK", youtube: "YOUTUBE", x: "TWITTER", twitter: "TWITTER",
       };
-      const PUBLISHABLE = new Set(["FACEBOOK", "INSTAGRAM", "LINKEDIN"]);
+      const PUBLISHABLE_NO_VISUAL = new Set(["FACEBOOK", "LINKEDIN"]);
       const hour = input.hourUtc ?? 9;
       const now = Date.now();
 
       const { emitIntentTyped } = await import("@/server/services/mestor/intents");
-      let armed = 0, skippedPast = 0, skippedUnsupported = 0;
+      let armed = 0, skippedPast = 0, skippedUnsupported = 0, skippedNeedsVisual = 0, alreadyArmed = 0;
       const byPlatform: Record<string, number> = {};
 
       for (const p of posts) {
         const code = PLATFORM_CODE[p.platform.trim().toLowerCase()] ?? p.platform.trim().toUpperCase();
-        if (!PUBLISHABLE.has(code)) { skippedUnsupported++; continue; }
+        if (code === "INSTAGRAM") { skippedNeedsVisual++; continue; }
+        if (!PUBLISHABLE_NO_VISUAL.has(code)) { skippedUnsupported++; continue; }
         const at = new Date(`${p.date}T${String(hour).padStart(2, "0")}:00:00Z`);
         if (Number.isNaN(at.getTime()) || at.getTime() <= now + 2 * 60_000) { skippedPast++; continue; }
         const text = (p.caption ?? p.theme ?? p.angle ?? "").trim();
         if (!text) { skippedPast++; continue; }
+        if (armedKeys.has(`${code}|${p.date}|${text}`)) { alreadyArmed++; continue; }
         await emitIntentTyped(
           {
             kind: "ANUBIS_PUBLISH_SOCIAL_POST",
@@ -570,6 +608,6 @@ export const gloryRouter = createTRPCRouter({
         byPlatform[code] = (byPlatform[code] ?? 0) + 1;
       }
 
-      return { armed, skippedPast, skippedUnsupported, byPlatform, reason: null };
+      return { armed, skippedPast, skippedUnsupported, skippedNeedsVisual, alreadyArmed, byPlatform, reason: null };
     }),
 });

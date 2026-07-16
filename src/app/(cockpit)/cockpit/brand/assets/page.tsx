@@ -46,6 +46,25 @@ const ASSET_TYPES = [
 
 type AssetType = (typeof ASSET_TYPES)[number]["value"];
 
+/**
+ * BrandAsset.kind → type UI (miroir du KIND_FOR_TYPE serveur). Source de
+ * vérité du filtre Type : l'ancien filtre comparait un INDEX numérique stocké
+ * à l'upload à une STRING → ne matchait jamais (audit 2026-07-16).
+ */
+const TYPE_FOR_KIND: Record<string, AssetType> = {
+  LOGO_FINAL: "LOGO",
+  LOGO_IDEA: "LOGO",
+  TYPOGRAPHY_SYSTEM: "FONT",
+  CHROMATIC_STRATEGY: "COLOR",
+  KV_VISUAL: "IMAGE",
+};
+function assetUiType(a: { kind?: string | null; pillarTags?: unknown }): string {
+  const byKind = a.kind ? TYPE_FOR_KIND[a.kind] : undefined;
+  if (byKind) return byKind;
+  const legacy = (a.pillarTags as Record<string, unknown> | null)?.assetType;
+  return typeof legacy === "string" ? legacy : "OTHER";
+}
+
 export default function AssetsPage() {
   const strategyId = useCurrentStrategyId();
   const toast = useToast();
@@ -96,7 +115,10 @@ export default function AssetsPage() {
   );
 
   const strategies = trpc.strategy.list.useQuery({});
-  const pillarContentMap = buildPillarContentMap(strategies.data?.[0]?.pillars as Array<{ key: string; content: unknown }> | undefined);
+  // Bannière depuis la marque COURANTE — `data[0]` affichait le positionnement
+  // d'une AUTRE marque en multi-marques/délégué (audit 2026-07-16).
+  const currentStrategy = strategies.data?.find((st) => st.id === strategyId);
+  const pillarContentMap = buildPillarContentMap(currentStrategy?.pillars as Array<{ key: string; content: unknown }> | undefined);
 
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
@@ -131,10 +153,7 @@ export default function AssetsPage() {
 
   // Apply type filter
   const typeFiltered = typeFilter
-    ? allAssets.filter((a) => {
-        const tags = a.pillarTags as Record<string, unknown> | null;
-        return (tags?.assetType as string) === typeFilter;
-      })
+    ? allAssets.filter((a) => assetUiType(a) === typeFilter)
     : allAssets;
 
   const assets = typeFiltered.filter(
@@ -151,8 +170,7 @@ export default function AssetsPage() {
 
   const categoryMap = new Map<string, number>();
   for (const a of allAssets) {
-    const tags = a.pillarTags as Record<string, unknown> | null;
-    const cat = (tags?.assetType as string) ?? "OTHER";
+    const cat = assetUiType(a);
     categoryMap.set(cat, (categoryMap.get(cat) ?? 0) + 1);
   }
 
@@ -186,10 +204,9 @@ export default function AssetsPage() {
       name: uploadForm.name,
       type: uploadForm.type,
       fileUrl: uploadForm.fileUrl || undefined,
-      pillarTags: {
-        ...uploadForm.pillarTags,
-        assetType: ASSET_TYPES.findIndex((t) => t.value === uploadForm.type),
-      },
+      // `type` → kind canonique côté serveur ; plus d'index numérique
+      // assetType (illisible côté filtre, audit 2026-07-16).
+      pillarTags: uploadForm.pillarTags,
     });
   };
 
@@ -364,7 +381,7 @@ export default function AssetsPage() {
               {assets.map((asset) => {
                 const tags = asset.pillarTags as Record<string, unknown> | null;
                 const level = (tags?.level as string) ?? "production";
-                const assetType = (tags?.assetType as string) ?? "";
+                const assetType = assetUiType(asset);
                 const Icon = getFileIcon(asset.name);
 
                 return (

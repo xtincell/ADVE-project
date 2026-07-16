@@ -54,7 +54,7 @@ export async function generateInsights(strategyId: string): Promise<MestorInsigh
         title: "Déséquilibre entre piliers",
         description: `Écart de ${spread} points entre le pilier le plus fort et le plus faible. Un écart > 15 indique un manque de cohérence stratégique.`,
         actionable: true,
-        suggestedAction: "Lancer un diagnostic ARTEMIS sur les piliers faibles",
+        suggestedAction: "Lancer un diagnostic sur les piliers faibles",
         data: { spread, min, max },
       });
     }
@@ -87,7 +87,7 @@ export async function generateInsights(strategyId: string): Promise<MestorInsigh
       title: `${missingKeys.length} pilier(s) incomplet(s)`,
       description: `Les piliers suivants n'ont pas de contenu: ${missingKeys.join(", ")}`,
       actionable: true,
-      suggestedAction: "Compléter les piliers manquants via le Boot Sequence ou manuellement",
+      suggestedAction: "Compléter les piliers manquants depuis votre fiche de marque",
     });
   }
 
@@ -103,7 +103,7 @@ export async function generateInsights(strategyId: string): Promise<MestorInsigh
       title: `${criticalSignals.length} signal(aux) critique(s)`,
       description: "Des signaux critiques nécessitent une attention immédiate.",
       actionable: true,
-      suggestedAction: "Consulter les signaux dans le Signal Dashboard",
+      suggestedAction: "Consulter votre veille marché",
       data: { count: criticalSignals.length },
     });
   }
@@ -115,8 +115,8 @@ export async function generateInsights(strategyId: string): Promise<MestorInsigh
       insights.push({
         type: "CULT_INDEX",
         severity: "MEDIUM",
-        title: "Cult Index faible",
-        description: `Le Cult Index est à ${latest.compositeScore}/100 (tier: ${latest.tier}). Des actions d'engagement sont recommandées.`,
+        title: "Indice d'attachement faible",
+        description: `Votre indice d'attachement est à ${latest.compositeScore}/100. Des actions d'engagement sont recommandées.`,
         actionable: true,
         suggestedAction: "Activer le programme Ambassador et les rituels de marque",
         data: { score: latest.compositeScore, tier: latest.tier },
@@ -135,7 +135,7 @@ export async function generateInsights(strategyId: string): Promise<MestorInsigh
       insights.push({
         type: "DRIFT",
         severity: "HIGH",
-        title: "Régression de la Devotion Ladder",
+        title: "Recul de l'échelle d'engagement",
         description: "La proportion de l'audience engagée a diminué. Risque de désengagement.",
         actionable: true,
         suggestedAction: "Analyser les causes et relancer les programmes d'engagement",
@@ -163,10 +163,10 @@ export async function generateInsights(strategyId: string): Promise<MestorInsigh
     insights.push({
       type: "OPPORTUNITY",
       severity: "LOW",
-      title: "Sous-utilisation des Drivers",
+      title: "Canaux sous-utilisés",
       description: `Seulement ${strategy.drivers.length} Driver(s) actif(s). Explorer d'autres canaux pour diversifier la présence.`,
       actionable: true,
-      suggestedAction: "Utiliser l'outil GLORY 'digital-planner' pour identifier les canaux à activer",
+      suggestedAction: "Demander un plan digital pour identifier les canaux à activer",
     });
   }
 
