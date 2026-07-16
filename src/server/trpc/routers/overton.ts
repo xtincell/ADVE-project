@@ -8,6 +8,7 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { db } from "@/lib/db";
+import { assertStrategyRead } from "./_strategy-read-guard";
 import {
   upsertOvertonPositionInputSchema,
   recordZoneTransitionInputSchema,
@@ -51,7 +52,8 @@ export const overtonRouter = createTRPCRouter({
   /** Lecture : signaux Overton d'une marque (positions tenues + transitions). */
   brandSignals: protectedProcedure
     .input(z.object({ strategyId: z.string().min(1) }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      await assertStrategyRead(ctx.session.user.id, input.strategyId);
       return getOvertonSignalsForBrand(db, input.strategyId);
     }),
 });

@@ -109,6 +109,42 @@ export async function buildAggregatedManifest(): Promise<McpAggregatedManifest> 
   };
 }
 
+/** Vrai si le schéma d'entrée du tool déclare un champ `strategyId` (ZodObject). */
+function schemaAcceptsStrategyId(schema: z.ZodType): boolean {
+  const shape = (schema as z.ZodObject<z.ZodRawShape>).shape;
+  return !!shape && typeof shape === "object" && "strategyId" in shape;
+}
+
+/**
+ * ADR-0145 — enforcement FAIL-CLOSED de la portée BRAND au niveau du dispatch
+ * (audit 2026-07-16 `mcp-brand-scope-unenforced` : seul amendPillar lisait
+ * `__auth` — une clé « limitée à la marque » opérait en réalité n'importe
+ * quelle marque, la portée affichée en console était décorative).
+ *
+ * Règles : clé BRAND sans strategyId de portée → refus ; tool sans champ
+ * `strategyId` dans son schéma → refus (pas de scoping possible = pas d'accès) ;
+ * `strategyId` client divergent → refus ; absent → injecté depuis la portée.
+ */
+function enforceBrandScope(
+  tool: McpToolDefinition,
+  params: Record<string, unknown>,
+): Record<string, unknown> {
+  const auth = params.__auth as { scopeKind?: string | null; scopeStrategyId?: string | null } | undefined;
+  if (auth?.scopeKind !== "BRAND") return params;
+  const scopeId = auth.scopeStrategyId;
+  if (!scopeId) throw new Error("Clé scopée marque sans marque de portée — accès refusé.");
+  if (!schemaAcceptsStrategyId(tool.inputSchema)) {
+    throw new Error(
+      `Le tool ${tool.name} n'est pas scopable par marque — inaccessible avec une clé limitée à une marque.`,
+    );
+  }
+  const requested = params.strategyId;
+  if (requested != null && requested !== scopeId) {
+    throw new Error("strategyId hors de la portée de la clé — accès refusé.");
+  }
+  return { ...params, strategyId: scopeId };
+}
+
 export async function dispatchTool(
   serverName: string,
   toolName: string,
@@ -125,7 +161,7 @@ export async function dispatchTool(
         .join(", ")}`,
     );
   }
-  return tool.handler(params);
+  return tool.handler(enforceBrandScope(tool, params));
 }
 
 export function clearCache(): void {

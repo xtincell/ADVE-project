@@ -11,6 +11,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
+import { isBrandPublicSlug } from "@/domain/brand-slug";
 
 export const dynamic = "force-dynamic";
 
@@ -111,7 +112,10 @@ export default async function PublicBrandPage(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
-  if (!/^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/.test(slug)) notFound();
+  // Point de vérité domaine (audit 2026-07-16 `b-slug-lfa-regex-404` : le regex
+  // ad-hoc minuscules rejetait TOUT slug au format canon `LFA-…` — 100 % des
+  // pages publiques 404 après la migration des slugs).
+  if (!isBrandPublicSlug(slug)) notFound();
   const brand = await loadBrand(slug).catch(() => null);
   if (!brand) notFound();
 

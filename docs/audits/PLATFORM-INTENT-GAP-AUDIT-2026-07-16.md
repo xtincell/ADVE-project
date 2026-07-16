@@ -533,7 +533,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : La page « Missions actives » du talent liste TOUTES les missions IN_PROGRESS de la plateforme (aucun filtre assigneeId — active/page.tsx:29), donc un talent voit et peut « Soumettre livrable » sur les missions des autres. `submitDeliverable` ne vérifie NI que l'appelant est l'assignee NI l'accès à la stratégie (mission.ts:419-437) : n'importe quel compte crée un MissionDeliverable sur n'importe quelle mission et la bascule en REVIEW (mutation d'état d'une mission d'autrui). enforceStrategyAccess n'est câblé que sur mission.start (1 seul usage, mission.ts:219).
 - **Preuve** : src/app/(creator)/creator/missions/active/page.tsx:29 (`mission.list({status:"IN_PROGRESS"})` sans assigneeId) ; src/server/trpc/routers/mission.ts:401-437 (submitDeliverable sans guard, auto-transition REVIEW) ; grep enforceStrategyAccess = 1 seul call site (:219)
 - **Fix esquissé** : Filtrer la page active sur assigneeId=session.user.id (ou réutiliser strategy.myDelegatedBrands.missions déjà correct) ; dans submitDeliverable, exiger mission.assigneeId === ctx.session.user.id (ou opérateur).
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V5 sécurité/tenancy (v6.27.179)
 
 ### [CRITICAL] `guild-brand-no-tracking-surface` — guilde-creator
 
@@ -551,7 +551,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : `mission.list` et `mission.get` sont des protectedProcedure SANS scoping ownership NI filtre guildPublished (mission.ts:351-364, 366-398 — findMany/findUniqueOrThrow renvoient tous les scalaires dont `briefData` brut). N'importe quel compte auto-inscrit (register libre, rôle USER inclus dans CREATOR_ROLES du proxy, proxy.ts:75-82,89) ouvre /creator/missions/available qui liste TOUTES les missions DRAFT de la plateforme — y compris les missions guilde PAS ENCORE MODÉRÉES et les missions internes de toutes les marques — et lit contactEmail/contactName dans briefData via mission.get, court-circuitant l'intermédiation payante de la plateforme. Il peut aussi candidater à une mission non modérée (missionApplication.submit ne vérifie pas guildPublished, mission-applications.ts:39).
 - **Preuve** : src/server/trpc/routers/mission.ts:366-398 (list sans where ownership/guildPublished, include briefData) et :351-364 (get idem) ; src/app/(creator)/creator/missions/available/page.tsx:33 (`mission.list({status:"DRAFT"})`) ; src/proxy.ts:75-89 (USER accède /creator) ; contraste : laguilde.ts:39-51 PUBLIC_MISSION_SELECT soigneusement minimal
 - **Fix esquissé** : Scoper mission.list/get : opérateur → tout ; talent → missions guildPublished=true OU assignées à lui ; et exclure contactName/contactEmail de briefData hors opérateur (projection dédiée). Ajouter le filtre guildPublished dans APPLY_TO_MISSION pour les missions d'origine guilde.
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V5 sécurité/tenancy (v6.27.179)
 
 ### [CRITICAL] `oracle-jargon-neteru-client` — oracle-chain
 
@@ -596,7 +596,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : Le garde-fou d'entrée de la page rejette TOUT slug au nouveau format : `/^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/` (minuscules uniquement) alors que le préfixe canonique est `LFA-` en MAJUSCULES (BRAND_SLUG_RE exige `LFA-`). `LFA-motion19` → notFound() AVANT même la requête DB. Le commit 21ee83b (format LFA- + script scripts/migrate-brand-slugs.ts qui migre les slugs existants) n'a pas touché page.tsx — après migration, 100 % des pages publiques de marque font 404.
 - **Preuve** : src/app/(public-brand)/b/[slug]/page.tsx:114 `if (!/^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/.test(slug)) notFound();` vs src/domain/brand-slug.ts:16-19 `BRAND_SLUG_PREFIX = "LFA-"` / `BRAND_SLUG_RE = /^LFA-[a-z0-9]+…/`. git : 21ee83b modifie brand-slug.ts + seeds + migrate-brand-slugs.ts mais pas page.tsx.
 - **Fix esquissé** : Remplacer le regex ad-hoc par `isBrandPublicSlug(slug)` (le point de vérité domaine existe déjà), éventuellement avec tolérance casse + redirect 308 vers la forme canonique.
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V5 sécurité/tenancy (v6.27.179)
 
 ### [CRITICAL] `mcp-brand-scope-unenforced` — social-chain
 
@@ -605,7 +605,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : La clé founder est créée `server: "*"` (tous les serveurs MCP) avec scopeKind=BRAND, et /api/mcp injecte `__auth` dans les params — mais UN SEUL outil sur ~11 serveurs lit `__auth` (advertis amendPillar). Tous les autres outils (notoria, seshat, intelligence, operations, creative…) acceptent un `strategyId` arbitraire sans vérifier `scopeStrategyId` : une clé « limitée à la marque » lit/opère en réalité N'IMPORTE QUELLE marque (fuite cross-tenant), et la portée affichée en console est décorative.
 - **Preuve** : src/server/trpc/routers/brand-mcp.ts:58-63 (`server: "*"`, scopeKind BRAND) ; src/app/api/mcp/route.ts:51-60 (injection __auth) ; grep `__auth` dans src/server/mcp → unique hit src/server/mcp/advertis/index.ts:165-172 ; src/server/mcp/notoria/index.ts:27-31 (handler filtre par strategyId fourni par le client, aucune garde).
 - **Fix esquissé** : Faire appliquer la portée dans le dispatcher unifié (mcp-server dispatchTool) : si scopeKind=BRAND, forcer/vérifier tout param strategyId contre scopeStrategyId et refuser les outils sans scoping — fail-closed au niveau du dispatch, pas outil par outil.
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V5 sécurité/tenancy (v6.27.179)
 
 ### [CRITICAL] `legacy-read-procedures-cross-tenant` — transverse-scan
 
@@ -614,7 +614,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : Le durcissement a couvert les mutations, pas les lectures : `campaign.get/list` (include strategy, budgets), `mission.get/list` (include commissions avec montants bruts/nets, driver, strategy), `devotionLadder.list/getByStrategy`, `superfan.count/segments/top`, `sourceInsights.list` sont en `protectedProcedure` nu — n'importe quel compte authentifié (freelance Guilde inclus) peut lire les campagnes, missions et commissions de n'importe quelle marque en passant un strategyId arbitraire ; `mission.list` et `campaign.list` sans strategyId retournent TOUT le parc cross-tenant.
 - **Preuve** : src/server/trpc/routers/campaign.ts:93-118 (get/list sans garde) ; src/server/trpc/routers/mission.ts:351-399 (get/list + commissions.grossAmount/netAmount) ; src/server/trpc/routers/devotion-ladder.ts:64-81 ; src/server/trpc/routers/superfan.ts:91-119 ; src/server/trpc/init.ts:40-49 (protectedProcedure = session seulement)
 - **Fix esquissé** : Passe systématique sur les .query protectedProcedure qui prennent strategyId/id : brancher le chokepoint canAccessStrategy(getOperatorContext) comme dans cockpit-router, et exiger strategyId (ou scopeStrategies) sur les list.
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V5 sécurité/tenancy (v6.27.179)
 
 ### [CRITICAL] `ptah-magnific-mock-delivered-as-real` — transverse-scan
 
@@ -659,7 +659,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : superfan.count / velocity / segments / top et overton.brandSignals sont protectedProcedure SANS aucune garde d'ownership : tout utilisateur connecté peut requêter N'IMPORTE QUEL strategyId. `superfan.top` retourne handles + plateformes + engagementDepth des superfans d'une marque tierce (PII de tiers, la donnée que `candidates` protège soigneusement derrière operatorProcedure).
 - **Preuve** : src/server/trpc/routers/superfan.ts:91-119 (count), :122-160 (velocity), :163-190 (segments), :193-216 (top — select handle/platform, aucune vérification userId/canAccessStrategy) ; src/server/trpc/routers/overton.ts:52-55 idem.
 - **Fix esquissé** : Appliquer le chokepoint canAccessStrategy(strategyId, opCtx) (ADR-0129) en tête de chaque query superfan.*/overton.brandSignals, comme dans cockpit-router.
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V5 sécurité/tenancy (v6.27.179)
 
 ### [MAJOR] `tier-gate-keyed-on-viewer-not-brand` — cockpit-intelligence
 
@@ -668,7 +668,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : checkPaidTier(ctx.session.user.id) est évalué sur le VIEWER (cockpit-router.ts:135, 220) : un collaborateur délégué ou un opérateur non-god-mode passe canAccessStrategy puis se fait refuser sur SA propre absence d'abonnement (tier-gate.ts:61-94, bypass réservé role ADMIN + email god-mode) et lit « activez votre abonnement » — on demande de payer à la mauvaise personne. Effet cascade : « Fans détectés » n'est monté QUE dans CommunityPanelInner APRÈS ce gate (community-panel.tsx:93-107, 211) → la revue de candidats superfans est inatteignable pour les opérateurs OPERATOR-role, exactement ceux censés cliquer « Suivre ce fan ».
 - **Preuve** : src/server/trpc/routers/cockpit-router.ts:135 + 220 `checkPaidTier(ctx.session.user.id)` ; src/server/services/glory-tools/tier-gate.ts:80-89 (bypass ADMIN+god-mode uniquement) ; src/components/cockpit/intelligence/community-panel.tsx:93-107 (gate avant le mount de SuperfanCandidatesPanel l.211, unique mount du repo).
 - **Fix esquissé** : Résoudre l'abonnement sur le propriétaire de la Strategy (strategy.userId/operatorId) au lieu du viewer, et exempter les viewers canOperate/collaborateurs ACTIVE du gate (lecture déléguée).
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V5 sécurité/tenancy (v6.27.179)
 
 ### [MAJOR] `manual-subscription-reference-hidden` — console-operator
 

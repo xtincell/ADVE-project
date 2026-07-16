@@ -21,15 +21,22 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { verifyCronSecret } from "@/lib/cron-auth";
 import { db } from "@/lib/db";
+import { brandPublicSlug } from "@/domain/brand-slug";
 
 const DEFAULT_TEXT =
   "🚀 Test de publication automatisée via La Fusée — chaîne ADVE → calendrier → publication planifiée. Ce message part à l'heure fixée par le système.";
 
 async function resolveBrand(slugOrName: string) {
+  // brandPublicSlug est idempotent : gère « motion19 » comme « LFA-motion19 »
+  // (audit 2026-07-16 `prod-finish-lowercase-slug-lookup` : le toLowerCase brut
+  // ne matchait plus jamais un slug canon `LFA-…`). Lève sur entrée non-sluggable
+  // → on retombe sur la recherche par nom.
+  let canonicalSlug: string | null = null;
+  try { canonicalSlug = brandPublicSlug(slugOrName); } catch { canonicalSlug = null; }
   return db.strategy.findFirst({
     where: {
       OR: [
-        { publicSlug: slugOrName.toLowerCase() },
+        ...(canonicalSlug ? [{ publicSlug: canonicalSlug }] : []),
         { name: { contains: slugOrName, mode: "insensitive" } },
       ],
     },

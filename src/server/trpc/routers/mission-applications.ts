@@ -33,11 +33,16 @@ export const missionApplicationRouter = createTRPCRouter({
     }
     const mission = await db.mission.findUnique({
       where: { id: input.missionId },
-      select: { status: true, assigneeId: true },
+      select: { status: true, assigneeId: true, guildPublished: true },
     });
     if (!mission) throw new Error("Mission introuvable.");
     if (mission.status !== "DRAFT" || mission.assigneeId) {
       throw new Error("Cette mission n'est plus ouverte aux candidatures.");
+    }
+    // Audit 2026-07-16 : on ne candidate pas à une mission non publiée
+    // (pré-modération ou mission interne d'une marque).
+    if (!mission.guildPublished) {
+      throw new Error("Cette mission n'est pas publiée sur le mur des missions.");
     }
     const talentProfile = await db.talentProfile.findUnique({
       where: { userId: user.id },

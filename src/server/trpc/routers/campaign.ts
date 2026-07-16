@@ -1,7 +1,9 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import * as auditTrail from "@/server/services/audit-trail";
+import { canAccessCampaign, canAccessStrategy, getOperatorContext, scopeCampaigns } from "@/server/services/operator-isolation";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
 
@@ -90,9 +92,17 @@ export const campaignRouter = createTRPCRouter({
       return updated;
     }),
 
+  // Audit 2026-07-16 `legacy-read-procedures-cross-tenant` : les LECTURES
+  // legacy étaient en protectedProcedure nu — tout compte authentifié lisait
+  // les campagnes (budgets inclus) de n'importe quelle marque. Chokepoint
+  // ADR-0129 appliqué (canAccessCampaign / scopeCampaigns).
   get: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
+      const opCtx = await getOperatorContext(ctx.session.user.id);
+      if (!(await canAccessCampaign(input.id, opCtx))) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette campagne" });
+      }
       return ctx.db.campaign.findUniqueOrThrow({
         where: { id: input.id },
         include: { missions: true, strategy: true },
@@ -102,8 +112,13 @@ export const campaignRouter = createTRPCRouter({
   list: protectedProcedure
     .input(z.object({ strategyId: z.string().optional(), status: z.string().optional() }))
     .query(async ({ ctx, input }) => {
+      const opCtx = await getOperatorContext(ctx.session.user.id);
+      if (input.strategyId && !(await canAccessStrategy(input.strategyId, opCtx))) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette marque" });
+      }
       return ctx.db.campaign.findMany({
         where: {
+          ...scopeCampaigns(opCtx),
           ...(input.strategyId ? { strategyId: input.strategyId } : {}),
           ...(input.status ? { status: input.status } : {}),
         },
@@ -124,6 +139,10 @@ export const campaignRouter = createTRPCRouter({
   canonByStrategy: protectedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
+      const opCtx = await getOperatorContext(ctx.session.user.id);
+      if (!(await canAccessStrategy(input.strategyId, opCtx))) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette marque" });
+      }
       const campaigns = await ctx.db.campaign.findMany({
         where: { strategyId: input.strategyId, canonType: { not: null } },
         select: {

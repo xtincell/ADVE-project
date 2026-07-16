@@ -10,9 +10,19 @@ import * as auditTrail from "@/server/services/audit-trail";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { assertCampaignHasBrief } from "@/server/services/campaign-manager/brief-gate";
 import * as cm from "@/server/services/campaign-manager";
-import { canAccessStrategy } from "@/server/services/operator-isolation";
+import { canAccessStrategy, canAccessMission, getOperatorContext, scopeMissions } from "@/server/services/operator-isolation";
 import { TRPCError } from "@trpc/server";
 /* lafusee:governed-active */
+
+/**
+ * Projection guilde : retire le contact direct du déposant du briefData
+ * (l'intermédiation passe par la plateforme — audit 2026-07-16).
+ */
+function stripGuildContacts(briefData: unknown): unknown {
+  if (!briefData || typeof briefData !== "object" || Array.isArray(briefData)) return briefData;
+  const { contactName: _cn, contactEmail: _ce, ...rest } = briefData as Record<string, unknown>;
+  return rest;
+}
 
 /** Founder-safe ownership guard (ADR-0144) — résout mission/activité → marque. */
 async function enforceStrategyAccess(
@@ -348,10 +358,15 @@ export const missionRouter = createTRPCRouter({
       return updated;
     }),
 
+  // Audit 2026-07-16 `mission-endpoints-leak-guild-contact-and-premoderation` +
+  // `legacy-read-procedures-cross-tenant` : get/list étaient en protectedProcedure
+  // nu — tout compte auto-inscrit lisait TOUTES les missions (commissions
+  // gross/net incluses) + le contact direct du déposant guilde AVANT modération,
+  // court-circuitant l'intermédiation. Chokepoint ADR-0129 + projection guilde.
   get: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      return ctx.db.mission.findUniqueOrThrow({
+      const mission = await ctx.db.mission.findUniqueOrThrow({
         where: { id: input.id },
         include: {
           deliverables: { include: { qualityReviews: true } },
@@ -361,6 +376,19 @@ export const missionRouter = createTRPCRouter({
           commissions: true,
         },
       });
+      const opCtx = await getOperatorContext(ctx.session.user.id);
+      if (await canAccessMission(mission.id, opCtx)) return mission;
+      // Mission guilde PUBLIÉE encore ouverte : lisible par les talents qui
+      // candidatent, mais SANS le contact du déposant ni l'économie interne.
+      if (mission.guildPublished && !mission.assigneeId) {
+        return {
+          ...mission,
+          briefData: stripGuildContacts(mission.briefData),
+          commissions: [],
+          strategy: null,
+        };
+      }
+      throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette mission" });
     }),
 
   list: protectedProcedure
@@ -370,15 +398,31 @@ export const missionRouter = createTRPCRouter({
       status: z.string().optional(),
       driverId: z.string().optional(),
       limit: z.number().default(50),
+      /** Missions guilde publiées & ouvertes (mur creator) — projection redactée. */
+      guildOnly: z.boolean().optional(),
+      /** Uniquement les missions assignées à l'appelant (page « Missions actives »). */
+      assignedToMe: z.boolean().optional(),
     }))
     .query(async ({ ctx, input }) => {
+      const opCtx = await getOperatorContext(ctx.session.user.id);
+      if (input.strategyId && !(await canAccessStrategy(input.strategyId, opCtx))) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette marque" });
+      }
+      const filters = {
+        ...(input.strategyId ? { strategyId: input.strategyId } : {}),
+        ...(input.campaignId ? { campaignId: input.campaignId } : {}),
+        ...(input.status ? { status: input.status } : {}),
+        ...(input.driverId ? { driverId: input.driverId } : {}),
+      };
+      // Tenancy : hors mode guilde, on ne liste que le périmètre de l'appelant
+      // (marques accessibles + missions qui lui sont assignées).
+      const accessWhere = input.guildOnly
+        ? { guildPublished: true, status: "DRAFT", assigneeId: null }
+        : input.assignedToMe
+          ? { assigneeId: ctx.session.user.id }
+          : { OR: [scopeMissions(opCtx), { assigneeId: ctx.session.user.id }] };
       const missions = await ctx.db.mission.findMany({
-        where: {
-          ...(input.strategyId ? { strategyId: input.strategyId } : {}),
-          ...(input.campaignId ? { campaignId: input.campaignId } : {}),
-          ...(input.status ? { status: input.status } : {}),
-          ...(input.driverId ? { driverId: input.driverId } : {}),
-        },
+        where: { ...filters, ...accessWhere },
         include: {
           deliverables: { orderBy: { createdAt: "asc" as const } },
           driver: true,
@@ -395,7 +439,12 @@ export const missionRouter = createTRPCRouter({
         ? await ctx.db.user.findMany({ where: { id: { in: assigneeIds } }, select: { id: true, name: true, email: true, image: true } })
         : [];
       const assigneeMap = new Map(assignees.map((u) => [u.id, u]));
-      return missions.map((m) => ({ ...m, assignee: m.assigneeId ? (assigneeMap.get(m.assigneeId) ?? null) : null }));
+      return missions.map((m) => ({
+        ...m,
+        assignee: m.assigneeId ? (assigneeMap.get(m.assigneeId) ?? null) : null,
+        // Mur guilde : jamais le contact du déposant ni l'économie interne.
+        ...(input.guildOnly ? { briefData: stripGuildContacts(m.briefData), commissions: [] } : {}),
+      }));
     }),
 
   submitDeliverable: governedProcedure({
@@ -417,6 +466,19 @@ export const missionRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      // Audit 2026-07-16 `creator-active-missions-unscoped-and-deliverable-no-assignee-guard` :
+      // n'importe quel compte pouvait créer un livrable sur la mission d'autrui
+      // et la basculer en REVIEW. Seuls l'assignee et le périmètre marque passent.
+      const target = await ctx.db.mission.findUniqueOrThrow({
+        where: { id: input.missionId },
+        select: { assigneeId: true, strategyId: true },
+      });
+      if (target.assigneeId !== ctx.session.user.id) {
+        const opCtx = await getOperatorContext(ctx.session.user.id);
+        if (!(await canAccessStrategy(target.strategyId, opCtx))) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Seul le talent assigné peut soumettre un livrable sur cette mission." });
+        }
+      }
       const deliverable = await ctx.db.missionDeliverable.create({
         data: {
           missionId: input.missionId,

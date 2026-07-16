@@ -23,6 +23,7 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
+import { assertStrategyRead } from "./_strategy-read-guard";
 /* lafusee:governed-active */
 
 // ── REQ-5: The 6 devotion levels (canon: src/domain/devotion-ladder.ts) ─────
@@ -61,9 +62,12 @@ export const devotionLadderRouter = createTRPCRouter({
       });
     }),
 
+  // Audit 2026-07-16 `legacy-read-procedures-cross-tenant` : lectures gardées
+  // par le chokepoint ADR-0129 (tout compte authentifié lisait n'importe quelle marque).
   list: protectedProcedure
     .input(z.object({ strategyId: z.string(), limit: z.number().default(20) }))
     .query(async ({ ctx, input }) => {
+      await assertStrategyRead(ctx.session.user.id, input.strategyId);
       return ctx.db.devotionSnapshot.findMany({
         where: { strategyId: input.strategyId },
         orderBy: { measuredAt: "desc" },
@@ -74,6 +78,7 @@ export const devotionLadderRouter = createTRPCRouter({
   getByStrategy: protectedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
+      await assertStrategyRead(ctx.session.user.id, input.strategyId);
       return ctx.db.devotionSnapshot.findFirst({
         where: { strategyId: input.strategyId },
         orderBy: { measuredAt: "desc" },
@@ -113,6 +118,7 @@ export const devotionLadderRouter = createTRPCRouter({
   compare: protectedProcedure
     .input(z.object({ strategyId: z.string(), periods: z.number().default(6) }))
     .query(async ({ ctx, input }) => {
+      await assertStrategyRead(ctx.session.user.id, input.strategyId);
       const snapshots = await ctx.db.devotionSnapshot.findMany({
         where: { strategyId: input.strategyId },
         orderBy: { measuredAt: "desc" },
@@ -240,6 +246,7 @@ export const devotionLadderRouter = createTRPCRouter({
   getVisualizationData: protectedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
+      await assertStrategyRead(ctx.session.user.id, input.strategyId);
       // Get all snapshots for trend data
       const snapshots = await ctx.db.devotionSnapshot.findMany({
         where: { strategyId: input.strategyId },
