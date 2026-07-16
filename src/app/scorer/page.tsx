@@ -52,7 +52,13 @@ const PLATFORM_LABELS: Record<string, string> = {
 
 const fmt = (n: number) => new Intl.NumberFormat("fr-FR").format(n);
 
-/** Ce que chaque signal non mesuré attend — en clair pour un prospect (pas de jargon interne). */
+/**
+ * Ce que chaque signal non mesuré attend — SANS site fourni (pas de jargon
+ * interne). Une fois le site fourni, on n'affiche plus jamais ce hint statique
+ * pour email/domain/perf — le `details` du serveur (déjà honnête : « site
+ * fourni — vérification en échec, réessayez ») prend le relais (audit
+ * 2026-07-16 : « le site est collecté mais ça dit le contraire »).
+ */
 const LEAD_HINT: Record<string, string> = {
   site: "Ajoutez votre site web",
   email: "Nécessite votre site web",
@@ -399,7 +405,12 @@ export default function ScorerPage() {
                           <Text className="text-xs text-[color:var(--color-foreground-muted)]">
                             {NEEDS_SITE.has(d.key) && unmeasuredDims.some((x) => x.key === "site")
                               ? "↑ via votre site"
-                              : LEAD_HINT[d.key] ?? "à mesurer"}
+                              // Le site a été mesuré : le hint statique « nécessite
+                              // votre site » serait FAUX ici — on montre la vraie
+                              // raison serveur (RDAP/DNS en échec, clé absente…).
+                              : NEEDS_SITE.has(d.key) && d.key !== "site"
+                                ? d.details ?? LEAD_HINT[d.key] ?? "à mesurer"
+                                : LEAD_HINT[d.key] ?? "à mesurer"}
                           </Text>
                         </div>
                       ))}

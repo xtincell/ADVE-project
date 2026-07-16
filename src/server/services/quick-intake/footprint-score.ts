@@ -105,7 +105,16 @@ export function computeFootprintScore(f: EnrichedFootprint): FootprintScore {
     if (f.emailInfra.hasDmarc) { s += 25; parts.push("DMARC"); }
     dims.push({ key: "email", label: "Email professionnel", weight: 10, measured: true, score: clamp(s), details: parts.join(" · ") || "aucune infrastructure email" });
   } else {
-    dims.push({ key: "email", label: "Email professionnel", weight: 10, measured: false, score: null, details: "domaine non vérifiable" });
+    // Détail HONNÊTE de la raison (audit 2026-07-16 « ce n'est pas verbeux, le
+    // site est collecté mais ça dit le contraire ») : SKIPPED = aucun site
+    // fourni ; ERROR = site fourni mais la vérification DNS a échoué/timeout.
+    // Ne jamais dire « nécessite votre site » quand le site EST fourni.
+    dims.push({
+      key: "email", label: "Email professionnel", weight: 10, measured: false, score: null,
+      details: !f.emailInfra || f.emailInfra.status === "SKIPPED"
+        ? "nécessite votre site web"
+        : "site fourni — vérification DNS en échec, réessayez",
+    });
   }
 
   // ── Maturité domaine (5) ──
@@ -116,7 +125,14 @@ export function computeFootprintScore(f: EnrichedFootprint): FootprintScore {
       details: `${f.domain.ageYears} an(s)${f.domain.registrar ? ` · ${f.domain.registrar}` : ""}`,
     });
   } else {
-    dims.push({ key: "domain", label: "Maturité du domaine", weight: 5, measured: false, score: null, details: "domaine non vérifiable" });
+    dims.push({
+      key: "domain", label: "Maturité du domaine", weight: 5, measured: false, score: null,
+      details: !f.domain || f.domain.status === "SKIPPED"
+        ? "nécessite votre site web"
+        : f.domain.status === "NOT_FOUND"
+          ? "domaine introuvable au registre (RDAP)"
+          : "site fourni — vérification en échec, réessayez",
+    });
   }
 
   // ── Performance (10) ──
@@ -127,7 +143,14 @@ export function computeFootprintScore(f: EnrichedFootprint): FootprintScore {
       details: `${f.performance.performanceScore}/100 mobile${f.performance.lcpMs ? ` · LCP ${(f.performance.lcpMs / 1000).toFixed(1)}s` : ""}`,
     });
   } else {
-    dims.push({ key: "perf", label: "Performance du site", weight: 10, measured: false, score: null, details: "non mesurée" });
+    dims.push({
+      key: "perf", label: "Performance du site", weight: 10, measured: false, score: null,
+      details: !f.performance || f.performance.status === "SKIPPED"
+        ? "nécessite votre site web"
+        : f.performance.status === "DEFERRED_NO_KEY"
+          ? "mesure indisponible pour l'instant"
+          : "site fourni — mesure en échec, réessayez",
+    });
   }
 
   const measured = dims.filter((d) => d.measured && d.score !== null);

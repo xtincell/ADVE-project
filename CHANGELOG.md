@@ -10,6 +10,15 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.186 — fix(scorer): /scorer mentait sur ses propres signaux mesurés (2026-07-16)
+
+**Remontée opérateur (« le site internet est collecté mais ça dit le contraire ») — bug indépendant du budget corrigé en v6.27.185** :
+
+- **Hint statique faux** : dans « Encore à mesurer », email/domaine/performance affichaient TOUJOURS « Nécessite votre site web » dès qu'ils n'étaient pas mesurés — même quand le site AVAIT été fourni et mesuré (« Site web 85/100 » affiché juste au-dessus). La condition qui aurait dû afficher le vrai motif (`d.details`, déjà honnête côté serveur) tombait dans une branche `else` qui ignorait l'état réel du site. Corrigé : le hint statique ne s'affiche plus QUE si le site est réellement non mesuré ; sinon la vraie raison serveur est montrée.
+- **Raisons serveur enfin verbeuses** (`computeFootprintScore`) : « domaine non vérifiable » / « non mesurée » (génériques, toujours pareilles) → distinguent désormais SKIPPED (site non fourni) de ERROR/NOT_FOUND (site fourni, la vérification RDAP/DNS a échoué ou le domaine est introuvable au registre) et DEFERRED_NO_KEY (clé PageSpeed non configurée pour la performance).
+- Les réseaux sociaux (« audience non relevée ») restent honnêtes tels quels — comptes détectés sans clé Apify configurée/atteinte n'est pas un bug de copy, c'est un vrai signal non mesuré (déjà budgété correctement depuis v6.27.185).
+- tsc 0 · lint 0 · 1024 tests gouvernance verts.
+
 ## v6.27.185 — fix(cockpit): hotfix post-déploiement — §16 Oracle, gazette vide, missions absentes, scorer affamé, dock superposé (2026-07-16)
 
 **5 remontées prod opérateur, même session** :
