@@ -3,7 +3,7 @@ import Link from "next/link";
 const PORTAILS = [
   {
     num: "06 / 1", name: "Cockpit", forWhom: "→ Founder, marque",
-    bullets: ["Score ADVE-RTIS /200 et radar 8 piliers en temps réel", "Brandbook, plan media, KV générés par l'OS", "Stratégie Oracle qui se met à jour seule quand le marché bouge"],
+    bullets: ["Score ADVE/RTIS /200 et radar 8 piliers en temps réel", "Brandbook, plan media, KV générés par l'OS", "Stratégie Oracle qui se met à jour seule quand le marché bouge"],
     cta: "Accéder au Cockpit ↗",
     href: "/cockpit",
   },

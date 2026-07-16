@@ -4,19 +4,19 @@ const QUESTIONS = [
     a: "Une agence vend des heures. La Fusée vend une trajectoire mesurée. Chaque livrable est scoré, chaque décision est tracée à vie et auditable, chaque franc passe par un verrou budgétaire avant d'être engagé. On industrialise — pas on improvise.",
   },
   {
-    q: "48h pour diagnostiquer une marque, c'est crédible ?",
-    a: "Le rapport diagnostic auto se rend en 15 minutes (gratuit, web). Les 47h45 restantes servent à écrire la stratégie complète, dispatcher les missions, et obtenir les premiers livrables QC. Le PDF brandé exportable est en option payante. Si on rate l'altitude, on le dit — c'est le rôle des sentinelles.",
+    q: "15 minutes pour diagnostiquer une marque, c'est crédible ?",
+    a: "Oui — le rapport diagnostic auto se rend en 15 minutes (gratuit, web). Ensuite, la stratégie complète s'écrit, les missions se dispatchent, et les premiers livrables arrivent sous 30 jours. Le PDF brandé exportable est en option payante. Si on rate l'altitude, on le dit — c'est le rôle de la veille sentinelle.",
   },
   {
     q: "Qu'est-ce qui empêche l'IA de raconter n'importe quoi ?",
-    a: "Cinq verrous : un point d'écriture unique sur chaque pilier, la Bible des Variables (verrou format), une validation de type, un score de confiance, et Thot (verrou financier). Confiance < 0.5 → revue obligatoire. Aucune mutation ne sort du décideur sans signature auditable.",
+    a: "Cinq verrous : un point d'écriture unique sur chaque pilier, un verrou de format, une validation de type, un score de confiance, et un verrou financier automatique. Confiance < 0.5 → revue obligatoire. Aucune mutation ne sort du décideur sans signature auditable.",
   },
   {
     q: "Et les freelances africains, comment ils s'intègrent ?",
     a: "Tier system + matching automatique sur skills + QC + paiement mobile money. Un créatif à Douala peut livrer un KV pour une marque à Abidjan sans dispatch humain — l'OS apparie talent et mission, compose l'équipe, et route le QC. La progression de tier est validée par les livraisons réelles, pas par une lettre de recommandation. Formation Académie intégrée pour combler les gaps.",
   },
   {
-    q: "ADVE-RTIS, ça veut dire quoi exactement ?",
+    q: "ADVE/RTIS, ça veut dire quoi exactement ?",
     a: "Authenticité, Distinction, Valeur, Engagement, Risque, Track, Innovation, Stratégie. La cascade A → D → V → E → R → T → I → S est unidirectionnelle (sauf re-entry explicite). Chaque pilier alimente le suivant.",
   },
   {
@@ -25,7 +25,7 @@ const QUESTIONS = [
   },
   {
     q: "Concrètement, ça coûte combien ?",
-    a: "Le diagnostic est gratuit (rapport web en 15 minutes) et te donne déjà un score, un radar 8 piliers et un plan d'action priorisé. Le PDF brandé exportable est en option payante. Propulsion est en sur-devis indexé sur ton palier visé (FORTE, CULTE, ICONE) et le périmètre missions au trimestre — pas une grille tarifaire publique parce que la complexité varie selon ton point de départ. Apex est un partenariat sélectif. Le diagnostic gratuit te donne tous les éléments pour comparer un devis Propulsion à ce que tu paies aujourd'hui en agence ou en interne.",
+    a: "Le diagnostic est gratuit (rapport web en 15 minutes) et te donne déjà un score, un radar 8 piliers et un plan d'action priorisé. Le PDF brandé exportable est en option payante. La grille par palier et par zone (FCFA / EUR / USD) est publique — voir la page tarifs. Propulsion s'indexe sur ton palier visé (FORTE, CULTE, ICONE) et le périmètre missions ; Apex est un partenariat sélectif sur devis. Le diagnostic gratuit te donne tous les éléments pour comparer à ce que tu paies aujourd'hui en agence ou en interne.",
   },
   {
     q: "Quand est-ce que je vois mes premiers superfans recrutés ?",

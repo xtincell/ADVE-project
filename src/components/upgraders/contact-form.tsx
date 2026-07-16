@@ -1,17 +1,41 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowRight, Check } from "lucide-react";
 import { CONTACT } from "./data";
 
 const NEEDS = [
   "Audit ADVE",
-  "Mandat RTIS complet",
-  "Direction artistique",
+  "Stratégie marketing",
+  "Études & rapports",
+  "Audit financier",
+  "Charte graphique",
+  "Production graphique",
   "Production photo / vidéo",
+  "Direction artistique",
+  "La Fusée — Propulsion (OS complet)",
+  "La Fusée — Apex (partenariat)",
   "Marque blanche (agence/studio)",
   "Autre",
 ] as const;
+
+/**
+ * ?offre=<slug> → besoin présélectionné. 9+ CTAs du catalogue passent ce param
+ * (data.ts) — il était JETÉ avant d'atteindre le CRM (audit 2026-07-16) : le
+ * select retombait sur « Audit ADVE » quel que soit le clic d'origine.
+ */
+const OFFER_TO_NEED: Record<string, (typeof NEEDS)[number]> = {
+  "audit-adve": "Audit ADVE",
+  "strategie-marketing": "Stratégie marketing",
+  "etudes-rapports": "Études & rapports",
+  "audit-financier": "Audit financier",
+  "charte-graphique": "Charte graphique",
+  "production-graphique": "Production graphique",
+  "production-audiovisuelle": "Production photo / vidéo",
+  "marque-blanche": "Marque blanche (agence/studio)",
+  "lafusee-propulsion": "La Fusée — Propulsion (OS complet)",
+  "lafusee-apex": "La Fusée — Apex (partenariat)",
+};
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -29,6 +53,13 @@ export function ContactForm() {
   const [need, setNeed] = useState<string>(NEEDS[0]);
   const [message, setMessage] = useState("");
   const [captured, setCaptured] = useState(false);
+
+  // Présélection depuis ?offre= (window.location pour éviter le Suspense
+  // qu'imposerait useSearchParams — lecture one-shot au mount).
+  useEffect(() => {
+    const slug = new URLSearchParams(window.location.search).get("offre");
+    if (slug && OFFER_TO_NEED[slug]) setNeed(OFFER_TO_NEED[slug]);
+  }, []);
 
   const compose = () => {
     const lines = [

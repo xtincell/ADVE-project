@@ -44,8 +44,16 @@ export function PricingGrid({ callbackPath = "/pricing" }: { callbackPath?: stri
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   const { data: grid, isLoading } = trpc.payment.getTierGrid.useQuery({ countryCode: country });
+  const initSubscription = trpc.payment.initSubscription.useMutation();
   const initManualSubscription = trpc.payment.initManualSubscription.useMutation();
 
+  /**
+   * Rail canonique d'abord (`initSubscription` AUTO : Stripe si carte + clé,
+   * cycle mobile money sinon, gratuit ADMIN) — la copy promettait « carte
+   * (Stripe/PayPal) à l'international » mais TOUTES les zones partaient sur
+   * wa.me (audit 2026-07-16). Repli WhatsApp (validation manuelle) uniquement
+   * si aucun provider n'est provisionné.
+   */
   const handleSubscribe = async (tierKey: string) => {
     setCheckoutError(null);
     if (!session?.user) {
@@ -53,16 +61,27 @@ export function PricingGrid({ callbackPath = "/pricing" }: { callbackPath?: stri
       return;
     }
     setPendingTier(tierKey);
+    const typedTier = tierKey as "COCKPIT_MONTHLY" | "RETAINER_BASE" | "RETAINER_PRO" | "RETAINER_ENTERPRISE";
     try {
-      const res = await initManualSubscription.mutateAsync({
-        tierKey: tierKey as "COCKPIT_MONTHLY" | "RETAINER_BASE" | "RETAINER_PRO" | "RETAINER_ENTERPRISE",
+      const res = await initSubscription.mutateAsync({
+        tierKey: typedTier,
         countryCode: country,
+        returnUrl: `${window.location.origin}/cockpit?subscribed=1`,
       });
       if (res.mode === "ADMIN_FREE") { router.push("/cockpit"); return; }
-      if (res.whatsappUrl) { window.location.href = res.whatsappUrl; }
-    } catch (err) {
-      setCheckoutError(err instanceof Error ? err.message : "Échec de la demande d'abonnement.");
-      setPendingTier(null);
+      if (res.paymentUrl) { window.location.href = res.paymentUrl; return; }
+      throw new Error("Aucune URL de paiement retournée.");
+    } catch {
+      // Provider indisponible (clé absente, zone non couverte) → paiement
+      // manuel via WhatsApp, validé par l'équipe (ADR PR #258).
+      try {
+        const res = await initManualSubscription.mutateAsync({ tierKey: typedTier, countryCode: country });
+        if (res.mode === "ADMIN_FREE") { router.push("/cockpit"); return; }
+        if (res.whatsappUrl) { window.location.href = res.whatsappUrl; }
+      } catch (err) {
+        setCheckoutError(err instanceof Error ? err.message : "Échec de la demande d'abonnement.");
+        setPendingTier(null);
+      }
     }
   };
 

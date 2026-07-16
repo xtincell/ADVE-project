@@ -1,6 +1,16 @@
 "use client";
 
+import { trpc } from "@/lib/trpc/client";
+
 export function MarketingHero() {
+  // Compteur RÉEL de diagnostics complétés (publicProcedure, même source que la
+  // page intake). L'ancien panneau « TELEMETRY · LIVE » affichait des chiffres
+  // inventés (127 marques, 142 388 superfans, « updated: now ») — purgé (audit
+  // intention/exécution 2026-07-16 : un chiffre fabriqué face lead viole le
+  // canon d'honnêteté « des chiffres, pas des slides »).
+  const { data: diagnosedCount } = trpc.quickIntake.getCompletedCount.useQuery(undefined, {
+    staleTime: 5 * 60_000,
+  });
   return (
     <header className="relative min-h-screen pt-24 pb-16 overflow-hidden flex flex-col">
       <div
@@ -31,12 +41,16 @@ export function MarketingHero() {
 
       <div className="relative z-10 flex items-center gap-4 px-[var(--pad-page)] py-3.5 text-2xs font-mono text-foreground-muted border-b border-border-subtle flex-wrap">
         <span><span className="inline-block w-1.5 h-1.5 rounded-full bg-success animate-pulse mr-1.5"></span>SYSTEM · NOMINAL</span>
-        <span className="text-[color-mix(in_oklab,var(--color-foreground-muted)_60%,transparent)]">·</span>
-        <span>47 MARQUES DIAGNOSTIQUÉES</span>
+        {typeof diagnosedCount === "number" && diagnosedCount > 0 ? (
+          <>
+            <span className="text-[color-mix(in_oklab,var(--color-foreground-muted)_60%,transparent)]">·</span>
+            <span>{diagnosedCount} MARQUE{diagnosedCount > 1 ? "S" : ""} DIAGNOSTIQUÉE{diagnosedCount > 1 ? "S" : ""}</span>
+          </>
+        ) : null}
         <span className="text-[color-mix(in_oklab,var(--color-foreground-muted)_60%,transparent)]">·</span>
         <span>ABIDJAN · DOUALA · DAKAR · LAGOS</span>
         <span className="text-[color-mix(in_oklab,var(--color-foreground-muted)_60%,transparent)]">·</span>
-        <span>SCORE MOYEN /200 · 142</span>
+        <span>DIAGNOSTIC GRATUIT · 15 MIN</span>
       </div>
 
       <div className="relative z-10 mx-auto max-w-[var(--maxw-content)] w-full px-[var(--pad-page)] flex-1 flex flex-col pt-12 md:pt-20">
@@ -86,25 +100,27 @@ export function MarketingHero() {
           <aside className="border border-border bg-surface-raised/70 backdrop-blur-sm">
             <header className="flex items-center gap-2 px-3.5 py-2.5 text-2xs font-mono uppercase tracking-widest text-foreground-secondary border-b border-border">
               <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-              TELEMETRY · LIVE
+              SYSTÈME · MESURABLE
             </header>
+            {/* Chiffre réel (compteur live) + constantes produit vérifiables — jamais
+                de métriques inventées présentées comme de la télémétrie. */}
             <ul className="font-mono text-xs">
               {[
-                ["brand.diagnosed", "127"],
-                ["apogee.icone", "3"],
-                ["superfans.tracked", "142,388"],
-                ["overton.shifts", "7 secteurs"],
-                ["talents.tier_3+", "214"],
+                ["marques.diagnostiquées", typeof diagnosedCount === "number" ? String(diagnosedCount) : "—"],
+                ["piliers.scannés", "8"],
+                ["sections.stratégie", "35"],
+                ["paliers.trajectoire", "6"],
+                ["score.échelle", "/200"],
               ].map(([k, v]) => (
                 <li key={k} className="flex justify-between gap-3 px-3.5 py-2 border-b border-border-subtle last:border-0">
                   <span className="text-foreground-muted">{k}</span>
-                  <span className={k === "overton.shifts" ? "text-accent" : "text-foreground"}>{v}</span>
+                  <span className={k === "score.échelle" ? "text-accent" : "text-foreground"}>{v}</span>
                 </li>
               ))}
             </ul>
             <footer className="flex justify-between px-3.5 py-2.5 text-2xs font-mono text-foreground-muted border-t border-border">
-              <span>↳ updated</span>
-              <span>now</span>
+              <span>↳ vos métriques réelles</span>
+              <span>dès le diagnostic</span>
             </footer>
           </aside>
         </div>

@@ -83,13 +83,6 @@ function Nav({ onStart }: { onStart: () => void }) {
 }
 
 function Hero({ onStart }: { onStart: () => void }) {
-  const avatars = [
-    { src: "/brand/people/p1.png", name: "Awa M." },
-    { src: "/brand/people/p4.png", name: "Kwame B." },
-    { src: "/brand/people/p7.png", name: "Fatou D." },
-    { src: "/brand/people/p5.png", name: "Kemi A." },
-    { src: "/brand/people/p2.png", name: "Naomi T." },
-  ];
   return (
     <section className="hero up-grain" id="top">
       <span className="hero__glow" aria-hidden="true" />
@@ -112,13 +105,13 @@ function Hero({ onStart }: { onStart: () => void }) {
             <span><Check /> Sans engagement</span>
             <span><Check /> 100% confidentiel</span>
           </div>
+          {/* Preuve sociale RÉELLE (canon data.ts STATS/CLIENT_STRIP) — l'ancien
+              bloc (« +250 dirigeants · 4,9/5 » + avatars fictifs) était inventé
+              (audit intention/exécution 2026-07-16). */}
           <div className="proof">
-            <span className="avatars">
-              {avatars.map((a) => <Image key={a.src} src={a.src} alt={a.name} width={40} height={40} />)}
-            </span>
             <div className="proof__txt">
-              <b>+250 dirigeants accompagnés</b>
-              <span className="stars">★★★★★ <b>4,9/5 de satisfaction</b></span>
+              <b>30+ marques accompagnées depuis 2017</b>
+              <span>Motion19 · Universal Music Africa · Chococam · Ecobank…</span>
             </div>
           </div>
         </div>
@@ -130,11 +123,11 @@ function Hero({ onStart }: { onStart: () => void }) {
           </div>
           <div className="float float--score">
             <span className="float__ic" style={{ background: "var(--accent-fill)", color: "var(--accent)" }}><Gauge /></span>
-            <div><small>Score ADVE</small><b>78 / 100</b></div>
+            <div><small>Score de marque</small><b>156 / 200</b></div>
           </div>
           <div className="float float--growth">
             <span className="float__ic" style={{ background: "var(--success-fill)", color: "var(--success)" }}><TrendingUp /></span>
-            <div><small>Visibilité</small><b style={{ color: "var(--success)" }}>+156%</b></div>
+            <div><small>Palier</small><b style={{ color: "var(--success)" }}>FORTE</b></div>
           </div>
           <span className="doodle" style={{ top: -28, left: 18, width: 64, height: 64, transform: "rotate(-12deg)" }} aria-hidden="true">
             <svg viewBox="0 0 64 64"><path d="M10 40c-6-14 4-30 20-30 14 0 24 12 22 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeDasharray="2 7" /><path d="M50 18l3 6 6 1-5 4 1 6-5-3-5 3 1-6-5-4 6-1 3-6Z" fill="currentColor" /></svg>
@@ -183,7 +176,7 @@ function Steps({ onStart }: { onStart: () => void }) {
   const ref = useReveal();
   const steps = [
     { n: "1", tag: "~10 minutes", t: "Vous répondez", d: "Un questionnaire guidé sur les 4 piliers ADVE — ou importez vos documents, l'IA s'occupe du reste." },
-    { n: "2", tag: "Instantané", t: "Vous recevez votre score", d: "Un diagnostic clair sur 100, pilier par pilier, avec vos forces et vos angles morts." },
+    { n: "2", tag: "Instantané", t: "Vous recevez votre score", d: "Un diagnostic clair sur 200, pilier par pilier, avec vos forces et vos angles morts." },
     { n: "3", tag: "Activable", t: "Vous passez à l'action", d: "Une feuille de route priorisée — et l'option d'être accompagné par La Fusée pour l'exécuter." },
   ];
   return (
@@ -227,14 +220,16 @@ function ScoreReport() {
     const t = setTimeout(() => setShown(true), 1400);
     return () => { io.disconnect(); clearTimeout(t); };
   }, []);
-  const R = 58, C = 2 * Math.PI * R, total = 78;
-  const offset = shown ? C * (1 - total / 100) : C;
+  // Échelle canon /200 (classifyTier) — la landing vendait un « 78/100 » alors
+  // que le produit rend un /200 (audit 2026-07-16). 156/200 = palier FORTE.
+  const R = 58, C = 2 * Math.PI * R, total = 156;
+  const offset = shown ? C * (1 - total / 200) : C;
   return (
     <div className="report" ref={ref}>
       <span className="report__diamond up-texture-diamond" aria-hidden="true" />
       <div className="report__top">
-        <div className="report__co">Zola Apparel<small>Mode · Côte d'Ivoire</small></div>
-        <span className="modal__eyebrow" style={{ color: "var(--up-gold)" }}><Award style={{ width: 14, height: 14 }} /> Rapport ADVE</span>
+        <div className="report__co">Zola Apparel<small>Mode · Côte d&apos;Ivoire · exemple fictif</small></div>
+        <span className="modal__eyebrow" style={{ color: "var(--up-gold)" }}><Award style={{ width: 14, height: 14 }} /> Exemple de rapport</span>
       </div>
       <div className="score-ring">
         <svg width="132" height="132" viewBox="0 0 132 132">
@@ -242,7 +237,7 @@ function ScoreReport() {
           <circle cx="66" cy="66" r={R} fill="none" stroke="var(--accent)" strokeWidth="11" strokeLinecap="round"
                   strokeDasharray={C} strokeDashoffset={offset} style={{ transition: "stroke-dashoffset 1.1s var(--ease-out)" }} />
         </svg>
-        <div className="score-ring__v"><b>{shown ? total : 0}</b><small>/ 100</small></div>
+        <div className="score-ring__v"><b>{shown ? total : 0}</b><small>/ 200</small></div>
       </div>
       <div className="report__grade"><span><Star style={{ width: 13, height: 13 }} /> Marque en bonne voie</span></div>
       <div className="report__bars">
@@ -278,7 +273,7 @@ function Adve() {
               <div key={p.k} className="pillar reveal">
                 <div className="pillar__badge" style={{ background: p.c }}>{p.k}</div>
                 <div className="pillar__b">
-                  <div className="pillar__top"><h4>{p.name}</h4><span className="pillar__v">{p.v}/100</span></div>
+                  <div className="pillar__top"><h4>{p.name}</h4><span className="pillar__v">{p.v} %</span></div>
                   <p>{p.q}</p>
                   <div className="rbar__track" style={{ background: "color-mix(in srgb, var(--text-primary) 9%, transparent)" }}>
                     <div className="rbar__fill" style={{ width: `${p.v}%`, background: p.c }} />
@@ -294,31 +289,38 @@ function Adve() {
   );
 }
 
+/**
+ * Preuve sociale RÉELLE — marques effectivement bâties ou propulsées par le
+ * cabinet (canon `data.ts` CLIENT_STRIP/REALISATIONS). L'ancienne section
+ * affichait trois témoignages nominatifs FABRIQUÉS (personnes et marques
+ * inexistantes, notes 5★ et gains « +19 pts » inventés) — purgée le 2026-07-16
+ * (audit intention/exécution : tromperie active face lead, exposition
+ * juridique pratique commerciale trompeuse).
+ */
 function Temoignages() {
   const ref = useReveal();
   const items = [
-    { ph: "/brand/people/p1.png", q: "Le diagnostic a mis des mots sur ce que je sentais sans pouvoir l'exprimer. En 3 mois, notre message est enfin clair.", n: "Awa Mensah", co: "Zola Apparel · Mode, Abidjan", pts: "+19 pts" },
-    { ph: "/brand/people/p7.png", q: "On a arrêté de disperser le budget. Aujourd'hui chaque action a un sens et un objectif mesurable.", n: "Fatou Diané", co: "Sira Cosmetics · Beauté, Dakar", pts: "+24 pts" },
-    { ph: "/brand/people/p4.png", q: "Ma structure ne reposait que sur moi. ADVE m'a donné le système qui manquait pour déléguer sereinement.", n: "Kwame Boateng", co: "Boateng & Fils · Agro, Accra", pts: "+16 pts" },
+    { n: "Motion19", co: "Équipement audiovisuel · Douala" },
+    { n: "Universal Music Africa", co: "Musique · Abidjan" },
+    { n: "Chococam", co: "Agroalimentaire · Douala" },
+    { n: "Ecobank", co: "Banque · panafricain" },
+    { n: "Akwa Palace", co: "Hôtellerie · Douala" },
+    { n: "Friesland Campina", co: "Agroalimentaire · multinationale" },
   ];
   return (
     <section className="sec sec--dark up-grain" id="temoignages" ref={ref}>
       <span className="deco-weave tmon__weave up-texture-geo" aria-hidden="true" />
       <div className="wrapc">
         <div className="sec__head reveal">
-          <span className="kick">Ils l'ont fait</span>
-          <h2>Des dirigeants qui ont <span className="em">propulsé</span> leur marque.</h2>
-          <p className="sec__lead">+250 entrepreneurs d'Afrique de l'Ouest ont déjà fait le diagnostic. Voici ce qu'ils en retiennent.</p>
+          <span className="kick">Ils nous font confiance</span>
+          <h2>Des marques <span className="em">réelles</span>, bâties ou propulsées par le cabinet.</h2>
+          <p className="sec__lead">30+ marques accompagnées depuis 2017, de la PME locale à la multinationale — voici quelques-unes d&apos;entre elles.</p>
         </div>
         <div className="tmon-grid">
           {items.map((it) => (
             <div key={it.n} className="tmon reveal">
-              <div className="tmon__stars">★★★★★</div>
-              <p className="tmon__quote">{it.q}</p>
-              <div className="tmon__foot">
-                <Image className="tmon__ph" src={it.ph} alt={it.n} width={52} height={52} />
+              <div className="tmon__foot" style={{ marginTop: 0 }}>
                 <div className="tmon__who"><b>{it.n}</b><span>{it.co}</span></div>
-                <span className="tmon__pts">{it.pts}</span>
               </div>
             </div>
           ))}
@@ -329,10 +331,13 @@ function Temoignages() {
 }
 
 function Agency() {
+  // Stats RÉELLES (canon data.ts STATS — « 30+ marques, depuis 2017 »).
+  // L'ancien bloc (« 250+ · 4,9/5 · 8 ans ») était inventé et contredisait
+  // la homepage UPgraders (audit 2026-07-16).
   const stats = [
-    { v: "250+", l: "marques accompagnées" },
-    { v: "4,9/5", l: "satisfaction client" },
-    { v: "8 ans", l: "d'expertise terrain" },
+    { v: "30+", l: "marques accompagnées" },
+    { v: "2017", l: "année de fondation" },
+    { v: "2 villes", l: "Douala · Abidjan" },
   ];
   return (
     <section className="sec sec--bone" id="upgraders" data-theme="light">
@@ -433,6 +438,20 @@ function DiagnosticModal({ onClose }: { onClose: () => void }) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return setErr("Entrez une adresse email valide.");
     if (!form.company.trim()) return setErr("Le nom de votre marque est requis.");
     setErr(""); setDone(true);
+    // Capture CRM best-effort (pattern ContactForm → /api/contact, CrmContact) :
+    // avant ce fix, un prospect qui fermait la modale ici était PERDU — rien
+    // n'était persisté nulle part (audit 2026-07-16).
+    void fetch("/api/contact", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: form.name,
+        email: form.email,
+        brand: form.company,
+        need: "Diagnostic La Fusée (landing)",
+        message: `Méthode choisie : ${method === "GUIDED" ? "questionnaire guidé" : "import de documents"}.`,
+      }),
+    }).catch(() => undefined);
   };
 
   const goToIntake = () => {
@@ -457,7 +476,7 @@ function DiagnosticModal({ onClose }: { onClose: () => void }) {
             <p>Votre diagnostic ADVE pour <b style={{ color: "var(--text-primary)" }}>{form.company}</b> est prêt à démarrer.
               {method === "GUIDED" ? " On vous guide à travers les 4 piliers." : " Importez vos documents, l'IA fait le reste."}</p>
             <button className="lf-btn lf-btn--primary lf-btn--lg lf-btn--block" onClick={goToIntake}>Commencer le questionnaire <ArrowRight /></button>
-            <p className="modal__legal">Une copie du lien a été envoyée à {form.email}.</p>
+            <p className="modal__legal">Vos réponses préremplissent le questionnaire — rien n&apos;est envoyé sans votre accord.</p>
           </div>
         ) : (
           <form onSubmit={submit}>

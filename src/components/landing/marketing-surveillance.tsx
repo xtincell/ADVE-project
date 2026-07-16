@@ -110,8 +110,10 @@ export function MarketingSurveillance() {
             </svg>
 
             <footer className="flex justify-between gap-4 font-mono text-2xs uppercase tracking-widest pt-3 border-t border-dashed" style={{ color: "var(--color-foreground-muted)", borderColor: "color-mix(in oklab, var(--color-foreground) 12%, transparent)" }}>
-              <span className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" /> SWEEP ACTIF</span>
-              <span>n=412 · 2024-2026</span>
+              {/* Plus de « n=412 » — taille d'échantillon d'une étude inexistante
+                  (audit 2026-07-16). Le radar est une ILLUSTRATION du protocole. */}
+              <span className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" /> PROTOCOLE DE VEILLE</span>
+              <span>illustration · secteurs suivis en continu</span>
             </footer>
           </div>
 

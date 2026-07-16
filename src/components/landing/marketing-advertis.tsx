@@ -39,7 +39,7 @@ export function MarketingAdvertis() {
       <div className="mx-auto max-w-[var(--maxw-content)] px-[var(--pad-page)]">
         <div className="flex items-baseline gap-3.5 mb-8 font-mono text-2xs uppercase tracking-widest text-foreground-muted">
           <span className="w-8 h-px bg-accent" />
-          03 · Méthode ADVE-RTIS
+          03 · Méthode ADVE/RTIS
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 items-end">
           <h2 className="font-display font-semibold tracking-tight" style={{ fontSize: "var(--text-display)", lineHeight: 0.96 }}>
@@ -55,7 +55,7 @@ export function MarketingAdvertis() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-start">
           <div className="border border-border p-6 bg-surface-raised/30">
-            <svg viewBox="-200 -200 400 400" className="w-full aspect-square" role="img" aria-label={`Score ADVE-RTIS ${total}/200, palier ${tier}`}>
+            <svg viewBox="-200 -200 400 400" className="w-full aspect-square" role="img" aria-label={`Score ADVE/RTIS ${total}/200, palier ${tier}`}>
               <g fill="none" stroke="var(--color-border)" strokeWidth="0.5">
                 {[40, 80, 120, 160].map((r) => <circle key={r} r={r} />)}
               </g>
