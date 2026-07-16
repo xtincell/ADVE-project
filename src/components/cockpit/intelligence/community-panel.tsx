@@ -43,9 +43,11 @@ interface CommunityDistribution {
   evangeliste: number;
 }
 
+/** Le DTO porte des fractions canon 0-1 (normalisées au boundary serveur —
+    audit 2026-07-16 `devotion-rung-pct-times-100` : l'ancienne heuristique
+    « v<=1 ? v*100 : v » multipliait par 100 les petits rungs réels). */
 function pct(v: number): number {
-  const n = v <= 1 ? v * 100 : v;
-  return Math.max(0, Math.min(100, Math.round(n)));
+  return Math.max(0, Math.min(100, Math.round(v * 100)));
 }
 
 function CommunityPanelSkeleton() {
@@ -136,6 +138,16 @@ function CommunityPanelInner({ strategyId }: { strategyId: string }) {
         {/* Devotion ladder distribution */}
         {devotion && (
           <SectionCard title="Échelle d'engagement" icon={Crown}>
+            {/* Trajectoire du score — la donnée quotidienne n'est plus jetée
+                (audit 2026-07-16 `community-timeseries-and-identities-dropped`). */}
+            {devotion.history.length >= 2 && (
+              <div className="mb-3 flex items-center gap-3">
+                <TrendSparkline values={[...devotion.history]} />
+                <span className="text-xs text-foreground-muted">
+                  Trajectoire sur {devotion.history.length} relevés
+                </span>
+              </div>
+            )}
             <ul className="space-y-2.5">
               {DEVOTION_RUNGS.map(({ key, label }) => {
                 const width = pct(devotion.distribution[key]);
@@ -206,6 +218,11 @@ function CommunityPanelInner({ strategyId }: { strategyId: string }) {
           </SectionCard>
         )}
 
+        {/* QUI sont les superfans — l'identité collectée n'est plus jetée à la
+            projection (audit 2026-07-16 `superfan-identities-counts-only` :
+            le founder ne voyait que des compteurs, jamais ses fans). */}
+        <TopSuperfansCard strategyId={strategyId} />
+
         {/* Fans détectés dans les interactions réelles — s'auto-masque hors
             opérateur et sans candidat (revue humaine, jamais de naissance auto). */}
         <SuperfanCandidatesPanel strategyId={strategyId} />
@@ -225,6 +242,60 @@ function CommunityPanelInner({ strategyId }: { strategyId: string }) {
         </SectionCard>
       </div>
     </div>
+  );
+}
+
+/** Mini-courbe inline (SVG pur, dimensions fixes, aucune dépendance). */
+function TrendSparkline({ values }: { values: number[] }) {
+  const w = 96;
+  const h = 24;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const pts = values
+    .map((v, i) => `${(i / (values.length - 1)) * w},${h - 2 - ((v - min) / span) * (h - 4)}`)
+    .join(" ");
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden className="shrink-0 text-accent">
+      <polyline points={pts} fill="none" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+/** Libellés client des segments (lexique T7 — jamais l'enum brut). */
+const SEGMENT_LABELS: Record<string, string> = {
+  ambassadeur: "Ambassadeur",
+  evangeliste: "Prescripteur",
+};
+
+function TopSuperfansCard({ strategyId }: { strategyId: string }) {
+  const { data: fans } = trpc.superfan.top.useQuery(
+    { strategyId, limit: 8 },
+    { enabled: !!strategyId, retry: false },
+  );
+  if (!fans || fans.length === 0) return null;
+  return (
+    <SectionCard title="Vos ambassadeurs" icon={Users}>
+      <ul className="space-y-2">
+        {fans.map((f) => (
+          <li key={f.id} className="flex items-center justify-between gap-3 text-sm">
+            <div className="min-w-0">
+              <p className="truncate font-medium text-foreground">@{f.handle}</p>
+              <p className="text-xs text-foreground-muted">
+                {f.platform}
+                {f.lastActiveAt ? ` · actif le ${new Date(f.lastActiveAt).toLocaleDateString("fr-FR")}` : ""}
+              </p>
+            </div>
+            <div className="shrink-0 text-right">
+              <span className="rounded-full border border-border px-2 py-0.5 text-xs text-foreground-secondary">
+                {SEGMENT_LABELS[f.segment] ?? f.segment}
+              </span>
+              <p className="mt-0.5 text-xs text-foreground-muted">{f.interactions} interactions</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </SectionCard>
   );
 }
 

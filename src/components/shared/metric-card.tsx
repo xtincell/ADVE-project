@@ -90,8 +90,11 @@ function Sparkline({ data, className }: { data: number[]; className?: string }) 
   );
 }
 
+// Tokens système uniquement (audit 2026-07-16 `metric-card-white-on-bone-
+// light-mode` : la valeur en `text-white` littéral devenait blanc-sur-bone
+// invisible en mode jour — les 4 KPIs superfans disparaissaient).
 const TREND_CONFIG = {
-  up: { icon: TrendingUp, color: "text-emerald-400" },
+  up: { icon: TrendingUp, color: "text-success" },
   down: { icon: TrendingDown, color: "text-error" },
   flat: { icon: Minus, color: "text-foreground-secondary" },
 };
@@ -120,7 +123,7 @@ export function MetricCard({
 
       <div className="mt-2 flex items-end justify-between gap-4">
         <div className="flex items-baseline gap-2">
-          <span className="text-2xl font-bold text-white">
+          <span className="text-2xl font-bold text-foreground">
             {formatValue(value, format, currency, currencySymbol)}
           </span>
           {trendConfig && TrendIcon && (

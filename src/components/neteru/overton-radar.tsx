@@ -108,6 +108,14 @@ const DEGRADED_COPY: Record<ConnectorDegradationReason, { title: string; descrip
     description: "L'accès à la source de signal sectoriel doit être reconfiguré. Vos équipes UPgraders en sont notifiées.",
     icon: ShieldAlert,
   },
+  // Déblocage À LA MAIN du founder — pas de la patience (audit 2026-07-16
+  // `degraded-copy-hides-missing-sector-unlock`).
+  MISSING_PREREQUISITE: {
+    title: "Renseignez le secteur de votre marque",
+    description:
+      "Le radar a besoin de connaître votre secteur pour mesurer le cadre culturel. Complétez-le dans Ma marque → Fondation (carte Marché) — la mesure démarre ensuite automatiquement.",
+    icon: ShieldAlert,
+  },
 };
 
 // ── Geometry ─────────────────────────────────────────────────────────────────
@@ -406,6 +414,14 @@ export function OvertonRadar({ signal, instance, density, className }: OvertonRa
 
   const observedAt = signal.state === "LIVE" ? signal.observedAt : signal.state === "DEGRADED" ? signal.lastObservedAt : undefined;
   const mocked = signal.state === "LIVE" && signal.data.mocked;
+  // ADR-0127 — provenance de l'axe rendue au founder (audit 2026-07-16
+  // `axis-polity-resolution-dropped-in-ui` : la résolution honnête était
+  // calculée puis jetée — un fallback global s'affichait comme un axe local).
+  const axisResolution = signal.state === "LIVE" ? signal.data.axisPolityResolution : null;
+  const axisResolutionLabel =
+    axisResolution === "EXACT" ? "Axe : votre marché" :
+    axisResolution === "SCALE_ONLY" ? "Axe : votre échelle" :
+    axisResolution === "GLOBAL_FALLBACK" ? "Axe : référence globale" : null;
 
   return (
     <section className={cn(overtonRadarVariants({ instance, density }), className)} aria-label="Radar Overton sectoriel">
@@ -414,8 +430,13 @@ export function OvertonRadar({ signal, instance, density, className }: OvertonRa
           <RadarIcon className="h-4 w-4 text-foreground-muted" aria-hidden />
           Overton sectoriel
         </h3>
-        <div className="text-[10px] uppercase tracking-wider text-foreground-muted">
-          {mocked ? "Démo" : observedAt ? `Veille sectorielle · ${new Date(observedAt).toLocaleDateString()}` : "—"}
+        <div className="flex items-baseline gap-2 text-[10px] uppercase tracking-wider text-foreground-muted">
+          {axisResolutionLabel ? (
+            <span className="rounded-full border border-border px-2 py-0.5 normal-case tracking-normal">
+              {axisResolutionLabel}
+            </span>
+          ) : null}
+          <span>{mocked ? "Démo" : observedAt ? `Veille sectorielle · ${new Date(observedAt).toLocaleDateString()}` : "—"}</span>
         </div>
       </header>
       {body}

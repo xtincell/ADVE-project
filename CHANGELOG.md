@@ -10,6 +10,20 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.181 — fix(cockpit): Vague 7 audit plateforme — intelligence communauté & Overton (échelle ×100, KPIs invisibles, radar honnête, fans visibles) (2026-07-16)
+
+**Vague 7 de l'audit intention/exécution : 8 findings cockpit intelligence (3 CRITICAL)** :
+
+- **Échelle d'engagement fausse d'un facteur 100** (`devotion-rung-pct-times-100`, CRITICAL) : DevotionSnapshot stocke des pourcentages 0-100, l'heuristique UI « v≤1 ? v×100 : v » re-multipliait les petits rungs réels (3 ambassadeurs / 4 000 = 0,1 stocké → « 10 % » affiché) — faux exactement là où la mesure devient réelle. Unité normalisée AU BOUNDARY : le DTO porte des fractions canon 0-1, le panel fait un simple ×100.
+- **KPIs invisibles en mode jour** (`metric-card-white-on-bone-light-mode`, CRITICAL) : `MetricCard` rendait la valeur en `text-white` littéral → blanc-sur-bone au thème clair (les 4 KPIs superfans disparaissaient). Tokens système (`text-foreground`, trend `text-success`) — corrige aussi le dashboard.
+- **Radar Overton dé-menti** (`overton-deferred-stale-operator-guard`, CRITICAL) : le guard `!strategy.operatorId` court-circuitait AVANT le connecteur (qui ignore operatorId depuis le dé-mock) — un founder self-serve voyait À VIE « en attente d'activation… vos équipes s'en chargent » pendant que le signal RSS réel dormait en base. Guard mort supprimé, appel inconditionnel.
+- **Provenance d'axe rendue** (`axis-polity-resolution-dropped-in-ui`) : `axisPolityResolution` (ADR-0127) était calculé puis jeté — badge « Axe : votre marché / votre échelle / référence globale » dans le header du radar.
+- **Déblocage actionnable** (`degraded-copy-hides-missing-sector-unlock`) : secteur non renseigné affichait « le radar se précisera avec le temps » (patience) alors que le déblocage est une action du founder. Raison discriminée `MISSING_PREREQUISITE` (union ConnectorResult étendue) + copy « Renseignez le secteur de votre marque » avec le chemin.
+- **QUI sont les fans** (`superfan-identities-counts-only` + moitié identités de `community-timeseries-and-identities-dropped`) : le dashboard ne montrait que des compteurs — section « Vos ambassadeurs » branchée sur `superfan.top` (tenant-gardé V5) : handle, plateforme, segment (lexique client), interactions, dernière activité.
+- **Trajectoire projetée** (moitié timeseries) : les snapshots quotidiens n'étaient jamais projetés — le DTO porte l'historique devotion (≤30 relevés) + sparkline SVG pur sur l'échelle d'engagement.
+- **L'empreinte web complète au client payant** (`footprint-riche-invisible-founder`) : le cockpit ne projetait que 3 compteurs pendant que le PROSPECT intake voyait presse (titres+liens), avis Google, domaine, email, performance. `getConnectedSources.webPresenceFull` + réutilisation du composant `FootprintSection` de l'intake sur la page Sources.
+- tsc 0 · lint 0 · 1024 tests gouvernance verts.
+
 ## v6.27.180 — fix(thot): Vague 6 audit plateforme — paiements & abonnement manuel (expiration, annulation, fallback one-shot, notifications) (2026-07-16)
 
 **Vague 6 de l'audit intention/exécution : 6 findings paiements (3 CRITICAL)** :

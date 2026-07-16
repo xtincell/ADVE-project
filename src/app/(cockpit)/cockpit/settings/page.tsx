@@ -20,6 +20,7 @@ import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { useToast } from "@/components/shared/notification-toast";
 import { Button, Input } from "@/components/primitives";
 import { TIER_LABELS, SUBSCRIPTION_STATUS_LABELS } from "@/lib/billing/subscription-labels";
+import { FootprintSection } from "@/app/(intake)/intake/[token]/result/footprint-section";
 
 /**
  * Sécurité — changement de mot de passe + invitation dismissable (Increment 2b).
@@ -176,6 +177,16 @@ function ConnectedSourcesSection() {
                 : "Pas encore de digest marché pour votre pays × secteur (il se construit automatiquement)."}
             </p>
           </div>
+
+          {/* Empreinte web COMPLÈTE — presse (titres + liens), avis, domaine,
+              email, performance… Le prospect intake voyait tout ça, le client
+              payant ne voyait que 3 compteurs (audit 2026-07-16
+              `footprint-riche-invisible-founder`). Même composant que l'intake. */}
+          {data.webPresenceFull != null && (
+            <div className="border-t border-border pt-4">
+              <FootprintSection footprint={data.webPresenceFull} companyName="votre marque" />
+            </div>
+          )}
         </div>
       )}
     </section>
