@@ -139,7 +139,7 @@ export default async function LeaderboardPage() {
           <div className="lb__cta-txt">
             <strong>Où se classe VOTRE marque ?</strong>
             <span>
-              Commencez par scorer votre empreinte publique — gratuit, 30 secondes, sans email.
+              Commencez par scorer votre empreinte publique — gratuit, une minute, sans email.
               L&apos;entrée au championnat se fait ensuite, par une mesure officielle sur épreuves.
             </span>
           </div>

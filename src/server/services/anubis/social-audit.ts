@@ -437,21 +437,30 @@ export async function fetchPublicFollowers(
   const results: SocialFollowerData[] = [];
   let worstDegradation: ApifyRunOutcome & { kind: "DEGRADED" } | null = null;
 
-  for (const platform of ["INSTAGRAM", "TIKTOK", "FACEBOOK"] as const) {
-    const spec = APIFY_ACTORS[platform];
-    const rawEnvActor = process.env[spec.envVar];
-    if (rawEnvActor === "off") continue; // opt-out explicite (même convention que maps/ads)
-    const envActor = rawEnvActor || undefined;
-    if (!spec.enabledWithoutEnv && !envActor) continue;
+  // Plateformes en PARALLÈLE (2026-07-16) : les runs étaient séquentiels —
+  // IG puis TikTok puis FB, chacun 10-60 s de scraping — impossible à tenir
+  // dans le budget d'un rapport instantané. Chaque plateforme garde son
+  // propre timeout ; le wall-clock total = la plus lente, pas la somme.
+  const outcomes = await Promise.all(
+    (["INSTAGRAM", "TIKTOK", "FACEBOOK"] as const).map(async (platform) => {
+      const spec = APIFY_ACTORS[platform];
+      const rawEnvActor = process.env[spec.envVar];
+      if (rawEnvActor === "off") return null; // opt-out explicite (même convention que maps/ads)
+      const envActor = rawEnvActor || undefined;
+      if (!spec.enabledWithoutEnv && !envActor) return null;
 
-    const platformHandles = handles
-      .filter((h) => h.platform === platform)
-      .map((h) => h.handle.replace(/^@/, ""));
-    if (platformHandles.length === 0) continue;
+      const platformHandles = handles
+        .filter((h) => h.platform === platform)
+        .map((h) => h.handle.replace(/^@/, ""));
+      if (platformHandles.length === 0) return null;
 
-    const actorId =
-      envActor ?? (platform === "INSTAGRAM" ? creds.igActorOverride ?? spec.defaultActorId : spec.defaultActorId);
-    const outcome = await runApifyActor(creds.apiKey, platform, actorId, platformHandles, timeoutMs);
+      const actorId =
+        envActor ?? (platform === "INSTAGRAM" ? creds.igActorOverride ?? spec.defaultActorId : spec.defaultActorId);
+      return runApifyActor(creds.apiKey, platform, actorId, platformHandles, timeoutMs);
+    }),
+  );
+  for (const outcome of outcomes) {
+    if (!outcome) continue;
     if (outcome.kind === "OK") {
       for (const data of outcome.data) {
         await persistSnapshot(strategyId, data, "APIFY");

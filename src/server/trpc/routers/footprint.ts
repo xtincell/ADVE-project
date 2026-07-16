@@ -120,11 +120,11 @@ export const footprintRouter = createTRPCRouter({
         socialLinksRaw: input.socialLinksRaw?.trim() || null,
         country: input.country?.trim() || null,
         strategyId: null, // pas de FollowerSnapshot par-client — persistance via le répertoire Seshat
-        // Bug prod 2026-07-16 : 8s de budget total → le fetch du site pouvait
-        // tout consommer et l'étage des signaux GRATUITS (domaine/email/perf,
-        // gardé par remaining()>3s) sautait en silence — score 0 « Critique »
-        // avec un site renseigné. La copy promet 30 secondes : on les donne.
-        budgetMs: 25_000,
+        // Fenêtre UNIQUE de ~1 minute (mandat opérateur 2026-07-16) : tout part
+        // en parallèle, on consolide à la fin. 55 s pour rester sous les
+        // timeouts proxy usuels (60 s). L'UI affiche une progression d'une
+        // minute pour rendre l'attente tolérable.
+        budgetMs: 55_000,
       });
       const score = computeFootprintScore(enriched);
       // On garde `label` + `details` (la preuve factuelle « sur quoi ça se base »)
@@ -156,6 +156,54 @@ export const footprintRouter = createTRPCRouter({
         facts,
       });
 
+      // ── Relevé d'audience en ARRIÈRE-PLAN (2026-07-16, clé posée mais
+      // toujours « non relevée ») : un actor Apify (scraping) prend 10-60 s —
+      // intenable dans un rapport instantané. Si la collecte inline a échoué
+      // par manque de temps (DEGRADED, clé présente), on la relance ici SANS
+      // bloquer la réponse, avec un vrai budget (120 s) ; à la fin, une
+      // observation FRAÎCHE (compteurs + score recalculé) est enregistrée —
+      // le prochain « Scorer » (cache) montre l'audience. Fire-and-forget :
+      // notre prod est un serveur long-vivant (Coolify), pas du serverless.
+      let audienceStatus: string = enriched.enrichment.apify;
+      if (enriched.enrichment.apify === "DEGRADED" && enriched.socials.length > 0) {
+        audienceStatus = "PENDING";
+        void (async () => {
+          try {
+            const { toSocialHandles } = await import("@/server/services/quick-intake/public-enrichment");
+            const { fetchPublicFollowers } = await import("@/server/services/anubis/social-audit");
+            const live = await fetchPublicFollowers(null, toSocialHandles(enriched.socials), { timeoutMs: 120_000 });
+            if (live.state !== "LIVE" || live.data.length === 0) return;
+            const patched = {
+              ...enriched,
+              enrichment: { ...enriched.enrichment, apify: "LIVE" as const },
+              followerCounts: live.data.map((d) => ({
+                platform: d.platform,
+                handle: d.handle,
+                followerCount: d.followerCount,
+                source: "APIFY" as const,
+                capturedAt: live.observedAt,
+              })),
+            };
+            const patchedScore = computeFootprintScore(patched);
+            await recordFootprintObservation({
+              name: input.brandName,
+              websiteUrl: input.websiteUrl,
+              countryCode: input.country,
+              sectorSlug: null,
+              total: patchedScore.total,
+              measuredWeight: patchedScore.measuredWeight,
+              dimensions: patchedScore.dimensions.map((d) => ({
+                key: d.key, label: d.label, details: d.details, measured: d.measured, score: d.score, weight: d.weight,
+              })),
+              followerCounts: patched.followerCounts,
+              facts: buildFootprintFacts(patched),
+            });
+          } catch (err) {
+            console.warn("[scorer] relevé d'audience de fond échoué:", err instanceof Error ? err.message : err);
+          }
+        })();
+      }
+
       return {
         total: score.total, // number | null
         outOf: score.outOf, // 100
@@ -163,11 +211,11 @@ export const footprintRouter = createTRPCRouter({
         dimensions,
         followerCounts: asFollowerCounts(enriched.followerCounts),
         facts,
-        // POURQUOI l'audience n'est pas relevée (remontée opérateur 2026-07-16 :
-        // « pourquoi ça ne récupère pas les réseaux ? ») — DEFERRED = clé de
-        // collecte non configurée côté plateforme ; DEGRADED = collecte tentée
-        // mais en échec/timeout ; LIVE = relevée ; SKIPPED = aucun compte.
-        audienceStatus: enriched.enrichment.apify,
+        // POURQUOI l'audience n'est pas relevée (remontée opérateur 2026-07-16) :
+        // DEFERRED = clé de collecte non configurée ; PENDING = relevé lancé en
+        // arrière-plan (revenez dans ~1 min) ; DEGRADED = échec définitif ;
+        // LIVE = relevée ; SKIPPED = aucun compte.
+        audienceStatus,
         cached: false,
         capturedAt: (saved?.capturedAt ?? new Date()).toISOString(),
         stale: false,
