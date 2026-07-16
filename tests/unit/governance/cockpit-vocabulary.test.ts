@@ -34,6 +34,11 @@ const SCAN_DIRS = [
   // du funnel sous verrou.
   join(ROOT, "src/app/(intake)"),
   join(ROOT, "src/components/intake"),
+  // Audit 2026-07-16 `oracle-jargon-neteru-client` — le LIVRABLE PHARE
+  // (grille cockpit, page partagée publique, PDF) échappait au verrou qui
+  // interdit exactement ces mots.
+  join(ROOT, "src/components/strategy-presentation"),
+  join(ROOT, "src/app/(shared)"),
 ];
 // Composants hors components/cockpit mais rendus dans le portail founder,
 // + sources de chaînes rendues au prospect (grille /pricing).

@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.183 — fix(oracle): Vague 9 audit plateforme — le livrable parle client (jargon purgé, LLM dead-end tranché, statuts réconciliés) (2026-07-16)
+
+**Vague 9 de l'audit intention/exécution : 4 findings Oracle (1 CRITICAL)** :
+
+- **Jargon Neteru purgé du livrable phare** (`oracle-jargon-neteru-client`, CRITICAL) : le client lisait « Crew Program (Imhotep) », « Plan Comms (Anubis) », « Tarsis — Signaux faibles », « gouvernés par Imhotep — ADR-0010 + ADR-0019 », « cible APOGEE », « Manipulation Matrix — Peddler/Dealer… » dans la grille cockpit, la TOC publique ET les titres du PDF — et le test HARD ne scannait pas cette surface. Titres/descriptions en vocable business (« Programme équipe », « Plan de diffusion », « Modes d'engagement — 4 leviers d'audience », « Échelle d'engagement », « Fenêtre d'Overton ») ; réfs ADR déplacées en commentaires code (traçabilité intacte) ; **verrou CI étendu** (`cockpit-vocabulary` scanne désormais `components/strategy-presentation` + `app/(shared)`) — 6 hits résiduels purgés au passage (« diagnostic ADVERTIS », « Score ADVE-RTIS » des métadonnées partagées…).
+- **Recommandations en langage business** (`composer-jargon-intent-kinds`) : les recos composées écrivaient des Intent kinds et des chemins de champs internes DANS le contenu persistant du livrable (« Compléter s.visionStrategique via SYNTHESIZE_S »…). Réécrites (« Déclarez votre vision stratégique dans le pilier Stratégie »…).
+- **LLM dead-end tranché** (`oracle-llm-payload-dead-end`, DÉCISION) : le runner LLM était payé, son résultat rangé dans `OracleSection.payload` (colonne qu'aucune surface ne rend) puis ÉCRASÉ par la composition déterministe. Les sections à composeur sont désormais **COMPOSE-only** (cohérent ADR-0091 « Oracle 35/35 sans LLM ») — le LLM ne sert plus que les sections sans composeur. Zéro coût pour du contenu jamais livré.
+- **Deux vérités réconciliées** (`oracle-dual-status-truth`) : le héro (« 97 % assemblé ») et le panel progressif (« 35 périmés ») se contredisaient sur le même écran. Le héro consomme aussi la fraîcheur des sections et annonce « N sections à actualiser depuis vos dernières modifications ».
+- tsc 0 · lint 0 · 1024 tests gouvernance verts (verrou vocabulaire élargi).
+
 ## v6.27.182 — fix(ui): Vague 8 audit plateforme — guilde & creator (suivi post-dépôt, brief visible, candidatures agence, dashboard dé-fabriqué) (2026-07-16)
 
 **Vague 8 de l'audit intention/exécution : 6 findings guilde/creator (1 CRITICAL)** :

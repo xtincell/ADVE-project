@@ -219,7 +219,7 @@ export function Mckinsey7s({ data }: Props) {
     <SectionShell
       tier="BIG4_BASELINE"
       title="McKinsey 7S Framework"
-      description="Diagnostic structuré 7 dimensions — alignement et gaps vs APOGEE target."
+      description="Diagnostic structuré 7 dimensions — alignement et écarts vs trajectoire cible."
     >
       {sevenS && Object.keys(sevenS).length > 0 ? (
         <Stack direction="col" gap={3}>
@@ -658,8 +658,8 @@ export function ManipulationMatrix({ data, strategyId }: Props) {
   return (
     <SectionShell
       tier="DISTINCTIVE"
-      title="Manipulation Matrix — 4 modes d'engagement"
-      description="Peddler / Dealer / Facilitator / Entertainer — comment la marque transforme l'audience en propellant superfan."
+      title="Modes d'engagement — 4 leviers d'audience"
+      description="Les 4 leviers par lesquels la marque engage son audience et la transforme en communauté active."
     >
       {mm ? (
         <Stack direction="col" gap={3}>
@@ -699,7 +699,7 @@ export function ManipulationMatrix({ data, strategyId }: Props) {
           ) : null}
         </Stack>
       ) : (
-        <EmptyState message="Manipulation Matrix non encore évaluée." />
+        <EmptyState message="Modes d'engagement non encore évalués." />
       )}
     </SectionShell>
   );
@@ -905,7 +905,7 @@ export function OvertonDistinctive({ data }: Props) {
     <SectionShell
       tier="DISTINCTIVE"
       title="Overton Distinctive — Position fenêtre culturelle"
-      description="Mapping Overton sectoriel + position actuelle + cible APOGEE + manœuvres pour déplacer la fenêtre."
+      description="Cartographie culturelle du secteur — position actuelle, palier cible et manœuvres pour déplacer la fenêtre."
     >
       <Stack direction="col" gap={3}>
         {realSignal ? <OvertonRealSignalBlock signal={realSignal} /> : null}
@@ -942,7 +942,7 @@ export function TarsisWeakSignals({ data }: Props) {
   return (
     <SectionShell
       tier="DISTINCTIVE"
-      title="Tarsis — Signaux faibles sectoriels"
+      title="Signaux faibles sectoriels"
       description="Détection des signaux faibles du secteur, scoring d'impact et horizon de matérialisation (J+30 / 90 / 180 / 365+)."
     >
       {tarsis && tarsis.signals ? (
@@ -970,7 +970,7 @@ export function TarsisWeakSignals({ data }: Props) {
           ))}
         </Stack>
       ) : (
-        <EmptyState message="Aucun signal faible Tarsis détecté pour l'instant." />
+        <EmptyState message="Aucun signal faible détecté pour l'instant." />
       )}
     </SectionShell>
   );
@@ -981,6 +981,9 @@ export function TarsisWeakSignals({ data }: Props) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export function ImhotepCrewProgram({ data, strategyId }: Props) {
+  // Gouvernance : ADR-0010 (pré-réserve) + ADR-0019 (full activation).
+  // Les réfs vivent ICI (traçabilité code) — jamais dans les chaînes rendues
+  // au client (ADR-0123, audit 2026-07-16 `oracle-jargon-neteru-client`).
   // Audit 2026-06-11 — contenu réel : draft Imhotep (status + rôles requis +
   // budget estimé) produit par imhotep.draftCrewProgram pendant l'enrichissement.
   const crew = data.crewProgram as {
@@ -994,8 +997,8 @@ export function ImhotepCrewProgram({ data, strategyId }: Props) {
   return (
     <SectionShell
       tier="CORE"
-      title="Crew Program — Imhotep"
-      description="Crew Programs gouvernés par Imhotep (matching, talent, team, tier, qc, formation) — ADR-0010 (pré-réserve) + ADR-0019 (full activation)."
+      title="Programme équipe"
+      description="Programme équipe — sélection des talents, composition, montée en compétence et contrôle qualité."
     >
       {crew?.summary || legacyPlaceholder ? (
         <Stack direction="col" gap={3}>
@@ -1022,7 +1025,7 @@ export function ImhotepCrewProgram({ data, strategyId }: Props) {
           ) : null}
         </Stack>
       ) : (
-        <EmptyState message="Crew program non encore généré — lancer l'enrichissement Oracle ou produire le brief via /cockpit/crew-programs (ADR-0019)." />
+        <EmptyState message="Programme équipe non encore généré — lancez l'assemblage de la stratégie." />
       )}
       {strategyId ? (
         <Stack direction="row" justify="end" gap={2}>
@@ -1040,6 +1043,8 @@ export function ImhotepCrewProgram({ data, strategyId }: Props) {
 }
 
 export function AnubisPlanComms({ data }: Props) {
+  // Gouvernance : ADR-0011 (pré-réserve) + ADR-0020 (full activation).
+  // Réfs en commentaire code uniquement (ADR-0123 — vocabulaire client).
   // Audit 2026-06-11 — contenu réel : draft Anubis (status + canaux proposés)
   // produit par anubis.draftCommsPlan pendant l'enrichissement.
   const plan = data.commsPlan as {
@@ -1052,8 +1057,8 @@ export function AnubisPlanComms({ data }: Props) {
   return (
     <SectionShell
       tier="CORE"
-      title="Plan Comms — Anubis"
-      description="Plan comms gouverné par Anubis (broadcast multi-canal, ad networks, notifications) — ADR-0011 (pré-réserve) + ADR-0020 (full activation)."
+      title="Plan de diffusion"
+      description="Plan de diffusion multi-canal — réseaux sociaux, campagnes média, email et notifications."
     >
       {plan?.summary || legacyPlaceholder ? (
         <Stack direction="col" gap={3}>
@@ -1075,7 +1080,7 @@ export function AnubisPlanComms({ data }: Props) {
           ) : null}
         </Stack>
       ) : (
-        <EmptyState message="Plan comms non encore généré — lancer l'enrichissement Oracle ou produire le plan via /cockpit/plan-comms (ADR-0020)." />
+        <EmptyState message="Plan de diffusion non encore généré — lancez l'assemblage de la stratégie." />
       )}
     </SectionShell>
   );

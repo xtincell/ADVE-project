@@ -22,10 +22,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return {
     title: `${strategy?.name ?? "Marque"} — Proposition Strategique | LaFusee`,
-    description: `Proposition strategique pour ${strategy?.name ?? "la marque"} — Score ADVE-RTIS: ${score}/200`,
+    description: `Proposition strategique pour ${strategy?.name ?? "la marque"} — Score de marque: ${score}/200`,
     openGraph: {
       title: `${strategy?.name} — Proposition Strategique`,
-      description: `Score ADVE-RTIS: ${score}/200 — Diagnostic complet et plan d'activation`,
+      description: `Score de marque: ${score}/200 — Diagnostic complet et plan d'activation`,
       type: "website",
     },
   };

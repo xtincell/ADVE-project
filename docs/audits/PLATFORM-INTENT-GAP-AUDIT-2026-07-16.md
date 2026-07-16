@@ -560,7 +560,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : Le livrable phare rend au client : « Crew Program (Imhotep) » (§22), « Plan Comms (Anubis) » (§23), « Tarsis — Signaux faibles sectoriels » (§35) dans SECTION_REGISTRY (titres repris par la grille cockpit, la TOC publique ET les titres du PDF) ; descriptions rendues « gouvernés par Imhotep … — ADR-0010 (pré-réserve) + ADR-0019 (full activation) », « cible APOGEE », « Manipulation Matrix — Peddler / Dealer / Facilitator / Entertainer — comment la marque transforme l'audience en propellant superfan » (persona client incluse). Le test HARD cockpit-vocabulary.test.ts ne scanne NI src/components/strategy-presentation NI src/app/(shared) — la surface la plus client-facing du produit échappe au verrou qui interdit exactement ces mots.
 - **Preuve** : src/server/services/strategy-presentation/types.ts:169-170 (`title: "Crew Program (Imhotep)"`, `"Plan Comms (Anubis)"`), :186 (`"Tarsis — Signaux faibles…"`) ; src/components/strategy-presentation/sections/phase13-sections.tsx:908 (« cible APOGEE »), :998 (« ADR-0010 … ADR-0019 »), :661-662 (Manipulation Matrix, personas client), :1025/:1078 (EmptyStates « (ADR-0019) »/« (ADR-0020) ») ; tests/unit/governance/cockpit-vocabulary.test.ts:28-43 SCAN_DIRS sans strategy-presentation/(shared)
 - **Fix esquissé** : Renommer les titres/descriptions en vocable business (KB §3 : « Programme équipe », « Plan de diffusion », « Signaux faibles sectoriels ») et étendre SCAN_DIRS du test HARD à components/strategy-presentation + app/(shared).
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V9 Oracle (v6.27.183)
 
 ### [CRITICAL] `cancel-manual-wa-routes-to-stripe-and-fails-silently` — payments-gates
 
@@ -749,7 +749,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : Les recommandations composées écrivent des Intent kinds et des chemins de champs internes DANS le contenu du livrable : « Compléter s.visionStrategique via SYNTHESIZE_S », « Renseigner a.equipeDirigeante via OPERATOR_AMEND_PILLAR », « Générer le catalogue via GENERATE_I_ACTIONS », « brancher Imhotep crew ». Ces chaînes sont persistées dans le BrandAsset (writeback) puis rendues au client via la section 7S et le PDF.
 - **Preuve** : src/server/services/strategy-presentation/deterministic-composers.ts:250 (« via SYNTHESIZE_S »), :256 (« via OPERATOR_AMEND_PILLAR »), :262 (« via GENERATE_I_ACTIONS »), :280 (« brancher Imhotep crew ») — rendus par phase13-sections.tsx Mckinsey7s (dim.recommendation) et par renderValue dans le PDF
 - **Fix esquissé** : Réécrire les libellés de gap/recommandation en langage business (« Déclarez votre vision stratégique dans le pilier Stratégie ») ; les codes d'action internes restent en clé `_` strippée si besoin d'audit.
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V9 Oracle (v6.27.183)
 
 ### [MAJOR] `oracle-dual-status-truth` — oracle-chain
 
@@ -758,7 +758,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : Deux systèmes de statut indépendants coexistent à l'écran : le héro/grille consomment `strategyPresentation.completeness` (dérivé BrandAsset + composers read-time → complete/partial/empty, ignore staleAt) tandis que le panel progressif consomme `oracle.listSections` (OracleSection PENDING/…/STALE). Comme `writePillar` marque TOUTES les sections STALE à chaque écriture pilier (markAllSectionsStale, « conservateur »), le founder voit simultanément « 97 % assemblé / 0 vides » en haut et « 35 périmés » 200px plus bas ; inversement les composers read-time font dire « complete » à des sections que le panel affiche PENDING.
 - **Preuve** : src/app/(cockpit)/cockpit/brand/proposition/page.tsx:173-179 (stats depuis completeness) vs src/components/cockpit/oracle/progressive-panel.tsx:90-101 (stats depuis OracleSection.status) ; src/server/services/pillar-gateway/index.ts:619-626 (markAllSectionsStale sur toute écriture) ; src/server/services/strategy-presentation/index.ts:442-503 (checkCompleteness sans lecture d'OracleSection.staleAt)
 - **Fix esquissé** : Composer une readiness unique côté serveur (completeness × OracleSection.staleAt/status) consommée par le héro, la grille ET le panel ; a minima afficher le statut « périmé » dans la grille des 35.
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V9 Oracle (v6.27.183)
 
 ### [MAJOR] `oracle-llm-payload-dead-end` — oracle-chain
 
@@ -767,7 +767,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : Quand le runner LLM réussit, son résultat n'est écrit QUE dans OracleSection.payload — colonne qu'aucune surface ne rend (assemblePresentation lit pillars+BrandAssets ; listSections ne renvoie que les statuts). Puis le handler ré-exécute le composeur DÉTERMINISTE qui écrit/écrase le BrandAsset keyé sectionId que le rendu consomme (handler.ts:411-418). Résultat : le coût LLM est payé, le contenu « riche » dort en DB, et le client voit toujours la composition déterministe — collecté-mais-jeté structurel, admis en commentaire mais résolu en écrasant le LLM au lieu de le brancher.
 - **Preuve** : src/server/services/oracle-section/handler.ts:403-419 (succès LLM → `composeSectionDeterministic` writeback) ; src/server/services/oracle-section/index.ts:254 (payload persisté, jamais sélectionné pour rendu) ; grep `promoteSectionToBrandAsset` : seul caller = deterministic-composers.ts:740 ; src/server/services/strategy-presentation/index.ts:213-245 (le rendu lit le BrandAsset sectionId-keyé)
 - **Fix esquissé** : Écrire le résultat LLM (validé shape par le Zod de la séquence) dans le BrandAsset sectionId-keyé et ne composer déterministe qu'en fallback d'échec ; ou assumer (décision) que §22-35 sont COMPOSE-only et cesser de dispatcher/payer le runner LLM.
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V9 Oracle (v6.27.183)
 
 ### [MAJOR] `funnel-monthly-cta-stripe-only-dead-end` — payments-gates
 

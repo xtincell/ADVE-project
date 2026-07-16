@@ -47,7 +47,7 @@ export function SwotInterne({ data }: Props) {
 
       {data.artemisResults.length > 0 && (
         <div>
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Diagnostics Artemis</h3>
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Diagnostics complémentaires</h3>
           {data.artemisResults.map((ar, i) => (
             <div key={i} className="mb-3 rounded-lg border border-border bg-background/50 p-4">
               <div className="flex items-center justify-between">
