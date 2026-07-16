@@ -131,12 +131,6 @@ export const cockpitRouter = createTRPCRouter({
   overtonSignal: protectedProcedure
     .input(z.object({ strategyId: z.string().min(1) }))
     .query(async ({ ctx, input }): Promise<OvertonSignalResult> => {
-      // Paid-tier gate (FR32) — mirrors `campaignTracker.getFounderAttributionLineage`.
-      const gate = await checkPaidTier(ctx.session.user.id);
-      if (!gate.allowed) {
-        return { state: "TIER_GATE_DENIED", configureUrl: gate.configureUrl ?? "/pricing" };
-      }
-
       const strategy = await ctx.db.strategy.findUnique({
         where: { id: input.strategyId },
         select: {
@@ -159,6 +153,17 @@ export const cockpitRouter = createTRPCRouter({
         const opCtx = await getOperatorContext(ctx.session.user.id);
         if (!(await canAccessStrategy(input.strategyId, opCtx))) {
           throw new TRPCError({ code: "FORBIDDEN", message: "Cette marque ne vous appartient pas" });
+        }
+      }
+
+      // Paid-tier gate (FR32) sur le PROPRIÉTAIRE de la marque, pas le viewer
+      // (audit 2026-07-16 `tier-gate-keyed-on-viewer-not-brand` : un opérateur
+      // ou collaborateur délégué se voyait demander d'« activer SON abonnement »).
+      // Viewer délégué (≠ owner, accès déjà vérifié ci-dessus) : lecture exempte.
+      if (strategy.userId === ctx.session.user.id) {
+        const gate = await checkPaidTier(strategy.userId);
+        if (!gate.allowed) {
+          return { state: "TIER_GATE_DENIED", configureUrl: gate.configureUrl ?? "/pricing" };
         }
       }
 
@@ -217,11 +222,6 @@ export const cockpitRouter = createTRPCRouter({
   getCommunityDashboard: protectedProcedure
     .input(z.object({ strategyId: z.string().min(1) }))
     .query(async ({ ctx, input }): Promise<CommunityDashboardResult> => {
-      const gate = await checkPaidTier(ctx.session.user.id);
-      if (!gate.allowed) {
-        return { state: "TIER_GATE_DENIED", configureUrl: gate.configureUrl ?? "/pricing" };
-      }
-
       const strategy = await ctx.db.strategy.findUnique({
         where: { id: input.strategyId },
         select: { id: true, userId: true },
@@ -233,6 +233,16 @@ export const cockpitRouter = createTRPCRouter({
         const opCtx = await getOperatorContext(ctx.session.user.id);
         if (!(await canAccessStrategy(input.strategyId, opCtx))) {
           throw new TRPCError({ code: "FORBIDDEN", message: "Cette marque ne vous appartient pas" });
+        }
+      }
+
+      // Paid-tier gate sur le PROPRIÉTAIRE, viewers délégués exempts (audit
+      // 2026-07-16 `tier-gate-keyed-on-viewer-not-brand` — la revue « Fans
+      // détectés » était inatteignable pour les opérateurs OPERATOR-role).
+      if (strategy.userId === ctx.session.user.id) {
+        const gate = await checkPaidTier(strategy.userId);
+        if (!gate.allowed) {
+          return { state: "TIER_GATE_DENIED", configureUrl: gate.configureUrl ?? "/pricing" };
         }
       }
 

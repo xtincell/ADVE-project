@@ -14,6 +14,7 @@ import {
   listSuperfanCandidates,
 } from "@/server/services/seshat/superfan-ingest";
 import { db } from "@/lib/db";
+import { assertStrategyRead } from "./_strategy-read-guard";
 /* lafusee:governed-active */
 
 const ACTIVE_SUPERFAN_THRESHOLD = 0.65; // ambassadeur+ (devotion engine: ≥0.65 = ambassadeur, ≥0.85 = evangeliste)
@@ -90,7 +91,8 @@ export const superfanRouter = createTRPCRouter({
   /** Count active superfans for a strategy (THE northstar) */
   count: protectedProcedure
     .input(z.object({ strategyId: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      await assertStrategyRead(ctx.session.user.id, input.strategyId);
       const total = await db.superfanProfile.count({
         where: { strategyId: input.strategyId },
       });
@@ -124,7 +126,8 @@ export const superfanRouter = createTRPCRouter({
       strategyId: z.string(),
       days: z.number().default(30),
     }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      await assertStrategyRead(ctx.session.user.id, input.strategyId);
       const since = new Date();
       since.setDate(since.getDate() - input.days);
 
@@ -162,7 +165,8 @@ export const superfanRouter = createTRPCRouter({
   /** Segment breakdown by devotion tier */
   segments: protectedProcedure
     .input(z.object({ strategyId: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      await assertStrategyRead(ctx.session.user.id, input.strategyId);
       const profiles = await db.superfanProfile.findMany({
         where: { strategyId: input.strategyId },
         select: { engagementDepth: true, platform: true },
@@ -195,7 +199,8 @@ export const superfanRouter = createTRPCRouter({
       strategyId: z.string(),
       limit: z.number().default(10),
     }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      await assertStrategyRead(ctx.session.user.id, input.strategyId);
       return db.superfanProfile.findMany({
         where: {
           strategyId: input.strategyId,

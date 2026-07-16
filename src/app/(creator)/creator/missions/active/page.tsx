@@ -26,7 +26,9 @@ export default function ActiveMissionsPage() {
   const [titleError, setTitleError] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
 
-  const missions = trpc.mission.list.useQuery({ status: "IN_PROGRESS", limit: 50 });
+  // Mes missions actives = celles qui ME sont assignées (audit 2026-07-16 :
+  // la page listait toutes les missions IN_PROGRESS de la plateforme).
+  const missions = trpc.mission.list.useQuery({ status: "IN_PROGRESS", assignedToMe: true, limit: 50 });
   const missionDetail = trpc.mission.get.useQuery(
     { id: selectedMission! },
     { enabled: !!selectedMission }

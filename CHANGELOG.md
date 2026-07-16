@@ -10,6 +10,18 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.179 — fix(governance): Vague 5 audit plateforme — sécurité & tenancy (lectures cross-tenant fermées, MCP scopé, guilde étanche) (2026-07-16)
+
+**Vague 5 de l'audit intention/exécution (2e passe, 98 agents) : 7 findings sécurité/tenancy (5 CRITICAL)** :
+
+- **Lectures legacy cross-tenant fermées** (`legacy-read-procedures-cross-tenant`, CRITICAL) : le durcissement PR #447 couvrait les mutations, pas les lectures — tout compte authentifié (freelance auto-inscrit inclus) lisait campagnes (budgets), missions (commissions brutes/nettes), snapshots devotion et signaux de N'IMPORTE QUELLE marque via un strategyId arbitraire ; `mission.list`/`campaign.list` sans filtre renvoyaient TOUT le parc. Garde canonique `_strategy-read-guard.ts` (chokepoint ADR-0129 `canAccessStrategy` + god-mode via `getOperatorContext`) posée sur `campaign.get/list/canonByStrategy`, `devotionLadder.list/getByStrategy/compare/getVisualizationData`, `sourceInsights.list/getSummary`, `superfan.count/velocity/segments/top` (PII handles — `superfan-overton-queries-unscoped-pii`), `overton.brandSignals` ; les list sont scopées (`scopeCampaigns`/`scopeMissions`).
+- **Guilde étanche** (`mission-endpoints-leak-guild-contact-and-premoderation`, CRITICAL) : le mur creator listait les missions DRAFT PRÉ-MODÉRATION de toute la plateforme et `mission.get` livrait `contactEmail/contactName` du déposant (court-circuit de l'intermédiation payante). `mission.list` : mode `guildOnly` (publiées & ouvertes, projection redactée sans contact ni commissions) + mode `assignedToMe` ; `mission.get` : accès complet au périmètre, projection redactée pour les missions guilde publiées, FORBIDDEN sinon ; candidature refusée sur mission non publiée.
+- **Livrable = assignee only** (`creator-active-missions-unscoped-and-deliverable-no-assignee-guard`, CRITICAL) : « Missions actives » listait TOUTES les missions IN_PROGRESS de la plateforme et `submitDeliverable` permettait à n'importe quel compte de créer un livrable sur la mission d'autrui (et la basculer REVIEW). Page filtrée `assignedToMe` + garde assignee-ou-périmètre-marque.
+- **Portée MCP appliquée** (`mcp-brand-scope-unenforced`, CRITICAL) : une clé « limitée à la marque » opérait en réalité toutes les marques (seul amendPillar lisait `__auth`). Enforcement FAIL-CLOSED dans le dispatcher unifié `dispatchTool` : clé BRAND → tool sans champ `strategyId` refusé, strategyId divergent refusé, absent injecté depuis la portée.
+- **Pages publiques dé-404isées** (`b-slug-lfa-regex-404`, CRITICAL) : le garde regex minuscules de `/b/[slug]` rejetait TOUT slug canon `LFA-…` (100 % des pages publiques mortes post-migration) → `isBrandPublicSlug` (point de vérité domaine) ; `prod-finish` résout via `brandPublicSlug` idempotent (fini le `toLowerCase` qui ne matchait plus).
+- **Tier-gate sur le propriétaire, pas le viewer** (`tier-gate-keyed-on-viewer-not-brand`) : `overtonSignal`/`getCommunityDashboard` demandaient l'abonnement au VIEWER — un opérateur/collaborateur délégué lisait « activez votre abonnement » (et la revue « Fans détectés » était inatteignable pour les OPERATOR). Gate déplacé après le contrôle d'accès, résolu sur le propriétaire ; viewers délégués exempts en lecture.
+- tsc 0 · lint 0 · 1024 tests gouvernance verts. Audit doc : statuts V1-V5 à jour (+39 findings 2e passe consignés).
+
 ## v6.27.178 — fix(ui): Vague 4 audit plateforme — le verdict montre sa preuve (palmarès leaderboard, rescore post-victoire, Oracle nommé, PDF partagé) + intégration audit design (2026-07-16)
 
 **Vague 4 de l'audit intention/exécution — leaderboard/scoreur/Oracle** + quick wins de l'[audit design](docs/audits/FRONTEND-DESIGN-AUDIT-2026-07-16.md) :

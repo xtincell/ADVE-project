@@ -30,7 +30,10 @@ export default function AvailableMissionsPage() {
   const [selectedMission, setSelectedMission] = useState<string | null>(null);
   const [acceptDialog, setAcceptDialog] = useState<string | null>(null);
 
-  const missions = trpc.mission.list.useQuery({ status: "DRAFT", limit: 50 });
+  // Mur des missions ouvertes = missions guilde PUBLIÉES uniquement (projection
+  // redactée serveur — audit 2026-07-16 : le mur listait les DRAFT pré-modération
+  // de toute la plateforme, contact du déposant inclus).
+  const missions = trpc.mission.list.useQuery({ guildOnly: true, limit: 50 });
   const drivers = trpc.driver.list.useQuery({});
   // Vague 7 — flux candidature : on POSTULE, l'opérateur décide (fin du
   // premier-arrivé-premier-servi). Mes candidatures listées en bas de page.
