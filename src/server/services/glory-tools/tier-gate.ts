@@ -58,11 +58,20 @@ export async function checkPaidTier(
 ): Promise<TierGateResult> {
   const tiers = allowedTiers && allowedTiers.length > 0 ? allowedTiers : PAID_TIER_KEYS_DEFAULT;
 
+  // Audit 2026-07-16 `manual-wa-subscription-never-expires` — ceinture en plus
+  // du sweep quotidien : une période échue (au-delà de 3 j de grâce) ne donne
+  // plus accès même si le statut n'a pas encore été balayé. Null-tolerant :
+  // les abonnements provider sans période matérialisée restent pilotés par status.
+  const graceCutoff = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
   const sub = await db.subscription.findFirst({
     where: {
       operatorId,
       status: { in: [...ACTIVE_STATUSES] },
       tierKey: { in: [...tiers] },
+      OR: [
+        { currentPeriodEnd: null },
+        { currentPeriodEnd: { gte: graceCutoff } },
+      ],
     },
     select: { tierKey: true, status: true },
     orderBy: { createdAt: "desc" },

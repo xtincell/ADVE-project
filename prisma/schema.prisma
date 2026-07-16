@@ -463,6 +463,10 @@ enum IntakePaymentProvider {
   PAYPAL
   MOCK
   ADMIN_BYPASS
+  /// Paiement one-shot encaissé hors plateforme (WhatsApp) — validé par
+  /// l'opérateur en console (audit 2026-07-16 : sans clés provider, le
+  /// premier paiement du funnel était structurellement imprenable).
+  MANUAL_WA
 }
 
 enum IntakePaymentCurrency {

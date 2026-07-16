@@ -304,7 +304,7 @@ Ces correspondances évitent la réinvention :
 - **EscrowStatus** : HELD | RELEASED | DISPUTED | REFUNDED
 - **PaymentMethod** : MOBILE_MONEY_ORANGE | MOBILE_MONEY_MTN | MOBILE_MONEY_WAVE | BANK_TRANSFER | CASH
 - **PaymentOrderStatus** : PENDING | PROCESSING | COMPLETED | FAILED | CANCELLED
-- **IntakePaymentProvider** : CINETPAY | STRIPE | PAYPAL | MOCK | ADMIN_BYPASS
+- **IntakePaymentProvider** : CINETPAY | STRIPE | PAYPAL | MOCK | ADMIN_BYPASS | MANUAL_WA
 - **IntakePaymentCurrency** : XAF | XOF | EUR | USD | MAD | NGN | GHS | TND | CDF | WKD
 - **IntakePaymentStatus** : PENDING | PAID | FAILED
 - **DealStage** : LEAD | QUALIFIED | PROPOSAL | NEGOTIATION | WON | LOST

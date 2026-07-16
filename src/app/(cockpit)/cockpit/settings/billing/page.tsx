@@ -125,6 +125,13 @@ export default function CockpitBillingPage() {
               </div>
             </dl>
 
+            {/* Échec d'annulation VISIBLE (audit 2026-07-16 : le bouton faisait
+                « Annulation… » puis rien — l'erreur n'était jamais rendue). */}
+            {cancelMutation.error && confirmingId === null ? (
+              <p className="text-xs text-warning">
+                L&apos;annulation n&apos;a pas abouti — réessayez ou contactez-nous.
+              </p>
+            ) : null}
             {sub.cancelAtPeriodEnd ? (
               <p className="text-xs text-foreground-muted">
                 Annulation programmée — l&apos;accès reste actif jusqu&apos;à la fin de la période en cours.
