@@ -15,14 +15,25 @@
 
 import { Rocket, Shield, Star, Crown, Flame, Skull, Eye, Target, Heart, AlertTriangle, BarChart3, Settings, Compass } from "lucide-react";
 
+// Bandes CANON (src/domain/brand-tier.ts classifyTier) — l'ancienne liste
+// (5 tiers, « 0-80 Latent », sans FRAGILE) contredisait la classification
+// réellement rendue au lead (audit 2026-07-16).
 const TIERS = [
   {
-    range: "0-80",
+    range: "0-40",
     label: "Latent",
     desc: "Invisible, pas d'identite distincte. Substituable a tout moment.",
     color: "var(--color-class-latent)",
     bgOpacity: "10%",
     icon: Skull,
+  },
+  {
+    range: "41-80",
+    label: "Fragile",
+    desc: "Des intuitions justes mais un socle instable. La coherence ne tient pas seule.",
+    color: "var(--color-class-fragile, var(--color-class-latent))",
+    bgOpacity: "10%",
+    icon: AlertTriangle,
   },
   {
     range: "81-120",
@@ -63,9 +74,10 @@ const PILLARS = [
   { key: "D", name: "Distinction", question: "Pourquoi vous et pas un autre ?", color: "var(--color-pillar-d)", icon: Star },
   { key: "V", name: "Valeur", question: "Que promettez-vous au monde ?", color: "var(--color-pillar-v)", icon: Target },
   { key: "E", name: "Engagement", question: "Comment creer la devotion ?", color: "var(--color-pillar-e)", icon: Flame },
-  { key: "R", name: "Risk", question: "Quels sont vos angles morts ?", color: "var(--color-pillar-r)", icon: AlertTriangle },
+  { key: "R", name: "Risque", question: "Quels sont vos angles morts ?", color: "var(--color-pillar-r)", icon: AlertTriangle },
   { key: "T", name: "Track", question: "Comment mesurez-vous le succes ?", color: "var(--color-pillar-t)", icon: BarChart3 },
-  { key: "I", name: "Implementation", question: "De la strategie a l'action ?", color: "var(--color-pillar-i)", icon: Settings },
+  // I = Innovation (canon produit) — « Implementation » était un drift.
+  { key: "I", name: "Innovation", question: "Quel potentiel inexploite ?", color: "var(--color-pillar-i)", icon: Settings },
   { key: "S", name: "Strategie", question: "Comment assembler le tout ?", color: "var(--color-pillar-s)", icon: Compass },
 ];
 
@@ -92,9 +104,9 @@ export default function PublicScorePage() {
         {/* Classification tiers */}
         <div className="mt-12">
           <h2 className="mb-6 text-center text-xl font-bold text-foreground">
-            Les 5 niveaux de marque
+            Les 6 paliers de marque
           </h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-6">
             {TIERS.map((tier) => {
               const Icon = tier.icon;
               return (
@@ -155,6 +167,10 @@ export default function PublicScorePage() {
           <div className="mt-6 rounded-lg bg-background-overlay p-4 text-center">
             <p className="text-xs text-foreground-muted">
               <strong>Score composite</strong> = A + D + V + E + R + T + I + S (chaque pilier /25, total /200)
+            </p>
+            <p className="mt-2 text-xs text-foreground-muted">
+              Le diagnostic gratuit mesure votre <strong>socle ADVE</strong> (4 piliers, /100) —
+              les piliers d&apos;exécution (R·T·I·S) se mesurent ensuite, dans votre espace.
             </p>
           </div>
         </div>

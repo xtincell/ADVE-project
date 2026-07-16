@@ -33,6 +33,9 @@ import {
 import { PricingTiers, OracleTeaser, RapportPdfPreview } from "@/components/neteru";
 import { Modal } from "@/components/shared/modal";
 import { FootprintSection } from "./footprint-section";
+import { AdvertisRadar } from "@/components/shared/advertis-radar";
+import { PILLAR_KEYS } from "@/lib/types/advertis-vector";
+import { HIDDEN_FIELDS, humanizeValue } from "@/server/services/quick-intake/report-composer";
 
 // ── Types matching the narrative-report service ────────────────────
 interface AdvePillarReport {
@@ -94,11 +97,22 @@ interface BrandLevelEvaluation {
   iconeVision: string;
 }
 
+/** Plan d'action déterministe (généré par generateDiagnostic — jeté avant l'audit 2026-07-16). */
+interface DiagnosticRecommendation {
+  pillar: string;
+  key: string;
+  score: number;
+  diagnostic: string;
+  actions: string[];
+}
+
 interface Diagnostic {
   classification?: string;
   summary?: string;
   narrativeReport?: NarrativeReport;
   brandLevel?: BrandLevelEvaluation;
+  strengths?: Array<{ pillar: string; key: string; score: number; insight?: string }>;
+  recommendations?: DiagnosticRecommendation[];
 }
 
 const LEVEL_TAGLINE: Record<BrandLevel, string> = {
@@ -203,7 +217,9 @@ function flattenValue(value: unknown, depth = 0): string {
       .join(" · ");
   }
   if (typeof value === "object") {
-    if (depth > 1) return JSON.stringify(value);
+    // Plus jamais de JSON brut dans un rapport payant (audit 2026-07-16) —
+    // le humanize borné du composer produit du texte lisible à toute profondeur.
+    if (depth > 1) return humanizeValue(value) ?? "";
     const entries = Object.entries(value as Record<string, unknown>)
       .filter(([, v]) => v != null && v !== "")
       .map(([k, v]) => {
@@ -218,6 +234,9 @@ function flattenValue(value: unknown, depth = 0): string {
 
 function flattenContent(content: Record<string, unknown>): Array<{ key: string; value: string }> {
   return Object.entries(content)
+    // Champs méta/techniques (narrativeFull dupliqué, webPresence JSON,
+    // fieldCertainty…) — même liste que le composer (audit 2026-07-16).
+    .filter(([k]) => !HIDDEN_FIELDS.has(k))
     .map(([k, v]) => ({ key: humanizeKey(k), value: flattenValue(v) }))
     .filter((entry) => entry.value && entry.value.length > 0);
 }
@@ -682,6 +701,41 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
               )}
             </div>
           )}
+
+          {/* ORACLE_FULL payé : le lien vers la stratégie complète activée
+              (audit 2026-07-16 — le payeur ne voyait RIEN de ce qu'il avait payé). */}
+          {paymentData?.oracleShareUrl ? (
+            <div className="mt-6 rounded-2xl border-2 border-success/40 bg-success/10 p-5">
+              <p className="text-2xs font-bold uppercase tracking-widest text-success">
+                Votre stratégie complète est activée
+              </p>
+              <p className="mt-2 text-sm text-foreground">
+                Les 35 sections de votre document stratégique s&apos;assemblent — consultez-le (et gardez ce lien) :
+              </p>
+              <a
+                href={paymentData.oracleShareUrl}
+                className="mt-2 inline-flex items-center gap-2 rounded-lg bg-success px-4 py-2 text-sm font-semibold text-background hover:opacity-90"
+              >
+                Ouvrir ma stratégie complète <ArrowRight className="h-4 w-4" />
+              </a>
+            </div>
+          ) : null}
+
+          {/* Radar 4 piliers — la promesse « radar » enfin livrée (audit
+              2026-07-16 : le composant existait partout sauf ici). */}
+          <div className="mt-6 flex flex-col items-center gap-2">
+            <AdvertisRadar
+              scores={{ a: cap(vector.a ?? 0), d: cap(vector.d ?? 0), v: cap(vector.v ?? 0), e: cap(vector.e ?? 0) }}
+              pillarKeys={PILLAR_KEYS.filter((k) => k === "a" || k === "d" || k === "v" || k === "e")}
+              maxScore={25}
+              size="md"
+              interactive={false}
+            />
+            <p className="max-w-[52ch] text-center text-xs text-foreground-muted">
+              Score socle ADVE : {composite}/100 — votre score de marque complet /200
+              (piliers d&apos;exécution inclus) se construit ensuite dans votre espace.
+            </p>
+          </div>
 
           {/* Completion score — relegated to a small caption */}
           <p className="mt-3 text-xs text-foreground-muted">
@@ -1203,6 +1257,48 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
               <span className="font-semibold">Fondé sur :</span>{" "}
               {report.recommendation.foundedOnTension}
             </p>
+          </section>
+        )}
+
+        {/* ════════════════════════════════════════════════════════════
+            PLAN D'ACTION PRIORITAIRE — déterministe, TOUJOURS livré.
+            Fallback quand le bloc stratégique V3 est absent : le plan
+            généré par l'analyse des réponses (generateDiagnostic) était
+            calculé, persisté… et jamais rendu (audit 2026-07-16 — la
+            promesse « plan d'action » du tier PDF devient inconditionnelle).
+            Rendu écran ET PDF.
+        ════════════════════════════════════════════════════════════ */}
+        {!report?.recommendation && (diagnostic?.recommendations?.length ?? 0) > 0 && (
+          <section className="mt-10 rounded-2xl border border-primary/40 bg-card p-6 sm:p-8 print:mt-0 print:rounded-none print:border-0 print:break-before-page">
+            <header className="mb-6">
+              <p className="text-2xs font-bold uppercase tracking-[0.25em] text-primary">
+                Plan d&apos;action prioritaire
+              </p>
+              <h2 className="mt-1 text-xl font-bold text-foreground sm:text-2xl">
+                Vos deux chantiers, analysés depuis vos réponses
+              </h2>
+            </header>
+            <div className="space-y-6">
+              {diagnostic!.recommendations!.map((rec) => (
+                <div key={rec.key} className="rounded-xl border border-border p-5">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <h3 className="text-base font-bold text-foreground">{rec.pillar}</h3>
+                    <span className="text-xs font-mono text-foreground-muted">{Math.round(rec.score * 10) / 10}/25</span>
+                  </div>
+                  <p className="mt-2 text-sm leading-relaxed text-foreground-secondary">{rec.diagnostic}</p>
+                  {rec.actions.length > 0 && (
+                    <ul className="mt-3 space-y-1.5 text-sm text-foreground">
+                      {rec.actions.map((a, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <ArrowRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                          {a}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </div>
           </section>
         )}
 

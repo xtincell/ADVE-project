@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { trpc } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";
 import {
@@ -78,6 +79,55 @@ export default function NewBrandPage() {
   const createStrategy = trpc.strategy.create.useMutation();
   const startBoot = trpc.bootSequence.start.useMutation();
 
+  // ── Reprise d'un diagnostic intake (?intake=<token>) ─────────────────────
+  // Le result page redirige ici avec `?tier=&intake=` — ces params étaient
+  // JETÉS (audit 2026-07-16) : l'abonné re-saisissait tout à la main et sa
+  // marque naissait VIDE alors que ses 4 piliers extraits + diagnostic +
+  // empreinte existaient déjà. Désormais : si l'email de session correspond,
+  // on propose l'activation complète (activateBrand — piliers inclus) ;
+  // sinon on préremplit le formulaire.
+  const [intakeToken, setIntakeToken] = useState<string | null>(null);
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get("intake");
+    if (t) setIntakeToken(t);
+  }, []);
+  const { data: session } = useSession();
+  const sessionEmail = session?.user?.email ?? null;
+  const { data: intakeData } = trpc.quickIntake.getByToken.useQuery(
+    { token: intakeToken ?? "" },
+    { enabled: !!intakeToken },
+  );
+  const activateBrand = trpc.quickIntake.activateBrand.useMutation({
+    onSuccess: () => router.push("/cockpit"),
+    onError: (e) => setError(e.message || "Activation impossible — créez la marque manuellement ci-dessous."),
+  });
+  const intakeMatchesSession =
+    !!intakeData?.contactEmail && !!sessionEmail &&
+    intakeData.contactEmail.toLowerCase() === sessionEmail.toLowerCase();
+
+  // Préremplissage depuis l'intake (une fois, sans écraser une saisie).
+  const [prefilled, setPrefilled] = useState(false);
+  useEffect(() => {
+    if (!intakeData || prefilled) return;
+    setPrefilled(true);
+    if (intakeData.companyName && !brandName) setBrandName(intakeData.companyName);
+    if (intakeData.sector) {
+      const s = intakeData.sector.toUpperCase();
+      setSector(SECTORS.includes(s) ? s : "AUTRE");
+    }
+    if (intakeData.country) {
+      const c = intakeData.country.toUpperCase();
+      setCountry(COUNTRIES.some((x) => x.code === c) ? c : "OTHER");
+    }
+    if (intakeData.businessModel && BUSINESS_MODELS.some((m) => m.key === intakeData.businessModel)) {
+      setBusinessModel(intakeData.businessModel);
+    }
+    if (intakeData.positioning && POSITIONING.some((p) => p.key === intakeData.positioning)) {
+      setPositioning(intakeData.positioning);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [intakeData, prefilled]);
+
   const STEPS = [
     { title: "La marque", icon: Sparkles },
     { title: "Le marché", icon: Globe },
@@ -148,6 +198,34 @@ export default function NewBrandPage() {
           { label: "Nouvelle marque" },
         ]}
       />
+
+      {/* Diagnostic intake détecté : activation complète en un clic (piliers
+          extraits + diagnostic + empreinte inclus) au lieu de repartir de zéro. */}
+      {intakeData && intakeMatchesSession ? (
+        <div className="mb-6 rounded-2xl border-2 border-success/40 bg-success/10 p-5">
+          <p className="text-2xs font-bold uppercase tracking-widest text-success">
+            Votre diagnostic est prêt à être activé
+          </p>
+          <p className="mt-2 text-sm text-foreground">
+            <strong>{intakeData.companyName}</strong> a déjà été diagnostiquée — activez-la
+            telle quelle : vos réponses, votre analyse et votre empreinte publique suivent.
+            Rien à re-saisir.
+          </p>
+          <button
+            type="button"
+            disabled={activateBrand.isPending}
+            onClick={() => intakeToken && activateBrand.mutate({ token: intakeToken })}
+            className="mt-3 inline-flex items-center gap-2 rounded-lg bg-success px-4 py-2 text-sm font-semibold text-background hover:opacity-90 disabled:opacity-50"
+          >
+            {activateBrand.isPending ? "Activation…" : "Activer ma marque diagnostiquée"}
+            <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
+      ) : intakeData ? (
+        <div className="mb-6 rounded-xl border border-border bg-card p-4 text-sm text-foreground-secondary">
+          Formulaire prérempli depuis votre diagnostic <strong>{intakeData.companyName}</strong> — vérifiez et complétez.
+        </div>
+      ) : null}
 
       {/* Step indicator */}
       <div className="flex items-center gap-2">

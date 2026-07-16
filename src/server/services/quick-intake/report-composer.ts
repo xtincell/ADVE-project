@@ -26,8 +26,13 @@ const RTIS_LABELS: Record<"r" | "t" | "i" | "s", string> = {
   s: "Stratégie",
 };
 
-/** Champs méta/techniques exclus du rendu verbatim. */
-const HIDDEN_FIELDS = new Set([
+/**
+ * Champs méta/techniques exclus du rendu verbatim — PARTAGÉ avec le result
+ * page (audit 2026-07-16 : la page rendait « Narrative full » dupliqué et du
+ * JSON brut « Web presence » dans le PDF payant alors que cette liste existait
+ * déjà ici).
+ */
+export const HIDDEN_FIELDS = new Set([
   "narrativePreview",
   "narrativeFull",
   "webPresence",

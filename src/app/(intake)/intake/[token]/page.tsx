@@ -431,8 +431,22 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
               {typeof window !== "undefined" ? `${window.location.origin}/intake/${token}` : `/intake/${token}`}
             </code>
           </div>
-          <p className="mt-3 text-xs text-foreground-muted">
-            Un email de rappel a ete envoye a votre adresse.
+          {/* Honnêteté : AUCUN email n'est envoyé ici (audit 2026-07-16 — la
+              phrase « un email de rappel a été envoyé » était fausse ; un lead
+              qui s'y fiait et fermait l'onglet perdait son diagnostic). */}
+          <button
+            type="button"
+            onClick={() => {
+              void navigator.clipboard
+                .writeText(`${window.location.origin}/intake/${token}`)
+                .catch(() => undefined);
+            }}
+            className="mt-3 text-xs font-medium text-primary underline-offset-2 hover:underline"
+          >
+            Copier le lien
+          </button>
+          <p className="mt-2 text-xs text-foreground-muted">
+            Gardez ce lien précieusement — c&apos;est votre seul accès de reprise.
           </p>
           <div className="mt-6 flex gap-3">
             <button

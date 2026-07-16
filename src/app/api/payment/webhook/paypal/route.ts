@@ -127,11 +127,11 @@ export async function POST(req: Request) {
     return null;
   });
 
-  // Vague D — re-extraction ADVE premium + régénération rapport pour le
-  // payeur, fire-and-forget (jamais bloquant pour l'ACK webhook).
+  // Fulfillment centralisé (fire-and-forget) : re-extraction premium +
+  // livraison ORACLE_FULL selon le tierKey payé (audit 2026-07-16).
   if (payment?.intakeToken) {
-    const { premiumReextractAfterPayment } = await import("@/server/services/quick-intake");
-    premiumReextractAfterPayment(payment.intakeToken);
+    const { fulfillPaidIntakeReport } = await import("@/server/services/quick-intake/paid-fulfillment");
+    void fulfillPaidIntakeReport(reference);
   }
 
   // Cycle d'abonnement manuel (Vague 5) — extension de période à l'encaissement.

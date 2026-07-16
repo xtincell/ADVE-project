@@ -76,8 +76,13 @@ export const paymentRouter = createTRPCRouter({
             provider: "ADMIN_BYPASS",
             status: "PAID",
             paidAt: new Date(),
+            tierKey: input.tierKey,
           },
         });
+        // PAID immédiat (pas de webhook) → fulfillment ici (ORACLE_FULL livré).
+        void import("@/server/services/quick-intake/paid-fulfillment").then((m) =>
+          m.fulfillPaidIntakeReport(reference),
+        );
         return {
           paymentUrl: `${input.returnUrl}?ref=${reference}&status=paid&bypass=admin`,
           reference,
@@ -104,8 +109,12 @@ export const paymentRouter = createTRPCRouter({
             provider: "ADMIN_BYPASS",
             status: "PAID",
             paidAt: new Date(),
+            tierKey: input.tierKey,
           },
         });
+        void import("@/server/services/quick-intake/paid-fulfillment").then((m) =>
+          m.fulfillPaidIntakeReport(reference),
+        );
         return {
           paymentUrl: `${input.returnUrl}?ref=${reference}&status=paid&bypass=free`,
           reference,
@@ -143,8 +152,12 @@ export const paymentRouter = createTRPCRouter({
             provider: "MOCK",
             status: "PAID",
             paidAt: new Date(),
+            tierKey: input.tierKey,
           },
         });
+        void import("@/server/services/quick-intake/paid-fulfillment").then((m) =>
+          m.fulfillPaidIntakeReport(reference),
+        );
         const result = await providerImpl.initPayment({
           reference,
           amount: providerAmount,
@@ -172,6 +185,10 @@ export const paymentRouter = createTRPCRouter({
           currency: resolved.currencyCode as "EUR" | "XAF" | "XOF" | "USD" | "MAD" | "NGN" | "GHS" | "TND" | "CDF" | "WKD",
           provider: providerId,
           status: "PENDING",
+          // Tier acheté — SANS ça, le webhook ne peut pas savoir quoi livrer
+          // (cause racine du gap « ORACLE_FULL payé jamais livré », audit
+          // 2026-07-16 : la colonne existait, jamais peuplée).
+          tierKey: input.tierKey,
         },
       });
 
@@ -531,16 +548,35 @@ export const paymentRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const payment = await ctx.db.intakePayment.findUnique({
         where: { reference: input.reference },
-        select: { status: true, intakeToken: true, provider: true },
+        select: { status: true, intakeToken: true, provider: true, tierKey: true },
       });
       if (!payment) {
-        return { status: "NOT_FOUND" as const, paid: false };
+        return { status: "NOT_FOUND" as const, paid: false, tierKey: null, oracleShareUrl: null };
+      }
+      // ORACLE_FULL payé : remonter le lien de la stratégie complète au payeur
+      // (le fulfillment l'a activée — audit 2026-07-16, le payeur ne voyait RIEN).
+      let oracleShareUrl: string | null = null;
+      if (payment.status === "PAID" && payment.tierKey === "ORACLE_FULL" && payment.intakeToken) {
+        try {
+          const intake = await ctx.db.quickIntake.findUnique({
+            where: { shareToken: payment.intakeToken },
+            select: { convertedToId: true },
+          });
+          if (intake?.convertedToId) {
+            const { getShareToken } = await import("@/server/services/strategy-presentation");
+            oracleShareUrl = (await getShareToken(intake.convertedToId)).url;
+          }
+        } catch {
+          /* best-effort — l'assemblage peut encore être en cours */
+        }
       }
       return {
         status: payment.status,
         paid: payment.status === "PAID",
         intakeToken: payment.intakeToken,
         provider: payment.provider,
+        tierKey: payment.tierKey,
+        oracleShareUrl,
       };
     }),
 

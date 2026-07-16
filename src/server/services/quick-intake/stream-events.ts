@@ -8,8 +8,15 @@
  * NSP n'est qu'un aiguillage temps-réel pour l'UI result page.
  *
  * Routing : on publie par `intakeToken` car l'intake est anonyme pré-conversion
- * (pas de userId stable). La page `/intake/[token]/result` subscribe au canal
- * du même token.
+ * (pas de userId stable).
+ *
+ * ⚠️ ÉTAT RÉEL (audit 2026-07-16, `stream-jalons-intake-sans-consommateur`) :
+ * AUCUN consommateur client n'existe encore — le seul endpoint SSE
+ * (`/api/notifications/stream`) exige une session (401 pour un lead anonyme).
+ * Les jalons sont émis pour le jour où un endpoint SSE public token-scopé
+ * sera posé ; d'ici là, le wizard affiche un spinner et l'écran ingest une
+ * progression simulée. Ne PAS documenter ces emitters comme « consommés par
+ * la result page » — c'était faux.
  *
  * Les 6 sub-kinds discriminés couvrent :
  *   - intake_started       — complete() démarré
