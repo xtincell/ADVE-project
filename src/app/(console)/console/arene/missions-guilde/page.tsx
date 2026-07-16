@@ -103,6 +103,52 @@ export default function GuildMissionModerationPage() {
                   )}
                 </div>
 
+                {/* Brief COMPLET dépliable (audit 2026-07-16 : le modérateur
+                    publiait/rejetait sans lire contexte/livrables/critères). */}
+                <details className="rounded-[var(--card-radius)] border border-border-subtle">
+                  <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-foreground-secondary hover:text-foreground">
+                    Brief complet
+                  </summary>
+                  <div className="space-y-2 px-3 pb-3 text-sm text-foreground-secondary">
+                    {m.fullBrief.context && (
+                      <p><span className="font-medium text-foreground">Contexte : </span>{m.fullBrief.context}</p>
+                    )}
+                    {m.fullBrief.targetAudience && (
+                      <p><span className="font-medium text-foreground">Audience cible : </span>{m.fullBrief.targetAudience}</p>
+                    )}
+                    {m.fullBrief.deliverables.length > 0 && (
+                      <div>
+                        <p className="font-medium text-foreground">Livrables attendus :</p>
+                        <ul className="ml-4 list-disc">
+                          {m.fullBrief.deliverables.map((d, i) => (
+                            <li key={i}>{d.title}{d.description ? ` — ${d.description}` : ""}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {m.fullBrief.channels.length > 0 && (
+                      <p><span className="font-medium text-foreground">Canaux : </span>{m.fullBrief.channels.join(", ")}</p>
+                    )}
+                    {m.fullBrief.skillsRequired.length > 0 && (
+                      <p><span className="font-medium text-foreground">Compétences : </span>{m.fullBrief.skillsRequired.join(", ")}</p>
+                    )}
+                    {m.fullBrief.qualityCriteria.length > 0 && (
+                      <div>
+                        <p className="font-medium text-foreground">Critères de qualité :</p>
+                        <ul className="ml-4 list-disc">
+                          {m.fullBrief.qualityCriteria.map((c, i) => <li key={i}>{c}</li>)}
+                        </ul>
+                      </div>
+                    )}
+                    {m.fullBrief.deadline && (
+                      <p><span className="font-medium text-foreground">Échéance : </span>{new Date(m.fullBrief.deadline).toLocaleDateString("fr-FR")}</p>
+                    )}
+                    {!m.fullBrief.context && m.fullBrief.deliverables.length === 0 && (
+                      <p className="text-foreground-muted">Le brief ne contient pas de détail au-delà du résumé.</p>
+                    )}
+                  </div>
+                </details>
+
                 {rejectingId === m.id && (
                   <div className="flex flex-col gap-2 rounded-[var(--card-radius)] border border-border-subtle p-3">
                     <Textarea

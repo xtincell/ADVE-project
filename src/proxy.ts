@@ -79,6 +79,10 @@ const CREATOR_ROLES = [
   "CREATOR",
   "FREELANCE",
   "PARTNER",
+  // Audit 2026-07-16 `agency-role-locked-out-of-application-tracking` : une
+  // agence inscrite via La Guilde (rôle promu AGENCY) candidatait puis perdait
+  // TOUT accès au suivi de ses candidatures (/creator = seule surface listMine).
+  "AGENCY",
 ];
 
 const PROTECTED_ROUTES: Array<{
