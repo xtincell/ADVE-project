@@ -58,6 +58,7 @@ const DEGRADATION_LABEL: Record<ConnectorDegradationReason, string> = {
   VENDOR_OUTAGE: "Panne fournisseur",
   RATE_LIMITED: "Quota dépassé",
   AUTH_REVOKED: "Accès révoqué",
+  MISSING_PREREQUISITE: "Prérequis à renseigner",
 };
 
 const CREDENTIALS_VAULT_URL = "/console/anubis/credentials";

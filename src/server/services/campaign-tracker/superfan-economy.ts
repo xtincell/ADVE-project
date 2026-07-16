@@ -201,6 +201,10 @@ function mapDegradationToReason(reason: ConnectorDegradationReason): SuperfanIns
       return "DEGRADED_RATE_LIMITED";
     case "AUTH_REVOKED":
       return "DEGRADED_AUTH_REVOKED";
+    // Un prérequis utilisateur manquant se lit comme un manque de donnée côté
+    // mesure superfan (le connecteur CRM n'émet pas cette raison lui-même).
+    case "MISSING_PREREQUISITE":
+      return "DEGRADED_INSUFFICIENT_DATA";
   }
 }
 

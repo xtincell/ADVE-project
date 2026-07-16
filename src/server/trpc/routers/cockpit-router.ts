@@ -169,15 +169,17 @@ export const cockpitRouter = createTRPCRouter({
 
       const sectorSlug = extractSectorSlug(strategy.businessContext);
       if (!sectorSlug) {
-        return { state: "DEGRADED", reason: "INSUFFICIENT_DATA" };
+        // Cause discriminée (audit 2026-07-16) : secteur non renseigné = action
+        // à la main du founder, pas « attendez que le signal arrive ».
+        return { state: "DEGRADED", reason: "MISSING_PREREQUISITE" };
       }
-      if (!strategy.operatorId) {
-        // No operator → no credentials reachable → ship-without-keys honest state.
-        return { state: "DEFERRED_AWAITING_CREDENTIALS", connectorId: "tarsis-monitoring" };
-      }
-
+      // Audit 2026-07-16 `overton-deferred-stale-operator-guard` : le guard
+      // `!strategy.operatorId` était MORT depuis le dé-mock du connecteur
+      // (fetchSectorSignal ignore operatorId — signal sectoriel réel en base).
+      // Un founder self-serve voyait À VIE « en attente d'activation » pendant
+      // que le signal RSS dormait. Appel inconditionnel.
       const { fetchSectorSignal } = await import("@/server/services/seshat/tarsis/connector");
-      const signal = await fetchSectorSignal(strategy.operatorId, sectorSlug);
+      const signal = await fetchSectorSignal(strategy.operatorId ?? "", sectorSlug);
 
       // P22-1 invariant 1 : exhaustive — no default/else.
       switch (signal.state) {
@@ -253,7 +255,7 @@ export const cockpitRouter = createTRPCRouter({
       const prevStart = new Date();
       prevStart.setDate(prevStart.getDate() - periodDays * 2);
 
-      const [total, active, evangelistes, newActive, previousActive, devotionRow, communityRow, followerSnaps] =
+      const [total, active, evangelistes, newActive, previousActive, devotionRow, devotionHistoryRows, communityRow, followerSnaps] =
         await Promise.all([
           ctx.db.superfanProfile.count({ where: { strategyId } }),
           ctx.db.superfanProfile.count({ where: { strategyId, engagementDepth: { gte: ACTIVE_SUPERFAN_THRESHOLD } } }),
@@ -265,6 +267,14 @@ export const cockpitRouter = createTRPCRouter({
             where: { strategyId, engagementDepth: { gte: ACTIVE_SUPERFAN_THRESHOLD }, createdAt: { gte: prevStart, lt: since } },
           }),
           ctx.db.devotionSnapshot.findFirst({ where: { strategyId }, orderBy: { measuredAt: "desc" } }),
+          // Trajectoire (audit 2026-07-16 `community-timeseries-and-identities-
+          // dropped`) : la donnée quotidienne persistée n'était jamais projetée.
+          ctx.db.devotionSnapshot.findMany({
+            where: { strategyId },
+            orderBy: { measuredAt: "desc" },
+            take: 30,
+            select: { devotionScore: true, measuredAt: true },
+          }),
           ctx.db.communitySnapshot.findFirst({ where: { strategyId }, orderBy: { measuredAt: "desc" } }),
           ctx.db.followerSnapshot.findMany({
             where: { strategyId },
@@ -286,6 +296,7 @@ export const cockpitRouter = createTRPCRouter({
         superfanCounts: { total, active, evangelistes },
         velocity: { newActive, previousActive, periodDays },
         devotionRow,
+        devotionHistory: [...devotionHistoryRows].reverse(),
         communityRow,
         followerRows,
       });
@@ -377,6 +388,10 @@ export const cockpitRouter = createTRPCRouter({
               footprintScore: webPresence.footprintScore?.total ?? null,
             }
           : null,
+        // Empreinte ENTIÈRE (presse titres+liens, avis, domaine, email, perf…)
+        // — le prospect voyait plus que le client payant (audit 2026-07-16
+        // `footprint-riche-invisible-founder`). Read-only, tenant-scopé plus haut.
+        webPresenceFull: (eContent.webPresence ?? null) as unknown,
         marketFeed: {
           countryCode: strategy.countryCode,
           sector: typeof sector === "string" ? sector : null,

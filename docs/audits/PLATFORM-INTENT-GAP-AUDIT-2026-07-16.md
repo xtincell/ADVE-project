@@ -497,7 +497,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : Le writer DevotionSnapshot stocke des POURCENTAGES 0-100 (devotion-engine/index.ts:233-247, roundPct((count/total)*100)), mais le panel applique le heuristique pct() `v <= 1 ? v*100 : v` (community-panel.tsx:46-49) aux rungs. Avec la forme de donnée réelle qu'ADR-0134 a créée (des milliers de spectateurs, une poignée d'ambassadeurs), tout rung < 1% (ex. 3 ambassadeurs / 4000 → 0.1 stocké) est re-multiplié ×100 et affiché « 10% » voire « 100% » — l'échelle d'engagement du founder est fausse d'un facteur 100 exactement là où la mesure devient réelle.
 - **Preuve** : src/components/cockpit/intelligence/community-panel.tsx:46-49 `const n = v <= 1 ? v * 100 : v;` appliqué à devotion.distribution (l.141) ; src/server/services/devotion-engine/index.ts:237-247 stocke `roundPct((finalCounts.x / totalAudience) * 100)` (0-100).
 - **Fix esquissé** : Normaliser l'unité au boundary DTO : shapeCommunityDashboard convertit les rungs DevotionSnapshot /100 en fractions canon 0-1, et le panel supprime l'heuristique pct() au profit d'un simple ×100 arrondi.
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V7 cockpit intelligence (v6.27.181)
 
 ### [CRITICAL] `metric-card-white-on-bone-light-mode` — cockpit-intelligence
 
@@ -506,7 +506,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : MetricCard rend la valeur en `text-white` littéral (metric-card.tsx:123) et le trend up en `text-emerald-400` (l.94). Le toggle thème pose `data-theme="light"` sur documentElement (theme-toggle.tsx:52) qui flippe `--color-background` vers bone quasi-blanc (tokens/system.css:57-60). En mode jour, les 4 KPIs superfans (« Superfans actifs », « Prescripteurs », etc.) sont blanc-sur-bone → invisibles pour le founder.
 - **Preuve** : src/components/shared/metric-card.tsx:123 `<span className="text-2xl font-bold text-white">` ; src/styles/tokens/system.css:57-60 `[data-theme="light"] { --color-background: var(--ref-bone); ... }` ; consommé par community-panel.tsx:125-132.
 - **Fix esquissé** : Remplacer `text-white` par `text-foreground` et `text-emerald-400` par le token succès dans MetricCard (composant partagé — corrige aussi le dashboard).
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V7 cockpit intelligence (v6.27.181)
 
 ### [CRITICAL] `overton-deferred-stale-operator-guard` — cockpit-intelligence
 
@@ -515,7 +515,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : Le router court-circuite AVANT le connecteur : `if (!strategy.operatorId) return { state: "DEFERRED_AWAITING_CREDENTIALS" }` (cockpit-router.ts:169-172) alors que fetchSectorSignal ignore totalement operatorId (`_operatorId`, connector.ts:64-67). Un founder self-serve (Strategy.operatorId null — strategy.ts:44 le tire de la session, un founder n'en a pas) voit À VIE « Source signal en attente d'activation... Vos équipes UPgraders s'en chargent » (overton-radar.tsx:84-88) — une promesse que personne ne peut tenir puisqu'il n'existe plus aucune credential à activer, pendant que le signal RSS réel dort en base.
 - **Preuve** : src/server/trpc/routers/cockpit-router.ts:169-172 (guard) vs src/server/services/seshat/tarsis/connector.ts:24-25 (« Plus de branche DEFERRED... ») et :64 `fetchSectorSignal(_operatorId, ...)`.
 - **Fix esquissé** : Supprimer le guard `!strategy.operatorId` (mort post-dé-mock) et appeler fetchSectorSignal inconditionnellement ; retirer la copy DEFERRED du chemin founder ou la réserver au futur enrichissement premium.
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V7 cockpit intelligence (v6.27.181)
 
 ### [CRITICAL] `console-orphan-brand-directory-scoreur-canon` — console-operator
 
@@ -632,7 +632,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : Le champ est calculé et posé sur le view-model (cockpit-router.ts:203) mais AUCUN composant ne le lit — grep repo entier : 2 hits seulement (le producteur et la définition domain). Le radar (overton-radar.tsx) ne rend jamais si l'axe affiché est celui de la polity exacte de la marque ou un fallback global — précisément le mensonge par omission qu'ADR-0127 voulait fermer.
 - **Preuve** : src/server/trpc/routers/cockpit-router.ts:203 `axisPolityResolution: resolved?.resolution ?? null` ; src/domain/overton-radar-signal.ts:68 ; zéro consommateur dans src/components/** (grep axisPolityResolution).
 - **Fix esquissé** : Ajouter un badge de provenance dans le header du radar (« Axe : votre marché » / « échelle » / « référence globale ») lu depuis signal.data.axisPolityResolution.
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V7 cockpit intelligence (v6.27.181)
 
 ### [MAJOR] `community-timeseries-and-identities-dropped` — cockpit-intelligence
 
@@ -641,7 +641,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : La donnée temporelle est persistée chaque jour mais le dashboard ne projette que le DERNIER snapshot + un delta 30j (cockpit-router.ts:257-258 findFirst orderBy desc) : aucun sparkline (MetricCard supporte `data` — jamais passé), getDevotionTrend et son annotation preAudienceBase ont ZÉRO consommateur, et superfan.top/segments (QUI sont les superfans) ne sont branchés nulle part — le founder voit des compteurs nus, jamais ses fans ni la trajectoire.
 - **Preuve** : src/server/trpc/routers/cockpit-router.ts:257-258 (findFirst latest only) ; grep getDevotionTrend → seul le manifest le référence ; grep superfan.top/segments → zéro .tsx ; metric-card.tsx:9 prop `data` (sparkline) jamais fournie par community-panel.tsx:124-132.
 - **Fix esquissé** : Étendre getCommunityDashboard avec les N derniers snapshots (sparklines MetricCard + trend devotion annoté preAudienceBase) et un bloc « Vos superfans » branché sur superfan.top (tenant-scopé d'abord, cf. gap précédent).
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V7 cockpit intelligence (v6.27.181)
 
 ### [MAJOR] `degraded-copy-hides-missing-sector-unlock` — cockpit-intelligence
 
@@ -650,7 +650,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : Secteur absent de businessContext → même reason INSUFFICIENT_DATA que « pas assez d'observations » ; le radar affiche « Le secteur n'a pas encore produit assez d'observations... se précisera avec le temps » (overton-radar.tsx:91-94) — on dit au founder d'ATTENDRE alors que le déblocage est une action à sa main (renseigner son secteur). Dead-end permanent maquillé en patience.
 - **Preuve** : src/server/trpc/routers/cockpit-router.ts:165-168 (sector absent → DEGRADED INSUFFICIENT_DATA, indistinguable) ; src/components/neteru/overton-radar.tsx:90-95 (copy « avec le temps », aucun CTA).
 - **Fix esquissé** : Discriminer la cause (ex. reason dédiée ou champ missingPrerequisite) et rendre un EmptyState actionnable « Renseignez le secteur de votre marque » avec lien vers la fiche marque.
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V7 cockpit intelligence (v6.27.181)
 
 ### [MAJOR] `superfan-overton-queries-unscoped-pii` — cockpit-intelligence
 
@@ -821,7 +821,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : Une fois le lead devenu FOUNDER payant, le cockpit ne projette que 3 compteurs : `getConnectedSources` réduit webPresence à { siteReachable, socialsDetected: count, pressMentions: count, footprintScore } et la page settings rend « X canal(aux) détecté(s) · Y mention(s) presse ». Les titres/liens presse, avis Google, âge de domaine, infra email ne sont rendus NULLE PART dans le cockpit (grep webPresence en .tsx : settings/page.tsx uniquement) ; webPresence est absent de la variable-bible → le hub pilier E ne l'affiche pas non plus. Le prospect voit plus que le client payant.
 - **Preuve** : src/server/trpc/routers/cockpit-router.ts:361-369 (projection compteurs) ; src/app/(cockpit)/cockpit/settings/page.tsx:161-169 ; richesse réelle : src/server/services/quick-intake/footprint-types.ts:21-87 + public-enrichment.ts:517-569 ; surface lead riche : src/app/(intake)/intake/[token]/result/footprint-section.tsx:45-53
 - **Fix esquissé** : Étendre getConnectedSources (ou une query dédiée) pour projeter press[], maps, youtube, domain, emailInfra tels quels, et réutiliser le composant footprint-section de l'intake côté cockpit (hub Fondation ou pilier E).
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V7 cockpit intelligence (v6.27.181)
 
 ### [MAJOR] `identity-graph-sans-porte-ni-bridge` — transverse-scan
 
@@ -839,7 +839,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : Le dashboard communauté founder ne montre QUE des agrégats (total/actifs/prescripteurs/ratio/vélocité) — jamais QUI sont les superfans. La procédure `superfan.top` (handles, segment, interactions, lastActiveAt, protectedProcedure donc pensée founder) existe mais a ZÉRO consommateur UI (grep : aucun .tsx) ; aucune liste superfans côté console non plus. La donnée d'identité collectée quotidiennement est jetée à la projection — le pattern scorer sur la métrique pivot de la mission.
 - **Preuve** : src/server/trpc/routers/superfan.ts:193-216 (top orphelin) ; src/components/cockpit/intelligence/community-panel.tsx:125-131 + 214-222 (MetricCards de comptes uniquement) ; src/server/trpc/routers/cockpit-router.ts:246-256 (getCommunityDashboard ne fait que des count())
 - **Fix esquissé** : Ajouter une section « Vos ambassadeurs » au CommunityPanel consommant superfan.top (displayName/plateforme/segment/dernière activité), en respectant le lexique T7.
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V7 cockpit intelligence (v6.27.181)
 
 ## Faux positifs écartés
 

@@ -29,6 +29,9 @@ export interface CommunityDevotion {
   };
   readonly devotionScore: number;
   readonly measuredAt: string;
+  /** Trajectoire du score (asc, ≤30 derniers snapshots quotidiens) — audit
+      2026-07-16 `community-timeseries-and-identities-dropped`. */
+  readonly history: ReadonlyArray<number>;
 }
 
 export interface CommunityHealth {
@@ -93,6 +96,8 @@ export interface ShapeInput {
   communityRow: CommunityRow | null;
   /** Latest follower count per platform (already deduped to most-recent). */
   followerRows: ReadonlyArray<{ platform: string; followerCount: number }>;
+  /** Snapshots devotion asc pour la trajectoire (optionnel, défaut []). */
+  devotionHistory?: ReadonlyArray<{ devotionScore: number }>;
 }
 
 /**
@@ -100,23 +105,31 @@ export interface ShapeInput {
  * déterministe, zéro LLM, zéro I/O.
  */
 export function shapeCommunityDashboard(input: ShapeInput): CommunityDashboard {
-  const { superfanCounts, velocity, devotionRow, communityRow, followerRows } = input;
+  const { superfanCounts, velocity, devotionRow, communityRow, followerRows, devotionHistory } = input;
 
   const delta = velocity.newActive - velocity.previousActive;
   const trend: VelocityTrend = delta > 0 ? "up" : delta < 0 ? "down" : "flat";
 
+  // Unité normalisée AU BOUNDARY : DevotionSnapshot stocke des POURCENTAGES
+  // 0-100 (devotion-engine roundPct) ; le DTO porte des FRACTIONS 0-1 canon.
+  // Audit 2026-07-16 `devotion-rung-pct-times-100` : l'heuristique UI
+  // « v <= 1 ? v*100 : v » re-multipliait les petits rungs réels (0.1 % → 10 %)
+  // — l'échelle d'engagement était fausse d'un facteur 100 exactement là où
+  // la mesure devient réelle.
+  const asFraction = (v: number): number => Math.max(0, Math.min(1, v / 100));
   const devotion: CommunityDevotion | null = devotionRow
     ? {
         distribution: {
-          spectateur: devotionRow.spectateur,
-          interesse: devotionRow.interesse,
-          participant: devotionRow.participant,
-          engage: devotionRow.engage,
-          ambassadeur: devotionRow.ambassadeur,
-          evangeliste: devotionRow.evangeliste,
+          spectateur: asFraction(devotionRow.spectateur),
+          interesse: asFraction(devotionRow.interesse),
+          participant: asFraction(devotionRow.participant),
+          engage: asFraction(devotionRow.engage),
+          ambassadeur: asFraction(devotionRow.ambassadeur),
+          evangeliste: asFraction(devotionRow.evangeliste),
         },
         devotionScore: devotionRow.devotionScore,
         measuredAt: devotionRow.measuredAt.toISOString(),
+        history: (devotionHistory ?? []).map((h) => h.devotionScore),
       }
     : null;
 

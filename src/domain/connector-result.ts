@@ -86,6 +86,12 @@ export const CONNECTOR_DEGRADATION_REASONS = [
   "RATE_LIMITED",
   /** Upstream returned a 401/403 — credentials are invalid, revoked, or expired. */
   "AUTH_REVOKED",
+  /**
+   * A prerequisite the USER can fill is missing (e.g. brand sector not declared).
+   * Distinct from INSUFFICIENT_DATA : the unlock is an action, not patience
+   * (audit 2026-07-16 `degraded-copy-hides-missing-sector-unlock`).
+   */
+  "MISSING_PREREQUISITE",
 ] as const;
 
 export type ConnectorDegradationReason = (typeof CONNECTOR_DEGRADATION_REASONS)[number];
