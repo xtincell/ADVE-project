@@ -24,5 +24,5 @@ export default async function SharedStrategyPage({ params, searchParams }: Props
   const validPersona =
     persona === "client" || persona === "creative" ? persona : "consultant";
 
-  return <PresentationLayout document={document} defaultPersona={validPersona} />;
+  return <PresentationLayout document={document} defaultPersona={validPersona} shareToken={token} />;
 }

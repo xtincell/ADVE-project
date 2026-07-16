@@ -62,6 +62,10 @@ import {
 } from "./sections/phase13-sections";
 
 interface PresentationLayoutProps {
+  /** Token public — quand le layout est rendu via /shared/strategy/[token],
+      l'export PDF passe par la route token-scopée (le destinataire du lien
+      n'a pas de session — audit 2026-07-16, `shared-oracle-pdf-401`). */
+  shareToken?: string;
   document: StrategyPresentationDocument;
   defaultPersona: PresentationPersona;
 }
@@ -186,7 +190,7 @@ const TIER_META: Record<string, { rn: string; chip: string; nav: string; icon: L
   DISTINCTIVE: { rn: "III", chip: "Distinct", nav: "Distinctives", icon: Sparkles, title: "Distinctives La Fusée", desc: "Ce que les Big 4 ne mesurent pas : la masse culturelle." },
 };
 
-export function PresentationLayout({ document: doc, defaultPersona }: PresentationLayoutProps) {
+export function PresentationLayout({ document: doc, defaultPersona, shareToken }: PresentationLayoutProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [persona, setPersona] = useState<PresentationPersona>(defaultPersona);
@@ -255,7 +259,9 @@ export function PresentationLayout({ document: doc, defaultPersona }: Presentati
       ? "La promesse, la valeur et le plan — l'essentiel pour décider, en clair."
       : "Le territoire de marque — plateforme, création et exécution.";
 
-  const pdfHref = `/api/export/oracle/${doc.meta.strategyId}/pdf`;
+  const pdfHref = shareToken
+    ? `/api/export/oracle/shared/${shareToken}/pdf`
+    : `/api/export/oracle/${doc.meta.strategyId}/pdf`;
 
   return (
     <div className="ck-ogen" data-theme={theme} role="main" aria-label="L'Oracle — page générée">

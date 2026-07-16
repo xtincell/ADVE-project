@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { LayoutGrid, Menu, X } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { LocaleToggle } from "@/components/i18n/locale-toggle";
+import { APP_VERSION } from "@/lib/version";
 
 function firstName(name: string | null | undefined, email: string | null | undefined, fallback: string): string {
   if (name && name.trim()) return name.trim().split(/\s+/)[0]!;
@@ -53,7 +54,8 @@ function FuseeBrand() {
       <span className="font-semibold tracking-tight text-base">
         La Fusée<span className="text-accent">.</span>
       </span>
-      <span className="hidden text-2xs font-mono text-foreground-muted px-1.5 py-0.5 border border-border sm:inline">v6.27</span>
+      {/* Version RÉELLE (audit design 2026-07-16 §A3 : « v6.27 » était figé en dur). */}
+      <span className="hidden text-2xs font-mono text-foreground-muted px-1.5 py-0.5 border border-border sm:inline">v{APP_VERSION}</span>
     </Link>
   );
 }

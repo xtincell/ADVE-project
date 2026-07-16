@@ -104,7 +104,7 @@ export function Modal({
         aria-modal="true"
         aria-label={title}
         className={cn(
-          "relative flex max-h-[92vh] w-full flex-col animate-in fade-in zoom-in-95 rounded-xl border border-border bg-background shadow-2xl",
+          "relative flex max-h-[92vh] w-full flex-col animate-modal-in rounded-xl border border-border bg-background shadow-2xl",
           SIZE_CLASSES[size],
           className,
         )}

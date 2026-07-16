@@ -80,6 +80,8 @@ export function MarketingFooter() {
             <a href="/creator" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">Creator</a>
             <a href="/agency" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">Agency</a>
             <a href="/LaGuilde" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">La Guilde</a>
+            <a href="/leaderboard" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">Classement des marques</a>
+            <a href="/scorer" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">Scorer ma marque</a>
           </div>
           <div>
             <div className="font-mono text-2xs uppercase tracking-widest text-foreground-muted mb-3.5">Maison</div>
@@ -102,7 +104,7 @@ export function MarketingFooter() {
       </div>
       <div className="mx-auto max-w-[var(--maxw-content)] px-[var(--pad-page)] mt-6 flex gap-6 font-mono text-2xs text-foreground-muted flex-wrap">
         <span>UPgraders / La Fusée SARL — 2026</span>
-        <span>v{APP_VERSION} · 2026-07-13</span>
+        <span>v{APP_VERSION}</span>
         <span>Tous droits réservés.</span>
         <span aria-label="Propriété éditoriale sœur de La Fusée">
           <a href="/argos" className="hover:text-accent transition-colors">

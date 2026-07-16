@@ -1,61 +1,74 @@
 /**
- * ADR-0149 — feuille de style scopée du leaderboard public de la force révélée.
- * (styles/** exempt de l'interdit DS #2 sur les couleurs brutes.)
+ * ADR-0149 — feuille scopée du leaderboard public de la force révélée.
+ *
+ * RE-BASÉE SUR LES TOKENS DS (audit design 2026-07-16 §C2 : la page vivait sur
+ * une palette crème/or en hex + fonts système — « ne ressemble à aucune autre
+ * surface de la marque », le « look IA par défaut » exact). Les alias --lb-*
+ * sont conservés comme couche locale mais pointent le système UPgraders
+ * (rouge fusée, or « level », Clash/Satoshi/JetBrains). Zéro hex.
  */
 .lb {
-  --lb-bg: #f4efe4;
-  --lb-panel: #fcfaf2;
-  --lb-hair: #dcd2bf;
-  --lb-fg: #1d1a14;
-  --lb-fg2: #494236;
-  --lb-fg3: #726a59;
-  --lb-accent: #e56458;
-  --lb-accent-ink: #b23c2c;
-  --lb-gold: #b4862a;
-  --lb-green: #3c8a57;
+  --lb-bg: var(--color-background);
+  --lb-panel: var(--color-surface-raised);
+  --lb-hair: var(--color-border);
+  --lb-fg: var(--color-foreground);
+  --lb-fg2: var(--color-foreground-secondary);
+  --lb-fg3: var(--color-foreground-muted);
+  --lb-accent: var(--color-accent);
+  --lb-accent-ink: var(--color-accent);
+  --lb-gold: var(--color-level);
+  --lb-green: var(--color-success);
   min-height: 100vh;
   background: var(--lb-bg);
   color: var(--lb-fg);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-}
-@media (prefers-color-scheme: dark) {
-  .lb {
-    --lb-bg: #141109;
-    --lb-panel: #1f1b12;
-    --lb-hair: #332d1f;
-    --lb-fg: #f0e9d8;
-    --lb-fg2: #c6bda9;
-    --lb-fg3: #928974;
-    --lb-accent: #f0776b;
-    --lb-accent-ink: #f5a399;
-    --lb-gold: #dba73c;
-    --lb-green: #5eb47c;
-  }
+  font-family: var(--font-sans, system-ui, sans-serif);
 }
 .lb__wrap { max-width: 940px; margin: 0 auto; padding: clamp(28px, 5vw, 64px) clamp(18px, 5vw, 36px) 90px; }
-.lb__eyebrow { font-family: ui-monospace, "JetBrains Mono", monospace; font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--lb-accent-ink); font-weight: 600; }
-.lb__title { font-size: clamp(30px, 5vw, 52px); font-weight: 730; letter-spacing: -0.02em; line-height: 1.02; margin: 0.2em 0 0.1em; }
+.lb__eyebrow { font-family: var(--font-mono, monospace); font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--lb-accent-ink); font-weight: 600; }
+.lb__title { font-family: var(--font-display, var(--font-sans)); font-size: clamp(30px, 5vw, 52px); font-weight: 600; letter-spacing: -0.02em; line-height: 1.02; margin: 0.2em 0 0.1em; }
 .lb__title em { font-style: normal; color: var(--lb-accent); }
 .lb__lede { font-size: clamp(15px, 2vw, 18px); color: var(--lb-fg2); max-width: 64ch; line-height: 1.5; }
 .lb__league { margin-top: 40px; }
-.lb__league h2 { font-size: 15px; font-family: ui-monospace, "JetBrains Mono", monospace; color: var(--lb-gold); text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 10px; }
+.lb__league h2 { font-size: 15px; font-family: var(--font-mono, monospace); color: var(--lb-gold); text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 10px; }
 .lb__tablewrap { overflow-x: auto; border: 1px solid var(--lb-hair); border-radius: 14px; background: var(--lb-panel); }
-.lb__table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 14px; }
-.lb__table th, .lb__table td { padding: 11px 16px; text-align: left; border-bottom: 1px solid var(--lb-hair); vertical-align: middle; }
-.lb__table thead th { font-family: ui-monospace, "JetBrains Mono", monospace; font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--lb-fg3); font-weight: 600; }
-.lb__table tbody tr:last-child td { border-bottom: 0; }
-.lb__rank { font-family: ui-monospace, "JetBrains Mono", monospace; color: var(--lb-fg3); width: 44px; }
+.lb__rank { font-family: var(--font-mono, monospace); color: var(--lb-fg3); }
 .lb__brand { font-weight: 640; }
-.lb__force { font-family: ui-monospace, "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; }
-.lb__tier { display: inline-block; font-family: ui-monospace, "JetBrains Mono", monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; padding: 2px 9px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--lb-accent) 45%, transparent); color: var(--lb-accent-ink); background: color-mix(in srgb, var(--lb-accent) 8%, transparent); }
-.lb__cov { color: var(--lb-fg3); font-family: ui-monospace, "JetBrains Mono", monospace; font-size: 12px; }
+.lb__force { font-family: var(--font-mono, monospace); font-variant-numeric: tabular-nums; }
+.lb__tier { display: inline-block; font-family: var(--font-mono, monospace); font-size: 12px; font-weight: 700; letter-spacing: 0.04em; padding: 2px 9px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--lb-accent) 45%, transparent); color: var(--lb-accent-ink); background: color-mix(in srgb, var(--lb-accent) 8%, transparent); }
+.lb__cov { color: var(--lb-fg3); font-family: var(--font-mono, monospace); font-size: 12px; }
 .lb__cap { color: var(--lb-gold); font-size: 12px; }
 .lb__method { margin-top: 44px; border: 1px solid var(--lb-hair); border-left: 3px solid var(--lb-accent); border-radius: 0 12px 12px 0; padding: 16px 20px; background: var(--lb-panel); }
-.lb__method h3 { margin: 0 0 6px; font-family: ui-monospace, "JetBrains Mono", monospace; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--lb-accent-ink); }
+.lb__method h3 { margin: 0 0 6px; font-family: var(--font-mono, monospace); font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--lb-accent-ink); }
 .lb__method p { margin: 0.3em 0; color: var(--lb-fg2); font-size: 13.5px; line-height: 1.5; }
-.lb__empty { margin-top: 40px; padding: 24px; border: 1px dashed var(--lb-hair); border-radius: 12px; color: var(--lb-fg3); text-align: center; }
+.lb__empty { margin-top: 40px; padding: 28px 24px; border: 1px dashed var(--lb-hair); border-radius: 12px; color: var(--lb-fg3); text-align: center; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.lb__empty strong { color: var(--lb-fg); font-size: 15px; }
 .lb__cta { margin-top: 28px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; padding: 18px 22px; border: 1px solid color-mix(in srgb, var(--lb-accent) 40%, var(--lb-hair)); border-radius: 14px; background: color-mix(in srgb, var(--lb-accent) 7%, var(--lb-panel)); }
-.lb__cta-txt strong { display: block; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 16px; color: var(--lb-fg); }
+.lb__cta-txt strong { display: block; font-family: var(--font-sans, sans-serif); font-size: 16px; color: var(--lb-fg); }
 .lb__cta-txt span { font-size: 13.5px; color: var(--lb-fg2); }
-.lb__ctabtn { display: inline-block; font-weight: 600; font-size: 14px; padding: 10px 18px; border-radius: 999px; background: var(--lb-accent); color: #fff; text-decoration: none; white-space: nowrap; }
-.lb__ctabtn:hover { filter: brightness(1.05); }
+.lb__ctabtn { display: inline-block; font-weight: 600; font-size: 14px; padding: 10px 18px; border-radius: 999px; background: var(--lb-accent); color: var(--color-accent-foreground, #fff); text-decoration: none; white-space: nowrap; transition: transform var(--duration-fast, 150ms) var(--ease-spring, ease-out), filter var(--duration-fast, 150ms) ease; }
+.lb__ctabtn:hover { filter: brightness(1.05); transform: translateY(-1px); }
+.lb__ctabtn:active { transform: translateY(0) scale(0.98); }
+
+/* ── Palmarès dépliable (audit 2026-07-16 `leaderboard-palmares-jete`) —
+     la PREUVE derrière chaque verdict : arènes, victoires/défaites, épreuves. */
+.lb__gridhead,
+.lb__sumrow { display: grid; grid-template-columns: 44px minmax(0, 1fr) 110px 96px 96px 84px; gap: 0 8px; align-items: center; padding: 11px 16px; min-width: 640px; font-size: 14px; }
+.lb__gridhead { font-family: var(--font-mono, monospace); font-size: 12px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--lb-fg3); font-weight: 600; border-bottom: 1px solid var(--lb-hair); }
+.lb__sumrow:hover { background: color-mix(in srgb, var(--lb-accent) 4%, transparent); }
+.lb__row-details { border-bottom: 1px solid var(--lb-hair); }
+.lb__row-details:last-child { border-bottom: 0; }
+.lb__row-details summary { cursor: pointer; list-style: none; }
+.lb__row-details summary::-webkit-details-marker { display: none; }
+.lb__chev { display: inline-block; transition: transform var(--duration-fast, 150ms) ease; color: var(--lb-fg3); font-size: 11px; }
+details[open] .lb__chev { transform: rotate(90deg); }
+.lb__palmares { padding: 4px 16px 16px 60px; }
+.lb__palmares-h { font-family: var(--font-mono, monospace); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--lb-fg3); margin: 10px 0 6px; }
+.lb__arenas { display: flex; flex-wrap: wrap; gap: 8px; }
+.lb__arena { border: 1px solid var(--lb-hair); border-radius: 10px; padding: 8px 12px; background: color-mix(in srgb, var(--lb-panel) 60%, transparent); min-width: 132px; }
+.lb__arena b { display: block; font-family: var(--font-mono, monospace); font-size: 12px; color: var(--lb-accent-ink); text-transform: uppercase; letter-spacing: 0.04em; }
+.lb__arena span { display: block; font-size: 12.5px; color: var(--lb-fg2); margin-top: 2px; }
+.lb__arena .lb__wl { font-family: var(--font-mono, monospace); font-variant-numeric: tabular-nums; color: var(--lb-fg); }
+.lb__gates { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.lb__gate { font-family: var(--font-mono, monospace); font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--lb-hair); color: var(--lb-fg3); }
+.lb__gate[data-ok="1"] { color: var(--lb-green); border-color: color-mix(in srgb, var(--lb-green) 45%, transparent); }
+.lb__palmares-meta { font-size: 12.5px; color: var(--lb-fg3); margin-top: 8px; }

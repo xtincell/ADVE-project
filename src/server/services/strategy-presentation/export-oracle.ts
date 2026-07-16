@@ -201,6 +201,12 @@ async function ensureSnapshotForExport(
   return { ...opts, snapshotId };
 }
 
+/** Nom de marque pour les titres de livrable (jamais un CUID face client). */
+async function loadBrandName(strategyId: string): Promise<string> {
+  const row = await db.strategy.findUnique({ where: { id: strategyId }, select: { name: true } });
+  return row?.name ?? "Marque";
+}
+
 export async function exportOracleAsMarkdown(
   strategyId: string,
   opts: ExportOpts = {},
@@ -209,14 +215,14 @@ export async function exportOracleAsMarkdown(
   const ensured = await ensureSnapshotForExport(strategyId, opts);
   const sections = await loadOracle(strategyId, ensured);
   const lang = opts.lang ?? "fr";
+  // Titre = NOM DE LA MARQUE — le CUID brut en titre d'un livrable client était
+  // un gap d'exécution (audit 2026-07-16, `oracle-pdf-cuid-title`).
+  const brandName = await loadBrandName(strategyId);
+  const dateStr = new Date().toLocaleDateString(lang === "fr" ? "fr-FR" : "en-US", { day: "numeric", month: "long", year: "numeric" });
   const lines: string[] = [];
-  lines.push(`# Oracle — ${strategyId}`);
+  lines.push(`# ${lang === "fr" ? "Stratégie" : "Strategy"} — ${brandName}`);
   lines.push("");
-  lines.push(
-    lang === "fr"
-      ? `_Généré depuis le snapshot ${ensured.snapshotId} (Phase 13 auto-snapshot pre-export)._`
-      : `_Generated from snapshot ${ensured.snapshotId} (Phase 13 auto-snapshot pre-export)._`,
-  );
+  lines.push(lang === "fr" ? `_Version du ${dateStr}._` : `_Version of ${dateStr}._`);
   lines.push("");
   for (const s of sections) {
     lines.push(`## ${s.title}`);
@@ -240,11 +246,14 @@ export async function exportOracleAsPdf(
   const lineHeight = 14;
   let y = margin;
 
+  const brandName = await loadBrandName(strategyId);
+  const lang = opts.lang ?? "fr";
+  const dateStr = new Date().toLocaleDateString(lang === "fr" ? "fr-FR" : "en-US", { day: "numeric", month: "long", year: "numeric" });
   doc.setFontSize(20);
-  doc.text(`Oracle — ${strategyId}`, margin, y);
+  doc.text(`${lang === "fr" ? "Stratégie" : "Strategy"} — ${brandName}`, margin, y);
   y += lineHeight * 2;
   doc.setFontSize(10);
-  doc.text(`Snapshot ${ensured.snapshotId}`, margin, y);
+  doc.text(lang === "fr" ? `Version du ${dateStr}` : `Version of ${dateStr}`, margin, y);
   y += lineHeight * 2;
 
   for (const s of sections) {

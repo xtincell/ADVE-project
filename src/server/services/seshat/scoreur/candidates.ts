@@ -127,6 +127,19 @@ export async function decideCandidate(input: DecideCandidateInput): Promise<{ st
     where: { id: cand.id },
     data: { status: "APPROVED", reviewedBy: input.reviewedBy, reviewedAt: new Date(), recordedEpreuveId: ep.id },
   });
+
+  // Re-score immédiat du sujet — SANS ça, l'épreuve validée ne « comptait »
+  // nulle part : le leaderboard gardait le verdict d'AVANT la validation tant
+  // que l'opérateur ne relançait pas toute la moulinette (audit 2026-07-16,
+  // `victoire-validee-score-jamais-recalcule`). Best-effort : un échec de
+  // rescore ne défait pas la validation.
+  try {
+    const { scoreBrand } = await import("./index");
+    await scoreBrand(cand.subjectStrategyId, { persist: true });
+  } catch (err) {
+    console.warn("[scoreur] rescore post-validation échoué (non bloquant):", err instanceof Error ? err.message : err);
+  }
+
   return { status: "APPROVED", recordedEpreuveId: ep.id };
 }
 
