@@ -60,10 +60,13 @@ export function computeFootprintScore(f: EnrichedFootprint): FootprintScore {
   if (socialMeasured) {
     const presence = clamp(f.socials.length * 15, 0, 40); // multi-canal
     const audience = totalAudience > 0 ? (audienceScore(totalAudience) * 60) / 100 : realCounts.length > 0 || ytSubs > 0 ? 0 : 20; // hints seuls : mi-chemin prudent
+    // Détail FACTUEL : nommer les plateformes détectées (jamais un « 3 canal(aux) »
+    // opaque) + l'audience mesurée, ou dire honnêtement qu'elle n'est pas relevée.
+    const platforms = [...new Set(f.socials.map((s) => s.platform.toLowerCase()))].join(", ");
     dims.push({
       key: "social", label: "Réseaux sociaux", weight: 30, measured: true,
       score: clamp(presence + audience),
-      details: `${f.socials.length} canal(aux)${totalAudience > 0 ? ` · ${new Intl.NumberFormat("fr-FR").format(totalAudience)} abonnés mesurés` : ""}`,
+      details: `${platforms || "présence détectée"}${totalAudience > 0 ? ` · ${new Intl.NumberFormat("fr-FR").format(totalAudience)} abonnés mesurés` : " · audience non relevée"}`,
     });
   } else {
     dims.push({ key: "social", label: "Réseaux sociaux", weight: 30, measured: false, score: null, details: "découverte non exécutée (clé absente) et rien de déclaré" });

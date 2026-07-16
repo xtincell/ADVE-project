@@ -15,6 +15,7 @@ import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, publicProcedure, operatorProcedure } from "../init";
 import { enrichPublicFootprint } from "@/server/services/quick-intake/public-enrichment";
 import { computeFootprintScore } from "@/server/services/quick-intake/footprint-score";
+import { buildFootprintFacts, parseFootprintFacts } from "@/server/services/quick-intake/footprint-facts";
 import type { FollowerCountEntry } from "@/server/services/quick-intake/footprint-types";
 
 /**
@@ -84,15 +85,19 @@ export const footprintRouter = createTRPCRouter({
 
       // ── Cache instantané : une marque déjà observée revient sans re-scanner ──
       // (sauf `refresh`). La donnée de Seshat sert le prospect immédiatement.
+      // Un snapshot legacy SANS faits (pré-v6.27.174) est traité comme un cache
+      // miss : on re-scanne plutôt que servir un rapport sans preuve.
       if (!input.refresh) {
         const cached = await lookupLatestFootprint(brandKey);
-        if (cached) {
+        const cachedFacts = cached ? parseFootprintFacts(cached.facts) : null;
+        if (cached && cachedFacts) {
           return {
             total: cached.total,
             outOf: 100,
             measuredWeight: cached.measuredWeight,
             dimensions: cached.dimensions,
             followerCounts: asFollowerCounts(cached.followerCounts),
+            facts: cachedFacts,
             cached: true,
             capturedAt: cached.capturedAt.toISOString(),
             stale: cached.stale,
@@ -129,6 +134,11 @@ export const footprintRouter = createTRPCRouter({
         weight: d.weight,
       }));
 
+      // La PREUVE du score : faits observés (réseaux + handles + audiences,
+      // presse titres + liens, domaine, email, avis, perf). Renvoyée au front
+      // ET persistée — le cache montre la même chose qu'un scan frais.
+      const facts = buildFootprintFacts(enriched);
+
       // ── Persistance dans la base de marques de Seshat (jamais perdu) ─────────
       const saved = await recordFootprintObservation({
         name: input.brandName,
@@ -139,6 +149,7 @@ export const footprintRouter = createTRPCRouter({
         measuredWeight: score.measuredWeight,
         dimensions,
         followerCounts: enriched.followerCounts,
+        facts,
       });
 
       return {
@@ -147,6 +158,7 @@ export const footprintRouter = createTRPCRouter({
         measuredWeight: score.measuredWeight,
         dimensions,
         followerCounts: asFollowerCounts(enriched.followerCounts),
+        facts,
         cached: false,
         capturedAt: (saved?.capturedAt ?? new Date()).toISOString(),
         stale: false,
