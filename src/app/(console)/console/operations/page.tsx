@@ -79,6 +79,20 @@ export default function OperationsPage() {
                   {app.proposedRate ? `Taux proposé ${fcfa(app.proposedRate)} · ` : ""}
                   déposée {new Date(app.createdAt).toLocaleDateString("fr-FR")}
                 </p>
+                {/* Profil du candidat — la donnée qui fait la décision (audit
+                    2026-07-16 `application-decision-blind-profile-dropped`). */}
+                {app.talentProfile && (
+                  <p className="mt-1 text-xs text-foreground-secondary">
+                    <span className="rounded-full bg-bg-subtle px-2 py-0.5 font-mono text-[10px]">{app.talentProfile.tier}</span>
+                    {" "}· {app.talentProfile.totalMissions} mission{app.talentProfile.totalMissions > 1 ? "s" : ""}
+                    {app.talentProfile.avgScore > 0 ? ` · score moyen ${Math.round(app.talentProfile.avgScore * 10) / 10}` : ""}
+                    {app.talentProfile.firstPassRate > 0 ? ` · ${Math.round(app.talentProfile.firstPassRate * 100)} % validé du premier coup` : ""}
+                    {Array.isArray(app.talentProfile.skills) && app.talentProfile.skills.length > 0
+                      ? ` · ${(app.talentProfile.skills as string[]).filter((x) => typeof x === "string").slice(0, 5).join(", ")}`
+                      : ""}
+                    {app.talentProfile.bio ? ` — ${String(app.talentProfile.bio).slice(0, 120)}` : ""}
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <input

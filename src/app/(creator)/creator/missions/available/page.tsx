@@ -22,6 +22,7 @@ import { Modal } from "@/components/shared/modal";
 import { PillarProgress } from "@/components/shared/pillar-progress";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { type PillarKey } from "@/lib/types/advertis-vector";
+import { GuildBriefBlock } from "@/components/laguilde/guild-brief-block";
 
 export default function AvailableMissionsPage() {
   const [search, setSearch] = useState("");
@@ -81,8 +82,8 @@ export default function AvailableMissionsPage() {
     }
 
     if (sortBy === "budget") {
-      const bA = (metaA?.budget as number) ?? 0;
-      const bB = (metaB?.budget as number) ?? 0;
+      const bA = a.budget ?? (metaA?.budget as number) ?? 0;
+      const bB = b.budget ?? (metaB?.budget as number) ?? 0;
       return bB - bA; // highest budget first
     }
 
@@ -167,8 +168,11 @@ export default function AvailableMissionsPage() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filtered.map((m) => {
             const meta = m.advertis_vector as Record<string, unknown> | null;
-            const deadline = meta?.deadline as string | undefined;
-            const budget = meta?.budget as number | undefined;
+            // Colonnes réelles d'abord (les missions guilde n'ont pas
+            // d'advertis_vector — audit 2026-07-16).
+            const deadline = (m.slaDeadline ? new Date(m.slaDeadline).toISOString() : undefined)
+              ?? (meta?.deadline as string | undefined);
+            const budget = m.budget ?? (meta?.budget as number | undefined);
 
             return (
               <div
@@ -293,6 +297,11 @@ export default function AvailableMissionsPage() {
                 </p>
               </div>
             </div>
+
+            {/* Brief guilde COMPLET — budget, échéance, contexte, livrables
+                attendus (audit 2026-07-16 `guild-brief-invisible-to-assigned-
+                talent` : le modal ne rendait jamais briefData). */}
+            <GuildBriefBlock briefData={detail.briefData} budget={detail.budget} slaDeadline={detail.slaDeadline} />
 
             {Object.keys(pillarScores).length > 0 && (
               <div>

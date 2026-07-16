@@ -542,7 +542,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : La query `laGuilde.myPostedMissions` (id, slug, moderationState PENDING/PUBLISHED/REJECTED, applicationCount) existe côté serveur mais n'a AUCUN consommateur UI (grep repo entier : 0 hit hors router). Après le dépôt, la marque n'a aucune surface pour voir : le statut de modération, le motif de rejet (stocké dans briefData.moderationNote à laguilde.ts:527-531 — même la query ne le projette pas), le nombre de candidatures, ni l'attribution. `publishMission` et `decide` n'émettent aucune notification (aucun appel au notification center Phase 16). La marque dépose dans le vide.
 - **Preuve** : src/server/trpc/routers/laguilde.ts:248-283 (`myPostedMissions` — 0 consumer, vérifié grep) ; laguilde.ts:521-536 (moderationNote enfoui dans briefData, jamais projeté) ; src/components/laguilde/post-mission-form.tsx:141-161 (success card sans lien de suivi, seulement « Retour au mur » / « Déposer une autre mission »)
 - **Fix esquissé** : Créer une page « Mes missions déposées » (cockpit ou /LaGuilde/mes-missions) consommant myPostedMissions, y projeter moderationNote + applicationCount, et notifier (notification center existant) au PUBLISH/REJECT et à l'attribution.
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V8 guilde/creator (v6.27.182)
 
 ### [CRITICAL] `mission-endpoints-leak-guild-contact-and-premoderation` — guilde-creator
 
@@ -704,7 +704,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : registerOrganization promeut le rôle en AGENCY (laguilde.ts:452-454), mais AGENCY est ABSENT de CREATOR_ROLES du proxy (proxy.ts:75-82) → /creator (seule surface qui consomme missionApplication.listMine et myDelegatedBrands) lui est interdit, et le portail /agency n'a aucune vue candidatures (agency/missions/page.tsx utilise mission.list brut). Une agence candidate depuis le mur public puis ne peut plus JAMAIS voir le statut de sa candidature ni la retirer (au prochain login, le rôle AGENCY prend effet et ferme la porte).
 - **Preuve** : src/proxy.ts:75-91 (CREATOR_ROLES sans AGENCY) ; src/server/trpc/routers/laguilde.ts:452-456 (role→AGENCY) ; src/app/(agency)/agency/missions/page.tsx:15 (pas de listMine) ; consumers de listMine : uniquement /creator/missions/available
 - **Fix esquissé** : Ajouter AGENCY à CREATOR_ROLES (ou monter une section « Mes candidatures » consommant missionApplication.listMine dans /agency/missions).
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V8 guilde/creator (v6.27.182)
 
 ### [MAJOR] `application-decision-blind-profile-dropped` — guilde-creator
 
@@ -713,7 +713,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : Au moment de décider, l'opérateur ne voit que name/email/rôle brut + 140 caractères du message + taux (console/operations/page.tsx:68-105). `listPending` n'inclut pas talentProfile (mission-applications.ts:108-120) : tier, skills, bio, spécialisations, organisation, services (ADR-0117) et stats QC — toutes collectées et persistées — sont jetées à l'endroit exact où la valeur du marketplace se joue. Le matching-engine (matchingEngine.suggest, utilisé par listForCreator) n'est pas non plus mobilisé pour classer les candidats.
 - **Preuve** : src/server/trpc/routers/mission-applications.ts:107-120 (include: applicant {id,name,email,role} seulement) ; src/app/(console)/console/operations/page.tsx:68-105 (message.slice(0,140), aucune donnée profil) ; profil riche : laguilde.ts:346-385 registerTalent
 - **Fix esquissé** : Inclure talentProfile (tier, skills, org, stats) + lien vers le profil dans listPending/listForMission, et afficher un panneau candidat déplié dans la file de décision ; optionnellement injecter le matchScore du matching-engine.
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V8 guilde/creator (v6.27.182)
 
 ### [MAJOR] `creator-dashboard-fabricated-trend-and-unscoped-kpis` — guilde-creator
 
@@ -722,7 +722,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : La sparkline « Gains mois » est une série INVENTÉE hardcodée `[180,210,250,280,310,290,340, réel]` (creator/page.tsx:86) — 7 points fabriqués + 1 réel, affichant une tendance ascendante fictive ; le StatCard « Missions dispo. » porte un trend fabriqué `trendValue="+3"` (:234). Par ailleurs les KPIs « En cours »/« Missions en cours » filtrent mission.list NON scopé (:60,70-71) : ils comptent/affichent les missions de TOUTES les marques de la plateforme comme si c'étaient celles du talent.
 - **Preuve** : src/app/(creator)/creator/page.tsx:86 (`const earningsTrend = [180, 210, 250, 280, 310, 290, 340, monthlyEarnings / 1000]`), :234 (`trend="up" trendValue="+3"`), :60+70-71 (mission.list sans scope, filtre client)
 - **Fix esquissé** : Dériver la sparkline des commissions réelles agrégées par mois (commission.getByCreator existe déjà), supprimer le trendValue fabriqué, et baser les compteurs missions sur assigneeId/myDelegatedBrands.
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V8 guilde/creator (v6.27.182)
 
 ### [MAJOR] `guild-brief-invisible-to-assigned-talent` — guilde-creator
 
@@ -731,7 +731,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : Les modals « Details »/« Brief de la mission » du portail creator ne rendent JAMAIS briefData : ils lisent deadline/budget dans `advertis_vector` (null pour toute mission guilde) et affichent stratégie/driver/mode/livrables soumis (active/page.tsx:75-76,113-115 ; available/page.tsx:68-84,166-168). Le talent attribué ne voit donc ni le budget, ni l'échéance (slaDeadline), ni le contexte, ni les livrables attendus, ni les critères QC du brief pour lequel il a été choisi — sa seule voie est de retrouver l'URL publique /LaGuilde/m/[slug].
 - **Preuve** : src/app/(creator)/creator/missions/active/page.tsx:75-76 (`detail?.advertis_vector … deadline`) + 212-292 (modal sans briefData) ; available/page.tsx:166-168 (meta.budget depuis advertis_vector) ; source réelle : laguilde.ts:219-236 (briefData + budget + slaDeadline colonnes)
 - **Fix esquissé** : Dans les modals mission du creator, rendre Mission.budget/slaDeadline (colonnes) et, si briefData._kind===GUILD_MISSION_BRIEF, le brief complet via coerceBrief (composant réutilisable avec MissionDetailView).
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V8 guilde/creator (v6.27.182)
 
 ### [MAJOR] `moderation-queue-drops-full-brief` — guilde-creator
 
@@ -740,7 +740,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : `listPendingModeration` ne projette que brandName/summary/contactEmail depuis briefData (laguilde.ts:482-498) ; la page modération n'affiche que titre + accroche + secteur/lieu/budget (missions-guilde/page.tsx:55-104). Le modérateur ne peut lire NI le contexte, NI les livrables, NI les contraintes avant de publier — et il n'a aucun autre chemin : getMissionBySlug renvoie null tant que guildPublished=false (laguilde.ts:125). Il publie ou rejette à l'aveugle un brief que la marque a passé 10 minutes à remplir.
 - **Preuve** : src/server/trpc/routers/laguilde.ts:461-499 (projection brandName/summary seulement) + :125 (détail public verrouillé pré-publication) ; src/app/(console)/console/arene/missions-guilde/page.tsx:55-104 (aucun rendu du brief complet)
 - **Fix esquissé** : Projeter le brief complet (coerceBrief) dans listPendingModeration et rendre un panneau dépliable « brief complet » dans la carte de modération.
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V8 guilde/creator (v6.27.182)
 
 ### [MAJOR] `composer-jargon-intent-kinds` — oracle-chain
 

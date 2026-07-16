@@ -57,7 +57,11 @@ function ProgressBar({ label, current, target, unit = "", color }: {
 
 export default function CreatorDashboard() {
   const profile = trpc.guilde.getMyProfile.useQuery();
-  const missions = trpc.mission.list.useQuery({ limit: 10 });
+  // Scopé (audit 2026-07-16 `creator-dashboard-fabricated-trend-and-unscoped-
+  // kpis` : les KPIs comptaient les missions de TOUTES les marques) : mes
+  // missions assignées + le mur guilde publié.
+  const missions = trpc.mission.list.useQuery({ assignedToMe: true, limit: 10 });
+  const guildWall = trpc.mission.list.useQuery({ guildOnly: true, limit: 50 });
   const commissions = trpc.commission.getByCreator.useQuery({});
   const reviews = trpc.qualityReview.list.useQuery({ limit: 5 });
   // ADR-0131 — mini console : marques en opération, accès cockpit, candidatures.
@@ -68,7 +72,7 @@ export default function CreatorDashboard() {
   const tier = (profile.data?.tier ?? "APPRENTI") as GuildTier;
   const thresholds = TIER_THRESHOLDS[tier];
   const activeMissions = missions.data?.filter((m) => m.status === "IN_PROGRESS") ?? [];
-  const availableMissions = missions.data?.filter((m) => m.status === "DRAFT") ?? [];
+  const availableMissions = guildWall.data ?? [];
   const totalMissions = profile.data?.totalMissions ?? 0;
   const firstPassRate = (profile.data?.firstPassRate ?? 0) * 100;
   const avgScore = profile.data?.avgScore ?? 0;
@@ -83,7 +87,18 @@ export default function CreatorDashboard() {
     .reduce((sum, c) => sum + c.netAmount, 0) ?? 0;
 
   const recentReviews = reviews.data?.items ?? [];
-  const earningsTrend = [180, 210, 250, 280, 310, 290, 340, monthlyEarnings / 1000];
+  // Série RÉELLE : gains nets agrégés par mois sur les 8 derniers mois (audit
+  // 2026-07-16 : l'ancienne sparkline était 7 points INVENTÉS + 1 réel).
+  const earningsTrend = (() => {
+    const buckets: number[] = new Array(8).fill(0);
+    const now = new Date();
+    for (const c of commissions.data ?? []) {
+      const d = new Date(c.createdAt);
+      const monthsAgo = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
+      if (monthsAgo >= 0 && monthsAgo < 8) buckets[7 - monthsAgo] = (buckets[7 - monthsAgo] ?? 0) + c.netAmount / 1000;
+    }
+    return buckets;
+  })();
 
   return (
     <div className="space-y-6">
@@ -231,7 +246,7 @@ export default function CreatorDashboard() {
 
       {/* KPI Row */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard title="Missions dispo." value={availableMissions.length} icon={Briefcase} trend="up" trendValue="+3" />
+        <StatCard title="Missions dispo." value={availableMissions.length} icon={Briefcase} />
         <StatCard title="En cours" value={activeMissions.length} icon={Clock} />
         <div className="rounded-xl border border-border bg-card p-4">
           <div className="flex items-center justify-between">

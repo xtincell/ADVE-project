@@ -10,6 +10,18 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.182 — fix(ui): Vague 8 audit plateforme — guilde & creator (suivi post-dépôt, brief visible, candidatures agence, dashboard dé-fabriqué) (2026-07-16)
+
+**Vague 8 de l'audit intention/exécution : 6 findings guilde/creator (1 CRITICAL)** :
+
+- **La marque ne dépose plus dans le vide** (`guild-brand-no-tracking-surface`, CRITICAL) : `myPostedMissions` n'avait AUCUN consommateur — après le dépôt, aucune surface pour voir le statut de modération, le motif de rejet (enfoui dans briefData, jamais projeté) ni les candidatures. Page **`/LaGuilde/mes-missions`** (statut, motif de rejet, nb de candidatures, talent attribué, lien mur), `moderationNote` projeté, **notification IN_APP+EMAIL** au PUBLISH/REJECT, et la carte de succès du dépôt pointe « Suivre mes missions ».
+- **Le modérateur lit le brief avant de décider** (`moderation-queue-drops-full-brief`) : la file ne projetait que marque+résumé (et le détail public est verrouillé pré-publication) — panneau dépliable « Brief complet » (contexte, audience, livrables, canaux, compétences, critères, échéance) via la projection publique typée.
+- **Le talent attribué voit son brief** (`guild-brief-invisible-to-assigned-talent`) : les modals creator lisaient budget/deadline dans `advertis_vector` (null pour toute mission guilde) et ne rendaient jamais briefData. Composant `GuildBriefBlock` (budget/échéance colonnes réelles + brief complet) monté dans les modals « Missions actives » et « Missions disponibles » ; tris/cartes basculés sur les colonnes réelles.
+- **Les agences suivent leurs candidatures** (`agency-role-locked-out-of-application-tracking`) : le rôle AGENCY (promu à l'inscription guilde) était absent de CREATOR_ROLES — l'agence candidatait puis perdait tout accès au suivi. AGENCY ajouté au périmètre /creator.
+- **Dashboard creator dé-fabriqué** (`creator-dashboard-fabricated-trend-and-unscoped-kpis`) : la sparkline « Gains mois » était 7 points INVENTÉS + 1 réel, « Missions dispo. » portait un trend fabriqué « +3 », et les KPIs comptaient les missions de TOUTE la plateforme. Série réelle (commissions nettes agrégées par mois, 8 mois), trend supprimé, compteurs scopés (`assignedToMe` + mur guilde).
+- **La décision de candidature n'est plus aveugle** (`application-decision-blind-profile-dropped`) : `listPending` ne livrait que nom/email/140 chars — jointure applicative `TalentProfile` (tier, missions, score moyen, taux de première passe, compétences, bio) rendue dans la file de décision console.
+- tsc 0 · lint 0 · 1024 tests gouvernance verts.
+
 ## v6.27.181 — fix(cockpit): Vague 7 audit plateforme — intelligence communauté & Overton (échelle ×100, KPIs invisibles, radar honnête, fans visibles) (2026-07-16)
 
 **Vague 7 de l'audit intention/exécution : 8 findings cockpit intelligence (3 CRITICAL)** :

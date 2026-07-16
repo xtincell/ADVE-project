@@ -578,7 +578,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 270 (par deck)
+## Pages — 271 (par deck)
 
 ### Agency (12)
 
@@ -824,7 +824,7 @@ Ces correspondances évitent la réinvention :
 - `/launchpad/portfolio-bulk-import`
 - `/score`
 
-### Public (41)
+### Public (42)
 
 - `/(marketing)`
 - `/agence`
@@ -844,6 +844,7 @@ Ces correspondances évitent la réinvention :
 - `/lafusee`
 - `/LaGuilde`
 - `/LaGuilde/m/[slug]`
+- `/LaGuilde/mes-missions`
 - `/LaGuilde/publier`
 - `/LaGuilde/rejoindre`
 - `/LaGuilde/services`

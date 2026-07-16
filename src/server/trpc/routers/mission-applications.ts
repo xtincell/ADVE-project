@@ -112,8 +112,8 @@ export const missionApplicationRouter = createTRPCRouter({
   /** File globale des candidatures PENDING (console). */
   listPending: operatorProcedure
     .input(z.object({ limit: z.number().int().min(1).max(200).default(50) }).optional())
-    .query(({ input }) =>
-      db.missionApplication.findMany({
+    .query(async ({ input }) => {
+      const apps = await db.missionApplication.findMany({
         where: { status: "PENDING" },
         include: {
           applicant: { select: { id: true, name: true, email: true, role: true } },
@@ -121,8 +121,24 @@ export const missionApplicationRouter = createTRPCRouter({
         },
         orderBy: { createdAt: "asc" },
         take: input?.limit ?? 50,
-      }),
-    ),
+      });
+      // Le profil riche à l'endroit où la décision se joue (audit 2026-07-16
+      // `application-decision-blind-profile-dropped` : tier, skills, bio,
+      // stats QC collectés puis jetés — l'opérateur décidait sur 140 chars).
+      // Pas de relation Prisma déclarée sur talentProfileId → jointure applicative.
+      const profileIds = apps.map((a) => a.talentProfileId).filter(Boolean) as string[];
+      const profiles = profileIds.length
+        ? await db.talentProfile.findMany({
+            where: { id: { in: profileIds } },
+            select: { id: true, tier: true, skills: true, bio: true, totalMissions: true, firstPassRate: true, avgScore: true },
+          })
+        : [];
+      const profileMap = new Map(profiles.map((p) => [p.id, p]));
+      return apps.map((a) => ({
+        ...a,
+        talentProfile: a.talentProfileId ? (profileMap.get(a.talentProfileId) ?? null) : null,
+      }));
+    }),
 
   /**
    * Décision opérateur. ACCEPTED : assigne la mission (assigneeId +

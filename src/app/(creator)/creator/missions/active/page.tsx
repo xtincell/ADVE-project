@@ -16,6 +16,7 @@ import { Modal } from "@/components/shared/modal";
 import { FormField } from "@/components/shared/form-field";
 import { MissionCard } from "@/components/shared/mission-card";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
+import { GuildBriefBlock } from "@/components/laguilde/guild-brief-block";
 
 export default function ActiveMissionsPage() {
   const [selectedMission, setSelectedMission] = useState<string | null>(null);
@@ -75,7 +76,10 @@ export default function ActiveMissionsPage() {
 
   const detail = missionDetail.data;
   const detailMeta = detail?.advertis_vector as Record<string, unknown> | null;
-  const deadline = detailMeta?.deadline as string | undefined;
+  // Colonne réelle d'abord (les missions guilde n'ont pas d'advertis_vector —
+  // audit 2026-07-16 `guild-brief-invisible-to-assigned-talent`).
+  const deadline = (detail?.slaDeadline ? new Date(detail.slaDeadline).toISOString() : undefined)
+    ?? (detailMeta?.deadline as string | undefined);
 
   function getSlaInfo(deadlineStr?: string) {
     if (!deadlineStr) return null;
@@ -113,7 +117,8 @@ export default function ActiveMissionsPage() {
         <div className="space-y-4">
           {activeMissions.map((m) => {
             const meta = m.advertis_vector as Record<string, unknown> | null;
-            const mDeadline = meta?.deadline as string | undefined;
+            const mDeadline = (m.slaDeadline ? new Date(m.slaDeadline).toISOString() : undefined)
+              ?? (meta?.deadline as string | undefined);
             const sla = getSlaInfo(mDeadline);
             const deliverableCount = m.deliverables?.length ?? 0;
 
@@ -242,6 +247,10 @@ export default function ActiveMissionsPage() {
                 </div>
               )}
             </div>
+
+            {/* Brief guilde COMPLET — budget, échéance, contexte, livrables
+                attendus (audit 2026-07-16 : le talent attribué ne le voyait pas). */}
+            <GuildBriefBlock briefData={detail.briefData} budget={detail.budget} slaDeadline={detail.slaDeadline} />
 
             {/* ADR-0049 — upstream campaign brief surface */}
             {campaignId && campaignBriefsQuery.data && campaignBriefsQuery.data.length > 0 && (

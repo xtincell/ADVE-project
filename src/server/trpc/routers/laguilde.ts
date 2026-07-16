@@ -258,28 +258,37 @@ export const laGuildeRouter = createTRPCRouter({
         guildPublishedAt: true,
         category: true,
         budget: true,
+        briefData: true,
+        assigneeId: true,
         createdAt: true,
         _count: { select: { applications: true } },
       },
       orderBy: { createdAt: "desc" },
       take: 100,
     });
-    return rows.map((m) => ({
-      id: m.id,
-      title: m.title,
-      slug: m.publicSlug,
-      category: m.category,
-      categoryLabel: guildMissionCategoryLabel(m.category),
-      budget: m.budget,
-      applicationCount: m._count.applications,
-      moderationState: m.guildPublished
-        ? ("PUBLISHED" as const)
-        : m.status === "CANCELLED"
-          ? ("REJECTED" as const)
-          : ("PENDING" as const),
-      missionStatus: m.status,
-      createdAt: m.createdAt.toISOString(),
-    }));
+    return rows.map((m) => {
+      const brief = (m.briefData ?? {}) as Record<string, unknown>;
+      return {
+        id: m.id,
+        title: m.title,
+        slug: m.publicSlug,
+        category: m.category,
+        categoryLabel: guildMissionCategoryLabel(m.category),
+        budget: m.budget,
+        applicationCount: m._count.applications,
+        moderationState: m.guildPublished
+          ? ("PUBLISHED" as const)
+          : m.status === "CANCELLED"
+            ? ("REJECTED" as const)
+            : ("PENDING" as const),
+        // Le motif de rejet n'était jamais projeté (audit 2026-07-16
+        // `guild-brand-no-tracking-surface`) — la marque déposait dans le vide.
+        moderationNote: typeof brief.moderationNote === "string" ? brief.moderationNote : null,
+        assigned: Boolean(m.assigneeId),
+        missionStatus: m.status,
+        createdAt: m.createdAt.toISOString(),
+      };
+    });
   }),
 
   /**
@@ -471,7 +480,10 @@ export const laGuildeRouter = createTRPCRouter({
           category: true,
           sector: true,
           location: true,
+          mode: true,
           budget: true,
+          slaDeadline: true,
+          guildPublishedAt: true,
           briefData: true,
           guildSubmittedAt: true,
           postedByUserId: true,
@@ -494,6 +506,11 @@ export const laGuildeRouter = createTRPCRouter({
           summary: typeof brief.summary === "string" ? brief.summary : "",
           contactEmail: typeof brief.contactEmail === "string" ? brief.contactEmail : null,
           submittedAt: m.guildSubmittedAt?.toISOString() ?? null,
+          // Brief COMPLET (audit 2026-07-16 `moderation-queue-drops-full-brief` :
+          // le modérateur publiait/rejetait à l'aveugle — contexte, livrables,
+          // contraintes jamais projetés, et le détail public est verrouillé
+          // pré-publication). Projection publique typée (sans contact).
+          fullBrief: toPublicGuildMission(m),
         };
       });
     }),
@@ -513,14 +530,35 @@ export const laGuildeRouter = createTRPCRouter({
 
     const mission = await db.mission.findUnique({
       where: { id: input.missionId },
-      select: { id: true, status: true, guildPublished: true, guildSubmittedAt: true, briefData: true },
+      select: { id: true, title: true, status: true, guildPublished: true, guildSubmittedAt: true, briefData: true, postedByUserId: true },
     });
     if (!mission) throw new Error("Mission introuvable.");
     if (!mission.guildSubmittedAt) throw new Error("Cette mission n'a pas été déposée via La Guilde.");
 
+    // La marque déposante est PRÉVENUE de la décision (audit 2026-07-16
+    // `guild-brand-no-tracking-surface` : elle déposait dans le vide). Best-effort.
+    const notifyPoster = async (title: string, body: string) => {
+      if (!mission.postedByUserId) return;
+      try {
+        const { pushNotification } = await import("@/server/services/anubis/notifications");
+        await pushNotification({
+          userId: mission.postedByUserId,
+          title,
+          body,
+          link: "/LaGuilde/mes-missions",
+          channels: ["IN_APP", "EMAIL"],
+          type: "SYSTEM",
+          entityType: "Mission",
+          entityId: mission.id,
+        });
+      } catch (err) {
+        console.warn("[laguilde] notification décision non envoyée:", err instanceof Error ? err.message : err);
+      }
+    };
+
     if (input.decision === "REJECT") {
       const brief = (mission.briefData ?? {}) as Record<string, unknown>;
-      return db.mission.update({
+      const rejected = await db.mission.update({
         where: { id: mission.id },
         data: {
           status: "CANCELLED",
@@ -533,12 +571,22 @@ export const laGuildeRouter = createTRPCRouter({
         },
         select: { id: true, status: true },
       });
+      await notifyPoster(
+        "Votre mission n'a pas été publiée",
+        `« ${mission.title} » n'a pas été retenue pour le mur des missions${input.note ? ` : ${input.note}` : "."}`,
+      );
+      return rejected;
     }
 
-    return db.mission.update({
+    const published = await db.mission.update({
       where: { id: mission.id },
       data: { guildPublished: true, guildPublishedAt: new Date() },
       select: { id: true, guildPublished: true, guildPublishedAt: true },
     });
+    await notifyPoster(
+      "Votre mission est publiée",
+      `« ${mission.title} » est en ligne sur le mur des missions — les candidatures peuvent arriver.`,
+    );
+    return published;
   }),
 });

@@ -151,10 +151,13 @@ export function PostMissionForm() {
             approuvée, elle apparaîtra sur le mur public et les talents pourront candidater.
           </p>
           <div className="flex flex-wrap gap-2">
+            <Link href="/LaGuilde/mes-missions">
+              <Button>Suivre mes missions</Button>
+            </Link>
             <Link href="/LaGuilde">
               <Button variant="ghost">Retour au mur</Button>
             </Link>
-            <Button onClick={() => post.reset()}>Déposer une autre mission</Button>
+            <Button variant="ghost" onClick={() => post.reset()}>Déposer une autre mission</Button>
           </div>
         </CardBody>
       </Card>
