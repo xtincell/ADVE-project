@@ -32,4 +32,13 @@
   /* Legacy aliases */
   --ease-default:       var(--ease-in-out);
   --ease-bounce:        var(--ease-spring);
+
+  /* ──── Animations d'entrée nommées (audit design 2026-07-16 §B1) ────
+     Les surfaces modal/toast/intake portaient des classes `animate-in fade-in…`
+     du plugin tailwindcss-animate JAMAIS installé → zéro animation rendue.
+     Utilities générées par Tailwind 4 depuis ces tokens ; keyframes canon
+     dans globals.css (scale-in / slide-down / slide-up). */
+  --animate-modal-in:   scale-in var(--motion-base) var(--ease-spring) both;
+  --animate-toast-in:   slide-down var(--motion-medium) var(--ease-out) both;
+  --animate-rise-in:    slide-up var(--motion-slow) var(--ease-out) both;
 }

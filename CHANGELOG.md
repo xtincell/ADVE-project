@@ -10,6 +10,20 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.178 — fix(ui): Vague 4 audit plateforme — le verdict montre sa preuve (palmarès leaderboard, rescore post-victoire, Oracle nommé, PDF partagé) + intégration audit design (2026-07-16)
+
+**Vague 4 de l'audit intention/exécution — leaderboard/scoreur/Oracle** + quick wins de l'[audit design](docs/audits/FRONTEND-DESIGN-AUDIT-2026-07-16.md) :
+
+- **Palmarès leaderboard enfin projeté** (`leaderboard-palmares-jete`) : `ScoreVerdict` persiste depuis toujours arènes (V/D, force ±RD, épreuves), portes de palier et `epreuveCount` — la page publique n'affichait qu'un chiffre nu. Chaque ligne du classement est désormais **dépliable (zéro JS, `<details>`)** sur son palmarès : cartes par arène (Authenticité/Distinction/Valeur/Engagement/Track — victoires·défaites, force /25 ± incertitude, nb d'épreuves), chips de portes ✓/—, total d'épreuves + date de mesure. Le verdict /200 montre sa preuve — cohérent avec la doctrine du rapport scorer factuel (v6.27.172).
+- **Victoire validée → score recalculé** (`victoire-validee-score-jamais-recalcule`) : APPROVE d'une `EpreuveCandidate` enregistrait l'épreuve mais le leaderboard gardait le verdict d'AVANT tant qu'on ne relançait pas la moulinette. `decideCandidate` re-score le sujet immédiatement (best-effort, un échec de rescore ne défait pas la validation).
+- **Chasse aux victoires : rival sélectionnable** : le formulaire console exigeait un nom libre → le rival scoré existant n'était jamais lié (`rivalStrategyId` toujours null, θ du rival jamais mis à jour par la dyade). Select des marques déjà placées + fallback saisie libre.
+- **Oracle : le livrable porte le nom de la marque** (`oracle-pdf-cuid`) : titres MD/PDF `Stratégie — <marque>` + date de version lisible (fini le CUID de snapshot en titre de livrable client).
+- **Export PDF du lien partagé réparé** (`shared-oracle-pdf-401`) : le CTA « Export PDF » du livrable partagé pointait la route session-gardée → JSON 401 brut chez le destinataire. Nouvelle route `/api/export/oracle/shared/[token]/pdf` (le token EST l'autorisation, même doctrine que la page), filename dérivé de la marque.
+- **CTA scorer honnête** (`cta-scorer-fausse-promesse`) : le leaderboard promettait « scorez → vous y apparaîtrez » alors que /scorer donne une empreinte /100 instantanée et que l'entrée au championnat passe par une mesure officielle validée. Copy reformulée (CTA + EmptyState) : scorer l'empreinte D'ABORD, mesure officielle ENSUITE.
+- **Audit design §B1 (P0)** : modal, toasts et écran de traitement intake portaient des classes `animate-in fade-in…` du plugin tailwindcss-animate **jamais installé** → zéro animation rendue depuis toujours. Tokens `--animate-modal-in/toast-in/rise-in` (Tailwind 4, keyframes canon existants) + classes remplacées. `prefers-reduced-motion` déjà géré globalement.
+- **Audit design §A3/A4** : version nav marketing « v6.27 » figée en dur → `APP_VERSION` réel (+ date morte du footer retirée) ; le leaderboard public et /scorer (croissance organique) enfin vendus dans les DEUX footers (« Classement des marques », « Scorer ma marque »).
+- Versions resynchronisées (package.json/lock/version.ts avaient divergé 174↔177). tsc 0 · lint 0 · 1024 tests gouvernance verts.
+
 ## v6.27.177 — fix(cockpit): Vague 3 audit plateforme — le cockpit tient parole (armement fiabilisé, actions founder, honnêteté des KPI) (2026-07-16)
 
 **Vague 3 de l'audit intention/exécution : 15 findings cockpit (2 CRITICAL)** :

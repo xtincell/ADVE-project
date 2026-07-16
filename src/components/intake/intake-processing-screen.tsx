@@ -233,7 +233,7 @@ export function IntakeProcessingScreen({ companyName, isPending, errorMessage }:
         <div className="mt-auto pt-8">
           <div
             key={factIndex}
-            className="rounded-xl border border-border bg-background-raised px-5 py-4 animate-in fade-in slide-in-from-bottom-2 duration-500"
+            className="rounded-xl border border-border bg-background-raised px-5 py-4 animate-rise-in"
           >
             <p className="text-[11px] font-semibold uppercase tracking-wider text-primary">
               {FACT_LABELS[factsRef.current[factIndex]?.kind ?? "verite"]}

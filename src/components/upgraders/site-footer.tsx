@@ -116,6 +116,8 @@ export function SiteFooter() {
           <Col title="Produit — La Fusée">
             <FLink href="/lafusee">La Fusée (l&apos;OS)</FLink>
             <FLink href="/intake">Diagnostic gratuit</FLink>
+            <FLink href="/scorer">Scorer ma marque</FLink>
+            <FLink href="/leaderboard">Classement des marques</FLink>
             <FLink href="/pricing">Tarifs</FLink>
             <FLink href="/cockpit">Cockpit</FLink>
             <FLink href="/LaGuilde">Marketplace</FLink>

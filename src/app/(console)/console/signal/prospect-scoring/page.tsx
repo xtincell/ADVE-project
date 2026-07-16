@@ -223,14 +223,32 @@ export default function ProspectScoringPage() {
           </CardHeader>
           <CardBody>
             <div className="mb-4 flex flex-wrap items-center gap-2">
-              <Input placeholder="Nom du rival à comparer" value={rivalName} onChange={(e) => setRivalName(e.target.value)} className="max-w-xs" />
+              {/* Rival LIÉ aux marques placées (audit 2026-07-16,
+                  `rival-place-jamais-lie`) : le texte libre laissait
+                  rivalStrategyId=null → épreuves « vs unknown » alors que les
+                  concurrents venaient d'être placés avec leur strategyId. */}
+              {placed.length > 1 ? (
+                <select
+                  value={rivalName}
+                  onChange={(e) => setRivalName(e.target.value)}
+                  className="max-w-xs rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+                >
+                  <option value="">Choisir le rival…</option>
+                  {placed.slice(1).map((p) => (
+                    <option key={p.strategyId} value={p.name}>{p.name}</option>
+                  ))}
+                </select>
+              ) : (
+                <Input placeholder="Nom du rival à comparer" value={rivalName} onChange={(e) => setRivalName(e.target.value)} className="max-w-xs" />
+              )}
               <Button
                 variant="outline"
                 disabled={hunt.isPending || !rivalName.trim()}
                 onClick={async () => {
                   setErr(null);
                   try {
-                    const r = await hunt.mutateAsync({ subjectStrategyId: subjectId, rivalName: rivalName.trim() });
+                    const rivalStrategyId = placed.find((p) => p.name === rivalName.trim())?.strategyId ?? null;
+                    const r = await hunt.mutateAsync({ subjectStrategyId: subjectId, rivalName: rivalName.trim(), rivalStrategyId });
                     if (r.deferred) setErr("Recherche IA indisponible (clé LLM absente) — 0 victoire proposée.");
                     await utils.scoreur.listCandidates.invalidate();
                   } catch (e) { setErr(e instanceof Error ? e.message : String(e)); }

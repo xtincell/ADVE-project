@@ -88,7 +88,7 @@ function ToastItem({
   return (
     <div
       className={cn(
-        "pointer-events-auto flex items-start gap-3 rounded-lg border px-4 py-3 shadow-lg backdrop-blur-sm animate-in slide-in-from-top-2 fade-in",
+        "pointer-events-auto flex items-start gap-3 rounded-lg border px-4 py-3 shadow-lg backdrop-blur-sm animate-toast-in",
         config.colors,
       )}
     >
