@@ -36,13 +36,25 @@ describe("intake ADVE-only (vague D)", () => {
     expect(source).toContain("regenerateAnalysis(intakeToken, { premium: true })");
   });
 
-  it("les 3 webhooks paiement déclenchent la re-extraction premium", () => {
+  it("les 3 webhooks paiement déclenchent le fulfillment centralisé (qui porte la re-extraction premium)", () => {
+    // Audit 2026-07-16 : la re-extraction a déménagé dans fulfillPaidIntakeReport
+    // (qui livre AUSSI ORACLE_FULL). La chaîne complète est vérifiée en 2 temps :
+    // (1) chaque webhook appelle le fulfillment ; (2) le fulfillment appelle
+    // TOUJOURS la re-extraction premium.
     for (const provider of ["stripe", "cinetpay", "paypal"]) {
       const route = fs.readFileSync(
         path.resolve(__dirname, `../../../src/app/api/payment/webhook/${provider}/route.ts`),
         "utf-8",
       );
-      expect(route, `webhook ${provider}`).toContain("premiumReextractAfterPayment");
+      expect(route, `webhook ${provider}`).toContain("fulfillPaidIntakeReport");
     }
+    const fulfillment = fs.readFileSync(
+      path.resolve(__dirname, "../../../src/server/services/quick-intake/paid-fulfillment.ts"),
+      "utf-8",
+    );
+    expect(fulfillment).toContain("premiumReextractAfterPayment");
+    // ORACLE_FULL livre réellement : activation + assemblage Oracle.
+    expect(fulfillment).toContain("ASSEMBLE_ORACLE");
+    expect(fulfillment).toContain("activateBrand");
   });
 });

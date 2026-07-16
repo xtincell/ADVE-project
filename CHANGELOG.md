@@ -10,6 +10,19 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.176 — fix(intake): Vague 2 audit plateforme — la valeur payée est livrée (ORACLE_FULL, plan d'action, radar, reprise cockpit) (2026-07-16)
+
+**Vague 2 de l'audit intention/exécution : le parcours payé tient enfin ses promesses** (8 findings, dont 1 CRITICAL) :
+
+- **ORACLE_FULL payé jamais livré (CRITICAL)** : payer l'Oracle complet produisait EXACTEMENT le même résultat que le PDF à 49 — le webhook marquait PAID et rien d'autre (la colonne `tierKey` existait, jamais peuplée). Fix : `tierKey` peuplé sur les 4 chemins de création + **fulfillment centralisé** `paid-fulfillment.ts` appelé par les 3 webhooks (Stripe/CinetPay/PayPal) ET les chemins PAID immédiats (admin/gratuit/mock) : re-extraction premium (historique) + pour ORACLE_FULL → **activation de la marque** (activateBrand, idempotent) + **`ASSEMBLE_ORACLE scope=ALL`** (gouverné, composers déterministes en secours) + **lien `/shared/strategy/<token>`** + **alerte admins**. `verifyPayment` remonte `oracleShareUrl` → le result page affiche « Votre stratégie complète est activée » avec le lien.
+- **Plan d'action jeté** : les recommandations déterministes (analysées depuis les réponses réelles, persistées) n'étaient JAMAIS rendues — et le bloc « plan 90 j » promis au tier PDF n'existait qu'en pipeline V3 (défaut V1). Fix : section « Plan d'action prioritaire » inconditionnelle (fallback déterministe quand le bloc V3 est absent), écran ET PDF.
+- **Radar enfin livré** : `<AdvertisRadar>` (4 piliers ADVE /25) rendu sur le result page — le composant servait partout sauf là où il était promis. Score encadré honnêtement : « socle ADVE /100 — le /200 complet (piliers d'exécution) se construit ensuite ».
+- **`/score` réaligné canon** : 6 paliers (FRAGILE manquait, « 0-80 Latent » contredisait classifyTier), I = **Innovation** (« Implementation » était un drift), note explicite sur ce que couvre le diagnostic gratuit.
+- **JSON brut dans le PDF payant** : `HIDDEN_FIELDS` du composer partagé avec le result page (narrativeFull dupliqué, webPresence JSON purgés) + `humanizeValue` remplace `JSON.stringify` en profondeur.
+- **Reprise cockpit** : `/cockpit/new?intake=<token>` était ignoré (l'abonné re-saisissait tout, marque VIDE). Fix : email de session = email intake → bouton « Activer ma marque diagnostiquée » (piliers + diagnostic + empreinte suivent) ; sinon préremplissage du formulaire.
+- **« Email de rappel envoyé » (faux)** : remplacé par « Copier le lien » + avertissement honnête ; doc-comment des stream-events corrigé (aucun consommateur SSE anonyme — c'était documenté comme consommé).
+- Verrou `intake-adve-only` étendu : webhooks → fulfillment → re-extraction + ASSEMBLE_ORACLE + activateBrand vérifiés en chaîne. tsc 0 · lint 0 · **2372 tests verts**.
+
 ## v6.27.175 — fix(ui): Vague 1 audit plateforme — honnêteté du funnel public (fake telemetry, faux témoignages, leads perdus, pricing contradictoire) (2026-07-16)
 
 **Mandat opérateur carte blanche : « la même chose étendue à toute la plateforme, absolument tout ».** Audit 12 surfaces × vérification adversariale (52 agents) : 126 gaps rapportés, 39+ confirmés — consignés dans [docs/audits/PLATFORM-INTENT-GAP-AUDIT-2026-07-16.md](docs/audits/PLATFORM-INTENT-GAP-AUDIT-2026-07-16.md). **Vague 1 = le funnel public ne ment plus** (10 findings, dont 2 CRITICAL) :

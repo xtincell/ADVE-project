@@ -100,11 +100,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unknown reference" }, { status: 404 });
   }
 
-  // Vague D — re-extraction ADVE premium + régénération rapport pour le
-  // payeur, fire-and-forget (jamais bloquant pour l'ACK webhook).
+  // Fulfillment centralisé (fire-and-forget) : re-extraction premium +
+  // livraison ORACLE_FULL selon le tierKey payé (audit 2026-07-16).
   if (isPaid && intakeToken) {
-    const { premiumReextractAfterPayment } = await import("@/server/services/quick-intake");
-    premiumReextractAfterPayment(intakeToken);
+    const { fulfillPaidIntakeReport } = await import("@/server/services/quick-intake/paid-fulfillment");
+    void fulfillPaidIntakeReport(reference);
   }
 
   // Cycle d'abonnement manuel (Vague 5) : un paiement lié à une Subscription

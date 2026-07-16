@@ -147,12 +147,12 @@ export async function POST(request: Request) {
               providerEventId: event.id,
             },
       });
-      // Vague D — le payeur a droit au rapport PREMIUM : re-extraction ADVE
-      // modèle premium + régénération rapport, fire-and-forget (jamais
-      // bloquant pour l'ACK webhook).
-      if (paid && payment.intakeToken) {
-        const { premiumReextractAfterPayment } = await import("@/server/services/quick-intake");
-        premiumReextractAfterPayment(payment.intakeToken);
+      // Fulfillment centralisé (fire-and-forget, jamais bloquant pour l'ACK) :
+      // re-extraction premium + livraison ORACLE_FULL (activation + assemblage
+      // Oracle + lien de partage + alerte admins) selon le tierKey payé.
+      if (paid) {
+        const { fulfillPaidIntakeReport } = await import("@/server/services/quick-intake/paid-fulfillment");
+        void fulfillPaidIntakeReport(reference);
       }
     } catch {
       return NextResponse.json({ error: "Unknown reference" }, { status: 404 });
