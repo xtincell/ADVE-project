@@ -415,6 +415,10 @@ export const consoleNavGroups: NavGroup[] = [
       { href: "/console/seshat/tarsis", label: "Tarsis", icon: Radar },
       { href: "/console/seshat/argos", label: "Argos (Hunter)", icon: Crosshair },
       { href: "/console/signal/prospect-scoring", label: "Scorer un prospect", icon: Award },
+      // Audit 2026-07-16 `console-orphan-brand-directory-scoreur-canon` :
+      // pages fonctionnelles mais orphelines de toute nav.
+      { href: "/console/signal/brand-directory", label: "Base de marques", icon: Building2 },
+      { href: "/console/signal/scoreur-canon", label: "Canon du scoreur", icon: Award },
       { href: "/console/seshat/marketplace", label: "Marketplace", icon: Building2 },
       { href: "/console/seshat/attribution", label: "Attribution", icon: GitBranch },
     ],

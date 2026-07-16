@@ -81,9 +81,9 @@ export async function materializeBrief(
   // `NoAvailableProviderError` quand aucun provider du kind n'est configuré
   // (ex. génération d'image sans `OPENAI_API_KEY` — routing exclusif OpenAI).
   // On convertit ce throw en forge DIFFÉRÉE (task tracée + retriable), au lieu
-  // de crasher la cascade. Magnific (mock fallback) reste toujours disponible
-  // pour ses kinds, donc ce chemin ne déclenche que pour openai/adobe/canva/figma
-  // sans credentials.
+  // de crasher la cascade. Depuis l'audit 2026-07-16, Magnific SANS clé n'est
+  // plus disponible (mock gaté derrière PTAH_ALLOW_MOCK_FORGE=1) — ce chemin
+  // couvre donc aussi les kinds Magnific sans credentials.
   let provider: Awaited<ReturnType<typeof selectProvider>>;
   try {
     provider = await selectProvider(payload.brief);

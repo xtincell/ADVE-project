@@ -102,8 +102,16 @@ class MagnificProvider implements ForgeProvider {
     const apiKey = process.env.FREEPIK_API_KEY ?? process.env.MAGNIFIC_API_KEY;
     const model = this.resolveModel(brief);
 
-    // Mock fallback : si pas d'API key, retourne un task_id mock — l'asset
-    // est livré par PtahDemoMockReconciler en arrière-plan (pour démos client).
+    // Mode démo EXPLICITE uniquement (audit 2026-07-16 `ptah-magnific-mock-
+    // delivered-as-real` : sans clé, une image picsum aléatoire était livrée
+    // comme une vraie forge — indiscernable en aval, jusque dans la vitrine
+    // founder). Sans PTAH_ALLOW_MOCK_FORGE=1, l'absence de clé rend le
+    // provider indisponible → chemin DEFERRED_AWAITING_CREDENTIALS (ADR-0021).
+    if (!apiKey && process.env.PTAH_ALLOW_MOCK_FORGE !== "1") {
+      throw new Error(
+        "Magnific: aucune clé API (FREEPIK_API_KEY/MAGNIFIC_API_KEY) — forge différée (ADR-0021).",
+      );
+    }
     if (!apiKey) {
       const mockTaskId = `magnific-mock-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       // Schedule mock reconcile (5s delay simulating async forge)
@@ -248,9 +256,11 @@ class MagnificProvider implements ForgeProvider {
   }
 
   async isAvailable() {
-    // Toujours disponible : avec API key on appelle Magnific, sans on bascule
-    // en mock fallback (démos client + dev local sans credentials).
-    return true;
+    // Disponible avec clé API, ou en mode démo EXPLICITE (PTAH_ALLOW_MOCK_FORGE=1).
+    // Sans les deux → indisponible → le dispatcher matérialise une forge
+    // DEFERRED_AWAITING_CREDENTIALS honnête (ADR-0021, audit 2026-07-16).
+    const apiKey = process.env.FREEPIK_API_KEY ?? process.env.MAGNIFIC_API_KEY;
+    return Boolean(apiKey) || process.env.PTAH_ALLOW_MOCK_FORGE === "1";
   }
 
   private resolveModel(brief: ForgeBrief): string {

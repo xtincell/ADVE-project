@@ -95,9 +95,19 @@ export function PublicationManagerPanel({ strategyId }: { strategyId: string }) 
     <div className="space-y-3">
       <h3 className="ck-card__t">Vos publications — voir &amp; corriger</h3>
       {items.map((p) => {
-        const st = STATUS_LABEL[p.status] ?? { label: p.status, tone: "muted" };
+        // Audit 2026-07-16 `publish-failed-shown-as-published` : une publication
+        // dont TOUS les envois ont échoué était affichée « Publiée » (statut
+        // EXECUTED), sans motif ni retry. Le chip dérive des RÉSULTATS, le motif
+        // réel est rendu, et Modifier/Déclencher restent disponibles.
+        const allFailed =
+          p.status === "EXECUTED" &&
+          p.results.length > 0 &&
+          !p.results.some((r) => r.state === "PUBLISHED");
+        const st = allFailed
+          ? { label: "Échec d'envoi", tone: "warn" }
+          : (STATUS_LABEL[p.status] ?? { label: p.status, tone: "muted" });
         const isEditing = editingId === p.brandActionId;
-        const editable = p.status === "SCHEDULED";
+        const editable = p.status === "SCHEDULED" || allFailed;
         return (
           <div className="ck-card ck-pub" key={p.brandActionId}>
             <div className="ck-pub__head">
@@ -141,9 +151,14 @@ export function PublicationManagerPanel({ strategyId }: { strategyId: string }) 
                 <p className="ck-pub__text">{p.text}</p>
                 {p.imageUrl ? <p className="ck-pub__img"><ImageIcon /> visuel joint</p> : <p className="ck-pub__noimg">Pas encore de visuel — importez-en un depuis le brief.</p>}
                 {p.results.length > 0 && (
-                  <p className="ck-pub__results">
-                    {p.results.map((r) => `${r.platform} : ${RESULT_LABEL[r.state] ?? r.state}`).join(" · ")}
-                  </p>
+                  <div className="ck-pub__results">
+                    <p>{p.results.map((r) => `${r.platform} : ${RESULT_LABEL[r.state] ?? r.state}`).join(" · ")}</p>
+                    {p.results.filter((r) => r.state !== "PUBLISHED" && r.detail).map((r) => (
+                      <p key={r.platform} className="ck-pub__result-detail">
+                        {r.platform} — {r.detail}
+                      </p>
+                    ))}
+                  </div>
                 )}
                 {editable && (
                   <div className="ck-pub__actions">

@@ -107,6 +107,33 @@ export async function scoreProspect(input: ProspectInput): Promise<ScoreProspect
       budgetMs: 30_000,
     });
     footprintStatus = enriched.enrichment.apify === "DEFERRED" ? "DEFERRED" : "OK";
+
+    // Les faits coûteux du scan entrent dans la base de marques Seshat
+    // (audit 2026-07-16 `prospect-scan-facts-lost` : presse, domaine, MX/SPF,
+    // maps, perf étaient collectés puis JETÉS — re-payables, et le prospect
+    // mesuré n'entrait jamais au répertoire). Best-effort, jamais bloquant.
+    try {
+      const { buildFootprintFacts } = await import("@/server/services/quick-intake/footprint-facts");
+      const { computeFootprintScore } = await import("@/server/services/quick-intake/footprint-score");
+      const { recordFootprintObservation } = await import("@/server/services/seshat/brand-registry");
+      const score = computeFootprintScore(enriched);
+      await recordFootprintObservation({
+        name: input.name,
+        websiteUrl: input.websiteUrl ?? null,
+        countryCode: input.countryCode ?? null,
+        sectorSlug: input.sectorRaw ?? null,
+        total: score.total,
+        measuredWeight: score.measuredWeight,
+        dimensions: score.dimensions.map((d) => ({
+          key: d.key, label: d.label, details: d.details, measured: d.measured, score: d.score, weight: d.weight,
+        })),
+        followerCounts: enriched.followerCounts,
+        facts: buildFootprintFacts(enriched),
+        source: "PROSPECT_SCORING",
+      });
+    } catch (err) {
+      console.warn("[scoreur] observation d'empreinte non enregistrée:", err instanceof Error ? err.message : err);
+    }
   } catch {
     footprintStatus = "DEFERRED";
   }
