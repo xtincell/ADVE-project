@@ -55,6 +55,14 @@ export default function PropositionPage() {
   const [cascadeModalOpen, setCascadeModalOpen] = useState(false);
   const [externalBlockers, setExternalBlockers] = useState<BlockerHint[] | undefined>(undefined);
 
+  // Audit 2026-07-16 `oracle-dual-status-truth` : le héro (completeness) et le
+  // panel progressif (OracleSection.status) racontaient deux vérités
+  // contradictoires sur le MÊME écran (« 97 % assemblé » vs « 35 périmés »).
+  // Le héro consomme désormais AUSSI la fraîcheur des sections.
+  const oracleSections = trpc.oracle.listSections.useQuery(
+    { strategyId: strategyId ?? "" },
+    { enabled: !!strategyId },
+  );
   const completeness = trpc.strategyPresentation.completeness.useQuery(
     { strategyId: strategyId ?? "" },
     {
@@ -177,6 +185,8 @@ export default function PropositionPage() {
   const emptySections = Object.values(report).filter((s) => s === "empty").length;
   // lafusee:allow-adhoc-completion: display-only assembled% (Oracle section-count ratio, not the canonical pillar completion gate)
   const pct = totalSections > 0 ? Math.round((completeSections / totalSections) * 100) : 0;
+  const staleSections = (Array.isArray(oracleSections.data) ? [] : (oracleSections.data?.sections ?? []))
+    .filter((s) => s.status === "STALE").length;
 
   // ── 3 cartes de préparation — état RÉEL de la cascade (pas de prose mock) ──
   const readinessCards = [
@@ -227,6 +237,12 @@ export default function PropositionPage() {
             ? <>Votre proposition stratégique est <span className="hl">prête à compiler</span> — {completeSections}/{totalSections} sections assemblées.</>
             : <>Votre proposition s&apos;assemble en continu — <span className="hl">{pct}%</span> du livrable est consolidé.</>}
         </h2>
+        {staleSections > 0 && (
+          <p className="ck-oracle-hero__p">
+            {staleSections} section{staleSections > 1 ? "s" : ""} à actualiser depuis vos dernières
+            modifications de piliers — régénérez-les depuis le panneau ci-dessous.
+          </p>
+        )}
         <p className="ck-oracle-hero__p">
           L&apos;Oracle est un livrable consulting de {totalSections} sections, assemblé et réévalué en continu par votre équipe (méthode ADVE-RTIS).
           {isAssembling ? " Assemblage en cours — les sections se mettent à jour en temps réel." : ` ${totalSections - completeSections} section(s) restantes.`}

@@ -350,14 +350,11 @@ async function dispatchRunner(
     // Pure mapping is 100% confident (no LLM hallucination risk)
     return { payload, confidence: 1.0 };
   }
-  // ── Fallback déterministe (sections 22-35 — mandat « Oracle sans LLM ») ──
-  // Deux portes : (1) aucun provider LLM configuré → composer directement,
-  // sans tenter un appel voué à l'échec ; (2) le runner LLM échoue → dégradation
-  // gracieuse vers le composer COMPOSE (données réelles, confidence dégradée,
-  // provenance DETERMINISTIC_COMPOSE tracée). Les 21 sections CORE restent
-  // PURE_MAPPER au-dessus — l'Oracle entier compile désormais sans LLM.
+  // ── Composition déterministe d'abord (sections 22-35 — « Oracle sans LLM ») ──
+  // Sections à composeur = COMPOSE-only (décision audit 2026-07-16) ; le runner
+  // LLM ne sert plus que les sections SANS composeur, avec dégradation gracieuse
+  // en cas d'échec. Les 21 sections CORE restent PURE_MAPPER au-dessus.
   const {
-    isAnyLLMProviderConfigured,
     hasDeterministicComposer,
     composeSectionDeterministic,
   } = await import("@/server/services/strategy-presentation/deterministic-composers");
@@ -395,27 +392,19 @@ async function dispatchRunner(
     throw new Error(`Unknown runner kind: ${runner.kind as string}`);
   };
 
-  if (!isAnyLLMProviderConfigured() && hasDeterministicComposer(meta.id)) {
+  // DÉCISION (audit 2026-07-16 `oracle-llm-payload-dead-end`) : les sections à
+  // composeur déterministe sont COMPOSE-only. L'ancien flux payait le runner LLM,
+  // rangeait son résultat dans OracleSection.payload (colonne qu'AUCUNE surface
+  // ne rend) puis ÉCRASAIT le BrandAsset avec la composition déterministe — coût
+  // LLM payé pour un contenu jamais livré. Cohérent ADR-0091 (Oracle 35/35 sans
+  // LLM) : le composeur d'abord, le LLM seulement pour les sections sans composeur.
+  if (hasDeterministicComposer(meta.id)) {
     const composed = await composeSectionDeterministic(strategyId, meta);
     if (composed) return composed;
   }
 
   try {
     const llmResult = await runLLMRunner();
-    // Le runner LLM stocke son résultat dans OracleSection.payload mais n'écrivait
-    // PAS le BrandAsset que le rendu (PDF / lien partagé / sections §22-35) consomme.
-    // Sans ce writeback, générer une section ne changeait rien au livrable délivré —
-    // cause racine du « Oracle pas parfait » (UI 35/35 COMPLETE, PDF inchangé). On
-    // garantit donc le writeback canonique via le composeur déterministe (forme
-    // correcte pour le renderer, keyé par sectionId) quand il existe.
-    if (hasDeterministicComposer(meta.id)) {
-      await composeSectionDeterministic(strategyId, meta).catch((err) => {
-        console.warn(
-          `[oracle-section] BrandAsset writeback (post-LLM) échoué pour §${meta.number}:`,
-          err instanceof Error ? err.message : err,
-        );
-      });
-    }
     return llmResult;
   } catch (err) {
     if (hasDeterministicComposer(meta.id)) {

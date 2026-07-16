@@ -176,7 +176,7 @@ const SECTION_DATA_MAP: Record<string, string> = {
 
 // ── Persona lens meta (reader) ──
 const PERSONA_META: Record<PresentationPersona, { label: string; icon: LucideIcon; desc: string; eyebrow: string }> = {
-  consultant: { label: "Consultant", icon: Briefcase, desc: "Analyse complète — diagnostic ADVERTIS, frameworks Big 4 et distinctives.", eyebrow: "Proposition stratégique · analyse" },
+  consultant: { label: "Consultant", icon: Briefcase, desc: "Analyse complète — diagnostic 8 piliers, frameworks Big 4 et distinctives.", eyebrow: "Proposition stratégique · analyse" },
   client: { label: "Client", icon: Users, desc: "L'essentiel pour décider — synthèse, valeur, plan et budget.", eyebrow: "Proposition stratégique · pour décision" },
   creative: { label: "Creative", icon: Palette, desc: "Territoire & exécution — plateforme, création et production.", eyebrow: "Proposition stratégique · brief créatif" },
 };
@@ -185,7 +185,7 @@ const PERSONA_ORDER: PresentationPersona[] = ["consultant", "client", "creative"
 // ── Tier (chapter) meta ──
 const TIER_ORDER = ["CORE", "BIG4_BASELINE", "DISTINCTIVE"] as const;
 const TIER_META: Record<string, { rn: string; chip: string; nav: string; icon: LucideIcon; title: string; desc: string }> = {
-  CORE: { rn: "I", chip: "Core", nav: "Fondation & exécution", icon: Rocket, title: "Fondation & exécution", desc: "Le cœur ADVERTIS — identité, diagnostic, plan et mesure." },
+  CORE: { rn: "I", chip: "Core", nav: "Fondation & exécution", icon: Rocket, title: "Fondation & exécution", desc: "Le cœur de la méthode — identité, diagnostic, plan et mesure." },
   BIG4_BASELINE: { rn: "II", chip: "Big 4", nav: "Baseline Big 4", icon: LayoutGrid, title: "Baseline consulting", desc: "Les cadres de référence Big 4 appliqués à la marque." },
   DISTINCTIVE: { rn: "III", chip: "Distinct", nav: "Distinctives", icon: Sparkles, title: "Distinctives La Fusée", desc: "Ce que les Big 4 ne mesurent pas : la masse culturelle." },
 };
@@ -389,7 +389,7 @@ export function PresentationLayout({ document: doc, defaultPersona, shareToken }
 
             <footer className="ck-ogen__foot">
               <p>Document confidentiel — usage interne client uniquement.</p>
-              <p>Généré par La Fusée — Industry OS · méthode ADVE-RTIS.</p>
+              <p>Généré par La Fusée — Industry OS · méthode ADVE.</p>
             </footer>
           </div>
         </div>

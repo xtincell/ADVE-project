@@ -166,8 +166,8 @@ export const SECTION_REGISTRY: SectionMeta[] = [
   // leur contenu réel est produit par `imhotep.draftCrewProgram` /
   // `anubis.draftCommsPlan` via la génération de section (sequenceKey
   // IMHOTEP-CREW / ANUBIS-COMMS — plus de stub ; legacy déposé ADR-0125).
-  { id: "imhotep-crew-program", number: "22", title: "Crew Program (Imhotep)", personas: ["consultant"], tier: "CORE", brandAssetKind: "GENERIC", sequenceKey: "IMHOTEP-CREW" },
-  { id: "anubis-plan-comms", number: "23", title: "Plan Comms (Anubis)", personas: ["consultant"], tier: "CORE", brandAssetKind: "GENERIC", sequenceKey: "ANUBIS-COMMS" },
+  { id: "imhotep-crew-program", number: "22", title: "Programme équipe", personas: ["consultant"], tier: "CORE", brandAssetKind: "GENERIC", sequenceKey: "IMHOTEP-CREW" },
+  { id: "anubis-plan-comms", number: "23", title: "Plan de diffusion", personas: ["consultant"], tier: "CORE", brandAssetKind: "GENERIC", sequenceKey: "ANUBIS-COMMS" },
 
   // ─── BIG4_BASELINE (7 sections — frameworks consulting one-shot) ──────────
   { id: "mckinsey-7s", number: "24", title: "McKinsey 7S Framework", personas: ["consultant", "client"], tier: "BIG4_BASELINE", isBaseline: true, brandAssetKind: "MCK_7S", sequenceKey: "MCK-7S" },
@@ -180,10 +180,10 @@ export const SECTION_REGISTRY: SectionMeta[] = [
 
   // ─── DISTINCTIVE (5 sections — valeur ajoutée La Fusée vs Big4) ───────────
   { id: "cult-index", number: "31", title: "Cult Index — Score de masse culturelle", personas: ["consultant", "client"], tier: "DISTINCTIVE", isDistinctive: true, brandAssetKind: "CULT_INDEX", sequenceKey: "CULT-INDEX" },
-  { id: "manipulation-matrix", number: "32", title: "Manipulation Matrix — 4 modes d'engagement", personas: ["consultant", "client", "creative"], tier: "DISTINCTIVE", isDistinctive: true, brandAssetKind: "MANIPULATION_MATRIX", sequenceKey: "MANIP-MATRIX" },
-  { id: "devotion-ladder", number: "33", title: "Devotion Ladder — Hiérarchie superfans", personas: ["consultant", "client"], tier: "DISTINCTIVE", isDistinctive: true, brandAssetKind: "SUPERFAN_JOURNEY", sequenceKey: "DEVOTION-LADDER" },
-  { id: "overton-distinctive", number: "34", title: "Overton Distinctive — Position fenêtre culturelle", personas: ["consultant", "client"], tier: "DISTINCTIVE", isDistinctive: true, brandAssetKind: "OVERTON_WINDOW", sequenceKey: "OVERTON-DISTINCTIVE" },
-  { id: "tarsis-weak-signals", number: "35", title: "Tarsis — Signaux faibles sectoriels", personas: ["consultant"], tier: "DISTINCTIVE", isDistinctive: true, brandAssetKind: "TREND_RADAR", sequenceKey: "TARSIS-WEAK" },
+  { id: "manipulation-matrix", number: "32", title: "Modes d'engagement — 4 leviers d'audience", personas: ["consultant", "client", "creative"], tier: "DISTINCTIVE", isDistinctive: true, brandAssetKind: "MANIPULATION_MATRIX", sequenceKey: "MANIP-MATRIX" },
+  { id: "devotion-ladder", number: "33", title: "Échelle d'engagement — Hiérarchie superfans", personas: ["consultant", "client"], tier: "DISTINCTIVE", isDistinctive: true, brandAssetKind: "SUPERFAN_JOURNEY", sequenceKey: "DEVOTION-LADDER" },
+  { id: "overton-distinctive", number: "34", title: "Fenêtre d'Overton — Position culturelle distinctive", personas: ["consultant", "client"], tier: "DISTINCTIVE", isDistinctive: true, brandAssetKind: "OVERTON_WINDOW", sequenceKey: "OVERTON-DISTINCTIVE" },
+  { id: "tarsis-weak-signals", number: "35", title: "Signaux faibles sectoriels", personas: ["consultant"], tier: "DISTINCTIVE", isDistinctive: true, brandAssetKind: "TREND_RADAR", sequenceKey: "TARSIS-WEAK" },
 ];
 
 /**
