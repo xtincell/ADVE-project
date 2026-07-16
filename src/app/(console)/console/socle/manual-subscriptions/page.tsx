@@ -77,6 +77,7 @@ export default function ManualSubscriptionsPage() {
           <table className="w-full text-left text-sm">
             <thead className="border-b border-border bg-background/60 text-xs uppercase tracking-wider text-foreground-muted">
               <tr>
+                <th className="px-4 py-3 font-medium">Réf</th>
                 <th className="px-4 py-3 font-medium">Formule</th>
                 <th className="px-4 py-3 font-medium">Montant</th>
                 <th className="px-4 py-3 font-medium">Contact</th>
@@ -91,6 +92,11 @@ export default function ManualSubscriptionsPage() {
                 const isPending = r.status === "pending_manual";
                 return (
                   <tr key={r.id} className="border-b border-border last:border-0">
+                    {/* La réf envoyée au client sur WhatsApp — le rapprochement se fait
+                        par elle, pas au nom/email (audit 2026-07-16). */}
+                    <td className="px-4 py-3 font-mono text-xs text-foreground">
+                      {r.providerSubscriptionId.replace(/^manual-wa:/, "").replace(/^admin-free:/, "")}
+                    </td>
                     <td className="px-4 py-3 font-medium text-foreground">{r.tierKey}</td>
                     <td className="px-4 py-3 text-foreground-secondary">
                       {r.amountPerPeriod.toLocaleString("fr-FR")} {r.currency}
@@ -143,6 +149,77 @@ export default function ManualSubscriptionsPage() {
           </table>
         </div>
       )}
+
+      <OneShotQueue />
     </section>
+  );
+}
+
+/**
+ * Paiements one-shot manuels du funnel (PDF / Stratégie complète payés sur
+ * WhatsApp faute de provider configuré — audit 2026-07-16). Valider = PAID +
+ * fulfillment (le lien du lead se déverrouille tout seul).
+ */
+function OneShotQueue() {
+  const utils = trpc.useUtils();
+  const { data: rows, isLoading } = trpc.payment.listManualIntakePayments.useQuery({ status: "PENDING" });
+  const invalidate = () => utils.payment.listManualIntakePayments.invalidate();
+  const approve = trpc.payment.approveManualIntakePayment.useMutation({ onSuccess: invalidate });
+  const reject = trpc.payment.rejectManualIntakePayment.useMutation({ onSuccess: invalidate });
+  const pending = approve.isPending || reject.isPending;
+
+  if (isLoading || !rows || rows.length === 0) return null;
+
+  return (
+    <div className="space-y-3">
+      <h2 className="text-sm font-semibold text-foreground">Paiements one-shot (diagnostic / stratégie) en attente</h2>
+      <div className="overflow-x-auto rounded-xl border border-border">
+        <table className="w-full text-left text-sm">
+          <thead className="border-b border-border bg-background/60 text-xs uppercase tracking-wider text-foreground-muted">
+            <tr>
+              <th className="px-4 py-3 font-medium">Réf</th>
+              <th className="px-4 py-3 font-medium">Produit</th>
+              <th className="px-4 py-3 font-medium">Montant</th>
+              <th className="px-4 py-3 font-medium">Demandé le</th>
+              <th className="px-4 py-3 text-right font-medium">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((p) => (
+              <tr key={p.id} className="border-b border-border last:border-0">
+                <td className="px-4 py-3 font-mono text-xs text-foreground">{p.reference}</td>
+                <td className="px-4 py-3 text-foreground-secondary">
+                  {p.tierKey === "ORACLE_FULL" ? "Stratégie complète" : "Rapport PDF complet"}
+                </td>
+                <td className="px-4 py-3 text-foreground-secondary">
+                  {p.amount.toLocaleString("fr-FR")} {p.currency}
+                </td>
+                <td className="px-4 py-3 text-xs text-foreground-muted">
+                  {new Date(p.createdAt).toLocaleString("fr-FR")}
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <div className="inline-flex gap-2">
+                    <button
+                      onClick={() => approve.mutate({ reference: p.reference })}
+                      disabled={pending}
+                      className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-accent-foreground hover:opacity-90 disabled:opacity-50"
+                    >
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Valider
+                    </button>
+                    <button
+                      onClick={() => reject.mutate({ reference: p.reference })}
+                      disabled={pending}
+                      className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground-secondary hover:text-foreground disabled:opacity-50"
+                    >
+                      <XCircle className="h-3.5 w-3.5" /> Refuser
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }

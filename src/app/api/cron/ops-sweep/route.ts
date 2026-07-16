@@ -35,7 +35,15 @@ export async function GET(request: Request) {
     const pastDue = await db.subscription.updateMany({
       where: {
         status: "active",
-        providerSubscriptionId: { startsWith: "manual:" },
+        // Audit 2026-07-16 `manual-wa-subscription-never-expires` : le filtre
+        // « manual: » ratait la voie de production « manual-wa: » (et les
+        // grants « admin-free: ») — une demande WhatsApp validée une fois
+        // restait active À VIE. Tous les rails non-provider expirent ici.
+        OR: [
+          { providerSubscriptionId: { startsWith: "manual:" } },
+          { providerSubscriptionId: { startsWith: "manual-wa:" } },
+          { providerSubscriptionId: { startsWith: "admin-free:" } },
+        ],
         currentPeriodEnd: { lt: graceCutoff },
       },
       data: { status: "past_due" },

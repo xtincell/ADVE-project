@@ -569,7 +569,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : payment.cancelSubscription teste `!sub.providerSubscriptionId.startsWith("manual:")` (payment.ts:366) — un abonnement `manual-wa:` (ou `admin-free:`) passe donc dans la branche Stripe : cancelStripeSubscription("manual-wa:…") throw « STRIPE_SECRET_KEY required » (stripe-subscription.ts:81) ou un 404 Stripe. Côté UI, billing/page.tsx ne rend JAMAIS cancelMutation.error (aucun binding) : le founder clique « Oui, annuler », le bouton fait « Annulation… » puis rien — échec muet, cancelAtPeriodEnd jamais posé. La page elle-même connaît les deux préfixes (`startsWith("manual:") || startsWith("manual-")` ligne 119) — seul le backend a raté le second.
 - **Preuve** : src/server/trpc/routers/payment.ts:366-371 + src/server/services/payment-providers/stripe-subscription.ts:80-81 + src/app/(cockpit)/cockpit/settings/billing/page.tsx:35-37 (mutation sans rendu d'erreur) vs page.tsx:119 (l'UI teste `manual-` mais pas le routeur).
 - **Fix esquissé** : Dans cancelSubscription, ne router vers Stripe que si le préfixe n'est ni `manual` ni `admin-free` (test partagé avec l'UI), et afficher cancelMutation.error sur la page billing.
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V6 paiements (v6.27.180)
 
 ### [CRITICAL] `intake-paywall-env-vars-shown-to-lead-no-manual-fallback` — payments-gates
 
@@ -578,7 +578,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : En prod sans clés provider, pickProvider throw « No payment provider configured. Set CINETPAY_API_KEY+CINETPAY_SITE_ID, STRIPE_SECRET_KEY, or PAYPAL_CLIENT_ID+PAYPAL_CLIENT_SECRET. » (payment-providers/index.ts:72-74), enveloppé « Aucun provider de paiement disponible. … » (payment.ts:130) et rendu VERBATIM au lead : result/page.tsx:1320-1322 `{initPaymentMutation.error.message}`. Le lead voit des noms de variables d'environnement. Et contrairement aux abonnements, les one-shots n'ont AUCUN fallback WhatsApp manuel : le premier euro/FCFA du funnel est structurellement imprenable sans clés — exactement le pattern /scorer (raison d'infra face lead + valeur perdue).
 - **Preuve** : src/server/services/payment-providers/index.ts:72-74 (message env vars) → src/server/trpc/routers/payment.ts:129-131 → src/app/(intake)/intake/[token]/result/page.tsx:1320-1322 (rendu brut). initManualSubscription (payment.ts:386) ne couvre que les 4 tiers mensuels, jamais INTAKE_PDF/ORACLE_FULL.
 - **Fix esquissé** : Étendre le chemin manuel WhatsApp aux one-shots (IntakePayment `pending_manual` + validation console) et remplacer le message d'erreur rendu par une copy client (« paiement momentanément indisponible — contactez-nous sur WhatsApp »).
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V6 paiements (v6.27.180)
 
 ### [CRITICAL] `manual-wa-subscription-never-expires` — payments-gates
 
@@ -587,7 +587,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : Le sweep quotidien filtre `providerSubscriptionId: { startsWith: "manual:" }` mais la voie de production WhatsApp crée des subscriptions préfixées `manual-wa:` (payment.ts:433) — "manual-wa:".startsWith("manual:") est FAUX. Et checkPaidTier ne vérifie jamais currentPeriodEnd (tier-gate.ts:61-69, seulement status ∈ active/trialing). Résultat : une demande WhatsApp validée une fois reste `active` À VIE — le client garde l'accès payant pour toujours après un seul paiement de 30 j. Aucun autre writer ne repasse jamais un `manual-wa:` en past_due (grep exhaustif : 3 hits, tous dans payment.ts).
 - **Preuve** : src/app/api/cron/ops-sweep/route.ts:35-42 `where: { status: "active", providerSubscriptionId: { startsWith: "manual:" }, currentPeriodEnd: { lt: graceCutoff } }` vs src/server/trpc/routers/payment.ts:433 `providerSubscriptionId: \`manual-wa:${reference}\`` ; tier-gate.ts:61-69 ne lit pas currentPeriodEnd. Le test manual-payment-surface.test.ts ne couvre pas l'expiration.
 - **Fix esquissé** : Élargir le filtre du sweep à `OR: [{startsWith:"manual:"},{startsWith:"manual-wa:"}]` (voire `admin-free:`), OU ajouter `currentPeriodEnd: { gte: now }` (null-tolerant) dans la clause where de checkPaidTier.
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V6 paiements (v6.27.180)
 
 ### [CRITICAL] `b-slug-lfa-regex-404` — social-chain
 
@@ -677,7 +677,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : La référence est générée, envoyée au client dans le message WhatsApp et persistée (`providerSubscriptionId = manual-wa:<ref>`), mais la table console ne l'affiche PAS (colonnes : Formule / Montant / Contact / Demandé le / Statut / Actions). L'opérateur qui reçoit « Réf : ABC123 » sur WhatsApp ne peut pas la retrouver dans la file — il rapproche au nom/email, fragile si plusieurs demandes ou emails différents. Donnée collectée-mais-jetée par la projection UI (la row la contient).
 - **Preuve** : src/server/trpc/routers/payment.ts:452-454 (message WhatsApp avec `Réf : ${reference}`) et :433 (`providerSubscriptionId: \`manual-wa:${reference}\``) ; src/app/(console)/console/socle/manual-subscriptions/page.tsx:79-101 (aucune colonne Réf, providerSubscriptionId jamais lu)
 - **Fix esquissé** : Ajouter une colonne « Réf » (providerSubscriptionId.replace(/^manual-wa:/, "")) en mono, copiable — la donnée est déjà dans la réponse.
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V6 paiements (v6.27.180)
 
 ### [MAJOR] `prospect-scan-facts-lost` — console-operator
 
@@ -776,7 +776,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : handleSelectTier fait un fetch brut vers `monetization.initSubscription` (result/page.tsx:426-440), qui est STRIPE-ONLY (monetization.ts:308 initStripeSubscription, throw sans STRIPE_SECRET_KEY, jamais de rail mobile money ni WhatsApp). Sur échec, redirection silencieuse vers `/cockpit/new?tier=…` (page.tsx:447) : le lead atterrit sur l'ignition SANS qu'aucun paiement n'ait été initié ni proposé — il retombera plus loin sur les cadenas tier-gate. Pendant ce temps le vrai deux-rails `payment.initSubscription` (payment.ts:250) n'est consommé par AUCUNE UI (grep : 0 caller front) — backend shippé, jamais branché.
 - **Preuve** : src/app/(intake)/intake/[token]/result/page.tsx:426-448 (fetch monetization.initSubscription + fallback muet) ; src/server/trpc/routers/monetization.ts:289-323 (Stripe-only, publicProcedure) ; grep initSubscription : payment.initSubscription sans consommateur UI.
 - **Fix esquissé** : Faire dispatcher le CTA mensuel du funnel vers payment.initManualSubscription (ou payment.initSubscription qui choisit déjà le rail), et remplacer le fallback muet par un état visible (« demande enregistrée / payer via WhatsApp »).
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V6 paiements (v6.27.180)
 
 ### [MAJOR] `manual-approval-promised-notification-never-sent` — payments-gates
 
@@ -785,7 +785,7 @@ La première passe de vérification adversariale était plafonnée à 40 finding
 - **Exécution** : approveManualSubscription (payment.ts:473-502) fait uniquement db.update + audit-trail best-effort. Aucun email, aucun événement notification-center, aucun NSP — grep « notif|sendEmail » dans payment.ts : 0 hit hors notifyUrl webhooks. Le founder qui a payé sur WhatsApp doit deviner que son accès est ouvert en re-visitant la page billing. rejectManualSubscription idem (aucun feedback du refus).
 - **Preuve** : src/app/(cockpit)/cockpit/settings/billing/page.tsx:99-102 (promesse) vs src/server/trpc/routers/payment.ts:473-523 (approve/reject : update + auditTrail seulement).
 - **Fix esquissé** : Émettre une notification (notification-center + email best-effort) dans approve/reject avec le libellé client du tier — ou retirer la promesse de la copy.
-- **Statut** : ⬜ à corriger
+- **Statut** : ✅ corrigé — V6 paiements (v6.27.180)
 
 ### [MAJOR] `ig-business-inbox-host-and-scope` — social-chain
 

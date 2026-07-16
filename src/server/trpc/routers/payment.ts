@@ -135,8 +135,38 @@ export const paymentRouter = createTRPCRouter({
           countryCode: country,
           preferred: input.provider === "AUTO" ? undefined : input.provider as PaymentProviderId,
         });
-      } catch (err) {
-        throw new Error(`Aucun provider de paiement disponible. ${(err as Error).message}`);
+      } catch {
+        // Fallback manuel WhatsApp (audit 2026-07-16 `intake-paywall-env-vars-
+        // shown-to-lead-no-manual-fallback`) : sans clés provider, le premier
+        // paiement du funnel était structurellement imprenable — et le lead
+        // voyait des noms de variables d'environnement. Le rail manuel des
+        // abonnements est étendu aux one-shots : IntakePayment PENDING
+        // MANUAL_WA + lien WhatsApp ; l'opérateur valide en console → PAID +
+        // fulfillment (verifyPayment déverrouille alors le livrable).
+        await ctx.db.intakePayment.create({
+          data: {
+            reference,
+            intakeToken: input.intakeToken,
+            amount: Math.round(resolved.amount),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            currency: resolved.currencyCode as any,
+            provider: "MANUAL_WA",
+            status: "PENDING",
+            tierKey: input.tierKey,
+          },
+        });
+        const waNumber = (process.env.MANUAL_PAYMENT_WHATSAPP_NUMBER ?? "237694171799").replace(/\D/g, "");
+        const tierLabel = input.tierKey === "ORACLE_FULL" ? "Stratégie complète" : "Rapport PDF complet";
+        const waMessage =
+          `Bonjour, je souhaite régler « ${tierLabel} » (${Math.round(resolved.amount)} ${resolved.currencyCode}) ` +
+          `pour ${intake.companyName ?? "ma marque"}. Email : ${intake.contactEmail ?? "—"}. Réf : ${reference}.`;
+        return {
+          paymentUrl: `https://wa.me/${waNumber}?text=${encodeURIComponent(waMessage)}`,
+          reference,
+          provider: "MANUAL_WA" as const,
+          amount: Math.round(resolved.amount),
+          currency: resolved.currencyCode,
+        };
       }
 
       const providerId = providerImpl.id;
@@ -380,7 +410,15 @@ export const paymentRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const sub = await ctx.db.subscription.findUnique({ where: { id: input.subscriptionId } });
       if (!sub || sub.operatorId !== ctx.session.user.id) throw new Error("Souscription introuvable.");
-      if (!sub.providerSubscriptionId.startsWith("manual:")) {
+      // Audit 2026-07-16 `cancel-manual-wa-routes-to-stripe-and-fails-silently` :
+      // seuls les abonnements PROVIDER passent chez Stripe — « manual: »,
+      // « manual-wa: » et « admin-free: » s'annulent par simple flag (l'ancien
+      // test « manual: » envoyait les manual-wa chez Stripe → throw, annulation
+      // silencieusement impossible pour le founder WhatsApp).
+      const isNonProvider =
+        sub.providerSubscriptionId.startsWith("manual") ||
+        sub.providerSubscriptionId.startsWith("admin-free:");
+      if (!isNonProvider) {
         const { cancelStripeSubscription } = await import(
           "@/server/services/payment-providers/stripe-subscription"
         );
@@ -515,6 +553,26 @@ export const paymentRouter = createTRPCRouter({
         entityId: sub.id,
         newValue: { status: "active", tierKey: sub.tierKey, manualApproval: true },
       }).catch(() => {});
+      // Le founder qui a payé sur WhatsApp est PRÉVENU que son accès est ouvert
+      // (audit 2026-07-16 `manual-approval-promised-notification-never-sent` :
+      // il devait deviner en re-visitant la page facturation). Best-effort.
+      try {
+        if (!sub.operatorId) throw new Error("subscription sans operatorId — pas de destinataire");
+        const { pushNotification } = await import("@/server/services/anubis/notifications");
+        const { TIER_LABELS } = await import("@/lib/billing/subscription-labels");
+        await pushNotification({
+          userId: sub.operatorId,
+          title: "Votre abonnement est activé",
+          body: `Votre paiement a été validé — la formule ${TIER_LABELS[sub.tierKey] ?? sub.tierKey} est active pour ${input.periodDays} jours.`,
+          link: "/cockpit/settings/billing",
+          channels: ["IN_APP", "EMAIL"],
+          type: "SYSTEM",
+          entityType: "Subscription",
+          entityId: sub.id,
+        });
+      } catch (err) {
+        console.warn("[payment] notification d'activation non envoyée:", err instanceof Error ? err.message : err);
+      }
       return updated;
     }),
 
@@ -524,7 +582,7 @@ export const paymentRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const sub = await ctx.db.subscription.findUnique({ where: { id: input.subscriptionId } });
       if (!sub || sub.status !== "pending_manual") throw new Error("Demande manuelle introuvable ou déjà traitée.");
-      return ctx.db.subscription.update({
+      const rejected = await ctx.db.subscription.update({
         where: { id: sub.id },
         data: {
           status: "rejected_manual",
@@ -536,6 +594,78 @@ export const paymentRouter = createTRPCRouter({
             rejectedAt: new Date().toISOString(),
           },
         },
+      });
+      // Feedback du refus au demandeur (audit 2026-07-16) — best-effort.
+      try {
+        if (!sub.operatorId) throw new Error("subscription sans operatorId — pas de destinataire");
+        const { pushNotification } = await import("@/server/services/anubis/notifications");
+        const { TIER_LABELS } = await import("@/lib/billing/subscription-labels");
+        await pushNotification({
+          userId: sub.operatorId,
+          title: "Demande d'abonnement non validée",
+          body: `Votre demande pour la formule ${TIER_LABELS[sub.tierKey] ?? sub.tierKey} n'a pas été validée${input.reason ? ` : ${input.reason}` : "."} Contactez-nous si besoin.`,
+          link: "/cockpit/settings/billing",
+          channels: ["IN_APP", "EMAIL"],
+          type: "SYSTEM",
+          entityType: "Subscription",
+          entityId: sub.id,
+        });
+      } catch (err) {
+        console.warn("[payment] notification de refus non envoyée:", err instanceof Error ? err.message : err);
+      }
+      return rejected;
+    }),
+
+  /** Console : file des paiements one-shot manuels (WhatsApp) du funnel. */
+  listManualIntakePayments: adminProcedure
+    .input(z.object({ status: z.enum(["PENDING", "PAID", "FAILED", "all"]).default("PENDING") }).optional())
+    .query(({ ctx, input }) => {
+      const status = input?.status ?? "PENDING";
+      return ctx.db.intakePayment.findMany({
+        where: { provider: "MANUAL_WA", ...(status === "all" ? {} : { status }) },
+        orderBy: { createdAt: "desc" },
+        take: 200,
+      });
+    }),
+
+  /** Console : valide un paiement one-shot manuel → PAID + fulfillment (livrable déverrouillé). */
+  approveManualIntakePayment: adminProcedure
+    .input(z.object({ reference: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const payment = await ctx.db.intakePayment.findUnique({ where: { reference: input.reference } });
+      if (!payment || payment.provider !== "MANUAL_WA" || payment.status !== "PENDING") {
+        throw new Error("Paiement manuel introuvable ou déjà traité.");
+      }
+      const updated = await ctx.db.intakePayment.update({
+        where: { reference: input.reference },
+        data: { status: "PAID", paidAt: new Date() },
+      });
+      // Même chemin de livraison que les webhooks provider (V2 audit) :
+      // re-extraction premium + ORACLE_FULL → activation + assemblage + lien.
+      const { fulfillPaidIntakeReport } = await import("@/server/services/quick-intake/paid-fulfillment");
+      await fulfillPaidIntakeReport(input.reference);
+      const auditTrail = await import("@/server/services/audit-trail");
+      auditTrail.log({
+        userId: ctx.session.user.id,
+        action: "UPDATE",
+        entityType: "IntakePayment",
+        entityId: payment.id,
+        newValue: { status: "PAID", tierKey: payment.tierKey, manualApproval: true },
+      }).catch(() => {});
+      return updated;
+    }),
+
+  /** Console : refuse un paiement one-shot manuel. */
+  rejectManualIntakePayment: adminProcedure
+    .input(z.object({ reference: z.string(), reason: z.string().max(500).optional() }))
+    .mutation(async ({ ctx, input }) => {
+      const payment = await ctx.db.intakePayment.findUnique({ where: { reference: input.reference } });
+      if (!payment || payment.provider !== "MANUAL_WA" || payment.status !== "PENDING") {
+        throw new Error("Paiement manuel introuvable ou déjà traité.");
+      }
+      return ctx.db.intakePayment.update({
+        where: { reference: input.reference },
+        data: { status: "FAILED", failureReason: input.reason ?? "Refusé par l'opérateur" },
       });
     }),
 

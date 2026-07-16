@@ -10,6 +10,18 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.180 — fix(thot): Vague 6 audit plateforme — paiements & abonnement manuel (expiration, annulation, fallback one-shot, notifications) (2026-07-16)
+
+**Vague 6 de l'audit intention/exécution : 6 findings paiements (3 CRITICAL)** :
+
+- **L'abonnement WhatsApp expire enfin** (`manual-wa-subscription-never-expires`, CRITICAL) : le sweep quotidien filtrait `manual:` mais la voie de production crée `manual-wa:` — une demande validée une fois restait active À VIE après un seul paiement de 30 j. Sweep élargi (`manual:` / `manual-wa:` / `admin-free:`) + ceinture `checkPaidTier` : période échue au-delà de 3 j de grâce = accès refusé même avant le passage du sweep (null-tolerant pour les rails provider).
+- **Annulation réparée** (`cancel-manual-wa-routes-to-stripe-and-fails-silently`, CRITICAL) : `cancelSubscription` envoyait les `manual-wa:`/`admin-free:` chez Stripe (throw sans clé) et la page facturation ne rendait JAMAIS l'erreur — le founder cliquait « Oui, annuler » et il ne se passait rien. Routage Stripe réservé aux abonnements provider + erreur visible sur la page.
+- **Fallback manuel one-shot** (`intake-paywall-env-vars-shown-to-lead-no-manual-fallback`, CRITICAL) : sans clés provider, le premier paiement du funnel (PDF 49 / Stratégie complète) était structurellement imprenable ET le lead lisait des noms de variables d'environnement. Rail manuel étendu aux one-shots : enum `MANUAL_WA` (migration additive), `IntakePayment PENDING` + lien WhatsApp avec réf, **file de validation console** (`listManualIntakePayments`/`approve`/`reject`, section dédiée sur `/console/socle/manual-subscriptions`) — Valider = PAID + **même fulfillment que les webhooks** (re-extraction, ORACLE_FULL → activation + assemblage + lien). Copy d'erreur client (fini les env vars face lead).
+- **CTA mensuel du funnel dé-mort** (`funnel-monthly-cta-stripe-only-dead-end`) : l'init Stripe-only échouait et le lead était redirigé EN SILENCE vers l'ignition sans paiement — désormais repli sur le rail WhatsApp (même voie que /pricing).
+- **Le payeur est prévenu** (`manual-approval-promised-notification-never-sent`) : approve/reject d'une demande manuelle notifie le demandeur (notification-center IN_APP + EMAIL best-effort, libellés client des formules) — il ne devine plus son activation en re-visitant la page facturation.
+- **Réf visible en console** (`manual-subscription-reference-hidden`) : la référence envoyée au client sur WhatsApp est affichée en colonne mono — le rapprochement ne se fait plus au nom/email.
+- tsc 0 · lint 0 · 1024 tests gouvernance verts. 1 migration additive (`ALTER TYPE … ADD VALUE 'MANUAL_WA'`).
+
 ## v6.27.179 — fix(governance): Vague 5 audit plateforme — sécurité & tenancy (lectures cross-tenant fermées, MCP scopé, guilde étanche) (2026-07-16)
 
 **Vague 5 de l'audit intention/exécution (2e passe, 98 agents) : 7 findings sécurité/tenancy (5 CRITICAL)** :

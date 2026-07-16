@@ -458,12 +458,24 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
           }),
         });
         type TrpcSubResp = Array<{ result?: { data?: { json?: { paymentUrl: string } } } }>;
-        const data = (await res.json()) as TrpcSubResp;
-        const url = data?.[0]?.result?.data?.json?.paymentUrl;
+        let url: string | undefined;
+        try {
+          const data = (await res.json()) as TrpcSubResp;
+          url = data?.[0]?.result?.data?.json?.paymentUrl;
+        } catch {
+          url = undefined;
+        }
         if (url) {
           window.location.href = url;
         } else {
-          window.location.href = `/cockpit/new?tier=${tierKey}&intake=${token}`;
+          // Rail manuel WhatsApp (audit 2026-07-16 `funnel-monthly-cta-stripe-
+          // only-dead-end`) : l'init Stripe-only échouait et le lead était
+          // redirigé EN SILENCE vers l'ignition sans paiement ni explication.
+          // Même rail que /pricing : la demande part sur WhatsApp.
+          const waMessage =
+            `Bonjour, je souhaite m'abonner à La Fusée — formule ${tierKey}. ` +
+            `Marque : ${intake.companyName ?? "—"}. Email : ${intake.contactEmail ?? "—"}.`;
+          window.location.href = `https://wa.me/237694171799?text=${encodeURIComponent(waMessage)}`;
         }
       }
     },
@@ -1413,8 +1425,13 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
               onUnlock={handleUnlockClick}
               unlockDisabled={paywallLoading}
             />
+            {/* Copy client, jamais le message technique (audit 2026-07-16 :
+                le lead lisait des noms de variables d'environnement). */}
             {initPaymentMutation.error && (
-              <p className="mt-3 px-2 text-xs text-destructive">{initPaymentMutation.error.message}</p>
+              <p className="mt-3 px-2 text-xs text-destructive">
+                Le paiement en ligne est momentanément indisponible. Réessayez dans un instant,
+                ou écrivez-nous sur WhatsApp — nous débloquons votre rapport manuellement.
+              </p>
             )}
           </div>
         )}
