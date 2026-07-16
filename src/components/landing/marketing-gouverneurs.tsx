@@ -24,7 +24,7 @@ const GOVS = {
     role: "Coeur stratégique de l'OS",
     rule: { k: "RÈGLE 01", t: "Chaque mutation traverse un point unique — aucune exception." },
     desc: "Le décideur. Point d'entrée pour toute action métier. Analyse le contexte, tranche les arbitrages, recommande la priorité. Chaque diagnostic, chaque plan, chaque décision passe par lui — et reste auditable à vie.",
-    caps: ["Point d'écriture unique", "Recommandations Notoria", "Cascade ADVERTIS", "Arbitrage de priorités", "Plan d'orchestration", "Insights cross-pilier"],
+    caps: ["Point d'écriture unique", "Recommandations priorisées", "Cascade ADVE → RTIS", "Arbitrage de priorités", "Plan d'orchestration", "Insights cross-pilier"],
   },
   artemis: {
     func: "Production",
@@ -39,8 +39,8 @@ const GOVS = {
     tag: "Seshat",
     role: "Capteur de marché",
     rule: { k: "RÈGLE 03", t: "L'observateur n'écrit jamais. Il observe — et nourrit la décision." },
-    desc: "Le capteur. Surveille le marché en continu, interprète les signaux faibles avant qu'ils ne deviennent évidents, anticipe les tendances sectorielles. Ses sources internes : Tarsis (curation données) et Jehuty (intelligence feed).",
-    caps: ["Tarsis · weak signals", "Indice d'attachement (mesure du lien client)", "Moteur d'engagement", "Knowledge graph sectoriel", "Cross-brand benchmark", "Jehuty · intelligence feed"],
+    desc: "Le capteur. Surveille le marché en continu, interprète les signaux faibles avant qu'ils ne deviennent évidents, anticipe les tendances sectorielles — et nourrit chaque décision d'un fil d'intelligence marché à jour.",
+    caps: ["Signaux faibles sectoriels", "Indice d'attachement (mesure du lien client)", "Moteur d'engagement", "Knowledge graph sectoriel", "Cross-brand benchmark", "Fil d'intelligence marché"],
   },
   thot: {
     func: "Finances",

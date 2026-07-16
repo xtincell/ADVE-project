@@ -103,6 +103,56 @@ function renderableChunks(src: string): Array<{ chunk: string; line: number }> {
   return out;
 }
 
+/**
+ * Extension audit 2026-07-16 (`lafusee-jargon-hors-verrou-adr0123`) — la plus
+ * grosse surface LEAD (marketing/landing/upgraders) était sans verrou. Sous-
+ * ensemble interdit dédié : les 7 noms Neteru en ACCENT typographique et
+ * « APOGEE » (registre aéronautique) sont des décisions DA documentées
+ * (marketing-gouverneurs.tsx header) et restent permis ; les sous-marques
+ * internes (Notoria/Tarsis/Jehuty), « ADVERTIS », les pseudo-outils
+ * (« Mestor.scan ») et la plomberie restent interdits.
+ */
+const MARKETING_SCAN_DIRS = [
+  join(ROOT, "src/app/(marketing)"),
+  join(ROOT, "src/components/landing"),
+  join(ROOT, "src/components/upgraders"),
+  join(ROOT, "src/components/marketing"),
+];
+const MARKETING_FORBIDDEN: Array<{ name: string; re: RegExp }> = [
+  { name: "sous-marque/mécanisme interne", re: /\b(ADVERTIS|Jehuty|Notoria|Tarsis|NETERU)\b/ },
+  { name: "pseudo-outil interne", re: /\b(?:Mestor|Artemis|Seshat|Ptah|Thot|Anubis|Imhotep)\.\w+/ },
+  { name: "plomberie IntentEmission", re: /\bIntentEmission\b/ },
+  { name: "réf ADR", re: /\bADR-\d{4}\b/ },
+  { name: "function-calling", re: /function-calling/ },
+];
+
+describe("Marketing — vocabulaire lead (audit 2026-07-16)", () => {
+  const files = MARKETING_SCAN_DIRS.flatMap((d) => walk(d));
+
+  it("scanne un périmètre non vide", () => {
+    expect(files.length).toBeGreaterThan(20);
+  });
+
+  it("aucune sous-marque/plomberie interne dans les chaînes rendues au lead", () => {
+    const violations: string[] = [];
+    for (const file of files) {
+      const rel = relative(ROOT, file);
+      const src = stripComments(readFileSync(file, "utf-8"));
+      for (const { chunk, line } of renderableChunks(src)) {
+        if (IDENTIFIER_CHUNK.test(chunk)) continue;
+        for (const { name, re } of MARKETING_FORBIDDEN) {
+          const m = chunk.match(re);
+          if (m) violations.push(`${rel}:${line} [${name}] → ${m[0]} dans ${chunk.slice(0, 80)}`);
+        }
+      }
+    }
+    expect(
+      violations,
+      `Vocabulaire interne rendu au lead (funnel marketing) :\n${violations.join("\n")}`,
+    ).toEqual([]);
+  });
+});
+
 describe("Cockpit — vocabulaire client (lot 11, T1)", () => {
   const files = [...SCAN_DIRS.flatMap((d) => walk(d)), ...EXTRA_FILES.filter((f) => existsSync(f))];
 

@@ -179,16 +179,20 @@ export const RTIS: MethodStep[] = [
   },
 ];
 
-/* Paliers de maturité + score cible /200 (KB §9 + §10) */
+/* Paliers de maturité + seuil d'ENTRÉE /200 — dérivés du canon classifyTier
+   (src/domain/brand-tier.ts : LATENT ≤40 · FRAGILE ≤80 · ORDINAIRE ≤120 ·
+   FORTE ≤160 · CULTE ≤180 · ICONE >180). KB §9 : score-cibles = seuils
+   d'entrée de bande. L'ancienne liste (80/100/120/160/180) mélangeait bornes
+   hautes et seuils — corrigé (audit intention/exécution 2026-07-16). */
 export type Palier = { name: string; score: string; note: string };
 
 export const PALIERS: Palier[] = [
   { name: "Latent", score: "—", note: "La marque existe à peine. Tout est à poser." },
-  { name: "Fragile", score: "80", note: "Un socle, mais instable. La cohérence ne tient pas seule." },
-  { name: "Ordinaire", score: "100", note: "Lisible, mais interchangeable. La distinction manque." },
-  { name: "Forte", score: "120", note: "Reconnue, défendable. Une vraie part d'esprit." },
-  { name: "Culte", score: "160", note: "Une communauté qui s'identifie. Le mouvement est né." },
-  { name: "Icône", score: "180", note: "Référence du secteur. Elle déplace le standard." },
+  { name: "Fragile", score: "41", note: "Un socle, mais instable. La cohérence ne tient pas seule." },
+  { name: "Ordinaire", score: "81", note: "Lisible, mais interchangeable. La distinction manque." },
+  { name: "Forte", score: "121", note: "Reconnue, défendable. Une vraie part d'esprit." },
+  { name: "Culte", score: "161", note: "Une communauté qui s'identifie. Le mouvement est né." },
+  { name: "Icône", score: "181", note: "Référence du secteur. Elle déplace le standard." },
 ];
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -371,7 +375,7 @@ export const PRODUCTS: ProductOffer[] = [
     priceNote: "Étude cadrée par périmètre. Version productisée : le rapport ADVE+RTIS / l'Oracle La Fusée, à prix fixe.",
     inclusions: [
       "Étude concurrentielle & sectorielle",
-      "Lecture des signaux faibles (Tarsis)",
+      "Lecture des signaux faibles du marché",
       "Observatoire / veille continue",
       "Rapport livré, actionnable",
     ],

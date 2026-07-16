@@ -69,7 +69,7 @@ export function MarketingFooter() {
           <div>
             <div className="font-mono text-2xs uppercase tracking-widest text-foreground-muted mb-3.5">Doctrine</div>
             <a href="#manifesto" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">Manifesto</a>
-            <a href="#methode" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">ADVE-RTIS</a>
+            <a href="#methode" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">ADVE/RTIS</a>
             <a href="#apogee" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">APOGEE</a>
             <a href="#gouverneurs" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">Gouverneurs</a>
           </div>

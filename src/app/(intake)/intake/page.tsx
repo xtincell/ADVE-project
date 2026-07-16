@@ -112,6 +112,11 @@ function IntakeLandingContent() {
     if (Object.keys(attr).length > 0) setAttribution(attr);
 
     // Préremplissage funnel (hero / mini-modale / /scorer) — capture sans re-saisie.
+    // `method` (GUIDED/IMPORT) choisi dans la modale landing : il était passé
+    // mais jamais consommé — le choix « Import IA » était silencieusement
+    // ignoré (audit 2026-07-16).
+    const method = searchParams.get("method");
+    if (method === "GUIDED" || method === "IMPORT") setSelectedMethod(method);
     const company = searchParams.get("company") ?? searchParams.get("brand");
     const email = searchParams.get("email");
     const website = searchParams.get("website") ?? searchParams.get("websiteUrl");

@@ -2,22 +2,22 @@ const PLANS = [
   {
     name: "RAMPE 01", title: "Diagnostic", lead: "Pour calibrer l'altitude actuelle de la marque.",
     price: "Gratuit", per: "— rapport web en 15 min",
-    feats: ["Score ADVE-RTIS /200", "Radar 8 piliers", "1 plan d'action priorisé", "PDF brandé exportable en option payante", "Sans engagement, sans appel commercial"],
+    feats: ["Score de marque /200 (méthode ADVE/RTIS)", "Radar 8 piliers", "1 plan d'action priorisé", "PDF brandé exportable en option payante", "Sans engagement, sans appel commercial"],
     cta: "Lancer le diagnostic →", href: "#intake", featured: false,
     timeline: "↳ Résultat : 15 minutes",
   },
   {
     name: "RAMPE 02", title: "Propulsion", lead: "L'OS complet pour aller de FORTE à CULTE.",
-    price: "Sur devis", per: "— pricing par palier visé",
-    feats: ["Tout le Diagnostic +", "Stratégie Oracle dynamique — 35 sections qui se mettent à jour seules", "12 missions / trimestre · talents tier 1–3", "Cockpit founder + Cockpit ops"],
-    cta: "Briefer un opérateur →", href: "#contact", featured: true,
+    price: "Par palier", per: "— grille publique par zone (FCFA / EUR / USD)",
+    feats: ["Tout le Diagnostic +", "Stratégie dynamique — 35 sections qui se mettent à jour seules", "Missions en production · talents appariés", "Cockpit fondateur + suivi opérationnel"],
+    cta: "Briefer un opérateur →", href: "/contact?offre=lafusee-propulsion", featured: true,
     timeline: "↳ Premiers livrables : 30 jours · 1er palier mesuré : 90 jours",
   },
   {
-    name: "RAMPE 03", title: "Apex", lead: "Pour les candidats à l'ICONE — sentinelles activées.",
-    price: "Partenariat", per: "— dossier sélectif",
-    feats: ["Tout Propulsion +", "3 sentinelles cron actives (Overton, Cult, Asset)", "Couverture cross-secteur", "Account dédié · UPgraders en lead direct"],
-    cta: "Postuler →", href: "#contact", featured: false,
+    name: "RAMPE 03", title: "Apex", lead: "Pour les candidats à l'ICONE — veille sentinelle active.",
+    price: "Partenariat", per: "— dossier sélectif, sur devis",
+    feats: ["Tout Propulsion +", "Veille sentinelle continue (culture, communauté, actifs)", "Couverture cross-secteur", "Account dédié · UPgraders en lead direct"],
+    cta: "Postuler →", href: "/contact?offre=lafusee-apex", featured: false,
     timeline: "↳ Maintien orbite ICONE · cycle annuel renouvelé",
   },
 ];
@@ -33,7 +33,7 @@ export function MarketingPricing() {
         <header className="mb-16 max-w-3xl">
           <h2 className="font-display font-semibold tracking-tight" style={{ fontSize: "var(--text-display)", lineHeight: 0.96, color: "var(--color-foreground)" }}>
             Trois rampes.<br />
-            Une seule promesse : <span className="relative inline-block">décollage en 48h.<span className="absolute inset-x-[-2%] bottom-1 h-[0.18em] bg-accent -z-10" style={{ transform: "skewX(-12deg)" }} /></span>
+            Une seule promesse : <span className="relative inline-block">un état final mesuré.<span className="absolute inset-x-[-2%] bottom-1 h-[0.18em] bg-accent -z-10" style={{ transform: "skewX(-12deg)" }} /></span>
           </h2>
         </header>
 

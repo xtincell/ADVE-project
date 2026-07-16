@@ -3,15 +3,18 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 
+// Ce que chaque pilier mesure — en clair. Les anciens pseudo-outils
+// (« Mestor.scan », « Thot.audit »…) étaient du jargon interne inventé
+// face lead (audit intention/exécution 2026-07-16, ADR-0123).
 const LETTERS = [
-  { l: "A", name: "Authenticité", tool: "Mestor.scan" },
-  { l: "D", name: "Distinction", tool: "Artemis.diff" },
-  { l: "V", name: "Valeur", tool: "Seshat.tone" },
-  { l: "E", name: "Engagement", tool: "Artemis.path" },
-  { l: "R", name: "Risque", tool: "Seshat.story" },
-  { l: "T", name: "Track", tool: "Mestor.pulse" },
-  { l: "I", name: "Innovation", tool: "Ptah.brand" },
-  { l: "S", name: "Stratégie", tool: "Thot.audit" },
+  { l: "A", name: "Authenticité", tool: "qui vous êtes" },
+  { l: "D", name: "Distinction", tool: "pourquoi vous" },
+  { l: "V", name: "Valeur", tool: "votre promesse" },
+  { l: "E", name: "Engagement", tool: "vos superfans" },
+  { l: "R", name: "Risque", tool: "vos failles" },
+  { l: "T", name: "Track", tool: "votre marché" },
+  { l: "I", name: "Innovation", tool: "votre potentiel" },
+  { l: "S", name: "Stratégie", tool: "votre cap" },
 ];
 
 export function MarketingDiagnostic() {
@@ -48,7 +51,7 @@ export function MarketingDiagnostic() {
             <span className="relative inline-block">Le verdict tombe en quelques secondes.<span className="absolute inset-x-[-2%] bottom-1 h-[0.18em] bg-accent -z-10" style={{ transform: "skewX(-12deg)" }} /></span>
           </h2>
           <p className="max-w-[60ch] text-base md:text-lg" style={{ color: "var(--color-foreground-secondary)" }}>
-            Pas de questionnaire de 40 pages. Pas de réunion de cadrage. La méthode <strong style={{ color: "var(--color-foreground)" }}>ADVE-RTIS</strong> scanne 8 piliers via un combo d&rsquo;outils maison, et te rend un rapport + une recommandation.
+            Pas de questionnaire de 40 pages. Pas de réunion de cadrage. La méthode <strong style={{ color: "var(--color-foreground)" }}>ADVE/RTIS</strong> scanne 8 piliers via un combo d&rsquo;outils maison, et te rend un rapport + une recommandation.
           </p>
         </header>
 
@@ -100,7 +103,7 @@ export function MarketingDiagnostic() {
           </div>
 
           <div className="p-6" style={{ background: "var(--color-background)" }}>
-            <div className="font-mono text-xs text-accent uppercase tracking-widest mb-4">⌖ TOOLCHAIN · 8 outils maison</div>
+            <div className="font-mono text-xs text-accent uppercase tracking-widest mb-4">⌖ SCAN · 8 piliers</div>
             <ol className="flex flex-col">
               {LETTERS.map((letter, i) => {
                 const isActive = i === active && !done;
@@ -121,7 +124,7 @@ export function MarketingDiagnostic() {
           <div className="p-6" style={{ background: "var(--color-background)" }}>
             <div className="font-mono text-xs text-accent uppercase tracking-widest mb-4">⌖ OUTPUT · rapport + reco</div>
             <div className={`transition-opacity ${done ? "opacity-100" : "opacity-50"}`}>
-              <div className="font-mono text-2xs uppercase tracking-widest mb-1" style={{ color: "var(--color-foreground-secondary)" }}>SCORE ADVE-RTIS</div>
+              <div className="font-mono text-2xs uppercase tracking-widest mb-1" style={{ color: "var(--color-foreground-secondary)" }}>SCORE ADVE/RTIS</div>
               <div className="font-serif font-medium text-5xl mb-1" style={{ color: "var(--color-foreground)" }}>{done ? "115" : "—"}<span className="text-xl" style={{ color: "var(--color-foreground-secondary)" }}>/200</span></div>
               <div className="font-mono text-xs uppercase tracking-widest text-accent mb-4">TIER · ORDINAIRE</div>
               <div className="text-sm leading-relaxed mb-4" style={{ color: "var(--color-foreground)" }}>

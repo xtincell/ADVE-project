@@ -1,10 +1,16 @@
+import { TIER_UPPER_BOUNDS_200 } from "@/domain";
+
+// Bandes DÉRIVÉES du canon (src/domain/brand-tier.ts) — plus jamais de seuils
+// littéraux qui contredisent classifyTier (audit intention/exécution 2026-07-16 :
+// un lead à 75 lisait LATENT ici alors que le produit le classe FRAGILE).
+const B = TIER_UPPER_BOUNDS_200;
 const TIERS = [
-  { i: 6, num: "06", name: "ICONE", alt: "APEX · plafond cassé", proofs: ["Référence culturelle", "Marché redéfini", "Influence transversale"], metric: "Cult Index > 0.85 · Overton déflecté", cron: "DEFEND_LEGACY" },
-  { i: 5, num: "05", name: "CULTE", alt: "plafond haut · communauté", proofs: ["NPS > 70", "UGC organique soutenu", "Tribu identifiable"], metric: "Cult Index > 0.7 · NPS > 70", cron: "MAINTAIN_APOGEE" },
-  { i: 4, num: "04", name: "FORTE", alt: "plafond moyen · traction", proofs: ["Top of mind sectoriel", "Distribution maîtrisée", "Pricing power +20%"], metric: "Score > 120/200 · pricing +20%", cron: "DEFEND_OVERTON" },
-  { i: 3, num: "03", name: "ORDINAIRE", alt: "bas plafond · interchangeable", proofs: ["Identité reconnue", "Promesse claire", "Mais pas différenciante"], metric: "Score 100–120/200", cron: "EXPAND_SECTOR" },
-  { i: 2, num: "02", name: "FRAGILE", alt: "décollage · instable", proofs: ["Présence existe", "Pas de système", "Tout repose sur 1 personne"], metric: "Score 80–100/200", cron: "STABILIZE_BASE" },
-  { i: 1, num: "01", name: "LATENT", alt: "SOL · invisible", proofs: ["Notoriété quasi nulle", "Aucune trace mesurable", "Existe sans exister"], metric: "Score < 80/200", cron: "DETECT_PULSE" },
+  { i: 6, num: "06", name: "ICONE", alt: "APEX · plafond cassé", proofs: ["Référence culturelle", "Marché redéfini", "Influence transversale"], metric: `Score > ${B.CULTE}/200 · Overton déflecté`, cron: "DEFEND_LEGACY" },
+  { i: 5, num: "05", name: "CULTE", alt: "plafond haut · communauté", proofs: ["NPS > 70", "UGC organique soutenu", "Tribu identifiable"], metric: `Score ${B.FORTE + 1}–${B.CULTE}/200 · NPS > 70`, cron: "MAINTAIN_APOGEE" },
+  { i: 4, num: "04", name: "FORTE", alt: "plafond moyen · traction", proofs: ["Top of mind sectoriel", "Distribution maîtrisée", "Pricing power +20%"], metric: `Score ${B.ORDINAIRE + 1}–${B.FORTE}/200 · pricing +20%`, cron: "DEFEND_OVERTON" },
+  { i: 3, num: "03", name: "ORDINAIRE", alt: "bas plafond · interchangeable", proofs: ["Identité reconnue", "Promesse claire", "Mais pas différenciante"], metric: `Score ${B.FRAGILE + 1}–${B.ORDINAIRE}/200`, cron: "EXPAND_SECTOR" },
+  { i: 2, num: "02", name: "FRAGILE", alt: "décollage · instable", proofs: ["Présence existe", "Pas de système", "Tout repose sur 1 personne"], metric: `Score ${B.LATENT + 1}–${B.FRAGILE}/200`, cron: "STABILIZE_BASE" },
+  { i: 1, num: "01", name: "LATENT", alt: "SOL · invisible", proofs: ["Notoriété quasi nulle", "Aucune trace mesurable", "Existe sans exister"], metric: `Score ≤ ${B.LATENT}/200`, cron: "DETECT_PULSE" },
 ];
 
 export function MarketingApogee() {
