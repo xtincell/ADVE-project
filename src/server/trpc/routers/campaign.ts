@@ -118,7 +118,9 @@ export const campaignRouter = createTRPCRouter({
       }
       return ctx.db.campaign.findMany({
         where: {
-          ...scopeCampaigns(opCtx),
+          // strategyId fourni → canAccessStrategy a déjà tranché la tenancy
+          // (scopeCampaigns est plus étroit — cf. régression missions 2026-07-16).
+          ...(input.strategyId ? {} : scopeCampaigns(opCtx)),
           ...(input.strategyId ? { strategyId: input.strategyId } : {}),
           ...(input.status ? { status: input.status } : {}),
         },

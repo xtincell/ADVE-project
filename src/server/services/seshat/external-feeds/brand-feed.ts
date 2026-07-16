@@ -89,12 +89,18 @@ export async function getOrBuildBrandFeed(
       .catch(() => null);
     if (existing) {
       const d = (existing.data ?? {}) as { items?: BrandFeedArticle[]; subjects?: string[] };
-      return {
-        articles: Array.isArray(d.items) ? d.items.slice(0, 12) : [],
-        subjects: Array.isArray(d.subjects) && d.subjects.length > 0 ? d.subjects : subjects,
-        generatedAt: existing.createdAt.toISOString(),
-        cached: true,
-      };
+      const cachedItems = Array.isArray(d.items) ? d.items : [];
+      // Un digest VIDE n'est pas une réponse (bug prod 2026-07-16 « gazette
+      // vide ») : un seul échec de collecte (throttle/timeout RSS) figeait le
+      // panneau à zéro pour toute la journée. Cache vide → on retente.
+      if (cachedItems.length > 0) {
+        return {
+          articles: cachedItems.slice(0, 12),
+          subjects: Array.isArray(d.subjects) && d.subjects.length > 0 ? d.subjects : subjects,
+          generatedAt: existing.createdAt.toISOString(),
+          cached: true,
+        };
+      }
     }
   }
 
@@ -108,7 +114,26 @@ export async function getOrBuildBrandFeed(
     }),
   );
 
-  const ranked = rankItemsByRelevance(items, subjects, { limit: 12 });
+  let ranked = rankItemsByRelevance(items, subjects, { limit: 12 });
+  if (ranked.length === 0 && items.length > 0) {
+    // Les flux interrogés sont déjà des recherches scopées au sujet (Google
+    // News search par marque/secteur) : si le matching par tokens écarte tout
+    // (accents, élisions, titres reformulés), la récence brute reste honnête.
+    const seenTitles = new Set<string>();
+    ranked = items
+      .filter((it) => {
+        const t = (it.title ?? "").trim().toLowerCase();
+        if (!t || seenTitles.has(t)) return false;
+        seenTitles.add(t);
+        return true;
+      })
+      .sort((a, b) => (Date.parse(b.pubDate ?? "") || 0) - (Date.parse(a.pubDate ?? "") || 0))
+      .slice(0, 12)
+      .map((it) => ({ ...it, relevance: 0 }));
+  }
+  if (items.length === 0) {
+    console.warn(`[brand-feed] collecte VIDE pour ${brand.name} (${sources.length} sources) — probable throttle/timeout RSS`);
+  }
   const articles = toFeedItems(ranked, 12).map((a) => ({
     title: a.title,
     link: a.link,
@@ -127,18 +152,22 @@ export async function getOrBuildBrandFeed(
     generatedAt,
     feedSource: "rss:brand-multi-subject",
   };
-  await db.knowledgeEntry
-    .create({
-      data: {
-        entryType: "EXTERNAL_FEED_DIGEST",
-        market: marketKey,
-        countryCode: brand.countryCode,
-        sector: brand.sector ?? null,
-        data: JSON.parse(JSON.stringify(data)) as Prisma.InputJsonValue,
-        sampleSize: articles.length,
-      },
-    })
-    .catch(() => undefined);
+  // Jamais de cache VIDE : un échec de collecte ne doit pas figer le panneau
+  // à zéro jusqu'à minuit (la prochaine requête retentera).
+  if (articles.length > 0) {
+    await db.knowledgeEntry
+      .create({
+        data: {
+          entryType: "EXTERNAL_FEED_DIGEST",
+          market: marketKey,
+          countryCode: brand.countryCode,
+          sector: brand.sector ?? null,
+          data: JSON.parse(JSON.stringify(data)) as Prisma.InputJsonValue,
+          sampleSize: articles.length,
+        },
+      })
+      .catch(() => undefined);
+  }
 
   return { articles, subjects, generatedAt, cached: false };
 }

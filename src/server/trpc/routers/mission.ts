@@ -414,13 +414,18 @@ export const missionRouter = createTRPCRouter({
         ...(input.status ? { status: input.status } : {}),
         ...(input.driverId ? { driverId: input.driverId } : {}),
       };
-      // Tenancy : hors mode guilde, on ne liste que le périmètre de l'appelant
-      // (marques accessibles + missions qui lui sont assignées).
+      // Tenancy : hors mode guilde, on ne liste que le périmètre de l'appelant.
+      // strategyId fourni → canAccessStrategy (ci-dessus) A DÉJÀ tranché la
+      // tenancy : pas de sur-filtre (régression prod 2026-07-16 « les missions
+      // ne remontent pas » — scopeMissions est plus étroit que canAccessStrategy
+      // pour un compte rattaché à un opérateur qui possède des marques en propre).
       const accessWhere = input.guildOnly
         ? { guildPublished: true, status: "DRAFT", assigneeId: null }
         : input.assignedToMe
           ? { assigneeId: ctx.session.user.id }
-          : { OR: [scopeMissions(opCtx), { assigneeId: ctx.session.user.id }] };
+          : input.strategyId
+            ? {}
+            : { OR: [scopeMissions(opCtx), { assigneeId: ctx.session.user.id }] };
       const missions = await ctx.db.mission.findMany({
         where: { ...filters, ...accessWhere },
         include: {

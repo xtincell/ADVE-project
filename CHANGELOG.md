@@ -10,6 +10,17 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.185 — fix(cockpit): hotfix post-déploiement — §16 Oracle, gazette vide, missions absentes, scorer affamé, dock superposé (2026-07-16)
+
+**5 remontées prod opérateur, même session** :
+
+- **§16 « KPIs & Mesure » crashait** (`Cannot read properties of undefined (reading 'map')`) : le handler PURE_MAPPER dupliquait l'include Prisma canonique et avait DRIFTÉ (`communitySnapshots` absent). Une seule source désormais (`PRESENTATION_INCLUDE` exporté, consommé par le handler) + `mapKpisMesure` défensif (include partiel → dégradation, jamais un crash).
+- **Gazette (« Veille & actualités ») vide alors que tout est renseigné** : un seul échec de collecte RSS (throttle/timeout Google News) mettait en cache un digest VIDE **pour toute la journée**, et le filtre de pertinence par tokens pouvait écarter 100 % d'articles pourtant issus de recherches déjà scopées au sujet. Triple fix : cache vide = miss (on retente), fallback récence quand le rank écarte tout (les sources sont des recherches Google News par marque/secteur — honnête), on ne persiste JAMAIS un digest vide.
+- **« Les missions ne remontent pas »** (régression V5) : quand `strategyId` est fourni, `canAccessStrategy` tranchait DÉJÀ la tenancy — le sur-filtre `scopeMissions`/`scopeCampaigns` (plus étroit : un compte rattaché à un opérateur perdait ses marques en propre) vidait les listes. Sur-filtre retiré quand strategyId est vérifié + `scopeStrategies` aligné sur `canAccessStrategy` (bras owner + collaborateur ajoutés au bras opérateur).
+- **Scorer « 0 % Critique » avec un site renseigné** : budget total de 8 s — le fetch du site pouvait tout consommer et l'étage des signaux GRATUITS (domaine RDAP, email MX/SPF, performance — gardé par `remaining()>3s`) sautait en silence. Ni Brave ni Apify en cause. Budget porté à 25 s (la copy promet 30 s), fetch du site capé à 40 % du budget, garde de l'étage gratuit abaissée à 500 ms.
+- **Dock « Recommandations » superposé au bouton feedback** (coin bas-droit) : empilé au-dessus (offset vertical, safe-area mobile respectée).
+- tsc 0 · lint 0 · 1024 tests gouvernance verts.
+
 ## v6.27.184 — fix(console): Vague 10 audit plateforme — console/forge/social (pages orphelines, mock Ptah, inbox IG, page publique, identity graph) — **audit 78/78 clos** (2026-07-16)
 
 **Vague 10 (finale) de l'audit intention/exécution : 7 findings (2 CRITICAL). Les 78 findings confirmés des deux passes sont désormais tous corrigés (V1→V10, PRs #539→#548).**

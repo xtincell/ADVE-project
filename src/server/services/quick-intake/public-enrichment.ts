@@ -133,7 +133,9 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
           declaredSocialUrls: declared,
           companyName: input.companyName,
         }),
-        Math.min(12_000, remaining()),
+        // Jamais plus de ~40% du budget : un site lent ne doit pas affamer
+        // les collecteurs gratuits d'aval (bug prod 2026-07-16).
+        Math.min(12_000, Math.max(3_000, Math.floor(budgetMs * 0.4)), remaining()),
         footprint,
       );
     } catch (err) {
@@ -311,7 +313,7 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
   // Read-only, chacun time-boxé et honnête ; l'échec d'un collecteur
   // n'affecte pas les autres.
   const enrichedExtras: Pick<EnrichedFootprint, "maps" | "youtube" | "domain" | "emailInfra" | "performance" | "ads"> = {};
-  if (remaining() > 3_000) {
+  if (remaining() > 500) {
     try {
       const collectors = await import("./footprint-collectors");
       const domainName = input.websiteUrl ? collectors.registrableDomain(input.websiteUrl) : null;

@@ -74,6 +74,11 @@ export function scopeStrategies(ctx: OperatorContext): Prisma.StrategyWhereInput
     OR: [
       { client: { operatorId: ctx.operatorId } },
       { operatorId: ctx.operatorId },
+      // Aligné sur canAccessStrategy : l'OWNER accède toujours à sa marque —
+      // un compte rattaché à un opérateur ne perd pas ses marques en propre
+      // (régression prod 2026-07-16 « les missions ne remontent pas »).
+      { userId: ctx.userId },
+      { collaborators: { some: { userId: ctx.userId, status: "ACTIVE" } } },
     ],
   };
   return {
