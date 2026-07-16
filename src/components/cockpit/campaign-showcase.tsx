@@ -79,7 +79,7 @@ export function CampaignShowcase({ strategyId }: { strategyId: string }) {
                 {until ? <span className="ck-camp__dates">jusqu&apos;au {until}</span>
                   : from ? <span className="ck-camp__dates">depuis le {from}</span> : null}
               </p>
-              <Link href="/cockpit/campaigns" className="ck-card__link">
+              <Link href="/cockpit/operate/campaigns" className="ck-card__link">
                 Suivre la campagne <ArrowRight />
               </Link>
             </div>
@@ -90,7 +90,7 @@ export function CampaignShowcase({ strategyId }: { strategyId: string }) {
             <p className="ck-camp__empty-sub">
               Votre prochaine campagne apparaîtra ici avec son visuel clé dès son lancement.
             </p>
-            <Link href="/cockpit/campaigns" className="ck-card__link">Mes campagnes <ArrowRight /></Link>
+            <Link href="/cockpit/operate/campaigns" className="ck-card__link">Mes campagnes <ArrowRight /></Link>
           </div>
         )}
       </div>

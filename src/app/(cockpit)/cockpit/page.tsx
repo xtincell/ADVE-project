@@ -77,6 +77,22 @@ const VIEW_MODE_LABELS: Record<ViewMode, string> = {
   MINIMAL: "Essentielle",
 };
 
+/**
+ * Types d'analyse en langage client — l'enum brut (STALE_PILLAR, CULT_INDEX…)
+ * était rendu en chip au founder (audit 2026-07-16).
+ */
+const INSIGHT_TYPE_LABELS: Record<string, string> = {
+  STALE_PILLAR: "Fiche à rafraîchir",
+  CULT_INDEX: "Attachement",
+  SLA_RISK: "Délai à surveiller",
+  BUDGET: "Budget",
+  MISSION: "Missions",
+  SIGNAL: "Signal marché",
+  DEVOTION: "Communauté",
+  DRIVER: "Canaux",
+  BOOT: "Démarrage",
+};
+
 export default function CockpitDashboard() {
   const [viewMode, setViewMode] = useState<ViewMode>("MARKETING");
   const { strategyId, isLoading: strategiesLoading, isError: strategiesError } = useStrategy();
@@ -213,7 +229,9 @@ export default function CockpitDashboard() {
     r: vector.r ?? 0, t: vector.t ?? 0, i: vector.i ?? 0, s: vector.s ?? 0,
   };
   const composite = strategy?.composite ?? 0;
-  const cultIndex = Math.round(composite / 2);
+  // Plus JAMAIS de proxy fabriqué composite/2 présenté comme « indice
+  // d'attachement » (audit 2026-07-16, `cult-index-fabricated-proxy`) : sans
+  // mesure réelle (CultIndexSnapshot), on affiche « — » + comment débloquer.
 
   const devotion = devotionQuery.data;
   // Honnêteté des données (canon : ne jamais inventer de données) — aucune
@@ -253,7 +271,6 @@ export default function CockpitDashboard() {
       ? [...PILLAR_STORAGE_KEYS].reduce((sum, k) => sum + (vec[k] ?? 0), 0)
       : 0;
   });
-  const cultTrend = scoreTrend.map((s) => Math.round(s / 2));
 
   // Brand content from pillars (field names match Zod schemas: pillar-schemas.ts)
   const pillarContentMap = buildPillarContentMap(
@@ -457,12 +474,21 @@ export default function CockpitDashboard() {
           {/* KPI grid */}
           <div className="ck-grid ck-grid--kpi">
             <div className="ck-kpi">
-              <div className="ck-kpi__top"><span className="ck-kpi__lbl">Indice d'attachement</span><span className="ck-kpi__spark"><Sparkline data={cultTrend} width={60} height={20} /></span></div>
-              <p className="ck-kpi__val">{cultIndexQuery.data?.current ?? cultIndex}<span className="m">/100</span></p>
-              {(() => {
-                const d = cultIndexQuery.data?.delta ?? 0;
-                return d !== 0 ? <span className={`ck-kpi__delta ${d > 0 ? "up" : ""}`}><TrendingUp />{d > 0 ? "+" : ""}{d} ce mois</span> : null;
-              })()}
+              <div className="ck-kpi__top"><span className="ck-kpi__lbl">Indice d'attachement</span></div>
+              {(cultIndexQuery.data?.current ?? 0) > 0 ? (
+                <>
+                  <p className="ck-kpi__val">{cultIndexQuery.data!.current}<span className="m">/100</span></p>
+                  {(() => {
+                    const d = cultIndexQuery.data?.delta ?? 0;
+                    return d !== 0 ? <span className={`ck-kpi__delta ${d > 0 ? "up" : ""}`}><TrendingUp />{d > 0 ? "+" : ""}{d} ce mois</span> : null;
+                  })()}
+                </>
+              ) : (
+                <>
+                  <p className="ck-kpi__val">—<span className="m">/100</span></p>
+                  <span className="ck-kpi__delta">se mesure dès vos réseaux connectés</span>
+                </>
+              )}
             </div>
             <div className="ck-kpi">
               <div className="ck-kpi__top"><span className="ck-kpi__lbl">Missions actives</span><Rocket className="h-4 w-4 text-accent" /></div>
@@ -552,7 +578,7 @@ export default function CockpitDashboard() {
                   <span className="ck-presc__sev" data-s={insight.severity} />
                   <div className="ck-presc__b">
                     <div className="ck-presc__row1">
-                      <span className="ck-presc__type">{insight.type}</span>
+                      <span className="ck-presc__type">{INSIGHT_TYPE_LABELS[insight.type] ?? "Analyse"}</span>
                       <span className="ck-presc__title">{insight.title}</span>
                     </div>
                     <p className="ck-presc__desc">{insight.description}</p>

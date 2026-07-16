@@ -10,6 +10,18 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.177 — fix(cockpit): Vague 3 audit plateforme — le cockpit tient parole (armement fiabilisé, actions founder, honnêteté des KPI) (2026-07-16)
+
+**Vague 3 de l'audit intention/exécution : 15 findings cockpit (2 CRITICAL)** :
+
+- **Armement des publications fiabilisé** (4 findings sur la feature v6.27.171) : (1) **Instagram sans visuel n'est plus consommé en silence** (CRITICAL — le post passait EXECUTED sans jamais être publié) : IG compté « visuel requis », à planifier avec image depuis le Plan d'actions ; (2) **garde anti-doublon** (armer 2× dupliquait toutes les publications — index par plateforme/date/texte, compteur « déjà armées ») ; (3) **la voix de marque (pilier D) suit le ré-ancrage J-0** (`brandVoiceFromPillarD` pur, servi par `launchCalendar` et utilisé à l'armement ET à l'affichage — les captions gardaient le gabarit générique) ; (4) **`autoSchedule` n'écrase plus les publications armées** ni le terminé/annulé (le spread 14 j détruisait le rétroplan et faisait publier le cron aux mauvaises dates).
+- **Pillar page founder** (CRITICAL) : « Enrichir » (operatorProcedure) masqué hors `canOperate` (le founder recevait un FORBIDDEN brut) ; « Saisir » (modal opérateur) → lien « Compléter » vers son éditeur ; enums bruts (EMPTY/COMPLETE, « Certainty : INFERRED ») → labels client (« À compléter », « Proposé par l'IA — à valider ») ; chemins techniques masqués hors opérateur ; vouvoiement unifié.
+- **Fin du KPI fabriqué** : « Indice d'attachement » n'est plus `composite/2` déguisé (ni sa sparkline `scoreTrend/2`) — valeur réelle (CultIndexSnapshot) ou « — · se mesure dès vos réseaux connectés ». Chips d'analyse : enum brut (STALE_PILLAR…) → labels client ; chaînes du service insights purgées du jargon (ARTEMIS/GLORY/Boot Sequence/Cult Index/Devotion Ladder → registre business).
+- **Guidelines** : le lien de partage pointait une route INEXISTANTE (404 chez le destinataire) → route publique `/shared/guidelines/[token]` créée + UNE seule implémentation de token (celle du service, persistée) ; export HTML : fin du `window.open` sur `/api/trpc` (erreur superjson) → téléchargement Blob via le client tRPC.
+- **Assets** : le filtre Type ne matchait JAMAIS (index numérique comparé à une string) → type dérivé du `kind` canonique ; la bannière piliers affichait une AUTRE marque en multi-marques → marque courante.
+- **Veille marché débloquée** : pays + secteur enfin éditables (MarketScaleCard + `strategy.update` avec merge `businessContext.sector`) — une marque existante sans secteur avait une veille définitivement morte. Forge : un VETO ne se rend plus en carte verte « Aperçu prêt » (carte warning + raison). Vitrine campagne : liens 404 corrigés.
+- tsc 0 · lint 0 · 1024 tests gouvernance verts.
+
 ## v6.27.176 — fix(intake): Vague 2 audit plateforme — la valeur payée est livrée (ORACLE_FULL, plan d'action, radar, reprise cockpit) (2026-07-16)
 
 **Vague 2 de l'audit intention/exécution : le parcours payé tient enfin ses promesses** (8 findings, dont 1 CRITICAL) :

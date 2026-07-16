@@ -230,14 +230,24 @@ export const actionsRouter = createTRPCRouter({
       await assertCalendarWrite(ctx.session.user.id, input.strategyId);
       const cadence = input.cadenceDays ?? 14;
       const start = input.startDate ? new Date(input.startDate) : new Date();
-      const rows = await ctx.db.brandAction.findMany({
+      const candidates = await ctx.db.brandAction.findMany({
         where: {
           strategyId: input.strategyId,
           selected: true,
           ...(input.onlyUnscheduled ? { timingStart: null } : {}),
         },
         orderBy: [{ priority: "asc" }, { createdAt: "asc" }],
-        select: { id: true },
+        select: { id: true, status: true, metadata: true },
+      });
+      // Le spread administratif ne touche QUE le plan d'actions — jamais les
+      // publications sociales armées (leur échéance EST la donnée : les
+      // re-étaler ferait publier le cron aux mauvaises dates), ni le terminé/
+      // annulé (audit 2026-07-16, `autoschedule-stomps-armed-publications`).
+      const rows = candidates.filter((a) => {
+        if (a.status === "EXECUTED" || a.status === "CANCELLED") return false;
+        const meta = a.metadata as Record<string, unknown> | null;
+        if (meta && meta.socialPublish) return false;
+        return true;
       });
       const DAY = 86_400_000;
       let scheduled = 0;
@@ -249,6 +259,6 @@ export const actionsRouter = createTRPCRouter({
         });
         scheduled++;
       }
-      return { scheduled };
+      return { scheduled, protectedPublications: candidates.length - rows.length };
     }),
 });

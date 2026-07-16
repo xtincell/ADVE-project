@@ -109,10 +109,11 @@ export function LaunchCalendarPanel() {
   const isEmpty = !query.isLoading && !timeline && !calendar && !naming && !social;
 
   // Rétroplan ré-ancré sur le J-0 choisi (déterministe, pur) — l'affichage
-  // colle à ce qui sera réellement armé.
+  // colle à ce qui sera réellement armé, VOIX DE MARQUE incluse (pilier D —
+  // le re-dérive sans elle perdait le lexique/ton ADVE, audit 2026-07-16).
   const datedPosts: ContentPost[] =
     calendar && Object.keys(calendar.cadenceParCanal).length > 0
-      ? deriveDatedPosts(calendar, j0, weeks)
+      ? deriveDatedPosts(calendar, j0, weeks, data?.brandVoice ?? {})
       : calendar?.posts ?? [];
 
   return (
@@ -189,6 +190,17 @@ export function LaunchCalendarPanel() {
             <p className="mt-3 text-xs text-success">
               {arm.data.armed} publication{arm.data.armed > 1 ? "s" : ""} armée{arm.data.armed > 1 ? "s" : ""} à partir du{" "}
               {new Date(`${j0}T00:00:00Z`).toLocaleDateString(LOCALE, { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })}.
+              {arm.data.alreadyArmed > 0 ? (
+                <span className="text-foreground-muted">
+                  {" "}{arm.data.alreadyArmed} déjà armée{arm.data.alreadyArmed > 1 ? "s" : ""} (pas de doublon).
+                </span>
+              ) : null}
+              {arm.data.skippedNeedsVisual > 0 ? (
+                <span className="text-foreground-muted">
+                  {" "}{arm.data.skippedNeedsVisual} post{arm.data.skippedNeedsVisual > 1 ? "s" : ""} Instagram non armé{arm.data.skippedNeedsVisual > 1 ? "s" : ""} — un visuel est requis
+                  (planifiez-les depuis le Plan d&apos;actions avec une image).
+                </span>
+              ) : null}
               {arm.data.skippedUnsupported > 0 ? (
                 <span className="text-foreground-muted">
                   {" "}{arm.data.skippedUnsupported} post{arm.data.skippedUnsupported > 1 ? "s" : ""} sur plateforme non

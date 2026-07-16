@@ -682,8 +682,33 @@ export default function DeliverableForgePage() {
             </section>
           )}
 
-          {/* ── Étape 3 — Résultat ───────────────────────────────────────── */}
-          {composition && (
+          {/* ── Étape 3 — Résultat ─────────────────────────────────────────
+              Branché sur composition.status : un VETOED rendait la carte
+              VERTE « Aperçu prêt » avec le bouton Forger actif (audit
+              2026-07-16, `forge-veto-rendered-as-success`). */}
+          {composition && (composition as { status?: string }).status === "VETOED" ? (
+            <section className="rounded-xl border border-warning/40 bg-warning/5 p-5 space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-warning/15 text-warning">
+                  <AlertTriangle className="h-5 w-5" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-foreground">Composition refusée</h3>
+                  <p className="mt-2 text-xs text-foreground">
+                    {(composition as { summary?: string }).summary ??
+                      "Les pré-conditions ne sont pas réunies (fiche de marque incomplète ou budget). Complétez puis réessayez."}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleReset}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background/40 px-3 py-2 text-xs text-foreground-secondary hover:border-foreground-muted"
+              >
+                Recommencer
+              </button>
+            </section>
+          ) : composition && (
             <section className="rounded-xl border border-success/40 bg-success/5 p-5 space-y-3">
               <div className="flex items-start gap-3">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-success/15 text-success">
