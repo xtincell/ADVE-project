@@ -13,7 +13,7 @@
  * se base, et ce qui n'a pas pu être mesuré (et pourquoi).
  */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
 import { ScoreBadge } from "@/components/shared/score-badge";
@@ -70,6 +70,60 @@ const LEAD_HINT: Record<string, string> = {
 };
 /** Dimensions qui se débloquent en fournissant un site web. */
 const NEEDS_SITE = new Set(["site", "email", "domain", "perf"]);
+
+/**
+ * Progression du scan — la fenêtre de collecte dure ~1 minute (tout part en
+ * parallèle : site, découverte des réseaux, relevé des audiences, presse,
+ * domaine, email…) et on consolide à la fin. L'animation suit cette minute
+ * pour rendre l'attente tolérable ; les étapes affichées sont les étapes
+ * RÉELLES du scan, pas un théâtre.
+ */
+const SCAN_STEPS: Array<{ at: number; label: string }> = [
+  { at: 0, label: "Lecture de votre site (https, balises, sitemap)…" },
+  { at: 8, label: "Découverte de vos réseaux sociaux…" },
+  { at: 16, label: "Relevé des audiences (Instagram, Facebook, TikTok) — l'étape la plus longue…" },
+  { at: 34, label: "Presse, avis Google, domaine, email professionnel…" },
+  { at: 46, label: "Consolidation de tout ce qu'on a trouvé…" },
+];
+const SCAN_TOTAL_S = 55;
+
+function ScanProgress() {
+  const [elapsed, setElapsed] = useState(0);
+  const startRef = useRef(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setElapsed(Math.floor((Date.now() - startRef.current) / 1000)), 500);
+    return () => clearInterval(id);
+  }, []);
+  // La barre plafonne à 96 % tant que la réponse n'est pas là — jamais un faux 100 %.
+  const pct = Math.min(96, Math.round((elapsed / SCAN_TOTAL_S) * 100));
+  const step = [...SCAN_STEPS].reverse().find((st) => elapsed >= st.at) ?? SCAN_STEPS[0]!;
+  return (
+    <Card>
+      <CardBody>
+        <div className="flex flex-col gap-3 py-2">
+          <div className="flex items-center justify-between gap-3">
+            <Text className="text-sm font-semibold">Scan en cours — environ une minute</Text>
+            <Text className="font-mono text-xs text-[color:var(--color-foreground-muted)]">
+              {Math.min(elapsed, SCAN_TOTAL_S)}s / ~{SCAN_TOTAL_S}s
+            </Text>
+          </div>
+          <div className="h-2 w-full overflow-hidden rounded-full" style={{ background: "var(--color-surface)" }}>
+            <div
+              className="h-full rounded-full transition-all duration-500 ease-linear"
+              style={{ width: `${pct}%`, background: "var(--color-accent)" }}
+            />
+          </div>
+          <Text className="text-xs text-[color:var(--color-foreground-muted)]" aria-live="polite">
+            {step.label}
+          </Text>
+          <Text className="text-xs text-[color:var(--color-foreground-muted)]">
+            On interroge tout en parallèle et on ne garde que le vérifiable — rien n&apos;est inventé.
+          </Text>
+        </div>
+      </CardBody>
+    </Card>
+  );
+}
 
 /** Verdict en langage clair du /100 (le prospect comprend ce que ça VEUT dire). */
 function scoreVerdict(total: number): string {
@@ -160,10 +214,10 @@ export default function ScorerPage() {
         <Text className="font-mono text-xs uppercase tracking-widest text-[color:var(--color-accent)]">
           La Fusée · score gratuit · sans email
         </Text>
-        <Heading level={1}>Scorez votre marque en 30 secondes</Heading>
+        <Heading level={1}>Scorez votre marque en une minute</Heading>
         <Text>
-          Entrez votre marque, votre site et vos réseaux — on mesure votre empreinte
-          digitale <strong>tout de suite</strong>, sans inscription. Puis, si vous voulez
+          Entrez votre marque, votre site et vos réseaux — on scanne votre empreinte
+          digitale en <strong>une minute</strong>, sans inscription. Puis, si vous voulez
           aller plus loin, votre diagnostic complet (méthode ADVE) vous attend.
         </Text>
       </header>
@@ -207,12 +261,14 @@ export default function ScorerPage() {
         </CardBody>
       </Card>
 
+      {score.isPending ? <ScanProgress /> : null}
+
       {result ? (
         <Card>
           <CardHeader>
             <CardTitle>Votre présence en ligne, mesurée</CardTitle>
             <CardDescription>
-              Voici ce qu&apos;on a trouvé sur vous <strong>publiquement</strong>, en 30 secondes.
+              Voici ce qu&apos;on a trouvé sur vous <strong>publiquement</strong>, en une minute de scan.
               On ne note que ce qu&apos;on peut vérifier — rien n&apos;est inventé.
             </CardDescription>
             {result.capturedAt ? (

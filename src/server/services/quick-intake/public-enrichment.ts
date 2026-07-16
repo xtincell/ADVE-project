@@ -270,9 +270,12 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
   if (handles.length > 0 && remaining() > 3_000) {
     try {
       const { fetchPublicFollowers } = await import("@/server/services/anubis/social-audit");
+      // Fenêtre 1 min (2026-07-16) : un actor Apify (scraping) prend 10-60 s —
+      // avec les plateformes désormais en parallèle, on lui laisse jusqu'à 35 s
+      // dans la fenêtre au lieu de l'étouffer à 15 s.
       const result = await withTimeout(
-        fetchPublicFollowers(input.strategyId, handles, { timeoutMs: Math.min(15_000, remaining()) }),
-        Math.min(18_000, remaining()),
+        fetchPublicFollowers(input.strategyId, handles, { timeoutMs: Math.min(35_000, remaining()) }),
+        Math.min(40_000, remaining()),
         { state: "DEGRADED" as const, reason: "VENDOR_OUTAGE" as const },
       );
       switch (result.state) {

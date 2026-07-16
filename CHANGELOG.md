@@ -10,6 +10,17 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.188 — fix(scorer): fenêtre de scan unique ~1 min — tout en parallèle, consolidation finale, animation de progression (2026-07-16)
+
+**Mandat opérateur (« tu envois plusieurs en meme temps, tu cree une fenetre de 1min. puis tu consolides ce que tu as trouvé. avec une animation qui dure 1min pour que ce soit tolerable ») — le relevé d'audience restait « non relevé » avec TOUTES les clés posées** : un actor Apify (scraping Instagram/TikTok/Facebook) prend 10-60 s et les trois plateformes tournaient SÉQUENTIELLEMENT dans un budget résiduel de ~8-15 s. Refonte structurelle du scan :
+
+- **Fenêtre unique de ~1 minute** : `budgetMs` 25 s → **55 s** (sous les timeouts proxy usuels de 60 s). Tout part en parallèle dès l'ouverture, on consolide à la fin.
+- **Plateformes Apify en PARALLÈLE** (`fetchPublicFollowers`) : IG + TikTok + FB en `Promise.all` — wall-clock = la plus lente, pas la somme. Caps élargis en conséquence (35 s l'appel, 40 s le wrapper) : un actor a maintenant le temps de finir.
+- **Relevé d'audience en ARRIÈRE-PLAN si la fenêtre ne suffit pas** : clé présente mais collecte DEGRADED → relance fire-and-forget avec un vrai budget (120 s) ; à la fin une observation FRAÎCHE (compteurs + score recalculé) est enregistrée au répertoire Seshat — le prochain « Scorer » (cache) montre l'audience. Réponse marquée `audienceStatus: "PENDING"` (« relevé en cours — revenez dans ~1 min »). Serveur long-vivant (Coolify), pas de serverless qui tue le process.
+- **Animation de progression 1 min** (`ScanProgress`) : étapes réelles du scan (site → découverte réseaux → audiences « l'étape la plus longue » → presse/domaine/email → consolidation), barre plafonnée à 96 % tant que la réponse n'est pas là (jamais un faux 100 %), aria-live.
+- **Copy alignée** : « 30 secondes » → « une minute » (scorer, leaderboard, marketing home, landingintake).
+- tsc 0 · lint 0 · **2 745 tests unitaires verts** (suite complète).
+
 ## v6.27.187 — fix(scorer): signaux gratuits immunisés contre la famine de budget + la raison de l'audience manquante affichée (2026-07-16)
 
 **Suite de la remontée Cimenteries du Cameroun (le scan progresse — site 85/100, 5 réseaux découverts par Brave, presse mesurée — mais domaine/email restaient « à mesurer » et « audience non relevée » ne disait pas pourquoi)** :
