@@ -86,6 +86,15 @@ export default function ScorerPage() {
 
   const score = trpc.footprint.scoreInstant.useMutation();
   const result = score.data;
+  // POURQUOI l'audience manque (jamais un « non relevée » nu) — statut absent
+  // (rapport en cache pré-mise-à-jour) → copy générique.
+  const audienceStatus = (result as { audienceStatus?: string } | undefined)?.audienceStatus;
+  const audienceReason =
+    audienceStatus === "DEFERRED"
+      ? "relevé d'audience non configuré sur la plateforme"
+      : audienceStatus === "DEGRADED"
+        ? "relevé d'audience en échec — cliquez Actualiser"
+        : "audience non relevée";
 
   function run(refresh: boolean) {
     if (!brandName.trim()) return;
@@ -283,7 +292,7 @@ export default function ScorerPage() {
                         {f.followerCount !== null ? (
                           <span className="shrink-0 font-mono font-semibold">{fmt(f.followerCount)}</span>
                         ) : (
-                          <span className="shrink-0 text-xs text-[color:var(--color-foreground-muted)]">compte détecté · audience non relevée</span>
+                          <span className="shrink-0 text-xs text-[color:var(--color-foreground-muted)]">compte détecté · {audienceReason}</span>
                         )}
                       </div>
                     ))}

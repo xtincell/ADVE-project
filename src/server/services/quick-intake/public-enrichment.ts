@@ -111,6 +111,23 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
   const remaining = () => Math.max(0, budgetMs - (Date.now() - t0));
   const errors: string[] = [];
 
+  // ── 0. Signaux GRATUITS lancés en parallèle de tout le reste ──
+  // Domaine (RDAP) + email (DNS) ne dépendent que de l'URL fournie et coûtent
+  // 1-6 s : lancés ICI, ils ne peuvent plus être affamés par les étages
+  // site/discovery/Apify (bug prod 2026-07-16 : « site fourni » mais domaine/
+  // email « à mesurer » — l'étage final n'avait plus de budget).
+  const freeCollectorsPromise = import("./footprint-collectors");
+  const earlyDomainPromise = input.websiteUrl
+    ? freeCollectorsPromise
+        .then((c) => c.fetchDomainInfo(input.websiteUrl, { timeoutMs: 6_000 }))
+        .catch(() => null)
+    : Promise.resolve(null);
+  const earlyEmailPromise = input.websiteUrl
+    ? freeCollectorsPromise
+        .then((c) => c.checkEmailInfrastructure(c.registrableDomain(input.websiteUrl!), { timeoutMs: 5_000 }))
+        .catch(() => null)
+    : Promise.resolve(null);
+
   // ── 1. Footprint déterministe (site + liens déclarés) ──
   const declared = (input.socialLinksRaw ?? "")
     .split(/\r?\n|,|;/)
@@ -313,20 +330,24 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
   // Read-only, chacun time-boxé et honnête ; l'échec d'un collecteur
   // n'affecte pas les autres.
   const enrichedExtras: Pick<EnrichedFootprint, "maps" | "youtube" | "domain" | "emailInfra" | "performance" | "ads"> = {};
+  // Signaux gratuits lancés à l'étage 0 — récupérés SANS condition de budget
+  // (ils ont couru en parallèle, l'attente restante est ≤ leur propre timeout).
+  {
+    const [earlyDomain, earlyEmail] = await Promise.all([earlyDomainPromise, earlyEmailPromise]);
+    if (earlyDomain) enrichedExtras.domain = earlyDomain;
+    if (earlyEmail) enrichedExtras.emailInfra = earlyEmail;
+  }
   if (remaining() > 500) {
     try {
       const collectors = await import("./footprint-collectors");
-      const domainName = input.websiteUrl ? collectors.registrableDomain(input.websiteUrl) : null;
       const ytProfile = footprint.socials.find((s) => s.platform === "YOUTUBE" && s.handle);
       const stageBudget = Math.min(20_000, remaining());
 
-      const [maps, youtube, domain, emailInfra, performance, ads] = await Promise.all([
+      const [maps, youtube, performance, ads] = await Promise.all([
         collectors.fetchGoogleBusinessPresence(input.companyName, input.country, { timeoutMs: Math.min(stageBudget, 18_000) }),
         ytProfile
           ? collectors.fetchYouTubeChannelStats(ytProfile.handle!, { timeoutMs: Math.min(stageBudget, 6_000) })
           : Promise.resolve(null),
-        collectors.fetchDomainInfo(input.websiteUrl, { timeoutMs: Math.min(stageBudget, 6_000) }),
-        collectors.checkEmailInfrastructure(domainName, { timeoutMs: Math.min(stageBudget, 5_000) }),
         collectors.fetchSitePerformance(footprint.site?.reachable ? footprint.site.url : null, { timeoutMs: Math.min(stageBudget, 18_000) }),
         collectors.fetchAdsPresence(input.companyName, { timeoutMs: Math.min(stageBudget, 15_000) }),
       ]);
@@ -358,8 +379,6 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
           }
         }
       }
-      enrichedExtras.domain = domain;
-      enrichedExtras.emailInfra = emailInfra;
       enrichedExtras.performance = performance;
       enrichedExtras.ads = ads;
     } catch (err) {

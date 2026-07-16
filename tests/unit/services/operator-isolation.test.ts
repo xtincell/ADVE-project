@@ -59,7 +59,10 @@ describe("Operator Isolation", () => {
       expect(result).toEqual({});
     });
 
-    it("avec operatorId retourne le filtre operateur", () => {
+    it("avec operatorId retourne le filtre operateur + les bras owner/collaborateur (aligné canAccessStrategy)", () => {
+      // Régression prod 2026-07-16 « les missions ne remontent pas » : un compte
+      // rattaché à un opérateur perdait ses marques possédées EN PROPRE —
+      // canAccessStrategy accordait l'accès (owner), scopeStrategies le filtrait.
       const ctx = { operatorId: "op-42", userId: "user-1", role: "USER" };
 
       const result = scopeStrategies(ctx);
@@ -68,6 +71,8 @@ describe("Operator Isolation", () => {
         OR: [
           { client: { operatorId: "op-42" } },
           { operatorId: "op-42" },
+          { userId: "user-1" },
+          { collaborators: { some: { userId: "user-1", status: "ACTIVE" } } },
         ],
       });
     });
@@ -95,7 +100,7 @@ describe("Operator Isolation", () => {
       expect(result).toEqual({});
     });
 
-    it("avec operatorId delegue a scopeStrategies via strategy", () => {
+    it("avec operatorId delegue a scopeStrategies via strategy (bras owner/collab inclus)", () => {
       const ctx = { operatorId: "op-42", userId: "user-1", role: "USER" };
 
       const result = scopeCampaigns(ctx);
@@ -105,6 +110,8 @@ describe("Operator Isolation", () => {
           OR: [
             { client: { operatorId: "op-42" } },
             { operatorId: "op-42" },
+            { userId: "user-1" },
+            { collaborators: { some: { userId: "user-1", status: "ACTIVE" } } },
           ],
         },
       });
@@ -135,7 +142,7 @@ describe("Operator Isolation", () => {
       expect(result).toEqual({});
     });
 
-    it("avec operatorId delegue a scopeStrategies via strategy", () => {
+    it("avec operatorId delegue a scopeStrategies via strategy (bras owner/collab inclus)", () => {
       const ctx = { operatorId: "op-10", userId: "user-1", role: "USER" };
 
       const result = scopeMissions(ctx);
@@ -145,6 +152,8 @@ describe("Operator Isolation", () => {
           OR: [
             { client: { operatorId: "op-10" } },
             { operatorId: "op-10" },
+            { userId: "user-1" },
+            { collaborators: { some: { userId: "user-1", status: "ACTIVE" } } },
           ],
         },
       });

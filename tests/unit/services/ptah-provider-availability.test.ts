@@ -46,8 +46,15 @@ describe("Ptah providers — isAvailable() pilote le deferral (ADR-0021)", () =>
     }
   });
 
-  it("magnific reste disponible sans clé (mock fallback) → jamais différé", async () => {
+  it("magnific SANS clé est indisponible → forge différée (audit 2026-07-16 : le mock picsum était livré comme un vrai asset)", async () => {
+    delete process.env.PTAH_ALLOW_MOCK_FORGE;
+    expect(await magnificProvider.isAvailable()).toBe(false);
+  });
+
+  it("magnific en mode démo EXPLICITE (PTAH_ALLOW_MOCK_FORGE=1) reste disponible", async () => {
+    process.env.PTAH_ALLOW_MOCK_FORGE = "1";
     expect(await magnificProvider.isAvailable()).toBe(true);
+    delete process.env.PTAH_ALLOW_MOCK_FORGE;
   });
 
   it("adobe / canva / figma sont indisponibles sans credentials → forge différée", async () => {

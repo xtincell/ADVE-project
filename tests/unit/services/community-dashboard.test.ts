@@ -55,16 +55,21 @@ describe("shapeCommunityDashboard — superfan KPIs", () => {
 });
 
 describe("shapeCommunityDashboard — sections", () => {
-  it("maps devotion distribution + iso measuredAt", () => {
+  it("maps devotion distribution (pct 0-100 → fractions canon 0-1) + iso measuredAt", () => {
+    // DevotionSnapshot stocke des POURCENTAGES 0-100 (devotion-engine roundPct) ;
+    // le DTO les normalise en fractions 0-1 au boundary (audit 2026-07-16
+    // `devotion-rung-pct-times-100` — l'heuristique UI multipliait par 100
+    // les petits rungs réels).
     const measuredAt = new Date("2026-06-01T00:00:00Z");
     const d = shapeCommunityDashboard({
       ...EMPTY,
       devotionRow: {
-        spectateur: 0.4, interesse: 0.25, participant: 0.15, engage: 0.1,
-        ambassadeur: 0.07, evangeliste: 0.03, devotionScore: 0.62, measuredAt,
+        spectateur: 40, interesse: 25, participant: 15, engage: 10,
+        ambassadeur: 7, evangeliste: 3, devotionScore: 0.62, measuredAt,
       },
     });
     expect(d.devotion?.distribution.evangeliste).toBe(0.03);
+    expect(d.devotion?.distribution.spectateur).toBe(0.4);
     expect(d.devotion?.measuredAt).toBe(measuredAt.toISOString());
     expect(d.hasAnyData).toBe(true);
   });

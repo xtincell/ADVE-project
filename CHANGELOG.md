@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.187 — fix(scorer): signaux gratuits immunisés contre la famine de budget + la raison de l'audience manquante affichée (2026-07-16)
+
+**Suite de la remontée Cimenteries du Cameroun (le scan progresse — site 85/100, 5 réseaux découverts par Brave, presse mesurée — mais domaine/email restaient « à mesurer » et « audience non relevée » ne disait pas pourquoi)** :
+
+- **Signaux gratuits lancés en PARALLÈLE dès le départ** : domaine (RDAP) + email (DNS) ne dépendent que de l'URL fournie et coûtent 1-6 s — ils étaient pourtant exécutés en DERNIER étage, après site/Brave/Apify qui pouvaient consommer tout le budget (25 s). Lancés à l'étage 0 avec leurs propres timeouts, récupérés sans condition de budget : structurellement immunisés contre la famine.
+- **La raison de l'audience manquante est AFFICHÉE** : `scoreInstant` renvoie `audienceStatus` (LIVE / DEFERRED / DEGRADED) et les lignes réseaux disent désormais « relevé d'audience non configuré sur la plateforme » (clé Apify absente — action opérateur) vs « relevé d'audience en échec — cliquez Actualiser » (collecte tentée mais tombée) au lieu du « audience non relevée » indéchiffrable.
+- **6 tests services alignés sur les canons des hotfixes** (ils vérifiaient les ANCIENS comportements volontairement changés, et `tests/unit/services` n'était pas dans la boucle de vérif des vagues) : devotion pct→fraction au boundary (v6.27.181), Magnific sans clé = indisponible + mode démo explicite (v6.27.184), scopeStrategies bras owner/collaborateur (v6.27.185).
+- **Note d'usage** : le rapport /scorer est mis en cache 7 jours — après un déploiement, cliquer « Actualiser » (pas « Scorer ») pour forcer un scan frais.
+- tsc 0 · lint 0 · **2 745 tests unitaires verts** (suite complète).
+
 ## v6.27.186 — fix(scorer): /scorer mentait sur ses propres signaux mesurés (2026-07-16)
 
 **Remontée opérateur (« le site internet est collecté mais ça dit le contraire ») — bug indépendant du budget corrigé en v6.27.185** :
