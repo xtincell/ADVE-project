@@ -289,19 +289,10 @@ const OPENAI_MODEL_MAP: Record<string, string> = {
   "claude-haiku-4-5-20251001": "gpt-4o-mini",
 };
 
-// ── DÉFAUT LLM CENTRALISÉ — owl-alpha via OpenRouter, PARTOUT ──────────────
-// Directive opérateur : provider texte primaire = OpenRouter, modèle par défaut =
-// owl-alpha PARTOUT (La Fusée ne dépend d'aucun crédit LLM payant). UNE seule
-// source de vérité, pinnable via `OPENROUTER_MODEL`. L'ancien OPENROUTER_MODEL_MAP
-// (routage par-modèle vers anthropic/claude-* payant) est supprimé : tout le texte
-// OpenRouter passe par owl-alpha. Slug confirmé live sur l'API : "openrouter/owl-alpha".
-export const DEFAULT_OPENROUTER_MODEL = process.env.OPENROUTER_MODEL ?? "openrouter/owl-alpha";
-
 // Chaîne de repli — modèles 100 % GRATUITS OpenRouter, testés live disponibles
 // (2026-06-30, real-output check). Parcourus dans l'ordre quand le modèle courant
 // n'a "aucun endpoint" / renvoie 404 / 429. Reste sur OpenRouter et GRATUIT
-// (doctrine « La Fusée ne dépend d'aucun crédit LLM payant »). owl-alpha reste le
-// défaut ; cette chaîne ne sert qu'en cas d'indisponibilité. Surchargeable via
+// (doctrine « La Fusée ne dépend d'aucun crédit LLM payant »). Surchargeable via
 // OPENROUTER_FALLBACK_MODELS (CSV) — ex. pour pinner un modèle plus puissant.
 export const OPENROUTER_FALLBACK_MODELS: string[] = process.env.OPENROUTER_FALLBACK_MODELS
   ? process.env.OPENROUTER_FALLBACK_MODELS.split(",").map((s) => s.trim()).filter(Boolean)
@@ -312,9 +303,18 @@ export const OPENROUTER_FALLBACK_MODELS: string[] = process.env.OPENROUTER_FALLB
       "nvidia/nemotron-3-nano-30b-a3b:free", // 30B MoE, dernier recours rapide
     ];
 
+// ── DÉFAUT OPENROUTER CENTRALISÉ — pinnable via `OPENROUTER_MODEL` ──────────
+// Architecture opérateur 2026-07-16 : le provider texte PRIMAIRE est Ollama
+// Cloud (OLLAMA_BASE_URL + OLLAMA_API_KEY + OLLAMA_MODEL) ; OpenRouter n'est
+// plus qu'un REPLI. L'ancien défaut `openrouter/owl-alpha` (preview) n'est
+// PLUS SERVI par OpenRouter → un défaut mort forçait chaque appel à brûler un
+// aller-retour 404 avant la chaîne de repli. Défaut sain : la tête de la
+// chaîne gratuite ci-dessus.
+export const DEFAULT_OPENROUTER_MODEL = process.env.OPENROUTER_MODEL ?? OPENROUTER_FALLBACK_MODELS[0]!;
+
 function resolveOpenRouterModel(_policyModel: string): string {
-  // owl-alpha pour TOUT le texte — le modèle de police (anthropicModel) n'est
-  // consulté que sur le chemin premium (Anthropic réel), jamais ici.
+  // Un seul modèle OpenRouter pour TOUT le texte — le modèle de police
+  // (anthropicModel) n'est consulté que sur le chemin premium (Anthropic réel).
   return DEFAULT_OPENROUTER_MODEL;
 }
 
@@ -336,12 +336,13 @@ export function isPremiumMode(): boolean {
 }
 
 /**
- * Resolve the text-provider try-order (pure). Encodes "owl-alpha by default,
- * premium opt-in":
+ * Resolve the text-provider try-order (pure). Encodes l'architecture opérateur
+ * 2026-07-16 « Ollama Cloud primaire, OpenRouter repli » :
  *   1. explicit `LLM_PRIMARY_PROVIDER` (when in candidates) → head (operator wins).
  *   2. premium ON → candidates unchanged (Anthropic-first, historical order).
- *   3. premium OFF (default) → OpenRouter (owl-alpha) to the head when present —
- *      the nominal path touches no paid credit; Anthropic/Ollama stay as fallback.
+ *   3. premium OFF (default) → Ollama (Cloud ou local, gratuit/forfaitaire) en
+ *      tête quand configuré ; sinon OpenRouter. Anthropic reste le dernier repli
+ *      — le chemin nominal ne touche aucun crédit payant.
  */
 function resolveTextProviderOrder(
   candidates: LLMProvider[],
@@ -349,7 +350,11 @@ function resolveTextProviderOrder(
 ): LLMProvider[] {
   const explicit =
     opts.explicitPrimary && candidates.includes(opts.explicitPrimary) ? opts.explicitPrimary : undefined;
-  const fallbackPrimary: LLMProvider | undefined = opts.premium ? undefined : "openrouter";
+  const fallbackPrimary: LLMProvider | undefined = opts.premium
+    ? undefined
+    : candidates.includes("ollama")
+      ? "ollama"
+      : "openrouter";
   const primary =
     explicit ?? (fallbackPrimary && candidates.includes(fallbackPrimary) ? fallbackPrimary : undefined);
   return primary ? [primary, ...candidates.filter((p) => p !== primary)] : candidates;
@@ -604,12 +609,13 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
   // Ensure at least anthropic is tried as the last-resort fallback.
   if (providersToTry.length === 0) providersToTry.push("anthropic");
 
-  // ── Ordre des providers texte — owl-alpha par défaut, premium opt-in ──────
-  // Directive opérateur « La Fusée ne dépend d'aucun crédit LLM payant ». Ordre
-  // résolu par resolveTextProviderOrder : `LLM_PRIMARY_PROVIDER` explicite (ex.
-  // "openrouter" pour servir owl-alpha) > premium ON `LLM_PREMIUM_MODE`
-  // (Anthropic d'abord, une fois les crédits chargés) > défaut premium OFF
-  // (OpenRouter/owl-alpha d'abord, gratuit ; Anthropic/Ollama en repli sans coût).
+  // ── Ordre des providers texte — Ollama Cloud primaire, premium opt-in ─────
+  // Architecture opérateur 2026-07-16 : Ollama Cloud (OLLAMA_MODEL) est LE
+  // provider texte ; OpenRouter est le repli. Ordre résolu par
+  // resolveTextProviderOrder : `LLM_PRIMARY_PROVIDER` explicite > premium ON
+  // `LLM_PREMIUM_MODE` (Anthropic d'abord, une fois les crédits chargés) >
+  // défaut premium OFF (Ollama si configuré, sinon OpenRouter ; Anthropic en
+  // dernier repli sans coût).
   const orderedProviders = resolveTextProviderOrder(providersToTry, {
     premium: isPremiumMode(),
     explicitPrimary: process.env.LLM_PRIMARY_PROVIDER as LLMProvider | undefined,
@@ -661,14 +667,18 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
         } else {
           // Ollama — local OU Ollama Cloud (https://ollama.com/v1 + clé API).
           // createOpenAI accepte une apiKey (requise pour le cloud ; le local
-          // accepte n'importe quelle valeur). Modèle : override par appel >
-          // OLLAMA_MODEL (ex. deepseek-v4-flash) > police > nom Claude.
+          // accepte n'importe quelle valeur). Modèle : OLLAMA_MODEL (pin global
+          // opérateur, ex. deepseek-v4-flash) > override par appel > police >
+          // nom Claude. Le pin global GAGNE sur les overrides par-appel : ces
+          // derniers épinglent des alias LOCAUX (hermes3-fast, hermes3:8b…)
+          // taillés pour un GPU 8 GB — inexistants sur Ollama Cloud, ils
+          // 404eraient chaque appel du chemin primaire.
           const { createOpenAI } = await import("@ai-sdk/openai");
           const ollama = createOpenAI({
             baseURL: process.env.OLLAMA_BASE_URL,
             apiKey: process.env.OLLAMA_API_KEY ?? "ollama",
           });
-          servedModel = options.ollamaModel ?? process.env.OLLAMA_MODEL ?? ollamaModel ?? anthropicModel;
+          servedModel = process.env.OLLAMA_MODEL ?? options.ollamaModel ?? ollamaModel ?? anthropicModel;
           aiModel = ollama(servedModel);
         }
 
@@ -770,7 +780,7 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
 
         // Non-blocking cost tracking. Use the actually-served model name
         // (anthropic name when on Anthropic/OpenAI, ollama name when free).
-        const billedModel = provider === "ollama" ? (options.ollamaModel ?? ollamaModel ?? anthropicModel) : anthropicModel;
+        const billedModel = provider === "ollama" ? servedModel : anthropicModel;
         trackCost(options, gatewayUsage, billedModel);
 
         // PostgreSQL jsonb refuse le null byte U+0000 ("unsupported Unicode escape

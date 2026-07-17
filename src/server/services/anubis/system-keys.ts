@@ -48,13 +48,14 @@ export function getSystemKeyStatus(): SystemKeyGroup[] {
     },
     {
       group: "LLM (Gateway multi-provider)",
-      hint: "Cascade Anthropic → OpenAI → Ollama → OpenRouter. Au moins un provider suffit à faire tourner l'assist/brief.",
+      hint: "Ollama Cloud primaire (URL + clé + OLLAMA_MODEL) → OpenRouter en repli → Anthropic (premium opt-in). Au moins un provider suffit à faire tourner l'assist/brief.",
       keys: [
-        { key: "ANTHROPIC_API_KEY", label: "Anthropic (primaire)", configured: has("ANTHROPIC_API_KEY") },
-        { key: "OPENAI_API_KEY", label: "OpenAI (fallback)", configured: has("OPENAI_API_KEY") },
-        { key: "OPENROUTER_API_KEY", label: "OpenRouter (fallback)", configured: has("OPENROUTER_API_KEY") },
+        { key: "OLLAMA_BASE_URL", label: "Ollama (URL — cloud ou local, primaire)", configured: has("OLLAMA_BASE_URL") },
         { key: "OLLAMA_API_KEY", label: "Ollama Cloud (clé API)", configured: has("OLLAMA_API_KEY") },
-        { key: "OLLAMA_BASE_URL", label: "Ollama (URL — cloud ou local)", configured: has("OLLAMA_BASE_URL") },
+        { key: "OLLAMA_MODEL", label: "Ollama (modèle épinglé, ex. deepseek flash)", configured: has("OLLAMA_MODEL") },
+        { key: "OPENROUTER_API_KEY", label: "OpenRouter (repli)", configured: has("OPENROUTER_API_KEY") },
+        { key: "ANTHROPIC_API_KEY", label: "Anthropic (premium opt-in)", configured: has("ANTHROPIC_API_KEY") },
+        { key: "OPENAI_API_KEY", label: "OpenAI (embeddings seulement)", configured: has("OPENAI_API_KEY") },
       ],
     },
     {

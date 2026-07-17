@@ -10,6 +10,26 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.189 — fix(governance): Ollama Cloud provider texte primaire + feat(scorer): rapport magazine (2026-07-16)
+
+**Deux mandats opérateur, même session** :
+
+**1. LLM — « j'ai défini Ollama Cloud en provider, le modèle est deepseek flash, OpenRouter est un fallback, owl-alpha n'est plus dispo »** — le chemin court de l'intake dégradait (« analyse automatique momentanément indisponible ») alors que les clés étaient posées :
+
+- **Ordre des providers texte corrigé** : le défaut (premium OFF) mettait OpenRouter en tête avec un modèle par défaut MORT (`openrouter/owl-alpha`, plus servi) — chaque appel brûlait un 404 avant le repli, et Ollama Cloud pourtant configuré passait après. Nouvel ordre : **Ollama (Cloud ou local) primaire quand configuré → OpenRouter repli → Anthropic (premium opt-in)**. `LLM_PRIMARY_PROVIDER` explicite gagne toujours.
+- **Défaut OpenRouter sain** : `DEFAULT_OPENROUTER_MODEL` ne pointe plus owl-alpha mais la tête de la chaîne gratuite testée live ; pinnable via `OPENROUTER_MODEL` comme avant.
+- **`OLLAMA_MODEL` (pin global opérateur) gagne désormais sur les overrides par-appel** : plusieurs flows épinglaient des alias LOCAUX (`hermes3-fast`, `hermes3:8b`, taillés GPU 8 GB) qui n'existent pas sur Ollama Cloud et 404eraient chaque appel du chemin primaire.
+- Panneau « Clés système » (console) : groupe LLM réordonné et relabellisé selon l'architecture réelle (Ollama primaire, OpenRouter repli, OpenAI = embeddings seulement).
+- Env attendues en prod : `OLLAMA_BASE_URL=https://ollama.com/v1` + `OLLAMA_API_KEY` + `OLLAMA_MODEL` (deepseek flash) + `OPENROUTER_API_KEY` (repli).
+
+**2. Scorer — « je veux du verbe et de l'image, comme un rapport magazine »** — les résultats /scorer passaient d'une liste technique à un rapport éditorial :
+
+- **Couverture** : titre de marque en display, chapo en prose (composée 100 % DÉTERMINISTE depuis les seuls faits mesurés — jamais une phrase sur un signal non relevé), score en anneau, 3 tuiles de stats (abonnés mesurés / mentions presse / % du spectre mesuré).
+- **4 chapitres numérotés** avec illustrations de marque (3D) et filets : 01 Votre audience (jauges relatives par plateforme + prose « votre place forte : Facebook »), 02 Votre réputation (presse en citations « guillemets » + avis Google), 03 Vos fondations (site/domaine/email/perf racontés en phrases + jauges /100), 04 Encore à mesurer (honnête, inchangé sur le fond).
+- `audienceStatus PENDING` (relevé de fond v6.27.188) affiché : « relevé en cours en arrière-plan — revenez dans une minute et cliquez Actualiser ».
+- Zéro LLM, zéro couleur brute (tokens DS), tests DS + vocabulaire verts.
+- tsc 0 · lint 0 · **2 746 tests unitaires verts** (suite complète).
+
 ## v6.27.188 — fix(scorer): fenêtre de scan unique ~1 min — tout en parallèle, consolidation finale, animation de progression (2026-07-16)
 
 **Mandat opérateur (« tu envois plusieurs en meme temps, tu cree une fenetre de 1min. puis tu consolides ce que tu as trouvé. avec une animation qui dure 1min pour que ce soit tolerable ») — le relevé d'audience restait « non relevé » avec TOUTES les clés posées** : un actor Apify (scraping Instagram/TikTok/Facebook) prend 10-60 s et les trois plateformes tournaient SÉQUENTIELLEMENT dans un budget résiduel de ~8-15 s. Refonte structurelle du scan :
