@@ -38,6 +38,17 @@ export async function GET(request: Request) {
     // ADR-0143 — préchauffe la veille MULTI-SUJETS par marque (marque + secteur,
     // multi-langue, pertinence déterministe) → le dashboard sert du cache.
     const brandFeeds = await refreshActiveBrandFeeds(db).catch(() => ({ built: 0, skipped: 0 }));
+    // Rationalisation 2026-07-16 (audit Seshat) : auto-enregistre un collecteur
+    // de signaux marché DAILY pour chaque marque active qui n'en a pas —
+    // « chaque marque collecte ce dont elle a besoin » devient structurel, plus
+    // dépendant d'un clic opérateur. Gated : seulement si un provider texte est
+    // sain (on n'enfile pas des jobs LLM condamnés). Best-effort.
+    const { isTextLLMAvailable } = await import("@/server/services/llm-gateway");
+    const daemons = isTextLLMAvailable()
+      ? await import("@/server/services/seshat/tarsis/daemon-backfill")
+          .then((m) => m.ensureSignalDaemonsForActiveStrategies())
+          .catch(() => ({ registered: 0, existing: 0, skipped: 0 }))
+      : { registered: 0, existing: 0, skipped: 0 };
     const summary = {
       pairs: results.length,
       okPairs: results.filter((r) => r.status === "OK").length,
@@ -49,6 +60,8 @@ export async function GET(request: Request) {
       errors: results.filter((r) => r.error).map((r) => `${r.countryCode}/${r.sector}: ${r.error}`),
       brandFeedsBuilt: brandFeeds.built,
       brandFeedsSkipped: brandFeeds.skipped,
+      signalDaemonsRegistered: daemons.registered,
+      signalDaemonsExisting: daemons.existing,
       sectorsRefreshed: sectors.filter((s) => s.state === "REFRESHED").length,
       sectorsSkipped: sectors
         .filter((s) => s.state === "SKIPPED")

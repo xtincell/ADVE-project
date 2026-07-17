@@ -84,13 +84,19 @@ async function resolveCountryCode(pays: string): Promise<string | null> {
   return c?.code ?? null;
 }
 
-/** Signaux EXTERNAL_SAAS récents de la stratégie (table Signal, < 30j). */
+/**
+ * Signaux marché récents de la stratégie (table Signal, < 30j). Lit
+ * `EXTERNAL_SAAS` (collecteur Tarsis) ET `MARKET_SIGNAL` (ingestion MANUELLE
+ * opérateur + seeds) — rationalisation 2026-07-16 : les signaux saisis à la
+ * main par l'opérateur étaient invisibles du pilier T (le kind avait migré
+ * vers EXTERNAL_SAAS sans réaligner l'ingest manuel — manual-first parity).
+ */
 async function loadExternalSaasSignals(strategyId?: string): Promise<Array<Record<string, unknown>>> {
   if (!strategyId) return [];
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const signals = await db.signal.findMany({
-    where: { strategyId, type: "EXTERNAL_SAAS", createdAt: { gte: thirtyDaysAgo } },
+    where: { strategyId, type: { in: ["EXTERNAL_SAAS", "MARKET_SIGNAL"] }, createdAt: { gte: thirtyDaysAgo } },
     orderBy: { createdAt: "desc" },
     take: 20,
   });

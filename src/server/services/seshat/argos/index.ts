@@ -77,6 +77,15 @@ export async function harvestReference(input: {
   topics?: string[];
   intentEmissionId?: string;
 }): Promise<DossierRow> {
+  // Pré-flight (rationalisation 2026-07-16, parité avec huntVictories) : sans
+  // provider texte sain, on n'a rien à chasser — échec IMMÉDIAT et lisible au
+  // lieu de brûler un appel Brave + un aller-retour LLM condamné.
+  const { isTextLLMAvailable } = await import("@/server/services/llm-gateway");
+  if (!isTextLLMAvailable()) {
+    throw new Error(
+      "HUNTER_LLM_UNAVAILABLE — aucun provider texte disponible (clé absente ou circuit ouvert). Configurez le LLM puis relancez la chasse.",
+    );
+  }
   const system = [
     "Tu es Hunter, l'agent de recherche d'Argos by LaFusée.",
     "Tu produis un DOSSIER DE RÉFÉRENCE (DNA + editorial) sur une marque/campagne emblématique,",
