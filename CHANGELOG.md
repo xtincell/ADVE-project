@@ -10,6 +10,10 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.192 — docs(governance): ÉTAT FINAL RECHERCHÉ — plan final par boucles d'accumulation (2026-07-16)
+
+**Mandat opérateur (« révise ton travail, vois les faiblesses, les idées de génie manquantes, rédige le plan final »)** : [docs/governance/ETAT-FINAL-RECHERCHE-2026.md](docs/governance/ETAT-FINAL-RECHERCHE-2026.md) — PROPOSÉ, canon à ratification opérateur. Autocritique du plan Neteru (ordonné par sous-systèmes → réordonné par 5 boucles d'accumulation AUDIENCE/FANS/DONNÉE/REVENU/OPÉRATEURS, règle de vie 60 j exercé-ou-gelé, cas-phare public obligatoire), 3 idées ajoutées : **le Pari Public** (l'engagement daté vérifiable comme produit), **la Valorisation de marque certifiée** (le produit haute marge type Interbrand, inexistant en Afrique francophone), **le parrainage comme première brique du passeport fan**. La Fusée = sa propre première marque culte (dogfooding radical, leaderboard inclus). Doc-only.
+
 ## v6.27.191 — feat(governance): moteur prédictif Seshat — forecast backtesté, registre calibré, benchmarks auto, rapport founder (2026-07-16)
 
 **Mandat opérateur (« je veux de l'automatisation… le rapport prédictif est critique, l'algorithme de prédiction doit être on point »)** — [ADR-0156](docs/governance/adr/0156-moteur-predictif-registre-calibration.md). « On point » = garanties structurelles, pas une promesse :
