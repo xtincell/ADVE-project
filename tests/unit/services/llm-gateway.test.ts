@@ -298,7 +298,7 @@ describe("LLM gateway — owl-alpha default + premium toggle", () => {
     else process.env.LLM_PREMIUM_MODE = prev;
   });
 
-  it("isPremiumMode is false by default — owl-alpha is the default model", () => {
+  it("isPremiumMode is false by default — le chemin nominal ne touche aucun crédit payant", () => {
     delete process.env.LLM_PREMIUM_MODE;
     expect(isPremiumMode()).toBe(false);
   });
@@ -314,10 +314,16 @@ describe("LLM gateway — owl-alpha default + premium toggle", () => {
     }
   });
 
-  it("default (premium OFF) puts OpenRouter/owl-alpha first", () => {
+  it("default (premium OFF) sans Ollama configuré → OpenRouter first", () => {
     expect(
       _resolveTextProviderOrderForTest(["anthropic", "openrouter"], { premium: false }),
     ).toEqual(["openrouter", "anthropic"]);
+  });
+
+  it("default (premium OFF) avec Ollama configuré → Ollama Cloud first, OpenRouter repli (2026-07-16)", () => {
+    expect(
+      _resolveTextProviderOrderForTest(["anthropic", "ollama", "openrouter"], { premium: false }),
+    ).toEqual(["ollama", "anthropic", "openrouter"]);
   });
 
   it("premium ON keeps the Anthropic-first historical order", () => {
@@ -335,9 +341,9 @@ describe("LLM gateway — owl-alpha default + premium toggle", () => {
     ).toEqual(["ollama", "anthropic", "openrouter"]);
   });
 
-  it("premium OFF with no OpenRouter candidate leaves order unchanged (graceful)", () => {
+  it("premium OFF sans OpenRouter → Ollama passe quand même en tête", () => {
     expect(
       _resolveTextProviderOrderForTest(["anthropic", "ollama"], { premium: false }),
-    ).toEqual(["anthropic", "ollama"]);
+    ).toEqual(["ollama", "anthropic"]);
   });
 });
