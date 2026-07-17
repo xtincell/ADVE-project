@@ -49,6 +49,26 @@ export async function GET(request: Request) {
           .then((m) => m.ensureSignalDaemonsForActiveStrategies())
           .catch(() => ({ registered: 0, existing: 0, skipped: 0 }))
       : { registered: 0, existing: 0, skipped: 0 };
+    // ADR-0156 — moteur prédictif : benchmarks marché auto (répertoire →
+    // MarketBenchmark p10/p50/p90), forecasts d'audience du jour (idempotent),
+    // et résolution des forecasts échus contre la vérité terrain. Best-effort,
+    // 100 % déterministe, zéro LLM.
+    const prediction = await (async () => {
+      try {
+        const { aggregateFootprintBenchmarks } = await import(
+          "@/server/services/seshat/brand-registry/benchmark-aggregator"
+        );
+        const { recordAudienceForecasts, resolveMaturedForecasts } = await import(
+          "@/server/services/seshat/prediction"
+        );
+        const benchmarks = await aggregateFootprintBenchmarks();
+        const forecasts = await recordAudienceForecasts();
+        const resolutions = await resolveMaturedForecasts();
+        return { benchmarks: benchmarks.upserted, forecasts: forecasts.recorded, resolved: resolutions.resolved };
+      } catch {
+        return { benchmarks: 0, forecasts: 0, resolved: 0 };
+      }
+    })();
     const summary = {
       pairs: results.length,
       okPairs: results.filter((r) => r.status === "OK").length,
@@ -62,6 +82,9 @@ export async function GET(request: Request) {
       brandFeedsSkipped: brandFeeds.skipped,
       signalDaemonsRegistered: daemons.registered,
       signalDaemonsExisting: daemons.existing,
+      benchmarksUpserted: prediction.benchmarks,
+      forecastsRecorded: prediction.forecasts,
+      forecastsResolved: prediction.resolved,
       sectorsRefreshed: sectors.filter((s) => s.state === "REFRESHED").length,
       sectorsSkipped: sectors
         .filter((s) => s.state === "SKIPPED")

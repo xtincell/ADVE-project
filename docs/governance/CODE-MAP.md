@@ -32,7 +32,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 218 models, 71 enums
+## Prisma — 219 models, 71 enums
 
 ### Models
 
@@ -254,6 +254,7 @@ Ces correspondances évitent la réinvention :
 - **ProviderCostRate** (16 fields) — Taux de coût par prestataire — le "par prestataire" de l'ajustement.
 - **ActionCostEstimate** (25 fields) — Snapshot d'estimation persisté — audit trail Thot (frère de CostDecision).
 - **Post** (15 fields) — Article de blog public du site UPgraders (« Notes de cabinet »). CMS natif éditorial — distinct des livrables client (`B
+- **PredictionRecord** (18 fields) — ADR-0156 — Registre des prédictions. Chaque prédiction (forecast déterministe de série OU thèse de signal faible) est en
 
 ### Enums
 
@@ -578,7 +579,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 271 (par deck)
+## Pages — 272 (par deck)
 
 ### Agency (12)
 
@@ -595,7 +596,7 @@ Ces correspondances évitent la réinvention :
 - `/agency/revenue`
 - `/agency/signals`
 
-### Cockpit (57)
+### Cockpit (58)
 
 - `/cockpit`
 - `/cockpit/brand/assets`
@@ -628,6 +629,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/intelligence/community`
 - `/cockpit/intelligence/market-studies`
 - `/cockpit/intelligence/overton`
+- `/cockpit/intelligence/previsions`
 - `/cockpit/intelligence/social`
 - `/cockpit/intelligence/track`
 - `/cockpit/messages`

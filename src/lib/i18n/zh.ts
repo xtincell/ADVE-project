@@ -216,6 +216,8 @@ export const zh = {
   "nav.demandes.sub": "向您的团队提出需求",
   "nav.overton": "行业雷达",
   "nav.overton.sub": "您在行业中的位置",
+  "nav.previsions": "预测",
+  "nav.previsions.sub": "基于您数据的可验证预测",
   "nav.market-studies": "市场研究",
   "nav.market-studies.sub": "您导入的研究",
   "nav.communaute": "社群",

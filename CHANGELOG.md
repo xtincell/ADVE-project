@@ -10,6 +10,19 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.191 — feat(governance): moteur prédictif Seshat — forecast backtesté, registre calibré, benchmarks auto, rapport founder (2026-07-16)
+
+**Mandat opérateur (« je veux de l'automatisation… le rapport prédictif est critique, l'algorithme de prédiction doit être on point »)** — [ADR-0156](docs/governance/adr/0156-moteur-predictif-registre-calibration.md). « On point » = garanties structurelles, pas une promesse :
+
+- **Moteur de forecast déterministe** (`src/domain/forecast.ts`, pur, zéro LLM) : pente de Theil-Sen (robuste aux relevés ratés) + intervalle ±1.96 σ + **backtest walk-forward intégré** — chaque forecast embarque son erreur MESURÉE (MAPE) sur l'historique de la marque. Refus de prédire sous 5 relevés / 14 jours (jamais un chiffre fabriqué).
+- **Registre des prédictions** (`PredictionRecord`, single-writer `seshat/prediction/` verrouillé HARD) : chaque prédiction est enregistrée AVANT l'échéance puis **résolue contre la vérité terrain** (HIT/MISS/UNRESOLVED honnête + Brier). Les thèses des signaux faibles y sont consignées — la confiance LLM n'est plus une fin en soi, elle attend sa confrontation au réel.
+- **Calibration auto-apprenante honnête** : la confiance affichée = shrinkage bayésien entre la confiance déclarée et le taux de réussite OBSERVÉ des prédictions passées.
+- **`MarketBenchmark` ressuscitée en AUTOMATIQUE** (`benchmark-aggregator.ts`) : distributions p10/p50/p90 (score d'empreinte, audience) par pays×secteur depuis le répertoire Seshat — le remplissage manuel (études, sources payantes) devient une source SUPPLÉMENTAIRE, plus la seule. ≥ 5 marques distinctes sinon rien.
+- **Cron external-feeds étendu** : forecasts quotidiens idempotents par marque + résolution des échéances + agrégation benchmarks.
+- **Rapport founder** `/cockpit/intelligence/previsions` (nav + i18n ×3) : projection 30 j avec intervalle, erreur backtest et calibration AFFICHÉES, prédictions en cours, thèses en observation, EmptyState pédagogique (connecter les réseaux → relevés quotidiens → la prévision s'active seule).
+- **Plan de refonte des Neteru** consigné : [docs/governance/NETERU-REFONTE-2026.md](docs/governance/NETERU-REFONTE-2026.md) (inspection par Neter, 3 « vrais moteurs » à bâtir, cadence).
+- 1 modèle Prisma additif + migration backfill-safe. tsc 0 · lint 0 · cycles 0 · **2 757 tests verts** (+11 : moteur, calibration, verrou single-writer).
+
 ## v6.27.190 — fix(governance): rationalisation Seshat post-audit — 6 trous du circuit marché fermés (2026-07-16)
 
 **Mandat opérateur (« je suis inquiet de l'état de Seshat… regarde-le de près et rationalise-le »)** : audit ground-truth 3 passes (persistance marché/gazette · Argos/Hunter · pilier T/prédictif/rapports vendables), consigné dans [docs/audits/SESHAT-INTEL-AUDIT-2026-07-16.md](docs/audits/SESHAT-INTEL-AUDIT-2026-07-16.md) (verdicts honnêtes : veille réelle et persistée ; « IA prédictive » marché = à ne pas survendre ; Oracle = LE rapport vendable ; analyses dédiées du traqueur de signaux faibles et du scanner d'Overton). Remédiation immédiate :
