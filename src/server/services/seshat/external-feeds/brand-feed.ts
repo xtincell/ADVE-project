@@ -186,7 +186,10 @@ export async function refreshActiveBrandFeeds(
       where: { countryCode: { not: null }, status: { not: "ARCHIVED" } },
       select: { id: true, name: true, countryCode: true, businessContext: true },
       orderBy: { updatedAt: "desc" },
-      take: opts?.max ?? 50,
+      // 50 → 200 (rationalisation 2026-07-16) : au-delà du cap, la N+1ᵉ marque
+      // déclenchait un build RSS SYNCHRONE dans la requête cockpit (latence +
+      // throttle Google News) au lieu de servir du cache préchauffé.
+      take: opts?.max ?? 200,
     })
     .catch(() => []);
   let built = 0;

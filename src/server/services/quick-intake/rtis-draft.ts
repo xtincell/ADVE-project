@@ -120,9 +120,15 @@ export async function loadMarketDigestForT(
         countryCode = (await lookupCountry(market))?.code ?? null;
       }
     }
+    // Borne de fraîcheur 30 j (rationalisation 2026-07-16) : sans elle, un
+    // cron arrêté faisait servir un digest périmé de plusieurs mois SOUS le
+    // label « Seshat ». Un digest plus vieux = absent → la garde
+    // `enforceSeshatProvenance` rétrograde honnêtement en `inferred`.
+    const freshnessCutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const entry = await db.knowledgeEntry.findFirst({
       where: {
         entryType: "EXTERNAL_FEED_DIGEST",
+        createdAt: { gte: freshnessCutoff },
         ...(countryCode ? { countryCode } : {}),
         ...(sector ? { sector: { contains: sector.trim().toLowerCase().slice(0, 40), mode: "insensitive" } } : {}),
       },

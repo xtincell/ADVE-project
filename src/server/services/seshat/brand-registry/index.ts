@@ -193,14 +193,22 @@ export interface BrandDirectoryEntry {
  * nombre d'observations. Lecture seule — rend la base de Seshat visible.
  */
 export async function listBrandDirectory(limit = 200): Promise<BrandDirectoryEntry[]> {
-  const rows = await db.brandFootprintSnapshot.findMany({
-    orderBy: { capturedAt: "desc" },
-    take: 2000,
-  });
+  // `distinct` renvoie la PREMIÈRE ligne par brandKey dans l'ordre demandé
+  // (capturedAt desc) = la dernière observation par marque — plus de
+  // troncature silencieuse à 2000 snapshots (rationalisation 2026-07-16 :
+  // au-delà, des marques anciennes disparaissaient du répertoire). Les
+  // compteurs d'observations viennent d'un groupBy exact.
+  const [rows, countRows] = await Promise.all([
+    db.brandFootprintSnapshot.findMany({
+      orderBy: { capturedAt: "desc" },
+      distinct: ["brandKey"],
+      take: Math.max(limit, 500),
+    }),
+    db.brandFootprintSnapshot.groupBy({ by: ["brandKey"], _count: { _all: true } }),
+  ]);
   const latest = new Map<string, BrandDirectoryEntry>();
-  const counts = new Map<string, number>();
+  const counts = new Map<string, number>(countRows.map((c) => [c.brandKey, c._count._all]));
   for (const r of rows) {
-    counts.set(r.brandKey, (counts.get(r.brandKey) ?? 0) + 1);
     if (!latest.has(r.brandKey)) {
       latest.set(r.brandKey, {
         brandKey: r.brandKey,

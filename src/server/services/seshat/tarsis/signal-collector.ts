@@ -147,6 +147,7 @@ export async function registerCollectionDaemon(
   return process.id;
 }
 
+
 // PR-K3-ter — sous-schéma validé (plus de JSON.parse brut). `.catch` borne les
 // valeurs douteuses du 8B au lieu de laisser passer (relevance hors [0,1],
 // sourceType inconnu) ou de tout jeter.

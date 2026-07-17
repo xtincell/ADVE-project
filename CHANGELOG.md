@@ -10,6 +10,18 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.190 — fix(governance): rationalisation Seshat post-audit — 6 trous du circuit marché fermés (2026-07-16)
+
+**Mandat opérateur (« je suis inquiet de l'état de Seshat… regarde-le de près et rationalise-le »)** : audit ground-truth 3 passes (persistance marché/gazette · Argos/Hunter · pilier T/prédictif/rapports vendables), consigné dans [docs/audits/SESHAT-INTEL-AUDIT-2026-07-16.md](docs/audits/SESHAT-INTEL-AUDIT-2026-07-16.md) (verdicts honnêtes : veille réelle et persistée ; « IA prédictive » marché = à ne pas survendre ; Oracle = LE rapport vendable ; analyses dédiées du traqueur de signaux faibles et du scanner d'Overton). Remédiation immédiate :
+
+- **Collecteurs de signaux marché AUTO-ENREGISTRÉS** (`seshat/tarsis/daemon-backfill.ts`, appelé par le cron external-feeds, gated `isTextLLMAvailable`) : `registerCollectionDaemon` n'avait qu'un caller manuel — une marque nouvellement créée ne collectait AUCUN signal tant qu'un opérateur n'y pensait pas. Backfill idempotent DAILY pour toute stratégie active avec pays.
+- **Le pilier T lit aussi les signaux MANUELS** (`track.ts`) : l'ingest opérateur écrivait `MARKET_SIGNAL`, le pilier ne lisait que `EXTERNAL_SAAS` (kind migré sans réaligner) — les signaux saisis à la main étaient invisibles. Manual-first parity restaurée (`type IN (EXTERNAL_SAAS, MARKET_SIGNAL)`).
+- **Borne de fraîcheur 30 j sur le digest du pilier T** (`loadMarketDigestForT`) : cron arrêté = digest périmé servi sous le label « Seshat » ; désormais un digest > 30 j est traité comme absent → `enforceSeshatProvenance` rétrograde honnêtement en `inferred`.
+- **Répertoire de marques sans troncature silencieuse** (`listBrandDirectory` → `distinct brandKey` + `groupBy` exact) : au-delà de 2 000 snapshots, des marques disparaissaient de la console.
+- **Gazette : préchauffe cron 50 → 200 marques** : la 51ᵉ marque déclenchait un build RSS synchrone dans la requête cockpit (latence + throttle Google News).
+- **Hunter : pré-flight `isTextLLMAvailable`** (parité `huntVictories`) : sans provider texte, échec immédiat lisible (`HUNTER_LLM_UNAVAILABLE`) au lieu de brûler un appel Brave + un aller-retour LLM condamné.
+- 0 LLM ajouté, 0 modèle Prisma, cap APOGEE 7/7 préservé. `audit:cycles` vert (module feuille daemon-backfill). tsc 0 · lint 0 · **2 746 tests verts** (suite complète).
+
 ## v6.27.189 — fix(governance): Ollama Cloud provider texte primaire + feat(scorer): rapport magazine (2026-07-16)
 
 **Deux mandats opérateur, même session** :
