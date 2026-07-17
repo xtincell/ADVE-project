@@ -253,6 +253,23 @@ Format JSON strict — tableau de WeakSignal :
       }
     }
 
+    // ADR-0156 — chaque thèse est CONSIGNÉE au registre des prédictions pour
+    // confrontation future au réel (la confiance déclarée par le LLM n'est
+    // plus une fin en soi : elle attend sa vérité terrain). Best-effort.
+    try {
+      const { recordThesis } = await import("@/server/services/seshat/prediction");
+      for (const ws of weakSignals) {
+        await recordThesis({
+          strategyId,
+          category: ws.impactCategory,
+          thesis: ws.thesis,
+          confidence: ws.confidence,
+        });
+      }
+    } catch {
+      /* le registre des prédictions ne casse jamais l'analyse */
+    }
+
     // Persist all weak signals as knowledge entry for cross-brand sharing.
     // ADR-0037 PR-E — countryCode persisted so cross-brand sharing stays
     // pays-scoped (CM brand ne pollue plus le KB ZA même secteur).

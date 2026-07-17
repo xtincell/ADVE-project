@@ -461,6 +461,34 @@ export const cockpitRouter = createTRPCRouter({
     }),
 
   /**
+   * ADR-0156 — Rapport prédictif de la marque : forecast d'audience
+   * déterministe (Theil-Sen + backtest walk-forward, erreur mesurée exposée),
+   * confiance CALIBRÉE sur les issues réelles de la famille de prédictions,
+   * forecasts en cours et thèses de signaux faibles consignées. Read-only,
+   * tenant-scoped, zéro LLM. Sans historique suffisant → INSUFFICIENT_DATA
+   * honnête, jamais un chiffre fabriqué.
+   */
+  getPredictiveReport: protectedProcedure
+    .input(z.object({ strategyId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const strategy = await ctx.db.strategy.findUnique({
+        where: { id: input.strategyId },
+        select: { id: true, name: true, userId: true },
+      });
+      if (!strategy) throw new TRPCError({ code: "NOT_FOUND", message: "Strategy introuvable" });
+      const isPrivileged = ctx.session.user.role === "ADMIN";
+      if (!isPrivileged && strategy.userId !== ctx.session.user.id) {
+        const opCtx = await getOperatorContext(ctx.session.user.id);
+        if (!(await canAccessStrategy(input.strategyId, opCtx))) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Cette marque ne vous appartient pas" });
+        }
+      }
+      const { buildPredictiveReport } = await import("@/server/services/seshat/prediction");
+      const report = await buildPredictiveReport(input.strategyId);
+      return { brandName: strategy.name, ...report };
+    }),
+
+  /**
    * ADR-0128 — Identité visuelle de la marque pour le dashboard : logo actif
    * (BrandAsset kind LOGO_FINAL, fallback LOGO_IDEA), inventaire des actifs
    * d'identité (typographies, palettes) et total du coffre. Chaque absence

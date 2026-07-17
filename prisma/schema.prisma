@@ -6708,3 +6708,36 @@ model Post {
 
   @@index([status, publishedAt])
 }
+
+/// ADR-0156 — Registre des prédictions. Chaque prédiction (forecast déterministe
+/// de série OU thèse de signal faible) est enregistrée AVANT l'échéance, puis
+/// confrontée à l'issue RÉELLE observée (résolution auto pour les FORECAST de
+/// séries ; les THESIS attendent une résolution opérateur). La calibration
+/// (taux de réussite observé par famille) corrige la confiance affichée — la
+/// prédiction n'est jamais un chiffre auto-proclamé sans vérité terrain.
+/// Single-writer : src/server/services/seshat/prediction/ (test HARD).
+model PredictionRecord {
+  id                 String    @id @default(cuid())
+  strategyId         String?
+  kind               String // FORECAST | THESIS
+  subjectType        String // AUDIENCE_TOTAL | WEAK_SIGNAL_<CATEGORY> | ...
+  subjectKey         String? // précision (plateforme, secteur…)
+  statement          String
+  baseline           Float?
+  predictedValue     Float?
+  predictedDirection String? // UP | DOWN | FLAT
+  /// Confiance DÉCLARÉE à l'enregistrement (0-1).
+  confidence         Float
+  horizonAt          DateTime
+  method             String // THEIL_SEN_V1 | LLM_CAUSAL_V1
+  backtestMape       Float?
+  status             String    @default("OPEN") // OPEN | HIT | MISS | UNRESOLVED
+  outcomeValue       Float?
+  resolvedAt         DateTime?
+  /// Score de Brier (confidence vs issue binaire) une fois résolu.
+  brier              Float?
+  createdAt          DateTime  @default(now())
+
+  @@index([strategyId, kind, status])
+  @@index([kind, subjectType, horizonAt])
+}

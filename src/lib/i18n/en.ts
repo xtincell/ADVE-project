@@ -217,6 +217,8 @@ export const en = {
   "nav.demandes.sub": "Requests to your team",
   "nav.overton": "Sector radar",
   "nav.overton.sub": "Your position in the sector",
+  "nav.previsions": "Forecasts",
+  "nav.previsions.sub": "Verifiable projections from your data",
   "nav.market-studies": "Market studies",
   "nav.market-studies.sub": "Your ingested studies",
   "nav.communaute": "Community",

@@ -194,6 +194,10 @@ export const cockpitNavGroups: NavGroup[] = [
         labelKey: "nav.overton", sublabelKey: "nav.overton.sub", icon: Radar,
       },
       {
+        href: "/cockpit/intelligence/previsions", label: "Prévisions", sublabel: "Projections vérifiables de vos données",
+        labelKey: "nav.previsions", sublabelKey: "nav.previsions.sub", icon: TrendingUp,
+      },
+      {
         href: "/cockpit/intelligence/market-studies", label: "Études de marché", sublabel: "Vos études ingérées",
         labelKey: "nav.market-studies", sublabelKey: "nav.market-studies.sub", icon: Search,
       },
