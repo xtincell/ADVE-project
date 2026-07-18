@@ -52,6 +52,7 @@ function classifyIntakeBrand(score: number): string {
 import { getFormatInstructions } from "@/lib/types/variable-bible";
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
 import { getAdaptiveQuestions, getBusinessContextQuestions } from "./question-bank";
+import { salvageRawResponses } from "./salvage-responses";
 import * as auditTrail from "@/server/services/audit-trail";
 import type { BusinessContext, BusinessModelKey, BrandNatureKey, EconomicModelKey, PositioningArchetypeKey, SalesChannel, PremiumScope } from "@/lib/types/business-context";
 import { POSITIONING_ARCHETYPES, BRAND_NATURES } from "@/lib/types/business-context";
@@ -566,9 +567,16 @@ export async function complete(token: string) {
   for (const pillar of pillars) {
     const rawResponses = responses[pillar];
     const structuredContent = structuredContents[pillar];
-    // Prefer AI-extracted structured content, fallback to raw responses
-    // when extraction returns an empty object.
-    const baseContent = isEmptyObject(structuredContent) ? rawResponses : structuredContent;
+    // Prefer AI-extracted structured content. Quand l'extraction LLM est vide
+    // (provider indisponible, JSON imparsable), on ne retombe PLUS sur les
+    // réponses brutes telles quelles (clés `a_*` que le scorer ne lit pas → un
+    // dossier riche scoré à ~0) : on les re-clé DÉTERMINISTIQUEMENT vers les
+    // champs de schéma (`salvageRawResponses`, doctrine « Fusée non-dépendante
+    // du LLM »). Le score reflète alors les vraies réponses ; « Enrichir »
+    // complète ensuite les champs non-inférables.
+    const baseContent = isEmptyObject(structuredContent)
+      ? salvageRawResponses(pillar, rawResponses)
+      : structuredContent;
     // Seal declared canonical fields so LLM cannot drift the pillar away
     // from the intake (e.g. businessModel:"SERVICES" when declared RAZOR_BLADE).
     // Only ADVE pillars carry declared canonical fields — pass RTIS through.
@@ -1229,8 +1237,10 @@ export async function regenerateAnalysis(
   const targetPillars = ADVE_STORAGE_KEYS;
   const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
   for (const pillar of targetPillars) {
+    // Même doctrine que complete() : extraction LLM vide → re-clé déterministe
+    // vers les champs de schéma (jamais les clés brutes `a_*` illisibles au scorer).
     const baseContent = isEmptyObject(structuredContents[pillar])
-      ? responses[pillar]
+      ? salvageRawResponses(pillar, responses[pillar])
       : structuredContents[pillar];
     const safeBase = (baseContent as Record<string, unknown> | undefined) ?? {};
     const sealed =
