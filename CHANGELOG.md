@@ -10,6 +10,26 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.194 — fix(tests): deux gardes single-writer étaient aveugles en local (grep BSD vs GNU) (2026-07-18)
+
+**Deux verrous HARD passaient en CI et échouaient en local — pour une raison de plateforme, pas de code.**
+
+- `scoring-scale-aware` (writers `SuperfanProfile`) et `community-measure-chain` (writers `CommunitySnapshot`) listent leurs writers via `execSync("grep -rln … src/ …")`. Le **grep BSD de macOS** rend `src//server/…` pour une racine `src/`, là où le **GNU grep de la CI Linux** rend `src/server/…`. La comparaison à l'allowlist (`src/server/…`) échouait donc systématiquement en local.
+- **Pourquoi ça comptait** : ce n'était pas qu'un bruit rouge. Un échec permanent « de plateforme » **noie un vrai writer illégitime** — le jour où un chemin de création non gouverné apparaît (vecteur d'inflation du plafond d'évidence, ADR-0126/0134), le développeur local voit le même rouge qu'hier et passe à autre chose. Le garde ne gardait plus rien en local.
+- **Correctif** : normalisation des slashes dans les deux tests (`replace(/\/{2,}/g, "/")`), insensible à la variante de `grep`. Aucun assouplissement de l'assertion — l'allowlist reste identique.
+- **Vérifié par canari** : un writer illégitime temporaire (`superfanProfile.create` + `communitySnapshot.create` hors voie gouvernée) est bien détecté par les deux gardes, avec le chemin normalisé, puis retiré. Les tests mordent réellement.
+- **Suite gouvernance : 1024/1024 verts** (0 échec) — les 2 échecs traînants sont clos.
+
+## v6.27.193 — fix(intake): l'import ne bascule plus tout seul vers le questionnaire (2026-07-18)
+
+**Mandat opérateur : « je ne veux pas de repli automatique ».**
+
+- **Point d'arrêt au lieu d'un saut** : `processIngest` renvoyant `completed:false` déclenchait un `router.push` immédiat vers le questionnaire. L'interstitiel « honnête » posé juste en dessous ne vivait qu'une frame — décoratif : l'explication n'arrivait qu'**après** la bascule, en bandeau, une fois la décision prise à la place du founder. Désormais l'écran explique la cause (indisponibilité temporaire ≠ sources trop minces) et **rend la main** : **« Réessayer l'analyse »** · **« Passer au questionnaire pré-rempli »** · « Revenir à mes sources ». Aucune redirection sans clic. Les sources sont déjà persistées serveur-side (le handler écrit avant d'extraire) → les trois issues sont sans perte. `processShort` et `processIngestPlus` `throw`aient déjà : `ingest` était le **seul** des trois chemins à dévier.
+- **Bug TDZ corrigé au passage** : `handleSubmit` était déclaré **après** les early-returns du composant ; le référencer depuis le nouvel écran aurait levé une `ReferenceError` au clic (la passe de rendu retourne avant l'initialisation du `const`). Déplacé au-dessus.
+- **`.env.example` — `OLLAMA_API_KEY` + `OLLAMA_MODEL` enfin documentées**, avec le piège explicité : sans `OLLAMA_MODEL`, le gateway retombe sur le modèle de la police (`llama3.1:70b`) que Ollama Cloud **ne sert pas** → **404 sur chaque appel** → bandeau « analyse indisponible » alors que l'URL et la clé sont valides. C'est exactement la panne prod du 2026-07-17 : `OLLAMA_BASE_URL` et `OLLAMA_API_KEY` étaient posées et bonnes, **`OLLAMA_MODEL` était absente**. Vérifié à la source : `deepseek-v4-flash:cloud` → HTTP 200, `llama3.1:70b` → HTTP 404. Correctif prod (config Coolify, hors repo) : `OLLAMA_MODEL=deepseek-v4-flash:cloud` + `LLM_PRIMARY_PROVIDER=ollama`. **Validé E2E** sur `powerupgraders.com` avec Orange Cameroun : rapport ADVE produit, 4 piliers réellement extraits (`d_voice`, `v_promise`, `e_loyalty` renseignés).
+- **NB** : le durcissement `system-keys` (surfaçage `OLLAMA_MODEL`) et le commentaire du gateway, préparés dans la même session, étaient **déjà livrés par #556** (« Ollama Cloud primaire ») — abandonnés plutôt que dupliqués (interdit NEFER n°1).
+- 0 migration · 0 nouveau Neter · 0 nouvel Intent kind · 0 bypass governance. Cap APOGEE 7/7. tsc 0 · lint 0.
+
 ## v6.27.192 — docs(governance): ÉTAT FINAL RECHERCHÉ — plan final par boucles d'accumulation (2026-07-16)
 
 **Mandat opérateur (« révise ton travail, vois les faiblesses, les idées de génie manquantes, rédige le plan final »)** : [docs/governance/ETAT-FINAL-RECHERCHE-2026.md](docs/governance/ETAT-FINAL-RECHERCHE-2026.md) — PROPOSÉ, canon à ratification opérateur. Autocritique du plan Neteru (ordonné par sous-systèmes → réordonné par 5 boucles d'accumulation AUDIENCE/FANS/DONNÉE/REVENU/OPÉRATEURS, règle de vie 60 j exercé-ou-gelé, cas-phare public obligatoire), 3 idées ajoutées : **le Pari Public** (l'engagement daté vérifiable comme produit), **la Valorisation de marque certifiée** (le produit haute marge type Interbrand, inexistant en Afrique francophone), **le parrainage comme première brique du passeport fan**. La Fusée = sa propre première marque culte (dogfooding radical, leaderboard inclus). Doc-only.

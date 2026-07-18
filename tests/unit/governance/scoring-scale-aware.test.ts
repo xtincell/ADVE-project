@@ -199,7 +199,11 @@ describe("ADR-0126 — naissance gouvernée des SuperfanProfile (single-writer H
       "grep -rln 'superfanProfile\\.\\(create\\|upsert\\|createMany\\)' src/ --include='*.ts' --include='*.tsx' || true",
       { encoding: "utf8" },
     ).trim();
-    const files = out ? out.split("\n") : [];
+    // Normalisation des slashes : le grep BSD (macOS) rend « src//server/… »
+    // pour une racine « src/ » là où le GNU grep (CI Linux) rend « src/server/… ».
+    // Sans ça le garde passait en CI et échouait en local — pire, un vrai
+    // writer illégitime aurait été noyé dans un échec « de plateforme ».
+    const files = (out ? out.split("\n") : []).map((f) => f.replace(/\/{2,}/g, "/"));
     // ADR-0134 §B4 : le corps d'écriture a déménagé du router vers le service
     // de mesure Seshat — UN seul fichier writer, deux portes gouvernées du
     // même kind (tRPC superfan.register + case commandant chemin cron).

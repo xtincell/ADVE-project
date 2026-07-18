@@ -51,7 +51,11 @@ describe("ADR-0134 — chaîne de mesure communautaire", () => {
       "grep -rln 'communitySnapshot\\.\\(create\\|createMany\\|upsert\\)' src/ --include='*.ts' --include='*.tsx' || true",
       { encoding: "utf8", cwd: ROOT },
     ).trim();
-    const files = out ? out.split("\n") : [];
+    // Normalisation des slashes : le grep BSD (macOS) rend « src//server/… »
+    // pour une racine « src/ » là où le GNU grep (CI Linux) rend « src/server/… ».
+    // Sans ça le garde passait en CI et échouait en local — pire, un vrai
+    // writer illégitime aurait été noyé dans un échec « de plateforme ».
+    const files = (out ? out.split("\n") : []).map((f) => f.replace(/\/{2,}/g, "/"));
     expect(files).toEqual([
       "src/server/services/cult-index-engine/community-snapshot-writer.ts",
     ]);
