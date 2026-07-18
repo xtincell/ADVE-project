@@ -68,14 +68,40 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
         router.push(`/intake/${token}/result`);
         return;
       }
-      // Extraction impossible ou insuffisante — bascule EXPLIQUÉE vers le
-      // questionnaire pré-rempli (la raison alimente le bandeau côté long).
-      const reason = data.reason ?? "extraction";
-      setFallbackReason(reason);
-      router.push(`/intake/${token}?fallback=${reason}`);
+      // Extraction impossible ou insuffisante. On ne bascule PAS tout seul :
+      // on s'arrête et on rend la main (cf. écran de décision plus bas). Le
+      // repli automatique — même expliqué après coup — décidait à la place du
+      // founder ; c'est lui qui choisit de réessayer ou de passer au
+      // questionnaire.
+      setFallbackReason(data.reason ?? "extraction");
     },
     onError: (err) => setError(err.message),
   });
+
+  // Déclaré AVANT les early-returns : l'écran de décision ci-dessous le
+  // référence, et un `const` défini plus bas ne serait jamais initialisé dans
+  // cette passe de rendu (TDZ au clic).
+  const handleSubmit = async () => {
+    if (files.length === 0 && !rawText.trim() && !websiteUrl.trim()) {
+      setError("Fournissez au moins un element : texte, document, ou URL.");
+      return;
+    }
+    setError("");
+
+    // Read files as base64 and send to backend
+    const fileData: Array<{ name: string; content: string; type: string }> = [];
+    for (const f of files) {
+      const content = await readFileAsBase64(f.file);
+      fileData.push({ name: f.name, content, type: f.type });
+    }
+
+    processIngestMutation.mutate({
+      token,
+      files: fileData,
+      rawText: rawText.trim() || undefined,
+      websiteUrl: websiteUrl.trim() || undefined,
+    });
+  };
 
   if (isLoading) {
     return (
@@ -98,21 +124,55 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
     return null;
   }
 
-  // Bascule vers le questionnaire : interstitiel honnête pendant la redirection
-  // (surtout PAS l'écran de succès « Terminé 100 % » suivi d'un saut muet).
+  // L'analyse n'a pas abouti : POINT D'ARRÊT, pas un saut. L'écran explique ce
+  // qui s'est passé et rend la main — aucune redirection tant que le founder
+  // n'a pas cliqué. Ses sources sont déjà persistées côté serveur (le handler
+  // écrit avant d'extraire), donc les deux issues sont sans perte.
   if (fallbackReason) {
+    const isTransient = fallbackReason === "llm_unavailable";
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-background px-5">
-        <div className="w-full max-w-md rounded-2xl border border-warning/30 bg-warning/10 p-6 text-center">
-          <p className="text-sm font-semibold text-foreground">
-            {fallbackReason === "llm_unavailable"
-              ? "Analyse automatique momentanément indisponible"
-              : "Vos sources n'ont pas suffi pour un diagnostic complet"}
-          </p>
-          <p className="mt-2 text-sm leading-relaxed text-foreground-secondary">
-            Rien n&apos;est perdu — ouverture du questionnaire pré-rempli…
-          </p>
-          <div className="mx-auto mt-4 h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <div className="w-full max-w-md rounded-2xl border border-warning/30 bg-warning/10 p-6">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
+            <div>
+              <p className="text-sm font-semibold text-foreground">
+                {isTransient
+                  ? "Analyse automatique momentanément indisponible"
+                  : "Vos sources n'ont pas suffi pour un diagnostic complet"}
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-foreground-secondary">
+                {isTransient
+                  ? "C'est temporaire et sans rapport avec votre marque. Rien n'est perdu : vos sources sont conservées."
+                  : "Rien n'est perdu : vos sources sont conservées. Ajoutez du contenu, ou répondez aux questions pour obtenir votre score."}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 space-y-2">
+            <button
+              onClick={() => {
+                setFallbackReason(null);
+                setError("");
+                handleSubmit();
+              }}
+              className="w-full rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary-hover"
+            >
+              Réessayer l&apos;analyse
+            </button>
+            <button
+              onClick={() => router.push(`/intake/${token}?fallback=${fallbackReason}`)}
+              className="w-full rounded-xl border border-border bg-background-raised px-6 py-3 text-sm font-medium text-foreground transition-colors hover:border-foreground-muted/30"
+            >
+              Passer au questionnaire pré-rempli
+            </button>
+            <button
+              onClick={() => setFallbackReason(null)}
+              className="w-full px-6 py-2 text-xs font-medium text-foreground-muted transition-colors hover:text-foreground"
+            >
+              Revenir à mes sources
+            </button>
+          </div>
         </div>
       </main>
     );
@@ -165,28 +225,6 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
 
   const removeFile = (index: number) => {
     setFiles((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleSubmit = async () => {
-    if (files.length === 0 && !rawText.trim() && !websiteUrl.trim()) {
-      setError("Fournissez au moins un element : texte, document, ou URL.");
-      return;
-    }
-    setError("");
-
-    // Read files as base64 and send to backend
-    const fileData: Array<{ name: string; content: string; type: string }> = [];
-    for (const f of files) {
-      const content = await readFileAsBase64(f.file);
-      fileData.push({ name: f.name, content, type: f.type });
-    }
-
-    processIngestMutation.mutate({
-      token,
-      files: fileData,
-      rawText: rawText.trim() || undefined,
-      websiteUrl: websiteUrl.trim() || undefined,
-    });
   };
 
   return (
