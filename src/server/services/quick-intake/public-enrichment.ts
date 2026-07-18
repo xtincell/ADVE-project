@@ -111,20 +111,40 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
   const remaining = () => Math.max(0, budgetMs - (Date.now() - t0));
   const errors: string[] = [];
 
+  // ── 0.0. Auto-découverte du site officiel si RIEN n'est déclaré ──
+  // Précondition de l'évidence révélée (ADR-0149) : sans site ni Brave, une
+  // marque nationale n'a ni domaine daté (RDAP) ni tech site → le Scoreur la
+  // cape LATENT par artefact. Déterministe, zéro clé, garde anti-faux-positif
+  // (le candidat DOIT mentionner la marque). Payé UNIQUEMENT quand rien n'est
+  // déclaré (site fourni → aucun coût). Borné pour ne pas affamer l'aval.
+  let effectiveWebsiteUrl = input.websiteUrl ?? null;
+  if (!effectiveWebsiteUrl && remaining() > 6_000) {
+    try {
+      const { discoverOfficialSite } = await import("./web-footprint");
+      effectiveWebsiteUrl = await withTimeout(
+        discoverOfficialSite(input.companyName, countryCodeGuess(input.country), { timeoutMs: 4_000 }),
+        Math.min(6_000, remaining()),
+        null,
+      );
+    } catch {
+      /* best-effort — l'absence de site reste un état honnête */
+    }
+  }
+
   // ── 0. Signaux GRATUITS lancés en parallèle de tout le reste ──
-  // Domaine (RDAP) + email (DNS) ne dépendent que de l'URL fournie et coûtent
-  // 1-6 s : lancés ICI, ils ne peuvent plus être affamés par les étages
-  // site/discovery/Apify (bug prod 2026-07-16 : « site fourni » mais domaine/
-  // email « à mesurer » — l'étage final n'avait plus de budget).
+  // Domaine (RDAP) + email (DNS) ne dépendent que de l'URL (déclarée ou
+  // découverte) et coûtent 1-6 s : lancés ICI, ils ne peuvent plus être affamés
+  // par les étages site/discovery/Apify (bug prod 2026-07-16 : « site fourni »
+  // mais domaine/email « à mesurer » — l'étage final n'avait plus de budget).
   const freeCollectorsPromise = import("./footprint-collectors");
-  const earlyDomainPromise = input.websiteUrl
+  const earlyDomainPromise = effectiveWebsiteUrl
     ? freeCollectorsPromise
-        .then((c) => c.fetchDomainInfo(input.websiteUrl, { timeoutMs: 6_000 }))
+        .then((c) => c.fetchDomainInfo(effectiveWebsiteUrl, { timeoutMs: 6_000 }))
         .catch(() => null)
     : Promise.resolve(null);
-  const earlyEmailPromise = input.websiteUrl
+  const earlyEmailPromise = effectiveWebsiteUrl
     ? freeCollectorsPromise
-        .then((c) => c.checkEmailInfrastructure(c.registrableDomain(input.websiteUrl!), { timeoutMs: 5_000 }))
+        .then((c) => c.checkEmailInfrastructure(c.registrableDomain(effectiveWebsiteUrl!), { timeoutMs: 5_000 }))
         .catch(() => null)
     : Promise.resolve(null);
 
@@ -142,11 +162,11 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
     collectedAt: new Date().toISOString(),
     errors: [],
   };
-  if (input.websiteUrl || declared.length > 0) {
+  if (effectiveWebsiteUrl || declared.length > 0) {
     try {
       footprint = await withTimeout(
         collectWebFootprint({
-          websiteUrl: input.websiteUrl,
+          websiteUrl: effectiveWebsiteUrl,
           declaredSocialUrls: declared,
           companyName: input.companyName,
         }),
