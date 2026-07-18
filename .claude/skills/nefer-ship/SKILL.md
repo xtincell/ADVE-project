@@ -26,7 +26,10 @@ npx vitest run tests/unit/governance/ 2>&1 | tail -6          # attendu : suite 
 - **MUST** (si UI touchée) : les 3 tests DS (`design-tokens-cascade`, `design-tokens-canonical`, `design-primitives-cva`) + `cockpit-vocabulary.test.ts` sont DANS la suite gouvernance — vérifier qu'ils passent sur le périmètre ÉTENDU (skill `nefer-vocab` pour l'extension).
 - **MUST** (si modif structurelle profonde) : `npm run stress:full`.
 - **NEVER** : désactiver/skipper un test HARD pour « faire passer » ; réduire un périmètre de scan ; ajouter une entrée d'allowlist sans hole id + reason + `reroutePlanned`.
-- Erreur PRÉ-EXISTANTE (reproduite sur main vierge) → la tracer dans `RESIDUAL-DEBT.md`, ne pas la réparer en douce dans un commit de feature.
+- Erreur / défaut PRÉ-EXISTANT constaté (reproduit, pas supposé) → **jamais l'abandonner** (interdit absolu n°4, NEFER §3.4). Arbre imposé :
+  1. **Réparable en passant** (rayon borné, vérifiable dans la session) → le **RÉPARER** dans un commit `fix(...)` dédié (jamais noyé « en douce » dans le `feat`) + consigner le symptôme dans [`PATCHED-SYMPTOMS.md`](../../../docs/governance/PATCHED-SYMPTOMS.md) (1 ligne : patch de surface + hypothèse de cause racine).
+  2. **Non réparable en passant** (refactor large, env à clés, décision opérateur) → l'inscrire à `RESIDUAL-DEBT.md` **AVEC un plan de résolution ET un déclencheur de reprise** (jamais un constat nu « on verra »).
+  3. **Bloqueur externe pur** (clé/contrat/choix business non-écrit) → **ESCALADER** explicitement à l'opérateur, jamais enterrer en silence.
 
 **Sortie attendue (bloquante)** : 0 erreur INTRODUITE. Sinon → corriger, re-gauntlet complet.
 

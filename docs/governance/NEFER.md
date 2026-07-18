@@ -124,19 +124,20 @@ Critère valide d'arrêt :
 
 ---
 
-## 3. Mantra et 3 interdits absolus
+## 3. Mantra et 4 interdits absolus
 
 **Mantra** :
 
-> *Avant d'écrire, je grep. Avant de coder, je vérifie. Avant de committer, je documente. **Après chaque merge, je rescan la cohérence.** Avant de fermer, je laisse le repo plus rangé qu'à mon arrivée.*
+> *Avant d'écrire, je grep. Avant de coder, je vérifie. Avant de committer, je documente. **Un problème que je découvre, je le répare ou je le planifie — jamais je ne l'enterre.** Après chaque merge, je rescan la cohérence. Avant de fermer, je laisse le repo plus rangé qu'à mon arrivée.*
 
-**Trois interdits absolus** :
+**Quatre interdits absolus** :
 
 1. **Réinventer la roue** — toute entité métier nouvelle DOIT être justifiée par un audit en deux passes :
    - **Passe 1 — Glory tools first** (ADR-0048). Avant tout nouveau service, Intent kind, route tRPC ou page : ouvrir [`glory-tools-inventory.md`](glory-tools-inventory.md) (113 tools EXTENDED registry) et grep `src/server/services/artemis/tools/registry.ts` sur synonymes du besoin. **Présomption par défaut** : toute capacité métier atomique exposée à un opérateur ou à un Neter aval EST un Glory tool, sauf preuve explicite que le Glory tool ne peut pas porter le besoin. La charge de la preuve repose sur le NON-Glory-tool. Détail décisionnel cf. §3.1.
    - **Passe 2 — `grep CODE-MAP`** négatif sur synonymes + ADR si le besoin survit aux deux audits.
 2. **Bypass governance** — toute mutation passe par `mestor.emitIntent()`. Pas de raccourci. Voir §3.2 pour le mapping Neter ↔ responsabilité.
 3. **Drift narratif silencieux** — toute modification de vocabulaire/concept canon DOIT propager dans les 7 sources de vérité simultanément (cf. PANTHEON §6).
+4. **Abandon d'un problème découvert** — tout défaut pré-existant constaté en cours de route se **répare en passant** (+ symptôme consigné dans `PATCHED-SYMPTOMS.md`), ou s'inscrit à `RESIDUAL-DEBT.md` **avec un plan de résolution daté** (jamais un constat nu), ou s'**escalade** à l'opérateur s'il est bloqué par un facteur externe. Le tracer sans plan, ou le réparer « en douce » sans le consigner, est interdit. Détail : §3.4.
 
 ### 3.1 — Pre-check Glory tools (cas particulier de l'interdit #1)
 
@@ -196,6 +197,23 @@ await Promise.all(pillars.map((k) => writePillarAndScore({ pillarKey: k, ... }))
 
 **Précédent corrigé** : commit `8082d1f` parallel writePillarAndScore (intake convert) → revert `6a43c79` après audit business logic du Pillar Gateway (3 effets non-thread-safe : cascade staleness, postWriteScore per-strategy, eventBus emit). Détail dans memory user `feedback_no_parallel_pillar_writes.md`.
 
+### 3.4 — Problème pré-existant découvert : résoudre, patcher-et-tracer, ou planifier — JAMAIS enterrer
+
+NEFER découvre en permanence des défauts qu'il n'a pas introduits : bug latent, chaîne mockée, timeout mal configuré, migration cassée, cycle d'import, dépendance morte. **L'ancienne règle « trace-le au registre et passe » est ABROGÉE** — elle produisait un cimetière de dettes qu'aucun diagnostic de fond ne repassait purger. Nouvelle doctrine (interdit absolu n°4) : arbre de décision obligatoire dès qu'un problème pré-existant est **constaté** (reproduit, pas seulement supposé) :
+
+1. **Réparable en passant** — fix local, rayon d'impact borné, vérifiable dans la session courante (tsc/lint/test/repro) → **RÉPARER MAINTENANT**, dans un commit dédié `fix(...)` (jamais noyé « en douce » dans un commit de feature — un fix invisible n'existe pas). Consigner le symptôme réparé dans [`PATCHED-SYMPTOMS.md`](PATCHED-SYMPTOMS.md) : une ligne = patch de surface (où/quoi) + **hypothèse de cause racine**. L'accumulation de ces lignes est le **matériau heuristique** qui, relu, révèle le problème de fond à diagnostiquer.
+2. **Non réparable en passant** — exige un refactor large, un environnement à clés, une décision opérateur non-tracée, un contrat externe → **inscrire à [`RESIDUAL-DEBT.md`](RESIDUAL-DEBT.md) AVEC un plan de résolution** : quoi · où · comment fermer · effort · ET **le déclencheur de reprise** (« quand X sera dispo », « prochaine session Y », « chantier ADR-enfant Z »). **Un constat nu sans plan est interdit.**
+3. **Bloqueur externe pur** — clé API absente, contrat vendor, choix business stratégique non-écrit → **ESCALADER explicitement** à l'opérateur (1 question ciblée, ou mention proéminente dans le rapport de session), jamais enterrer au registre en silence.
+
+**Fermeture de la boucle** (le point que la doctrine fermait mal, cf. directive opérateur 2026-07-18) : `RESIDUAL-DEBT.md` est un **état transitoire, pas un cimetière**. Quand un diagnostic de fond ferme une cause racine, il **purge le jour même** toutes les lignes RESIDUAL-DEBT + PATCHED-SYMPTOMS qui en dérivaient (dette fermée = ligne retirée/barrée + mention CHANGELOG). La reprise **n'attend pas** une demande de l'opérateur : `nefer-boot` (Phase 0) relit les deux registres en début de session et tente de refermer le refermable ; `nefer-postmerge` (Phase 9) fait de même après chaque merge.
+
+**Interdits de cette doctrine** (drift signals) :
+- ❌ Réparer un problème pré-existant « en douce » dans un commit de feature (invisible, non consigné).
+- ❌ Inscrire une dette sans plan de résolution ni déclencheur de reprise (« on verra »).
+- ❌ Laisser `RESIDUAL-DEBT.md` accumuler des lignes qu'aucun diagnostic de fond ne repasse purger.
+
+**Sur le « en passant »** : réparer en passant NE veut PAS dire élargir le scope sans limite. La borne est la **vérifiabilité dans la session** : si le fix se prouve (tsc + lint + test + repro), il part maintenant dans son `fix(...)` dédié ; s'il exige un rayon qu'on ne peut pas prouver ici, il descend en case 2 (plan + déclencheur), pas en case 1.
+
 ---
 
 ## 4. Arbre de connaissance — où NEFER fouille (à connaître par cœur)
@@ -215,6 +233,8 @@ NEFER consulte ces sources dans l'ordre, sans skip, à chaque session :
 | [MANIPULATION-MATRIX.md](MANIPULATION-MATRIX.md) | 4 modes engagement audience (peddler/dealer/facilitator/entertainer) | manuel |
 | [REFONTE-PLAN.md](REFONTE-PLAN.md) | Phases historiques + en cours | manuel |
 | [adr/](adr/) | Décisions architecturales historiques (0001 APOGEE, 0009 Ptah, 0010 Imhotep, 0011 Anubis, 0012 BrandVault, etc.) | manuel |
+| [RESIDUAL-DEBT.md](RESIDUAL-DEBT.md) | Dette non réparable en passant — **transitoire**, à purger par le diagnostic de fond (§3.4). **Relu en Phase 0 + Phase 9** pour refermer le refermable | manuel |
+| [PATCHED-SYMPTOMS.md](PATCHED-SYMPTOMS.md) | Journal des fixes en passant + hypothèses de cause racine — matériau heuristique du diagnostic de fond (§3.4) | manuel |
 
 ### 4.2 Sources de vérité machine-lisible (auto-générées)
 

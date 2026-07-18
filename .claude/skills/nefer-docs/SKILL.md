@@ -35,6 +35,8 @@ Toute session qui ship `feat` / `fix` impactant / `refactor` structurel / `chore
 | Nouvelle séquence | CHANGELOG + entrée `sequences.ts` (+ lifecycle DRAFT) |
 | Refactor architectural | CHANGELOG + ADR + entrée `REFONTE-PLAN.md` |
 | Bug fix significatif | CHANGELOG + `RESIDUAL-DEBT.md` si lessons learned |
+| Fix **en passant** d'un défaut pré-existant | CHANGELOG (si significatif) + `PATCHED-SYMPTOMS.md` (symptôme + hypothèse cause racine) |
+| Défaut pré-existant non réparable en passant | `RESIDUAL-DEBT.md` **avec plan de résolution + déclencheur de reprise** (§6.6) |
 | Vocabulaire / concept canon | CHANGELOG + **propagation 7 sources (§6.2)** |
 
 ## 6.2 — Propagation 7 sources (narratif Neteru/canon)
@@ -84,11 +86,14 @@ npm run glory:inventory                  # glory-tools-inventory.md
 - En-tête obligatoire : `Status` (Proposed/Accepted/Superseded) · `Date` · `Phase` · `Depends on` · `Supersedes` (si applicable). Corps : `## Contexte` → `## Décision` → `## Conséquences` (+ tests anti-drift créés).
 - Toute nouvelle entité métier refusée par le grep anti-doublon ne vit QUE si son ADR explique « pourquoi pas une extension ».
 
-## 6.6 — RESIDUAL-DEBT (registre honnête)
+## 6.6 — RESIDUAL-DEBT + PATCHED-SYMPTOMS (registres honnêtes, TRANSITOIRES)
 
-- Tout trou constaté (mock, EmptyState, chaîne cassée, coverage partielle, classification manquante) s'inscrit au registre AVEC bornage (quoi, où, comment fermer, effort).
-- Une dette fermée = sa ligne mise à jour/retirée le jour même + mention dans le CHANGELOG.
-- **NEVER** « on le notera plus tard » : l'inscription au registre fait partie du commit qui crée ou découvre le trou.
+Deux registres, une seule doctrine (§3.4 NEFER — un problème découvert se **résout, se patche-et-trace, ou se planifie**, jamais ne s'enterre) :
+
+- **`RESIDUAL-DEBT.md`** = dette **non réparable en passant**. Toute inscription porte un bornage COMPLET : quoi · où · comment fermer · effort · **ET un déclencheur de reprise** (« quand X dispo », « prochaine session Y », « ADR-enfant Z »). **Un constat sans plan de résolution est INTERDIT.**
+- **`PATCHED-SYMPTOMS.md`** = journal des **fixes en passant** de défauts pré-existants. 1 ligne = symptôme réparé (où/quoi) + hypothèse de cause racine. L'accumulation de ces lignes est le matériau heuristique qui révèle le problème de fond à diagnostiquer.
+- **État transitoire, pas cimetière** : `RESIDUAL-DEBT.md` doit être **purgé par le diagnostic de fond**. Quand une cause racine est fermée, retirer/barrer LE JOUR MÊME toutes les lignes RESIDUAL-DEBT + PATCHED-SYMPTOMS qui en dérivaient + mention CHANGELOG. La reprise **n'attend pas** une demande de l'opérateur : `nefer-boot` (Phase 0) et `nefer-postmerge` (Phase 9) relisent les deux registres et referment le refermable.
+- **NEVER** « on le notera plus tard » : l'inscription (ou la réparation + consignation) fait partie du commit qui découvre le trou.
 
 ## Conditions STOP
 

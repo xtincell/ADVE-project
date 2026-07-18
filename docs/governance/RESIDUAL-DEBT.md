@@ -1,5 +1,26 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
+> Ce registre est **transitoire** (NEFER §3.4, interdit absolu n°4) — pas un cimetière. Toute ligne
+> porte un **plan de résolution + un déclencheur de reprise**. `nefer-boot` (Phase 0.2.bis) et
+> `nefer-postmerge` (9.5.bis) le relisent et referment le refermable ; le diagnostic de fond le purge.
+> Les fixes en passant, eux, sont journalisés dans [`PATCHED-SYMPTOMS.md`](PATCHED-SYMPTOMS.md).
+
+## Intake `processIngest` synchrone → « Load failed » (2026-07-18, NEFER)
+
+**Symptôme** : sur la fin de l'intake, l'écran affiche « Load failed » et l'utilisateur ne peut pas savoir pourquoi. **Cause racine** : `processIngest` / `processIngestPlus` exécutent TOUT le travail lourd (scrape site + présence digitale + décodage fichiers + extraction LLM + narration + scoring + `complete()`) **de façon synchrone dans une seule mutation tRPC**. Sur des entrées lentes, la requête dépasse le timeout du proxy frontal (Cloudflare **100 s** en plan non-Enterprise ; Traefik `readTimeout` par défaut), le client reçoit une erreur réseau opaque (« Load failed » côté WebKit), la row reste `IN_PROGRESS`. `maxDuration = 300` sur la route est un **no-op** sous Coolify (contrat Vercel-only). Cf. commentaire déjà présent `quick-intake.ts:1112-1117`.
+
+**Où** : `src/server/trpc/routers/quick-intake.ts` (`processIngest` ~L1055, `processIngestPlus` ~L1201) · clients `src/app/(intake)/intake/[token]/ingest/page.tsx` + `ingest-plus/page.tsx` · `src/app/api/trpc/[trpc]/route.ts` (`maxDuration` inerte).
+
+**Mitigation de SURFACE déjà shippée** (cette session, journalisée [`PATCHED-SYMPTOMS.md`](PATCHED-SYMPTOMS.md)) : sur erreur réseau, le client sonde `getByToken` ~45 s → si le serveur a abouti malgré la coupure, il rejoint le résultat ; sinon écran honnête « analyse trop longue » (retry / questionnaire). **Ne corrige PAS la cause** — recouvre seulement le cas « origine terminée, client déconnecté » + rend le message honnête.
+
+**Plan de résolution (root fix)** — rendre l'ingestion **asynchrone** :
+1. Mutation courte : persiste les sources + passe la row à `PROCESSING` + émet un Intent ARTEMIS d'ingestion (ou enfile un job worker interne) → **retourne immédiatement**.
+2. Le travail lourd s'exécute hors de la requête HTTP (handler d'Intent / worker), écrit `COMPLETED` | `FAILED` en fin.
+3. Le client s'abonne au **NSP SSE existant** (`/api/notifications/stream`, filtré par intake) OU sonde `getByToken` jusqu'à l'état terminal. Aucune requête ne dépasse le timeout proxy.
+   - **Levier infra intérimaire** (à poser par l'opérateur, insuffisant seul) : relever Traefik `transport.respondingTimeouts.readTimeout` à 300 s (cf. `docs/deploy/SELF-HOST.md`). Mais le **cap Cloudflare 100 s** non-Enterprise rend l'async obligatoire — le levier infra ne suffit pas.
+
+**Déclencheur de reprise** : prochaine session dédiée « résilience funnel » **avec la dev-DB migrée** (le refactor touche le funnel live et n'est vérifiable qu'avec une base à jour — la migration `20260506122306_phase18_brand_tree` bloquait la vérif locale) **+ confirmation opérateur** (change le contrat UX de l'ingestion : ack immédiat + écran de progression). **Effort** : moyen (1 Intent kind async ou réutilisation d'un pattern existant + branchement SSE + 2 pages client).
+
 ## Graphes & Scoreur à force révélée — ADR-0147/0148/0149 (2026-07-15, NEFER)
 
 Chantier shippé (v6.27.162). Résidus DÉFÉRÉS explicitement :

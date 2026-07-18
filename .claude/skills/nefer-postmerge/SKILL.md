@@ -75,6 +75,20 @@ grep -nE "hash-chain|mestor\.emitIntent|tenantScopedDb|RLS strict|gates de quali
 npx vitest run tests/unit/governance/cockpit-vocabulary.test.ts 2>&1 | tail -3
 ```
 
+## 9.5.bis — Purger RESIDUAL-DEBT + PATCHED-SYMPTOMS (interdit n°4, fermeture de boucle)
+
+Les registres sont **transitoires** (NEFER §3.4) — un merge qui ferme une cause racine doit les purger, PAS les laisser gonfler.
+
+```bash
+# Lignes dont le déclencheur de reprise pourrait être satisfait par le merge courant :
+sed -n '1,60p' docs/governance/RESIDUAL-DEBT.md
+sed -n '1,60p' docs/governance/PATCHED-SYMPTOMS.md 2>/dev/null || echo "PATCHED-SYMPTOMS absent"
+```
+
+- **MUST** : toute dette que le merge vient de fermer → sa ligne **retirée/barrée le jour même** + mention CHANGELOG (dette fermée = ligne retirée, `nefer-docs` §6.6).
+- **MUST** : si N lignes PATCHED-SYMPTOMS convergent vers la même hypothèse de cause racine → ouvrir (ou proposer) le diagnostic de fond ; le patch de surface a atteint sa masse critique.
+- **NEVER** clore une session post-merge en laissant une dette dont le déclencheur est atteint « pour la prochaine fois ».
+
 ## 9.6 — Si drift détecté (règles de fix)
 
 1. Commit fix-only (`chore(version)` / `docs(governance)` / `fix(ui)`) — **NEVER** mélangé à une feature.
@@ -87,6 +101,7 @@ npx vitest run tests/unit/governance/cockpit-vocabulary.test.ts 2>&1 | tail -3
 - [ ] Zéro mismatch vérité-registre ↔ prose narrative
 - [ ] Zéro mention résiduelle d'état canonique périmé
 - [ ] Zéro jargon eng dans la copy publique
+- [ ] RESIDUAL-DEBT + PATCHED-SYMPTOMS relus ; toute dette fermée par le merge est purgée, aucun déclencheur atteint laissé dormant
 - [ ] `git status` clean
 
 ## Conditions STOP

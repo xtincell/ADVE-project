@@ -29,6 +29,7 @@ interface SelectedFile {
 export default function IngestPlusIntakePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
   const router = useRouter();
+  const utils = trpc.useUtils();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<SelectedFile[]>([]);
   const [websiteUrl, setWebsiteUrl] = useState("");
@@ -39,6 +40,8 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
   });
   const [error, setError] = useState("");
   const [dragActive, setDragActive] = useState(false);
+  // Sondage de récupération après une coupure réseau (voir onError + recoverAfterNetworkCut).
+  const [recovering, setRecovering] = useState(false);
 
   const { data: intake, isLoading } = trpc.quickIntake.getByToken.useQuery(
     { token },
@@ -49,8 +52,41 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
     onSuccess: () => {
       router.push(`/intake/${token}/result`);
     },
-    onError: (err) => setError(err.message),
+    onError: (err) => {
+      // Coupure du proxy frontal sur un appel long → erreur RÉSEAU opaque
+      // (« Load failed »), pas applicative. Le serveur a pu terminer : on sonde
+      // avant de conclure. Mitigation de surface (cf. RESIDUAL-DEBT « intake
+      // processIngest synchrone → Load failed »).
+      if (isNetworkCut(err.message)) {
+        void recoverAfterNetworkCut();
+        return;
+      }
+      setError(err.message);
+    },
   });
+
+  // Le handler écrit le statut terminal en DERNIÈRE étape : on sonde ~45 s après
+  // une coupure, on rejoint le résultat si abouti, sinon message honnête. JAMAIS
+  // de faux succès (redirection sur statut terminal RÉEL uniquement).
+  async function recoverAfterNetworkCut() {
+    setRecovering(true);
+    for (let i = 0; i < 9; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+      try {
+        const latest = await utils.quickIntake.getByToken.fetch({ token });
+        if (latest?.status === "COMPLETED" || latest?.status === "CONVERTED") {
+          router.push(`/intake/${token}/result`);
+          return;
+        }
+      } catch {
+        // Réseau encore instable — nouvelle tentative au tour suivant.
+      }
+    }
+    setRecovering(false);
+    setError(
+      "L'analyse a pris plus de temps que prévu. Vos sources sont conservées — réessayez, ou utilisez le questionnaire pré-rempli.",
+    );
+  }
 
   if (isLoading) {
     return (
@@ -73,11 +109,11 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
     return null;
   }
 
-  if (processIngestPlusMutation.isPending || processIngestPlusMutation.isSuccess) {
+  if (processIngestPlusMutation.isPending || processIngestPlusMutation.isSuccess || recovering) {
     return (
       <IntakeProcessingScreen
         companyName={intake.companyName}
-        isPending={processIngestPlusMutation.isPending}
+        isPending={processIngestPlusMutation.isPending || recovering}
         errorMessage={error || undefined}
       />
     );
@@ -287,6 +323,13 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
         </div>
       </div>
     </main>
+  );
+}
+
+// Distingue une coupure RÉSEAU / proxy d'une vraie erreur applicative tRPC.
+function isNetworkCut(message: string): boolean {
+  return /load failed|failed to fetch|networkerror|network error|timed?\s?out|timeout|aborted|fetch failed|err_/i.test(
+    message,
   );
 }
 
