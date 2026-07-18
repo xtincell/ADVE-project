@@ -33,6 +33,7 @@ import {
 import { PricingTiers, OracleTeaser, RapportPdfPreview } from "@/components/neteru";
 import { Modal } from "@/components/shared/modal";
 import { FootprintSection } from "./footprint-section";
+import { ForceSection } from "./force-section";
 import { AdvertisRadar } from "@/components/shared/advertis-radar";
 import { PILLAR_KEYS } from "@/lib/types/advertis-vector";
 import { HIDDEN_FIELDS, humanizeValue } from "@/server/services/quick-intake/report-composer";
@@ -871,6 +872,13 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             ((intake.responses as Record<string, unknown> | null)?.e as Record<string, unknown> | undefined) ?? null
           }
         />
+
+        {/* ════════════════════════════════════════════════════════════
+            FORCE DE MARQUE (nouveau scoreur, ADR-0149) — note révélée sur
+            la preuve publique captée. Lecture seule, honnête (couverture +
+            palier suivant). Le classement public reste un choix (payant/opérateur).
+        ════════════════════════════════════════════════════════════ */}
+        <ForceSection token={token} />
 
 
         {/* ════════════════════════════════════════════════════════════

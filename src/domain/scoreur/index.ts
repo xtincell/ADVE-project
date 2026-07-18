@@ -23,6 +23,7 @@ export * from "./types";
 export * from "./anchors";
 export * from "./palier";
 export * from "./bradley-terry";
+export * from "./revealed-gates";
 
 
 export interface ScoreInput {

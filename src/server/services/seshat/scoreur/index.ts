@@ -16,9 +16,12 @@ import {
   COHERENCE_THRESHOLD,
   defaultThetaForScale,
   MUST_HAVE_ITEMS,
+  resolveRevealedGates,
   scoreFromEpreuves,
   type CompiledEpreuve,
   type LeagueKey,
+  type RevealedGateThresholds,
+  type RevealedSignals,
   type ScoreVerdict,
   type ScoreurArena,
 } from "@/domain/scoreur";
@@ -205,15 +208,26 @@ export async function scoreBrand(
     }
   }
 
-  // Items franchis (mesurés + items gagnés au registre).
-  const itemsMet = await computeItemsMet(strategyId, {
-    superfanCount: measured.superfanCount,
-    superfanFloor: targets.superfansTarget,
-    favorableOverton: measured.favorableOverton,
-  });
+  // Audience cumulée ≥ plancher de ligue : arène A gagnée au footprint (ADR-0153).
+  const audienceMeetsFloor = measured.epreuves.some(
+    (e) => e.arena === "A" && e.opponentRef === ITEM_OPPONENTS.aAudienceFloor && e.result === "WIN",
+  );
 
   // Canon éditable a posteriori (ADR-0150) : override DB par-dessus les défauts code.
+  // Résolu AVANT les items — ses seuils de portes révélées pilotent computeItemsMet.
   const canon = await resolveScoreurCanon();
+
+  // Items franchis (mesurés + preuve publique révélée + items gagnés au registre).
+  const itemsMet = await computeItemsMet(
+    strategyId,
+    {
+      superfanCount: measured.superfanCount,
+      superfanFloor: targets.superfansTarget,
+      favorableOverton: measured.favorableOverton,
+      audienceMeetsFloor,
+    },
+    canon.revealedThresholds,
+  );
 
   // 1er passage → cohérence ; ajoute l'item coherence-seuil si R ≥ seuil.
   const first = scoreFromEpreuves({ subjectRef: strategyId, league, epreuves, anchors, itemsMet, canon });
@@ -232,14 +246,23 @@ export async function scoreBrand(
   return { verdict, epreuveCount: epreuves.length, superfanCount: measured.superfanCount, verdictId };
 }
 
-/** Items franchis : signaux mesurés + items gagnés au registre (opponent ITEM). */
+/** Items franchis : signaux mesurés + preuve publique révélée + items gagnés au registre. */
 async function computeItemsMet(
   strategyId: string,
-  signals: { superfanCount: number; superfanFloor: number; favorableOverton: number },
+  signals: { superfanCount: number; superfanFloor: number; favorableOverton: number; audienceMeetsFloor: boolean },
+  revealedThresholds?: RevealedGateThresholds,
 ): Promise<Set<string>> {
   const met = new Set<string>();
   if (signals.superfanCount >= signals.superfanFloor && signals.superfanFloor > 0) met.add("masse-superfan");
   if (signals.favorableOverton >= 1) met.add("duel-cadre-overton");
+
+  // Portes de bas de palier franchies par PREUVE PUBLIQUE RÉVÉLÉE (empreinte
+  // mesurée, provenance SOURCE — jamais l'ADVE déclaré). Doctrine « force
+  // révélée » : une marque nationale ancienne franchit FRAGILE/ORDINAIRE sur
+  // preuve datée (RDAP), presse, audience, avis. `actif-distinctif` (FORTE+)
+  // reste gagné au registre. Cf. `@/domain/scoreur/revealed-gates`.
+  const revealed = await readRevealedSignals(strategyId, signals.audienceMeetsFloor);
+  for (const gate of resolveRevealedGates(revealed, revealedThresholds)) met.add(gate);
 
   // Items gagnés au registre : épreuve WIN dont l'opponent est un ITEM slug=item-<id>.
   const itemIds = new Set(MUST_HAVE_ITEMS.map((i) => i.id));
@@ -258,4 +281,30 @@ async function computeItemsMet(
     }
   }
   return met;
+}
+
+/**
+ * Signaux publics révélés d'une marque, lus depuis l'empreinte MESURÉE (pilier E
+ * `webPresence`, provenance SOURCE — footprint observé, jamais l'ADVE déclaré).
+ * Absence honnête : un champ non mesuré reste neutre (jamais fabriqué, P22-2).
+ */
+async function readRevealedSignals(strategyId: string, audienceMeetsFloor: boolean): Promise<RevealedSignals> {
+  const pillar = await db.pillar.findFirst({
+    where: { strategyId, key: "e" },
+    select: { content: true },
+  });
+  const wp = ((pillar?.content as Record<string, unknown> | null)?.webPresence ?? {}) as Record<string, unknown>;
+  const domain = wp.domain as { ageYears?: number | null } | undefined;
+  const maps = wp.maps as { status?: string; reviewCount?: number | null } | undefined;
+  const site = wp.site as { tech?: unknown } | undefined;
+  const press = Array.isArray(wp.press) ? wp.press : [];
+  const socials = Array.isArray(wp.socials) ? wp.socials : [];
+  return {
+    domainAgeYears: typeof domain?.ageYears === "number" ? domain.ageYears : null,
+    pressCount: press.length,
+    hasReviews: maps?.status === "LIVE" && (maps.reviewCount ?? 0) > 0,
+    siteReachable: Boolean(site?.tech),
+    publicSocialCount: socials.length,
+    audienceMeetsFloor,
+  };
 }

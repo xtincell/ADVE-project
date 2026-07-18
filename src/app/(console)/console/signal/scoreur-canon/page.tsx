@@ -158,6 +158,29 @@ export default function ScoreurCanonPage() {
         </CardBody>
       </Card>
 
+      {/* ── Portes révélées : seuils de preuve publique ──────────────────── */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Portes révélées — seuils de preuve publique</CardTitle>
+          <CardDescription>
+            Ce qui fait franchir les portes de bas de palier sur PREUVE PUBLIQUE mesurée (jamais le
+            déclaré) : âge de domaine daté (RDAP) pour le mythe fondateur, nombre de mentions presse
+            pour le market-fit. `actif-distinctif` et au-delà restent gagnés au registre.
+          </CardDescription>
+        </CardHeader>
+        <CardBody>
+          <RevealedThresholdsRow
+            mytheMinDomainAgeYears={canon.data?.revealedThresholds?.mytheMinDomainAgeYears ?? 3}
+            marketFitMinPress={canon.data?.revealedThresholds?.marketFitMinPress ?? 3}
+            onSave={(mytheMinDomainAgeYears, marketFitMinPress) =>
+              edit.mutate({ op: "SET_REVEALED_THRESHOLDS", mytheMinDomainAgeYears, marketFitMinPress })
+            }
+            onReset={() => reset.mutate({ kind: "REVEALED_GATE", key: "default" })}
+            busy={edit.isPending}
+          />
+        </CardBody>
+      </Card>
+
       {/* ── Preview d'impact ─────────────────────────────────────────────── */}
       <PreviewCard />
     </div>
@@ -265,6 +288,40 @@ function AddItemRow(props: { onAdd: (id: string, tier: string, label: string, ar
         onClick={() => props.onAdd(id.trim(), tier, label.trim(), arena)}
       >
         Ajouter la porte
+      </Button>
+    </div>
+  );
+}
+
+function RevealedThresholdsRow(props: {
+  mytheMinDomainAgeYears: number;
+  marketFitMinPress: number;
+  onSave: (mytheMinDomainAgeYears: number, marketFitMinPress: number) => void;
+  onReset: () => void;
+  busy: boolean;
+}) {
+  const [m, setM] = useState(String(props.mytheMinDomainAgeYears));
+  const [p, setP] = useState(String(props.marketFitMinPress));
+  return (
+    <div className="flex items-center gap-3 flex-wrap">
+      <Text className="min-w-[240px]">Mythe fondateur — âge de domaine min. (ans)</Text>
+      <Input type="number" min={0} value={m} onChange={(e) => setM(e.target.value)} className="w-24" />
+      <Text className="min-w-[220px]">Market-fit — mentions presse min.</Text>
+      <Input type="number" min={1} value={p} onChange={(e) => setP(e.target.value)} className="w-24" />
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={props.busy}
+        onClick={() => {
+          const mm = Number.parseFloat(m);
+          const pp = Number.parseInt(p, 10);
+          if (Number.isFinite(mm) && Number.isFinite(pp)) props.onSave(mm, pp);
+        }}
+      >
+        Enregistrer
+      </Button>
+      <Button size="sm" variant="ghost" disabled={props.busy} onClick={props.onReset}>
+        Défaut
       </Button>
     </div>
   );

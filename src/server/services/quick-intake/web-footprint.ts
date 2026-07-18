@@ -289,6 +289,95 @@ async function fetchPublic(rawUrl: string): Promise<{ ok: boolean; status: numbe
   }
 }
 
+// ── Auto-découverte du site officiel (déterministe, zéro clé) ────────────
+// Précondition de l'évidence révélée (ADR-0149 revealed-gates) : sans site
+// déclaré NI Brave, une marque nationale n'a ni domaine daté ni tech site →
+// le Scoreur la cape LATENT par artefact. On devine des domaines candidats
+// depuis le nom + TLD pays et on les probe, avec garde anti-faux-positif
+// STRICTE (le candidat doit mentionner la marque). Jamais de fabrication : rien
+// trouvé → null honnête.
+
+/** Slug de marque compact pour un nom de domaine (`Chococam SA` → `chococam`). */
+export function brandDomainSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/\b(sa|sarl|inc|ltd|llc|group|groupe|company|cie)\b/g, "")
+    .replace(/[^a-z0-9]+/g, "")
+    .trim();
+}
+
+const COUNTRY_TLD: Record<string, string> = {
+  CM: "cm", CI: "ci", SN: "sn", FR: "fr", MA: "ma", NG: "ng", GH: "gh",
+  TN: "tn", CD: "cd", BJ: "bj", TG: "tg", GA: "ga", BF: "bf", ML: "ml",
+};
+
+/** Domaines candidats (déterministe) : `.com` + TLD pays + génériques. Max 5. */
+export function candidateDomains(name: string, countryCode?: string | null): string[] {
+  const slug = brandDomainSlug(name);
+  if (slug.length < 2) return [];
+  const tlds = ["com"];
+  const cc = countryCode?.trim().toUpperCase();
+  if (cc && COUNTRY_TLD[cc]) tlds.push(COUNTRY_TLD[cc]);
+  for (const t of ["net", "africa", "co"]) tlds.push(t);
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const tld of tlds) {
+    const host = `${slug}.${tld}`;
+    if (seen.has(host)) continue;
+    seen.add(host);
+    out.push(`https://${host}`);
+  }
+  return out.slice(0, 5);
+}
+
+/** Normalise un texte pour la garde de mention de marque (casse/diacritiques/ponctuation). */
+function normalizeForMatch(s: string): string {
+  return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "");
+}
+
+/**
+ * Probe les domaines candidats en parallèle ; retourne le 1er atteignable dont
+ * le contenu MENTIONNE la marque (garde anti-faux-positif — un domaine parké ou
+ * homonyme est rejeté). Préférence à l'ordre des candidats (`.com` d'abord).
+ * Best-effort, borné en temps, jamais de throw.
+ */
+export async function discoverOfficialSite(
+  name: string,
+  countryCode?: string | null,
+  opts: { timeoutMs?: number } = {},
+): Promise<string | null> {
+  const candidates = candidateDomains(name, countryCode);
+  if (candidates.length === 0) return null;
+  const token = brandDomainSlug(name);
+  const perProbe = opts.timeoutMs ?? 4_000;
+
+  const results = await Promise.all(
+    candidates.map(async (url) => {
+      try {
+        const raced = await Promise.race([
+          fetchPublic(url),
+          new Promise<{ ok: false; status: 0; body: "" }>((r) =>
+            setTimeout(() => r({ ok: false, status: 0, body: "" }), perProbe),
+          ),
+        ]);
+        if (!raced.ok) return null;
+        const meta = parseHtmlMeta(raced.body);
+        const hay = normalizeForMatch(`${meta.title ?? ""} ${meta.description ?? ""} ${raced.body.slice(0, 4_000)}`);
+        return hay.includes(token) ? url : null;
+      } catch {
+        return null;
+      }
+    }),
+  );
+  for (let i = 0; i < candidates.length; i++) {
+    const r = results[i];
+    if (r) return r;
+  }
+  return null;
+}
+
 // ── Collecteur ─────────────────────────────────────────────────────────
 
 export interface CollectFootprintInput {

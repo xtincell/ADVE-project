@@ -108,6 +108,18 @@ export async function scoreProspect(input: ProspectInput): Promise<ScoreProspect
     });
     footprintStatus = enriched.enrichment.apify === "DEFERRED" ? "DEFERRED" : "OK";
 
+    // Parité intake ↔ prospect (question opérateur 2026-07-18) : l'empreinte
+    // remplit AUSSI le pilier E, pas seulement le score. Une marque classée a
+    // donc AU MOINS un ADVE pré-rempli (pilier E) depuis l'empreinte — la donnée
+    // nourrit la compréhension, et débloque les portes révélées (elles lisent E).
+    // Best-effort : ne casse jamais le score.
+    try {
+      const { persistFootprintToPillarE } = await import("@/server/services/quick-intake/public-enrichment");
+      await persistFootprintToPillarE(strategyId, enriched);
+    } catch (err) {
+      console.warn("[scoreur] pilier E non rempli depuis l'empreinte:", err instanceof Error ? err.message : err);
+    }
+
     // Les faits coûteux du scan entrent dans la base de marques Seshat
     // (audit 2026-07-16 `prospect-scan-facts-lost` : presse, domaine, MX/SPF,
     // maps, perf étaient collectés puis JETÉS — re-payables, et le prospect

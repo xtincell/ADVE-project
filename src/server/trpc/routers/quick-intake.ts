@@ -373,6 +373,50 @@ export const quickIntakeRouter = createTRPCRouter({
     }),
 
   /**
+   * Force de marque RÉVÉLÉE (nouveau scoreur, ADR-0149) pour le rapport d'intake.
+   * Lecture SEULE (`persist:false` — aucun snapshot leaderboard, aucune écriture).
+   * Mesurée sur la preuve publique captée (empreinte), jamais le déclaratif. DTO
+   * en vocabulaire client (« terrains », « palier ») — pas de jargon interne.
+   * Best-effort : pas de strategy / calcul KO → `PENDING` honnête, jamais un throw.
+   */
+  getForceByToken: publicProcedure
+    .input(z.object({ token: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const intake = await ctx.db.quickIntake.findUnique({
+        where: { shareToken: input.token },
+        select: { convertedToId: true },
+      });
+      if (!intake?.convertedToId) return { status: "PENDING" as const };
+      try {
+        const { scoreBrand } = await import("@/server/services/seshat/scoreur");
+        const { ARENA_LABELS } = await import("@/domain/scoreur");
+        const { verdict } = await scoreBrand(intake.convertedToId, { persist: false });
+        const measured = verdict.arenas.filter((a) => a.epreuveCount > 0).length;
+        return {
+          status: "OK" as const,
+          force: Math.round(verdict.force * 10) / 10,
+          outOf: 200,
+          tier: verdict.tier,
+          coveragePct: verdict.coveragePct,
+          measuredArenas: measured,
+          totalArenas: verdict.arenas.length,
+          terrains: verdict.arenas.map((a) => ({
+            key: a.arena,
+            label: ARENA_LABELS[a.arena],
+            force: Math.round(a.force * 10) / 10,
+            measured: a.epreuveCount > 0,
+          })),
+          // Portes non encore franchies = ce qui débloque les paliers suivants
+          // (libellés déjà orientés métier : « Dirigeant identifiable »…).
+          nextUnlock: verdict.gates.filter((g) => !g.ok).map((g) => g.label).slice(0, 3),
+          cappedReason: verdict.cappedReason,
+        };
+      } catch {
+        return { status: "PENDING" as const };
+      }
+    }),
+
+  /**
    * Server-driven question fetcher. Returns adaptive questions for the current
    * phase of the intake (biz context or a specific ADVE pillar).
    * This enables the AI-guided questionnaire experience per CdC §5.2.

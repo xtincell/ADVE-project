@@ -111,20 +111,40 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
   const remaining = () => Math.max(0, budgetMs - (Date.now() - t0));
   const errors: string[] = [];
 
+  // ── 0.0. Auto-découverte du site officiel si RIEN n'est déclaré ──
+  // Précondition de l'évidence révélée (ADR-0149) : sans site ni Brave, une
+  // marque nationale n'a ni domaine daté (RDAP) ni tech site → le Scoreur la
+  // cape LATENT par artefact. Déterministe, zéro clé, garde anti-faux-positif
+  // (le candidat DOIT mentionner la marque). Payé UNIQUEMENT quand rien n'est
+  // déclaré (site fourni → aucun coût). Borné pour ne pas affamer l'aval.
+  let effectiveWebsiteUrl = input.websiteUrl ?? null;
+  if (!effectiveWebsiteUrl && remaining() > 6_000) {
+    try {
+      const { discoverOfficialSite } = await import("./web-footprint");
+      effectiveWebsiteUrl = await withTimeout(
+        discoverOfficialSite(input.companyName, countryCodeGuess(input.country), { timeoutMs: 4_000 }),
+        Math.min(6_000, remaining()),
+        null,
+      );
+    } catch {
+      /* best-effort — l'absence de site reste un état honnête */
+    }
+  }
+
   // ── 0. Signaux GRATUITS lancés en parallèle de tout le reste ──
-  // Domaine (RDAP) + email (DNS) ne dépendent que de l'URL fournie et coûtent
-  // 1-6 s : lancés ICI, ils ne peuvent plus être affamés par les étages
-  // site/discovery/Apify (bug prod 2026-07-16 : « site fourni » mais domaine/
-  // email « à mesurer » — l'étage final n'avait plus de budget).
+  // Domaine (RDAP) + email (DNS) ne dépendent que de l'URL (déclarée ou
+  // découverte) et coûtent 1-6 s : lancés ICI, ils ne peuvent plus être affamés
+  // par les étages site/discovery/Apify (bug prod 2026-07-16 : « site fourni »
+  // mais domaine/email « à mesurer » — l'étage final n'avait plus de budget).
   const freeCollectorsPromise = import("./footprint-collectors");
-  const earlyDomainPromise = input.websiteUrl
+  const earlyDomainPromise = effectiveWebsiteUrl
     ? freeCollectorsPromise
-        .then((c) => c.fetchDomainInfo(input.websiteUrl, { timeoutMs: 6_000 }))
+        .then((c) => c.fetchDomainInfo(effectiveWebsiteUrl, { timeoutMs: 6_000 }))
         .catch(() => null)
     : Promise.resolve(null);
-  const earlyEmailPromise = input.websiteUrl
+  const earlyEmailPromise = effectiveWebsiteUrl
     ? freeCollectorsPromise
-        .then((c) => c.checkEmailInfrastructure(c.registrableDomain(input.websiteUrl!), { timeoutMs: 5_000 }))
+        .then((c) => c.checkEmailInfrastructure(c.registrableDomain(effectiveWebsiteUrl!), { timeoutMs: 5_000 }))
         .catch(() => null)
     : Promise.resolve(null);
 
@@ -142,11 +162,11 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
     collectedAt: new Date().toISOString(),
     errors: [],
   };
-  if (input.websiteUrl || declared.length > 0) {
+  if (effectiveWebsiteUrl || declared.length > 0) {
     try {
       footprint = await withTimeout(
         collectWebFootprint({
-          websiteUrl: input.websiteUrl,
+          websiteUrl: effectiveWebsiteUrl,
           declaredSocialUrls: declared,
           companyName: input.companyName,
         }),
@@ -455,6 +475,38 @@ export async function rerunPublicEnrichmentForStrategy(strategyId: string): Prom
     budgetMs: 30_000,
   });
 
+  const { challenged } = await persistFootprintToPillarE(strategyId, enriched);
+
+  return {
+    status: "OK",
+    enrichment: enriched.enrichment,
+    discovery: enriched.discovery,
+    socialsFound: enriched.socials.length,
+    pressFound: enriched.press.length,
+    challenged,
+  };
+}
+
+/**
+ * Écrit l'empreinte MESURÉE dans le pilier E via le gateway (touchpoints +
+ * webPresence factuel + primaryChannel inféré), provenance SOURCE. Assure
+ * l'existence du row pilier — les marques PROSPECT (scoreProspect) n'ont pas de
+ * pilier pré-créé, contrairement à l'intake. **Parité intake ↔ prospect** : toute
+ * marque scorée reçoit AU MOINS son pilier E rempli depuis l'empreinte publique
+ * (déterministe, zéro LLM) — la donnée nourrit la compréhension, pas seulement le
+ * score. Débloque aussi les portes révélées du scoreur (elles lisent ce pilier E).
+ */
+export async function persistFootprintToPillarE(
+  strategyId: string,
+  enriched: EnrichedFootprint,
+): Promise<{ challenged: string[] }> {
+  const { db } = await import("@/lib/db");
+  // Row pilier E garanti (prospects : aucun pilier pré-créé).
+  await db.pillar.upsert({
+    where: { strategyId_key: { strategyId, key: "e" } },
+    create: { strategyId, key: "e", content: {}, confidence: 0 },
+    update: {},
+  });
   const pillar = await db.pillar.findFirst({
     where: { strategyId, key: "e" },
     select: { content: true },
@@ -468,34 +520,23 @@ export async function rerunPublicEnrichmentForStrategy(strategyId: string): Prom
   if (inferredFields.includes("primaryChannel")) {
     fields.push({ path: "primaryChannel", value: merged.primaryChannel });
   }
+  if (fields.length === 0) return { challenged: [] };
 
-  let challenged: string[] = [];
-  if (fields.length > 0) {
-    const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
-    const result = await writePillarAndScore({
-      strategyId,
-      pillarKey: "e",
-      operation: { type: "SET_FIELDS", fields },
-      author: { system: "EXTERNAL_SAAS", reason: "Re-scan empreinte publique (ENRICH_E_FROM_PUBLIC_FOOTPRINT, ADR-0121)" },
-      options: {
-        fieldProvenance: {
-          touchpoints: "SOURCE",
-          webPresence: "SOURCE",
-          ...(inferredFields.includes("primaryChannel") ? { primaryChannel: "INFERRED" as const } : {}),
-        },
+  const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
+  const result = await writePillarAndScore({
+    strategyId,
+    pillarKey: "e",
+    operation: { type: "SET_FIELDS", fields },
+    author: { system: "EXTERNAL_SAAS", reason: "Empreinte publique → pilier E (parité intake/prospect, ADR-0121)" },
+    options: {
+      fieldProvenance: {
+        touchpoints: "SOURCE",
+        webPresence: "SOURCE",
+        ...(inferredFields.includes("primaryChannel") ? { primaryChannel: "INFERRED" as const } : {}),
       },
-    });
-    challenged = result.challenged ?? [];
-  }
-
-  return {
-    status: "OK",
-    enrichment: enriched.enrichment,
-    discovery: enriched.discovery,
-    socialsFound: enriched.socials.length,
-    pressFound: enriched.press.length,
-    challenged,
-  };
+    },
+  });
+  return { challenged: result.challenged ?? [] };
 }
 
 /** Le pays intake est un nom libre ("Cameroun") ou un ISO-2 — best-effort ISO-2. */
