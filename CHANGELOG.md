@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.194 — fix(tests): deux gardes single-writer étaient aveugles en local (grep BSD vs GNU) (2026-07-18)
+
+**Deux verrous HARD passaient en CI et échouaient en local — pour une raison de plateforme, pas de code.**
+
+- `scoring-scale-aware` (writers `SuperfanProfile`) et `community-measure-chain` (writers `CommunitySnapshot`) listent leurs writers via `execSync("grep -rln … src/ …")`. Le **grep BSD de macOS** rend `src//server/…` pour une racine `src/`, là où le **GNU grep de la CI Linux** rend `src/server/…`. La comparaison à l'allowlist (`src/server/…`) échouait donc systématiquement en local.
+- **Pourquoi ça comptait** : ce n'était pas qu'un bruit rouge. Un échec permanent « de plateforme » **noie un vrai writer illégitime** — le jour où un chemin de création non gouverné apparaît (vecteur d'inflation du plafond d'évidence, ADR-0126/0134), le développeur local voit le même rouge qu'hier et passe à autre chose. Le garde ne gardait plus rien en local.
+- **Correctif** : normalisation des slashes dans les deux tests (`replace(/\/{2,}/g, "/")`), insensible à la variante de `grep`. Aucun assouplissement de l'assertion — l'allowlist reste identique.
+- **Vérifié par canari** : un writer illégitime temporaire (`superfanProfile.create` + `communitySnapshot.create` hors voie gouvernée) est bien détecté par les deux gardes, avec le chemin normalisé, puis retiré. Les tests mordent réellement.
+- **Suite gouvernance : 1024/1024 verts** (0 échec) — les 2 échecs traînants sont clos.
+
 ## v6.27.193 — fix(intake): l'import ne bascule plus tout seul vers le questionnaire (2026-07-18)
 
 **Mandat opérateur : « je ne veux pas de repli automatique ».**
