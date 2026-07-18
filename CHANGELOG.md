@@ -10,6 +10,15 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.197 — feat(scoreur): la note de force au rapport d'intake + parité ADVE pour toute marque scorée (2026-07-18)
+
+**Suite du câblage (« cable ») + réponse opérateur « toutes les marques classées ont un ADVE pré-rempli grâce à l'empreinte ? » → non, corrigé.**
+
+- **Intake → Scoreur câblé** : query publique `quickIntake.getForceByToken` (lecture SEULE, `scoreBrand persist:false` — **aucune écriture au classement**, aligné sur la doctrine « consulter le classement = libre ; y figurer = payant ou choix opérateur »). Section `ForceSection` sur le rapport : palier révélé + force /200 + **couverture de la mesure** (terrains mesurés — honnête, ADR-0046) + **« ce qui débloque le palier suivant »** (portes non franchies, actionnable) + état honnête si preuve insuffisante (« déclarez site/réseaux » plutôt qu'un zéro mort). Vocabulaire client (ADR-0123 : « force », « terrains », « palier ») — zéro jargon interne. DS-compliant.
+- **Parité ADVE intake ↔ prospect** (trou révélé par la question) : `scoreProspect` (voie opérateur du classement) créait un shell Strategy + `FollowerSnapshot` mais **pilier ADVE VIDE** — l'empreinte nourrissait le score, pas la compréhension. Nouveau helper `persistFootprintToPillarE` (extrait de `rerunPublicEnrichmentForStrategy`, DRY) : garantit le row pilier + écrit l'empreinte MESURÉE dans le pilier E via le gateway (provenance SOURCE). Appelé par `scoreProspect` → **toute marque scorée a désormais au moins son pilier E rempli** depuis l'empreinte (déterministe, zéro LLM). Effet double : la donnée nourrit la compréhension ET **débloque les portes révélées** (elles lisent le pilier E). Ferme le résidu « source pour parité scoreProspect ».
+- **Déféré (tracé)** : déduction A/D/V depuis le site auto-découvert (LLM ingest) = tier sérieux/payant, PAS le Scoreur rapide (cohérent avec la distinction opérateur « Scoreur léger comme un speed-test / intake sérieux / payant ouvre le classement »).
+- 0 migration · 0 nouveau modèle · 0 nouvel Intent kind · 0 nouveau Neter · 0 bypass. Écriture pilier via gateway (keystone C5). `scoring.ts` (ADR-0102) intact. Cap APOGEE 7/7. tsc 0 · lint 0 · cycles 0 · **1041/1041 gouvernance**.
+
 ## v6.27.196 — feat(scoreur): les portes de bas de palier se franchissent sur PREUVE PUBLIQUE + auto-découverte du site (2026-07-18)
 
 **Symptôme opérateur : « la note d'une marque comme Chococam ne devrait pas être aussi basse » + « tu n'as pas considéré le nouveau scoreur ».** Deux trous structurels sous la plainte, plus profonds que le score de complétude (v6.27.195).

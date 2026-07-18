@@ -475,6 +475,38 @@ export async function rerunPublicEnrichmentForStrategy(strategyId: string): Prom
     budgetMs: 30_000,
   });
 
+  const { challenged } = await persistFootprintToPillarE(strategyId, enriched);
+
+  return {
+    status: "OK",
+    enrichment: enriched.enrichment,
+    discovery: enriched.discovery,
+    socialsFound: enriched.socials.length,
+    pressFound: enriched.press.length,
+    challenged,
+  };
+}
+
+/**
+ * Écrit l'empreinte MESURÉE dans le pilier E via le gateway (touchpoints +
+ * webPresence factuel + primaryChannel inféré), provenance SOURCE. Assure
+ * l'existence du row pilier — les marques PROSPECT (scoreProspect) n'ont pas de
+ * pilier pré-créé, contrairement à l'intake. **Parité intake ↔ prospect** : toute
+ * marque scorée reçoit AU MOINS son pilier E rempli depuis l'empreinte publique
+ * (déterministe, zéro LLM) — la donnée nourrit la compréhension, pas seulement le
+ * score. Débloque aussi les portes révélées du scoreur (elles lisent ce pilier E).
+ */
+export async function persistFootprintToPillarE(
+  strategyId: string,
+  enriched: EnrichedFootprint,
+): Promise<{ challenged: string[] }> {
+  const { db } = await import("@/lib/db");
+  // Row pilier E garanti (prospects : aucun pilier pré-créé).
+  await db.pillar.upsert({
+    where: { strategyId_key: { strategyId, key: "e" } },
+    create: { strategyId, key: "e", content: {}, confidence: 0 },
+    update: {},
+  });
   const pillar = await db.pillar.findFirst({
     where: { strategyId, key: "e" },
     select: { content: true },
@@ -488,34 +520,23 @@ export async function rerunPublicEnrichmentForStrategy(strategyId: string): Prom
   if (inferredFields.includes("primaryChannel")) {
     fields.push({ path: "primaryChannel", value: merged.primaryChannel });
   }
+  if (fields.length === 0) return { challenged: [] };
 
-  let challenged: string[] = [];
-  if (fields.length > 0) {
-    const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
-    const result = await writePillarAndScore({
-      strategyId,
-      pillarKey: "e",
-      operation: { type: "SET_FIELDS", fields },
-      author: { system: "EXTERNAL_SAAS", reason: "Re-scan empreinte publique (ENRICH_E_FROM_PUBLIC_FOOTPRINT, ADR-0121)" },
-      options: {
-        fieldProvenance: {
-          touchpoints: "SOURCE",
-          webPresence: "SOURCE",
-          ...(inferredFields.includes("primaryChannel") ? { primaryChannel: "INFERRED" as const } : {}),
-        },
+  const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
+  const result = await writePillarAndScore({
+    strategyId,
+    pillarKey: "e",
+    operation: { type: "SET_FIELDS", fields },
+    author: { system: "EXTERNAL_SAAS", reason: "Empreinte publique → pilier E (parité intake/prospect, ADR-0121)" },
+    options: {
+      fieldProvenance: {
+        touchpoints: "SOURCE",
+        webPresence: "SOURCE",
+        ...(inferredFields.includes("primaryChannel") ? { primaryChannel: "INFERRED" as const } : {}),
       },
-    });
-    challenged = result.challenged ?? [];
-  }
-
-  return {
-    status: "OK",
-    enrichment: enriched.enrichment,
-    discovery: enriched.discovery,
-    socialsFound: enriched.socials.length,
-    pressFound: enriched.press.length,
-    challenged,
-  };
+    },
+  });
+  return { challenged: result.challenged ?? [] };
 }
 
 /** Le pays intake est un nom libre ("Cameroun") ou un ISO-2 — best-effort ISO-2. */
