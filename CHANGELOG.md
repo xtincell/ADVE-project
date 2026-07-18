@@ -10,6 +10,14 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.200 — fix(intake): récupération honnête après coupure réseau sur processIngest (« Load failed ») (2026-07-18)
+
+**Première application de l'interdit n°4 : fix en passant du symptôme « Load failed », root cause tracée.**
+
+- **Mitigation de surface** sur `ingest` + `ingest-plus` : une coupure du proxy frontal (Cloudflare ~100 s) sur l'appel long se présente comme une erreur RÉSEAU opaque (« Load failed » WebKit), pas applicative. Le client la détecte (`isNetworkCut`) et **sonde `getByToken` ~45 s** : si le serveur a abouti malgré la coupure, il rejoint le résultat ; sinon écran honnête « analyse trop longue » (réessayer / questionnaire pré-rempli). **Jamais de faux succès** — redirection sur statut terminal RÉEL uniquement.
+- **Ne corrige PAS la cause** (`processIngest` synchrone) — journalisé `PATCHED-SYMPTOMS.md` (2 symptômes convergents → diagnostic de fond mûr) ; root fix (ingestion asynchrone) tracé `RESIDUAL-DEBT.md` avec plan + déclencheur de reprise (session résilience funnel + dev-DB migrée + confirmation opérateur).
+- 0 migration · 0 nouveau modèle/Intent/Neter · 0 changement serveur · Cap APOGEE 7/7 · tsc 0 · lint 0 · gouvernance 1024/1024.
+
 ## v6.27.199 — docs(governance): interdit n°4 NEFER — un problème découvert se résout, se patche-et-trace, ou se planifie (2026-07-18)
 
 **Directive opérateur : « mets à jour NEFER pour qu'il ne laisse plus les problèmes pré-existants qu'il découvre sans résolution. »**

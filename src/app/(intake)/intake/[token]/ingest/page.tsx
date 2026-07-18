@@ -34,6 +34,7 @@ interface SelectedFile {
 export default function IngestIntakePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
   const router = useRouter();
+  const utils = trpc.useUtils();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<SelectedFile[]>([]);
   const [rawText, setRawText] = useState("");
@@ -44,6 +45,8 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
   // Pilote l'interstitiel honnête — jamais l'écran « Terminé 100 % » avant un
   // renvoi vers le questionnaire.
   const [fallbackReason, setFallbackReason] = useState<string | null>(null);
+  // Sondage de récupération après une coupure réseau (voir onError + recoverAfterNetworkCut).
+  const [recovering, setRecovering] = useState(false);
   const websitePrefilledRef = useRef(false);
 
   const { data: intake, isLoading } = trpc.quickIntake.getByToken.useQuery(
@@ -75,8 +78,43 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
       // questionnaire.
       setFallbackReason(data.reason ?? "extraction");
     },
-    onError: (err) => setError(err.message),
+    onError: (err) => {
+      // Une coupure du proxy frontal (Cloudflare ~100 s) sur un appel long se
+      // présente comme une erreur RÉSEAU opaque (« Load failed » / « Failed to
+      // fetch »), pas une erreur applicative. Le serveur a pu terminer malgré la
+      // coupure côté client : on sonde l'état réel avant de conclure. Mitigation
+      // de SURFACE — la vraie parade est l'ingestion asynchrone (cf.
+      // RESIDUAL-DEBT « intake processIngest synchrone → Load failed »).
+      if (isNetworkCut(err.message)) {
+        void recoverAfterNetworkCut();
+        return;
+      }
+      setError(err.message);
+    },
   });
+
+  // Après une coupure réseau : le handler écrit le statut terminal (COMPLETED)
+  // en toute DERNIÈRE étape. On sonde l'intake pendant ~45 s ; s'il a abouti
+  // malgré la coupure, on rejoint le résultat ; sinon écran honnête « analyse
+  // trop longue ». JAMAIS de faux succès — on ne redirige que sur un statut
+  // terminal RÉEL lu en base.
+  async function recoverAfterNetworkCut() {
+    setRecovering(true);
+    for (let i = 0; i < 9; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+      try {
+        const latest = await utils.quickIntake.getByToken.fetch({ token });
+        if (latest?.status === "COMPLETED" || latest?.status === "CONVERTED") {
+          router.push(`/intake/${token}/result`);
+          return;
+        }
+      } catch {
+        // Réseau encore instable — nouvelle tentative au tour suivant.
+      }
+    }
+    setRecovering(false);
+    setFallbackReason("timeout");
+  }
 
   // Déclaré AVANT les early-returns : l'écran de décision ci-dessous le
   // référence, et un `const` défini plus bas ne serait jamais initialisé dans
@@ -129,23 +167,25 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
   // n'a pas cliqué. Ses sources sont déjà persistées côté serveur (le handler
   // écrit avant d'extraire), donc les deux issues sont sans perte.
   if (fallbackReason) {
-    const isTransient = fallbackReason === "llm_unavailable";
+    const isTimeout = fallbackReason === "timeout";
+    const title = isTimeout
+      ? "L'analyse a pris plus de temps que prévu"
+      : fallbackReason === "llm_unavailable"
+        ? "Analyse automatique momentanément indisponible"
+        : "Vos sources n'ont pas suffi pour un diagnostic complet";
+    const body = isTimeout
+      ? "Le serveur a mis trop longtemps à répondre. Rien n'est perdu : vos sources sont conservées. Réessayez, ou répondez aux questions pour un résultat immédiat."
+      : fallbackReason === "llm_unavailable"
+        ? "C'est temporaire et sans rapport avec votre marque. Rien n'est perdu : vos sources sont conservées."
+        : "Rien n'est perdu : vos sources sont conservées. Ajoutez du contenu, ou répondez aux questions pour obtenir votre score.";
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-background px-5">
         <div className="w-full max-w-md rounded-2xl border border-warning/30 bg-warning/10 p-6">
           <div className="flex items-start gap-3">
             <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
             <div>
-              <p className="text-sm font-semibold text-foreground">
-                {isTransient
-                  ? "Analyse automatique momentanément indisponible"
-                  : "Vos sources n'ont pas suffi pour un diagnostic complet"}
-              </p>
-              <p className="mt-2 text-sm leading-relaxed text-foreground-secondary">
-                {isTransient
-                  ? "C'est temporaire et sans rapport avec votre marque. Rien n'est perdu : vos sources sont conservées."
-                  : "Rien n'est perdu : vos sources sont conservées. Ajoutez du contenu, ou répondez aux questions pour obtenir votre score."}
-              </p>
+              <p className="text-sm font-semibold text-foreground">{title}</p>
+              <p className="mt-2 text-sm leading-relaxed text-foreground-secondary">{body}</p>
             </div>
           </div>
 
@@ -178,11 +218,11 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
     );
   }
 
-  if (processIngestMutation.isPending || processIngestMutation.isSuccess) {
+  if (processIngestMutation.isPending || processIngestMutation.isSuccess || recovering) {
     return (
       <IntakeProcessingScreen
         companyName={intake.companyName}
-        isPending={processIngestMutation.isPending}
+        isPending={processIngestMutation.isPending || recovering}
         errorMessage={error || undefined}
       />
     );
@@ -378,6 +418,15 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
         </div>
       </div>
     </main>
+  );
+}
+
+// Distingue une coupure RÉSEAU / proxy (WebKit « Load failed », Chromium
+// « Failed to fetch », abandon de requête) d'une vraie erreur applicative tRPC.
+// Seules les premières déclenchent le sondage de récupération.
+function isNetworkCut(message: string): boolean {
+  return /load failed|failed to fetch|networkerror|network error|timed?\s?out|timeout|aborted|fetch failed|err_/i.test(
+    message,
   );
 }
 
