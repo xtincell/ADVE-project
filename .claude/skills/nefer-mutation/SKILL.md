@@ -7,11 +7,12 @@ description: Phases 1-4 NEFER — cadrage et exécution de toute MODIFICATION du
 
 **Procédure impérative. Chaque étape produit une sortie vérifiable avant de passer à la suivante. AUCUNE improvisation : toute déviation = drift → Phase 8 immédiate.**
 
-## Les trois interdits absolus (à réciter avant de concevoir)
+## Les quatre interdits absolus (à réciter avant de concevoir)
 
 1. **Réinventer la roue** — toute entité métier nouvelle DOIT être justifiée par un grep CODE-MAP négatif + ADR.
 2. **Bypass governance** — toute mutation métier passe par le spine d'émission (voir Phase 4). Pas de raccourci, pas de « juste pour ce cas ».
 3. **Drift narratif silencieux** — toute modification de vocabulaire/concept canon DOIT propager dans les 7 sources de vérité simultanément (→ skill `nefer-docs`).
+4. **Abandon d'un problème découvert** — un défaut pré-existant croisé pendant la conception se **répare en passant** (+ `PATCHED-SYMPTOMS.md`), ou s'inscrit à `RESIDUAL-DEBT.md` **avec plan + déclencheur de reprise**, ou s'escalade. Jamais un constat nu (→ NEFER §3.4, appliqué en Phase 5-6 via `nefer-ship`/`nefer-docs`).
 
 ## PHASE 1 — Examen APOGEE
 

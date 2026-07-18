@@ -10,6 +10,15 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.199 — docs(governance): interdit n°4 NEFER — un problème découvert se résout, se patche-et-trace, ou se planifie (2026-07-18)
+
+**Directive opérateur : « mets à jour NEFER pour qu'il ne laisse plus les problèmes pré-existants qu'il découvre sans résolution. »**
+
+- **4ᵉ interdit absolu** ajouté au canon NEFER (§3 + §3.4 détaillé) et **propagé aux 5 surfaces** (`NEFER.md`, `CLAUDE.md`, `EXPERT-PROTOCOL.md`, skills `nefer-mutation`/`nefer-ship`) + mantra mis à jour partout : un défaut pré-existant CONSTATÉ se **répare en passant** (+ symptôme dans `PATCHED-SYMPTOMS.md`), ou s'inscrit à `RESIDUAL-DEBT.md` **avec plan + déclencheur de reprise**, ou s'**escalade** à l'opérateur. Jamais un constat nu, jamais un fix « en douce » non consigné. Abroge l'ancienne règle `nefer-ship:29` (« trace-le et passe »).
+- **Fermeture de la boucle** (trou pointé : « le RESIDUAL-DEBT n'est pas purgé systématiquement par le diagnostic de fond ») : les deux registres sont **transitoires**, pas un cimetière. Nouveau `docs/governance/PATCHED-SYMPTOMS.md` — journal des fixes en passant + hypothèses de cause racine (matériau heuristique). `nefer-boot` (0.2.bis) et `nefer-postmerge` (9.5.bis) **relisent** les deux registres et referment le refermable ; N symptômes convergents = signal d'un diagnostic de fond mûr.
+- **Première application (dogfood)** : le bug funnel « Load failed » est trié correctement — cause racine (`processIngest` synchrone dépassant le timeout proxy) inscrite à RESIDUAL-DEBT **avec plan async + déclencheur de reprise** ; la tentative `maxDuration` (inerte sous Coolify) journalisée à PATCHED-SYMPTOMS. Le fix de surface suit en commit dédié `fix(intake)`.
+- 0 code touché · docs/gouvernance uniquement · Cap APOGEE 7/7 · tsc 0 · lint 0 · **1024/1024 gouvernance**.
+
 ## v6.27.198 — feat(scoreur): seuils des portes révélées éditables via le canon editor (2026-07-18)
 
 **« Fix ce qui reste » — clôture du dernier résidu doctrinal + re-cadrage honnête.**
