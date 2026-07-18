@@ -12,10 +12,12 @@ import type { Prisma } from "@prisma/client";
 import type { MarketScale } from "@/domain/market-scale";
 import { MARKET_SCALES } from "@/domain/market-scale";
 import {
+  DEFAULT_REVEALED_GATE_THRESHOLDS,
   GAUGE_BY_SCALE,
   MUST_HAVE_ITEMS,
   type GaugeMap,
   type MustHaveItem,
+  type RevealedGateThresholds,
 } from "@/domain/scoreur";
 import { BRAND_TIERS } from "@/domain/brand-tier";
 import { SCOREUR_ARENAS } from "@/domain/scoreur";
@@ -23,6 +25,8 @@ import { SCOREUR_ARENAS } from "@/domain/scoreur";
 export interface ResolvedCanon {
   gauge: GaugeMap;
   items: MustHaveItem[];
+  /** Seuils des portes franchies par preuve publique (ADR-0149 revealed-gates). */
+  revealedThresholds: RevealedGateThresholds;
 }
 
 const VALID_ITEM_ARENAS = new Set<string>([...SCOREUR_ARENAS, "R", "TENURE"]);
@@ -68,7 +72,24 @@ export async function resolveScoreurCanon(): Promise<ResolvedCanon> {
     .sort((a, b) => a.order - b.order)
     .map(({ order: _order, ...it }) => it);
 
-  return { gauge, items };
+  // ── Seuils des portes révélées (preuve publique) — override DB > défaut code ──
+  let revealedThresholds: RevealedGateThresholds = { ...DEFAULT_REVEALED_GATE_THRESHOLDS };
+  for (const o of overrides) {
+    if (o.kind !== "REVEALED_GATE") continue;
+    const d = (o.data ?? {}) as Partial<RevealedGateThresholds>;
+    revealedThresholds = {
+      mytheMinDomainAgeYears:
+        typeof d.mytheMinDomainAgeYears === "number" && d.mytheMinDomainAgeYears >= 0
+          ? d.mytheMinDomainAgeYears
+          : revealedThresholds.mytheMinDomainAgeYears,
+      marketFitMinPress:
+        typeof d.marketFitMinPress === "number" && d.marketFitMinPress >= 1
+          ? Math.round(d.marketFitMinPress)
+          : revealedThresholds.marketFitMinPress,
+    };
+  }
+
+  return { gauge, items, revealedThresholds };
 }
 
 // ── single-writers (gouvernés) ───────────────────────────────────────────────
@@ -123,8 +144,25 @@ export async function removeItemOverride(input: { itemId: string; userId?: strin
   });
 }
 
+/** Upsert des seuils de portes révélées (preuve publique — ADR-0149/0150). */
+export async function upsertRevealedThresholdsOverride(input: {
+  mytheMinDomainAgeYears: number;
+  marketFitMinPress: number;
+  userId?: string | null;
+}) {
+  const data: Prisma.InputJsonValue = {
+    mytheMinDomainAgeYears: input.mytheMinDomainAgeYears,
+    marketFitMinPress: Math.round(input.marketFitMinPress),
+  };
+  return db.scoreurCanonOverride.upsert({
+    where: { kind_key: { kind: "REVEALED_GATE", key: "default" } },
+    update: { data, active: true, updatedByUserId: input.userId ?? null },
+    create: { kind: "REVEALED_GATE", key: "default", data, updatedByUserId: input.userId ?? null },
+  });
+}
+
 /** Réinitialise un override (retour au canon code). */
-export async function resetCanonOverride(input: { kind: "GAUGE" | "ITEM"; key: string }) {
+export async function resetCanonOverride(input: { kind: "GAUGE" | "ITEM" | "REVEALED_GATE"; key: string }) {
   await db.scoreurCanonOverride.deleteMany({ where: { kind: input.kind, key: input.key } });
   return { status: "OK" as const };
 }
@@ -147,5 +185,5 @@ export async function getCanonForConsole() {
     }),
     resolveScoreurCanon(),
   ]);
-  return { anchors, gauge: resolved.gauge, items: resolved.items };
+  return { anchors, gauge: resolved.gauge, items: resolved.items, revealedThresholds: resolved.revealedThresholds };
 }

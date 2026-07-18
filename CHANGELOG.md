@@ -10,6 +10,14 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.198 — feat(scoreur): seuils des portes révélées éditables via le canon editor (2026-07-18)
+
+**« Fix ce qui reste » — clôture du dernier résidu doctrinal + re-cadrage honnête.**
+
+- **Seuils des portes révélées éditables sans redéploiement** (ADR-0150, « ratification opérateur ») : les seuils PROPOSÉS (âge de domaine min. pour `mythe-fondateur`, mentions presse min. pour `market-fit`) vivent désormais dans le canon editor. Nouveau kind d'override `REVEALED_GATE` (le champ `kind` est un String → **0 migration**), résolu par `resolveScoreurCanon` par-dessus le défaut code, piloté dans `computeItemsMet` (canon résolu AVANT les items). Op `SET_REVEALED_THRESHOLDS` gouvernée (`SESHAT_EDIT_SCOREUR_CANON`, requireOperator, spine ADR-0124) + reset (`REVEALED_GATE`/`default`). Section dédiée sur `/console/signal/scoreur-canon`. Test : seuils réellement honorés (les portes varient selon le canon).
+- **Re-cadrage honnête du dernier « reste »** : la déduction A/D/V depuis le site auto-découvert n'est PAS un bug résiduel — c'est le **tier sérieux/payant** par l'architecture opérateur (Scoreur léger sans LLM / intake sérieux / payant ouvre le classement). La forcer dans le chemin Scoreur rapide (déterministe) le contredirait. Reste donc **roadmap explicite**, pas dette.
+- 0 migration · 0 nouveau modèle · 0 nouveau Neter · 0 bypass. Écriture gouvernée (spine). Cap APOGEE 7/7. tsc 0 · lint 0 · cycles 0 · **1160/1160 gouvernance**.
+
 ## v6.27.197 — feat(scoreur): la note de force au rapport d'intake + parité ADVE pour toute marque scorée (2026-07-18)
 
 **Suite du câblage (« cable ») + réponse opérateur « toutes les marques classées ont un ADVE pré-rempli grâce à l'empreinte ? » → non, corrigé.**

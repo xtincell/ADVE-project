@@ -20,6 +20,7 @@ import {
   scoreFromEpreuves,
   type CompiledEpreuve,
   type LeagueKey,
+  type RevealedGateThresholds,
   type RevealedSignals,
   type ScoreVerdict,
   type ScoreurArena,
@@ -212,16 +213,21 @@ export async function scoreBrand(
     (e) => e.arena === "A" && e.opponentRef === ITEM_OPPONENTS.aAudienceFloor && e.result === "WIN",
   );
 
-  // Items franchis (mesurés + preuve publique révélée + items gagnés au registre).
-  const itemsMet = await computeItemsMet(strategyId, {
-    superfanCount: measured.superfanCount,
-    superfanFloor: targets.superfansTarget,
-    favorableOverton: measured.favorableOverton,
-    audienceMeetsFloor,
-  });
-
   // Canon éditable a posteriori (ADR-0150) : override DB par-dessus les défauts code.
+  // Résolu AVANT les items — ses seuils de portes révélées pilotent computeItemsMet.
   const canon = await resolveScoreurCanon();
+
+  // Items franchis (mesurés + preuve publique révélée + items gagnés au registre).
+  const itemsMet = await computeItemsMet(
+    strategyId,
+    {
+      superfanCount: measured.superfanCount,
+      superfanFloor: targets.superfansTarget,
+      favorableOverton: measured.favorableOverton,
+      audienceMeetsFloor,
+    },
+    canon.revealedThresholds,
+  );
 
   // 1er passage → cohérence ; ajoute l'item coherence-seuil si R ≥ seuil.
   const first = scoreFromEpreuves({ subjectRef: strategyId, league, epreuves, anchors, itemsMet, canon });
@@ -244,6 +250,7 @@ export async function scoreBrand(
 async function computeItemsMet(
   strategyId: string,
   signals: { superfanCount: number; superfanFloor: number; favorableOverton: number; audienceMeetsFloor: boolean },
+  revealedThresholds?: RevealedGateThresholds,
 ): Promise<Set<string>> {
   const met = new Set<string>();
   if (signals.superfanCount >= signals.superfanFloor && signals.superfanFloor > 0) met.add("masse-superfan");
@@ -255,7 +262,7 @@ async function computeItemsMet(
   // preuve datée (RDAP), presse, audience, avis. `actif-distinctif` (FORTE+)
   // reste gagné au registre. Cf. `@/domain/scoreur/revealed-gates`.
   const revealed = await readRevealedSignals(strategyId, signals.audienceMeetsFloor);
-  for (const gate of resolveRevealedGates(revealed)) met.add(gate);
+  for (const gate of resolveRevealedGates(revealed, revealedThresholds)) met.add(gate);
 
   // Items gagnés au registre : épreuve WIN dont l'opponent est un ITEM slug=item-<id>.
   const itemIds = new Set(MUST_HAVE_ITEMS.map((i) => i.id));

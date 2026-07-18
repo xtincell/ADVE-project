@@ -85,4 +85,15 @@ describe("resolveRevealedGates — preuve publique → portes de bas de palier",
   it("déterministe (variance = 0)", () => {
     expect(resolveRevealedGates(CHOCOCAM)).toEqual(resolveRevealedGates(CHOCOCAM));
   });
+
+  it("les seuils sont paramétrables (canon éditable ADR-0150)", () => {
+    const s: RevealedSignals = { ...NEANT, siteReachable: true, domainAgeYears: 5, pressCount: 2 };
+    // Défaut (3 ans / 3 presse) : domaine 5≥3 → mythe ; presse 2<3 → pas market-fit.
+    expect(resolveRevealedGates(s).has("mythe-fondateur")).toBe(true);
+    expect(resolveRevealedGates(s).has("market-fit")).toBe(false);
+    // Seuils relevés (domaine ≥10 / presse ≥2) : 5<10 → pas mythe ; 2≥2 → market-fit.
+    const strict = resolveRevealedGates(s, { mytheMinDomainAgeYears: 10, marketFitMinPress: 2 });
+    expect(strict.has("mythe-fondateur")).toBe(false);
+    expect(strict.has("market-fit")).toBe(true);
+  });
 });

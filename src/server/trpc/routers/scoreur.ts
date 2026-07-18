@@ -25,6 +25,7 @@ import {
   getCanonForConsole,
   upsertGaugeOverride,
   upsertItemOverride,
+  upsertRevealedThresholdsOverride,
   removeItemOverride,
   resetCanonOverride,
   updateAnchorTheta,
@@ -113,6 +114,11 @@ export const scoreurRouter = createTRPCRouter({
       }),
       z.object({ op: z.literal("REMOVE_ITEM"), itemId: z.string().min(1) }),
       z.object({ op: z.literal("SET_ANCHOR_THETA"), slug: z.string().min(1), fixedTheta: z.number() }),
+      z.object({
+        op: z.literal("SET_REVEALED_THRESHOLDS"),
+        mytheMinDomainAgeYears: z.number().min(0).max(100),
+        marketFitMinPress: z.number().int().min(1).max(50),
+      }),
     ]),
     caller: "scoreur:editCanon",
   }).mutation(async ({ input, ctx }) => {
@@ -127,6 +133,12 @@ export const scoreurRouter = createTRPCRouter({
         return removeItemOverride({ itemId: input.itemId, userId });
       case "SET_ANCHOR_THETA":
         return updateAnchorTheta({ slug: input.slug, fixedTheta: input.fixedTheta });
+      case "SET_REVEALED_THRESHOLDS":
+        return upsertRevealedThresholdsOverride({
+          mytheMinDomainAgeYears: input.mytheMinDomainAgeYears,
+          marketFitMinPress: input.marketFitMinPress,
+          userId,
+        });
     }
   }),
 
@@ -134,7 +146,7 @@ export const scoreurRouter = createTRPCRouter({
   resetCanon: governedProcedure({
     kind: "SESHAT_RESET_SCOREUR_CANON",
     requireOperator: true,
-    inputSchema: z.object({ kind: z.enum(["GAUGE", "ITEM"]), key: z.string().min(1) }),
+    inputSchema: z.object({ kind: z.enum(["GAUGE", "ITEM", "REVEALED_GATE"]), key: z.string().min(1) }),
     caller: "scoreur:resetCanon",
   }).mutation(async ({ input }) => {
     return resetCanonOverride({ kind: input.kind, key: input.key });
