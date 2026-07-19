@@ -1,3 +1,4 @@
+import { intakeEntryZh } from "./pages/intake-entry";
 import { scorerZh } from "./pages/scorer";
 import { leaderboardZh } from "./pages/leaderboard";
 import { parisZh } from "./pages/paris";
@@ -12,6 +13,7 @@ export const zh = {
   ...parisZh,
   ...leaderboardZh,
   ...scorerZh,
+  ...intakeEntryZh,
   // ── Common ───────────────────────────────────────────────────────────
   "common.cta.start": "开始",
   "common.cta.contact": "联系 UPgraders",

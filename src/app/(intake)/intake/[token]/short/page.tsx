@@ -11,18 +11,19 @@ import { useRouter } from "next/navigation";
 import { trpc } from "@/lib/trpc/client";
 import { FileText, Rocket, ArrowLeft, Sparkles, AlertCircle } from "lucide-react";
 import { AiBadge } from "@/components/shared/ai-badge";
+import { useT } from "@/lib/i18n/use-t";
 
-const PLACEHOLDER_TEXT = `Exemple : Notre entreprise SARL XYZ a ete fondee en 2018 par Marie Ndongo a Douala. Nous vendons des produits cosmetiques bio fabriques localement. Notre positionnement est premium, cible les femmes de 25-45 ans urbaines. Nous avons une communaute Instagram de 15k abonnes tres engages. Notre chiffre d'affaires est de 50M FCFA/an avec un taux de fidelisation de 40%. Nos principaux concurrents sont ABC Cosmetiques et Beaute Plus. Notre vision est de devenir la marque de reference en cosmetique naturelle en Afrique centrale d'ici 2028...`;
-
-const TIPS = [
-  "Votre page 'A propos' ou votre pitch deck",
-  "Un brief marketing ou un document de positionnement",
-  "Une description libre de votre marque, vos produits, vos clients",
-  "Plus le texte est riche et detaille, plus le diagnostic sera precis",
+// i18n keys — resolved via t() at render time
+const TIP_KEYS = [
+  "intake.short.tip1",
+  "intake.short.tip2",
+  "intake.short.tip3",
+  "intake.short.tip4",
 ];
 
 export default function ShortIntakePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
+  const { t } = useT();
   const router = useRouter();
   const [text, setText] = useState("");
   const [error, setError] = useState("");
@@ -50,8 +51,8 @@ export default function ShortIntakePage({ params }: { params: Promise<{ token: s
   if (!intake) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-background px-5">
-        <h1 className="text-2xl font-bold text-destructive">Diagnostic introuvable</h1>
-        <p className="mt-2 text-foreground-muted">Ce lien est invalide ou a expire.</p>
+        <h1 className="text-2xl font-bold text-destructive">{t("intake.notFound.title")}</h1>
+        <p className="mt-2 text-foreground-muted">{t("intake.notFound.body")}</p>
       </main>
     );
   }
@@ -63,7 +64,7 @@ export default function ShortIntakePage({ params }: { params: Promise<{ token: s
 
   const handleSubmit = () => {
     if (text.trim().length < 100) {
-      setError("Veuillez fournir un texte d'au moins 100 caracteres pour un diagnostic pertinent.");
+      setError(t("intake.short.error.minLength"));
       return;
     }
     setError("");
@@ -81,7 +82,7 @@ export default function ShortIntakePage({ params }: { params: Promise<{ token: s
           className="mb-6 flex items-center gap-1.5 text-sm text-foreground-muted transition-colors hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
-          Changer de méthode
+          {t("intake.short.back")}
         </button>
 
         {/* Header */}
@@ -90,21 +91,21 @@ export default function ShortIntakePage({ params }: { params: Promise<{ token: s
             <FileText className="h-7 w-7 text-primary" />
           </div>
           <h1 className="flex items-center justify-center gap-2 text-2xl font-bold text-foreground sm:text-3xl">
-            Analyse de texte <AiBadge />
+            {t("intake.short.title")} <AiBadge />
           </h1>
           <p className="mt-2 text-sm text-foreground-secondary">
-            Collez un texte qui decrit <span className="font-semibold text-primary">{intake.companyName}</span> et l'IA en extraira votre profil de marque ADVE.
+            {t("intake.short.subtitle.before")} <span className="font-semibold text-primary">{intake.companyName}</span> {t("intake.short.subtitle.after")}
           </p>
         </div>
 
         {/* Tips */}
         <div className="mb-6 rounded-xl border border-border bg-background-raised p-4">
-          <p className="mb-2 text-sm font-semibold text-foreground">Quel texte coller ?</p>
+          <p className="mb-2 text-sm font-semibold text-foreground">{t("intake.short.tipsTitle")}</p>
           <ul className="space-y-1.5">
-            {TIPS.map((tip, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-foreground-secondary">
+            {TIP_KEYS.map((tipKey) => (
+              <li key={tipKey} className="flex items-start gap-2 text-sm text-foreground-secondary">
                 <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-                {tip}
+                {t(tipKey)}
               </li>
             ))}
           </ul>
@@ -113,19 +114,21 @@ export default function ShortIntakePage({ params }: { params: Promise<{ token: s
         {/* Text area */}
         <div className="flex-1">
           <label className="mb-2 block text-sm font-medium text-foreground">
-            Decrivez votre marque
+            {t("intake.short.label")}
           </label>
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
             rows={12}
             className="w-full rounded-xl border border-border bg-background-raised px-4 py-3 text-base text-foreground outline-none transition-colors placeholder:text-foreground-muted focus:border-primary focus:ring-1 focus:ring-primary"
-            placeholder={PLACEHOLDER_TEXT}
+            placeholder={t("intake.short.placeholder")}
           />
           <div className="mt-2 flex items-center justify-between text-xs text-foreground-muted">
-            <span>{wordCount} mots</span>
+            <span>{t("intake.short.words").replace("{count}", String(wordCount))}</span>
             <span className={text.length < 100 ? "text-destructive" : "text-success"}>
-              {text.length < 100 ? `${100 - text.length} caracteres minimum restants` : "Longueur suffisante"}
+              {text.length < 100
+                ? t("intake.short.charsRemaining").replace("{count}", String(100 - text.length))
+                : t("intake.short.lengthOk")}
             </span>
           </div>
         </div>
@@ -147,10 +150,10 @@ export default function ShortIntakePage({ params }: { params: Promise<{ token: s
             {processShortMutation.isPending ? (
               <span className="flex items-center justify-center gap-2">
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-                Analyse en cours... (30-60 sec)
+                {t("intake.short.analyzing")}
               </span>
             ) : (
-              "Analyser et generer le score"
+              t("intake.short.submit")
             )}
           </button>
         </div>

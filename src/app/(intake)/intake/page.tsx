@@ -31,34 +31,35 @@ import {
   ArrowLeft, HelpCircle, ChevronRight,
 } from "lucide-react";
 import { AiBadge } from "@/components/shared/ai-badge";
+import { useT } from "@/lib/i18n/use-t";
 
 type Step = "contact" | "method";
 type IntakeMethod = "GUIDED" | "IMPORT";
 
 const METHOD_OPTIONS: Array<{
   id: IntakeMethod;
-  title: string;
-  subtitle: string;
-  duration: string;
-  description: string;
+  titleKey: string;
+  subtitleKey: string;
+  durationKey: string;
+  descriptionKey: string;
   icon: typeof ClipboardList;
   recommended?: boolean;
 }> = [
   {
     id: "GUIDED",
-    title: "Questionnaire",
-    subtitle: "Méthode guidée",
-    duration: "~10 min",
-    description: "Répondez a des questions sur les 4 piliers ADVE (Authenticité, Distinction, Valeur, Engagement). Activez l'IA pour des questions personnalisées.",
+    titleKey: "intake.method.guided.title",
+    subtitleKey: "intake.method.guided.subtitle",
+    durationKey: "intake.method.guided.duration",
+    descriptionKey: "intake.method.guided.description",
     icon: ClipboardList,
     recommended: true,
   },
   {
     id: "IMPORT",
-    title: "Import intelligent",
-    subtitle: "Méthode rapide",
-    duration: "~3-5 min",
-    description: "Fournissez un texte, des documents (PDF, Word) et/ou l'URL de votre site. L'IA analyse vos sources et extrait les données ADVE.",
+    titleKey: "intake.method.import.title",
+    subtitleKey: "intake.method.import.subtitle",
+    durationKey: "intake.method.import.duration",
+    descriptionKey: "intake.method.import.description",
     icon: FileText,
   },
 ];
@@ -72,6 +73,7 @@ export default function IntakeLanding() {
 }
 
 function IntakeLandingContent() {
+  const { t } = useT();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [step, setStep] = useState<Step>("contact");
@@ -161,13 +163,13 @@ function IntakeLandingContent() {
       }
     },
     onError: (err) => {
-      // Translate common Zod/tRPC errors to French
+      // Translate common Zod/tRPC errors to localized copy
       const msg = err.message;
       if (msg.includes("email") || msg.includes("pattern")) {
-        setError("Adresse email invalide. Vérifiez et réessayez.");
+        setError(t("intake.contact.error.invalidEmail"));
         setStep("contact");
       } else if (msg.includes("String must contain")) {
-        setError("Veuillez remplir tous les champs obligatoires.");
+        setError(t("intake.contact.error.requiredFields"));
         setStep("contact");
       } else {
         setError(msg);
@@ -186,17 +188,17 @@ function IntakeLandingContent() {
 
     // Client-side validation before hitting the server
     if (!form.contactName.trim()) {
-      setError("Le nom est requis.");
+      setError(t("intake.contact.error.nameRequired"));
       setStep("contact");
       return;
     }
     if (!form.contactEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contactEmail)) {
-      setError("Veuillez entrer une adresse email valide.");
+      setError(t("intake.contact.error.emailInvalid"));
       setStep("contact");
       return;
     }
     if (!form.companyName.trim()) {
-      setError("Le nom de la marque est requis.");
+      setError(t("intake.contact.error.companyRequired"));
       setStep("contact");
       return;
     }
@@ -228,41 +230,40 @@ function IntakeLandingContent() {
       <div className="flex flex-1 flex-col items-center justify-center px-5 py-12 sm:px-8">
         {/* Logo — official La Fusée mark */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/brand/logos/lafusee-logo.png" alt="La Fusée" className="mb-8 h-12 w-auto" />
+        <img src="/brand/logos/lafusee-logo.png" alt={t("intake.brand.alt")} className="mb-8 h-12 w-auto" />
 
         {/* Headline */}
         <h1 className="max-w-lg text-center text-3xl font-bold leading-tight text-foreground sm:text-4xl">
-          Mesurez la force de votre marque en{" "}
-          <span className="text-gradient-star">15 minutes</span>
+          {t("intake.hero.title.before")}{" "}
+          <span className="text-gradient-star">{t("intake.hero.title.highlight")}</span>
         </h1>
 
         <p className="mt-4 max-w-md text-center text-base leading-relaxed text-foreground-secondary sm:text-lg">
-          Le protocole ADVE analyse 4 dimensions fondamentales et vous donne votre socle de
-          marque sur 100 — le premier pas vers le score complet sur 200, mesuré sur épreuves.
+          {t("intake.hero.subtitle")}
         </p>
 
         {/* Trust badges */}
         <div className="mt-6 flex flex-wrap justify-center gap-4 text-xs text-foreground-muted">
           <span className="flex items-center gap-1.5">
             <Shield className="h-3.5 w-3.5 text-success" />
-            Gratuit
+            {t("intake.badge.free")}
           </span>
           <span className="flex items-center gap-1.5">
             <Shield className="h-3.5 w-3.5 text-success" />
-            Confidentiel
+            {t("intake.badge.confidential")}
           </span>
           <span className="flex items-center gap-1.5">
             <Clock className="h-3.5 w-3.5 text-info" />
-            15 min
+            {t("intake.badge.duration")}
           </span>
           <span className="flex items-center gap-1.5">
             <BarChart3 className="h-3.5 w-3.5 text-primary" />
-            Actionnable
+            {t("intake.badge.actionable")}
           </span>
           {completedCount && completedCount > 5 && (
             <span className="flex items-center gap-1.5">
               <Users className="h-3.5 w-3.5 text-accent" />
-              {completedCount}+ diagnostics
+              {t("intake.badge.diagnostics").replace("{count}", String(completedCount))}
             </span>
           )}
         </div>
@@ -272,12 +273,12 @@ function IntakeLandingContent() {
           <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${step === "contact" ? "bg-primary text-primary-foreground" : "bg-primary-subtle text-primary"}`}>
             1
           </span>
-          <span className={step === "contact" ? "font-medium text-foreground" : "text-foreground-muted"}>Vos infos</span>
+          <span className={step === "contact" ? "font-medium text-foreground" : "text-foreground-muted"}>{t("intake.steps.contact")}</span>
           <ChevronRight className="h-3.5 w-3.5" />
           <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${step === "method" ? "bg-primary text-primary-foreground" : "bg-background-overlay text-foreground-muted"}`}>
             2
           </span>
-          <span className={step === "method" ? "font-medium text-foreground" : "text-foreground-muted"}>Méthode</span>
+          <span className={step === "method" ? "font-medium text-foreground" : "text-foreground-muted"}>{t("intake.steps.method")}</span>
         </div>
 
         {/* ──────────── STEP 1: Contact info ──────────── */}
@@ -288,7 +289,7 @@ function IntakeLandingContent() {
           >
             <div>
               <label htmlFor="contactName" className="mb-1.5 block text-sm font-medium text-foreground">
-                Votre nom *
+                {t("intake.contact.name.label")} *
               </label>
               <input
                 id="contactName"
@@ -297,13 +298,13 @@ function IntakeLandingContent() {
                 value={form.contactName}
                 onChange={(e) => setForm({ ...form, contactName: e.target.value })}
                 className={inputClass}
-                placeholder="Ex: Marie Ndongo"
+                placeholder={t("intake.contact.name.placeholder")}
               />
             </div>
 
             <div>
               <label htmlFor="contactEmail" className="mb-1.5 block text-sm font-medium text-foreground">
-                Email *
+                {t("intake.contact.email.label")} *
               </label>
               <input
                 id="contactEmail"
@@ -312,13 +313,13 @@ function IntakeLandingContent() {
                 value={form.contactEmail}
                 onChange={(e) => setForm({ ...form, contactEmail: e.target.value })}
                 className={inputClass}
-                placeholder="marie@monentreprise.com"
+                placeholder={t("intake.contact.email.placeholder")}
               />
             </div>
 
             <div>
               <label htmlFor="companyName" className="mb-1.5 block text-sm font-medium text-foreground">
-                Nom de la marque / entreprise *
+                {t("intake.contact.company.label")} *
               </label>
               <input
                 id="companyName"
@@ -327,7 +328,7 @@ function IntakeLandingContent() {
                 value={form.companyName}
                 onChange={(e) => setForm({ ...form, companyName: e.target.value })}
                 className={inputClass}
-                placeholder="Ex: MonEntreprise SARL"
+                placeholder={t("intake.contact.company.placeholder")}
               />
             </div>
 
@@ -336,7 +337,7 @@ function IntakeLandingContent() {
                 validation — rien d'automatique). */}
             <div>
               <label htmlFor="referralCode" className="mb-1.5 block text-sm font-medium text-foreground">
-                Recommandé par (code de parrainage) — optionnel
+                {t("intake.contact.referral.label")}
               </label>
               <input
                 id="referralCode"
@@ -344,16 +345,16 @@ function IntakeLandingContent() {
                 value={form.referralCode}
                 onChange={(e) => setForm({ ...form, referralCode: e.target.value.toUpperCase() })}
                 className={inputClass}
-                placeholder="LF-ABC234"
+                placeholder={t("intake.contact.referral.placeholder")}
               />
               <p className="mt-1 text-xs text-foreground-muted">
-                Avec un code valide : −20 % sur votre premier cycle, et votre parrain gagne un mois offert.
+                {t("intake.contact.referral.hint")}
               </p>
             </div>
 
             <div>
               <label htmlFor="websiteUrl" className="mb-1.5 block text-sm font-medium text-foreground-secondary">
-                Site web <span className="text-foreground-muted">(recommandé — on analyse votre empreinte publique)</span>
+                {t("intake.contact.website.label")} <span className="text-foreground-muted">{t("intake.contact.website.hint")}</span>
               </label>
               <input
                 id="websiteUrl"
@@ -361,13 +362,13 @@ function IntakeLandingContent() {
                 value={form.websiteUrl}
                 onChange={(e) => setForm({ ...form, websiteUrl: e.target.value })}
                 className={inputClass}
-                placeholder="https://www.monentreprise.com"
+                placeholder={t("intake.contact.website.placeholder")}
               />
             </div>
 
             <div>
               <label htmlFor="socialLinksRaw" className="mb-1.5 block text-sm font-medium text-foreground-secondary">
-                Réseaux sociaux <span className="text-foreground-muted">(un lien par ligne — Instagram, Facebook, LinkedIn, TikTok…)</span>
+                {t("intake.contact.social.label")} <span className="text-foreground-muted">{t("intake.contact.social.hint")}</span>
               </label>
               <textarea
                 id="socialLinksRaw"
@@ -375,18 +376,17 @@ function IntakeLandingContent() {
                 value={form.socialLinksRaw}
                 onChange={(e) => setForm({ ...form, socialLinksRaw: e.target.value })}
                 className={inputClass}
-                placeholder={"https://www.instagram.com/monentreprise\nhttps://www.facebook.com/monentreprise"}
+                placeholder={t("intake.contact.social.placeholder")}
               />
               <p className="mt-1 text-xs text-foreground-muted">
-                Avant la rédaction du rapport, La Fusée collecte votre empreinte web publique (site,
-                profils sociaux, articles) pour ancrer le diagnostic Engagement dans le réel.
+                {t("intake.contact.social.note")}
               </p>
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label htmlFor="sector" className="mb-1.5 block text-sm font-medium text-foreground-secondary">
-                  Secteur
+                  {t("intake.contact.sector.label")}
                 </label>
                 <select
                   id="sector"
@@ -394,7 +394,7 @@ function IntakeLandingContent() {
                   onChange={(e) => setForm({ ...form, sector: e.target.value })}
                   className={selectClass}
                 >
-                  <option value="">Optionnel</option>
+                  <option value="">{t("intake.contact.optional")}</option>
                   {INTAKE_SECTORS.map((s) => (
                     <option key={s.value} value={s.value}>{s.label}</option>
                   ))}
@@ -403,7 +403,7 @@ function IntakeLandingContent() {
 
               <div>
                 <label htmlFor="country" className="mb-1.5 block text-sm font-medium text-foreground-secondary">
-                  Pays
+                  {t("intake.contact.country.label")}
                 </label>
                 <select
                   id="country"
@@ -411,7 +411,7 @@ function IntakeLandingContent() {
                   onChange={(e) => setForm({ ...form, country: e.target.value })}
                   className={selectClass}
                 >
-                  <option value="">Optionnel</option>
+                  <option value="">{t("intake.contact.optional")}</option>
                   {INTAKE_COUNTRIES.map((c) => (
                     <option key={c.value} value={c.value}>{c.label}</option>
                   ))}
@@ -421,7 +421,7 @@ function IntakeLandingContent() {
 
             <div>
               <label htmlFor="businessModel" className="mb-1.5 block text-sm font-medium text-foreground-secondary">
-                Modele d'affaires
+                {t("intake.contact.businessModel.label")}
               </label>
               <select
                 id="businessModel"
@@ -429,7 +429,7 @@ function IntakeLandingContent() {
                 onChange={(e) => setForm({ ...form, businessModel: e.target.value })}
                 className={selectClass}
               >
-                <option value="">Optionnel</option>
+                <option value="">{t("intake.contact.optional")}</option>
                 {Object.entries(BUSINESS_MODELS).map(([key, model]) => (
                   <option key={key} value={key}>{model.label}</option>
                 ))}
@@ -438,7 +438,7 @@ function IntakeLandingContent() {
 
             <div>
               <label htmlFor="positioning" className="mb-1.5 block text-sm font-medium text-foreground-secondary">
-                Positionnement prix
+                {t("intake.contact.positioning.label")}
               </label>
               <select
                 id="positioning"
@@ -446,7 +446,7 @@ function IntakeLandingContent() {
                 onChange={(e) => setForm({ ...form, positioning: e.target.value })}
                 className={selectClass}
               >
-                <option value="">Optionnel</option>
+                <option value="">{t("intake.contact.optional")}</option>
                 {Object.entries(POSITIONING_ARCHETYPES).map(([key, arch]) => (
                   <option key={key} value={key}>{arch.label}</option>
                 ))}
@@ -464,7 +464,7 @@ function IntakeLandingContent() {
                 type="submit"
                 className="w-full rounded-xl bg-primary px-6 py-4 text-base font-semibold text-primary-foreground shadow-lg transition-colors hover:bg-primary-hover sm:py-3 sm:shadow-none"
               >
-                Continuer — choisir la méthode
+                {t("intake.contact.continue")}
               </button>
             </div>
           </form>
@@ -478,11 +478,11 @@ function IntakeLandingContent() {
               className="mb-2 flex items-center gap-1.5 text-sm text-foreground-muted transition-colors hover:text-foreground"
             >
               <ArrowLeft className="h-4 w-4" />
-              Retour aux informations
+              {t("intake.method.back")}
             </button>
 
             <h2 className="text-lg font-bold text-foreground">
-              Comment souhaitez-vous diagnostiquer <span className="text-primary">{form.companyName}</span> ?
+              {t("intake.method.title.before")} <span className="text-primary">{form.companyName}</span>{t("intake.method.title.after")}
             </h2>
 
             <div className="space-y-3">
@@ -502,7 +502,7 @@ function IntakeLandingContent() {
                   >
                     {method.recommended && (
                       <span className="absolute -top-2.5 right-4 rounded-full bg-primary px-2.5 py-0.5 text-2xs font-bold uppercase tracking-wider text-primary-foreground">
-                        Recommande
+                        {t("intake.method.recommended")}
                       </span>
                     )}
                     <div className="flex items-start gap-4">
@@ -516,14 +516,14 @@ function IntakeLandingContent() {
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
                           <p className="flex items-center gap-1.5 font-semibold text-foreground">
-                            {method.title}
+                            {t(method.titleKey)}
                             <AiBadge />
                           </p>
-                          <span className="ml-2 text-xs text-foreground-muted">{method.duration}</span>
+                          <span className="ml-2 text-xs text-foreground-muted">{t(method.durationKey)}</span>
                         </div>
-                        <p className="mt-0.5 text-xs font-medium text-primary">{method.subtitle}</p>
+                        <p className="mt-0.5 text-xs font-medium text-primary">{t(method.subtitleKey)}</p>
                         <p className="mt-1.5 text-sm leading-relaxed text-foreground-secondary">
-                          {method.description}
+                          {t(method.descriptionKey)}
                         </p>
                       </div>
                     </div>
@@ -545,14 +545,14 @@ function IntakeLandingContent() {
                 disabled={startMutation.isPending}
                 className="w-full rounded-xl bg-primary px-6 py-4 text-base font-semibold text-primary-foreground shadow-lg transition-colors hover:bg-primary-hover disabled:opacity-50 sm:py-3 sm:shadow-none"
               >
-                {startMutation.isPending ? "Démarrage..." : "Commencer le diagnostic"}
+                {startMutation.isPending ? t("intake.method.starting") : t("intake.method.start")}
               </button>
             </div>
           </div>
         )}
 
         <p className="mt-6 max-w-xs text-center text-2xs leading-relaxed text-foreground-muted">
-          Vos données sont confidentielles et ne seront jamais partagées sans votre accord explicite.
+          {t("intake.footer.privacy")}
         </p>
       </div>
     </main>

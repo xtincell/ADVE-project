@@ -1,3 +1,4 @@
+import { intakeEntryEn } from "./pages/intake-entry";
 import { scorerEn } from "./pages/scorer";
 import { leaderboardEn } from "./pages/leaderboard";
 import { parisEn } from "./pages/paris";
@@ -11,6 +12,7 @@ export const en = {
   ...parisEn,
   ...leaderboardEn,
   ...scorerEn,
+  ...intakeEntryEn,
   // ── Common ───────────────────────────────────────────────────────────
   "common.cta.start": "Start",
   "common.cta.contact": "Contact UPgraders",
