@@ -1,3 +1,8 @@
+import { intakeEntryZh } from "./pages/intake-entry";
+import { scorerZh } from "./pages/scorer";
+import { leaderboardZh } from "./pages/leaderboard";
+import { intakeResultZh } from "./pages/intake-result";
+import { parisZh } from "./pages/paris";
 /**
  * 中文 (简体) strings — La Fusée.
  *
@@ -6,6 +11,11 @@
  * UPgraders, Mestor, Ptah, Overton…) are kept untranslated by design.
  */
 export const zh = {
+  ...parisZh,
+  ...leaderboardZh,
+  ...scorerZh,
+  ...intakeEntryZh,
+  ...intakeResultZh,
   // ── Common ───────────────────────────────────────────────────────────
   "common.cta.start": "开始",
   "common.cta.contact": "联系 UPgraders",

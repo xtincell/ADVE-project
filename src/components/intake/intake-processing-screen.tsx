@@ -13,6 +13,7 @@ import {
   Award,
   Loader2,
 } from "lucide-react";
+import { useT } from "@/lib/i18n/use-t";
 
 type StageKey = "read" | "id" | "a" | "d" | "v" | "e" | "synth";
 
@@ -25,14 +26,15 @@ interface Stage {
   startsAt: number;
 }
 
+// label / sub = i18n keys — resolved with t() at render time (fragment intake-result.ts).
 const STAGES: Stage[] = [
-  { key: "read",  label: "Lecture du contenu",          sub: "On parcourt vos documents et votre texte.",            icon: FileText,      startsAt: 0  },
-  { key: "id",    label: "Identification de la marque", sub: "Recoupement secteur, positionnement, signaux faibles.", icon: ScanSearch,    startsAt: 5  },
-  { key: "a",     label: "Authenticite",                sub: "Vision, mission, raison d'etre.",                       icon: ShieldCheck,   startsAt: 11 },
-  { key: "d",     label: "Distinction",                 sub: "Ce qui vous rend reconnaissable au premier regard.",    icon: Diamond,       startsAt: 19 },
-  { key: "v",     label: "Valeur",                      sub: "Promesse, livraison, ecart percu.",                     icon: Gem,           startsAt: 28 },
-  { key: "e",     label: "Engagement",                  sub: "Profondeur du lien avec votre audience.",               icon: HeartHandshake, startsAt: 37 },
-  { key: "synth", label: "Synthese du rapport",         sub: "Classement sectoriel et marges de progression.",        icon: Award,         startsAt: 46 },
+  { key: "read",  label: "intakeProcessing.stage.read.label",  sub: "intakeProcessing.stage.read.sub",  icon: FileText,       startsAt: 0  },
+  { key: "id",    label: "intakeProcessing.stage.id.label",    sub: "intakeProcessing.stage.id.sub",    icon: ScanSearch,     startsAt: 5  },
+  { key: "a",     label: "intakeProcessing.stage.a.label",     sub: "intakeProcessing.stage.a.sub",     icon: ShieldCheck,    startsAt: 11 },
+  { key: "d",     label: "intakeProcessing.stage.d.label",     sub: "intakeProcessing.stage.d.sub",     icon: Diamond,        startsAt: 19 },
+  { key: "v",     label: "intakeProcessing.stage.v.label",     sub: "intakeProcessing.stage.v.sub",     icon: Gem,            startsAt: 28 },
+  { key: "e",     label: "intakeProcessing.stage.e.label",     sub: "intakeProcessing.stage.e.sub",     icon: HeartHandshake, startsAt: 37 },
+  { key: "synth", label: "intakeProcessing.stage.synth.label", sub: "intakeProcessing.stage.synth.sub", icon: Award,          startsAt: 46 },
 ];
 
 type FactKind = "verite" | "methode" | "atelier" | "lafusee";
@@ -42,47 +44,48 @@ interface Fact {
   text: string;
 }
 
+// i18n keys — resolved with t() at render time.
 const FACT_LABELS: Record<FactKind, string> = {
-  verite: "Verite sur les marques cultes",
-  methode: "Methode",
-  atelier: "Vu en atelier",
-  lafusee: "Sous le capot de La Fusee",
+  verite: "intakeProcessing.factKind.verite",
+  methode: "intakeProcessing.factKind.methode",
+  atelier: "intakeProcessing.factKind.atelier",
+  lafusee: "intakeProcessing.factKind.lafusee",
 };
 
 const FACTS: Fact[] = [
-  // ── Verites ADVE ────────────────────────────────────────────────
-  { kind: "verite", text: "Une marque culte ne vend pas un produit. Elle propose une appartenance." },
-  { kind: "verite", text: "L'Authenticite est ce qui reste quand on retire le marketing." },
-  { kind: "verite", text: "98 % des marques echouent sur la Distinction, pas sur la qualite du produit." },
-  { kind: "verite", text: "Une promesse forte sans livraison coherente brule la credibilite plus vite que le silence." },
-  { kind: "verite", text: "L'Engagement n'est pas du trafic. C'est de la conviction qui se propage." },
-  { kind: "verite", text: "Les superfans ne sont pas vos clients. Ce sont vos evangelistes spontanes." },
-  { kind: "verite", text: "La fenetre d'Overton bouge quand 3 % du public bascule. Pas 50 %." },
-  { kind: "verite", text: "Une marque devient icone quand elle derange, puis convertit." },
+  // ── Verites ADVE (text = i18n keys) ─────────────────────────────
+  { kind: "verite", text: "intakeProcessing.fact.verite1" },
+  { kind: "verite", text: "intakeProcessing.fact.verite2" },
+  { kind: "verite", text: "intakeProcessing.fact.verite3" },
+  { kind: "verite", text: "intakeProcessing.fact.verite4" },
+  { kind: "verite", text: "intakeProcessing.fact.verite5" },
+  { kind: "verite", text: "intakeProcessing.fact.verite6" },
+  { kind: "verite", text: "intakeProcessing.fact.verite7" },
+  { kind: "verite", text: "intakeProcessing.fact.verite8" },
 
   // ── Methode (Xtincell-flavored) ────────────────────────────────
-  { kind: "methode", text: "Le brief ne sauve pas la strategie. La strategie nourrit le brief." },
-  { kind: "methode", text: "Ce qui se mesure se pilote. Ce qui se ressent se propage." },
-  { kind: "methode", text: "On ne corrige pas un positionnement faible avec un budget media. On le reecrit." },
-  { kind: "methode", text: "Si ta marque ne tient pas debout sur une diapo, elle ne tiendra pas en rayon." },
-  { kind: "methode", text: "L'execution mediocre tue les bonnes idees plus vite que les mauvaises idees." },
-  { kind: "methode", text: "Une categorie sans rituel n'a pas de superfans. Elle a des acheteurs." },
-  { kind: "methode", text: "Si tu copies l'iconique, tu deviens l'ordinaire de l'iconique." },
+  { kind: "methode", text: "intakeProcessing.fact.methode1" },
+  { kind: "methode", text: "intakeProcessing.fact.methode2" },
+  { kind: "methode", text: "intakeProcessing.fact.methode3" },
+  { kind: "methode", text: "intakeProcessing.fact.methode4" },
+  { kind: "methode", text: "intakeProcessing.fact.methode5" },
+  { kind: "methode", text: "intakeProcessing.fact.methode6" },
+  { kind: "methode", text: "intakeProcessing.fact.methode7" },
 
   // ── Vu en atelier (terrain africain) ───────────────────────────
-  { kind: "atelier", text: "La diaspora valide. Le marche local consacre. Les deux ne suivent pas le meme rythme." },
-  { kind: "atelier", text: "Une marque africaine forte ne demande pas la permission de Paris. Elle l'oblige a regarder." },
-  { kind: "atelier", text: "Le bouche-a-oreille reste le canal le plus rentable. Personne n'ose le budgeter." },
-  { kind: "atelier", text: "Faire vrai coute moins cher que faire pro. Et convertit dix fois plus." },
+  { kind: "atelier", text: "intakeProcessing.fact.atelier1" },
+  { kind: "atelier", text: "intakeProcessing.fact.atelier2" },
+  { kind: "atelier", text: "intakeProcessing.fact.atelier3" },
+  { kind: "atelier", text: "intakeProcessing.fact.atelier4" },
 
   // ── Easter eggs Neteru (cosmologie produit) ────────────────────
-  { kind: "lafusee", text: "Notre moteur de gouvernance relit chacune de vos reponses avant de laisser passer le diagnostic." },
-  { kind: "lafusee", text: "Un moteur tient la plume, un autre fond les assets, un troisieme observe en silence." },
-  { kind: "lafusee", text: "Le moteur financier compte le carburant. Sans carburant, pas de mise en orbite." },
-  { kind: "lafusee", text: "Un moteur assemble l'equipage, un autre porte le message a l'audience." },
-  { kind: "lafusee", text: "ADVE est le sol. La strategie est l'orbite. Vous etes ici sur le sol." },
-  { kind: "lafusee", text: "Nous classons votre marque sur 7 paliers : de Latent a Icone. Beaucoup tiennent dans Fragile." },
-  { kind: "lafusee", text: "La methode ADVE cascade A vers D vers V vers E. Sauter une etape coute cher en aval." },
+  { kind: "lafusee", text: "intakeProcessing.fact.lafusee1" },
+  { kind: "lafusee", text: "intakeProcessing.fact.lafusee2" },
+  { kind: "lafusee", text: "intakeProcessing.fact.lafusee3" },
+  { kind: "lafusee", text: "intakeProcessing.fact.lafusee4" },
+  { kind: "lafusee", text: "intakeProcessing.fact.lafusee5" },
+  { kind: "lafusee", text: "intakeProcessing.fact.lafusee6" },
+  { kind: "lafusee", text: "intakeProcessing.fact.lafusee7" },
 ];
 
 function shuffle<T>(arr: T[]): T[] {
@@ -103,6 +106,7 @@ interface Props {
 }
 
 export function IntakeProcessingScreen({ companyName, isPending, errorMessage }: Props) {
+  const { t } = useT();
   const [elapsed, setElapsed] = useState(0);
   const [factIndex, setFactIndex] = useState(0);
   const startRef = useRef<number>(Date.now());
@@ -150,10 +154,10 @@ export function IntakeProcessingScreen({ companyName, isPending, errorMessage }:
             <Sparkles className="h-8 w-8 animate-pulse text-primary" />
           </div>
           <h1 className="text-2xl font-bold text-foreground sm:text-3xl">
-            Analyse de <span className="text-primary">{companyName}</span> en cours
+            {t("intakeProcessing.titleBefore")} <span className="text-primary">{companyName}</span> {t("intakeProcessing.titleAfter")}
           </h1>
           <p className="mt-2 text-sm text-foreground-secondary sm:text-base">
-            On extrait vos 4 piliers ADVE. Cela prend generalement 30 a 60 secondes.
+            {t("intakeProcessing.sub")}
           </p>
         </div>
 
@@ -161,7 +165,7 @@ export function IntakeProcessingScreen({ companyName, isPending, errorMessage }:
         <div className="mt-8">
           <div className="mb-2 flex items-center justify-between text-xs">
             <span className="font-medium text-foreground-secondary">
-              {!isPending ? "Termine" : STAGES[activeIdx]?.label}
+              {!isPending ? t("intakeProcessing.done") : t(STAGES[activeIdx]?.label ?? "intakeProcessing.done")}
             </span>
             <span className="font-mono text-foreground-muted tabular-nums">
               {Math.round(progress)} %
@@ -220,9 +224,9 @@ export function IntakeProcessingScreen({ companyName, isPending, errorMessage }:
                       status === "pending" ? "text-foreground-muted" : "text-foreground"
                     }`}
                   >
-                    {stage.label}
+                    {t(stage.label)}
                   </p>
-                  <p className="mt-0.5 text-xs text-foreground-secondary sm:text-sm">{stage.sub}</p>
+                  <p className="mt-0.5 text-xs text-foreground-secondary sm:text-sm">{t(stage.sub)}</p>
                 </div>
               </li>
             );
@@ -236,10 +240,10 @@ export function IntakeProcessingScreen({ companyName, isPending, errorMessage }:
             className="rounded-xl border border-border bg-background-raised px-5 py-4 animate-rise-in"
           >
             <p className="text-[11px] font-semibold uppercase tracking-wider text-primary">
-              {FACT_LABELS[factsRef.current[factIndex]?.kind ?? "verite"]}
+              {t(FACT_LABELS[factsRef.current[factIndex]?.kind ?? "verite"])}
             </p>
             <p className="mt-1 text-sm text-foreground sm:text-base">
-              {factsRef.current[factIndex]?.text}
+              {(() => { const key = factsRef.current[factIndex]?.text; return key ? t(key) : null; })()}
             </p>
           </div>
         </div>

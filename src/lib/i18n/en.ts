@@ -1,3 +1,8 @@
+import { intakeEntryEn } from "./pages/intake-entry";
+import { scorerEn } from "./pages/scorer";
+import { leaderboardEn } from "./pages/leaderboard";
+import { intakeResultEn } from "./pages/intake-result";
+import { parisEn } from "./pages/paris";
 /**
  * EN strings — La Fusée.
  *
@@ -5,6 +10,11 @@
  * fall back to FR via `t()`.
  */
 export const en = {
+  ...parisEn,
+  ...leaderboardEn,
+  ...scorerEn,
+  ...intakeEntryEn,
+  ...intakeResultEn,
   // ── Common ───────────────────────────────────────────────────────────
   "common.cta.start": "Start",
   "common.cta.contact": "Contact UPgraders",

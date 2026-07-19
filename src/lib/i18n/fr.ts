@@ -1,3 +1,8 @@
+import { intakeEntryFr } from "./pages/intake-entry";
+import { scorerFr } from "./pages/scorer";
+import { leaderboardFr } from "./pages/leaderboard";
+import { intakeResultFr } from "./pages/intake-result";
+import { parisFr } from "./pages/paris";
 /**
  * Canonical FR strings — La Fusée.
  *
@@ -5,6 +10,11 @@
  * components for now (most of the app is FR-only by design).
  */
 export const fr = {
+  ...parisFr,
+  ...leaderboardFr,
+  ...scorerFr,
+  ...intakeEntryFr,
+  ...intakeResultFr,
   // ── Common ───────────────────────────────────────────────────────────
   "common.cta.start": "Commencer",
   "common.cta.contact": "Contacter UPgraders",

@@ -12,6 +12,7 @@ import { trpc } from "@/lib/trpc/client";
 import { Upload, FileUp, File, X, ArrowLeft, AlertCircle, CheckCircle } from "lucide-react";
 import { AiBadge } from "@/components/shared/ai-badge";
 import { IntakeProcessingScreen } from "@/components/intake/intake-processing-screen";
+import { useT } from "@/lib/i18n/use-t";
 
 const ACCEPTED_TYPES = [
   "application/pdf",
@@ -32,6 +33,7 @@ interface SelectedFile {
 }
 
 export default function IngestIntakePage({ params }: { params: Promise<{ token: string }> }) {
+  const { t } = useT();
   const { token } = use(params);
   const router = useRouter();
   const utils = trpc.useUtils();
@@ -121,7 +123,7 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
   // cette passe de rendu (TDZ au clic).
   const handleSubmit = async () => {
     if (files.length === 0 && !rawText.trim() && !websiteUrl.trim()) {
-      setError("Fournissez au moins un element : texte, document, ou URL.");
+      setError(t("intakeIngest.err.empty"));
       return;
     }
     setError("");
@@ -152,7 +154,7 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
   if (!intake) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-background px-5">
-        <h1 className="text-2xl font-bold text-destructive">Diagnostic introuvable</h1>
+        <h1 className="text-2xl font-bold text-destructive">{t("intakeIngest.notFound")}</h1>
       </main>
     );
   }
@@ -169,15 +171,15 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
   if (fallbackReason) {
     const isTimeout = fallbackReason === "timeout";
     const title = isTimeout
-      ? "L'analyse a pris plus de temps que prévu"
+      ? t("intakeIngest.fallback.timeoutTitle")
       : fallbackReason === "llm_unavailable"
-        ? "Analyse automatique momentanément indisponible"
-        : "Vos sources n'ont pas suffi pour un diagnostic complet";
+        ? t("intakeIngest.fallback.llmTitle")
+        : t("intakeIngest.fallback.extractionTitle");
     const body = isTimeout
-      ? "Le serveur a mis trop longtemps à répondre. Rien n'est perdu : vos sources sont conservées. Réessayez, ou répondez aux questions pour un résultat immédiat."
+      ? t("intakeIngest.fallback.timeoutBody")
       : fallbackReason === "llm_unavailable"
-        ? "C'est temporaire et sans rapport avec votre marque. Rien n'est perdu : vos sources sont conservées."
-        : "Rien n'est perdu : vos sources sont conservées. Ajoutez du contenu, ou répondez aux questions pour obtenir votre score.";
+        ? t("intakeIngest.fallback.llmBody")
+        : t("intakeIngest.fallback.extractionBody");
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-background px-5">
         <div className="w-full max-w-md rounded-2xl border border-warning/30 bg-warning/10 p-6">
@@ -198,19 +200,19 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
               }}
               className="w-full rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary-hover"
             >
-              Réessayer l&apos;analyse
+              {t("intakeIngest.fallback.retry")}
             </button>
             <button
               onClick={() => router.push(`/intake/${token}?fallback=${fallbackReason}`)}
               className="w-full rounded-xl border border-border bg-background-raised px-6 py-3 text-sm font-medium text-foreground transition-colors hover:border-foreground-muted/30"
             >
-              Passer au questionnaire pré-rempli
+              {t("intakeIngest.fallback.toForm")}
             </button>
             <button
               onClick={() => setFallbackReason(null)}
               className="w-full px-6 py-2 text-xs font-medium text-foreground-muted transition-colors hover:text-foreground"
             >
-              Revenir à mes sources
+              {t("intakeIngest.fallback.back")}
             </button>
           </div>
         </div>
@@ -241,15 +243,15 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
 
     for (const file of Array.from(fileList)) {
       if (!ACCEPTED_TYPES.includes(file.type) && !file.name.match(/\.(pdf|docx?|pptx?|txt)$/i)) {
-        setError(`Format non supporte : ${file.name}. Formats acceptes : PDF, Word, PowerPoint, TXT.`);
+        setError(`${t("intakeIngest.err.format")} ${file.name}. ${t("intakeIngest.err.formatAccepted")}`);
         continue;
       }
       if (file.size > MAX_FILE_SIZE) {
-        setError(`Fichier trop volumineux : ${file.name} (max 10 MB).`);
+        setError(`${t("intakeIngest.err.tooBig")} ${file.name} ${t("intakeIngest.err.tooBigMax")}`);
         continue;
       }
       if (files.length + newFiles.length >= 5) {
-        setError("Maximum 5 fichiers.");
+        setError(t("intakeIngest.err.maxFiles"));
         break;
       }
       newFiles.push({
@@ -277,7 +279,7 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
           className="mb-6 flex items-center gap-1.5 text-sm text-foreground-muted transition-colors hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
-          Passer au questionnaire guide
+          {t("intakeIngest.back")}
         </button>
 
         {/* Header */}
@@ -286,17 +288,17 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
             <Upload className="h-7 w-7 text-primary" />
           </div>
           <h1 className="flex items-center justify-center gap-2 text-2xl font-bold text-foreground sm:text-3xl">
-            Decrivez votre marque <AiBadge />
+            {t("intakeIngest.title")} <AiBadge />
           </h1>
           <p className="mt-2 text-sm text-foreground-secondary">
-            Partagez ce que vous avez sur <span className="font-semibold text-primary">{intake.companyName}</span> — texte, documents, ou lien web. L'IA extraira les données ADVE.
+            {t("intakeIngest.subBefore")} <span className="font-semibold text-primary">{intake.companyName}</span> {t("intakeIngest.subAfter")}
           </p>
         </div>
 
         {/* Text input */}
         <div className="mb-6">
           <label htmlFor="rawText" className="mb-2 block text-sm font-medium text-foreground">
-            Decrivez votre marque
+            {t("intakeIngest.title")}
           </label>
           <textarea
             id="rawText"
@@ -304,17 +306,17 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
             onChange={(e) => setRawText(e.target.value)}
             rows={6}
             className="w-full rounded-xl border border-border bg-background-raised px-4 py-3 text-base text-foreground outline-none transition-colors placeholder:text-foreground-muted focus:border-primary focus:ring-1 focus:ring-primary resize-y"
-            placeholder="Collez ici votre pitch, page 'A propos', brief marketing, description de votre marque... Tout texte qui decrit qui vous etes, ce qui vous differencie, et comment vous engagez vos clients."
+            placeholder={t("intakeIngest.text.placeholder")}
           />
           <p className="mt-1 text-xs text-foreground-muted">
-            {rawText.length > 0 ? `${rawText.length} caracteres` : "Optionnel — mais recommande pour un meilleur diagnostic"}
+            {rawText.length > 0 ? `${rawText.length} ${t("intakeIngest.text.chars")}` : t("intakeIngest.text.optional")}
           </p>
         </div>
 
         {/* Website URL */}
         <div className="mb-6">
           <label htmlFor="websiteUrl" className="mb-2 block text-sm font-medium text-foreground">
-            Site web (optionnel)
+            {t("intakeIngest.website.label")}
           </label>
           <input
             id="websiteUrl"
@@ -322,13 +324,13 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
             value={websiteUrl}
             onChange={(e) => setWebsiteUrl(e.target.value)}
             className="w-full rounded-xl border border-border bg-background-raised px-4 py-3 text-base text-foreground outline-none transition-colors placeholder:text-foreground-muted focus:border-primary focus:ring-1 focus:ring-primary"
-            placeholder="https://www.votremarque.com"
+            placeholder={t("intakeIngest.website.placeholder")}
           />
         </div>
 
         {/* Documents — Drop zone */}
         <label className="mb-2 block text-sm font-medium text-foreground">
-          Documents (optionnel)
+          {t("intakeIngest.docs.label")}
         </label>
         <div
           onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
@@ -343,10 +345,10 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
         >
           <FileUp className={`h-10 w-10 ${dragActive ? "text-primary" : "text-foreground-muted"}`} />
           <p className="mt-3 text-sm font-medium text-foreground">
-            Glissez vos fichiers ici ou <span className="text-primary">parcourir</span>
+            {t("intakeIngest.drop.before")} <span className="text-primary">{t("intakeIngest.drop.browse")}</span>
           </p>
           <p className="mt-1 text-xs text-foreground-muted">
-            PDF, Word, PowerPoint, TXT — Max 10 MB par fichier — 5 fichiers max
+            {t("intakeIngest.drop.hint")}
           </p>
           <input
             ref={fileInputRef}
@@ -383,12 +385,12 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
 
         {/* Info */}
         <div className="mt-6 rounded-xl border border-border bg-background-raised p-4">
-          <p className="mb-2 text-sm font-semibold text-foreground">Documents recommandes</p>
+          <p className="mb-2 text-sm font-semibold text-foreground">{t("intakeIngest.recommended.title")}</p>
           <ul className="space-y-1 text-sm text-foreground-secondary">
-            <li className="flex items-center gap-2"><CheckCircle className="h-3.5 w-3.5 text-success" /> Business plan ou pitch deck</li>
-            <li className="flex items-center gap-2"><CheckCircle className="h-3.5 w-3.5 text-success" /> Brand book ou charte graphique</li>
-            <li className="flex items-center gap-2"><CheckCircle className="h-3.5 w-3.5 text-success" /> Plan marketing ou brief creatif</li>
-            <li className="flex items-center gap-2"><CheckCircle className="h-3.5 w-3.5 text-success" /> Description de l'entreprise (page A propos)</li>
+            <li className="flex items-center gap-2"><CheckCircle className="h-3.5 w-3.5 text-success" /> {t("intakeIngest.recommended.item1")}</li>
+            <li className="flex items-center gap-2"><CheckCircle className="h-3.5 w-3.5 text-success" /> {t("intakeIngest.recommended.item2")}</li>
+            <li className="flex items-center gap-2"><CheckCircle className="h-3.5 w-3.5 text-success" /> {t("intakeIngest.recommended.item3")}</li>
+            <li className="flex items-center gap-2"><CheckCircle className="h-3.5 w-3.5 text-success" /> {t("intakeIngest.recommended.item4")}</li>
           </ul>
         </div>
 
@@ -409,10 +411,10 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
             {processIngestMutation.isPending ? (
               <span className="flex items-center justify-center gap-2">
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-                Analyse en cours...
+                {t("intakeIngest.submit.pending")}
               </span>
             ) : (
-              "Lancer le diagnostic ADVE"
+              t("intakeIngest.submit.cta")
             )}
           </button>
         </div>

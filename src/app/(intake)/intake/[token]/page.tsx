@@ -30,22 +30,24 @@ import { HelpCircle, Save, X, ArrowLeft } from "lucide-react";
 import { AiBadge } from "@/components/shared/ai-badge";
 import { IntakeProcessingScreen } from "@/components/intake/intake-processing-screen";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { useT } from "@/lib/i18n/use-t";
 
 // Phase order: business context first, then 4 ADVE pillars
 // RTIS (R, T, I, S) are reserved for the paid version post-conversion
 const PHASE_ORDER = ["biz", "a", "d", "v", "e"] as const;
 type Phase = (typeof PHASE_ORDER)[number];
 
-const PHASE_HEADLINE: Record<string, string> = {
-  biz: "Parlons de votre business",
-  a: "Qui etes-vous vraiment ?",
-  d: "Pourquoi vous et pas un autre ?",
-  v: "Que promettez-vous au monde ?",
-  e: "Comment creer la devotion ?",
+// i18n keys — resolved via t() at render time
+const PHASE_HEADLINE_KEY: Record<string, string> = {
+  biz: "intake.run.headline.biz",
+  a: "intake.run.headline.a",
+  d: "intake.run.headline.d",
+  v: "intake.run.headline.v",
+  e: "intake.run.headline.e",
 };
 
 const PHASE_LABEL: Record<string, string> = {
-  biz: "Contexte Business",
+  // biz label is resolved via t("intake.run.phase.biz") at render time
   a: PILLAR_NAMES.a,
   d: PILLAR_NAMES.d,
   v: PILLAR_NAMES.v,
@@ -113,6 +115,7 @@ function buildPrefill(intake: Record<string, unknown>): Record<string, unknown> 
 
 export default function IntakeQuestionnaire({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
+  const { t } = useT();
   const router = useRouter();
   const [currentPhaseIndex, setCurrentPhaseIndex] = useState(0);
   const [showQuitConfirm, setShowQuitConfirm] = useState(false);
@@ -179,7 +182,7 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
             }
           }
           setRecovering(false);
-          setError("L'analyse a pris trop de temps. Vos réponses sont enregistrées — rechargez la page pour réessayer.");
+          setError(t("intake.run.error.timeout"));
         })();
         return;
       }
@@ -349,7 +352,7 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
         utils.quickIntake.getQuestions.invalidate({ token, pillar: nextPhase });
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur de sauvegarde");
+      setError(err instanceof Error ? err.message : t("intake.run.error.save"));
     }
   };
 
@@ -373,7 +376,7 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
       clearDraftFromLocal(token);
       setShowSaveConfirm(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur de sauvegarde");
+      setError(err instanceof Error ? err.message : t("intake.run.error.save"));
     }
   };
 
@@ -393,7 +396,7 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
       }
       completeMutation.mutate({ token });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur");
+      setError(err instanceof Error ? err.message : t("intake.run.error.generic"));
     }
   };
 
@@ -449,7 +452,7 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
   if (completeMutation.isPending || recovering) {
     return (
       <IntakeProcessingScreen
-        companyName={intake?.companyName ?? "votre marque"}
+        companyName={intake?.companyName ?? t("intake.run.yourBrand")}
         isPending={true}
       />
     );
@@ -465,9 +468,9 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-success/10">
             <Save className="h-7 w-7 text-success" />
           </div>
-          <h2 className="text-xl font-bold text-foreground">Progrès sauvegardé !</h2>
+          <h2 className="text-xl font-bold text-foreground">{t("intake.run.saved.title")}</h2>
           <p className="mt-3 text-sm leading-relaxed text-foreground-secondary">
-            Vous pouvez reprendre à tout moment en utilisant ce lien :
+            {t("intake.run.saved.body")}
           </p>
           <div className="mt-4 rounded-lg bg-background-overlay px-4 py-3">
             <code className="break-all text-xs text-primary">
@@ -486,23 +489,23 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
             }}
             className="mt-3 text-xs font-medium text-primary underline-offset-2 hover:underline"
           >
-            Copier le lien
+            {t("intake.run.saved.copy")}
           </button>
           <p className="mt-2 text-xs text-foreground-muted">
-            Gardez ce lien précieusement — c&apos;est votre seul accès de reprise.
+            {t("intake.run.saved.keep")}
           </p>
           <div className="mt-6 flex gap-3">
             <button
               onClick={() => setShowSaveConfirm(false)}
               className="flex-1 rounded-xl border border-border px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-background-overlay"
             >
-              Reprendre
+              {t("intake.run.saved.resume")}
             </button>
             <button
               onClick={() => router.push("/intake")}
               className="flex-1 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover"
             >
-              Quitter
+              {t("intake.run.saved.quit")}
             </button>
           </div>
         </div>
@@ -522,8 +525,8 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
   if (!intake) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-background px-5">
-        <h1 className="text-2xl font-bold text-destructive">Diagnostic introuvable</h1>
-        <p className="mt-2 text-foreground-muted">Ce lien est invalide ou a expire.</p>
+        <h1 className="text-2xl font-bold text-destructive">{t("intake.notFound.title")}</h1>
+        <p className="mt-2 text-foreground-muted">{t("intake.notFound.body")}</p>
       </main>
     );
   }
@@ -538,8 +541,10 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
           <div className="flex items-center gap-3 text-xs text-foreground-muted">
             <span>
               {currentPhase === "biz"
-                ? "Contexte"
-                : `Pilier ${currentPhaseIndex}/${totalPhases - 1}`}
+                ? t("intake.run.phase.bizShort")
+                : t("intake.run.progress.pillar")
+                    .replace("{current}", String(currentPhaseIndex))
+                    .replace("{total}", String(totalPhases - 1))}
             </span>
             <span>{Math.round(overallProgress)}%</span>
           </div>
@@ -551,14 +556,14 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
               className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground-muted transition-colors hover:bg-background-overlay hover:text-foreground disabled:opacity-50"
             >
               <Save className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Sauvegarder et quitter</span>
-              <span className="sm:hidden">Sauver</span>
+              <span className="hidden sm:inline">{t("intake.run.save")}</span>
+              <span className="sm:hidden">{t("intake.run.saveShort")}</span>
             </button>
             {/* Cancel & Quit button — ConfirmDialog DS (0 dialogue natif dans le funnel) */}
             <button
               onClick={() => setShowQuitConfirm(true)}
               className="flex h-7 w-7 items-center justify-center rounded-lg border border-error/40 text-error transition-colors hover:bg-error/10"
-              title="Annuler et quitter"
+              title={t("intake.run.cancelQuit")}
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -569,10 +574,10 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
                 clearDraftFromLocal(token);
                 router.push("/intake");
               }}
-              title="Quitter sans sauvegarder ?"
-              message="Vos réponses non enregistrées seront perdues."
-              confirmLabel="Quitter"
-              cancelLabel="Continuer le diagnostic"
+              title={t("intake.run.quitConfirm.title")}
+              message={t("intake.run.quitConfirm.message")}
+              confirmLabel={t("intake.run.quitConfirm.confirm")}
+              cancelLabel={t("intake.run.quitConfirm.cancel")}
             />
           </div>
         </div>
@@ -604,7 +609,13 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
                       ? `color-mix(in oklch, ${PILLAR_COLORS[p] ?? "var(--color-primary)"} 50%, transparent)`
                       : "var(--color-border-subtle)",
                 }}
-                aria-label={`${p === "biz" ? "Contexte Business" : `Pilier ${p.toUpperCase()} — ${PILLAR_NAMES[p as PillarKey]}`}`}
+                aria-label={
+                  p === "biz"
+                    ? t("intake.run.phase.biz")
+                    : t("intake.run.aria.pillar")
+                        .replace("{letter}", p.toUpperCase())
+                        .replace("{name}", PILLAR_NAMES[p as PillarKey])
+                }
               />
             );
           })}
@@ -628,18 +639,17 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
               <div>
                 <p className="text-sm font-semibold text-warning">
                   {fallbackNotice === "llm_unavailable"
-                    ? "L'analyse automatique est momentanément indisponible."
-                    : "L'import n'a pas extrait assez d'informations pour un diagnostic fiable."}
+                    ? t("intake.run.fallback.llm")
+                    : t("intake.run.fallback.extraction")}
                 </p>
                 <p className="mt-1 text-xs leading-relaxed text-foreground-secondary">
-                  Rien n&apos;est perdu : vos informations sont conservées et les champs déjà
-                  connus sont pré-remplis. Répondez aux questions pour obtenir votre score.
+                  {t("intake.run.fallback.body")}
                 </p>
               </div>
               <button
                 onClick={() => setFallbackNotice(null)}
                 className="shrink-0 rounded-lg p-1 text-foreground-muted transition-colors hover:bg-background-overlay hover:text-foreground"
-                aria-label="Fermer"
+                aria-label={t("intake.run.close")}
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -657,15 +667,15 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
             }}
           >
             {currentPhase === "biz"
-              ? "Contexte Business"
+              ? t("intake.run.phase.biz")
               : `${currentPhase.toUpperCase()} — ${PHASE_LABEL[currentPhase]}`}
           </span>
           <h1 className="mt-3 flex items-center justify-center gap-2 text-xl font-bold text-foreground sm:text-2xl">
-            {PHASE_HEADLINE[currentPhase]} <AiBadge />
+            {t(PHASE_HEADLINE_KEY[currentPhase] ?? "")} <AiBadge />
           </h1>
           {currentPhase === "biz" && (
             <p className="mt-2 text-sm text-foreground-muted">
-              Ces informations nous aident a calibrer les questions suivantes selon votre secteur et modele.
+              {t("intake.run.bizHelp")}
             </p>
           )}
         </div>
@@ -675,7 +685,7 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
           <div className="flex flex-1 flex-col items-center justify-center gap-3">
             <div className="h-6 w-6 animate-spin rounded-full border-3 border-primary border-t-transparent" />
             <p className="text-sm text-foreground-muted">
-              Preparation des questions adaptees...
+              {t("intake.run.loadingQuestions")}
             </p>
           </div>
         ) : (
@@ -693,7 +703,7 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
               ))}
               {questions.some((q) => q.id.includes("_ai_")) && (
                 <p className="text-xs text-foreground-muted italic">
-                  * Questions complementaires generees par l'IA pour approfondir votre profil.
+                  {t("intake.run.aiNote")}
                 </p>
               )}
             </div>
@@ -703,8 +713,10 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
               {currentQ && (
                 <>
                   <p className="mb-2 text-2xs font-medium uppercase tracking-wider text-foreground-muted">
-                    Question {currentQuestionIndex + 1}/{questions.length}
-                    {currentQ.id.includes("_ai_") && " · IA"}
+                    {t("intake.run.questionCounter")
+                      .replace("{current}", String(currentQuestionIndex + 1))
+                      .replace("{total}", String(questions.length))}
+                    {currentQ.id.includes("_ai_") && t("intake.run.aiTag")}
                   </p>
                   <QuestionField
                     question={currentQ}
@@ -736,7 +748,7 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
               disabled={currentPhaseIndex === 0}
               className="rounded-xl border border-border px-6 py-3 text-sm font-medium text-foreground transition-colors hover:bg-background-overlay disabled:opacity-30"
             >
-              Precedent
+              {t("intake.run.prev")}
             </button>
             <button
               onClick={handleDesktopNext}
@@ -744,10 +756,10 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
               className="rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover disabled:opacity-50"
             >
               {completeMutation.isPending
-                ? "Calcul du score..."
+                ? t("intake.run.computing")
                 : currentPhaseIndex < PHASE_ORDER.length - 1
-                  ? "Suivant"
-                  : "Voir mon score"}
+                  ? t("intake.run.next")
+                  : t("intake.run.seeScore")}
             </button>
           </div>
 
@@ -758,13 +770,17 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
               disabled={currentPhaseIndex === 0 && currentQuestionIndex === 0}
               className="rounded-xl border border-border px-5 py-3 text-sm font-medium text-foreground disabled:opacity-30"
             >
-              Prec.
+              {t("intake.run.prevShort")}
             </button>
             {/* P2-1 (audit UX) — compteur basé sur les PHASES : l'ancien calcul
                 utilisait questions.length (variable par phase adaptative) et
                 affichait un total qui sautait/mentait. */}
             <span className="text-xs text-foreground-muted" role="status" aria-live="polite">
-              Étape {currentPhaseIndex + 1}/{PHASE_ORDER.length} · Q{currentQuestionIndex + 1}/{questions.length || 1}
+              {t("intake.run.stepCounter")
+                .replace("{phase}", String(currentPhaseIndex + 1))
+                .replace("{phases}", String(PHASE_ORDER.length))
+                .replace("{q}", String(currentQuestionIndex + 1))
+                .replace("{qs}", String(questions.length || 1))}
             </span>
             <button
               onClick={handleMobileNext}
@@ -776,11 +792,11 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
               className="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
             >
               {completeMutation.isPending
-                ? "Calcul..."
+                ? t("intake.run.computingShort")
                 : currentPhaseIndex === PHASE_ORDER.length - 1 &&
                     currentQuestionIndex === questions.length - 1
-                  ? "Score"
-                  : "Suivant"}
+                  ? t("intake.run.scoreShort")
+                  : t("intake.run.next")}
             </button>
           </div>
         </div>
@@ -794,6 +810,7 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
 // ─────────────────────────────────────────────────────────────────────────────
 
 function Tooltip({ text }: { text: string }) {
+  const { t } = useT();
   const [show, setShow] = useState(false);
 
   return (
@@ -804,7 +821,7 @@ function Tooltip({ text }: { text: string }) {
         onMouseLeave={() => setShow(false)}
         onClick={() => setShow(!show)}
         className="ml-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full text-foreground-muted transition-colors hover:bg-primary-subtle hover:text-primary"
-        aria-label="Aide"
+        aria-label={t("intake.run.help")}
       >
         <HelpCircle className="h-3.5 w-3.5" />
       </button>
@@ -835,6 +852,7 @@ interface QuestionFieldProps {
 }
 
 function QuestionField({ question, value, onChange, phaseColor, mobile }: QuestionFieldProps) {
+  const { t } = useT();
   const inputClass =
     "w-full rounded-xl border border-border bg-background-raised px-4 py-3 text-base text-foreground outline-none transition-colors placeholder:text-foreground-muted focus:border-primary focus:ring-1 focus:ring-primary";
 
@@ -858,7 +876,7 @@ function QuestionField({ question, value, onChange, phaseColor, mobile }: Questi
             onChange={(e) => onChange(e.target.value)}
             rows={mobile ? 5 : 3}
             className={`${inputClass} ${mobile ? "flex-1" : ""}`}
-            placeholder="Votre réponse…"
+            placeholder={t("intake.run.answerPlaceholder")}
             style={{ minHeight: mobile ? "120px" : undefined }}
           />
         </div>
@@ -910,7 +928,7 @@ function QuestionField({ question, value, onChange, phaseColor, mobile }: Questi
           <label className={`mb-2 block ${mobile ? "text-base" : "text-sm"} font-medium text-foreground`}>
             {labelContent}
           </label>
-          <p className="mb-3 text-xs text-foreground-muted">Plusieurs choix possibles</p>
+          <p className="mb-3 text-xs text-foreground-muted">{t("intake.run.multiHint")}</p>
           <div className="space-y-2">
             {question.options?.map((opt) => {
               const [optKey, optLabel] = opt.includes("::")

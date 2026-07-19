@@ -28,7 +28,7 @@
 
 ## Campagne UX 2026-07-19 — résidu tracé (mandat intégral)
 
-- **i18n du funnel** : les pages funnel (`/scorer`, `/intake`, `/leaderboard`, `/landingintake`) sont FR-en-dur sous une nav trilingue (le `LocaleToggle` change la nav, pas la page). Chantier d'externalisation vers `src/lib/i18n` (≥ EN) — trop large pour la vague 3 (centaines de chaînes), à faire en session dédiée. Les accents cassés relevés (`Methode rapide`, `donnees ADVE`…) se corrigent AVEC l'externalisation.
+- ~~**i18n du funnel**~~ → **CLOS 2026-07-19** (v6.27.220, règle « ne postpone rien ») : ~580 chaînes externalisées en fragments par page (`src/lib/i18n/pages/*`), fr/en/zh complets, parité typée + test. Accents cassés corrigés avec (v6.27.219).
 - **Spec a11y funnel** : `tests/a11y/scorer.a11y.spec.ts` écrite + `@axe-core/playwright` installé — premier run navigateur + baselines + câblage CI restent à faire (même posture que overton-radar.a11y.spec.ts).
 - **`inviteCollaborator` founder-facing** (P1-4 audit onboarding) : `grantCollaborator` reste requireOperator + compte existant + zéro email d'invitation — la version founder (email inconnu → user stub + invitation) attend le chantier passeport fan B2.
 - **locale OG dynamique** : `openGraph.locale` reste `fr_FR` figé au root layout (metadata statique Next) — à résoudre avec l'i18n funnel.

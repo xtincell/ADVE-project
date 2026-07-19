@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { AiBadge } from "@/components/shared/ai-badge";
 import { IntakeProcessingScreen } from "@/components/intake/intake-processing-screen";
+import { useT } from "@/lib/i18n/use-t";
 
 const ACCEPTED_EXTENSIONS = ".pdf,.doc,.docx,.ppt,.pptx,.txt";
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -27,6 +28,7 @@ interface SelectedFile {
 }
 
 export default function IngestPlusIntakePage({ params }: { params: Promise<{ token: string }> }) {
+  const { t } = useT();
   const { token } = use(params);
   const router = useRouter();
   const utils = trpc.useUtils();
@@ -83,9 +85,7 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
       }
     }
     setRecovering(false);
-    setError(
-      "L'analyse a pris plus de temps que prévu. Vos sources sont conservées — réessayez, ou utilisez le questionnaire pré-rempli.",
-    );
+    setError(t("intakeIngest.plus.timeoutError"));
   }
 
   if (isLoading) {
@@ -99,7 +99,7 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
   if (!intake) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-background px-5">
-        <h1 className="text-2xl font-bold text-destructive">Diagnostic introuvable</h1>
+        <h1 className="text-2xl font-bold text-destructive">{t("intakeIngest.notFound")}</h1>
       </main>
     );
   }
@@ -130,7 +130,7 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
     const newFiles: SelectedFile[] = [];
     for (const file of Array.from(fileList)) {
       if (file.size > MAX_FILE_SIZE) {
-        setError(`Fichier trop volumineux : ${file.name}`);
+        setError(`${t("intakeIngest.err.tooBig")} ${file.name}`);
         continue;
       }
       if (files.length + newFiles.length >= 5) break;
@@ -145,7 +145,7 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
 
   const handleSubmit = async () => {
     if (!hasContent) {
-      setError("Ajoutez au moins un fichier ou un lien vers votre site web.");
+      setError(t("intakeIngest.plus.errEmpty"));
       return;
     }
     setError("");
@@ -182,7 +182,7 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
           className="mb-6 flex items-center gap-1.5 text-sm text-foreground-muted transition-colors hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
-          Changer de méthode
+          {t("intakeIngest.plus.back")}
         </button>
 
         {/* Header */}
@@ -191,10 +191,10 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
             <Globe className="h-7 w-7 text-primary" />
           </div>
           <h1 className="flex items-center justify-center gap-2 text-2xl font-bold text-foreground sm:text-3xl">
-            Import + Scan en ligne <AiBadge />
+            {t("intakeIngest.plus.title")} <AiBadge />
           </h1>
           <p className="mt-2 text-sm text-foreground-secondary">
-            Documents + site web + reseaux sociaux pour un diagnostic complet de <span className="font-semibold text-primary">{intake.companyName}</span>.
+            {t("intakeIngest.plus.subBefore")} <span className="font-semibold text-primary">{intake.companyName}</span>{t("intakeIngest.plus.subAfter")}
           </p>
         </div>
 
@@ -202,21 +202,21 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
         <div className="mb-6">
           <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
             <Link2 className="h-4 w-4 text-primary" />
-            Site web
+            {t("intakeIngest.plus.website")}
           </h3>
           <input
             type="url"
             value={websiteUrl}
             onChange={(e) => setWebsiteUrl(e.target.value)}
             className={inputClass}
-            placeholder="https://www.votre-marque.com"
+            placeholder={t("intakeIngest.plus.websitePlaceholder")}
           />
         </div>
 
         {/* Section 2: Social URLs */}
         <div className="mb-6 space-y-3">
           <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-            Reseaux sociaux <span className="text-xs font-normal text-foreground-muted">(optionnel)</span>
+            {t("intakeIngest.plus.social")} <span className="text-xs font-normal text-foreground-muted">{t("intakeIngest.optionalSuffix")}</span>
           </h3>
           <div className="flex items-center gap-3">
             <Camera className="h-4 w-4 shrink-0 text-foreground-muted" />
@@ -225,7 +225,7 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
               value={socialUrls.instagram}
               onChange={(e) => setSocialUrls({ ...socialUrls, instagram: e.target.value })}
               className={inputClass}
-              placeholder="https://instagram.com/votre-marque"
+              placeholder={t("intakeIngest.plus.instagramPlaceholder")}
             />
           </div>
           <div className="flex items-center gap-3">
@@ -235,7 +235,7 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
               value={socialUrls.facebook}
               onChange={(e) => setSocialUrls({ ...socialUrls, facebook: e.target.value })}
               className={inputClass}
-              placeholder="https://facebook.com/votre-marque"
+              placeholder={t("intakeIngest.plus.facebookPlaceholder")}
             />
           </div>
           <div className="flex items-center gap-3">
@@ -245,7 +245,7 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
               value={socialUrls.linkedin}
               onChange={(e) => setSocialUrls({ ...socialUrls, linkedin: e.target.value })}
               className={inputClass}
-              placeholder="https://linkedin.com/company/votre-marque"
+              placeholder={t("intakeIngest.plus.linkedinPlaceholder")}
             />
           </div>
         </div>
@@ -254,7 +254,7 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
         <div className="mb-6">
           <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
             <Upload className="h-4 w-4 text-primary" />
-            Documents <span className="text-xs font-normal text-foreground-muted">(optionnel)</span>
+            {t("intakeIngest.plus.docs")} <span className="text-xs font-normal text-foreground-muted">{t("intakeIngest.optionalSuffix")}</span>
           </h3>
           <div
             onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
@@ -267,7 +267,7 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
           >
             <FileUp className="h-8 w-8 text-foreground-muted" />
             <p className="mt-2 text-sm text-foreground-muted">
-              Glissez vos fichiers ou <span className="text-primary">parcourir</span>
+              {t("intakeIngest.plus.dropBefore")} <span className="text-primary">{t("intakeIngest.drop.browse")}</span>
             </p>
             <input
               ref={fileInputRef}
@@ -314,10 +314,10 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
             {processIngestPlusMutation.isPending ? (
               <span className="flex items-center justify-center gap-2">
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-                Scan et analyse en cours... (2-3 min)
+                {t("intakeIngest.plus.pending")}
               </span>
             ) : (
-              "Lancer le diagnostic complet"
+              t("intakeIngest.plus.cta")
             )}
           </button>
         </div>
