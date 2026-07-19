@@ -24,6 +24,8 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Skeleton } from "@/components/primitives/skeleton";
 import { PricingModal } from "@/components/cockpit/pricing-modal";
 import { SuperfanCandidatesPanel } from "./superfan-candidates-panel";
+import { FanPassportsPanel } from "./fan-passports-panel";
+import { ReferralCodeCard } from "./referral-code-card";
 
 const DEVOTION_RUNGS: ReadonlyArray<{ key: keyof CommunityDistribution; label: string }> = [
   { key: "spectateur", label: "Spectateur" },
@@ -226,6 +228,14 @@ function CommunityPanelInner({ strategyId }: { strategyId: string }) {
         {/* Fans détectés dans les interactions réelles — s'auto-masque hors
             opérateur et sans candidat (revue humaine, jamais de naissance auto). */}
         <SuperfanCandidatesPanel strategyId={strategyId} />
+
+        {/* Passeports fan (ADR-0158) — délivrance opérateur, s'auto-masque
+            hors opérateur et sans profil suivi. */}
+        <FanPassportsPanel strategyId={strategyId} />
+
+        {/* Mon code de parrainage (ADR-0157, carte différée livrée avec le
+            passeport fan) — visible founder. */}
+        <ReferralCodeCard />
 
         {/* Superfan base summary */}
         <SectionCard title="Base superfans" icon={TrendingUp}>

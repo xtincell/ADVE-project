@@ -42,25 +42,40 @@ export const referralRouter = createTRPCRouter({
         orderBy: { createdAt: "desc" },
         take: 200,
       });
-      const referrerIds = [...new Set(rows.map((r) => r.referrerUserId))];
-      const referrers = await db.user.findMany({
-        where: { id: { in: referrerIds } },
-        select: { id: true, name: true, email: true, referralCode: true },
-      });
+      const referrerIds = [...new Set(rows.map((r) => r.referrerUserId).filter(Boolean))] as string[];
+      // ADR-0158 — le parrain peut être un fan porteur de passeport.
+      const fanReferrerIds = [...new Set(rows.map((r) => r.referrerProfileId).filter(Boolean))] as string[];
+      const [referrers, fanReferrers] = await Promise.all([
+        db.user.findMany({
+          where: { id: { in: referrerIds } },
+          select: { id: true, name: true, email: true, referralCode: true },
+        }),
+        db.superfanProfile.findMany({
+          where: { id: { in: fanReferrerIds } },
+          select: { id: true, handle: true, platform: true, fanCode: true, strategy: { select: { name: true } } },
+        }),
+      ]);
       const byId = new Map(referrers.map((u) => [u.id, u]));
-      return rows.map((r) => ({
-        id: r.id,
-        status: r.status,
-        codeUsed: r.codeUsed,
-        refereeEmail: r.refereeEmail,
-        refereeName: r.refereeName,
-        companyName: r.companyName,
-        note: r.note,
-        createdAt: r.createdAt.toISOString(),
-        convertedAt: r.convertedAt?.toISOString() ?? null,
-        rewardedAt: r.rewardedAt?.toISOString() ?? null,
-        referrer: byId.get(r.referrerUserId) ?? null,
-      }));
+      const byFanId = new Map(fanReferrers.map((f) => [f.id, f]));
+      return rows.map((r) => {
+        const fan = r.referrerProfileId ? byFanId.get(r.referrerProfileId) : null;
+        return {
+          id: r.id,
+          status: r.status,
+          codeUsed: r.codeUsed,
+          refereeEmail: r.refereeEmail,
+          refereeName: r.refereeName,
+          companyName: r.companyName,
+          note: r.note,
+          createdAt: r.createdAt.toISOString(),
+          convertedAt: r.convertedAt?.toISOString() ?? null,
+          rewardedAt: r.rewardedAt?.toISOString() ?? null,
+          referrer: r.referrerUserId ? (byId.get(r.referrerUserId) ?? null) : null,
+          fanReferrer: fan
+            ? { handle: fan.handle, platform: fan.platform, fanCode: fan.fanCode, brandName: fan.strategy.name }
+            : null,
+        };
+      });
     }),
 
   /** L'opérateur a APPLIQUÉ les récompenses (à la main) → marque REWARDED. */

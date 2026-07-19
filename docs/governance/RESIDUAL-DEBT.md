@@ -5,6 +5,13 @@
 > `nefer-postmerge` (9.5.bis) le relisent et referment le refermable ; le diagnostic de fond le purge.
 > Les fixes en passant, eux, sont journalisés dans [`PATCHED-SYMPTOMS.md`](PATCHED-SYMPTOMS.md).
 
+## Passeport fan v1 (ADR-0158, 2026-07-19) — déférés tracés
+
+- **Rituels fan-à-fan actifs** : v1 affiche le « cercle » (reconnaissance passive). Les rituels partagés (défis, initiations croisées) attendent les premiers passeports réellement distribués — déclencheur : ≥ 20 passeports actifs sur une marque (cas-phare SPAWT en tête).
+- **Webhook WhatsApp entrant** (pull automatisé — le fan écrit, le système répond) : contract-gated Meta WhatsApp Business — le rail réel actuel reste `wa.me` sortant fan→marque + traitement humain. Déclencheur : contrat WABA signé.
+- **Récompense mission fan payée momo bout-en-bout** : kind gouverné dédié (non-LEGACY) + rattachement PersonIdentity du payout — à bâtir à la PREMIÈRE mission fan réelle (jamais avant : pas d'anti-abus digne de ce nom sans volume réel, doctrine ADR-0157).
+- **`inviteCollaborator` founder-facing** (repris de Campagne UX ci-dessous) : reste ouvert — le passeport v1 couvre le fan sans compte, pas l'invitation de collaborateur par email inconnu.
+
 ## Campagne UX 2026-07-19 — résidu tracé (mandat intégral)
 
 - **i18n du funnel** : les pages funnel (`/scorer`, `/intake`, `/leaderboard`, `/landingintake`) sont FR-en-dur sous une nav trilingue (le `LocaleToggle` change la nav, pas la page). Chantier d'externalisation vers `src/lib/i18n` (≥ EN) — trop large pour la vague 3 (centaines de chaînes), à faire en session dédiée. Les accents cassés relevés (`Methode rapide`, `donnees ADVE`…) se corrigent AVEC l'externalisation.

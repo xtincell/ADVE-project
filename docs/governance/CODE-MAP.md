@@ -110,7 +110,7 @@ Ces correspondances évitent la réinvention :
 - **FrameworkExecution** (12 fields)
 - **FrameworkResult** (13 fields)
 - **CultIndexSnapshot** (13 fields)
-- **SuperfanProfile** (14 fields)
+- **SuperfanProfile** (17 fields)
 - **PersonIdentity** (12 fields) — ADR-0147 — Identity Graph. Une personne canonique, scopée à la marque (JAMAIS cross-marque). Réconcilie N handles / N ré
 - **PersonIdentifier** (12 fields) — ADR-0147 — arête d'identité (un email / téléphone / handle rattaché à une personne). PII : `matchHash` = HMAC-SHA256 dét
 - **OvertonPosition** (14 fields) — ADR-0148 — Overton Graph. Une POSITION tenue dans un débat sectoriel, avec sa zone d'acceptabilité PAR POLITY (secteur ×
@@ -255,7 +255,7 @@ Ces correspondances évitent la réinvention :
 - **ActionCostEstimate** (25 fields) — Snapshot d'estimation persisté — audit trail Thot (frère de CostDecision).
 - **Post** (15 fields) — Article de blog public du site UPgraders (« Notes de cabinet »). CMS natif éditorial — distinct des livrables client (`B
 - **PredictionRecord** (18 fields) — ADR-0156 — Registre des prédictions. Chaque prédiction (forecast déterministe de série OU thèse de signal faible) est en
-- **Referral** (11 fields) — ADR-0157 — Parrainage manual-first. Un filleul déclare « recommandé par » à l'intake (code) → PENDING. À l'activation d'
+- **Referral** (12 fields) — ADR-0157 — Parrainage manual-first. Un filleul déclare « recommandé par » à l'intake (code) → PENDING. À l'activation d'
 
 ### Enums
 
@@ -583,7 +583,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 275 (par deck)
+## Pages — 276 (par deck)
 
 ### Agency (12)
 
@@ -833,7 +833,7 @@ Ces correspondances évitent la réinvention :
 - `/launchpad/portfolio-bulk-import`
 - `/score`
 
-### Public (42)
+### Public (43)
 
 - `/(marketing)`
 - `/agence`
@@ -862,6 +862,7 @@ Ces correspondances évitent la réinvention :
 - `/login`
 - `/mentions-legales`
 - `/methode`
+- `/passeport/[token]`
 - `/portals`
 - `/pricing`
 - `/privacy`
@@ -1048,7 +1049,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 583 (par governor)
+## Intent kinds — 584 (par governor)
 
 ### MESTOR (79)
 
@@ -1150,10 +1151,11 @@ Ces correspondances évitent la réinvention :
 - `PROPOSE_SEQUENCE_PROMOTION_FROM_CAMPAIGN` → campaign-tracker (sync) — Cluster E — Si campagne réussie (tierDelta>0 + cultIndexDelta>0 + altitudeRegres…
 - `TOGGLE_QUALITY_GATE_MODE` → auto-promotion (sync) — Bascule le mode quality-gate entre SOFT (warning-only) et HARD (block-on-fail). …
 
-### SESHAT (35)
+### SESHAT (36)
 
 - `SESHAT_UPSERT_POLITY_AXIS` → sector-intelligence (sync) — Upsert d'un axe culturel sectoriel PAR POLITY (SectorPolityAxis — échelle de mar…
 - `SESHAT_REGISTER_SUPERFAN` → superfan (sync) — Enregistre/actualise UN SuperfanProfile (upsert par (strategyId, platform, handl…
+- `SESHAT_ISSUE_FAN_PASSPORT` → superfan (sync) — Passeport fan (ADR-0158) : délivre le passeport d'un profil DÉJÀ suivi — token p…
 - `SESHAT_UPSERT_PERSON_IDENTIFIER` → identity-graph (sync) — Identity Graph (ADR-0147) : ajoute/résout un identifiant (email/tel/handle/exter…
 - `SESHAT_MERGE_PERSONS` → identity-graph (sync) — Identity Graph (ADR-0147) : fusionne deux personnes (auto si preuve VERIFIED, re…
 - `SESHAT_SPLIT_PERSON` → identity-graph (sync) — Identity Graph (ADR-0147) : dé-fusionne une personne (ré-active le tombstone). T…

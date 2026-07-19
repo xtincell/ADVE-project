@@ -2901,6 +2901,13 @@ model SuperfanProfile {
   /// platform·handle inchangée), la personne est l'unification par-dessus.
   personId String?
 
+  /// ADR-0158 Passeport fan — accès public sans compte par token non-devinable
+  /// (délivrance = geste opérateur gouverné, single-writer fan-passport).
+  passportToken    String?   @unique
+  passportIssuedAt DateTime?
+  /// ADR-0158 — code de parrainage fan (FAN-XXXXXX, dictable à l'oral/WhatsApp).
+  fanCode          String?   @unique
+
   strategy Strategy      @relation(fields: [strategyId], references: [id])
   person   PersonIdentity? @relation(fields: [personId], references: [id])
 
@@ -6752,7 +6759,11 @@ model PredictionRecord {
 model Referral {
   id             String    @id @default(cuid())
   codeUsed       String
-  referrerUserId String
+  /// Nullable depuis ADR-0158 : le parrain est un compte (LF-…) OU un fan
+  /// porteur de passeport (FAN-…, `referrerProfileId`). Au moins l'un des deux.
+  referrerUserId String?
+  /// ADR-0158 — parrain fan (SuperfanProfile porteur du code FAN-XXXXXX).
+  referrerProfileId String?
   refereeEmail   String
   refereeName    String?
   companyName    String?
@@ -6764,5 +6775,6 @@ model Referral {
 
   @@index([status, createdAt])
   @@index([referrerUserId])
+  @@index([referrerProfileId])
   @@index([refereeEmail])
 }

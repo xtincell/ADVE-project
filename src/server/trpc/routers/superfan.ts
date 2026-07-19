@@ -13,6 +13,7 @@ import {
   registerSuperfanProfile,
   listSuperfanCandidates,
 } from "@/server/services/seshat/superfan-ingest";
+import { issueFanPassport, listPassportStates } from "@/server/services/seshat/fan-passport";
 import { db } from "@/lib/db";
 import { assertStrategyRead } from "./_strategy-read-guard";
 /* lafusee:governed-active */
@@ -88,6 +89,27 @@ export const superfanRouter = createTRPCRouter({
     .query(async ({ input }) => {
       return listSuperfanCandidates(input.strategyId, input.windowDays);
     }),
+
+  /**
+   * ADR-0158 — délivre le passeport fan d'un profil DÉJÀ suivi (token public
+   * non-devinable + code parrain FAN-XXXXXX). Geste opérateur gouverné,
+   * idempotent. Le passeport ne crée aucun statut : il rend visible la
+   * dévotion déjà mesurée.
+   */
+  issuePassport: governedProcedure({
+    kind: "SESHAT_ISSUE_FAN_PASSPORT",
+    requireOperator: true,
+    inputSchema: z.object({ profileId: z.string() }),
+    caller: "superfan:issuePassport",
+  }).mutation(async ({ input }) => {
+    const issued = await issueFanPassport(input.profileId);
+    return { ...issued, url: `/passeport/${issued.token}` };
+  }),
+
+  /** ADR-0158 — état des passeports par marque (panneau opérateur). */
+  passports: operatorProcedure
+    .input(z.object({ strategyId: z.string() }))
+    .query(async ({ input }) => listPassportStates(input.strategyId)),
   /** Count active superfans for a strategy (THE northstar) */
   count: protectedProcedure
     .input(z.object({ strategyId: z.string() }))
