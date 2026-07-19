@@ -61,6 +61,7 @@ import { scoreurRouter } from "./routers/scoreur";
 import { footprintRouter } from "./routers/footprint";
 import { feedbackRouter } from "./routers/feedback";
 import { referralRouter } from "./routers/referral";
+import { predictionRouter } from "./routers/prediction";
 import { implementationGeneratorRouter } from "./routers/implementation-generator";
 import { clientRouter } from "./routers/client";
 import { authRouter } from "./routers/auth";
@@ -199,6 +200,7 @@ export const appRouter = createTRPCRouter({
   footprint: footprintRouter,
   feedback: feedbackRouter,
   referral: referralRouter,
+  prediction: predictionRouter,
   implementationGenerator: implementationGeneratorRouter,
   brandClient: clientRouter,
   auth: authRouter,

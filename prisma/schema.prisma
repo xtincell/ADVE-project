@@ -6745,10 +6745,20 @@ model PredictionRecord {
   resolvedAt         DateTime?
   /// Score de Brier (confidence vs issue binaire) une fois résolu.
   brier              Float?
+
+  /// ADR-0159 Pari Public — pari VISIBLE sur le registre public /paris
+  /// (déclaration gouvernée + attestation règle Domino's dans l'émission).
+  isPublic       Boolean @default(false)
+  /// ADR-0159 — note de résolution (obligatoire en résolution manuelle).
+  resolutionNote String?
+  /// ADR-0159 — opérateur déclarant (audit ; jamais projeté publiquement).
+  declaredBy     String?
+
   createdAt          DateTime  @default(now())
 
   @@index([strategyId, kind, status])
   @@index([kind, subjectType, horizonAt])
+  @@index([isPublic, status])
 }
 
 /// ADR-0157 — Parrainage manual-first. Un filleul déclare « recommandé par »

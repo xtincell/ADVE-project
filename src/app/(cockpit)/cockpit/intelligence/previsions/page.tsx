@@ -11,9 +11,18 @@
  */
 
 import { TrendingUp } from "lucide-react";
+import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { Card, CardBody, CardHeader, CardTitle, CardDescription, Text, Badge } from "@/components/primitives";
+import { PledgePanel } from "@/components/cockpit/intelligence/pledge-panel";
+
+const PLEDGE_STATUS_LABELS: Record<string, string> = {
+  OPEN: "en cours",
+  HIT: "tenu",
+  MISS: "raté",
+  UNRESOLVED: "non tranché",
+};
 
 const fmt = (n: number) => new Intl.NumberFormat("fr-FR").format(Math.round(n));
 const dateFr = (iso: string) =>
@@ -138,6 +147,37 @@ export default function PrevisionsPage() {
           </CardBody>
         </Card>
       ) : null}
+
+      {r && r.declared.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Paris &amp; engagements</CardTitle>
+            <CardDescription>
+              Les paris déclarés de votre marque — chacun a son échéance et sera résolu contre le
+              réel. Les paris publics figurent sur{" "}
+              <Link href="/paris" className="text-accent underline underline-offset-2">le registre des paris</Link>.
+            </CardDescription>
+          </CardHeader>
+          <CardBody>
+            <div className="flex flex-col gap-2">
+              {r.declared.map((d) => (
+                <div key={d.id} className="flex flex-col gap-0.5 rounded-md border px-3 py-2" style={{ borderColor: "var(--color-border)" }}>
+                  <Text className="text-sm">{d.statement}</Text>
+                  <Text className="text-xs text-[color:var(--color-foreground-muted)]">
+                    {PLEDGE_STATUS_LABELS[d.status] ?? d.status}
+                    {d.isPublic ? " · public" : ""} · échéance {dateFr(d.horizonAt)} · confiance{" "}
+                    {Math.round(d.confidence * 100)} %
+                    {d.resolutionNote ? ` · ${d.resolutionNote}` : ""}
+                  </Text>
+                </div>
+              ))}
+            </div>
+          </CardBody>
+        </Card>
+      ) : null}
+
+      {/* Déclaration + résolution — s'auto-masque hors opérateur. */}
+      {strategyId ? <PledgePanel strategyId={strategyId} /> : null}
 
       {r && r.theses.length > 0 ? (
         <Card>
