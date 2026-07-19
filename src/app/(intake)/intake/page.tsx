@@ -86,6 +86,7 @@ function IntakeLandingContent() {
     positioning: "",
     websiteUrl: "",
     socialLinksRaw: "",
+    referralCode: "",
   });
   const [error, setError] = useState("");
 
@@ -122,7 +123,9 @@ function IntakeLandingContent() {
     const website = searchParams.get("website") ?? searchParams.get("websiteUrl");
     const social = searchParams.get("social") ?? searchParams.get("socialLinksRaw");
     const contactName = searchParams.get("name");
-    if (company || email || website || social || contactName) {
+    // ADR-0157 — code de parrainage préremplissable (?parrain=LF-XXXXXX).
+    const referral = searchParams.get("parrain") ?? searchParams.get("referral");
+    if (company || email || website || social || contactName || referral) {
       setForm((f) => ({
         ...f,
         companyName: company?.slice(0, 200) ?? f.companyName,
@@ -130,6 +133,7 @@ function IntakeLandingContent() {
         contactName: contactName?.slice(0, 200) ?? f.contactName,
         websiteUrl: website?.slice(0, 300) ?? f.websiteUrl,
         socialLinksRaw: social?.slice(0, 1000) ?? f.socialLinksRaw,
+        referralCode: referral?.slice(0, 24) ?? f.referralCode,
       }));
     }
   }, [searchParams]);
@@ -203,6 +207,7 @@ function IntakeLandingContent() {
       source: utmSource,
       attribution,
       method: selectedMethod,
+      referralCode: form.referralCode.trim() || undefined,
     });
   };
 
@@ -317,6 +322,26 @@ function IntakeLandingContent() {
                 className={inputClass}
                 placeholder="Ex: MonEntreprise SARL"
               />
+            </div>
+
+            {/* ADR-0157 — parrainage : optionnel, le filleul obtient -20 % sur
+                son premier cycle et le parrain 1 mois offert (appliqués à la
+                validation — rien d'automatique). */}
+            <div>
+              <label htmlFor="referralCode" className="mb-1.5 block text-sm font-medium text-foreground">
+                Recommandé par (code de parrainage) — optionnel
+              </label>
+              <input
+                id="referralCode"
+                type="text"
+                value={form.referralCode}
+                onChange={(e) => setForm({ ...form, referralCode: e.target.value.toUpperCase() })}
+                className={inputClass}
+                placeholder="LF-ABC234"
+              />
+              <p className="mt-1 text-xs text-foreground-muted">
+                Avec un code valide : −20 % sur votre premier cycle, et votre parrain gagne un mois offert.
+              </p>
             </div>
 
             <div>

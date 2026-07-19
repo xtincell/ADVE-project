@@ -60,6 +60,7 @@ import { overtonRouter } from "./routers/overton";
 import { scoreurRouter } from "./routers/scoreur";
 import { footprintRouter } from "./routers/footprint";
 import { feedbackRouter } from "./routers/feedback";
+import { referralRouter } from "./routers/referral";
 import { implementationGeneratorRouter } from "./routers/implementation-generator";
 import { clientRouter } from "./routers/client";
 import { authRouter } from "./routers/auth";
@@ -197,6 +198,7 @@ export const appRouter = createTRPCRouter({
   scoreur: scoreurRouter,
   footprint: footprintRouter,
   feedback: feedbackRouter,
+  referral: referralRouter,
   implementationGenerator: implementationGeneratorRouter,
   brandClient: clientRouter,
   auth: authRouter,

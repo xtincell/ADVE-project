@@ -553,6 +553,20 @@ export const paymentRouter = createTRPCRouter({
         entityId: sub.id,
         newValue: { status: "active", tierKey: sub.tierKey, manualApproval: true },
       }).catch(() => {});
+      // ADR-0157 — parrainage : l'activation payée du filleul flippe son
+      // Referral PENDING → CONVERTED (l'opérateur voit la file s'allumer et
+      // applique les récompenses à la main). Best-effort, jamais bloquant.
+      try {
+        const owner = sub.operatorId
+          ? await ctx.db.user.findFirst({ where: { operatorId: sub.operatorId }, select: { email: true } })
+          : null;
+        if (owner?.email) {
+          const { markReferralConverted } = await import("@/server/services/referral");
+          await markReferralConverted(owner.email);
+        }
+      } catch {
+        /* best-effort */
+      }
       // Le founder qui a payé sur WhatsApp est PRÉVENU que son accès est ouvert
       // (audit 2026-07-16 `manual-approval-promised-notification-never-sent` :
       // il devait deviner en re-visitant la page facturation). Best-effort.

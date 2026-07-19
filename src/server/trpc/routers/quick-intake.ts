@@ -263,9 +263,23 @@ export const quickIntakeRouter = createTRPCRouter({
       // Vague 10 — empreinte web publique (alimente le pilier E)
       websiteUrl: z.string().max(300).optional(),
       socialLinksRaw: z.string().max(2000).optional(),
+      // ADR-0157 — parrainage : « recommandé par » (code LF-XXXXXX). Optionnel,
+      // best-effort — un code invalide n'affecte jamais l'intake.
+      referralCode: z.string().max(24).optional(),
     }))
     .mutation(async ({ input }) => {
-      return quickIntakeService.start(input);
+      const { referralCode, ...startInput } = input;
+      const result = await quickIntakeService.start(startInput);
+      if (referralCode?.trim()) {
+        const { recordReferralFromIntake } = await import("@/server/services/referral");
+        await recordReferralFromIntake({
+          code: referralCode,
+          refereeEmail: input.contactEmail,
+          refereeName: input.contactName,
+          companyName: input.companyName,
+        });
+      }
+      return result;
     }),
 
   advance: publicProcedure

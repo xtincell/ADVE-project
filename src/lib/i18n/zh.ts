@@ -236,7 +236,7 @@ export const zh = {
   "landing.nav.portals": "门户",
   "landing.nav.pricing": "定价",
   "landing.nav.login": "登录",
-  "landing.nav.cta": "即时诊断",
+  "landing.nav.cta": "免费诊断 — 15分钟",
   "landing.nav.space": "我的空间",
 
   // ── Settings — language (international toggle) ────────────────────────

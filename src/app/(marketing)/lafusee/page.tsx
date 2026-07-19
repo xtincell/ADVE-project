@@ -17,7 +17,7 @@ import { MarketingFooter } from "@/components/landing/marketing-footer";
 export const metadata: Metadata = {
   title: "La Fusée — Industry OS du marché créatif africain | UPgraders",
   description:
-    "La Fusée, le produit d'UPgraders : diagnostic ADVE instantané · score de marque /200 · radar 8 piliers · feuille de route stratégique. Gratuit, sans engagement.",
+    "La Fusée, le produit d'UPgraders : diagnostic ADVE gratuit en 15 minutes · socle de marque /100 puis score complet /200 · radar 8 piliers · feuille de route stratégique. Gratuit, sans engagement.",
 };
 
 /* La Fusée — the product sub-site (the Industry OS). UPgraders (the agency) is the
