@@ -1,3 +1,4 @@
+import { parisZh } from "./pages/paris";
 /**
  * 中文 (简体) strings — La Fusée.
  *
@@ -6,6 +7,7 @@
  * UPgraders, Mestor, Ptah, Overton…) are kept untranslated by design.
  */
 export const zh = {
+  ...parisZh,
   // ── Common ───────────────────────────────────────────────────────────
   "common.cta.start": "开始",
   "common.cta.contact": "联系 UPgraders",

@@ -9,6 +9,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { listPublicPledges } from "@/server/services/seshat/prediction";
+import { getServerLocale } from "@/lib/i18n/server";
+import { t, type Locale } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -22,17 +24,18 @@ export const metadata: Metadata = {
   },
 };
 
-const dateFr = (iso: string) =>
-  new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+const dateFr = (iso: string, locale: Locale = "fr") =>
+  new Date(iso).toLocaleDateString(locale === "en" ? "en-GB" : locale === "zh" ? "zh-CN" : "fr-FR", { day: "numeric", month: "long", year: "numeric" });
 
-const STATUS_META: Record<string, { label: string; cls: string }> = {
-  OPEN: { label: "En cours", cls: "text-accent border-accent/40" },
-  HIT: { label: "Tenu", cls: "text-[color:var(--color-success)] border-[color:var(--color-success)]" },
-  MISS: { label: "Raté", cls: "text-[color:var(--color-error)] border-[color:var(--color-error)]" },
-  UNRESOLVED: { label: "Non tranché", cls: "text-foreground-muted border-border" },
+const STATUS_META: Record<string, { key: string; cls: string }> = {
+  OPEN: { key: "paris.status.open", cls: "text-accent border-accent/40" },
+  HIT: { key: "paris.status.hit", cls: "text-[color:var(--color-success)] border-[color:var(--color-success)]" },
+  MISS: { key: "paris.status.miss", cls: "text-[color:var(--color-error)] border-[color:var(--color-error)]" },
+  UNRESOLVED: { key: "paris.status.unresolved", cls: "text-foreground-muted border-border" },
 };
 
 export default async function ParisPage() {
+  const locale = await getServerLocale();
   const pledges = await listPublicPledges();
   const open = pledges.filter((p) => p.status === "OPEN");
   const settled = pledges.filter((p) => p.status !== "OPEN");
@@ -42,31 +45,29 @@ export default async function ParisPage() {
       {/* Chrome preuves (façade unique V3) — retour à l'univers La Fusée. */}
       <nav className="mb-8 flex flex-wrap items-center justify-between gap-2 text-xs">
         <Link href="/lafusee" className="font-semibold uppercase tracking-widest text-foreground hover:text-accent">
-          La Fusée
+          {t("paris.brand", locale)}
         </Link>
         <span className="flex gap-4 text-foreground-muted">
-          <Link href="/scorer" className="hover:text-foreground">Scorer</Link>
-          <Link href="/leaderboard" className="hover:text-foreground">Championnat</Link>
-          <Link href="/intake" className="text-accent hover:underline">Diagnostic gratuit</Link>
+          <Link href="/scorer" className="hover:text-foreground">{t("paris.nav.scorer", locale)}</Link>
+          <Link href="/leaderboard" className="hover:text-foreground">{t("paris.nav.championnat", locale)}</Link>
+          <Link href="/intake" className="text-accent hover:underline">{t("paris.nav.diagnostic", locale)}</Link>
         </span>
       </nav>
       <header className="mb-10 text-center">
-        <p className="text-xs font-medium uppercase tracking-widest text-foreground-muted">La Fusée</p>
-        <h1 className="mt-1 text-3xl font-semibold text-foreground">Le registre des paris</h1>
+        <p className="text-xs font-medium uppercase tracking-widest text-foreground-muted">{t("paris.brand", locale)}</p>
+        <h1 className="mt-1 text-3xl font-semibold text-foreground">{t("paris.title", locale)}</h1>
         <p className="mx-auto mt-3 max-w-xl text-sm text-foreground-secondary">
-          Ici, des marques s&apos;engagent en public : une prédiction datée, enregistrée avant
-          l&apos;échéance, résolue devant tous. Les paris tenus restent. Les paris ratés aussi —
-          c&apos;est ce qui rend les premiers crédibles.
+          {t("paris.lede", locale)}
         </p>
       </header>
 
       {pledges.length === 0 ? (
         <div className="rounded-2xl border p-8 text-center" style={{ borderColor: "var(--color-border)" }}>
-          <p className="text-sm font-medium text-foreground">Aucun pari public pour l&apos;instant.</p>
+          <p className="text-sm font-medium text-foreground">{t("paris.empty.title", locale)}</p>
           <p className="mt-2 text-xs text-foreground-secondary">
-            Le premier pari s&apos;écrit bientôt — chaque marque du{" "}
-            <Link href="/leaderboard" className="text-accent underline underline-offset-2">championnat</Link>{" "}
-            peut s&apos;engager.
+            {t("paris.empty.before", locale)}{" "}
+            <Link href="/leaderboard" className="text-accent underline underline-offset-2">{t("paris.empty.link", locale)}</Link>{" "}
+            {t("paris.empty.after", locale)}
           </p>
         </div>
       ) : (
@@ -74,11 +75,11 @@ export default async function ParisPage() {
           {open.length > 0 ? (
             <section>
               <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-foreground-muted">
-                En cours — échéance devant tous
+                {t("paris.section.open", locale)}
               </h2>
               <ul className="space-y-3">
                 {open.map((p) => (
-                  <PledgeCard key={p.id} p={p} />
+                  <PledgeCard key={p.id} p={p} locale={locale} />
                 ))}
               </ul>
             </section>
@@ -87,11 +88,11 @@ export default async function ParisPage() {
           {settled.length > 0 ? (
             <section>
               <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-foreground-muted">
-                Résolus — le verdict est resté
+                {t("paris.section.settled", locale)}
               </h2>
               <ul className="space-y-3">
                 {settled.map((p) => (
-                  <PledgeCard key={p.id} p={p} />
+                  <PledgeCard key={p.id} p={p} locale={locale} />
                 ))}
               </ul>
             </section>
@@ -101,13 +102,12 @@ export default async function ParisPage() {
 
       <footer className="mt-12 text-center text-xs text-foreground-muted">
         <p>
-          Chaque pari est enregistré AVANT son échéance et ne peut plus être réécrit. Un pari
-          n&apos;engage jamais que la marque qui le fait — jamais des tiers.
+          {t("paris.footer.rule", locale)}
         </p>
         <p className="mt-3">
-          <Link href="/leaderboard" className="underline underline-offset-2">Le championnat des marques</Link>
+          <Link href="/leaderboard" className="underline underline-offset-2">{t("paris.footer.leaderboard", locale)}</Link>
           {" · "}
-          <Link href="/scorer" className="underline underline-offset-2">Scorer ma marque</Link>
+          <Link href="/scorer" className="underline underline-offset-2">{t("paris.footer.scorer", locale)}</Link>
         </p>
       </footer>
     </main>
@@ -116,8 +116,10 @@ export default async function ParisPage() {
 
 function PledgeCard({
   p,
+  locale,
 }: {
   p: Awaited<ReturnType<typeof listPublicPledges>>[number];
+  locale: Locale;
 }) {
   const meta = STATUS_META[p.status] ?? STATUS_META.UNRESOLVED!;
   return (
@@ -131,14 +133,14 @@ function PledgeCard({
           )}
         </p>
         <span className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${meta.cls}`}>
-          {meta.label}
+          {t(meta.key, locale)}
         </span>
       </div>
       <p className="mt-2 text-sm text-foreground">{p.statement}</p>
       <p className="mt-2 text-xs text-foreground-muted">
-        déclaré le {dateFr(p.createdAt)} · échéance {dateFr(p.horizonAt)}
-        {p.resolvedAt ? ` · résolu le ${dateFr(p.resolvedAt)}` : ""}
-        {" · "}confiance déclarée {Math.round(p.confidence * 100)} %
+        {t("paris.card.declared", locale)} {dateFr(p.createdAt, locale)} · {t("paris.card.horizon", locale)} {dateFr(p.horizonAt, locale)}
+        {p.resolvedAt ? ` · ${t("paris.card.resolved", locale)} ${dateFr(p.resolvedAt, locale)}` : ""}
+        {" · "}{t("paris.card.confidence", locale)} {Math.round(p.confidence * 100)} %
       </p>
       {p.resolutionNote ? (
         <p className="mt-2 rounded-lg border px-3 py-2 text-xs text-foreground-secondary" style={{ borderColor: "var(--color-border)" }}>

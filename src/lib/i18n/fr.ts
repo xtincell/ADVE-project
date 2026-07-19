@@ -1,3 +1,4 @@
+import { parisFr } from "./pages/paris";
 /**
  * Canonical FR strings — La Fusée.
  *
@@ -5,6 +6,7 @@
  * components for now (most of the app is FR-only by design).
  */
 export const fr = {
+  ...parisFr,
   // ── Common ───────────────────────────────────────────────────────────
   "common.cta.start": "Commencer",
   "common.cta.contact": "Contacter UPgraders",

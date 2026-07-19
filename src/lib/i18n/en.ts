@@ -1,3 +1,4 @@
+import { parisEn } from "./pages/paris";
 /**
  * EN strings — La Fusée.
  *
@@ -5,6 +6,7 @@
  * fall back to FR via `t()`.
  */
 export const en = {
+  ...parisEn,
   // ── Common ───────────────────────────────────────────────────────────
   "common.cta.start": "Start",
   "common.cta.contact": "Contact UPgraders",
