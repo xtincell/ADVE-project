@@ -10,6 +10,10 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.222 — docs(audit): brief de fix scoreur & intake (test prod adversarial) (2026-07-19)
+
+Test adversarial de la prod (API tRPC + HTML servi) → 6 constats re-vérifiés avec preuves, consignés dans [docs/audits/FIX-BRIEF-SCORER-INTAKE-2026-07-19.md](docs/audits/FIX-BRIEF-SCORER-INTAKE-2026-07-19.md) (handoff session dédiée). **Bloquants** : (F1) chemin court/import de l'intake synchrone → timeout 100 s, « Load failed », row coincée `IN_PROGRESS` (dette async tracée, à refactorer) ; (F2) le scoreur fabrique un social 20/100 + « présence détectée » pour une marque sans présence réelle — une marque inventée score 15/100, identique à SPAWT sans site (viole ADR-0046). **Majeurs** : (F3) presse par match de sous-chaîne — « a » score 40/100 sur des brèves sans rapport ; (F4) rate-limit en mémoire par worker inopérant en prod multi-répliques. **Mineurs** : (F5) accents cassés dans la banque de questions serveur ; (F6) preuve d'audience pas toujours remontée. Brief auto-portant : fichier+lignes, comportement attendu, repro, critères de vérif, invariants NEFER, purge des données de test. Doc-only.
+
 ## v6.27.221 — fix(deploy): heap Node explicite pour le type-check du build (2026-07-19)
 
 **Diagnostic du déploiement échoué de 17:23** : le log Coolify s'arrête net ~30 s après « Running TypeScript » sans AUCUNE erreur de type affichée (exit 255 = processus tué) — le type-check de `next build` (~2,5 min, 265 pages, gros dictionnaires i18n) dépassait le heap Node par défaut sur le VPS et se faisait tuer par manque de mémoire. **Le code est sain** : build de production local complet VERT sur le même commit (TypeScript fini + 265/265 pages générées, exit 0). Fix : `NODE_OPTIONS="--max-old-space-size=6144"` dans l'étage builder du Dockerfile. NB pour le diagnostic futur : un `.env` local avec `NODE_ENV="development"` pollue `next build` (bundles React dépareillés → faux `null.useState` au prerender) — toujours builder avec un env propre.
