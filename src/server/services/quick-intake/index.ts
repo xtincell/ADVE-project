@@ -183,6 +183,18 @@ export async function start(input: QuickIntakeStartInput) {
   // Start with business context questions, then move to ADVE pillars
   const firstQuestions = getBusinessContextQuestions();
 
+  // P0-1 (audit UX 2026-07-19) — le lien de reprise part IMMÉDIATEMENT par
+  // email : avant ça, tout onglet fermé sans copier le lien = lead perdu.
+  // Fire-and-forget, jamais bloquant.
+  void import("./prospect-emails").then((m) =>
+    m.sendIntakeResumeEmail({
+      email: input.contactEmail,
+      name: input.contactName,
+      companyName: input.companyName,
+      token: intake.shareToken,
+    }),
+  );
+
   return {
     token: intake.shareToken,
     questions: firstQuestions,
@@ -1124,6 +1136,17 @@ export async function complete(token: string) {
   // Creates an AuditLog entry + KnowledgeEntry for the dashboard.
   // ─────────────────────────────────────────────────────────────────────────
   await notifyFixerOnCompletion(intake, vector, classification, deal.id);
+
+  // P0-1 (audit UX 2026-07-19) — le prospect reçoit le lien de son rapport
+  // par email (avant : aucun email jamais envoyé au prospect). Best-effort.
+  void import("./prospect-emails").then((m) =>
+    m.sendReportReadyEmail({
+      email: intake.contactEmail,
+      name: intake.contactName,
+      companyName: intake.companyName,
+      token: intake.shareToken,
+    }),
+  );
 
   // Jalon 4 (terminal) : complete() finalisé (~70s)
   emitIntakeCompleted({

@@ -28,6 +28,7 @@ import { trpc } from "@/lib/trpc/client";
 import { PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
 import { HelpCircle, Save, X, ArrowLeft } from "lucide-react";
 import { AiBadge } from "@/components/shared/ai-badge";
+import { IntakeProcessingScreen } from "@/components/intake/intake-processing-screen";
 
 // Phase order: business context first, then 4 ADVE pillars
 // RTIS (R, T, I, S) are reserved for the paid version post-conversion
@@ -147,13 +148,41 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
 
   const utils = trpc.useUtils();
   const advanceMutation = trpc.quickIntake.advance.useMutation();
+  // P0-2 (audit UX 2026-07-19) — le complete() guidé (~70 s) était le SEUL
+  // chemin sans récupération réseau : une coupure proxy (« Load failed »)
+  // affichait l'erreur brute alors que le serveur avait souvent abouti. Même
+  // pattern que ingest (commit 1f08a7a) : sonder l'état réel avant de conclure.
+  const [recovering, setRecovering] = useState(false);
   const completeMutation = trpc.quickIntake.complete.useMutation({
     onSuccess: () => {
       clearDraftFromLocal(token);
       utils.quickIntake.getByToken.invalidate({ token });
       router.push(`/intake/${token}/result`);
     },
-    onError: (err) => setError(err.message),
+    onError: (err) => {
+      if (/load failed|failed to fetch|networkerror|network error|timed?\s?out|timeout|aborted|fetch failed|err_/i.test(err.message)) {
+        void (async () => {
+          setRecovering(true);
+          for (let i = 0; i < 9; i++) {
+            await new Promise((resolve) => setTimeout(resolve, 5000));
+            try {
+              const latest = await utils.quickIntake.getByToken.fetch({ token });
+              if (latest?.status === "COMPLETED" || latest?.status === "CONVERTED") {
+                clearDraftFromLocal(token);
+                router.push(`/intake/${token}/result`);
+                return;
+              }
+            } catch {
+              /* réseau encore instable — tour suivant */
+            }
+          }
+          setRecovering(false);
+          setError("L'analyse a pris trop de temps. Vos réponses sont enregistrées — rechargez la page pour réessayer.");
+        })();
+        return;
+      }
+      setError(err.message);
+    },
   });
 
   // Update questions when server data changes
@@ -411,6 +440,18 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
       utils.quickIntake.getQuestions.invalidate({ token, pillar: prevPhase });
     }
   };
+
+  // P0-3 (audit UX 2026-07-19) — pendant les ~70 s du calcul final, le chemin
+  // guidé n'affichait qu'un label de bouton : l'écran de traitement soigné
+  // (étapes + faits) n'était câblé que sur ingest. Overlay dès le déclenchement.
+  if (completeMutation.isPending || recovering) {
+    return (
+      <IntakeProcessingScreen
+        companyName={intake?.companyName ?? "votre marque"}
+        isPending={true}
+      />
+    );
+  }
 
   // ─────────────────────────────────────────────────────────────────────────
   // Save & Quit confirmation overlay
@@ -710,9 +751,11 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
             >
               Prec.
             </button>
+            {/* P2-1 (audit UX) — compteur basé sur les PHASES : l'ancien calcul
+                utilisait questions.length (variable par phase adaptative) et
+                affichait un total qui sautait/mentait. */}
             <span className="text-xs text-foreground-muted">
-              {currentPhaseIndex * (questions.length || 3) + currentQuestionIndex + 1}/
-              {PHASE_ORDER.length * (questions.length || 3)}
+              Étape {currentPhaseIndex + 1}/{PHASE_ORDER.length} · Q{currentQuestionIndex + 1}/{questions.length || 1}
             </span>
             <button
               onClick={handleMobileNext}
@@ -920,9 +963,12 @@ function QuestionField({ question, value, onChange, phaseColor, mobile }: Questi
           <label className={`mb-2 block ${mobile ? "text-base" : "text-sm"} font-medium text-foreground`}>
             {labelContent}
           </label>
+          {/* P1-4 (audit UX 2026-07-19) — 10 boutons 40px fixes débordaient le
+              viewport mobile (~466px > 360px). Grille fluide : les boutons se
+              partagent la largeur, 2 rangées de 5 sur petit écran. */}
           <div className="mt-3 flex items-center gap-2">
             <span className="text-xs text-foreground-muted">1</span>
-            <div className="flex flex-1 justify-between gap-1">
+            <div className="grid flex-1 grid-cols-5 gap-1.5 sm:grid-cols-10">
               {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => {
                 const isSelected = value === n;
                 return (
@@ -930,7 +976,7 @@ function QuestionField({ question, value, onChange, phaseColor, mobile }: Questi
                     key={n}
                     type="button"
                     onClick={() => onChange(n)}
-                    className={`flex h-10 w-10 items-center justify-center rounded-lg border text-sm font-medium transition-all ${
+                    className={`flex h-10 min-w-0 items-center justify-center rounded-lg border text-sm font-medium transition-all ${
                       isSelected
                         ? "border-2 text-white shadow-sm"
                         : "border-border bg-background-raised hover:bg-background-overlay"

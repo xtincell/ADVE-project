@@ -83,6 +83,14 @@ export function ScoreBadge({
     }
     animatedRef.current = true;
 
+    // P0 a11y (audit DS 2026-07-19) — reduced-motion : sauter directement à la
+    // valeur finale (le count-up rAF animait malgré la préférence système).
+    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setDisplayScore(targetDisplay);
+      setRingProgress(1);
+      return;
+    }
+
     const duration = 800;
     const start = performance.now();
 

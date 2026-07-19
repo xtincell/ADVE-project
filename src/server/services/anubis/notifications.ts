@@ -152,12 +152,32 @@ export async function pushNotification(
     }
   }
 
-  // EMAIL / SMS : déléguer au flow broadcast (broadcastMessage capability
-  // existante) plutôt que dupliquer ici. Les notifications individuelles
-  // out-of-app passent par CommsPlan + BroadcastJob avec les provider façades
-  // mailgun/twilio. On marque deferred pour signaler l'aiguillage.
+  // EMAIL — câblé RÉELLEMENT sur le service email système (audit onboarding
+  // 2026-07-19, P0-1) : ce canal était un no-op (`deferred` posé, zéro envoi)
+  // alors que payment.ts et d'autres croyaient prévenir l'utilisateur par
+  // email. Best-effort : provider absent → le service log (dev) ; échec → deferred.
   if (channels.includes("EMAIL") && enabledMap["EMAIL"] !== false) {
-    deferred.push("email:via_broadcast_flow");
+    try {
+      const user = await db.user.findUnique({ where: { id: payload.userId }, select: { email: true } });
+      if (user?.email) {
+        const { sendEmail } = await import("@/server/services/email");
+        const base = (process.env.NEXTAUTH_URL ?? "https://powerupgraders.com").replace(/\/$/, "");
+        const link = payload.link ? `${base}${payload.link.startsWith("/") ? payload.link : `/${payload.link}`}` : base;
+        const result = await sendEmail({
+          to: user.email,
+          subject: payload.title,
+          html: `<div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#1a1a1a"><p style="font-weight:bold;font-size:17px">${payload.title}</p><p>${payload.body}</p><p style="margin:20px 0"><a href="${link}" style="background:#E56458;color:#fff;padding:11px 18px;border-radius:8px;text-decoration:none;font-weight:bold">Ouvrir</a></p></div>`,
+          text: `${payload.title}\n\n${payload.body}\n${link}`,
+          tag: "notification",
+        });
+        if (result.ok) delivered.push("EMAIL");
+        else deferred.push(`email:${result.error ?? "send_failed"}`);
+      } else {
+        deferred.push("email:no_address");
+      }
+    } catch (err) {
+      deferred.push(`email:${err instanceof Error ? err.message : "error"}`);
+    }
   }
   if (channels.includes("SMS") && enabledMap["SMS"] !== false) {
     deferred.push("sms:via_broadcast_flow");

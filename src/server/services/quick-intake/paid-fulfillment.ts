@@ -85,6 +85,28 @@ export async function fulfillPaidIntakeReport(reference: string): Promise<void> 
     } catch {
       /* notif best-effort */
     }
+
+    // P0-2 (audit onboarding 2026-07-19) — le PAYEUR ne recevait AUCUN accusé
+    // de son achat (seuls les admins étaient notifiés). Email de confirmation
+    // avec le lien de sa stratégie. Best-effort.
+    try {
+      const intakeRow = await db.quickIntake.findUnique({
+        where: { shareToken: payment.intakeToken },
+        select: { contactEmail: true },
+      });
+      if (intakeRow?.contactEmail) {
+        const { sendEmail } = await import("@/server/services/email");
+        await sendEmail({
+          to: intakeRow.contactEmail,
+          subject: `${activated.clientName} — votre achat est confirmé, votre stratégie s'assemble`,
+          tag: "payment-confirmation",
+          html: `<div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#1a1a1a"><p style="font-weight:bold;font-size:17px">Merci — votre paiement est confirmé.</p><p>Votre marque <strong>${activated.clientName}</strong> est activée et votre stratégie complète est en cours d'assemblage (quelques minutes).</p>${share ? `<p style="margin:20px 0"><a href="${share.url}" style="background:#E56458;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:bold">Consulter ma stratégie</a></p><p style="font-size:13px;color:#555">Ou copiez ce lien : ${share.url}</p>` : ""}</div>`,
+          text: `Votre paiement est confirmé. ${activated.clientName} est activée.${share ? ` Votre stratégie : ${share.url}` : ""}`,
+        });
+      }
+    } catch {
+      /* email best-effort */
+    }
   } catch (err) {
     console.error("[paid-fulfillment] échec (non-bloquant):", err);
   }

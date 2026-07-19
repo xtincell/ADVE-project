@@ -484,9 +484,13 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
   );
 
   if (isLoading || !token) {
+    // P2-3 (audit UX) — la page-récompense du parcours méritait mieux qu'un
+    // spinner nu : contexte + attente cadrée.
     return (
-      <main className="flex min-h-screen items-center justify-center bg-background">
+      <main className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background px-5 text-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-sm font-medium text-foreground">Assemblage de votre rapport…</p>
+        <p className="text-xs text-foreground-muted">Scores, radar par pilier et plan d&apos;action — quelques secondes.</p>
       </main>
     );
   }
@@ -497,9 +501,20 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         <AlertTriangle className="h-10 w-10 text-warning" />
         <h1 className="mt-3 text-2xl font-bold text-foreground">Diagnostic non disponible</h1>
         <p className="mt-2 max-w-md text-foreground-muted">
-          Ce lien est invalide ou l'intake n'a jamais existé.
+          Ce lien est invalide ou l&apos;intake n&apos;a jamais existé.
         </p>
         {error && <p className="mt-3 text-xs text-destructive">Erreur : {error.message}</p>}
+        {/* P1-5 (audit UX) — refetch existait mais aucun bouton ne l'exposait :
+            une erreur passagère (réseau) était un cul-de-sac. */}
+        {error ? (
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="mt-4 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover"
+          >
+            Réessayer
+          </button>
+        ) : null}
       </main>
     );
   }
@@ -750,9 +765,16 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             </p>
           </div>
 
-          {/* Completion score — relegated to a small caption */}
-          <p className="mt-3 text-xs text-foreground-muted">
-            Completude du dossier ADVE : {composite}/100 ({Math.round((composite / 100) * 100)}% des champs renseignes — informatif).
+          {/* P1-2 (audit UX 2026-07-19) — le MÊME composite était affiché deux
+              fois sous deux noms (« score socle » puis « complétude du
+              dossier ») : double sens supprimé, un seul chiffre, un seul nom.
+              P1-3 — une ligne relie les deux paliers qui coexistent : le
+              niveau ESTIMÉ (déclaratif, ce questionnaire) vs le palier RÉVÉLÉ
+              (preuve publique, section Force ci-dessous). */}
+          <p className="mt-3 max-w-[58ch] text-xs text-foreground-muted">
+            Votre niveau ci-dessus est <strong>estimé</strong> à partir de vos réponses. Plus bas, votre
+            palier <strong>révélé</strong> est mesuré sur votre preuve publique — les deux peuvent différer :
+            c&apos;est l&apos;écart entre ce que vous déclarez et ce que le marché voit.
           </p>
         </header>
 
@@ -865,6 +887,12 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             par dimension + sous-blocs mesurés + narratif. Honnête : les
             dimensions non mesurées sont dites, jamais fabriquées.
         ════════════════════════════════════════════════════════════ */}
+        {/* P1-2 (audit UX) — phrases-ponts : les scores se LISENT dans un ordre
+            (présence publique → socle déclaré → force révélée), pas en pile. */}
+        <p className="mx-auto mt-10 max-w-[60ch] text-center text-sm text-foreground-secondary">
+          Votre socle ci-dessus vient de vos réponses. Voici maintenant ce que le
+          public, lui, voit de {intake.companyName} — mesuré, pas déclaré.
+        </p>
         <FootprintSection
           footprint={(intake as { webFootprint?: unknown }).webFootprint ?? null}
           companyName={intake.companyName}
@@ -878,6 +906,10 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             la preuve publique captée. Lecture seule, honnête (couverture +
             palier suivant). Le classement public reste un choix (payant/opérateur).
         ════════════════════════════════════════════════════════════ */}
+        <p className="mx-auto mt-10 max-w-[60ch] text-center text-sm text-foreground-secondary">
+          Et quand on confronte cette preuve publique aux épreuves du réel, voici la
+          force qu&apos;elle révèle — le score complet /200, celui du classement.
+        </p>
         <ForceSection token={token} />
 
 
