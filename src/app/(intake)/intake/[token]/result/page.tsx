@@ -158,7 +158,7 @@ const RTIS_PILLARS_META: { key: "r" | "t" | "i" | "s"; name: string; tagline: st
   { key: "r", name: "Risque", tagline: "Vulnerabilites & risques" },
   { key: "t", name: "Track", tagline: "Validation marche" },
   { key: "i", name: "Innovation", tagline: "Innovation & exploration" },
-  { key: "s", name: "Strategie", tagline: "Plan & priorites" },
+  { key: "s", name: "Stratégie", tagline: "Plan & priorités" },
 ];
 
 const CONTACT_EMAIL = "xtincell@gmail.com";
@@ -790,7 +790,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
           <section className="hidden print:block print:mb-8 print:break-after-page">
             <h2 className="mb-3 text-2xl font-bold text-foreground">2. Contexte business</h2>
             <p className="mb-4 text-sm text-foreground-muted">
-              Donnees declarees lors de l'intake — contexte qui calibre l'analyse ci-dessous.
+              Données déclarées lors de l'intake — contexte qui calibre l'analyse ci-dessous.
             </p>
             <dl className="space-y-2">
               {bizContext.map((item, i) => (
@@ -1024,7 +1024,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                     </h4>
                     {allExtracted.length === 0 ? (
                       <p className="rounded-lg border border-warning/30 bg-warning/5 p-3 text-sm text-foreground-muted">
-                        Aucune valeur n'a pu etre extraite de vos reponses pour ce pilier.
+                        Aucune valeur n'a pu être extraite de vos réponses pour ce pilier.
                       </p>
                     ) : (
                       <>
@@ -1383,9 +1383,9 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         ════════════════════════════════════════════════════════════ */}
         {verbatim.length > 0 && (
           <section className="hidden print:block print:mb-4">
-            <h2 className="mb-3 text-2xl font-bold text-foreground">Annexe — Vos reponses verbatim</h2>
+            <h2 className="mb-3 text-2xl font-bold text-foreground">Annexe — Vos réponses verbatim</h2>
             <p className="mb-4 text-xs italic text-foreground-muted">
-              Reproduction fidele des reponses fournies, pour verifier la fidelite de l'extraction.
+              Reproduction fidèle des réponses fournies, pour vérifier la fidélité de l'extraction.
             </p>
             <div className="space-y-4">
               {verbatim.map((group, gi) => (
@@ -1411,7 +1411,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         <section className="mt-10 rounded-2xl border border-border bg-card p-6 print:hidden">
           <h2 className="mb-1 text-lg font-bold text-foreground">Echanger avec La Fusee</h2>
           <p className="mb-5 text-sm text-foreground-muted">
-            Une question sur votre rapport ? Un projet a discuter ? Reponse sous 24h.
+            Une question sur votre rapport ? Un projet à discuter ? Réponse sous 24h.
           </p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <a
