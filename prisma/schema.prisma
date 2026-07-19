@@ -618,6 +618,8 @@ model User {
   hashedPassword   String?
   image            String?
   role             String    @default("USER")
+  /// ADR-0157 — code de parrainage stable (LF-XXXXXX), généré à la première demande.
+  referralCode     String?   @unique
   operatorId       String?
   resetToken       String?   @unique
   resetTokenExpiry DateTime?
@@ -6740,4 +6742,27 @@ model PredictionRecord {
 
   @@index([strategyId, kind, status])
   @@index([kind, subjectType, horizonAt])
+}
+
+/// ADR-0157 — Parrainage manual-first. Un filleul déclare « recommandé par »
+/// à l'intake (code) → PENDING. À l'activation d'un abonnement payé du filleul
+/// (voie manuelle WhatsApp validée opérateur) → CONVERTED. L'opérateur applique
+/// les récompenses À LA MAIN (filleul -20 % premier cycle, parrain 1 mois
+/// offert) puis marque REWARDED — aucun octroi automatique d'argent.
+model Referral {
+  id             String    @id @default(cuid())
+  codeUsed       String
+  referrerUserId String
+  refereeEmail   String
+  refereeName    String?
+  companyName    String?
+  status         String    @default("PENDING") // PENDING | CONVERTED | REWARDED | REJECTED
+  note           String?
+  createdAt      DateTime  @default(now())
+  convertedAt    DateTime?
+  rewardedAt     DateTime?
+
+  @@index([status, createdAt])
+  @@index([referrerUserId])
+  @@index([refereeEmail])
 }

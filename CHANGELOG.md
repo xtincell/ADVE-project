@@ -10,6 +10,18 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.203 — feat(thot): parrainage manual-first — code parrain, intake « recommandé par », file console (ADR-0157) (2026-07-19)
+
+**Demande opérateur (relayée de Hilaire), arbitrage délégué** — [ADR-0157](docs/governance/adr/0157-parrainage-manual-first.md), première brique du passeport fan (ETAT-FINAL B2) :
+
+- **Récompenses arbitrées** : filleul **−20 % sur le premier cycle** · parrain **1 mois offert** à la conversion payée · éligible = tout compte enregistré.
+- **Code `LF-XXXXXX`** par compte (alphabet sans ambiguïté, dictable à l'oral/WhatsApp), généré à la première demande (`referral.getMyCode`, unique + retry collision).
+- **Intake** : champ « Recommandé par (code de parrainage) — optionnel », préremplissable `?parrain=LF-…` ; enregistrement best-effort (code invalide / auto-parrainage / doublon filleul = ignoré sans JAMAIS bloquer l'intake).
+- **Conversion détectée au paiement réel** : `approveManualSubscription` (le rail WhatsApp validé opérateur) flippe le `Referral` PENDING → CONVERTED (best-effort, jamais bloquant).
+- **File opérateur `/console/socle/parrainages`** (nav) : CONVERTED = récompenses à appliquer À LA MAIN (−20 % à la validation du filleul, +1 mois sur l'abo du parrain) puis « Récompensé ». `adminProcedure`, parité manual-subscriptions — **aucun octroi automatique d'argent**.
+- 1 modèle Prisma additif (`Referral`) + `User.referralCode @unique` (migration backfill-safe). 0 LLM. Déférés tracés à l'ADR (webhook Stripe, carte « Mon code » cockpit → passeport fan).
+- tsc 0 · **2 775 tests verts** (suite complète).
+
 ## v6.27.202 — fix(ui): passe de cohérence funnel — landings/scorer/intake/leaderboard désambiguïsés + registre de dette réconcilié (2026-07-19)
 
 **Mandat opérateur (« les landing pages et les entrées de funnel doivent être calibrées et désambiguïsées… c'est encore beaucoup de patch ici et là » + « penche-toi sur les residual debt »)** — cartographie complète des 8 entrées publiques (2 agents, 11 incohérences I1-I11 relevées), puis remédiation d'un bloc :

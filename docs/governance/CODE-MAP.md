@@ -32,14 +32,14 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 219 models, 71 enums
+## Prisma — 220 models, 71 enums
 
 ### Models
 
 - **Account** (13 fields)
 - **Session** (5 fields)
 - **VerificationToken** (3 fields)
-- **User** (31 fields)
+- **User** (32 fields)
 - **Operator** (30 fields)
 - **ClientAllocation** (14 fields)
 - **Client** (17 fields)
@@ -255,6 +255,7 @@ Ces correspondances évitent la réinvention :
 - **ActionCostEstimate** (25 fields) — Snapshot d'estimation persisté — audit trail Thot (frère de CostDecision).
 - **Post** (15 fields) — Article de blog public du site UPgraders (« Notes de cabinet »). CMS natif éditorial — distinct des livrables client (`B
 - **PredictionRecord** (18 fields) — ADR-0156 — Registre des prédictions. Chaque prédiction (forecast déterministe de série OU thèse de signal faible) est en
+- **Referral** (11 fields) — ADR-0157 — Parrainage manual-first. Un filleul déclare « recommandé par » à l'intake (code) → PENDING. À l'activation d'
 
 ### Enums
 
@@ -332,7 +333,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Services backend — 116
+## Services backend — 117
 
 - `src/server/services/advertis-connectors/` ✓ manifest
 - `src/server/services/advertis-scorer/` ✓ manifest
@@ -429,6 +430,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/ptah/` ✓ manifest
 - `src/server/services/qc-router/` ✓ manifest
 - `src/server/services/quick-intake/` ✓ manifest
+- `src/server/services/referral/`
 - `src/server/services/rtis-protocols/` ✓ manifest
 - `src/server/services/sector-intelligence/` ✓ manifest
 - `src/server/services/sentinel-handlers/` ✓ manifest
@@ -453,7 +455,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 121
+## tRPC routers — 122
 
 - `_strategy-read-guard` (`src/server/trpc/routers/_strategy-read-guard.ts`)
 - `accounts` (`src/server/trpc/routers/accounts.ts`)
@@ -558,6 +560,7 @@ Ces correspondances évitent la réinvention :
 - `publication` (`src/server/trpc/routers/publication.ts`)
 - `quality-review` (`src/server/trpc/routers/quality-review.ts`)
 - `quick-intake` (`src/server/trpc/routers/quick-intake.ts`)
+- `referral` (`src/server/trpc/routers/referral.ts`)
 - `scoreur` (`src/server/trpc/routers/scoreur.ts`)
 - `sequence-vault` (`src/server/trpc/routers/sequence-vault.ts`)
 - `seshat-search` (`src/server/trpc/routers/seshat-search.ts`)
@@ -579,7 +582,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 272 (par deck)
+## Pages — 273 (par deck)
 
 ### Agency (12)
 
@@ -657,7 +660,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/settings/billing`
 - `/cockpit/settings/connections`
 
-### Console (126)
+### Console (127)
 
 - `/console`
 - `/console/academie`
@@ -768,6 +771,7 @@ Ces correspondances évitent la réinvention :
 - `/console/socle/invoices`
 - `/console/socle/manual-subscriptions`
 - `/console/socle/market-costs`
+- `/console/socle/parrainages`
 - `/console/socle/pipeline`
 - `/console/socle/pricing`
 - `/console/socle/prod-ops`
