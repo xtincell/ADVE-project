@@ -333,7 +333,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Services backend — 117
+## Services backend — 118
 
 - `src/server/services/advertis-connectors/` ✓ manifest
 - `src/server/services/advertis-scorer/` ✓ manifest
@@ -451,6 +451,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/upsell-detector/` ✓ manifest
 - `src/server/services/utils/` ✓ manifest
 - `src/server/services/value-report-generator/` ✓ manifest
+- `src/server/services/value-statement/`
 - `src/server/services/vault-enrichment/` ✓ manifest
 
 ---
@@ -582,7 +583,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 274 (par deck)
+## Pages — 275 (par deck)
 
 ### Agency (12)
 
@@ -599,7 +600,7 @@ Ces correspondances évitent la réinvention :
 - `/agency/revenue`
 - `/agency/signals`
 
-### Cockpit (58)
+### Cockpit (59)
 
 - `/cockpit`
 - `/cockpit/brand/assets`
@@ -628,6 +629,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/insights/attribution`
 - `/cockpit/insights/benchmarks`
 - `/cockpit/insights/diagnostics`
+- `/cockpit/insights/releve`
 - `/cockpit/insights/reports`
 - `/cockpit/intelligence/community`
 - `/cockpit/intelligence/market-studies`

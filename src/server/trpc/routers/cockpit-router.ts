@@ -568,6 +568,31 @@ export const cockpitRouter = createTRPCRouter({
     }),
 
   /**
+   * Relevé de valeur mensuel (Phase A état-final, B4) — ce qui a été mesuré,
+   * ce qui a bougé, ce que ça a coûté. Déterministe, tenant-scoped, chaque
+   * série absente est dite « non mesurée » (jamais un zéro fabriqué).
+   */
+  getValueStatement: protectedProcedure
+    .input(z.object({ strategyId: z.string().min(1), month: z.string().regex(/^\d{4}-\d{2}$/).optional() }))
+    .query(async ({ ctx, input }) => {
+      const strategy = await ctx.db.strategy.findUnique({
+        where: { id: input.strategyId },
+        select: { id: true, userId: true },
+      });
+      if (!strategy) throw new TRPCError({ code: "NOT_FOUND", message: "Strategy introuvable" });
+      const isPrivileged = ctx.session.user.role === "ADMIN";
+      if (!isPrivileged && strategy.userId !== ctx.session.user.id) {
+        const opCtx = await getOperatorContext(ctx.session.user.id);
+        if (!(await canAccessStrategy(input.strategyId, opCtx))) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Cette marque ne vous appartient pas" });
+        }
+      }
+      const { buildValueStatement } = await import("@/server/services/value-statement");
+      const ref = input.month ? new Date(`${input.month}-15T00:00:00Z`) : undefined;
+      return buildValueStatement(input.strategyId, ref);
+    }),
+
+  /**
    * ADR-0128 — Identité visuelle de la marque pour le dashboard : logo actif
    * (BrandAsset kind LOGO_FINAL, fallback LOGO_IDEA), inventaire des actifs
    * d'identité (typographies, palettes) et total du coffre. Chaque absence

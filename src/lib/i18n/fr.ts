@@ -220,6 +220,8 @@ export const fr = {
   "nav.overton.sub": "Votre position dans le secteur",
   "nav.previsions": "Prévisions",
   "nav.previsions.sub": "Projections vérifiables de vos données",
+  "nav.releve": "Relevé de valeur",
+  "nav.releve.sub": "Ce qui a bougé, mois par mois",
   "nav.market-studies": "Études de marché",
   "nav.market-studies.sub": "Vos études ingérées",
   "nav.communaute": "Communauté",
