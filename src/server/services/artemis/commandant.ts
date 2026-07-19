@@ -871,6 +871,30 @@ async function synthesizeS(
     orderBy: { priority: "asc" },
   });
 
+  // ADR-0159 amendement (lecture inverse du pont RTIS→registre) : la synthèse
+  // S lit le registre des paris — track record résolu + engagements ouverts —
+  // comme intrant de stratégie. Lecture pure, best-effort (le registre absent
+  // n'empêche jamais la synthèse).
+  let pledgeTrackRecord: { open: number; hit: number; miss: number; statements: string[] } | null = null;
+  try {
+    const pledges = await db.predictionRecord.findMany({
+      where: { strategyId: intent.strategyId, kind: { in: ["PLEDGE", "ACTION_EFFECT"] } },
+      select: { status: true, statement: true },
+      orderBy: { horizonAt: "asc" },
+      take: 30,
+    });
+    if (pledges.length > 0) {
+      pledgeTrackRecord = {
+        open: pledges.filter((p) => p.status === "OPEN").length,
+        hit: pledges.filter((p) => p.status === "HIT").length,
+        miss: pledges.filter((p) => p.status === "MISS").length,
+        statements: pledges.filter((p) => p.status === "OPEN").map((p) => p.statement).slice(0, 5),
+      };
+    }
+  } catch {
+    /* registre indisponible → synthèse inchangée */
+  }
+
   const { generateBatch } = await import("@/server/services/notoria/engine");
   const batch = await generateBatch({
     strategyId: intent.strategyId,
@@ -879,9 +903,9 @@ async function synthesizeS(
 
   return {
     status: "OK",
-    summary: `S synthesized from ${selectedActions.length} selected actions: ${batch.totalRecos} recos`,
+    summary: `S synthesized from ${selectedActions.length} selected actions: ${batch.totalRecos} recos${pledgeTrackRecord ? ` · paris: ${pledgeTrackRecord.hit} tenus / ${pledgeTrackRecord.miss} ratés / ${pledgeTrackRecord.open} ouverts` : ""}`,
     tool: "notoria:S_SYNTHESIS",
-    output: { batch, selectedActionsCount: selectedActions.length },
+    output: { batch, selectedActionsCount: selectedActions.length, pledgeTrackRecord },
   };
 }
 

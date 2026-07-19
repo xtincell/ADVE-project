@@ -5,17 +5,18 @@
 > `nefer-postmerge` (9.5.bis) le relisent et referment le refermable ; le diagnostic de fond le purge.
 > Les fixes en passant, eux, sont journalisés dans [`PATCHED-SYMPTOMS.md`](PATCHED-SYMPTOMS.md).
 
-## Valorisation certifiée v1 (ADR-0160, 2026-07-19) — déférés tracés
+## Valorisation certifiée v1 (ADR-0160, 2026-07-19)
 
-- **Surface UI** (console : formulaire CA déclaré + rendu certificat + export PDF pattern ADR-0138) — déclencheur : prochaine session ; le spine est exerçable via `thot.valuation.compose/list`.
-- **Page publique de vérification du hash** + **ratification des constantes §4** (bandes de redevance/VAN, PROPOSÉES) — déclencheur : première vente réelle d'une valorisation.
-- **Percentiles benchmark marché dans le dossier** — déclencheur : MarketBenchmark ≥ 5 échantillons réels sur le couple pays×secteur.
+- ~~Surface UI~~ → **CLOS le jour même** (règle « plus de report ») : console `/console/socle/valorisations` (CA déclaré + composer + export MD) + nav.
+- ~~Page publique de vérification du hash~~ → **CLOS le jour même** : `/certificat/[hash]` (authentique/inconnu, sans montant ni PII).
+- **Ratification des constantes §4** (bandes de redevance/VAN, PROPOSÉES) — gated OPÉRATEUR : première vente réelle.
+- **Percentiles benchmark marché dans le dossier** — gated DONNÉE : MarketBenchmark ≥ 5 échantillons réels sur le couple pays×secteur.
 
 ## Pari Public v1 (ADR-0159, 2026-07-19) — déférés tracés
 
 - **Premier Pari Public de SPAWT** (cas-phare) : action opérateur en prod — déclarer un pari réel, MODESTE et daté (séquençage §8 du plan) via le panneau Prévisions. Le code est prêt ; déclencheur : prochain déploiement + décision opérateur du premier énoncé.
 - ~~**Auto-proposition d'`ACTION_EFFECT` à l'armement calendrier**~~ → **CLOS 2026-07-19** (amendement ADR-0159, demande opérateur « le RTIS doit gérer ça ») : le pont RTIS→registre propose le CADRE depuis le plan d'actions (`listActionEffectCandidates` + panneau pré-rempli) ; l'énoncé et le chiffre restent humains (jamais un chiffre fabriqué).
-- **Pilier S lit le registre** (track record + paris ouverts comme intrant de `SYNTHESIZE_S` — la lecture inverse du pont) : déclencheur — prochaine refonte de la synthèse S.
+- ~~**Pilier S lit le registre**~~ → **CLOS le jour même** (règle « plus de report ») : `synthesizeS` lit le track record (tenus/ratés/ouverts + énoncés ouverts) en intrant best-effort, surfacé dans le summary et l'output.
 - **Encart paris sur `/b/[slug]`** : déclencheur : première marque avec ≥ 1 pari public résolu.
 
 ## Passeport fan v1 (ADR-0158, 2026-07-19) — déférés tracés
