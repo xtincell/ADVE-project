@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.201 — docs(governance): plan d'état final amendé par la validation externe (recherche profonde) (2026-07-19)
+
+**Les 5 paris du plan confrontés aux preuves (107 agents, vérification adversariale 3 votes/claim)** — 4 corrections intégrées à [ETAT-FINAL-RECHERCHE-2026.md](docs/governance/ETAT-FINAL-RECHERCHE-2026.md) (marquées ⚗️, synthèse citée en §8) :
+
+- **B2 FANS re-libellée** : superfans = preuve sociale + production organique, JAMAIS moteur de croissance en volume (Double Jeopardy/Ehrenberg-Bass : la croissance vient de l'acquisition — B1 porte le volume) ; conception **pull-first** (économie WhatsApp 2025+ : conversations entrantes gratuites, templates sortants facturés) ; ingénierie **fan-à-fan**.
+- **Pari Public conditionné** : crédibilité (marques connues ou offres bon marché — séquencer notoriété→pari) + **règle Domino's** gravée (jamais un pari qui incite des tiers à prendre des risques ; 78 M$ punitifs, garantie tuée en 4 jours).
+- **Valorisation certifiée repositionnée** : pas un greenfield — Brand Finance depuis 2007 (audit IFRS/sponsoring = acheteurs réels élargis) mais biais 100 % anglophone/sud-africain → **la niche francophone est désignée par l'incumbent lui-même**.
+- **Cas-phare : critère ajouté** — marque de **niche à intensité** (l'excess loyalty n'existe que là), paris modestes et tenus avant le spectaculaire.
+- Validé au passage : mécaniques culte empiriquement réelles (Muniz & O'Guinn 2001), « industrialiser » a un précédent (Harley/HOG créé par la firme), WhatsApp-first validé, classement-comme-média prouvé (Africa 200). Doc-only.
+
 ## v6.27.200 — fix(intake): récupération honnête après coupure réseau sur processIngest (« Load failed ») (2026-07-18)
 
 **Première application de l'interdit n°4 : fix en passant du symptôme « Load failed », root cause tracée.**
