@@ -1,6 +1,6 @@
 # ÉTAT FINAL RECHERCHÉ — plan final (2026-07-16, amendé 2026-07-19)
 
-**Statut** : PROPOSÉ — extension opérationnelle du [STATE_FINAL_BLUEPRINT](STATE_FINAL_BLUEPRINT.md) (qui reste canon doctrinal). Devient canon à ratification opérateur explicite.
+**Statut** : **RATIFIÉ** (opérateur, 2026-07-19 — « Tout est ratifié ») — extension opérationnelle canon du [STATE_FINAL_BLUEPRINT](STATE_FINAL_BLUEPRINT.md) (qui reste canon doctrinal). Les 5 boucles, la règle des 60 jours, le cas-phare et la cadence par phases sont exécutoires.
 **Mandat** : « révise ton travail, vois les faiblesses de ton plan, les idées de génie qui manquent, et rédige le plan final de l'état final recherché. »
 **Amendement 2026-07-19** : les 5 paris ont été confrontés à des preuves externes (recherche profonde, 107 agents, vérification adversariale 3 votes/claim — synthèse en §8). Quatre corrections intégrées, marquées ⚗️ dans le texte.
 
@@ -54,7 +54,8 @@ Ratio cible : 1 fondateur → 10+ certifiés opérant. Tant que cette boucle ne 
 
 ## 4. Le cas-phare (obligatoire, non négociable)
 
-Une marque réelle (candidates : SPAWT, Motion19, ou La Fusée elle-même) menée **en public** de son score actuel vers Forte : paris publiés, épreuves publiées, échecs publiés. C'est la seule preuve qui compte. Tout chantier qui n'aide pas le cas-phare passe après.
+Une marque réelle menée **en public** de son score actuel vers Forte : paris publiés, épreuves publiées, échecs publiés. C'est la seule preuve qui compte. Tout chantier qui n'aide pas le cas-phare passe après.
+**Décision (ratification 2026-07-19)** : le cas-phare est **SPAWT** — la marque de niche à intensité du portefeuille (critère §8 : excess loyalty = niches étroites et intenses). Motion19 et La Fusée restent au championnat mais ne portent pas la preuve publique.
 ⚗️ **Critère de sélection ajouté (§8)** : choisir une marque de **niche à intensité** — l'« excess loyalty » (le seul crochet empirique où la loyauté dépasse la norme) existe pour les marques étroites et intenses, pas pour le mass-market. Le positionnement culte se démontre sur une niche ; le FMCG de masse se gagne par pénétration (B1), pas par dévotion. Et par la condition de crédibilité du Pari Public : le cas-phare commence par des paris **modestes et tenus** avant le pari spectaculaire.
 
 ## 5. Invariants (ce qui ne change jamais)
