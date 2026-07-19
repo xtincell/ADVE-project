@@ -83,6 +83,8 @@ export const KIND_TO_PILLAR: Record<BrandAssetKind, PillarKey> = {
   DELOITTE_BUDGET: "S",
   MANIPULATION_MATRIX: "S",
   OVERTON_WINDOW: "S",
+  // ADR-0160 — le certificat de valorisation synthétise la stratégie prouvée.
+  VALUATION_CERTIFICATE: "S",
 };
 
 /**

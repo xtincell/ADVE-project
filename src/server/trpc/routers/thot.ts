@@ -10,6 +10,10 @@
 
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
+import { composeBrandValuation } from "@/server/services/financial-brain/brand-valuation";
+import { db } from "@/lib/db";
 import { estimateActionCostFromDb } from "@/server/services/financial-brain/action-costing/estimator";
 
 const QUALITY = z.enum(["BASIC", "STANDARD", "PREMIUM"]);
@@ -38,6 +42,40 @@ const estimateInput = z.object({
 });
 
 export const thotRouter = createTRPCRouter({
+  /** ADR-0160 — valorisation certifiée v1 (Phase D état-final). */
+  valuation: createTRPCRouter({
+    compose: governedProcedure({
+      kind: "THOT_COMPOSE_BRAND_VALUATION",
+      requireOperator: true,
+      inputSchema: z.object({
+        strategyId: z.string(),
+        /** CA annuel DÉCLARÉ par l'opérateur — jamais estimé (ADR-0046). */
+        declaredAnnualRevenue: z.number().positive().finite().optional(),
+        currency: z.string().min(3).max(3).default("XAF"),
+      }),
+      caller: "thot.composeValuation",
+    }).mutation(async ({ ctx, input }) => {
+      return composeBrandValuation({
+        strategyId: input.strategyId,
+        declaredAnnualRevenue: input.declaredAnnualRevenue ?? null,
+        currency: input.currency,
+        declaredBy: ctx.session.user.id,
+      });
+    }),
+
+    /** Derniers certificats d'une marque (lecture opérateur). */
+    list: operatorProcedure
+      .input(z.object({ strategyId: z.string() }))
+      .query(({ input }) =>
+        db.brandAsset.findMany({
+          where: { strategyId: input.strategyId, kind: "VALUATION_CERTIFICATE" },
+          orderBy: { createdAt: "desc" },
+          take: 10,
+          select: { id: true, name: true, content: true, metadata: true, createdAt: true },
+        }),
+      ),
+  }),
+
   calc: createTRPCRouter({
     /** Pure deterministic estimate — does NOT persist (read-only). */
     estimateActionCost: protectedProcedure.input(estimateInput).query(async ({ input }) => {
