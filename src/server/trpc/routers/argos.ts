@@ -82,4 +82,30 @@ export const argosRouter = createTRPCRouter({
   getPublicByRef: publicProcedure
     .input(z.object({ ref: z.string().min(1).max(160) }))
     .query(({ input }) => getPublicDossierByRef(input.ref)),
+
+  /**
+   * Newsletter Argos (Phase A état-final) — capture d'audience possédée en
+   * propre. Consentement EXPLICITE (le prospect soumet son email pour ça),
+   * CrmContact taggé `argos-newsletter`, idempotent. Aucun envoi auto ici.
+   */
+  subscribeNewsletter: publicProcedure
+    .input(z.object({ email: z.string().email().max(200), source: z.string().max(60).optional() }))
+    .mutation(async ({ input }) => {
+      const { db } = await import("@/lib/db");
+      const email = input.email.toLowerCase();
+      const existing = await db.crmContact.findUnique({ where: { email }, select: { id: true, tags: true } });
+      if (existing) {
+        if (!existing.tags.includes("argos-newsletter")) {
+          await db.crmContact.update({
+            where: { id: existing.id },
+            data: { tags: { set: [...existing.tags, "argos-newsletter"] }, newsletterOptIn: true },
+          });
+        }
+      } else {
+        await db.crmContact.create({
+          data: { email, source: "NEWSLETTER", tags: ["argos-newsletter", ...(input.source ? [`src:${input.source}`] : [])], newsletterOptIn: true },
+        });
+      }
+      return { ok: true };
+    }),
 });

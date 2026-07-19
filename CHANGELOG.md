@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.207 — feat(governance): Phase A état-final vague 1 — la rédaction d'Argos tourne, championnat×média fusionnés, newsletter née (2026-07-19)
+
+**Boucle AUDIENCE du plan d'état final (B1)** — l'audit Argos disait « fonctionnel mais sans cadence, corpus = seed, zéro audience ». Trois organes posés :
+
+- **Cron `argos-hunt`** : la rédaction tourne — à chaque passage, Hunter chasse jusqu'à 3 sujets RÉELS (les marques du répertoire Seshat sans dossier, secteur connu d'abord — le média couvre le championnat, pas des sujets inventés). Gated `isTextLLMAvailable`, émission via le SPINE (ADR-0124, jamais un bypass), quarantaine + verdict de sûreté déterministe INTOUCHÉS (auto-publish sur PASS seulement, le reste attend la revue console).
+- **Fusion championnat × Argos** : /leaderboard affiche les derniers dossiers publiés (« Les dossiers de la rédaction ») + lien /argos ; /argos renvoie vers le championnat. Une seule propriété média, deux faces.
+- **Newsletter possédée en propre** (`argos.subscribeNewsletter` + `<NewsletterCapture>` sur /argos et /leaderboard) : consentement EXPLICITE (`newsletterOptIn: true`, tag CRM `argos-newsletter`), idempotent, AUCUN envoi automatique — la capture d'abord, la cadence éditoriale décidera des envois. C'est le seul canal d'audience qui ne dépend ni de Meta ni de Google.
+- Le plan ETAT-FINAL reste **PROPOSÉ** (ratification opérateur en attente) — ces chantiers tiennent par leurs mandats propres (activation Argos + boucle audience).
+- tsc 0 · **2 775 tests verts** (suite complète). Suite Phase A : relevé de valeur mensuel v1, cadence scheduled-ops du cron, choix du cas-phare (recommandation : marque de niche à intensité).
+
 ## v6.27.206 — feat(ui): campagne UX vague 3 — motion vivante, a11y armée, relance J+3 (2026-07-19)
 
 **Clôture du mandat intégral (vagues 1-3)** :
