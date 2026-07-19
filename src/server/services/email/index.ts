@@ -1,8 +1,11 @@
 /**
  * email — transactional email send.
  *
- * Delegates to a configured provider (Resend / SendGrid / SES). In dev
- * with no provider, logs to console (existing behavior).
+ * Delegates to a configured provider (Brevo / Resend / SendGrid). Brevo est
+ * en tête de cascade : c'est le provider réel de l'opérateur (2026-07-19) —
+ * le panneau clés système l'annonçait déjà, le service ne l'implémentait pas
+ * (trou panneau-vs-service, fermé ici). In dev with no provider, logs to
+ * console (existing behavior).
  *
  * Mission contribution: GROUND_INFRASTRUCTURE — without email delivery,
  * password reset / payment receipts / digest weekly fail. UPgraders
@@ -20,17 +23,46 @@ interface SendEmailInput {
 
 interface SendEmailResult {
   ok: boolean;
-  provider: "resend" | "sendgrid" | "ses" | "log";
+  provider: "brevo" | "resend" | "sendgrid" | "ses" | "log";
   messageId?: string;
   error?: string;
 }
 
 export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult> {
+  if (process.env.BREVO_API_KEY) return sendViaBrevo(input);
   if (process.env.RESEND_API_KEY) return sendViaResend(input);
   if (process.env.SENDGRID_API_KEY) return sendViaSendGrid(input);
   // Dev fallback
   console.log(`[email:log] to=${input.to} subject="${input.subject}"\n  ${input.text ?? input.html.slice(0, 200)}`);
   return { ok: true, provider: "log" };
+}
+
+/** Brevo (ex-Sendinblue) — API transactionnelle v3, auth par header `api-key`. */
+async function sendViaBrevo(input: SendEmailInput): Promise<SendEmailResult> {
+  const apiKey = process.env.BREVO_API_KEY!;
+  const from = process.env.EMAIL_FROM ?? "noreply@lafusee.com";
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "api-key": apiKey,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      sender: { email: from, name: "La Fusée" },
+      to: [{ email: input.to }],
+      subject: input.subject,
+      htmlContent: input.html,
+      textContent: input.text,
+      tags: input.tag ? [input.tag] : undefined,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    return { ok: false, provider: "brevo", error: (err as { message?: string }).message ?? `HTTP ${res.status}` };
+  }
+  const data = (await res.json().catch(() => ({}))) as { messageId?: string };
+  return { ok: true, provider: "brevo", messageId: data.messageId };
 }
 
 async function sendViaResend(input: SendEmailInput): Promise<SendEmailResult> {

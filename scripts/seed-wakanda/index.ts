@@ -109,6 +109,9 @@ async function main() {
   const { seedSuperfanTracking } = await import("./25b-superfan-tracking");
   await seedSuperfanTracking(prisma);
 
+  const { seedPledgesAndPassports } = await import("./33-pledges-passports");
+  await seedPledgesAndPassports(prisma);
+
   const { seedOracleSections } = await import("./19-oracle-sections");
   await seedOracleSections(prisma);
 
