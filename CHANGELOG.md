@@ -10,6 +10,17 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.206 — feat(ui): campagne UX vague 3 — motion vivante, a11y armée, relance J+3 (2026-07-19)
+
+**Clôture du mandat intégral (vagues 1-3)** :
+
+- **Motion enfin consommée** (le canon DESIGN-MOTION était prescrit, quasi rien ne l'appliquait) : preset `PRESS` (`active:scale`, `--ease-spring`, reduced-motion-safe) composé dans TOUS les boutons DS + preset `HOVER_LIFT` disponible ; la keyframe orpheline `glow-pulse-cta` branchée sur le CTA n°1 de /lafusee ; **scroll-reveal orchestré sur les 11 sections de /lafusee** (`RevealSections`, le hook existait sans aucun consommateur) ; les 3 `transition-all` (anti-pattern) du step intake remplacés par des propriétés ciblées.
+- **A11y** : `@axe-core/playwright` installé (le harnais tests/a11y était un README vide) + première spec funnel (`scorer.a11y.spec.ts` — violations sérieuses/critiques + opérabilité clavier) ; live regions `role="status"` sur le verdict du /scorer et la progression de l'intake.
+- **OG par page** : leaderboard + /lafusee ont leurs cartes de partage propres (elles héritaient du générique root).
+- **Relance J+3** (`/api/cron/lead-nurture`) : un prospect qui avait vu son rapport et fermé l'onglet ne recevait plus jamais rien. UNE relance unique (idempotence par tag CRM `nurture-j3-sent`), fenêtre J+3→J+30, borné 100/run, best-effort, « nous ne relancerons plus » dit dans l'email.
+- **Résidus tracés** RESIDUAL-DEBT §Campagne UX 2026-07-19 : i18n funnel (chantier dédié — des centaines de chaînes), run navigateur + CI de la spec a11y, inviteCollaborator founder (→ passeport fan B2), locale OG dynamique.
+- tsc 0 · **2 775 tests verts** (suite complète).
+
 ## v6.27.205 — feat(ui): campagne UX vague 2 — checklist d'activation + notre funnel mesuré (2026-07-19)
 
 **Suite du mandat intégral** :

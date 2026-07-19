@@ -23,3 +23,9 @@ export const TONE_TO_BG = {
 export const FOCUS_RING = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-ring)]";
 export const TRANSITION_BASE = "transition-colors duration-[var(--motion-fast)] ease-[var(--ease-out)]";
 export const DISABLED_STATE = "disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none";
+
+// Micro-interactions tactiles (audit DS 2026-07-19) — le canon motion
+// prescrivait un feedback press/lift (--ease-spring), aucun preset ne
+// l'offrait : les CTA ne réagissaient qu'en couleur.
+export const PRESS = "active:scale-[0.97] transition-transform duration-[var(--motion-fast)] ease-[var(--ease-spring)] motion-reduce:transition-none motion-reduce:active:scale-100";
+export const HOVER_LIFT = "hover:-translate-y-0.5 transition-transform duration-[var(--motion-fast)] ease-[var(--ease-out)] motion-reduce:transition-none motion-reduce:hover:translate-y-0";

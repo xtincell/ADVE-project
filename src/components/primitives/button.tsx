@@ -9,7 +9,7 @@
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
-import { FOCUS_RING, TRANSITION_BASE, DISABLED_STATE } from "@/lib/design/cva-presets";
+import { FOCUS_RING, TRANSITION_BASE, DISABLED_STATE, PRESS } from "@/lib/design/cva-presets";
 
 export const buttonVariants = cva(
   cn(
@@ -17,6 +17,7 @@ export const buttonVariants = cva(
     "rounded-[var(--button-radius)]",
     FOCUS_RING,
     TRANSITION_BASE,
+    PRESS,
     DISABLED_STATE,
   ),
   {

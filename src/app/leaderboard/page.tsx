@@ -11,6 +11,10 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Leaderboard — la force révélée des marques | La Fusée",
   description: "Le championnat des marques : force θ révélée par les épreuves du réel, par ligue. Zéro jury, zéro IA.",
+  openGraph: {
+    title: "Le championnat des marques — La Fusée",
+    description: "Force révélée par les épreuves du réel, par ligue. Zéro jury, zéro IA. Où se classe votre marque ?",
+  },
 };
 
 interface ArenaRow {
