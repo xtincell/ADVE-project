@@ -10,6 +10,10 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.208 — fix(governance): les crons argos-hunt et lead-nurture réellement déclenchés (2026-07-19)
+
+**Auto-correction immédiate** (règle « exercé ou gelé » du plan d'état final) : les deux crons livrés en v6.27.206-207 n'étaient câblés à AUCUN déclencheur — du code mort en puissance. `scheduled-ops.yml` : `lead-nurture` en tranche 6 h (sans risque — idempotent par tag CRM, une relance max par prospect) · `argos-hunt` en tranche hebdomadaire (lundi 06h UTC, 3 chasses, quarantaine). Doc-only côté app, workflow CI seul touché.
+
 ## v6.27.207 — feat(governance): Phase A état-final vague 1 — la rédaction d'Argos tourne, championnat×média fusionnés, newsletter née (2026-07-19)
 
 **Boucle AUDIENCE du plan d'état final (B1)** — l'audit Argos disait « fonctionnel mais sans cadence, corpus = seed, zéro audience ». Trois organes posés :

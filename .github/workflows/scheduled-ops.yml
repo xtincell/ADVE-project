@@ -100,6 +100,7 @@ jobs:
 
           if [ "$T" = "sixhourly" ] || [ "$T" = "all" ]; then
             hit /api/cron/sentinels "sentinels (détection apogée)"
+            hit /api/cron/lead-nurture "lead-nurture (relance J+3 unique, idempotent par tag CRM)"
             hit /api/cron/sentinel-handlers "sentinel-handlers (exécution)"
             hit /api/cron/asset-impact "asset-impact (delta CultIndex)"
             hit /api/cron/feedback-loop "feedback-loop (signaux)"
@@ -110,6 +111,7 @@ jobs:
 
           if [ "$T" = "weekly" ] || [ "$T" = "all" ]; then
             hit /api/cron/founder-digest "founder-digest (hebdo)"
+            hit /api/cron/argos-hunt "argos-hunt (la rédaction Argos — 3 chasses hebdo, quarantaine)"
           fi
 
           if [ "$T" = "monthly" ] || [ "$T" = "all" ]; then
