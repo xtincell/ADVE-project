@@ -238,6 +238,8 @@ export const en = {
   "landing.nav.governors": "Governors",
   "landing.nav.portals": "Portals",
   "landing.nav.pricing": "Pricing",
+  "landing.nav.championnat": "The championship",
+  "landing.nav.paris": "The pledges",
   "landing.nav.login": "Sign in",
   "landing.nav.cta": "Free diagnostic — 15 min",
   "landing.nav.space": "My space",

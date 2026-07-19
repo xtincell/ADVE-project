@@ -71,6 +71,9 @@ export function MarketingNav() {
     { href: "#gouverneurs", label: t("landing.nav.governors") },
     { href: "#portails", label: t("landing.nav.portals") },
     { href: "#tarifs", label: t("landing.nav.pricing") },
+    // Façade unique — les preuves publiques rattachées à l'univers La Fusée.
+    { href: "/leaderboard", label: t("landing.nav.championnat") },
+    { href: "/paris", label: t("landing.nav.paris") },
   ];
 
   return (
