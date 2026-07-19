@@ -6,11 +6,13 @@
 
 "use client";
 
-import { useState, use } from "react";
+import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/lib/trpc/client";
 import { FileText, Rocket, ArrowLeft, Sparkles, AlertCircle } from "lucide-react";
 import { AiBadge } from "@/components/shared/ai-badge";
+import { IntakeProcessingScreen } from "@/components/intake/intake-processing-screen";
+import { useIntakeProcessingWatch, failureReasonKey } from "@/components/intake/use-intake-processing-watch";
 import { useT } from "@/lib/i18n/use-t";
 
 // i18n keys — resolved via t() at render time
@@ -33,12 +35,29 @@ export default function ShortIntakePage({ params }: { params: Promise<{ token: s
     { enabled: !!token }
   );
 
-  const processShortMutation = trpc.quickIntake.processShort.useMutation({
-    onSuccess: () => {
+  // F1 async : le serveur rend la main immédiatement ({ status: "PROCESSING" }),
+  // le hook sonde getByToken jusqu'à l'état terminal RÉEL — redirection sur
+  // COMPLETED uniquement, message honnête sur FAILED (retry sans rien perdre).
+  const { watching, startWatching } = useIntakeProcessingWatch(token, (outcome) => {
+    if (outcome.status === "COMPLETED") {
       router.push(`/intake/${token}/result`);
+      return;
+    }
+    setError(t(failureReasonKey(outcome.reason)));
+  });
+
+  const processShortMutation = trpc.quickIntake.processShort.useMutation({
+    onSuccess: (data) => {
+      if (data.status === "PROCESSING") startWatching();
     },
     onError: (err) => setError(err.message),
   });
+
+  // Un retour sur la page pendant qu'un traitement tourne (refresh, lien
+  // rouvert) reprend le suivi au lieu de représenter le formulaire.
+  useEffect(() => {
+    if (intake?.status === "PROCESSING" && !watching) startWatching();
+  }, [intake?.status, watching, startWatching]);
 
   if (isLoading) {
     return (
@@ -60,6 +79,16 @@ export default function ShortIntakePage({ params }: { params: Promise<{ token: s
   if (intake.status === "COMPLETED" || intake.status === "CONVERTED") {
     router.push(`/intake/${token}/result`);
     return null;
+  }
+
+  if (watching || processShortMutation.isPending) {
+    return (
+      <IntakeProcessingScreen
+        companyName={intake.companyName}
+        isPending
+        errorMessage={error || undefined}
+      />
+    );
   }
 
   const handleSubmit = () => {

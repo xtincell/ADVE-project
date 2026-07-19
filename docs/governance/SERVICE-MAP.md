@@ -160,6 +160,7 @@ Observent, mesurent, archivent.
 | `market-intelligence/` | Intel sectorielle | SESHAT | ✅ existant |
 | `sector-intelligence/` | Sector as first-class entity (APOGEE drift 5.2 fix) — **Phase 23 (ADR-0078) confirme canonical Overton home** : campaign-tracker/culture.* délègue ici. Epic 3 Story 3.1 étend l'index pour accepter `ConnectorResult<TarsisSignal>` (data-in / data-out, pure). | SESHAT | ✅ existant |
 | `seshat/tarsis/connector.ts` | **Tarsis-monitoring API façade — Phase 23 PENDING (Epic 2 Story 2.2)**. Retourne `ConnectorResult<TarsisSignal>` per pattern P22-1. Credentials via Vault (ADR-0021 + ADR-0079). Cf. ADR-0077, architecture D4. | SESHAT | 🟡 PENDING (Phase 23) |
+| `seshat/scan-rate-limit.ts` | Rate-limit PARTAGÉ entre workers des scans frais du scoreur public (table `ScanRateHit`, 6/min/IP, fail-open, purge auto) + résolution IP réelle derrière Cloudflare/Traefik (ADR-0161). Le cache ne consomme jamais. | SESHAT | ✅ shippé (2026-07-19) |
 | `source-classifier/` | Reads BrandDataSource → BrandAsset DRAFTs (taxonomie canonique) | SESHAT | ✅ existant |
 | `playbook-capitalization/` | Cross-brand learning loop (MISSION drift 5.10) | SESHAT | ✅ existant |
 | `audit-trail/` | Trail audit transverse | INFRASTRUCTURE | ✅ existant |

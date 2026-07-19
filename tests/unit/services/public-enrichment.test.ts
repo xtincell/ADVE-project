@@ -43,6 +43,27 @@ describe("mentionsBrand (garde anti-faux-positif déterministe)", () => {
     expect(mentionsBrand("N'importe quoi", "")).toBe(false);
     expect(normalizeBrandToken("---")).toBe("");
   });
+  // Fix prod 2026-07-19 : match de sous-chaîne → frontière de mot. Une marque
+  // « a » scorait 100/100 presse sur des brèves incendie/cancer/football.
+  it("frontière de mot : « a » ne matche plus les sous-chaînes ni le « à » français", () => {
+    expect(mentionsBrand("Incendie en Gironde : le point sur la situation", "a")).toBe(false);
+    expect(mentionsBrand("Cancer : elle témoigne de ses métastases", "a")).toBe(false);
+    // « à » se normalise en « a » (NFD) — le token mono-lettre est refusé d'office.
+    expect(mentionsBrand("Match Espagne-Argentine à Madrid", "a")).toBe(false);
+  });
+  it("nom court purement alphabétique (< 3) refusé, avec chiffre accepté en mot entier", () => {
+    expect(mentionsBrand("Go Sport ouvre un magasin", "Go")).toBe(false);
+    expect(mentionsBrand("La chaîne M6 annonce sa grille", "M6")).toBe(true);
+    expect(mentionsBrand("L'autoroute M62 est fermée", "M6")).toBe(false);
+  });
+  it("mot entier exigé : Motion19 matche Motion19, pas ses sur-chaînes", () => {
+    expect(mentionsBrand("Douala : Motion19 équipe le studio", "Motion19")).toBe(true);
+    expect(mentionsBrand("Le projet Motion192 est lancé", "Motion19")).toBe(false);
+  });
+  it("multi-mots : séquence complète de tokens adjacents exigée", () => {
+    expect(mentionsBrand("Il regarde la fusée monter", "La Fusée")).toBe(true);
+    expect(mentionsBrand("La grande fusée décolle", "La Fusée")).toBe(false);
+  });
 });
 
 describe("toSocialHandles", () => {

@@ -243,6 +243,88 @@ async function fetchDigitalPresenceBlock(companyName: string): Promise<string | 
   return null;
 }
 
+// ── F1 async (fix prod 2026-07-19) — mécanique commune des 3 chemins lourds ──
+
+/**
+ * Réserve la row pour un traitement asynchrone. Claim ATOMIQUE : seuls
+ * IN_PROGRESS (premier passage) et FAILED (retry) sont réservables — un
+ * double-submit concurrent perd la course et reçoit une erreur explicite au
+ * lieu d'un double traitement.
+ */
+async function claimIntakeForProcessing(db: import("@prisma/client").PrismaClient, intakeId: string): Promise<void> {
+  const claimed = await db.quickIntake.updateMany({
+    where: { id: intakeId, status: { in: ["IN_PROGRESS", "FAILED"] } },
+    data: { status: "PROCESSING", failureReason: null },
+  });
+  if (claimed.count === 0) {
+    throw new TRPCError({
+      code: "CONFLICT",
+      message: "L'analyse est déjà en cours pour ce diagnostic. Patientez quelques instants, la page suit l'avancement.",
+    });
+  }
+}
+
+/**
+ * Merge substantive slices only — jamais d'écrasement des réponses existantes
+ * par un squelette vide (classe de bug interdite par hasSubstantiveAnswer).
+ * Relit la row au moment du merge (le snapshot pré-claim peut être périmé).
+ */
+async function mergeIntakeResponses(
+  db: import("@prisma/client").PrismaClient,
+  intakeId: string,
+  responses: Record<string, Record<string, unknown>>,
+): Promise<void> {
+  if (Object.keys(responses).length === 0) return;
+  const fresh = await db.quickIntake.findUnique({ where: { id: intakeId }, select: { responses: true } });
+  const existingResponses = (fresh?.responses as Record<string, unknown>) ?? {};
+  await db.quickIntake.update({
+    where: { id: intakeId },
+    data: { responses: { ...existingResponses, ...responses } as Prisma.InputJsonValue },
+  });
+}
+
+/**
+ * Exécute le travail lourd HORS requête (fire-and-forget — pattern du relevé
+ * d'audience du scoreur, `footprint.ts` : notre prod est un serveur
+ * long-vivant Coolify, pas du serverless ; pas de file externe). GARANTIE de
+ * transition terminale : COMPLETED est écrit par `complete()` lui-même ;
+ * toute autre issue pose FAILED + failureReason — uniquement si la row est
+ * encore PROCESSING (jamais écraser un succès). Un process tué net (redeploy)
+ * est rattrapé par la garde paresseuse de getByToken (> 10 min → FAILED
+ * "timeout").
+ */
+function runIntakeProcessing(
+  db: import("@prisma/client").PrismaClient,
+  intakeId: string,
+  token: string,
+  caller: string,
+  work: () => Promise<{ failed: "extraction" | "llm_unavailable" | null }>,
+): Promise<void> {
+  return (async () => {
+    let reason: "extraction" | "llm_unavailable" | "internal" | null = null;
+    try {
+      const outcome = await work();
+      reason = outcome.failed;
+    } catch (err) {
+      reason = err instanceof quickIntakeService.IncompleteIntakeError ? "extraction" : "internal";
+      console.error(
+        `[quick-intake:${caller}] traitement de fond échoué (token ${token}):`,
+        err instanceof Error ? err.message : err,
+      );
+    }
+    if (reason !== null) {
+      await db.quickIntake
+        .updateMany({
+          where: { id: intakeId, status: "PROCESSING" },
+          data: { status: "FAILED", failureReason: reason },
+        })
+        .catch((err) => {
+          console.error(`[quick-intake:${caller}] transition FAILED impossible:`, err instanceof Error ? err.message : err);
+        });
+    }
+  })();
+}
+
 export const quickIntakeRouter = createTRPCRouter({
   start: publicProcedure
     .input(z.object({
@@ -323,9 +405,25 @@ export const quickIntakeRouter = createTRPCRouter({
   getByToken: publicProcedure
     .input(z.object({ token: z.string() }))
     .query(async ({ ctx, input }) => {
-      return ctx.db.quickIntake.findUnique({
+      const intake = await ctx.db.quickIntake.findUnique({
         where: { shareToken: input.token },
       });
+      // Garde de sécurité F1 : un traitement de fond tué net (redeploy, OOM)
+      // ne doit JAMAIS laisser une row PROCESSING pour toujours. Réparation
+      // paresseuse à la lecture — le client qui suit l'avancement passe
+      // forcément ici : > 10 min sans transition terminale → FAILED honnête.
+      // `updatedAt` en clause where = lock optimiste (un worker concurrent qui
+      // vient de transitionner la row a bumpé updatedAt → no-op ici).
+      if (intake?.status === "PROCESSING" && Date.now() - intake.updatedAt.getTime() > 10 * 60_000) {
+        const repaired = await ctx.db.quickIntake.updateMany({
+          where: { id: intake.id, status: "PROCESSING", updatedAt: intake.updatedAt },
+          data: { status: "FAILED", failureReason: "timeout" },
+        });
+        if (repaired.count > 0) {
+          return ctx.db.quickIntake.findUnique({ where: { shareToken: input.token } });
+        }
+      }
+      return intake;
     }),
 
   /**
@@ -980,7 +1078,7 @@ export const quickIntakeRouter = createTRPCRouter({
 
   listAll: adminProcedure
     .input(z.object({
-      status: z.enum(["IN_PROGRESS", "COMPLETED", "CONVERTED", "EXPIRED"]).optional(),
+      status: z.enum(["IN_PROGRESS", "PROCESSING", "COMPLETED", "CONVERTED", "EXPIRED", "FAILED"]).optional(),
       limit: z.number().min(1).max(100).default(50),
       cursor: z.string().optional(),
     }))
@@ -1004,10 +1102,24 @@ export const quickIntakeRouter = createTRPCRouter({
   // ========================================================================
   // ALTERNATIVE METHODS: Short (text), Ingest (files), Ingest Plus (files+URLs)
   // All follow the same pattern: extract → structured content → score → complete
+  //
+  // F1 async (fix prod 2026-07-19, RESIDUAL-DEBT « Intake processIngest
+  // synchrone → Load failed ») : le travail lourd (scrape + décodage +
+  // extraction LLM + complete()) dépassait le timeout du proxy frontal
+  // (Cloudflare ~100 s / Traefik) — le client recevait « Load failed » et la
+  // row restait IN_PROGRESS à vie. Désormais chaque procédure : persiste les
+  // sources → pré-flight LLM synchrone (dégradation honnête immédiate) →
+  // CLAIM atomique PROCESSING → lance le travail en fire-and-forget (pattern
+  // du relevé d'audience du scoreur, footprint.ts — serveur long-vivant
+  // Coolify, pas de file externe) → ack immédiat { status: "PROCESSING" }.
+  // Le client suit getByToken jusqu'à l'état terminal (COMPLETED écrit par
+  // complete() lui-même, FAILED + failureReason sinon — jamais de PROCESSING
+  // sans issue : garde paresseuse 10 min dans getByToken).
   // ========================================================================
 
   /**
    * SHORT method: Process pasted text, AI extracts ADVE-RTIS data, scores.
+   * Ack immédiat { status: "PROCESSING" } — le scoring se fait hors requête.
    */
   processShort: publicProcedure
     .input(z.object({
@@ -1019,20 +1131,20 @@ export const quickIntakeRouter = createTRPCRouter({
         where: { shareToken: input.token },
       });
       if (!intake) throw new Error("Intake not found");
-      if (intake.status !== "IN_PROGRESS") throw new Error("Intake already completed");
+      if (intake.status !== "IN_PROGRESS" && intake.status !== "FAILED") {
+        throw new Error("Intake already completed");
+      }
 
-      // Save raw text
+      // Save raw text FIRST — rien de ce que l'utilisateur fournit n'est perdu,
+      // même si la suite échoue.
       await ctx.db.quickIntake.update({
         where: { id: intake.id },
         data: { rawText: input.text },
       });
 
-      // Use the complete() flow with pre-populated responses from AI extraction
-      const responses = await extractFromText(input.text, intake.companyName, intake.sector);
-      if (responses === null) {
-        // Extraction impossible (providers down / crédits épuisés) — erreur
-        // explicite en français : le texte de l'utilisateur est déjà persisté,
-        // il peut réessayer plus tard ou passer par le questionnaire guidé.
+      // Pré-flight LLM synchrone : providers down → erreur explicite immédiate,
+      // rien n'est réservé (le texte est sauvé, retry ou questionnaire guidé).
+      if (!isTextLLMAvailable()) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
           message:
@@ -1040,31 +1152,23 @@ export const quickIntakeRouter = createTRPCRouter({
         });
       }
 
-      // Merge substantive slices only — never overwrite existing answers with
-      // an empty skeleton.
-      const existingResponses = (intake.responses as Record<string, unknown>) ?? {};
-      await ctx.db.quickIntake.update({
-        where: { id: intake.id },
-        data: { responses: { ...existingResponses, ...responses } as Prisma.InputJsonValue },
+      await claimIntakeForProcessing(ctx.db, intake.id);
+
+      void runIntakeProcessing(ctx.db, intake.id, input.token, "processShort", async () => {
+        const responses = await extractFromText(input.text, intake.companyName, intake.sector);
+        if (responses === null) return { failed: "llm_unavailable" as const };
+        await mergeIntakeResponses(ctx.db, intake.id, responses);
+        await quickIntakeService.complete(input.token);
+        return { failed: null };
       });
 
-      // Now complete the intake (scores, classifies, creates deal)
-      try {
-        return await quickIntakeService.complete(input.token);
-      } catch (err) {
-        if (err instanceof quickIntakeService.IncompleteIntakeError) {
-          throw new TRPCError({
-            code: "PRECONDITION_FAILED",
-            message:
-              "Le texte fourni n'a pas permis d'extraire assez d'informations pour un diagnostic fiable. Enrichissez la description (produits, clients, différenciation, engagement) ou passez par le questionnaire guidé.",
-          });
-        }
-        throw err;
-      }
+      return { status: "PROCESSING" as const, token: input.token };
     }),
 
   /**
    * INGEST method: Process uploaded documents (base64), AI extracts ADVE-RTIS data.
+   * Ack immédiat { status: "PROCESSING" } (ou { status: "REJECTED" } si les
+   * providers LLM sont down — dégradation honnête sans rien réserver).
    */
   processIngest: publicProcedure
     .input(z.object({
@@ -1082,7 +1186,9 @@ export const quickIntakeRouter = createTRPCRouter({
         where: { shareToken: input.token },
       });
       if (!intake) throw new Error("Intake not found");
-      if (intake.status !== "IN_PROGRESS") throw new Error("Intake already completed");
+      if (intake.status !== "IN_PROGRESS" && intake.status !== "FAILED") {
+        throw new Error("Intake already completed");
+      }
 
       // Le site déclaré à l'étape contact (landing) reste la source par défaut :
       // le champ de la page ingest est pré-rempli côté UI, mais s'il revient
@@ -1112,105 +1218,94 @@ export const quickIntakeRouter = createTRPCRouter({
       // suite vers le questionnaire pré-rempli avec une raison explicite.
       // JAMAIS de bascule muette.
       if (!isTextLLMAvailable()) {
-        return { completed: false as const, reason: "llm_unavailable" as const, token: input.token };
+        return { status: "REJECTED" as const, reason: "llm_unavailable" as const, token: input.token };
       }
 
-      // Collect all text sources
-      const textParts: string[] = [];
+      await claimIntakeForProcessing(ctx.db, intake.id);
 
-      // 1. Raw text input
-      if (input.rawText) {
-        textParts.push(`[TEXTE FOURNI]\n${input.rawText}`);
-      }
+      void runIntakeProcessing(ctx.db, intake.id, input.token, "processIngest", async () => {
+        // Collect all text sources
+        const textParts: string[] = [];
 
-      // 2 + 4. Kick off network I/O CONCURRENTLY (website scrape + Seshat/Brave
-      // digital-presence search). These were previously serialized — each with
-      // its own multi-second timeout — so they stacked and, with the doomed
-      // gpt-5.5 LLM attempt, blew the serverless budget: the function was killed
-      // before its first DB write (the "Load failed" the founder saw, intake row
-      // left IN_PROGRESS). Both are bounded best-effort and never throw.
-      const sitePromise = effectiveWebsiteUrl
-        ? fetchUrlAsText(effectiveWebsiteUrl, { maxChars: 15_000 })
-        : Promise.resolve(null);
-      const presencePromise = intake.companyName
-        ? fetchDigitalPresenceBlock(intake.companyName)
-        : Promise.resolve(null);
+        // 1. Raw text input
+        if (input.rawText) {
+          textParts.push(`[TEXTE FOURNI]\n${input.rawText}`);
+        }
 
-      // 3. Decode base64 files and extract text robustly (CPU-bound — runs while
-      //    the network calls above are in flight).
-      for (const f of input.files) {
-        try {
-          const buffer = Buffer.from(f.content, "base64");
-          
-          if (f.type === "text/plain" || f.name.endsWith(".txt")) {
-            textParts.push(`[DOCUMENT: ${f.name}]\n${buffer.toString("utf-8")}`);
-          } else if (f.type === "application/pdf" || f.name.endsWith(".pdf")) {
-            const pdfParseRaw = await import("pdf-parse");
-            const pdfParse = (pdfParseRaw as any).default || pdfParseRaw;
-            const pdfData = await pdfParse(buffer);
-            const text = pdfData.text.replace(/\s{3,}/g, " ").trim().slice(0, 20_000);
-            if (text.length > 50) textParts.push(`[DOCUMENT: ${f.name}]\n${text}`);
-          } else if (f.name.endsWith(".docx") || f.type.includes("wordprocessingml")) {
-            const mammoth = (await import("mammoth")).default;
-            const result = await mammoth.extractRawText({ buffer });
-            const text = result.value.replace(/\s{3,}/g, " ").trim().slice(0, 20_000);
-            if (text.length > 50) textParts.push(`[DOCUMENT: ${f.name}]\n${text}`);
-          } else {
-            // Fallback for unknown text-like formats
-            const decoded = buffer.toString("utf-8");
-            const cleaned = decoded.replace(/[^\x20-\x7E\xC0-\xFF\n\r\t]/g, " ").replace(/\s{3,}/g, " ").trim();
-            if (cleaned.length > 50) textParts.push(`[DOCUMENT: ${f.name}]\n${cleaned}`);
+        // 2 + 4. Network I/O CONCURRENT (scrape site + présence digitale
+        // Seshat/Brave) — bounded best-effort, never throw. Plus de budget
+        // serverless à respecter : on tourne hors requête.
+        const sitePromise = effectiveWebsiteUrl
+          ? fetchUrlAsText(effectiveWebsiteUrl, { maxChars: 15_000 })
+          : Promise.resolve(null);
+        const presencePromise = intake.companyName
+          ? fetchDigitalPresenceBlock(intake.companyName)
+          : Promise.resolve(null);
+
+        // 3. Decode base64 files and extract text robustly (CPU-bound — runs
+        //    while the network calls above are in flight).
+        for (const f of input.files) {
+          try {
+            const buffer = Buffer.from(f.content, "base64");
+
+            if (f.type === "text/plain" || f.name.endsWith(".txt")) {
+              textParts.push(`[DOCUMENT: ${f.name}]\n${buffer.toString("utf-8")}`);
+            } else if (f.type === "application/pdf" || f.name.endsWith(".pdf")) {
+              const pdfParseRaw = await import("pdf-parse");
+              const pdfParse = (pdfParseRaw as any).default || pdfParseRaw;
+              const pdfData = await pdfParse(buffer);
+              const text = pdfData.text.replace(/\s{3,}/g, " ").trim().slice(0, 20_000);
+              if (text.length > 50) textParts.push(`[DOCUMENT: ${f.name}]\n${text}`);
+            } else if (f.name.endsWith(".docx") || f.type.includes("wordprocessingml")) {
+              const mammoth = (await import("mammoth")).default;
+              const result = await mammoth.extractRawText({ buffer });
+              const text = result.value.replace(/\s{3,}/g, " ").trim().slice(0, 20_000);
+              if (text.length > 50) textParts.push(`[DOCUMENT: ${f.name}]\n${text}`);
+            } else {
+              // Fallback for unknown text-like formats
+              const decoded = buffer.toString("utf-8");
+              const cleaned = decoded.replace(/[^\x20-\x7E\xC0-\xFF\n\r\t]/g, " ").replace(/\s{3,}/g, " ").trim();
+              if (cleaned.length > 50) textParts.push(`[DOCUMENT: ${f.name}]\n${cleaned}`);
+            }
+          } catch {
+            textParts.push(`[Fichier non lisible ou format non supporté: ${f.name}]`);
           }
-        } catch (err) {
-          textParts.push(`[Fichier non lisible ou format non supporte: ${f.name}]`);
         }
-      }
 
-      // Await the concurrent network I/O kicked off above and append in a stable
-      // order. Digital presence uses the canonical Seshat/Brave access point
-      // (ADR-0108) — no inline Brave code here.
-      const [siteText, presenceBlock] = await Promise.all([sitePromise, presencePromise]);
-      if (effectiveWebsiteUrl) {
-        textParts.push(siteText ? `[SITE WEB: ${effectiveWebsiteUrl}]\n${siteText}` : `[SITE WEB inaccessible: ${effectiveWebsiteUrl}]`);
-      }
-      if (presenceBlock) textParts.push(presenceBlock);
+        // Await the concurrent network I/O kicked off above and append in a
+        // stable order. Digital presence uses the canonical Seshat/Brave access
+        // point (ADR-0108) — no inline Brave code here.
+        const [siteText, presenceBlock] = await Promise.all([sitePromise, presencePromise]);
+        if (effectiveWebsiteUrl) {
+          textParts.push(siteText ? `[SITE WEB: ${effectiveWebsiteUrl}]\n${siteText}` : `[SITE WEB inaccessible: ${effectiveWebsiteUrl}]`);
+        }
+        if (presenceBlock) textParts.push(presenceBlock);
 
-      const allText = textParts.join("\n\n---\n\n");
+        const allText = textParts.join("\n\n---\n\n");
 
-      const responses = await extractFromText(allText, intake.companyName, intake.sector);
-      if (responses === null) {
-        // Extraction impossible (erreur LLM / sortie imparsable après retry).
-        // Les sources sont persistées, rien n'est perdu — bascule explicite.
-        return { completed: false as const, reason: "llm_unavailable" as const, token: input.token };
-      }
-      if (Object.keys(responses).length > 0) {
-        // Merge substantive slices only — jamais d'écrasement par un squelette
-        // vide (classe de bug interdite par hasSubstantiveAnswer).
-        const existingResponses = (intake.responses as Record<string, unknown>) ?? {};
-        await ctx.db.quickIntake.update({
-          where: { id: intake.id },
-          data: { responses: { ...existingResponses, ...responses } as Prisma.InputJsonValue },
-        });
-      }
+        const responses = await extractFromText(allText, intake.companyName, intake.sector);
+        if (responses === null) {
+          // Extraction impossible (erreur LLM / sortie imparsable après retry).
+          // Les sources sont persistées, rien n'est perdu — échec explicite.
+          return { failed: "llm_unavailable" as const };
+        }
+        await mergeIntakeResponses(ctx.db, intake.id, responses);
 
-      // Direct-to-diagnostic (operator choice 2026-06-29) : run the full ADVE
-      // diagnostic now and send the founder straight to the result page. If the
-      // AI extraction came back empty/sparse (thin sources), complete() refuses
-      // to score — fall back to the pre-filled guided questionnaire WITH an
-      // explicit reason so the front can explain the switch (never silent).
-      try {
+        // Direct-to-diagnostic (operator choice 2026-06-29) : run the full ADVE
+        // diagnostic and let the client land on the result page. If the AI
+        // extraction came back empty/sparse (thin sources), complete() refuses
+        // to score — FAILED "extraction" route le client vers le questionnaire
+        // pré-rempli avec la raison (never silent), via runIntakeProcessing.
         await quickIntakeService.complete(input.token);
-        return { completed: true as const, token: input.token };
-      } catch (err) {
-        if (err instanceof quickIntakeService.IncompleteIntakeError) {
-          return { completed: false as const, reason: "extraction" as const, token: input.token };
-        }
-        throw err;
-      }
+        return { failed: null };
+      });
+
+      return { status: "PROCESSING" as const, token: input.token };
     }),
 
   /**
    * INGEST PLUS method: Documents + URLs (website + social).
+   * Ack immédiat { status: "PROCESSING" } — décodage, fetchs et scoring hors requête.
    */
   processIngestPlus: publicProcedure
     .input(z.object({
@@ -1227,67 +1322,72 @@ export const quickIntakeRouter = createTRPCRouter({
         where: { shareToken: input.token },
       });
       if (!intake) throw new Error("Intake not found");
-      if (intake.status !== "IN_PROGRESS") throw new Error("Intake already completed");
-
-      const textParts: string[] = [];
-
-      // Process files
-      if (input.files?.length) {
-        for (const f of input.files) {
-          try {
-            if (f.type === "text/plain") {
-              textParts.push(Buffer.from(f.content, "base64").toString("utf-8"));
-            } else {
-              const decoded = Buffer.from(f.content, "base64").toString("utf-8");
-              textParts.push(decoded.replace(/[^\x20-\x7E\xC0-\xFF\n\r\t]/g, " ").replace(/\s{3,}/g, " ").trim());
-            }
-          } catch {
-            textParts.push(`[Fichier: ${f.name}]`);
-          }
-        }
+      if (intake.status !== "IN_PROGRESS" && intake.status !== "FAILED") {
+        throw new Error("Intake already completed");
       }
 
-      // Fetch URLs CONCURRENTLY (bounded best-effort) instead of serially — same
-      // canonical web-fetch helper as processIngest.
-      if (input.urls?.length) {
-        const fetched = await Promise.all(
-          input.urls.map(async (url) => {
-            const text = await fetchUrlAsText(url, { maxChars: 10_000 });
-            return text ? `[Source: ${url}]\n${text}` : `[URL inaccessible: ${url}]`;
-          }),
-        );
-        textParts.push(...fetched);
-      }
-
-      const allText = textParts.join("\n\n---\n\n");
-
+      // Persist source info FIRST (parité processIngest) — `undefined` = champ
+      // non touché, jamais d'écrasement d'une déclaration antérieure par null.
       await ctx.db.quickIntake.update({
         where: { id: intake.id },
         data: {
-          // `undefined` = champ non touché — ne jamais écraser une déclaration
-          // antérieure (landing) par null.
           documentUrl: input.files?.map((f) => f.name).join(", ") ?? undefined,
           websiteUrl: input.urls?.[0] ?? undefined,
         },
       });
 
-      const responses = await extractFromText(allText, intake.companyName, intake.sector);
-      if (responses === null) {
+      // Pré-flight LLM synchrone : dégradation honnête immédiate, rien réservé.
+      if (!isTextLLMAvailable()) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
           message:
             "L'analyse automatique est momentanément indisponible. Vos sources sont conservées — réessayez dans quelques minutes.",
         });
       }
-      if (Object.keys(responses).length > 0) {
-        const existingResponses = (intake.responses as Record<string, unknown>) ?? {};
-        await ctx.db.quickIntake.update({
-          where: { id: intake.id },
-          data: { responses: { ...existingResponses, ...responses } as Prisma.InputJsonValue },
-        });
-      }
 
-      return quickIntakeService.complete(input.token);
+      await claimIntakeForProcessing(ctx.db, intake.id);
+
+      void runIntakeProcessing(ctx.db, intake.id, input.token, "processIngestPlus", async () => {
+        const textParts: string[] = [];
+
+        // Process files
+        if (input.files?.length) {
+          for (const f of input.files) {
+            try {
+              if (f.type === "text/plain") {
+                textParts.push(Buffer.from(f.content, "base64").toString("utf-8"));
+              } else {
+                const decoded = Buffer.from(f.content, "base64").toString("utf-8");
+                textParts.push(decoded.replace(/[^\x20-\x7E\xC0-\xFF\n\r\t]/g, " ").replace(/\s{3,}/g, " ").trim());
+              }
+            } catch {
+              textParts.push(`[Fichier: ${f.name}]`);
+            }
+          }
+        }
+
+        // Fetch URLs CONCURRENTLY (bounded best-effort) — same canonical
+        // web-fetch helper as processIngest.
+        if (input.urls?.length) {
+          const fetched = await Promise.all(
+            input.urls.map(async (url) => {
+              const text = await fetchUrlAsText(url, { maxChars: 10_000 });
+              return text ? `[Source: ${url}]\n${text}` : `[URL inaccessible: ${url}]`;
+            }),
+          );
+          textParts.push(...fetched);
+        }
+
+        const allText = textParts.join("\n\n---\n\n");
+
+        const responses = await extractFromText(allText, intake.companyName, intake.sector);
+        if (responses === null) return { failed: "llm_unavailable" as const };
+        await mergeIntakeResponses(ctx.db, intake.id, responses);
+        await quickIntakeService.complete(input.token);
+        return { failed: null };
+      });
+
+      return { status: "PROCESSING" as const, token: input.token };
     }),
 
   // ── REQ-8: Notify fixer (Alexandre) on intake completion ───────────────
@@ -1345,7 +1445,10 @@ export const quickIntakeRouter = createTRPCRouter({
 
       const staleIntakes = await ctx.db.quickIntake.findMany({
         where: {
-          status: "IN_PROGRESS",
+          // FAILED abandonné > 7 j expire comme IN_PROGRESS (F1 async) ; les
+          // PROCESSING coincés sont rattrapés bien avant par la garde 10 min
+          // de getByToken (→ FAILED) puis expirent ici.
+          status: { in: ["IN_PROGRESS", "FAILED"] },
           updatedAt: { lt: sevenDaysAgo },
         },
         select: { id: true, companyName: true, contactEmail: true, updatedAt: true },

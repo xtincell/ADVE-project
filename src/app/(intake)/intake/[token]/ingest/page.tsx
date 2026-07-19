@@ -12,6 +12,7 @@ import { trpc } from "@/lib/trpc/client";
 import { Upload, FileUp, File, X, ArrowLeft, AlertCircle, CheckCircle } from "lucide-react";
 import { AiBadge } from "@/components/shared/ai-badge";
 import { IntakeProcessingScreen } from "@/components/intake/intake-processing-screen";
+import { useIntakeProcessingWatch } from "@/components/intake/use-intake-processing-watch";
 import { useT } from "@/lib/i18n/use-t";
 
 const ACCEPTED_TYPES = [
@@ -36,7 +37,6 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
   const { t } = useT();
   const { token } = use(params);
   const router = useRouter();
-  const utils = trpc.useUtils();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<SelectedFile[]>([]);
   const [rawText, setRawText] = useState("");
@@ -47,8 +47,6 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
   // Pilote l'interstitiel honnête — jamais l'écran « Terminé 100 % » avant un
   // renvoi vers le questionnaire.
   const [fallbackReason, setFallbackReason] = useState<string | null>(null);
-  // Sondage de récupération après une coupure réseau (voir onError + recoverAfterNetworkCut).
-  const [recovering, setRecovering] = useState(false);
   const websitePrefilledRef = useRef(false);
 
   const { data: intake, isLoading } = trpc.quickIntake.getByToken.useQuery(
@@ -66,57 +64,48 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
     }
   }, [intake]);
 
+  // F1 async : le serveur rend la main immédiatement ({ status: "PROCESSING" }),
+  // le hook sonde getByToken jusqu'à l'état TERMINAL réel — redirection sur
+  // COMPLETED uniquement, écran de décision honnête sur FAILED (retry /
+  // questionnaire pré-rempli, sans rien perdre). Le hook couvre aussi la
+  // coupure réseau : row restée IN_PROGRESS = lancement perdu → « timeout ».
+  const { watching, startWatching } = useIntakeProcessingWatch(token, (outcome) => {
+    if (outcome.status === "COMPLETED") {
+      router.push(`/intake/${token}/result`);
+      return;
+    }
+    setFallbackReason(outcome.reason);
+  });
+
+  // Un retour sur la page pendant qu'un traitement tourne (refresh, lien
+  // rouvert) reprend le suivi au lieu de représenter le formulaire.
+  useEffect(() => {
+    if (intake?.status === "PROCESSING" && !watching && !fallbackReason) startWatching();
+  }, [intake?.status, watching, fallbackReason, startWatching]);
+
   const processIngestMutation = trpc.quickIntake.processIngest.useMutation({
     onSuccess: (data) => {
-      if (data.completed) {
-        // Direct-to-diagnostic: straight to the result page.
-        router.push(`/intake/${token}/result`);
+      if (data.status === "PROCESSING") {
+        startWatching();
         return;
       }
-      // Extraction impossible ou insuffisante. On ne bascule PAS tout seul :
-      // on s'arrête et on rend la main (cf. écran de décision plus bas). Le
-      // repli automatique — même expliqué après coup — décidait à la place du
-      // founder ; c'est lui qui choisit de réessayer ou de passer au
+      // REJECTED (pré-flight : analyse indisponible). On ne bascule PAS tout
+      // seul : on s'arrête et on rend la main (cf. écran de décision plus
+      // bas) — c'est le founder qui choisit de réessayer ou de passer au
       // questionnaire.
-      setFallbackReason(data.reason ?? "extraction");
+      setFallbackReason(data.reason);
     },
     onError: (err) => {
-      // Une coupure du proxy frontal (Cloudflare ~100 s) sur un appel long se
-      // présente comme une erreur RÉSEAU opaque (« Load failed » / « Failed to
-      // fetch »), pas une erreur applicative. Le serveur a pu terminer malgré la
-      // coupure côté client : on sonde l'état réel avant de conclure. Mitigation
-      // de SURFACE — la vraie parade est l'ingestion asynchrone (cf.
-      // RESIDUAL-DEBT « intake processIngest synchrone → Load failed »).
+      // Coupure réseau opaque (« Load failed ») : le serveur a pu recevoir et
+      // lancer le traitement malgré la coupure côté client — on suit l'état
+      // réel en base avant de conclure (jamais de faux succès).
       if (isNetworkCut(err.message)) {
-        void recoverAfterNetworkCut();
+        startWatching();
         return;
       }
       setError(err.message);
     },
   });
-
-  // Après une coupure réseau : le handler écrit le statut terminal (COMPLETED)
-  // en toute DERNIÈRE étape. On sonde l'intake pendant ~45 s ; s'il a abouti
-  // malgré la coupure, on rejoint le résultat ; sinon écran honnête « analyse
-  // trop longue ». JAMAIS de faux succès — on ne redirige que sur un statut
-  // terminal RÉEL lu en base.
-  async function recoverAfterNetworkCut() {
-    setRecovering(true);
-    for (let i = 0; i < 9; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-      try {
-        const latest = await utils.quickIntake.getByToken.fetch({ token });
-        if (latest?.status === "COMPLETED" || latest?.status === "CONVERTED") {
-          router.push(`/intake/${token}/result`);
-          return;
-        }
-      } catch {
-        // Réseau encore instable — nouvelle tentative au tour suivant.
-      }
-    }
-    setRecovering(false);
-    setFallbackReason("timeout");
-  }
 
   // Déclaré AVANT les early-returns : l'écran de décision ci-dessous le
   // référence, et un `const` défini plus bas ne serait jamais initialisé dans
@@ -169,17 +158,12 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
   // n'a pas cliqué. Ses sources sont déjà persistées côté serveur (le handler
   // écrit avant d'extraire), donc les deux issues sont sans perte.
   if (fallbackReason) {
-    const isTimeout = fallbackReason === "timeout";
-    const title = isTimeout
-      ? t("intakeIngest.fallback.timeoutTitle")
-      : fallbackReason === "llm_unavailable"
-        ? t("intakeIngest.fallback.llmTitle")
-        : t("intakeIngest.fallback.extractionTitle");
-    const body = isTimeout
-      ? t("intakeIngest.fallback.timeoutBody")
-      : fallbackReason === "llm_unavailable"
-        ? t("intakeIngest.fallback.llmBody")
-        : t("intakeIngest.fallback.extractionBody");
+    const fallbackKind =
+      fallbackReason === "timeout" || fallbackReason === "llm_unavailable" || fallbackReason === "internal"
+        ? fallbackReason
+        : "extraction";
+    const title = t(`intakeIngest.fallback.${fallbackKind}Title`);
+    const body = t(`intakeIngest.fallback.${fallbackKind}Body`);
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-background px-5">
         <div className="w-full max-w-md rounded-2xl border border-warning/30 bg-warning/10 p-6">
@@ -220,11 +204,11 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
     );
   }
 
-  if (processIngestMutation.isPending || processIngestMutation.isSuccess || recovering) {
+  if (processIngestMutation.isPending || watching) {
     return (
       <IntakeProcessingScreen
         companyName={intake.companyName}
-        isPending={processIngestMutation.isPending || recovering}
+        isPending
         errorMessage={error || undefined}
       />
     );

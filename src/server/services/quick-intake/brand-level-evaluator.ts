@@ -146,7 +146,7 @@ export async function evaluateBrandLevel(input: {
         .join(" | ");
       if (text) lines.push(`[${pillar.toUpperCase()}] ${text.slice(0, 500)}`);
     }
-    return lines.join("\n") || "(aucune reponse texte)";
+    return lines.join("\n") || "(aucune réponse texte)";
   };
 
   // LOT 1e — entrées non fiables neutralisées (anti-injection). Nom/secteur/pays

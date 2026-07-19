@@ -149,9 +149,17 @@ enum TrackingStatus {
 
 enum QuickIntakeStatus {
   IN_PROGRESS
+  /// F1 async (2026-07-19) : travail lourd (extraction LLM + scoring + deal)
+  /// en cours HORS requête — l'ack tRPC revient immédiatement, le client suit
+  /// via getByToken jusqu'à l'état terminal. Jamais laissé sans transition :
+  /// garde paresseuse getByToken (> 10 min → FAILED "timeout").
+  PROCESSING
   COMPLETED
   CONVERTED
   EXPIRED
+  /// F1 async (2026-07-19) : traitement de fond échoué — raison dans
+  /// failureReason, sources conservées, retry autorisé (re-claim).
+  FAILED
 }
 
 enum IntakeMethod {
@@ -1358,6 +1366,20 @@ model BrandFootprintSnapshot {
   @@index([sectorSlug, countryCode, capturedAt])
 }
 
+/// Fix prod 2026-07-19 (ADR-0161) — compteur PARTAGÉ entre workers du
+/// rate-limit des scans frais du scoreur public. L'ancien compteur en mémoire
+/// par instance multipliait la limite par le nombre de workers Coolify.
+/// Table technique éphémère : une row par scan frais consommé, purgée au fil
+/// de l'eau (> 1 h). Aucune donnée métier — jamais de FK.
+model ScanRateHit {
+  id String   @id @default(cuid())
+  ip String
+  at DateTime @default(now())
+
+  @@index([ip, at])
+  @@index([at])
+}
+
 model TalentProfile {
   id                  String    @id @default(cuid())
   userId              String    @unique
@@ -2094,6 +2116,10 @@ model QuickIntake {
   diagnostic         Json?
   shareToken         String            @unique @default(cuid())
   status             QuickIntakeStatus @default(IN_PROGRESS)
+  /// F1 async (2026-07-19) : raison du dernier échec de traitement asynchrone
+  /// (extraction | llm_unavailable | internal | timeout) — affichée
+  /// honnêtement au client, jamais un état muet. Nettoyée au re-claim.
+  failureReason      String?
   convertedToId      String?
   // ADR-0029 — FK with onDelete: SetNull. The Strategy archive BFS purge
   // (cf. ADR-0028) reads information_schema for FKs and cascades DELETE on

@@ -19,7 +19,7 @@ export const BUSINESS_MODELS = {
     subtypes: ["AGENCE_CONSEIL", "FREELANCE", "MANAGED_SERVICES", "AUDIT_CERTIFICATION", "FORMATION_COACHING"] as const,
   },
   ABONNEMENT: {
-    label: "Abonnement / Recurrence",
+    label: "Abonnement / Récurrence",
     subtypes: ["SAAS", "PAAS_IAAS", "MEMBERSHIP_CLUB", "BOX_ABO", "CONTENT_SUB", "MAINTENANCE_CONTRACT"] as const,
   },
   PLATEFORME: {
@@ -65,15 +65,15 @@ export const BUSINESS_MODEL_KEYS = Object.keys(BUSINESS_MODELS) as BusinessModel
 
 export const ECONOMIC_MODELS = {
   VENTE_DIRECTE: { label: "Vente directe (one-shot)" },
-  ABONNEMENT: { label: "Abonnement recurrent" },
+  ABONNEMENT: { label: "Abonnement récurrent" },
   FREEMIUM: { label: "Freemium (base gratuite + options payantes)" },
   COMMISSION: { label: "Commission / Take rate" },
-  PUBLICITE: { label: "Publicite / Attention" },
+  PUBLICITE: { label: "Publicité / Attention" },
   LICENCE: { label: "Licence / Royalties" },
   LOW_COST: { label: "Low-cost / Volume" },
   PREMIUM_PRICING: { label: "Premium pricing / Marge haute" },
-  ECONOMIE_CIRCULAIRE: { label: "Economie circulaire" },
-  USAGE_BASED: { label: "Paiement a l'usage" },
+  ECONOMIE_CIRCULAIRE: { label: "Économie circulaire" },
+  USAGE_BASED: { label: "Paiement à l'usage" },
 } as const;
 
 export type EconomicModelKey = keyof typeof ECONOMIC_MODELS;
@@ -116,7 +116,7 @@ export interface FreeLayer {
 export const BRAND_NATURES = {
   PRODUCT:      { label: "Marque produit (FMCG, tech, mode...)", primaryChannel: null, dominantPillar: "d" as PillarKey },
   SERVICE:      { label: "Marque de services (agence, conseil, SaaS...)", primaryChannel: null, dominantPillar: "a" as PillarKey },
-  FESTIVAL_IP:  { label: "Festival / Evenement (le produit EST l'evenement)", primaryChannel: "EVENT" as const, dominantPillar: "e" as PillarKey },
+  FESTIVAL_IP:  { label: "Festival / Événement (le produit EST l'événement)", primaryChannel: "EVENT" as const, dominantPillar: "e" as PillarKey },
   MEDIA_IP:     { label: "Media / Contenu (magazine, podcast, chaine...)", primaryChannel: null, dominantPillar: "d" as PillarKey },
   RETAIL_SPACE: { label: "Lieu / Espace (concept store, restaurant, hotel...)", primaryChannel: null, dominantPillar: "v" as PillarKey },
   PLATFORM:     { label: "Plateforme / Marketplace", primaryChannel: "WEBSITE" as const, dominantPillar: "v" as PillarKey },

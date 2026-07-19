@@ -32,13 +32,18 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 | Date | Symptôme patché (où / quoi) | Commit | Hypothèse cause racine | Dette liée (RESIDUAL-DEBT) |
 |---|---|---|---|---|
-| 2026-07-18 | `src/app/api/trpc/[trpc]/route.ts` — `export const maxDuration = 300` (mitigation timeout intake). **Inerte sur l'hôte courant** : `maxDuration` est un contrat Vercel, no-op sous Coolify (Node standalone `next start` derrière Traefik/Cloudflare). Retro-log d'une mitigation déjà shippée. | (antérieur) | Une procédure **synchrone longue** (`processIngest` : extraction LLM + narration + score en un seul appel) dépasse le timeout du proxy frontal — Cloudflare coupe à 100 s (non-Enterprise), d'où « Load failed » côté client. Le plafond de durée ne se règle pas au niveau Next sur cet hôte : la seule vraie parade est de **rendre l'ingestion asynchrone** (ack rapide + polling). | § « Intake `processIngest` synchrone → Load failed » |
-| 2026-07-18 | `intake/[token]/ingest/page.tsx` + `ingest-plus/page.tsx` — sur erreur RÉSEAU (`isNetworkCut`), sondage `getByToken` ~45 s → redirection si statut terminal RÉEL (jamais de faux succès), sinon écran honnête « analyse trop longue » (retry / questionnaire). | `fix(intake)` (même PR) | **Même cause racine** que la ligne au-dessus : `processIngest` synchrone dépasse le timeout proxy. Le patch client recouvre le cas « origine terminée, client déconnecté » + rend le message honnête — il ne réduit PAS la durée serveur. **2 symptômes convergents → le diagnostic de fond (ingestion async) est mûr.** | § « Intake `processIngest` synchrone → Load failed » |
+| 2026-07-19 | Accents restaurés **en passant** au-delà du mandat F5 strict (`question-bank.ts`) : dict fr `intake-result.ts` (~98 chaînes + « La Fusée » ×16 fr/en/zh), page publique `/score` (11 chaînes TIERS/PILLARS), labels `business-context.ts` (6). Remplacements exacts assertés (script python, `assert old in s`), zéro regex aveugle. | `fix(intake+seshat)` v6.27.223 | Contenu FR historique saisi en ASCII sans accents ; les sweeps précédents (v6.27.219-220) ont procédé par surface, pas par inventaire global — chaque passe en découvre une autre. Le fond = pas de verrou structurel anti-sans-accents. | § « Accents hors funnel — surfaces cockpit/console restantes » |
+| 2026-07-19 | `intake/[token]/ingest*` — l'écran de traitement s'affichait sur `mutation.isSuccess` : au retour de l'écran de décision (« Revenir à mes sources »), un « Terminé 100 % » fantôme s'affichait au lieu du formulaire. Condition ré-ancrée sur l'état de suivi réel (`watching \|\| isPending`). | `fix(intake+seshat)` v6.27.223 | État UI dérivé du cycle de vie de la MUTATION au lieu de l'état métier de la row — classe de bug fermée par le hook de suivi F1 (source de vérité = statut en base). | — (clos avec F1) |
 
 ---
 
 ## Causes racines diagnostiquées (purges)
 
-*Aucune pour l'instant.* Quand une cause racine listée ci-dessus est fermée par un diagnostic de fond,
-déplacer ici les lignes concernées (barrées) avec le commit/ADR de résolution + la date, et retirer la
-dette correspondante de `RESIDUAL-DEBT.md`.
+**Cause racine « `processIngest` synchrone dépasse le timeout proxy » — FERMÉE 2026-07-19** par le root
+fix F1 (ingestion asynchrone, v6.27.223, RESIDUAL-DEBT § intake clos, `npm run verify:intake-async`).
+Lignes dérivées purgées :
+
+| Date | Symptôme patché (où / quoi) | Résolution |
+|---|---|---|
+| ~~2026-07-18~~ | ~~`src/app/api/trpc/[trpc]/route.ts` — `maxDuration = 300` (inerte sous Coolify, contrat Vercel-only)~~ | Root fix F1 v6.27.223 — plus aucune requête longue à plafonner ; `maxDuration` reste inoffensif. |
+| ~~2026-07-18~~ | ~~`intake/[token]/ingest*` — sondage de récupération ~45 s après coupure réseau (mitigation de surface)~~ | Root fix F1 v6.27.223 — remplacé par le suivi de statut `use-intake-processing-watch` (terminal réel, jamais de faux succès, couvre aussi la coupure réseau via row restée `IN_PROGRESS` → « timeout »). |
