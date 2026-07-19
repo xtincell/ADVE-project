@@ -32,6 +32,11 @@ ENV AUTH_URL="http://localhost:3000"
 ENV NEXT_PUBLIC_BASE_URL="http://localhost:3000"
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# Le type-check de `next build` (~2.5 min, 265 pages) dépasse le heap Node par
+# défaut sur le VPS : le worker se faisait tuer sans message pendant « Running
+# TypeScript » (déploiement 2026-07-19, exit 255). Heap explicite + un seul
+# worker de build pour tenir dans la RAM du serveur.
+ENV NODE_OPTIONS="--max-old-space-size=6144"
 RUN npm run build
 
 # ── runner ───────────────────────────────────────────────────────────────────
