@@ -81,7 +81,7 @@ export default function ShortIntakePage({ params }: { params: Promise<{ token: s
           className="mb-6 flex items-center gap-1.5 text-sm text-foreground-muted transition-colors hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
-          Changer de methode
+          Changer de méthode
         </button>
 
         {/* Header */}

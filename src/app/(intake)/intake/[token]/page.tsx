@@ -29,6 +29,7 @@ import { PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
 import { HelpCircle, Save, X, ArrowLeft } from "lucide-react";
 import { AiBadge } from "@/components/shared/ai-badge";
 import { IntakeProcessingScreen } from "@/components/intake/intake-processing-screen";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 
 // Phase order: business context first, then 4 ADVE pillars
 // RTIS (R, T, I, S) are reserved for the paid version post-conversion
@@ -114,6 +115,7 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
   const { token } = use(params);
   const router = useRouter();
   const [currentPhaseIndex, setCurrentPhaseIndex] = useState(0);
+  const [showQuitConfirm, setShowQuitConfirm] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [responses, setResponses] = useState<Record<string, unknown>>({});
   // Local cache of all phase responses — survives forward/back navigation
@@ -463,9 +465,9 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-success/10">
             <Save className="h-7 w-7 text-success" />
           </div>
-          <h2 className="text-xl font-bold text-foreground">Progres sauvegarde !</h2>
+          <h2 className="text-xl font-bold text-foreground">Progrès sauvegardé !</h2>
           <p className="mt-3 text-sm leading-relaxed text-foreground-secondary">
-            Vous pouvez reprendre a tout moment en utilisant ce lien :
+            Vous pouvez reprendre à tout moment en utilisant ce lien :
           </p>
           <div className="mt-4 rounded-lg bg-background-overlay px-4 py-3">
             <code className="break-all text-xs text-primary">
@@ -552,19 +554,26 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
               <span className="hidden sm:inline">Sauvegarder et quitter</span>
               <span className="sm:hidden">Sauver</span>
             </button>
-            {/* Cancel & Quit button */}
+            {/* Cancel & Quit button — ConfirmDialog DS (0 dialogue natif dans le funnel) */}
             <button
-              onClick={() => {
-                if (window.confirm("Quitter sans sauvegarder ? Vos reponses non enregistrees seront perdues.")) {
-                  clearDraftFromLocal(token);
-                  router.push("/intake");
-                }
-              }}
-              className="flex h-7 w-7 items-center justify-center rounded-lg border border-red-800/40 text-red-400 transition-colors hover:bg-red-950/40 hover:text-red-300"
+              onClick={() => setShowQuitConfirm(true)}
+              className="flex h-7 w-7 items-center justify-center rounded-lg border border-error/40 text-error transition-colors hover:bg-error/10"
               title="Annuler et quitter"
             >
               <X className="h-3.5 w-3.5" />
             </button>
+            <ConfirmDialog
+              open={showQuitConfirm}
+              onClose={() => setShowQuitConfirm(false)}
+              onConfirm={() => {
+                clearDraftFromLocal(token);
+                router.push("/intake");
+              }}
+              title="Quitter sans sauvegarder ?"
+              message="Vos réponses non enregistrées seront perdues."
+              confirmLabel="Quitter"
+              cancelLabel="Continuer le diagnostic"
+            />
           </div>
         </div>
         <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-background-overlay">
@@ -849,7 +858,7 @@ function QuestionField({ question, value, onChange, phaseColor, mobile }: Questi
             onChange={(e) => onChange(e.target.value)}
             rows={mobile ? 5 : 3}
             className={`${inputClass} ${mobile ? "flex-1" : ""}`}
-            placeholder="Votre reponse..."
+            placeholder="Votre réponse…"
             style={{ minHeight: mobile ? "120px" : undefined }}
           />
         </div>

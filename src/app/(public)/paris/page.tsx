@@ -39,6 +39,17 @@ export default async function ParisPage() {
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-12">
+      {/* Chrome preuves (façade unique V3) — retour à l'univers La Fusée. */}
+      <nav className="mb-8 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <Link href="/lafusee" className="font-semibold uppercase tracking-widest text-foreground hover:text-accent">
+          La Fusée
+        </Link>
+        <span className="flex gap-4 text-foreground-muted">
+          <Link href="/scorer" className="hover:text-foreground">Scorer</Link>
+          <Link href="/leaderboard" className="hover:text-foreground">Championnat</Link>
+          <Link href="/intake" className="text-accent hover:underline">Diagnostic gratuit</Link>
+        </span>
+      </nav>
       <header className="mb-10 text-center">
         <p className="text-xs font-medium uppercase tracking-widest text-foreground-muted">La Fusée</p>
         <h1 className="mt-1 text-3xl font-semibold text-foreground">Le registre des paris</h1>

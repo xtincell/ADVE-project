@@ -289,7 +289,7 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
             Decrivez votre marque <AiBadge />
           </h1>
           <p className="mt-2 text-sm text-foreground-secondary">
-            Partagez ce que vous avez sur <span className="font-semibold text-primary">{intake.companyName}</span> — texte, documents, ou lien web. L'IA extraira les donnees ADVE.
+            Partagez ce que vous avez sur <span className="font-semibold text-primary">{intake.companyName}</span> — texte, documents, ou lien web. L'IA extraira les données ADVE.
           </p>
         </div>
 

@@ -56,9 +56,9 @@ const METHOD_OPTIONS: Array<{
   {
     id: "IMPORT",
     title: "Import intelligent",
-    subtitle: "Methode rapide",
+    subtitle: "Méthode rapide",
     duration: "~3-5 min",
-    description: "Fournissez un texte, des documents (PDF, Word) et/ou l'URL de votre site. L'IA analyse vos sources et extrait les donnees ADVE.",
+    description: "Fournissez un texte, des documents (PDF, Word) et/ou l'URL de votre site. L'IA analyse vos sources et extrait les données ADVE.",
     icon: FileText,
   },
 ];
@@ -164,7 +164,7 @@ function IntakeLandingContent() {
       // Translate common Zod/tRPC errors to French
       const msg = err.message;
       if (msg.includes("email") || msg.includes("pattern")) {
-        setError("Adresse email invalide. Verifiez et reessayez.");
+        setError("Adresse email invalide. Vérifiez et réessayez.");
         setStep("contact");
       } else if (msg.includes("String must contain")) {
         setError("Veuillez remplir tous les champs obligatoires.");
@@ -277,7 +277,7 @@ function IntakeLandingContent() {
           <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${step === "method" ? "bg-primary text-primary-foreground" : "bg-background-overlay text-foreground-muted"}`}>
             2
           </span>
-          <span className={step === "method" ? "font-medium text-foreground" : "text-foreground-muted"}>Methode</span>
+          <span className={step === "method" ? "font-medium text-foreground" : "text-foreground-muted"}>Méthode</span>
         </div>
 
         {/* ──────────── STEP 1: Contact info ──────────── */}
@@ -464,7 +464,7 @@ function IntakeLandingContent() {
                 type="submit"
                 className="w-full rounded-xl bg-primary px-6 py-4 text-base font-semibold text-primary-foreground shadow-lg transition-colors hover:bg-primary-hover sm:py-3 sm:shadow-none"
               >
-                Continuer — choisir la methode
+                Continuer — choisir la méthode
               </button>
             </div>
           </form>
@@ -552,7 +552,7 @@ function IntakeLandingContent() {
         )}
 
         <p className="mt-6 max-w-xs text-center text-2xs leading-relaxed text-foreground-muted">
-          Vos donnees sont confidentielles et ne seront jamais partagees sans votre accord explicite.
+          Vos données sont confidentielles et ne seront jamais partagées sans votre accord explicite.
         </p>
       </div>
     </main>

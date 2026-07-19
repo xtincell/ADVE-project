@@ -10,6 +10,10 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.219 — fix(ui): façade unique V3a — accents du funnel réparés, 0 dialogue natif, chrome preuves (2026-07-19)
+
+**Passe UI/UX page-par-page, première tranche.** (1) **Accents cassés du funnel réparés** sur 7 fichiers intake (« Methode rapide »→« Méthode rapide », « donnees ADVE », « Verifiez et reessayez », « Progres sauvegarde », « Strategie », « reponses verbatim », « fidele/fidelite »… — uniquement les chaînes RENDUES, jamais les identifiants). (2) **0 dialogue natif dans le funnel** : le `window.confirm` de « Quitter sans sauvegarder » (questionnaire guidé) remplacé par le `ConfirmDialog` DS + les classes rouges brutes du bouton passées aux tokens `error`. (3) **Chrome preuves** : `/paris` reçoit sa barre de retour à l'univers La Fusée (Scorer · Championnat · Diagnostic gratuit) — `/scorer` et `/leaderboard` gardent leurs designs éditoriaux propres, déjà reliés par la nav La Fusée (V1) et leurs cross-links. Reste de la V3 (session dédiée déjà scopée) : i18n funnel complet. 2796 tests verts.
+
 ## v6.27.218 — feat(ui): façade unique V2 — la 3ᵉ landing absorbée, une seule porte La Fusée (2026-07-19)
 
 **Le fix structurel du chantier** : `/landingintake` (la 3ᵉ landing au design .lf qui doublait `/lafusee` avec une autre copy) → **308 permanent vers `/lafusee`**. Sa seule valeur unique — le **mini-funnel** 3 champs (nom/email/marque) + choix de méthode → `/intake` pré-rempli, avec capture CRM best-effort (un prospect qui ferme n'est jamais perdu) — est **portée sur `/lafusee`** : nouveau `<DiagnosticCta/>` (`components/landing/diagnostic-modal.tsx`, token bridge `.lf` scopé conservé pour la modale) branché sur le CTA primaire du hero « Diagnostiquer ma marque ». La façade La Fusée n'a plus qu'UNE porte, avec le meilleur des deux : le design DS/i18n de `/lafusee` + le funnel court du handoff. tsc 0 · lint 0 · 2796 tests verts.

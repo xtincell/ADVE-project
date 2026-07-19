@@ -78,7 +78,7 @@ const PILLARS = [
   { key: "T", name: "Track", question: "Comment mesurez-vous le succes ?", color: "var(--color-pillar-t)", icon: BarChart3 },
   // I = Innovation (canon produit) — « Implementation » était un drift.
   { key: "I", name: "Innovation", question: "Quel potentiel inexploite ?", color: "var(--color-pillar-i)", icon: Settings },
-  { key: "S", name: "Strategie", question: "Comment assembler le tout ?", color: "var(--color-pillar-s)", icon: Compass },
+  { key: "S", name: "Stratégie", question: "Comment assembler le tout ?", color: "var(--color-pillar-s)", icon: Compass },
 ];
 
 export default function PublicScorePage() {
