@@ -9,8 +9,10 @@
 
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
+import { useT } from "@/lib/i18n/use-t";
 
 export function NewsletterCapture({ source }: { source: string }) {
+  const { t } = useT();
   const [email, setEmail] = useState("");
   const [done, setDone] = useState(false);
   const subscribe = trpc.argos.subscribeNewsletter.useMutation({ onSuccess: () => setDone(true) });
@@ -18,7 +20,7 @@ export function NewsletterCapture({ source }: { source: string }) {
   if (done) {
     return (
       <p className="text-sm" role="status" style={{ color: "var(--color-foreground-secondary)" }}>
-        C&apos;est noté — vous recevrez les prochains dossiers et mouvements du classement.
+        {t("lb.nl.done")}
       </p>
     );
   }
@@ -35,8 +37,8 @@ export function NewsletterCapture({ source }: { source: string }) {
         required
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        placeholder="votre@email.com"
-        aria-label="Votre email pour la newsletter"
+        placeholder={t("lb.nl.placeholder")}
+        aria-label={t("lb.nl.aria")}
         className="min-w-[220px] flex-1 rounded-md border px-3 py-2 text-sm"
         style={{ borderColor: "var(--color-border)", background: "var(--color-surface)", color: "var(--color-foreground)" }}
       />
@@ -46,7 +48,7 @@ export function NewsletterCapture({ source }: { source: string }) {
         className="rounded-md px-4 py-2 text-sm font-semibold disabled:opacity-50"
         style={{ background: "var(--color-accent)", color: "var(--color-accent-foreground, #fff)" }}
       >
-        {subscribe.isPending ? "…" : "Recevoir les dossiers"}
+        {subscribe.isPending ? "…" : t("lb.nl.submit")}
       </button>
       {subscribe.error ? (
         <span className="text-xs" style={{ color: "var(--color-foreground-muted)" }}>{subscribe.error.message}</span>

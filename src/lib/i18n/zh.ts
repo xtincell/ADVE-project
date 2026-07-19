@@ -1,3 +1,4 @@
+import { leaderboardZh } from "./pages/leaderboard";
 import { parisZh } from "./pages/paris";
 /**
  * 中文 (简体) strings — La Fusée.
@@ -8,6 +9,7 @@ import { parisZh } from "./pages/paris";
  */
 export const zh = {
   ...parisZh,
+  ...leaderboardZh,
   // ── Common ───────────────────────────────────────────────────────────
   "common.cta.start": "开始",
   "common.cta.contact": "联系 UPgraders",

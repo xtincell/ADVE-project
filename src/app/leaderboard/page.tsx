@@ -5,9 +5,11 @@
  */
 import "@/styles/leaderboard.css";
 import { db } from "@/lib/db";
-import { MARKET_SCALE_LABELS, type MarketScale } from "@/domain/market-scale";
+import { type MarketScale } from "@/domain/market-scale";
 import { listPublicDossiers } from "@/server/services/seshat/argos";
 import { NewsletterCapture } from "@/components/public/newsletter-capture";
+import { getServerLocale } from "@/lib/i18n/server";
+import { t, type Locale } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -47,12 +49,21 @@ interface Row {
   epreuveCount: number;
 }
 
-const ARENA_LABELS: Record<string, string> = {
-  A: "Authenticité",
-  D: "Distinction",
-  V: "Valeur",
-  E: "Engagement",
-  T: "Track",
+const ARENA_KEYS: Record<string, string> = {
+  A: "lb.arena.A",
+  D: "lb.arena.D",
+  V: "lb.arena.V",
+  E: "lb.arena.E",
+  T: "lb.arena.T",
+};
+
+const SCALE_KEYS: Record<MarketScale, string> = {
+  QUARTIER: "lb.scale.QUARTIER",
+  VILLE: "lb.scale.VILLE",
+  REGION: "lb.scale.REGION",
+  NATION: "lb.scale.NATION",
+  CONTINENT: "lb.scale.CONTINENT",
+  MONDE: "lb.scale.MONDE",
 };
 
 function toArenas(value: unknown): ArenaRow[] {
@@ -76,14 +87,21 @@ function toGates(value: unknown): Array<{ label: string; ok: boolean }> {
     .map((g) => ({ label: String(g.label ?? ""), ok: Boolean(g.ok) }));
 }
 
-function leagueLabel(sectorSlug: string, marketScale: string | null, countryCode: string | null): string {
+function leagueLabel(sectorSlug: string, marketScale: string | null, countryCode: string | null, locale: Locale): string {
   const sector = sectorSlug.replace(/-/g, " ");
-  const scale = marketScale ? MARKET_SCALE_LABELS[marketScale as MarketScale] : "échelle non déclarée";
+  const scaleKey = marketScale && marketScale in SCALE_KEYS ? SCALE_KEYS[marketScale as MarketScale] : "lb.scale.undeclared";
+  const scale = t(scaleKey, locale);
   const country = countryCode ? ` · ${countryCode}` : "";
   return `${sector} · ${scale}${country}`;
 }
 
+function fmtDate(d: Date, locale: Locale): string {
+  const intl = locale === "en" ? "en-GB" : locale === "zh" ? "zh-CN" : "fr-FR";
+  return d.toLocaleDateString(intl, { day: "numeric", month: "long", year: "numeric" });
+}
+
 export default async function LeaderboardPage() {
+  const locale = await getServerLocale();
   const verdicts = await db.scoreVerdict.findMany({
     orderBy: { computedAt: "desc" },
     take: 1000,
@@ -130,14 +148,12 @@ export default async function LeaderboardPage() {
   return (
     <main className="lb">
       <div className="lb__wrap">
-        <div className="lb__eyebrow">La Fusée · la force révélée · zéro jury, zéro IA</div>
+        <div className="lb__eyebrow">{t("lb.eyebrow", locale)}</div>
         <h1 className="lb__title">
-          Un <em>championnat</em>, pas un jury.
+          {t("lb.title.before", locale)}<em>{t("lb.title.em", locale)}</em>{t("lb.title.after", locale)}
         </h1>
         <p className="lb__lede">
-          La force d&apos;une marque ne se note pas — elle se révèle par les épreuves qu&apos;elle gagne
-          ou perd dans le réel. Voici le classement, par ligue, à force θ révélée (Bradley-Terry
-          ancré sur les étalons). Chaque score se lit avec sa couverture d&apos;épreuves.
+          {t("lb.lede", locale)}
         </p>
 
         {/* Copy honnête (audit 2026-07-16 `cta-scorer-fausse-promesse`) : /scorer
@@ -146,42 +162,39 @@ export default async function LeaderboardPage() {
             l'un pour l'autre. */}
         <div className="lb__cta">
           <div className="lb__cta-txt">
-            <strong>Où se classe VOTRE marque ?</strong>
+            <strong>{t("lb.cta.title", locale)}</strong>
             <span>
-              Commencez par scorer votre empreinte publique — gratuit, une minute, sans email.
-              L&apos;entrée au championnat se fait ensuite, par une mesure officielle sur épreuves.
+              {t("lb.cta.body", locale)}
             </span>
           </div>
-          <a href="/scorer" className="lb__ctabtn">Scorer mon empreinte</a>
+          <a href="/scorer" className="lb__ctabtn">{t("lb.cta.btn", locale)}</a>
         </div>
 
         {leagues.length === 0 ? (
           <div className="lb__empty">
-            <strong>Le championnat n&apos;a pas encore de participants.</strong>
+            <strong>{t("lb.empty.title", locale)}</strong>
             <span>
-              Le classement se remplit dès qu&apos;une marque est mesurée par une épreuve du réel
-              (mesure officielle, validée par un opérateur). En attendant, scorez votre empreinte
-              publique — gratuit, une minute — puis demandez votre mesure officielle.
+              {t("lb.empty.body", locale)}
             </span>
-            <a href="/scorer" className="lb__ctabtn">Scorer mon empreinte — gratuit</a>
+            <a href="/scorer" className="lb__ctabtn">{t("lb.empty.btn", locale)}</a>
           </div>
         ) : (
           leagues.map((league) => {
             const first = league.rows[0]!;
             return (
               <section className="lb__league" key={league.key}>
-                <h2>{leagueLabel(first.sectorSlug, first.marketScale, first.countryCode)}</h2>
+                <h2>{leagueLabel(first.sectorSlug, first.marketScale, first.countryCode, locale)}</h2>
                 <div className="lb__tablewrap">
                   {/* Grille dépliable (zéro JS) : chaque ligne s'ouvre sur son
                       PALMARÈS — arènes, victoires/défaites, portes, épreuves.
                       Le verdict n'est plus un chiffre nu (audit 2026-07-16). */}
                   <div className="lb__gridhead" aria-hidden>
                     <span className="lb__rank">#</span>
-                    <span>Marque</span>
-                    <span>Palier</span>
-                    <span>Force</span>
-                    <span>Couverture</span>
-                    <span>Cohérence</span>
+                    <span>{t("lb.col.brand", locale)}</span>
+                    <span>{t("lb.col.tier", locale)}</span>
+                    <span>{t("lb.col.force", locale)}</span>
+                    <span>{t("lb.col.coverage", locale)}</span>
+                    <span>{t("lb.col.coherence", locale)}</span>
                   </div>
                   {league.rows.map((row, i) => (
                     <details className="lb__row-details" key={row.subjectKey}>
@@ -201,14 +214,14 @@ export default async function LeaderboardPage() {
                       <div className="lb__palmares">
                         {row.arenas.length > 0 ? (
                           <>
-                            <p className="lb__palmares-h">Palmarès par arène</p>
+                            <p className="lb__palmares-h">{t("lb.palmares.title", locale)}</p>
                             <div className="lb__arenas">
                               {row.arenas.map((a) => (
                                 <div className="lb__arena" key={a.arena}>
-                                  <b>{ARENA_LABELS[a.arena] ?? a.arena}</b>
-                                  <span className="lb__wl">{a.wins}V · {a.losses}D</span>
-                                  <span>force {Math.round(a.force * 10) / 10}/25 ±{Math.round(a.rd * 10) / 10}</span>
-                                  <span>{a.epreuveCount} épreuve{a.epreuveCount > 1 ? "s" : ""}</span>
+                                  <b>{ARENA_KEYS[a.arena] ? t(ARENA_KEYS[a.arena]!, locale) : a.arena}</b>
+                                  <span className="lb__wl">{a.wins}{t("lb.palmares.win", locale)} · {a.losses}{t("lb.palmares.loss", locale)}</span>
+                                  <span>{t("lb.palmares.force", locale)} {Math.round(a.force * 10) / 10}/25 ±{Math.round(a.rd * 10) / 10}</span>
+                                  <span>{a.epreuveCount} {t(a.epreuveCount > 1 ? "lb.trial.many" : "lb.trial.one", locale)}</span>
                                 </div>
                               ))}
                             </div>
@@ -216,7 +229,7 @@ export default async function LeaderboardPage() {
                         ) : null}
                         {row.gates.length > 0 ? (
                           <>
-                            <p className="lb__palmares-h">Portes de palier</p>
+                            <p className="lb__palmares-h">{t("lb.gates.title", locale)}</p>
                             <div className="lb__gates">
                               {row.gates.map((g) => (
                                 <span className="lb__gate" data-ok={g.ok ? "1" : "0"} key={g.label}>
@@ -227,8 +240,8 @@ export default async function LeaderboardPage() {
                           </>
                         ) : null}
                         <p className="lb__palmares-meta">
-                          {row.epreuveCount} épreuve{row.epreuveCount > 1 ? "s" : ""} au total ·
-                          mesuré le {row.computedAt.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+                          {row.epreuveCount} {t(row.epreuveCount > 1 ? "lb.trial.many" : "lb.trial.one", locale)}{t("lb.meta.totalSuffix", locale)} ·
+                          {" "}{t("lb.meta.measured", locale)} {fmtDate(row.computedAt, locale)}
                         </p>
                       </div>
                     </details>
@@ -243,7 +256,7 @@ export default async function LeaderboardPage() {
             Argos publiés (PASS + revue), et la newsletter possédée en propre. */}
         {dossiers.length > 0 ? (
           <section className="lb__league">
-            <h2>Les dossiers de la rédaction · Argos</h2>
+            <h2>{t("lb.argos.title", locale)}</h2>
             <div className="lb__tablewrap">
               {dossiers.map((d) => (
                 <a key={d.ref} href={`/argos/${d.ref}`} className="lb__row-details" style={{ display: "block", padding: "12px 16px", textDecoration: "none", color: "inherit" }}>
@@ -254,39 +267,35 @@ export default async function LeaderboardPage() {
               ))}
             </div>
             <p className="lb__lede" style={{ marginTop: 12 }}>
-              <a href="/argos" style={{ textDecoration: "underline", textUnderlineOffset: 3 }}>Tous les dossiers →</a>
+              <a href="/argos" style={{ textDecoration: "underline", textUnderlineOffset: 3 }}>{t("lb.argos.all", locale)}</a>
             </p>
           </section>
         ) : null}
 
         <div className="lb__cta" style={{ marginTop: 24 }}>
           <div className="lb__cta-txt">
-            <strong>Les dossiers et les mouvements du classement, par email.</strong>
-            <span>Pas de spam — la rédaction, quand elle publie.</span>
+            <strong>{t("lb.newsletter.title", locale)}</strong>
+            <span>{t("lb.newsletter.body", locale)}</span>
           </div>
           <NewsletterCapture source="leaderboard" />
         </div>
 
         <p className="lb__lede" style={{ marginTop: 16 }}>
           <a href="/paris" style={{ textDecoration: "underline", textUnderlineOffset: 3 }}>
-            Le registre des paris — des marques qui s&apos;engagent en public →
+            {t("lb.parisLink", locale)}
           </a>
         </p>
 
         <div className="lb__method">
-          <h3>Comment lire ce classement</h3>
+          <h3>{t("lb.method.title", locale)}</h3>
           <p>
-            <strong>Force θ</strong> = le nombre qui explique le mieux l&apos;ensemble des résultats
-            observés (recherche, premium, rétention, cadre culturel), ancré sur des étalons à θ fixé.
+            <strong>{t("lb.method.force.term", locale)}</strong> {t("lb.method.force.def", locale)}
           </p>
           <p>
-            <strong>Couverture</strong> = part des 5 arènes (A·D·V·E·T) où la marque a réellement
-            joué des épreuves. Peu d&apos;épreuves ⇒ incertitude large — un score se publie toujours
-            avec sa couverture.
+            <strong>{t("lb.method.coverage.term", locale)}</strong> {t("lb.method.coverage.def", locale)}
           </p>
           <p>
-            <strong>Palier</strong> = min(bande de force, items must-have franchis). Une force haute
-            sans les portes franchies reste plafonnée. Chaque marque est mesurée dans SA ligue.
+            <strong>{t("lb.method.tier.term", locale)}</strong> {t("lb.method.tier.def", locale)}
           </p>
         </div>
       </div>

@@ -1,3 +1,4 @@
+import { leaderboardEn } from "./pages/leaderboard";
 import { parisEn } from "./pages/paris";
 /**
  * EN strings — La Fusée.
@@ -7,6 +8,7 @@ import { parisEn } from "./pages/paris";
  */
 export const en = {
   ...parisEn,
+  ...leaderboardEn,
   // ── Common ───────────────────────────────────────────────────────────
   "common.cta.start": "Start",
   "common.cta.contact": "Contact UPgraders",
