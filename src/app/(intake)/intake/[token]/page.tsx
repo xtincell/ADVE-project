@@ -754,7 +754,7 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
             {/* P2-1 (audit UX) — compteur basé sur les PHASES : l'ancien calcul
                 utilisait questions.length (variable par phase adaptative) et
                 affichait un total qui sautait/mentait. */}
-            <span className="text-xs text-foreground-muted">
+            <span className="text-xs text-foreground-muted" role="status" aria-live="polite">
               Étape {currentPhaseIndex + 1}/{PHASE_ORDER.length} · Q{currentQuestionIndex + 1}/{questions.length || 1}
             </span>
             <button

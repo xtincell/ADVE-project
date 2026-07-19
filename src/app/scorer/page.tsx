@@ -423,7 +423,7 @@ export default function ScorerPage() {
                   ) : null}
                 </div>
 
-                <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="flex flex-wrap items-start justify-between gap-4" role="status" aria-live="polite">
                   <div className="min-w-0 flex-1">
                     <Heading level={1} as="h2" className="break-words">
                       {brandName.trim() || "Votre marque"}

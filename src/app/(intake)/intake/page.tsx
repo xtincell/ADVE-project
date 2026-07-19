@@ -462,7 +462,7 @@ function IntakeLandingContent() {
             <div className="sticky bottom-4 pt-2 sm:static sm:bottom-auto">
               <button
                 type="submit"
-                className="w-full rounded-xl bg-primary px-6 py-4 text-base font-semibold text-primary-foreground shadow-lg transition-all hover:bg-primary-hover sm:py-3 sm:shadow-none"
+                className="w-full rounded-xl bg-primary px-6 py-4 text-base font-semibold text-primary-foreground shadow-lg transition-colors hover:bg-primary-hover sm:py-3 sm:shadow-none"
               >
                 Continuer — choisir la methode
               </button>
@@ -494,7 +494,7 @@ function IntakeLandingContent() {
                     key={method.id}
                     type="button"
                     onClick={() => setSelectedMethod(method.id)}
-                    className={`relative w-full rounded-xl border-2 px-5 py-4 text-left transition-all ${
+                    className={`relative w-full rounded-xl border-2 px-5 py-4 text-left transition-[border-color,background-color,box-shadow] ${
                       isSelected
                         ? "border-primary bg-primary-subtle/30 shadow-sm"
                         : "border-border bg-background-raised hover:border-foreground-muted/30"
@@ -543,7 +543,7 @@ function IntakeLandingContent() {
                 type="button"
                 onClick={handleStart}
                 disabled={startMutation.isPending}
-                className="w-full rounded-xl bg-primary px-6 py-4 text-base font-semibold text-primary-foreground shadow-lg transition-all hover:bg-primary-hover disabled:opacity-50 sm:py-3 sm:shadow-none"
+                className="w-full rounded-xl bg-primary px-6 py-4 text-base font-semibold text-primary-foreground shadow-lg transition-colors hover:bg-primary-hover disabled:opacity-50 sm:py-3 sm:shadow-none"
               >
                 {startMutation.isPending ? "Démarrage..." : "Commencer le diagnostic"}
               </button>

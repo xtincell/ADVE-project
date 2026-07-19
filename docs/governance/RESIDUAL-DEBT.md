@@ -5,6 +5,13 @@
 > `nefer-postmerge` (9.5.bis) le relisent et referment le refermable ; le diagnostic de fond le purge.
 > Les fixes en passant, eux, sont journalisés dans [`PATCHED-SYMPTOMS.md`](PATCHED-SYMPTOMS.md).
 
+## Campagne UX 2026-07-19 — résidu tracé (mandat intégral)
+
+- **i18n du funnel** : les pages funnel (`/scorer`, `/intake`, `/leaderboard`, `/landingintake`) sont FR-en-dur sous une nav trilingue (le `LocaleToggle` change la nav, pas la page). Chantier d'externalisation vers `src/lib/i18n` (≥ EN) — trop large pour la vague 3 (centaines de chaînes), à faire en session dédiée. Les accents cassés relevés (`Methode rapide`, `donnees ADVE`…) se corrigent AVEC l'externalisation.
+- **Spec a11y funnel** : `tests/a11y/scorer.a11y.spec.ts` écrite + `@axe-core/playwright` installé — premier run navigateur + baselines + câblage CI restent à faire (même posture que overton-radar.a11y.spec.ts).
+- **`inviteCollaborator` founder-facing** (P1-4 audit onboarding) : `grantCollaborator` reste requireOperator + compte existant + zéro email d'invitation — la version founder (email inconnu → user stub + invitation) attend le chantier passeport fan B2.
+- **locale OG dynamique** : `openGraph.locale` reste `fr_FR` figé au root layout (metadata statique Next) — à résoudre avec l'i18n funnel.
+
 ## Intake `processIngest` synchrone → « Load failed » (2026-07-18, NEFER)
 
 **Symptôme** : sur la fin de l'intake, l'écran affiche « Load failed » et l'utilisateur ne peut pas savoir pourquoi. **Cause racine** : `processIngest` / `processIngestPlus` exécutent TOUT le travail lourd (scrape site + présence digitale + décodage fichiers + extraction LLM + narration + scoring + `complete()`) **de façon synchrone dans une seule mutation tRPC**. Sur des entrées lentes, la requête dépasse le timeout du proxy frontal (Cloudflare **100 s** en plan non-Enterprise ; Traefik `readTimeout` par défaut), le client reçoit une erreur réseau opaque (« Load failed » côté WebKit), la row reste `IN_PROGRESS`. `maxDuration = 300` sur la route est un **no-op** sous Coolify (contrat Vercel-only). Cf. commentaire déjà présent `quick-intake.ts:1112-1117`.

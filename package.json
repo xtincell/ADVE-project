@@ -1,6 +1,6 @@
 {
   "name": "lafusee",
-  "version": "6.27.205",
+  "version": "6.27.206",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
@@ -134,6 +134,7 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
     "@commitlint/cli": "^20.5.3",
     "@commitlint/config-conventional": "^20.5.3",
     "@playwright/test": "^1.59.1",
