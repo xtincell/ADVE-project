@@ -489,6 +489,85 @@ export const cockpitRouter = createTRPCRouter({
     }),
 
   /**
+   * Checklist d'activation (audit onboarding 2026-07-19, P1-1) — le founder
+   * n'avait AUCUN fil conducteur post-inscription : des empty states épars,
+   * zéro progression. Agrège des signaux DÉJÀ persistés (jamais de fabriqué) :
+   * chaque item est vérifiable et cliquable. Read-only, tenant-scoped.
+   */
+  getActivationChecklist: protectedProcedure
+    .input(z.object({ strategyId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const strategy = await ctx.db.strategy.findUnique({
+        where: { id: input.strategyId },
+        select: { id: true, userId: true, marketScale: true },
+      });
+      if (!strategy) throw new TRPCError({ code: "NOT_FOUND", message: "Strategy introuvable" });
+      const isPrivileged = ctx.session.user.role === "ADMIN";
+      if (!isPrivileged && strategy.userId !== ctx.session.user.id) {
+        const opCtx = await getOperatorContext(ctx.session.user.id);
+        if (!(await canAccessStrategy(input.strategyId, opCtx))) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Cette marque ne vous appartient pas" });
+        }
+      }
+      const [socialCount, logoCount, filledPillars, scheduledCount, sourceCount] = await Promise.all([
+        ctx.db.socialConnection.count({ where: { strategyId: input.strategyId } }),
+        ctx.db.brandAsset.count({
+          where: { strategyId: input.strategyId, kind: { in: ["LOGO_FINAL", "LOGO_IDEA"] } },
+        }),
+        ctx.db.pillar.count({
+          where: {
+            strategyId: input.strategyId,
+            key: { in: ["A", "D", "V", "E"] },
+            NOT: { content: { equals: {} } },
+          },
+        }),
+        ctx.db.brandAction.count({
+          where: { strategyId: input.strategyId, status: { in: ["SCHEDULED", "IN_PROGRESS", "DONE"] } },
+        }),
+        ctx.db.knowledgeEntry.count({ where: { entryType: "MARKET_STUDY_TAM" } }).catch(() => 0),
+      ]);
+      const items = [
+        {
+          key: "social",
+          label: "Connecter vos réseaux sociaux",
+          detail: "Vos audiences se relèvent automatiquement chaque jour — et les prévisions s'activent.",
+          done: socialCount > 0,
+          href: "/cockpit/settings/connections",
+        },
+        {
+          key: "logo",
+          label: "Déposer votre logo",
+          detail: "Votre espace et vos livrables prennent vos couleurs.",
+          done: logoCount > 0,
+          href: "/cockpit/brand/assets",
+        },
+        {
+          key: "scale",
+          label: "Déclarer l'échelle de votre marché",
+          detail: "Votre score s'affiche dans le bon référentiel — quartier, ville, nation…",
+          done: strategy.marketScale !== null,
+          href: "/cockpit/brand/fondation",
+        },
+        {
+          key: "pillars",
+          label: "Compléter vos 4 piliers de fondation",
+          detail: `${filledPillars}/4 piliers renseignés — le socle de toute la stratégie.`,
+          done: filledPillars >= 4,
+          href: "/cockpit/brand/fondation",
+        },
+        {
+          key: "action",
+          label: "Planifier votre première action",
+          detail: "Une publication ou une action au calendrier — la marque passe en mouvement.",
+          done: scheduledCount > 0,
+          href: "/cockpit/operate/calendar",
+        },
+      ];
+      const doneCount = items.filter((i) => i.done).length;
+      return { items, doneCount, total: items.length, sourceCount };
+    }),
+
+  /**
    * ADR-0128 — Identité visuelle de la marque pour le dashboard : logo actif
    * (BrandAsset kind LOGO_FINAL, fallback LOGO_IDEA), inventaire des actifs
    * d'identité (typographies, palettes) et total du coffre. Chaque absence

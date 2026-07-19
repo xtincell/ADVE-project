@@ -83,4 +83,48 @@ export const referralRouter = createTRPCRouter({
       });
       return { ok: true };
     }),
+
+  /**
+   * Notre PROPRE funnel de conversion (audit oubliés 2026-07-19, B4) — on
+   * capturait l'attribution à l'intake sans jamais la lire : le cordonnier ne
+   * se mesurait pas. Reconstruit intake→complété→payé depuis les données DÉJÀ
+   * persistées (QuickIntake.status/source/attribution + IntakePayment). 0
+   * nouveau tracking, 0 fabriqué (les visites pré-intake ne sont pas comptées
+   * — non instrumentées, dit tel quel).
+   */
+  adminFunnel: adminProcedure
+    .input(z.object({ days: z.number().int().min(1).max(365).default(30) }).optional())
+    .query(async ({ input }) => {
+      const since = new Date(Date.now() - (input?.days ?? 30) * 24 * 60 * 60 * 1000);
+      const [byStatus, paidCount, bySource, referralCounts] = await Promise.all([
+        db.quickIntake.groupBy({
+          by: ["status"],
+          where: { createdAt: { gte: since } },
+          _count: { _all: true },
+        }),
+        db.intakePayment.count({ where: { status: "PAID", createdAt: { gte: since } } }),
+        db.quickIntake.groupBy({
+          by: ["source"],
+          where: { createdAt: { gte: since } },
+          _count: { _all: true },
+          orderBy: { _count: { source: "desc" } },
+          take: 10,
+        }),
+        db.referral.groupBy({ by: ["status"], _count: { _all: true } }),
+      ]);
+      const statusMap = new Map(byStatus.map((r) => [r.status, r._count._all]));
+      const started = byStatus.reduce((s, r) => s + r._count._all, 0);
+      const completed = (statusMap.get("COMPLETED") ?? 0) + (statusMap.get("CONVERTED") ?? 0);
+      return {
+        windowDays: input?.days ?? 30,
+        started,
+        completed,
+        converted: statusMap.get("CONVERTED") ?? 0,
+        paid: paidCount,
+        completionRate: started > 0 ? Math.round((completed / started) * 100) : null,
+        paidRate: completed > 0 ? Math.round((paidCount / completed) * 100) : null,
+        topSources: bySource.map((r) => ({ source: r.source ?? "direct", count: r._count._all })),
+        referrals: referralCounts.map((r) => ({ status: r.status, count: r._count._all })),
+      };
+    }),
 });

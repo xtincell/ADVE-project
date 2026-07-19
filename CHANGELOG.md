@@ -10,6 +10,14 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.205 — feat(ui): campagne UX vague 2 — checklist d'activation + notre funnel mesuré (2026-07-19)
+
+**Suite du mandat intégral** :
+
+- **Checklist d'activation sur le dashboard founder** (`getActivationChecklist` + `<ActivationChecklist>`) : le fil conducteur qui manquait — 5 gestes (connecter réseaux / logo / échelle de marché / 4 piliers / première action planifiée), états 100 % réels agrégés des données persistées, barre de progression, prochaine étape annoncée (aria-live), chaque item cliquable. Se masque à 100 %.
+- **« Notre funnel » en console** (`/console/socle/funnel`, `referral.adminFunnel`) : le cordonnier se mesure — diagnostics démarrés → complétés → payés (fenêtre 7/30/90 j), taux de complétion et de paiement, top sources d'attribution, états des parrainages. Reconstruit des données DÉJÀ persistées (QuickIntake.status/source/attribution + IntakePayment), zéro nouveau tracking ; les visites pré-intake non instrumentées sont dites telles quelles.
+- tsc 0 · **2 775 tests verts**. Vague 3 (presets motion PRESS/lift, scroll-reveal /lafusee, transitions d'étape intake, i18n funnel, axe-core, nurture J+N, inviteCollaborateur) : suit.
+
 ## v6.27.204 — feat(ui): campagne UX vague 1 — la fuite de leads colmatée, le complete guidé protégé, l'onboarding email né (2026-07-19)
 
 **Mandat intégral (« gère tout ça, pas de report ») — 3 audits parallèles (funnel frictions / onboarding+emails / DS+oubliés), vague 1 de remédiation** :
