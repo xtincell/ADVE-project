@@ -10,6 +10,18 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.202 — fix(ui): passe de cohérence funnel — landings/scorer/intake/leaderboard désambiguïsés + registre de dette réconcilié (2026-07-19)
+
+**Mandat opérateur (« les landing pages et les entrées de funnel doivent être calibrées et désambiguïsées… c'est encore beaucoup de patch ici et là » + « penche-toi sur les residual debt »)** — cartographie complète des 8 entrées publiques (2 agents, 11 incohérences I1-I11 relevées), puis remédiation d'un bloc :
+
+- **Canon des durées tranché** : diagnostic = « ~15 min de questionnaire, verdict immédiat » (purge des « instantané »/« quelques secondes » de /lafusee section 04 et de /score qui coexistaient avec « 15 minutes » dans le même scroll — I1/I2) ; scoreur = « 1 min » partout (le « 30s » du hero /lafusee était FAUX, scan réel ~55 s — I3).
+- **Canon de l'échelle propagé** : « socle ADVE /100 au diagnostic gratuit → score complet /200 mesuré sur épreuves » — /intake ne sous-promet plus (« un score sur 100 » nu), /landingintake ne survend plus (« diagnostic sur 200 » → socle /100 puis /200) (I4).
+- **Leaderboard câblé depuis le rapport d'intake** : « Le classement public est consultable librement » est enfin un LIEN (payoff de la note de force, I5) ; /score ↔ /scorer cross-linkés (collision de noms, I8).
+- **Honnêteté scorer→intake** : « vous n'avez rien à re-taper » (faux — nom/email restent requis) → « on reprend votre marque, votre site et vos réseaux — il ne reste que vos coordonnées » (I7). La liaison querystring + attribution `source=scorer` vérifiée fonctionnelle côté intake.
+- **CTA diagnostic harmonisé** : « Diagnostiquer ma marque — gratuit » sur les CTA marketing génériques (Lancer le diagnostic / Mesurer votre marque gratuitement — I9). /la-guilde vs /LaGuilde vérifié : deux pages distinctes légitimes, pas un doublon.
+- **RESIDUAL-DEBT réconcilié avec la réalité** (audit prouvé fichier:ligne) : 2 entrées fermées (cycle madge quick-intake — cassé depuis footprint-types, audit:cycles vert ; vuln xlsx — dépendance retirée), 3 requalifiées (COLLABORATOR_KIND_ZONES étendu campagnes par ADR-0144 ; deps notification — web-push désormais présent, seuls FCM/MJML manquent ; sous-sections v6.1.18 marquées instantanés historiques sous leur header RESOLVED). Confirmés ouverts : reclassif ROUTER/SERVICE-MAP (34+23), contrat Devotion Ladder writeback, masquage writeZones, supervision console SocialConnection, cron anubis-digest.
+- tsc 0 · lint 0 · **2 775 tests verts** (suite complète).
+
 ## v6.27.201 — docs(governance): plan d'état final amendé par la validation externe (recherche profonde) (2026-07-19)
 
 **Les 5 paris du plan confrontés aux preuves (107 agents, vérification adversariale 3 votes/claim)** — 4 corrections intégrées à [ETAT-FINAL-RECHERCHE-2026.md](docs/governance/ETAT-FINAL-RECHERCHE-2026.md) (marquées ⚗️, synthèse citée en §8) :

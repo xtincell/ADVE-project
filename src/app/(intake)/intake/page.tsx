@@ -225,7 +225,8 @@ function IntakeLandingContent() {
         </h1>
 
         <p className="mt-4 max-w-md text-center text-base leading-relaxed text-foreground-secondary sm:text-lg">
-          Le protocole ADVE analyse 4 dimensions fondamentales et vous donne un score sur 100.
+          Le protocole ADVE analyse 4 dimensions fondamentales et vous donne votre socle de
+          marque sur 100 — le premier pas vers le score complet sur 200, mesuré sur épreuves.
         </p>
 
         {/* Trust badges */}

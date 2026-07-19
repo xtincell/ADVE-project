@@ -135,7 +135,9 @@ export function ForceSection({ token }: { token: string }) {
         {/* Classement public : consultable librement, y figurer est un choix (payant / opérateur) */}
         <p className="mt-4 flex items-center gap-1.5 border-t border-border-subtle pt-4 text-xs text-foreground-muted">
           <Trophy className="h-3.5 w-3.5 text-primary" />
-          Le classement public est consultable librement.
+          <a href="/leaderboard" className="text-primary underline-offset-2 hover:underline">
+            Le classement public est consultable librement.
+          </a>
           <Lock className="h-3 w-3" />
           Y faire figurer votre marque se débloque en mode complet.
         </p>

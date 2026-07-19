@@ -176,7 +176,7 @@ function Steps({ onStart }: { onStart: () => void }) {
   const ref = useReveal();
   const steps = [
     { n: "1", tag: "~10 minutes", t: "Vous répondez", d: "Un questionnaire guidé sur les 4 piliers ADVE — ou importez vos documents, l'IA s'occupe du reste." },
-    { n: "2", tag: "Instantané", t: "Vous recevez votre score", d: "Un diagnostic clair sur 200, pilier par pilier, avec vos forces et vos angles morts." },
+    { n: "2", tag: "Immédiat", t: "Vous recevez votre score", d: "Votre socle de marque sur 100, pilier par pilier — puis le score complet sur 200, mesuré sur épreuves." },
     { n: "3", tag: "Activable", t: "Vous passez à l'action", d: "Une feuille de route priorisée — et l'option d'être accompagné par La Fusée pour l'exécuter." },
   ];
   return (

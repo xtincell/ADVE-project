@@ -43,12 +43,12 @@ export function MarketingDiagnostic() {
       <div className="mx-auto max-w-[var(--maxw-content)] px-[var(--pad-page)]">
         <div className="flex items-baseline gap-3.5 mb-8 font-mono text-2xs uppercase tracking-widest" style={{ color: "var(--color-foreground-secondary)" }}>
           <span className="w-8 h-px bg-accent" />
-          04 · Diagnostic instantané
+          04 · Diagnostic express
         </div>
         <header className="mb-12 max-w-4xl">
           <h2 className="font-display font-semibold tracking-tight mb-5" style={{ fontSize: "var(--text-display)", lineHeight: 0.96, color: "var(--color-foreground)" }}>
             Tu colles ta marque.<br />
-            <span className="relative inline-block">Le verdict tombe en quelques secondes.<span className="absolute inset-x-[-2%] bottom-1 h-[0.18em] bg-accent -z-10" style={{ transform: "skewX(-12deg)" }} /></span>
+            <span className="relative inline-block">15 minutes plus tard, le verdict.<span className="absolute inset-x-[-2%] bottom-1 h-[0.18em] bg-accent -z-10" style={{ transform: "skewX(-12deg)" }} /></span>
           </h2>
           <p className="max-w-[60ch] text-base md:text-lg" style={{ color: "var(--color-foreground-secondary)" }}>
             Pas de questionnaire de 40 pages. Pas de réunion de cadrage. La méthode <strong style={{ color: "var(--color-foreground)" }}>ADVE/RTIS</strong> scanne 8 piliers via un combo d&rsquo;outils maison, et te rend un rapport + une recommandation.
@@ -97,7 +97,7 @@ export function MarketingDiagnostic() {
               href="/intake"
               className="w-full inline-flex items-center justify-center gap-2 py-3 text-sm font-medium bg-accent text-accent-foreground hover:bg-accent-hover transition-colors"
             >
-              Lancer le diagnostic
+              Diagnostiquer ma marque — gratuit
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
             </Link>
           </div>
@@ -141,7 +141,7 @@ export function MarketingDiagnostic() {
         </div>
 
         <p className="mt-6 font-mono text-xs text-center" style={{ color: "var(--color-foreground-secondary)" }}>
-          ⌖ Diagnostic = instantané. Production (stratégie écrite, missions, livrables) = 48h. Trajectoire complète = APOGEE.
+          ⌖ Diagnostic = ~15 min de questionnaire, verdict immédiat à la fin. Production (stratégie écrite, missions, livrables) = 48h. Trajectoire complète = APOGEE.
         </p>
       </div>
     </section>
