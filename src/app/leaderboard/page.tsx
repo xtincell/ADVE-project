@@ -6,6 +6,8 @@
 import "@/styles/leaderboard.css";
 import { db } from "@/lib/db";
 import { MARKET_SCALE_LABELS, type MarketScale } from "@/domain/market-scale";
+import { listPublicDossiers } from "@/server/services/seshat/argos";
+import { NewsletterCapture } from "@/components/public/newsletter-capture";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -86,6 +88,9 @@ export default async function LeaderboardPage() {
     orderBy: { computedAt: "desc" },
     take: 1000,
   });
+  // Phase A état-final — le championnat et sa rédaction sont UN média :
+  // les derniers dossiers Argos publiés (PASS uniquement) en pied de page.
+  const dossiers = await listPublicDossiers({ limit: 3 }).catch(() => []);
 
   // Dernier verdict par sujet.
   const latest = new Map<string, Row>();
@@ -233,6 +238,34 @@ export default async function LeaderboardPage() {
             );
           })
         )}
+
+        {/* Phase A état-final — la rédaction du championnat : derniers dossiers
+            Argos publiés (PASS + revue), et la newsletter possédée en propre. */}
+        {dossiers.length > 0 ? (
+          <section className="lb__league">
+            <h2>Les dossiers de la rédaction · Argos</h2>
+            <div className="lb__tablewrap">
+              {dossiers.map((d) => (
+                <a key={d.ref} href={`/argos/${d.ref}`} className="lb__row-details" style={{ display: "block", padding: "12px 16px", textDecoration: "none", color: "inherit" }}>
+                  <strong>{d.brand}</strong>
+                  {d.campaign ? <span> — {d.campaign}</span> : null}
+                  {d.sector ? <span className="lb__cap"> · {d.sector}</span> : null}
+                </a>
+              ))}
+            </div>
+            <p className="lb__lede" style={{ marginTop: 12 }}>
+              <a href="/argos" style={{ textDecoration: "underline", textUnderlineOffset: 3 }}>Tous les dossiers →</a>
+            </p>
+          </section>
+        ) : null}
+
+        <div className="lb__cta" style={{ marginTop: 24 }}>
+          <div className="lb__cta-txt">
+            <strong>Les dossiers et les mouvements du classement, par email.</strong>
+            <span>Pas de spam — la rédaction, quand elle publie.</span>
+          </div>
+          <NewsletterCapture source="leaderboard" />
+        </div>
 
         <div className="lb__method">
           <h3>Comment lire ce classement</h3>
