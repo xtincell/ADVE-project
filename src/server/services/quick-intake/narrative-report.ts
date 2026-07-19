@@ -64,7 +64,7 @@ balises markdown.`;
 const SYSTEM_PROMPT_ADVE = `Tu es Mestor, le strategiste senior de La Fusee. Tu produis pour la marque \
 qui vient de finaliser son auto-diagnostic ADVE :
 
-RAPPORT ADVE : un diagnostic narratif honnete pilier par pilier (Authenticite, \
+RAPPORT ADVE : un diagnostic narratif honnête pilier par pilier (Authenticité, \
 Distinction, Valeur, Engagement). Pour CHAQUE pilier tu donnes :
    - "preview" : 2-3 phrases qui resument l'etat actuel du pilier en CITANT au \
 moins une valeur concrete extraite (mots-cles entre guillemets ou nom de champ).
@@ -88,9 +88,9 @@ ${SYSTEM_STYLE}`;
 const SYSTEM_PROMPT_RTIS = `Tu es Mestor, le strategiste senior de La Fusee. La marque vient de \
 finaliser son auto-diagnostic ADVE et tu produis sa PROPOSITION STRATEGIQUE RTIS : \
 un narratif strategique pour CHACUN des 4 piliers RTIS — Risque (r), Track (t), \
-Innovation (i), Strategie (s). Pour chaque pilier RTIS :
+Innovation (i), Stratégie (s). Pour chaque pilier RTIS :
    - "key" : "r" | "t" | "i" | "s"
-   - "name" : "Risque" | "Track" | "Innovation" | "Strategie"
+   - "name" : "Risque" | "Track" | "Innovation" | "Stratégie"
    - "preview" : 1-2 phrases (cite la valeur ADVE extraite pertinente quand utile)
    - "full" : paragraphe d'action (100-130 mots) avec mecanique concrete reliee \
 aux valeurs extraites
@@ -120,7 +120,7 @@ export async function generateNarrativeReport(input: {
   const { companyName, sector, country, classification, vector, responses, extractedValues, recoSummaries, seshatGrounding } = input;
 
   const formatResponses = () => {
-    if (!responses) return "Aucune reponse disponible";
+    if (!responses) return "Aucune réponse disponible";
     const lines: string[] = [];
     for (const [pillar, answers] of Object.entries(responses)) {
       const text = Object.values(answers ?? {})
@@ -128,7 +128,7 @@ export async function generateNarrativeReport(input: {
         .join(" | ");
       if (text) lines.push(`[${pillar.toUpperCase()}] ${text.slice(0, 600)}`);
     }
-    return lines.join("\n") || "Aucune reponse texte";
+    return lines.join("\n") || "Aucune réponse texte";
   };
 
   const formatExtracted = () => {
@@ -176,7 +176,7 @@ SECTEUR : ${sanitizeInline(sector ?? "non precis", { max: 80 })}
 PAYS : ${sanitizeInline(country ?? "non precis", { max: 60 })}
 CLASSIFICATION ADVE : ${classification}
 SCORES /25 PAR PILIER :
-- Authenticite (A) : ${(vector.a ?? 0).toFixed(1)}
+- Authenticité (A) : ${(vector.a ?? 0).toFixed(1)}
 - Distinction (D)  : ${(vector.d ?? 0).toFixed(1)}
 - Valeur (V)       : ${(vector.v ?? 0).toFixed(1)}
 - Engagement (E)   : ${(vector.e ?? 0).toFixed(1)}
@@ -200,7 +200,7 @@ Produis le JSON avec cette forme exacte :
 {
   "executiveSummary": "<3-4 phrases globales sur l'état ADVE de la marque>",
   "adve": [
-    { "key": "a", "name": "Authenticite", "preview": "...", "full": "..." },
+    { "key": "a", "name": "Authenticité", "preview": "...", "full": "..." },
     { "key": "d", "name": "Distinction",  "preview": "...", "full": "..." },
     { "key": "v", "name": "Valeur",       "preview": "...", "full": "..." },
     { "key": "e", "name": "Engagement",   "preview": "...", "full": "..." }
@@ -219,7 +219,7 @@ Produis le JSON avec cette forme exacte :
     { "key": "r", "name": "Risque",     "preview": "...", "full": "...", "priority": "P0", "keyMove": "..." },
     { "key": "t", "name": "Track",      "preview": "...", "full": "...", "priority": "P1", "keyMove": "..." },
     { "key": "i", "name": "Innovation", "preview": "...", "full": "...", "priority": "P1", "keyMove": "..." },
-    { "key": "s", "name": "Strategie",  "preview": "...", "full": "...", "priority": "P2", "keyMove": "..." }
+    { "key": "s", "name": "Stratégie",  "preview": "...", "full": "...", "priority": "P2", "keyMove": "..." }
   ]
 }`;
 

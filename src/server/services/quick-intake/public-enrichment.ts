@@ -68,11 +68,26 @@ export function normalizeBrandToken(s: string): string {
     .trim();
 }
 
-/** True ssi le texte mentionne le nom de marque (déterministe, zéro LLM). */
+/**
+ * True ssi le texte mentionne le nom de marque (déterministe, zéro LLM).
+ *
+ * Match sur FRONTIÈRE DE MOT, jamais en sous-chaîne (fix prod 2026-07-19 :
+ * « a » matchait « Gironde », « métastases »… → presse 100/100 pour un nom
+ * d'une lettre). La normalisation réduit tout non-alphanumérique à un espace,
+ * donc l'inclusion de ` ${brand} ` dans le texte espacé équivaut à un match
+ * de mots entiers — et exige la séquence complète pour un nom multi-mots.
+ *
+ * Garde de longueur : un nom normalisé < 3 caractères purement alphabétique
+ * est refusé d'office — après NFD, « à » devient « a » et tout article ou
+ * préposition collisionne ; aucune découverte fiable n'est possible sur un tel
+ * token (mieux vaut 0 mention qu'une fausse). Les noms courts avec chiffre
+ * (« M6 », « 3M ») restent matchables en mot entier.
+ */
 export function mentionsBrand(text: string, companyName: string): boolean {
   const brand = normalizeBrandToken(companyName);
   if (!brand) return false;
-  return normalizeBrandToken(text).includes(brand);
+  if (brand.length < 3 && !/[0-9]/.test(brand)) return false;
+  return ` ${normalizeBrandToken(text)} `.includes(` ${brand} `);
 }
 
 const SNAPSHOT_PLATFORMS = new Set(["INSTAGRAM", "FACEBOOK", "TIKTOK", "LINKEDIN", "TWITTER", "YOUTUBE"]);

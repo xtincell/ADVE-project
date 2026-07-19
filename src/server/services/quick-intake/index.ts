@@ -251,7 +251,19 @@ export async function advance(input: QuickIntakeAdvanceInput) {
   });
 
   if (!intake) throw new Error("Intake not found");
-  if (intake.status !== "IN_PROGRESS") throw new Error("Intake already completed");
+  // FAILED est retryable (F1 async 2026-07-19) : le founder qui bascule vers
+  // le questionnaire guidé après un échec d'analyse reprend là où il en était
+  // — ses sources et réponses sont conservées. PROCESSING reste bloqué (un
+  // traitement de fond est en vol).
+  if (intake.status !== "IN_PROGRESS" && intake.status !== "FAILED") {
+    throw new Error("Intake already completed");
+  }
+  if (intake.status === "FAILED") {
+    await db.quickIntake.update({
+      where: { id: intake.id },
+      data: { status: "IN_PROGRESS", failureReason: null },
+    });
+  }
 
   // Validate every phase slice in the incoming payload. Refusing here means
   // the DB never sees an empty `{ a: {} }` slice, which in turn means
@@ -1487,7 +1499,7 @@ async function extractStructuredPillarContent(
           .filter(([, v]) => v != null && String(v).trim())
           .map(([qId, v]) => `  ${qId}: ${String(v)}`)
           .join("\n")
-      : "Aucune reponse directe";
+      : "Aucune réponse directe";
 
     // Build context from already generated pillars
     const previousPillarsContext = Object.entries(result)
@@ -1682,7 +1694,7 @@ function generateDiagnostic(
 ) {
   // Intake diagnostic covers ADVE only (RTIS = paid version)
   const pillars = [
-    { key: "a", name: "Authenticite", score: vector.a ?? 0 },
+    { key: "a", name: "Authenticité", score: vector.a ?? 0 },
     { key: "d", name: "Distinction", score: vector.d ?? 0 },
     { key: "v", name: "Valeur", score: vector.v ?? 0 },
     { key: "e", name: "Engagement", score: vector.e ?? 0 },
@@ -1706,17 +1718,17 @@ function generateDiagnostic(
 
   let summaryIntro: string;
   if (classification === "LATENT") {
-    summaryIntro = `${brand} presente des fondations fragiles. Les piliers fondamentaux de la marque sont absents ou sous-developpes, ce qui la rend vulnerable et invisible sur son marche.`;
+    summaryIntro = `${brand} présente des fondations fragiles. Les piliers fondamentaux de la marque sont absents ou sous-développés, ce qui la rend vulnérable et invisible sur son marché.`;
   } else if (classification === "FRAGILE") {
-    summaryIntro = `${brand} a des bases mais elles manquent de coherence. L'identite de marque est en construction — il faut consolider avant de pouvoir se differencier.`;
+    summaryIntro = `${brand} a des bases mais elles manquent de cohérence. L'identité de marque est en construction — il faut consolider avant de pouvoir se différencier.`;
   } else if (classification === "ORDINAIRE") {
-    summaryIntro = `${brand} possede une base fonctionnelle mais manque d'elements differenciants. Elle risque d'etre substituable par n'importe quel concurrent.`;
+    summaryIntro = `${brand} possède une base fonctionnelle mais manque d'éléments différenciants. Elle risque d'être substituable par n'importe quel concurrent.`;
   } else if (classification === "FORTE") {
-    summaryIntro = `${brand} a des fondations solides avec des forces reelles en ${strongNames}. L'enjeu est maintenant de combler les lacunes pour passer au niveau superieur.`;
+    summaryIntro = `${brand} a des fondations solides avec des forces réelles en ${strongNames}. L'enjeu est maintenant de combler les lacunes pour passer au niveau supérieur.`;
   } else if (classification === "CULTE") {
-    summaryIntro = `${brand} approche le statut culte avec une communaute naissante. Les piliers ${strongNames} sont vos moteurs. Optimiser ${weakNames} peut declencher un mouvement.`;
+    summaryIntro = `${brand} approche le statut culte avec une communauté naissante. Les piliers ${strongNames} sont vos moteurs. Optimiser ${weakNames} peut déclencher un mouvement.`;
   } else {
-    summaryIntro = `${brand} transcende son marche. Focus sur la perennite et la transmission.`;
+    summaryIntro = `${brand} transcende son marché. Focus sur la pérennité et la transmission.`;
   }
 
   return {
@@ -1755,7 +1767,7 @@ function generateStrengthInsight(
 
   // Richer answers = stronger signal
   if (totalLength > 200) {
-    return "Vos reponses detaillees montrent une vraie maturite sur ce pilier. Capitalisez dessus dans votre communication.";
+    return "Vos réponses détaillées montrent une vraie maturité sur ce pilier. Capitalisez dessus dans votre communication.";
   }
   return "Ce pilier montre du potentiel. Approfondissez-le pour en faire un vrai avantage concurrentiel.";
 }
@@ -1786,20 +1798,20 @@ function analyzePillarResponses(
       return {
         pillar: name, key, score,
         diagnostic: noStory
-          ? "Votre marque n'a pas de mythologie fondatrice articulee. Sans histoire, il n'y a pas d'emotion, et sans emotion, pas de connexion avec votre audience."
+          ? "Votre marque n'a pas de mythologie fondatrice articulée. Sans histoire, il n'y a pas d'émotion, et sans émotion, pas de connexion avec votre audience."
           : noValues
             ? "Vous avez une histoire mais vos valeurs restent floues. Une marque authentique doit pouvoir articuler clairement ce en quoi elle croit."
-            : "Votre authenticite existe mais manque de structure. Elle doit etre codifiee pour devenir un outil strategique.",
+            : "Votre authenticité existe mais manque de structure. Elle doit être codifiée pour devenir un outil stratégique.",
         actions: noStory
           ? [
-              "Documenter votre histoire fondatrice : le moment declencheur, le probleme que vous avez voulu resoudre, votre transformation personnelle",
-              "Identifier votre archetype de marque (Heros, Sage, Rebelle...) pour ancrer votre narration",
-              "Formuler 3 valeurs non-negociables qui guident chaque decision",
+              "Documenter votre histoire fondatrice : le moment déclencheur, le problème que vous avez voulu résoudre, votre transformation personnelle",
+              "Identifier votre archétype de marque (Héros, Sage, Rebelle...) pour ancrer votre narration",
+              "Formuler 3 valeurs non-négociables qui guident chaque décision",
             ]
           : [
-              "Structurer votre narration fondatrice en un recit de 90 secondes",
-              "Decliner vos valeurs en comportements observables par vos clients",
-              "Creer un manifeste de marque d'une page",
+              "Structurer votre narration fondatrice en un récit de 90 secondes",
+              "Décliner vos valeurs en comportements observables par vos clients",
+              "Créer un manifeste de marque d'une page",
             ],
       };
     }
@@ -1809,20 +1821,20 @@ function analyzePillarResponses(
       return {
         pillar: name, key, score,
         diagnostic: noDiff
-          ? "Vous n'avez pas identifie ce qui vous rend unique. Sur un marche competitif, l'absence de distinction signifie l'invisibilite."
+          ? "Vous n'avez pas identifié ce qui vous rend unique. Sur un marché compétitif, l'absence de distinction signifie l'invisibilité."
           : noVisual
-            ? "Votre positionnement verbal existe mais votre identite visuelle est sous-developpee. Le visuel represente 80% de la premiere impression."
+            ? "Votre positionnement verbal existe mais votre identité visuelle est sous-développée. Le visuel représente 80% de la première impression."
             : "Votre distinction a du potentiel mais n'est pas assez tranchante pour marquer les esprits.",
         actions: noDiff
           ? [
-              "Cartographier 5 concurrents directs et identifier les espaces non occupes",
-              "Definir votre 'Only Statement' : Nous sommes les seuls a [X] pour [Y] parce que [Z]",
-              "Tester votre proposition aupres de 10 clients : peuvent-ils vous decrire en une phrase ?",
+              "Cartographier 5 concurrents directs et identifier les espaces non occupés",
+              "Définir votre 'Only Statement' : Nous sommes les seuls à [X] pour [Y] parce que [Z]",
+              "Tester votre proposition auprès de 10 clients : peuvent-ils vous décrire en une phrase ?",
             ]
           : [
-              "Creer un moodboard de direction artistique avec codes couleurs, typographies, imagerie",
-              "Definir votre ton de voix : 3 mots qu'on utilise, 3 mots qu'on n'utilise jamais",
-              "Auditer la coherence visuelle sur tous vos points de contact",
+              "Créer un moodboard de direction artistique avec codes couleurs, typographies, imagerie",
+              "Définir votre ton de voix : 3 mots qu'on utilise, 3 mots qu'on n'utilise jamais",
+              "Auditer la cohérence visuelle sur tous vos points de contact",
             ],
       };
     }
@@ -1832,20 +1844,20 @@ function analyzePillarResponses(
       return {
         pillar: name, key, score,
         diagnostic: noPromise
-          ? "Votre promesse de valeur n'est pas articulee. Sans promesse claire, vos clients ne savent pas pourquoi acheter chez vous plutot qu'ailleurs."
+          ? "Votre promesse de valeur n'est pas articulée. Sans promesse claire, vos clients ne savent pas pourquoi acheter chez vous plutôt qu'ailleurs."
           : weakOffer
-            ? "Vous avez une offre mais elle n'est pas structuree en proposition de valeur. Il y a une difference entre decrire ce que vous faites et promettre un resultat."
-            : "Votre proposition de valeur existe mais manque de precision. Passez du vague au mesurable.",
+            ? "Vous avez une offre mais elle n'est pas structurée en proposition de valeur. Il y a une différence entre décrire ce que vous faites et promettre un résultat."
+            : "Votre proposition de valeur existe mais manque de précision. Passez du vague au mesurable.",
         actions: noPromise
           ? [
-              "Formuler votre promesse en une phrase : 'Pour [cible], nous promettons [resultat] grace a [methode]'",
-              "Lister les 3 resultats concrets que vos clients obtiennent en travaillant avec vous",
-              "Definir votre pricing ladder : offre d'appel, offre principale, offre premium",
+              "Formuler votre promesse en une phrase : 'Pour [cible], nous promettons [résultat] grâce à [méthode]'",
+              "Lister les 3 résultats concrets que vos clients obtiennent en travaillant avec vous",
+              "Définir votre pricing ladder : offre d'appel, offre principale, offre premium",
             ]
           : [
-              "Quantifier votre impact : delais, pourcentages, montants concrets",
-              "Creer un catalogue structure avec benefices clients (pas juste des features)",
-              "Mettre en place un systeme de temoignages clients pour prouver votre promesse",
+              "Quantifier votre impact : délais, pourcentages, montants concrets",
+              "Créer un catalogue structuré avec bénéfices clients (pas juste des features)",
+              "Mettre en place un système de témoignages clients pour prouver votre promesse",
             ],
       };
     }
@@ -1855,20 +1867,20 @@ function analyzePillarResponses(
       return {
         pillar: name, key, score,
         diagnostic: noCommunity
-          ? "Aucune communaute active. Votre marque parle mais personne ne repond. L'engagement est le carburant de la croissance organique."
+          ? "Aucune communauté active. Votre marque parle mais personne ne répond. L'engagement est le carburant de la croissance organique."
           : passiveEngagement
-            ? "Vous avez une audience mais pas une communaute. La difference : une audience consomme, une communaute participe et evangelise."
-            : "Votre engagement existe mais n'est pas structure en rituels repetables.",
+            ? "Vous avez une audience mais pas une communauté. La différence : une audience consomme, une communauté participe et évangélise."
+            : "Votre engagement existe mais n'est pas structuré en rituels répétables.",
         actions: noCommunity
           ? [
               "Choisir UN canal principal et publier 3x/semaine pendant 90 jours sans interruption",
-              "Creer un rituel de marque hebdomadaire (live, rubrique, challenge)",
-              "Repondre a 100% des commentaires et DMs pendant 30 jours",
+              "Créer un rituel de marque hebdomadaire (live, rubrique, challenge)",
+              "Répondre à 100% des commentaires et DMs pendant 30 jours",
             ]
           : [
               "Mettre en place une Devotion Ladder : identifier vos spectateurs, participants, ambassadeurs",
-              "Creer un programme de referral pour transformer vos clients satisfaits en apporteurs d'affaires",
-              "Lancer un format de contenu UGC pour que vos clients deviennent co-createurs",
+              "Créer un programme de referral pour transformer vos clients satisfaits en apporteurs d'affaires",
+              "Lancer un format de contenu UGC pour que vos clients deviennent co-créateurs",
             ],
       };
     }
@@ -1877,18 +1889,18 @@ function analyzePillarResponses(
       return {
         pillar: name, key, score,
         diagnostic: noRiskMgmt
-          ? "Aucune gestion de risque structuree. Vous naviguez a vue. Un seul evenement negatif pourrait detruire des mois de travail sans plan de contingence."
-          : "Vous etes conscient de certains risques mais il manque un cadre structure pour les anticiper et les mitiger.",
+          ? "Aucune gestion de risque structurée. Vous naviguez à vue. Un seul événement négatif pourrait détruire des mois de travail sans plan de contingence."
+          : "Vous êtes conscient de certains risques mais il manque un cadre structuré pour les anticiper et les mitiger.",
         actions: noRiskMgmt
           ? [
-              "Realiser une analyse SWOT honnete : 3 forces, 3 faiblesses, 3 opportunites, 3 menaces",
+              "Réaliser une analyse SWOT honnête : 3 forces, 3 faiblesses, 3 opportunités, 3 menaces",
               "Identifier votre 'Sheitan' — l'ennemi existentiel de votre marque (pas un concurrent, une force)",
-              "Rediger un protocole de crise en une page : qui fait quoi quand ca deraille",
+              "Rédiger un protocole de crise en une page : qui fait quoi quand ça déraille",
             ]
           : [
-              "Prioriser vos risques avec une matrice probabilite x impact",
+              "Prioriser vos risques avec une matrice probabilité x impact",
               "Mettre en place une veille concurrentielle mensuelle",
-              "Preparer 3 scenarios de reponse pour les types de crises les plus probables",
+              "Préparer 3 scénarios de réponse pour les types de crises les plus probables",
             ],
       };
     }
@@ -1897,18 +1909,18 @@ function analyzePillarResponses(
       return {
         pillar: name, key, score,
         diagnostic: noKPIs
-          ? "Aucun systeme de mesure en place. Sans donnees, vous prenez des decisions a l'aveugle et ne pouvez pas prouver votre valeur."
-          : "Vous mesurez certaines choses mais il manque un tableau de bord structure avec des KPIs actionables.",
+          ? "Aucun système de mesure en place. Sans données, vous prenez des décisions à l'aveugle et ne pouvez pas prouver votre valeur."
+          : "Vous mesurez certaines choses mais il manque un tableau de bord structuré avec des KPIs actionables.",
         actions: noKPIs
           ? [
-              "Definir 5 KPIs vitaux : 2 d'acquisition, 1 de retention, 1 de revenue, 1 de satisfaction",
+              "Définir 5 KPIs vitaux : 2 d'acquisition, 1 de rétention, 1 de revenue, 1 de satisfaction",
               "Mettre en place Google Analytics + un outil de social listening basique",
-              "Creer un rapport mensuel de 1 page avec vos metriques cles et tendances",
+              "Créer un rapport mensuel de 1 page avec vos métriques clés et tendances",
             ]
           : [
-              "Automatiser votre reporting avec un dashboard unifie",
-              "Ajouter des metriques de Brand-Market Fit : NPS, brand recall, part de voix",
-              "Faire une etude de marche TAM/SAM/SOM pour quantifier votre potentiel",
+              "Automatiser votre reporting avec un dashboard unifié",
+              "Ajouter des métriques de Brand-Market Fit : NPS, brand recall, part de voix",
+              "Faire une étude de marché TAM/SAM/SOM pour quantifier votre potentiel",
             ],
       };
     }
@@ -1918,20 +1930,20 @@ function analyzePillarResponses(
       return {
         pillar: name, key, score,
         diagnostic: noRoadmap
-          ? "Aucune structure d'execution. Vous avez peut-etre des idees mais sans roadmap, equipe, ni budget, rien ne se materialise."
+          ? "Aucune structure d'exécution. Vous avez peut-être des idées mais sans roadmap, équipe, ni budget, rien ne se matérialise."
           : noBudget
-            ? "Vous avez une idee de votre direction mais pas de ressources allouees. Une strategie sans budget est un souhait, pas un plan."
-            : "Votre implementation est en cours mais manque de rigueur operationnelle.",
+            ? "Vous avez une idée de votre direction mais pas de ressources allouées. Une stratégie sans budget est un souhait, pas un plan."
+            : "Votre implémentation est en cours mais manque de rigueur opérationnelle.",
         actions: noRoadmap
           ? [
-              "Creer une roadmap 90 jours avec 3 objectifs maximum et des jalons hebdomadaires",
-              "Allouer un budget minimum viable : meme 50K FCFA/mois est un debut si c'est constant",
-              "Identifier une personne responsable du marketing, meme a temps partiel",
+              "Créer une roadmap 90 jours avec 3 objectifs maximum et des jalons hebdomadaires",
+              "Allouer un budget minimum viable : même 50K FCFA/mois est un début si c'est constant",
+              "Identifier une personne responsable du marketing, même à temps partiel",
             ]
           : [
               "Structurer vos campagnes en sprints de 2 semaines avec objectifs mesurables",
-              "Mettre en place un calendrier editorial 30 jours a l'avance",
-              "Definir un processus de validation clair : qui decide quoi et en combien de temps",
+              "Mettre en place un calendrier éditorial 30 jours à l'avance",
+              "Définir un processus de validation clair : qui décide quoi et en combien de temps",
             ],
       };
     }
@@ -1940,25 +1952,25 @@ function analyzePillarResponses(
       return {
         pillar: name, key, score,
         diagnostic: noStrategy
-          ? "Pas de strategie documentee. Vous improvisez. Le 'freestyle' n'est pas une strategie — c'est l'absence de strategie deguisee en agilite."
-          : "Vous avez des elements strategiques mais ils ne forment pas un tout coherent. La strategie, c'est le liant entre tous les autres piliers.",
+          ? "Pas de stratégie documentée. Vous improvisez. Le 'freestyle' n'est pas une stratégie — c'est l'absence de stratégie déguisée en agilité."
+          : "Vous avez des éléments stratégiques mais ils ne forment pas un tout cohérent. La stratégie, c'est le liant entre tous les autres piliers.",
         actions: noStrategy
           ? [
-              "Rediger un document strategique d'une page : vision, mission, positionnement, 3 priorites",
-              "Creer des guidelines de marque meme basiques : logo usage, couleurs, ton de voix",
-              "Planifier une session de reflexion strategique trimestrielle (meme 2h suffit)",
+              "Rédiger un document stratégique d'une page : vision, mission, positionnement, 3 priorités",
+              "Créer des guidelines de marque même basiques : logo usage, couleurs, ton de voix",
+              "Planifier une session de réflexion stratégique trimestrielle (même 2h suffit)",
             ]
           : [
-              "Auditer la coherence entre vos canaux : le meme message est-il porte partout ?",
-              "Creer un score de coherence interne : vos equipes peuvent-elles pitcher la marque de la meme facon ?",
-              "Documenter vos apprentissages : qu'est-ce qui a marche, qu'est-ce qui a echoue, pourquoi",
+              "Auditer la cohérence entre vos canaux : le même message est-il porté partout ?",
+              "Créer un score de cohérence interne : vos équipes peuvent-elles pitcher la marque de la même façon ?",
+              "Documenter vos apprentissages : qu'est-ce qui a marché, qu'est-ce qui a échoué, pourquoi",
             ],
       };
     }
     default:
       return {
         pillar: name, key, score,
-        diagnostic: "Ce pilier necessite un renforcement.",
+        diagnostic: "Ce pilier nécessite un renforcement.",
         actions: ["Approfondir l'analyse avec un diagnostic complet IMPULSION."],
       };
   }

@@ -7,7 +7,8 @@
  * révélée /200 (ADR-0149) — c'est le teaser qui pousse vers l'intake (capture email).
  *
  * 100 % éphémère : `strategyId: null` ⇒ aucune écriture (les snapshots sont
- * strategyId-gardés ; Apify défère sans clé). Zéro LLM. Rate-limit best-effort par IP.
+ * strategyId-gardés ; Apify défère sans clé). Zéro LLM. Rate-limit par IP sur
+ * store DB partagé entre workers (ADR-0161) — seuls les scans frais consomment.
  */
 
 import { z } from "zod";
@@ -41,23 +42,7 @@ import {
   recordFootprintObservation,
   listBrandDirectory,
 } from "@/server/services/seshat/brand-registry";
-
-// ── Rate-limit best-effort en mémoire (par instance) ─────────────────────────
-const WINDOW_MS = 60_000;
-const MAX_PER_WINDOW = 6;
-const hits = new Map<string, number[]>();
-
-function rateLimit(ip: string): boolean {
-  const now = Date.now();
-  const arr = (hits.get(ip) ?? []).filter((t) => now - t < WINDOW_MS);
-  if (arr.length >= MAX_PER_WINDOW) {
-    hits.set(ip, arr);
-    return false;
-  }
-  arr.push(now);
-  hits.set(ip, arr);
-  return true;
-}
+import { resolveClientIp, consumeScanBudget } from "@/server/services/seshat/scan-rate-limit";
 
 export const footprintRouter = createTRPCRouter({
   /**
@@ -105,9 +90,11 @@ export const footprintRouter = createTRPCRouter({
         }
       }
 
-      // Un vrai scan (ou un refresh) consomme le budget → rate-limité par IP.
-      const ip = ctx.headers?.get("x-forwarded-for")?.split(",")[0]?.trim() || "anon";
-      if (!rateLimit(ip)) {
+      // Un vrai scan (ou un refresh) consomme le budget → rate-limité par IP
+      // sur le store DB partagé (fix prod 2026-07-19 : le compteur en mémoire
+      // par worker multipliait la limite par le nombre de workers Coolify).
+      const ip = resolveClientIp(ctx.headers);
+      if (!(await consumeScanBudget(ip))) {
         throw new TRPCError({
           code: "TOO_MANY_REQUESTS",
           message: "Trop de scores demandés. Réessayez dans une minute.",

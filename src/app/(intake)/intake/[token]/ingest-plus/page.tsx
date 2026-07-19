@@ -6,7 +6,7 @@
 
 "use client";
 
-import { useState, useRef, use } from "react";
+import { useState, useEffect, useRef, use } from "react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/lib/trpc/client";
 import {
@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { AiBadge } from "@/components/shared/ai-badge";
 import { IntakeProcessingScreen } from "@/components/intake/intake-processing-screen";
+import { useIntakeProcessingWatch, failureReasonKey } from "@/components/intake/use-intake-processing-watch";
 import { useT } from "@/lib/i18n/use-t";
 
 const ACCEPTED_EXTENSIONS = ".pdf,.doc,.docx,.ppt,.pptx,.txt";
@@ -31,7 +32,6 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
   const { t } = useT();
   const { token } = use(params);
   const router = useRouter();
-  const utils = trpc.useUtils();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<SelectedFile[]>([]);
   const [websiteUrl, setWebsiteUrl] = useState("");
@@ -42,51 +42,41 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
   });
   const [error, setError] = useState("");
   const [dragActive, setDragActive] = useState(false);
-  // Sondage de récupération après une coupure réseau (voir onError + recoverAfterNetworkCut).
-  const [recovering, setRecovering] = useState(false);
 
   const { data: intake, isLoading } = trpc.quickIntake.getByToken.useQuery(
     { token },
     { enabled: !!token }
   );
 
-  const processIngestPlusMutation = trpc.quickIntake.processIngestPlus.useMutation({
-    onSuccess: () => {
+  // F1 async : ack immédiat { status: "PROCESSING" }, puis suivi getByToken
+  // jusqu'à l'état TERMINAL réel — redirection sur COMPLETED uniquement,
+  // message honnête sur FAILED (retry sans rien perdre). Couvre aussi la
+  // coupure réseau (row restée IN_PROGRESS = lancement perdu → « timeout »).
+  const { watching, startWatching } = useIntakeProcessingWatch(token, (outcome) => {
+    if (outcome.status === "COMPLETED") {
       router.push(`/intake/${token}/result`);
+      return;
+    }
+    setError(t(failureReasonKey(outcome.reason)));
+  });
+
+  const processIngestPlusMutation = trpc.quickIntake.processIngestPlus.useMutation({
+    onSuccess: (data) => {
+      if (data.status === "PROCESSING") startWatching();
     },
     onError: (err) => {
-      // Coupure du proxy frontal sur un appel long → erreur RÉSEAU opaque
-      // (« Load failed »), pas applicative. Le serveur a pu terminer : on sonde
-      // avant de conclure. Mitigation de surface (cf. RESIDUAL-DEBT « intake
-      // processIngest synchrone → Load failed »).
       if (isNetworkCut(err.message)) {
-        void recoverAfterNetworkCut();
+        startWatching();
         return;
       }
       setError(err.message);
     },
   });
 
-  // Le handler écrit le statut terminal en DERNIÈRE étape : on sonde ~45 s après
-  // une coupure, on rejoint le résultat si abouti, sinon message honnête. JAMAIS
-  // de faux succès (redirection sur statut terminal RÉEL uniquement).
-  async function recoverAfterNetworkCut() {
-    setRecovering(true);
-    for (let i = 0; i < 9; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-      try {
-        const latest = await utils.quickIntake.getByToken.fetch({ token });
-        if (latest?.status === "COMPLETED" || latest?.status === "CONVERTED") {
-          router.push(`/intake/${token}/result`);
-          return;
-        }
-      } catch {
-        // Réseau encore instable — nouvelle tentative au tour suivant.
-      }
-    }
-    setRecovering(false);
-    setError(t("intakeIngest.plus.timeoutError"));
-  }
+  // Un retour sur la page pendant qu'un traitement tourne reprend le suivi.
+  useEffect(() => {
+    if (intake?.status === "PROCESSING" && !watching) startWatching();
+  }, [intake?.status, watching, startWatching]);
 
   if (isLoading) {
     return (
@@ -109,11 +99,11 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
     return null;
   }
 
-  if (processIngestPlusMutation.isPending || processIngestPlusMutation.isSuccess || recovering) {
+  if (processIngestPlusMutation.isPending || watching) {
     return (
       <IntakeProcessingScreen
         companyName={intake.companyName}
-        isPending={processIngestPlusMutation.isPending || recovering}
+        isPending
         errorMessage={error || undefined}
       />
     );

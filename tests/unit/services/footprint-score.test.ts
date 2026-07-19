@@ -73,12 +73,47 @@ describe("computeFootprintScore — renormalisation sur le mesuré", () => {
     expect(score.total).toBe(0);
   });
 
-  it("social mesuré via découverte OK même sans profil trouvé (zéro honnête)", () => {
+  // Fix prod 2026-07-19 : une découverte qui tourne SANS rien trouver n'est
+  // plus « mesurée » — fin des 20 points fabriqués et du libellé « présence
+  // détectée » pour une marque inexistante (ADR-0046).
+  it("découverte OK mais 0 profil → social NON mesuré, exclu du dénominateur", () => {
     const f = base({ discovery: { attempted: true, queries: ["q"], status: "OK" } });
     const score = computeFootprintScore(f);
     const social = score.dimensions.find((d) => d.key === "social")!;
+    expect(social.measured).toBe(false);
+    expect(social.score).toBeNull();
+    expect(social.details).toBe("aucun profil social détecté");
+    expect(score.measuredWeight).toBe(0);
+    expect(score.total).toBeNull(); // marque inventée sans site : rien de mesurable
+  });
+
+  it("profils détectés sans audience relevée → présence seule, jamais de +20 fabriqué", () => {
+    const f = base({
+      socials: [
+        { platform: "INSTAGRAM", url: "https://instagram.com/marque", handle: "marque" },
+        { platform: "FACEBOOK", url: "https://facebook.com/marque", handle: "marque" },
+      ],
+    });
+    const score = computeFootprintScore(f);
+    const social = score.dimensions.find((d) => d.key === "social")!;
     expect(social.measured).toBe(true);
-    expect(social.score).toBe(20); // hints seuls : mi-chemin prudent (0 profil × 15 + 20)
+    expect(social.score).toBe(30); // 2 profils × 15, audience 0 honnête (pas de fallback 20)
+    expect(social.details).toContain("instagram, facebook");
+    expect(social.details).toContain("audience non relevée");
+    expect(social.details).not.toContain("présence détectée");
+  });
+
+  it("relevé d'audience sans profil parsé (connecteur seul) → mesuré sur la preuve du relevé", () => {
+    const f = base({
+      followerCounts: [
+        { platform: "INSTAGRAM", handle: "marque", followerCount: 12_000, source: "CONNECTOR", capturedAt: "2026-07-10T00:00:00Z" },
+      ],
+    });
+    const score = computeFootprintScore(f);
+    const social = score.dimensions.find((d) => d.key === "social")!;
+    expect(social.measured).toBe(true);
+    expect(social.details).toContain("instagram");
+    expect(social.details).toContain("abonnés mesurés");
   });
 
   it("clé absente (DEFERRED) → dimension exclue, pas comptée à 0", () => {

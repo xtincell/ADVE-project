@@ -24,12 +24,12 @@ export const intakeResultFr = {
   "intakeResult.corrupt.body": "L'intake est marqué comme terminé mais le score est introuvable. Recommencez le questionnaire.",
 
   // ── Result — taglines de niveau ────────────────────────────────────
-  "intakeResult.levelTagline.LATENT": "Invisible — fondations a poser",
-  "intakeResult.levelTagline.FRAGILE": "Intuitions justes — coherence a stabiliser",
+  "intakeResult.levelTagline.LATENT": "Invisible — fondations à poser",
+  "intakeResult.levelTagline.FRAGILE": "Intuitions justes — cohérence à stabiliser",
   "intakeResult.levelTagline.ORDINAIRE": "Fonctionnelle — substituable",
-  "intakeResult.levelTagline.FORTE": "Distincte — preferee par certains",
-  "intakeResult.levelTagline.CULTE": "Mouvement — communaute engagee",
-  "intakeResult.levelTagline.ICONE": "Reference sectorielle — patrimoine",
+  "intakeResult.levelTagline.FORTE": "Distincte — préférée par certains",
+  "intakeResult.levelTagline.CULTE": "Mouvement — communauté engagée",
+  "intakeResult.levelTagline.ICONE": "Référence sectorielle — patrimoine",
 
   // ── Result — priorités RTIS ────────────────────────────────────────
   "intakeResult.priority.P0": "Urgent",
@@ -37,18 +37,18 @@ export const intakeResultFr = {
   "intakeResult.priority.P2": "Roadmap",
 
   // ── Result — méta piliers ──────────────────────────────────────────
-  "intakeResult.pillar.a.name": "Authenticite",
-  "intakeResult.pillar.a.tagline": "ADN & legitimite",
+  "intakeResult.pillar.a.name": "Authenticité",
+  "intakeResult.pillar.a.tagline": "ADN & légitimité",
   "intakeResult.pillar.d.name": "Distinction",
-  "intakeResult.pillar.d.tagline": "Differenciation",
+  "intakeResult.pillar.d.tagline": "Différenciation",
   "intakeResult.pillar.v.name": "Valeur",
   "intakeResult.pillar.v.tagline": "Promesse & pricing",
   "intakeResult.pillar.e.name": "Engagement",
-  "intakeResult.pillar.e.tagline": "Communaute",
+  "intakeResult.pillar.e.tagline": "Communauté",
   "intakeResult.pillar.r.name": "Risque",
-  "intakeResult.pillar.r.tagline": "Vulnerabilites & risques",
+  "intakeResult.pillar.r.tagline": "Vulnérabilités & risques",
   "intakeResult.pillar.t.name": "Track",
-  "intakeResult.pillar.t.tagline": "Validation marche",
+  "intakeResult.pillar.t.tagline": "Validation marché",
   "intakeResult.pillar.i.name": "Innovation",
   "intakeResult.pillar.i.tagline": "Innovation & exploration",
   "intakeResult.pillar.s.name": "Stratégie",
@@ -56,49 +56,49 @@ export const intakeResultFr = {
 
   // ── Result — intros templatées par classification ──────────────────
   "intakeResult.intro.LATENT":
-    "Le diagnostic revele que votre marque est, a ce stade, quasi-invisible sur son marche. Les fondations identitaires sont absentes ou trop sous-developpees pour produire une preference. C'est le moment de tout poser proprement avant de communiquer plus.",
+    "Le diagnostic révèle que votre marque est, à ce stade, quasi-invisible sur son marché. Les fondations identitaires sont absentes ou trop sous-développées pour produire une préférence. C'est le moment de tout poser proprement avant de communiquer plus.",
   "intakeResult.intro.FRAGILE":
-    "Votre marque a des intuitions justes mais une architecture incomplete. Le risque : multiplier les actions tactiques sans coherence, ce qui dilue le peu de signal deja construit. La priorite est de stabiliser la plateforme avant d'accelerer.",
+    "Votre marque a des intuitions justes mais une architecture incomplète. Le risque : multiplier les actions tactiques sans cohérence, ce qui dilue le peu de signal déjà construit. La priorité est de stabiliser la plateforme avant d'accélérer.",
   "intakeResult.intro.ORDINAIRE":
-    "Votre marque est fonctionnelle mais substituable. Sur un marche sature, l'absence de differenciation forte expose a la guerre des prix et a la commoditisation. Le diagnostic suivant pointe les leviers de distinction concrets.",
+    "Votre marque est fonctionnelle mais substituable. Sur un marché saturé, l'absence de différenciation forte expose à la guerre des prix et à la commoditisation. Le diagnostic suivant pointe les leviers de distinction concrets.",
   "intakeResult.intro.FORTE":
-    "Vous avez des fondations solides et des forces reelles. L'enjeu n'est plus de poser les bases mais de combler les lacunes restantes pour passer de marque competente a marque preferee.",
+    "Vous avez des fondations solides et des forces réelles. L'enjeu n'est plus de poser les bases mais de combler les lacunes restantes pour passer de marque compétente à marque préférée.",
   "intakeResult.intro.CULTE":
-    "Vous touchez le statut culte. Votre marque a une communaute, un point de vue, une signature. La phase suivante consiste a structurer ce qui se cree organiquement pour le rendre transmissible et durable.",
+    "Vous touchez le statut culte. Votre marque a une communauté, un point de vue, une signature. La phase suivante consiste à structurer ce qui se crée organiquement pour le rendre transmissible et durable.",
   "intakeResult.intro.ICONE":
-    "Votre marque transcende son marche. Les enjeux sont desormais ceux d'une marque etablie : perennite, transmission, defense de la position acquise.",
+    "Votre marque transcende son marché. Les enjeux sont désormais ceux d'une marque établie : pérennité, transmission, défense de la position acquise.",
   "intakeResult.intro.default":
-    "Voici le diagnostic synthetique de votre marque, suivi des leviers strategiques recommandes.",
+    "Voici le diagnostic synthétique de votre marque, suivi des leviers stratégiques recommandés.",
 
   // ── Result — pitchs retainer par classification ────────────────────
   "intakeResult.retainer.LATENT":
-    "La Fusee accompagne en priorite les marques qui doivent (re)poser les bases. Notre retainer demarrage couvre la consolidation des piliers ADVE en 8 semaines : audit, ateliers fondateur, livrables identitaires, premier plan d'engagement.",
+    "La Fusée accompagne en priorité les marques qui doivent (re)poser les bases. Notre retainer démarrage couvre la consolidation des piliers ADVE en 8 semaines : audit, ateliers fondateur, livrables identitaires, premier plan d'engagement.",
   "intakeResult.retainer.FRAGILE":
-    "La Fusee accompagne les marques en phase de stabilisation. Notre retainer 'Cap structurel' tient sur 12 semaines : verrouillage des piliers ADVE, mise en coherence verbal/visuel, plan strategique execute.",
+    "La Fusée accompagne les marques en phase de stabilisation. Notre retainer 'Cap structurel' tient sur 12 semaines : verrouillage des piliers ADVE, mise en cohérence verbal/visuel, plan stratégique exécuté.",
   "intakeResult.retainer.ORDINAIRE":
-    "La Fusee accompagne les marques en quete de differenciation. Notre retainer 'Distinction' (12 semaines) cible la position concurrentielle, le territoire d'expression et la cascade strategique pour ouvrir un avantage durable.",
+    "La Fusée accompagne les marques en quête de différenciation. Notre retainer 'Distinction' (12 semaines) cible la position concurrentielle, le territoire d'expression et la cascade stratégique pour ouvrir un avantage durable.",
   "intakeResult.retainer.FORTE":
-    "La Fusee accompagne les marques fortes a passer un cap. Notre retainer 'Acceleration' (16 semaines) industrialise vos forces existantes et active la cascade strategique pour amplifier la traction commerciale.",
+    "La Fusée accompagne les marques fortes à passer un cap. Notre retainer 'Accélération' (16 semaines) industrialise vos forces existantes et active la cascade stratégique pour amplifier la traction commerciale.",
   "intakeResult.retainer.CULTE":
-    "La Fusee accompagne les marques cultes a transformer leur communaute en mouvement durable. Retainer 'Transmission' : structure operationnelle, programme ambassadeurs, codification des rituels.",
+    "La Fusée accompagne les marques cultes à transformer leur communauté en mouvement durable. Retainer 'Transmission' : structure opérationnelle, programme ambassadeurs, codification des rituels.",
   "intakeResult.retainer.ICONE":
-    "La Fusee accompagne les marques iconiques sur la perennite et la transmission. Retainer 'Heritage' : protection de la position, formation des relais, capitalisation patrimoniale.",
+    "La Fusée accompagne les marques iconiques sur la pérennité et la transmission. Retainer 'Héritage' : protection de la position, formation des relais, capitalisation patrimoniale.",
   "intakeResult.retainer.default":
-    "La Fusee accompagne les marques sur la mise en coherence et l'execution strategique. Echangeons sur votre besoin.",
+    "La Fusée accompagne les marques sur la mise en cohérence et l'exécution stratégique. Échangeons sur votre besoin.",
 
   // ── Result — cover PDF ─────────────────────────────────────────────
-  "intakeResult.cover.kicker": "La Fusee — Industry OS",
+  "intakeResult.cover.kicker": "La Fusée — Industry OS",
   "intakeResult.cover.title": "Rapport ADVE complet",
   "intakeResult.cover.score": "Score",
-  "intakeResult.cover.contact": "Contact prepare",
-  "intakeResult.cover.lafusee": "La Fusee",
+  "intakeResult.cover.contact": "Contact préparé",
+  "intakeResult.cover.lafusee": "La Fusée",
 
   // ── Result — header écran ──────────────────────────────────────────
-  "intakeResult.header.kicker": "Rapport ADVE — Pre-evaluation de marque",
+  "intakeResult.header.kicker": "Rapport ADVE — Pré-évaluation de marque",
   "intakeResult.header.levelKicker": "Niveau actuel de la marque",
-  "intakeResult.header.ladder": "Echelle",
+  "intakeResult.header.ladder": "Échelle",
   "intakeResult.header.ladderTarget": "Cible : ICONE",
-  "intakeResult.header.nextStep": "Prochaine etape :",
+  "intakeResult.header.nextStep": "Prochaine étape :",
 
   // ── Result — stratégie complète activée ────────────────────────────
   "intakeResult.oracle.activated": "Votre stratégie complète est activée",
@@ -122,18 +122,18 @@ export const intakeResultFr = {
   "intakeResult.pdf.currentLevel": "Niveau actuel",
   "intakeResult.pdf.pillarRead": "Lecture par pilier ADVE",
   "intakeResult.pdf.adveTitle": "5. Diagnostic ADVE",
-  "intakeResult.pdf.rtisTitle": "6. Proposition strategique",
-  "intakeResult.pdf.conclusionTitle": "7. Conclusion & prochaine etape",
+  "intakeResult.pdf.rtisTitle": "6. Proposition stratégique",
+  "intakeResult.pdf.conclusionTitle": "7. Conclusion & prochaine étape",
   "intakeResult.pdf.activate": "Activons votre plan",
-  "intakeResult.pdf.activateBody": "Le diagnostic ADVE livre la photographie. La cascade strategique et l'execution sont la valeur ajoutee de l'accompagnement La Fusee. Premier echange offert pour cadrer le besoin.",
+  "intakeResult.pdf.activateBody": "Le diagnostic ADVE livre la photographie. La cascade stratégique et l'exécution sont la valeur ajoutée de l'accompagnement La Fusée. Premier échange offert pour cadrer le besoin.",
   "intakeResult.pdf.annexTitle": "Annexe — Vos réponses verbatim",
   "intakeResult.pdf.annexSub": "Reproduction fidèle des réponses fournies, pour vérifier la fidélité de l'extraction.",
 
   // ── Result — contexte business (labels) ────────────────────────────
   "intakeResult.biz.sector": "Secteur",
   "intakeResult.biz.country": "Pays",
-  "intakeResult.biz.businessModel": "Modele business",
-  "intakeResult.biz.economicModel": "Modele economique",
+  "intakeResult.biz.businessModel": "Modèle business",
+  "intakeResult.biz.economicModel": "Modèle économique",
   "intakeResult.biz.positioning": "Positionnement",
 
   // ── Result — trajectoire ───────────────────────────────────────────
@@ -143,14 +143,14 @@ export const intakeResultFr = {
   "intakeResult.path.current": "(actuel)",
   "intakeResult.lock.label": "Verrou :",
   "intakeResult.vision.kicker": "Vision ICONE pour",
-  "intakeResult.path.badge": "palier(s) a franchir",
-  "intakeResult.path.subBefore": "Chaque palier correspond a un saut qualitatif specifique pour",
+  "intakeResult.path.badge": "palier(s) à franchir",
+  "intakeResult.path.subBefore": "Chaque palier correspond à un saut qualitatif spécifique pour",
   "intakeResult.path.subAfter": ".",
-  "intakeResult.path.youAreHere": "Vous etes ici",
+  "intakeResult.path.youAreHere": "Vous êtes ici",
 
   // ── Result — synthèse ──────────────────────────────────────────────
-  "intakeResult.exec.title": "Synthese executive",
-  "intakeResult.exec.titlePdf": "4. Synthese executive",
+  "intakeResult.exec.title": "Synthèse exécutive",
+  "intakeResult.exec.titlePdf": "4. Synthèse exécutive",
 
   // ── Result — phrases-ponts entre scores ────────────────────────────
   "intakeResult.bridge.footprintBefore": "Votre socle ci-dessus vient de vos réponses. Voici maintenant ce que le public, lui, voit de",
@@ -158,20 +158,20 @@ export const intakeResultFr = {
   "intakeResult.bridge.force": "Et quand on confronte cette preuve publique aux épreuves du réel, voici la force qu'elle révèle — le score complet /200, celui du classement.",
 
   // ── Result — ADVE écran ────────────────────────────────────────────
-  "intakeResult.adve.title": "Ce que le systeme a compris",
-  "intakeResult.adve.badge": "Apercu — version complete dans le PDF",
-  "intakeResult.adve.sub": "Pour chaque pilier ADVE : un extrait des valeurs extraites, suivi du commentaire strategique condense.",
+  "intakeResult.adve.title": "Ce que le système a compris",
+  "intakeResult.adve.badge": "Aperçu — version complète dans le PDF",
+  "intakeResult.adve.sub": "Pour chaque pilier ADVE : un extrait des valeurs extraites, suivi du commentaire stratégique condensé.",
   "intakeResult.adve.extracted": "Valeurs extraites",
   "intakeResult.adve.noValues": "Aucune valeur n'a pu être extraite de vos réponses pour ce pilier.",
-  "intakeResult.adve.moreFields": "champ(s) supplementaire(s) dans le PDF complet",
-  "intakeResult.adve.strategicRead": "Lecture strategique",
+  "intakeResult.adve.moreFields": "champ(s) supplémentaire(s) dans le PDF complet",
+  "intakeResult.adve.strategicRead": "Lecture stratégique",
   "intakeResult.adve.deepDive": "Analyse approfondie dans le PDF complet",
 
   // ── Result — RTIS écran + print ────────────────────────────────────
-  "intakeResult.rtis.title": "Proposition strategique",
-  "intakeResult.rtis.badge": "Apercu — analyse complete dans le PDF",
-  "intakeResult.rtis.lock": "Mecanique d'execution dans le PDF",
-  "intakeResult.rtis.keyMove": "Le coup a jouer :",
+  "intakeResult.rtis.title": "Proposition stratégique",
+  "intakeResult.rtis.badge": "Aperçu — analyse complète dans le PDF",
+  "intakeResult.rtis.lock": "Mécanique d'exécution dans le PDF",
+  "intakeResult.rtis.keyMove": "Le coup à jouer :",
 
   // ── Result — recommandation stratégique (V3) ───────────────────────
   "intakeResult.reco.kicker": "Recommandation stratégique",
@@ -193,7 +193,7 @@ export const intakeResultFr = {
   // ── Result — contact / verbatim ────────────────────────────────────
   "intakeResult.contact.email": "Email",
   "intakeResult.contact.whatsapp": "WhatsApp",
-  "intakeResult.contact.title": "Echanger avec La Fusee",
+  "intakeResult.contact.title": "Échanger avec La Fusée",
   "intakeResult.contact.sub": "Une question sur votre rapport ? Un projet à discuter ? Réponse sous 24h.",
   "intakeResult.verbatim.freeText": "Texte fourni",
   "intakeResult.verbatim.freeDesc": "Description libre",
@@ -207,7 +207,7 @@ export const intakeResultFr = {
   "intakeResult.download.ready": "Votre version intégrale est prête.",
   "intakeResult.download.opening": "Ouverture de l'impression…",
   "intakeResult.download.cta": "Télécharger le PDF",
-  "intakeResult.download.error": "Echec du téléchargement",
+  "intakeResult.download.error": "Échec du téléchargement",
 
   // ── Result — grille tarifaire / activation ─────────────────────────
   "intakeResult.tiers.kicker": "Et après ? Voici votre trajectoire",
@@ -216,18 +216,18 @@ export const intakeResultFr = {
   "intakeResult.tiers.cta": "Voir les options",
   "intakeResult.tiers.recommended": "Recommandé : Oracle complet ·",
   "intakeResult.activate.title": "Activer votre cockpit",
-  "intakeResult.activate.sub": "Creez votre espace marque pour piloter ces recommandations.",
+  "intakeResult.activate.sub": "Créez votre espace marque pour piloter ces recommandations.",
   "intakeResult.activate.li1Before": "Votre marque",
-  "intakeResult.activate.li1After": "est creee dans le systeme",
-  "intakeResult.activate.li2": "La cascade strategique (R·T·I·S) est lancee sur votre cockpit",
+  "intakeResult.activate.li1After": "est créée dans le système",
+  "intakeResult.activate.li2": "La cascade stratégique (R·T·I·S) est lancée sur votre cockpit",
   "intakeResult.activate.li3Before": "Vous pourrez vous connecter avec",
   "intakeResult.activate.li3After": "pour reprendre la main",
-  "intakeResult.activate.pending": "Creation en cours...",
+  "intakeResult.activate.pending": "Création en cours...",
   "intakeResult.activate.cta": "Activer mon cockpit",
-  "intakeResult.activated.titleBefore": "Cockpit cree pour",
+  "intakeResult.activated.titleBefore": "Cockpit créé pour",
   "intakeResult.activated.subBefore": "Inscrivez-vous avec",
-  "intakeResult.activated.subAfter": "pour acceder a votre marque.",
-  "intakeResult.activated.cta": "Creer mon mot de passe",
+  "intakeResult.activated.subAfter": "pour accéder à votre marque.",
+  "intakeResult.activated.cta": "Créer mon mot de passe",
   "intakeResult.modal.title": "Trajectoire complète — 5 paliers",
   "intakeResult.sticky.kicker": "Débloquer la suite",
   "intakeResult.sticky.from": "À partir de",
@@ -263,33 +263,35 @@ export const intakeResultFr = {
   "intakeIngest.fallback.timeoutBody": "Le serveur a mis trop longtemps à répondre. Rien n'est perdu : vos sources sont conservées. Réessayez, ou répondez aux questions pour un résultat immédiat.",
   "intakeIngest.fallback.llmBody": "C'est temporaire et sans rapport avec votre marque. Rien n'est perdu : vos sources sont conservées.",
   "intakeIngest.fallback.extractionBody": "Rien n'est perdu : vos sources sont conservées. Ajoutez du contenu, ou répondez aux questions pour obtenir votre score.",
+  "intakeIngest.fallback.internalTitle": "L'analyse a rencontré une erreur inattendue",
+  "intakeIngest.fallback.internalBody": "Ce n'est pas lié à votre marque. Rien n'est perdu : vos sources sont conservées. Réessayez, ou répondez aux questions pour un résultat immédiat.",
   "intakeIngest.fallback.retry": "Réessayer l'analyse",
   "intakeIngest.fallback.toForm": "Passer au questionnaire pré-rempli",
   "intakeIngest.fallback.back": "Revenir à mes sources",
-  "intakeIngest.err.empty": "Fournissez au moins un element : texte, document, ou URL.",
-  "intakeIngest.err.format": "Format non supporte :",
-  "intakeIngest.err.formatAccepted": "Formats acceptes : PDF, Word, PowerPoint, TXT.",
+  "intakeIngest.err.empty": "Fournissez au moins un élément : texte, document, ou URL.",
+  "intakeIngest.err.format": "Format non supporté :",
+  "intakeIngest.err.formatAccepted": "Formats acceptés : PDF, Word, PowerPoint, TXT.",
   "intakeIngest.err.tooBig": "Fichier trop volumineux :",
   "intakeIngest.err.tooBigMax": "(max 10 MB).",
   "intakeIngest.err.maxFiles": "Maximum 5 fichiers.",
-  "intakeIngest.back": "Passer au questionnaire guide",
-  "intakeIngest.title": "Decrivez votre marque",
+  "intakeIngest.back": "Passer au questionnaire guidé",
+  "intakeIngest.title": "Décrivez votre marque",
   "intakeIngest.subBefore": "Partagez ce que vous avez sur",
   "intakeIngest.subAfter": "— texte, documents, ou lien web. L'IA extraira les données ADVE.",
-  "intakeIngest.text.placeholder": "Collez ici votre pitch, page 'A propos', brief marketing, description de votre marque... Tout texte qui decrit qui vous etes, ce qui vous differencie, et comment vous engagez vos clients.",
-  "intakeIngest.text.chars": "caracteres",
-  "intakeIngest.text.optional": "Optionnel — mais recommande pour un meilleur diagnostic",
+  "intakeIngest.text.placeholder": "Collez ici votre pitch, page 'À propos', brief marketing, description de votre marque... Tout texte qui décrit qui vous êtes, ce qui vous différencie, et comment vous engagez vos clients.",
+  "intakeIngest.text.chars": "caractères",
+  "intakeIngest.text.optional": "Optionnel — mais recommandé pour un meilleur diagnostic",
   "intakeIngest.website.label": "Site web (optionnel)",
   "intakeIngest.website.placeholder": "https://www.votremarque.com",
   "intakeIngest.docs.label": "Documents (optionnel)",
   "intakeIngest.drop.before": "Glissez vos fichiers ici ou",
   "intakeIngest.drop.browse": "parcourir",
   "intakeIngest.drop.hint": "PDF, Word, PowerPoint, TXT — Max 10 MB par fichier — 5 fichiers max",
-  "intakeIngest.recommended.title": "Documents recommandes",
+  "intakeIngest.recommended.title": "Documents recommandés",
   "intakeIngest.recommended.item1": "Business plan ou pitch deck",
   "intakeIngest.recommended.item2": "Brand book ou charte graphique",
-  "intakeIngest.recommended.item3": "Plan marketing ou brief creatif",
-  "intakeIngest.recommended.item4": "Description de l'entreprise (page A propos)",
+  "intakeIngest.recommended.item3": "Plan marketing ou brief créatif",
+  "intakeIngest.recommended.item4": "Description de l'entreprise (page À propos)",
   "intakeIngest.submit.pending": "Analyse en cours...",
   "intakeIngest.submit.cta": "Lancer le diagnostic ADVE",
 
@@ -298,11 +300,11 @@ export const intakeResultFr = {
   "intakeIngest.plus.errEmpty": "Ajoutez au moins un fichier ou un lien vers votre site web.",
   "intakeIngest.plus.back": "Changer de méthode",
   "intakeIngest.plus.title": "Import + Scan en ligne",
-  "intakeIngest.plus.subBefore": "Documents + site web + reseaux sociaux pour un diagnostic complet de",
+  "intakeIngest.plus.subBefore": "Documents + site web + réseaux sociaux pour un diagnostic complet de",
   "intakeIngest.plus.subAfter": ".",
   "intakeIngest.plus.website": "Site web",
   "intakeIngest.plus.websitePlaceholder": "https://www.votre-marque.com",
-  "intakeIngest.plus.social": "Reseaux sociaux",
+  "intakeIngest.plus.social": "Réseaux sociaux",
   "intakeIngest.optionalSuffix": "(optionnel)",
   "intakeIngest.plus.instagramPlaceholder": "https://instagram.com/votre-marque",
   "intakeIngest.plus.facebookPlaceholder": "https://facebook.com/votre-marque",
@@ -317,56 +319,62 @@ export const intakeResultFr = {
   "intakeProcessing.stage.read.sub": "On parcourt vos documents et votre texte.",
   "intakeProcessing.stage.id.label": "Identification de la marque",
   "intakeProcessing.stage.id.sub": "Recoupement secteur, positionnement, signaux faibles.",
-  "intakeProcessing.stage.a.label": "Authenticite",
-  "intakeProcessing.stage.a.sub": "Vision, mission, raison d'etre.",
+  "intakeProcessing.stage.a.label": "Authenticité",
+  "intakeProcessing.stage.a.sub": "Vision, mission, raison d'être.",
   "intakeProcessing.stage.d.label": "Distinction",
   "intakeProcessing.stage.d.sub": "Ce qui vous rend reconnaissable au premier regard.",
   "intakeProcessing.stage.v.label": "Valeur",
-  "intakeProcessing.stage.v.sub": "Promesse, livraison, ecart percu.",
+  "intakeProcessing.stage.v.sub": "Promesse, livraison, écart perçu.",
   "intakeProcessing.stage.e.label": "Engagement",
   "intakeProcessing.stage.e.sub": "Profondeur du lien avec votre audience.",
-  "intakeProcessing.stage.synth.label": "Synthese du rapport",
+  "intakeProcessing.stage.synth.label": "Synthèse du rapport",
   "intakeProcessing.stage.synth.sub": "Classement sectoriel et marges de progression.",
 
   // ── Processing — familles de facts ─────────────────────────────────
-  "intakeProcessing.factKind.verite": "Verite sur les marques cultes",
-  "intakeProcessing.factKind.methode": "Methode",
+  "intakeProcessing.factKind.verite": "Vérité sur les marques cultes",
+  "intakeProcessing.factKind.methode": "Méthode",
   "intakeProcessing.factKind.atelier": "Vu en atelier",
-  "intakeProcessing.factKind.lafusee": "Sous le capot de La Fusee",
+  "intakeProcessing.factKind.lafusee": "Sous le capot de La Fusée",
 
   // ── Processing — facts rotatifs ────────────────────────────────────
   "intakeProcessing.fact.verite1": "Une marque culte ne vend pas un produit. Elle propose une appartenance.",
-  "intakeProcessing.fact.verite2": "L'Authenticite est ce qui reste quand on retire le marketing.",
-  "intakeProcessing.fact.verite3": "98 % des marques echouent sur la Distinction, pas sur la qualite du produit.",
-  "intakeProcessing.fact.verite4": "Une promesse forte sans livraison coherente brule la credibilite plus vite que le silence.",
+  "intakeProcessing.fact.verite2": "L'Authenticité est ce qui reste quand on retire le marketing.",
+  "intakeProcessing.fact.verite3": "98 % des marques échouent sur la Distinction, pas sur la qualité du produit.",
+  "intakeProcessing.fact.verite4": "Une promesse forte sans livraison cohérente brûle la crédibilité plus vite que le silence.",
   "intakeProcessing.fact.verite5": "L'Engagement n'est pas du trafic. C'est de la conviction qui se propage.",
-  "intakeProcessing.fact.verite6": "Les superfans ne sont pas vos clients. Ce sont vos evangelistes spontanes.",
-  "intakeProcessing.fact.verite7": "La fenetre d'Overton bouge quand 3 % du public bascule. Pas 50 %.",
-  "intakeProcessing.fact.verite8": "Une marque devient icone quand elle derange, puis convertit.",
-  "intakeProcessing.fact.methode1": "Le brief ne sauve pas la strategie. La strategie nourrit le brief.",
+  "intakeProcessing.fact.verite6": "Les superfans ne sont pas vos clients. Ce sont vos évangélistes spontanés.",
+  "intakeProcessing.fact.verite7": "La fenêtre d'Overton bouge quand 3 % du public bascule. Pas 50 %.",
+  "intakeProcessing.fact.verite8": "Une marque devient icône quand elle dérange, puis convertit.",
+  "intakeProcessing.fact.methode1": "Le brief ne sauve pas la stratégie. La stratégie nourrit le brief.",
   "intakeProcessing.fact.methode2": "Ce qui se mesure se pilote. Ce qui se ressent se propage.",
-  "intakeProcessing.fact.methode3": "On ne corrige pas un positionnement faible avec un budget media. On le reecrit.",
+  "intakeProcessing.fact.methode3": "On ne corrige pas un positionnement faible avec un budget média. On le réécrit.",
   "intakeProcessing.fact.methode4": "Si ta marque ne tient pas debout sur une diapo, elle ne tiendra pas en rayon.",
-  "intakeProcessing.fact.methode5": "L'execution mediocre tue les bonnes idees plus vite que les mauvaises idees.",
-  "intakeProcessing.fact.methode6": "Une categorie sans rituel n'a pas de superfans. Elle a des acheteurs.",
+  "intakeProcessing.fact.methode5": "L'exécution médiocre tue les bonnes idées plus vite que les mauvaises idées.",
+  "intakeProcessing.fact.methode6": "Une catégorie sans rituel n'a pas de superfans. Elle a des acheteurs.",
   "intakeProcessing.fact.methode7": "Si tu copies l'iconique, tu deviens l'ordinaire de l'iconique.",
-  "intakeProcessing.fact.atelier1": "La diaspora valide. Le marche local consacre. Les deux ne suivent pas le meme rythme.",
-  "intakeProcessing.fact.atelier2": "Une marque africaine forte ne demande pas la permission de Paris. Elle l'oblige a regarder.",
-  "intakeProcessing.fact.atelier3": "Le bouche-a-oreille reste le canal le plus rentable. Personne n'ose le budgeter.",
-  "intakeProcessing.fact.atelier4": "Faire vrai coute moins cher que faire pro. Et convertit dix fois plus.",
-  "intakeProcessing.fact.lafusee1": "Notre moteur de gouvernance relit chacune de vos reponses avant de laisser passer le diagnostic.",
-  "intakeProcessing.fact.lafusee2": "Un moteur tient la plume, un autre fond les assets, un troisieme observe en silence.",
+  "intakeProcessing.fact.atelier1": "La diaspora valide. Le marché local consacre. Les deux ne suivent pas le même rythme.",
+  "intakeProcessing.fact.atelier2": "Une marque africaine forte ne demande pas la permission de Paris. Elle l'oblige à regarder.",
+  "intakeProcessing.fact.atelier3": "Le bouche-à-oreille reste le canal le plus rentable. Personne n'ose le budgéter.",
+  "intakeProcessing.fact.atelier4": "Faire vrai coûte moins cher que faire pro. Et convertit dix fois plus.",
+  "intakeProcessing.fact.lafusee1": "Notre moteur de gouvernance relit chacune de vos réponses avant de laisser passer le diagnostic.",
+  "intakeProcessing.fact.lafusee2": "Un moteur tient la plume, un autre fond les assets, un troisième observe en silence.",
   "intakeProcessing.fact.lafusee3": "Le moteur financier compte le carburant. Sans carburant, pas de mise en orbite.",
-  "intakeProcessing.fact.lafusee4": "Un moteur assemble l'equipage, un autre porte le message a l'audience.",
-  "intakeProcessing.fact.lafusee5": "ADVE est le sol. La strategie est l'orbite. Vous etes ici sur le sol.",
-  "intakeProcessing.fact.lafusee6": "Nous classons votre marque sur 7 paliers : de Latent a Icone. Beaucoup tiennent dans Fragile.",
-  "intakeProcessing.fact.lafusee7": "La methode ADVE cascade A vers D vers V vers E. Sauter une etape coute cher en aval.",
+  "intakeProcessing.fact.lafusee4": "Un moteur assemble l'équipage, un autre porte le message à l'audience.",
+  "intakeProcessing.fact.lafusee5": "ADVE est le sol. La stratégie est l'orbite. Vous êtes ici sur le sol.",
+  "intakeProcessing.fact.lafusee6": "Nous classons votre marque sur 7 paliers : de Latent à Icône. Beaucoup tiennent dans Fragile.",
+  "intakeProcessing.fact.lafusee7": "La méthode ADVE cascade A vers D vers V vers E. Sauter une étape coûte cher en aval.",
 
   // ── Processing — header / progression ──────────────────────────────
   "intakeProcessing.titleBefore": "Analyse de",
   "intakeProcessing.titleAfter": "en cours",
-  "intakeProcessing.sub": "On extrait vos 4 piliers ADVE. Cela prend generalement 30 a 60 secondes.",
-  "intakeProcessing.done": "Termine",
+  "intakeProcessing.sub": "On extrait vos 4 piliers ADVE. Cela prend généralement 30 à 60 secondes.",
+  "intakeProcessing.done": "Terminé",
+
+  // ── Processing — échecs du traitement asynchrone (F1, 2026-07-19) ──
+  "intakeProcessing.failed.extraction": "Le contenu fourni n'a pas permis d'extraire assez d'informations pour un diagnostic fiable. Enrichissez la description (produits, clients, différenciation, engagement) ou passez par le questionnaire guidé.",
+  "intakeProcessing.failed.llm_unavailable": "L'analyse automatique est momentanément indisponible. Vos sources sont conservées — réessayez dans quelques minutes, ou passez par le questionnaire guidé.",
+  "intakeProcessing.failed.internal": "L'analyse a rencontré une erreur inattendue. Vos sources sont conservées — réessayez, ou passez par le questionnaire guidé.",
+  "intakeProcessing.failed.timeout": "L'analyse a été interrompue avant d'aboutir. Vos sources sont conservées — réessayez, ou passez par le questionnaire guidé.",
 } as const;
 
 export const intakeResultEn: Record<keyof typeof intakeResultFr, string> = {
@@ -440,11 +448,11 @@ export const intakeResultEn: Record<keyof typeof intakeResultFr, string> = {
   "intakeResult.retainer.default":
     "La Fusée supports brands on strategic coherence and execution. Let's talk about your needs.",
 
-  "intakeResult.cover.kicker": "La Fusee — Industry OS",
+  "intakeResult.cover.kicker": "La Fusée — Industry OS",
   "intakeResult.cover.title": "Full ADVE report",
   "intakeResult.cover.score": "Score",
   "intakeResult.cover.contact": "Prepared for",
-  "intakeResult.cover.lafusee": "La Fusee",
+  "intakeResult.cover.lafusee": "La Fusée",
 
   "intakeResult.header.kicker": "ADVE report — Brand pre-evaluation",
   "intakeResult.header.levelKicker": "Current brand level",
@@ -599,6 +607,8 @@ export const intakeResultEn: Record<keyof typeof intakeResultFr, string> = {
   "intakeIngest.fallback.timeoutBody": "The server took too long to respond. Nothing is lost: your sources are saved. Try again, or answer the questions for an immediate result.",
   "intakeIngest.fallback.llmBody": "It's temporary and unrelated to your brand. Nothing is lost: your sources are saved.",
   "intakeIngest.fallback.extractionBody": "Nothing is lost: your sources are saved. Add more content, or answer the questions to get your score.",
+  "intakeIngest.fallback.internalTitle": "The analysis hit an unexpected error",
+  "intakeIngest.fallback.internalBody": "This is not about your brand. Nothing is lost: your sources are saved. Retry, or answer the questions for an immediate result.",
   "intakeIngest.fallback.retry": "Retry the analysis",
   "intakeIngest.fallback.toForm": "Switch to the pre-filled questionnaire",
   "intakeIngest.fallback.back": "Back to my sources",
@@ -698,6 +708,12 @@ export const intakeResultEn: Record<keyof typeof intakeResultFr, string> = {
   "intakeProcessing.titleAfter": "in progress",
   "intakeProcessing.sub": "We're extracting your 4 ADVE pillars. This usually takes 30 to 60 seconds.",
   "intakeProcessing.done": "Done",
+
+  // ── Processing — async failure states (F1, 2026-07-19) ──
+  "intakeProcessing.failed.extraction": "The content provided did not yield enough information for a reliable diagnostic. Enrich the description (products, customers, differentiation, engagement) or use the guided questionnaire.",
+  "intakeProcessing.failed.llm_unavailable": "Automatic analysis is temporarily unavailable. Your sources are saved — retry in a few minutes, or use the guided questionnaire.",
+  "intakeProcessing.failed.internal": "The analysis hit an unexpected error. Your sources are saved — retry, or use the guided questionnaire.",
+  "intakeProcessing.failed.timeout": "The analysis was interrupted before finishing. Your sources are saved — retry, or use the guided questionnaire.",
 };
 
 export const intakeResultZh: Record<keyof typeof intakeResultFr, string> = {
@@ -771,11 +787,11 @@ export const intakeResultZh: Record<keyof typeof intakeResultFr, string> = {
   "intakeResult.retainer.default":
     "La Fusée 陪伴品牌实现战略一致性与落地执行。欢迎与我们聊聊您的需求。",
 
-  "intakeResult.cover.kicker": "La Fusee — Industry OS",
+  "intakeResult.cover.kicker": "La Fusée — Industry OS",
   "intakeResult.cover.title": "ADVE 完整报告",
   "intakeResult.cover.score": "得分",
   "intakeResult.cover.contact": "报告接收人",
-  "intakeResult.cover.lafusee": "La Fusee",
+  "intakeResult.cover.lafusee": "La Fusée",
 
   "intakeResult.header.kicker": "ADVE 报告——品牌预评估",
   "intakeResult.header.levelKicker": "品牌当前层级",
@@ -930,6 +946,8 @@ export const intakeResultZh: Record<keyof typeof intakeResultFr, string> = {
   "intakeIngest.fallback.timeoutBody": "服务器响应时间过长。您没有任何损失：资料已保存。请重试，或改答问卷立即获得结果。",
   "intakeIngest.fallback.llmBody": "这是暂时性问题，与您的品牌无关。您没有任何损失：资料已保存。",
   "intakeIngest.fallback.extractionBody": "您没有任何损失：资料已保存。请补充内容，或改答问卷以获得得分。",
+  "intakeIngest.fallback.internalTitle": "分析遇到意外错误",
+  "intakeIngest.fallback.internalBody": "这与您的品牌无关。您没有任何损失：资料已保存。请重试，或改答问卷以立即获得结果。",
   "intakeIngest.fallback.retry": "重试分析",
   "intakeIngest.fallback.toForm": "改用预填问卷",
   "intakeIngest.fallback.back": "返回我的资料",
@@ -1029,4 +1047,10 @@ export const intakeResultZh: Record<keyof typeof intakeResultFr, string> = {
   "intakeProcessing.titleAfter": "……",
   "intakeProcessing.sub": "正在提取您的 4 大 ADVE 支柱。通常需要 30 到 60 秒。",
   "intakeProcessing.done": "完成",
+
+  // ── Processing — 异步处理失败状态（F1，2026-07-19）──
+  "intakeProcessing.failed.extraction": "所提供的内容不足以生成可靠的诊断。请补充描述（产品、客户、差异化、互动），或改用引导式问卷。",
+  "intakeProcessing.failed.llm_unavailable": "自动分析暂时不可用。您的资料已保存——请几分钟后重试，或改用引导式问卷。",
+  "intakeProcessing.failed.internal": "分析遇到意外错误。您的资料已保存——请重试，或改用引导式问卷。",
+  "intakeProcessing.failed.timeout": "分析在完成前被中断。您的资料已保存——请重试，或改用引导式问卷。",
 };

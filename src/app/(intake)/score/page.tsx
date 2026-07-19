@@ -22,7 +22,7 @@ const TIERS = [
   {
     range: "0-40",
     label: "Latent",
-    desc: "Invisible, pas d'identite distincte. Substituable a tout moment.",
+    desc: "Invisible, pas d'identité distincte. Substituable à tout moment.",
     color: "var(--color-class-latent)",
     bgOpacity: "10%",
     icon: Skull,
@@ -30,7 +30,7 @@ const TIERS = [
   {
     range: "41-80",
     label: "Fragile",
-    desc: "Des intuitions justes mais un socle instable. La coherence ne tient pas seule.",
+    desc: "Des intuitions justes mais un socle instable. La cohérence ne tient pas seule.",
     color: "var(--color-class-fragile, var(--color-class-latent))",
     bgOpacity: "10%",
     icon: AlertTriangle,
@@ -38,7 +38,7 @@ const TIERS = [
   {
     range: "81-120",
     label: "Ordinaire",
-    desc: "Fonctionnel mais interchangeable. Pas de raison de vous choisir specifiquement.",
+    desc: "Fonctionnel mais interchangeable. Pas de raison de vous choisir spécifiquement.",
     color: "var(--color-class-ordinaire)",
     bgOpacity: "10%",
     icon: Eye,
@@ -46,7 +46,7 @@ const TIERS = [
   {
     range: "121-160",
     label: "Forte",
-    desc: "Reconnue et respectee. Vos clients vous preferent pour des raisons claires.",
+    desc: "Reconnue et respectée. Vos clients vous préfèrent pour des raisons claires.",
     color: "var(--color-class-forte)",
     bgOpacity: "10%",
     icon: Shield,
@@ -54,15 +54,15 @@ const TIERS = [
   {
     range: "161-180",
     label: "Culte",
-    desc: "Adoree, inspire la devotion. Vos clients sont vos meilleurs ambassadeurs.",
+    desc: "Adorée, inspire la dévotion. Vos clients sont vos meilleurs ambassadeurs.",
     color: "var(--color-class-culte)",
     bgOpacity: "10%",
     icon: Flame,
   },
   {
     range: "181-200",
-    label: "Icone",
-    desc: "Legendaire, reference mondiale. Vous transcendez votre marche.",
+    label: "Icône",
+    desc: "Légendaire, référence mondiale. Vous transcendez votre marché.",
     color: "var(--color-class-icone)",
     bgOpacity: "10%",
     icon: Crown,
@@ -70,14 +70,14 @@ const TIERS = [
 ];
 
 const PILLARS = [
-  { key: "A", name: "Authenticite", question: "Qui etes-vous vraiment ?", color: "var(--color-pillar-a)", icon: Heart },
+  { key: "A", name: "Authenticité", question: "Qui êtes-vous vraiment ?", color: "var(--color-pillar-a)", icon: Heart },
   { key: "D", name: "Distinction", question: "Pourquoi vous et pas un autre ?", color: "var(--color-pillar-d)", icon: Star },
   { key: "V", name: "Valeur", question: "Que promettez-vous au monde ?", color: "var(--color-pillar-v)", icon: Target },
-  { key: "E", name: "Engagement", question: "Comment creer la devotion ?", color: "var(--color-pillar-e)", icon: Flame },
+  { key: "E", name: "Engagement", question: "Comment créer la dévotion ?", color: "var(--color-pillar-e)", icon: Flame },
   { key: "R", name: "Risque", question: "Quels sont vos angles morts ?", color: "var(--color-pillar-r)", icon: AlertTriangle },
-  { key: "T", name: "Track", question: "Comment mesurez-vous le succes ?", color: "var(--color-pillar-t)", icon: BarChart3 },
+  { key: "T", name: "Track", question: "Comment mesurez-vous le succès ?", color: "var(--color-pillar-t)", icon: BarChart3 },
   // I = Innovation (canon produit) — « Implementation » était un drift.
-  { key: "I", name: "Innovation", question: "Quel potentiel inexploite ?", color: "var(--color-pillar-i)", icon: Settings },
+  { key: "I", name: "Innovation", question: "Quel potentiel inexploité ?", color: "var(--color-pillar-i)", icon: Settings },
   { key: "S", name: "Stratégie", question: "Comment assembler le tout ?", color: "var(--color-pillar-s)", icon: Compass },
 ];
 

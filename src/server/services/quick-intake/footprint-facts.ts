@@ -43,7 +43,7 @@ export interface FootprintFacts {
   email: { hasMx: boolean; mxProvider: string | null; hasSpf: boolean; hasDmarc: boolean } | null;
   reviews: { placeName: string | null; rating: number | null; reviewCount: number | null } | null;
   performance: { performanceScore: number | null; lcpMs: number | null } | null;
-  youtube: { channelTitle: string | null; subscriberCount: number | null; videoCount: number | null } | null;
+  youtube: { channelTitle: string | null; handle: string | null; subscriberCount: number | null; videoCount: number | null } | null;
   site: { url: string | null; reachable: boolean } | null;
 }
 
@@ -85,6 +85,26 @@ export function buildFootprintFacts(f: EnrichedFootprint): FootprintFacts {
     seenPlatformHandle.add(key);
     socials.push({ platform: fc.platform, handle, url: null, followerCount: fc.followerCount, source: fc.source });
   }
+  // Invariant de preuve (fix prod 2026-07-19) : TOUTE source comptée dans le
+  // total d'audience du score a sa ligne ici. L'audience YouTube (API) entre
+  // dans le total même quand Apify n'a rien relevé — si aucun profil YOUTUBE
+  // parsé ne l'a portée ci-dessus, on pousse la ligne depuis la mesure API.
+  if (
+    f.youtube?.status === "LIVE" &&
+    f.youtube.subscriberCount !== null &&
+    !socials.some((s) => s.platform === "YOUTUBE" && s.followerCount !== null)
+  ) {
+    const existingIdx = socials.findIndex((s) => s.platform === "YOUTUBE");
+    const row: FactSocial = {
+      platform: "YOUTUBE",
+      handle: f.youtube.handle ? f.youtube.handle.replace(/^@/, "") : null,
+      url: existingIdx >= 0 ? socials[existingIdx]!.url : null,
+      followerCount: f.youtube.subscriberCount,
+      source: "YOUTUBE_API",
+    };
+    if (existingIdx >= 0) socials[existingIdx] = { ...socials[existingIdx]!, ...row, handle: row.handle ?? socials[existingIdx]!.handle };
+    else socials.push(row);
+  }
 
   return {
     socials,
@@ -112,7 +132,7 @@ export function buildFootprintFacts(f: EnrichedFootprint): FootprintFacts {
         : null,
     youtube:
       f.youtube?.status === "LIVE"
-        ? { channelTitle: f.youtube.channelTitle, subscriberCount: f.youtube.subscriberCount, videoCount: f.youtube.videoCount }
+        ? { channelTitle: f.youtube.channelTitle, handle: f.youtube.handle, subscriberCount: f.youtube.subscriberCount, videoCount: f.youtube.videoCount }
         : null,
     site: f.site ? { url: f.site.url ?? null, reachable: f.site.reachable } : null,
   };

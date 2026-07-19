@@ -32,7 +32,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 220 models, 71 enums
+## Prisma — 221 models, 71 enums
 
 ### Models
 
@@ -55,6 +55,7 @@ Ces correspondances évitent la réinvention :
 - **NewsletterCampaign** (12 fields) — Campagne newsletter (The Upgrade) — composer, tester, envoyer aux opt-in.
 - **FollowerSnapshot** (9 fields)
 - **BrandFootprintSnapshot** (13 fields) — ADR-0151 — base de marques de Seshat (répertoire d'empreintes publiques). Chaque recherche `/scorer` (marque hors-platef
+- **ScanRateHit** (3 fields) — Fix prod 2026-07-19 (ADR-0161) — compteur PARTAGÉ entre workers du rate-limit des scans frais du scoreur public. L'ancie
 - **TalentProfile** (27 fields)
 - **MissionQuote** (17 fields)
 - **TalentService** (13 fields)
@@ -79,7 +80,7 @@ Ces correspondances évitent la réinvention :
 - **DeliverableTracking** (10 fields)
 - **Conversation** (14 fields)
 - **Message** (12 fields)
-- **QuickIntake** (31 fields)
+- **QuickIntake** (32 fields)
 - **MediaPlan** (13 fields)
 - **MediaPlanLine** (18 fields)
 - **CampaignAction** (29 fields)
@@ -275,7 +276,7 @@ Ces correspondances évitent la réinvention :
 - **MembershipStatus** : ACTIVE | OVERDUE | CANCELLED | EXEMPT
 - **KnowledgeType** : DIAGNOSTIC_RESULT | MISSION_OUTCOME | BRIEF_PATTERN | CREATOR_PATTERN | SECTOR_BENCHMARK | CAMPAIGN_TEMPLATE | FEEDBACK_VALIDATED | MARKET_STUDY_TAM | MARKET_STUDY_COMPETITOR | MARKET_STUDY_SEGMENT | MARKET_STUDY_RAW | EXTERNAL_FEED_DIGEST
 - **TrackingStatus** : AWAITING_SIGNALS | PARTIAL | COMPLETE | EXPIRED
-- **QuickIntakeStatus** : IN_PROGRESS | COMPLETED | CONVERTED | EXPIRED
+- **QuickIntakeStatus** : IN_PROGRESS | PROCESSING | COMPLETED | CONVERTED | EXPIRED | FAILED
 - **IntakeMethod** : GUIDED | IMPORT | LONG | SHORT | INGEST | INGEST_PLUS
 - **BrandNature** : PRODUCT | SERVICE | CHARACTER_IP | FESTIVAL_IP | MEDIA_IP | RETAIL_SPACE | PLATFORM | INSTITUTION | PERSONAL
 - **MarketScale** : QUARTIER | VILLE | REGION | NATION | CONTINENT | MONDE

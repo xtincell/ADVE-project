@@ -349,6 +349,14 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
     if (paymentData?.paid === true) setUnlockedByPayment(true);
   }, [paymentData]);
 
+  // F1 async : pendant un traitement de fond (statut PROCESSING), la page
+  // suit l'avancement — refetch 4 s jusqu'à l'état terminal réel en base.
+  useEffect(() => {
+    if (intake?.status !== "PROCESSING") return;
+    const id = window.setInterval(() => void refetch(), 4_000);
+    return () => window.clearInterval(id);
+  }, [intake?.status, refetch]);
+
   const isPaid = isAdmin || unlockedByPayment || paymentData?.paid === true;
   // Use the canonical localized price (handles ALL currencies, not just XAF/XOF/EUR).
   // Default = paid (false) while pricing is loading/erroring — never claim "Gratuit"
@@ -513,6 +521,19 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             {t("intakeResult.error.retry")}
           </button>
         ) : null}
+      </main>
+    );
+  }
+
+  // F1 async : un lien /result ouvert PENDANT le traitement de fond suit
+  // l'avancement au lieu de renvoyer « non finalisé » — le rapport apparaît
+  // tout seul à la fin (refetch 4 s, statut terminal réel uniquement).
+  if (intake.status === "PROCESSING") {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center bg-background px-5 text-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <h1 className="mt-4 text-xl font-bold text-foreground">{t("intakeResult.loading.title")}</h1>
+        <p className="mt-2 max-w-md text-sm text-foreground-muted">{t("intakeResult.loading.sub")}</p>
       </main>
     );
   }

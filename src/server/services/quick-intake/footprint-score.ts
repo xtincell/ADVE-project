@@ -52,24 +52,47 @@ export function computeFootprintScore(f: EnrichedFootprint): FootprintScore {
     dims.push({ key: "site", label: "Site web", weight: 20, measured: false, score: null, details: "aucun site déclaré ni détecté" });
   }
 
-  // ── Social (30) — mesuré si ≥1 profil détecté OU si la découverte a réellement tourné ──
+  // ── Social (30) — mesuré UNIQUEMENT sur preuve réelle : ≥1 profil détecté
+  // ou ≥1 relevé d'audience (connecteur / YouTube). Une découverte qui a tourné
+  // sans rien trouver n'est PAS une présence : dimension exclue du dénominateur,
+  // jamais de points fabriqués ni de « présence détectée » sans profil (ADR-0046,
+  // fix prod 2026-07-19 : marque inventée scorée 20/100 social).
   const realCounts = f.followerCounts ?? [];
   const ytSubs = f.youtube?.status === "LIVE" && f.youtube.subscriberCount ? f.youtube.subscriberCount : 0;
   const totalAudience = realCounts.reduce((sum, c) => sum + c.followerCount, 0) + ytSubs;
-  const socialMeasured = f.socials.length > 0 || f.discovery.status === "OK";
+  const socialMeasured = f.socials.length > 0 || realCounts.length > 0 || ytSubs > 0;
   if (socialMeasured) {
     const presence = clamp(f.socials.length * 15, 0, 40); // multi-canal
-    const audience = totalAudience > 0 ? (audienceScore(totalAudience) * 60) / 100 : realCounts.length > 0 || ytSubs > 0 ? 0 : 20; // hints seuls : mi-chemin prudent
-    // Détail FACTUEL : nommer les plateformes détectées (jamais un « 3 canal(aux) »
-    // opaque) + l'audience mesurée, ou dire honnêtement qu'elle n'est pas relevée.
-    const platforms = [...new Set(f.socials.map((s) => s.platform.toLowerCase()))].join(", ");
+    // Audience réellement relevée → échelle log ; sinon 0 honnête (« audience
+    // non relevée ») — l'ancien fallback +20 « mi-chemin prudent » n'avait
+    // aucune preuve derrière lui.
+    const audience = totalAudience > 0 ? (audienceScore(totalAudience) * 60) / 100 : 0;
+    // Détail FACTUEL : nommer les plateformes (profils parsés + relevés
+    // d'audience) + l'audience mesurée, ou dire honnêtement qu'elle n'est pas
+    // relevée. `platforms` est toujours non vide : `socialMeasured` exige au
+    // moins un profil ou un relevé.
+    const platforms = [
+      ...new Set([
+        ...f.socials.map((s) => s.platform.toLowerCase()),
+        ...realCounts.map((c) => c.platform.toLowerCase()),
+        ...(ytSubs > 0 ? ["youtube"] : []),
+      ]),
+    ].join(", ");
     dims.push({
       key: "social", label: "Réseaux sociaux", weight: 30, measured: true,
       score: clamp(presence + audience),
-      details: `${platforms || "présence détectée"}${totalAudience > 0 ? ` · ${new Intl.NumberFormat("fr-FR").format(totalAudience)} abonnés mesurés` : " · audience non relevée"}`,
+      details: `${platforms}${totalAudience > 0 ? ` · ${new Intl.NumberFormat("fr-FR").format(totalAudience)} abonnés mesurés` : " · audience non relevée"}`,
     });
   } else {
-    dims.push({ key: "social", label: "Réseaux sociaux", weight: 30, measured: false, score: null, details: "découverte non exécutée (clé absente) et rien de déclaré" });
+    dims.push({
+      key: "social", label: "Réseaux sociaux", weight: 30, measured: false, score: null,
+      details:
+        f.discovery.status === "OK"
+          ? "aucun profil social détecté"
+          : f.discovery.status === "ERROR"
+            ? "découverte en échec et rien de déclaré"
+            : "découverte non exécutée (clé absente) et rien de déclaré",
+    });
   }
 
   // ── Avis (15) — mesuré seulement si le collecteur Maps a tourné ──
