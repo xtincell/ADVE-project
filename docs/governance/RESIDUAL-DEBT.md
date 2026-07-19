@@ -126,7 +126,7 @@ Vague [ADR-0132](adr/0132-brand-connections-hub-shopify-public-page.md) shippée
 
 Vague [ADR-0131](adr/0131-collaborator-role-zones-dual-dashboard.md) shippée (v6.27.107) : zones d'écriture par rôle DENY-par-défaut (firewall d'émission ×2 voies + gardes calendrier), mini console Guilde, double dashboard stratégique/« Suivi du jour », mode jour. Restes réels :
 
-- **Cartographie kind→zone à étendre** : `COLLABORATOR_KIND_ZONES` couvre la zone digitale (calendar/social/publications) ; les kinds campagnes/newsletter du DIGITAL_DIRECTOR restent à cataloguer kind par kind (deny par défaut en attendant — sûr mais restrictif).
+- **Cartographie kind→zone à étendre** *(requalifié 2026-07-19)* : `COLLABORATOR_KIND_ZONES` couvre la zone digitale (calendar/social/publications) **et campagnes amorcé** (ADR-0144 : `START_CAMPAIGN_MISSION → "campaigns"`, `SET_BRAND_ACTION_STATUS → "calendar"` — `src/domain/collaborator-access.ts:83-85`) ; les kinds newsletter (zéro catalogué) et la quasi-totalité des kinds campagnes restent à cataloguer (deny par défaut en attendant — sûr mais restrictif).
 - **Masquage fin des gestes hors zone** : le firewall serveur veto proprement (message business) ; le masquage préventif des boutons d'écriture sur les surfaces secondaires (campagnes, demandes) via `getMyAccess.writeZones` reste à poser (le dashboard/calendrier/réseaux sont couverts).
 - **Sweep light-mode page-par-page** : les deux dashboards sont vérifiés (captures) ; les autres surfaces cockpit héritent des tokens — passer chaque page en mode jour à l'occasion (même pattern que la passe responsive mobile).
 - ~~Logo blanc sur fond blanc (sidebar, mode jour)~~ — **clos le 12/07 (v6.27.108)** : tuile logo fond blanc constant + le logo ACTIVE est désormais le wordmark officiel fond clair extrait du Brand Book (les déclinaisons réserve blanche restent SELECTED au coffre pour les fonds sombres).
@@ -137,7 +137,7 @@ Purge des incohérences doctrine/code (bible 11 anchors, contextes, i18n, commen
 
 - **Reclassification ROUTER-MAP / SERVICE-MAP** : 34 routers + 23 services post-Phase 19 listés en § « À classifier » des deux maps (couverture honnête, zéro classification inventée). Chantier : attribuer Sous-système APOGEE + Tier + statut governance/Governor à chaque entrée, puis re-fusionner dans les tables et refaire les synthèses. Bornage : mécanique, ~1 session dédiée.
 - **Contrat writeback→renderer section 33 (Devotion Ladder)** : le tool `devotion-levels-mapper` (unifié canon 6 rungs cette vague — était sur une échelle 5-rungs fantôme) sort `devotion_levels` + `current_distribution`, mais le renderer `DevotionLadder` (phase13-sections) ne lit que `distribution[{niveau, valeur}]`/`conversionTriggers` (forme du composer déterministe `composeDevotionLadder`). Le chemin LLM de la section produit donc du contenu qui rend EmptyState (honnête, pas de donnée inventée). Brancher = mapper la sortie tool → forme composer dans `section-writeback` OU apprendre les deux formes au renderer.
-- **Cycle madge quick-intake (pré-existant, non-bloquant)** : `footprint-score.ts ↔ public-enrichment.ts` — 1 circular dependency signalée par `npm run audit:cycles` (exit 0, CI madge verte — tolérée). À casser par extraction du type/helper partagé.
+- ~~**Cycle madge quick-intake**~~ — **RÉSOLU (réconciliation 2026-07-19)** : le module feuille `footprint-types.ts` a été extrait (2026-07-16), `footprint-score.ts` n'importe plus `public-enrichment` (types via `footprint-types`, unique référence restante = import dynamique runtime invisible à madge). `npm run audit:cycles` → « ✔ No circular dependency found! » (1566 fichiers).
 
 ## Scoring-échelle — hors périmètre ADR-0126 tranché (2026-07-11 PM, NEFER)
 
@@ -569,6 +569,8 @@ Pattern observé sur `auto-filler.generateMissingFields` ET `rtis-cascade.actual
 
 ## v6.1.18 — résidus post-fix cache reconciliation (2026-05-03 PM) — ✅ RESOLVED 2026-05-06 (v6.18.21)
 
+> *Réconciliation 2026-07-19 : les sous-sections ci-dessous (« À auditer — autres callers writePillar », « Bug intake completionLevel », « Stepper Notoria ») sont des instantanés HISTORIQUES antérieurs à la résolution — le Sprint 8 conclut « 0 caller writePillar bare unsafe restant » et le keystone C5 (`no-bare-pillar-content-write.test.ts`, PR #258) verrouille structurellement depuis. Conservées pour l'historique, ne plus les lire comme ouvertes.*
+
 Audit cache reconciliation complet (Sprint 8). 14 callers writePillar identifiés et per-domain audités :
 
 **Migrés vers writePillarAndScore** (cache reconciliation auto) — 9 callers :
@@ -630,7 +632,7 @@ Identifiés par NEFER lors du rescan post-merge. Le récap dev disait "déjà do
 ### Encore ouvert
 - **Typecheck CI fail** — local pass avec TS 5.9.3, lock file aussi 5.9.3 — probablement Node 20 (CI) vs Node 22.22 (local) sur lib types DOM (`Uint8Array<ArrayBuffer>`). Fix candidat : cast plus permissif ou bump lock TS minor. À investiguer avant prochain deploy.
 - **Lighthouse fail** — corrélé à l'ajout `<NotificationBell />` dans `topbar.tsx` partagé (re-mount client component sur les 4 portails). À profiler : suspendre le mount derrière `<Suspense>` ou rendre conditionnel selon route.
-- **Deps notification stack manquantes** — `web-push`, `firebase-admin`, `mjml`, `@types/web-push`, `@types/mjml` absents de `package.json`. `handlebars` présent en transitive uniquement. Code Phase 16 importe ces modules — runtime crash garanti dès qu'un push réel passe par les façades. Provider VAPID/FCM retourne `DEFERRED_AWAITING_CREDENTIALS` en mock, mais l'install est bloquant pour activation prod.
+- **Deps notification stack manquantes** *(requalifié 2026-07-19)* — `web-push` (^3.6.7) et `@types/web-push` (^3.6.4) sont **désormais présents** dans `package.json` : le socle VAPID/web-push ne crashe plus. Restent absents : `firebase-admin`, `mjml`, `@types/mjml` — la stack FCM/MJML seule reste non installée (provider retourne `DEFERRED_AWAITING_CREDENTIALS`, install requise pour activation prod FCM/emails MJML).
 - **Rate limiting MCP outbound** — `anubis/mcp-client.ts` dispatch HTTP sans throttle. Risque flood si Slack/Notion répondent lent. À ajouter : token bucket per-server dans McpRegistry ou middleware générique.
 - **NSP single-instance** — broker in-memory, pas de Redis pubsub adapter. Multi-instance Vercel/cluster = events perdus. Ship-able pour single-process, à upgrader avant scale-out (contrat publish/subscribe déjà compatible).
 - **Digest cron pas câblé** — `runDigest(DAILY|WEEKLY)` existe dans `digest-scheduler.ts` mais pas de cron entry dans `vercel.json` ni `/api/cron/anubis-digest`. À brancher Phase 16.1.
@@ -643,7 +645,7 @@ Identifiés par NEFER lors du rescan post-merge. Le récap dev disait "déjà do
 - **`npm audit fix` non-breaking** : 15 vulns (4 high + 11 mod) → 10 vulns (1 high + 9 mod).
 
 ### Encore ouvert
-- **`xlsx@*`** (1 high résiduel) — Prototype Pollution + ReDoS, **no fix upstream**. Décision ops à prendre : pin un fork safe (`@e965/xlsx`), sandbox usage, ou retirer la dep si non critique. Hors scope sprint deploy.
+- ~~**`xlsx@*`** (1 high résiduel)~~ — **RÉSOLU par retrait de la dépendance (réconciliation 2026-07-19)** : le paquet `xlsx` n'est plus dans `package.json` (grep négatif) — la source du high est éteinte. Le router `xlsx-parser` subsiste mais ne tire plus le paquet vulnérable.
 - **9 vulns moderate** — chaîne transitive (postcss via next, etc.). Disparaîtront avec un bump Next mineur.
 - **Migration `add_ptah_forge` + 4 autres** : présentes en code, pas appliquées en DB live. `prisma migrate deploy` à exécuter par ops.
 - **Crons Vercel** : 7 crons déclarés dans `vercel.json` — vérifier que le plan Vercel cible le supporte avant deploy.

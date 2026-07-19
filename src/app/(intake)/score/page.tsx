@@ -182,10 +182,17 @@ export default function PublicScorePage() {
             className="inline-flex items-center gap-2 rounded-xl bg-primary px-8 py-4 text-base font-semibold text-primary-foreground shadow-lg transition-all hover:bg-primary-hover sm:py-3"
           >
             <Rocket className="h-5 w-5" />
-            Mesurer votre marque gratuitement
+            Diagnostiquer ma marque — gratuit
           </a>
           <p className="mt-3 text-xs text-foreground-muted">
-            15 minutes · Gratuit · Confidentiel · Score instantane
+            Questionnaire ~15 min · Gratuit · Confidentiel · Verdict immédiat
+          </p>
+          <p className="mt-2 text-xs text-foreground-muted">
+            Pressé ?{" "}
+            <a href="/scorer" className="text-primary underline-offset-2 hover:underline">
+              Scorez votre empreinte publique en 1 min, sans email
+            </a>
+            .
           </p>
         </div>
       </div>

@@ -78,7 +78,7 @@ export function MarketingHero() {
                   <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
                 </a>
                 <a href="/scorer" className="inline-flex items-center gap-2 px-5 py-3.5 text-sm font-medium border border-accent text-accent hover:bg-accent/10 transition-colors">
-                  Scorer ma marque — 30s
+                  Scorer ma marque — 1 min
                 </a>
                 <a href="#manifesto" className="inline-flex items-center gap-2 px-5 py-3.5 text-sm font-medium border border-border-strong text-foreground hover:bg-surface-elevated transition-colors">
                   Lire le manifeste

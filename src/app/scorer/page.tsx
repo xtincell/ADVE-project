@@ -665,7 +665,7 @@ export default function ScorerPage() {
               <Heading level={3}>Ce n&apos;est que votre présence. Et votre marque, elle vaut quoi ?</Heading>
               <Text>
                 Le vrai diagnostic (méthode ADVE, votre place dans votre ligue) est offert.
-                On reprend ce que vous venez d&apos;entrer — vous n&apos;avez rien à re-taper.
+                On reprend votre marque, votre site et vos réseaux — il ne reste que vos coordonnées.
               </Text>
               <div className="flex flex-wrap justify-center gap-3">
                 <Link href={intakeHref}>
