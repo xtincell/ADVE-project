@@ -46,6 +46,8 @@ export type BrandAssetFamily = (typeof BRAND_ASSET_FAMILIES)[number];
  * Note : extension non-cassante car `BrandAsset.kind` est `String @default` côté Prisma.
  */
 export const BRAND_ASSET_KINDS = [
+  // ── Phase D état-final (ADR-0160) — certificat de valorisation ────────────
+  "VALUATION_CERTIFICATE",
   // ── Phase 10 baseline ──────────────────────────────────────────────────────
   // Identité & Vision
   "BIG_IDEA",

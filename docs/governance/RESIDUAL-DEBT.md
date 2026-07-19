@@ -5,6 +5,12 @@
 > `nefer-postmerge` (9.5.bis) le relisent et referment le refermable ; le diagnostic de fond le purge.
 > Les fixes en passant, eux, sont journalisés dans [`PATCHED-SYMPTOMS.md`](PATCHED-SYMPTOMS.md).
 
+## Valorisation certifiée v1 (ADR-0160, 2026-07-19) — déférés tracés
+
+- **Surface UI** (console : formulaire CA déclaré + rendu certificat + export PDF pattern ADR-0138) — déclencheur : prochaine session ; le spine est exerçable via `thot.valuation.compose/list`.
+- **Page publique de vérification du hash** + **ratification des constantes §4** (bandes de redevance/VAN, PROPOSÉES) — déclencheur : première vente réelle d'une valorisation.
+- **Percentiles benchmark marché dans le dossier** — déclencheur : MarketBenchmark ≥ 5 échantillons réels sur le couple pays×secteur.
+
 ## Pari Public v1 (ADR-0159, 2026-07-19) — déférés tracés
 
 - **Premier Pari Public de SPAWT** (cas-phare) : action opérateur en prod — déclarer un pari réel, MODESTE et daté (séquençage §8 du plan) via le panneau Prévisions. Le code est prêt ; déclencheur : prochain déploiement + décision opérateur du premier énoncé.

@@ -303,6 +303,7 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   // ADR-0126 — naissance gouvernée d'un SuperfanProfile (upsert dédupliqué) ; sync, zéro LLM.
   { kind: "SESHAT_REGISTER_SUPERFAN", p95LatencyMs: 500, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "SESHAT_ISSUE_FAN_PASSPORT", p95LatencyMs: 500, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "THOT_COMPOSE_BRAND_VALUATION", p95LatencyMs: 3_000, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "SESHAT_DECLARE_PREDICTION", p95LatencyMs: 1_000, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "SESHAT_RESOLVE_PREDICTION", p95LatencyMs: 1_000, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "SESHAT_UPSERT_PERSON_IDENTIFIER", p95LatencyMs: 800, errorRatePct: 0.01, costP95Usd: 0 },
