@@ -32,6 +32,9 @@ export function PledgePanel({ strategyId }: { strategyId: string }) {
 
   const list = trpc.prediction.listForStrategy.useQuery({ strategyId }, { enabled: canOperate && !!strategyId });
   const due = trpc.prediction.due.useQuery(undefined, { enabled: canOperate });
+  // Pont RTIS → registre : les actions du plan sans effet prédit (la machine
+  // propose le cadre, l'humain écrit l'énoncé et le chiffre).
+  const candidates = trpc.prediction.actionCandidates.useQuery({ strategyId }, { enabled: canOperate && !!strategyId });
 
   const [form, setForm] = useState({
     statement: "",
@@ -42,12 +45,18 @@ export function PledgePanel({ strategyId }: { strategyId: string }) {
     isPublic: false,
     dominosAttestation: false,
   });
+  /** Non null = le pari en cours de saisie est l'effet prédit de cette action. */
+  const [linkedAction, setLinkedAction] = useState<{ id: string; title: string } | null>(null);
 
   const declare = trpc.prediction.declare.useMutation({
     onSuccess: async () => {
       toast.success("Pari enregistré — il sera confronté au réel à l'échéance.");
       setForm((f) => ({ ...f, statement: "", predictedValue: "", isPublic: false, dominosAttestation: false }));
-      await utils.prediction.listForStrategy.invalidate({ strategyId });
+      setLinkedAction(null);
+      await Promise.all([
+        utils.prediction.listForStrategy.invalidate({ strategyId }),
+        utils.prediction.actionCandidates.invalidate({ strategyId }),
+      ]);
     },
     onError: (e) => toast.error(e.message),
   });
@@ -74,6 +83,49 @@ export function PledgePanel({ strategyId }: { strategyId: string }) {
         Commencez modeste et tenez — la crédibilité se construit pari par pari, le
         spectaculaire vient après.
       </p>
+
+      {candidates.data && candidates.data.length > 0 ? (
+        <div className="mb-4 rounded-lg border px-3 py-2" style={{ borderColor: "var(--color-border)" }}>
+          <p className="mb-2 text-xs font-semibold text-foreground">
+            Proposés depuis votre plan d&apos;actions
+          </p>
+          <p className="mb-2 text-xs text-foreground-muted">
+            Ces actions n&apos;ont pas encore d&apos;effet prédit. La machine propose le cadre —
+            l&apos;énoncé et le chiffre restent à vous.
+          </p>
+          <ul className="flex flex-wrap gap-2">
+            {candidates.data.map((c) => (
+              <li key={c.actionId}>
+                <button
+                  type="button"
+                  className="rounded-full border px-3 py-1 text-xs text-foreground-secondary hover:text-foreground"
+                  style={{ borderColor: "var(--color-border)" }}
+                  onClick={() => {
+                    setLinkedAction({ id: c.actionId, title: c.title });
+                    setForm((f) => ({
+                      ...f,
+                      statement: `Effet prédit de « ${c.title} » : `,
+                      subjectType: c.suggestedSubjectType,
+                      horizonDays: c.suggestedHorizonDays,
+                    }));
+                  }}
+                >
+                  {c.title}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {linkedAction ? (
+        <p className="mb-2 text-xs text-foreground-muted">
+          Lié à l&apos;action : <span className="text-foreground">{linkedAction.title}</span>{" "}
+          <button type="button" className="underline underline-offset-2" onClick={() => setLinkedAction(null)}>
+            détacher
+          </button>
+        </p>
+      ) : null}
 
       <div className="flex flex-col gap-3">
         <textarea
@@ -166,7 +218,8 @@ export function PledgePanel({ strategyId }: { strategyId: string }) {
             onClick={() =>
               declare.mutate({
                 strategyId,
-                kind: "PLEDGE",
+                kind: linkedAction ? "ACTION_EFFECT" : "PLEDGE",
+                subjectKey: linkedAction?.id,
                 subjectType: form.subjectType,
                 statement: form.statement.trim(),
                 predictedValue: form.predictedValue.trim() ? Number(form.predictedValue) : undefined,

@@ -238,6 +238,73 @@ export async function resolvePredictionManually(input: {
   });
 }
 
+// ── ADR-0159 amendement — pont RTIS → registre (le plan d'actions propose) ───
+
+/**
+ * AARRR de l'action → sujet de mesure suggéré. Déterministe. `BUSINESS` par
+ * défaut (résolution manuelle) — on ne présume jamais qu'un effet est
+ * auto-mesurable.
+ */
+const AARRR_TO_SUBJECT: Record<string, string> = {
+  ACQUISITION: "AUDIENCE_TOTAL",
+  ACTIVATION: "COMMUNITY_HEALTH",
+  RETENTION: "COMMUNITY_HEALTH",
+  REFERRAL: "AUDIENCE_TOTAL",
+  REVENUE: "BUSINESS",
+};
+
+export interface ActionEffectCandidate {
+  actionId: string;
+  title: string;
+  status: string;
+  aarrrIntent: string | null;
+  suggestedSubjectType: string;
+  suggestedHorizonDays: number;
+  timingStart: string | null;
+  timingEnd: string | null;
+}
+
+/**
+ * Actions du plan (pilier I matérialisé, ADR-0094) SANS effet prédit déclaré —
+ * le RTIS propose le CADRE (action, sujet, échéance), l'humain écrit l'énoncé
+ * et le chiffre (LOI 9 / ADR-0046 : la machine ne fabrique jamais un chiffre
+ * prédit). Lecture pure, zéro écriture.
+ */
+export async function listActionEffectCandidates(strategyId: string, limit = 12): Promise<ActionEffectCandidate[]> {
+  const [actions, covered] = await Promise.all([
+    db.brandAction.findMany({
+      where: { strategyId, status: { in: ["PROPOSED", "ACCEPTED", "SCHEDULED"] } },
+      orderBy: [{ timingStart: "asc" }, { createdAt: "desc" }],
+      take: 60,
+      select: { id: true, title: true, status: true, aarrrIntent: true, timingStart: true, timingEnd: true },
+    }),
+    db.predictionRecord.findMany({
+      where: { strategyId, kind: "ACTION_EFFECT", subjectKey: { not: null } },
+      select: { subjectKey: true },
+    }),
+  ]);
+  const coveredIds = new Set(covered.map((c) => c.subjectKey));
+  return actions
+    .filter((a) => !coveredIds.has(a.id))
+    .slice(0, limit)
+    .map((a) => {
+      // Échéance suggérée : fin de l'action + 30 j d'effet, sinon 45 j.
+      const horizonMs = a.timingEnd
+        ? a.timingEnd.getTime() + 30 * DAY_MS - Date.now()
+        : 45 * DAY_MS;
+      return {
+        actionId: a.id,
+        title: a.title,
+        status: a.status,
+        aarrrIntent: a.aarrrIntent,
+        suggestedSubjectType: AARRR_TO_SUBJECT[a.aarrrIntent ?? ""] ?? "BUSINESS",
+        suggestedHorizonDays: Math.max(7, Math.min(365, Math.round(horizonMs / DAY_MS))),
+        timingStart: a.timingStart?.toISOString() ?? null,
+        timingEnd: a.timingEnd?.toISOString() ?? null,
+      };
+    });
+}
+
 /** Paris OPEN échus SANS voie auto — à trancher par l'opérateur (honnêteté : rien ne se résout tout seul sans mesure). */
 export async function listDueForManualResolution(limit = 50) {
   const due = await db.predictionRecord.findMany({

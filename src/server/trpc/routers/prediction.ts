@@ -21,6 +21,7 @@ import {
   listDueForManualResolution,
   listPublicPledges,
   getCalibrationByKind,
+  listActionEffectCandidates,
   PUBLIC_PLEDGE_MAX_HORIZON_DAYS,
 } from "@/server/services/seshat/prediction";
 import { db } from "@/lib/db";
@@ -94,6 +95,15 @@ export const predictionRouter = createTRPCRouter({
 
   /** Paris échus à trancher à la main (file opérateur). */
   due: operatorProcedure.query(() => listDueForManualResolution()),
+
+  /**
+   * Pont RTIS → registre (ADR-0159 amendement) : actions du plan (pilier I
+   * matérialisé) sans effet prédit — la machine propose le CADRE, l'humain
+   * déclare l'énoncé et le chiffre.
+   */
+  actionCandidates: operatorProcedure
+    .input(z.object({ strategyId: z.string() }))
+    .query(({ input }) => listActionEffectCandidates(input.strategyId)),
 
   /** Tous les paris d'une marque (panneau opérateur). */
   listForStrategy: operatorProcedure

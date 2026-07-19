@@ -15,8 +15,16 @@
 
 Glory-tools-first : Intent direct accepté — primitive write/persistence pure du registre, aucune orchestration ni production d'asset.
 
+## Amendement 2026-07-19 — pont RTIS → registre (« le RTIS doit gérer ça ? »)
+
+**Oui pour le CADRE, non pour les CHIFFRES.** Question opérateur tranchée ainsi :
+
+- Le RTIS **propose** : `listActionEffectCandidates` (lecture pure, zéro écriture) remonte les actions du plan (pilier I matérialisé en `BrandAction`, ADR-0094) sans effet prédit, avec un cadre déterministe — sujet suggéré par l'AARRR de l'action (`ACQUISITION→AUDIENCE_TOTAL`, `ACTIVATION/RETENTION→COMMUNITY_HEALTH`, `REVENUE→BUSINESS`, défaut `BUSINESS` = résolution manuelle, jamais présumé mesurable), échéance suggérée (fin d'action + 30 j). Panneau opérateur : « Proposés depuis votre plan d'actions » pré-remplit la déclaration (`kind=ACTION_EFFECT`, `subjectKey=actionId`).
+- L'humain **déclare** : l'énoncé et la valeur prédite restent une saisie humaine (LOI 9 / ADR-0046 — la machine ne fabrique JAMAIS un chiffre prédit ; un pari auto-chiffré serait de la donnée inventée qui pourrirait la calibration).
+- Le RTIS **reste dérivé** : rien ici n'écrit un pilier ; le registre est un aval de l'ADVE-RTIS (cascade intacte, STOP à Jehuty préservé, ADR-0085). La lecture inverse (le pilier S synthétise EN LISANT le registre — track record + paris ouverts comme intrant de synthèse) est déférée à la prochaine refonte de `SYNTHESIZE_S` (tracée RESIDUAL-DEBT). Ceci REMPLACE le déféré « auto-proposition à l'armement » (clos par ce pont, la déclaration restant humaine).
+
 ## Déférés (tracés RESIDUAL-DEBT)
 
 - **Premier Pari Public de SPAWT** : action opérateur en prod (déclaration réelle, modeste, datée) — le code est prêt.
-- **Auto-proposition d'ACTION_EFFECT à l'armement calendrier** (chaque action armée propose son effet prédit) : v2, après les premiers paris manuels réellement résolus.
+- **Pilier S lit le registre** (track record + paris ouverts comme intrant de `SYNTHESIZE_S`) : prochaine refonte de la synthèse S.
 - **Encart paris sur `/b/[slug]`** : quand une marque a ≥ 1 pari public résolu.

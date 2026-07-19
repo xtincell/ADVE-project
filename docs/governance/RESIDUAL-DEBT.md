@@ -8,7 +8,8 @@
 ## Pari Public v1 (ADR-0159, 2026-07-19) — déférés tracés
 
 - **Premier Pari Public de SPAWT** (cas-phare) : action opérateur en prod — déclarer un pari réel, MODESTE et daté (séquençage §8 du plan) via le panneau Prévisions. Le code est prêt ; déclencheur : prochain déploiement + décision opérateur du premier énoncé.
-- **Auto-proposition d'`ACTION_EFFECT` à l'armement calendrier** (chaque action armée propose son effet prédit + échéance) : v2 — déclencheur : ≥ 10 paris manuels réellement résolus (la mécanique doit être exercée avant d'être poussée).
+- ~~**Auto-proposition d'`ACTION_EFFECT` à l'armement calendrier**~~ → **CLOS 2026-07-19** (amendement ADR-0159, demande opérateur « le RTIS doit gérer ça ») : le pont RTIS→registre propose le CADRE depuis le plan d'actions (`listActionEffectCandidates` + panneau pré-rempli) ; l'énoncé et le chiffre restent humains (jamais un chiffre fabriqué).
+- **Pilier S lit le registre** (track record + paris ouverts comme intrant de `SYNTHESIZE_S` — la lecture inverse du pont) : déclencheur — prochaine refonte de la synthèse S.
 - **Encart paris sur `/b/[slug]`** : déclencheur : première marque avec ≥ 1 pari public résolu.
 
 ## Passeport fan v1 (ADR-0158, 2026-07-19) — déférés tracés
