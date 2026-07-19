@@ -59,7 +59,12 @@ export default function ParrainagesPage() {
           <CardBody>
             <div className="flex flex-col gap-2">
               <Text className="text-sm">
-                Parrain : {r.referrer ? `${r.referrer.name ?? r.referrer.email} (${r.referrer.email})` : "compte introuvable"}
+                Parrain :{" "}
+                {r.referrer
+                  ? `${r.referrer.name ?? r.referrer.email} (${r.referrer.email})`
+                  : r.fanReferrer
+                    ? `fan ${r.fanReferrer.handle} · ${r.fanReferrer.platform} · marque ${r.fanReferrer.brandName} (passeport ${r.fanReferrer.fanCode ?? "—"})`
+                    : "compte introuvable"}
               </Text>
               {r.note ? <Text className="text-xs text-foreground-secondary">Note : {r.note}</Text> : null}
               {r.status === "PENDING" || r.status === "CONVERTED" ? (
