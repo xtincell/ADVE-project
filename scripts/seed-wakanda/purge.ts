@@ -301,6 +301,9 @@ async function purge() {
     d("AmbassadorProgram", await tx.ambassadorProgram.deleteMany({ where: { id: { in: ambassadorProgramIds } } }));
     d("SuperfanProfile", await tx.superfanProfile.deleteMany({ where: { strategyId: { in: strategyIds } } }));
     d("CommunitySnapshot", await tx.communitySnapshot.deleteMany({ where: { strategyId: { in: strategyIds } } }));
+    // ADR-0158/0159 — paris + parrainages fan de la zone
+    d("PredictionRecord", await tx.predictionRecord.deleteMany({ where: { id: { startsWith: "wk-pledge-" } } }));
+    d("Referral", await tx.referral.deleteMany({ where: { id: { startsWith: "wk-referral-" } } }));
 
     // Phase 3 reverse — Intelligence
     d("MarketSynthesis", await tx.marketSynthesis.deleteMany({ where: { studyId: { in: marketStudyIds } } }));
