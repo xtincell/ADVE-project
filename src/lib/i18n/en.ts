@@ -237,7 +237,7 @@ export const en = {
   "landing.nav.portals": "Portals",
   "landing.nav.pricing": "Pricing",
   "landing.nav.login": "Sign in",
-  "landing.nav.cta": "Instant diagnostic",
+  "landing.nav.cta": "Free diagnostic — 15 min",
   "landing.nav.space": "My space",
 
   // ── Settings — language (international toggle) ────────────────────────

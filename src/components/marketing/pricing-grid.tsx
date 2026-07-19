@@ -217,7 +217,7 @@ export function PricingGrid({ callbackPath = "/pricing" }: { callbackPath?: stri
                     }`}
                     style={tier.amount === 0 ? {} : { borderColor: "currentColor" }}
                   >
-                    {tier.amount === 0 ? "Lancer le diagnostic →" : "Via le diagnostic →"}
+                    {tier.amount === 0 ? "Diagnostiquer ma marque →" : "Via le diagnostic →"}
                   </a>
                 )}
               </article>

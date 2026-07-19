@@ -104,7 +104,7 @@ export default function ContactPage() {
                 Vous préférez explorer seul d&apos;abord ? Essayez notre OS en libre-service : le diagnostic de marque est
                 gratuit.{" "}
                 <Link href="/intake" className="text-accent underline-offset-4 hover:underline">
-                  Lancer le diagnostic →
+                  Diagnostiquer ma marque →
                 </Link>
               </p>
             </div>

@@ -152,7 +152,7 @@ export default async function LeaderboardPage() {
             <span>
               Le classement se remplit dès qu&apos;une marque est mesurée par une épreuve du réel
               (mesure officielle, validée par un opérateur). En attendant, scorez votre empreinte
-              publique — gratuit, instantané — puis demandez votre mesure officielle.
+              publique — gratuit, une minute — puis demandez votre mesure officielle.
             </span>
             <a href="/scorer" className="lb__ctabtn">Scorer mon empreinte — gratuit</a>
           </div>

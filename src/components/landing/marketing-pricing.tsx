@@ -2,7 +2,7 @@ const PLANS = [
   {
     name: "RAMPE 01", title: "Diagnostic", lead: "Pour calibrer l'altitude actuelle de la marque.",
     price: "Gratuit", per: "— rapport web en 15 min",
-    feats: ["Score de marque /200 (méthode ADVE/RTIS)", "Radar 8 piliers", "1 plan d'action priorisé", "PDF brandé exportable en option payante", "Sans engagement, sans appel commercial"],
+    feats: ["Socle de marque /100 (méthode ADVE) — premier pas vers le score complet /200", "Radar 8 piliers", "1 plan d'action priorisé", "PDF brandé exportable en option payante", "Sans engagement, sans appel commercial"],
     cta: "Diagnostiquer ma marque →", href: "#intake", featured: false,
     timeline: "↳ Résultat : 15 minutes",
   },
