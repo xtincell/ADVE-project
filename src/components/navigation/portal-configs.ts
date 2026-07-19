@@ -210,6 +210,10 @@ export const cockpitNavGroups: NavGroup[] = [
         labelKey: "nav.communaute", sublabelKey: "nav.communaute.sub", icon: Users,
       },
       {
+        href: "/cockpit/insights/releve", label: "Relevé de valeur", sublabel: "Ce qui a bougé, mois par mois",
+        labelKey: "nav.releve", sublabelKey: "nav.releve.sub", icon: Receipt,
+      },
+      {
         href: "/cockpit/insights/reports", label: "Rapports & analyses", sublabel: "Santé · Benchmarks · Attribution",
         labelKey: "nav.rapports", sublabelKey: "nav.rapports.sub", icon: BarChart3,
         activePrefixes: [

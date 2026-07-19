@@ -10,6 +10,10 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.209 — feat(cockpit): relevé de valeur mensuel v1 — ce qui a été mesuré, ce qui a bougé, ce que ça a coûté (2026-07-19)
+
+**Phase A état-final, boucle B4 REVENU** — le manque n°3 du diagnostic (« la valeur produite est affirmée, jamais prouvée par client ») reçoit son premier organe : un **relevé mensuel** par marque, composé 100 % déterministe depuis les séries réellement persistées. Service `value-statement/` (`buildValueStatement`) : audience réseaux (FollowerSnapshot — somme des derniers relevés connus par compte, par jour), santé communauté (CommunitySnapshot.health en ‰), empreinte publique (BrandFootprintSnapshot par brandKey — le /scorer public), publications parties (SocialPost.publishedAt), actions terminées (BrandAction DONE), **coût de production réellement enregistré** (somme IntentEmission.costUsd — jamais estimé), dernière force /200 (ScoreVerdict). Honnêteté ADR-0046 structurelle : `seriesDelta` refuse le delta sur un seul point (« un seul relevé — pas de delta calculable ») et dit « aucun relevé sur la période » plutôt qu'un zéro fabriqué. Surface cockpit `/cockpit/insights/releve` (sélecteur 6 mois, deltas signés, 4 tuiles, footer pédagogique « connectez vos réseaux — le relevé se remplit tout seul ») + query `cockpitDashboard.getValueStatement` (protectedProcedure tenant-scopée, mois `YYYY-MM` optionnel, défaut = mois glissant −15 j) + entrée nav « Mon marché » i18n ×3. Zéro LLM, zéro migration, cap APOGEE 7/7 préservé. 2775 tests verts.
+
 ## v6.27.208 — fix(governance): les crons argos-hunt et lead-nurture réellement déclenchés (2026-07-19)
 
 **Auto-correction immédiate** (règle « exercé ou gelé » du plan d'état final) : les deux crons livrés en v6.27.206-207 n'étaient câblés à AUCUN déclencheur — du code mort en puissance. `scheduled-ops.yml` : `lead-nurture` en tranche 6 h (sans risque — idempotent par tag CRM, une relance max par prospect) · `argos-hunt` en tranche hebdomadaire (lundi 06h UTC, 3 chasses, quarantaine). Doc-only côté app, workflow CI seul touché.

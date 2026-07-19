@@ -218,6 +218,8 @@ export const zh = {
   "nav.overton.sub": "您在行业中的位置",
   "nav.previsions": "预测",
   "nav.previsions.sub": "基于您数据的可验证预测",
+  "nav.releve": "价值月报",
+  "nav.releve.sub": "每月变化一目了然",
   "nav.market-studies": "市场研究",
   "nav.market-studies.sub": "您导入的研究",
   "nav.communaute": "社群",
