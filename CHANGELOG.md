@@ -10,6 +10,22 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.204 — feat(ui): campagne UX vague 1 — la fuite de leads colmatée, le complete guidé protégé, l'onboarding email né (2026-07-19)
+
+**Mandat intégral (« gère tout ça, pas de report ») — 3 audits parallèles (funnel frictions / onboarding+emails / DS+oubliés), vague 1 de remédiation** :
+
+- **P0 · LA fuite du funnel colmatée** : aucun email n'était JAMAIS envoyé au prospect — onglet fermé sans copier le lien token = lead définitivement perdu. Désormais : email « reprenez votre diagnostic » au démarrage + « votre rapport est prêt » à la complétion (`prospect-emails.ts`, best-effort, provider absent → log).
+- **P0 · Le canal EMAIL des notifications était un NO-OP** (`anubis/notifications.ts` : `deferred` posé, zéro envoi — l'email « abonnement activé » promis par payment.ts ne partait jamais). Câblé réellement sur le service email système.
+- **P0 · Confirmation d'achat au payeur** : ORACLE_FULL payé ne notifiait QUE les admins — le payeur reçoit maintenant son accusé avec le lien de sa stratégie.
+- **P0 · Le complete() guidé (~70 s) protégé** : seul chemin sans récupération réseau (« Load failed » brut alors que le serveur avait souvent abouti) → sondage de l'état réel + redirection (pattern ingest) + l'écran de traitement soigné (`IntakeProcessingScreen`) enfin monté sur le chemin guidé.
+- **P1 · Double-saisie supprimée** : modale landing → /intake sautait déjà les valeurs mais re-présentait le step contact entier → skip direct au choix de méthode ; l'écran de confirmation intermédiaire (« C'est parti 🚀 » + re-clic) route directement.
+- **P1 · Rapport narré, plus empilé** : phrases-ponts entre empreinte /100 → socle → force /200, le double-labelling du composite (« complétude ») supprimé, la ligne « niveau estimé vs palier révélé » explique enfin pourquoi les deux paliers peuvent différer ; bouton Réessayer sur l'erreur ; loading contextualisé.
+- **P1 · Email de bienvenue à l'inscription** (aucune inscription n'envoyait rien) avec les 3 premiers gestes d'activation.
+- **P1 · Bannière pilier honnête** : « Clique sur Enrichir » pointait un bouton masqué hors opérateur → copy par audience.
+- **P1 · Question scale utilisable au pouce** (10 boutons 40px débordaient le viewport → grille 5×2 mobile) ; compteur de progression par phases (l'ancien mentait).
+- **P2 · Empty states du dashboard avec next-action** (communauté → Connexions, recommandations → Fondation, missions → Calendrier) ; a11y : reduced-motion sur les count-up score/jauge, CTA footer landing au clavier, accents intake corrigés ; OG/metadata du /scorer (la page la plus partageable n'avait aucune).
+- tsc 0 · **2 775 tests verts** (suite complète). Vague 2 (checklist d'activation, presets motion PRESS/lift, scroll-reveal /lafusee, i18n funnel, dashboard conversion console, axe-core) : en cours.
+
 ## v6.27.203 — feat(thot): parrainage manual-first — code parrain, intake « recommandé par », file console (ADR-0157) (2026-07-19)
 
 **Demande opérateur (relayée de Hilaire), arbitrage délégué** — [ADR-0157](docs/governance/adr/0157-parrainage-manual-first.md), première brique du passeport fan (ETAT-FINAL B2) :

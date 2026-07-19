@@ -47,9 +47,9 @@ const METHOD_OPTIONS: Array<{
   {
     id: "GUIDED",
     title: "Questionnaire",
-    subtitle: "Methode guidee",
+    subtitle: "Méthode guidée",
     duration: "~10 min",
-    description: "Repondez a des questions sur les 4 piliers ADVE (Authenticite, Distinction, Valeur, Engagement). Activez l'IA pour des questions personnalisees.",
+    description: "Répondez a des questions sur les 4 piliers ADVE (Authenticité, Distinction, Valeur, Engagement). Activez l'IA pour des questions personnalisées.",
     icon: ClipboardList,
     recommended: true,
   },
@@ -135,6 +135,13 @@ function IntakeLandingContent() {
         socialLinksRaw: social?.slice(0, 1000) ?? f.socialLinksRaw,
         referralCode: referral?.slice(0, 24) ?? f.referralCode,
       }));
+      // P1-1 (audit UX 2026-07-19) — la modale landing collecte déjà
+      // nom/email/marque : re-présenter le step contact entier était une
+      // double-saisie. Querystring complet → on saute directement au choix
+      // de méthode (les champs restent modifiables via « Retour »).
+      if (contactName && email && company) {
+        setStep("method");
+      }
     }
   }, [searchParams]);
 
@@ -538,7 +545,7 @@ function IntakeLandingContent() {
                 disabled={startMutation.isPending}
                 className="w-full rounded-xl bg-primary px-6 py-4 text-base font-semibold text-primary-foreground shadow-lg transition-all hover:bg-primary-hover disabled:opacity-50 sm:py-3 sm:shadow-none"
               >
-                {startMutation.isPending ? "Demarrage..." : "Commencer le diagnostic"}
+                {startMutation.isPending ? "Démarrage..." : "Commencer le diagnostic"}
               </button>
             </div>
           </div>

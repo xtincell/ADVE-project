@@ -46,9 +46,16 @@ export function CultIndex({
     }
     animRef.current = true;
 
+    const targetAngle = (score / 100) * 180;
+    // P0 a11y (audit DS 2026-07-19) — reduced-motion : valeur finale directe.
+    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setDisplayScore(score);
+      setNeedleAngle(targetAngle);
+      return;
+    }
+
     const duration = 800;
     const start = performance.now();
-    const targetAngle = (score / 100) * 180;
 
     const tick = (now: number) => {
       const elapsed = now - start;

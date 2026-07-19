@@ -399,7 +399,7 @@ function Footer({ onStart }: { onStart: () => void }) {
         <div>
           <h4>Le diagnostic</h4>
           <div className="footer__links">
-            <a onClick={onStart} role="button" tabIndex={0}>Faire le diagnostic ADVE</a>
+            <button type="button" onClick={onStart} style={{ background: "none", border: 0, padding: 0, font: "inherit", color: "inherit", cursor: "pointer", textAlign: "left" }}>Faire le diagnostic ADVE</button>
             <a href="#methode">Comment ça marche</a>
             <a href="#adve">Le protocole ADVE</a>
             <a href="#temoignages">Témoignages</a>
@@ -437,7 +437,11 @@ function DiagnosticModal({ onClose }: { onClose: () => void }) {
     if (!form.name.trim()) return setErr("Votre nom est requis.");
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return setErr("Entrez une adresse email valide.");
     if (!form.company.trim()) return setErr("Le nom de votre marque est requis.");
+    // P2-4 (audit UX 2026-07-19) — l'écran de confirmation intermédiaire
+    // (« C'est parti 🚀 » + re-clic) était une étape morte : on route
+    // directement vers /intake, qui saute lui-même le step contact (P1-1).
     setErr(""); setDone(true);
+    goToIntake();
     // Capture CRM best-effort (pattern ContactForm → /api/contact, CrmContact) :
     // avant ce fix, un prospect qui fermait la modale ici était PERDU — rien
     // n'était persisté nulle part (audit 2026-07-16).

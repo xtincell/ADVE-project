@@ -691,14 +691,19 @@ export function PillarPage({ pageKey }: PillarPageProps) {
               <div className="text-sm font-semibold text-info">
                 Pilier vierge — 0/{(assess.derivable?.length ?? 0) + (assess.satisfied?.length ?? 0)} champs renseignés
               </div>
+              {/* P1-5 (audit onboarding 2026-07-19) — la consigne pointait le
+                  bouton « Enrichir », masqué hors opérateur : un founder lisait
+                  une action invisible. Copy par audience. */}
               <p className="mt-1 text-2xs text-foreground-muted">
-                {isAdve
-                  ? "Clique sur "
-                  : "Les piliers stratégiques se dérivent de votre fondation. "}
-                <strong>Enrichir</strong>
-                {isAdve
-                  ? " pour démarrer l'auto-remplissage via vault, calculs et IA."
-                  : " ci-dessus pour générer ce pilier depuis ADVE (nécessite ADVE complété au préalable)."}
+                {canOperate ? (
+                  isAdve
+                    ? <>Clique sur <strong>Enrichir</strong> pour démarrer l&apos;auto-remplissage via vault, calculs et IA.</>
+                    : <>Les piliers stratégiques se dérivent de votre fondation. <strong>Enrichir</strong> ci-dessus pour générer ce pilier depuis ADVE (nécessite ADVE complété au préalable).</>
+                ) : (
+                  isAdve
+                    ? <>Répondez aux champs ci-dessous — chaque réponse renforce votre socle de marque.</>
+                    : <>Ce pilier se construit automatiquement à partir de votre fondation — complétez d&apos;abord vos 4 piliers de base.</>
+                )}
               </p>
             </div>
           </div>

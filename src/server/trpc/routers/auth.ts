@@ -37,6 +37,21 @@ export const authRouter = createTRPCRouter({
       // Claim path: a stub User was provisioned by `quickIntake.activateBrand`.
       // Set the password + name on the existing row so the prospect inherits
       // the Client + Strategy that were already created in their name.
+      // P1-2 (audit onboarding 2026-07-19) — email de bienvenue : aucune
+      // inscription n'envoyait quoi que ce soit. Best-effort, jamais bloquant.
+      const sendWelcome = (to: string, name: string) => {
+        void import("@/server/services/email").then(({ sendEmail }) => {
+          const base = (process.env.NEXTAUTH_URL ?? "https://powerupgraders.com").replace(/\/$/, "");
+          return sendEmail({
+            to,
+            subject: "Bienvenue — votre espace de marque est ouvert",
+            tag: "welcome",
+            html: `<div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#1a1a1a"><p style="font-weight:bold;font-size:17px">Bienvenue ${name},</p><p>Votre espace est prêt. Les trois premiers gestes qui comptent :</p><ol style="padding-left:18px"><li>Connectez vos réseaux sociaux (vos audiences se relèvent automatiquement chaque jour)</li><li>Déposez votre logo</li><li>Déclarez l'échelle de votre marché — votre score s'affiche dans le bon référentiel</li></ol><p style="margin:20px 0"><a href="${base}/cockpit" style="background:#E56458;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:bold">Ouvrir mon espace</a></p></div>`,
+            text: `Bienvenue ${name} — ouvrez votre espace : ${base}/cockpit`,
+          });
+        }).catch(() => {});
+      };
+
       if (existing) {
         const user = await ctx.db.user.update({
           where: { id: existing.id },
@@ -45,6 +60,7 @@ export const authRouter = createTRPCRouter({
             hashedPassword,
           },
         });
+        sendWelcome(user.email, input.name);
         return { id: user.id, email: user.email, claimed: true };
       }
 
@@ -57,6 +73,7 @@ export const authRouter = createTRPCRouter({
         },
       });
 
+      sendWelcome(user.email, input.name);
       return { id: user.id, email: user.email, claimed: false };
     }),
 

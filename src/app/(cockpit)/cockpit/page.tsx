@@ -554,7 +554,7 @@ export default function CockpitDashboard() {
               ) : hasDevotion ? (
                 <DevotionLadder {...devotionValues} variant="pyramid" />
               ) : (
-                <p className="ck-presc__empty">Pas encore de données de communauté — l&apos;échelle d&apos;engagement apparaîtra dès les premières interactions mesurées.</p>
+                <p className="ck-presc__empty">Pas encore de données de communauté. <Link href="/cockpit/settings/connections" className="underline underline-offset-2">Connectez vos réseaux</Link> — l&apos;échelle d&apos;engagement se mesure ensuite toute seule.</p>
               )}
             </div>
           )}
@@ -603,7 +603,7 @@ export default function CockpitDashboard() {
               })}
             </div>
           ) : (
-            <p className="ck-presc__empty">Aucune recommandation active — l'assistant surveille votre marque.</p>
+            <p className="ck-presc__empty">Aucune recommandation active — l'assistant surveille votre marque. <Link href="/cockpit/brand/fondation" className="underline underline-offset-2">Renforcez votre fondation</Link> pour en déclencher.</p>
           )}
         </div>
       )}
@@ -622,7 +622,10 @@ export default function CockpitDashboard() {
                   {Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)}
                 </div>
               ) : missions.length === 0 ? (
-                <EmptyState icon={Rocket} title="Aucune mission" description="Les missions apparaitront ici une fois creees." />
+                <div>
+                  <EmptyState icon={Rocket} title="Aucune mission" description="Planifiez votre première action — le calendrier la transforme en mission suivie." />
+                  <p className="mt-2 text-center text-sm"><Link href="/cockpit/operate/calendar" className="text-[color:var(--color-accent)] underline-offset-2 hover:underline">Ouvrir le calendrier →</Link></p>
+                </div>
               ) : (
                 <div className="space-y-3">
                   {missions.slice(0, 4).map((m) => (
@@ -658,7 +661,7 @@ export default function CockpitDashboard() {
                   ))}
                 </div>
               ) : timelineEvents.length === 0 ? (
-                <EmptyState icon={Activity} title="Aucune activite" description="L'activite recente apparaitra ici." />
+                <EmptyState icon={Activity} title="Aucune activite" description="Votre activité s'enregistre dès vos premiers gestes — publication planifiée, pilier complété, réseau connecté." />
               ) : (
                 <Timeline events={timelineEvents} />
               )}
