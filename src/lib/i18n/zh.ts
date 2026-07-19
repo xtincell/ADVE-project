@@ -237,6 +237,8 @@ export const zh = {
   "landing.nav.governors": "治理者",
   "landing.nav.portals": "门户",
   "landing.nav.pricing": "定价",
+  "landing.nav.championnat": "品牌锦标赛",
+  "landing.nav.paris": "公开承诺",
   "landing.nav.login": "登录",
   "landing.nav.cta": "免费诊断 — 15分钟",
   "landing.nav.space": "我的空间",

@@ -239,6 +239,8 @@ export const fr = {
   "landing.nav.governors": "Gouverneurs",
   "landing.nav.portals": "Portails",
   "landing.nav.pricing": "Tarifs",
+  "landing.nav.championnat": "Le championnat",
+  "landing.nav.paris": "Les paris",
   "landing.nav.login": "Connexion",
   "landing.nav.cta": "Diagnostic gratuit — 15 min",
   "landing.nav.space": "Mon espace",
