@@ -1,6 +1,7 @@
 "use client";
 
 import { trpc } from "@/lib/trpc/client";
+import { DiagnosticCta } from "./diagnostic-modal";
 
 export function MarketingHero() {
   // Compteur RÉEL de diagnostics complétés (publicProcedure, même source que la
@@ -73,10 +74,12 @@ export function MarketingHero() {
             </p>
             <div className="flex flex-col gap-2.5">
               <div className="flex gap-3 flex-wrap">
-                <a href="/intake" className="inline-flex items-center gap-2 px-5 py-3.5 text-sm font-medium bg-accent text-accent-foreground hover:bg-accent-hover transition-colors motion-safe:[animation:glow-pulse-cta_3s_ease-in-out_infinite]">
+                {/* Façade unique V2 — le mini-funnel porté de /landingintake :
+                    3 champs + méthode → /intake pré-rempli (capture CRM best-effort). */}
+                <DiagnosticCta className="inline-flex items-center gap-2 px-5 py-3.5 text-sm font-medium bg-accent text-accent-foreground hover:bg-accent-hover transition-colors motion-safe:[animation:glow-pulse-cta_3s_ease-in-out_infinite]">
                   Diagnostiquer ma marque
                   <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
-                </a>
+                </DiagnosticCta>
                 <a href="/scorer" className="inline-flex items-center gap-2 px-5 py-3.5 text-sm font-medium border border-accent text-accent hover:bg-accent/10 transition-colors">
                   Scorer ma marque — 1 min
                 </a>
