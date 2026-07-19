@@ -1,3 +1,4 @@
+import { scorerFr } from "./pages/scorer";
 import { leaderboardFr } from "./pages/leaderboard";
 import { parisFr } from "./pages/paris";
 /**
@@ -9,6 +10,7 @@ import { parisFr } from "./pages/paris";
 export const fr = {
   ...parisFr,
   ...leaderboardFr,
+  ...scorerFr,
   // ── Common ───────────────────────────────────────────────────────────
   "common.cta.start": "Commencer",
   "common.cta.contact": "Contacter UPgraders",
