@@ -254,7 +254,7 @@ Ces correspondances évitent la réinvention :
 - **ProviderCostRate** (16 fields) — Taux de coût par prestataire — le "par prestataire" de l'ajustement.
 - **ActionCostEstimate** (25 fields) — Snapshot d'estimation persisté — audit trail Thot (frère de CostDecision).
 - **Post** (15 fields) — Article de blog public du site UPgraders (« Notes de cabinet »). CMS natif éditorial — distinct des livrables client (`B
-- **PredictionRecord** (18 fields) — ADR-0156 — Registre des prédictions. Chaque prédiction (forecast déterministe de série OU thèse de signal faible) est en
+- **PredictionRecord** (21 fields) — ADR-0156 — Registre des prédictions. Chaque prédiction (forecast déterministe de série OU thèse de signal faible) est en
 - **Referral** (12 fields) — ADR-0157 — Parrainage manual-first. Un filleul déclare « recommandé par » à l'intake (code) → PENDING. À l'activation d'
 
 ### Enums
@@ -456,7 +456,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 122
+## tRPC routers — 123
 
 - `_strategy-read-guard` (`src/server/trpc/routers/_strategy-read-guard.ts`)
 - `accounts` (`src/server/trpc/routers/accounts.ts`)
@@ -554,6 +554,7 @@ Ces correspondances évitent la réinvention :
 - `phase18-residuals` (`src/server/trpc/routers/phase18-residuals.ts`)
 - `pillar` (`src/server/trpc/routers/pillar.ts`)
 - `pr` (`src/server/trpc/routers/pr.ts`)
+- `prediction` (`src/server/trpc/routers/prediction.ts`)
 - `process` (`src/server/trpc/routers/process.ts`)
 - `prod-ops` (`src/server/trpc/routers/prod-ops.ts`)
 - `production` (`src/server/trpc/routers/production.ts`)
@@ -583,7 +584,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 276 (par deck)
+## Pages — 277 (par deck)
 
 ### Agency (12)
 
@@ -833,7 +834,7 @@ Ces correspondances évitent la réinvention :
 - `/launchpad/portfolio-bulk-import`
 - `/score`
 
-### Public (43)
+### Public (44)
 
 - `/(marketing)`
 - `/agence`
@@ -862,6 +863,7 @@ Ces correspondances évitent la réinvention :
 - `/login`
 - `/mentions-legales`
 - `/methode`
+- `/paris`
 - `/passeport/[token]`
 - `/portals`
 - `/pricing`
@@ -1049,7 +1051,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 584 (par governor)
+## Intent kinds — 586 (par governor)
 
 ### MESTOR (79)
 
@@ -1151,11 +1153,13 @@ Ces correspondances évitent la réinvention :
 - `PROPOSE_SEQUENCE_PROMOTION_FROM_CAMPAIGN` → campaign-tracker (sync) — Cluster E — Si campagne réussie (tierDelta>0 + cultIndexDelta>0 + altitudeRegres…
 - `TOGGLE_QUALITY_GATE_MODE` → auto-promotion (sync) — Bascule le mode quality-gate entre SOFT (warning-only) et HARD (block-on-fail). …
 
-### SESHAT (36)
+### SESHAT (38)
 
 - `SESHAT_UPSERT_POLITY_AXIS` → sector-intelligence (sync) — Upsert d'un axe culturel sectoriel PAR POLITY (SectorPolityAxis — échelle de mar…
 - `SESHAT_REGISTER_SUPERFAN` → superfan (sync) — Enregistre/actualise UN SuperfanProfile (upsert par (strategyId, platform, handl…
 - `SESHAT_ISSUE_FAN_PASSPORT` → superfan (sync) — Passeport fan (ADR-0158) : délivre le passeport d'un profil DÉJÀ suivi — token p…
+- `SESHAT_DECLARE_PREDICTION` → prediction (sync) — Registre des paris (ADR-0159, étend ADR-0156) : déclare un pari daté — PLEDGE (e…
+- `SESHAT_RESOLVE_PREDICTION` → prediction (sync) — Registre des paris (ADR-0159) : résolution MANUELLE d'un pari OPEN non auto-mesu…
 - `SESHAT_UPSERT_PERSON_IDENTIFIER` → identity-graph (sync) — Identity Graph (ADR-0147) : ajoute/résout un identifiant (email/tel/handle/exter…
 - `SESHAT_MERGE_PERSONS` → identity-graph (sync) — Identity Graph (ADR-0147) : fusionne deux personnes (auto si preuve VERIFIED, re…
 - `SESHAT_SPLIT_PERSON` → identity-graph (sync) — Identity Graph (ADR-0147) : dé-fusionne une personne (ré-active le tombstone). T…

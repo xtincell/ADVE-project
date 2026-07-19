@@ -267,6 +267,12 @@ export default async function LeaderboardPage() {
           <NewsletterCapture source="leaderboard" />
         </div>
 
+        <p className="lb__lede" style={{ marginTop: 16 }}>
+          <a href="/paris" style={{ textDecoration: "underline", textUnderlineOffset: 3 }}>
+            Le registre des paris — des marques qui s&apos;engagent en public →
+          </a>
+        </p>
+
         <div className="lb__method">
           <h3>Comment lire ce classement</h3>
           <p>

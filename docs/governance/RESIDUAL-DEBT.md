@@ -5,6 +5,12 @@
 > `nefer-postmerge` (9.5.bis) le relisent et referment le refermable ; le diagnostic de fond le purge.
 > Les fixes en passant, eux, sont journalisés dans [`PATCHED-SYMPTOMS.md`](PATCHED-SYMPTOMS.md).
 
+## Pari Public v1 (ADR-0159, 2026-07-19) — déférés tracés
+
+- **Premier Pari Public de SPAWT** (cas-phare) : action opérateur en prod — déclarer un pari réel, MODESTE et daté (séquençage §8 du plan) via le panneau Prévisions. Le code est prêt ; déclencheur : prochain déploiement + décision opérateur du premier énoncé.
+- **Auto-proposition d'`ACTION_EFFECT` à l'armement calendrier** (chaque action armée propose son effet prédit + échéance) : v2 — déclencheur : ≥ 10 paris manuels réellement résolus (la mécanique doit être exercée avant d'être poussée).
+- **Encart paris sur `/b/[slug]`** : déclencheur : première marque avec ≥ 1 pari public résolu.
+
 ## Passeport fan v1 (ADR-0158, 2026-07-19) — déférés tracés
 
 - **Rituels fan-à-fan actifs** : v1 affiche le « cercle » (reconnaissance passive). Les rituels partagés (défis, initiations croisées) attendent les premiers passeports réellement distribués — déclencheur : ≥ 20 passeports actifs sur une marque (cas-phare SPAWT en tête).

@@ -115,6 +115,217 @@ export async function recordAudienceForecasts(opts?: { max?: number }): Promise<
   return { recorded, skipped };
 }
 
+// ── ADR-0159 — Paris déclarés (PLEDGE / ACTION_EFFECT) ──────────────────────
+
+/** Sujets auto-mesurables : leur série se relit à l'échéance (résolution auto). */
+export const MEASURABLE_SUBJECTS = ["AUDIENCE_TOTAL", "COMMUNITY_HEALTH", "FOOTPRINT_SCORE"] as const;
+export type MeasurableSubject = (typeof MEASURABLE_SUBJECTS)[number];
+
+/** Horizon maximal d'un pari PUBLIC (vérifiable dans une fenêtre raisonnable). */
+export const PUBLIC_PLEDGE_MAX_HORIZON_DAYS = 180;
+
+/** Série santé communauté (fraction 0-1, telle que mesurée — jamais fabriquée). */
+export async function buildCommunityHealthSeries(strategyId: string): Promise<SeriesPoint[]> {
+  const rows = await db.communitySnapshot.findMany({
+    where: { strategyId, health: { not: null } },
+    select: { health: true, measuredAt: true },
+    orderBy: { measuredAt: "asc" },
+    take: 1000,
+  });
+  return rows.map((r) => ({ t: r.measuredAt.getTime(), v: r.health ?? 0 }));
+}
+
+/** Série empreinte publique (/scorer) par brandKey de la marque. */
+export async function buildFootprintSeries(strategyId: string): Promise<SeriesPoint[]> {
+  const strategy = await db.strategy.findUnique({
+    where: { id: strategyId },
+    select: { name: true, websiteUrl: true, countryCode: true },
+  });
+  if (!strategy) return [];
+  const { normalizeBrandKey } = await import("@/server/services/seshat/brand-registry");
+  const brandKey = normalizeBrandKey({
+    name: strategy.name,
+    websiteUrl: strategy.websiteUrl,
+    countryCode: strategy.countryCode,
+  });
+  const rows = await db.brandFootprintSnapshot.findMany({
+    where: { brandKey, total: { not: null } },
+    select: { total: true, capturedAt: true },
+    orderBy: { capturedAt: "asc" },
+    take: 500,
+  });
+  return rows.map((r) => ({ t: r.capturedAt.getTime(), v: r.total ?? 0 }));
+}
+
+async function buildSubjectSeries(strategyId: string, subjectType: string): Promise<SeriesPoint[] | null> {
+  if (subjectType === "AUDIENCE_TOTAL") return buildAudienceSeries(strategyId);
+  if (subjectType === "COMMUNITY_HEALTH") return buildCommunityHealthSeries(strategyId);
+  if (subjectType === "FOOTPRINT_SCORE") return buildFootprintSeries(strategyId);
+  return null; // sujet non mesurable → résolution manuelle
+}
+
+export interface DeclarePredictionInput {
+  strategyId: string;
+  kind: "PLEDGE" | "ACTION_EFFECT";
+  subjectType: string;
+  subjectKey?: string | null;
+  statement: string;
+  predictedValue?: number | null;
+  predictedDirection?: "UP" | "DOWN" | "FLAT" | null;
+  confidence: number;
+  horizonDays: number;
+  isPublic?: boolean;
+  declaredBy?: string | null;
+}
+
+/**
+ * Déclare un pari (ADR-0159). Append-only. La baseline d'un sujet mesurable est
+ * LUE de la série au moment de la déclaration (mesure, pas fabrication) — sujet
+ * non mesurable → baseline null et résolution manuelle assumée.
+ */
+export async function declarePrediction(input: DeclarePredictionInput) {
+  if (input.isPublic && input.horizonDays > PUBLIC_PLEDGE_MAX_HORIZON_DAYS) {
+    throw new Error(`PUBLIC_PLEDGE_HORIZON_TOO_FAR (max ${PUBLIC_PLEDGE_MAX_HORIZON_DAYS} j)`);
+  }
+  const series = await buildSubjectSeries(input.strategyId, input.subjectType);
+  const baseline = series && series.length > 0 ? series[series.length - 1]!.v : null;
+  return db.predictionRecord.create({
+    data: {
+      strategyId: input.strategyId,
+      kind: input.kind,
+      subjectType: input.subjectType,
+      subjectKey: input.subjectKey ?? null,
+      statement: input.statement.slice(0, 1000),
+      baseline,
+      predictedValue: input.predictedValue ?? null,
+      predictedDirection: input.predictedDirection ?? null,
+      confidence: Math.max(0.05, Math.min(0.95, input.confidence)),
+      horizonAt: new Date(Date.now() + input.horizonDays * DAY_MS),
+      method: "DECLARED_V1",
+      isPublic: input.isPublic ?? false,
+      declaredBy: input.declaredBy ?? null,
+    },
+  });
+}
+
+/**
+ * Résolution MANUELLE d'un pari OPEN (sujet non auto-mesurable, ou échéance
+ * passée sans mesure). Note obligatoire, jamais de réécriture d'un résolu.
+ */
+export async function resolvePredictionManually(input: {
+  id: string;
+  outcome: "HIT" | "MISS" | "UNRESOLVED";
+  note: string;
+  outcomeValue?: number | null;
+}) {
+  const record = await db.predictionRecord.findUniqueOrThrow({
+    where: { id: input.id },
+    select: { status: true, confidence: true },
+  });
+  if (record.status !== "OPEN") throw new Error("PREDICTION_ALREADY_RESOLVED");
+  return db.predictionRecord.update({
+    where: { id: input.id },
+    data: {
+      status: input.outcome,
+      outcomeValue: input.outcomeValue ?? null,
+      resolvedAt: new Date(),
+      resolutionNote: input.note.slice(0, 1000),
+      brier:
+        input.outcome === "UNRESOLVED"
+          ? null
+          : Math.pow(record.confidence - (input.outcome === "HIT" ? 1 : 0), 2),
+    },
+  });
+}
+
+/** Paris OPEN échus SANS voie auto — à trancher par l'opérateur (honnêteté : rien ne se résout tout seul sans mesure). */
+export async function listDueForManualResolution(limit = 50) {
+  const due = await db.predictionRecord.findMany({
+    where: {
+      status: "OPEN",
+      horizonAt: { lte: new Date() },
+      kind: { in: ["PLEDGE", "ACTION_EFFECT", "THESIS"] },
+    },
+    orderBy: { horizonAt: "asc" },
+    take: limit,
+  });
+  // Les sujets mesurables avec valeur prédite seront tranchés par la voie auto — on ne liste que le reste.
+  return due.filter(
+    (p) => !(p.predictedValue !== null && (MEASURABLE_SUBJECTS as readonly string[]).includes(p.subjectType)),
+  );
+}
+
+/** Vérité terrain par famille (FORECAST / PLEDGE / ACTION_EFFECT / THESIS). */
+export async function getCalibrationByKind(): Promise<Record<string, CalibrationSummary>> {
+  const rows = await db.predictionRecord.findMany({
+    where: { status: { in: ["HIT", "MISS"] } },
+    select: { kind: true, status: true, brier: true },
+    take: 5000,
+  });
+  const out: Record<string, CalibrationSummary> = {};
+  for (const kind of ["FORECAST", "PLEDGE", "ACTION_EFFECT", "THESIS"]) {
+    const sub = rows.filter((r) => r.kind === kind);
+    const hits = sub.filter((r) => r.status === "HIT").length;
+    const briers = sub.map((r) => r.brier).filter((b): b is number => b !== null);
+    out[kind] = {
+      resolved: sub.length,
+      hits,
+      hitRate: sub.length > 0 ? hits / sub.length : null,
+      meanBrier: briers.length > 0 ? briers.reduce((a, b) => a + b, 0) / briers.length : null,
+    };
+  }
+  return out;
+}
+
+export interface PublicPledge {
+  id: string;
+  brandName: string;
+  brandSlug: string | null;
+  statement: string;
+  status: string;
+  confidence: number;
+  horizonAt: string;
+  createdAt: string;
+  resolvedAt: string | null;
+  baseline: number | null;
+  predictedValue: number | null;
+  outcomeValue: number | null;
+  resolutionNote: string | null;
+}
+
+/** Le registre public /paris — paris PUBLICS uniquement, jamais declaredBy. */
+export async function listPublicPledges(limit = 100): Promise<PublicPledge[]> {
+  const rows = await db.predictionRecord.findMany({
+    where: { isPublic: true, kind: "PLEDGE" },
+    orderBy: [{ status: "asc" }, { horizonAt: "asc" }],
+    take: limit,
+  });
+  const strategyIds = [...new Set(rows.map((r) => r.strategyId).filter(Boolean))] as string[];
+  const strategies = await db.strategy.findMany({
+    where: { id: { in: strategyIds } },
+    select: { id: true, name: true, publicSlug: true },
+  });
+  const byId = new Map(strategies.map((s) => [s.id, s]));
+  return rows.map((r) => {
+    const s = r.strategyId ? byId.get(r.strategyId) : null;
+    return {
+      id: r.id,
+      brandName: s?.name ?? "Marque",
+      brandSlug: s?.publicSlug ?? null,
+      statement: r.statement,
+      status: r.status,
+      confidence: r.confidence,
+      horizonAt: r.horizonAt.toISOString(),
+      createdAt: r.createdAt.toISOString(),
+      resolvedAt: r.resolvedAt?.toISOString() ?? null,
+      baseline: r.baseline,
+      predictedValue: r.predictedValue,
+      outcomeValue: r.outcomeValue,
+      resolutionNote: r.resolutionNote,
+    };
+  });
+}
+
 /** Consigne une thèse de signal faible (pour confrontation future au réel). */
 export async function recordThesis(input: {
   strategyId: string;
@@ -143,7 +354,15 @@ export async function recordThesis(input: {
  */
 export async function resolveMaturedForecasts(): Promise<{ resolved: number; unresolved: number }> {
   const due = await db.predictionRecord.findMany({
-    where: { kind: "FORECAST", status: "OPEN", horizonAt: { lte: new Date() } },
+    where: {
+      // ADR-0159 : la voie auto tranche aussi les paris déclarés dont le sujet
+      // est mesurable (la même série se relit) — le reste va à la voie manuelle.
+      kind: { in: ["FORECAST", "PLEDGE", "ACTION_EFFECT"] },
+      subjectType: { in: [...MEASURABLE_SUBJECTS] },
+      predictedValue: { not: null },
+      status: "OPEN",
+      horizonAt: { lte: new Date() },
+    },
     take: 200,
   });
   let resolved = 0;
@@ -151,7 +370,7 @@ export async function resolveMaturedForecasts(): Promise<{ resolved: number; unr
   for (const p of due) {
     try {
       if (!p.strategyId || p.predictedValue === null) throw new Error("unresolvable");
-      const series = await buildAudienceSeries(p.strategyId);
+      const series = (await buildSubjectSeries(p.strategyId, p.subjectType)) ?? [];
       // Valeur observée : dernier point ≤ horizon + 7 j de grâce, ≥ horizon − 3 j.
       const windowLo = p.horizonAt.getTime() - 3 * DAY_MS;
       const windowHi = p.horizonAt.getTime() + 7 * DAY_MS;
@@ -227,10 +446,22 @@ export interface PredictiveReport {
     confidence: number;
     backtestMape: number | null;
   }>;
+  /** ADR-0159 — paris déclarés de la marque (PLEDGE/ACTION_EFFECT, tout statut). */
+  declared: Array<{
+    id: string;
+    kind: string;
+    statement: string;
+    status: string;
+    isPublic: boolean;
+    horizonAt: string;
+    confidence: number;
+    resolvedAt: string | null;
+    resolutionNote: string | null;
+  }>;
 }
 
 export async function buildPredictiveReport(strategyId: string): Promise<PredictiveReport> {
-  const [audience, calibration, theses, openForecasts] = await Promise.all([
+  const [audience, calibration, theses, openForecasts, declared] = await Promise.all([
     forecastAudience(strategyId),
     getCalibration(),
     db.predictionRecord.findMany({
@@ -242,6 +473,11 @@ export async function buildPredictiveReport(strategyId: string): Promise<Predict
       where: { strategyId, kind: "FORECAST", status: "OPEN" },
       orderBy: { createdAt: "desc" },
       take: 5,
+    }),
+    db.predictionRecord.findMany({
+      where: { strategyId, kind: { in: ["PLEDGE", "ACTION_EFFECT"] } },
+      orderBy: [{ status: "asc" }, { horizonAt: "asc" }],
+      take: 12,
     }),
   ]);
   const conf =
@@ -266,6 +502,17 @@ export async function buildPredictiveReport(strategyId: string): Promise<Predict
       horizonAt: f.horizonAt.toISOString(),
       confidence: f.confidence,
       backtestMape: f.backtestMape,
+    })),
+    declared: declared.map((d) => ({
+      id: d.id,
+      kind: d.kind,
+      statement: d.statement,
+      status: d.status,
+      isPublic: d.isPublic,
+      horizonAt: d.horizonAt.toISOString(),
+      confidence: d.confidence,
+      resolvedAt: d.resolvedAt?.toISOString() ?? null,
+      resolutionNote: d.resolutionNote,
     })),
   };
 }
