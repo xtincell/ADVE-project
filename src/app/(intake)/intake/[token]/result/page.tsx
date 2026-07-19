@@ -37,6 +37,7 @@ import { ForceSection } from "./force-section";
 import { AdvertisRadar } from "@/components/shared/advertis-radar";
 import { PILLAR_KEYS } from "@/lib/types/advertis-vector";
 import { HIDDEN_FIELDS, humanizeValue } from "@/server/services/quick-intake/report-composer";
+import { useT } from "@/lib/i18n/use-t";
 
 // ── Types matching the narrative-report service ────────────────────
 interface AdvePillarReport {
@@ -116,13 +117,14 @@ interface Diagnostic {
   recommendations?: DiagnosticRecommendation[];
 }
 
+// i18n keys — resolved with t() at render time (fragment intake-result.ts).
 const LEVEL_TAGLINE: Record<BrandLevel, string> = {
-  LATENT: "Invisible — fondations a poser",
-  FRAGILE: "Intuitions justes — coherence a stabiliser",
-  ORDINAIRE: "Fonctionnelle — substituable",
-  FORTE: "Distincte — preferee par certains",
-  CULTE: "Mouvement — communaute engagee",
-  ICONE: "Reference sectorielle — patrimoine",
+  LATENT: "intakeResult.levelTagline.LATENT",
+  FRAGILE: "intakeResult.levelTagline.FRAGILE",
+  ORDINAIRE: "intakeResult.levelTagline.ORDINAIRE",
+  FORTE: "intakeResult.levelTagline.FORTE",
+  CULTE: "intakeResult.levelTagline.CULTE",
+  ICONE: "intakeResult.levelTagline.ICONE",
 };
 
 const LEVEL_ORDER: BrandLevel[] = ["LATENT", "FRAGILE", "ORDINAIRE", "FORTE", "CULTE", "ICONE"];
@@ -137,10 +139,11 @@ const LEVEL_COLOR: Record<BrandLevel, string> = {
 };
 
 // ── Static constants ───────────────────────────────────────────────
+// i18n keys — resolved with t() at render time.
 const PRIORITY_LABEL: Record<RtisPillarReport["priority"], string> = {
-  P0: "Urgent",
-  P1: "Sous 30 jours",
-  P2: "Roadmap",
+  P0: "intakeResult.priority.P0",
+  P1: "intakeResult.priority.P1",
+  P2: "intakeResult.priority.P2",
 };
 const PRIORITY_COLOR: Record<RtisPillarReport["priority"], string> = {
   P0: "border-destructive/40 bg-destructive/10 text-destructive",
@@ -148,17 +151,18 @@ const PRIORITY_COLOR: Record<RtisPillarReport["priority"], string> = {
   P2: "border-border bg-card text-foreground-muted",
 };
 
+// name/tagline = i18n keys — resolved with t() at render time.
 const ADVE_PILLARS: { key: "a" | "d" | "v" | "e"; name: string; tagline: string }[] = [
-  { key: "a", name: "Authenticite", tagline: "ADN & legitimite" },
-  { key: "d", name: "Distinction", tagline: "Differenciation" },
-  { key: "v", name: "Valeur", tagline: "Promesse & pricing" },
-  { key: "e", name: "Engagement", tagline: "Communaute" },
+  { key: "a", name: "intakeResult.pillar.a.name", tagline: "intakeResult.pillar.a.tagline" },
+  { key: "d", name: "intakeResult.pillar.d.name", tagline: "intakeResult.pillar.d.tagline" },
+  { key: "v", name: "intakeResult.pillar.v.name", tagline: "intakeResult.pillar.v.tagline" },
+  { key: "e", name: "intakeResult.pillar.e.name", tagline: "intakeResult.pillar.e.tagline" },
 ];
 const RTIS_PILLARS_META: { key: "r" | "t" | "i" | "s"; name: string; tagline: string }[] = [
-  { key: "r", name: "Risque", tagline: "Vulnerabilites & risques" },
-  { key: "t", name: "Track", tagline: "Validation marche" },
-  { key: "i", name: "Innovation", tagline: "Innovation & exploration" },
-  { key: "s", name: "Stratégie", tagline: "Plan & priorités" },
+  { key: "r", name: "intakeResult.pillar.r.name", tagline: "intakeResult.pillar.r.tagline" },
+  { key: "t", name: "intakeResult.pillar.t.name", tagline: "intakeResult.pillar.t.tagline" },
+  { key: "i", name: "intakeResult.pillar.i.name", tagline: "intakeResult.pillar.i.tagline" },
+  { key: "s", name: "intakeResult.pillar.s.name", tagline: "intakeResult.pillar.s.tagline" },
 ];
 
 const CONTACT_EMAIL = "xtincell@gmail.com";
@@ -166,34 +170,23 @@ const CONTACT_WHATSAPP_NUMBER = "237675583639";
 const CONTACT_WHATSAPP_DISPLAY = "+237 675 58 36 39";
 
 // Template intro / conclusion that adapt to the classification.
+// Values = i18n keys — resolved with t() at render time.
 const CLASSIFICATION_INTRO: Record<string, string> = {
-  LATENT:
-    "Le diagnostic revele que votre marque est, a ce stade, quasi-invisible sur son marche. Les fondations identitaires sont absentes ou trop sous-developpees pour produire une preference. C'est le moment de tout poser proprement avant de communiquer plus.",
-  FRAGILE:
-    "Votre marque a des intuitions justes mais une architecture incomplete. Le risque : multiplier les actions tactiques sans coherence, ce qui dilue le peu de signal deja construit. La priorite est de stabiliser la plateforme avant d'accelerer.",
-  ORDINAIRE:
-    "Votre marque est fonctionnelle mais substituable. Sur un marche sature, l'absence de differenciation forte expose a la guerre des prix et a la commoditisation. Le diagnostic suivant pointe les leviers de distinction concrets.",
-  FORTE:
-    "Vous avez des fondations solides et des forces reelles. L'enjeu n'est plus de poser les bases mais de combler les lacunes restantes pour passer de marque competente a marque preferee.",
-  CULTE:
-    "Vous touchez le statut culte. Votre marque a une communaute, un point de vue, une signature. La phase suivante consiste a structurer ce qui se cree organiquement pour le rendre transmissible et durable.",
-  ICONE:
-    "Votre marque transcende son marche. Les enjeux sont desormais ceux d'une marque etablie : perennite, transmission, defense de la position acquise.",
+  LATENT: "intakeResult.intro.LATENT",
+  FRAGILE: "intakeResult.intro.FRAGILE",
+  ORDINAIRE: "intakeResult.intro.ORDINAIRE",
+  FORTE: "intakeResult.intro.FORTE",
+  CULTE: "intakeResult.intro.CULTE",
+  ICONE: "intakeResult.intro.ICONE",
 };
 
 const CLASSIFICATION_RETAINER_PITCH: Record<string, string> = {
-  LATENT:
-    "La Fusee accompagne en priorite les marques qui doivent (re)poser les bases. Notre retainer demarrage couvre la consolidation des piliers ADVE en 8 semaines : audit, ateliers fondateur, livrables identitaires, premier plan d'engagement.",
-  FRAGILE:
-    "La Fusee accompagne les marques en phase de stabilisation. Notre retainer 'Cap structurel' tient sur 12 semaines : verrouillage des piliers ADVE, mise en coherence verbal/visuel, plan strategique execute.",
-  ORDINAIRE:
-    "La Fusee accompagne les marques en quete de differenciation. Notre retainer 'Distinction' (12 semaines) cible la position concurrentielle, le territoire d'expression et la cascade strategique pour ouvrir un avantage durable.",
-  FORTE:
-    "La Fusee accompagne les marques fortes a passer un cap. Notre retainer 'Acceleration' (16 semaines) industrialise vos forces existantes et active la cascade strategique pour amplifier la traction commerciale.",
-  CULTE:
-    "La Fusee accompagne les marques cultes a transformer leur communaute en mouvement durable. Retainer 'Transmission' : structure operationnelle, programme ambassadeurs, codification des rituels.",
-  ICONE:
-    "La Fusee accompagne les marques iconiques sur la perennite et la transmission. Retainer 'Heritage' : protection de la position, formation des relais, capitalisation patrimoniale.",
+  LATENT: "intakeResult.retainer.LATENT",
+  FRAGILE: "intakeResult.retainer.FRAGILE",
+  ORDINAIRE: "intakeResult.retainer.ORDINAIRE",
+  FORTE: "intakeResult.retainer.FORTE",
+  CULTE: "intakeResult.retainer.CULTE",
+  ICONE: "intakeResult.retainer.ICONE",
 };
 
 // ── Formatting helpers ─────────────────────────────────────────────
@@ -245,13 +238,14 @@ function flattenContent(content: Record<string, unknown>): Array<{ key: string; 
 // Format the biz responses (positioning, business model, etc.) into a list.
 function formatBizContext(
   intake: { businessModel?: string | null; economicModel?: string | null; positioning?: string | null; sector?: string | null; country?: string | null; responses?: unknown },
+  t: (key: string) => string,
 ): Array<{ label: string; value: string }> {
   const out: Array<{ label: string; value: string }> = [];
-  if (intake.sector) out.push({ label: "Secteur", value: intake.sector });
-  if (intake.country) out.push({ label: "Pays", value: intake.country });
-  if (intake.businessModel) out.push({ label: "Modele business", value: intake.businessModel });
-  if (intake.economicModel) out.push({ label: "Modele economique", value: intake.economicModel });
-  if (intake.positioning) out.push({ label: "Positionnement", value: intake.positioning });
+  if (intake.sector) out.push({ label: t("intakeResult.biz.sector"), value: intake.sector });
+  if (intake.country) out.push({ label: t("intakeResult.biz.country"), value: intake.country });
+  if (intake.businessModel) out.push({ label: t("intakeResult.biz.businessModel"), value: intake.businessModel });
+  if (intake.economicModel) out.push({ label: t("intakeResult.biz.economicModel"), value: intake.economicModel });
+  if (intake.positioning) out.push({ label: t("intakeResult.biz.positioning"), value: intake.positioning });
   // Free-form biz Q&A from the intake
   const bizResponses = (intake.responses as Record<string, unknown> | null)?.biz as
     | Record<string, unknown>
@@ -267,11 +261,14 @@ function formatBizContext(
 }
 
 // Verbatim — flatten the user's actual answers per pillar, for the appendix.
-function formatVerbatim(intake: { rawText?: string | null; responses?: unknown }): Array<{ pillar: string; entries: Array<{ q: string; a: string }> }> {
+function formatVerbatim(
+  intake: { rawText?: string | null; responses?: unknown },
+  t: (key: string) => string,
+): Array<{ pillar: string; entries: Array<{ q: string; a: string }> }> {
   const responses = intake.responses as Record<string, unknown> | null;
   if (!responses) {
     return intake.rawText
-      ? [{ pillar: "Texte fourni", entries: [{ q: "Description libre", a: intake.rawText }] }]
+      ? [{ pillar: t("intakeResult.verbatim.freeText"), entries: [{ q: t("intakeResult.verbatim.freeDesc"), a: intake.rawText }] }]
       : [];
   }
   const groups: Array<{ pillar: string; entries: Array<{ q: string; a: string }> }> = [];
@@ -283,7 +280,7 @@ function formatVerbatim(intake: { rawText?: string | null; responses?: unknown }
         .filter(([, val]) => typeof val === "string" && val.trim())
         .map(([q, val]) => ({ q: humanizeKey(q), a: String(val) }));
       if (entries.length > 0) {
-        groups.push({ pillar: k === "biz" ? "Contexte business" : `Pilier ${k.toUpperCase()}`, entries });
+        groups.push({ pillar: k === "biz" ? t("intakeResult.verbatim.biz") : `${t("intakeResult.verbatim.pillar")} ${k.toUpperCase()}`, entries });
       }
     }
   }
@@ -306,6 +303,7 @@ export default function IntakeResult({ params }: { params: Promise<{ token: stri
 }
 
 function IntakeResultContent({ params }: { params: Promise<{ token: string }> }) {
+  const { t } = useT();
   const { token } = use(params);
   const searchParams = useSearchParams();
   const paymentRef = searchParams.get("ref");
@@ -397,11 +395,11 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
       // Defer revoke so the browser has time to start the download.
       setTimeout(() => URL.revokeObjectURL(objectUrl), 5000);
     } catch (err) {
-      setPdfError(err instanceof Error ? err.message : "Echec du téléchargement");
+      setPdfError(err instanceof Error ? err.message : t("intakeResult.download.error"));
     } finally {
       setPdfGenerating(false);
     }
-  }, [token]);
+  }, [token, t]);
 
   const activateMutation = trpc.quickIntake.activateBrand.useMutation({
     onSuccess: (data) => {
@@ -489,8 +487,8 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background px-5 text-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-sm font-medium text-foreground">Assemblage de votre rapport…</p>
-        <p className="text-xs text-foreground-muted">Scores, radar par pilier et plan d&apos;action — quelques secondes.</p>
+        <p className="text-sm font-medium text-foreground">{t("intakeResult.loading.title")}</p>
+        <p className="text-xs text-foreground-muted">{t("intakeResult.loading.sub")}</p>
       </main>
     );
   }
@@ -499,11 +497,11 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-background px-5 text-center">
         <AlertTriangle className="h-10 w-10 text-warning" />
-        <h1 className="mt-3 text-2xl font-bold text-foreground">Diagnostic non disponible</h1>
+        <h1 className="mt-3 text-2xl font-bold text-foreground">{t("intakeResult.error.title")}</h1>
         <p className="mt-2 max-w-md text-foreground-muted">
-          Ce lien est invalide ou l&apos;intake n&apos;a jamais existé.
+          {t("intakeResult.error.body")}
         </p>
-        {error && <p className="mt-3 text-xs text-destructive">Erreur : {error.message}</p>}
+        {error && <p className="mt-3 text-xs text-destructive">{t("intakeResult.error.label")} {error.message}</p>}
         {/* P1-5 (audit UX) — refetch existait mais aucun bouton ne l'exposait :
             une erreur passagère (réseau) était un cul-de-sac. */}
         {error ? (
@@ -512,7 +510,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             onClick={() => refetch()}
             className="mt-4 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover"
           >
-            Réessayer
+            {t("intakeResult.error.retry")}
           </button>
         ) : null}
       </main>
@@ -529,15 +527,15 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-background px-5 text-center">
         <AlertTriangle className="h-10 w-10 text-warning" />
-        <h1 className="mt-3 text-2xl font-bold text-foreground">Diagnostic non finalisé</h1>
+        <h1 className="mt-3 text-2xl font-bold text-foreground">{t("intakeResult.incomplete.title")}</h1>
         <p className="mt-2 max-w-md text-foreground-muted">
-          Le questionnaire n'est pas encore terminé. Reprenez-le pour générer votre rapport.
+          {t("intakeResult.incomplete.body")}
         </p>
         <Link
           href={`/intake/${token}`}
           className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
         >
-          Reprendre le questionnaire <ArrowRight className="h-4 w-4" />
+          {t("intakeResult.incomplete.cta")} <ArrowRight className="h-4 w-4" />
         </Link>
       </main>
     );
@@ -551,15 +549,15 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-background px-5 text-center">
         <AlertTriangle className="h-10 w-10 text-warning" />
-        <h1 className="mt-3 text-2xl font-bold text-foreground">Rapport corrompu</h1>
+        <h1 className="mt-3 text-2xl font-bold text-foreground">{t("intakeResult.corrupt.title")}</h1>
         <p className="mt-2 max-w-md text-foreground-muted">
-          L'intake est marqué comme terminé mais le score est introuvable. Recommencez le questionnaire.
+          {t("intakeResult.corrupt.body")}
         </p>
         <Link
           href={`/intake/${token}`}
           className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
         >
-          Reprendre le questionnaire <ArrowRight className="h-4 w-4" />
+          {t("intakeResult.incomplete.cta")} <ArrowRight className="h-4 w-4" />
         </Link>
       </main>
     );
@@ -589,13 +587,11 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
   // visible in preview mode (full paragraphs gated to the PDF).
   const PAGE_VALUES_PER_PILLAR = 2;
 
-  const introText = CLASSIFICATION_INTRO[classification] ??
-    "Voici le diagnostic synthetique de votre marque, suivi des leviers strategiques recommandes.";
-  const retainerPitch = CLASSIFICATION_RETAINER_PITCH[classification] ??
-    "La Fusee accompagne les marques sur la mise en coherence et l'execution strategique. Echangeons sur votre besoin.";
+  const introText = t(CLASSIFICATION_INTRO[classification] ?? "intakeResult.intro.default");
+  const retainerPitch = t(CLASSIFICATION_RETAINER_PITCH[classification] ?? "intakeResult.retainer.default");
 
-  const bizContext = formatBizContext(intake);
-  const verbatim = formatVerbatim(intake);
+  const bizContext = formatBizContext(intake, t);
+  const verbatim = formatVerbatim(intake, t);
   const reportDate = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
 
   return (
@@ -608,9 +604,9 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         <section className="hidden print:block print:mb-10 print:break-after-page">
           <div className="border-b-4 border-foreground pb-6">
             <p className="text-xs font-bold uppercase tracking-widest text-foreground-muted">
-              La Fusee — Industry OS
+              {t("intakeResult.cover.kicker")}
             </p>
-            <h1 className="mt-2 text-4xl font-bold text-foreground">Rapport ADVE complet</h1>
+            <h1 className="mt-2 text-4xl font-bold text-foreground">{t("intakeResult.cover.title")}</h1>
             {/* Personnalisation (vague E) : identité visuelle DÉTECTÉE de la
                 marque (og:image du site, déjà collectée) — jamais un logo
                 inventé, rien si non détectée. */}
@@ -623,18 +619,18 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             })()}
             <p className="mt-2 text-lg text-foreground-secondary">{intake.companyName}</p>
             <p className="mt-1 text-sm text-foreground-muted">
-              {classification} · Score {composite}/100 · {reportDate}
+              {classification} · {t("intakeResult.cover.score")} {composite}/100 · {reportDate}
             </p>
           </div>
           <div className="mt-12 grid grid-cols-2 gap-4 text-xs text-foreground-secondary">
             <div>
-              <p className="font-bold uppercase tracking-wider text-foreground-muted">Contact prepare</p>
+              <p className="font-bold uppercase tracking-wider text-foreground-muted">{t("intakeResult.cover.contact")}</p>
               <p className="mt-1">{intake.contactName}</p>
               <p>{intake.contactEmail}</p>
               {intake.contactPhone && <p>{intake.contactPhone}</p>}
             </div>
             <div>
-              <p className="font-bold uppercase tracking-wider text-foreground-muted">La Fusee</p>
+              <p className="font-bold uppercase tracking-wider text-foreground-muted">{t("intakeResult.cover.lafusee")}</p>
               <p className="mt-1">{CONTACT_EMAIL}</p>
               <p>{CONTACT_WHATSAPP_DISPLAY}</p>
             </div>
@@ -646,7 +642,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         ════════════════════════════════════════════════════════════ */}
         <header className="mb-10 print:hidden">
           <p className="text-xs font-medium uppercase tracking-wider text-foreground-muted">
-            Rapport ADVE — Pre-evaluation de marque
+            {t("intakeResult.header.kicker")}
           </p>
           <h1 className="mt-1 text-2xl font-bold text-foreground sm:text-3xl">
             {intake.companyName}
@@ -656,14 +652,14 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
           {classification !== "NON_CLASSIFIE" && (
             <div className="mt-6 rounded-2xl border-2 border-primary/30 bg-gradient-to-br from-primary-subtle/30 to-card p-5 sm:p-6">
               <p className="text-2xs font-bold uppercase tracking-widest text-primary">
-                Niveau actuel de la marque
+                {t("intakeResult.header.levelKicker")}
               </p>
               <div className="mt-1 flex flex-wrap items-baseline gap-3">
                 <h2 className="text-3xl font-bold text-foreground sm:text-4xl">
                   {classification}
                 </h2>
                 <span className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${LEVEL_COLOR[classification as BrandLevel]}`}>
-                  {LEVEL_TAGLINE[classification as BrandLevel]}
+                  {t(LEVEL_TAGLINE[classification as BrandLevel])}
                 </span>
               </div>
               {brandLevel?.justification && (
@@ -675,8 +671,8 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
               {/* Ladder progress */}
               <div className="mt-5">
                 <div className="mb-1.5 flex items-center justify-between text-2xs font-semibold uppercase tracking-widest text-foreground-muted">
-                  <span>Echelle</span>
-                  <span>Cible : ICONE</span>
+                  <span>{t("intakeResult.header.ladder")}</span>
+                  <span>{t("intakeResult.header.ladderTarget")}</span>
                 </div>
                 <div className="grid grid-cols-6 gap-1">
                   {LEVEL_ORDER.map((lvl, i) => {
@@ -710,7 +706,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
               {brandLevel?.nextMilestone && classification !== "ICONE" && (
                 <div className="mt-5 rounded-lg border border-primary/40 bg-card p-4">
                   <p className="text-2xs font-bold uppercase tracking-widest text-primary">
-                    Prochaine etape : {brandLevel.nextMilestone.targetLevel}
+                    {t("intakeResult.header.nextStep")} {brandLevel.nextMilestone.targetLevel}
                   </p>
                   <p className="mt-1 text-sm font-medium text-foreground">
                     {brandLevel.nextMilestone.headline}
@@ -735,16 +731,16 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
           {paymentData?.oracleShareUrl ? (
             <div className="mt-6 rounded-2xl border-2 border-success/40 bg-success/10 p-5">
               <p className="text-2xs font-bold uppercase tracking-widest text-success">
-                Votre stratégie complète est activée
+                {t("intakeResult.oracle.activated")}
               </p>
               <p className="mt-2 text-sm text-foreground">
-                Les 35 sections de votre document stratégique s&apos;assemblent — consultez-le (et gardez ce lien) :
+                {t("intakeResult.oracle.body")}
               </p>
               <a
                 href={paymentData.oracleShareUrl}
                 className="mt-2 inline-flex items-center gap-2 rounded-lg bg-success px-4 py-2 text-sm font-semibold text-background hover:opacity-90"
               >
-                Ouvrir ma stratégie complète <ArrowRight className="h-4 w-4" />
+                {t("intakeResult.oracle.open")} <ArrowRight className="h-4 w-4" />
               </a>
             </div>
           ) : null}
@@ -760,8 +756,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
               interactive={false}
             />
             <p className="max-w-[52ch] text-center text-xs text-foreground-muted">
-              Score socle ADVE : {composite}/100 — votre score de marque complet /200
-              (piliers d&apos;exécution inclus) se construit ensuite dans votre espace.
+              {t("intakeResult.radar.before")} {composite}{t("intakeResult.radar.after")}
             </p>
           </div>
 
@@ -772,9 +767,9 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
               niveau ESTIMÉ (déclaratif, ce questionnaire) vs le palier RÉVÉLÉ
               (preuve publique, section Force ci-dessous). */}
           <p className="mt-3 max-w-[58ch] text-xs text-foreground-muted">
-            Votre niveau ci-dessus est <strong>estimé</strong> à partir de vos réponses. Plus bas, votre
-            palier <strong>révélé</strong> est mesuré sur votre preuve publique — les deux peuvent différer :
-            c&apos;est l&apos;écart entre ce que vous déclarez et ce que le marché voit.
+            {t("intakeResult.estRev.p1")} <strong>{t("intakeResult.estRev.estimated")}</strong>{" "}
+            {t("intakeResult.estRev.p2")} <strong>{t("intakeResult.estRev.revealed")}</strong>{" "}
+            {t("intakeResult.estRev.p3")}
           </p>
         </header>
 
@@ -782,15 +777,15 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             PDF-ONLY: Intro + Contexte business
         ════════════════════════════════════════════════════════════ */}
         <section className="hidden print:block print:mb-8">
-          <h2 className="mb-3 text-2xl font-bold text-foreground">1. Introduction</h2>
+          <h2 className="mb-3 text-2xl font-bold text-foreground">{t("intakeResult.pdf.introTitle")}</h2>
           <p className="text-base leading-relaxed text-foreground">{introText}</p>
         </section>
 
         {bizContext.length > 0 && (
           <section className="hidden print:block print:mb-8 print:break-after-page">
-            <h2 className="mb-3 text-2xl font-bold text-foreground">2. Contexte business</h2>
+            <h2 className="mb-3 text-2xl font-bold text-foreground">{t("intakeResult.pdf.bizTitle")}</h2>
             <p className="mb-4 text-sm text-foreground-muted">
-              Données déclarées lors de l'intake — contexte qui calibre l'analyse ci-dessous.
+              {t("intakeResult.pdf.bizSub")}
             </p>
             <dl className="space-y-2">
               {bizContext.map((item, i) => (
@@ -808,21 +803,21 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         ════════════════════════════════════════════════════════════ */}
         {brandLevel && (
           <section className="hidden print:block print:mb-8 print:break-after-page">
-            <h2 className="mb-3 text-2xl font-bold text-foreground">3. Niveau actuel & trajectoire</h2>
+            <h2 className="mb-3 text-2xl font-bold text-foreground">{t("intakeResult.pdf.levelTitle")}</h2>
             <div className="mb-6 rounded-lg border-2 border-foreground p-5">
               <p className="text-xs font-bold uppercase tracking-wider text-foreground-muted">
-                Niveau actuel
+                {t("intakeResult.pdf.currentLevel")}
               </p>
               <p className="mt-1 text-3xl font-bold text-foreground">{classification}</p>
               <p className="mt-1 text-sm italic text-foreground-secondary">
-                {classification !== "NON_CLASSIFIE" && LEVEL_TAGLINE[classification as BrandLevel]}
+                {classification !== "NON_CLASSIFIE" && t(LEVEL_TAGLINE[classification as BrandLevel])}
               </p>
               <p className="mt-3 text-sm leading-relaxed text-foreground">{brandLevel.justification}</p>
             </div>
 
             {brandLevel.pillarSignals.length > 0 && (
               <div className="mb-6">
-                <h3 className="mb-2 text-base font-bold text-foreground">Lecture par pilier ADVE</h3>
+                <h3 className="mb-2 text-base font-bold text-foreground">{t("intakeResult.pdf.pillarRead")}</h3>
                 <dl className="space-y-2">
                   {brandLevel.pillarSignals.map((s) => (
                     <div key={s.pillar} className="grid grid-cols-[140px_1fr] gap-3 border-b border-border-subtle py-2">
@@ -837,18 +832,18 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             )}
 
             <h3 className="mb-3 text-base font-bold text-foreground">
-              Trajectoire vers ICONE ({brandLevel.pathToIcone.length} palier{brandLevel.pathToIcone.length > 1 ? "s" : ""})
+              {t("intakeResult.path.title")} ({brandLevel.pathToIcone.length} {brandLevel.pathToIcone.length > 1 ? t("intakeResult.unit.tiers") : t("intakeResult.unit.tier")})
             </h3>
             <ol className="mb-6 space-y-3">
               {brandLevel.pathToIcone.map((step, i) => (
                 <li key={i} className="border-l-4 border-foreground pl-4">
                   <p className="text-sm font-bold uppercase tracking-wider text-foreground">
-                    {i + 1}. {step.level} {step.level === classification ? "(actuel)" : ""}
+                    {i + 1}. {step.level} {step.level === classification ? t("intakeResult.path.current") : ""}
                   </p>
                   <p className="mt-1 text-sm text-foreground">{step.description}</p>
                   {step.keyMilestone && (
                     <p className="mt-1 text-xs italic text-foreground-secondary">
-                      Verrou : {step.keyMilestone}
+                      {t("intakeResult.lock.label")} {step.keyMilestone}
                     </p>
                   )}
                 </li>
@@ -858,7 +853,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             {brandLevel.iconeVision && (
               <div className="rounded border-2 border-primary p-4">
                 <p className="text-xs font-bold uppercase tracking-wider text-primary">
-                  Vision ICONE pour {intake.companyName}
+                  {t("intakeResult.vision.kicker")} {intake.companyName}
                 </p>
                 <p className="mt-2 text-sm leading-relaxed text-foreground">{brandLevel.iconeVision}</p>
               </div>
@@ -873,8 +868,8 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
           <section className="mb-8 rounded-2xl border border-primary/20 bg-primary-subtle/20 p-6 print:rounded-none print:border-0 print:bg-transparent print:p-0 print:mb-8">
             <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-primary print:text-2xl print:text-foreground print:normal-case print:tracking-normal">
               <Sparkles className="h-4 w-4 print:hidden" />
-              <span className="print:hidden">Synthese executive</span>
-              <span className="hidden print:inline">4. Synthese executive</span>
+              <span className="print:hidden">{t("intakeResult.exec.title")}</span>
+              <span className="hidden print:inline">{t("intakeResult.exec.titlePdf")}</span>
             </h2>
             <p className="text-base leading-relaxed text-foreground">
               {report?.executiveSummary ?? fallbackSummary}
@@ -890,8 +885,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         {/* P1-2 (audit UX) — phrases-ponts : les scores se LISENT dans un ordre
             (présence publique → socle déclaré → force révélée), pas en pile. */}
         <p className="mx-auto mt-10 max-w-[60ch] text-center text-sm text-foreground-secondary">
-          Votre socle ci-dessus vient de vos réponses. Voici maintenant ce que le
-          public, lui, voit de {intake.companyName} — mesuré, pas déclaré.
+          {t("intakeResult.bridge.footprintBefore")} {intake.companyName} {t("intakeResult.bridge.footprintAfter")}
         </p>
         <FootprintSection
           footprint={(intake as { webFootprint?: unknown }).webFootprint ?? null}
@@ -907,8 +901,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             palier suivant). Le classement public reste un choix (payant/opérateur).
         ════════════════════════════════════════════════════════════ */}
         <p className="mx-auto mt-10 max-w-[60ch] text-center text-sm text-foreground-secondary">
-          Et quand on confronte cette preuve publique aux épreuves du réel, voici la
-          force qu&apos;elle révèle — le score complet /200, celui du classement.
+          {t("intakeResult.bridge.force")}
         </p>
         <ForceSection token={token} />
 
@@ -919,13 +912,13 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         {brandLevel?.pathToIcone && brandLevel.pathToIcone.length > 0 && (
           <section className="mb-10 print:hidden">
             <header className="mb-2 flex items-center justify-between gap-3">
-              <h2 className="text-lg font-bold text-foreground">Trajectoire vers ICONE</h2>
+              <h2 className="text-lg font-bold text-foreground">{t("intakeResult.path.title")}</h2>
               <span className="rounded-full border border-border-subtle bg-card px-2 py-0.5 text-xs text-foreground-muted">
-                {brandLevel.pathToIcone.length} palier(s) a franchir
+                {brandLevel.pathToIcone.length} {t("intakeResult.path.badge")}
               </span>
             </header>
             <p className="mb-4 text-sm text-foreground-muted">
-              Chaque palier correspond a un saut qualitatif specifique pour <span className="font-medium text-foreground">{intake.companyName}</span>.
+              {t("intakeResult.path.subBefore")} <span className="font-medium text-foreground">{intake.companyName}</span>{t("intakeResult.path.subAfter")}
             </p>
             <ol className="space-y-3">
               {brandLevel.pathToIcone.map((step, i) => {
@@ -953,7 +946,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                         </span>
                         {isCurrent && (
                           <span className="rounded-full bg-primary px-2 py-0.5 text-2xs font-medium text-primary-foreground">
-                            Vous etes ici
+                            {t("intakeResult.path.youAreHere")}
                           </span>
                         )}
                       </div>
@@ -961,7 +954,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                     <p className="text-sm leading-relaxed text-foreground">{step.description}</p>
                     {step.keyMilestone && (
                       <p className="mt-2 border-l-2 border-primary/40 pl-3 text-xs text-foreground-secondary">
-                        <span className="font-semibold text-primary">Verrou : </span>
+                        <span className="font-semibold text-primary">{t("intakeResult.lock.label")} </span>
                         {step.keyMilestone}
                       </p>
                     )}
@@ -973,7 +966,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             {brandLevel.iconeVision && (
               <div className="mt-6 rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/10 to-card p-5">
                 <p className="text-2xs font-bold uppercase tracking-widest text-primary">
-                  Vision ICONE pour {intake.companyName}
+                  {t("intakeResult.vision.kicker")} {intake.companyName}
                 </p>
                 <p className="mt-2 text-sm leading-relaxed text-foreground">{brandLevel.iconeVision}</p>
               </div>
@@ -986,13 +979,13 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         ════════════════════════════════════════════════════════════ */}
         <section className="mb-10 print:hidden">
           <header className="mb-2 flex items-center justify-between gap-3">
-            <h2 className="text-lg font-bold text-foreground">Ce que le systeme a compris</h2>
+            <h2 className="text-lg font-bold text-foreground">{t("intakeResult.adve.title")}</h2>
             <span className="rounded-full border border-border-subtle bg-card px-2 py-0.5 text-xs text-foreground-muted">
-              Apercu — version complete dans le PDF
+              {t("intakeResult.adve.badge")}
             </span>
           </header>
           <p className="mb-6 text-sm text-foreground-muted">
-            Pour chaque pilier ADVE : un extrait des valeurs extraites, suivi du commentaire strategique condense.
+            {t("intakeResult.adve.sub")}
           </p>
 
           <div className="space-y-5">
@@ -1007,9 +1000,9 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                   <header className="mb-4 flex items-center justify-between gap-3 border-b border-border-subtle pb-3">
                     <div>
                       <p className="text-2xs font-bold uppercase tracking-widest text-foreground-muted">
-                        {meta.key.toUpperCase()} · {meta.tagline}
+                        {meta.key.toUpperCase()} · {t(meta.tagline)}
                       </p>
-                      <h3 className="mt-0.5 text-lg font-semibold text-foreground">{meta.name}</h3>
+                      <h3 className="mt-0.5 text-lg font-semibold text-foreground">{t(meta.name)}</h3>
                     </div>
                     <div className="flex shrink-0 items-baseline gap-1 rounded-md bg-background px-2.5 py-1">
                       <span className="text-base font-semibold tabular-nums text-foreground">{score.toFixed(1)}</span>
@@ -1020,11 +1013,11 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                   <div className="mb-4">
                     <h4 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
                       <Database className="h-3.5 w-3.5" />
-                      Valeurs extraites ({allExtracted.length})
+                      {t("intakeResult.adve.extracted")} ({allExtracted.length})
                     </h4>
                     {allExtracted.length === 0 ? (
                       <p className="rounded-lg border border-warning/30 bg-warning/5 p-3 text-sm text-foreground-muted">
-                        Aucune valeur n'a pu être extraite de vos réponses pour ce pilier.
+                        {t("intakeResult.adve.noValues")}
                       </p>
                     ) : (
                       <>
@@ -1042,7 +1035,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                         {moreCount > 0 && (
                           <p className="mt-2 flex items-center gap-1.5 text-xs text-foreground-muted">
                             <Lock className="h-3 w-3" />
-                            +{moreCount} champ(s) supplementaire(s) dans le PDF complet
+                            +{moreCount} {t("intakeResult.adve.moreFields")}
                           </p>
                         )}
                       </>
@@ -1052,12 +1045,12 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                   {reportPillar && (
                     <div className="border-t border-border-subtle pt-4">
                       <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
-                        Lecture strategique
+                        {t("intakeResult.adve.strategicRead")}
                       </h4>
                       <p className="text-sm leading-relaxed text-foreground">{reportPillar.preview}</p>
                       <p className="mt-2 flex items-center gap-1.5 text-xs text-foreground-muted">
                         <Lock className="h-3 w-3" />
-                        Analyse approfondie dans le PDF complet
+                        {t("intakeResult.adve.deepDive")}
                       </p>
                     </div>
                   )}
@@ -1071,7 +1064,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             ADVE — print (FULL: all values + full narrative)
         ════════════════════════════════════════════════════════════ */}
         <section className="hidden print:block print:mb-8 print:break-after-page">
-          <h2 className="mb-3 text-2xl font-bold text-foreground">5. Diagnostic ADVE</h2>
+          <h2 className="mb-3 text-2xl font-bold text-foreground">{t("intakeResult.pdf.adveTitle")}</h2>
           <div className="space-y-6">
             {ADVE_PILLARS.map((meta) => {
               const allExtracted = extractedByKey[meta.key] ?? [];
@@ -1081,16 +1074,16 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                 <div key={meta.key} className="border-b border-border-subtle pb-6 last:border-0">
                   <header className="mb-2 flex items-baseline justify-between gap-3">
                     <h3 className="text-xl font-bold text-foreground">
-                      {meta.key.toUpperCase()} · {meta.name}
+                      {meta.key.toUpperCase()} · {t(meta.name)}
                     </h3>
                     <span className="text-sm tabular-nums text-foreground-muted">{score.toFixed(1)} / 25</span>
                   </header>
-                  <p className="mb-3 text-sm italic text-foreground-muted">{meta.tagline}</p>
+                  <p className="mb-3 text-sm italic text-foreground-muted">{t(meta.tagline)}</p>
 
                   {allExtracted.length > 0 && (
                     <>
                       <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-foreground-muted">
-                        Valeurs extraites
+                        {t("intakeResult.adve.extracted")}
                       </h4>
                       <dl className="mb-4 space-y-1">
                         {allExtracted.map((entry, idx) => (
@@ -1106,7 +1099,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                   {reportPillar && (
                     <>
                       <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-foreground-muted">
-                        Lecture strategique
+                        {t("intakeResult.adve.strategicRead")}
                       </h4>
                       <p className="text-sm leading-relaxed text-foreground">{reportPillar.preview}</p>
                       <p className="mt-2 text-sm leading-relaxed text-foreground-secondary">{reportPillar.full}</p>
@@ -1124,9 +1117,9 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         {report?.rtis && (
           <section className="mb-10 print:hidden">
             <header className="mb-2 flex items-center justify-between gap-3">
-              <h2 className="text-lg font-bold text-foreground">Proposition strategique</h2>
+              <h2 className="text-lg font-bold text-foreground">{t("intakeResult.rtis.title")}</h2>
               <span className="rounded-full border border-border-subtle bg-card px-2 py-0.5 text-xs text-foreground-muted">
-                Apercu — analyse complete dans le PDF
+                {t("intakeResult.rtis.badge")}
               </span>
             </header>
             <p className="mb-6 text-sm text-foreground-muted">{report.rtis.framing}</p>
@@ -1136,7 +1129,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                   <header className="mb-3 flex items-start justify-between gap-3">
                     <div>
                       <p className="text-2xs font-bold uppercase tracking-widest text-foreground-muted">
-                        {p.key.toUpperCase()} · {RTIS_PILLARS_META.find((m) => m.key === p.key)?.tagline ?? ""}
+                        {p.key.toUpperCase()} · {(() => { const tagline = RTIS_PILLARS_META.find((m) => m.key === p.key)?.tagline; return tagline ? t(tagline) : ""; })()}
                       </p>
                       <h3 className="mt-0.5 text-base font-semibold text-foreground">{p.name}</h3>
                     </div>
@@ -1154,7 +1147,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                   <p className="text-sm leading-relaxed text-foreground">{p.preview}</p>
                   <p className="mt-3 flex items-center gap-1.5 border-t border-border-subtle pt-3 text-xs text-foreground-muted">
                     <Lock className="h-3 w-3" />
-                    Mecanique d'execution dans le PDF
+                    {t("intakeResult.rtis.lock")}
                   </p>
                 </article>
               ))}
@@ -1167,7 +1160,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         ════════════════════════════════════════════════════════════ */}
         {report?.rtis && (
           <section className="hidden print:block print:mb-8 print:break-after-page">
-            <h2 className="mb-3 text-2xl font-bold text-foreground">6. Proposition strategique</h2>
+            <h2 className="mb-3 text-2xl font-bold text-foreground">{t("intakeResult.pdf.rtisTitle")}</h2>
             <p className="mb-4 text-sm italic text-foreground-secondary">{report.rtis.framing}</p>
             <div className="space-y-6">
               {report.rtis.pillars.map((p) => (
@@ -1177,12 +1170,12 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                       {p.key.toUpperCase()} · {p.name}
                     </h3>
                     <span className="rounded border border-foreground-muted px-2 py-0.5 text-xs">
-                      {p.priority} · {PRIORITY_LABEL[p.priority]}
+                      {p.priority} · {t(PRIORITY_LABEL[p.priority])}
                     </span>
                   </header>
                   {p.keyMove && (
                     <p className="mb-3 border-l-4 border-primary bg-primary-subtle/30 px-3 py-2 text-sm font-semibold text-foreground">
-                      Le coup a jouer : {p.keyMove}
+                      {t("intakeResult.rtis.keyMove")} {p.keyMove}
                     </p>
                   )}
                   <p className="text-sm leading-relaxed text-foreground">{p.preview}</p>
@@ -1203,14 +1196,14 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             <header className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
               <div>
                 <p className="text-2xs font-bold uppercase tracking-[0.25em] text-amber-400 print:text-foreground-muted">
-                  Recommandation stratégique
+                  {t("intakeResult.reco.kicker")}
                 </p>
                 <h2 className="mt-1 text-xl font-bold text-foreground sm:text-2xl print:text-2xl">
                   {report.recommendation.strategicMove}
                 </h2>
               </div>
               <span className="hidden rounded-full border border-amber-700/50 bg-amber-950/30 px-2 py-0.5 text-2xs font-medium text-amber-300 print:hidden sm:inline-flex">
-                Opus · ancré sur la tension centrale
+                {t("intakeResult.reco.badge")}
               </span>
             </header>
 
@@ -1222,7 +1215,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
 
             {/* Prioritized actions */}
             <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
-              Actions priorisées
+              {t("intakeResult.reco.actions")}
             </h3>
             <ol className="mb-6 space-y-3">
               {report.recommendation.prioritizedActions.map((a, i) => (
@@ -1246,7 +1239,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                   {Array.isArray(a.examples) && a.examples.length > 0 && (
                     <div className="mt-3 rounded-md border border-border-subtle bg-background-overlay/40 p-3 print:border-foreground-muted print:bg-transparent">
                       <p className="mb-2 text-2xs font-semibold uppercase tracking-wider text-foreground-muted">
-                        Comment l&apos;exécuter — 2 exemples
+                        {t("intakeResult.reco.examples")}
                       </p>
                       <ul className="space-y-1.5 text-sm text-foreground-secondary">
                         {a.examples.slice(0, 2).map((ex, j) => (
@@ -1259,7 +1252,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                     </div>
                   )}
                   <p className="mt-2 border-t border-border-subtle pt-2 text-xs text-foreground-muted">
-                    <span className="font-semibold">Succès :</span> {a.successKpi}
+                    <span className="font-semibold">{t("intakeResult.reco.success")}</span> {a.successKpi}
                   </p>
                 </li>
               ))}
@@ -1267,13 +1260,13 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
 
             {/* 90-day roadmap */}
             <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
-              Feuille de route 90 jours
+              {t("intakeResult.reco.roadmap")}
             </h3>
             <div className="mb-6 grid gap-3 sm:grid-cols-3">
               {[
-                { label: "0-30j", text: report.recommendation.roadmap90d.phase1_0_30j },
-                { label: "30-60j", text: report.recommendation.roadmap90d.phase2_30_60j },
-                { label: "60-90j", text: report.recommendation.roadmap90d.phase3_60_90j },
+                { label: t("intakeResult.reco.phase1"), text: report.recommendation.roadmap90d.phase1_0_30j },
+                { label: t("intakeResult.reco.phase2"), text: report.recommendation.roadmap90d.phase2_30_60j },
+                { label: t("intakeResult.reco.phase3"), text: report.recommendation.roadmap90d.phase3_60_90j },
               ].map((phase) => (
                 <div
                   key={phase.label}
@@ -1291,7 +1284,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             {report.recommendation.risksToWatch.length > 0 && (
               <>
                 <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
-                  Risques à surveiller
+                  {t("intakeResult.reco.risks")}
                 </h3>
                 <ul className="mb-6 space-y-1.5">
                   {report.recommendation.risksToWatch.map((r, i) => (
@@ -1306,7 +1299,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
 
             {/* Founded on tension — the hash-link back to the diagnostic */}
             <p className="mt-6 border-t border-border-subtle pt-4 text-xs italic text-foreground-muted">
-              <span className="font-semibold">Fondé sur :</span>{" "}
+              <span className="font-semibold">{t("intakeResult.reco.foundedOn")}</span>{" "}
               {report.recommendation.foundedOnTension}
             </p>
           </section>
@@ -1324,10 +1317,10 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
           <section className="mt-10 rounded-2xl border border-primary/40 bg-card p-6 sm:p-8 print:mt-0 print:rounded-none print:border-0 print:break-before-page">
             <header className="mb-6">
               <p className="text-2xs font-bold uppercase tracking-[0.25em] text-primary">
-                Plan d&apos;action prioritaire
+                {t("intakeResult.plan.kicker")}
               </p>
               <h2 className="mt-1 text-xl font-bold text-foreground sm:text-2xl">
-                Vos deux chantiers, analysés depuis vos réponses
+                {t("intakeResult.plan.title")}
               </h2>
             </header>
             <div className="space-y-6">
@@ -1358,20 +1351,20 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             PDF-ONLY: Conclusion + CTA retainer
         ════════════════════════════════════════════════════════════ */}
         <section className="hidden print:block print:mb-8 print:break-after-page">
-          <h2 className="mb-3 text-2xl font-bold text-foreground">7. Conclusion & prochaine etape</h2>
+          <h2 className="mb-3 text-2xl font-bold text-foreground">{t("intakeResult.pdf.conclusionTitle")}</h2>
           <p className="text-base leading-relaxed text-foreground">{retainerPitch}</p>
           <div className="mt-6 rounded-lg border-2 border-primary p-5">
-            <h3 className="mb-2 text-base font-bold text-foreground">Activons votre plan</h3>
+            <h3 className="mb-2 text-base font-bold text-foreground">{t("intakeResult.pdf.activate")}</h3>
             <p className="mb-4 text-sm leading-relaxed text-foreground-secondary">
-              Le diagnostic ADVE livre la photographie. La cascade strategique et l'execution sont la valeur ajoutee de l'accompagnement La Fusee. Premier echange offert pour cadrer le besoin.
+              {t("intakeResult.pdf.activateBody")}
             </p>
             <dl className="space-y-1 text-sm">
               <div className="grid grid-cols-[100px_1fr] gap-2">
-                <dt className="font-semibold text-foreground-muted">Email</dt>
+                <dt className="font-semibold text-foreground-muted">{t("intakeResult.contact.email")}</dt>
                 <dd className="text-foreground">{CONTACT_EMAIL}</dd>
               </div>
               <div className="grid grid-cols-[100px_1fr] gap-2">
-                <dt className="font-semibold text-foreground-muted">WhatsApp</dt>
+                <dt className="font-semibold text-foreground-muted">{t("intakeResult.contact.whatsapp")}</dt>
                 <dd className="text-foreground">{CONTACT_WHATSAPP_DISPLAY}</dd>
               </div>
             </dl>
@@ -1383,9 +1376,9 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         ════════════════════════════════════════════════════════════ */}
         {verbatim.length > 0 && (
           <section className="hidden print:block print:mb-4">
-            <h2 className="mb-3 text-2xl font-bold text-foreground">Annexe — Vos réponses verbatim</h2>
+            <h2 className="mb-3 text-2xl font-bold text-foreground">{t("intakeResult.pdf.annexTitle")}</h2>
             <p className="mb-4 text-xs italic text-foreground-muted">
-              Reproduction fidèle des réponses fournies, pour vérifier la fidélité de l'extraction.
+              {t("intakeResult.pdf.annexSub")}
             </p>
             <div className="space-y-4">
               {verbatim.map((group, gi) => (
@@ -1409,9 +1402,9 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             PAGE-ONLY: Contact / paywall / activation (print:hidden)
         ════════════════════════════════════════════════════════════ */}
         <section className="mt-10 rounded-2xl border border-border bg-card p-6 print:hidden">
-          <h2 className="mb-1 text-lg font-bold text-foreground">Echanger avec La Fusee</h2>
+          <h2 className="mb-1 text-lg font-bold text-foreground">{t("intakeResult.contact.title")}</h2>
           <p className="mb-5 text-sm text-foreground-muted">
-            Une question sur votre rapport ? Un projet à discuter ? Réponse sous 24h.
+            {t("intakeResult.contact.sub")}
           </p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <a
@@ -1420,7 +1413,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             >
               <div className="rounded-full bg-primary/10 p-2"><Mail className="h-4 w-4 text-primary" /></div>
               <div className="min-w-0">
-                <p className="text-xs font-medium uppercase tracking-wider text-foreground-muted">Email</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-foreground-muted">{t("intakeResult.contact.email")}</p>
                 <p className="truncate text-sm font-medium text-foreground">{CONTACT_EMAIL}</p>
               </div>
             </a>
@@ -1432,7 +1425,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             >
               <div className="rounded-full bg-primary/10 p-2"><MessageCircle className="h-4 w-4 text-primary" /></div>
               <div className="min-w-0">
-                <p className="text-xs font-medium uppercase tracking-wider text-foreground-muted">WhatsApp</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-foreground-muted">{t("intakeResult.contact.whatsapp")}</p>
                 <p className="truncate text-sm font-medium text-foreground">{CONTACT_WHATSAPP_DISPLAY}</p>
               </div>
             </a>
@@ -1457,7 +1450,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
               }
               unlockPriceLabel={
                 isFree
-                  ? "Gratuit"
+                  ? t("intakeResult.paywall.free")
                   : pricing?.localized?.display ?? (pricing?.recommended === "CINETPAY"
                     ? `${pricing?.prices.fcfa ?? 0} FCFA`
                     : `${pricing?.prices.eur ?? 0} EUR`)
@@ -1469,8 +1462,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                 le lead lisait des noms de variables d'environnement). */}
             {initPaymentMutation.error && (
               <p className="mt-3 px-2 text-xs text-destructive">
-                Le paiement en ligne est momentanément indisponible. Réessayez dans un instant,
-                ou écrivez-nous sur WhatsApp — nous débloquons votre rapport manuellement.
+                {t("intakeResult.paywall.paymentDown")}
               </p>
             )}
           </div>
@@ -1483,8 +1475,8 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                 <Check className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1">
-                <h2 className="text-lg font-bold text-foreground">Télécharger le rapport (PDF)</h2>
-                <p className="mt-1 text-sm text-foreground-muted">Votre version intégrale est prête.</p>
+                <h2 className="text-lg font-bold text-foreground">{t("intakeResult.download.title")}</h2>
+                <p className="mt-1 text-sm text-foreground-muted">{t("intakeResult.download.ready")}</p>
               </div>
             </div>
             <button
@@ -1494,9 +1486,9 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
               className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {pdfGenerating ? (
-                <><Loader2 className="h-4 w-4 animate-spin" /> Ouverture de l&apos;impression…</>
+                <><Loader2 className="h-4 w-4 animate-spin" /> {t("intakeResult.download.opening")}</>
               ) : (
-                <><Download className="h-4 w-4" /> Télécharger le PDF</>
+                <><Download className="h-4 w-4" /> {t("intakeResult.download.cta")}</>
               )}
             </button>
             {pdfError && <p className="mt-3 text-xs text-destructive">{pdfError}</p>}
@@ -1530,13 +1522,13 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
                     <p className="text-2xs font-semibold uppercase tracking-[0.25em] text-amber-400">
-                      Et après ? Voici votre trajectoire
+                      {t("intakeResult.tiers.kicker")}
                     </p>
                     <h2 className="mt-2 text-xl font-semibold text-zinc-50 sm:text-2xl">
-                      Débloquez le rapport complet — 5 paliers, du PDF au Retainer.
+                      {t("intakeResult.tiers.title")}
                     </h2>
                     <p className="mt-1 text-sm text-zinc-400">
-                      Comparez les options sans surcharger cette page : ouvrez la grille tarifaire dans une vue dédiée.
+                      {t("intakeResult.tiers.sub")}
                     </p>
                   </div>
                   <div className="shrink-0">
@@ -1545,12 +1537,12 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                       onClick={() => setPricingModalOpen(true)}
                       className="inline-flex items-center gap-2 rounded-lg bg-amber-600 px-5 py-3 text-sm font-semibold text-black transition hover:bg-amber-500"
                     >
-                      Voir les options
+                      {t("intakeResult.tiers.cta")}
                       <ArrowRight className="h-4 w-4" />
                     </button>
                     {recommendedPrice && (
                       <p className="mt-2 text-right text-2xs text-zinc-500">
-                        Recommandé : Oracle complet · <span className="text-zinc-300">{recommendedPrice}</span>
+                        {t("intakeResult.tiers.recommended")} <span className="text-zinc-300">{recommendedPrice}</span>
                       </p>
                     )}
                   </div>
@@ -1565,9 +1557,9 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             <div className="flex items-center gap-3">
               <div className="rounded-full bg-primary/10 p-2"><Rocket className="h-5 w-5 text-primary" /></div>
               <div>
-                <h2 className="text-lg font-bold text-foreground">Activer votre cockpit</h2>
+                <h2 className="text-lg font-bold text-foreground">{t("intakeResult.activate.title")}</h2>
                 <p className="mt-1 text-sm text-foreground-muted">
-                  Creez votre espace marque pour piloter ces recommandations.
+                  {t("intakeResult.activate.sub")}
                 </p>
               </div>
             </div>
@@ -1575,15 +1567,15 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             <ul className="mt-5 space-y-2 text-sm text-foreground-secondary">
               <li className="flex items-start gap-2">
                 <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                Votre marque <span className="font-semibold text-foreground">{intake.companyName}</span> est creee dans le systeme
+                {t("intakeResult.activate.li1Before")} <span className="font-semibold text-foreground">{intake.companyName}</span> {t("intakeResult.activate.li1After")}
               </li>
               <li className="flex items-start gap-2">
                 <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                La cascade strategique (R·T·I·S) est lancee sur votre cockpit
+                {t("intakeResult.activate.li2")}
               </li>
               <li className="flex items-start gap-2">
                 <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                Vous pourrez vous connecter avec <span className="font-mono text-foreground">{intake.contactEmail}</span> pour reprendre la main
+                {t("intakeResult.activate.li3Before")} <span className="font-mono text-foreground">{intake.contactEmail}</span> {t("intakeResult.activate.li3After")}
               </li>
             </ul>
 
@@ -1594,9 +1586,9 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
               className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {activateMutation.isPending ? (
-                <><Loader2 className="h-4 w-4 animate-spin" /> Creation en cours...</>
+                <><Loader2 className="h-4 w-4 animate-spin" /> {t("intakeResult.activate.pending")}</>
               ) : (
-                <>Activer mon cockpit <ArrowRight className="h-4 w-4" /></>
+                <>{t("intakeResult.activate.cta")} <ArrowRight className="h-4 w-4" /></>
               )}
             </button>
             {activateMutation.error && (
@@ -1610,9 +1602,9 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             <div className="flex items-center gap-3">
               <div className="rounded-full bg-primary/15 p-2"><ShieldCheck className="h-6 w-6 text-primary" /></div>
               <div>
-                <h2 className="text-lg font-bold text-foreground">Cockpit cree pour {activated.clientName}</h2>
+                <h2 className="text-lg font-bold text-foreground">{t("intakeResult.activated.titleBefore")} {activated.clientName}</h2>
                 <p className="mt-1 text-sm text-foreground-muted">
-                  Inscrivez-vous avec <span className="font-mono text-foreground">{activated.userEmail}</span> pour acceder a votre marque.
+                  {t("intakeResult.activated.subBefore")} <span className="font-mono text-foreground">{activated.userEmail}</span> {t("intakeResult.activated.subAfter")}
                 </p>
               </div>
             </div>
@@ -1620,7 +1612,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
               href={`/register?email=${encodeURIComponent(activated.userEmail)}`}
               className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
             >
-              Creer mon mot de passe <ArrowRight className="h-4 w-4" />
+              {t("intakeResult.activated.cta")} <ArrowRight className="h-4 w-4" />
             </Link>
           </section>
         )}
@@ -1633,7 +1625,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         <Modal
           open={pricingModalOpen}
           onClose={() => setPricingModalOpen(false)}
-          title="Trajectoire complète — 5 paliers"
+          title={t("intakeResult.modal.title")}
           size="2xl"
         >
           <PricingTiers
@@ -1660,16 +1652,16 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
               <div className="min-w-0">
                 <p className="truncate text-2xs uppercase tracking-wider text-zinc-500">
-                  Débloquer la suite
+                  {t("intakeResult.sticky.kicker")}
                 </p>
                 <p className="truncate text-sm text-zinc-200">
-                  À partir de{" "}
+                  {t("intakeResult.sticky.from")}{" "}
                   <span className="font-semibold text-amber-400">
                     {cheapest?.price.display ?? "—"}
                   </span>
                   {recommended && (
                     <span className="hidden sm:inline text-zinc-500">
-                      {" · Recommandé : "}
+                      {" "}{t("intakeResult.sticky.recommended")}{" "}
                       <span className="text-zinc-300">{recommended.price.display}</span>
                     </span>
                   )}
@@ -1680,7 +1672,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                 onClick={() => setPricingModalOpen(true)}
                 className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-amber-600 px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-amber-500"
               >
-                Voir les options
+                {t("intakeResult.tiers.cta")}
                 <ArrowRight className="h-4 w-4" />
               </button>
             </div>
