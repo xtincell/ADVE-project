@@ -1,7 +1,8 @@
-# ÉTAT FINAL RECHERCHÉ — plan final (2026-07-16)
+# ÉTAT FINAL RECHERCHÉ — plan final (2026-07-16, amendé 2026-07-19)
 
 **Statut** : PROPOSÉ — extension opérationnelle du [STATE_FINAL_BLUEPRINT](STATE_FINAL_BLUEPRINT.md) (qui reste canon doctrinal). Devient canon à ratification opérateur explicite.
 **Mandat** : « révise ton travail, vois les faiblesses de ton plan, les idées de génie qui manquent, et rédige le plan final de l'état final recherché. »
+**Amendement 2026-07-19** : les 5 paris ont été confrontés à des preuves externes (recherche profonde, 107 agents, vérification adversariale 3 votes/claim — synthèse en §8). Quatre corrections intégrées, marquées ⚗️ dans le texte.
 
 ---
 
@@ -24,7 +25,8 @@ Corollaire : **La Fusée est sa propre première marque culte.** Elle figure au 
 ## 2. Les trois idées de génie qui manquaient
 
 1. **Le Pari Public (la Pesée comme engagement).** Fusion du registre de paris + championnat + Overton : une marque cliente s'engage PUBLIQUEMENT sur une prédiction datée (« dans 90 jours, X »), enregistrée au registre, résolue à l'échéance devant tous. Le courage devient le produit. Une marque qui parie et gagne devient culte **par le pari lui-même** — et une qui n'ose pas parier se disqualifie seule. C'est l'inverse du marketing : de l'engagement vérifiable. Personne n'ose vendre ça ; c'est exactement pourquoi c'est à nous.
-2. **La Valorisation de marque certifiée** — le produit à haute marge oublié. Scoreur θ + benchmarks auto + relevés de valeur + Oracle = les ingrédients d'une **valorisation de marque** (à la Interbrand, inexistante en Afrique francophone) vendue aux M&A, banques, investisseurs, groupes. L'Oracle devient un titre : l'ADVE documenté est un **actif cessible** lors d'une vente d'entreprise. La Fusée devient le registre de référence des marques africaines.
+   ⚗️ **Conditions de crédibilité (validées empiriquement, §8)** : (a) la générosité d'un engagement n'est **crue** que pour des marques déjà connues ou des offres bon marché — une jeune marque inconnue qui fait un pari spectaculaire sur une offre chère n'est pas crue → **séquencer : notoriété d'abord, pari spectaculaire ensuite** (le cas-phare construit sa crédibilité avant son premier grand pari) ; (b) **règle Domino's** (gravée) : un pari dont l'échec coûte de la réputation ou de l'argent à la marque/l'agence — **jamais un pari qui incite des tiers à prendre des risques pour tenir la promesse** (la garantie « 30 minutes » a fait passer Domino's de 300 à 2 000+ restaurants puis a été tuée par 78 M$ de dommages punitifs après l'accident d'un livreur).
+2. **La Valorisation de marque certifiée** — le produit à haute marge oublié. Scoreur θ + benchmarks auto + relevés de valeur + Oracle = les ingrédients d'une **valorisation de marque** vendue aux acheteurs réels du marché. ⚗️ **Pas un terrain vierge — une niche désignée** : Brand Finance opère depuis Johannesburg depuis 2007 et vend exactement ce mix (valorisation, brand management, **valorisations techniques pour audit — IFRS 3, impairment, prix de transfert — et évaluation de sponsoring**, pas seulement le M&A) ; mais ses classements sont massivement anglophones/sud-africains (top 10 Africa 200 = 100 % sud-africain). **L'Afrique francophone est la niche que l'incumbent a laissée ouverte** — le modèle est validé ET la zone est libre. L'Oracle devient un titre : l'ADVE documenté est un **actif cessible** lors d'une vente d'entreprise. La Fusée devient le registre de référence des marques d'Afrique francophone.
 3. **Le parrainage comme première brique du passeport fan** (pas une feature marketing isolée). Chaque fan est un canal mesuré : recommander = une mission, récompensée en statut + FCFA. Le référral demandé (Hilaire) s'implémente DANS l'instrument fan, jamais à côté.
 
 ## 3. Les cinq boucles d'accumulation (l'état final EST ces boucles qui tournent)
@@ -36,6 +38,7 @@ Actif accumulé : lecteurs + autorité d'arbitre. Organes : tous existants sauf 
 ### B2 — FANS (la relation se possède)
 `Passeport fan WhatsApp-first (identity graph C1 déjà bâti) → dévotion VISIBLE pour le fan (statuts, initiation) → parrainage natif → micro-missions UGC payées mobile money (Guilde étendue aux fans)`
 Actif accumulé : communauté first-party avec consentement — plus louée à Meta. C'est l'organe qui manquait à la mission mot pour mot : « industrialiser l'accumulation de superfans ».
+⚗️ **Trois corrections empiriques (§8)** : (1) **rôle honnête de la boucle** — les superfans sont un mécanisme de **preuve sociale et de production organique**, PAS un moteur de croissance en volume (Double Jeopardy/Ehrenberg-Bass : la croissance vient de la pénétration/acquisition — c'est B1 qui porte le volume ; ne jamais vendre B2 comme substitut de B1) ; (2) **conception pull-first** — l'économie WhatsApp 2025+ rend gratuites les conversations initiées par le fan et facture chaque template marketing sortant : le passeport répond, il ne broadcast qu'en exception budgétée ; (3) **ingénierie fan-à-fan** — dans toutes les communautés documentées, le lien pair-à-pair prime sur le lien marque-membre : le passeport crée des liens ENTRE fans (rituels partagés, reconnaissance mutuelle), pas un canal vertical de plus.
 
 ### B3 — DONNÉE (la mémoire compose)
 `Registre de paris étendu aux ACTIONS (chaque brief/campagne = effet prédit + échéance) → résolution contre le réel → Jehuty affiche son taux de réussite → benchmarks auto + coûts vivants Thot (chaque mission/facture réelle nourrit les coûts marché)`
@@ -52,6 +55,7 @@ Ratio cible : 1 fondateur → 10+ certifiés opérant. Tant que cette boucle ne 
 ## 4. Le cas-phare (obligatoire, non négociable)
 
 Une marque réelle (candidates : SPAWT, Motion19, ou La Fusée elle-même) menée **en public** de son score actuel vers Forte : paris publiés, épreuves publiées, échecs publiés. C'est la seule preuve qui compte. Tout chantier qui n'aide pas le cas-phare passe après.
+⚗️ **Critère de sélection ajouté (§8)** : choisir une marque de **niche à intensité** — l'« excess loyalty » (le seul crochet empirique où la loyauté dépasse la norme) existe pour les marques étroites et intenses, pas pour le mass-market. Le positionnement culte se démontre sur une niche ; le FMCG de masse se gagne par pénétration (B1), pas par dévotion. Et par la condition de crédibilité du Pari Public : le cas-phare commence par des paris **modestes et tenus** avant le pari spectaculaire.
 
 ## 5. Invariants (ce qui ne change jamais)
 
@@ -72,6 +76,14 @@ Une marque réelle (candidates : SPAWT, Motion19, ou La Fusée elle-même) mené
 ## 7. Critères de l'état final atteint (mesurables)
 
 1. La newsletter Argos a des abonnés qui ne sont pas nous. 2. Une marque a gagné un Pari Public. 3. Un fan a touché une récompense via le passeport. 4. Jehuty affiche un taux de réussite calculé sur ≥ 50 paris résolus. 5. Une valorisation certifiée a été payée. 6. Une campagne a été opérée de bout en bout par un certifié non-fondateur. 7. La Fusée figure au leaderboard avec un score né d'épreuves réelles.
+
+## 8. Validation externe (recherche profonde 2026-07-19 — 107 agents, vérification adversariale 3 votes/claim)
+
+Les 5 paris confrontés aux preuves. Rapport complet cité dans le run du workflow ; digest :
+
+**VALIDÉ.** Les mécaniques culte sont empiriquement réelles (Muniz & O'Guinn, *JCR* 2001, ~10k citations : conscience partagée, **rituels**, responsabilité morale — et communauté « non-geographically bound » → WhatsApp-first validé). Une firme peut **délibérément** co-évoluer avec sa sous-culture et la monétiser (Schouten & McAlexander 1995 — Harley/HOG créé PAR l'entreprise) : « industrialiser » a un précédent. L'économie WhatsApp 2025+ favorise le modèle communautaire pull-first (conversations entrantes gratuites, templates marketing sortants ~0,01-0,12 $/msg). Le classement-comme-média est un modèle prouvé (Brand Finance Africa 200).
+
+**CONTREDIT/CORRIGÉ.** (a) **La croissance ne vient pas des superfans** : Double Jeopardy + JBR 2014 (acquisition > rétention) + loyauté polygame — corrections intégrées en B2 ; l'excess loyalty n'existe que pour les niches → critère cas-phare. (b) **Le Pari Public n'est crédible que sous conditions** (théorie du signal, Moorthy & Srinivasan 1995 ; Jeng 2014) : marques connues ou offres bon marché, séquençage notoriété→pari, règle Domino's (78 M$ punitifs) — intégré en §2.1. (c) **La valorisation africaine n'est pas un greenfield** : Brand Finance y opère depuis 2007 — mais biais anglophone/sud-africain total → la niche francophone est désignée, intégré en §2.2. (d) Nuance communautaire : le lien fan-à-fan prime sur le lien marque-fan ; l'appartenance communautaire seule ne produit PAS l'évangélisme oppositionnel (c'est la loyauté individuelle profonde qui le prédit) → l'échelle de dévotion (intensité) est le bon instrument, pas le headcount.
 
 ---
 
