@@ -7,6 +7,7 @@ import { trpc } from "@/lib/trpc/client";
 import { DevotionLadder } from "@/components/shared/devotion-ladder";
 import { MissionCard } from "@/components/shared/mission-card";
 import { EmptyState } from "@/components/shared/empty-state";
+import { ActivationChecklist } from "@/components/cockpit/activation-checklist";
 import { SkeletonPage, SkeletonCard } from "@/components/shared/loading-skeleton";
 import { Timeline } from "@/components/shared/timeline";
 import { Sparkline } from "@/components/shared/sparkline";
@@ -366,6 +367,9 @@ export default function CockpitDashboard() {
 
       {/* ── Batch Actions Bar ──────────────────────────────────── */}
       <BatchActionsBar strategyId={strategyId} />
+
+      {/* Checklist d'activation (audit onboarding 2026-07-19) — se masque à 100 % */}
+      <ActivationChecklist strategyId={strategyId} />
 
       {/* Brand Story Hero */}
       <div className="ck-grid ck-grid--hero">

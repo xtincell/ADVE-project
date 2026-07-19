@@ -582,7 +582,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 273 (par deck)
+## Pages — 274 (par deck)
 
 ### Agency (12)
 
@@ -660,7 +660,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/settings/billing`
 - `/cockpit/settings/connections`
 
-### Console (127)
+### Console (128)
 
 - `/console`
 - `/console/academie`
@@ -768,6 +768,7 @@ Ces correspondances évitent la réinvention :
 - `/console/socle/contracts`
 - `/console/socle/escrow`
 - `/console/socle/feedback`
+- `/console/socle/funnel`
 - `/console/socle/invoices`
 - `/console/socle/manual-subscriptions`
 - `/console/socle/market-costs`
