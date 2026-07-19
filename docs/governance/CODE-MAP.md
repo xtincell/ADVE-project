@@ -584,7 +584,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 277 (par deck)
+## Pages — 279 (par deck)
 
 ### Agency (12)
 
@@ -663,7 +663,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/settings/billing`
 - `/cockpit/settings/connections`
 
-### Console (128)
+### Console (129)
 
 - `/console`
 - `/console/academie`
@@ -781,6 +781,7 @@ Ces correspondances évitent la réinvention :
 - `/console/socle/prod-ops`
 - `/console/socle/revenue`
 - `/console/socle/transactions`
+- `/console/socle/valorisations`
 - `/console/socle/value-reports`
 - `/console/strategy-operations/boot`
 - `/console/strategy-operations/boot/[sessionId]`
@@ -834,7 +835,7 @@ Ces correspondances évitent la réinvention :
 - `/launchpad/portfolio-bulk-import`
 - `/score`
 
-### Public (44)
+### Public (45)
 
 - `/(marketing)`
 - `/agence`
@@ -843,6 +844,7 @@ Ces correspondances évitent la réinvention :
 - `/b/[slug]`
 - `/blog`
 - `/blog/[slug]`
+- `/certificat/[hash]`
 - `/cgu`
 - `/cgv`
 - `/changelog`
