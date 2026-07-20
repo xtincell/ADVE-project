@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.225 — fix(seshat+intake): collecte éprouvée sur cas réel — géo-d'abord + réseau dégradé (2026-07-20)
+
+**Test réel en boucle « Burger King Abidjan » (7 rounds run→inspect→fix) jusqu'au standard ADR-0162 : 5/5 mentions presse Côte d'Ivoire/Abidjan (Servair, Enko, Jeune Afrique, Glovo CI), 7 items de bruit écartés et comptés.** Amendement [ADR-0162](docs/governance/adr/0162-entity-gate-collecte-adversariale.md).
+
+- **Cascade presse géo-d'abord** : marque mondiale déclarée sur UN marché → la requête nom-seul remontait 5/5 articles France (même marque, mauvais marché). Passe 1 `"Burger King" ("Côte d'Ivoire" OR Abidjan)` (référentiel `COUNTRY_CITIES` exporté par l'entity-gate) ; passe 2 (rappel large) SEULEMENT si < 5 slots, ajoutée APRÈS le marché déclaré (dédup lien) ; tri par discriminants co-occurrents conservé.
+- **`countryCodeGuess` référentiel nom→ISO-2** (pré-existant, PATCHED-SYMPTOMS) : « Côte d'Ivoire » → null → locale presse `gl=CM`, aucun `.ci` probé, démonymes entity-gate absents. Mapping statique FR/EN des pays COUNTRY_TLD.
+- **Rétries réseau bornés** (pré-existant, PATCHED-SYMPTOMS) : `fetchRssText` 5× / `fetchPublic` 3×, timeout PAR TENTATIVE 3,5 s (8 s globaux tuaient le retry en vol), backoff progressif 400·n ms (rafale de probes → SYN blackholés ~1-2 s sur certains FAI — le terrain réel du marché cible). Échec HTTP déterministe jamais re-tenté.
+- **TLD pays d'abord** dans `candidateDomains` (`burgerking.ci` avant `.com` global — le domaine du marché déclaré représente LE client ; tous probés en parallèle, test mis à jour).
+- Vérifié : rejet honnête de `burgerking.com` (page anti-bot sans mention) compté `filtered.site` ; DEFERRED honnêtes sans clés ; `judge: DETERMINISTIC_ONLY` sans LLM. tsc 0 · lint 0 · 2434 tests verts.
+
 ## v6.27.224 — feat(seshat): entity-gate — collecte publique adversariale, désambiguïsation d'entité (2026-07-20)
 
 **La marque « Top » n'aspire plus « le top 10 des plages » : la collecte juge désormais des ENTITÉS, plus des mots.** Incident prod 2026-07-20 (soda Top, Brasseries du Cameroun) : la garde lexicale F3 (frontière de mot) est structurellement insuffisante pour un nom-mot-du-dictionnaire — tout le pipeline presse/découverte/Maps/site collectait le mot ordinaire. [ADR-0162](docs/governance/adr/0162-entity-gate-collecte-adversariale.md).

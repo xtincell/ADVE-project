@@ -152,7 +152,14 @@ export function toFeedItems(
 // ── Fetch durci (https-only, timeout, cap taille) ──────────────────────────────
 
 const MAX_BYTES = 1_500_000;
-const TIMEOUT_MS = 8_000;
+/**
+ * Timeout PAR TENTATIVE (pas global) : une connexion qui pend (SYN blackholé
+ * par une IP round-robin morte) doit lâcher vite pour laisser sa chance à la
+ * tentative suivante — 8 s par tentative mangeait toute la fenêtre de
+ * l'appelant et rendait les retries inopérants (test BK Abidjan 2026-07-20).
+ * Un fetch sain (connect + 150 KB) tient largement sous 3,5 s.
+ */
+const TIMEOUT_MS = 3_500;
 
 /** Récupère le XML d'un flux. https only. Retourne null sur échec (best-effort). */
 export async function fetchRssText(url: string): Promise<string | null> {
@@ -164,23 +171,38 @@ export async function fetchRssText(url: string): Promise<string | null> {
   }
   if (parsed.protocol !== "https:") return null;
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-  try {
-    const res = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        "User-Agent": "LaFuseeBot/1.0 (+https://lafusee.upgraders.io/trust-center)",
-        Accept: "application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.5",
-      },
-      redirect: "follow",
-    });
-    if (!res.ok) return null;
-    const text = await res.text();
-    return text.length > MAX_BYTES ? text.slice(0, MAX_BYTES) : text;
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timer);
+  // Jusqu'à 5 tentatives sur échec RÉSEAU uniquement (connect ETIMEDOUT /
+  // EHOSTUNREACH) : les résolveurs round-robin de news.google.com servent
+  // parfois une IP injoignable depuis certains FAI — l'échec est quasi
+  // instantané (~250-300 ms) et une tentative suivante finit par tomber sur
+  // une IP saine (mesuré test BK Abidjan 2026-07-20 : jusqu'à 3-4 FAIL
+  // consécutifs avant OK ; coût pire cas ~2 s). Une réponse HTTP non-ok est
+  // déterministe → pas de retry.
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    try {
+      const res = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          "User-Agent": "LaFuseeBot/1.0 (+https://lafusee.upgraders.io/trust-center)",
+          Accept: "application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.5",
+        },
+        redirect: "follow",
+      });
+      if (!res.ok) return null;
+      const text = await res.text();
+      return text.length > MAX_BYTES ? text.slice(0, MAX_BYTES) : text;
+    } catch {
+      if (attempt === 5) return null;
+      // Backoff PROGRESSIF (400·n ms) : après une rafale de connexions (probes
+      // de site parallèles), certains FAI blackholent les SYN ~1-2 s — des
+      // retries trop rapprochés tombent tous dans le trou (mesuré test BK
+      // Abidjan 2026-07-20 : 5 échecs en 2 s, puis succès).
+      await new Promise((r) => setTimeout(r, 400 * attempt));
+    } finally {
+      clearTimeout(timer);
+    }
   }
+  return null;
 }

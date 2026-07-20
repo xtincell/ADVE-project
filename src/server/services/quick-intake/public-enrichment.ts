@@ -31,7 +31,13 @@ import {
   type SocialProfile,
   type WebFootprint,
 } from "./web-footprint";
-import { createEntityGate, mentionsEntity, type EntityGateReport } from "@/server/services/seshat/entity-gate";
+import {
+  COUNTRY_CITIES,
+  createEntityGate,
+  mentionsEntity,
+  normalizeEntityText,
+  type EntityGateReport,
+} from "@/server/services/seshat/entity-gate";
 
 // ── Types ──────────────────────────────────────────────────────────────
 // Déplacés dans le module feuille `footprint-types` (rompt le cycle d'import
@@ -384,35 +390,77 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
     try {
       const { brandPressFeedFor } = await import("@/server/services/seshat/external-feeds/feed-sources");
       const { fetchRssText, parseRssItems } = await import("@/server/services/seshat/external-feeds/rss");
-      // Nom AMBIGU → requête discriminée À LA SOURCE (`"Top" (boissons OR
-      // Cameroun)`) : la requête nom-seul ne remonterait que du bruit que le
-      // gate écarterait ensuite — autant chercher juste dès le départ.
-      const pressQueryTerms = gate.ambiguity.ambiguous
-        ? [
-            ...(input.sector ?? "")
-              .split(/[\s,/;·]+/)
-              .filter((w) => w.length >= 3)
-              .slice(0, 2),
-            ...(input.country?.trim() ? [input.country.trim()] : []),
-          ]
+      const ccPress = countryCodeGuess(input.country);
+
+      // Juge + classe les items d'un flux : gate ADR-0162 (mention exigée +
+      // discriminant co-occurrent pour un nom ambigu — « Le top 10 des
+      // plages » est écarté), puis tri par nombre de discriminants matchés
+      // (desc, ordre Google stable sinon) — tri, jamais suppression.
+      const judgeFeed = (xml: string | null) =>
+        !xml
+          ? []
+          : parseRssItems(xml, 25)
+              .map((it) => ({ it, verdict: gate.judge(it.title) }))
+              .filter(({ verdict }) => {
+                if (!verdict.accepted) filtered.press += 1;
+                return verdict.accepted;
+              })
+              .map((entry, i) => ({ ...entry, i }))
+              .sort(
+                (a, b) =>
+                  b.verdict.matchedDiscriminants.length - a.verdict.matchedDiscriminants.length ||
+                  a.i - b.i,
+              );
+
+      // Termes secteur (requête discriminée pour un nom AMBIGU — `"Top"
+      // (boissons OR Cameroun)` : la requête nom-seul ne remonterait que du
+      // bruit que le gate écarterait ensuite).
+      const sectorTerms = [
+        ...(input.sector ?? "")
+          .split(/[\s,/;·]+/)
+          .filter((w) => w.length >= 3)
+          .slice(0, 2),
+        ...(input.country?.trim() ? [input.country.trim()] : []),
+      ];
+      // Termes géo (cascade géo-d'abord — test BK Abidjan 2026-07-20) : pour
+      // une marque mondiale déclarée sur UN marché, la requête nom-seul ne
+      // remonte que la presse des gros marchés (France…) — du bruit
+      // géographique pour le client d'Abidjan. On cherche d'abord
+      // `"Burger King" ("Côte d'Ivoire" OR Abidjan)`.
+      const geoTerms = input.country?.trim()
+        ? [`"${input.country.trim()}"`, ...(ccPress ? (COUNTRY_CITIES[ccPress] ?? []) : [])].slice(0, 3)
         : [];
-      const feed = brandPressFeedFor(input.companyName, countryCodeGuess(input.country), {
-        extraTerms: pressQueryTerms,
-      });
-      const xml = await withTimeout(fetchRssText(feed.url), Math.min(8_000, remaining()), null);
-      if (xml) {
-        // Gate d'entité (ADR-0162) : mention exigée + discriminant co-occurrent
-        // pour un nom ambigu (« Le top 10 des plages » mentionne « top » en
-        // frontière de mot — il est écarté faute de discriminant).
-        const items = parseRssItems(xml, 25).filter((it) => {
-          const ok = gate.judge(it.title).accepted;
-          if (!ok) filtered.press += 1;
-          return ok;
-        });
-        for (const it of items.slice(0, 5)) {
-          const { title, sourceName } = splitGoogleNewsTitle(it.title);
-          press.push({ title, url: it.link, sourceName, publishedAt: it.pubDate || null });
+
+      // 12 s par flux : fetchRssText retente jusqu'à 5× (3,5 s max/tentative)
+      // sur les IP round-robin mortes — une fenêtre de 8 s tuait le retry.
+      const fetchFeed = async (extraTerms: readonly string[]) => {
+        const feed = brandPressFeedFor(input.companyName, ccPress, { extraTerms });
+        return withTimeout(fetchRssText(feed.url), Math.min(12_000, remaining()), null);
+      };
+
+      // Passe 1 — géo-scopée si un pays est déclaré ; sinon comportement
+      // historique (discriminée si ambigu, nom-seul sinon).
+      const pass1Terms = geoTerms.length > 0 ? geoTerms : gate.ambiguity.ambiguous ? sectorTerms : [];
+      const accepted = judgeFeed(await fetchFeed(pass1Terms));
+
+      // Passe 2 (rappel) — si la passe géo n'a pas rempli les 5 slots : requête
+      // large (discriminée si ambigu), items ajoutés APRÈS ceux de la passe géo
+      // (dédup par lien). La presse du marché déclaré prime toujours.
+      if (geoTerms.length > 0 && accepted.length < 5 && remaining() > 3_000) {
+        const seen = new Set(accepted.map(({ it }) => it.link));
+        for (const entry of judgeFeed(await fetchFeed(gate.ambiguity.ambiguous ? sectorTerms : []))) {
+          if (!seen.has(entry.it.link)) {
+            seen.add(entry.it.link);
+            accepted.push(entry);
+          }
         }
+      }
+
+      for (const { it } of accepted.slice(0, 5)) {
+        const { title, sourceName } = splitGoogleNewsTitle(it.title);
+        press.push({ title, url: it.link, sourceName, publishedAt: it.pubDate || null });
+      }
+      if (accepted.length > 0 || filtered.press > 0) {
         pressStatus = press.length > 0 ? "LIVE" : "EMPTY";
       }
     } catch (err) {
@@ -711,11 +759,37 @@ export async function persistFootprintToPillarE(
   return { challenged: result.challenged ?? [] };
 }
 
-/** Le pays intake est un nom libre ("Cameroun") ou un ISO-2 — best-effort ISO-2. */
-function countryCodeGuess(country?: string | null): string | null {
+/**
+ * Le pays intake est un nom libre ("Cameroun", "Côte d'Ivoire") ou un ISO-2.
+ * Référentiel statique nom→ISO-2 (FR/EN, pays du COUNTRY_TLD web-footprint) —
+ * sans lui, « Côte d'Ivoire » rendait null → locale presse retombée sur CM,
+ * pas de TLD .ci probé, pas de démonymes entity-gate (bug test BK Abidjan
+ * 2026-07-20). Normalisation diacritiques/ponctuation via entity-gate.
+ */
+const COUNTRY_NAME_TO_ISO2: Record<string, string> = {
+  "cameroun": "CM", "cameroon": "CM",
+  "cote d ivoire": "CI", "ivory coast": "CI",
+  "senegal": "SN",
+  "france": "FR",
+  "maroc": "MA", "morocco": "MA",
+  "nigeria": "NG",
+  "ghana": "GH",
+  "tunisie": "TN", "tunisia": "TN",
+  "congo": "CD", "rdc": "CD", "republique democratique du congo": "CD",
+  "benin": "BJ",
+  "togo": "TG",
+  "gabon": "GA",
+  "burkina faso": "BF", "burkina": "BF",
+  "mali": "ML",
+};
+
+/** Exporté pour tests. */
+export function countryCodeGuess(country?: string | null): string | null {
   if (!country) return null;
   const c = country.trim();
-  return /^[A-Za-z]{2}$/.test(c) ? c.toUpperCase() : null;
+  if (/^[A-Za-z]{2}$/.test(c)) return c.toUpperCase();
+  const normalized = normalizeEntityText(c);
+  return COUNTRY_NAME_TO_ISO2[normalized] ?? null;
 }
 
 // ── Writeback pilier E (pur) ───────────────────────────────────────────

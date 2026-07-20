@@ -258,36 +258,50 @@ export async function assertPublicUrl(rawUrl: string): Promise<URL> {
 
 async function fetchPublic(rawUrl: string): Promise<{ ok: boolean; status: number; body: string }> {
   const url = await assertPublicUrl(rawUrl);
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-  try {
-    const res = await fetch(url.toString(), {
-      signal: controller.signal,
-      redirect: "follow",
-      headers: { "User-Agent": UA, Accept: "text/html,application/xhtml+xml,application/xml" },
-    });
-    const reader = res.body?.getReader();
-    let received = 0;
-    const chunks: Uint8Array[] = [];
-    if (reader) {
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        if (value) {
-          received += value.byteLength;
-          chunks.push(value);
-          if (received >= MAX_BYTES) {
-            controller.abort();
-            break;
+  // 3 tentatives sur échec RÉSEAU pur (connect ETIMEDOUT quasi instantané —
+  // résolveurs round-robin servant parfois une IP injoignable, mesuré test BK
+  // Abidjan 2026-07-20). Une réponse HTTP (même 4xx/5xx) est déterministe →
+  // rendue telle quelle, jamais re-tentée.
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    try {
+      const res = await fetch(url.toString(), {
+        signal: controller.signal,
+        redirect: "follow",
+        headers: { "User-Agent": UA, Accept: "text/html,application/xhtml+xml,application/xml" },
+      });
+      const reader = res.body?.getReader();
+      let received = 0;
+      const chunks: Uint8Array[] = [];
+      if (reader) {
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (value) {
+            received += value.byteLength;
+            chunks.push(value);
+            if (received >= MAX_BYTES) {
+              controller.abort();
+              break;
+            }
           }
         }
       }
+      const body = Buffer.concat(chunks.map((c) => Buffer.from(c))).toString("utf8");
+      return { ok: res.ok, status: res.status, body };
+    } catch (err) {
+      lastErr = err;
+      clearTimeout(timer);
+      if (attempt === 3) break;
+      await new Promise((r) => setTimeout(r, 200));
+      continue;
+    } finally {
+      clearTimeout(timer);
     }
-    const body = Buffer.concat(chunks.map((c) => Buffer.from(c))).toString("utf8");
-    return { ok: res.ok, status: res.status, body };
-  } finally {
-    clearTimeout(timer);
   }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 }
 
 // ── Auto-découverte du site officiel (déterministe, zéro clé) ────────────
@@ -314,13 +328,20 @@ const COUNTRY_TLD: Record<string, string> = {
   TN: "tn", CD: "cd", BJ: "bj", TG: "tg", GA: "ga", BF: "bf", ML: "ml",
 };
 
-/** Domaines candidats (déterministe) : `.com` + TLD pays + génériques. Max 5. */
+/**
+ * Domaines candidats (déterministe) : TLD du pays déclaré D'ABORD (le marché
+ * du client — pour une franchise, `burgerking.ci` représente mieux le client
+ * d'Abidjan que le `.com` global ; test BK 2026-07-20, ADR-0162), puis `.com`
+ * + génériques. Max 5. Tous sont probés en parallèle — l'ordre n'est que la
+ * préférence de sélection.
+ */
 export function candidateDomains(name: string, countryCode?: string | null): string[] {
   const slug = brandDomainSlug(name);
   if (slug.length < 2) return [];
-  const tlds = ["com"];
+  const tlds: string[] = [];
   const cc = countryCode?.trim().toUpperCase();
   if (cc && COUNTRY_TLD[cc]) tlds.push(COUNTRY_TLD[cc]);
+  tlds.push("com");
   for (const t of ["net", "africa", "co"]) tlds.push(t);
   const seen = new Set<string>();
   const out: string[] = [];

@@ -123,26 +123,51 @@ export function assessBrandNameAmbiguity(name: string): AmbiguityAssessment {
 }
 
 /**
- * Démonymes/toponymes par pays (table STATIQUE de référence, même esprit que
- * COUNTRY_TLD de web-footprint — pas une invention, un référentiel). Tokens
- * déjà normalisés.
+ * Démonymes + villes majeures par pays (tables STATIQUES de référence, même
+ * esprit que COUNTRY_TLD de web-footprint — pas une invention, un référentiel).
+ * Tokens déjà normalisés.
  */
-const COUNTRY_DISCRIMINANTS: Record<string, string[]> = {
-  CM: ["cameroun", "cameroon", "camerounais", "camerounaise", "douala", "yaounde"],
-  CI: ["ivoire", "ivoirien", "ivoirienne", "abidjan"],
-  SN: ["senegal", "senegalais", "senegalaise", "dakar"],
-  FR: ["france", "francais", "francaise", "paris"],
-  MA: ["maroc", "marocain", "marocaine", "casablanca", "rabat"],
-  NG: ["nigeria", "nigerian", "lagos", "abuja"],
-  GH: ["ghana", "ghanaian", "accra"],
-  TN: ["tunisie", "tunisien", "tunisienne", "tunis"],
-  CD: ["congo", "congolais", "congolaise", "kinshasa", "rdc"],
-  BJ: ["benin", "beninois", "beninoise", "cotonou"],
-  TG: ["togo", "togolais", "togolaise", "lome"],
-  GA: ["gabon", "gabonais", "gabonaise", "libreville"],
-  BF: ["burkina", "burkinabe", "ouagadougou"],
-  ML: ["mali", "malien", "malienne", "bamako"],
+const COUNTRY_DEMONYMS: Record<string, string[]> = {
+  CM: ["cameroun", "cameroon", "camerounais", "camerounaise"],
+  CI: ["ivoire", "ivoirien", "ivoirienne"],
+  SN: ["senegal", "senegalais", "senegalaise"],
+  FR: ["france", "francais", "francaise"],
+  MA: ["maroc", "marocain", "marocaine"],
+  NG: ["nigeria", "nigerian"],
+  GH: ["ghana", "ghanaian"],
+  TN: ["tunisie", "tunisien", "tunisienne"],
+  CD: ["congo", "congolais", "congolaise", "rdc"],
+  BJ: ["benin", "beninois", "beninoise"],
+  TG: ["togo", "togolais", "togolaise"],
+  GA: ["gabon", "gabonais", "gabonaise"],
+  BF: ["burkina", "burkinabe"],
+  ML: ["mali", "malien", "malienne"],
 };
+
+/** Villes majeures par ISO-2 — exportées pour les requêtes géo-scopées (presse). */
+export const COUNTRY_CITIES: Record<string, string[]> = {
+  CM: ["douala", "yaounde"],
+  CI: ["abidjan"],
+  SN: ["dakar"],
+  FR: ["paris"],
+  MA: ["casablanca", "rabat"],
+  NG: ["lagos", "abuja"],
+  GH: ["accra"],
+  TN: ["tunis"],
+  CD: ["kinshasa"],
+  BJ: ["cotonou"],
+  TG: ["lome"],
+  GA: ["libreville"],
+  BF: ["ouagadougou"],
+  ML: ["bamako"],
+};
+
+const COUNTRY_DISCRIMINANTS: Record<string, string[]> = Object.fromEntries(
+  Object.keys(COUNTRY_DEMONYMS).map((cc) => [
+    cc,
+    [...COUNTRY_DEMONYMS[cc]!, ...(COUNTRY_CITIES[cc] ?? [])],
+  ]),
+);
 
 export interface DiscriminantContext {
   /** Secteur déclaré à l'intake (texte libre). */

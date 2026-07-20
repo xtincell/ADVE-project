@@ -18,10 +18,14 @@ describe("brandDomainSlug", () => {
 });
 
 describe("candidateDomains", () => {
-  it("génère .com + TLD pays + génériques, déterministe, max 5", () => {
+  it("génère TLD pays D'ABORD + .com + génériques, déterministe, max 5", () => {
     const c = candidateDomains("Chococam", "CM");
-    expect(c[0]).toBe("https://chococam.com"); // .com d'abord (préférence)
-    expect(c).toContain("https://chococam.cm"); // TLD Cameroun
+    // TLD du marché déclaré en tête (ADR-0162, test BK Abidjan 2026-07-20) :
+    // pour une franchise mondiale, le domaine du pays représente LE client.
+    // Tous les candidats sont probés en parallèle — l'ordre n'est que la
+    // préférence de sélection ; un .cm absent retombe sur le .com.
+    expect(c[0]).toBe("https://chococam.cm"); // TLD pays d'abord
+    expect(c).toContain("https://chococam.com");
     expect(c.length).toBeLessThanOrEqual(5);
     expect(candidateDomains("Chococam", "CM")).toEqual(c); // variance = 0
   });
