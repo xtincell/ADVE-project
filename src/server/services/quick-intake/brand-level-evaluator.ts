@@ -9,6 +9,7 @@ import {
   compareTiers,
   normalizePalier,
 } from "@/domain";
+import { sectorDisplayLabel } from "@/domain/sector-taxonomy";
 
 // ============================================================================
 // MODULE — Brand Level Evaluator
@@ -152,7 +153,7 @@ export async function evaluateBrandLevel(input: {
   // LOT 1e — entrées non fiables neutralisées (anti-injection). Nom/secteur/pays
   // inline ; valeurs extraites + réponses brutes (texte founder) balisées en bloc.
   const prompt = `MARQUE : ${sanitizeInline(companyName, { max: 120 })}
-SECTEUR : ${sanitizeInline(sector ?? "non precis", { max: 80 })}
+SECTEUR : ${sanitizeInline(sectorDisplayLabel(sector) ?? sector ?? "non precis", { max: 80 })}
 PAYS : ${sanitizeInline(country ?? "non precis", { max: 60 })}
 
 ${wrapUntrusted("VALEURS EXTRAITES PAR PILIER ADVE", formatExtracted(), { max: 8000 })}
@@ -305,7 +306,8 @@ export function deriveBrandLevelDeterministic(input: {
   completionByPillar: Record<"a" | "d" | "v" | "e", number>;
 }): BrandLevelEvaluation {
   const { companyName, sector, extractedValues, completionByPillar } = input;
-  const sectorLabel = sector ?? "son secteur";
+  // Libellé humain, jamais le CODE canon (« dans AUTRE » — fix 2026-07-20).
+  const sectorLabel = sectorDisplayLabel(sector) ?? "son secteur";
 
   // Per-pillar density: fraction of extracted fields that are non-empty.
   const pillarDensity = (k: "a" | "d" | "v" | "e"): number => {

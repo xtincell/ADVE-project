@@ -52,7 +52,7 @@ const ALLOWED_BARE_CALLERS: ReadonlyArray<{ file: string; line: number; reason: 
   },
   {
     file: "src/server/services/quick-intake/infer-needs-human-fields.ts",
-    line: 504,
+    line: 501,
     reason:
       "Inférence needs-human fields (reroute C2) — bare writePillar VOLONTAIRE : draft AI_PROPOSED mi-intake, scoré à l'activation comme le reste du flux. Validation + PillarVersion + cascade + author trail appliqués ; fieldCertainty (métadonnée) écrite séparément.",
   },

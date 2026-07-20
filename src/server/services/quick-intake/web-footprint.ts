@@ -374,6 +374,19 @@ export function candidateDomains(name: string, countryCode?: string | null): str
  * page »). `opts.validate` permet à l'appelant d'imposer le verdict complet
  * du gate (discriminants exigés pour un nom ambigu).
  */
+/**
+ * Détection déterministe de domaine PARQUÉ / à vendre. Une page de parking
+ * mentionne toujours le slug de la marque (« dovv.com is for sale ») — la
+ * garde de mention seule est donc structurellement aveugle à ce faux positif
+ * (test qualité Dovv 2026-07-20 : dovv.com « This Domain May Be For Sale »
+ * adopté comme site officiel, socials poubelle scrapés depuis le parking).
+ */
+export function looksLikeParkedDomain(pageText: string): boolean {
+  return /domain (?:may be |is )?for sale|buy this domain|this domain is parked|domain parking|parked (?:free )?courtesy|achetez ce domaine|ce domaine est à vendre|sedo\.com|hugedomains|afternic|dan\.com\/buy|godaddy\.com\/domainsearch|undeveloped\.com|domainmarket\.com/i.test(
+    pageText,
+  );
+}
+
 export async function discoverOfficialSite(
   name: string,
   countryCode?: string | null,
@@ -396,6 +409,7 @@ export async function discoverOfficialSite(
         if (!raced.ok) return null;
         const meta = parseHtmlMeta(raced.body);
         const pageText = `${meta.title ?? ""} ${meta.description ?? ""} ${raced.body.slice(0, 4_000)}`;
+        if (looksLikeParkedDomain(pageText)) return null;
         return validate(pageText) ? url : null;
       } catch {
         return null;

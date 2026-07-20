@@ -185,6 +185,9 @@ interface InferredAdveFields {
       defensibility?: "LOW" | "MEDIUM" | "HIGH";
       category?: "data" | "network" | "brand" | "process" | "cost";
     }>;
+    // `esov` : jamais généré par le LLM (interdit au prompt) — posé en CODE
+    // depuis le benchmark sectoriel déterministe, `measurementMethod:
+    // "benchmark sectoriel à valider"` (étiquetage honnête).
     esov?: {
       value: number;
       measurementMethod?: string;
@@ -210,13 +213,10 @@ interface InferredAdveFields {
       packagingMaterial?: "premium" | "standard" | "eco";
       deliveryMode?: "express" | "standard" | "event";
     };
-    roiProofs?: Array<{
-      client?: string;
-      beforeMetric: string;
-      afterMetric: string;
-      lift: string;
-      timeframe: string;
-    }>;
+    // `roiProofs` RETIRÉ de l'inférence (2026-07-20, ADR-0163) : une preuve
+    // ROI chiffrée est de la DONNÉE RÉELLE (comme traction, exclue par
+    // doctrine) — la drafter fabrique des « +300 % » et attestations fictives
+    // qui gonflent le score V et s'affichent au client comme extraites.
   };
   e?: {
     // ADR-0037 PR-K3 — pilier E intégré au flux d'inférence (était exclu avant)
@@ -356,9 +356,6 @@ FORMAT DE SORTIE — STRICT JSON, sans markdown :
       "packagingMaterial": "premium|standard|eco",
       "deliveryMode": "express|standard|event"
     },
-    "roiProofs": [
-      { "client": "<placeholder ou client réel>", "beforeMetric": "<métrique avant>", "afterMetric": "<métrique après>", "lift": "<+X% ou xN>", "timeframe": "<ex: 90j>" }
-    ]
   },
   "e": {
     "pelerinages": [

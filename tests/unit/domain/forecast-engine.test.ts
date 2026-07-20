@@ -99,7 +99,11 @@ describe("single-writer PredictionRecord (verrou HARD, ADR-0156)", () => {
       { encoding: "utf8", cwd: process.cwd() },
     )
       .split("\n")
-      .filter(Boolean);
+      .filter(Boolean)
+      // grep BSD (macOS) émet `src//server/...` quand le motif de départ finit
+      // par `/` — normalisé pour que le verrou tourne à l'identique en local
+      // et en CI Linux (pré-existant, constaté 2026-07-20).
+      .map((p) => p.replace(/\/{2,}/g, "/"));
     expect(out).toEqual(["src/server/services/seshat/prediction/index.ts"]);
   });
 });

@@ -60,3 +60,28 @@ describe("sync taxonomie ⊇ INTAKE_SECTORS (pas de code orphelin)", () => {
     expect(new Set(slugs).size).toBe(slugs.length);
   });
 });
+
+// ── Fix 2026-07-20 (test qualité 5 marques) : pluriels/dérivés + libellé ──
+import { sectorDisplayLabel } from "@/domain/sector-taxonomy";
+
+describe("classifyCanonicalSector — préfixe de mot (pluriels/dérivés)", () => {
+  it("« Télécommunications » → TELECOM (dérivé de `telecom`)", () => {
+    expect(classifyCanonicalSector("Télécommunications").code).toBe("TELECOM");
+  });
+  it("« Boissons » → FOOD (pluriel de `boisson`)", () => {
+    expect(classifyCanonicalSector("Boissons").code).toBe("FOOD");
+  });
+  it("les keywords courts restent mot-entier : « modèle business » ne matche pas MODE", () => {
+    expect(classifyCanonicalSector("modèle business").code).not.toBe("MODE");
+  });
+});
+
+describe("sectorDisplayLabel — jamais de code brut sur une surface client", () => {
+  it("code canon → libellé humain", () => {
+    expect(sectorDisplayLabel("RETAIL")).toBe("Retail & distribution");
+  });
+  it("AUTRE → null (l'appelant choisit sa périphrase)", () => {
+    expect(sectorDisplayLabel("un truc introuvable xyz")).toBeNull();
+    expect(sectorDisplayLabel(null)).toBeNull();
+  });
+});

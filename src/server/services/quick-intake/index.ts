@@ -601,10 +601,26 @@ export async function complete(token: string) {
     const baseContent = isEmptyObject(structuredContent)
       ? salvageRawResponses(pillar, rawResponses)
       : structuredContent;
+    // Scrub DÉTERMINISTE des preuves non fondées (ADR-0163) : la règle prompt
+    // « ne fabrique jamais de chiffres » ne suffit pas — l'extracteur produit
+    // des roiProofs inventés (+300 %, attestations fictives) qui gonflent le
+    // score V et s'affichent au client. Tout champ de preuve dont les nombres
+    // n'apparaissent pas dans les réponses source + faits déclarés est droppé.
+    const { scrubUnfoundedEvidence } = await import("./evidence-scrub");
+    const scrubSource = `${JSON.stringify(responses ?? {})} ${JSON.stringify(canonicalContext)}`;
+    const scrubbed = scrubUnfoundedEvidence(
+      (baseContent as Record<string, unknown> | undefined) ?? {},
+      scrubSource,
+    );
+    if (scrubbed.dropped.length > 0) {
+      console.warn(
+        `[quick-intake] pilier ${pillar} — preuves non fondées droppées (anti-fabrication): ${scrubbed.dropped.join(", ")}`,
+      );
+    }
     // Seal declared canonical fields so LLM cannot drift the pillar away
     // from the intake (e.g. businessModel:"SERVICES" when declared RAZOR_BLADE).
     // Only ADVE pillars carry declared canonical fields — pass RTIS through.
-    const safeBase = (baseContent as Record<string, unknown> | undefined) ?? {};
+    const safeBase = scrubbed.content;
     let sealedContent =
       pillar === "a" || pillar === "d" || pillar === "v" || pillar === "e"
         ? sealCanonicalPillarFields(pillar, safeBase, canonicalContext)
@@ -740,16 +756,12 @@ export async function complete(token: string) {
     { a: {}, d: {}, v: {}, e: {} },
   );
 
-  // ── BRAND-LEVEL EVALUATOR (kicked off early, awaited after narrative) ──
-  // Optimisation 2026-05-11 (test:golden-path perf:complete-too-slow) :
-  // brandLevel et narrativeReport sont structurellement indépendants — tous
-  // deux lisent extractedValues + responses + vector mais aucun ne dépend de
-  // la sortie de l'autre. On les fait tourner en parallèle pour réduire le
-  // wait commercial de ~10-20s (mesure complete() : ~130s → cible ~100-110s).
-  //
-  // Le brandLevel.level OVERRIDE classification après que narrative ait
-  // utilisé la classification threshold-based — pas de changement de
-  // comportement vs séquentiel.
+  // ── BRAND-LEVEL EVALUATOR (kicked off early, awaited AVANT le narratif) ──
+  // Démarré ici pour recouvrir les étages suivants (scoring, recos, Seshat
+  // grounding) ; attendu juste avant la génération du narratif pour que la
+  // synthèse exécutive mette en scène le niveau FINAL (fix cohérence
+  // 2026-07-20 — l'ancien await post-narratif produisait « FRAGILE » en
+  // header et « ressort au niveau LATENT » en synthèse).
   const brandLevelPromise: Promise<import("./brand-level-evaluator").BrandLevelEvaluation | null> = (async () => {
     try {
       const { evaluateBrandLevel } = await import("./brand-level-evaluator");
@@ -780,6 +792,20 @@ export async function complete(token: string) {
       return null;
     }
   })();
+
+  // ── BRAND-LEVEL EVALUATOR — attendu AVANT le narratif (fix 2026-07-20) ──
+  // Le niveau FINAL (brandLevel.level) doit être celui que le narratif met en
+  // scène : l'ancien await tardif faisait écrire la synthèse exécutive avec la
+  // classification threshold-based (« ressort au niveau LATENT ») pendant que
+  // le header affichait le brandLevel (« FRAGILE ») — page incohérente,
+  // constatée en prod (rapport « Top » 2026-07-20) puis sur les 5 marques du
+  // test qualité. La perte de parallélisme est bornée : l'évaluation a démarré
+  // bien plus haut (brandLevelPromise) — on n'attend ici que son reliquat.
+  const brandLevel = await brandLevelPromise;
+  if (brandLevel) {
+    // Override the threshold-based classification with the substance verdict.
+    classification = brandLevel.level;
+  }
 
   // ── NARRATIVE REPORT: written ADVE diagnostic + RTIS proposition ──
   // Drives the public result page (replaces the metric-heavy view).
@@ -1017,17 +1043,7 @@ export async function complete(token: string) {
     durationMs: elapsed(),
   });
 
-  // ── BRAND-LEVEL EVALUATOR: substance-based placement on the ladder ──
-  // This is THE deliverable for the MVP pre-evaluation: where the brand sits
-  // (Latent → Icone) based on what was said + the trajectory toward Culte.
-  // Overrides the threshold-based classification.
-  // L'evaluation a démarré en parallèle de narrative-report (cf. brandLevelPromise
-  // plus haut). On await le résultat ici.
-  const brandLevel = await brandLevelPromise;
-  if (brandLevel) {
-    // Override the threshold-based classification with the LLM verdict
-    classification = brandLevel.level;
-  }
+  // (brandLevel déjà attendu AVANT le narratif — cf. fix cohérence 2026-07-20.)
 
   // ── FINANCIAL CAPACITY (Thot) — extract direct anchors + persist ─────
   // Snapshot financial answers from biz responses into a structured column
@@ -1277,7 +1293,18 @@ export async function regenerateAnalysis(
     const baseContent = isEmptyObject(structuredContents[pillar])
       ? salvageRawResponses(pillar, responses[pillar])
       : structuredContents[pillar];
-    const safeBase = (baseContent as Record<string, unknown> | undefined) ?? {};
+    // Scrub anti-fabrication (ADR-0163) — parité avec complete().
+    const { scrubUnfoundedEvidence } = await import("./evidence-scrub");
+    const scrubbed = scrubUnfoundedEvidence(
+      (baseContent as Record<string, unknown> | undefined) ?? {},
+      `${JSON.stringify(responses ?? {})} ${JSON.stringify(canonicalContext)}`,
+    );
+    if (scrubbed.dropped.length > 0) {
+      console.warn(
+        `[quick-intake.regen] pilier ${pillar} — preuves non fondées droppées: ${scrubbed.dropped.join(", ")}`,
+      );
+    }
+    const safeBase = scrubbed.content;
     const sealed =
       pillar === "a" || pillar === "d" || pillar === "v" || pillar === "e"
         ? sealCanonicalPillarFields(pillar, safeBase, canonicalContext)
@@ -1305,6 +1332,42 @@ export async function regenerateAnalysis(
     responses as Record<string, Record<string, string>> | null,
     intake.companyName,
   );
+
+  // ── Brand-level AVANT le narratif (fix cohérence 2026-07-20, parité avec
+  // complete()) : la synthèse doit mettre en scène le niveau FINAL, pas la
+  // classification threshold-based qu'il s'apprête à écraser.
+  let brandLevel: import("./brand-level-evaluator").BrandLevelEvaluation | null = null;
+  try {
+    const { evaluateBrandLevel } = await import("./brand-level-evaluator");
+    const completionByPillar: Record<"a" | "d" | "v" | "e", number> = {
+      a: (vector.a ?? 0) / 25,
+      d: (vector.d ?? 0) / 25,
+      v: (vector.v ?? 0) / 25,
+      e: (vector.e ?? 0) / 25,
+    };
+    const levelRows = await db.pillar.findMany({
+      where: { strategyId: strategy.id, key: { in: [...ADVE_STORAGE_KEYS] } },
+      select: { key: true, content: true },
+    });
+    const levelValues = levelRows.reduce<Record<"a" | "d" | "v" | "e", Record<string, unknown>>>(
+      (acc, row) => {
+        acc[row.key as "a" | "d" | "v" | "e"] = (row.content as Record<string, unknown> | null) ?? {};
+        return acc;
+      },
+      { a: {}, d: {}, v: {}, e: {} },
+    );
+    brandLevel = await evaluateBrandLevel({
+      companyName: intake.companyName,
+      sector: intake.sector,
+      country: intake.country,
+      responses: responses as Record<string, Record<string, string>> | null,
+      extractedValues: levelValues,
+      completionByPillar,
+    });
+    classification = brandLevel.level;
+  } catch (err) {
+    console.warn("[quick-intake.regen] brand level regeneration failed (non-blocking):", err instanceof Error ? err.message : err);
+  }
 
   // Re-run the narrative report — the previous one had the same drift baked in.
   let narrativeReport: import("./narrative-report").NarrativeReport | null = null;
@@ -1358,39 +1421,7 @@ export async function regenerateAnalysis(
     }
   }
 
-  // Re-run brand-level evaluation (the previous one was wired off the stale data).
-  let brandLevel: import("./brand-level-evaluator").BrandLevelEvaluation | null = null;
-  try {
-    const { evaluateBrandLevel } = await import("./brand-level-evaluator");
-    const completionByPillar: Record<"a" | "d" | "v" | "e", number> = {
-      a: (vector.a ?? 0) / 25,
-      d: (vector.d ?? 0) / 25,
-      v: (vector.v ?? 0) / 25,
-      e: (vector.e ?? 0) / 25,
-    };
-    const extractedRows = await db.pillar.findMany({
-      where: { strategyId: strategy.id, key: { in: [...ADVE_STORAGE_KEYS] } },
-      select: { key: true, content: true },
-    });
-    const extractedValues = extractedRows.reduce<Record<"a" | "d" | "v" | "e", Record<string, unknown>>>(
-      (acc, row) => {
-        acc[row.key as "a" | "d" | "v" | "e"] = (row.content as Record<string, unknown> | null) ?? {};
-        return acc;
-      },
-      { a: {}, d: {}, v: {}, e: {} },
-    );
-    brandLevel = await evaluateBrandLevel({
-      companyName: intake.companyName,
-      sector: intake.sector,
-      country: intake.country,
-      responses: responses as Record<string, Record<string, string>> | null,
-      extractedValues,
-      completionByPillar,
-    });
-    classification = brandLevel.level;
-  } catch (err) {
-    console.warn("[quick-intake.regen] brand level regeneration failed (non-blocking):", err instanceof Error ? err.message : err);
-  }
+  // (brandLevel déjà recalculé AVANT le narratif — fix cohérence 2026-07-20.)
 
   await db.quickIntake.update({
     where: { id: intake.id },

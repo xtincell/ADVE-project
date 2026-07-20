@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.228 — fix(intake): qualité de l'OUTPUT — anti-fabrication de preuves, cohérence de palier, anti-parking, taxonomie secteur (test 5 marques) (2026-07-20)
+
+**Test qualité de la page finale `/intake/[token]/result` sur 5 marques réelles à découvrabilité étagée (Orange · Brasseries du Cameroun · Dovv · Azur · La Paillote) — on ne jugeait que les remontées, pas l'output. 4 défauts trouvés, corrigés, re-vérifiés sur pages régénérées** ([ADR-0163](docs/governance/adr/0163-anti-fabrication-preuves-intake.md)) :
+
+- **Anti-fabrication de preuves** (ADR-0163) : l'extracteur LLM inventait des `roiProofs` (« +300 % — PME Cameroun — attestation fictive ») affichés au client comme « valeurs extraites » et gonflant V à 24,4/25 pour un intake de 5 phrases. La règle prompt ne suffisait pas → **scrub déterministe** `evidence-scrub.ts` (champ de preuve dont les nombres ne sont pas dans la source → droppé, jamais remplacé ; jugements intouchés) branché sur `complete()` + ré-extraction premium ; `roiProofs` retiré de l'inférence needsHuman (une preuve ne se draft pas).
+- **Cohérence de palier** (le bug du rapport « Top ») : header « FRAGILE » vs synthèse « ressort au niveau LATENT » — le narratif recevait la classification threshold-based, écrasée APRÈS par `brandLevel`. `brandLevel` attendu AVANT le narratif (complete() + regenerateAnalysis) : un seul palier final partout. Vérifié : Orange ORDINAIRE/ORDINAIRE, Dovv FRAGILE/FRAGILE.
+- **Anti-parking** : `dovv.com` (« This Domain May Be For Sale ») adopté comme site officiel + socials poubelle scrapés du parking (`@rimbiana`). `looksLikeParkedDomain` déterministe dans la découverte. Vérifié : « aucun site détecté » honnête.
+- **Taxonomie secteur** : « Télécommunications »/« Boissons » → AUTRE (match mot-entier strict aveugle aux pluriels/dérivés) et CODE brut rendu au client (« pour Orange dans AUTRE »). Match par préfixe (keywords ≥ 5) + `sectorDisplayLabel()` (AUTRE → périphrase). Corrigé aussi : handle TikTok « discover » (chemins réservés élargis, v6.27.227 complété).
+- Réparés en passant (pré-existants, PATCHED-SYMPTOMS) : verrou `forecast-engine` cassé sur grep BSD macOS (`src//`), allowlist `no-bare-writepillar` ré-épinglée. tsc 0 · lint 0 · 0 cycle · **2839 tests verts** (+13 : evidence-scrub 6, taxonomie 5, parking 2).
+
 ## v6.27.227 — fix(seshat+intake): clés réelles branchées — filtre marché socials, Apify async 2 temps, réserve juge (rounds 11-15 BK Abidjan) (2026-07-20)
 
 **Suite du test en boucle avec les clés réelles (Ollama Cloud `deepseek-v4-flash` + Brave + Apify) : le cran 3 (réfutation LLM) a tourné en vrai (`DETERMINISTIC_PLUS_LLM`, 0 faux rejet sur presse CI légitime), et 4 trous supplémentaires fermés** ([ADR-0162](docs/governance/adr/0162-entity-gate-collecte-adversariale.md) amendé 2ᵉ vague) :

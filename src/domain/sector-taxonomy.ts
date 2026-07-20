@@ -65,9 +65,20 @@ function normalize(raw: string): string {
     .trim();
 }
 
-/** Vrai si `kw` apparaît comme mot entier dans `haystack` (évite art⊂carte). */
+/**
+ * Vrai si `kw` apparaît comme mot entier dans `haystack` (évite art⊂carte),
+ * OU comme PRÉFIXE d'un mot quand le keyword fait ≥ 5 caractères (fix
+ * 2026-07-20, test qualité 5 marques : « Télécommunications » ne matchait pas
+ * `telecom`, « Boissons » ne matchait pas `boisson` — pluriels et dérivés
+ * classés AUTRE). Le seuil de 5 évite les débordements courts (`mode` ⊄
+ * `modele`, `tech` reste mot entier).
+ */
 function matchesWord(haystack: string, kw: string): boolean {
-  const re = new RegExp(`(?:^|[^a-z0-9])${kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:[^a-z0-9]|$)`);
+  const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re =
+    kw.length >= 5
+      ? new RegExp(`(?:^|[^a-z0-9])${escaped}`)
+      : new RegExp(`(?:^|[^a-z0-9])${escaped}(?:[^a-z0-9]|$)`);
   return re.test(haystack);
 }
 
@@ -100,4 +111,16 @@ export function classifyCanonicalSector(raw: string | null | undefined): Canonic
 /** Slug de ligue canonique (raccourci). */
 export function canonicalSectorSlug(raw: string | null | undefined): string {
   return classifyCanonicalSector(raw).slug;
+}
+
+/**
+ * Libellé humain d'un secteur (code canon ou texte libre) pour les surfaces
+ * client — un rapport ne doit jamais rendre le CODE brut (« pour Orange dans
+ * AUTRE », test qualité 2026-07-20). AUTRE → null (l'appelant choisit sa
+ * périphrase : « votre secteur », « son secteur »…).
+ */
+export function sectorDisplayLabel(raw: string | null | undefined): string | null {
+  if (!raw || !raw.trim()) return null;
+  const s = classifyCanonicalSector(raw);
+  return s.code === "AUTRE" ? null : s.label;
 }

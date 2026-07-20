@@ -40,3 +40,17 @@ describe("candidateDomains", () => {
     expect(candidateDomains("X", "CM")).toEqual([]);
   });
 });
+
+// ── Fix 2026-07-20 (test qualité Dovv) : domaine parqué ≠ site officiel ──
+import { looksLikeParkedDomain } from "@/server/services/quick-intake/web-footprint";
+
+describe("looksLikeParkedDomain", () => {
+  it("détecte les pages de parking (cas réel dovv.com)", () => {
+    expect(looksLikeParkedDomain("dovv.com — This Domain May Be For Sale. Get it now!")).toBe(true);
+    expect(looksLikeParkedDomain("Buy this domain at sedo.com auctions")).toBe(true);
+    expect(looksLikeParkedDomain("Ce domaine est à vendre — contactez-nous")).toBe(true);
+  });
+  it("ne rejette pas un vrai site de marque", () => {
+    expect(looksLikeParkedDomain("Chococam — chocolat camerounais depuis 1968. Nos produits en vente ici.")).toBe(false);
+  });
+});
