@@ -18,6 +18,37 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 - **Bandeau de preuves au-dessus du paywall** : « Déjà mesuré pour {marque} » agrège les compteurs RÉELS de CE rapport (propositions d'action, citations web, mentions presse, avis Google, abonnés) — on vend sur ce qui est mesuré, jamais sur du vent. i18n fr/en/zh.
 - **Narratif d'empreinte calibré sur la couverture** : un « 100/100 » sur 20 points de poids mesurés n'est plus vendu comme « visibilité maximale » — le template dit la lecture partielle, et une garde déterministe rejette toute sortie LLM triomphaliste (« parfait », « maximal »…) à faible couverture (leçon ADR-0163 : la règle prompt ne suffit jamais seule). Vérifié La Paillote : bandeau « 11 propositions · 5 citations · 19 avis Google ». tsc 0 · lint 0 · tests footprint verts.
 
+## v6.27.235 — docs(governance): RESIDUAL-DEBT restructuré — purge, actions opérateur consolidées, refus honnêtes (2026-07-20)
+
+**Le registre redevient transitoire : 956 → ~300 lignes, chaque ligne restante porte plan + déclencheur.**
+
+- Purge des lignes closes/STALE réconciliées avec le code (C8 clos PR #442, T7 clos ADR-0135, ratification θ close ADR-0150, Typecheck CI/Lighthouse/xlsx/mjml/chunking enrichOracle périmés).
+- Nouvelles sections : « Actions OPÉRATEUR en attente » (ModelPolicy Sonnet 5, scheduler digest, bascule Coolify, sign-offs direction, App Review…) · « Décisions de refus honnête » (T9, T14, ugcGenerationRate, §33 distribution LLM, OG locale dynamique) · archive compressée (l'histoire vit dans CHANGELOG/ADRs).
+- PATCHED-SYMPTOMS : cause racine « protectedProcedure + id libre » FERMÉE (pointeur ADR-0166), ligne gazette réconciliée.
+- Nouveau suivi inscrit : audit d'ownership de la lane governedProcedure founder (plan + déclencheur).
+
+## v6.27.234 — fix(registre): lot P1 RESIDUAL-DEBT — 12 dettes bornées refermées (2026-07-20)
+
+**Une session, douze dettes du registre fermées avec preuve — dont Sonnet 5, la purge RGPD et la garde anti-sans-accents.**
+
+- LLM Gateway : défauts `claude-sonnet-4-*` → `claude-sonnet-5` (policy fallback, priorité, map OpenAI, routeurs, seed) + gardes de parité (thinking disabled explicite, température strippée — Sonnet 5 pense par défaut et 400 sur température non-défaut). Reste ops : `UPDATE_MODEL_POLICY` prod.
+- Purge RGPD gouvernée `SESHAT_PURGE_PERSON_DATA` (ADR-0147 « cascade /data-deletion ») : identifiants PII + tombstones supprimés, profils dé-rattachés, transactionnel, requireOperator.
+- Writers `Client.sector` canonicalisés à l'écriture (ADR-0152 : laguilde, brand-resolver, client.create/update).
+- §33 Devotion Ladder : le chemin LLM mappe désormais le QUALITATIF vers la forme composer ; la distribution chiffrée n'est JAMAIS rendue (anti-fabrication ADR-0163/0134).
+- Intake : bloc « Filtrage des homonymes » (ADR-0162) sur la page résultat + i18n fr/en/zh.
+- Accents : sweep cockpit/console/agency (18 chaînes) + 5ᵉ test HARD anti-sans-accents dans cockpit-vocabulary.
+- ADR-0144 : FK durable `BrandAction.missionId` (migration additive 20260720120000, backfill missionKey, ON DELETE SET NULL).
+- Phase 16 : token bucket MCP sortant par serveur + cron `/api/cron/anubis-digest` câblé.
+- ADR-0130 : garde contraste WCAG sur l'accent de marque (fallback corail) · OG `alternateLocale` en/zh.
+
+## v6.27.233 — fix(governance): gardes d'ownership par marque sur les routeurs tRPC (ADR-0166) (2026-07-20)
+
+**La classe de fuite « strategyId arbitraire » (celle de la gazette Jehuty) est fermée sur les 123 routeurs — et ne peut plus revenir.**
+
+- Recensement au niveau PROCÉDURE (pas fichier) : fuites supplémentaires trouvées dans des routeurs « déjà gardés ailleurs » — `cockpit-router.dashboard` (piliers complets), glory ×11, `jehuty.dashboard`, social ×4, `messaging.getConversation` (historique de n'importe quelle conversation), l'arbre de marque entier (`resolveEffectivePillars`, `searchContext`).
+- Middleware canonique `strategyScopedProcedure` (raw input → chokepoint `canAccessStrategy` ADR-0129) + `assertRawStrategyScope` (bases composées, optionnels) + `accessibleStrategyIds` (modèles à lien lâche : conversations, contacts, estimations).
+- 85 procédures / 30 routeurs migrées ; gardes par entité (conversation = participant OU marque accessible ; nœud d'arbre = opérateur OU marque sur la chaîne ancêtre/descendant — cas founder couvert) ; 2 flips `operatorProcedure` (agrégats cross-marques) ; 3 champs `strategyId` morts retirés.
+- Verrou CI HARD `strategy-ownership-guard.test.ts` : allowlist 3 entrées justifiées, qui ne peut que décroître.
 ## v6.27.231 — feat(seshat+intake): veille branchée sur l'ADVE + éditable, fraîcheur dure, scrub des récits fabriqués (ADR-0165) (2026-07-20)
 
 **Le cas Motion19 clos : la veille suit enfin ce que la marque VEND et QUI elle sert.** ([ADR-0165](docs/governance/adr/0165-veille-sujets-adve-editables.md)) :
