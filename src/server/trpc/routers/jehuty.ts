@@ -8,7 +8,13 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
 import { db } from "@/lib/db";
-import { mapSignalToFeedItem, mapRecoToFeedItem, mapDiagnosticToFeedItem } from "@/server/services/jehuty/mappers";
+import {
+  mapSignalToFeedItem,
+  mapRecoToFeedItem,
+  mapDiagnosticToFeedItem,
+  mapExternalArticleToFeedItem,
+  diagnosticBelongsToFeed,
+} from "@/server/services/jehuty/mappers";
 import type { JehutyFeedItem } from "@/lib/types/jehuty";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 
@@ -37,9 +43,37 @@ export const jehutyRouter = createTRPCRouter({
       limit: z.number().min(1).max(100).default(50),
       hideDismissed: z.boolean().default(true),
     }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const { strategyId, category, limit, hideDismissed } = input;
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+      // ── Gardes d'accès (fix fuite 2026-07-20) ──
+      // 1. Mode marque : ownership/délégation exigés — n'importe quel compte
+      //    authentifié pouvait lire la gazette de n'importe quelle marque.
+      // 2. Mode agence (sans strategyId) : opérateur/ADMIN uniquement.
+      const isAdmin = ctx.session.user.role === "ADMIN";
+      if (strategyId) {
+        const strategy = await db.strategy.findUnique({
+          where: { id: strategyId },
+          select: { userId: true },
+        });
+        if (!strategy) throw new Error("Strategy introuvable");
+        if (!isAdmin && strategy.userId !== ctx.session.user.id) {
+          const { getOperatorContext, canAccessStrategy } = await import(
+            "@/server/services/operator-isolation"
+          );
+          const opCtx = await getOperatorContext(ctx.session.user.id);
+          if (!(await canAccessStrategy(strategyId, opCtx))) {
+            throw new Error("Cette marque ne vous appartient pas");
+          }
+        }
+      } else if (!isAdmin) {
+        const { getOperatorContext } = await import("@/server/services/operator-isolation");
+        const opCtx = await getOperatorContext(ctx.session.user.id);
+        if (opCtx.role !== "ADMIN" && !opCtx.operatorId) {
+          throw new Error("Vue agence réservée aux opérateurs");
+        }
+      }
 
       // ── Parallel source queries ──
       // When strategyId is provided we also pull signals from OTHER strategies
@@ -147,11 +181,43 @@ export const jehutyRouter = createTRPCRouter({
 
       for (const diag of diagnostics) {
         const data = (diag.data ?? {}) as Record<string, unknown>;
-        const diagStrategyId = (data.strategyId as string) ?? strategyId;
-        if (!diagStrategyId) continue;
-        if (strategyId && diagStrategyId !== strategyId) continue;
+        // Fix fuite 2026-07-20 : un diagnostic SANS data.strategyId (ex :
+        // événement funnel `quick_intake_completed`, avec PII prospect) était
+        // estampillé avec l'id de l'APPELANT et apparaissait dans la gazette
+        // de chaque marque (« Diagnostic NETERU » ×7 chez Motion19 = intakes
+        // d'autres marques). Règle pure : `diagnosticBelongsToFeed` (testée).
+        if (!diagnosticBelongsToFeed(data, strategyId)) continue;
+        const diagStrategyId = data.strategyId as string;
         const curation = curationMap.get(`DIAGNOSTIC:${diag.id}`);
         items.push(mapDiagnosticToFeedItem(diag, curation, diagStrategyId, strategyNames.get(diagStrategyId)));
+      }
+
+      // ── « Le monde dehors » — la veille de marque DÉJÀ collectée (digest
+      // quotidien EXTERNAL_FEED_DIGEST, ADR-0143) entre enfin dans la gazette.
+      // La rubrique existait mais n'était alimentée par AUCUNE source réelle
+      // (fix 2026-07-20). Articles ≤ 90 jours seulement — un flux de veille
+      // n'affiche pas des archives.
+      if (strategyId && (!category || category === "EXTERNAL_SIGNAL")) {
+        try {
+          const digest = await db.knowledgeEntry.findFirst({
+            where: { entryType: "EXTERNAL_FEED_DIGEST", market: `brand:${strategyId}` },
+            orderBy: { createdAt: "desc" },
+            select: { createdAt: true, data: true },
+          });
+          const digestItems = ((digest?.data ?? {}) as { items?: Array<{ title?: string; link?: string; source?: string; publishedAt?: string }> }).items ?? [];
+          const maxAgeMs = 90 * 24 * 60 * 60 * 1000;
+          let rank = 0;
+          for (const art of digestItems) {
+            if (!art.title || !art.link) continue;
+            const published = art.publishedAt ? Date.parse(art.publishedAt) : NaN;
+            if (Number.isFinite(published) && Date.now() - published > maxAgeMs) continue;
+            if (rank >= 6) break;
+            rank += 1;
+            items.push(mapExternalArticleToFeedItem(art, strategyId, digest!.createdAt, curationMap.get(`EXTERNAL:${art.link}`)));
+          }
+        } catch {
+          /* best-effort — la gazette vit sans la veille si la lecture échoue */
+        }
       }
 
       // ── Filter ──

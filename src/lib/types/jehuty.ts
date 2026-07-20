@@ -47,6 +47,8 @@ export interface JehutyFeedItem {
   // Meta
   createdAt: string;
   source?: string;
+  /** Lien externe (articles de veille « Le monde dehors », fix 2026-07-20). */
+  externalUrl?: string;
 }
 
 // ── Priority Calculation ──────────────────────────────────────────

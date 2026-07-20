@@ -41,6 +41,43 @@ const CATEGORY_RUBRIC: Record<JehutyCategory, string> = {
   EXTERNAL_SIGNAL: "Le monde dehors",
 };
 
+/**
+ * Présentation des rubriques (fix 2026-07-20) : chaque rubrique dit ce
+ * qu'elle contient et D'OÙ vient sa matière — une rubrique vide s'affiche
+ * avec son explication au lieu de disparaître (le lecteur sait ce qui
+ * viendra et comment le déclencher).
+ */
+const CATEGORY_DESCRIPTION: Record<JehutyCategory, { about: string; whenEmpty: string }> = {
+  RECOMMENDATION: {
+    about: "Les améliorations concrètes proposées pour vos fondations de marque, à appliquer en un clic ou à discuter.",
+    whenEmpty: "Aucune recommandation publiée pour l'instant — elles arrivent après chaque analyse de vos fondations avec votre opérateur.",
+  },
+  MARKET_SIGNAL: {
+    about: "Ce que vos mesures racontent : ventes, audience, activité — les faits chiffrés de votre marque.",
+    whenEmpty: "Rien à signaler pour l'instant. Connectez vos réseaux et votre boutique (Réglages → Connexions) pour alimenter cette rubrique.",
+  },
+  WEAK_SIGNAL: {
+    about: "Les frémissements de votre marché détectés tôt — tendances naissantes, mouvements discrets à surveiller.",
+    whenEmpty: "Aucun signal faible détecté sur la période. C'est aussi une information : votre marché est calme.",
+  },
+  SCORE_DRIFT: {
+    about: "Les variations de votre score de marque — ce qui monte, ce qui baisse, et depuis quand.",
+    whenEmpty: "Votre score n'a pas bougé récemment. Chaque nouvelle mesure ou action peut le faire évoluer.",
+  },
+  DIAGNOSTIC: {
+    about: "Les examens automatiques de vos fondations : points de friction détectés et grilles d'analyse mobilisées.",
+    whenEmpty: "Aucun examen récent. Le prochain tour d'analyse de vos fondations alimentera cette rubrique.",
+  },
+  EXTERNAL_SIGNAL: {
+    about: "Votre veille : ce que la presse et le web publient autour de votre marque, votre secteur et votre marché.",
+    whenEmpty: "La veille n'a rien capté de récent sur vos sujets suivis — la collecte tourne chaque jour.",
+  },
+};
+
+/** Libellés lisibles des valeurs de qualification (fini les codes anglais). */
+const URGENCY_LABEL: Record<string, string> = { NOW: "Maintenant", SOON: "Bientôt", LATER: "Plus tard" };
+const IMPACT_LABEL: Record<string, string> = { HIGH: "Fort", MEDIUM: "Moyen", LOW: "Faible" };
+
 const CATEGORY_ORDER: JehutyCategory[] = [
   "RECOMMENDATION",
   "MARKET_SIGNAL",
@@ -289,10 +326,28 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
       {/* ═══ Sections par rubrique ═════════════════════════════════ */}
       {CATEGORY_ORDER.map((cat) => {
         const list = byCategory[cat];
-        if (list.length === 0) return null;
+        // Rubrique VIDE : présentée quand même (fix 2026-07-20) — le lecteur
+        // sait ce qu'elle contiendra et comment la déclencher, au lieu d'un
+        // sommaire qui promet des rubriques introuvables dans la page.
+        if (list.length === 0) {
+          return (
+            <section key={cat} className="mb-12">
+              <RubricHeader label={CATEGORY_RUBRIC[cat]} suffix={null} />
+              <p className="max-w-2xl text-sm leading-relaxed text-foreground-muted">
+                {CATEGORY_DESCRIPTION[cat].about}
+              </p>
+              <p className="mt-1.5 max-w-2xl font-mono text-2xs uppercase tracking-widest text-foreground-muted/60">
+                {CATEGORY_DESCRIPTION[cat].whenEmpty}
+              </p>
+            </section>
+          );
+        }
         return (
           <section key={cat} className="mb-16">
             <RubricHeader label={CATEGORY_RUBRIC[cat]} suffix={`${list.length}`} />
+            <p className="-mt-2 mb-6 max-w-2xl text-xs leading-relaxed text-foreground-muted">
+              {CATEGORY_DESCRIPTION[cat].about}
+            </p>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-10">
               {list.map((item) => (
                 <Dispatch
@@ -481,7 +536,13 @@ function LeadStory({
           className="font-display font-semibold tracking-tight leading-[1.05] text-foreground mb-5"
           style={{ fontSize: "var(--text-3xl)" }}
         >
-          {item.title}
+          {item.externalUrl ? (
+            <a href={item.externalUrl} target="_blank" rel="noopener noreferrer" className="hover:text-primary hover:underline">
+              {item.title}
+            </a>
+          ) : (
+            item.title
+          )}
         </h3>
 
         {summary && (
@@ -557,11 +618,11 @@ function LeadStory({
           <dl className="space-y-3">
             <div>
               <dt className="font-mono text-2xs uppercase tracking-widest text-foreground-muted/60">Urgence</dt>
-              <dd className="font-display text-2xl font-semibold tracking-tight text-foreground">{item.urgency}</dd>
+              <dd className="font-display text-2xl font-semibold tracking-tight text-foreground">{URGENCY_LABEL[item.urgency] ?? item.urgency}</dd>
             </div>
             <div>
               <dt className="font-mono text-2xs uppercase tracking-widest text-foreground-muted/60">Impact</dt>
-              <dd className="font-display text-2xl font-semibold tracking-tight text-foreground">{item.impact}</dd>
+              <dd className="font-display text-2xl font-semibold tracking-tight text-foreground">{IMPACT_LABEL[item.impact] ?? item.impact}</dd>
             </div>
             <div>
               <dt className="font-mono text-2xs uppercase tracking-widest text-foreground-muted/60">Confiance</dt>
@@ -637,7 +698,13 @@ function Dispatch({
         className="font-display font-semibold tracking-tight leading-[1.15] text-foreground mb-2"
         style={{ fontSize: "var(--text-xl)" }}
       >
-        {item.title}
+        {item.externalUrl ? (
+          <a href={item.externalUrl} target="_blank" rel="noopener noreferrer" className="hover:text-primary hover:underline">
+            {item.title}
+          </a>
+        ) : (
+          item.title
+        )}
       </h3>
 
       <p className="font-serif text-foreground-secondary leading-snug text-base flex-1" style={{ fontSize: "var(--text-base)" }}>

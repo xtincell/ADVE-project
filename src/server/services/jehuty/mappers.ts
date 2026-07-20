@@ -117,6 +117,24 @@ export function mapRecoToFeedItem(
 
 // ── KnowledgeEntry (DIAGNOSTIC_RESULT) → FeedItem ─────────────────
 
+/**
+ * Règle d'appartenance d'un diagnostic au feed (fix fuite 2026-07-20, pur) :
+ *   - mode marque : SEULS les diagnostics portant `data.strategyId` ===
+ *     strategyId — jamais de fallback vers l'appelant (c'est le fallback qui
+ *     faisait apparaître les intakes d'AUTRES marques, PII incluse, dans la
+ *     gazette de chaque founder).
+ *   - mode agence : les entrées sans strategyId (télémétrie funnel) sont
+ *     exclues aussi — elles ont leur surface Console dédiée.
+ */
+export function diagnosticBelongsToFeed(
+  data: Record<string, unknown>,
+  strategyId: string | undefined,
+): boolean {
+  const diagStrategyId = typeof data.strategyId === "string" ? data.strategyId : undefined;
+  if (strategyId) return diagStrategyId === strategyId;
+  return Boolean(diagStrategyId);
+}
+
 export function mapDiagnosticToFeedItem(
   entry: {
     id: string;
@@ -133,13 +151,51 @@ export function mapDiagnosticToFeedItem(
   const urgency = severity === "critical" || severity === "high" ? "NOW" : "SOON";
   const impact = severity === "critical" ? "HIGH" : severity === "high" ? "HIGH" : "MEDIUM";
 
+  // ── Titre PERSONNALISÉ + synthèse réelle (fix 2026-07-20) ──
+  // La gazette affichait « Diagnostic NETERU » ×7 (jargon mythologique
+  // interne — interdit client, ADR-0123) sans aucun commentaire : le mapper
+  // ignorait le payload réel du diagnostic-engine (symptoms/localization/
+  // frameworksUsed). Le titre dit désormais CE que le diagnostic a trouvé.
+  const symptoms = typeof data.symptoms === "number" ? data.symptoms : null;
+  const localization = Array.isArray(data.localization)
+    ? (data.localization as string[])
+    : typeof data.localization === "string"
+      ? [data.localization]
+      : [];
+  const localizationLabel = localization
+    .map((l) => String(l).toUpperCase())
+    .filter(Boolean)
+    .slice(0, 3)
+    .join(", ");
+  const title =
+    (data.title as string) ??
+    (data.diagnostic as string)?.slice(0, 80) ??
+    (symptoms !== null && symptoms > 0
+      ? `${symptoms} point(s) de friction détecté(s)${localizationLabel ? ` — fondation(s) ${localizationLabel}` : ""}`
+      : symptoms === 0
+        ? "Examen de votre marque : rien d'alarmant détecté"
+        : "Examen de votre marque");
+  const frameworksUsed = Array.isArray(data.frameworksUsed) ? (data.frameworksUsed as string[]) : [];
+  const summary =
+    (data.prescription as string) ??
+    (data.diagnostic as string) ??
+    [
+      symptoms !== null
+        ? `${symptoms} symptôme(s) relevé(s) lors de l'examen automatique de vos fondations.`
+        : "",
+      frameworksUsed.length > 0 ? `Grilles d'analyse mobilisées : ${frameworksUsed.slice(0, 3).join(", ")}.` : "",
+      "Le détail et les prescriptions se travaillent avec votre opérateur.",
+    ]
+      .filter(Boolean)
+      .join(" ");
+
   return {
     id: `diag:${entry.id}`,
     sourceType: "DIAGNOSTIC",
     sourceId: entry.id,
     category: "DIAGNOSTIC",
-    title: (data.title as string) ?? (data.diagnostic as string)?.slice(0, 80) ?? "Diagnostic NETERU",
-    summary: (data.prescription as string) ?? (data.diagnostic as string) ?? "",
+    title,
+    summary,
     pillarKey: entry.pillarFocus ?? undefined,
     strategyId,
     strategyName,
@@ -149,6 +205,40 @@ export function mapDiagnosticToFeedItem(
     priority: computePriority(urgency, impact, 0.6, entry.createdAt),
     curation: curation ? { action: curation.action as JehutyCurationAction, note: curation.note ?? undefined } : undefined,
     createdAt: entry.createdAt.toISOString(),
-    source: "Artemis/Diagnostic",
+    source: "Examen automatique",
+  };
+}
+
+// ── Article de veille (EXTERNAL_FEED_DIGEST) → FeedItem ───────────
+
+/**
+ * « Le monde dehors » (fix 2026-07-20) : la veille de marque quotidienne
+ * (digest déterministe ADR-0143) entre dans la gazette comme items
+ * EXTERNAL_SIGNAL — titre = l'article réel, source = le média.
+ */
+export function mapExternalArticleToFeedItem(
+  article: { title?: string; link?: string; source?: string; publishedAt?: string },
+  strategyId: string,
+  digestCreatedAt: Date,
+  curation: CurationRecord,
+): JehutyFeedItem {
+  const published = article.publishedAt ? new Date(article.publishedAt) : digestCreatedAt;
+  const createdAt = Number.isNaN(published.getTime()) ? digestCreatedAt : published;
+  return {
+    id: `ext:${article.link}`,
+    sourceType: "SIGNAL",
+    sourceId: article.link ?? "",
+    category: "EXTERNAL_SIGNAL",
+    title: (article.title ?? "").slice(0, 120),
+    summary: article.source ? `Vu chez ${article.source}. À lire si votre marché en parle autour de vous.` : "",
+    strategyId,
+    urgency: "LATER",
+    impact: "LOW",
+    confidence: 1,
+    priority: computePriority("LATER", "LOW", 1, createdAt),
+    externalUrl: article.link,
+    curation: curation ? { action: curation.action as JehutyCurationAction, note: curation.note ?? undefined } : undefined,
+    createdAt: createdAt.toISOString(),
+    source: article.source ?? "Veille de marque",
   };
 }

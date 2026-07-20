@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.230 — fix(jehuty): gazette — fuite cross-tenant colmatée, titres personnalisés, monde dehors branché, rubriques présentées (2026-07-20)
+
+**Retour opérateur sur la gazette Motion19 : 7 cartes « Diagnostic NETERU » sans commentaire, rubriques vides.** L'inspection a révélé pire que le symptôme : les 7 cartes étaient des événements funnel `quick_intake_completed` **d'AUTRES marques** (email prospect dans le payload), estampillés avec l'id de l'appelant faute de filtre — **fuite cross-tenant client-visible**, colmatée :
+
+- **Anti-fuite** : règle pure `diagnosticBelongsToFeed` (testée sur le cas prod exact) — mode marque : seuls les diagnostics portant `data.strategyId` de LA marque ; la télémétrie funnel (PII) reste au Console. + **2 gardes d'accès** sur `jehuty.feed` : ownership/délégation exigés en mode marque (n'importe quel compte authentifié pouvait lire la gazette de n'importe quelle marque), opérateur/ADMIN exigé en mode agence.
+- **Titres personnalisés + vrai commentaire** : le mapper lit enfin le payload du diagnostic-engine (« 3 point(s) de friction détecté(s) — fondation(s) D, E », grilles mobilisées) ; fallback sans jargon ; « Diagnostic NETERU » et « Artemis/Diagnostic » purgés (ADR-0123 — le jargon mythologique ne sort jamais).
+- **« Le monde dehors » branché** : la veille de marque quotidienne (digest ADR-0143, déjà collectée) entre dans la gazette — articles ≤ 90 j, titres cliquables vers la source, « Vu chez {média} ».
+- **Rubriques présentées** : chaque rubrique affiche sa description (ce qu'elle contient, d'où vient sa matière) — une rubrique vide s'affiche avec son explication et comment la déclencher, au lieu de disparaître. Libellés qualification en français (NOW/SOON/MEDIUM → Maintenant/Bientôt/Moyen).
+- tsc 0 · lint 0 · **2846 tests verts** (+6 jehuty-mappers, dont le cas de fuite réel). Restent tracés : sujets de veille dérivés de l'ADVE + éditables (plan validé, prochaine vague), scrub de la prose fabriquée (AARRR).
+
 ## v6.27.229 — feat(intake): rapport founder-first — propositions R/T/I/S ancrées, citations web, langage client (ADR-0164) (2026-07-20)
 
 **Retour opérateur sur la page résultat : cartes R/T/I/S vides, micro-marques à « 0 empreinte », synthèse en jargon fermé, copy pensée pour un initié.** Réponse ([ADR-0164](docs/governance/adr/0164-rapport-intake-founder-first.md)), vérifiée sur 3 rounds réels La Paillote :
