@@ -10,6 +10,10 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.226 — fix(intake): presse marché-SEULEMENT — le rappel large supprimé (round 8 BK Abidjan) (2026-07-20)
+
+**Le contrat presse devient déterministe : presse du marché déclaré, ou EMPTY honnête — jamais un remplissage hors-marché.** Round 8 du test en boucle : la passe géo échouait réseau → le « rappel large » de v6.27.225 remplissait silencieusement les 5 slots avec la presse France (même marque, mauvais marché), résultat dépendant de l'état du réseau. Supprimé ([ADR-0162](docs/governance/adr/0162-entity-gate-collecte-adversariale.md) amendé) : requête unique marché-d'abord ; échec réseau du flux → erreur enregistrée (`errors`) + EMPTY ; l'absence de presse locale est un signal honnête, pas un vide à combler. Vérifié rounds 9-10 : réseau OK → 5/5 mentions Côte d'Ivoire/Abidjan (7 bruits écartés comptés) ; fenêtre réseau morte → EMPTY + erreur explicite. tsc 0 · lint 0 · 2434 tests verts.
+
 ## v6.27.225 — fix(seshat+intake): collecte éprouvée sur cas réel — géo-d'abord + réseau dégradé (2026-07-20)
 
 **Test réel en boucle « Burger King Abidjan » (7 rounds run→inspect→fix) jusqu'au standard ADR-0162 : 5/5 mentions presse Côte d'Ivoire/Abidjan (Servair, Enko, Jeune Afrique, Glovo CI), 7 items de bruit écartés et comptés.** Amendement [ADR-0162](docs/governance/adr/0162-entity-gate-collecte-adversariale.md).

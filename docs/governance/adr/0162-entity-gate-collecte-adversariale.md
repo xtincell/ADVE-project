@@ -90,11 +90,15 @@ d'Ivoire) a révélé un 2ᵉ type de bruit que l'homonymie ne couvre pas : la r
 nom-seul remonte la presse des gros marchés (5/5 articles France) — même marque,
 mauvais marché. Décisions ajoutées, toutes déterministes :
 
-1. **Cascade presse géo-d'abord** : pays déclaré → passe 1 `"Burger King" ("Côte
-   d'Ivoire" OR Abidjan)` (référentiel `COUNTRY_CITIES` exporté par l'entity-gate) ;
-   passe 2 (rappel) requête large SEULEMENT si la passe géo n'a pas rempli les 5 slots,
-   items ajoutés APRÈS ceux du marché (dédup par lien). Résultat mesuré : 5/5 mentions
-   Côte d'Ivoire/Abidjan, 7 items de bruit écartés et comptés.
+1. **Presse marché-d'abord et marché-SEULEMENT** : pays déclaré → requête unique
+   `"Burger King" ("Côte d'Ivoire" OR Abidjan)` (référentiel `COUNTRY_CITIES` exporté
+   par l'entity-gate). Résultat mesuré : 5/5 mentions Côte d'Ivoire/Abidjan, 7 items de
+   bruit écartés et comptés. Un « rappel large » initialement tenté a été SUPPRIMÉ
+   (round 8) : dès qu'il tournait (échec réseau de la passe géo, ou marché sans presse),
+   il remplissait les slots avec la presse des gros marchés — non-déterministe et
+   trompeur. L'absence de presse locale est un signal honnête, pas un vide à combler ;
+   un échec réseau du flux est enregistré (`errors`) et rend EMPTY, jamais un repli
+   hors-marché.
 2. **`countryCodeGuess` référentiel nom→ISO-2** : le pays intake est du texte libre
    (« Côte d'Ivoire ») — sans mapping, locale presse retombée `gl=CM`, aucun TLD pays
    probé, démonymes absents.

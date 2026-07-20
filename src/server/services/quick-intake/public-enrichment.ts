@@ -438,31 +438,25 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
         return withTimeout(fetchRssText(feed.url), Math.min(12_000, remaining()), null);
       };
 
-      // Passe 1 — géo-scopée si un pays est déclaré ; sinon comportement
-      // historique (discriminée si ambigu, nom-seul sinon).
-      const pass1Terms = geoTerms.length > 0 ? geoTerms : gate.ambiguity.ambiguous ? sectorTerms : [];
-      const accepted = judgeFeed(await fetchFeed(pass1Terms));
-
-      // Passe 2 (rappel) — si la passe géo n'a pas rempli les 5 slots : requête
-      // large (discriminée si ambigu), items ajoutés APRÈS ceux de la passe géo
-      // (dédup par lien). La presse du marché déclaré prime toujours.
-      if (geoTerms.length > 0 && accepted.length < 5 && remaining() > 3_000) {
-        const seen = new Set(accepted.map(({ it }) => it.link));
-        for (const entry of judgeFeed(await fetchFeed(gate.ambiguity.ambiguous ? sectorTerms : []))) {
-          if (!seen.has(entry.it.link)) {
-            seen.add(entry.it.link);
-            accepted.push(entry);
-          }
-        }
+      // Requête UNIQUE, marché-d'abord et marché-SEULEMENT quand un pays est
+      // déclaré : l'empreinte presse du client d'Abidjan, c'est la presse de
+      // SON marché — jamais un remplissage avec la presse des gros marchés
+      // (round 8 test BK : un « rappel large » après échec réseau de la passe
+      // géo remplissait les 5 slots avec la presse France → supprimé, l'absence
+      // de presse locale est un signal honnête, pas un vide à combler).
+      // Sans pays déclaré : discriminée si nom ambigu, nom-seul sinon.
+      const queryTerms = geoTerms.length > 0 ? geoTerms : gate.ambiguity.ambiguous ? sectorTerms : [];
+      const xml = await fetchFeed(queryTerms);
+      if (!xml) {
+        errors.push("press: flux Google News injoignable (réseau) — aucun repli hors-marché");
       }
+      const accepted = judgeFeed(xml);
 
       for (const { it } of accepted.slice(0, 5)) {
         const { title, sourceName } = splitGoogleNewsTitle(it.title);
         press.push({ title, url: it.link, sourceName, publishedAt: it.pubDate || null });
       }
-      if (accepted.length > 0 || filtered.press > 0) {
-        pressStatus = press.length > 0 ? "LIVE" : "EMPTY";
-      }
+      if (xml) pressStatus = press.length > 0 ? "LIVE" : "EMPTY";
     } catch (err) {
       pressStatus = "ERROR";
       errors.push(`press: ${err instanceof Error ? err.message : String(err)}`);
