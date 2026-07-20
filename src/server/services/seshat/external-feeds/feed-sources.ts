@@ -68,11 +68,23 @@ export function feedSourcesFor(countryCode: string, sector: string, countryName?
 /**
  * Flux presse pour une MARQUE nommée (mentions presse, intake pilier E).
  * Même mécanique Google News RSS, requête exacte sur le nom de marque.
+ *
+ * `extraTerms` (ADR-0162 entity-gate) : pour un nom de marque AMBIGU (mot du
+ * dictionnaire — « Top », « Orange »…), la requête nom-seul ne remonte que du
+ * bruit ; on la discrimine à la SOURCE avec les termes du contexte déclaré :
+ * `"Top" (boissons OR Cameroun)`. Jamais plus de 4 termes (précision Google
+ * News dégrade au-delà).
  */
-export function brandPressFeedFor(companyName: string, countryCode?: string | null): FeedSource {
+export function brandPressFeedFor(
+  companyName: string,
+  countryCode?: string | null,
+  opts?: { extraTerms?: readonly string[] },
+): FeedSource {
   const cc = (countryCode ?? "CM").toUpperCase();
   const locale = `hl=fr&gl=${cc}&ceid=${cc}:fr`;
-  const q = encodeURIComponent(`"${companyName}"`);
+  const terms = (opts?.extraTerms ?? []).filter((t) => t.trim()).slice(0, 4);
+  const query = terms.length > 0 ? `"${companyName}" (${terms.join(" OR ")})` : `"${companyName}"`;
+  const q = encodeURIComponent(query);
   return {
     url: `https://news.google.com/rss/search?q=${q}&${locale}`,
     name: `google-news:brand:${companyName.toLowerCase()}:${cc}`,

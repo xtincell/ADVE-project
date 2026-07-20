@@ -22,6 +22,7 @@
 
 import { lookup as dnsLookup } from "node:dns/promises";
 import { isIP } from "node:net";
+import { mentionsEntity } from "@/server/services/seshat/entity-gate";
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -332,26 +333,27 @@ export function candidateDomains(name: string, countryCode?: string | null): str
   return out.slice(0, 5);
 }
 
-/** Normalise un texte pour la garde de mention de marque (casse/diacritiques/ponctuation). */
-function normalizeForMatch(s: string): string {
-  return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "");
-}
-
 /**
  * Probe les domaines candidats en parallèle ; retourne le 1er atteignable dont
  * le contenu MENTIONNE la marque (garde anti-faux-positif — un domaine parké ou
  * homonyme est rejeté). Préférence à l'ordre des candidats (`.com` d'abord).
  * Best-effort, borné en temps, jamais de throw.
+ *
+ * Garde (ADR-0162) : mention en FRONTIÈRE DE MOT via l'entity-gate Seshat —
+ * l'ancienne garde en sous-chaîne validait `top.com` pour la marque « Top »
+ * dès que la page contenait « top » n'importe où (« desktop », « top of
+ * page »). `opts.validate` permet à l'appelant d'imposer le verdict complet
+ * du gate (discriminants exigés pour un nom ambigu).
  */
 export async function discoverOfficialSite(
   name: string,
   countryCode?: string | null,
-  opts: { timeoutMs?: number } = {},
+  opts: { timeoutMs?: number; validate?: (pageText: string) => boolean } = {},
 ): Promise<string | null> {
   const candidates = candidateDomains(name, countryCode);
   if (candidates.length === 0) return null;
-  const token = brandDomainSlug(name);
   const perProbe = opts.timeoutMs ?? 4_000;
+  const validate = opts.validate ?? ((pageText: string) => mentionsEntity(pageText, name));
 
   const results = await Promise.all(
     candidates.map(async (url) => {
@@ -364,8 +366,8 @@ export async function discoverOfficialSite(
         ]);
         if (!raced.ok) return null;
         const meta = parseHtmlMeta(raced.body);
-        const hay = normalizeForMatch(`${meta.title ?? ""} ${meta.description ?? ""} ${raced.body.slice(0, 4_000)}`);
-        return hay.includes(token) ? url : null;
+        const pageText = `${meta.title ?? ""} ${meta.description ?? ""} ${raced.body.slice(0, 4_000)}`;
+        return validate(pageText) ? url : null;
       } catch {
         return null;
       }

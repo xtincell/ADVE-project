@@ -63,6 +63,13 @@ export interface EnrichedFootprint extends WebFootprint {
   /** Profils publics exacts des réseaux connectés (source CONNECTOR). */
   connectedProfiles?: ConnectedProfileEntry[];
   press: PressMention[];
+  /**
+   * Rapport du gate d'entité (ADR-0162) : ambiguïté du nom, discriminants
+   * utilisés, mode de jugement (déterministe seul ou + réfutation LLM) et
+   * comptes de candidats écartés par source. Optionnel — rétro-compat avec
+   * les webFootprint JSON persistés avant le gate.
+   */
+  entityGate?: import("@/server/services/seshat/entity-gate").EntityGateReport;
   discovery: {
     attempted: boolean;
     queries: string[];

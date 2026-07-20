@@ -930,3 +930,7 @@ profondeur, pas de la largeur.**
 ### Déploiement manuel + canal feedback (2026-07-15)
 - **Auto-deploy coupé côté repo** (`build-image.yml` = workflow_dispatch seul). **Action opérateur restante** : désactiver l'auto-deploy de l'app dans le dashboard Coolify (webhook git / watch registry) — non pilotable depuis le repo.
 - **Feedback (ADR-0155)** : pièce jointe / capture d'écran = post-MVP. Bouton sur surfaces **publiques** (non authentifiées) = voie anonyme rate-limitée à ajouter (patron `footprint.scoreInstant`) si besoin.
+
+### Entity Gate — collecte adversariale (ADR-0162, 2026-07-20)
+- **Surfacer `entityGate.filtered` sur la page résultat intake** : la donnée (« N mentions écartées — homonymie », mode de jugement, discriminants) est déjà persistée dans `EnrichedFootprint.entityGate` ; il manque le bloc UI honnête sur `/intake/[token]/result` (+ i18n ×3). Effort : ~1 h UI. Déclencheur : prochaine passe UI intake ou demande opérateur.
+- **Lexique de mots communs statique** : `COMMON_WORD_LEXICON` (~200 entrées FR/EN) couvre les cas type « Top »/« Orange »/« Total » mais n'est pas exhaustif ; un nom commun absent du lexique retombe sur la garde lexicale seule (comportement pré-ADR-0162, jamais pire). Fermeture : rendre le lexique éditable opérateur (pattern ADR-0150 canon-override) si un cas réel échappe. Déclencheur : 2ᵉ incident d'homonymie non couvert.

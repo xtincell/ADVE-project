@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.224 — feat(seshat): entity-gate — collecte publique adversariale, désambiguïsation d'entité (2026-07-20)
+
+**La marque « Top » n'aspire plus « le top 10 des plages » : la collecte juge désormais des ENTITÉS, plus des mots.** Incident prod 2026-07-20 (soda Top, Brasseries du Cameroun) : la garde lexicale F3 (frontière de mot) est structurellement insuffisante pour un nom-mot-du-dictionnaire — tout le pipeline presse/découverte/Maps/site collectait le mot ordinaire. [ADR-0162](docs/governance/adr/0162-entity-gate-collecte-adversariale.md).
+
+- **Entity Gate Seshat** (`seshat/entity-gate/`, déterministe, zéro LLM) : ambiguïté du nom détectée par lexique statique de mots communs FR/EN (« Top », « Orange », « Total » → ambigus ; « Chococam » → distinctif) + discriminants construits depuis le contexte DÉCLARÉ uniquement (secteur, pays + référentiel démonymes/toponymes ISO-2, domaine, handles). Verdict avec preuves : mention en frontière de mot toujours exigée, co-occurrence discriminante exigée EN PLUS pour un nom ambigu. Branché sur les 4 points d'entrée de `enrichPublicFootprint` (presse, découverte Brave, Maps, découverte de site — celle-ci passait par une **sous-chaîne** qui validait `top.com` sur « desktop »).
+- **Requête presse discriminée à la source** : nom ambigu → `"Top" (boissons OR Cameroun)` (`brandPressFeedFor` extraTerms) au lieu de `"Top"` nu qui ne remontait que du bruit.
+- **Réfutation adversariale (deep-research-like, demote-only)** : un juge LLM optionnel (`executeStructuredLLMCall`, 1 appel batché, retries 1) tente de RÉFUTER chaque candidat accepté ; il ne peut qu'écarter — jamais repêcher ni fabriquer ; sans LLM/timeout → plancher déterministe, rapport honnête `judge: DETERMINISTIC_ONLY`. Pattern hérité de Hunter ADR-0100 (réutilisé en pattern, pas en code — pas de 2ᵉ Hunter, pas de 2ᵉ orchestrateur).
+- **Restitution honnête** : `EnrichedFootprint.entityGate` (ambiguïté, discriminants, mode de jugement, comptes d'écartés par source) — un candidat écarté est compté, jamais remplacé (ADR-0046). Nom ambigu sans contexte déclaré → tout rejeté, `discriminants: []` assumé.
+- 0 modèle Prisma, 0 Intent kind, cap APOGEE 7/7. Tests : `entity-gate.test.ts` (cas fondateur « Top ») + suites footprint vertes (50 assertions).
+
 ## v6.27.223 — fix(intake+seshat): brief scoreur & intake — les 6 fixes prod exécutés (2026-07-19)
 
 **Le scoreur ne fabrique plus rien, et l'intake ne meurt plus sur le timeout du proxy.** Exécution intégrale du brief v6.27.222 ([FIX-BRIEF-SCORER-INTAKE-2026-07-19.md](docs/audits/FIX-BRIEF-SCORER-INTAKE-2026-07-19.md)).
