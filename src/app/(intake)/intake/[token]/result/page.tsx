@@ -665,9 +665,25 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
           <p className="text-xs font-medium uppercase tracking-wider text-foreground-muted">
             {t("intakeResult.header.kicker")}
           </p>
-          <h1 className="mt-1 text-2xl font-bold text-foreground sm:text-3xl">
-            {intake.companyName}
-          </h1>
+          {/* Identité visuelle DÉTECTÉE (og:image du site collecté, ADR-0164) —
+              jamais un visuel inventé, rien si non détectée. */}
+          <div className="mt-1 flex items-center gap-4">
+            {(() => {
+              const og = ((intake as { webFootprint?: { site?: { ogImage?: string | null } | null } }).webFootprint?.site?.ogImage ?? null);
+              return og ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={og}
+                  alt=""
+                  className="h-14 w-14 shrink-0 rounded-xl border border-border object-cover"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                />
+              ) : null;
+            })()}
+            <h1 className="text-2xl font-bold text-foreground sm:text-3xl">
+              {intake.companyName}
+            </h1>
+          </div>
 
           {/* Level placement — the headline */}
           {classification !== "NON_CLASSIFIE" && (
@@ -1464,6 +1480,37 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             and the strategic content redacted to drive conversion. */}
         {!isPaid && (
           <div className="mt-10">
+            {/* ADR-0164 — bandeau de preuves RÉELLES au-dessus du paywall :
+                on vend sur ce qui a déjà été mesuré/produit, jamais sur du
+                vent. Chaque compteur vient des données de CE rapport. */}
+            {(() => {
+              const fpx = (intake as { webFootprint?: { press?: unknown[]; webMentions?: { items?: unknown[] }; maps?: { status?: string; reviewCount?: number | null }; followerCounts?: Array<{ followerCount?: number }> } }).webFootprint;
+              const propositionCount = (report?.rtis?.pillars ?? []).reduce(
+                (n, p) => n + ((p.full.match(/•/g) ?? []).length || 1),
+                0,
+              );
+              const chips: string[] = [];
+              if (propositionCount > 0) chips.push(`${propositionCount} ${t("intakeResult.proof.propositions")}`);
+              const cit = fpx?.webMentions?.items?.length ?? 0;
+              if (cit > 0) chips.push(`${cit} ${t("intakeResult.proof.citations")}`);
+              const pressN = fpx?.press?.length ?? 0;
+              if (pressN > 0) chips.push(`${pressN} ${t("intakeResult.proof.press")}`);
+              if (fpx?.maps?.status === "LIVE" && fpx.maps.reviewCount) chips.push(`${fpx.maps.reviewCount} ${t("intakeResult.proof.reviews")}`);
+              const audience = (fpx?.followerCounts ?? []).reduce((n, f) => n + (f.followerCount ?? 0), 0);
+              if (audience > 0) chips.push(`${audience.toLocaleString("fr-FR")} ${t("intakeResult.proof.audience")}`);
+              if (chips.length === 0) return null;
+              return (
+                <div className="mb-4 rounded-xl border border-primary/20 bg-primary-subtle/20 p-4">
+                  <p className="text-2xs font-bold uppercase tracking-widest text-primary">
+                    {t("intakeResult.proof.kicker")} {intake.companyName}
+                  </p>
+                  <p className="mt-1.5 text-sm leading-relaxed text-foreground">
+                    {chips.join(" · ")}
+                  </p>
+                  <p className="mt-1 text-xs text-foreground-muted">{t("intakeResult.proof.tail")}</p>
+                </div>
+              );
+            })()}
             <RapportPdfPreview
               brandName={intake.companyName}
               classification={classification}

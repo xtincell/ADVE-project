@@ -30,6 +30,7 @@ export interface WebFootprintJson {
     reachable: boolean;
     title: string | null;
     description: string | null;
+    ogImage?: string | null;
     tech?: {
       cms: string | null;
       https: boolean;
@@ -231,7 +232,18 @@ export function FootprintSection({
 
       {/* ── Site déclaré ── */}
       {fp.site && (
-        <div className="mb-3 rounded-lg border border-border-subtle bg-background-raised p-3 print:rounded-none">
+        <div className="mb-3 flex gap-3 rounded-lg border border-border-subtle bg-background-raised p-3 print:rounded-none">
+          {/* Visuel DÉTECTÉ du site (og:image, ADR-0164) — jamais inventé. */}
+          {fp.site.ogImage && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={fp.site.ogImage}
+              alt=""
+              className="h-16 w-16 shrink-0 rounded-md border border-border-subtle object-cover"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
+          )}
+          <div className="min-w-0">
           <p className="text-sm font-medium text-foreground">
             {fp.site.title ?? fp.site.url}{" "}
             {!fp.site.reachable && <span className="text-xs text-warning">(site injoignable lors de la collecte)</span>}
@@ -254,6 +266,7 @@ export function FootprintSection({
               <TechBadge on={fp.site.tech.hasRobotsTxt} label="robots.txt" />
             </div>
           )}
+          </div>
         </div>
       )}
 
@@ -403,16 +416,26 @@ export function FootprintSection({
           </p>
           <ul className="space-y-1">
             {fp.webMentions!.items.slice(0, 6).map((m) => (
-              <li key={m.url} className="text-xs">
+              <li key={m.url} className="flex items-center gap-1.5 text-xs">
+                {/* Favicon de la source (rendu client, jamais stocké) — repère
+                    visuel immédiat : Tripadvisor, Petit Futé… (ADR-0164). */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(m.host)}&sz=32`}
+                  alt=""
+                  className="h-4 w-4 shrink-0 rounded-sm"
+                  loading="lazy"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                />
                 <a
                   href={m.url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-foreground-secondary hover:text-primary hover:underline"
                 >
-                  ▸ {m.title}
+                  {m.title}
                 </a>
-                <span className="text-foreground-muted"> — {m.host}</span>
+                <span className="shrink-0 text-foreground-muted"> — {m.host}</span>
               </li>
             ))}
           </ul>

@@ -96,9 +96,14 @@ export function buildFootprintNarrativeTemplate(
   const score: FootprintScore | undefined = f.score;
   const facts = collectFootprintFacts(f, ctx.companyName);
 
+  // Calibrage COUVERTURE (ADR-0164) : un « 100/100 » mesuré sur 20 points de
+  // poids n'est PAS une visibilité maximale — le narratif doit le dire.
+  const lowCoverage = (score?.measuredWeight ?? 0) < 50;
   const opening =
     score?.total !== null && score?.total !== undefined
-      ? `L'empreinte digitale publique de ${ctx.companyName} ressort à ${score.total}/100 (calculé sur les dimensions réellement mesurées).`
+      ? lowCoverage
+        ? `Sur les quelques terrains que nous avons pu mesurer (${score!.measuredWeight} points de poids sur 100), l'empreinte publique de ${ctx.companyName} ressort à ${score!.total}/100 — une lecture encore partielle, à confirmer en connectant site et réseaux.`
+        : `L'empreinte digitale publique de ${ctx.companyName} ressort à ${score!.total}/100 (calculé sur les dimensions réellement mesurées).`
       : `L'empreinte digitale publique de ${ctx.companyName} n'a pas pu être mesurée automatiquement.`;
 
   const unmeasured = (score?.dimensions ?? []).filter((d) => !d.measured);
@@ -145,11 +150,11 @@ export async function narrateFootprint(
       purpose: "intermediate",
       system: `${UNTRUSTED_NOTICE}\n\nTu es l'analyste discovery de La Fusée. Tu rédiges en français, ton professionnel et direct. Tu t'appuies EXCLUSIVEMENT sur les faits fournis — aucune invention, aucun chiffre qui n'y figure pas, aucune recommandation commerciale.`,
       prompt: `Marque : ${brand}${sector ? ` (secteur : ${sector})` : ""}.
-Score d'empreinte digitale publique : ${f.score.total}/100 (sur les dimensions mesurées uniquement).
+Score d'empreinte digitale publique : ${f.score.total}/100 — COUVERTURE : ${f.score.measuredWeight} points de poids mesurés sur 100.
 
 ${wrapUntrusted("FAITS MESURÉS (collecte publique)", facts.map((fact) => `- ${fact}`).join("\n"), { max: 4000 })}
 
-Rédige 2 à 4 phrases qui synthétisent cette empreinte pour un rapport de diagnostic de marque. Cite le score. Reste strictement factuel. Réponds avec le paragraphe seul, sans titre ni liste.`,
+Rédige 2 à 4 phrases qui synthétisent cette empreinte pour un rapport de diagnostic de marque, destiné à un dirigeant qui découvre l'exercice. Cite le score ET sa couverture. RÈGLE DURE : si la couverture est inférieure à 50 points, dis explicitement que la lecture est partielle et n'emploie JAMAIS « parfait », « maximal », « excellent » ou équivalent — un score élevé sur peu de terrains mesurés n'est pas une visibilité maximale. Reste strictement factuel. Réponds avec le paragraphe seul, sans titre ni liste.`,
       maxOutputTokens: 400,
     });
     const { text } = await Promise.race([
@@ -160,7 +165,18 @@ Rédige 2 à 4 phrases qui synthétisent cette empreinte pour un rapport de diag
     const cleaned = text.trim().replace(/^["«\s]+|["»\s]+$/g, "");
     const citesBrand = cleaned.toLowerCase().includes(ctx.companyName.toLowerCase().slice(0, 12));
     const citesScore = cleaned.includes(String(f.score.total));
-    if (cleaned.length >= 120 && cleaned.length <= 1_200 && citesBrand && citesScore) {
+    // Garde DÉTERMINISTE de calibrage (ADR-0164) : à faible couverture, toute
+    // sortie triomphaliste est rejetée au profit du template honnête — la
+    // règle prompt ne suffit jamais seule (leçon ADR-0163).
+    const lowCoverage = (f.score.measuredWeight ?? 0) < 50;
+    const celebratory = /parfait|maximal|excellent|exceptionnel|remarquable|impressionnant/i.test(cleaned);
+    if (
+      cleaned.length >= 120 &&
+      cleaned.length <= 1_200 &&
+      citesBrand &&
+      citesScore &&
+      !(lowCoverage && celebratory)
+    ) {
       return { text: cleaned, source: "LLM" };
     }
     return { text: template, source: "TEMPLATE" };
