@@ -33,6 +33,7 @@ import {
 } from "./web-footprint";
 import {
   COUNTRY_CITIES,
+  compactTextHasDiscriminant,
   createEntityGate,
   mentionsEntity,
   normalizeEntityText,
@@ -155,6 +156,20 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
   /** Évidence (texte du hit Brave) par profil social DÉCOUVERT — pour la passe adversariale. */
   const discoveredSocialEvidence = new Map<string, string>();
 
+  // ── 0ter. Run Google Business DÉMARRÉ tôt (pattern async 2 temps) ──
+  // L'actor Apify prend 30-60 s : démarré ici, il travaille chez Apify
+  // pendant tout le pipeline ; la récolte se fait tard (étage 5ter), juste
+  // avant la réfutation adversariale. Une fenêtre synchrone de 18 s dans le
+  // stage parallèle le condamnait structurellement (round 13 test BK Abidjan).
+  const mapsStartPromise: Promise<import("./footprint-collectors").MapsRunStart> = (async () => {
+    try {
+      const { startGoogleBusinessRun } = await import("./footprint-collectors");
+      return await startGoogleBusinessRun(input.companyName, input.country);
+    } catch {
+      return { status: "ERROR" as const };
+    }
+  })();
+
   // ── 0.0. Auto-découverte du site officiel si RIEN n'est déclaré ──
   // Précondition de l'évidence révélée (ADR-0149) : sans site ni Brave, une
   // marque nationale n'a ni domaine daté (RDAP) ni tech site → le Scoreur la
@@ -250,10 +265,23 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
         discovery.status = "OK";
         // Garde anti-faux-positif ENTITY-GATE (ADR-0162) : le hit doit
         // mentionner la marque ET, si le nom est ambigu, co-mentionner un
-        // discriminant. L'évidence (texte du hit) est conservée par profil
-        // pour la passe adversariale aval.
+        // discriminant. QUAND UN PAYS EST DÉCLARÉ, un profil découvert doit
+        // EN PLUS porter un signal marché — discriminant en frontière de mot
+        // dans le titre/description, ou en forme compacte dans l'URL/handle
+        // (`burgerkingcotedivoire` ∋ « ivoire ») : round 12 test BK Abidjan,
+        // la requête géo remontait aussi les comptes France/global/Trinidad
+        // et Apify comptait les followers des MAUVAIS comptes. Même doctrine
+        // que la presse : le marché déclaré, ou rien — jamais l'homonyme de
+        // marché. Les profils issus du SITE du client (chemin de confiance)
+        // ne passent pas par ce filtre.
+        const marketScoped = Boolean(input.country?.trim()) && gate.discriminants.length > 0;
         const accepted = result.hits.filter((h) => {
-          const ok = gate.judge(`${h.title} ${h.description}`).accepted;
+          const verdict = gate.judge(`${h.title} ${h.description}`);
+          const marketOk =
+            !marketScoped ||
+            verdict.matchedDiscriminants.length > 0 ||
+            compactTextHasDiscriminant(h.url, gate.discriminants);
+          const ok = verdict.accepted && marketOk;
           if (!ok) filtered.discovery += 1;
           return ok;
         });
@@ -349,10 +377,14 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
       const { fetchPublicFollowers } = await import("@/server/services/anubis/social-audit");
       // Fenêtre 1 min (2026-07-16) : un actor Apify (scraping) prend 10-60 s —
       // avec les plateformes désormais en parallèle, on lui laisse jusqu'à 35 s
-      // dans la fenêtre au lieu de l'étouffer à 15 s.
+      // dans la fenêtre au lieu de l'étouffer à 15 s. MAIS il laisse toujours
+      // ≥ 12 s au reste du pipeline : au round 12 du test BK Abidjan, Apify a
+      // mangé le budget entier et la réfutation adversariale (le filet
+      // anti-bruit final) n'a jamais tourné.
+      const apifyWindow = Math.max(5_000, Math.min(35_000, remaining() - 12_000));
       const result = await withTimeout(
-        fetchPublicFollowers(input.strategyId, handles, { timeoutMs: Math.min(35_000, remaining()) }),
-        Math.min(40_000, remaining()),
+        fetchPublicFollowers(input.strategyId, handles, { timeoutMs: apifyWindow }),
+        apifyWindow + 5_000,
         { state: "DEGRADED" as const, reason: "VENDOR_OUTAGE" as const },
       );
       switch (result.state) {
@@ -480,8 +512,7 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
       const ytProfile = footprint.socials.find((s) => s.platform === "YOUTUBE" && s.handle);
       const stageBudget = Math.min(20_000, remaining());
 
-      const [maps, youtube, performance, ads] = await Promise.all([
-        collectors.fetchGoogleBusinessPresence(input.companyName, input.country, { timeoutMs: Math.min(stageBudget, 18_000) }),
+      const [youtube, performance, ads] = await Promise.all([
         ytProfile
           ? collectors.fetchYouTubeChannelStats(ytProfile.handle!, { timeoutMs: Math.min(stageBudget, 6_000) })
           : Promise.resolve(null),
@@ -489,18 +520,6 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
         collectors.fetchAdsPresence(input.companyName, { timeoutMs: Math.min(stageBudget, 15_000) }),
       ]);
 
-      // Garde anti-faux-positif ENTITY-GATE : une fiche Maps qui ne passe pas
-      // le verdict (mention + discriminant si nom ambigu — « Top Voyages »
-      // n'est pas le soda Top) est rejetée (NOT_FOUND honnête, jamais les
-      // avis d'un autre). L'adresse participe à l'évidence (ville = discriminant).
-      const mapsRejected =
-        maps.status === "LIVE" &&
-        maps.placeName &&
-        !gate.judge(`${maps.placeName} ${maps.address ?? ""}`).accepted;
-      if (mapsRejected) filtered.maps += 1;
-      enrichedExtras.maps = mapsRejected
-        ? { ...maps, status: "NOT_FOUND", placeName: null, rating: null, reviewCount: null, address: null, topReviews: [] }
-        : maps;
       if (youtube) {
         enrichedExtras.youtube = youtube;
         // Audience YouTube mesurée → FollowerSnapshot (même sémantique que le
@@ -526,6 +545,43 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
       enrichedExtras.ads = ads;
     } catch (err) {
       errors.push(`collectors: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  // ── 5ter. Récolte du run Google Business (démarré à l'étage 0ter) ──
+  // Fenêtre = tout le budget restant MOINS la réserve du juge adversarial.
+  {
+    const mapsStart = await mapsStartPromise;
+    if ("status" in mapsStart) {
+      enrichedExtras.maps = {
+        status: mapsStart.status,
+        placeName: null,
+        rating: null,
+        reviewCount: null,
+        address: null,
+        topReviews: [],
+      };
+    } else {
+      try {
+        const { collectGoogleBusinessRun } = await import("./footprint-collectors");
+        const maps = await collectGoogleBusinessRun(mapsStart.runId, {
+          timeoutMs: Math.max(3_000, Math.min(45_000, remaining() - 10_000)),
+        });
+        // Garde anti-faux-positif ENTITY-GATE : une fiche Maps qui ne passe
+        // pas le verdict (mention + discriminant si nom ambigu — « Top
+        // Voyages » n'est pas le soda Top) est rejetée (NOT_FOUND honnête,
+        // jamais les avis d'un autre). L'adresse participe à l'évidence.
+        const mapsRejected =
+          maps.status === "LIVE" &&
+          maps.placeName &&
+          !gate.judge(`${maps.placeName} ${maps.address ?? ""}`).accepted;
+        if (mapsRejected) filtered.maps += 1;
+        enrichedExtras.maps = mapsRejected
+          ? { ...maps, status: "NOT_FOUND", placeName: null, rating: null, reviewCount: null, address: null, topReviews: [] }
+          : maps;
+      } catch (err) {
+        errors.push(`maps: ${err instanceof Error ? err.message : String(err)}`);
+      }
     }
   }
 

@@ -104,6 +104,39 @@ mauvais marché. Décisions ajoutées, toutes déterministes :
    probé, démonymes absents.
 3. **TLD du pays déclaré prioritaire** dans `candidateDomains` (le domaine du marché
    représente LE client ; tous les candidats restent probés en parallèle).
-4. **Rétries réseau bornés** (`fetchRssText` 5×, `fetchPublic` 3×, timeout par tentative
-   3,5 s, backoff progressif) : sur FAI à IP round-robin partiellement mortes — le
-   terrain réel du marché cible — un fetch single-shot rendait NULL en silence.
+4. **Rétries réseau bornés** (`fetchRssText` 5×, `fetchPublic` 3×, `braveWebSearch` 3×
+   + une re-tentative 429, timeout par tentative 3,5 s, backoff progressif) : sur FAI à
+   IP round-robin partiellement mortes — le terrain réel du marché cible — un fetch
+   single-shot rendait NULL en silence.
+
+## Amendement 2026-07-20 (2ᵉ vague) — clés réelles branchées, rounds 11-15
+
+Le test s'est poursuivi avec les clés réelles (Ollama Cloud deepseek-v4-flash + Brave +
+Apify). Le cran 3 (réfutation LLM) a tourné en vrai (`DETERMINISTIC_PLUS_LLM`, 0 faux
+rejet sur presse CI légitime). Quatre trous supplémentaires trouvés et fermés :
+
+5. **Profils sociaux découverts = marché déclaré SEULEMENT** : la requête Brave géo
+   remontait aussi les comptes France/global/Trinidad de la franchise, et Apify
+   comptait les followers des MAUVAIS comptes (1,99 M IG global vs 9 855 FB CI). Quand
+   un pays est déclaré, un profil découvert doit porter un signal marché — discriminant
+   en frontière de mot dans titre/description, ou en forme compacte dans l'URL/handle
+   (`compactTextHasDiscriminant` : `burgerkingcotedivoire` ∋ « ivoire »). Les profils
+   issus du site du client (chemin de confiance) ne passent pas par ce filtre. Résultat
+   mesuré : 1 seul profil retenu (le bon), 5 écartés comptés, followers du bon compte.
+6. **Chemins réservés de plateforme ≠ handles** : `tiktok.com/discover/burger-king-abidjan`
+   produisait un profil « discover ». Stoplist élargie dans `detectSocialLinks`.
+7. **Apify en pattern async 2 temps** (`startGoogleBusinessRun` tôt →
+   `collectGoogleBusinessRun` tard) : le long-poll `run-sync` tenait la connexion
+   pendant tout le run de l'actor (30-75 s) et se faisait tuer par les intermédiaires
+   qui coupent à ~60 s (NAT FAI mesuré, proxys/edge en prod). L'actor travaille chez
+   Apify pendant que le pipeline tourne ; fiche récoltée juste avant la réfutation.
+   Résultat mesuré : « Burger King Cocody Abidjan », 3.9★, 2 967 avis. Abort
+   best-effort si la fenêtre expire (pas de crédits brûlés pour rien).
+8. **Réserve de budget pour le juge** : la fenêtre Apify followers laisse désormais
+   ≥ 12 s au reste du pipeline — au round 12 elle mangeait le budget entier et la
+   réfutation adversariale (le filet final) ne tournait jamais.
+
+Validation par étage (rounds réels) : presse CI 5/5 + juge LLM (R7/9/11) · socials
+marché + followers du bon compte (R13/15) · site accepté (R13) / rejeté honnête
+(R1-6) · maps Cocody LIVE + juge (R14) · dégradation honnête réseau mort, zéro
+fabrication, erreurs enregistrées (R10/12/14).

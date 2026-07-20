@@ -270,6 +270,18 @@ export function createEntityGate(name: string, ctx: DiscriminantContext): Entity
   return { brandName: name, ambiguity, discriminants, judge };
 }
 
+/**
+ * Match discriminant en forme COMPACTE (tout non-alphanumérique retiré) —
+ * pour les handles/URLs où les mots sont collés : `burgerkingcotedivoire`
+ * contient bien « ivoire » alors que la frontière de mot ne le voit pas.
+ * Garde de longueur ≥ 4 (un discriminant trop court matcherait n'importe où).
+ */
+export function compactTextHasDiscriminant(text: string, discriminants: readonly string[]): boolean {
+  const compact = normalizeEntityText(text).replace(/ /g, "");
+  if (!compact) return false;
+  return discriminants.some((d) => d.length >= 4 && compact.includes(d));
+}
+
 // ── Rapport de gate (persisté dans EnrichedFootprint.entityGate) ───────
 
 export interface EntityGateReport {

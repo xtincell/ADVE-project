@@ -223,13 +223,33 @@ describe("fetchGoogleBusinessPresence (dégradations)", () => {
     expect(maps.status).toBe("DEFERRED_NO_KEY");
     expect(spy).not.toHaveBeenCalled();
   });
-  it("NOT_FOUND honnête sur dataset vide", async () => {
+  it("NOT_FOUND honnête sur dataset vide (protocole async start→poll→items)", async () => {
     process.env.APIFY_TOKEN = "t";
     process.env.APIFY_MAPS_ACTOR_ID = "compass~crawler-google-places";
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => [] }));
+    // Séquence async 2 temps (ADR-0162 amendé — plus jamais de long-poll
+    // run-sync tué à ~60 s) : start run → poll SUCCEEDED → dataset vide.
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ data: { id: "run-1" } }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ data: { status: "SUCCEEDED" } }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => [] });
+    vi.stubGlobal("fetch", fetchMock);
     const maps = await fetchGoogleBusinessPresence("Marque Introuvable", null);
     expect(maps.status).toBe("NOT_FOUND");
     expect(maps.rating).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+  it("run FAILED → ERROR honnête, jamais de fabrication", async () => {
+    process.env.APIFY_TOKEN = "t";
+    process.env.APIFY_MAPS_ACTOR_ID = "compass~crawler-google-places";
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ data: { id: "run-2" } }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ data: { status: "FAILED" } }) });
+    vi.stubGlobal("fetch", fetchMock);
+    const maps = await fetchGoogleBusinessPresence("Marque", null);
+    expect(maps.status).toBe("ERROR");
+    expect(maps.placeName).toBeNull();
   });
 });
 

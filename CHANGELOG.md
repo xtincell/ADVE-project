@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.227 — fix(seshat+intake): clés réelles branchées — filtre marché socials, Apify async 2 temps, réserve juge (rounds 11-15 BK Abidjan) (2026-07-20)
+
+**Suite du test en boucle avec les clés réelles (Ollama Cloud `deepseek-v4-flash` + Brave + Apify) : le cran 3 (réfutation LLM) a tourné en vrai (`DETERMINISTIC_PLUS_LLM`, 0 faux rejet sur presse CI légitime), et 4 trous supplémentaires fermés** ([ADR-0162](docs/governance/adr/0162-entity-gate-collecte-adversariale.md) amendé 2ᵉ vague) :
+
+- **Profils sociaux découverts = marché déclaré SEULEMENT** : Brave remontait les comptes France/global/Trinidad de la franchise et Apify comptait les followers des MAUVAIS comptes (1,99 M IG global vs 9 855 FB CI). Signal marché exigé (discriminant en frontière de mot dans titre/desc, ou compact dans URL/handle — `compactTextHasDiscriminant`, `burgerkingcotedivoire` ∋ « ivoire ») ; chemin de confiance (site du client) non filtré. Mesuré : 1 seul profil retenu (le bon), 5 écartés comptés.
+- **Apify Maps → pattern async 2 temps** (pré-existant, PATCHED-SYMPTOMS) : le long-poll `run-sync` (30-75 s) était tué par les intermédiaires coupant à ~60 s → `startGoogleBusinessRun` (étage 0) + `collectGoogleBusinessRun` (étage 5ter, juste avant la réfutation) + abort best-effort. Mesuré : « Burger King Cocody Abidjan », 3.9★, 2 967 avis.
+- **Réserve de budget juge** : la fenêtre Apify followers laisse ≥ 12 s au pipeline aval — elle mangeait le budget entier et la réfutation ne tournait jamais. `braveWebSearch` : retries réseau 3× + re-tentative 429, timeout par tentative.
+- **Chemins réservés ≠ handles** (pré-existant, PATCHED-SYMPTOMS) : `tiktok.com/discover/...` → profil « discover ». Stoplist élargie dans `detectSocialLinks`.
+- Validation par étage sur cas réel : presse CI 5/5 + juge (R7/9/11) · socials marché + followers du bon compte (R13/15) · site accepté (R13)/rejeté honnête (R1-6) · maps Cocody + juge (R14) · dégradation honnête réseau mort (R10/12/14). tsc 0 · lint 0 · **2435 tests verts** (+2 protocole async maps).
+
 ## v6.27.226 — fix(intake): presse marché-SEULEMENT — le rappel large supprimé (round 8 BK Abidjan) (2026-07-20)
 
 **Le contrat presse devient déterministe : presse du marché déclaré, ou EMPTY honnête — jamais un remplissage hors-marché.** Round 8 du test en boucle : la passe géo échouait réseau → le « rappel large » de v6.27.225 remplissait silencieusement les 5 slots avec la presse France (même marque, mauvais marché), résultat dépendant de l'état du réseau. Supprimé ([ADR-0162](docs/governance/adr/0162-entity-gate-collecte-adversariale.md) amendé) : requête unique marché-d'abord ; échec réseau du flux → erreur enregistrée (`errors`) + EMPTY ; l'absence de presse locale est un signal honnête, pas un vide à combler. Vérifié rounds 9-10 : réseau OK → 5/5 mentions Côte d'Ivoire/Abidjan (7 bruits écartés comptés) ; fenêtre réseau morte → EMPTY + erreur explicite. tsc 0 · lint 0 · 2434 tests verts.

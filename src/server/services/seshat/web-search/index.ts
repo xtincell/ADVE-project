@@ -60,17 +60,49 @@ export async function braveWebSearch(query: string, opts?: WebSearchOptions): Pr
   const count = Math.min(Math.max(opts?.count ?? 5, 1), 20);
   const timeoutMs = opts?.timeoutMs ?? 8000;
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const url = new URL(BRAVE_ENDPOINT);
-    url.searchParams.set("q", query.trim());
-    url.searchParams.set("count", String(count));
+  // Retries bornés (même doctrine que fetchRssText/fetchPublic, ADR-0162
+  // amendé) : timeout PAR TENTATIVE (une connexion pendue ne mange pas toute
+  // la fenêtre), 3 tentatives sur échec réseau pur (IP round-robin mortes,
+  // FAI dégradé — le terrain réel du marché cible), backoff progressif.
+  // 429 (rate-limit free tier 1 req/s) → UNE re-tentative après 1,1 s.
+  const attemptTimeoutMs = Math.min(timeoutMs, 3_500);
+  let res: Response | null = null;
+  let retried429 = false;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), attemptTimeoutMs);
+    try {
+      const url = new URL(BRAVE_ENDPOINT);
+      url.searchParams.set("q", query.trim());
+      url.searchParams.set("count", String(count));
 
-    const res = await fetch(url.toString(), {
-      signal: controller.signal,
-      headers: { Accept: "application/json", "X-Subscription-Token": braveKey },
-    });
+      res = await fetch(url.toString(), {
+        signal: controller.signal,
+        headers: { Accept: "application/json", "X-Subscription-Token": braveKey },
+      });
+      if (res.status === 429 && !retried429) {
+        retried429 = true;
+        clearTimeout(timeout);
+        await new Promise((r) => setTimeout(r, 1_100));
+        attempt -= 1; // la re-tentative 429 ne consomme pas un essai réseau
+        continue;
+      }
+      break;
+    } catch (err) {
+      res = null;
+      clearTimeout(timeout);
+      if (attempt === 3) {
+        return { status: "ERROR", error: err instanceof Error ? err.message : String(err) };
+      }
+      await new Promise((r) => setTimeout(r, 300 * attempt));
+      continue;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+  if (!res) return { status: "ERROR", error: "unreachable" };
+
+  try {
     if (!res.ok) return { status: "ERROR", error: `Brave HTTP ${res.status}` };
 
     const data: unknown = await res.json();
@@ -96,8 +128,6 @@ export async function braveWebSearch(query: string, opts?: WebSearchOptions): Pr
     return { status: "OK", hits };
   } catch (err) {
     return { status: "ERROR", error: err instanceof Error ? err.message : String(err) };
-  } finally {
-    clearTimeout(timeout);
   }
 }
 

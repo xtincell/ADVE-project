@@ -138,7 +138,15 @@ export function detectSocialLinks(htmlOrLinks: string): SocialProfile[] {
       // Exclut les liens de partage (sharer, intent) — pas des profils.
       if (/sharer|share\.php|intent\/|\/share(\/|\?|$)/i.test(raw)) continue;
       const handle = raw.match(handleRe)?.[1] ?? null;
-      if (handle && /^(p|reel|posts?|watch|hashtag|share|sharer|home|search)$/i.test(handle)) continue;
+      // Chemins réservés de plateforme ≠ profils (round 12 test BK Abidjan :
+      // tiktok.com/discover/burger-king-abidjan → handle « discover »).
+      if (
+        handle &&
+        /^(p|reels?|posts?|watch|hashtag|share|sharer|home|search|discover|explore|stories|story|live|videos?|music|foryou|tag|tags|pages|groups|events|about|help|legal|privacy|terms|business|directory|mentions)$/i.test(
+          handle,
+        )
+      )
+        continue;
       const key = `${platform}:${(handle ?? raw).toLowerCase()}`;
       if (!found.has(key)) found.set(key, { platform, url: raw, handle });
     }

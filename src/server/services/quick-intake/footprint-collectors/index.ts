@@ -7,6 +7,13 @@
 export { fetchDomainInfo, registrableDomain, parseRdapResponse, type DomainInfo } from "./domain-rdap";
 export { checkEmailInfrastructure, detectMxProvider, hasSpfRecord, hasDmarcRecord, type EmailInfra } from "./email-dns";
 export { fetchYouTubeChannelStats, parseYouTubeChannelResponse, type YouTubeStats } from "./youtube";
-export { fetchGoogleBusinessPresence, parseMapsPlaceItem, type MapsPresence } from "./google-maps";
+export {
+  fetchGoogleBusinessPresence,
+  startGoogleBusinessRun,
+  collectGoogleBusinessRun,
+  parseMapsPlaceItem,
+  type MapsPresence,
+  type MapsRunStart,
+} from "./google-maps";
 export { fetchSitePerformance, parsePsiResponse, type SitePerformance } from "./pagespeed";
 export { fetchAdsPresence, parseAdsItems, type AdsPresence } from "./ads-library";

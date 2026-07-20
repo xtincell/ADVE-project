@@ -36,19 +36,30 @@ export function parseMapsPlaceItem(item: Record<string, unknown>): Omit<MapsPres
   return { placeName, rating, reviewCount, address, topReviews };
 }
 
-export async function fetchGoogleBusinessPresence(
+// Pattern ASYNCHRONE en 2 temps (démarrer le run → poller court → lire le
+// dataset) au lieu de `run-sync-get-dataset-items` : le long-poll tenait la
+// connexion ouverte pendant tout le run de l'actor (30-75 s) et se faisait
+// tuer par les intermédiaires qui coupent à ~60 s (NAT FAI mesuré test BK
+// Abidjan 2026-07-20, proxys/edge en prod). Ici chaque requête dure < 8 s,
+// et l'orchestrateur peut DÉMARRER tôt / RÉCOLTER tard — l'actor travaille
+// chez Apify pendant que le reste du pipeline tourne.
+
+export type MapsRunStart = { runId: string } | { status: "DEFERRED_NO_KEY" | "ERROR" };
+
+const shortFetch = (url: string, init?: RequestInit) =>
+  fetch(url, { ...init, signal: AbortSignal.timeout(8_000) });
+
+/** Démarre le run Apify (requête courte). Ne lève jamais. */
+export async function startGoogleBusinessRun(
   companyName: string,
   country: string | null | undefined,
-  opts?: { timeoutMs?: number },
-): Promise<MapsPresence> {
+): Promise<MapsRunStart> {
   const token = process.env.APIFY_TOKEN;
   const actorId = process.env.APIFY_MAPS_ACTOR_ID;
-  if (!token || !actorId || actorId === "off") return { status: "DEFERRED_NO_KEY", ...EMPTY };
-
-  const timeoutMs = opts?.timeoutMs ?? 25_000;
+  if (!token || !actorId || actorId === "off") return { status: "DEFERRED_NO_KEY" };
   try {
-    const res = await fetch(
-      `https://api.apify.com/v2/acts/${encodeURIComponent(actorId)}/run-sync-get-dataset-items?token=${encodeURIComponent(token)}&timeout=${Math.ceil(timeoutMs / 1000)}`,
+    const startRes = await shortFetch(
+      `https://api.apify.com/v2/acts/${encodeURIComponent(actorId)}/runs?token=${encodeURIComponent(token)}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -58,11 +69,56 @@ export async function fetchGoogleBusinessPresence(
           maxReviews: 3,
           language: "fr",
         }),
-        signal: AbortSignal.timeout(timeoutMs + 10_000),
       },
     );
-    if (!res.ok) return { status: "ERROR", ...EMPTY };
-    const items = (await res.json()) as Array<Record<string, unknown>>;
+    if (!startRes.ok) return { status: "ERROR" };
+    const started = (await startRes.json()) as { data?: { id?: string } };
+    return started.data?.id ? { runId: started.data.id } : { status: "ERROR" };
+  } catch {
+    return { status: "ERROR" };
+  }
+}
+
+/** Récolte le run (poll 4 s + dataset). Abort best-effort si la fenêtre expire. */
+export async function collectGoogleBusinessRun(
+  runId: string,
+  opts?: { timeoutMs?: number },
+): Promise<MapsPresence> {
+  const token = process.env.APIFY_TOKEN;
+  if (!token) return { status: "DEFERRED_NO_KEY", ...EMPTY };
+  const deadline = Date.now() + (opts?.timeoutMs ?? 25_000);
+  try {
+    let runStatus = "RUNNING";
+    for (;;) {
+      try {
+        const st = await shortFetch(`https://api.apify.com/v2/actor-runs/${runId}?token=${encodeURIComponent(token)}`);
+        if (st.ok) {
+          const body = (await st.json()) as { data?: { status?: string } };
+          runStatus = body.data?.status ?? "RUNNING";
+          if (["SUCCEEDED", "FAILED", "ABORTED", "TIMED-OUT"].includes(runStatus)) break;
+        }
+      } catch {
+        /* poll transitoire raté — on continue jusqu'à la deadline */
+      }
+      if (Date.now() >= deadline) break;
+      await new Promise((r) => setTimeout(r, Math.min(4_000, Math.max(250, deadline - Date.now()))));
+    }
+    if (runStatus !== "SUCCEEDED") {
+      // Fenêtre épuisée ou run mort : abort best-effort (ne pas brûler de
+      // crédits sur un run que personne ne lira), verdict honnête.
+      if (!["FAILED", "ABORTED", "TIMED-OUT"].includes(runStatus)) {
+        shortFetch(`https://api.apify.com/v2/actor-runs/${runId}/abort?token=${encodeURIComponent(token)}`, {
+          method: "POST",
+        }).catch(() => undefined);
+      }
+      return { status: "ERROR", ...EMPTY };
+    }
+
+    const itemsRes = await shortFetch(
+      `https://api.apify.com/v2/actor-runs/${runId}/dataset/items?token=${encodeURIComponent(token)}&limit=3`,
+    );
+    if (!itemsRes.ok) return { status: "ERROR", ...EMPTY };
+    const items = (await itemsRes.json()) as Array<Record<string, unknown>>;
     if (!Array.isArray(items) || items.length === 0) return { status: "NOT_FOUND", ...EMPTY };
     const parsed = parseMapsPlaceItem(items[0]!);
     if (!parsed) return { status: "NOT_FOUND", ...EMPTY };
@@ -70,4 +126,15 @@ export async function fetchGoogleBusinessPresence(
   } catch {
     return { status: "ERROR", ...EMPTY };
   }
+}
+
+/** Compat : démarre + récolte dans la même fenêtre (callers hors orchestrateur). */
+export async function fetchGoogleBusinessPresence(
+  companyName: string,
+  country: string | null | undefined,
+  opts?: { timeoutMs?: number },
+): Promise<MapsPresence> {
+  const started = await startGoogleBusinessRun(companyName, country);
+  if ("status" in started) return { status: started.status, ...EMPTY };
+  return collectGoogleBusinessRun(started.runId, opts);
 }
