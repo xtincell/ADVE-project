@@ -363,7 +363,9 @@ export function deriveBrandLevelDeterministic(input: {
   return {
     level,
     confidence: 0.55, // honest: a rules read is less certain than a substance read
-    justification: `Évaluation déterministe (sans LLM) : le pilier ADVE le plus faible place ${companyName} au palier ${TIER_DEFINITIONS[level].label}. ${TIER_DEFINITIONS[level].signals}`,
+    // Langage fondateur (2026-07-20) : « Évaluation déterministe (sans LLM) »
+    // est du jargon interne — le client n'a pas à connaître notre machinerie.
+    justification: `Évaluation automatique à partir de vos réponses : chaque marque est tirée par sa fondation la plus faible — la vôtre place ${companyName} au niveau ${TIER_DEFINITIONS[level].label}. ${TIER_DEFINITIONS[level].signals}`,
     pillarSignals,
     nextMilestone,
     pathToIcone,

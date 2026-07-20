@@ -291,5 +291,12 @@ export interface EntityGateReport {
   /** DETERMINISTIC_ONLY = LLM indisponible/désactivé — plancher honnête. */
   judge: "DETERMINISTIC_ONLY" | "DETERMINISTIC_PLUS_LLM";
   /** Candidats écartés par source (bruit supprimé, jamais remplacé). */
-  filtered: { press: number; discovery: number; maps: number; site: number; adversarial: number };
+  filtered: {
+    press: number;
+    discovery: number;
+    maps: number;
+    site: number;
+    citations: number;
+    adversarial: number;
+  };
 }

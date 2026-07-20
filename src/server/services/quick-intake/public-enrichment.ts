@@ -152,7 +152,7 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
     websiteUrl: input.websiteUrl,
     socialHandles: declaredHandles,
   });
-  const filtered = { press: 0, discovery: 0, maps: 0, site: 0, adversarial: 0 };
+  const filtered = { press: 0, discovery: 0, maps: 0, site: 0, citations: 0, adversarial: 0 };
   /** Évidence (texte du hit Brave) par profil social DÉCOUVERT — pour la passe adversariale. */
   const discoveredSocialEvidence = new Map<string, string>();
 
@@ -426,16 +426,23 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
 
       // Juge + classe les items d'un flux : gate ADR-0162 (mention exigée +
       // discriminant co-occurrent pour un nom ambigu — « Le top 10 des
-      // plages » est écarté), puis tri par nombre de discriminants matchés
-      // (desc, ordre Google stable sinon) — tri, jamais suppression.
+      // plages » est écarté). QUAND UN PAYS EST DÉCLARÉ, un discriminant
+      // marché est exigé pour TOUS les noms, même distinctifs : « La
+      // Paillote » (restaurant Douala) remontait la Paillote de CONAKRY —
+      // même entité de nom, autre marché (test qualité 2026-07-20, même
+      // règle que les profils sociaux). Puis tri par nombre de discriminants
+      // (desc, ordre Google stable sinon).
+      const pressMarketScoped = Boolean(input.country?.trim()) && gate.discriminants.length > 0;
       const judgeFeed = (xml: string | null) =>
         !xml
           ? []
           : parseRssItems(xml, 25)
               .map((it) => ({ it, verdict: gate.judge(it.title) }))
               .filter(({ verdict }) => {
-                if (!verdict.accepted) filtered.press += 1;
-                return verdict.accepted;
+                const ok =
+                  verdict.accepted && (!pressMarketScoped || verdict.matchedDiscriminants.length > 0);
+                if (!ok) filtered.press += 1;
+                return ok;
               })
               .map((entry, i) => ({ ...entry, i }))
               .sort(
@@ -548,6 +555,63 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
     }
   }
 
+  // ── 4ter. Citations web (Brave, ADR-0164) — une marque, même micro, laisse
+  // TOUJOURS des traces publiques (annuaire, avis, blog, page sociale). Le
+  // rapport doit les montrer au fondateur au lieu d'un « 0 » sec. Gate
+  // d'entité + filtre marché appliqués (jamais l'homonyme d'un autre pays).
+  let webMentions: EnrichedFootprint["webMentions"] = undefined;
+  if (remaining() > 3_000) {
+    try {
+      const { braveWebSearch, isBraveConfigured } = await import("@/server/services/seshat/web-search");
+      if (!isBraveConfigured()) {
+        webMentions = { status: "DEFERRED_NO_KEY", items: [] };
+      } else {
+        const q = `"${input.companyName}" ${input.country?.trim() ?? input.sector ?? ""}`.trim();
+        const res = await withTimeout(
+          braveWebSearch(q, { count: 10, timeoutMs: Math.min(6_000, remaining()) }),
+          Math.min(7_000, remaining()),
+          { status: "ERROR" as const, error: "timeout" },
+        );
+        if (res.status === "OK") {
+          const marketScoped = Boolean(input.country?.trim()) && gate.discriminants.length > 0;
+          const seenUrls = new Set(press.map((p) => p.url));
+          const items: NonNullable<EnrichedFootprint["webMentions"]>["items"] = [];
+          for (const h of res.hits) {
+            if (seenUrls.has(h.url)) continue;
+            const verdict = gate.judge(`${h.title} ${h.description}`);
+            const marketOk =
+              !marketScoped ||
+              verdict.matchedDiscriminants.length > 0 ||
+              compactTextHasDiscriminant(h.url, gate.discriminants);
+            if (!(verdict.accepted && marketOk)) {
+              filtered.citations += 1;
+              continue;
+            }
+            try {
+              items.push({
+                title: (h.title || h.url).slice(0, 160),
+                url: h.url,
+                host: new URL(h.url).hostname.replace(/^www\./, ""),
+              });
+              seenUrls.add(h.url);
+            } catch {
+              /* URL malformée — ignorée */
+            }
+          }
+          webMentions = { status: items.length > 0 ? "LIVE" : "EMPTY", items: items.slice(0, 6) };
+        } else if (res.status === "DEFERRED_NO_KEY") {
+          webMentions = { status: "DEFERRED_NO_KEY", items: [] };
+        } else {
+          webMentions = { status: "ERROR", items: [] };
+          errors.push(`citations: ${res.error ?? "erreur"}`);
+        }
+      }
+    } catch (err) {
+      webMentions = { status: "ERROR", items: [] };
+      errors.push(`citations: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
   // ── 5ter. Récolte du run Google Business (démarré à l'étage 0ter) ──
   // Fenêtre = tout le budget restant MOINS la réserve du juge adversarial.
   {
@@ -594,11 +658,16 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
   if (remaining() > 2_500) {
     try {
       const { adversarialRefute } = await import("@/server/services/seshat/entity-gate/adversarial");
-      const candidates: Array<{ id: string; text: string; kind: "press" | "discovery" | "maps" }> = [
+      const candidates: Array<{ id: string; text: string; kind: "press" | "discovery" | "maps" | "citation" }> = [
         ...press.map((p, i) => ({
           id: `press:${i}`,
           text: `${p.title}${p.sourceName ? ` — ${p.sourceName}` : ""}`,
           kind: "press" as const,
+        })),
+        ...(webMentions?.items ?? []).map((m, i) => ({
+          id: `cit:${i}`,
+          text: `${m.title} (${m.host})`,
+          kind: "citation" as const,
         })),
         ...(enrichedExtras.maps?.status === "LIVE" && enrichedExtras.maps.placeName
           ? [{ id: "maps:0", text: `${enrichedExtras.maps.placeName} ${enrichedExtras.maps.address ?? ""}`, kind: "maps" as const }]
@@ -629,6 +698,15 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
               if (result.refutedIds.has(`press:${i}`)) press.splice(i, 1);
             }
             if (press.length === 0 && pressStatus === "LIVE") pressStatus = "EMPTY";
+            // Citations web : même règle demote-only.
+            if (webMentions) {
+              for (let i = webMentions.items.length - 1; i >= 0; i--) {
+                if (result.refutedIds.has(`cit:${i}`)) webMentions.items.splice(i, 1);
+              }
+              if (webMentions.items.length === 0 && webMentions.status === "LIVE") {
+                webMentions = { ...webMentions, status: "EMPTY" };
+              }
+            }
             // Maps : fiche réfutée → NOT_FOUND honnête.
             if (result.refutedIds.has("maps:0") && enrichedExtras.maps) {
               enrichedExtras.maps = {
@@ -678,6 +756,7 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
     followerCounts,
     ...(connectedProfiles.length > 0 ? { connectedProfiles } : {}),
     press,
+    ...(webMentions ? { webMentions } : {}),
     discovery,
     entityGate: {
       ambiguousName: gate.ambiguity.ambiguous,

@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.229 — feat(intake): rapport founder-first — propositions R/T/I/S ancrées, citations web, langage client (ADR-0164) (2026-07-20)
+
+**Retour opérateur sur la page résultat : cartes R/T/I/S vides, micro-marques à « 0 empreinte », synthèse en jargon fermé, copy pensée pour un initié.** Réponse ([ADR-0164](docs/governance/adr/0164-rapport-intake-founder-first.md)), vérifiée sur 3 rounds réels La Paillote :
+
+- **Propositions R/T/I/S déterministes** (`rtis-propositions.ts`, 0 LLM) : ≥ 2 propositions par volet au format « action → Pourquoi : {évidence citée} », dérivées du déclaré + du mesuré — plancher du composer, rendues À L'ÉCRAN (fini les cartes vides).
+- **Citations web** (Brave, gate + filtre marché + juge) : section « Ce qu'on trouve de vous en ligne » + dimension « Citations web » (poids 10) — La Paillote sort avec 5 citations réelles (Petit Futé, Tripadvisor) au lieu d'un 0 sec.
+- **Langage fondateur** : synthèse exécutive réécrite (échelle expliquée, évidences citées), framing R/T/I/S en clair, « Évaluation déterministe (sans LLM) » purgé, prompts narratifs avec règles d'écriture (expliquer, citer, zéro jargon), « Devotion Ladder »/« UGC » purgés du plan d'action.
+- **Presse marché-SEULEMENT même pour un nom distinctif** : « La Paillote » Douala remontait la Paillote de CONAKRY — discriminant marché exigé partout (parité socials) ; le résidu retors (titre guinéen contenant « Cameroun ») tombe au juge LLM (`adversarial: 2` mesuré).
+- **Budget collecte 20 s → 40 s** dans `complete()` : à 20 s le juge ne tournait JAMAIS en vrai flux (totalMs=20001, DETERMINISTIC_ONLY mesuré) — l'intake est asynchrone, les secondes sont invisibles. tsc 0 · lint 0 · 0 cycle · **2840 tests verts**.
+
 ## v6.27.228 — fix(intake): qualité de l'OUTPUT — anti-fabrication de preuves, cohérence de palier, anti-parking, taxonomie secteur (test 5 marques) (2026-07-20)
 
 **Test qualité de la page finale `/intake/[token]/result` sur 5 marques réelles à découvrabilité étagée (Orange · Brasseries du Cameroun · Dovv · Azur · La Paillote) — on ne jugeait que les remontées, pas l'output. 4 défauts trouvés, corrigés, re-vérifiés sur pages régénérées** ([ADR-0163](docs/governance/adr/0163-anti-fabrication-preuves-intake.md)) :

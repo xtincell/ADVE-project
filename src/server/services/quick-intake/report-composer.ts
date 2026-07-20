@@ -11,6 +11,7 @@
  */
 
 import type { NarrativeReport, AdvePillarReport, RtisPillarReport } from "./narrative-report";
+import { composeRtisPropositions } from "./rtis-propositions";
 
 const PILLAR_LABELS: Record<"a" | "d" | "v" | "e", string> = {
   a: "Authenticité",
@@ -87,60 +88,118 @@ export interface ComposeReportInput {
   rtisValues?: Partial<Record<"r" | "t" | "i" | "s", Record<string, unknown>>>;
   /** Score composite /100 (ADVE). */
   compositeScore?: number;
+  /** Scores /25 par pilier — fonde les propositions R/T/I/S (ADR-0164). */
+  pillarScores?: Record<"a" | "d" | "v" | "e", number>;
+  /** Empreinte publique mesurée — cite les preuves dans les propositions. */
+  footprint?: import("./footprint-types").EnrichedFootprint | null;
+  /** Libellé humain du secteur (jamais le code canon). */
+  sectorLabel?: string | null;
 }
 
 /**
  * Compose un NarrativeReport complet sans LLM. Chaque section dit ce qu'elle
  * est : une restitution structurée du déclaré + dérivé — pas une analyse.
  */
+/** Explication d'une phrase par pilier — le fondateur découvre la méthode. */
+const PILLAR_PLAIN: Record<"a" | "d" | "v" | "e", string> = {
+  a: "qui vous êtes et d'où vous venez",
+  d: "ce qui fait qu'on vous choisit vous",
+  v: "ce que vous vendez et à quel prix",
+  e: "qui vous suit et où",
+};
+
+/** Libellé + explication courte d'un niveau — jamais un code sec. */
+const TIER_PLAIN: Record<string, string> = {
+  LATENT: "Latent — votre marque existe, mais le marché ne la voit pas encore",
+  FRAGILE: "Fragile — les intuitions sont bonnes, la cohérence reste à verrouiller",
+  ORDINAIRE: "Ordinaire — la marque fonctionne, mais un concurrent pourrait prendre sa place",
+  FORTE: "Forte — la marque est distincte et préférée par une partie du marché",
+  CULTE: "Culte — une communauté engagée porte la marque",
+  ICONE: "Icône — la référence de son marché",
+};
+
 export function composeDeterministicReport(input: ComposeReportInput): NarrativeReport {
-  const { companyName, classification, extractedValues, rtisValues, compositeScore } = input;
+  const { companyName, classification, extractedValues, rtisValues, compositeScore, pillarScores, footprint, sectorLabel } = input;
 
   const adve: AdvePillarReport[] = (Object.keys(PILLAR_LABELS) as Array<"a" | "d" | "v" | "e">).map((key) => {
     const lines = pillarContentLines(extractedValues[key] ?? {});
+    const plain = PILLAR_PLAIN[key];
     const preview =
       lines.length > 0
-        ? `${PILLAR_LABELS[key]} — ${lines.length} élément(s) documenté(s). ${lines[0]!.slice(0, 160)}${lines.length > 1 ? " (…)" : ""}`
-        : `${PILLAR_LABELS[key]} — aucun élément documenté pour l'instant : c'est le premier chantier de ce pilier.`;
+        ? `${PILLAR_LABELS[key]} (${plain}) — ${lines.length} élément(s) dans vos réponses. ${lines[0]!.slice(0, 160)}${lines.length > 1 ? " (…)" : ""}`
+        : `${PILLAR_LABELS[key]} (${plain}) — rien de documenté pour l'instant : c'est le premier chantier, et c'est normal à ce stade.`;
     const full =
       lines.length > 0
-        ? `Ce que votre diagnostic ${PILLAR_LABELS[key]} contient, restitué tel quel :\n${lines.map((l) => `• ${l}`).join("\n")}`
-        : `Aucune matière déclarée ou détectée sur ce pilier. Un pilier ${PILLAR_LABELS[key]} vide n'est pas une faiblesse morale — c'est un angle mort à documenter en priorité avec votre opérateur.`;
+        ? `Ce que vous nous avez dit sur ${plain}, restitué tel quel :\n${lines.map((l) => `• ${l}`).join("\n")}`
+        : `Vous n'avez encore rien déclaré sur ${plain} — et notre collecte publique n'a rien trouvé pour le déduire. Ce n'est pas une faute : c'est l'angle mort à documenter en premier avec votre opérateur.`;
     return { key, name: PILLAR_LABELS[key], preview, full };
   });
+
+  // ── R/T/I/S : le contenu dérivé s'il existe, SINON des propositions
+  // concrètes fondées sur les données (ADR-0164) — jamais une carte vide.
+  const propositions =
+    pillarScores
+      ? composeRtisPropositions({
+          companyName,
+          sectorLabel: sectorLabel ?? null,
+          extractedValues,
+          pillarScores,
+          footprint: footprint ?? null,
+        })
+      : null;
 
   const rtisPillars: RtisPillarReport[] = (Object.keys(RTIS_LABELS) as Array<"r" | "t" | "i" | "s">).map((key) => {
     const content = rtisValues?.[key] ?? {};
     const lines = pillarContentLines(content);
     const narrative = typeof content.narrative === "string" ? content.narrative : null;
+    const prop = propositions?.[key] ?? null;
+    const hasDerived = narrative !== null || lines.length > 0;
     return {
       key,
       name: RTIS_LABELS[key],
-      preview: narrative ?? (lines[0] ? lines[0].slice(0, 200) : `Le volet ${RTIS_LABELS[key]} sera dérivé de votre ADVE par l'analyse complète.`),
-      full:
-        lines.length > 0
-          ? lines.map((l) => `• ${l}`).join("\n")
-          : `Pas encore de contenu ${RTIS_LABELS[key]} dérivé — il se construit à partir de vos piliers ADVE et des données marché.`,
+      preview:
+        narrative ??
+        (lines[0] ? lines[0].slice(0, 200) : prop?.preview || `Le volet ${RTIS_LABELS[key]} se construit avec votre opérateur à partir de vos réponses.`),
+      full: hasDerived
+        ? (narrative ? `${narrative}\n` : "") + lines.map((l) => `• ${l}`).join("\n")
+        : prop?.full ||
+          `Pas encore assez de matière pour ce volet — il se construit à partir de vos réponses et des données de votre marché.`,
       priority: key === "s" ? "P0" : "P1",
-      keyMove:
-        narrative?.slice(0, 120) ??
-        `Dériver le volet ${RTIS_LABELS[key]} depuis l'ADVE documenté.`,
+      keyMove: narrative?.slice(0, 120) ?? prop?.keyMove ?? `Construire le volet ${RTIS_LABELS[key]} avec votre opérateur.`,
     };
   });
 
-  const documentedPillars = adve.filter((p) => !p.preview.includes("aucun élément documenté")).length;
+  const documentedPillars = adve.filter((p) => !p.preview.includes("rien de documenté")).length;
+
+  // ── Synthèse exécutive FONDATEUR : explique l'échelle, cite les faits,
+  // zéro jargon (retour opérateur 2026-07-20 : « un jargon fermé qui ne
+  // parle à personne »).
+  const tierPlain = TIER_PLAIN[classification.toUpperCase()] ?? classification;
+  const evidence: string[] = [];
+  if (footprint) {
+    if (footprint.press.length > 0) evidence.push(`${footprint.press.length} mention(s) presse`);
+    const realFollowers = footprint.followerCounts.reduce((n, f) => n + (f.followerCount ?? 0), 0);
+    if (realFollowers > 0) evidence.push(`${realFollowers.toLocaleString("fr-FR")} abonnés comptés sur vos réseaux`);
+    if (footprint.maps?.status === "LIVE" && footprint.maps.reviewCount)
+      evidence.push(`${footprint.maps.reviewCount} avis Google (${footprint.maps.rating ?? "?"}★)`);
+    if (footprint.site?.reachable) evidence.push("un site joignable");
+  }
+  const evidencePhrase =
+    evidence.length > 0
+      ? ` Côté public, nous avons trouvé : ${evidence.join(", ")}.`
+      : " Côté public, notre collecte n'a presque rien trouvé à votre nom — c'est une information en soi : votre marque vit surtout hors ligne pour l'instant.";
 
   return {
     executiveSummary:
-      `${companyName} ressort au niveau ${classification}` +
-      (typeof compositeScore === "number" ? ` avec un score ADVE de ${Math.round(compositeScore)}/100` : "") +
-      `. ${documentedPillars}/4 piliers fondateurs sont documentés. ` +
-      `Ce rapport restitue fidèlement votre diagnostic déclaré et les données publiques collectées — ` +
-      `la lecture stratégique approfondie est produite avec votre opérateur.`,
+      `${companyName} se situe aujourd'hui au niveau « ${tierPlain} », sur une échelle qui va de Latent à Icône (la référence de son marché). ` +
+      `Ce niveau est estimé à partir de vos réponses : ${documentedPillars} de vos 4 fondations de marque sont documentées` +
+      (typeof compositeScore === "number" ? ` (score de départ : ${Math.round(compositeScore)}/100)` : "") +
+      `.${evidencePhrase} ` +
+      `Ce rapport restitue fidèlement ce que vous avez déclaré et ce que le public voit — la lecture stratégique approfondie se fait ensuite avec votre opérateur.`,
     adve,
     rtis: {
       framing:
-        "Les volets R/T/I/S sont dérivés de vos piliers fondateurs. Ci-dessous : l'état actuel de cette dérivation, restitué sans interprétation.",
+        "Après les fondations, la méthode regarde quatre volets d'exécution : vos risques (R — ce qui peut vous faire décrocher), la preuve marché (T — ce que le public prouve déjà), les pistes à tester (I) et le plan d'action (S). Voici une première lecture automatique, fondée uniquement sur vos réponses et votre empreinte publique.",
       pillars: rtisPillars,
     },
   };

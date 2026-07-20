@@ -119,6 +119,31 @@ export function computeFootprintScore(f: EnrichedFootprint): FootprintScore {
     dims.push({ key: "press", label: "Presse", weight: 10, measured: false, score: null, details: "flux presse indisponible" });
   }
 
+  // ── Citations web (10, ADR-0164) — toute trace publique hors presse ──
+  // Mesurée dès que la recherche a tourné (LIVE/EMPTY) ; une marque micro
+  // avec 2 citations réelles sort d'un « 0 » sec — honnête dans les 2 sens.
+  if (f.webMentions?.status === "LIVE" || f.webMentions?.status === "EMPTY") {
+    const n = f.webMentions.items.length;
+    dims.push({
+      key: "citations",
+      label: "Citations web",
+      weight: 10,
+      measured: true,
+      score: clamp(n * 25),
+      details: n > 0 ? `${n} page(s) publique(s) parlent de vous` : "aucune page publique trouvée à votre nom",
+    });
+  } else {
+    dims.push({
+      key: "citations",
+      label: "Citations web",
+      weight: 10,
+      measured: false,
+      score: null,
+      details:
+        f.webMentions?.status === "ERROR" ? "recherche en échec, réessayez" : "recherche web non configurée",
+    });
+  }
+
   // ── Email pro (10) ──
   if (f.emailInfra?.status === "LIVE") {
     let s = 0;

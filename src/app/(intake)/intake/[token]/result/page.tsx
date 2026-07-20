@@ -1160,12 +1160,17 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                       {p.priority}
                     </span>
                   </header>
-                  {p.keyMove && (
+                  {/* ADR-0164 — ≥ 2 propositions visibles À L'ÉCRAN (le chip
+                      keyMove est masqué quand il duplique la 1ʳᵉ proposition ;
+                      contenu long clampé, l'intégral reste dans le PDF). */}
+                  {p.keyMove && !p.full.includes(p.keyMove.slice(0, 60)) && (
                     <p className="mb-3 rounded-md bg-primary-subtle/30 px-3 py-2 text-xs font-medium leading-snug text-primary">
                       {p.keyMove}
                     </p>
                   )}
-                  <p className="text-sm leading-relaxed text-foreground">{p.preview}</p>
+                  <p className="whitespace-pre-line text-sm leading-relaxed text-foreground">
+                    {p.full.split("\n").slice(0, 9).join("\n") || p.preview}
+                  </p>
                   <p className="mt-3 flex items-center gap-1.5 border-t border-border-subtle pt-3 text-xs text-foreground-muted">
                     <Lock className="h-3 w-3" />
                     {t("intakeResult.rtis.lock")}

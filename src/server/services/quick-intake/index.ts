@@ -483,7 +483,13 @@ export async function complete(token: string) {
   // ── ADR-0121 — collecte de l'empreinte publique enrichie. ──
   // Inconditionnelle (l'orchestrateur dégrade seul : découverte Brave si
   // rien de déclaré, Apify si token, presse RSS sans clé). Best-effort
-  // borné 25 s — n'échoue JAMAIS le complete().
+  // borné 45 s — n'échoue JAMAIS le complete(). Budget 40 s (2026-07-20) :
+  // à 20 s, les étages amont (site, presse, citations, followers) mangeaient
+  // tout et la RÉFUTATION adversariale (le filet anti-bruit final, ADR-0162)
+  // ne tournait JAMAIS dans le vrai flux — mesuré test La Paillote :
+  // totalMs=20001, judge=DETERMINISTIC_ONLY, la presse guinéenne passait.
+  // L'intake est asynchrone (F1 v6.27.223) : le fondateur voit des jalons,
+  // pas un spinner — les ~20 s de plus sont invisibles.
   if (!webFootprint) {
     try {
       const { enrichPublicFootprint } = await import("./public-enrichment");
@@ -495,9 +501,9 @@ export async function complete(token: string) {
           websiteUrl: intake.websiteUrl,
           socialLinksRaw: intake.socialLinksRaw,
           strategyId: strategy.id,
-          budgetMs: 20_000,
+          budgetMs: 40_000,
         }),
-        new Promise<null>((resolve) => setTimeout(() => resolve(null), 25_000)),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 45_000)),
       ]);
       if (webFootprint) {
         // Narratif du diagnostic (LLM court, fallback template déterministe) —
@@ -1029,6 +1035,10 @@ export async function complete(token: string) {
         },
         rtisValues: { r: byKey.r, t: byKey.t, i: byKey.i, s: byKey.s },
         compositeScore: adveComposite,
+        // ADR-0164 — fonde les propositions R/T/I/S + la synthèse fondateur.
+        pillarScores: { a: vector.a ?? 0, d: vector.d ?? 0, v: vector.v ?? 0, e: vector.e ?? 0 },
+        footprint: webFootprint,
+        sectorLabel: (await import("@/domain/sector-taxonomy")).sectorDisplayLabel(intake.sector),
       });
       console.log("[quick-intake] rapport composé en déterministe (fallback zéro-LLM)");
     } catch (err) {
@@ -1415,6 +1425,10 @@ export async function regenerateAnalysis(
         extractedValues: { a: byKey.a ?? {}, d: byKey.d ?? {}, v: byKey.v ?? {}, e: byKey.e ?? {} },
         rtisValues: { r: byKey.r, t: byKey.t, i: byKey.i, s: byKey.s },
         compositeScore: adveComposite,
+        // ADR-0164 — parité avec complete().
+        pillarScores: { a: vector.a ?? 0, d: vector.d ?? 0, v: vector.v ?? 0, e: vector.e ?? 0 },
+        footprint: (intake.webFootprint as unknown as import("./footprint-types").EnrichedFootprint | null) ?? null,
+        sectorLabel: (await import("@/domain/sector-taxonomy")).sectorDisplayLabel(intake.sector),
       });
     } catch (err) {
       console.warn("[quick-intake.regen] composer déterministe échoué (non bloquant):", err instanceof Error ? err.message : err);
@@ -1909,9 +1923,11 @@ function analyzePillarResponses(
               "Répondre à 100% des commentaires et DMs pendant 30 jours",
             ]
           : [
-              "Mettre en place une Devotion Ladder : identifier vos spectateurs, participants, ambassadeurs",
-              "Créer un programme de referral pour transformer vos clients satisfaits en apporteurs d'affaires",
-              "Lancer un format de contenu UGC pour que vos clients deviennent co-créateurs",
+              // Vocabulaire fondateur (2026-07-20) : « Devotion Ladder » / « UGC »
+              // sont du jargon interne — jamais rendus au client (ADR-0123).
+              "Cartographier votre échelle d'engagement : qui vous regarde, qui participe, qui vous recommande",
+              "Créer un programme de parrainage pour transformer vos clients satisfaits en apporteurs d'affaires",
+              "Lancer un format où vos clients créent le contenu avec vous (photos, avis, défis)",
             ],
       };
     }

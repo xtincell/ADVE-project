@@ -43,6 +43,7 @@ export interface WebFootprintJson {
   articles?: Array<{ url: string; title: string | null }>;
   followerCounts?: Array<{ platform: string; handle: string; followerCount: number }>;
   press?: Array<{ title: string; url: string; sourceName: string | null; publishedAt: string | null }>;
+  webMentions?: { status: string; items: Array<{ title: string; url: string; host: string }> };
   maps?: { status: string; placeName: string | null; rating: number | null; reviewCount: number | null; address: string | null; topReviews?: Array<{ text: string; stars: number }> };
   youtube?: { status: string; handle: string | null; channelTitle: string | null; subscriberCount: number | null; viewCount: number | null; videoCount: number | null };
   domain?: { status: string; domain: string | null; ageYears: number | null; registrar: string | null };
@@ -388,6 +389,30 @@ export function FootprintSection({
                   ▸ {p.title}
                 </a>
                 {p.sourceName && <span className="text-foreground-muted"> — {p.sourceName}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* ── Citations web (ADR-0164) — ce que le web dit de la marque ── */}
+      {(fp.webMentions?.items ?? []).length > 0 && (
+        <div className="mt-3">
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-foreground-secondary">
+            Ce qu&apos;on trouve de vous en ligne
+          </p>
+          <ul className="space-y-1">
+            {fp.webMentions!.items.slice(0, 6).map((m) => (
+              <li key={m.url} className="text-xs">
+                <a
+                  href={m.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-foreground-secondary hover:text-primary hover:underline"
+                >
+                  ▸ {m.title}
+                </a>
+                <span className="text-foreground-muted"> — {m.host}</span>
               </li>
             ))}
           </ul>

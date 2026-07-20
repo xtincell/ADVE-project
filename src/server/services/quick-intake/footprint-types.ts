@@ -26,6 +26,24 @@ export interface PressMention {
 }
 
 /**
+ * Citation web (ADR-0164) — toute trace publique de la marque hors presse :
+ * annuaire, avis, blog, page sociale, article. Une marque, même micro, laisse
+ * TOUJOURS des traces — le rapport doit les montrer (retour opérateur
+ * 2026-07-20). Gate d'entité appliqué (ADR-0162), jamais d'homonyme.
+ */
+export interface WebMention {
+  title: string;
+  url: string;
+  /** Hôte lisible (ex : facebook.com, tripadvisor.fr). */
+  host: string;
+}
+
+export interface WebMentionsBlock {
+  status: "LIVE" | "EMPTY" | "DEFERRED_NO_KEY" | "ERROR";
+  items: WebMention[];
+}
+
+/**
  * Profil public de la marque tel que publié sur un réseau CONNECTÉ (OAuth
  * ADR-0128, `SocialConnection.metadata.profile`) — donnée exacte de l'API,
  * pas une estimation scrapée. Alimente le pilier E (empreinte publique).
@@ -42,7 +60,7 @@ export interface ConnectedProfileEntry {
 }
 
 export interface FootprintDimension {
-  key: "site" | "social" | "reviews" | "press" | "email" | "domain" | "perf";
+  key: "site" | "social" | "reviews" | "press" | "citations" | "email" | "domain" | "perf";
   label: string;
   weight: number;
   measured: boolean;
@@ -63,6 +81,8 @@ export interface EnrichedFootprint extends WebFootprint {
   /** Profils publics exacts des réseaux connectés (source CONNECTOR). */
   connectedProfiles?: ConnectedProfileEntry[];
   press: PressMention[];
+  /** Citations web toutes sources (ADR-0164) — optionnel : rétro-compat JSON persistés. */
+  webMentions?: WebMentionsBlock;
   /**
    * Rapport du gate d'entité (ADR-0162) : ambiguïté du nom, discriminants
    * utilisés, mode de jugement (déterministe seul ou + réfutation LLM) et

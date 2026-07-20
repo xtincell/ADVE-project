@@ -23,8 +23,8 @@ export interface AdversarialCandidate {
   id: string;
   /** Texte du candidat (titre + description + nom de source…). */
   text: string;
-  /** Source pour le contexte du juge (press / discovery / maps). */
-  kind: "press" | "discovery" | "maps";
+  /** Source pour le contexte du juge (press / discovery / maps / citation). */
+  kind: "press" | "discovery" | "maps" | "citation";
 }
 
 export interface AdversarialResult {
