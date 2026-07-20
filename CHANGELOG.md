@@ -10,14 +10,6 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
-## v6.27.232 — feat(intake): page de vente — visuels réels + bandeau de preuves + narratif d'empreinte calibré (ADR-0164 suite) (2026-07-20)
-
-**Les deux résiduels de l'ADR-0164 livrés (page résultat = page de conversion).** Vague réalisée et vérifiée en même temps que la founder-first, restée non commitée deux commits durant :
-
-- **Visuels réels, jamais inventés** : logo de la marque (og:image du site collecté) dans le header du rapport + à côté du site dans l'empreinte ; favicon de chaque source de citation (Tripadvisor, Petit Futé…) via le service favicon Google ; `onError` masque proprement toute image cassée.
-- **Bandeau de preuves au-dessus du paywall** : « Déjà mesuré pour {marque} » agrège les compteurs RÉELS de CE rapport (propositions d'action, citations web, mentions presse, avis Google, abonnés) — on vend sur ce qui est mesuré, jamais sur du vent. i18n fr/en/zh.
-- **Narratif d'empreinte calibré sur la couverture** : un « 100/100 » sur 20 points de poids mesurés n'est plus vendu comme « visibilité maximale » — le template dit la lecture partielle, et une garde déterministe rejette toute sortie LLM triomphaliste (« parfait », « maximal »…) à faible couverture (leçon ADR-0163 : la règle prompt ne suffit jamais seule). Vérifié La Paillote : bandeau « 11 propositions · 5 citations · 19 avis Google ». tsc 0 · lint 0 · tests footprint verts.
-
 ## v6.27.235 — docs(governance): RESIDUAL-DEBT restructuré — purge, actions opérateur consolidées, refus honnêtes (2026-07-20)
 
 **Le registre redevient transitoire : 956 → ~300 lignes, chaque ligne restante porte plan + déclencheur.**
@@ -49,6 +41,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 - Middleware canonique `strategyScopedProcedure` (raw input → chokepoint `canAccessStrategy` ADR-0129) + `assertRawStrategyScope` (bases composées, optionnels) + `accessibleStrategyIds` (modèles à lien lâche : conversations, contacts, estimations).
 - 85 procédures / 30 routeurs migrées ; gardes par entité (conversation = participant OU marque accessible ; nœud d'arbre = opérateur OU marque sur la chaîne ancêtre/descendant — cas founder couvert) ; 2 flips `operatorProcedure` (agrégats cross-marques) ; 3 champs `strategyId` morts retirés.
 - Verrou CI HARD `strategy-ownership-guard.test.ts` : allowlist 3 entrées justifiées, qui ne peut que décroître.
+
+## v6.27.232 — feat(intake): page de vente — visuels réels + bandeau de preuves + narratif d'empreinte calibré (ADR-0164 suite) (2026-07-20)
+
+**Les deux résiduels de l'ADR-0164 livrés (page résultat = page de conversion).** Vague réalisée et vérifiée en même temps que la founder-first, restée non commitée deux commits durant :
+
+- **Visuels réels, jamais inventés** : logo de la marque (og:image du site collecté) dans le header du rapport + à côté du site dans l'empreinte ; favicon de chaque source de citation (Tripadvisor, Petit Futé…) via le service favicon Google ; `onError` masque proprement toute image cassée.
+- **Bandeau de preuves au-dessus du paywall** : « Déjà mesuré pour {marque} » agrège les compteurs RÉELS de CE rapport (propositions d'action, citations web, mentions presse, avis Google, abonnés) — on vend sur ce qui est mesuré, jamais sur du vent. i18n fr/en/zh.
+- **Narratif d'empreinte calibré sur la couverture** : un « 100/100 » sur 20 points de poids mesurés n'est plus vendu comme « visibilité maximale » — le template dit la lecture partielle, et une garde déterministe rejette toute sortie LLM triomphaliste (« parfait », « maximal »…) à faible couverture (leçon ADR-0163 : la règle prompt ne suffit jamais seule). Vérifié La Paillote : bandeau « 11 propositions · 5 citations · 19 avis Google ». tsc 0 · lint 0 · tests footprint verts.
+
+
 ## v6.27.231 — feat(seshat+intake): veille branchée sur l'ADVE + éditable, fraîcheur dure, scrub des récits fabriqués (ADR-0165) (2026-07-20)
 
 **Le cas Motion19 clos : la veille suit enfin ce que la marque VEND et QUI elle sert.** ([ADR-0165](docs/governance/adr/0165-veille-sujets-adve-editables.md)) :
