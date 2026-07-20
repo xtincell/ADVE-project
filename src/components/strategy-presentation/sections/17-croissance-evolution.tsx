@@ -30,7 +30,7 @@ export function CroissanceEvolution({ data }: Props) {
 
       {data.expansionStrategy && data.expansionStrategy.length > 0 && (
         <div>
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Strategie d'expansion</h3>
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Stratégie d'expansion</h3>
           <DataTable
             headers={["Marche", "Priorite", "Plan d'entree"]}
             rows={data.expansionStrategy.map((e) => [e.marche, String(e.priorite), e.planEntree])}

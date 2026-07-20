@@ -21,6 +21,7 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
+import { classifyCanonicalSector } from "@/domain/sector-taxonomy";
 import { scopeClients, canAccessClient } from "@/server/services/operator-isolation";
 import * as auditTrail from "@/server/services/audit-trail";
 import { governedProcedure } from "@/server/governance/governed-procedure";
@@ -54,7 +55,8 @@ export const clientRouter = createTRPCRouter({
           contactName: input.contactName,
           contactEmail: input.contactEmail,
           contactPhone: input.contactPhone,
-          sector: input.sector,
+          // ADR-0152 — canonicalisation à l'écriture (le read reste tolérant).
+          sector: input.sector ? classifyCanonicalSector(input.sector).code : input.sector,
           country: input.country,
           notes: input.notes,
           operatorId,
@@ -105,6 +107,8 @@ export const clientRouter = createTRPCRouter({
       if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé" });
 
       const { id, ...data } = input;
+      // ADR-0152 — canonicalisation à l'écriture (le read reste tolérant).
+      if (data.sector) data.sector = classifyCanonicalSector(data.sector).code;
       const previous = await ctx.db.client.findUniqueOrThrow({ where: { id } });
       const updated = await ctx.db.client.update({ where: { id }, data });
 

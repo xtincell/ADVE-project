@@ -9,7 +9,7 @@ import { Lightbulb, CheckCircle, XCircle, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 const PILLAR_LABELS: Record<string, { name: string; color: string }> = {
-  a: { name: "Authenticite", color: "oklch(0.60 0.22 25)" },
+  a: { name: "Authenticité", color: "oklch(0.60 0.22 25)" },
   d: { name: "Distinction", color: "oklch(0.60 0.22 265)" },
   v: { name: "Valeur", color: "oklch(0.65 0.20 145)" },
   e: { name: "Engagement", color: "oklch(0.65 0.18 340)" },

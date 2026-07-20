@@ -61,6 +61,37 @@ async function getRegistry(
   });
 }
 
+/**
+ * Token bucket par serveur MCP sortant (RESIDUAL-DEBT Phase 16 « Rate limiting
+ * MCP outbound ») — sans throttle, un burst d'invocations vers un Slack/Notion
+ * lent empile les requêtes et flood le serveur distant. Local au process
+ * (même posture que la rate-policy du LLM Gateway) : N jetons, recharge
+ * continue ; au-delà, on attend — jamais on ne part se prendre un 429 distant.
+ */
+const MCP_BUCKET_CAPACITY = 5;
+const MCP_REFILL_PER_SEC = 2;
+const mcpBuckets = new Map<string, { tokens: number; lastRefill: number }>();
+
+async function acquireMcpToken(serverKey: string): Promise<void> {
+  for (;;) {
+    const now = Date.now();
+    let bucket = mcpBuckets.get(serverKey);
+    if (!bucket) {
+      bucket = { tokens: MCP_BUCKET_CAPACITY, lastRefill: now };
+      mcpBuckets.set(serverKey, bucket);
+    }
+    const elapsed = (now - bucket.lastRefill) / 1000;
+    bucket.tokens = Math.min(MCP_BUCKET_CAPACITY, bucket.tokens + elapsed * MCP_REFILL_PER_SEC);
+    bucket.lastRefill = now;
+    if (bucket.tokens >= 1) {
+      bucket.tokens -= 1;
+      return;
+    }
+    const waitMs = Math.ceil(((1 - bucket.tokens) / MCP_REFILL_PER_SEC) * 1000);
+    await new Promise((r) => setTimeout(r, Math.min(waitMs, 2000)));
+  }
+}
+
 async function callExternal(
   endpoint: string,
   toolName: string,
@@ -70,6 +101,7 @@ async function callExternal(
   const headers: Record<string, string> = { "content-type": "application/json" };
   if (bearer) headers["authorization"] = `Bearer ${bearer}`;
   const url = endpoint.endsWith("/") ? `${endpoint}tools/invoke` : `${endpoint}/tools/invoke`;
+  await acquireMcpToken(endpoint);
   const res = await fetch(url, {
     method: "POST",
     headers,

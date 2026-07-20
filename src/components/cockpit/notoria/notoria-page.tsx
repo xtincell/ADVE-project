@@ -34,8 +34,8 @@ import { getPillarChipStatus, type PillarReadinessProjection } from "./lib/pilla
 // ── Pillar labels ─────────────────────────────────────────────────
 
 const PILLAR_LABELS: Record<string, string> = {
-  a: "Authenticite", d: "Distinction", v: "Valeur", e: "Engagement",
-  r: "Risk", t: "Track", i: "Potentiel", s: "Strategie",
+  a: "Authenticité", d: "Distinction", v: "Valeur", e: "Engagement",
+  r: "Risk", t: "Track", i: "Potentiel", s: "Stratégie",
 };
 
 // Phase 21 F-A.5 (ADR-0069) — `COMPLETION_COLORS` legacy retiré. Le mapping

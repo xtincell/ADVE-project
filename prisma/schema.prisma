@@ -1155,6 +1155,8 @@ model Mission {
   @@index([guildPublished, status])
   @@index([category])
   @@index([sector])
+  /// ADR-0144 — tâches datées du calendrier rattachées à la mission.
+  brandActions BrandAction[]
 }
 
 model MissionDeliverable {
@@ -5474,6 +5476,11 @@ model BrandAction {
 
   // Phase 24 (ADR-0094) — BrandAction is the canonical queryable projection of
   // I-pillar initiatives. FK to Strategy (cascade purge with the brand).
+  /// ADR-0144 (résiduel FK durable) — lien mission ↔ tâche datée. Additif
+  /// nullable ; backfillé depuis metadata.missionKey (migration 20260720).
+  missionId String?
+  mission   Mission? @relation(fields: [missionId], references: [id], onDelete: SetNull)
+
   strategy Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
 
   // ADR-0119 — toute action appartient à une campagne (invariant cible). Nullable
@@ -5486,6 +5493,7 @@ model BrandAction {
   @@index([strategyId, selected])
   @@index([touchpoint, aarrrIntent])
   @@index([recoId])
+  @@index([missionId])
   @@index([costTemplateKey, costZoneCode])
   @@index([campaignId])
 }

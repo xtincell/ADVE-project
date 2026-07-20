@@ -114,7 +114,7 @@ const ALLOWED_BARE_PILLAR_CONTENT_WRITES: ReadonlyArray<AcceptedBareWrite> = [
   },
   {
     file: "src/server/trpc/routers/client.ts",
-    line: 300,
+    line: 304,
     hole: "—",
     reason:
       "Seed ADVE à la création de marque via client.addBrand (comme strategy.create voisin) : amorce a/d/v depuis le business-context. Bootstrap de ligne au create. Reroute via gateway = dette P2.",

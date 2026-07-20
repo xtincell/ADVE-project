@@ -46,7 +46,7 @@ Ces correspondances évitent la réinvention :
 - **Strategy** (78 fields)
 - **Intention** (14 fields)
 - **Campaign** (80 fields)
-- **Mission** (35 fields)
+- **Mission** (36 fields)
 - **MissionDeliverable** (12 fields)
 - **MissionActivity** (22 fields) — Activité d'une mission — couche d'exécution pilotable par mission (pipeline staged). Chaque activité = création d'asset 
 - **MissionApplication** (15 fields) — Vague 7 — candidature d'un talent/agence à une mission ouverte. Le flux remplace l'auto-acceptation : candidater → revue
@@ -224,7 +224,7 @@ Ces correspondances évitent la réinvention :
 - **MarketDocument** (12 fields)
 - **BrandContextNode** (19 fields)
 - **MarketContextNode** (10 fields)
-- **BrandAction** (37 fields)
+- **BrandAction** (39 fields)
 - **CostDecision** (12 fields) — Cost gate decision per Intent — Thot's audit trail (separate from IntentEmission so Thot's reasoning is queryable indepe
 - **Sector** (10 fields) — Sector — first-class entity. Overton lives within a sector. Each sector has its own cultural axis modelable as orientati
 - **SectorPolityAxis** (10 fields) — ADR-0127 — Axe culturel sectoriel PAR POLITY (échelle de marché × pays). Complète le Sector global (qui reste le fallbac
@@ -1054,7 +1054,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 587 (par governor)
+## Intent kinds — 588 (par governor)
 
 ### MESTOR (79)
 
@@ -1156,7 +1156,7 @@ Ces correspondances évitent la réinvention :
 - `PROPOSE_SEQUENCE_PROMOTION_FROM_CAMPAIGN` → campaign-tracker (sync) — Cluster E — Si campagne réussie (tierDelta>0 + cultIndexDelta>0 + altitudeRegres…
 - `TOGGLE_QUALITY_GATE_MODE` → auto-promotion (sync) — Bascule le mode quality-gate entre SOFT (warning-only) et HARD (block-on-fail). …
 
-### SESHAT (38)
+### SESHAT (39)
 
 - `SESHAT_UPSERT_POLITY_AXIS` → sector-intelligence (sync) — Upsert d'un axe culturel sectoriel PAR POLITY (SectorPolityAxis — échelle de mar…
 - `SESHAT_REGISTER_SUPERFAN` → superfan (sync) — Enregistre/actualise UN SuperfanProfile (upsert par (strategyId, platform, handl…
@@ -1166,6 +1166,7 @@ Ces correspondances évitent la réinvention :
 - `SESHAT_UPSERT_PERSON_IDENTIFIER` → identity-graph (sync) — Identity Graph (ADR-0147) : ajoute/résout un identifiant (email/tel/handle/exter…
 - `SESHAT_MERGE_PERSONS` → identity-graph (sync) — Identity Graph (ADR-0147) : fusionne deux personnes (auto si preuve VERIFIED, re…
 - `SESHAT_SPLIT_PERSON` → identity-graph (sync) — Identity Graph (ADR-0147) : dé-fusionne une personne (ré-active le tombstone). T…
+- `SESHAT_PURGE_PERSON_DATA` → identity-graph (sync) — Identity Graph (ADR-0147, cascade /data-deletion) : purge RGPD gouvernée d'une p…
 - `SESHAT_UPSERT_OVERTON_POSITION` → overton-graph (sync) — Overton Graph (ADR-0148) : upsert d'une position tenue dans un débat sectoriel +…
 - `SESHAT_RECORD_ZONE_TRANSITION` → overton-graph (sync) — Overton Graph (ADR-0148) : enregistre une migration de zone datée d'une position…
 - `SESHAT_LINK_ACTOR_TO_POSITION` → overton-graph (sync) — Overton Graph (ADR-0148) : relie un acteur (BRAND/COMPETITOR/SUPERFAN/INSTITUTIO…

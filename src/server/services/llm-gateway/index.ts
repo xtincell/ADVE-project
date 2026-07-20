@@ -120,7 +120,7 @@ interface RetryOptions {
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const DEFAULT_MODEL = "claude-sonnet-4-20250514";
+const DEFAULT_MODEL = "claude-sonnet-5";
 const DEFAULT_MAX_TOKENS = 6000;
 
 /**
@@ -139,18 +139,18 @@ const FALLBACK_POLICY: Record<GatewayPurpose, {
   allowOllamaSubstitution: boolean;
 }> = {
   "final-report":     { anthropicModel: "claude-opus-4-20250514",   ollamaModel: null,                allowOllamaSubstitution: false },
-  "agent":            { anthropicModel: "claude-sonnet-4-20250514", ollamaModel: "llama3.1:70b",      allowOllamaSubstitution: true  },
-  "intermediate":     { anthropicModel: "claude-sonnet-4-20250514", ollamaModel: "llama3.1:70b",      allowOllamaSubstitution: true  },
+  "agent":            { anthropicModel: "claude-sonnet-5",          ollamaModel: "llama3.1:70b",      allowOllamaSubstitution: true  },
+  "intermediate":     { anthropicModel: "claude-sonnet-5",          ollamaModel: "llama3.1:70b",      allowOllamaSubstitution: true  },
   "intake-followup":  { anthropicModel: "claude-haiku-4-5-20251001", ollamaModel: "llama3.1:8b",      allowOllamaSubstitution: true  },
-  "extraction":       { anthropicModel: "claude-sonnet-4-20250514", ollamaModel: "llama3.1:70b",      allowOllamaSubstitution: true  },
+  "extraction":       { anthropicModel: "claude-sonnet-5",          ollamaModel: "llama3.1:70b",      allowOllamaSubstitution: true  },
 };
 
-// Pricing per 1M tokens (Sonnet 4)
+// Pricing per 1M tokens (Sonnet 5 — sticker $3/$15, inchangé vs Sonnet 4.x)
 const INPUT_PRICE_PER_M = 3;
 const OUTPUT_PRICE_PER_M = 15;
 
 // v4 — Model priority for budget downgrade (cheaper = higher index)
-const MODEL_PRIORITY = ["claude-opus-4-6", "claude-opus-4-20250514", "claude-sonnet-4-6", "claude-sonnet-4-20250514", "claude-haiku-4-5", "claude-haiku-4-5-20251001"];
+const MODEL_PRIORITY = ["claude-opus-4-6", "claude-opus-4-20250514", "claude-sonnet-5", "claude-haiku-4-5", "claude-haiku-4-5-20251001"];
 
 // ── v4 — Multi-vendor LLM provider abstraction ────────────────────────────
 
@@ -279,8 +279,7 @@ export const _CIRCUIT_BREAKER_RESET_MS_FOR_TEST = CIRCUIT_BREAKER_RESET_MS;
 // tombait (ex. crédits épuisés), TOUTE requête LLM échouait au lieu de basculer.
 // gpt-4o / gpt-4o-mini sont confirmés 200 avec le chemin d'appel courant.
 const OPENAI_MODEL_MAP: Record<string, string> = {
-  "claude-sonnet-4-20250514": "gpt-4o",
-  "claude-sonnet-4-6": "gpt-4o",
+  "claude-sonnet-5": "gpt-4o",
   "claude-opus-4-6": "gpt-4o",
   "claude-opus-4-7": "gpt-4o",
   "claude-opus-4-8": "gpt-4o",
@@ -688,10 +687,18 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
         // upstream callers MUST inject a strict JSON contract in `system` (cf.
         // executeStructuredLLMCall in utils/llm-structured.ts). We log a warn
         // here so any drift is surfaced.
-        const providerOptions =
+        // Migration Sonnet 5 (RESIDUAL-DEBT ADR-0143 suite) — parité de
+        // comportement : Sonnet 5 pense par défaut quand `thinking` est omis
+        // (troncature possible sur maxOutputTokens court) et rejette une
+        // `temperature` non-défaut en 400. On préserve le comportement 4.x.
+        const anthropicSonnet5 = provider === "anthropic" && anthropicModel.startsWith("claude-sonnet-5");
+        const baseProviderOptions =
           options.responseFormat === "json_object" && (provider === "openai" || provider === "ollama" || provider === "openrouter")
             ? { openai: { responseFormat: { type: "json_object" as const } } }
             : undefined;
+        const providerOptions = anthropicSonnet5
+          ? { ...(baseProviderOptions ?? {}), anthropic: { thinking: { type: "disabled" as const } } }
+          : baseProviderOptions;
         if (options.responseFormat === "json_object" && provider === "anthropic") {
           // best-effort: rely on caller's system prompt; not a hard error.
           // Silent in tests, warn once otherwise.
@@ -721,7 +728,7 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
           system: hr.system,
           prompt: hr.prompt,
           maxOutputTokens: options.maxOutputTokens ?? DEFAULT_MAX_TOKENS,
-          temperature: options.temperature,
+          temperature: anthropicSonnet5 ? undefined : options.temperature,
           ...(options.signal ? { abortSignal: options.signal } : {}),
           ...(providerOptions ? { providerOptions } : {}),
         };

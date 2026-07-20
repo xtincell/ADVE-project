@@ -309,6 +309,7 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "SESHAT_UPSERT_PERSON_IDENTIFIER", p95LatencyMs: 800, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "SESHAT_MERGE_PERSONS", p95LatencyMs: 1_500, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "SESHAT_SPLIT_PERSON", p95LatencyMs: 800, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "SESHAT_PURGE_PERSON_DATA", p95LatencyMs: 1500, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "SESHAT_UPSERT_OVERTON_POSITION", p95LatencyMs: 800, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "SESHAT_RECORD_ZONE_TRANSITION", p95LatencyMs: 800, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "SESHAT_LINK_ACTOR_TO_POSITION", p95LatencyMs: 800, errorRatePct: 0.01, costP95Usd: 0 },

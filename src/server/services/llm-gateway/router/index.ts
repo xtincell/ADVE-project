@@ -28,7 +28,7 @@ export interface RoutedModel {
 
 const MATRIX: Record<QualityTier, RoutedModel> = {
   S: { provider: "anthropic", model: "claude-opus-4-7", reason: "qualityTier=S → Opus 4.7" },
-  A: { provider: "anthropic", model: "claude-sonnet-4-6", reason: "qualityTier=A → Sonnet 4.6" },
+  A: { provider: "anthropic", model: "claude-sonnet-5", reason: "qualityTier=A → Sonnet 5" },
   B: { provider: "openai", model: "gpt-4o-mini", reason: "qualityTier=B → GPT-4o-mini" },
   C: { provider: "anthropic", model: "claude-haiku-4-5-20251001", reason: "qualityTier=C → Haiku 4.5" },
 };

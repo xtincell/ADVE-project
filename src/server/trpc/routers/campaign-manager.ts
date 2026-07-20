@@ -1714,7 +1714,7 @@ export const campaignManagerRouter = createTRPCRouter({
           where: { campaignId: input.campaignId },
           select: {
             id: true, title: true, description: true, status: true, touchpoint: true,
-            timingStart: true, timingEnd: true, metadata: true,
+            timingStart: true, timingEnd: true, metadata: true, missionId: true,
           },
           orderBy: { timingStart: "asc" },
         }),
@@ -1734,7 +1734,9 @@ export const campaignManagerRouter = createTRPCRouter({
       // Tâches datées de la mission = BrandActions du calendrier rattachées via
       // metadata.missionKey (dates réelles timingStart/End = le rétroplanning).
       const tasks = allActions.filter(
-        (a) => (a.metadata as Record<string, unknown> | null)?.missionKey === input.missionId,
+        (a) =>
+          a.missionId === input.missionId ||
+          (a.metadata as Record<string, unknown> | null)?.missionKey === input.missionId,
       );
       const done = tasks.filter((t) => t.status === "EXECUTED").length;
       // Dernière remontée par type de source (la plus récente en tête).

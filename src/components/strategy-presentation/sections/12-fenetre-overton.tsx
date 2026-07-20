@@ -118,7 +118,7 @@ export function FenetreOverton({ data }: Props) {
 
       {data.strategieDeplacment.length > 0 && (
         <div>
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Strategie de deplacement</h3>
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Stratégie de déplacement</h3>
           <div className="space-y-3">
             {data.strategieDeplacment.map((s, i) => (
               <div key={i} className="flex items-start gap-3">

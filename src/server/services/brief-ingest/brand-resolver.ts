@@ -6,6 +6,7 @@
  */
 
 import { db } from "@/lib/db";
+import { classifyCanonicalSector } from "@/domain/sector-taxonomy";
 import type { ParsedBrief, ClientResolution } from "./types";
 
 // ── Fuzzy match helpers ─────────────────────────────────────────────────────
@@ -123,7 +124,8 @@ export async function createClientAndStrategy(
       name: brief.client.companyName,
       contactName: brief.client.brandName,
       contactEmail: brief.client.contactEmail ?? null,
-      sector: brief.client.sector ?? null,
+      // ADR-0152 — canonicalisation à l'écriture (le read reste tolérant).
+      sector: brief.client.sector ? classifyCanonicalSector(brief.client.sector).code : null,
       country: brief.client.country ?? null,
       status: "ACTIVE",
       operator: { connect: { id: operatorId } },

@@ -46,7 +46,7 @@ const SEEDS: ReadonlyArray<SeedRow> = [
   },
   {
     purpose: "agent",
-    anthropicModel: "claude-sonnet-4-20250514",
+    anthropicModel: "claude-sonnet-5",
     ollamaModel: "llama3.1:70b",
     allowOllamaSubstitution: true,
     pipelineVersion: "V1",
@@ -54,7 +54,7 @@ const SEEDS: ReadonlyArray<SeedRow> = [
   },
   {
     purpose: "intermediate",
-    anthropicModel: "claude-sonnet-4-20250514",
+    anthropicModel: "claude-sonnet-5",
     ollamaModel: "llama3.1:70b",
     allowOllamaSubstitution: true,
     pipelineVersion: "V1",
@@ -70,7 +70,7 @@ const SEEDS: ReadonlyArray<SeedRow> = [
   },
   {
     purpose: "extraction",
-    anthropicModel: "claude-sonnet-4-20250514",
+    anthropicModel: "claude-sonnet-5",
     ollamaModel: "llama3.1:70b",
     allowOllamaSubstitution: true,
     pipelineVersion: "V1",

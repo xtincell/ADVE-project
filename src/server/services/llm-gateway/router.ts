@@ -49,7 +49,7 @@ const CATALOG: ModelChoice[] = [
   // Tier S — premium creative
   { provider: "anthropic", model: "claude-opus-4-7", costPerMTokensUsd: 15, typicalLatencyMs: 6000, available: hasEnv("ANTHROPIC_API_KEY") },
   // Tier A — strong reasoning
-  { provider: "anthropic", model: "claude-sonnet-4-6", costPerMTokensUsd: 3, typicalLatencyMs: 3500, available: hasEnv("ANTHROPIC_API_KEY") },
+  { provider: "anthropic", model: "claude-sonnet-5", costPerMTokensUsd: 3, typicalLatencyMs: 3500, available: hasEnv("ANTHROPIC_API_KEY") },
   // Tier B — fast + decent
   { provider: "anthropic", model: "claude-haiku-4-5-20251001", costPerMTokensUsd: 0.8, typicalLatencyMs: 1500, available: hasEnv("ANTHROPIC_API_KEY") },
   { provider: "openai", model: "gpt-4o-mini", costPerMTokensUsd: 0.15, typicalLatencyMs: 1200, available: hasEnv("OPENAI_API_KEY") },

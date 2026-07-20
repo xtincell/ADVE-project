@@ -56,7 +56,7 @@ export function ExperienceEngagement({ data }: Props) {
 
       {data.communityStrategy && (
         <div>
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Strategie communautaire</h3>
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Stratégie communautaire</h3>
           <p className="text-sm text-foreground-secondary">{data.communityStrategy}</p>
         </div>
       )}

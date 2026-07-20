@@ -240,6 +240,52 @@ export async function mergePersons(
 
 /** Dé-fusionne : ré-active la personne fusionnée (ne re-scinde pas les arêtes déjà
  * re-pointées manuellement — audit-safe minimal, dette ADR-0147 pour split fin). */
+/**
+ * Purge RGPD (ADR-0147 résiduel « cascade /data-deletion ») — efface la
+ * personne ET sa PII : identifiants (hash + chiffrement), tombstones fusionnés
+ * vers elle, dé-rattache les SuperfanProfile (personId → null, le profil de
+ * mesure agrégé reste — il ne porte pas de PII d'identifiant). Opérateur
+ * uniquement, sur demande de suppression (page publique /data-deletion).
+ * Transactionnel : jamais de purge partielle.
+ */
+export async function purgePersonData(
+  client: IdentityDbClient,
+  input: { strategyId: string; personId: string },
+): Promise<{ status: "OK" | "NOT_FOUND"; identifiersDeleted: number; personsDeleted: number; profilesUnlinked: number }> {
+  const person = await client.personIdentity.findFirst({
+    where: { id: input.personId, strategyId: input.strategyId },
+    select: { id: true },
+  });
+  if (!person) return { status: "NOT_FOUND", identifiersDeleted: 0, personsDeleted: 0, profilesUnlinked: 0 };
+
+  return client.$transaction(async (tx) => {
+    // Personnes à purger : la cible + tout tombstone fusionné vers elle.
+    const merged = await tx.personIdentity.findMany({
+      where: { mergedIntoId: person.id, strategyId: input.strategyId },
+      select: { id: true },
+    });
+    const ids = [person.id, ...merged.map((m) => m.id)];
+
+    const profiles = await tx.superfanProfile.updateMany({
+      where: { personId: { in: ids } },
+      data: { personId: null },
+    });
+    const identifiers = await tx.personIdentifier.deleteMany({
+      where: { personId: { in: ids } },
+    });
+    const persons = await tx.personIdentity.deleteMany({
+      where: { id: { in: ids } },
+    });
+
+    return {
+      status: "OK" as const,
+      identifiersDeleted: identifiers.count,
+      personsDeleted: persons.count,
+      profilesUnlinked: profiles.count,
+    };
+  });
+}
+
 export async function splitPerson(
   client: IdentityDbClient,
   input: SplitPersonInput,

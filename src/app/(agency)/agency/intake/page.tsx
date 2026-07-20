@@ -128,7 +128,7 @@ export default function AgencyIntakePage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard title="Total intakes" value={items.length} icon={Filter} />
         <StatCard title="En cours" value={inProgress} icon={Clock} />
-        <StatCard title="Completes" value={completed} icon={CheckCircle} />
+        <StatCard title="Complétés" value={completed} icon={CheckCircle} />
         <StatCard title="Convertis" value={converted} icon={ArrowRight} trendValue={`${conversionRate}%`} />
       </div>
 

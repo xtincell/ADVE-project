@@ -72,7 +72,7 @@ export function KpisMesure({ data }: Props) {
       {/* Community */}
       {data.communitySnapshots.length > 0 && (
         <div>
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Communaute</h3>
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Communauté</h3>
           <DataTable
             headers={["Plateforme", "Taille", "Engagement", "Croissance"]}
             rows={data.communitySnapshots.map((cs) => [

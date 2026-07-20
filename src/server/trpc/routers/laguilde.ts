@@ -18,6 +18,7 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, publicProcedure, protectedProcedure, operatorProcedure } from "../init";
+import { classifyCanonicalSector } from "@/domain/sector-taxonomy";
 import { db } from "@/lib/db";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
@@ -186,7 +187,8 @@ export const laGuildeRouter = createTRPCRouter({
           operatorId: operator.id,
           contactName: input.contactName ?? user.name ?? null,
           contactEmail: input.contactEmail ?? user.email ?? null,
-          sector: input.sector,
+          // ADR-0152 — canonicalisation à l'écriture (le read reste tolérant).
+          sector: input.sector ? classifyCanonicalSector(input.sector).code : input.sector,
         },
         select: { id: true },
       });

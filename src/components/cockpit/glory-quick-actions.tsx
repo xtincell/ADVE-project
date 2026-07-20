@@ -138,7 +138,7 @@ function getClientTemplates(autoOnly?: boolean, limit?: number) {
     { id: "tpl-audit-marque", name: "Audit Marque", description: "Diagnostic R + etude T", sequenceKeys: ["AUDIT-R", "ETUDE-T"], category: "ANALYTICS", estimatedDays: 10, autoExecutable: false, icon: "search" },
     { id: "tpl-rentabilite", name: "Rentabilite", description: "P&L, marge, utilisation", sequenceKeys: ["PROFITABILITY"], category: "ANALYTICS", estimatedDays: 1, autoExecutable: true, icon: "trending-up" },
     { id: "tpl-planning-annuel", name: "Planning Annuel", description: "Calendrier 12 mois + mix + budget", sequenceKeys: ["ANNUAL-PLAN"], category: "CONTENT", estimatedDays: 5, autoExecutable: true, icon: "calendar" },
-    { id: "tpl-strategie-one-shot", name: "Strategie One-Shot", description: "Manifeste + offre rapide", sequenceKeys: ["MANIFESTE-A", "OFFRE-V"], category: "BRANDING", estimatedDays: 5, autoExecutable: false, icon: "flag" },
+    { id: "tpl-strategie-one-shot", name: "Stratégie One-Shot", description: "Manifeste + offre rapide", sequenceKeys: ["MANIFESTE-A", "OFFRE-V"], category: "BRANDING", estimatedDays: 5, autoExecutable: false, icon: "flag" },
   ];
 
   if (autoOnly) tpls = tpls.filter((t) => t.autoExecutable);

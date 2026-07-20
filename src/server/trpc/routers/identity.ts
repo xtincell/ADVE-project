@@ -22,6 +22,7 @@ import {
   upsertPersonIdentifier,
   mergePersons,
   splitPerson,
+  purgePersonData,
 } from "@/server/services/seshat/identity-graph";
 import { hashForMatch } from "@/server/services/seshat/identity-graph/pii-crypto";
 
@@ -120,6 +121,23 @@ export const identityRouter = createTRPCRouter({
     caller: "identity:splitPerson",
   }).mutation(async ({ input }) => {
     return splitPerson(db, input);
+  }),
+
+  /**
+   * Purge RGPD (cascade /data-deletion, ADR-0147) — action opérateur sur
+   * demande de suppression : efface la personne et toute sa PII (identifiants
+   * hashés/chiffrés, tombstones fusionnés), dé-rattache les profils de mesure.
+   */
+  purgePersonData: governedProcedure({
+    kind: "SESHAT_PURGE_PERSON_DATA",
+    requireOperator: true,
+    inputSchema: z.object({
+      strategyId: z.string().min(1),
+      personId: z.string().min(1),
+    }),
+    caller: "identity:purgePersonData",
+  }).mutation(async ({ input }) => {
+    return purgePersonData(db, input);
   }),
 
   /** Lecture opérateur : personnes actives + compte d'identifiants (revue). */
