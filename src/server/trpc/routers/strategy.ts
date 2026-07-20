@@ -260,6 +260,9 @@ export const strategyRouter = createTRPCRouter({
       // poser sur une marque existante — veille définitivement morte.
       countryCode: z.string().length(2).nullable().optional(),
       sector: z.string().max(120).nullable().optional(),
+      // ADR-0165 — sujets de veille suivis (édition manuelle, prime sur le
+      // dérivé ADVE). [] = revenir au dérivé automatique.
+      watchSubjects: z.array(z.string().min(3).max(60)).max(8).optional(),
       advertis_vector: z.record(z.string(), z.number()).optional(),
       recalculateScore: z.boolean().optional(),
       // Audit 2026-07-16 `public-page-no-founder-surface` : aucune surface
@@ -274,7 +277,7 @@ export const strategyRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const { id, advertis_vector, recalculateScore, sector, enablePublicPage, ...data } = input;
+      const { id, advertis_vector, recalculateScore, sector, enablePublicPage, watchSubjects, ...data } = input;
 
       // Enforce operator isolation
       const hasAccess = await canAccessStrategy(id, {
@@ -285,12 +288,14 @@ export const strategyRouter = createTRPCRouter({
       if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé" });
 
       const previous = await ctx.db.strategy.findUniqueOrThrow({ where: { id } });
-      // Secteur : MERGE dans businessContext (jamais un écrasement du JSON).
+      // Secteur / sujets de veille : MERGE dans businessContext (jamais un
+      // écrasement du JSON). watchSubjects: [] = purge (retour au dérivé ADVE).
       const mergedBusinessContext =
-        sector !== undefined
+        sector !== undefined || watchSubjects !== undefined
           ? ({
               ...((previous.businessContext as Record<string, unknown> | null) ?? {}),
-              sector,
+              ...(sector !== undefined ? { sector } : {}),
+              ...(watchSubjects !== undefined ? { watchSubjects } : {}),
             } as Prisma.InputJsonValue)
           : undefined;
       // Page publique : slug canonique dérivé du nom (format LFA-, idempotent).

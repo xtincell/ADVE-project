@@ -5,6 +5,25 @@
 > `nefer-postmerge` (9.5.bis) le relisent et referment le refermable ; le diagnostic de fond le purge.
 > Les fixes en passant, eux, sont journalisés dans [`PATCHED-SYMPTOMS.md`](PATCHED-SYMPTOMS.md).
 
+## Gardes d'ownership `strategyId` — 51 routeurs sans garde (recensement 2026-07-20)
+
+**Constat** (suite fuite gazette Jehuty, PATCHED-SYMPTOMS 2026-07-20) : le recensement automatique
+(`protectedProcedure` + `strategyId` en input, aucun motif `canAccessStrategy`/`scopeStrategies`/
+ownership dans le fichier) marque **51 routeurs sur 123** — dont des surfaces founder-visibles
+(notoria, oracle, devotion-ladder, superfan, brand-vault, newsletter, signal…). Un compte authentifié
+quelconque peut potentiellement lire/muter les données d'une autre marque en passant son id.
+Faux positifs possibles (gardes au niveau service/tenantScopedDb) — chaque routeur doit être VÉRIFIÉ,
+pas présumé coupable.
+
+**Plan** : (1) middleware canonique `strategyScopedProcedure` (résout + vérifie l'accès une fois,
+injecte la strategy dans le ctx) ; (2) migration par lots de 10, founder-visibles d'abord (notoria,
+oracle, devotion-ladder, superfan, brand-vault, newsletter) ; (3) test HARD gouvernance
+`strategy-ownership-guard.test.ts` : tout routeur `protectedProcedure`+`strategyId` doit utiliser le
+middleware OU figurer dans une allowlist à justification, qui ne peut que DÉCROÎTRE.
+
+**Déclencheur** : prochaine session backend — AVANT toute nouvelle surface founder. Priorité élevée :
+même classe que la fuite Jehuty colmatée en v6.27.230 (prouvée exploitable).
+
 ## Valorisation certifiée v1 (ADR-0160, 2026-07-19)
 
 - ~~Surface UI~~ → **CLOS le jour même** (règle « plus de report ») : console `/console/socle/valorisations` (CA déclaré + composer + export MD) + nav.

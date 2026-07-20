@@ -17,6 +17,59 @@ import type { PrismaClient, Prisma } from "@prisma/client";
 import { subjectSourcesFor, sectorHeadTerm } from "./feed-sources";
 import { fetchRssText, parseRssItems, toFeedItems, type RssItem } from "./rss";
 import { rankItemsByRelevance } from "./relevance";
+import { deriveWatchSubjects, effectiveWatchSubjects } from "./watch-subjects";
+
+/**
+ * Sujets de veille EFFECTIFS d'une marque (ADR-0165) : l'édition manuelle
+ * (`businessContext.watchSubjects`) prime ; sinon dérivation déterministe
+ * depuis les piliers V (marques du catalogue), D (concurrents), E
+ * (communauté cible). Best-effort : échec DB → [] (la veille retombe sur
+ * nom + secteur, comportement historique).
+ */
+export async function loadWatchSubjects(
+  db: PrismaClient,
+  strategyId: string,
+  businessContext: unknown,
+  countryName?: string | null,
+): Promise<{ subjects: string[]; source: "MANUAL" | "DERIVED" | "NONE" }> {
+  const manual = ((businessContext ?? {}) as Record<string, unknown>).watchSubjects;
+  try {
+    const pillars = await db.pillar.findMany({
+      where: { strategyId, key: { in: ["v", "d", "e"] } },
+      select: { key: true, content: true },
+    });
+    const byKey = Object.fromEntries(
+      pillars.map((p) => [p.key, (p.content as Record<string, unknown> | null) ?? {}]),
+    );
+    const derived = deriveWatchSubjects({
+      pillarV: byKey.v,
+      pillarD: byKey.d,
+      pillarE: byKey.e,
+      countryName,
+    });
+    return effectiveWatchSubjects(manual, derived);
+  } catch {
+    return effectiveWatchSubjects(manual, []);
+  }
+}
+
+/**
+ * Plafond de fraîcheur DUR (ADR-0165) : un panneau de veille n'affiche pas
+ * des archives — le bonus de fraîcheur du ranking (départage [0,1]) laissait
+ * passer des articles de 3 010 jours dès qu'ils matchaient les tokens du
+ * sujet. Les items datés au-delà du plafond sont exclus AVANT ranking ; les
+ * items non datés sont conservés (le ranking les départage).
+ */
+const MAX_ARTICLE_AGE_DAYS = 120;
+
+function withinFreshnessCap(items: RssItem[]): RssItem[] {
+  const cutoff = Date.now() - MAX_ARTICLE_AGE_DAYS * 86_400_000;
+  return items.filter((it) => {
+    if (!it.pubDate) return true;
+    const t = Date.parse(it.pubDate);
+    return !Number.isFinite(t) || t >= cutoff;
+  });
+}
 
 export interface BrandFeedArticle {
   title: string;
@@ -90,10 +143,16 @@ export async function getOrBuildBrandFeed(
     if (existing) {
       const d = (existing.data ?? {}) as { items?: BrandFeedArticle[]; subjects?: string[] };
       const cachedItems = Array.isArray(d.items) ? d.items : [];
+      // ADR-0165 — le cache du jour n'est valable que pour les MÊMES sujets :
+      // quand l'opérateur édite ses sujets suivis (ou que l'ADVE en dérive de
+      // nouveaux), la veille se reconstruit immédiatement au lieu d'attendre
+      // demain.
+      const norm = (xs: string[]) => [...xs.map((x) => x.toLowerCase().trim())].sort().join("|");
+      const sameSubjects = norm(Array.isArray(d.subjects) ? d.subjects : []) === norm(subjects);
       // Un digest VIDE n'est pas une réponse (bug prod 2026-07-16 « gazette
       // vide ») : un seul échec de collecte (throttle/timeout RSS) figeait le
       // panneau à zéro pour toute la journée. Cache vide → on retente.
-      if (cachedItems.length > 0) {
+      if (cachedItems.length > 0 && sameSubjects) {
         return {
           articles: cachedItems.slice(0, 12),
           subjects: Array.isArray(d.subjects) && d.subjects.length > 0 ? d.subjects : subjects,
@@ -114,13 +173,15 @@ export async function getOrBuildBrandFeed(
     }),
   );
 
-  let ranked = rankItemsByRelevance(items, subjects, { limit: 12 });
-  if (ranked.length === 0 && items.length > 0) {
+  // Plafond de fraîcheur AVANT ranking (ADR-0165 — fini les articles de 3 010 j).
+  const fresh = withinFreshnessCap(items);
+  let ranked = rankItemsByRelevance(fresh, subjects, { limit: 12 });
+  if (ranked.length === 0 && fresh.length > 0) {
     // Les flux interrogés sont déjà des recherches scopées au sujet (Google
     // News search par marque/secteur) : si le matching par tokens écarte tout
     // (accents, élisions, titres reformulés), la récence brute reste honnête.
     const seenTitles = new Set<string>();
-    ranked = items
+    ranked = fresh
       .filter((it) => {
         const t = (it.title ?? "").trim().toLowerCase();
         if (!t || seenTitles.has(t)) return false;
@@ -201,11 +262,17 @@ export async function refreshActiveBrandFeeds(
     }
     const ctx = (s.businessContext ?? {}) as Record<string, unknown>;
     const sector = typeof ctx.sector === "string" ? ctx.sector : null;
+    // ADR-0165 — le cron préchauffe avec les MÊMES sujets que le cockpit
+    // (ADVE dérivé / édition manuelle), sinon le cache du jour servirait la
+    // veille générique et l'ADVE ne serait consulté qu'au build à la demande.
+    const { countryDisplayNameFr } = await import("./watch-subjects");
+    const watch = await loadWatchSubjects(db, s.id, s.businessContext, countryDisplayNameFr(s.countryCode));
     const r = await getOrBuildBrandFeed(db, {
       strategyId: s.id,
       name: s.name,
       countryCode: s.countryCode,
       sector,
+      extraSubjects: watch.subjects,
     }).catch(() => null);
     if (r && !r.cached) built++;
     else skipped++;

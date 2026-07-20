@@ -432,6 +432,8 @@ export const cockpitRouter = createTRPCRouter({
         articles: [] as Array<{ title: string; link: string; source: string | null; publishedAt: string | null }>,
         themes: [] as string[],
         configured: Boolean(strategy.countryCode),
+        watchSubjects: [] as string[],
+        watchSource: "NONE" as "MANUAL" | "DERIVED" | "NONE",
       };
 
       // ADR-0143 — veille MULTI-SUJETS par marque (la marque elle-même + son
@@ -439,11 +441,23 @@ export const cockpitRouter = createTRPCRouter({
       // DÉTERMINISTE (relevance.ts) : ZÉRO LLM. Cache journalier read-through
       // (préchauffé par le cron external-feeds). `countryCode` absent → défaut
       // géographique côté source, mais on signale `configured: false`.
+      // ADR-0165 — les sujets viennent de l'ADVE (marques du catalogue V,
+      // concurrents D, communauté E), édition manuelle prioritaire
+      // (businessContext.watchSubjects).
+      const { loadWatchSubjects } = await import("@/server/services/seshat/external-feeds/brand-feed");
+      const { countryDisplayNameFr } = await import("@/server/services/seshat/external-feeds/watch-subjects");
+      const watch = await loadWatchSubjects(
+        ctx.db,
+        strategy.id,
+        strategy.businessContext,
+        countryDisplayNameFr(strategy.countryCode),
+      );
       const feed = await getOrBuildBrandFeed(ctx.db, {
         strategyId: strategy.id,
         name: strategy.name,
         countryCode: strategy.countryCode ?? "CM",
         sector,
+        extraSubjects: watch.subjects,
       }).catch(() => null);
       if (!feed) return empty;
 
@@ -456,7 +470,10 @@ export const cockpitRouter = createTRPCRouter({
           source: a.source ?? null,
           publishedAt: a.publishedAt ?? null,
         })),
-        themes: feed.subjects.slice(0, 6),
+        themes: feed.subjects.slice(0, 8),
+        // ADR-0165 — pour l'éditeur de sujets du panneau.
+        watchSubjects: watch.subjects,
+        watchSource: watch.source,
       };
     }),
 

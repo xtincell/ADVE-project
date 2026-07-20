@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.231 — feat(seshat+intake): veille branchée sur l'ADVE + éditable, fraîcheur dure, scrub des récits fabriqués (ADR-0165) (2026-07-20)
+
+**Le cas Motion19 clos : la veille suit enfin ce que la marque VEND et QUI elle sert.** ([ADR-0165](docs/governance/adr/0165-veille-sujets-adve-editables.md)) :
+
+- **Sujets dérivés de l'ADVE** (`watch-subjects.ts`, 0 LLM) : marques du catalogue V (Canon/Nikon/Godox par fréquence des premiers tokens, stoplist générique), concurrents D (+ pays), communauté E (+ pays). Le crochet `extraSubjects` (ADR-0143) est enfin branché — cockpit ET cron, cache journalier invalidé au changement de sujets.
+- **Éditable manual-first** : panneau Veille → « Sujets suivis » (chips + ajout/retrait) → `businessContext.watchSubjects` via `strategy.update` (garde d'ownership existante). Manuel ≠ vide → il prime ; `[]` → retour au dérivé.
+- **Fraîcheur dure** : articles > 120 j exclus AVANT ranking — fini les dépêches de 3 010 jours.
+- **Scrub des récits opérationnels** (extension ADR-0163) : `aarrr`/`taboos`/`programmeEvangelisation`/… droppés si < 25 % de leurs tokens de contenu sont ancrés dans le déclaré — le mur AARRR fabriqué de La Paillote (pilier E 23/25 fantôme) tombe, une restructuration honnête passe. Jugements (personas…) hors périmètre.
+- **Recensement classe de fuite** : 51/123 routeurs `protectedProcedure`+`strategyId` sans motif de garde dans le fichier — chantier middleware + test HARD + lots tracé RESIDUAL-DEBT (priorité élevée, même classe que la fuite Jehuty v6.27.230). tsc 0 · lint 0 · **2857 tests verts** (+17).
+
 ## v6.27.230 — fix(jehuty): gazette — fuite cross-tenant colmatée, titres personnalisés, monde dehors branché, rubriques présentées (2026-07-20)
 
 **Retour opérateur sur la gazette Motion19 : 7 cartes « Diagnostic NETERU » sans commentaire, rubriques vides.** L'inspection a révélé pire que le symptôme : les 7 cartes étaient des événements funnel `quick_intake_completed` **d'AUTRES marques** (email prospect dans le payload), estampillés avec l'id de l'appelant faute de filtre — **fuite cross-tenant client-visible**, colmatée :

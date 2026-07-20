@@ -20,6 +20,45 @@
 const EVIDENCE_KEY_RE =
   /roi|proof|preuve|traction|attestation|testimonial|temoignage|metric|lift|esov|kpi|revenue|chiffreaffaire|growthrate/i;
 
+/**
+ * Champs de RÉCIT OPÉRATIONNEL (extension 2026-07-20, cas « AARRR » La
+ * Paillote) : l'extracteur y fabriquait des dispositifs entiers jamais
+ * déclarés (« livre d'or », « groupe WhatsApp Ambassadeurs », « programme de
+ * parrainage en cours de déploiement ») — pas de chiffres, donc invisibles au
+ * scrub numérique, mais un pilier E gonflé à 23/25 et des murs de prose
+ * inventée affichés au client. Ces champs décrivent des FAITS opérationnels
+ * (ce que la marque FAIT), pas des jugements : ils doivent être ANCRÉS dans
+ * le déclaré.
+ */
+const OPERATIONAL_CLAIM_KEY_RE =
+  /^(aarrr|taboos?|pelerinages?|programmeEvangelisation|communityBuilding|clergeStructure|rituels?|ritualisation|fanClub|ambassadeurs?)$/i;
+
+/** Mots-outils exclus du calcul d'ancrage. */
+const GROUNDING_STOPWORDS = new Set([
+  "dans", "avec", "pour", "cette", "leurs", "notre", "votre", "elles", "sont",
+  "être", "etre", "plus", "sans", "chez", "tout", "tous", "toutes", "comme",
+  "entre", "aussi", "ainsi", "leur", "vers", "grace", "grâce", "afin", "depuis",
+  "principal", "principale", "premiere", "première", "premier", "clients",
+  "client", "marque", "permet", "encore", "chaque", "meme", "même",
+]);
+
+/** Tokens de contenu (≥ 5 lettres, hors mots-outils), normalisés. */
+function groundingTokens(serialized: string): string[] {
+  return [
+    ...new Set(
+      serialized
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "")
+        .split(/[^a-z]+/)
+        .filter((w) => w.length >= 5 && !GROUNDING_STOPWORDS.has(w)),
+    ),
+  ];
+}
+
+/** Seuil d'ancrage : sous 25 % de tokens de contenu retrouvés dans la source, le récit est fabriqué. */
+const GROUNDING_MIN_RATIO = 0.25;
+
 /** Nombres « durs » d'une valeur sérialisée : 300 dans « +300% », 90 dans « 90j », 1948… */
 function hardNumbers(serialized: string): string[] {
   return serialized.match(/\d[\d\s.,]{0,12}\d|\d/g)?.map((n) => n.replace(/[\s.,]/g, "")) ?? [];
@@ -54,9 +93,29 @@ export function scrubUnfoundedEvidence(
     return nums.every((n) => source.includes(n));
   };
 
+  // Ancrage d'un récit opérationnel : part des tokens de contenu retrouvés
+  // dans la source. Un extracteur qui RESTRUCTURE le déclaré garde un ratio
+  // élevé ; un extracteur qui INVENTE des dispositifs tombe sous le seuil.
+  const sourceTokens = new Set(groundingTokens(source));
+  const isGroundedNarrative = (value: unknown): boolean => {
+    const tokens = groundingTokens(JSON.stringify(value ?? ""));
+    if (tokens.length < 8) return true; // trop court pour juger — on garde
+    const found = tokens.filter((t) => sourceTokens.has(t)).length;
+    return found / tokens.length >= GROUNDING_MIN_RATIO;
+  };
+
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(content)) {
-    if (value == null || !EVIDENCE_KEY_RE.test(key)) {
+    if (value == null) {
+      out[key] = value;
+      continue;
+    }
+    if (OPERATIONAL_CLAIM_KEY_RE.test(key)) {
+      if (isGroundedNarrative(value)) out[key] = value;
+      else dropped.push(key);
+      continue;
+    }
+    if (!EVIDENCE_KEY_RE.test(key)) {
       out[key] = value;
       continue;
     }
