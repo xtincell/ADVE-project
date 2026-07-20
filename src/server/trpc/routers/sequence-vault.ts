@@ -5,6 +5,7 @@
 
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
+import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import {
   listExecutions,
   acceptExecution,
@@ -20,7 +21,7 @@ import { governedProcedure } from "@/server/governance/governed-procedure";
 
 export const sequenceVaultRouter = createTRPCRouter({
   /** List all sequence executions for a strategy */
-  list: protectedProcedure
+  list: strategyScopedProcedure
     .input(z.object({
       strategyId: z.string(),
       approval: z.enum(["PENDING", "ACCEPTED", "REJECTED"]).optional(),
@@ -87,7 +88,7 @@ export const sequenceVaultRouter = createTRPCRouter({
     }),
 
   /** Get the accepted execution for a specific sequence */
-  getAccepted: protectedProcedure
+  getAccepted: strategyScopedProcedure
     .input(z.object({
       strategyId: z.string(),
       sequenceKey: z.string(),
@@ -97,14 +98,14 @@ export const sequenceVaultRouter = createTRPCRouter({
     }),
 
   /** Get the full skill tree (all sequences with lock status) */
-  skillTree: protectedProcedure
+  skillTree: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ input }) => {
       return buildSkillTree(input.strategyId);
     }),
 
   /** Check prerequisites for a specific sequence */
-  checkPrereqs: protectedProcedure
+  checkPrereqs: strategyScopedProcedure
     .input(z.object({
       strategyId: z.string(),
       requires: z.array(z.object({

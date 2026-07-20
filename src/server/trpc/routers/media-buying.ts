@@ -21,6 +21,7 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure } from "../init";
+import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
 
@@ -84,7 +85,7 @@ export const mediaBuyingRouter = createTRPCRouter({
     }),
 
   // Get media performance summary
-  getSummary: protectedProcedure
+  getSummary: strategyScopedProcedure
     .input(z.object({
       strategyId: z.string(),
       platform: z.string().optional(),
@@ -272,7 +273,7 @@ export const mediaBuyingRouter = createTRPCRouter({
     }),
 
   // ── REQ-6: recommendMix — media-mix-calculator ──────────────────────────
-  recommendMix: protectedProcedure
+  recommendMix: strategyScopedProcedure
     .input(z.object({
       strategyId: z.string(),
       budget: z.number(),
@@ -338,7 +339,7 @@ export const mediaBuyingRouter = createTRPCRouter({
     }),
 
   // ── REQ-7: getPortalData — aggregate all media data for console view ────
-  getPortalData: protectedProcedure
+  getPortalData: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
       const signals = await ctx.db.signal.findMany({

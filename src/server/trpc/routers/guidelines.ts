@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
+import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import * as guidelinesService from "@/server/services/guidelines-renderer";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
@@ -18,13 +19,13 @@ export const guidelinesRouter = createTRPCRouter({
       return guidelinesService.generate(input.strategyId);
     }),
 
-  get: protectedProcedure
+  get: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ input }) => {
       return guidelinesService.generate(input.strategyId);
     }),
 
-  export: protectedProcedure
+  export: strategyScopedProcedure
     .input(z.object({
       strategyId: z.string(),
       format: z.enum(["html", "pdf"]).default("html"),

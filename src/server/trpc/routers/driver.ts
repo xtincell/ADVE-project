@@ -26,6 +26,9 @@ import { z } from "zod";
 import { DriverChannel } from "@prisma/client";
 import type { Prisma, SocialPlatform } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure } from "../init";
+import { assertStrategyRead } from "./_strategy-read-guard";
+import { getOperatorContext, scopeStrategies } from "@/server/services/operator-isolation";
+import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { generateSpecs as engineGenerateSpecs, translateBrief as engineTranslateBrief } from "@/server/services/driver-engine";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
@@ -129,8 +132,11 @@ export const driverRouter = createTRPCRouter({
   list: protectedProcedure
     .input(z.object({ strategyId: z.string().optional() }))
     .query(async ({ ctx, input }) => {
+      // ADR-0166 — scope ownership : jamais de liste cross-marques.
+      const opCtx = await getOperatorContext(ctx.session.user.id);
       return ctx.db.driver.findMany({
         where: {
+          strategy: scopeStrategies(opCtx),
           ...(input.strategyId ? { strategyId: input.strategyId } : {}),
           deletedAt: null,
         },
@@ -139,7 +145,7 @@ export const driverRouter = createTRPCRouter({
       });
     }),
 
-  getByStrategy: protectedProcedure
+  getByStrategy: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
       return ctx.db.driver.findMany({
@@ -241,7 +247,7 @@ export const driverRouter = createTRPCRouter({
       }
     }),
 
-  auditCoherence: protectedProcedure
+  auditCoherence: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
       const drivers = await ctx.db.driver.findMany({
@@ -338,6 +344,7 @@ export const driverRouter = createTRPCRouter({
         where: { id: input.driverId },
         include: { strategy: true },
       });
+      await assertStrategyRead(ctx.session.user.id, driver.strategyId);
       // Map DriverChannel to SocialPlatform where applicable
       const platformMap: Record<string, string> = {
         INSTAGRAM: "INSTAGRAM", FACEBOOK: "FACEBOOK", TIKTOK: "TIKTOK",
@@ -407,6 +414,7 @@ export const driverRouter = createTRPCRouter({
     .input(z.object({ driverId: z.string() }))
     .query(async ({ ctx, input }) => {
       const driver = await ctx.db.driver.findUniqueOrThrow({ where: { id: input.driverId } });
+      await assertStrategyRead(ctx.session.user.id, driver.strategyId);
       // Map paid-relevant channels to media platform names
       const mediaMap: Record<string, string> = {
         INSTAGRAM: "meta_ads", FACEBOOK: "meta_ads", TIKTOK: "tiktok_ads",

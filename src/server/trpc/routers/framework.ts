@@ -32,6 +32,7 @@ import { PILLAR_STORAGE_KEYS } from "@/domain";
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import * as artemis from "@/server/services/artemis";
 import type { FrameworkLayer } from "@/server/services/artemis/frameworks";
 import { governedProcedure } from "@/server/governance/governed-procedure";
@@ -166,11 +167,11 @@ export const frameworkRouter = createTRPCRouter({
       return results;
     }),
 
-  history: protectedProcedure
+  history: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(({ input }) => artemis.getDiagnosticHistory(input.strategyId)),
 
-  differential: protectedProcedure
+  differential: strategyScopedProcedure
     .input(z.object({ strategyId: z.string(), fromDate: z.date(), toDate: z.date() }))
     .query(({ input }) => artemis.differentialDiagnosis(input.strategyId, input.fromDate, input.toDate)),
 
@@ -182,7 +183,7 @@ export const frameworkRouter = createTRPCRouter({
   diagnosticBySymptom: protectedProcedure
     .input(z.object({
       symptom: z.string().min(1),
-      strategyId: z.string().optional(),
+      // ADR-0166 : champ marque retiré — jamais consommé (mapping statique).
     }))
     .query(({ input }) => {
       // Map common symptoms to pillar keys and relevant framework layers
@@ -244,7 +245,7 @@ export const frameworkRouter = createTRPCRouter({
     }),
 
   // ── REQ-11 complement: Compare two framework results ───────────────────
-  compareResults: protectedProcedure
+  compareResults: strategyScopedProcedure
     .input(z.object({
       strategyId: z.string(),
       frameworkIdA: z.string(),
@@ -272,7 +273,7 @@ export const frameworkRouter = createTRPCRouter({
     }),
 
   // ── REQ-6 complement: Global ARTEMIS score ─────────────────────────────
-  getScore: protectedProcedure
+  getScore: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
       const allSlugs = artemis.FRAMEWORKS.map(f => f.slug);

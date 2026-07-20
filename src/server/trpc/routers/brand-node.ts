@@ -39,10 +39,53 @@ import {
 import { classifyBibleVar, filterBibleKeysByNature } from "@/server/services/brand-node/bible-classifier";
 import { applyNarrativeCoherenceGate } from "@/server/services/mestor/gates/narrative-coherence";
 import { db } from "@/lib/db";
+import { canAccessStrategy, getOperatorContext } from "@/server/services/operator-isolation";
+import { accessibleStrategyIds } from "../middleware/strategy-scope";
 
 /* lafusee:governed-active — Phase 18/19 router. Toutes les mutations utilisent governedProcedure (ADR-0004 strict cible atteinte) ; tag corrigé 2026-05-06 strangler→governed (faux positif initial — le router a toujours utilisé governedProcedure depuis sa création). */
 
 const StringId = z.string().min(1);
+
+/**
+ * Garde d'accès nœud d'arbre (ADR-0166) — l'arbre porte noms, structure et
+ * piliers effectifs des marques. Accès si : ADMIN · membre du même opérateur ·
+ * marque attachée accessible (chokepoint ADR-0129) · le caller possède une
+ * marque sur la CHAÎNE (ancêtre du nœud, ou nœud ancêtre de sa marque —
+ * cas founder : commutator + breadcrumbs). Avant : lecture libre par nodeId.
+ */
+async function assertNodeAccess(userId: string, nodeId: string): Promise<void> {
+  const node = await db.brandNode.findUnique({
+    where: { id: nodeId },
+    select: { id: true, operatorId: true, strategyId: true },
+  });
+  if (!node) throw new TRPCError({ code: "NOT_FOUND", message: "Nœud introuvable" });
+
+  const opCtx = await getOperatorContext(userId);
+  if (opCtx.role === "ADMIN") return;
+  if (opCtx.operatorId && opCtx.operatorId === node.operatorId) return;
+  if (node.strategyId && (await canAccessStrategy(node.strategyId, opCtx))) return;
+
+  const ids = await accessibleStrategyIds(userId);
+  if (ids?.length) {
+    // Le caller possède le nœud même ou un ancêtre du nœud.
+    const chain = [node.id, ...(await getAncestorIds(node.id))];
+    const owned = await db.brandNode.findFirst({
+      where: { id: { in: chain }, strategyId: { in: ids } },
+      select: { id: true },
+    });
+    if (owned) return;
+    // Le nœud est un ancêtre d'une marque du caller (breadcrumb remontant).
+    const userNodes = await db.brandNode.findMany({
+      where: { strategyId: { in: ids }, operatorId: node.operatorId },
+      select: { id: true },
+    });
+    for (const un of userNodes) {
+      if ((await getAncestorIds(un.id)).includes(node.id)) return;
+    }
+  }
+
+  throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à ce nœud de marque" });
+}
 
 const BrandNatureEnum = z.enum([
   "PRODUCT", "SERVICE", "CHARACTER_IP", "FESTIVAL_IP", "MEDIA_IP",
@@ -203,7 +246,8 @@ export const brandNodeRouter = createTRPCRouter({
   // ── Read queries ─────────────────────────────────────────────────────
   get: protectedProcedure
     .input(z.object({ nodeId: StringId }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      await assertNodeAccess(ctx.session.user.id, input.nodeId);
       return getNode(input.nodeId);
     }),
 
@@ -212,14 +256,28 @@ export const brandNodeRouter = createTRPCRouter({
       parentNodeId: StringId.nullable(),
       operatorId: StringId,
     }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      if (input.parentNodeId) {
+        await assertNodeAccess(ctx.session.user.id, input.parentNodeId);
+      } else {
+        const opCtx = await getOperatorContext(ctx.session.user.id);
+        if (opCtx.role !== "ADMIN" && opCtx.operatorId !== input.operatorId) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cet opérateur" });
+        }
+      }
       return listChildren(input.parentNodeId, input.operatorId);
     }),
 
   /** Liste les nœuds racines (parentNodeId = null) pour un operator donné. */
   listRoots: protectedProcedure
     .input(z.object({ operatorId: StringId }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      // ADR-0166 — l'arbre de marque d'un opérateur n'est lisible que par ses
+      // membres (ou ADMIN) : l'operatorId arbitraire exposait noms/structure.
+      const opCtx = await getOperatorContext(ctx.session.user.id);
+      if (opCtx.role !== "ADMIN" && opCtx.operatorId !== input.operatorId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cet opérateur" });
+      }
       return listChildren(null, input.operatorId);
     }),
 
@@ -239,6 +297,7 @@ export const brandNodeRouter = createTRPCRouter({
   listMarketsForBrand: protectedProcedure
     .input(z.object({ brandNodeId: StringId }))
     .query(async ({ input, ctx }) => {
+      await assertNodeAccess(ctx.session.user.id, input.brandNodeId);
       const brand = await ctx.db.brandNode.findUnique({
         where: { id: input.brandNodeId },
         select: {
@@ -268,14 +327,16 @@ export const brandNodeRouter = createTRPCRouter({
   /** Remonte vers la racine et retourne le nœud root. */
   findRoot: protectedProcedure
     .input(z.object({ nodeId: StringId }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      await assertNodeAccess(ctx.session.user.id, input.nodeId);
       return findRoot(input.nodeId);
     }),
 
   /** Retourne le chemin ancêtres-vers-racine (pour breadcrumbs UI). */
   getAncestorPath: protectedProcedure
     .input(z.object({ nodeId: StringId }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      await assertNodeAccess(ctx.session.user.id, input.nodeId);
       const ancestorIds = await getAncestorIds(input.nodeId);
       if (ancestorIds.length === 0) return [];
       return db.brandNode.findMany({
@@ -290,10 +351,13 @@ export const brandNodeRouter = createTRPCRouter({
    */
   getBySlug: protectedProcedure
     .input(z.object({ operatorId: StringId, slug: StringId }))
-    .query(async ({ input }) => {
-      return db.brandNode.findUnique({
+    .query(async ({ ctx, input }) => {
+      const node = await db.brandNode.findUnique({
         where: { operatorId_slug: { operatorId: input.operatorId, slug: input.slug } },
       });
+      if (!node) return null;
+      await assertNodeAccess(ctx.session.user.id, node.id);
+      return node;
     }),
 
   // ── Phase 18-N1/N2 — Inheritance résolution + invalidation cache ─────
@@ -307,9 +371,10 @@ export const brandNodeRouter = createTRPCRouter({
    */
   resolveEffectivePillars: protectedProcedure
     .input(z.object({ nodeId: StringId, bypassCache: z.boolean().optional() }))
-    .query(({ input }) =>
-      resolveEffectivePillars(input.nodeId, { bypassCache: input.bypassCache }),
-    ),
+    .query(async ({ ctx, input }) => {
+      await assertNodeAccess(ctx.session.user.id, input.nodeId);
+      return resolveEffectivePillars(input.nodeId, { bypassCache: input.bypassCache });
+    }),
 
   /**
    * Invalide manuellement le cache d'un node + descendants. Utile en debug
@@ -319,7 +384,8 @@ export const brandNodeRouter = createTRPCRouter({
    */
   invalidateInheritanceCache: protectedProcedure
     .input(z.object({ nodeId: StringId }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      await assertNodeAccess(ctx.session.user.id, input.nodeId);
       const count = await invalidateNodeAndDescendants(input.nodeId);
       return { ok: true, invalidatedNodes: count };
     }),
@@ -343,15 +409,16 @@ export const brandNodeRouter = createTRPCRouter({
         limit: z.number().int().min(1).max(200).optional(),
       }),
     )
-    .query(({ input }) =>
-      searchContextForNode(input.nodeId, {
+    .query(async ({ ctx, input }) => {
+      await assertNodeAccess(ctx.session.user.id, input.nodeId);
+      return searchContextForNode(input.nodeId, {
         kinds: input.kinds,
         pillarKeys: input.pillarKeys,
         includeSiblings: input.includeSiblings,
         maxAncestorDepth: input.maxAncestorDepth,
         limit: input.limit,
-      }),
-    ),
+      });
+    }),
 
   // ── Phase 18-N6 — Glory tools brand-aware filter ─────────────────────
   /**
@@ -428,10 +495,11 @@ export const brandNodeRouter = createTRPCRouter({
         outputText: z.string().min(1).max(20000),
       }),
     )
-    .query(({ input }) =>
-      applyNarrativeCoherenceGate({
+    .query(async ({ ctx, input }) => {
+      await assertNodeAccess(ctx.session.user.id, input.nodeId);
+      return applyNarrativeCoherenceGate({
         brandNodeId: input.nodeId,
         outputText: input.outputText,
-      }),
-    ),
+      });
+    }),
 });

@@ -57,7 +57,7 @@ export const marketStudyRouter = createTRPCRouter({
 
   list: protectedProcedure
     .input(z.object({
-      strategyId: z.string().optional(),
+      // ADR-0166 : champ marque retiré — jamais consommé (pool sectoriel global).
       sector: z.string().optional(),
     }))
     .query(async ({ ctx, input }) => {

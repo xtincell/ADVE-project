@@ -8,6 +8,7 @@
 
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure, protectedProcedure, adminProcedure, operatorProcedure } from "../init";
+import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { db } from "@/lib/db";
 import { MarketScaleSchema } from "@/domain/market-scale";
@@ -237,7 +238,7 @@ export const scoreurRouter = createTRPCRouter({
     }),
 
   /** Preview d'impact : re-score une marque SANS persister (voir l'effet d'un edit). */
-  previewBrand: protectedProcedure
+  previewBrand: strategyScopedProcedure
     .input(z.object({ strategyId: z.string().min(1) }))
     .mutation(async ({ input }) => {
       const r = await scoreBrand(input.strategyId, { persist: false });

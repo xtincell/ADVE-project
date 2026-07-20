@@ -26,6 +26,7 @@ import { PILLAR_STORAGE_KEYS } from "@/domain";
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure } from "../init";
+import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { processSignal, detectStrategyDrift } from "@/server/services/feedback-loop";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
@@ -66,7 +67,7 @@ export const signalRouter = createTRPCRouter({
       return { signal, feedbackAlerts };
     }),
 
-  list: protectedProcedure
+  list: strategyScopedProcedure
     .input(z.object({
       strategyId: z.string(),
       type: z.string().optional(),
@@ -93,7 +94,7 @@ export const signalRouter = createTRPCRouter({
     }),
 
   // Check drift status for a specific pillar on a strategy
-  checkDrift: protectedProcedure
+  checkDrift: strategyScopedProcedure
     .input(z.object({
       strategyId: z.string(),
       pillarKey: z.enum([...PILLAR_STORAGE_KEYS]),
@@ -243,7 +244,7 @@ export const signalRouter = createTRPCRouter({
       return { success: true, strategyId: input.strategyId, pillarsConfigured: Object.keys(input.thresholds) };
     }),
 
-  checkThresholds: protectedProcedure
+  checkThresholds: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
       // Load thresholds config

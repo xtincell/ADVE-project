@@ -49,7 +49,7 @@ function fileToBase64(file: File): Promise<string> {
 
 export default function MarketStudiesPage() {
   const strategyId = useCurrentStrategyId();
-  const list = trpc.marketStudyIngestion.list.useQuery({ strategyId: strategyId ?? undefined, limit: 50 });
+  const list = trpc.marketStudyIngestion.list.useQuery({ limit: 50 });
   const previewMut = trpc.marketStudyIngestion.preview.useMutation();
   const confirmMut = trpc.marketStudyIngestion.confirm.useMutation();
   const [openUpload, setOpenUpload] = useState(false);

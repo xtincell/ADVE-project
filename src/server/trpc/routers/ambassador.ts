@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
+import { strategyScopedProcedure } from "../middleware/strategy-scope";
 
 // AmbassadorProgram tiers mapped to Devotion Ladder segments:
 // Bronze = engage (segment 4), Silver = engage (segment 4),
@@ -13,7 +14,7 @@ const TIER_TO_DEVOTION: Record<string, string> = {
 };
 
 export const ambassadorRouter = createTRPCRouter({
-  list: protectedProcedure
+  list: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
       // Derive ambassador list from DevotionSnapshot segments
@@ -41,7 +42,7 @@ export const ambassadorRouter = createTRPCRouter({
       };
     }),
 
-  getProgram: protectedProcedure
+  getProgram: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
       const snapshots = await ctx.db.devotionSnapshot.findMany({

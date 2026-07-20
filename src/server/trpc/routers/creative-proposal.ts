@@ -9,12 +9,13 @@
 
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
+import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { creativeProposalContractSchema, creativeDirectionSchema } from "@/lib/types/creative-proposal";
 import { ROADMAP_ROUTE_KEYS } from "@/lib/types/pillar-schemas";
 
 export const creativeProposalRouter = createTRPCRouter({
-  listByStrategy: protectedProcedure
+  listByStrategy: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ input }) => {
       const { listCreativeProposalsByStrategy } = await import("@/server/services/creative-proposal");
@@ -28,7 +29,7 @@ export const creativeProposalRouter = createTRPCRouter({
       return getCreativeProposal(input.id);
     }),
 
-  executionLevels: protectedProcedure
+  executionLevels: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ input }) => {
       const { getExecutionLevels } = await import("@/server/services/creative-proposal");

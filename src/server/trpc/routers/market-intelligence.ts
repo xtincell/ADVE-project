@@ -5,6 +5,7 @@
 
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
+import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { runMarketIntelligence, checkSectorKnowledge } from "@/server/services/market-intelligence";
 import {
   registerCollectionDaemon,
@@ -125,7 +126,7 @@ export const marketIntelligenceRouter = createTRPCRouter({
     }),
 
   /** List active collection DAEMONs for a strategy */
-  listCollectors: protectedProcedure
+  listCollectors: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ input }) => {
       return listCollectors(input.strategyId);
@@ -147,7 +148,7 @@ export const marketIntelligenceRouter = createTRPCRouter({
     }),
 
   /** Get weak signals for a strategy */
-  getWeakSignals: protectedProcedure
+  getWeakSignals: strategyScopedProcedure
     .input(z.object({
       strategyId: z.string(),
       minUrgency: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]).optional(),

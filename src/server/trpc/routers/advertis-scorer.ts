@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import {
   scoreObject,
   batchScore,
@@ -44,7 +45,7 @@ export const advertisScorerRouter = createTRPCRouter({
     }),
 
   /** Score history for a strategy — time series of ScoreSnapshots */
-  getHistory: protectedProcedure
+  getHistory: strategyScopedProcedure
     .input(z.object({
       strategyId: z.string(),
       limit: z.number().min(1).max(200).default(50),

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { getOperatorContext, scopeStrategies } from "@/server/services/operator-isolation";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
 
@@ -47,9 +48,12 @@ export const interventionRouter = createTRPCRouter({
       status: z.string().optional(),
     }))
     .query(async ({ ctx, input }) => {
+      // ADR-0166 — scope ownership : jamais de liste cross-marques.
+      const opCtx = await getOperatorContext(ctx.session.user.id);
       return ctx.db.signal.findMany({
         where: {
           type: "INTERVENTION_REQUEST",
+          strategy: scopeStrategies(opCtx),
           ...(input.strategyId ? { strategyId: input.strategyId } : {}),
         },
         orderBy: { createdAt: "desc" },

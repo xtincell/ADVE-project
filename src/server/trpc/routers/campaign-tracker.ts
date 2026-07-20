@@ -30,6 +30,7 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
+import { assertRawStrategyScope } from "../middleware/strategy-scope";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
 import { checkPaidTier } from "@/server/services/glory-tools/tier-gate";
 import {
@@ -80,7 +81,12 @@ import {
 // declare STUB state and emit DEFERRED_AWAITING_DEPS via this router.
 void DeferredAwaitingDepsError;
 
-const auditedProtected = auditedProcedure(protectedProcedure, "campaign-tracker");
+const auditedProtected = auditedProcedure(protectedProcedure, "campaign-tracker").use(async ({ ctx, getRawInput, next }) => {
+  // ADR-0166 — garde d'ownership à la base : toutes les procédures de cette
+  // lane prennent un strategyId ; un id étranger est refusé avant le handler.
+  await assertRawStrategyScope(ctx.session.user.id, await getRawInput(), { optional: true });
+  return next();
+});
 // Cluster F (Économie agence) — restricted Operator role (ADMIN ou Operator-linked).
 // Pattern aligné avec adminProcedure / operatorProcedure de init.ts. Cf. ADR-0052-F §6.
 const auditedOperator = auditedProcedure(operatorProcedure, "campaign-tracker");

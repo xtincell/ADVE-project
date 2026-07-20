@@ -22,6 +22,7 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure } from "../init";
+import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
 
@@ -116,7 +117,7 @@ export const prRouter = createTRPCRouter({
     }),
 
   // Get PR coverage summary
-  getCoverage: protectedProcedure
+  getCoverage: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
       const signals = await ctx.db.signal.findMany({
@@ -158,7 +159,7 @@ export const prRouter = createTRPCRouter({
     }),
 
   // ── REQ-4: generateAngles — translate ADVE profile into press angles ────
-  generateAngles: protectedProcedure
+  generateAngles: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
       // Read ADVE pillars for the strategy

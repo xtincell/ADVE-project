@@ -3,6 +3,7 @@ import { classifyTier, MarketScaleSchema } from "@/domain";
 import type { Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, adminProcedure, operatorProcedure } from "../init";
+import { assertStrategyRead } from "./_strategy-read-guard";
 import { scoreObject } from "@/server/services/advertis-scorer";
 import { propagateFromPillar } from "@/server/services/staleness-propagator";
 import * as auditTrail from "@/server/services/audit-trail";
@@ -816,6 +817,7 @@ export const strategyRouter = createTRPCRouter({
   comparables: protectedProcedure
     .input(z.object({ strategyId: z.string(), topK: z.number().min(1).max(20).default(8) }))
     .query(async ({ input, ctx }) => {
+      await assertStrategyRead(ctx.session.user.id, input.strategyId);
       const { findSimilarAcrossStrategies } = await import(
         "@/server/services/seshat/context-store"
       );
@@ -880,6 +882,7 @@ export const strategyRouter = createTRPCRouter({
   getSynthesisConfidence: protectedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
+      await assertStrategyRead(ctx.session.user.id, input.strategyId);
       const sPillar = await ctx.db.pillar.findFirst({
         where: { strategyId: input.strategyId, key: "s" },
       });
@@ -910,6 +913,7 @@ export const strategyRouter = createTRPCRouter({
       forceConfidence: z.boolean().optional().default(false),
     }))
     .mutation(async ({ ctx, input }) => {
+      await assertStrategyRead(ctx.session.user.id, input.strategyId);
       // 1. Lire le pilier S
       const sPillar = await ctx.db.pillar.findFirst({
         where: { strategyId: input.strategyId, key: "s" },

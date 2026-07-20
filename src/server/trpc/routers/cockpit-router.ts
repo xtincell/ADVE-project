@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "../init";
+import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { checkPaidTier } from "@/server/services/glory-tools/tier-gate";
 import { canAccessStrategy, getOperatorContext } from "@/server/services/operator-isolation";
 import { getOrBuildBrandFeed } from "@/server/services/seshat/external-feeds/brand-feed";
@@ -63,7 +64,7 @@ function extractBrandTags(pillarDContent: unknown): Record<string, number> {
 
 export const cockpitRouter = createTRPCRouter({
   /** Dashboard summary for the client portal */
-  dashboard: protectedProcedure
+  dashboard: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
       const strategy = await ctx.db.strategy.findUniqueOrThrow({

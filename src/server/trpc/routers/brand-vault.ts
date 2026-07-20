@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { tagAsset } from "@/server/services/asset-tagger";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import {
@@ -84,7 +85,7 @@ export const brandVaultRouter = createTRPCRouter({
     }),
 
   // List assets filtered by pillar and level
-  list: protectedProcedure
+  list: strategyScopedProcedure
     .input(z.object({
       strategyId: z.string(),
       pillar: z.string().optional(),
@@ -334,7 +335,7 @@ export const brandVaultRouter = createTRPCRouter({
   // callers need to find canonical assets by kind+state. Used by the
   // Source Classifier proposals UI and by Artemis to find ACTIVE logos.
 
-  listByKind: protectedProcedure
+  listByKind: strategyScopedProcedure
     .input(z.object({
       strategyId: z.string(),
       kind: z.string().optional(),
@@ -355,7 +356,7 @@ export const brandVaultRouter = createTRPCRouter({
 
   // List BrandAsset DRAFT proposals tied to a specific BrandDataSource.
   // Powers the "Propositions vault" UI section on the sources page.
-  listDraftsFromSource: protectedProcedure
+  listDraftsFromSource: strategyScopedProcedure
     .input(z.object({
       strategyId: z.string(),
       sourceDataSourceId: z.string(),

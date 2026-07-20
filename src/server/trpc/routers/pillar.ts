@@ -28,6 +28,7 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
+import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { validatePillarContent, validatePillarPartial, type PillarKey } from "@/lib/types/pillar-schemas";
 import { validateCrossReferences, getCrossRefSummary } from "@/server/services/cross-validator";
 import * as pillarVersioning from "@/server/services/pillar-versioning";
@@ -59,12 +60,12 @@ export const pillarRouter = createTRPCRouter({
    * that triggers downstream work. See
    * src/server/governance/pillar-readiness.ts for the contract.
    */
-  readiness: protectedProcedure
+  readiness: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(({ input }) => getStrategyReadiness(input.strategyId)),
 
   /** Maturity assessment for a pillar — 3-level scoring (suffisant/complet/R+T) */
-  assess: protectedProcedure
+  assess: strategyScopedProcedure
     .input(z.object({ strategyId: z.string(), key: pillarKeyEnum }))
     .query(async ({ ctx, input }) => {
       const { assessPillar } = await import("@/server/services/pillar-maturity/assessor");
@@ -119,7 +120,7 @@ export const pillarRouter = createTRPCRouter({
     }),
 
   /** Get a single pillar with validation status and semantic score */
-  get: protectedProcedure
+  get: strategyScopedProcedure
     .input(z.object({ strategyId: z.string(), key: pillarKeyEnum }))
     .query(async ({ ctx, input }) => {
       const pillar = await ctx.db.pillar.findUnique({
@@ -135,7 +136,7 @@ export const pillarRouter = createTRPCRouter({
     }),
 
   /** Get all 8 pillars with completion map */
-  getAll: protectedProcedure
+  getAll: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
       const pillars = await ctx.db.pillar.findMany({ where: { strategyId: input.strategyId } });
@@ -204,7 +205,7 @@ export const pillarRouter = createTRPCRouter({
     }),
 
   /** Dry-run validation — no save */
-  validate: protectedProcedure
+  validate: strategyScopedProcedure
     .input(z.object({ strategyId: z.string(), key: pillarKeyEnum, content: z.record(z.string(), z.unknown()) }))
     .query(({ input }) => {
       const full = validatePillarContent(input.key, input.content);
@@ -213,17 +214,17 @@ export const pillarRouter = createTRPCRouter({
     }),
 
   /** Cross-pillar validation */
-  validateCrossRefs: protectedProcedure
+  validateCrossRefs: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(({ input }) => validateCrossReferences(input.strategyId)),
 
   /** Cross-ref summary */
-  crossRefSummary: protectedProcedure
+  crossRefSummary: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(({ input }) => getCrossRefSummary(input.strategyId)),
 
   /** Completion map for all 8 pillars */
-  getCompletionMap: protectedProcedure
+  getCompletionMap: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
       const pillars = await ctx.db.pillar.findMany({ where: { strategyId: input.strategyId } });
@@ -561,7 +562,7 @@ export const pillarRouter = createTRPCRouter({
     }),
 
   /** Get version history for a pillar */
-  getVersionHistory: protectedProcedure
+  getVersionHistory: strategyScopedProcedure
     .input(z.object({ strategyId: z.string(), key: pillarKeyEnum, limit: z.number().min(1).max(100).default(20) }))
     .query(async ({ ctx, input }) => {
       const pillar = await ctx.db.pillar.findUnique({
@@ -673,7 +674,7 @@ export const pillarRouter = createTRPCRouter({
     }),
 
   /** @deprecated Use notoria.getRecosByPillar instead */
-  getRecos: protectedProcedure
+  getRecos: strategyScopedProcedure
     .input(z.object({ strategyId: z.string(), key: adveKeyEnum }))
     .query(async ({ ctx, input }) => {
       // Delegate to Notoria Recommendation table
@@ -758,7 +759,7 @@ export const pillarRouter = createTRPCRouter({
     }),
 
   /** Get commentary for a pillar */
-  getCommentary: protectedProcedure
+  getCommentary: strategyScopedProcedure
     .input(z.object({ strategyId: z.string(), key: pillarKeyEnum }))
     .query(async ({ ctx, input }) => {
       const pillar = await ctx.db.pillar.findUnique({
@@ -771,7 +772,7 @@ export const pillarRouter = createTRPCRouter({
   // ── Maturity Assessment ────────────────────────────────────────────────
 
   /** Get maturity report for all 8 pillars of a strategy */
-  maturityReport: protectedProcedure
+  maturityReport: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ input }) => {
       const { assessStrategy } = await import("@/server/services/pillar-maturity/assessor");
@@ -921,7 +922,7 @@ export const pillarRouter = createTRPCRouter({
   // ── REQ-10: Strategy phase state machine ───────────────────────────────
   // Phases: FICHE → AUDIT → IMPLEMENTATION → COCKPIT → COMPLETE
 
-  getPhase: protectedProcedure
+  getPhase: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
       const strategy = await ctx.db.strategy.findUniqueOrThrow({
@@ -1224,7 +1225,7 @@ Propose une nouvelle valeur cohérente avec l'intention, en respectant le schém
    * as-is. The actual content stays unchanged — operators who want to edit
    * the value should use the regular amend flow (OPERATOR_AMEND_PILLAR).
    */
-  confirmInferredField: protectedProcedure
+  confirmInferredField: strategyScopedProcedure
     .input(z.object({
       strategyId: z.string().min(1),
       pillarKey: z.enum(["a", "d", "v", "e", "r", "t", "i", "s", "A", "D", "V", "E", "R", "T", "I", "S"]),

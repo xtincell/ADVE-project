@@ -1169,6 +1169,7 @@ export const campaignManagerRouter = createTRPCRouter({
   listBriefsForStrategy: protectedProcedure
     .input(z.object({ strategyId: z.string(), limit: z.number().min(1).max(200).default(100) }))
     .query(async ({ ctx, input }) => {
+      await enforceStrategyAccess(ctx, input.strategyId);
       return ctx.db.campaignBrief.findMany({
         where: { campaign: { strategyId: input.strategyId } },
         orderBy: { createdAt: "desc" },
@@ -1430,6 +1431,7 @@ export const campaignManagerRouter = createTRPCRouter({
   getSimulatorData: protectedProcedure
     .input(z.object({ campaignId: z.string() }))
     .query(async ({ ctx, input }) => {
+      await enforceCampaignAccess(ctx, input.campaignId);
       const campaign = await ctx.db.campaign.findUniqueOrThrow({
         where: { id: input.campaignId },
         include: { actions: true, amplifications: true },

@@ -8,6 +8,7 @@
 
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
+import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import * as cultIndex from "@/server/services/cult-index-engine";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
@@ -19,11 +20,11 @@ export const cultIndexRouter = createTRPCRouter({
     caller: "cult-index:calculate",
   }).mutation(({ input }) => cultIndex.calculateAndSnapshot(input.strategyId)),
 
-  history: protectedProcedure
+  history: strategyScopedProcedure
     .input(z.object({ strategyId: z.string(), limit: z.number().optional() }))
     .query(({ input }) => cultIndex.getCultIndexHistory(input.strategyId, input.limit)),
 
-  trend: protectedProcedure
+  trend: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(({ input }) => cultIndex.getCultIndexTrend(input.strategyId)),
 });

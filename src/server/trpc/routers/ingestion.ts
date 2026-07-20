@@ -4,6 +4,7 @@
 
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import * as ingestion from "@/server/services/ingestion-pipeline";
 import { AdveKeySchema } from "@/domain";
 import { SourceCertaintySchema } from "@/domain/source-certainty";
@@ -84,7 +85,7 @@ export const ingestionRouter = createTRPCRouter({
     }),
 
   // List data sources for a strategy
-  listSources: protectedProcedure
+  listSources: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
       return ctx.db.brandDataSource.findMany({
@@ -171,14 +172,14 @@ export const ingestionRouter = createTRPCRouter({
     }),
 
   // Get ingestion pipeline status
-  getStatus: protectedProcedure
+  getStatus: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ input }) => {
       return ingestion.getIngestionStatus(input.strategyId);
     }),
 
   // Get AI-proposed content for a specific pillar (for operator review)
-  getPillarProposal: protectedProcedure
+  getPillarProposal: strategyScopedProcedure
     .input(z.object({ strategyId: z.string(), pillarKey: z.string() }))
     .query(async ({ ctx, input }) => {
       const pillar = await ctx.db.pillar.findUnique({

@@ -9,6 +9,7 @@
 
 import { z } from "zod";
 import { createTRPCRouter, operatorProcedure, protectedProcedure } from "../init";
+import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { openEmission, closeEmission } from "@/server/governance/emission-spine";
 import { db } from "@/lib/db";
@@ -122,7 +123,7 @@ export const identityRouter = createTRPCRouter({
   }),
 
   /** Lecture opérateur : personnes actives + compte d'identifiants (revue). */
-  listPersons: protectedProcedure
+  listPersons: strategyScopedProcedure
     .input(z.object({ strategyId: z.string().min(1), limit: z.number().int().min(1).max(200).default(50) }))
     .query(async ({ input }) => {
       const persons = await db.personIdentity.findMany({
