@@ -54,6 +54,14 @@ export interface WebFootprintJson {
   score?: { total: number | null; outOf: number; measuredWeight: number; dimensions: FootprintDimensionJson[] };
   narrative?: { text: string; source: "LLM" | "TEMPLATE" };
   collectedAt?: string;
+  /** ADR-0162 — rapport du filtrage d'homonymie (persisté serveur). */
+  entityGate?: {
+    ambiguousName: boolean;
+    ambiguityReason: string | null;
+    discriminants: string[];
+    judge: "DETERMINISTIC_ONLY" | "DETERMINISTIC_PLUS_LLM";
+    filtered: { press: number; discovery: number; maps: number; site: number; citations: number; adversarial: number };
+  };
 }
 
 const nf = new Intl.NumberFormat("fr-FR");
@@ -161,11 +169,14 @@ export function FootprintSection({
   footprint,
   companyName,
   declaredE = null,
+  gateLabels = null,
 }: {
   footprint: unknown;
   companyName: string;
   /** Réponses déclarées du pilier E (intake.responses.e) — optionnel. */
   declaredE?: Record<string, unknown> | null;
+  /** Libellés i18n du bloc filtrage d'homonymie (ADR-0162) — résolus par la page. */
+  gateLabels?: { title: string; filteredSuffix: string; judgeDet: string; judgeLlm: string; discriminants: string } | null;
 }) {
   const fp = footprint as WebFootprintJson | null;
   const hasAnything =
@@ -481,6 +492,33 @@ export function FootprintSection({
           Aucune fiche Google Business trouvée pour {companyName} lors de la collecte.
         </p>
       )}
+
+      {/* ── Filtrage d'homonymie (ADR-0162) — transparence sur le tri ── */}
+      {gateLabels &&
+        fp.entityGate &&
+        (() => {
+          const gate = fp.entityGate;
+          const totalFiltered = Object.values(gate.filtered).reduce((s, n) => s + (n || 0), 0);
+          if (!gate.ambiguousName && totalFiltered === 0) return null;
+          return (
+            <div className="mt-4 rounded-lg border border-border-subtle bg-background-raised p-3 text-xs text-foreground-secondary print:rounded-none print:border-0 print:p-0">
+              <p className="font-semibold uppercase tracking-wider text-foreground-muted">{gateLabels.title}</p>
+              {totalFiltered > 0 && (
+                <p className="mt-1">
+                  {totalFiltered} {gateLabels.filteredSuffix}
+                </p>
+              )}
+              <p className="mt-1 text-foreground-muted">
+                {gate.judge === "DETERMINISTIC_PLUS_LLM" ? gateLabels.judgeLlm : gateLabels.judgeDet}
+              </p>
+              {gate.discriminants.length > 0 && (
+                <p className="mt-1 text-foreground-muted">
+                  {gateLabels.discriminants} {gate.discriminants.slice(0, 8).join(" · ")}
+                </p>
+              )}
+            </div>
+          );
+        })()}
     </section>
   );
 }

@@ -388,7 +388,8 @@ export async function seedSpawtGtm() {
   });
   for (const a of sprintActions) {
     const meta = { ...((a.metadata ?? {}) as Record<string, unknown>), missionKey: M2 };
-    await db.brandAction.update({ where: { id: a.id }, data: { metadata: meta as Prisma.InputJsonValue } });
+    // ADR-0144 résiduel — FK durable en plus du stopgap metadata.missionKey.
+    await db.brandAction.update({ where: { id: a.id }, data: { metadata: meta as Prisma.InputJsonValue, missionId: M2 } });
   }
   const archived = await db.campaign.updateMany({
     where: { id: "spawt-campaign-lancement" },

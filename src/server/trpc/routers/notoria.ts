@@ -8,6 +8,7 @@
 
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
+import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { generateBatch } from "@/server/services/notoria/engine";
 import { generateTypedRecommendations } from "@/server/services/notoria/generate-typed-recos";
 import {
@@ -158,7 +159,7 @@ export const notoriaRouter = createTRPCRouter({
    * recos AVANT application : simulation pure (aucune écriture, aucun LLM).
    * Retourne { [recoId]: { compositeBefore, compositeAfter, delta, perPillar } }.
    */
-  previewRecoImpact: protectedProcedure
+  previewRecoImpact: strategyScopedProcedure
     .input(z.object({ strategyId: z.string(), recoIds: z.array(z.string()).min(1).max(50) }))
     .query(async ({ input }) => {
       const { previewRecoScoreImpact } = await import(
@@ -168,7 +169,7 @@ export const notoriaRouter = createTRPCRouter({
     }),
 
   /** Complétude ADVERTIS transversale (advePct / advertisPct / byPillar). */
-  getAdvertisCompletion: protectedProcedure
+  getAdvertisCompletion: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ input }) => {
       const { getStrategyAdvertisCompletion } = await import(
@@ -177,7 +178,7 @@ export const notoriaRouter = createTRPCRouter({
       return getStrategyAdvertisCompletion(input.strategyId);
     }),
 
-  getRecos: protectedProcedure
+  getRecos: strategyScopedProcedure
     .input(
       z.object({
         strategyId: z.string(),
@@ -228,7 +229,7 @@ export const notoriaRouter = createTRPCRouter({
       return { items, nextCursor };
     }),
 
-  getRecosByPillar: protectedProcedure
+  getRecosByPillar: strategyScopedProcedure
     .input(
       z.object({
         strategyId: z.string(),
@@ -248,7 +249,7 @@ export const notoriaRouter = createTRPCRouter({
       });
     }),
 
-  getPendingCounts: protectedProcedure
+  getPendingCounts: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ input }) => {
       const counts = await db.recommendation.groupBy({
@@ -264,7 +265,7 @@ export const notoriaRouter = createTRPCRouter({
       return result;
     }),
 
-  getBatches: protectedProcedure
+  getBatches: strategyScopedProcedure
     .input(
       z.object({
         strategyId: z.string(),
@@ -285,7 +286,7 @@ export const notoriaRouter = createTRPCRouter({
       });
     }),
 
-  getDashboard: protectedProcedure
+  getDashboard: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ input }) => {
       // Phase 21 (ADR-0069) — F-A.5 readiness UI parity. On agrège le
@@ -358,11 +359,11 @@ export const notoriaRouter = createTRPCRouter({
       };
     }),
 
-  getPipelineStatus: protectedProcedure
+  getPipelineStatus: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(({ input }) => getPipelineStatus(input.strategyId)),
 
-  getKPIs: protectedProcedure
+  getKPIs: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ input }) => {
       const all = await db.recommendation.findMany({

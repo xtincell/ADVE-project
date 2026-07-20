@@ -5,6 +5,7 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
 
@@ -28,7 +29,7 @@ export const analyticsRouter = createTRPCRouter({
   })
     .mutation(async ({ ctx, input }) => ctx.db.attributionEvent.create({ data: input })),
 
-  getAttribution: protectedProcedure
+  getAttribution: strategyScopedProcedure
     .input(z.object({ strategyId: z.string(), period: z.string().optional() }))
     .query(async ({ ctx, input }) => {
       return ctx.db.attributionEvent.findMany({
@@ -61,7 +62,7 @@ export const analyticsRouter = createTRPCRouter({
       return ctx.db.cohortSnapshot.create({ data: { ...input, metrics: input.metrics as Prisma.InputJsonValue } });
     }),
 
-  getCohorts: protectedProcedure
+  getCohorts: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
       return ctx.db.cohortSnapshot.findMany({
@@ -84,7 +85,7 @@ export const analyticsRouter = createTRPCRouter({
       return ctx.db.insightReport.create({ data: { ...input, data: input.data as Prisma.InputJsonValue } });
     }),
 
-  getInsights: protectedProcedure
+  getInsights: strategyScopedProcedure
     .input(z.object({ strategyId: z.string(), reportType: z.string().optional() }))
     .query(async ({ ctx, input }) => {
       return ctx.db.insightReport.findMany({
@@ -94,7 +95,7 @@ export const analyticsRouter = createTRPCRouter({
     }),
 
   // === SCORE HISTORY ===
-  getScoreHistory: protectedProcedure
+  getScoreHistory: strategyScopedProcedure
     .input(z.object({ strategyId: z.string(), limit: z.number().optional() }))
     .query(async ({ ctx, input }) => {
       return ctx.db.scoreSnapshot.findMany({

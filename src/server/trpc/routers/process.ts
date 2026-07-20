@@ -23,6 +23,7 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { getOperatorContext, scopeStrategies } from "@/server/services/operator-isolation";
 import { startProcess, pauseProcess, stopProcess, getContention } from "@/server/services/process-scheduler";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
@@ -109,8 +110,11 @@ export const processRouter = createTRPCRouter({
       status: z.enum(["RUNNING", "PAUSED", "STOPPED", "COMPLETED"]).optional(),
     }))
     .query(async ({ ctx, input }) => {
+      // ADR-0166 — scope ownership : jamais de liste cross-marques.
+      const opCtx = await getOperatorContext(ctx.session.user.id);
       return ctx.db.process.findMany({
         where: {
+          strategy: scopeStrategies(opCtx),
           ...(input.strategyId ? { strategyId: input.strategyId } : {}),
           ...(input.status ? { status: input.status } : {}),
         },

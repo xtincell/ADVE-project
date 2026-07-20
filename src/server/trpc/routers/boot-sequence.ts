@@ -21,6 +21,7 @@ import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import * as bootService from "@/server/services/boot-sequence";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
@@ -87,12 +88,12 @@ export const bootSequenceRouter = createTRPCRouter({
       return bootService.complete(input.strategyId);
     }),
 
-  getState: protectedProcedure
+  getState: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ input }) => { return bootService.getState(input.strategyId); }),
 
   // ── REQ-2: Adaptive decision tree ────────────────────────────────────────
-  getAdaptiveQuestions: protectedProcedure
+  getAdaptiveQuestions: strategyScopedProcedure
     .input(z.object({ strategyId: z.string(), step: z.number() }))
     .query(async ({ ctx, input }) => {
       const strategy = await ctx.db.strategy.findUniqueOrThrow({ where: { id: input.strategyId } });
@@ -115,7 +116,7 @@ export const bootSequenceRouter = createTRPCRouter({
     }),
 
   // ── REQ-4: Brand Diagnostic Report ───────────────────────────────────────
-  generateReport: protectedProcedure
+  generateReport: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
       const strategy = await ctx.db.strategy.findUniqueOrThrow({
@@ -186,7 +187,7 @@ Contexte actuel: ${JSON.stringify(state?.responses ?? {})}`,
     }),
 
   // ── REQ-6: Progress persistence / resume ─────────────────────────────────
-  resume: protectedProcedure
+  resume: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
       const strategy = await ctx.db.strategy.findUniqueOrThrow({ where: { id: input.strategyId } });

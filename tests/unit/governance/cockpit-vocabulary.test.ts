@@ -186,4 +186,29 @@ describe("Cockpit — vocabulaire client (lot 11, T1)", () => {
         "l'ajouter à OPERATOR_GATED_ALLOWLIST avec justification.",
     ).toEqual([]);
   });
+
+  // RESIDUAL-DEBT « Accents hors funnel » (2026-07-19) — garde structurelle :
+  // les mots FR fréquents rendus SANS accent (« Authenticite », « Strategie »…)
+  // signent une chaîne dégradée. Liste conservatrice (mots sans homonyme
+  // anglais plausible dans une chaîne rendue), frontières de mot strictes.
+  const MISSING_ACCENT = /\b(Authenticite|Strategie|Completude|Communaute|Notoriete|Visibilite|Credibilite|Coherence narrative|Echoue|Reussie?s?\b|Demarree?s?\b|Terminee?s?\b)\b/;
+
+  it("aucun mot FR fréquent rendu sans accent (sweep F5 étendu)", () => {
+    const violations: string[] = [];
+    for (const file of files) {
+      const rel = relative(ROOT, file);
+      if (OPERATOR_GATED_ALLOWLIST.includes(rel)) continue;
+      const src = stripComments(readFileSync(file, "utf-8"));
+      for (const { chunk, line } of renderableChunks(src)) {
+        if (IDENTIFIER_CHUNK.test(chunk)) continue;
+        const m = chunk.match(MISSING_ACCENT);
+        if (m) violations.push(`${rel}:${line} → « ${m[0]} » dans ${chunk.slice(0, 80)}`);
+      }
+    }
+    expect(
+      violations,
+      `Chaînes rendues sans accents (registre RESIDUAL-DEBT « Accents hors funnel ») :\n${violations.join("\n")}\n` +
+        "→ Restaurer les accents (remplacement exact, jamais de regex aveugle).",
+    ).toEqual([]);
+  });
 });

@@ -930,6 +930,13 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
           declaredE={
             ((intake.responses as Record<string, unknown> | null)?.e as Record<string, unknown> | undefined) ?? null
           }
+          gateLabels={{
+            title: t("intakeResult.gate.title"),
+            filteredSuffix: t("intakeResult.gate.filteredSuffix"),
+            judgeDet: t("intakeResult.gate.judgeDet"),
+            judgeLlm: t("intakeResult.gate.judgeLlm"),
+            discriminants: t("intakeResult.gate.discriminants"),
+          }}
         />
 
         {/* ════════════════════════════════════════════════════════════

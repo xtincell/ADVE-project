@@ -134,6 +134,7 @@ export const socialRouter = createTRPCRouter({
       limit: z.number().default(30),
     }))
     .query(async ({ ctx, input }) => {
+      await assertStrategyAccess(ctx, input.strategyId);
       const signals = await ctx.db.signal.findMany({
         where: {
           strategyId: input.strategyId,
@@ -290,6 +291,7 @@ export const socialRouter = createTRPCRouter({
   checkEngagementThresholds: protectedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
+      await assertStrategyAccess(ctx, input.strategyId);
       const signals = await ctx.db.signal.findMany({
         where: { strategyId: input.strategyId, type: "SOCIAL_METRICS" },
         orderBy: { createdAt: "desc" },
@@ -362,6 +364,7 @@ export const socialRouter = createTRPCRouter({
   getCrossplatformAnalytics: protectedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
+      await assertStrategyAccess(ctx, input.strategyId);
       const signals = await ctx.db.signal.findMany({
         where: { strategyId: input.strategyId, type: "SOCIAL_METRICS" },
         orderBy: { createdAt: "desc" },
@@ -473,7 +476,8 @@ export const socialRouter = createTRPCRouter({
    */
   followerTrends: protectedProcedure
     .input(z.object({ strategyId: z.string().nullable().default(null), days: z.number().int().min(7).max(365).default(90) }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      if (input.strategyId) await assertStrategyAccess(ctx, input.strategyId);
       const { db } = await import("@/lib/db");
       const since = new Date(Date.now() - input.days * 24 * 3600 * 1000);
       const rows = await db.followerSnapshot.findMany({

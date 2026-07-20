@@ -61,7 +61,7 @@ const PILLAR_CONFIG: Record<string, {
   diagnostic:   { title: "Diagnostic",               subtitle: "Analyse des risques et vulnerabilites.",                 pillarKey: "r", type: "rtis", accent: "text-error" },
   market:       { title: "Realite Marche",           subtitle: "Ce que le marche dit de votre marque.",                  pillarKey: "t", type: "rtis", accent: "text-info" },
   potential:    { title: "Potentiel",                 subtitle: "Tout ce que votre marque peut faire.",                   pillarKey: "i", type: "rtis", accent: "text-warning" },
-  roadmap:      { title: "Strategie",                subtitle: "Votre plan d'action vers le superfan.",                  pillarKey: "s", type: "rtis", accent: "text-error" },
+  roadmap:      { title: "Stratégie",                subtitle: "Votre plan d'action vers le superfan.",                  pillarKey: "s", type: "rtis", accent: "text-error" },
 };
 
 // ── RecoValuePreview — compact preview of proposed/current value ──────

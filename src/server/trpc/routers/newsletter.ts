@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, operatorProcedure, protectedProcedure } from "../init";
+import { accessibleStrategyIds } from "../middleware/strategy-scope";
+import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { db } from "@/lib/db";
 import {
   sendBrandEmail,
@@ -19,11 +21,18 @@ export const newsletterRouter = createTRPCRouter({
         tag: z.string().optional(),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      // ADR-0166 — scope ownership (lien strategyId lâche, pas de relation).
+      const ids = await accessibleStrategyIds(ctx.session.user.id);
+      const strategyFilter = input.strategyId
+        ? { strategyId: ids === null || ids.includes(input.strategyId) ? input.strategyId : "__denied__" }
+        : ids !== null
+          ? { strategyId: { in: ids } }
+          : {};
       return db.crmContact.findMany({
         where: {
           newsletterOptIn: true,
-          ...(input.strategyId ? { strategyId: input.strategyId } : {}),
+          ...strategyFilter,
           ...(input.tag ? { tags: { has: input.tag } } : {}),
         },
         orderBy: { createdAt: "desc" },
@@ -281,7 +290,7 @@ export const newsletterRouter = createTRPCRouter({
   // en DB (Vault ADR-0021) et n'est JAMAIS renvoyée au client (projection sans
   // `apiKey`).
 
-  emailProviderGet: protectedProcedure
+  emailProviderGet: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ input }) => {
       return getBrandEmailConnectorView(input.strategyId);

@@ -152,7 +152,7 @@ const LABELS: Record<string, string> = {
   howTheyFight: "Leur strategie", enemySchwartzValues: "Valeurs ennemies",
   // Direction artistique
   semioticAnalysis: "Analyse semiotique", visualLandscape: "Paysage visuel",
-  moodboard: "Moodboard", chromaticStrategy: "Strategie chromatique",
+  moodboard: "Moodboard", chromaticStrategy: "Stratégie chromatique",
   typographySystem: "Systeme typographique", logoTypeRecommendation: "Recommandation logo",
   logoValidation: "Validation logo", designTokens: "Design tokens",
   motionIdentity: "Identite mouvement", brandGuidelines: "Charte graphique",
@@ -206,7 +206,7 @@ const LABELS: Record<string, string> = {
   symbol: "Symbole", meanings: "Significations", usageContexts: "Contextes d'usage",
   // Concurrents
   partDeMarcheEstimee: "Part de marche estimee", avantagesCompetitifs: "Avantages competitifs",
-  faiblesses: "Faiblesses", strategiePos: "Strategie de positionnement",
+  faiblesses: "Faiblesses", strategiePos: "Stratégie de positionnement",
   distinctiveAssets: "Assets distinctifs", menaceNiveau: "Menace",
   // Generics
   score: "Score", gaps: "Lacunes", pillar1: "Pilier 1", pillar2: "Pilier 2",
@@ -257,7 +257,7 @@ const LABELS: Record<string, string> = {
   // S — Strategie
   axe: "Axe", pillarsLinked: "Piliers lies",
   perceptionActuelle: "Perception actuelle", perceptionCible: "Perception cible",
-  ecart: "Ecart", strategieDeplacement: "Strategie de deplacement",
+  ecart: "Ecart", strategieDeplacement: "Stratégie de déplacement",
   etape: "Etape", devotionTarget: "Cible Engagement", riskRef: "Ref risque",
   hypothesisRef: "Ref hypothese", responsibility: "Responsabilite",
   pillar: "Pilier", target: "Objectif",

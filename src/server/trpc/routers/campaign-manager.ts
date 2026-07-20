@@ -1169,6 +1169,7 @@ export const campaignManagerRouter = createTRPCRouter({
   listBriefsForStrategy: protectedProcedure
     .input(z.object({ strategyId: z.string(), limit: z.number().min(1).max(200).default(100) }))
     .query(async ({ ctx, input }) => {
+      await enforceStrategyAccess(ctx, input.strategyId);
       return ctx.db.campaignBrief.findMany({
         where: { campaign: { strategyId: input.strategyId } },
         orderBy: { createdAt: "desc" },
@@ -1430,6 +1431,7 @@ export const campaignManagerRouter = createTRPCRouter({
   getSimulatorData: protectedProcedure
     .input(z.object({ campaignId: z.string() }))
     .query(async ({ ctx, input }) => {
+      await enforceCampaignAccess(ctx, input.campaignId);
       const campaign = await ctx.db.campaign.findUniqueOrThrow({
         where: { id: input.campaignId },
         include: { actions: true, amplifications: true },
@@ -1712,7 +1714,7 @@ export const campaignManagerRouter = createTRPCRouter({
           where: { campaignId: input.campaignId },
           select: {
             id: true, title: true, description: true, status: true, touchpoint: true,
-            timingStart: true, timingEnd: true, metadata: true,
+            timingStart: true, timingEnd: true, metadata: true, missionId: true,
           },
           orderBy: { timingStart: "asc" },
         }),
@@ -1732,7 +1734,9 @@ export const campaignManagerRouter = createTRPCRouter({
       // Tâches datées de la mission = BrandActions du calendrier rattachées via
       // metadata.missionKey (dates réelles timingStart/End = le rétroplanning).
       const tasks = allActions.filter(
-        (a) => (a.metadata as Record<string, unknown> | null)?.missionKey === input.missionId,
+        (a) =>
+          a.missionId === input.missionId ||
+          (a.metadata as Record<string, unknown> | null)?.missionKey === input.missionId,
       );
       const done = tasks.filter((t) => t.status === "EXECUTED").length;
       // Dernière remontée par type de source (la plus récente en tête).

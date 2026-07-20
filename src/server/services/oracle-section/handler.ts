@@ -61,6 +61,39 @@ const SECTION_REGISTRY_BY_NUMBER: ReadonlyMap<number, SectionMeta> = (() => {
 })();
 
 /**
+ * Contrat writeback→renderer §33 (RESIDUAL-DEBT « Vérité unique documentaire »)
+ * — le chemin LLM (repli quand le composeur déterministe n'a rien à composer)
+ * sort `devotion_levels`/`current_distribution`, formes que le renderer
+ * `DevotionLadder` ne lit pas. On mappe UNIQUEMENT le qualitatif (déclencheurs
+ * par palier) vers la forme composer (`devotionLadder.conversionTriggers`).
+ * La distribution CHIFFRÉE du tool n'est JAMAIS mappée : un pourcentage
+ * inventé par le LLM rendu en pyramide serait une fabrication de mesure
+ * (ADR-0163 / ADR-0134) — la pyramide ne vient que du mesuré (composer).
+ */
+function normalizeSectionPayload(metaId: string, payload: unknown): unknown {
+  if (metaId !== "devotion-ladder" || !payload || typeof payload !== "object") return payload;
+  const p = payload as Record<string, unknown>;
+  if (p.devotionLadder) return payload; // déjà en forme composer
+
+  const result = (p.result && typeof p.result === "object" ? p.result : p) as Record<string, unknown>;
+  const output = (result.output && typeof result.output === "object" ? result.output : result) as Record<string, unknown>;
+  const levels = Array.isArray(output.devotion_levels) ? (output.devotion_levels as Array<Record<string, unknown>>) : null;
+  if (!levels) return payload;
+
+  const conversionTriggers = levels
+    .filter((l) => l && typeof l === "object")
+    .slice(0, 6)
+    .map((l) => ({
+      palier: typeof l.palier === "string" ? l.palier : "",
+      trigger: typeof l.trigger === "string" ? l.trigger : "",
+    }))
+    .filter((t) => t.palier || t.trigger);
+  if (conversionTriggers.length === 0) return payload;
+
+  return { ...p, devotionLadder: { conversionTriggers } };
+}
+
+/**
  * Entry point — dispatché par Mestor commandant case `GENERATE_ORACLE_SECTION`.
  */
 export async function generateOracleSectionHandler(
@@ -158,7 +191,7 @@ export async function generateOracleSectionHandler(
     strategyId,
     sectionId,
     lockToken,
-    runnerOutput.payload,
+    normalizeSectionPayload(meta.id, runnerOutput.payload),
     runnerOutput.confidence,
   );
   if (!persistResult.ok) {

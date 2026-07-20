@@ -401,7 +401,7 @@ export default function MissionsPage() {
     { key: "all", label: "Toutes", count: allMissions.length },
     { key: "active", label: "Actives", count: activeMissions.length },
     { key: "validate", label: "A valider", count: toValidate.length },
-    { key: "completed", label: "Terminees", count: completed.length },
+    { key: "completed", label: "Terminées", count: completed.length },
   ];
 
   const detailData = detailMission

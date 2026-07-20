@@ -9,6 +9,7 @@
 
 import { z } from "zod";
 import { createTRPCRouter, operatorProcedure, protectedProcedure } from "../init";
+import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { openEmission, closeEmission } from "@/server/governance/emission-spine";
 import { db } from "@/lib/db";
@@ -21,6 +22,7 @@ import {
   upsertPersonIdentifier,
   mergePersons,
   splitPerson,
+  purgePersonData,
 } from "@/server/services/seshat/identity-graph";
 import { hashForMatch } from "@/server/services/seshat/identity-graph/pii-crypto";
 
@@ -121,8 +123,25 @@ export const identityRouter = createTRPCRouter({
     return splitPerson(db, input);
   }),
 
+  /**
+   * Purge RGPD (cascade /data-deletion, ADR-0147) — action opérateur sur
+   * demande de suppression : efface la personne et toute sa PII (identifiants
+   * hashés/chiffrés, tombstones fusionnés), dé-rattache les profils de mesure.
+   */
+  purgePersonData: governedProcedure({
+    kind: "SESHAT_PURGE_PERSON_DATA",
+    requireOperator: true,
+    inputSchema: z.object({
+      strategyId: z.string().min(1),
+      personId: z.string().min(1),
+    }),
+    caller: "identity:purgePersonData",
+  }).mutation(async ({ input }) => {
+    return purgePersonData(db, input);
+  }),
+
   /** Lecture opérateur : personnes actives + compte d'identifiants (revue). */
-  listPersons: protectedProcedure
+  listPersons: strategyScopedProcedure
     .input(z.object({ strategyId: z.string().min(1), limit: z.number().int().min(1).max(200).default(50) }))
     .query(async ({ input }) => {
       const persons = await db.personIdentity.findMany({

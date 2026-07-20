@@ -26,6 +26,7 @@
 
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
+import { assertRawStrategyScope } from "../middleware/strategy-scope";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
 
 /* lafusee:governed-active — compose mutation traverses mestor.emitIntent({ kind: "COMPOSE_DELIVERABLE" }), service imports are types + sync resolvers (read-only DAG resolution + vault scan, no DB writes outside emitIntent) */
@@ -40,7 +41,12 @@ import {
 } from "@/server/services/deliverable-orchestrator";
 import { emitIntent } from "@/server/services/mestor/intents";
 
-const auditedProtected = auditedProcedure(protectedProcedure, "deliverable-orchestrator");
+const auditedProtected = auditedProcedure(protectedProcedure, "deliverable-orchestrator").use(async ({ ctx, getRawInput, next }) => {
+  // ADR-0166 — garde d'ownership à la base : toutes les procédures de cette
+  // lane prennent un strategyId ; un id étranger est refusé avant le handler.
+  await assertRawStrategyScope(ctx.session.user.id, await getRawInput(), { optional: true });
+  return next();
+});
 
 const targetKindSchema = z.string().refine(isSupportedTargetKind, {
   message:

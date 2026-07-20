@@ -5,6 +5,8 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
+import { assertStrategyRead } from "./_strategy-read-guard";
+import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import * as gloryTools from "@/server/services/glory-tools";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { parseLaunchTimeline, parseContentCalendar, parseSocialNaming, parseSocialCopy, deriveDatedPosts, brandVoiceFromPillarD } from "@/lib/types/launch-calendar";
@@ -127,7 +129,7 @@ export const gloryRouter = createTRPCRouter({
       return gloryTools.executeBrandPipeline(input.strategyId, input.initialInput);
     }),
 
-  history: protectedProcedure
+  history: strategyScopedProcedure
     .input(z.object({ strategyId: z.string(), toolSlug: z.string().optional() }))
     .query(({ input }) => gloryTools.getToolHistory(input.strategyId, input.toolSlug)),
 
@@ -234,13 +236,13 @@ export const gloryRouter = createTRPCRouter({
 
   // ── Scan (pre-flight readiness, passive DB read) ──
 
-  scanSequence: protectedProcedure
+  scanSequence: strategyScopedProcedure
     .input(z.object({ strategyId: z.string(), sequenceKey: z.string() }))
     .query(async ({ input }) => {
       return gloryTools.scanSequence(input.sequenceKey as gloryTools.GlorySequenceKey, input.strategyId);
     }),
 
-  scanAll: protectedProcedure
+  scanAll: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ input }) => {
       return gloryTools.scanAllSequences(input.strategyId);
@@ -265,7 +267,7 @@ export const gloryRouter = createTRPCRouter({
       return gloryTools.autoCompleteGaps(input.strategyId, input.sequenceKey as gloryTools.GlorySequenceKey);
     }),
 
-  recommendSequences: protectedProcedure
+  recommendSequences: strategyScopedProcedure
     .input(z.object({ strategyId: z.string(), limit: z.number().optional() }))
     .query(async ({ input }) => {
       return gloryTools.getNextSequences(input.strategyId, input.limit ?? 5);
@@ -273,7 +275,7 @@ export const gloryRouter = createTRPCRouter({
 
   // ── Pillar Health ──
 
-  pillarHealth: protectedProcedure
+  pillarHealth: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ input }) => {
       return gloryTools.assessAllPillarsHealth(input.strategyId);
@@ -281,13 +283,13 @@ export const gloryRouter = createTRPCRouter({
 
   // ── Queue (séquences prêtes à lancer) ──
 
-  queue: protectedProcedure
+  queue: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ input }) => {
       return gloryTools.buildQueue(input.strategyId);
     }),
 
-  readySequences: protectedProcedure
+  readySequences: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ input }) => {
       return gloryTools.getReadySequences(input.strategyId);
@@ -295,13 +297,13 @@ export const gloryRouter = createTRPCRouter({
 
   // ── Deliverables (livrables prêts à compiler) ──
 
-  compilableDeliverables: protectedProcedure
+  compilableDeliverables: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ input }) => {
       return gloryTools.listCompilableDeliverables(input.strategyId);
     }),
 
-  compileDeliverable: protectedProcedure
+  compileDeliverable: strategyScopedProcedure
     .input(z.object({ strategyId: z.string(), sequenceKey: z.string() }))
     .query(async ({ input }) => {
       return gloryTools.compileDeliverable(input.strategyId, input.sequenceKey as gloryTools.GlorySequenceKey);
@@ -371,6 +373,9 @@ export const gloryRouter = createTRPCRouter({
         },
       });
       if (!output) return null;
+      if (output.strategyId) {
+        await assertStrategyRead(ctx.session.user.id, output.strategyId);
+      }
 
       // Resolve the tool name from registry
       const tool = gloryTools.getGloryTool(output.toolSlug);
@@ -385,7 +390,7 @@ export const gloryRouter = createTRPCRouter({
     }),
 
   /** Get all outputs for a specific sequence execution */
-  getSequenceOutputs: protectedProcedure
+  getSequenceOutputs: strategyScopedProcedure
     .input(z.object({ strategyId: z.string(), sequenceKey: z.string() }))
     .query(async ({ ctx, input }) => {
       const seq = gloryTools.getSequence(input.sequenceKey as gloryTools.GlorySequenceKey);

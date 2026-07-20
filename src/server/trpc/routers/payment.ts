@@ -16,6 +16,7 @@
 
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure, protectedProcedure, adminProcedure } from "../init";
+import { assertRawStrategyScope } from "../middleware/strategy-scope";
 import { isCinetPayCountry } from "@/lib/constants/intake-options";
 import crypto from "crypto";
 import { resolvePrice } from "@/server/services/monetization";
@@ -303,6 +304,8 @@ export const paymentRouter = createTRPCRouter({
       strategyId: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      // ADR-0166 — un strategyId fourni doit appartenir au caller.
+      await assertRawStrategyScope(ctx.session.user.id, input, { optional: true });
       const user = ctx.session.user;
       const email = user.email;
       if (!email) throw new Error("Email utilisateur requis pour souscrire.");
@@ -445,6 +448,8 @@ export const paymentRouter = createTRPCRouter({
       strategyId: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      // ADR-0166 — un strategyId fourni doit appartenir au caller.
+      await assertRawStrategyScope(ctx.session.user.id, input, { optional: true });
       const user = ctx.session.user;
       const email = user.email ?? null;
       const resolved = await resolvePrice(input.tierKey, input.countryCode);

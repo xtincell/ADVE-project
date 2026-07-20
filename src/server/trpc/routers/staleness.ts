@@ -5,6 +5,7 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import {
   propagateFromPillar,
   auditAllStrategies,
@@ -46,7 +47,7 @@ export const stalenessRouter = createTRPCRouter({
       return getTransitiveDependencies(input.pillarKey);
     }),
 
-  getConfig: protectedProcedure
+  getConfig: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
       return ctx.db.variableStoreConfig.findUnique({

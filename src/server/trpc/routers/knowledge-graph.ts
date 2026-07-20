@@ -1,6 +1,6 @@
 import { z } from "zod";
 import crypto from "crypto";
-import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { createTRPCRouter, protectedProcedure, adminProcedure, operatorProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
 
@@ -42,7 +42,8 @@ export const knowledgeGraphRouter = createTRPCRouter({
       return { count: vectors.length, avgComposite, benchmarks: {} };
     }),
 
-  getFrameworkRanking: protectedProcedure
+  // ADR-0166 — classement cross-marques (noms + scores) : lane opérateur.
+  getFrameworkRanking: operatorProcedure
     .input(z.object({ frameworkId: z.string().optional() }))
     .query(async ({ ctx }) => {
       const strategies = await ctx.db.strategy.findMany({

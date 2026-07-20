@@ -7,6 +7,8 @@
 
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
+import { accessibleStrategyIds } from "../middleware/strategy-scope";
+import { assertStrategyRead } from "./_strategy-read-guard";
 import { db } from "@/lib/db";
 import {
   mapSignalToFeedItem,
@@ -309,10 +311,18 @@ export const jehutyRouter = createTRPCRouter({
 
   dashboard: protectedProcedure
     .input(z.object({ strategyId: z.string().optional() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const { strategyId } = input;
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-      const where = strategyId ? { strategyId } : {};
+      // ADR-0166 — id fourni : vérifié ; absent : scope aux marques accessibles.
+      let where: { strategyId?: string | { in: string[] } } = {};
+      if (strategyId) {
+        await assertStrategyRead(ctx.session.user.id, strategyId);
+        where = { strategyId };
+      } else {
+        const ids = await accessibleStrategyIds(ctx.session.user.id);
+        if (ids !== null) where = { strategyId: { in: ids } };
+      }
 
       const [signalCount, criticalSignals, recoStats, marketPillar] = await Promise.all([
         db.signal.count({

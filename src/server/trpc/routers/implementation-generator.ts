@@ -5,6 +5,7 @@
 
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
+import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { generateImplementation } from "@/server/services/implementation-generator";
 import { createCampaignDrafts } from "@/server/services/implementation-generator/campaign-bridge";
 import { db } from "@/lib/db";
@@ -35,7 +36,7 @@ export const implementationGeneratorRouter = createTRPCRouter({
     }),
 
   /** Get current I pillar generation status (quality score, passes, etc.) */
-  getStatus: protectedProcedure
+  getStatus: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ input }) => {
       const pillar = await db.pillar.findUnique({

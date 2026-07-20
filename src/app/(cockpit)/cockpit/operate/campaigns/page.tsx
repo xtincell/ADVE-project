@@ -169,7 +169,7 @@ export default function CampaignsPage() {
     { key: "all", label: "Toutes", count: allCampaigns.length },
     { key: "active", label: "Actives", count: activeCampaigns.length },
     { key: "production", label: "Production", count: productionCampaigns.length },
-    { key: "completed", label: "Terminees", count: completedCampaigns.length },
+    { key: "completed", label: "Terminées", count: completedCampaigns.length },
   ];
 
   const selectedCampaignData = selectedCampaign

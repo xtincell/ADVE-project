@@ -115,7 +115,7 @@ export function buildPipelineSteps(
   basePath = "/cockpit/brand",
 ): PipelineStep[] {
   const defs: Array<{ key: string; label: string; phase: 1 | 2 | 3; href: string }> = [
-    { key: "a", label: "Authenticite", phase: 1, href: `${basePath}/identity` },
+    { key: "a", label: "Authenticité", phase: 1, href: `${basePath}/identity` },
     { key: "d", label: "Distinction",  phase: 1, href: `${basePath}/identity` },
     { key: "v", label: "Valeur",       phase: 1, href: `${basePath}/identity` },
     { key: "e", label: "Engagement",   phase: 1, href: `${basePath}/identity` },

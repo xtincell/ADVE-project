@@ -5,6 +5,7 @@
 import { z } from "zod";
 import type { Prisma, ContractStatus } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { getOperatorContext, scopeStrategies } from "@/server/services/operator-isolation";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
 
@@ -39,8 +40,14 @@ export const contractRouter = createTRPCRouter({
   list: protectedProcedure
     .input(z.object({ strategyId: z.string().optional(), status: z.string().optional() }))
     .query(async ({ ctx, input }) => {
+      // ADR-0166 — scope ownership : jamais de liste cross-marques.
+      const opCtx = await getOperatorContext(ctx.session.user.id);
       return ctx.db.contract.findMany({
-        where: { ...(input.strategyId ? { strategyId: input.strategyId } : {}), ...(input.status ? { status: input.status as ContractStatus } : {}) },
+        where: {
+          strategy: scopeStrategies(opCtx),
+          ...(input.strategyId ? { strategyId: input.strategyId } : {}),
+          ...(input.status ? { status: input.status as ContractStatus } : {}),
+        },
         orderBy: { createdAt: "desc" },
       });
     }),

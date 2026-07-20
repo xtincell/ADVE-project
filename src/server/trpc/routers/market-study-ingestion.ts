@@ -15,6 +15,7 @@
 
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { assertRawStrategyScope } from "../middleware/strategy-scope";
 import { previewMarketStudy } from "@/server/services/seshat/market-study-ingestion";
 import { MarketStudyExtractionSchema } from "@/server/services/seshat/market-study-ingestion/types";
 import { TREND_TRACKER_49, trendTrackerByCategory } from "@/server/services/seshat/knowledge/trend-tracker-49";
@@ -50,6 +51,8 @@ export const marketStudyIngestionRouter = createTRPCRouter({
       sourceUrl: z.string().url().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      // ADR-0166 — un strategyId fourni doit appartenir au caller.
+      await assertRawStrategyScope(ctx.session.user.id, input, { optional: true });
       const file = decodeFile(input.file);
       if (file.buffer.length > 50 * 1024 * 1024) {
         throw new Error("File too large (max 50 MB).");
@@ -75,6 +78,8 @@ export const marketStudyIngestionRouter = createTRPCRouter({
       sourceUrl: z.string().url().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      // ADR-0166 — un strategyId fourni doit appartenir au caller.
+      await assertRawStrategyScope(ctx.session.user.id, input, { optional: true });
       const result = await emitIntent(
         {
           kind: "INGEST_MARKET_STUDY",
@@ -95,7 +100,7 @@ export const marketStudyIngestionRouter = createTRPCRouter({
 
   list: protectedProcedure
     .input(z.object({
-      strategyId: z.string().optional(),
+      // ADR-0166 : champ marque retiré — jamais consommé (pool marché global).
       countryCode: z.string().length(2).optional(),
       sector: z.string().optional(),
       limit: z.number().int().min(1).max(200).default(50),
@@ -227,6 +232,8 @@ export const marketStudyIngestionRouter = createTRPCRouter({
       cascadeLevel: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      // ADR-0166 — un strategyId fourni doit appartenir au caller.
+      await assertRawStrategyScope(ctx.session.user.id, input, { optional: true });
       const result = await emitIntent(
         {
           kind: "RUN_MARKET_RESEARCH",

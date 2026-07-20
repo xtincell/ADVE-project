@@ -11,13 +11,20 @@
 
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
+import { assertRawStrategyScope } from "../middleware/strategy-scope";
+import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
 import { promoteToActive as enginePromoteToActive } from "@/server/services/brand-vault/engine";
 
 /* lafusee:governed-active — write paths (acceptProposal/rejectProposal/acceptAllForSource) traverse mestor.emitIntent dynamically; promoteToActive is a sync helper invoked inside the emitIntent handler */
 import { isBrandAssetKind, BRAND_ASSET_KINDS } from "@/domain/brand-asset-kinds";
 
-const auditedProtected = auditedProcedure(protectedProcedure, "source-classifier");
+const auditedProtected = auditedProcedure(protectedProcedure, "source-classifier").use(async ({ ctx, getRawInput, next }) => {
+  // ADR-0166 — garde d'ownership à la base : toutes les procédures de cette
+  // lane prennent un strategyId ; un id étranger est refusé avant le handler.
+  await assertRawStrategyScope(ctx.session.user.id, await getRawInput(), { optional: true });
+  return next();
+});
 
 const ACCEPT_AS_ACTIVE_KINDS: ReadonlySet<string> = new Set([
   "BIG_IDEA",
@@ -53,7 +60,7 @@ export const sourceClassifierRouter = createTRPCRouter({
 
   // List all DRAFT BrandAsset proposals for a strategy. Used by the
   // Propositions vault panel to render per-source folds.
-  listProposalsForStrategy: protectedProcedure
+  listProposalsForStrategy: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
       const drafts = await ctx.db.brandAsset.findMany({

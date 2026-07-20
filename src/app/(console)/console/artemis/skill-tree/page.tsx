@@ -45,7 +45,7 @@ interface SequenceInfo {
 // The 40 sequences with their FULL step chains
 const ALL_SEQUENCES: SequenceInfo[] = [
   // T0 — Foundation
-  { key: "MANIFESTE-A", name: "Le Manifeste", family: "PILLAR", tier: 0, description: "Document fondateur Authenticite", aiPowered: true, requires: [{ type: "PILLAR", key: "a", maturity: "ENRICHED" }], steps: [
+  { key: "MANIFESTE-A", name: "Le Manifeste", family: "PILLAR", tier: 0, description: "Document fondateur Authenticité", aiPowered: true, requires: [{ type: "PILLAR", key: "a", maturity: "ENRICHED" }], steps: [
     { type: "PILLAR", ref: "a", name: "Injection pilier A", outputKeys: ["archetype", "prophecy", "brand_dna", "values"] },
     { type: "ARTEMIS", ref: "fw-01-brand-archeology", name: "Archeologie de Marque", outputKeys: ["analysis", "archetypeDeep"] },
     { type: "SESHAT", ref: "cultural-refs", name: "References culturelles", outputKeys: ["references"] },
@@ -61,7 +61,7 @@ const ALL_SEQUENCES: SequenceInfo[] = [
     { type: "GLORY", ref: "visual-landscape-mapper", name: "Carte paysage visuel", outputKeys: ["visual_landscape_map"] },
     { type: "GLORY", ref: "visual-moodboard-generator", name: "Generateur moodboard", outputKeys: ["moodboard_directions"] },
     { type: "GLORY", ref: "photography-style-guide", name: "Guide photo", outputKeys: ["photo_guidelines"] },
-    { type: "GLORY", ref: "chromatic-strategy-builder", name: "Strategie chromatique", outputKeys: ["chromatic_strategy"] },
+    { type: "GLORY", ref: "chromatic-strategy-builder", name: "Stratégie chromatique", outputKeys: ["chromatic_strategy"] },
     { type: "GLORY", ref: "typography-system-architect", name: "Systeme typographique", outputKeys: ["typography_system"] },
     { type: "GLORY", ref: "logo-type-advisor", name: "Conseiller logotype", outputKeys: ["logotype_direction"] },
     { type: "GLORY", ref: "logo-validation-protocol", name: "Validation logo", outputKeys: ["logo_validation_report"] },
@@ -195,7 +195,7 @@ function buildSimpleSequences(): SequenceInfo[] {
     { key: "OPS", name: "Operations", family: "OPERATIONAL", tier: 5, description: "Workflow operationnel", aiPowered: false, requires: [], steps: [{ type: "CALC", ref: "workflow-optimizer", name: "Optimisation", outputKeys: ["workflow"] }] },
     { key: "GUARD", name: "Brand Guardian", family: "OPERATIONAL", tier: 5, description: "Surveillance coherence", aiPowered: true, requires: [], steps: [{ type: "GLORY", ref: "brand-guardian", name: "Guardian", outputKeys: ["report"] }] },
     { key: "EVAL", name: "Evaluation", family: "OPERATIONAL", tier: 5, description: "Evaluation performances", aiPowered: false, requires: [], steps: [{ type: "CALC", ref: "performance-scorer", name: "Scoring", outputKeys: ["scores"] }] },
-    { key: "INFLUENCE", name: "Influence", family: "OPERATIONAL", tier: 5, description: "Strategie d'influence", aiPowered: true, requires: [], steps: [{ type: "GLORY", ref: "influence-strategy-builder", name: "Strategie", outputKeys: ["strategy"] }] },
+    { key: "INFLUENCE", name: "Influence", family: "OPERATIONAL", tier: 5, description: "Stratégie d'influence", aiPowered: true, requires: [], steps: [{ type: "GLORY", ref: "influence-strategy-builder", name: "Stratégie", outputKeys: ["strategy"] }] },
     { key: "COST-SERVICE", name: "Cout Service", family: "OPERATIONAL", tier: 5, description: "Calcul cout service", aiPowered: false, requires: [], steps: [{ type: "CALC", ref: "service-cost-calculator", name: "Calcul", outputKeys: ["cost"] }] },
     { key: "COST-CAMPAIGN", name: "Cout Campagne", family: "OPERATIONAL", tier: 5, description: "Calcul cout campagne", aiPowered: false, requires: [{ type: "SEQUENCE", key: "CAMPAIGN-360" }], steps: [{ type: "CALC", ref: "campaign-cost-calculator", name: "Calcul", outputKeys: ["cost"] }] },
     { key: "PROFITABILITY", name: "Rentabilite", family: "OPERATIONAL", tier: 5, description: "Analyse rentabilite", aiPowered: false, requires: [{ type: "SEQUENCE", key: "COST-SERVICE" }, { type: "SEQUENCE", key: "COST-CAMPAIGN" }], steps: [{ type: "CALC", ref: "profitability-analyzer", name: "Analyse", outputKeys: ["profitability"] }] },
@@ -233,7 +233,7 @@ export default function SkillTreePage() {
   const [preflightError, setPreflightError] = useState<string | null>(null);
 
   const { data: strategies } = trpc.strategy.list.useQuery({});
-  const activeStrategies = (strategies ?? []).filter((s) => s.status === "ACTIVE");
+  const activeStratégies = (strategies ?? []).filter((s) => s.status === "ACTIVE");
 
   // Vault skill tree — live status for each sequence
   const skillTreeQuery = trpc.sequenceVault.skillTree.useQuery(
@@ -345,7 +345,7 @@ export default function SkillTreePage() {
           className="flex-1 rounded-lg border border-border-subtle bg-background px-3 py-2 text-sm text-foreground"
         >
           <option value="">Vue catalogue (toutes les sequences)</option>
-          {activeStrategies.map((s) => (
+          {activeStratégies.map((s) => (
             <option key={s.id} value={s.id}>{s.name}</option>
           ))}
         </select>

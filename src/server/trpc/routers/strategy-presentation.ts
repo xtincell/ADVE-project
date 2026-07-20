@@ -5,6 +5,7 @@
 
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../init";
+import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import {
   assemblePresentation,
   getShareToken,
@@ -17,7 +18,7 @@ import { auditedProcedure, governedProcedure } from "@/server/governance/governe
 
 export const strategyPresentationRouter = createTRPCRouter({
   /** Assemble the full 13-section document for a strategy (authenticated) */
-  assemble: protectedProcedure
+  assemble: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ input }) => {
       return assemblePresentation(input.strategyId);
@@ -52,7 +53,7 @@ export const strategyPresentationRouter = createTRPCRouter({
     }),
 
   /** Check which sections have sufficient data */
-  completeness: protectedProcedure
+  completeness: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ input }) => {
       return checkCompleteness(input.strategyId);
@@ -157,7 +158,7 @@ export const strategyPresentationRouter = createTRPCRouter({
   }),
 
   /** Generate deterministic budget plan from raw budget amount */
-  budgetPlan: protectedProcedure
+  budgetPlan: strategyScopedProcedure
     .input(z.object({
       strategyId: z.string(),
       budget: z.number().min(0).optional(),

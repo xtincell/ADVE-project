@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
+import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
 
@@ -15,7 +16,7 @@ export const attributionRouter = createTRPCRouter({
   })
     .mutation(async ({ ctx, input }) => ctx.db.attributionEvent.create({ data: input })),
 
-  list: protectedProcedure
+  list: strategyScopedProcedure
     .input(z.object({ strategyId: z.string(), source: z.string().optional(), limit: z.number().default(50) }))
     .query(async ({ ctx, input }) => {
       return ctx.db.attributionEvent.findMany({
@@ -25,7 +26,7 @@ export const attributionRouter = createTRPCRouter({
       });
     }),
 
-  getSummary: protectedProcedure
+  getSummary: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
       const events = await ctx.db.attributionEvent.findMany({ where: { strategyId: input.strategyId } });

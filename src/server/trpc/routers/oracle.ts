@@ -19,6 +19,7 @@
 
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
+import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import {
   getSectionsForStrategy,
   getSection,
@@ -37,21 +38,21 @@ export const oracleRouter = createTRPCRouter({
    */
   catalog: protectedProcedure.query(() => buildOracleCatalog()),
 
-  listSections: protectedProcedure
+  listSections: strategyScopedProcedure
     .input(z.object({ strategyId: z.string().min(1) }))
     .query(async ({ input }) => {
       const sections = await getSectionsForStrategy(input.strategyId);
       return { sections };
     }),
 
-  getSection: protectedProcedure
+  getSection: strategyScopedProcedure
     .input(z.object({ strategyId: z.string().min(1), sectionId: SectionIdSchema }))
     .query(async ({ input }) => {
       const section = await getSection(input.strategyId, input.sectionId);
       return { section };
     }),
 
-  snapshotStrategy: protectedProcedure
+  snapshotStrategy: strategyScopedProcedure
     .input(z.object({ strategyId: z.string().min(1) }))
     .query(async ({ input }) => {
       const snapshot = await snapshotStrategy(input.strategyId);

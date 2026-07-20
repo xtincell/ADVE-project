@@ -5,7 +5,7 @@
  */
 
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { createTRPCRouter, protectedProcedure, adminProcedure, operatorProcedure } from "../init";
 import { db } from "@/lib/db";
 import {
   capture,
@@ -140,7 +140,8 @@ export const errorVaultRouter = createTRPCRouter({
    * `code` prefix `ORACLE-` and clusters by code, returning per-code
    * stats + last sample. Used by /console/governance/oracle-incidents.
    */
-  oracleIncidents: protectedProcedure
+  // ADR-0166 — agrégats cross-marques : lane opérateur (console diagnostics).
+  oracleIncidents: operatorProcedure
     .input(
       z.object({
         resolved: z.boolean().default(false),

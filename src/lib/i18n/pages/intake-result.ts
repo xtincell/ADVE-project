@@ -153,6 +153,11 @@ export const intakeResultFr = {
   "intakeResult.exec.titlePdf": "4. Synthèse exécutive",
 
   // ── Result — phrases-ponts entre scores ────────────────────────────
+  "intakeResult.gate.title": "Filtrage des homonymes",
+  "intakeResult.gate.filteredSuffix": "mention(s) écartée(s) de la collecte : elles concernaient un homonyme, pas votre marque.",
+  "intakeResult.gate.judgeDet": "Tri déterministe (repères de votre secteur et de votre pays).",
+  "intakeResult.gate.judgeLlm": "Tri déterministe, complété d'une vérification par analyse automatique.",
+  "intakeResult.gate.discriminants": "Repères utilisés :",
   "intakeResult.bridge.footprintBefore": "Votre socle ci-dessus vient de vos réponses. Voici maintenant ce que le public, lui, voit de",
   "intakeResult.bridge.footprintAfter": "— mesuré, pas déclaré.",
   "intakeResult.bridge.force": "Et quand on confronte cette preuve publique aux épreuves du réel, voici la force qu'elle révèle — le score complet /200, celui du classement.",
@@ -513,6 +518,11 @@ export const intakeResultEn: Record<keyof typeof intakeResultFr, string> = {
   "intakeResult.exec.title": "Executive summary",
   "intakeResult.exec.titlePdf": "4. Executive summary",
 
+  "intakeResult.gate.title": "Namesake filtering",
+  "intakeResult.gate.filteredSuffix": "mention(s) excluded from the collection: they referred to a namesake, not your brand.",
+  "intakeResult.gate.judgeDet": "Deterministic filtering (anchored on your sector and country).",
+  "intakeResult.gate.judgeLlm": "Deterministic filtering, completed by an automated-analysis check.",
+  "intakeResult.gate.discriminants": "Anchors used:",
   "intakeResult.bridge.footprintBefore": "Your foundation above comes from your answers. Now here is what the public actually sees of",
   "intakeResult.bridge.footprintAfter": "— measured, not declared.",
   "intakeResult.bridge.force": "And when this public evidence is put through real-world trials, here is the force it reveals — the full score /200, the one used for the ranking.",
@@ -859,6 +869,11 @@ export const intakeResultZh: Record<keyof typeof intakeResultFr, string> = {
   "intakeResult.exec.title": "高管摘要",
   "intakeResult.exec.titlePdf": "4. 高管摘要",
 
+  "intakeResult.gate.title": "同名品牌过滤",
+  "intakeResult.gate.filteredSuffix": "条提及已从采集中剔除：它们涉及同名主体，而非您的品牌。",
+  "intakeResult.gate.judgeDet": "确定性筛选（以您的行业与国家为判据）。",
+  "intakeResult.gate.judgeLlm": "确定性筛选，并辅以自动分析复核。",
+  "intakeResult.gate.discriminants": "使用的判据：",
   "intakeResult.bridge.footprintBefore": "上面的根基得分来自您的回答。下面是公众实际看到的",
   "intakeResult.bridge.footprintAfter": "——实测，而非自述。",
   "intakeResult.bridge.force": "当这些公开证据经受现实检验时，它揭示出的力量如下——即品牌总分 /200，也就是排行榜使用的分数。",

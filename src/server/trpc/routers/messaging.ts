@@ -1,10 +1,39 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
+import { accessibleStrategyIds, assertRawStrategyScope } from "../middleware/strategy-scope";
+import { canAccessStrategy, getOperatorContext } from "@/server/services/operator-isolation";
+import { db } from "@/lib/db";
 /* lafusee:governed-active */
 
 const CHANNELS = ["INTERNAL", "INSTAGRAM", "FACEBOOK", "WHATSAPP", "TELEGRAM", "DISCORD"] as const;
+
+/**
+ * Garde d'accès conversation (ADR-0166) : participant déclaré OU marque
+ * accessible (chokepoint ADR-0129) OU ADMIN. Avant : n'importe quel compte
+ * authentifié lisait/écrivait n'importe quelle conversation par id.
+ */
+async function assertConversationAccess(
+  userId: string,
+  conversationId: string,
+): Promise<void> {
+  const convo = await db.conversation.findUnique({
+    where: { id: conversationId },
+    select: { strategyId: true, participants: true },
+  });
+  if (!convo) throw new TRPCError({ code: "NOT_FOUND", message: "Conversation introuvable" });
+
+  const parts = Array.isArray(convo.participants) ? (convo.participants as Array<{ userId?: string }>) : [];
+  if (parts.some((p) => p?.userId === userId)) return;
+
+  const opCtx = await getOperatorContext(userId);
+  if (opCtx.role === "ADMIN") return;
+  if (convo.strategyId && (await canAccessStrategy(convo.strategyId, opCtx))) return;
+
+  throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette conversation" });
+}
 
 export const messagingRouter = createTRPCRouter({
   // ── Get current user info ─────────────────────────────────────────────
@@ -30,6 +59,16 @@ export const messagingRouter = createTRPCRouter({
       if (input?.channel) where.channel = input.channel;
       if (input?.strategyId) where.strategyId = input.strategyId;
 
+      // ADR-0166 — scope : participant déclaré OU marque accessible. Un
+      // strategyId étranger intersecte à vide (silent-empty, sémantique liste).
+      const ids = await accessibleStrategyIds(ctx.session.user.id);
+      if (ids !== null) {
+        where.OR = [
+          { participants: { array_contains: [{ userId: ctx.session.user.id }] } },
+          ...(ids.length ? [{ strategyId: { in: ids } }] : []),
+        ];
+      }
+
       return ctx.db.conversation.findMany({
         where,
         orderBy: { lastMessageAt: { sort: "desc", nulls: "last" } },
@@ -43,6 +82,7 @@ export const messagingRouter = createTRPCRouter({
   getConversation: protectedProcedure
     .input(z.object({ conversationId: z.string() }))
     .query(async ({ ctx, input }) => {
+      await assertConversationAccess(ctx.session.user.id, input.conversationId);
       const conversation = await ctx.db.conversation.findUniqueOrThrow({
         where: { id: input.conversationId },
         include: {
@@ -70,6 +110,7 @@ export const messagingRouter = createTRPCRouter({
   })
     .mutation(async ({ ctx, input }) => {
       const user = ctx.session.user;
+      await assertConversationAccess(user.id, input.conversationId);
 
       const message = await ctx.db.message.create({
         data: {
@@ -106,6 +147,7 @@ export const messagingRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      await assertConversationAccess(ctx.session.user.id, input.conversationId);
       await ctx.db.message.updateMany({
         where: {
           conversationId: input.conversationId,
@@ -145,6 +187,7 @@ export const messagingRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      await assertRawStrategyScope(ctx.session.user.id, input, { optional: true });
       return ctx.db.conversation.create({
         data: {
           title: input.title,
@@ -159,9 +202,17 @@ export const messagingRouter = createTRPCRouter({
 
   // ── Get total unread count ────────────────────────────────────────────
   getUnreadCount: protectedProcedure.query(async ({ ctx }) => {
+    const where: Prisma.ConversationWhereInput = { status: "ACTIVE" };
+    const ids = await accessibleStrategyIds(ctx.session.user.id);
+    if (ids !== null) {
+      where.OR = [
+        { participants: { array_contains: [{ userId: ctx.session.user.id }] } },
+        ...(ids.length ? [{ strategyId: { in: ids } }] : []),
+      ];
+    }
     const result = await ctx.db.conversation.aggregate({
       _sum: { unreadCount: true },
-      where: { status: "ACTIVE" },
+      where,
     });
     return result._sum.unreadCount ?? 0;
   }),

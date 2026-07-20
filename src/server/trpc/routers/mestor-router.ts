@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
+import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { generateInsights } from "@/server/services/mestor/insights";
 import * as mestor from "@/server/services/mestor";
 import { auditedProcedure, governedProcedure } from "@/server/governance/governed-procedure";
@@ -7,7 +8,7 @@ import { auditedProcedure, governedProcedure } from "@/server/governance/governe
 
 export const mestorRouter = createTRPCRouter({
   /** Get proactive AI insights for a strategy (Artemis) */
-  getInsights: protectedProcedure
+  getInsights: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ input }) => {
       return generateInsights(input.strategyId);
@@ -52,7 +53,7 @@ export const mestorRouter = createTRPCRouter({
     }),
 
   /** Load an existing plan */
-  loadPlan: protectedProcedure
+  loadPlan: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ input }) => {
       const { loadPlan } = await import("@/server/services/neteru-shared/hyperviseur");

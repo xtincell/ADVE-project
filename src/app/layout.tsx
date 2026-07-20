@@ -53,7 +53,12 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: "La Fusée",
+    // RESIDUAL-DEBT « locale OG dynamique » — fix borné : la locale pleinement
+    // dynamique exigerait headers()/cookies() au root layout, ce qui force le
+    // rendu dynamique de TOUTE l'app (refusé, coût perf). On déclare les
+    // locales servies par l'i18n funnel (fr canonique + en/zh).
     locale: "fr_FR",
+    alternateLocale: ["en_US", "zh_CN"],
     url: SITE_URL,
     title: "La Fusée — Industry OS du marché créatif africain",
     description:

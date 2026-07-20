@@ -9,7 +9,7 @@ export function TerritoireCreatif({ data }: Props) {
   const da = (data.directionArtistique ?? {}) as Record<string, unknown>;
   const subCards = [
     data.moodboard && { title: "Moodboard", d: data.moodboard },
-    data.chromaticStrategy && { title: "Strategie chromatique", d: data.chromaticStrategy },
+    data.chromaticStrategy && { title: "Stratégie chromatique", d: data.chromaticStrategy },
     data.typographySystem && { title: "Systeme typographique", d: data.typographySystem },
     data.logoAdvice && { title: "Direction logo", d: data.logoAdvice },
   ].filter(Boolean) as Array<{ title: string; d: Record<string, unknown> }>;

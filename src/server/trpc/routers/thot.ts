@@ -10,6 +10,7 @@
 
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
+import { accessibleStrategyIds } from "../middleware/strategy-scope";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
 import { composeBrandValuation } from "@/server/services/financial-brain/brand-valuation";
@@ -115,10 +116,17 @@ export const thotRouter = createTRPCRouter({
     estimateHistory: protectedProcedure
       .input(z.object({ brandActionId: z.string().optional(), strategyId: z.string().optional(), take: z.number().min(1).max(100).default(20) }))
       .query(async ({ ctx, input }) => {
+        // ADR-0166 — scope ownership (lien strategyId lâche, pas de relation).
+        const ids = await accessibleStrategyIds(ctx.session.user.id);
+        const strategyFilter = input.strategyId
+          ? { strategyId: ids === null || ids.includes(input.strategyId) ? input.strategyId : "__denied__" }
+          : ids !== null
+            ? { strategyId: { in: ids } }
+            : {};
         return ctx.db.actionCostEstimate.findMany({
           where: {
+            ...strategyFilter,
             ...(input.brandActionId ? { brandActionId: input.brandActionId } : {}),
-            ...(input.strategyId ? { strategyId: input.strategyId } : {}),
           },
           orderBy: { computedAt: "desc" },
           take: input.take,

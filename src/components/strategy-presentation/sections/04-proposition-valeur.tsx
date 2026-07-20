@@ -10,7 +10,7 @@ export function PropositionValeur({ data }: Props) {
     <div className="space-y-6">
       {data.pricing && (
         <div>
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Strategie de prix</h3>
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Stratégie de prix</h3>
           <div className="rounded-lg border border-border bg-background/50 p-4 space-y-2">
             <p className="text-sm text-foreground-secondary">{data.pricing.strategy}</p>
             <p className="text-xs text-foreground-muted">{data.pricing.ladderDescription}</p>

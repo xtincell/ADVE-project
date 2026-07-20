@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
+import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import * as valueReportService from "@/server/services/value-report-generator";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 
@@ -13,7 +14,7 @@ export const valueReportRouter = createTRPCRouter({
     return valueReportService.generate(input.strategyId, input.period);
   }),
 
-  list: protectedProcedure
+  list: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
       const [snapshots, signals] = await Promise.all([
@@ -49,13 +50,13 @@ export const valueReportRouter = createTRPCRouter({
         }));
     }),
 
-  getByStrategy: protectedProcedure
+  getByStrategy: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ input }) => {
       return valueReportService.generate(input.strategyId, new Date().toISOString().slice(0, 7));
     }),
 
-  export: protectedProcedure
+  export: strategyScopedProcedure
     .input(z.object({ strategyId: z.string(), period: z.string(), format: z.enum(["html", "pdf"]).default("html") }))
     .query(async ({ input }) => {
       return valueReportService.exportHtml(input.strategyId, input.period);
