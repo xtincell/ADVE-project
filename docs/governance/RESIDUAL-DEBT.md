@@ -213,15 +213,30 @@ dispatch : sur 588 kinds, **91 cités 0 fois hors de leur déclaration** —
   supprimer ceux dont aucun routeur n'émet le kind (vérifier `emitIntentTyped`/`governedProcedure`
   d'abord — certains restent le kind d'un handler inline actif). **Déclencheur** : passe de nettoyage
   `intent-kinds.ts`.
-- **20 non-legacy sans handler** : trajectoire APOGEE (`PROMOTE_LATENT_TO_FRAGILE`…`PROMOTE_CULTE_TO_ICONE`
-  + 5 `DEMOTE_*` — le classement de palier marche via le scoring `classifyBrand`, mais les transitions
-  gouvernées hash-chainées Loi 1 ne sont jamais émises) · rollbacks (`ROLLBACK_ADVE`,
-  `ROLLBACK_RTIS_CASCADE`, `REVERT_RECOMMENDATIONS`, `DISCARD_RECOMMENDATIONS`) · error-vault gouverné
-  (`CAPTURE_ERROR_EVENT`/`RESOLVE_ERROR_EVENT` — la capture marche par appel direct) · divers
-  (`ACTIVATE_RETAINER`, `ANUBIS_OAUTH_REFRESH_TOKEN`, `COLLECT_WEB_FOOTPRINT`, `COMPUTE_LOYALTY_SCORE`,
-  `HYPERVISEUR_PEER_INSIGHTS`). **Plan** : par grappe — câbler ce qui sert la mission (trajectoire
-  gouvernée = vraie valeur Loi 1), supprimer le reste, tracer les décisions. **Déclencheur** : chantier
-  dédié « moteur de trajectoire gouverné » (candidat prochaine session).
+- **10 kinds trajectoire APOGEE** (`PROMOTE_LATENT_TO_FRAGILE`…`PROMOTE_CULTE_TO_ICONE` + 5 `DEMOTE_*`)
+  — **CLOS** ([ADR-0167](adr/0167-apogee-trajectory-engine.md), moteur de trajectoire) : palier officiel
+  persisté `Strategy.apogeeTier` (ratchet), gate `PALIER_PROMOTION_PROOFS`, handler qui persiste (dents
+  Loi 1, pas un STUB), tRPC `transitionTier`/preview/trajectory + UI console + cockpit `effectiveTier`.
+  Vérifié E2E Motion19. HARD `brand-tier-transition-wired.test.ts`.
+- **10 non-legacy sans handler restants** : rollbacks (`ROLLBACK_ADVE`, `ROLLBACK_RTIS_CASCADE`,
+  `REVERT_RECOMMENDATIONS`, `DISCARD_RECOMMENDATIONS`) · error-vault gouverné (`CAPTURE_ERROR_EVENT`/
+  `RESOLVE_ERROR_EVENT` — la capture marche par appel direct) · divers (`ACTIVATE_RETAINER`,
+  `ANUBIS_OAUTH_REFRESH_TOKEN`, `COLLECT_WEB_FOOTPRINT`, `COMPUTE_LOYALTY_SCORE`, `HYPERVISEUR_PEER_INSIGHTS`).
+  **Plan** : par grappe — câbler ce qui sert la mission, supprimer le reste, tracer les décisions.
+  **Déclencheur** : prochaine session (les rollbacks compensateurs sont les plus proches en valeur).
+
+### Trajectoire APOGEE — déférés phase 2 (ADR-0167 §Hors périmètre)
+
+- **Auto-évaluation de palier** : un passage qui flag les promotions éligibles en dry-run pour revue
+  opérateur (précédent `AUTO_PROMOTION_EVALUATE`). **Déclencheur** : demande produit / cron gouvernance.
+- **Page dédiée** `/console/governance/palier-transitions` (ADR-0086) : vue cross-marques des décisions
+  de gate. Le panneau détail-marque `<ApogeeTrajectoryPanel>` suffit au MVP. **Déclencheur** : besoin ops.
+- **Divergence officiel/impliqué non surfacée** sur les ~13 autres callsites `ScoreBadge`/`classifyBrand`
+  (ils montrent légitimement le palier-impliqué-par-le-score, par conception). **Déclencheur** : si un
+  écran opérateur doit trancher officiel vs impliqué, y poser `effectiveTier`.
+- **`superfanCount` = rows brutes** (non dé-dupliqué `personId`, ADR-0147) dans le gate — cohérent avec
+  ce que lit déjà le scorer + le cron sentinels. **Déclencheur** : si le double-comptage CRM devient
+  matériel pour le plafond apex.
 
 ### Phase 21 (mégasprint closure — résidus consolidés)
 

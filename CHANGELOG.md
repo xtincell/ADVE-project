@@ -10,6 +10,17 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.239 — feat(apogee): moteur de trajectoire de palier — la Loi 1 a enfin des dents (2026-07-21)
+
+**Les 10 kinds `PROMOTE_*`/`DEMOTE_*` étaient déclarés au registre depuis toujours mais jamais câblés (absents de l'union Intent, du dispatcher, sans handler). Le palier de marque était dérivé du score à la lecture — donc une baisse de score rétrogradait le palier en silence, violant la Loi 1 « conservation d'altitude ». [ADR-0167](docs/governance/adr/0167-apogee-trajectory-engine.md).**
+
+- **Palier officiel persisté** (`Strategy.apogeeTier` + `SetAt`/`Reason`/`By`, additifs nullable, migration backfill-safe) = ratchet « altitude de record » mû seulement par transition gouvernée. Helper pur `effectiveTier({apogeeTier, composite})` = officiel s'il est posé, sinon `classifyTier(composite)` dérivé. `null` (toutes les marques existantes) ⇒ comportement inchangé.
+- **Gate `PALIER_PROMOTION_PROOFS`** (réalise ADR-0086) : cœur pur `evaluatePalierTransition` + wrapper async lecture-seule, branché en pré-flight `emitIntent`. PROMOTE : `composite > borne cible` (le composite étant déjà evidence-capped, ce test enforce implicitement les preuves apex CULTE/ICONE) ; raison chiffrée honnête (superfans n/target, échelle non déclarée). DEMOTE : structural seul (Loi 1). Mesure d'évidence extraite du scorer vers `advertis-scorer/evidence.ts` (source unique) + `computeEvidenceBreakdown`.
+- **Câblage atomique** : 10 membres à l'union Intent + 10 case commandant + groupe `intentTouchesPillars` (les 2 switches sans `default` ⇒ `tsc` prouve l'exhaustivité) + handler `brand-tier-transition/handler.ts` qui **PERSISTE** apogeeTier (dents, pas le STUB ADR-0139).
+- **Surface opérateur** (ADR-0085 décision opérateur) : `strategy.transitionTier`/`tierTransitionPreview`/`tierTrajectory` (voie bus, kind dynamique) + `governance.compensate` à dents pour les DEMOTE + panneau console `<ApogeeTrajectoryPanel>` (officiel vs impliqué, boutons gate-aware, historique depuis IntentEmission) + cockpit ligne palier via `effectiveTier`.
+- **Vérifié E2E (Motion19, PG)** : promotion méritée ORDINAIRE→FORTE (OK, apogeeTier écrit) · promotion apex non méritée FORTE→CULTE (VETOED, « score 160 ≤ seuil 160 — superfans 0/1000 ; échelle non déclarée ») · ratchet (score chute à 90, effectiveTier reste FORTE) · démotion explicite · 3 émissions hash-chaînées.
+- **0 nouveau modèle Prisma, 0 LLM, cap APOGEE 7/7.** tsc 0 · lint 0 · cycles 0 · HARD `brand-tier-transition-wired.test.ts` (les 10 câblés) + gate/handler/effectiveTier tests. RESIDUAL-DEBT : ligne trajectoire CLOSE ; déférés phase 2 tracés (auto-éval, page dédiée, callsites, dé-dup superfan).
+
 ## v6.27.238 — feat(jehuty): des images dans la Gazette — vignettes RSS réelles + logo de marque (2026-07-21)
 
 **Constat opérateur : « et aucune image, c'est grave ? ». La Gazette était text-only ; les flux RSS fournissent souvent des vignettes que le parser ignorait, et le logo de la marque (au coffre) n'était nulle part sur la page.**
