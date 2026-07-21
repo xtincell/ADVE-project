@@ -243,8 +243,8 @@ NEFER consulte ces sources dans l'ordre, sans skip, à chaque session :
 | [CODE-MAP.md](CODE-MAP.md) | **Knowledge graph** — synonymes mot-du-métier ↔ entité, tous models Prisma, services, routers, pages, Glory tools, séquences, intent kinds | ✓ pre-commit hook |
 | [INTENT-CATALOG.md](INTENT-CATALOG.md) | 561 Intent kinds (recompte 2026-07-13 — registre `INTENT_KINDS`) avec governor/handler/SLO/description | ✓ `npx tsx scripts/gen-intent-catalog.ts` |
 | [glory-tools-inventory.md](glory-tools-inventory.md) | Glory tools indexés par layer — 56 CORE / 149 au registre étendu (recompte 2026-07-11 ; décomposition CORE : 40 legacy + 9 P13 + 4 P14 + 3 P15) | ✓ `npm run glory:inventory` |
-| [SERVICE-MAP.md](SERVICE-MAP.md) | 115 répertoires services backend par sous-système APOGEE (recompte 2026-07-11 ; 23 « À classifier ») | manuel |
-| [ROUTER-MAP.md](ROUTER-MAP.md) | 112 routers tRPC par sous-système (recompte 2026-07-11 ; 34 « À classifier ») | manuel |
+| [SERVICE-MAP.md](SERVICE-MAP.md) | 118 répertoires services backend par sous-système APOGEE (recompte 2026-07-21 ; tous classifiés, « À classifier » refermée) | manuel |
+| [ROUTER-MAP.md](ROUTER-MAP.md) | 123 fichiers routers tRPC par sous-système (122 routers + 1 helper ; recompte 2026-07-21 ; tous classifiés, « À classifier » refermée) | manuel |
 | [PAGE-MAP.md](PAGE-MAP.md) | 165+ pages par deck (Console/Cockpit/Agency/Creator/Launchpad) | manuel |
 
 ### 4.3 Code source — surfaces structurelles à connaître
