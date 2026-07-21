@@ -10,6 +10,15 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.236 — docs(governance): SERVICE-MAP / ROUTER-MAP reclassifiés — sections « À classifier » refermées (2026-07-21)
+
+**Les deux registres APOGEE redisent la vérité du filesystem : 118 répertoires services / 123 fichiers routers, tout est classifié.**
+
+- SERVICE-MAP : les 26 services du delta post-Phase 19 (23 listés + `referral`/`tester-feedback`/`value-statement` jamais recensés) intégrés aux tables par sous-système (governors lus dans les manifests co-localisés) ; synthèse, §9 verdict et vérification arithmétique recomptés (117 métier + 1 helper = 118 ✅) ; note sous-modules `seshat/` explicitée.
+- ROUTER-MAP : les 46 routers du delta (34 listés + 12 apparus depuis) classifiés avec statut governance vérifié par scan statique ; lignes flottantes `commerce`/`prod-ops` rangées ; helper `_strategy-read-guard.ts` documenté hors compte ; §10 recompté daté (**104/122 routers sur la voie gouvernée**, 11 mutations directes toutes documentées) ; `governance.ts` marqué livré au §11.
+- Réparation en passant : 3 manifests manquants écrits (`referral` THOT · `tester-feedback` INFRASTRUCTURE · `value-statement` SESHAT, tous GROUND_INFRASTRUCTURE justifié, zéro capability) + registre régénéré — **Phase 2.6 re-fermée : 118/118 manifests, audit clean zéro warn**.
+- RESIDUAL-DEBT : ligne « Reclassification ROUTER-MAP / SERVICE-MAP » CLOSE (archivée) ; règle anti-retour : tout nouveau service/router se classifie dans le même PR (NEFER Phase 6).
+
 ## v6.27.235 — docs(governance): RESIDUAL-DEBT restructuré — purge, actions opérateur consolidées, refus honnêtes (2026-07-20)
 
 **Le registre redevient transitoire : 956 → ~300 lignes, chaque ligne restante porte plan + déclencheur.**

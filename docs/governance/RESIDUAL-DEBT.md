@@ -203,13 +203,6 @@
   littéraux rendus des surfaces scannées, pas les dicts). **Déclencheur** : prochaine passe i18n.
 - **Onglets réels Livrables/Rapports** (fusion optionnelle — nav par `activePrefixes` propre).
 
-### Docs / registres
-
-- **Reclassification ROUTER-MAP / SERVICE-MAP** : 34 routers + 23 services post-Phase 19 en
-  § « À classifier » (couverture honnête). **Plan** : attribuer sous-système APOGEE + tier + statut
-  governance à chaque entrée, re-fusionner, refaire les synthèses. **Effort** : ~1 session mécanique.
-  **Déclencheur** : prochaine session docs.
-
 ### Phase 21 (mégasprint closure — résidus consolidés)
 
 - **Annotation per-tool `outputSchema` Zod** : 56+ Glory tools LLM + 24 frameworks, 5 batchs
@@ -306,6 +299,11 @@ sign-off direction (cf. § Actions opérateur).
 - **galileo « Fusée non-dépendante du LLM » (PR #258)** — C5 keystone · C1 · C2 · C7 · scoring figé
   ADR-0102 · gate C6 advisory · OpenRouter 4ᵉ provider · paiement manuel WhatsApp · portail
   communauté · HYBRID fullAuto · self-host — shippés v6.27.x (cf. CHANGELOG).
+- **Reclassification ROUTER-MAP / SERVICE-MAP** — CLOS 2026-07-21 : les 46 routers + 26 services
+  « À classifier » intégrés aux tables par sous-système APOGEE (governors depuis manifests, statuts
+  governance par scan statique — 104/122 routers voie gouvernée), headers/synthèses recomptés
+  (118 répertoires / 123 fichiers), 3 manifests manquants comblés (`referral`/`tester-feedback`/
+  `value-statement` — Phase 2.6 re-fermée 118/118, audit clean).
 - **Phase 23 closure** — 7 epics / 53 stories SHIPPED (ADR-0077…0081), pivots superfans × Overton
   founder-visibles ; restes = § Actions opérateur (sign-off) + growth carry-overs ci-dessus.
 - **Phase 21 mégasprint (F-A→F-H)** — closed ADR-0074 ; legacy `enrichOracle` DÉPOSÉ (ADR-0125) ;

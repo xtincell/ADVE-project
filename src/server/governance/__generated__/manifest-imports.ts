@@ -100,6 +100,7 @@ import { manifest as promptRegistryManifest } from "@/server/services/prompt-reg
 import { manifest as ptahManifest } from "@/server/services/ptah/manifest";
 import { manifest as qcRouterManifest } from "@/server/services/qc-router/manifest";
 import { manifest as quickIntakeManifest } from "@/server/services/quick-intake/manifest";
+import { manifest as referralManifest } from "@/server/services/referral/manifest";
 import { manifest as rtisProtocolsManifest } from "@/server/services/rtis-protocols/manifest";
 import { manifest as sectorIntelligenceManifest } from "@/server/services/sector-intelligence/manifest";
 import { manifest as sentinelHandlersManifest } from "@/server/services/sentinel-handlers/manifest";
@@ -114,11 +115,13 @@ import { manifest as strategyPresentationManifest } from "@/server/services/stra
 import { manifest as talentEngineManifest } from "@/server/services/talent-engine/manifest";
 import { manifest as talentServicesManifest } from "@/server/services/talent-services/manifest";
 import { manifest as teamAllocatorManifest } from "@/server/services/team-allocator/manifest";
+import { manifest as testerFeedbackManifest } from "@/server/services/tester-feedback/manifest";
 import { manifest as tierEvaluatorManifest } from "@/server/services/tier-evaluator/manifest";
 import { manifest as translationManifest } from "@/server/services/translation/manifest";
 import { manifest as upsellDetectorManifest } from "@/server/services/upsell-detector/manifest";
 import { manifest as utilsManifest } from "@/server/services/utils/manifest";
 import { manifest as valueReportGeneratorManifest } from "@/server/services/value-report-generator/manifest";
+import { manifest as valueStatementManifest } from "@/server/services/value-statement/manifest";
 import { manifest as vaultEnrichmentManifest } from "@/server/services/vault-enrichment/manifest";
 
 export const MANIFESTS: readonly NeteruManifest[] = [
@@ -217,6 +220,7 @@ export const MANIFESTS: readonly NeteruManifest[] = [
   ptahManifest,
   qcRouterManifest,
   quickIntakeManifest,
+  referralManifest,
   rtisProtocolsManifest,
   sectorIntelligenceManifest,
   sentinelHandlersManifest,
@@ -231,10 +235,12 @@ export const MANIFESTS: readonly NeteruManifest[] = [
   talentEngineManifest,
   talentServicesManifest,
   teamAllocatorManifest,
+  testerFeedbackManifest,
   tierEvaluatorManifest,
   translationManifest,
   upsellDetectorManifest,
   utilsManifest,
   valueReportGeneratorManifest,
+  valueStatementManifest,
   vaultEnrichmentManifest,
 ];
