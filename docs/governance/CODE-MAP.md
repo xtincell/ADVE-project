@@ -43,7 +43,7 @@ Ces correspondances évitent la réinvention :
 - **Operator** (30 fields)
 - **ClientAllocation** (14 fields)
 - **Client** (17 fields)
-- **Strategy** (78 fields)
+- **Strategy** (82 fields)
 - **Intention** (14 fields)
 - **Campaign** (80 fields)
 - **Mission** (36 fields)
@@ -431,7 +431,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/ptah/` ✓ manifest
 - `src/server/services/qc-router/` ✓ manifest
 - `src/server/services/quick-intake/` ✓ manifest
-- `src/server/services/referral/`
+- `src/server/services/referral/` ✓ manifest
 - `src/server/services/rtis-protocols/` ✓ manifest
 - `src/server/services/sector-intelligence/` ✓ manifest
 - `src/server/services/sentinel-handlers/` ✓ manifest
@@ -446,13 +446,13 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/talent-engine/` ✓ manifest
 - `src/server/services/talent-services/` ✓ manifest
 - `src/server/services/team-allocator/` ✓ manifest
-- `src/server/services/tester-feedback/`
+- `src/server/services/tester-feedback/` ✓ manifest
 - `src/server/services/tier-evaluator/` ✓ manifest
 - `src/server/services/translation/` ✓ manifest
 - `src/server/services/upsell-detector/` ✓ manifest
 - `src/server/services/utils/` ✓ manifest
 - `src/server/services/value-report-generator/` ✓ manifest
-- `src/server/services/value-statement/`
+- `src/server/services/value-statement/` ✓ manifest
 - `src/server/services/vault-enrichment/` ✓ manifest
 
 ---

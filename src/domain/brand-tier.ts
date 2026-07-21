@@ -106,6 +106,26 @@ export function normalizePalier(raw: unknown): BrandTier | null {
   return LEGACY_PALIER_ALIASES[up] ?? null;
 }
 
+/**
+ * Palier EFFECTIF d'une marque (ADR-0167) : le palier officiel PERSISTÉ
+ * (`Strategy.apogeeTier`, ratchet mû seulement par une transition gouvernée
+ * PROMOTE ou DEMOTE) s'il est posé, sinon le palier IMPLIQUÉ par le score.
+ *
+ * C'est ce qui donne des dents à la Loi 1 « conservation d'altitude » : une
+ * fois `apogeeTier` posé, une baisse de composite ne rétrograde plus le palier
+ * en silence — seul un DEMOTE explicite le fait. `apogeeTier === null` (toutes
+ * les marques avant leur première promotion) ⇒ comportement dérivé inchangé.
+ *
+ * Pur, déterministe. Réutilise `normalizePalier` (valide + alias legacy) et
+ * `classifyTier` (le fallback dérivé).
+ */
+export function effectiveTier(args: {
+  apogeeTier?: string | null;
+  composite: number | null | undefined;
+}): BrandTier {
+  return normalizePalier(args.apogeeTier) ?? classifyTier(args.composite ?? 0);
+}
+
 export interface TierDefinition {
   /** Short FR label for UI badges. */
   label: string;
