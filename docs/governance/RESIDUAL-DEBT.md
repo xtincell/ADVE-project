@@ -203,6 +203,26 @@
   littéraux rendus des surfaces scannées, pas les dicts). **Déclencheur** : prochaine passe i18n.
 - **Onglets réels Livrables/Rapports** (fusion optionnelle — nav par `activePrefixes` propre).
 
+### Intents déclarés jamais câblés (audit 2026-07-21)
+
+Découvert en réparant `JEHUTY_FEED_REFRESH` (déclaré au registre, aucun handler → la
+Gazette ne se remplissait jamais ; **CLOS** ce jour, v6.27.237). Audit croisé registre ↔
+dispatch : sur 588 kinds, **91 cités 0 fois hors de leur déclaration** —
+
+- **71 `LEGACY_*`** : placeholders auto-générés (reliquat migration strangler). **Plan** :
+  supprimer ceux dont aucun routeur n'émet le kind (vérifier `emitIntentTyped`/`governedProcedure`
+  d'abord — certains restent le kind d'un handler inline actif). **Déclencheur** : passe de nettoyage
+  `intent-kinds.ts`.
+- **20 non-legacy sans handler** : trajectoire APOGEE (`PROMOTE_LATENT_TO_FRAGILE`…`PROMOTE_CULTE_TO_ICONE`
+  + 5 `DEMOTE_*` — le classement de palier marche via le scoring `classifyBrand`, mais les transitions
+  gouvernées hash-chainées Loi 1 ne sont jamais émises) · rollbacks (`ROLLBACK_ADVE`,
+  `ROLLBACK_RTIS_CASCADE`, `REVERT_RECOMMENDATIONS`, `DISCARD_RECOMMENDATIONS`) · error-vault gouverné
+  (`CAPTURE_ERROR_EVENT`/`RESOLVE_ERROR_EVENT` — la capture marche par appel direct) · divers
+  (`ACTIVATE_RETAINER`, `ANUBIS_OAUTH_REFRESH_TOKEN`, `COLLECT_WEB_FOOTPRINT`, `COMPUTE_LOYALTY_SCORE`,
+  `HYPERVISEUR_PEER_INSIGHTS`). **Plan** : par grappe — câbler ce qui sert la mission (trajectoire
+  gouvernée = vraie valeur Loi 1), supprimer le reste, tracer les décisions. **Déclencheur** : chantier
+  dédié « moteur de trajectoire gouverné » (candidat prochaine session).
+
 ### Phase 21 (mégasprint closure — résidus consolidés)
 
 - **Annotation per-tool `outputSchema` Zod** : 56+ Glory tools LLM + 24 frameworks, 5 batchs

@@ -138,7 +138,7 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "RE_EXTRACT_MARKET_STUDY", p95LatencyMs: 90_000, errorRatePct: 0.10, costP95Usd: 0.50 },
   { kind: "CLASSIFY_BRAND_SOURCE", p95LatencyMs: 30_000, errorRatePct: 0.05, costP95Usd: 0.15 },
   { kind: "PROPOSE_VAULT_FROM_SOURCE", p95LatencyMs: 35_000, errorRatePct: 0.05, costP95Usd: 0.15 },
-  { kind: "JEHUTY_FEED_REFRESH", p95LatencyMs: 2_500, errorRatePct: 0.02, costP95Usd: 0.01 },
+  { kind: "JEHUTY_FEED_REFRESH", p95LatencyMs: 30_000, errorRatePct: 0.05, costP95Usd: 0.15 },
   { kind: "JEHUTY_CURATE", p95LatencyMs: 800, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "HYPERVISEUR_PEER_INSIGHTS", p95LatencyMs: 2_500, errorRatePct: 0.02, costP95Usd: 0.02 },
   { kind: "LIFT_INTAKE_TO_STRATEGY", p95LatencyMs: 60_000, errorRatePct: 0.05, costP95Usd: 0.5 },

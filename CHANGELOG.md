@@ -10,6 +10,22 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.237 — feat(jehuty): JEHUTY_FEED_REFRESH — la Gazette se remplit enfin (bouton + cron) (2026-07-21)
+
+**Constat opérateur : « la marque est initiée depuis des jours mais la Gazette reste vide, peu importe les connecteurs ». Root cause : l'Intent `JEHUTY_FEED_REFRESH` était déclaré au registre mais n'avait AUCUN handler — la Gazette est une lecture live qui n'affichait que ce que d'autres pipelines écrivaient, et rien ne les déclenchait.**
+
+- **Orchestrateur `refreshBrandGazette(strategyId)`** (`src/server/services/jehuty/refresh.ts`) : exécute, best-effort et indépendamment, les producteurs des 6 rubriques et retourne un statut HONNÊTE par rubrique (FILLED / EMPTY-avec-raison / DEFERRED / ERROR). Zéro fabrication (ADR-0046/0134) :
+  - **Le monde dehors** ← veille RSS/Google News réelle par marque (`getOrBuildBrandFeed`).
+  - **Diagnostics** ← `runDiagnostic` déterministe (purge+recrée pour toujours afficher le plus récent).
+  - **Mouvements de score** ← ScoreSnapshot + drift déterministe (>15 pts composite / >10 % pilier) ; premier relevé = référence honnête.
+  - **Signaux marché** ← deltas d'audience RÉELS entre relevés `FollowerSnapshot` (un seul point = pas de variation inventée).
+  - **Recommandations** ← Notoria (unique étape LLM, PENDING, publiées à la Gazette ; indispo sans clé => DEFERRED honnête ; l'application à un pilier reste le clic opérateur — STOP-à-Jehuty préservé).
+  - **Signaux faibles** ← thème émergent dérivé de la veille captée (terme significatif dans ≥ 3 titres, hors marque/secteur/stopwords).
+- **Câblage** : `jehuty.refreshFeed` (governedProcedure `JEHUTY_FEED_REFRESH`, garde d'ownership ADR-0166) · **bouton « Rafraîchir la gazette »** au masthead du Cockpit (toast récapitulatif par rubrique) · **cron `/api/cron/jehuty-refresh`** (toutes marques actives, déterministe par défaut, recos opt-in `?recos=1`). SLO `JEHUTY_FEED_REFRESH` réaligné (30 s / 0,15 $ — l'ancien 2,5 s/0,01 $ ignorait l'étape LLM).
+- 2 helpers purs exportés + testés (`computeFollowerDeltas`, `detectEmergingTerm`) — 8 tests anti-drift.
+- **Vérifié sur Motion19** (seed local, PG) : Gazette passée de **0 → 15 dépêches** (12 veille + 1 diagnostic + 1 audience +126 abonnés + 1 signal faible ; score stable ; recos LLM-gated). 0 modèle Prisma · 0 migration · cap APOGEE 7/7. tsc 0 · lint 0 · cycles 0 · **1057 tests verts**.
+- **Découverte tracée (interdit NEFER n°4)** : audit « déclaré, jamais câblé » → 71 `LEGACY_*` morts + 20 kinds non-legacy sans handler (trajectoire APOGEE promote/demote, rollbacks, error-vault gouverné…) inscrits [RESIDUAL-DEBT.md](docs/governance/RESIDUAL-DEBT.md).
+
 ## v6.27.236 — docs(governance): SERVICE-MAP / ROUTER-MAP reclassifiés — sections « À classifier » refermées (2026-07-21)
 
 **Les deux registres APOGEE redisent la vérité du filesystem : 118 répertoires services / 123 fichiers routers, tout est classifié.**
