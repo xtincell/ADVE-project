@@ -9,6 +9,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { computeFollowerDeltas, detectEmergingTerm } from "@/server/services/jehuty/refresh";
+import { parseRssItems } from "@/server/services/seshat/external-feeds/rss";
 
 describe("computeFollowerDeltas — variation d'audience réelle", () => {
   it("un seul relevé par plateforme => aucune variation, allSinglePoint", () => {
@@ -93,5 +94,45 @@ describe("detectEmergingTerm — thème émergent de la veille réelle", () => {
       exclude,
     );
     expect(term).toEqual({ term: "studio", n: 3 });
+  });
+});
+
+// ── Extraction d'image RSS (vignettes « Le monde dehors ») ──────────────────
+describe("parseRssItems — vignette réelle du flux (fix « aucune image »)", () => {
+  it("extrait media:thumbnail / media:content", () => {
+    const xml = `<rss><channel><item>
+      <title>Un titre</title><link>https://ex.com/a</link>
+      <media:thumbnail url="https://img.ex.com/t.jpg" />
+    </item></channel></rss>`;
+    expect(parseRssItems(xml)[0]?.imageUrl).toBe("https://img.ex.com/t.jpg");
+  });
+
+  it("extrait enclosure image", () => {
+    const xml = `<rss><channel><item>
+      <title>Deux</title><link>https://ex.com/b</link>
+      <enclosure url="https://img.ex.com/e.png" type="image/png" />
+    </item></channel></rss>`;
+    expect(parseRssItems(xml)[0]?.imageUrl).toBe("https://img.ex.com/e.png");
+  });
+
+  it("extrait le premier <img src> de la description", () => {
+    const xml = `<rss><channel><item>
+      <title>Trois</title><link>https://ex.com/c</link>
+      <description>&lt;img src="https://img.ex.com/d.jpg"&gt; texte</description>
+    </item></channel></rss>`;
+    // La description est CDATA/échappée selon le flux ; ici on teste le <img> brut.
+    const xml2 = `<rss><channel><item><title>Trois</title><link>https://ex.com/c</link><description><![CDATA[<img src="https://img.ex.com/d.jpg"> texte]]></description></item></channel></rss>`;
+    expect(parseRssItems(xml2)[0]?.imageUrl).toBe("https://img.ex.com/d.jpg");
+    void xml;
+  });
+
+  it("pas d'image => imageUrl absent (jamais une URL vide)", () => {
+    const xml = `<rss><channel><item><title>Quatre</title><link>https://ex.com/d</link></item></channel></rss>`;
+    expect(parseRssItems(xml)[0]?.imageUrl).toBeUndefined();
+  });
+
+  it("ignore une URL non http(s) (data:/relative)", () => {
+    const xml = `<rss><channel><item><title>Cinq</title><link>https://ex.com/e</link><media:content url="data:image/gif;base64,AAAA" /></item></channel></rss>`;
+    expect(parseRssItems(xml)[0]?.imageUrl).toBeUndefined();
   });
 });

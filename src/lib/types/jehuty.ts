@@ -49,6 +49,8 @@ export interface JehutyFeedItem {
   source?: string;
   /** Lien externe (articles de veille « Le monde dehors », fix 2026-07-20). */
   externalUrl?: string;
+  /** Vignette réelle fournie par le flux RSS (articles de veille). */
+  imageUrl?: string;
 }
 
 // ── Priority Calculation ──────────────────────────────────────────

@@ -207,7 +207,7 @@ export const jehutyRouter = createTRPCRouter({
             orderBy: { createdAt: "desc" },
             select: { createdAt: true, data: true },
           });
-          const digestItems = ((digest?.data ?? {}) as { items?: Array<{ title?: string; link?: string; source?: string; publishedAt?: string }> }).items ?? [];
+          const digestItems = ((digest?.data ?? {}) as { items?: Array<{ title?: string; link?: string; source?: string; publishedAt?: string; imageUrl?: string }> }).items ?? [];
           const maxAgeMs = 90 * 24 * 60 * 60 * 1000;
           let rank = 0;
           for (const art of digestItems) {

@@ -131,6 +131,13 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
     { enabled: mode === "agency" || !!strategyId },
   );
 
+  // Logo de la marque — ancre visuelle du masthead (image RÉELLE du coffre).
+  const identityQuery = trpc.cockpitDashboard.getBrandIdentity.useQuery(
+    { strategyId: strategyId ?? "" },
+    { enabled: mode === "brand" && !!strategyId },
+  );
+  const brandLogo = identityQuery.data?.logo?.url ?? null;
+
   // ── Mutations ──
   const curateMutation = trpc.jehuty.curate.useMutation({
     onSuccess: () => feedQuery.refetch(),
@@ -246,6 +253,13 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
       {/* ═══ Masthead ═══════════════════════════════════════════════ */}
       <section className="mb-12 md:mb-16 flex items-start justify-between gap-6 flex-wrap">
         <div>
+          {brandLogo && (
+            <ArticleThumb
+              src={brandLogo}
+              fit="contain"
+              className="mb-4 h-16 w-16 !rounded-2xl border-2 bg-surface"
+            />
+          )}
           <h1
             className="font-display font-semibold tracking-tighter leading-[0.9] text-foreground"
             style={{ fontSize: "var(--text-display)" }}
@@ -452,6 +466,28 @@ function Indicator({ label, value, hint, accent }: {
       </div>
       <div className="font-mono text-2xs uppercase tracking-widest text-foreground mt-2">{label}</div>
       <div className="text-xs text-foreground-muted mt-0.5">{hint}</div>
+    </div>
+  );
+}
+
+/**
+ * Vignette d'article de veille — image RÉELLE fournie par le flux RSS. Se
+ * retire proprement si l'URL casse (hotlink bloqué, 404) : pas de cadre vide.
+ */
+function ArticleThumb({ src, className, fit = "cover" }: { src: string; className?: string; fit?: "cover" | "contain" }) {
+  const [broken, setBroken] = useState(false);
+  if (broken) return null;
+  return (
+    <div className={`overflow-hidden rounded-lg border border-border-subtle bg-surface-sunken ${className ?? ""}`}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- image externe distante, dimensions inconnues */}
+      <img
+        src={src}
+        alt=""
+        loading="lazy"
+        referrerPolicy="no-referrer"
+        className={`h-full w-full ${fit === "contain" ? "object-contain p-1" : "object-cover"}`}
+        onError={() => setBroken(true)}
+      />
     </div>
   );
 }
@@ -722,6 +758,7 @@ function Dispatch({
 
   return (
     <article className={`flex flex-col ${isPinned ? "border-l-2 border-accent pl-4 -ml-4" : ""}`}>
+      {item.imageUrl && <ArticleThumb src={item.imageUrl} className="mb-3 aspect-[16/9]" />}
       <div className="flex items-center gap-2 font-mono text-2xs uppercase tracking-widest text-foreground-muted mb-2.5">
         <Icon className="h-3 w-3 text-accent" />
         {item.pillarKey && <span className="text-foreground">{item.pillarKey.toUpperCase()}</span>}

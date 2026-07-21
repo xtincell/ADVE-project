@@ -10,6 +10,15 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.238 — feat(jehuty): des images dans la Gazette — vignettes RSS réelles + logo de marque (2026-07-21)
+
+**Constat opérateur : « et aucune image, c'est grave ? ». La Gazette était text-only ; les flux RSS fournissent souvent des vignettes que le parser ignorait, et le logo de la marque (au coffre) n'était nulle part sur la page.**
+
+- **Extraction d'image RSS** (`rss.ts`) : `parseRssItems` capte désormais `media:content` / `media:thumbnail` / `enclosure` image / premier `<img src>` de la description — URL http(s) absolue seulement (data:/relative ignorés). Threadé jusqu'à la dépêche : `RssItem.imageUrl` → `BrandFeedArticle.imageUrl` → digest persisté → `mapExternalArticleToFeedItem` → `JehutyFeedItem.imageUrl`.
+- **UI** : composant `ArticleThumb` (lazy, `referrer=no-referrer`, se retire proprement si l'image casse — jamais de cadre vide) rend la vignette en tête des dépêches « Le monde dehors », et le **logo de la marque** (`cockpitDashboard.getBrandIdentity`, image réelle du coffre) ancre le masthead.
+- Honnêteté : Google News RSS (source par défaut) n'agrège pas de vignette — l'extraction reste correcte et se remplit sur les flux natifs porteurs de `media:*` ; le logo de marque, lui, est garanti dès qu'il existe au coffre. Aucune image inventée.
+- 5 tests anti-drift sur `parseRssItems` (media/enclosure/img/absence/non-http). Zéro modèle Prisma, zéro migration, cap 7/7. tsc 0 · lint 0 · **1062 tests verts**.
+
 ## v6.27.237 — feat(jehuty): JEHUTY_FEED_REFRESH — la Gazette se remplit enfin (bouton + cron) (2026-07-21)
 
 **Constat opérateur : « la marque est initiée depuis des jours mais la Gazette reste vide, peu importe les connecteurs ». Root cause : l'Intent `JEHUTY_FEED_REFRESH` était déclaré au registre mais n'avait AUCUN handler — la Gazette est une lecture live qui n'affichait que ce que d'autres pipelines écrivaient, et rien ne les déclenchait.**

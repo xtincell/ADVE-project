@@ -217,7 +217,7 @@ export function mapDiagnosticToFeedItem(
  * EXTERNAL_SIGNAL — titre = l'article réel, source = le média.
  */
 export function mapExternalArticleToFeedItem(
-  article: { title?: string; link?: string; source?: string; publishedAt?: string },
+  article: { title?: string; link?: string; source?: string; publishedAt?: string; imageUrl?: string },
   strategyId: string,
   digestCreatedAt: Date,
   curation: CurationRecord,
@@ -237,6 +237,7 @@ export function mapExternalArticleToFeedItem(
     confidence: 1,
     priority: computePriority("LATER", "LOW", 1, createdAt),
     externalUrl: article.link,
+    ...(article.imageUrl ? { imageUrl: article.imageUrl } : {}),
     curation: curation ? { action: curation.action as JehutyCurationAction, note: curation.note ?? undefined } : undefined,
     createdAt: createdAt.toISOString(),
     source: article.source ?? "Veille de marque",

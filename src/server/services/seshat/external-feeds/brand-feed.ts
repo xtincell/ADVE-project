@@ -76,6 +76,8 @@ export interface BrandFeedArticle {
   link: string;
   source?: string;
   publishedAt?: string;
+  /** Vignette réelle fournie par le flux, si présente. */
+  imageUrl?: string;
 }
 
 export interface BrandFeedResult {
@@ -200,6 +202,7 @@ export async function getOrBuildBrandFeed(
     link: a.link,
     ...(a.source ? { source: a.source } : {}),
     ...(a.publishedAt ? { publishedAt: a.publishedAt } : {}),
+    ...(a.imageUrl ? { imageUrl: a.imageUrl } : {}),
   }));
 
   const generatedAt = new Date().toISOString();

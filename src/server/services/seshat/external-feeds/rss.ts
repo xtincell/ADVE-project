@@ -9,6 +9,8 @@ export interface RssItem {
   link: string;
   pubDate: string;
   summary: string;
+  /** Vignette fournie par le flux (media:thumbnail / media:content / enclosure / <img>). */
+  imageUrl?: string;
 }
 
 // ── Parsing pur (testable sans réseau) ─────────────────────────────────────────
@@ -47,6 +49,27 @@ function blocks(xml: string, tag: string): string[] {
   return xml.match(new RegExp(`<${tag}[\\s\\S]*?</${tag}>`, "gi")) ?? [];
 }
 
+/**
+ * Vignette d'un item : Media RSS (`media:content`/`media:thumbnail`),
+ * `enclosure` image, ou premier `<img src>` dans la description. Déterministe,
+ * ne throw jamais. Retourne une URL http(s) absolue ou "".
+ */
+function itemImage(block: string): string {
+  const patterns = [
+    /<media:(?:content|thumbnail)[^>]*\burl="([^"]+)"/i,
+    /<enclosure[^>]*\btype="image\/[^"]*"[^>]*\burl="([^"]+)"/i,
+    /<enclosure[^>]*\burl="([^"]+)"[^>]*\btype="image\//i,
+    /<img[^>]*\bsrc="([^"]+)"/i,
+    /<image>[\s\S]*?<url>([^<]+)<\/url>/i,
+  ];
+  for (const re of patterns) {
+    const m = re.exec(block);
+    const url = m?.[1]?.trim();
+    if (url && /^https?:\/\//i.test(url)) return url;
+  }
+  return "";
+}
+
 /** Parse un flux RSS 2.0 ou Atom en items (max 25). Tolérant, ne throw jamais. */
 export function parseRssItems(xml: string, limit = 25): RssItem[] {
   if (!xml || typeof xml !== "string") return [];
@@ -58,7 +81,8 @@ export function parseRssItems(xml: string, limit = 25): RssItem[] {
     const link = firstField(b, ["link"]) || atomLink(b);
     const pubDate = firstField(b, ["pubDate", "published", "updated", "dc:date"]);
     const summary = firstField(b, ["description", "summary", "content"]);
-    items.push({ title, link, pubDate, summary });
+    const imageUrl = itemImage(b);
+    items.push(imageUrl ? { title, link, pubDate, summary, imageUrl } : { title, link, pubDate, summary });
     if (items.length >= limit) break;
   }
   return items;
@@ -130,9 +154,9 @@ export function buildDigestFromItems(
 export function toFeedItems(
   items: RssItem[],
   limit = 12,
-): Array<{ title: string; link: string; source?: string; publishedAt?: string }> {
+): Array<{ title: string; link: string; source?: string; publishedAt?: string; imageUrl?: string }> {
   const seen = new Set<string>();
-  const out: Array<{ title: string; link: string; source?: string; publishedAt?: string }> = [];
+  const out: Array<{ title: string; link: string; source?: string; publishedAt?: string; imageUrl?: string }> = [];
   for (const it of items) {
     const key = it.title.toLowerCase();
     if (!it.title || seen.has(key)) continue;
@@ -143,6 +167,7 @@ export function toFeedItems(
       link: it.link,
       ...(dash > 20 ? { source: it.title.slice(dash + 3).trim() } : {}),
       ...(it.pubDate ? { publishedAt: it.pubDate } : {}),
+      ...(it.imageUrl ? { imageUrl: it.imageUrl } : {}),
     });
     if (out.length >= limit) break;
   }
