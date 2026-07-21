@@ -1,12 +1,12 @@
 # SERVICE-MAP — Tous les services backend mappés sur APOGEE
 
-**115 répertoires** sous `src/server/services/` (recompte 2026-07-11). Les tables ci-dessous classifient le recensement historique Phase 19 (92 répertoires — incl. `imhotep/`, `anubis/`, `ptah/`, `error-vault/`, `deliverable-orchestrator/` Phase 17b, `campaign-tracker/` Phase 19, et services Phase 13) : **91 services métier** classifiés par **Sous-système APOGEE** + **Tier**, et **1 répertoire helper** (`utils/`) hors classification. Les **23 services apparus depuis** sont listés en fin de document (§ « À classifier »). Le **Governor Neteru** indique sous quelle gouvernance le service tombe : MESTOR / ARTEMIS / SESHAT / THOT / **PTAH** (Phase 9) / **IMHOTEP** (Phase 14, ADR-0019) / **ANUBIS** (Phase 15, ADR-0020) / INFRASTRUCTURE.
+**118 répertoires** sous `src/server/services/` (recompte 2026-07-21) : **117 services métier** classifiés par **Sous-système APOGEE** + **Tier**, et **1 répertoire helper** (`utils/`) hors classification. La reclassification du delta post-Phase 19 (26 services apparus entre les recomptes 2026-07-11 et 2026-07-21) est intégrée aux tables ci-dessous — la section « À classifier » est refermée. Le **Governor Neteru** indique sous quelle gouvernance le service tombe : MESTOR / ARTEMIS / SESHAT / THOT / **PTAH** (Phase 9) / **IMHOTEP** (Phase 14, ADR-0019) / **ANUBIS** (Phase 15, ADR-0020) / INFRASTRUCTURE.
 
 **Cap APOGEE atteint — 7/7 Neteru actifs** depuis Phase 14/15.
 
 Source de vérité : `find src/server/services -mindepth 1 -maxdepth 1 -type d`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
-Phase 2.6 du REFONTE-PLAN exige un `manifest.ts` co-localisé pour chaque service métier — **objectif atteint**. La colonne **Manifest** ci-dessous indique l'état observé : `✅ existant` pour les 90 services métier + `nsp/` (stub utilitaire). Audit `npm run manifests:audit` clean.
+Phase 2.6 du REFONTE-PLAN exige un `manifest.ts` co-localisé pour chaque service métier — **objectif atteint et re-fermé 2026-07-21** : **118/118 manifests** (les 3 manquants `referral/` · `tester-feedback/` · `value-statement/` comblés à la reclassification ; `utils/` en a un aussi depuis). Audit `npm run manifests:audit` clean, zéro warn.
 
 ---
 
@@ -14,16 +14,16 @@ Phase 2.6 du REFONTE-PLAN exige un `manifest.ts` co-localisé pour chaque servic
 
 | Sous-système | Tier | Count | Governor Neteru |
 |---|---|---|---|
-| Propulsion (briefs) | M | 14 (incl. `deliverable-orchestrator/` Phase 17b) | ARTEMIS |
+| Propulsion (briefs) | M | 19 (incl. `deliverable-orchestrator/` Phase 17b + acteurs Phase 24) | ARTEMIS (+ INFRASTRUCTURE acteurs) |
 | Propulsion (forge) | M | 1 (`ptah/` Phase 9 ✅ shipped) | **PTAH** (ADR-0009) |
-| Guidance | M | 12 | MESTOR |
-| Telemetry | M | 21 | SESHAT |
-| Sustainment | M | 12 | THOT / MESTOR / INFRASTRUCTURE |
-| Operations | G | 10 | THOT (extension) / INFRASTRUCTURE |
-| Crew Programs | G | 5 satellites + `imhotep/` orchestrateur (Phase 14 ✅) | **IMHOTEP** (ADR-0019, supersedes ADR-0017) |
+| Guidance | M | 21 | MESTOR (+ INFRASTRUCTURE) |
+| Telemetry | M | 25 | SESHAT (+ INFRASTRUCTURE / THOT) |
+| Sustainment | M | 13 | THOT / MESTOR / INFRASTRUCTURE |
+| Operations | G | 15 | THOT (extension) / INFRASTRUCTURE |
+| Crew Programs | G | 6 satellites + `imhotep/` orchestrateur (Phase 14 ✅) | **IMHOTEP** (ADR-0019, supersedes ADR-0017) |
 | Comms | G | 2 satellites + `anubis/` orchestrateur (Phase 15 ✅) | **ANUBIS** (ADR-0020, supersedes ADR-0018) |
-| Admin | G | 11 | INFRASTRUCTURE |
-| **TOTAL** | | **90 services métier** + 1 helper (`utils/`) = **91 répertoires** | 7 Neteru actifs + INFRASTRUCTURE |
+| Admin | G | 13 | INFRASTRUCTURE |
+| **TOTAL** | | **117 services métier** + 1 helper (`utils/`) = **118 répertoires** | 7 Neteru actifs + INFRASTRUCTURE |
 
 ### Imhotep — service Phase 14 ✅ shipped (ADR-0019)
 
@@ -94,9 +94,9 @@ src/server/services/ptah/
 
 ---
 
-## 1. Propulsion (14 services — Mission Tier)
+## 1. Propulsion (20 services — Mission Tier)
 
-Génèrent la poussée vers l'apogée. **14 services briefs (ARTEMIS, incl. `deliverable-orchestrator/` Phase 17b) + 1 service forge (PTAH)**.
+Génèrent la poussée vers l'apogée. **19 services briefs (incl. `deliverable-orchestrator/` Phase 17b + acteurs Phase 24) + 1 service forge (PTAH)**.
 
 | Service | Rôle propulsion | Governor | Manifest |
 |---|---|---|---|
@@ -115,10 +115,15 @@ Génèrent la poussée vers l'apogée. **14 services briefs (ARTEMIS, incl. `del
 | `seshat-bridge/` | **Bridge** Telemetry → Propulsion (signaux qui déclenchent missions) | ARTEMIS | ✅ existant |
 | `ptah/` | **Forge orchestrator** — matérialise les briefs en assets (image/video/audio/icon/refine/...) | **PTAH** (ADR-0009) | ✅ existant |
 | `deliverable-orchestrator/` | **Output-first composer** (Phase 17b, ADR-0050 — anciennement ADR-0037) — résout DAG briefs depuis kind matériel cible, scan vault, mode PREVIEW | ARTEMIS | ✅ existant |
+| `intention/` | Aval de l'ADVE (Phase 24, ADR-0106) : capture l'intention du dirigeant → brief candidat (intention × ADVE, manual-first) | ARTEMIS | ✅ existant |
+| `oracle-section/` | OracleSection first-class (Phase 21 F-B/F-C, ADR-0068/0070) : lifecycle 35 sections, lock optimiste, runners | ARTEMIS | ✅ existant |
+| `creative-proposal/` | Proposition Créative — gate de génération de production (ADR-0120) : validation → briefs de production depuis les frames canon | INFRASTRUCTURE | ✅ existant |
+| `campaign-canon/` | 3 campagnes canon (30-60-90 / annuelle / always-on) depuis le Pilier I + ponctuelles insight-driven (ADR-0119) | INFRASTRUCTURE | ✅ existant |
+| `media-plan/` | Plan média structuré (acteur Média, ADR-0115) | INFRASTRUCTURE | ✅ existant |
 
 ---
 
-## 2. Guidance (13 services — Mission Tier)
+## 2. Guidance (21 services — Mission Tier)
 
 Dirigent la trajectoire. Décisions, validations, plans.
 
@@ -137,6 +142,14 @@ Dirigent la trajectoire. Décisions, validations, plans.
 | `prompt-registry/` | Registre prompts LLM versionnés | MESTOR | ✅ existant |
 | `staleness-propagator/` | Détecte et propage staleness | MESTOR | ✅ existant |
 | `campaign-tracker/` | **L2 Instrumental** Campaign module (Phase 19, ADR-0052) — orchestrateur cross-Neteru ; Vague 1 = Cluster A (trajectory + fuelBurnRate + pauseFlameOut) + Cluster B (bigIdeaCoherence + culturalDebt + mythArc). Capability flags 4-états (READY/PARTIAL/STUB/DISABLED) + STUB→MVP→PRODUCTION par sous-cluster. | MESTOR | ✅ existant |
+| `auto-promotion/` | Transitions planifiées timer-based (fenêtres de sûreté) — promotions gouvernées non-strategy-scoped | MESTOR | ✅ existant |
+| `brand-node/` | Arbre de marque multi-archétype (Phase 18, ADR-0059) : BrandContextNode, resolveEffectivePillars, cascade d'invalidation | MESTOR | ✅ existant |
+| `campaign-change-request/` | CampaignChangeRequest (Phase 18-A1) : demandes de changement gouvernées | MESTOR | ✅ existant |
+| `campaign-deliverable/` | Matrice 6D CampaignDeliverable (ADR-0059) : CRUD gouverné + RAG override | MESTOR | ✅ existant |
+| `consulting/` | Acteur Conseil (ADR-0109/0113) : priorisation RICE déterministe + chaîne de preuve (engagements → hypothèses → évidences → verdict) | INFRASTRUCTURE | ✅ existant |
+| `market-lifecycle/` | Kill-switch marché gouverné (ADR-0105) : NEUTRALIZE (FROZEN/SHADOWBANNED) / REINSTATE / PURGE cascade | MESTOR | ✅ existant |
+| `morning-batch/` | Morning Brief batch ingestion mail/Slack + validation middle-portal (Phase 18-A1-δ, ADR-0062) | MESTOR | ✅ existant |
+| `operator-action/` | OperatorAction (Phase 18-A1) : actions opérateur tracées | MESTOR | ✅ existant |
 
 > Helpers TS dans `strategy-presentation/` (n/a manifest, n/a count) :
 > - `error-codes.ts` — catalogue typé `ORACLE-NNN` + classe `OracleError` + `toOracleError` (ADR-0022)
@@ -146,9 +159,9 @@ Dirigent la trajectoire. Décisions, validations, plans.
 
 ---
 
-## 3. Telemetry (21 services — Mission Tier)
+## 3. Telemetry (25 services — Mission Tier)
 
-Observent, mesurent, archivent.
+Observent, mesurent, archivent. **25 répertoires** ; la table contient 3 lignes supplémentaires (`seshat/tarsis/connector.ts` · `seshat/scan-rate-limit.ts` · `seshat/entity-gate/`) qui sont des **sous-modules de `seshat/`** — documentés ici pour la traçabilité, hors compte.
 
 | Service | Rôle telemetry | Governor | Manifest |
 |---|---|---|---|
@@ -176,10 +189,14 @@ Observent, mesurent, archivent.
 | `feedback-processor/` | Traitement feedbacks structurés | SESHAT | ✅ existant |
 | `asset-tagger/` | Tagging automatique assets | SESHAT | ✅ existant |
 | `error-vault/` | Collecteur erreurs runtime (server/client/Prisma/NSP/Ptah/cron/webhook) — Phase 11 | SESHAT | ✅ existant |
+| `bureau-etudes/` | Acteur Bureau d'étude (ADR-0110/0114) : vagues d'étude time-spine, significativité vague-sur-vague, fusion pondérée par provenance | INFRASTRUCTURE | ✅ existant |
+| `community-dashboard/` | Composition lecture seule du suivi communauté (superfans, paliers de dévotion, santé, followers) | SESHAT | ✅ existant |
+| `media-perf/` | Ingestion perf média réelle → CampaignAmplification (acteur Média, ADR-0115) — manuel ou connecteur credential-gated (ConnectorResult honnête) | INFRASTRUCTURE | ✅ existant |
+| `value-statement/` | Relevé de valeur mensuel déterministe depuis séries persistées (boucle B4 REVENU) — « non mesuré » quand la série est absente, jamais un zéro fabriqué (ADR-0046) | SESHAT | ✅ existant (2026-07-21) |
 
 ---
 
-## 4. Sustainment (12 services — Mission Tier)
+## 4. Sustainment (13 services — Mission Tier)
 
 Maintiennent la mission viable techniquement. Mémoires long terme, transports, gates de capacité, sentinels.
 
@@ -197,12 +214,13 @@ Maintiennent la mission viable techniquement. Mémoires long terme, transports, 
 | `strategy-archive/` | 2-phase soft archive + hard purge (`Strategy.archivedAt`) | INFRASTRUCTURE | ✅ existant |
 | `sentinel-handlers/` | Handlers cron `/api/cron/sentinels` — consomme IntentEmission PENDING (Loi 4 maintien orbite) | MESTOR | ✅ existant |
 | `nsp/` | Neteru Streaming Protocol — transport publish/subscribe vers UI | INFRASTRUCTURE | ✅ existant (stub utilitaire) |
+| `market-visibility/` | Substrat read-filter (ADR-0105) : pays SHADOWBANNED + descendants pour le default-deny tenant-scoped (cache TTL 15 s) | INFRASTRUCTURE | ✅ existant |
 
 > `cross-validator/` est compté en Guidance (rôle dominant : validation cross-pillar). Ses invariants techniques sont consommés par Sustainment — pas de double-count.
 
 ---
 
-## 5. Operations (10 services — Ground Tier)
+## 5. Operations (15 services — Ground Tier)
 
 Argent, contrats, facturation, monétisation. Sans Operations, pas de business.
 
@@ -218,12 +236,17 @@ Argent, contrats, facturation, monétisation. Sans Operations, pas de business.
 | `upsell-detector/` | Signaux d'upgrade contractuel | SESHAT | ✅ existant |
 | `campaign-budget-engine/` | Budgets par campagne | THOT | ✅ existant |
 | `data-export/` | Export données structurées (factures, reports) | INFRASTRUCTURE | ✅ existant |
+| `escrow-arbitration/` | Séquestre de mission à validation manuelle + payouts mobile money (Guilde, ADR-0116) : hold/release/refund/dispute | INFRASTRUCTURE | ✅ existant |
+| `market-cost/` | Base de coûts marché historisés par (pays, secteur, métrique, période) — MarketCostSnapshot (ADR-0099) | THOT | ✅ existant |
+| `mission-quote/` | Devis structuré prestataire → marque (Guilde, ADR-0118) : soumission + décision + totaux déterministes | INFRASTRUCTURE | ✅ existant |
+| `production/` | Acteur Production (ADR-0111/0112) : fan-out specs de livrable, droits d'usage avec gate d'expiration, devis AICP | INFRASTRUCTURE | ✅ existant |
+| `referral/` | Parrainage manual-first (ADR-0157) : codes stables par compte, récompenses arbitrées appliquées à la main par l'opérateur | THOT | ✅ existant (2026-07-21) |
 
 ---
 
-## 6. Crew Programs (6 services — Ground Tier)
+## 6. Crew Programs (7 services — Ground Tier)
 
-Talent, formation, matching, QC, psychologie founder. **5 satellites + `imhotep/` orchestrateur**.
+Talent, formation, matching, QC, psychologie founder, marketplace offre-side. **6 satellites + `imhotep/` orchestrateur**.
 
 | Service | Rôle crew programs | Governor | Manifest |
 |---|---|---|---|
@@ -233,6 +256,7 @@ Talent, formation, matching, QC, psychologie founder. **5 satellites + `imhotep/
 | `team-allocator/` | Composition d'équipes optimales | INFRASTRUCTURE | ✅ existant |
 | `qc-router/` | Routing quality control | INFRASTRUCTURE | ✅ existant |
 | `founder-psychology/` | Mécanise "founder = first superfan" (MISSION drift 5.9) | INFRASTRUCTURE | ✅ existant |
+| `talent-services/` | Catalogue offre-side de la Guilde (ADR-0117) : gigs à prix fixe indépendants des missions (pattern Fiverr/Malt supply) | INFRASTRUCTURE | ✅ existant |
 
 ---
 
@@ -252,7 +276,7 @@ Channels externes vers audience. Ad networks, email, SMS, OAuth flows. **2 satel
 
 ---
 
-## 8. Admin (11 services — Ground Tier)
+## 8. Admin (13 services — Ground Tier)
 
 Configuration, boot, ingestion système, support, security, collaboration interne.
 
@@ -269,6 +293,8 @@ Configuration, boot, ingestion système, support, security, collaboration intern
 | `board-export/` | Export données pour boards externes | INFRASTRUCTURE | ✅ existant |
 | `mfa/` | TOTP-based MFA pour role ADMIN (Mission contribution: GROUND_INFRASTRUCTURE) | INFRASTRUCTURE | ✅ existant |
 | `collab-doc/` | Persistence layer collaborative StrategyDoc (load/save + optimistic concurrency, futur Yjs CRDT) | INFRASTRUCTURE | ✅ existant |
+| `canon/` | Namespace de données canon (ADVE UPgraders 100 %) pour seed + scoring de référence — bibliothèque de données pures | INFRASTRUCTURE | ✅ existant |
+| `tester-feedback/` | Canal feedback/bug des testeurs (ADR-0155) : single-writer `Feedback`, tri inbox console | INFRASTRUCTURE | ✅ existant (2026-07-21) |
 
 > Helper hors compte : `utils/` — helpers transverses, pas un service au sens APOGEE.
 
@@ -276,31 +302,32 @@ Configuration, boot, ingestion système, support, security, collaboration intern
 
 ## 9. Verdict — orphelins révélés
 
-Aucun service n'est resté orphelin après Phase 14/15 et Phase 16 :
+Aucun service n'est resté orphelin après Phase 14/15/16, ni après la reclassification 2026-07-21 du delta post-Phase 19 :
 
-- Tous les services financiers (`financial-*`, `commission-engine`, `mobile-money`, `payment-providers`, `monetization`, `crm-engine`, `upsell-detector`, `campaign-budget-engine`, `data-export`) → absorbés par **Operations** (10 services).
-- Tous les services humains (`talent-engine`, `matching-engine`, `team-allocator`, `qc-router`, `founder-psychology`) + `imhotep/` orchestrateur → absorbés par **Crew Programs** (6 services).
+- Tous les services financiers + marketplace argent (`financial-*`, `commission-engine`, `mobile-money`, `payment-providers`, `monetization`, `crm-engine`, `upsell-detector`, `campaign-budget-engine`, `data-export`, `escrow-arbitration`, `market-cost`, `mission-quote`, `production`, `referral`) → absorbés par **Operations** (15 services).
+- Tous les services humains (`talent-engine`, `matching-engine`, `team-allocator`, `qc-router`, `founder-psychology`, `talent-services`) + `imhotep/` orchestrateur → absorbés par **Crew Programs** (7 services).
 - Tous les services de communication externe (`email`, `oauth-integrations`) + `anubis/` orchestrateur → absorbés par **Comms** (3 services).
-- Tous les services d'infrastructure (`boot-sequence`, `process-scheduler`, `ingestion-pipeline`, `country-registry`, `translation`, `mfa`, `collab-doc`, etc.) → absorbés par **Admin** (11 services).
-- Tous les services de mémoire long terme + transport + sentinels (`brand-vault`, `strategy-archive`, `nsp`, `sentinel-handlers`, `model-policy`) → absorbés par **Sustainment** (12 services).
+- Tous les services d'infrastructure (`boot-sequence`, `process-scheduler`, `ingestion-pipeline`, `country-registry`, `translation`, `mfa`, `collab-doc`, `canon`, `tester-feedback`, etc.) → absorbés par **Admin** (13 services).
+- Tous les services de mémoire long terme + transport + sentinels + read-filters (`brand-vault`, `strategy-archive`, `nsp`, `sentinel-handlers`, `model-policy`, `market-visibility`) → absorbés par **Sustainment** (13 services).
+- Les acteurs Phase 24 (`consulting`, `bureau-etudes`, `production`, `media-perf`/`media-plan`, `creative-proposal`, `intention`) → ventilés par rôle dominant : décision → Guidance, mesure → Telemetry, argent/contrats → Operations, brief → Propulsion.
 
 **Cas particuliers** :
 
 - `seshat-bridge/` — **service pont** entre 2 sous-systèmes (Telemetry → Propulsion). Pattern récurrent où une observation Seshat déclenche une action Artemis. Listé en Propulsion (output) avec governor SESHAT.
 - `cross-validator/` — sert à la fois Guidance (validation cross-pillar) et Sustainment (invariants techniques). Listé en Guidance (rôle dominant) — pas de double-count.
 - `nsp/` — utilitaire pur de transport (pas une capability métier, pas de manifest). Compté en Sustainment (transport infra transversale).
-- `utils/` — helpers TS, pas un service au sens APOGEE. Compté comme répertoire (1) mais pas comme service métier (0).
+- `utils/` — helpers TS, pas un service au sens APOGEE. Compté comme répertoire (1) mais pas comme service métier (0). A désormais un `manifest.ts` déclaratif (bibliothèque pure, aucune capability) — reste hors classification.
 
-**Vérification arithmétique** :
+**Vérification arithmétique (recompte 2026-07-21)** :
 
 ```
-Propulsion (briefs) 14 + Propulsion (forge) 1 + Guidance 12 + Telemetry 21 + Sustainment 12 + Operations 10 + Crew 6 + Comms 3 + Admin 11
-= 90 services métier classifiés
+Propulsion (briefs) 19 + Propulsion (forge) 1 + Guidance 21 + Telemetry 25 + Sustainment 13 + Operations 15 + Crew 7 + Comms 3 + Admin 13
+= 117 services métier classifiés
 + 1 helper (utils/)
-= 91 répertoires sous src/server/services/  ✅
+= 118 répertoires sous src/server/services/  ✅
 ```
 
-**Manifests Phase 2 — ✅ COMPLETÉ** : tous les **90 services métier** + **1 stub utilitaire** (`nsp/`) ont leur `manifest.ts` co-localisé. Registry runtime (`__generated__/manifest-imports.ts`) recense **90 manifests** validés par `npm run manifests:audit`. Seul `utils/` reste sans manifest (helper transverse, pas un service au sens APOGEE — exclu par design). Phase 2.6 du REFONTE-PLAN refermée.
+**Manifests Phase 2 — ✅ COMPLETÉ (re-fermé 2026-07-21)** : les **118 répertoires** ont leur `manifest.ts` co-localisé (les 3 manquants `referral/` · `tester-feedback/` · `value-statement/` comblés à la reclassification). Registry runtime (`__generated__/manifest-imports.ts`) recense **118 manifests** validés par `npm run manifests:audit` — clean, zéro warn. Phase 2.6 du REFONTE-PLAN refermée.
 
 ---
 
@@ -320,8 +347,6 @@ Ces 3 services optionnels arriveront uniquement si pattern d'extraction émerge 
 
 ---
 
-## À classifier (delta post-recensement Phase 19 — recompte 2026-07-11)
+## Historique de reclassification
 
-23 services présents sur le filesystem mais absents des tables ci-dessus. Couverture honnête : listés, **pas encore classifiés** (Sous-système APOGEE + Tier + Governor à attribuer — chantier tracé [RESIDUAL-DEBT.md](RESIDUAL-DEBT.md)).
-
-`auto-promotion` · `brand-node` · `bureau-etudes` · `campaign-canon` · `campaign-change-request` · `campaign-deliverable` · `canon` · `community-dashboard` · `consulting` · `creative-proposal` · `escrow-arbitration` · `intention` · `market-cost` · `market-lifecycle` · `market-visibility` · `media-perf` · `media-plan` · `mission-quote` · `morning-batch` · `operator-action` · `oracle-section` · `production` · `talent-services`
+- **2026-07-21** — Le delta post-recensement Phase 19 (26 services : les 23 listés « À classifier » au recompte 2026-07-11 + `referral` · `tester-feedback` · `value-statement` apparus ensuite) est intégré aux tables ci-dessus. Section « À classifier » refermée ; chantier RESIDUAL-DEBT « Reclassification ROUTER-MAP / SERVICE-MAP » clos. Tout nouveau service DOIT être classifié ici dans le même PR (protocole NEFER Phase 6 — pas de retour de la section tampon).
