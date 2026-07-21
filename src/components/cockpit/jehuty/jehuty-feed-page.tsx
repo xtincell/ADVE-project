@@ -15,10 +15,11 @@ import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import type { JehutyCategory, JehutyFeedItem } from "@/lib/types/jehuty";
 import { PILLAR_KEYS as CANONICAL_PILLAR_KEYS } from "@/domain/pillars";
+import { useToast } from "@/components/shared/notification-toast";
 import {
   Sparkles, TrendingUp, AlertTriangle, Activity,
   Stethoscope, Globe, Pin, X, Zap, Loader2, CheckCircle2,
-  ChevronDown,
+  ChevronDown, RefreshCw,
 } from "lucide-react";
 
 // ── Category metadata ─────────────────────────────────────────────
@@ -39,6 +40,16 @@ const CATEGORY_RUBRIC: Record<JehutyCategory, string> = {
   SCORE_DRIFT: "Mouvements de score",
   DIAGNOSTIC: "Diagnostics",
   EXTERNAL_SIGNAL: "Le monde dehors",
+};
+
+/** Libellé court par section du rafraîchissement (toast). */
+const RUBRIC_SHORT: Record<string, string> = {
+  EXTERNAL_SIGNAL: "veille",
+  DIAGNOSTIC: "diagnostics",
+  SCORE_DRIFT: "score",
+  MARKET_SIGNAL: "audience",
+  RECOMMENDATION: "recommandations",
+  WEAK_SIGNAL: "signaux faibles",
 };
 
 /**
@@ -99,6 +110,7 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
   const strategyIdFromContext = useCurrentStrategyId();
   const strategyId = mode === "brand" ? strategyIdFromContext : undefined;
 
+  const toast = useToast();
   const [selectedCategory, setSelectedCategory] = useState<JehutyCategory | null>(null);
   const [selectedPillar, setSelectedPillar] = useState<string | null>(null);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
@@ -119,6 +131,13 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
     { enabled: mode === "agency" || !!strategyId },
   );
 
+  // Logo de la marque — ancre visuelle du masthead (image RÉELLE du coffre).
+  const identityQuery = trpc.cockpitDashboard.getBrandIdentity.useQuery(
+    { strategyId: strategyId ?? "" },
+    { enabled: mode === "brand" && !!strategyId },
+  );
+  const brandLogo = identityQuery.data?.logo?.url ?? null;
+
   // ── Mutations ──
   const curateMutation = trpc.jehuty.curate.useMutation({
     onSuccess: () => feedQuery.refetch(),
@@ -134,6 +153,26 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
   const applyRecoMutation = trpc.jehuty.applyRecommendation.useMutation({
     onSuccess: () => feedQuery.refetch(),
   });
+
+  // Rafraîchit les 6 rubriques (veille, diagnostic, score, audience, recos,
+  // signaux faibles). Toast récapitulatif honnête par rubrique.
+  const refreshMutation = trpc.jehuty.refreshFeed.useMutation({
+    onSuccess: (res) => {
+      const filled = res.sections.filter((s) => s.status === "FILLED");
+      if (filled.length > 0) {
+        toast.success(`Gazette rafraîchie — ${filled.length} rubrique(s) alimentée(s) : ${filled.map((s) => RUBRIC_SHORT[s.section]).join(", ")}.`);
+      } else {
+        toast.info("Gazette rafraîchie — aucune nouvelle dépêche pour l'instant (voir chaque rubrique pour le détail).");
+      }
+      feedQuery.refetch();
+      dashboardQuery.refetch();
+    },
+    onError: (e) => toast.error(`Rafraîchissement impossible : ${e.message}`),
+  });
+  const handleRefresh = () => {
+    if (!strategyId) return;
+    refreshMutation.mutate({ strategyId, withRecos: true });
+  };
 
   const items: JehutyFeedItem[] = feedQuery.data ?? [];
   const dashboard = dashboardQuery.data;
@@ -212,16 +251,38 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
       </header>
 
       {/* ═══ Masthead ═══════════════════════════════════════════════ */}
-      <section className="mb-12 md:mb-16">
-        <h1
-          className="font-display font-semibold tracking-tighter leading-[0.9] text-foreground"
-          style={{ fontSize: "var(--text-display)" }}
-        >
-          La Gazette.
-        </h1>
-        <p className="mt-3 text-foreground-secondary max-w-[60ch]" style={{ fontSize: "var(--text-lg)" }}>
-          La gazette stratégique de votre marque — <span className="font-serif italic">recommandations, signaux, diagnostics</span>, mise à jour en continu.
-        </p>
+      <section className="mb-12 md:mb-16 flex items-start justify-between gap-6 flex-wrap">
+        <div>
+          {brandLogo && (
+            <ArticleThumb
+              src={brandLogo}
+              fit="contain"
+              className="mb-4 h-16 w-16 !rounded-2xl border-2 bg-surface"
+            />
+          )}
+          <h1
+            className="font-display font-semibold tracking-tighter leading-[0.9] text-foreground"
+            style={{ fontSize: "var(--text-display)" }}
+          >
+            La Gazette.
+          </h1>
+          <p className="mt-3 text-foreground-secondary max-w-[60ch]" style={{ fontSize: "var(--text-lg)" }}>
+            La gazette stratégique de votre marque — <span className="font-serif italic">recommandations, signaux, diagnostics</span>, mise à jour en continu.
+          </p>
+        </div>
+        {mode === "brand" && (
+          <button
+            onClick={handleRefresh}
+            disabled={refreshMutation.isPending || !strategyId}
+            className="shrink-0 inline-flex items-center gap-2 rounded-full border border-border-subtle bg-surface-elevated px-5 py-2.5 font-mono text-2xs uppercase tracking-widest text-foreground hover:bg-surface-sunken transition-colors disabled:opacity-50"
+            title="Collecte la veille, examine vos fondations, relève votre audience et votre score, et génère des recommandations."
+          >
+            {refreshMutation.isPending
+              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              : <RefreshCw className="h-3.5 w-3.5" />}
+            {refreshMutation.isPending ? "Rafraîchissement…" : "Rafraîchir la gazette"}
+          </button>
+        )}
       </section>
 
       {/* ═══ Indicators row ═════════════════════════════════════════ */}
@@ -405,6 +466,28 @@ function Indicator({ label, value, hint, accent }: {
       </div>
       <div className="font-mono text-2xs uppercase tracking-widest text-foreground mt-2">{label}</div>
       <div className="text-xs text-foreground-muted mt-0.5">{hint}</div>
+    </div>
+  );
+}
+
+/**
+ * Vignette d'article de veille — image RÉELLE fournie par le flux RSS. Se
+ * retire proprement si l'URL casse (hotlink bloqué, 404) : pas de cadre vide.
+ */
+function ArticleThumb({ src, className, fit = "cover" }: { src: string; className?: string; fit?: "cover" | "contain" }) {
+  const [broken, setBroken] = useState(false);
+  if (broken) return null;
+  return (
+    <div className={`overflow-hidden rounded-lg border border-border-subtle bg-surface-sunken ${className ?? ""}`}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- image externe distante, dimensions inconnues */}
+      <img
+        src={src}
+        alt=""
+        loading="lazy"
+        referrerPolicy="no-referrer"
+        className={`h-full w-full ${fit === "contain" ? "object-contain p-1" : "object-cover"}`}
+        onError={() => setBroken(true)}
+      />
     </div>
   );
 }
@@ -675,6 +758,7 @@ function Dispatch({
 
   return (
     <article className={`flex flex-col ${isPinned ? "border-l-2 border-accent pl-4 -ml-4" : ""}`}>
+      {item.imageUrl && <ArticleThumb src={item.imageUrl} className="mb-3 aspect-[16/9]" />}
       <div className="flex items-center gap-2 font-mono text-2xs uppercase tracking-widest text-foreground-muted mb-2.5">
         <Icon className="h-3 w-3 text-accent" />
         {item.pillarKey && <span className="text-foreground">{item.pillarKey.toUpperCase()}</span>}

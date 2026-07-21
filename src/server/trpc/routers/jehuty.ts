@@ -19,6 +19,7 @@ import {
 } from "@/server/services/jehuty/mappers";
 import type { JehutyFeedItem } from "@/lib/types/jehuty";
 import { governedProcedure } from "@/server/governance/governed-procedure";
+import { refreshBrandGazette } from "@/server/services/jehuty/refresh";
 
 /* lafusee:governed-active */
 
@@ -206,7 +207,7 @@ export const jehutyRouter = createTRPCRouter({
             orderBy: { createdAt: "desc" },
             select: { createdAt: true, data: true },
           });
-          const digestItems = ((digest?.data ?? {}) as { items?: Array<{ title?: string; link?: string; source?: string; publishedAt?: string }> }).items ?? [];
+          const digestItems = ((digest?.data ?? {}) as { items?: Array<{ title?: string; link?: string; source?: string; publishedAt?: string; imageUrl?: string }> }).items ?? [];
           const maxAgeMs = 90 * 24 * 60 * 60 * 1000;
           let rank = 0;
           for (const art of digestItems) {
@@ -303,6 +304,29 @@ export const jehutyRouter = createTRPCRouter({
     }).catch(() => null);
 
     return result;
+  }),
+
+  // ══════════════════════════════════════════════════════════════════
+  // REFRESH — remplit les 6 rubriques de la Gazette (bouton + cron)
+  // ══════════════════════════════════════════════════════════════════
+
+  /**
+   * Rafraîchit la Gazette d'une marque : exécute les producteurs des 6
+   * rubriques (veille externe, diagnostic, score, signaux marché, recos,
+   * signaux faibles) et retourne un statut honnête par rubrique. Ferme le
+   * trou historique : `JEHUTY_FEED_REFRESH` était déclaré sans handler, donc
+   * rien ne peuplait jamais la Gazette. Garde d'ownership : le fondateur ne
+   * rafraîchit que SA marque (ADR-0166).
+   */
+  refreshFeed: governedProcedure({
+    kind: "JEHUTY_FEED_REFRESH",
+    inputSchema: z.object({
+      strategyId: z.string(),
+      withRecos: z.boolean().default(true),
+    }),
+  }).mutation(async ({ input, ctx }) => {
+    await assertStrategyRead(ctx.session.user.id, input.strategyId);
+    return refreshBrandGazette(input.strategyId, { withRecos: input.withRecos, force: true });
   }),
 
   // ══════════════════════════════════════════════════════════════════
