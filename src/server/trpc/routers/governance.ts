@@ -102,8 +102,28 @@ export const governanceRouter = createTRPCRouter({
       const built = await buildCompensatingIntent({
         originalIntentId: input.originalIntentId,
         reason: input.reason,
+        // ADR-0167 — les compensateurs de palier (DEMOTE_*) exigent operatorId.
+        payloadOverride: { operatorId: ctx.session.user.id },
       });
-      const reverseIntent = built.reverseIntent as Record<string, unknown>;
+
+      // ADR-0167 — si le compensateur a un VRAI handler (transition de palier),
+      // on le DISPATCHE (persiste apogeeTier), au lieu de logger un no-op
+      // audit-only (ce serait le piège STUB ADR-0139). Les autres kinds
+      // compensateurs (sans handler à ce jour) gardent le log audit-only.
+      const { PALIER_TRANSITION_KINDS } = await import("@/server/services/mestor/gates/palier-promotion-proofs");
+      if (PALIER_TRANSITION_KINDS.has(built.reverseKind)) {
+        const { emitIntent } = await import("@/server/services/mestor/intents");
+        const result = await emitIntent(built.reverseIntent, { caller: "console:governance:compensate" });
+        if (result.status !== "OK") {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: result.summary ?? result.reason ?? "Compensation refusée.",
+          });
+        }
+        return { ok: true, reverseKind: built.reverseKind, originalKind: built.originalKind, executed: true };
+      }
+
+      const reverseIntent = built.reverseIntent as unknown as Record<string, unknown>;
       const reverseStrategyId = typeof reverseIntent.strategyId === "string"
         ? reverseIntent.strategyId
         : "(none)";
@@ -126,7 +146,7 @@ export const governanceRouter = createTRPCRouter({
         result: { compensatedFrom: input.originalIntentId, originalKind: built.originalKind },
         status: "OK",
       });
-      return { ok: true, reverseKind: built.reverseKind, originalKind: built.originalKind };
+      return { ok: true, reverseKind: built.reverseKind, originalKind: built.originalKind, executed: false };
     } catch (err) {
       throw new TRPCError({
         code: "BAD_REQUEST",

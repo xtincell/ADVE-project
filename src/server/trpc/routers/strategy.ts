@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { classifyTier, MarketScaleSchema } from "@/domain";
+import { classifyTier, MarketScaleSchema, BrandTierSchema, effectiveTier } from "@/domain";
 import type { Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, adminProcedure, operatorProcedure } from "../init";
@@ -10,8 +10,15 @@ import * as auditTrail from "@/server/services/audit-trail";
 import { canAccessStrategy, scopeStrategies } from "@/server/services/operator-isolation";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import * as strategyArchive from "@/server/services/strategy-archive";
-import { emitIntent } from "@/server/services/mestor/intents";
+import { emitIntent, type Intent } from "@/server/services/mestor/intents";
 import { PILLAR_STORAGE_KEYS } from "@/domain";
+import {
+  evaluatePalierTransition,
+  tierTransitionKind,
+  KIND_TRANSITIONS,
+  type TierTransitionDirection,
+} from "@/server/services/mestor/gates/palier-promotion-proofs";
+import { computeEvidenceBreakdown } from "@/server/services/advertis-scorer/evidence";
 /* lafusee:governed-active */
 
 export const strategyRouter = createTRPCRouter({
@@ -1307,6 +1314,150 @@ export const strategyRouter = createTRPCRouter({
     });
     return { revoked: true };
   }),
+
+  // ══════════════════════════════════════════════════════════════════
+  // ADR-0167 — Moteur de trajectoire APOGEE (transitions de palier)
+  // ══════════════════════════════════════════════════════════════════
+
+  /**
+   * Aperçu dry-run : palier officiel courant, palier impliqué par le score, et
+   * pour chaque direction (promouvoir/rétrograder) si elle est permise + la
+   * raison chiffrée (pour activer/désactiver le bouton sans émettre). Lecture
+   * seule — ne ré-score jamais.
+   */
+  tierTransitionPreview: operatorProcedure
+    .input(z.object({ strategyId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      await assertStrategyRead(ctx.session.user.id, input.strategyId);
+      const strategy = await ctx.db.strategy.findUnique({
+        where: { id: input.strategyId },
+        select: { apogeeTier: true, advertis_vector: true, marketScale: true },
+      });
+      if (!strategy) throw new TRPCError({ code: "NOT_FOUND", message: "Marque introuvable" });
+
+      const composite = (strategy.advertis_vector as { composite?: number } | null)?.composite ?? 0;
+      const currentTier = effectiveTier({ apogeeTier: strategy.apogeeTier, composite });
+      const breakdown = await computeEvidenceBreakdown(input.strategyId);
+
+      const evalDir = (direction: TierTransitionDirection) => {
+        const kind = tierTransitionKind(currentTier, direction);
+        if (!kind) return null; // apex (promote) ou plancher (demote)
+        const meta = KIND_TRANSITIONS[kind]!;
+        const verdict = evaluatePalierTransition({
+          kind,
+          currentEffectiveTier: currentTier,
+          composite,
+          superfanCount: breakdown.superfanCount,
+          evidence: breakdown.evidence,
+          superfansTarget: breakdown.superfansTarget,
+          marketScaleDeclared: strategy.marketScale != null,
+        });
+        return { kind, targetTier: meta.toTier, allowed: verdict.verdict === "PASS", reason: verdict.reason ?? "" };
+      };
+
+      return {
+        currentTier,
+        impliedTier: classifyTier(composite),
+        composite,
+        apogeeTierSet: strategy.apogeeTier != null,
+        superfanCount: breakdown.superfanCount,
+        superfansTarget: breakdown.superfansTarget,
+        marketScaleDeclared: strategy.marketScale != null,
+        promote: evalDir("PROMOTE"),
+        demote: evalDir("DEMOTE"),
+      };
+    }),
+
+  /**
+   * Historique de trajectoire (Loi 1) : les transitions de palier gouvernées,
+   * lues depuis IntentEmission (registre append-only hash-chaîné). Pas de
+   * modèle dédié — la hash-chain EST le registre.
+   */
+  tierTrajectory: operatorProcedure
+    .input(z.object({ strategyId: z.string().min(1), limit: z.number().min(1).max(100).default(30) }))
+    .query(async ({ ctx, input }) => {
+      await assertStrategyRead(ctx.session.user.id, input.strategyId);
+      const rows = await ctx.db.intentEmission.findMany({
+        where: { strategyId: input.strategyId, intentKind: { in: Object.keys(KIND_TRANSITIONS) } },
+        orderBy: { emittedAt: "desc" },
+        take: input.limit,
+        select: { id: true, intentKind: true, payload: true, result: true, status: true, emittedAt: true },
+      });
+      return rows.map((r) => {
+        const meta = KIND_TRANSITIONS[r.intentKind];
+        const payload = (r.payload ?? {}) as { reason?: string; operatorId?: string };
+        // IntentEmission.status column peut rester PENDING ; l'issue réelle vit
+        // dans result.status (OK / VETOED). On préfère result quand présent.
+        const resultStatus = (r.result as { status?: string } | null)?.status;
+        return {
+          id: r.id,
+          kind: r.intentKind,
+          from: meta?.fromTier ?? null,
+          to: meta?.toTier ?? null,
+          direction: meta?.direction ?? null,
+          reason: payload.reason ?? null,
+          actor: payload.operatorId ?? null,
+          outcome: resultStatus ?? r.status,
+          emittedAt: r.emittedAt,
+        };
+      });
+    }),
+
+  /**
+   * Décide une transition de palier : résout le kind depuis le palier EFFECTIF
+   * courant + la direction, puis émet l'Intent gouverné (spine hash-chaîné,
+   * gate PALIER_PROMOTION_PROOFS en pré-flight). Un refus du gate remonte au
+   * front avec sa raison chiffrée. Voie bus (kind dynamique parmi les 10) — pas
+   * `governedProcedure` (qui lie un kind fixe).
+   */
+  transitionTier: operatorProcedure
+    .input(z.object({
+      strategyId: z.string().min(1),
+      direction: z.enum(["PROMOTE", "DEMOTE"]),
+      reason: z.string().min(10).max(500),
+      expectedFromTier: BrandTierSchema.optional(),
+      evidenceRef: z.string().max(300).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      await assertStrategyRead(ctx.session.user.id, input.strategyId);
+      const strategy = await ctx.db.strategy.findUnique({
+        where: { id: input.strategyId },
+        select: { apogeeTier: true, advertis_vector: true },
+      });
+      if (!strategy) throw new TRPCError({ code: "NOT_FOUND", message: "Marque introuvable" });
+
+      const composite = (strategy.advertis_vector as { composite?: number } | null)?.composite ?? 0;
+      const from = effectiveTier({ apogeeTier: strategy.apogeeTier, composite });
+      const kind = tierTransitionKind(from, input.direction);
+      if (!kind) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: input.direction === "PROMOTE"
+            ? `« ${from} » est le palier apex — aucune promotion possible.`
+            : `« ${from} » est le palier plancher — aucune rétrogradation possible.`,
+        });
+      }
+
+      // Kind résolu au runtime (garanti dans KIND_TRANSITIONS) → cast vers l'union.
+      const intent = {
+        kind,
+        strategyId: input.strategyId,
+        operatorId: ctx.session.user.id,
+        reason: input.reason,
+        expectedFromTier: input.expectedFromTier,
+        evidenceRef: input.evidenceRef,
+      } as unknown as Intent;
+
+      const result = await emitIntent(intent, { caller: "strategy-router:transitionTier" });
+      if (result.status !== "OK") {
+        // VETOED (gate) / FAILED — remonter la raison chiffrée honnête.
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: result.summary ?? result.reason ?? "Transition de palier refusée.",
+        });
+      }
+      return result.output;
+    }),
 });
 
 function classifyScore(composite: number): string {
