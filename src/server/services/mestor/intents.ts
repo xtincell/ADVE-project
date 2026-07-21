@@ -1,4 +1,4 @@
-import { ADVE_STORAGE_KEYS } from "@/domain";
+import { ADVE_STORAGE_KEYS, type BrandTier } from "@/domain";
 
 /**
  * MESTOR — Intent Contract
@@ -1018,6 +1018,34 @@ export type Intent =
       /** Operator rationale, free-form. Persists in IntentEmission.payload. */
       reason: string;
     }
+  // ── ADR-0167 — Transitions de palier APOGEE (moteur de trajectoire) ──
+  // Les 10 kinds PROMOTE/DEMOTE (LATENT↔FRAGILE↔ORDINAIRE↔FORTE↔CULTE↔ICONE)
+  // font transiter Strategy.apogeeTier (ratchet officiel). Gate pré-flight
+  // PALIER_PROMOTION_PROOFS (composite > seuil + preuves apex). Handler
+  // brand-tier-transition. DEMOTE = compensateur explicite (Loi 1).
+  | {
+      kind:
+        | "PROMOTE_LATENT_TO_FRAGILE"
+        | "PROMOTE_FRAGILE_TO_ORDINAIRE"
+        | "PROMOTE_ORDINAIRE_TO_FORTE"
+        | "PROMOTE_FORTE_TO_CULTE"
+        | "PROMOTE_CULTE_TO_ICONE"
+        | "DEMOTE_FRAGILE_TO_LATENT"
+        | "DEMOTE_ORDINAIRE_TO_FRAGILE"
+        | "DEMOTE_FORTE_TO_ORDINAIRE"
+        | "DEMOTE_CULTE_TO_FORTE"
+        | "DEMOTE_ICONE_TO_CULTE";
+      strategyId: string;
+      operatorId: string;
+      /** Justification opérateur, persistée dans IntentEmission.payload + apogeeTierReason. */
+      reason: string;
+      /** Concurrence optimiste : palier effectif affiché à l'opérateur. */
+      expectedFromTier?: BrandTier;
+      /** Preuve citée par l'opérateur (documentaire, non requise par le gate). */
+      evidenceRef?: string;
+      /** Rempli par la voie compensateur (governance.compensate). */
+      compensatedFrom?: string;
+    }
   // ── Phase 23 (ADR-0081) — Attribution model calibration run ─────────
   // Runs the pure-TS logistic regression in
   // `services/campaign-tracker/superfan-attribution.ts` against real
@@ -1384,6 +1412,20 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     case "THOT_UPSERT_ZONE_INDEX":
     case "THOT_UPSERT_PROVIDER_RATE":
       return [];
+    // ADR-0167 — Transitions de palier APOGEE : écrivent Strategy.apogeeTier
+    // (ratchet officiel) ; aucun pilier ADVE-RTIS muté. Ce groupe est le garde
+    // d'exhaustivité runtime des 10 kinds (le switch n'a pas de `default`).
+    case "PROMOTE_LATENT_TO_FRAGILE":
+    case "PROMOTE_FRAGILE_TO_ORDINAIRE":
+    case "PROMOTE_ORDINAIRE_TO_FORTE":
+    case "PROMOTE_FORTE_TO_CULTE":
+    case "PROMOTE_CULTE_TO_ICONE":
+    case "DEMOTE_FRAGILE_TO_LATENT":
+    case "DEMOTE_ORDINAIRE_TO_FRAGILE":
+    case "DEMOTE_FORTE_TO_ORDINAIRE":
+    case "DEMOTE_CULTE_TO_FORTE":
+    case "DEMOTE_ICONE_TO_CULTE":
+      return [];
   }
 }
 
@@ -1448,6 +1490,30 @@ async function preflightCalibrationSnapshot(
     kind: intent.kind,
     toState: intent.toState,
     calibrationSnapshotRef: intent.calibrationSnapshotRef,
+  });
+  if (verdict.verdict === "BLOCK") {
+    return { status: "VETOED", reason: verdict.reason };
+  }
+  return null;
+}
+
+/**
+ * ADR-0167 — PALIER_PROMOTION_PROOFS pre-flight. Pour les 10 kinds de
+ * transition de palier, refuse (VETOED) une promotion non méritée (score sous
+ * le seuil, preuves apex insuffisantes) ou une transition depuis un mauvais
+ * palier. Miroir de `preflightCalibrationSnapshot`. Lecture seule.
+ */
+async function preflightPalierPromotionProofs(
+  intent: Intent,
+): Promise<{ status: "VETOED"; reason: string } | null> {
+  const { PALIER_TRANSITION_KINDS, palierPromotionProofsGate } = await import(
+    "./gates/palier-promotion-proofs"
+  );
+  if (!PALIER_TRANSITION_KINDS.has(intent.kind)) return null;
+  const verdict = await palierPromotionProofsGate({
+    kind: intent.kind,
+    strategyId: intent.strategyId,
+    expectedFromTier: "expectedFromTier" in intent ? intent.expectedFromTier : undefined,
   });
   if (verdict.verdict === "BLOCK") {
     return { status: "VETOED", reason: verdict.reason };
@@ -1685,6 +1751,22 @@ export async function emitIntent(
       startedAt,
       completedAt: new Date().toISOString(),
       reason: "CALIBRATION_SNAPSHOT_REQUIRED",
+    };
+    await close(emissionId, result, "VETOED");
+    return result;
+  }
+
+  // ── ADR-0167 — PALIER_PROMOTION_PROOFS pre-flight (transitions de palier) ──
+  const palierCheck = await preflightPalierPromotionProofs(intent);
+  if (palierCheck) {
+    const result: IntentResult = {
+      intentKind: intent.kind,
+      strategyId: intent.strategyId,
+      status: "VETOED",
+      summary: palierCheck.reason,
+      startedAt,
+      completedAt: new Date().toISOString(),
+      reason: "PALIER_PROMOTION_PROOFS",
     };
     await close(emissionId, result, "VETOED");
     return result;

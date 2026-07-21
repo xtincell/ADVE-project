@@ -134,6 +134,25 @@ export async function execute(intent: Intent): Promise<IntentResult> {
         return wrap({ ...base, ...(await promotePivotSubcluster(intent)) });
       }
 
+      // ── ADR-0167 — Transitions de palier APOGEE (moteur de trajectoire) ──
+      // Les 10 kinds partagent un handler. Le gate PALIER_PROMOTION_PROOFS a
+      // déjà validé en pré-flight ; le handler persiste Strategy.apogeeTier.
+      case "PROMOTE_LATENT_TO_FRAGILE":
+      case "PROMOTE_FRAGILE_TO_ORDINAIRE":
+      case "PROMOTE_ORDINAIRE_TO_FORTE":
+      case "PROMOTE_FORTE_TO_CULTE":
+      case "PROMOTE_CULTE_TO_ICONE":
+      case "DEMOTE_FRAGILE_TO_LATENT":
+      case "DEMOTE_ORDINAIRE_TO_FRAGILE":
+      case "DEMOTE_FORTE_TO_ORDINAIRE":
+      case "DEMOTE_CULTE_TO_FORTE":
+      case "DEMOTE_ICONE_TO_CULTE": {
+        const { applyBrandTierTransition } = await import(
+          "@/server/services/brand-tier-transition/handler"
+        );
+        return wrap({ ...base, ...(await applyBrandTierTransition(intent)) });
+      }
+
       // ── Phase 23 Epic 3 Story 3.7 (ADR-0078 + ADR-0060) — Manual Overton delta tag ──
       case "OPERATOR_TAG_OVERTON_DELTA": {
         const { operatorTagOvertonDelta } = await import(
