@@ -6,6 +6,7 @@ import { trpc } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";
 import { AdvertisRadar } from "@/components/shared/advertis-radar";
 import { ScoreBadge } from "@/components/shared/score-badge";
+import { ApogeeTrajectoryPanel } from "@/components/console/apogee-trajectory-panel";
 import { PillarProgress } from "@/components/shared/pillar-progress";
 import { StatusBadge } from "@/components/shared/status-badge";
 import {
@@ -233,6 +234,9 @@ export default function StrategyDetailPage({
           )}
         </div>
       </section>
+
+      {/* ─── Trajectoire APOGEE (ADR-0167) ─── */}
+      <ApogeeTrajectoryPanel strategyId={strategyId} />
 
       {/* ─── 8 Pillar Cards ─── */}
       <section className="space-y-4">
