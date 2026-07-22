@@ -10,6 +10,19 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.242 — feat(oracle): « penser produit » — le système produit dans le pilier Valeur (2026-07-22)
+
+**Chantier « La Fusée compile » Phase 2. Mandat opérateur : « La Fusée doit penser produit dans le pilier Valeur. » Le pilier V modélisait l'ÉCONOMIE du produit (catalogue, ladder, unit-economics, MVP, IP) mais pas son MÉCANISME interne — le « Système Palais » de SPAWT (5 axes × 13 archétypes × 5 stades × modes × cartes) vivait en prose éparse. [ADR-0170](docs/governance/adr/0170-product-system-pillar-v.md).**
+
+- **Domaine Layer-0 `src/domain/product-system.ts`** : foyer générique (pas SPAWT-spécifique) au mécanisme produit — 6 dimensions canoniques (`axes`/`archetypes`/`progressionStages`/`modes`/`artifacts`/`mechanics`) + `coreConcept`, `ProductSystemSchema` Zod pur (idiome `brand-tier`/`brand-nature-archetypes`), helpers `productSystemDepth`/`isProductSystemEmpty`. Toutes dimensions optionnelles — un produit physique simple laisse le reste vide, **zéro fabrication**.
+- **`v.productSystem`** composé dans `PillarVSchema` (**additif, 0 migration** — content JSON ; Loi 1, marques existantes inchangées) + propagation éditable : `BIBLE_V` (`canonicalCode V8`, `STRATEGIC_REWRITE`) + `FieldDef` structuré dans `PILLAR_V`. Édition via `OPERATOR_AMEND_PILLAR` existant (décision opérateur, ADR-0085).
+- **Visible au cockpit** : section « Système produit » dans `pillar-v-fields.tsx` (composant `ProductSystem` — `coreConcept` + une carte par dimension renseignée, empty-state honnête). Le mécanisme ne dort plus en prose.
+- **Glory tool `product-system-architect`** (HYBRID, `defineHybridTool` → parité manuelle ADR-0060, `outputSchema = ProductSystemSchema`) : lit A/D/V, propose un système produit structuré, invocable via `glory.executeHybrid` (**aucun nouveau Intent kind**) ; prompt anti-fabrication ; sortie = draft appliqué par l'opérateur, jamais auto-write ADVE. Cap APOGEE 7/7 (tutelle Artemis).
+- **Vérifié** : le schéma accueille le Palais RÉEL de SPAWT (brand book v1.0) ; `PillarV` l'accepte. Tests `product-system` (6) + `pillar-schema-coherence`/`glory-tools`(56 CORE inchangé)/`phase22-glory-hybrid` verts. tsc 0 · lint 0. 0 modèle · 0 migration · 0 Intent kind · **1 Glory tool (EXTENDED 149→150)** · 1 variable canonique (V8).
+- **Déféré (RESIDUAL-DEBT)** : seed du Palais SPAWT complet (via ingestion Phase 3, pour ne pas fabriquer) ; annotation `applicableGloryTools` par nature ; rendu du système produit dans le Brand Book PDF (Phase 4).
+
+---
+
 ## v6.27.241 — feat(oracle): les livrables sortent aux couleurs de la marque (brand-skinning) (2026-07-22)
 
 **Chantier « La Fusée compile » Phase 1 (débloqueur). Les Brand Books réels fournis (Motion19/SPAWT) ont rendu vivant le constat : La Fusée est forte en intelligence, faible en production. La Bible de Marque compilait déjà honnêtement `BRANDBOOK-D`, mais rendait dans la palette UPgraders EN DUR ; l'Oracle PDF était noir/blanc sans identité. [ADR-0169](docs/governance/adr/0169-brand-skinned-deliverable-rendering.md).**

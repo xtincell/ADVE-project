@@ -334,7 +334,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Services backend — 119
+## Services backend — 120
 
 - `src/server/services/advertis-connectors/` ✓ manifest
 - `src/server/services/advertis-scorer/` ✓ manifest
@@ -348,6 +348,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/board-export/` ✓ manifest
 - `src/server/services/boot-sequence/` ✓ manifest
 - `src/server/services/brand-node/` ✓ manifest
+- `src/server/services/brand-theme/`
 - `src/server/services/brand-tier-transition/`
 - `src/server/services/brand-vault/` ✓ manifest
 - `src/server/services/brief-ingest/` ✓ manifest

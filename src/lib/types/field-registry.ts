@@ -274,6 +274,52 @@ const PILLAR_V: Record<string, FieldDef> = {
   coutClientIntangible: stringsField("Cout client intangible"),
   valeurMarqueTangible: stringsField("Valeur marque tangible"),
   valeurMarqueIntangible: stringsField("Valeur marque intangible"),
+  // ADR-0170 — le SYSTÈME produit (mécanisme interne, distinct du catalogue).
+  productSystem: {
+    kind: "object", label: "Système produit",
+    fields: {
+      coreConcept: textField("Concept central", { multiline: true }),
+      axes: {
+        kind: "array-of-objects", label: "Axes du mécanisme", itemLabel: "Axe",
+        itemFields: {
+          label: textField("Libellé"), poleLow: textField("Pôle bas"),
+          poleHigh: textField("Pôle haut"), description: textField("Description"),
+        },
+      },
+      archetypes: {
+        kind: "array-of-objects", label: "Archétypes", itemLabel: "Archétype",
+        itemFields: {
+          name: textField("Nom"), axesSignature: textField("Signature d'axes"),
+          essence: textField("Essence"), progressionNames: stringsField("Noms progressifs"),
+        },
+      },
+      progressionStages: {
+        kind: "array-of-objects", label: "Stades de progression", itemLabel: "Stade",
+        itemFields: {
+          name: textField("Nom"), threshold: textField("Seuil"),
+          signals: stringsField("Signaux"), unlocks: stringsField("Débloque"),
+        },
+      },
+      modes: {
+        kind: "array-of-objects", label: "Modes d'usage", itemLabel: "Mode",
+        itemFields: {
+          name: textField("Nom"), trigger: textField("Déclencheur"),
+          format: textField("Format"), description: textField("Description"),
+        },
+      },
+      artifacts: {
+        kind: "array-of-objects", label: "Artefacts / collectibles", itemLabel: "Artefact",
+        itemFields: {
+          name: textField("Nom"), kind: textField("Type"),
+          description: textField("Description"), socialSignal: textField("Signal social"),
+        },
+      },
+      mechanics: {
+        kind: "array-of-objects", label: "Règles fondatrices", itemLabel: "Règle",
+        itemFields: { name: textField("Nom"), rule: textField("Règle", { multiline: true }) },
+      },
+    },
+  },
 };
 
 // ─── PILLAR E — Engagement ───────────────────────────────────────────────

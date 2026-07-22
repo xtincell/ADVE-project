@@ -154,9 +154,12 @@
   - **Phase 1 résidus** : embarquement réel des **fichiers de police** (jsPDF `addFont` depuis
     `TYPOGRAPHY_SYSTEM.files[]` — réseau + TTF-only + souvent absent ; helvetica en attendant) ;
     skinning de la voie **puppeteer** `oracle-pdf.ts` (via le CSS de la route `/shared/strategy`).
-  - **Phase 2** — « penser produit » : `v.productSystem` (domaine `product-system.ts` + schéma + bible +
-    Glory `product-system-architect` HYBRID) pour modéliser le mécanisme produit (le « Système Palais » de
-    SPAWT vit en prose éparse aujourd'hui).
+  - **Phase 2 ✅ SHIPPÉE** ([ADR-0170](adr/0170-product-system-pillar-v.md), v6.27.242) : `v.productSystem`
+    (domaine `product-system.ts` + schéma + bible V8 + field-registry + renderer cockpit + Glory
+    `product-system-architect` HYBRID) modélise le mécanisme produit. **Résidus Phase 2** : seed du Palais
+    SPAWT complet dans `spawt-canon.ts` (déféré à l'ingestion Phase 3 — l'encoder à la main risquerait la
+    fabrication) ; annotation `applicableGloryTools` du tool par nature (`brand-nature-archetypes.ts` —
+    discovery UI, le tool est déjà invocable par slug).
   - **Phase 3** — ingestion d'un Brand Book officiel → piliers + vault (extracteur structuré manual-first,
     kind `BRAND_BOOK`, flag `certainty=OFFICIAL`, intent gouverné) ; zéro fabrication (null sur absence).
   - **Phase 4** — livrable **Brand Book complet** deux-strates (identité + système produit), gabarit

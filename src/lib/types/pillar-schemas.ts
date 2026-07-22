@@ -6,6 +6,7 @@
 
 import { z } from "zod";
 import { PILLAR_KEYS, ADVE_KEYS } from "@/domain";
+import { ProductSystemSchema } from "@/domain/product-system";
 import {
   ARCHETYPES, SCHWARTZ_VALUES, LIFE_FORCE_8, AARRR_STAGES,
   DEVOTION_LEVELS, CHANNELS, TOUCHPOINT_TYPES, RITUAL_TYPES,
@@ -581,6 +582,12 @@ export const PillarVSchema = z.object({
 
   // Unit Economics
   unitEconomics: UnitEconomicsSchema,
+
+  // ── Système produit (ADR-0170 — « penser produit dans le pilier Valeur ») ──
+  // Le MÉCANISME interne du produit (axes, archétypes, progression, modes,
+  // artefacts, règles) — distinct du catalogue/économie ci-dessus. Générique,
+  // toutes dimensions optionnelles (un produit sans mécanique gamifiée reste vide).
+  productSystem: ProductSystemSchema.optional(),
 
   // Promesse de valeur
   promesseDeValeur: textMedium.optional(),
