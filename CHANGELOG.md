@@ -1,5 +1,13 @@
 # Changelog — La Fusee
 
+## v6.27.260 — docs(governance): clôture de la boucle adversariale — résidus tracés + suite verte (2026-07-22)
+
+**Audit adversarial « TOUT » convergé : toutes les fuites CRITIQUES/HAUTES fermées et shippées (10 commits), le reste tracé avec plan + déclencheur.**
+
+- `docs(governance)` RESIDUAL-DEBT §Audit 2026-07-22 complété : gouvernance sous-gouvernée (B1 Q3 lint réel, B2 mutations directes non gouvernées, B3 13 kinds hors-registre), test-net (T2 DS-canonical vacant), moteur Compensate réel (G-build), provenance ingestion LLM (C3), tier par-marque (F5), devise provider (F6), replay cycle (F7), unions computed (E5), `text-white` mode jour (J4) — chacun borné (quoi/où/comment/déclencheur), aucun risque de build-breakage introduit dans la boucle.
+- **Suite complète verte** : 3047 tests unitaires (284 fichiers) · tsc 0 · cycles 0 · `prisma validate` ok. Cap APOGEE 7/7 préservé sur toute la boucle · 0 LLM ajouté.
+
+
 ## v6.27.259 — fix(ingestion): anti-misfile du persister brand book (2026-07-22)
 
 **Audit adversarial (boucle d'alignement) — chaque datum du brand book va dans SON champ, une seule fois ; un misfile est pire qu'un gap honnête.**
