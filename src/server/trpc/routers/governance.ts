@@ -106,12 +106,15 @@ export const governanceRouter = createTRPCRouter({
         payloadOverride: { operatorId: ctx.session.user.id },
       });
 
-      // ADR-0167 — si le compensateur a un VRAI handler (transition de palier),
-      // on le DISPATCHE (persiste apogeeTier), au lieu de logger un no-op
-      // audit-only (ce serait le piège STUB ADR-0139). Les autres kinds
-      // compensateurs (sans handler à ce jour) gardent le log audit-only.
+      // ADR-0167/0176 — si le compensateur a un VRAI handler, on le DISPATCHE
+      // (transition de palier → persiste apogeeTier ; ROLLBACK_PILLAR →
+      // restaure Pillar.content depuis PillarVersion via le gateway) au lieu de
+      // logger un no-op audit-only (ce serait le piège STUB ADR-0139). Les
+      // compensateurs sans handler (ROLLBACK_ADVE/RTIS_CASCADE, DISCARD/REVERT
+      // recos — cf. RESIDUAL-DEBT §G) gardent le log audit-only honnête.
       const { PALIER_TRANSITION_KINDS } = await import("@/server/services/mestor/gates/palier-promotion-proofs");
-      if (PALIER_TRANSITION_KINDS.has(built.reverseKind)) {
+      const DISPATCHABLE_COMPENSATORS = new Set<string>([...PALIER_TRANSITION_KINDS, "ROLLBACK_PILLAR"]);
+      if (DISPATCHABLE_COMPENSATORS.has(built.reverseKind)) {
         const { emitIntent } = await import("@/server/services/mestor/intents");
         const result = await emitIntent(built.reverseIntent, { caller: "console:governance:compensate" });
         if (result.status !== "OK") {

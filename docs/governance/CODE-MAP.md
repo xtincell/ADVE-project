@@ -64,7 +64,7 @@ Ces correspondances évitent la réinvention :
 - **GloryOutput** (12 fields)
 - **BrandAsset** (50 fields) — BrandAsset = vault de la marque, réceptacle unique pour TOUS les actifs.  Couvre deux familles :  - Actifs **intellectue
 - **Pillar** (18 fields)
-- **PillarVersion** (9 fields)
+- **PillarVersion** (10 fields)
 - **BrandDataSource** (16 fields)
 - **Invoice** (14 fields)
 - **Driver** (20 fields)

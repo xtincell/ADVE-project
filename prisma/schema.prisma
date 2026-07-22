@@ -1756,6 +1756,12 @@ model PillarVersion {
   diff     Json?
   author   String?
   reason   String?
+  /// G (ADR-0176) — l'IntentEmission qui a produit cette écriture. Chaque
+  /// PillarVersion capture le contenu PRÉ-écriture ; l'`intentId` permet à
+  /// ROLLBACK_PILLAR de restaurer EXACTEMENT l'état d'avant l'intent visé
+  /// (au lieu de deviner « la dernière version »). Additif nullable — les
+  /// versions antérieures au suivi ne sont pas restaurables avec précision.
+  intentId String?
 
   pillar Pillar @relation(fields: [pillarId], references: [id], onDelete: Cascade)
 
@@ -1763,6 +1769,7 @@ model PillarVersion {
 
   @@index([pillarId])
   @@index([createdAt])
+  @@index([intentId])
 }
 
 model BrandDataSource {

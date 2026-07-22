@@ -1058,6 +1058,21 @@ export type Intent =
       /** Rempli par la voie compensateur (governance.compensate). */
       compensatedFrom?: string;
     }
+  // ── G (ADR-0176) — Compensateur RÉEL d'une écriture pilier ──────────
+  // Restaure Pillar.content à l'état d'AVANT l'intent `compensatedFrom`, depuis
+  // l'instantané pré-écriture (PillarVersion stampée `intentId`). Écriture
+  // gouvernée via le gateway (C5), undo forward-moving (Loi 1). Handler
+  // pillar-gateway/rollback. Émis par governance.compensate (WRITE_PILLAR undo).
+  | {
+      kind: "ROLLBACK_PILLAR";
+      strategyId: string;
+      /** Pilier ciblé (propagé depuis le payload WRITE_PILLAR d'origine). */
+      key: string;
+      /** IntentEmission de l'écriture à annuler. */
+      compensatedFrom: string;
+      reason: string;
+      operatorId?: string;
+    }
   // ── Phase 23 (ADR-0081) — Attribution model calibration run ─────────
   // Runs the pure-TS logistic regression in
   // `services/campaign-tracker/superfan-attribution.ts` against real
@@ -1351,6 +1366,9 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
       return [];
     case "OPERATOR_AMEND_PILLAR":
       return [intent.pillarKey];
+    // G (ADR-0176) — restaure le contenu du pilier `key` (staleness cascade via le gateway).
+    case "ROLLBACK_PILLAR":
+      return [intent.key.toLowerCase() as PillarKey];
     case "INGEST_BRAND_BOOK":
       return ["a", "d", "v"]; // le brand book alimente A/D/V (staleness cascade en découle)
     case "OPERATOR_ARCHIVE_STRATEGY":

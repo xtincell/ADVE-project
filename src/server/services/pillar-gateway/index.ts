@@ -37,6 +37,13 @@ interface PillarWriteAuthor {
   system: AuthorSystem;
   userId?: string;
   reason: string;
+  /**
+   * G (ADR-0176) — IntentEmission courante (posée par governedProcedure via
+   * `ctx.intentId`). Stampée sur la PillarVersion créée par cette écriture pour
+   * permettre un ROLLBACK_PILLAR PRÉCIS (restaurer l'état d'avant CET intent).
+   * Optionnel : les écritures non gouvernées / hors requête ne la portent pas.
+   */
+  intentId?: string;
 }
 
 type PillarWriteOperation =
@@ -584,11 +591,14 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
       }
 
       // ── VERSION: create PillarVersion ────────────────────────────
+      // La PillarVersion capture le contenu PRÉ-écriture, stampé de l'intent
+      // courant → ROLLBACK_PILLAR restaure EXACTEMENT cet état (G, ADR-0176).
       await createVersion({
         pillarId: pillar.id,
         content: newContent,
         author: `${author.system}${author.userId ? `:${author.userId}` : ""}`,
         reason: author.reason,
+        intentId: author.intentId,
       });
 
       const newVersion = (pillar.currentVersion ?? 1) + 1;

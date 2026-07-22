@@ -153,6 +153,29 @@ export async function execute(intent: Intent): Promise<IntentResult> {
         return wrap({ ...base, ...(await applyBrandTierTransition(intent)) });
       }
 
+      // ── G (ADR-0176) — Compensateur RÉEL d'une écriture pilier ──────────
+      // Restaure Pillar.content à l'état d'avant `compensatedFrom` via le
+      // gateway (C5, undo forward-moving). Refus honnête si l'instantané
+      // pré-écriture manque (écriture antérieure au suivi intentId).
+      case "ROLLBACK_PILLAR": {
+        const { rollbackPillar } = await import(
+          "@/server/services/pillar-gateway/rollback"
+        );
+        const r = await rollbackPillar({
+          strategyId: intent.strategyId,
+          pillarKey: intent.key,
+          compensatedFrom: intent.compensatedFrom,
+          operatorId: intent.operatorId,
+          reason: intent.reason,
+        });
+        return wrap({
+          ...base,
+          status: r.restored ? "OK" : "FAILED",
+          summary: r.reason,
+          output: r as unknown as IntentResult["output"],
+        });
+      }
+
       // ── Phase 23 Epic 3 Story 3.7 (ADR-0078 + ADR-0060) — Manual Overton delta tag ──
       case "OPERATOR_TAG_OVERTON_DELTA": {
         const { operatorTagOvertonDelta } = await import(

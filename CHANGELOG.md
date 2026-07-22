@@ -1,5 +1,15 @@
 # Changelog — La Fusee
 
+## v6.27.262 — feat(governance): ROLLBACK_PILLAR — moteur de compensation RÉEL (Loi 1 a des dents) (2026-07-22)
+
+**Le bouton « Compenser » RESTAURE réellement un pilier depuis l'historique PillarVersion — fini le no-op audit-only (audit adversarial « TOUT » — bloc G, build, zéro LLM).**
+
+- **Trou fermé** ([ADR-0176](docs/governance/adr/0176-real-rollback-pillar-compensation.md)) : `ROLLBACK_PILLAR` était le compensateur DÉCLARÉ de `WRITE_PILLAR` (COMPENSATING_MAP + catalogue + SLO) mais SANS handler → `governance.compensate` n'enregistrait qu'une ligne d'audit (`executed:false`), rien n'était restauré. La Loi 1 (conservation d'altitude) était sans dents pour les écritures pilier.
+- **Lien de version** : `PillarVersion.intentId` (additif nullable, migration `20260722220000`, backfill-safe + index). Le gateway stampe l'IntentEmission courante (`author.intentId` ← `ctx.intentId` de governedProcedure) sur la version. Comme `createVersion` snapshotte le contenu PRÉ-écriture, la `PillarVersion(intentId=X)` porte EXACTEMENT l'état à restaurer pour annuler l'intent X.
+- **Handler réel** (`pillar-gateway/rollback.ts`) : lit l'instantané lié et **réécrit son contenu via `writePillarAndScore`** (le gateway, C5) → écriture gouvernée + scorée + cascade de staleness, **undo forward-moving** (historique préservé, ré-annulable). Déterministe. Refus HONNÊTE si aucun instantané lié (écriture antérieure au suivi) — jamais de restauration à l'aveugle (pas d'undo du mauvais écrasement).
+- **Câblage** : union `Intent` + case commandant + `intentTouchesPillars` (switch sans default → `tsc` prouve le câblage) + `buildCompensatingIntent` propage `key` d'origine + `governance.compensate` dispatch `DISPATCHABLE_COMPENSATORS = PALIER ∪ {ROLLBACK_PILLAR}` (`executed:true` au succès).
+- **Vérif** : `rollback-pillar-wired.test.ts` (HARD, 7 cas — déclaré/SLO/compensateur/dispatché/restaure-via-gateway/refuse-honnête/propage-key). tsc 0 · lint 0 · cycles 0 · 2614 tests governance+services verts. Cap APOGEE 7/7 préservé. Restants tracés (RESIDUAL-DEBT §G) : ROLLBACK_ADVE/RTIS_CASCADE + DISCARD/REVERT recos (audit-only) + `pillar.rollbackVersion` bare-write (→ B2).
+
 ## v6.27.261 — fix(thot): devise du taux prestataire honorée + anti-rejeu du cycle d'abonnement (2026-07-22)
 
 **Deux fuites d'argent du chemin Thot fermées (audit adversarial « TOUT » — F6/F7, build, zéro LLM).**

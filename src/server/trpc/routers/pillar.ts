@@ -181,7 +181,13 @@ export const pillarRouter = createTRPCRouter({
         strategyId: input.strategyId,
         pillarKey: input.key.toLowerCase() as PK,
         operation: { type: "REPLACE_FULL", content: sanitizedContent as Record<string, unknown> },
-        author: { system: "OPERATOR", userId: ctx.session.user.id, reason: "manual_edit" },
+        author: {
+          system: "OPERATOR",
+          userId: ctx.session.user.id,
+          reason: "manual_edit",
+          // G (ADR-0176) — lie la PillarVersion à cet intent pour un rollback précis.
+          intentId: (ctx as { intentId?: string }).intentId,
+        },
         options: { confidenceDelta: 0.1 },
       });
 
@@ -198,7 +204,13 @@ export const pillarRouter = createTRPCRouter({
         strategyId: input.strategyId,
         pillarKey: input.key.toLowerCase() as PK,
         operation: { type: "MERGE_DEEP", patch: input.content as Record<string, unknown> },
-        author: { system: "OPERATOR", userId: ctx.session.user.id, reason: "partial_edit" },
+        author: {
+          system: "OPERATOR",
+          userId: ctx.session.user.id,
+          reason: "partial_edit",
+          // G (ADR-0176) — lie la PillarVersion à cet intent pour un rollback précis.
+          intentId: (ctx as { intentId?: string }).intentId,
+        },
       });
 
       const validation = validatePillarPartial(input.key, result.newContent);

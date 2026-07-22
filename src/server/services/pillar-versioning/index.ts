@@ -10,6 +10,8 @@ interface VersionEntry {
   content: Record<string, unknown>;
   author?: string;
   reason?: string;
+  /** G (ADR-0176) — IntentEmission qui produit cette écriture (rollback précis). */
+  intentId?: string;
 }
 
 /**
@@ -31,6 +33,7 @@ export async function createVersion(entry: VersionEntry): Promise<string> {
       diff: diff as Prisma.InputJsonValue,
       author: entry.author,
       reason: entry.reason,
+      intentId: entry.intentId ?? null,
     },
   });
 
