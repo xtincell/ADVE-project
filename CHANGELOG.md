@@ -1,5 +1,13 @@
 # Changelog — La Fusee
 
+## v6.27.259 — fix(ingestion): anti-misfile du persister brand book (2026-07-22)
+
+**Audit adversarial (boucle d'alignement) — chaque datum du brand book va dans SON champ, une seule fois ; un misfile est pire qu'un gap honnête.**
+
+- `fix(ingestion)` **Champs mal ciblés du persister ADR-0173 corrigés** : `mission` était écrit à la fois en `description` ET `missionStatement` (double-assertion gonflant la complétude) → `missionStatement` seul ; `vision` (aspiration future) n'écrase plus `noyauIdentitaire` (essence de marque ≠ vision) ; `tagline` (slogan pub) ne remplit plus `accroche` (phrase identitaire ≠ slogan) ; `toneOfVoice` n'écrit plus un `tonDeVoix` PARTIEL (schéma-invalide — exige personnalite+onDit+onNeditPas). Le contenu non mappé reste dans l'asset `BRAND_BOOK` brut (préservé, l'opérateur le mappe en revue).
+- Zéro fabrication (interdit NEFER n°3) : on ne route que vers un champ-cible SÛR ; le reste attend le mapping opérateur. C3 (provenance INFERRED pour le chemin LLM) tracé RESIDUAL-DEBT. tsc 0 · ingestion 10 verts.
+
+
 ## v6.27.258 — fix(seshat): course de création d'identité + index par strategyId (2026-07-22)
 
 **Audit adversarial (boucle d'alignement) — plus d'orpheline qui gonfle le compte de personnes, et fin des seq scans par marque.**
