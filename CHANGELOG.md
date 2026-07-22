@@ -1,5 +1,14 @@
 # Changelog — La Fusee
 
+## v6.27.257 — fix(governance): bouton Compensate honnête + baselines de test durcies (2026-07-22)
+
+**Audit adversarial (boucle d'alignement) — plus de fausse restauration, et le filet de tests ne ment plus.**
+
+- `fix(governance)` **Bouton Compensate honnête (Loi 1)** : les 5 kinds compensateurs non-palier (`ROLLBACK_PILLAR`/`ROLLBACK_ADVE`/`ROLLBACK_RTIS_CASCADE`/`DISCARD_RECOMMENDATIONS`/`REVERT_RECOMMENDATIONS`) n'ont pas de handler → l'UI console affichait « succès » alors que RIEN n'était restauré (le serveur calculait `executed:false`, l'UI le jetait). L'opérateur est désormais prévenu « enregistré EN AUDIT UNIQUEMENT — rien restauré ». Le moteur de restauration réel (depuis `PillarVersion`) est un chantier tracé RESIDUAL-DEBT.
+- `test(governance)` **3 baselines vacantes durcies** : `glory-tool-llm-zod-enforcement` (1000), `framework-output-schema` (100), `oracle-section-coverage` (100) étaient posées AU-DESSUS de leur population entière (dette réelle 0/0/0) → incapables d'échouer. Passées à **0 (HARD)** : un nouveau Glory tool LLM / framework / section Oracle sans `outputSchema`/runner casse désormais le build (invariant ADR-0067/0068 enfin réel).
+- tsc 0. Résidus tracés RESIDUAL-DEBT §Audit 2026-07-22 (moteur Compensate, Q3 lint, 13 kinds hors-registre, text-white mode jour, etc.).
+
+
 ## v6.27.256 — fix(ui): verrou de scroll ref-compté + vocabulaire client + pages publiques DS (2026-07-22)
 
 **Audit adversarial (boucle d'alignement) — le cockpit ne se fige plus, les erreurs parlent business, les pages publiques sont à la marque.**

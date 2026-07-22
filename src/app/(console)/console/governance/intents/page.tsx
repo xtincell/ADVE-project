@@ -51,9 +51,18 @@ export default function IntentsPage() {
   );
   const stats = trpc.governance.statsByKind.useQuery({ sinceDays });
   const compensate = trpc.governance.compensate.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
       void list.refetch();
       void stats.refetch();
+      // Honnêteté (audit adversarial 2026-07-22) : ne JAMAIS laisser croire à une
+      // restauration quand seul un enregistrement d'audit a eu lieu. Les compensateurs
+      // de palier (DEMOTE_*) s'exécutent vraiment (executed:true) ; les ROLLBACK_*/
+      // DISCARD_*/REVERT_* n'ont pas encore de handler de restauration → audit-only.
+      if (data && "executed" in data && !data.executed) {
+        window.alert(
+          `« ${data.reverseKind} » enregistré EN AUDIT UNIQUEMENT — la restauration réelle de ce type n'est pas encore câblée : RIEN n'a été restauré (le journal conserve la trace). Cf. RESIDUAL-DEBT.`,
+        );
+      }
     },
   });
 

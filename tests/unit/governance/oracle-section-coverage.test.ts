@@ -14,7 +14,7 @@
 
 import { describe, expect, it } from "vitest";
 
-const BASELINE_SECTIONS_WITHOUT_RUNNER = 100; // soft mode
+const BASELINE_SECTIONS_WITHOUT_RUNNER = 0; // HARD (audit 2026-07-22 : dette réelle = 0)
 
 describe("ADR-0068 — Oracle section registry coverage", () => {
   it("contains exactly 35 sections", async () => {
