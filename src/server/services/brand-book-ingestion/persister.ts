@@ -28,12 +28,20 @@ interface FieldWrite {
   provenance: FieldProvenance;
 }
 
-/** Construit les écritures A/D/V à partir de l'extraction (champs présents seulement). */
-function buildPillarWrites(x: BrandBookExtraction): Record<"a" | "d" | "v", FieldWrite[]> {
+/**
+ * Construit les écritures A/D/V à partir de l'extraction (champs présents seulement).
+ * `baseProvenance` (C3) : SOURCE si le parseur DÉTERMINISTE a produit les champs
+ * (fait observé), INFERRED si le LLM les a extraits (jugement à valider). Un champ
+ * peut toujours surclasser vers une provenance plus certaine (jamais l'inverse).
+ */
+function buildPillarWrites(
+  x: BrandBookExtraction,
+  baseProvenance: FieldProvenance,
+): Record<"a" | "d" | "v", FieldWrite[]> {
   const a: FieldWrite[] = [];
   const d: FieldWrite[] = [];
   const v: FieldWrite[] = [];
-  const push = (arr: FieldWrite[], path: string, value: unknown, provenance: FieldProvenance = "SOURCE") => {
+  const push = (arr: FieldWrite[], path: string, value: unknown, provenance: FieldProvenance = baseProvenance) => {
     if (value !== null && value !== undefined && !(typeof value === "string" && value.trim() === "") && !(Array.isArray(value) && value.length === 0)) {
       arr.push({ path, value, provenance });
     }
@@ -106,9 +114,14 @@ export async function persistBrandBookExtraction(args: {
   extraction: BrandBookExtraction;
   sourceFilename?: string;
   sourceDataSourceId?: string;
+  /** C3 — mode d'extraction : STRUCTURED → SOURCE, LLM (défaut) → INFERRED. */
+  extractionMode?: "LLM" | "STRUCTURED";
 }): Promise<BrandBookPersistResult> {
   const { strategyId, operatorId, extraction } = args;
-  const writes = buildPillarWrites(extraction);
+  // Champs produits par le LLM = jugements (INFERRED, à valider) ; parseur
+  // déterministe = faits observés (SOURCE). Défaut conservateur = INFERRED.
+  const baseProvenance: FieldProvenance = args.extractionMode === "STRUCTURED" ? "SOURCE" : "INFERRED";
+  const writes = buildPillarWrites(extraction, baseProvenance);
   const pillarsWritten: string[] = [];
   const assetsCreated: string[] = [];
   const warnings: string[] = [];

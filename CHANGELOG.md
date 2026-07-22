@@ -1,5 +1,13 @@
 # Changelog — La Fusee
 
+## v6.27.266 — fix(ingestion): provenance honnête du brand book (LLM → INFERRED, déterministe → SOURCE) (2026-07-22)
+
+**Les champs extraits par le LLM ne sont plus étiquetés « fait observé » — la provenance dit la vérité sur l'origine (audit adversarial « TOUT » — C3, zéro LLM ajouté).**
+
+- **Trou fermé** : le persister d'ingestion brand book (ADR-0173) écrivait TOUS les champs en provenance `SOURCE` (fait observé), y compris ceux extraits par le LLM (jugements) — indistinguables du parseur déterministe. Le garde de provenance (HUMAIN > SOURCE > INFÉRÉ) traitait donc un jugement LLM comme un fait, et rien ne signalait « à valider ».
+- **Fix** : le mode d'extraction (LLM/STRUCTURED, connu au preview) est porté sur l'Intent `INGEST_BRAND_BOOK` → le persister pose la provenance en conséquence : **STRUCTURED → `SOURCE`** (parseur déterministe = fait observé), **LLM → `INFERRED`** (jugement à valider). Défaut conservateur = `INFERRED` (ne prétend jamais un fait en l'absence d'info).
+- **Vérif** : `brand-book-provenance.test.ts` (STRUCTURED→SOURCE / LLM→INFERRED / défaut→INFERRED, via mock gateway). tsc 0 · lint 0. Cap APOGEE 7/7 préservé.
+
 ## v6.27.265 — feat(governance): vérificateur Q3 réel — verrou anti-bypass des routeurs governed-active (2026-07-22)
 
 **Le marqueur `governed-active` est enfin VÉRIFIÉ : plus aucune mutation non gouvernée ne peut se glisser en silence (audit adversarial « TOUT » — B1, zéro LLM).**

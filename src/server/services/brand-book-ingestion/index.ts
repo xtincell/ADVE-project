@@ -61,7 +61,7 @@ type HandlerResult = Pick<IntentResult, "status" | "summary" | "output" | "reaso
  * L'Intent porte l'extraction validée + l'opérateur ; on re-valide par sécurité.
  */
 export async function ingestBrandBook(intent: IngestIntent): Promise<HandlerResult> {
-  const { strategyId, extraction, operatorId, sourceFilename, sourceDataSourceId } = intent;
+  const { strategyId, extraction, operatorId, sourceFilename, sourceDataSourceId, extractionMode } = intent;
   const parsed = BrandBookExtractionSchema.safeParse(extraction);
   if (!parsed.success) {
     return { status: "FAILED", summary: "Extraction de brand book invalide", reason: parsed.error.issues.slice(0, 3).map((i) => i.message).join(" | ") };
@@ -72,6 +72,7 @@ export async function ingestBrandBook(intent: IngestIntent): Promise<HandlerResu
     extraction: parsed.data,
     sourceFilename,
     sourceDataSourceId,
+    extractionMode,
   });
   const nothing = !result.wrote;
   return {

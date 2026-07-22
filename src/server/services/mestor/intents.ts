@@ -504,6 +504,13 @@ export type Intent =
       extraction: unknown;
       sourceFilename?: string;
       sourceDataSourceId?: string;
+      /**
+       * C3 (audit 2026-07-22) — mode d'extraction qui a produit les champs.
+       * STRUCTURED = parseur déterministe → provenance SOURCE (fait observé) ;
+       * LLM = jugement du modèle → provenance INFERRED (à valider). Défaut LLM
+       * (conservateur : marque « à valider » en l'absence d'info).
+       */
+      extractionMode?: "LLM" | "STRUCTURED";
     }
   | {
       kind: "ANUBIS_FETCH_DELIVERY_REPORT";

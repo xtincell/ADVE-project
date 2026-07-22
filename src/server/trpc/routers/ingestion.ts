@@ -328,6 +328,9 @@ export const ingestionRouter = createTRPCRouter({
       extraction: z.unknown(),
       sourceFilename: z.string().optional(),
       sourceDataSourceId: z.string().optional(),
+      // C3 — le front transmet le mode utilisé au preview (LLM/STRUCTURED) pour
+      // que le persister pose la bonne provenance (INFERRED vs SOURCE).
+      extractionMode: z.enum(["LLM", "STRUCTURED"]).default("LLM"),
     }))
     .mutation(async ({ ctx, input }) => {
       // Marque la source « OFFICIELLE » (fait vérifié) si fournie.
@@ -346,6 +349,7 @@ export const ingestionRouter = createTRPCRouter({
           extraction: input.extraction,
           sourceFilename: input.sourceFilename,
           sourceDataSourceId: input.sourceDataSourceId,
+          extractionMode: input.extractionMode,
         },
         { caller: "trpc.ingestion.ingestBrandBook" },
       );
