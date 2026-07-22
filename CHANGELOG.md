@@ -1,5 +1,14 @@
 # Changelog — La Fusee
 
+## v6.27.264 — fix(governance): calendrier BrandAction gouverné (SET_BRAND_ACTION_STATUS câblé) (2026-07-22)
+
+**setSelected/setTiming/autoSchedule émettent enfin — les décisions de rétroplanning qui arment le CRON social sont tracées (audit adversarial « TOUT » — B2, zéro LLM).**
+
+- **Trou fermé** : `actions.setSelected`/`setTiming`/`autoSchedule` faisaient des `db.brandAction.*` DIRECTS dans `.mutation()` sans émission (Q1/Q2 absents). Le header du routeur les justifiait en « read-projection », mais `setTiming`/`autoSchedule` arment `timingStart` que le CRON social consomme pour PUBLIER → ce sont de vraies décisions opérateur avec effet aval. Désormais elles passent par `emitIntent(SET_BRAND_ACTION_STATUS)` (mirror de `propose` dans le même routeur).
+- **Câblage** : `SET_BRAND_ACTION_STATUS` (kind déjà catalogué, orphelin) enfin wiré — union `Intent` (payload discriminé SELECT/TIMING/AUTOSCHEDULE) + case commandant + handler `artemis/action-db/set-status` (logique déterministe déplacée du routeur : étalement + préservation des publications armées) + `intentTouchesPillars` (projection BrandAction, aucun pilier). Garde de zone calendrier (ADR-0131 `assertCalendarWrite`, operatorId résolu en base) **conservée au routeur** → zéro régression collaborateur (SOCIAL_MANAGER garde l'accès calendrier).
+- **Reclassé documenté-exempt** (décision anti « innovation pour l'innovation ») : `brand-mcp.*` (credential infra ADR-0145, `canAccessStrategy`-gardé) + `mcp-billing.*` (adminProcedure, relevés gelés + paymentRef = audit propre) restent ungoverned — infra documentée, access-gardée, auto-auditée ; les envelopper régresserait les collaborateurs pour un gain marginal.
+- **Vérif** : `set-brand-action-status.test.ts` (SELECT/TIMING scopés + AUTOSCHEDULE préserve les publications armées) + dispatch⊆INTENT_KINDS vert. tsc 0 · lint 0 · 2621 tests governance+services verts. Cap APOGEE 7/7 préservé.
+
 ## v6.27.263 — fix(governance): 13 kinds dispatchés enfin catalogués + verrou HARD dispatch⊆INTENT_KINDS (2026-07-22)
 
 **Les kinds cœur (cascade RTIS, actions, intention, livrable, indexation, recherche marché, signal Seshat) étaient dispatchés mais échappaient au monitoring SLO — régularisés + verrouillés (audit adversarial « TOUT » — B3, zéro LLM).**

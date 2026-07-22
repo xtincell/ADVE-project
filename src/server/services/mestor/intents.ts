@@ -88,6 +88,20 @@ export type Intent =
       via?: "BRIEF" | "GENERATE_MORE" | "MANUAL";
       operatorId?: string;
     }
+  // ── B2 (audit adversarial 2026-07-22) — décision opérateur sur le
+  // rétroplanning (BrandAction). setSelected/setTiming/autoSchedule faisaient
+  // des db.brandAction.* directs sans émission ; désormais gouverné (le garde
+  // de zone calendrier ADR-0131 reste au routeur). Zone collaborateur =
+  // "calendar" (COLLABORATOR_KIND_ZONES). Handler artemis/action-db/set-status.
+  | {
+      kind: "SET_BRAND_ACTION_STATUS";
+      strategyId: string;
+      operatorId?: string;
+      op:
+        | { type: "SELECT"; actionId: string; selected: boolean }
+        | { type: "TIMING"; actionId: string; timingStart: string | null; timingEnd?: string | null }
+        | { type: "AUTOSCHEDULE"; startDate?: string; cadenceDays?: number; onlyUnscheduled?: boolean };
+    }
   // ── Phase 24 (ADR-0106) — Intention : porte d'entrée du cycle de vie ──
   // CAPTURE = déterministe. GENERATE_BRIEF = seule porte LLM légitime (croise
   // l'intention × ADVE), parité MANUAL + dégradation DEFERRED. VALIDATE = gate
@@ -1286,6 +1300,9 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
       return ["i"];
     case "SYNTHESIZE_S":
       return ["s"];
+    // B2 — édite la PROJECTION BrandAction (selected/timing/status), pas le
+    // blob I-pillar (staleness gérée par la resync du materializer, pas ici).
+    case "SET_BRAND_ACTION_STATUS":
     // Phase 24 (ADR-0106) — Intention : aval de l'ADVE, ne mute aucun pilier.
     case "CAPTURE_INTENTION":
     case "GENERATE_BRIEF_FROM_INTENTION":

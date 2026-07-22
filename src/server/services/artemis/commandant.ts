@@ -59,6 +59,9 @@ export async function execute(intent: Intent): Promise<IntentResult> {
       case "PROPOSE_BRAND_ACTIONS":
         return wrap({ ...base, ...(await proposeBrandActionsHandler(intent)) });
 
+      case "SET_BRAND_ACTION_STATUS":
+        return wrap({ ...base, ...(await setBrandActionStatusHandler(intent)) });
+
       case "CAPTURE_INTENTION":
         return wrap({ ...base, ...(await captureIntentionHandler(intent)) });
       case "GENERATE_BRIEF_FROM_INTENTION":
@@ -989,6 +992,21 @@ async function proposeBrandActionsHandler(
     tool: "artemis:propose-brand-actions",
     output: res,
   };
+}
+
+// ── B2 (audit 2026-07-22) — décision opérateur sur le rétroplanning ──
+async function setBrandActionStatusHandler(
+  intent: Extract<Intent, { kind: "SET_BRAND_ACTION_STATUS" }>,
+): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
+  const { setBrandActionStatus } = await import("./action-db/set-status");
+  const res = await setBrandActionStatus({ strategyId: intent.strategyId, op: intent.op });
+  const summary =
+    res.op === "AUTOSCHEDULE"
+      ? `${res.updated} action(s) planifiée(s) (${res.protectedPublications ?? 0} publication(s) armée(s) préservée(s))`
+      : res.op === "SELECT"
+        ? `${res.updated} action(s) ${intent.op.type === "SELECT" && intent.op.selected ? "retenue(s)" : "retirée(s)"}`
+        : `${res.updated} échéance(s) ajustée(s)`;
+  return { status: "OK", summary, tool: "artemis:set-brand-action-status", output: res };
 }
 
 // ── Phase 24 (ADR-0106) — Intention : porte d'entrée du cycle de vie ──
