@@ -10,6 +10,17 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.249 — feat(scorer): intégrité des 22 arêtes de référence inter-piliers (Lot 3) (2026-07-22)
+
+**Une référence FK (`entityId` uuid) n'était jamais vérifiée : rien ne validait qu'elle RÉSOUD vers sa cible. Le validateur généralise le motif produit (rule 31) à toutes les arêtes — liens par nom + FK UUID du backbone. [ADR-0174](docs/governance/adr/0174-pillar-reference-edge-integrity.md).**
+
+- **`src/domain/pillar-reference-edges.ts`** (`findDanglingReferences`, pur, zéro LLM) : liens par nom (`personaSegmentMap`/`superfanPortrait` → `D.personas[].name`, matching tolérant accents/casse) + FK UUID (`mitigatesRiskIds`→R, `targetsPersonaIds`→D, `hypothesisId`→T, `sourceInitiativeId`→I, `strategieDeplacement.riskId`→R.overtonBlockers). Résolution par chaîne (id lisible résout comme un UUID — cohérent ADR-0172) + garde pool-vide (pas de faux positif FK).
+- **`OvertonBlockerSchema` gagne `id: entityId.optional()`** (additif) → l'arête S→R, **impossible par construction** (overtonBlockers sans id), devient résoluble.
+- **Cross-validator rule 32** (détection, scoring, jamais bloquant). Vérifié E2E motion19 : **5 dangles réels surfacés** — motion19 porte deux taxonomies de persona (D.personas Brand Book §04 vs segment/superfan), inconsistance de DONNÉE désormais VISIBLE au score (réconciliation = décision opérateur, tracée — on n'invente pas le mapping).
+- Tests `pillar-reference-edges` (8). tsc 0 · lint 0 · gouvernance verte. 0 modèle · 0 migration · 0 LLM · cap 7/7. **23/23 arêtes validées** (rule 31 produit + rule 32 le reste).
+
+---
+
 ## v6.27.248 — fix(cockpit): champs invisibles rendus + CRUD item-level + fix corruption dot-path (Lot 2) (2026-07-22)
 
 **Trois trous de l'audit ADVE fermés : des champs canoniques ne s'affichaient nulle part, l'édition était add-only, et l'amendement d'un item de tableau corrompait le contenu.**

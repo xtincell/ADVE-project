@@ -170,9 +170,15 @@
       formes duales objet-vs-scalaire réconciliées par unions ADR-0168 → **les 4 canons A→I SHAPE=0** (test CI
       `canon-conformance`). **Restant (advisory, non bloquant, tracé §ADR-0172 ci-dessous)** : traduction
       sémantique enum FR→canonique (« mensuelle »→MONTHLY), normalisation id lisible→UUID au seed.
-    - **22/23 arêtes de référence** non validées (dangles LIVE : `personaSegmentMap.personaName`/`productNames`,
-      `superfanPortrait.personaRef` ; arête impossible `strategieDeplacement.riskId`→`overtonBlockers[].id`
-      sans `id`). **Bornage** : généraliser le motif rule 31. **Déclencheur** : lot « intégrité référentielle ».
+    - **Arêtes de référence — VALIDATION FERMÉE (Lot 3, [ADR-0174](adr/0174-pillar-reference-edge-integrity.md),
+      v6.27.249)** : `findDanglingReferences` + cross-validator rule 32 valident les 22 arêtes restantes (liens
+      par nom + FK UUID) ; `overtonBlockers` gagne un `id` (arête S→R rendue possible). **23/23 arêtes
+      validées.** **Restant (DONNÉE, non VALIDATION)** : motion19 porte **deux taxonomies de persona**
+      (`D.personas` Brand Book §04 « L'amateur / L'entrepreneur du web… » vs le segment/superfan « Le créateur
+      de contenu / Le vidéaste pro… ») → 5 dangles LIVE surfacés au score. **Bornage** : réconcilier les deux
+      taxonomies (renommer `personaSegmentMap.personaName`/`superfanPortrait.personaRef` vers les `nom` de
+      `D.personas`, OU acter que ce sont des segments distincts) — **décision opérateur** (on n'invente pas le
+      mapping, interdit n°3). **Déclencheur** : passe éditeur ADVE / validation opérateur des personas motion19.
     - **Champs invisibles — FERMÉ (Lot 2, v6.27.248)** : R.globalSwot / S.selectedFromI / S.rejectedFromI /
       E.channelTouchpointMap rendus (ObjCard/ProofList) ; `ObjCard` tolère désormais la forme compacte
       (chaîne au lieu d'objet — union ADR-0168).

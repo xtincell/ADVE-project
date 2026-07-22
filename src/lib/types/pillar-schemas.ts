@@ -945,6 +945,9 @@ export const OvertonBlockerSchema = z.object({
   blockingPerception: z.string().min(1),
   mitigation: z.string().min(1),
   devotionLevelBlocked: z.enum(DEVOTION_LEVELS).optional(),
+  // Cible FK de S.strategieDeplacement.riskId (ADR-0174) — sans cet id, l'arête était
+  // impossible à résoudre par construction. Additif optionnel (back-compat).
+  id: entityId.optional(),
 });
 
 export const PillarRSchema = z.object({
