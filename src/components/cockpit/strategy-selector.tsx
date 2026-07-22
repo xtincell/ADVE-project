@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { classifyTier, type BrandTier } from "@/domain";
 import { createPortal } from "react-dom";
+import { lockBodyScroll, unlockBodyScroll } from "@/lib/scroll-lock";
 import {
   Building2, Check, Search, X, Settings, Plus, Folder,
   ChevronDown, Globe2, Star, Crown, Flame, Shield, Eye, Skull,
@@ -172,11 +173,10 @@ function BrandPickerModal({
 
   useEffect(() => {
     setPortalEl(document.body);
-    // Lock body scroll while modal is open.
-    const original = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    // Verrou de scroll ref-compté (le composant n'est monté que modal ouvert).
+    lockBodyScroll();
     return () => {
-      document.body.style.overflow = original;
+      unlockBodyScroll();
     };
   }, []);
 

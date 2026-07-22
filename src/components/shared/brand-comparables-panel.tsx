@@ -46,8 +46,8 @@ export function BrandComparablesPanel({ strategyId, topK = 6, className = "" }: 
           <h3 className="text-sm font-semibold">Marques voisines</h3>
         </div>
         <p className="text-xs text-foreground-muted">
-          Aucune marque comparable indexée pour l'instant. Le store Seshat se remplit
-          au fil des intakes — repasse plus tard.
+          Aucune marque comparable indexée pour l'instant. Notre base de marques
+          comparables se remplit au fil des intakes — repasse plus tard.
         </p>
       </div>
     );

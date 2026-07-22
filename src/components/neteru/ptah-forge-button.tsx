@@ -206,7 +206,7 @@ export function PtahForgeButton({
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
         title={t("oracle.forge.dialog.title")}
-        description={`Cette action va déclencher une forge ${forgeKind} via Ptah pour la section ${sectionId}. Le coût sera vérifié par Thot avant exécution (cascade hash-chain Glory→Brief→Forge).`}
+        description={`Cette action va produire le livrable ${forgeKind} pour cette section. Le coût est estimé et vérifié avant l'exécution.`}
       >
         <div className="space-y-2">
           <div className="flex flex-wrap gap-2">

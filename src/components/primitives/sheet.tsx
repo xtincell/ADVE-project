@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
+import { lockBodyScroll, unlockBodyScroll } from "@/lib/scroll-lock";
 import { cn } from "@/lib/utils";
 
 export const sheetVariants = cva(
@@ -52,10 +53,10 @@ export function Sheet({ open, onOpenChange, modal = true, title, side, size, cla
     if (!open) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onOpenChange(false); };
     document.addEventListener("keydown", onKey);
-    if (modal) document.body.style.overflow = "hidden";
+    if (modal) lockBodyScroll();
     return () => {
       document.removeEventListener("keydown", onKey);
-      if (modal) document.body.style.overflow = "";
+      if (modal) unlockBodyScroll();
     };
   }, [open, modal, onOpenChange]);
 

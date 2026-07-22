@@ -1,5 +1,17 @@
 # Changelog — La Fusee
 
+## v6.27.256 — fix(ui): verrou de scroll ref-compté + vocabulaire client + pages publiques DS (2026-07-22)
+
+**Audit adversarial (boucle d'alignement) — le cockpit ne se fige plus, les erreurs parlent business, les pages publiques sont à la marque.**
+
+- `fix(ui)` **Verrou de scroll REF-COMPTÉ** (`src/lib/scroll-lock.ts`) : deux modaux concurrents (« Quoi de neuf » + PortalWelcome au 1er login) laissaient le `body` bloqué `overflow:hidden` APRÈS fermeture → cockpit non-scrollable jusqu'au reload. Un compteur global unique (1er lock mémorise, dernier unlock restaure) branché sur Dialog + Sheet + Modal + AppShell drawer + StrategySelector.
+- `fix(cockpit)` **`WhatsNewModal` gated** : affiché seulement authentifié + après le PortalWelcome vu (plus de flash pré-auth ni d'empilement).
+- `fix(ui)` **Vocabulaire client (ADR-0123)** : messages d'erreur gouvernés (« Budget **Thot** insuffisant » → « Budget insuffisant » ; « Framework **Artemis**/Phase **Seshat**/**Mestor** » → business) rendus au founder via `TRPCError.message` ; bouton de forge (« matérialisation **Ptah** … vérifié par **Thot** … cascade **Glory** ») → « production du livrable » (founder + partage public) ; EmptyState « store **Seshat** » → « base de marques comparables ».
+- `fix(ui)` **Pages publiques du partage** (`shared/strategy/[token]/{error,not-found}`) : violet hors-marque + zinc brut → tokens DS sémantiques (accent corail, `bg-background`/`text-foreground`).
+- `fix(intake)` **i18n LLM-down** : `intakeIngest.fallback.llm_unavailableTitle` (clé INEXISTANTE) affichait la clé BRUTE au prospect sur le chemin d'échec le plus probable → mapping `llm_unavailable → llm`.
+- NB : « ADVE/RTIS » sur le site AGENCE UPgraders est le nom propriétaire de la méthode (~20 chaînes cohérentes, décision de design) — laissé intact, ADR-0123 borne l'interdiction RTIS aux surfaces CLIENT du produit. J4 (sweep `text-white` mode jour) tracé RESIDUAL-DEBT. tsc 0 · governance 1125 verts.
+
+
 ## v6.27.255 — fix(thot): fuites d'argent — idempotence webhooks + double-payout + secret fail-closed (2026-07-22)
 
 **Audit adversarial (boucle d'alignement) — fermeture des vecteurs de double-paiement et de confirmation forgée.**

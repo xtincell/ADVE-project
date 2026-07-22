@@ -9,26 +9,40 @@
  * sur n'importe quelle page après login.
  */
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { Dialog, DialogFooter } from "@/components/primitives/dialog";
 import { Button } from "@/components/primitives/button";
 import { LATEST_RELEASE, releaseToShow, type ReleaseNote } from "@/lib/release-notes";
 
 const LS_KEY = "lafusee.whatsNew.lastSeenVersion";
+// Clé du PortalWelcome cockpit — on n'affiche « Quoi de neuf » qu'APRÈS le welcome
+// vu, pour ne pas empiler deux modaux au tout premier login (le welcome prime).
+const WELCOME_KEY = "lafusee:welcome:cockpit:v1";
 
 export function WhatsNewModal() {
+  const { status } = useSession();
   const [note, setNote] = useState<ReleaseNote | null>(null);
 
   useEffect(() => {
+    // Gate d'auth (audit 2026-07-22) : pas de flash pré-auth, ni d'affichage à un
+    // visiteur non authentifié. (Le modal ne sert que la note produit — inoffensif
+    // pour un opérateur/collaborateur, mais on évite l'apparition intempestive.)
+    if (status !== "authenticated") return;
     if (!LATEST_RELEASE) return;
     let lastSeen: string | null = null;
+    let welcomeSeen = true;
     try {
       lastSeen = window.localStorage.getItem(LS_KEY);
+      welcomeSeen = window.localStorage.getItem(WELCOME_KEY) === "seen";
     } catch {
       /* stockage indisponible (mode privé) — on présentera la note, sans mémoriser */
     }
+    // Coordination : au tout premier login, laisser le PortalWelcome seul ; « Quoi de
+    // neuf » apparaîtra à la navigation/visite suivante (welcome alors vu).
+    if (!welcomeSeen) return;
     const toShow = releaseToShow(lastSeen);
     if (toShow) setNote(toShow);
-  }, []);
+  }, [status]);
 
   function dismiss() {
     try {

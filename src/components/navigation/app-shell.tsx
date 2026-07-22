@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { lockBodyScroll, unlockBodyScroll } from "@/lib/scroll-lock";
 import { Topbar } from "./topbar";
 import { Sidebar } from "./sidebar";
 import { MobileTabBar } from "./mobile-tab-bar";
@@ -46,9 +47,8 @@ export function AppShell({
     if (!mobileNavOpen) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setMobileNavOpen(false); };
     window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { window.removeEventListener("keydown", onKey); document.body.style.overflow = prev; };
+    lockBodyScroll();
+    return () => { window.removeEventListener("keydown", onKey); unlockBodyScroll(); };
   }, [mobileNavOpen]);
 
   return (

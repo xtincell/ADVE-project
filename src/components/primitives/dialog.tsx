@@ -8,6 +8,7 @@
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
+import { lockBodyScroll, unlockBodyScroll } from "@/lib/scroll-lock";
 
 export const dialogContentVariants = cva(
   cn(
@@ -57,8 +58,9 @@ export function Dialog({
   React.useEffect(() => {
     if (!open) return;
     const previousActive = document.activeElement as HTMLElement | null;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    // Verrou de scroll REF-COMPTÉ (audit 2026-07-22) — plusieurs modaux empilés ne
+    // laissent plus le body bloqué `overflow:hidden` après fermeture.
+    lockBodyScroll();
 
     function handleKey(e: KeyboardEvent) {
       if (e.key === "Escape" && dismissible) onOpenChange(false);
@@ -71,7 +73,7 @@ export function Dialog({
 
     return () => {
       document.removeEventListener("keydown", handleKey);
-      document.body.style.overflow = previousOverflow;
+      unlockBodyScroll();
       previousActive?.focus?.();
     };
   }, [open, onOpenChange, dismissible]);
