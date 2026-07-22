@@ -73,6 +73,16 @@ export const commissionRouter = createTRPCRouter({
   })
     .mutation(async ({ ctx, input }) => {
       try {
+        // Idempotence (audit adversarial 2026-07-22) : sans ce garde, chaque appel
+        // créait une NOUVELLE Commission PENDING pour la même mission → deux lignes
+        // indépendamment payables = double-payout. Miroir de `calculateOnComplete`.
+        const existing = await ctx.db.commission.findFirst({
+          where: { missionId: input.missionId },
+        });
+        if (existing) {
+          return { commissionId: existing.id, alreadyExists: true as const };
+        }
+
         const result = await engineCalculate(input.missionId);
 
         // Persist the commission record

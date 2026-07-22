@@ -91,6 +91,24 @@ export async function releaseEscrow(input: { escrowId: string; arbitratedBy: str
     throw new Error("Conditions non remplies — libération refusée (utilise force avec justification pour outrepasser).");
   }
 
+  // Claim atomique de la transition d'état (audit adversarial 2026-07-22) — deux
+  // arbitrages concurrents (ou un double-clic) passaient TOUS DEUX le check HELD puis
+  // créaient chacun un PaymentOrder PENDING = double payout (le 1er orphelin mais
+  // capturable). On revendique HELD/DISPUTED → RELEASED d'abord ; seul le gagnant
+  // (count === 1) poursuit et crée le payout.
+  const claim = await db.escrow.updateMany({
+    where: { id: input.escrowId, status: { in: ["HELD", "DISPUTED"] } },
+    data: {
+      status: "RELEASED",
+      releasedAt: new Date(),
+      arbitratedBy: input.arbitratedBy,
+      reason: input.reason ?? escrow.reason,
+    },
+  });
+  if (claim.count !== 1) {
+    throw new Error(`Escrow ${input.escrowId} déjà libéré (course concurrente).`);
+  }
+
   // Destinataire du payout : le talent assigné (téléphone momo).
   let recipientPhone: string | null = null;
   let recipientName: string | null = null;
@@ -121,15 +139,11 @@ export async function releaseEscrow(input: { escrowId: string; arbitratedBy: str
     },
   });
 
+  // La transition d'état a déjà été revendiquée atomiquement ci-dessus ; on ne
+  // pose plus que le lien vers le payout créé par le gagnant.
   const updated = await db.escrow.update({
     where: { id: input.escrowId },
-    data: {
-      status: "RELEASED",
-      releasedAt: new Date(),
-      arbitratedBy: input.arbitratedBy,
-      paymentOrderId: payout.id,
-      reason: input.reason ?? escrow.reason,
-    },
+    data: { paymentOrderId: payout.id },
   });
 
   if (escrow.commissionId) {

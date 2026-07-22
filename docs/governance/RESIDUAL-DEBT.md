@@ -1,5 +1,14 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
+## Audit adversarial « TOUT » 2026-07-22 (PR #612) — déférés bornés
+
+Items MEDIUM à régression-risquée ou à coordination, déférés de la boucle de fix (le reste est shippé — cf. CHANGELOG v6.27.252→) :
+
+- **F5 — tier-gate par-marque** : `checkPaidTier(operatorId)` (`glory-tools/tier-gate.ts`) ignore `Subscription.strategyId` → un `COCKPIT_MONTHLY` débloque les N marques d'un même user (l'intention est par-marque sauf `RETAINER_ENTERPRISE` ≤5). **Fermeture** : ajouter `strategyId?` à `checkPaidTier`, scoper les tiers mono-marque quand `sub.strategyId` est posé (rétro-compat : subs `strategyId=null` restent operator-wide), mettre à jour les callers (`cockpit-router.ts:165,246`). **Déclencheur** : passe billing dédiée (change l'entitlement de payeurs LIVE → design délibéré + classification tiers mono/multi requis avant).
+- **F6 — devise du provider-rate ignorée** (`financial-brain/action-costing/estimator.ts:181`) : `resolveProviderRate` renvoie `{rate,currency}` mais seul `rate` est utilisé → un taux EUR/USD composé comme XAF (sous-compté ~650× en zone diaspora). **Fermeture** : FX ou rejet si `currency ≠ template.baseCurrency` + porter la devise sur la ligne. **Déclencheur** : activation d'un `ProviderCostRate` non-FCFA.
+- **F7 — replay de cycle d'abonnement périmé** (`payment-providers/subscription-cycles.ts:213`) : le garde d'idempotence ne retient que le `lastCycleRef` → un webhook `PAID` d'un cycle ANTÉRIEUR ré-étend +30 j. **Fermeture** : dédupliquer sur `IntakePayment.reference` (marquer la ligne « cycle appliqué »), pas sur un slot unique. **Déclencheur** : prochaine passe paiements.
+- **E5 — armes `z.unknown()` des `S.computed`** (`pillar-schemas.ts:1447+`) : `budgetByPhase`/`devotionFunnel` acceptent tout objet/array → gate SHAPE neutralisé pour ces champs. **Fermeture** : resserrer vers les formes concrètes de `computePillarS` **en coordination avec le seed spawt** (qui portait des formes divergentes — risque de re-casser le seed sinon). **Déclencheur** : passe seed spawt / computePillarS.
+
 > Ce registre est **transitoire** (NEFER §3.4, interdit absolu n°4) — pas un cimetière. Toute ligne
 > porte un **plan de résolution + un déclencheur de reprise**. `nefer-boot` (Phase 0.2.bis) et
 > `nefer-postmerge` (9.5.bis) le relisent et referment le refermable ; le diagnostic de fond le purge.

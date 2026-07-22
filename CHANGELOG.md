@@ -1,5 +1,17 @@
 # Changelog — La Fusee
 
+## v6.27.255 — fix(thot): fuites d'argent — idempotence webhooks + double-payout + secret fail-closed (2026-07-22)
+
+**Audit adversarial (boucle d'alignement) — fermeture des vecteurs de double-paiement et de confirmation forgée.**
+
+- `fix(thot)` **`commission.calculate` idempotent** : chaque appel créait une NOUVELLE Commission PENDING pour la même mission → deux lignes indépendamment payables (double-payout). Garde existant-check (miroir de `calculateOnComplete`).
+- `fix(thot)` **Webhook membership idempotent** : les providers momo redélivrent → chaque replay ajoutait +30 j GRATUITS. Le `sourceHash` par transaction était écrit mais jamais VÉRIFIÉ avant d'étendre — dedup ajouté.
+- `fix(thot)` **MTN X-Reference-Id déterministe** : `crypto.randomUUID()` à chaque re-tentative → MTN ne dédupliquait pas → double-décaissement RÉEL. Dérivé de `params.reference` (unique par commission, `stableUuid`), parité Wave.
+- `fix(thot)` **Escrow release atomique** : TOCTOU — deux arbitrages concurrents passaient tous deux le check HELD puis créaient chacun un PaymentOrder (double payout). Claim conditionnel `updateMany` — seul `count===1` poursuit.
+- `fix(security)` **Secret webhook fail-closed en prod** : `?? "dev-webhook-secret"` (constante en clair) laissait forger les HMAC → confirmations de paiement fabriquées. Plus de fallback hardcodé en production.
+- tsc 0 · cycles 0 · governance+services 2600 verts. Déférés bornés (F5 tier par-marque, F6 devise, F7 replay cycle, E5 unions computed) tracés RESIDUAL-DEBT §Audit 2026-07-22.
+
+
 ## v6.27.254 — fix(domain): sécurité du pilier — union non-bloquante, arêtes de référence réparées, gate SHAPE runtime (2026-07-22)
 
 **Audit adversarial (boucle d'alignement) — le gate anti-corruption ne bloque plus la donnée DRAFT valide, les arêtes de référence lisent enfin les bons chemins, et l'édition runtime ne peut plus persister une forme cassée.**

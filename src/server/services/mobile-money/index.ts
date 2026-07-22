@@ -4,6 +4,7 @@
  */
 
 import { db } from "@/lib/db";
+import { stableUuid } from "@/domain/schema-normalizer";
 import type { PaymentMethod, PaymentOrderStatus } from "@prisma/client";
 
 export type MobileMoneyProvider = "ORANGE" | "MTN" | "WAVE";
@@ -284,7 +285,11 @@ async function callMtnDisbursement(params: {
   }
 
   // 2. Transfer — l'X-Reference-Id devient notre providerRef de polling.
-  const referenceId = crypto.randomUUID();
+  // Idempotence (audit adversarial 2026-07-22) : DÉTERMINISTE depuis `params.reference`
+  // (unique par commission, `COM-<id>`). Un random à chaque retry (ancien
+  // `crypto.randomUUID()`) faisait que MTN ne dédupliquait PAS → double-décaissement
+  // réel sur re-tentative. Parité avec Wave (`Idempotency-Key: params.reference`).
+  const referenceId = stableUuid(params.reference);
   const msisdn = params.phone.replace(/[^0-9]/g, "");
   const res = await fetch(`${base}/disbursement/v1_0/transfer`, {
     method: "POST",
