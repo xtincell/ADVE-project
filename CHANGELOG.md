@@ -1,5 +1,14 @@
 # Changelog — La Fusee
 
+## v6.27.265 — feat(governance): vérificateur Q3 réel — verrou anti-bypass des routeurs governed-active (2026-07-22)
+
+**Le marqueur `governed-active` est enfin VÉRIFIÉ : plus aucune mutation non gouvernée ne peut se glisser en silence (audit adversarial « TOUT » — B1, zéro LLM).**
+
+- **Trou fermé** : Q3 (non-bypass) reposait sur un lint `warn` + un marqueur de fichier `lafusee:governed-active` qui EXEMPTAIT le routeur SANS vérifier qu'il gouverne vraiment ; le test `yggdrasil-three-invariants` grep-ait sa propre règle (tautologie). Un routeur pouvait porter le marqueur ET des `.mutation()` en `db.*` direct sans émission.
+- **Vérificateur réel** : `governed-active-no-new-bypass.test.ts` (HARD) — pour CHAQUE routeur `governed-active`, compte les `.mutation()` NI `governedProcedure` NI `auditedProcedure` (strangler) NI porteuses d'un `emitIntent*`/`openEmission`, et **gèle ce compte par un baseline par routeur, exact-match, décroissant** (78 au 2026-07-22, motif emission-spine) : ajouter une mutation non gouvernée → compte > baseline → merge cassé ; réparer → baisser le baseline.
+- **Baseline catégorisé** : EXEMPT (infra credential `brand-mcp`, facturation adminProcedure auto-auditée `mcp-billing`, webhook signé `mobile-money`, cache `brand-node`, preview/dry-run, re-projection) vs PENDING (vraies mutations métier — surtout `campaign-manager` 18 / `notoria` 12 / `pillar` 10 = chantier dédié « migration Neteru cœur », trop risqué en une passe ; petits routeurs par lots). Tracé RESIDUAL-DEBT §B1.
+- **Vérif** : tsc 0 · lint 0 · 1139 tests governance verts. Cap APOGEE 7/7 préservé.
+
 ## v6.27.264 — fix(governance): calendrier BrandAction gouverné (SET_BRAND_ACTION_STATUS câblé) (2026-07-22)
 
 **setSelected/setTiming/autoSchedule émettent enfin — les décisions de rétroplanning qui arment le CRON social sont tracées (audit adversarial « TOUT » — B2, zéro LLM).**
