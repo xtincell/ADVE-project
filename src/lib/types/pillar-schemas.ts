@@ -218,13 +218,19 @@ export const PillarASchema = z.object({
     justification: z.string().min(1),
     exclusivityProof: z.string().min(1),
   })).min(1).max(3).optional(),
-  preuvesAuthenticite: z.array(z.object({
-    type: z.enum(["heritage", "certification", "recognition", "press", "datapoint"]),
-    claim: z.string().min(1),
-    evidence: z.string().min(1),
-    source: z.string().min(1),
-    year: z.number().int().optional(),
-  })).optional(),
+  // Deux formes légitimes : compacte (canon/humain — preuve en chaîne nue) OU
+  // structurée {type, claim, evidence, source, year}. Le renderer ProofList
+  // affiche les deux (cf. pilier D proofPoints, même motif).
+  preuvesAuthenticite: z.array(z.union([
+    z.string().min(1),
+    z.object({
+      type: z.enum(["heritage", "certification", "recognition", "press", "datapoint"]),
+      claim: z.string().min(1),
+      evidence: z.string().min(1),
+      source: z.string().min(1),
+      year: z.number().int().optional(),
+    }),
+  ])).optional(),
   indexReputation: z.object({
     source: z.enum(["GOOGLE_REVIEWS", "TRUSTPILOT", "NPS", "YELP", "TRIPADVISOR", "OTHER"]),
     score: z.number(),
@@ -342,6 +348,11 @@ export const PillarDSchema = z.object({
 
   // Direction artistique (BRAND pipeline outputs — remplis progressivement par GLORY)
   directionArtistique: z.object({
+    // Forme compacte (canon / humain) — la matière réelle d'un Brand Book
+    // (énoncé d'univers + principes directeurs). Coexiste avec les sous-objets
+    // riches ci-dessous (sortie des Glory créatifs). Cf. renderer pillar-d-fields.
+    univers: z.string().min(1).optional(),
+    principes: z.array(textShort).optional(),
     semioticAnalysis: z.object({
       gloryOutputId: z.string().optional(),
       dominantSigns: z.array(z.object({ sign: textShort, meaning: textShort, culturalContext: textShort.optional() })).optional(),
@@ -430,12 +441,18 @@ export const PillarDSchema = z.object({
     stage: textShort.optional(),
     socialSignal: textShort.optional(),
   })).optional(),
-  proofPoints: z.array(z.object({
-    type: textShort,
-    claim: textShort,
-    evidence: textShort.optional(),
-    source: textShort.optional(),
-  })).optional(),
+  // Deux formes légitimes : compacte (canon/humain — une preuve écrite en
+  // chaîne nue, la matière brute) OU structurée {type, claim, evidence, source}
+  // (sortie enrichie). Le renderer ProofList affiche les deux.
+  proofPoints: z.array(z.union([
+    z.string().min(1),
+    z.object({
+      type: textShort,
+      claim: textShort,
+      evidence: textShort.optional(),
+      source: textShort.optional(),
+    }),
+  ])).optional(),
   symboles: z.array(z.object({
     symbol: textShort,
     meanings: z.array(textShort).optional(),

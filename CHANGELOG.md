@@ -10,6 +10,19 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.240 — fix(pillars): la Distinction affiche enfin la direction artistique + les proof points (2026-07-22)
+
+**Signalement opérateur : le pilier Distinction de Motion19 n'affichait ni sa direction artistique ni ses proof points — alors que la donnée existe et est réelle (Brand Book officiel). Diagnostic : ni manque de donnée, ni besoin d'invoquer des Glory tools pendant l'ADVE, mais un mismatch de contrat de forme. [ADR-0168](docs/governance/adr/0168-pillar-shape-tolerance-compact-vs-rich.md).**
+
+- **Racine** : les fichiers canon (`motion19`/`spawt`/`lafusee`) écrivent une forme **compacte** (matière réelle d'un Brand Book, saisie main) — `directionArtistique = {univers, principes}`, `proofPoints`/`preuvesAuthenticite = string[]` — que le schéma Zod canonique, et donc le renderer bespoke qui le suit, n'attendait que sous forme **riche** (sortie Glory : `{moodboard, chromaticStrategy, …}`, `{type, claim, …}[]`). Le renderer cherchait les clés riches → introuvables → « à saisir » sur des champs pourtant renseignés. Données **bien collectées, mal shapées**.
+- **Schéma tolérant** (`pillar-schemas.ts`) : `directionArtistique` accepte `univers?`/`principes?` en plus des sous-objets riches (tous optionnels) ; `proofPoints` (D) et `preuvesAuthenticite` (A) deviennent `array(union([string, objet]))`. Les deux formes valident — la validation gateway (warnings-only) ne bruite plus.
+- **Renderer tolérant** (`pillar-kit.tsx` + `pillar-d-fields.tsx`) : `ProofList` rend un item chaîne en ligne d'affirmation (primitive partagée ⇒ profite à tous les piliers) ; `str()` devient **non-lossy** sur les objets imbriqués (l'ancienne version ne gardait que la 1re chaîne, écrasant moodboard/chromaticStrategy) et **saute la plomberie interne** (`gloryOutputId`, clés `_`) ; nouveau composant `DirectionArtistique` qui affiche `univers`+`principes` compacts **et** les sous-objets riches présents. DS-compliant (aucune couleur brute, tokens/CVA intacts).
+- **Zéro fabrication** : le renderer affiche la forme présente, sans jamais inventer de structure absente (interdit NEFER n°3). Les deux formes cohabitent (compacte = humain/canon ; riche = Glory).
+- **Vérifié sur la base** (Motion19 pilier D) : `directionArtistique` non vide, univers + 3 principes rendus ; 4 proof points rendus. Tests `tests/unit/types/pillar-shape-tolerance.test.ts` (8). tsc 0 · lint 0 · **1101 tests gouvernance+types verts**. 0 modèle Prisma · 0 LLM · 0 migration · cap APOGEE 7/7.
+- **Déféré (RESIDUAL-DEBT)** : `personas` (D) présente le même motif mais son renderer est déjà tolérant (warnings-only, pas un bug d'affichage) ; l'**étape de compilation** d'un Brand Book *designé* brand-skinné à partir de l'ADVE + vault (comme le Brand Book V2 fourni) reste le grand chantier aval (l'Oracle compile déjà 35 sections déterministes + PDF, mais au gabarit générique).
+
+---
+
 ## v6.27.239 — feat(apogee): moteur de trajectoire de palier — la Loi 1 a enfin des dents (2026-07-21)
 
 **Les 10 kinds `PROMOTE_*`/`DEMOTE_*` étaient déclarés au registre depuis toujours mais jamais câblés (absents de l'union Intent, du dispatcher, sans handler). Le palier de marque était dérivé du score à la lecture — donc une baisse de score rétrogradait le palier en silence, violant la Loi 1 « conservation d'altitude ». [ADR-0167](docs/governance/adr/0167-apogee-trajectory-engine.md).**

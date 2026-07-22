@@ -183,6 +183,54 @@ function SacredObjects({ items, status }: { items: unknown; status?: string }) {
   );
 }
 
+// ── Direction artistique (forme compacte OU riche) ─────────────────────
+// Deux formes légitimes coexistent : compacte `{univers, principes}` (canon /
+// humain, la matière réelle d'un Brand Book) et riche `{semioticAnalysis,
+// moodboard, chromaticStrategy, typographySystem, …}` (sortie des Glory
+// créatifs). Le renderer affiche celle qui est présente — aucune n'écrase
+// l'autre, aucune donnée n'est inventée.
+function DirectionArtistique({ value, status }: { value: unknown; status?: string }) {
+  const empty = isEmpty(value);
+  const obj = asRec(value);
+  const RICH: Array<[string, string]> = [
+    ["semioticAnalysis", "Analyse sémiotique"], ["visualLandscape", "Paysage visuel"],
+    ["moodboard", "Moodboard"], ["chromaticStrategy", "Stratégie chromatique"],
+    ["typographySystem", "Système typographique"], ["logoTypeRecommendation", "Reco logotype"],
+    ["logoValidation", "Validation logo"], ["designTokens", "Design tokens"],
+    ["motionIdentity", "Identité motion"], ["brandGuidelines", "Brand guidelines"],
+    ["lsiMatrix", "Matrice LSI"],
+  ];
+  const richPresent = RICH.filter(([k]) => !isEmpty(obj[k]));
+  return (
+    <ACard title="Direction artistique" status={status} empty={empty} span>
+      {empty ? <EmptyBody verb="À générer" /> : (
+        <div className="ck-a-obj">
+          {!isEmpty(obj.univers) ? (
+            <div className="ck-a-obj__row">
+              <span className="ck-a-obj__k">Univers</span>
+              <div className="ck-a-obj__v"><p className="ck-a-stmt">{str(obj.univers)}</p></div>
+            </div>
+          ) : null}
+          {!isEmpty(obj.principes) ? (
+            <div className="ck-a-obj__row">
+              <span className="ck-a-obj__k">Principes</span>
+              <div className="ck-a-obj__v"><TagRow items={obj.principes} tone="info" /></div>
+            </div>
+          ) : null}
+          {richPresent.map(([k, label]) => (
+            <div className="ck-a-obj__row" key={k}>
+              <span className="ck-a-obj__k">{label}</span>
+              <div className="ck-a-obj__v">
+                {Array.isArray(obj[k]) ? <TagRow items={obj[k]} /> : <span>{str(obj[k])}</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </ACard>
+  );
+}
+
 // ── Ratio histoire / preuve ────────────────────────────────────────────
 
 function StoryRatio({ value, status }: { value: unknown; status?: string }) {
@@ -244,8 +292,7 @@ export function PillarDFields({ content, certainty }: { content: Rec; certainty:
         <div className="ck-a-grid">
           <TonDeVoix value={v.tonDeVoix} status={st("tonDeVoix")} />
           <AssetsLinguistiques value={v.assetsLinguistiques} status={st("assetsLinguistiques")} />
-          <ObjCard title="Direction artistique" value={v.directionArtistique} status={st("directionArtistique")} span
-            fields={[["semioticAnalysis", "Analyse sémiotique"], ["moodboard", "Moodboard"], ["chromaticStrategy", "Stratégie chromatique"], ["typographySystem", "Système typographique"], ["logoTypeRecommendation", "Reco logotype"], ["motionIdentity", "Identité motion"], ["brandGuidelines", "Brand guidelines"]]} />
+          <DirectionArtistique value={v.directionArtistique} status={st("directionArtistique")} />
           <SacredObjects items={v.sacredObjects} status={st("sacredObjects")} />
           <ProofList title="Proof points" items={v.proofPoints} status={st("proofPoints")}
             cols={[["type", "Type"], ["claim", "Affirmation"], ["evidence", "Preuve"], ["source", "Source"]]} />
