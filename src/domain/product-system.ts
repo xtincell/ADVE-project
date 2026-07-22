@@ -48,6 +48,7 @@ export const ProductArchetypeSchema = z.object({
   axesSignature: s.optional(), // ex. « Nomade + Maquis »
   essence: s.optional(), // la devise / l'esprit
   progressionNames: z.array(s).optional(), // noms progressifs par stade
+  relatedProductIds: z.array(s).optional(), // → V.produitsCatalogue (id ou nom)
 });
 
 /** Un palier de progression/maturité (l'ordre du tableau = l'ordre canonique). */
@@ -64,6 +65,7 @@ export const ProductModeSchema = z.object({
   trigger: s.optional(), // ex. « Midi (11h-14h) »
   format: s.optional(),
   description: s.optional(),
+  relatedProductIds: z.array(s).optional(), // → V.produitsCatalogue (id ou nom)
 });
 
 /** Un artefact/collectible produit par le système. */
@@ -72,6 +74,7 @@ export const ProductArtifactSchema = z.object({
   kind: s.optional(), // carte, badge, titre, certificat…
   description: s.optional(),
   socialSignal: s.optional(), // pourquoi on le partage
+  relatedProductIds: z.array(s).optional(), // → V.produitsCatalogue (id ou nom)
 });
 
 /** Une règle/mécanique fondatrice. */
@@ -87,6 +90,7 @@ export const ProductMechanicSchema = z.object({
  */
 export const ProductSystemSchema = z.object({
   coreConcept: sLong.optional(), // le concept central en une phrase
+  anchorProductIds: z.array(s).optional(), // les produits du catalogue sur lesquels le système repose (id ou nom)
   axes: z.array(ProductAxisSchema).optional(),
   archetypes: z.array(ProductArchetypeSchema).optional(),
   progressionStages: z.array(ProductProgressionStageSchema).optional(),

@@ -279,6 +279,7 @@ const PILLAR_V: Record<string, FieldDef> = {
     kind: "object", label: "Système produit",
     fields: {
       coreConcept: textField("Concept central", { multiline: true }),
+      anchorProductIds: stringsField("Produits socles", "id ou nom d'un produit du catalogue"),
       axes: {
         kind: "array-of-objects", label: "Axes du mécanisme", itemLabel: "Axe",
         itemFields: {
@@ -291,6 +292,7 @@ const PILLAR_V: Record<string, FieldDef> = {
         itemFields: {
           name: textField("Nom"), axesSignature: textField("Signature d'axes"),
           essence: textField("Essence"), progressionNames: stringsField("Noms progressifs"),
+          relatedProductIds: stringsField("Produits liés"),
         },
       },
       progressionStages: {
@@ -305,6 +307,7 @@ const PILLAR_V: Record<string, FieldDef> = {
         itemFields: {
           name: textField("Nom"), trigger: textField("Déclencheur"),
           format: textField("Format"), description: textField("Description"),
+          relatedProductIds: stringsField("Produits liés"),
         },
       },
       artifacts: {
@@ -312,6 +315,7 @@ const PILLAR_V: Record<string, FieldDef> = {
         itemFields: {
           name: textField("Nom"), kind: textField("Type"),
           description: textField("Description"), socialSignal: textField("Signal social"),
+          relatedProductIds: stringsField("Produits liés"),
         },
       },
       mechanics: {

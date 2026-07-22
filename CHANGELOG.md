@@ -10,6 +10,18 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.243 — feat(scorer)+docs: socle produit (intégrité des références) + audit d'intégrité ADVE (2026-07-22)
+
+**Question opérateur : « les gammes / le système reposent bien sur les produits ? La Fusée sait recommander / mettre à jour / supprimer ? » → audit : NON, l'intégrité référentielle était fragile. Socle posé + audit exhaustif de tout l'ADVE avant l'ingestion. [ADR-0171](docs/governance/adr/0171-product-catalog-reference-integrity.md) + [docs/audits/ADVE-INTEGRITY-AUDIT-2026-07-22.md](docs/audits/ADVE-INTEGRITY-AUDIT-2026-07-22.md).**
+
+- **Socle produit `src/domain/product-catalog.ts`** (pur, zéro LLM) : `ensureProductIds` (ids stables déterministes, dédup, jamais d'écrasement — `addProduct` l'applique) · `resolveProductRef` (résolution **tolérante id OU nom OU slug** — marche même sans id) · `danglingProductRefs` (détecte les références fantômes sur gammes/persona×segment/système).
+- **Le système produit repose sur le catalogue** : `ProductSystemSchema` gagne `anchorProductIds` (top) + `relatedProductIds` (modes/artifacts/archetypes) → V.produitsCatalogue (optionnels).
+- **1ʳᵉ règle d'intégrité référentielle** : cross-validator **rule 31** — les références produit résolvent vers le catalogue (INVALID + liste chiffrée sinon). 1/23 arêtes fermée.
+- **Audit ADVE exhaustif** (3 sous-agents, tout l'ADVE) → carte durable des trous de fond avant Phase 3 : **le seed bypasse Zod** (formes malformées persistées) ; **0/23 arêtes de référence validées** (dangles LIVE : personaSegmentMap, superfanPortrait…) ; **dizaines de mismatches canon↔schéma HARD** (ids non-UUID, enums accentués, objet-vs-scalaire, numériques string) ; **champs invisibles** au cockpit (R.globalSwot requis, S.selectedFromI…) ; **SmartFieldEditor orphelin** + **aucun CRUD item-level** (add-only). Punch-list priorisée dans l'audit ; tracé RESIDUAL-DEBT.
+- Tests `product-catalog` (5). tsc 0 · lint 0 · cycles 0 · 2691 tests verts. 0 modèle · 0 migration · 0 LLM · 0 Intent kind · cap 7/7.
+
+---
+
 ## v6.27.242 — feat(oracle): « penser produit » — le système produit dans le pilier Valeur (2026-07-22)
 
 **Chantier « La Fusée compile » Phase 2. Mandat opérateur : « La Fusée doit penser produit dans le pilier Valeur. » Le pilier V modélisait l'ÉCONOMIE du produit (catalogue, ladder, unit-economics, MVP, IP) mais pas son MÉCANISME interne — le « Système Palais » de SPAWT (5 axes × 13 archétypes × 5 stades × modes × cartes) vivait en prose éparse. [ADR-0170](docs/governance/adr/0170-product-system-pillar-v.md).**

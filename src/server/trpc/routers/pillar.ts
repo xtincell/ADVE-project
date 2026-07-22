@@ -36,6 +36,7 @@ import { propagateFromPillar } from "@/server/services/staleness-propagator";
 import { getStrategyReadiness } from "@/server/governance/pillar-readiness";
 import { scoreObject } from "@/server/services/advertis-scorer";
 import { writePillarAndScore } from "@/server/services/pillar-gateway";
+import { ensureProductIds } from "@/domain/product-catalog";
 import type { PillarKey as PK } from "@/lib/types/advertis-vector";
 import { triggerNextStageFrameworks } from "@/server/services/artemis";
 import {
@@ -264,13 +265,16 @@ export const pillarRouter = createTRPCRouter({
       const content = (pillar?.content as Record<string, unknown>) ?? {};
       const catalogue = getArraySafe(content.produitsCatalogue);
       catalogue.push(input.product);
+      // Ids stables : le nouveau produit (et tout legacy sans id) reçoit un id
+      // déterministe → les gammes/système peuvent référencer de façon fiable (ADR-0171).
+      const withIds = ensureProductIds(catalogue as Array<Record<string, unknown>>);
 
       await writePillarAndScore({
         strategyId: input.strategyId, pillarKey: "v",
-        operation: { type: "SET_FIELDS", fields: [{ path: "produitsCatalogue", value: catalogue }] },
+        operation: { type: "SET_FIELDS", fields: [{ path: "produitsCatalogue", value: withIds }] },
         author: { system: "OPERATOR", userId: ctx.session.user.id, reason: "addProduct" },
       });
-      return { success: true, productCount: catalogue.length };
+      return { success: true, productCount: withIds.length };
     }),
 
   /** Convenience: add a persona to D.personas */

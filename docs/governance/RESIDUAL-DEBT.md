@@ -160,6 +160,28 @@
     SPAWT complet dans `spawt-canon.ts` (déféré à l'ingestion Phase 3 — l'encoder à la main risquerait la
     fabrication) ; annotation `applicableGloryTools` du tool par nature (`brand-nature-archetypes.ts` —
     discovery UI, le tool est déjà invocable par slug).
+  - **Phase 2-bis ✅ SHIPPÉE — socle produit** ([ADR-0171](adr/0171-product-catalog-reference-integrity.md),
+    v6.27.243) : ids produits stables + résolution tolérante + 1ʳᵉ règle d'intégrité référentielle
+    (cross-validator rule 31) + lien système↔catalogue. **1/23 arêtes de référence fermée.**
+  - **🔴 AUDIT D'INTÉGRITÉ ADVE (2026-07-22)** — [carte complète](../audits/ADVE-INTEGRITY-AUDIT-2026-07-22.md).
+    Balayage exhaustif des 8 piliers avant l'ingestion → trous de fond systémiques (prérequis Phase 3) :
+    - **Canon↔schéma cassé** : le seed bypasse Zod ; dizaines de mismatches HARD (ids non-UUID `risk-*`/`M*`
+      vs `z.string().uuid()` → chaque R/T/I/S seedé échoue la validation stricte ; enums accentués `"Engagé"`
+      vs `ENGAGE` ; objet-vs-scalaire non réconciliés — `valeurs`/`personas`/`sousPromesses`/`productLadder`/
+      `touchpoints`/`kpis`… ; numériques string). **Bornage** : décision de conception Phase 3 — l'extracteur
+      structuré normalise vers le schéma OU on assouplit les schémas (unions/coercions, motif ADR-0168).
+      **Déclencheur** : Phase 3 (ingestion) — c'est LE choix de conception à trancher.
+    - **22/23 arêtes de référence** non validées (dangles LIVE : `personaSegmentMap.personaName`/`productNames`,
+      `superfanPortrait.personaRef` ; arête impossible `strategieDeplacement.riskId`→`overtonBlockers[].id`
+      sans `id`). **Bornage** : généraliser le motif rule 31. **Déclencheur** : lot « intégrité référentielle ».
+    - **Champs invisibles** au cockpit (rendu bespoke either/or, zéro fallback) : **R.globalSwot** (requis),
+      S.selectedFromI/rejectedFromI, E.channelTouchpointMap ; `ObjCard` non tolérant à la variante string
+      (A.prophecy/doctrine). **Bornage** : ajout aux renderers bespoke + `ObjCard` union-tolérant.
+    - **`SmartFieldEditor` + field-registry orphelins** (édition réelle = textarea JSON brutes) + **aucun CRUD
+      item-level** (5 helpers add-only, pas d'update/remove ; dot-path `setNestedValue` cassé sur les index).
+      **Bornage** : monter l'éditeur récursif OU acter le raw-JSON + ajouter update/remove. **Déclencheur** :
+      lot « éditeur ADVE ».
+    - **Provenance/needsHuman non-enforcé** : INFERRED nourrit `computePillarS` comme DECLARED.
   - **Phase 3** — ingestion d'un Brand Book officiel → piliers + vault (extracteur structuré manual-first,
     kind `BRAND_BOOK`, flag `certainty=OFFICIAL`, intent gouverné) ; zéro fabrication (null sur absence).
   - **Phase 4** — livrable **Brand Book complet** deux-strates (identité + système produit), gabarit

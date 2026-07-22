@@ -218,19 +218,22 @@ function ProductSystem({ value, status }: { value: unknown; status?: string }) {
   const ps = asRec(value);
   const dims: Array<[string, string, Array<[string, string]>]> = [
     ["axes", "Axes du mécanisme", [["label", "Axe"], ["poleLow", "Pôle bas"], ["poleHigh", "Pôle haut"], ["description", "Description"]]],
-    ["archetypes", "Archétypes", [["name", "Nom"], ["axesSignature", "Signature"], ["essence", "Essence"], ["progressionNames", "Noms progressifs"]]],
+    ["archetypes", "Archétypes", [["name", "Nom"], ["axesSignature", "Signature"], ["essence", "Essence"], ["progressionNames", "Noms progressifs"], ["relatedProductIds", "Produits liés"]]],
     ["progressionStages", "Stades de progression", [["name", "Stade"], ["threshold", "Seuil"], ["signals", "Signaux"], ["unlocks", "Débloque"]]],
-    ["modes", "Modes d'usage", [["name", "Mode"], ["trigger", "Déclencheur"], ["format", "Format"], ["description", "Description"]]],
-    ["artifacts", "Artefacts / collectibles", [["name", "Nom"], ["kind", "Type"], ["description", "Description"], ["socialSignal", "Signal social"]]],
+    ["modes", "Modes d'usage", [["name", "Mode"], ["trigger", "Déclencheur"], ["format", "Format"], ["description", "Description"], ["relatedProductIds", "Produits liés"]]],
+    ["artifacts", "Artefacts / collectibles", [["name", "Nom"], ["kind", "Type"], ["description", "Description"], ["socialSignal", "Signal social"], ["relatedProductIds", "Produits liés"]]],
     ["mechanics", "Règles fondatrices", [["name", "Règle"], ["rule", "Énoncé"]]],
   ];
   const present = dims.filter(([k]) => asArr(ps[k]).length > 0);
-  const allEmpty = isEmpty(ps.coreConcept) && present.length === 0;
+  const allEmpty = isEmpty(ps.coreConcept) && isEmpty(ps.anchorProductIds) && present.length === 0;
   return (
     <ACard title="Système produit" status={status} empty={allEmpty} span>
       {allEmpty ? <EmptyBody verb="À générer" /> : (
         <div className="ck-v-psys">
           {!isEmpty(ps.coreConcept) ? <p className="ck-a-stmt ck-a-stmt--big">{str(ps.coreConcept)}</p> : null}
+          {!isEmpty(ps.anchorProductIds) ? (
+            <div className="ck-v-psys__anchor"><span className="ck-a-obj__k">Produits socles</span><TagRow items={ps.anchorProductIds} tone="emerald" /></div>
+          ) : null}
           <div className="ck-a-grid">
             {present.map(([k, label, cols]) => (
               <ProofList key={k} title={label} items={ps[k]} cols={cols} />
