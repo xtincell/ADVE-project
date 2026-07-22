@@ -10,6 +10,17 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.241 — feat(oracle): les livrables sortent aux couleurs de la marque (brand-skinning) (2026-07-22)
+
+**Chantier « La Fusée compile » Phase 1 (débloqueur). Les Brand Books réels fournis (Motion19/SPAWT) ont rendu vivant le constat : La Fusée est forte en intelligence, faible en production. La Bible de Marque compilait déjà honnêtement `BRANDBOOK-D`, mais rendait dans la palette UPgraders EN DUR ; l'Oracle PDF était noir/blanc sans identité. [ADR-0169](docs/governance/adr/0169-brand-skinned-deliverable-rendering.md).**
+
+- **Résolveur de thème serveur** `src/server/services/brand-theme/` : `resolveBrandTheme(strategyId) → BrandTheme` déterministe **zéro LLM**, dérive palette/typo/logo du coffre (`CHROMATIC_STRATEGY`/`TYPOGRAPHY_SYSTEM`/`LOGO_*`). Cœur pur `buildBrandTheme` testable sans DB. **Tolérant de forme** (leçon ADR-0168) : `collectHexes` récolte tout hex — champs, `full[]`, et clés `roles[hex]` (Motion19) ; `extractFontFamilies` tolère `primary/secondary` (SPAWT) et `display/text` (Motion19). **Lisibilité garantie** : `readableTextOn` = blanc sauf illisible→noir (ferme le bug latent « blanc sur or »), `accentOnLight` rétrograde sur l'encre si l'accent est trop clair. **Fallback UPgraders identique** si pas de palette (`isFallback`, réversible ADR-0130). **Zéro fabrication** — le thème ne vient QUE de la donnée.
+- **`brand-bible-pdf.ts`** : `const C` supprimé → thème threadé (couverture/section/cadre/légende), **logo dessiné sur la couverture** (`embedLogo` data-URL + http best-effort timeout, échec = pas de logo jamais d'exception), nom de marque en accent. **`export-oracle.ts`** : barre + titres en accent lisible, corps noir/blanc conservé.
+- **Vérifié E2E (base réelle)** : Bible de Marque Motion19 → `coverBg #1d1d1d`, bandeaux `#3384ff`, texte blanc lisible, fontes Exo 2/Roboto, logo embarqué, 13 slides, PDF `%PDF-` valide ; marque sans palette → fallback UPgraders. Tests `brand-theme` (8) + `brand-bible-deck` étendu. tsc 0 · lint 0 · cycles 0 · **1101 tests gouvernance+types verts**. 0 modèle · 0 migration · 0 LLM · 0 Intent kind · cap 7/7.
+- **Déféré (RESIDUAL-DEBT)** : embarquement réel des fichiers de police (jsPDF `addFont`) ; skinning voie puppeteer `oracle-pdf.ts` (CSS route) ; le Brand Book complet deux-strates = Phase 4 du chantier.
+
+---
+
 ## v6.27.240 — fix(pillars): la Distinction affiche enfin la direction artistique + les proof points (2026-07-22)
 
 **Signalement opérateur : le pilier Distinction de Motion19 n'affichait ni sa direction artistique ni ses proof points — alors que la donnée existe et est réelle (Brand Book officiel). Diagnostic : ni manque de donnée, ni besoin d'invoquer des Glory tools pendant l'ADVE, mais un mismatch de contrat de forme. [ADR-0168](docs/governance/adr/0168-pillar-shape-tolerance-compact-vs-rich.md).**

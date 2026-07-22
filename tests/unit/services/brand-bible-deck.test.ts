@@ -46,6 +46,7 @@ import { getGloryTool } from "@/server/services/artemis/tools/registry";
 import { BRAND_ASSET_KINDS } from "@/domain/brand-asset-kinds";
 import { KIND_TO_PILLAR } from "@/server/services/source-classifier/pillar-mapping";
 import { exportBrandBibleAsPdf } from "@/server/services/value-report-generator/brand-bible-pdf";
+import { UPGRADERS_THEME } from "@/server/services/brand-theme";
 
 describe("Bible de Marque — kind + spine BRANDBOOK-D", () => {
   it("le kind BRAND_BIBLE est enregistré + mappé au pilier D", () => {
@@ -68,7 +69,8 @@ describe("Bible de Marque — kind + spine BRANDBOOK-D", () => {
 
 describe("Bible de Marque — rendu PDF 16:9", () => {
   it("produit un vrai PDF (couverture + slides) sans inventer de données", async () => {
-    const res = await exportBrandBibleAsPdf("strat_test");
+    // themeOverride → rendu pur (le thème de marque est testé séparément dans brand-theme.test.ts).
+    const res = await exportBrandBibleAsPdf("strat_test", { themeOverride: UPGRADERS_THEME });
     // Bytes PDF valides.
     expect(res.pdf.subarray(0, 5).toString("latin1")).toBe("%PDF-");
     expect(res.pdf.length).toBeGreaterThan(1000);

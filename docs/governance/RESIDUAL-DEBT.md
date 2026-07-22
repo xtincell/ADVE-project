@@ -147,14 +147,23 @@
   env-avec-clés, ADR enfant de 0136. **Déclencheur** : env à clés + session dédiée.
 - **`ugcGenerationRate`** : exclusion MAINTENUE (décision négative explicite ADR-0134 §B2).
   Dérivation future : inbox v2 `kind="MENTION"` + mentions connecteur + constante validée direction.
-- **Compilation Brand Book *designé* (brand-skinné)** (ADR-0168 §Hors périmètre) : l'Oracle compile
-  déjà 35 sections déterministes + PDF lisible (ADR-0091/0138) et le vault détient palette/typo/logo
-  (BrandAsset CHROMATIC_STRATEGY/TYPOGRAPHY_SYSTEM/LOGO_FINAL), mais au **gabarit générique UPgraders** —
-  pas encore à la palette/typo/logo/motif de la marque, comme le Brand Book V2 fourni par l'opérateur
-  (16 pages : logo, couleurs RGB/HSL/CMYK, typo, motif, voix, lexique, personas, présence). **Bornage** :
-  (a) mapper `Strategy` → thème de rendu (palette/typo depuis le vault) ; (b) gabarit « Brand Book »
-  brand-skinné dans le pipeline de rendu Oracle/forge. **Déclencheur** : chantier « étape de compilation »
-  dédié (l'ADVE détient déjà la matière — c'est un travail de *rendu*, pas de collecte).
+- **Chantier « La Fusée compile » (Brand Book designé, brand-skinné)** — plan `_bmad`/session ; 5 phases.
+  **Phase 1 ✅ SHIPPÉE** ([ADR-0169](adr/0169-brand-skinned-deliverable-rendering.md), v6.27.241) :
+  `resolveBrandTheme` serveur + `brand-bible-pdf`/`export-oracle` rendent aux couleurs de la marque
+  (item « mapper Strategy → thème de rendu » CLOS). **Restant du chantier** :
+  - **Phase 1 résidus** : embarquement réel des **fichiers de police** (jsPDF `addFont` depuis
+    `TYPOGRAPHY_SYSTEM.files[]` — réseau + TTF-only + souvent absent ; helvetica en attendant) ;
+    skinning de la voie **puppeteer** `oracle-pdf.ts` (via le CSS de la route `/shared/strategy`).
+  - **Phase 2** — « penser produit » : `v.productSystem` (domaine `product-system.ts` + schéma + bible +
+    Glory `product-system-architect` HYBRID) pour modéliser le mécanisme produit (le « Système Palais » de
+    SPAWT vit en prose éparse aujourd'hui).
+  - **Phase 3** — ingestion d'un Brand Book officiel → piliers + vault (extracteur structuré manual-first,
+    kind `BRAND_BOOK`, flag `certainty=OFFICIAL`, intent gouverné) ; zéro fabrication (null sur absence).
+  - **Phase 4** — livrable **Brand Book complet** deux-strates (identité + système produit), gabarit
+    multi-sections brand-skinné (cible SPAWT/Motion19).
+  - **Phase 5** — profondeur du système visuel (applications carte/letterhead/merch, mauvais usages logo,
+    PANTONE, type scale) — incrémental. **Déclencheur** : suite du chantier (l'ADVE détient déjà la
+    matière — travail de *rendu*, pas de collecte).
 
 ### Réseaux / suite sociale (ADR-0128/0129/0130/0131/0132/0133)
 
