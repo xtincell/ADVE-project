@@ -271,7 +271,11 @@ export const strategyRouter = createTRPCRouter({
       // ADR-0165 — sujets de veille suivis (édition manuelle, prime sur le
       // dérivé ADVE). [] = revenir au dérivé automatique.
       watchSubjects: z.array(z.string().min(3).max(60)).max(8).optional(),
-      advertis_vector: z.record(z.string(), z.number()).optional(),
+      // ADR-0175/audit adversarial — `advertis_vector` RETIRÉ de l'input mutable :
+      // il est POSSÉDÉ par le scoreur (scoreObject, evidence-capped ADR-0126).
+      // L'accepter verbatim laissait un founder poser composite=200 sans évidence
+      // (recalculateScore:false) puis empoisonner la preview et forger un palier
+      // ICONE ratcheté (ADR-0167). Aucun caller ne le passait — trou pur.
       recalculateScore: z.boolean().optional(),
       // Audit 2026-07-16 `public-page-no-founder-surface` : aucune surface
       // produit n'écrivait publicSlug (seeds/scripts uniquement) — le founder
@@ -285,7 +289,7 @@ export const strategyRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const { id, advertis_vector, recalculateScore, sector, enablePublicPage, watchSubjects, ...data } = input;
+      const { id, recalculateScore, sector, enablePublicPage, watchSubjects, ...data } = input;
 
       // Enforce operator isolation
       const hasAccess = await canAccessStrategy(id, {
@@ -307,20 +311,40 @@ export const strategyRouter = createTRPCRouter({
             } as Prisma.InputJsonValue)
           : undefined;
       // Page publique : slug canonique dérivé du nom (format LFA-, idempotent).
+      // Non-latin-safe (jamais de throw) + désambiguïsation de collision (le slug
+      // est @unique GLOBAL ; deux marques homonymes crashaient sinon en P2002 500).
       let publicSlugPatch: { publicSlug: string } | undefined;
       if (enablePublicPage && !previous.publicSlug) {
-        const { brandPublicSlug } = await import("@/domain/brand-slug");
-        publicSlugPatch = { publicSlug: brandPublicSlug(previous.name) };
+        const { brandPublicSlugSafe, disambiguateBrandSlug } = await import("@/domain/brand-slug");
+        let candidate = brandPublicSlugSafe(previous.name, previous.id);
+        const clash = await ctx.db.strategy.findFirst({
+          where: { publicSlug: candidate, id: { not: id } },
+          select: { id: true },
+        });
+        if (clash) candidate = disambiguateBrandSlug(candidate, previous.id);
+        publicSlugPatch = { publicSlug: candidate };
       }
-      const updated = await ctx.db.strategy.update({
-        where: { id },
-        data: {
-          ...data,
-          ...(advertis_vector ? { advertis_vector: advertis_vector as Prisma.InputJsonValue } : {}),
-          ...(mergedBusinessContext !== undefined ? { businessContext: mergedBusinessContext } : {}),
-          ...(publicSlugPatch ?? {}),
-        },
+      const buildUpdateData = (slugPatch?: { publicSlug: string }) => ({
+        ...data,
+        ...(mergedBusinessContext !== undefined ? { businessContext: mergedBusinessContext } : {}),
+        ...(slugPatch ?? {}),
       });
+      let updated;
+      try {
+        updated = await ctx.db.strategy.update({ where: { id }, data: buildUpdateData(publicSlugPatch) });
+      } catch (err) {
+        // Course entre le findFirst et l'update sur le slug → réessai désambiguïsé.
+        // Duck-typing sur `.code` (l'import Prisma est type-only ici).
+        const isUniqueViolation =
+          !!err && typeof err === "object" && (err as { code?: unknown }).code === "P2002";
+        if (publicSlugPatch && isUniqueViolation) {
+          const { disambiguateBrandSlug } = await import("@/domain/brand-slug");
+          updated = await ctx.db.strategy.update({
+            where: { id },
+            data: buildUpdateData({ publicSlug: disambiguateBrandSlug(publicSlugPatch.publicSlug, previous.id) }),
+          });
+        } else throw err;
+      }
 
       // Audit trail (non-blocking)
       auditTrail.log({

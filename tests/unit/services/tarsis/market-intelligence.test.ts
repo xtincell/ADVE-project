@@ -2,7 +2,7 @@
  * Story fix-rtis-t-pillar-completion — AC6 unit tests
  *
  * Validates:
- *   AC1 — marketReality is always populated after runMarketIntelligence (CALC fallback)
+ *   AC1 — marketReality dérivé des signaux RÉELS ; ABSENT (honnête) si aucun (audit 2026-07-22 : plus de padding placeholder)
  *   AC2 — weakSignalAnalysis is NOT written when weakSignals is empty
  *   AC1-liveness — LLM-provided marketReality is NOT overwritten by CALC fallback
  *   AC2-positive — weakSignalAnalysis IS written when weakSignals is non-empty
@@ -88,42 +88,49 @@ afterEach(() => {
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-describe("runMarketIntelligence — marketReality CALC fallback (AC1)", () => {
-  it("always produces a non-empty marketReality object when LLM skips the field", async () => {
-    setupBaselineMocks();
+describe("runMarketIntelligence — marketReality dérivé RÉEL, jamais fabriqué (AC1, audit 2026-07-22)", () => {
+  it("OMET marketReality (gap honnête) quand le LLM le saute ET qu'aucun signal réel n'existe", async () => {
+    setupBaselineMocks(); // collectMarketSignals=[] + analyzeWeakSignals=[] → zéro signal réel
     // LLM response intentionally omits marketReality
     callLLMMock.mockResolvedValue({
       text: JSON.stringify({
         triangulation: { customerInterviews: "test", competitiveAnalysis: "test", trendAnalysis: "test", financialBenchmarks: "test" },
         tamSamSom: { tam: { value: 0, description: "test" }, sam: { value: 0, description: "test" }, som: { value: 0, description: "test" } },
         brandMarketFitScore: 50,
-        // marketReality absent — CALC fallback must kick in
       }),
     });
 
     const result = await runMarketIntelligence("strat-1");
 
-    const mr = result.pillarContent.marketReality as { macroTrends: string[]; weakSignals: string[] } | undefined;
-    expect(mr).toBeDefined();
-    expect(mr!.macroTrends).toBeInstanceOf(Array);
-    expect(mr!.macroTrends.length).toBeGreaterThanOrEqual(3);
-    expect(mr!.weakSignals).toBeInstanceOf(Array);
-    expect(mr!.weakSignals.length).toBeGreaterThanOrEqual(2);
-    // All entries must be non-empty strings
-    for (const t of mr!.macroTrends) expect(typeof t).toBe("string");
-    for (const s of mr!.weakSignals) expect(typeof s).toBe("string");
+    // Anti-fabrication : plus de placeholders « Signaux économiques collectés » pour
+    // atteindre le min-count du schéma → marketReality reste ABSENT (honnête).
+    expect(result.pillarContent.marketReality).toBeUndefined();
   });
 
-  it("CALC fallback triggers even when LLM returns unparseable response", async () => {
+  it("OMET marketReality quand la réponse LLM est illisible ET zéro signal réel", async () => {
     setupBaselineMocks();
     callLLMMock.mockResolvedValue({ text: "This is not JSON." });
 
     const result = await runMarketIntelligence("strat-1");
 
+    expect(result.pillarContent.marketReality).toBeUndefined();
+  });
+
+  it("dérive marketReality des SIGNAUX RÉELS quand ils existent (aucun placeholder)", async () => {
+    setupBaselineMocks();
+    // Signaux marché frais RÉELS (titres) — la source de macroTrends.
+    collectMarketSignalsMock.mockResolvedValue([
+      { title: "Hausse du prix du blé", sourceType: "RSS", relevance: 0.8, collectedAt: new Date().toISOString() },
+      { title: "Nouveau concurrent régional", sourceType: "RSS", relevance: 0.7, collectedAt: new Date().toISOString() },
+    ]);
+    callLLMMock.mockResolvedValue({ text: JSON.stringify({ brandMarketFitScore: 55 }) });
+
+    const result = await runMarketIntelligence("strat-1");
+
     const mr = result.pillarContent.marketReality as { macroTrends: string[]; weakSignals: string[] } | undefined;
     expect(mr).toBeDefined();
-    expect(mr!.macroTrends.length).toBeGreaterThanOrEqual(3);
-    expect(mr!.weakSignals.length).toBeGreaterThanOrEqual(2);
+    // Uniquement les titres RÉELS, pas de padding placeholder.
+    expect(mr!.macroTrends).toEqual(["Hausse du prix du blé", "Nouveau concurrent régional"]);
   });
 });
 

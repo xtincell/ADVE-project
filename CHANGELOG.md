@@ -1,5 +1,17 @@
 # Changelog — La Fusee
 
+## v6.27.253 — fix(scorer): intégrité du score (composite non-poisonnable) + mesure réelle vs fabriquée + publicSlug (2026-07-22)
+
+**Audit adversarial (boucle d'alignement) — le score/palier ne se truque plus, la mesure part de données RÉELLES au lieu d'inventer, la page publique ne crashe plus.**
+
+- `fix(scorer)` **Composite non-poisonnable (trajectoire ADR-0167)** : `strategy.update` acceptait `advertis_vector` verbatim → un founder posait `composite=200` sans évidence (recalculateScore:false), empoisonnait la preview et forgeait un palier ICONE ratcheté. Le vecteur est POSSÉDÉ par le scoreur (evidence-capped ADR-0126) — retiré de l'input mutable (aucun caller ne le passait, trou pur).
+- `fix(seshat)` **Tarsis — pilier T sans fabrication** : `runMarketIntelligence` PADDAIT `macroTrends`/`weakSignals` avec des placeholders (« Signaux économiques collectés »…) pour atteindre le min-count du schéma → faux « market intelligence » dans l'Oracle. Désormais dérivé des signaux RÉELS uniquement ; ABSENT si aucun (gap honnête) ; `successScore` = null si non produit (plus de 0.5 inventé).
+- `fix(cult-index)` **reconcileAmbassadors — base RÉELLE** : ne SEED PLUS une pyramide de dévotion inventée 50/20/15/8 quand aucun snapshot n'existe — part de la distribution mesurée par le devotion-engine (`calculateDevotion`, superfans par engagementDepth), 0 honnête si rien de mesuré.
+- `fix(scorer)` **knowledge-seeder** : `sampleSize: Math.random()*N` (lu comme un N mesuré) → 0 (prior expert seedé, honnête).
+- `fix(cockpit)` **Page publique de marque** : `publicSlug` sans désambiguïsation → deux marques homonymes (« Nike ») ou un nom non-latin (« 摩托19 ») crashaient l'activation (P2002 500 / throw) et bloquaient DÉFINITIVEMENT la 2ᵉ. Slug non-latin-safe + désambiguïsation par fragment d'id + réessai P2002.
+- Tests alignés sur le contrat honnête (tarsis marketReality réel-ou-absent, reconcile base réelle). tsc 0 · cycles 0.
+
+
 ## v6.27.252 — fix(security): garde d'ownership sur la voie gouvernée + IDOR vault + anti-prototype-pollution (2026-07-22)
 
 **Audit adversarial (boucle d'alignement produit↔intention) — fermeture des fuites CRITIQUES cross-tenant que le durcissement P0 avait laissées ouvertes ([ADR-0175](docs/governance/adr/0175-governed-lane-ownership-guard.md)).**

@@ -423,10 +423,10 @@ function generateSectorBenchmarks(): Prisma.KnowledgeEntryCreateInput[] {
           avgComposite: s.avgComposite,
           topQuartile: Math.round(s.avgComposite * 1.4),
           weakness: s.weakness,
-          sampleSize: Math.floor(Math.random() * 15) + 5,
+          sampleSize: 0, // prior expert seedé — pas d'échantillon mesuré (ex-Math.random, lecture faussement « mesurée »)
         } as Prisma.InputJsonValue,
         successScore: s.avgComposite / 200,
-        sampleSize: Math.floor(Math.random() * 15) + 5,
+        sampleSize: 0, // prior expert seedé — pas d'échantillon mesuré (ex-Math.random, lecture faussement « mesurée »)
         sourceHash: "seed-expertise",
       });
     }
@@ -478,10 +478,10 @@ function generateSectorBusinessModelBenchmarks(): Prisma.KnowledgeEntryCreateInp
       weakness: b.weakness,
       strengths: b.strengths,
       positioning: b.positioning,
-      sampleSize: Math.floor(Math.random() * 10) + 3,
+      sampleSize: 0, // prior expert seedé — pas d'échantillon mesuré (ex-Math.random)
     } as Prisma.InputJsonValue,
     successScore: b.avgComposite / 200,
-    sampleSize: Math.floor(Math.random() * 10) + 3,
+    sampleSize: 0, // prior expert seedé — pas d'échantillon mesuré (ex-Math.random)
     sourceHash: "seed-expertise",
   }));
 }
@@ -506,7 +506,7 @@ function generateBriefPatterns(): Prisma.KnowledgeEntryCreateInput[] {
       avgRevisions: c.avgRevisions,
     } as Prisma.InputJsonValue,
     successScore: c.successRate,
-    sampleSize: Math.floor(Math.random() * 40) + 20,
+    sampleSize: 0, // prior expert seedé — pas d'échantillon mesuré (ex-Math.random)
     sourceHash: "seed-expertise",
   }));
 }

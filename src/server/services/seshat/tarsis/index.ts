@@ -260,31 +260,26 @@ Format JSON strict conforme au schema PillarT :
     pillarContent = {};
   }
 
-  // CALC fallback — derive marketReality from available signal data if LLM skipped it.
-  // Schema requires macroTrends.min(3) and weakSignals.min(2) — pad with placeholders if needed.
+  // CALC fallback — derive marketReality from REAL signal data if the LLM skipped it.
+  // Anti-fabrication (audit adversarial 2026-07-22, interdit NEFER n°3) : on NE PAD
+  // JAMAIS avec des placeholders (« Signaux économiques collectés »…) pour atteindre le
+  // min-count du schéma. On écrit uniquement les entrées RÉELLES (signaux frais ou données
+  // marché existantes) ; si insuffisant, `marketReality` reste ABSENT — gap honnête, le
+  // pilier n'est pas faussement marqué complet, l'auto-filler/opérateur complète ensuite.
+  // Les signaux réels ne sont pas perdus : ils vont dans weakSignalAnalysis + marketDataSources.
   if (!pillarContent.marketReality || typeof pillarContent.marketReality !== "object") {
     const edTyped = existingData as Array<{ type?: string; title?: string }>;
-    const macroRaw: string[] = freshSignals.length > 0
-      ? freshSignals.slice(0, 5).map((s) => s.title).filter((t): t is string => Boolean(t))
-      : edTyped.slice(0, 5).map((e) => e.title ?? String(e.type ?? "")).filter(Boolean);
+    const macroRaw: string[] = (freshSignals.length > 0
+      ? freshSignals.slice(0, 5).map((s) => s.title)
+      : edTyped.slice(0, 5).map((e) => e.title ?? String(e.type ?? "")))
+      .filter((t): t is string => Boolean(t));
     const weakRaw: string[] = weakSignals.slice(0, 3).map((ws) => ws.thesis).filter(Boolean);
-
-    const MACRO_PLACEHOLDERS = [
-      "Tendance sectorielle en cours d'analyse",
-      "Signaux économiques collectés",
-      "Dynamiques concurrentielles à surveiller",
-    ];
-    const WEAK_PLACEHOLDERS = [
-      "Signal faible à confirmer",
-      "Indicateur précurseur en observation",
-    ];
-    while (macroRaw.length < 3) macroRaw.push(MACRO_PLACEHOLDERS[macroRaw.length] ?? MACRO_PLACEHOLDERS[2]!);
-    while (weakRaw.length < 2) weakRaw.push(WEAK_PLACEHOLDERS[weakRaw.length] ?? WEAK_PLACEHOLDERS[1]!);
-
-    pillarContent.marketReality = {
-      macroTrends: macroRaw.slice(0, 5),
-      weakSignals: weakRaw.slice(0, 3),
-    };
+    if (macroRaw.length > 0 || weakRaw.length > 0) {
+      pillarContent.marketReality = {
+        macroTrends: macroRaw.slice(0, 5),
+        weakSignals: weakRaw.slice(0, 3),
+      };
+    }
   }
 
   // Inject metadata
@@ -334,7 +329,11 @@ Format JSON strict conforme au schema PillarT :
           generatedFor: strategyId,
           generatedAt: new Date().toISOString(),
         } as Prisma.InputJsonValue,
-        successScore: (pillarContent.brandMarketFitScore as number ?? 50) / 100,
+        // Honnête : null si le LLM n'a pas produit de score de fit (pas de 0.5 fabriqué).
+        successScore:
+          typeof pillarContent.brandMarketFitScore === "number"
+            ? pillarContent.brandMarketFitScore / 100
+            : null,
         sampleSize: freshSignals.length + existingData.length,
       },
     });
