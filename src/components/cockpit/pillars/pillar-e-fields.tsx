@@ -207,6 +207,8 @@ export function PillarEFields({ content, certainty }: { content: Rec; certainty:
             cols={[["fromLevel", "De"], ["toLevel", "Vers"], ["trigger", "Déclencheur"], ["channel", "Canal"]]} />
           <ProofList title="Barrières à l'engagement" items={v.barriersEngagement} status={st("barriersEngagement")}
             cols={[["level", "Niveau"], ["barrier", "Barrière"], ["mitigation", "Mitigation"]]} />
+          <ProofList title="Canaux × points de contact" items={v.channelTouchpointMap} status={st("channelTouchpointMap")}
+            cols={[["salesChannel", "Canal de vente"], ["touchpointRefs", "Points de contact"]]} />
         </div>
       </Section>
 

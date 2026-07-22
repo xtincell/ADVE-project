@@ -626,6 +626,8 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "LEGACY_PILLAR_ADD_RITUAL", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_PILLAR_ADD_TOUCHPOINT", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_PILLAR_ADD_VALUE", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "LEGACY_PILLAR_UPDATE_ITEM", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "LEGACY_PILLAR_REMOVE_ITEM", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_PILLAR_APPLY_GLORY_OUTPUT", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_PILLAR_AUTO_FILL", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_PILLAR_AUTO_FILL_ALL", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },

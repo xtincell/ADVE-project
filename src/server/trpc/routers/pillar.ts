@@ -406,6 +406,64 @@ export const pillarRouter = createTRPCRouter({
       return { success: true, valueCount: valeurs.length };
     }),
 
+  // ── CRUD item-level générique (Lot 2) — MET À JOUR / SUPPRIME un item de
+  //    n'importe quel tableau ADVE (ferme le trou « add-only »). ADVE = décision
+  //    opérateur (STOP à Jehuty) → requireOperator (l'opérateur accède à toute
+  //    marque, pas de trou d'ownership). arrayPath = dot-path (« personas »,
+  //    « gamification.niveaux »). Écriture via le gateway (C5).
+  updateArrayItem: governedProcedure({
+    kind: "LEGACY_PILLAR_UPDATE_ITEM",
+    requireOperator: true,
+    inputSchema: z.object({
+      strategyId: z.string(),
+      pillarKey: AdveKeySchema,
+      arrayPath: z.string().min(1),
+      index: z.number().int().min(0),
+      value: z.unknown(),
+    }),
+    caller: "pillar:updateArrayItem",
+  })
+    .mutation(async ({ ctx, input }) => {
+      const key = input.pillarKey.toLowerCase() as "a" | "d" | "v" | "e";
+      const pillar = await ctx.db.pillar.findUnique({ where: { strategyId_key: { strategyId: input.strategyId, key } } });
+      const content = (pillar?.content as Record<string, unknown>) ?? {};
+      const arr = getNestedArray(content, input.arrayPath);
+      if (input.index >= arr.length) return { success: false, error: `Index ${input.index} hors limites (${arr.length} item(s))` };
+      arr[input.index] = input.value;
+      await writePillarAndScore({
+        strategyId: input.strategyId, pillarKey: key,
+        operation: { type: "SET_FIELDS", fields: [{ path: input.arrayPath, value: arr }] },
+        author: { system: "OPERATOR", userId: ctx.session.user.id, reason: "updateArrayItem" },
+      });
+      return { success: true, count: arr.length };
+    }),
+
+  removeArrayItem: governedProcedure({
+    kind: "LEGACY_PILLAR_REMOVE_ITEM",
+    requireOperator: true,
+    inputSchema: z.object({
+      strategyId: z.string(),
+      pillarKey: AdveKeySchema,
+      arrayPath: z.string().min(1),
+      index: z.number().int().min(0),
+    }),
+    caller: "pillar:removeArrayItem",
+  })
+    .mutation(async ({ ctx, input }) => {
+      const key = input.pillarKey.toLowerCase() as "a" | "d" | "v" | "e";
+      const pillar = await ctx.db.pillar.findUnique({ where: { strategyId_key: { strategyId: input.strategyId, key } } });
+      const content = (pillar?.content as Record<string, unknown>) ?? {};
+      const arr = getNestedArray(content, input.arrayPath);
+      if (input.index >= arr.length) return { success: false, error: `Index ${input.index} hors limites (${arr.length} item(s))` };
+      arr.splice(input.index, 1);
+      await writePillarAndScore({
+        strategyId: input.strategyId, pillarKey: key,
+        operation: { type: "SET_FIELDS", fields: [{ path: input.arrayPath, value: arr }] },
+        author: { system: "OPERATOR", userId: ctx.session.user.id, reason: "removeArrayItem" },
+      });
+      return { success: true, count: arr.length };
+    }),
+
   /** Transition pillar validation status with gates */
   transitionStatus: operatorProcedure
     .input(z.object({
@@ -1267,4 +1325,14 @@ Propose une nouvelle valeur cohérente avec l'intention, en respectant le schém
 
 function getArraySafe(val: unknown): unknown[] {
   return Array.isArray(val) ? [...val] : [];
+}
+
+/** Récupère (copie de) le tableau à un dot-path (top-level ou imbriqué), ou []. */
+function getNestedArray(content: Record<string, unknown>, path: string): unknown[] {
+  let cur: unknown = content;
+  for (const p of path.split(".")) {
+    if (cur && typeof cur === "object" && !Array.isArray(cur)) cur = (cur as Record<string, unknown>)[p];
+    else return [];
+  }
+  return Array.isArray(cur) ? [...cur] : [];
 }

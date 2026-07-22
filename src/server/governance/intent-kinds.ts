@@ -663,6 +663,8 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "LEGACY_PILLAR_ADD_RITUAL", governor: "INFRASTRUCTURE", handler: "pillar", async: false, description: "Strangler-promoted mutation 'addRitual' from router 'pillar'." },
   { kind: "LEGACY_PILLAR_ADD_TOUCHPOINT", governor: "INFRASTRUCTURE", handler: "pillar", async: false, description: "Strangler-promoted mutation 'addTouchpoint' from router 'pillar'." },
   { kind: "LEGACY_PILLAR_ADD_VALUE", governor: "INFRASTRUCTURE", handler: "pillar", async: false, description: "Strangler-promoted mutation 'addValue' from router 'pillar'." },
+  { kind: "LEGACY_PILLAR_UPDATE_ITEM", governor: "INFRASTRUCTURE", handler: "pillar", async: false, description: "CRUD item-level (Lot 2) — met à jour un item d'un tableau ADVE par index (arrayPath générique, ferme le trou add-only)." },
+  { kind: "LEGACY_PILLAR_REMOVE_ITEM", governor: "INFRASTRUCTURE", handler: "pillar", async: false, description: "CRUD item-level (Lot 2) — supprime un item d'un tableau ADVE par index (arrayPath générique)." },
   { kind: "LEGACY_PILLAR_APPLY_GLORY_OUTPUT", governor: "INFRASTRUCTURE", handler: "pillar", async: false, description: "Strangler-promoted mutation 'applyGloryOutput' from router 'pillar'." },
   { kind: "LEGACY_PILLAR_AUTO_FILL", governor: "INFRASTRUCTURE", handler: "pillar", async: false, description: "Strangler-promoted mutation 'autoFill' from router 'pillar'." },
   { kind: "LEGACY_PILLAR_AUTO_FILL_ALL", governor: "INFRASTRUCTURE", handler: "pillar", async: false, description: "Strangler-promoted mutation 'autoFillAll' from router 'pillar'." },

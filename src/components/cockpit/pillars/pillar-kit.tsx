@@ -127,9 +127,14 @@ export function ObjCard({
 }: { title: string; value: unknown; status?: string; fields: Array<[string, string]>; span?: boolean }) {
   const empty = isEmpty(value);
   const obj = asRec(value);
+  // Forme compacte (union ADR-0168) : le champ est une chaîne nue au lieu de l'objet
+  // structuré (prophecy/doctrine/enemy.overtonMap…) → on rend la chaîne, pas une grille vide.
+  const compact = typeof value === "string" || typeof value === "number";
   return (
     <ACard title={title} status={status} empty={empty} span={span}>
-      {empty ? <EmptyBody verb="À générer" /> : (
+      {empty ? <EmptyBody verb="À générer" /> : compact ? (
+        <p className="ck-a-card__prose">{str(value)}</p>
+      ) : (
         <div className="ck-a-obj">
           {fields.map(([k, label]) => {
             const val = obj[k];

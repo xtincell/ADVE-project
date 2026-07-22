@@ -173,13 +173,15 @@
     - **22/23 arêtes de référence** non validées (dangles LIVE : `personaSegmentMap.personaName`/`productNames`,
       `superfanPortrait.personaRef` ; arête impossible `strategieDeplacement.riskId`→`overtonBlockers[].id`
       sans `id`). **Bornage** : généraliser le motif rule 31. **Déclencheur** : lot « intégrité référentielle ».
-    - **Champs invisibles** au cockpit (rendu bespoke either/or, zéro fallback) : **R.globalSwot** (requis),
-      S.selectedFromI/rejectedFromI, E.channelTouchpointMap ; `ObjCard` non tolérant à la variante string
-      (A.prophecy/doctrine). **Bornage** : ajout aux renderers bespoke + `ObjCard` union-tolérant.
-    - **`SmartFieldEditor` + field-registry orphelins** (édition réelle = textarea JSON brutes) + **aucun CRUD
-      item-level** (5 helpers add-only, pas d'update/remove ; dot-path `setNestedValue` cassé sur les index).
-      **Bornage** : monter l'éditeur récursif OU acter le raw-JSON + ajouter update/remove. **Déclencheur** :
-      lot « éditeur ADVE ».
+    - **Champs invisibles — FERMÉ (Lot 2, v6.27.248)** : R.globalSwot / S.selectedFromI / S.rejectedFromI /
+      E.channelTouchpointMap rendus (ObjCard/ProofList) ; `ObjCard` tolère désormais la forme compacte
+      (chaîne au lieu d'objet — union ADR-0168).
+    - **CRUD item-level + dot-path — FERMÉ (Lot 2, v6.27.248)** : `pillar.updateArrayItem`/`removeArrayItem`
+      (governés, requireOperator) ferment le « add-only » ; `setNestedValue` indexe enfin les tableaux
+      (`personas[0].name` n'écrit plus une clé littérale — corruption, vérifiée E2E). **Restant** :
+      `SmartFieldEditor` + field-registry **encore orphelins** (édition = textarea JSON brutes) ; monter
+      l'éditeur récursif OU acter le raw-JSON. **Déclencheur** : lot « éditeur ADVE » (+ surface d'ingestion
+      §ADR-0173 qui a le même besoin de formulaire nested).
     - **Provenance/needsHuman non-enforcé** : INFERRED nourrit `computePillarS` comme DECLARED.
   - **Phase 3 — backend SHIPPÉ (Lot 1b, [ADR-0173](adr/0173-brand-book-ingestion.md), v6.27.247)** :
     service `brand-book-ingestion` (2 extracteurs parité manual-first, preview→confirm, Intent

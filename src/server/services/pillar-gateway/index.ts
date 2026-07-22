@@ -117,21 +117,43 @@ function deepMerge(target: Record<string, unknown>, source: Record<string, unkno
 
 // ── Set nested value by dot path ──────────────────────────────────────
 
-function setNestedValue(obj: Record<string, unknown>, path: string, value: unknown): void {
-  const parts = path.split(".");
-  if (parts.length === 1) {
-    obj[parts[0]!] = value;
+/**
+ * Tokenise un dot-path avec indices de tableau : `personas[0].name` →
+ * `["personas", 0, "name"]`. Sans ce parsing, `personas[0].name` créait une clé
+ * littérale « personas[0] » au lieu d'indexer le tableau (corruption — l'amendement
+ * opérateur d'un item de tableau écrivait à côté). ADR-0172/audit ADVE 2026-07-22.
+ */
+export function tokenizePillarPath(path: string): (string | number)[] {
+  const tokens: (string | number)[] = [];
+  for (const seg of path.split(".")) {
+    const m = seg.match(/^([^[\]]+)((?:\[\d+\])*)$/);
+    if (!m || !m[1]) {
+      tokens.push(seg);
+      continue;
+    }
+    tokens.push(m[1]);
+    for (const idx of (m[2] ?? "").match(/\d+/g) ?? []) tokens.push(Number(idx));
+  }
+  return tokens;
+}
+
+export function setNestedValue(obj: Record<string, unknown>, path: string, value: unknown): void {
+  const tokens = tokenizePillarPath(path);
+  if (tokens.length === 1) {
+    (obj as Record<string | number, unknown>)[tokens[0]!] = value;
     return;
   }
-  let current = obj;
-  for (let i = 0; i < parts.length - 1; i++) {
-    const part = parts[i]!;
-    if (current[part] === undefined || current[part] === null || typeof current[part] !== "object") {
-      current[part] = {};
+  let current: Record<string | number, unknown> = obj;
+  for (let i = 0; i < tokens.length - 1; i++) {
+    const t = tokens[i]!;
+    const nextIsIndex = typeof tokens[i + 1] === "number";
+    if (current[t] === undefined || current[t] === null || typeof current[t] !== "object") {
+      // Crée un tableau si le prochain token est un index, sinon un objet.
+      current[t] = nextIsIndex ? [] : {};
     }
-    current = current[part] as Record<string, unknown>;
+    current = current[t] as Record<string | number, unknown>;
   }
-  current[parts[parts.length - 1]!] = value;
+  current[tokens[tokens.length - 1]!] = value;
 }
 
 // ── Recommendation application (from rtis-cascade.ts, centralized) ───

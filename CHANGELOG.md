@@ -10,6 +10,18 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.248 — fix(cockpit): champs invisibles rendus + CRUD item-level + fix corruption dot-path (Lot 2) (2026-07-22)
+
+**Trois trous de l'audit ADVE fermés : des champs canoniques ne s'affichaient nulle part, l'édition était add-only, et l'amendement d'un item de tableau corrompait le contenu.**
+
+- **Fix corruption `setNestedValue`** (gateway C5) : `personas[0].name` créait une clé LITTÉRALE « personas[0] » au lieu d'indexer le tableau → l'amendement opérateur d'un item écrivait à côté. Tokenizer `key[index]` (`tokenizePillarPath`) + navigation de tableau. Vérifié E2E (l'index s'écrit, le voisin reste, zéro clé parasite) + tests (4). Symptôme pré-existant tracé PATCHED-SYMPTOMS.
+- **CRUD item-level générique** : `pillar.updateArrayItem` / `removeArrayItem` (governedProcedure `requireOperator` — ADVE = décision opérateur, STOP à Jehuty) ferment le trou « 5 helpers add-only ». arrayPath dot-path (top-level ou imbriqué), écriture via le gateway. 2 kinds `LEGACY_PILLAR_UPDATE_ITEM/REMOVE_ITEM` + SLOs.
+- **3 champs invisibles rendus** : `R.globalSwot` (SWOT consolidé, requis mais jamais affiché), `S.selectedFromI`/`rejectedFromI` (actions retenues/écartées de I), `E.channelTouchpointMap` (canaux × points de contact).
+- **`ObjCard` tolérant à la forme compacte** (union ADR-0168) : un champ objet devenu chaîne nue (prophecy/doctrine/enemy.overtonMap…) rend la chaîne au lieu d'une grille vide.
+- tsc 0 · lint 0 · **1124 tests gouvernance verts** (+2 kinds au catalogue → **591 Intent kinds**). 0 modèle · 0 migration · 0 LLM · cap 7/7. Reste (RESIDUAL-DEBT) : éditeur récursif `SmartFieldEditor` (encore orphelin — édition texte JSON), promotion produits.
+
+---
+
 ## v6.27.247 — feat(ingestion): un brand book officiel → piliers A/D/V + vault (Lot 1b) (2026-07-22)
 
 **La matière la plus riche (le brand book que la marque possède déjà) entre enfin dans La Fusée — sans jamais rien inventer. Extraction structurée (LLM ou parseur déterministe) → revue opérateur → écriture gouvernée A/D/V + assets vault DRAFT. [ADR-0173](docs/governance/adr/0173-brand-book-ingestion.md).**
