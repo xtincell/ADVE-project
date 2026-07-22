@@ -559,6 +559,10 @@ Versioning : incrémenter MAJEURE si refonte architecturale, PHASE si nouvelle p
 
 NEFER ne committe **jamais** un `feat(...)` sans entry CHANGELOG. Audit anti-drift : `scripts/audit-changelog-coverage.ts` (vérifie git log vs CHANGELOG entries).
 
+**6.0-bis OBLIGATOIRE — RELEASE_NOTES client si bénéfice visible du dirigeant**
+
+Le CHANGELOG parle NEFER (technique). Le dirigeant voit un écran « Quoi de neuf » à sa connexion (`WhatsNewModal`) + un récap console (`/console/socle/release-notes`), tous deux nourris par la source unique `src/lib/release-notes.ts` (vocable CLIENT, ADR-0123). Toute session qui ship une livraison **porteuse d'un bénéfice ressenti par le dirigeant** AJOUTE une entrée en tête de `RELEASE_NOTES`, même commit, `version = APP_VERSION`. Vocable client strict (jamais ADR/pilier/Neter/RTIS/plomberie), zéro promesse (bénéfice réel livré), pas de note pour la plomberie invisible. Verrou : `tests/unit/governance/release-notes-coverage.test.ts` (forme + ordre + vocable + note jamais en avance sur `APP_VERSION`). Détail dans le skill `nefer-docs` §6.0-bis.
+
 **6.1 Docs structurelles à update selon type de modification :**
 
 | Type modif | Docs à update | Niveau |
@@ -575,6 +579,7 @@ NEFER ne committe **jamais** un `feat(...)` sans entry CHANGELOG. Audit anti-dri
 | Bug fix significatif | CHANGELOG + RESIDUAL-DEBT update si lessons learned | **OBLIGATOIRE** |
 | Bump dépendance | CHANGELOG `chore(deps)` | **OBLIGATOIRE** |
 | Doc-only update | CHANGELOG `docs(<scope>)` | **OBLIGATOIRE** |
+| Livraison à bénéfice visible du dirigeant | CHANGELOG + **`src/lib/release-notes.ts`** (entrée en tête, vocable client) | **OBLIGATOIRE** |
 
 **6.2 Régénération auto :**
 

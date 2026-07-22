@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.251 — feat(cockpit): écran « Quoi de neuf » à la connexion + récap console + normalisation NEFER (2026-07-22)
+
+**Le dirigeant voit enfin les nouveautés de patch à sa connexion, en vocable client — et c'est désormais une étape normalisée du protocole NEFER.**
+
+- **`src/lib/release-notes.ts`** — nouvelle **source unique** des notes de version en vocable CLIENT (ADR-0123 : bénéfices produit, jamais « ADR-XXXX »/« pilier »/« Neter »/« RTIS »). DISTINCT du `/changelog` public (commits git bruts, auditeur) et du `CHANGELOG.md` interne (vocable NEFER). Première note = les 5 bénéfices du chantier « La Fusée compile ».
+- **`WhatsNewModal`** (cockpit) — présente la note la plus récente **une seule fois par version** (mémoire `localStorage`, per-device, pas de nag, zéro migration). Monté une fois dans le layout cockpit → visible sur n'importe quelle page après login. Tokens DS sémantiques → suit le mode jour/nuit.
+- **`/console/socle/release-notes`** — récap opérateur qui rend TOUT l'historique des notes depuis la **même source** (anti-doublon : une donnée, deux vues). Entrée nav « Notes de version » dans Le Socle.
+- **Normalisé dans NEFER** : `nefer-docs` §6.0-bis + NEFER.md §6.0-bis + matrice docs — toute livraison à bénéfice visible du dirigeant AJOUTE une entrée en tête, `version = APP_VERSION`. Verrou CI `release-notes-coverage.test.ts` (forme + ordre décroissant + vocable client + note jamais en avance sur `APP_VERSION`).
+- **Anti-doublon vérifié** : aucun récap release-note console préexistant (seuls `/changelog` public git-based + `prod-ops` deploy-watcher existaient) — la source unique client est le bon nouvel artefact, consommé par les deux surfaces.
+
 ## v6.27.250 — fix(scorer+cockpit+ingestion): remédiation revue adversariale (chantier « La Fusée compile ») (2026-07-22)
 
 **3 agents adversariaux ont attaqué unions / gate+normaliseur / ingestion et trouvé de vrais bugs — corrigés le jour même. Le plus grave : les unions ADR-0168 bénissaient des formes que des CONSOMMATEURS n'avaient jamais réconciliés (le motif exige un renderer tolérant, pas seulement un schéma tolérant).**
