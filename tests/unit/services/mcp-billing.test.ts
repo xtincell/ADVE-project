@@ -228,6 +228,25 @@ describe("applySubscriptionCycleIfPaid — extension de période", () => {
     expect(mocks.subUpdate).not.toHaveBeenCalled();
   });
 
+  it("F7 — fenêtre de migration : paiement appliqué sous l'ancien code (cycleAppliedAt NULL + lastCycleRef=réf) NE ré-étend PAS", async () => {
+    // Régression trouvée à l'audit : la colonne cycleAppliedAt est ajoutée sans
+    // backfill → un paiement déjà appliqué sous l'ancien code a cycleAppliedAt
+    // NULL. Un rejeu passerait la garde. Le fallback lit l'ancien slot lastCycleRef.
+    mocks.intakeFindUnique.mockResolvedValue({ status: "PAID", subscriptionId: "sub-1", paidAt: PAID_AT, cycleAppliedAt: null });
+    mocks.subFindUnique.mockResolvedValue({
+      id: "sub-1",
+      status: "active",
+      currentPeriodEnd: new Date(PAID_AT.getTime() + 30 * 24 * 3600 * 1000),
+      providerSnapshot: { lastCycleRef: "REF-LEGACY" }, // CE paiement, appliqué avant migration
+    });
+    mocks.intakeUpdateMany.mockResolvedValue({ count: 1 }); // le claim réussit (cycleAppliedAt était NULL)
+
+    await applySubscriptionCycleIfPaid("REF-LEGACY");
+    // Le marqueur est migré (claim) mais AUCUNE nouvelle extension.
+    expect(mocks.intakeUpdateMany).toHaveBeenCalled();
+    expect(mocks.subUpdate).not.toHaveBeenCalled();
+  });
+
   it("F7 — course : réclamation perdue (count 0) → pas de double extension", async () => {
     // Deux webhooks concurrents pour la même référence : la mise à jour
     // conditionnelle `cycleAppliedAt: null → now` ne réussit que pour un seul.

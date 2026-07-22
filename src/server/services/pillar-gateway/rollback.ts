@@ -61,9 +61,14 @@ export async function rollbackPillar(args: RollbackPillarArgs): Promise<Rollback
 
   // La PillarVersion stampée de l'intent visé porte le contenu PRÉ-écriture =
   // exactement l'état à restaurer.
+  // `asc` : la PREMIÈRE version stampée de cet intent porte l'état PRÉ-intent.
+  // Si un même intent écrivait le pilier plusieurs fois (chaque écriture stampe
+  // le même intentId), `desc` restaurerait un état INTERMÉDIAIRE (avant la
+  // dernière sous-écriture), pas l'état d'avant l'intent. Aujourd'hui chaque
+  // intent WRITE_PILLAR écrit une fois — mais `asc` est correct par construction.
   const snapshot = await db.pillarVersion.findFirst({
     where: { pillarId: pillar.id, intentId: args.compensatedFrom },
-    orderBy: { createdAt: "desc" },
+    orderBy: { createdAt: "asc" },
     select: { content: true, version: true },
   });
   if (!snapshot) {

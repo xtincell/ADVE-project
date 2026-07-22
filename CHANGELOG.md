@@ -1,5 +1,14 @@
 # Changelog — La Fusee
 
+## v6.27.268 — fix(thot): PayPal encaisse enfin (capture) + fenêtre de migration F7 + rollback asc (2026-07-22)
+
+**Fuite de revenu HIGH fermée (PayPal livrait sans jamais encaisser) + régression F7 de fenêtre de migration + correctif rollback — round 2 adversarial (money + correctness).**
+
+- **PayPal ne capturait JAMAIS (HIGH, $0 encaissé)** : les ordres sont créés `intent:"CAPTURE"`, mais le webhook traitait `CHECKOUT.ORDER.APPROVED` comme terminal → marquait PAID + livrait l'Oracle/PDF, sans jamais appeler la capture (les fonds n'ont pas bougé à l'APPROVAL). Nouvelle fonction `capturePayPalOrder` (idempotente : `PayPal-Request-Id` déterministe + `ORDER_ALREADY_CAPTURED`→capturé) appelée sur APPROVED ; sans capture COMPLETED **on ne livre pas**. `verifyPayment` capture aussi (au lieu de traiter APPROVED comme payé). Marquage PAID conditionnel (`updateMany status≠PAID`) → fulfillment + cycle **une seule fois** (fin du double-fulfill sur redelivery / double-événement APPROVED+CAPTURE.COMPLETED).
+- **F7 — régression de fenêtre de migration** (trouvée en revue adversariale de mon propre diff) : la colonne `IntakePayment.cycleAppliedAt` est ajoutée SANS backfill → un paiement appliqué sous l'ANCIEN code a `cycleAppliedAt=NULL` ; un rejeu post-déploiement passait la garde et ré-étendait +30 j. Fallback rétro-compat : si `providerSnapshot.lastCycleRef === reference` (ancien slot), on migre le marqueur en avant SANS ré-étendre.
+- **ROLLBACK_PILLAR — `orderBy` asc** (latent) : pour un intent multi-écritures, la PREMIÈRE version stampée porte l'état pré-intent ; `desc` aurait restauré un état intermédiaire. Corrigé par construction (aujourd'hui 1 écriture/intent).
+- **Vérif** : +1 cas F7 (fenêtre migration), suite mcp-billing 14 verts + rollback 7 verts. tsc 0 · lint 0. Cap APOGEE 7/7 préservé.
+
 ## v6.27.267 — chore(security): suppression du footgun `middleware/operator.ts` + traçage surcharge operatorId (2026-07-22)
 
 **Dead code de fuite tenant retiré + cause racine `session.operatorId` tracée (audit adversarial « TOUT » — hygiène sécurité).**

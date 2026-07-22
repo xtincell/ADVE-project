@@ -97,7 +97,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "signature verification failed" }, { status: 401 });
   }
 
-  // We only act on capture events.
+  // We only act on approval / capture events.
   if (
     event.event_type !== "CHECKOUT.ORDER.APPROVED"
     && event.event_type !== "PAYMENT.CAPTURE.COMPLETED"
@@ -115,18 +115,41 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "no reference_id on event" }, { status: 400 });
   }
 
-  const payment = await db.intakePayment.update({
-    where: { reference },
-    data: {
-      status: "PAID",
-      paidAt: new Date(),
-      providerEventId: event.id,
-    },
-  }).catch((err) => {
-    console.error("[paypal-webhook] update failed:", err);
-    return null;
-  });
+  // ── CAPTURE avant livraison (fix revenue leak) ──────────────────────────
+  // `CHECKOUT.ORDER.APPROVED` = l'acheteur a CONSENTI ; pour un ordre
+  // `intent: "CAPTURE"` les fonds n'ont PAS bougé. L'ancien code marquait PAID
+  // + livrait le PDF sur APPROVED sans jamais capturer → $0 encaissé sur chaque
+  // vente PayPal. On capture d'abord ; sans capture COMPLETED, on ne livre pas.
+  if (event.event_type === "CHECKOUT.ORDER.APPROVED") {
+    const orderId = event.resource.id;
+    if (!orderId) {
+      return NextResponse.json({ error: "no order id on APPROVED event" }, { status: 400 });
+    }
+    const { capturePayPalOrder } = await import("@/server/services/payment-providers/paypal");
+    const cap = await capturePayPalOrder(orderId).catch(() => ({ captured: false }));
+    if (!cap.captured) {
+      console.warn(`[paypal-webhook] capture NOT completed for order ${orderId} (ref ${reference}) — livraison refusée`);
+      return NextResponse.json({ ok: true, captured: false, order: orderId });
+    }
+  }
 
+  // Fonds encaissés (APPROVED capturé, OU PAYMENT.CAPTURE.COMPLETED). Marque
+  // PAID UNE seule fois : `updateMany` conditionnel `status ≠ PAID` → le
+  // fulfillment + le cycle d'abonnement ne tournent qu'au 1er passage, même si
+  // APPROVED-capture ET CAPTURE.COMPLETED arrivent (fin du double-fulfill sur
+  // redelivery / double-événement).
+  const claimed = await db.intakePayment.updateMany({
+    where: { reference, status: { not: "PAID" } },
+    data: { status: "PAID", paidAt: new Date(), providerEventId: event.id },
+  });
+  if (claimed.count === 0) {
+    return NextResponse.json({ ok: true, alreadyPaid: true });
+  }
+
+  const payment = await db.intakePayment.findUnique({
+    where: { reference },
+    select: { intakeToken: true },
+  });
   // Fulfillment centralisé (fire-and-forget) : re-extraction premium +
   // livraison ORACLE_FULL selon le tierKey payé (audit 2026-07-16).
   if (payment?.intakeToken) {
@@ -142,5 +165,5 @@ export async function POST(req: Request) {
     console.warn("[paypal-webhook] subscription cycle extension failed:", err instanceof Error ? err.message : err),
   );
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, captured: true });
 }

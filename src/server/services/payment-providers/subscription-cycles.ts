@@ -202,6 +202,22 @@ export async function applySubscriptionCycleIfPaid(reference: string): Promise<v
 
   const now = payment.paidAt ?? new Date();
 
+  // Rétro-compat migration (fix régression audit 2026-07-22) : un paiement
+  // appliqué SOUS L'ANCIEN CODE porte `cycleAppliedAt = NULL` (colonne ajoutée
+  // sans backfill) MAIS la subscription retient `providerSnapshot.lastCycleRef`.
+  // Un rejeu de CE webhook post-déploiement passerait la garde `cycleAppliedAt`
+  // (NULL) et ré-étendrait +30 j. On lit donc l'ancien slot : si cette référence
+  // y figure, le cycle a DÉJÀ été accordé → on migre juste le marqueur en avant
+  // (claim), sans nouvelle extension.
+  const preSub = await db.subscription.findUnique({
+    where: { id: payment.subscriptionId },
+    select: { providerSnapshot: true },
+  });
+  const alreadyAppliedLegacy =
+    !!preSub?.providerSnapshot &&
+    typeof preSub.providerSnapshot === "object" &&
+    (preSub.providerSnapshot as Record<string, unknown>).lastCycleRef === reference;
+
   // Réclamation + extension ATOMIQUES (course fermée comme l'escrow) : la mise à
   // jour conditionnelle `cycleAppliedAt: null → now` ne réussit que pour UN seul
   // webhook ; l'extension d'abonnement partage la même transaction (soit les
@@ -213,6 +229,9 @@ export async function applySubscriptionCycleIfPaid(reference: string): Promise<v
       data: { cycleAppliedAt: now },
     });
     if (claim.count !== 1) return; // déjà réclamé (rejeu / concurrence) → no-op
+
+    // Cycle déjà accordé sous l'ancien code : marqueur migré, PAS de ré-extension.
+    if (alreadyAppliedLegacy) return;
 
     const subscription = await tx.subscription.findUnique({ where: { id: payment.subscriptionId! } });
     if (!subscription) return; // la réclamation reste posée : le paiement est orphelin, pas de cycle à accorder
