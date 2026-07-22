@@ -137,8 +137,28 @@ export function tokenizePillarPath(path: string): (string | number)[] {
   return tokens;
 }
 
+/**
+ * Segments de chemin interdits — écrire via `__proto__`/`constructor`/`prototype`
+ * remonterait dans `Object.prototype` (empoisonnement de prototype GLOBAL : tous les
+ * tenants, tout le process, jusqu'au restart). `pillar.amend` accepte un `field`
+ * libre non-allowlisté → vecteur atteignable. On refuse net. Audit adversarial 2026-07-22.
+ */
+const FORBIDDEN_PATH_SEGMENTS = new Set(["__proto__", "constructor", "prototype"]);
+
+/** Lève si un token de chemin permettrait un empoisonnement de prototype. */
+export function assertSafePillarPath(tokens: readonly (string | number)[]): void {
+  for (const t of tokens) {
+    if (typeof t === "string" && FORBIDDEN_PATH_SEGMENTS.has(t)) {
+      throw new Error(
+        `Chemin de champ interdit : segment « ${t} » (protection contre l'empoisonnement de prototype).`,
+      );
+    }
+  }
+}
+
 export function setNestedValue(obj: Record<string, unknown>, path: string, value: unknown): void {
   const tokens = tokenizePillarPath(path);
+  assertSafePillarPath(tokens);
   if (tokens.length === 1) {
     (obj as Record<string | number, unknown>)[tokens[0]!] = value;
     return;

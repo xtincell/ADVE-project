@@ -957,6 +957,14 @@ async function generateMissingFields(
 
 function setNestedValue(obj: Record<string, unknown>, path: string, value: unknown): void {
   const parts = path.split(".");
+  // Garde anti-empoisonnement de prototype (audit adversarial 2026-07-22) — cohérent
+  // avec `assertSafePillarPath` du pillar-gateway. Paths contract-définis ici, mais
+  // défense en profondeur : un `__proto__`/`constructor`/`prototype` est refusé net.
+  for (const p of parts) {
+    if (p === "__proto__" || p === "constructor" || p === "prototype") {
+      throw new Error(`Chemin de champ interdit : segment « ${p} » (protection prototype-pollution).`);
+    }
+  }
   if (parts.length === 1) {
     obj[parts[0]!] = value;
     return;

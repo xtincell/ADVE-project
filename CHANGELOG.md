@@ -1,5 +1,15 @@
 # Changelog — La Fusee
 
+## v6.27.252 — fix(security): garde d'ownership sur la voie gouvernée + IDOR vault + anti-prototype-pollution (2026-07-22)
+
+**Audit adversarial (boucle d'alignement produit↔intention) — fermeture des fuites CRITIQUES cross-tenant que le durcissement P0 avait laissées ouvertes ([ADR-0175](docs/governance/adr/0175-governed-lane-ownership-guard.md)).**
+
+- `fix(security)` **Voie `governedProcedure` — cross-tenant en écriture fermé** : la voie de mutation founder n'appliquait AUCUN `canAccessStrategy` (~90 procédures : `pillar.updateFull`, `glory.execute*`, `signal.create`, `brand-node.*`…). Un founder passait le `strategyId` d'un autre tenant et écrasait ses piliers. Garde middleware `canAccessStrategy` posée AVANT l'émission (fail-fast), hors kinds publics Guilde. Ferme aussi `shareLink` (exfiltration de l'Oracle complet d'un autre tenant via token public).
+- `fix(security)` **`brand-vault.*` IDOR par id d'actif** : `get`/`updateTags`/`delete`/`purge`(hard delete)/`supersede`/`archive`/`promoteToActive`/`selectFromBatch` — invisibles au scan `strategyId` — résolvent désormais la marque de l'actif et appliquent `canAccessStrategy` (`assertBrandAssetAccess`).
+- `fix(security)` **Empoisonnement de prototype via `pillar.amend`** : un `field="__proto__.polluted"` remontait dans `Object.prototype` (global, tous tenants, jusqu'au restart). `assertSafePillarPath` refuse net `__proto__`/`constructor`/`prototype` (gateway + copie auto-filler).
+- Tests : `pillar-path-proto-pollution.test.ts` (runtime, la garde lève + ne pollue jamais) + `strategy-ownership-guard.test.ts` étendu (garde middleware vérifiée avant émission + procédures vault par id). Cap APOGEE 7/7, 0 modèle Prisma, 0 LLM.
+
+
 Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 - **MAJEURE** : Refonte architecturale ou changement de paradigme (v1 = fondation, v2 = modules, v3 = NETERU, ...)

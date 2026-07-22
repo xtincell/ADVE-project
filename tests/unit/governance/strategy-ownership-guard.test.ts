@@ -13,10 +13,14 @@
  * `accessibleStrategyIds`, `resolveOperatorId` ou `getOperatorContext` —
  * OU figurer dans l'allowlist justifiée ci-dessous, qui ne peut que DÉCROÎTRE.
  *
- * Lanes exemptes par conception : `operatorProcedure`/`adminProcedure`
- * (opérateurs cross-marques), `governedProcedure` (spine ADR-0124, audit
- * requireOperator PR #447), `publicProcedure` (capacité par token — vérifiée
- * au cas par cas), bases `audited*` enveloppées par `assertRawStrategyScope`.
+ * Lanes exemptes du scan textuel : `operatorProcedure`/`adminProcedure`
+ * (opérateurs cross-marques), `governedProcedure` (spine ADR-0124), `publicProcedure`
+ * (capacité par token — vérifiée au cas par cas), bases `audited*` enveloppées par
+ * `assertRawStrategyScope`. **ADR-0175** : la voie `governedProcedure` n'est plus
+ * exemptée « par confiance » — le middleware applique désormais `canAccessStrategy`
+ * dès qu'un `strategyId` de tête est présent (fuite cross-tenant en écriture fermée) ;
+ * le test ci-dessous VÉRIFIE que cette garde middleware existe, elle ne peut plus
+ * disparaître silencieusement.
  *
  * NOTE STATIQUE : l'analyse est textuelle (spans entre déclarations de
  * procédures). Un helper de garde no-op tromperait ce test — la revue de code
@@ -119,5 +123,49 @@ describe("strategy-ownership-guard (HARD — ADR-0166)", () => {
     expect(mw).toContain("canAccessStrategy");
     expect(mw).toContain("strategyScopedProcedure");
     expect(mw).toContain("assertRawStrategyScope");
+  });
+
+  it("la voie governedProcedure applique canAccessStrategy AVANT l'émission (ADR-0175)", () => {
+    // La classe CRITIQUE fermée : le lane founder gouverné écrivait cross-tenant.
+    // On exige que la garde soit posée dans le middleware ET avant preEmitIntent
+    // (fail-fast, pas de bruit d'audit sur un refus d'accès).
+    const src = readFileSync(
+      join(process.cwd(), "src/server/governance/governed-procedure.ts"),
+      "utf8",
+    );
+    expect(src, "governed-procedure.ts doit importer + appeler canAccessStrategy").toContain(
+      "canAccessStrategy(",
+    );
+    const guardIdx = src.indexOf("canAccessStrategy(");
+    const emitIdx = src.indexOf("const intentId = await preEmitIntent(");
+    expect(guardIdx, "canAccessStrategy présent").toBeGreaterThan(0);
+    expect(emitIdx, "preEmitIntent présent").toBeGreaterThan(0);
+    expect(guardIdx, "la garde d'ownership doit précéder l'émission").toBeLessThan(emitIdx);
+  });
+
+  it("brand-vault : les procédures indexées par ID D'ACTIF sont gardées (ADR-0175)", () => {
+    // Ces procédures n'ont pas de strategyId de tête → invisibles au middleware ;
+    // elles DOIVENT résoudre la marque de l'actif et appeler la garde par actif.
+    const src = readFileSync(
+      join(process.cwd(), "src/server/trpc/routers/brand-vault.ts"),
+      "utf8",
+    );
+    expect(src).toContain("assertBrandAssetAccess");
+    // Chaque mutation/lecture par id d'actif doit appeler une garde.
+    const ASSET_ID_PROCS = [
+      "  get:",
+      "  updateTags:",
+      "  delete:",
+      "  purge:",
+      "  selectFromBatch:",
+      "  promoteToActive:",
+      "  supersede:",
+      "  archive:",
+    ];
+    // Le fichier contient au moins autant d'appels de garde que de procédures par-id.
+    const guardCalls = (src.match(/assert(BrandAssetAccess|StrategyAccessForAsset)\(/g) ?? []).length;
+    expect(guardCalls, "une garde par procédure indexée par id d'actif").toBeGreaterThanOrEqual(
+      ASSET_ID_PROCS.length,
+    );
   });
 });
