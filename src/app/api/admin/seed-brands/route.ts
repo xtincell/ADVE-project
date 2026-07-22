@@ -16,6 +16,13 @@ import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { verifyCronSecret } from "@/lib/cron-auth";
 
+// Sérialise les exécutions concurrentes (audit adversarial 2026-07-22) : le
+// patch GLOBAL de `console.log` ci-dessous n'est pas ré-entrant — deux appels
+// simultanés interleavaient leurs captures et, pire, le `finally` de l'un
+// pouvait restaurer `console.log` vers le patch de l'autre (fuite mémoire +
+// double-log permanents). Un seed en cours ⇒ 409, jamais de patch imbriqué.
+let seedRunning = false;
+
 export async function POST(request: Request) {
   // Deux voies d'autorisation, même privilège : (1) session ADMIN (bouton
   // console) ; (2) bearer CRON_SECRET (déclenchement serveur-à-serveur /
@@ -29,6 +36,14 @@ export async function POST(request: Request) {
       { status: 403 },
     );
   }
+
+  if (seedRunning) {
+    return NextResponse.json(
+      { ok: false, error: "Un seed est déjà en cours — réessayez dans un instant." },
+      { status: 409 },
+    );
+  }
+  seedRunning = true;
 
   const log: string[] = [];
   const capture = (line: string) => log.push(line);
@@ -261,5 +276,6 @@ export async function POST(request: Request) {
     );
   } finally {
     console.log = origLog;
+    seedRunning = false;
   }
 }

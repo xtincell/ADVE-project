@@ -158,6 +158,9 @@ export const signalRouter = createTRPCRouter({
     .input(z.object({ signalId: z.string() }))
     .query(async ({ ctx, input }) => {
       const signal = await ctx.db.signal.findUniqueOrThrow({ where: { id: input.signalId } });
+      // anti-IDOR (sibling manqué au 1er passage) : le vecteur de score d'un
+      // signal appartient à une marque — sans garde, lecture cross-tenant.
+      await assertStrategyAccess(ctx.session.user.id, signal.strategyId);
       const vector = (signal.advertis_vector as Record<string, number>) ?? {};
       const pillars = [...PILLAR_STORAGE_KEYS];
       // Each pillar scores /25, total /200

@@ -223,7 +223,10 @@ export function unpackState(packed: string, signingKey: string): OAuthState | nu
   if (!b64 || !sig) return null;
   const json = Buffer.from(b64, "base64url").toString("utf8");
   const expectedSig = crypto.createHmac("sha256", signingKey).update(json).digest("base64url");
-  if (expectedSig !== sig) return null;
+  // Comparaison constant-time (le `!==` fuit un oracle de timing sur le HMAC).
+  const a = Buffer.from(expectedSig);
+  const b = Buffer.from(sig);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
   try {
     const state = JSON.parse(json) as OAuthState;
     if (Date.now() - state.ts > STATE_TTL_MS) return null;
@@ -231,6 +234,27 @@ export function unpackState(packed: string, signingKey: string): OAuthState | nu
   } catch {
     return null;
   }
+}
+
+/**
+ * Clé de signature de l'état OAuth (HMAC anti-CSRF/anti-forge du `state`).
+ *
+ * Fail-closed en production (audit adversarial 2026-07-22) : le fallback
+ * hardcodé `"lafusee-dev-fallback-32-chars-minimum"` était PUBLIC (source
+ * ouvert) — si `NEXTAUTH_SECRET` manquait en prod, n'importe qui pouvait
+ * FORGER un `state` signé (account-linking d'un compte social attaquant sur
+ * la marque d'une victime, ou détournement du `returnUrl`). En prod, secret
+ * absent → on jette (aucune signature attaquable). En dev/CI, fallback toléré.
+ */
+export function oauthStateSigningKey(): string {
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (secret && secret.length >= 16) return secret;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "NEXTAUTH_SECRET is required in production to sign OAuth state (no hardcoded fallback).",
+    );
+  }
+  return "lafusee-dev-fallback-32-chars-minimum";
 }
 
 // ── Token encryption (AES-GCM) ────────────────────────────────────────

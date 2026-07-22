@@ -26,6 +26,7 @@ import {
   fetchUserInfo,
   getProviderConfig,
   getPublicBaseUrl,
+  oauthStateSigningKey,
   unpackState,
 } from "@/server/services/oauth-integrations";
 import {
@@ -35,9 +36,8 @@ import {
 } from "@/server/services/anubis/social-connect";
 import { emitIntentTyped } from "@/server/services/mestor/intents";
 
-function signingKey(): string {
-  return process.env.NEXTAUTH_SECRET ?? "lafusee-dev-fallback-32-chars-minimum";
-}
+// Clé fail-closed en prod (cf. oauthStateSigningKey) — plus de fallback public.
+const signingKey = oauthStateSigningKey;
 
 const PKCE_COOKIE = "lf_oauth_pkce";
 

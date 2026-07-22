@@ -1,9 +1,43 @@
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
+import crypto from "crypto";
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import * as feedbackLoop from "@/server/services/feedback-loop";
 import * as knowledgeCapture from "@/server/services/knowledge-capture";
+
+// ---------------------------------------------------------------------------
+// Webhook signature (fail-closed) — audit adversarial 2026-07-22
+// ---------------------------------------------------------------------------
+// Sans vérification, cette route écrivait des `Signal(SOCIAL_METRICS)` FABRIQUÉS
+// (n'importe qui POSTait des métriques bidon → score/feedback-loop empoisonnés)
+// et servait d'ORACLE de divulgation (la réponse révélait le strategyId lié à
+// un accountId deviné). On exige désormais une signature HMAC valide.
+//
+// Meta/Instagram signent en `X-Hub-Signature-256: sha256=<hmac(appSecret, body)>`.
+// On accepte aussi `x-webhook-signature` (autres providers). En PRODUCTION,
+// aucun secret configuré ⇒ rejet (fail-closed) — jamais de constante en clair.
+const SOCIAL_WEBHOOK_SECRET =
+  process.env.WEBHOOK_SECRET_SOCIAL ??
+  process.env.META_OAUTH_CLIENT_SECRET ??
+  (process.env.NODE_ENV === "production" ? undefined : "dev-webhook-secret");
+
+function verifySocialSignature(rawBody: string, signature: string | null): boolean {
+  if (!signature || !SOCIAL_WEBHOOK_SECRET) return false;
+  const providedHex = signature.startsWith("sha256=") ? signature.slice(7) : signature;
+  const expected = crypto
+    .createHmac("sha256", SOCIAL_WEBHOOK_SECRET)
+    .update(rawBody)
+    .digest("hex");
+  try {
+    return crypto.timingSafeEqual(
+      Buffer.from(providedHex, "hex"),
+      Buffer.from(expected, "hex"),
+    );
+  } catch {
+    return false;
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -104,7 +138,22 @@ function extractMetrics(payload: SocialWebhookPayload) {
 
 export async function POST(request: Request) {
   try {
-    const payload = (await request.json()) as SocialWebhookPayload;
+    const rawBody = await request.text();
+
+    // Signature OBLIGATOIRE — fail-closed (cf. bloc en tête de fichier).
+    const signature =
+      request.headers.get("x-hub-signature-256") ??
+      request.headers.get("x-webhook-signature");
+    if (!verifySocialSignature(rawBody, signature)) {
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    }
+
+    let payload: SocialWebhookPayload;
+    try {
+      payload = JSON.parse(rawBody) as SocialWebhookPayload;
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
 
     // Validate required fields
     if (!payload.platform || !payload.event || !payload.accountId) {
@@ -133,7 +182,9 @@ export async function POST(request: Request) {
     }
 
     if (!matchedStrategyId) {
-      return NextResponse.json({ received: true, matched: false });
+      // Réponse identique au cas « matché » (pas de strategyId) — plus d'oracle
+      // de divulgation accountId→marque, même une fois la signature vérifiée.
+      return NextResponse.json({ received: true });
     }
 
     // Extract platform-specific metrics
@@ -185,13 +236,7 @@ export async function POST(request: Request) {
       sourceId: matchedStrategyId,
     }).catch((err) => { console.warn("[social-webhook] knowledge capture failed:", err instanceof Error ? err.message : err); });
 
-    return NextResponse.json({
-      received: true,
-      matched: true,
-      strategyId: matchedStrategyId,
-      platform: payload.platform,
-      event: payload.event,
-    });
+    return NextResponse.json({ received: true });
   } catch (error) {
     console.error("[social-webhook] Processing error:", error);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });

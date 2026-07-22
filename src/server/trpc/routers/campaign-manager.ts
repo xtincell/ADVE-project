@@ -41,7 +41,7 @@ import type { Prisma, CampaignState, ProductionState } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, adminProcedure, operatorProcedure } from "../init";
 import * as cm from "@/server/services/campaign-manager";
-import { canAccessStrategy, canAccessCampaign } from "@/server/services/operator-isolation";
+import { canAccessStrategy, canAccessCampaign, getOperatorContext, scopeCampaigns } from "@/server/services/operator-isolation";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
 
@@ -71,8 +71,11 @@ async function enforceCampaignAccess(ctx: { session: { user: { id: string; role:
  * keyées `campaignId` (briefs, assets, actions, budgets…) n'appelaient PAS
  * `enforceCampaignAccess` → un founder lisait/écrivait les artefacts de campagne
  * d'une AUTRE marque. Cette base rend la garde structurelle (plus d'oubli
- * possible). Les procédures keyées sur un id d'entité (briefId, assetId…) sans
- * `campaignId` sont no-op ici et gardées inline (résolution entité→campagne).
+ * possible). Les procédures keyées sur un id de SOUS-ENTITÉ (actionId,
+ * amplificationId…) SANS `campaignId` sont no-op ici : elles sont gardées par
+ * `enforceResolvedCampaignAccess` qui résout l'entité → son `campaignId`
+ * (round-3 : la garde `.use(enforceCampaignRawScope)` y était INERTE, faute de
+ * campaignId à lire — écritures/suppressions cross-tenant possibles).
  */
 /** Résout le `campaignId` d'un input brut + enforce l'accès (helper pur, réutilisable). */
 async function enforceCampaignRawScope(
@@ -84,6 +87,19 @@ async function enforceCampaignRawScope(
       ? (raw as { campaignId: string }).campaignId
       : null;
   if (campaignId) await enforceCampaignAccess(ctx, campaignId);
+}
+
+/**
+ * Garde des procédures keyées sur un id de sous-entité : le `campaignId` a été
+ * résolu inline (`ctx.db.<entity>.findUnique`) → on enforce l'accès campagne.
+ * `null`/introuvable ⇒ NOT_FOUND (ne révèle pas l'existence cross-tenant).
+ */
+async function enforceResolvedCampaignAccess(
+  ctx: { session: { user: { id: string; role: string; operatorId?: string | null } } },
+  campaignId: string | null | undefined,
+): Promise<void> {
+  if (!campaignId) throw new TRPCError({ code: "NOT_FOUND", message: "Entité introuvable" });
+  await enforceCampaignAccess(ctx, campaignId);
 }
 
 const campaignScopedProcedure = protectedProcedure.use(async ({ ctx, getRawInput, next }) => {
@@ -498,7 +514,10 @@ export const campaignManagerRouter = createTRPCRouter({
 
   })
     .use(async ({ ctx, getRawInput, next }) => {
-      await enforceCampaignRawScope(ctx, await getRawInput());
+      const raw = (await getRawInput()) as { id?: unknown };
+      const id = typeof raw?.id === "string" ? raw.id : null;
+      const row = id ? await ctx.db.campaignAction.findUnique({ where: { id }, select: { campaignId: true } }) : null;
+      await enforceResolvedCampaignAccess(ctx, row?.campaignId);
       return next();
     })
     .mutation(async ({ ctx, input }) => {
@@ -584,7 +603,10 @@ export const campaignManagerRouter = createTRPCRouter({
 
   })
     .use(async ({ ctx, getRawInput, next }) => {
-      await enforceCampaignRawScope(ctx, await getRawInput());
+      const raw = (await getRawInput()) as { id?: unknown };
+      const id = typeof raw?.id === "string" ? raw.id : null;
+      const row = id ? await ctx.db.campaignExecution.findUnique({ where: { id }, select: { campaignId: true } }) : null;
+      await enforceResolvedCampaignAccess(ctx, row?.campaignId);
       return next();
     })
     .mutation(async ({ ctx, input }) => {
@@ -599,6 +621,7 @@ export const campaignManagerRouter = createTRPCRouter({
     }))
     .mutation(async ({ ctx, input }) => {
       const exec = await ctx.db.campaignExecution.findUniqueOrThrow({ where: { id: input.id } });
+      await enforceCampaignAccess(ctx, exec.campaignId); // anti-IDOR : cross-opérateur sinon
       const validTransitions: Record<string, string[]> = {
         DEVIS: ["BAT", "ANNULE"],
         BAT: ["EN_PRODUCTION", "DEVIS", "ANNULE"],
@@ -689,7 +712,10 @@ export const campaignManagerRouter = createTRPCRouter({
 
   })
     .use(async ({ ctx, getRawInput, next }) => {
-      await enforceCampaignRawScope(ctx, await getRawInput());
+      const raw = (await getRawInput()) as { id?: unknown };
+      const id = typeof raw?.id === "string" ? raw.id : null;
+      const row = id ? await ctx.db.campaignAmplification.findUnique({ where: { id }, select: { campaignId: true } }) : null;
+      await enforceResolvedCampaignAccess(ctx, row?.campaignId);
       return next();
     })
     .mutation(async ({ ctx, input }) => {
@@ -744,7 +770,10 @@ export const campaignManagerRouter = createTRPCRouter({
 
   })
     .use(async ({ ctx, getRawInput, next }) => {
-      await enforceCampaignRawScope(ctx, await getRawInput());
+      const raw = (await getRawInput()) as { id?: unknown };
+      const id = typeof raw?.id === "string" ? raw.id : null;
+      const row = id ? await ctx.db.campaignAmplification.findUnique({ where: { id }, select: { campaignId: true } }) : null;
+      await enforceResolvedCampaignAccess(ctx, row?.campaignId);
       return next();
     })
     .mutation(async ({ ctx, input }) => {
@@ -912,7 +941,10 @@ export const campaignManagerRouter = createTRPCRouter({
 
   })
     .use(async ({ ctx, getRawInput, next }) => {
-      await enforceCampaignRawScope(ctx, await getRawInput());
+      const raw = (await getRawInput()) as { id?: unknown };
+      const id = typeof raw?.id === "string" ? raw.id : null;
+      const row = id ? await ctx.db.campaignMilestone.findUnique({ where: { id }, select: { campaignId: true } }) : null;
+      await enforceResolvedCampaignAccess(ctx, row?.campaignId);
       return next();
     })
     .mutation(async ({ ctx, input }) => {
@@ -926,6 +958,8 @@ export const campaignManagerRouter = createTRPCRouter({
       gateReview: z.record(z.string(), z.unknown()).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      const ms = await ctx.db.campaignMilestone.findUniqueOrThrow({ where: { id: input.id }, select: { campaignId: true } });
+      await enforceCampaignAccess(ctx, ms.campaignId); // anti-IDOR : cross-opérateur sinon
       return ctx.db.campaignMilestone.update({
         where: { id: input.id },
         data: {
@@ -951,7 +985,10 @@ export const campaignManagerRouter = createTRPCRouter({
 
   })
     .use(async ({ ctx, getRawInput, next }) => {
-      await enforceCampaignRawScope(ctx, await getRawInput());
+      const raw = (await getRawInput()) as { id?: unknown };
+      const id = typeof raw?.id === "string" ? raw.id : null;
+      const row = id ? await ctx.db.campaignMilestone.findUnique({ where: { id }, select: { campaignId: true } }) : null;
+      await enforceResolvedCampaignAccess(ctx, row?.campaignId);
       return next();
     })
     .mutation(async ({ ctx, input }) => {
@@ -1026,7 +1063,10 @@ export const campaignManagerRouter = createTRPCRouter({
 
   })
     .use(async ({ ctx, getRawInput, next }) => {
-      await enforceCampaignRawScope(ctx, await getRawInput());
+      const raw = (await getRawInput()) as { id?: unknown };
+      const id = typeof raw?.id === "string" ? raw.id : null;
+      const row = id ? await ctx.db.budgetLine.findUnique({ where: { id }, select: { campaignId: true } }) : null;
+      await enforceResolvedCampaignAccess(ctx, row?.campaignId);
       return next();
     })
     .mutation(({ input }) => cm.updateBudgetLine(input.id, input.actual)),
@@ -1049,7 +1089,10 @@ export const campaignManagerRouter = createTRPCRouter({
 
   })
     .use(async ({ ctx, getRawInput, next }) => {
-      await enforceCampaignRawScope(ctx, await getRawInput());
+      const raw = (await getRawInput()) as { id?: unknown };
+      const id = typeof raw?.id === "string" ? raw.id : null;
+      const row = id ? await ctx.db.budgetLine.findUnique({ where: { id }, select: { campaignId: true } }) : null;
+      await enforceResolvedCampaignAccess(ctx, row?.campaignId);
       return next();
     })
     .mutation(({ input }) => cm.deleteBudgetLine(input.id)),
@@ -1110,6 +1153,8 @@ export const campaignManagerRouter = createTRPCRouter({
       comment: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      const appr = await ctx.db.campaignApproval.findUniqueOrThrow({ where: { id: input.id }, select: { campaignId: true } });
+      await enforceCampaignAccess(ctx, appr.campaignId); // anti-IDOR : cross-opérateur sinon
       return ctx.db.campaignApproval.update({
         where: { id: input.id },
         data: { status: input.status, comment: input.comment, decidedAt: new Date() },
@@ -1132,6 +1177,11 @@ export const campaignManagerRouter = createTRPCRouter({
   getPendingApprovals: campaignScopedProcedure
     .input(z.object({ approverId: z.string() }))
     .query(async ({ ctx, input }) => {
+      // anti-IDOR : on ne lit QUE sa propre file d'approbation (l'approverId est
+      // un userId). ADMIN peut consulter n'importe quel approbateur.
+      if (input.approverId !== ctx.session.user.id && ctx.session.user.role !== "ADMIN") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Vous ne pouvez consulter que vos propres approbations." });
+      }
       return ctx.db.campaignApproval.findMany({
         where: { approverId: input.approverId, status: "PENDING" },
         include: { campaign: { select: { id: true, name: true, state: true } } },
@@ -1203,6 +1253,7 @@ export const campaignManagerRouter = createTRPCRouter({
     })
     .mutation(async ({ ctx, input }) => {
       const existing = await ctx.db.campaignAsset.findUniqueOrThrow({ where: { id: input.id } });
+      await enforceCampaignAccess(ctx, existing.campaignId); // anti-IDOR : asset d'une autre marque sinon
       return ctx.db.campaignAsset.update({
         where: { id: input.id },
         data: { fileUrl: input.fileUrl, fileSize: input.fileSize, version: existing.version + 1 },
@@ -1216,6 +1267,7 @@ export const campaignManagerRouter = createTRPCRouter({
         where: { id: input.id },
         include: { campaign: true },
       });
+      await enforceCampaignAccess(ctx, asset.campaignId); // anti-IDOR : publie l'asset d'une autre marque sinon
       // Create BrandAsset from campaign asset
       await ctx.db.brandAsset.create({
         data: {
@@ -1298,8 +1350,11 @@ export const campaignManagerRouter = createTRPCRouter({
   briefStatusMany: campaignScopedProcedure
     .input(z.object({ campaignIds: z.array(z.string()).min(1).max(200) }))
     .query(async ({ ctx, input }) => {
+      // anti-IDOR : on n'intersecte que les campagnes accessibles (sinon un
+      // appelant lisait le statut des briefs de campagnes d'autres marques).
+      const opCtx = await getOperatorContext(ctx.session.user.id);
       const rows = await ctx.db.campaign.findMany({
-        where: { id: { in: input.campaignIds } },
+        where: { AND: [{ id: { in: input.campaignIds } }, scopeCampaigns(opCtx)] },
         select: {
           id: true,
           activeBriefId: true,
@@ -1341,6 +1396,7 @@ export const campaignManagerRouter = createTRPCRouter({
     })
     .mutation(async ({ ctx, input }) => {
       const existing = await ctx.db.campaignBrief.findUniqueOrThrow({ where: { id: input.id } });
+      await enforceCampaignAccess(ctx, existing.campaignId); // anti-IDOR : brief d'une autre marque sinon
       return ctx.db.campaignBrief.update({
         where: { id: input.id },
         data: {
@@ -1416,7 +1472,9 @@ export const campaignManagerRouter = createTRPCRouter({
   getReport: campaignScopedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      return ctx.db.campaignReport.findUniqueOrThrow({ where: { id: input.id } });
+      const report = await ctx.db.campaignReport.findUniqueOrThrow({ where: { id: input.id } });
+      await enforceCampaignAccess(ctx, report.campaignId); // anti-IDOR : lecture cross-tenant sinon
+      return report;
     }),
 
   // ==========================================================================
@@ -1533,6 +1591,11 @@ export const campaignManagerRouter = createTRPCRouter({
       return next();
     })
     .mutation(async ({ ctx, input }) => {
+      // anti-IDOR : sourceId/targetId sont des ids de Campaign — l'appelant doit
+      // posséder LES DEUX (sinon il polluerait le graphe de dépendances d'une
+      // autre marque, ou lierait sa campagne à celle d'un tiers).
+      await enforceCampaignAccess(ctx, input.sourceId);
+      await enforceCampaignAccess(ctx, input.targetId);
       return ctx.db.campaignDependency.create({
         data: { sourceId: input.sourceId, targetId: input.targetId, depType: input.depType ?? "BLOCKS" },
       });
@@ -1649,7 +1712,11 @@ export const campaignManagerRouter = createTRPCRouter({
 
   getFieldOp: campaignScopedProcedure
     .input(z.object({ id: z.string() }))
-    .query(({ input }) => cm.getFieldOp(input.id)),
+    .query(async ({ ctx, input }) => {
+      const fo = await ctx.db.campaignFieldOp.findUniqueOrThrow({ where: { id: input.id }, select: { campaignId: true } });
+      await enforceCampaignAccess(ctx, fo.campaignId); // anti-IDOR : lecture cross-tenant sinon
+      return cm.getFieldOp(input.id);
+    }),
 
   updateFieldOp: governedProcedure({
 
@@ -1672,7 +1739,10 @@ export const campaignManagerRouter = createTRPCRouter({
 
   })
     .use(async ({ ctx, getRawInput, next }) => {
-      await enforceCampaignRawScope(ctx, await getRawInput());
+      const raw = (await getRawInput()) as { id?: unknown };
+      const id = typeof raw?.id === "string" ? raw.id : null;
+      const row = id ? await ctx.db.campaignFieldOp.findUnique({ where: { id }, select: { campaignId: true } }) : null;
+      await enforceResolvedCampaignAccess(ctx, row?.campaignId);
       return next();
     })
     .mutation(async ({ ctx, input }) => {
@@ -1703,7 +1773,10 @@ export const campaignManagerRouter = createTRPCRouter({
 
   })
     .use(async ({ ctx, getRawInput, next }) => {
-      await enforceCampaignRawScope(ctx, await getRawInput());
+      const raw = (await getRawInput()) as { id?: unknown };
+      const id = typeof raw?.id === "string" ? raw.id : null;
+      const row = id ? await ctx.db.campaignFieldOp.findUnique({ where: { id }, select: { campaignId: true } }) : null;
+      await enforceResolvedCampaignAccess(ctx, row?.campaignId);
       return next();
     })
     .mutation(async ({ ctx, input }) => {
@@ -1770,10 +1843,12 @@ export const campaignManagerRouter = createTRPCRouter({
   getFieldReport: campaignScopedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      return ctx.db.campaignFieldReport.findUniqueOrThrow({
+      const fr = await ctx.db.campaignFieldReport.findUniqueOrThrow({
         where: { id: input.id },
         include: { fieldOp: true },
       });
+      await enforceCampaignAccess(ctx, fr.campaignId); // anti-IDOR : lecture cross-tenant sinon
+      return fr;
     }),
 
   validateFieldReport: operatorProcedure
@@ -1782,7 +1857,11 @@ export const campaignManagerRouter = createTRPCRouter({
       validatorId: z.string(),
       overrides: z.record(z.string(), z.unknown()).optional(),
     }))
-    .mutation(({ input }) => cm.validateFieldReport(input.id, input.validatorId, input.overrides)),
+    .mutation(async ({ ctx, input }) => {
+      const fr = await ctx.db.campaignFieldReport.findUniqueOrThrow({ where: { id: input.id }, select: { campaignId: true } });
+      await enforceCampaignAccess(ctx, fr.campaignId); // anti-IDOR : cross-opérateur sinon
+      return cm.validateFieldReport(input.id, input.validatorId, input.overrides);
+    }),
 
   getFieldReportStats: campaignScopedProcedure
     .input(z.object({ campaignId: z.string() }))
@@ -1791,6 +1870,8 @@ export const campaignManagerRouter = createTRPCRouter({
   rejectFieldReport: operatorProcedure
     .input(z.object({ id: z.string(), reason: z.string() }))
     .mutation(async ({ ctx, input }) => {
+      const fr = await ctx.db.campaignFieldReport.findUniqueOrThrow({ where: { id: input.id }, select: { campaignId: true } });
+      await enforceCampaignAccess(ctx, fr.campaignId); // anti-IDOR : cross-opérateur sinon
       return ctx.db.campaignFieldReport.update({
         where: { id: input.id },
         data: { status: "SUBMITTED", data: { rejected: true, reason: input.reason } as Prisma.InputJsonValue },

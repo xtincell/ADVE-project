@@ -3,6 +3,8 @@ import { anthropic } from "@ai-sdk/anthropic";
 import { streamText } from "ai";
 import { getSystemPrompt, type MestorContext } from "@/server/services/mestor";
 import { db } from "@/lib/db";
+import { auth } from "@/lib/auth/config";
+import { canAccessStrategy, getOperatorContext } from "@/server/services/operator-isolation";
 
 import { PILLAR_STORAGE_KEYS } from "@/domain";
 interface ChatMessage {
@@ -83,6 +85,20 @@ async function loadStrategyContext(strategyId: string): Promise<string> {
 
 export async function POST(request: Request) {
   try {
+    // Auth OBLIGATOIRE (audit adversarial 2026-07-22) : sans session, cette
+    // route (a) exfiltrait le CONTEXTE CLIENT complet (piliers ADVE, campagnes,
+    // signaux, business model) de n'importe quelle marque via un `strategyId`
+    // deviné, injecté dans le prompt système, et (b) était un vecteur de
+    // déni-de-portefeuille (appels LLM anonymes non plafonnés). On exige une
+    // session + l'ownership de la marque avant de charger le moindre contexte.
+    const session = await auth();
+    if (!session?.user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     const body = (await request.json()) as ChatRequestBody;
     const { messages, context, strategyId } = body;
 
@@ -96,8 +112,15 @@ export async function POST(request: Request) {
     // Build system prompt
     let systemPrompt = getSystemPrompt(context ?? "console");
 
-    // Load strategy context if available
+    // Load strategy context ONLY when the caller owns the strategy.
     if (strategyId) {
+      const opCtx = await getOperatorContext(session.user.id);
+      if (!(await canAccessStrategy(strategyId, opCtx))) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
       const strategyContext = await loadStrategyContext(strategyId);
       if (strategyContext) {
         systemPrompt += "\n\n" + strategyContext;

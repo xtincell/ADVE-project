@@ -403,11 +403,16 @@ export async function getDealDetails(dealId: string) {
  * Get pipeline overview with counts and values per stage
  */
 export async function getPipelineOverview(operatorId?: string | null) {
-  // Anti-IDOR (audit 2026-07-22) : scope opérateur via la relation strategy —
-  // sans lui, tout appelant voyait le pipeline (contacts/valeurs) de TOUS les
-  // opérateurs. `operatorId` absent (ADMIN) → global assumé.
+  // Anti-IDOR (audit 2026-07-22) : scope opérateur via la relation strategy.
+  // Round-3 : `Deal.strategyId` est NULLABLE (peuplé seulement à la conversion
+  // WON) — un filtre relation-to-one SEUL excluait tous les deals pré-conversion
+  // (LEAD/QUALIFIED/…) → l'opérateur voyait un pipeline VIDE (régression). Les
+  // deals pré-conversion n'ont AUCUN lien opérateur en base (`createDeal` ne pose
+  // ni userId ni strategyId) : on les inclut donc (partagés, faute de colonne
+  // `Deal.operatorId` — vraie isolation tracée RESIDUAL-DEBT) et on scope les
+  // deals convertis par la marque. `operatorId` absent (ADMIN) → global assumé.
   const strategyScope = operatorId
-    ? { strategy: scopeStrategies({ operatorId, userId: "", role: "FIXER" }) }
+    ? { OR: [{ strategyId: null }, { strategy: scopeStrategies({ operatorId, userId: "", role: "FIXER" }) }] }
     : {};
   const deals = await db.deal.findMany({
     where: { ...strategyScope },
@@ -444,9 +449,10 @@ export async function listDeals(options?: {
   operatorId?: string | null;
   limit?: number;
 }) {
-  // If operator-scoped, filter deals by strategy belonging to operator
+  // Cf. getPipelineOverview : deals pré-conversion (strategyId null) inclus,
+  // sinon l'opérateur voit une liste vide (régression round-3).
   const strategyScope = options?.operatorId
-    ? { strategy: scopeStrategies({ operatorId: options.operatorId, userId: "", role: "FIXER" }) }
+    ? { OR: [{ strategyId: null }, { strategy: scopeStrategies({ operatorId: options.operatorId, userId: "", role: "FIXER" }) }] }
     : {};
 
   return db.deal.findMany({
@@ -472,8 +478,9 @@ export async function listDeals(options?: {
  */
 export async function getRevenueForecast(operatorId?: string | null) {
   // Anti-IDOR (audit 2026-07-22) : scope opérateur (prévisions = valeurs des deals).
+  // Cf. getPipelineOverview : deals pré-conversion (strategyId null) inclus.
   const strategyScope = operatorId
-    ? { strategy: scopeStrategies({ operatorId, userId: "", role: "FIXER" }) }
+    ? { OR: [{ strategyId: null }, { strategy: scopeStrategies({ operatorId, userId: "", role: "FIXER" }) }] }
     : {};
   const deals = await db.deal.findMany({
     where: { stage: { notIn: ["LOST"] }, ...strategyScope },
