@@ -109,6 +109,22 @@ Items MEDIUM à régression-risquée ou à coordination, déférés de la boucle
 
 ### Gouvernance / sécurité
 
+- **`session.user.operatorId` jamais peuplé — champ `User.operatorId` surchargé** *(trouvé à l'audit
+  B1, 2026-07-22)* : le callback NextAuth (`lib/auth/config.ts`) ne pose que `role`+`id` sur la
+  session → `session.user.operatorId` est TOUJOURS `undefined`. Le garde ADR-0175 (`governedProcedure`)
+  + ~15 routeurs (`client`, `strategy`, `monetization`, `media-plan`, `mission`, `intention`…) le
+  lisent → tous voient `null`. **Direction fail-safe** (non exploitable) : `canAccessStrategy` avec
+  `operatorId:null` REFUSE l'accès same-operator (le garde n'accorde qu'owner/ADMIN/collaborateur ;
+  les staff opérateur passent parce qu'ils sont ADMIN god-mode/seed). **Pourquoi NE PAS peupler
+  naïvement** : `User.operatorId` est surchargé — il marque l'appartenance au tenant AUSSI pour les
+  users CLIENT/BRAND/founder (cf. `seed-demo` : `CLIENT_RETAINER`/`BRAND_MANAGER` portent
+  `operatorId=operator.id`). Peupler `session.operatorId` ferait passer `canAccessStrategy` ligne 160
+  → un client verrait TOUTES les marques de son opérateur (fuite cross-tenant CATASTROPHIQUE).
+  **Plan** : introduire un booléen distinct `User.isOperatorStaff` (ou un rôle OPERATOR strict) et ne
+  peupler `session.operatorId` QUE pour ce cas ; migrer les ~15 lecteurs. **Effort** : ~1 session
+  dédiée (sécurité). **Déclencheur** : quand un vrai staff opérateur NON-ADMIN doit exister. Dead code
+  supprimé en passant : `middleware/operator.ts` (session-based `operatorFilter` renvoyait `{}` =
+  non filtré = fuite si jamais câblé — 0 import, retiré v6.27.267).
 - **Audit d'ownership des mutations `governedProcedure` founder-lane** *(suivi ADR-0166, inscrit
   2026-07-20)* : la lane protected est close ; les mutations gouvernées `requireOperator:false`
   (guilde, paiements, candidatures, cockpit founder — flags audités PR #447) n'ont PAS toutes une

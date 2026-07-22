@@ -1,5 +1,13 @@
 # Changelog — La Fusee
 
+## v6.27.267 — chore(security): suppression du footgun `middleware/operator.ts` + traçage surcharge operatorId (2026-07-22)
+
+**Dead code de fuite tenant retiré + cause racine `session.operatorId` tracée (audit adversarial « TOUT » — hygiène sécurité).**
+
+- **Footgun supprimé** : `src/server/trpc/middleware/operator.ts` (session-based `operatorFilter`/`enforceOperatorIsolation`) — 0 import en prod (le vrai `enforceOperatorIsolation` vit dans `operator-isolation/index.ts`, prend un `OperatorContext` résolu en base). `operatorFilter` renvoyait `{}` (aucun filtre = TOUTES les lignes cross-tenant) pour tout non-ADMIN, car il lit `session.user.operatorId` qui n'est JAMAIS peuplé → un futur câblage naïf aurait ouvert une fuite. Retiré (fail-OPEN sur donnée manquante = anti-pattern).
+- **Cause racine tracée** (RESIDUAL-DEBT §Gouvernance/sécurité) : le callback NextAuth ne pose que `role`+`id` → `session.user.operatorId` toujours `undefined` ; le garde ADR-0175 + ~15 routeurs le lisent. Direction fail-safe (refuse same-operator, les staff passent via ADMIN). **NE PAS peupler naïvement** : `User.operatorId` est surchargé (marque aussi l'appartenance tenant des users CLIENT/BRAND/founder — cf. seed-demo) → peupler ferait fuiter toutes les marques d'un opérateur à ses clients. Plan : booléen distinct `isOperatorStaff`.
+- **Vérif** : tsc 0. Cap APOGEE 7/7 préservé.
+
 ## v6.27.266 — fix(ingestion): provenance honnête du brand book (LLM → INFERRED, déterministe → SOURCE) (2026-07-22)
 
 **Les champs extraits par le LLM ne sont plus étiquetés « fait observé » — la provenance dit la vérité sur l'origine (audit adversarial « TOUT » — C3, zéro LLM ajouté).**
