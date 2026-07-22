@@ -6,4 +6,4 @@
  * l'endpoint `/api/version` la consomment — le watcher de déploiement de
  * `/console/socle/prod-ops` compare cette valeur à la version servie en ligne.
  */
-export const APP_VERSION = "6.27.270";
+export const APP_VERSION = "6.27.271";

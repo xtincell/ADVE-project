@@ -65,6 +65,32 @@ async function enforceCampaignAccess(ctx: { session: { user: { id: string; role:
   if (!ok) throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé: cette campagne appartient à un autre opérateur" });
 }
 
+/**
+ * Anti-IDOR (audit adversarial 2026-07-22) : base qui enforce l'accès campagne
+ * DÈS QU'un `campaignId` figure dans l'input. Les ~51 procédures sous-entité
+ * keyées `campaignId` (briefs, assets, actions, budgets…) n'appelaient PAS
+ * `enforceCampaignAccess` → un founder lisait/écrivait les artefacts de campagne
+ * d'une AUTRE marque. Cette base rend la garde structurelle (plus d'oubli
+ * possible). Les procédures keyées sur un id d'entité (briefId, assetId…) sans
+ * `campaignId` sont no-op ici et gardées inline (résolution entité→campagne).
+ */
+/** Résout le `campaignId` d'un input brut + enforce l'accès (helper pur, réutilisable). */
+async function enforceCampaignRawScope(
+  ctx: { session: { user: { id: string; role: string; operatorId?: string | null } } },
+  raw: unknown,
+): Promise<void> {
+  const campaignId =
+    raw && typeof raw === "object" && "campaignId" in raw && typeof (raw as { campaignId?: unknown }).campaignId === "string"
+      ? (raw as { campaignId: string }).campaignId
+      : null;
+  if (campaignId) await enforceCampaignAccess(ctx, campaignId);
+}
+
+const campaignScopedProcedure = protectedProcedure.use(async ({ ctx, getRawInput, next }) => {
+  await enforceCampaignRawScope(ctx, await getRawInput());
+  return next();
+});
+
 // ============================================================================
 // Shared Zod enums
 // ============================================================================
@@ -126,7 +152,7 @@ export const campaignManagerRouter = createTRPCRouter({
   // ==========================================================================
 
   /** getByStrategy — campaigns by strategy with filters */
-  getByStrategy: protectedProcedure
+  getByStrategy: campaignScopedProcedure
     .input(z.object({
       strategyId: z.string(),
       state: campaignStateEnum.optional(),
@@ -146,7 +172,7 @@ export const campaignManagerRouter = createTRPCRouter({
     }),
 
   /** getById — full detail with all relations */
-  getById: protectedProcedure
+  getById: campaignScopedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       await enforceCampaignAccess(ctx, input.id);
@@ -176,7 +202,7 @@ export const campaignManagerRouter = createTRPCRouter({
     }),
 
   /** listBrandActions — actions stratégiques (BrandAction, ADR-0094/0119) liées à la campagne. */
-  listBrandActions: protectedProcedure
+  listBrandActions: campaignScopedProcedure
     .input(z.object({ campaignId: z.string() }))
     .query(async ({ ctx, input }) => {
       await enforceCampaignAccess(ctx, input.campaignId);
@@ -187,7 +213,7 @@ export const campaignManagerRouter = createTRPCRouter({
     }),
 
   /** chainHealth — diagnostic de chaîne actions → briefs → missions (lecture seule). */
-  chainHealth: protectedProcedure
+  chainHealth: campaignScopedProcedure
     .input(z.object({ campaignId: z.string() }))
     .query(async ({ ctx, input }) => {
       await enforceCampaignAccess(ctx, input.campaignId);
@@ -214,7 +240,7 @@ export const campaignManagerRouter = createTRPCRouter({
   }),
 
   /** getKanban — grouped by state */
-  getKanban: protectedProcedure
+  getKanban: campaignScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
       await enforceStrategyAccess(ctx, input.strategyId);
@@ -233,7 +259,7 @@ export const campaignManagerRouter = createTRPCRouter({
     }),
 
   /** getCalendar — by launch date */
-  getCalendar: protectedProcedure
+  getCalendar: campaignScopedProcedure
     .input(z.object({ strategyId: z.string(), month: z.number().min(1).max(12), year: z.number() }))
     .query(async ({ ctx, input }) => {
       await enforceStrategyAccess(ctx, input.strategyId);
@@ -254,7 +280,7 @@ export const campaignManagerRouter = createTRPCRouter({
     }),
 
   /** search — multi-field */
-  search: protectedProcedure
+  search: campaignScopedProcedure
     .input(z.object({
       strategyId: z.string().optional(),
       query: z.string().optional(),
@@ -269,7 +295,7 @@ export const campaignManagerRouter = createTRPCRouter({
     }),
 
   /** dashboard — aggregated stats */
-  dashboard: protectedProcedure
+  dashboard: campaignScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
       await enforceStrategyAccess(ctx, input.strategyId);
@@ -324,6 +350,10 @@ export const campaignManagerRouter = createTRPCRouter({
     caller: "campaign-manager:update",
 
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(async ({ ctx, input }) => {
       await enforceCampaignAccess(ctx, input.id);
       const { id, advertis_vector, devotionObjective, aarrTargets, ...data } = input;
@@ -351,7 +381,7 @@ export const campaignManagerRouter = createTRPCRouter({
     }),
 
   /** availableTransitions */
-  availableTransitions: protectedProcedure
+  availableTransitions: campaignScopedProcedure
     .input(z.object({ state: campaignStateEnum }))
     .query(({ input }) => cm.getAvailableTransitions(input.state as CampaignState)),
 
@@ -365,6 +395,10 @@ export const campaignManagerRouter = createTRPCRouter({
     caller: "campaign-manager:delete",
 
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(async ({ ctx, input }) => {
       await enforceCampaignAccess(ctx, input.id);
       return ctx.db.campaign.update({
@@ -423,11 +457,15 @@ export const campaignManagerRouter = createTRPCRouter({
 
 
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(async ({ input }) => {
       return cm.createActionFromType(input.campaignId, input.actionTypeSlug, input);
     }),
 
-  listActions: protectedProcedure
+  listActions: campaignScopedProcedure
     .input(z.object({ campaignId: z.string(), category: actionCategoryEnum.optional() }))
     .query(async ({ ctx, input }) => {
       return ctx.db.campaignAction.findMany({
@@ -459,12 +497,16 @@ export const campaignManagerRouter = createTRPCRouter({
 
 
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
       return ctx.db.campaignAction.update({ where: { id }, data });
     }),
 
-  getActionTypes: protectedProcedure
+  getActionTypes: campaignScopedProcedure
     .input(z.object({
       category: actionCategoryEnum.optional(),
       driver: z.string().optional(),
@@ -503,11 +545,15 @@ export const campaignManagerRouter = createTRPCRouter({
 
 
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.campaignExecution.create({ data: input });
     }),
 
-  listExecutions: protectedProcedure
+  listExecutions: campaignScopedProcedure
     .input(z.object({ campaignId: z.string(), actionId: z.string().optional() }))
     .query(async ({ ctx, input }) => {
       return ctx.db.campaignExecution.findMany({
@@ -537,6 +583,10 @@ export const campaignManagerRouter = createTRPCRouter({
 
 
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
       return ctx.db.campaignExecution.update({ where: { id }, data: data as Prisma.CampaignExecutionUpdateInput });
@@ -594,11 +644,15 @@ export const campaignManagerRouter = createTRPCRouter({
 
 
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.campaignAmplification.create({ data: input });
     }),
 
-  listAmplifications: protectedProcedure
+  listAmplifications: campaignScopedProcedure
     .input(z.object({ campaignId: z.string() }))
     .query(async ({ ctx, input }) => {
       return ctx.db.campaignAmplification.findMany({
@@ -634,6 +688,10 @@ export const campaignManagerRouter = createTRPCRouter({
 
 
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(async ({ ctx, input }) => {
       const { id, aarrAttribution, ...data } = input;
       return ctx.db.campaignAmplification.update({
@@ -645,7 +703,7 @@ export const campaignManagerRouter = createTRPCRouter({
       });
     }),
 
-  getAmplificationMetrics: protectedProcedure
+  getAmplificationMetrics: campaignScopedProcedure
     .input(z.object({ campaignId: z.string() }))
     .query(async ({ ctx, input }) => {
       const amps = await ctx.db.campaignAmplification.findMany({ where: { campaignId: input.campaignId } });
@@ -685,6 +743,10 @@ export const campaignManagerRouter = createTRPCRouter({
 
 
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.campaignAmplification.delete({ where: { id: input.id } });
     }),
@@ -711,6 +773,10 @@ export const campaignManagerRouter = createTRPCRouter({
 
 
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(async ({ ctx, input }) => {
       const { permissions, ...rest } = input;
       return ctx.db.campaignTeamMember.create({
@@ -718,7 +784,7 @@ export const campaignManagerRouter = createTRPCRouter({
       });
     }),
 
-  getTeam: protectedProcedure
+  getTeam: campaignScopedProcedure
     .input(z.object({ campaignId: z.string() }))
     .query(({ input }) => cm.getCampaignTeam(input.campaignId)),
 
@@ -740,6 +806,10 @@ export const campaignManagerRouter = createTRPCRouter({
 
 
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.campaignTeamMember.update({
         where: { campaignId_userId: { campaignId: input.campaignId, userId: input.userId } },
@@ -763,13 +833,17 @@ export const campaignManagerRouter = createTRPCRouter({
 
 
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.campaignTeamMember.deleteMany({
         where: { campaignId: input.campaignId, userId: input.userId },
       });
     }),
 
-  listTeamByRole: protectedProcedure
+  listTeamByRole: campaignScopedProcedure
     .input(z.object({ campaignId: z.string(), role: teamRoleEnum }))
     .query(async ({ ctx, input }) => {
       return ctx.db.campaignTeamMember.findMany({
@@ -801,11 +875,15 @@ export const campaignManagerRouter = createTRPCRouter({
 
 
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.campaignMilestone.create({ data: input });
     }),
 
-  listMilestones: protectedProcedure
+  listMilestones: campaignScopedProcedure
     .input(z.object({ campaignId: z.string() }))
     .query(async ({ ctx, input }) => {
       return ctx.db.campaignMilestone.findMany({
@@ -833,6 +911,10 @@ export const campaignManagerRouter = createTRPCRouter({
 
 
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
       return ctx.db.campaignMilestone.update({ where: { id }, data });
@@ -868,6 +950,10 @@ export const campaignManagerRouter = createTRPCRouter({
 
 
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.campaignMilestone.delete({ where: { id: input.id } });
     }),
@@ -876,27 +962,27 @@ export const campaignManagerRouter = createTRPCRouter({
   // C.3.7 — Budget — 10 procedures
   // ==========================================================================
 
-  getBudgetBreakdown: protectedProcedure
+  getBudgetBreakdown: campaignScopedProcedure
     .input(z.object({ campaignId: z.string() }))
     .query(({ input }) => cm.getBudgetBreakdown(input.campaignId)),
 
-  getBudgetSummary: protectedProcedure
+  getBudgetSummary: campaignScopedProcedure
     .input(z.object({ campaignId: z.string() }))
     .query(({ input }) => cm.getBudgetSummary(input.campaignId)),
 
-  getBudgetVariance: protectedProcedure
+  getBudgetVariance: campaignScopedProcedure
     .input(z.object({ campaignId: z.string() }))
     .query(({ input }) => cm.getBudgetVariance(input.campaignId)),
 
-  getBurnForecast: protectedProcedure
+  getBurnForecast: campaignScopedProcedure
     .input(z.object({ campaignId: z.string() }))
     .query(({ input }) => cm.getBurnForecast(input.campaignId)),
 
-  getSpendByActionLine: protectedProcedure
+  getSpendByActionLine: campaignScopedProcedure
     .input(z.object({ campaignId: z.string() }))
     .query(({ input }) => cm.getSpendByActionLine(input.campaignId)),
 
-  getCostPerKPI: protectedProcedure
+  getCostPerKPI: campaignScopedProcedure
     .input(z.object({ campaignId: z.string() }))
     .query(({ input }) => cm.getCostPerKPI(input.campaignId)),
 
@@ -920,6 +1006,10 @@ export const campaignManagerRouter = createTRPCRouter({
 
 
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(({ input }) => cm.createBudgetLine(input)),
 
   updateBudgetLine: governedProcedure({
@@ -935,9 +1025,13 @@ export const campaignManagerRouter = createTRPCRouter({
 
 
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(({ input }) => cm.updateBudgetLine(input.id, input.actual)),
 
-  listBudgetLines: protectedProcedure
+  listBudgetLines: campaignScopedProcedure
     .input(z.object({ campaignId: z.string() }))
     .query(({ input }) => cm.listBudgetLines(input.campaignId)),
 
@@ -954,6 +1048,10 @@ export const campaignManagerRouter = createTRPCRouter({
 
 
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(({ input }) => cm.deleteBudgetLine(input.id)),
 
   // ==========================================================================
@@ -980,6 +1078,10 @@ export const campaignManagerRouter = createTRPCRouter({
 
 
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(async ({ ctx, input }) => {
       // Count existing rounds for this approval type
       const existingCount = await ctx.db.campaignApproval.count({
@@ -1014,7 +1116,7 @@ export const campaignManagerRouter = createTRPCRouter({
       });
     }),
 
-  listApprovals: protectedProcedure
+  listApprovals: campaignScopedProcedure
     .input(z.object({ campaignId: z.string(), approvalType: approvalTypeEnum.optional() }))
     .query(async ({ ctx, input }) => {
       return ctx.db.campaignApproval.findMany({
@@ -1027,7 +1129,7 @@ export const campaignManagerRouter = createTRPCRouter({
       });
     }),
 
-  getPendingApprovals: protectedProcedure
+  getPendingApprovals: campaignScopedProcedure
     .input(z.object({ approverId: z.string() }))
     .query(async ({ ctx, input }) => {
       return ctx.db.campaignApproval.findMany({
@@ -1063,9 +1165,13 @@ export const campaignManagerRouter = createTRPCRouter({
 
 
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(async ({ ctx, input }) => ctx.db.campaignAsset.create({ data: input })),
 
-  listAssets: protectedProcedure
+  listAssets: campaignScopedProcedure
     .input(z.object({ campaignId: z.string(), assetType: z.string().optional() }))
     .query(async ({ ctx, input }) => {
       return ctx.db.campaignAsset.findMany({
@@ -1091,6 +1197,10 @@ export const campaignManagerRouter = createTRPCRouter({
 
 
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(async ({ ctx, input }) => {
       const existing = await ctx.db.campaignAsset.findUniqueOrThrow({ where: { id: input.id } });
       return ctx.db.campaignAsset.update({
@@ -1145,13 +1255,17 @@ export const campaignManagerRouter = createTRPCRouter({
 
 
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.campaignBrief.create({
         data: { ...input, content: input.content as Prisma.InputJsonValue },
       });
     }),
 
-  listBriefs: protectedProcedure
+  listBriefs: campaignScopedProcedure
     .input(z.object({ campaignId: z.string(), briefType: briefTypeEnum.optional() }))
     .query(async ({ ctx, input }) => {
       return ctx.db.campaignBrief.findMany({
@@ -1161,12 +1275,12 @@ export const campaignManagerRouter = createTRPCRouter({
     }),
 
   // ADR-0049 — read-only brief status for client gating (badges, "missing brief" CTA)
-  briefStatus: protectedProcedure
+  briefStatus: campaignScopedProcedure
     .input(z.object({ campaignId: z.string() }))
     .query(({ ctx, input }) => cm.getCampaignBriefStatus(input.campaignId, ctx.db)),
 
   // ADR-0049 — list all briefs across a strategy's campaigns (cockpit/operate/briefs)
-  listBriefsForStrategy: protectedProcedure
+  listBriefsForStrategy: campaignScopedProcedure
     .input(z.object({ strategyId: z.string(), limit: z.number().min(1).max(200).default(100) }))
     .query(async ({ ctx, input }) => {
       await enforceStrategyAccess(ctx, input.strategyId);
@@ -1181,7 +1295,7 @@ export const campaignManagerRouter = createTRPCRouter({
     }),
 
   // ADR-0049 — bulk variant : brief status for many campaigns at once (agency table column)
-  briefStatusMany: protectedProcedure
+  briefStatusMany: campaignScopedProcedure
     .input(z.object({ campaignIds: z.array(z.string()).min(1).max(200) }))
     .query(async ({ ctx, input }) => {
       const rows = await ctx.db.campaign.findMany({
@@ -1221,6 +1335,10 @@ export const campaignManagerRouter = createTRPCRouter({
 
 
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(async ({ ctx, input }) => {
       const existing = await ctx.db.campaignBrief.findUniqueOrThrow({ where: { id: input.id } });
       return ctx.db.campaignBrief.update({
@@ -1238,6 +1356,10 @@ export const campaignManagerRouter = createTRPCRouter({
     inputSchema: z.object({ id: z.string() }),
     caller: "campaign-manager:validateBriefAndCreateMission",
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(async ({ ctx, input }) => {
       // Étage « Briefs → [validation] → Missions » : la validation matérialise la
       // mission liée (briefId + budget définitif du brief + brandActionId). Voie
@@ -1251,7 +1373,7 @@ export const campaignManagerRouter = createTRPCRouter({
       return { success: true, briefId: res.briefId, missionId: res.missionId, created: res.created };
     }),
 
-  getBriefTypes: protectedProcedure
+  getBriefTypes: campaignScopedProcedure
     .query(() => cm.getBriefTypes()),
 
   generateCreativeBrief: operatorProcedure
@@ -1282,7 +1404,7 @@ export const campaignManagerRouter = createTRPCRouter({
     }))
     .mutation(({ input }) => cm.generateFullReport(input.campaignId, input.reportType, input.title)),
 
-  listReports: protectedProcedure
+  listReports: campaignScopedProcedure
     .input(z.object({ campaignId: z.string(), reportType: reportTypeEnum.optional() }))
     .query(async ({ ctx, input }) => {
       return ctx.db.campaignReport.findMany({
@@ -1291,7 +1413,7 @@ export const campaignManagerRouter = createTRPCRouter({
       });
     }),
 
-  getReport: protectedProcedure
+  getReport: campaignScopedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       return ctx.db.campaignReport.findUniqueOrThrow({ where: { id: input.id } });
@@ -1314,6 +1436,10 @@ export const campaignManagerRouter = createTRPCRouter({
 
 
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(({ input }) => cm.linkMission(input.campaignId, input.missionId)),
 
   linkSignal: governedProcedure({
@@ -1329,6 +1455,10 @@ export const campaignManagerRouter = createTRPCRouter({
 
 
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(({ input }) => cm.linkSignal(input.campaignId, input.signalId)),
 
   linkPublication: governedProcedure({
@@ -1344,6 +1474,10 @@ export const campaignManagerRouter = createTRPCRouter({
 
 
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(({ input }) => cm.linkPublication(input.campaignId, input.publicationId)),
 
   unlinkEntity: governedProcedure({
@@ -1359,13 +1493,17 @@ export const campaignManagerRouter = createTRPCRouter({
 
 
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(({ input }) => cm.unlinkEntity(input.campaignId, input.linkedType, input.linkedId)),
 
-  getLinks: protectedProcedure
+  getLinks: campaignScopedProcedure
     .input(z.object({ campaignId: z.string() }))
     .query(({ input }) => cm.getLinks(input.campaignId)),
 
-  getLinksByType: protectedProcedure
+  getLinksByType: campaignScopedProcedure
     .input(z.object({ campaignId: z.string(), linkedType: z.enum(["MISSION", "PUBLICATION", "SIGNAL"]) }))
     .query(({ input }) => cm.getLinksByType(input.campaignId, input.linkedType)),
 
@@ -1390,17 +1528,21 @@ export const campaignManagerRouter = createTRPCRouter({
 
 
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.campaignDependency.create({
         data: { sourceId: input.sourceId, targetId: input.targetId, depType: input.depType ?? "BLOCKS" },
       });
     }),
 
-  listDependencies: protectedProcedure
+  listDependencies: campaignScopedProcedure
     .input(z.object({ campaignId: z.string() }))
     .query(({ input }) => cm.listDependencies(input.campaignId)),
 
-  validateDependencies: protectedProcedure
+  validateDependencies: campaignScopedProcedure
     .input(z.object({ campaignId: z.string() }))
     .query(({ input }) => cm.validateDependencies(input.campaignId)),
 
@@ -1414,7 +1556,10 @@ export const campaignManagerRouter = createTRPCRouter({
       strategyId: z.string(),
       name: z.string(),
     }))
-    .mutation(({ input }) => cm.createFromTemplate(input.templateId, input.strategyId, input.name)),
+    .mutation(async ({ ctx, input }) => {
+      await enforceStrategyAccess(ctx, input.strategyId);
+      return cm.createFromTemplate(input.templateId, input.strategyId, input.name);
+    }),
 
   saveAsTemplate: operatorProcedure
     .input(z.object({
@@ -1428,7 +1573,7 @@ export const campaignManagerRouter = createTRPCRouter({
   // C.3.15 — Simulator — 1 procedure
   // ==========================================================================
 
-  getSimulatorData: protectedProcedure
+  getSimulatorData: campaignScopedProcedure
     .input(z.object({ campaignId: z.string() }))
     .query(async ({ ctx, input }) => {
       await enforceCampaignAccess(ctx, input.campaignId);
@@ -1481,6 +1626,10 @@ export const campaignManagerRouter = createTRPCRouter({
 
 
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(async ({ ctx, input }) => {
       const { team, ambassadors, aarrConfig, briefData, ...rest } = input;
       return ctx.db.campaignFieldOp.create({
@@ -1494,11 +1643,11 @@ export const campaignManagerRouter = createTRPCRouter({
       });
     }),
 
-  listFieldOps: protectedProcedure
+  listFieldOps: campaignScopedProcedure
     .input(z.object({ campaignId: z.string() }))
     .query(({ input }) => cm.listFieldOps(input.campaignId)),
 
-  getFieldOp: protectedProcedure
+  getFieldOp: campaignScopedProcedure
     .input(z.object({ id: z.string() }))
     .query(({ input }) => cm.getFieldOp(input.id)),
 
@@ -1522,6 +1671,10 @@ export const campaignManagerRouter = createTRPCRouter({
 
 
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(async ({ ctx, input }) => {
       const { id, results, team, ambassadors, aarrConfig, ...data } = input;
       return ctx.db.campaignFieldOp.update({
@@ -1549,6 +1702,10 @@ export const campaignManagerRouter = createTRPCRouter({
 
 
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.campaignFieldOp.delete({ where: { id: input.id } });
     }),
@@ -1591,6 +1748,10 @@ export const campaignManagerRouter = createTRPCRouter({
 
 
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(async ({ ctx, input }) => {
       const { data: reportData, photos, ...rest } = input;
       return ctx.db.campaignFieldReport.create({
@@ -1602,11 +1763,11 @@ export const campaignManagerRouter = createTRPCRouter({
       });
     }),
 
-  listFieldReports: protectedProcedure
+  listFieldReports: campaignScopedProcedure
     .input(z.object({ fieldOpId: z.string().optional(), campaignId: z.string().optional() }))
     .query(({ input }) => cm.listFieldReports(input.fieldOpId ?? input.campaignId ?? "")),
 
-  getFieldReport: protectedProcedure
+  getFieldReport: campaignScopedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       return ctx.db.campaignFieldReport.findUniqueOrThrow({
@@ -1623,7 +1784,7 @@ export const campaignManagerRouter = createTRPCRouter({
     }))
     .mutation(({ input }) => cm.validateFieldReport(input.id, input.validatorId, input.overrides)),
 
-  getFieldReportStats: protectedProcedure
+  getFieldReportStats: campaignScopedProcedure
     .input(z.object({ campaignId: z.string() }))
     .query(({ input }) => cm.getFieldReportStats(input.campaignId)),
 
@@ -1660,6 +1821,10 @@ export const campaignManagerRouter = createTRPCRouter({
 
 
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(async ({ ctx, input }) => {
       // ADR-0144 — durcissement ownership (ce writer founder-safe n'était pas scopé).
       await enforceCampaignAccess(ctx, input.campaignId);
@@ -1678,6 +1843,10 @@ export const campaignManagerRouter = createTRPCRouter({
     }),
     caller: "campaign-manager:setBrandActionStatus",
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(async ({ ctx, input }) => {
       const action = await ctx.db.brandAction.findUniqueOrThrow({
         where: { id: input.brandActionId },
@@ -1697,7 +1866,7 @@ export const campaignManagerRouter = createTRPCRouter({
    * (connecté / à connecter). Zéro invention : une source non branchée est dite,
    * jamais un zéro fabriqué. Les tâches/activités viennent du panel de mission.
    */
-  getMissionCockpit: protectedProcedure
+  getMissionCockpit: campaignScopedProcedure
     .input(z.object({ campaignId: z.string(), missionId: z.string() }))
     .query(async ({ ctx, input }) => {
       await enforceCampaignAccess(ctx, input.campaignId);
@@ -1760,11 +1929,11 @@ export const campaignManagerRouter = createTRPCRouter({
       return { tasks, execution: { total: tasks.length, done }, metrics, sources };
     }),
 
-  getAARRReport: protectedProcedure
+  getAARRReport: campaignScopedProcedure
     .input(z.object({ campaignId: z.string() }))
     .query(({ input }) => cm.generateAARRReport(input.campaignId)),
 
-  getUnifiedAARRR: protectedProcedure
+  getUnifiedAARRR: campaignScopedProcedure
     .input(z.object({ campaignId: z.string() }))
     .query(({ input }) => cm.getUnifiedAARRR(input.campaignId)),
 
@@ -1772,7 +1941,7 @@ export const campaignManagerRouter = createTRPCRouter({
   // C.3.19 — Operation Recommender — 3 procedures
   // ==========================================================================
 
-  recommendActions: protectedProcedure
+  recommendActions: campaignScopedProcedure
     .input(z.object({
       objectives: z.array(z.string()),
       budget: z.number(),
@@ -1780,7 +1949,7 @@ export const campaignManagerRouter = createTRPCRouter({
     }))
     .query(({ input }) => cm.recommendActions(input.objectives, input.budget, input.preferredDrivers)),
 
-  getRecommendationsForFunnel: protectedProcedure
+  getRecommendationsForFunnel: campaignScopedProcedure
     .input(z.object({
       funnelStage: aarrStageEnum,
       budget: z.number(),
@@ -1788,7 +1957,7 @@ export const campaignManagerRouter = createTRPCRouter({
     }))
     .query(({ input }) => cm.getRecommendationsForFunnel(input.funnelStage, input.budget, input.sector)),
 
-  scoreActionFit: protectedProcedure
+  scoreActionFit: campaignScopedProcedure
     .input(z.object({
       actionSlug: z.string(),
       funnelStage: z.string(),
@@ -1806,7 +1975,7 @@ export const campaignManagerRouter = createTRPCRouter({
   // C.3.20 — ADVE Vector Alignment (REQ-16) — 1 procedure
   // ==========================================================================
 
-  getAdvertisVectorAlignment: protectedProcedure
+  getAdvertisVectorAlignment: campaignScopedProcedure
     .input(z.object({ campaignId: z.string() }))
     .query(async ({ ctx, input }) => {
       await enforceCampaignAccess(ctx, input.campaignId);
@@ -1817,7 +1986,7 @@ export const campaignManagerRouter = createTRPCRouter({
   // C.3.21 — Devotion Objective (REQ-17) — 3 procedures
   // ==========================================================================
 
-  getDevotionProgression: protectedProcedure
+  getDevotionProgression: campaignScopedProcedure
     .input(z.object({ campaignId: z.string() }))
     .query(async ({ ctx, input }) => {
       await enforceCampaignAccess(ctx, input.campaignId);
@@ -1840,6 +2009,10 @@ export const campaignManagerRouter = createTRPCRouter({
 
 
   })
+    .use(async ({ ctx, getRawInput, next }) => {
+      await enforceCampaignRawScope(ctx, await getRawInput());
+      return next();
+    })
     .mutation(async ({ ctx, input }) => {
       await enforceCampaignAccess(ctx, input.campaignId);
       return cm.setDevotionObjective(input.campaignId, input.objective);
@@ -1980,7 +2153,7 @@ export const campaignManagerRouter = createTRPCRouter({
   // ==========================================================================
 
   /** Agrège toutes les données de performance d'une campagne pour le bilan de clôture */
-  getCampaignClosureReport: protectedProcedure
+  getCampaignClosureReport: campaignScopedProcedure
     .input(z.object({ campaignId: z.string() }))
     .query(async ({ ctx, input }) => {
       await enforceCampaignAccess(ctx, input.campaignId);
@@ -2062,7 +2235,7 @@ export const campaignManagerRouter = createTRPCRouter({
     }),
 
   /** Retourne la timeline des jalons et l'historique d'état d'une campagne */
-  getCampaignTimeline: protectedProcedure
+  getCampaignTimeline: campaignScopedProcedure
     .input(z.object({ campaignId: z.string() }))
     .query(async ({ ctx, input }) => {
       await enforceCampaignAccess(ctx, input.campaignId);

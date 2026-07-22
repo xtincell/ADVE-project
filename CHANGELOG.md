@@ -1,5 +1,14 @@
 # Changelog — La Fusee
 
+## v6.27.271 — fix(security): IDOR round-2 batch C — campaign-manager sous-entités gardées par campagne (2026-07-22)
+
+**Les artefacts de campagne (briefs, assets, actions, budgets, équipe, liens…) ne fuient plus cross-tenant (audit adversarial « TOUT » round-2 — ~90 procédures rendues structurellement gardées).**
+
+- **Trou fermé** : la famille sous-entité de `campaign-manager` (C.3.2–C.3.16) ne rappelait PAS `enforceCampaignAccess` (seul le CRUD campagne-niveau le faisait) → un founder lisait+écrivait les briefs/assets/budgets/plans d'une AUTRE marque via `campaignId`. Middleware `campaignScopedProcedure` + helper pur `enforceCampaignRawScope` : dès qu'un `campaignId` figure dans l'input, l'accès campagne est enforce — garde STRUCTURELLE (plus d'oubli possible).
+- **Application** : 54 lectures re-basées `protectedProcedure → campaignScopedProcedure` (auto-enforce) + 36 écritures gouvernées reçoivent `.use()` du même contrôle (le middleware no-op sans `campaignId`, donc sûr partout) + `createFromTemplate` (strategyId) enforce `enforceStrategyAccess`. Zéro `as never` (helper pur réutilisable, motif `strategy-scope`).
+- **Vérif** : tsc 0 · lint 0 · 2628 tests governance+services verts (dont `no-bare-as-never` HARD). Cap APOGEE 7/7 préservé.
+- **Restants tracés** (§IDOR round-2) : ~24 ops keyées sur un id d'ENTITÉ sans `campaignId` (`updateAction`/`updateBrief`/`decideApproval`/`versionAsset`/`publishAssetToBrandVault`…) → résolution entité→campagne à ajouter ; `deliverable-tracking` (métadonnées faible valeur) ; ownership deal↔opérateur par-deal (CRM) + `getConversionMetrics` scope.
+
 ## v6.27.270 — fix(security): IDOR round-2 batch B — CRM d'agence + Credentials Vault scopés opérateur (2026-07-22)
 
 **Deux surfaces opérateur ouvertes à tout compte fermées (audit adversarial « TOUT » round-2 — CRM commercial + coffre de credentials).**
