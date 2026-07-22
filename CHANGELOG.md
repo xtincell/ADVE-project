@@ -1,5 +1,14 @@
 # Changelog — La Fusee
 
+## v6.27.263 — fix(governance): 13 kinds dispatchés enfin catalogués + verrou HARD dispatch⊆INTENT_KINDS (2026-07-22)
+
+**Les kinds cœur (cascade RTIS, actions, intention, livrable, indexation, recherche marché, signal Seshat) étaient dispatchés mais échappaient au monitoring SLO — régularisés + verrouillés (audit adversarial « TOUT » — B3, zéro LLM).**
+
+- **Trou fermé** : 13 kinds (`ENRICH_R_FROM_ADVE`, `ENRICH_T_FROM_ADVE_R_SESHAT`, `GENERATE_I_ACTIONS`, `SYNTHESIZE_S`, `PROPOSE_ADVE_UPDATE_FROM_RT`, `PROPOSE_BRAND_ACTIONS`, `PRODUCE_DELIVERABLE`, `CAPTURE_INTENTION`, `GENERATE_BRIEF_FROM_INTENTION`, `VALIDATE_INTENTION_BRIEF`, `INDEX_BRAND_CONTEXT`, `RUN_MARKET_RESEARCH`, `PROCESS_SESHAT_SIGNAL`) étaient dispatchés par le commandant (Q1 tracé via emitIntent) mais absents d'`INTENT_KINDS` + `slos.ts` → aucun SLO, invisibles au monitoring (Loi 3).
+- **Régularisation** : enregistrés dans `INTENT_KINDS` (governor MESTOR/ARTEMIS/SESHAT selon le sous-système, handler co-localisé) + 13 SLOs (`costP95Usd:0` — **aucune capability cost-gate déclarée, donc AUCUN nouveau veto** ; monitoring seulement). INTENT-CATALOG régénéré (604 kinds).
+- **Verrou HARD** : `dispatched-kinds-catalogued.test.ts` scanne les 114 `case "…"` du dispatcher unique (commandant) et exige dispatch ⊆ `INTENT_KINDS` + SLO apparié pour chacun. Un futur `case` non enregistré casse le merge — le trou ne peut plus se rouvrir en silence.
+- **Vérif** : tsc 0 · lint 0 · 1136 tests governance verts. Cap APOGEE 7/7 préservé (governors = Neteru existants, pas de 8ᵉ).
+
 ## v6.27.262 — feat(governance): ROLLBACK_PILLAR — moteur de compensation RÉEL (Loi 1 a des dents) (2026-07-22)
 
 **Le bouton « Compenser » RESTAURE réellement un pilier depuis l'historique PillarVersion — fini le no-op audit-only (audit adversarial « TOUT » — bloc G, build, zéro LLM).**
