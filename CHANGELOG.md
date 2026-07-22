@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.244 — feat(scorer): normaliser vers le schéma strict — primitives (2026-07-22)
+
+**Décision opérateur (« normaliser vers le strict ») : les schémas Zod restent la loi ; le canon + l'ingestion s'y conforment. Fondation du normaliseur déterministe (Lot 1). [ADR-0172](docs/governance/adr/0172-normalize-to-strict-schema.md).**
+
+- **`src/domain/schema-normalizer.ts`** (Layer-0 pur, zéro LLM, zéro random) — les coercions déterministes qui rapprochent la matière humaine de sa forme stricte : `coerceEnum` (accents/casse/séparateurs → membre canonique, « Engagé » → `ENGAGE`) · `stableUuid`/`normalizeId` (id lisible `risk-m19-001` → **UUID reproductible** via cyrb128 — même seed → même UUID, donc les références croisées restent cohérentes après remap ; idempotent) · `coerceNumber` (« ≈150 000 FCFA » → 150000, conservateur).
+- Sert **deux** usages : l'ingestion Phase 3 (données neuves) ET la conformité des canons existants — une seule mécanique.
+- Tests `schema-normalizer` (8). tsc 0 · lint 0. 0 modèle · 0 migration · 0 LLM · 0 Intent kind · cap 7/7. **Suite du lot** (tracée) : applicateur schéma-guidé `normalizeToSchema`, gate Zod au seed, conformité des canons actifs.
+
+---
+
 ## v6.27.243 — feat(scorer)+docs: socle produit (intégrité des références) + audit d'intégrité ADVE (2026-07-22)
 
 **Question opérateur : « les gammes / le système reposent bien sur les produits ? La Fusée sait recommander / mettre à jour / supprimer ? » → audit : NON, l'intégrité référentielle était fragile. Socle posé + audit exhaustif de tout l'ADVE avant l'ingestion. [ADR-0171](docs/governance/adr/0171-product-catalog-reference-integrity.md) + [docs/audits/ADVE-INTEGRITY-AUDIT-2026-07-22.md](docs/audits/ADVE-INTEGRITY-AUDIT-2026-07-22.md).**
