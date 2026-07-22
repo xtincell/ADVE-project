@@ -176,6 +176,7 @@ Observent, mesurent, archivent. **25 répertoires** ; la table contient 3 lignes
 | `seshat/scan-rate-limit.ts` | Rate-limit PARTAGÉ entre workers des scans frais du scoreur public (table `ScanRateHit`, 6/min/IP, fail-open, purge auto) + résolution IP réelle derrière Cloudflare/Traefik (ADR-0161). Le cache ne consomme jamais. | SESHAT | ✅ shippé (2026-07-19) |
 | `seshat/entity-gate/` | Gate adversarial de collecte publique (ADR-0162) : ambiguïté du nom (lexique mots communs) + discriminants du contexte déclaré + verdict déterministe avec preuves + réfutation LLM optionnelle demote-only. Consommé par `quick-intake/public-enrichment` (presse, Brave, Maps, découverte de site). | SESHAT | ✅ shippé (2026-07-20) |
 | `source-classifier/` | Reads BrandDataSource → BrandAsset DRAFTs (taxonomie canonique) | SESHAT | ✅ existant |
+| `brand-book-ingestion/` | Ingestion d'un brand book officiel → piliers A/D/V (gateway) + assets vault DRAFT. Deux extracteurs (LLM structuré + parseur déterministe, parité manual-first), preview→confirm, zéro fabrication (null sur absence). Intent `INGEST_BRAND_BOOK` (ADR-0173). | MESTOR | ✅ shippé (2026-07-22, Lot 1b) |
 | `playbook-capitalization/` | Cross-brand learning loop (MISSION drift 5.10) | SESHAT | ✅ existant |
 | `audit-trail/` | Trail audit transverse | INFRASTRUCTURE | ✅ existant |
 | `ecosystem-engine/` | Moteur métriques cross-tenant | SESHAT | ✅ existant |

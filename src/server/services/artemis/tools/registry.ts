@@ -83,6 +83,7 @@ export type {
 export { defineHybridTool } from "./tool-types";
 import type { GloryLayer, GloryExecutionType, GloryToolDef } from "./tool-types";
 import { defineHybridTool, type GloryToolNature } from "./tool-types";
+import { ProductSystemSchema } from "@/domain/product-system";
 
 // ─── LAYER CR — Concepteur-Rédacteur (10 tools) ─────────────────────────────
 
@@ -1566,6 +1567,47 @@ Concurrents : {{competitors}} | Cible : {{target}}
 Livrable : canvas proposition de valeur, bénéfice unique (1 phrase), 3 preuves, pitch elevator (30s), différenciateurs vs. concurrents.`,
     status: "ACTIVE",
   },
+  // ── ADR-0170 — « penser produit » : modélise le MÉCANISME du produit ──
+  defineHybridTool({
+    slug: "product-system-architect",
+    name: "Architecte du Système Produit",
+    layer: "DC",
+    order: 50,
+    executionType: "HYBRID",
+    applicableNatures: ALL_NATURES,
+    pillarKeys: ["V", "D", "A"],
+    requiredDrivers: [],
+    dependencies: [],
+    description:
+      "Modélise le SYSTÈME/mécanisme interne du produit — axes, archétypes, stades de progression, modes d'usage, artefacts/collectibles, règles fondatrices — ce qui crée de la valeur structurellement (distinct du catalogue/pricing). Ex. le « Système Palais » de SPAWT.",
+    inputFields: ["core_offer", "positioning", "personas", "archetype"],
+    pillarBindings: {
+      core_offer: "v.produitsCatalogue",
+      positioning: "d.positionnement",
+      personas: "d.personas",
+      archetype: "a.archetype",
+    },
+    outputFormat: "product_system",
+    outputSchema: ProductSystemSchema,
+    promptTemplate: `En tant qu'architecte produit, modélise le SYSTÈME interne (le mécanisme qui crée de la valeur structurellement), PAS le catalogue.
+Offre : {{core_offer}}
+Positionnement : {{positioning}}
+Personas : {{personas}} | Archétype : {{archetype}}
+
+Renvoie un JSON strict :
+{
+  "coreConcept": "le concept central du système en 1 phrase (ce qui le fait fonctionner)",
+  "axes":       [{ "label": "...", "poleLow": "...", "poleHigh": "...", "description": "..." }],
+  "archetypes": [{ "name": "...", "axesSignature": "ex. Nomade + Maquis", "essence": "la devise", "progressionNames": ["nom stade 1", "..."] }],
+  "progressionStages": [{ "name": "...", "threshold": "ex. 0-10 usages", "signals": ["..."], "unlocks": ["..."] }],
+  "modes":      [{ "name": "...", "trigger": "...", "format": "...", "description": "..." }],
+  "artifacts":  [{ "name": "...", "kind": "carte|badge|titre|certificat", "description": "...", "socialSignal": "pourquoi on le partage" }],
+  "mechanics":  [{ "name": "...", "rule": "la règle fondatrice" }]
+}
+
+Discipline : n'invente RIEN — ne remplis une dimension QUE si l'offre la porte vraiment. Un produit physique simple peut n'avoir que "mechanics" + "artifacts" ; laisse les autres vides (omets-les). L'ordre de progressionStages = du plus bas au plus haut.`,
+    status: "ACTIVE",
+  }),
   {
     slug: "pricing-strategy-advisor",
     name: "Conseiller Stratégie de Pricing",

@@ -785,6 +785,14 @@ model Strategy {
   /// Année de fondation DÉCLARÉE de la marque — source honnête du bras
   /// « patrimoine » de l'évidence (avant ADR-0126 : createdAt du compte).
   brandFoundedYear    Int?
+  /// ADR-0167 — palier officiel APOGEE (ratchet « altitude de record »). null =
+  /// jamais promu explicitement, fallback dérivé classifyTier(composite) via
+  /// effectiveTier(). Ne bouge QUE par transition gouvernée proof-gated PROMOTE
+  /// ou DEMOTE (Loi 1 : pas de rétrogradation silencieuse). Validé Zod au write.
+  apogeeTier          String?
+  apogeeTierSetAt     DateTime?
+  apogeeTierReason    String?
+  apogeeTierBy        String?      // operatorId ayant décidé la transition
   /// Slug public de la page de marque (<slug>.powerupgraders.com → /b/<slug>).
   /// Posé par l'opérateur/seed uniquement — null = pas de page publique.
   publicSlug          String?      @unique

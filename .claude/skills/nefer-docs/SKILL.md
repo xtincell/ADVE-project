@@ -21,6 +21,17 @@ Toute session qui ship `feat` / `fix` impactant / `refactor` structurel / `chore
 
 - Versionnage : MAJEURE = refonte architecturale · PHASE = nouvelle phase de refonte · ITERATION = sinon. **MUST** : lire les 3 dernières entrées avant de bumper. Numéro déjà pris par un commit parallèle → `+1` immédiat, sans débat.
 
+## 6.0-bis — RELEASE_NOTES client (OBLIGATOIRE si bénéfice visible du dirigeant)
+
+Le `CHANGELOG.md` parle NEFER (vocable technique). Le dirigeant, lui, voit un écran « Quoi de neuf » à sa connexion + un récap console — tous deux alimentés par **`src/lib/release-notes.ts`** (source unique, vocable CLIENT ADR-0123).
+
+**MUST** : toute session qui ship une livraison **porteuse d'un bénéfice visible du dirigeant** (nouvelle capacité au cockpit, livrable qui change, correctif qu'il ressent) AJOUTE une entrée **en tête** de `RELEASE_NOTES`, dans le même commit, `version` = `APP_VERSION` au ship. Règles :
+
+- **Vocable client strict** (ADR-0123) : bénéfice produit, jamais « ADR-XXXX », « pilier », « gate », « Neter », « RTIS », plomberie. Le test `release-notes-coverage` casse le build sinon.
+- **Zéro promesse** (interdit NEFER n°3) : uniquement des bénéfices RÉELS et livrés.
+- **Pas de note pour la plomberie pure** (refonte interne invisible du dirigeant, méta-features) : le CHANGELOG suffit. La note en tête peut donc être `< APP_VERSION` — le test verrouille seulement qu'elle n'est jamais **en avance**.
+- **NEVER** réécrire une note passée : l'historique reste (le récap console le montre).
+
 ## 6.1 — Matrice docs-à-mettre-à-jour (toutes OBLIGATOIRES selon le type)
 
 | Type de modification | Docs à mettre à jour |

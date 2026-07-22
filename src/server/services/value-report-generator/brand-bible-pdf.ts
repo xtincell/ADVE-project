@@ -25,17 +25,7 @@ import { jsPDF } from "jspdf";
 import { compileDeliverable, type DeliverableManifest } from "@/server/services/artemis/tools/deliverable-compiler";
 import { getSequence } from "@/server/services/artemis/tools/sequences";
 import { getGloryTool } from "@/server/services/artemis/tools/registry";
-
-// ── Palette UPgraders DS (RGB) — canon ADR-0097 ──────────────────────────────
-const C = {
-  panda: [26, 26, 26] as const, // noir panda
-  bone: [245, 240, 232] as const, // bone (fond clair)
-  corail: [229, 100, 88] as const, // rouge fusée #E56458
-  or: [250, 204, 21] as const, // or #FACC15
-  ink: [38, 38, 38] as const, // texte sombre
-  muted: [120, 113, 108] as const, // texte secondaire
-  white: [255, 255, 255] as const,
-};
+import { resolveBrandTheme, type BrandTheme } from "@/server/services/brand-theme";
 
 // Dimensions 16:9 (px).
 const W = 1280;
@@ -55,9 +45,11 @@ export interface BrandBiblePdfResult {
  */
 export async function exportBrandBibleAsPdf(
   strategyId: string,
-  opts?: { manifestOverride?: DeliverableManifest },
+  opts?: { manifestOverride?: DeliverableManifest; themeOverride?: BrandTheme },
 ): Promise<BrandBiblePdfResult> {
   const manifest = opts?.manifestOverride ?? (await compileDeliverable(strategyId, "BRANDBOOK-D"));
+  // Thème aux couleurs de la marque (coffre) — fallback UPgraders si pas de palette (ADR-0169).
+  const theme = opts?.themeOverride ?? (await resolveBrandTheme(strategyId));
   const seq = getSequence("BRANDBOOK-D");
   if (!seq) throw new Error("brand-bible: séquence BRANDBOOK-D introuvable");
 
@@ -72,7 +64,7 @@ export async function exportBrandBibleAsPdf(
   const doc = new jsPDF({ orientation: "landscape", unit: "px", format: [W, H] });
 
   // ── Slide 1 — Couverture ───────────────────────────────────────────────────
-  renderCover(doc, manifest.meta.strategyName, manifest.isComplete);
+  await renderCover(doc, theme, manifest.meta.strategyName, manifest.isComplete);
 
   // ── Slides 2..N — une par section BRAND ────────────────────────────────────
   let slideCount = 1;
@@ -82,7 +74,7 @@ export async function exportBrandBibleAsPdf(
     const tool = getGloryTool(slug);
     const title = tool?.name ?? slug;
     const section = bySlug.get(slug);
-    renderSectionSlide(doc, {
+    renderSectionSlide(doc, theme, {
       index: idx + 1,
       total: gloryRefs.length,
       title,
@@ -101,28 +93,30 @@ export async function exportBrandBibleAsPdf(
 }
 
 // ── Rendu : couverture ───────────────────────────────────────────────────────
-function renderCover(doc: jsPDF, brand: string, isComplete: boolean): void {
-  // Fond panda plein.
-  doc.setFillColor(...C.panda);
+async function renderCover(doc: jsPDF, t: BrandTheme, brand: string, isComplete: boolean): Promise<void> {
+  // Fond de marque plein (sombre).
+  doc.setFillColor(...t.coverBg);
   doc.rect(0, 0, W, H, "F");
-  // Bande corail verticale (signature fusée).
-  doc.setFillColor(...C.corail);
+  // Bande d'accent verticale (signature fusée).
+  doc.setFillColor(...t.band);
   doc.rect(0, 0, 16, H, "F");
-  // Eyebrow or.
-  doc.setTextColor(...C.or);
+  // Logo de la marque en haut à droite (si présent au coffre).
+  if (t.logoUrl) await embedLogo(doc, t.logoUrl, W - MARGIN - 240, 96, 240, 96);
+  // Sur-titre producteur (signature de l'OS — honnête).
+  doc.setTextColor(...t.coverEyebrow);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(18);
-  doc.text("UPGRADERS · LA FUSÉE", MARGIN, 180);
+  doc.text(t.brandLabel, MARGIN, 180);
   // Titre.
-  doc.setTextColor(...C.white);
+  doc.setTextColor(...t.coverText);
   doc.setFontSize(76);
   doc.text("Bible de Marque", MARGIN, 300);
-  // Nom de marque.
-  doc.setTextColor(...C.corail);
+  // Nom de marque (couleur d'accent — l'identité).
+  doc.setTextColor(...t.coverBrand);
   doc.setFontSize(48);
   doc.text(truncate(brand, 40), MARGIN, 380);
   // Pied : date + statut.
-  doc.setTextColor(...C.muted);
+  doc.setTextColor(...t.muted);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(16);
   const date = new Date().toISOString().slice(0, 10);
@@ -130,19 +124,57 @@ function renderCover(doc: jsPDF, brand: string, isComplete: boolean): void {
   doc.text(`${date}  ·  ${status}`, MARGIN, H - 72);
 }
 
+/**
+ * Dessine un logo (data-URL directement ; http en best-effort avec timeout).
+ * Échec réseau/format → aucun dessin, jamais d'exception (le rendu continue).
+ */
+async function embedLogo(doc: jsPDF, url: string, x: number, y: number, maxW: number, maxH: number): Promise<void> {
+  let dataUrl = url;
+  if (!url.startsWith("data:")) {
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 2500);
+      const res = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(timer);
+      const ct = res.headers.get("content-type") ?? "";
+      if (!res.ok || !/^image\//.test(ct)) return;
+      const buf = Buffer.from(await res.arrayBuffer());
+      dataUrl = `data:${ct};base64,${buf.toString("base64")}`;
+    } catch {
+      return;
+    }
+  }
+  try {
+    const props = doc.getImageProperties(dataUrl);
+    const fmt = /image\/jpe?g/i.test(dataUrl) ? "JPEG" : "PNG";
+    const ratio = props.width / props.height || 1;
+    let w = maxW;
+    let h = w / ratio;
+    if (h > maxH) {
+      h = maxH;
+      w = h * ratio;
+    }
+    // Aligné à droite du cadre alloué.
+    doc.addImage(dataUrl, fmt, x + (maxW - w), y, w, h, undefined, "FAST");
+  } catch {
+    /* image illisible → pas de logo, on continue */
+  }
+}
+
 // ── Rendu : slide de section ─────────────────────────────────────────────────
 function renderSectionSlide(
   doc: jsPDF,
+  t: BrandTheme,
   s: { index: number; total: number; title: string; brand: string; content: Record<string, unknown> | null },
 ): void {
-  // Fond bone.
-  doc.setFillColor(...C.bone);
+  // Fond de section (clair).
+  doc.setFillColor(...t.sectionBg);
   doc.rect(0, 0, W, H, "F");
-  // Bandeau d'en-tête corail.
-  doc.setFillColor(...C.corail);
+  // Bandeau d'en-tête (accent de marque).
+  doc.setFillColor(...t.band);
   doc.rect(0, 0, W, 132, "F");
-  // Eyebrow + titre dans le bandeau.
-  doc.setTextColor(...C.white);
+  // Eyebrow + titre dans le bandeau (couleur lisible sur l'accent).
+  doc.setTextColor(...t.bandText);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(14);
   doc.text(`BIBLE DE MARQUE · ${truncate(s.brand, 28).toUpperCase()}`, MARGIN, 56);
@@ -156,17 +188,17 @@ function renderSectionSlide(
   // gpt-image-1 (l'opérateur accepte les fails image → placeholder visible).
   const prompt = buildPlatePrompt(s.title, s.content);
   const forged = extractImageDataUrl(s.content);
-  renderVisualFrame(doc, MARGIN, 168, 684, H - 168 - 78, prompt, forged);
-  renderCaption(doc, 792, 196, W - 792 - MARGIN, s.content);
+  renderVisualFrame(doc, t, MARGIN, 168, 684, H - 168 - 78, prompt, forged);
+  renderCaption(doc, t, 792, 196, W - 792 - MARGIN, s.content);
 
   // Pied de page : numéro + branding.
-  doc.setTextColor(...C.muted);
+  doc.setTextColor(...t.muted);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(13);
   doc.text(`${String(s.index).padStart(2, "0")} / ${String(s.total).padStart(2, "0")}`, MARGIN, H - 40);
-  doc.text("Forgé par La Fusée — UPgraders", W - MARGIN, H - 40, { align: "right" });
-  // Accent or sous le pied.
-  doc.setFillColor(...C.or);
+  doc.text("Propulsé par La Fusée", W - MARGIN, H - 40, { align: "right" });
+  // Barre d'accent sous le pied.
+  doc.setFillColor(...t.accentBar);
   doc.rect(MARGIN, H - 58, 48, 4, "F");
 }
 
@@ -196,6 +228,7 @@ function extractImageDataUrl(content: Record<string, unknown> | null): string | 
 /** Cadre visuel : image forgée si dispo, sinon placeholder avec le PROMPT prêt. */
 function renderVisualFrame(
   doc: jsPDF,
+  t: BrandTheme,
   x: number,
   y: number,
   w: number,
@@ -207,7 +240,7 @@ function renderVisualFrame(
     try {
       const fmt = forgedUrl.includes("image/jpeg") || /\.jpe?g/i.test(forgedUrl) ? "JPEG" : "PNG";
       doc.addImage(forgedUrl, fmt, x, y, w, h, undefined, "FAST");
-      doc.setDrawColor(...C.panda);
+      doc.setDrawColor(...t.ink);
       doc.setLineWidth(1.5);
       doc.rect(x, y, w, h, "S");
       return;
@@ -216,17 +249,17 @@ function renderVisualFrame(
     }
   }
   // Placeholder « cadre vide » avec le prompt dans le cadre.
-  doc.setFillColor(...C.white);
-  doc.setDrawColor(...C.corail);
+  doc.setFillColor(...t.frameBg);
+  doc.setDrawColor(...t.band);
   doc.setLineWidth(2);
   doc.rect(x, y, w, h, "FD");
-  doc.setFillColor(...C.corail);
+  doc.setFillColor(...t.band);
   doc.rect(x, y, 300, 32, "F");
-  doc.setTextColor(...C.white);
+  doc.setTextColor(...t.bandText);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
   doc.text("VISUEL À FORGER · gpt-image-1 (1K)", x + 12, y + 21);
-  doc.setTextColor(...C.ink);
+  doc.setTextColor(...t.ink);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
   doc.text("PROMPT", x + 18, y + 68);
@@ -236,7 +269,7 @@ function renderVisualFrame(
   for (const para of prompt.split("\n")) {
     for (const ln of doc.splitTextToSize(para, w - 36) as string[]) {
       if (ty > y + h - 18) {
-        doc.setTextColor(...C.muted);
+        doc.setTextColor(...t.muted);
         doc.text("…", x + 18, ty);
         return;
       }
@@ -250,19 +283,20 @@ function renderVisualFrame(
 /** Directions du brief, condensées en colonne (à droite de la planche). */
 function renderCaption(
   doc: jsPDF,
+  t: BrandTheme,
   x: number,
   y: number,
   w: number,
   content: Record<string, unknown> | null,
 ): void {
-  doc.setTextColor(...C.corail);
+  doc.setTextColor(...t.accentOnLight);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
   doc.text("DIRECTIONS DU BRIEF", x, y);
   let ty = y + 26;
   const bottom = H - 80;
   if (!content) {
-    doc.setTextColor(...C.muted);
+    doc.setTextColor(...t.muted);
     doc.setFont("helvetica", "italic");
     doc.setFontSize(12);
     for (const ln of doc.splitTextToSize("Brief à générer (séquence BRANDBOOK-D).", w) as string[]) {
@@ -273,14 +307,14 @@ function renderCaption(
   }
   for (const ln of flatten(content, 0)) {
     if (ty > bottom) {
-      doc.setTextColor(...C.muted);
+      doc.setTextColor(...t.muted);
       doc.setFont("helvetica", "italic");
       doc.setFontSize(11);
       doc.text("… (détail dans le vault)", x, ty);
       return;
     }
     const isLabel = ln.kind === "label";
-    const col = isLabel ? C.corail : C.ink;
+    const col = isLabel ? t.accentOnLight : t.ink;
     doc.setTextColor(col[0], col[1], col[2]);
     doc.setFont("helvetica", isLabel ? "bold" : "normal");
     doc.setFontSize(isLabel ? 12 : 11);

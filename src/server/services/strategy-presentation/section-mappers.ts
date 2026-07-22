@@ -309,7 +309,11 @@ export function mapPlateformeStrategique(strategy: any): PlateformeStrategiqueSe
     valeurs,
     positionnement: safeStr(pillarD?.positionnement),
     promesseMaitre: safeStr(pillarD?.promesseMaitre),
-    sousPromesses: safeArr(pillarD?.sousPromesses) as string[],
+    // Forme duale (union ADR-0168) : chaîne nue OU {promesse, preuve}. On coerce en
+    // chaîne lisible (sinon `.join(" | ")` produisait « [object Object] » dans l'Oracle).
+    sousPromesses: safeArr(pillarD?.sousPromesses).map((s) =>
+      typeof s === "string" ? s : ((s as { promesse?: unknown })?.promesse != null ? String((s as { promesse: unknown }).promesse) : ""),
+    ).filter(Boolean) as string[],
     tonDeVoix: tonDeVoix
       ? {
           personnalite: safeArr(tonDeVoix.personnalite) as string[],

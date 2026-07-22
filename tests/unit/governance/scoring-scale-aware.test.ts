@@ -158,18 +158,27 @@ describe("ADR-0126 — fix d'unités cult-index (devotion = pourcentages 0-100)"
 
 describe("ADR-0126 — câblage du plafond d'évidence (advertis-scorer)", () => {
   const scorerSrc = read("src/server/services/advertis-scorer/index.ts");
+  // ADR-0167 — la mesure d'évidence a été extraite dans evidence.ts (source
+  // unique partagée avec le gate PALIER_PROMOTION_PROOFS). Le scorer consomme
+  // toujours le plafond ; la logique de lecture vit désormais dans evidence.ts.
+  const evidenceSrc = read("src/server/services/advertis-scorer/evidence.ts");
 
-  it("le scorer résout ses cibles via le domaine (plus de constantes universelles)", () => {
-    expect(scorerSrc).toContain("resolveEvidenceTargets");
-    expect(scorerSrc).not.toMatch(/const SUPERFANS_TARGET\s*=/);
-    expect(scorerSrc).not.toMatch(/const TARSIS_TARGET\s*=/);
+  it("le scorer applique le plafond d'évidence sur le composite", () => {
+    expect(scorerSrc).toContain("evidenceTierCeiling");
+    expect(scorerSrc).toContain("computeEvidenceScore");
   });
 
-  it("le scorer lit l'échelle déclarée et l'année de fondation de la marque", () => {
-    expect(scorerSrc).toContain("marketScale: true");
-    expect(scorerSrc).toContain("addressableAudience: true");
-    expect(scorerSrc).toContain("brandFoundedYear: true");
-    expect(scorerSrc).toContain("brandFoundedYear");
+  it("la mesure d'évidence résout ses cibles via le domaine (plus de constantes universelles)", () => {
+    expect(evidenceSrc).toContain("resolveEvidenceTargets");
+    expect(evidenceSrc).not.toMatch(/const SUPERFANS_TARGET\s*=/);
+    expect(evidenceSrc).not.toMatch(/const TARSIS_TARGET\s*=/);
+  });
+
+  it("la mesure d'évidence lit l'échelle déclarée et l'année de fondation de la marque", () => {
+    expect(evidenceSrc).toContain("marketScale: true");
+    expect(evidenceSrc).toContain("addressableAudience: true");
+    expect(evidenceSrc).toContain("brandFoundedYear: true");
+    expect(evidenceSrc).toContain("brandFoundedYear");
   });
 });
 

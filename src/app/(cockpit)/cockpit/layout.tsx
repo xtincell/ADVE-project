@@ -10,6 +10,7 @@ import { CockpitThemeToggle } from "@/components/cockpit/theme-toggle";
 import { PortalWelcome } from "@/components/shared/portal-welcome";
 import { PortalTourHost } from "@/components/shared/portal-tour";
 import { NotoriaStatusDock } from "@/components/cockpit/notoria/notoria-status-dock";
+import { WhatsNewModal } from "@/components/cockpit/whats-new-modal";
 
 function CockpitSidebarHeader() {
   const { strategies, strategyId } = useStrategy();
@@ -69,6 +70,10 @@ export default function CockpitLayout({ children }: { children: React.ReactNode 
         </AppShell>
         <PortalWelcome portal="cockpit" />
         <PortalTourHost portal="cockpit" />
+        {/* « Quoi de neuf » — la note de version la plus récente (vocable client)
+            présentée une fois par version après login. Même source que le récap
+            console `/console/socle/release-notes` (src/lib/release-notes.ts). */}
+        <WhatsNewModal />
         {/* Persistent Notoria status — visible on every cockpit page so the
             operator always knows the engine state (pillar maturity + pending
             recos + next pipeline step). Source: notoria.getDashboard via

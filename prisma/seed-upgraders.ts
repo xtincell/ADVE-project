@@ -17,6 +17,8 @@
 
 import type { PrismaClient, Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { assertPillarConforms } from "@/lib/types/pillar-conformance";
+import type { PillarKey } from "@/lib/types/pillar-schemas";
 import {
   UPGRADERS_CANON_PILLARS,
   UPGRADERS_STRATEGY_NAME,
@@ -64,6 +66,9 @@ async function seedStrategyFromCanon(args: SeedStrategyArgs): Promise<void> {
   console.log(`[OK] Strategy: ${strategy.name} (${strategy.id})`);
 
   for (const p of pillars) {
+    // Gate anti-corruption (ADR-0172) — S inclus (formes computed héritées désormais
+    // couvertes par unions ; corrige F3 de la revue adversariale : plus de S corrompu VALIDATED).
+    assertPillarConforms(p.key.toUpperCase() as PillarKey, p.content, `${name}/${p.key}`);
     const pillar = await prisma.pillar.upsert({
       where: { strategyId_key: { strategyId: strategy.id, key: p.key } },
       update: { content: p.content as Prisma.InputJsonValue, confidence: p.confidence, validationStatus: "VALIDATED" },

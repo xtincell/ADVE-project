@@ -5,6 +5,8 @@
 
 import { db } from "@/lib/db";
 import { SCHWARTZ_VALUES } from "@/lib/types/taxonomies";
+import { danglingProductRefs } from "@/domain/product-catalog";
+import { findDanglingReferences, type PillarBag } from "@/domain/pillar-reference-edges";
 
 export interface CrossRefValidation {
   rule: string;
@@ -339,6 +341,36 @@ export async function validateCrossReferences(strategyId: string): Promise<Cross
     results.push({ rule: "Roadmap budget sum ~ globalBudget", ruleId: 30, from: "S.roadmap.budget", to: "S.globalBudget", status: ok ? "VALID" : "INVALID", message: ok ? `Somme phases ${roadmapBudgetSum} ~ globalBudget ${globalBudget}` : `Somme phases ${roadmapBudgetSum} incoherente avec globalBudget ${globalBudget}` });
   } else {
     results.push({ rule: "Roadmap budget sum ~ globalBudget", ruleId: 30, from: "S.roadmap.budget", to: "S.globalBudget", status: "SKIPPED", message: "Donnees insuffisantes" });
+  }
+
+  // ── Rule 31 (ADR-0171) — intégrité des références produit ────────────
+  // Les gammes (productLadder.produitIds), la carte persona×segment
+  // (personaSegmentMap.productNames) et le système produit (anchor/related
+  // ProductIds) DOIVENT résoudre vers le catalogue V.produitsCatalogue.
+  // Résolution tolérante (id OU nom) ; on surface honnêtement les fantômes.
+  const vForRefs = p.V as Record<string, unknown> | null;
+  const catalogueLen = getArray(vForRefs?.produitsCatalogue).length;
+  if (catalogueLen === 0) {
+    results.push({ rule: "Références produit résolvent vers le catalogue", ruleId: 31, from: "V.productLadder/personaSegmentMap/productSystem", to: "V.produitsCatalogue", status: "SKIPPED", message: "Catalogue vide" });
+  } else {
+    const dangling = danglingProductRefs(vForRefs);
+    if (dangling.length === 0) {
+      results.push({ rule: "Références produit résolvent vers le catalogue", ruleId: 31, from: "V.productLadder/personaSegmentMap/productSystem", to: "V.produitsCatalogue", status: "VALID", message: "Toutes les références produit résolvent vers le catalogue" });
+    } else {
+      const detail = dangling.slice(0, 5).map((d) => `${d.source} → « ${d.ref} »`).join(" · ");
+      results.push({ rule: "Références produit résolvent vers le catalogue", ruleId: 31, from: "V.productLadder/personaSegmentMap/productSystem", to: "V.produitsCatalogue", status: "INVALID", message: `${dangling.length} référence(s) produit fantôme(s) : ${detail}${dangling.length > 5 ? " …" : ""}` });
+    }
+  }
+
+  // ── 32. Intégrité des arêtes de référence inter-piliers (ADR-0174) ──
+  // Généralise rule 31 : liens par nom (persona) + FK UUID (risque/persona/hypothèse/
+  // action) résolvent-ils vers leur cible ? Détection seulement (scoring, jamais bloquant).
+  const danglingRefs = findDanglingReferences(p as PillarBag);
+  if (danglingRefs.length === 0) {
+    results.push({ rule: "Arêtes de référence résolvent vers leur cible", ruleId: 32, from: "I/S/V/E refs", to: "R/D/T/I ids & noms", status: "VALID", message: "Toutes les références inter-piliers résolvent" });
+  } else {
+    const detail = danglingRefs.slice(0, 5).map((d) => `${d.source} → « ${d.ref} »`).join(" · ");
+    results.push({ rule: "Arêtes de référence résolvent vers leur cible", ruleId: 32, from: "I/S/V/E refs", to: "R/D/T/I ids & noms", status: "INVALID", message: `${danglingRefs.length} référence(s) fantôme(s) : ${detail}${danglingRefs.length > 5 ? " …" : ""}` });
   }
 
   return results;

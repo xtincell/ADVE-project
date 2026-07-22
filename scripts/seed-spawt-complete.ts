@@ -12,6 +12,8 @@
 
 import { PrismaClient, type Prisma } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { assertPillarConforms } from "@/lib/types/pillar-conformance";
+import type { PillarKey } from "@/lib/types/pillar-schemas";
 
 function makeClient() {
   const connectionString = process.env.DATABASE_URL;
@@ -1682,6 +1684,9 @@ export async function seedSpawtComplete(db: PrismaClient) {
   ];
 
   for (const p of pillarsData) {
+    // Gate anti-corruption (ADR-0172) — S inclus (formes computed héritées couvertes
+    // par unions ; corrige F3 de la revue adversariale : plus de S corrompu VALIDATED).
+    assertPillarConforms(p.key.toUpperCase() as PillarKey, p.content, `spawt/${p.key}`);
     const pillar = await db.pillar.create({
       data: {
         strategyId: strategy.id,

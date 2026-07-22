@@ -109,6 +109,7 @@ L'argent et les contrats. Sans ces pages, UPgraders ne facture pas.
 | `/console/socle/invoices/page.tsx` | Operations | G | active | Factures |
 | `/console/socle/pipeline/page.tsx` | Operations | G | active | Pipeline commercial |
 | `/console/socle/prod-ops/page.tsx` | Admin | INFRA | active | Cycle prod en 3 temps (injection/déploiement/action) — skill `nefer-ops` |
+| `/console/socle/release-notes/page.tsx` | Admin | INFRA | active | Récap opérateur des notes de version CLIENT (`src/lib/release-notes.ts`, même source que l'écran « Quoi de neuf » cockpit) |
 | `/console/socle/revenue/page.tsx` | Operations | G | active | Revenu rolling |
 | `/console/socle/value-reports/page.tsx` | Operations | G | active | Rapports valeur clients |
 

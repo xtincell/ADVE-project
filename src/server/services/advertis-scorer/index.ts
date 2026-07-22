@@ -45,10 +45,12 @@
 // ============================================================================
 
 import { db } from "@/lib/db";
-import { TIER_UPPER_BOUNDS_200, resolveEvidenceTargets } from "@/domain";
 import { type AdvertisVector, type PillarKey, PILLAR_KEYS, classifyBrand } from "@/lib/types/advertis-vector";
 import { type BusinessContext, getPillarWeightsForContext } from "@/lib/types/business-context";
 import { scoreStructural } from "./structural";
+// ADR-0167 — la mesure d'évidence (plafond CULTE/ICONE) vit désormais dans
+// evidence.ts (source unique partagée avec le gate PALIER_PROMOTION_PROOFS).
+import { computeEvidenceScore, evidenceTierCeiling } from "./evidence";
 // quality-modulator SUPPRIMÉ — LOI 9 : pas de LLM dans le scoring (CdC v4 Chantier 2)
 import * as auditTrail from "@/server/services/audit-trail";
 
@@ -164,102 +166,9 @@ export async function scoreObject(type: ScorableType, id: string): Promise<Adver
   }
 }
 
-// ---------------------------------------------------------------------------
-// Evidence ceiling — gates the top tiers (CULTE/ICONE) on proven cultural mass.
-// ---------------------------------------------------------------------------
-
-// Weights sum to 1.0. Superfans + cult-index dominate (they ARE the proof of
-// mass); age (patrimony) and Tarsis (cultural relevance proxy) are minor.
-//
-// ADR-0126 — the superfans/tarsis saturation targets are NO LONGER universal
-// absolutes: they come from the brand's DECLARED market scale (+ addressable
-// audience density cap) via `resolveEvidenceTargets` (src/domain/market-scale).
-// A neighborhood brand is no longer asked for a nation's worth of superfans,
-// and a big footprint no longer banks free evidence. No declared scale →
-// historical targets (NATION band) — zero silent regression (Loi 1).
-const SUPERFANS_WEIGHT = 0.45; // saturated at resolveEvidenceTargets().superfansTarget
-const CULT_INDEX_WEIGHT = 0.30; // saturated at cult-index score 80
-const AGE_WEIGHT = 0.10; // saturated at 5 years of BRAND age (declared brandFoundedYear)
-const TARSIS_WEIGHT = 0.15; // saturated at resolveEvidenceTargets().tarsisTarget
-const CULT_INDEX_TARGET = 80;
-const AGE_YEARS_TARGET = 5;
-
-/** Minimum evidence (0-1) to be eligible for the two apex tiers. */
-const EVIDENCE_FOR_CULTE = 0.20;
-const EVIDENCE_FOR_ICONE = 0.50;
-
-/**
- * Returns the maximum composite (/200) a brand may be classified at given how
- * much cultural mass it has PROVEN. No proof → capped at FORTE; this is a
- * CEILING, never a floor (a strong structural strategy keeps its FORTE score).
- */
-function evidenceTierCeiling(evidence: number): number {
-  if (evidence >= EVIDENCE_FOR_ICONE) return 200; // ICONE eligible
-  if (evidence >= EVIDENCE_FOR_CULTE) return TIER_UPPER_BOUNDS_200.CULTE; // 180
-  return TIER_UPPER_BOUNDS_200.FORTE; // 160
-}
-
-/**
- * Evidence score in [0, 1] — how much the brand has PROVEN (superfans, cult
- * index, patrimony, weak signals) versus merely DECLARED. Pure read, no side
- * effects. Failures fall back to 0 (conservative: cap at FORTE, never block).
- */
-async function computeEvidenceScore(strategyId: string): Promise<number> {
-  try {
-    const [strategy, superfanCount, latestCult, tarsisCount] = await Promise.all([
-      db.strategy.findUnique({
-        where: { id: strategyId },
-        select: {
-          createdAt: true,
-          marketScale: true,
-          addressableAudience: true,
-          brandFoundedYear: true,
-        },
-      }),
-      db.superfanProfile.count({ where: { strategyId } }).catch(() => 0),
-      db.cultIndexSnapshot.findFirst({
-        where: { strategyId },
-        orderBy: { measuredAt: "desc" },
-        select: { compositeScore: true },
-      }).catch(() => null),
-      db.signal
-        .count({ where: { strategyId, type: { contains: "TARSIS" } } })
-        .catch(() => 0),
-    ]);
-
-    // ADR-0126 — targets calibrated to the DECLARED market scale (+ optional
-    // addressable-audience density cap). Nothing declared → historical values.
-    const targets = resolveEvidenceTargets({
-      marketScale: strategy?.marketScale ?? null,
-      addressableAudience: strategy?.addressableAudience ?? null,
-    });
-
-    const superfansFraction = Math.min(1, superfanCount / targets.superfansTarget);
-    const cultFraction = latestCult?.compositeScore != null
-      ? Math.min(1, latestCult.compositeScore / CULT_INDEX_TARGET)
-      : 0;
-    // Patrimony = declared BRAND founding year when available; the account's
-    // createdAt is only the honest fallback (tenure in the system, not brand age).
-    const nowMs = Date.now();
-    const foundedMs = strategy?.brandFoundedYear
-      ? Date.UTC(strategy.brandFoundedYear, 0, 1)
-      : strategy?.createdAt?.getTime() ?? nowMs;
-    const ageMs = Math.max(0, nowMs - foundedMs);
-    const ageYears = ageMs / (365.25 * 24 * 60 * 60 * 1000);
-    const ageFraction = Math.min(1, Math.max(0, ageYears / AGE_YEARS_TARGET));
-    const tarsisFraction = Math.min(1, tarsisCount / targets.tarsisTarget);
-
-    return Math.min(
-      1,
-      superfansFraction * SUPERFANS_WEIGHT +
-        cultFraction * CULT_INDEX_WEIGHT +
-        ageFraction * AGE_WEIGHT +
-        tarsisFraction * TARSIS_WEIGHT,
-    );
-  } catch {
-    return 0;
-  }
-}
+// Evidence ceiling (plafond CULTE/ICONE sur la masse culturelle prouvée) :
+// `evidenceTierCeiling` + `computeEvidenceScore` déplacés vers ./evidence.ts
+// (ADR-0167 — source unique partagée avec le gate PALIER_PROMOTION_PROOFS).
 
 // ---------------------------------------------------------------------------
 // batchScore — optimized bulk scoring with shared context + concurrency limit

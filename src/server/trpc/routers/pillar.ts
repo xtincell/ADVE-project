@@ -36,6 +36,7 @@ import { propagateFromPillar } from "@/server/services/staleness-propagator";
 import { getStrategyReadiness } from "@/server/governance/pillar-readiness";
 import { scoreObject } from "@/server/services/advertis-scorer";
 import { writePillarAndScore } from "@/server/services/pillar-gateway";
+import { ensureProductIds } from "@/domain/product-catalog";
 import type { PillarKey as PK } from "@/lib/types/advertis-vector";
 import { triggerNextStageFrameworks } from "@/server/services/artemis";
 import {
@@ -264,13 +265,16 @@ export const pillarRouter = createTRPCRouter({
       const content = (pillar?.content as Record<string, unknown>) ?? {};
       const catalogue = getArraySafe(content.produitsCatalogue);
       catalogue.push(input.product);
+      // Ids stables : le nouveau produit (et tout legacy sans id) reçoit un id
+      // déterministe → les gammes/système peuvent référencer de façon fiable (ADR-0171).
+      const withIds = ensureProductIds(catalogue as Array<Record<string, unknown>>);
 
       await writePillarAndScore({
         strategyId: input.strategyId, pillarKey: "v",
-        operation: { type: "SET_FIELDS", fields: [{ path: "produitsCatalogue", value: catalogue }] },
+        operation: { type: "SET_FIELDS", fields: [{ path: "produitsCatalogue", value: withIds }] },
         author: { system: "OPERATOR", userId: ctx.session.user.id, reason: "addProduct" },
       });
-      return { success: true, productCount: catalogue.length };
+      return { success: true, productCount: withIds.length };
     }),
 
   /** Convenience: add a persona to D.personas */
@@ -400,6 +404,64 @@ export const pillarRouter = createTRPCRouter({
         author: { system: "OPERATOR", userId: ctx.session.user.id, reason: "addValue" },
       });
       return { success: true, valueCount: valeurs.length };
+    }),
+
+  // ── CRUD item-level générique (Lot 2) — MET À JOUR / SUPPRIME un item de
+  //    n'importe quel tableau ADVE (ferme le trou « add-only »). ADVE = décision
+  //    opérateur (STOP à Jehuty) → requireOperator (l'opérateur accède à toute
+  //    marque, pas de trou d'ownership). arrayPath = dot-path (« personas »,
+  //    « gamification.niveaux »). Écriture via le gateway (C5).
+  updateArrayItem: governedProcedure({
+    kind: "LEGACY_PILLAR_UPDATE_ITEM",
+    requireOperator: true,
+    inputSchema: z.object({
+      strategyId: z.string(),
+      pillarKey: AdveKeySchema,
+      arrayPath: z.string().min(1),
+      index: z.number().int().min(0),
+      value: z.unknown(),
+    }),
+    caller: "pillar:updateArrayItem",
+  })
+    .mutation(async ({ ctx, input }) => {
+      const key = input.pillarKey.toLowerCase() as "a" | "d" | "v" | "e";
+      const pillar = await ctx.db.pillar.findUnique({ where: { strategyId_key: { strategyId: input.strategyId, key } } });
+      const content = (pillar?.content as Record<string, unknown>) ?? {};
+      const arr = getNestedArray(content, input.arrayPath);
+      if (input.index >= arr.length) return { success: false, error: `Index ${input.index} hors limites (${arr.length} item(s))` };
+      arr[input.index] = input.value;
+      await writePillarAndScore({
+        strategyId: input.strategyId, pillarKey: key,
+        operation: { type: "SET_FIELDS", fields: [{ path: input.arrayPath, value: arr }] },
+        author: { system: "OPERATOR", userId: ctx.session.user.id, reason: "updateArrayItem" },
+      });
+      return { success: true, count: arr.length };
+    }),
+
+  removeArrayItem: governedProcedure({
+    kind: "LEGACY_PILLAR_REMOVE_ITEM",
+    requireOperator: true,
+    inputSchema: z.object({
+      strategyId: z.string(),
+      pillarKey: AdveKeySchema,
+      arrayPath: z.string().min(1),
+      index: z.number().int().min(0),
+    }),
+    caller: "pillar:removeArrayItem",
+  })
+    .mutation(async ({ ctx, input }) => {
+      const key = input.pillarKey.toLowerCase() as "a" | "d" | "v" | "e";
+      const pillar = await ctx.db.pillar.findUnique({ where: { strategyId_key: { strategyId: input.strategyId, key } } });
+      const content = (pillar?.content as Record<string, unknown>) ?? {};
+      const arr = getNestedArray(content, input.arrayPath);
+      if (input.index >= arr.length) return { success: false, error: `Index ${input.index} hors limites (${arr.length} item(s))` };
+      arr.splice(input.index, 1);
+      await writePillarAndScore({
+        strategyId: input.strategyId, pillarKey: key,
+        operation: { type: "SET_FIELDS", fields: [{ path: input.arrayPath, value: arr }] },
+        author: { system: "OPERATOR", userId: ctx.session.user.id, reason: "removeArrayItem" },
+      });
+      return { success: true, count: arr.length };
     }),
 
   /** Transition pillar validation status with gates */
@@ -1263,4 +1325,14 @@ Propose une nouvelle valeur cohérente avec l'intention, en respectant le schém
 
 function getArraySafe(val: unknown): unknown[] {
   return Array.isArray(val) ? [...val] : [];
+}
+
+/** Récupère (copie de) le tableau à un dot-path (top-level ou imbriqué), ou []. */
+function getNestedArray(content: Record<string, unknown>, path: string): unknown[] {
+  let cur: unknown = content;
+  for (const p of path.split(".")) {
+    if (cur && typeof cur === "object" && !Array.isArray(cur)) cur = (cur as Record<string, unknown>)[p];
+    else return [];
+  }
+  return Array.isArray(cur) ? [...cur] : [];
 }

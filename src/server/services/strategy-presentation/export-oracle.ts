@@ -30,6 +30,7 @@ import { createHash } from "node:crypto";
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { jsPDF } from "jspdf";
+import { resolveBrandTheme, type BrandTheme } from "@/server/services/brand-theme";
 import { SECTION_REGISTRY } from "./types";
 
 export interface ExportOpts {
@@ -37,6 +38,8 @@ export interface ExportOpts {
   snapshotId?: string;
   /** Markdown localization. */
   lang?: "fr" | "en";
+  /** Thème de rendu injecté (tests / override) ; sinon résolu depuis le coffre (ADR-0169). */
+  themeOverride?: BrandTheme;
 }
 
 interface OracleSection {
@@ -247,10 +250,20 @@ export async function exportOracleAsPdf(
   let y = margin;
 
   const brandName = await loadBrandName(strategyId);
+  // Thème aux couleurs de la marque (ADR-0169) — touche légère : barre + titres
+  // en accent lisible ; le corps reste noir sur blanc pour la lisibilité.
+  const theme = opts.themeOverride ?? (await resolveBrandTheme(strategyId));
+  const [ar, ag, ab] = theme.accentOnLight;
   const lang = opts.lang ?? "fr";
   const dateStr = new Date().toLocaleDateString(lang === "fr" ? "fr-FR" : "en-US", { day: "numeric", month: "long", year: "numeric" });
+  // Barre d'accent en tête.
+  doc.setFillColor(ar, ag, ab);
+  doc.rect(margin, y - 10, 40, 4, "F");
+  y += 6;
   doc.setFontSize(20);
+  doc.setTextColor(ar, ag, ab);
   doc.text(`${lang === "fr" ? "Stratégie" : "Strategy"} — ${brandName}`, margin, y);
+  doc.setTextColor(0, 0, 0);
   y += lineHeight * 2;
   doc.setFontSize(10);
   doc.text(lang === "fr" ? `Version du ${dateStr}` : `Version of ${dateStr}`, margin, y);
@@ -263,7 +276,9 @@ export async function exportOracleAsPdf(
     }
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
+    doc.setTextColor(ar, ag, ab);
     doc.text(s.title, margin, y);
+    doc.setTextColor(0, 0, 0);
     doc.setFont("helvetica", "normal");
     y += lineHeight * 1.5;
     doc.setFontSize(10);

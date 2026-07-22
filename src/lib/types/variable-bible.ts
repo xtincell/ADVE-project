@@ -435,6 +435,17 @@ export const BIBLE_V: Record<string, VariableSpec> = {
     format: "Objet { cac (coût acquisition), ltv (lifetime value), ltvCacRatio (calculé), pointMort, margeNette, budgetCom (annuel), caVise (CA annuel visé) }",
     rules: ["cac et ltv en devise locale (XAF)", "ltvCacRatio ≥ 3 = sain, < 3 = alarme", "budgetCom et caVise sont des objectifs annuels"],
   },
+  productSystem: {
+    description: "Le SYSTÈME/mécanisme interne du produit — ce qui le fait fonctionner et crée de la valeur structurellement (distinct du catalogue/économie). Ex. le « Système Palais » de SPAWT.",
+    format: "Objet { coreConcept, axes[{label,poleLow,poleHigh}], archetypes[{name,axesSignature,essence,progressionNames}], progressionStages[{name,threshold,signals,unlocks}], modes[{name,trigger,format}], artifacts[{name,kind,socialSignal}], mechanics[{name,rule}] }",
+    rules: [
+      "Générique — toutes dimensions optionnelles ; un produit sans mécanique gamifiée reste vide (pas de fabrication)",
+      "L'ordre du tableau progressionStages = l'ordre canonique (du plus bas au plus haut)",
+      "Décrit le MÉCANISME, pas le catalogue (produitsCatalogue) ni le pricing",
+    ],
+    canonicalCode: "V8",
+    editableMode: "STRATEGIC_REWRITE",
+  },
   businessModel: {
     description: "Le modèle d'affaires fondamental",
     format: "String enum : PRODUCTION, DISTRIBUTION, SERVICES, ABONNEMENT, PLATEFORME, FREEMIUM_AD, LICENSING_IP, etc.",

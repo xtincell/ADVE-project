@@ -197,6 +197,28 @@ const NEEDS_HUMAN_BY_PILLAR: Record<string, Set<string>> = {
 };
 
 /**
+ * Champs SCHÉMA légitimement optionnels — EXCLUS du contrat COMPLETE (100 %).
+ * Contrairement aux champs structurels toujours présents (positionnement,
+ * personas, catalogue…), ceux-ci ne s'appliquent pas à toute marque : les
+ * exiger forcerait la fabrication (interdit NEFER n°3). Une marque reste 100 %
+ * complète sans eux.
+ *
+ * - `v.productSystem` (ADR-0170) : le mécanisme produit gamifié n'existe pas
+ *   pour tout produit (un plombier n'a pas de « Système Palais ») ; le Glory
+ *   tool `product-system-architect` refuse d'en fabriquer un s'il n'y en a pas.
+ */
+const COMPLETE_OPTIONAL_BY_PILLAR: Record<string, Set<string>> = {
+  a: new Set<string>(),
+  d: new Set<string>(),
+  v: new Set<string>(["productSystem"]),
+  e: new Set<string>(),
+  r: new Set<string>(),
+  t: new Set<string>(),
+  i: new Set<string>(),
+  s: new Set<string>(),
+};
+
+/**
  * Unwrap ZodOptional/ZodNullable/ZodDefault/ZodEffects/ZodPipe/ZodUnion to
  * reach the underlying schema. Zod 4 exposes constructor.name ("ZodOptional",
  * etc.) and `_def.innerType` for wrapper types.
@@ -361,9 +383,12 @@ export function deriveSchemaRequirements(pillarKey: string): FieldRequirement[] 
   if (!schema) return [];
   const shape = (schema as unknown as { shape?: Record<string, z.ZodTypeAny> }).shape ?? {};
   const needsHuman = NEEDS_HUMAN_BY_PILLAR[pillarKey.toLowerCase()] ?? new Set<string>();
+  const completeOptional = COMPLETE_OPTIONAL_BY_PILLAR[pillarKey.toLowerCase()] ?? new Set<string>();
 
   const reqs: FieldRequirement[] = [];
   for (const [path, fieldSchema] of Object.entries(shape)) {
+    // Champ légitimement optionnel → exclu du contrat 100 % (pas de fabrication forcée).
+    if (completeOptional.has(path)) continue;
     const inner = unwrapZod(fieldSchema);
     const { validator, arg } = inferValidatorFromZod(inner);
     const isHuman = needsHuman.has(path);

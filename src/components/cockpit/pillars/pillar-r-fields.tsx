@@ -190,6 +190,8 @@ export function PillarRFields({ content, certainty }: { content: Rec; certainty:
             cols={[["level", "Niveau"], ["churnCause", "Cause d'attrition"], ["mitigation", "Mitigation"]]} />
           <ObjCard title="Micro-SWOTs par pilier" value={v.microSWOTs} status={st("microSWOTs")}
             fields={[["a", "SWOT A"], ["d", "SWOT D"], ["v", "SWOT V"], ["e", "SWOT E"]]} />
+          <ObjCard title="SWOT global (consolidé)" value={v.globalSwot} status={st("globalSwot")}
+            fields={[["strengths", "Forces"], ["weaknesses", "Faiblesses"], ["opportunities", "Opportunités"], ["threats", "Menaces"]]} />
         </div>
         <p className="ck-a-foot">{filled} / {total} champs canoniques renseignés · ontologie ADVE-RTIS · pilier R (synthèse)</p>
       </Section>

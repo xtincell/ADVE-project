@@ -239,6 +239,10 @@ export function PillarSFields({ content, certainty }: { content: Rec; certainty:
           </ACard>
           <Sprint90 items={v.sprint90Days} status={st("sprint90Days")} />
           <Roadmap items={v.roadmap} status={st("roadmap")} />
+          <ProofList title="Actions retenues (de I)" items={v.selectedFromI} status={st("selectedFromI")}
+            cols={[["action", "Action"], ["phase", "Phase"], ["priority", "Priorité"]]} />
+          <ProofList title="Actions écartées (de I)" items={v.rejectedFromI} status={st("rejectedFromI")}
+            cols={[["action", "Action"], ["reason", "Raison"]]} />
         </div>
       </Section>
 

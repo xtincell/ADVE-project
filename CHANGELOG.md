@@ -10,6 +10,157 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.251 — feat(cockpit): écran « Quoi de neuf » à la connexion + récap console + normalisation NEFER (2026-07-22)
+
+**Le dirigeant voit enfin les nouveautés de patch à sa connexion, en vocable client — et c'est désormais une étape normalisée du protocole NEFER.**
+
+- **`src/lib/release-notes.ts`** — nouvelle **source unique** des notes de version en vocable CLIENT (ADR-0123 : bénéfices produit, jamais « ADR-XXXX »/« pilier »/« Neter »/« RTIS »). DISTINCT du `/changelog` public (commits git bruts, auditeur) et du `CHANGELOG.md` interne (vocable NEFER). Première note = les 5 bénéfices du chantier « La Fusée compile ».
+- **`WhatsNewModal`** (cockpit) — présente la note la plus récente **une seule fois par version** (mémoire `localStorage`, per-device, pas de nag, zéro migration). Monté une fois dans le layout cockpit → visible sur n'importe quelle page après login. Tokens DS sémantiques → suit le mode jour/nuit.
+- **`/console/socle/release-notes`** — récap opérateur qui rend TOUT l'historique des notes depuis la **même source** (anti-doublon : une donnée, deux vues). Entrée nav « Notes de version » dans Le Socle.
+- **Normalisé dans NEFER** : `nefer-docs` §6.0-bis + NEFER.md §6.0-bis + matrice docs — toute livraison à bénéfice visible du dirigeant AJOUTE une entrée en tête, `version = APP_VERSION`. Verrou CI `release-notes-coverage.test.ts` (forme + ordre décroissant + vocable client + note jamais en avance sur `APP_VERSION`).
+- **Anti-doublon vérifié** : aucun récap release-note console préexistant (seuls `/changelog` public git-based + `prod-ops` deploy-watcher existaient) — la source unique client est le bon nouvel artefact, consommé par les deux surfaces.
+
+## v6.27.250 — fix(scorer+cockpit+ingestion): remédiation revue adversariale (chantier « La Fusée compile ») (2026-07-22)
+
+**3 agents adversariaux ont attaqué unions / gate+normaliseur / ingestion et trouvé de vrais bugs — corrigés le jour même. Le plus grave : les unions ADR-0168 bénissaient des formes que des CONSOMMATEURS n'avaient jamais réconciliés (le motif exige un renderer tolérant, pas seulement un schéma tolérant).**
+
+- **HIGH — Oracle client** : `sousPromesses` (forme objet, union-valide) rendait `[object Object] | …` dans le livrable payant (`04-plateforme-strat.tsx` `.join`). Le mapper coerce désormais objet→chaîne (`.promesse`). Vérifié E2E Motion19 (chaînes lisibles).
+- **MEDIUM — cockpit E** : `taboos`/`principesCommunautaires` (chaînes) + `sacredCalendar` (record) rendaient blanc (RelList/Principes supposaient objet-array). Renderers rendus tolérants (chaîne nue + forme record clé:valeur).
+- **MEDIUM — base d'actions** : `actionsByDevotionLevel` en chaînes s'effondrait sur un id vide unique (`normalizeInitiative(string)→{}`) → toutes les actions perdues. Corrigé (chaîne → `{action}`).
+- **MEDIUM — gate** : faux-négatif scalaire-dans-`record` classé TYPE (toléré) au lieu de SHAPE ; `isContainer` couvre record/map/set. + S computed corrompu seedé VALIDATED (upgraders/lafusee) → 3 champs `computed.*` unionés → S désormais SHAPE-clean et **gaté** (plus d'exclusion S).
+- **MEDIUM — ingestion (persister)** : `tonDeVoix` écrit dans le pilier A au lieu de D (perte silencieuse) → corrigé ; `motivations: description ?? nom` fabriquait une motivation depuis le nom → repli retiré ; `story` écrit en double (noyauIdentitaire + originMyth) → dédupliqué ; `manifesto→prophecy` (stretch sémantique) retiré ; `missionStatement` posé ; flag `wrote` (no-op honnête).
+- **Honnêteté** : docstrings corrigées (certitude par champ OFFICIAL non posée à l'ingestion — seule la source l'est ; zéro-fab STRUCTUREL pour le persister/parseur, la revue opérateur est le garde-fou du chemin LLM ; carriers `*Ref` non normalisés). Déférés latents/systémiques tracés RESIDUAL-DEBT §Revue adversariale (double voie provenance/certainty, ownership operatorProcedure, gate F2/F5/F6/F7, scorer sémantique mort).
+- Tests `adversarial-fixes` (3) + `canon-conformance` étendu à S. tsc 0 · lint 0 · **3028 tests verts**. 0 modèle · 0 migration · 0 LLM · cap 7/7.
+
+---
+
+## v6.27.249 — feat(scorer): intégrité des 22 arêtes de référence inter-piliers (Lot 3) (2026-07-22)
+
+**Une référence FK (`entityId` uuid) n'était jamais vérifiée : rien ne validait qu'elle RÉSOUD vers sa cible. Le validateur généralise le motif produit (rule 31) à toutes les arêtes — liens par nom + FK UUID du backbone. [ADR-0174](docs/governance/adr/0174-pillar-reference-edge-integrity.md).**
+
+- **`src/domain/pillar-reference-edges.ts`** (`findDanglingReferences`, pur, zéro LLM) : liens par nom (`personaSegmentMap`/`superfanPortrait` → `D.personas[].name`, matching tolérant accents/casse) + FK UUID (`mitigatesRiskIds`→R, `targetsPersonaIds`→D, `hypothesisId`→T, `sourceInitiativeId`→I, `strategieDeplacement.riskId`→R.overtonBlockers). Résolution par chaîne (id lisible résout comme un UUID — cohérent ADR-0172) + garde pool-vide (pas de faux positif FK).
+- **`OvertonBlockerSchema` gagne `id: entityId.optional()`** (additif) → l'arête S→R, **impossible par construction** (overtonBlockers sans id), devient résoluble.
+- **Cross-validator rule 32** (détection, scoring, jamais bloquant). Vérifié E2E motion19 : **5 dangles réels surfacés** — motion19 porte deux taxonomies de persona (D.personas Brand Book §04 vs segment/superfan), inconsistance de DONNÉE désormais VISIBLE au score (réconciliation = décision opérateur, tracée — on n'invente pas le mapping).
+- Tests `pillar-reference-edges` (8). tsc 0 · lint 0 · gouvernance verte. 0 modèle · 0 migration · 0 LLM · cap 7/7. **23/23 arêtes validées** (rule 31 produit + rule 32 le reste).
+
+---
+
+## v6.27.248 — fix(cockpit): champs invisibles rendus + CRUD item-level + fix corruption dot-path (Lot 2) (2026-07-22)
+
+**Trois trous de l'audit ADVE fermés : des champs canoniques ne s'affichaient nulle part, l'édition était add-only, et l'amendement d'un item de tableau corrompait le contenu.**
+
+- **Fix corruption `setNestedValue`** (gateway C5) : `personas[0].name` créait une clé LITTÉRALE « personas[0] » au lieu d'indexer le tableau → l'amendement opérateur d'un item écrivait à côté. Tokenizer `key[index]` (`tokenizePillarPath`) + navigation de tableau. Vérifié E2E (l'index s'écrit, le voisin reste, zéro clé parasite) + tests (4). Symptôme pré-existant tracé PATCHED-SYMPTOMS.
+- **CRUD item-level générique** : `pillar.updateArrayItem` / `removeArrayItem` (governedProcedure `requireOperator` — ADVE = décision opérateur, STOP à Jehuty) ferment le trou « 5 helpers add-only ». arrayPath dot-path (top-level ou imbriqué), écriture via le gateway. 2 kinds `LEGACY_PILLAR_UPDATE_ITEM/REMOVE_ITEM` + SLOs.
+- **3 champs invisibles rendus** : `R.globalSwot` (SWOT consolidé, requis mais jamais affiché), `S.selectedFromI`/`rejectedFromI` (actions retenues/écartées de I), `E.channelTouchpointMap` (canaux × points de contact).
+- **`ObjCard` tolérant à la forme compacte** (union ADR-0168) : un champ objet devenu chaîne nue (prophecy/doctrine/enemy.overtonMap…) rend la chaîne au lieu d'une grille vide.
+- tsc 0 · lint 0 · **1124 tests gouvernance verts** (+2 kinds au catalogue → **591 Intent kinds**). 0 modèle · 0 migration · 0 LLM · cap 7/7. Reste (RESIDUAL-DEBT) : éditeur récursif `SmartFieldEditor` (encore orphelin — édition texte JSON), promotion produits.
+
+---
+
+## v6.27.247 — feat(ingestion): un brand book officiel → piliers A/D/V + vault (Lot 1b) (2026-07-22)
+
+**La matière la plus riche (le brand book que la marque possède déjà) entre enfin dans La Fusée — sans jamais rien inventer. Extraction structurée (LLM ou parseur déterministe) → revue opérateur → écriture gouvernée A/D/V + assets vault DRAFT. [ADR-0173](docs/governance/adr/0173-brand-book-ingestion.md).**
+
+- **Service `brand-book-ingestion`** (governor MESTOR) : `BrandBookExtractionSchema` (tout `.nullable().optional()` — absence = null, zéro fabrication) + deux extracteurs à parité manual-first (ADR-0060) — `extractor-llm` (`executeStructuredLLMCall` ADR-0067, consigne anti-fab DURE) et `extractor-structured` (parseur pur : couleurs hex + polices connues, zéro LLM).
+- **Preview → confirm** (motif `market-study-ingestion`) : `previewBrandBook` EXTRAIT sans écrire (revue opérateur, plancher déterministe complète le LLM sans l'écraser) ; l'écriture n'a lieu qu'après validation. **L'écriture ADVE reste une décision opérateur** (ADR-0023, STOP à Jehuty) → `operatorProcedure`.
+- **Écriture gouvernée** : Intent `INGEST_BRAND_BOOK` → `writePillarAndScore` (C5, `author.system:"INGESTION"`, `fieldProvenance` SOURCE) pour A/D/V + assets `CHROMATIC_STRATEGY`/`TYPOGRAPHY_SYSTEM` en DRAFT (l'opérateur promeut, motif `source-classifier`). **Mapping conservateur** : produits/valeurs Schwartz (schémas à matrice) NON auto-écrits (fabriqueraient) — conservés pour promotion opérateur.
+- **Nouveau kind `BRAND_BOOK`** (entrée) distinct de `BRAND_BIBLE` (sortie). tRPC `ingestion.previewBrandBook`/`ingestBrandBook`. Source uploadée → `certainty="OFFICIAL"`.
+- **Zéro fabrication VÉRIFIÉE** (E2E) : extraction null → RIEN écrit ; extraction réelle → A/D/V (9 champs) + 2 assets DRAFT. Tests `brand-book-ingestion` (10). tsc 0 · **1110 tests gouvernance verts**. 0 modèle · 0 migration · cap 7/7. **589 Intent kinds** (recompte 2026-07-22). Déférés RESIDUAL-DEBT §ADR-0173 : surface cockpit, promotion produits, logo binaire.
+
+---
+
+## v6.27.246 — feat(scorer): gate anti-corruption des piliers + conformité des 4 canons (Lot 1) (2026-07-22)
+
+**Le seed ne persiste plus de forme malformée en silence. Un gate distingue la corruption structurelle (objet/tableau attendu là où un scalaire casse le rendu — refusée) de l'état DRAFT légitime (enum FR, placeholder, champ manquant — toléré, journalisé). Les 4 canons seed sont A→I SHAPE=0. [ADR-0172](docs/governance/adr/0172-normalize-to-strict-schema.md).**
+
+- **Constat** : le canon et le schéma Zod strict étaient **deux modèles de données** (~450 divergences/canon, pas « des douzaines »). Les forcer à zéro exigerait d'assouplir le schéma (écarté) OU d'inventer du contenu (interdit n°3 : placeholders « à calibrer »→number, bios non publiques). Le gate tranche : refuser la corruption de rendu, tolérer visiblement l'incomplétude DRAFT.
+- **`src/lib/types/pillar-conformance.ts`** — `classifyPillarConformance` (SHAPE/ENUM/TYPE/LENGTH/MISSING **par `code` Zod**, robuste) + `assertPillarConforms` (throw sur SHAPE, retourne les advisories). `validatePillarContent` expose désormais `code`/`expected`/`received`.
+- **Conformité via le précédent [ADR-0168](docs/governance/adr/0168-pillar-shape-tolerance-compact-vs-rich.md)** : les ~85 corruptions SHAPE/canon fermées en étendant `z.union([string, objet])` (+ renderer tolérant) aux formes duales récurrentes — **jamais** en réécrivant la donnée (perte de contenu INFERRED réel) ni en fabriquant les sous-champs. **Le schéma reste STRICT** (une union accepte 2 formes légitimes, pas n'importe quoi). **Une union corrige les 4 canons à la fois** → motion19 · spawt · upgraders · lafusee **A→I SHAPE=0** (S exclu — computed).
+- **Gate câblé** aux 4 seeds (persistance brute — refs lisibles intactes). **Test CI** `canon-conformance` (loi universelle sans DB, 33). **E2E** `db:seed:motion19` : gate franchi, advisories logguées (ex. E : 57 enum · 4 type · 28 manquant, tolérés).
+- Tests `schema-normalizer` (12) + `canon-conformance` (33). tsc 0 · lint 0 · lint:governance 0 · cycles clean · **1304 tests verts**. 0 modèle · 0 migration · 0 LLM · 0 Intent kind · cap 7/7. Déférés tracés RESIDUAL-DEBT §ADR-0172 (traduction enum FR, normalisation id→UUID Lot 3, extracteur ingestion Lot 1b).
+
+---
+
+## v6.27.245 — feat(scorer): applicateur schéma-guidé `normalizeToSchema` (Lot 1) (2026-07-22)
+
+**Le walk Zod qui applique les coercions par champ — enums accentués, ids lisibles→UUID stable, numériques string — en profondeur sur objets/arrays/records. Ne fabrique jamais (valeur non-coercible laissée intacte). [ADR-0172](docs/governance/adr/0172-normalize-to-strict-schema.md).**
+
+- **`normalizeToSchema(value, schema)`** — déballe `ZodOptional/Nullable/Default/Effects/Pipe`, dispatch par `constructor.name` : `ZodObject` récurse le shape · `ZodArray` mappe l'élément · `ZodRecord` mappe les valeurs · `ZodEnum` → `coerceEnum` · `ZodNumber` coerce les strings · `ZodString` UUID → `normalizeId`. Unions (formes compacte/riche ADR-0168) laissées intactes.
+- **Cohérence des arêtes préservée sans remap coordonné** : `normalizeId` étant déterministe, un id ET ses FK (même chaîne source) produisent le MÊME UUID.
+- Tests `schema-normalizer` (12, +4 applicateur). tsc 0 · lint 0. 0 modèle · 0 migration · 0 LLM · 0 Intent kind · cap 7/7. **Suite du lot** : gate Zod au seed + conformité structurelle des canons (mismatches objet-vs-scalaire hors périmètre de l'applicateur — édition canon).
+
+---
+
+## v6.27.244 — feat(scorer): normaliser vers le schéma strict — primitives (2026-07-22)
+
+**Décision opérateur (« normaliser vers le strict ») : les schémas Zod restent la loi ; le canon + l'ingestion s'y conforment. Fondation du normaliseur déterministe (Lot 1). [ADR-0172](docs/governance/adr/0172-normalize-to-strict-schema.md).**
+
+- **`src/domain/schema-normalizer.ts`** (Layer-0 pur, zéro LLM, zéro random) — les coercions déterministes qui rapprochent la matière humaine de sa forme stricte : `coerceEnum` (accents/casse/séparateurs → membre canonique, « Engagé » → `ENGAGE`) · `stableUuid`/`normalizeId` (id lisible `risk-m19-001` → **UUID reproductible** via cyrb128 — même seed → même UUID, donc les références croisées restent cohérentes après remap ; idempotent) · `coerceNumber` (« ≈150 000 FCFA » → 150000, conservateur).
+- Sert **deux** usages : l'ingestion Phase 3 (données neuves) ET la conformité des canons existants — une seule mécanique.
+- Tests `schema-normalizer` (8). tsc 0 · lint 0. 0 modèle · 0 migration · 0 LLM · 0 Intent kind · cap 7/7. **Suite du lot** (tracée) : applicateur schéma-guidé `normalizeToSchema`, gate Zod au seed, conformité des canons actifs.
+
+---
+
+## v6.27.243 — feat(scorer)+docs: socle produit (intégrité des références) + audit d'intégrité ADVE (2026-07-22)
+
+**Question opérateur : « les gammes / le système reposent bien sur les produits ? La Fusée sait recommander / mettre à jour / supprimer ? » → audit : NON, l'intégrité référentielle était fragile. Socle posé + audit exhaustif de tout l'ADVE avant l'ingestion. [ADR-0171](docs/governance/adr/0171-product-catalog-reference-integrity.md) + [docs/audits/ADVE-INTEGRITY-AUDIT-2026-07-22.md](docs/audits/ADVE-INTEGRITY-AUDIT-2026-07-22.md).**
+
+- **Socle produit `src/domain/product-catalog.ts`** (pur, zéro LLM) : `ensureProductIds` (ids stables déterministes, dédup, jamais d'écrasement — `addProduct` l'applique) · `resolveProductRef` (résolution **tolérante id OU nom OU slug** — marche même sans id) · `danglingProductRefs` (détecte les références fantômes sur gammes/persona×segment/système).
+- **Le système produit repose sur le catalogue** : `ProductSystemSchema` gagne `anchorProductIds` (top) + `relatedProductIds` (modes/artifacts/archetypes) → V.produitsCatalogue (optionnels).
+- **1ʳᵉ règle d'intégrité référentielle** : cross-validator **rule 31** — les références produit résolvent vers le catalogue (INVALID + liste chiffrée sinon). 1/23 arêtes fermée.
+- **Audit ADVE exhaustif** (3 sous-agents, tout l'ADVE) → carte durable des trous de fond avant Phase 3 : **le seed bypasse Zod** (formes malformées persistées) ; **0/23 arêtes de référence validées** (dangles LIVE : personaSegmentMap, superfanPortrait…) ; **dizaines de mismatches canon↔schéma HARD** (ids non-UUID, enums accentués, objet-vs-scalaire, numériques string) ; **champs invisibles** au cockpit (R.globalSwot requis, S.selectedFromI…) ; **SmartFieldEditor orphelin** + **aucun CRUD item-level** (add-only). Punch-list priorisée dans l'audit ; tracé RESIDUAL-DEBT.
+- Tests `product-catalog` (5). tsc 0 · lint 0 · cycles 0 · 2691 tests verts. 0 modèle · 0 migration · 0 LLM · 0 Intent kind · cap 7/7.
+
+---
+
+## v6.27.242 — feat(oracle): « penser produit » — le système produit dans le pilier Valeur (2026-07-22)
+
+**Chantier « La Fusée compile » Phase 2. Mandat opérateur : « La Fusée doit penser produit dans le pilier Valeur. » Le pilier V modélisait l'ÉCONOMIE du produit (catalogue, ladder, unit-economics, MVP, IP) mais pas son MÉCANISME interne — le « Système Palais » de SPAWT (5 axes × 13 archétypes × 5 stades × modes × cartes) vivait en prose éparse. [ADR-0170](docs/governance/adr/0170-product-system-pillar-v.md).**
+
+- **Domaine Layer-0 `src/domain/product-system.ts`** : foyer générique (pas SPAWT-spécifique) au mécanisme produit — 6 dimensions canoniques (`axes`/`archetypes`/`progressionStages`/`modes`/`artifacts`/`mechanics`) + `coreConcept`, `ProductSystemSchema` Zod pur (idiome `brand-tier`/`brand-nature-archetypes`), helpers `productSystemDepth`/`isProductSystemEmpty`. Toutes dimensions optionnelles — un produit physique simple laisse le reste vide, **zéro fabrication**.
+- **`v.productSystem`** composé dans `PillarVSchema` (**additif, 0 migration** — content JSON ; Loi 1, marques existantes inchangées) + propagation éditable : `BIBLE_V` (`canonicalCode V8`, `STRATEGIC_REWRITE`) + `FieldDef` structuré dans `PILLAR_V`. Édition via `OPERATOR_AMEND_PILLAR` existant (décision opérateur, ADR-0085).
+- **Visible au cockpit** : section « Système produit » dans `pillar-v-fields.tsx` (composant `ProductSystem` — `coreConcept` + une carte par dimension renseignée, empty-state honnête). Le mécanisme ne dort plus en prose.
+- **Glory tool `product-system-architect`** (HYBRID, `defineHybridTool` → parité manuelle ADR-0060, `outputSchema = ProductSystemSchema`) : lit A/D/V, propose un système produit structuré, invocable via `glory.executeHybrid` (**aucun nouveau Intent kind**) ; prompt anti-fabrication ; sortie = draft appliqué par l'opérateur, jamais auto-write ADVE. Cap APOGEE 7/7 (tutelle Artemis).
+- **Vérifié** : le schéma accueille le Palais RÉEL de SPAWT (brand book v1.0) ; `PillarV` l'accepte. Tests `product-system` (6) + `pillar-schema-coherence`/`glory-tools`(56 CORE inchangé)/`phase22-glory-hybrid` verts. tsc 0 · lint 0. 0 modèle · 0 migration · 0 Intent kind · **1 Glory tool (EXTENDED 149→150)** · 1 variable canonique (V8).
+- **Déféré (RESIDUAL-DEBT)** : seed du Palais SPAWT complet (via ingestion Phase 3, pour ne pas fabriquer) ; annotation `applicableGloryTools` par nature ; rendu du système produit dans le Brand Book PDF (Phase 4).
+
+---
+
+## v6.27.241 — feat(oracle): les livrables sortent aux couleurs de la marque (brand-skinning) (2026-07-22)
+
+**Chantier « La Fusée compile » Phase 1 (débloqueur). Les Brand Books réels fournis (Motion19/SPAWT) ont rendu vivant le constat : La Fusée est forte en intelligence, faible en production. La Bible de Marque compilait déjà honnêtement `BRANDBOOK-D`, mais rendait dans la palette UPgraders EN DUR ; l'Oracle PDF était noir/blanc sans identité. [ADR-0169](docs/governance/adr/0169-brand-skinned-deliverable-rendering.md).**
+
+- **Résolveur de thème serveur** `src/server/services/brand-theme/` : `resolveBrandTheme(strategyId) → BrandTheme` déterministe **zéro LLM**, dérive palette/typo/logo du coffre (`CHROMATIC_STRATEGY`/`TYPOGRAPHY_SYSTEM`/`LOGO_*`). Cœur pur `buildBrandTheme` testable sans DB. **Tolérant de forme** (leçon ADR-0168) : `collectHexes` récolte tout hex — champs, `full[]`, et clés `roles[hex]` (Motion19) ; `extractFontFamilies` tolère `primary/secondary` (SPAWT) et `display/text` (Motion19). **Lisibilité garantie** : `readableTextOn` = blanc sauf illisible→noir (ferme le bug latent « blanc sur or »), `accentOnLight` rétrograde sur l'encre si l'accent est trop clair. **Fallback UPgraders identique** si pas de palette (`isFallback`, réversible ADR-0130). **Zéro fabrication** — le thème ne vient QUE de la donnée.
+- **`brand-bible-pdf.ts`** : `const C` supprimé → thème threadé (couverture/section/cadre/légende), **logo dessiné sur la couverture** (`embedLogo` data-URL + http best-effort timeout, échec = pas de logo jamais d'exception), nom de marque en accent. **`export-oracle.ts`** : barre + titres en accent lisible, corps noir/blanc conservé.
+- **Vérifié E2E (base réelle)** : Bible de Marque Motion19 → `coverBg #1d1d1d`, bandeaux `#3384ff`, texte blanc lisible, fontes Exo 2/Roboto, logo embarqué, 13 slides, PDF `%PDF-` valide ; marque sans palette → fallback UPgraders. Tests `brand-theme` (8) + `brand-bible-deck` étendu. tsc 0 · lint 0 · cycles 0 · **1101 tests gouvernance+types verts**. 0 modèle · 0 migration · 0 LLM · 0 Intent kind · cap 7/7.
+- **Déféré (RESIDUAL-DEBT)** : embarquement réel des fichiers de police (jsPDF `addFont`) ; skinning voie puppeteer `oracle-pdf.ts` (CSS route) ; le Brand Book complet deux-strates = Phase 4 du chantier.
+
+---
+
+## v6.27.240 — fix(pillars): la Distinction affiche enfin la direction artistique + les proof points (2026-07-22)
+
+**Signalement opérateur : le pilier Distinction de Motion19 n'affichait ni sa direction artistique ni ses proof points — alors que la donnée existe et est réelle (Brand Book officiel). Diagnostic : ni manque de donnée, ni besoin d'invoquer des Glory tools pendant l'ADVE, mais un mismatch de contrat de forme. [ADR-0168](docs/governance/adr/0168-pillar-shape-tolerance-compact-vs-rich.md).**
+
+- **Racine** : les fichiers canon (`motion19`/`spawt`/`lafusee`) écrivent une forme **compacte** (matière réelle d'un Brand Book, saisie main) — `directionArtistique = {univers, principes}`, `proofPoints`/`preuvesAuthenticite = string[]` — que le schéma Zod canonique, et donc le renderer bespoke qui le suit, n'attendait que sous forme **riche** (sortie Glory : `{moodboard, chromaticStrategy, …}`, `{type, claim, …}[]`). Le renderer cherchait les clés riches → introuvables → « à saisir » sur des champs pourtant renseignés. Données **bien collectées, mal shapées**.
+- **Schéma tolérant** (`pillar-schemas.ts`) : `directionArtistique` accepte `univers?`/`principes?` en plus des sous-objets riches (tous optionnels) ; `proofPoints` (D) et `preuvesAuthenticite` (A) deviennent `array(union([string, objet]))`. Les deux formes valident — la validation gateway (warnings-only) ne bruite plus.
+- **Renderer tolérant** (`pillar-kit.tsx` + `pillar-d-fields.tsx`) : `ProofList` rend un item chaîne en ligne d'affirmation (primitive partagée ⇒ profite à tous les piliers) ; `str()` devient **non-lossy** sur les objets imbriqués (l'ancienne version ne gardait que la 1re chaîne, écrasant moodboard/chromaticStrategy) et **saute la plomberie interne** (`gloryOutputId`, clés `_`) ; nouveau composant `DirectionArtistique` qui affiche `univers`+`principes` compacts **et** les sous-objets riches présents. DS-compliant (aucune couleur brute, tokens/CVA intacts).
+- **Zéro fabrication** : le renderer affiche la forme présente, sans jamais inventer de structure absente (interdit NEFER n°3). Les deux formes cohabitent (compacte = humain/canon ; riche = Glory).
+- **Vérifié sur la base** (Motion19 pilier D) : `directionArtistique` non vide, univers + 3 principes rendus ; 4 proof points rendus. Tests `tests/unit/types/pillar-shape-tolerance.test.ts` (8). tsc 0 · lint 0 · **1101 tests gouvernance+types verts**. 0 modèle Prisma · 0 LLM · 0 migration · cap APOGEE 7/7.
+- **Déféré (RESIDUAL-DEBT)** : `personas` (D) présente le même motif mais son renderer est déjà tolérant (warnings-only, pas un bug d'affichage) ; l'**étape de compilation** d'un Brand Book *designé* brand-skinné à partir de l'ADVE + vault (comme le Brand Book V2 fourni) reste le grand chantier aval (l'Oracle compile déjà 35 sections déterministes + PDF, mais au gabarit générique).
+
+---
+
+## v6.27.239 — feat(apogee): moteur de trajectoire de palier — la Loi 1 a enfin des dents (2026-07-21)
+
+**Les 10 kinds `PROMOTE_*`/`DEMOTE_*` étaient déclarés au registre depuis toujours mais jamais câblés (absents de l'union Intent, du dispatcher, sans handler). Le palier de marque était dérivé du score à la lecture — donc une baisse de score rétrogradait le palier en silence, violant la Loi 1 « conservation d'altitude ». [ADR-0167](docs/governance/adr/0167-apogee-trajectory-engine.md).**
+
+- **Palier officiel persisté** (`Strategy.apogeeTier` + `SetAt`/`Reason`/`By`, additifs nullable, migration backfill-safe) = ratchet « altitude de record » mû seulement par transition gouvernée. Helper pur `effectiveTier({apogeeTier, composite})` = officiel s'il est posé, sinon `classifyTier(composite)` dérivé. `null` (toutes les marques existantes) ⇒ comportement inchangé.
+- **Gate `PALIER_PROMOTION_PROOFS`** (réalise ADR-0086) : cœur pur `evaluatePalierTransition` + wrapper async lecture-seule, branché en pré-flight `emitIntent`. PROMOTE : `composite > borne cible` (le composite étant déjà evidence-capped, ce test enforce implicitement les preuves apex CULTE/ICONE) ; raison chiffrée honnête (superfans n/target, échelle non déclarée). DEMOTE : structural seul (Loi 1). Mesure d'évidence extraite du scorer vers `advertis-scorer/evidence.ts` (source unique) + `computeEvidenceBreakdown`.
+- **Câblage atomique** : 10 membres à l'union Intent + 10 case commandant + groupe `intentTouchesPillars` (les 2 switches sans `default` ⇒ `tsc` prouve l'exhaustivité) + handler `brand-tier-transition/handler.ts` qui **PERSISTE** apogeeTier (dents, pas le STUB ADR-0139).
+- **Surface opérateur** (ADR-0085 décision opérateur) : `strategy.transitionTier`/`tierTransitionPreview`/`tierTrajectory` (voie bus, kind dynamique) + `governance.compensate` à dents pour les DEMOTE + panneau console `<ApogeeTrajectoryPanel>` (officiel vs impliqué, boutons gate-aware, historique depuis IntentEmission) + cockpit ligne palier via `effectiveTier`.
+- **Vérifié E2E (Motion19, PG)** : promotion méritée ORDINAIRE→FORTE (OK, apogeeTier écrit) · promotion apex non méritée FORTE→CULTE (VETOED, « score 160 ≤ seuil 160 — superfans 0/1000 ; échelle non déclarée ») · ratchet (score chute à 90, effectiveTier reste FORTE) · démotion explicite · 3 émissions hash-chaînées.
+- **0 nouveau modèle Prisma, 0 LLM, cap APOGEE 7/7.** tsc 0 · lint 0 · cycles 0 · HARD `brand-tier-transition-wired.test.ts` (les 10 câblés) + gate/handler/effectiveTier tests. RESIDUAL-DEBT : ligne trajectoire CLOSE ; déférés phase 2 tracés (auto-éval, page dédiée, callsites, dé-dup superfan).
+
 ## v6.27.238 — feat(jehuty): des images dans la Gazette — vignettes RSS réelles + logo de marque (2026-07-21)
 
 **Constat opérateur : « et aucune image, c'est grave ? ». La Gazette était text-only ; les flux RSS fournissent souvent des vignettes que le parser ignorait, et le logo de la marque (au coffre) n'était nulle part sur la page.**

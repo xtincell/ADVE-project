@@ -1,6 +1,6 @@
 "use client";
 
-import { PILLAR_STORAGE_KEYS, classifyTier, formatTierReferential } from "@/domain";
+import { PILLAR_STORAGE_KEYS, classifyTier, formatTierReferential, effectiveTier } from "@/domain";
 
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
@@ -507,8 +507,10 @@ export default function CockpitDashboard() {
             <div className="ck-kpi">
               <div className="ck-kpi__top"><span className="ck-kpi__lbl">Score de marque</span><span className="ck-kpi__spark"><Sparkline data={scoreTrend} width={60} height={20} /></span></div>
               <p className="ck-kpi__val">{Math.round(composite)}<span className="m">/200</span></p>
-              {/* ADR-0126 — le palier ne s'affiche jamais sans son référentiel d'échelle. */}
-              <span className="ck-kpi__delta">{formatTierReferential(classifyTier(composite), strategy?.marketScale ?? null)}</span>
+              {/* ADR-0126 — le palier ne s'affiche jamais sans son référentiel d'échelle.
+                  ADR-0167 — palier EFFECTIF (officiel apogeeTier s'il est posé,
+                  sinon dérivé du score). Loi 1 : pas de rétrogradation silencieuse. */}
+              <span className="ck-kpi__delta">{formatTierReferential(effectiveTier({ apogeeTier: strategy?.apogeeTier, composite }), strategy?.marketScale ?? null)}</span>
             </div>
           </div>
         </>

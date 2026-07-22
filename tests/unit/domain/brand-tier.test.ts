@@ -7,6 +7,7 @@ import {
   nextTier,
   prevTier,
   normalizePalier,
+  effectiveTier,
   TIER_DEFINITIONS,
   TIER_UPPER_BOUNDS_200,
 } from "@/domain";
@@ -76,5 +77,37 @@ describe("brand-tier — canonical 6-tier ladder", () => {
   it("bands widen toward the apex", () => {
     expect(TIER_UPPER_BOUNDS_200.LATENT).toBe(40);
     expect(TIER_UPPER_BOUNDS_200.CULTE).toBe(180);
+  });
+});
+
+describe("effectiveTier — palier officiel (ratchet) vs impliqué (ADR-0167)", () => {
+  it("apogeeTier null => palier dérivé du composite (marques existantes)", () => {
+    expect(effectiveTier({ apogeeTier: null, composite: 100 })).toBe("ORDINAIRE");
+    expect(effectiveTier({ apogeeTier: undefined, composite: 30 })).toBe("LATENT");
+  });
+
+  it("apogeeTier posé => officiel prime, MÊME au-dessus du palier impliqué", () => {
+    // Score implique ORDINAIRE (100) mais officiel FORTE (promotion enregistrée).
+    expect(effectiveTier({ apogeeTier: "FORTE", composite: 100 })).toBe("FORTE");
+  });
+
+  it("ratchet Loi 1 : score chute sous le seuil, l'officiel ne rétrograde PAS", () => {
+    // Composite tombé à 90 (implique ORDINAIRE) — l'officiel FORTE tient : pas
+    // de rétrogradation silencieuse (seul un DEMOTE explicite l'abaisse).
+    expect(effectiveTier({ apogeeTier: "FORTE", composite: 90 })).toBe("FORTE");
+    expect(classifyTier(90)).toBe("ORDINAIRE"); // le palier IMPLIQUÉ diverge — surfacé côté UI
+  });
+
+  it("alias legacy ZOMBIE normalisé vers LATENT", () => {
+    expect(effectiveTier({ apogeeTier: "ZOMBIE", composite: 170 })).toBe("LATENT");
+  });
+
+  it("apogeeTier invalide => ignoré, fallback dérivé (jamais un throw)", () => {
+    expect(effectiveTier({ apogeeTier: "BOGUS", composite: 150 })).toBe("FORTE");
+  });
+
+  it("composite null/undefined => 0 => LATENT (défensif)", () => {
+    expect(effectiveTier({ apogeeTier: null, composite: null })).toBe("LATENT");
+    expect(effectiveTier({ apogeeTier: null, composite: undefined })).toBe("LATENT");
   });
 });

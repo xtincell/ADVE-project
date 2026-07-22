@@ -43,7 +43,7 @@ Ces correspondances évitent la réinvention :
 - **Operator** (30 fields)
 - **ClientAllocation** (14 fields)
 - **Client** (17 fields)
-- **Strategy** (78 fields)
+- **Strategy** (82 fields)
 - **Intention** (14 fields)
 - **Campaign** (80 fields)
 - **Mission** (36 fields)
@@ -334,7 +334,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Services backend — 118
+## Services backend — 121
 
 - `src/server/services/advertis-connectors/` ✓ manifest
 - `src/server/services/advertis-scorer/` ✓ manifest
@@ -347,7 +347,10 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/auto-promotion/` ✓ manifest
 - `src/server/services/board-export/` ✓ manifest
 - `src/server/services/boot-sequence/` ✓ manifest
+- `src/server/services/brand-book-ingestion/` ✓ manifest
 - `src/server/services/brand-node/` ✓ manifest
+- `src/server/services/brand-theme/`
+- `src/server/services/brand-tier-transition/`
 - `src/server/services/brand-vault/` ✓ manifest
 - `src/server/services/brief-ingest/` ✓ manifest
 - `src/server/services/budget-allocator/` ✓ manifest
@@ -431,7 +434,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/ptah/` ✓ manifest
 - `src/server/services/qc-router/` ✓ manifest
 - `src/server/services/quick-intake/` ✓ manifest
-- `src/server/services/referral/`
+- `src/server/services/referral/` ✓ manifest
 - `src/server/services/rtis-protocols/` ✓ manifest
 - `src/server/services/sector-intelligence/` ✓ manifest
 - `src/server/services/sentinel-handlers/` ✓ manifest
@@ -446,13 +449,13 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/talent-engine/` ✓ manifest
 - `src/server/services/talent-services/` ✓ manifest
 - `src/server/services/team-allocator/` ✓ manifest
-- `src/server/services/tester-feedback/`
+- `src/server/services/tester-feedback/` ✓ manifest
 - `src/server/services/tier-evaluator/` ✓ manifest
 - `src/server/services/translation/` ✓ manifest
 - `src/server/services/upsell-detector/` ✓ manifest
 - `src/server/services/utils/` ✓ manifest
 - `src/server/services/value-report-generator/` ✓ manifest
-- `src/server/services/value-statement/`
+- `src/server/services/value-statement/` ✓ manifest
 - `src/server/services/vault-enrichment/` ✓ manifest
 
 ---
@@ -585,7 +588,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 279 (par deck)
+## Pages — 280 (par deck)
 
 ### Agency (12)
 
@@ -664,7 +667,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/settings/billing`
 - `/cockpit/settings/connections`
 
-### Console (129)
+### Console (130)
 
 - `/console`
 - `/console/academie`
@@ -780,6 +783,7 @@ Ces correspondances évitent la réinvention :
 - `/console/socle/pipeline`
 - `/console/socle/pricing`
 - `/console/socle/prod-ops`
+- `/console/socle/release-notes`
 - `/console/socle/revenue`
 - `/console/socle/transactions`
 - `/console/socle/valorisations`
@@ -1054,12 +1058,13 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 588 (par governor)
+## Intent kinds — 591 (par governor)
 
-### MESTOR (79)
+### MESTOR (80)
 
 - `FILL_ADVE` → mestor (sync) — Fill ADVE pillars from sources.…
 - `OPERATOR_AMEND_PILLAR` → mestor (sync) — Operator-driven ADVE pillar field amendment (PATCH_DIRECT / LLM_REPHRASE / STRAT…
+- `INGEST_BRAND_BOOK` → brand-book-ingestion (sync) — Lot 1b (ADR-0173) — persiste une extraction de brand book RÉVISÉE vers A/D/V (ga…
 - `OPERATOR_ARCHIVE_STRATEGY` → strategy-archive (sync) — Soft archive a Strategy (Strategy.archivedAt = now). Hides from default queries,…
 - `OPERATOR_RESTORE_STRATEGY` → strategy-archive (sync) — Restore a soft-archived Strategy (Strategy.archivedAt = null). Reverses OPERATOR…
 - `OPERATOR_PURGE_ARCHIVED_STRATEGY` → strategy-archive (sync) — Hard delete a Strategy + BFS cascade on 30+ child tables via information_schema …
@@ -1213,7 +1218,7 @@ Ces correspondances évitent la réinvention :
 - `THOT_PAUSE_CAMPAIGN_FLAME_OUT` → campaign-tracker (sync) — Cluster A — Auto-pause Campaign en flame-out. Set Campaign.killTriggeredAt + sta…
 - `RECOMPUTE_AGENCY_ACTIVITY_MARGINS` → campaign-tracker (async) — Cluster F — Agrège anonymisé cross-clients (k-anonymity k≥5) par CampaignAction.…
 
-### INFRASTRUCTURE (382)
+### INFRASTRUCTURE (384)
 
 - `ADMIN_SET_USER_ROLE` → accounts (sync) — Console superviseur (Vague 7) : promotion/retrogradation du role d'un compte (en…
 - `SUBMIT_FEEDBACK` → tester-feedback (sync) — Canal feedback testeur (ADR-0155) : un utilisateur connecté remonte un bug/idée/…
@@ -1523,6 +1528,8 @@ Ces correspondances évitent la réinvention :
 - `LEGACY_PILLAR_ADD_RITUAL` → pillar (sync) — Strangler-promoted mutation 'addRitual' from router 'pillar'.…
 - `LEGACY_PILLAR_ADD_TOUCHPOINT` → pillar (sync) — Strangler-promoted mutation 'addTouchpoint' from router 'pillar'.…
 - `LEGACY_PILLAR_ADD_VALUE` → pillar (sync) — Strangler-promoted mutation 'addValue' from router 'pillar'.…
+- `LEGACY_PILLAR_UPDATE_ITEM` → pillar (sync) — CRUD item-level (Lot 2) — met à jour un item d'un tableau ADVE par index (arrayP…
+- `LEGACY_PILLAR_REMOVE_ITEM` → pillar (sync) — CRUD item-level (Lot 2) — supprime un item d'un tableau ADVE par index (arrayPat…
 - `LEGACY_PILLAR_APPLY_GLORY_OUTPUT` → pillar (sync) — Strangler-promoted mutation 'applyGloryOutput' from router 'pillar'.…
 - `LEGACY_PILLAR_AUTO_FILL` → pillar (sync) — Strangler-promoted mutation 'autoFill' from router 'pillar'.…
 - `LEGACY_PILLAR_AUTO_FILL_ALL` → pillar (sync) — Strangler-promoted mutation 'autoFillAll' from router 'pillar'.…

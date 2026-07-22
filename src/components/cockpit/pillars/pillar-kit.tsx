@@ -50,9 +50,15 @@ export function str(v: unknown): string {
   if (typeof v === "boolean") return v ? "Oui" : "Non";
   if (Array.isArray(v)) return (v as unknown[]).map(str).filter(Boolean).join(", ");
   if (typeof v === "object") {
-    const vals = Object.values(v as Record<string, unknown>);
-    const first = vals.find((x): x is string => typeof x === "string" && x.length > 0);
-    return first ?? vals.map(str).filter(Boolean).join(", ");
+    // Rends TOUTES les valeurs lisibles (non-lossy) — l'ancienne version ne
+    // gardait que la première chaîne, ce qui écrasait silencieusement les
+    // objets riches (moodboard, chromaticStrategy…). Ignore la plomberie
+    // interne (gloryOutputId, clés `_`-préfixées) jamais destinée à l'écran.
+    const readable = Object.entries(v as Record<string, unknown>)
+      .filter(([k]) => k !== "gloryOutputId" && !k.startsWith("_"))
+      .map(([, x]) => str(x))
+      .filter(Boolean);
+    return readable.join(" · ");
   }
   return String(v);
 }
@@ -121,9 +127,14 @@ export function ObjCard({
 }: { title: string; value: unknown; status?: string; fields: Array<[string, string]>; span?: boolean }) {
   const empty = isEmpty(value);
   const obj = asRec(value);
+  // Forme compacte (union ADR-0168) : le champ est une chaîne nue au lieu de l'objet
+  // structuré (prophecy/doctrine/enemy.overtonMap…) → on rend la chaîne, pas une grille vide.
+  const compact = typeof value === "string" || typeof value === "number";
   return (
     <ACard title={title} status={status} empty={empty} span={span}>
-      {empty ? <EmptyBody verb="À générer" /> : (
+      {empty ? <EmptyBody verb="À générer" /> : compact ? (
+        <p className="ck-a-card__prose">{str(value)}</p>
+      ) : (
         <div className="ck-a-obj">
           {fields.map(([k, label]) => {
             const val = obj[k];
@@ -148,21 +159,35 @@ export function ProofList({
   title, items, status, cols,
 }: { title: string; items: unknown; status?: string; cols: Array<[string, string]> }) {
   const empty = isEmpty(items);
-  const arr = asArr(items);
+  const arr = Array.isArray(items) ? (items as unknown[]) : [];
   return (
     <ACard title={title + (empty ? "" : ` · ${arr.length}`)} status={status} empty={empty} span>
       {empty ? <EmptyBody verb="À générer" /> : (
         <div className="ck-a-proofs">
-          {arr.map((it, i) => (
-            <div className="ck-a-proof" key={i}>
-              {cols.map(([k, label]) => (!isEmpty(it[k]) ? (
-                <div className="ck-a-proof__cell" key={k}>
-                  <span className="ck-a-proof__k">{label}</span>
-                  <span className="ck-a-proof__v">{Array.isArray(it[k]) ? (it[k] as unknown[]).map(str).join(", ") : str(it[k])}</span>
+          {arr.map((it, i) => {
+            // Forme compacte (canon/humain) : une preuve écrite en chaîne nue
+            // (au lieu d'un objet {type, claim, …}) → une ligne d'affirmation.
+            if (typeof it === "string" || typeof it === "number") {
+              return (
+                <div className="ck-a-proof" key={i}>
+                  <div className="ck-a-proof__cell">
+                    <span className="ck-a-proof__v">{str(it)}</span>
+                  </div>
                 </div>
-              ) : null))}
-            </div>
-          ))}
+              );
+            }
+            const rec = asRec(it);
+            return (
+              <div className="ck-a-proof" key={i}>
+                {cols.map(([k, label]) => (!isEmpty(rec[k]) ? (
+                  <div className="ck-a-proof__cell" key={k}>
+                    <span className="ck-a-proof__k">{label}</span>
+                    <span className="ck-a-proof__v">{Array.isArray(rec[k]) ? (rec[k] as unknown[]).map(str).join(", ") : str(rec[k])}</span>
+                  </div>
+                ) : null))}
+              </div>
+            );
+          })}
         </div>
       )}
     </ACard>

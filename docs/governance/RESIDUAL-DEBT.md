@@ -147,6 +147,130 @@
   env-avec-clés, ADR enfant de 0136. **Déclencheur** : env à clés + session dédiée.
 - **`ugcGenerationRate`** : exclusion MAINTENUE (décision négative explicite ADR-0134 §B2).
   Dérivation future : inbox v2 `kind="MENTION"` + mentions connecteur + constante validée direction.
+- **Chantier « La Fusée compile » (Brand Book designé, brand-skinné)** — plan `_bmad`/session ; 5 phases.
+  **Phase 1 ✅ SHIPPÉE** ([ADR-0169](adr/0169-brand-skinned-deliverable-rendering.md), v6.27.241) :
+  `resolveBrandTheme` serveur + `brand-bible-pdf`/`export-oracle` rendent aux couleurs de la marque
+  (item « mapper Strategy → thème de rendu » CLOS). **Restant du chantier** :
+  - **Phase 1 résidus** : embarquement réel des **fichiers de police** (jsPDF `addFont` depuis
+    `TYPOGRAPHY_SYSTEM.files[]` — réseau + TTF-only + souvent absent ; helvetica en attendant) ;
+    skinning de la voie **puppeteer** `oracle-pdf.ts` (via le CSS de la route `/shared/strategy`).
+  - **Phase 2 ✅ SHIPPÉE** ([ADR-0170](adr/0170-product-system-pillar-v.md), v6.27.242) : `v.productSystem`
+    (domaine `product-system.ts` + schéma + bible V8 + field-registry + renderer cockpit + Glory
+    `product-system-architect` HYBRID) modélise le mécanisme produit. **Résidus Phase 2** : seed du Palais
+    SPAWT complet dans `spawt-canon.ts` (déféré à l'ingestion Phase 3 — l'encoder à la main risquerait la
+    fabrication) ; annotation `applicableGloryTools` du tool par nature (`brand-nature-archetypes.ts` —
+    discovery UI, le tool est déjà invocable par slug).
+  - **Phase 2-bis ✅ SHIPPÉE — socle produit** ([ADR-0171](adr/0171-product-catalog-reference-integrity.md),
+    v6.27.243) : ids produits stables + résolution tolérante + 1ʳᵉ règle d'intégrité référentielle
+    (cross-validator rule 31) + lien système↔catalogue. **1/23 arêtes de référence fermée.**
+  - **🔴 AUDIT D'INTÉGRITÉ ADVE (2026-07-22)** — [carte complète](../audits/ADVE-INTEGRITY-AUDIT-2026-07-22.md).
+    Balayage exhaustif des 8 piliers avant l'ingestion → trous de fond systémiques (prérequis Phase 3) :
+    - **Canon↔schéma — corruption de forme FERMÉE (Lot 1, [ADR-0172](adr/0172-normalize-to-strict-schema.md), v6.27.246)** :
+      gate anti-corruption (`pillar-conformance.ts`) au seed (throw sur SHAPE, tolère les advisories DRAFT) +
+      formes duales objet-vs-scalaire réconciliées par unions ADR-0168 → **les 4 canons A→I SHAPE=0** (test CI
+      `canon-conformance`). **Restant (advisory, non bloquant, tracé §ADR-0172 ci-dessous)** : traduction
+      sémantique enum FR→canonique (« mensuelle »→MONTHLY), normalisation id lisible→UUID au seed.
+    - **Arêtes de référence — VALIDATION FERMÉE (Lot 3, [ADR-0174](adr/0174-pillar-reference-edge-integrity.md),
+      v6.27.249)** : `findDanglingReferences` + cross-validator rule 32 valident les 22 arêtes restantes (liens
+      par nom + FK UUID) ; `overtonBlockers` gagne un `id` (arête S→R rendue possible). **23/23 arêtes
+      validées.** **Restant (DONNÉE, non VALIDATION)** : motion19 porte **deux taxonomies de persona**
+      (`D.personas` Brand Book §04 « L'amateur / L'entrepreneur du web… » vs le segment/superfan « Le créateur
+      de contenu / Le vidéaste pro… ») → 5 dangles LIVE surfacés au score. **Bornage** : réconcilier les deux
+      taxonomies (renommer `personaSegmentMap.personaName`/`superfanPortrait.personaRef` vers les `nom` de
+      `D.personas`, OU acter que ce sont des segments distincts) — **décision opérateur** (on n'invente pas le
+      mapping, interdit n°3). **Déclencheur** : passe éditeur ADVE / validation opérateur des personas motion19.
+    - **Champs invisibles — FERMÉ (Lot 2, v6.27.248)** : R.globalSwot / S.selectedFromI / S.rejectedFromI /
+      E.channelTouchpointMap rendus (ObjCard/ProofList) ; `ObjCard` tolère désormais la forme compacte
+      (chaîne au lieu d'objet — union ADR-0168).
+    - **CRUD item-level + dot-path — FERMÉ (Lot 2, v6.27.248)** : `pillar.updateArrayItem`/`removeArrayItem`
+      (governés, requireOperator) ferment le « add-only » ; `setNestedValue` indexe enfin les tableaux
+      (`personas[0].name` n'écrit plus une clé littérale — corruption, vérifiée E2E). **Restant** :
+      `SmartFieldEditor` + field-registry **encore orphelins** (édition = textarea JSON brutes) ; monter
+      l'éditeur récursif OU acter le raw-JSON. **Déclencheur** : lot « éditeur ADVE » (+ surface d'ingestion
+      §ADR-0173 qui a le même besoin de formulaire nested).
+    - **Provenance/needsHuman non-enforcé** : INFERRED nourrit `computePillarS` comme DECLARED.
+  - **Phase 3 — backend SHIPPÉ (Lot 1b, [ADR-0173](adr/0173-brand-book-ingestion.md), v6.27.247)** :
+    service `brand-book-ingestion` (2 extracteurs parité manual-first, preview→confirm, Intent
+    `INGEST_BRAND_BOOK` → gateway A/D/V + assets vault DRAFT, kind `BRAND_BOOK`, source `OFFICIAL`, zéro-fab
+    vérifié E2E). **Restant (déféré §ADR-0173 ci-dessous)** : surface cockpit/console, promotion produits,
+    logo binaire.
+  - **Phase 4** — livrable **Brand Book complet** deux-strates (identité + système produit), gabarit
+    multi-sections brand-skinné (cible SPAWT/Motion19).
+  - **Phase 5** — profondeur du système visuel (applications carte/letterhead/merch, mauvais usages logo,
+    PANTONE, type scale) — incrémental. **Déclencheur** : suite du chantier (l'ADVE détient déjà la
+    matière — travail de *rendu*, pas de collecte).
+
+### §ADR-0173 — ingestion brand book (déférés, non bloquants)
+
+Le backend d'ingestion (extracteurs + Intent + tRPC + persister) est shippé et vérifié E2E. Restent :
+
+- **Surface cockpit/console** (upload → revue de l'extraction → apply) : les endpoints tRPC
+  `ingestion.previewBrandBook`/`ingestBrandBook` existent ; il manque l'écran opérateur (formulaire éditable
+  de l'extraction avant confirmation). **Bornage** : page `/console/…/brand-book` réutilisant le pattern
+  `market-study-ingestion` UI. **Déclencheur** : passe « éditeur ADVE » (Lot 2) — mutualiser le rendu de
+  formulaire nested.
+- **Promotion produits extraits → `v.produitsCatalogue`** : les produits d'un brand book (nom/prix/desc) ne
+  sont PAS auto-écrits (le schéma riche exige une matrice de valeur → fabrication). L'extraction brute est
+  disponible. **Bornage** : action opérateur « promouvoir » via le socle produit (`ensureProductIds`,
+  ADR-0171). **Déclencheur** : Lot CRUD produit (Lot 2).
+- **Logo binaire** : `pdf-parse` ne garde que le texte → le logo d'un brand book n'est pas extrait (seule sa
+  description l'est). **Bornage** : ré-upload image séparé → `LOGO_FINAL` (chaîne existante). **Déclencheur** :
+  quand un vrai book est ingéré en prod.
+
+### §Revue adversariale 2026-07-22 (chantier « La Fusée compile ») — déférés tracés
+
+3 agents adversariaux ont attaqué unions / gate+normaliseur / ingestion. **Bugs réels CORRIGÉS le jour
+même** (mêmes commits) : Oracle `sousPromesses` → `[object Object]` (mapper coerce), 3 champs cockpit-E
+aveugles (RelList/Principes tolérants string+record), effondrement des actions string (`normalizeInitiative`),
+faux-négatif scalaire-dans-record du classifieur (`isContainer` + record), persister (tonDeVoix→D,
+motivations sans repli-nom, story non dupliquée, manifesto non écrit, flag `wrote`), S computed corrompu
+VALIDATED (unions S + gate S), surclaims de docstrings (OFFICIAL/LLM-zéro-fab). **Restent (latents/systémiques)** :
+
+- **Deux voies de confiance disjointes** (pré-existant) : `content._fieldProvenance` (garde de provenance)
+  vs `Pillar.fieldCertainty` (seeds/intake/`confirmInferredField`). Un champ confirmé opérateur reste
+  `_fieldProvenance:UNKNOWN` → une écriture SOURCE (ingestion) le surécrit en silence (`decideOverwrite`
+  ALLOW). **Bornage** : `confirmInferredField` doit passer par le gateway (poser `_fieldProvenance:HUMAN`)
+  OU le garde doit consulter `fieldCertainty`. **Déclencheur** : chantier provenance unifiée (avant tout
+  usage prod de l'ingestion qui écrase).
+- **Certitude par champ non posée à l'ingestion** : le persister pose `fieldProvenance:SOURCE` mais pas
+  `Pillar.fieldCertainty=OFFICIAL` (seule `BrandDataSource.certainty` l'est). **Bornage** : écrire la
+  certitude par champ après le write. **Déclencheur** : surface cockpit d'ingestion.
+- **`ingestBrandBook`/`previewBrandBook` = `operatorProcedure` non scopé par stratégie** (les reads sœurs
+  sont `strategyScopedProcedure`). Modèle de confiance opérateur intentionnel, mais asymétrique.
+  **Bornage** : `strategyScopedProcedure` + garde operator. **Déclencheur** : si `operatorProcedure` est
+  accordé à un rôle moins fiable.
+- **Gate F2/F5/F6/F7 (latents)** : absent-required-container classé MISSING (les renderers doivent
+  optional-chain les requis) ; détection SHAPE côté `received` via message EN (un `z.config(locale fr)`
+  la casserait — aucun configuré) ; placeholder dans un champ union sur-bloque (SHAPE) vs toléré hors-union ;
+  atomicité seed (throw mid-loop ; `seed-spawt` `create` non-idempotent) — **gardé en amont par le test CI
+  `canon-conformance`** (un canon régressé échoue le test avant tout seed). **Bornage** : pré-flight
+  conformance avant le write loop. **Déclencheur** : prochaine passe seed.
+- **`stableUuid` + carriers `*Ref` legacy** (dormant) : si un jour on persiste `normalizeToSchema`, les
+  `riskRef`/`hypothesisRef`/`sourceRef` (string nu, non uuid-typés) casseraient l'arête. Aucun caller ne
+  persiste le normalisé aujourd'hui. **Bornage** : normaliser aussi les `*Ref` OU remap coordonné.
+  **Déclencheur** : si l'ingestion adopte `normalizeToSchema`.
+- **`advertis-scorer/semantic.ts` sous-compte les formes compactes** (`hierarchieCommunautaire`/
+  `sacredCalendar` objet → `arrLen`=0). **Code mort** (aucun consommateur ; le /200 officiel = `scoreStructural`).
+  **Bornage** : si ce scorer est ranimé, le rendre tolérant. **Déclencheur** : réveil du scorer sémantique.
+
+### §ADR-0172 — advisories de conformité canon (déférés, non bloquants)
+
+Le gate anti-corruption (Lot 1) ferme la corruption de forme (SHAPE) ; il **tolère** un tail d'advisories
+qui rendent correctement en l'état mais ne sont pas strictement canoniques. Aucun ne casse le rendu.
+
+- **Traduction sémantique enum FR→canonique** (~120/canon) : « mensuelle »→MONTHLY, « Activation »→ACTIVATION,
+  « trimestrielle »→QUARTERLY… Le fold ascii/casse du normaliseur ne traduit pas entre langues. **Bornage** :
+  petite table FR→enum dans `schema-normalizer` (déterministe, réutilisée par l'ingestion). **Déclencheur** :
+  Lot 1b (l'ingestion aura le même besoin sur de la donnée FR) — mutualiser là.
+- **Normalisation id lisible→UUID au seed** (`risk-m19-001`→UUID) : le gate persiste **brut** pour préserver
+  l'intégrité des refs (id ET ref doivent co-normaliser). **Bornage** : appliquer `normalizeToSchema` au seed
+  APRÈS avoir prouvé que toutes les refs sont uuid-typées et partagent la chaîne source. **Déclencheur** :
+  Lot 3 (intégrité des 22 arêtes) — c'est le même chantier.
+- **S seedé-brut (upgraders/lafusee) vs computed (motion19)** : incohérence pré-existante — le loop
+  `seedUpgraders` seed le canon S (stale) au lieu de le calculer via `computePillarS` comme motion19.
+  Le gate exclut S (computed, non authored) donc ne le voit pas. **Bornage** : câbler `computePillarS` dans
+  `seedUpgraders` (comme `seed-motion19`) + supprimer le S des canons upgraders/lafusee. **Déclencheur** :
+  prochaine passe seed — bas risque, ~10 lignes.
 
 ### Réseaux / suite sociale (ADR-0128/0129/0130/0131/0132/0133)
 
@@ -202,6 +326,12 @@
   + **inventaire des dicts i18n des pages non-intake** (la garde anti-sans-accents couvre les
   littéraux rendus des surfaces scannées, pas les dicts). **Déclencheur** : prochaine passe i18n.
 - **Onglets réels Livrables/Rapports** (fusion optionnelle — nav par `activePrefixes` propre).
+- **`personas` (pilier D) — mismatch de forme compacte↔schéma** (même motif qu'ADR-0168) : le canon écrit
+  une forme divergente de `PersonaSchema` (`name`/`rank` absents, `motivations` scalaire vs objet). Le
+  renderer `Personas` est **déjà tolérant** (affiche via `str()`/normalisation array) donc c'est
+  **warnings-only** à la validation gateway, PAS un bug d'affichage. **Fix propre** : union/tolérance sur
+  `PersonaSchema` (comme `proofPoints`/`directionArtistique` ADR-0168). **Déclencheur** : prochaine passe
+  piliers, ou si un `strictSchemaValidation` couvre un jour le pilier D.
 
 ### Intents déclarés jamais câblés (audit 2026-07-21)
 
@@ -213,15 +343,30 @@ dispatch : sur 588 kinds, **91 cités 0 fois hors de leur déclaration** —
   supprimer ceux dont aucun routeur n'émet le kind (vérifier `emitIntentTyped`/`governedProcedure`
   d'abord — certains restent le kind d'un handler inline actif). **Déclencheur** : passe de nettoyage
   `intent-kinds.ts`.
-- **20 non-legacy sans handler** : trajectoire APOGEE (`PROMOTE_LATENT_TO_FRAGILE`…`PROMOTE_CULTE_TO_ICONE`
-  + 5 `DEMOTE_*` — le classement de palier marche via le scoring `classifyBrand`, mais les transitions
-  gouvernées hash-chainées Loi 1 ne sont jamais émises) · rollbacks (`ROLLBACK_ADVE`,
-  `ROLLBACK_RTIS_CASCADE`, `REVERT_RECOMMENDATIONS`, `DISCARD_RECOMMENDATIONS`) · error-vault gouverné
-  (`CAPTURE_ERROR_EVENT`/`RESOLVE_ERROR_EVENT` — la capture marche par appel direct) · divers
-  (`ACTIVATE_RETAINER`, `ANUBIS_OAUTH_REFRESH_TOKEN`, `COLLECT_WEB_FOOTPRINT`, `COMPUTE_LOYALTY_SCORE`,
-  `HYPERVISEUR_PEER_INSIGHTS`). **Plan** : par grappe — câbler ce qui sert la mission (trajectoire
-  gouvernée = vraie valeur Loi 1), supprimer le reste, tracer les décisions. **Déclencheur** : chantier
-  dédié « moteur de trajectoire gouverné » (candidat prochaine session).
+- **10 kinds trajectoire APOGEE** (`PROMOTE_LATENT_TO_FRAGILE`…`PROMOTE_CULTE_TO_ICONE` + 5 `DEMOTE_*`)
+  — **CLOS** ([ADR-0167](adr/0167-apogee-trajectory-engine.md), moteur de trajectoire) : palier officiel
+  persisté `Strategy.apogeeTier` (ratchet), gate `PALIER_PROMOTION_PROOFS`, handler qui persiste (dents
+  Loi 1, pas un STUB), tRPC `transitionTier`/preview/trajectory + UI console + cockpit `effectiveTier`.
+  Vérifié E2E Motion19. HARD `brand-tier-transition-wired.test.ts`.
+- **10 non-legacy sans handler restants** : rollbacks (`ROLLBACK_ADVE`, `ROLLBACK_RTIS_CASCADE`,
+  `REVERT_RECOMMENDATIONS`, `DISCARD_RECOMMENDATIONS`) · error-vault gouverné (`CAPTURE_ERROR_EVENT`/
+  `RESOLVE_ERROR_EVENT` — la capture marche par appel direct) · divers (`ACTIVATE_RETAINER`,
+  `ANUBIS_OAUTH_REFRESH_TOKEN`, `COLLECT_WEB_FOOTPRINT`, `COMPUTE_LOYALTY_SCORE`, `HYPERVISEUR_PEER_INSIGHTS`).
+  **Plan** : par grappe — câbler ce qui sert la mission, supprimer le reste, tracer les décisions.
+  **Déclencheur** : prochaine session (les rollbacks compensateurs sont les plus proches en valeur).
+
+### Trajectoire APOGEE — déférés phase 2 (ADR-0167 §Hors périmètre)
+
+- **Auto-évaluation de palier** : un passage qui flag les promotions éligibles en dry-run pour revue
+  opérateur (précédent `AUTO_PROMOTION_EVALUATE`). **Déclencheur** : demande produit / cron gouvernance.
+- **Page dédiée** `/console/governance/palier-transitions` (ADR-0086) : vue cross-marques des décisions
+  de gate. Le panneau détail-marque `<ApogeeTrajectoryPanel>` suffit au MVP. **Déclencheur** : besoin ops.
+- **Divergence officiel/impliqué non surfacée** sur les ~13 autres callsites `ScoreBadge`/`classifyBrand`
+  (ils montrent légitimement le palier-impliqué-par-le-score, par conception). **Déclencheur** : si un
+  écran opérateur doit trancher officiel vs impliqué, y poser `effectiveTier`.
+- **`superfanCount` = rows brutes** (non dé-dupliqué `personId`, ADR-0147) dans le gate — cohérent avec
+  ce que lit déjà le scorer + le cron sentinels. **Déclencheur** : si le double-comptage CRM devient
+  matériel pour le plafond apex.
 
 ### Phase 21 (mégasprint closure — résidus consolidés)
 
