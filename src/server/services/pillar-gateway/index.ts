@@ -59,6 +59,16 @@ interface PillarWriteOptions {
    */
   strictSchemaValidation?: boolean;
   /**
+   * ADR-0175/audit adversarial — quand true, bloque UNIQUEMENT la corruption
+   * STRUCTURELLE (SHAPE : un objet/tableau attendu là où un scalaire est fourni, qui
+   * casse le rendu), en TOLÉRANT les divergences advisory DRAFT (TYPE/ENUM/LENGTH/
+   * MISSING). Plus fin que `strictSchemaValidation` (qui bloque tout). Posé sur les
+   * chemins d'ÉDITION utilisateur (CRUD item-level, amend) où une valeur libre peut
+   * transformer `personas[0]` en scalaire → crash renderer. Le gate seed
+   * `assertPillarConforms` ne couvrait PAS le runtime.
+   */
+  shapeGate?: boolean;
+  /**
    * Provenance par champ de l'écriture entrante (path → HUMAN/SOURCE/INFERRED).
    * Le garde de provenance (HUMAIN > SOURCE > INFÉRÉ) l'utilise pour refuser
    * qu'un inféré écrase un humain/source, et pour signaler les conflits
@@ -490,6 +500,30 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
               error: `Strict schema validation failed (${validation.errors.length} issues): ${summary}${more}`,
             };
           }
+        }
+      }
+
+      // ── VALIDATE: SHAPE gate (corruption structurelle uniquement) ──────────
+      // Bloque un scalaire-là-où-conteneur (casse le rendu) sans toucher aux advisories
+      // DRAFT. Couvre le runtime (CRUD/amend) que le gate seed ne voyait pas.
+      if (options?.shapeGate) {
+        const { classifyPillarConformance } = await import("@/lib/types/pillar-conformance");
+        const conf = classifyPillarConformance(
+          pillarKey.toUpperCase() as Parameters<typeof classifyPillarConformance>[0],
+          newContent,
+        );
+        if (!conf.ok) {
+          const summary = conf.shape.slice(0, 5).map((e) => `${e.path}: ${e.message}`).join(" | ");
+          const more = conf.shape.length > 5 ? ` (+${conf.shape.length - 5})` : "";
+          return {
+            success: false,
+            version: pillar.currentVersion ?? 0,
+            previousContent,
+            newContent: previousContent,
+            stalePropagated: [],
+            warnings: [...warnings, `SHAPE gate: ${conf.shape.length} corruption(s) structurelle(s)`],
+            error: `Édition refusée — corruption structurelle (${conf.shape.length}) : ${summary}${more}`,
+          };
         }
       }
 

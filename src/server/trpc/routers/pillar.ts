@@ -35,7 +35,7 @@ import * as pillarVersioning from "@/server/services/pillar-versioning";
 import { propagateFromPillar } from "@/server/services/staleness-propagator";
 import { getStrategyReadiness } from "@/server/governance/pillar-readiness";
 import { scoreObject } from "@/server/services/advertis-scorer";
-import { writePillarAndScore } from "@/server/services/pillar-gateway";
+import { writePillarAndScore, tokenizePillarPath } from "@/server/services/pillar-gateway";
 import { ensureProductIds } from "@/domain/product-catalog";
 import type { PillarKey as PK } from "@/lib/types/advertis-vector";
 import { triggerNextStageFrameworks } from "@/server/services/artemis";
@@ -430,11 +430,15 @@ export const pillarRouter = createTRPCRouter({
       const arr = getNestedArray(content, input.arrayPath);
       if (input.index >= arr.length) return { success: false, error: `Index ${input.index} hors limites (${arr.length} item(s))` };
       arr[input.index] = input.value;
-      await writePillarAndScore({
+      // shapeGate : `value: z.unknown()` permet de transformer `personas[0]` en scalaire
+      // → crash renderer. Le gate refuse la corruption structurelle (tolère les advisories).
+      const result = await writePillarAndScore({
         strategyId: input.strategyId, pillarKey: key,
         operation: { type: "SET_FIELDS", fields: [{ path: input.arrayPath, value: arr }] },
         author: { system: "OPERATOR", userId: ctx.session.user.id, reason: "updateArrayItem" },
+        options: { shapeGate: true },
       });
+      if (!result.success) return { success: false, error: result.error ?? "Édition refusée (corruption structurelle)" };
       return { success: true, count: arr.length };
     }),
 
@@ -456,11 +460,13 @@ export const pillarRouter = createTRPCRouter({
       const arr = getNestedArray(content, input.arrayPath);
       if (input.index >= arr.length) return { success: false, error: `Index ${input.index} hors limites (${arr.length} item(s))` };
       arr.splice(input.index, 1);
-      await writePillarAndScore({
+      const result = await writePillarAndScore({
         strategyId: input.strategyId, pillarKey: key,
         operation: { type: "SET_FIELDS", fields: [{ path: input.arrayPath, value: arr }] },
         author: { system: "OPERATOR", userId: ctx.session.user.id, reason: "removeArrayItem" },
+        options: { shapeGate: true },
       });
+      if (!result.success) return { success: false, error: result.error ?? "Édition refusée (corruption structurelle)" };
       return { success: true, count: arr.length };
     }),
 
@@ -1327,12 +1333,17 @@ function getArraySafe(val: unknown): unknown[] {
   return Array.isArray(val) ? [...val] : [];
 }
 
-/** Récupère (copie de) le tableau à un dot-path (top-level ou imbriqué), ou []. */
+/**
+ * Récupère (copie de) le tableau à un dot-path, y compris imbriqué dans un élément
+ * de tableau (`personas[0].jobsToBeDone`). Symétrique de `tokenizePillarPath` du côté
+ * écriture — sans ça, updateArrayItem/removeArrayItem ne pouvaient PAS cibler un tableau
+ * imbriqué (capacité morte, audit 2026-07-22).
+ */
 function getNestedArray(content: Record<string, unknown>, path: string): unknown[] {
   let cur: unknown = content;
-  for (const p of path.split(".")) {
-    if (cur && typeof cur === "object" && !Array.isArray(cur)) cur = (cur as Record<string, unknown>)[p];
-    else return [];
+  for (const tok of tokenizePillarPath(path)) {
+    if (cur == null || typeof cur !== "object") return [];
+    cur = (cur as Record<string | number, unknown>)[tok];
   }
   return Array.isArray(cur) ? [...cur] : [];
 }

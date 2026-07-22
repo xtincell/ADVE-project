@@ -1,5 +1,16 @@
 # Changelog — La Fusee
 
+## v6.27.254 — fix(domain): sécurité du pilier — union non-bloquante, arêtes de référence réparées, gate SHAPE runtime (2026-07-22)
+
+**Audit adversarial (boucle d'alignement) — le gate anti-corruption ne bloque plus la donnée DRAFT valide, les arêtes de référence lisent enfin les bons chemins, et l'édition runtime ne peut plus persister une forme cassée.**
+
+- `fix(domain)` **Union classée par type RÉEL reçu (E1, ADR-0172)** : `invalid_union` était classé SHAPE inconditionnellement → un placeholder scalaire légitime (`charismaScore:"8/10"` dans un union number|objet) bloquait le seed/l'ingestion. Désormais : scalaire reçu → TYPE (advisory, rend), conteneur non conforme → SHAPE. Le normaliseur RECURSE dans les armes et coerce le coercible (`metriqueCle.valeur:"150000"→150000`) — ni bloqué ni toléré avant.
+- `fix(domain)` **Arêtes de référence réparées (E2/E4, ADR-0174)** : `findDanglingReferences` lisait `S.strategieDeplacement` (objet, toujours `undefined`) au lieu de `S.fenetreOverton.strategieDeplacement[]` (array) → l'arête S→R Overton ne se déclenchait JAMAIS (le but même de l'id ADR-0174). Et `collectActions` OMETTAIT `catalogueParCanal` (le catalogue primaire) + lisait un `i.actions` inexistant → FK jamais vérifiées + faux dangles S→I.
+- `fix(pillar-gateway)` **Gate SHAPE au runtime (E3)** : `updateArrayItem`/`removeArrayItem` (value libre) pouvaient transformer `personas[0]` en scalaire → crash renderer, persisté avec un simple warning. Nouvelle option `shapeGate` (bloque la corruption STRUCTURELLE seule, tolère les advisories DRAFT) posée sur les chemins d'édition. Le gate seed ne couvrait pas le runtime.
+- `fix(pillar)` **getNestedArray symétrique (E6)** : ignorait les crochets (`personas[0].jobsToBeDone`) que le côté écriture comprenait → capacité morte pour les tableaux imbriqués. Réutilise `tokenizePillarPath`.
+- Tests alignés sur le contrat corrigé + round-2 (`adversarial-fixes` E1). tsc 0 · cycles 0. (Résidu tracé : E5 armes `z.unknown()` des `S.computed` — tightening à coordonner avec le seed spawt.)
+
+
 ## v6.27.253 — fix(scorer): intégrité du score (composite non-poisonnable) + mesure réelle vs fabriquée + publicSlug (2026-07-22)
 
 **Audit adversarial (boucle d'alignement) — le score/palier ne se truque plus, la mesure part de données RÉELLES au lieu d'inventer, la page publique ne crashe plus.**
