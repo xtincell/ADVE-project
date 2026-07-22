@@ -1,5 +1,12 @@
 # Changelog — La Fusee
 
+## v6.27.275 — fix(cockpit): régression round-5 — `systemConfig.get` re-ouvert au créateur (page Gains QC) (2026-07-22)
+
+**Vérification adversariale du diff round-4/5 : 1 régression corrigée (le reste des ~22 gates confirmés corrects), les 3 changements infra confirmés sûrs.**
+
+- **Régression corrigée** : round-4/5 avait gaté `systemConfig.get` à `operatorProcedure` par excès de prudence → le portail créateur `/creator/earnings/qc` (`trpc.systemConfig.get({ key: "system-config" })`) recevait un 403 et retombait sur le taux QC par défaut (5000) au lieu du taux réel configuré par l'opérateur. Ces `config` sont des RÉGLAGES SYSTÈME non-secrets (les secrets vivent en env vars, ADR-0075), pas des données de marque → `get` repasse `protectedProcedure`. `recentAudit` reste `adminProcedure` (journal d'audit GLOBAL avec emails — genuinement sensible). Test HARD `entity-id-ownership-guard` ajusté ; gating fin par-clé tracé si une clé s'avère sensible.
+- **Confirmés corrects par la vérification** (aucune action) : les 3 suspects (self-signup adhésion talent = webhook momo pas tRPC ; QC self-assign/escalate créateur = seul `submit` gardé par `assertQcParticipant` runtime ; operations-center cockpit = rendu seulement si `canOperate`, miroir d'`operatorProcedure`) sont CLEAN ; l'audit gouverné honnête (VETOED/FAILED sur `!result.ok`) préserve la propagation d'erreur + Seshat observe les 4 événements terminaux + Thot ne facture plus les mutations refusées ; `canAccessCampaign/Mission` ne fait qu'ÉLARGIR l'accès (collaborateur ADR-0129 ajouté, assigné préservé) ; `prod-finish` hash == mdp affiché.
+
 ## v6.27.274 — fix(security): round-4/5 adversarial — cluster financier CRITIQUE gardé + IDOR entité-id app-wide CLOS + audit gouverné honnête (2026-07-22)
 
 **Un compte authentifié ne peut plus DÉPLACER DE L'ARGENT ni muter les entités d'une autre marque : la classe IDOR entité-id (au-delà de campaign-manager) est fermée sur tout le routeur, dont le cluster financier.**

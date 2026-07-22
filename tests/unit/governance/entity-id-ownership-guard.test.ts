@@ -97,10 +97,12 @@ describe("entity-id founder-reachable procedures resolve ownership (round-4)", (
     expect(router("guilde.ts")).toMatch(/item\.talentProfile\.userId !== ctx\.session\.user\.id/);
   });
 
-  it("system-config: global audit is ADMIN, config get is operator", () => {
+  it("system-config: global audit log is ADMIN", () => {
+    // `recentAudit` = journal d'audit GLOBAL (emails de tous les users) → ADMIN.
+    // `get` reste `protectedProcedure` VOLONTAIREMENT (réglages système non-secrets
+    // lus par le portail créateur QC — cf. commentaire du router).
     const s = router("system-config.ts");
     expect(s).toMatch(/recentAudit:\s*adminProcedure/);
-    expect(s).toMatch(/get:\s*operatorProcedure/);
   });
 
   it("morning-batch ingested-comms reads are staff-gated", () => {

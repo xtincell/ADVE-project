@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure, operatorProcedure, adminProcedure } from "../init";
+import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import type { Prisma } from "@prisma/client";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
@@ -9,8 +9,16 @@ import { governedProcedure } from "@/server/governance/governed-procedure";
  * general-purpose key/value config storage (system-config, matching-config, etc.).
  */
 export const systemConfigRouter = createTRPCRouter({
-  /** Get a config by serverName key — STAFF only (config système/opérateur, audit round-4). */
-  get: operatorProcedure
+  /**
+   * Get a config by serverName key. `protectedProcedure` (tout compte
+   * authentifié) : ces `config` sont des RÉGLAGES SYSTÈME non-secrets (les
+   * secrets vivent en env vars, ADR-0075), pas des données de marque — et le
+   * portail créateur `/creator/earnings/qc` en lit légitimement le taux de
+   * compensation QC (`qcCompensationPerReview`). Round-4 avait gaté à
+   * `operatorProcedure` par excès → régression (403 sur la page créateur).
+   * Gating fin par-clé si une clé s'avère sensible = refinement tracé.
+   */
+  get: protectedProcedure
     .input(z.object({ key: z.string() }))
     .query(async ({ ctx, input }) => {
       const record = await ctx.db.mcpServerConfig.findUnique({
