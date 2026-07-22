@@ -1,5 +1,13 @@
 # Changelog — La Fusee
 
+## v6.27.270 — fix(security): IDOR round-2 batch B — CRM d'agence + Credentials Vault scopés opérateur (2026-07-22)
+
+**Deux surfaces opérateur ouvertes à tout compte fermées (audit adversarial « TOUT » round-2 — CRM commercial + coffre de credentials).**
+
+- **`crm.*` — CRM d'agence lisible+modifiable par TOUT compte authentifié** (le pire finding) : toutes les procédures étaient `protectedProcedure`/`governedProcedure` sans scope opérateur → un founder/creator/compte guilde lisait le pipeline commercial complet (contacts, emails, valeurs des prospects) et modifiait n'importe quel deal. Désormais `operatorProcedure`/`requireOperator` (opérateurs/ADMIN uniquement) + lectures agrégées (`listDeals`/`getPipeline`/`getRevenueForecast`) scopées à l'opérateur appelant (DB-résolu ; ADMIN voit tout). **`convertToStrategy`** n'accepte plus un `operatorId` client (escalade : créer une Strategy sous un opérateur arbitraire) → dérivé du serveur.
+- **`connectors.*` — Credentials Vault cross-opérateur** : `ExternalConnector.config` = tokens OAuth / clés API chiffrés ; les procédures prenaient `operatorId` en INPUT CLIENT sans vérifier l'appartenance → lecture/écriture/suppression des credentials d'un AUTRE opérateur, `sync` sur un `connectorId` arbitraire. Désormais `operatorProcedure` + `scopedOperatorId` (un opérateur ne gère QUE ses connecteurs, `operatorId` client rejeté s'il diffère ; ADMIN gère tous ; `sync` vérifie l'ownership du connecteur).
+- **Vérif** : tsc 0 · lint 0 · B1 baseline + guard tests verts. Cap APOGEE 7/7 préservé. Restants tracés (§IDOR round-2) : ownership deal↔opérateur par-deal (cross-opérateur, théorique mono-opérateur), `getConversionMetrics` scope, campaign-manager sous-entités (batch C).
+
 ## v6.27.269 — fix(security): IDOR round-2 batch A — gardes d'ownership sur entités keyées hors strategyId (2026-07-22)
 
 **Fuites cross-tenant fermées sur 6 surfaces keyées par id d'entité (audit adversarial « TOUT » round-2 — les gardes ADR-0166/0175 ne couvrent QUE le `strategyId` de tête).**

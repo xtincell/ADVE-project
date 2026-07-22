@@ -402,8 +402,15 @@ export async function getDealDetails(dealId: string) {
 /**
  * Get pipeline overview with counts and values per stage
  */
-export async function getPipelineOverview() {
+export async function getPipelineOverview(operatorId?: string | null) {
+  // Anti-IDOR (audit 2026-07-22) : scope opérateur via la relation strategy —
+  // sans lui, tout appelant voyait le pipeline (contacts/valeurs) de TOUS les
+  // opérateurs. `operatorId` absent (ADMIN) → global assumé.
+  const strategyScope = operatorId
+    ? { strategy: scopeStrategies({ operatorId, userId: "", role: "FIXER" }) }
+    : {};
   const deals = await db.deal.findMany({
+    where: { ...strategyScope },
     orderBy: { createdAt: "desc" },
     include: {
       strategy: { select: { id: true, name: true } },
@@ -463,17 +470,21 @@ export async function listDeals(options?: {
  * Revenue forecast: weighted pipeline value by stage probability.
  * Shows: total pipeline, weighted forecast, average deal size, win rate.
  */
-export async function getRevenueForecast() {
+export async function getRevenueForecast(operatorId?: string | null) {
+  // Anti-IDOR (audit 2026-07-22) : scope opérateur (prévisions = valeurs des deals).
+  const strategyScope = operatorId
+    ? { strategy: scopeStrategies({ operatorId, userId: "", role: "FIXER" }) }
+    : {};
   const deals = await db.deal.findMany({
-    where: { stage: { notIn: ["LOST"] } },
+    where: { stage: { notIn: ["LOST"] }, ...strategyScope },
   });
 
   const wonDeals = await db.deal.findMany({
-    where: { stage: "WON" },
+    where: { stage: "WON", ...strategyScope },
   });
 
   const lostDeals = await db.deal.count({
-    where: { stage: "LOST" },
+    where: { stage: "LOST", ...strategyScope },
   });
 
   // Weighted pipeline
