@@ -1,5 +1,14 @@
 # Changelog — La Fusee
 
+## v6.27.258 — fix(seshat): course de création d'identité + index par strategyId (2026-07-22)
+
+**Audit adversarial (boucle d'alignement) — plus d'orpheline qui gonfle le compte de personnes, et fin des seq scans par marque.**
+
+- `fix(seshat)` **Course de création d'identité (K2)** : `upsertPersonIdentifier` était un find-then-create non atomique — deux ingests concurrents du même `(strategyId,kind,matchHash)` créaient chacun une `PersonIdentity`, le 2ᵉ `personIdentifier.create` levait P2002 mais SA personne fraîchement créée devenait ORPHELINE → compteur d'actifs gonflé (invariant anti-inflation ADR-0126/0147 défait). Catch P2002 → rollback de l'orpheline + re-résolution vers la gagnante (sans transaction imbriquée — robuste que `client` soit db ou tx).
+- `perf(db)` **Index par strategyId (K1)** : `Signal` (append-only, filtré par strategyId/+type/+orderBy createdAt dans 20+ chemins dont des cron sweeps) et `GloryOutput` n'avaient que `@@index([tenantId])` — Postgres n'indexe pas les FK → seq scans linéaires croissants. Migration additive backfill-safe (`Signal_strategyId_type_idx`, `Signal_strategyId_createdAt_idx`, `GloryOutput_strategyId_idx`).
+- 0 modèle nouveau, migration purement additive. tsc 0 · governance 1125 · `prisma validate` ok.
+
+
 ## v6.27.257 — fix(governance): bouton Compensate honnête + baselines de test durcies (2026-07-22)
 
 **Audit adversarial (boucle d'alignement) — plus de fausse restauration, et le filet de tests ne ment plus.**

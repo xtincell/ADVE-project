@@ -1491,6 +1491,11 @@ model Signal {
   updatedAt DateTime @updatedAt
 
   @@index([tenantId])
+  // Audit adversarial 2026-07-22 — Signal est append-only et filtré par strategyId
+  // (+type, +orderBy createdAt) dans 20+ chemins dont des cron sweeps ; Postgres
+  // n'indexe pas les FK → seq scans linéaires. Index composites additifs.
+  @@index([strategyId, type])
+  @@index([strategyId, createdAt])
 }
 
 model SequenceExecution {
@@ -1548,6 +1553,7 @@ model GloryOutput {
   updatedAt DateTime @updatedAt
 
   @@index([tenantId])
+  @@index([strategyId]) // audit 2026-07-22 — filtré par strategyId, FK non auto-indexée
 }
 
 // Phase 10 (ADR-0012) — BrandAsset state machine
