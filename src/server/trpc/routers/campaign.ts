@@ -66,6 +66,12 @@ export const campaignRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      // anti-IDOR (audit round-4) : `get` était gardé (2026-07-16), pas
+      // `update`/`delete` → mutation cross-tenant de campagne. Chokepoint ADR-0129.
+      const opCtx = await getOperatorContext(ctx.session.user.id);
+      if (!(await canAccessCampaign(input.id, opCtx))) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette campagne" });
+      }
       const { id, advertis_vector, devotionObjective, ...data } = input;
       const previous = await ctx.db.campaign.findUniqueOrThrow({ where: { id } });
       const updated = await ctx.db.campaign.update({
@@ -174,6 +180,10 @@ export const campaignRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      const opCtx = await getOperatorContext(ctx.session.user.id);
+      if (!(await canAccessCampaign(input.id, opCtx))) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette campagne" });
+      }
       return ctx.db.campaign.update({
         where: { id: input.id },
         data: { status: "ARCHIVED" },

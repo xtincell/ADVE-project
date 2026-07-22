@@ -59,7 +59,10 @@ export async function POST(request: Request) {
   // devinable. Si l'opérateur ne fournit pas `loginPassword`, on en GÉNÈRE un
   // aléatoire, surfacé UNE fois dans le rapport (route gated CRON_SECRET) —
   // le compte force le changement (`passwordChangeInvited: true`).
-  const providedPassword = url.searchParams.get("loginPassword");
+  // `|| null` : un `?loginPassword=` VIDE compte comme « non fourni » (sinon les
+  // deux lignes divergeaient — truthiness vs nullish — et le compte était créé
+  // avec bcrypt.hash("") pendant que le rapport affichait un mdp généré bidon).
+  const providedPassword = url.searchParams.get("loginPassword") || null;
   const generatedPassword = providedPassword ? null : crypto.randomBytes(9).toString("base64url");
   const loginPassword = providedPassword ?? generatedPassword!;
   const delayMin = Math.max(2, Number(url.searchParams.get("delayMin") ?? 3));

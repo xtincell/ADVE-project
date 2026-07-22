@@ -3,10 +3,14 @@ import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
 
+// Gestion des organisations de la Guilde (création + appartenance des talents)
+// = gouvernance STAFF (audit round-4 : tout authentifié réassignait l'org d'un
+// talent arbitraire). requireOperator sur toutes les mutations.
 export const guildOrgRouter = createTRPCRouter({
   create: governedProcedure({
 
     kind: "LEGACY_GUILD_ORG_CREATE",
+    requireOperator: true,
 
     inputSchema: z.object({ name: z.string(), description: z.string().optional(), logoUrl: z.string().optional(), website: z.string().optional() }),
 
@@ -21,6 +25,7 @@ export const guildOrgRouter = createTRPCRouter({
 
 
     kind: "LEGACY_GUILD_ORG_UPDATE",
+    requireOperator: true,
 
 
     inputSchema: z.object({ id: z.string(), name: z.string().optional(), description: z.string().optional(), logoUrl: z.string().optional(), website: z.string().optional() }),
@@ -56,6 +61,7 @@ export const guildOrgRouter = createTRPCRouter({
 
 
     kind: "LEGACY_GUILD_ORG_ADD_MEMBER",
+    requireOperator: true,
 
 
     inputSchema: z.object({ orgId: z.string(), talentProfileId: z.string() }),
@@ -73,6 +79,7 @@ export const guildOrgRouter = createTRPCRouter({
 
 
     kind: "LEGACY_GUILD_ORG_REMOVE_MEMBER",
+    requireOperator: true,
 
 
     inputSchema: z.object({ talentProfileId: z.string() }),

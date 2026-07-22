@@ -12,6 +12,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "../init";
+import { canAccessCampaign, getOperatorContext } from "@/server/services/operator-isolation";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import {
 
@@ -149,7 +150,12 @@ export const campaignDeliverableRouter = createTRPCRouter({
   // ── Read queries ─────────────────────────────────────────────────────
   listForCampaign: protectedProcedure
     .input(z.object({ campaignId: StringId }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      // anti-IDOR (audit round-4) : livrables d'une campagne d'autrui sinon.
+      const opCtx = await getOperatorContext(ctx.session.user.id);
+      if (!(await canAccessCampaign(input.campaignId, opCtx))) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette campagne." });
+      }
       return listDeliverablesForCampaign(input.campaignId);
     }),
 

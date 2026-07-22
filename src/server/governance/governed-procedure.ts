@@ -76,6 +76,28 @@ function unwrapMiddlewareResult(result: unknown): unknown {
   return { kind: "unknown-middleware-result" };
 }
 
+/** tRPC v11 `next()` NE JETTE PAS sur échec aval — il renvoie { ok:false }. */
+function isFailedMiddlewareResult(result: unknown): boolean {
+  return !!(
+    result &&
+    typeof result === "object" &&
+    "ok" in result &&
+    (result as { ok?: unknown }).ok === false
+  );
+}
+
+/** Code d'erreur tRPC (`FORBIDDEN`, `INTERNAL_SERVER_ERROR`, …) d'un résultat échoué. */
+function middlewareResultErrorCode(result: unknown): string | undefined {
+  if (result && typeof result === "object" && "error" in result) {
+    const err = (result as { error?: unknown }).error;
+    if (err && typeof err === "object" && "code" in err) {
+      const code = (err as { code?: unknown }).code;
+      return typeof code === "string" ? code : undefined;
+    }
+  }
+  return undefined;
+}
+
 type AnyZod = z.ZodTypeAny;
 
 interface GovernedOptions<I extends AnyZod, O extends AnyZod> {
@@ -242,6 +264,23 @@ export function governedProcedure<I extends AnyZod, O extends AnyZod>(
         ? { ...ctx, intentId, costDecision }
         : { ...ctx, intentId };
       const result = await next({ ctx: childCtx });
+
+      // ── Honnêteté de l'audit (round-4) : tRPC v11 `next()` NE JETTE PAS quand
+      // un middleware/handler AVAL refuse ou échoue — il renvoie { ok:false }.
+      // Le `catch` ci-dessous ne voit donc QUE les throws du corps de CETTE
+      // middleware. Sans ce garde, une mutation REFUSÉE en aval (garde d'ownership
+      // entité-id, règle métier) était close `OK` + publiait `intent.completed`
+      // + Seshat la marquait OBSERVED → combustion falsifiée (viole Q1/Q2). Le
+      // strangler `auditedProcedure` teste déjà `result.ok` ; on aligne le lane
+      // gouverné. FORBIDDEN/UNAUTHORIZED = veto d'accès ; le reste = échec handler.
+      if (isFailedMiddlewareResult(result)) {
+        const code = middlewareResultErrorCode(result);
+        const status: EmissionStatus =
+          code === "FORBIDDEN" || code === "UNAUTHORIZED" ? "VETOED" : "FAILED";
+        await postEmitIntent(ctx, intentId, unwrapMiddlewareResult(result), status);
+        return result;
+      }
+
       const finalStatus = costDecision?.decision === "DOWNGRADE" ? "DOWNGRADED" : "OK";
       // ORACLE-901 fix: never persist the raw MiddlewareResult — it carries
       // ctx (PrismaClient proxies). Always unwrap to .data first.

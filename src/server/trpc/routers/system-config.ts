@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { createTRPCRouter, protectedProcedure, operatorProcedure, adminProcedure } from "../init";
 import type { Prisma } from "@prisma/client";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
@@ -9,8 +9,8 @@ import { governedProcedure } from "@/server/governance/governed-procedure";
  * general-purpose key/value config storage (system-config, matching-config, etc.).
  */
 export const systemConfigRouter = createTRPCRouter({
-  /** Get a config by serverName key */
-  get: protectedProcedure
+  /** Get a config by serverName key — STAFF only (config système/opérateur, audit round-4). */
+  get: operatorProcedure
     .input(z.object({ key: z.string() }))
     .query(async ({ ctx, input }) => {
       const record = await ctx.db.mcpServerConfig.findUnique({
@@ -63,8 +63,9 @@ export const systemConfigRouter = createTRPCRouter({
     };
   }),
 
-  /** Get recent audit trail */
-  recentAudit: protectedProcedure
+  /** Get recent audit trail — ADMIN only : journal d'audit GLOBAL (actions +
+   * nom/email de TOUS les users) → divulgation cross-tenant sinon (audit round-4). */
+  recentAudit: adminProcedure
     .input(z.object({ limit: z.number().min(1).max(100).default(20) }))
     .query(async ({ ctx, input }) => {
       return ctx.db.auditLog.findMany({

@@ -9,9 +9,14 @@ import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
 
 export const mobileMoneyRouter = createTRPCRouter({
+  // Primitive de PAIEMENT brute (envoi d'argent, montant+destinataire libres) :
+  // réservée au STAFF (audit round-4 — était `governedProcedure` sans gate ⇒ tout
+  // compte authentifié initiait un virement momo arbitraire). Miroir du gate
+  // arbitre/ADMIN d'`escrow-arbitration.capturePayout`.
   initiatePayment: governedProcedure({
 
     kind: "LEGACY_MOBILE_MONEY_INITIATE_PAYMENT",
+    requireOperator: true,
 
     inputSchema: z.object({
       amount: z.number(),
@@ -27,10 +32,13 @@ export const mobileMoneyRouter = createTRPCRouter({
   })
     .mutation(({ input }) => mobileMoney.initiatePayment(input)),
 
+  // Payout d'une commission : STAFF uniquement (était ouvert à tout authentifié
+  // → un créateur payait sa propre commission sans opérateur dans la boucle).
   payCommission: governedProcedure({
 
 
     kind: "LEGACY_MOBILE_MONEY_PAY_COMMISSION",
+    requireOperator: true,
 
 
     inputSchema: z.object({ commissionId: z.string() }),

@@ -5,9 +5,14 @@ import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
 
 export const membershipRouter = createTRPCRouter({
+  // Gestion d'adhésion = acte STAFF (audit round-4) : l'adhésion ACTIVE accorde
+  // une remise sur la commission plateforme — `create` (amount 0 par défaut,
+  // status ACTIVE) laissait tout créateur s'auto-offrir la remise. La voie
+  // payante talent passe par le webhook mobile-money (référence `membership-…`).
   create: governedProcedure({
 
     kind: "LEGACY_MEMBERSHIP_CREATE",
+    requireOperator: true,
 
     inputSchema: z.object({
       talentProfileId: z.string(),
@@ -39,6 +44,7 @@ export const membershipRouter = createTRPCRouter({
 
 
     kind: "LEGACY_MEMBERSHIP_RENEW",
+    requireOperator: true,
 
 
     inputSchema: z.object({
@@ -67,6 +73,7 @@ export const membershipRouter = createTRPCRouter({
 
 
     kind: "LEGACY_MEMBERSHIP_CANCEL",
+    requireOperator: true,
 
 
     inputSchema: z.object({

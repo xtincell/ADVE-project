@@ -20,10 +20,15 @@ export const guildTierRouter = createTRPCRouter({
       return evaluateCreator(input.talentProfileId);
     }),
 
+  // Promotion/rétrogradation de palier = décision de gouvernance STAFF (elle
+  // change le taux de commission du talent). requireOperator (audit round-4) :
+  // un créateur ne peut plus s'auto-promouvoir ASSOCIE. Le self-service passe
+  // par `guilde.requestTierUpgrade` (critères + ownership vérifiés).
   promote: governedProcedure({
 
 
     kind: "LEGACY_GUILD_TIER_PROMOTE",
+    requireOperator: true,
 
 
     inputSchema: z.object({ talentProfileId: z.string(), newTier: z.enum(["COMPAGNON", "MAITRE", "ASSOCIE"]) }),
@@ -44,6 +49,7 @@ export const guildTierRouter = createTRPCRouter({
 
 
     kind: "LEGACY_GUILD_TIER_DEMOTE",
+    requireOperator: true,
 
 
     inputSchema: z.object({ talentProfileId: z.string(), newTier: z.enum(["APPRENTI", "COMPAGNON", "MAITRE"]) }),

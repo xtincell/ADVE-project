@@ -37,6 +37,40 @@ async function enforceStrategyAccess(
   if (!ok) throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé : cette marque appartient à un autre compte." });
 }
 
+/**
+ * Anti-IDOR (audit round-4) : le cycle de vie de mission
+ * (update/delete/complete/cancel/setDeadline/submitToGuild + livrables) était
+ * keyé sur un id d'entité SANS garde alors que `start`/`getById` gardaient déjà.
+ * Chokepoint `canAccessMission` (owner / opérateur / assigné / collaborateur ADR-0129).
+ */
+async function enforceMissionAccess(
+  ctx: { session: { user: { id: string; role: string; operatorId?: string | null } } },
+  missionId: string,
+) {
+  const ok = await canAccessMission(missionId, {
+    operatorId: ctx.session.user.operatorId ?? null,
+    userId: ctx.session.user.id,
+    role: ctx.session.user.role,
+  });
+  if (!ok) throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé : cette mission appartient à un autre compte." });
+}
+
+/** Résout un livrable → sa mission → enforce (reviewDeliverable/acceptDeliverable). */
+async function enforceDeliverableAccess(
+  ctx: {
+    session: { user: { id: string; role: string; operatorId?: string | null } };
+    db: typeof import("@/lib/db").db;
+  },
+  deliverableId: string,
+) {
+  const d = await ctx.db.missionDeliverable.findUnique({
+    where: { id: deliverableId },
+    select: { missionId: true },
+  });
+  if (!d) throw new TRPCError({ code: "NOT_FOUND", message: "Livrable introuvable" });
+  await enforceMissionAccess(ctx, d.missionId);
+}
+
 export const missionRouter = createTRPCRouter({
   create: governedProcedure({
 
@@ -114,6 +148,7 @@ export const missionRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      await enforceMissionAccess(ctx, input.id); // anti-IDOR (update→COMPLETED cascade payout)
       const { id, briefData, slaDeadline, ...data } = input;
       const previous = await ctx.db.mission.findUniqueOrThrow({ where: { id }, include: { strategy: true } });
       const updated = await ctx.db.mission.update({
@@ -595,6 +630,7 @@ export const missionRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      await enforceDeliverableAccess(ctx, input.deliverableId); // anti-IDOR
       // Update or create quality review
       const existing = await ctx.db.qualityReview.findFirst({
         where: { deliverableId: input.deliverableId, reviewerId: ctx.session.user.id },
@@ -669,6 +705,7 @@ export const missionRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      await enforceDeliverableAccess(ctx, input.deliverableId); // anti-IDOR
       return ctx.db.missionDeliverable.update({
         where: { id: input.deliverableId },
         data: { status: "ACCEPTED" },
@@ -689,6 +726,7 @@ export const missionRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      await enforceMissionAccess(ctx, input.id); // anti-IDOR
       return ctx.db.mission.update({
         where: { id: input.id },
         data: { status: "CANCELLED" },
@@ -706,6 +744,7 @@ export const missionRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      await enforceMissionAccess(ctx, input.id); // anti-IDOR
       return ctx.db.mission.update({
         where: { id: input.id },
         data: { slaDeadline: new Date(input.deadline) },
@@ -753,6 +792,7 @@ export const missionRouter = createTRPCRouter({
     inputSchema: z.object({ id: z.string() }),
     caller: "mission:complete",
   }).mutation(async ({ ctx, input }) => {
+    await enforceMissionAccess(ctx, input.id); // anti-IDOR
     return ctx.db.mission.update({ where: { id: input.id }, data: { status: "COMPLETED" } });
   }),
 
@@ -762,6 +802,7 @@ export const missionRouter = createTRPCRouter({
     inputSchema: z.object({ id: z.string(), reason: z.string().max(500).optional() }),
     caller: "mission:cancel",
   }).mutation(async ({ ctx, input }) => {
+    await enforceMissionAccess(ctx, input.id); // anti-IDOR
     const m = await ctx.db.mission.findUniqueOrThrow({ where: { id: input.id }, select: { briefData: true } });
     const bd = (m.briefData ?? {}) as Record<string, unknown>;
     return ctx.db.mission.update({
@@ -778,7 +819,8 @@ export const missionRouter = createTRPCRouter({
     kind: "LEGACY_MISSION_SUBMIT_TO_GUILD",
     inputSchema: z.object({ id: z.string() }),
     caller: "mission:submitToGuild",
-  }).mutation(async ({ input }) => {
+  }).mutation(async ({ ctx, input }) => {
+    await enforceMissionAccess(ctx, input.id); // anti-IDOR : publie une mission privée au marketplace sinon
     return cm.submitMissionToGuild(input.id);
   }),
 

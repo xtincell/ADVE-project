@@ -197,14 +197,15 @@ export async function canAccessCampaign(
 
   const campaign = await db.campaign.findUnique({
     where: { id: campaignId },
-    include: { strategy: { select: { userId: true, operatorId: true } } },
+    select: { strategyId: true },
   });
 
   if (!campaign) return false;
-  if (campaign.strategy.userId === ctx.userId) return true;
-  if (ctx.operatorId && campaign.strategy.operatorId === ctx.operatorId) return true;
-
-  return false;
+  // Délègue au chokepoint marque : owner / même opérateur / collaborateur ACTIVE
+  // (ADR-0129). Corrige l'incohérence (audit round-4) où un collaborateur délégué
+  // (ex. directeur du digital) passait `canAccessStrategy` mais était REFUSÉ sur
+  // les campagnes/sous-entités de sa propre marque.
+  return canAccessStrategy(campaign.strategyId, ctx);
 }
 
 /**
@@ -218,17 +219,15 @@ export async function canAccessMission(
 
   const mission = await db.mission.findUnique({
     where: { id: missionId },
-    include: { strategy: { select: { userId: true, operatorId: true } } },
+    select: { strategyId: true, assigneeId: true },
   });
 
   if (!mission) return false;
-  if (mission.strategy.userId === ctx.userId) return true;
-  if (ctx.operatorId && mission.strategy.operatorId === ctx.operatorId) return true;
-
-  // Freelancers assigned to the mission can access
+  // Freelancer assigné à la mission : accès direct (crew delivery).
   if (mission.assigneeId === ctx.userId) return true;
-
-  return false;
+  // Sinon délègue au chokepoint marque (owner / opérateur / collaborateur ACTIVE
+  // ADR-0129) — même correction d'incohérence que canAccessCampaign (round-4).
+  return canAccessStrategy(mission.strategyId, ctx);
 }
 
 /**

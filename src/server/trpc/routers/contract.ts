@@ -4,10 +4,29 @@
 
 import { z } from "zod";
 import type { Prisma, ContractStatus } from "@prisma/client";
+import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
-import { getOperatorContext, scopeStrategies } from "@/server/services/operator-isolation";
+import { canAccessStrategy, getOperatorContext, scopeStrategies } from "@/server/services/operator-isolation";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
+
+/**
+ * Anti-IDOR (audit round-4) : les procédures contrat/escrow sont keyées sur un
+ * id d'entité (contractId/escrowId/conditionId), pas `strategyId` → gardes
+ * ADR-0175 inertes. On remonte `contract → strategy` et on passe
+ * `canAccessStrategy`. Les actes financiers (escrow) sont EN OUTRE `requireOperator`.
+ */
+async function assertContractAccess(
+  ctx: { session: { user: { id: string } }; db: typeof import("@/lib/db").db },
+  contractId: string,
+): Promise<void> {
+  const c = await ctx.db.contract.findUnique({ where: { id: contractId }, select: { strategyId: true } });
+  if (!c) throw new TRPCError({ code: "NOT_FOUND", message: "Contrat introuvable" });
+  const opCtx = await getOperatorContext(ctx.session.user.id);
+  if (!(await canAccessStrategy(c.strategyId, opCtx))) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à ce contrat." });
+  }
+}
 
 export const contractRouter = createTRPCRouter({
   create: governedProcedure({
@@ -34,6 +53,7 @@ export const contractRouter = createTRPCRouter({
   get: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
+      await assertContractAccess(ctx, input.id); // anti-IDOR : lecture cross-tenant sinon
       return ctx.db.contract.findUniqueOrThrow({ where: { id: input.id }, include: { escrows: { include: { conditions: true } } } });
     }),
 
@@ -65,7 +85,10 @@ export const contractRouter = createTRPCRouter({
 
 
   })
-    .mutation(async ({ ctx, input }) => ctx.db.contract.update({ where: { id: input.id }, data: { status: input.status } })),
+    .mutation(async ({ ctx, input }) => {
+      await assertContractAccess(ctx, input.id); // anti-IDOR : forge de statut cross-tenant sinon
+      return ctx.db.contract.update({ where: { id: input.id }, data: { status: input.status } });
+    }),
 
   sign: governedProcedure({
 
@@ -81,13 +104,15 @@ export const contractRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      await assertContractAccess(ctx, input.id); // anti-IDOR : forge d'activation cross-tenant sinon
       return ctx.db.contract.update({ where: { id: input.id }, data: { status: "ACTIVE", signedAt: new Date(), documentUrl: input.documentUrl } });
     }),
 
-  // === ESCROW ===
+  // === ESCROW (fonds sous séquestre = actes STAFF) ===
   createEscrow: governedProcedure({
 
     kind: "LEGACY_CONTRACT_CREATE_ESCROW",
+    requireOperator: true,
 
     inputSchema: z.object({ contractId: z.string(), amount: z.number(), conditions: z.array(z.string()).optional() }),
 
@@ -95,6 +120,7 @@ export const contractRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      await assertContractAccess(ctx, input.contractId); // scope opérateur à SON contrat
       const escrow = await ctx.db.escrow.create({ data: { contractId: input.contractId, amount: input.amount } });
       if (input.conditions) {
         for (const condition of input.conditions) {
@@ -104,10 +130,15 @@ export const contractRouter = createTRPCRouter({
       return escrow;
     }),
 
+  // Libération des fonds sous séquestre = acte STAFF/arbitre (parité avec
+  // `escrow-arbitration.release` ADMIN — était ouvert à tout authentifié ⇒
+  // n'importe qui vidait n'importe quel escrow). L'ownership par-marque de
+  // l'escrow (3 parents possibles : contrat/mission/commission) est tracé.
   releaseEscrow: governedProcedure({
 
 
     kind: "LEGACY_CONTRACT_RELEASE_ESCROW",
+    requireOperator: true,
 
 
     inputSchema: z.object({ id: z.string(), reason: z.string().optional() }),
@@ -125,6 +156,7 @@ export const contractRouter = createTRPCRouter({
 
 
     kind: "LEGACY_CONTRACT_MEET_ESCROW_CONDITION",
+    requireOperator: true,
 
 
     inputSchema: z.object({ conditionId: z.string(), verifiedBy: z.string() }),

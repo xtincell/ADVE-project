@@ -62,9 +62,13 @@ const MEMBERSHIP_DISCOUNT: Record<string, number> = {
 };
 
 export const commissionRouter = createTRPCRouter({
+  // Calcul/écriture de commission = acte STAFF (déclenché par la machine à états
+  // de mission ou l'opérateur). requireOperator (audit round-4) : un créateur ne
+  // peut plus se fabriquer une Commission PENDING pour amorcer un payout.
   calculate: governedProcedure({
 
     kind: "LEGACY_COMMISSION_CALCULATE",
+    requireOperator: true,
 
     inputSchema: z.object({ missionId: z.string() }),
 
@@ -160,10 +164,13 @@ export const commissionRouter = createTRPCRouter({
       });
     }),
 
+  // Flag PAID = acte financier STAFF (les payouts sautent les commissions PAID —
+  // un tiers pouvait supprimer un payout légitime ou falsifier l'état).
   markPaid: governedProcedure({
 
 
     kind: "LEGACY_COMMISSION_MARK_PAID",
+    requireOperator: true,
 
 
     inputSchema: z.object({ id: z.string() }),
@@ -180,10 +187,12 @@ export const commissionRouter = createTRPCRouter({
       });
     }),
 
+  // Injecte un PaymentOrder payable dans la file de décaissement : STAFF only.
   generatePaymentOrder: governedProcedure({
 
 
     kind: "LEGACY_COMMISSION_GENERATE_PAYMENT_ORDER",
+    requireOperator: true,
 
 
     inputSchema: z.object({ commissionId: z.string() }),
@@ -301,6 +310,7 @@ export const commissionRouter = createTRPCRouter({
   calculateOnComplete: governedProcedure({
 
     kind: "LEGACY_COMMISSION_CALCULATE_ON_COMPLETE",
+    requireOperator: true,
 
     inputSchema: z.object({ missionId: z.string() }),
 

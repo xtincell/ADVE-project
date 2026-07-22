@@ -23,9 +23,42 @@
 
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
+import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { canAccessStrategy, getOperatorContext } from "@/server/services/operator-isolation";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
+
+/**
+ * Anti-IDOR (audit round-4) : `submit` écrit une QualityReview qui recalcule le
+ * `firstPassRate` du créateur (métrique affectant palier + commission). Sans
+ * garde, tout compte injectait un verdict sur le livrable d'autrui. Reviewer
+ * LÉGITIME = membre de la Guilde (peer review, cross-tenant par design) OU
+ * partie prenante de la mission (owner/opérateur/collaborateur, ex. revue CLIENT/FIXER).
+ */
+async function assertQcParticipant(
+  ctx: { session: { user: { id: string; role?: string | null } }; db: typeof import("@/lib/db").db },
+  deliverableId: string,
+): Promise<void> {
+  if (ctx.session.user.role === "ADMIN") return;
+  const profile = await ctx.db.talentProfile.findUnique({
+    where: { userId: ctx.session.user.id },
+    select: { id: true },
+  });
+  if (profile) return; // membre de la Guilde → peer reviewer légitime
+  const d = await ctx.db.missionDeliverable.findUnique({
+    where: { id: deliverableId },
+    select: { mission: { select: { strategyId: true } } },
+  });
+  if (d) {
+    const opCtx = await getOperatorContext(ctx.session.user.id);
+    if (await canAccessStrategy(d.mission.strategyId, opCtx)) return;
+  }
+  throw new TRPCError({
+    code: "FORBIDDEN",
+    message: "Réservé aux membres de la Guilde ou aux parties prenantes de la mission.",
+  });
+}
 
 /** Tier hierarchy for reviewer routing (higher index = higher tier) */
 const TIER_HIERARCHY = ["APPRENTI", "COMPAGNON", "MAITRE", "ASSOCIE"] as const;
@@ -69,6 +102,7 @@ export const qualityReviewRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      await assertQcParticipant(ctx, input.deliverableId); // anti-IDOR firstPassRate
       // REQ-7: Validate that pillarScores has ADVE structure
       const pillarKeys = Object.keys(input.pillarScores);
       const hasADVE = pillarKeys.some((k) => VALID_PILLAR_KEYS.includes(k.toLowerCase()));
@@ -164,6 +198,7 @@ export const qualityReviewRouter = createTRPCRouter({
   assignReviewer: governedProcedure({
 
     kind: "LEGACY_QUALITY_REVIEW_ASSIGN_REVIEWER",
+    requireOperator: true, // orchestration QC (assignation par palier) = staff
 
     inputSchema: z.object({
       deliverableId: z.string(),
@@ -231,6 +266,7 @@ export const qualityReviewRouter = createTRPCRouter({
   escalate: governedProcedure({
 
     kind: "LEGACY_QUALITY_REVIEW_ESCALATE",
+    requireOperator: true, // escalade QC vers palier supérieur = staff
 
     inputSchema: z.object({ reviewId: z.string(), reason: z.string() }),
 
