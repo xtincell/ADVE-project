@@ -141,12 +141,16 @@ function Principes({ items, status }: { items: unknown; status?: string }) {
     <ACard title="Principes communautaires" status={status} empty={empty} span>
       {empty ? <EmptyBody /> : (
         <div className="ck-e-princ">
-          {arr.map((p, i) => (
-            <div className="ck-e-princ__p" key={i}>
-              <span className="ck-e-princ__t">{str(p.principle)}</span>
-              {!isEmpty(p.enforcement) ? <span className="ck-e-princ__e">⚖ {str(p.enforcement)}</span> : null}
-            </div>
-          ))}
+          {arr.map((p, i) => {
+            // Forme compacte (union ADR-0168) : un principe écrit en chaîne nue.
+            const compact = typeof p === "string" || typeof p === "number";
+            return (
+              <div className="ck-e-princ__p" key={i}>
+                <span className="ck-e-princ__t">{compact ? str(p) : str((p as Rec).principle)}</span>
+                {!compact && !isEmpty((p as Rec).enforcement) ? <span className="ck-e-princ__e">⚖ {str((p as Rec).enforcement)}</span> : null}
+              </div>
+            );
+          })}
         </div>
       )}
     </ACard>
@@ -157,18 +161,38 @@ function Principes({ items, status }: { items: unknown; status?: string }) {
 
 function RelList({ title, items, status, cols, span }: { title: string; items: unknown; status?: string; cols: Array<[string, string]>; span?: boolean }) {
   const empty = isEmpty(items);
+  // Forme record (union ADR-0168, ex. sacredCalendar {quotidien, hebdomadaire…}) →
+  // lignes « clé : valeur » (sinon asArr rendait un tableau vide).
+  const recordRows = items && typeof items === "object" && !Array.isArray(items)
+    ? Object.entries(items as Rec).filter(([, val]) => !isEmpty(val))
+    : null;
   const arr = asArr(items);
+  const count = recordRows ? recordRows.length : arr.length;
   return (
-    <ACard title={title + (empty ? "" : ` · ${arr.length}`)} status={status} empty={empty} span={span}>
-      {empty ? <EmptyBody verb="À générer" /> : (
+    <ACard title={title + (empty ? "" : ` · ${count}`)} status={status} empty={empty} span={span}>
+      {empty ? <EmptyBody verb="À générer" /> : recordRows ? (
         <div className="ck-e-rel">
-          {arr.map((it, i) => (
+          {recordRows.map(([k, val], i) => (
             <div className="ck-e-rel__row" key={i}>
-              {cols.map(([k, label]) => (!isEmpty(it[k]) ? (
-                <div className="ck-e-rel__cell" key={k}><span className="ck-e-rel__k">{label}</span><span className="ck-e-rel__v">{Array.isArray(it[k]) ? (it[k] as unknown[]).map(str).join(", ") : str(it[k])}</span></div>
-              ) : null))}
+              <div className="ck-e-rel__cell"><span className="ck-e-rel__k">{k}</span><span className="ck-e-rel__v">{str(val)}</span></div>
             </div>
           ))}
+        </div>
+      ) : (
+        <div className="ck-e-rel">
+          {arr.map((it, i) => {
+            // Forme compacte : item = chaîne nue → une cellule (1ʳᵉ colonne).
+            if (typeof it === "string" || typeof it === "number") {
+              return <div className="ck-e-rel__row" key={i}><div className="ck-e-rel__cell"><span className="ck-e-rel__v">{str(it)}</span></div></div>;
+            }
+            return (
+              <div className="ck-e-rel__row" key={i}>
+                {cols.map(([k, label]) => (!isEmpty((it as Rec)[k]) ? (
+                  <div className="ck-e-rel__cell" key={k}><span className="ck-e-rel__k">{label}</span><span className="ck-e-rel__v">{Array.isArray((it as Rec)[k]) ? ((it as Rec)[k] as unknown[]).map(str).join(", ") : str((it as Rec)[k])}</span></div>
+                ) : null))}
+              </div>
+            );
+          })}
         </div>
       )}
     </ACard>

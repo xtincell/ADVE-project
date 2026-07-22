@@ -58,7 +58,7 @@ export interface PillarConformance {
   all: ClassifiedError[];
 }
 
-const isContainer = (t?: string) => t === "object" || t === "array" || t === "tuple";
+const isContainer = (t?: string) => t === "object" || t === "array" || t === "tuple" || t === "record" || t === "map" || t === "set";
 
 /**
  * Classe une divergence Zod. Par `code` d'abord (robuste — insensible aux messages

@@ -66,8 +66,9 @@ async function seedStrategyFromCanon(args: SeedStrategyArgs): Promise<void> {
   console.log(`[OK] Strategy: ${strategy.name} (${strategy.id})`);
 
   for (const p of pillars) {
-    // Gate anti-corruption (ADR-0172) sur A→I authored (S = computed, exclu).
-    if (p.key !== "s") assertPillarConforms(p.key.toUpperCase() as PillarKey, p.content, `${name}/${p.key}`);
+    // Gate anti-corruption (ADR-0172) — S inclus (formes computed héritées désormais
+    // couvertes par unions ; corrige F3 de la revue adversariale : plus de S corrompu VALIDATED).
+    assertPillarConforms(p.key.toUpperCase() as PillarKey, p.content, `${name}/${p.key}`);
     const pillar = await prisma.pillar.upsert({
       where: { strategyId_key: { strategyId: strategy.id, key: p.key } },
       update: { content: p.content as Prisma.InputJsonValue, confidence: p.confidence, validationStatus: "VALIDATED" },

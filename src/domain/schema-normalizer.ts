@@ -7,7 +7,11 @@
  *   - `coerceEnum` : accents/casse/espaces → membre canonique de l'enum ;
  *   - `stableUuid` : id lisible (« risk-m19-001 ») → UUID stable et reproductible
  *     (pour satisfaire `z.string().uuid()` SANS perdre l'identité — même seed →
- *     même UUID, donc les références croisées restent cohérentes après remap) ;
+ *     même UUID, donc les références croisées restent cohérentes après remap
+ *     **UNIQUEMENT si les deux extrémités sont uuid-typées** ; les carriers legacy
+ *     `*Ref` (riskRef/hypothesisRef/sourceRef, `z.string()` nu) ne normalisent PAS
+ *     → ne jamais persister une sortie `normalizeToSchema` sans remap coordonné de
+ *     ces champs. Aujourd'hui aucun caller ne persiste le normalisé — hazard dormant) ;
  *   - `coerceNumber` : « ≈150 000 FCFA » → 150000.
  *
  * Layer-0 pur (zéro dépendance Node, zéro LLM, zéro Math.random/Date.now).

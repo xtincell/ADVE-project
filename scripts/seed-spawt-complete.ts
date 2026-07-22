@@ -1684,8 +1684,9 @@ export async function seedSpawtComplete(db: PrismaClient) {
   ];
 
   for (const p of pillarsData) {
-    // Gate anti-corruption (ADR-0172) sur A→I authored (S = computed, exclu).
-    if (p.key !== "s") assertPillarConforms(p.key.toUpperCase() as PillarKey, p.content, `spawt/${p.key}`);
+    // Gate anti-corruption (ADR-0172) — S inclus (formes computed héritées couvertes
+    // par unions ; corrige F3 de la revue adversariale : plus de S corrompu VALIDATED).
+    assertPillarConforms(p.key.toUpperCase() as PillarKey, p.content, `spawt/${p.key}`);
     const pillar = await db.pillar.create({
       data: {
         strategyId: strategy.id,

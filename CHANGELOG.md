@@ -10,6 +10,20 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.250 — fix(scorer+cockpit+ingestion): remédiation revue adversariale (chantier « La Fusée compile ») (2026-07-22)
+
+**3 agents adversariaux ont attaqué unions / gate+normaliseur / ingestion et trouvé de vrais bugs — corrigés le jour même. Le plus grave : les unions ADR-0168 bénissaient des formes que des CONSOMMATEURS n'avaient jamais réconciliés (le motif exige un renderer tolérant, pas seulement un schéma tolérant).**
+
+- **HIGH — Oracle client** : `sousPromesses` (forme objet, union-valide) rendait `[object Object] | …` dans le livrable payant (`04-plateforme-strat.tsx` `.join`). Le mapper coerce désormais objet→chaîne (`.promesse`). Vérifié E2E Motion19 (chaînes lisibles).
+- **MEDIUM — cockpit E** : `taboos`/`principesCommunautaires` (chaînes) + `sacredCalendar` (record) rendaient blanc (RelList/Principes supposaient objet-array). Renderers rendus tolérants (chaîne nue + forme record clé:valeur).
+- **MEDIUM — base d'actions** : `actionsByDevotionLevel` en chaînes s'effondrait sur un id vide unique (`normalizeInitiative(string)→{}`) → toutes les actions perdues. Corrigé (chaîne → `{action}`).
+- **MEDIUM — gate** : faux-négatif scalaire-dans-`record` classé TYPE (toléré) au lieu de SHAPE ; `isContainer` couvre record/map/set. + S computed corrompu seedé VALIDATED (upgraders/lafusee) → 3 champs `computed.*` unionés → S désormais SHAPE-clean et **gaté** (plus d'exclusion S).
+- **MEDIUM — ingestion (persister)** : `tonDeVoix` écrit dans le pilier A au lieu de D (perte silencieuse) → corrigé ; `motivations: description ?? nom` fabriquait une motivation depuis le nom → repli retiré ; `story` écrit en double (noyauIdentitaire + originMyth) → dédupliqué ; `manifesto→prophecy` (stretch sémantique) retiré ; `missionStatement` posé ; flag `wrote` (no-op honnête).
+- **Honnêteté** : docstrings corrigées (certitude par champ OFFICIAL non posée à l'ingestion — seule la source l'est ; zéro-fab STRUCTUREL pour le persister/parseur, la revue opérateur est le garde-fou du chemin LLM ; carriers `*Ref` non normalisés). Déférés latents/systémiques tracés RESIDUAL-DEBT §Revue adversariale (double voie provenance/certainty, ownership operatorProcedure, gate F2/F5/F6/F7, scorer sémantique mort).
+- Tests `adversarial-fixes` (3) + `canon-conformance` étendu à S. tsc 0 · lint 0 · **3028 tests verts**. 0 modèle · 0 migration · 0 LLM · cap 7/7.
+
+---
+
 ## v6.27.249 — feat(scorer): intégrité des 22 arêtes de référence inter-piliers (Lot 3) (2026-07-22)
 
 **Une référence FK (`entityId` uuid) n'était jamais vérifiée : rien ne validait qu'elle RÉSOUD vers sa cible. Le validateur généralise le motif produit (rule 31) à toutes les arêtes — liens par nom + FK UUID du backbone. [ADR-0174](docs/governance/adr/0174-pillar-reference-edge-integrity.md).**

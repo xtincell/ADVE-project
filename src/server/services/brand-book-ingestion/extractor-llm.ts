@@ -2,9 +2,12 @@
  * brand-book-ingestion/extractor-llm.ts — extracteur LLM structuré (ADR-0173, ADR-0067).
  *
  * Utilise `executeStructuredLLMCall` (schema-driven, retry-on-Zod, JSON forcé) sur le
- * texte du brand book. **Anti-fabrication DURE** : la consigne ordonne `null` sur
- * absence — on n'extrait QUE ce qui figure explicitement dans le document. Le résultat
- * est validé contre `BrandBookExtractionSchema` par le call lui-même.
+ * texte du brand book. **Anti-fabrication par la CONSIGNE** : la consigne ordonne `null`
+ * sur absence. NB honnête : le schéma tout-nullable ne PEUT PAS enforcer « seulement ce
+ * qui est dans le texte » (toute valeur bien formée passe) — le vrai garde-fou de ce
+ * chemin est la consigne + la **revue opérateur** (preview→confirm), PAS le schéma. La
+ * garantie STRUCTURELLE de non-fabrication vaut pour `extractor-structured` (déterministe)
+ * et pour le persister (n'écrit que les champs présents).
  *
  * C'est la moitié « automatique » de la parité manual-first (ADR-0060) ; la moitié
  * « manuelle/déterministe » est `extractor-structured.ts`. Les deux produisent le même

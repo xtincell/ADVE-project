@@ -1444,24 +1444,27 @@ export const PillarSSchema = z.object({
   // (each carries `derivedFrom`, keeping listEditableFields("s") === []).
   computed: z.object({
     totalBudget: currency.optional(),                        // Σ budget des initiatives status=SELECTED_FOR_ROADMAP
-    budgetByPhase: z.record(z.enum(INITIATIVE_TIMEFRAMES), currency).optional(), // groupé par timeframe
+    budgetByPhase: z.union([z.record(z.enum(INITIATIVE_TIMEFRAMES), currency), z.record(z.string(), z.unknown()), z.array(z.unknown())]).optional(), // record (computed) OU formes héritées (canon S stale, ADR-0172)
     riskCoverage: percentage.optional(),                     // % risques R couverts par une initiative sélectionnée
     mitigatedRiskIds: z.array(entityId).optional(),          // union des mitigatesRiskIds des initiatives sélectionnées
     selectedInitiativeCount: z.number().int().min(0).optional(),
-    devotionFunnel: z.array(z.object({
-      phase: z.string().min(1),
-      spectateurs: z.number().optional(),
-      interesses: z.number().optional(),
-      participants: z.number().optional(),
-      engages: z.number().optional(),
-      ambassadeurs: z.number().optional(),
-      evangelistes: z.number().optional(),
-    })).optional(),
-    overtonPosition: z.object({
+    devotionFunnel: z.union([
+      z.array(z.object({
+        phase: z.string().min(1),
+        spectateurs: z.number().optional(),
+        interesses: z.number().optional(),
+        participants: z.number().optional(),
+        engages: z.number().optional(),
+        ambassadeurs: z.number().optional(),
+        evangelistes: z.number().optional(),
+      })),
+      z.record(z.string(), z.unknown()),                     // forme héritée objet (canon S stale, ADR-0172)
+    ]).optional(),
+    overtonPosition: stringOrShape(z.object({
       current: z.string().min(1),                            // dérivé T.overtonPosition / T.perceptionGap
       target: z.string().min(1),
       gapScore: percentage.optional(),
-    }).optional(),
+    })).optional(),
     coherenceScore: percentage.optional(),                   // dérivé R.coherenceRisks
     // 3 trajectoires de roadmap (ADR-0088) — projections PURES, jamais LLM.
     // ADR-0089 : chaque route porte aussi son JEU DE STRATÉGIE calculé
@@ -1695,7 +1698,10 @@ export function normalizeInitiative(
   raw: unknown,
   ctx: { channel?: string; devotionLevel?: string; overtonPhase?: string } = {},
 ): NormalizedInitiative {
-  const o = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  // Forme compacte (union ADR-0168) : une action écrite en chaîne nue. On la lit
+  // comme le texte de l'action (sinon toutes les chaînes s'effondraient sur un même
+  // id "{}" vide via stableInitiativeId — perte silencieuse dans la base d'actions).
+  const o = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : isNonEmptyStr(raw) ? { action: raw } : {};
   const action = isNonEmptyStr(o.action) ? o.action : "";
   const budgetEstime =
     o.budgetEstime === "LOW" || o.budgetEstime === "MEDIUM" || o.budgetEstime === "HIGH"

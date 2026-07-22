@@ -45,10 +45,10 @@ function buildPillarWrites(x: BrandBookExtraction): Record<"a" | "d" | "v", Fiel
     push(a, "nomMarque", id.brandName);
     if (id.tagline) push(a, "accroche", trunc(id.tagline, 100));
     push(a, "description", id.mission);
-    push(a, "noyauIdentitaire", id.vision ?? id.story);
+    push(a, "missionStatement", id.mission ? trunc(id.mission, 200) : null);
+    push(a, "noyauIdentitaire", id.vision); // vision seulement — pas de repli sur story (double-assertion)
     if (id.story) push(a, "originMyth", { elevator: trunc(id.story, 400) });
-    if (id.manifesto) push(a, "prophecy", id.manifesto); // union accepte la chaîne (ADR-0168)
-    if (id.toneOfVoice?.length) push(a, "tonDeVoix", { personnalite: id.toneOfVoice });
+    // manifesto → PAS écrit en prophecy (concepts distincts) — conservé brut dans l'asset BRAND_BOOK.
     // Jugement → INFERRED (needsHuman). archetype attend un enum : on ne l'écrit PAS
     // en dur (risque hors-enum) — seulement une note libre si le champ existe.
   }
@@ -59,11 +59,15 @@ function buildPillarWrites(x: BrandBookExtraction): Record<"a" | "d" | "v", Fiel
     if (di.positioning) push(d, "positionnement", trunc(di.positioning, 200));
     push(d, "promesseMaitre", di.masterPromise);
     push(d, "sousPromesses", di.subPromises); // union accepte string[] (ADR-0168)
+    // tonDeVoix est un champ de D (pas A) — la voix de marque du book y atterrit.
+    if (id?.toneOfVoice?.length) push(d, "tonDeVoix", { personnalite: id.toneOfVoice });
     if (di.personas?.length) {
+      // rank = ordre de listing du book (ordinal requis, pas une assertion de primauté) ;
+      // motivations écrit SEULEMENT si présent (jamais le nom en repli — ce serait fabriqué).
       push(
         d,
         "personas",
-        di.personas.map((p, i) => ({ name: p.name, motivations: p.description ?? p.name, rank: i + 1 })),
+        di.personas.map((p, i) => ({ name: p.name, rank: i + 1, ...(p.description ? { motivations: p.description } : {}) })),
       );
     }
   }
@@ -79,6 +83,8 @@ function buildPillarWrites(x: BrandBookExtraction): Record<"a" | "d" | "v", Fiel
 }
 
 export interface BrandBookPersistResult {
+  /** true ssi au moins un champ ou asset a été écrit (distinct de « l'intent a tourné »). */
+  wrote: boolean;
   pillarsWritten: string[];
   fieldsWritten: number;
   assetsCreated: string[];
@@ -153,5 +159,5 @@ export async function persistBrandBookExtraction(args: {
     if (asset?.id) assetsCreated.push(asset.id);
   }
 
-  return { pillarsWritten, fieldsWritten, assetsCreated, warnings };
+  return { wrote: pillarsWritten.length > 0 || assetsCreated.length > 0, pillarsWritten, fieldsWritten, assetsCreated, warnings };
 }

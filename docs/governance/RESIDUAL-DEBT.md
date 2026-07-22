@@ -217,6 +217,42 @@ Le backend d'ingestion (extracteurs + Intent + tRPC + persister) est shippé et 
   description l'est). **Bornage** : ré-upload image séparé → `LOGO_FINAL` (chaîne existante). **Déclencheur** :
   quand un vrai book est ingéré en prod.
 
+### §Revue adversariale 2026-07-22 (chantier « La Fusée compile ») — déférés tracés
+
+3 agents adversariaux ont attaqué unions / gate+normaliseur / ingestion. **Bugs réels CORRIGÉS le jour
+même** (mêmes commits) : Oracle `sousPromesses` → `[object Object]` (mapper coerce), 3 champs cockpit-E
+aveugles (RelList/Principes tolérants string+record), effondrement des actions string (`normalizeInitiative`),
+faux-négatif scalaire-dans-record du classifieur (`isContainer` + record), persister (tonDeVoix→D,
+motivations sans repli-nom, story non dupliquée, manifesto non écrit, flag `wrote`), S computed corrompu
+VALIDATED (unions S + gate S), surclaims de docstrings (OFFICIAL/LLM-zéro-fab). **Restent (latents/systémiques)** :
+
+- **Deux voies de confiance disjointes** (pré-existant) : `content._fieldProvenance` (garde de provenance)
+  vs `Pillar.fieldCertainty` (seeds/intake/`confirmInferredField`). Un champ confirmé opérateur reste
+  `_fieldProvenance:UNKNOWN` → une écriture SOURCE (ingestion) le surécrit en silence (`decideOverwrite`
+  ALLOW). **Bornage** : `confirmInferredField` doit passer par le gateway (poser `_fieldProvenance:HUMAN`)
+  OU le garde doit consulter `fieldCertainty`. **Déclencheur** : chantier provenance unifiée (avant tout
+  usage prod de l'ingestion qui écrase).
+- **Certitude par champ non posée à l'ingestion** : le persister pose `fieldProvenance:SOURCE` mais pas
+  `Pillar.fieldCertainty=OFFICIAL` (seule `BrandDataSource.certainty` l'est). **Bornage** : écrire la
+  certitude par champ après le write. **Déclencheur** : surface cockpit d'ingestion.
+- **`ingestBrandBook`/`previewBrandBook` = `operatorProcedure` non scopé par stratégie** (les reads sœurs
+  sont `strategyScopedProcedure`). Modèle de confiance opérateur intentionnel, mais asymétrique.
+  **Bornage** : `strategyScopedProcedure` + garde operator. **Déclencheur** : si `operatorProcedure` est
+  accordé à un rôle moins fiable.
+- **Gate F2/F5/F6/F7 (latents)** : absent-required-container classé MISSING (les renderers doivent
+  optional-chain les requis) ; détection SHAPE côté `received` via message EN (un `z.config(locale fr)`
+  la casserait — aucun configuré) ; placeholder dans un champ union sur-bloque (SHAPE) vs toléré hors-union ;
+  atomicité seed (throw mid-loop ; `seed-spawt` `create` non-idempotent) — **gardé en amont par le test CI
+  `canon-conformance`** (un canon régressé échoue le test avant tout seed). **Bornage** : pré-flight
+  conformance avant le write loop. **Déclencheur** : prochaine passe seed.
+- **`stableUuid` + carriers `*Ref` legacy** (dormant) : si un jour on persiste `normalizeToSchema`, les
+  `riskRef`/`hypothesisRef`/`sourceRef` (string nu, non uuid-typés) casseraient l'arête. Aucun caller ne
+  persiste le normalisé aujourd'hui. **Bornage** : normaliser aussi les `*Ref` OU remap coordonné.
+  **Déclencheur** : si l'ingestion adopte `normalizeToSchema`.
+- **`advertis-scorer/semantic.ts` sous-compte les formes compactes** (`hierarchieCommunautaire`/
+  `sacredCalendar` objet → `arrLen`=0). **Code mort** (aucun consommateur ; le /200 officiel = `scoreStructural`).
+  **Bornage** : si ce scorer est ranimé, le rendre tolérant. **Déclencheur** : réveil du scorer sémantique.
+
 ### §ADR-0172 — advisories de conformité canon (déférés, non bloquants)
 
 Le gate anti-corruption (Lot 1) ferme la corruption de forme (SHAPE) ; il **tolère** un tail d'advisories

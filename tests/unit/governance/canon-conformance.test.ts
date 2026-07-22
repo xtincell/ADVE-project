@@ -33,8 +33,8 @@ const CANONS = {
 describe("canon-conformance — zéro corruption de forme (SHAPE) sur les 4 canons seed", () => {
   for (const [name, pillars] of Object.entries(CANONS)) {
     for (const p of pillars) {
-      // S est computed (computePillarS) — pas authored, exclu du gate.
-      if (p.key.toLowerCase() === "s") continue;
+      // S inclus : les formes computed héritées sont couvertes par unions (F3 de la
+      // revue adversariale — plus de SHAPE corruption S non gardée).
       const key = p.key.toUpperCase() as PillarKey;
       it(`${name}/${key} : aucune corruption de forme`, () => {
         const c = classifyPillarConformance(key, p.content);

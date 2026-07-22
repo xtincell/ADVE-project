@@ -13,9 +13,12 @@
  *   - `extractor-structured.ts` : parseur pur déterministe (hex, familles de police,
  *     URLs) — null sur absence, aucune dépendance LLM.
  *
- * Certitude par champ (posée à l'application, PAS ici) : les FAITS observables
- * (nom, baseline, couleurs hex, noms de produits, polices) → `OFFICIAL` ; les
- * JUGEMENTS (archétype, nuance de positionnement) → `INFERRED` (doctrine needsHuman).
+ * Confiance : l'écriture pose `fieldProvenance:"SOURCE"` (le garde de provenance
+ * empêche un SOURCE d'écraser un champ HUMAIN amendé) et la SOURCE uploadée passe
+ * `BrandDataSource.certainty="OFFICIAL"`. La certitude PAR CHAMP (`fieldCertainty`
+ * OFFICIAL/INFERRED) n'est PAS posée à l'écriture aujourd'hui — déféré (RESIDUAL-DEBT
+ * §ADR-0173). On n'invente aucune certitude ; les JUGEMENTS (archétype) ne sont pas
+ * écrits en dur (risque hors-enum).
  */
 import { z } from "zod";
 

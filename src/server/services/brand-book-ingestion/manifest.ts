@@ -38,5 +38,5 @@ export const manifest = defineManifest({
   dependencies: ["llm-gateway", "pillar-gateway", "brand-vault"],
   missionContribution: "CHAIN_VIA:artemis",
   groundJustification:
-    "Un brand book officiel EXISTANT est la matière la plus riche et la plus fiable pour fonder l'ADVE d'une marque. Sans porte d'entrée, cette matière restait dehors et l'opérateur ré-saisissait à la main. L'ingestion la fait entrer sans jamais rien inventer (null sur absence, OFFICIAL sur les faits, INFERRED sur les jugements) — l'ADVE nourri par le réel accélère toute la chaîne aval qui accumule des superfans.",
+    "Un brand book officiel EXISTANT est la matière la plus riche et la plus fiable pour fonder l'ADVE d'une marque. Sans porte d'entrée, cette matière restait dehors et l'opérateur ré-saisissait à la main. L'ingestion la fait entrer sans jamais rien inventer (null sur absence ; provenance SOURCE, source marquée OFFICIAL ; les jugements ne sont pas écrits en dur) — l'ADVE nourri par le réel accélère toute la chaîne aval qui accumule des superfans.",
 });

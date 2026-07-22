@@ -73,7 +73,7 @@ export async function ingestBrandBook(intent: IngestIntent): Promise<HandlerResu
     sourceFilename,
     sourceDataSourceId,
   });
-  const nothing = result.pillarsWritten.length === 0 && result.assetsCreated.length === 0;
+  const nothing = !result.wrote;
   return {
     status: "OK",
     summary: nothing
