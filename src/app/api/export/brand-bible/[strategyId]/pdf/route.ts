@@ -13,6 +13,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/config";
 import { exportBrandBibleAsPdf } from "@/server/services/value-report-generator/brand-bible-pdf";
+import { canAccessStrategy } from "@/server/services/operator-isolation";
 import { db } from "@/lib/db";
 
 export async function GET(
@@ -25,6 +26,19 @@ export async function GET(
   }
 
   const { strategyId } = await params;
+
+  // Isolation opérateur — anti-IDOR : seul ADMIN / propriétaire / même opérateur
+  // / collaborateur peut télécharger la Bible de cette marque. Les routes sœurs
+  // (Oracle PDF, export) posaient déjà cette garde ; celle-ci l'omettait → tout
+  // compte authentifié téléchargeait la Bible complète de n'importe quelle marque.
+  const hasAccess = await canAccessStrategy(strategyId, {
+    operatorId: (session.user as unknown as Record<string, unknown>).operatorId as string | null ?? null,
+    userId: session.user.id,
+    role: session.user.role ?? "USER",
+  });
+  if (!hasAccess) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const strategy = await db.strategy.findUnique({
     where: { id: strategyId },

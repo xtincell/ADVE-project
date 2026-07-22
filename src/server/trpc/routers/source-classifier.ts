@@ -10,11 +10,34 @@
  */
 
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { assertRawStrategyScope } from "../middleware/strategy-scope";
 import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
 import { promoteToActive as enginePromoteToActive } from "@/server/services/brand-vault/engine";
+import { canAccessStrategy, getOperatorContext } from "@/server/services/operator-isolation";
+import { db } from "@/lib/db";
+
+/**
+ * Anti-IDOR (audit adversarial 2026-07-22) : `acceptProposal`/`rejectProposal`
+ * sont keyés sur `brandAssetId` (pas `strategyId`) → la garde de base
+ * `assertRawStrategyScope({optional:true})` est un NO-OP pour eux, et la mutation
+ * promeut/rejette l'asset sans vérifier l'ownership. On résout l'asset → sa
+ * marque et on passe le chokepoint `canAccessStrategy` (DB-résolu). Symétrique
+ * de `brand-vault.assertBrandAssetAccess` sur la même entité.
+ */
+async function assertProposalAccess(userId: string, brandAssetId: string): Promise<void> {
+  const asset = await db.brandAsset.findUnique({
+    where: { id: brandAssetId },
+    select: { strategyId: true },
+  });
+  if (!asset) throw new TRPCError({ code: "NOT_FOUND", message: "Proposition introuvable." });
+  const opCtx = await getOperatorContext(userId);
+  if (!(await canAccessStrategy(asset.strategyId, opCtx))) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Cette proposition n'appartient pas à une marque à laquelle vous avez accès." });
+  }
+}
 
 /* lafusee:governed-active — write paths (acceptProposal/rejectProposal/acceptAllForSource) traverse mestor.emitIntent dynamically; promoteToActive is a sync helper invoked inside the emitIntent handler */
 import { isBrandAssetKind, BRAND_ASSET_KINDS } from "@/domain/brand-asset-kinds";
@@ -86,6 +109,7 @@ export const sourceClassifierRouter = createTRPCRouter({
       reason: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      await assertProposalAccess(ctx.session.user.id, input.brandAssetId);
       const asset = await ctx.db.brandAsset.findUniqueOrThrow({
         where: { id: input.brandAssetId },
       });
@@ -130,6 +154,7 @@ export const sourceClassifierRouter = createTRPCRouter({
       reason: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      await assertProposalAccess(ctx.session.user.id, input.brandAssetId);
       const asset = await ctx.db.brandAsset.findUniqueOrThrow({
         where: { id: input.brandAssetId },
       });

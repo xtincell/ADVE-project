@@ -25,10 +25,26 @@ import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
+import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { processSignal, detectStrategyDrift } from "@/server/services/feedback-loop";
 import { governedProcedure } from "@/server/governance/governed-procedure";
+import { canAccessStrategy, getOperatorContext } from "@/server/services/operator-isolation";
+
+/**
+ * Anti-IDOR (audit adversarial 2026-07-22) : `get`/`reprocess`/`propagateToQueue`
+ * sont keyés sur `signalId`, pas `strategyId` → gardes ADR-0166/0175 inertes.
+ * `get` renvoyait le Signal + la Strategy COMPLÈTE ; `propagateToQueue` injectait
+ * un Process dans une autre marque. On résout le signal → sa marque et on passe
+ * `canAccessStrategy` (DB-résolu).
+ */
+async function assertStrategyAccess(userId: string, strategyId: string): Promise<void> {
+  const opCtx = await getOperatorContext(userId);
+  if (!(await canAccessStrategy(strategyId, opCtx))) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette marque." });
+  }
+}
 /* lafusee:governed-active */
 
 export const signalRouter = createTRPCRouter({
@@ -87,10 +103,12 @@ export const signalRouter = createTRPCRouter({
   get: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      return ctx.db.signal.findUniqueOrThrow({
+      const signal = await ctx.db.signal.findUniqueOrThrow({
         where: { id: input.id },
         include: { strategy: true },
       });
+      await assertStrategyAccess(ctx.session.user.id, signal.strategyId);
+      return signal;
     }),
 
   // Check drift status for a specific pillar on a strategy
@@ -119,7 +137,12 @@ export const signalRouter = createTRPCRouter({
     caller: "signal:reprocess",
 
   })
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      const signal = await ctx.db.signal.findUniqueOrThrow({
+        where: { id: input.signalId },
+        select: { strategyId: true },
+      });
+      await assertStrategyAccess(ctx.session.user.id, signal.strategyId);
       try {
         const alerts = await processSignal(input.signalId);
         return { signalId: input.signalId, alerts };
@@ -198,6 +221,7 @@ export const signalRouter = createTRPCRouter({
         where: { id: input.signalId },
         include: { strategy: true },
       });
+      await assertStrategyAccess(ctx.session.user.id, signal.strategyId);
 
       // Create a decision queue entry as a Process of type TRIGGERED
       const queueEntry = await ctx.db.process.create({

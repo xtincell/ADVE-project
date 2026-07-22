@@ -1,5 +1,18 @@
 # Changelog — La Fusee
 
+## v6.27.269 — fix(security): IDOR round-2 batch A — gardes d'ownership sur entités keyées hors strategyId (2026-07-22)
+
+**Fuites cross-tenant fermées sur 6 surfaces keyées par id d'entité (audit adversarial « TOUT » round-2 — les gardes ADR-0166/0175 ne couvrent QUE le `strategyId` de tête).**
+
+- **Cause racine** : les deux gardes d'ownership (`strategyScopedProcedure`/`assertRawStrategyScope` ADR-0166, garde `governedProcedure` ADR-0175) n'inspectent que le `strategyId` de premier niveau. Une procédure keyée sur un AUTRE id (`brandAssetId`, `pressReleaseId`, `signalId`, `clippingId`) n'a donc AUCUN contrôle d'ownership → lecture/écriture cross-tenant. Correctif : résoudre l'entité → sa marque et passer `canAccessStrategy` (DB-résolu via `getOperatorContext`).
+- **`/api/export/brand-bible/[strategyId]/pdf`** : téléchargeait la Bible de Marque complète de N'IMPORTE quelle marque pour tout compte authentifié (`canAccessStrategy` omis alors que les routes Oracle sœurs l'avaient). Garde ajoutée.
+- **`source-classifier.acceptProposal`/`rejectProposal`** (brandAssetId) : promouvaient/rejetaient un actif vault d'une autre marque. Garde `assertProposalAccess` (symétrique de `brand-vault.assertBrandAssetAccess`).
+- **`pr.processClipping`/`scorePressRelease`/`trackDistribution`/`getDistributionStatus`** (signalId/pressReleaseId) : écrivaient un communiqué + lisaient la liste journalistes (PII) d'une autre marque. Garde `assertStrategyAccess` sur chaque.
+- **`signal.get`/`reprocess`/`propagateToQueue`** (signalId) : `get` renvoyait le Signal + la Strategy COMPLÈTE ; `propagateToQueue` injectait un Process dans une autre marque. Gardes ajoutées.
+- **`jehuty.triggerNotoria`** : le `strategyId` était validé mais pas que le `signalId` LUI appartenait → lecture cross-tenant du contenu d'un signal reflété dans ses propres recos. Assertion `signal.strategyId === input.strategyId`.
+- **`crm-contacts.sendMessage`** : `governedProcedure` sans `requireOperator` → base `protectedProcedure` (tout compte envoyait un email arbitraire à un contact). `requireOperator: true` comme ses sœurs.
+- **Vérif** : tsc 0 · lint 0 · guard test 5 verts. Cap APOGEE 7/7 préservé. Restants (batch B/C/D) tracés : campaign-manager sous-entités, crm.ts operator-scope, connectors.ts, deliverable-tracking.
+
 ## v6.27.268 — fix(thot): PayPal encaisse enfin (capture) + fenêtre de migration F7 + rollback asc (2026-07-22)
 
 **Fuite de revenu HIGH fermée (PayPal livrait sans jamais encaisser) + régression F7 de fenêtre de migration + correctif rollback — round 2 adversarial (money + correctness).**

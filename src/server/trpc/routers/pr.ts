@@ -21,9 +21,26 @@
 
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
+import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { governedProcedure } from "@/server/governance/governed-procedure";
+import { canAccessStrategy, getOperatorContext } from "@/server/services/operator-isolation";
+
+/**
+ * Anti-IDOR (audit adversarial 2026-07-22) : `processClipping` (clippingId=Signal),
+ * `scorePressRelease`/`trackDistribution`/`getDistributionStatus`
+ * (pressReleaseId=BrandAsset) sont keyés sur un id d'entité, PAS `strategyId` →
+ * ni la garde ADR-0166 ni ADR-0175 ne s'appliquent. On résout l'entité → sa
+ * marque et on passe `canAccessStrategy` (DB-résolu). Sinon : écriture d'un
+ * communiqué d'une autre marque + lecture de la liste journalistes (PII).
+ */
+async function assertStrategyAccess(userId: string, strategyId: string): Promise<void> {
+  const opCtx = await getOperatorContext(userId);
+  if (!(await canAccessStrategy(strategyId, opCtx))) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette marque." });
+  }
+}
 /* lafusee:governed-active */
 
 /** ADVE pillar keys used for PR angle generation */
@@ -244,6 +261,7 @@ export const prRouter = createTRPCRouter({
       const clipping = await ctx.db.signal.findUniqueOrThrow({
         where: { id: input.clippingId },
       });
+      await assertStrategyAccess(ctx.session.user.id, clipping.strategyId);
 
       const data = clipping.data as Record<string, unknown> | null;
       if (!data) throw new Error("Clipping has no data");
@@ -291,6 +309,7 @@ export const prRouter = createTRPCRouter({
       const asset = await ctx.db.brandAsset.findUniqueOrThrow({
         where: { id: input.pressReleaseId },
       });
+      await assertStrategyAccess(ctx.session.user.id, asset.strategyId);
 
       const tags = asset.pillarTags as Record<string, unknown> | null;
       const content = (tags?.content as string) ?? "";
@@ -344,6 +363,7 @@ export const prRouter = createTRPCRouter({
       const asset = await ctx.db.brandAsset.findUniqueOrThrow({
         where: { id: input.pressReleaseId },
       });
+      await assertStrategyAccess(ctx.session.user.id, asset.strategyId);
 
       const tags = asset.pillarTags as Record<string, unknown> | null;
       const existingDistribution = (tags?.distribution as Array<Record<string, unknown>>) ?? [];
@@ -389,6 +409,7 @@ export const prRouter = createTRPCRouter({
       const asset = await ctx.db.brandAsset.findUniqueOrThrow({
         where: { id: input.pressReleaseId },
       });
+      await assertStrategyAccess(ctx.session.user.id, asset.strategyId);
 
       const tags = asset.pillarTags as Record<string, unknown> | null;
       const distribution = (tags?.distribution as Array<Record<string, unknown>>) ?? [];
