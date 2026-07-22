@@ -181,13 +181,33 @@
       **Bornage** : monter l'éditeur récursif OU acter le raw-JSON + ajouter update/remove. **Déclencheur** :
       lot « éditeur ADVE ».
     - **Provenance/needsHuman non-enforcé** : INFERRED nourrit `computePillarS` comme DECLARED.
-  - **Phase 3** — ingestion d'un Brand Book officiel → piliers + vault (extracteur structuré manual-first,
-    kind `BRAND_BOOK`, flag `certainty=OFFICIAL`, intent gouverné) ; zéro fabrication (null sur absence).
+  - **Phase 3 — backend SHIPPÉ (Lot 1b, [ADR-0173](adr/0173-brand-book-ingestion.md), v6.27.247)** :
+    service `brand-book-ingestion` (2 extracteurs parité manual-first, preview→confirm, Intent
+    `INGEST_BRAND_BOOK` → gateway A/D/V + assets vault DRAFT, kind `BRAND_BOOK`, source `OFFICIAL`, zéro-fab
+    vérifié E2E). **Restant (déféré §ADR-0173 ci-dessous)** : surface cockpit/console, promotion produits,
+    logo binaire.
   - **Phase 4** — livrable **Brand Book complet** deux-strates (identité + système produit), gabarit
     multi-sections brand-skinné (cible SPAWT/Motion19).
   - **Phase 5** — profondeur du système visuel (applications carte/letterhead/merch, mauvais usages logo,
     PANTONE, type scale) — incrémental. **Déclencheur** : suite du chantier (l'ADVE détient déjà la
     matière — travail de *rendu*, pas de collecte).
+
+### §ADR-0173 — ingestion brand book (déférés, non bloquants)
+
+Le backend d'ingestion (extracteurs + Intent + tRPC + persister) est shippé et vérifié E2E. Restent :
+
+- **Surface cockpit/console** (upload → revue de l'extraction → apply) : les endpoints tRPC
+  `ingestion.previewBrandBook`/`ingestBrandBook` existent ; il manque l'écran opérateur (formulaire éditable
+  de l'extraction avant confirmation). **Bornage** : page `/console/…/brand-book` réutilisant le pattern
+  `market-study-ingestion` UI. **Déclencheur** : passe « éditeur ADVE » (Lot 2) — mutualiser le rendu de
+  formulaire nested.
+- **Promotion produits extraits → `v.produitsCatalogue`** : les produits d'un brand book (nom/prix/desc) ne
+  sont PAS auto-écrits (le schéma riche exige une matrice de valeur → fabrication). L'extraction brute est
+  disponible. **Bornage** : action opérateur « promouvoir » via le socle produit (`ensureProductIds`,
+  ADR-0171). **Déclencheur** : Lot CRUD produit (Lot 2).
+- **Logo binaire** : `pdf-parse` ne garde que le texte → le logo d'un brand book n'est pas extrait (seule sa
+  description l'est). **Bornage** : ré-upload image séparé → `LOGO_FINAL` (chaîne existante). **Déclencheur** :
+  quand un vrai book est ingéré en prod.
 
 ### §ADR-0172 — advisories de conformité canon (déférés, non bloquants)
 

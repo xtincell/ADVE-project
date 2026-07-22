@@ -334,7 +334,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Services backend — 120
+## Services backend — 121
 
 - `src/server/services/advertis-connectors/` ✓ manifest
 - `src/server/services/advertis-scorer/` ✓ manifest
@@ -347,6 +347,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/auto-promotion/` ✓ manifest
 - `src/server/services/board-export/` ✓ manifest
 - `src/server/services/boot-sequence/` ✓ manifest
+- `src/server/services/brand-book-ingestion/` ✓ manifest
 - `src/server/services/brand-node/` ✓ manifest
 - `src/server/services/brand-theme/`
 - `src/server/services/brand-tier-transition/`
@@ -1056,12 +1057,13 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 588 (par governor)
+## Intent kinds — 589 (par governor)
 
-### MESTOR (79)
+### MESTOR (80)
 
 - `FILL_ADVE` → mestor (sync) — Fill ADVE pillars from sources.…
 - `OPERATOR_AMEND_PILLAR` → mestor (sync) — Operator-driven ADVE pillar field amendment (PATCH_DIRECT / LLM_REPHRASE / STRAT…
+- `INGEST_BRAND_BOOK` → brand-book-ingestion (sync) — Lot 1b (ADR-0173) — persiste une extraction de brand book RÉVISÉE vers A/D/V (ga…
 - `OPERATOR_ARCHIVE_STRATEGY` → strategy-archive (sync) — Soft archive a Strategy (Strategy.archivedAt = now). Hides from default queries,…
 - `OPERATOR_RESTORE_STRATEGY` → strategy-archive (sync) — Restore a soft-archived Strategy (Strategy.archivedAt = null). Reverses OPERATOR…
 - `OPERATOR_PURGE_ARCHIVED_STRATEGY` → strategy-archive (sync) — Hard delete a Strategy + BFS cascade on 30+ child tables via information_schema …

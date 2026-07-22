@@ -480,6 +480,18 @@ export type Intent =
       expectedVersion?: number;
     }
   | {
+      // Lot 1b (ADR-0173) — ingestion d'un brand book officiel : écrit une extraction
+      // RÉVISÉE (par l'opérateur, preview→confirm) vers A/D/V via le gateway + assets
+      // vault DRAFT. Zéro fabrication (l'extracteur émet null sur absence).
+      kind: "INGEST_BRAND_BOOK";
+      strategyId: string;
+      operatorId: string;
+      /** Extraction révisée (BrandBookExtraction) — re-validée dans le handler. */
+      extraction: unknown;
+      sourceFilename?: string;
+      sourceDataSourceId?: string;
+    }
+  | {
       kind: "ANUBIS_FETCH_DELIVERY_REPORT";
       strategyId: string;
       operatorId: string;
@@ -1339,6 +1351,8 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
       return [];
     case "OPERATOR_AMEND_PILLAR":
       return [intent.pillarKey];
+    case "INGEST_BRAND_BOOK":
+      return ["a", "d", "v"]; // le brand book alimente A/D/V (staleness cascade en découle)
     case "OPERATOR_ARCHIVE_STRATEGY":
     case "OPERATOR_RESTORE_STRATEGY":
     case "OPERATOR_PURGE_ARCHIVED_STRATEGY":

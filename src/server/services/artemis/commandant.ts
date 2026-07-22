@@ -495,6 +495,13 @@ export async function execute(intent: Intent): Promise<IntentResult> {
         return wrap({ ...base, ...(await operatorAmendPillar(intent)) });
       }
 
+      case "INGEST_BRAND_BOOK": {
+        const { ingestBrandBook } = await import(
+          "@/server/services/brand-book-ingestion"
+        );
+        return wrap({ ...base, ...(await ingestBrandBook(intent)) });
+      }
+
       // ── ADR-0028 — Strategy archive 2-phase ───────────────────────
       case "OPERATOR_ARCHIVE_STRATEGY": {
         const { archiveStrategyHandler } = await import(

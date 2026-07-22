@@ -21,6 +21,7 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "FILL_ADVE", p95LatencyMs: 25_000, errorRatePct: 0.03, costP95Usd: 0.25 },
   // ADR-0023 — small-scope edit; PATCH_DIRECT zero LLM cost, LLM_REPHRASE bounded.
   { kind: "OPERATOR_AMEND_PILLAR", p95LatencyMs: 5_000, errorRatePct: 0.02, costP95Usd: 0.05 },
+  { kind: "INGEST_BRAND_BOOK", p95LatencyMs: 8_000, errorRatePct: 0.05, costP95Usd: 0.05 },
   // ADR-0048 — Strategy archive 2-phase. Archive/restore = single UPDATE.
   // Purge = transaction BFS sur 30+ tables, latency upper bound généreux pour
   // strategies avec beaucoup d'historique (CultIndexSnapshot/ScoreSnapshot).

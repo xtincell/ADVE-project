@@ -26,6 +26,7 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "FILL_ADVE", governor: "MESTOR", handler: "mestor", async: false, description: "Fill ADVE pillars from sources." },
   // ADR-0023 — manual operator amend (ADVE only, RTIS forbidden at type level).
   { kind: "OPERATOR_AMEND_PILLAR", governor: "MESTOR", handler: "mestor", async: false, description: "Operator-driven ADVE pillar field amendment (PATCH_DIRECT / LLM_REPHRASE / STRATEGIC_REWRITE)." },
+  { kind: "INGEST_BRAND_BOOK", governor: "MESTOR", handler: "brand-book-ingestion", async: false, description: "Lot 1b (ADR-0173) — persiste une extraction de brand book RÉVISÉE vers A/D/V (gateway) + assets vault DRAFT. Zéro fabrication (null sur absence)." },
   // ADR-0048 — Strategy archive 2-phase (soft archive → hard purge).
   { kind: "OPERATOR_ARCHIVE_STRATEGY", governor: "MESTOR", handler: "strategy-archive", async: false, description: "Soft archive a Strategy (Strategy.archivedAt = now). Hides from default queries, restorable. Refuses Wakanda dummies." },
   { kind: "OPERATOR_RESTORE_STRATEGY", governor: "MESTOR", handler: "strategy-archive", async: false, description: "Restore a soft-archived Strategy (Strategy.archivedAt = null). Reverses OPERATOR_ARCHIVE_STRATEGY." },

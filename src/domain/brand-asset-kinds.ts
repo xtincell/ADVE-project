@@ -125,6 +125,13 @@ export const BRAND_ASSET_KINDS = [
    *  en bible de marque téléchargeable. family=CONCEPTUAL, rendu PDF à la volée
    *  via `value-report-generator/brand-bible-pdf.ts` (jsPDF, comme l'Oracle). */
   "BRAND_BIBLE",
+
+  // ── Ingestion (Lot 1b, ADR-0173) — brand book officiel ENTRANT ────────────
+  /** Le brand book officiel FOURNI par la marque (PDF/deck), ingéré → source des
+   *  piliers A/D/V + assets vault. family=MATERIAL (fichier concret), fileUrl =
+   *  le document uploadé. DISTINCT de BRAND_BIBLE (output compilé PAR La Fusée) :
+   *  BRAND_BOOK = entrée, BRAND_BIBLE = sortie. Zéro fabrication à l'extraction. */
+  "BRAND_BOOK",
 ] as const;
 
 export type BrandAssetKind = (typeof BRAND_ASSET_KINDS)[number];

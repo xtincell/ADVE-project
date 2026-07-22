@@ -10,6 +10,18 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.247 — feat(ingestion): un brand book officiel → piliers A/D/V + vault (Lot 1b) (2026-07-22)
+
+**La matière la plus riche (le brand book que la marque possède déjà) entre enfin dans La Fusée — sans jamais rien inventer. Extraction structurée (LLM ou parseur déterministe) → revue opérateur → écriture gouvernée A/D/V + assets vault DRAFT. [ADR-0173](docs/governance/adr/0173-brand-book-ingestion.md).**
+
+- **Service `brand-book-ingestion`** (governor MESTOR) : `BrandBookExtractionSchema` (tout `.nullable().optional()` — absence = null, zéro fabrication) + deux extracteurs à parité manual-first (ADR-0060) — `extractor-llm` (`executeStructuredLLMCall` ADR-0067, consigne anti-fab DURE) et `extractor-structured` (parseur pur : couleurs hex + polices connues, zéro LLM).
+- **Preview → confirm** (motif `market-study-ingestion`) : `previewBrandBook` EXTRAIT sans écrire (revue opérateur, plancher déterministe complète le LLM sans l'écraser) ; l'écriture n'a lieu qu'après validation. **L'écriture ADVE reste une décision opérateur** (ADR-0023, STOP à Jehuty) → `operatorProcedure`.
+- **Écriture gouvernée** : Intent `INGEST_BRAND_BOOK` → `writePillarAndScore` (C5, `author.system:"INGESTION"`, `fieldProvenance` SOURCE) pour A/D/V + assets `CHROMATIC_STRATEGY`/`TYPOGRAPHY_SYSTEM` en DRAFT (l'opérateur promeut, motif `source-classifier`). **Mapping conservateur** : produits/valeurs Schwartz (schémas à matrice) NON auto-écrits (fabriqueraient) — conservés pour promotion opérateur.
+- **Nouveau kind `BRAND_BOOK`** (entrée) distinct de `BRAND_BIBLE` (sortie). tRPC `ingestion.previewBrandBook`/`ingestBrandBook`. Source uploadée → `certainty="OFFICIAL"`.
+- **Zéro fabrication VÉRIFIÉE** (E2E) : extraction null → RIEN écrit ; extraction réelle → A/D/V (9 champs) + 2 assets DRAFT. Tests `brand-book-ingestion` (10). tsc 0 · **1110 tests gouvernance verts**. 0 modèle · 0 migration · cap 7/7. **589 Intent kinds** (recompte 2026-07-22). Déférés RESIDUAL-DEBT §ADR-0173 : surface cockpit, promotion produits, logo binaire.
+
+---
+
 ## v6.27.246 — feat(scorer): gate anti-corruption des piliers + conformité des 4 canons (Lot 1) (2026-07-22)
 
 **Le seed ne persiste plus de forme malformée en silence. Un gate distingue la corruption structurelle (objet/tableau attendu là où un scalaire casse le rendu — refusée) de l'état DRAFT légitime (enum FR, placeholder, champ manquant — toléré, journalisé). Les 4 canons seed sont A→I SHAPE=0. [ADR-0172](docs/governance/adr/0172-normalize-to-strict-schema.md).**

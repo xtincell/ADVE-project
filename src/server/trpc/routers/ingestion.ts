@@ -3,7 +3,8 @@
  */
 
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { TRPCError } from "@trpc/server";
+import { createTRPCRouter, protectedProcedure, adminProcedure, operatorProcedure } from "../init";
 import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import * as ingestion from "@/server/services/ingestion-pipeline";
 import { AdveKeySchema } from "@/domain";
@@ -294,5 +295,59 @@ export const ingestionRouter = createTRPCRouter({
       })();
       fireVaultProposalHook(input.strategyId, created.id, ctx.session.user.id);
       return created;
+    }),
+
+  // ── Brand book ingestion (ADR-0173, Lot 1b) — preview→confirm, opérateur ──
+  // L'écriture ADVE est une décision opérateur (STOP à Jehuty) → operatorProcedure.
+  /** EXTRAIT un brand book uploadé pour REVUE (aucune écriture). Coûte un LLM en mode LLM. */
+  previewBrandBook: operatorProcedure
+    .input(z.object({ strategyId: z.string(), sourceId: z.string(), mode: z.enum(["LLM", "STRUCTURED"]).default("LLM") }))
+    .mutation(async ({ ctx, input }) => {
+      const source = await ctx.db.brandDataSource.findFirst({
+        where: { id: input.sourceId, strategyId: input.strategyId },
+        select: { rawContent: true, fileName: true },
+      });
+      if (!source?.rawContent) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Source introuvable ou sans texte extrait — uploade d'abord le brand book." });
+      }
+      const { previewBrandBook } = await import("@/server/services/brand-book-ingestion");
+      const extraction = await previewBrandBook({
+        strategyId: input.strategyId,
+        text: source.rawContent,
+        mode: input.mode,
+        caller: `operator:${ctx.session.user.id}`,
+        sourceFilename: source.fileName ?? undefined,
+      });
+      return { extraction };
+    }),
+
+  /** PERSISTE une extraction RÉVISÉE via l'Intent gouverné (gateway + assets DRAFT). */
+  ingestBrandBook: operatorProcedure
+    .input(z.object({
+      strategyId: z.string(),
+      extraction: z.unknown(),
+      sourceFilename: z.string().optional(),
+      sourceDataSourceId: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Marque la source « OFFICIELLE » (fait vérifié) si fournie.
+      if (input.sourceDataSourceId) {
+        await ctx.db.brandDataSource.updateMany({
+          where: { id: input.sourceDataSourceId, strategyId: input.strategyId },
+          data: { certainty: "OFFICIAL" },
+        });
+      }
+      const { emitIntent } = await import("@/server/services/mestor/intents");
+      return emitIntent(
+        {
+          kind: "INGEST_BRAND_BOOK",
+          strategyId: input.strategyId,
+          operatorId: ctx.session.user.id,
+          extraction: input.extraction,
+          sourceFilename: input.sourceFilename,
+          sourceDataSourceId: input.sourceDataSourceId,
+        },
+        { caller: "trpc.ingestion.ingestBrandBook" },
+      );
     }),
 });
