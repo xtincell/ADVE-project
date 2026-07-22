@@ -10,6 +10,18 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.246 — feat(scorer): gate anti-corruption des piliers + conformité des 4 canons (Lot 1) (2026-07-22)
+
+**Le seed ne persiste plus de forme malformée en silence. Un gate distingue la corruption structurelle (objet/tableau attendu là où un scalaire casse le rendu — refusée) de l'état DRAFT légitime (enum FR, placeholder, champ manquant — toléré, journalisé). Les 4 canons seed sont A→I SHAPE=0. [ADR-0172](docs/governance/adr/0172-normalize-to-strict-schema.md).**
+
+- **Constat** : le canon et le schéma Zod strict étaient **deux modèles de données** (~450 divergences/canon, pas « des douzaines »). Les forcer à zéro exigerait d'assouplir le schéma (écarté) OU d'inventer du contenu (interdit n°3 : placeholders « à calibrer »→number, bios non publiques). Le gate tranche : refuser la corruption de rendu, tolérer visiblement l'incomplétude DRAFT.
+- **`src/lib/types/pillar-conformance.ts`** — `classifyPillarConformance` (SHAPE/ENUM/TYPE/LENGTH/MISSING **par `code` Zod**, robuste) + `assertPillarConforms` (throw sur SHAPE, retourne les advisories). `validatePillarContent` expose désormais `code`/`expected`/`received`.
+- **Conformité via le précédent [ADR-0168](docs/governance/adr/0168-pillar-shape-tolerance-compact-vs-rich.md)** : les ~85 corruptions SHAPE/canon fermées en étendant `z.union([string, objet])` (+ renderer tolérant) aux formes duales récurrentes — **jamais** en réécrivant la donnée (perte de contenu INFERRED réel) ni en fabriquant les sous-champs. **Le schéma reste STRICT** (une union accepte 2 formes légitimes, pas n'importe quoi). **Une union corrige les 4 canons à la fois** → motion19 · spawt · upgraders · lafusee **A→I SHAPE=0** (S exclu — computed).
+- **Gate câblé** aux 4 seeds (persistance brute — refs lisibles intactes). **Test CI** `canon-conformance` (loi universelle sans DB, 33). **E2E** `db:seed:motion19` : gate franchi, advisories logguées (ex. E : 57 enum · 4 type · 28 manquant, tolérés).
+- Tests `schema-normalizer` (12) + `canon-conformance` (33). tsc 0 · lint 0 · lint:governance 0 · cycles clean · **1304 tests verts**. 0 modèle · 0 migration · 0 LLM · 0 Intent kind · cap 7/7. Déférés tracés RESIDUAL-DEBT §ADR-0172 (traduction enum FR, normalisation id→UUID Lot 3, extracteur ingestion Lot 1b).
+
+---
+
 ## v6.27.245 — feat(scorer): applicateur schéma-guidé `normalizeToSchema` (Lot 1) (2026-07-22)
 
 **Le walk Zod qui applique les coercions par champ — enums accentués, ids lisibles→UUID stable, numériques string — en profondeur sur objets/arrays/records. Ne fabrique jamais (valeur non-coercible laissée intacte). [ADR-0172](docs/governance/adr/0172-normalize-to-strict-schema.md).**

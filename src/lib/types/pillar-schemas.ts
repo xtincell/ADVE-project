@@ -44,6 +44,17 @@ const rank = z.number().int().min(1);
 // Core-Engine refactor — ADR-0088.
 const entityId = z.string().uuid();
 
+// ── ADR-0168 — formes duales légitimes (compacte humaine ∪ structurée) ──────
+// Le canon (et les brand books ingérés) sont souvent authored en forme compacte
+// (une phrase, une liste de phrases) là où le schéma modélise une forme riche.
+// Ce n'est PAS de la corruption — c'est une forme d'écriture légitime (précédent
+// ADR-0168 : prophecy/doctrine/proofPoints). Le schéma reste STRICT : il accepte
+// les DEUX formes, jamais n'importe quoi. Le renderer tolère les deux (pillar-kit).
+const stringOrShape = <T extends z.ZodTypeAny>(shape: T) => z.union([z.string().min(1), shape]);
+const numberOrShape = <T extends z.ZodTypeAny>(shape: T) => z.union([z.number(), shape]);
+const listOfStringOr = <T extends z.ZodTypeAny>(shape: T) => z.array(z.union([z.string().min(1), shape]));
+const oneOrManyStrings = z.union([z.string().min(1), z.array(z.string().min(1))]);
+
 // ============================================================================
 // PILIER A — AUTHENTICITÉ
 // ============================================================================
@@ -121,8 +132,11 @@ export const PillarASchema = z.object({
   // Valeurs Schwartz (1-3 valeurs max — une marque forte ne dépasse jamais 3 valeurs)
   valeurs: z.array(BrandValueSchema).min(1).max(3),
 
-  // Hiérarchie communautaire
-  hierarchieCommunautaire: z.array(CommunityLevelSchema).min(4).max(6),
+  // Hiérarchie communautaire — forme riche (ladder) OU compacte {niveaux, principe} (ADR-0168)
+  hierarchieCommunautaire: z.union([
+    z.array(CommunityLevelSchema).min(4).max(6),
+    z.object({ niveaux: z.array(z.string().min(1)).min(3), principe: z.string().min(1).optional() }),
+  ]),
 
   // Timeline narrative
   timelineNarrative: TimelineNarrativeSchema.optional(),
@@ -131,9 +145,10 @@ export const PillarASchema = z.object({
   prophecy: z.union([
     z.object({
       worldTransformed: z.string().min(1),
-      pioneers: z.string().min(1),
-      urgency: z.string().min(1),
-      horizon: z.string().min(1),
+      vision: z.string().min(1).optional(),   // forme canon (vision + worldTransformed + horizon)
+      pioneers: z.string().min(1).optional(),
+      urgency: z.string().min(1).optional(),
+      horizon: z.string().min(1).optional(),
     }),
     z.string().min(1), // legacy flat string
   ]).optional(),
@@ -142,31 +157,32 @@ export const PillarASchema = z.object({
     manifesto: textMedium.optional(),
     narrative: textMedium.optional(),
     enemySchwartzValues: z.array(z.enum(SCHWARTZ_VALUES)).optional(),
-    overtonMap: z.object({
+    overtonMap: stringOrShape(z.object({
       ourPosition: z.string().min(1).optional(),
       enemyPosition: z.string().min(1).optional(),
       battleground: z.string().min(1).optional(),
       shiftDirection: z.string().min(1).optional(),
-    }).optional(),
-    enemyBrands: z.array(z.object({
+    })).optional(),
+    enemyBrands: listOfStringOr(z.object({
       name: textShort,
       howTheyFight: textShort.optional(),
     })).optional(),
-    activeOpposition: z.array(z.string().min(1)).optional(),
-    passiveOpposition: z.array(z.string().min(1)).optional(),
-    counterStrategy: z.object({
+    activeOpposition: oneOrManyStrings.optional(),
+    passiveOpposition: oneOrManyStrings.optional(),
+    counterStrategy: stringOrShape(z.object({
       marketingCounter: textMedium.optional(),
       alliances: z.array(textShort).optional(),
-    }).optional(),
-    fraternityFuel: z.object({
+    })).optional(),
+    fraternityFuel: stringOrShape(z.object({
       sharedHatred: z.string().min(1).optional(),
       bondingRituals: z.array(z.string().min(1)).optional(),
-    }).optional(),
+    })).optional(),
   }).optional(),
   doctrine: z.union([
     z.object({
       dogmas: z.array(z.string().min(1)).min(3),
-      principles: z.array(z.string().min(1)).min(3),
+      texte: z.string().min(1).optional(),          // forme canon (texte + dogmas)
+      principles: z.array(z.string().min(1)).optional(),
       practices: z.array(z.string().min(1)).optional(),
     }),
     z.string().min(1), // legacy flat string
@@ -206,12 +222,12 @@ export const PillarASchema = z.object({
   messieFondateur: z.object({
     nom: z.string().min(1),
     role: z.string().min(1),
-    charismaScore: z.object({
+    charismaScore: numberOrShape(z.object({
       conviction: z.number().min(0).max(10),
       storytelling: z.number().min(0).max(10),
       presence: z.number().min(0).max(10),
       authenticity: z.number().min(0).max(10),
-    }).optional(),
+    })).optional(),
     narrative: z.string().min(50),
   }).optional(),
   competencesDivines: z.array(z.object({
@@ -284,7 +300,7 @@ const PersonaSchema = z.object({
   brandRelationships: z.string().min(1).optional(),
 
   // Motivation & Friction
-  motivations: z.string().min(1),
+  motivations: oneOrManyStrings,   // une phrase OU une liste de motivations (ADR-0168)
   fears: z.string().min(1).optional(),
   hiddenDesire: z.string().min(1).optional(),
   whatTheyActuallyBuy: z.string().min(1).optional(),
@@ -324,7 +340,7 @@ export const PillarDSchema = z.object({
 
   // Promesses de marque
   promesseMaitre: z.string().max(150, "La promesse maître doit faire ≤150 caractères"),
-  sousPromesses: z.array(z.string().min(1)).min(2),
+  sousPromesses: listOfStringOr(z.object({ promesse: z.string().min(1), preuve: z.string().min(1).optional() })).min(2),
 
   // Positionnement
   positionnement: z.string().max(200, "Le positionnement doit faire ≤200 caractères"),
@@ -556,7 +572,7 @@ const UnitEconomicsSchema = z.object({
 export const PillarVSchema = z.object({
   // ── Fondamentaux économiques (migrés de Strategy.businessContext) ─────
   businessModel: z.string().min(1).optional(),             // BusinessModelKey (PRODUCTION, DISTRIBUTION, etc.)
-  economicModels: z.array(z.string().min(1)).optional(),
+  economicModels: listOfStringOr(z.object({ modele: z.string().min(1), part: z.number().optional() })).optional(),
   positioningArchetype: z.string().min(1).optional(),      // PositioningArchetypeKey (ULTRA_LUXE, PREMIUM, etc.)
   salesChannel: z.enum(SALES_CHANNELS).optional(),
   freeLayer: z.object({
@@ -623,7 +639,7 @@ export const PillarVSchema = z.object({
     secretsCommerciaux: z.array(z.string().min(1)).optional(),
     technologieProprietary: z.string().optional(),   // Description de l'avantage techno
     barrieresEntree: z.array(z.string().min(1)).optional(), // Moats / barrieres
-    licences: z.array(z.object({
+    licences: listOfStringOr(z.object({
       nom: z.string().min(1),
       type: z.string().min(1),                       // Exclusive, non-exclusive, etc.
     })).optional(),
@@ -653,7 +669,7 @@ export const PillarVSchema = z.object({
     justification: z.string().min(1),
   }).optional(),
   packagingExperience: z.object({
-    unboxingRitual: z.array(z.string()).optional(),
+    unboxingRitual: oneOrManyStrings.optional(),
     packagingMaterial: z.enum(["premium", "standard", "eco"]).optional(),
     deliveryMode: z.enum(["express", "standard", "event"]).optional(),
     sensoryNotes: z.string().optional(),
@@ -749,17 +765,17 @@ export const PillarESchema = z.object({
   rituels: z.array(RitualSchema).min(3).max(10),
 
   // Principes communautaires
-  principesCommunautaires: z.array(z.object({
+  principesCommunautaires: listOfStringOr(z.object({
     principle: z.string().min(1),
-    enforcement: textShort,
+    enforcement: textShort.optional(),
   })).min(3).optional(),
 
   // Gamification
   gamification: z.object({
-    niveaux: z.array(z.object({
+    niveaux: listOfStringOr(z.object({
       niveau: textShort,
-      condition: textShort,
-      reward: textShort,
+      condition: textShort.optional(),
+      reward: textShort.optional(),
       duration: textShort.optional(),
     })).min(3),
     recompenses: z.array(textShort).optional(),
@@ -778,17 +794,20 @@ export const PillarESchema = z.object({
   kpis: z.array(KPISchema).min(6),
 
   // Tabous communautaires
-  taboos: z.array(z.object({
+  taboos: listOfStringOr(z.object({
     taboo: textShort,
     consequence: textShort.optional(),
   })).optional(),
 
   // Extensions engagement sacré
-  sacredCalendar: z.array(z.object({
-    date: textShort,
-    name: textShort,
-    significance: textShort,
-  })).min(4).optional(),
+  sacredCalendar: z.union([
+    z.array(z.object({
+      date: textShort,
+      name: textShort,
+      significance: textShort,
+    })).min(4),
+    z.record(z.string(), z.string()),   // forme cadence {quotidien, hebdomadaire, mensuel, annuel} (ADR-0168)
+  ]).optional(),
 
   commandments: z.array(z.object({
     commandment: textShort,
@@ -813,24 +832,24 @@ export const PillarESchema = z.object({
 
   // ── ADR-0037 PR-K — nouveaux fields canon manuel ADVE ────────────────
   clergeStructure: z.object({
-    communityManager: z.object({
+    communityManager: stringOrShape(z.object({
       name: z.string().min(1),
       role: z.string().min(1),
       status: z.enum(["FULL_TIME", "PART_TIME", "VOLUNTEER"]),
-    }).nullable().optional(),
-    ambassadeurs: z.array(z.object({
+    })).nullable().optional(),
+    ambassadeurs: z.union([z.string().min(1), z.array(z.object({
       name: z.string().min(1),
       reach: z.number().int().optional(),
       tier: z.enum(["ALPHA", "BETA", "MICRO"]).optional(),
-    })).optional(),
-    supportTeam: z.object({
+    }))]).optional(),
+    supportTeam: stringOrShape(z.object({
       size: z.number().int().min(0),
       sla: z.string().optional(),
-    }).optional(),
-    specialists: z.array(z.object({
+    })).optional(),
+    specialists: z.union([z.string().min(1), z.array(z.object({
       name: z.string().min(1),
       expertise: z.string().min(1),
-    })).optional(),
+    }))]).optional(),
   }).optional(),
   pelerinages: z.array(z.object({
     name: z.string().min(1),
@@ -841,29 +860,29 @@ export const PillarESchema = z.object({
     entryRitual: z.string().optional(),
   })).optional(),
   programmeEvangelisation: z.object({
-    referralProgram: z.object({
+    referralProgram: stringOrShape(z.object({
       incentive: z.string().min(1),
       viralCoefficient: z.number().optional(),
       launchedAt: z.string().optional(),
-    }).nullable().optional(),
-    brandAdvocacyProgram: z.object({
+    })).nullable().optional(),
+    brandAdvocacyProgram: stringOrShape(z.object({
       tiers: z.array(z.string()).optional(),
       rewards: z.string().optional(),
       kpi: z.string().optional(),
-    }).nullable().optional(),
-    communityRecruitment: z.object({
+    })).nullable().optional(),
+    communityRecruitment: stringOrShape(z.object({
       channels: z.array(z.string()).optional(),
       conversionRate: z.number().optional(),
-    }).nullable().optional(),
+    })).nullable().optional(),
   }).optional(),
   communityBuilding: z.object({
-    platforms: z.array(z.object({
+    platforms: listOfStringOr(z.object({
       name: z.string().min(1),
-      type: z.enum(["DISCORD", "SLACK", "FACEBOOK_GROUP", "FORUM", "CIRCLE", "OTHER"]),
+      type: z.enum(["DISCORD", "SLACK", "FACEBOOK_GROUP", "FORUM", "CIRCLE", "OTHER"]).optional(),
       memberCount: z.number().int().min(0).optional(),
     })).min(1).optional(),
     moderationRules: z.array(z.string()).min(3).optional(),
-    growthMechanics: z.array(z.enum(["referral", "content", "events"])).optional(),
+    growthMechanics: z.union([z.string().min(1), z.array(z.enum(["referral", "content", "events"]))]).optional(),
   }).optional(),
 });
 
@@ -931,10 +950,10 @@ export const OvertonBlockerSchema = z.object({
 export const PillarRSchema = z.object({
   // ── Diagnostic ADVE (transition E→R) ─────────────────────────────────
   pillarGaps: z.object({
-    a: z.object({ score: z.number().optional(), gaps: z.array(z.string()).optional() }).optional(),
-    d: z.object({ score: z.number().optional(), gaps: z.array(z.string()).optional() }).optional(),
-    v: z.object({ score: z.number().optional(), gaps: z.array(z.string()).optional() }).optional(),
-    e: z.object({ score: z.number().optional(), gaps: z.array(z.string()).optional() }).optional(),
+    a: stringOrShape(z.object({ score: z.number().optional(), gaps: z.array(z.string()).optional() })).optional(),
+    d: stringOrShape(z.object({ score: z.number().optional(), gaps: z.array(z.string()).optional() })).optional(),
+    v: stringOrShape(z.object({ score: z.number().optional(), gaps: z.array(z.string()).optional() })).optional(),
+    e: stringOrShape(z.object({ score: z.number().optional(), gaps: z.array(z.string()).optional() })).optional(),
   }).optional(),
   coherenceRisks: z.array(z.object({
     pillar1: z.string().min(1),
@@ -999,7 +1018,7 @@ const WeakSignalSchema = z.object({
   confidence: z.number().min(0).max(1),
   urgency: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]),
   relatedPillars: z.array(z.string()).optional(),
-  supportingSignals: z.array(z.object({
+  supportingSignals: listOfStringOr(z.object({
     title: z.string().min(1),
     content: z.string().min(1),
     addedConfidence: z.number().min(0).max(0.3),
@@ -1029,7 +1048,7 @@ export const PillarTSchema = z.object({
   // ── Fenêtre d'Overton mesurée (Chantier -1 §-1.2) ───────────────────
   overtonPosition: z.object({
     currentPerception: z.string().min(1),                    // Comment le marché perçoit la marque MAINTENANT
-    marketSegments: z.array(z.object({
+    marketSegments: listOfStringOr(z.object({
       segment: z.string().min(1),
       perception: z.string().min(1),
     })).optional(),
@@ -1097,21 +1116,21 @@ export const PillarTSchema = z.object({
 
   // ── Berkus: Traction / Signaux precoces ────────────────────────────────
   traction: z.object({
-    loisSignees: z.array(z.object({
+    loisSignees: numberOrShape(z.array(z.object({
       partenaire: z.string().min(1),
       type: z.enum(["LOI", "MOU", "CONTRAT", "PRECOMMANDE", "PILOTE"]),
       valeur: z.number().optional(),                 // Valeur en devise
       date: z.string().optional(),
-    })).optional(),
+    }))).optional(),
     utilisateursInscrits: z.number().min(0).optional(),
     utilisateursActifs: z.number().min(0).optional(),
     croissanceHebdo: z.number().optional(),           // % croissance WoW
     revenusRecurrents: z.number().min(0).optional(),  // MRR/ARR
-    metriqueCle: z.object({                           // North Star Metric
+    metriqueCle: stringOrShape(z.object({             // North Star Metric — objet OU note libre (ADR-0168)
       nom: z.string().min(1),
       valeur: z.number(),
       tendance: z.enum(["UP", "DOWN", "STABLE"]),
-    }).optional(),
+    })).optional(),
     preuvesTraction: z.array(z.string().min(1)).optional(), // Texte libre: preuves qualitatives
     tractionScore: z.number().min(0).max(10).optional(),    // Derive automatiquement
   }).optional(),
@@ -1169,16 +1188,16 @@ const PotentialActivationSchema = z.object({
 export const PillarISchema = z.object({
   // ── Transitions T→I (le potentiel guidé par la réalité marché) ───────
   actionsByDevotionLevel: z.object({
-    SPECTATEUR: z.array(PotentialActionSchema).optional(),
-    INTERESSE: z.array(PotentialActionSchema).optional(),
-    PARTICIPANT: z.array(PotentialActionSchema).optional(),
-    ENGAGE: z.array(PotentialActionSchema).optional(),
-    AMBASSADEUR: z.array(PotentialActionSchema).optional(),
-    EVANGELISTE: z.array(PotentialActionSchema).optional(),
+    SPECTATEUR: listOfStringOr(PotentialActionSchema).optional(),
+    INTERESSE: listOfStringOr(PotentialActionSchema).optional(),
+    PARTICIPANT: listOfStringOr(PotentialActionSchema).optional(),
+    ENGAGE: listOfStringOr(PotentialActionSchema).optional(),
+    AMBASSADEUR: listOfStringOr(PotentialActionSchema).optional(),
+    EVANGELISTE: listOfStringOr(PotentialActionSchema).optional(),
   }).optional(),
   actionsByOvertonPhase: z.array(z.object({
     phase: z.string().min(1),                                // "early_adopters", "mainstream", "resistants"
-    actions: z.array(PotentialActionSchema),
+    actions: listOfStringOr(PotentialActionSchema),
   })).optional(),
   riskMitigationActions: z.array(z.object({
     riskRef: z.string().min(1).optional(),                   // @deprecated (ADR-0088) — text name, use riskId
@@ -1228,7 +1247,7 @@ export const PillarISchema = z.object({
     competitiveAdvantage: textShort.optional(),
     emotionalBenefit: textShort.optional(),
     functionalBenefit: textShort.optional(),
-    supportedBy: textShort.optional(),
+    supportedBy: oneOrManyStrings.optional(),   // une preuve OU une liste (ADR-0168)
   }).optional(),
 
   // ── Copy strategy (stable) ────────────────────────────────────────────
@@ -1517,11 +1536,15 @@ export type PillarContent =
 /**
  * Validate pillar content against its schema
  * Returns { success: true, data } or { success: false, errors }
+ *
+ * `code`/`expected`/`received` sont exposés (best-effort, additifs) pour permettre
+ * une classification robuste des divergences (cf. pillar-conformance.ts, ADR-0172) —
+ * le message texte seul est fragile (messages custom, i18n).
  */
 export function validatePillarContent(key: PillarKey, content: unknown): {
   success: boolean;
   data?: PillarContent;
-  errors?: Array<{ path: string; message: string }>;
+  errors?: Array<{ path: string; message: string; code?: string; expected?: string; received?: string }>;
 } {
   const schema = PILLAR_SCHEMAS[key];
   const result = schema.safeParse(content);
@@ -1535,6 +1558,9 @@ export function validatePillarContent(key: PillarKey, content: unknown): {
     errors: result.error.issues.map((issue) => ({
       path: issue.path.join("."),
       message: issue.message,
+      code: (issue as { code?: string }).code,
+      expected: (issue as { expected?: string }).expected,
+      received: (issue as { received?: string }).received,
     })),
   };
 }

@@ -34,28 +34,56 @@ mécanique, deux points d'application.**
   restent cohérentes** après remap. `normalizeId` est idempotent (passe-plat sur un UUID existant).
 - `coerceNumber(raw)` — « ≈150 000 FCFA » → 150000 ; conservateur (null si non-extractible).
 
-### Suite du lot (increments à venir, tracés)
+### Applicateur (shippé)
 
-- **Applicateur schéma-guidé** `normalizeToSchema(content, zodSchema)` : walk du schéma (réutilise les
-  helpers d'introspection Zod existants de `pillar-maturity-contracts.ts` — `unwrapZod`,
-  `inferValidatorFromZod`, `extractObjectKeys`), applique les coercions par champ (enum, uuid, number),
-  restructure les formes compactes connues.
-- **Gate Zod au seed** : `validatePillarContent` avant persistance → les mismatches ne persistent plus en
-  silence (fail-loud).
-- **Conformité des canons** actifs (motion19/spawt) passés au normaliseur jusqu'à validation stricte.
+- **`normalizeToSchema(content, zodSchema)`** (`schema-normalizer.ts`) : walk du schéma Zod, coercions par
+  champ (enum fold, id lisible→UUID stable, numérique string→number), récursif objets/arrays/records. Ne
+  fabrique jamais — valeur non-coercible laissée intacte. Réservé à l'**ingestion** (Phase 3, donnée neuve
+  messy) ; pour le canon la normalisation leaf est classifiante seulement (persistance brute — cf. gate).
+
+### Le gate anti-corruption + sa sémantique honnête (shippé)
+
+Le canon et le schéma strict se sont révélés être **deux modèles de données** (~450 divergences/canon,
+non « des douzaines »). Les forcer TOUTES à zéro exigerait soit d'assouplir le schéma (écarté), soit
+d'**inventer du contenu** (interdit n°3 — placeholders « à calibrer »→number, bios non publiques, champs
+manquants). Le gate (`pillar-conformance.ts`) distingue donc ce qui **casse le rendu** (à refuser) de
+l'état DRAFT légitime (à tolérer, visiblement) :
+
+- **SHAPE (HARD-FAIL)** : un objet/tableau attendu là où on reçoit un scalaire (ou l'inverse). Le renderer
+  fait `.map()`/`.champ` → écran blanc. Reshapeable sans fabriquer. **Refusé** (throw au seed).
+- **ENUM / TYPE / LENGTH / MISSING (advisories, tolérés)** : enum FR non-canonique (rend en l'état),
+  placeholder numérique (« à calibrer »), longueur, champ absent (DRAFT — `validationStatus DRAFT` +
+  `fieldCertainty INFERRED` marquent précisément l'incomplétude ; l'opérateur complète via l'amendement).
+
+Classification **par `code` Zod** (robuste — insensible aux messages custom/i18n ; `validatePillarContent`
+expose `code`/`expected`/`received`).
+
+### Conformité des 4 canons via le précédent ADR-0168 (shippé)
+
+La corruption SHAPE (~85/canon) est fermée en étendant le **précédent ADR-0168** (`z.union([string, objet])`
++ renderer tolérant) aux formes duales récurrentes — **jamais** en réécrivant la donnée (qui supprimerait
+du contenu INFERRED réel) ni en fabriquant les sous-champs manquants. **Le schéma reste STRICT** : une
+union `string ∪ objet` accepte DEUX formes légitimes, pas n'importe quoi. Levier : **une union corrige le
+champ dans les 4 canons à la fois** (ils partagent le style d'écriture). Résultat : **motion19 · spawt ·
+upgraders · lafusee = A→I SHAPE=0** (S exclu — computed par `computePillarS`, pas authored).
 
 ## Conséquences
 
-- Base déterministe et testée de la « normalisation vers le strict » ; réutilisable ingestion + canon.
-- **Tests** : `tests/unit/domain/schema-normalizer.test.ts` (8 — enums accents/casse/séparateurs, UUID
-  stable & reproductible & idempotent, coercion numérique). tsc 0 · lint 0.
-- **0 modèle Prisma**, **0 migration**, **0 LLM**, **0 Intent kind**, cap 7/7. Primitives non encore
-  câblées (foundation) — l'applicateur + la conformité canon suivent dans ce même lot.
+- **Gate câblé** aux 4 seeds (`seed-motion19` · `seed-upgraders` (upgraders+lafusee) · `seed-spawt`),
+  throw sur SHAPE, advisories journalisées. Persistance **brute** (ids lisibles + refs intacts — la
+  normalisation d'id/enum est déférée à l'ingestion + Lot 3).
+- **Test CI** `tests/unit/governance/canon-conformance.test.ts` (loi universelle sans DB) : les 4 canons
+  A→I SHAPE=0 + classifieur SHAPE-vs-advisory + le gate jette sur une vraie corruption.
+- **Tests** : `schema-normalizer` (12) + `canon-conformance` (33). tsc 0 · lint 0 · lint:governance 0 ·
+  audit:cycles clean · 1304 tests verts. **E2E** : `db:seed:motion19` passe le gate, advisories logguées.
+- **0 modèle Prisma**, **0 migration**, **0 LLM**, **0 Intent kind**, cap 7/7.
 
-## Hors périmètre (déféré — audit ADVE)
+## Hors périmètre (déféré — RESIDUAL-DEBT §ADR-0172)
 
-Applicateur schéma-guidé, gate Zod seed, conformité des 4 canons, extracteur d'ingestion (Phase 3),
-champs invisibles + CRUD (Lot 2), 22 arêtes de référence (Lot 3). Tout tracé RESIDUAL-DEBT + audit ADVE.
+Traduction sémantique enum FR→canonique (advisory, ~120/canon), normalisation id lisible→UUID au seed
+(déférée Lot 3 pour préserver l'intégrité des refs), S computed vs seedé-brut pour upgraders/lafusee
+(incohérence pré-existante — motion19 le calcule), extracteur d'ingestion (Phase 3, Lot 1b), champs
+invisibles + CRUD (Lot 2), 22 arêtes de référence (Lot 3).
 
 ## Lectures associées
 

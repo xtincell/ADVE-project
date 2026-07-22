@@ -40,6 +40,8 @@ import {
   PILLAR_S,
 } from "@/server/services/canon/motion19-canon";
 import { brandPublicSlug } from "@/domain/brand-slug";
+import { assertPillarConforms } from "@/lib/types/pillar-conformance";
+import type { PillarKey } from "@/lib/types/pillar-schemas";
 
 const MOTION19_PUBLIC_SLUG = brandPublicSlug("motion19"); // LFA-motion19
 import { guildMissionBriefSchema, slugifyMissionTitle } from "@/lib/types/guild-mission-brief";
@@ -107,6 +109,18 @@ export async function seedMotion19(prisma: PrismaClient): Promise<void> {
   // ── A → I : upsert canon (DRAFT + fieldCertainty INFERRED sur ADVE) ──
   for (const p of MOTION19_CANON_PILLARS) {
     if (p.key === "s") continue; // S recalculé ci-dessous
+    // Gate anti-corruption (ADR-0172) : refuse la corruption de forme (SHAPE — un
+    // objet/tableau attendu là où une valeur scalaire casse le rendu) ; tolère les
+    // advisories d'un état DRAFT (enums FR non canoniques, ids lisibles, placeholders
+    // « à calibrer », champs manquants). Le contenu persisté reste brut (refs lisibles
+    // intactes) — la normalisation leaf est réservée à l'ingestion (Phase 3) + Lot 3.
+    const conf = assertPillarConforms(p.key.toUpperCase() as PillarKey, p.content, `motion19/${p.key}`);
+    const adv = conf.enum.length + conf.type.length + conf.length.length + conf.missing.length;
+    if (adv > 0) {
+      console.log(
+        `  [conformance] ${p.key.toUpperCase()} : ${conf.enum.length} enum · ${conf.type.length} type · ${conf.length.length} longueur · ${conf.missing.length} manquant (DRAFT, tolérés)`,
+      );
+    }
     const certainty =
       p.key === "a" || p.key === "d" || p.key === "v" || p.key === "e"
         ? (MOTION19_FIELD_CERTAINTY[p.key] as unknown as Prisma.InputJsonValue)

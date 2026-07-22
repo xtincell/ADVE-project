@@ -165,12 +165,11 @@
     (cross-validator rule 31) + lien système↔catalogue. **1/23 arêtes de référence fermée.**
   - **🔴 AUDIT D'INTÉGRITÉ ADVE (2026-07-22)** — [carte complète](../audits/ADVE-INTEGRITY-AUDIT-2026-07-22.md).
     Balayage exhaustif des 8 piliers avant l'ingestion → trous de fond systémiques (prérequis Phase 3) :
-    - **Canon↔schéma cassé** : le seed bypasse Zod ; dizaines de mismatches HARD (ids non-UUID `risk-*`/`M*`
-      vs `z.string().uuid()` → chaque R/T/I/S seedé échoue la validation stricte ; enums accentués `"Engagé"`
-      vs `ENGAGE` ; objet-vs-scalaire non réconciliés — `valeurs`/`personas`/`sousPromesses`/`productLadder`/
-      `touchpoints`/`kpis`… ; numériques string). **Bornage** : décision de conception Phase 3 — l'extracteur
-      structuré normalise vers le schéma OU on assouplit les schémas (unions/coercions, motif ADR-0168).
-      **Déclencheur** : Phase 3 (ingestion) — c'est LE choix de conception à trancher.
+    - **Canon↔schéma — corruption de forme FERMÉE (Lot 1, [ADR-0172](adr/0172-normalize-to-strict-schema.md), v6.27.246)** :
+      gate anti-corruption (`pillar-conformance.ts`) au seed (throw sur SHAPE, tolère les advisories DRAFT) +
+      formes duales objet-vs-scalaire réconciliées par unions ADR-0168 → **les 4 canons A→I SHAPE=0** (test CI
+      `canon-conformance`). **Restant (advisory, non bloquant, tracé §ADR-0172 ci-dessous)** : traduction
+      sémantique enum FR→canonique (« mensuelle »→MONTHLY), normalisation id lisible→UUID au seed.
     - **22/23 arêtes de référence** non validées (dangles LIVE : `personaSegmentMap.personaName`/`productNames`,
       `superfanPortrait.personaRef` ; arête impossible `strategieDeplacement.riskId`→`overtonBlockers[].id`
       sans `id`). **Bornage** : généraliser le motif rule 31. **Déclencheur** : lot « intégrité référentielle ».
@@ -189,6 +188,25 @@
   - **Phase 5** — profondeur du système visuel (applications carte/letterhead/merch, mauvais usages logo,
     PANTONE, type scale) — incrémental. **Déclencheur** : suite du chantier (l'ADVE détient déjà la
     matière — travail de *rendu*, pas de collecte).
+
+### §ADR-0172 — advisories de conformité canon (déférés, non bloquants)
+
+Le gate anti-corruption (Lot 1) ferme la corruption de forme (SHAPE) ; il **tolère** un tail d'advisories
+qui rendent correctement en l'état mais ne sont pas strictement canoniques. Aucun ne casse le rendu.
+
+- **Traduction sémantique enum FR→canonique** (~120/canon) : « mensuelle »→MONTHLY, « Activation »→ACTIVATION,
+  « trimestrielle »→QUARTERLY… Le fold ascii/casse du normaliseur ne traduit pas entre langues. **Bornage** :
+  petite table FR→enum dans `schema-normalizer` (déterministe, réutilisée par l'ingestion). **Déclencheur** :
+  Lot 1b (l'ingestion aura le même besoin sur de la donnée FR) — mutualiser là.
+- **Normalisation id lisible→UUID au seed** (`risk-m19-001`→UUID) : le gate persiste **brut** pour préserver
+  l'intégrité des refs (id ET ref doivent co-normaliser). **Bornage** : appliquer `normalizeToSchema` au seed
+  APRÈS avoir prouvé que toutes les refs sont uuid-typées et partagent la chaîne source. **Déclencheur** :
+  Lot 3 (intégrité des 22 arêtes) — c'est le même chantier.
+- **S seedé-brut (upgraders/lafusee) vs computed (motion19)** : incohérence pré-existante — le loop
+  `seedUpgraders` seed le canon S (stale) au lieu de le calculer via `computePillarS` comme motion19.
+  Le gate exclut S (computed, non authored) donc ne le voit pas. **Bornage** : câbler `computePillarS` dans
+  `seedUpgraders` (comme `seed-motion19`) + supprimer le S des canons upgraders/lafusee. **Déclencheur** :
+  prochaine passe seed — bas risque, ~10 lignes.
 
 ### Réseaux / suite sociale (ADR-0128/0129/0130/0131/0132/0133)
 
