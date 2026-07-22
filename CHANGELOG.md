@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.245 — feat(scorer): applicateur schéma-guidé `normalizeToSchema` (Lot 1) (2026-07-22)
+
+**Le walk Zod qui applique les coercions par champ — enums accentués, ids lisibles→UUID stable, numériques string — en profondeur sur objets/arrays/records. Ne fabrique jamais (valeur non-coercible laissée intacte). [ADR-0172](docs/governance/adr/0172-normalize-to-strict-schema.md).**
+
+- **`normalizeToSchema(value, schema)`** — déballe `ZodOptional/Nullable/Default/Effects/Pipe`, dispatch par `constructor.name` : `ZodObject` récurse le shape · `ZodArray` mappe l'élément · `ZodRecord` mappe les valeurs · `ZodEnum` → `coerceEnum` · `ZodNumber` coerce les strings · `ZodString` UUID → `normalizeId`. Unions (formes compacte/riche ADR-0168) laissées intactes.
+- **Cohérence des arêtes préservée sans remap coordonné** : `normalizeId` étant déterministe, un id ET ses FK (même chaîne source) produisent le MÊME UUID.
+- Tests `schema-normalizer` (12, +4 applicateur). tsc 0 · lint 0. 0 modèle · 0 migration · 0 LLM · 0 Intent kind · cap 7/7. **Suite du lot** : gate Zod au seed + conformité structurelle des canons (mismatches objet-vs-scalaire hors périmètre de l'applicateur — édition canon).
+
+---
+
 ## v6.27.244 — feat(scorer): normaliser vers le schéma strict — primitives (2026-07-22)
 
 **Décision opérateur (« normaliser vers le strict ») : les schémas Zod restent la loi ; le canon + l'ingestion s'y conforment. Fondation du normaliseur déterministe (Lot 1). [ADR-0172](docs/governance/adr/0172-normalize-to-strict-schema.md).**

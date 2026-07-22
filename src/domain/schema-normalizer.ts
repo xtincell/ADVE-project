@@ -107,3 +107,92 @@ export function coerceNumber(raw: unknown): number | null {
   const n = Number(cleaned);
   return Number.isFinite(n) ? n : null;
 }
+
+// ── Applicateur schéma-guidé (walk Zod → coerce par champ) ───────────────────
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+/** Déballe ZodOptional/Nullable/Default/Effects/Pipe pour atteindre le type sous-jacent. */
+function unwrap(t: any): any {
+  let cur = t;
+  let safety = 0;
+  while (cur && typeof cur === "object" && safety++ < 16) {
+    const ctor = cur.constructor?.name ?? "";
+    const def = cur._def ?? {};
+    if (ctor === "ZodOptional" || ctor === "ZodNullable" || ctor === "ZodDefault") cur = def.innerType ?? def.schema ?? cur;
+    else if (ctor === "ZodEffects" || ctor === "ZodTransform") cur = def.schema ?? def.innerType ?? cur;
+    else if (ctor === "ZodPipe") cur = def.in ?? def.out ?? cur;
+    else break;
+  }
+  return cur;
+}
+
+/** Valeurs canoniques d'un ZodEnum (Zod 4 : `def.entries` objet ou `def.values` array). */
+function enumOptions(def: any): string[] {
+  if (def?.entries && typeof def.entries === "object") return Object.values(def.entries) as string[];
+  if (Array.isArray(def?.values)) return def.values as string[];
+  return [];
+}
+
+/** Détecte `z.string().uuid()` (défensif — Zod 4 range le format en plusieurs endroits). */
+function isUuidString(s: any): boolean {
+  const def = s?._def ?? {};
+  if (def.format === "uuid") return true;
+  for (const c of def.checks ?? []) {
+    const cd = c?._zod?.def ?? c?.def ?? c ?? {};
+    if (cd.format === "uuid" || cd.kind === "uuid" || cd.check === "uuid") return true;
+  }
+  return false;
+}
+
+/**
+ * Normalise `value` vers la forme stricte décrite par `schema` (Zod). Coerce par
+ * champ : enums (accents/casse), ids uuid (id lisible → UUID stable), numériques
+ * (string → number). Récursif sur objets/arrays/records. Ne fabrique JAMAIS —
+ * une valeur non-coercible est laissée intacte (la validation stricte la signalera).
+ *
+ * Cohérence des références : `normalizeId` étant déterministe, un id ET ses FK
+ * (même chaîne source) produisent le MÊME UUID → les arêtes restent cohérentes
+ * sans passe de remap coordonnée.
+ */
+export function normalizeToSchema(value: unknown, schema: unknown): unknown {
+  const s = unwrap(schema);
+  const ctor = (s?.constructor?.name ?? "") as string;
+  const def = s?._def ?? {};
+
+  switch (ctor) {
+    case "ZodObject": {
+      if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+      const shape = (s.shape ?? {}) as Record<string, unknown>;
+      const out: Record<string, unknown> = { ...(value as Record<string, unknown>) };
+      for (const [k, sub] of Object.entries(shape)) {
+        if (k in out) out[k] = normalizeToSchema(out[k], sub);
+      }
+      return out;
+    }
+    case "ZodArray": {
+      if (!Array.isArray(value)) return value;
+      const el = def.element ?? def.type ?? def.innerType;
+      return value.map((v) => normalizeToSchema(v, el));
+    }
+    case "ZodRecord": {
+      if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+      const valSchema = def.valueType ?? def.value;
+      const out: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(value as Record<string, unknown>)) out[k] = normalizeToSchema(v, valSchema);
+      return out;
+    }
+    case "ZodEnum": {
+      const coerced = coerceEnum(value, enumOptions(def));
+      return coerced ?? value;
+    }
+    case "ZodNumber":
+      return typeof value === "string" ? (coerceNumber(value) ?? value) : value;
+    case "ZodString":
+      return isUuidString(s) && typeof value === "string" && value ? normalizeId(value) : value;
+    default:
+      // ZodUnion (formes compacte/riche déjà acceptées), ZodBoolean, ZodLiteral… : intact.
+      return value;
+  }
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
