@@ -139,7 +139,7 @@ Ces correspondances évitent la réinvention :
 - **Escrow** (15 fields)
 - **EscrowCondition** (7 fields)
 - **PaymentOrder** (14 fields)
-- **IntakePayment** (15 fields)
+- **IntakePayment** (16 fields)
 - **Subscription** (15 fields) — Subscription for monthly tiers (COCKPIT_MONTHLY / RETAINER_*).
 - **Deal** (18 fields)
 - **FunnelMapping** (7 fields)

@@ -3600,6 +3600,10 @@ model IntakePayment {
   providerEventId String?
   failureReason   String?
   paidAt          DateTime?
+  /// F7 — anti-rejeu du cycle d'abonnement : posé au moment où CE paiement
+  /// étend la Subscription. Un webhook rejoué (même ancien) ne ré-étend plus
+  /// (le garde `lastCycleRef` mono-slot laissait passer un cycle antérieur).
+  cycleAppliedAt  DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

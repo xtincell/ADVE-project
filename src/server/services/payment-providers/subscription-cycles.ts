@@ -190,41 +190,53 @@ export async function startManualSubscriptionCycle(
 export async function applySubscriptionCycleIfPaid(reference: string): Promise<void> {
   const payment = await db.intakePayment.findUnique({
     where: { reference },
-    select: { status: true, subscriptionId: true, paidAt: true },
+    select: { status: true, subscriptionId: true, paidAt: true, cycleAppliedAt: true },
   });
   if (!payment?.subscriptionId || payment.status !== "PAID") return;
-
-  const subscription = await db.subscription.findUnique({
-    where: { id: payment.subscriptionId },
-  });
-  if (!subscription) return;
+  // F7 — anti-rejeu PAR PAIEMENT : le garde mono-slot `lastCycleRef` ne
+  // retenait que le DERNIER cycle → un webhook PAID d'un cycle ANTÉRIEUR
+  // (`lastCycleRef ≠ reference`) ré-étendait +30 j. On déduplique désormais sur
+  // CE paiement : une fois `cycleAppliedAt` posé, aucun rejeu (ancien ou récent)
+  // ne ré-applique. Court-circuit rapide hors transaction.
+  if (payment.cycleAppliedAt) return;
 
   const now = payment.paidAt ?? new Date();
-  // Renouvellement anticipé : on étend depuis la fin de période courante si
-  // elle est dans le futur (le client ne perd jamais de jours payés).
-  const base =
-    subscription.currentPeriodEnd && subscription.currentPeriodEnd > now
-      ? subscription.currentPeriodEnd
-      : now;
-  const newEnd = new Date(base.getTime() + CYCLE_DAYS * 24 * 60 * 60 * 1000);
 
-  // Idempotence : si la fin de période couvre déjà ce paiement (webhook
-  // rejoué), l'extension a déjà été appliquée pour cette référence.
-  const alreadyApplied =
-    subscription.status === "active" &&
-    subscription.providerSnapshot &&
-    typeof subscription.providerSnapshot === "object" &&
-    (subscription.providerSnapshot as Record<string, unknown>).lastCycleRef === reference;
-  if (alreadyApplied) return;
+  // Réclamation + extension ATOMIQUES (course fermée comme l'escrow) : la mise à
+  // jour conditionnelle `cycleAppliedAt: null → now` ne réussit que pour UN seul
+  // webhook ; l'extension d'abonnement partage la même transaction (soit les
+  // deux, soit aucune — jamais « marqué appliqué sans jours accordés » ni
+  // l'inverse). Deux webhooks concurrents pour la même référence : un seul étend.
+  await db.$transaction(async (tx) => {
+    const claim = await tx.intakePayment.updateMany({
+      where: { reference, cycleAppliedAt: null },
+      data: { cycleAppliedAt: now },
+    });
+    if (claim.count !== 1) return; // déjà réclamé (rejeu / concurrence) → no-op
 
-  await db.subscription.update({
-    where: { id: subscription.id },
-    data: {
-      status: "active",
-      currentPeriodStart: subscription.currentPeriodEnd && subscription.currentPeriodEnd > now ? subscription.currentPeriodStart : now,
-      currentPeriodEnd: newEnd,
-      cancelAtPeriodEnd: false,
-      providerSnapshot: { lastCycleRef: reference, lastCycleAt: now.toISOString() },
-    },
+    const subscription = await tx.subscription.findUnique({ where: { id: payment.subscriptionId! } });
+    if (!subscription) return; // la réclamation reste posée : le paiement est orphelin, pas de cycle à accorder
+
+    // Renouvellement anticipé : on étend depuis la fin de période courante si
+    // elle est dans le futur (le client ne perd jamais de jours payés).
+    const base =
+      subscription.currentPeriodEnd && subscription.currentPeriodEnd > now
+        ? subscription.currentPeriodEnd
+        : now;
+    const newEnd = new Date(base.getTime() + CYCLE_DAYS * 24 * 60 * 60 * 1000);
+
+    await tx.subscription.update({
+      where: { id: subscription.id },
+      data: {
+        status: "active",
+        currentPeriodStart:
+          subscription.currentPeriodEnd && subscription.currentPeriodEnd > now
+            ? subscription.currentPeriodStart
+            : now,
+        currentPeriodEnd: newEnd,
+        cancelAtPeriodEnd: false,
+        providerSnapshot: { lastCycleRef: reference, lastCycleAt: now.toISOString() },
+      },
+    });
   });
 }

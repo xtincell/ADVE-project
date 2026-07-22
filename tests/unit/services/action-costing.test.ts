@@ -19,6 +19,7 @@ import {
   QUALITY_SENSITIVE_DRIVERS,
 } from "@/server/services/financial-brain/action-costing/estimator";
 import { convertRateUnit } from "@/server/services/financial-brain/action-costing/provider-rate";
+import { convertFixedParity, EUR_TO_CFA } from "@/server/services/financial-brain/action-costing/currency-fx";
 import { resolveAcrossChain, neighborsOf } from "@/server/services/financial-brain/action-costing/zone-index";
 import { ZONE_INDEX_SEED } from "@/server/services/financial-brain/action-costing/seed-data";
 import type { ComputeContext, EstimateInput } from "@/server/services/financial-brain/action-costing/types";
@@ -205,5 +206,35 @@ describe("action-costing — provider rate unit conversion", () => {
   it("passes through non-time units unchanged", () => {
     expect(convertRateUnit(50000, "FLAT", "DAY")).toBe(50000);
     expect(convertRateUnit(12000, "SQUARE_METER", "HOUR")).toBe(12000);
+  });
+});
+
+describe("action-costing — F6 conversion de devise à parité FIXE", () => {
+  it("identité si même devise", () => {
+    expect(convertFixedParity(90000, "XAF", "XAF")).toBe(90000);
+    expect(convertFixedParity(500, "EUR", "EUR")).toBe(500);
+  });
+
+  it("XOF ↔ XAF = 1:1 (parité CFA commune)", () => {
+    expect(convertFixedParity(120000, "XOF", "XAF")).toBe(120000);
+    expect(convertFixedParity(75000, "XAF", "XOF")).toBe(75000);
+  });
+
+  it("EUR → CFA multiplie par la parité gelée 655,957", () => {
+    expect(convertFixedParity(100, "EUR", "XAF")).toBeCloseTo(100 * EUR_TO_CFA, 6);
+    expect(convertFixedParity(100, "EUR", "XOF")).toBeCloseTo(100 * EUR_TO_CFA, 6);
+  });
+
+  it("CFA → EUR divise par la parité (aller-retour exact)", () => {
+    const eur = 250;
+    const xaf = convertFixedParity(eur, "EUR", "XAF")!;
+    expect(convertFixedParity(xaf, "XAF", "EUR")).toBeCloseTo(eur, 9);
+  });
+
+  it("devise flottante → null (non convertible sans source de taux — jamais de mécompte)", () => {
+    expect(convertFixedParity(100, "USD", "XAF")).toBeNull();
+    expect(convertFixedParity(100, "XAF", "USD")).toBeNull();
+    expect(convertFixedParity(100, "NGN", "XOF")).toBeNull();
+    expect(convertFixedParity(100, "GHS", "EUR")).toBeNull();
   });
 });

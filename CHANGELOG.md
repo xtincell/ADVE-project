@@ -1,5 +1,13 @@
 # Changelog — La Fusee
 
+## v6.27.261 — fix(thot): devise du taux prestataire honorée + anti-rejeu du cycle d'abonnement (2026-07-22)
+
+**Deux fuites d'argent du chemin Thot fermées (audit adversarial « TOUT » — F6/F7, build, zéro LLM).**
+
+- **F6 — devise du taux prestataire HONORÉE** (`action-costing/estimator.ts`) : `resolveProviderRate` renvoyait `{rate,currency}` mais seul `rate` était sommé → un taux EUR/XOF composé dans un template XAF sous-comptait ~656× (une séance photo diaspora s'affichait en centimes de FCFA). Nouveau module pur `currency-fx.ts` : conversion DÉTERMINISTE bornée aux parités FIXES (franc CFA XOF/XAF ↔ EUR gelé à 655,957 ; XOF↔XAF = 1:1). Même devise → tel quel ; parité fixe → conversion exacte ; devise flottante différente (USD…) → **non convertible** → dégradation honnête vers les sources en devise du template (marché/benchmark/base), tracée sur la ligne (`provider-currency-unconvertible`, `usedFallback`) — jamais de mécompte, jamais de taux inventé (interdit NEFER n°3).
+- **F7 — anti-rejeu du cycle d'abonnement mobile money** (`payment-providers/subscription-cycles.ts`) : le garde d'idempotence ne retenait que `providerSnapshot.lastCycleRef` (mono-slot) → un webhook `PAID` d'un cycle ANTÉRIEUR rejoué APRÈS un cycle récent ré-étendait +30 j. Dédup désormais PAR PAIEMENT via `IntakePayment.cycleAppliedAt` (migration additive `20260722210000`, backfill-safe) : réclamation conditionnelle `null → now` + extension dans une **transaction atomique** (course fermée comme l'escrow — deux webhooks concurrents, un seul étend ; soit marqué+étendu, soit ni l'un ni l'autre).
+- **Vérif** : +5 cas `action-costing` (parité identité/CFA/EUR/flottante-null) + suite `mcp-billing` réécrite pour la dédup par paiement (rejeu même réf, rejeu d'un cycle ANTÉRIEUR, course count 0). tsc 0 · lint 0 · 2607 tests governance+services verts. Cap APOGEE 7/7 préservé.
+
 ## v6.27.260 — docs(governance): clôture de la boucle adversariale — résidus tracés + suite verte (2026-07-22)
 
 **Audit adversarial « TOUT » convergé : toutes les fuites CRITIQUES/HAUTES fermées et shippées (10 commits), le reste tracé avec plan + déclencheur.**
