@@ -1,5 +1,13 @@
 # Changelog — La Fusee
 
+## v6.27.272 — docs+fix(governance): clôture round-2 adversarial — résidus IDOR tracés + dép scorer honnête (2026-07-22)
+
+**Round-2 adversarial convergé : CRITIQUE/HAUT fixé (money + IDOR), MEDIUM entité-id tracé avec plan.**
+
+- **Résidus IDOR round-2 tracés** (RESIDUAL-DEBT §Gouvernance/sécurité) : ~24 ops campaign-manager keyées sur un id d'entité (résolution entité→campagne à ajouter) + `deliverable-tracking` + ownership deal↔opérateur par-deal + `getConversionMetrics` scope — chacun borné (quoi/où/plan/déclencheur) + verrou à bâtir (étendre `strategy-ownership-guard.test.ts` aux ids d'entité).
+- **`advertis-scorer` manifest — dépendance `llm-gateway` FAUSSE retirée** (honnêteté) : le scorer est déterministe (ADR-0102, zéro LLM, garde `scoring-base-canon`) mais son manifest déclarait une dépendance LLM qu'aucun code n'importe (vérifié grep). `dependencies: []`.
+- **Bilan round-2** (4 sous-agents adversariaux : mon diff / money / access-control / invariants) : invariants gouvernance CLEAN (0 violation), money 6 fixés (PayPal capture HIGH, F7 fenêtre migration, webhook non signé, membership, commission, rollback asc), access-control cluster IDOR CRITIQUE fixé (7 surfaces) + MEDIUM tracé. tsc 0 · lint 0 · 1139 governance verts.
+
 ## v6.27.271 — fix(security): IDOR round-2 batch C — campaign-manager sous-entités gardées par campagne (2026-07-22)
 
 **Les artefacts de campagne (briefs, assets, actions, budgets, équipe, liens…) ne fuient plus cross-tenant (audit adversarial « TOUT » round-2 — ~90 procédures rendues structurellement gardées).**
