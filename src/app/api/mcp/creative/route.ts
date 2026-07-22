@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
-import { authenticateMcpRequest, meterAndRun } from "@/server/services/anubis/mcp-billing";
+import { authenticateMcpRequest, meterAndRun, scopeMcpParams } from "@/server/services/anubis/mcp-billing";
 import { tools as creativeTools } from "@/server/mcp/creative";
 
 const toolMap = Object.fromEntries(creativeTools.map((t) => [t.name, t.handler]));
@@ -24,7 +24,9 @@ export async function POST(request: Request) {
     );
   }
   // Metering billable (Vague 5) — succès comme échec ; x-api-key = facturé.
-  return meterAndRun(gate, "creative", tool, () => handler(body.params ?? {}));
+  const __scoped = scopeMcpParams(gate, "creative", tool, body.params ?? {});
+  if (__scoped.denied) return __scoped.denied;
+  return meterAndRun(gate, "creative", tool, () => handler(__scoped.params));
 }
 
 export async function GET(request: Request) {

@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
-import { authenticateMcpRequest, meterAndRun } from "@/server/services/anubis/mcp-billing";
+import { authenticateMcpRequest, meterAndRun, scopeMcpParams } from "@/server/services/anubis/mcp-billing";
 import { tools as advertisTools } from "@/server/mcp/advertis";
 
 // ADVERTIS (outbound) — expose une marque à un agent (ADR-0142). Lecture seule.
@@ -25,19 +25,12 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-  // Injecte la portée du token (ADR-0145) pour les outils d'écriture (amendPillar).
-  // Écrit APRÈS le spread → un client ne peut pas usurper __auth.
-  return meterAndRun(gate, "advertis", tool, () =>
-    handler({
-      ...(body.params ?? {}),
-      __auth: {
-        scopeKind: gate.scopeKind ?? null,
-        scopeStrategyId: gate.scopeStrategyId ?? null,
-        userId: gate.userId ?? null,
-        apiKeyId: gate.apiKeyId ?? null,
-      },
-    }),
-  );
+  // Enforce la portée du token (ADR-0145) + injecte `__auth`. Une clé BRAND ne
+  // peut lire/écrire QUE sa marque — même les reads (getBrandCard/getAdveRtis)
+  // sont désormais scopés au bord (anti-IDOR round-6), plus seulement amendPillar.
+  const scoped = scopeMcpParams(gate, "advertis", tool, body.params ?? {});
+  if (scoped.denied) return scoped.denied;
+  return meterAndRun(gate, "advertis", tool, () => handler(scoped.params));
 }
 
 export async function GET(request: Request) {

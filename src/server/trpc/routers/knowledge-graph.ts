@@ -5,7 +5,7 @@ import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
 
 export const knowledgeGraphRouter = createTRPCRouter({
-  query: protectedProcedure
+  query: operatorProcedure
     .input(z.object({
       queryText: z.string().min(1),
       filters: z.record(z.string(), z.unknown()).optional(),
@@ -21,7 +21,7 @@ export const knowledgeGraphRouter = createTRPCRouter({
       return strategies.map((s) => ({ type: "strategy" as const, ...s }));
     }),
 
-  getBenchmarks: protectedProcedure
+  getBenchmarks: operatorProcedure
     .input(z.object({
       sector: z.string().optional(),
       category: z.string().optional(),

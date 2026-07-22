@@ -58,6 +58,17 @@ const REQUIRE_OPERATOR: Array<[string, string]> = [
   ["operator-action.ts", "OPERATOR_UPDATE_ACTION"],
   ["operator-action.ts", "OPERATOR_TOGGLE_ACTION_DONE"],
   ["operator-action.ts", "OPERATOR_DELETE_ACTION"],
+  // ── Écritures de contenu GLOBAL (round-6 : certifs/commandes/éditorial/cours) ──
+  ["boutique.ts", "LEGACY_BOUTIQUE_CREATE_ITEM"],
+  ["boutique.ts", "LEGACY_BOUTIQUE_UPDATE_ITEM"],
+  ["boutique.ts", "LEGACY_BOUTIQUE_UPDATE_ORDER_STATUS"],
+  ["editorial.ts", "LEGACY_EDITORIAL_CREATE"],
+  ["editorial.ts", "LEGACY_EDITORIAL_PUBLISH"],
+  ["learning.ts", "LEGACY_LEARNING_CREATE_COURSE"],
+  ["learning.ts", "LEGACY_LEARNING_PUBLISH_COURSE"],
+  ["learning.ts", "LEGACY_LEARNING_ISSUE_CERTIFICATION"],
+  ["event.ts", "LEGACY_EVENT_CREATE"],
+  ["event.ts", "LEGACY_EVENT_MARK_ATTENDED"],
 ];
 
 describe("entity-id financial + privilege procedures are staff-gated (round-4)", () => {
@@ -110,5 +121,33 @@ describe("entity-id founder-reachable procedures resolve ownership (round-4)", (
     expect(s).toMatch(/getBatch:\s*operatorProcedure/);
     expect(s).toMatch(/listBatches:\s*operatorProcedure/);
     expect(s).toMatch(/listSources:\s*operatorProcedure/);
+  });
+});
+
+/**
+ * Round-6 : chaque route MCP enforce la portée du token AVANT dispatch
+ * (`scopeMcpParams`) — une clé BRAND ne peut plus lire une autre marque via un
+ * `strategyId` injecté dans les params.
+ */
+describe("MCP routes enforce token brand-scope (round-6)", () => {
+  const MCP_DIR = join(process.cwd(), "src/app/api/mcp");
+  const MCP_ROUTES = [
+    "route.ts", // agrégat /api/mcp
+    "advertis/route.ts",
+    "advertis-inbound/route.ts",
+    "artemis/route.ts",
+    "creative/route.ts",
+    "guild/route.ts",
+    "intelligence/route.ts",
+    "operations/route.ts",
+    "ptah/route.ts",
+    "pulse/route.ts",
+    "seshat/route.ts",
+  ];
+  it.each(MCP_ROUTES)("mcp/%s appelle scopeMcpParams avant dispatch", (rel) => {
+    const src = readFileSync(join(MCP_DIR, rel), "utf8");
+    expect(src, `${rel} doit enforcer la portée du token via scopeMcpParams`).toMatch(/scopeMcpParams\(/);
+    // Le résultat denied court-circuite AVANT tout appel au handler.
+    expect(src).toMatch(/\.denied\)?\s*return/);
   });
 });

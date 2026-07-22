@@ -13,7 +13,7 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
-import { createTRPCRouter, protectedProcedure } from "../init";
+import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { db } from "@/lib/db";
 
 const StringId = z.string().min(1);
@@ -32,7 +32,7 @@ export const phase18ResidualsRouter = createTRPCRouter({
   /**
    * Crée ou upsert une entrée résidu. Idempotent par (operatorId, category, targetKey).
    */
-  upsert: protectedProcedure
+  upsert: adminProcedure
     .input(
       z.object({
         operatorId: StringId,
@@ -77,7 +77,7 @@ export const phase18ResidualsRouter = createTRPCRouter({
     }),
 
   /** Marque une entrée comme RESOLVED + stamp resolvedAt + resolvedBy. */
-  resolve: protectedProcedure
+  resolve: adminProcedure
     .input(
       z.object({
         entryId: StringId,
@@ -106,7 +106,7 @@ export const phase18ResidualsRouter = createTRPCRouter({
     }),
 
   /** Marque DISMISSED (= n'a pas besoin de résolution, opérateur a tranché). */
-  dismiss: protectedProcedure
+  dismiss: adminProcedure
     .input(z.object({ entryId: StringId, reason: z.string().min(1).max(500) }))
     .mutation(async ({ input }) => {
       try {
@@ -124,7 +124,7 @@ export const phase18ResidualsRouter = createTRPCRouter({
     }),
 
   /** Liste les entrées d'un operator filtrées par category / status. */
-  list: protectedProcedure
+  list: adminProcedure
     .input(
       z.object({
         operatorId: StringId,
@@ -144,7 +144,7 @@ export const phase18ResidualsRouter = createTRPCRouter({
     ),
 
   /** Stats agrégées par category × status pour dashboard governance. */
-  stats: protectedProcedure
+  stats: adminProcedure
     .input(z.object({ operatorId: StringId }))
     .query(async ({ input }) => {
       const all = await db.phase18ResidualEntry.findMany({

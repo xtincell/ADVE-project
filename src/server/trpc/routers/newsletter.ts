@@ -259,7 +259,7 @@ export const newsletterRouter = createTRPCRouter({
       });
     }),
 
-  newslettersStats: protectedProcedure
+  newslettersStats: operatorProcedure
     .input(z.object({ newsletterId: z.string() }))
     .query(async ({ input }) => {
       const campaign = await db.newsletterCampaign.findUniqueOrThrow({

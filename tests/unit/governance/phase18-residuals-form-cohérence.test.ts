@@ -109,8 +109,10 @@ describe("Phase 18 résidus — router tRPC cohérence", () => {
   it("router exporte phase18ResidualsRouter avec les 5 procédures canoniques", () => {
     expect(router).toContain("export const phase18ResidualsRouter");
     for (const proc of CANONICAL_PROCEDURES) {
-      // pattern : `procName: protectedProcedure` (avec espace possible avant les deux-points)
-      const pattern = new RegExp(`${proc}\\s*:\\s*protectedProcedure`);
+      // pattern : `procName: <lane>Procedure`. Le durcissement round-6 a passé
+      // ces 5 procédures à `adminProcedure` (métadonnées de gouvernance +
+      // `resolvedBy` non-spoofable) — on accepte toute lane authentifiée.
+      const pattern = new RegExp(`${proc}\\s*:\\s*(protected|operator|admin)Procedure`);
       expect(router, `procédure ${proc} manquante`).toMatch(pattern);
     }
   });

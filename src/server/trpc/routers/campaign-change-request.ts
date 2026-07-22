@@ -7,7 +7,7 @@
 
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { createTRPCRouter, protectedProcedure } from "../init";
+import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
 import { canAccessMission, getOperatorContext } from "@/server/services/operator-isolation";
 import { db } from "@/lib/db";
 import { governedProcedure } from "@/server/governance/governed-procedure";
@@ -144,7 +144,7 @@ export const campaignChangeRequestRouter = createTRPCRouter({
       return listChangeRequestsForDeliverable(input.deliverableId);
     }),
 
-  listOpenForOperator: protectedProcedure
+  listOpenForOperator: operatorProcedure
     .input(z.object({ operatorId: StringId }))
     .query(({ input }) => listOpenChangeRequestsForOperator(input.operatorId)),
 });

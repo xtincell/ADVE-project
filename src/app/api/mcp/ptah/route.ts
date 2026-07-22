@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
-import { authenticateMcpRequest, meterAndRun } from "@/server/services/anubis/mcp-billing";
+import { authenticateMcpRequest, meterAndRun, scopeMcpParams } from "@/server/services/anubis/mcp-billing";
 import { tools as ptahTools } from "@/server/mcp/ptah";
 
 const toolMap = Object.fromEntries(ptahTools.map((t) => [t.name, t.handler]));
@@ -31,7 +31,9 @@ export async function POST(request: Request) {
     );
   }
   // Metering billable (Vague 5) — succès comme échec ; x-api-key = facturé.
-  return meterAndRun(gate, "ptah", tool, () => handler(body.params ?? {}));
+  const __scoped = scopeMcpParams(gate, "ptah", tool, body.params ?? {});
+  if (__scoped.denied) return __scoped.denied;
+  return meterAndRun(gate, "ptah", tool, () => handler(__scoped.params));
 }
 
 export async function GET(request: Request) {

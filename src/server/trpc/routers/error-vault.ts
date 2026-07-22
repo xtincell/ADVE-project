@@ -58,7 +58,7 @@ export const errorVaultRouter = createTRPCRouter({
       return { id };
     }),
 
-  list: protectedProcedure
+  list: operatorProcedure
     .input(
       z.object({
         source: SourceEnum.optional(),
@@ -81,7 +81,7 @@ export const errorVaultRouter = createTRPCRouter({
       });
     }),
 
-  groupBySignature: protectedProcedure
+  groupBySignature: operatorProcedure
     .input(z.object({ resolved: z.boolean().default(false), limit: z.number().default(100) }))
     .query(async ({ input }) => {
       // Cluster par signature — agrège sample + count

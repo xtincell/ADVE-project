@@ -13,6 +13,7 @@ export const learningRouter = createTRPCRouter({
   createCourse: governedProcedure({
 
     kind: "LEGACY_LEARNING_CREATE_COURSE",
+    requireOperator: true, // cours Académie GLOBAL = staff
 
     inputSchema: z.object({
       title: z.string(), slug: z.string(), description: z.string().optional(),
@@ -51,6 +52,7 @@ export const learningRouter = createTRPCRouter({
 
 
     kind: "LEGACY_LEARNING_PUBLISH_COURSE",
+    requireOperator: true,
 
 
     inputSchema: z.object({ id: z.string() }),
@@ -118,6 +120,7 @@ export const learningRouter = createTRPCRouter({
   issueCertification: governedProcedure({
 
     kind: "LEGACY_LEARNING_ISSUE_CERTIFICATION",
+    requireOperator: true, // délivrance de certification talent = staff (Académie/Imhotep)
 
     inputSchema: z.object({ talentProfileId: z.string(), name: z.string(), category: z.string(), expiresAt: z.date().optional() }),
 

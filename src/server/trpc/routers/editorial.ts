@@ -41,6 +41,7 @@ export const editorialRouter = createTRPCRouter({
 
 
     kind: "LEGACY_EDITORIAL_CREATE",
+    requireOperator: true, // contenu éditorial GLOBAL = staff (défacement/spam SEO sinon)
 
 
     inputSchema: z.object({
@@ -73,6 +74,7 @@ export const editorialRouter = createTRPCRouter({
 
 
     kind: "LEGACY_EDITORIAL_PUBLISH",
+    requireOperator: true,
 
 
     inputSchema: z.object({ id: z.string() }),

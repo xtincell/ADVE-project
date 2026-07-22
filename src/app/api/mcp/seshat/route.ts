@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
-import { authenticateMcpRequest, meterAndRun } from "@/server/services/anubis/mcp-billing";
+import { authenticateMcpRequest, meterAndRun, scopeMcpParams } from "@/server/services/anubis/mcp-billing";
 import { tools as seshatTools } from "@/server/mcp/seshat";
 
 // ---------------------------------------------------------------------------
@@ -34,7 +34,9 @@ export async function POST(request: Request) {
     );
   }
   // Metering billable (Vague 5) — succès comme échec ; x-api-key = facturé.
-  return meterAndRun(gate, "seshat", tool, () => handler(body.params ?? {}));
+  const __scoped = scopeMcpParams(gate, "seshat", tool, body.params ?? {});
+  if (__scoped.denied) return __scoped.denied;
+  return meterAndRun(gate, "seshat", tool, () => handler(__scoped.params));
 }
 
 // ---------------------------------------------------------------------------

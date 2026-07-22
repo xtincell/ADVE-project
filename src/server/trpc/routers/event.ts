@@ -37,6 +37,7 @@ export const eventRouter = createTRPCRouter({
 
 
     kind: "LEGACY_EVENT_CREATE",
+    requireOperator: true, // événement GLOBAL = staff
 
 
     inputSchema: z.object({
@@ -105,6 +106,7 @@ export const eventRouter = createTRPCRouter({
 
 
     kind: "LEGACY_EVENT_MARK_ATTENDED",
+    requireOperator: true, // marquer une présence = staff (fraude de présence sinon)
 
 
     inputSchema: z.object({ registrationId: z.string() }),
