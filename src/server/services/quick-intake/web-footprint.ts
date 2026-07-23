@@ -20,9 +20,13 @@
  * jamais propagée — l'intake n'échoue JAMAIS à cause de l'empreinte.
  */
 
-import { lookup as dnsLookup } from "node:dns/promises";
-import { isIP } from "node:net";
 import { mentionsEntity } from "@/server/services/seshat/entity-gate";
+import { ssrfSafeFetch } from "@/lib/net/ssrf-guard";
+
+// `assertPublicUrl` est désormais la garde SSRF partagée (`@/lib/net/ssrf-guard`)
+// — ré-exportée ici pour conserver le chemin d'import historique (tests
+// `web-footprint.test.ts` + callers).
+export { assertPublicUrl } from "@/lib/net/ssrf-guard";
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -224,48 +228,9 @@ function decodeEntities(s: string): string {
     .replace(/&nbsp;/g, " ");
 }
 
-// ── Garde SSRF + fetch borné ───────────────────────────────────────────
-
-function isPrivateIp(ip: string): boolean {
-  if (ip.includes(":")) {
-    // IPv6 : loopback, link-local, unique-local, mapped IPv4 privé
-    const low = ip.toLowerCase();
-    return low === "::1" || low.startsWith("fe80:") || low.startsWith("fc") || low.startsWith("fd") || low.startsWith("::ffff:127.") || low.startsWith("::ffff:10.") || low.startsWith("::ffff:192.168.");
-  }
-  const parts = ip.split(".").map(Number);
-  const [a, b] = [parts[0] ?? -1, parts[1] ?? -1];
-  return (
-    a === 127 || a === 10 || a === 0 ||
-    (a === 192 && b === 168) ||
-    (a === 172 && b >= 16 && b <= 31) ||
-    (a === 169 && b === 254) ||
-    a >= 224
-  );
-}
-
-export async function assertPublicUrl(rawUrl: string): Promise<URL> {
-  const url = new URL(rawUrl);
-  if (url.protocol !== "https:" && url.protocol !== "http:") {
-    throw new Error(`Protocole refusé: ${url.protocol}`);
-  }
-  const host = url.hostname;
-  if (host === "localhost" || host.endsWith(".local") || host.endsWith(".internal")) {
-    throw new Error(`Hôte interne refusé: ${host}`);
-  }
-  if (isIP(host)) {
-    if (isPrivateIp(host)) throw new Error(`IP privée refusée: ${host}`);
-    return url;
-  }
-  const resolved = await dnsLookup(host, { all: true }).catch(() => []);
-  if (resolved.length === 0) throw new Error(`DNS introuvable: ${host}`);
-  for (const { address } of resolved) {
-    if (isPrivateIp(address)) throw new Error(`Hôte résout vers une IP privée: ${host}`);
-  }
-  return url;
-}
+// ── Fetch borné (garde SSRF partagée `@/lib/net/ssrf-guard`) ─────────────
 
 async function fetchPublic(rawUrl: string): Promise<{ ok: boolean; status: number; body: string }> {
-  const url = await assertPublicUrl(rawUrl);
   // 3 tentatives sur échec RÉSEAU pur (connect ETIMEDOUT quasi instantané —
   // résolveurs round-robin servant parfois une IP injoignable, mesuré test BK
   // Abidjan 2026-07-20). Une réponse HTTP (même 4xx/5xx) est déterministe →
@@ -275,9 +240,11 @@ async function fetchPublic(rawUrl: string): Promise<{ ok: boolean; status: numbe
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
     try {
-      const res = await fetch(url.toString(), {
+      // ssrfSafeFetch valide l'URL initiale ET chaque redirection (redirect
+      // MANUEL) — ferme le contournement « 302 → IP privée / métadonnées cloud »
+      // sur ce chemin PUBLIC non authentifié.
+      const res = await ssrfSafeFetch(rawUrl, {
         signal: controller.signal,
-        redirect: "follow",
         headers: { "User-Agent": UA, Accept: "text/html,application/xhtml+xml,application/xml" },
       });
       const reader = res.body?.getReader();

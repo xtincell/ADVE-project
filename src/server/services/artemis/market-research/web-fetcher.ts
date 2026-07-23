@@ -13,7 +13,15 @@
  *   - Hard timeout : 12 s per URL.
  *   - Total wall-clock budget : 60 s for the whole batch (callers should
  *     set their own AbortController if a tighter budget is needed).
+ *
+ * Round-8 : `isUrlAllowed` reste un pré-filtre regex SYNC (consommé par
+ * `seshat/web-search` + son test) ; le fetch réel passe par `ssrfSafeFetch`
+ * (`@/lib/net/ssrf-guard`) qui ajoute la résolution DNS (ferme l'IP décimale +
+ * le nom public résolvant vers du privé) ET la re-validation de chaque
+ * redirection — l'ancien suivi automatique menait un 302 vers du privé.
  */
+
+import { ssrfSafeFetch } from "@/lib/net/ssrf-guard";
 
 const FETCH_TIMEOUT_MS = 12_000;
 const MAX_BODY_BYTES = 5 * 1024 * 1024;
@@ -79,14 +87,16 @@ export async function fetchSourceUrl(rawUrl: string): Promise<FetchedSource> {
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
   try {
-    const response = await fetch(validated.url, {
+    // `isUrlAllowed` (ci-dessus) n'est qu'un pré-filtre regex sans DNS ;
+    // `ssrfSafeFetch` résout le DNS + re-valide chaque redirection (redirect
+    // MANUEL) — c'est lui qui ferme le SSRF, pas le pré-filtre.
+    const response = await ssrfSafeFetch(rawUrl, {
       method: "GET",
       headers: {
         "user-agent": "LaFusee-MarketResearch/1.0 (Seshat governor; contact via Console)",
         accept: "text/html,application/xhtml+xml,application/json,text/plain;q=0.9,*/*;q=0.8",
       },
       signal: controller.signal,
-      redirect: "follow",
     });
 
     const contentType = response.headers.get("content-type") ?? undefined;

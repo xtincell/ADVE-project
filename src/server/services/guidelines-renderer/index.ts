@@ -95,7 +95,7 @@ export async function generateGuidelines(strategyId: string): Promise<string> {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${doc.title}</title>
+  <title>${escapeHtml(doc.title)}</title>
   <style>
     :root {
       --primary: #6C3CE0;
@@ -235,7 +235,7 @@ export async function generateGuidelines(strategyId: string): Promise<string> {
         <li class="asset-item">
           <span class="asset-name">${escapeHtml(asset.name)}</span>
           <div class="asset-tags">
-            ${topTags.map(([k]) => `<span class="tag">${k.toUpperCase()}</span>`).join("")}
+            ${topTags.map(([k]) => `<span class="tag">${escapeHtml(k.toUpperCase())}</span>`).join("")}
           </div>
         </li>`;
     }
@@ -402,7 +402,7 @@ export async function exportPdf(strategyId: string): Promise<string> {
         .map(([k]) => k.toUpperCase())
         .join(", ");
       html += `
-      <tr><td>${escapeHtml(asset.name)}</td><td>${topTags || "—"}</td></tr>`;
+      <tr><td>${escapeHtml(asset.name)}</td><td>${topTags ? escapeHtml(topTags) : "—"}</td></tr>`;
     }
 
     html += `
