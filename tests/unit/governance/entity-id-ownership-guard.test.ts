@@ -128,8 +128,17 @@ describe("entity-id founder-reachable procedures resolve ownership (round-4)", (
  * Round-6 : chaque route MCP enforce la portée du token AVANT dispatch
  * (`scopeMcpParams`) — une clé BRAND ne peut plus lire une autre marque via un
  * `strategyId` injecté dans les params.
+ *
+ * Round-8 (CRITICAL) : `scopeMcpParams` ne vérifie QUE `params.strategyId` — un
+ * outil keyé sur un id d'ENTITÉ (`campaignId`/`missionId`/`driverId`/`userId`…)
+ * échappait à la portée BRAND sur les routes PAR-SERVEUR (elles appelaient
+ * `handler()` en direct, sans `enforceBrandScope`). Fermé en unifiant les 2
+ * chemins de dispatch : les 10 routes par-serveur délèguent désormais à
+ * `dispatchTool` (comme l'agrégat) — `dispatchTool` applique `enforceBrandScope`
+ * FAIL-CLOSED (une clé BRAND est refusée sur tout outil dont le schéma n'a pas de
+ * champ `strategyId`). Plus de « deux chemins à enforcement inégal ».
  */
-describe("MCP routes enforce token brand-scope (round-6)", () => {
+describe("MCP routes enforce token brand-scope (round-6 + round-8)", () => {
   const MCP_DIR = join(process.cwd(), "src/app/api/mcp");
   const MCP_ROUTES = [
     "route.ts", // agrégat /api/mcp
@@ -149,5 +158,13 @@ describe("MCP routes enforce token brand-scope (round-6)", () => {
     expect(src, `${rel} doit enforcer la portée du token via scopeMcpParams`).toMatch(/scopeMcpParams\(/);
     // Le résultat denied court-circuite AVANT tout appel au handler.
     expect(src).toMatch(/\.denied\)?\s*return/);
+  });
+
+  it.each(MCP_ROUTES)("mcp/%s délègue à dispatchTool (enforceBrandScope fail-closed)", (rel) => {
+    const src = readFileSync(join(MCP_DIR, rel), "utf8");
+    // Chemin unifié : le dispatch passe par dispatchTool (qui applique
+    // enforceBrandScope). Aucune route ne doit appeler `handler(...)` en direct.
+    expect(src, `${rel} doit dispatcher via dispatchTool (fail-closed brand-scope)`).toMatch(/dispatchTool\(/);
+    expect(src, `${rel} ne doit plus appeler handler(...) en direct`).not.toMatch(/=>\s*handler\(/);
   });
 });

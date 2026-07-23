@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { authenticateMcpRequest, meterAndRun, scopeMcpParams } from "@/server/services/anubis/mcp-billing";
+import { dispatchTool } from "@/server/services/anubis/mcp-server";
 import { tools as advertisTools } from "@/server/mcp/advertis";
 
 // ADVERTIS (outbound) — expose une marque à un agent (ADR-0142). Lecture seule.
@@ -18,8 +19,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
   const tool = body.tool ?? "";
-  const handler = toolMap[tool];
-  if (!handler) {
+  if (!toolMap[tool]) {
     return NextResponse.json(
       { error: `Unknown tool: ${tool}`, availableTools: Object.keys(toolMap) },
       { status: 400 },
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
   // sont désormais scopés au bord (anti-IDOR round-6), plus seulement amendPillar.
   const scoped = scopeMcpParams(gate, "advertis", tool, body.params ?? {});
   if (scoped.denied) return scoped.denied;
-  return meterAndRun(gate, "advertis", tool, () => handler(scoped.params));
+  return meterAndRun(gate, "advertis", tool, () => dispatchTool("advertis", tool, scoped.params));
 }
 
 export async function GET(request: Request) {

@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { authenticateMcpRequest, meterAndRun, scopeMcpParams } from "@/server/services/anubis/mcp-billing";
+import { dispatchTool } from "@/server/services/anubis/mcp-server";
 import { tools as artemisTools } from "@/server/mcp/artemis";
 
 const toolMap = Object.fromEntries(artemisTools.map((t) => [t.name, t.handler]));
@@ -16,8 +17,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
   const tool = body.tool ?? "";
-  const handler = toolMap[tool];
-  if (!handler) {
+  if (!toolMap[tool]) {
     return NextResponse.json(
       { error: `Unknown tool: ${tool}`, availableTools: Object.keys(toolMap) },
       { status: 400 },
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   // Metering billable (Vague 5) — succès comme échec ; x-api-key = facturé.
   const __scoped = scopeMcpParams(gate, "artemis", tool, body.params ?? {});
   if (__scoped.denied) return __scoped.denied;
-  return meterAndRun(gate, "artemis", tool, () => handler(__scoped.params));
+  return meterAndRun(gate, "artemis", tool, () => dispatchTool("artemis", tool, __scoped.params));
 }
 
 export async function GET(request: Request) {
