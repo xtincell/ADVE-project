@@ -21,6 +21,7 @@
 
 import { db } from "@/lib/db";
 import { setNestedValue, tokenizePillarPath, assertSafePillarPath } from "@/lib/pillar-path";
+import { coerceValue, applyResolvedRecoOps } from "./apply-resolved-ops";
 import type { Prisma } from "@prisma/client";
 import { type PillarKey, getPillarDependents } from "@/lib/types/advertis-vector";
 import { validatePillarPartial } from "@/lib/types/pillar-schemas";
@@ -142,54 +143,8 @@ function deepMerge(target: Record<string, unknown>, source: Record<string, unkno
 export { setNestedValue, tokenizePillarPath, assertSafePillarPath };
 
 // ── Recommendation application (from rtis-cascade.ts, centralized) ───
-
-/**
- * Coerce a proposed value to match the type of the existing value.
- * Prevents type mismatches when LLM produces wrong format.
- */
-function coerceValue(existing: unknown, proposed: unknown): unknown {
-  if (proposed === null || proposed === undefined) return proposed;
-
-  // If existing is a string and proposed is an array → join
-  if (typeof existing === "string" && Array.isArray(proposed)) {
-    return proposed.map(String).join(", ");
-  }
-
-  // If existing is a string and proposed is an object → stringify the main value
-  if (typeof existing === "string" && typeof proposed === "object" && !Array.isArray(proposed)) {
-    const obj = proposed as Record<string, unknown>;
-    // Try common fields
-    return obj.value ?? obj.text ?? obj.content ?? obj.description ?? obj.name ?? JSON.stringify(proposed);
-  }
-
-  // If existing is a number and proposed is a string → parse
-  if (typeof existing === "number" && typeof proposed === "string") {
-    const n = parseFloat(proposed);
-    return isNaN(n) ? existing : n;
-  }
-
-  // If existing is an array and proposed is a single item (string/object) → wrap in array
-  if (Array.isArray(existing) && !Array.isArray(proposed)) {
-    // For ADD operations, the proposed should be a single item
-    // For SET operations on array fields, wrap it
-    if (typeof proposed === "string") {
-      // If existing array has objects, try to wrap string into expected object format
-      if (existing.length > 0 && typeof existing[0] === "object" && existing[0] !== null) {
-        const firstKeys = Object.keys(existing[0] as Record<string, unknown>);
-        const nameKey = firstKeys.find(k => ["name", "nom", "value", "title", "action"].includes(k)) ?? firstKeys[0];
-        if (nameKey) {
-          return { [nameKey]: proposed };
-        }
-      }
-    }
-    return proposed; // Trust it — ADD operation will append
-  }
-
-  // If field doesn't exist yet (new field), trust the proposed value
-  if (existing === undefined || existing === null || existing === "") return proposed;
-
-  return proposed;
-}
+// `coerceValue` + `applyResolvedRecoOps` vivent dans `./apply-resolved-ops`
+// (module PUR, testable sans DB, profondeur-conscient). Cf. import en tête.
 
 function applyRecos(
   content: Record<string, unknown>,
@@ -332,99 +287,14 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
           break;
         }
         case "APPLY_RECOS_RESOLVED": {
-          // Notoria sends pre-resolved operations — no pendingRecos lookup needed
-          const ops = operation.operations;
-          newContent = { ...previousContent };
-
-          // Sort operations: EXTEND → MODIFY → ADD → REMOVE → SET (prevent index shift)
-          const opOrder: Record<string, number> = { EXTEND: 0, MODIFY: 1, ADD: 2, REMOVE: 3, SET: 4 };
-          const sorted = [...ops].sort(
-            (a, b) => (opOrder[a.operation] ?? 5) - (opOrder[b.operation] ?? 5),
-          );
-
-          let appliedCount = 0;
-          for (const op of sorted) {
-            const existing = newContent[op.field];
-
-            switch (op.operation) {
-              case "SET":
-                newContent[op.field] = coerceValue(existing, op.proposedValue);
-                appliedCount++;
-                break;
-
-              case "ADD":
-                if (Array.isArray(existing)) {
-                  existing.push(coerceValue(undefined, op.proposedValue));
-                  appliedCount++;
-                } else if (existing == null) {
-                  newContent[op.field] = [coerceValue(undefined, op.proposedValue)];
-                  appliedCount++;
-                } else {
-                  warnings.push(`ADD: field "${op.field}" is not an array (type=${typeof existing}) — skipped (reco ${op.recoId})`);
-                }
-                break;
-
-              case "MODIFY": {
-                if (!Array.isArray(existing)) {
-                  warnings.push(`MODIFY: field "${op.field}" is not an array — skipped (reco ${op.recoId})`);
-                  break;
-                }
-                let idx = -1;
-                if (op.targetMatch) {
-                  idx = existing.findIndex(
-                    (item) =>
-                      typeof item === "object" &&
-                      item !== null &&
-                      (item as Record<string, unknown>)[op.targetMatch!.key] === op.targetMatch!.value,
-                  );
-                }
-                if (idx < 0) {
-                  warnings.push(`MODIFY: target not found for "${op.field}" match=${JSON.stringify(op.targetMatch)} — skipped (reco ${op.recoId})`);
-                } else {
-                  existing[idx] = coerceValue(existing[idx], op.proposedValue);
-                  appliedCount++;
-                }
-                break;
-              }
-
-              case "REMOVE": {
-                if (!Array.isArray(existing)) {
-                  warnings.push(`REMOVE: field "${op.field}" is not an array — skipped (reco ${op.recoId})`);
-                  break;
-                }
-                let ridx = -1;
-                if (op.targetMatch) {
-                  ridx = existing.findIndex(
-                    (item) =>
-                      typeof item === "object" &&
-                      item !== null &&
-                      (item as Record<string, unknown>)[op.targetMatch!.key] === op.targetMatch!.value,
-                  );
-                }
-                if (ridx < 0) {
-                  warnings.push(`REMOVE: target not found for "${op.field}" match=${JSON.stringify(op.targetMatch)} — skipped (reco ${op.recoId})`);
-                } else {
-                  existing.splice(ridx, 1);
-                  appliedCount++;
-                }
-                break;
-              }
-
-              case "EXTEND": {
-                if (typeof existing === "object" && existing !== null && !Array.isArray(existing)) {
-                  newContent[op.field] = { ...(existing as Record<string, unknown>), ...(op.proposedValue as Record<string, unknown>) };
-                  appliedCount++;
-                } else if (existing == null) {
-                  newContent[op.field] = op.proposedValue;
-                  appliedCount++;
-                } else {
-                  warnings.push(`EXTEND: field "${op.field}" is not an object — skipped (reco ${op.recoId})`);
-                }
-                break;
-              }
-            }
-          }
-          if (appliedCount === 0) warnings.push("APPLY_RECOS_RESOLVED: aucune operation appliquee");
+          // Notoria sends pre-resolved operations — no pendingRecos lookup needed.
+          // Profondeur-conscient (`apply-resolved-ops`) : une reco ciblant une
+          // feuille imbriquée (`prophecy.pioneers`) s'écrit à la bonne feuille au
+          // lieu de créer une clé littérale « prophecy.pioneers » no-op.
+          const res = applyResolvedRecoOps(previousContent, operation.operations);
+          newContent = res.content;
+          for (const w of res.warnings) warnings.push(w);
+          if (res.appliedCount === 0) warnings.push("APPLY_RECOS_RESOLVED: aucune operation appliquee");
           break;
         }
       }

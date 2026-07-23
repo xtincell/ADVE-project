@@ -35,7 +35,7 @@ const SRC = join(ROOT, "src");
 const ALLOWED_BARE_CALLERS: ReadonlyArray<{ file: string; line: number; reason: string }> = [
   {
     file: "src/server/services/pillar-gateway/index.ts",
-    line: 708,
+    line: 578,
     reason: "Implémentation interne de writePillarAndScore — appelle writePillar puis cache reconcile + scoring + event.",
   },
   {

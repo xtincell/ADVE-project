@@ -10,6 +10,7 @@ import { callLLM } from "@/server/services/llm-gateway";
 import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import { extractJSON as _extractJSON } from "@/server/services/utils/llm";
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
+import { findEmptyLeafPaths } from "@/lib/types/pillar-maturity-contracts";
 import type { PillarKey } from "@/lib/types/advertis-vector";
 import { getFormatInstructions } from "@/lib/types/variable-bible";
 import { Prisma } from "@prisma/client";
@@ -213,22 +214,49 @@ async function generateRecosForPillar(
     /* graceful: no ranker / no embeddings → no few-shot, no error */
   }
 
-  // ── Detect empty/missing fields (PRIORITY for recos) ──
+  // ── Detect empty/missing fields (PRIORITY for recos) — EN PROFONDEUR ──
+  // L'ancienne détection ne regardait que le PREMIER niveau du schema
+  // (`currentContent[k]`) : un objet `prophecy = {worldTransformed}` comptait
+  // « rempli » alors que `pioneers`/`urgency`/`horizon` étaient vides, et une
+  // matrice `produitsCatalogue = [{nom}]` masquait ses cellules vides → « la
+  // notoria ignore les champs vides ». `findEmptyLeafPaths` (inventaire canonique)
+  // descend dans les objets imbriqués, saute les formes union-string legacy, et
+  // exclut les champs NEEDS_HUMAN (traction… — jamais fabriqués, interdit n°3).
   const allSchemaKeys = Object.keys(
     (PILLAR_SCHEMAS[targetKey.toUpperCase() as keyof typeof PILLAR_SCHEMAS] as { shape?: Record<string, unknown> })?.shape ?? {},
   );
-  const emptyFields = allSchemaKeys.filter((k) => {
+  const emptyLeaves = findEmptyLeafPaths(targetKey, currentContent);
+  const filledFields = allSchemaKeys.filter((k) => {
     const v = currentContent[k];
-    return v === null || v === undefined || v === "" || (Array.isArray(v) && v.length === 0);
+    return !(v === null || v === undefined || v === "" || (Array.isArray(v) && v.length === 0));
   });
-  const filledFields = allSchemaKeys.filter((k) => !emptyFields.includes(k));
+
+  // Sépare feuilles de PREMIER niveau (SET) des sous-feuilles imbriquées vides,
+  // groupées par objet parent (EXTEND — préserve les sous-champs déjà remplis).
+  const topLevelEmpty = emptyLeaves.filter((l) => !l.path.includes(".")).map((l) => l.path);
+  const nestedByParent = new Map<string, string[]>();
+  for (const l of emptyLeaves) {
+    if (!l.path.includes(".")) continue;
+    const dot = l.path.indexOf(".");
+    const parent = l.path.slice(0, dot);
+    const leaf = l.path.slice(dot + 1);
+    if (!nestedByParent.has(parent)) nestedByParent.set(parent, []);
+    nestedByParent.get(parent)!.push(leaf);
+  }
 
   // ── Inject Bible format rules for all fields ──
   const bibleInstructions = getFormatInstructions(targetKey, allSchemaKeys);
 
-  const emptyFieldsSection = emptyFields.length > 0
-    ? `\n⚠️ CHAMPS VIDES A REMPLIR EN PRIORITE (${emptyFields.length} champs):\n${emptyFields.map(f => `  - ${f}`).join("\n")}\n\nCes champs DOIVENT etre remplis via des operations SET. C'est la PRIORITE #1.`
-    : "\nTous les champs sont remplis. Concentre-toi sur l'enrichissement et la correction.";
+  const emptyFieldsSection = emptyLeaves.length > 0
+    ? `\n⚠️ CHAMPS VIDES A REMPLIR EN PRIORITE (${emptyLeaves.length} feuille(s)):\n` +
+      (topLevelEmpty.length > 0
+        ? `\nChamps de premier niveau (operation SET, une reco par champ) :\n${topLevelEmpty.map((f) => `  - ${f}`).join("\n")}\n`
+        : "") +
+      (nestedByParent.size > 0
+        ? `\nSous-champs imbriques vides (operation EXTEND sur l'objet parent — preserve les sous-champs deja remplis, une reco EXTEND par parent) :\n${[...nestedByParent.entries()].map(([p, leaves]) => `  - ${p} : ${leaves.join(", ")}`).join("\n")}\n`
+        : "") +
+      `\nToutes ces feuilles DOIVENT etre remplies. C'est la PRIORITE #1 — ne laisse AUCUNE feuille vide listee ci-dessus.`
+    : "\nTous les champs sont remplis en profondeur. Concentre-toi sur l'enrichissement et la correction.";
 
   const prompt = `SCHEMA du pilier ${targetKey.toUpperCase()} (types attendus):
 ${schemaDesc}

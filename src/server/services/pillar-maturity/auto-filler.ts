@@ -16,6 +16,7 @@ import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
 
 import { db } from "@/lib/db";
 import { setNestedValue, resolvePillarPath } from "@/lib/pillar-path";
+import { findEmptyLeafPaths } from "@/lib/types/pillar-maturity-contracts";
 import type { Prisma } from "@prisma/client";
 import type { MaturityStage, AutoFillResult, FieldRequirement } from "@/lib/types/pillar-maturity";
 import { assessPillar } from "./assessor";
@@ -232,6 +233,35 @@ async function runFillPass(
 
   if (fieldsToFill && fieldsToFill.length > 0) {
     missingReqs = missingReqs.filter(r => fieldsToFill.includes(r.path));
+  }
+
+  // ── Feuilles PROFONDES vides (sous-clés d'objets imbriqués : prophecy.pioneers,
+  // ikigai.love) — inventaire canonique DÉCOUPLÉ du contrat de maturité (le % de
+  // COMPLET ne bouge pas). Sert « Enrichir remplit tout en profondeur jusqu'à la
+  // feuille » sans distordre la complétude. On n'ajoute une feuille profonde QUE si
+  // son objet parent N'EST PAS déjà régénéré en entier par le contrat (sinon les
+  // sous-clés arriveraient avec l'objet — conflit d'ordre d'écriture). Anti-
+  // fabrication : `findEmptyLeafPaths` exclut NEEDS_HUMAN + formes union-string. ──
+  {
+    const already = new Set(missingReqs.map((r) => r.path));
+    const contractTopKeys = new Set(missingReqs.map((r) => r.path.split(/[.[]/)[0]!));
+    const inScope = (p: string) =>
+      !fieldsToFill || fieldsToFill.length === 0 ||
+      fieldsToFill.includes(p) || fieldsToFill.includes(p.split(".")[0]!);
+    for (const leaf of findEmptyLeafPaths(key, content)) {
+      if (!leaf.path.includes(".")) continue; // top-level : déjà couvert par le contrat
+      if (already.has(leaf.path)) continue;
+      if (contractTopKeys.has(leaf.topKey)) continue; // objet parent régénéré en entier
+      if (!inScope(leaf.path)) continue;
+      missingReqs.push({
+        path: leaf.path,
+        validator: leaf.isArray ? "min_items" : "non_empty",
+        ...(leaf.isArray ? { validatorArg: 1 } : {}),
+        derivable: true,
+        derivationSource: "ai_generation",
+        description: `Feuille profonde ${key.toUpperCase()}.${leaf.path}`,
+      });
+    }
   }
 
   if (missingReqs.length === 0) {
