@@ -247,7 +247,38 @@ export async function POST(request: Request) {
 // GET — Health check
 // ---------------------------------------------------------------------------
 
-export async function GET() {
+// Vérification d'abonnement webhook Meta/Instagram (handshake GET). À
+// l'abonnement, Meta appelle `?hub.mode=subscribe&hub.verify_token=<token>&hub.challenge=<c>`.
+// On RENVOIE `hub.challenge` EN CLAIR (text/plain, exigé par Meta) UNIQUEMENT si
+// `hub.verify_token` matche `META_WEBHOOK_VERIFY_TOKEN` (comparaison constante-temps).
+// Fail-closed : token non configuré / mode≠subscribe / mismatch ⇒ 403, jamais
+// d'écho non vérifié (parité avec le POST signé fail-closed ci-dessus). Cette voie
+// est le prérequis code-side des webhooks temps-réel Meta (Advanced Access) — la
+// review Meta reste l'atome externe, mais le code est prêt (drop-in). Sans aucun
+// paramètre `hub.*`, on préserve la sonde de santé JSON existante.
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const mode = url.searchParams.get("hub.mode");
+  const token = url.searchParams.get("hub.verify_token");
+  const challenge = url.searchParams.get("hub.challenge");
+
+  if (mode !== null || token !== null || challenge !== null) {
+    const expected = process.env.META_WEBHOOK_VERIFY_TOKEN;
+    if (mode === "subscribe" && expected && token && challenge) {
+      const a = Buffer.from(token);
+      const b = Buffer.from(expected);
+      const ok = a.length === b.length && crypto.timingSafeEqual(a, b);
+      if (ok) {
+        // Meta attend le challenge brut (text/plain), pas du JSON.
+        return new NextResponse(challenge, {
+          status: 200,
+          headers: { "Content-Type": "text/plain" },
+        });
+      }
+    }
+    return new NextResponse("Forbidden", { status: 403 });
+  }
+
   return NextResponse.json({
     status: "ok",
     platforms: ["facebook", "instagram", "tiktok", "youtube", "twitter", "linkedin"],

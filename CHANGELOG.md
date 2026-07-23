@@ -1,5 +1,14 @@
 # Changelog — La Fusee
 
+## v6.27.312 — feat(governance): webhook Meta — handshake de vérification GET `hub.challenge` (fail-closed) (2026-07-23)
+
+**Le webhook social avait un GET « sonde de santé » qui ignorait le handshake d'abonnement Meta. Ajouté : la vérification `hub.challenge` (le prérequis code-side des webhooks temps-réel Meta) — le code est prêt, seule l'App Review reste l'atome externe.**
+
+- **Le trou** : `/api/webhooks/social` GET renvoyait un JSON d'état statique — à l'abonnement, Meta appelle `?hub.mode=subscribe&hub.verify_token=<tok>&hub.challenge=<c>` et attend l'écho de `hub.challenge` EN CLAIR. Sans ce handshake, Meta ne peut jamais confirmer l'abonnement temps-réel (les insights passent aujourd'hui par polling).
+- **Le fix** : GET renvoie `hub.challenge` (text/plain, 200) UNIQUEMENT si `hub.mode === "subscribe"` ET `hub.verify_token` matche `META_WEBHOOK_VERIFY_TOKEN` (comparaison **constante-temps**, longueurs gardées). **Fail-closed** : token non configuré / mode≠subscribe / mismatch ⇒ 403, jamais d'écho non vérifié (parité avec le POST signé HMAC fail-closed). Sans aucun paramètre `hub.*`, la sonde de santé JSON existante est **préservée** (backward-compat).
+- **« Rien n'est irréductible »** : ce mini-build câble le dernier pouce code-side du webhook Meta temps-réel. Il ne reste que l'**atome externe pur** — l'App Review Meta accordant l'Advanced Access. Le code est drop-in : dès la review passée + le token posé, l'abonnement se confirme.
+- 5 tests (écho sur token valide / 403 sur token faux / 403 fail-closed sans env / 403 sur mode≠subscribe / sonde de santé préservée). 0 modèle Prisma · 0 migration · cap APOGEE 7/7 · 0 LLM. tsc 0 · 1273 tests gouvernance verts.
+
 ## v6.27.311 — feat(seshat): scoreur — 2 collecteurs footprint publics sans clé (Wikipedia + autocomplete) (2026-07-23)
 
 **Deux signaux révélés publics alimentent enfin le scoreur A/D — sans aucune clé, sans toucher la math de score. Wikipedia (API officielle) ON ; autocomplete Google (ToS-gray) default-OFF, honnête plutôt que reckless.**
