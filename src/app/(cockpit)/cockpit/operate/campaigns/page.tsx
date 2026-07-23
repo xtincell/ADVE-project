@@ -339,7 +339,7 @@ export default function CampaignsPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h4 className="text-sm font-semibold text-white">
+                      <h4 className="text-sm font-semibold text-foreground">
                         {c.name}
                       </h4>
                       <CampaignStateBadge state={getState(c)} />
@@ -365,7 +365,7 @@ export default function CampaignsPage() {
                         })}
                       </span>
                       {bData ? (
-                        <span className="flex items-center gap-1 text-white">
+                        <span className="flex items-center gap-1 text-foreground">
                           <DollarSign className="h-3 w-3 text-accent" />
                           <span>Dépensé : {bData.spent.toLocaleString("fr-FR")} / {bData.planned.toLocaleString("fr-FR")} XAF</span>
                         </span>
@@ -444,7 +444,7 @@ export default function CampaignsPage() {
                 setNewCampaign({ ...newCampaign, name: e.target.value })
               }
               placeholder="Ex: Campagne printemps 2026"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
             />
           </FormField>
 
@@ -456,7 +456,7 @@ export default function CampaignsPage() {
               }
               placeholder="Decrivez les objectifs et le contexte de la campagne..."
               rows={3}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
             />
           </FormField>
 
@@ -468,7 +468,7 @@ export default function CampaignsPage() {
                 setNewCampaign({ ...newCampaign, budget: e.target.value })
               }
               placeholder="Ex: 5000000"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
             />
           </FormField>
 
@@ -480,7 +480,7 @@ export default function CampaignsPage() {
                 onChange={(e) =>
                   setNewCampaign({ ...newCampaign, startDate: e.target.value })
                 }
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
               />
             </FormField>
             <FormField label="Date de fin">
@@ -490,7 +490,7 @@ export default function CampaignsPage() {
                 onChange={(e) =>
                   setNewCampaign({ ...newCampaign, endDate: e.target.value })
                 }
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
               />
             </FormField>
           </div>
@@ -646,13 +646,13 @@ function CampaignDetailModal({ campaign, pillarContentMap, onClose, onTransition
                 {objectives.primary && (
                   <div>
                     <p className="text-2xs font-medium uppercase tracking-wide text-foreground-muted">Principal</p>
-                    <p className="text-sm text-white">{objectives.primary}</p>
+                    <p className="text-sm text-foreground">{objectives.primary}</p>
                   </div>
                 )}
                 {objectives.secondary && (
                   <div>
                     <p className="text-2xs font-medium uppercase tracking-wide text-foreground-muted">Secondaire</p>
-                    <p className="text-sm text-white">{objectives.secondary}</p>
+                    <p className="text-sm text-foreground">{objectives.secondary}</p>
                   </div>
                 )}
                 {objectives.missions && objectives.missions.length > 0 && (
@@ -683,7 +683,7 @@ function CampaignDetailModal({ campaign, pillarContentMap, onClose, onTransition
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <p className="text-xs text-foreground-muted">Total</p>
-                  <p className="text-sm font-semibold text-white">
+                  <p className="text-sm font-semibold text-foreground">
                     {(budget.total ?? 0).toLocaleString("fr-FR")} XAF
                   </p>
                 </div>
@@ -705,7 +705,7 @@ function CampaignDetailModal({ campaign, pillarContentMap, onClose, onTransition
                   {budget.breakdown.map((item) => (
                     <div key={item.category} className="flex items-center justify-between text-xs">
                       <span className="text-foreground-secondary">{item.category}</span>
-                      <span className="text-white">{item.amount.toLocaleString("fr-FR")} XAF</span>
+                      <span className="text-foreground">{item.amount.toLocaleString("fr-FR")} XAF</span>
                     </div>
                   ))}
                 </div>
@@ -729,13 +729,13 @@ function CampaignDetailModal({ campaign, pillarContentMap, onClose, onTransition
               <div className="space-y-3">
                 {aarrrData.stages.map((stage) => (
                   <div key={stage.stage} className="rounded-lg border border-border bg-background/60 p-3">
-                    <h5 className="mb-2 text-xs font-semibold text-white">{stage.stage}</h5>
+                    <h5 className="mb-2 text-xs font-semibold text-foreground">{stage.stage}</h5>
                     {stage.metrics && stage.metrics.length > 0 ? (
                       <div className="space-y-1">
                         {stage.metrics.map((m) => (
                           <div key={m.metric} className="flex items-center justify-between text-xs">
                             <span className="text-foreground-secondary">{m.metric}</span>
-                            <span className="text-white">
+                            <span className="text-foreground">
                               {m.value}{m.target ? ` / ${m.target}` : ""}
                             </span>
                           </div>
@@ -816,7 +816,7 @@ function CampaignDetailModal({ campaign, pillarContentMap, onClose, onTransition
                               {mission.priority}
                             </span>
                           )}
-                          <span className="text-sm font-medium text-white">{mission.title || `${mission.id.slice(0, 8)}...`}</span>
+                          <span className="text-sm font-medium text-foreground">{mission.title || `${mission.id.slice(0, 8)}...`}</span>
                         </div>
                         {mission.description && (
                           <p className="mt-1 text-xs text-foreground-muted line-clamp-1">{mission.description}</p>

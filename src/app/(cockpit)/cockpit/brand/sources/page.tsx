@@ -501,7 +501,7 @@ function SourceEditModal({
                 type="text"
                 value={titleValue}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full rounded border border-white/10 bg-surface px-3 py-2 text-sm text-white"
+                className="w-full rounded border border-white/10 bg-surface px-3 py-2 text-sm text-foreground"
               />
             </div>
           )}
@@ -550,7 +550,7 @@ function SourceEditModal({
                             value={value as string}
                             onChange={(e) => handleResponseChange(q.id, e.target.value)}
                             rows={3}
-                            className="w-full rounded border border-white/10 bg-surface px-3 py-2 text-xs text-white placeholder-foreground-muted outline-none focus:border-accent"
+                            className="w-full rounded border border-white/10 bg-surface px-3 py-2 text-xs text-foreground placeholder-foreground-muted outline-none focus:border-accent"
                             placeholder="Votre réponse..."
                           />
                         )}
@@ -559,7 +559,7 @@ function SourceEditModal({
                           <select
                             value={value as string}
                             onChange={(e) => handleResponseChange(q.id, e.target.value)}
-                            className="w-full rounded border border-white/10 bg-surface px-3 py-2 text-xs text-white placeholder-foreground-muted outline-none focus:border-accent"
+                            className="w-full rounded border border-white/10 bg-surface px-3 py-2 text-xs text-foreground placeholder-foreground-muted outline-none focus:border-accent"
                           >
                             <option value="">— Sélectionner —</option>
                             {q.options?.map((opt: string) => {
@@ -581,7 +581,7 @@ function SourceEditModal({
                                 const [, label] = opt.includes("::") ? opt.split("::") : [opt, opt];
                                 const isChecked = selectedValues.includes(opt);
                                 return (
-                                  <label key={opt} className="flex items-center gap-2 text-2xs font-normal text-foreground-secondary cursor-pointer hover:text-white">
+                                  <label key={opt} className="flex items-center gap-2 text-2xs font-normal text-foreground-secondary cursor-pointer hover:text-foreground">
                                     <input
                                       type="checkbox"
                                       checked={isChecked}
@@ -629,7 +629,7 @@ function SourceEditModal({
                 value={contentValue}
                 onChange={(e) => setContent(e.target.value)}
                 rows={14}
-                className="w-full rounded border border-white/10 bg-surface px-3 py-2 font-mono text-xs text-white"
+                className="w-full rounded border border-white/10 bg-surface px-3 py-2 font-mono text-xs text-foreground"
               />
             </div>
           )}
@@ -748,14 +748,14 @@ export default function SourcesPage() {
             placeholder="Titre (ex: Notes de reunion client, Brief initial, Analyse concurrentielle...)"
             value={noteTitle}
             onChange={e => setNoteTitle(e.target.value)}
-            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-accent"
+            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-accent"
           />
           <textarea
             placeholder="Collez ici toute information utile sur la marque : description, historique, positionnement, concurrents, chiffres cles, verbatims clients, notes de reunion..."
             value={noteContent}
             onChange={e => setNoteContent(e.target.value)}
             rows={6}
-            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-accent resize-y"
+            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-accent resize-y"
           />
           <div className="flex justify-end gap-2">
             <button onClick={() => setShowAddForm(false)} className="rounded px-3 py-1.5 text-xs text-foreground-muted hover:bg-white/5">

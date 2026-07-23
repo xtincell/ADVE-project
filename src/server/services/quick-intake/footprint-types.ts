@@ -109,6 +109,10 @@ export interface EnrichedFootprint extends WebFootprint {
   emailInfra?: import("./footprint-collectors").EmailInfra;
   performance?: import("./footprint-collectors").SitePerformance;
   ads?: import("./footprint-collectors").AdsPresence;
+  /** Présence Wikipédia (axe A — notabilité). Contrat P22-1 : LIVE (hasPage true/false) ou DEGRADED. */
+  wikipedia?: import("@/domain").ConnectorResult<import("./footprint-collectors").WikipediaSignal>;
+  /** Demande de recherche via autocomplete Google (axe D). Registered-but-off — souvent DEGRADED(MISSING_PREREQUISITE). */
+  searchAutocomplete?: import("@/domain").ConnectorResult<import("./footprint-collectors").SearchAutocompleteSignal>;
   score?: FootprintScore;
   narrative?: { text: string; source: "LLM" | "TEMPLATE" };
 }

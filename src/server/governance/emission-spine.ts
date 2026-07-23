@@ -209,12 +209,13 @@ export interface CloseEmissionArgs {
  * puis publie l'événement terminal correspondant. Jette en cas d'échec
  * d'écriture — la row reste PENDING (état non-terminal, observable en base).
  *
- * NOTE d'honnêteté (round-13c) : il n'existe PAS de sweep automatique des
- * émissions PENDING orphelines (process mort entre open/close, ou blip DB à
- * l'update ci-dessous). L'intégrité n'est PAS en jeu (fail-closed : la mutation
- * a commit ou non, jamais à moitié) — seule la trace peut rester figée. Trou
- * d'observabilité tracé (RESIDUAL-DEBT §round-13, sweep à bâtir prudemment pour
- * ne pas fail-closer des émissions async légitimes encore en vol).
+ * NOTE (purge dette) : si cette écriture échoue (ou si le process meurt entre
+ * open/close), la row reste PENDING — mais le sweep `ops-sweep §5` la réconcilie
+ * désormais (status PENDING + completedAt null > 6 h → FAILED ; observationStatus
+ * figé sur une émission OK/DOWNGRADED > 6 h → STALE_OBSERVATION), via updateMany
+ * DIRECT (aucun event bus → aucun fan-out de compensation ; un close réel ultérieur
+ * écrase, idempotent). L'intégrité n'est PAS en jeu (fail-closed : la mutation a
+ * commit ou non, jamais à moitié) — seule la trace pouvait rester figée.
  */
 export async function closeEmission(args: CloseEmissionArgs): Promise<void> {
   const db = await resolveDb(args.db);

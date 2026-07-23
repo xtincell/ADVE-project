@@ -113,7 +113,7 @@ export function FieldOpsTab({ campaignId }: { campaignId: string }) {
                           op.status === "CANCELLED" ? "bg-error/15 text-error" :
                           "bg-foreground-muted/15 text-foreground-secondary"
                         }`}>{(op.status as string) ?? "PLANNED"}</span>
-                        <h4 className="text-sm font-medium text-white">{(op.name as string) ?? (op.title as string)}</h4>
+                        <h4 className="text-sm font-medium text-foreground">{(op.name as string) ?? (op.title as string)}</h4>
                         {!!aarrConfig.primaryStage && (
                           <span className="rounded bg-accent/15 px-1.5 py-0.5 text-2xs font-bold text-accent">{aarrConfig.primaryStage as string}</span>
                         )}
@@ -167,7 +167,7 @@ export function FieldOpsTab({ campaignId }: { campaignId: string }) {
                           <h5 className="mb-2 text-xs font-semibold text-foreground-secondary">Equipe terrain</h5>
                           <div className="flex flex-wrap gap-2">
                             {team.map((t, i) => (
-                              <span key={i} className="rounded-lg border border-border bg-background px-2.5 py-1 text-xs text-white">
+                              <span key={i} className="rounded-lg border border-border bg-background px-2.5 py-1 text-xs text-foreground">
                                 {(t.name as string) ?? "Membre"} <span className="text-foreground-muted">({(t.role as string) ?? "agent"})</span>
                               </span>
                             ))}
@@ -196,7 +196,7 @@ export function FieldOpsTab({ campaignId }: { campaignId: string }) {
                           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                             {(aarrConfig.resources as Array<Record<string, unknown>>).map((r, i) => (
                               <div key={i} className="rounded-lg border border-border bg-background/50 p-2">
-                                <p className="text-xs font-medium text-white">{(r.role as string) ?? "Role"}</p>
+                                <p className="text-xs font-medium text-foreground">{(r.role as string) ?? "Role"}</p>
                                 <p className="text-2xs text-foreground-muted">Qty: {(r.count as number) ?? 1}</p>
                               </div>
                             ))}
@@ -218,7 +218,7 @@ export function FieldOpsTab({ campaignId }: { campaignId: string }) {
                                       r.status === "SUBMITTED" ? "bg-warning/15 text-warning" :
                                       "bg-foreground-muted/15 text-foreground-secondary"
                                     }`}>{(r.status as string) ?? "DRAFT"}</span>
-                                    <span className="text-xs text-white">{(r.reporterName as string) ?? "Anonyme"}</span>
+                                    <span className="text-xs text-foreground">{(r.reporterName as string) ?? "Anonyme"}</span>
                                     {!!r.createdAt && <span className="text-2xs text-foreground-muted">{new Date(r.createdAt as string).toLocaleDateString("fr-FR")}</span>}
                                   </div>
                                   {(r.status === "SUBMITTED" || r.status === "DRAFT") && (
@@ -237,7 +237,7 @@ export function FieldOpsTab({ campaignId }: { campaignId: string }) {
                                   ].map((m) => (
                                     <div key={m.label} className="text-center">
                                       <p className="text-2xs text-foreground-muted">{m.label}</p>
-                                      <p className="text-sm font-bold text-white">{m.val != null ? m.val.toLocaleString("fr-FR") : "—"}</p>
+                                      <p className="text-sm font-bold text-foreground">{m.val != null ? m.val.toLocaleString("fr-FR") : "—"}</p>
                                       {!!m.unit && <p className="text-[9px] text-foreground-muted">{m.unit}</p>}
                                     </div>
                                   ))}
@@ -263,55 +263,55 @@ export function FieldOpsTab({ campaignId }: { campaignId: string }) {
             <FormField label="Nom de l'operation" required>
               <input type="text" value={newOp.name} onChange={(e) => setNewOp({ ...newOp, name: e.target.value })}
                 placeholder="Ex: Activation marche central Douala"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong" />
             </FormField>
             <FormField label="Type d'operation">
               <select value={newOp.type} onChange={(e) => setNewOp({ ...newOp, type: e.target.value })}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong">
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-border-strong">
                 {OP_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </FormField>
             <FormField label="Lieu / Zone d'execution" required>
               <input type="text" value={newOp.location} onChange={(e) => setNewOp({ ...newOp, location: e.target.value })}
                 placeholder="Ex: Douala, Marche Mboppi"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong" />
             </FormField>
             <FormField label="Date" required>
               <input type="date" value={newOp.date} onChange={(e) => setNewOp({ ...newOp, date: e.target.value })}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong" />
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-border-strong" />
             </FormField>
             <FormField label="Chef des operations">
               <input type="text" value={newOp.chefOps} onChange={(e) => setNewOp({ ...newOp, chefOps: e.target.value })}
                 placeholder="Nom du responsable terrain"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong" />
             </FormField>
             <FormField label="Duree">
               <input type="text" value={newOp.duree} onChange={(e) => setNewOp({ ...newOp, duree: e.target.value })}
                 placeholder="Ex: 3 jours, 1 semaine"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong" />
             </FormField>
             <FormField label="Budget (XAF)">
               <input type="number" value={newOp.budget} onChange={(e) => setNewOp({ ...newOp, budget: e.target.value })}
                 placeholder="Ex: 500000"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong" />
             </FormField>
             <FormField label="Taille de l'equipe">
               <input type="number" value={newOp.teamSize} onChange={(e) => setNewOp({ ...newOp, teamSize: e.target.value })}
                 placeholder="Ex: 5"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong" />
             </FormField>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField label="Objectif primaire AARRR">
               <select value={newOp.primaryAARR} onChange={(e) => setNewOp({ ...newOp, primaryAARR: e.target.value })}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong">
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-border-strong">
                 {AARR_STAGES.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </FormField>
             <FormField label="Objectif secondaire AARRR">
               <select value={newOp.secondaryAARR} onChange={(e) => setNewOp({ ...newOp, secondaryAARR: e.target.value })}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong">
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-border-strong">
                 {AARR_STAGES.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </FormField>
@@ -328,9 +328,9 @@ export function FieldOpsTab({ campaignId }: { campaignId: string }) {
             {newOp.team.map((t, i) => (
               <div key={i} className="mb-2 flex gap-2">
                 <input type="text" value={t.name} onChange={(e) => { const tm = [...newOp.team]; tm[i] = { ...tm[i]!, name: e.target.value }; setNewOp({ ...newOp, team: tm }); }}
-                  placeholder="Nom" className="flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
+                  placeholder="Nom" className="flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-foreground placeholder-foreground-muted outline-none focus:border-border-strong" />
                 <select value={t.role} onChange={(e) => { const tm = [...newOp.team]; tm[i] = { ...tm[i]!, role: e.target.value }; setNewOp({ ...newOp, team: tm }); }}
-                  className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-white outline-none focus:border-border-strong">
+                  className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-foreground outline-none focus:border-border-strong">
                   {["agent", "superviseur", "vendeur", "hotesse", "animateur", "chauffeur"].map((r) => <option key={r} value={r}>{r}</option>)}
                 </select>
                 <MiniBtn variant="danger" onClick={() => setNewOp({ ...newOp, team: newOp.team.filter((_, j) => j !== i) })}>
@@ -351,9 +351,9 @@ export function FieldOpsTab({ campaignId }: { campaignId: string }) {
             {newOp.ambassadors.map((a, i) => (
               <div key={i} className="mb-2 flex gap-2">
                 <input type="text" value={a.name} onChange={(e) => { const am = [...newOp.ambassadors]; am[i] = { ...am[i]!, name: e.target.value }; setNewOp({ ...newOp, ambassadors: am }); }}
-                  placeholder="Nom" className="flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
+                  placeholder="Nom" className="flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-foreground placeholder-foreground-muted outline-none focus:border-border-strong" />
                 <input type="text" value={a.phone} onChange={(e) => { const am = [...newOp.ambassadors]; am[i] = { ...am[i]!, phone: e.target.value }; setNewOp({ ...newOp, ambassadors: am }); }}
-                  placeholder="Telephone" className="w-32 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
+                  placeholder="Telephone" className="w-32 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-foreground placeholder-foreground-muted outline-none focus:border-border-strong" />
                 <MiniBtn variant="danger" onClick={() => setNewOp({ ...newOp, ambassadors: newOp.ambassadors.filter((_, j) => j !== i) })}>
                   <Trash2 className="h-3 w-3" />
                 </MiniBtn>
@@ -372,9 +372,9 @@ export function FieldOpsTab({ campaignId }: { campaignId: string }) {
             {newOp.resources.map((r, i) => (
               <div key={i} className="mb-2 flex gap-2">
                 <input type="text" value={r.role} onChange={(e) => { const rs = [...newOp.resources]; rs[i] = { ...rs[i]!, role: e.target.value }; setNewOp({ ...newOp, resources: rs }); }}
-                  placeholder="Ex: vendeurs, hotesses, flyers" className="flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
+                  placeholder="Ex: vendeurs, hotesses, flyers" className="flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-foreground placeholder-foreground-muted outline-none focus:border-border-strong" />
                 <input type="number" value={r.count} onChange={(e) => { const rs = [...newOp.resources]; rs[i] = { ...rs[i]!, count: e.target.value }; setNewOp({ ...newOp, resources: rs }); }}
-                  placeholder="Qty" className="w-20 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
+                  placeholder="Qty" className="w-20 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-foreground placeholder-foreground-muted outline-none focus:border-border-strong" />
                 <MiniBtn variant="danger" onClick={() => setNewOp({ ...newOp, resources: newOp.resources.filter((_, j) => j !== i) })}>
                   <Trash2 className="h-3 w-3" />
                 </MiniBtn>
@@ -415,7 +415,7 @@ export function FieldOpsTab({ campaignId }: { campaignId: string }) {
           <FormField label="Nom du rapporteur" required>
             <input type="text" value={newReport.reporterName} onChange={(e) => setNewReport({ ...newReport, reporterName: e.target.value })}
               placeholder="Ex: Jean Mballa"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong" />
           </FormField>
 
           <h5 className="text-xs font-semibold text-foreground-secondary">Metriques AARRR</h5>
@@ -427,17 +427,17 @@ export function FieldOpsTab({ campaignId }: { campaignId: string }) {
             { stage: "Referral", prefix: "referral" as const, color: "border-accent bg-accent/20" },
           ].map(({ stage, prefix, color }) => (
             <div key={prefix} className={`rounded-lg border p-3 ${color}`}>
-              <h6 className="mb-2 text-xs font-bold text-white">{stage}</h6>
+              <h6 className="mb-2 text-xs font-bold text-foreground">{stage}</h6>
               <div className="grid grid-cols-3 gap-2">
                 <input type="number" value={(newReport as Record<string, string>)[`${prefix}Count`]}
                   onChange={(e) => setNewReport({ ...newReport, [`${prefix}Count`]: e.target.value })}
-                  placeholder="Quantite" className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-white placeholder-foreground-muted outline-none" />
+                  placeholder="Quantite" className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-foreground placeholder-foreground-muted outline-none" />
                 <input type="text" value={(newReport as Record<string, string>)[`${prefix}Label`]}
                   onChange={(e) => setNewReport({ ...newReport, [`${prefix}Label`]: e.target.value })}
-                  placeholder="Label" className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-white placeholder-foreground-muted outline-none" />
+                  placeholder="Label" className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-foreground placeholder-foreground-muted outline-none" />
                 <input type="text" value={(newReport as Record<string, string>)[`${prefix}Unit`]}
                   onChange={(e) => setNewReport({ ...newReport, [`${prefix}Unit`]: e.target.value })}
-                  placeholder="Unite" className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-white placeholder-foreground-muted outline-none" />
+                  placeholder="Unite" className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-foreground placeholder-foreground-muted outline-none" />
               </div>
             </div>
           ))}
@@ -445,7 +445,7 @@ export function FieldOpsTab({ campaignId }: { campaignId: string }) {
           <FormField label="Notes">
             <textarea value={newReport.notes} onChange={(e) => setNewReport({ ...newReport, notes: e.target.value })}
               rows={3} placeholder="Observations, incidents, remarques..."
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong" />
           </FormField>
 
           <div className="flex justify-end gap-3 pt-2">

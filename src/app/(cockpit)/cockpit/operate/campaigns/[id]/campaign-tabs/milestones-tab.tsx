@@ -45,7 +45,7 @@ export function MilestonesTab({ campaignId }: { campaignId: string }) {
                     <div>
                       <div className="flex items-center gap-2">
                         {isComplete && <CheckCircle className="h-4 w-4 text-success" />}
-                        <h4 className={`text-sm font-medium ${isComplete ? "text-success line-through" : "text-white"}`}>{ms.title as string}</h4>
+                        <h4 className={`text-sm font-medium ${isComplete ? "text-success line-through" : "text-foreground"}`}>{ms.title as string}</h4>
                       </div>
                       {!!ms.phase && <p className="mt-1 text-xs text-foreground-muted">Phase: {ms.phase as string}</p>}
                       {dueDate && (
@@ -78,16 +78,16 @@ export function MilestonesTab({ campaignId }: { campaignId: string }) {
           <FormField label="Titre" required>
             <input type="text" value={newMs.title} onChange={(e) => setNewMs({ ...newMs, title: e.target.value })}
               placeholder="Ex: Validation du brief creatif"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong" />
           </FormField>
           <FormField label="Phase">
             <input type="text" value={newMs.phase} onChange={(e) => setNewMs({ ...newMs, phase: e.target.value })}
               placeholder="Ex: PLANNING, PRODUCTION, APPROVAL"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong" />
           </FormField>
           <FormField label="Date d'echeance" required>
             <input type="date" value={newMs.dueDate} onChange={(e) => setNewMs({ ...newMs, dueDate: e.target.value })}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong" />
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-border-strong" />
           </FormField>
           <div className="flex justify-end gap-3 pt-2">
             <MiniBtn onClick={() => setShowCreate(false)}>Annuler</MiniBtn>

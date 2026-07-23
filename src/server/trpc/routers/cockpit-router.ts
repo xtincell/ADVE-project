@@ -162,7 +162,10 @@ export const cockpitRouter = createTRPCRouter({
       // ou collaborateur délégué se voyait demander d'« activer SON abonnement »).
       // Viewer délégué (≠ owner, accès déjà vérifié ci-dessus) : lecture exempte.
       if (strategy.userId === ctx.session.user.id) {
-        const gate = await checkPaidTier(strategy.userId);
+        // F5 — entitlement scopé à CETTE marque (input.strategyId), pas
+        // operator-wide : un abonnement scopé à une autre marque ne débloque
+        // pas celle-ci ; un sub legacy null reste operator-wide (backward-compat).
+        const gate = await checkPaidTier(strategy.userId, undefined, input.strategyId);
         if (!gate.allowed) {
           return { state: "TIER_GATE_DENIED", configureUrl: gate.configureUrl ?? "/pricing" };
         }
@@ -243,7 +246,10 @@ export const cockpitRouter = createTRPCRouter({
       // 2026-07-16 `tier-gate-keyed-on-viewer-not-brand` — la revue « Fans
       // détectés » était inatteignable pour les opérateurs OPERATOR-role).
       if (strategy.userId === ctx.session.user.id) {
-        const gate = await checkPaidTier(strategy.userId);
+        // F5 — entitlement scopé à CETTE marque (input.strategyId), pas
+        // operator-wide : un abonnement scopé à une autre marque ne débloque
+        // pas celle-ci ; un sub legacy null reste operator-wide (backward-compat).
+        const gate = await checkPaidTier(strategy.userId, undefined, input.strategyId);
         if (!gate.allowed) {
           return { state: "TIER_GATE_DENIED", configureUrl: gate.configureUrl ?? "/pricing" };
         }

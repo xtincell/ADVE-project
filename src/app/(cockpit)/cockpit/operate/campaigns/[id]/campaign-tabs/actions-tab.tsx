@@ -79,7 +79,7 @@ export function ActionsTab({ campaignId }: { campaignId: string }) {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         {!!a.priority && <span className={`rounded px-1.5 py-0.5 text-2xs font-bold ${PRIORITY_COLORS[a.priority as string] ?? ""}`}>{a.priority as string}</span>}
-                        <h4 className="text-sm font-medium text-white">{a.title as string}</h4>
+                        <h4 className="text-sm font-medium text-foreground">{a.title as string}</h4>
                       </div>
                       {!!a.description && <p className="mt-1 text-xs text-foreground-muted line-clamp-2">{a.description as string}</p>}
                       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-2xs text-foreground-muted">
@@ -132,7 +132,7 @@ export function ActionsTab({ campaignId }: { campaignId: string }) {
             <button
               key={cat}
               onClick={() => setFilter(cat)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${filter === cat ? "bg-background text-white" : "text-foreground-muted hover:text-foreground-secondary"}`}
+              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${filter === cat ? "bg-background text-foreground" : "text-foreground-muted hover:text-foreground-secondary"}`}
             >
               {cat}
             </button>
@@ -152,7 +152,7 @@ export function ActionsTab({ campaignId }: { campaignId: string }) {
                       <span className={`rounded px-1.5 py-0.5 text-2xs font-bold ${a.category === "ATL" ? "bg-info/15 text-info" : a.category === "BTL" ? "bg-success/15 text-success" : a.category === "TTL" ? "bg-accent/15 text-accent" : "bg-warning/15 text-warning"}`}>
                         {a.category as string}
                       </span>
-                      <h4 className="text-sm font-medium text-white">{a.label as string}</h4>
+                      <h4 className="text-sm font-medium text-foreground">{a.label as string}</h4>
                     </div>
                     <p className="mt-1 text-xs text-foreground-muted">{a.typeCode as string}</p>
                     {!!a.kpiTarget && <p className="mt-1 text-xs text-foreground-secondary">KPI: {String(a.kpiTarget)}</p>}
@@ -172,7 +172,7 @@ export function ActionsTab({ campaignId }: { campaignId: string }) {
             <select
               value={newAction.actionTypeSlug}
               onChange={(e) => setNewAction({ ...newAction, actionTypeSlug: e.target.value })}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-border-strong"
             >
               <option value="">Sélectionner un type...</option>
               {actionTypes.map((t) => (
@@ -186,7 +186,7 @@ export function ActionsTab({ campaignId }: { campaignId: string }) {
               value={newAction.name}
               onChange={(e) => setNewAction({ ...newAction, name: e.target.value })}
               placeholder="Ex: Spot TV 30s — campagne notoriete"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong"
             />
           </FormField>
           <FormField label="Budget (XAF)">
@@ -195,7 +195,7 @@ export function ActionsTab({ campaignId }: { campaignId: string }) {
               value={newAction.budget}
               onChange={(e) => setNewAction({ ...newAction, budget: e.target.value })}
               placeholder="Ex: 500000"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong"
             />
           </FormField>
           <div className="flex justify-end gap-3 pt-2">

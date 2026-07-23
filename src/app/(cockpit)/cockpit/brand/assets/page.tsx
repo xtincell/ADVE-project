@@ -272,7 +272,7 @@ export default function AssetsPage() {
           className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
             pillarFilter === "all"
               ? "bg-white text-foreground-muted"
-              : "border border-border bg-background text-foreground-secondary hover:text-white"
+              : "border border-border bg-background text-foreground-secondary hover:text-foreground"
           }`}
         >
           Tous
@@ -284,7 +284,7 @@ export default function AssetsPage() {
             className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
               pillarFilter === key
                 ? "bg-white text-foreground-muted"
-                : "border border-border bg-background text-foreground-secondary hover:text-white"
+                : "border border-border bg-background text-foreground-secondary hover:text-foreground"
             }`}
           >
             {key.toUpperCase()} - {PILLAR_NAMES[key]}
@@ -318,13 +318,13 @@ export default function AssetsPage() {
         <div className="flex rounded-lg border border-border">
           <button
             onClick={() => setViewMode("grid")}
-            className={`p-2 ${viewMode === "grid" ? "bg-background text-white" : "text-foreground-muted hover:text-white"}`}
+            className={`p-2 ${viewMode === "grid" ? "bg-background text-foreground" : "text-foreground-muted hover:text-foreground"}`}
           >
             <Grid3X3 className="h-4 w-4" />
           </button>
           <button
             onClick={() => setViewMode("list")}
-            className={`p-2 ${viewMode === "list" ? "bg-background text-white" : "text-foreground-muted hover:text-white"}`}
+            className={`p-2 ${viewMode === "list" ? "bg-background text-foreground" : "text-foreground-muted hover:text-foreground"}`}
           >
             <List className="h-4 w-4" />
           </button>
@@ -421,7 +421,7 @@ export default function AssetsPage() {
                     </div>
 
                     <div className="mt-3">
-                      <p className="truncate text-sm font-medium text-white">
+                      <p className="truncate text-sm font-medium text-foreground">
                         {asset.name}
                       </p>
                       <p className="mt-1 text-xs text-foreground-muted">
@@ -475,7 +475,7 @@ export default function AssetsPage() {
                     >
                       <Icon className="h-5 w-5 shrink-0 text-foreground-muted" />
                       <div className="flex-1 truncate">
-                        <p className="truncate text-sm font-medium text-white">
+                        <p className="truncate text-sm font-medium text-foreground">
                           {asset.name}
                         </p>
                       </div>
@@ -540,7 +540,7 @@ export default function AssetsPage() {
                 setUploadForm({ ...uploadForm, name: e.target.value })
               }
               placeholder="Ex: Logo principal, Charte couleurs..."
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
             />
           </FormField>
 
@@ -556,7 +556,7 @@ export default function AssetsPage() {
                   className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
                     uploadForm.type === t.value
                       ? "border-white bg-white text-foreground-muted"
-                      : "border-border bg-background text-foreground-secondary hover:border-border hover:text-white"
+                      : "border-border bg-background text-foreground-secondary hover:border-border hover:text-foreground"
                   }`}
                 >
                   <t.icon className="h-4 w-4" />
@@ -576,7 +576,7 @@ export default function AssetsPage() {
                   className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
                     (uploadForm.pillarTags[key] ?? 0) > 0
                       ? "bg-accent text-white"
-                      : "border border-border bg-background text-foreground-secondary hover:text-white"
+                      : "border border-border bg-background text-foreground-secondary hover:text-foreground"
                   }`}
                 >
                   {key.toUpperCase()} - {PILLAR_NAMES[key]}
@@ -590,11 +590,11 @@ export default function AssetsPage() {
               {/* Toggle file vs URL */}
               <div className="flex gap-2">
                 <button type="button" onClick={() => setUploadMode("file")}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${uploadMode === "file" ? "bg-white text-foreground-muted" : "border border-border text-foreground-secondary hover:text-white"}`}>
+                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${uploadMode === "file" ? "bg-white text-foreground-muted" : "border border-border text-foreground-secondary hover:text-foreground"}`}>
                   Uploader un fichier
                 </button>
                 <button type="button" onClick={() => setUploadMode("url")}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${uploadMode === "url" ? "bg-white text-foreground-muted" : "border border-border text-foreground-secondary hover:text-white"}`}>
+                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${uploadMode === "url" ? "bg-white text-foreground-muted" : "border border-border text-foreground-secondary hover:text-foreground"}`}>
                   Lien URL
                 </button>
               </div>
@@ -616,7 +616,7 @@ export default function AssetsPage() {
                         <FileText className="h-12 w-12 text-foreground-muted" />
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="truncate text-sm text-white">{uploadForm.name || "Fichier selectionne"}</p>
+                        <p className="truncate text-sm text-foreground">{uploadForm.name || "Fichier selectionne"}</p>
                         <p className="text-2xs text-foreground-muted">Pret a uploader</p>
                       </div>
                       <button type="button" onClick={() => { setFilePreview(null); setUploadForm((p) => ({ ...p, fileUrl: "" })); }}
@@ -628,7 +628,7 @@ export default function AssetsPage() {
                 <input type="url" value={uploadForm.fileUrl}
                   onChange={(e) => setUploadForm({ ...uploadForm, fileUrl: e.target.value })}
                   placeholder="https://..."
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong focus:ring-1 focus:ring-border" />
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong focus:ring-1 focus:ring-border" />
               )}
             </div>
           </FormField>
@@ -705,7 +705,7 @@ export default function AssetsPage() {
                 </div>
                 <div>
                   <p className="text-xs font-medium text-foreground-muted">Date d'ajout</p>
-                  <p className="mt-1 text-sm text-white">
+                  <p className="mt-1 text-sm text-foreground">
                     {new Date(
                       selectedAssetData.createdAt as unknown as string,
                     ).toLocaleDateString("fr-FR", {

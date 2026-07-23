@@ -483,13 +483,16 @@ export const pillarRouter = createTRPCRouter({
     }),
 
   /** Transition pillar validation status with gates */
-  transitionStatus: operatorProcedure
-    .input(z.object({
+  transitionStatus: governedProcedure({
+    kind: "LEGACY_PILLAR_TRANSITION_STATUS",
+    caller: "pillar:transitionStatus",
+    requireOperator: true,
+    inputSchema: z.object({
       strategyId: z.string(),
       key: pillarKeyEnum,
       targetStatus: z.enum(["DRAFT", "AI_PROPOSED", "VALIDATED", "LOCKED"]),
-    }))
-    .mutation(async ({ ctx, input }) => {
+    }),
+  }).mutation(async ({ ctx, input }) => {
       const pillar = await ctx.db.pillar.findUnique({
         where: { strategyId_key: { strategyId: input.strategyId, key: input.key.toLowerCase() } },
       });
@@ -606,8 +609,11 @@ export const pillarRouter = createTRPCRouter({
     }),
 
   /** Apply a GLORY tool output to D.directionArtistique */
-  applyGloryOutput: operatorProcedure
-    .input(z.object({
+  applyGloryOutput: governedProcedure({
+    kind: "LEGACY_PILLAR_APPLY_GLORY_OUTPUT",
+    caller: "pillar:applyGloryOutput",
+    requireOperator: true,
+    inputSchema: z.object({
       strategyId: z.string(),
       gloryOutputId: z.string(),
       targetField: z.enum([
@@ -615,8 +621,8 @@ export const pillarRouter = createTRPCRouter({
         "typographySystem", "logoTypeRecommendation", "logoValidation",
         "designTokens", "motionIdentity", "brandGuidelines",
       ]),
-    }))
-    .mutation(async ({ ctx, input }) => {
+    }),
+  }).mutation(async ({ ctx, input }) => {
       // Load the glory output
       const gloryOutput = await ctx.db.gloryOutput.findUniqueOrThrow({
         where: { id: input.gloryOutputId },
@@ -655,9 +661,12 @@ export const pillarRouter = createTRPCRouter({
     }),
 
   /** Rollback a pillar to a previous version */
-  rollbackVersion: operatorProcedure
-    .input(z.object({ strategyId: z.string(), key: pillarKeyEnum, versionId: z.string() }))
-    .mutation(async ({ ctx, input }) => {
+  rollbackVersion: governedProcedure({
+    kind: "LEGACY_PILLAR_ROLLBACK_VERSION",
+    caller: "pillar:rollbackVersion",
+    requireOperator: true,
+    inputSchema: z.object({ strategyId: z.string(), key: pillarKeyEnum, versionId: z.string() }),
+  }).mutation(async ({ ctx, input }) => {
       const pillar = await ctx.db.pillar.findUnique({
         where: { strategyId_key: { strategyId: input.strategyId, key: input.key.toLowerCase() } },
       });
@@ -783,14 +792,17 @@ export const pillarRouter = createTRPCRouter({
     }),
 
   /** @deprecated Use notoria.acceptRecos + notoria.applyRecos instead */
-  acceptRecos: operatorProcedure
-    .input(z.object({
+  acceptRecos: governedProcedure({
+    kind: "LEGACY_PILLAR_ACCEPT_RECOS",
+    caller: "pillar:acceptRecos",
+    requireOperator: true,
+    inputSchema: z.object({
       strategyId: z.string(),
       key: adveKeyEnum,
       recoIndices: z.array(z.number()).optional(),
       fields: z.array(z.string()).optional(),
-    }))
-    .mutation(async ({ input }) => {
+    }),
+  }).mutation(async ({ input }) => {
       return applyAcceptedRecommendations(
         input.strategyId,
         input.key,
@@ -800,9 +812,12 @@ export const pillarRouter = createTRPCRouter({
     }),
 
   /** @deprecated Use notoria.rejectRecos instead */
-  rejectRecos: operatorProcedure
-    .input(z.object({ strategyId: z.string(), key: adveKeyEnum }))
-    .mutation(async ({ input }) => {
+  rejectRecos: governedProcedure({
+    kind: "LEGACY_PILLAR_REJECT_RECOS",
+    caller: "pillar:rejectRecos",
+    requireOperator: true,
+    inputSchema: z.object({ strategyId: z.string(), key: adveKeyEnum }),
+  }).mutation(async ({ input }) => {
       await clearRecommendations(input.strategyId, input.key);
       return { success: true };
     }),
@@ -860,25 +875,31 @@ export const pillarRouter = createTRPCRouter({
     }),
 
   /** Auto-fill a single pillar toward COMPLETE */
-  autoFill: operatorProcedure
-    .input(z.object({
+  autoFill: governedProcedure({
+    kind: "LEGACY_PILLAR_AUTO_FILL",
+    caller: "pillar:autoFill",
+    requireOperator: true,
+    inputSchema: z.object({
       strategyId: z.string(),
       pillarKey: z.string(),
       targetStage: z.enum(["INTAKE", "ENRICHED", "COMPLETE"]).optional(),
       fields: z.array(z.string()).optional(),
-    }))
-    .mutation(async ({ input }) => {
+    }),
+  }).mutation(async ({ input }) => {
       const { fillToStage } = await import("@/server/services/pillar-maturity/auto-filler");
       return fillToStage(input.strategyId, input.pillarKey, input.targetStage ?? "COMPLETE", input.fields);
     }),
 
   /** Auto-fill ALL pillars toward COMPLETE */
-  autoFillAll: operatorProcedure
-    .input(z.object({
+  autoFillAll: governedProcedure({
+    kind: "LEGACY_PILLAR_AUTO_FILL_ALL",
+    caller: "pillar:autoFillAll",
+    requireOperator: true,
+    inputSchema: z.object({
       strategyId: z.string(),
       targetStage: z.enum(["INTAKE", "ENRICHED", "COMPLETE"]).optional(),
-    }))
-    .mutation(async ({ input }) => {
+    }),
+  }).mutation(async ({ input }) => {
       const { fillStrategyToStage } = await import("@/server/services/pillar-maturity/auto-filler");
       return fillStrategyToStage(input.strategyId, input.targetStage ?? "COMPLETE");
     }),
@@ -1029,12 +1050,15 @@ export const pillarRouter = createTRPCRouter({
       };
     }),
 
-  transitionPhase: operatorProcedure
-    .input(z.object({
+  transitionPhase: governedProcedure({
+    kind: "LEGACY_PILLAR_TRANSITION_PHASE",
+    caller: "pillar:transitionPhase",
+    requireOperator: true,
+    inputSchema: z.object({
       strategyId: z.string(),
       targetPhase: z.enum(["FICHE", "AUDIT", "IMPLEMENTATION", "COCKPIT", "COMPLETE"]),
-    }))
-    .mutation(async ({ ctx, input }) => {
+    }),
+  }).mutation(async ({ ctx, input }) => {
       const phaseOrder = ["FICHE", "AUDIT", "IMPLEMENTATION", "COCKPIT", "COMPLETE"] as const;
       const phaseToStatus: Record<string, string> = {
         FICHE: "DRAFT", AUDIT: "ACTIVE", IMPLEMENTATION: "IN_PROGRESS",
@@ -1305,13 +1329,15 @@ Propose une nouvelle valeur cohérente avec l'intention, en respectant le schém
    * as-is. The actual content stays unchanged — operators who want to edit
    * the value should use the regular amend flow (OPERATOR_AMEND_PILLAR).
    */
-  confirmInferredField: strategyScopedProcedure
-    .input(z.object({
+  confirmInferredField: governedProcedure({
+    kind: "LEGACY_PILLAR_CONFIRM_INFERRED_FIELD",
+    caller: "pillar:confirmInferredField",
+    inputSchema: z.object({
       strategyId: z.string().min(1),
       pillarKey: z.enum(["a", "d", "v", "e", "r", "t", "i", "s", "A", "D", "V", "E", "R", "T", "I", "S"]),
       fieldPath: z.string().min(1),
-    }))
-    .mutation(async ({ ctx, input }) => {
+    }),
+  }).mutation(async ({ ctx, input }) => {
       const pillar = await ctx.db.pillar.findUnique({
         where: { strategyId_key: { strategyId: input.strategyId, key: input.pillarKey.toLowerCase() } },
         select: { id: true, fieldCertainty: true },

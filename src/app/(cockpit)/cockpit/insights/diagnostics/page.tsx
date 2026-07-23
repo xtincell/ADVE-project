@@ -147,7 +147,7 @@ export default function DiagnosticsPage() {
 
       {/* Radar - large centered */}
       <div className="rounded-xl border border-border bg-background/80 p-6">
-        <h3 className="mb-4 text-center font-semibold text-white">
+        <h3 className="mb-4 text-center font-semibold text-foreground">
           Vos huit piliers aujourd'hui
         </h3>
         <AdvertisRadar scores={scores} size={400} className="flex justify-center" />
@@ -182,14 +182,14 @@ export default function DiagnosticsPage() {
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
                   <span
-                    className={`flex h-11 w-11 items-center justify-center rounded-xl text-sm font-bold text-white ${
+                    className={`flex h-11 w-11 items-center justify-center rounded-xl text-sm font-bold text-foreground ${
                       isWeak ? "bg-warning/50" : "bg-background"
                     }`}
                   >
                     {key.toUpperCase()}
                   </span>
                   <div>
-                    <p className="text-sm font-semibold text-white">
+                    <p className="text-sm font-semibold text-foreground">
                       {PILLAR_NAMES[key]}
                     </p>
                     <p className="text-xs text-foreground-secondary">

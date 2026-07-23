@@ -41,7 +41,7 @@ export function ReportsTab({ campaignId }: { campaignId: string }) {
               >
                 <Icon className="h-4 w-4 text-foreground-secondary" />
                 <div>
-                  <p className="text-xs font-medium text-white">{rt.label}</p>
+                  <p className="text-xs font-medium text-foreground">{rt.label}</p>
                   <p className="text-2xs text-foreground-muted">{generating === rt.type ? "Generation..." : "Cliquer pour generer"}</p>
                 </div>
               </button>
@@ -62,7 +62,7 @@ export function ReportsTab({ campaignId }: { campaignId: string }) {
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="rounded bg-info/15 px-1.5 py-0.5 text-2xs font-bold text-info">{r.type as string}</span>
-                      <h4 className="text-sm font-medium text-white">{(r.title as string) ?? `Rapport ${(r.id as string).slice(0, 8)}`}</h4>
+                      <h4 className="text-sm font-medium text-foreground">{(r.title as string) ?? `Rapport ${(r.id as string).slice(0, 8)}`}</h4>
                     </div>
                     <p className="mt-0.5 text-xs text-foreground-muted">
                       {r.createdAt ? new Date(r.createdAt as string).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : ""}

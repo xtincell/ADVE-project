@@ -258,14 +258,22 @@ export const signalRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      // Store thresholds as a KnowledgeEntry (strategy-scoped config)
+      // Store thresholds as a KnowledgeEntry (strategy-scoped config).
+      // FIX (purge dette) : upsert sur le PK `id` déterministe — `sourceHash` n'est
+      // PAS unique au schéma (market-study crée N lignes/sha256), donc l'ancien
+      // `upsert({ where: { sourceHash } })` (casté `WhereUniqueInput`) JETAIT au
+      // runtime (`PrismaClientValidationError`) → `configureThresholds` cassée.
+      // Pattern knowledge-seeder/aggregator (where:{id}). Le lecteur `checkThresholds`
+      // (findFirst sur sourceHash) reste compatible : le create pose id ET sourceHash.
+      const configId = `thresholds-${input.strategyId}`;
       await ctx.db.knowledgeEntry.upsert({
-        where: { sourceHash: `thresholds-${input.strategyId}` } as Prisma.KnowledgeEntryWhereUniqueInput,
+        where: { id: configId },
         update: { data: input.thresholds as Prisma.InputJsonValue },
         create: {
+          id: configId,
           entryType: "MISSION_OUTCOME",
           data: input.thresholds as Prisma.InputJsonValue,
-          sourceHash: `thresholds-${input.strategyId}`,
+          sourceHash: configId,
         },
       });
       return { success: true, strategyId: input.strategyId, pillarsConfigured: Object.keys(input.thresholds) };

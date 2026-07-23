@@ -120,11 +120,41 @@ export async function GET(request: Request) {
       }
     }
 
+    // ── 5. Émissions orphelines : trace figée non réconciliée (purge dette) ──
+    // Le schéma IntentEmission promet « flip à STALE_OBSERVATION par cron staleness »
+    // — ce sweep l'honore enfin (round-13c : il n'existait pas ; commentaires alors
+    // rendus honnêtes). Deux volets, TOUS via updateMany DIRECT (aucun event bus →
+    // AUCUN fan-out de compensation) :
+    //  (a) observationStatus PENDING_OBSERVATION trop vieux, sur une émission dont le
+    //      HANDLER a réussi (OK/DOWNGRADED) → STALE_OBSERVATION (la boucle Seshat n'a
+    //      jamais mesuré l'effet).
+    //  (b) status PENDING + completedAt null trop vieux (handler sync jamais fermé —
+    //      process mort entre openEmission/closeEmission, ou blip DB à l'update) →
+    //      FAILED (trace honnête). Idempotent : un closeEmission réel ultérieur écrase
+    //      (update-by-id inconditionnel, later-wins) ; QUEUED async n'est JAMAIS touché
+    //      (statut distinct). Plafond 6 h ≫ tout SLO (slos.ts en secondes) → aucun job
+    //      légitime encore en vol n'est fail-flaggé.
+    const EMISSION_STALE_HOURS = 6;
+    const emCutoff = new Date(Date.now() - EMISSION_STALE_HOURS * 3600 * 1000);
+    const staleObs = await db.intentEmission.updateMany({
+      where: {
+        observationStatus: "PENDING_OBSERVATION",
+        status: { in: ["OK", "DOWNGRADED"] },
+        startedAt: { lt: emCutoff },
+      },
+      data: { observationStatus: "STALE_OBSERVATION" },
+    });
+    const orphanEmissions = await db.intentEmission.updateMany({
+      where: { status: "PENDING", completedAt: null, startedAt: { lt: emCutoff } },
+      data: { status: "FAILED" },
+    });
+
     return NextResponse.json({
       ok: true,
       subscriptionsPastDue: pastDue.count,
       recommendationsExpired: expiredRecos.count,
       oracleStaleRefresh: oracleRefresh,
+      emissionStaleness: { observationStale: staleObs.count, orphanFailed: orphanEmissions.count },
       ...(statements ? { mcpStatements: statements } : {}),
     });
   } catch (err) {

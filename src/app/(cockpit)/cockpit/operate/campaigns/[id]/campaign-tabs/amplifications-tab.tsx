@@ -63,7 +63,7 @@ export function AmplificationsTab({ campaignId }: { campaignId: string }) {
           ].map((s) => (
             <div key={s.label} className="rounded-lg border border-border bg-background/50 p-2.5">
               <p className="text-2xs uppercase text-foreground-muted">{s.label}</p>
-              <p className="text-sm font-semibold text-white">{s.value}</p>
+              <p className="text-sm font-semibold text-foreground">{s.value}</p>
             </div>
           ))}
         </div>
@@ -88,7 +88,7 @@ export function AmplificationsTab({ campaignId }: { campaignId: string }) {
                       <div className="flex items-center gap-2">
                         <span className="rounded bg-info/15 px-1.5 py-0.5 text-2xs font-bold text-info">{amp.platform as string}</span>
                         {!!amp.mediaType && <span className="rounded bg-surface-raised px-1.5 py-0.5 text-2xs font-bold text-foreground-secondary">{amp.mediaType as string}</span>}
-                        <span className="text-sm font-medium text-white">{((amp.budget as number) ?? 0).toLocaleString("fr-FR")} XAF</span>
+                        <span className="text-sm font-medium text-foreground">{((amp.budget as number) ?? 0).toLocaleString("fr-FR")} XAF</span>
                       </div>
                       <div className="mt-1.5 flex flex-wrap gap-3 text-xs text-foreground-muted">
                         {!!amp.startDate && <span>{new Date(amp.startDate as string).toLocaleDateString("fr-FR")} → {amp.endDate ? new Date(amp.endDate as string).toLocaleDateString("fr-FR") : "?"}</span>}
@@ -124,7 +124,7 @@ export function AmplificationsTab({ campaignId }: { campaignId: string }) {
                     ].map((m) => (
                       <div key={m.label} className="text-center">
                         <p className="text-2xs text-foreground-muted">{m.label}</p>
-                        <p className="text-sm font-bold text-white">{m.val != null ? m.val.toLocaleString("fr-FR") : "—"}</p>
+                        <p className="text-sm font-bold text-foreground">{m.val != null ? m.val.toLocaleString("fr-FR") : "—"}</p>
                       </div>
                     ))}
                   </div>
@@ -138,7 +138,7 @@ export function AmplificationsTab({ campaignId }: { campaignId: string }) {
                             <label className="text-2xs text-foreground-muted">{field}</label>
                             <input type="number" value={(editMetrics as Record<string, string>)[field]}
                               onChange={(e) => setEditMetrics({ ...editMetrics, [field]: e.target.value })}
-                              className="w-full rounded border border-border bg-background px-2 py-1 text-xs text-white outline-none" />
+                              className="w-full rounded border border-border bg-background px-2 py-1 text-xs text-foreground outline-none" />
                           </div>
                         ))}
                       </div>
@@ -168,39 +168,39 @@ export function AmplificationsTab({ campaignId }: { campaignId: string }) {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField label="Plateforme" required>
               <select value={newAmp.platform} onChange={(e) => setNewAmp({ ...newAmp, platform: e.target.value })}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong">
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-border-strong">
                 {PLATFORMS.map((p) => <option key={p} value={p}>{p}</option>)}
               </select>
             </FormField>
             <FormField label="Type de media">
               <select value={newAmp.mediaType} onChange={(e) => setNewAmp({ ...newAmp, mediaType: e.target.value })}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong">
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-border-strong">
                 {MEDIA_TYPES.map((m) => <option key={m} value={m}>{m}</option>)}
               </select>
             </FormField>
             <FormField label="Budget total (XAF)" required>
               <input type="number" value={newAmp.budget} onChange={(e) => setNewAmp({ ...newAmp, budget: e.target.value })}
-                placeholder="Ex: 1000000" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
+                placeholder="Ex: 1000000" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong" />
             </FormField>
             <FormField label="Cout media (XAF)">
               <input type="number" value={newAmp.mediaCost} onChange={(e) => setNewAmp({ ...newAmp, mediaCost: e.target.value })}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong" />
             </FormField>
             <FormField label="Date debut">
               <input type="date" value={newAmp.startDate} onChange={(e) => setNewAmp({ ...newAmp, startDate: e.target.value })}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong" />
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-border-strong" />
             </FormField>
             <FormField label="Date fin">
               <input type="date" value={newAmp.endDate} onChange={(e) => setNewAmp({ ...newAmp, endDate: e.target.value })}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong" />
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-border-strong" />
             </FormField>
             <FormField label="Cout production (XAF)">
               <input type="number" value={newAmp.productionCost} onChange={(e) => setNewAmp({ ...newAmp, productionCost: e.target.value })}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong" />
             </FormField>
             <FormField label="Frais agence (XAF)">
               <input type="number" value={newAmp.agencyFee} onChange={(e) => setNewAmp({ ...newAmp, agencyFee: e.target.value })}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong" />
             </FormField>
           </div>
           <div className="flex justify-end gap-3 pt-2">

@@ -5,9 +5,13 @@
  * via the LLM gateway, persists them. Designed to run async (post-intake)
  * or as a periodic cron — idempotent and resumable.
  *
- * When OPENAI_API_KEY is missing, embed() returns empty vectors and the
- * worker logs a no-op (graceful degradation — Tier 3 nodes still exist
- * with their structured payload, only the vector path is unavailable).
+ * En production les embeddings passent par le service d'embedding SELF-HOSTED
+ * (`EMBED_SERVICE_URL`, API Ollama-compatible) — souveraineté des données
+ * d'abord (cf. `llm-gateway` `selectEmbedProvider`). NB : Ollama Cloud (la clé
+ * texte) NE sert AUCUN modèle d'embedding — d'où le self-host dédié. OpenAI /
+ * OpenRouter ne sont que des replis. embed() ne renvoie des vecteurs vides (no-op
+ * gracieux) QUE si AUCUN provider n'est configuré — les nœuds Tier 3 existent
+ * alors toujours avec leur payload structuré, seul le chemin vectoriel manque.
  *
  * When pgvector is enabled in production, the `embedding Float[]` column
  * can be migrated to `vector(1536)` via a single raw SQL ALTER. The worker

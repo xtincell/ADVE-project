@@ -313,7 +313,8 @@ ${formatPreciseFields(precise)}${sourceBlock}
 /**
  * Build a context block by vector similarity to a query string.
  * Falls back to getOracleBrandContext() when embeddings are not populated yet
- * or when OPENAI_API_KEY is missing.
+ * or when NO embedding provider is configured (prod = self-hosted
+ * `EMBED_SERVICE_URL` ; OpenAI/OpenRouter en repli).
  */
 export async function getOracleBrandContextByQuery(
   strategyId: string,

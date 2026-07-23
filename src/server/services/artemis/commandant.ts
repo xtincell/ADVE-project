@@ -455,6 +455,28 @@ export async function execute(intent: Intent): Promise<IntentResult> {
         });
       }
 
+      case "SESHAT_UPSERT_POLITY_AXIS": {
+        // Chemin cron/emitIntent (ADR-0127 + ADR-0134 §B6) — harvester
+        // digest→polity. La voie interactive (seed opérateur) passe par
+        // governedProcedure côté router `market-intelligence.upsertPolityAxis`
+        // (MÊME kind, MÊME writer). L'axe n'est JAMAIS fabriqué : les `signals`
+        // fournis viennent du digest RSS réel du secteur (fetchSectorSignal →
+        // tarsisSignalToLegacySignals) et sont agrégés par computeAxisFromSignals.
+        const { upsertPolityAxis } = await import("@/server/services/sector-intelligence");
+        const row = await upsertPolityAxis({
+          slug: intent.sectorSlug,
+          marketScale: intent.marketScale,
+          countryCode: intent.countryCode,
+          signals: intent.signals,
+        });
+        return wrap({
+          ...base,
+          status: "OK",
+          summary: `Axe polity ${intent.sectorSlug} / ${intent.marketScale}${intent.countryCode ? ` / ${intent.countryCode}` : " (supra-national)"} rafraîchi (${intent.signals.length} signal(aux))`,
+          output: { id: row.id, sectorSlug: intent.sectorSlug, marketScale: intent.marketScale, countryCode: row.countryCode },
+        });
+      }
+
       case "ANUBIS_PUBLISH_SOCIAL_POST": {
         // Chemin cron des publications planifiées (échéance calendrier) —
         // le chemin interactif passe par governedProcedure côté router.

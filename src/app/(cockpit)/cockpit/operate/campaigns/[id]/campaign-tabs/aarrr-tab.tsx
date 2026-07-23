@@ -131,7 +131,7 @@ export function AARRRTab({ campaignId, budget }: { campaignId: string; budget?: 
               return (
                 <div key={stage} className={`rounded-lg border p-4 ${STAGE_COLORS[stage] ?? "border-border bg-background/50"}`} style={{ marginLeft: `${idx * 2}%`, marginRight: `${idx * 2}%` }}>
                   <div className="flex items-center justify-between mb-2">
-                    <h5 className="text-xs font-bold text-white">{stage}</h5>
+                    <h5 className="text-xs font-bold text-foreground">{stage}</h5>
                     {(fieldTotals as Record<string, number>)[stage]! > 0 && <span className="text-2xs text-foreground-muted">Terrain: {(fieldTotals as Record<string, number>)[stage]!.toLocaleString("fr-FR")}</span>}
                   </div>
                   {stageData?.metrics && stageData.metrics.length > 0 ? (
@@ -139,7 +139,7 @@ export function AARRRTab({ campaignId, budget }: { campaignId: string; budget?: 
                       {stageData.metrics.map((m) => (
                         <div key={m.metric}>
                           <p className="text-2xs text-foreground-muted">{m.metric}</p>
-                          <p className="text-sm font-semibold text-white">
+                          <p className="text-sm font-semibold text-foreground">
                             {m.value.toLocaleString("fr-FR")}
                             {m.target && (
                               <>
@@ -192,7 +192,7 @@ export function AARRRTab({ campaignId, budget }: { campaignId: string; budget?: 
                   }
                   return (
                     <tr key={op.id as string} className="border-b border-border/50 hover:bg-background/20">
-                      <td className="py-2 text-white">{(op.name as string) ?? (op.title as string)}</td>
+                      <td className="py-2 text-foreground">{(op.name as string) ?? (op.title as string)}</td>
                       <td className="py-2 text-right text-info">{opTotals.acq.toLocaleString("fr-FR")}</td>
                       <td className="py-2 text-right text-success">{opTotals.act.toLocaleString("fr-FR")}</td>
                       <td className="py-2 text-right text-warning">{opTotals.ret.toLocaleString("fr-FR")}</td>
@@ -204,7 +204,7 @@ export function AARRRTab({ campaignId, budget }: { campaignId: string; budget?: 
                 })}
                 {/* Totals row */}
                 <tr className="border-t border-border font-bold">
-                  <td className="py-2 text-white">TOTAL</td>
+                  <td className="py-2 text-foreground">TOTAL</td>
                   <td className="py-2 text-right text-info">{fieldTotals.ACQUISITION.toLocaleString("fr-FR")}</td>
                   <td className="py-2 text-right text-success">{fieldTotals.ACTIVATION.toLocaleString("fr-FR")}</td>
                   <td className="py-2 text-right text-warning">{fieldTotals.RETENTION.toLocaleString("fr-FR")}</td>
@@ -232,7 +232,7 @@ export function AARRRTab({ campaignId, budget }: { campaignId: string; budget?: 
       {/* Operation recommendations */}
       <Section title="Recommandations d'operations" icon={Sparkles} action={
         <select value={recoStage} onChange={(e) => setRecoStage(e.target.value)}
-          className="rounded-lg border border-border bg-background px-2 py-1 text-xs text-white outline-none">
+          className="rounded-lg border border-border bg-background px-2 py-1 text-xs text-foreground outline-none">
           {STAGES.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
       }>
@@ -242,7 +242,7 @@ export function AARRRTab({ campaignId, budget }: { campaignId: string; budget?: 
               <div key={i} className="flex items-start gap-3 rounded-lg border border-border bg-background/50 p-3">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-accent/20 text-2xs font-bold text-accent">{i + 1}</span>
                 <div>
-                  <p className="text-sm text-white">{r.action as string}</p>
+                  <p className="text-sm text-foreground">{r.action as string}</p>
                   {!!r.reason && <p className="mt-0.5 text-xs text-foreground-muted">{r.reason as string}</p>}
                   {typeof r.score === "number" && <p className="mt-1 text-xs text-foreground-secondary">Score: {r.score}/10</p>}
                 </div>
@@ -256,29 +256,29 @@ export function AARRRTab({ campaignId, budget }: { campaignId: string; budget?: 
         <div className="space-y-4">
           <FormField label="Etape" required>
             <select value={newMetric.stage} onChange={(e) => setNewMetric({ ...newMetric, stage: e.target.value })}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong">
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-border-strong">
               {STAGES.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </FormField>
           <FormField label="Metrique" required>
             <input type="text" value={newMetric.metric} onChange={(e) => setNewMetric({ ...newMetric, metric: e.target.value })}
               placeholder="Ex: impressions, clicks, signups"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong" />
           </FormField>
           <div className="grid grid-cols-2 gap-4">
             <FormField label="Valeur" required>
               <input type="number" value={newMetric.value} onChange={(e) => setNewMetric({ ...newMetric, value: e.target.value })}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong" />
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-border-strong" />
             </FormField>
             <FormField label="Cible">
               <input type="number" value={newMetric.target} onChange={(e) => setNewMetric({ ...newMetric, target: e.target.value })}
                 placeholder="Optionnel"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong" />
             </FormField>
           </div>
           <FormField label="Periode" required>
             <input type="month" value={newMetric.period} onChange={(e) => setNewMetric({ ...newMetric, period: e.target.value })}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong" />
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-border-strong" />
           </FormField>
           <div className="flex justify-end gap-3 pt-2">
             <MiniBtn onClick={() => setShowRecord(false)}>Annuler</MiniBtn>

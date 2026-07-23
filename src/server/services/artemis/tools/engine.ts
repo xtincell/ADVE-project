@@ -130,7 +130,10 @@ export async function executeTool(
       );
       return { outputId: "", output: denied as unknown as Record<string, unknown>, intentId: null };
     }
-    const gate = await checkPaidTier(strategyForGate.userId, tool.paidTierAllowList);
+    // F5 — entitlement scopé à la marque sur laquelle le tool s'exécute
+    // (`strategyId`) : un abonnement scopé à une autre marque ne débloque pas
+    // ce run ; un sub legacy null reste operator-wide (backward-compat).
+    const gate = await checkPaidTier(strategyForGate.userId, tool.paidTierAllowList, strategyId);
     if (!gate.allowed) {
       const denied = tierGateDenied(
         gate.reason ?? `Tool ${toolSlug} réservé aux abonnements payants.`,

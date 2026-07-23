@@ -105,7 +105,7 @@ function BriefCard({ m, getBriefStatus }: { m: Mission; getBriefStatus: (m: Miss
           <div className="flex-1 min-w-0">
             {/* Title + status */}
             <div className="flex flex-wrap items-center gap-2">
-              <h4 className="text-sm font-semibold text-white leading-snug">{m.title}</h4>
+              <h4 className="text-sm font-semibold text-foreground leading-snug">{m.title}</h4>
               <span
                 className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${
                   BRIEF_STATUS_CONFIG[briefStatus as keyof typeof BRIEF_STATUS_CONFIG]?.color ??
@@ -239,7 +239,7 @@ function BriefCard({ m, getBriefStatus }: { m: Mission; getBriefStatus: (m: Miss
                 {Object.entries(metriques).map(([k, v]) => (
                   <div key={k} className="rounded-lg border border-border bg-background/60 p-2.5">
                     <p className="text-2xs text-foreground-muted capitalize">{k.replace(/([A-Z])/g, " $1").trim()}</p>
-                    <p className="text-sm font-semibold text-white">{String(v)}</p>
+                    <p className="text-sm font-semibold text-foreground">{String(v)}</p>
                   </div>
                 ))}
               </div>
@@ -289,7 +289,7 @@ function BriefCard({ m, getBriefStatus }: { m: Mission; getBriefStatus: (m: Miss
                     <div className="flex items-center gap-2">
                       <CheckCircle className={`h-3.5 w-3.5 flex-shrink-0 ${d.status === "ACCEPTED" ? "text-success" : "text-foreground-muted"}`} />
                       <div>
-                        <p className="text-xs font-medium text-white">{d.title}</p>
+                        <p className="text-xs font-medium text-foreground">{d.title}</p>
                         {d.fileUrl && <p className="text-2xs text-foreground-muted font-mono">{d.fileUrl}</p>}
                       </div>
                     </div>
@@ -348,7 +348,7 @@ function CampaignBriefCard({ b }: { b: CampaignBriefRow }) {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h4 className="text-sm font-semibold text-white">{b.title}</h4>
+            <h4 className="text-sm font-semibold text-foreground">{b.title}</h4>
             {isActive && (
               <span className="rounded-full bg-success/15 px-2 py-0.5 text-2xs font-semibold text-success ring-1 ring-inset ring-success/30">
                 ACTIF
@@ -743,7 +743,7 @@ export default function BriefsPage() {
               onChange={(e) => setBriefForm({ ...briefForm, objective: e.target.value })}
               rows={2}
               placeholder="Définissez l'objectif principal du brief..."
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong"
             />
           </FormField>
 
@@ -753,7 +753,7 @@ export default function BriefsPage() {
               value={briefForm.targetPersona}
               onChange={(e) => setBriefForm({ ...briefForm, targetPersona: e.target.value })}
               placeholder="Ex: foodies 25-35 ans, Abidjan, 2000+ followers"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong"
             />
           </FormField>
 
@@ -763,7 +763,7 @@ export default function BriefsPage() {
               onChange={(e) => setBriefForm({ ...briefForm, keyMessage: e.target.value })}
               rows={2}
               placeholder="Le message principal à communiquer..."
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong"
             />
           </FormField>
 
@@ -773,7 +773,7 @@ export default function BriefsPage() {
               onChange={(e) => setBriefForm({ ...briefForm, deliverables: e.target.value })}
               rows={3}
               placeholder="Ex: 26 interviews foodies&#10;20 restaurants visités&#10;Rapport terrain"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong"
             />
           </FormField>
 
@@ -796,7 +796,7 @@ export default function BriefsPage() {
             <select
               value={briefForm.driverId}
               onChange={(e) => setBriefForm({ ...briefForm, driverId: e.target.value })}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-border-strong"
             >
               <option value="">Sélectionner un driver...</option>
               {drivers.map((d) => <option key={d.id} value={d.id}>{d.name} ({d.channel})</option>)}
@@ -814,13 +814,13 @@ export default function BriefsPage() {
               <input type="number" value={briefForm.budget}
                 onChange={(e) => setBriefForm({ ...briefForm, budget: e.target.value })}
                 placeholder="0"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong"
               />
             </FormField>
             <FormField label="Date limite">
               <input type="date" value={briefForm.deadline}
                 onChange={(e) => setBriefForm({ ...briefForm, deadline: e.target.value })}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-border-strong"
               />
             </FormField>
           </div>

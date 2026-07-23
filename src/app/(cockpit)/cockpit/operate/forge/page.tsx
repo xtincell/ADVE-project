@@ -319,7 +319,7 @@ export default function DeliverableForgePage() {
             "px-4 py-2 text-sm font-semibold border-b-2 -mb-[2px] transition-colors",
             activeTab === "projects"
               ? "border-accent text-accent"
-              : "border-transparent text-foreground-secondary hover:text-white"
+              : "border-transparent text-foreground-secondary hover:text-foreground"
           )}
         >
           S → Projets (La Forge)
@@ -330,7 +330,7 @@ export default function DeliverableForgePage() {
             "px-4 py-2 text-sm font-semibold border-b-2 -mb-[2px] transition-colors",
             activeTab === "deliverables"
               ? "border-accent text-accent"
-              : "border-transparent text-foreground-secondary hover:text-white"
+              : "border-transparent text-foreground-secondary hover:text-foreground"
           )}
         >
           Livrables (Deliverable Forge)
@@ -348,9 +348,9 @@ export default function DeliverableForgePage() {
                   <AlertCircle className="h-5 w-5" />
                 </div>
                 <div className="space-y-1">
-                  <h3 className="text-sm font-bold text-white">Validation du S requise</h3>
+                  <h3 className="text-sm font-bold text-foreground">Validation du S requise</h3>
                   <p className="text-xs text-foreground-secondary leading-relaxed">
-                    La stratégie de la marque <span className="font-semibold text-white">{strategy?.name}</span> n'a pas encore été validée. La validation de la synthèse est nécessaire pour verrouiller la stratégie et déclencher sa vie opérationnelle.
+                    La stratégie de la marque <span className="font-semibold text-foreground">{strategy?.name}</span> n'a pas encore été validée. La validation de la synthèse est nécessaire pour verrouiller la stratégie et déclencher sa vie opérationnelle.
                   </p>
                 </div>
               </div>
@@ -393,7 +393,7 @@ export default function DeliverableForgePage() {
               <div className="flex items-center gap-3">
                 <ShieldCheck className="h-5 w-5 text-success" />
                 <div className="text-xs">
-                  <span className="font-semibold text-white">Stratégie Validée.</span> La vie opérationnelle de la marque est active. Vous pouvez forger des projets ci-dessous.
+                  <span className="font-semibold text-foreground">Stratégie Validée.</span> La vie opérationnelle de la marque est active. Vous pouvez forger des projets ci-dessous.
                 </div>
               </div>
             </section>
@@ -404,7 +404,7 @@ export default function DeliverableForgePage() {
             <section className="rounded-xl border border-border bg-background/80 p-5 space-y-4">
               <div className="flex items-start justify-between border-b border-border pb-3 flex-wrap gap-2">
                 <div className="space-y-1">
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
                     <Briefcase className="h-4 w-4 text-accent" />
                     Actions Recommandées & Initiatives
                   </h3>
@@ -484,7 +484,7 @@ export default function DeliverableForgePage() {
                               )}
                             </td>
                             <td className="py-3 max-w-sm">
-                              <p className="font-semibold text-white">{act.title}</p>
+                              <p className="font-semibold text-foreground">{act.title}</p>
                               <p className="text-2xs text-foreground-secondary line-clamp-1">{act.description}</p>
                             </td>
                             <td className="py-3">
@@ -496,7 +496,7 @@ export default function DeliverableForgePage() {
                             <td className="py-3">
                               <span className="font-mono">{act.priority ?? "P2"}</span>
                             </td>
-                            <td className="py-3 text-right text-white">
+                            <td className="py-3 text-right text-foreground">
                               {act.budgetMin ? `${act.budgetMin.toLocaleString()} XAF` : "—"}
                             </td>
                             <td className="py-3 text-right pr-2">

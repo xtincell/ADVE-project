@@ -67,6 +67,9 @@ export const ptahRouter = createTRPCRouter({
         sourceIntentId: z.string(),
         brief: ForgeBriefSchema,
         overrideMixViolation: z.boolean().optional(),
+        // C6 (ADR-0103) — « forger quand même » : passe le VETO d'incohérence
+        // brief↔ADVE sous C6_COHERENCE_MODE=block. Sans effet en mode WARN.
+        coherenceOverride: z.boolean().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -79,6 +82,7 @@ export const ptahRouter = createTRPCRouter({
           sourceIntentId: input.sourceIntentId,
           brief: input.brief as Extract<Intent, { kind: "PTAH_MATERIALIZE_BRIEF" }>["brief"],
           overrideMixViolation: input.overrideMixViolation,
+          coherenceOverride: input.coherenceOverride,
         },
         { caller: "ptah-router:materializeBrief" },
       );

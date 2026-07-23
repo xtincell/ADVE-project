@@ -39,7 +39,7 @@
 import { z } from "zod";
 import type { Prisma, CampaignState, ProductionState } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
-import { createTRPCRouter, protectedProcedure, adminProcedure, operatorProcedure } from "../init";
+import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import * as cm from "@/server/services/campaign-manager";
 import { canAccessStrategy, canAccessCampaign, getOperatorContext, scopeCampaigns } from "@/server/services/operator-isolation";
 import { governedProcedure } from "@/server/governance/governed-procedure";
@@ -322,8 +322,11 @@ export const campaignManagerRouter = createTRPCRouter({
     }),
 
   /** create — with auto code */
-  create: operatorProcedure
-    .input(z.object({
+  create: governedProcedure({
+    kind: "LEGACY_CAMPAIGN_MANAGER_CREATE",
+    caller: "campaign-manager:create",
+    requireOperator: true,
+    inputSchema: z.object({
       name: z.string().min(1),
       strategyId: z.string(),
       description: z.string().optional(),
@@ -334,8 +337,8 @@ export const campaignManagerRouter = createTRPCRouter({
       advertis_vector: z.record(z.string(), z.number()).optional(),
       devotionObjective: z.record(z.string(), z.unknown()).optional(),
       parentCampaignId: z.string().optional(),
-    }))
-    .mutation(async ({ ctx, input }) => {
+    }),
+  }).mutation(async ({ ctx, input }) => {
       await enforceStrategyAccess(ctx, input.strategyId);
       const code = cm.generateCampaignCode();
       const { advertis_vector, devotionObjective, description, ...rest } = input;
@@ -388,13 +391,16 @@ export const campaignManagerRouter = createTRPCRouter({
     }),
 
   /** transition — state machine with gate reviews */
-  transition: operatorProcedure
-    .input(z.object({
+  transition: governedProcedure({
+    kind: "LEGACY_CAMPAIGN_MANAGER_TRANSITION",
+    caller: "campaign-manager:transition",
+    requireOperator: true,
+    inputSchema: z.object({
       campaignId: z.string(),
       toState: campaignStateEnum,
       approverId: z.string().optional(),
-    }))
-    .mutation(async ({ ctx, input }) => {
+    }),
+  }).mutation(async ({ ctx, input }) => {
       await enforceCampaignAccess(ctx, input.campaignId);
       return cm.transitionCampaign(input.campaignId, input.toState as CampaignState, input.approverId);
     }),
@@ -427,9 +433,12 @@ export const campaignManagerRouter = createTRPCRouter({
     }),
 
   /** migrate — from Pillar I to Campaign Manager */
-  migrate: operatorProcedure
-    .input(z.object({ campaignId: z.string() }))
-    .mutation(async ({ ctx, input }) => {
+  migrate: governedProcedure({
+    kind: "LEGACY_CAMPAIGN_MANAGER_MIGRATE",
+    caller: "campaign-manager:migrate",
+    requireOperator: true,
+    inputSchema: z.object({ campaignId: z.string() }),
+  }).mutation(async ({ ctx, input }) => {
       await enforceCampaignAccess(ctx, input.campaignId);
       const campaign = await ctx.db.campaign.findUniqueOrThrow({ where: { id: input.campaignId } });
       if (campaign.state !== "BRIEF_DRAFT") {
@@ -624,12 +633,15 @@ export const campaignManagerRouter = createTRPCRouter({
       return ctx.db.campaignExecution.update({ where: { id }, data: data as Prisma.CampaignExecutionUpdateInput });
     }),
 
-  transitionExecution: operatorProcedure
-    .input(z.object({
+  transitionExecution: governedProcedure({
+    kind: "LEGACY_CAMPAIGN_MANAGER_TRANSITION_EXECUTION",
+    caller: "campaign-manager:transitionExecution",
+    requireOperator: true,
+    inputSchema: z.object({
       id: z.string(),
       toState: productionStateEnum,
-    }))
-    .mutation(async ({ ctx, input }) => {
+    }),
+  }).mutation(async ({ ctx, input }) => {
       const exec = await ctx.db.campaignExecution.findUniqueOrThrow({ where: { id: input.id } });
       await enforceCampaignAccess(ctx, exec.campaignId); // anti-IDOR : cross-opérateur sinon
       const validTransitions: Record<string, string[]> = {
@@ -962,12 +974,15 @@ export const campaignManagerRouter = createTRPCRouter({
       return ctx.db.campaignMilestone.update({ where: { id }, data });
     }),
 
-  completeMilestone: operatorProcedure
-    .input(z.object({
+  completeMilestone: governedProcedure({
+    kind: "LEGACY_CAMPAIGN_MANAGER_COMPLETE_MILESTONE",
+    caller: "campaign-manager:completeMilestone",
+    requireOperator: true,
+    inputSchema: z.object({
       id: z.string(),
       gateReview: z.record(z.string(), z.unknown()).optional(),
-    }))
-    .mutation(async ({ ctx, input }) => {
+    }),
+  }).mutation(async ({ ctx, input }) => {
       const ms = await ctx.db.campaignMilestone.findUniqueOrThrow({ where: { id: input.id }, select: { campaignId: true } });
       await enforceCampaignAccess(ctx, ms.campaignId); // anti-IDOR : cross-opérateur sinon
       return ctx.db.campaignMilestone.update({
@@ -1156,13 +1171,16 @@ export const campaignManagerRouter = createTRPCRouter({
       });
     }),
 
-  decideApproval: operatorProcedure
-    .input(z.object({
+  decideApproval: governedProcedure({
+    kind: "LEGACY_CAMPAIGN_MANAGER_DECIDE_APPROVAL",
+    caller: "campaign-manager:decideApproval",
+    requireOperator: true,
+    inputSchema: z.object({
       id: z.string(),
       status: approvalStatusEnum,
       comment: z.string().optional(),
-    }))
-    .mutation(async ({ ctx, input }) => {
+    }),
+  }).mutation(async ({ ctx, input }) => {
       const appr = await ctx.db.campaignApproval.findUniqueOrThrow({ where: { id: input.id }, select: { campaignId: true } });
       await enforceCampaignAccess(ctx, appr.campaignId); // anti-IDOR : cross-opérateur sinon
       return ctx.db.campaignApproval.update({
@@ -1270,9 +1288,12 @@ export const campaignManagerRouter = createTRPCRouter({
       });
     }),
 
-  publishAssetToBrandVault: operatorProcedure
-    .input(z.object({ id: z.string() }))
-    .mutation(async ({ ctx, input }) => {
+  publishAssetToBrandVault: governedProcedure({
+    kind: "LEGACY_CAMPAIGN_MANAGER_PUBLISH_ASSET_TO_BRAND_VAULT",
+    caller: "campaign-manager:publishAssetToBrandVault",
+    requireOperator: true,
+    inputSchema: z.object({ id: z.string() }),
+  }).mutation(async ({ ctx, input }) => {
       const asset = await ctx.db.campaignAsset.findUniqueOrThrow({
         where: { id: input.id },
         include: { campaign: true },
@@ -1442,33 +1463,51 @@ export const campaignManagerRouter = createTRPCRouter({
   getBriefTypes: campaignScopedProcedure
     .query(() => cm.getBriefTypes()),
 
-  generateCreativeBrief: operatorProcedure
-    .input(z.object({ campaignId: z.string(), strategyId: z.string() }))
-    .mutation(({ input }) => cm.generateCreativeBrief(input.campaignId, input.strategyId)),
+  generateCreativeBrief: governedProcedure({
+    kind: "LEGACY_CAMPAIGN_MANAGER_GENERATE_CREATIVE_BRIEF",
+    caller: "campaign-manager:generateCreativeBrief",
+    requireOperator: true,
+    inputSchema: z.object({ campaignId: z.string(), strategyId: z.string() }),
+  }).mutation(({ input }) => cm.generateCreativeBrief(input.campaignId, input.strategyId)),
 
-  generateMediaBrief: operatorProcedure
-    .input(z.object({ campaignId: z.string(), strategyId: z.string() }))
-    .mutation(({ input }) => cm.generateMediaBrief(input.campaignId, input.strategyId)),
+  generateMediaBrief: governedProcedure({
+    kind: "LEGACY_CAMPAIGN_MANAGER_GENERATE_MEDIA_BRIEF",
+    caller: "campaign-manager:generateMediaBrief",
+    requireOperator: true,
+    inputSchema: z.object({ campaignId: z.string(), strategyId: z.string() }),
+  }).mutation(({ input }) => cm.generateMediaBrief(input.campaignId, input.strategyId)),
 
-  generateVendorBrief: operatorProcedure
-    .input(z.object({ campaignId: z.string(), strategyId: z.string() }))
-    .mutation(({ input }) => cm.generateVendorBrief(input.campaignId, input.strategyId)),
+  generateVendorBrief: governedProcedure({
+    kind: "LEGACY_CAMPAIGN_MANAGER_GENERATE_VENDOR_BRIEF",
+    caller: "campaign-manager:generateVendorBrief",
+    requireOperator: true,
+    inputSchema: z.object({ campaignId: z.string(), strategyId: z.string() }),
+  }).mutation(({ input }) => cm.generateVendorBrief(input.campaignId, input.strategyId)),
 
-  generateProductionBrief: operatorProcedure
-    .input(z.object({ campaignId: z.string(), strategyId: z.string() }))
-    .mutation(({ input }) => cm.generateProductionBrief(input.campaignId, input.strategyId)),
+  generateProductionBrief: governedProcedure({
+    kind: "LEGACY_CAMPAIGN_MANAGER_GENERATE_PRODUCTION_BRIEF",
+    caller: "campaign-manager:generateProductionBrief",
+    requireOperator: true,
+    inputSchema: z.object({ campaignId: z.string(), strategyId: z.string() }),
+  }).mutation(({ input }) => cm.generateProductionBrief(input.campaignId, input.strategyId)),
 
   // ==========================================================================
   // C.3.11 — Reports — 3 procedures
   // ==========================================================================
 
-  generateReport: operatorProcedure
-    .input(z.object({
+  generateReport: governedProcedure({
+    kind: "LEGACY_CAMPAIGN_MANAGER_GENERATE_REPORT",
+    caller: "campaign-manager:generateReport",
+    requireOperator: true,
+    inputSchema: z.object({
       campaignId: z.string(),
       reportType: reportTypeEnum,
       title: z.string(),
-    }))
-    .mutation(({ input }) => cm.generateFullReport(input.campaignId, input.reportType, input.title)),
+    }),
+  }).use(async ({ ctx, getRawInput, next }) => {
+    await enforceCampaignRawScope(ctx, await getRawInput());
+    return next({ ctx });
+  }).mutation(({ input }) => cm.generateFullReport(input.campaignId, input.reportType, input.title)),
 
   listReports: campaignScopedProcedure
     .input(z.object({ campaignId: z.string(), reportType: reportTypeEnum.optional() }))
@@ -1623,24 +1662,33 @@ export const campaignManagerRouter = createTRPCRouter({
   // C.3.14 — Templates — 2 procedures
   // ==========================================================================
 
-  createFromTemplate: operatorProcedure
-    .input(z.object({
+  createFromTemplate: governedProcedure({
+    kind: "LEGACY_CAMPAIGN_MANAGER_CREATE_FROM_TEMPLATE",
+    caller: "campaign-manager:createFromTemplate",
+    requireOperator: true,
+    inputSchema: z.object({
       templateId: z.string(),
       strategyId: z.string(),
       name: z.string(),
-    }))
-    .mutation(async ({ ctx, input }) => {
+    }),
+  }).mutation(async ({ ctx, input }) => {
       await enforceStrategyAccess(ctx, input.strategyId);
       return cm.createFromTemplate(input.templateId, input.strategyId, input.name);
     }),
 
-  saveAsTemplate: operatorProcedure
-    .input(z.object({
+  saveAsTemplate: governedProcedure({
+    kind: "LEGACY_CAMPAIGN_MANAGER_SAVE_AS_TEMPLATE",
+    caller: "campaign-manager:saveAsTemplate",
+    requireOperator: true,
+    inputSchema: z.object({
       campaignId: z.string(),
       name: z.string(),
       description: z.string().optional(),
-    }))
-    .mutation(({ input }) => cm.saveAsTemplate(input.campaignId, input.name, input.description ?? "")),
+    }),
+  }).use(async ({ ctx, getRawInput, next }) => {
+    await enforceCampaignRawScope(ctx, await getRawInput());
+    return next({ ctx });
+  }).mutation(({ input }) => cm.saveAsTemplate(input.campaignId, input.name, input.description ?? "")),
 
   // ==========================================================================
   // C.3.15 — Simulator — 1 procedure
@@ -1868,13 +1916,16 @@ export const campaignManagerRouter = createTRPCRouter({
       return fr;
     }),
 
-  validateFieldReport: operatorProcedure
-    .input(z.object({
+  validateFieldReport: governedProcedure({
+    kind: "LEGACY_CAMPAIGN_MANAGER_VALIDATE_FIELD_REPORT",
+    caller: "campaign-manager:validateFieldReport",
+    requireOperator: true,
+    inputSchema: z.object({
       id: z.string(),
       validatorId: z.string(),
       overrides: z.record(z.string(), z.unknown()).optional(),
-    }))
-    .mutation(async ({ ctx, input }) => {
+    }),
+  }).mutation(async ({ ctx, input }) => {
       const fr = await ctx.db.campaignFieldReport.findUniqueOrThrow({ where: { id: input.id }, select: { campaignId: true } });
       await enforceCampaignAccess(ctx, fr.campaignId); // anti-IDOR : cross-opérateur sinon
       return cm.validateFieldReport(input.id, input.validatorId, input.overrides);
@@ -1884,9 +1935,12 @@ export const campaignManagerRouter = createTRPCRouter({
     .input(z.object({ campaignId: z.string() }))
     .query(({ input }) => cm.getFieldReportStats(input.campaignId)),
 
-  rejectFieldReport: operatorProcedure
-    .input(z.object({ id: z.string(), reason: z.string() }))
-    .mutation(async ({ ctx, input }) => {
+  rejectFieldReport: governedProcedure({
+    kind: "LEGACY_CAMPAIGN_MANAGER_REJECT_FIELD_REPORT",
+    caller: "campaign-manager:rejectFieldReport",
+    requireOperator: true,
+    inputSchema: z.object({ id: z.string(), reason: z.string() }),
+  }).mutation(async ({ ctx, input }) => {
       const fr = await ctx.db.campaignFieldReport.findUniqueOrThrow({ where: { id: input.id }, select: { campaignId: true } });
       await enforceCampaignAccess(ctx, fr.campaignId); // anti-IDOR : cross-opérateur sinon
       return ctx.db.campaignFieldReport.update({
@@ -2116,13 +2170,16 @@ export const campaignManagerRouter = createTRPCRouter({
       return cm.setDevotionObjective(input.campaignId, input.objective);
     }),
 
-  createFromValidatedAction: operatorProcedure
-    .input(z.object({
+  createFromValidatedAction: governedProcedure({
+    kind: "LEGACY_CAMPAIGN_MANAGER_CREATE_FROM_VALIDATED_ACTION",
+    caller: "campaign-manager:createFromValidatedAction",
+    requireOperator: true,
+    inputSchema: z.object({
       strategyId: z.string(),
       actionId: z.string(),
       kpis: z.record(z.string(), z.unknown()).optional(),
-    }))
-    .mutation(async ({ ctx, input }) => {
+    }),
+  }).mutation(async ({ ctx, input }) => {
       await enforceStrategyAccess(ctx, input.strategyId);
 
       const action = await ctx.db.brandAction.findUniqueOrThrow({
@@ -2193,11 +2250,14 @@ export const campaignManagerRouter = createTRPCRouter({
       return { success: true, campaignId: campaign.id, campaignCode };
     }),
 
-  routeToGuilde: operatorProcedure
-    .input(z.object({
+  routeToGuilde: governedProcedure({
+    kind: "LEGACY_CAMPAIGN_MANAGER_ROUTE_TO_GUILDE",
+    caller: "campaign-manager:routeToGuilde",
+    requireOperator: true,
+    inputSchema: z.object({
       campaignId: z.string(),
-    }))
-    .mutation(async ({ ctx, input }) => {
+    }),
+  }).mutation(async ({ ctx, input }) => {
       await enforceCampaignAccess(ctx, input.campaignId);
 
       const campaign = await ctx.db.campaign.findUniqueOrThrow({

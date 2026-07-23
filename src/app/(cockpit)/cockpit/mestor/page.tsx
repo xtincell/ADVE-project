@@ -230,7 +230,7 @@ export default function MestorPage() {
               <div className="rounded-2xl bg-gradient-to-br from-accent/20 to-accent/20 p-4">
                 <Sparkles className="h-10 w-10 text-accent" />
               </div>
-              <h3 className="mt-4 text-lg font-semibold text-white">
+              <h3 className="mt-4 text-lg font-semibold text-foreground">
                 Bienvenue sur votre assistant
               </h3>
               <p className="mt-1 max-w-sm text-center text-sm text-foreground-secondary">
@@ -248,7 +248,7 @@ export default function MestorPage() {
                   >
                     <qp.icon className="h-5 w-5 shrink-0 text-accent" />
                     <div>
-                      <p className="text-sm font-medium text-white">
+                      <p className="text-sm font-medium text-foreground">
                         {qp.label}
                       </p>
                       <p className="mt-0.5 text-xs text-foreground-muted line-clamp-1">
@@ -376,7 +376,7 @@ export default function MestorPage() {
                 onKeyDown={handleKeyDown}
                 placeholder="Posez une question à l'assistant..."
                 rows={1}
-                className="w-full resize-none rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-white placeholder-foreground-muted outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/30"
+                className="w-full resize-none rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/30"
                 style={{ minHeight: 40, maxHeight: 120 }}
               />
             </div>
