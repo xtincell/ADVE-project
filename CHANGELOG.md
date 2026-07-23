@@ -1,5 +1,15 @@
 # Changelog — La Fusee
 
+## v6.27.288 — fix(governance): round-10 adversarial (b) — IDOR marketplace (PII créateur + télémétrie carrière) (2026-07-23)
+
+**Deuxième lot du scan proactif : la face créateur/marketplace fuyait le `payoutPhone` (mobile-money), les compensations, l'historique d'adhésions et la télémétrie de carrière à tout compte authentifié.**
+
+- **PRIORITÉ 0 — fuite `payoutPhone` (PII mobile-money)** : `guild-tier.getProfile` (+ historique complet d'adhésions) et `guild-org.getMembers` renvoyaient le profil talent SANS `omit` → n'importe qui lisait le téléphone de payout de tout membre. `omit: { payoutPhone: true }` + self-or-operator sur getProfile. `guild-tier.listByTier` idem (omit en passant).
+- **HIGH — télémétrie de carrière privée** : `guild-tier.checkPromotion`/`getProgressPath` + `imhotep.evaluateTier` (reco PROMOTE/DEMOTE), `membership.getByCreator` (montants d'adhésions), `learning.getCertifications`, `quality-review.getFirstPassRate` (first-pass/révisions) → gardés self-or-operator via le nouveau chokepoint `assertTalentProfileAccess`.
+- **HIGH — QC** : `quality-review.getByReviewer` (self-default OUTREPASSABLE → historique de review d'autrui), `calculateReviewerCompensation` (compensation d'autrui), `calculateReviewPriority` (**budget CLIENT** en clair) → self / stakeholder / staff. `getByDeliverable` → `assertQcParticipant`. `getReviewerCandidates` + `imhotep.matchTalent` → `operatorProcedure` (routage crew = staff, moitié LECTURE de mutations déjà operator).
+- **MED — matching + scheduler** : `matching.suggest`/`getHistory`/`getBestForBrief` → `canAccessMission` ; `process.getSchedule` + `marketIntelligence.stopCollector` → nouveau `assertProcessAccess` (process marque-scopé OU système-staff).
+- Nouveau garde partagé `_talent-access-guard.ts` (`assertTalentProfileAccess`/`isStaff`) + `assertProcessAccess`. Verrou `entity-id-ownership-guard` étendu (8 chokepoints + 2 flips operator + 3 assertions QC). Cap APOGEE 7/7 · 0 LLM. tsc 0 · 92 tests ownership verts. **Reste : campaign-manager decorative + quick-intake + scanner proactif permanent → (c).**
+
 ## v6.27.287 — fix(governance): round-10 adversarial (a) — IDOR entité-id, cluster brand-core (scan proactif) (2026-07-23)
 
 **Un scan proactif a inventorié 122 procédures keyées sur un id d'ENTITÉ ; ce lot ferme le cluster brand-core (piliers ADVE, drivers, sources, missions/activités, scoring).**

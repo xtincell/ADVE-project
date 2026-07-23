@@ -108,6 +108,15 @@ const RESOLUTION_GUARD: Array<[string, RegExp]> = [
   ["ingestion.ts", /assertSourceAccess\(/], // getSource/deleteSource/updateSource → source.strategyId (rawContent)
   ["mission.ts", /enforceActivityAccess\(/], // activity cluster → activity.missionId → mission
   ["social.ts", /await assertStrategyAccess\(ctx, driver\.strategyId\)/], // connectToDriver/linkToDriver → driver.strategyId
+  // ── Round-10 (b) : marketplace PII + télémétrie carrière + misc ──
+  ["guild-tier.ts", /assertTalentProfileAccess\(/], // getProfile/checkPromotion/getProgressPath + omit payoutPhone
+  ["guild-org.ts", /omit: \{ payoutPhone: true \}/], // getMembers : jamais le payout momo en liste
+  ["membership.ts", /assertTalentProfileAccess\(/], // getByCreator → historique+montants
+  ["imhotep.ts", /assertTalentProfileAccess\(/], // evaluateTier → reco PROMOTE/DEMOTE
+  ["learning.ts", /assertTalentProfileAccess\(/], // getCertifications
+  ["matching.ts", /assertMissionAccess\(/], // suggest/getHistory/getBestForBrief → canAccessMission
+  ["process.ts", /assertProcessAccess\(/], // getSchedule → process.strategyId | staff
+  ["market-intelligence.ts", /assertProcessAccess\(/], // stopCollector → process.strategyId | staff
 ];
 
 describe("entity-id founder-reachable procedures resolve ownership (round-4)", () => {
@@ -136,6 +145,23 @@ describe("entity-id founder-reachable procedures resolve ownership (round-4)", (
     expect(s).toMatch(/getBatch:\s*operatorProcedure/);
     expect(s).toMatch(/listBatches:\s*operatorProcedure/);
     expect(s).toMatch(/listSources:\s*operatorProcedure/);
+  });
+
+  it("round-10 : crew-orchestration reads are staff-gated (operatorProcedure)", () => {
+    // matchTalent (candidats classés d'une mission) + getReviewerCandidates
+    // (reviewers éligibles) = moitié LECTURE d'orchestrations dont les mutations
+    // sœurs (assembleCrew / assignReviewer) sont déjà staff-only.
+    expect(router("imhotep.ts")).toMatch(/matchTalent:\s*operatorProcedure/);
+    expect(router("quality-review.ts")).toMatch(/getReviewerCandidates:\s*operatorProcedure/);
+  });
+
+  it("round-10 : quality-review self/stakeholder reads are gated", () => {
+    const s = router("quality-review.ts");
+    // getByReviewer (self-default outrepassable) + calculateReviewPriority
+    // (budget client) + getFirstPassRate + calculateReviewerCompensation.
+    expect(s).toMatch(/Historique de review réservé à son auteur/);
+    expect(s).toMatch(/canAccessStrategy\(deliverable\.mission\.strategyId/);
+    expect(s).toMatch(/Compensation réservée à l'auteur de la review/);
   });
 });
 

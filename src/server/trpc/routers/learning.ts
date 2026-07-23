@@ -6,6 +6,7 @@ import { z } from "zod";
 import type { Prisma, CourseLevel } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
+import { assertTalentProfileAccess } from "./_talent-access-guard";
 /* lafusee:governed-active */
 
 export const learningRouter = createTRPCRouter({
@@ -132,6 +133,9 @@ export const learningRouter = createTRPCRouter({
   getCertifications: protectedProcedure
     .input(z.object({ talentProfileId: z.string() }))
     .query(async ({ ctx, input }) => {
+      // IDOR round-10 : certifications d'un talent arbitraire (aucune surface
+      // publique dédiée ; l'émission est operator-only) → self-or-operator.
+      await assertTalentProfileAccess(ctx.session.user.id, input.talentProfileId);
       return ctx.db.talentCertification.findMany({ where: { talentProfileId: input.talentProfileId }, orderBy: { issuedAt: "desc" } });
     }),
 });

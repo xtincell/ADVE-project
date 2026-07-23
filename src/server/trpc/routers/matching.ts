@@ -1,13 +1,24 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { suggest } from "@/server/services/matching-engine";
+import { canAccessMission, getOperatorContext } from "@/server/services/operator-isolation";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
+
+/** IDOR round-10 : matching keyé sur `missionId` → propriétaire/opérateur/assigné. */
+async function assertMissionAccess(userId: string, missionId: string): Promise<void> {
+  const opCtx = await getOperatorContext(userId);
+  if (!(await canAccessMission(missionId, opCtx))) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette mission" });
+  }
+}
 
 export const matchingRouter = createTRPCRouter({
   suggest: protectedProcedure
     .input(z.object({ missionId: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      await assertMissionAccess(ctx.session.user.id, input.missionId);
       return suggest(input.missionId);
     }),
 
@@ -35,6 +46,7 @@ export const matchingRouter = createTRPCRouter({
   getHistory: protectedProcedure
     .input(z.object({ missionId: z.string() }))
     .query(async ({ ctx, input }) => {
+      await assertMissionAccess(ctx.session.user.id, input.missionId);
       const commissions = await ctx.db.commission.findMany({
         where: { mission: { id: input.missionId } },
         include: {
@@ -57,7 +69,8 @@ export const matchingRouter = createTRPCRouter({
 
   getBestForBrief: protectedProcedure
     .input(z.object({ missionId: z.string(), count: z.number().default(3) }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      await assertMissionAccess(ctx.session.user.id, input.missionId);
       return suggest(input.missionId);
     }),
 });

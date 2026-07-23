@@ -24,9 +24,10 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
-import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { createTRPCRouter, protectedProcedure, adminProcedure, operatorProcedure } from "../init";
 import { canAccessStrategy, getOperatorContext } from "@/server/services/operator-isolation";
 import { governedProcedure } from "@/server/governance/governed-procedure";
+import { isStaff } from "./_talent-access-guard";
 /* lafusee:governed-active */
 
 /**
@@ -178,6 +179,9 @@ export const qualityReviewRouter = createTRPCRouter({
   getByDeliverable: protectedProcedure
     .input(z.object({ deliverableId: z.string() }))
     .query(async ({ ctx, input }) => {
+      // IDOR round-10 : verdicts/feedback/reviewerId d'un livrable arbitraire →
+      // réservé aux participants QC (comme submit).
+      await assertQcParticipant(ctx, input.deliverableId);
       return ctx.db.qualityReview.findMany({
         where: { deliverableId: input.deliverableId },
         orderBy: { createdAt: "desc" },
@@ -187,8 +191,16 @@ export const qualityReviewRouter = createTRPCRouter({
   getByReviewer: protectedProcedure
     .input(z.object({ reviewerId: z.string().optional() }))
     .query(async ({ ctx, input }) => {
+      // IDOR round-10 : `reviewerId ?? self` = self-default OUTREPASSABLE → un
+      // reviewerId arbitraire renvoyait tout l'historique de reviews d'autrui.
+      const self = ctx.session.user.id;
+      const reviewerId = input.reviewerId ?? self;
+      if (reviewerId !== self) {
+        const opCtx = await getOperatorContext(self);
+        if (!isStaff(opCtx)) throw new TRPCError({ code: "FORBIDDEN", message: "Historique de review réservé à son auteur." });
+      }
       return ctx.db.qualityReview.findMany({
-        where: { reviewerId: input.reviewerId ?? ctx.session.user.id },
+        where: { reviewerId },
         orderBy: { createdAt: "desc" },
         include: { deliverable: true },
       });
@@ -329,7 +341,9 @@ export const qualityReviewRouter = createTRPCRouter({
     }),
 
   // ── REQ-5: getReviewerCandidates — filter by tier for a deliverable ─────
-  getReviewerCandidates: protectedProcedure
+  // IDOR round-10 : énumération des reviewers éligibles = routage QC STAFF
+  // (moitié LECTURE de assignReviewer, qui est requireOperator).
+  getReviewerCandidates: operatorProcedure
     .input(z.object({ deliverableId: z.string() }))
     .query(async ({ ctx, input }) => {
       const deliverable = await ctx.db.missionDeliverable.findUniqueOrThrow({
@@ -382,6 +396,13 @@ export const qualityReviewRouter = createTRPCRouter({
         include: { mission: true },
       });
 
+      // IDOR round-10 : `factors.budget` = budget CLIENT (privé) → réservé au
+      // stakeholder de la marque ou au staff (pas à un membre Guilde quelconque).
+      const opCtx = await getOperatorContext(ctx.session.user.id);
+      if (!isStaff(opCtx) && !(await canAccessStrategy(deliverable.mission.strategyId, opCtx))) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Priorité de review réservée aux parties prenantes de la mission." });
+      }
+
       const mission = deliverable.mission;
       const priority = mission.priority ?? 5;
       const budget = (typeof mission.budget === "number" ? mission.budget : 0);
@@ -417,6 +438,12 @@ export const qualityReviewRouter = createTRPCRouter({
   getFirstPassRate: protectedProcedure
     .input(z.object({ creatorId: z.string() }))
     .query(async ({ ctx, input }) => {
+      // IDOR round-10 : `creatorId` = userId du créateur → breakdown de perf
+      // granulaire (first-pass/révisions) privé. Self-or-staff.
+      if (input.creatorId !== ctx.session.user.id) {
+        const opCtx = await getOperatorContext(ctx.session.user.id);
+        if (!isStaff(opCtx)) throw new TRPCError({ code: "FORBIDDEN", message: "Taux de premier passage réservé au créateur." });
+      }
       // Get from TalentProfile (cached value)
       const profile = await ctx.db.talentProfile.findUnique({
         where: { userId: input.creatorId },
@@ -461,6 +488,12 @@ export const qualityReviewRouter = createTRPCRouter({
       const review = await ctx.db.qualityReview.findUniqueOrThrow({
         where: { id: input.reviewId },
       });
+
+      // IDOR round-10 : la compensation d'une review est privée à son auteur.
+      if (review.reviewerId !== ctx.session.user.id) {
+        const opCtx = await getOperatorContext(ctx.session.user.id);
+        if (!isStaff(opCtx)) throw new TRPCError({ code: "FORBIDDEN", message: "Compensation réservée à l'auteur de la review." });
+      }
 
       // Only PEER reviews are compensated
       if (review.reviewType !== "PEER") {

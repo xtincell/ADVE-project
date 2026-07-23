@@ -26,6 +26,7 @@ import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { getOperatorContext, scopeStrategies } from "@/server/services/operator-isolation";
 import { startProcess, pauseProcess, stopProcess, getContention } from "@/server/services/process-scheduler";
 import { governedProcedure } from "@/server/governance/governed-procedure";
+import { assertProcessAccess } from "./_strategy-read-guard";
 /* lafusee:governed-active */
 
 export const processRouter = createTRPCRouter({
@@ -182,6 +183,7 @@ export const processRouter = createTRPCRouter({
   getSchedule: protectedProcedure
     .input(z.object({ processId: z.string() }))
     .query(async ({ ctx, input }) => {
+      await assertProcessAccess(ctx.session.user.id, input.processId);
       return ctx.db.process.findUniqueOrThrow({
         where: { id: input.processId },
         select: { id: true, name: true, status: true, lastRunAt: true, nextRunAt: true, frequency: true },

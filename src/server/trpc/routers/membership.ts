@@ -2,6 +2,7 @@ import { z } from "zod";
 import { MembershipStatus, GuildTier } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
+import { assertTalentProfileAccess } from "./_talent-access-guard";
 /* lafusee:governed-active */
 
 export const membershipRouter = createTRPCRouter({
@@ -109,6 +110,8 @@ export const membershipRouter = createTRPCRouter({
   getByCreator: protectedProcedure
     .input(z.object({ talentProfileId: z.string() }))
     .query(async ({ ctx, input }) => {
+      // IDOR round-10 : historique d'adhésions + montants (financier privé).
+      await assertTalentProfileAccess(ctx.session.user.id, input.talentProfileId);
       return ctx.db.membership.findMany({
         where: { talentProfileId: input.talentProfileId },
       });

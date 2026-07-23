@@ -47,7 +47,9 @@ export const guildOrgRouter = createTRPCRouter({
   getMembers: protectedProcedure
     .input(z.object({ orgId: z.string() }))
     .query(async ({ ctx, input }) => {
-      return ctx.db.talentProfile.findMany({ where: { guildOrganizationId: input.orgId } });
+      // IDOR round-10 : la liste des membres peut rester publique, mais
+      // `payoutPhone` (PII mobile-money) ne doit jamais fuiter en masse.
+      return ctx.db.talentProfile.findMany({ where: { guildOrganizationId: input.orgId }, omit: { payoutPhone: true } });
     }),
 
   getMetrics: protectedProcedure
