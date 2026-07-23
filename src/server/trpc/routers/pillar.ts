@@ -35,7 +35,8 @@ import * as pillarVersioning from "@/server/services/pillar-versioning";
 import { propagateFromPillar } from "@/server/services/staleness-propagator";
 import { getStrategyReadiness } from "@/server/governance/pillar-readiness";
 import { scoreObject } from "@/server/services/advertis-scorer";
-import { writePillarAndScore, tokenizePillarPath } from "@/server/services/pillar-gateway";
+import { writePillarAndScore } from "@/server/services/pillar-gateway";
+import { getNestedArray } from "@/lib/pillar-path";
 import { ensureProductIds } from "@/domain/product-catalog";
 import type { PillarKey as PK } from "@/lib/types/advertis-vector";
 import { triggerNextStageFrameworks } from "@/server/services/artemis";
@@ -1371,17 +1372,3 @@ function getArraySafe(val: unknown): unknown[] {
   return Array.isArray(val) ? [...val] : [];
 }
 
-/**
- * Récupère (copie de) le tableau à un dot-path, y compris imbriqué dans un élément
- * de tableau (`personas[0].jobsToBeDone`). Symétrique de `tokenizePillarPath` du côté
- * écriture — sans ça, updateArrayItem/removeArrayItem ne pouvaient PAS cibler un tableau
- * imbriqué (capacité morte, audit 2026-07-22).
- */
-function getNestedArray(content: Record<string, unknown>, path: string): unknown[] {
-  let cur: unknown = content;
-  for (const tok of tokenizePillarPath(path)) {
-    if (cur == null || typeof cur !== "object") return [];
-    cur = (cur as Record<string | number, unknown>)[tok];
-  }
-  return Array.isArray(cur) ? [...cur] : [];
-}

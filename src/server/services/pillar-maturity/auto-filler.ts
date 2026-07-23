@@ -15,6 +15,7 @@ import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
  */
 
 import { db } from "@/lib/db";
+import { setNestedValue } from "@/lib/pillar-path";
 import type { Prisma } from "@prisma/client";
 import type { MaturityStage, AutoFillResult, FieldRequirement } from "@/lib/types/pillar-maturity";
 import { assessPillar } from "./assessor";
@@ -951,33 +952,6 @@ async function generateMissingFields(
     missingReqs,
     caller: `auto-filler:${pillarKey}`,
   });
-}
-
-// ─── Utilities ──────────────────────────────────────────────────────────────
-
-function setNestedValue(obj: Record<string, unknown>, path: string, value: unknown): void {
-  const parts = path.split(".");
-  // Garde anti-empoisonnement de prototype (audit adversarial 2026-07-22) — cohérent
-  // avec `assertSafePillarPath` du pillar-gateway. Paths contract-définis ici, mais
-  // défense en profondeur : un `__proto__`/`constructor`/`prototype` est refusé net.
-  for (const p of parts) {
-    if (p === "__proto__" || p === "constructor" || p === "prototype") {
-      throw new Error(`Chemin de champ interdit : segment « ${p} » (protection prototype-pollution).`);
-    }
-  }
-  if (parts.length === 1) {
-    obj[parts[0]!] = value;
-    return;
-  }
-  let current = obj;
-  for (let i = 0; i < parts.length - 1; i++) {
-    const part = parts[i]!;
-    if (current[part] === undefined || current[part] === null || typeof current[part] !== "object") {
-      current[part] = {};
-    }
-    current = current[part] as Record<string, unknown>;
-  }
-  current[parts[parts.length - 1]!] = value;
 }
 
 // ── Source Extraction (Step 0 — BrandDataSource) ───────────────────────

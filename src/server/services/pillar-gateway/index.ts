@@ -20,6 +20,7 @@
  */
 
 import { db } from "@/lib/db";
+import { setNestedValue, tokenizePillarPath, assertSafePillarPath } from "@/lib/pillar-path";
 import type { Prisma } from "@prisma/client";
 import { type PillarKey, getPillarDependents } from "@/lib/types/advertis-vector";
 import { validatePillarPartial } from "@/lib/types/pillar-schemas";
@@ -132,66 +133,13 @@ function deepMerge(target: Record<string, unknown>, source: Record<string, unkno
   return result;
 }
 
-// ── Set nested value by dot path ──────────────────────────────────────
-
-/**
- * Tokenise un dot-path avec indices de tableau : `personas[0].name` →
- * `["personas", 0, "name"]`. Sans ce parsing, `personas[0].name` créait une clé
- * littérale « personas[0] » au lieu d'indexer le tableau (corruption — l'amendement
- * opérateur d'un item de tableau écrivait à côté). ADR-0172/audit ADVE 2026-07-22.
- */
-export function tokenizePillarPath(path: string): (string | number)[] {
-  const tokens: (string | number)[] = [];
-  for (const seg of path.split(".")) {
-    const m = seg.match(/^([^[\]]+)((?:\[\d+\])*)$/);
-    if (!m || !m[1]) {
-      tokens.push(seg);
-      continue;
-    }
-    tokens.push(m[1]);
-    for (const idx of (m[2] ?? "").match(/\d+/g) ?? []) tokens.push(Number(idx));
-  }
-  return tokens;
-}
-
-/**
- * Segments de chemin interdits — écrire via `__proto__`/`constructor`/`prototype`
- * remonterait dans `Object.prototype` (empoisonnement de prototype GLOBAL : tous les
- * tenants, tout le process, jusqu'au restart). `pillar.amend` accepte un `field`
- * libre non-allowlisté → vecteur atteignable. On refuse net. Audit adversarial 2026-07-22.
- */
-const FORBIDDEN_PATH_SEGMENTS = new Set(["__proto__", "constructor", "prototype"]);
-
-/** Lève si un token de chemin permettrait un empoisonnement de prototype. */
-export function assertSafePillarPath(tokens: readonly (string | number)[]): void {
-  for (const t of tokens) {
-    if (typeof t === "string" && FORBIDDEN_PATH_SEGMENTS.has(t)) {
-      throw new Error(
-        `Chemin de champ interdit : segment « ${t} » (protection contre l'empoisonnement de prototype).`,
-      );
-    }
-  }
-}
-
-export function setNestedValue(obj: Record<string, unknown>, path: string, value: unknown): void {
-  const tokens = tokenizePillarPath(path);
-  assertSafePillarPath(tokens);
-  if (tokens.length === 1) {
-    (obj as Record<string | number, unknown>)[tokens[0]!] = value;
-    return;
-  }
-  let current: Record<string | number, unknown> = obj;
-  for (let i = 0; i < tokens.length - 1; i++) {
-    const t = tokens[i]!;
-    const nextIsIndex = typeof tokens[i + 1] === "number";
-    if (current[t] === undefined || current[t] === null || typeof current[t] !== "object") {
-      // Crée un tableau si le prochain token est un index, sinon un objet.
-      current[t] = nextIsIndex ? [] : {};
-    }
-    current = current[t] as Record<string | number, unknown>;
-  }
-  current[tokens[tokens.length - 1]!] = value;
-}
+// ── Résolution de chemin pilier (déplacée dans @/lib/pillar-path) ──────
+// La mécanique de dot-path profonde (tokenizer + garde proto + set) vit
+// désormais dans la feuille pure `@/lib/pillar-path`, partagée par l'assessor
+// et l'auto-filler (qui divergeaient en object-only, incapables de lire/écrire
+// une cellule de matrice). Re-exportée ici pour la compat des imports
+// historiques `@/server/services/pillar-gateway` (tests + pillar.ts router).
+export { setNestedValue, tokenizePillarPath, assertSafePillarPath };
 
 // ── Recommendation application (from rtis-cascade.ts, centralized) ───
 

@@ -1,5 +1,15 @@
 # Changelog — La Fusee
 
+## v6.27.314 — refactor(domain): pillar-path — chemin ADVE profond unifié (Phase 0 remplissage profond) (2026-07-23)
+
+**Une seule mécanique de chemin ADVE, capable de lire ET écrire `produitsCatalogue[2].gainClientConcret`, partagée par le gateway, l'assessor et l'auto-filler. Prérequis dur du chantier « la notoria remplit tout en profondeur ».**
+
+- **Le diagnostic** (capture opérateur : matrice produit vide au pilier V, « je n'arrive pas à remplir les vides via la notoria », confirmé sur TOUS les piliers) : la résolution de chemin divergeait en **trois copies**. Le gateway savait ÉCRIRE en profondeur (array-index, ADR-0172) ; l'assessor LISAIT en `split(".")` object-only (`resolvePath`) ; l'auto-filler ÉCRIVAIT en `split(".")` object-only. **Aveugles aux cellules de matrice** → la notoria ne pouvait ni détecter ni écrire une feuille de tableau. Le vide n'est pas un bug de données, c'est architectural.
+- **Le build** : NOUVEAU `src/lib/pillar-path.ts` (feuille pure, zéro dépendance serveur) = `tokenizePillarPath` + `assertSafePillarPath` + `setNestedValue` (déplacés du gateway) + `getNestedArray` (déplacé du router `pillar.ts`) + NOUVEAU `resolvePillarPath` (lecture array-index-aware, remplace l'ex-`resolvePath` object-only). Le gateway **re-exporte** (compat des imports historiques `@/server/services/pillar-gateway` — tests + router). `assessor.ts`, `auto-filler.ts` et `pillar.ts` consomment la version partagée → **les deux implémentations object-only sont mortes**.
+- **Phase 0 d'un chantier séquencé** : cible finale = la notoria remplit tout l'ADVE en profondeur (drafts INFERRED, toutes options) · l'édition à la main atteint chaque feuille · la profondeur nourrit le RTIS. Sans chemin profond partagé, rien de profond n'est détectable ni écrivable — d'où ce socle d'abord.
+- **Zéro changement de comportement** : `resolvePillarPath` est un superset strict de l'ex-`resolvePath` (identique sur les chemins object, plus le support array-index) ; idem `setNestedValue` côté auto-filler. Allowlist `no-bare-writepillar` re-pointée (ligne interne du gateway décalée par l'extraction).
+- 18 tests `pillar-path` (lecture profonde + aller-retour write→read) ; suite gouvernance/lib/services/types verte (**3045**). tsc 0 · lint 0 · lint:governance 0 erreur · cycles 0 (feuille madge) · C5 keystone intact · cap APOGEE 7/7 · 0 LLM · 0 modèle Prisma · 0 migration.
+
 ## v6.27.313 — feat(governance): C6 — mode BLOCK + override fondateur (défaut WARN inchangé) (2026-07-23)
 
 **Le gate de cohérence brief↔ADVE (C6) peut désormais BLOQUER le forge — mais reste WARN par défaut. Le flip vers BLOCK est une env var opérateur, à poser une fois l'heuristique validée ; l'override fondateur « forger quand même » ship dans le même lot pour qu'aucun faux positif ne piège personne.**

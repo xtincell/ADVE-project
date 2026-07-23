@@ -8,6 +8,7 @@ import { PILLAR_STORAGE_KEYS } from "@/domain";
  */
 
 import { db } from "@/lib/db";
+import { resolvePillarPath } from "@/lib/pillar-path";
 import type {
   MaturityStage,
   FieldRequirement,
@@ -19,27 +20,16 @@ import { MATURITY_ORDER } from "@/lib/types/pillar-maturity";
 import { getContracts } from "./contracts-loader";
 
 // ─── Field Validation ───────────────────────────────────────────────────────
-
-/**
- * Resolve a dot-notation path within content.
- * "enemy.name" → content.enemy.name
- */
-function resolvePath(content: Record<string, unknown>, path: string): unknown {
-  const parts = path.split(".");
-  let current: unknown = content;
-  for (const part of parts) {
-    if (current === null || current === undefined) return undefined;
-    if (typeof current !== "object") return undefined;
-    current = (current as Record<string, unknown>)[part];
-  }
-  return current;
-}
+//
+// La résolution de chemin (dot-path + array-index, ex. `produitsCatalogue[2].nom`)
+// vient de la feuille partagée `@/lib/pillar-path` — l'ex-`resolvePath` local était
+// object-only (`split(".")`), aveugle aux cellules de matrice.
 
 /**
  * Check if a field requirement is satisfied by the pillar content.
  */
 function isFieldSatisfied(content: Record<string, unknown>, req: FieldRequirement): boolean {
-  const value = resolvePath(content, req.path);
+  const value = resolvePillarPath(content, req.path);
 
   switch (req.validator) {
     case "non_empty":
