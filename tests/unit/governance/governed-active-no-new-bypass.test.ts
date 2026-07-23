@@ -1,6 +1,12 @@
 /**
- * HARD — un routeur `lafusee:governed-active` ne peut plus ajouter de mutation
- * NON gouvernée en silence (B1, audit adversarial 2026-07-22).
+ * HARD — AUCUN routeur ne peut ajouter de mutation NON gouvernée en silence
+ * (B1, audit adversarial 2026-07-22 ; étendu à TOUS les routeurs round-8).
+ *
+ * ROUND-8 (§B) : le gate `if (!src.includes("lafusee:governed-active")) continue`
+ * exemptait 18 routeurs NON tagués (`payment`, `auth`, `newsletter`, `blog`,
+ * `error-vault`, `prod-ops`…) qui portaient `.mutation(` sans AUCUN signal CI —
+ * une mutation métier ungoverned pouvait y apparaître silencieusement. Le gate est
+ * RETIRÉ : tous les routeurs sont scannés, le baseline gèle l'inventaire complet.
  *
  * # Le trou que ce test verrouille
  *
@@ -87,16 +93,30 @@ const BASELINE: Readonly<Record<string, number>> = {
   "ingestion.ts": 1, // EXEMPT — previewBrandBook (dry-run)
   "market-cost.ts": 1, // PENDING — seedBaseline (admin seed)
   "mission-applications.ts": 1, // PENDING — withdraw
-  "mobile-money.ts": 1, // EXEMPT — webhook externe (signature vérifiée)
+  "mobile-money.ts": 1, // EXEMPT — webhook externe (secret partagé fail-closed round-8)
   "monetization.ts": 1, // PENDING — initSubscription (public paywall)
   "strategy.ts": 1, // PENDING — validateSynthesis
+  // ── Round-8 (§B) : routeurs NON tagués `governed-active`, désormais scannés ──
+  "payment.ts": 8, // EXEMPT — infra paiement (paywall public + admin) + audit IntakePayment/Subscription propre (ADR-0092)
+  "newsletter.ts": 7, // MIXTE — 3 emailProvider* EXEMPT (vault ADR-0021) + 4 PENDING (subscribers*/newsletters* → spine, plan round-7 ; kind async NEWSLETTER_SEND_CAMPAIGN déjà déclaré, à câbler)
+  "auth.ts": 6, // EXEMPT — auth (register/forgot/reset public) + self-prefs (pas de binding opérateur pré-auth)
+  "blog.ts": 3, // EXEMPT — CMS éditorial operatorProcedure (doctrine « comme le router CRM », classe editorial.ts)
+  "error-vault.ts": 3, // EXEMPT — capture télémétrie + admin markResolved sur le log d'erreurs interne
+  "phase18-residuals.ts": 3, // EXEMPT — formulaire de gouvernance adminProcedure (métadonnées)
+  "prod-ops.ts": 3, // EXEMPT — infra ops adminProcedure (Coolify deploy / cron / prod-finish)
+  "referral.ts": 2, // EXEMPT — file de récompense opérateur adminProcedure (ADR-0157)
+  "scoreur.ts": 2, // EXEMPT — seedCanon (seed admin) + previewBrand (dry-run persist:false)
+  "footprint.ts": 1, // EXEMPT — scan funnel public, observation Seshat (strategyId:null, télémétrie)
+  "xlsx-parser.ts": 1, // EXEMPT — transform pur publicProcedure, zéro effet DB (.mutation pour la sémantique POST)
 };
 
 function scanAll(): Record<string, number> {
   const out: Record<string, number> = {};
   for (const f of readdirSync(ROUTERS_DIR).filter((x) => x.endsWith(".ts"))) {
     const src = readFileSync(join(ROUTERS_DIR, f), "utf8");
-    if (!src.includes("lafusee:governed-active")) continue;
+    // Round-8 (audit MCP §B) : le gate `governed-active` est RETIRÉ — 18 routeurs
+    // NON tagués portaient `.mutation(` sans aucun signal CI. On scanne désormais
+    // TOUS les routeurs ; le baseline gèle l'inventaire complet (EXEMPT + PENDING).
     const n = ungovernedMutationCount(src);
     if (n > 0) out[f] = n;
   }

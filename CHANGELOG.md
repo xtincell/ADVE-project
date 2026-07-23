@@ -1,5 +1,13 @@
 # Changelog — La Fusee
 
+## v6.27.282 — fix(governance): round-8 adversarial (e) — scanner anti-bypass étendu à TOUS les routeurs (2026-07-22)
+
+**Une mutation métier non gouvernée ne peut plus apparaître en silence dans AUCUN routeur — plus seulement ceux marqués `governed-active`.**
+
+- **Angle mort CI fermé** : le verrou HARD `governed-active-no-new-bypass` ne scannait QUE les routeurs portant le marqueur `lafusee:governed-active` (gate `if (!src.includes(...)) continue`). 18 routeurs NON tagués (`payment`, `auth`, `newsletter`, `blog`, `error-vault`, `phase18-residuals`, `prod-ops`, `referral`, `scoreur`, `footprint`, `xlsx-parser`) portaient des `.mutation(` sans AUCUN signal CI — une mutation métier bypassant le spine d'émission pouvait y être ajoutée silencieusement. Gate RETIRÉ : tous les routeurs sont désormais scannés, le baseline gèle l'inventaire complet (ne peut que décroître ; hausse = merge cassé).
+- **Inventaire des 11 routeurs ajoutés au baseline** : tous EXEMPT (auth/self-prefs, webhooks paiement + admin infra `payment`/`prod-ops`/`referral`/`phase18-residuals`, télémétrie `error-vault`/`footprint`, transform pur `xlsx-parser`, CMS `blog`) SAUF **`newsletter` (4 PENDING)** — `subscribersAdd`/`subscribersBulkImport`/`newslettersCreate`/`newslettersSend` sont de vraies mutations métier (broadcast Anubis + écriture CRM) à router vers le spine. Découverte utile : le kind async `NEWSLETTER_SEND_CAMPAIGN` est DÉJÀ déclaré au registre (Vague 10) mais jamais câblé au router (`operatorProcedure` inline) — leur gouvernance reste le chantier tracé (round-7 + RESIDUAL-DEBT), non rushé sur un flux email/paiement-adjacent.
+- Clôt le résidu round-6 (e). Cap APOGEE 7/7. tsc 0 · lint 0 · **1228 tests governance verts**.
+
 ## v6.27.281 — fix(governance): round-8 adversarial (d) — intégrité financière (double-payout + webhook momo + redelivery) (2026-07-22)
 
 **Un talent ne peut plus être payé deux fois sur un double-clic, un inconnu ne peut plus valider un payout momo, et une redelivery Stripe/CinetPay ne renvoie plus deux fois les emails.**
