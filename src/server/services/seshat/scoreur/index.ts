@@ -299,6 +299,10 @@ async function readRevealedSignals(strategyId: string, audienceMeetsFloor: boole
   const site = wp.site as { tech?: unknown } | undefined;
   const press = Array.isArray(wp.press) ? wp.press : [];
   const socials = Array.isArray(wp.socials) ? wp.socials : [];
+  // Empreinte P22-1 : seule la donnée d'un état LIVE a été persistée (ADR-0121).
+  // Wikipédia = axe A (notabilité) ; autocomplete = axe D (demande de recherche).
+  const wikipedia = wp.wikipedia as { hasPage?: boolean } | undefined;
+  const autocomplete = wp.searchAutocomplete as { brandAppearsInOwnSuggest?: boolean } | undefined;
   return {
     domainAgeYears: typeof domain?.ageYears === "number" ? domain.ageYears : null,
     pressCount: press.length,
@@ -306,5 +310,7 @@ async function readRevealedSignals(strategyId: string, audienceMeetsFloor: boole
     siteReachable: Boolean(site?.tech),
     publicSocialCount: socials.length,
     audienceMeetsFloor,
+    hasWikipediaPage: wikipedia?.hasPage === true,
+    brandInOwnAutocomplete: autocomplete?.brandAppearsInOwnSuggest === true,
   };
 }

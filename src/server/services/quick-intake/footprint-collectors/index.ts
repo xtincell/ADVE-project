@@ -17,3 +17,10 @@ export {
 } from "./google-maps";
 export { fetchSitePerformance, parsePsiResponse, type SitePerformance } from "./pagespeed";
 export { fetchAdsPresence, parseAdsItems, type AdsPresence } from "./ads-library";
+export { fetchWikipediaPresence, parseWikipediaSummary, type WikipediaSignal } from "./wikipedia";
+export {
+  fetchSearchAutocomplete,
+  parseAutocompleteResponse,
+  isSearchAutocompleteEnabled,
+  type SearchAutocompleteSignal,
+} from "./search-autocomplete";

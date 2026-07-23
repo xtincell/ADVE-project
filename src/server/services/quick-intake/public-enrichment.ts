@@ -505,7 +505,10 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
   // ── 5. Empreinte entière — collecteurs parallèles (ADR-0121 vague A). ──
   // Read-only, chacun time-boxé et honnête ; l'échec d'un collecteur
   // n'affecte pas les autres.
-  const enrichedExtras: Pick<EnrichedFootprint, "maps" | "youtube" | "domain" | "emailInfra" | "performance" | "ads"> = {};
+  const enrichedExtras: Pick<
+    EnrichedFootprint,
+    "maps" | "youtube" | "domain" | "emailInfra" | "performance" | "ads" | "wikipedia" | "searchAutocomplete"
+  > = {};
   // Signaux gratuits lancés à l'étage 0 — récupérés SANS condition de budget
   // (ils ont couru en parallèle, l'attente restante est ≤ leur propre timeout).
   {
@@ -519,12 +522,22 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
       const ytProfile = footprint.socials.find((s) => s.platform === "YOUTUBE" && s.handle);
       const stageBudget = Math.min(20_000, remaining());
 
-      const [youtube, performance, ads] = await Promise.all([
+      const [youtube, performance, ads, wikipedia, searchAutocomplete] = await Promise.all([
         ytProfile
           ? collectors.fetchYouTubeChannelStats(ytProfile.handle!, { timeoutMs: Math.min(stageBudget, 6_000) })
           : Promise.resolve(null),
         collectors.fetchSitePerformance(footprint.site?.reachable ? footprint.site.url : null, { timeoutMs: Math.min(stageBudget, 18_000) }),
         collectors.fetchAdsPresence(input.companyName, { timeoutMs: Math.min(stageBudget, 15_000) }),
+        // Wikipédia (axe A — notabilité) : nom de marque, pas d'URL requise ;
+        // langue la plus probable du marché (fr pour l'Afrique francophone, en
+        // sinon). Un seul appel — l'absence de page reste un négatif honnête.
+        collectors.fetchWikipediaPresence(input.companyName, {
+          timeoutMs: Math.min(stageBudget, 6_000),
+          lang: wikipediaLangForCountry(countryCodeGuess(input.country)),
+        }),
+        // Autocomplete Google (axe D — demande) : registered-but-off, ne part
+        // qu'avec SEARCH_AUTOCOMPLETE_ENABLED (posture ToS-gray, single-shot).
+        collectors.fetchSearchAutocomplete(input.companyName, { timeoutMs: Math.min(stageBudget, 6_000) }),
       ]);
 
       if (youtube) {
@@ -550,6 +563,8 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
       }
       enrichedExtras.performance = performance;
       enrichedExtras.ads = ads;
+      enrichedExtras.wikipedia = wikipedia;
+      enrichedExtras.searchAutocomplete = searchAutocomplete;
     } catch (err) {
       errors.push(`collectors: ${err instanceof Error ? err.message : String(err)}`);
     }
@@ -921,6 +936,21 @@ export function countryCodeGuess(country?: string | null): string | null {
   return COUNTRY_NAME_TO_ISO2[normalized] ?? null;
 }
 
+/** ISO-2 des marchés francophones ciblés — pour choisir le wiki le plus probable. */
+const FRANCOPHONE_ISO2 = new Set([
+  "CM", "CI", "SN", "FR", "MA", "CD", "BJ", "TG", "GA", "BF", "ML", "TN", "NE",
+  "TD", "CG", "CF", "DJ", "KM", "MG", "RW", "BI", "SC", "GN", "MR", "BE", "LU", "MC",
+]);
+
+/**
+ * Langue Wikipédia la plus probable du marché : fr pour l'Afrique francophone
+ * ciblée, en sinon. Un seul appel côté collecteur — l'absence de page reste un
+ * négatif honnête (jamais une seconde tentative fabriquée). Exporté pour tests.
+ */
+export function wikipediaLangForCountry(countryCode: string | null): string {
+  return countryCode && FRANCOPHONE_ISO2.has(countryCode) ? "fr" : "en";
+}
+
 // ── Writeback pilier E (pur) ───────────────────────────────────────────
 
 const PLATFORM_TO_CHANNEL: Record<string, string> = {
@@ -997,6 +1027,15 @@ export function mergeEnrichedFootprintIntoPillarE(
   }
   if (enriched.ads && enriched.ads.status === "LIVE") {
     webPresence.ads = enriched.ads;
+  }
+  // Contrat P22-1 (`ConnectorResult`) — on ne persiste QUE la donnée d'un état
+  // LIVE (le fait mesuré) ; DEGRADED est omis (jamais une absence présentée comme
+  // un fait, ADR-0046). La donnée nourrit `readRevealedSignals` du Scoreur.
+  if (enriched.wikipedia && enriched.wikipedia.state === "LIVE") {
+    webPresence.wikipedia = enriched.wikipedia.data;
+  }
+  if (enriched.searchAutocomplete && enriched.searchAutocomplete.state === "LIVE") {
+    webPresence.searchAutocomplete = enriched.searchAutocomplete.data;
   }
   if (enriched.site?.tech) {
     const site = (webPresence.site ?? {}) as Record<string, unknown>;

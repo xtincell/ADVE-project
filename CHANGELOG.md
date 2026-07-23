@@ -1,5 +1,15 @@
 # Changelog — La Fusee
 
+## v6.27.311 — feat(seshat): scoreur — 2 collecteurs footprint publics sans clé (Wikipedia + autocomplete) (2026-07-23)
+
+**Deux signaux révélés publics alimentent enfin le scoreur A/D — sans aucune clé, sans toucher la math de score. Wikipedia (API officielle) ON ; autocomplete Google (ToS-gray) default-OFF, honnête plutôt que reckless.**
+
+- **Le trou** : le scoreur avait un scaffold `ConnectorResult` (P22-1) + un seul collecteur no-key (`domain-rdap.ts`) ; les endpoints publics gratuits (Wikipedia, autocomplete) n'étaient pas branchés. Buildable, pas gated — corrigé.
+- **`wikipedia.ts`** (API REST officielle Wikimedia, `User-Agent` conforme, ToS-OK, default-ON) → **signal axe A (notabilité)**. Anti-fabrication : un 404 = `LIVE { hasPage:false }` (négatif RÉEL, l'API a répondu « pas de page »), jamais un zéro fabriqué ; seul un échec transport = `DEGRADED(VENDOR_OUTAGE)`. Pages d'homonymie comptées `hasPage:false` (pas de faux positif « Orange »/« Apple »).
+- **`search-autocomplete.ts`** (endpoint public Google, **default-OFF** derrière `SEARCH_AUTOCOMPLETE_ENABLED`) → **signal axe D (demande de recherche)**. Endpoint non-officiel ToS-gray + le système score BEAUCOUP de marques → interroger systématiquement est un risque réel : **honnête plutôt que reckless**, off par défaut, `DEGRADED(MISSING_PREREQUISITE)` sans AUCUN appel réseau quand désactivé ; single-shot / no-retry / no-batch documenté. L'unlock est une action opérateur (no-key → jamais DEFERRED).
+- **Zéro régression de score** : 2 champs `RevealedSignals` OPTIONNELS (`hasWikipediaPage?` axe A, `brandInOwnAutocomplete?` axe D) branchés en **OR additif/monotone** sur les gates existants (`dirigeant-identifiable`, `market-fit`) — un signal ne peut qu'AJOUTER un gate, jamais en retirer. Bradley-Terry, arène, poids d'items, cohérence, `computeFootprintScore` /100 : **INTOUCHÉS**. Persisté à `webPresence` uniquement quand LIVE (omission honnête sinon).
+- 55 tests dédiés (parité domain-rdap : LIVE / LIVE-négatif / DEGRADED / default-off sans réseau) + monotonicité des gates. 0 nouveau modèle Prisma · 0 migration · cap APOGEE 7/7 · 0 LLM. tsc 0 · 2820 tests governance+services verts.
+
 ## v6.27.310 — feat(seshat): Tarsis — harvester digest→polity (Overton par échelle × pays, zéro fabrication) (2026-07-23)
 
 **L'Overton radar avait une résolution par polity (secteur × échelle × pays) mais seul l'axe secteur GLOBAL était nourri automatiquement. Ce harvester remplit les axes PAR POLITY — depuis l'échelle de marché DÉCLARÉE des marques couvertes, jamais devinée.**

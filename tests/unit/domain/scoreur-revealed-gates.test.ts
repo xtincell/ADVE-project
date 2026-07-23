@@ -96,4 +96,31 @@ describe("resolveRevealedGates — preuve publique → portes de bas de palier",
     expect(strict.has("mythe-fondateur")).toBe(false);
     expect(strict.has("market-fit")).toBe(true);
   });
+
+  // ── Signaux d'empreinte Wikipédia (axe A) + autocomplete (axe D) ──────────
+  // Ajouts ADDITIFS (monotones) : ils ne peuvent qu'AJOUTER une porte. Champs
+  // optionnels → absents des fixtures existantes → comportement inchangé.
+  it("Wikipédia (axe A) franchit dirigeant-identifiable sans site ni social", () => {
+    const wikiOnly: RevealedSignals = { ...NEANT, hasWikipediaPage: true };
+    expect(resolveRevealedGates(wikiOnly).has("dirigeant-identifiable")).toBe(true);
+    // Une page Wikipédia daterait aussi le mythe ? Non : mythe-fondateur exige
+    // un âge de domaine, pas Wikipédia — pas de fuite hors de l'axe A.
+    expect(resolveRevealedGates(wikiOnly).has("mythe-fondateur")).toBe(false);
+  });
+
+  it("autocomplete (axe D) franchit market-fit (demande de recherche révélée)", () => {
+    // Autocomplete seul → market-fit, mais PAS dirigeant-identifiable → escalade
+    // stricte stoppe à LATENT (aucune identité publique). Signal cantonné à l'axe D.
+    const searchOnly: RevealedSignals = { ...NEANT, brandInOwnAutocomplete: true };
+    const gates = resolveRevealedGates(searchOnly);
+    expect(gates.has("market-fit")).toBe(true);
+    expect(gates.has("dirigeant-identifiable")).toBe(false);
+    expect(itemsTier(gates)).toBe("LATENT");
+  });
+
+  it("monotone : ajouter les nouveaux signaux à NEANT ne retire aucune porte", () => {
+    const base = resolveRevealedGates(NEANT);
+    const withNew = resolveRevealedGates({ ...NEANT, hasWikipediaPage: true, brandInOwnAutocomplete: true });
+    for (const g of base) expect(withNew.has(g)).toBe(true);
+  });
 });

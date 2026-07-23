@@ -30,6 +30,18 @@ export interface RevealedSignals {
   readonly publicSocialCount: number;
   /** L'audience cumulée atteint le plancher d'audience de la ligue (arène A gagnée). */
   readonly audienceMeetsFloor: boolean;
+  /**
+   * AXE A (notabilité) — la marque a une page Wikipédia dédiée (empreinte
+   * mesurée). Optionnel : rétro-compat avec les `RevealedSignals` construits
+   * avant le collecteur Wikipédia. `undefined`/`false` = neutre (jamais fabriqué).
+   */
+  readonly hasWikipediaPage?: boolean;
+  /**
+   * AXE D (demande) — la marque apparaît dans son propre autocomplete de
+   * recherche (Google la reconnaît comme requête). Optionnel : rétro-compat +
+   * collecteur registered-but-off (souvent absent). `undefined`/`false` = neutre.
+   */
+  readonly brandInOwnAutocomplete?: boolean;
 }
 
 /** Seuils canon PROPOSÉS (ADR-0150) — conservateurs, ajustables. */
@@ -60,8 +72,10 @@ export function resolveRevealedGates(
   const met = new Set<RevealedGateId>();
 
   // FRAGILE — identité publique vérifiable de la marque (site OU présence sociale
-  // publique). Une marque avec une vraie empreinte publique est identifiable.
-  if (s.siteReachable || s.publicSocialCount >= 1) {
+  // publique OU page Wikipédia dédiée — axe A notabilité). Une marque avec une
+  // vraie empreinte publique est identifiable. Ajout ADDITIF (monotone) : une
+  // page Wikipédia ne peut qu'AJOUTER la porte, jamais la retirer.
+  if (s.siteReachable || s.publicSocialCount >= 1 || s.hasWikipediaPage === true) {
     met.add("dirigeant-identifiable");
   }
 
@@ -72,8 +86,15 @@ export function resolveRevealedGates(
   }
 
   // ORDINAIRE — market-fit prouvé : traction publique (audience ≥ plancher de
-  // ligue) OU couverture presse OU avis clients réels. Faisceau, jamais déclaré.
-  if (s.audienceMeetsFloor || s.pressCount >= thresholds.marketFitMinPress || s.hasReviews) {
+  // ligue) OU couverture presse OU avis clients réels OU demande de recherche
+  // révélée (axe D — la marque est cherchée, Google l'autocomplète). Faisceau,
+  // jamais déclaré. Ajout ADDITIF (monotone) : ne peut qu'AJOUTER la porte.
+  if (
+    s.audienceMeetsFloor ||
+    s.pressCount >= thresholds.marketFitMinPress ||
+    s.hasReviews ||
+    s.brandInOwnAutocomplete === true
+  ) {
     met.add("market-fit");
   }
 

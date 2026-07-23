@@ -21,9 +21,14 @@ import {
   fetchSitePerformance,
   fetchAdsPresence,
   fetchDomainInfo,
+  parseWikipediaSummary,
+  fetchWikipediaPresence,
+  parseAutocompleteResponse,
+  isSearchAutocompleteEnabled,
+  fetchSearchAutocomplete,
 } from "@/server/services/quick-intake/footprint-collectors";
 
-const ENV_KEYS = ["YOUTUBE_API_KEY", "PAGESPEED_API_KEY", "APIFY_TOKEN", "APIFY_MAPS_ACTOR_ID", "APIFY_ADS_ACTOR_ID"] as const;
+const ENV_KEYS = ["YOUTUBE_API_KEY", "PAGESPEED_API_KEY", "APIFY_TOKEN", "APIFY_MAPS_ACTOR_ID", "APIFY_ADS_ACTOR_ID", "SEARCH_AUTOCOMPLETE_ENABLED"] as const;
 const saved: Record<string, string | undefined> = {};
 
 beforeEach(() => {
@@ -303,5 +308,157 @@ describe("fetchAdsPresence (dégradations)", () => {
     process.env.APIFY_TOKEN = "t";
     process.env.APIFY_ADS_ACTOR_ID = "some~ads-actor";
     expect((await fetchAdsPresence("Cimencam")).status).toBe("NOT_FOUND");
+  });
+});
+
+// ── Wikipédia (axe A — notabilité) — collecteur no-key, ConnectorResult ─────
+// Design : l'API a répondu 404 = négatif RÉEL → LIVE avec hasPage:false (pas
+// DEGRADED — Wikipédia a bien tranché « aucune page »). Seule une panne de
+// transport = DEGRADED(VENDOR_OUTAGE). Zéro clé → jamais DEFERRED.
+
+describe("parseWikipediaSummary", () => {
+  it("page standard → hasPage true + titre/extrait/url", () => {
+    const sig = parseWikipediaSummary(
+      {
+        type: "standard",
+        title: "Nestlé",
+        extract: "Nestlé S.A. est une entreprise agroalimentaire suisse.",
+        content_urls: { desktop: { page: "https://fr.wikipedia.org/wiki/Nestlé" } },
+      },
+      "fr",
+    );
+    expect(sig).toEqual({
+      hasPage: true,
+      title: "Nestlé",
+      extract: "Nestlé S.A. est une entreprise agroalimentaire suisse.",
+      url: "https://fr.wikipedia.org/wiki/Nestlé",
+      lang: "fr",
+    });
+  });
+  it("désambiguïsation → hasPage false + nuls (jamais un faux positif « Orange »)", () => {
+    const sig = parseWikipediaSummary({ type: "disambiguation", title: "Orange" }, "fr");
+    expect(sig).toEqual({ hasPage: false, title: null, extract: null, url: null, lang: "fr" });
+  });
+});
+
+describe("fetchWikipediaPresence (ConnectorResult, dégradations honnêtes)", () => {
+  it("(a) l'API répond avec une page → LIVE + hasPage true + User-Agent envoyé", async () => {
+    const spy = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ type: "standard", title: "Cimencam", extract: "…", content_urls: { desktop: { page: "https://fr.wikipedia.org/wiki/Cimencam" } } }),
+    });
+    vi.stubGlobal("fetch", spy);
+    const res = await fetchWikipediaPresence("Cimencam", { lang: "fr" });
+    expect(res.state).toBe("LIVE");
+    if (res.state !== "LIVE") throw new Error("attendu LIVE");
+    expect(res.data.hasPage).toBe(true);
+    expect(res.data.title).toBe("Cimencam");
+    expect(res.observedAt).toEqual(expect.any(String));
+    // Étiquette API Wikimedia : User-Agent descriptif obligatoire.
+    const init = spy.mock.calls[0]![1] as { headers?: Record<string, string> };
+    expect(init.headers?.["User-Agent"]).toContain("LaFusee");
+  });
+
+  it("(b) l'API répond 404 → LIVE négatif honnête (hasPage:false), jamais DEGRADED", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 404 }));
+    const res = await fetchWikipediaPresence("MarqueInexistanteXYZ", { lang: "fr" });
+    expect(res.state).toBe("LIVE");
+    if (res.state !== "LIVE") throw new Error("attendu LIVE");
+    expect(res.data.hasPage).toBe(false);
+    expect(res.data.title).toBeNull();
+  });
+
+  it("(c) fetch throw → DEGRADED(VENDOR_OUTAGE), jamais de crash ni de valeur fabriquée", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
+    const res = await fetchWikipediaPresence("Cimencam", { lang: "fr" });
+    expect(res).toEqual({ state: "DEGRADED", reason: "VENDOR_OUTAGE" });
+  });
+
+  it("non-200 (5xx) → DEGRADED(VENDOR_OUTAGE)", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 503 }));
+    const res = await fetchWikipediaPresence("Cimencam");
+    expect(res).toEqual({ state: "DEGRADED", reason: "VENDOR_OUTAGE" });
+  });
+
+  it("nom vide → DEGRADED(INSUFFICIENT_DATA), aucun fetch", async () => {
+    const spy = vi.fn();
+    vi.stubGlobal("fetch", spy);
+    const res = await fetchWikipediaPresence("   ");
+    expect(res).toEqual({ state: "DEGRADED", reason: "INSUFFICIENT_DATA" });
+    expect(spy).not.toHaveBeenCalled();
+  });
+});
+
+// ── Autocomplete Google (axe D — demande) — no-key, registered-but-off ──────
+// Endpoint public NON officiel (ToS-gray) : OFF par défaut. Design : suggestions
+// vides = négatif RÉEL → LIVE (l'API a répondu). Panne = DEGRADED(VENDOR_OUTAGE).
+// Désactivé = DEGRADED(MISSING_PREREQUISITE) sans aucun fetch. Zéro clé → jamais DEFERRED.
+
+describe("parseAutocompleteResponse", () => {
+  it("suggestions contenant la marque → brandAppearsInOwnSuggest true", () => {
+    const sig = parseAutocompleteResponse(["nestle", ["nestle produits", "nestle rappel", ""]], "Nestlé");
+    expect(sig.suggestions).toEqual(["nestle produits", "nestle rappel"]);
+    expect(sig.brandAppearsInOwnSuggest).toBe(true);
+  });
+  it("suggestions vides → LIVE négatif honnête (false), jamais fabriqué", () => {
+    const sig = parseAutocompleteResponse(["xqzyt", []], "Xqzyt");
+    expect(sig.suggestions).toEqual([]);
+    expect(sig.brandAppearsInOwnSuggest).toBe(false);
+  });
+});
+
+describe("isSearchAutocompleteEnabled", () => {
+  it("OFF par défaut ; ON sur opt-in explicite", () => {
+    expect(isSearchAutocompleteEnabled()).toBe(false);
+    process.env.SEARCH_AUTOCOMPLETE_ENABLED = "true";
+    expect(isSearchAutocompleteEnabled()).toBe(true);
+  });
+});
+
+describe("fetchSearchAutocomplete (ConnectorResult, ToS-gray registered-but-off)", () => {
+  it("désactivé par défaut → DEGRADED(MISSING_PREREQUISITE), AUCUN fetch (posture ToS)", async () => {
+    const spy = vi.fn();
+    vi.stubGlobal("fetch", spy);
+    const res = await fetchSearchAutocomplete("Nestlé");
+    expect(res).toEqual({ state: "DEGRADED", reason: "MISSING_PREREQUISITE" });
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("(a) activé + l'API répond avec suggestions → LIVE + brandAppearsInOwnSuggest true", async () => {
+    process.env.SEARCH_AUTOCOMPLETE_ENABLED = "1";
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify(["nestle", ["nestle produits", "nestle cameroun"]]),
+    }));
+    const res = await fetchSearchAutocomplete("Nestlé");
+    expect(res.state).toBe("LIVE");
+    if (res.state !== "LIVE") throw new Error("attendu LIVE");
+    expect(res.data.brandAppearsInOwnSuggest).toBe(true);
+    expect(res.data.suggestions).toHaveLength(2);
+  });
+
+  it("(b) activé + suggestions vides → LIVE négatif honnête (pas DEGRADED)", async () => {
+    process.env.SEARCH_AUTOCOMPLETE_ENABLED = "1";
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200, text: async () => JSON.stringify(["xqzyt", []]) }));
+    const res = await fetchSearchAutocomplete("Xqzyt");
+    expect(res.state).toBe("LIVE");
+    if (res.state !== "LIVE") throw new Error("attendu LIVE");
+    expect(res.data.brandAppearsInOwnSuggest).toBe(false);
+  });
+
+  it("(c) activé + fetch throw → DEGRADED(VENDOR_OUTAGE), jamais de crash", async () => {
+    process.env.SEARCH_AUTOCOMPLETE_ENABLED = "1";
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
+    const res = await fetchSearchAutocomplete("Nestlé");
+    expect(res).toEqual({ state: "DEGRADED", reason: "VENDOR_OUTAGE" });
+  });
+
+  it("activé + JSON illisible → DEGRADED(VENDOR_OUTAGE)", async () => {
+    process.env.SEARCH_AUTOCOMPLETE_ENABLED = "1";
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200, text: async () => "<html>429</html>" }));
+    const res = await fetchSearchAutocomplete("Nestlé");
+    expect(res).toEqual({ state: "DEGRADED", reason: "VENDOR_OUTAGE" });
   });
 });
