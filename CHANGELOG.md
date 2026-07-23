@@ -1,5 +1,15 @@
 # Changelog — La Fusee
 
+## v6.27.283 — fix(governance): round-9 adversarial (a) — IDOR entité-id sur les routeurs manqués (creative-proposal / brand-node / media-buying) (2026-07-23)
+
+**Un fondateur ne peut plus valider/lire les propositions créatives, éditer l'arbre de marque, ni écrire les perfs média d'une AUTRE marque.**
+
+- Le sweep entité-id round-4/5 avait MANQUÉ `creative-proposal.ts` et `brand-node.ts` (absents de `entity-id-ownership-guard.test.ts`). Nouveau fan-out round-9 (3 auditeurs) → 6 findings.
+- **HIGH — `creativeProposal.validate/submit/reject`** keyés sur `{ id }` (pas de `strategyId` de tête → garde ADR-0175 inapplicable) → tout fondateur validait la proposition d'autrui (`validate` = déclenche la génération de production sur la marque cible + brûle du LLM), la rejetait, ou la soumettait. **MED — `getById`** lisait toute proposition cross-marque. Fix : chokepoint `assertProposalAccess` (résout `proposal.strategyId` → `assertStrategyRead`) sur les 4.
+- **HIGH — `brandNode.update/delete/move/tagRole/attachStrategy`** keyés sur `nodeId` : le `strategyId` de tête (« pivot d'audit ») était celui de la marque DU CALLER, jamais la cible → réécriture/archivage d'un nœud d'autrui (piliers effectifs, cascade). Les READS utilisaient déjà `assertNodeAccess`, pas les MUTATIONS. Fix : `assertNodeAccess(nodeId)` sur les 5 + `create` gardé (`assertOperatorAccess(operatorId)` + `assertNodeAccess(parentNodeId)` + `assertStrategyRead(attachStrategyId)` — le service ne vérifiait que `parent.operatorId === args.operatorId`, tous deux fournis par l'attaquant) + 3 lectures mineures (`nodeNature`) gardées.
+- **LOW-MED — `mediaBuying.syncToCampaign`** : `strategyId` gardé (ADR-0175) mais `campaignId` non → écriture d'une `CampaignAmplification` sur la campagne d'autrui. Fix : la campagne doit appartenir à `input.strategyId`.
+- Verrou HARD étendu (`entity-id-ownership-guard` §round-9). Clôt le résidu round-6 (c) `media-buying`. Cap APOGEE 7/7. tsc 0 · lint 0 · **2731 tests (governance+services) verts**.
+
 ## v6.27.282 — fix(governance): round-8 adversarial (e) — scanner anti-bypass étendu à TOUS les routeurs (2026-07-22)
 
 **Une mutation métier non gouvernée ne peut plus apparaître en silence dans AUCUN routeur — plus seulement ceux marqués `governed-active`.**

@@ -19,6 +19,7 @@
 // ============================================================================
 
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { strategyScopedProcedure } from "../middleware/strategy-scope";
@@ -142,6 +143,16 @@ export const mediaBuyingRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      // Anti-IDOR (round-9) : `strategyId` de tête est gardé (ADR-0175) mais
+      // `campaignId` ne l'était PAS → on écrivait une CampaignAmplification sur
+      // la campagne d'AUTRUI. La campagne doit appartenir à la marque possédée.
+      const camp = await ctx.db.campaign.findUnique({
+        where: { id: input.campaignId },
+        select: { strategyId: true },
+      });
+      if (!camp || camp.strategyId !== input.strategyId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Cette campagne n'appartient pas à la marque." });
+      }
       // Gather all MEDIA_PERFORMANCE signals for this strategy + platform
       const signals = await ctx.db.signal.findMany({
         where: {

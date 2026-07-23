@@ -93,6 +93,10 @@ const RESOLUTION_GUARD: Array<[string, RegExp]> = [
   ["campaign-change-request.ts", /canAccessMission\(/],
   ["deliverable-tracking.ts", /canAccessMission\(/],
   ["signal.ts", /assertStrategyAccess\(/],
+  // ── Round-9 : routeurs entité-id manqués par le sweep round-4/5 ──
+  ["creative-proposal.ts", /assertProposalAccess\(/], // getById/submit/validate/reject → proposal.strategyId
+  ["brand-node.ts", /assertNodeAccess\(/], // update/delete/move/tagRole/attachStrategy/create + reads
+  ["media-buying.ts", /camp\.strategyId !== input\.strategyId/], // syncToCampaign → campaign appartient à la marque
 ];
 
 describe("entity-id founder-reachable procedures resolve ownership (round-4)", () => {
