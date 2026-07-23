@@ -128,7 +128,11 @@ export async function POST(request: Request) {
     }
 
     const result = streamText({
-      model: anthropic("claude-sonnet-4-20250514"),
+      // purge dette : Sonnet 4 legacy → Sonnet 5 (défaut canon du Gateway
+      // llm-gateway/index.ts:123 + CLAUDE.md « default to latest »). Le routage
+      // COMPLET du chat via le Gateway (cost-tracking/circuit-breaker/headroom)
+      // reste un chantier — le Gateway n'expose pas encore de surface streaming.
+      model: anthropic("claude-sonnet-5"),
       system: systemPrompt,
       messages: messages.map((m) => ({
         role: m.role as "user" | "assistant",
