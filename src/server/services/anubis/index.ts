@@ -119,9 +119,11 @@ export async function draftCommsPlan(
   if (strategy) {
     const channels = [...DEFAULT_CHANNELS];
     return {
+      // round-14c : `placeholder` sans réf ADR (elle fuyait dans le livrable client
+      // Oracle §23 via le composer). ADR conservés en métadonnée interne `adrRefs`.
       placeholder: payload.audience
-        ? `Plan comms ${payload.audience} pour « ${strategy.name} » — ${channels.length} canaux proposés. ADRs: ADR-0011 + ADR-0020.`
-        : `Plan comms générique pour « ${strategy.name} » — ${channels.length} canaux proposés. ADRs: ADR-0011 + ADR-0020.`,
+        ? `Plan de diffusion ${payload.audience} pour « ${strategy.name} » — ${channels.length} canaux proposés.`
+        : `Plan de diffusion pour « ${strategy.name} » — ${channels.length} canaux proposés.`,
       status: "DRAFT",
       adrRefs: ["ADR-0011", "ADR-0020"],
       scaffoldedAt: new Date().toISOString(),
@@ -132,8 +134,8 @@ export async function draftCommsPlan(
   // Back-compat Phase 13 : strategy absente → dormant placeholder.
   return {
     placeholder: payload.audience
-      ? `Plan comms ${payload.audience} — strategy non trouvée, placeholder dormant. Cf. ADR-0011 + ADR-0020.`
-      : "Plan comms — strategy non trouvée, placeholder dormant. Cf. ADR-0011 + ADR-0020.",
+      ? `Plan de diffusion ${payload.audience} — stratégie introuvable, brouillon dormant.`
+      : "Plan de diffusion — stratégie introuvable, brouillon dormant.",
     status: "DORMANT_PRE_RESERVED",
     adrRefs: ["ADR-0011", "ADR-0020"],
     scaffoldedAt: new Date().toISOString(),

@@ -1,5 +1,13 @@
 # Changelog — La Fusee
 
+## v6.27.298 — fix(oracle): round-14 adversarial (c) — Oracle §22/§23 client réel (fin du template + fuite ADR) (2026-07-23)
+
+**Sous-agent honest-hole : forte convergence (les surfaces balayées lisent de la vraie donnée et dégradent honnêtement) — SAUF un trou lazy réel : les livrables client Oracle §22/§23 templataient par-dessus les données pilier déjà en main ET fuyaient des réf ADR internes au client.**
+
+- **MED (H5 + doctrine ADR-0123) — Oracle §22 « Programme équipe » + §23 « Plan de diffusion »** (tous deux CORE, rendus CLIENT) : leur `summary` venait de `draft.placeholder` (`imhotep.draftCrewProgram` / `anubis.draftCommsPlan`) = une chaîne template fixe qui ne composait RIEN depuis les piliers, et contenait « ADRs: ADR-0010 + ADR-0019 » / « ADR-0011 + ADR-0020 » → **réf ADR internes fuitées dans le livrable client** (viole ADR-0123 ; le test HARD `cockpit-vocabulary` garde les composants cockpit mais PAS le JSON de section Oracle composé serveur, d'où l'échappée). Le composer tenait pourtant déjà `ctx.pillars` (équipe A, touchpoints E) + le nom de marque.
+- **Fix (H5 fermé pour ces 2 sections)** : `composeCrewProgram`/`composeCommsPlan` composent désormais le `summary` depuis les VRAIES données pilier (nom + secteur + équipe déclarée en A / canaux déclarés en E) — déterministe, 0 LLM, 0 requête neuve. Les réf ADR retirées des `placeholder` (imhotep/anubis) — elles restent en **métadonnée structurelle interne** `adrRefs`. Vocabulaire client (« Programme équipe » / « Plan de diffusion »). Garde de non-régression : `deterministic-composers.test.ts` assure `summary` référence la marque ET ne matche pas `/ADR-\d/` (au niveau composer = frontière client exacte).
+- **Tout le reste vérifié SOLIDE** (dropped, non-findings) : clusters Phase 19 (documentés PARTIAL/MVP gated calibration), superfan-attribution `INSUFFICIENT_DATA` (writer bâti ADR-0135, attend ≥30 transitions réelles), Overton (`null` honnête, axe câblé ADR-0134), community-dashboard / ops-snapshot / market-feed / brand-identity / jehuty-gazette (vraie donnée → EmptyState honnête), media-perf (credential-gated), Tarsis→palier (T9 refus honnête). Cap APOGEE 7/7 · 0 LLM · 0 migration. tsc 0 · 3230 tests verts.
+
 ## v6.27.297 — test(governance): round-13 adversarial (b) — honnêteté + protection des invariants déterministes (2026-07-23)
 
 **Le sous-agent determinism a vérifié SOLIDES les deux claims porteuses (valeur de score 0-LLM, Oracle composers, 6 gates, cult-index) — les trouvailles sont des tests qui SUR-CLAMENT ou qui MANQUENT une classe qu'ils prétendent garder.**

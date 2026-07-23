@@ -281,13 +281,19 @@ describe("shapes consommées par les composants §22-35", () => {
 
   it("§22 crewProgram + §23 commsPlan : drafts Neteru réels (déterministes)", async () => {
     const crew = await composeSectionDeterministic("strat-fixture-1", metaFor("imhotep-crew-program"));
-    const crewContent = crew!.payload.content as { crewProgram: { status: string; rolesRequired: string[] } };
+    const crewContent = crew!.payload.content as { crewProgram: { status: string; summary: string; rolesRequired: string[] } };
     expect(crewContent.crewProgram.status).toBe("DRAFT");
     expect(crewContent.crewProgram.rolesRequired.length).toBeGreaterThan(0);
+    // round-14c : summary composé depuis le pilier réel (nom de marque), sans réf
+    // ADR interne (livrable CLIENT Oracle §22, ADR-0123) ni « placeholder » template.
+    expect(crewContent.crewProgram.summary).toMatch(/Programme équipe pour/);
+    expect(crewContent.crewProgram.summary).not.toMatch(/ADR-\d/);
 
     const comms = await composeSectionDeterministic("strat-fixture-1", metaFor("anubis-plan-comms"));
-    const commsContent = comms!.payload.content as { commsPlan: { channels: string[] } };
+    const commsContent = comms!.payload.content as { commsPlan: { summary: string; channels: string[] } };
     expect(commsContent.commsPlan.channels).toContain("WhatsApp");
+    expect(commsContent.commsPlan.summary).toMatch(/Plan de diffusion pour/);
+    expect(commsContent.commsPlan.summary).not.toMatch(/ADR-\d/);
   });
 });
 
