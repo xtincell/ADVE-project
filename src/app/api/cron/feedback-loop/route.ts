@@ -24,7 +24,11 @@ export async function GET(request: Request) {
       where: { status: "ACTIVE" },
       include: {
         signals: {
-          where: { type: "MONTHLY_FEEDBACK", createdAt: { gte: thirtyDaysAgo } },
+          // round-13c : le garde « au plus une fois/30 j » interrogeait le type
+          // "MONTHLY_FEEDBACK" alors que le write ci-dessous crée "MONTHLY_FEEDBACK_NEEDED"
+          // (aucun code n'écrit jamais "MONTHLY_FEEDBACK") → garde mort → un signal
+          // dupliqué créé à CHAQUE run quotidien. Aligné sur le type réellement écrit.
+          where: { type: "MONTHLY_FEEDBACK_NEEDED", createdAt: { gte: thirtyDaysAgo } },
           take: 1,
         },
         pillars: true,

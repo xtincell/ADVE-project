@@ -53,6 +53,29 @@ export async function GET(request: Request) {
     try {
       const digest = await composeWeeklyDigest(founder.id, strat.id);
       out.composed++;
+      const sourceHash = `founder-digest-${strat.id}-${digest.weekOf}`;
+
+      // Idempotence (round-13c) : ne JAMAIS ré-emailer le même digest hebdo. Le
+      // marqueur KnowledgeEntry fait AUSSI office d'historique (replay). Un re-fire
+      // (workflow_dispatch target=all, re-run GH, timeout curl + redispatch) rejouait
+      // l'email — effet externe irréversible (même classe que le double-publish social
+      // round-12). Pattern canonique findFirst(sourceHash) → skip (cf. webhooks/mobile-money).
+      const already = await db.knowledgeEntry.findFirst({ where: { sourceHash } });
+      if (already) {
+        out.skipped++;
+        continue;
+      }
+
+      // Claim-then-send (at-most-once) : marqueur posé AVANT l'envoi ; sur échec on
+      // le retire pour autoriser un retry (no-duplicate d'abord, livraison ensuite —
+      // comme la restauration du claim social round-12).
+      const marker = await db.knowledgeEntry.create({
+        data: {
+          entryType: "MISSION_OUTCOME",
+          data: digest as unknown as Prisma.InputJsonValue,
+          sourceHash,
+        },
+      });
       const rendered = renderDigestEmail(digest, founder.name ?? null, strat.name);
       const sendResult = await sendEmail({
         to: founder.email,
@@ -61,15 +84,11 @@ export async function GET(request: Request) {
         text: rendered.text,
         tag: "founder-weekly-digest",
       }).catch(() => ({ ok: false } as const));
-      if (sendResult.ok) out.sent++;
-      // Persist the digest for replay/history.
-      await db.knowledgeEntry.create({
-        data: {
-          entryType: "MISSION_OUTCOME",
-          data: digest as unknown as Prisma.InputJsonValue,
-          sourceHash: `founder-digest-${strat.id}-${digest.weekOf}`,
-        },
-      }).catch(() => undefined);
+      if (sendResult.ok) {
+        out.sent++;
+      } else {
+        await db.knowledgeEntry.delete({ where: { id: marker.id } }).catch(() => undefined);
+      }
     } catch (err) {
       out.errors.push(`${strat.id}: ${err instanceof Error ? err.message : String(err)}`);
     }

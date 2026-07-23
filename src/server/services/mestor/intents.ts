@@ -1718,8 +1718,9 @@ export async function emitIntent(
   );
 
   // Fermeture best-effort : la mutation a déjà eu lieu — un échec d'écriture
-  // de la complétion ne détruit pas le résultat, il laisse la row PENDING
-  // (le cron staleness la flaggera — échec de trace visible, pas silencieux).
+  // de la complétion ne détruit pas le résultat, il laisse la row PENDING (état
+  // non-terminal observable ; PAS de sweep automatique à ce jour — round-13c,
+  // tracé RESIDUAL-DEBT §round-13). Échec de trace, jamais de donnée métier.
   const close = async (
     emissionId: string,
     result: IntentResult,
