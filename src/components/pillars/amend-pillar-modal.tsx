@@ -12,10 +12,12 @@
  * ADR-0023 §I.2). Zod stays the runtime validator at the gateway.
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { Modal } from "@/components/shared/modal";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { StructuredFieldControl } from "@/components/shared/smart-field-editor";
+import { hasFieldDef } from "@/lib/types/field-registry";
 import { Sparkles, AlertTriangle, Loader2, Send, Lock } from "lucide-react";
 
 type AdveKey = "A" | "D" | "V" | "E";
@@ -46,6 +48,9 @@ export function AmendPillarModal({
   const [reason, setReason] = useState<string>("");
   const [overrideLocked, setOverrideLocked] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  // Brouillon structuré (éditeur récursif) — utilisé en PATCH_DIRECT quand le
+  // champ a une shape déclarée au registre (matrices, objets imbriqués).
+  const [structuredDraft, setStructuredDraft] = useState<unknown>(null);
 
   const editable = trpc.pillar.listEditableFields.useQuery(
     { strategyId, pillarKey },
@@ -59,12 +64,25 @@ export function AmendPillarModal({
     [editable.data, field],
   );
 
+  // Édition profonde structurée : PATCH_DIRECT + champ à shape déclarée au
+  // registre → éditeur récursif (matrice/objet imbriqué jusqu'à la feuille) au
+  // lieu du textarea JSON brut. Le write reste la voie gouvernée OPERATOR_AMEND_PILLAR.
+  const pillarKeyLower = pillarKey.toLowerCase();
+  const usesStructured =
+    Boolean(field) && mode === "PATCH_DIRECT" && hasFieldDef(pillarKeyLower, field ?? "");
+
+  // Réinitialise le brouillon structuré sur la valeur courante quand le champ
+  // (ou son chargement async) change — l'éditeur récursif part de l'existant.
+  useEffect(() => {
+    setStructuredDraft(selectedFieldEntry?.currentValue ?? null);
+  }, [field, selectedFieldEntry?.currentValue]);
+
   const isLocked = editable.data?.validationStatus === "LOCKED";
   const reasonTooShort = mode === "STRATEGIC_REWRITE" && reason.trim().length < 20;
   const cannotApply =
     !field ||
     reasonTooShort ||
-    (mode === "PATCH_DIRECT" && !proposedValue) ||
+    (mode === "PATCH_DIRECT" && !usesStructured && !proposedValue) ||
     (mode === "LLM_REPHRASE" && !proposedValue) ||
     amendMutation.isPending;
 
@@ -83,13 +101,20 @@ export function AmendPillarModal({
 
   function doApply() {
     if (!field) return;
-    let parsedValue: unknown = proposedValue;
-    // Try JSON parse if the field expects an object/array
-    if (proposedValue.trim().startsWith("{") || proposedValue.trim().startsWith("[")) {
-      try {
-        parsedValue = JSON.parse(proposedValue);
-      } catch {
-        /* keep as string */
+    let parsedValue: unknown;
+    if (usesStructured) {
+      // L'éditeur récursif a construit la valeur complète (matrice/objet
+      // imbriqué) — on l'envoie telle quelle ; le gateway (shapeGate + Zod) valide.
+      parsedValue = structuredDraft;
+    } else {
+      parsedValue = proposedValue;
+      // Try JSON parse if the field expects an object/array
+      if (proposedValue.trim().startsWith("{") || proposedValue.trim().startsWith("[")) {
+        try {
+          parsedValue = JSON.parse(proposedValue);
+        } catch {
+          /* keep as string */
+        }
       }
     }
     amendMutation.mutate(
@@ -252,20 +277,34 @@ export function AmendPillarModal({
             <div className="space-y-1">
               <label className="block text-xs font-medium text-foreground-secondary">
                 Valeur proposée
-                {selectedFieldEntry?.spec.format ? (
+                {selectedFieldEntry?.spec.format && !usesStructured ? (
                   <span className="ml-2 text-[10px] text-foreground-muted">
                     {selectedFieldEntry.spec.format}
                   </span>
                 ) : null}
+                {usesStructured ? (
+                  <span className="ml-2 text-[10px] text-foreground-muted">
+                    éditeur structuré · jusqu&apos;à la feuille
+                  </span>
+                ) : null}
               </label>
-              <textarea
-                className="w-full rounded-lg border border-white/10 bg-background-overlay px-3 py-2 text-sm font-mono"
-                rows={5}
-                value={proposedValue}
-                onChange={(e) => setProposedValue(e.target.value)}
-                placeholder={selectedFieldEntry?.spec.examples?.[0] ?? ""}
-              />
-              {selectedFieldEntry?.spec.maxLength ? (
+              {usesStructured ? (
+                <StructuredFieldControl
+                  pillarKey={pillarKeyLower}
+                  fieldKey={field}
+                  value={structuredDraft}
+                  onChange={setStructuredDraft}
+                />
+              ) : (
+                <textarea
+                  className="w-full rounded-lg border border-white/10 bg-background-overlay px-3 py-2 text-sm font-mono"
+                  rows={5}
+                  value={proposedValue}
+                  onChange={(e) => setProposedValue(e.target.value)}
+                  placeholder={selectedFieldEntry?.spec.examples?.[0] ?? ""}
+                />
+              )}
+              {selectedFieldEntry?.spec.maxLength && !usesStructured ? (
                 <p className="text-[10px] text-foreground-muted">
                   {proposedValue.length} / {selectedFieldEntry.spec.maxLength} car.
                 </p>

@@ -84,10 +84,36 @@ function extractJSON(text: string): Record<string, unknown> {
   return _extractJSON(text) as Record<string, unknown>;
 }
 
-function serializePillar(key: string, content: unknown): string {
+/**
+ * Projection préservant la STRUCTURE pour le contexte RTIS (Phase 4).
+ * L'ancien `slice(8000)` coupait la QUEUE du JSON — un pilier V rempli en
+ * profondeur (matrice `produitsCatalogue` : N produits × ~15 cellules) dépasse
+ * 8000 caractères et perdait ses derniers champs → le RTIS dérivait d'un ADVE
+ * amputé. Ici on ne coupe QUE la PROSE longue par feuille (manifestes/récits) et
+ * on garde TOUTE l'arborescence (chaque produit, chaque cellule de matrice) : la
+ * profondeur atteint enfin R/T/I/S. Les cellules de valeur (courtes) sont intactes.
+ */
+export function projectForContext(value: unknown, leafMax: number): unknown {
+  if (typeof value === "string") {
+    return value.length > leafMax ? value.slice(0, leafMax) + "…" : value;
+  }
+  if (Array.isArray(value)) return value.map((v) => projectForContext(v, leafMax));
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) out[k] = projectForContext(v, leafMax);
+    return out;
+  }
+  return value;
+}
+
+export function serializePillar(key: string, content: unknown): string {
   if (!content || typeof content !== "object") return `[${key}] Vide`;
+  // Projection profondeur-préservante : cap prose par feuille (400), garde toute
+  // la structure. Backstop total généreux (24000, ex-8000) — après projection, un
+  // pilier réaliste tient largement ; seul un pilier pathologique est encore capé.
+  const json = JSON.stringify(projectForContext(content, 400), null, 2);
   // LOT 1b — contenu pilier (donnée non fiable) balisé anti-injection.
-  return wrapUntrusted(`PILIER ${key}`, JSON.stringify(content, null, 2), { max: 8000 });
+  return wrapUntrusted(`PILIER ${key}`, json, { max: 24000 });
 }
 
 /**

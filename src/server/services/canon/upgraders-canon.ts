@@ -97,10 +97,34 @@ export const PILLAR_V = {
   promesseDeValeur:
     "Une société qui aligne ses propres outils sur l'intérêt du client : La Fusée pour piloter et mesurer, Argos pour la preuve sociale et la veille, l'opérateur humain pour exécuter — un état final mesuré plutôt que des moyens facturés.",
   produitsCatalogue: [
-    { nom: "La Fusée — Industry OS", description: "Le produit SaaS opéré : Cockpit founder, Oracle 35 sections, scoring /200, forge, Hub-Escrow, API billable", prix: "Abonnements FCFA par palier (15k → 1M+/mois)" },
-    { nom: "Argos", description: "Sous-marque média : dossiers de référence curés, veille sectorielle, preuve sociale du marché", prix: "Inclus retainer / licence média" },
-    { nom: "Conseil & exécution fixer", description: "L'opérateur humain UPgraders : stratégie de marque, GTM, direction créative, exécution sous SLA", prix: "Retainer / mission (devis)" },
-    { nom: "Académie & Guilde", description: "Formation et marketplace de talents (freelances, agences) opérés par UPgraders", prix: "Commission Hub-Escrow dégressive" },
+    {
+      nom: "La Fusée — Industry OS", categorie: "PLATEFORME", phaseLifecycle: "GROWTH",
+      gainClientConcret: "Un Cockpit qui pilote la marque, un Oracle 35 sections et un score /200 auditables",
+      gainClientAbstrait: "La fin du marketing au feeling : la sensation de tenir enfin la barre de sa trajectoire",
+      lienPromesse: "L'infrastructure qui rend l'obligation d'effet tenable et mesurable",
+      segmentCible: "Le Founder bâtisseur (FMCG/PME)", canalDistribution: ["WEBSITE", "APP"],
+    },
+    {
+      nom: "Argos", categorie: "CONTENU", phaseLifecycle: "GROWTH",
+      gainClientConcret: "Des dossiers de référence sectoriels et une veille curée, sourcés et signés",
+      gainClientAbstrait: "La légitimité d'être adossé à la propriété média de référence de son secteur",
+      lienPromesse: "La preuve sociale et la veille qui nourrissent la trajectoire depuis le marché",
+      segmentCible: "Le directeur marketing corporate", canalDistribution: ["WEBSITE", "EMAIL"],
+    },
+    {
+      nom: "Conseil & exécution fixer", categorie: "CONSEIL", phaseLifecycle: "MATURITY",
+      gainClientConcret: "Stratégie, GTM et direction créative exécutés sous SLA chiffrés avec pénalités d'avoir",
+      gainClientAbstrait: "La tranquillité de déléguer à un opérateur tenu à l'effet, pas aux moyens",
+      lienPromesse: "L'humain qui exécute l'état final promis, gouverné par l'OS",
+      segmentCible: "Le Founder bâtisseur (FMCG/PME)", canalDistribution: ["LINKEDIN", "EVENT"],
+    },
+    {
+      nom: "Académie & Guilde", categorie: "FORMATION", phaseLifecycle: "GROWTH",
+      gainClientConcret: "Accès à une Académie de formation et à une Guilde de talents qualifiés sous Hub-Escrow",
+      gainClientAbstrait: "L'appartenance à un écosystème qui fait monter le talent en même temps que la marque",
+      lienPromesse: "Le vivier humain qui industrialise l'exécution de la trajectoire",
+      segmentCible: "La marque personnelle en ascension", canalDistribution: ["WEBSITE", "LINKEDIN"],
+    },
   ],
 } as const;
 

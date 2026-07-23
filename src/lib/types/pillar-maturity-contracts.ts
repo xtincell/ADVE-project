@@ -16,6 +16,7 @@ import { PILLAR_STORAGE_KEYS } from "@/domain";
  */
 
 import { z } from "zod";
+import { tokenizePillarPath } from "@/lib/pillar-path";
 import type { FieldRequirement, PillarMaturityContract, MaturityStage, FieldValidator } from "./pillar-maturity";
 import { PILLAR_SCHEMAS } from "./pillar-schemas";
 
@@ -340,22 +341,25 @@ export function getFieldZod(pillarKey: string, path: string): unknown | null {
   const upper = pillarKey.toUpperCase() as keyof typeof PILLAR_SCHEMAS;
   const schema = PILLAR_SCHEMAS[upper];
   if (!schema) return null;
-  const parts = path.split(".");
+  // tokenizePillarPath gère les index de tableau (`produitsCatalogue[0].categorie`
+  // → ["produitsCatalogue", 0, "categorie"]) — indispensable pour donner au LLM la
+  // SHAPE EXACTE (enums compris) d'une CELLULE de matrice lors de l'enrichissement
+  // surgical (Phase 3). Sans index, une descente s'arrêtait au tableau.
   let cur: any = unwrapZod(schema);
-  for (const part of parts) {
+  for (const tok of tokenizePillarPath(path)) {
     if (!cur) return null;
     cur = unwrapZod(cur);
     const ctor = cur?.constructor?.name;
-    if (ctor === "ZodObject") {
-      const shape = cur.shape ?? {};
-      cur = shape[part];
+    if (typeof tok === "number") {
+      // Index de tableau → descend dans le type d'élément.
+      if (ctor !== "ZodArray") return null;
+      cur = unwrapZod(cur._def?.element ?? cur._def?.type ?? cur._def?.innerType);
+    } else if (ctor === "ZodObject") {
+      cur = cur.shape?.[tok];
     } else if (ctor === "ZodArray") {
-      const element = cur._def?.element ?? cur._def?.type ?? cur._def?.innerType;
-      cur = unwrapZod(element);
-      const innerCtor = (cur as any)?.constructor?.name;
-      if (innerCtor === "ZodObject") {
-        cur = (cur as any).shape?.[part];
-      }
+      // Descente non-indexée `champ.sousChamp` à travers un tableau d'objets.
+      const element = unwrapZod(cur._def?.element ?? cur._def?.type ?? cur._def?.innerType);
+      cur = (element as any)?.constructor?.name === "ZodObject" ? (element as any).shape?.[tok] : null;
     } else {
       return null;
     }
@@ -399,14 +403,21 @@ export function deriveSchemaRequirements(pillarKey: string): FieldRequirement[] 
     // forcera Enrichir à régénérer).
     const { required, optional } = extractObjectKeys(inner);
     const allKeys = [...required, ...optional];
+    // Tableau d'OBJETS (matrice) → profondeur par item : `array_items_complete`
+    // exige que CHAQUE item ait ses feuilles requises renseignées, au lieu de
+    // `min_items` qui laisse passer `[{nom}]` (la cause des « vides » invisibles).
+    // Un tableau de scalaires (array-of-strings) garde min_items — pas d'items keys.
+    const isArrayOfObjects = validator === "min_items" && allKeys.length > 0;
+    const validatorFinal: FieldValidator = isArrayOfObjects ? "array_items_complete" : validator;
     reqs.push({
       path,
-      validator,
+      validator: validatorFinal,
       validatorArg: arg,
       derivable: !isHuman,
       derivationSource: isHuman ? undefined : "ai_generation",
       description: `Schema ${pillarKey.toUpperCase()}.${path}`,
       ...(allKeys.length > 0 ? { expectedKeys: allKeys, requiredKeys: required } : {}),
+      ...(isArrayOfObjects ? { requiredItemKeys: required } : {}),
     });
   }
   return reqs;
@@ -517,11 +528,21 @@ export function buildContracts(
     const enrichWithKeys = (r: FieldRequirement): FieldRequirement => {
       const sd = schemaByPath.get(r.path);
       if (!sd) return r;
-      return {
+      const enriched: FieldRequirement = {
         ...r,
         ...(sd.expectedKeys ? { expectedKeys: sd.expectedKeys } : {}),
         ...(sd.requiredKeys ? { requiredKeys: sd.requiredKeys } : {}),
       };
+      // Si le schema dit « tableau d'objets », on impose la profondeur par item
+      // au stage COMPLETE — même quand la requirement venait d'ENRICHED/glory en
+      // min_items/non_empty (le stage ENRICHED lui-même reste inchangé : cette
+      // copie enrichie n'alimente que COMPLETE). C'est ce qui fait chuter COMPLET
+      // honnêtement tant que les cellules requises manquent, sur TOUS les piliers.
+      if (sd.validator === "array_items_complete") {
+        enriched.validator = "array_items_complete";
+        enriched.requiredItemKeys = sd.requiredItemKeys;
+      }
+      return enriched;
     };
     const seen = new Set<string>();
     const merged: FieldRequirement[] = [];

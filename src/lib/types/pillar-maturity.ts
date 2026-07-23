@@ -26,6 +26,7 @@ export type FieldValidator =
   | "non_empty"          // value is not null/undefined/empty string/empty array
   | "min_length"         // string.length >= validatorArg
   | "min_items"          // array.length >= validatorArg
+  | "array_items_complete" // array.length >= 1 AND each item has all requiredItemKeys non-empty (profondeur matrice)
   | "nested_complete"    // all sub-fields of the object are non-empty
   | "is_number"          // typeof value === "number" && !isNaN
   | "is_object";         // typeof value === "object" && value !== null && Object.keys > 0
@@ -62,6 +63,15 @@ export interface FieldRequirement {
    * la shape comme valide — mode strict utilisé pour les top-level objects).
    */
   requiredKeys?: string[];
+  /**
+   * Pour le validateur `array_items_complete` : les feuilles OBLIGATOIRES que
+   * CHAQUE item d'un tableau d'objets doit avoir renseignées (non vides) pour
+   * que le tableau compte comme complet en profondeur. Dérivées des sous-clés
+   * NON-optionnelles du schema Zod de l'item — on n'exige jamais les cellules
+   * `.optional()` (pas de fabrication forcée). Vide/absent → dégrade en
+   * "≥1 item" (comportement min_items).
+   */
+  requiredItemKeys?: string[];
 }
 
 // ─── Pillar Contract ────────────────────────────────────────────────────────
