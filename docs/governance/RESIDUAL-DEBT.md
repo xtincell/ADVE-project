@@ -175,8 +175,17 @@ Items MEDIUM à régression-risquée ou à coordination, déférés de la boucle
 - **C3 canon-sync god-mode** : écrit le pilier S direct (best-effort, push manuel god-mode) —
   2 entrées allowlist C5 (`reroutePlanned:true` pour le bloc computed). **Plan** : reroute gateway.
   **Déclencheur** : basse priorité, prochain passage sur canon-sync.
-- **C6 `BRIEF_VS_ADVE_COHERENCE` WARN → BLOCK + UI override** : Phase 24 closure-target #14 —
-  décision opérateur explicite (ne pas pull en avant). [ADR-0103](adr/0103-brief-vs-adve-coherence-deterministic-advisory.md).
+- **C6 `BRIEF_VS_ADVE_COHERENCE` WARN → BLOCK + override** — 🟢 **MÉCANISME BÂTI (v6.27.313)**,
+  activation = décision opérateur : le mode BLOCK + l'override fondateur sont câblés et testés
+  ([ADR-0103](adr/0103-brief-vs-adve-coherence-deterministic-advisory.md)). Défaut **WARN**
+  (`resolveC6Mode()` — inchangé). Sous `C6_COHERENCE_MODE=block` (opt-in opérateur, à poser une
+  fois la précision de l'heuristique validée sur la période WARN — sinon on bloque un fondateur
+  sur un faux positif), une incohérence brief↔ADVE VETO le `PTAH_MATERIALIZE_BRIEF` — SAUF
+  override fondateur (`coherenceOverride`, invocable via `ptah.materializeBrief`). `decideC6Enforcement`
+  pur + 6 tests. **Reste (dormant tant que BLOCK off, non-bloquant)** : threader `coherenceOverride`
+  à travers la cascade `COMPOSE_DELIVERABLE → sequence-executor → chainGloryToPtah` + le bouton
+  cockpit « Forger quand même » sur la surface forge (l'override est déjà atteignable par l'API
+  directe `materializeBrief` ; le bouton compose-path est un lot UX focalisé à part).
 
 ### Scoreur / graphes (ADR-0147/0148/0149/0153/0154)
 

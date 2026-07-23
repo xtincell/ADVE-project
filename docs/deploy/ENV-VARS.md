@@ -67,6 +67,7 @@ Le score d'empreinte /100 est renormalisé sur les dimensions réellement mesur�
 | `OPS_DAEMON` | daemon cron in-process (vague C) — ON par défaut en prod, tire `/api/cron/*` aux cadences de scheduled-ops.yml sans cron externe ; `0`/`off` désactive, `1` force en dev | défaut : actif en prod — un self-host Coolify n'a RIEN à configurer pour que sentinelles/feeds/digests tournent |
 | `SEARCH_AUTOCOMPLETE_ENABLED` | collecteur footprint autocomplete Google (signal axe D scoreur) — endpoint PUBLIC sans clé mais ToS-gray → **OFF par défaut** (choix opérateur, single-shot/no-batch) ; `1`/`true`/`on` active | défaut OFF : le collecteur renvoie `DEGRADED(MISSING_PREREQUISITE)` sans appel réseau ; Wikipedia (API officielle) reste ON |
 | `META_WEBHOOK_VERIFY_TOKEN` | token de vérification d'abonnement webhook Meta/Instagram (handshake GET `hub.challenge`, `/api/webhooks/social`) | non posé ⇒ la vérification renvoie 403 (fail-closed) — Meta ne peut pas confirmer l'abonnement temps-réel tant que le token n'est pas configuré ET que l'App Review Advanced Access n'est pas accordée |
+| `C6_COHERENCE_MODE` | mode d'enforcement de la cohérence brief↔ADVE (C6, ADR-0103) — **`warn` par défaut** (non-bloquant) ; `block` fait VETO le forge sur une incohérence (le fondateur peut forcer via l'override « forger quand même ») | défaut WARN : à ne passer à `block` qu'après avoir vérifié sur la période WARN que l'heuristique ne produit pas de faux positifs — sinon un fondateur est bloqué à tort |
 
 ## ⚪ Connecteurs externes
 

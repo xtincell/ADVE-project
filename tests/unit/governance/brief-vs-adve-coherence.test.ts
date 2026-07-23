@@ -10,7 +10,7 @@
  *      coherent brief — exercised against a stub db (no real I/O).
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, afterEach } from "vitest";
 
 import { MESTOR_GATE_KEYS, mestorGates } from "@/server/services/mestor/gates";
 import {
@@ -22,6 +22,7 @@ import {
   flattenPillarText,
 } from "@/server/services/mestor/gates/brief-adve-coherence-score";
 import type { GateContext } from "@/server/services/mestor/gates/gate-types";
+import { resolveC6Mode, decideC6Enforcement } from "@/server/services/mestor/intents";
 
 /** Minimal PrismaClient stub: only pillar.findMany, returns the given contents. */
 function stubDb(contents: unknown[]): GateContext["db"] {
@@ -146,5 +147,49 @@ describe("C6 — gate verdicts (stub db, no real I/O)", () => {
       { db: brokenDb },
     );
     expect(r.verdict).toBe("PASS");
+  });
+});
+
+describe("C6 — mode d'enforcement (ADR-0103 : WARN par défaut, BLOCK opt-in + override)", () => {
+  const orig = process.env.C6_COHERENCE_MODE;
+  afterEach(() => {
+    if (orig === undefined) delete process.env.C6_COHERENCE_MODE;
+    else process.env.C6_COHERENCE_MODE = orig;
+  });
+
+  it("resolveC6Mode : défaut WARN (absent / vide / valeur inconnue)", () => {
+    delete process.env.C6_COHERENCE_MODE;
+    expect(resolveC6Mode()).toBe("warn");
+    process.env.C6_COHERENCE_MODE = "";
+    expect(resolveC6Mode()).toBe("warn");
+    process.env.C6_COHERENCE_MODE = "nope";
+    expect(resolveC6Mode()).toBe("warn");
+  });
+
+  it("resolveC6Mode : BLOCK uniquement sur 'block' explicite (insensible casse/espaces)", () => {
+    process.env.C6_COHERENCE_MODE = "BLOCK";
+    expect(resolveC6Mode()).toBe("block");
+    process.env.C6_COHERENCE_MODE = "  block  ";
+    expect(resolveC6Mode()).toBe("block");
+  });
+
+  it("decideC6Enforcement : non divergent → null (jamais de bruit sur un brief cohérent)", () => {
+    expect(decideC6Enforcement(false, "warn", false, "r")).toBeNull();
+    expect(decideC6Enforcement(false, "block", false, "r")).toBeNull();
+    expect(decideC6Enforcement(false, "block", true, "r")).toBeNull();
+  });
+
+  it("decideC6Enforcement : divergent + mode WARN → warn (non-bloquant, défaut)", () => {
+    expect(decideC6Enforcement(true, "warn", false, "r")).toEqual({ action: "warn", reason: "r" });
+    // L'override n'a aucun effet en mode WARN (rien à contourner).
+    expect(decideC6Enforcement(true, "warn", true, "r")).toEqual({ action: "warn", reason: "r" });
+  });
+
+  it("decideC6Enforcement : divergent + BLOCK sans override → block (VETO)", () => {
+    expect(decideC6Enforcement(true, "block", false, "r")).toEqual({ action: "block", reason: "r" });
+  });
+
+  it("decideC6Enforcement : divergent + BLOCK + override fondateur → override (passe + trace)", () => {
+    expect(decideC6Enforcement(true, "block", true, "r")).toEqual({ action: "override", reason: "r" });
   });
 });

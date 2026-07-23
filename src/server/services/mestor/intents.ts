@@ -307,6 +307,13 @@ export type Intent =
         manipulationMode: "peddler" | "dealer" | "facilitator" | "entertainer";
       };
       overrideMixViolation?: boolean;
+      /**
+       * C6 (ADR-0103) — override fondateur « forger quand même ». Sous
+       * `C6_COHERENCE_MODE=block`, une incohérence brief↔ADVE VETO le forge ;
+       * ce flag (bouton cockpit) le laisse passer + trace l'override en warning.
+       * Sans effet en mode WARN (défaut) — l'incohérence est déjà non-bloquante.
+       */
+      coherenceOverride?: boolean;
     }
   | {
       kind: "PTAH_RECONCILE_TASK";
@@ -1598,18 +1605,60 @@ async function preflightPalierPromotionProofs(
   return null;
 }
 
+/** C6 verdict d'enforcement (ADR-0103). */
+export type C6Verdict =
+  | null
+  | { action: "warn"; reason: string }
+  | { action: "block"; reason: string }
+  | { action: "override"; reason: string };
+
 /**
- * C6 (PROPAGATION-MAP §6b) — BRIEF_VS_ADVE_COHERENCE pre-flight.
+ * Mode d'enforcement C6. Défaut **WARN** (non-bloquant) — ADR-0103 : le flip vers
+ * BLOCK est une décision OPÉRATEUR délibérée (poser `C6_COHERENCE_MODE=block` une
+ * fois la précision de l'heuristique de cohérence validée sur la période WARN,
+ * pour ne pas bloquer un fondateur sur un faux positif). Toute autre valeur
+ * (absente / vide / "warn") reste WARN.
+ */
+export function resolveC6Mode(): "warn" | "block" {
+  return (process.env.C6_COHERENCE_MODE ?? "").trim().toLowerCase() === "block"
+    ? "block"
+    : "warn";
+}
+
+/**
+ * Décision d'enforcement C6 — pure (testable sans I/O). À partir de la
+ * divergence détectée par le gate, du mode courant et de l'override fondateur :
+ *   - non divergent → null (rien)
+ *   - divergent + mode WARN → warn (surfacé, non-bloquant)
+ *   - divergent + mode BLOCK + pas d'override → block (VETO)
+ *   - divergent + mode BLOCK + override → override (passe + trace)
+ */
+export function decideC6Enforcement(
+  divergent: boolean,
+  mode: "warn" | "block",
+  override: boolean,
+  reason: string,
+): C6Verdict {
+  if (!divergent) return null;
+  if (mode !== "block") return { action: "warn", reason };
+  return override ? { action: "override", reason } : { action: "block", reason };
+}
+
+/**
+ * C6 (PROPAGATION-MAP §6b, ADR-0103) — BRIEF_VS_ADVE_COHERENCE pre-flight.
  *
  * For `PTAH_MATERIALIZE_BRIEF` (the production frontier — a brief about to be
  * forged into a concrete asset), checks the brief text against the brand's ADVE
- * noyau via the deterministic coherence gate. WARN is **non-blocking** : the
- * forge proceeds, the warning is surfaced on `IntentResult.warnings` for the
- * operator (manual-first parity, ADR-0060). Returns the warning reason or null.
+ * noyau via the deterministic coherence gate. Par DÉFAUT (mode WARN) :
+ * **non-bloquant** — le forge passe, la divergence est surfacée sur
+ * `IntentResult.warnings` (parité manuelle, ADR-0060). Sous
+ * `C6_COHERENCE_MODE=block` (opt-in opérateur) : une incohérence VETO le
+ * dispatch — SAUF override fondateur explicite (`intent.coherenceOverride`, le
+ * bouton « forger quand même »), qui laisse passer ET trace l'override.
  */
 async function preflightBriefVsAdveCoherence(
   intent: Intent,
-): Promise<string | null> {
+): Promise<C6Verdict> {
   if (intent.kind !== "PTAH_MATERIALIZE_BRIEF") return null;
   try {
     const { briefVsAdveCoherenceGate } = await import("./gates/brief-vs-adve-coherence");
@@ -1617,7 +1666,12 @@ async function preflightBriefVsAdveCoherence(
       { strategyId: intent.strategyId, brief: { content: intent.brief.briefText } },
       {},
     );
-    return verdict.verdict === "WARN" ? verdict.reason : null;
+    return decideC6Enforcement(
+      verdict.verdict === "WARN", // seule bande divergente (COHERENT/NOT_APPLICABLE → PASS)
+      resolveC6Mode(),
+      intent.coherenceOverride === true,
+      verdict.reason ?? "",
+    );
   } catch {
     // Advisory gate — never block dispatch on an internal error.
     return null;
@@ -1883,10 +1937,24 @@ export async function emitIntent(
     return result;
   }
 
-  // ── C6 — BRIEF_VS_ADVE_COHERENCE advisory pre-flight (non-blocking) ──
-  // Computed before dispatch, surfaced on the result after (WARN never stops
-  // the forge — it flags the divergence for the operator).
-  const briefCoherenceWarning = await preflightBriefVsAdveCoherence(intent);
+  // ── C6 — BRIEF_VS_ADVE_COHERENCE pre-flight (ADR-0103) ──
+  // Défaut WARN (non-bloquant, surfacé après dispatch). Sous
+  // `C6_COHERENCE_MODE=block` : une incohérence VETO le forge AVANT dispatch —
+  // sauf override fondateur explicite (« forger quand même »), qui passe + trace.
+  const briefCoherence = await preflightBriefVsAdveCoherence(intent);
+  if (briefCoherence?.action === "block") {
+    const result: IntentResult = {
+      intentKind: intent.kind,
+      strategyId: intent.strategyId,
+      status: "VETOED",
+      summary: briefCoherence.reason,
+      startedAt,
+      completedAt: new Date().toISOString(),
+      reason: "BRIEF_VS_ADVE_COHERENCE",
+    };
+    await close(emissionId, result, "VETOED");
+    return result;
+  }
 
   // Dispatch to Artemis
   let result: IntentResult;
@@ -1903,9 +1971,15 @@ export async function emitIntent(
     };
   }
 
-  // Surface the C6 coherence advisory on the result (non-blocking).
-  if (briefCoherenceWarning) {
-    result.warnings = [...(result.warnings ?? []), briefCoherenceWarning];
+  // Surface the C6 coherence advisory on the result (non-blocking : WARN OU
+  // override fondateur assumé — le BLOCK a déjà court-circuité le dispatch plus
+  // haut, donc `action` est ici « warn » ou « override »).
+  if (briefCoherence) {
+    const note =
+      briefCoherence.action === "override"
+        ? `${briefCoherence.reason} [override fondateur — forgé malgré l'incohérence brief↔ADVE]`
+        : briefCoherence.reason;
+    result.warnings = [...(result.warnings ?? []), note];
   }
   // Surface manipulation-gate DOWNGRADE + cost-gate DOWNGRADE (non-blocking).
   if (mixDowngradeReason) {

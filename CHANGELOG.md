@@ -1,5 +1,16 @@
 # Changelog — La Fusee
 
+## v6.27.313 — feat(governance): C6 — mode BLOCK + override fondateur (défaut WARN inchangé) (2026-07-23)
+
+**Le gate de cohérence brief↔ADVE (C6) peut désormais BLOQUER le forge — mais reste WARN par défaut. Le flip vers BLOCK est une env var opérateur, à poser une fois l'heuristique validée ; l'override fondateur « forger quand même » ship dans le même lot pour qu'aucun faux positif ne piège personne.**
+
+- **Le contexte** (ADR-0103) : C6 calcule déterministiquement la divergence brief↔ADVE et la surface en WARN (non-bloquant). Le passage à BLOCK était tracé « Phase 24 / décision opérateur » — pour NE PAS bloquer un fondateur sur une heuristique non encore validée en prod. Mandat opérateur « rien d'irréductible » : on bâtit le mécanisme, on garde le défaut sûr.
+- **Le build** : `resolveC6Mode()` lit `C6_COHERENCE_MODE` (**défaut `warn`** ; `block` uniquement sur valeur explicite). `decideC6Enforcement(divergent, mode, override, reason)` — **pur, testable** : non-divergent → rien · divergent+WARN → warn (surfacé) · divergent+BLOCK sans override → **block (VETO avant dispatch)** · divergent+BLOCK+override → override (passe + trace en warning). Pré-flight `PTAH_MATERIALIZE_BRIEF` câblé : le BLOCK VETO avant le forge, le WARN/override est surfacé après.
+- **Override fondateur** : `coherenceOverride?: boolean` sur l'intent `PTAH_MATERIALIZE_BRIEF` (à côté d'`overrideMixViolation`) + threadé par la tRPC `ptah.materializeBrief` — le « forger quand même » est invocable via l'API forge directe.
+- **Défaut inchangé** : `C6_COHERENCE_MODE` non posé ⇒ WARN pur ⇒ **zéro changement de comportement** pour tout le monde. Le flip est un choix opérateur explicite (respecte le séquencement ADR-0103).
+- **Reste (dormant tant que BLOCK off)** : threader `coherenceOverride` à travers la cascade `COMPOSE_DELIVERABLE → sequence-executor → chainGloryToPtah` + le bouton cockpit « Forger quand même » sur la surface forge (lot UX focalisé — l'override est déjà atteignable par l'API directe). Tracé RESIDUAL-DEBT §C6.
+- 6 tests d'enforcement (mode défaut/opt-in + les 4 branches de décision). 0 modèle Prisma · 0 migration · cap APOGEE 7/7 · 0 LLM. tsc 0 · 1279 tests gouvernance verts.
+
 ## v6.27.312 — feat(governance): webhook Meta — handshake de vérification GET `hub.challenge` (fail-closed) (2026-07-23)
 
 **Le webhook social avait un GET « sonde de santé » qui ignorait le handshake d'abonnement Meta. Ajouté : la vérification `hub.challenge` (le prérequis code-side des webhooks temps-réel Meta) — le code est prêt, seule l'App Review reste l'atome externe.**
