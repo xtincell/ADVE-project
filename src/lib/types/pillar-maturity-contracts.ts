@@ -16,6 +16,7 @@ import { PILLAR_STORAGE_KEYS } from "@/domain";
  */
 
 import { z } from "zod";
+import { tokenizePillarPath } from "@/lib/pillar-path";
 import type { FieldRequirement, PillarMaturityContract, MaturityStage, FieldValidator } from "./pillar-maturity";
 import { PILLAR_SCHEMAS } from "./pillar-schemas";
 
@@ -340,22 +341,25 @@ export function getFieldZod(pillarKey: string, path: string): unknown | null {
   const upper = pillarKey.toUpperCase() as keyof typeof PILLAR_SCHEMAS;
   const schema = PILLAR_SCHEMAS[upper];
   if (!schema) return null;
-  const parts = path.split(".");
+  // tokenizePillarPath gère les index de tableau (`produitsCatalogue[0].categorie`
+  // → ["produitsCatalogue", 0, "categorie"]) — indispensable pour donner au LLM la
+  // SHAPE EXACTE (enums compris) d'une CELLULE de matrice lors de l'enrichissement
+  // surgical (Phase 3). Sans index, une descente s'arrêtait au tableau.
   let cur: any = unwrapZod(schema);
-  for (const part of parts) {
+  for (const tok of tokenizePillarPath(path)) {
     if (!cur) return null;
     cur = unwrapZod(cur);
     const ctor = cur?.constructor?.name;
-    if (ctor === "ZodObject") {
-      const shape = cur.shape ?? {};
-      cur = shape[part];
+    if (typeof tok === "number") {
+      // Index de tableau → descend dans le type d'élément.
+      if (ctor !== "ZodArray") return null;
+      cur = unwrapZod(cur._def?.element ?? cur._def?.type ?? cur._def?.innerType);
+    } else if (ctor === "ZodObject") {
+      cur = cur.shape?.[tok];
     } else if (ctor === "ZodArray") {
-      const element = cur._def?.element ?? cur._def?.type ?? cur._def?.innerType;
-      cur = unwrapZod(element);
-      const innerCtor = (cur as any)?.constructor?.name;
-      if (innerCtor === "ZodObject") {
-        cur = (cur as any).shape?.[part];
-      }
+      // Descente non-indexée `champ.sousChamp` à travers un tableau d'objets.
+      const element = unwrapZod(cur._def?.element ?? cur._def?.type ?? cur._def?.innerType);
+      cur = (element as any)?.constructor?.name === "ZodObject" ? (element as any).shape?.[tok] : null;
     } else {
       return null;
     }

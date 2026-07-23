@@ -15,13 +15,57 @@ import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
  */
 
 import { db } from "@/lib/db";
-import { setNestedValue } from "@/lib/pillar-path";
+import { setNestedValue, resolvePillarPath } from "@/lib/pillar-path";
 import type { Prisma } from "@prisma/client";
 import type { MaturityStage, AutoFillResult, FieldRequirement } from "@/lib/types/pillar-maturity";
 import { assessPillar } from "./assessor";
 import { getContract } from "./contracts-loader";
 import { getFormatInstructions } from "@/lib/types/variable-bible";
 import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
+
+// ─── Enrichissement surgical des matrices (Phase 3) ───────────────────────────
+
+/**
+ * Éclate une requirement `array_items_complete` dont le tableau a DÉJÀ des items
+ * en cellules manquantes PRÉCISES (`produitsCatalogue[2].gainClientConcret`).
+ * La notoria ne remplit alors QUE les cellules vides des items existants — elle
+ * ne régénère JAMAIS le tableau, ne touche JAMAIS aux valeurs déjà là (préserve
+ * le catalogue réel du fondateur, anti-fabrication). Le gateway écrit ces chemins
+ * profonds via `setNestedValue` (Phase 0). Un tableau VIDE (ou une requirement
+ * non-matrice) garde la requirement d'origine → le LLM crée alors les items de
+ * zéro avec la shape complète en exemple. Fonction PURE (testable sans DB/LLM).
+ */
+export function expandArrayItemRequirements(
+  reqs: FieldRequirement[],
+  content: Record<string, unknown>,
+): FieldRequirement[] {
+  const cellFilled = (v: unknown): boolean =>
+    !(v == null || (typeof v === "string" && !v.trim()) || (Array.isArray(v) && v.length === 0));
+  const out: FieldRequirement[] = [];
+  for (const req of reqs) {
+    const arr = req.validator === "array_items_complete" ? resolvePillarPath(content, req.path) : undefined;
+    if (Array.isArray(arr) && arr.length > 0 && (req.requiredItemKeys?.length ?? 0) > 0) {
+      for (let i = 0; i < arr.length; i++) {
+        const item = arr[i];
+        if (typeof item !== "object" || item === null) continue;
+        for (const k of req.requiredItemKeys!) {
+          if (!cellFilled((item as Record<string, unknown>)[k])) {
+            out.push({
+              path: `${req.path}[${i}].${k}`,
+              validator: "non_empty",
+              derivable: req.derivable,
+              derivationSource: req.derivable ? "ai_generation" : undefined,
+              description: `Cellule « ${k} » du produit #${i + 1} (matrice ${req.path})`,
+            });
+          }
+        }
+      }
+    } else {
+      out.push(req);
+    }
+  }
+  return out;
+}
 
 // ─── Main API ───────────────────────────────────────────────────────────────
 
@@ -96,7 +140,11 @@ export async function fillToStage(
     // humain/source, et signale les contradictions source↔humain (CHALLENGE).
     const fieldProvenance: Record<string, import("@/domain/field-provenance").FieldProvenance> = {};
     for (const path of aggregateFilled) {
-      const topKey = path.split(".")[0]!;
+      // Clé de tête normalisée : on retire l'index de tableau ET la profondeur
+      // (`produitsCatalogue[2].gainClientConcret` → `produitsCatalogue`) — la
+      // provenance/le badge restent au grain top-level (une cellule inférée
+      // marque toute la matrice INFERRED).
+      const topKey = path.split(/[.[]/)[0]!;
       // SOURCE l'emporte sur INFERRED si plusieurs sous-champs d'une même clé.
       if (aggregateSourceFilled.has(path)) fieldProvenance[topKey] = "SOURCE";
       else if (fieldProvenance[topKey] !== "SOURCE") fieldProvenance[topKey] = "INFERRED";
@@ -114,7 +162,9 @@ export async function fillToStage(
     const updatedCertainty = { ...existingCertainty };
     let certaintyChanged = false;
     for (const path of aggregateAiFilled) {
-      const dbKey = `${key}.${path}`;
+      // Grain top-level (index de tableau + profondeur retirés) : une cellule
+      // de matrice inférée marque toute la matrice INFERRED côté badge.
+      const dbKey = `${key}.${path.split(/[.[]/)[0]}`;
       if (!updatedCertainty[dbKey] || updatedCertainty[dbKey] === "INFERRED") {
         updatedCertainty[dbKey] = "INFERRED";
         certaintyChanged = true;
@@ -194,6 +244,9 @@ async function runFillPass(
     (PRIORITY[a.derivationSource ?? "ai_generation"] ?? 3) - (PRIORITY[b.derivationSource ?? "ai_generation"] ?? 3)
   );
 
+  // Enrichissement SURGICAL des matrices (Phase 3) — voir `expandArrayItemRequirements`.
+  const expanded = expandArrayItemRequirements(sorted, content);
+
   const filled: string[] = [];
   const failed: Array<{ path: string; reason: string }> = [];
   const needsHuman: string[] = [];
@@ -212,7 +265,7 @@ async function runFillPass(
   const crossFields: FieldRequirement[] = [];
   const aiFields: FieldRequirement[] = [];
 
-  for (const req of sorted) {
+  for (const req of expanded) {
     if (!req.derivable) {
       needsHuman.push(req.path);
       aiFields.push(req); // Try to generate non-derivable fields via AI (marked INFERRED)

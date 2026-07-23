@@ -1,5 +1,16 @@
 # Changelog — La Fusee
 
+## v6.27.317 — feat(domain): notoria — enrichissement SURGICAL des matrices en profondeur (Phase 3) (2026-07-23)
+
+**La notoria remplit enfin les cellules vides de la matrice produit — SANS jamais régénérer le tableau ni écraser le catalogue réel du fondateur. Elle ne touche QUE les vides des items existants.**
+
+- **Le maillon** : Phase 2 fait apparaître les matrices incomplètes en `missing.derivable`. Phase 3 les fait remplir par la notoria (auto-filler « Enrichir »), en profondeur, sans rien inventer ni écraser.
+- **Enrichissement surgical** : NOUVEAU `expandArrayItemRequirements` (pur, testable) — une requirement `array_items_complete` dont le tableau a DÉJÀ des items est éclatée en **cellules manquantes précises** (`produitsCatalogue[2].gainClientConcret`). La notoria ne remplit QUE ces cellules vides ; elle **ne régénère JAMAIS le tableau** et **ne touche JAMAIS aux valeurs déjà là** (préserve le catalogue réel — anti-fabrication, interdit NEFER n°3). Le gateway écrit ces chemins profonds via `setNestedValue` (Phase 0). Un tableau **VIDE** garde la requirement d'origine → le LLM crée alors les items de zéro (avec la shape complète en exemple).
+- **Shape exacte des cellules au LLM** : `getFieldZod` gère désormais l'index de tableau (`produitsCatalogue[0].categorie` → descend dans l'élément) → le prompt reçoit la **shape/enum EXACTE** de chaque cellule (une valeur d'enum RÉELLE, ex. `PLATEFORME`, pas un placeholder) → moins de valeurs invalides.
+- **Provenance top-level** : une cellule inférée marque **toute la matrice** `INFERRED` (badge côté cockpit) + `fieldProvenance` normalisée (index/profondeur retirés). Drafts INFERRED — l'opérateur valide (flip DECLARED).
+- **« Toutes les options »** : la notoria enchaîne toujours `calculation → cross_pillar → ai_generation`, désormais **jusqu'aux cellules profondes**. Le LLM n'intervient que sur le génératif (cellules de valeur), marqué INFERRED — aligné doctrine (min-LLM + validation opérateur).
+- 8 tests (éclatement cellules / items complets ignorés / tableau vide conservé / passthrough non-matrice / items primitifs / shape cellule enum-string-array / non-régression tableau entier). tsc 0 · lint 0 · cycles 0 · **3065 tests verts**. Cap APOGEE 7/7 · 0 modèle Prisma · 0 migration. **E2E live** (la notoria remplit Motion19 via LLM) = vérification opérateur (DB+LLM requis) — le wiring déterministe est unit-testé.
+
 ## v6.27.316 — feat(domain): maturité — profondeur matrice `array_items_complete` + canon de référence réaligné (Phase 2) (2026-07-23)
 
 **COMPLET devient honnête : une matrice produit `[{nom}]` aux cellules vides ne passe plus pour complète — chaque item doit avoir ses feuilles requises. Le validateur correct a exposé (et fait réparer) un drift pré-existant du canon de référence.**
