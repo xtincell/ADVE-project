@@ -1,14 +1,12 @@
 "use client";
 
 /**
- * BrandComparablesPanel — UI block listing semantically similar brands.
+ * BrandComparablesPanel — repère ANONYME de maturité vs les marques voisines.
  *
- * Calls strategy.comparables via tRPC. Shows top peers with their composite
- * score, financial capacity tier, and similarity score. Drops in cleanly
- * to any cockpit/console page where peer context is useful.
- *
- * Empty state when no embeddings exist yet — guides operator to wait for
- * indexing or shows a "no peers in store yet" message.
+ * round-16b : ne rend PLUS de lignes par-pair (nom / budget / score d'une AUTRE
+ * marque = fuite cross-tenant). `strategy.comparables` renvoie un agrégat k-anonyme
+ * ({ peerCount, medianComposite, topSimilarity }) ; ce panel affiche « N marques
+ * voisines · maturité médiane du groupe X/200 ». Empty state sans embeddings.
  */
 
 import { trpc } from "@/lib/trpc/client";
@@ -38,7 +36,7 @@ export function BrandComparablesPanel({ strategyId, topK = 6, className = "" }: 
     );
   }
 
-  if (!data || data.length === 0) {
+  if (!data || data.peerCount === 0) {
     return (
       <div className={`rounded-xl border border-border bg-card p-4 ${className}`}>
         <div className="flex items-center gap-2 mb-2">
@@ -58,50 +56,27 @@ export function BrandComparablesPanel({ strategyId, topK = 6, className = "" }: 
       <div className="flex items-center gap-2 mb-3">
         <Users className="h-4 w-4 text-foreground-muted" />
         <h3 className="text-sm font-semibold">Marques voisines</h3>
-        <span className="ml-auto text-xs text-foreground-muted">{data.length} pairs</span>
+        <span className="ml-auto text-xs text-foreground-muted">{data.peerCount} pairs</span>
       </div>
-      <div className="space-y-2">
-        {data.map((peer) => {
-          const fin = (peer.financialCapacity ?? null) as
-            | { reconciled?: number; currency?: string }
-            | null;
-          const biz = (peer.businessContext ?? null) as
-            | { sector?: string; country?: string; businessModel?: string }
-            | null;
-          return (
-            <div
-              key={peer.strategyId}
-              className="flex items-center gap-3 px-3 py-2 rounded-lg bg-background border border-border"
-            >
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium truncate">
-                  {peer.name ?? peer.strategyId.slice(0, 12) + "…"}
-                </div>
-                <div className="text-xs text-foreground-muted truncate">
-                  {biz?.sector && <span className="mr-2">{biz.sector}</span>}
-                  {biz?.country && <span className="mr-2">{biz.country}</span>}
-                  {biz?.businessModel && <span className="mr-2">{biz.businessModel}</span>}
-                  {fin?.reconciled != null && (
-                    <span className="font-mono">
-                      ~{Math.round(fin.reconciled / 1_000_000)}M {fin.currency ?? "XAF"}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="text-right">
-                {peer.composite != null && (
-                  <div className="text-xs font-mono text-foreground">
-                    {peer.composite.toFixed(0)}/200
-                  </div>
-                )}
-                <div className="text-xs font-mono text-foreground-muted">
-                  sim {peer.topSimilarity.toFixed(2)}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+      <div className="px-3 py-2 rounded-lg bg-background border border-border">
+        {data.medianComposite != null ? (
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-xs text-foreground-muted">Maturité médiane du groupe</span>
+            <span className="text-sm font-mono text-foreground">{data.medianComposite}/200</span>
+          </div>
+        ) : (
+          <div className="text-xs text-foreground-muted">
+            Groupe trop restreint pour un repère anonyme (moins de 3 pairs).
+          </div>
+        )}
+        <div className="flex items-baseline justify-between gap-3 mt-1">
+          <span className="text-xs text-foreground-muted">Proximité maximale</span>
+          <span className="text-xs font-mono text-foreground-muted">sim {data.topSimilarity.toFixed(2)}</span>
+        </div>
       </div>
+      <p className="mt-2 text-[11px] text-foreground-muted">
+        Repère agrégé et anonyme — aucune marque tierce n'est nommée.
+      </p>
     </div>
   );
 }

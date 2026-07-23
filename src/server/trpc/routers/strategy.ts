@@ -846,8 +846,19 @@ export const strategyRouter = createTRPCRouter({
   }),
 
   /**
-   * comparables — list peer strategies semantically similar to this one.
-   * Powered by the Seshat ranker. Graceful empty when no embeddings exist.
+   * comparables — repère ANONYME de maturité vs les marques sémantiquement
+   * proches (ranker Seshat). Empty gracieux sans embeddings.
+   *
+   * round-16b (fuite cross-tenant output-side) : `findSimilarAcrossStrategies`
+   * énumère TOUTES les marques de la plateforme (aucun scope tenant — normal, la
+   * proximité est cross-marque). Le garde `assertStrategyRead` protège l'ENTRÉE
+   * (la marque interrogée est possédée) mais PAS la SORTIE. Un fondateur ne doit
+   * JAMAIS voir le nom / le budget / le score exact d'une AUTRE marque (fuite
+   * cross-tenant catastrophique — RESIDUAL-DEBT §Gouvernance). On renvoie un
+   * AGRÉGAT k-anonyme (jamais de ligne par-pair identifiable) : nb de pairs +
+   * médiane de maturité du groupe + proximité max. Sous le seuil k, on masque
+   * même la médiane (un groupe < k réidentifie). Le détail nominatif reste réservé
+   * à la Mission Control opérateur (seshat-search, `operatorProcedure`).
    */
   comparables: protectedProcedure
     .input(z.object({ strategyId: z.string(), topK: z.number().min(1).max(20).default(8) }))
@@ -860,57 +871,34 @@ export const strategyRouter = createTRPCRouter({
         kinds: ["BRANDLEVEL", "NARRATIVE"],
         topK: input.topK * 3, // over-fetch then dedupe by strategy
       });
-      // Aggregate by strategy
-      const byStrategy = new Map<
-        string,
-        { strategyId: string; nodeCount: number; topSimilarity: number }
-      >();
+      // Dédupe par marque (proximité max), sans jamais exposer les ids par-pair.
+      const byStrategy = new Map<string, number>();
       for (const p of peers) {
-        const existing = byStrategy.get(p.strategyId);
-        if (existing) {
-          existing.nodeCount++;
-          existing.topSimilarity = Math.max(existing.topSimilarity, p.similarity);
-        } else {
-          byStrategy.set(p.strategyId, {
-            strategyId: p.strategyId,
-            nodeCount: 1,
-            topSimilarity: p.similarity,
-          });
-        }
+        byStrategy.set(p.strategyId, Math.max(byStrategy.get(p.strategyId) ?? 0, p.similarity));
       }
       const ids = Array.from(byStrategy.keys()).slice(0, input.topK);
-      if (ids.length === 0) return [];
+      const topSimilarity = ids.length ? Math.max(...ids.map((id) => byStrategy.get(id)!)) : 0;
 
-      const strategies = await ctx.db.strategy.findMany({
+      // k-anonymité : sous 3 pairs, une médiane approche une valeur individuelle → masquée.
+      const K_ANON = 3;
+      if (ids.length < K_ANON) {
+        return { peerCount: ids.length, medianComposite: null, topSimilarity };
+      }
+
+      // SEULEMENT le score (jamais name/financialCapacity/businessContext), agrégé en médiane.
+      const peerStrategies = await ctx.db.strategy.findMany({
         where: { id: { in: ids } },
-        select: {
-          id: true,
-          name: true,
-          businessContext: true,
-          financialCapacity: true,
-          advertis_vector: true,
-          brandNature: true,
-        },
+        select: { advertis_vector: true },
       });
-      const stratMap = new Map(strategies.map((s) => [s.id, s]));
+      const composites = peerStrategies
+        .map((s) => (s.advertis_vector as Record<string, number> | null)?.composite)
+        .filter((c): c is number => typeof c === "number")
+        .sort((a, b) => a - b);
+      const medianComposite = composites.length
+        ? Math.round(composites[Math.floor(composites.length / 2)]!)
+        : null;
 
-      return ids
-        .map((id) => {
-          const s = stratMap.get(id);
-          const stats = byStrategy.get(id)!;
-          return {
-            strategyId: id,
-            name: s?.name ?? null,
-            brandNature: s?.brandNature ?? null,
-            businessContext: s?.businessContext ?? null,
-            financialCapacity: s?.financialCapacity ?? null,
-            composite:
-              (s?.advertis_vector as Record<string, number> | null)?.composite ?? null,
-            topSimilarity: stats.topSimilarity,
-            nodeMatches: stats.nodeCount,
-          };
-        })
-        .sort((a, b) => b.topSimilarity - a.topSimilarity);
+      return { peerCount: ids.length, medianComposite, topSimilarity };
     }),
 
   /** Retourne la confiance et le statut du pilier S pour La Forge */
