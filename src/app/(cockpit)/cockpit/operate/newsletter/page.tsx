@@ -54,7 +54,7 @@ export default function NewsletterPage() {
   );
 
   const newslettersQuery = trpc.newsletter.newslettersList.useQuery(
-    undefined,
+    { strategyId: strategyId ?? "" },
     { enabled: Boolean(strategyId) }
   );
 

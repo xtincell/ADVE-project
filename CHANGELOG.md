@@ -1,5 +1,14 @@
 # Changelog — La Fusee
 
+## v6.27.277 — fix(security): round-7 adversarial — NewsletterCampaign scopée par marque (vrai fix du stopgap round-6) (2026-07-22)
+
+**Une campagne newsletter appartient enfin à SA marque : le fondateur revoit ses stats sans fuir les destinataires d'autrui, et la liste ne déballe plus toutes les marques.**
+
+- **Cause racine (structurelle)** : `NewsletterCampaign` n'avait AUCUN `strategyId` alors que ses entités sœurs en portent (abonnés `CrmContact.strategyId`, fournisseur email `BrandEmailConnector`) — l'auteur l'avait flaggé (`newsletter.ts` : « les campagnes ne portent pas encore de strategyId propre »). Conséquence : `newslettersList` renvoyait TOUTES les campagnes toutes marques confondues, et `newslettersStats` exposait les emails/noms des destinataires (`crmMessage.contact`) de n'importe quelle campagne. Le round-6 avait colmaté `newslettersStats` par un gate `operatorProcedure` — ce qui fermait la fuite PII mais **cassait la modale « Consulter » du fondateur** (403 → modale vide) et laissait `newslettersList` fuir.
+- **Vrai fix** : champ `strategyId` additif nullable sur `NewsletterCampaign` (migration `20260722230000_newsletter_campaign_strategy_scope`, backfill-safe, index `(strategyId, createdAt)`). `newslettersList`/`newslettersStats` repassent `protectedProcedure` **scopés par `accessibleStrategyIds`** (le fondateur voit SES campagnes + SES stats ; l'opérateur/god-mode voit tout ; une campagne legacy `strategyId=null` reste opérateur-only — fail-closed). `newslettersCreate` stampe la marque ; garde de cohérence à l'envoi (`newslettersSend` refuse d'envoyer une campagne d'une marque à l'audience d'une autre). Page cockpit : la liste est requêtée avec la marque active.
+- **Verrou** : le scanner HARD `strategy-ownership-guard.test.ts` exige+confirme désormais la garde `accessibleStrategyIds` sur les deux reads (elle ne peut plus disparaître en silence).
+- **Tracé RESIDUAL-DEBT §round-7** : les écritures newsletter (`newslettersCreate`/`newslettersSend`/`subscribersAdd`/`subscribersBulkImport`) restent `operatorProcedure` (staff) alors que la page est fondateur-facing et qu'une zone d'écriture collaborateur `"newsletter"` existe (rôle `DIGITAL_DIRECTOR`) → à passer en `governedProcedure` avec vérification de zone par le firewall d'émission (kinds `NEWSLETTER_*` à cataloguer, 100 % déterministe). PATCHED-SYMPTOMS : classe « une feature par-marque dont l'entité enfant omet le `strategyId` de ses sœurs force un gate operator-par-dépit qui casse l'UX fondateur ». Cap APOGEE 7/7 préservé. tsc 0 · lint 0 · **1203 tests gouvernance verts**.
+
 ## v6.27.276 — fix(security): round-6 adversarial — portée du token MCP enforcée + écritures de contenu global gardées (2026-07-22)
 
 **3ᵉ sweep adversarial : une clé API BRAND ne peut plus lire une AUTRE marque via le MCP, et personne ne s'auto-délivre un certificat / ne publie du contenu global.**

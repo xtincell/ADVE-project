@@ -132,6 +132,7 @@ export const newsletterRouter = createTRPCRouter({
     .mutation(async ({ input }) => {
       return db.newsletterCampaign.create({
         data: {
+          strategyId: input.strategyId ?? null,
           subject: input.subject,
           bodyHtml: input.content,
           bodyMjml: input.content, // Fallback MJML as same content
@@ -154,6 +155,16 @@ export const newsletterRouter = createTRPCRouter({
 
       if (campaign.status === "SENT") {
         throw new Error("Newsletter has already been sent.");
+      }
+
+      // Cohérence de marque : une campagne rattachée à une marque ne peut PAS
+      // être envoyée à l'audience d'une AUTRE marque (défense anti-cross-marque —
+      // l'`input.strategyId` cible les destinataires + arme le provider).
+      if (campaign.strategyId && campaign.strategyId !== input.strategyId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cette campagne appartient à une autre marque.",
+        });
       }
 
       // Pré-vol : aucun provider d'envoi armé pour cette marque → on NE marque
@@ -251,20 +262,41 @@ export const newsletterRouter = createTRPCRouter({
     }),
 
   newslettersList: protectedProcedure
-    .input(z.object({ limit: z.number().default(50) }).optional())
-    .query(async ({ input }) => {
+    .input(z.object({ limit: z.number().default(50), strategyId: z.string().optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      // ADR-0166 — scope ownership (lien strategyId lâche, pas de relation).
+      // Fermait une fuite : la liste renvoyait TOUTES les campagnes, toutes
+      // marques confondues. Les campagnes legacy (strategyId null) restent
+      // opérateur-only (accessibleStrategyIds=null ⇒ admin, sinon exclues).
+      const ids = await accessibleStrategyIds(ctx.session.user.id);
+      const strategyFilter = input?.strategyId
+        ? { strategyId: ids === null || ids.includes(input.strategyId) ? input.strategyId : "__denied__" }
+        : ids !== null
+          ? { strategyId: { in: ids } }
+          : {};
       return db.newsletterCampaign.findMany({
+        where: strategyFilter,
         orderBy: { createdAt: "desc" },
         take: input?.limit ?? 50,
       });
     }),
 
-  newslettersStats: operatorProcedure
+  newslettersStats: protectedProcedure
     .input(z.object({ newsletterId: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const campaign = await db.newsletterCampaign.findUniqueOrThrow({
         where: { id: input.newsletterId },
       });
+
+      // anti-IDOR (ADR-0166) : les emails/noms des destinataires (crmMessage →
+      // contact) ne fuient plus cross-marque. Le fondateur consulte SES campagnes
+      // (page cockpit) ; l'opérateur/god-mode voit tout ; une campagne legacy
+      // (strategyId null) reste opérateur-only. Remplace le stopgap round-6
+      // (operatorProcedure) qui cassait la modale « Consulter » du fondateur.
+      const ids = await accessibleStrategyIds(ctx.session.user.id);
+      if (ids !== null && (!campaign.strategyId || !ids.includes(campaign.strategyId))) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette campagne." });
+      }
 
       const messages = await db.crmMessage.findMany({
         where: { campaignId: input.newsletterId },

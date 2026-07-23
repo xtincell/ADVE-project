@@ -52,7 +52,7 @@ Ces correspondances évitent la réinvention :
 - **MissionApplication** (15 fields) — Vague 7 — candidature d'un talent/agence à une mission ouverte. Le flux remplace l'auto-acceptation : candidater → revue
 - **CrmContact** (16 fields) — Vague 7 — instantané followers/mentions par plateforme (traque unifiée). strategyId null = comptes propres de La Fusée /
 - **CrmMessage** (14 fields) — Message CRM (email transactionnel sortant ou note entrante consignée).
-- **NewsletterCampaign** (12 fields) — Campagne newsletter (The Upgrade) — composer, tester, envoyer aux opt-in.
+- **NewsletterCampaign** (13 fields) — Campagne newsletter (The Upgrade) — composer, tester, envoyer aux opt-in.
 - **FollowerSnapshot** (9 fields)
 - **BrandFootprintSnapshot** (13 fields) — ADR-0151 — base de marques de Seshat (répertoire d'empreintes publiques). Chaque recherche `/scorer` (marque hors-platef
 - **ScanRateHit** (3 fields) — Fix prod 2026-07-19 (ADR-0161) — compteur PARTAGÉ entre workers du rate-limit des scans frais du scoreur public. L'ancie
