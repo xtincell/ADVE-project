@@ -9,6 +9,7 @@
 
 import type { AdvertisVector, BrandClassification } from "@/lib/types/advertis-vector";
 import { resolveCultIndexTier } from "@/domain/cult-index-tier";
+import { TIER_MIN_DEPTH } from "@/domain/superfan-conditions";
 import { collectNormalizedInitiatives, type NormalizedInitiative } from "@/lib/types/pillar-schemas";
 // section-defaults n'est plus consommé par les mappers (audit galileo) : les
 // modules dévorent les vraies données ADVERTIS (multi-clés + sources
@@ -1526,8 +1527,15 @@ export function mapProfilSuperfan(strategy: any): ProfilSuperfanSection {
       .filter((p: any) => p.palier);
   }
 
-  const actifs = superfans.filter((s: any) => s.engagementDepth >= 0.8).length;
-  const evangelistes = superfans.filter((s: any) => s.segment === "evangeliste" || s.engagementDepth >= 0.95).length;
+  // Seuils CANONIQUES (audit round-9) : alignés sur `TIER_MIN_DEPTH` (domaine) +
+  // le segment est stocké en MAJUSCULES (`"EVANGELISTE"`, via superfan-ingest).
+  // Avant : `>= 0.8` (actifs, vs canon 0.65) + `"evangeliste"` minuscule qui ne
+  // matchait JAMAIS → repli `>= 0.95` qui perdait tout évangéliste dans [0.85,0.95[
+  // → §15 sous-comptait actifs ET évangélistes vs le dashboard cockpit/community.
+  const actifs = superfans.filter((s: any) => s.engagementDepth >= TIER_MIN_DEPTH.AMBASSADEUR).length;
+  const evangelistes = superfans.filter(
+    (s: any) => s.segment === "EVANGELISTE" || s.engagementDepth >= TIER_MIN_DEPTH.EVANGELISTE,
+  ).length;
 
   // Cult index — ADR-0046 ; no magic fallback. CultIndexTier résolu (galileo).
   const cultIndex = cultSnap

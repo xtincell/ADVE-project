@@ -80,6 +80,11 @@ function isFieldSatisfied(content: Record<string, unknown>, req: FieldRequiremen
     case "nested_complete": {
       if (typeof value !== "object" || value === null) return false;
       const obj = value as Record<string, unknown>;
+      // Un objet VIDE n'est PAS « complet » : `Object.values({}).every()` est
+      // vacuously `true` → il gonflerait `atomesValides`/le score structurel si
+      // un contrat câblait un jour `nested_complete` (dormant aujourd'hui — audit
+      // round-9). Rejet explicite.
+      if (Object.keys(obj).length === 0) return false;
       return Object.values(obj).every(
         v => v !== null && v !== undefined && v !== "" && !(Array.isArray(v) && v.length === 0)
       );

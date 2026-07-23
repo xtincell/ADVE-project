@@ -1,5 +1,14 @@
 # Changelog — La Fusee
 
+## v6.27.284 — fix(oracle): round-9 adversarial (c) — correctness (composite Oracle == dashboard, compte évangélistes, verrous) (2026-07-23)
+
+**L'Oracle affiche enfin le même palier que le dashboard, et compte correctement les superfans actifs / évangélistes.**
+
+- **HIGH — l'Oracle affichait un palier INFÉRIEUR au dashboard** : `strategy-presentation` re-plafonnait le composite avec un MIROIR d'évidence PÉRIMÉ (cibles NATION `SUPERFANS_TARGET=1000` / `TARSIS_TARGET=20` pré-ADR-0126 + `strategy.createdAt` au lieu de `brandFoundedYear`), alors que le scorer canonique (`advertis-scorer`, ADR-0126) plafonne DÉJÀ le composite persisté de façon SCALE-AWARE (`resolveEvidenceTargets(marketScale, addressableAudience)`) et que le dashboard cockpit lit cette valeur verbatim. Une marque QUARTIER scorée CULTE (60 superfans / cible 50) était re-plafonnée FORTE dans §01 + méta + PDF (60/1000 → évidence ≈ 0.18) — pénalisant systématiquement le segment capture-then-grow. Miroir SUPPRIMÉ : l'Oracle rend le composite persisté, identique au dashboard.
+- **MED-HIGH — §15 sous-comptait actifs + évangélistes** : `s.segment === "evangeliste"` (minuscule) ne matchait JAMAIS (`SuperfanProfile.segment` = `"EVANGELISTE"`) → repli `>= 0.95` perdant tout évangéliste dans [0.85, 0.95[ ; `actifs` à `>= 0.8` vs canon `TIER_MIN_DEPTH.AMBASSADEUR = 0.65`. Aligné sur `TIER_MIN_DEPTH` (segment MAJUSCULE + seuils canoniques) → §15 concorde avec les dashboards community/cockpit.
+- **LOW — `acquireGenerationLock`** : `OR: [..., { id: existing.id }]` matchait TOUJOURS la ligne cible → l'atomicité était défaite (deux appelants concurrents sur un verrou expiré se croyaient détenteurs). 3ᵉ clause retirée (le 2ᵉ échoue désormais, `lockExpiresAt` venant d'être rafraîchi). **LOW — `nested_complete`** vacuously `true` sur `{}` (dormant — aucun contrat ne le câble) → garde `Object.keys(obj).length === 0 → false`.
+- Verrou `correctness-round9.test.ts`. Cap APOGEE 7/7 · 0 LLM. tsc 0 · lint 0 · **2731 tests (governance+services) verts**.
+
 ## v6.27.283 — fix(governance): round-9 adversarial (a) — IDOR entité-id sur les routeurs manqués (creative-proposal / brand-node / media-buying) (2026-07-23)
 
 **Un fondateur ne peut plus valider/lire les propositions créatives, éditer l'arbre de marque, ni écrire les perfs média d'une AUTRE marque.**
