@@ -289,7 +289,11 @@ export const missionRouter = createTRPCRouter({
       // Get available missions (unassigned DRAFT)
       const missions = await ctx.db.mission.findMany({
         where: { status: "DRAFT", assigneeId: null },
-        include: { driver: true, strategy: { select: { name: true, advertis_vector: true } } },
+        // `advertis_vector` (scoring ADVE interne de la marque) retiré : le mur
+        // des missions ouvertes ne doit pas exposer le vecteur stratégique aux
+        // créateurs (le matching utilise `mission.id`, pas le vecteur — audit
+        // round-8). Cohérent avec le mur public Guilde qui le rédige déjà.
+        include: { driver: true, strategy: { select: { name: true } } },
         orderBy: { createdAt: "desc" },
         take: 50,
       });

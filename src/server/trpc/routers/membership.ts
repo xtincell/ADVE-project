@@ -100,7 +100,8 @@ export const membershipRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       return ctx.db.membership.findMany({
         where: input.status ? { status: input.status } : {},
-        include: { talentProfile: true },
+        // `payoutPhone` (PII payout du talent) exclu de la lecture (audit round-8).
+        include: { talentProfile: { omit: { payoutPhone: true } } },
         orderBy: { createdAt: "desc" },
       });
     }),

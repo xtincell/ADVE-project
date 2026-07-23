@@ -307,7 +307,10 @@ export const campaignManagerRouter = createTRPCRouter({
     }))
     .query(async ({ ctx, input }) => {
       if (input.strategyId) await enforceStrategyAccess(ctx, input.strategyId);
-      return cm.searchCampaigns(input);
+      // ADR-0166 — scope INCONDITIONNEL aux marques accessibles : sans strategyId,
+      // `searchCampaigns` renvoyait TOUTES les campagnes cross-marque (audit round-8).
+      const opCtx = await getOperatorContext(ctx.session.user.id);
+      return cm.searchCampaigns({ ...input, scope: scopeCampaigns(opCtx) });
     }),
 
   /** dashboard — aggregated stats */

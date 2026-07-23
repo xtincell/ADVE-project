@@ -193,20 +193,32 @@ export async function searchCampaigns(params: {
   category?: string;
   startDate?: Date;
   endDate?: Date;
+  /**
+   * Garde d'ownership (ADR-0166) — where fragment scopé aux marques accessibles
+   * (`scopeCampaigns(opCtx)` : `{}` pour ADMIN, sinon `{ strategy: … }`). ANDé
+   * INCONDITIONNELLEMENT : sans lui, `search({})` (strategyId omis) renvoyait
+   * TOUTES les campagnes cross-marque + identités des membres d'équipe (audit
+   * round-8). Le router DOIT toujours le fournir.
+   */
+  scope?: Prisma.CampaignWhereInput;
 }) {
-  const where: Prisma.CampaignWhereInput = {};
+  const filters: Prisma.CampaignWhereInput = {};
 
-  if (params.strategyId) where.strategyId = params.strategyId;
-  if (params.state) where.state = params.state as PrismaCampaignState;
+  if (params.strategyId) filters.strategyId = params.strategyId;
+  if (params.state) filters.state = params.state as PrismaCampaignState;
   if (params.query) {
-    where.name = { contains: params.query, mode: "insensitive" };
+    filters.name = { contains: params.query, mode: "insensitive" };
   }
   if (params.startDate || params.endDate) {
     const dateFilter: Prisma.DateTimeFilter = {};
     if (params.startDate) dateFilter.gte = params.startDate;
     if (params.endDate) dateFilter.lte = params.endDate;
-    where.startDate = dateFilter;
+    filters.startDate = dateFilter;
   }
+
+  const where: Prisma.CampaignWhereInput = params.scope
+    ? { AND: [params.scope, filters] }
+    : filters;
 
   const campaigns = await db.campaign.findMany({
     where,

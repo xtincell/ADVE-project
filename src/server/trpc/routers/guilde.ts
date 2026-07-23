@@ -50,6 +50,9 @@ export const guildeRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       return ctx.db.talentProfile.findMany({
         where: input.tier ? { tier: input.tier } : undefined,
+        // Annuaire browsable, mais `payoutPhone` (numéro mobile-money de payout,
+        // PII) ne doit JAMAIS sortir d'une lecture ouverte (audit round-8).
+        omit: { payoutPhone: true },
         orderBy: { totalMissions: "desc" },
         take: input.limit,
       });
@@ -60,6 +63,8 @@ export const guildeRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       return ctx.db.talentProfile.findUniqueOrThrow({
         where: { id: input.id },
+        // `payoutPhone` (PII payout) exclu — profil consultable par tout membre.
+        omit: { payoutPhone: true },
         include: {
           portfolioItems: true,
           memberships: { where: { status: "ACTIVE" } },

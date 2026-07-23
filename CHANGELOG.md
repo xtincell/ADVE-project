@@ -1,5 +1,14 @@
 # Changelog — La Fusee
 
+## v6.27.280 — fix(governance): round-8 adversarial (c) — fuites de lecture cross-tenant (search + payoutPhone + advertis_vector) (2026-07-22)
+
+**La recherche de campagnes ne déballe plus toutes les marques, le numéro de payout des créateurs ne fuit plus, et le vecteur ADVE interne ne s'affiche plus sur le mur des missions.**
+
+- **HIGH — `campaignManager.search` renvoyait TOUTES les campagnes cross-marque** : sa base `campaignScopedProcedure` ne garde que si un `campaignId` est en input (aucun ici → middleware inerte) et le handler ne vérifiait l'accès que `if (input.strategyId)`. `strategyId` omis → `searchCampaigns({query})` construisait un `where` SANS scope tenant → tout compte authentifié énumérait les campagnes de toutes les marques (nom, + `include teamMembers→user` = identités des équipes). **Fix** : `searchCampaigns` prend un `scope?: Prisma.CampaignWhereInput` ANDé inconditionnellement ; le router fournit toujours `scopeCampaigns(opCtx)` (`{}` pour ADMIN, sinon marques accessibles — ADR-0166). Le scanner `strategy-ownership-guard` confirme la garde.
+- **MED — `TalentProfile.payoutPhone` (numéro mobile-money de payout, PII) sur-exposé** : `guilde.list`/`getProfile` + `membership.list` (`include talentProfile:true`) sont `protectedProcedure` → tout compte authentifié moissonnait le numéro de payout de chaque créateur. **Fix** : `omit: { payoutPhone: true }` (annuaire browsable, mais la PII de payout ne sort jamais d'une lecture ouverte). NB : `guilde.getLeaderboard` utilisait DÉJÀ un `select` sans payoutPhone (faux positif de l'audit — non touché).
+- **LOW-MED — `mission.listForCreator` fuyait `advertis_vector`** : le mur des missions ouvertes (`status:DRAFT, assigneeId:null`) faisait `strategy:{select:{name,advertis_vector}}` → le vecteur ADVE interne de la marque partait à tous les talents (le matching utilise `mission.id`, jamais le vecteur ; le mur public Guilde le rédige déjà). **Fix** : `select:{name}`.
+- Verrou HARD `cross-tenant-read-leaks.test.ts` (scope search + omit payoutPhone + pas d'advertis_vector). Cap APOGEE 7/7. tsc 0 · lint 0 · **2724 tests (governance+services) verts**.
+
 ## v6.27.279 — fix(governance): round-8 adversarial (b) CRITICAL — dispatch MCP par-serveur fail-closed (2026-07-22)
 
 **Une clé API « limitée à une marque » ne peut plus piloter ni lire les campagnes, missions, briefs et budgets d'une AUTRE marque via les routes MCP par-serveur.**
