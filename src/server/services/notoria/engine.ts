@@ -256,11 +256,19 @@ IMPORTANT:
   const response = await callNotoriaLLM(system, prompt, strategyId);
   const parsed = extractJSON(response);
 
-  const recos: RawLLMReco[] = Array.isArray(parsed)
+  const recosRaw: RawLLMReco[] = Array.isArray(parsed)
     ? (parsed as RawLLMReco[])
     : (parsed as Record<string, unknown>).recommendations
       ? ((parsed as Record<string, unknown>).recommendations as RawLLMReco[])
       : [];
+
+  // F3 (round-11) : le LLM peut omettre `field` (sortie malformée) — les boucles
+  // `reco.field.startsWith(...)`/`.split(...)` plus bas planteraient alors TOUT le
+  // batch. On écarte honnêtement les recos sans `field` exploitable (une reco sans
+  // cible n'est pas persistable) au lieu de crasher — jamais de champ fabriqué.
+  const recos = recosRaw.filter(
+    (r): r is RawLLMReco => !!r && typeof r.field === "string" && r.field.trim().length > 0,
+  );
 
   // Validate proposedValues against schema
   const upperKey = targetKey.toUpperCase() as keyof typeof PILLAR_SCHEMAS;

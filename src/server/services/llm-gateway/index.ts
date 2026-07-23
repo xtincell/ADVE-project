@@ -819,9 +819,15 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
 // ── callLLMAndParse — Text → JSON ───────────────────────────────────────────
 
 /**
- * Call Claude with retry + cost tracking + extractJSON.
- * Returns parsed JSON from the LLM response.
- * This is the most common pattern in the codebase.
+ * Call the LLM with retry + cost tracking, then `extractJSON` the response.
+ *
+ * ⚠️ N'apporte AUCUNE validation de schéma (le nom « …Parse » est trompeur — il
+ * EXTRAIT, il ne VALIDE pas) : le retour est un cast `Record<string, unknown>`.
+ * Pour toute sortie destinée à être PERSISTÉE (pilier, asset, reco) → utiliser
+ * `executeStructuredLLMCall(..., { outputSchema })` (ADR-0067 : injecte
+ * UNTRUSTED_NOTICE + valide en Zod + retry-on-fail), JAMAIS ce helper + cast.
+ * Réservé aux appels dont le résultat est re-validé en aval (ex : re-passe
+ * gateway `writePillar`) ou purement advisory.
  */
 export async function callLLMAndParse(
   options: GatewayCallOptions,

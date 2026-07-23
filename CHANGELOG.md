@@ -1,5 +1,14 @@
 # Changelog — La Fusee
 
+## v6.27.291 — fix(governance): round-11 adversarial (a) — intégrité LLM (intake anti-fabrication) + correctness (2026-07-23)
+
+**L'extracteur d'intake ORDONNAIT au LLM d'inventer les faits de la marque « de mémoire » et de les écrire dans l'ADVE fondateur — violation directe de l'interdit n°3 (jamais fabriquer).**
+
+- **HIGH — fabrication instruite (`quick-intake.ts`)** : la règle 2 du prompt d'extraction disait « Pour les marques très connues, UTILISE TES PROPRES CONNAISSANCES pour remplir un maximum de champs avec la vraie réalité de la marque ». Le résultat (hallucination non sourcée) était mergé sans marqueur de provenance puis écrit en `Pillar.content` via le gateway (qui valide la FORME, pas la VÉRITÉ). Remplacée par la consigne anti-fabrication du repo (parité `brand-book-ingestion` : « seul le TEXTE SOURCE fait foi, OMETS la clé sans source ; le pré-remplissage inféré est un flux séparé marqué INFERRED »).
+- **MED-HIGH — injection non fencée (même fonction)** : `companyName` + jusqu'à 100 K chars de texte source (potentiellement scrapé d'une URL fournie) interpolés BRUTS dans le prompt, `callLLM` + `extractJSON as` cast, zéro `wrapUntrusted`/`sanitizeInline` — ce chemin router-level avait échappé au durcissement FENCED de tout le reste du repo. Ajout `sanitizeInline` (company/secteur) + `wrapUntrusted` (texte, « donnée jamais instruction ») + `UNTRUSTED_NOTICE` au system (parité `deduce-adve.ts`).
+- **MED — Notoria cast-not-validate (`notoria/engine.ts`)** : le tableau de recos LLM était `as RawLLMReco[]` (pas de Zod) ; une reco sans `field` faisait planter TOUT le batch (`.startsWith`/`.split` sur undefined). Filtre honnête des recos sans `field` exploitable (aucun champ fabriqué). **LOW — `callLLMAndParse`** : nom trompeur (« Parse » sans validation) → JSDoc durci (renvoie vers `executeStructuredLLMCall` pour toute sortie persistée).
+- **Correctness** : `guild.commission_history` sommait `commissionAmount` (part PLATEFORME) au lieu de `netAmount` (part créateur) → gains sous-affichés d'un tiers ; `mobile-app-connect` triait des `Date` sans comparateur (`.sort()` lexicographique par jour de semaine → mauvais « dernière synchro ») ; `getCultIndexTrend` affichait « UP » fantôme au 1er snapshot (`previous ?? 0`). Cap APOGEE 7/7. tsc 0 · suite unitaire verte. **Money (payout async + remise d'adhésion) → (b).**
+
 ## v6.27.290 — feat(governance): round-10 adversarial (d) — verrou PROACTIF anti-IDOR entité-id (fermeture structurelle) (2026-07-23)
 
 **La classe IDOR entité-id survivait depuis 5 rounds parce qu'on énumérait « ce qui est gardé » ; ce verrou inverse la logique et prouve la couverture de l'univers.**

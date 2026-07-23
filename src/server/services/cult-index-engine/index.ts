@@ -272,14 +272,17 @@ export async function getCultIndexTrend(strategyId: string): Promise<{
   });
 
   const current = snapshots[0]?.compositeScore ?? 0;
-  const previous = snapshots[1]?.compositeScore ?? 0;
+  // Sans snapshot précédent, `?? 0` fabriquait un delta = current → « UP »
+  // fantôme au tout premier snapshot (absence ≠ zéro). Défaut = current → delta 0.
+  const hasPrevious = snapshots.length >= 2;
+  const previous = snapshots[1]?.compositeScore ?? current;
   const delta = current - previous;
 
   return {
     current,
     previous,
     delta,
-    trend: delta > 2 ? "UP" : delta < -2 ? "DOWN" : "STABLE",
+    trend: !hasPrevious ? "STABLE" : delta > 2 ? "UP" : delta < -2 ? "DOWN" : "STABLE",
   };
 }
 

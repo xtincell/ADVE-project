@@ -103,7 +103,13 @@ export async function getMobileAppStatus(strategyId: string): Promise<MobileAppS
   });
   const appStore = conns.find((c) => c.platform === APP_STORE_PLATFORM);
   const playStore = conns.find((c) => c.platform === PLAY_STORE_PLATFORM);
-  const lastSync = conns.map((c) => c.lastSyncAt).filter(Boolean).sort().pop();
+  // `.sort()` nu sur des Date coerce en toString() ("Wed Jul 23…") → tri
+  // lexicographique par jour de semaine, pas chronologique. Comparateur explicite.
+  const lastSync = conns
+    .map((c) => c.lastSyncAt)
+    .filter((d): d is Date => !!d)
+    .sort((a, b) => a.getTime() - b.getTime())
+    .at(-1) ?? null;
   return {
     appStoreUrl: appStore?.accountId ?? null,
     playStoreUrl: playStore?.accountId ?? null,
