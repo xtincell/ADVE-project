@@ -1,5 +1,14 @@
 # Changelog — La Fusee
 
+## v6.27.299 — fix(governance): round-14 adversarial (a) — robustesse crons digest (render-before-claim + cult decouple) (2026-07-23)
+
+**Sous-agent verify-fixes : les 3 fixes round-13 vérifiés SOLIDES (13a ferme EN PLUS un deadlock latent APPLY_RECOS), et la classe « write hors-tx invalide un prédicat in-tx » n'a AUCUNE autre instance — mais 3 résidus réels bornés dans les crons que round-13c venait de toucher.**
+
+- **LOW — `founder-digest` : marqueur committé AVANT le rendu → skip permanent** : le claim `KnowledgeEntry` était posé puis `renderDigestEmail` appelé ; si le rendu jette (section au format inattendu → `escapeHtml`), l'exception saute au catch externe SANS libérer le marqueur → le digest hebdo de cette marque est perdu à vie. Fix : rendu AVANT le claim (comme `digest-scheduler`). 
+- **LOW/INFO — `feedback-loop` : le garde révivé throttlait le refresh cult** : révival du garde questionnaire (round-13c) plaçait le rafraîchissement Cult Index (cadence 7 j) SOUS le `continue` → une marque portant un signal `MONTHLY_FEEDBACK_NEEDED` récent voyait son cult sauté jusqu'à 30 j (couplage non voulu, bénin mais réel). Fix : bloc cult hissé AU-DESSUS du garde — il ne gouverne QUE le questionnaire désormais.
+- **LOW-MED (honnêteté) — TOCTOU « at-most-once » sur-clamé** : le claim-then-send dédupe les re-fires SÉQUENTIELS (le dominant) mais `KnowledgeEntry.sourceHash` n'a pas de contrainte unique → sous fire TRULY-concurrent le `findFirst→create` reste un TOCTOU (doublon d'email rare, JAMAIS de corruption ; pattern accepté du codebase, cf. `webhooks/mobile-money`). Commentaires rendus honnêtes ; durcissement `@@unique + P2002` tracé RESIDUAL-DEBT (prérequis : audit des writers `sourceHash` + doublons existants).
+- **LOW (pré-existant, tracé)** : `createVersion` committe le `PillarVersion` sur `db` global dans la tx du gateway → instantané orphelin sur conflit de version (audit-only, intégrité intacte, round-13a réduit l'occurrence). Cap APOGEE 7/7 · 0 LLM · 0 migration. tsc 0 · 3230 tests verts.
+
 ## v6.27.298 — fix(oracle): round-14 adversarial (c) — Oracle §22/§23 client réel (fin du template + fuite ADR) (2026-07-23)
 
 **Sous-agent honest-hole : forte convergence (les surfaces balayées lisent de la vraie donnée et dégradent honnêtement) — SAUF un trou lazy réel : les livrables client Oracle §22/§23 templataient par-dessus les données pilier déjà en main ET fuyaient des réf ADR internes au client.**

@@ -36,37 +36,16 @@ export async function GET(request: Request) {
     });
 
     for (const strategy of strategies) {
-      // Skip if already got feedback this month
-      if (strategy.signals.length > 0) continue;
-
-      // Find stale composites (pillars not updated in 30+ days)
-      const stalePillars = strategy.pillars.filter((p) => p.updatedAt < thirtyDaysAgo);
-
-      if (stalePillars.length > 0) {
-        // Create a signal requesting monthly feedback
-        await db.signal.create({
-          data: {
-            strategyId: strategy.id,
-            type: "MONTHLY_FEEDBACK_NEEDED",
-            data: {
-              stalePillars: stalePillars.map((p) => p.key),
-              message: `${stalePillars.length} pilier(s) non mis à jour: ${stalePillars.map((p) => p.key).join(", ")}`,
-              severity: stalePillars.length >= 4 ? "high" : "medium",
-            },
-          },
-        });
-        questionnairesCreated++;
-      }
-
-      // Rafraîchissement du Cult Index pour les marques en mode dégradé (peu
-      // d'activité mais des données de dévotion), au plus une fois/7 j.
+      // Rafraîchissement du Cult Index (cadence 7 j) — INDÉPENDANT du questionnaire
+      // mensuel. round-14a : hissé AU-DESSUS du garde questionnaire ci-dessous, sinon
+      // une marque portant un signal MONTHLY_FEEDBACK_NEEDED récent voyait son
+      // rafraîchissement cult sauté (cadence 7 j → 30 j), couplage non voulu introduit
+      // en révivant le garde (round-13c).
       //
-      // Round-12 (fabrication) : l'ancien bloc écrivait un snapshot INVENTÉ —
-      // zéros hardcodés sur 4 dimensions, `×200`/`×500` (= le bug d'unités
-      // ADR-0126 RÉINTRODUIT, alors que le devotion est en % 0-100), et un
-      // composite bidon `engagementDepth × 0.25` → chaque marque dormante héritait
-      // d'un ~25/FUNCTIONAL fabriqué dans son historique (lu par le dashboard cult
-      // + getCultIndexTrend). On délègue au SEUL écrivain canonique
+      // Round-12 (fabrication) : l'ancien bloc écrivait un snapshot INVENTÉ — zéros
+      // hardcodés sur 4 dimensions, `×200`/`×500` (= le bug d'unités ADR-0126
+      // RÉINTRODUIT, alors que le devotion est en % 0-100) → chaque marque dormante
+      // héritait d'un ~25/FUNCTIONAL fabriqué. On délègue au SEUL écrivain canonique
       // `calculateAndSnapshot` : math ADR-0126 correcte + exclusion honnête des
       // dimensions non mesurées (jamais un 0 fabriqué). Interdit n°3.
       const lastCultIndex = await db.cultIndexSnapshot.findFirst({
@@ -86,6 +65,29 @@ export async function GET(request: Request) {
           await calculateAndSnapshot(strategy.id);
           cultIndexesUpdated++;
         }
+      }
+
+      // Questionnaire mensuel — au plus une fois/30 j (garde round-13c aligné sur le
+      // type réellement écrit MONTHLY_FEEDBACK_NEEDED). Ne gouverne QUE le questionnaire.
+      if (strategy.signals.length > 0) continue;
+
+      // Find stale composites (pillars not updated in 30+ days)
+      const stalePillars = strategy.pillars.filter((p) => p.updatedAt < thirtyDaysAgo);
+
+      if (stalePillars.length > 0) {
+        // Create a signal requesting monthly feedback
+        await db.signal.create({
+          data: {
+            strategyId: strategy.id,
+            type: "MONTHLY_FEEDBACK_NEEDED",
+            data: {
+              stalePillars: stalePillars.map((p) => p.key),
+              message: `${stalePillars.length} pilier(s) non mis à jour: ${stalePillars.map((p) => p.key).join(", ")}`,
+              severity: stalePillars.length >= 4 ? "high" : "medium",
+            },
+          },
+        });
+        questionnairesCreated++;
       }
     }
 

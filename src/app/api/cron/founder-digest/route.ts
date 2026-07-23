@@ -66,9 +66,17 @@ export async function GET(request: Request) {
         continue;
       }
 
-      // Claim-then-send (at-most-once) : marqueur posé AVANT l'envoi ; sur échec on
-      // le retire pour autoriser un retry (no-duplicate d'abord, livraison ensuite —
-      // comme la restauration du claim social round-12).
+      // Rendu AVANT le claim (round-14a) : si `renderDigestEmail` jette (section au
+      // format inattendu), le marqueur ne doit pas être déjà posé — sinon l'exception
+      // saute au catch externe SANS libérer → digest de la semaine perdu à vie.
+      const rendered = renderDigestEmail(digest, founder.name ?? null, strat.name);
+
+      // Claim-then-send : marqueur posé avant l'envoi ; sur échec on le retire pour
+      // autoriser un retry (no-duplicate d'abord, livraison ensuite). Dédupe les
+      // re-fires SÉQUENTIELS (le dominant). NB : `sourceHash` n'a pas de contrainte
+      // unique → sous fire TRULY-concurrent, TOCTOU = doublon d'email rare (pattern
+      // codebase, cf. webhooks/mobile-money), jamais de corruption — durcissement
+      // (unique + P2002) tracé RESIDUAL-DEBT §round-13.
       const marker = await db.knowledgeEntry.create({
         data: {
           entryType: "MISSION_OUTCOME",
@@ -76,7 +84,6 @@ export async function GET(request: Request) {
           sourceHash,
         },
       });
-      const rendered = renderDigestEmail(digest, founder.name ?? null, strat.name);
       const sendResult = await sendEmail({
         to: founder.email,
         subject: rendered.subject,

@@ -109,8 +109,12 @@ export async function runDigest(frequency: Frequency): Promise<{
       skipped++;
       continue;
     }
-    // Claim-then-send : marqueur AVANT envoi, libéré si non-envoyé (deferred/throw)
-    // pour autoriser un retry sans dupliquer sur ré-invocation après succès.
+    // Claim-then-send : marqueur AVANT envoi, libéré si non-envoyé (deferred/throw
+    // via finally) pour autoriser un retry sans dupliquer sur ré-invocation
+    // SÉQUENTIELLE (le dominant). `sourceHash` n'a pas de contrainte unique → TOCTOU
+    // sous fire TRULY-concurrent = doublon d'email rare (pattern codebase, cf.
+    // webhooks/mobile-money), jamais de corruption ; durcissement unique+P2002 tracé
+    // RESIDUAL-DEBT §round-13.
     const marker = await db.knowledgeEntry.create({
       data: {
         entryType: "MISSION_OUTCOME",
