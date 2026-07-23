@@ -102,9 +102,16 @@ Items MEDIUM à régression-risquée ou à coordination, déférés de la boucle
 - **LinkedIn** : produit Community Management (compteurs organisation) · **X** : palier payant PPU ·
   **TikTok** : client secret + audit d'app · **YouTube** : scope `yt-analytics.readonly` + audit
   (commentaires/upload).
-- **Tarsis réel** : SDK/contrat vendor (connecteur `_mocked` prêt) · **WABA** : contrat WhatsApp
+- **WABA** : contrat WhatsApp
   Business (webhook entrant passeport fan) · **Shopify** : app Partner (env) + DNS wildcard
   `*.powerupgraders.com` + domaines Coolify (pages publiques de marque).
+  <!-- Tarsis RETIRÉ de cette liste 2026-07-23 : ce n'est PAS un vendor externe.
+       Tarsis = sous-domaine INTERNE de Seshat (monitoring signaux faibles), dé-mocké
+       le 2026-06-14 (ADR-0100) — `connector.ts` renvoie LIVE dès qu'un digest RSS
+       existe (`_mocked:false`). La credential `tarsis-monitoring` est OPTIONNELLE
+       (enrichissement social-listening premium futur), jamais un prérequis du socle.
+       Le seul reste Tarsis est interne : granularité polity (digest→polity) + refus
+       honnête T9 (cap CULTE/ICONE) — aucun des deux n'est gated par une clé. -->
 - **Scrappeur légit A/D/V du scoreur** (Trends, autocomplete, avis, wiki, presse, awards) :
   credential/ToS-gated — pattern `ConnectorResult<T>` P22-1, dégradation honnête (ADR-0149).
 
