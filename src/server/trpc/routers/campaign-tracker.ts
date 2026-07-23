@@ -412,7 +412,10 @@ export const campaignTrackerRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const gate = await checkPaidTier(ctx.session.user.id);
+      // F5 — entitlement scopé à la marque de la lignée (input.strategyId) :
+      // le founder doit payer POUR cette marque (ou détenir un sub legacy null
+      // operator-wide, backward-compat). Cockpit path = per-brand.
+      const gate = await checkPaidTier(ctx.session.user.id, undefined, input.strategyId);
       if (!gate.allowed) {
         return {
           state: "TIER_GATE_DENIED" as const,

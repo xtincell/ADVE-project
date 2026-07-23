@@ -1,5 +1,14 @@
 # Changelog — La Fusee
 
+## v6.27.309 — feat(thot): F5 — tier-gate payant scopé PAR MARQUE (backward-compat, zéro payeur affecté) (2026-07-23)
+
+**`checkPaidTier` scope enfin l'abonnement à la marque concernée : un `COCKPIT_MONTHLY` ne débloque plus toutes les marques d'un même compte. Backward-compat total — aucun payeur live ne perd l'accès.**
+
+- **Le trou** : `checkPaidTier(operatorId)` interrogeait `Subscription` par `operatorId` seul, ignorant `Subscription.strategyId` → un abonnement mono-marque débloquait les N marques du compte (l'intention doctrinale, CLAUDE.md §F5, est par-marque sauf `RETAINER_ENTERPRISE` ≤5).
+- **Le fix** : `checkPaidTier(operatorId, allowedTiers?, strategyId?)` — nouveau 3ᵉ param optionnel. Fourni → le `where` ajoute (sous `AND`, pour cohabiter avec le OR grâce-période) un OR de scope : `{ strategyId: null }` (legacy operator-wide, **matche toute marque** = filet backward-compat) OU `{ strategyId }` (cette marque seule) OU `{ tierKey ∈ MULTI_BRAND_TIER_KEYS }` (`RETAINER_ENTERPRISE` jamais restreint). **Absent → `where` byte-identique au pré-F5.**
+- **Backward-compat prouvé** : tous les subs existants sont créés `strategyId = null` (`payment.ts`/`subscription-cycles.ts`) → la branche `{ strategyId: null }` leur garde l'accès à toutes leurs marques. **Aucun payeur LIVE affecté.** God-mode intact (bypass dans `if(!sub)` ; la garde ne fait que RÉTRÉCIR la requête → `!sub` plus probable, jamais moins). 4 callers migrés (`cockpit-router` ×2 overtonSignal/getCommunityDashboard, `campaign-tracker` getFounderAttributionLineage, `engine` executeTool) — tous brand-spécifiques.
+- 13 tests tier-gate (legacy-null grant / brand-scope deny cross-brand / no-strategyId inchangé / god-mode / ENTERPRISE jamais restreint). `Subscription.strategyId` existait déjà → **0 migration**. Cap APOGEE 7/7 · 0 LLM. tsc 0.
+
 ## v6.27.308 — refactor(governance): B1 — pillar + campaign-manager migrés (3 routeurs cœur clos) + correction bucketing embeddings (2026-07-23)
 
 **Fin de la migration « 3 routeurs Neteru cœur » (B1) : pillar (9) + campaign-manager (18) rejoignent notoria sous `governedProcedure`. Baseline de dette Q3 66 → 39. Plus une correction d'honnêteté : les embeddings n'étaient PAS gated (self-host prod), erreur de bucketing corrigée partout.**

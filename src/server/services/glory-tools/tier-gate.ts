@@ -39,6 +39,16 @@ export const PAID_TIER_KEYS_DEFAULT: readonly string[] = [
  */
 const ACTIVE_STATUSES: readonly string[] = ["active", "trialing"];
 
+/**
+ * Tiers dont l'abonnement couvre PLUSIEURS marques d'un même operator.
+ * `RETAINER_ENTERPRISE` = « Multi-brand orchestration (jusqu'à 5 marques) »
+ * (pricing-tiers.ts:158-176). Un tel abonnement est traité comme operator-wide
+ * même s'il porte un `strategyId` — sinon on restreindrait à tort un payeur
+ * multi-marques à une seule de ses marques (F5 : « ne jamais restreindre
+ * ENTERPRISE »). Ne fait que GRANTER — ne restreint jamais.
+ */
+export const MULTI_BRAND_TIER_KEYS: readonly string[] = ["RETAINER_ENTERPRISE"];
+
 export interface TierGateResult {
   allowed: boolean;
   matchedTier?: string;
@@ -51,10 +61,17 @@ export interface TierGateResult {
  *
  * @param operatorId  User.id qui invoque le tool (généralement Strategy.userId).
  * @param allowedTiers  Override de la liste des tiers acceptés ; default = `PAID_TIER_KEYS_DEFAULT`.
+ * @param strategyId  F5 — scope par marque. **Fourni** : ne comptent que
+ *   l'abonnement scopé à CETTE marque (`strategyId = <marque>`), OU un abonnement
+ *   legacy operator-wide (`strategyId = null` — filet de backward-compat, matche
+ *   toute marque), OU un tier multi-marques (`MULTI_BRAND_TIER_KEYS`). **Absent** :
+ *   comportement inchangé (operator-wide) — backward-compat pur pour les callers
+ *   non encore migrés.
  */
 export async function checkPaidTier(
   operatorId: string,
   allowedTiers?: readonly string[],
+  strategyId?: string,
 ): Promise<TierGateResult> {
   const tiers = allowedTiers && allowedTiers.length > 0 ? allowedTiers : PAID_TIER_KEYS_DEFAULT;
 
@@ -68,10 +85,35 @@ export async function checkPaidTier(
       operatorId,
       status: { in: [...ACTIVE_STATUSES] },
       tierKey: { in: [...tiers] },
+      // OR grâce-période (INCHANGÉ) — reste au top-level.
       OR: [
         { currentPeriodEnd: null },
         { currentPeriodEnd: { gte: graceCutoff } },
       ],
+      // F5 — scope par marque. N'est ajouté QUE si un `strategyId` est fourni ⇒
+      // sans strategyId, le `where` est identique au comportement pré-F5
+      // (operator-wide pur, aucun payeur non migré n'est affecté). Niché sous
+      // `AND` pour que les DEUX ORs (grâce + scope) tiennent ENSEMBLE au lieu
+      // d'entrer en collision (un même objet ne peut porter qu'une clé `OR`).
+      ...(strategyId
+        ? {
+            AND: [
+              {
+                OR: [
+                  // Backward-compat : sub legacy/operator-wide → matche TOUTE
+                  // marque. Aucun sub existant (tous créés `strategyId = null`
+                  // avant F5) ne perd l'accès.
+                  { strategyId: null },
+                  // Sub scopé à cette marque → ne débloque QUE cette marque.
+                  { strategyId },
+                  // ENTERPRISE multi-marques → jamais restreint à une seule
+                  // marque, même s'il porte un strategyId (ne fait que granter).
+                  { tierKey: { in: [...MULTI_BRAND_TIER_KEYS] } },
+                ],
+              },
+            ],
+          }
+        : {}),
     },
     select: { tierKey: true, status: true },
     orderBy: { createdAt: "desc" },
