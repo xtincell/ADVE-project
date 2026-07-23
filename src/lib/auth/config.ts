@@ -28,10 +28,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           Google({
             clientId: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-            // Démo : lie une connexion Google à un compte email/mot de passe
-            // déjà existant portant le même email (évite OAuthAccountNotLinked).
-            // À durcir avant prod pure — cf. allowDangerousEmailAccountLinking.
-            allowDangerousEmailAccountLinking: true,
+            // DURCI round-9 : `allowDangerousEmailAccountLinking` RETIRÉ. Il liait
+            // Google à un compte email/mdp préexistant SANS vérifier la propriété
+            // de l'email → pre-account hijacking. Défaut NextAuth (liaison explicite
+            // requise) restauré.
           }),
         ]
       : []),
@@ -57,8 +57,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         );
         if (!isValid) return null;
 
-        // ── MFA challenge for ADMIN role ──
-        if (user.role === "ADMIN") {
+        // ── MFA challenge for effective-ADMIN (DB role OU god-mode) ──
+        // Le privilège ADMIN god-mode est accordé PLUS TARD au callback JWT via
+        // l'allowlist email (le rôle DB reste USER/FOUNDER) → gater le MFA sur le
+        // seul rôle DB laissait les comptes les PLUS sensibles jamais challengés
+        // (audit round-9). On calcule le rôle effectif ici.
+        if (user.role === "ADMIN" || isGodModeEmail(user.email)) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const mfaSecret = await (db as any).mfaSecret?.findUnique?.({
             where: { userId: user.id },

@@ -1,5 +1,15 @@
 # Changelog — La Fusee
 
+## v6.27.285 — fix(governance): round-9 adversarial (b) — durcissement auth/session (2026-07-23)
+
+**Plus de liaison Google dangereuse, les ADMIN god-mode sont challengés en MFA, et forgot-password ne révèle plus qui est inscrit.**
+
+- **HIGH — pre-account-hijacking Google** : `allowDangerousEmailAccountLinking: true` liait une identité Google à un compte email/mdp préexistant SANS vérifier la propriété de l'email (un attaquant `register` victim@gmail + son mdp ; la victime « Continue with Google » liait ensuite son identité Google sur la ligne de l'attaquant, dont le mdp authentifie toujours → prise de compte). RETIRÉ (défaut NextAuth : liaison explicite requise). Conditionnel (Google activé par env), mais fermé.
+- **MED — les ADMIN god-mode contournaient le MFA** : le challenge TOTP était gaté sur le rôle DB (`user.role === "ADMIN"`), or le privilège god-mode est accordé PLUS TARD au callback JWT via l'allowlist email (rôle DB = USER/FOUNDER) → les comptes les PLUS sensibles n'étaient jamais challengés. Gate sur le rôle EFFECTIF (`|| isGodModeEmail(user.email)`).
+- **MED — énumération d'emails par timing sur `forgotPassword`** : le corps AWAITait la MAJ DB + l'envoi SMTP quand l'email existait (délai révélateur malgré une réponse constante `{success:true}`). MAJ + envoi DÉTACHÉS (fire-and-forget) → temps de réponse identique que l'email existe ou non.
+- **LOW — open-redirect** dans le callback OAuth social : `returnUrl.startsWith("/")` acceptait `//evil.com` / `/\evil.com` (protocol-relative → `new URL()` résout en URL ABSOLUE). Rejet des préfixes `//` et `/\`.
+- **Tracés (RESIDUAL-DEBT §round-9 b)** : (MED) prise du stub non-réclamé (`register` pose un mdp sur un stub sans mdp SANS vérifier la propriété de l'email — nécessite une vérification email pour la revendication, réutilisant les reset-tokens ; décision produit sur la friction onboarding) ; (LOW) rate-limit login/MFA + cache anti-replay TOTP (nécessite un limiteur). **Vérifiés propres par l'auditeur** : crypto AES-GCM (IV frais, jamais renvoyé au client), state OAuth (HMAC + timingSafe + fail-closed), reset-tokens (256-bit, 1h, single-use), `register` (pas d'injection de rôle/operatorId), dette `session.operatorId` fail-SAFE (deny-by-default), bcrypt cost-12, cron fail-closed. Cap APOGEE 7/7. tsc 0 · lint 0 · **2736 tests (governance+services) verts**.
+
 ## v6.27.284 — fix(oracle): round-9 adversarial (c) — correctness (composite Oracle == dashboard, compte évangélistes, verrous) (2026-07-23)
 
 **L'Oracle affiche enfin le même palier que le dashboard, et compte correctement les superfans actifs / évangélistes.**

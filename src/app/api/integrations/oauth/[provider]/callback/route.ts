@@ -57,7 +57,13 @@ function socialRedirect(
   provider: string,
   platforms?: string[],
 ): NextResponse {
-  const safePath = returnUrl.startsWith("/") ? returnUrl : "/cockpit";
+  // Anti-open-redirect (round-9) : `//evil.com` et `/\evil.com` commencent par
+  // "/" mais `new URL()` les résout en URL ABSOLUE (protocol-relative). On
+  // n'accepte qu'un chemin interne (UN seul "/" initial, ni "//" ni "/\").
+  const safePath =
+    returnUrl.startsWith("/") && !returnUrl.startsWith("//") && !returnUrl.startsWith("/\\")
+      ? returnUrl
+      : "/cockpit";
   const u = new URL(safePath, baseUrl);
   u.searchParams.set("reseau", flag);
   u.searchParams.set("fournisseur", provider);
