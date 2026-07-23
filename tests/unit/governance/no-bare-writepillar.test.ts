@@ -35,7 +35,7 @@ const SRC = join(ROOT, "src");
 const ALLOWED_BARE_CALLERS: ReadonlyArray<{ file: string; line: number; reason: string }> = [
   {
     file: "src/server/services/pillar-gateway/index.ts",
-    line: 755,
+    line: 760,
     reason: "Implémentation interne de writePillarAndScore — appelle writePillar puis cache reconcile + scoring + event.",
   },
   {
@@ -84,7 +84,12 @@ function* walkFiles(dir: string): Generator<string> {
 
 function findBareCallers(): BareCall[] {
   const out: BareCall[] = [];
-  const re = /\bawait writePillar\(/g;
+  // round-13b : élargi au-delà de `await` — `return writePillar(` / `void writePillar(`
+  // / `= writePillar(` / `(writePillar(` évadaient le garde (le reconcile score/
+  // version/cascade que `writePillarAndScore` wrappe n'était pas appliqué). Ne matche
+  // PAS `writePillarAndScore(`/`writePillarRTIS(` (paren non adjacent à "writePillar")
+  // ni la définition `function writePillar(` (préfixe `function `, pas =/(/,/mot-clé).
+  const re = /(?:\bawait\s+|\breturn\s+|\bvoid\s+|[=(,]\s*)writePillar\(/g;
   for (const file of walkFiles(SRC)) {
     const text = readFileSync(file, "utf-8");
     re.lastIndex = 0;
@@ -116,7 +121,11 @@ function findRenamedImports(): BareCall[] {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]!;
       if (!rename.test(line)) continue;
-      if (!/\bimport\b|\brequire\s*\(/.test(line)) continue;
+      // round-13b : inclut les renommages par DÉSTRUCTURATION hors ligne d'import
+      // (`const { writePillar: wp } = await import("…/pillar-gateway")`) — le two-step
+      // échappait au filtre import/require seul, et le call-site `await wp(` reste
+      // invisible à la regex bare. Un alias de writePillar est toujours suspect.
+      if (!/\b(?:import|const|let|var)\b|\brequire\s*\(/.test(line)) continue;
       out.push({ file: relative(ROOT, file).replace(/\\/g, "/"), line: i + 1 });
     }
   }

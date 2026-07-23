@@ -1,5 +1,14 @@
 # Changelog — La Fusee
 
+## v6.27.297 — test(governance): round-13 adversarial (b) — honnêteté + protection des invariants déterministes (2026-07-23)
+
+**Le sous-agent determinism a vérifié SOLIDES les deux claims porteuses (valeur de score 0-LLM, Oracle composers, 6 gates, cult-index) — les trouvailles sont des tests qui SUR-CLAMENT ou qui MANQUENT une classe qu'ils prétendent garder.**
+
+- **MED (honnêteté doctrine) — LOI-9 « 0 LLM dans le scoring »** : `scoreObject` calcule + persiste la VALEUR déterministe (0-LLM), PUIS `detectAndSignalScoreChange` → `processSignal` (feedback-loop) appelle un LLM sur drift sévère (`runArtemisDiagnostic`). Le test `scoring-base-canon` scannait 3 fichiers pour des tokens LLM littéraux, sans suivi transitif → il affirmait « aucun LLM dans le chemin de scoring » alors qu'un LLM est atteignable à un hop. **Le couplage synchrone est VOULU** (garde de ré-entrance `scoreObject↔processSignal` — un fire-and-forget la casserait → signal-storm) ; la VALEUR reste 0-LLM. Claim rendue honnête (« calcul de VALEUR » vs « chemin ») + scan élargi aux fichiers réellement purs du calcul (`evidence.ts`, `semantic.ts`, `pillar-maturity/assessor.ts`) → un LLM ajouté DANS le calcul est désormais attrapé. Décorrélation async de la réaction = tracé RESIDUAL-DEBT §round-13 (file/flag durable, pas un patch nu).
+- **INFO — « Oracle 35/35 sans LLM » non gardé** : le handler route composer-first si `hasDeterministicComposer(id)`, sinon PURE_MAPPER, SINON tombe sur executeSequence/Framework/Tool (= LLM). `oracle-section-coverage` figeait compte/tier/runner mais PAS la couverture composer → une 36ᵉ section ou un id renommé aurait routé SILENCIEUSEMENT vers le LLM. Nouvel invariant : chaque section est PURE_MAPPER OU dotée d'un composer (partition exacte des 35). Vérifié : holds aujourd'hui (21 PURE_MAPPER + 14 composers).
+- **LOW — garde bare-`writePillar` évadable** : la regex `await writePillar(` manquait `return`/`void`/`= writePillar(` et le renommage two-step (`const { writePillar: wp } = await import(...)`). Élargie (superset, ne matche pas `writePillarAndScore`) + filtre déstructuration hors ligne d'import. Aucun évadeur existant (défense en profondeur).
+- **Note** : R13a (le fix CRITICAL keystone C5) avait décalé de ~5 lignes `writePillarAndScore` dans pillar-gateway → allowlist `no-bare-writepillar` repointée 755→760 (papercut d'allowlist ligne-keyée ; le hook pre-commit ne lance pas la suite complète — d'où la vérif suite complète avant push). Cap APOGEE 7/7 · 0 LLM · 0 source-change (tests + doc). tsc 0 · governance+types 1299 verts.
+
 ## v6.27.296 — fix(anubis): round-13 adversarial (c) — idempotence crons digest/signal (re-emails + signal dupliqués) (2026-07-23)
 
 **Trois crons ré-émettaient sur re-fire (double email fondateur, digest Anubis répété, signal mensuel dupliqué à chaque run) faute d'idempotence — même classe d'effet externe que le double-publish social round-12.**
