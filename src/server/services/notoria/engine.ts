@@ -220,12 +220,20 @@ async function generateRecosForPillar(
   });
 
   // Sépare feuilles de PREMIER niveau (SET) des sous-feuilles imbriquées vides,
-  // groupées par objet parent (EXTEND — préserve les sous-champs déjà remplis).
+  // groupées par objet parent IMMÉDIAT (EXTEND — préserve les sous-champs déjà
+  // remplis). CRITIQUE : on groupe par le DERNIER point (`lastIndexOf`), pas le
+  // premier — le parent doit être l'objet DIRECT (`pillarGaps.a`), pas le
+  // grand-parent (`pillarGaps`). Un EXTEND sur le grand-parent ferait une fusion
+  // SUPERFICIELLE d'un niveau (`{...existing, ...proposed}`) qui ÉCRASERAIT un
+  // sous-objet frère déjà rempli (`pillarGaps.a.gaps` écrit par l'opérateur) →
+  // destruction silencieuse de donnée réelle (interdit n°3). L'EXTEND profond
+  // (`field = pillarGaps.a`) fusionne à la bonne feuille via `setNestedValue` et
+  // préserve tous les frères. Audit adversarial 2026-07-23.
   const topLevelEmpty = emptyLeaves.filter((l) => !l.path.includes(".")).map((l) => l.path);
   const nestedByParent = new Map<string, string[]>();
   for (const l of emptyLeaves) {
     if (!l.path.includes(".")) continue;
-    const dot = l.path.indexOf(".");
+    const dot = l.path.lastIndexOf(".");
     const parent = l.path.slice(0, dot);
     const leaf = l.path.slice(dot + 1);
     if (!nestedByParent.has(parent)) nestedByParent.set(parent, []);

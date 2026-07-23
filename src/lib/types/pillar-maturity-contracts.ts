@@ -238,9 +238,13 @@ function unwrapZod(t: unknown): unknown {
       cur = def.in ?? def.out ?? cur;
     } else if (ctor === "ZodUnion") {
       const opts = (def.options ?? []) as any[];
-      // Prefer ZodObject > ZodArray > ZodString to choose the most "structural" branch
+      // Prefer les branches "structurelles" : ZodObject/ZodRecord/ZodMap (objet)
+      // > ZodArray > ZodString. Un ZodRecord EST objet-formé — le classer avec les
+      // objets évite qu'une union `record|array` (ex. s.computed.budgetByPhase) soit
+      // lue comme un tableau (isArray erroné) alors que sa forme canon est un record.
+      const objTier = (n?: string) => n === "ZodObject" || n === "ZodRecord" || n === "ZodMap";
       const ranked = opts
-        .map((o) => ({ o, score: o?.constructor?.name === "ZodObject" ? 3 : o?.constructor?.name === "ZodArray" ? 2 : o?.constructor?.name === "ZodString" ? 1 : 0 }))
+        .map((o) => ({ o, score: objTier(o?.constructor?.name) ? 3 : o?.constructor?.name === "ZodArray" ? 2 : o?.constructor?.name === "ZodString" ? 1 : 0 }))
         .sort((a, b) => b.score - a.score);
       cur = ranked[0]?.o ?? opts[0] ?? cur;
       break;
@@ -444,6 +448,12 @@ export function listSchemaLeafPaths(pillarKey: string, maxDepth = 4): SchemaLeaf
  */
 export function findEmptyLeafPaths(pillarKey: string, content: Record<string, unknown>): SchemaLeaf[] {
   const needsHuman = NEEDS_HUMAN_BY_PILLAR[pillarKey.toLowerCase()] ?? new Set<string>();
+  // Champs SCHÉMA légitimement optionnels (ex. `v.productSystem`, ADR-0170) : le
+  // contrat COMPLETE les exclut déjà (pas de fabrication forcée d'un « Système Palais »
+  // qu'un plombier n'a pas). `findEmptyLeafPaths` DOIT honorer la MÊME exclusion —
+  // sinon la notoria + l'auto-filler drafteraient tout le sous-système via LLM
+  // (fabrication, interdit n°3). Audit adversarial 2026-07-23.
+  const completeOptional = COMPLETE_OPTIONAL_BY_PILLAR[pillarKey.toLowerCase()] ?? new Set<string>();
   const isEmpty = (v: unknown): boolean =>
     v === null ||
     v === undefined ||
@@ -451,13 +461,20 @@ export function findEmptyLeafPaths(pillarKey: string, content: Record<string, un
     (Array.isArray(v) && v.length === 0) ||
     (typeof v === "object" && !Array.isArray(v) && v !== null && Object.keys(v).length === 0);
 
-  // Un ancêtre primitif (string/number/bool) signe la forme legacy d'une union
-  // `object|string` : la valeur est complète, on ne descend pas dedans.
-  const ancestorIsPrimitive = (path: string): boolean => {
+  // Un ancêtre NON-DESCENDABLE signe une forme d'union que la feuille (dérivée de
+  // la branche objet du schema) ne recouvre pas — la valeur en place est complète,
+  // on ne draft PAS par-dessus (interdit n°3) :
+  //   - primitif (string/number/bool) → forme legacy d'une union `object|string` ;
+  //   - TABLEAU → forme tableau d'une union `array|object` (ex. hierarchieCommunautaire
+  //     stockée en échelle/ladder) : `unwrapZod` a descendu la branche objet, mais le
+  //     contenu réel est un tableau rempli → ses feuilles-objet n'existent pas et NE
+  //     doivent PAS être « comblées ». (Un tableau est `typeof "object"` → le test
+  //     primitif seul le manquait : c'était le faux positif.)
+  const ancestorNotDescendable = (path: string): boolean => {
     const parts = path.split(".");
     for (let i = 1; i < parts.length; i++) {
       const anc = resolvePillarPath(content, parts.slice(0, i).join("."));
-      if (anc !== null && anc !== undefined && typeof anc !== "object") return true;
+      if (anc !== null && anc !== undefined && (typeof anc !== "object" || Array.isArray(anc))) return true;
     }
     return false;
   };
@@ -465,7 +482,8 @@ export function findEmptyLeafPaths(pillarKey: string, content: Record<string, un
   const out: SchemaLeaf[] = [];
   for (const leaf of listSchemaLeafPaths(pillarKey)) {
     if (needsHuman.has(leaf.topKey)) continue;
-    if (leaf.path.includes(".") && ancestorIsPrimitive(leaf.path)) continue;
+    if (completeOptional.has(leaf.topKey)) continue;
+    if (leaf.path.includes(".") && ancestorNotDescendable(leaf.path)) continue;
     if (isEmpty(resolvePillarPath(content, leaf.path))) out.push(leaf);
   }
   return out;

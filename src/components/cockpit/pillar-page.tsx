@@ -1004,13 +1004,23 @@ export function PillarPage({ pageKey }: PillarPageProps) {
               const weightedScore = typeof reco.weightedScore === "number" ? Math.round(reco.weightedScore) : null;
               const vw = typeof reco.validationWarning === "string" ? reco.validationWarning : "";
               const inferiorToExisting = /ruler_inferior|ne bat pas/i.test(vw);
+              // Le gate refuse pour DEUX raisons (ruler inférieur ET violation Bible),
+              // et pose `applyPolicy = "requires_review"` dans les deux cas + financier.
+              // On traite tout `requires_review` comme non-amélioration, pas seulement le
+              // ruler (sinon une reco Bible-invalide s'affichait « Amélioration » verte).
+              const requiresReview = reco.applyPolicy === "requires_review";
+              // `currentEmpty` prime : combler un vide ne peut pas être « inférieur à
+              // l'existant ». Le drapeau ne s'allume que sur un champ NON vide.
+              const flagged = !currentEmpty && op !== "ADD" && (inferiorToExisting || requiresReview);
               const verdict = op === "ADD"
                 ? { label: "Ajout", cls: "bg-success/15 text-success" }
                 : currentEmpty
                   ? { label: "Comble un vide", cls: "bg-info/15 text-info" }
                   : inferiorToExisting
                     ? { label: "N'améliore pas l'existant", cls: "bg-warning/15 text-warning" }
-                    : { label: "Amélioration", cls: "bg-success/15 text-success" };
+                    : requiresReview
+                      ? { label: "À revoir", cls: "bg-warning/15 text-warning" }
+                      : { label: "Amélioration", cls: "bg-success/15 text-success" };
 
               return (
                 <div key={recoId} onClick={() => { const s = new Set(selectedRecos); if (isSelected) s.delete(recoId); else s.add(recoId); setSelectedRecos(s); }}
@@ -1029,13 +1039,21 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                         ) : null}
                         {reco.impact ? <span className={`rounded-full px-1.5 py-0.5 text-[9px] ${reco.impact === "HIGH" ? "bg-error/15 text-error" : reco.impact === "MEDIUM" ? "bg-warning/15 text-warning" : "bg-white/10 text-foreground-muted"}`}>{String(reco.impact)}</span> : null}
                       </div>
-                      {/* Justification */}
-                      <p className="text-2xs text-foreground-muted mb-1">{String(reco.justification ?? "")}</p>
-                      {/* Warning : la reco n'améliore pas l'existant (gate ruler) */}
-                      {inferiorToExisting ? (
+                      {/* Justification — la colonne persistée est `explain` (le moteur
+                          écrit `explain: reco.justification`), pas `justification` : lire
+                          `reco.justification` rendait une ligne VIDE pour chaque reco. */}
+                      <p className="text-2xs text-foreground-muted mb-1">{String(reco.explain ?? reco.justification ?? "")}</p>
+                      {/* Warning : le gate signale un problème (ruler inférieur OU violation
+                          Bible OU financier) sur un champ NON vide → surface la vraie raison. */}
+                      {flagged ? (
                         <p className="mb-2 flex items-start gap-1 text-[10px] text-warning">
                           <AlertCircle className="mt-px h-3 w-3 flex-shrink-0" />
-                          <span>Cette proposition n'améliore pas la valeur en place selon le score — appliquée, elle sera refusée par le garde de remplacement. À revoir avant d'accepter.</span>
+                          <span>
+                            {inferiorToExisting
+                              ? "Cette proposition n'améliore pas la valeur en place selon le score — appliquée, elle sera refusée par le garde de remplacement."
+                              : "Cette proposition demande une revue avant application (le garde a signalé un point à vérifier)."}
+                            {vw ? ` — ${vw}` : ""}
+                          </span>
                         </p>
                       ) : null}
                       {/* Diff: current → proposed */}
@@ -1068,9 +1086,11 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              const s = new Set(expandedRecos);
-                              if (isExpanded) s.delete(recoId); else s.add(recoId);
-                              setExpandedRecos(s);
+                              setExpandedRecos((prev) => {
+                                const s = new Set(prev);
+                                if (s.has(recoId)) s.delete(recoId); else s.add(recoId);
+                                return s;
+                              });
                             }}
                             className="flex items-center gap-1 text-[9px] font-medium text-foreground-muted transition-colors hover:text-foreground"
                           >

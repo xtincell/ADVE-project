@@ -70,6 +70,23 @@ describe("findEmptyLeafPaths — vides réels, anti-fabrication", () => {
     expect(empty).toContain("prophecy.worldTransformed");
     expect(empty).toContain("secteur");
   });
+
+  it("union `array|object` en forme TABLEAU remplie → pas de faux vide (audit adversarial)", () => {
+    // hierarchieCommunautaire = union([array(ladder), object]) : unwrapZod descend
+    // la branche objet, mais un contenu stocké en forme TABLEAU (échelle remplie)
+    // ne doit PAS voir ses feuilles-objet listées comme vides à drafter.
+    const arrayForm = { hierarchieCommunautaire: [{ level: "SPECTATEUR" }, { level: "AMBASSADEUR" }] };
+    const empty = findEmptyLeafPaths("a", arrayForm).map((l) => l.path);
+    expect(empty.some((p) => p.startsWith("hierarchieCommunautaire."))).toBe(false);
+  });
+
+  it("champ COMPLETE_OPTIONAL (`v.productSystem`, ADR-0170) jamais proposé au remplissage", () => {
+    // Il EXISTE dans l'inventaire brut…
+    expect(listSchemaLeafPaths("v").some((l) => l.topKey === "productSystem")).toBe(true);
+    // …mais findEmptyLeafPaths ne le propose JAMAIS (pas de fabrication d'un « Système
+    // Palais » qu'un produit n'a pas — même exclusion que le contrat COMPLETE).
+    expect(findEmptyLeafPaths("v", {}).some((l) => l.topKey === "productSystem")).toBe(false);
+  });
 });
 
 describe("shape PROFONDE équipant la notoria (buildExampleFromZod / getFieldZod)", () => {

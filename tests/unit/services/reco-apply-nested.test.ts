@@ -81,6 +81,44 @@ describe("applyResolvedRecoOps — parité top-level (non-régression)", () => {
   });
 });
 
+describe("applyResolvedRecoOps — corrections audit adversarial 2026-07-23", () => {
+  it("EXTEND profond préserve les frères remplis (fin du clobber depth≥3)", () => {
+    // La notoria groupe désormais par parent IMMÉDIAT → EXTEND sur `pillarGaps.a`
+    // (pas le grand-parent `pillarGaps`) → fusion profonde qui garde `gaps`.
+    const base = { pillarGaps: { a: { gaps: ["écrit par l'opérateur"] } } };
+    const { content } = applyResolvedRecoOps(base, [op("pillarGaps.a", "EXTEND", { score: 4 })]);
+    const a = (content.pillarGaps as { a: Record<string, unknown> }).a;
+    expect(a.score).toBe(4);
+    expect(a.gaps).toEqual(["écrit par l'opérateur"]); // frère préservé
+  });
+
+  it("refuse un champ top-level `__proto__` (garde de prototype UNIFORME) — non appliqué, pas de pollution", () => {
+    const { content, appliedCount, warnings } = applyResolvedRecoOps({ promesse: "x" }, [
+      op("__proto__", "SET", { polluted: "YES" }),
+    ]);
+    expect(appliedCount).toBe(0);
+    expect(warnings.length).toBeGreaterThanOrEqual(1);
+    expect(JSON.stringify(content)).toBe('{"promesse":"x"}');
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+  });
+
+  it("refuse un champ top-level `constructor` (pas de clé fantôme persistée)", () => {
+    const { content, appliedCount } = applyResolvedRecoOps({ promesse: "x" }, [
+      op("constructor", "SET", { hacked: 1 }),
+    ]);
+    expect(appliedCount).toBe(0);
+    expect(JSON.stringify(content)).toBe('{"promesse":"x"}');
+  });
+
+  it("SURFACE un chevauchement parent/enfant dans le lot (jamais un écrasement silencieux)", () => {
+    const { warnings } = applyResolvedRecoOps({ matrice: { lignes: [{ id: "a" }] } }, [
+      op("matrice.lignes", "ADD", { id: "NEW" }),
+      op("matrice", "SET", { lignes: [{ id: "W" }] }),
+    ]);
+    expect(warnings.some((w) => w.includes("Chevauchement"))).toBe(true);
+  });
+});
+
 describe("applyResolvedRecoOps — sûreté", () => {
   it("ne mute JAMAIS la base (clone profond) — le snapshot précédent reste intact", () => {
     const base = { prophecy: { worldTransformed: "X" }, touchpoints: [{ nom: "Insta" }] };
@@ -92,8 +130,16 @@ describe("applyResolvedRecoOps — sûreté", () => {
     expect(base.touchpoints.length).toBe(1); // pas muté par l'ADD
   });
 
-  it("refuse un segment de proto-pollution via setNestedValue", () => {
-    expect(() => applyResolvedRecoOps({}, [op("prophecy.__proto__.polluted", "SET", 1)])).toThrow();
+  it("refuse un segment de proto-pollution PROFOND (skip + warning, ne crash pas le lot)", () => {
+    // Le garde uniforme refuse l'op au lieu de laisser setNestedValue throw et casser
+    // TOUT le lot — un op malveillant est écarté, les recos légitimes passent.
+    const { content, appliedCount, warnings } = applyResolvedRecoOps(
+      { ok: "keep" },
+      [op("prophecy.__proto__.polluted", "SET", 1), op("secteur", "SET", "Tech")],
+    );
+    expect(appliedCount).toBe(1); // seul `secteur` passe
+    expect(content).toEqual({ ok: "keep", secteur: "Tech" });
+    expect(warnings.some((w) => w.includes("__proto__") || w.toLowerCase().includes("interdit"))).toBe(true);
   });
 
   it("coerceValue : nouvelle feuille vide → valeur proposée telle quelle", () => {
