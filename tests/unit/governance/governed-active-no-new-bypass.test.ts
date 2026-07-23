@@ -27,7 +27,7 @@
  *   - Réparer une mutation → compte < baseline → mettre à jour le baseline
  *     (le registre reste honnête et décroissant, motif emission-spine).
  *
- * # Nature du BASELINE (dette Q3 tracée, 78 au 2026-07-22)
+ * # Nature du BASELINE (dette Q3 tracée, 78 au 2026-07-22 → 66 au 2026-07-23 après B1 notoria)
  *
  * Deux familles :
  *   • EXEMPT (légitimement non gouverné, ne bougera pas) — infra credential
@@ -36,9 +36,9 @@
  *     dry-run (`market-study-ingestion.preview`, `ingestion.previewBrandBook`),
  *     re-projection déterministe (`campaign-tracker.reportFieldProgress`).
  *   • PENDING (vraies mutations métier à migrer vers governedProcedure) —
- *     surtout `campaign-manager` (18), `notoria` (12), `pillar` (10) : chantier
- *     dédié « migration governedProcedure des 3 routeurs Neteru cœur » (trop
- *     risqué en une passe — cf. RESIDUAL-DEBT §B1). Les petits routeurs
+ *     `campaign-manager` (18), `pillar` (10) restants ; `notoria` (12) ✅ MIGRÉ
+ *     (v6.27.307, B1) : chantier « migration governedProcedure des 3 routeurs
+ *     Neteru cœur » en cours (cf. RESIDUAL-DEBT §B1). Les petits routeurs
  *     (`client`, `crm-contacts`, `strategy.validateSynthesis`…) suivront par lots.
  *
  * Mode HARD (exact match) — toute dérive (hausse OU baisse non répercutée) casse.
@@ -77,7 +77,8 @@ function ungovernedMutationCount(src: string): number {
  */
 const BASELINE: Readonly<Record<string, number>> = {
   "campaign-manager.ts": 18, // PENDING — chantier migration Neteru cœur
-  "notoria.ts": 12, // PENDING — idem
+  // notoria.ts — CLOS (v6.27.307, B1) : les 12 mutations migrées vers governedProcedure
+  //   (requireOperator:true préserve le gate opérateur + ADR-0175 ajoute le brand-scope).
   "pillar.ts": 10, // PENDING — idem (dont rollbackVersion, cf. §G)
   "quick-intake.ts": 8, // mixte : funnel public (conversation-state) + PENDING
   "mcp-billing.ts": 6, // EXEMPT — infra facturation adminProcedure auto-auditée

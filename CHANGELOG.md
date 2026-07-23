@@ -1,5 +1,14 @@
 # Changelog — La Fusee
 
+## v6.27.307 — refactor(governance): B1 — les 12 mutations Notoria migrées vers governedProcedure (2026-07-23)
+
+**Premier lot de la migration « 3 routeurs Neteru cœur » (B1) : les 12 mutations de Notoria (recommandations) passent de `operatorProcedure` nu à `governedProcedure` — elles émettent enfin un `IntentEmission` traçable ET gagnent le brand-scope. Baseline de dette Q3 78 → 66.**
+
+- **Ce que ça ferme** : les 12 mutations Notoria (`launchPipeline`/`advancePipeline`/`actualizeRT`/`acceptRecos`/`rejectRecos`/`applyRecos`/`applyBatch`/`revertReco`/`publishToJehuty`/`expireOldRecos`/`generateTypedRecommendations`/`generateFromVault`) mutaient sans passer par le spine d'émission (Q1/Q2 Yggdrasil non tenus) et sans garde d'ownership de marque. Wrap `governedProcedure({ kind: "LEGACY_NOTORIA_*", requireOperator: true, inputSchema, caller }).mutation(body)` — le corps (+ tout garde inline) est INCHANGÉ.
+- **Sécurité préservée + renforcée** : `requireOperator: true` sur les 12 → la base reste `operatorProcedure` (gate staff préservé, ZÉRO downgrade vers protectedProcedure) ; en prime, la garde ADR-0175 de `governedProcedure` ajoute `canAccessStrategy` sur le `strategyId` de tête → brand-scope là où il n'y en avait pas (un opérateur ne touche plus les recos d'une marque hors de son périmètre). Import `operatorProcedure`/`protectedProcedure` retiré (plus utilisé).
+- **2 nouveaux kinds LEGACY** (`LEGACY_NOTORIA_GENERATE_FROM_VAULT` + `_GENERATE_TYPED_RECOMMENDATIONS`) + SLOs (generateFromVault : 30 s/0.5 $ car LLM ; typed : 5 s/0 $ déterministe). **Ajoutés À LA MAIN au bloc autogen** — landmine découverte : le générateur `generate-legacy-intent-kinds.ts` ne traite que les routeurs `strangler-active`, or les 3 cœur sont désormais `governed-active` → AUCUN strangler → re-run VIDERAIT le bloc (44+ kinds) et casserait tout. Tracé RESIDUAL-DEBT §B1 (shrink-guard générateur à ajouter).
+- Baseline `governed-active-no-new-bypass` : `notoria.ts` retiré (0 ungoverned). Reste `campaign-manager` (18) + `pillar` (10) = prochains lots B1. Cap APOGEE 7/7 · 0 LLM · 0 migration Prisma. tsc 0 · 1303 tests governance+types verts.
+
 ## v6.27.306 — fix(ui): J4 — lisibilité cockpit en mode jour (330 `text-white` traités par occurrence) (2026-07-23)
 
 **Le mode jour du cockpit rendait le texte blanc littéral invisible sur les fonds qui s'éclaircissent. Les 330 `text-white` du cockpit sont traités UN PAR UN (fond gouvernant tracé, pas de sweep aveugle) : 303 corrigés, 27 gardés là où le fond est une couleur fixe.**

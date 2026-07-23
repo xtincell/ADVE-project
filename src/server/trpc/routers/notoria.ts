@@ -7,7 +7,7 @@
  */
 
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
+import { createTRPCRouter } from "../init";
 import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { generateBatch } from "@/server/services/notoria/engine";
 import { generateTypedRecommendations } from "@/server/services/notoria/generate-typed-recos";
@@ -77,9 +77,12 @@ export const notoriaRouter = createTRPCRouter({
    *  derived from the structured pillars (promote initiatives, mark covered
    *  risks mitigated, propose mitigations for uncovered high-severity risks).
    *  Applied by id via the applyRecos typed branch. */
-  generateTypedRecommendations: operatorProcedure
-    .input(z.object({ strategyId: z.string() }))
-    .mutation(({ input }) => generateTypedRecommendations(input.strategyId)),
+  generateTypedRecommendations: governedProcedure({
+    kind: "LEGACY_NOTORIA_GENERATE_TYPED_RECOMMENDATIONS",
+    caller: "notoria:generateTypedRecommendations",
+    requireOperator: true,
+    inputSchema: z.object({ strategyId: z.string() }),
+  }).mutation(({ input }) => generateTypedRecommendations(input.strategyId)),
 
   /** Génère des recommandations ANCRÉES dans les sources importées (vault).
    *  Scanne toutes les BrandDataSource de la stratégie et produit des recos
@@ -88,9 +91,12 @@ export const notoriaRouter = createTRPCRouter({
    *  la même file Recommendation que le reste de Notoria. Comble le trou : avant,
    *  seul le bouton « Enrichir » par-pilier consultait les sources — le hub
    *  Notoria les ignorait. */
-  generateFromVault: operatorProcedure
-    .input(z.object({ strategyId: z.string() }))
-    .mutation(async ({ input }) => {
+  generateFromVault: governedProcedure({
+    kind: "LEGACY_NOTORIA_GENERATE_FROM_VAULT",
+    caller: "notoria:generateFromVault",
+    requireOperator: true,
+    inputSchema: z.object({ strategyId: z.string() }),
+  }).mutation(async ({ input }) => {
       const { enrichAllFromVault } = await import("@/server/services/vault-enrichment");
       const perPillar = await enrichAllFromVault(input.strategyId);
       const count = Object.values(perPillar).reduce(
@@ -121,23 +127,32 @@ export const notoriaRouter = createTRPCRouter({
     return selectRoadmapRoute(input.strategyId, input.routeKey);
   }),
 
-  launchPipeline: operatorProcedure
-    .input(z.object({ strategyId: z.string() }))
-    .mutation(({ input }) => launchPipeline(input.strategyId)),
+  launchPipeline: governedProcedure({
+    kind: "LEGACY_NOTORIA_LAUNCH_PIPELINE",
+    caller: "notoria:launchPipeline",
+    requireOperator: true,
+    inputSchema: z.object({ strategyId: z.string() }),
+  }).mutation(({ input }) => launchPipeline(input.strategyId)),
 
-  advancePipeline: operatorProcedure
-    .input(z.object({ strategyId: z.string() }))
-    .mutation(({ input }) => advancePipeline(input.strategyId)),
+  advancePipeline: governedProcedure({
+    kind: "LEGACY_NOTORIA_ADVANCE_PIPELINE",
+    caller: "notoria:advancePipeline",
+    requireOperator: true,
+    inputSchema: z.object({ strategyId: z.string() }),
+  }).mutation(({ input }) => advancePipeline(input.strategyId)),
 
   /** Actualize R and/or T pillars via RTIS cascade (prerequisite for ADVE_UPDATE).
    *  ADR-0030 Axe 3 — gate RTIS_CASCADE : refuse si ADVE pas ENRICHED. Cohérent
    *  avec generateBatch ci-dessus (preconditions: ["RTIS_CASCADE"]). */
-  actualizeRT: operatorProcedure
-    .input(z.object({
+  actualizeRT: governedProcedure({
+    kind: "LEGACY_NOTORIA_ACTUALIZE_R_T",
+    caller: "notoria:actualizeRT",
+    requireOperator: true,
+    inputSchema: z.object({
       strategyId: z.string(),
       pillars: z.array(z.enum(["R", "T"])).default(["R", "T"]),
-    }))
-    .mutation(async ({ input }) => {
+    }),
+  }).mutation(async ({ input }) => {
       const { assertReadyFor } = await import("@/server/governance/pillar-readiness");
       await assertReadyFor(input.strategyId, "RTIS_CASCADE");
 
@@ -449,26 +464,28 @@ export const notoriaRouter = createTRPCRouter({
   // ACTIONS
   // ══════════════════════════════════════════════════════════════════
 
-  acceptRecos: operatorProcedure
-    .input(
-      z.object({
-        strategyId: z.string(),
-        recoIds: z.array(z.string()).min(1),
-      }),
-    )
-    .mutation(({ input, ctx }) =>
+  acceptRecos: governedProcedure({
+    kind: "LEGACY_NOTORIA_ACCEPT_RECOS",
+    caller: "notoria:acceptRecos",
+    requireOperator: true,
+    inputSchema: z.object({
+      strategyId: z.string(),
+      recoIds: z.array(z.string()).min(1),
+    }),
+  }).mutation(({ input, ctx }) =>
       acceptRecos(input.strategyId, input.recoIds, ctx.session.user.id),
     ),
 
-  rejectRecos: operatorProcedure
-    .input(
-      z.object({
-        strategyId: z.string(),
-        recoIds: z.array(z.string()).min(1),
-        reason: z.string().optional(),
-      }),
-    )
-    .mutation(({ input, ctx }) =>
+  rejectRecos: governedProcedure({
+    kind: "LEGACY_NOTORIA_REJECT_RECOS",
+    caller: "notoria:rejectRecos",
+    requireOperator: true,
+    inputSchema: z.object({
+      strategyId: z.string(),
+      recoIds: z.array(z.string()).min(1),
+      reason: z.string().optional(),
+    }),
+  }).mutation(({ input, ctx }) =>
       rejectRecos(
         input.strategyId,
         input.recoIds,
@@ -477,23 +494,25 @@ export const notoriaRouter = createTRPCRouter({
       ),
     ),
 
-  applyRecos: operatorProcedure
-    .input(
-      z.object({
-        strategyId: z.string(),
-        recoIds: z.array(z.string()).min(1),
-      }),
-    )
-    .mutation(({ input }) => applyRecos(input.strategyId, input.recoIds)),
+  applyRecos: governedProcedure({
+    kind: "LEGACY_NOTORIA_APPLY_RECOS",
+    caller: "notoria:applyRecos",
+    requireOperator: true,
+    inputSchema: z.object({
+      strategyId: z.string(),
+      recoIds: z.array(z.string()).min(1),
+    }),
+  }).mutation(({ input }) => applyRecos(input.strategyId, input.recoIds)),
 
-  applyBatch: operatorProcedure
-    .input(
-      z.object({
-        strategyId: z.string(),
-        batchId: z.string(),
-      }),
-    )
-    .mutation(async ({ input, ctx }) => {
+  applyBatch: governedProcedure({
+    kind: "LEGACY_NOTORIA_APPLY_BATCH",
+    caller: "notoria:applyBatch",
+    requireOperator: true,
+    inputSchema: z.object({
+      strategyId: z.string(),
+      batchId: z.string(),
+    }),
+  }).mutation(async ({ input, ctx }) => {
       // Accept all PENDING in batch
       const pending = await db.recommendation.findMany({
         where: { batchId: input.batchId, status: "PENDING" },
@@ -522,15 +541,16 @@ export const notoriaRouter = createTRPCRouter({
       return { applied: 0, warnings: ["Aucune recommandation a appliquer dans ce batch."] };
     }),
 
-  revertReco: operatorProcedure
-    .input(
-      z.object({
-        strategyId: z.string(),
-        recoId: z.string(),
-        reason: z.string(),
-      }),
-    )
-    .mutation(({ input }) =>
+  revertReco: governedProcedure({
+    kind: "LEGACY_NOTORIA_REVERT_RECO",
+    caller: "notoria:revertReco",
+    requireOperator: true,
+    inputSchema: z.object({
+      strategyId: z.string(),
+      recoId: z.string(),
+      reason: z.string(),
+    }),
+  }).mutation(({ input }) =>
       revertReco(input.strategyId, input.recoId, input.reason),
     ),
 
@@ -538,14 +558,15 @@ export const notoriaRouter = createTRPCRouter({
   // PUBLICATION (Jehuty)
   // ══════════════════════════════════════════════════════════════════
 
-  publishToJehuty: operatorProcedure
-    .input(
-      z.object({
-        strategyId: z.string(),
-        recoIds: z.array(z.string()),
-      }),
-    )
-    .mutation(async ({ input }) => {
+  publishToJehuty: governedProcedure({
+    kind: "LEGACY_NOTORIA_PUBLISH_TO_JEHUTY",
+    caller: "notoria:publishToJehuty",
+    requireOperator: true,
+    inputSchema: z.object({
+      strategyId: z.string(),
+      recoIds: z.array(z.string()),
+    }),
+  }).mutation(async ({ input }) => {
       const result = await db.recommendation.updateMany({
         where: {
           id: { in: input.recoIds },
@@ -561,14 +582,15 @@ export const notoriaRouter = createTRPCRouter({
   // EXPIRY
   // ══════════════════════════════════════════════════════════════════
 
-  expireOldRecos: operatorProcedure
-    .input(
-      z.object({
-        strategyId: z.string(),
-        maxAgeDays: z.number().default(30),
-      }),
-    )
-    .mutation(({ input }) =>
+  expireOldRecos: governedProcedure({
+    kind: "LEGACY_NOTORIA_EXPIRE_OLD_RECOS",
+    caller: "notoria:expireOldRecos",
+    requireOperator: true,
+    inputSchema: z.object({
+      strategyId: z.string(),
+      maxAgeDays: z.number().default(30),
+    }),
+  }).mutation(({ input }) =>
       expireOldRecos(input.strategyId, input.maxAgeDays),
     ),
 });

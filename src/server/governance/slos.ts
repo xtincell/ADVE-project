@@ -625,6 +625,8 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "LEGACY_NOTORIA_APPLY_BATCH", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_NOTORIA_APPLY_RECOS", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_NOTORIA_EXPIRE_OLD_RECOS", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "LEGACY_NOTORIA_GENERATE_FROM_VAULT", p95LatencyMs: 30_000, errorRatePct: 0.1, costP95Usd: 0.5 },
+  { kind: "LEGACY_NOTORIA_GENERATE_TYPED_RECOMMENDATIONS", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_NOTORIA_LAUNCH_PIPELINE", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_NOTORIA_PRECONDITIONS", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_NOTORIA_PUBLISH_TO_JEHUTY", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },

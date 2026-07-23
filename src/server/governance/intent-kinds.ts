@@ -663,6 +663,8 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "LEGACY_NOTORIA_APPLY_BATCH", governor: "INFRASTRUCTURE", handler: "notoria", async: false, description: "Strangler-promoted mutation 'applyBatch' from router 'notoria'." },
   { kind: "LEGACY_NOTORIA_APPLY_RECOS", governor: "INFRASTRUCTURE", handler: "notoria", async: false, description: "Strangler-promoted mutation 'applyRecos' from router 'notoria'." },
   { kind: "LEGACY_NOTORIA_EXPIRE_OLD_RECOS", governor: "INFRASTRUCTURE", handler: "notoria", async: false, description: "Strangler-promoted mutation 'expireOldRecos' from router 'notoria'." },
+  { kind: "LEGACY_NOTORIA_GENERATE_FROM_VAULT", governor: "INFRASTRUCTURE", handler: "notoria", async: false, description: "Strangler-promoted mutation 'generateFromVault' from router 'notoria'." },
+  { kind: "LEGACY_NOTORIA_GENERATE_TYPED_RECOMMENDATIONS", governor: "INFRASTRUCTURE", handler: "notoria", async: false, description: "Strangler-promoted mutation 'generateTypedRecommendations' from router 'notoria'." },
   { kind: "LEGACY_NOTORIA_LAUNCH_PIPELINE", governor: "INFRASTRUCTURE", handler: "notoria", async: false, description: "Strangler-promoted mutation 'launchPipeline' from router 'notoria'." },
   { kind: "LEGACY_NOTORIA_PRECONDITIONS", governor: "INFRASTRUCTURE", handler: "notoria", async: false, description: "Strangler-promoted mutation 'preconditions' from router 'notoria'." },
   { kind: "LEGACY_NOTORIA_PUBLISH_TO_JEHUTY", governor: "INFRASTRUCTURE", handler: "notoria", async: false, description: "Strangler-promoted mutation 'publishToJehuty' from router 'notoria'." },
