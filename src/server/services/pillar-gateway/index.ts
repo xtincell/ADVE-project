@@ -639,9 +639,14 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
         }
       }
 
-      // ── PERSIST ──────────────────────────────────────────────────
-      await tx.pillar.update({
-        where: { id: pillar.id },
+      // ── PERSIST (verrou optimiste — round-12) ────────────────────
+      // Conditionné à la version LUE (`pillar.currentVersion`, l.336). Sans ce
+      // prédicat, deux écritures concurrentes du MÊME pilier (fenêtre findUnique
+      // → persist, READ COMMITTED) bumpaient toutes deux N→N+1 en `where:{id}` →
+      // perte d'édition silencieuse sur le FONDEMENT ADVE. count≠1 → throw =
+      // rollback de toute la tx (cascade + audit inclus), aucune écriture partielle.
+      const persisted = await tx.pillar.updateMany({
+        where: { id: pillar.id, currentVersion: pillar.currentVersion },
         data: {
           content: newContent as Prisma.InputJsonValue,
           confidence: newConfidence,
@@ -650,6 +655,12 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
           currentVersion: newVersion,
         },
       });
+      if (persisted.count !== 1) {
+        throw new Error(
+          `PILLAR_VERSION_CONFLICT: le pilier ${pillarKey} a été modifié en parallèle ` +
+            `(version ${pillar.currentVersion ?? "?"} écrasée) — écriture abandonnée, recharger et réappliquer.`,
+        );
+      }
 
       // ── STALE: propagate to dependents (cascade ADVERTIS) ────────
       const dependents = getPillarDependents(pillarKey);

@@ -1,29 +1,28 @@
 /**
  * brand-tier-transition/handler.test.ts (ADR-0167) — le handler PERSISTE
  * apogeeTier (dents de la Loi 1), contrairement au STUB PROMOTE_SEQUENCE.
+ *
+ * Round-12 : l'écriture est un `updateMany` conditionné à la valeur d'apogeeTier
+ * LUE (verrou optimiste anti-course) — le test assure sur `updateMany`, count 1.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const findUnique = vi.fn();
-const update = vi.fn();
+const updateMany = vi.fn();
 vi.mock("@/lib/db", () => ({
-  db: { strategy: { findUnique: (...a: unknown[]) => findUnique(...a), update: (...a: unknown[]) => update(...a) } },
+  db: { strategy: { findUnique: (...a: unknown[]) => findUnique(...a), updateMany: (...a: unknown[]) => updateMany(...a) } },
 }));
 
 import { applyBrandTierTransition } from "@/server/services/brand-tier-transition/handler";
 
 beforeEach(() => {
   findUnique.mockReset();
-  update.mockReset();
-  update.mockResolvedValue({});
+  updateMany.mockReset();
+  updateMany.mockResolvedValue({ count: 1 });
 });
 
 describe("applyBrandTierTransition", () => {
   it("promotion : palier de départ OK => persiste apogeeTier + OK", async () => {
-    // apogeeTier null, composite 130 => effectiveTier FORTE... non : 130 = FORTE.
-    // On promeut ORDINAIRE→FORTE : composite 130 implique FORTE, mais le palier
-    // EFFECTIF de départ est calculé sur apogeeTier=null => classifyTier(130)=FORTE.
-    // Pour partir d'ORDINAIRE il faut composite en bande ORDINAIRE (100).
     findUnique.mockResolvedValue({ apogeeTier: null, advertis_vector: { composite: 100 } });
     const r = await applyBrandTierTransition({
       kind: "PROMOTE_ORDINAIRE_TO_FORTE",
@@ -32,9 +31,10 @@ describe("applyBrandTierTransition", () => {
       reason: "Score et preuves au rendez-vous.",
     });
     expect(r.status).toBe("OK");
-    expect(update).toHaveBeenCalledWith(
+    expect(updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: "s1" },
+        // verrou optimiste : where inclut la valeur apogeeTier LUE (null ici).
+        where: { id: "s1", apogeeTier: null },
         data: expect.objectContaining({ apogeeTier: "FORTE", apogeeTierReason: "Score et preuves au rendez-vous.", apogeeTierBy: "op1" }),
       }),
     );
@@ -42,8 +42,6 @@ describe("applyBrandTierTransition", () => {
   });
 
   it("ratchet : apogeeTier officiel prime sur le composite pour le fromTier", async () => {
-    // officiel FORTE, composite tombé à 90 (implique ORDINAIRE). Promotion
-    // FORTE→CULTE part bien de FORTE (l'officiel), pas d'ORDINAIRE (l'impliqué).
     findUnique.mockResolvedValue({ apogeeTier: "FORTE", advertis_vector: { composite: 90 } });
     const r = await applyBrandTierTransition({
       kind: "PROMOTE_FORTE_TO_CULTE",
@@ -52,7 +50,9 @@ describe("applyBrandTierTransition", () => {
       reason: "Masse culturelle prouvée.",
     });
     expect(r.status).toBe("OK");
-    expect(update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ apogeeTier: "CULTE" }) }));
+    expect(updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: "s1", apogeeTier: "FORTE" }, data: expect.objectContaining({ apogeeTier: "CULTE" }) }),
+    );
   });
 
   it("fromTier mismatch => VETOED, aucune écriture", async () => {
@@ -64,7 +64,20 @@ describe("applyBrandTierTransition", () => {
       reason: "x".repeat(10),
     });
     expect(r.status).toBe("VETOED");
-    expect(update).not.toHaveBeenCalled();
+    expect(updateMany).not.toHaveBeenCalled();
+  });
+
+  it("course concurrente (count 0) => VETOED FROM_TIER_MISMATCH", async () => {
+    findUnique.mockResolvedValue({ apogeeTier: "FORTE", advertis_vector: { composite: 90 } });
+    updateMany.mockResolvedValue({ count: 0 }); // un writer concurrent a bougé apogeeTier
+    const r = await applyBrandTierTransition({
+      kind: "PROMOTE_FORTE_TO_CULTE",
+      strategyId: "s1",
+      operatorId: "op1",
+      reason: "Masse culturelle prouvée.",
+    });
+    expect(r.status).toBe("VETOED");
+    expect(r.reason).toBe("FROM_TIER_MISMATCH");
   });
 
   it("démotion : abaisse apogeeTier (Loi 1, acte explicite)", async () => {
@@ -76,14 +89,14 @@ describe("applyBrandTierTransition", () => {
       reason: "Régression constatée, détrônement explicite.",
     });
     expect(r.status).toBe("OK");
-    expect(update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ apogeeTier: "ORDINAIRE" }) }));
+    expect(updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ apogeeTier: "ORDINAIRE" }) }));
   });
 
   it("stratégie introuvable => FAILED", async () => {
     findUnique.mockResolvedValue(null);
     const r = await applyBrandTierTransition({ kind: "PROMOTE_ORDINAIRE_TO_FORTE", strategyId: "nope", operatorId: "op1", reason: "x".repeat(10) });
     expect(r.status).toBe("FAILED");
-    expect(update).not.toHaveBeenCalled();
+    expect(updateMany).not.toHaveBeenCalled();
   });
 
   it("kind inconnu => FAILED", async () => {

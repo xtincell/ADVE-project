@@ -36,6 +36,21 @@ async function runDuePublications(): Promise<Array<{ brandActionId: string; stat
   const due = await listDueScheduledPublications();
   const out: Array<{ brandActionId: string; status: string }> = [];
   for (const job of due) {
+    // Round-12 (double-publish) : CLAIM ATOMIQUE `SCHEDULED → PUBLISHING`. Deux
+    // ticks concurrents (chemin quotidien + tick `?mode=publish`, ou une
+    // redélivrance at-least-once) lisaient tous deux la même action `pending` et
+    // ré-émettaient → le POST partait 2× sur les réseaux RÉELS de la marque
+    // (effet externe irréversible). Seul le 1er claim (count===1) émet ; le
+    // handler résout ensuite le statut (EXECUTED, ou SCHEDULED si en attente de
+    // connexion) via upsertPublishAction, écrasant PUBLISHING.
+    const claim = await db.brandAction.updateMany({
+      where: { id: job.brandActionId, status: "SCHEDULED" },
+      data: { status: "PUBLISHING" },
+    });
+    if (claim.count !== 1) {
+      out.push({ brandActionId: job.brandActionId, status: "SKIPPED_ALREADY_CLAIMED" });
+      continue;
+    }
     try {
       await emitIntentTyped(
         {
@@ -55,6 +70,11 @@ async function runDuePublications(): Promise<Array<{ brandActionId: string; stat
       );
       out.push({ brandActionId: job.brandActionId, status: "EMITTED" });
     } catch (err) {
+      // Échec AVANT la résolution du statut par le handler → restaurer SCHEDULED
+      // pour un nouveau tick (jamais bloqué en PUBLISHING).
+      await db.brandAction
+        .updateMany({ where: { id: job.brandActionId, status: "PUBLISHING" }, data: { status: "SCHEDULED" } })
+        .catch(() => {});
       out.push({
         brandActionId: job.brandActionId,
         status: `FAILED: ${err instanceof Error ? err.message.slice(0, 120) : "?"}`,

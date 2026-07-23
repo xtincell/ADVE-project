@@ -65,8 +65,15 @@ export async function applyBrandTierTransition(intent: TierTransitionIntent): Pr
   }
 
   const setAt = new Date();
-  await db.strategy.update({
-    where: { id: intent.strategyId },
+  // Round-12 (Loi 1) : écriture ATOMIQUE conditionnée à la valeur EXACTE lue.
+  // Le re-check `current !== fromTier` ci-dessus est une lecture SÉPARÉE → il
+  // n'exclut pas un writer concurrent. Sans ce updateMany conditionnel, deux
+  // transitions simultanées (une promotion + une démotion partant du même palier)
+  // s'écrasaient (last-writer-wins) tout en enregistrant DEUX émissions « OK » →
+  // la hash-chain attestait une promotion silencieusement écrasée (régression
+  // d'altitude — exactement ce que ADR-0167 doit empêcher).
+  const claim = await db.strategy.updateMany({
+    where: { id: intent.strategyId, apogeeTier: strategy.apogeeTier },
     data: {
       apogeeTier: toTier,
       apogeeTierSetAt: setAt,
@@ -74,6 +81,14 @@ export async function applyBrandTierTransition(intent: TierTransitionIntent): Pr
       apogeeTierBy: intent.operatorId,
     },
   });
+  if (claim.count !== 1) {
+    return {
+      status: "VETOED",
+      tool: "brand-tier-transition",
+      summary: `Palier modifié en parallèle depuis la lecture (course concurrente) — transition « ${fromTier} → ${toTier} » abandonnée.`,
+      reason: "FROM_TIER_MISMATCH",
+    };
+  }
 
   return {
     status: "OK",

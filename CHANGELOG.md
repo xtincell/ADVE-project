@@ -1,5 +1,15 @@
 # Changelog — La Fusee
 
+## v6.27.294 — fix(governance): round-12 adversarial (b) — concurrence (claims atomiques : double-publish, palier, mission, pilier) (2026-07-23)
+
+**Quatre courses concurrentes, une seule cause racine : un garde lu HORS de l'écriture atomique — le codebase connaît le bon `updateMany` conditionnel (subscription-cycles) mais 4 handlers ne l'utilisaient pas.**
+
+- **HIGH — post social double-publié (`cron/social-sync` + `anubis/social-publish`)** : `listDueScheduledPublications` lit les actions `SCHEDULED + pending` sans claim ; deux ticks concurrents (chemin quotidien + tick `?mode=publish`, ou une redélivrance) ré-émettaient la MÊME publication pendant la fenêtre de POST (~12 s) → le post partait **2×+ sur les réseaux RÉELS** de la marque (effet externe irréversible). Claim atomique `SCHEDULED→PUBLISHING` (count===1) avant émission + restauration `SCHEDULED` sur échec (le handler résout ensuite le statut via `upsertPublishAction`).
+- **MED — ratchet de palier APOGEE (`brand-tier-transition/handler`)** : le re-check `current !== fromTier` était une lecture SÉPARÉE de l'écriture → deux transitions simultanées (promotion + démotion depuis le même palier) s'écrasaient (last-writer-wins) tout en enregistrant DEUX émissions « OK » → la hash-chain attestait une promotion silencieusement écrasée (Loi 1 sans dents). `updateMany({ where: { id, apogeeTier: valeurLue } })`, count≠1 → VETOED `FROM_TIER_MISMATCH`.
+- **MED — mission double-attribuée (`mission-applications.decide`)** : le garde `assigneeId || status!==DRAFT` hors transaction → deux acceptations concurrentes passaient → deux candidatures ACCEPTED + assignee ambigu. Claim atomique de la mission `updateMany({ where: { id, status: DRAFT, assigneeId: null } })` DANS une transaction interactive + passage candidature conditionné à PENDING.
+- **MED — édition ADVE perdue (`pillar-gateway` PERSIST, keystone C5)** : le verrou de version était un `findUnique` séparé ; le persist écrivait `currentVersion` en `where:{id}` sans prédicat → deux écritures concurrentes du même pilier (fenêtre READ COMMITTED) bumpaient toutes deux N→N+1 → perte silencieuse sur le FONDEMENT ADVE. Persist rendu conditionnel `updateMany({ where: { id, currentVersion: valeurLue } })` → throw (rollback) sur conflit.
+- Le spine d'émission (hash-chain + `pg_advisory_xact_lock`), `acquireGenerationLock`, `observeIntent` et les crons `ops-sweep`/`external-feeds`/`subscription-cycles` **vérifiés atomiques** (convergence). Résidu tracé (arête crash-dur du claim social, RESIDUAL-DEBT). Cap APOGEE 7/7 · 0 LLM. tsc 0 · lint:gov 0 · audit:cycles propre · **3222 tests verts**.
+
 ## v6.27.293 — fix(seshat): round-12 adversarial (a) — fabrication cult-index (cron feedback-loop) + honnêteté métrique (2026-07-23)
 
 **Un cron planifié toutes les 6 h écrivait des snapshots cult-index INVENTÉS — réintroduisant le bug d'unités ADR-0126 pour chaque marque dormante.**
