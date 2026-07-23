@@ -150,7 +150,7 @@ export default function BrandDeliverablesPage() {
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <h4 className="text-sm font-semibold text-white">{d.name}</h4>
+                        <h4 className="text-sm font-semibold text-foreground">{d.name}</h4>
                         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold ring-1 ring-inset ${fmt.color}`}>
                           {fmt.label}
                         </span>
@@ -189,7 +189,7 @@ export default function BrandDeliverablesPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="flex items-center gap-2">
-                        <h4 className="text-sm font-semibold text-white">{d.name}</h4>
+                        <h4 className="text-sm font-semibold text-foreground">{d.name}</h4>
                         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold ring-1 ring-inset ${fmt.color}`}>
                           {fmt.label}
                         </span>
@@ -208,7 +208,7 @@ export default function BrandDeliverablesPage() {
                       </div>
                       <a
                         href={`/cockpit/brand/deliverables/${d.sequenceKey}`}
-                        className="rounded-lg border border-border px-3 py-1.5 text-xs text-foreground-secondary hover:text-white hover:border-border-strong"
+                        className="rounded-lg border border-border px-3 py-1.5 text-xs text-foreground-secondary hover:text-foreground hover:border-border-strong"
                       >
                         Details
                       </a>
@@ -309,10 +309,10 @@ export default function BrandDeliverablesPage() {
                           isExpanded ? "bg-accent/20 border-b border-accent/30" : "bg-background/60 hover:bg-background/60"
                         }`}
                       >
-                        <span className="flex h-5 w-5 items-center justify-center rounded bg-surface-raised text-[9px] font-bold text-white shrink-0">
+                        <span className="flex h-5 w-5 items-center justify-center rounded bg-surface-raised text-[9px] font-bold text-foreground shrink-0">
                           {i + 1}
                         </span>
-                        <span className={`text-sm flex-1 ${isExpanded ? "text-accent font-semibold" : "text-white"}`}>{s.title}</span>
+                        <span className={`text-sm flex-1 ${isExpanded ? "text-accent font-semibold" : "text-foreground"}`}>{s.title}</span>
                         <span className="text-2xs text-foreground-muted">{s.sourceType}</span>
                         <span className="text-foreground-muted">{isExpanded ? "▴" : "▾"}</span>
                       </button>
@@ -365,7 +365,7 @@ export default function BrandDeliverablesPage() {
                                   a.click();
                                   URL.revokeObjectURL(url);
                                 }}
-                                className="mt-2 rounded border border-border px-2.5 py-1 text-2xs text-foreground-secondary hover:text-white hover:border-border-strong transition-colors"
+                                className="mt-2 rounded border border-border px-2.5 py-1 text-2xs text-foreground-secondary hover:text-foreground hover:border-border-strong transition-colors"
                               >
                                 ↓ Telecharger JSON
                               </button>

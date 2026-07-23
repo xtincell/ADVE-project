@@ -191,7 +191,7 @@ export default function BenchmarksPage() {
 
       {/* Radar comparison card */}
       <div className="rounded-xl border border-border bg-background/80 p-6">
-        <h3 className="mb-4 font-semibold text-white">
+        <h3 className="mb-4 font-semibold text-foreground">
           Comparaison radar : Vous vs Secteur
         </h3>
         <div className="flex flex-col items-center">
@@ -240,7 +240,7 @@ export default function BenchmarksPage() {
                   <p className="text-xs font-bold text-foreground-secondary">
                     {k.toUpperCase()}
                   </p>
-                  <p className="text-sm font-semibold text-white">
+                  <p className="text-sm font-semibold text-foreground">
                     {mine.toFixed(1)}
                   </p>
                   <p className="text-xs text-foreground-muted">
@@ -267,7 +267,7 @@ export default function BenchmarksPage() {
 
       {/* Pillar comparison table */}
       <div className="rounded-xl border border-border bg-background/80 p-6">
-        <h3 className="mb-4 font-semibold text-white">
+        <h3 className="mb-4 font-semibold text-foreground">
           Comparaison detaillee par pilier
         </h3>
         <div className="overflow-x-auto">
@@ -301,7 +301,7 @@ export default function BenchmarksPage() {
                   <tr key={k} className="hover:bg-background/30">
                     <td className="py-3">
                       <div className="flex items-center gap-2">
-                        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-background text-xs font-bold text-white">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-background text-xs font-bold text-foreground">
                           {k.toUpperCase()}
                         </span>
                         <span className="text-foreground-secondary">
@@ -309,7 +309,7 @@ export default function BenchmarksPage() {
                         </span>
                       </div>
                     </td>
-                    <td className="py-3 text-right font-semibold text-white">
+                    <td className="py-3 text-right font-semibold text-foreground">
                       {mine.toFixed(1)}
                     </td>
                     <td className="py-3 text-right text-foreground-secondary">
@@ -350,7 +350,7 @@ export default function BenchmarksPage() {
         );
         return (
           <div className="rounded-xl border border-border bg-background/80 p-6">
-            <h3 className="mb-4 font-semibold text-white">
+            <h3 className="mb-4 font-semibold text-foreground">
               Votre positionnement unique
             </h3>
 
@@ -412,7 +412,7 @@ export default function BenchmarksPage() {
 
       {/* Classification distribution */}
       <div className="rounded-xl border border-border bg-background/80 p-6">
-        <h3 className="mb-4 font-semibold text-white">
+        <h3 className="mb-4 font-semibold text-foreground">
           Distribution des classifications
         </h3>
         <p className="mb-6 text-xs text-foreground-secondary">
@@ -427,7 +427,7 @@ export default function BenchmarksPage() {
               <div key={c.cls} className="flex items-center gap-3">
                 <span
                   className={`w-24 text-sm font-medium ${
-                    isMyClass ? "text-white" : "text-foreground-secondary"
+                    isMyClass ? "text-foreground" : "text-foreground-secondary"
                   }`}
                 >
                   {c.label}
@@ -452,7 +452,7 @@ export default function BenchmarksPage() {
                 </div>
                 <span
                   className={`w-10 text-right text-sm font-semibold ${
-                    isMyClass ? "text-white" : "text-foreground-muted"
+                    isMyClass ? "text-foreground" : "text-foreground-muted"
                   }`}
                 >
                   {c.count}

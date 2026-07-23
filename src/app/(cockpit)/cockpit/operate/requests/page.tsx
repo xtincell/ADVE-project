@@ -298,7 +298,7 @@ export default function RequestsPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Form */}
         <div className="rounded-xl border border-border bg-background/80 p-6">
-          <h3 className="mb-4 font-semibold text-white">Nouvelle demande</h3>
+          <h3 className="mb-4 font-semibold text-foreground">Nouvelle demande</h3>
           <form onSubmit={handleSubmit} className="space-y-4">
             <FormField label="Titre" required error={errors.title}>
               <input
@@ -306,7 +306,7 @@ export default function RequestsPage() {
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
                 placeholder="Ex: Mise a jour urgente du logo"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
               />
             </FormField>
 
@@ -318,7 +318,7 @@ export default function RequestsPage() {
                 }
                 rows={4}
                 placeholder="Decrivez votre besoin en detail..."
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
               />
             </FormField>
 
@@ -380,7 +380,7 @@ export default function RequestsPage() {
           {/* Type distribution */}
           {requests.length > 0 && (
             <div className="rounded-xl border border-border bg-background/80 p-5">
-              <h4 className="mb-3 text-sm font-semibold text-white flex items-center gap-1.5">
+              <h4 className="mb-3 text-sm font-semibold text-foreground flex items-center gap-1.5">
                 <BarChart3 className="h-4 w-4 text-foreground-secondary" />
                 Repartition par type
               </h4>
@@ -390,7 +390,7 @@ export default function RequestsPage() {
 
           {/* Request cards */}
           <div className="rounded-xl border border-border bg-background/80 p-6">
-            <h3 className="mb-4 font-semibold text-white">Historique</h3>
+            <h3 className="mb-4 font-semibold text-foreground">Historique</h3>
             {requestsQuery.isLoading ? (
               <SkeletonList items={3} />
             ) : requests.length === 0 ? (
@@ -419,7 +419,7 @@ export default function RequestsPage() {
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h4 className="text-sm font-medium text-white">
+                            <h4 className="text-sm font-medium text-foreground">
                               {(data?.title as string) ?? "Intervention"}
                             </h4>
                             <StatusBadge
@@ -536,7 +536,7 @@ export default function RequestsPage() {
                 {assignee && (
                   <div>
                     <p className="text-xs font-medium text-foreground-muted">Assigne a</p>
-                    <p className="mt-1 text-white flex items-center gap-1">
+                    <p className="mt-1 text-foreground flex items-center gap-1">
                       <User className="h-3.5 w-3.5 text-foreground-secondary" />
                       {assignee}
                     </p>
@@ -544,7 +544,7 @@ export default function RequestsPage() {
                 )}
                 <div>
                   <p className="text-xs font-medium text-foreground-muted">Cree le</p>
-                  <p className="mt-1 text-white">
+                  <p className="mt-1 text-foreground">
                     {new Date(createdStr).toLocaleDateString("fr-FR", {
                       day: "numeric",
                       month: "long",

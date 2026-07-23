@@ -39,11 +39,11 @@ export function TeamTab({ campaignId }: { campaignId: string }) {
               return (
                 <div key={m.id as string} className="flex items-center justify-between rounded-lg border border-border bg-background/50 p-3">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-background text-xs font-bold text-white">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-background text-xs font-bold text-foreground">
                       {((user?.name as string) ?? "?").charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-white">{(user?.name as string) ?? (m.userId as string)?.slice(0, 8)}</p>
+                      <p className="text-sm font-medium text-foreground">{(user?.name as string) ?? (m.userId as string)?.slice(0, 8)}</p>
                       <span className="rounded bg-background px-1.5 py-0.5 text-2xs font-medium text-foreground-secondary">{m.role as string}</span>
                     </div>
                   </div>
@@ -65,14 +65,14 @@ export function TeamTab({ campaignId }: { campaignId: string }) {
               value={newMember.userId}
               onChange={(e) => setNewMember({ ...newMember, userId: e.target.value })}
               placeholder="ID utilisateur"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong"
             />
           </FormField>
           <FormField label="Role" required>
             <select
               value={newMember.role}
               onChange={(e) => setNewMember({ ...newMember, role: e.target.value })}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-border-strong"
             >
               {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
             </select>

@@ -309,7 +309,7 @@ export default function GuidelinesPage() {
           <div className="flex items-center gap-4">
             <div>
               <p className="text-xs font-medium text-foreground-muted">Completion</p>
-              <p className="text-sm font-semibold text-white">{completionPct}%</p>
+              <p className="text-sm font-semibold text-foreground">{completionPct}%</p>
             </div>
             <div className="h-2 w-40 rounded-full bg-background">
               <div
@@ -344,7 +344,7 @@ export default function GuidelinesPage() {
           </p>
           <button
             onClick={handleGenerate}
-            className="mt-3 rounded-lg bg-background px-4 py-2 text-sm text-white hover:bg-surface-raised"
+            className="mt-3 rounded-lg bg-background px-4 py-2 text-sm text-foreground hover:bg-surface-raised"
           >
             Generer les guidelines
           </button>
@@ -380,7 +380,7 @@ export default function GuidelinesPage() {
                       onClick={() => scrollToSection(section.id)}
                       className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs transition-colors ${
                         isActive
-                          ? "bg-background text-white"
+                          ? "bg-background text-foreground"
                           : "text-foreground-secondary hover:text-foreground-secondary hover:bg-background/50"
                       }`}
                     >
@@ -437,7 +437,7 @@ export default function GuidelinesPage() {
                             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-background">
                               <Icon className="h-4 w-4 text-foreground-secondary" />
                             </div>
-                            <h3 className="text-sm font-semibold text-white">{section.label}</h3>
+                            <h3 className="text-sm font-semibold text-foreground">{section.label}</h3>
                           </div>
                           {section.pillarSource && (
                             <span
@@ -450,7 +450,7 @@ export default function GuidelinesPage() {
                         </div>
                         {sectionHtml ? (
                           <div
-                            className="prose prose-invert prose-sm max-w-none prose-headings:text-white prose-p:text-foreground-secondary prose-a:text-accent prose-strong:text-white prose-code:text-foreground-secondary"
+                            className="prose prose-invert prose-sm max-w-none prose-headings:text-foreground prose-p:text-foreground-secondary prose-a:text-accent prose-strong:text-foreground prose-code:text-foreground-secondary"
                             dangerouslySetInnerHTML={{ __html: sectionHtml }}
                           />
                         ) : (
@@ -473,7 +473,7 @@ export default function GuidelinesPage() {
                   </summary>
                   <div
                     ref={contentRef}
-                    className="mt-4 rounded-xl border border-border bg-background/80 p-8 prose prose-invert prose-sm max-w-none prose-headings:text-white prose-p:text-foreground-secondary prose-a:text-accent prose-strong:text-white prose-code:text-foreground-secondary"
+                    className="mt-4 rounded-xl border border-border bg-background/80 p-8 prose prose-invert prose-sm max-w-none prose-headings:text-foreground prose-p:text-foreground-secondary prose-a:text-accent prose-strong:text-foreground prose-code:text-foreground-secondary"
                     dangerouslySetInnerHTML={{ __html: htmlContent }}
                   />
                 </details>

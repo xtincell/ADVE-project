@@ -181,7 +181,7 @@ export default function CockpitMessagesPage() {
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-white">
+                  <p className="truncate text-sm font-medium text-foreground">
                     {selectedConv?.title ?? "Conversation"}
                   </p>
                   <p className="text-xs text-foreground-muted">
@@ -213,7 +213,7 @@ export default function CockpitMessagesPage() {
                       onKeyDown={handleKeyDown}
                       placeholder="Ecrivez un message..."
                       rows={1}
-                      className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong"
+                      className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong"
                       style={{ minHeight: 38, maxHeight: 120 }}
                     />
                   </div>

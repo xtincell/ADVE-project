@@ -29,7 +29,7 @@ export function ExecutionsTab({ campaignId }: { campaignId: string }) {
               <div key={ex.id as string} className="rounded-lg border border-border bg-background/50 p-4">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h4 className="text-sm font-medium text-white">{(ex.label as string) ?? `Execution ${(ex.id as string).slice(0, 8)}`}</h4>
+                    <h4 className="text-sm font-medium text-foreground">{(ex.label as string) ?? `Execution ${(ex.id as string).slice(0, 8)}`}</h4>
                     <p className="mt-0.5 text-xs text-foreground-muted">Action: {(ex.actionId as string)?.slice(0, 8)}...</p>
                     {!!ex.deliverableUrl && <p className="mt-1 text-xs text-info">{ex.deliverableUrl as string}</p>}
                   </div>

@@ -274,7 +274,7 @@ export default function PillarEditorPage() {
               <currentConfig.icon className={`h-5 w-5 ${currentConfig.color}`} />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-white">{currentConfig.key} — {currentConfig.label}</h2>
+              <h2 className="text-lg font-semibold text-foreground">{currentConfig.key} — {currentConfig.label}</h2>
               <p className="text-xs text-foreground-muted">
                 Score: {(pillarInfo?.score as number ?? 0).toFixed(1)}/25 · Complétude: {pillarInfo?.completion ?? 0}% · Erreurs: {pillarInfo?.errors ?? 0}
               </p>
@@ -443,7 +443,7 @@ function TextField({ label, value, onChange, placeholder, minLength, maxLength, 
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         maxLength={maxLength}
-        className={`w-full rounded-lg border bg-background/60 px-3 py-2 text-sm text-white placeholder-foreground-muted ${
+        className={`w-full rounded-lg border bg-background/60 px-3 py-2 text-sm text-foreground placeholder-foreground-muted ${
           isEmpty ? "border-warning/60" : isShort ? "border-warning/50" : isLong ? "border-error/50" : "border-border"
         }`}
       />
@@ -474,7 +474,7 @@ function TextArea({ label, value, onChange, placeholder, minLength, rows = 3, hi
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={rows}
-        className={`w-full rounded-lg border bg-background/60 px-3 py-2 text-sm text-white placeholder-foreground-muted ${
+        className={`w-full rounded-lg border bg-background/60 px-3 py-2 text-sm text-foreground placeholder-foreground-muted ${
           isEmpty ? "border-warning/60" : isShort ? "border-warning/50" : "border-border"
         }`}
       />
@@ -501,7 +501,7 @@ function SelectField({ label, value, options, onChange, highlight }: {
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-border bg-background/60 px-3 py-2 text-sm text-white"
+        className="w-full rounded-lg border border-border bg-background/60 px-3 py-2 text-sm text-foreground"
       >
         <option value="">— Sélectionner —</option>
         {options.map((opt) => (

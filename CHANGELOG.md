@@ -1,5 +1,15 @@
 # Changelog — La Fusee
 
+## v6.27.306 — fix(ui): J4 — lisibilité cockpit en mode jour (330 `text-white` traités par occurrence) (2026-07-23)
+
+**Le mode jour du cockpit rendait le texte blanc littéral invisible sur les fonds qui s'éclaircissent. Les 330 `text-white` du cockpit sont traités UN PAR UN (fond gouvernant tracé, pas de sweep aveugle) : 303 corrigés, 27 gardés là où le fond est une couleur fixe.**
+
+- **Le bug (J4)** : `text-white` est un blanc LITTÉRAL qui n'inverse pas. Le toggle mode-jour (`CockpitThemeToggle`, monté UNIQUEMENT dans `(cockpit)/cockpit/layout.tsx`) stampe `data-theme="light"` sur `<html>` → `--color-background`/`--color-surface-*`/`--color-foreground` s'inversent (system.css) mais `text-white` reste blanc → blanc-sur-clair = illisible en mode jour.
+- **Le fix, par occurrence** : **303 remplacés** — `text-foreground` (inversant) sur tout fond theme-inversant (`bg-background`, `bg-surface-*`, tints colorés ≤20 % qui composent clair en mode jour) ; **+4 `text-foreground-inverse`** sur les `hover:bg-foreground` (ceux-là étaient invisibles en mode NUIT — `bg-foreground` devient bone/clair — corrigés en passant, `text-foreground` aurait été faux). **27 GARDÉS** intacts : tous sur couleur FIXE (`bg-accent` ×19, `bg-success` ×5, `bg-warning` ×2, `bg-info`, `bg-rocket-red`) où le blanc reste correct dans les deux thèmes.
+- **Périmètre vérifié = `(cockpit)` UNIQUEMENT** : les 423 autres `text-white` (`(console)` 307, `(creator)` 82, `(agency)` 34) sont dark-only (aucun toggle monté) → leur blanc est correct, NON touchés (un sweep aveugle des 753 aurait été le bug inverse).
+- **Garde CI** `cockpit-day-mode-readability.test.ts` : baseline décroissant 27, bloque tout nouveau `text-white` régressant sur un fond inversant (un ban total casserait les 27 keeps légitimes — plus honnête). Règle keep/replace dérivée de `system.css` (tokens inversants vs fixes), pas devinée.
+- 4 agents de la boucle ont classifié par lot (39 fichiers), chaque décision auditée par diff (scan anti-danger : aucun `text-foreground` posé sur un fond fixe, aucun `text-white` restant sur un fond inversant). RESIDUAL-DEBT §J4 CLOS. Cap APOGEE 7/7 · 0 LLM · 0 migration. tsc 0 · lint 0 · 1303 tests governance+types verts.
+
 ## v6.27.305 — fix(governance): purge dette — sweep d'émissions orphelines bâti + upsert seuils réparé + chat Sonnet 5 (2026-07-23)
 
 **« Je ne veux plus rien d'ouvert : purge la dette. » Le refermable en code est refermé : le sweep que le schéma `IntentEmission` PROMET existe enfin, un upsert cassé au runtime est réparé, le chat passe au modèle canon. Les 6 dettes du registre sont re-verdictées en états TERMINAUX (bâti / tradeoff accepté / limite physique / décision opérateur).**

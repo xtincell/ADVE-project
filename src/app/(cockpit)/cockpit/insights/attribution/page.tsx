@@ -265,7 +265,7 @@ function AttributionContent() {
           onChange={(e) =>
             setFilterPillar(e.target.value as PillarKey | "all")
           }
-          className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-white"
+          className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground"
         >
           <option value="all">Tous les piliers</option>
           {PILLAR_KEYS.map((k) => (
@@ -278,7 +278,7 @@ function AttributionContent() {
         <select
           value={filterType}
           onChange={(e) => setFilterType(e.target.value)}
-          className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-white"
+          className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground"
         >
           <option value="all">Tous les types</option>
           {signalTypes.map((t) => (
@@ -291,7 +291,7 @@ function AttributionContent() {
         <select
           value={filterRange}
           onChange={(e) => setFilterRange(e.target.value)}
-          className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-white"
+          className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground"
         >
           <option value="all">Toute la periode</option>
           <option value="7d">7 derniers jours</option>

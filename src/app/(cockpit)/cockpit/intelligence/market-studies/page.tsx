@@ -135,7 +135,7 @@ export default function MarketStudiesPage() {
               <div>
                 <div className="flex items-center gap-2">
                   <FileText className="h-4 w-4 text-rocket-red" />
-                  <h3 className="text-base font-semibold text-white">{entry.studyTitle}</h3>
+                  <h3 className="text-base font-semibold text-foreground">{entry.studyTitle}</h3>
                 </div>
                 <p className="mt-1 text-xs text-foreground-muted">
                   {entry.publisher ? `${entry.publisher} · ` : ""}
@@ -162,7 +162,7 @@ export default function MarketStudiesPage() {
                 value={declaredCountry}
                 onChange={(e) => setDeclaredCountry(e.target.value.toUpperCase())}
                 placeholder="ZA"
-                className="mt-1 block w-full rounded border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
+                className="mt-1 block w-full rounded border border-white/10 bg-white/5 px-3 py-2 text-sm text-foreground"
               />
             </label>
             <label className="block text-xs">
@@ -172,7 +172,7 @@ export default function MarketStudiesPage() {
                 value={declaredSector}
                 onChange={(e) => setDeclaredSector(e.target.value)}
                 placeholder="cosmetics"
-                className="mt-1 block w-full rounded border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
+                className="mt-1 block w-full rounded border border-white/10 bg-white/5 px-3 py-2 text-sm text-foreground"
               />
             </label>
           </div>
@@ -202,16 +202,16 @@ export default function MarketStudiesPage() {
           {state.status === "preview" && (
             <div className="space-y-3">
               <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-xs">
-                <strong className="text-white">{state.data.extraction.study.title}</strong>
+                <strong className="text-foreground">{state.data.extraction.study.title}</strong>
                 {state.data.extraction.study.publisher ? <span className="text-foreground-muted"> — {state.data.extraction.study.publisher}</span> : null}
                 <div className="mt-2 grid grid-cols-2 gap-2 text-foreground-muted">
-                  <div>Pays résolu : <span className="text-white">{state.data.resolvedCountryCode ?? "(non détecté)"}</span></div>
-                  <div>Secteur résolu : <span className="text-white">{state.data.resolvedSector ?? "(non détecté)"}</span></div>
-                  <div>TAM : <span className="text-white">{state.data.extraction.tam ? `${state.data.extraction.tam.value} ${state.data.extraction.tam.currency ?? ""}` : "—"}</span></div>
-                  <div>Concurrents : <span className="text-white">{state.data.extraction.competitorShares.length}</span></div>
-                  <div>Segments : <span className="text-white">{state.data.extraction.consumerSegments.length}</span></div>
-                  <div>Signaux faibles : <span className="text-white">{state.data.extraction.weakSignals.length}</span></div>
-                  <div>Trend Tracker : <span className="text-white">{state.data.extraction.trendTracker ? `${Object.keys(state.data.extraction.trendTracker).length}/49` : "0/49"}</span></div>
+                  <div>Pays résolu : <span className="text-foreground">{state.data.resolvedCountryCode ?? "(non détecté)"}</span></div>
+                  <div>Secteur résolu : <span className="text-foreground">{state.data.resolvedSector ?? "(non détecté)"}</span></div>
+                  <div>TAM : <span className="text-foreground">{state.data.extraction.tam ? `${state.data.extraction.tam.value} ${state.data.extraction.tam.currency ?? ""}` : "—"}</span></div>
+                  <div>Concurrents : <span className="text-foreground">{state.data.extraction.competitorShares.length}</span></div>
+                  <div>Segments : <span className="text-foreground">{state.data.extraction.consumerSegments.length}</span></div>
+                  <div>Signaux faibles : <span className="text-foreground">{state.data.extraction.weakSignals.length}</span></div>
+                  <div>Trend Tracker : <span className="text-foreground">{state.data.extraction.trendTracker ? `${Object.keys(state.data.extraction.trendTracker).length}/49` : "0/49"}</span></div>
                 </div>
                 {state.data.alreadyIngested ? (
                   <p className="mt-2 text-warning">Cette étude a déjà été ingérée (sha256 match). Re-confirm créera un doublon.</p>

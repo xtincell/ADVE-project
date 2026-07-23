@@ -102,7 +102,7 @@ export default function DeliverableViewPage() {
     <div className="min-h-screen bg-background">
       {/* Toolbar — not included in PDF */}
       <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-background/95 backdrop-blur px-6 py-3">
-        <button onClick={() => router.back()} className="flex items-center gap-2 text-sm text-foreground-secondary hover:text-white transition-colors">
+        <button onClick={() => router.back()} className="flex items-center gap-2 text-sm text-foreground-secondary hover:text-foreground transition-colors">
           <ArrowLeft className="h-4 w-4" /> Retour
         </button>
         <div className="flex items-center gap-3">
@@ -130,7 +130,7 @@ export default function DeliverableViewPage() {
         {/* Cover */}
         <div className="mb-16 text-center">
           <p className="text-xs uppercase tracking-[0.3em] text-foreground-muted mb-4">LaFusee — {m.meta.sequenceName}</p>
-          <h1 className="text-4xl font-black text-white mb-3">{m.name}</h1>
+          <h1 className="text-4xl font-black text-foreground mb-3">{m.name}</h1>
           <p className="text-lg text-foreground-secondary">{m.meta.strategyName}</p>
           <div className="mt-6 flex items-center justify-center gap-4 text-xs text-foreground-muted">
             <span>Genere le {new Date(m.meta.generatedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</span>
@@ -168,7 +168,7 @@ export default function DeliverableViewPage() {
               <div className="flex items-center gap-3 mb-6">
                 <span className="text-3xl font-black text-foreground-muted">{String(i + 1).padStart(2, "0")}</span>
                 <div>
-                  <h2 className="text-xl font-bold text-white">{section.title}</h2>
+                  <h2 className="text-xl font-bold text-foreground">{section.title}</h2>
                   <span className={`inline-flex rounded px-1.5 py-0.5 text-[9px] font-bold mt-1 ${SOURCE_COLORS[section.sourceType] ?? "bg-surface-raised text-foreground-secondary"}`}>
                     {section.sourceType}
                   </span>

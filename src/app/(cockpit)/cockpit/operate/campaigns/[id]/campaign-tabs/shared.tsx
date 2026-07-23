@@ -38,7 +38,7 @@ export function Section({ title, icon: Icon, action, children }: { title: string
   return (
     <div className="rounded-xl border border-border bg-background/80 p-5">
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
           {Icon && <Icon className="h-4 w-4 text-foreground-secondary" />}
           {title}
         </h3>
@@ -59,7 +59,7 @@ export function KV({ label, value, mono }: { label: string; value: React.ReactNo
   return (
     <div>
       <p className="text-2xs font-medium uppercase tracking-wide text-foreground-muted">{label}</p>
-      <p className={`text-sm text-white ${mono ? "font-mono" : ""}`}>{value ?? "—"}</p>
+      <p className={`text-sm text-foreground ${mono ? "font-mono" : ""}`}>{value ?? "—"}</p>
     </div>
   );
 }

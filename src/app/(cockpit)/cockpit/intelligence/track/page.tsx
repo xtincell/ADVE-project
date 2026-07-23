@@ -108,7 +108,7 @@ export default function TrackPage() {
                       return (
                         <tr key={v.code} className="border-t border-white/5">
                           <td className="px-3 py-2 font-mono text-xs text-rocket-red">{v.code}</td>
-                          <td className="px-3 py-2 text-white">{v.label}</td>
+                          <td className="px-3 py-2 text-foreground">{v.label}</td>
                           <td className="px-3 py-2 text-xs text-foreground-muted">{v.unit}</td>
                           <td className="px-3 py-2">
                             {value && value.value != null ? (
@@ -141,7 +141,7 @@ export default function TrackPage() {
           <div className="grid grid-cols-3 gap-3">
             {intel.data.tamSamSom ? (
               <div className="rounded-lg border border-white/8 bg-white/[0.02] p-3 text-xs">
-                <p className="font-semibold text-white">TAM</p>
+                <p className="font-semibold text-foreground">TAM</p>
                 <p className="mt-1 text-success">{intel.data.tamSamSom.tam.value} {intel.data.tamSamSom.tam.currency ?? ""} ({intel.data.tamSamSom.tam.year})</p>
                 {intel.data.tamSamSom.sam ? <p className="text-foreground-muted">SAM : {intel.data.tamSamSom.sam.value}</p> : null}
                 {intel.data.tamSamSom.som ? <p className="text-foreground-muted">SOM : {intel.data.tamSamSom.som.value}</p> : null}
@@ -149,7 +149,7 @@ export default function TrackPage() {
             ) : null}
             {intel.data.competitors.length > 0 ? (
               <div className="rounded-lg border border-white/8 bg-white/[0.02] p-3 text-xs">
-                <p className="font-semibold text-white">Concurrents (parts marché)</p>
+                <p className="font-semibold text-foreground">Concurrents (parts marché)</p>
                 <ul className="mt-1 space-y-1">
                   {intel.data.competitors.slice(0, 5).map((c, i) => (
                     <li key={i}><span className="text-foreground-muted">{c.name} :</span> <span className="text-success">{c.marketSharePct ?? "?"}%</span></li>
@@ -159,7 +159,7 @@ export default function TrackPage() {
             ) : null}
             {intel.data.segments.length > 0 ? (
               <div className="rounded-lg border border-white/8 bg-white/[0.02] p-3 text-xs">
-                <p className="font-semibold text-white">Segments consommateurs</p>
+                <p className="font-semibold text-foreground">Segments consommateurs</p>
                 <ul className="mt-1 space-y-1">
                   {intel.data.segments.slice(0, 5).map((s, i) => (
                     <li key={i}><span className="text-foreground-muted">{s.segment} :</span> <span className="text-success">{s.sizePct}%</span></li>
@@ -181,7 +181,7 @@ function Card({ icon, label, value }: { icon: React.ReactNode; label: string; va
         {icon}
         {label}
       </div>
-      <div className="mt-1 text-lg font-semibold text-white">{value}</div>
+      <div className="mt-1 text-lg font-semibold text-foreground">{value}</div>
     </div>
   );
 }

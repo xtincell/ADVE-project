@@ -172,7 +172,7 @@ export default function CampaignTrackerPage() {
         <div className="rounded-xl border border-border bg-background/80 p-5 lg:col-span-1 space-y-4">
           <div className="flex items-center gap-2 border-b border-border pb-3">
             <BarChart3 className="h-5 w-5 text-accent" />
-            <h3 className="font-bold text-white">Entonnoir AARRR terrain</h3>
+            <h3 className="font-bold text-foreground">Entonnoir AARRR terrain</h3>
           </div>
 
           <div className="space-y-4">
@@ -189,7 +189,7 @@ export default function CampaignTrackerPage() {
               return (
                 <div key={stage.label} className="space-y-1">
                   <div className="flex justify-between text-xs">
-                    <span className="font-medium text-white">{stage.label}</span>
+                    <span className="font-medium text-foreground">{stage.label}</span>
                     <span className="text-foreground-secondary">{stage.count.toLocaleString()}</span>
                   </div>
                   <div className="h-3 w-full bg-background border border-border rounded-full overflow-hidden">
@@ -209,7 +209,7 @@ export default function CampaignTrackerPage() {
           <div className="flex items-center justify-between border-b border-border pb-3">
             <div className="flex items-center gap-2">
               <MapPin className="h-5 w-5 text-accent" />
-              <h3 className="font-bold text-white">Opérations terrain & Check-ins</h3>
+              <h3 className="font-bold text-foreground">Opérations terrain & Check-ins</h3>
             </div>
           </div>
 
@@ -241,7 +241,7 @@ export default function CampaignTrackerPage() {
                         </span>
                       </div>
 
-                      <h4 className="text-sm font-bold text-white">{op.name}</h4>
+                      <h4 className="text-sm font-bold text-foreground">{op.name}</h4>
                       
                       <div className="flex items-center gap-4 text-2xs text-foreground-muted flex-wrap">
                         <span className="flex items-center gap-1">
@@ -261,7 +261,7 @@ export default function CampaignTrackerPage() {
 
                     <button
                       onClick={() => setSelectedFieldOpId(op.id)}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background/40 hover:bg-background px-3 py-1.5 text-xs text-foreground-secondary hover:text-white transition-colors shrink-0"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background/40 hover:bg-background px-3 py-1.5 text-xs text-foreground-secondary hover:text-foreground transition-colors shrink-0"
                     >
                       <PlusCircle className="h-3.5 w-3.5" />
                       Check-in / Rapport
@@ -291,7 +291,7 @@ export default function CampaignTrackerPage() {
                   value={reportForm.reporterName}
                   onChange={(e) => setReportForm({ ...reportForm, reporterName: e.target.value })}
                   placeholder="Ex: William Mandengue"
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
                 />
               </FormField>
 
@@ -301,7 +301,7 @@ export default function CampaignTrackerPage() {
                   value={reportForm.notes}
                   onChange={(e) => setReportForm({ ...reportForm, notes: e.target.value })}
                   placeholder="Observations clés de l'opération..."
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
                 />
               </FormField>
             </div>
@@ -328,7 +328,7 @@ export default function CampaignTrackerPage() {
                       min="0"
                       value={reportForm[item.field as keyof typeof reportForm]}
                       onChange={(e) => setReportForm({ ...reportForm, [item.field]: parseInt(e.target.value) || 0 })}
-                      className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
+                      className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm text-foreground outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
                     />
                   </div>
                 ))}

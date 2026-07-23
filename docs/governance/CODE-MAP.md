@@ -460,9 +460,10 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 123
+## tRPC routers — 124
 
 - `_strategy-read-guard` (`src/server/trpc/routers/_strategy-read-guard.ts`)
+- `_talent-access-guard` (`src/server/trpc/routers/_talent-access-guard.ts`)
 - `accounts` (`src/server/trpc/routers/accounts.ts`)
 - `actions` (`src/server/trpc/routers/actions.ts`)
 - `advertis-scorer` (`src/server/trpc/routers/advertis-scorer.ts`)

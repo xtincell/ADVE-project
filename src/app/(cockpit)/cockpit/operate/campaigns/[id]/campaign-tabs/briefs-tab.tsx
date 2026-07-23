@@ -11,14 +11,14 @@ import { ClipboardList, FileText, Plus, Eye } from "lucide-react";
 /** Rendu LISIBLE et COMPLET d'un contenu de brief (string ou objet structuré). */
 function BriefContentView({ content }: { content: unknown }) {
   if (content == null) return <p className="text-sm text-foreground-muted">Aucun contenu.</p>;
-  if (typeof content === "string") return <p className="whitespace-pre-wrap text-sm text-white">{content}</p>;
+  if (typeof content === "string") return <p className="whitespace-pre-wrap text-sm text-foreground">{content}</p>;
   if (typeof content === "object") {
     return (
       <div className="space-y-3">
         {Object.entries(content as Record<string, unknown>).map(([k, v]) => (
           <div key={k}>
             <p className="text-2xs font-semibold uppercase tracking-wide text-foreground-muted">{getFieldLabel(k)}</p>
-            <div className="mt-0.5 text-sm text-white">
+            <div className="mt-0.5 text-sm text-foreground">
               {Array.isArray(v) ? (
                 <ul className="list-disc space-y-0.5 pl-4">
                   {v.map((x, i) => <li key={i}>{typeof x === "object" ? JSON.stringify(x) : String(x)}</li>)}
@@ -38,7 +38,7 @@ function BriefContentView({ content }: { content: unknown }) {
       </div>
     );
   }
-  return <p className="text-sm text-white">{String(content)}</p>;
+  return <p className="text-sm text-foreground">{String(content)}</p>;
 }
 
 export function BriefsTab({ campaignId, strategyId }: { campaignId: string; strategyId: string }) {
@@ -121,7 +121,7 @@ export function BriefsTab({ campaignId, strategyId }: { campaignId: string; stra
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="rounded bg-accent/15 px-1.5 py-0.5 text-2xs font-bold text-accent">{b.type as string}</span>
-                      <h4 className="text-sm font-medium text-white">{(b.title as string) ?? `Brief ${(b.id as string).slice(0, 8)}`}</h4>
+                      <h4 className="text-sm font-medium text-foreground">{(b.title as string) ?? `Brief ${(b.id as string).slice(0, 8)}`}</h4>
                       <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold ring-1 ring-inset ${
                         b.status === "VALIDATED"
                           ? "bg-success/15 text-success ring-success/30 border border-success/30"
@@ -168,7 +168,7 @@ export function BriefsTab({ campaignId, strategyId }: { campaignId: string; stra
         <div className="space-y-4">
           <FormField label="Type" required>
             <select value={newBrief.briefType} onChange={(e) => setNewBrief({ ...newBrief, briefType: e.target.value })}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong">
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-border-strong">
               {types.length > 0 ? types.map((t) => (
                 <option key={t.code as string} value={t.code as string}>{(t.label as string) ?? (t.code as string)}</option>
               )) : ["CREATIVE", "MEDIA", "VENDOR", "PRODUCTION", "SOCIAL", "PR"].map((t) => (
@@ -179,12 +179,12 @@ export function BriefsTab({ campaignId, strategyId }: { campaignId: string; stra
           <FormField label="Titre" required>
             <input type="text" value={newBrief.title} onChange={(e) => setNewBrief({ ...newBrief, title: e.target.value })}
               placeholder="Ex: Brief creatif — lancement produit X"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong" />
           </FormField>
           <FormField label="Contenu" required>
             <textarea value={newBrief.content} onChange={(e) => setNewBrief({ ...newBrief, content: e.target.value })}
               rows={6} placeholder="Redigez le contenu du brief..."
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong" />
           </FormField>
           <div className="flex justify-end gap-3 pt-2">
             <MiniBtn onClick={() => setShowCreate(false)}>Annuler</MiniBtn>

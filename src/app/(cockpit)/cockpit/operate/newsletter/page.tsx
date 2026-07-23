@@ -222,14 +222,14 @@ export default function NewsletterPage() {
           <div className="flex gap-2">
             <button
               onClick={() => setShowAddContact(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-white hover:bg-foreground hover:text-white px-3 py-1.5 text-xs font-semibold text-foreground-muted transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-white hover:bg-foreground hover:text-foreground-inverse px-3 py-1.5 text-xs font-semibold text-foreground-muted transition-colors"
             >
               <UserPlus className="h-3.5 w-3.5" />
               Ajouter contact
             </button>
             <button
               onClick={() => setShowBulkImport(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background hover:bg-surface-raised px-3 py-1.5 text-xs text-foreground-secondary hover:text-white transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background hover:bg-surface-raised px-3 py-1.5 text-xs text-foreground-secondary hover:text-foreground transition-colors"
             >
               <Upload className="h-3.5 w-3.5" />
               Import CSV
@@ -238,7 +238,7 @@ export default function NewsletterPage() {
         ) : (
           <button
             onClick={() => setShowCreateNewsletter(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-white hover:bg-foreground hover:text-white px-3 py-1.5 text-xs font-semibold text-foreground-muted transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-white hover:bg-foreground hover:text-foreground-inverse px-3 py-1.5 text-xs font-semibold text-foreground-muted transition-colors"
           >
             <Plus className="h-3.5 w-3.5" />
             Créer newsletter
@@ -271,10 +271,10 @@ export default function NewsletterPage() {
                   <tbody className="divide-y divide-border">
                     {subscribers.map((sub) => (
                       <tr key={sub.id} className="hover:bg-background/20 transition-colors">
-                        <td className="py-3 text-white font-medium">
+                        <td className="py-3 text-foreground font-medium">
                           {sub.name || <span className="text-foreground-muted italic">Sans nom</span>}
                         </td>
-                        <td className="py-3 text-white font-mono">{sub.email}</td>
+                        <td className="py-3 text-foreground font-mono">{sub.email}</td>
                         <td className="py-3">
                           <span className="px-1.5 py-0.5 rounded bg-background border border-border text-foreground-muted text-[10px]">
                             {sub.source}
@@ -334,11 +334,11 @@ export default function NewsletterPage() {
                           )}
                         </div>
 
-                        <h4 className="text-sm font-bold text-white">{camp.subject}</h4>
+                        <h4 className="text-sm font-bold text-foreground">{camp.subject}</h4>
                         
                         {isSent && (
                           <div className="flex items-center gap-4 text-2xs text-foreground-muted flex-wrap">
-                            <span>Destinataires : <strong className="text-white">{camp.recipientCount}</strong></span>
+                            <span>Destinataires : <strong className="text-foreground">{camp.recipientCount}</strong></span>
                             <span>Succès : <strong className="text-success">{camp.sentCount}</strong></span>
                             {camp.failedCount > 0 && (
                               <span className="text-error">Échecs : <strong>{camp.failedCount}</strong></span>
@@ -350,7 +350,7 @@ export default function NewsletterPage() {
                       <div className="flex items-center gap-2 shrink-0">
                         <button
                           onClick={() => setSelectedNewsletterId(camp.id)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-border bg-background/40 hover:bg-background px-3 py-1.5 text-xs text-foreground-secondary hover:text-white transition-colors"
+                          className="inline-flex items-center gap-1 rounded-lg border border-border bg-background/40 hover:bg-background px-3 py-1.5 text-xs text-foreground-secondary hover:text-foreground transition-colors"
                           title="Visualiser et statistiques"
                         >
                           <Eye className="h-3.5 w-3.5" />
@@ -386,7 +386,7 @@ export default function NewsletterPage() {
               value={contactForm.email}
               onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
               placeholder="ex: jean.dupont@gmail.com"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong"
             />
           </FormField>
           <FormField label="Nom complet">
@@ -395,7 +395,7 @@ export default function NewsletterPage() {
               value={contactForm.name}
               onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
               placeholder="ex: Jean Dupont"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong"
             />
           </FormField>
           <FormField label="Tags (séparés par virgule)">
@@ -404,13 +404,13 @@ export default function NewsletterPage() {
               value={contactForm.tags}
               onChange={(e) => setContactForm({ ...contactForm, tags: e.target.value })}
               placeholder="ex: prospects, event-juin"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong"
             />
           </FormField>
           <button
             type="submit"
             disabled={addContactMutation.isPending}
-            className="w-full rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-foreground-muted hover:bg-foreground hover:text-white disabled:opacity-50"
+            className="w-full rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-foreground-muted hover:bg-foreground hover:text-foreground-inverse disabled:opacity-50"
           >
             {addContactMutation.isPending ? "Ajout..." : "Ajouter le contact"}
           </button>
@@ -427,13 +427,13 @@ export default function NewsletterPage() {
               value={bulkCsv}
               onChange={(e) => setBulkCsv(e.target.value)}
               placeholder="exemple@domain.com,Jean Dupont&#10;contact@agence.com,Marie Durand"
-              className="w-full font-mono text-xs rounded-lg border border-border bg-background px-3 py-2 text-white placeholder-foreground-muted outline-none focus:border-border-strong"
+              className="w-full font-mono text-xs rounded-lg border border-border bg-background px-3 py-2 text-foreground placeholder-foreground-muted outline-none focus:border-border-strong"
             />
           </FormField>
           <button
             type="submit"
             disabled={bulkImportMutation.isPending}
-            className="w-full rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-foreground-muted hover:bg-foreground hover:text-white disabled:opacity-50"
+            className="w-full rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-foreground-muted hover:bg-foreground hover:text-foreground-inverse disabled:opacity-50"
           >
             {bulkImportMutation.isPending ? "Importation..." : "Importer la liste"}
           </button>
@@ -450,7 +450,7 @@ export default function NewsletterPage() {
               value={newsletterForm.subject}
               onChange={(e) => setNewsletterForm({ ...newsletterForm, subject: e.target.value })}
               placeholder="ex: Lancement exclusif de notre nouvelle collection !"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none"
             />
           </FormField>
           <FormField label="Contenu (HTML ou Texte)" required>
@@ -460,7 +460,7 @@ export default function NewsletterPage() {
               value={newsletterForm.content}
               onChange={(e) => setNewsletterForm({ ...newsletterForm, content: e.target.value })}
               placeholder="Entrez le contenu de votre email ici..."
-              className="w-full font-mono text-xs rounded-lg border border-border bg-background px-3 py-2 text-white placeholder-foreground-muted outline-none"
+              className="w-full font-mono text-xs rounded-lg border border-border bg-background px-3 py-2 text-foreground placeholder-foreground-muted outline-none"
             />
           </FormField>
           <button
@@ -482,9 +482,9 @@ export default function NewsletterPage() {
         ) : statsQuery.data && (
           <div className="space-y-4">
             <div className="bg-background/40 border border-border p-4 rounded-lg space-y-2">
-              <h3 className="text-sm font-bold text-white">{statsQuery.data.campaign.subject}</h3>
+              <h3 className="text-sm font-bold text-foreground">{statsQuery.data.campaign.subject}</h3>
               <p className="text-xs text-foreground-secondary">
-                Status : <span className="text-white font-medium uppercase">{statsQuery.data.campaign.status}</span>
+                Status : <span className="text-foreground font-medium uppercase">{statsQuery.data.campaign.status}</span>
               </p>
               {statsQuery.data.campaign.sentAt && (
                 <p className="text-xs text-foreground-secondary">
@@ -506,7 +506,7 @@ export default function NewsletterPage() {
                   statsQuery.data.messages.map((msg) => (
                     <div key={msg.id} className="p-3 flex items-center justify-between text-xs hover:bg-background/20 transition-colors">
                       <div>
-                        <p className="font-semibold text-white">{msg.name || "Abonné"}</p>
+                        <p className="font-semibold text-foreground">{msg.name || "Abonné"}</p>
                         <p className="text-2xs text-foreground-muted font-mono">{msg.recipient}</p>
                       </div>
                       <div className="text-right">

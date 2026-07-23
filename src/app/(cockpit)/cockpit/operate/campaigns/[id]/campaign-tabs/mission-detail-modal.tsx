@@ -68,7 +68,7 @@ function BriefValue({ value }: { value: unknown }) {
     return (
       <ul className="list-disc space-y-0.5 pl-4">
         {value.map((v, i) => (
-          <li key={i} className="text-sm text-white">{typeof v === "object" ? JSON.stringify(v) : String(v)}</li>
+          <li key={i} className="text-sm text-foreground">{typeof v === "object" ? JSON.stringify(v) : String(v)}</li>
         ))}
       </ul>
     );
@@ -85,7 +85,7 @@ function BriefValue({ value }: { value: unknown }) {
       </div>
     );
   }
-  return <p className="text-sm text-white">{String(value)}</p>;
+  return <p className="text-sm text-foreground">{String(value)}</p>;
 }
 
 function BriefView({ brief }: { brief: Record<string, unknown> }) {
@@ -221,7 +221,7 @@ export function MissionDetailModal({
 
         {/* Brief — consultable avant validation */}
         <section className="rounded-xl border border-border bg-background/60 p-4">
-          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
             <ClipboardList className="h-4 w-4 text-foreground-secondary" /> Brief de la mission
           </h3>
           <BriefView brief={brief} />
@@ -229,7 +229,7 @@ export function MissionDetailModal({
 
         {/* Rétroplanning — tâches datées + cocher */}
         <section className="rounded-xl border border-border bg-background/60 p-4">
-          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
             <CheckCircle2 className="h-4 w-4 text-foreground-secondary" /> Rétroplanning — les tâches et quand
           </h3>
           {cockpit.isLoading ? (
@@ -257,7 +257,7 @@ export function MissionDetailModal({
                               : <Circle className="h-5 w-5 text-foreground-muted hover:text-foreground-secondary" />}
                           </button>
                           <div className="min-w-0 flex-1">
-                            <p className={`text-sm font-medium ${doneTask ? "text-foreground-muted line-through" : "text-white"}`}>{t.title}</p>
+                            <p className={`text-sm font-medium ${doneTask ? "text-foreground-muted line-through" : "text-foreground"}`}>{t.title}</p>
                             <div className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-2xs text-foreground-muted">
                               <span>{fmtRange(t.timingStart, t.timingEnd)}</span>
                               {t.touchpoint && <span className="rounded bg-surface-raised px-1.5 py-0.5">{t.touchpoint}</span>}
@@ -275,7 +275,7 @@ export function MissionDetailModal({
 
         {/* Performance — KPI réels saisis + sources honnêtes */}
         <section className="rounded-xl border border-border bg-background/60 p-4">
-          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
             <BarChart3 className="h-4 w-4 text-foreground-secondary" /> Performance réelle
           </h3>
 
@@ -290,7 +290,7 @@ export function MissionDetailModal({
                     {metricsByStage.get(s.key)!.map((m) => (
                       <div key={m.id} className="rounded-lg border border-border bg-background/50 p-2">
                         <p className="truncate text-2xs text-foreground-muted" title={m.metric}>{m.metric}</p>
-                        <p className="text-sm font-bold text-white">
+                        <p className="text-sm font-bold text-foreground">
                           {m.value.toLocaleString("fr-FR")}
                           {m.target != null && <span className="text-2xs font-normal text-foreground-muted"> / {m.target.toLocaleString("fr-FR")}</span>}
                         </p>
@@ -310,7 +310,7 @@ export function MissionDetailModal({
               <select
                 value={metricStage}
                 onChange={(e) => setMetricStage(e.target.value)}
-                className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-white"
+                className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-foreground"
               >
                 {AARR_STAGES.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
               </select>
@@ -321,7 +321,7 @@ export function MissionDetailModal({
                 value={metricLabel}
                 onChange={(e) => setMetricLabel(e.target.value)}
                 placeholder="ex. Spawters actifs, leads quiz, conversion premium…"
-                className="w-full rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-white placeholder:text-foreground-muted"
+                className="w-full rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-foreground placeholder:text-foreground-muted"
               />
             </label>
             <label className="flex flex-col gap-0.5">
@@ -331,7 +331,7 @@ export function MissionDetailModal({
                 onChange={(e) => setMetricValue(e.target.value)}
                 inputMode="numeric"
                 placeholder="0"
-                className="w-24 rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-white placeholder:text-foreground-muted"
+                className="w-24 rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-foreground placeholder:text-foreground-muted"
               />
             </label>
             <label className="flex flex-col gap-0.5">
@@ -341,13 +341,13 @@ export function MissionDetailModal({
                 onChange={(e) => setMetricTarget(e.target.value)}
                 inputMode="numeric"
                 placeholder="—"
-                className="w-20 rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-white placeholder:text-foreground-muted"
+                className="w-20 rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-foreground placeholder:text-foreground-muted"
               />
             </label>
             <button
               onClick={submitMetric}
               disabled={metricMut.isPending}
-              className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-surface-raised disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-surface-raised disabled:opacity-50"
             >
               <Plus className="h-3.5 w-3.5" /> Enregistrer
             </button>

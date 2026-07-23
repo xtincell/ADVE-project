@@ -255,7 +255,7 @@ export default function NewBrandPage() {
         {step === 0 && (
           <div className="space-y-5">
             <div>
-              <h3 className="text-lg font-semibold text-white mb-1">Comment s'appelle votre marque ?</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-1">Comment s'appelle votre marque ?</h3>
               <p className="text-sm text-foreground-secondary">Le nom tel qu'il apparait publiquement.</p>
             </div>
             <div>
@@ -265,7 +265,7 @@ export default function NewBrandPage() {
                 value={brandName}
                 onChange={(e) => setBrandName(e.target.value)}
                 placeholder="Ex: CIMENCAM, Orange, Nescafe..."
-                className="w-full rounded-lg border border-border bg-background px-4 py-3 text-white placeholder-foreground-muted outline-none focus:border-accent focus:ring-1 focus:ring-accent text-lg"
+                className="w-full rounded-lg border border-border bg-background px-4 py-3 text-foreground placeholder-foreground-muted outline-none focus:border-accent focus:ring-1 focus:ring-accent text-lg"
                 autoFocus
               />
             </div>
@@ -276,7 +276,7 @@ export default function NewBrandPage() {
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="En une phrase, que fait cette marque ?"
                 rows={2}
-                className="w-full rounded-lg border border-border bg-background px-4 py-3 text-sm text-white placeholder-foreground-muted outline-none focus:border-accent"
+                className="w-full rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-accent"
               />
             </div>
           </div>
@@ -285,7 +285,7 @@ export default function NewBrandPage() {
         {step === 1 && (
           <div className="space-y-5">
             <div>
-              <h3 className="text-lg font-semibold text-white mb-1">Ou opere cette marque ?</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-1">Ou opere cette marque ?</h3>
               <p className="text-sm text-foreground-secondary">Secteur d'activité et marché principal.</p>
             </div>
             <div>
@@ -330,7 +330,7 @@ export default function NewBrandPage() {
         {step === 2 && (
           <div className="space-y-5">
             <div>
-              <h3 className="text-lg font-semibold text-white mb-1">Quel est le modèle d'affaires ?</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-1">Quel est le modèle d'affaires ?</h3>
               <p className="text-sm text-foreground-secondary">Comment la marque gagne de l'argent et se positionne.</p>
             </div>
             <div>
@@ -398,7 +398,7 @@ export default function NewBrandPage() {
                 value={freeElement}
                 onChange={(e) => setFreeElement(e.target.value)}
                 placeholder="Ex: Formation, contenu educatif, echantillons, essai gratuit..."
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-accent"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-accent"
               />
               {freeElement && (
                 <div className="mt-2">
@@ -407,7 +407,7 @@ export default function NewBrandPage() {
                     value={freeDetail}
                     onChange={(e) => setFreeDetail(e.target.value)}
                     placeholder="Qu'est-ce qui est payant en contrepartie ?"
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-accent"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-accent"
                   />
                 </div>
               )}
@@ -418,13 +418,13 @@ export default function NewBrandPage() {
         {step === 3 && (
           <div className="space-y-5">
             <div>
-              <h3 className="text-lg font-semibold text-white mb-1">Recapitulatif</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-1">Recapitulatif</h3>
               <p className="text-sm text-foreground-secondary">Verifiez les informations avant de creer la marque.</p>
             </div>
             <div className="rounded-lg border border-border bg-background divide-y divide-border">
               <div className="flex justify-between px-4 py-3">
                 <span className="text-xs text-foreground-muted">Marque</span>
-                <span className="text-sm font-semibold text-white">{brandName}</span>
+                <span className="text-sm font-semibold text-foreground">{brandName}</span>
               </div>
               {description && (
                 <div className="flex justify-between px-4 py-3">

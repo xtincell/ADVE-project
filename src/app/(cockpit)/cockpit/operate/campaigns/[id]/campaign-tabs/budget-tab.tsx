@@ -36,7 +36,7 @@ export function BudgetTab({ campaignId }: { campaignId: string }) {
       {/* Summary cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          { label: "Budget total", value: `${fmt(summary?.total)} XAF`, color: "text-white" },
+          { label: "Budget total", value: `${fmt(summary?.total)} XAF`, color: "text-foreground" },
           { label: "Depense", value: `${fmt(summary?.spent)} XAF`, color: "text-warning" },
           { label: "Restant", value: `${fmt(summary?.remaining)} XAF`, color: "text-success" },
           { label: "Variance", value: `${fmt(variance?.percentage)}%`, color: typeof variance?.percentage === "number" && variance.percentage > 0 ? "text-error" : "text-success" },
@@ -58,7 +58,7 @@ export function BudgetTab({ campaignId }: { campaignId: string }) {
                 <div key={b.category as string}>
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-foreground-secondary">{b.category as string}</span>
-                    <span className="text-white">{fmt(b.amount)} XAF ({Math.round(pct)}%)</span>
+                    <span className="text-foreground">{fmt(b.amount)} XAF ({Math.round(pct)}%)</span>
                   </div>
                   <div className="mt-1 h-1.5 w-full rounded-full bg-background">
                     <div className="h-1.5 rounded-full bg-info transition-all" style={{ width: `${Math.min(100, pct)}%` }} />
@@ -111,7 +111,7 @@ export function BudgetTab({ campaignId }: { campaignId: string }) {
                 {lines.map((l) => (
                   <tr key={l.id as string} className="border-b border-border/50">
                     <td className="py-2 pr-3 text-foreground-secondary">{l.category as string}</td>
-                    <td className="py-2 pr-3 text-white">{l.label as string}</td>
+                    <td className="py-2 pr-3 text-foreground">{l.label as string}</td>
                     <td className="py-2 pr-3 text-right text-foreground-secondary">{fmt(l.plannedAmount)} XAF</td>
                     <td className="py-2 text-right text-warning">{fmt(l.actualAmount)} XAF</td>
                   </tr>
@@ -126,7 +126,7 @@ export function BudgetTab({ campaignId }: { campaignId: string }) {
         <div className="space-y-4">
           <FormField label="Categorie" required>
             <select value={newLine.category} onChange={(e) => setNewLine({ ...newLine, category: e.target.value })}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong">
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-border-strong">
               <option value="">Sélectionner...</option>
               {["MEDIA", "PRODUCTION", "TALENT", "LOGISTICS", "TECHNOLOGY", "LEGAL", "CONTINGENCY", "AGENCY_FEE"].map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
@@ -134,16 +134,16 @@ export function BudgetTab({ campaignId }: { campaignId: string }) {
           <FormField label="Libelle" required>
             <input type="text" value={newLine.label} onChange={(e) => setNewLine({ ...newLine, label: e.target.value })}
               placeholder="Ex: Achat media Facebook"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong" />
           </FormField>
           <FormField label="Montant prevu (XAF)" required>
             <input type="number" value={newLine.planned} onChange={(e) => setNewLine({ ...newLine, planned: e.target.value })}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong" />
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-border-strong" />
           </FormField>
           <FormField label="Notes">
             <input type="text" value={newLine.notes} onChange={(e) => setNewLine({ ...newLine, notes: e.target.value })}
               placeholder="Notes optionnelles..."
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-foreground-muted outline-none focus:border-border-strong" />
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-border-strong" />
           </FormField>
           <div className="flex justify-end gap-3 pt-2">
             <MiniBtn onClick={() => setShowAdd(false)}>Annuler</MiniBtn>

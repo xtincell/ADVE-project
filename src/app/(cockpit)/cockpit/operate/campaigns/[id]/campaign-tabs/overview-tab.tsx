@@ -69,7 +69,7 @@ export function OverviewTab({ campaignId, strategyId, state, onRefresh }: { camp
         ].map((s) => (
           <div key={s.label} className="rounded-lg border border-border bg-background/50 p-3">
             <p className="text-2xs uppercase text-foreground-muted">{s.label}</p>
-            <p className="text-lg font-bold text-white">{String(s.value)}</p>
+            <p className="text-lg font-bold text-foreground">{String(s.value)}</p>
           </div>
         ))}
       </div>
@@ -98,7 +98,7 @@ export function OverviewTab({ campaignId, strategyId, state, onRefresh }: { camp
                   transitionMut.mutate({ campaignId, toState: toState as CampaignState });
                 }}
                 disabled={transitionMut.isPending}
-                className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-surface-raised disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-surface-raised disabled:opacity-50"
               >
                 <ArrowRight className="h-3 w-3" />
                 {toState.replace(/_/g, " ")}
@@ -142,7 +142,7 @@ export function OverviewTab({ campaignId, strategyId, state, onRefresh }: { camp
               {pendingBriefs.map((b) => (
                 <div key={b.id as string} className="flex items-center justify-between rounded-lg border border-warning/30 bg-warning/5 p-3">
                   <div>
-                    <p className="text-sm font-medium text-white">{b.title as string}</p>
+                    <p className="text-sm font-medium text-foreground">{b.title as string}</p>
                     <p className="text-2xs text-foreground-muted">Type: {String(b.briefType || b.type || "PRODUCTION")}</p>
                   </div>
                   <div className="flex flex-col items-end gap-1">
@@ -180,7 +180,7 @@ export function OverviewTab({ campaignId, strategyId, state, onRefresh }: { camp
                     </span>
                   )}
                   <div>
-                    <p className="text-sm font-medium text-white">{(m.title as string) || (m.id as string).slice(0, 8)}</p>
+                    <p className="text-sm font-medium text-foreground">{(m.title as string) || (m.id as string).slice(0, 8)}</p>
                     {!!m.description && <p className="text-xs text-foreground-muted line-clamp-1">{m.description as string}</p>}
                   </div>
                 </div>
@@ -209,7 +209,7 @@ export function OverviewTab({ campaignId, strategyId, state, onRefresh }: { camp
             {deps.map((d, i) => (
               <div key={i} className="flex items-center justify-between text-xs">
                 <span className="text-foreground-secondary">{(d.type as string) ?? "FINISH_TO_START"}</span>
-                <span className="text-white">{(d.targetCampaignId as string)?.slice(0, 8)}...</span>
+                <span className="text-foreground">{(d.targetCampaignId as string)?.slice(0, 8)}...</span>
               </div>
             ))}
           </div>

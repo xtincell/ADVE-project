@@ -180,7 +180,7 @@ export default function ReportsPage() {
       {/* Generate action */}
       <div className="flex items-center gap-4 rounded-xl border border-border bg-background/80 p-5">
         <div className="flex-1">
-          <h3 className="text-sm font-semibold text-white">Generer un nouveau rapport</h3>
+          <h3 className="text-sm font-semibold text-foreground">Generer un nouveau rapport</h3>
           <p className="mt-1 text-xs text-foreground-secondary">
             Selectionnez la periode et lancez la generation du rapport de valeur.
           </p>
@@ -189,7 +189,7 @@ export default function ReportsPage() {
           type="month"
           value={generatePeriod}
           onChange={(e) => setGeneratePeriod(e.target.value)}
-          className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-white"
+          className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
         />
         <button
           onClick={handleGenerate}
@@ -225,7 +225,7 @@ export default function ReportsPage() {
                     <FileText className="h-5 w-5 text-accent" />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-white">
+                    <p className="text-sm font-semibold text-foreground">
                       Rapport{" "}
                       {new Date(report.period + "-01").toLocaleDateString("fr-FR", {
                         month: "long",
@@ -269,7 +269,7 @@ export default function ReportsPage() {
                         a.click();
                         URL.revokeObjectURL(url);
                       }}
-                      className="rounded border border-border px-2 py-0.5 text-xs text-foreground-secondary hover:bg-background hover:text-white transition-colors"
+                      className="rounded border border-border px-2 py-0.5 text-xs text-foreground-secondary hover:bg-background hover:text-foreground transition-colors"
                     >
                       <Download className="inline h-3 w-3" /> Texte
                     </button>
@@ -285,7 +285,7 @@ export default function ReportsPage() {
                         a.click();
                         URL.revokeObjectURL(url);
                       }}
-                      className="rounded border border-border px-2 py-0.5 text-xs text-foreground-secondary hover:bg-background hover:text-white transition-colors"
+                      className="rounded border border-border px-2 py-0.5 text-xs text-foreground-secondary hover:bg-background hover:text-foreground transition-colors"
                     >
                       <Download className="inline h-3 w-3" /> HTML
                     </button>
@@ -341,7 +341,7 @@ export default function ReportsPage() {
                       key={key}
                       className="flex items-center gap-3 rounded-lg border border-border bg-background/50 p-3"
                     >
-                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-background text-xs font-bold text-white">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-background text-xs font-bold text-foreground">
                         {key.toUpperCase()}
                       </span>
                       <span className="w-28 text-sm text-foreground-secondary">
