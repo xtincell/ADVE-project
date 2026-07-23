@@ -1,5 +1,14 @@
 # Changelog — La Fusee
 
+## v6.27.318 — fix(mestor): RTIS — la profondeur ADVE n'est plus tronquée en contexte (Phase 4, chantier clos) (2026-07-23)
+
+**La matrice produit remplie en profondeur atteint enfin la dérivation R/T/I/S — fini le JSON coupé à 8000 caractères qui amputait l'ADVE. Dernière phase du chantier « remplissage profond ».**
+
+- **Le maillon final** : Phases 2-3 remplissent l'ADVE en profondeur, mais la cascade RTIS sérialisait chaque pilier via `serializePillar` = `JSON.stringify` **slicé à 8000 caractères**. Un pilier V rempli (matrice `produitsCatalogue` : N produits × ~15 cellules dépasse 8000 à lui seul) arrivait **amputé de sa queue** → le RTIS dérivait R/T/I/S d'un ADVE incomplet. L'intégralité ne servait pas encore le RTIS.
+- **Le build** : NOUVEAU `projectForContext` (récursif, pur) — projection **profondeur-préservante** : on ne coupe QUE la **prose longue par feuille** (cap 400 car. — manifestes/récits) et on garde **TOUTE l'arborescence** (chaque produit, chaque cellule de matrice ; les cellules de valeur courtes sont intactes). Backstop total relevé 8000 → 24000 (après projection, un pilier réaliste tient largement ; seul un pilier pathologique est encore capé). La matrice complète nourrit enfin R/T/I/S.
+- 5 tests (cap feuille / structure & tableaux intacts / scalaires / **les 12 produits d'un gros catalogue survivent** là où l'ex-cap coupait la queue / placeholder vide honnête). tsc 0 · lint 0 · cycles 0 · **3070 tests verts**. Cap APOGEE 7/7 · 0 modèle Prisma · 0 migration · 0 LLM ajouté.
+- **Chantier « remplissage profond ADVE » CLOS (Phases 0→4, PR #617)** : chemin profond unifié (0) · édition à la main jusqu'à la feuille (1) · le contrat voit la profondeur, COMPLET honnête (2) · la notoria remplit les cellules en INFERRED sans écraser le réel (3) · la profondeur nourrit le RTIS (4). La notoria remplit tout en profondeur, l'opérateur édite tout jusqu'à la feuille, et l'intégralité sert le RTIS.
+
 ## v6.27.317 — feat(domain): notoria — enrichissement SURGICAL des matrices en profondeur (Phase 3) (2026-07-23)
 
 **La notoria remplit enfin les cellules vides de la matrice produit — SANS jamais régénérer le tableau ni écraser le catalogue réel du fondateur. Elle ne touche QUE les vides des items existants.**
