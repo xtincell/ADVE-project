@@ -6,7 +6,7 @@ import { Save, X, Plus, Trash2, Pencil } from "lucide-react";
 
 // ─── Styles ──────────────────────────────────────────────────────────────
 
-const inputClass = "w-full rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-white outline-none focus:border-accent focus:ring-1 focus:ring-violet-600";
+const inputClass = "w-full rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-foreground outline-none focus:border-accent focus:ring-1 focus:ring-accent";
 const selectClass = `${inputClass} appearance-none`;
 const labelClass = "text-[10px] font-medium uppercase tracking-wider text-foreground-muted mb-1 block";
 const btnSm = "rounded-lg px-2.5 py-1 text-[10px] font-medium transition-colors";
@@ -84,7 +84,7 @@ function StringsEditor({ value, def, onChange }: { value: unknown; def: Extract<
           <button type="button" onClick={() => onChange(items.filter((_, j) => j !== i))} className="text-foreground-muted hover:text-error"><Trash2 className="h-3 w-3" /></button>
         </div>
       ))}
-      <button type="button" onClick={() => onChange([...items, ""])} className={`${btnSm} bg-background text-foreground-secondary hover:text-white flex items-center gap-1`}>
+      <button type="button" onClick={() => onChange([...items, ""])} className={`${btnSm} bg-background text-foreground-secondary hover:text-foreground flex items-center gap-1`}>
         <Plus className="h-2.5 w-2.5" /> Ajouter
       </button>
     </div>
@@ -131,7 +131,7 @@ function ArrayOfObjectsEditor({ value, def, onChange }: { value: unknown; def: E
           </div>
         </div>
       ))}
-      <button type="button" onClick={() => onChange([...items, {}])} className={`${btnSm} bg-background text-foreground-secondary hover:text-white flex items-center gap-1 w-full justify-center py-2`}>
+      <button type="button" onClick={() => onChange([...items, {}])} className={`${btnSm} bg-background text-foreground-secondary hover:text-foreground flex items-center gap-1 w-full justify-center py-2`}>
         <Plus className="h-3 w-3" /> Ajouter {def.itemLabel?.toLowerCase() ?? "item"}
       </button>
     </div>
@@ -199,7 +199,7 @@ export function SmartFieldEditor({
     return (
       <button
         onClick={startEdit}
-        className="flex items-center gap-1.5 rounded-lg border border-border/50 bg-background/50 px-2.5 py-1 text-[10px] font-medium text-foreground-secondary hover:text-white hover:border-border-strong transition-colors"
+        className="flex items-center gap-1.5 rounded-lg border border-border/50 bg-background/50 px-2.5 py-1 text-[10px] font-medium text-foreground-secondary hover:text-foreground hover:border-border-strong transition-colors"
       >
         <Pencil className="h-2.5 w-2.5" /> Editer
       </button>
@@ -207,17 +207,49 @@ export function SmartFieldEditor({
   }
 
   return (
-    <div className="mt-2 rounded-lg border border-amber-700/40 bg-amber-950/10 p-3 space-y-3">
-      <div className="text-[10px] font-medium text-amber-400 uppercase tracking-wider">{def.label}</div>
+    <div className="mt-2 rounded-lg border border-warning/40 bg-warning/5 p-3 space-y-3">
+      <div className="text-[10px] font-medium text-warning uppercase tracking-wider">{def.label}</div>
       <AtomicEditor value={draft} def={def} onChange={setDraft} />
       <div className="flex items-center gap-2">
-        <button onClick={save} disabled={isSaving} className={`${btnSm} bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-1`}>
+        <button onClick={save} disabled={isSaving} className={`${btnSm} bg-success text-white hover:bg-success/90 disabled:opacity-50 flex items-center gap-1`}>
           <Save className="h-3 w-3" /> {isSaving ? "..." : "Enregistrer"}
         </button>
         <button onClick={() => setIsEditing(false)} className={`${btnSm} bg-background text-foreground-secondary hover:bg-surface-raised flex items-center gap-1`}>
           <X className="h-3 w-3" /> Annuler
         </button>
       </div>
+    </div>
+  );
+}
+
+// ─── Embeddable structured control ────────────────────────────────────────
+
+/**
+ * Champ contrôlé pur qui rend l'éditeur récursif (matrices, objets imbriqués,
+ * feuilles) lié à `value`/`onChange` du parent — sans le chrome autonome de
+ * SmartFieldEditor (bouton Editer + Save/Cancel).
+ *
+ * Embarqué par l'amend modal (OPERATOR_AMEND_PILLAR, ADR-0023) en mode
+ * PATCH_DIRECT : l'opérateur édite un champ ADVE jusqu'au plus profond
+ * (ex. la matrice `produitsCatalogue`, cellule par cellule, ajout/suppression
+ * de lignes) au lieu de taper du JSON brut dans un textarea. `pillarKey`
+ * attendu en minuscule (a·d·v·e), cohérent avec FIELD_REGISTRY.
+ */
+export function StructuredFieldControl({
+  pillarKey,
+  fieldKey,
+  value,
+  onChange,
+}: {
+  pillarKey: string;
+  fieldKey: string;
+  value: unknown;
+  onChange: (v: unknown) => void;
+}) {
+  const def = getFieldDef(pillarKey, fieldKey);
+  return (
+    <div className="rounded-lg border border-border bg-background/30 p-3">
+      <AtomicEditor value={value} def={def} onChange={onChange} />
     </div>
   );
 }

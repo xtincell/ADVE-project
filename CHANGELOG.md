@@ -1,5 +1,16 @@
 # Changelog — La Fusee
 
+## v6.27.315 — feat(cockpit): édition profonde à la main — matrice & objets ADVE dans l'amend modal (Phase 1) (2026-07-23)
+
+**L'opérateur édite enfin la matrice produit (et tout objet/tableau ADVE) cellule par cellule dans l'amend modal — fini le JSON tapé à la main. Phase 1 du chantier « remplissage profond ».**
+
+- **Le constat** : la seule voie d'édition manuelle intentionnelle de l'ADVE (l'amend modal, `OPERATOR_AMEND_PILLAR` / ADR-0023) offrait un **textarea JSON brut** en « Valeur proposée ». Remplir la matrice `produitsCatalogue` « à la main » = écrire tout le tableau d'objets en JSON dans un textarea — de facto impossible (le vrai sens de « je n'arrive pas à remplir les vides »). Pendant ce temps, l'éditeur récursif générique `SmartFieldEditor` existait mais était **orphelin** (câblé nulle part).
+- **Le build** : nouvel export `StructuredFieldControl` (champ contrôlé pur = l'éditeur récursif de SmartFieldEditor : matrices, objets imbriqués, tableaux, jusqu'à la feuille) **embarqué dans l'amend modal** en mode PATCH_DIRECT quand le champ a une shape déclarée au registre (`hasFieldDef`). L'opérateur édite la **matrice produit cellule par cellule** + ajoute/supprime des lignes + édite les objets imbriqués (`unitEconomics`, `mvp`…) au lieu de taper du JSON. Le textarea est **préservé** en fallback (champs hors registre) et pour les modes LLM_REPHRASE / STRATEGIC_REWRITE.
+- **Réutilisation gouvernance (zéro roue réinventée)** : **aucune nouvelle mutation ni Intent kind** — le write reste la voie unique `pillar.amend` PATCH_DIRECT → gateway `SET_FIELDS` (shapeGate + Zod). L'éditeur récursif construit la valeur complète côté client ; le gateway valide. Décision ADVE = opérateur (STOP à Jehuty, modal operator-only) préservée.
+- **Le socle Phase 0** : la matrice s'édite jusqu'à la cellule parce que `field-registry` la modélise déjà en `array-of-objects` avec ses `itemFields` (chaque cellule 2×2×2). Rien à modéliser — juste à câbler l'éditeur.
+- **DS (réparé en passant)** : `SmartFieldEditor` retokenisé (`text-white`→`text-foreground`, `emerald`→`success`, `amber`→`warning`, `ring-violet`→`ring-accent`).
+- 4 tests de contrat registre (matrice V `array-of-objects` + `itemFields` ; `unitEconomics` object ; fallback JSON hors registre — verrou anti-régression : si un champ profond quitte le registre, la matrice ne doit pas silencieusement redevenir du JSON à taper). tsc 0 · lint 0 · DS + types + gouvernance verts (1313). Cap APOGEE 7/7 · 0 modèle Prisma · 0 migration · 0 LLM.
+
 ## v6.27.314 — refactor(domain): pillar-path — chemin ADVE profond unifié (Phase 0 remplissage profond) (2026-07-23)
 
 **Une seule mécanique de chemin ADVE, capable de lire ET écrire `produitsCatalogue[2].gainClientConcret`, partagée par le gateway, l'assessor et l'auto-filler. Prérequis dur du chantier « la notoria remplit tout en profondeur ».**

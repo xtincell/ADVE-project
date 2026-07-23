@@ -648,3 +648,13 @@ export const FIELD_REGISTRY: Record<string, Record<string, FieldDef>> = {
 export function getFieldDef(pillarKey: string, fieldKey: string): FieldDef {
   return FIELD_REGISTRY[pillarKey]?.[fieldKey] ?? { kind: "json", label: fieldKey };
 }
+
+/**
+ * True si le champ a une shape structurée déclarée dans le registre (donc
+ * éditable via l'éditeur récursif `StructuredFieldControl` — matrices, objets
+ * imbriqués). Faux → fallback textarea/JSON. `pillarKey` attendu en minuscule
+ * (a·d·v·e·r·t·i·s), cohérent avec FIELD_REGISTRY.
+ */
+export function hasFieldDef(pillarKey: string, fieldKey: string): boolean {
+  return Boolean(FIELD_REGISTRY[pillarKey]?.[fieldKey]);
+}
