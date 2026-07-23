@@ -92,33 +92,22 @@ Items MEDIUM à régression-risquée ou à coordination, déférés de la boucle
 | **Tunnels live SPAWT** : re-datation Sprint Abidjan (7–21 août, `?op=patch actions[]`) + réconciliation `spawt-strategy-001` (reparent missions → GTM_90, archive placeholder) | ADR-0144 — post-deploy, après `?diag` |
 | **Revue des 16 Glory tools candidats `forgeOutput`** ([glory-forgeoutput-audit.md](glory-forgeoutput-audit.md)) | Phase 9 — instrumentation après revue humaine |
 
-### Clés / contrats / App Review (gated externe — le code dégrade honnêtement en attendant)
+### Externe réel vs faux « gated » (audit 2026-07-23 vérifié contre le code)
 
-- **Meta App Review 2ᵉ soumission groupée** (publishing + engagement + insights : `read_insights`,
-  `instagram_manage_insights`) = LE passage hors-testeurs ; **IG Business Login direct** hors testeurs ;
-  webhooks temps réel (Advanced Access) ; DM/messaging (vague ultérieure) — ADR-0128/0133.
-- **Ops env** : `INSTAGRAM_OAUTH_CLIENT_SECRET` (Coolify) ; `firebase-admin` + creds si FCM ;
-  clés providers ads/email/SMS (Credentials Vault ADR-0021).
-  <!-- Embeddings RETIRÉS d'ici 2026-07-23 : PAS gated. Chemin PROD = serveur
-       d'embedding SELF-HOSTED de l'opérateur (`EMBED_SERVICE_URL`, API Ollama-
-       compatible) — disponible en prod. Ollama Cloud (clé texte) ne sert AUCUN
-       embedding. OpenAI/OpenRouter = replis. `OPENAI_API_KEY` n'est donc PAS un
-       prérequis embeddings ; c'était une erreur de bucketing (comme Tarsis). -->
-- **LinkedIn** : produit Community Management (compteurs organisation) · **X** : palier payant PPU ·
-  **TikTok** : client secret + audit d'app · **YouTube** : scope `yt-analytics.readonly` + audit
-  (commentaires/upload).
-- **WABA** : contrat WhatsApp
-  Business (webhook entrant passeport fan) · **Shopify** : app Partner (env) + DNS wildcard
-  `*.powerupgraders.com` + domaines Coolify (pages publiques de marque).
-  <!-- Tarsis RETIRÉ de cette liste 2026-07-23 : ce n'est PAS un vendor externe.
-       Tarsis = sous-domaine INTERNE de Seshat (monitoring signaux faibles), dé-mocké
-       le 2026-06-14 (ADR-0100) — `connector.ts` renvoie LIVE dès qu'un digest RSS
-       existe (`_mocked:false`). La credential `tarsis-monitoring` est OPTIONNELLE
-       (enrichissement social-listening premium futur), jamais un prérequis du socle.
-       Le seul reste Tarsis est interne : granularité polity (digest→polity) + refus
-       honnête T9 (cap CULTE/ICONE) — aucun des deux n'est gated par une clé. -->
-- **Scrappeur légit A/D/V du scoreur** (Trends, autocomplete, avis, wiki, presse, awards) :
-  credential/ToS-gated — pattern `ConnectorResult<T>` P22-1, dégradation honnête (ADR-0149).
+**La plupart des lignes « gated » étaient SUR-COTÉES** — même classe d'erreur de bucketing que Tarsis (interne) et les embeddings (self-host prod). Re-classification honnête, evidence-based :
+
+**(A) Self-serve — env-var + app développeur GRATUITE que l'opérateur crée lui-même (PAS un contrat signé) ; code 100 % bâti, câblé, dégrade honnêtement :**
+- **Secrets OAuth** `X_/TIKTOK_/LINKEDIN_/INSTAGRAM_/SHOPIFY_OAUTH_*` — flow start→callback→sync câblé pour tous (`oauth-integrations/`, `social-connect.ts`, `commerce-connect.ts`) ; sans creds → « bientôt disponible » honnête. Instagram = le secret seul suffit. **Poser l'env var est le SEUL geste code-side.**
+- **Shopify** : connexion par-boutique 100 % bâtie (`commerce-connect.ts`, OAuth `?commerce=1`, intent gouverné). Seul bloqueur = `SHOPIFY_OAUTH_CLIENT_ID/SECRET` (app Partner self-serve gratuite). **Le wildcard DNS `*.powerupgraders.com` est DÉCOUPLÉ** — il sert les pages publiques de marque, pas la connexion Shopify.
+- **Métriques publiques de base** (X `public_metrics`, YouTube stats, TikTok, LinkedIn profil) : marchent DÉJÀ avec les env creds ; dégradation honnête (`social-connect.ts:497-514`).
+- **Embeddings** : PAS gated — self-host prod `EMBED_SERVICE_URL` (Ollama-compatible). Corrigé 2026-07-23 (cf. §Ops env retiré).
+- **Ops env restant** : `firebase-admin` + creds si FCM ; clés providers ads/email/SMS (Credentials Vault ADR-0021).
+
+**(C) Atomes externes RÉELS — code complet + dégradation honnête, seul un tiers débloque :**
+- **Meta App Review groupée** (`read_insights`/`instagram_manage_insights`/publish + IG Business Login hors-testeurs) — les scopes marchent DÉJÀ pour les comptes testeurs ; la review = passage public. Reste 1 mini-build interne : handler GET `hub.challenge` du webhook temps-réel (à faire ; Advanced-Access-gated de toute façon).
+- **Approbations de scopes ÉLEVÉS platform-side** : YouTube `yt-analytics.readonly` (audit Google) · TikTok (audit d'app) · LinkedIn Community Management (produit) · X palier payant PPU. Code présent, dégrade honnêtement en attendant.
+- **Google Trends + scraping d'avis à l'échelle** (scoreur A/D/V) : pas d'API officielle / ToS-gated (`ConnectorResult<T>` P22-1, ADR-0149). MAIS les endpoints PUBLICS (Wikipedia REST, autocomplete Google) sont **buildables sans clé** (à faire — item B).
+- **WABA entrant** (webhook passeport fan) : contrat WhatsApp Business **ET** code non bâti — le SEUL C où le code n'est pas drop-in-ready (vague future).
 
 ---
 
