@@ -69,6 +69,11 @@ const REQUIRE_OPERATOR: Array<[string, string]> = [
   ["learning.ts", "LEGACY_LEARNING_ISSUE_CERTIFICATION"],
   ["event.ts", "LEGACY_EVENT_CREATE"],
   ["event.ts", "LEGACY_EVENT_MARK_ATTENDED"],
+  // ── Round-10 : scoring keyé sur { type, id } arbitraire (re-score cross-tenant) ──
+  ["advertis-scorer.ts", "LEGACY_ADVERTIS_SCORER_SCORE_OBJECT"],
+  ["advertis-scorer.ts", "LEGACY_ADVERTIS_SCORER_BATCH_SCORE"],
+  ["advertis-scorer.ts", "LEGACY_ADVERTIS_SCORER_RECALCULATE"],
+  ["advertis-scorer.ts", "LEGACY_ADVERTIS_SCORER_SNAPSHOT_ALL"],
 ];
 
 describe("entity-id financial + privilege procedures are staff-gated (round-4)", () => {
@@ -97,6 +102,12 @@ const RESOLUTION_GUARD: Array<[string, RegExp]> = [
   ["creative-proposal.ts", /assertProposalAccess\(/], // getById/submit/validate/reject → proposal.strategyId
   ["brand-node.ts", /assertNodeAccess\(/], // update/delete/move/tagRole/attachStrategy/create + reads
   ["media-buying.ts", /camp\.strategyId !== input\.strategyId/], // syncToCampaign → campaign appartient à la marque
+  // ── Round-10 : sweep proactif (scan-entity-idor) — clusters brand-core ──
+  ["strategy.ts", /assertStrategyRead\(ctx\.session\.user\.id, input\.id\)/], // getWithScore : `{ id }` = strategyId nommé `id`
+  ["driver.ts", /assertDriverAccess\(/], // update/delete/activate/…/generatePRAngles → driver.strategyId
+  ["ingestion.ts", /assertSourceAccess\(/], // getSource/deleteSource/updateSource → source.strategyId (rawContent)
+  ["mission.ts", /enforceActivityAccess\(/], // activity cluster → activity.missionId → mission
+  ["social.ts", /await assertStrategyAccess\(ctx, driver\.strategyId\)/], // connectToDriver/linkToDriver → driver.strategyId
 ];
 
 describe("entity-id founder-reachable procedures resolve ownership (round-4)", () => {

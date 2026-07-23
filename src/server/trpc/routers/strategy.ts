@@ -819,6 +819,10 @@ export const strategyRouter = createTRPCRouter({
   getWithScore: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
+      // IDOR (round-10) : keyé sur `{ id }` (= le strategyId, mais NOMMÉ `id` donc
+      // invisible à la garde de tête ADR-0175) → fuite complète des piliers ADVE
+      // d'une marque arbitraire. Garde de lecture explicite.
+      await assertStrategyRead(ctx.session.user.id, input.id);
       const strategy = await ctx.db.strategy.findUniqueOrThrow({
         where: { id: input.id },
         include: { pillars: true, client: { select: { id: true, name: true } } },

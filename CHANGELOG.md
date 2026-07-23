@@ -1,5 +1,18 @@
 # Changelog — La Fusee
 
+## v6.27.287 — fix(governance): round-10 adversarial (a) — IDOR entité-id, cluster brand-core (scan proactif) (2026-07-23)
+
+**Un scan proactif a inventorié 122 procédures keyées sur un id d'ENTITÉ ; ce lot ferme le cluster brand-core (piliers ADVE, drivers, sources, missions/activités, scoring).**
+
+- **Cause structurelle (récurrente rounds 4→10)** : la garde ADR-0175 de `governedProcedure` + `strategyScopedProcedure` ne se déclenchent que sur un `strategyId` de TÊTE. Toute procédure keyée sur un id d'entité (`{ id }`, `driverId`, `activityId`, source `{ id }`…, ou même un strategyId NOMMÉ `id`) échappe — et le scanner `strategy-ownership-guard` ne la voit pas. Nouveau script de découverte `scan-entity-idor` → 122 candidats, triés (fix / operator / sûr-par-design).
+- **CRITICAL — `strategy.getWithScore`** : keyé sur `{ id }` (= le strategyId, mais nommé `id`) → **fuite COMPLÈTE des piliers ADVE** de n'importe quelle marque. Garde `assertStrategyRead`.
+- **HIGH — cluster driver (11 procédures)** : `update`/`delete`/`activate`/`deactivate`/`setPrimary`/`translateBrief`/`get/link/unlinkGloryTool`/`generatePRAngles` (fuite piliers A/V/E)/`cloneForMarket` mutaient/lisaient un driver d'autrui. Helper `assertDriverAccess` (driver → marque).
+- **HIGH — sources d'ingestion** : `getSource` (fuite `rawContent` brut), `deleteSource`, `updateSource` keyées sur `BrandDataSource.id`. Helper `assertSourceAccess`.
+- **HIGH — cluster mission/activités (14)** : `assign` (hijack de mission), `suggestTalent`, `listActivities`/`activityHealth`/`retroplan`, et les 8 procédures d'activité (create/generate/update/complete/cancel/regenerate/assign/setDuration) déléguaient à `cm.*` avec un `missionId`/`activityId` brut. Helper `enforceActivityAccess` (activité → mission) + `enforceMissionAccess`. `claim` gagne un gate `guildPublished` (une mission DRAFT PRIVÉE était revendicable off-wall).
+- **HIGH — `social.connectToDriver`/`linkToDriver`** : keyés sur `driverId` → écriture cross-tenant. Garde `assertStrategyAccess(driver.strategyId)`.
+- **MED — `advertis-scorer` (scoreObject/batchScore/recalculate/snapshotAll)** : keyés sur `{ type, id }` arbitraire → re-score/écrase le vecteur ADVE de n'importe quel objet (primitive scoring système). Passés `requireOperator: true`.
+- Verrou `entity-id-ownership-guard` étendu (5 chokepoints + 4 kinds operator). Cap APOGEE 7/7 · 0 LLM. tsc 0 · 90 tests ownership verts. **Reste du scan (marketplace PII, intake, decorative-strategyId) → lots (b)/(c).**
+
 ## v6.27.286 — fix(thot): round-10 adversarial — correctness (coût archétype + isComplete ARTEMIS) (2026-07-23)
 
 **Deux mensonges déterministes fermés : un post costé comme une journée d'event, et un livrable dit « complet » alors qu'il manque ses frameworks.**

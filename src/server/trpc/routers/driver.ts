@@ -31,7 +31,23 @@ import { getOperatorContext, scopeStrategies } from "@/server/services/operator-
 import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { generateSpecs as engineGenerateSpecs, translateBrief as engineTranslateBrief } from "@/server/services/driver-engine";
 import { governedProcedure } from "@/server/governance/governed-procedure";
+import { db } from "@/lib/db";
 /* lafusee:governed-active */
+
+/**
+ * IDOR (round-10) — un driver keyé sur son `id`/`driverId` n'a PAS de strategyId
+ * de tête, donc ni la garde ADR-0175 de `governedProcedure` ni `strategyScoped`
+ * ne s'appliquent. Résout le driver → sa marque et garde lecture/écriture.
+ * Retourne le strategyId pour réutilisation.
+ */
+async function assertDriverAccess(userId: string, driverId: string): Promise<string> {
+  const driver = await db.driver.findUniqueOrThrow({
+    where: { id: driverId },
+    select: { strategyId: true },
+  });
+  await assertStrategyRead(userId, driver.strategyId);
+  return driver.strategyId;
+}
 
 export const driverRouter = createTRPCRouter({
   create: governedProcedure({
@@ -97,6 +113,7 @@ export const driverRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      await assertDriverAccess(ctx.session.user.id, input.id);
       const { id, ...rest } = input;
       const data: Record<string, unknown> = {};
       if (rest.name !== undefined) data.name = rest.name;
@@ -123,6 +140,7 @@ export const driverRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      await assertDriverAccess(ctx.session.user.id, input.id);
       return ctx.db.driver.update({
         where: { id: input.id },
         data: { deletedAt: new Date() },
@@ -169,6 +187,7 @@ export const driverRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      await assertDriverAccess(ctx.session.user.id, input.id);
       return ctx.db.driver.update({
         where: { id: input.id },
         data: { status: "ACTIVE" },
@@ -189,6 +208,7 @@ export const driverRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      await assertDriverAccess(ctx.session.user.id, input.id);
       return ctx.db.driver.update({
         where: { id: input.id },
         data: { status: "INACTIVE" },
@@ -209,6 +229,7 @@ export const driverRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      await assertDriverAccess(ctx.session.user.id, input.id);
       const driver = await ctx.db.driver.findUniqueOrThrow({ where: { id: input.id } });
       // Transaction: unset all primary for this strategy, then set this one
       await ctx.db.$transaction([
@@ -326,7 +347,8 @@ export const driverRouter = createTRPCRouter({
 
 
   })
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      await assertDriverAccess(ctx.session.user.id, input.driverId);
       try {
         return await engineTranslateBrief(input.driverId, input.missionContext);
       } catch (error) {
@@ -363,6 +385,7 @@ export const driverRouter = createTRPCRouter({
   getGloryTools: protectedProcedure
     .input(z.object({ driverId: z.string() }))
     .query(async ({ ctx, input }) => {
+      await assertDriverAccess(ctx.session.user.id, input.driverId);
       return ctx.db.driverGloryTool.findMany({
         where: { driverId: input.driverId },
       });
@@ -382,6 +405,7 @@ export const driverRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      await assertDriverAccess(ctx.session.user.id, input.driverId);
       // Prevent duplicates
       const existing = await ctx.db.driverGloryTool.findFirst({
         where: { driverId: input.driverId, gloryTool: input.gloryTool },
@@ -406,6 +430,12 @@ export const driverRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      // Keyé sur driverGloryTool.id → résoudre le lien → son driver → sa marque.
+      const link = await ctx.db.driverGloryTool.findUniqueOrThrow({
+        where: { id: input.id },
+        select: { driverId: true },
+      });
+      await assertDriverAccess(ctx.session.user.id, link.driverId);
       return ctx.db.driverGloryTool.delete({ where: { id: input.id } });
     }),
 
@@ -433,6 +463,7 @@ export const driverRouter = createTRPCRouter({
   generatePRAngles: protectedProcedure
     .input(z.object({ driverId: z.string() }))
     .query(async ({ ctx, input }) => {
+      await assertDriverAccess(ctx.session.user.id, input.driverId);
       const driver = await ctx.db.driver.findUniqueOrThrow({
         where: { id: input.driverId },
         include: { strategy: { include: { pillars: true } } },
@@ -478,6 +509,7 @@ export const driverRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      await assertDriverAccess(ctx.session.user.id, input.driverId);
       const source = await ctx.db.driver.findUniqueOrThrow({ where: { id: input.driverId } });
       const clonedName = input.nameOverride ?? `${source.name} (${input.targetMarket.toUpperCase()})`;
 
