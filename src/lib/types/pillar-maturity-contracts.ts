@@ -399,14 +399,21 @@ export function deriveSchemaRequirements(pillarKey: string): FieldRequirement[] 
     // forcera Enrichir à régénérer).
     const { required, optional } = extractObjectKeys(inner);
     const allKeys = [...required, ...optional];
+    // Tableau d'OBJETS (matrice) → profondeur par item : `array_items_complete`
+    // exige que CHAQUE item ait ses feuilles requises renseignées, au lieu de
+    // `min_items` qui laisse passer `[{nom}]` (la cause des « vides » invisibles).
+    // Un tableau de scalaires (array-of-strings) garde min_items — pas d'items keys.
+    const isArrayOfObjects = validator === "min_items" && allKeys.length > 0;
+    const validatorFinal: FieldValidator = isArrayOfObjects ? "array_items_complete" : validator;
     reqs.push({
       path,
-      validator,
+      validator: validatorFinal,
       validatorArg: arg,
       derivable: !isHuman,
       derivationSource: isHuman ? undefined : "ai_generation",
       description: `Schema ${pillarKey.toUpperCase()}.${path}`,
       ...(allKeys.length > 0 ? { expectedKeys: allKeys, requiredKeys: required } : {}),
+      ...(isArrayOfObjects ? { requiredItemKeys: required } : {}),
     });
   }
   return reqs;
@@ -517,11 +524,21 @@ export function buildContracts(
     const enrichWithKeys = (r: FieldRequirement): FieldRequirement => {
       const sd = schemaByPath.get(r.path);
       if (!sd) return r;
-      return {
+      const enriched: FieldRequirement = {
         ...r,
         ...(sd.expectedKeys ? { expectedKeys: sd.expectedKeys } : {}),
         ...(sd.requiredKeys ? { requiredKeys: sd.requiredKeys } : {}),
       };
+      // Si le schema dit « tableau d'objets », on impose la profondeur par item
+      // au stage COMPLETE — même quand la requirement venait d'ENRICHED/glory en
+      // min_items/non_empty (le stage ENRICHED lui-même reste inchangé : cette
+      // copie enrichie n'alimente que COMPLETE). C'est ce qui fait chuter COMPLET
+      // honnêtement tant que les cellules requises manquent, sur TOUS les piliers.
+      if (sd.validator === "array_items_complete") {
+        enriched.validator = "array_items_complete";
+        enriched.requiredItemKeys = sd.requiredItemKeys;
+      }
+      return enriched;
     };
     const seen = new Set<string>();
     const merged: FieldRequirement[] = [];

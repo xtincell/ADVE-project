@@ -67,6 +67,42 @@ function isFieldSatisfied(content: Record<string, unknown>, req: FieldRequiremen
       return true;
     }
 
+    case "array_items_complete": {
+      // Profondeur matrice : le tableau doit avoir ≥1 item ET CHAQUE item doit
+      // avoir TOUTES ses feuilles requises renseignées (non vides). C'est ce qui
+      // fait qu'une matrice `produitsCatalogue` = [{nom}] compte comme INCOMPLÈTE
+      // (les cellules gainClientConcret/… manquent) → la notoria les cible.
+      // On n'exige que les `requiredItemKeys` (sous-clés non-optionnelles du
+      // schema) — jamais les cellules `.optional()` (pas de fabrication forcée).
+      //
+      // Champ union tableau|record (ex. sacredCalendar = z.union([array, record])) :
+      // la forme record (objet non vide) est une forme VALIDE. `requiredItemKeys`
+      // provient de la branche tableau du schema, mais la valeur peut être un
+      // record → un objet non vide compte comme satisfait (on n'impose la
+      // profondeur par item que sur la forme tableau).
+      if (!Array.isArray(value)) {
+        return typeof value === "object" && value !== null && Object.keys(value).length > 0;
+      }
+      if (value.length < 1) return false;
+      const required = req.requiredItemKeys ?? [];
+      if (required.length === 0) return true; // dégrade en "≥1 item"
+      const cellFilled = (v: unknown): boolean => {
+        if (v === null || v === undefined) return false;
+        if (typeof v === "string" && v.trim() === "") return false;
+        if (Array.isArray(v) && v.length === 0) return false;
+        return true; // 0 / false sont des valeurs légitimes
+      };
+      return value.every((item) => {
+        // Item primitif (string) : forme raccourcie valide des schemas
+        // `listOfStringOr(z.object(...))` (principesCommunautaires, taboos…).
+        // Une string non vide EST un item rempli — on n'exige les feuilles que
+        // lorsque l'item est un objet.
+        if (typeof item !== "object" || item === null) return cellFilled(item);
+        const rec = item as Record<string, unknown>;
+        return required.every((k) => cellFilled(rec[k]));
+      });
+    }
+
     case "nested_complete": {
       if (typeof value !== "object" || value === null) return false;
       const obj = value as Record<string, unknown>;

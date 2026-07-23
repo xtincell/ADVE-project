@@ -1,5 +1,9 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
+## Chantier « remplissage profond ADVE » 2026-07-23 (PR #617) — déférés
+
+- **Profondeur des objets imbriqués mono (LOW)** *(Phase 2)* : `array_items_complete` surface la profondeur des **tableaux d'objets** (matrices) — chaque item doit avoir ses feuilles requises. Les **objets imbriqués simples** (non-tableaux, ex. `unitEconomics`, `mvp`, `proprieteIntellectuelle`) gardent le validateur `is_object` (présent + ≥1 clé reconnue), PAS de requirement par-feuille. **Honnête aujourd'hui** : la quasi-totalité de ces objets ont des feuilles `.optional()` (les exiger = fabrication forcée) → `is_object` est le bon niveau. **Reste** : un objet imbriqué qui aurait des feuilles REQUIRED (non-`.optional()`) verrait ces feuilles non surfacées per-leaf. **Fermeture** : étendre `deriveSchemaRequirements` pour émettre des dot-paths `champ.feuilleRequise` (profondeur bornée à 1-2 niveaux, respect strict de l'optionalité — jamais les `.optional()`), + un cas assessor. **Déclencheur** : si un pilier expose un objet imbriqué à feuilles required non couvertes (aucun identifié aujourd'hui sur A/D/V/E). Effort ~½ session.
+
 ## Audit adversarial « TOUT » 2026-07-22 (PR #612) — déférés bornés
 
 Items MEDIUM à régression-risquée ou à coordination, déférés de la boucle de fix (le reste est shippé — cf. CHANGELOG v6.27.252→) :

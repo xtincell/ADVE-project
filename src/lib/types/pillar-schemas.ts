@@ -130,7 +130,7 @@ export const PillarASchema = z.object({
   ikigai: BrandIkigaiSchema,
 
   // Valeurs Schwartz (1-3 valeurs max — une marque forte ne dépasse jamais 3 valeurs)
-  valeurs: z.array(BrandValueSchema).min(1).max(3),
+  valeurs: z.array(BrandValueSchema).min(1).max(5),
 
   // Hiérarchie communautaire — forme riche (ladder) OU compacte {niveaux, principe} (ADR-0168)
   hierarchieCommunautaire: z.union([
@@ -593,8 +593,8 @@ export const PillarVSchema = z.object({
   // Catalogue produits (1-50)
   produitsCatalogue: z.array(ProduitServiceSchema).min(1).max(50),
 
-  // Product Ladder (2-5 tiers)
-  productLadder: z.array(ProductLadderTierSchema).min(2).max(5),
+  // Product Ladder (2-7 tiers)
+  productLadder: z.array(ProductLadderTierSchema).min(2).max(7),
 
   // Unit Economics
   unitEconomics: UnitEconomicsSchema,
