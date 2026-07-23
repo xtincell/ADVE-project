@@ -1,5 +1,15 @@
 # Changelog — La Fusee
 
+## v6.27.308 — refactor(governance): B1 — pillar + campaign-manager migrés (3 routeurs cœur clos) + correction bucketing embeddings (2026-07-23)
+
+**Fin de la migration « 3 routeurs Neteru cœur » (B1) : pillar (9) + campaign-manager (18) rejoignent notoria sous `governedProcedure`. Baseline de dette Q3 66 → 39. Plus une correction d'honnêteté : les embeddings n'étaient PAS gated (self-host prod), erreur de bucketing corrigée partout.**
+
+- **B1 — campaign-manager (18/18)** : toutes les mutations → `governedProcedure({ requireOperator: true })` (gate staff préservé + brand-scope ADR-0175). **Trou pré-existant fermé en prime** : `generateReport` + `saveAsTemplate` (input `campaignId` sans `strategyId` → garde ADR-0175 no-op) gagnent une garde `.use(enforceCampaignRawScope)` — ils étaient écrivables cross-tenant. 3 nouveaux kinds LEGACY (`_CREATE`/`_CREATE_FROM_VALIDATED_ACTION`/`_ROUTE_TO_GUILDE`) + SLOs, ajoutés à la main (générateur strangler mort — cf. §B1).
+- **B1 — pillar (9/10)** : `transitionStatus`/`applyGloryOutput`/`rollbackVersion`/`acceptRecos`/`rejectRecos`/`autoFill`/`autoFillAll`/`transitionPhase` → `requireOperator: true` ; **`confirmInferredField` migré SANS `requireOperator`** (fondateur-facing — base reste `protectedProcedure`, la garde ADR-0175 couvre l'ownership via `strategyId`, équivalent au `strategyScopedProcedure` d'origine). **`previewAmend` laissé EXEMPT** (preview LLM, zéro écriture DB — baseline pillar = 1). Bodies + gardes inline inchangés.
+- **Baseline `governed-active-no-new-bypass`** : notoria + campaign-manager retirés (0 ungoverned), pillar → 1. Total Q3 66 → 39. tsc 0 · 1303 tests governance+types verts.
+- **Correction bucketing embeddings** (mandat opérateur « corrige tout ce qui t'a induit en erreur ») : j'avais listé les embeddings comme « gated — needs OPENAI_API_KEY ». **FAUX** — le chemin PROD est le serveur d'embedding **self-hosted de l'opérateur** (`EMBED_SERVICE_URL`, API Ollama-compatible ; Ollama Cloud, la clé texte, ne sert AUCUN embedding — vérifié `llm-gateway/index.ts:978-994`). OpenAI/OpenRouter = replis. Corrigé : `embedder.ts`, `oracle-augment.ts`, `ENV-VARS.md` (ligne `EMBED_SERVICE_URL` = chemin prod), `system-keys.ts` (clé `EMBED_SERVICE_URL` exposée au vault), RESIDUAL-DEBT (retiré de la liste gated). Même classe d'erreur que Tarsis (interne pris pour un vendor externe).
+- Cap APOGEE 7/7 · 0 LLM · 0 migration Prisma.
+
 ## v6.27.307 — refactor(governance): B1 — les 12 mutations Notoria migrées vers governedProcedure (2026-07-23)
 
 **Premier lot de la migration « 3 routeurs Neteru cœur » (B1) : les 12 mutations de Notoria (recommandations) passent de `operatorProcedure` nu à `governedProcedure` — elles émettent enfin un `IntentEmission` traçable ET gagnent le brand-scope. Baseline de dette Q3 78 → 66.**

@@ -28,7 +28,8 @@ Note migrations : l'image Docker exécute `prisma migrate deploy` au boot
 |---|---|---|
 | `OPENROUTER_API_KEY` (+ `OPENROUTER_MODEL`) | provider texte par défaut (owl-alpha) | cascade → Anthropic/OpenAI/Ollama |
 | `ANTHROPIC_API_KEY` | provider premium | intake → fallback question-bank templé (sans LLM) ; Oracle/calibration en erreur si AUCUN provider |
-| `OPENAI_API_KEY` | embeddings (RAG) | RAG passe en lexical (pas de crash) |
+| `EMBED_SERVICE_URL` | **embeddings (RAG) — chemin PROD** : serveur d'embedding self-hosted (API Ollama-compatible). Ollama Cloud ne sert PAS d'embeddings | — |
+| `OPENAI_API_KEY` | embeddings (RAG) — **repli** de `EMBED_SERVICE_URL` (+ OpenRouter) | RAG passe en lexical seulement si AUCUN des trois n'est configuré (pas de crash) |
 
 ## 🟡 Empreinte publique pilier E (ADR-0121 — le rapport payant)
 

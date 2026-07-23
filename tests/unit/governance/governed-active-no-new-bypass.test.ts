@@ -27,7 +27,7 @@
  *   - Réparer une mutation → compte < baseline → mettre à jour le baseline
  *     (le registre reste honnête et décroissant, motif emission-spine).
  *
- * # Nature du BASELINE (dette Q3 tracée, 78 au 2026-07-22 → 66 au 2026-07-23 après B1 notoria)
+ * # Nature du BASELINE (dette Q3 tracée, 78 au 2026-07-22 → 66 au 2026-07-23 après B1 notoria → 39 après B1 pillar+campaign)
  *
  * Deux familles :
  *   • EXEMPT (légitimement non gouverné, ne bougera pas) — infra credential
@@ -76,10 +76,9 @@ function ungovernedMutationCount(src: string): number {
  * (audit 2026-07-22). NE PEUT QUE DÉCROÎTRE. Absent = 0 attendu (aucune dette).
  */
 const BASELINE: Readonly<Record<string, number>> = {
-  "campaign-manager.ts": 18, // PENDING — chantier migration Neteru cœur
   // notoria.ts — CLOS (v6.27.307, B1) : les 12 mutations migrées vers governedProcedure
   //   (requireOperator:true préserve le gate opérateur + ADR-0175 ajoute le brand-scope).
-  "pillar.ts": 10, // PENDING — idem (dont rollbackVersion, cf. §G)
+  "pillar.ts": 1, // EXEMPT — previewAmend (LLM preview, zéro écriture DB)
   "quick-intake.ts": 8, // mixte : funnel public (conversation-state) + PENDING
   "mcp-billing.ts": 6, // EXEMPT — infra facturation adminProcedure auto-auditée
   "crm-contacts.ts": 4, // PENDING — CRM

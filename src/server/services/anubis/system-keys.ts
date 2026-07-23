@@ -55,7 +55,8 @@ export function getSystemKeyStatus(): SystemKeyGroup[] {
         { key: "OLLAMA_MODEL", label: "Ollama (modèle épinglé, ex. deepseek flash)", configured: has("OLLAMA_MODEL") },
         { key: "OPENROUTER_API_KEY", label: "OpenRouter (repli)", configured: has("OPENROUTER_API_KEY") },
         { key: "ANTHROPIC_API_KEY", label: "Anthropic (premium opt-in)", configured: has("ANTHROPIC_API_KEY") },
-        { key: "OPENAI_API_KEY", label: "OpenAI (embeddings seulement)", configured: has("OPENAI_API_KEY") },
+        { key: "EMBED_SERVICE_URL", label: "Embeddings — serveur self-hosted (Ollama-compatible, chemin PROD)", configured: has("EMBED_SERVICE_URL") },
+        { key: "OPENAI_API_KEY", label: "OpenAI (embeddings — repli du self-host)", configured: has("OPENAI_API_KEY") },
       ],
     },
     {
