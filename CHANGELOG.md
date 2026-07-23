@@ -1,5 +1,13 @@
 # Changelog — La Fusee
 
+## v6.27.295 — fix(governance): round-13 adversarial (a) — CRITICAL écriture pilier cassée (createVersion bumpait hors tx) (2026-07-23)
+
+**Le verrou optimiste posé round-12 sur le keystone C5 était auto-défait : `createVersion` bumpait `currentVersion` sur une connexion HORS transaction → le persist conditionnel matchait 0 ligne → TOUTE écriture pilier gouvernée aurait échoué sur le vrai Postgres (invisible en CI : DB stub).**
+
+- **CRITICAL — régression du fix round-12 (`pillar-gateway` + `pillar-versioning`)** : round-12 a rendu le persist du gateway conditionnel (`updateMany where { id, currentVersion: N }` → verrou optimiste anti-lost-update). MAIS `createVersion` (appelé ~50 lignes plus haut, l.596) tourne sur le client `db` **global**, hors de la tx interactive du gateway (il doit trouver la ligne via son id — cf. commentaire gateway l.324), et bumpait `currentVersion` N→N+1. Ce bump **committe sur une connexion séparée AVANT** le persist ; sous READ COMMITTED le persist re-snapshotte la ligne à N+1, le prédicat `= N` matche **0 ligne** → `count !== 1` → throw `PILLAR_VERSION_CONFLICT`. Résultat : **chaque** écriture pilier gouvernée (seed intake, `OPERATOR_AMEND_PILLAR`, cascade RTIS `ENRICH_*`, `ROLLBACK_PILLAR`, enrichissement Oracle) aurait renvoyé `success:false` sur le vrai Postgres Coolify — le FONDEMENT ADVE ne s'écrit plus. Invisible en CI (`DATABASE_URL` stub + tx mockée dans les tests d'intégration).
+- **Fix** : le bump de `currentVersion` appartient désormais au **SEUL** persist atomique du gateway (verrou optimiste RÉEL). Retiré de `createVersion` (qui ne fait plus QUE le snapshot pré-écriture `PillarVersion`). Le caller hors gateway `pillar-versioning.rollback` (`LEGACY_PILLAR_ROLLBACK_VERSION`) bumpe désormais **explicitement** (`currentVersion: { increment: 1 }`) — état final identique à `main`. Vérifié : happy-path (single writer) et rejet concurrent (lost-update) corrects sur Postgres réel.
+- **Régression rendue visible en CI** : nouveau `pillar-versioning-no-version-bump.test.ts` (comportemental, DB mockée) verrouille l'invariant « createVersion n'écrit JAMAIS `Pillar.currentVersion` ». Trouvé par la boucle adversariale round-13 (sous-agent data-layer). Cap APOGEE 7/7 · 0 LLM. tsc 0 · lint:gov 0 · pillar guards verts.
+
 ## v6.27.294 — fix(governance): round-12 adversarial (b) — concurrence (claims atomiques : double-publish, palier, mission, pilier) (2026-07-23)
 
 **Quatre courses concurrentes, une seule cause racine : un garde lu HORS de l'écriture atomique — le codebase connaît le bon `updateMany` conditionnel (subscription-cycles) mais 4 handlers ne l'utilisaient pas.**

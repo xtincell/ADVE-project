@@ -37,12 +37,17 @@ export async function createVersion(entry: VersionEntry): Promise<string> {
     },
   });
 
-  // Bump version counter
-  await db.pillar.update({
-    where: { id: entry.pillarId },
-    data: { currentVersion: (pillar.currentVersion ?? 1) + 1 },
-  });
-
+  // round-13a (CRITICAL) — createVersion ne bumpe PLUS `Pillar.currentVersion`.
+  // Il tourne sur le client `db` global (hors de la tx interactive du gateway, cf.
+  // pillar-gateway/index.ts:324-325). Bumper ici committait N→N+1 sur une connexion
+  // SÉPARÉE, AVANT le persist conditionnel du gateway (`updateMany where
+  // currentVersion = N` — verrou optimiste posé round-12). Sous READ COMMITTED, ce
+  // persist re-snapshottait la ligne à N+1 (déjà committée par ce bump), matchait
+  // 0 ligne → `count !== 1` → throw PILLAR_VERSION_CONFLICT → TOUTE écriture pilier
+  // gouvernée échouait sur un vrai Postgres (invisible en CI : DB stub + tx mockée).
+  // Le bump du compteur appartient désormais au SEUL persist atomique du gateway,
+  // qui devient un verrou optimiste réel. Les callers hors gateway (rollback ci-dessous)
+  // bumpent explicitement. Invariant verrouillé par create-version-no-bump.test.ts.
   return version.id;
 }
 
@@ -72,10 +77,17 @@ export async function rollback(pillarId: string, versionId: string, author?: str
     reason: `rollback_to_v${version.version}`,
   });
 
-  // Apply the old content
+  // Apply the old content. round-13a : bump `currentVersion` explicitement ici —
+  // createVersion ne le fait plus, et ce chemin de rollback (LEGACY_PILLAR_ROLLBACK_VERSION,
+  // pillar.rollbackVersion) ne passe pas par le persist du gateway. Sans ce bump le
+  // compteur resterait figé (le snapshot pré-rollback et le suivant porteraient le
+  // même numéro). État final identique à `main` : contenu restauré + currentVersion +1.
   await db.pillar.update({
     where: { id: pillarId },
-    data: { content: version.content as Prisma.InputJsonValue },
+    data: {
+      content: version.content as Prisma.InputJsonValue,
+      currentVersion: { increment: 1 },
+    },
   });
 }
 

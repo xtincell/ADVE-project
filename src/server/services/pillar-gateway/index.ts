@@ -639,12 +639,17 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
         }
       }
 
-      // ── PERSIST (verrou optimiste — round-12) ────────────────────
+      // ── PERSIST (verrou optimiste — round-12, corrigé round-13a) ──
       // Conditionné à la version LUE (`pillar.currentVersion`, l.336). Sans ce
       // prédicat, deux écritures concurrentes du MÊME pilier (fenêtre findUnique
       // → persist, READ COMMITTED) bumpaient toutes deux N→N+1 en `where:{id}` →
       // perte d'édition silencieuse sur le FONDEMENT ADVE. count≠1 → throw =
       // rollback de toute la tx (cascade + audit inclus), aucune écriture partielle.
+      // Round-13a : ce persist est le SEUL à bumper currentVersion. createVersion
+      // (l.596, client `db` global HORS de cette tx) le bumpait AUSSI → committait
+      // N+1 sur une autre connexion avant ce persist → le prédicat `= N` matchait
+      // 0 ligne → throw systématique sur un vrai Postgres. Bump retiré de
+      // createVersion : le compteur avance ici et le verrou optimiste est réel.
       const persisted = await tx.pillar.updateMany({
         where: { id: pillar.id, currentVersion: pillar.currentVersion },
         data: {
