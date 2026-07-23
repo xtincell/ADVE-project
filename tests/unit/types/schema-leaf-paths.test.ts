@@ -5,7 +5,8 @@
  * premier niveau → « la notoria ignore les champs vides ». Pur, sans DB.
  */
 import { describe, it, expect } from "vitest";
-import { listSchemaLeafPaths, findEmptyLeafPaths } from "@/lib/types/pillar-maturity-contracts";
+import { listSchemaLeafPaths, findEmptyLeafPaths, buildExampleFromZod, getFieldZod } from "@/lib/types/pillar-maturity-contracts";
+import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
 
 describe("listSchemaLeafPaths — descend les objets, s'arrête aux tableaux", () => {
   it("pilier A : descend prophecy (union object|string) + ikigai jusqu'aux feuilles", () => {
@@ -68,5 +69,25 @@ describe("findEmptyLeafPaths — vides réels, anti-fabrication", () => {
     const empty = findEmptyLeafPaths("a", {}).map((l) => l.path);
     expect(empty).toContain("prophecy.worldTransformed");
     expect(empty).toContain("secteur");
+  });
+});
+
+describe("shape PROFONDE équipant la notoria (buildExampleFromZod / getFieldZod)", () => {
+  it("buildExampleFromZod expose l'arborescence imbriquée avec ses sous-clés (pas un type plat)", () => {
+    // Ce que le prompt notoria montre désormais au LLM : la SHAPE, pas « prophecy: object ».
+    const ex = buildExampleFromZod(PILLAR_SCHEMAS.A) as Record<string, unknown>;
+    expect(typeof ex.prophecy).toBe("object");
+    expect(Object.keys(ex.prophecy as object)).toContain("pioneers");
+  });
+
+  it("getFieldZod valide une feuille imbriquée (chemin `prophecy.pioneers`)", () => {
+    const zod = getFieldZod("a", "prophecy.pioneers") as { safeParse?: (v: unknown) => { success: boolean } } | null;
+    expect(typeof zod?.safeParse).toBe("function");
+    expect(zod?.safeParse?.("les pionniers de la cause")?.success).toBe(true);
+  });
+
+  it("getFieldZod valide une cellule de matrice (chemin `produitsCatalogue[0].gainClientConcret`)", () => {
+    const zod = getFieldZod("v", "produitsCatalogue[0].gainClientConcret") as { safeParse?: (v: unknown) => { success: boolean } } | null;
+    expect(typeof zod?.safeParse).toBe("function");
   });
 });

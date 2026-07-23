@@ -1,5 +1,14 @@
 # Changelog — La Fusee
 
+## v6.27.320 — fix(notoria): le LLM est ÉQUIPÉ et VALIDÉ en profondeur (fin de la divergence de shape) ([ADR-0177](docs/governance/adr/0177-schema-leaf-inventory-and-notoria-depth.md)) (2026-07-23)
+
+**Suite du fond, pas un patch : la notoria ne se contente plus de LISTER les feuilles vides imbriquées — elle MONTRE au LLM leur shape exacte et VALIDE ses recos en profondeur, avec la même machinerie que l'auto-filler.**
+
+- **Le maillon manquant de v6.27.319** : on avait rendu la DÉTECTION des vides profonde, mais la notoria re-dérivait une vue de schema **plus plate** que l'auto-filler — `describeSchemaFields` montrait `- prophecy: object` (types plats) et la validation post-génération testait `shape[reco.field]` (top-level only). Résultat : le LLM se voyait demander de remplir `prophecy.pioneers` **sans jamais voir la sous-structure ni les enums** → il inventait des clés (`pioneer` vs `pioneers`, `good/love/paid/skill` vs `love/competence/worldNeed/remuneration`) ; et une reco profonde n'était **jamais validée**.
+- **Shape profonde** : `describeSchemaFields` utilise désormais `buildExampleFromZod(schema)` — l'**exacte machinerie que l'auto-filler** (`buildExampleForPath`). Le LLM reçoit l'arborescence COMPLÈTE avec sous-clés + valeurs d'enum RÉELLES → il EXTEND/remplit en profondeur sans inventer de clé. Fin de la divergence « deux descriptions du schema, une profonde une plate ».
+- **Validation profonde** : `getFieldZod(targetKey, reco.field)` (chemins imbriqués `prophecy.pioneers` + cellules `produitsCatalogue[2].gainClientConcret`) remplace `shape[reco.field]`. Limitée aux SET (un ADD/MODIFY porte un item, un EXTEND un objet partiel fusionné → les valider contre le champ entier produisait de **faux avertissements** — bug pré-existant corrigé en passant).
+- 3 tests neufs (`buildExampleFromZod` expose l'arborescence / `getFieldZod` valide une feuille imbriquée / valide une cellule de matrice). tsc 0 · lint 0 · cycles 0 · **3339 tests verts**. Cap APOGEE 7/7 · 0 modèle Prisma · 0 migration · 0 nouvel Intent kind.
+
 ## v6.27.319 — fix(notoria): la notoria voit les champs vides EN PROFONDEUR + recos lisibles et honnêtement gatées ([ADR-0177](docs/governance/adr/0177-schema-leaf-inventory-and-notoria-depth.md)) (2026-07-23)
 
 **Trois bugs rapportés sur SPAWT pilier A — recos non prévisualisables, remplacement « silencieux » malgré le score, champs vides ignorés — réparés à la racine, pas en patch : une seule notion canonique de « feuille vide » partout, et le score déterministe (déjà calculé) enfin affiché.**

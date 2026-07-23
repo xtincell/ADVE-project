@@ -10,7 +10,7 @@ import { callLLM } from "@/server/services/llm-gateway";
 import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import { extractJSON as _extractJSON } from "@/server/services/utils/llm";
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
-import { findEmptyLeafPaths } from "@/lib/types/pillar-maturity-contracts";
+import { findEmptyLeafPaths, buildExampleFromZod, getFieldZod } from "@/lib/types/pillar-maturity-contracts";
 import type { PillarKey } from "@/lib/types/advertis-vector";
 import { getFormatInstructions } from "@/lib/types/variable-bible";
 import { Prisma } from "@prisma/client";
@@ -64,25 +64,13 @@ function describeSchemaFields(key: string): string {
   const upperKey = key.toUpperCase() as keyof typeof PILLAR_SCHEMAS;
   const schema = PILLAR_SCHEMAS[upperKey];
   if (!schema) return `Schema non disponible pour ${key}`;
-  const shape = schema.shape as Record<
-    string,
-    { _def?: { typeName?: string }; description?: string }
-  >;
-  const lines: string[] = [];
-  for (const [fieldName, fieldSchema] of Object.entries(shape)) {
-    const def = fieldSchema?._def;
-    const typeName = def?.typeName ?? "unknown";
-    let typeLabel = "unknown";
-    if (typeName.includes("ZodString")) typeLabel = "string";
-    else if (typeName.includes("ZodNumber")) typeLabel = "number";
-    else if (typeName.includes("ZodArray")) typeLabel = "array";
-    else if (typeName.includes("ZodObject")) typeLabel = "object";
-    else if (typeName.includes("ZodEnum")) typeLabel = "enum";
-    else if (typeName.includes("ZodBoolean")) typeLabel = "boolean";
-    else if (typeName.includes("ZodOptional")) typeLabel = "optional";
-    lines.push(`  - ${fieldName}: ${typeLabel}`);
-  }
-  return lines.join("\n");
+  // Shape EXACTE et PROFONDE — MÊME machinerie que l'auto-filler (`buildExampleFromZod`).
+  // L'ancienne version listait des types PLATS (`- prophecy: object`) : le LLM se
+  // voyait demander de remplir `prophecy.pioneers` sans jamais voir les sous-clés ni
+  // les vraies valeurs d'enum → il inventait des clés (`pioneer` vs `pioneers`,
+  // `good/love/paid/skill` vs `love/competence/worldNeed/remuneration`). Ici il reçoit
+  // l'arborescence complète avec enums réels → il EXTEND/remplit en profondeur juste.
+  return JSON.stringify(buildExampleFromZod(schema), null, 2);
 }
 
 // ── System Prompts ────────────────────────────────────────────────
@@ -258,7 +246,7 @@ async function generateRecosForPillar(
       `\nToutes ces feuilles DOIVENT etre remplies. C'est la PRIORITE #1 — ne laisse AUCUNE feuille vide listee ci-dessus.`
     : "\nTous les champs sont remplis en profondeur. Concentre-toi sur l'enrichissement et la correction.";
 
-  const prompt = `SCHEMA du pilier ${targetKey.toUpperCase()} (types attendus):
+  const prompt = `SHAPE EXACTE du pilier ${targetKey.toUpperCase()} (arborescence complète, sous-clés + valeurs d'enum RÉELLES — respecte EXACTEMENT cette structure, n'invente aucune clé):
 ${schemaDesc}
 
 BIBLE DE FORMAT (regles de fond pour chaque champ):
@@ -298,21 +286,21 @@ IMPORTANT:
     (r): r is RawLLMReco => !!r && typeof r.field === "string" && r.field.trim().length > 0,
   );
 
-  // Validate proposedValues against schema
-  const upperKey = targetKey.toUpperCase() as keyof typeof PILLAR_SCHEMAS;
-  const schema = PILLAR_SCHEMAS[upperKey];
-  if (schema) {
-    const shape = schema.shape as Record<
-      string,
-      { safeParse?: (v: unknown) => { success: boolean } }
-    >;
-    for (const reco of recos) {
-      const fieldSchema = shape[reco.field];
-      if (fieldSchema?.safeParse) {
-        const result = fieldSchema.safeParse(reco.proposedValue);
-        if (!result.success) {
-          (reco as unknown as Record<string, unknown>)._validationWarning = `Format ne correspond pas au schema pour "${reco.field}"`;
-        }
+  // Validate proposedValues against schema — PROFOND. `getFieldZod` résout les
+  // chemins imbriqués (`prophecy.pioneers`) ET les cellules de matrice
+  // (`produitsCatalogue[2].gainClientConcret`), là où l'ancien `shape[reco.field]`
+  // ne voyait que le premier niveau (une reco profonde n'était jamais validée). On
+  // ne valide que les SET (remplacement de champ entier) : ADD/MODIFY portent un
+  // ITEM et EXTEND un objet PARTIEL fusionné → les valider contre le schema du champ
+  // entier produisait de faux avertissements (bug pré-existant corrigé en passant).
+  for (const reco of recos) {
+    const op = (reco as { operation?: string }).operation ?? "SET";
+    if (op !== "SET") continue;
+    const fieldSchema = getFieldZod(targetKey, reco.field) as { safeParse?: (v: unknown) => { success: boolean } } | null;
+    if (fieldSchema?.safeParse) {
+      const result = fieldSchema.safeParse(reco.proposedValue);
+      if (!result.success) {
+        (reco as unknown as Record<string, unknown>)._validationWarning = `Format ne correspond pas au schema pour "${reco.field}"`;
       }
     }
   }
