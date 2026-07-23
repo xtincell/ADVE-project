@@ -530,7 +530,9 @@ export async function generateBatch(
     }
   }
   if (missionType === "SESHAT_OBSERVATION" && seshatObservation) {
-    extraContext += `Observation Seshat:\n${seshatObservation}`;
+    // round-15a : fencé (parité avec serializePillar l.59) — observation externe non
+    // fiable (OWASP LLM01). Sink = queue Recommendation gatée, mais l'input reste non fiable.
+    extraContext += wrapUntrusted("Observation Seshat", seshatObservation, { max: 4000 });
   }
 
   // Load vault context for ADVE_UPDATE
@@ -547,7 +549,9 @@ export async function generateBatch(
       const vaultSummary = sources
         .map((s) => `[${s.fileName}] ${(s.rawContent ?? "").slice(0, 500)}`)
         .join("\n");
-      extraContext += `\nDocuments Vault:\n${vaultSummary}`;
+      // round-15a : contenu de documents opérateur-uploadés → fencé (parité avec
+      // serializePillar). `rawContent` est non fiable (OWASP LLM01).
+      extraContext += `\n${wrapUntrusted("Documents Vault", vaultSummary, { max: 4000 })}`;
     }
   }
 

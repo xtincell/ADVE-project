@@ -1,5 +1,14 @@
 # Changelog — La Fusee
 
+## v6.27.301 — fix(governance): round-15 adversarial (a) — parité fencing inputs LLM gated (notoria + vault-enrichment) (2026-07-23)
+
+**Sous-agent LLM-prompt-layer : ZÉRO violation interdit-n°3 (fabrication dans l'ADVE fondateur) — la classe round-11 n'a PAS récidivé. Tout writer de donnée fondatrice est anti-fabrication + fencé + validé + marqué INFERRED/AI_PROPOSED derrière le chokepoint gateway. Seuls 3 résidus LOW d'injection-hardening, aucun n'atteint la donnée fondatrice.**
+
+- **LOW — `notoria/engine.ts`** : `seshatObservation` (obs. externe) + `vaultSummary` (`rawContent` de documents opérateur-uploadés, `slice(0,500)`×5) étaient interpolés BRUTS dans `extraContext` → prompt, alors que le contenu pilier frère EST fencé (`serializePillar`). Sink = queue `Recommendation` GATÉE (PENDING → apply opérateur → gateway valide), et `UNTRUSTED_NOTICE` est déjà au system — mais parité incomplète (OWASP LLM01). Les deux passés par `wrapUntrusted`.
+- **LOW — `vault-enrichment/index.ts`** : `dataBrief` (extraits RAG vault + autres piliers) interpolé brut. Plus faible (`executeStructuredLLMCall` auto-préfixe `UNTRUSTED_NOTICE` + Zod strict, sink `VaultRecommendation` gaté) → `dataBrief` désormais `wrapUntrusted`.
+- **LOW/ephemeral (dropped)** : `boot-sequence` chat — inputs non fencés mais sortie ÉPHÉMÈRE (réponse de chat non persistée), self-injection only.
+- **Vérifié CLEAN** : les 3 fixes round-11 tiennent (`quick-intake` anti-fabrication, `notoria` field-filter, `vault-enrichment` Zod strict) ; `deduce-adve`/`ai-filler`/`brand-book-ingestion`/`market-study-ingestion`/`narrate-adve`/`rtis-draft`/Glory-engine tous fencés+validés. **Réfuté** : market-research « mode mémoire » (provenance `source:memory` forcée + disclosed opérateur + sink KB cross-marque, PAS l'ADVE + `enforceSeshatProvenance`) et auto-filler needsHuman (flux INFERRED sanctionné CLAUDE.md). Composers round-14 confirmés déterministes (0 LLM). Cap APOGEE 7/7 · 0 LLM ajouté. tsc 0 · 3230 tests verts.
+
 ## v6.27.300 — fix(ui): round-14 adversarial (b) — durcissement client (localStorage + null-array + interval) (2026-07-23)
 
 **Sous-agent frontend : le front est fortement durci (13 rounds back-end le montrent) — dashboard/publish/scorer/leaderboard/guidelines tous défensifs. 4 trouvailles localisées, aucune CRITICAL n'a survécu à la réfutation.**

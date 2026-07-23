@@ -23,6 +23,7 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
 import { executeStructuredLLMCall, LLMStructuredCallError } from "@/server/services/utils/llm-structured";
+import { wrapUntrusted } from "@/server/services/utils/untrusted-content";
 import { getFormatInstructions } from "@/lib/types/variable-bible";
 import type { PillarKey } from "@/lib/types/advertis-vector";
 import { Prisma } from "@prisma/client";
@@ -414,7 +415,7 @@ ${schemaFields}
 ${JSON.stringify(currentContent, null, 2).slice(0, 3000)}
 
 === DONNÉES DISPONIBLES (autres piliers + vault) ===
-${dataBrief.join("\n\n").slice(0, 10000)}
+${wrapUntrusted("données disponibles", dataBrief.join("\n\n"), { max: 10000 })}
 
 ${unresolvedEmpty.length > 0 ? `\nCHAMPS PRIORITAIRES A REMPLIR : ${unresolvedEmpty.join(", ")}` : ""}
 ${filledFields.length > 0 ? `\nCHAMPS A VERIFIER (tous, vs source) : ${filledFields.join(", ")}` : ""}
