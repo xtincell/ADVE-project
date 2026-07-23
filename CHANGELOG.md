@@ -1,5 +1,14 @@
 # Changelog — La Fusee
 
+## v6.27.290 — feat(governance): round-10 adversarial (d) — verrou PROACTIF anti-IDOR entité-id (fermeture structurelle) (2026-07-23)
+
+**La classe IDOR entité-id survivait depuis 5 rounds parce qu'on énumérait « ce qui est gardé » ; ce verrou inverse la logique et prouve la couverture de l'univers.**
+
+- **Cause racine (rounds 4→10)** : la garde ADR-0175 + le scanner `strategy-ownership-guard` ne réagissent qu'au token littéral `strategyId` de TÊTE → toute procédure keyée sur un id d'ENTITÉ (`{id}`/`driverId`/`talentProfileId`/…, ou un strategyId nommé `id`) leur est invisible. Énumérer les gardes connues ne trouve jamais les trous.
+- **Remède structurel** : `tests/unit/governance/entity-id-idor-proactive.test.ts` — un scanner PROACTIF permanent qui ÉNUMÈRE l'univers des procédures founder-atteignables keyées sur un id d'entité, puis PROUVE que chacune est soit gardée (référence un chokepoint reconnu / self-scope), soit inscrite à `SAFE_BY_DESIGN` (30 entrées, chacune vérifiée par lecture de handler — 4 sous-agents adversariaux). **Une procédure NEUVE non gardée et non allowlistée casse désormais le build.** + garde-fou anti-régression du parseur + anti-stale-allowlist.
+- **Bilan round-10** : **122 candidats inventoriés → 92 gardés** (lots a/b/c : brand-core, marketplace PII, campaign-manager décoratif, intake) + **30 SAFE_BY_DESIGN** (catalogue global, self-scope, provenance JSON, where-scope co-localisé, résolution en mémoire, ownership couche-service). Utilitaire de découverte `scripts/scan-entity-idor.mjs` (le test reste canonique).
+- **Résidu tracé (LOW)** : `strategy.create` — l'objet créé est TOUJOURS self-owned (pas d'IDOR), mais `input.operatorId`/`clientId` non validés → pollution de portefeuille d'un autre opérateur (le flux portfolio les passe légitimement, d'où le tracé plutôt qu'un drop). RESIDUAL-DEBT §Gouvernance. Dette « audit founder-lane » (ADR-0166) marquée CLOSE. Cap APOGEE 7/7 · 0 LLM. tsc 0 · 1264 tests gouvernance verts.
+
 ## v6.27.289 — fix(governance): round-10 adversarial (c) — IDOR campaign-manager décoratif + intake (privilège/PII) (2026-07-23)
 
 **Troisième lot : le « strategyId décoratif » (campaignId vérifié mais entité liée non vérifiée) + la conversion d'intake qui laissait n'importe qui s'attribuer la marque d'autrui.**

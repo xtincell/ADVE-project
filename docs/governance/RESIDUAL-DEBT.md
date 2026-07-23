@@ -143,13 +143,27 @@ Items MEDIUM à régression-risquée ou à coordination, déférés de la boucle
   supprimé en passant : `middleware/operator.ts` (session-based `operatorFilter` renvoyait `{}` =
   non filtré = fuite si jamais câblé — 0 import, retiré v6.27.267).
 - **Audit d'ownership des mutations `governedProcedure` founder-lane** *(suivi ADR-0166, inscrit
-  2026-07-20)* : la lane protected est close ; les mutations gouvernées `requireOperator:false`
-  (guilde, paiements, candidatures, cockpit founder — flags audités PR #447) n'ont PAS toutes une
-  garde d'ownership explicite sur leurs ids d'entités (2 seules posées : `strategy.delete`,
-  `monetization.cancelSubscription`). **Plan** : réutiliser le scanner span de
-  `strategy-ownership-guard.test.ts` sur la lane governed, vérifier procédure par procédure (les
-  kinds calendrier/social sont déjà couverts par firewall de zones ADR-0131 + `canAccessStrategy`),
-  étendre le test HARD. **Effort** : ~½ session. **Déclencheur** : prochaine session backend.
+  2026-07-20)* — 🟢 **CLOS round-10** (v6.27.287→289, scan proactif `scan-entity-idor`). Le plan
+  (« vérifier procédure par procédure, étendre le test HARD ») est réalisé par un **scanner PROACTIF
+  permanent** (`tests/unit/governance/entity-id-idor-proactive.test.ts`) qui INVERSE la logique : il
+  énumère l'univers des procédures founder-atteignables keyées sur un id d'ENTITÉ (`{id}`/`driverId`/
+  `talentProfileId`/…, ou un strategyId nommé `id`) et PROUVE que chacune est gardée OU inscrite à
+  `SAFE_BY_DESIGN` (30 entrées, chacune vérifiée par lecture de handler — 4 sous-agents adversariaux).
+  122 candidats inventoriés → cluster brand-core (strategy/driver/ingestion/mission/social/scoring, a),
+  marketplace PII + télémétrie carrière (guild/quality-review/membership/imhotep/learning, b),
+  campaign-manager décoratif + intake privilège/PII (c) fermés. **Une procédure NEUVE non gardée et
+  non allowlistée casse désormais le build** — la classe (récurrente rounds 4→10) ne peut plus repasser
+  en silence. Restant tracé ci-dessous (`strategy.create` LOW).
+- **`strategy.create` — associations `operatorId`/`clientId` non validées (LOW)** *(round-10, scan
+  proactif)* : le nouvel objet est TOUJOURS self-owned (`userId = resolveSessionUserId(ctx)` — pas
+  d'IDOR sur l'objet créé), mais un caller peut passer un `input.operatorId`/`clientId` ARBITRAIRE →
+  la Strategy est associée au portefeuille d'un autre opérateur (pollution de vue, pas fuite/vol de
+  donnée). Le flux légitime `cockpit/portfolio/[corporateSlug]` passe l'operatorId du nœud corporate
+  que le fondateur opère — d'où l'impossibilité de simplement dropper l'input. **Plan** : valider que
+  `input.operatorId`/`clientId`, si fournis, sont accessibles au caller (getOperatorContext →
+  `== caller` ou nœud corporate qu'il possède, sinon ignorer et défaut au contexte du caller).
+  **Effort** : ~½ session (touche le modèle d'accès portfolio multi-tenant). **Déclencheur** : prochaine
+  passe multi-opérateur (lié à `session.operatorId`/`Deal.operatorId` ci-dessus) OU 2ᵉ opérateur réel.
 - **C3 canon-sync god-mode** : écrit le pilier S direct (best-effort, push manuel god-mode) —
   2 entrées allowlist C5 (`reroutePlanned:true` pour le bloc computed). **Plan** : reroute gateway.
   **Déclencheur** : basse priorité, prochain passage sur canon-sync.
