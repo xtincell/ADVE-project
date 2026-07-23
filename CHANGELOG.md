@@ -1,5 +1,12 @@
 # Changelog — La Fusee
 
+## v6.27.293 — fix(seshat): round-12 adversarial (a) — fabrication cult-index (cron feedback-loop) + honnêteté métrique (2026-07-23)
+
+**Un cron planifié toutes les 6 h écrivait des snapshots cult-index INVENTÉS — réintroduisant le bug d'unités ADR-0126 pour chaque marque dormante.**
+
+- **HIGH — fabrication cult-index (`cron/feedback-loop`)** : quand une marque avait un `DevotionSnapshot` mais pas de `CultIndexSnapshot` récent, le cron écrivait son propre snapshot à la main — 4 dimensions hardcodées à 0, `ritualAdoption ×200` / `evangelismScore ×500` (= le bug d'unités ADR-0126 RÉINTRODUIT, alors que le devotion est en % 0-100), et un composite bidon `engagementDepth × 0.25` → chaque marque dormante héritait d'un ~25/FUNCTIONAL fabriqué dans son historique (lu par le dashboard cult + `getCultIndexTrend`). Violation directe de l'interdit n°3, undo silencieux d'ADR-0126. Remplacé par une délégation au SEUL écrivain canonique `calculateAndSnapshot` (math ADR-0126 correcte + exclusion honnête des dimensions non mesurées — jamais un 0 fabriqué).
+- **LOW — pollution du compteur ops (`api/admin/metrics`)** : le bypass PDF admin écrit un `IntakePayment` synthétique `status="PAID"` `provider="ADMIN_BYPASS"` `amount=0` → chaque génération admin gonflait le compteur « rapports payés » de +1. Exclu du `groupBy` (`provider != ADMIN_BYPASS`). Cap APOGEE 7/7 · 0 LLM. tsc 0 · 3222 tests verts. **Concurrence (double-publish + claims atomiques) → (b).**
+
 ## v6.27.292 — fix(thot): round-11 adversarial (b) — intégrité money (payout async réconcilié + double-disburse + remise adhésion) (2026-07-23)
 
 **Un payout mobile-money async ne repassait JAMAIS la commission à PAID → ledger corrompu + Orange re-disbursait sur re-clic ; la remise d'adhésion promise n'était jamais appliquée.**

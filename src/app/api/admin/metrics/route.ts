@@ -75,7 +75,10 @@ export async function GET(req: Request) {
   // payment_total
   const byPayment = await db.intakePayment.groupBy({
     by: ["status", "currency"],
-    where: { createdAt: { gte: since } },
+    // Round-12 : exclut les lignes synthétiques `ADMIN_BYPASS` (amount 0 écrit
+    // quand un ADMIN télécharge un PDF d'intake non payé) — sinon chaque
+    // génération admin gonflait le compteur « rapports payés » de +1.
+    where: { createdAt: { gte: since }, provider: { not: "ADMIN_BYPASS" } },
     _count: { _all: true },
     _sum: { amount: true },
   }).catch(() => []);

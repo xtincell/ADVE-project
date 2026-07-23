@@ -54,37 +54,32 @@ export async function GET(request: Request) {
         questionnairesCreated++;
       }
 
-      // Auto-update Cult Index for active strategies (weekly)
+      // Rafraîchissement du Cult Index pour les marques en mode dégradé (peu
+      // d'activité mais des données de dévotion), au plus une fois/7 j.
+      //
+      // Round-12 (fabrication) : l'ancien bloc écrivait un snapshot INVENTÉ —
+      // zéros hardcodés sur 4 dimensions, `×200`/`×500` (= le bug d'unités
+      // ADR-0126 RÉINTRODUIT, alors que le devotion est en % 0-100), et un
+      // composite bidon `engagementDepth × 0.25` → chaque marque dormante héritait
+      // d'un ~25/FUNCTIONAL fabriqué dans son historique (lu par le dashboard cult
+      // + getCultIndexTrend). On délègue au SEUL écrivain canonique
+      // `calculateAndSnapshot` : math ADR-0126 correcte + exclusion honnête des
+      // dimensions non mesurées (jamais un 0 fabriqué). Interdit n°3.
       const lastCultIndex = await db.cultIndexSnapshot.findFirst({
         where: { strategyId: strategy.id },
         orderBy: { measuredAt: "desc" },
       });
-
       const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
       if (!lastCultIndex || lastCultIndex.measuredAt < sevenDaysAgo) {
-        // Create a baseline/updated cult index snapshot
-        const devotion = await db.devotionSnapshot.findFirst({
+        // Ne rafraîchir que les marques qui ont AU MOINS une donnée de dévotion
+        // (sinon calculateAndSnapshot écrirait un 0/GHOST honnête mais inutile).
+        const hasDevotion = await db.devotionSnapshot.findFirst({
           where: { strategyId: strategy.id },
-          orderBy: { measuredAt: "desc" },
+          select: { id: true },
         });
-
-        if (devotion) {
-          const engagementDepth = Math.min(100, (devotion.participant + devotion.engage + devotion.ambassadeur + devotion.evangeliste) * 100);
-
-          await db.cultIndexSnapshot.create({
-            data: {
-              strategyId: strategy.id,
-              engagementDepth,
-              superfanVelocity: 0,
-              communityCohesion: 0,
-              brandDefenseRate: 0,
-              ugcGenerationRate: 0,
-              ritualAdoption: Math.min(100, devotion.engage * 200),
-              evangelismScore: Math.min(100, devotion.evangeliste * 500),
-              compositeScore: engagementDepth * 0.25, // Simplified for degraded mode
-              tier: engagementDepth * 0.25 <= 20 ? "GHOST" : engagementDepth * 0.25 <= 40 ? "FUNCTIONAL" : "LOVED",
-            },
-          });
+        if (hasDevotion) {
+          const { calculateAndSnapshot } = await import("@/server/services/cult-index-engine");
+          await calculateAndSnapshot(strategy.id);
           cultIndexesUpdated++;
         }
       }
