@@ -12,6 +12,7 @@ import { ADVE_STORAGE_KEYS } from "@/domain";
 
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
+import { resolvePillarPath } from "@/lib/pillar-path";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import type { PillarKey as PillarStorageKey } from "@/lib/types/advertis-vector";
@@ -23,7 +24,7 @@ import {
 } from "./field-renderers";
 import {
   RefreshCw, AlertCircle, CheckCircle, Sparkles, Loader2,
-  ThumbsUp, ThumbsDown, ChevronRight, Pencil,
+  ThumbsUp, ThumbsDown, ChevronRight, ChevronDown, Pencil,
 } from "lucide-react";
 import Link from "next/link";
 import { AmendPillarModal } from "@/components/pillars/amend-pillar-modal";
@@ -108,6 +109,55 @@ function RecoValuePreview({ value }: { value: unknown }) {
     );
   }
   return <span className="text-2xs text-white/70">{String(value)}</span>;
+}
+
+// ── RecoValueFull — prévisualisation COMPLÈTE (rien de tronqué) ───────
+// L'aperçu compact (RecoValuePreview) résume un objet à 4 champs / un tableau
+// à « N éléments » → l'opérateur ne pouvait PAS voir le contenu réellement
+// proposé (« reco non prévisualisable »). Ce rendu récursif montre TOUT.
+
+function RecoValueFull({ value, depth = 0 }: { value: unknown; depth?: number }) {
+  if (value == null || value === "") return <span className="text-2xs italic text-foreground-muted/60">vide</span>;
+  if (typeof value === "string") return <p className="whitespace-pre-wrap text-2xs text-foreground-secondary">{value}</p>;
+  if (typeof value === "number") return <span className="text-2xs font-medium text-foreground">{value.toLocaleString()}</span>;
+  if (typeof value === "boolean") return <span className={`text-2xs ${value ? "text-success" : "text-error"}`}>{value ? "Oui" : "Non"}</span>;
+  if (Array.isArray(value)) {
+    if (value.length === 0) return <span className="text-2xs italic text-foreground-muted/60">vide</span>;
+    if (value.every((v) => typeof v === "string")) {
+      return (
+        <div className="flex flex-wrap gap-1">
+          {(value as string[]).map((v, i) => (
+            <span key={i} className="rounded bg-white/5 px-1.5 py-0.5 text-2xs text-foreground-secondary">{v}</span>
+          ))}
+        </div>
+      );
+    }
+    return (
+      <div className="space-y-1.5">
+        {(value as unknown[]).map((it, i) => (
+          <div key={i} className="rounded border border-white/5 bg-white/[0.02] p-1.5">
+            <p className="mb-0.5 text-[9px] uppercase tracking-wide text-foreground-muted/60">#{i + 1}</p>
+            <RecoValueFull value={it} depth={depth + 1} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+  if (typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>).filter(([, v]) => v != null && v !== "");
+    if (entries.length === 0) return <span className="text-2xs italic text-foreground-muted/60">vide</span>;
+    return (
+      <div className="space-y-1">
+        {entries.map(([k, v]) => (
+          <div key={k} className="grid grid-cols-[minmax(0,8rem)_1fr] gap-2">
+            <span className="text-2xs text-foreground-muted">{getFieldLabel(k)}</span>
+            {depth < 3 ? <RecoValueFull value={v} depth={depth + 1} /> : <span className="text-2xs text-foreground-secondary">…</span>}
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return <span className="text-2xs text-foreground-secondary">{String(value)}</span>;
 }
 
 // ── Component ─────────────────────────────────────────────────────────
@@ -212,6 +262,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
     onError: (err: any) => { setEnrichResult({ type: "error", message: err?.message ?? "Erreur lors de la sélection d'ambition" }); },
   });
   const [selectedRecos, setSelectedRecos] = useState<Set<string>>(new Set());
+  const [expandedRecos, setExpandedRecos] = useState<Set<string>>(new Set());
 
   if (!strategyId) return <SkeletonPage />;
   if (pillarQuery.isLoading) return <SkeletonPage />;
@@ -371,6 +422,12 @@ export function PillarPage({ pageKey }: PillarPageProps) {
 
   // Notoria recos: each reco is a Recommendation entity with id, status, etc.
   const pendingRecos = (recosQuery.data ?? []) as Array<Record<string, unknown> & { id: string; status: string }>;
+  // ADR-0090 — le moteur PERSISTE déjà `weightedScore` (ruler déterministe +
+  // impact + confidence) sur chaque reco, mais le panneau ne l'affichait pas :
+  // « on a implémenté une logique de score pour éviter de recommander des choses
+  // moins efficaces » restait invisible. On trie les meilleures d'abord.
+  const recoScore = (r: Record<string, unknown>) => (typeof r.weightedScore === "number" ? r.weightedScore : -1);
+  const sortedRecos = [...pendingRecos].sort((a, b) => recoScore(b) - recoScore(a));
 
   // RTIS pages: pending counts from Notoria
   const pendingCounts = pendingCountsQuery?.data ?? {};
@@ -922,9 +979,10 @@ export function PillarPage({ pageKey }: PillarPageProps) {
             </div>
           </div>
           <div className="space-y-2 max-h-[32rem] overflow-y-auto">
-            {pendingRecos.map((reco) => {
+            {sortedRecos.map((reco) => {
               const recoId = reco.id;
               const isSelected = selectedRecos.has(recoId);
+              const isExpanded = expandedRecos.has(recoId);
               const op = String(reco.operation ?? "SET");
               const opLabel = op === "SET" ? "Remplacer" : op === "ADD" ? "Ajouter" : op === "MODIFY" ? "Modifier" : op === "REMOVE" ? "Supprimer" : op === "EXTEND" ? "Enrichir" : op;
               const opColor = op === "SET" ? "bg-warning/15 text-warning" :
@@ -934,34 +992,82 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                               op === "EXTEND" ? "bg-accent/15 text-accent" :
                               "bg-white/10 text-foreground-muted";
               const fieldName = String(reco.targetField ?? reco.field ?? "");
-              const currentValue = content[fieldName];
+              // Résolution PROFONDE : `content[fieldName]` échouait pour un chemin
+              // imbriqué (`prophecy.pioneers`) → le bloc « Actuel » ne s'affichait
+              // pas et le remplacement paraissait silencieux. resolvePillarPath lit
+              // la vraie feuille.
+              const currentValue = resolvePillarPath(content, fieldName);
               const hasProposed = reco.proposedValue != null && reco.proposedValue !== "";
+              const currentEmpty = currentValue == null || currentValue === "" || (Array.isArray(currentValue) && currentValue.length === 0);
+
+              // ── Score + verdict (ADR-0090, jusqu'ici invisibles) ──
+              const weightedScore = typeof reco.weightedScore === "number" ? Math.round(reco.weightedScore) : null;
+              const vw = typeof reco.validationWarning === "string" ? reco.validationWarning : "";
+              const inferiorToExisting = /ruler_inferior|ne bat pas/i.test(vw);
+              // Le gate refuse pour DEUX raisons (ruler inférieur ET violation Bible),
+              // et pose `applyPolicy = "requires_review"` dans les deux cas + financier.
+              // On traite tout `requires_review` comme non-amélioration, pas seulement le
+              // ruler (sinon une reco Bible-invalide s'affichait « Amélioration » verte).
+              const requiresReview = reco.applyPolicy === "requires_review";
+              // `currentEmpty` prime : combler un vide ne peut pas être « inférieur à
+              // l'existant ». Le drapeau ne s'allume que sur un champ NON vide.
+              const flagged = !currentEmpty && op !== "ADD" && (inferiorToExisting || requiresReview);
+              const verdict = op === "ADD"
+                ? { label: "Ajout", cls: "bg-success/15 text-success" }
+                : currentEmpty
+                  ? { label: "Comble un vide", cls: "bg-info/15 text-info" }
+                  : inferiorToExisting
+                    ? { label: "N'améliore pas l'existant", cls: "bg-warning/15 text-warning" }
+                    : requiresReview
+                      ? { label: "À revoir", cls: "bg-warning/15 text-warning" }
+                      : { label: "Amélioration", cls: "bg-success/15 text-success" };
 
               return (
                 <div key={recoId} onClick={() => { const s = new Set(selectedRecos); if (isSelected) s.delete(recoId); else s.add(recoId); setSelectedRecos(s); }}
                   className={`cursor-pointer rounded-lg border p-3 transition-colors ${isSelected ? "border-success/30 bg-success/10" : "border-white/5 bg-white/[0.02] hover:bg-white/5"}`}>
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      {/* Operation badge + field name + impact */}
-                      <div className="flex items-center gap-2 mb-1">
+                      {/* Operation badge + field name + impact + verdict + score */}
+                      <div className="flex flex-wrap items-center gap-1.5 mb-1">
                         <span className={`rounded px-1.5 py-0.5 text-2xs font-bold ${opColor}`}>{opLabel}</span>
                         <span className="text-xs font-medium text-white">{getFieldLabel(fieldName)}</span>
+                        <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${verdict.cls}`}>{verdict.label}</span>
+                        {weightedScore != null ? (
+                          <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[9px] text-foreground-secondary" title="Score pondéré de la reco (ruler déterministe + impact + confiance)">
+                            score {weightedScore}
+                          </span>
+                        ) : null}
                         {reco.impact ? <span className={`rounded-full px-1.5 py-0.5 text-[9px] ${reco.impact === "HIGH" ? "bg-error/15 text-error" : reco.impact === "MEDIUM" ? "bg-warning/15 text-warning" : "bg-white/10 text-foreground-muted"}`}>{String(reco.impact)}</span> : null}
                       </div>
-                      {/* Justification */}
-                      <p className="text-2xs text-foreground-muted mb-2">{String(reco.justification ?? "")}</p>
+                      {/* Justification — la colonne persistée est `explain` (le moteur
+                          écrit `explain: reco.justification`), pas `justification` : lire
+                          `reco.justification` rendait une ligne VIDE pour chaque reco. */}
+                      <p className="text-2xs text-foreground-muted mb-1">{String(reco.explain ?? reco.justification ?? "")}</p>
+                      {/* Warning : le gate signale un problème (ruler inférieur OU violation
+                          Bible OU financier) sur un champ NON vide → surface la vraie raison. */}
+                      {flagged ? (
+                        <p className="mb-2 flex items-start gap-1 text-[10px] text-warning">
+                          <AlertCircle className="mt-px h-3 w-3 flex-shrink-0" />
+                          <span>
+                            {inferiorToExisting
+                              ? "Cette proposition n'améliore pas la valeur en place selon le score — appliquée, elle sera refusée par le garde de remplacement."
+                              : "Cette proposition demande une revue avant application (le garde a signalé un point à vérifier)."}
+                            {vw ? ` — ${vw}` : ""}
+                          </span>
+                        </p>
+                      ) : null}
                       {/* Diff: current → proposed */}
                       {hasProposed ? (
                         <div className="rounded border border-white/5 bg-black/20 p-2 space-y-1.5">
-                          {/* Current value (compact) */}
-                          {currentValue != null && currentValue !== "" && op !== "ADD" ? (
+                          {/* Current value */}
+                          {!currentEmpty && op !== "ADD" ? (
                             <div>
                               <p className="text-[9px] text-error/70 uppercase tracking-wide mb-0.5">Actuel</p>
-                              <RecoValuePreview value={currentValue} />
+                              {isExpanded ? <RecoValueFull value={currentValue} /> : <RecoValuePreview value={currentValue} />}
                             </div>
                           ) : null}
                           {/* Arrow separator for replacements */}
-                          {currentValue != null && currentValue !== "" && op !== "ADD" ? (
+                          {!currentEmpty && op !== "ADD" ? (
                             <div className="flex items-center gap-1 text-foreground-muted/40">
                               <div className="flex-1 border-t border-dashed border-foreground-muted/20" />
                               <ChevronRight className="h-3 w-3" />
@@ -971,10 +1077,26 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                           {/* Proposed value */}
                           <div>
                             <p className="text-[9px] text-success/70 uppercase tracking-wide mb-0.5">
-                              {op === "ADD" ? "A ajouter" : "Propose"}
+                              {op === "ADD" ? "A ajouter" : op === "EXTEND" ? "À enrichir" : "Propose"}
                             </p>
-                            <RecoValuePreview value={reco.proposedValue} />
+                            {isExpanded ? <RecoValueFull value={reco.proposedValue} /> : <RecoValuePreview value={reco.proposedValue} />}
                           </div>
+                          {/* Expand/collapse — indépendant de la sélection */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExpandedRecos((prev) => {
+                                const s = new Set(prev);
+                                if (s.has(recoId)) s.delete(recoId); else s.add(recoId);
+                                return s;
+                              });
+                            }}
+                            className="flex items-center gap-1 text-[9px] font-medium text-foreground-muted transition-colors hover:text-foreground"
+                          >
+                            <ChevronDown className={`h-3 w-3 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                            {isExpanded ? "Réduire" : "Voir le détail complet"}
+                          </button>
                         </div>
                       ) : null}
                     </div>

@@ -16,6 +16,7 @@ import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
 
 import { db } from "@/lib/db";
 import { setNestedValue, resolvePillarPath } from "@/lib/pillar-path";
+import { findEmptyLeafPaths } from "@/lib/types/pillar-maturity-contracts";
 import type { Prisma } from "@prisma/client";
 import type { MaturityStage, AutoFillResult, FieldRequirement } from "@/lib/types/pillar-maturity";
 import { assessPillar } from "./assessor";
@@ -234,6 +235,41 @@ async function runFillPass(
     missingReqs = missingReqs.filter(r => fieldsToFill.includes(r.path));
   }
 
+  // ── Feuilles PROFONDES vides (sous-clés d'objets imbriqués : prophecy.pioneers,
+  // ikigai.love) — inventaire canonique DÉCOUPLÉ du contrat de maturité (le % de
+  // COMPLET ne bouge pas). Sert « Enrichir remplit tout en profondeur jusqu'à la
+  // feuille » sans distordre la complétude. On n'ajoute une feuille profonde QUE si
+  // son objet parent N'EST PAS déjà régénéré en entier par le contrat (sinon les
+  // sous-clés arriveraient avec l'objet — conflit d'ordre d'écriture). Anti-
+  // fabrication : `findEmptyLeafPaths` exclut NEEDS_HUMAN + formes union-string. ──
+  {
+    const already = new Set(missingReqs.map((r) => r.path));
+    const contractTopKeys = new Set(missingReqs.map((r) => r.path.split(/[.[]/)[0]!));
+    const inScope = (p: string) =>
+      !fieldsToFill || fieldsToFill.length === 0 ||
+      fieldsToFill.includes(p) || fieldsToFill.includes(p.split(".")[0]!);
+    for (const leaf of findEmptyLeafPaths(key, content)) {
+      if (!leaf.path.includes(".")) continue; // top-level : déjà couvert par le contrat
+      if (already.has(leaf.path)) continue;
+      if (contractTopKeys.has(leaf.topKey)) continue; // objet parent régénéré en entier
+      if (!inScope(leaf.path)) continue;
+      // Feuilles financières CALCULABLES (ratios unit-economics : ltvCacRatio=ltv/cac,
+      // roiEstime, payback…) → chemin `calculation` (déterministe, cohérent avec cac/ltv
+      // stockés), JAMAIS le LLM qui devinerait des valeurs incohérentes avec le reste.
+      // Si `deriveByCalculation` ne couvre pas une sous-feuille, elle reste vide (honnête,
+      // zéro fabrication). Audit adversarial 2026-07-23.
+      const isCalcLeaf = key === "v" && leaf.path.startsWith("unitEconomics.");
+      missingReqs.push({
+        path: leaf.path,
+        validator: leaf.isArray ? "min_items" : "non_empty",
+        ...(leaf.isArray ? { validatorArg: 1 } : {}),
+        derivable: true,
+        derivationSource: isCalcLeaf ? "calculation" : "ai_generation",
+        description: `Feuille profonde ${key.toUpperCase()}.${leaf.path}`,
+      });
+    }
+  }
+
   if (missingReqs.length === 0) {
     return { filled: [], failed: [], needsHuman: [], sourceFilled: [], aiFilled: [] };
   }
@@ -373,9 +409,14 @@ async function runFillPass(
       if (report.blockers.length > 0) {
         console.warn(`[auto-filler] Financial validation BLOCKED for ${strategyId}/${key}:`,
           report.blockers.map(b => `${b.ruleId}: ${b.message}`));
-        // Remove the invalid financial values — they'll need human input
+        // Remove the invalid financial values — they'll need human input.
+        // FIX (audit adversarial 2026-07-23) : on SUPPRIME aussi la valeur du `content`
+        // (pas seulement du tracking filled/aiFilled) — sinon la valeur incohérente
+        // BLOQUÉE restait dans `content` et était persistée par le gateway malgré le
+        // blocage (le commentaire « Remove the invalid values » ne correspondait pas au code).
         for (const blocker of report.blockers) {
           const fieldPath = `unitEconomics.${blocker.field}`;
+          if (blocker.field in ue) delete ue[blocker.field];
           if (filled.includes(fieldPath)) {
             filled.splice(filled.indexOf(fieldPath), 1);
             failed.push({ path: fieldPath, reason: `Validation BLOCK: ${blocker.message}` });

@@ -10,6 +10,7 @@ import { callLLM } from "@/server/services/llm-gateway";
 import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import { extractJSON as _extractJSON } from "@/server/services/utils/llm";
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
+import { findEmptyLeafPaths, buildExampleFromZod, getFieldZod } from "@/lib/types/pillar-maturity-contracts";
 import type { PillarKey } from "@/lib/types/advertis-vector";
 import { getFormatInstructions } from "@/lib/types/variable-bible";
 import { Prisma } from "@prisma/client";
@@ -63,25 +64,13 @@ function describeSchemaFields(key: string): string {
   const upperKey = key.toUpperCase() as keyof typeof PILLAR_SCHEMAS;
   const schema = PILLAR_SCHEMAS[upperKey];
   if (!schema) return `Schema non disponible pour ${key}`;
-  const shape = schema.shape as Record<
-    string,
-    { _def?: { typeName?: string }; description?: string }
-  >;
-  const lines: string[] = [];
-  for (const [fieldName, fieldSchema] of Object.entries(shape)) {
-    const def = fieldSchema?._def;
-    const typeName = def?.typeName ?? "unknown";
-    let typeLabel = "unknown";
-    if (typeName.includes("ZodString")) typeLabel = "string";
-    else if (typeName.includes("ZodNumber")) typeLabel = "number";
-    else if (typeName.includes("ZodArray")) typeLabel = "array";
-    else if (typeName.includes("ZodObject")) typeLabel = "object";
-    else if (typeName.includes("ZodEnum")) typeLabel = "enum";
-    else if (typeName.includes("ZodBoolean")) typeLabel = "boolean";
-    else if (typeName.includes("ZodOptional")) typeLabel = "optional";
-    lines.push(`  - ${fieldName}: ${typeLabel}`);
-  }
-  return lines.join("\n");
+  // Shape EXACTE et PROFONDE — MÊME machinerie que l'auto-filler (`buildExampleFromZod`).
+  // L'ancienne version listait des types PLATS (`- prophecy: object`) : le LLM se
+  // voyait demander de remplir `prophecy.pioneers` sans jamais voir les sous-clés ni
+  // les vraies valeurs d'enum → il inventait des clés (`pioneer` vs `pioneers`,
+  // `good/love/paid/skill` vs `love/competence/worldNeed/remuneration`). Ici il reçoit
+  // l'arborescence complète avec enums réels → il EXTEND/remplit en profondeur juste.
+  return JSON.stringify(buildExampleFromZod(schema), null, 2);
 }
 
 // ── System Prompts ────────────────────────────────────────────────
@@ -213,24 +202,59 @@ async function generateRecosForPillar(
     /* graceful: no ranker / no embeddings → no few-shot, no error */
   }
 
-  // ── Detect empty/missing fields (PRIORITY for recos) ──
+  // ── Detect empty/missing fields (PRIORITY for recos) — EN PROFONDEUR ──
+  // L'ancienne détection ne regardait que le PREMIER niveau du schema
+  // (`currentContent[k]`) : un objet `prophecy = {worldTransformed}` comptait
+  // « rempli » alors que `pioneers`/`urgency`/`horizon` étaient vides, et une
+  // matrice `produitsCatalogue = [{nom}]` masquait ses cellules vides → « la
+  // notoria ignore les champs vides ». `findEmptyLeafPaths` (inventaire canonique)
+  // descend dans les objets imbriqués, saute les formes union-string legacy, et
+  // exclut les champs NEEDS_HUMAN (traction… — jamais fabriqués, interdit n°3).
   const allSchemaKeys = Object.keys(
     (PILLAR_SCHEMAS[targetKey.toUpperCase() as keyof typeof PILLAR_SCHEMAS] as { shape?: Record<string, unknown> })?.shape ?? {},
   );
-  const emptyFields = allSchemaKeys.filter((k) => {
+  const emptyLeaves = findEmptyLeafPaths(targetKey, currentContent);
+  const filledFields = allSchemaKeys.filter((k) => {
     const v = currentContent[k];
-    return v === null || v === undefined || v === "" || (Array.isArray(v) && v.length === 0);
+    return !(v === null || v === undefined || v === "" || (Array.isArray(v) && v.length === 0));
   });
-  const filledFields = allSchemaKeys.filter((k) => !emptyFields.includes(k));
+
+  // Sépare feuilles de PREMIER niveau (SET) des sous-feuilles imbriquées vides,
+  // groupées par objet parent IMMÉDIAT (EXTEND — préserve les sous-champs déjà
+  // remplis). CRITIQUE : on groupe par le DERNIER point (`lastIndexOf`), pas le
+  // premier — le parent doit être l'objet DIRECT (`pillarGaps.a`), pas le
+  // grand-parent (`pillarGaps`). Un EXTEND sur le grand-parent ferait une fusion
+  // SUPERFICIELLE d'un niveau (`{...existing, ...proposed}`) qui ÉCRASERAIT un
+  // sous-objet frère déjà rempli (`pillarGaps.a.gaps` écrit par l'opérateur) →
+  // destruction silencieuse de donnée réelle (interdit n°3). L'EXTEND profond
+  // (`field = pillarGaps.a`) fusionne à la bonne feuille via `setNestedValue` et
+  // préserve tous les frères. Audit adversarial 2026-07-23.
+  const topLevelEmpty = emptyLeaves.filter((l) => !l.path.includes(".")).map((l) => l.path);
+  const nestedByParent = new Map<string, string[]>();
+  for (const l of emptyLeaves) {
+    if (!l.path.includes(".")) continue;
+    const dot = l.path.lastIndexOf(".");
+    const parent = l.path.slice(0, dot);
+    const leaf = l.path.slice(dot + 1);
+    if (!nestedByParent.has(parent)) nestedByParent.set(parent, []);
+    nestedByParent.get(parent)!.push(leaf);
+  }
 
   // ── Inject Bible format rules for all fields ──
   const bibleInstructions = getFormatInstructions(targetKey, allSchemaKeys);
 
-  const emptyFieldsSection = emptyFields.length > 0
-    ? `\n⚠️ CHAMPS VIDES A REMPLIR EN PRIORITE (${emptyFields.length} champs):\n${emptyFields.map(f => `  - ${f}`).join("\n")}\n\nCes champs DOIVENT etre remplis via des operations SET. C'est la PRIORITE #1.`
-    : "\nTous les champs sont remplis. Concentre-toi sur l'enrichissement et la correction.";
+  const emptyFieldsSection = emptyLeaves.length > 0
+    ? `\n⚠️ CHAMPS VIDES A REMPLIR EN PRIORITE (${emptyLeaves.length} feuille(s)):\n` +
+      (topLevelEmpty.length > 0
+        ? `\nChamps de premier niveau (operation SET, une reco par champ) :\n${topLevelEmpty.map((f) => `  - ${f}`).join("\n")}\n`
+        : "") +
+      (nestedByParent.size > 0
+        ? `\nSous-champs imbriques vides (operation EXTEND sur l'objet parent — preserve les sous-champs deja remplis, une reco EXTEND par parent) :\n${[...nestedByParent.entries()].map(([p, leaves]) => `  - ${p} : ${leaves.join(", ")}`).join("\n")}\n`
+        : "") +
+      `\nToutes ces feuilles DOIVENT etre remplies. C'est la PRIORITE #1 — ne laisse AUCUNE feuille vide listee ci-dessus.`
+    : "\nTous les champs sont remplis en profondeur. Concentre-toi sur l'enrichissement et la correction.";
 
-  const prompt = `SCHEMA du pilier ${targetKey.toUpperCase()} (types attendus):
+  const prompt = `SHAPE EXACTE du pilier ${targetKey.toUpperCase()} (arborescence complète, sous-clés + valeurs d'enum RÉELLES — respecte EXACTEMENT cette structure, n'invente aucune clé):
 ${schemaDesc}
 
 BIBLE DE FORMAT (regles de fond pour chaque champ):
@@ -270,21 +294,21 @@ IMPORTANT:
     (r): r is RawLLMReco => !!r && typeof r.field === "string" && r.field.trim().length > 0,
   );
 
-  // Validate proposedValues against schema
-  const upperKey = targetKey.toUpperCase() as keyof typeof PILLAR_SCHEMAS;
-  const schema = PILLAR_SCHEMAS[upperKey];
-  if (schema) {
-    const shape = schema.shape as Record<
-      string,
-      { safeParse?: (v: unknown) => { success: boolean } }
-    >;
-    for (const reco of recos) {
-      const fieldSchema = shape[reco.field];
-      if (fieldSchema?.safeParse) {
-        const result = fieldSchema.safeParse(reco.proposedValue);
-        if (!result.success) {
-          (reco as unknown as Record<string, unknown>)._validationWarning = `Format ne correspond pas au schema pour "${reco.field}"`;
-        }
+  // Validate proposedValues against schema — PROFOND. `getFieldZod` résout les
+  // chemins imbriqués (`prophecy.pioneers`) ET les cellules de matrice
+  // (`produitsCatalogue[2].gainClientConcret`), là où l'ancien `shape[reco.field]`
+  // ne voyait que le premier niveau (une reco profonde n'était jamais validée). On
+  // ne valide que les SET (remplacement de champ entier) : ADD/MODIFY portent un
+  // ITEM et EXTEND un objet PARTIEL fusionné → les valider contre le schema du champ
+  // entier produisait de faux avertissements (bug pré-existant corrigé en passant).
+  for (const reco of recos) {
+    const op = (reco as { operation?: string }).operation ?? "SET";
+    if (op !== "SET") continue;
+    const fieldSchema = getFieldZod(targetKey, reco.field) as { safeParse?: (v: unknown) => { success: boolean } } | null;
+    if (fieldSchema?.safeParse) {
+      const result = fieldSchema.safeParse(reco.proposedValue);
+      if (!result.success) {
+        (reco as unknown as Record<string, unknown>)._validationWarning = `Format ne correspond pas au schema pour "${reco.field}"`;
       }
     }
   }

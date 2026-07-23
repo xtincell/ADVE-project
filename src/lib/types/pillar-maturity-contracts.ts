@@ -16,7 +16,7 @@ import { PILLAR_STORAGE_KEYS } from "@/domain";
  */
 
 import { z } from "zod";
-import { tokenizePillarPath } from "@/lib/pillar-path";
+import { tokenizePillarPath, resolvePillarPath } from "@/lib/pillar-path";
 import type { FieldRequirement, PillarMaturityContract, MaturityStage, FieldValidator } from "./pillar-maturity";
 import { PILLAR_SCHEMAS } from "./pillar-schemas";
 
@@ -238,9 +238,13 @@ function unwrapZod(t: unknown): unknown {
       cur = def.in ?? def.out ?? cur;
     } else if (ctor === "ZodUnion") {
       const opts = (def.options ?? []) as any[];
-      // Prefer ZodObject > ZodArray > ZodString to choose the most "structural" branch
+      // Prefer les branches "structurelles" : ZodObject/ZodRecord/ZodMap (objet)
+      // > ZodArray > ZodString. Un ZodRecord EST objet-formé — le classer avec les
+      // objets évite qu'une union `record|array` (ex. s.computed.budgetByPhase) soit
+      // lue comme un tableau (isArray erroné) alors que sa forme canon est un record.
+      const objTier = (n?: string) => n === "ZodObject" || n === "ZodRecord" || n === "ZodMap";
       const ranked = opts
-        .map((o) => ({ o, score: o?.constructor?.name === "ZodObject" ? 3 : o?.constructor?.name === "ZodArray" ? 2 : o?.constructor?.name === "ZodString" ? 1 : 0 }))
+        .map((o) => ({ o, score: objTier(o?.constructor?.name) ? 3 : o?.constructor?.name === "ZodArray" ? 2 : o?.constructor?.name === "ZodString" ? 1 : 0 }))
         .sort((a, b) => b.score - a.score);
       cur = ranked[0]?.o ?? opts[0] ?? cur;
       break;
@@ -374,6 +378,115 @@ export function buildExampleForPath(pillarKey: string, path: string): unknown {
   const zod = getFieldZod(pillarKey, path);
   if (!zod) return null;
   return buildExampleFromZod(zod);
+}
+
+// ─── Inventaire canonique des feuilles de schema (chemins de REMPLISSAGE) ─────
+
+export interface SchemaLeaf {
+  /** Chemin dot vers la feuille (`prophecy.pioneers`) ; top-level = clé seule. */
+  path: string;
+  /** Clé de premier niveau (`prophecy`) — grain NEEDS_HUMAN / provenance. */
+  topKey: string;
+  /** Feuille de type tableau (objets ou scalaires) — NON descendue. */
+  isArray: boolean;
+  /** true si la feuille (ou un ancêtre) est optionnelle dans le schema. */
+  optional: boolean;
+}
+
+/**
+ * Énumère TOUTE feuille remplissable d'un pillar schema, en descendant dans les
+ * `ZodObject` imbriqués (`prophecy.pioneers`, `ikigai.love`) mais en S'ARRÊTANT
+ * aux tableaux (un tableau est une feuille — la profondeur par cellule est gérée
+ * par `array_items_complete` / `expandArrayItemRequirements`). Réutilise
+ * `unwrapZod` (optional/nullable/default/effects/pipe/union → branche la plus
+ * structurelle, donc l'objet d'une union `object|string` est bien descendu).
+ * Profondeur capée.
+ *
+ * PUR. Source canonique de « quelles feuilles existent » pour les chemins de
+ * REMPLISSAGE — détection des champs vides de la notoria (`engine.ts`) ET
+ * remplissage profond de l'auto-filler. DÉCOUPLÉ du contrat de maturité (qui
+ * reste top-level) : le % de complétude n'est PAS affecté par cet inventaire.
+ */
+export function listSchemaLeafPaths(pillarKey: string, maxDepth = 4): SchemaLeaf[] {
+  const upper = pillarKey.toUpperCase() as keyof typeof PILLAR_SCHEMAS;
+  const schema = PILLAR_SCHEMAS[upper];
+  if (!schema) return [];
+  const out: SchemaLeaf[] = [];
+  const rootShape = (schema as unknown as { shape?: Record<string, unknown> }).shape ?? {};
+
+  const walk = (fieldSchema: unknown, path: string, topKey: string, depth: number, optional: boolean): void => {
+    const rawCtor = (fieldSchema as { constructor?: { name?: string } })?.constructor?.name ?? "";
+    const opt = optional || rawCtor === "ZodOptional" || rawCtor === "ZodDefault" || rawCtor === "ZodNullable";
+    const inner = unwrapZod(fieldSchema) as { constructor?: { name?: string }; shape?: Record<string, unknown> };
+    const ctor = inner?.constructor?.name ?? "";
+    if (ctor === "ZodObject" && depth < maxDepth) {
+      const shape = (inner.shape ?? {}) as Record<string, unknown>;
+      const keys = Object.keys(shape);
+      // Objet vide (ou profondeur atteinte) → feuille terminale.
+      if (keys.length > 0) {
+        for (const k of keys) walk(shape[k], `${path}.${k}`, topKey, depth + 1, opt);
+        return;
+      }
+    }
+    out.push({ path, topKey, isArray: ctor === "ZodArray", optional: opt });
+  };
+
+  for (const [k, v] of Object.entries(rootShape)) walk(v, k, k, 1, false);
+  return out;
+}
+
+/**
+ * Feuilles VIDES et SÛRES à draft depuis le contenu d'un pilier. Anti-fabrication
+ * (interdit NEFER n°3) :
+ *   - exclut les clés top-level NEEDS_HUMAN (donnée réelle : traction… — jamais
+ *     inférée) ;
+ *   - saute toute feuille dont un ANCÊTRE est un primitif non-objet (une union
+ *     `object|string` rendue dans sa forme string legacy est une valeur COMPLÈTE
+ *     — y descendre corromprait le contenu réel du fondateur).
+ * Ne retourne QUE des cibles réellement vides. Consommé identiquement par la
+ * notoria et l'auto-filler → une seule notion de « feuille vide » dans tout l'OS.
+ */
+export function findEmptyLeafPaths(pillarKey: string, content: Record<string, unknown>): SchemaLeaf[] {
+  const needsHuman = NEEDS_HUMAN_BY_PILLAR[pillarKey.toLowerCase()] ?? new Set<string>();
+  // Champs SCHÉMA légitimement optionnels (ex. `v.productSystem`, ADR-0170) : le
+  // contrat COMPLETE les exclut déjà (pas de fabrication forcée d'un « Système Palais »
+  // qu'un plombier n'a pas). `findEmptyLeafPaths` DOIT honorer la MÊME exclusion —
+  // sinon la notoria + l'auto-filler drafteraient tout le sous-système via LLM
+  // (fabrication, interdit n°3). Audit adversarial 2026-07-23.
+  const completeOptional = COMPLETE_OPTIONAL_BY_PILLAR[pillarKey.toLowerCase()] ?? new Set<string>();
+  const isEmpty = (v: unknown): boolean =>
+    v === null ||
+    v === undefined ||
+    (typeof v === "string" && v.trim() === "") ||
+    (Array.isArray(v) && v.length === 0) ||
+    (typeof v === "object" && !Array.isArray(v) && v !== null && Object.keys(v).length === 0);
+
+  // Un ancêtre NON-DESCENDABLE signe une forme d'union que la feuille (dérivée de
+  // la branche objet du schema) ne recouvre pas — la valeur en place est complète,
+  // on ne draft PAS par-dessus (interdit n°3) :
+  //   - primitif (string/number/bool) → forme legacy d'une union `object|string` ;
+  //   - TABLEAU → forme tableau d'une union `array|object` (ex. hierarchieCommunautaire
+  //     stockée en échelle/ladder) : `unwrapZod` a descendu la branche objet, mais le
+  //     contenu réel est un tableau rempli → ses feuilles-objet n'existent pas et NE
+  //     doivent PAS être « comblées ». (Un tableau est `typeof "object"` → le test
+  //     primitif seul le manquait : c'était le faux positif.)
+  const ancestorNotDescendable = (path: string): boolean => {
+    const parts = path.split(".");
+    for (let i = 1; i < parts.length; i++) {
+      const anc = resolvePillarPath(content, parts.slice(0, i).join("."));
+      if (anc !== null && anc !== undefined && (typeof anc !== "object" || Array.isArray(anc))) return true;
+    }
+    return false;
+  };
+
+  const out: SchemaLeaf[] = [];
+  for (const leaf of listSchemaLeafPaths(pillarKey)) {
+    if (needsHuman.has(leaf.topKey)) continue;
+    if (completeOptional.has(leaf.topKey)) continue;
+    if (leaf.path.includes(".") && ancestorNotDescendable(leaf.path)) continue;
+    if (isEmpty(resolvePillarPath(content, leaf.path))) out.push(leaf);
+  }
+  return out;
 }
 
 /**
