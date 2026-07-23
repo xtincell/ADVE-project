@@ -108,6 +108,17 @@ export async function calculateOperatorFee(
  * est ensuite MANUELLE (l'opérateur confirme la transaction). Plus de stub JSON.
  */
 export async function generatePaymentOrder(commissionId: string) {
+  // Idempotence (audit round-8) : `PaymentOrder` n'a pas d'unique sur
+  // `commissionId` → deux appels (double-clic / retry opérateur) créaient DEUX
+  // ordres PENDING capturables = talent payé DEUX FOIS. On renvoie l'ordre
+  // non-FAILED existant plutôt que d'en créer un doublon. (La course concurrente
+  // pure reste tracée RESIDUAL-DEBT — même famille que commission.calculate.)
+  const existing = await db.paymentOrder.findFirst({
+    where: { commissionId, status: { not: "FAILED" } },
+    orderBy: { createdAt: "desc" },
+  });
+  if (existing) return existing;
+
   const commission = await db.commission.findUniqueOrThrow({ where: { id: commissionId } });
   const talent = await db.talentProfile.findUnique({
     where: { userId: commission.talentId },

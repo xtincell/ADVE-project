@@ -1,5 +1,14 @@
 # Changelog — La Fusee
 
+## v6.27.281 — fix(governance): round-8 adversarial (d) — intégrité financière (double-payout + webhook momo + redelivery) (2026-07-22)
+
+**Un talent ne peut plus être payé deux fois sur un double-clic, un inconnu ne peut plus valider un payout momo, et une redelivery Stripe/CinetPay ne renvoie plus deux fois les emails.**
+
+- **MED — double-payout `commission.generatePaymentOrder`** : `PaymentOrder` n'a pas d'unique sur `commissionId` et le `create` était nu → deux appels (double-clic / retry opérateur) créaient DEUX ordres PENDING capturables = talent payé DEUX FOIS (ses siblings `calculate`/`releaseEscrow`/idempotency-key MTN avaient été durcis le 2026-07-22, celui-ci manquait). Garde d'idempotence applicative : renvoie l'ordre non-FAILED existant plutôt qu'un doublon.
+- **MED — webhook mobile money non authentifié** : `mobileMoney.webhook` était `publicProcedure` SANS vérification de signature ; `handleWebhook` écrit `PaymentOrder.status` depuis le payload → quiconque connaît un `transactionRef`/`providerRef` basculait un payout à COMPLETED/FAILED. Secret partagé fail-closed `MOBILE_MONEY_WEBHOOK_SECRET` (doctrine `verifyCronSecret` : REFUSÉ en prod si non configuré, autorisé hors prod — momo DEFERRED, la capture réelle reste une confirmation opérateur MANUELLE). La vraie signature par provider (Orange/MTN/Wave) remplacera le secret à l'intégration.
+- **LOW — re-fulfillment sur redelivery Stripe/CinetPay** : `intakePayment.update` inconditionnel → une redelivery de l'événement (signature DÉJÀ vérifiée) re-déclenchait `fulfillPaidIntakeReport` (re-envoi emails payeur+admin + ré-assemblage Oracle/LLM). PayPal l'avait déjà fermé (claim atomique) ; Stripe + CinetPay alignés : `updateMany({status not PAID})` → PAID + fulfillment une SEULE fois (le cycle d'abonnement était déjà idempotent).
+- Verrou HARD `financial-integrity-round8.test.ts`. Restant tracé (RESIDUAL-DEBT §round-8) : course concurrente pure sur `generatePaymentOrder` (unique partiel `commissionId`) ; signature réelle par provider momo à l'intégration. Env : `MOBILE_MONEY_WEBHOOK_SECRET` documenté. Cap APOGEE 7/7. tsc 0 · lint 0 · **2728 tests (governance+services) verts**.
+
 ## v6.27.280 — fix(governance): round-8 adversarial (c) — fuites de lecture cross-tenant (search + payoutPhone + advertis_vector) (2026-07-22)
 
 **La recherche de campagnes ne déballe plus toutes les marques, le numéro de payout des créateurs ne fuit plus, et le vecteur ADVE interne ne s'affiche plus sur le mur des missions.**

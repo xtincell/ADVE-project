@@ -131,33 +131,43 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing client_reference_id" }, { status: 400 });
     }
     const paid = session.payment_status === "paid";
-    try {
-      const payment = await db.intakePayment.update({
-        where: { reference },
-        data: paid
-          ? {
-              status: "PAID",
-              paidAt: new Date(),
-              providerRef: session.payment_intent ?? session.id,
-              providerEventId: event.id,
-            }
-          : {
-              status: "FAILED",
-              failureReason: session.payment_status ?? "unpaid",
-              providerEventId: event.id,
-            },
+    if (paid) {
+      // Claim atomique (comme PayPal, `paypal/route.ts`) : PAID une SEULE fois →
+      // le fulfillment (re-extraction premium + livraison ORACLE_FULL + emails +
+      // assemblage Oracle) ne tourne qu'au 1er passage, même si Stripe redélivre
+      // l'événement (fin du double-envoi email + ré-assemblage LLM — audit round-8).
+      const claimed = await db.intakePayment.updateMany({
+        where: { reference, status: { not: "PAID" } },
+        data: {
+          status: "PAID",
+          paidAt: new Date(),
+          providerRef: session.payment_intent ?? session.id,
+          providerEventId: event.id,
+        },
       });
-      // Fulfillment centralisé (fire-and-forget, jamais bloquant pour l'ACK) :
-      // re-extraction premium + livraison ORACLE_FULL (activation + assemblage
-      // Oracle + lien de partage + alerte admins) selon le tierKey payé.
-      if (paid) {
-        const { fulfillPaidIntakeReport } = await import("@/server/services/quick-intake/paid-fulfillment");
-        void fulfillPaidIntakeReport(reference);
+      if (claimed.count === 0) {
+        // Déjà payé (redelivery) OU référence inconnue → ACK idempotent (200
+        // stoppe les retries Stripe ; la signature de l'événement est déjà vérifiée).
+        return NextResponse.json({ received: true, alreadyPaid: true });
       }
+      const { fulfillPaidIntakeReport } = await import("@/server/services/quick-intake/paid-fulfillment");
+      void fulfillPaidIntakeReport(reference);
+      return NextResponse.json({ received: true, status: "PAID" });
+    }
+    // Échec : update inconditionnel (aucun fulfillment sur un échec).
+    try {
+      await db.intakePayment.update({
+        where: { reference },
+        data: {
+          status: "FAILED",
+          failureReason: session.payment_status ?? "unpaid",
+          providerEventId: event.id,
+        },
+      });
     } catch {
       return NextResponse.json({ error: "Unknown reference" }, { status: 404 });
     }
-    return NextResponse.json({ received: true, status: paid ? "PAID" : "FAILED" });
+    return NextResponse.json({ received: true, status: "FAILED" });
   }
 
   // ── Handle subscription lifecycle ──
