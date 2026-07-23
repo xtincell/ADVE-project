@@ -21,6 +21,7 @@ import { db } from "@/lib/db";
 import { refreshAllPriorityPairs } from "@/server/services/seshat/external-feeds";
 import { refreshActiveBrandFeeds } from "@/server/services/seshat/external-feeds/brand-feed";
 import { refreshSectorsFromRecentDigests } from "@/server/services/seshat/tarsis/sector-refresh";
+import { refreshPolityAxesFromRecentDigests } from "@/server/services/seshat/tarsis/polity-refresh";
 
 export async function GET(request: Request) {
   if (!verifyCronSecret(request)) {
@@ -34,6 +35,13 @@ export async function GET(request: Request) {
     // Best-effort : un échec ne casse jamais la collecte des feeds.
     const sectors = await refreshSectorsFromRecentDigests().catch(
       () => [] as Awaited<ReturnType<typeof refreshSectorsFromRecentDigests>>,
+    );
+    // ADR-0127 — JUSTE APRÈS l'axe Sector GLOBAL : granularité PAR POLITY
+    // (secteur × échelle de marché DÉCLARÉE × pays). N'écrit une row que sur
+    // une échelle réellement déclarée (anti-fabrication) ; le Sector global
+    // reste le GLOBAL_FALLBACK. Best-effort — un échec ne casse jamais le cron.
+    const polities = await refreshPolityAxesFromRecentDigests().catch(
+      () => [] as Awaited<ReturnType<typeof refreshPolityAxesFromRecentDigests>>,
     );
     // ADR-0143 — préchauffe la veille MULTI-SUJETS par marque (marque + secteur,
     // multi-langue, pertinence déterministe) → le dashboard sert du cache.
@@ -89,6 +97,10 @@ export async function GET(request: Request) {
       sectorsSkipped: sectors
         .filter((s) => s.state === "SKIPPED")
         .map((s) => `${s.sectorSlug}: ${s.reason ?? "?"}`),
+      polityAxesRefreshed: polities.filter((p) => p.state === "REFRESHED").length,
+      polityAxesSkipped: polities
+        .filter((p) => p.state === "SKIPPED")
+        .map((p) => `${p.sectorSlug}/${p.marketScale}${p.countryCode ? `/${p.countryCode}` : ""}: ${p.reason ?? "?"}`),
     };
     return NextResponse.json({ ok: true, ...summary, at: new Date().toISOString() });
   } catch (err) {

@@ -473,9 +473,14 @@ sign-off direction (cf. § Actions opérateur).
 - Re-calibration cron programmée + `staleAt` sur les snapshots de calibration (drift detection).
 - Predictive OvertonRadar (forecast) · cross-client Jehuty benchmarking (k≥5 anonymisé).
 - Améliorations algo Overton : TOUJOURS dans `sector-intelligence/` (ADR-0078), jamais en parallèle.
-- Harvesting Tarsis PAR POLITY : niveau secteur global câblé (ADR-0134) ; la granularité
-  `SectorPolityAxis` exige une résolution digest→polity qui n'existe pas encore. Pondération
-  CULTE/ICONE par largeur de fenêtre : seuils calibrés direction (pattern Phase 23).
+- Harvesting Tarsis PAR POLITY — 🟢 **BÂTI (v6.27.310)** : `refreshPolityAxesFromRecentDigests()`
+  (`tarsis/polity-refresh.ts`) mire le harvester secteur + ajoute la dimension `marketScale`
+  DÉCLARÉE (jamais inventée — `if (!s.marketScale) continue`, ADR-0126/0127) → remplit
+  `SectorPolityAxis` via `emitIntent(SESHAT_UPSERT_POLITY_AXIS)` (câblé bus dual-door
+  commandant+union, jamais un upsert nu). Câblé au cron `external-feeds` après le secteur.
+  Le Sector global reste le fallback (GLOBAL_FALLBACK). **Reste (calibration-gated, PAS
+  bâti délibérément)** : pondération CULTE/ICONE par largeur de fenêtre = seuils calibrés
+  direction (pattern Phase 23 ; distinct de T9 refus honnête ADR-0137 — non touché).
 - Chip d'échelle sur la console Argos (informatif — sélection safety-verdict-driven).
 
 ### Phase 16 (restes réels)

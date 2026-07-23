@@ -1,5 +1,15 @@
 # Changelog — La Fusee
 
+## v6.27.310 — feat(seshat): Tarsis — harvester digest→polity (Overton par échelle × pays, zéro fabrication) (2026-07-23)
+
+**L'Overton radar avait une résolution par polity (secteur × échelle × pays) mais seul l'axe secteur GLOBAL était nourri automatiquement. Ce harvester remplit les axes PAR POLITY — depuis l'échelle de marché DÉCLARÉE des marques couvertes, jamais devinée.**
+
+- **Le trou** : `SectorPolityAxis` (résolution `EXACT → SCALE_ONLY → GLOBAL_FALLBACK`, radar founder) + son écriture gouvernée `SESHAT_UPSERT_POLITY_AXIS` + le seed opérateur manuel existaient déjà, MAIS aucun harvest automatique ne remplissait la granularité polity — seul l'axe secteur GLOBAL l'était (`sector-refresh.ts`). 100 % interne, aucune dépendance externe : c'était buildable, pas gated.
+- **Le build** : `refreshPolityAxesFromRecentDigests()` (`tarsis/polity-refresh.ts`) mire le harvester secteur et ajoute la dimension `marketScale`. Résolveur pur `resolvePolityUnits()` (déterministe, coverage `digestSector.includes(slug)` identique au secteur, dedup `sectorSlug|marketScale|countryCode`). Même signal digest-dérivé que l'axe global (réutilise `fetchSectorSignal` + `tarsisSignalToLegacySignals` — zéro calcul divergent).
+- **Anti-fabrication (ADR-0126/0127)** : `if (!s.marketScale) continue` (`polity-refresh.ts:95`) — une marque SANS échelle déclarée ne produit AUCUNE ligne polity ; l'échelle n'est jamais défaultée. 2ᵉ garde honnête : pas de signal LIVE → `SKIPPED/DEGRADED_INPUT`, zéro écriture.
+- **Gouverné, jamais brut** : écriture via `emitIntent(SESHAT_UPSERT_POLITY_AXIS)`, jamais un `db.sectorPolityAxis.upsert` nu. Le kind n'était wired qu'en tRPC → ajout de la voie bus (dual-door : union `Intent` + `intentTouchesPillars→[]` + case `commandant`, pattern `SESHAT_REGISTER_SUPERFAN`). Câblé au cron `external-feeds` après le secteur (best-effort). `Sector` global reste le fallback.
+- **NON touché** : le plafond d'évidence CULTE/ICONE (T9/ADR-0137, refus honnête séparé). 0 nouveau modèle Prisma, 0 migration. Cap APOGEE 7/7 · 0 LLM. tsc 0 · 2805 tests governance+services verts (13 dédiés polity).
+
 ## v6.27.309 — feat(thot): F5 — tier-gate payant scopé PAR MARQUE (backward-compat, zéro payeur affecté) (2026-07-23)
 
 **`checkPaidTier` scope enfin l'abonnement à la marque concernée : un `COCKPIT_MONTHLY` ne débloque plus toutes les marques d'un même compte. Backward-compat total — aucun payeur live ne perd l'accès.**

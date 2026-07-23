@@ -661,6 +661,24 @@ export type Intent =
       // ADR-0141 — conditions strictes franchies + preuve (gate « a payé » inclus).
       conditions?: import("@/domain/superfan-conditions").SuperfanConditionMap;
     }
+  // ── ADR-0127 — axe Overton PAR POLITY (secteur × échelle × pays) ──────
+  // Deux portes du MÊME kind : tRPC `market-intelligence.upsertPolityAxis`
+  // (seed opérateur, governedProcedure inline) et CE chemin emitIntent — le
+  // harvester digest→polity du cron external-feeds (caller
+  // "cron:external-feeds:polity"). Écriture unique : `sector-intelligence.
+  // upsertPolityAxis` (l'axe est CALCULÉ par computeAxisFromSignals ; jamais
+  // fabriqué — les `signals` viennent du digest RSS réel du secteur).
+  // `strategyId` = sentinel sector-scoped "(sector)" : la polity agrège N
+  // stratégies d'une même échelle×pays, aucune n'est propriétaire de la row.
+  | {
+      kind: "SESHAT_UPSERT_POLITY_AXIS";
+      strategyId: string; // sentinel "(sector)" — écriture sector-scoped, pas strategy-scoped
+      sectorSlug: string;
+      marketScale: import("@/domain").MarketScale;
+      /** ISO-2 majuscule ; "" (ou null) = axe supra-national de l'échelle. */
+      countryCode: string | null;
+      signals: readonly { tags?: Record<string, number>; narrative?: string; weight?: number }[];
+    }
   // ── Anubis boutique de la marque — Shopify OAuth founder (vague 2026-07-12) ──
   | {
       kind: "ANUBIS_COMMERCE_CONNECT_SHOP";
@@ -1378,6 +1396,9 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     case "SESHAT_ATTRIBUTE_DEVOTION_TRANSITIONS":
     // ADR-0126/0134 — écrit un SuperfanProfile (mesure), jamais un pilier.
     case "SESHAT_REGISTER_SUPERFAN":
+    // ADR-0127 — écrit un SectorPolityAxis (axe culturel secteur×échelle×pays),
+    // jamais un pilier ADVE-RTIS.
+    case "SESHAT_UPSERT_POLITY_AXIS":
     // ADR-0146 — ingestion métrique externe : écrit CampaignAARRMetric /
     // MissionActivity.kpiActual / Signal, jamais un pilier ADVE.
     case "INGEST_EXTERNAL_METRIC":

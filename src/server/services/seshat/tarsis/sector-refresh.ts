@@ -47,13 +47,48 @@ function humanizeSlug(slug: string): string {
   return slug.replace(/\b\p{L}/gu, (c) => c.toUpperCase());
 }
 
-/** Miroir de `campaign-tracker/signals-culture.extractSectorSlugFromStrategy`. */
-function extractSectorSlug(businessContext: unknown): string | null {
+/**
+ * Miroir de `campaign-tracker/signals-culture.extractSectorSlugFromStrategy`.
+ * Exporté : le harvester polity (`polity-refresh.ts`) DOIT résoudre le slug de
+ * secteur d'une stratégie à l'identique — pas de « computation subtilement
+ * différente » (interdit anti-doublon NEFER).
+ */
+export function extractSectorSlug(businessContext: unknown): string | null {
   if (businessContext && typeof businessContext === "object" && !Array.isArray(businessContext)) {
     const ctx = businessContext as Record<string, unknown>;
     if (typeof ctx.sector === "string" && ctx.sector.length > 0) return ctx.sector;
   }
   return null;
+}
+
+/** Dernier digest observé + pays couverts pour un slug de secteur normalisé. */
+export interface DigestSectorAggregate {
+  latestAt: Date;
+  countryCodes: Set<string>;
+}
+
+/**
+ * Charge les digests `EXTERNAL_FEED_DIGEST` récents (fenêtre
+ * `DIGEST_LOOKBACK_HOURS`) et les agrège par slug de secteur normalisé. SOURCE
+ * UNIQUE de la carte de couverture consommée par les DEUX harvesters (sector
+ * global + polity) — garantit une sémantique de couverture identique.
+ */
+export async function loadRecentDigestsBySector(): Promise<Map<string, DigestSectorAggregate>> {
+  const floor = new Date(Date.now() - DIGEST_LOOKBACK_HOURS * 3_600_000);
+  const digests = await db.knowledgeEntry.findMany({
+    where: { entryType: "EXTERNAL_FEED_DIGEST", createdAt: { gte: floor }, sector: { not: null } },
+    select: { sector: true, countryCode: true, createdAt: true },
+  });
+  const digestBySector = new Map<string, DigestSectorAggregate>();
+  for (const d of digests) {
+    const key = normalizeSectorKey(d.sector ?? "");
+    if (!key) continue;
+    const agg = digestBySector.get(key) ?? { latestAt: d.createdAt, countryCodes: new Set<string>() };
+    if (d.createdAt > agg.latestAt) agg.latestAt = d.createdAt;
+    if (d.countryCode) agg.countryCodes.add(d.countryCode);
+    digestBySector.set(key, agg);
+  }
+  return digestBySector;
 }
 
 export interface SectorRegistryEntry {
@@ -100,12 +135,9 @@ export async function ensureSectorRegistryRows(
  * Appelé par le cron `external-feeds` APRÈS `refreshAllPriorityPairs()`.
  */
 export async function refreshSectorsFromRecentDigests(): Promise<SectorRefreshOutcome[]> {
-  const floor = new Date(Date.now() - DIGEST_LOOKBACK_HOURS * 3_600_000);
-  const [digests, strategies] = await Promise.all([
-    db.knowledgeEntry.findMany({
-      where: { entryType: "EXTERNAL_FEED_DIGEST", createdAt: { gte: floor }, sector: { not: null } },
-      select: { sector: true, countryCode: true, createdAt: true },
-    }),
+  const [digestBySector, strategies] = await Promise.all([
+    // Digest sectors normalisés → dernier digest + pays observés (source unique).
+    loadRecentDigestsBySector(),
     db.strategy.findMany({
       // Pas de filtre Json sur businessContext (sémantique DbNull piégeuse) —
       // extractSectorSlug fait le tri, une stratégie sans secteur est ignorée.
@@ -123,18 +155,7 @@ export async function refreshSectorsFromRecentDigests(): Promise<SectorRefreshOu
       },
     }),
   ]);
-  if (digests.length === 0) return [];
-
-  // Digest sectors normalisés → dernier digest + pays observés.
-  const digestBySector = new Map<string, { latestAt: Date; countryCodes: Set<string> }>();
-  for (const d of digests) {
-    const key = normalizeSectorKey(d.sector ?? "");
-    if (!key) continue;
-    const agg = digestBySector.get(key) ?? { latestAt: d.createdAt, countryCodes: new Set<string>() };
-    if (d.createdAt > agg.latestAt) agg.latestAt = d.createdAt;
-    if (d.countryCode) agg.countryCodes.add(d.countryCode);
-    digestBySector.set(key, agg);
-  }
+  if (digestBySector.size === 0) return [];
 
   // Unités de travail par slug : d'abord les slugs des STRATÉGIES couvertes
   // par un digest (le connecteur matche digest.sector CONTAINS slug), puis
