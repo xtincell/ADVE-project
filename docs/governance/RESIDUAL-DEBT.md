@@ -79,7 +79,6 @@ Items MEDIUM à régression-risquée ou à coordination, déférés de la boucle
 | Action | Contexte / référence |
 |---|---|
 | **`ModelPolicy` prod → Sonnet 5** : émettre `UPDATE_MODEL_POLICY` (ou re-seed `scripts/seed-model-policy.ts`) contre la base Coolify | ADR-0143 suite — le code défaut est migré ; `resolvePolicy` lit la BASE. Vérifier ensuite que la cascade Ollama-cloud→Sonnet 5 ne hard-fail plus |
-| **Scheduler cron** : ajouter `curl CRON_SECRET /api/cron/anubis-digest?frequency=DAILY` (07:00 UTC) + `WEEKLY` (lundi) | Route posée 2026-07-20 ; même patron que social-sync |
 | **Bascule Coolify « Docker Image »** (`ghcr.io/xtincell/adve-project:latest`, port 3000), hors pic ; optionnel : registry ghcr + secrets `COOLIFY_URL/TOKEN/APP_UUID` | Build déporté — [docs/deploy/BUILD-DEPORT.md](../deploy/BUILD-DEPORT.md). Rollback = re-source « Dockerfile » |
 | **Désactiver l'auto-deploy** dans le dashboard Coolify (webhook git / watch registry) | Déploiement manuel 2026-07-15 — non pilotable depuis le repo |
 | **Sign-off direction seuils ROC AUC / RMSE** (`CALIBRATION_THRESHOLDS`, ADR-0081 §4) → promotions PRODUCTION des 3 sous-clusters pivot + flips MISSION §9 | Phase 23 closure. Trigger : calibration via `CalibrationReviewPanel`, lecture des métriques, acceptation |

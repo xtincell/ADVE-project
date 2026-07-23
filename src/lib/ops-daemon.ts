@@ -30,20 +30,24 @@ interface Cadence {
   paths: string[];
 }
 
-/** Cadences alignées sur scheduled-ops.yml (+ external-feeds, jamais planifié avant). */
+/** Cadences alignées sur scheduled-ops.yml (parité stricte — round-15b). */
 const CADENCES: Cadence[] = [
   {
-    key: "frequent", // */15 min : séquences planifiées + réconciliation forge
+    key: "frequent", // */15 min : séquences planifiées + réconciliation forge + publication sociale due
     bucketId: (d) => `${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}-${d.getUTCHours()}-${Math.floor(d.getUTCMinutes() / 15)}`,
     claimTtlSeconds: 10 * 60,
-    paths: ["/api/cron/scheduler", "/api/cron/ptah-download"],
+    // round-15b : `social-sync?mode=publish` publie les posts planifiés dus (BrandAction
+    // SCHEDULED, ré-émis via mestor.emitIntent + claim atomique round-12) — était documenté
+    // (~15 min) mais câblé à AUCUN scheduler → posts fondateurs jamais publiés.
+    paths: ["/api/cron/scheduler", "/api/cron/ptah-download", "/api/cron/social-sync?mode=publish"],
   },
   {
-    key: "sixhourly", // 0 */6 h : sentinelles + télémétrie + sweep + feeds marché
+    key: "sixhourly", // 0 */6 h : sentinelles + télémétrie + sweep + feeds marché + relance leads
     bucketId: (d) => `${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}-${Math.floor(d.getUTCHours() / 6)}`,
     claimTtlSeconds: 3 * 3600,
     paths: [
       "/api/cron/sentinels",
+      "/api/cron/lead-nurture", // round-15b : parité scheduled-ops.yml (omis avant)
       "/api/cron/sentinel-handlers",
       "/api/cron/asset-impact",
       "/api/cron/feedback-loop",
@@ -53,13 +57,33 @@ const CADENCES: Cadence[] = [
     ],
   },
   {
-    key: "weekly", // lundi 06h UTC : digest founders
+    key: "daily", // 05h UTC : sync sociale plein + gazette + digest quotidien (round-15b)
+    // Tête de la chaîne de mesure Phase-23 (community → devotion → cult) + gazette Jehuty
+    // + digest Anubis DAILY. Documentés « quotidien » mais câblés à AUCUN scheduler avant →
+    // la mécanique-pivot mission ne tournait jamais sur le déploiement zero-config (daemon).
+    bucketId: (d) => {
+      if (d.getUTCHours() !== 5) return null;
+      return `${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}`;
+    },
+    claimTtlSeconds: 12 * 3600,
+    paths: [
+      "/api/cron/social-sync",
+      "/api/cron/jehuty-refresh",
+      "/api/cron/anubis-digest?frequency=DAILY",
+    ],
+  },
+  {
+    key: "weekly", // lundi 06h UTC : digest founders + chasses Argos + digest Anubis hebdo
     bucketId: (d) => {
       if (d.getUTCDay() !== 1 || d.getUTCHours() !== 6) return null;
       return `${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}`;
     },
     claimTtlSeconds: 12 * 3600,
-    paths: ["/api/cron/founder-digest"],
+    paths: [
+      "/api/cron/founder-digest",
+      "/api/cron/argos-hunt", // round-15b : parité scheduled-ops.yml (omis avant)
+      "/api/cron/anubis-digest?frequency=WEEKLY", // round-15b : digest hebdo (jamais planifié avant)
+    ],
   },
   {
     key: "monthly", // 1er du mois 00h UTC : relevés MCP du mois clos

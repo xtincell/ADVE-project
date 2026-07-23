@@ -2,14 +2,13 @@ export const dynamic = "force-dynamic";
 /**
  * Cron — Founder Weekly Digest (Tier 3.11 of the residual debt).
  *
- * Schedule: every Monday 06:00 UTC.
+ * Cadence : hebdo, lundi 06:00 UTC — planifié par `.github/workflows/scheduled-ops.yml`
+ * (target weekly) ET le daemon in-process `ops-daemon.ts` (cadence "weekly"). Pas de
+ * `vercel.json` dans ce repo (déploiement Coolify/self-host + belt-and-suspenders GitHub).
  * Iterates active strategies that have a bound founder user, composes a
  * `WeeklyDigest` from `founder-psychology`, renders an HTML email, and
  * delivers it via the `email` service. Each digest is also persisted as
  * a `KnowledgeEntry` (entryType=MISSION_OUTCOME) so it can be replayed.
- *
- * Vercel cron entry (vercel.json):
- *   { "path": "/api/cron/founder-digest", "schedule": "0 6 * * 1" }
  */
 
 import { db } from "@/lib/db";

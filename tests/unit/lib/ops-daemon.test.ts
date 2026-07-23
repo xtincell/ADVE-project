@@ -80,6 +80,32 @@ describe("opsDaemonStep — armement et frontières", () => {
     expect(fetchCalls.some((c) => c.url.includes("/api/cron/external-feeds"))).toBe(true);
   });
 
+  it("daily tire à 05h UTC : sync sociale + gazette + digest quotidien (round-15b)", async () => {
+    const buckets = new Map<string, string>();
+    await opsDaemonStep(new Date(Date.UTC(2026, 6, 10, 4, 59, 0)), buckets); // 04:59 — arme (hors fenêtre daily)
+    const fired = await opsDaemonStep(new Date(Date.UTC(2026, 6, 10, 5, 0, 30)), buckets); // 05:00:30 — fenêtre daily
+    expect(fired).toContain("daily");
+    // Tête de la chaîne de mesure Phase-23 + gazette + digest quotidien, jamais planifiés avant.
+    expect(fetchCalls.some((c) => c.url.includes("/api/cron/social-sync"))).toBe(true);
+    expect(fetchCalls.some((c) => c.url.includes("/api/cron/jehuty-refresh"))).toBe(true);
+    expect(fetchCalls.some((c) => c.url.includes("/api/cron/anubis-digest?frequency=DAILY"))).toBe(true);
+  });
+
+  it("parité scheduled-ops.yml : lead-nurture (6h) + argos-hunt/anubis WEEKLY (hebdo) câblés (round-15b)", async () => {
+    const buckets = new Map<string, string>();
+    // 6h sixhourly : lead-nurture doit tirer (parité yml, omis avant).
+    await opsDaemonStep(new Date(Date.UTC(2026, 6, 10, 5, 59, 0)), buckets); // arme (floor 0)
+    await opsDaemonStep(new Date(Date.UTC(2026, 6, 10, 12, 0, 30)), buckets); // frontière sixhourly (floor 2)
+    expect(fetchCalls.some((c) => c.url.includes("/api/cron/lead-nurture"))).toBe(true);
+    // Lundi 06h weekly : argos-hunt + anubis WEEKLY doivent tirer.
+    fetchCalls = [];
+    const b2 = new Map<string, string>();
+    await opsDaemonStep(new Date(Date.UTC(2026, 6, 12, 23, 50, 0)), b2); // dimanche — arme
+    await opsDaemonStep(new Date(Date.UTC(2026, 6, 13, 6, 0, 30)), b2); // lundi 06h
+    expect(fetchCalls.some((c) => c.url.includes("/api/cron/argos-hunt"))).toBe(true);
+    expect(fetchCalls.some((c) => c.url.includes("/api/cron/anubis-digest?frequency=WEEKLY"))).toBe(true);
+  });
+
   it("monthly tire le 1er du mois 00h UTC avec ?monthly=1", async () => {
     const buckets = new Map<string, string>();
     await opsDaemonStep(new Date(Date.UTC(2026, 6, 31, 23, 59, 0)), buckets); // 31 juillet — arme

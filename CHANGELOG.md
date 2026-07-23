@@ -1,5 +1,16 @@
 # Changelog — La Fusee
 
+## v6.27.302 — fix(governance): round-15 adversarial (b) — câblage crons documentés dormants (chaîne Phase-23 + social + parité) (2026-07-23)
+
+**Sous-agent config/deploy : migrations, secrets fail-closed, i18n (822/822/822) et honnêteté des tests money/scoring tous CLEAN, les 4 fixes round-14 vérifiés SOLIDES — SAUF une classe réelle : des routes cron documentées « quotidiennes » étaient câblées à AUCUN scheduler livré.**
+
+⚠️ **Active des crons production dormants (effets externes)** — comportement documenté mais jamais tiré jusqu'ici. Visible ici pour l'opérateur ; réversible route par route.
+
+- **MED — `social-sync` (tête de la chaîne de mesure Phase-23) tirée par NI l'un NI l'autre scheduler** : ni `scheduled-ops.yml` ni le daemon in-process `ops-daemon.ts` n'avaient de cadence QUOTIDIENNE, alors que CLAUDE.md + les en-têtes de route documentent `social-sync` (daily plein + `?mode=publish` ~15 min), `jehuty-refresh` (matin) et `anubis-digest` (DAILY/WEEKLY) comme planifiés. Conséquence : sur le déploiement zero-config (daemon, promis « RIEN à configurer » par ENV-VARS), `SESHAT_CAPTURE_COMMUNITY_SNAPSHOT` → devotion → cult ne se rafraîchissait JAMAIS depuis la donnée sociale réelle, les posts fondateurs planifiés n'étaient JAMAIS publiés, superfan-ingest/ventes jamais synchronisés. La mécanique-pivot mission (construite rounds 12-14) tournait à vide.
+- **Fix** : nouvelle cadence `daily` (05h UTC) dans les DEUX schedulers → `social-sync` (plein) + `jehuty-refresh` + `anubis-digest?frequency=DAILY` ; `social-sync?mode=publish` ajouté à `frequent` (*/15) ; **parité** restaurée (`lead-nurture` → sixhourly, `argos-hunt` + `anubis-digest?frequency=WEEKLY` → weekly — le daemon les omettait alors qu'il CLAME « reprend exactement les cadences de scheduled-ops.yml »). Sûr : routes idempotentes (round-13) + claim atomique de publication (round-12) + `claimOnce` daemon + cost-gate/spine. Publie UNIQUEMENT les posts qu'un fondateur a EXPLICITEMENT planifiés (intent fondateur).
+- **LOW — commentaires de cadence périmés corrigés** : `founder-digest` (réf `vercel.json` inexistant), `auto-promotion` (« daily » → réellement sixhourly), `feedback-loop` (« Runs daily » → sixhourly). Action opérateur « scheduler anubis-digest » **CLOSE** (RESIDUAL-DEBT — désormais piloté depuis le repo).
+- **Tout le reste CLEAN** : intégrité migrations (89, ordonnées, lock présent, applier single-tx sûr), secrets fail-closed (CRON_SECRET/ADMIN_METRICS_TOKEN/NEXTAUTH_SECRET/INTEGRATION_TOKEN_KEY), i18n symétrique 822/822/822, honnêteté tests money/scoring. Les 4 fixes round-14 (`asArr` filter, cult decouple, render-before-claim, composers) vérifiés SOLIDES, 0 régression. Cap APOGEE 7/7 · 0 LLM · 0 migration. tsc 0 · 3232 tests verts (+2 daemon).
+
 ## v6.27.301 — fix(governance): round-15 adversarial (a) — parité fencing inputs LLM gated (notoria + vault-enrichment) (2026-07-23)
 
 **Sous-agent LLM-prompt-layer : ZÉRO violation interdit-n°3 (fabrication dans l'ADVE fondateur) — la classe round-11 n'a PAS récidivé. Tout writer de donnée fondatrice est anti-fabrication + fencé + validé + marqué INFERRED/AI_PROPOSED derrière le chokepoint gateway. Seuls 3 résidus LOW d'injection-hardening, aucun n'atteint la donnée fondatrice.**

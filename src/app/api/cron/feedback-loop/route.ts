@@ -1,7 +1,9 @@
 export const dynamic = "force-dynamic";
 /**
  * Feedback Loop Cron — Monthly structured questionnaire for strategies in degraded mode (Phase 0-1)
- * Runs daily, checks for strategies needing monthly feedback questionnaires
+ * Cadence : toutes les 6 h (`scheduled-ops.yml` sixhourly + `ops-daemon.ts`). Le
+ * questionnaire est gardé « au plus une fois/30 j » ; le refresh Cult Index a sa propre
+ * cadence 7 j (round-14a). round-15b : commentaire « Runs daily » corrigé.
  */
 
 import { db } from "@/lib/db";
