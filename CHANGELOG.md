@@ -1,5 +1,14 @@
 # Changelog — La Fusee
 
+## v6.27.292 — fix(thot): round-11 adversarial (b) — intégrité money (payout async réconcilié + double-disburse + remise adhésion) (2026-07-23)
+
+**Un payout mobile-money async ne repassait JAMAIS la commission à PAID → ledger corrompu + Orange re-disbursait sur re-clic ; la remise d'adhésion promise n'était jamais appliquée.**
+
+- **HIGH — payout async jamais réconcilié + double-disburse Orange (`mobile-money`)** : `payCommission` ne flippait la commission PAID qu'au COMPLETED SYNCHRONE, or MTN renvoie toujours `pending` (202) et Orange souvent → commission bloquée PENDING à vie (travail payé affiché « non payé ») ET le garde `status !== "PENDING"` défait → un re-clic re-envoyait le transfert (Orange n'avait pas l'idempotence MTN/Wave du round-8). Fix : le `PaymentOrder` porte le `commissionId` (était absent), `handleWebhook` réconcilie Commission→PAID à la confirmation, claim ATOMIQUE `PENDING→PROCESSING` avant l'envoi (bloque le re-clic pour TOUS les providers async), + `Idempotency-Key` sur Orange (défense en profondeur).
+- **MED — double payout escrow (`escrow-arbitration`)** : `releaseEscrow` créait son `PaymentOrder` SANS le garde de dedup que `generatePaymentOrder` a depuis le round-8 → `generatePaymentOrder(C)` puis `releaseEscrow(escrow lié à C)` = deux ordres PENDING pour la même commission, tous deux capturables. Même garde `findFirst({ commissionId, status not FAILED })` posée.
+- **MED — remise d'adhésion vaporware (`commission-engine`)** : `engineCalculate` (chemin ARGENT) indexait le taux brut `TIER_RATES`, ignorant la remise que `getAdjustedRate` (affichage) montrait → un membre MAITRE voyait « je garde 74% » mais chaque `netAmount` réel était calculé à 70%. Fix : helper `effectiveTalentRate` (base + remise si adhésion active, plafonné) branché sur les DEUX chemins, tables `TIER_RATES`/`MEMBERSHIP_DISCOUNT` rendues **source unique** (doublons `commission.ts` supprimés → plus de divergence possible).
+- **LOW — étiquette de méthode payout** : `commission-engine` + `escrow` détectaient le provider via `/MTN|ORANGE|WAVE/i.test(payoutPhone)` (jamais présent dans un numéro E.164 → tout étiqueté WAVE) → `detectProvider` (préfixe). 5 tests `effectiveTalentRate`. Cap APOGEE 7/7 · 0 LLM. tsc 0 · audit:cycles propre · **3222 tests unitaires verts**.
+
 ## v6.27.291 — fix(governance): round-11 adversarial (a) — intégrité LLM (intake anti-fabrication) + correctness (2026-07-23)
 
 **L'extracteur d'intake ORDONNAIT au LLM d'inventer les faits de la marque « de mémoire » et de les écrire dans l'ADVE fondateur — violation directe de l'interdit n°3 (jamais fabriquer).**

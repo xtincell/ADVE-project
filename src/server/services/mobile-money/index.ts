@@ -16,6 +16,9 @@ interface PaymentRequest {
   recipientName: string;
   provider: MobileMoneyProvider;
   reference: string;
+  /** Commission source du payout — stampée sur le PaymentOrder pour que le
+   *  webhook async puisse réconcilier Commission→PAID (round-11). */
+  commissionId?: string;
 }
 
 interface PaymentResponse {
@@ -57,6 +60,7 @@ export function detectProvider(phone: string): MobileMoneyProvider | null {
 export async function initiatePayment(request: PaymentRequest): Promise<PaymentResponse> {
   const order = await db.paymentOrder.create({
     data: {
+      commissionId: request.commissionId ?? null,
       amount: request.amount,
       currency: request.currency,
       method: `MOBILE_MONEY_${request.provider}` as PaymentMethod,
@@ -119,10 +123,6 @@ export async function payCommission(commissionId: string): Promise<PaymentRespon
     include: { talent: true },
   });
 
-  if (commission.status !== "PENDING") {
-    throw new Error(`Commission ${commissionId} n'est pas en attente (status: ${commission.status})`);
-  }
-
   // Destination payout = TalentProfile.payoutPhone (E.164). Le stub
   // historique utilisait l'EMAIL comme téléphone — refus explicite désormais.
   const phone = commission.talent.payoutPhone?.trim() ?? "";
@@ -132,23 +132,49 @@ export async function payCommission(commissionId: string): Promise<PaymentRespon
     );
   }
 
+  // Round-11 (double-disburse) : les providers ASYNC (MTN toujours, Orange souvent)
+  // renvoient `pending` → l'ancien code ne flippait la commission qu'au COMPLETED
+  // SYNCHRONE, la laissant PENDING pour toujours → le garde `status !== "PENDING"`
+  // était défait → un re-clic re-envoyait le transfert. Claim ATOMIQUE PENDING→
+  // PROCESSING : une seconde entrée sur une commission déjà en cours échoue.
+  const claim = await db.commission.updateMany({
+    where: { id: commissionId, status: "PENDING" },
+    data: { status: "PROCESSING" },
+  });
+  if (claim.count === 0) {
+    throw new Error(`Commission ${commissionId} n'est pas en attente (déjà en cours ou payée).`);
+  }
+
   const provider = detectProvider(phone) ?? "ORANGE";
 
-  const result = await initiatePayment({
-    amount: commission.netAmount,
-    currency: commission.currency,
-    recipientPhone: phone,
-    recipientName: commission.talent.displayName,
-    provider,
-    reference: `COM-${commissionId}`,
-  });
+  let result: PaymentResponse;
+  try {
+    result = await initiatePayment({
+      amount: commission.netAmount,
+      currency: commission.currency,
+      recipientPhone: phone,
+      recipientName: commission.talent.displayName,
+      provider,
+      reference: `COM-${commissionId}`,
+      commissionId,
+    });
+  } catch (err) {
+    // Échec avant même l'ordre → rendre la commission re-payable.
+    await db.commission.updateMany({ where: { id: commissionId, status: "PROCESSING" }, data: { status: "PENDING" } });
+    throw err;
+  }
 
   if (result.status === "COMPLETED") {
-    await db.commission.update({
-      where: { id: commissionId },
+    await db.commission.updateMany({
+      where: { id: commissionId, status: { in: ["PENDING", "PROCESSING"] } },
       data: { status: "PAID", paidAt: new Date() },
     });
+  } else if (result.status === "FAILED") {
+    // Provider a refusé → re-payable après correction (numéro, solde…).
+    await db.commission.updateMany({ where: { id: commissionId, status: "PROCESSING" }, data: { status: "PENDING" } });
   }
+  // PENDING (async accepté) : la commission reste PROCESSING ; `handleWebhook`
+  // la flippera PAID à la confirmation du provider.
 
   return result;
 }
@@ -181,6 +207,23 @@ export async function handleWebhook(
       processedAt: status === "COMPLETED" ? new Date() : undefined,
     },
   });
+
+  // Round-11 : réconcilier la Commission liée. Sans ce lien, un payout async
+  // confirmé par webhook laissait la commission bloquée PROCESSING/PENDING à vie
+  // (corruption de ledger : du travail payé affiché « non payé »).
+  if (order.commissionId) {
+    if (status === "COMPLETED") {
+      await db.commission.updateMany({
+        where: { id: order.commissionId, status: { in: ["PENDING", "PROCESSING"] } },
+        data: { status: "PAID", paidAt: new Date() },
+      });
+    } else if (status === "FAILED") {
+      await db.commission.updateMany({
+        where: { id: order.commissionId, status: "PROCESSING" },
+        data: { status: "PENDING" },
+      });
+    }
+  }
 
   return { processed: true, orderId: order.id };
 }
@@ -350,7 +393,13 @@ async function callOrangeTransfer(params: {
   const path = process.env.ORANGE_MONEY_TRANSFER_PATH ?? "/omcoreapis/1.0.2/mp/pay";
   const res = await fetch(`${base}${path}`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      // Idempotence déterministe depuis `reference` (round-11, parité Wave/MTN) —
+      // défense en profondeur au cas où le POST est rejoué au niveau HTTP.
+      "Idempotency-Key": params.reference,
+    },
     body: JSON.stringify({
       customer_key: params.phone.replace(/[^0-9]/g, ""),
       amount: String(params.amount),

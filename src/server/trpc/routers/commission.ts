@@ -22,7 +22,13 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, adminProcedure, operatorProcedure } from "../init";
-import { calculate as engineCalculate, generatePaymentOrder as engineGeneratePaymentOrder } from "@/server/services/commission-engine";
+import {
+  calculate as engineCalculate,
+  generatePaymentOrder as engineGeneratePaymentOrder,
+  TIER_RATES as DEFAULT_COMMISSION_RATES,
+  MEMBERSHIP_DISCOUNT,
+  effectiveTalentRate,
+} from "@/server/services/commission-engine";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
 
@@ -45,21 +51,10 @@ async function commissionScope(ctx: {
   return { isAdmin: false, operatorId: user?.operatorId ?? null, userId };
 }
 
-/** Default commission rates by tier — overridable via BrandOSConfig */
-const DEFAULT_COMMISSION_RATES: Record<string, number> = {
-  APPRENTI: 0.60,
-  COMPAGNON: 0.65,
-  MAITRE: 0.70,
-  ASSOCIE: 0.75,
-};
-
-/** Membership discount on platform commission (active members pay less commission) */
-const MEMBERSHIP_DISCOUNT: Record<string, number> = {
-  APPRENTI: 0.00,
-  COMPAGNON: 0.02,
-  MAITRE: 0.04,
-  ASSOCIE: 0.06,
-};
+// Taux de commission + remise d'adhésion : SOURCE UNIQUE = commission-engine
+// (importés ci-dessus). Round-11 : les doublons locaux ont été supprimés pour
+// que l'affichage (getAdjustedRate) et le chemin argent (engineCalculate) ne
+// puissent plus diverger.
 
 export const commissionRouter = createTRPCRouter({
   // Calcul/écriture de commission = acte STAFF (déclenché par la machine à états
@@ -372,12 +367,13 @@ export const commissionRouter = createTRPCRouter({
       });
 
       const tier = profile?.tier ?? "APPRENTI";
-      const baseRate = DEFAULT_COMMISSION_RATES[tier] ?? 0.60;
+      const baseRate = DEFAULT_COMMISSION_RATES[tier as keyof typeof DEFAULT_COMMISSION_RATES] ?? 0.60;
       const hasActiveMembership = (profile?.memberships?.length ?? 0) > 0;
 
-      // Active membership grants a discount on platform commission
-      const discount = hasActiveMembership ? (MEMBERSHIP_DISCOUNT[tier] ?? 0) : 0;
-      const adjustedRate = Math.min(baseRate + discount, 0.85); // cap at 85% to talent
+      // Active membership grants a discount on platform commission. adjustedRate
+      // = MÊME helper que le chemin argent (engineCalculate) → jamais de divergence.
+      const discount = hasActiveMembership ? (MEMBERSHIP_DISCOUNT[tier as keyof typeof MEMBERSHIP_DISCOUNT] ?? 0) : 0;
+      const adjustedRate = effectiveTalentRate(tier, hasActiveMembership);
 
       return {
         creatorId: input.creatorId,

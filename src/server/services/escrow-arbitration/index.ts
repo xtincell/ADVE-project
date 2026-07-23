@@ -13,6 +13,7 @@
 
 import { db } from "@/lib/db";
 import type { PaymentMethod, EscrowStatus, PaymentOrderStatus } from "@prisma/client";
+import { detectProvider } from "@/server/services/mobile-money";
 
 export interface EscrowConditionLike {
   met: boolean;
@@ -121,9 +122,31 @@ export async function releaseEscrow(input: { escrowId: string; arbitratedBy: str
     recipientName = talent?.displayName ?? null;
   }
 
-  const method =
-    (recipientPhone && PAYMENT_METHOD_BY_PREFIX[(recipientPhone.match(/WAVE|MTN|ORANGE/i)?.[0] ?? "").toUpperCase()]) ||
-    "MOBILE_MONEY_WAVE";
+  // detectProvider = préfixe E.164 (le regex sur des lettres DANS le numéro ne
+  // matchait jamais → tout étiqueté WAVE). PAYMENT_METHOD_BY_PREFIX conservé pour
+  // la table, indexée par le provider détecté.
+  const method: PaymentMethod =
+    (recipientPhone && PAYMENT_METHOD_BY_PREFIX[detectProvider(recipientPhone) ?? "WAVE"]) || "MOBILE_MONEY_WAVE";
+
+  // F2 (round-11) : dedup payout PAR COMMISSION. `generatePaymentOrder`
+  // (commission-engine) a cette garde depuis le round-8 ; `releaseEscrow` la
+  // manquait → `generatePaymentOrder(C)` PUIS `releaseEscrow(escrow lié à C)`
+  // créaient DEUX ordres PENDING pour la même commission, tous deux capturables
+  // → double payout. Réutiliser l'ordre non-FAILED existant.
+  if (escrow.commissionId) {
+    const existingPayout = await db.paymentOrder.findFirst({
+      where: { commissionId: escrow.commissionId, status: { not: "FAILED" } },
+      orderBy: { createdAt: "desc" },
+    });
+    if (existingPayout) {
+      const updatedEscrow = await db.escrow.update({
+        where: { id: input.escrowId },
+        data: { paymentOrderId: existingPayout.id },
+      });
+      await db.commission.update({ where: { id: escrow.commissionId }, data: { status: "PAID", paidAt: new Date() } }).catch(() => {});
+      return { escrow: updatedEscrow, paymentOrder: existingPayout };
+    }
+  }
 
   // Payout RÉEL credential/SDK-gated → PENDING honnête (jamais COMPLETED sans preuve).
   const payout = await db.paymentOrder.create({
