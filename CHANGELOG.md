@@ -1,5 +1,15 @@
 # Changelog — La Fusee
 
+## v6.27.289 — fix(governance): round-10 adversarial (c) — IDOR campaign-manager décoratif + intake (privilège/PII) (2026-07-23)
+
+**Troisième lot : le « strategyId décoratif » (campaignId vérifié mais entité liée non vérifiée) + la conversion d'intake qui laissait n'importe qui s'attribuer la marque d'autrui.**
+
+- **CRITICAL — `quick-intake.convert`** : `userId` était CHOISI par l'appelant et estampillé PROPRIÉTAIRE de la Strategy créée → tout compte convertissait l'intake d'un tiers et se l'appropriait. `requireOperator: true` (REQ-6 « l'admin convertit », surface console). `notifyFixerOnComplete` idem (exfil PII contact → Signal).
+- **HIGH — `quick-intake.get`/`updateIntake`** : keyés sur l'id INTERNE (PII contact + réponses), atteignables par tout compte. Nouveau garde `assertIntakeAccess` : intake CONVERTI → accès si le caller possède `convertedToId` (préserve le cockpit founder `brand/sources`), intake NON converti → staff.
+- **HIGH — campaign-manager « decorative campaignId »** (Agent C) : `campaignId` vérifié caller-owned, mais l'entité LIÉE ne l'était pas. `linkMission` REASSIGNAIT carrément la Mission d'un tiers ; `unlinkEntity` la détachait ; `createExecution`/`submitFieldReport` liaient une action/op-terrain d'une autre campagne (surfacées via `include`). Cross-checks `entité.strategyId === campagne.strategyId` (linkMission/Signal/Publication via `assertLinkedEntitySameStrategy`) + `updateMany` scopé campaignId (unlink) + `action/fieldOp.campaignId === input.campaignId`.
+- **MED — `mission-quote.submit`** : `submitQuote` ne vérifiait pas que la mission existe/est publiée → un prestataire injectait des devis dans une mission interne par id. Gate `guildPublished`.
+- Distinction fine (Agent C) : `createExecution.actionId` est une vraie relation (FIX) mais `createBudgetLine.actionId` un scalaire libre jamais déréférencé (NA) — même nom, verdicts opposés. Verrou étendu. Cap APOGEE 7/7 · 0 LLM. tsc 0 · 98 tests ownership verts (allowlist bare-writePillar quick-intake repointée 56→81 après insertion du garde). **Reste : scanner proactif permanent → (d).**
+
 ## v6.27.288 — fix(governance): round-10 adversarial (b) — IDOR marketplace (PII créateur + télémétrie carrière) (2026-07-23)
 
 **Deuxième lot du scan proactif : la face créateur/marketplace fuyait le `payoutPhone` (mobile-money), les compensations, l'historique d'adhésions et la télémétrie de carrière à tout compte authentifié.**

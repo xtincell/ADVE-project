@@ -1536,9 +1536,30 @@ export async function listReports(campaignId: string) {
 // ============================================================================
 
 /**
+ * IDOR round-10 (Agent C — « decorative campaignId ») : `campaignId` est vérifié
+ * caller-owned en amont (enforceCampaignAccess), mais l'entité LIÉE (mission /
+ * signal / publication) était rattachée par id BRUT — sans vérifier qu'elle
+ * appartient à la MÊME marque. `linkMission` REASSIGNAIT carrément la Mission
+ * d'un tiers (cross-tenant WRITE). Ce garde résout la marque de la campagne et
+ * refuse toute entité d'une autre marque.
+ */
+async function assertLinkedEntitySameStrategy(
+  campaignId: string,
+  entityStrategyId: string | null | undefined,
+  entityLabel: string,
+): Promise<void> {
+  const campaign = await db.campaign.findUniqueOrThrow({ where: { id: campaignId }, select: { strategyId: true } });
+  if (entityStrategyId !== campaign.strategyId) {
+    throw new Error(`${entityLabel} n'appartient pas à la marque de cette campagne`);
+  }
+}
+
+/**
  * Link a mission to a campaign
  */
 export async function linkMission(campaignId: string, missionId: string) {
+  const mission = await db.mission.findUniqueOrThrow({ where: { id: missionId }, select: { strategyId: true } });
+  await assertLinkedEntitySameStrategy(campaignId, mission.strategyId, "La mission");
   await db.mission.update({ where: { id: missionId }, data: { campaignId } });
   await db.campaignLink.upsert({
     where: { campaignId_linkedType_linkedId: { campaignId, linkedType: "MISSION", linkedId: missionId } },
@@ -1552,6 +1573,8 @@ export async function linkMission(campaignId: string, missionId: string) {
  * Link a signal to a campaign
  */
 export async function linkSignal(campaignId: string, signalId: string) {
+  const signal = await db.signal.findUniqueOrThrow({ where: { id: signalId }, select: { strategyId: true } });
+  await assertLinkedEntitySameStrategy(campaignId, signal.strategyId, "Le signal");
   await db.campaignLink.upsert({
     where: { campaignId_linkedType_linkedId: { campaignId, linkedType: "SIGNAL", linkedId: signalId } },
     update: {},
@@ -1564,6 +1587,8 @@ export async function linkSignal(campaignId: string, signalId: string) {
  * Link a publication to a campaign
  */
 export async function linkPublication(campaignId: string, publicationId: string) {
+  const pub = await db.socialPost.findUniqueOrThrow({ where: { id: publicationId }, select: { strategyId: true } });
+  await assertLinkedEntitySameStrategy(campaignId, pub.strategyId, "La publication");
   await db.campaignLink.upsert({
     where: { campaignId_linkedType_linkedId: { campaignId, linkedType: "PUBLICATION", linkedId: publicationId } },
     update: {},
@@ -1580,7 +1605,9 @@ export async function unlinkEntity(campaignId: string, linkedType: string, linke
     where: { campaignId, linkedType, linkedId },
   });
   if (linkedType === "MISSION") {
-    try { await db.mission.update({ where: { id: linkedId }, data: { campaignId: null } }); } catch { /* ok */ }
+    // IDOR round-10 : ne détacher QUE si la mission est bien liée à CETTE
+    // campagne (updateMany scopé) — un `update` brut détachait la mission d'un tiers.
+    await db.mission.updateMany({ where: { id: linkedId, campaignId }, data: { campaignId: null } });
   }
   return { success: true, removed: deleted.count };
 }

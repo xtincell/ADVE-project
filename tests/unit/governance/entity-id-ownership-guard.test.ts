@@ -74,6 +74,9 @@ const REQUIRE_OPERATOR: Array<[string, string]> = [
   ["advertis-scorer.ts", "LEGACY_ADVERTIS_SCORER_BATCH_SCORE"],
   ["advertis-scorer.ts", "LEGACY_ADVERTIS_SCORER_RECALCULATE"],
   ["advertis-scorer.ts", "LEGACY_ADVERTIS_SCORER_SNAPSHOT_ALL"],
+  // ── Round-10 (c) : intake — privilège (userId choisi) + PII fixer ──
+  ["quick-intake.ts", "LEGACY_QUICK_INTAKE_CONVERT"],
+  ["quick-intake.ts", "LEGACY_QUICK_INTAKE_NOTIFY_FIXER_ON_COMPLETE"],
 ];
 
 describe("entity-id financial + privilege procedures are staff-gated (round-4)", () => {
@@ -117,6 +120,10 @@ const RESOLUTION_GUARD: Array<[string, RegExp]> = [
   ["matching.ts", /assertMissionAccess\(/], // suggest/getHistory/getBestForBrief → canAccessMission
   ["process.ts", /assertProcessAccess\(/], // getSchedule → process.strategyId | staff
   ["market-intelligence.ts", /assertProcessAccess\(/], // stopCollector → process.strategyId | staff
+  // ── Round-10 (c) : campaign-manager decorative + intake + quote ──
+  ["campaign-manager.ts", /action\.campaignId !== input\.campaignId/], // createExecution → action ∈ campagne
+  ["quick-intake.ts", /assertIntakeAccess\(/], // get/updateIntake → intake.convertedToId | staff
+  ["mission-quote.ts", /mission\.guildPublished/], // submit → mission ouverte sur le mur
 ];
 
 describe("entity-id founder-reachable procedures resolve ownership (round-4)", () => {
@@ -162,6 +169,17 @@ describe("entity-id founder-reachable procedures resolve ownership (round-4)", (
     expect(s).toMatch(/Historique de review réservé à son auteur/);
     expect(s).toMatch(/canAccessStrategy\(deliverable\.mission\.strategyId/);
     expect(s).toMatch(/Compensation réservée à l'auteur de la review/);
+  });
+
+  it("round-10 (c) : campaign-manager link/unlink cross-check entité∈marque (decorative campaignId)", () => {
+    // Les liens (linkMission/Signal/Publication) + unlinkEntity vivent dans le
+    // SERVICE. linkMission REASSIGNAIT la Mission d'un tiers → cross-check strategy.
+    const svc = readFileSync(join(process.cwd(), "src/server/services/campaign-manager/index.ts"), "utf8");
+    expect(svc).toMatch(/assertLinkedEntitySameStrategy\(/);
+    // unlinkEntity : détache la mission via updateMany scopé campaignId (pas un update brut).
+    expect(svc).toMatch(/mission\.updateMany\(\{ where: \{ id: linkedId, campaignId \}/);
+    // submitFieldReport (router) : fieldOp ∈ campagne.
+    expect(router("campaign-manager.ts")).toMatch(/fieldOp\.campaignId !== input\.campaignId/);
   });
 });
 

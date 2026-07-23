@@ -33,7 +33,32 @@ import * as quickIntakeService from "@/server/services/quick-intake";
 import { getAdaptiveQuestions, getBusinessContextQuestions, getAllQuestions } from "@/server/services/quick-intake/question-bank";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { writePillar } from "@/server/services/pillar-gateway";
+import { db } from "@/lib/db";
+import { assertStrategyRead } from "./_strategy-read-guard";
+import { getOperatorContext } from "@/server/services/operator-isolation";
 /* lafusee:governed-active */
+
+/**
+ * IDOR round-10 (Agent D) — `quickIntake.get`/`updateIntake` sont keyés sur l'id
+ * INTERNE de l'intake (PII : contact + réponses). Le funnel self-service passe
+ * par `shareToken` ; l'accès par id interne vient du cockpit founder (source
+ * `origin:"intake:<id>"`). Un intake CONVERTI appartient à sa marque
+ * (`convertedToId`) → accès si le caller possède cette marque ; un intake NON
+ * converti est un prospect → réservé au staff.
+ */
+async function assertIntakeAccess(userId: string, intakeId: string): Promise<void> {
+  const intake = await db.quickIntake.findUniqueOrThrow({
+    where: { id: intakeId },
+    select: { convertedToId: true },
+  });
+  if (intake.convertedToId) {
+    await assertStrategyRead(userId, intake.convertedToId);
+    return;
+  }
+  const opCtx = await getOperatorContext(userId);
+  if (opCtx.role === "ADMIN" || opCtx.operatorId) return;
+  throw new TRPCError({ code: "FORBIDDEN", message: "Intake non accessible" });
+}
 
 /**
  * C1 reroute (PROPAGATION-MAP §6b) — seed an intake-converted pillar through the
@@ -875,6 +900,10 @@ export const quickIntakeRouter = createTRPCRouter({
 
     kind: "LEGACY_QUICK_INTAKE_CONVERT",
 
+    // IDOR round-10 (CRITICAL) : `userId` est choisi par l'appelant et estampillé
+    // PROPRIÉTAIRE de la Strategy créée → tout compte convertissait l'intake d'un
+    // tiers et s'attribuait la marque. REQ-6 = « l'admin convertit ». Surface console.
+    requireOperator: true,
 
     inputSchema: z.object({
       intakeId: z.string(),
@@ -1395,6 +1424,10 @@ export const quickIntakeRouter = createTRPCRouter({
 
     kind: "LEGACY_QUICK_INTAKE_NOTIFY_FIXER_ON_COMPLETE",
 
+    // IDOR round-10 : `intakeId` arbitraire → copie la PII de contact de l'intake
+    // dans un Signal rattaché à la Strategy la plus récente + alerte fixer. Interne (REQ-8).
+    requireOperator: true,
+
     inputSchema: z.object({ intakeId: z.string() }),
 
     caller: "quick-intake:notifyFixerOnComplete",
@@ -1477,6 +1510,7 @@ export const quickIntakeRouter = createTRPCRouter({
   get: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
+      await assertIntakeAccess(ctx.session.user.id, input.id);
       return ctx.db.quickIntake.findUniqueOrThrow({
         where: { id: input.id },
       });
@@ -1497,6 +1531,7 @@ export const quickIntakeRouter = createTRPCRouter({
     caller: "quick-intake:updateIntake",
   })
     .mutation(async ({ ctx, input }) => {
+      await assertIntakeAccess(ctx.session.user.id, input.id);
       const intake = await ctx.db.quickIntake.findUniqueOrThrow({
         where: { id: input.id },
       });

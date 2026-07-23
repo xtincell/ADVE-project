@@ -572,6 +572,13 @@ export const campaignManagerRouter = createTRPCRouter({
       return next();
     })
     .mutation(async ({ ctx, input }) => {
+      // IDOR round-10 : campaignId est caller-owned (middleware), mais `actionId`
+      // est une relation CampaignAction surfacée par listExecutions.include →
+      // vérifier que l'action appartient bien à CETTE campagne.
+      const action = await ctx.db.campaignAction.findUniqueOrThrow({ where: { id: input.actionId }, select: { campaignId: true } });
+      if (action.campaignId !== input.campaignId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Cette action n'appartient pas à la campagne." });
+      }
       return ctx.db.campaignExecution.create({ data: input });
     }),
 
@@ -1829,6 +1836,13 @@ export const campaignManagerRouter = createTRPCRouter({
       return next();
     })
     .mutation(async ({ ctx, input }) => {
+      // IDOR round-10 : campaignId caller-owned (middleware), mais `fieldOpId`
+      // (relation CampaignFieldOp surfacée par getFieldReport.include) doit
+      // appartenir à CETTE campagne — sinon lecture cross-tenant du brief terrain.
+      const fieldOp = await ctx.db.campaignFieldOp.findUniqueOrThrow({ where: { id: input.fieldOpId }, select: { campaignId: true } });
+      if (fieldOp.campaignId !== input.campaignId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Cette opération terrain n'appartient pas à la campagne." });
+      }
       const { data: reportData, photos, ...rest } = input;
       return ctx.db.campaignFieldReport.create({
         data: {
