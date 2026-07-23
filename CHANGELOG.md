@@ -1,5 +1,15 @@
 # Changelog — La Fusee
 
+## v6.27.300 — fix(ui): round-14 adversarial (b) — durcissement client (localStorage + null-array + interval) (2026-07-23)
+
+**Sous-agent frontend : le front est fortement durci (13 rounds back-end le montrent) — dashboard/publish/scorer/leaderboard/guidelines tous défensifs. 4 trouvailles localisées, aucune CRITICAL n'a survécu à la réfutation.**
+
+- **MED — `sidebar.tsx` : `JSON.parse(localStorage)` non gardé → lockout portail-wide** : `lf-sidebar-favorites` parsé sans try/catch dans l'effet de montage ; `Sidebar` est montée par `AppShell` sur CHAQUE page authentifiée (cockpit/console/agency/creator). Une valeur corrompue (devtools, extension, écriture tronquée, format cross-version) jetait → error boundary → utilisateur verrouillé hors du portail au chargement, reload re-jette. Le MÊME pattern est déjà gardé ailleurs (`whats-new-modal`, `intake/[token]`) → oubli. Fix : try/catch + garde `Array.isArray`.
+- **LOW-MED — `command-palette.tsx`** : même `JSON.parse` non gardé (`lf-recent-pages`), effet sur `[open]` (throw seulement à l'ouverture Cmd+K, blast-radius moindre). Même fix.
+- **LOW — renderers pilier : deref d'un élément `null` d'un tableau** : les gardes de tolérance de forme (ADR-0168) testaient `string|number` ; un élément `null` (typeof `object`) tombait sur `(it as Rec).field` → « Cannot read properties of null » = crash de rendu du pilier (déclencheur : `content` pilier `["texte", null]`). Fix single-point dans `asArr` (pillar-kit) : filtre les éléments null/undefined (les string/number restent). Couvre Principes/RelList/ProductSystem/ObjCard d'un coup.
+- **LOW — `marketing-diagnostic.tsx` (landing public) : cleanup d'interval mal placé** : `return () => clearInterval` était rendu par le callback du `setTimeout` (jamais appelé par React) → quitter pendant l'animation (~2 s) laissait l'interval ticker sur un composant démonté. Fix : `interval` hissé au scope de l'effet, nettoyé dans SON cleanup.
+- **Vérifié robuste** (dropped) : guidelines XSS (round-8 complet), blog `dangerouslySetInnerHTML` (operator-only), social token (serveur-only), publish double-submit (client gardé), dashboard/scorer/leaderboard/SSE (états gardés). Cap APOGEE 7/7 · 0 LLM. tsc 0 · 3230 tests verts.
+
 ## v6.27.299 — fix(governance): round-14 adversarial (a) — robustesse crons digest (render-before-claim + cult decouple) (2026-07-23)
 
 **Sous-agent verify-fixes : les 3 fixes round-13 vérifiés SOLIDES (13a ferme EN PLUS un deadlock latent APPLY_RECOS), et la classe « write hors-tx invalide un prédicat in-tx » n'a AUCUNE autre instance — mais 3 résidus réels bornés dans les crons que round-13c venait de toucher.**

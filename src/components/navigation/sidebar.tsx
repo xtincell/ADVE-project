@@ -36,7 +36,17 @@ export function Sidebar({ navGroups, portalAccentVar, headerContent, mobile = fa
     const stored = localStorage.getItem("lf-sidebar-collapsed");
     if (stored === "true") setCollapsed(true);
     const storedFavs = localStorage.getItem("lf-sidebar-favorites");
-    if (storedFavs) setFavorites(JSON.parse(storedFavs));
+    if (storedFavs) {
+      // round-14b : JSON.parse gardé — une valeur corrompue (devtools, extension,
+      // écriture tronquée, format cross-version) jetait dans l'effet de montage →
+      // error boundary → LOCKOUT portail-wide (Sidebar montée par AppShell partout).
+      try {
+        const parsed = JSON.parse(storedFavs);
+        if (Array.isArray(parsed)) setFavorites(parsed);
+      } catch {
+        /* valeur corrompue — ignorer */
+      }
+    }
   }, []);
 
   useEffect(() => {

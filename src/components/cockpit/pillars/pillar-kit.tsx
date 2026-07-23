@@ -41,7 +41,12 @@ export function asRec(v: unknown): Rec {
   return v && typeof v === "object" && !Array.isArray(v) ? (v as Rec) : {};
 }
 export function asArr(v: unknown): Rec[] {
-  return Array.isArray(v) ? (v as Rec[]) : [];
+  // round-14b : filtre les éléments null/undefined — un trou dans le tableau
+  // (content pilier tolérant aux formes, ex. `["texte", null]`) atteignait
+  // `(it as Rec).field` dans les renderers (Principes/RelList/ProductSystem/ObjCard)
+  // → « Cannot read properties of null » = crash de rendu du pilier. Les string/
+  // number restent (leur accès `.field` renvoie undefined, géré par isEmpty/str).
+  return Array.isArray(v) ? (v.filter((e) => e != null) as Rec[]) : [];
 }
 export function str(v: unknown): string {
   if (v == null) return "";

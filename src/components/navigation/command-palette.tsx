@@ -83,7 +83,16 @@ export function CommandPalette({ open, onClose, navGroups, portal }: CommandPale
 
   useEffect(() => {
     const stored = localStorage.getItem("lf-recent-pages");
-    if (stored) setRecentPaths(JSON.parse(stored));
+    if (stored) {
+      // round-14b : JSON.parse gardé (mêmes raisons que sidebar) — une valeur
+      // corrompue ne doit pas jeter à l'ouverture de la palette.
+      try {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) setRecentPaths(parsed);
+      } catch {
+        /* valeur corrompue — ignorer */
+      }
+    }
   }, [open]);
 
   useEffect(() => {

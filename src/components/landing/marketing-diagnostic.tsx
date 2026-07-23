@@ -22,9 +22,14 @@ export function MarketingDiagnostic() {
   const [done, setDone] = useState(false);
 
   useEffect(() => {
+    // round-14b : `interval` hissé au scope de l'effet et nettoyé dans SON cleanup.
+    // Avant, le `return () => clearInterval` était rendu par le callback du setTimeout
+    // (jamais appelé par React) → quitter la page pendant l'animation (~2 s) laissait
+    // l'interval ticker sur un composant démonté (setActive/setDone sur un unmounted).
+    let interval: ReturnType<typeof setInterval> | undefined;
     const handler = setTimeout(() => {
       let i = 0;
-      const interval = setInterval(() => {
+      interval = setInterval(() => {
         if (i >= LETTERS.length) {
           clearInterval(interval);
           setDone(true);
@@ -33,9 +38,11 @@ export function MarketingDiagnostic() {
         setActive(i);
         i++;
       }, 350);
-      return () => clearInterval(interval);
     }, 600);
-    return () => clearTimeout(handler);
+    return () => {
+      clearTimeout(handler);
+      if (interval) clearInterval(interval);
+    };
   }, []);
 
   return (
