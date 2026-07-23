@@ -70,8 +70,11 @@ async function runDuePublications(): Promise<Array<{ brandActionId: string; stat
       );
       out.push({ brandActionId: job.brandActionId, status: "EMITTED" });
     } catch (err) {
-      // Échec AVANT la résolution du statut par le handler → restaurer SCHEDULED
-      // pour un nouveau tick (jamais bloqué en PUBLISHING).
+      // Échec PRÉ-POST → restaurer SCHEDULED pour un nouveau tick. round-16a : le
+      // handler résout lui-même le statut (→ EXECUTED) quand un POST a RÉUSSI mais que
+      // le persist échoue — donc si on arrive ici après un POST réel, l'action n'est
+      // plus en PUBLISHING et ce updateMany est un NO-OP (le prédicat status=PUBLISHING
+      // ne matche pas) → jamais de re-POST irréversible.
       await db.brandAction
         .updateMany({ where: { id: job.brandActionId, status: "PUBLISHING" }, data: { status: "SCHEDULED" } })
         .catch(() => {});

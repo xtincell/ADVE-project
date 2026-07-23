@@ -391,11 +391,32 @@ export async function publishSocialPost(
     !anyPublished && results.some((r) => r.state === "NOT_CONNECTED");
   const keepWaiting = Boolean(input.brandActionId) && waitingForConnection;
 
-  const brandActionId = await upsertPublishAction(
-    input,
-    keepWaiting ? "SCHEDULED" : "PUBLISHED",
-    results,
-  );
+  let brandActionId: string;
+  try {
+    brandActionId = await upsertPublishAction(
+      input,
+      keepWaiting ? "SCHEDULED" : "PUBLISHED",
+      results,
+    );
+  } catch (persistErr) {
+    // round-16a : si un POST RÉEL a réussi (anyPublished) mais que le persist du
+    // statut échoue (blip DB), NE JAMAIS laisser l'action claimée en PUBLISHING :
+    // le cron social-sync restaure alors SCHEDULED → RE-POST irréversible au tick
+    // suivant (FB Graph n'a pas de clé d'idempotence). On sort de PUBLISHING vers
+    // EXECUTED (best-effort, idempotent) et on renvoie un succès — le post EST parti,
+    // seul le détail persisté (metadata results) est perdu. Sur un échec PRÉ-POST
+    // (aucun réseau publié), on re-throw → le cron restaure SCHEDULED pour un vrai retry.
+    if (anyPublished && input.brandActionId) {
+      await db.brandAction
+        .updateMany({
+          where: { id: input.brandActionId, status: "PUBLISHING" },
+          data: { status: "EXECUTED", timingEnd: new Date() },
+        })
+        .catch(() => {});
+      return { mode: "PUBLISHED", brandActionId: input.brandActionId, results };
+    }
+    throw persistErr;
+  }
 
   // En attente de connexion : pas de notification (sinon spam à chaque tick).
   // Le calendrier montre l'action toujours planifiée avec le motif NOT_CONNECTED.

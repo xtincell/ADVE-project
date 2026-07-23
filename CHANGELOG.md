@@ -1,5 +1,13 @@
 # Changelog — La Fusee
 
+## v6.27.304 — fix(governance): round-16 adversarial (a) — publication sociale crash-safe (pas de re-POST après POST réussi) (2026-07-23)
+
+**Le verify-fixes a déclaré round-15 SÛR à shipper (les 2 fixes SOLIDES, 0 régression) — mais round-15b, en câblant le chemin de publication, a RENDU ATTEIGNABLE une arête latente pré-existante (round-12) : un doublon de post RÉEL si le persist échoue APRÈS un POST réussi.**
+
+- **MED (latent round-12, activé par round-15b) — double-POST irréversible sur persist échoué post-POST** : `runDuePublications` restaurait `SCHEDULED` sur TOUT throw d'`emitIntentTyped`. Or `publishSocialPost` peut POSTer sur `graph.facebook.com` avec SUCCÈS (irréversible) PUIS jeter si `upsertPublishAction` échoue (blip DB) → l'action reste `PUBLISHING` → le cron restaure `SCHEDULED` → **re-POST au tick suivant** (FB Graph n'a pas de clé d'idempotence). Le cas concurrent commun (2 ticks) était DÉJÀ gardé (claim atomique round-12) — seule cette fenêtre sous-seconde persist-échoué restait. Fix : `publishSocialPost` résout lui-même le statut quand un POST a réussi mais que le persist échoue (`updateMany PUBLISHING→EXECUTED` best-effort + renvoie un succès sans throw) → le cron n'a plus rien à restaurer. Sur un échec PRÉ-POST, re-throw → restauration `SCHEDULED` pour un vrai retry.
+- **LOW (tracés) — doublons bénins sous dual-scheduler** (daemon + GitHub Actions tous deux configurés, chacun tirant chaque route ~2×) : vérifiés SANS corruption (`social-sync` claim atomique, `argos-hunt` upsert `ref` déterministe = 1 article seul coût LLM ×2, `community-snapshot` fenêtre vélocité exclut les doublons même-jour = pas d'inflation cult). Reste `anubis-digest`/`lead-nurture` = 1 email dupliqué possible (même TOCTOU `sourceHash` que round-14a). Fermeture = `@@unique([sourceHash])` OU choisir UNE topologie. Tracés RESIDUAL-DEBT §round-13 + arête extrême du fix ci-dessus (panne DB TOTALE sur 2 écritures).
+- **Round-15 vérifié SÛR** par ailleurs : cadence daily correcte (fires 1×/jour, jamais au boot, `claimOnce` cross-pod), query params tous parsés, publish `?mode=publish` ne publie QUE les posts dus (`SCHEDULED + pending + timingStart≤now`), fencing round-15a sans casse de prompt/schema. Cap APOGEE 7/7 · 0 LLM · 0 migration. tsc 0 · 3235 tests verts.
+
 ## v6.27.303 — fix(governance): round-16 adversarial (b) — fuite cross-tenant OUTPUT-side (comparables → agrégat anonyme) (2026-07-23)
 
 **Le completeness-critic a trouvé LE seul angle mort de 15 rounds : la fuite cross-tenant OUTPUT-side. Les 15 rounds ont durci l'ENTRÉE (`assertStrategyRead` sur le strategyId interrogé) ; ce garde ne voit pas une procédure qui possède légitimement son entrée mais ÉNUMÈRE d'autres tenants.**
