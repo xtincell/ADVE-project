@@ -1,5 +1,13 @@
 # Changelog — La Fusee
 
+## v6.27.286 — fix(thot): round-10 adversarial — correctness (coût archétype + isComplete ARTEMIS) (2026-07-23)
+
+**Deux mensonges déterministes fermés : un post costé comme une journée d'event, et un livrable dit « complet » alors qu'il manque ses frameworks.**
+
+- **MED — mauvais archétype de coût (`resolve-template.ts`)** : le résolveur d'action → template de coût (ADR-0093) matche par SUBSTRING first-wins ; des tokens à mot ENTIER capturaient leurs super-chaînes → `« standard » ⊃ « stand »`, `« tournage » ⊃ « tour »`, `« whatsapp » ⊃ « app »` costaient un post/tournage/campagne WhatsApp comme une **journée d'activation event** (le plus cher du catalogue). Tokens remplacés par des formes sans faux positif (`« stand »` délimité, `« roadshow »`/`« tournee »`, `« application »` qui couvre déjà l'app mobile ; `« app »` retiré de LANDING). 5 régressions ajoutées au test.
+- **LOW — `isComplete` mentait sur les étapes ARTEMIS (`deliverable-compiler.ts`)** : la branche ARTEMIS (résolution `FrameworkResult`) n'avait PAS de `else { missingOutputs.push }` (contrairement à GLORY/CALC) → une étape framework active mais non générée était comptée comme complète (`missingOutputs.length === 0`). De même `listCompilableDeliverables` ne comptait la complétude que sur GLORY/CALC. Les deux fonctions comptent désormais les étapes ARTEMIS (résolues par slug de framework).
+- **Classe (PATCHED-SYMPTOMS)** : « match par substring first-wins sur un dictionnaire de tokens → super-chaîne captée par un token court » + « parité de comptage manquante entre branches d'un même agrégateur ». Cap APOGEE 7/7 · 0 LLM. tsc 0 · 29 tests action-costing verts.
+
 ## v6.27.285 — fix(governance): round-9 adversarial (b) — durcissement auth/session (2026-07-23)
 
 **Plus de liaison Google dangereuse, les ADMIN god-mode sont challengés en MFA, et forgot-password ne révèle plus qui est inscrit.**

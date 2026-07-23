@@ -13,6 +13,7 @@ import {
 } from "@prisma/client";
 
 import { ACTION_COST_CATALOG, CATALOG_BY_KEY } from "@/server/services/financial-brain/action-costing/catalog";
+import { resolveActionTemplateKey } from "@/server/services/financial-brain/action-costing/resolve-template";
 import {
   computeActionCost,
   resolveCatalogComponentsFixed,
@@ -165,6 +166,36 @@ describe("action-costing — deterministic composite estimate", () => {
       expect(r.totalTtc, t.actionKey).toBeGreaterThan(0);
       expect(r.totalTtc).toBeGreaterThan(r.totalHt);
     }
+  });
+});
+
+describe("action-costing — archetype resolver (word tokens, no substring false-positives)", () => {
+  // Round-10 : le match est un SUBSTRING first-wins. Des tokens à mot entier
+  // (« stand », « tour », « app ») capturaient leurs super-chaînes (« standard »,
+  // « tournage », « whatsapp ») → un post/tournage costé comme une journée
+  // d'activation event. Ces cas verrouillent la correction.
+  it("« Post Instagram standard » → SOCIAL (pas EVENT via « stand »)", () => {
+    expect(resolveActionTemplateKey({ title: "Post Instagram standard" })).toBe("SOCIAL_CONTENT_BATCH");
+  });
+  it("« Tournage vidéo » → VIDEO_SHOOT (pas EVENT via « tour »)", () => {
+    expect(resolveActionTemplateKey({ title: "Tournage vidéo" })).toBe("VIDEO_SHOOT_1DAY");
+  });
+  it("« Campagne WhatsApp business » → SOCIAL (pas LANDING via « app »)", () => {
+    expect(resolveActionTemplateKey({ title: "Campagne WhatsApp business" })).toBe("SOCIAL_CONTENT_BATCH");
+  });
+
+  // Régressions — les vrais archétypes doivent toujours résoudre.
+  it("les archétypes légitimes résolvent encore", () => {
+    expect(resolveActionTemplateKey({ title: "Stand sur le salon" })).toBe("EVENT_ACTIVATION_DAY");
+    expect(resolveActionTemplateKey({ title: "Festival food tour" })).toBe("EVENT_ACTIVATION_DAY");
+    expect(resolveActionTemplateKey({ title: "Landing page produit" })).toBe("LANDING_PAGE");
+    expect(resolveActionTemplateKey({ title: "Application mobile onboarding" })).toBe("LANDING_PAGE");
+    expect(resolveActionTemplateKey({ channel: "influenceur ambassadeur" })).toBe("INFLUENCER_POST");
+  });
+
+  it("rien ne matche → null (aucun coût fabriqué)", () => {
+    expect(resolveActionTemplateKey({ title: "xyzzy" })).toBeNull();
+    expect(resolveActionTemplateKey({})).toBeNull();
   });
 });
 

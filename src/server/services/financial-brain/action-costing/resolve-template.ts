@@ -46,10 +46,15 @@ const RULES: Array<{ key: ActionTemplateKey; any: string[] }> = [
   { key: "INFLUENCER_POST", any: ["influence", "influenceu", "ambassad", "ugc", "micro-influence", "creatrice", "createur de contenu"] },
   { key: "PR_PRESS_EVENT", any: ["presse", "press", "relations publiques", "rp ", "conference", "media kit", "kit media"] },
   { key: "PACKAGING_DESIGN", any: ["packaging", "emballage", "sticker", "cartes collectibles", "carte collectible", "carte spawt"] },
-  { key: "EVENT_ACTIVATION_DAY", any: ["event", "evenement", "événement", "activation", "pop-up", "popup", "food tour", "stand", "tour", "festival", "atelier", "crew night"] },
+  // NB (audit round-10) : tokens à mot ENTIER (« stand », « tour », « app ») retirés
+  // — le match est un SUBSTRING first-wins, donc « standard » ⊃ « stand », « tournage »
+  // ⊃ « tour », « whatsapp » ⊃ « app » costaient des posts/tournages comme des
+  // journées d'activation. Remplacés par des tokens sans faux positif (« stand »
+  // délimité, « roadshow »/« tournee », « application » qui couvre déjà l'app mobile).
+  { key: "EVENT_ACTIVATION_DAY", any: ["event", "evenement", "événement", "activation", "pop-up", "popup", "food tour", "roadshow", "tournee", "stand ", "festival", "atelier", "crew night"] },
   { key: "VIDEO_SHOOT_1DAY", any: ["tournage", "captation", "video shoot", "film ", "clip"] },
   { key: "PRINT_KV", any: ["key visual", " kv", "print", "affiche", "flyer", "infographie"] },
-  { key: "LANDING_PAGE", any: ["landing", "site web", "site vitrine", "page web", "mini-jeu", "mini jeu", "onboarding", "app ", "application", "web one-page", "webflow"] },
+  { key: "LANDING_PAGE", any: ["landing", "site web", "site vitrine", "page web", "mini-jeu", "mini jeu", "onboarding", "application", "web one-page", "webflow"] },
   // Generic social/digital catch-alls come last.
   { key: "SOCIAL_CONTENT_BATCH", any: ["tiktok", "instagram", "reel", "reels", "story", "stories", "post", "social", "content", "contenu", "newsletter", "email", "whatsapp", "chatbot", "carousel"] },
   { key: "VIDEO_SHOOT_1DAY", any: ["video", "vidéo"] },
