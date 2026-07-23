@@ -1,0 +1,229 @@
+/**
+ * Verrou HARD — gardes des procédures keyées sur un id d'ENTITÉ (round-4/5).
+ *
+ * Classe prouvée exploitable (audit adversarial « TOUT » round-4, sweep 2026-07-22) :
+ * une procédure `governedProcedure`/`protectedProcedure` keyée sur un id d'ENTITÉ
+ * (`{ id }`, `{ commissionId }`, `{ deliverableId }`, `{ missionId }`, `{ signalId }`…)
+ * — PAS un `strategyId`/`campaignId` de tête — n'est PAS auto-gardée : la garde
+ * ADR-0175 de `governedProcedure` ne lit que le `strategyId` de tête, et le
+ * scanner `strategy-ownership-guard.test.ts` ne couvre que ce cas. C'est
+ * précisément pourquoi une CLASSE entière a survécu, dont un cluster FINANCIER
+ * (mobile-money, commission, contract/escrow) où tout compte authentifié
+ * DÉPLAÇAIT DE L'ARGENT.
+ *
+ * Ce test verrouille les deux remèdes appliqués :
+ *  1. les primitives financières + actes de gouvernance/privilège portent
+ *     `requireOperator: true` (base operatorProcedure = staff) ;
+ *  2. les mutations/lectures founder-atteignables résolvent l'entité → sa
+ *     marque/mission et appellent un chokepoint `canAccess*`/`assert*`/`enforce*`.
+ *
+ * Analyse TEXTUELLE (comme les autres verrous d'ownership) : un helper no-op
+ * tromperait le scan — la revue reste responsable de la sémantique.
+ */
+import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+const ROUTERS = join(process.cwd(), "src/server/trpc/routers");
+function router(name: string): string {
+  return readFileSync(join(ROUTERS, name), "utf8");
+}
+
+/** Le kind est suivi (fenêtre 400 c.) de `requireOperator: true`. */
+const REQUIRE_OPERATOR: Array<[string, string]> = [
+  // ── Cluster financier (CRITICAL — déplacement d'argent) ──
+  ["mobile-money.ts", "LEGACY_MOBILE_MONEY_INITIATE_PAYMENT"],
+  ["mobile-money.ts", "LEGACY_MOBILE_MONEY_PAY_COMMISSION"],
+  ["commission.ts", "LEGACY_COMMISSION_CALCULATE"],
+  ["commission.ts", "LEGACY_COMMISSION_MARK_PAID"],
+  ["commission.ts", "LEGACY_COMMISSION_GENERATE_PAYMENT_ORDER"],
+  ["commission.ts", "LEGACY_COMMISSION_CALCULATE_ON_COMPLETE"],
+  ["contract.ts", "LEGACY_CONTRACT_CREATE_ESCROW"],
+  ["contract.ts", "LEGACY_CONTRACT_RELEASE_ESCROW"],
+  ["contract.ts", "LEGACY_CONTRACT_MEET_ESCROW_CONDITION"],
+  // ── Gouvernance guilde / privilège (self-escalation, remise) ──
+  ["guild-tier.ts", "LEGACY_GUILD_TIER_PROMOTE"],
+  ["guild-tier.ts", "LEGACY_GUILD_TIER_DEMOTE"],
+  ["membership.ts", "LEGACY_MEMBERSHIP_CREATE"],
+  ["membership.ts", "LEGACY_MEMBERSHIP_RENEW"],
+  ["membership.ts", "LEGACY_MEMBERSHIP_CANCEL"],
+  ["guild-org.ts", "LEGACY_GUILD_ORG_ADD_MEMBER"],
+  ["guild-org.ts", "LEGACY_GUILD_ORG_REMOVE_MEMBER"],
+  ["guilde.ts", "LEGACY_GUILDE_ASSIGN_MENTOR"],
+  // ── Orchestration QC + notification (phishing) + tâches opérateur ──
+  ["quality-review.ts", "LEGACY_QUALITY_REVIEW_ASSIGN_REVIEWER"],
+  ["quality-review.ts", "LEGACY_QUALITY_REVIEW_ESCALATE"],
+  ["notification.ts", "LEGACY_NOTIFICATION_CREATE"],
+  ["operator-action.ts", "OPERATOR_CREATE_ACTION"],
+  ["operator-action.ts", "OPERATOR_UPDATE_ACTION"],
+  ["operator-action.ts", "OPERATOR_TOGGLE_ACTION_DONE"],
+  ["operator-action.ts", "OPERATOR_DELETE_ACTION"],
+  // ── Écritures de contenu GLOBAL (round-6 : certifs/commandes/éditorial/cours) ──
+  ["boutique.ts", "LEGACY_BOUTIQUE_CREATE_ITEM"],
+  ["boutique.ts", "LEGACY_BOUTIQUE_UPDATE_ITEM"],
+  ["boutique.ts", "LEGACY_BOUTIQUE_UPDATE_ORDER_STATUS"],
+  ["editorial.ts", "LEGACY_EDITORIAL_CREATE"],
+  ["editorial.ts", "LEGACY_EDITORIAL_PUBLISH"],
+  ["learning.ts", "LEGACY_LEARNING_CREATE_COURSE"],
+  ["learning.ts", "LEGACY_LEARNING_PUBLISH_COURSE"],
+  ["learning.ts", "LEGACY_LEARNING_ISSUE_CERTIFICATION"],
+  ["event.ts", "LEGACY_EVENT_CREATE"],
+  ["event.ts", "LEGACY_EVENT_MARK_ATTENDED"],
+  // ── Round-10 : scoring keyé sur { type, id } arbitraire (re-score cross-tenant) ──
+  ["advertis-scorer.ts", "LEGACY_ADVERTIS_SCORER_SCORE_OBJECT"],
+  ["advertis-scorer.ts", "LEGACY_ADVERTIS_SCORER_BATCH_SCORE"],
+  ["advertis-scorer.ts", "LEGACY_ADVERTIS_SCORER_RECALCULATE"],
+  ["advertis-scorer.ts", "LEGACY_ADVERTIS_SCORER_SNAPSHOT_ALL"],
+  // ── Round-10 (c) : intake — privilège (userId choisi) + PII fixer ──
+  ["quick-intake.ts", "LEGACY_QUICK_INTAKE_CONVERT"],
+  ["quick-intake.ts", "LEGACY_QUICK_INTAKE_NOTIFY_FIXER_ON_COMPLETE"],
+];
+
+describe("entity-id financial + privilege procedures are staff-gated (round-4)", () => {
+  it.each(REQUIRE_OPERATOR)("%s / %s → requireOperator: true", (file, kind) => {
+    const src = router(file);
+    const idx = src.indexOf(`"${kind}"`);
+    expect(idx, `kind ${kind} introuvable dans ${file}`).toBeGreaterThan(-1);
+    const span = src.slice(idx, idx + 400);
+    expect(span, `${kind} doit porter requireOperator: true`).toMatch(/requireOperator:\s*true/);
+  });
+});
+
+/** Le fichier référence un chokepoint de résolution entité→marque/mission. */
+const RESOLUTION_GUARD: Array<[string, RegExp]> = [
+  ["mission.ts", /enforceMissionAccess\(/],
+  ["mission.ts", /enforceDeliverableAccess\(/],
+  ["campaign.ts", /canAccessCampaign\(/],
+  ["contract.ts", /assertContractAccess\(/],
+  ["intervention.ts", /assertSignalStrategyAccess\(/],
+  ["quality-review.ts", /assertQcParticipant\(/],
+  ["campaign-deliverable.ts", /canAccessCampaign\(/],
+  ["campaign-change-request.ts", /canAccessMission\(/],
+  ["deliverable-tracking.ts", /canAccessMission\(/],
+  ["signal.ts", /assertStrategyAccess\(/],
+  // ── Round-9 : routeurs entité-id manqués par le sweep round-4/5 ──
+  ["creative-proposal.ts", /assertProposalAccess\(/], // getById/submit/validate/reject → proposal.strategyId
+  ["brand-node.ts", /assertNodeAccess\(/], // update/delete/move/tagRole/attachStrategy/create + reads
+  ["media-buying.ts", /camp\.strategyId !== input\.strategyId/], // syncToCampaign → campaign appartient à la marque
+  // ── Round-10 : sweep proactif (scan-entity-idor) — clusters brand-core ──
+  ["strategy.ts", /assertStrategyRead\(ctx\.session\.user\.id, input\.id\)/], // getWithScore : `{ id }` = strategyId nommé `id`
+  ["driver.ts", /assertDriverAccess\(/], // update/delete/activate/…/generatePRAngles → driver.strategyId
+  ["ingestion.ts", /assertSourceAccess\(/], // getSource/deleteSource/updateSource → source.strategyId (rawContent)
+  ["mission.ts", /enforceActivityAccess\(/], // activity cluster → activity.missionId → mission
+  ["social.ts", /await assertStrategyAccess\(ctx, driver\.strategyId\)/], // connectToDriver/linkToDriver → driver.strategyId
+  // ── Round-10 (b) : marketplace PII + télémétrie carrière + misc ──
+  ["guild-tier.ts", /assertTalentProfileAccess\(/], // getProfile/checkPromotion/getProgressPath + omit payoutPhone
+  ["guild-org.ts", /omit: \{ payoutPhone: true \}/], // getMembers : jamais le payout momo en liste
+  ["membership.ts", /assertTalentProfileAccess\(/], // getByCreator → historique+montants
+  ["imhotep.ts", /assertTalentProfileAccess\(/], // evaluateTier → reco PROMOTE/DEMOTE
+  ["learning.ts", /assertTalentProfileAccess\(/], // getCertifications
+  ["matching.ts", /assertMissionAccess\(/], // suggest/getHistory/getBestForBrief → canAccessMission
+  ["process.ts", /assertProcessAccess\(/], // getSchedule → process.strategyId | staff
+  ["market-intelligence.ts", /assertProcessAccess\(/], // stopCollector → process.strategyId | staff
+  // ── Round-10 (c) : campaign-manager decorative + intake + quote ──
+  ["campaign-manager.ts", /action\.campaignId !== input\.campaignId/], // createExecution → action ∈ campagne
+  ["quick-intake.ts", /assertIntakeAccess\(/], // get/updateIntake → intake.convertedToId | staff
+  ["mission-quote.ts", /mission\.guildPublished/], // submit → mission ouverte sur le mur
+];
+
+describe("entity-id founder-reachable procedures resolve ownership (round-4)", () => {
+  it.each(RESOLUTION_GUARD)("%s references its ownership chokepoint", (file, re) => {
+    expect(router(file)).toMatch(re);
+  });
+
+  it("notification.markRead is self-scoped", () => {
+    expect(router("notification.ts")).toMatch(/notif\.userId !== ctx\.session\.user\.id/);
+  });
+
+  it("guilde.removePortfolioItem is self-scoped", () => {
+    expect(router("guilde.ts")).toMatch(/item\.talentProfile\.userId !== ctx\.session\.user\.id/);
+  });
+
+  it("system-config: global audit log is ADMIN", () => {
+    // `recentAudit` = journal d'audit GLOBAL (emails de tous les users) → ADMIN.
+    // `get` reste `protectedProcedure` VOLONTAIREMENT (réglages système non-secrets
+    // lus par le portail créateur QC — cf. commentaire du router).
+    const s = router("system-config.ts");
+    expect(s).toMatch(/recentAudit:\s*adminProcedure/);
+  });
+
+  it("morning-batch ingested-comms reads are staff-gated", () => {
+    const s = router("morning-batch.ts");
+    expect(s).toMatch(/getBatch:\s*operatorProcedure/);
+    expect(s).toMatch(/listBatches:\s*operatorProcedure/);
+    expect(s).toMatch(/listSources:\s*operatorProcedure/);
+  });
+
+  it("round-10 : crew-orchestration reads are staff-gated (operatorProcedure)", () => {
+    // matchTalent (candidats classés d'une mission) + getReviewerCandidates
+    // (reviewers éligibles) = moitié LECTURE d'orchestrations dont les mutations
+    // sœurs (assembleCrew / assignReviewer) sont déjà staff-only.
+    expect(router("imhotep.ts")).toMatch(/matchTalent:\s*operatorProcedure/);
+    expect(router("quality-review.ts")).toMatch(/getReviewerCandidates:\s*operatorProcedure/);
+  });
+
+  it("round-10 : quality-review self/stakeholder reads are gated", () => {
+    const s = router("quality-review.ts");
+    // getByReviewer (self-default outrepassable) + calculateReviewPriority
+    // (budget client) + getFirstPassRate + calculateReviewerCompensation.
+    expect(s).toMatch(/Historique de review réservé à son auteur/);
+    expect(s).toMatch(/canAccessStrategy\(deliverable\.mission\.strategyId/);
+    expect(s).toMatch(/Compensation réservée à l'auteur de la review/);
+  });
+
+  it("round-10 (c) : campaign-manager link/unlink cross-check entité∈marque (decorative campaignId)", () => {
+    // Les liens (linkMission/Signal/Publication) + unlinkEntity vivent dans le
+    // SERVICE. linkMission REASSIGNAIT la Mission d'un tiers → cross-check strategy.
+    const svc = readFileSync(join(process.cwd(), "src/server/services/campaign-manager/index.ts"), "utf8");
+    expect(svc).toMatch(/assertLinkedEntitySameStrategy\(/);
+    // unlinkEntity : détache la mission via updateMany scopé campaignId (pas un update brut).
+    expect(svc).toMatch(/mission\.updateMany\(\{ where: \{ id: linkedId, campaignId \}/);
+    // submitFieldReport (router) : fieldOp ∈ campagne.
+    expect(router("campaign-manager.ts")).toMatch(/fieldOp\.campaignId !== input\.campaignId/);
+  });
+});
+
+/**
+ * Round-6 : chaque route MCP enforce la portée du token AVANT dispatch
+ * (`scopeMcpParams`) — une clé BRAND ne peut plus lire une autre marque via un
+ * `strategyId` injecté dans les params.
+ *
+ * Round-8 (CRITICAL) : `scopeMcpParams` ne vérifie QUE `params.strategyId` — un
+ * outil keyé sur un id d'ENTITÉ (`campaignId`/`missionId`/`driverId`/`userId`…)
+ * échappait à la portée BRAND sur les routes PAR-SERVEUR (elles appelaient
+ * `handler()` en direct, sans `enforceBrandScope`). Fermé en unifiant les 2
+ * chemins de dispatch : les 10 routes par-serveur délèguent désormais à
+ * `dispatchTool` (comme l'agrégat) — `dispatchTool` applique `enforceBrandScope`
+ * FAIL-CLOSED (une clé BRAND est refusée sur tout outil dont le schéma n'a pas de
+ * champ `strategyId`). Plus de « deux chemins à enforcement inégal ».
+ */
+describe("MCP routes enforce token brand-scope (round-6 + round-8)", () => {
+  const MCP_DIR = join(process.cwd(), "src/app/api/mcp");
+  const MCP_ROUTES = [
+    "route.ts", // agrégat /api/mcp
+    "advertis/route.ts",
+    "advertis-inbound/route.ts",
+    "artemis/route.ts",
+    "creative/route.ts",
+    "guild/route.ts",
+    "intelligence/route.ts",
+    "operations/route.ts",
+    "ptah/route.ts",
+    "pulse/route.ts",
+    "seshat/route.ts",
+  ];
+  it.each(MCP_ROUTES)("mcp/%s appelle scopeMcpParams avant dispatch", (rel) => {
+    const src = readFileSync(join(MCP_DIR, rel), "utf8");
+    expect(src, `${rel} doit enforcer la portée du token via scopeMcpParams`).toMatch(/scopeMcpParams\(/);
+    // Le résultat denied court-circuite AVANT tout appel au handler.
+    expect(src).toMatch(/\.denied\)?\s*return/);
+  });
+
+  it.each(MCP_ROUTES)("mcp/%s délègue à dispatchTool (enforceBrandScope fail-closed)", (rel) => {
+    const src = readFileSync(join(MCP_DIR, rel), "utf8");
+    // Chemin unifié : le dispatch passe par dispatchTool (qui applique
+    // enforceBrandScope). Aucune route ne doit appeler `handler(...)` en direct.
+    expect(src, `${rel} doit dispatcher via dispatchTool (fail-closed brand-scope)`).toMatch(/dispatchTool\(/);
+    expect(src, `${rel} ne doit plus appeler handler(...) en direct`).not.toMatch(/=>\s*handler\(/);
+  });
+});

@@ -458,6 +458,13 @@ export const jehutyRouter = createTRPCRouter({
       // Load signal
       const signal = await db.signal.findUnique({ where: { id: input.signalId } });
       if (!signal) throw new Error("Signal introuvable.");
+      // Anti-IDOR (audit 2026-07-22) : le garde ADR-0175 valide `strategyId` mais
+      // pas que le signal LUI appartient. Sans ce contrôle, un compte possédant la
+      // marque A pouvait lire le contenu d'un signal de la marque B (signalId
+      // arbitraire) et le refléter dans ses propres recommandations.
+      if (signal.strategyId !== input.strategyId) {
+        throw new Error("Ce signal n'appartient pas à cette marque.");
+      }
 
       // Extract observation text
       const data = (signal.data ?? {}) as Record<string, unknown>;

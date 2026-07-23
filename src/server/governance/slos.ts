@@ -188,6 +188,24 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "EXPORT_RTIS_PDF", p95LatencyMs: 30_000, errorRatePct: 0.03, costP95Usd: 0.2 },
   { kind: "ACTIVATE_RETAINER", p95LatencyMs: 500, errorRatePct: 0.001, costP95Usd: 0 },
 
+  // B3 (audit adversarial 2026-07-22) — SLOs des kinds dispatchés désormais
+  // catalogués. LLM-heavy (RTIS cascade, actions, intention, deliverable) →
+  // p95 large ; indexation/recherche/signal Seshat → dépend I/O. costP95Usd:0
+  // (aucune capability cost-gate déclarée — monitoring seulement, pas de veto).
+  { kind: "ENRICH_R_FROM_ADVE", p95LatencyMs: 30_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "ENRICH_T_FROM_ADVE_R_SESHAT", p95LatencyMs: 30_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "GENERATE_I_ACTIONS", p95LatencyMs: 30_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "SYNTHESIZE_S", p95LatencyMs: 30_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "PROPOSE_ADVE_UPDATE_FROM_RT", p95LatencyMs: 20_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "PROPOSE_BRAND_ACTIONS", p95LatencyMs: 30_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "PRODUCE_DELIVERABLE", p95LatencyMs: 60_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "CAPTURE_INTENTION", p95LatencyMs: 15_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "GENERATE_BRIEF_FROM_INTENTION", p95LatencyMs: 30_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "VALIDATE_INTENTION_BRIEF", p95LatencyMs: 15_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "INDEX_BRAND_CONTEXT", p95LatencyMs: 20_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "RUN_MARKET_RESEARCH", p95LatencyMs: 60_000, errorRatePct: 0.08, costP95Usd: 0 },
+  { kind: "PROCESS_SESHAT_SIGNAL", p95LatencyMs: 10_000, errorRatePct: 0.05, costP95Usd: 0 },
+
   // Compensating intents (rollbacks)
   { kind: "ROLLBACK_PILLAR", p95LatencyMs: 1_500, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "ROLLBACK_ADVE", p95LatencyMs: 2_000, errorRatePct: 0.02, costP95Usd: 0 },

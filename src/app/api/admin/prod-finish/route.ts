@@ -19,6 +19,7 @@ export const dynamic = "force-dynamic";
  */
 
 import { NextResponse } from "next/server";
+import crypto from "crypto";
 import { verifyCronSecret } from "@/lib/cron-auth";
 import { db } from "@/lib/db";
 import { brandPublicSlug } from "@/domain/brand-slug";
@@ -53,7 +54,17 @@ export async function POST(request: Request) {
   const postBrand = url.searchParams.get("postBrand") ?? "xtincell";
   const loginEmail = (url.searchParams.get("loginEmail") ?? "lionel@motion19.cm").toLowerCase();
   const loginName = url.searchParams.get("loginName") ?? "Lionel";
-  const loginPassword = url.searchParams.get("loginPassword") ?? "12345678";
+  // Aucun mot de passe par défaut hardcodé (audit adversarial 2026-07-22) :
+  // le `"12345678"` précédent était un identifiant FOUNDER trivialement
+  // devinable. Si l'opérateur ne fournit pas `loginPassword`, on en GÉNÈRE un
+  // aléatoire, surfacé UNE fois dans le rapport (route gated CRON_SECRET) —
+  // le compte force le changement (`passwordChangeInvited: true`).
+  // `|| null` : un `?loginPassword=` VIDE compte comme « non fourni » (sinon les
+  // deux lignes divergeaient — truthiness vs nullish — et le compte était créé
+  // avec bcrypt.hash("") pendant que le rapport affichait un mdp généré bidon).
+  const providedPassword = url.searchParams.get("loginPassword") || null;
+  const generatedPassword = providedPassword ? null : crypto.randomBytes(9).toString("base64url");
+  const loginPassword = providedPassword ?? generatedPassword!;
   const delayMin = Math.max(2, Number(url.searchParams.get("delayMin") ?? 3));
   const text = url.searchParams.get("text") ?? DEFAULT_TEXT;
 
@@ -101,7 +112,14 @@ export async function POST(request: Request) {
           },
         });
         log.push(`[OK] login ${loginEmail} créé → ${brand.name} (DIGITAL_DIRECTOR)`);
-        report.login = { done: true, email: loginEmail, brand: brand.name };
+        report.login = {
+          done: true,
+          email: loginEmail,
+          brand: brand.name,
+          // Mot de passe généré : montré UNE fois ici (à transmettre à Lionel,
+          // changement forcé au premier login). Null si l'opérateur l'a fourni.
+          ...(generatedPassword ? { generatedPassword } : {}),
+        };
       }
     }
   } catch (e) {

@@ -11,7 +11,8 @@
 
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { createTRPCRouter, protectedProcedure } from "../init";
+import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
+import { canAccessCampaign, getOperatorContext } from "@/server/services/operator-isolation";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import {
 
@@ -149,11 +150,16 @@ export const campaignDeliverableRouter = createTRPCRouter({
   // ── Read queries ─────────────────────────────────────────────────────
   listForCampaign: protectedProcedure
     .input(z.object({ campaignId: StringId }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      // anti-IDOR (audit round-4) : livrables d'une campagne d'autrui sinon.
+      const opCtx = await getOperatorContext(ctx.session.user.id);
+      if (!(await canAccessCampaign(input.campaignId, opCtx))) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette campagne." });
+      }
       return listDeliverablesForCampaign(input.campaignId);
     }),
 
-  listForOperator: protectedProcedure
+  listForOperator: operatorProcedure
     .input(
       z.object({
         operatorId: StringId,
@@ -176,7 +182,7 @@ export const campaignDeliverableRouter = createTRPCRouter({
   /**
    * Stats agrégées par RAG / status pour le KPI header dashboard agence.
    */
-  statsForOperator: protectedProcedure
+  statsForOperator: operatorProcedure
     .input(z.object({ operatorId: StringId }))
     .query(async ({ input, ctx }) => {
       const all = await ctx.db.campaignDeliverable.findMany({

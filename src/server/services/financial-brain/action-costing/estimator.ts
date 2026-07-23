@@ -23,6 +23,7 @@ import type {
 } from "./types";
 import { resolveZoneIndex } from "./zone-index";
 import { resolveProviderRate } from "./provider-rate";
+import { convertFixedParity } from "./currency-fx";
 
 // ── Deterministic constants ────────────────────────────────────────────
 
@@ -168,6 +169,7 @@ async function resolveComponentRate(
   zoneCode: string,
   baseZoneCode: string,
   providerId: string | undefined,
+  baseCurrency: string,
 ): Promise<{ unitRate: number; zoneAdjustable: boolean; resolvedFrom: string; usedFallback: boolean; fallbackChain: string[] }> {
   // 1. Provider-specific rate (absolute, not zone-multiplied).
   if (c.rateBasis === "PROVIDER_RATE" && providerId) {
@@ -179,9 +181,63 @@ async function resolveComponentRate(
       targetUnit: c.unit,
     });
     if (pr) {
-      return { unitRate: pr.rate, zoneAdjustable: false, resolvedFrom: pr.resolvedFrom, usedFallback: false, fallbackChain: [] };
+      // F6 — la devise du taux prestataire est HONORÉE (elle était droppée →
+      // un taux EUR/XOF composé comme XAF sous-comptait ~656×). Même devise :
+      // tel quel. Parité fixe (CFA/EUR) : conversion exacte déterministe.
+      // Devise flottante différente (USD…) : NON convertible sans source de
+      // taux → on ne retourne PAS ce taux, on retombe sur les sources en
+      // devise du template (marché/benchmark/base) — jamais de mécompte.
+      if (pr.currency === baseCurrency) {
+        return { unitRate: pr.rate, zoneAdjustable: false, resolvedFrom: pr.resolvedFrom, usedFallback: false, fallbackChain: [] };
+      }
+      const converted = convertFixedParity(pr.rate, pr.currency, baseCurrency);
+      if (converted != null) {
+        return {
+          unitRate: converted,
+          zoneAdjustable: false,
+          resolvedFrom: `${pr.resolvedFrom}+fx:${pr.currency}→${baseCurrency}`,
+          usedFallback: false,
+          fallbackChain: [],
+        };
+      }
+      // Non convertible → dégradation honnête vers la source suivante (le devis
+      // se compose depuis les taux en devise du template). Tracé, non silencieux.
+      return await resolveComponentRateWithoutProvider(c, zoneCode, baseZoneCode, [
+        `provider-currency-unconvertible:${pr.currency}≠${baseCurrency}`,
+      ]);
     }
   }
+  return await resolveComponentRateWithoutProvider(c, zoneCode, baseZoneCode, []);
+}
+
+/**
+ * Résolution du taux SANS le taux prestataire (sources en devise du template) :
+ * MARKET_INDEX → BENCHMARK (Seshat/statique) → baseRate (FIXED). `extraFallback`
+ * porte une éventuelle raison de saut du prestataire (F6 — devise non convertible).
+ */
+async function resolveComponentRateWithoutProvider(
+  c: DbComponent,
+  zoneCode: string,
+  baseZoneCode: string,
+  extraFallback: string[],
+): Promise<{ unitRate: number; zoneAdjustable: boolean; resolvedFrom: string; usedFallback: boolean; fallbackChain: string[] }> {
+  const base = await resolveNonProviderRate(c, zoneCode, baseZoneCode);
+  // Un saut du taux prestataire (F6 — devise non convertible) est tracé sur la
+  // ligne : chaîne de repli enrichie + drapeau usedFallback (jamais silencieux).
+  if (extraFallback.length === 0) return base;
+  return {
+    ...base,
+    usedFallback: true,
+    fallbackChain: [...extraFallback, ...base.fallbackChain],
+  };
+}
+
+/** Sources de taux en devise du template : MARKET_INDEX → BENCHMARK → baseRate. */
+async function resolveNonProviderRate(
+  c: DbComponent,
+  zoneCode: string,
+  baseZoneCode: string,
+): Promise<{ unitRate: number; zoneAdjustable: boolean; resolvedFrom: string; usedFallback: boolean; fallbackChain: string[] }> {
   // 2. Market index (zone-specific value).
   if (c.rateBasis === "MARKET_INDEX" && c.indexFamily && c.rateKey) {
     const zi = await resolveZoneIndex(c.indexFamily as ZoneIndexFamily, zoneCode, c.rateKey);
@@ -298,6 +354,7 @@ export async function estimateActionCostFromDb(
       input.zoneCode,
       baseZoneCode,
       input.providerId,
+      currency,
     );
     if (r.usedFallback) {
       usedFallback = true;

@@ -158,10 +158,15 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
   // n'a pas cliqué. Ses sources sont déjà persistées côté serveur (le handler
   // écrit avant d'extraire), donc les deux issues sont sans perte.
   if (fallbackReason) {
+    // `llm_unavailable` (côté serveur) → clé i18n `llm` (audit 2026-07-22 : sans ce
+    // mapping, `intakeIngest.fallback.llm_unavailableTitle` N'EXISTE PAS → la clé BRUTE
+    // s'affichait au prospect au pire moment, sur le chemin d'échec le plus probable).
     const fallbackKind =
-      fallbackReason === "timeout" || fallbackReason === "llm_unavailable" || fallbackReason === "internal"
+      fallbackReason === "timeout" || fallbackReason === "internal"
         ? fallbackReason
-        : "extraction";
+        : fallbackReason === "llm_unavailable"
+          ? "llm"
+          : "extraction";
     const title = t(`intakeIngest.fallback.${fallbackKind}Title`);
     const body = t(`intakeIngest.fallback.${fallbackKind}Body`);
     return (

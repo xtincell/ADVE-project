@@ -12,6 +12,7 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth/config";
+import { canAccessStrategy, getOperatorContext } from "@/server/services/operator-isolation";
 import {
   ConflictError,
   loadDoc,
@@ -35,6 +36,14 @@ export async function GET(req: NextRequest) {
   const docKey = req.nextUrl.searchParams.get("docKey");
   if (!strategyId || !docKind || !docKey || !VALID_KINDS.has(docKind)) {
     return NextResponse.json({ error: "missing or invalid params" }, { status: 400 });
+  }
+  // Ownership OBLIGATOIRE (audit adversarial 2026-07-22) : les docs collab
+  // (PILLAR_CONTENT/ORACLE_SECTION/MESTOR_CHAT) sont clés par strategyId — sans
+  // cette garde, tout compte authentifié LISAIT/ÉCRASAIT les documents d'une
+  // AUTRE marque via un strategyId deviné.
+  const opCtx = await getOperatorContext(session.user.id);
+  if (!(await canAccessStrategy(strategyId, opCtx))) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   const snap = await loadDoc(strategyId, docKind, docKey);
   if (!snap) {
@@ -71,6 +80,11 @@ export async function POST(req: NextRequest) {
     typeof body.baseVersion !== "number"
   ) {
     return NextResponse.json({ error: "invalid body" }, { status: 400 });
+  }
+  // Ownership OBLIGATOIRE — écriture cross-tenant sinon (cf. GET).
+  const opCtx = await getOperatorContext(session.user.id);
+  if (!(await canAccessStrategy(body.strategyId, opCtx))) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   let yBytes: Uint8Array;
   try {

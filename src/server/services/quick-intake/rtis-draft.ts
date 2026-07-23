@@ -243,16 +243,14 @@ async function draftPillar(
     try {
       const peers = await findComparableBrands(input.strategyId, 4);
       if (peers.length > 0) {
-        const ids = peers.map((p) => p.strategyId);
-        const peerRows = await db.strategy.findMany({
-          where: { id: { in: ids } },
-          select: { id: true, name: true },
-        });
-        const nameById = new Map(peerRows.map((s) => [s.id, s.name]));
+        // round-16b : PAS de nom de marque tierce dans le prompt (fuite cross-tenant —
+        // le LLM pourrait l'écho dans les recos I lues par le fondateur). Étiquettes
+        // anonymes « Marque comparable A/B/C » : le cadre « emprunter des patterns »
+        // fonctionne à l'identique sans révéler l'identité d'un concurrent.
         comparablesBlock = peers
           .map(
-            (p) =>
-              `- ${nameById.get(p.strategyId) ?? p.strategyId} (matchScore=${p.matchScore.toFixed(2)}, shared=${p.sharedTraits.slice(0, 3).join("|")})`,
+            (p, i) =>
+              `- Marque comparable ${String.fromCharCode(65 + i)} (matchScore=${p.matchScore.toFixed(2)}, shared=${p.sharedTraits.slice(0, 3).join("|")})`,
           )
           .join("\n");
       }

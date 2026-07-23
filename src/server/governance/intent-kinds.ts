@@ -257,6 +257,25 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "DEMOTE_CULTE_TO_FORTE", governor: "MESTOR", handler: "mestor", async: false, description: "Compensator for PROMOTE_FORTE_TO_CULTE." },
   { kind: "DEMOTE_ICONE_TO_CULTE", governor: "MESTOR", handler: "mestor", async: false, description: "Compensator for PROMOTE_CULTE_TO_ICONE." },
 
+  // ── B3 (audit adversarial 2026-07-22) — kinds DISPATCHÉS mais jamais
+  // catalogués. Ils tracent bien (Q1 via emitIntent → commandant) mais
+  // échappaient au monitoring SLO. Enregistrés SANS capability cost-gate
+  // (handlers inline commandant / services sans coût déclaré → aucun veto neuf).
+  // Verrou : `dispatched-kinds-catalogued.test.ts` (union/dispatch ⊆ INTENT_KINDS).
+  { kind: "ENRICH_R_FROM_ADVE", governor: "MESTOR", handler: "mestor", async: false, description: "Dérive le pilier R (Résonance) depuis l'ADVE — étape cascade RTIS." },
+  { kind: "ENRICH_T_FROM_ADVE_R_SESHAT", governor: "MESTOR", handler: "mestor", async: false, description: "Dérive le pilier T (Territoire) depuis ADVE + R + digest Seshat — étape cascade RTIS." },
+  { kind: "GENERATE_I_ACTIONS", governor: "MESTOR", handler: "mestor", async: false, description: "Dérive le pilier I (Innovation/actions) depuis la cascade — étape RTIS." },
+  { kind: "SYNTHESIZE_S", governor: "MESTOR", handler: "mestor", async: false, description: "Synthétise le pilier S (Stratégie) — étape finale de la cascade RTIS." },
+  { kind: "PROPOSE_ADVE_UPDATE_FROM_RT", governor: "MESTOR", handler: "mestor", async: false, description: "Propose une mise à jour ADVE à partir des dérivés R/T (décision opérateur — STOP à Jehuty)." },
+  { kind: "PROPOSE_BRAND_ACTIONS", governor: "ARTEMIS", handler: "artemis", async: false, description: "Propose des BrandAction additives (Phase 24) — LLM brand-aware ou saisie manuelle." },
+  { kind: "PRODUCE_DELIVERABLE", governor: "ARTEMIS", handler: "artemis", async: false, description: "Exécute une GlorySequence pour produire un livrable (teaser post-intake / complet post-paywall)." },
+  { kind: "CAPTURE_INTENTION", governor: "ARTEMIS", handler: "intention", async: false, description: "Capture l'intention founder (aval de l'ADVE) — Phase 24 (ADR-0106)." },
+  { kind: "GENERATE_BRIEF_FROM_INTENTION", governor: "ARTEMIS", handler: "intention", async: false, description: "Génère un brief à partir de l'intention capturée — Phase 24." },
+  { kind: "VALIDATE_INTENTION_BRIEF", governor: "ARTEMIS", handler: "intention", async: false, description: "Valide le brief d'intention avant production — Phase 24." },
+  { kind: "INDEX_BRAND_CONTEXT", governor: "SESHAT", handler: "seshat", async: true, description: "Indexe le contexte de marque dans le context-store (RAG) — indexeur async Seshat." },
+  { kind: "RUN_MARKET_RESEARCH", governor: "SESHAT", handler: "sector-intelligence", async: false, description: "Recherche marché cross-brand (fetch → extract → persist) — Phase 20." },
+  { kind: "PROCESS_SESHAT_SIGNAL", governor: "SESHAT", handler: "sector-intelligence", async: false, description: "Traite un signal Seshat (télémétrie sectorielle)." },
+
   // ── Plugin extension intents (loyalty-extension demo) ──
   { kind: "COMPUTE_LOYALTY_SCORE", governor: "INFRASTRUCTURE", handler: "loyalty-extension", async: false, description: "Plugin: compute loyalty score from SuperfanProfile + DevotionSnapshot for a strategy." },
 

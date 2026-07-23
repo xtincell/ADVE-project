@@ -1,8 +1,51 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
+import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
+import { canAccessMission, getOperatorContext } from "@/server/services/operator-isolation";
 /* lafusee:governed-active */
+
+/**
+ * Anti-IDOR (audit adversarial 2026-07-22, round-3) : les procédures sont keyées
+ * sur `deliverableId`/`trackingId` (pas strategyId) → gardes ADR-0175 inertes.
+ * On remonte `deliverable → mission → strategy` et on passe `canAccessMission`
+ * (owner / opérateur / assigné). Sans ça : lecture/écriture cross-tenant des
+ * suivis de livrables (comptes de signaux, injection de faux signaux).
+ */
+async function assertDeliverableAccess(
+  ctx: { session: { user: { id: string } }; db: typeof import("@/lib/db").db },
+  missionId: string,
+): Promise<void> {
+  const opCtx = await getOperatorContext(ctx.session.user.id);
+  if (!(await canAccessMission(missionId, opCtx))) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à ce livrable." });
+  }
+}
+
+async function missionIdOfDeliverable(
+  ctx: { db: typeof import("@/lib/db").db },
+  deliverableId: string,
+): Promise<string> {
+  const d = await ctx.db.missionDeliverable.findUnique({
+    where: { id: deliverableId },
+    select: { missionId: true },
+  });
+  if (!d) throw new TRPCError({ code: "NOT_FOUND", message: "Livrable introuvable" });
+  return d.missionId;
+}
+
+async function missionIdOfTracking(
+  ctx: { db: typeof import("@/lib/db").db },
+  trackingId: string,
+): Promise<string> {
+  const t = await ctx.db.deliverableTracking.findUnique({
+    where: { id: trackingId },
+    select: { deliverable: { select: { missionId: true } } },
+  });
+  if (!t) throw new TRPCError({ code: "NOT_FOUND", message: "Suivi introuvable" });
+  return t.deliverable.missionId;
+}
 
 export const deliverableTrackingRouter = createTRPCRouter({
   create: governedProcedure({
@@ -18,6 +61,7 @@ export const deliverableTrackingRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      await assertDeliverableAccess(ctx, await missionIdOfDeliverable(ctx, input.deliverableId));
       return ctx.db.deliverableTracking.create({
         data: {
           deliverableId: input.deliverableId,
@@ -45,6 +89,7 @@ export const deliverableTrackingRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      await assertDeliverableAccess(ctx, await missionIdOfTracking(ctx, input.trackingId));
       const tracking = await ctx.db.deliverableTracking.findUniqueOrThrow({
         where: { id: input.trackingId },
       });
@@ -59,6 +104,7 @@ export const deliverableTrackingRouter = createTRPCRouter({
   getByDeliverable: protectedProcedure
     .input(z.object({ deliverableId: z.string() }))
     .query(async ({ ctx, input }) => {
+      await assertDeliverableAccess(ctx, await missionIdOfDeliverable(ctx, input.deliverableId));
       return ctx.db.deliverableTracking.findMany({
         where: { deliverableId: input.deliverableId },
       });
@@ -67,6 +113,7 @@ export const deliverableTrackingRouter = createTRPCRouter({
   getImpact: protectedProcedure
     .input(z.object({ deliverableId: z.string() }))
     .query(async ({ ctx, input }) => {
+      await assertDeliverableAccess(ctx, await missionIdOfDeliverable(ctx, input.deliverableId));
       const trackings = await ctx.db.deliverableTracking.findMany({
         where: { deliverableId: input.deliverableId },
       });
@@ -95,6 +142,7 @@ export const deliverableTrackingRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      await assertDeliverableAccess(ctx, await missionIdOfTracking(ctx, input.trackingId));
       return ctx.db.deliverableTracking.update({
         where: { id: input.trackingId },
         data: { status: "EXPIRED" },

@@ -154,6 +154,11 @@ export async function compileDeliverable(
           content: (fwResult.output as Record<string, unknown>) ?? {},
           sourceType: "ARTEMIS",
         });
+      } else {
+        // Sans ce push, `isComplete` (missingOutputs.length === 0) mentait :
+        // une étape ARTEMIS active sans FrameworkResult était comptée comme
+        // complète (parité avec la branche GLORY/CALC ci-dessus).
+        missingOutputs.push(step.ref);
       }
     }
     // PILLAR, SESHAT, MESTOR steps don't produce direct sections —
@@ -193,18 +198,31 @@ export async function listCompilableDeliverables(
   });
   const executedSlugs = new Set(outputs.map((o) => o.toolSlug));
 
+  // ARTEMIS steps resolve against FrameworkResult (par slug), pas GloryOutput.
+  // Sans ça, la complétude ne comptait que GLORY/CALC → `isComplete` mentait de
+  // la même manière que `compileDeliverable` (parité de comptage des étapes).
+  const fwResults = await db.frameworkResult.findMany({
+    where: { strategyId },
+    select: { framework: { select: { slug: true } } },
+  });
+  const executedFrameworkSlugs = new Set(fwResults.map((r) => r.framework.slug));
+  const isStepDone = (s: { type: string; ref: string }): boolean =>
+    s.type === "ARTEMIS" ? executedFrameworkSlugs.has(s.ref) : executedSlugs.has(s.ref);
+
   const { ALL_SEQUENCES } = await import("./sequences");
   const results: Array<{ sequenceKey: GlorySequenceKey; name: string; format: DeliverableFormat; completeness: number; isComplete: boolean }> = [];
 
   for (const seq of ALL_SEQUENCES) {
-    const glorySteps = seq.steps.filter((s) => (s.type === "GLORY" || s.type === "CALC") && s.status === "ACTIVE");
-    if (glorySteps.length === 0) continue;
+    const producingSteps = seq.steps.filter(
+      (s) => (s.type === "GLORY" || s.type === "CALC" || s.type === "ARTEMIS") && s.status === "ACTIVE",
+    );
+    if (producingSteps.length === 0) continue;
 
-    const completed = glorySteps.filter((s) => executedSlugs.has(s.ref)).length;
+    const completed = producingSteps.filter(isStepDone).length;
     if (completed === 0) continue; // No outputs at all — skip
 
     // lafusee:allow-adhoc-completion: deliverable compilation progress metric (sections processed ratio)
-    const completeness = Math.round((completed / glorySteps.length) * 100);
+    const completeness = Math.round((completed / producingSteps.length) * 100);
     const format = SEQUENCE_FORMATS[seq.key] ?? "JSON";
 
     results.push({

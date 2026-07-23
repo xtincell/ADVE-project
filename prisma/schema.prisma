@@ -1309,6 +1309,11 @@ model CrmMessage {
 /// Campagne newsletter (The Upgrade) — composer, tester, envoyer aux opt-in.
 model NewsletterCampaign {
   id             String    @id @default(cuid())
+  /// Marque propriétaire (ADR-0166 — scoping par marque). Nullable : les
+  /// campagnes legacy (pré-2026-07-22) n'en portent pas → visibles opérateur
+  /// uniquement (fail-closed pour les fondateurs). Cohérent avec les abonnés
+  /// (`CrmContact.strategyId`) et le fournisseur email (`BrandEmailConnector`).
+  strategyId     String?
   subject        String
   /// Corps MJML (rendu via anubis/mjml-render — zéro dépendance) ou HTML brut.
   bodyMjml       String?
@@ -1324,6 +1329,7 @@ model NewsletterCampaign {
   updatedAt DateTime @updatedAt
 
   @@index([status, createdAt])
+  @@index([strategyId, createdAt])
 }
 
 model FollowerSnapshot {
@@ -1491,6 +1497,11 @@ model Signal {
   updatedAt DateTime @updatedAt
 
   @@index([tenantId])
+  // Audit adversarial 2026-07-22 — Signal est append-only et filtré par strategyId
+  // (+type, +orderBy createdAt) dans 20+ chemins dont des cron sweeps ; Postgres
+  // n'indexe pas les FK → seq scans linéaires. Index composites additifs.
+  @@index([strategyId, type])
+  @@index([strategyId, createdAt])
 }
 
 model SequenceExecution {
@@ -1548,6 +1559,7 @@ model GloryOutput {
   updatedAt DateTime @updatedAt
 
   @@index([tenantId])
+  @@index([strategyId]) // audit 2026-07-22 — filtré par strategyId, FK non auto-indexée
 }
 
 // Phase 10 (ADR-0012) — BrandAsset state machine
@@ -1750,6 +1762,12 @@ model PillarVersion {
   diff     Json?
   author   String?
   reason   String?
+  /// G (ADR-0176) — l'IntentEmission qui a produit cette écriture. Chaque
+  /// PillarVersion capture le contenu PRÉ-écriture ; l'`intentId` permet à
+  /// ROLLBACK_PILLAR de restaurer EXACTEMENT l'état d'avant l'intent visé
+  /// (au lieu de deviner « la dernière version »). Additif nullable — les
+  /// versions antérieures au suivi ne sont pas restaurables avec précision.
+  intentId String?
 
   pillar Pillar @relation(fields: [pillarId], references: [id], onDelete: Cascade)
 
@@ -1757,6 +1775,7 @@ model PillarVersion {
 
   @@index([pillarId])
   @@index([createdAt])
+  @@index([intentId])
 }
 
 model BrandDataSource {
@@ -3594,6 +3613,10 @@ model IntakePayment {
   providerEventId String?
   failureReason   String?
   paidAt          DateTime?
+  /// F7 — anti-rejeu du cycle d'abonnement : posé au moment où CE paiement
+  /// étend la Subscription. Un webhook rejoué (même ancien) ne ré-étend plus
+  /// (le garde `lastCycleRef` mono-slot laissait passer un cycle antérieur).
+  cycleAppliedAt  DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

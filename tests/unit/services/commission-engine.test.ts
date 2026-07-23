@@ -129,3 +129,42 @@ describe("Commission Engine - Edge Cases", () => {
     expect(apprenti.commissionAmount).toBeGreaterThan(associe.commissionAmount);
   });
 });
+
+// ── Round-11 : remise d'adhésion appliquée au chemin ARGENT (source unique) ──
+import {
+  effectiveTalentRate,
+  TIER_RATES as REAL_TIER_RATES,
+  MEMBERSHIP_DISCOUNT as REAL_DISCOUNT,
+  TALENT_RATE_CAP,
+} from "@/server/services/commission-engine";
+
+describe("effectiveTalentRate — remise d'adhésion (F3 round-11)", () => {
+  it("sans adhésion = taux de base du palier", () => {
+    for (const tier of ["APPRENTI", "COMPAGNON", "MAITRE", "ASSOCIE"] as const) {
+      expect(effectiveTalentRate(tier, false)).toBeCloseTo(REAL_TIER_RATES[tier], 6);
+    }
+  });
+
+  it("avec adhésion ACTIVE = base + remise (plafonné)", () => {
+    // MAITRE 0.70 + 0.04 = 0.74 (le talent GARDE plus — c'est la promesse produit).
+    expect(effectiveTalentRate("MAITRE", true)).toBeCloseTo(0.74, 6);
+    expect(effectiveTalentRate("COMPAGNON", true)).toBeCloseTo(0.67, 6);
+    // APPRENTI : remise 0 → inchangé.
+    expect(effectiveTalentRate("APPRENTI", true)).toBeCloseTo(0.60, 6);
+  });
+
+  it("plafonne à TALENT_RATE_CAP", () => {
+    // Aucun tier ne dépasse le cap avec la remise, mais la garde est réelle :
+    expect(effectiveTalentRate("ASSOCIE", true)).toBeLessThanOrEqual(TALENT_RATE_CAP);
+  });
+
+  it("tier inconnu → défaut APPRENTI (jamais NaN)", () => {
+    expect(effectiveTalentRate("ZZZ", false)).toBeCloseTo(0.60, 6);
+    expect(Number.isNaN(effectiveTalentRate("ZZZ", true))).toBe(false);
+  });
+
+  it("source unique : les tables exportées portent bien les valeurs canon", () => {
+    expect(REAL_DISCOUNT).toEqual({ APPRENTI: 0, COMPAGNON: 0.02, MAITRE: 0.04, ASSOCIE: 0.06 });
+    expect(REAL_TIER_RATES.MAITRE).toBe(0.70);
+  });
+});

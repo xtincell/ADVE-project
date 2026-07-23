@@ -26,6 +26,7 @@ import {
   fetchUserInfo,
   getProviderConfig,
   getPublicBaseUrl,
+  oauthStateSigningKey,
   unpackState,
 } from "@/server/services/oauth-integrations";
 import {
@@ -35,9 +36,8 @@ import {
 } from "@/server/services/anubis/social-connect";
 import { emitIntentTyped } from "@/server/services/mestor/intents";
 
-function signingKey(): string {
-  return process.env.NEXTAUTH_SECRET ?? "lafusee-dev-fallback-32-chars-minimum";
-}
+// Clé fail-closed en prod (cf. oauthStateSigningKey) — plus de fallback public.
+const signingKey = oauthStateSigningKey;
 
 const PKCE_COOKIE = "lf_oauth_pkce";
 
@@ -57,7 +57,13 @@ function socialRedirect(
   provider: string,
   platforms?: string[],
 ): NextResponse {
-  const safePath = returnUrl.startsWith("/") ? returnUrl : "/cockpit";
+  // Anti-open-redirect (round-9) : `//evil.com` et `/\evil.com` commencent par
+  // "/" mais `new URL()` les résout en URL ABSOLUE (protocol-relative). On
+  // n'accepte qu'un chemin interne (UN seul "/" initial, ni "//" ni "/\").
+  const safePath =
+    returnUrl.startsWith("/") && !returnUrl.startsWith("//") && !returnUrl.startsWith("/\\")
+      ? returnUrl
+      : "/cockpit";
   const u = new URL(safePath, baseUrl);
   u.searchParams.set("reseau", flag);
   u.searchParams.set("fournisseur", provider);

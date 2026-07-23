@@ -7,7 +7,6 @@
 import crypto from "crypto";
 import { db } from "@/lib/db";
 import { classifyBrand, createEmptyVector, PILLAR_NAMES, sanitizeVector } from "@/lib/types/advertis-vector";
-import { TIER_UPPER_BOUNDS_200 } from "@/domain";
 import type { AdvertisVector } from "@/lib/types/advertis-vector";
 import {
   mapExecutiveSummary,
@@ -43,47 +42,6 @@ import {
   loadComposerContext,
   composeSectionContent,
 } from "./deterministic-composers";
-
-// ─── Evidence multiplier (presentation-time mirror of advertis-scorer) ──────
-// Mirrors `computeEvidenceMultiplier` in advertis-scorer/index.ts but reads
-// from the already-loaded `strategy` relations instead of querying the DB
-// again. Kept in sync deliberately so scored rows and rendered Oracle align.
-
-const SUPERFANS_TARGET = 1000;
-const CULT_INDEX_TARGET = 80;
-const AGE_YEARS_TARGET = 5;
-const TARSIS_TARGET = 20;
-
-function computePresentationEvidence(strategy: StrategyWithRelations): number {
-  const superfanCount: number = Array.isArray(strategy.superfanProfiles)
-    ? strategy.superfanProfiles.length
-    : 0;
-  const cultSnap = Array.isArray(strategy.cultIndexSnapshots)
-    ? strategy.cultIndexSnapshots[0]
-    : null;
-  const cultScore: number =
-    cultSnap && typeof cultSnap.compositeScore === "number" ? cultSnap.compositeScore : 0;
-  const tarsisCount: number = Array.isArray(strategy.signals)
-    ? strategy.signals.filter((s: { type?: string }) =>
-        typeof s.type === "string" && s.type.includes("TARSIS"),
-      ).length
-    : 0;
-  const createdAt = strategy.createdAt instanceof Date ? strategy.createdAt : null;
-  const ageMs = createdAt ? Date.now() - createdAt.getTime() : 0;
-  const ageYears = ageMs / (365.25 * 24 * 60 * 60 * 1000);
-
-  const superfansFraction = Math.min(1, superfanCount / SUPERFANS_TARGET);
-  const cultFraction = Math.min(1, cultScore / CULT_INDEX_TARGET);
-  const ageFraction = Math.min(1, Math.max(0, ageYears / AGE_YEARS_TARGET));
-  const tarsisFraction = Math.min(1, tarsisCount / TARSIS_TARGET);
-
-  // Vague 9 (alignement v6.25.15) — fraction d'évidence PURE [0,1], sans
-  // plancher : les poids miroir du scorer canonique (advertis-scorer).
-  return Math.min(
-    1,
-    superfansFraction * 0.45 + cultFraction * 0.30 + ageFraction * 0.10 + tarsisFraction * 0.15,
-  );
-}
 
 // ─── Prisma Include (single comprehensive query) ────────────────────────────
 
@@ -164,20 +122,17 @@ export async function assemblePresentation(strategyId: string): Promise<Strategy
           : 0,
   };
 
-  // ── PLAFOND d'évidence (refonte scoring v6.25.15 — Vague 9 alignement). ──
-  // L'ancien code MULTIPLIAIT le composite par un facteur plancher 0.30 : le
-  // mécanisme exact des « résultats absurdes » (Apple → LATENT) tué côté
-  // scorer en Vague 2 mais survivant ici — l'Oracle affichait LATENT pour une
-  // stratégie FORTE fraîchement scorée. Doctrine canonique : le composite est
-  // le POTENTIEL structurel ; l'évidence ne fait que PLAFONNER les deux
-  // paliers d'apex (CULTE/ICONE), jamais tirer vers le bas.
-  const evidence = computePresentationEvidence(strategy);
-  const ceiling =
-    evidence >= 0.5 ? 200 : evidence >= 0.2 ? TIER_UPPER_BOUNDS_200.CULTE : TIER_UPPER_BOUNDS_200.FORTE;
-  const vector: AdvertisVector = {
-    ...baseVector,
-    composite: Math.min(ceiling, Math.max(0, baseVector.composite)),
-  };
+  // ── Composite = valeur persistée (déjà plafonnée par l'évidence au scorer). ──
+  // Le scorer canonique (advertis-scorer, ADR-0126) applique DÉJÀ le plafond
+  // d'évidence SCALE-AWARE (`resolveEvidenceTargets(marketScale, addressableAudience)`
+  // + `brandFoundedYear`) avant de persister `advertis_vector.composite`, et le
+  // dashboard cockpit lit cette valeur VERBATIM. L'ancien re-plafonnage ici
+  // utilisait un MIROIR d'évidence PÉRIMÉ (cibles NATION 1000/20 pré-ADR-0126 +
+  // `createdAt` au lieu de `brandFoundedYear`) → il DIVERGEAIT du dashboard et
+  // affichait un palier INFÉRIEUR pour toute marque sous-nationale (segment
+  // capture-then-grow — audit round-9). Supprimé : l'Oracle rend le composite
+  // persisté, identique au dashboard.
+  const vector: AdvertisVector = { ...baseVector };
   const classification = classifyBrand(vector.composite);
 
   // Phase 13 (B5/B6) — charger les BrandAssets des sections BrandAsset-driven

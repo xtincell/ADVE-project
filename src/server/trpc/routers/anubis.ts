@@ -156,11 +156,11 @@ export const anubisRouter = createTRPCRouter({
       return anubis.segmentAudience({ rules: input.rules, operatorId });
     }),
 
-  trackDelivery: protectedProcedure
+  trackDelivery: operatorProcedure
     .input(z.object({ broadcastJobId: z.string() }))
     .query(async ({ input }) => anubis.trackDelivery(input)),
 
-  fetchDeliveryReport: protectedProcedure
+  fetchDeliveryReport: operatorProcedure
     .input(z.object({ broadcastJobId: z.string() }))
     .query(async ({ input }) => anubis.fetchDeliveryReport(input)),
 

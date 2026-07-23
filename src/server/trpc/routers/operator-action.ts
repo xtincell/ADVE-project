@@ -7,7 +7,7 @@
 
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { createTRPCRouter, protectedProcedure } from "../init";
+import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import {
   createOperatorAction,
@@ -24,9 +24,15 @@ const PriorityEnum = z.enum(["CRITIQUE", "HAUTE", "MOYENNE", "BASSE"]);
 const CategoryEnum = z.enum(["BEFORE_DEPARTURE", "SYSTEM", "FOLLOWUPS", "PRODUCTION", "OTHER"]);
 const SourceEnum = z.enum(["GMAIL", "SLACK", "WHATSAPP", "VERBAL", "BRIEF", "SYSTEM", "OTHER"]);
 
+// Tâches OPÉRATEUR (console Matanga) = surface STAFF. Audit round-4 : le
+// `strategyId` de tête était un LEURRE — la garde ADR-0175 le vérifiait mais la
+// mutation ciblait `operatorId`/`actionId` (jamais résolus) → un founder passant
+// SA marque éditait/supprimait la tâche de n'importe quel opérateur. requireOperator
+// sur toutes les mutations (base operatorProcedure = staff, plus de leurre).
 export const operatorActionRouter = createTRPCRouter({
   create: governedProcedure({
     kind: "OPERATOR_CREATE_ACTION",
+    requireOperator: true,
     inputSchema: z.object({
       strategyId: StringId,
       operatorId: StringId,
@@ -65,6 +71,7 @@ export const operatorActionRouter = createTRPCRouter({
 
   update: governedProcedure({
     kind: "OPERATOR_UPDATE_ACTION",
+    requireOperator: true,
     inputSchema: z.object({
       strategyId: StringId,
       operatorId: StringId,
@@ -95,6 +102,7 @@ export const operatorActionRouter = createTRPCRouter({
 
   toggleDone: governedProcedure({
     kind: "OPERATOR_TOGGLE_ACTION_DONE",
+    requireOperator: true,
     inputSchema: z.object({
       strategyId: StringId,
       operatorId: StringId,
@@ -115,6 +123,7 @@ export const operatorActionRouter = createTRPCRouter({
 
   delete: governedProcedure({
     kind: "OPERATOR_DELETE_ACTION",
+    requireOperator: true,
     inputSchema: z.object({
       strategyId: StringId,
       operatorId: StringId,
@@ -132,8 +141,8 @@ export const operatorActionRouter = createTRPCRouter({
     }
   }),
 
-  // Reads
-  listForOperator: protectedProcedure
+  // Reads — STAFF only (énumérait les tâches de n'importe quel opérateur).
+  listForOperator: operatorProcedure
     .input(
       z.object({
         operatorId: StringId,

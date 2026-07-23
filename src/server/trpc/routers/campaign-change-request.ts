@@ -7,7 +7,9 @@
 
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { createTRPCRouter, protectedProcedure } from "../init";
+import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
+import { canAccessMission, getOperatorContext } from "@/server/services/operator-isolation";
+import { db } from "@/lib/db";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import {
 
@@ -128,9 +130,21 @@ export const campaignChangeRequestRouter = createTRPCRouter({
   // Reads
   listForDeliverable: protectedProcedure
     .input(z.object({ deliverableId: StringId }))
-    .query(({ input }) => listChangeRequestsForDeliverable(input.deliverableId)),
+    .query(async ({ ctx, input }) => {
+      // anti-IDOR (audit round-4) : tickets de modif d'un livrable d'autrui sinon.
+      const d = await db.missionDeliverable.findUnique({
+        where: { id: input.deliverableId },
+        select: { mission: { select: { id: true } } },
+      });
+      if (!d) throw new TRPCError({ code: "NOT_FOUND", message: "Livrable introuvable" });
+      const opCtx = await getOperatorContext(ctx.session.user.id);
+      if (!(await canAccessMission(d.mission.id, opCtx))) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à ce livrable." });
+      }
+      return listChangeRequestsForDeliverable(input.deliverableId);
+    }),
 
-  listOpenForOperator: protectedProcedure
+  listOpenForOperator: operatorProcedure
     .input(z.object({ operatorId: StringId }))
     .query(({ input }) => listOpenChangeRequestsForOperator(input.operatorId)),
 });

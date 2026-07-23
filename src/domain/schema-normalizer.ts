@@ -194,8 +194,31 @@ export function normalizeToSchema(value: unknown, schema: unknown): unknown {
       return typeof value === "string" ? (coerceNumber(value) ?? value) : value;
     case "ZodString":
       return isUuidString(s) && typeof value === "string" && value ? normalizeId(value) : value;
+    case "ZodUnion":
+    case "ZodDiscriminatedUnion": {
+      // Récursion dans les armes (audit adversarial 2026-07-22) : sans elle, une valeur
+      // coercible d'un union (ex. `metriqueCle.valeur:"150000"` dans string|objet) n'était
+      // NI corrigée NI tolérée → hard-fail invalid_union. On coerce vers l'arme qui valide.
+      const options = (def.options ?? []) as unknown[];
+      if (!Array.isArray(options) || options.length === 0) return value;
+      // 1. Normalise vers chaque arme ; garde la première qui VALIDE (coerce ses feuilles).
+      for (const arm of options) {
+        const norm = normalizeToSchema(value, arm);
+        const armSchema = unwrap(arm) as { safeParse?: (v: unknown) => { success: boolean } } | null;
+        if (armSchema?.safeParse?.(norm)?.success) return norm;
+      }
+      // 2. Sinon vers la 1ʳᵉ arme du MÊME type-family (scalaire→scalaire, conteneur→conteneur)
+      //    — coerce sans jamais fabriquer ; ce qui reste sera classé (scalaire = advisory).
+      const valIsContainer = value !== null && typeof value === "object";
+      for (const arm of options) {
+        const armCtor = (unwrap(arm)?.constructor?.name ?? "") as string;
+        const armIsContainer = armCtor === "ZodObject" || armCtor === "ZodArray" || armCtor === "ZodRecord";
+        if (armIsContainer === valIsContainer) return normalizeToSchema(value, arm);
+      }
+      return value;
+    }
     default:
-      // ZodUnion (formes compacte/riche déjà acceptées), ZodBoolean, ZodLiteral… : intact.
+      // ZodBoolean, ZodLiteral… : intact.
       return value;
   }
 }

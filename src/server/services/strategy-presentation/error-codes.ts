@@ -31,7 +31,7 @@ export const ORACLE_ERROR_CODES = {
     recoverable: true,
   },
   "ORACLE-102": {
-    fr: "Budget Thot insuffisant pour cette enrichment.",
+    fr: "Budget insuffisant pour cet enrichissement.",
     hint: "Augmenter le budget mensuel Operator ou attendre le reset (1er du mois).",
     governor: "THOT",
     recoverable: true,
@@ -57,7 +57,7 @@ export const ORACLE_ERROR_CODES = {
 
   // ── 2xx — Exécution (un framework / sequence a foiré) ────────────────────
   "ORACLE-201": {
-    fr: "Framework Artemis a échoué.",
+    fr: "Le traitement stratégique a échoué.",
     hint: "Voir context.frameworkSlug pour identifier le framework. Re-tenter avec circuit-breaker.",
     governor: "ARTEMIS",
     recoverable: true,
@@ -81,13 +81,13 @@ export const ORACLE_ERROR_CODES = {
     recoverable: true,
   },
   "ORACLE-205": {
-    fr: "Phase Seshat (observation) a échoué.",
+    fr: "La phase d'observation du marché a échoué.",
     hint: "Tarsis ou queryReferences indisponible. Pipeline continue sans benchmarks.",
     governor: "SESHAT",
     recoverable: true,
   },
   "ORACLE-206": {
-    fr: "Phase Mestor (priorisation LLM) a échoué.",
+    fr: "La phase de priorisation a échoué.",
     hint: "Fallback ordre par défaut appliqué. Voir LLM Gateway logs.",
     governor: "MESTOR",
     recoverable: true,

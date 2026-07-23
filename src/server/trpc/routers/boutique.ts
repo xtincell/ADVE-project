@@ -7,6 +7,10 @@ import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
 
+// Catalogue + statut de commande = gestion STAFF (audit round-6 : tout compte
+// authentifié injectait des articles, réécrivait un prix → 0, ou marquait
+// n'importe quelle commande payée/expédiée). `order`/`myOrders` restent
+// self-scopés (commande de l'utilisateur courant).
 export const boutiqueRouter = createTRPCRouter({
   listItems: protectedProcedure
     .input(z.object({
@@ -33,6 +37,7 @@ export const boutiqueRouter = createTRPCRouter({
 
 
     kind: "LEGACY_BOUTIQUE_CREATE_ITEM",
+    requireOperator: true,
 
 
     inputSchema: z.object({
@@ -58,6 +63,7 @@ export const boutiqueRouter = createTRPCRouter({
 
 
     kind: "LEGACY_BOUTIQUE_UPDATE_ITEM",
+    requireOperator: true,
 
 
     inputSchema: z.object({
@@ -125,6 +131,7 @@ export const boutiqueRouter = createTRPCRouter({
 
 
     kind: "LEGACY_BOUTIQUE_UPDATE_ORDER_STATUS",
+    requireOperator: true,
 
 
     inputSchema: z.object({

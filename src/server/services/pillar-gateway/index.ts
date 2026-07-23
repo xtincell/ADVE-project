@@ -37,6 +37,13 @@ interface PillarWriteAuthor {
   system: AuthorSystem;
   userId?: string;
   reason: string;
+  /**
+   * G (ADR-0176) — IntentEmission courante (posée par governedProcedure via
+   * `ctx.intentId`). Stampée sur la PillarVersion créée par cette écriture pour
+   * permettre un ROLLBACK_PILLAR PRÉCIS (restaurer l'état d'avant CET intent).
+   * Optionnel : les écritures non gouvernées / hors requête ne la portent pas.
+   */
+  intentId?: string;
 }
 
 type PillarWriteOperation =
@@ -58,6 +65,16 @@ interface PillarWriteOptions {
    * never silently corrupts the pillar content.
    */
   strictSchemaValidation?: boolean;
+  /**
+   * ADR-0175/audit adversarial — quand true, bloque UNIQUEMENT la corruption
+   * STRUCTURELLE (SHAPE : un objet/tableau attendu là où un scalaire est fourni, qui
+   * casse le rendu), en TOLÉRANT les divergences advisory DRAFT (TYPE/ENUM/LENGTH/
+   * MISSING). Plus fin que `strictSchemaValidation` (qui bloque tout). Posé sur les
+   * chemins d'ÉDITION utilisateur (CRUD item-level, amend) où une valeur libre peut
+   * transformer `personas[0]` en scalaire → crash renderer. Le gate seed
+   * `assertPillarConforms` ne couvrait PAS le runtime.
+   */
+  shapeGate?: boolean;
   /**
    * Provenance par champ de l'écriture entrante (path → HUMAN/SOURCE/INFERRED).
    * Le garde de provenance (HUMAIN > SOURCE > INFÉRÉ) l'utilise pour refuser
@@ -137,8 +154,28 @@ export function tokenizePillarPath(path: string): (string | number)[] {
   return tokens;
 }
 
+/**
+ * Segments de chemin interdits — écrire via `__proto__`/`constructor`/`prototype`
+ * remonterait dans `Object.prototype` (empoisonnement de prototype GLOBAL : tous les
+ * tenants, tout le process, jusqu'au restart). `pillar.amend` accepte un `field`
+ * libre non-allowlisté → vecteur atteignable. On refuse net. Audit adversarial 2026-07-22.
+ */
+const FORBIDDEN_PATH_SEGMENTS = new Set(["__proto__", "constructor", "prototype"]);
+
+/** Lève si un token de chemin permettrait un empoisonnement de prototype. */
+export function assertSafePillarPath(tokens: readonly (string | number)[]): void {
+  for (const t of tokens) {
+    if (typeof t === "string" && FORBIDDEN_PATH_SEGMENTS.has(t)) {
+      throw new Error(
+        `Chemin de champ interdit : segment « ${t} » (protection contre l'empoisonnement de prototype).`,
+      );
+    }
+  }
+}
+
 export function setNestedValue(obj: Record<string, unknown>, path: string, value: unknown): void {
   const tokens = tokenizePillarPath(path);
+  assertSafePillarPath(tokens);
   if (tokens.length === 1) {
     (obj as Record<string | number, unknown>)[tokens[0]!] = value;
     return;
@@ -473,6 +510,30 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
         }
       }
 
+      // ── VALIDATE: SHAPE gate (corruption structurelle uniquement) ──────────
+      // Bloque un scalaire-là-où-conteneur (casse le rendu) sans toucher aux advisories
+      // DRAFT. Couvre le runtime (CRUD/amend) que le gate seed ne voyait pas.
+      if (options?.shapeGate) {
+        const { classifyPillarConformance } = await import("@/lib/types/pillar-conformance");
+        const conf = classifyPillarConformance(
+          pillarKey.toUpperCase() as Parameters<typeof classifyPillarConformance>[0],
+          newContent,
+        );
+        if (!conf.ok) {
+          const summary = conf.shape.slice(0, 5).map((e) => `${e.path}: ${e.message}`).join(" | ");
+          const more = conf.shape.length > 5 ? ` (+${conf.shape.length - 5})` : "";
+          return {
+            success: false,
+            version: pillar.currentVersion ?? 0,
+            previousContent,
+            newContent: previousContent,
+            stalePropagated: [],
+            warnings: [...warnings, `SHAPE gate: ${conf.shape.length} corruption(s) structurelle(s)`],
+            error: `Édition refusée — corruption structurelle (${conf.shape.length}) : ${summary}${more}`,
+          };
+        }
+      }
+
       // ── VALIDATE: Bible rules (format de fond) ──────────────────
       const bibleViolations = validateAgainstBible(pillarKey, newContent);
       for (const v of bibleViolations) {
@@ -530,11 +591,14 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
       }
 
       // ── VERSION: create PillarVersion ────────────────────────────
+      // La PillarVersion capture le contenu PRÉ-écriture, stampé de l'intent
+      // courant → ROLLBACK_PILLAR restaure EXACTEMENT cet état (G, ADR-0176).
       await createVersion({
         pillarId: pillar.id,
         content: newContent,
         author: `${author.system}${author.userId ? `:${author.userId}` : ""}`,
         reason: author.reason,
+        intentId: author.intentId,
       });
 
       const newVersion = (pillar.currentVersion ?? 1) + 1;
@@ -575,9 +639,19 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
         }
       }
 
-      // ── PERSIST ──────────────────────────────────────────────────
-      await tx.pillar.update({
-        where: { id: pillar.id },
+      // ── PERSIST (verrou optimiste — round-12, corrigé round-13a) ──
+      // Conditionné à la version LUE (`pillar.currentVersion`, l.336). Sans ce
+      // prédicat, deux écritures concurrentes du MÊME pilier (fenêtre findUnique
+      // → persist, READ COMMITTED) bumpaient toutes deux N→N+1 en `where:{id}` →
+      // perte d'édition silencieuse sur le FONDEMENT ADVE. count≠1 → throw =
+      // rollback de toute la tx (cascade + audit inclus), aucune écriture partielle.
+      // Round-13a : ce persist est le SEUL à bumper currentVersion. createVersion
+      // (l.596, client `db` global HORS de cette tx) le bumpait AUSSI → committait
+      // N+1 sur une autre connexion avant ce persist → le prédicat `= N` matchait
+      // 0 ligne → throw systématique sur un vrai Postgres. Bump retiré de
+      // createVersion : le compteur avance ici et le verrou optimiste est réel.
+      const persisted = await tx.pillar.updateMany({
+        where: { id: pillar.id, currentVersion: pillar.currentVersion },
         data: {
           content: newContent as Prisma.InputJsonValue,
           confidence: newConfidence,
@@ -586,6 +660,12 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
           currentVersion: newVersion,
         },
       });
+      if (persisted.count !== 1) {
+        throw new Error(
+          `PILLAR_VERSION_CONFLICT: le pilier ${pillarKey} a été modifié en parallèle ` +
+            `(version ${pillar.currentVersion ?? "?"} écrasée) — écriture abandonnée, recharger et réappliquer.`,
+        );
+      }
 
       // ── STALE: propagate to dependents (cascade ADVERTIS) ────────
       const dependents = getPillarDependents(pillarKey);

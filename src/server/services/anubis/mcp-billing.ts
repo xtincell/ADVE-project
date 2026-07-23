@@ -90,6 +90,63 @@ export async function authenticateMcpRequest(
   };
 }
 
+// ── Portée du token (ADR-0145) — anti-IDOR cross-tenant ──────────────────
+
+/**
+ * Enforce la portée du token AVANT dispatch + injecte `__auth` dans les params.
+ *
+ * Anti-IDOR cross-tenant (audit adversarial round-6, 2026-07-22) : les routes
+ * `/api/mcp/<server>` passaient les params BRUTS au handler (`handler(params)`),
+ * n'injectaient PAS `__auth`, et AUCUNE n'enforçait la portée centralement — seul
+ * l'outil `advertis.amendPillar` (write) la vérifiait. Une clé BRAND (qu'un
+ * fondateur peut légitimement émettre pour SA marque, server `*`) pouvait alors
+ * lire une AUTRE marque en passant `params.strategyId=<autre marque>` (scores,
+ * signaux, piliers, veille concurrentielle). On enforce désormais AU BORD :
+ * une clé BRAND ne peut opérer QUE sur `scopeStrategyId`.
+ *
+ * Retourne soit `{ denied }` (403 prête + metering DENIED), soit `{ params }`
+ * (params enrichis de `__auth`, à passer au handler). Les clés SYSTEM/ADMIN
+ * passent tout (portée globale). L'injection est faite APRÈS le spread → un
+ * `__auth` fourni par le client est écrasé (pas d'usurpation).
+ */
+export function scopeMcpParams(
+  gate: McpAuthResult,
+  server: string,
+  tool: string,
+  rawParams: Record<string, unknown>,
+): { denied: NextResponse; params?: undefined } | { denied?: undefined; params: Record<string, unknown> } {
+  if (gate.scopeKind === "BRAND") {
+    const requested = typeof rawParams.strategyId === "string" ? rawParams.strategyId : null;
+    if (requested && requested !== gate.scopeStrategyId) {
+      recordMcpCall({
+        apiKeyId: gate.apiKeyId,
+        userId: gate.userId,
+        ratePerCallUsd: gate.ratePerCallUsd,
+        server,
+        tool,
+        status: "DENIED",
+      }).catch(() => {});
+      return {
+        denied: NextResponse.json(
+          { error: "SCOPE_DENIED", detail: "Ce token est limité à une autre marque." },
+          { status: 403 },
+        ),
+      };
+    }
+  }
+  return {
+    params: {
+      ...rawParams,
+      __auth: {
+        scopeKind: gate.scopeKind ?? null,
+        scopeStrategyId: gate.scopeStrategyId ?? null,
+        userId: gate.userId ?? null,
+        apiKeyId: gate.apiKeyId ?? null,
+      },
+    },
+  };
+}
+
 // ── Metering ───────────────────────────────────────────────────────────
 
 export interface RecordMcpCallInput {

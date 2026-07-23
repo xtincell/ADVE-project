@@ -31,6 +31,7 @@ import { findCapability, getManifest } from "./registry";
 import { intentKindExists } from "./intent-kinds";
 import { assertPostConditions, PostconditionFailedError } from "./post-conditions";
 import { assertCollaboratorMayEmit, CollaboratorWriteVetoError } from "./collaborator-firewall";
+import { canAccessStrategy } from "@/server/services/operator-isolation";
 import type { Capability, NeteruManifest, ReadinessGateName } from "./manifest";
 import {
   OracleError,
@@ -73,6 +74,28 @@ function unwrapMiddlewareResult(result: unknown): unknown {
   }
   // Defensive — if shape ever changes, log a primitive instead of the proxy.
   return { kind: "unknown-middleware-result" };
+}
+
+/** tRPC v11 `next()` NE JETTE PAS sur échec aval — il renvoie { ok:false }. */
+function isFailedMiddlewareResult(result: unknown): boolean {
+  return !!(
+    result &&
+    typeof result === "object" &&
+    "ok" in result &&
+    (result as { ok?: unknown }).ok === false
+  );
+}
+
+/** Code d'erreur tRPC (`FORBIDDEN`, `INTERNAL_SERVER_ERROR`, …) d'un résultat échoué. */
+function middlewareResultErrorCode(result: unknown): string | undefined {
+  if (result && typeof result === "object" && "error" in result) {
+    const err = (result as { error?: unknown }).error;
+    if (err && typeof err === "object" && "code" in err) {
+      const code = (err as { code?: unknown }).code;
+      return typeof code === "string" ? code : undefined;
+    }
+  }
+  return undefined;
 }
 
 type AnyZod = z.ZodTypeAny;
@@ -118,6 +141,34 @@ export function governedProcedure<I extends AnyZod, O extends AnyZod>(
 ) {
   const base = opts.requireOperator === true ? operatorProcedure : protectedProcedure;
   return base.input(opts.inputSchema).use(async ({ ctx, input, next }) => {
+    // ── ADR-0175 — garde d'ownership de marque sur la voie gouvernée ──────────
+    // La voie de mutation founder (base `protectedProcedure`) ne vérifiait PAS
+    // l'accès à la marque : tout compte authentifié pouvait passer le `strategyId`
+    // d'un autre tenant (fuite CRITIQUE cross-tenant en ÉCRITURE sur ~90 procédures ;
+    // le firewall collaborateur est un no-op pour les non-collaborateurs). On applique
+    // le chokepoint canonique `canAccessStrategy` (ADMIN / propriétaire / même opérateur
+    // / collaborateur ACTIVE) dès qu'un `strategyId` figure en tête d'input. Les kinds
+    // PUBLICS (Guilde ADR-0098) créent/candidatent sans `strategyId` à posséder →
+    // exemptés. Fail-fast AVANT toute émission (pas de bruit d'audit sur un refus d'accès).
+    const guardedStrategyId = extractStrategyId(input);
+    if (guardedStrategyId && !PUBLIC_INTENT_KINDS.has(opts.kind)) {
+      const userId = ctx.session?.user?.id ?? null;
+      const allowed = userId
+        ? await canAccessStrategy(guardedStrategyId, {
+            operatorId:
+              ((ctx.session?.user as unknown as Record<string, unknown> | undefined)?.operatorId as
+                | string
+                | null
+                | undefined) ?? null,
+            userId,
+            role: ctx.session?.user?.role ?? "USER",
+          })
+        : false;
+      if (!allowed) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette marque." });
+      }
+    }
+
     const intentId = await preEmitIntent(ctx, opts.kind, input, opts.caller ?? "governed");
 
     // ── ADR-0131 — firewall d'écriture collaborateur (DENY par défaut) ──
@@ -213,6 +264,23 @@ export function governedProcedure<I extends AnyZod, O extends AnyZod>(
         ? { ...ctx, intentId, costDecision }
         : { ...ctx, intentId };
       const result = await next({ ctx: childCtx });
+
+      // ── Honnêteté de l'audit (round-4) : tRPC v11 `next()` NE JETTE PAS quand
+      // un middleware/handler AVAL refuse ou échoue — il renvoie { ok:false }.
+      // Le `catch` ci-dessous ne voit donc QUE les throws du corps de CETTE
+      // middleware. Sans ce garde, une mutation REFUSÉE en aval (garde d'ownership
+      // entité-id, règle métier) était close `OK` + publiait `intent.completed`
+      // + Seshat la marquait OBSERVED → combustion falsifiée (viole Q1/Q2). Le
+      // strangler `auditedProcedure` teste déjà `result.ok` ; on aligne le lane
+      // gouverné. FORBIDDEN/UNAUTHORIZED = veto d'accès ; le reste = échec handler.
+      if (isFailedMiddlewareResult(result)) {
+        const code = middlewareResultErrorCode(result);
+        const status: EmissionStatus =
+          code === "FORBIDDEN" || code === "UNAUTHORIZED" ? "VETOED" : "FAILED";
+        await postEmitIntent(ctx, intentId, unwrapMiddlewareResult(result), status);
+        return result;
+      }
+
       const finalStatus = costDecision?.decision === "DOWNGRADE" ? "DOWNGRADED" : "OK";
       // ORACLE-901 fix: never persist the raw MiddlewareResult — it carries
       // ctx (PrismaClient proxies). Always unwrap to .data first.

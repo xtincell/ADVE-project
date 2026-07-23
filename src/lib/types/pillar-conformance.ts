@@ -60,6 +60,25 @@ export interface PillarConformance {
 
 const isContainer = (t?: string) => t === "object" || t === "array" || t === "tuple" || t === "record" || t === "map" || t === "set";
 
+/** Type runtime d'une valeur, aligné sur le vocabulaire Zod (`array`/`object`/scalaires). */
+function runtimeType(v: unknown): string {
+  if (v === undefined) return "undefined";
+  if (v === null) return "null";
+  if (Array.isArray(v)) return "array";
+  return typeof v;
+}
+
+/** Valeur au chemin pointé `a.b.0.c` (indices numériques comme clés — Array["0"] marche). */
+function valueAtPath(content: unknown, path: string): unknown {
+  if (!path) return content;
+  let cur: unknown = content;
+  for (const seg of path.split(".")) {
+    if (cur == null || typeof cur !== "object") return undefined;
+    cur = (cur as Record<string, unknown>)[seg];
+  }
+  return cur;
+}
+
 /**
  * Classe une divergence Zod. Par `code` d'abord (robuste — insensible aux messages
  * custom/i18n), avec repli sur le texte du message. Cf. doctrine en tête de fichier.
@@ -75,8 +94,17 @@ export function classifyConformanceError(err: RawPillarError): ConformanceClass 
     case "invalid_value":       // Zod 4 : enum / littéral
     case "invalid_enum_value":  // Zod 3
       return "ENUM";
-    case "invalid_union":
-      return "SHAPE";           // aucune arme de l'union satisfaite → structurel
+    case "invalid_union": {
+      // Zod émet `invalid_union` pour TOUTE divergence dans une arme — y compris un
+      // simple scalaire mal typé (ex. `charismaScore:"8/10"` dans un union number|objet).
+      // Nos unions sont scalaire|objet (stringOrShape/numberOrShape/listOfStringOr/…) :
+      // une valeur SCALAIRE reçue rend correctement (l'arme scalaire) → advisory TYPE,
+      // pas SHAPE. Seul un CONTENEUR reçu qui ne matche aucune arme est une vraie
+      // corruption. `received` est résolu depuis le contenu réel (classifyPillarConformance).
+      if (received === "undefined") return "MISSING";
+      if (received && !isContainer(received)) return "TYPE";
+      return "SHAPE";
+    }
     case "invalid_format":      // uuid/url/email sur valeur présente → placeholder toléré
       return "TYPE";
     case "unrecognized_keys":
@@ -114,7 +142,13 @@ export function classifyPillarConformance(key: PillarKey, content: unknown): Pil
   const schema = PILLAR_SCHEMAS[key];
   const normalized = schema ? normalizeToSchema(content, schema) : content;
   const errors = validatePillarContent(key, normalized).errors ?? [];
-  const all: ClassifiedError[] = errors.map((e) => ({ ...e, kind: classifyConformanceError(e) }));
+  // Enrichit `received` avec le TYPE RÉEL de la valeur au chemin quand Zod ne le donne
+  // pas (cas `invalid_union` notamment) — permet de distinguer un scalaire toléré d'un
+  // conteneur structurellement corrompu.
+  const all: ClassifiedError[] = errors.map((e) => {
+    const received = e.received ?? runtimeType(valueAtPath(normalized, e.path));
+    return { ...e, received, kind: classifyConformanceError({ ...e, received }) };
+  });
   const by = (k: ConformanceClass) => all.filter((e) => e.kind === k);
   const shape = by("SHAPE");
   return {

@@ -50,6 +50,17 @@ export const missionQuoteRouter = createTRPCRouter({
     }),
     caller: "mission-quote:submit",
   }).mutation(async ({ ctx, input }) => {
+    // IDOR round-10 : `submitQuote` ne résolvait que le talentProfile du caller —
+    // aucune vérification que la mission existe / est PUBLIÉE. Un prestataire
+    // injectait des devis dans n'importe quelle mission (interne incluse) par id.
+    // Gate = mission ouverte sur le mur de la Guilde (mirroir mission-applications.submit).
+    const mission = await ctx.db.mission.findUniqueOrThrow({
+      where: { id: input.missionId },
+      select: { guildPublished: true },
+    });
+    if (!mission.guildPublished) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Cette mission n'est pas ouverte aux devis." });
+    }
     return quote.submitQuote({ userId: ctx.session.user.id, ...input });
   }),
 

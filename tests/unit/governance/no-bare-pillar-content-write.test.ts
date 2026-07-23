@@ -130,10 +130,10 @@ const ALLOWED_BARE_PILLAR_CONTENT_WRITES: ReadonlyArray<AcceptedBareWrite> = [
   },
   {
     file: "src/server/services/pillar-versioning/index.ts",
-    line: 73,
+    line: 85,
     hole: "—",
     reason:
-      "Primitive de rollback : restaure le content d'un `PillarVersion` déjà validé. Sous-service du gateway (createVersion y est appelé) ; la restauration d'une version antérieure est un retour à un état déjà scoré.",
+      "Primitive de rollback : restaure le content d'un `PillarVersion` déjà validé + bump explicite de currentVersion (round-13a : createVersion ne bumpe plus). Sous-service du gateway (createVersion y est appelé) ; la restauration d'une version antérieure est un retour à un état déjà scoré.",
     reroutePlanned: false,
   },
   {

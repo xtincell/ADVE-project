@@ -16,6 +16,7 @@
 import { z } from "zod";
 import { NotificationChannel } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
+import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import * as anubis from "@/server/services/anubis";
@@ -48,6 +49,12 @@ export const notificationRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      // anti-IDOR (audit round-4) : on ne marque lu QUE sa propre notification
+      // (l'update par id nu mutait + retournait la notif d'un autre user).
+      const notif = await ctx.db.notification.findUnique({ where: { id: input.id }, select: { userId: true } });
+      if (!notif || notif.userId !== ctx.session.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Notification introuvable." });
+      }
       return ctx.db.notification.update({
         where: { id: input.id },
         data: { isRead: true, readAt: new Date() },
@@ -106,10 +113,14 @@ export const notificationRouter = createTRPCRouter({
       });
     }),
 
+  // Injection d'une notif dans le fil d'un user ARBITRAIRE (lien inclus) =
+  // primitive de phishing/ingénierie sociale : réservée au STAFF (audit round-4).
+  // Les notifs légitimes partent via Anubis (système), pas par un user tiers.
   create: governedProcedure({
 
 
     kind: "LEGACY_NOTIFICATION_CREATE",
+    requireOperator: true,
 
 
     inputSchema: z.object({

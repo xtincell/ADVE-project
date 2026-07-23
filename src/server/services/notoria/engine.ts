@@ -256,11 +256,19 @@ IMPORTANT:
   const response = await callNotoriaLLM(system, prompt, strategyId);
   const parsed = extractJSON(response);
 
-  const recos: RawLLMReco[] = Array.isArray(parsed)
+  const recosRaw: RawLLMReco[] = Array.isArray(parsed)
     ? (parsed as RawLLMReco[])
     : (parsed as Record<string, unknown>).recommendations
       ? ((parsed as Record<string, unknown>).recommendations as RawLLMReco[])
       : [];
+
+  // F3 (round-11) : le LLM peut omettre `field` (sortie malformée) — les boucles
+  // `reco.field.startsWith(...)`/`.split(...)` plus bas planteraient alors TOUT le
+  // batch. On écarte honnêtement les recos sans `field` exploitable (une reco sans
+  // cible n'est pas persistable) au lieu de crasher — jamais de champ fabriqué.
+  const recos = recosRaw.filter(
+    (r): r is RawLLMReco => !!r && typeof r.field === "string" && r.field.trim().length > 0,
+  );
 
   // Validate proposedValues against schema
   const upperKey = targetKey.toUpperCase() as keyof typeof PILLAR_SCHEMAS;
@@ -522,7 +530,9 @@ export async function generateBatch(
     }
   }
   if (missionType === "SESHAT_OBSERVATION" && seshatObservation) {
-    extraContext += `Observation Seshat:\n${seshatObservation}`;
+    // round-15a : fencé (parité avec serializePillar l.59) — observation externe non
+    // fiable (OWASP LLM01). Sink = queue Recommendation gatée, mais l'input reste non fiable.
+    extraContext += wrapUntrusted("Observation Seshat", seshatObservation, { max: 4000 });
   }
 
   // Load vault context for ADVE_UPDATE
@@ -539,7 +549,9 @@ export async function generateBatch(
       const vaultSummary = sources
         .map((s) => `[${s.fileName}] ${(s.rawContent ?? "").slice(0, 500)}`)
         .join("\n");
-      extraContext += `\nDocuments Vault:\n${vaultSummary}`;
+      // round-15a : contenu de documents opérateur-uploadés → fencé (parité avec
+      // serializePillar). `rawContent` est non fiable (OWASP LLM01).
+      extraContext += `\n${wrapUntrusted("Documents Vault", vaultSummary, { max: 4000 })}`;
     }
   }
 

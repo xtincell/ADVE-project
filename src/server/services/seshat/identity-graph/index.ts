@@ -123,6 +123,7 @@ export async function upsertPersonIdentifier(
   }
 
   // Pas de match : attacher à la cible, sinon créer une personne.
+  const createdPerson = target == null;
   const personId =
     target ??
     (
@@ -136,18 +137,38 @@ export async function upsertPersonIdentifier(
       })
     ).id;
 
-  await client.personIdentifier.create({
-    data: {
-      personId,
-      strategyId: input.strategyId,
-      kind,
-      matchHash,
-      displayCipher: encryptForDisplay(normalized),
-      platform: input.platform ?? null,
-      source: input.source,
-      confidence,
-    },
-  });
+  try {
+    await client.personIdentifier.create({
+      data: {
+        personId,
+        strategyId: input.strategyId,
+        kind,
+        matchHash,
+        displayCipher: encryptForDisplay(normalized),
+        platform: input.platform ?? null,
+        source: input.source,
+        confidence,
+      },
+    });
+  } catch (err) {
+    // Course (audit adversarial 2026-07-22) : deux ingests concurrents du même
+    // (strategyId,kind,matchHash) trouvent tous deux « pas de match » et créent chacun
+    // une PersonIdentity ; le 2ᵉ `personIdentifier.create` lève P2002 — mais SA personne
+    // fraîchement créée devenait ORPHELINE (compteur d'actifs gonflé, invariant
+    // anti-inflation ADR-0126/0147 défait). On rollback l'orpheline et on re-résout vers
+    // la gagnante. Duck-typing `.code` (pas de dépendance au type d'erreur Prisma runtime).
+    const isUnique = !!err && typeof err === "object" && (err as { code?: unknown }).code === "P2002";
+    if (!isUnique) throw err;
+    if (createdPerson) {
+      await client.personIdentity.delete({ where: { id: personId } }).catch(() => {});
+    }
+    const winner = await client.personIdentifier.findUnique({
+      where: { strategyId_kind_matchHash: { strategyId: input.strategyId, kind, matchHash } },
+      select: { personId: true },
+    });
+    if (winner) return { status: "OK", personId: winner.personId };
+    throw err;
+  }
 
   return { status: "OK", personId, created: target == null };
 }

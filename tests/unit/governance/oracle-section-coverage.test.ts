@@ -14,7 +14,7 @@
 
 import { describe, expect, it } from "vitest";
 
-const BASELINE_SECTIONS_WITHOUT_RUNNER = 100; // soft mode
+const BASELINE_SECTIONS_WITHOUT_RUNNER = 0; // HARD (audit 2026-07-22 : dette réelle = 0)
 
 describe("ADR-0068 — Oracle section registry coverage", () => {
   it("contains exactly 35 sections", async () => {
@@ -100,6 +100,50 @@ describe("ADR-0068 — Section runner binding (soft mode)", () => {
           missing.map((s) => `  - §${s.number} ${s.title} (${s.id})`).join("\n"),
       );
     }
+  });
+});
+
+describe("Oracle 35/35 sans LLM — chaque section a un chemin déterministe (round-13b)", () => {
+  // Doctrine « Oracle 35/35 sans LLM » (ADR-0091) : `generateOracleSectionHandler`
+  // route composer-first UNIQUEMENT si `hasDeterministicComposer(id)` (sinon
+  // PURE_MAPPER via section-mappers), et sinon TOMBE sur executeSequence/Framework/
+  // Tool (= LLM). Donc toute section NI PURE_MAPPER NI dotée d'un composer route
+  // SILENCIEUSEMENT vers le LLM. Sans ce garde, une 36ᵉ section ou un id renommé
+  // casserait la doctrine sans test rouge (trou relevé par le sous-agent determinism
+  // round-13 : `oracle-section-coverage` figeait le compte/tier/runner mais PAS la
+  // couverture composer).
+  it("every section is PURE_MAPPER or has a deterministic composer (else silent LLM route)", async () => {
+    const { SECTION_REGISTRY, resolveSectionRunner } = await import(
+      "@/server/services/strategy-presentation/types"
+    );
+    const { hasDeterministicComposer } = await import(
+      "@/server/services/strategy-presentation/deterministic-composers"
+    );
+    const llmRouted = SECTION_REGISTRY.filter((s) => {
+      const runner = resolveSectionRunner(s);
+      const isPureMapper = runner?.kind === "PURE_MAPPER";
+      return !isPureMapper && !hasDeterministicComposer(s.id);
+    });
+    expect(
+      llmRouted,
+      "Sections routées vers le LLM (ni PURE_MAPPER ni composer) — casse « Oracle 35/35 sans LLM » :\n" +
+        llmRouted.map((s) => `  - §${s.number} ${s.title} (${s.id})`).join("\n"),
+    ).toEqual([]);
+  });
+
+  it("PURE_MAPPER + composer-backed sections together cover exactly the 35", async () => {
+    const { SECTION_REGISTRY, resolveSectionRunner } = await import(
+      "@/server/services/strategy-presentation/types"
+    );
+    const { hasDeterministicComposer } = await import(
+      "@/server/services/strategy-presentation/deterministic-composers"
+    );
+    const pureMapper = SECTION_REGISTRY.filter((s) => resolveSectionRunner(s)?.kind === "PURE_MAPPER");
+    const composerBacked = SECTION_REGISTRY.filter(
+      (s) => resolveSectionRunner(s)?.kind !== "PURE_MAPPER" && hasDeterministicComposer(s.id),
+    );
+    // Partition exacte : les deux chemins déterministes couvrent l'intégralité.
+    expect(pureMapper.length + composerBacked.length).toBe(35);
   });
 });
 

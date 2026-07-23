@@ -10,10 +10,15 @@
  *   3. Déterminisme strict (variance = 0) — même entrée → même sortie.
  *   4. Plafonnement à 25 par pilier.
  *   5. Poids business-context déterministes + clampés [0.5, 2.5].
- *   6. **LOI 9 — aucun LLM dans le chemin de scoring** : ni `scoring.ts`, ni
- *      `advertis-scorer/structural.ts`, ni `advertis-scorer/index.ts` ne doit
- *      appeler une primitive LLM ou un « quality modulator ». C'est la garantie
- *      « non-dépendance au LLM » du scoring, désormais runtime-vérifiée.
+ *   6. **LOI 9 — aucun LLM dans le calcul de la VALEUR de score** : les fichiers
+ *      du calcul déterministe (`scoring.ts`, `structural.ts`, `evidence.ts`,
+ *      `semantic.ts`, `pillar-maturity/assessor.ts`, `advertis-scorer/index.ts`)
+ *      n'appellent aucune primitive LLM ni « quality modulator ». La valeur est
+ *      calculée + persistée AVANT toute réaction. La réaction post-valeur
+ *      `detectAndSignalScoreChange` → feedback-loop (diagnostic de drift) utilise
+ *      INTENTIONNELLEMENT un LLM — c'est la boucle de feedback, PAS le calcul, et
+ *      elle tourne après la persistance (round-13b : claim rendue honnête « valeur »
+ *      + scan élargi aux fichiers réellement sur le chemin du calcul).
  *
  * Mode HARD — toute dérive bloque le merge. Modifier la base = changer la
  * doctrine (ADR-0102) ET ce test, consciemment.
@@ -133,13 +138,28 @@ describe("ADR-0102 — business-context weights are deterministic + clamped", ()
   });
 });
 
-describe("ADR-0102 / LOI 9 — no LLM in the scoring path", () => {
-  // The deterministic guarantee is meaningless if the scoring path can reach an
-  // LLM. Scan the source (comments stripped) for any LLM primitive or the
-  // removed quality modulator.
+describe("ADR-0102 / LOI 9 — no LLM in the score VALUE computation", () => {
+  // Le déterminisme est vide de sens si le CALCUL DE LA VALEUR peut atteindre un
+  // LLM. On scanne les fichiers du calcul de valeur (commentaires retirés) pour
+  // toute primitive LLM ou le quality modulator supprimé.
+  //
+  // Honnêteté (round-13b, sous-agent determinism) : `scoreObject` (index.ts)
+  // déclenche APRÈS avoir calculé + persisté la valeur (l.141) une réaction
+  // `detectAndSignalScoreChange` → `processSignal` (feedback-loop) qui, sur drift
+  // sévère, appelle un LLM (`runArtemisDiagnostic`). C'est la boucle de feedback
+  // (intentionnelle), PAS le calcul de valeur. Le couplage synchrone est VOULU :
+  // il préserve la garde de ré-entrance `scoreObject ↔ processSignal`
+  // (`_scoringInProgress`) — un fire-and-forget la casserait (signal-storm). La
+  // VALEUR reste 0-LLM et c'est ce que ce scan fige ; index.ts ne contient qu'UN
+  // appel atteignant un LLM (`processSignal`, non-primitive, post-valeur), pas de
+  // primitive directe. Décorréler la réaction async du chemin d'écriture = tracé
+  // RESIDUAL-DEBT §round-13 (nécessite une file/flag durable, pas un patch nu).
   const SCORING_PATH = [
     "lib/utils/scoring.ts",
     "server/services/advertis-scorer/structural.ts",
+    "server/services/advertis-scorer/evidence.ts",
+    "server/services/advertis-scorer/semantic.ts",
+    "server/services/pillar-maturity/assessor.ts",
     "server/services/advertis-scorer/index.ts",
   ];
 

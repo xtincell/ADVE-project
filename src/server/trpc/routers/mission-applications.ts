@@ -174,16 +174,24 @@ export const missionApplicationRouter = createTRPCRouter({
     if (app.mission.assigneeId || app.mission.status !== "DRAFT") {
       throw new Error("La mission a déjà été attribuée.");
     }
-    const [accepted] = await db.$transaction([
-      db.missionApplication.update({
-        where: { id: app.id },
-        data: { status: "ACCEPTED", decidedBy: deciderId, decidedAt: now, decisionNote: input.note ?? null },
-      }),
-      db.mission.update({
-        where: { id: app.mission.id },
+    // Round-12 : le garde ci-dessus est une lecture SÉPARÉE de l'écriture → deux
+    // acceptations concurrentes (2 opérateurs) le passaient toutes deux → DEUX
+    // candidatures ACCEPTED + assignee ambigu. La vraie barrière = un CLAIM
+    // ATOMIQUE de la mission (DRAFT + non assignée) DANS la transaction, plus
+    // le passage de la candidature en ACCEPTED conditionné à PENDING (course
+    // withdraw↔decide). count≠1 → rollback.
+    const accepted = await db.$transaction(async (tx) => {
+      const missionClaim = await tx.mission.updateMany({
+        where: { id: app.mission.id, status: "DRAFT", assigneeId: null },
         data: { assigneeId: app.applicantId, status: "IN_PROGRESS" },
-      }),
-      db.missionApplication.updateMany({
+      });
+      if (missionClaim.count !== 1) throw new Error("La mission a déjà été attribuée.");
+      const appClaim = await tx.missionApplication.updateMany({
+        where: { id: app.id, status: "PENDING" },
+        data: { status: "ACCEPTED", decidedBy: deciderId, decidedAt: now, decisionNote: input.note ?? null },
+      });
+      if (appClaim.count !== 1) throw new Error("Candidature déjà traitée.");
+      await tx.missionApplication.updateMany({
         where: { missionId: app.mission.id, status: "PENDING", id: { not: app.id } },
         data: {
           status: "REJECTED",
@@ -191,8 +199,9 @@ export const missionApplicationRouter = createTRPCRouter({
           decidedAt: now,
           decisionNote: "Mission attribuée à un autre candidat.",
         },
-      }),
-    ]);
+      });
+      return tx.missionApplication.findUniqueOrThrow({ where: { id: app.id } });
+    });
     return accepted;
   }),
 });

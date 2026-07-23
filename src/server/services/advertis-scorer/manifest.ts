@@ -77,7 +77,10 @@ export const manifest = defineManifest({
         "Historique des scores requis pour graphs cockpit (évolution score par pilier dans le temps) et detect drift loop.",
     },
   ],
-  dependencies: ["llm-gateway"],
+  // Le scorer est DÉTERMINISTE (ADR-0102, zéro LLM — garde `scoring-base-canon`).
+  // La dépendance `llm-gateway` déclarée ici était FAUSSE (aucun code scorer ne
+  // l'importe) — retirée (honnêteté du manifest ; audit adversarial 2026-07-22).
+  dependencies: [],
   docs: {
     summary:
       "Single source of truth for pillar maturity scoring. Wrapped by pillar-gateway.writePillarAndScore for write-and-score atomicity.",

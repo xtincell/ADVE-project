@@ -13,6 +13,7 @@
 
 import { db } from "@/lib/db";
 import type { PaymentMethod, EscrowStatus, PaymentOrderStatus } from "@prisma/client";
+import { detectProvider } from "@/server/services/mobile-money";
 
 export interface EscrowConditionLike {
   met: boolean;
@@ -91,6 +92,24 @@ export async function releaseEscrow(input: { escrowId: string; arbitratedBy: str
     throw new Error("Conditions non remplies — libération refusée (utilise force avec justification pour outrepasser).");
   }
 
+  // Claim atomique de la transition d'état (audit adversarial 2026-07-22) — deux
+  // arbitrages concurrents (ou un double-clic) passaient TOUS DEUX le check HELD puis
+  // créaient chacun un PaymentOrder PENDING = double payout (le 1er orphelin mais
+  // capturable). On revendique HELD/DISPUTED → RELEASED d'abord ; seul le gagnant
+  // (count === 1) poursuit et crée le payout.
+  const claim = await db.escrow.updateMany({
+    where: { id: input.escrowId, status: { in: ["HELD", "DISPUTED"] } },
+    data: {
+      status: "RELEASED",
+      releasedAt: new Date(),
+      arbitratedBy: input.arbitratedBy,
+      reason: input.reason ?? escrow.reason,
+    },
+  });
+  if (claim.count !== 1) {
+    throw new Error(`Escrow ${input.escrowId} déjà libéré (course concurrente).`);
+  }
+
   // Destinataire du payout : le talent assigné (téléphone momo).
   let recipientPhone: string | null = null;
   let recipientName: string | null = null;
@@ -103,9 +122,31 @@ export async function releaseEscrow(input: { escrowId: string; arbitratedBy: str
     recipientName = talent?.displayName ?? null;
   }
 
-  const method =
-    (recipientPhone && PAYMENT_METHOD_BY_PREFIX[(recipientPhone.match(/WAVE|MTN|ORANGE/i)?.[0] ?? "").toUpperCase()]) ||
-    "MOBILE_MONEY_WAVE";
+  // detectProvider = préfixe E.164 (le regex sur des lettres DANS le numéro ne
+  // matchait jamais → tout étiqueté WAVE). PAYMENT_METHOD_BY_PREFIX conservé pour
+  // la table, indexée par le provider détecté.
+  const method: PaymentMethod =
+    (recipientPhone && PAYMENT_METHOD_BY_PREFIX[detectProvider(recipientPhone) ?? "WAVE"]) || "MOBILE_MONEY_WAVE";
+
+  // F2 (round-11) : dedup payout PAR COMMISSION. `generatePaymentOrder`
+  // (commission-engine) a cette garde depuis le round-8 ; `releaseEscrow` la
+  // manquait → `generatePaymentOrder(C)` PUIS `releaseEscrow(escrow lié à C)`
+  // créaient DEUX ordres PENDING pour la même commission, tous deux capturables
+  // → double payout. Réutiliser l'ordre non-FAILED existant.
+  if (escrow.commissionId) {
+    const existingPayout = await db.paymentOrder.findFirst({
+      where: { commissionId: escrow.commissionId, status: { not: "FAILED" } },
+      orderBy: { createdAt: "desc" },
+    });
+    if (existingPayout) {
+      const updatedEscrow = await db.escrow.update({
+        where: { id: input.escrowId },
+        data: { paymentOrderId: existingPayout.id },
+      });
+      await db.commission.update({ where: { id: escrow.commissionId }, data: { status: "PAID", paidAt: new Date() } }).catch(() => {});
+      return { escrow: updatedEscrow, paymentOrder: existingPayout };
+    }
+  }
 
   // Payout RÉEL credential/SDK-gated → PENDING honnête (jamais COMPLETED sans preuve).
   const payout = await db.paymentOrder.create({
@@ -121,15 +162,11 @@ export async function releaseEscrow(input: { escrowId: string; arbitratedBy: str
     },
   });
 
+  // La transition d'état a déjà été revendiquée atomiquement ci-dessus ; on ne
+  // pose plus que le lien vers le payout créé par le gagnant.
   const updated = await db.escrow.update({
     where: { id: input.escrowId },
-    data: {
-      status: "RELEASED",
-      releasedAt: new Date(),
-      arbitratedBy: input.arbitratedBy,
-      paymentOrderId: payout.id,
-      reason: input.reason ?? escrow.reason,
-    },
+    data: { paymentOrderId: payout.id },
   });
 
   if (escrow.commissionId) {

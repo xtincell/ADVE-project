@@ -1,14 +1,39 @@
 import { db } from "@/lib/db";
+import type { PaymentMethod } from "@prisma/client";
+import { detectProvider } from "@/server/services/mobile-money";
 
 type GuildTier = "APPRENTI" | "COMPAGNON" | "MAITRE" | "ASSOCIE";
 
-// Commission rates by tier (% of mission gross amount)
-const TIER_RATES: Record<GuildTier, number> = {
+// Commission rates by tier (part GARDÉE par le talent — % du gross de la mission).
+// Source de vérité UNIQUE (le router commission.ts les importe — plus de doublon).
+export const TIER_RATES: Record<GuildTier, number> = {
   APPRENTI: 0.60,
   COMPAGNON: 0.65,
   MAITRE: 0.70,
   ASSOCIE: 0.75,
 };
+
+// Remise d'adhésion : une adhésion ACTIVE augmente la part gardée par le talent
+// (remise sur la commission plateforme — promesse produit, cf. CHANGELOG membership).
+export const MEMBERSHIP_DISCOUNT: Record<GuildTier, number> = {
+  APPRENTI: 0.00,
+  COMPAGNON: 0.02,
+  MAITRE: 0.04,
+  ASSOCIE: 0.06,
+};
+
+export const TALENT_RATE_CAP = 0.85; // plafond de la part talent
+
+/**
+ * Taux EFFECTIF gardé par le talent = base tier + remise si adhésion active,
+ * plafonné. Round-11 : `engineCalculate` (chemin ARGENT) ignorait la remise
+ * alors que `getAdjustedRate` (affichage) la montrait → le bénéfice membre était
+ * vaporware (talent sous-crédité). Un seul point de vérité pour les deux.
+ */
+export function effectiveTalentRate(tier: string, hasActiveMembership: boolean): number {
+  const t = (tier in TIER_RATES ? tier : "APPRENTI") as GuildTier;
+  return Math.min(TIER_RATES[t] + (hasActiveMembership ? MEMBERSHIP_DISCOUNT[t] : 0), TALENT_RATE_CAP);
+}
 
 interface CommissionResult {
   missionId: string;
@@ -39,14 +64,18 @@ export async function calculate(missionId: string): Promise<CommissionResult> {
 
   // Find the talent assigned to THIS mission (not random talent with missions)
   let talentProfile = null;
+  let hasActiveMembership = false;
   if (mission.assigneeId) {
     talentProfile = await db.talentProfile.findUnique({
       where: { userId: mission.assigneeId },
+      include: { memberships: { where: { status: "ACTIVE" }, take: 1 } },
     });
+    hasActiveMembership = (talentProfile?.memberships?.length ?? 0) > 0;
   }
 
   const tier = (talentProfile?.tier as GuildTier) ?? "APPRENTI";
-  const rate = TIER_RATES[tier];
+  // Round-11 : applique la remise d'adhésion au chemin ARGENT (était ignorée).
+  const rate = effectiveTalentRate(tier, hasActiveMembership);
   const netAmount = grossAmount * rate;
   const commissionAmount = grossAmount - netAmount;
 
@@ -108,17 +137,26 @@ export async function calculateOperatorFee(
  * est ensuite MANUELLE (l'opérateur confirme la transaction). Plus de stub JSON.
  */
 export async function generatePaymentOrder(commissionId: string) {
+  // Idempotence (audit round-8) : `PaymentOrder` n'a pas d'unique sur
+  // `commissionId` → deux appels (double-clic / retry opérateur) créaient DEUX
+  // ordres PENDING capturables = talent payé DEUX FOIS. On renvoie l'ordre
+  // non-FAILED existant plutôt que d'en créer un doublon. (La course concurrente
+  // pure reste tracée RESIDUAL-DEBT — même famille que commission.calculate.)
+  const existing = await db.paymentOrder.findFirst({
+    where: { commissionId, status: { not: "FAILED" } },
+    orderBy: { createdAt: "desc" },
+  });
+  if (existing) return existing;
+
   const commission = await db.commission.findUniqueOrThrow({ where: { id: commissionId } });
   const talent = await db.talentProfile.findUnique({
     where: { userId: commission.talentId },
     select: { payoutPhone: true, displayName: true },
   });
   const phone = talent?.payoutPhone ?? null;
-  const method = phone && /MTN/i.test(phone)
-    ? "MOBILE_MONEY_MTN"
-    : phone && /ORANGE/i.test(phone)
-      ? "MOBILE_MONEY_ORANGE"
-      : "MOBILE_MONEY_WAVE";
+  // Le provider se détecte par PRÉFIXE E.164 (detectProvider), pas en cherchant
+  // « MTN »/« ORANGE » DANS le numéro (jamais présent → tout tombait sur WAVE).
+  const method = (phone ? `MOBILE_MONEY_${detectProvider(phone) ?? "WAVE"}` : "MOBILE_MONEY_WAVE") as PaymentMethod;
 
   return db.paymentOrder.create({
     data: {

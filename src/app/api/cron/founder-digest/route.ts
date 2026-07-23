@@ -2,14 +2,13 @@ export const dynamic = "force-dynamic";
 /**
  * Cron — Founder Weekly Digest (Tier 3.11 of the residual debt).
  *
- * Schedule: every Monday 06:00 UTC.
+ * Cadence : hebdo, lundi 06:00 UTC — planifié par `.github/workflows/scheduled-ops.yml`
+ * (target weekly) ET le daemon in-process `ops-daemon.ts` (cadence "weekly"). Pas de
+ * `vercel.json` dans ce repo (déploiement Coolify/self-host + belt-and-suspenders GitHub).
  * Iterates active strategies that have a bound founder user, composes a
  * `WeeklyDigest` from `founder-psychology`, renders an HTML email, and
  * delivers it via the `email` service. Each digest is also persisted as
  * a `KnowledgeEntry` (entryType=MISSION_OUTCOME) so it can be replayed.
- *
- * Vercel cron entry (vercel.json):
- *   { "path": "/api/cron/founder-digest", "schedule": "0 6 * * 1" }
  */
 
 import { db } from "@/lib/db";
@@ -53,7 +52,37 @@ export async function GET(request: Request) {
     try {
       const digest = await composeWeeklyDigest(founder.id, strat.id);
       out.composed++;
+      const sourceHash = `founder-digest-${strat.id}-${digest.weekOf}`;
+
+      // Idempotence (round-13c) : ne JAMAIS ré-emailer le même digest hebdo. Le
+      // marqueur KnowledgeEntry fait AUSSI office d'historique (replay). Un re-fire
+      // (workflow_dispatch target=all, re-run GH, timeout curl + redispatch) rejouait
+      // l'email — effet externe irréversible (même classe que le double-publish social
+      // round-12). Pattern canonique findFirst(sourceHash) → skip (cf. webhooks/mobile-money).
+      const already = await db.knowledgeEntry.findFirst({ where: { sourceHash } });
+      if (already) {
+        out.skipped++;
+        continue;
+      }
+
+      // Rendu AVANT le claim (round-14a) : si `renderDigestEmail` jette (section au
+      // format inattendu), le marqueur ne doit pas être déjà posé — sinon l'exception
+      // saute au catch externe SANS libérer → digest de la semaine perdu à vie.
       const rendered = renderDigestEmail(digest, founder.name ?? null, strat.name);
+
+      // Claim-then-send : marqueur posé avant l'envoi ; sur échec on le retire pour
+      // autoriser un retry (no-duplicate d'abord, livraison ensuite). Dédupe les
+      // re-fires SÉQUENTIELS (le dominant). NB : `sourceHash` n'a pas de contrainte
+      // unique → sous fire TRULY-concurrent, TOCTOU = doublon d'email rare (pattern
+      // codebase, cf. webhooks/mobile-money), jamais de corruption — durcissement
+      // (unique + P2002) tracé RESIDUAL-DEBT §round-13.
+      const marker = await db.knowledgeEntry.create({
+        data: {
+          entryType: "MISSION_OUTCOME",
+          data: digest as unknown as Prisma.InputJsonValue,
+          sourceHash,
+        },
+      });
       const sendResult = await sendEmail({
         to: founder.email,
         subject: rendered.subject,
@@ -61,15 +90,11 @@ export async function GET(request: Request) {
         text: rendered.text,
         tag: "founder-weekly-digest",
       }).catch(() => ({ ok: false } as const));
-      if (sendResult.ok) out.sent++;
-      // Persist the digest for replay/history.
-      await db.knowledgeEntry.create({
-        data: {
-          entryType: "MISSION_OUTCOME",
-          data: digest as unknown as Prisma.InputJsonValue,
-          sourceHash: `founder-digest-${strat.id}-${digest.weekOf}`,
-        },
-      }).catch(() => undefined);
+      if (sendResult.ok) {
+        out.sent++;
+      } else {
+        await db.knowledgeEntry.delete({ where: { id: marker.id } }).catch(() => undefined);
+      }
     } catch (err) {
       out.errors.push(`${strat.id}: ${err instanceof Error ? err.message : String(err)}`);
     }

@@ -88,6 +88,20 @@ export type Intent =
       via?: "BRIEF" | "GENERATE_MORE" | "MANUAL";
       operatorId?: string;
     }
+  // ── B2 (audit adversarial 2026-07-22) — décision opérateur sur le
+  // rétroplanning (BrandAction). setSelected/setTiming/autoSchedule faisaient
+  // des db.brandAction.* directs sans émission ; désormais gouverné (le garde
+  // de zone calendrier ADR-0131 reste au routeur). Zone collaborateur =
+  // "calendar" (COLLABORATOR_KIND_ZONES). Handler artemis/action-db/set-status.
+  | {
+      kind: "SET_BRAND_ACTION_STATUS";
+      strategyId: string;
+      operatorId?: string;
+      op:
+        | { type: "SELECT"; actionId: string; selected: boolean }
+        | { type: "TIMING"; actionId: string; timingStart: string | null; timingEnd?: string | null }
+        | { type: "AUTOSCHEDULE"; startDate?: string; cadenceDays?: number; onlyUnscheduled?: boolean };
+    }
   // ── Phase 24 (ADR-0106) — Intention : porte d'entrée du cycle de vie ──
   // CAPTURE = déterministe. GENERATE_BRIEF = seule porte LLM légitime (croise
   // l'intention × ADVE), parité MANUAL + dégradation DEFERRED. VALIDATE = gate
@@ -490,6 +504,13 @@ export type Intent =
       extraction: unknown;
       sourceFilename?: string;
       sourceDataSourceId?: string;
+      /**
+       * C3 (audit 2026-07-22) — mode d'extraction qui a produit les champs.
+       * STRUCTURED = parseur déterministe → provenance SOURCE (fait observé) ;
+       * LLM = jugement du modèle → provenance INFERRED (à valider). Défaut LLM
+       * (conservateur : marque « à valider » en l'absence d'info).
+       */
+      extractionMode?: "LLM" | "STRUCTURED";
     }
   | {
       kind: "ANUBIS_FETCH_DELIVERY_REPORT";
@@ -1058,6 +1079,21 @@ export type Intent =
       /** Rempli par la voie compensateur (governance.compensate). */
       compensatedFrom?: string;
     }
+  // ── G (ADR-0176) — Compensateur RÉEL d'une écriture pilier ──────────
+  // Restaure Pillar.content à l'état d'AVANT l'intent `compensatedFrom`, depuis
+  // l'instantané pré-écriture (PillarVersion stampée `intentId`). Écriture
+  // gouvernée via le gateway (C5), undo forward-moving (Loi 1). Handler
+  // pillar-gateway/rollback. Émis par governance.compensate (WRITE_PILLAR undo).
+  | {
+      kind: "ROLLBACK_PILLAR";
+      strategyId: string;
+      /** Pilier ciblé (propagé depuis le payload WRITE_PILLAR d'origine). */
+      key: string;
+      /** IntentEmission de l'écriture à annuler. */
+      compensatedFrom: string;
+      reason: string;
+      operatorId?: string;
+    }
   // ── Phase 23 (ADR-0081) — Attribution model calibration run ─────────
   // Runs the pure-TS logistic regression in
   // `services/campaign-tracker/superfan-attribution.ts` against real
@@ -1271,6 +1307,9 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
       return ["i"];
     case "SYNTHESIZE_S":
       return ["s"];
+    // B2 — édite la PROJECTION BrandAction (selected/timing/status), pas le
+    // blob I-pillar (staleness gérée par la resync du materializer, pas ici).
+    case "SET_BRAND_ACTION_STATUS":
     // Phase 24 (ADR-0106) — Intention : aval de l'ADVE, ne mute aucun pilier.
     case "CAPTURE_INTENTION":
     case "GENERATE_BRIEF_FROM_INTENTION":
@@ -1351,6 +1390,9 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
       return [];
     case "OPERATOR_AMEND_PILLAR":
       return [intent.pillarKey];
+    // G (ADR-0176) — restaure le contenu du pilier `key` (staleness cascade via le gateway).
+    case "ROLLBACK_PILLAR":
+      return [intent.key.toLowerCase() as PillarKey];
     case "INGEST_BRAND_BOOK":
       return ["a", "d", "v"]; // le brand book alimente A/D/V (staleness cascade en découle)
     case "OPERATOR_ARCHIVE_STRATEGY":
@@ -1676,8 +1718,9 @@ export async function emitIntent(
   );
 
   // Fermeture best-effort : la mutation a déjà eu lieu — un échec d'écriture
-  // de la complétion ne détruit pas le résultat, il laisse la row PENDING
-  // (le cron staleness la flaggera — échec de trace visible, pas silencieux).
+  // de la complétion ne détruit pas le résultat, il laisse la row PENDING (état
+  // non-terminal observable ; PAS de sweep automatique à ce jour — round-13c,
+  // tracé RESIDUAL-DEBT §round-13). Échec de trace, jamais de donnée métier.
   const close = async (
     emissionId: string,
     result: IntentResult,

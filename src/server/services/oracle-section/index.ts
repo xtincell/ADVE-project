@@ -204,11 +204,12 @@ export async function acquireGenerationLock(
       strategyId,
       sectionId,
       status: existing.status,
-      OR: [
-        { lockExpiresAt: null },
-        { lockExpiresAt: { lte: now } },
-        { id: existing.id }, // keep current row if matches
-      ],
+      // Le verrou n'est réclamable QUE s'il est libre (null) ou EXPIRÉ. L'ancien
+      // `OR { id: existing.id }` matchait TOUJOURS la ligne cible → l'atomicité
+      // était défaite : deux appelants concurrents sur un verrou expiré passaient
+      // tous deux (`count===1`) et se croyaient détenteurs (audit round-9). Retiré :
+      // le 2ᵉ appelant échoue désormais car `lockExpiresAt` vient d'être rafraîchi.
+      OR: [{ lockExpiresAt: null }, { lockExpiresAt: { lte: now } }],
     },
     data: {
       status: "GENERATING",

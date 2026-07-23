@@ -147,7 +147,7 @@ export const fr = {
   "oracle.forge.button.icon": "Forger icône",
   "oracle.forge.button.design": "Forger deck",
   "oracle.forge.button.pending": "Forge en cours…",
-  "oracle.forge.dialog.title": "Confirmer la matérialisation Ptah",
+  "oracle.forge.dialog.title": "Confirmer la production du livrable",
   "oracle.forge.dialog.cancel": "Annuler",
   "oracle.forge.dialog.confirm": "Confirmer la forge",
   "oracle.forge.result.heading": "Dernière forge",

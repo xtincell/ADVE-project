@@ -88,21 +88,38 @@ export async function POST(request: Request) {
   const isPaid = verified.accepted || payload.cpm_trans_status === "ACCEPTED";
 
   let intakeToken: string | null = null;
-  try {
-    const payment = await db.intakePayment.update({
-      where: { reference },
-      data: isPaid
-        ? { status: "PAID", paidAt: new Date(), providerRef: payload.cpm_payid ?? null }
-        : { status: "FAILED", failureReason: payload.cpm_trans_status ?? "REFUSED" },
+  let newlyPaid = false;
+  if (isPaid) {
+    // Claim atomique (comme PayPal) : PAID une SEULE fois → le fulfillment ne
+    // tourne qu'au 1er passage même si CinetPay redélivre la notif (fin du
+    // double-envoi email + ré-assemblage Oracle — audit round-8). Le cycle
+    // d'abonnement plus bas est DÉJÀ idempotent (`applySubscriptionCycleIfPaid`).
+    const claimed = await db.intakePayment.updateMany({
+      where: { reference, status: { not: "PAID" } },
+      data: { status: "PAID", paidAt: new Date(), providerRef: payload.cpm_payid ?? null },
     });
-    intakeToken = payment.intakeToken;
-  } catch {
-    return NextResponse.json({ error: "Unknown reference" }, { status: 404 });
+    newlyPaid = claimed.count > 0;
+    const row = await db.intakePayment.findUnique({
+      where: { reference },
+      select: { intakeToken: true },
+    });
+    if (!row) return NextResponse.json({ error: "Unknown reference" }, { status: 404 });
+    intakeToken = row.intakeToken;
+  } else {
+    try {
+      const payment = await db.intakePayment.update({
+        where: { reference },
+        data: { status: "FAILED", failureReason: payload.cpm_trans_status ?? "REFUSED" },
+      });
+      intakeToken = payment.intakeToken;
+    } catch {
+      return NextResponse.json({ error: "Unknown reference" }, { status: 404 });
+    }
   }
 
-  // Fulfillment centralisé (fire-and-forget) : re-extraction premium +
-  // livraison ORACLE_FULL selon le tierKey payé (audit 2026-07-16).
-  if (isPaid && intakeToken) {
+  // Fulfillment centralisé (fire-and-forget) — UNIQUEMENT au 1er passage PAID :
+  // re-extraction premium + livraison ORACLE_FULL selon le tierKey payé.
+  if (isPaid && newlyPaid && intakeToken) {
     const { fulfillPaidIntakeReport } = await import("@/server/services/quick-intake/paid-fulfillment");
     void fulfillPaidIntakeReport(reference);
   }

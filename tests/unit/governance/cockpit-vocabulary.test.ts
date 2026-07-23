@@ -129,6 +129,11 @@ const MARKETING_FORBIDDEN: Array<{ name: string; re: RegExp }> = [
   { name: "plomberie IntentEmission", re: /\bIntentEmission\b/ },
   { name: "réf ADR", re: /\bADR-\d{4}\b/ },
   { name: "function-calling", re: /function-calling/ },
+  // NB (audit adversarial 2026-07-22) : « RTIS » n'est PAS interdit ici. Sur le site
+  // AGENCE UPgraders (lead pré-signup), « ADVE/RTIS » est le nom PROPRIÉTAIRE de la
+  // méthode (~20 chaînes cohérentes) — décision de design (MARKETING_FORBIDDEN l'omet
+  // délibérément). ADR-0123 Lot 0 borne l'interdiction RTIS aux surfaces CLIENT du
+  // PRODUIT (cockpit/intake/shared/strategy-presentation), pas au marketing agence.
 ];
 
 describe("Marketing — vocabulaire lead (audit 2026-07-16)", () => {

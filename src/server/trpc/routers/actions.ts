@@ -177,11 +177,18 @@ export const actionsRouter = createTRPCRouter({
     .input(z.object({ strategyId: z.string().min(1), actionId: z.string().min(1), selected: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       await assertCalendarWrite(ctx.session.user.id, input.strategyId);
-      const updated = await ctx.db.brandAction.updateMany({
-        where: { id: input.actionId, strategyId: input.strategyId },
-        data: { selected: input.selected, status: input.selected ? "ACCEPTED" : "PROPOSED" },
-      });
-      return { updated: updated.count };
+      // B2 — décision opérateur GOUVERNÉE (émission Q1/Q2), comme `propose`.
+      const { emitIntent } = await import("@/server/services/mestor/intents");
+      const result = await emitIntent(
+        {
+          kind: "SET_BRAND_ACTION_STATUS",
+          strategyId: input.strategyId,
+          operatorId: ctx.session.user.id,
+          op: { type: "SELECT", actionId: input.actionId, selected: input.selected },
+        },
+        { caller: "actions.setSelected" },
+      );
+      return { updated: (result.output as { updated?: number } | undefined)?.updated ?? 0 };
     }),
 
   /**
@@ -200,15 +207,24 @@ export const actionsRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       await assertCalendarWrite(ctx.session.user.id, input.strategyId);
-      const updated = await ctx.db.brandAction.updateMany({
-        where: { id: input.actionId, strategyId: input.strategyId },
-        data: {
-          timingStart: input.timingStart ? new Date(input.timingStart) : null,
-          ...(input.timingEnd !== undefined ? { timingEnd: input.timingEnd ? new Date(input.timingEnd) : null } : {}),
-          status: input.timingStart ? "SCHEDULED" : "ACCEPTED",
+      // B2 — arme `timingStart` (consommé par le CRON social) → mutation
+      // gouvernée, pas un simple edit de projection.
+      const { emitIntent } = await import("@/server/services/mestor/intents");
+      const result = await emitIntent(
+        {
+          kind: "SET_BRAND_ACTION_STATUS",
+          strategyId: input.strategyId,
+          operatorId: ctx.session.user.id,
+          op: {
+            type: "TIMING",
+            actionId: input.actionId,
+            timingStart: input.timingStart,
+            ...(input.timingEnd !== undefined ? { timingEnd: input.timingEnd } : {}),
+          },
         },
-      });
-      return { updated: updated.count };
+        { caller: "actions.setTiming" },
+      );
+      return { updated: (result.output as { updated?: number } | undefined)?.updated ?? 0 };
     }),
 
   /**
@@ -228,37 +244,25 @@ export const actionsRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       await assertCalendarWrite(ctx.session.user.id, input.strategyId);
-      const cadence = input.cadenceDays ?? 14;
-      const start = input.startDate ? new Date(input.startDate) : new Date();
-      const candidates = await ctx.db.brandAction.findMany({
-        where: {
+      // B2 — étalement gouverné (arme des échéances CRON). La logique
+      // déterministe (spread + préservation des publications armées) vit dans
+      // le handler `artemis/action-db/set-status`.
+      const { emitIntent } = await import("@/server/services/mestor/intents");
+      const result = await emitIntent(
+        {
+          kind: "SET_BRAND_ACTION_STATUS",
           strategyId: input.strategyId,
-          selected: true,
-          ...(input.onlyUnscheduled ? { timingStart: null } : {}),
+          operatorId: ctx.session.user.id,
+          op: {
+            type: "AUTOSCHEDULE",
+            ...(input.startDate !== undefined ? { startDate: input.startDate } : {}),
+            ...(input.cadenceDays !== undefined ? { cadenceDays: input.cadenceDays } : {}),
+            ...(input.onlyUnscheduled !== undefined ? { onlyUnscheduled: input.onlyUnscheduled } : {}),
+          },
         },
-        orderBy: [{ priority: "asc" }, { createdAt: "asc" }],
-        select: { id: true, status: true, metadata: true },
-      });
-      // Le spread administratif ne touche QUE le plan d'actions — jamais les
-      // publications sociales armées (leur échéance EST la donnée : les
-      // re-étaler ferait publier le cron aux mauvaises dates), ni le terminé/
-      // annulé (audit 2026-07-16, `autoschedule-stomps-armed-publications`).
-      const rows = candidates.filter((a) => {
-        if (a.status === "EXECUTED" || a.status === "CANCELLED") return false;
-        const meta = a.metadata as Record<string, unknown> | null;
-        if (meta && meta.socialPublish) return false;
-        return true;
-      });
-      const DAY = 86_400_000;
-      let scheduled = 0;
-      for (let i = 0; i < rows.length; i++) {
-        const s = new Date(start.getTime() + i * cadence * DAY);
-        await ctx.db.brandAction.update({
-          where: { id: rows[i]!.id },
-          data: { timingStart: s, timingEnd: new Date(s.getTime() + DAY), status: "SCHEDULED" },
-        });
-        scheduled++;
-      }
-      return { scheduled, protectedPublications: candidates.length - rows.length };
+        { caller: "actions.autoSchedule" },
+      );
+      const out = result.output as { updated?: number; protectedPublications?: number } | undefined;
+      return { scheduled: out?.updated ?? 0, protectedPublications: out?.protectedPublications ?? 0 };
     }),
 });

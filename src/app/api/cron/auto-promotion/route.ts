@@ -2,7 +2,10 @@ export const dynamic = "force-dynamic";
 /**
  * Cron — Auto-promotion (ADR-0066).
  *
- * Schedule : daily (vercel.json `0 6 * * *`).
+ * Cadence : toutes les 6 h — `scheduled-ops.yml` (sixhourly) + `ops-daemon.ts`
+ * (cadence "sixhourly"). Gardé time/cycle/quality → un tick plus fréquent est
+ * inoffensif (idempotent). Pas de `vercel.json` dans ce repo (round-15b : commentaire
+ * « daily/vercel.json » corrigé).
  * Évalue les 3 résidus calendar-locked (DRAFT→STABLE sequences/wrappers
  * + quality-gate soft→hard) et émet les Intents de promotion via
  * `mestor.emitIntent({ kind: "AUTO_PROMOTION_EVALUATE" })`.

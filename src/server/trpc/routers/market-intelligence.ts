@@ -6,6 +6,7 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { strategyScopedProcedure } from "../middleware/strategy-scope";
+import { assertProcessAccess } from "./_strategy-read-guard";
 import { runMarketIntelligence, checkSectorKnowledge } from "@/server/services/market-intelligence";
 import {
   registerCollectionDaemon,
@@ -142,7 +143,8 @@ export const marketIntelligenceRouter = createTRPCRouter({
     caller: "market-intelligence:stopCollector",
 
   })
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      await assertProcessAccess(ctx.session.user.id, input.processId);
       await stopCollector(input.processId);
       return { success: true };
     }),

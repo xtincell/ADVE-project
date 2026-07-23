@@ -187,11 +187,22 @@ async function composeCrewProgram(ctx: ComposerContext): Promise<Blob> {
   const { draftCrewProgram } = await import("@/server/services/imhotep");
   const sector = str(ctx.strategy.businessContext?.sector) ?? str(ctx.pillars.a?.secteur) ?? undefined;
   const draft = await draftCrewProgram({ strategyId: ctx.strategy.id, sector });
+  const roles = draft.rolesRequired ?? [];
+  // round-14c (H5) : summary composé depuis les VRAIES données du pilier (l'équipe
+  // déjà déclarée en A) au lieu du template `draft.placeholder` — et sans réf ADR
+  // interne (livrable client Oracle §22, ADR-0123). Déterministe, 0 LLM, 0 requête neuve.
+  const teamCount = arr(ctx.pillars.a?.equipeDirigeante).length;
+  const summary =
+    `Programme équipe pour « ${ctx.strategy.name} »` +
+    (sector ? ` — secteur ${sector}` : "") +
+    ` : ${roles.length} rôle(s) clé(s) recommandé(s)` +
+    (teamCount > 0 ? `, ${teamCount} déjà en place` : "") +
+    ".";
   return {
     crewProgram: {
       status: draft.status,
-      summary: draft.placeholder,
-      rolesRequired: draft.rolesRequired ?? [],
+      summary,
+      rolesRequired: roles,
       estimatedBudgetUsd: draft.estimatedBudgetUsd ?? null,
     },
   };
@@ -204,10 +215,17 @@ async function composeCommsPlan(ctx: ComposerContext): Promise<Blob> {
   // complétés par les canaux par défaut du draft Anubis.
   const declared = names(arr(ctx.pillars.e?.touchpoints), ["canal", "channel", "nom", "name"]);
   const channels = [...new Set([...declared, ...(draft.channels ?? []).map(String)])];
+  // round-14c (H5) : summary composé des VRAIS canaux déclarés (E.touchpoints) au
+  // lieu du template `draft.placeholder` — sans réf ADR interne (livrable client
+  // Oracle §23, ADR-0123). Déterministe, 0 LLM.
+  const summary =
+    `Plan de diffusion pour « ${ctx.strategy.name} » : ${channels.length} canal(aux)` +
+    (declared.length > 0 ? ` dont ${declared.length} déclaré(s) par la marque` : "") +
+    ".";
   return {
     commsPlan: {
       status: draft.status,
-      summary: draft.placeholder,
+      summary,
       channels,
     },
   };

@@ -119,24 +119,54 @@ export const paypalProvider: PaymentProvider = {
   },
 
   async verifyPayment(reference: string) {
-    // PayPal verification is webhook-driven; here we re-confirm via Orders show
-    // if the providerRef was persisted (router responsibility). We accept reference
-    // = providerRef as a fallback when webhook-only flow isn't desired.
+    // Un ordre `intent: "CAPTURE"` APPROUVÉ n'a PAS encaissé : l'acheteur a
+    // consenti, les fonds n'ont pas bougé. « Vérifier » = tenter la CAPTURE
+    // (idempotente) puis reporter si COMPLETED. `reference` = order id
+    // (providerRef). Sans capture, l'ancien code livrait le PDF sur un APPROVED
+    // et n'encaissait JAMAIS ($0 collecté sur chaque vente PayPal).
     if (!this.isConfigured()) return { paid: false };
-    let token: string;
-    try {
-      token = await getAccessToken();
-    } catch {
-      return { paid: false };
-    }
-    const res = await fetch(`${baseUrl()}/v2/checkout/orders/${encodeURIComponent(reference)}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!res.ok) return { paid: false };
-    const data = await res.json() as { status?: string };
-    return { paid: data.status === "COMPLETED" || data.status === "APPROVED", raw: data };
+    const cap = await capturePayPalOrder(reference).catch(() => ({ captured: false, raw: null as unknown }));
+    return { paid: cap.captured, raw: cap.raw };
   },
 };
+
+/**
+ * Capture un ordre PayPal APPROUVÉ (déplace réellement les fonds). Idempotent :
+ *   - `PayPal-Request-Id` déterministe → PayPal dédoublonne côté serveur ;
+ *   - une seconde capture d'un ordre déjà capturé renvoie 422
+ *     `ORDER_ALREADY_CAPTURED` → traité comme `captured: true`.
+ * Retourne `captured:false` sans lever (le webhook/route décide de NE PAS
+ * marquer PAID) — jamais de livraison sur une capture ratée.
+ */
+export async function capturePayPalOrder(orderId: string): Promise<{ captured: boolean; raw: unknown }> {
+  if (!paypalProvider.isConfigured()) return { captured: false, raw: null };
+  let token: string;
+  try {
+    token = await getAccessToken();
+  } catch {
+    return { captured: false, raw: null };
+  }
+  const res = await fetch(`${baseUrl()}/v2/checkout/orders/${encodeURIComponent(orderId)}/capture`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      // Clé déterministe : rejoue = même capture, pas un double encaissement.
+      "PayPal-Request-Id": `capture-${orderId}`,
+    },
+  });
+  const data = (await res.json().catch(() => ({}))) as {
+    status?: string;
+    name?: string;
+    details?: Array<{ issue?: string }>;
+  };
+  if (res.ok && data.status === "COMPLETED") return { captured: true, raw: data };
+  const alreadyCaptured =
+    data.name === "UNPROCESSABLE_ENTITY" &&
+    (data.details ?? []).some((d) => d.issue === "ORDER_ALREADY_CAPTURED");
+  if (alreadyCaptured) return { captured: true, raw: data };
+  return { captured: false, raw: data };
+}
 
 /** Convert smallest-unit input to PayPal's "49.00"-style decimal string. */
 function formatPayPalAmount(amount: number, currency: string): string {

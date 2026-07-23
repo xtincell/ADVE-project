@@ -20,6 +20,11 @@ export const advertisScorerRouter = createTRPCRouter({
 
     kind: "LEGACY_ADVERTIS_SCORER_SCORE_OBJECT",
 
+    // IDOR (round-10) : keyé sur `{ type, id }` arbitraire → re-score/écrase le
+    // vecteur ADVE de N'IMPORTE quel objet (marque d'autrui incluse). Primitive
+    // scoring système/opérateur, jamais un geste founder cross-tenant.
+    requireOperator: true,
+
     inputSchema: z.object({ type: scorableTypes, id: z.string() }),
 
     caller: "advertis-scorer:scoreObject",
@@ -34,6 +39,8 @@ export const advertisScorerRouter = createTRPCRouter({
   batchScore: governedProcedure({
 
     kind: "LEGACY_ADVERTIS_SCORER_BATCH_SCORE",
+
+    requireOperator: true, // IDOR round-10 : batch re-score d'ids arbitraires.
 
     inputSchema: z.object({ type: scorableTypes, ids: z.array(z.string()).max(500) }),
 
@@ -59,6 +66,8 @@ export const advertisScorerRouter = createTRPCRouter({
 
     kind: "LEGACY_ADVERTIS_SCORER_RECALCULATE",
 
+    requireOperator: true, // IDOR round-10 : « Admin: force recalculate » — id arbitraire.
+
     inputSchema: z.object({ type: scorableTypes, id: z.string() }),
 
     caller: "advertis-scorer:recalculate",
@@ -72,6 +81,7 @@ export const advertisScorerRouter = createTRPCRouter({
   /** Admin: snapshot all strategies (called by cron, also callable manually) */
   snapshotAll: governedProcedure({
     kind: "LEGACY_ADVERTIS_SCORER_SNAPSHOT_ALL",
+    requireOperator: true, // IDOR round-10 : re-snapshot de TOUTES les marques (churn/DoS) — cron passe par emitIntent système.
     inputSchema: z.object({}),
     caller: "advertis-scorer:snapshotAll",
   }).mutation(async () => {

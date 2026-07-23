@@ -13,7 +13,7 @@
 
 import { describe, expect, it } from "vitest";
 
-const BASELINE_FRAMEWORKS_WITHOUT_SCHEMA = 100; // soft mode
+const BASELINE_FRAMEWORKS_WITHOUT_SCHEMA = 0; // HARD (audit 2026-07-22 : dette réelle = 0)
 
 describe("ADR-0067 — Framework output schema enforcement", () => {
   it("every framework declares either outputSchema OR _noSchemaJustification", async () => {

@@ -87,28 +87,33 @@ export const authRouter = createTRPCRouter({
         where: { email: input.email.toLowerCase() },
       });
 
+      // Anti-énumération PAR TIMING (audit round-9) : le corps AWAITait la MAJ DB
+      // + l'envoi email (SMTP) → ~centaines de ms de plus quand l'email EXISTE. La
+      // réponse est constante (`{success:true}`) mais le DÉLAI révélait les emails
+      // inscrits. On DÉTACHE la MAJ+envoi (fire-and-forget) → temps de réponse
+      // identique que l'email existe ou non.
       if (user) {
-        const resetToken = crypto.randomBytes(32).toString("hex");
-        const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-
-        await ctx.db.user.update({
-          where: { id: user.id },
-          data: { resetToken, resetTokenExpiry },
-        });
-
-        const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
-        const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
-
-        const { sendEmail, renderPasswordResetEmail } = await import("@/server/services/email");
-        const rendered = renderPasswordResetEmail({ resetUrl, userName: user.name ?? undefined });
-        await sendEmail({
-          to: user.email,
-          subject: rendered.subject,
-          html: rendered.html,
-          text: rendered.text,
-          tag: "password-reset",
-        }).catch((err) => {
-          console.error("[auth:forgotPassword] email send failed:", err);
+        const captured = user;
+        void (async () => {
+          const resetToken = crypto.randomBytes(32).toString("hex");
+          const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+          await ctx.db.user.update({
+            where: { id: captured.id },
+            data: { resetToken, resetTokenExpiry },
+          });
+          const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+          const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
+          const { sendEmail, renderPasswordResetEmail } = await import("@/server/services/email");
+          const rendered = renderPasswordResetEmail({ resetUrl, userName: captured.name ?? undefined });
+          await sendEmail({
+            to: captured.email,
+            subject: rendered.subject,
+            html: rendered.html,
+            text: rendered.text,
+            tag: "password-reset",
+          });
+        })().catch((err) => {
+          console.error("[auth:forgotPassword] background reset failed:", err instanceof Error ? err.message : err);
         });
       }
 

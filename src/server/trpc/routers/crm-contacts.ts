@@ -121,6 +121,11 @@ export const crmContactsRouter = createTRPCRouter({
   /** Envoi RÉEL d'un email à un contact (governed). DEFERRED sans clés. */
   sendMessage: governedProcedure({
     kind: "CRM_SEND_MESSAGE",
+    // Envoie un VRAI email à un contact — réservé aux opérateurs comme tout le
+    // routeur CRM (les sœurs `logInbound`/`upsertContact` sont operatorProcedure).
+    // Sans `requireOperator`, la base était `protectedProcedure` → tout compte
+    // authentifié pouvait envoyer un email arbitraire (sujet/corps) à un contact.
+    requireOperator: true,
     inputSchema: z.object({
       contactId: z.string(),
       subject: z.string().min(2).max(200),

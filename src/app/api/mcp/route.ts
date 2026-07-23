@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/config";
-import { authenticateMcpRequest, meterAndRun } from "@/server/services/anubis/mcp-billing";
+import { authenticateMcpRequest, meterAndRun, scopeMcpParams } from "@/server/services/anubis/mcp-billing";
 import { buildAggregatedManifest, dispatchTool } from "@/server/services/anubis/mcp-server";
 
 export async function GET() {
@@ -46,17 +46,10 @@ export async function POST(request: Request) {
 
   const server = body.server;
   const tool = body.tool;
-  // Injecte la portée du token (ADR-0145) — les outils d'écriture (amendPillar)
-  // l'exigent (fail-closed). Écrit APRÈS le spread → pas d'usurpation client.
-  return meterAndRun(gate, server, tool, () =>
-    dispatchTool(server, tool, {
-      ...(body.params ?? {}),
-      __auth: {
-        scopeKind: gate.scopeKind ?? null,
-        scopeStrategyId: gate.scopeStrategyId ?? null,
-        userId: gate.userId ?? null,
-        apiKeyId: gate.apiKeyId ?? null,
-      },
-    }),
-  );
+  // Enforce la portée du token (ADR-0145) + injecte `__auth` (les writes comme
+  // amendPillar l'exigent ; fail-closed). Une clé BRAND ne peut toucher qu'à SA
+  // marque — `strategyId` d'une autre marque = 403 (anti-IDOR round-6).
+  const scoped = scopeMcpParams(gate, server, tool, body.params ?? {});
+  if (scoped.denied) return scoped.denied;
+  return meterAndRun(gate, server, tool, () => dispatchTool(server, tool, scoped.params));
 }

@@ -9,7 +9,7 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
-import { createTRPCRouter, protectedProcedure } from "../init";
+import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import {
   previewBatch,
@@ -202,15 +202,18 @@ export const morningBatchRouter = createTRPCRouter({
   }),
 
   // Reads
-  getBatch: protectedProcedure
+  // STAFF only (audit round-4) : les batches contiennent des extraits BRUTS
+  // d'email/Slack/WhatsApp ingérés (données opérateur sensibles) — un compte
+  // authentifié quelconque les lisait via un batchId/operatorId deviné.
+  getBatch: operatorProcedure
     .input(z.object({ batchId: StringId }))
     .query(({ input }) => getBatch(input.batchId)),
 
-  listBatches: protectedProcedure
+  listBatches: operatorProcedure
     .input(z.object({ operatorId: StringId, limit: z.number().min(1).max(100).optional() }))
     .query(({ input }) => listBatchesForOperator(input.operatorId, input.limit)),
 
-  listSources: protectedProcedure
+  listSources: operatorProcedure
     .input(z.object({ operatorId: StringId, limit: z.number().min(1).max(200).optional() }))
     .query(({ input }) => listIngestedSourcesForOperator(input.operatorId, input.limit)),
 });

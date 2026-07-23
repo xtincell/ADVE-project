@@ -147,7 +147,7 @@ export const zh = {
   "oracle.forge.button.icon": "锻造图标",
   "oracle.forge.button.design": "锻造演示文稿",
   "oracle.forge.button.pending": "锻造中…",
-  "oracle.forge.dialog.title": "确认 Ptah 物化",
+  "oracle.forge.dialog.title": "确认制作交付物",
   "oracle.forge.dialog.cancel": "取消",
   "oracle.forge.dialog.confirm": "确认锻造",
   "oracle.forge.result.heading": "最近一次锻造",

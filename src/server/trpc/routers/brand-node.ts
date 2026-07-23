@@ -41,6 +41,7 @@ import { applyNarrativeCoherenceGate } from "@/server/services/mestor/gates/narr
 import { db } from "@/lib/db";
 import { canAccessStrategy, getOperatorContext } from "@/server/services/operator-isolation";
 import { accessibleStrategyIds } from "../middleware/strategy-scope";
+import { assertStrategyRead } from "./_strategy-read-guard";
 
 /* lafusee:governed-active — Phase 18/19 router. Toutes les mutations utilisent governedProcedure (ADR-0004 strict cible atteinte) ; tag corrigé 2026-05-06 strangler→governed (faux positif initial — le router a toujours utilisé governedProcedure depuis sa création). */
 
@@ -87,6 +88,28 @@ async function assertNodeAccess(userId: string, nodeId: string): Promise<void> {
   throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à ce nœud de marque" });
 }
 
+/**
+ * Garde d'accès à l'arbre d'un opérateur (round-9) — pour `create` (le nœud
+ * n'existe pas encore). ADMIN · l'opérateur lui-même · un fondateur possédant une
+ * marque sous cet opérateur. Ferme l'injection d'un nœud dans l'arbre d'autrui
+ * (le service ne vérifiait que `parent.operatorId === args.operatorId`, tous deux
+ * fournis par l'attaquant).
+ */
+async function assertOperatorAccess(userId: string, operatorId: string): Promise<void> {
+  const opCtx = await getOperatorContext(userId);
+  if (opCtx.role === "ADMIN") return;
+  if (opCtx.operatorId && opCtx.operatorId === operatorId) return;
+  const ids = await accessibleStrategyIds(userId);
+  if (ids?.length) {
+    const strat = await db.strategy.findFirst({
+      where: { id: { in: ids }, operatorId },
+      select: { id: true },
+    });
+    if (strat) return;
+  }
+  throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cet opérateur" });
+}
+
 const BrandNatureEnum = z.enum([
   "PRODUCT", "SERVICE", "CHARACTER_IP", "FESTIVAL_IP", "MEDIA_IP",
   "RETAIL_SPACE", "PLATFORM", "INSTITUTION", "PERSONAL",
@@ -110,7 +133,13 @@ export const brandNodeRouter = createTRPCRouter({
       clusterTag: z.string().nullable().optional(),
       attachStrategyId: StringId.nullable().optional(),
     }),
-  }).mutation(async ({ input }) => {
+  }).mutation(async ({ ctx, input }) => {
+    // Anti-IDOR (round-9) : le caller ne peut créer un nœud QUE dans un arbre
+    // qu'il contrôle (parent accessible + opérateur accessible + marque attachée
+    // possédée). Le `strategyId` de tête (pivot d'audit) ne prouvait RIEN.
+    if (input.parentNodeId) await assertNodeAccess(ctx.session.user.id, input.parentNodeId);
+    await assertOperatorAccess(ctx.session.user.id, input.operatorId);
+    if (input.attachStrategyId) await assertStrategyRead(ctx.session.user.id, input.attachStrategyId);
     try {
       const node = await createBrandNode({
         operatorId: input.operatorId,
@@ -150,7 +179,8 @@ export const brandNodeRouter = createTRPCRouter({
         inheritanceLocked: z.boolean().optional(),
       }).passthrough(),
     }),
-  }).mutation(async ({ input }) => {
+  }).mutation(async ({ ctx, input }) => {
+    await assertNodeAccess(ctx.session.user.id, input.nodeId);
     try {
       const node = await updateBrandNode(input.nodeId, input.patches);
       return { ok: true as const, node };
@@ -170,7 +200,8 @@ export const brandNodeRouter = createTRPCRouter({
       nodeId: StringId,
       reason: z.string().optional(),
     }),
-  }).mutation(async ({ input }) => {
+  }).mutation(async ({ ctx, input }) => {
+    await assertNodeAccess(ctx.session.user.id, input.nodeId);
     try {
       const node = await archiveBrandNode(input.nodeId);
       return { ok: true as const, node };
@@ -191,7 +222,10 @@ export const brandNodeRouter = createTRPCRouter({
       newParentNodeId: StringId.nullable(),
       reason: z.string().optional(),
     }),
-  }).mutation(async ({ input }) => {
+  }).mutation(async ({ ctx, input }) => {
+    await assertNodeAccess(ctx.session.user.id, input.nodeId);
+    // Déplacer DANS un arbre exige aussi l'accès au nouveau parent.
+    if (input.newParentNodeId) await assertNodeAccess(ctx.session.user.id, input.newParentNodeId);
     try {
       const node = await moveBrandNode(input.nodeId, input.newParentNodeId);
       return { ok: true as const, node };
@@ -210,7 +244,9 @@ export const brandNodeRouter = createTRPCRouter({
       operatorId: StringId,
       nodeId: StringId,
     }),
-  }).mutation(async ({ input }) => {
+  }).mutation(async ({ ctx, input }) => {
+    await assertNodeAccess(ctx.session.user.id, input.nodeId);
+    await assertStrategyRead(ctx.session.user.id, input.strategyId);
     try {
       const node = await attachStrategyToNode(input.nodeId, input.strategyId);
       return { ok: true as const, node };
@@ -231,7 +267,8 @@ export const brandNodeRouter = createTRPCRouter({
       action: z.enum(["ADD", "REMOVE"]),
       role: z.string().min(1).max(60),
     }),
-  }).mutation(async ({ input }) => {
+  }).mutation(async ({ ctx, input }) => {
+    await assertNodeAccess(ctx.session.user.id, input.nodeId);
     try {
       const node = await tagNodeRole(input.nodeId, input.action, input.role);
       return { ok: true as const, node };
@@ -426,7 +463,8 @@ export const brandNodeRouter = createTRPCRouter({
    */
   isGloryToolApplicable: protectedProcedure
     .input(z.object({ toolSlug: z.string(), nodeId: StringId }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      await assertNodeAccess(ctx.session.user.id, input.nodeId);
       const node = await db.brandNode.findUnique({
         where: { id: input.nodeId },
         select: { nodeNature: true },
@@ -448,7 +486,8 @@ export const brandNodeRouter = createTRPCRouter({
    */
   listApplicableGloryTools: protectedProcedure
     .input(z.object({ nodeId: StringId }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      await assertNodeAccess(ctx.session.user.id, input.nodeId);
       const node = await db.brandNode.findUnique({
         where: { id: input.nodeId },
         select: { nodeNature: true, nodeKind: true, name: true },
@@ -476,7 +515,8 @@ export const brandNodeRouter = createTRPCRouter({
 
   filterBibleKeysForNode: protectedProcedure
     .input(z.object({ nodeId: StringId, bibleKeys: z.array(z.string()) }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      await assertNodeAccess(ctx.session.user.id, input.nodeId);
       const node = await db.brandNode.findUnique({
         where: { id: input.nodeId },
         select: { nodeNature: true },

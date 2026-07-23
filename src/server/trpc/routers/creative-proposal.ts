@@ -8,11 +8,31 @@
  */
 
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { strategyScopedProcedure } from "../middleware/strategy-scope";
+import { assertStrategyRead } from "./_strategy-read-guard";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { creativeProposalContractSchema, creativeDirectionSchema } from "@/lib/types/creative-proposal";
 import { ROADMAP_ROUTE_KEYS } from "@/lib/types/pillar-schemas";
+import { db } from "@/lib/db";
+
+/**
+ * Anti-IDOR (audit round-9) : les procédures keyées sur `{ id }` de proposition
+ * (getById/submit/validate/reject) ne portent PAS de `strategyId` de tête → la
+ * garde ADR-0175 de `governedProcedure` ne s'applique pas. Sans ce chokepoint,
+ * tout fondateur validait/rejetait/lisait la proposition d'une AUTRE marque
+ * (validate = déclenche la génération de production sur la marque cible + brûle
+ * du LLM). On résout `proposal.strategyId` → `assertStrategyRead`.
+ */
+async function assertProposalAccess(userId: string, proposalId: string): Promise<void> {
+  const p = await db.creativeProposal.findUnique({
+    where: { id: proposalId },
+    select: { strategyId: true },
+  });
+  if (!p) throw new TRPCError({ code: "NOT_FOUND", message: "Proposition introuvable" });
+  await assertStrategyRead(userId, p.strategyId);
+}
 
 export const creativeProposalRouter = createTRPCRouter({
   listByStrategy: strategyScopedProcedure
@@ -24,7 +44,8 @@ export const creativeProposalRouter = createTRPCRouter({
 
   getById: protectedProcedure
     .input(z.object({ id: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      await assertProposalAccess(ctx.session.user.id, input.id);
       const { getCreativeProposal } = await import("@/server/services/creative-proposal");
       return getCreativeProposal(input.id);
     }),
@@ -49,7 +70,8 @@ export const creativeProposalRouter = createTRPCRouter({
     kind: "SUBMIT_CREATIVE_PROPOSAL",
     inputSchema: z.object({ id: z.string() }),
     caller: "creativeProposal:submit",
-  }).mutation(async ({ input }) => {
+  }).mutation(async ({ ctx, input }) => {
+    await assertProposalAccess(ctx.session.user.id, input.id);
     const { submitCreativeProposal } = await import("@/server/services/creative-proposal");
     return submitCreativeProposal(input.id);
   }),
@@ -59,6 +81,7 @@ export const creativeProposalRouter = createTRPCRouter({
     inputSchema: z.object({ id: z.string() }),
     caller: "creativeProposal:validate",
   }).mutation(async ({ ctx, input }) => {
+    await assertProposalAccess(ctx.session.user.id, input.id);
     const { validateCreativeProposal } = await import("@/server/services/creative-proposal");
     return validateCreativeProposal(input.id, ctx.session.user.id);
   }),
@@ -67,7 +90,8 @@ export const creativeProposalRouter = createTRPCRouter({
     kind: "REJECT_CREATIVE_PROPOSAL",
     inputSchema: z.object({ id: z.string(), reason: z.string().min(1).max(2000) }),
     caller: "creativeProposal:reject",
-  }).mutation(async ({ input }) => {
+  }).mutation(async ({ ctx, input }) => {
+    await assertProposalAccess(ctx.session.user.id, input.id);
     const { rejectCreativeProposal } = await import("@/server/services/creative-proposal");
     return rejectCreativeProposal(input.id, input.reason);
   }),

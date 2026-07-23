@@ -10,7 +10,7 @@
  */
 
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "../init";
+import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
 import { previewBrief, confirmIngest } from "@/server/services/brief-ingest";
 import { parsedBriefSchema } from "@/server/services/brief-ingest/types";
 import { executePlan, resolveHumanStep, persistPlan } from "@/server/services/mestor/hyperviseur";
@@ -182,7 +182,7 @@ export const briefIngestRouter = createTRPCRouter({
   /**
    * List previously ingested briefs
    */
-  list: protectedProcedure
+  list: operatorProcedure
     .input(z.object({
       page: z.number().default(1),
       limit: z.number().default(20),

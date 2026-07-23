@@ -18,14 +18,15 @@ name: scheduled-ops
 
 on:
   schedule:
-    - cron: "*/15 * * * *"  # fréquent : scheduler + téléchargements Ptah
-    - cron: "0 */6 * * *"   # 6 h : sentinelles, télémétrie, sweep ops
-    - cron: "0 6 * * 1"     # lundi 06h UTC : digest founders
+    - cron: "*/15 * * * *"  # fréquent : scheduler + téléchargements Ptah + publication sociale due
+    - cron: "0 */6 * * *"   # 6 h : sentinelles, télémétrie, sweep ops, relance leads
+    - cron: "0 5 * * *"     # quotidien 05h UTC : sync sociale plein + gazette + digest jour
+    - cron: "0 6 * * 1"     # lundi 06h UTC : digest founders + chasses Argos + digest hebdo
     - cron: "30 0 1 * *"    # 1er du mois : relevés MCP du mois clos
   workflow_dispatch:
     inputs:
       target:
-        description: "Cible manuelle (frequent|sixhourly|weekly|monthly|all)"
+        description: "Cible manuelle (frequent|sixhourly|daily|weekly|monthly|all)"
         default: "all"
 
 permissions: {}
@@ -54,6 +55,7 @@ jobs:
             case "$SCHED" in
               "*/15 * * * *") echo "target=frequent" >> "$GITHUB_OUTPUT" ;;
               "0 */6 * * *")  echo "target=sixhourly" >> "$GITHUB_OUTPUT" ;;
+              "0 5 * * *")    echo "target=daily" >> "$GITHUB_OUTPUT" ;;
               "0 6 * * 1")    echo "target=weekly" >> "$GITHUB_OUTPUT" ;;
               "30 0 1 * *")   echo "target=monthly" >> "$GITHUB_OUTPUT" ;;
               *)              echo "target=frequent" >> "$GITHUB_OUTPUT" ;;
@@ -96,6 +98,7 @@ jobs:
           if [ "$T" = "frequent" ] || [ "$T" = "all" ]; then
             hit /api/cron/scheduler "scheduler (séquences planifiées)"
             hit /api/cron/ptah-download "ptah-download (réconciliation forge)"
+            hit "/api/cron/social-sync?mode=publish" "social-sync publish (posts planifiés dus — round-15b)"
           fi
 
           if [ "$T" = "sixhourly" ] || [ "$T" = "all" ]; then
@@ -109,9 +112,16 @@ jobs:
             hit /api/cron/external-feeds "external-feeds (digests marché pays×secteur)"
           fi
 
+          if [ "$T" = "daily" ] || [ "$T" = "all" ]; then
+            hit /api/cron/social-sync "social-sync (sync sociale plein — audience/posts/inbox/ventes + publications dues) — round-15b"
+            hit /api/cron/jehuty-refresh "jehuty-refresh (Gazette de toutes les marques) — round-15b"
+            hit "/api/cron/anubis-digest?frequency=DAILY" "anubis-digest DAILY (récap notifications) — round-15b"
+          fi
+
           if [ "$T" = "weekly" ] || [ "$T" = "all" ]; then
             hit /api/cron/founder-digest "founder-digest (hebdo)"
             hit /api/cron/argos-hunt "argos-hunt (la rédaction Argos — 3 chasses hebdo, quarantaine)"
+            hit "/api/cron/anubis-digest?frequency=WEEKLY" "anubis-digest WEEKLY (récap hebdo) — round-15b"
           fi
 
           if [ "$T" = "monthly" ] || [ "$T" = "all" ]; then

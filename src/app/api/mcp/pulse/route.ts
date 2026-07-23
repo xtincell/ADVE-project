@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
-import { authenticateMcpRequest, meterAndRun } from "@/server/services/anubis/mcp-billing";
+import { authenticateMcpRequest, meterAndRun, scopeMcpParams } from "@/server/services/anubis/mcp-billing";
+import { dispatchTool } from "@/server/services/anubis/mcp-server";
 import { tools as pulseTools } from "@/server/mcp/pulse";
 
 const toolMap = Object.fromEntries(pulseTools.map((t) => [t.name, t.handler]));
@@ -16,15 +17,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
   const tool = body.tool ?? "";
-  const handler = toolMap[tool];
-  if (!handler) {
+  if (!toolMap[tool]) {
     return NextResponse.json(
       { error: `Unknown tool: ${tool}`, availableTools: Object.keys(toolMap) },
       { status: 400 },
     );
   }
   // Metering billable (Vague 5) — succès comme échec ; x-api-key = facturé.
-  return meterAndRun(gate, "pulse", tool, () => handler(body.params ?? {}));
+  const __scoped = scopeMcpParams(gate, "pulse", tool, body.params ?? {});
+  if (__scoped.denied) return __scoped.denied;
+  return meterAndRun(gate, "pulse", tool, () => dispatchTool("pulse", tool, __scoped.params));
 }
 
 export async function GET(request: Request) {

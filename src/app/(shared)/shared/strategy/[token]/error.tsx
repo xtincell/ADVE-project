@@ -22,11 +22,11 @@ export default function SharedStrategyError({
   }, [error]);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-950 px-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
       <div className="w-full max-w-md text-center">
-        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-red-950/50 ring-1 ring-red-800/50">
+        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-error/10 ring-1 ring-error/40">
           <svg
-            className="h-8 w-8 text-red-400"
+            className="h-8 w-8 text-error"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -40,15 +40,15 @@ export default function SharedStrategyError({
           </svg>
         </div>
 
-        <h1 className="mb-2 text-2xl font-bold text-white">
+        <h1 className="mb-2 text-2xl font-bold text-foreground">
           Cette proposition n&apos;a pas pu s&apos;afficher
         </h1>
-        <p className="mb-2 text-sm text-zinc-400">
+        <p className="mb-2 text-sm text-foreground-secondary">
           Une erreur est survenue lors du chargement du document. Réessayez dans
           un instant.
         </p>
         {error.digest && (
-          <p className="mb-6 font-mono text-xs text-zinc-600">
+          <p className="mb-6 font-mono text-xs text-foreground-muted">
             Ref: {error.digest}
           </p>
         )}
@@ -56,13 +56,13 @@ export default function SharedStrategyError({
         <div className="flex items-center justify-center gap-3">
           <button
             onClick={reset}
-            className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-violet-500"
+            className="inline-flex items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover"
           >
             Réessayer
           </button>
           <Link
             href="/"
-            className="rounded-lg border border-zinc-700 px-5 py-2.5 text-sm font-medium text-zinc-300 transition-colors hover:border-zinc-600 hover:bg-zinc-800 hover:text-white"
+            className="rounded-lg border border-border px-5 py-2.5 text-sm font-medium text-foreground-secondary transition-colors hover:bg-surface-raised hover:text-foreground"
           >
             Accueil
           </Link>

@@ -28,8 +28,14 @@ const PROVIDER_SECRETS: Record<string, string | undefined> = {
   wave: process.env.WEBHOOK_SECRET_WAVE,
 };
 
-// Fallback shared secret for dev/staging
-const SHARED_SECRET = process.env.WEBHOOK_SECRET ?? "dev-webhook-secret";
+// Fallback shared secret pour dev/staging UNIQUEMENT. En production, AUCUN secret
+// hardcodé (audit adversarial 2026-07-22) : sans WEBHOOK_SECRET (ni secret par provider),
+// `verifySignature` échoue fail-closed — sinon quiconque calcule un HMAC valide avec la
+// constante en clair du source → confirmations de paiement FORGÉES (commissions PAID,
+// abonnements prolongés gratuitement).
+const SHARED_SECRET =
+  process.env.WEBHOOK_SECRET ??
+  (process.env.NODE_ENV === "production" ? undefined : "dev-webhook-secret");
 
 // ---------------------------------------------------------------------------
 // HMAC signature verification
@@ -158,6 +164,18 @@ export async function POST(request: Request) {
     // Membership renewal payment
     if (reference.startsWith("membership-")) {
       const membershipId = reference.replace("membership-", "");
+
+      // Idempotence (audit adversarial 2026-07-22) : les providers momo redélivrent
+      // (retry sur non-2xx, ou 500 en aval APRÈS l'extension). Sans dedup par
+      // transaction, chaque replay ajoutait +30 jours GRATUITS. Le `sourceHash` par
+      // transaction était déjà écrit (ligne ~191) mais JAMAIS vérifié avant d'étendre.
+      const renewalHash = `membership-${payload.transactionId}`;
+      if (payload.transactionId) {
+        const already = await db.knowledgeEntry.findFirst({ where: { sourceHash: renewalHash } });
+        if (already) {
+          return NextResponse.json({ received: true, type: "membership", id: membershipId, deduped: true });
+        }
+      }
 
       const membership = await db.membership.findUniqueOrThrow({
         where: { id: membershipId },

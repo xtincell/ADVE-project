@@ -1,9 +1,12 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
+import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { tagAsset } from "@/server/services/asset-tagger";
+import { canAccessStrategy } from "@/server/services/operator-isolation";
 import { governedProcedure } from "@/server/governance/governed-procedure";
+import type { Context } from "@/server/trpc/context";
 import {
   selectFromBatch as engineSelectFromBatch,
   promoteToActive as enginePromoteToActive,
@@ -17,6 +20,39 @@ import { PILLAR_KEYS } from "@/domain";
 
 // BrandVault 3 levels: system / operator / production
 type AssetLevel = "system" | "operator" | "production";
+
+/**
+ * ADR-0175 — garde d'ownership pour les procédures indexées par ID D'ACTIF
+ * (invisibles à la garde middleware `governedProcedure`, qui ne lit que le
+ * `strategyId` de tête). On résout la marque de l'actif puis on applique le
+ * chokepoint `canAccessStrategy`. Fuite IDOR CRITIQUE sinon : lecture/suppression
+ * (dont `purge` = hard delete) des actifs de n'importe quel tenant par son id.
+ */
+async function assertBrandAssetAccess(ctx: Context, assetId: string): Promise<string> {
+  const asset = await ctx.db.brandAsset.findUnique({
+    where: { id: assetId },
+    select: { strategyId: true },
+  });
+  if (!asset) throw new TRPCError({ code: "NOT_FOUND", message: "Actif introuvable." });
+  await assertStrategyAccessForAsset(ctx, asset.strategyId);
+  return asset.strategyId;
+}
+
+async function assertStrategyAccessForAsset(ctx: Context, strategyId: string): Promise<void> {
+  const userId = ctx.session?.user?.id;
+  const allowed = userId
+    ? await canAccessStrategy(strategyId, {
+        operatorId:
+          ((ctx.session?.user as unknown as Record<string, unknown> | undefined)?.operatorId as
+            | string
+            | null
+            | undefined) ?? null,
+        userId,
+        role: ctx.session?.user?.role ?? "USER",
+      })
+    : false;
+  if (!allowed) throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cet actif." });
+}
 
 export const brandVaultRouter = createTRPCRouter({
   // Upload/create an asset
@@ -113,6 +149,7 @@ export const brandVaultRouter = createTRPCRouter({
   get: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
+      await assertBrandAssetAccess(ctx, input.id);
       return ctx.db.brandAsset.findUniqueOrThrow({ where: { id: input.id } });
     }),
 
@@ -130,6 +167,7 @@ export const brandVaultRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      await assertBrandAssetAccess(ctx, input.id);
       const asset = await ctx.db.brandAsset.findUniqueOrThrow({ where: { id: input.id } });
       const existing = (asset.pillarTags as Record<string, unknown>) ?? {};
       return ctx.db.brandAsset.update({
@@ -151,6 +189,7 @@ export const brandVaultRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      await assertBrandAssetAccess(ctx, input.id);
       const asset = await ctx.db.brandAsset.findUniqueOrThrow({ where: { id: input.id } });
       const tags = (asset.pillarTags as Record<string, unknown>) ?? {};
       return ctx.db.brandAsset.update({
@@ -190,8 +229,23 @@ export const brandVaultRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const result = await ctx.db.brandAsset.deleteMany({
+      // Chaque actif doit appartenir à une marque accessible au caller — sinon
+      // un founder pouvait hard-delete le vault d'un autre tenant (IDOR CRITIQUE).
+      const owned = await ctx.db.brandAsset.findMany({
         where: { id: { in: input.assetIds } },
+        select: { id: true, strategyId: true },
+      });
+      const accessibleStrategies = new Set<string>();
+      for (const a of owned) {
+        if (!accessibleStrategies.has(a.strategyId)) {
+          await assertStrategyAccessForAsset(ctx, a.strategyId);
+          accessibleStrategies.add(a.strategyId);
+        }
+      }
+      const purgeableIds = owned.map((a) => a.id);
+      if (purgeableIds.length === 0) return { deleted: 0 };
+      const result = await ctx.db.brandAsset.deleteMany({
+        where: { id: { in: purgeableIds } },
       });
       return { deleted: result.count };
     }),
@@ -220,6 +274,7 @@ export const brandVaultRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      await assertBrandAssetAccess(ctx, input.selectedAssetId);
       return engineSelectFromBatch({
         batchId: input.batchId,
         selectedAssetId: input.selectedAssetId,
@@ -251,6 +306,7 @@ export const brandVaultRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      await assertBrandAssetAccess(ctx, input.brandAssetId);
       return enginePromoteToActive({
         brandAssetId: input.brandAssetId,
         promotedById: ctx.session.user.id,
@@ -294,6 +350,9 @@ export const brandVaultRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      // Ownership sur l'actif superséédé ET sur la marque du nouvel actif.
+      await assertBrandAssetAccess(ctx, input.oldAssetId);
+      await assertStrategyAccessForAsset(ctx, input.newAsset.strategyId);
       const newAssetInput: CreateBrandAssetInput = {
         ...input.newAsset,
         operatorId: ctx.session.user.id,
@@ -323,6 +382,7 @@ export const brandVaultRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      await assertBrandAssetAccess(ctx, input.brandAssetId);
       return engineArchive({
         brandAssetId: input.brandAssetId,
         archivedById: ctx.session.user.id,

@@ -271,7 +271,11 @@ export const strategyRouter = createTRPCRouter({
       // ADR-0165 — sujets de veille suivis (édition manuelle, prime sur le
       // dérivé ADVE). [] = revenir au dérivé automatique.
       watchSubjects: z.array(z.string().min(3).max(60)).max(8).optional(),
-      advertis_vector: z.record(z.string(), z.number()).optional(),
+      // ADR-0175/audit adversarial — `advertis_vector` RETIRÉ de l'input mutable :
+      // il est POSSÉDÉ par le scoreur (scoreObject, evidence-capped ADR-0126).
+      // L'accepter verbatim laissait un founder poser composite=200 sans évidence
+      // (recalculateScore:false) puis empoisonner la preview et forger un palier
+      // ICONE ratcheté (ADR-0167). Aucun caller ne le passait — trou pur.
       recalculateScore: z.boolean().optional(),
       // Audit 2026-07-16 `public-page-no-founder-surface` : aucune surface
       // produit n'écrivait publicSlug (seeds/scripts uniquement) — le founder
@@ -285,7 +289,7 @@ export const strategyRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const { id, advertis_vector, recalculateScore, sector, enablePublicPage, watchSubjects, ...data } = input;
+      const { id, recalculateScore, sector, enablePublicPage, watchSubjects, ...data } = input;
 
       // Enforce operator isolation
       const hasAccess = await canAccessStrategy(id, {
@@ -307,20 +311,40 @@ export const strategyRouter = createTRPCRouter({
             } as Prisma.InputJsonValue)
           : undefined;
       // Page publique : slug canonique dérivé du nom (format LFA-, idempotent).
+      // Non-latin-safe (jamais de throw) + désambiguïsation de collision (le slug
+      // est @unique GLOBAL ; deux marques homonymes crashaient sinon en P2002 500).
       let publicSlugPatch: { publicSlug: string } | undefined;
       if (enablePublicPage && !previous.publicSlug) {
-        const { brandPublicSlug } = await import("@/domain/brand-slug");
-        publicSlugPatch = { publicSlug: brandPublicSlug(previous.name) };
+        const { brandPublicSlugSafe, disambiguateBrandSlug } = await import("@/domain/brand-slug");
+        let candidate = brandPublicSlugSafe(previous.name, previous.id);
+        const clash = await ctx.db.strategy.findFirst({
+          where: { publicSlug: candidate, id: { not: id } },
+          select: { id: true },
+        });
+        if (clash) candidate = disambiguateBrandSlug(candidate, previous.id);
+        publicSlugPatch = { publicSlug: candidate };
       }
-      const updated = await ctx.db.strategy.update({
-        where: { id },
-        data: {
-          ...data,
-          ...(advertis_vector ? { advertis_vector: advertis_vector as Prisma.InputJsonValue } : {}),
-          ...(mergedBusinessContext !== undefined ? { businessContext: mergedBusinessContext } : {}),
-          ...(publicSlugPatch ?? {}),
-        },
+      const buildUpdateData = (slugPatch?: { publicSlug: string }) => ({
+        ...data,
+        ...(mergedBusinessContext !== undefined ? { businessContext: mergedBusinessContext } : {}),
+        ...(slugPatch ?? {}),
       });
+      let updated;
+      try {
+        updated = await ctx.db.strategy.update({ where: { id }, data: buildUpdateData(publicSlugPatch) });
+      } catch (err) {
+        // Course entre le findFirst et l'update sur le slug → réessai désambiguïsé.
+        // Duck-typing sur `.code` (l'import Prisma est type-only ici).
+        const isUniqueViolation =
+          !!err && typeof err === "object" && (err as { code?: unknown }).code === "P2002";
+        if (publicSlugPatch && isUniqueViolation) {
+          const { disambiguateBrandSlug } = await import("@/domain/brand-slug");
+          updated = await ctx.db.strategy.update({
+            where: { id },
+            data: buildUpdateData({ publicSlug: disambiguateBrandSlug(publicSlugPatch.publicSlug, previous.id) }),
+          });
+        } else throw err;
+      }
 
       // Audit trail (non-blocking)
       auditTrail.log({
@@ -795,6 +819,10 @@ export const strategyRouter = createTRPCRouter({
   getWithScore: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
+      // IDOR (round-10) : keyé sur `{ id }` (= le strategyId, mais NOMMÉ `id` donc
+      // invisible à la garde de tête ADR-0175) → fuite complète des piliers ADVE
+      // d'une marque arbitraire. Garde de lecture explicite.
+      await assertStrategyRead(ctx.session.user.id, input.id);
       const strategy = await ctx.db.strategy.findUniqueOrThrow({
         where: { id: input.id },
         include: { pillars: true, client: { select: { id: true, name: true } } },
@@ -818,8 +846,19 @@ export const strategyRouter = createTRPCRouter({
   }),
 
   /**
-   * comparables — list peer strategies semantically similar to this one.
-   * Powered by the Seshat ranker. Graceful empty when no embeddings exist.
+   * comparables — repère ANONYME de maturité vs les marques sémantiquement
+   * proches (ranker Seshat). Empty gracieux sans embeddings.
+   *
+   * round-16b (fuite cross-tenant output-side) : `findSimilarAcrossStrategies`
+   * énumère TOUTES les marques de la plateforme (aucun scope tenant — normal, la
+   * proximité est cross-marque). Le garde `assertStrategyRead` protège l'ENTRÉE
+   * (la marque interrogée est possédée) mais PAS la SORTIE. Un fondateur ne doit
+   * JAMAIS voir le nom / le budget / le score exact d'une AUTRE marque (fuite
+   * cross-tenant catastrophique — RESIDUAL-DEBT §Gouvernance). On renvoie un
+   * AGRÉGAT k-anonyme (jamais de ligne par-pair identifiable) : nb de pairs +
+   * médiane de maturité du groupe + proximité max. Sous le seuil k, on masque
+   * même la médiane (un groupe < k réidentifie). Le détail nominatif reste réservé
+   * à la Mission Control opérateur (seshat-search, `operatorProcedure`).
    */
   comparables: protectedProcedure
     .input(z.object({ strategyId: z.string(), topK: z.number().min(1).max(20).default(8) }))
@@ -832,57 +871,34 @@ export const strategyRouter = createTRPCRouter({
         kinds: ["BRANDLEVEL", "NARRATIVE"],
         topK: input.topK * 3, // over-fetch then dedupe by strategy
       });
-      // Aggregate by strategy
-      const byStrategy = new Map<
-        string,
-        { strategyId: string; nodeCount: number; topSimilarity: number }
-      >();
+      // Dédupe par marque (proximité max), sans jamais exposer les ids par-pair.
+      const byStrategy = new Map<string, number>();
       for (const p of peers) {
-        const existing = byStrategy.get(p.strategyId);
-        if (existing) {
-          existing.nodeCount++;
-          existing.topSimilarity = Math.max(existing.topSimilarity, p.similarity);
-        } else {
-          byStrategy.set(p.strategyId, {
-            strategyId: p.strategyId,
-            nodeCount: 1,
-            topSimilarity: p.similarity,
-          });
-        }
+        byStrategy.set(p.strategyId, Math.max(byStrategy.get(p.strategyId) ?? 0, p.similarity));
       }
       const ids = Array.from(byStrategy.keys()).slice(0, input.topK);
-      if (ids.length === 0) return [];
+      const topSimilarity = ids.length ? Math.max(...ids.map((id) => byStrategy.get(id)!)) : 0;
 
-      const strategies = await ctx.db.strategy.findMany({
+      // k-anonymité : sous 3 pairs, une médiane approche une valeur individuelle → masquée.
+      const K_ANON = 3;
+      if (ids.length < K_ANON) {
+        return { peerCount: ids.length, medianComposite: null, topSimilarity };
+      }
+
+      // SEULEMENT le score (jamais name/financialCapacity/businessContext), agrégé en médiane.
+      const peerStrategies = await ctx.db.strategy.findMany({
         where: { id: { in: ids } },
-        select: {
-          id: true,
-          name: true,
-          businessContext: true,
-          financialCapacity: true,
-          advertis_vector: true,
-          brandNature: true,
-        },
+        select: { advertis_vector: true },
       });
-      const stratMap = new Map(strategies.map((s) => [s.id, s]));
+      const composites = peerStrategies
+        .map((s) => (s.advertis_vector as Record<string, number> | null)?.composite)
+        .filter((c): c is number => typeof c === "number")
+        .sort((a, b) => a - b);
+      const medianComposite = composites.length
+        ? Math.round(composites[Math.floor(composites.length / 2)]!)
+        : null;
 
-      return ids
-        .map((id) => {
-          const s = stratMap.get(id);
-          const stats = byStrategy.get(id)!;
-          return {
-            strategyId: id,
-            name: s?.name ?? null,
-            brandNature: s?.brandNature ?? null,
-            businessContext: s?.businessContext ?? null,
-            financialCapacity: s?.financialCapacity ?? null,
-            composite:
-              (s?.advertis_vector as Record<string, number> | null)?.composite ?? null,
-            topSimilarity: stats.topSimilarity,
-            nodeMatches: stats.nodeCount,
-          };
-        })
-        .sort((a, b) => b.topSimilarity - a.topSimilarity);
+      return { peerCount: ids.length, medianComposite, topSimilarity };
     }),
 
   /** Retourne la confiance et le statut du pilier S pour La Forge */

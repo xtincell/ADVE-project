@@ -33,7 +33,12 @@ function collectActions(i: Rec): Rec[] {
   const byLevel = (i.actionsByDevotionLevel ?? {}) as Rec;
   for (const v of Object.values(byLevel)) out.push(...arr(v));
   for (const phase of arr(i.actionsByOvertonPhase)) out.push(...arr(phase.actions));
-  out.push(...arr(i.actions));
+  // catalogueParCanal = record<canal, action[]> (catalogue PRIMAIRE, id/mitigatesRiskIds/
+  // targetsPersonaIds/hypothesisId). Il était OMIS (audit 2026-07-22) → ses FK jamais
+  // vérifiées + faux dangles S→I quand d'autres conteneurs étaient non vides. `i.actions`
+  // n'existe pas au schéma (toujours vide) → retiré.
+  const catalogue = (i.catalogueParCanal ?? {}) as Rec;
+  for (const v of Object.values(catalogue)) out.push(...arr(v));
   out.push(...arr(i.riskMitigationActions), ...arr(i.hypothesisTestActions));
   return out;
 }
@@ -87,9 +92,20 @@ export function findDanglingReferences(p: PillarBag): DanglingReference[] {
       }
     });
   }
-  const sd = (S.strategieDeplacement ?? {}) as Rec;
-  if (blockerIds.size && sd.riskId && !blockerIds.has(asStr(sd.riskId))) {
-    out.push({ edge: "S.strategieDeplacement.riskId → R.overtonBlockers[].id", source: "S.strategieDeplacement.riskId", ref: asStr(sd.riskId) });
+  // S.fenetreOverton.strategieDeplacement est un ARRAY d'étapes {riskId} (schéma:1320) —
+  // PAS un objet à `S.strategieDeplacement` (toujours undefined). L'arête ne se déclenchait
+  // JAMAIS (false negative — le but même de l' id ADR-0174). Corrigé : chemin + itération.
+  if (blockerIds.size) {
+    const fenetreOverton = (S.fenetreOverton ?? {}) as Rec;
+    arr(fenetreOverton.strategieDeplacement).forEach((step, i) => {
+      if (step.riskId && !blockerIds.has(asStr(step.riskId))) {
+        out.push({
+          edge: "S.fenetreOverton.strategieDeplacement[].riskId → R.overtonBlockers[].id",
+          source: `S.fenetreOverton.strategieDeplacement[${i}].riskId`,
+          ref: asStr(step.riskId),
+        });
+      }
+    });
   }
 
   return out;

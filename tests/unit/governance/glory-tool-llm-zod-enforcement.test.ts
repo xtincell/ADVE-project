@@ -17,7 +17,7 @@
 
 import { describe, expect, it } from "vitest";
 
-const BASELINE_TOOLS_WITHOUT_SCHEMA = 1000; // soft mode — large enough to pass at first run
+const BASELINE_TOOLS_WITHOUT_SCHEMA = 0; // HARD (audit 2026-07-22 : dette réelle = 0, plus de baseline vacant)
 
 describe("ADR-0067 — Glory tool LLM Zod enforcement", () => {
   it("every Glory tool with executionType=LLM declares either outputSchema OR _noSchemaJustification", async () => {

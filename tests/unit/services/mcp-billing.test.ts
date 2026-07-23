@@ -24,6 +24,7 @@ const mocks = vi.hoisted(() => ({
   subFindUnique: vi.fn(),
   subUpdate: vi.fn(),
   intakeFindUnique: vi.fn(),
+  intakeUpdateMany: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -41,7 +42,16 @@ vi.mock("@/lib/db", () => ({
       findUniqueOrThrow: mocks.stmtFindUniqueOrThrow,
     },
     subscription: { findUnique: mocks.subFindUnique, update: mocks.subUpdate },
-    intakePayment: { findUnique: mocks.intakeFindUnique },
+    intakePayment: { findUnique: mocks.intakeFindUnique, updateMany: mocks.intakeUpdateMany },
+    // F7 — la réclamation + extension partagent une transaction (atomicité).
+    // Le mock exécute le callback avec un `tx` qui route vers les mêmes stubs.
+    $transaction: (fn: (tx: unknown) => unknown) =>
+      Promise.resolve(
+        fn({
+          intakePayment: { updateMany: mocks.intakeUpdateMany },
+          subscription: { findUnique: mocks.subFindUnique, update: mocks.subUpdate },
+        }),
+      ),
   },
 }));
 
@@ -146,7 +156,8 @@ describe("applySubscriptionCycleIfPaid — extension de période", () => {
   });
 
   it("première activation : période = paidAt → paidAt + 30 j", async () => {
-    mocks.intakeFindUnique.mockResolvedValue({ status: "PAID", subscriptionId: "sub-1", paidAt: PAID_AT });
+    mocks.intakeFindUnique.mockResolvedValue({ status: "PAID", subscriptionId: "sub-1", paidAt: PAID_AT, cycleAppliedAt: null });
+    mocks.intakeUpdateMany.mockResolvedValue({ count: 1 }); // réclamation réussie
     mocks.subFindUnique.mockResolvedValue({
       id: "sub-1",
       status: "unpaid",
@@ -161,11 +172,16 @@ describe("applySubscriptionCycleIfPaid — extension de période", () => {
     expect(arg.data.status).toBe("active");
     const expectedEnd = new Date(PAID_AT.getTime() + 30 * 24 * 3600 * 1000);
     expect(arg.data.currentPeriodEnd.toISOString()).toBe(expectedEnd.toISOString());
+    // La ligne de paiement est réclamée (anti-rejeu par paiement).
+    expect(mocks.intakeUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { reference: "REF-1", cycleAppliedAt: null } }),
+    );
   });
 
   it("renouvellement anticipé : étend depuis la fin de période courante (aucun jour perdu)", async () => {
     const futureEnd = new Date(PAID_AT.getTime() + 10 * 24 * 3600 * 1000);
-    mocks.intakeFindUnique.mockResolvedValue({ status: "PAID", subscriptionId: "sub-1", paidAt: PAID_AT });
+    mocks.intakeFindUnique.mockResolvedValue({ status: "PAID", subscriptionId: "sub-1", paidAt: PAID_AT, cycleAppliedAt: null });
+    mocks.intakeUpdateMany.mockResolvedValue({ count: 1 });
     mocks.subFindUnique.mockResolvedValue({
       id: "sub-1",
       status: "active",
@@ -181,17 +197,63 @@ describe("applySubscriptionCycleIfPaid — extension de période", () => {
     expect(arg.data.currentPeriodEnd.toISOString()).toBe(expectedEnd.toISOString());
   });
 
-  it("webhook rejoué (même référence) : idempotent, aucune double extension", async () => {
-    mocks.intakeFindUnique.mockResolvedValue({ status: "PAID", subscriptionId: "sub-1", paidAt: PAID_AT });
+  it("webhook rejoué (ce paiement déjà consommé) : court-circuit, aucune double extension", async () => {
+    // F7 — dédup PAR PAIEMENT : `cycleAppliedAt` déjà posé → no-op immédiat,
+    // sans même ouvrir de transaction.
+    mocks.intakeFindUnique.mockResolvedValue({ status: "PAID", subscriptionId: "sub-1", paidAt: PAID_AT, cycleAppliedAt: PAID_AT });
+
+    await applySubscriptionCycleIfPaid("REF-3");
+    expect(mocks.intakeUpdateMany).not.toHaveBeenCalled();
+    expect(mocks.subUpdate).not.toHaveBeenCalled();
+  });
+
+  it("F7 — rejeu d'un cycle ANTÉRIEUR (autre réf, déjà consommé) NE ré-étend PAS", async () => {
+    // Le bug fermé : le garde mono-slot `lastCycleRef` ne retenait que le DERNIER
+    // cycle ; un webhook PAID d'un cycle antérieur (REF-OLD) rejoué APRÈS REF-NEW
+    // ré-étendait +30 j. Désormais REF-OLD porte son propre `cycleAppliedAt`.
+    mocks.intakeFindUnique.mockResolvedValue({
+      status: "PAID",
+      subscriptionId: "sub-1",
+      paidAt: new Date("2026-05-12T10:00:00Z"),
+      cycleAppliedAt: new Date("2026-05-12T10:00:05Z"), // déjà consommé à l'époque
+    });
     mocks.subFindUnique.mockResolvedValue({
       id: "sub-1",
       status: "active",
-      currentPeriodStart: PAID_AT,
-      currentPeriodEnd: new Date(PAID_AT.getTime() + 30 * 24 * 3600 * 1000),
-      providerSnapshot: { lastCycleRef: "REF-3" },
+      currentPeriodEnd: new Date("2026-07-12T10:00:00Z"),
+      providerSnapshot: { lastCycleRef: "REF-NEW" }, // le mono-slot pointe ailleurs
     });
 
-    await applySubscriptionCycleIfPaid("REF-3");
+    await applySubscriptionCycleIfPaid("REF-OLD");
+    expect(mocks.subUpdate).not.toHaveBeenCalled();
+  });
+
+  it("F7 — fenêtre de migration : paiement appliqué sous l'ancien code (cycleAppliedAt NULL + lastCycleRef=réf) NE ré-étend PAS", async () => {
+    // Régression trouvée à l'audit : la colonne cycleAppliedAt est ajoutée sans
+    // backfill → un paiement déjà appliqué sous l'ancien code a cycleAppliedAt
+    // NULL. Un rejeu passerait la garde. Le fallback lit l'ancien slot lastCycleRef.
+    mocks.intakeFindUnique.mockResolvedValue({ status: "PAID", subscriptionId: "sub-1", paidAt: PAID_AT, cycleAppliedAt: null });
+    mocks.subFindUnique.mockResolvedValue({
+      id: "sub-1",
+      status: "active",
+      currentPeriodEnd: new Date(PAID_AT.getTime() + 30 * 24 * 3600 * 1000),
+      providerSnapshot: { lastCycleRef: "REF-LEGACY" }, // CE paiement, appliqué avant migration
+    });
+    mocks.intakeUpdateMany.mockResolvedValue({ count: 1 }); // le claim réussit (cycleAppliedAt était NULL)
+
+    await applySubscriptionCycleIfPaid("REF-LEGACY");
+    // Le marqueur est migré (claim) mais AUCUNE nouvelle extension.
+    expect(mocks.intakeUpdateMany).toHaveBeenCalled();
+    expect(mocks.subUpdate).not.toHaveBeenCalled();
+  });
+
+  it("F7 — course : réclamation perdue (count 0) → pas de double extension", async () => {
+    // Deux webhooks concurrents pour la même référence : la mise à jour
+    // conditionnelle `cycleAppliedAt: null → now` ne réussit que pour un seul.
+    mocks.intakeFindUnique.mockResolvedValue({ status: "PAID", subscriptionId: "sub-1", paidAt: PAID_AT, cycleAppliedAt: null });
+    mocks.intakeUpdateMany.mockResolvedValue({ count: 0 }); // réclamé par l'autre webhook
+
+    await applySubscriptionCycleIfPaid("REF-4");
     expect(mocks.subUpdate).not.toHaveBeenCalled();
   });
 });

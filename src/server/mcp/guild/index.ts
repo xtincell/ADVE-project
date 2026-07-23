@@ -202,7 +202,10 @@ export const tools: ToolDefinition[] = [
         orderBy: { createdAt: "desc" },
         take: (input.limit as number) ?? 20,
       });
-      const totalEarned = commissions.reduce((sum, c) => sum + (c.commissionAmount ?? 0), 0);
+      // `netAmount` = part créateur (ce que momo verse réellement, ce que toutes
+      // les surfaces /creator/earnings somment) ; `commissionAmount` = la part
+      // PLATEFORME (gross − net). Sommer netAmount, jamais la coupe plateforme.
+      const totalEarned = commissions.reduce((sum, c) => sum + (c.netAmount ?? 0), 0);
       return { userId: input.userId, commissions, totalEarned };
     },
   },

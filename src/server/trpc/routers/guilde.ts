@@ -50,6 +50,9 @@ export const guildeRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       return ctx.db.talentProfile.findMany({
         where: input.tier ? { tier: input.tier } : undefined,
+        // Annuaire browsable, mais `payoutPhone` (numéro mobile-money de payout,
+        // PII) ne doit JAMAIS sortir d'une lecture ouverte (audit round-8).
+        omit: { payoutPhone: true },
         orderBy: { totalMissions: "desc" },
         take: input.limit,
       });
@@ -60,6 +63,8 @@ export const guildeRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       return ctx.db.talentProfile.findUniqueOrThrow({
         where: { id: input.id },
+        // `payoutPhone` (PII payout) exclu — profil consultable par tout membre.
+        omit: { payoutPhone: true },
         include: {
           portfolioItems: true,
           memberships: { where: { status: "ACTIVE" } },
@@ -170,6 +175,16 @@ export const guildeRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      // anti-IDOR (audit round-4) : on ne supprime QUE ses propres items de
+      // portfolio (mirror des siblings requestTierUpgrade/unlockSkill).
+      const item = await ctx.db.portfolioItem.findUnique({
+        where: { id: input.id },
+        select: { talentProfile: { select: { userId: true } } },
+      });
+      if (!item) throw new Error("Item introuvable");
+      if (item.talentProfile.userId !== ctx.session.user.id && ctx.session.user.role !== "ADMIN") {
+        throw new Error("Acces refuse");
+      }
       return ctx.db.portfolioItem.delete({ where: { id: input.id } });
     }),
 
@@ -410,6 +425,7 @@ export const guildeRouter = createTRPCRouter({
 
 
     kind: "LEGACY_GUILDE_ASSIGN_MENTOR",
+    requireOperator: true, // affectation de mentor = orchestration guilde (staff) ; le self-request passe par requestMentor
 
 
     inputSchema: z.object({ menteeId: z.string(), mentorId: z.string() }),

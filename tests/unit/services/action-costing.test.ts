@@ -13,12 +13,14 @@ import {
 } from "@prisma/client";
 
 import { ACTION_COST_CATALOG, CATALOG_BY_KEY } from "@/server/services/financial-brain/action-costing/catalog";
+import { resolveActionTemplateKey } from "@/server/services/financial-brain/action-costing/resolve-template";
 import {
   computeActionCost,
   resolveCatalogComponentsFixed,
   QUALITY_SENSITIVE_DRIVERS,
 } from "@/server/services/financial-brain/action-costing/estimator";
 import { convertRateUnit } from "@/server/services/financial-brain/action-costing/provider-rate";
+import { convertFixedParity, EUR_TO_CFA } from "@/server/services/financial-brain/action-costing/currency-fx";
 import { resolveAcrossChain, neighborsOf } from "@/server/services/financial-brain/action-costing/zone-index";
 import { ZONE_INDEX_SEED } from "@/server/services/financial-brain/action-costing/seed-data";
 import type { ComputeContext, EstimateInput } from "@/server/services/financial-brain/action-costing/types";
@@ -167,6 +169,36 @@ describe("action-costing — deterministic composite estimate", () => {
   });
 });
 
+describe("action-costing — archetype resolver (word tokens, no substring false-positives)", () => {
+  // Round-10 : le match est un SUBSTRING first-wins. Des tokens à mot entier
+  // (« stand », « tour », « app ») capturaient leurs super-chaînes (« standard »,
+  // « tournage », « whatsapp ») → un post/tournage costé comme une journée
+  // d'activation event. Ces cas verrouillent la correction.
+  it("« Post Instagram standard » → SOCIAL (pas EVENT via « stand »)", () => {
+    expect(resolveActionTemplateKey({ title: "Post Instagram standard" })).toBe("SOCIAL_CONTENT_BATCH");
+  });
+  it("« Tournage vidéo » → VIDEO_SHOOT (pas EVENT via « tour »)", () => {
+    expect(resolveActionTemplateKey({ title: "Tournage vidéo" })).toBe("VIDEO_SHOOT_1DAY");
+  });
+  it("« Campagne WhatsApp business » → SOCIAL (pas LANDING via « app »)", () => {
+    expect(resolveActionTemplateKey({ title: "Campagne WhatsApp business" })).toBe("SOCIAL_CONTENT_BATCH");
+  });
+
+  // Régressions — les vrais archétypes doivent toujours résoudre.
+  it("les archétypes légitimes résolvent encore", () => {
+    expect(resolveActionTemplateKey({ title: "Stand sur le salon" })).toBe("EVENT_ACTIVATION_DAY");
+    expect(resolveActionTemplateKey({ title: "Festival food tour" })).toBe("EVENT_ACTIVATION_DAY");
+    expect(resolveActionTemplateKey({ title: "Landing page produit" })).toBe("LANDING_PAGE");
+    expect(resolveActionTemplateKey({ title: "Application mobile onboarding" })).toBe("LANDING_PAGE");
+    expect(resolveActionTemplateKey({ channel: "influenceur ambassadeur" })).toBe("INFLUENCER_POST");
+  });
+
+  it("rien ne matche → null (aucun coût fabriqué)", () => {
+    expect(resolveActionTemplateKey({ title: "xyzzy" })).toBeNull();
+    expect(resolveActionTemplateKey({})).toBeNull();
+  });
+});
+
 describe("action-costing — zone-index fallback (ADR-0087 §3)", () => {
   it("direct zone hit → no fallback", () => {
     const r = resolveAcrossChain("CI", ["SN", "BF"], (z) => (z === "CI" ? 105 : null));
@@ -205,5 +237,35 @@ describe("action-costing — provider rate unit conversion", () => {
   it("passes through non-time units unchanged", () => {
     expect(convertRateUnit(50000, "FLAT", "DAY")).toBe(50000);
     expect(convertRateUnit(12000, "SQUARE_METER", "HOUR")).toBe(12000);
+  });
+});
+
+describe("action-costing — F6 conversion de devise à parité FIXE", () => {
+  it("identité si même devise", () => {
+    expect(convertFixedParity(90000, "XAF", "XAF")).toBe(90000);
+    expect(convertFixedParity(500, "EUR", "EUR")).toBe(500);
+  });
+
+  it("XOF ↔ XAF = 1:1 (parité CFA commune)", () => {
+    expect(convertFixedParity(120000, "XOF", "XAF")).toBe(120000);
+    expect(convertFixedParity(75000, "XAF", "XOF")).toBe(75000);
+  });
+
+  it("EUR → CFA multiplie par la parité gelée 655,957", () => {
+    expect(convertFixedParity(100, "EUR", "XAF")).toBeCloseTo(100 * EUR_TO_CFA, 6);
+    expect(convertFixedParity(100, "EUR", "XOF")).toBeCloseTo(100 * EUR_TO_CFA, 6);
+  });
+
+  it("CFA → EUR divise par la parité (aller-retour exact)", () => {
+    const eur = 250;
+    const xaf = convertFixedParity(eur, "EUR", "XAF")!;
+    expect(convertFixedParity(xaf, "XAF", "EUR")).toBeCloseTo(eur, 9);
+  });
+
+  it("devise flottante → null (non convertible sans source de taux — jamais de mécompte)", () => {
+    expect(convertFixedParity(100, "USD", "XAF")).toBeNull();
+    expect(convertFixedParity(100, "XAF", "USD")).toBeNull();
+    expect(convertFixedParity(100, "NGN", "XOF")).toBeNull();
+    expect(convertFixedParity(100, "GHS", "EUR")).toBeNull();
   });
 });

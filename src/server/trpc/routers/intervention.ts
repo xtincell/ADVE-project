@@ -1,9 +1,21 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
+import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
-import { getOperatorContext, scopeStrategies } from "@/server/services/operator-isolation";
+import { canAccessStrategy, getOperatorContext, scopeStrategies } from "@/server/services/operator-isolation";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
+
+/** Anti-IDOR (audit round-4) : convert/dismiss keyés `signalId` → résout signal→marque. */
+async function assertSignalStrategyAccess(
+  ctx: { session: { user: { id: string } }; db: typeof import("@/lib/db").db },
+  signalStrategyId: string,
+): Promise<void> {
+  const opCtx = await getOperatorContext(ctx.session.user.id);
+  if (!(await canAccessStrategy(signalStrategyId, opCtx))) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette marque." });
+  }
+}
 
 export const interventionRouter = createTRPCRouter({
   // Create an intervention request (client-facing)
@@ -79,6 +91,7 @@ export const interventionRouter = createTRPCRouter({
         where: { id: input.signalId },
         include: { strategy: true },
       });
+      await assertSignalStrategyAccess(ctx, signal.strategyId); // anti-IDOR
 
       const data = signal.data as Record<string, unknown>;
       if (data.status !== "PENDING") {
@@ -125,6 +138,7 @@ export const interventionRouter = createTRPCRouter({
   })
     .mutation(async ({ ctx, input }) => {
       const signal = await ctx.db.signal.findUniqueOrThrow({ where: { id: input.signalId } });
+      await assertSignalStrategyAccess(ctx, signal.strategyId); // anti-IDOR
       const data = signal.data as Record<string, unknown>;
 
       return ctx.db.signal.update({

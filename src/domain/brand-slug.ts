@@ -45,3 +45,26 @@ export function brandPublicSlug(nameOrSlug: string): string {
 export function isBrandPublicSlug(slug: string): boolean {
   return BRAND_SLUG_RE.test(slug);
 }
+
+/**
+ * Variante GARANTIE NON VIDE pour l'activation self-service (noms arbitraires).
+ * Si le nom ne produit aucun segment (ex. « 摩托19 » 100 % non-latin), retombe
+ * sur un slug basé sur l'id — au lieu de LEVER (le `brandPublicSlug` strict
+ * crashait la mutation d'activation de la page publique). Audit adversarial 2026-07-22.
+ */
+export function brandPublicSlugSafe(name: string, id: string): string {
+  const short = brandShortName(name.replace(/^LFA-/i, ""));
+  if (short) return `${BRAND_SLUG_PREFIX}${short}`;
+  const idFrag = brandShortName(id).slice(0, 8) || "brand";
+  return `${BRAND_SLUG_PREFIX}${idFrag}`;
+}
+
+/**
+ * Désambiguïse une collision de `publicSlug` (globalement `@unique`) en suffixant
+ * un fragment d'id. Sans ça, deux marques homonymes (« Nike ») produisaient le même
+ * slug → P2002 → 500 + blocage PERMANENT de la 2ᵉ (le nom régénère toujours la collision).
+ */
+export function disambiguateBrandSlug(baseSlug: string, id: string): string {
+  const idFrag = brandShortName(id).slice(0, 6) || "x";
+  return `${baseSlug}-${idFrag}`;
+}

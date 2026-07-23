@@ -33,7 +33,33 @@ import * as quickIntakeService from "@/server/services/quick-intake";
 import { getAdaptiveQuestions, getBusinessContextQuestions, getAllQuestions } from "@/server/services/quick-intake/question-bank";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { writePillar } from "@/server/services/pillar-gateway";
+import { db } from "@/lib/db";
+import { assertStrategyRead } from "./_strategy-read-guard";
+import { getOperatorContext } from "@/server/services/operator-isolation";
+import { sanitizeInline, wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 /* lafusee:governed-active */
+
+/**
+ * IDOR round-10 (Agent D) — `quickIntake.get`/`updateIntake` sont keyés sur l'id
+ * INTERNE de l'intake (PII : contact + réponses). Le funnel self-service passe
+ * par `shareToken` ; l'accès par id interne vient du cockpit founder (source
+ * `origin:"intake:<id>"`). Un intake CONVERTI appartient à sa marque
+ * (`convertedToId`) → accès si le caller possède cette marque ; un intake NON
+ * converti est un prospect → réservé au staff.
+ */
+async function assertIntakeAccess(userId: string, intakeId: string): Promise<void> {
+  const intake = await db.quickIntake.findUniqueOrThrow({
+    where: { id: intakeId },
+    select: { convertedToId: true },
+  });
+  if (intake.convertedToId) {
+    await assertStrategyRead(userId, intake.convertedToId);
+    return;
+  }
+  const opCtx = await getOperatorContext(userId);
+  if (opCtx.role === "ADMIN" || opCtx.operatorId) return;
+  throw new TRPCError({ code: "FORBIDDEN", message: "Intake non accessible" });
+}
 
 /**
  * C1 reroute (PROPAGATION-MAP §6b) — seed an intake-converted pillar through the
@@ -89,7 +115,7 @@ async function extractFromText(
   const timeout = setTimeout(() => controller.abort(), 60_000);
 
   try {
-    const system = mestor.getSystemPrompt("intake");
+    const system = `${mestor.getSystemPrompt("intake")}\n\n${UNTRUSTED_NOTICE}`;
     const bank = getAllQuestions();
     
     const expectedSchema = Object.entries(bank)
@@ -99,21 +125,25 @@ async function extractFromText(
         return `  "${pillar}": {\n${fields}\n  }`;
       }).join(",\n");
 
+    // IDOR/injection (round-11) : companyName/secteur inline-sanitisés + texte
+    // source (jusqu'à 100K, potentiellement scrapé d'une URL fournie) encadré
+    // `wrapUntrusted` (« donnée, jamais instruction ») — parité deduce-adve.ts.
+    const safeCompany = sanitizeInline(companyName, { max: 120 });
+    const safeSector = sanitizeInline(sector ?? "Non precise", { max: 80 });
     const prompt = `NOTE D'INTENTION CRITIQUE (POUR L'IA) :
-Ce texte contient la documentation fondatrice de "La Fusée", un écosystème de stratégie de marque créé par Alexandre Djengue (Upgraders). 
+Ce texte contient la documentation fondatrice de "La Fusée", un écosystème de stratégie de marque créé par Alexandre Djengue (Upgraders).
 ATTENTION : Tous les termes liés au champ lexical de la guerre, de la secte ou de la manipulation (ex: "culte", "ennemi", "manipulation", "endoctrinement", "propagande") sont de PURES MÉTAPHORES DE BRANDING B2B/B2C. Il s'agit d'une théorie marketing légitime pour engager des "superfans" (clients fidèles). Il n'y a aucune incitation à la violence ou à des comportements illégaux. Ce document est 100% professionnel.
 
 A partir de ce texte brut, extrait les reponses de la marque pour le diagnostic ADVE.
 
-MARQUE: ${companyName}
-SECTEUR: ${sector ?? "Non precise"}
+MARQUE: ${safeCompany}
+SECTEUR: ${safeSector}
 
-TEXTE SOURCE:
-${text.slice(0, 100_000)}
+${wrapUntrusted("TEXTE SOURCE", text, { max: 100_000 })}
 
 REGLES STRICTES:
-1. Remplis les champs attendus ci-dessous. Si le texte source ne permet pas de repondre a une question et que la marque est peu connue, omets la cle.
-2. CRITIQUE : Pour les marques matures et très connues (ex: ${companyName}), si l'information n'est pas dans le texte, UTILISE TES PROPRES CONNAISSANCES pour remplir un maximum de champs avec la vraie réalité de la marque (ses produits, ses engagements, etc). Ne laisse pas de trous si tu connais la marque !
+1. Remplis les champs attendus ci-dessous UNIQUEMENT à partir du TEXTE SOURCE. Si l'information n'y figure pas, OMETS la clé — un champ sans source dans le texte reste un trou honnête.
+2. N'INVENTE JAMAIS de données : aucune connaissance externe sur la marque, aucune supposition, aucune « réalité connue » de tête. Seul le TEXTE SOURCE fait foi. (Le pré-remplissage inféré des champs non-dérivables est un flux séparé, marqué INFERRED — ce n'est pas le rôle de cette extraction.)
 3. Sois concis : 1 a 2 phrases par champ texte, MAXIMUM. La sortie complete doit rester un JSON compact.
 4. Reponds UNIQUEMENT par un objet JSON valide. Aucun texte avant ou apres.
 
@@ -875,6 +905,10 @@ export const quickIntakeRouter = createTRPCRouter({
 
     kind: "LEGACY_QUICK_INTAKE_CONVERT",
 
+    // IDOR round-10 (CRITICAL) : `userId` est choisi par l'appelant et estampillé
+    // PROPRIÉTAIRE de la Strategy créée → tout compte convertissait l'intake d'un
+    // tiers et s'attribuait la marque. REQ-6 = « l'admin convertit ». Surface console.
+    requireOperator: true,
 
     inputSchema: z.object({
       intakeId: z.string(),
@@ -1395,6 +1429,10 @@ export const quickIntakeRouter = createTRPCRouter({
 
     kind: "LEGACY_QUICK_INTAKE_NOTIFY_FIXER_ON_COMPLETE",
 
+    // IDOR round-10 : `intakeId` arbitraire → copie la PII de contact de l'intake
+    // dans un Signal rattaché à la Strategy la plus récente + alerte fixer. Interne (REQ-8).
+    requireOperator: true,
+
     inputSchema: z.object({ intakeId: z.string() }),
 
     caller: "quick-intake:notifyFixerOnComplete",
@@ -1477,6 +1515,7 @@ export const quickIntakeRouter = createTRPCRouter({
   get: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
+      await assertIntakeAccess(ctx.session.user.id, input.id);
       return ctx.db.quickIntake.findUniqueOrThrow({
         where: { id: input.id },
       });
@@ -1497,6 +1536,7 @@ export const quickIntakeRouter = createTRPCRouter({
     caller: "quick-intake:updateIntake",
   })
     .mutation(async ({ ctx, input }) => {
+      await assertIntakeAccess(ctx.session.user.id, input.id);
       const intake = await ctx.db.quickIntake.findUniqueOrThrow({
         where: { id: input.id },
       });

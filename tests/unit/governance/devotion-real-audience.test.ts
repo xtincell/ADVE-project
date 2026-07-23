@@ -90,15 +90,21 @@ describe("ADR-0134 §B3 — devotion sur audience réelle", () => {
     expect(src.includes("activeRate")).toBe(false);
   });
 
-  it("reconcileAmbassadors aligné pourcentages (résidu ADR-0126)", () => {
+  it("reconcileAmbassadors : base RÉELLE (calculateDevotion), pas de pyramide inventée (audit 2026-07-22)", () => {
     const cult = read("src/server/services/cult-index-engine/index.ts");
     const fn = cult.slice(
       cult.indexOf("export async function reconcileAmbassadors"),
       cult.indexOf("export async function getCultDashboardData"),
     );
+    // Pourcentages 0-100 (résidu ADR-0126) conservés.
     expect(fn.includes("Math.min(1,")).toBe(false);
     expect(fn).toContain("Math.min(100,");
-    expect(fn).toContain("?? 50");
     expect(fn.includes("?? 0.5")).toBe(false);
+    // Anti-fabrication : plus AUCUN défaut inventé 50/20/15/8 — on part de la
+    // distribution mesurée par le devotion-engine.
+    expect(fn.includes("?? 50")).toBe(false);
+    expect(fn.includes("?? 20")).toBe(false);
+    expect(fn.includes("?? 15")).toBe(false);
+    expect(fn).toContain("calculateDevotion(strategyId)");
   });
 });

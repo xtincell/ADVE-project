@@ -3,6 +3,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { lockBodyScroll, unlockBodyScroll } from "@/lib/scroll-lock";
 
 interface ModalProps {
   open: boolean;
@@ -67,7 +68,7 @@ export function Modal({
     if (open) {
       previouslyFocused.current = (document.activeElement as HTMLElement) ?? null;
       document.addEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "hidden";
+      lockBodyScroll();
       // Focus the dialog so Tab traps inside on first keystroke
       requestAnimationFrame(() => {
         const firstFocusable = dialogRef.current?.querySelector<HTMLElement>(
@@ -78,7 +79,7 @@ export function Modal({
     }
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "";
+      if (open) unlockBodyScroll(); // symétrique du lock (ref-compté)
       // Restore focus to the trigger that opened the modal
       if (!open && previouslyFocused.current) {
         previouslyFocused.current.focus?.();

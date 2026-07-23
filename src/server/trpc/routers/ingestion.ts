@@ -10,7 +10,22 @@ import * as ingestion from "@/server/services/ingestion-pipeline";
 import { AdveKeySchema } from "@/domain";
 import { SourceCertaintySchema } from "@/domain/source-certainty";
 import { governedProcedure } from "@/server/governance/governed-procedure";
+import { db } from "@/lib/db";
+import { assertStrategyRead } from "./_strategy-read-guard";
 /* lafusee:governed-active */
+
+/**
+ * IDOR (round-10) — une source keyée sur son `id` (BrandDataSource) n'a pas de
+ * strategyId de tête → aucune garde ne s'applique. `rawContent` est le matériel
+ * brut de la marque (fuite/altération cross-tenant). Résout la source → sa marque.
+ */
+async function assertSourceAccess(userId: string, sourceId: string): Promise<void> {
+  const source = await db.brandDataSource.findUniqueOrThrow({
+    where: { id: sourceId },
+    select: { strategyId: true },
+  });
+  await assertStrategyRead(userId, source.strategyId);
+}
 
 /**
  * Fire PROPOSE_VAULT_FROM_SOURCE for a freshly extracted source. Best-effort,
@@ -114,6 +129,7 @@ export const ingestionRouter = createTRPCRouter({
   getSource: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
+      await assertSourceAccess(ctx.session.user.id, input.id);
       return ctx.db.brandDataSource.findUnique({
         where: { id: input.id },
         select: { id: true, fileName: true, rawContent: true, certainty: true, sourceType: true, origin: true },
@@ -131,6 +147,7 @@ export const ingestionRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      await assertSourceAccess(ctx.session.user.id, input.id);
       return ctx.db.brandDataSource.delete({ where: { id: input.id } });
     }),
 
@@ -151,6 +168,7 @@ export const ingestionRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      await assertSourceAccess(ctx.session.user.id, input.id);
       const data: Record<string, unknown> = {};
       if (input.title !== undefined) data.fileName = input.title;
       if (input.content !== undefined) data.rawContent = input.content;
@@ -328,6 +346,9 @@ export const ingestionRouter = createTRPCRouter({
       extraction: z.unknown(),
       sourceFilename: z.string().optional(),
       sourceDataSourceId: z.string().optional(),
+      // C3 — le front transmet le mode utilisé au preview (LLM/STRUCTURED) pour
+      // que le persister pose la bonne provenance (INFERRED vs SOURCE).
+      extractionMode: z.enum(["LLM", "STRUCTURED"]).default("LLM"),
     }))
     .mutation(async ({ ctx, input }) => {
       // Marque la source « OFFICIELLE » (fait vérifié) si fournie.
@@ -346,6 +367,7 @@ export const ingestionRouter = createTRPCRouter({
           extraction: input.extraction,
           sourceFilename: input.sourceFilename,
           sourceDataSourceId: input.sourceDataSourceId,
+          extractionMode: input.extractionMode,
         },
         { caller: "trpc.ingestion.ingestBrandBook" },
       );

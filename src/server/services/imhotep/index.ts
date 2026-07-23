@@ -66,7 +66,10 @@ export async function draftCrewProgram(
   if (strategy) {
     const sector = payload.sector ?? "general";
     return {
-      placeholder: `Crew program ${sector} — ${DEFAULT_ROLES.length} rôles requis pour la stratégie « ${strategy.name} ». ADRs: ADR-0010 + ADR-0019.`,
+      // round-14c : `placeholder` ne porte PLUS de réf ADR (elle fuyait dans le
+      // livrable client Oracle §22 via le composer). Les ADR restent en métadonnée
+      // structurelle interne dans `adrRefs`. Vocabulaire client (ADR-0123).
+      placeholder: `Programme équipe « ${strategy.name} » (${sector}) — ${DEFAULT_ROLES.length} rôles clés recommandés.`,
       status: "DRAFT",
       adrRefs: ["ADR-0010", "ADR-0019"],
       scaffoldedAt: new Date().toISOString(),
@@ -78,8 +81,8 @@ export async function draftCrewProgram(
   // Phase 13 back-compat path (strategy absent → dormant placeholder)
   return {
     placeholder: payload.sector
-      ? `Crew program ${payload.sector} — strategy non trouvée, placeholder dormant. Cf. ADR-0010 + ADR-0019.`
-      : "Crew program — strategy non trouvée, placeholder dormant. Cf. ADR-0010 + ADR-0019.",
+      ? `Programme équipe ${payload.sector} — stratégie introuvable, brouillon dormant.`
+      : "Programme équipe — stratégie introuvable, brouillon dormant.",
     status: "DORMANT_PRE_RESERVED",
     adrRefs: ["ADR-0010", "ADR-0019"],
     scaffoldedAt: new Date().toISOString(),

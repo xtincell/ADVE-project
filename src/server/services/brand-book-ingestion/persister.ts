@@ -28,29 +28,40 @@ interface FieldWrite {
   provenance: FieldProvenance;
 }
 
-/** Construit les écritures A/D/V à partir de l'extraction (champs présents seulement). */
-function buildPillarWrites(x: BrandBookExtraction): Record<"a" | "d" | "v", FieldWrite[]> {
+/**
+ * Construit les écritures A/D/V à partir de l'extraction (champs présents seulement).
+ * `baseProvenance` (C3) : SOURCE si le parseur DÉTERMINISTE a produit les champs
+ * (fait observé), INFERRED si le LLM les a extraits (jugement à valider). Un champ
+ * peut toujours surclasser vers une provenance plus certaine (jamais l'inverse).
+ */
+function buildPillarWrites(
+  x: BrandBookExtraction,
+  baseProvenance: FieldProvenance,
+): Record<"a" | "d" | "v", FieldWrite[]> {
   const a: FieldWrite[] = [];
   const d: FieldWrite[] = [];
   const v: FieldWrite[] = [];
-  const push = (arr: FieldWrite[], path: string, value: unknown, provenance: FieldProvenance = "SOURCE") => {
+  const push = (arr: FieldWrite[], path: string, value: unknown, provenance: FieldProvenance = baseProvenance) => {
     if (value !== null && value !== undefined && !(typeof value === "string" && value.trim() === "") && !(Array.isArray(value) && value.length === 0)) {
       arr.push({ path, value, provenance });
     }
   };
 
   // ── Pilier A ──
+  // Anti-misfile (audit adversarial 2026-07-22) : chaque datum va dans SON champ, une
+  // seule fois. Un champ mal ciblé est PIRE qu'un gap honnête (le contenu brut reste
+  // dans l'asset BRAND_BOOK, l'opérateur le mappe en revue). Corrections :
+  //  · `mission` → `missionStatement` UNIQUEMENT (plus de double-écriture en `description`,
+  //    qui = « ce que fait la marque » ≠ mission, et gonflait la complétude).
+  //  · `vision` (aspiration future) N'écrase PLUS `noyauIdentitaire` (essence ≠ vision).
+  //  · `tagline` (slogan pub) ne remplit PLUS `accroche` (phrase identitaire ≠ slogan).
   const id = x.identity;
   if (id) {
     push(a, "nomMarque", id.brandName);
-    if (id.tagline) push(a, "accroche", trunc(id.tagline, 100));
-    push(a, "description", id.mission);
     push(a, "missionStatement", id.mission ? trunc(id.mission, 200) : null);
-    push(a, "noyauIdentitaire", id.vision); // vision seulement — pas de repli sur story (double-assertion)
     if (id.story) push(a, "originMyth", { elevator: trunc(id.story, 400) });
-    // manifesto → PAS écrit en prophecy (concepts distincts) — conservé brut dans l'asset BRAND_BOOK.
-    // Jugement → INFERRED (needsHuman). archetype attend un enum : on ne l'écrit PAS
-    // en dur (risque hors-enum) — seulement une note libre si le champ existe.
+    // vision / tagline / manifesto / archetype : conservés bruts dans l'asset BRAND_BOOK
+    // (pas de champ-cible sûr sans risque de misfile ou d'enum hors-domaine — mapping opérateur).
   }
 
   // ── Pilier D ──
@@ -59,8 +70,10 @@ function buildPillarWrites(x: BrandBookExtraction): Record<"a" | "d" | "v", Fiel
     if (di.positioning) push(d, "positionnement", trunc(di.positioning, 200));
     push(d, "promesseMaitre", di.masterPromise);
     push(d, "sousPromesses", di.subPromises); // union accepte string[] (ADR-0168)
-    // tonDeVoix est un champ de D (pas A) — la voix de marque du book y atterrit.
-    if (id?.toneOfVoice?.length) push(d, "tonDeVoix", { personnalite: id.toneOfVoice });
+    // `tonDeVoix` N'EST PAS écrit depuis `toneOfVoice` (audit 2026-07-22) : le schéma exige
+    // personnalite(5-7) + onDit(≥3) + onNeditPas(≥2) — un objet partiel { personnalite }
+    // est schéma-invalide (persisté en warning) et casse les consommateurs qui lisent
+    // `.onDit`. La voix reste dans l'asset BRAND_BOOK ; l'opérateur complète les 3 axes.
     if (di.personas?.length) {
       // rank = ordre de listing du book (ordinal requis, pas une assertion de primauté) ;
       // motivations écrit SEULEMENT si présent (jamais le nom en repli — ce serait fabriqué).
@@ -101,9 +114,14 @@ export async function persistBrandBookExtraction(args: {
   extraction: BrandBookExtraction;
   sourceFilename?: string;
   sourceDataSourceId?: string;
+  /** C3 — mode d'extraction : STRUCTURED → SOURCE, LLM (défaut) → INFERRED. */
+  extractionMode?: "LLM" | "STRUCTURED";
 }): Promise<BrandBookPersistResult> {
   const { strategyId, operatorId, extraction } = args;
-  const writes = buildPillarWrites(extraction);
+  // Champs produits par le LLM = jugements (INFERRED, à valider) ; parseur
+  // déterministe = faits observés (SOURCE). Défaut conservateur = INFERRED.
+  const baseProvenance: FieldProvenance = args.extractionMode === "STRUCTURED" ? "SOURCE" : "INFERRED";
+  const writes = buildPillarWrites(extraction, baseProvenance);
   const pillarsWritten: string[] = [];
   const assetsCreated: string[] = [];
   const warnings: string[] = [];

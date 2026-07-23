@@ -37,6 +37,56 @@ async function enforceStrategyAccess(
   if (!ok) throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé : cette marque appartient à un autre compte." });
 }
 
+/**
+ * Anti-IDOR (audit round-4) : le cycle de vie de mission
+ * (update/delete/complete/cancel/setDeadline/submitToGuild + livrables) était
+ * keyé sur un id d'entité SANS garde alors que `start`/`getById` gardaient déjà.
+ * Chokepoint `canAccessMission` (owner / opérateur / assigné / collaborateur ADR-0129).
+ */
+async function enforceMissionAccess(
+  ctx: { session: { user: { id: string; role: string; operatorId?: string | null } } },
+  missionId: string,
+) {
+  const ok = await canAccessMission(missionId, {
+    operatorId: ctx.session.user.operatorId ?? null,
+    userId: ctx.session.user.id,
+    role: ctx.session.user.role,
+  });
+  if (!ok) throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé : cette mission appartient à un autre compte." });
+}
+
+/** Résout un livrable → sa mission → enforce (reviewDeliverable/acceptDeliverable). */
+async function enforceDeliverableAccess(
+  ctx: {
+    session: { user: { id: string; role: string; operatorId?: string | null } };
+    db: typeof import("@/lib/db").db;
+  },
+  deliverableId: string,
+) {
+  const d = await ctx.db.missionDeliverable.findUnique({
+    where: { id: deliverableId },
+    select: { missionId: true },
+  });
+  if (!d) throw new TRPCError({ code: "NOT_FOUND", message: "Livrable introuvable" });
+  await enforceMissionAccess(ctx, d.missionId);
+}
+
+/** Résout une activité → sa mission → enforce (activity cluster round-10 IDOR). */
+async function enforceActivityAccess(
+  ctx: {
+    session: { user: { id: string; role: string; operatorId?: string | null } };
+    db: typeof import("@/lib/db").db;
+  },
+  activityId: string,
+) {
+  const a = await ctx.db.missionActivity.findUnique({
+    where: { id: activityId },
+    select: { missionId: true },
+  });
+  if (!a) throw new TRPCError({ code: "NOT_FOUND", message: "Activité introuvable" });
+  await enforceMissionAccess(ctx, a.missionId);
+}
+
 export const missionRouter = createTRPCRouter({
   create: governedProcedure({
 
@@ -114,6 +164,7 @@ export const missionRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      await enforceMissionAccess(ctx, input.id); // anti-IDOR (update→COMPLETED cascade payout)
       const { id, briefData, slaDeadline, ...data } = input;
       const previous = await ctx.db.mission.findUniqueOrThrow({ where: { id }, include: { strategy: true } });
       const updated = await ctx.db.mission.update({
@@ -254,7 +305,11 @@ export const missionRouter = createTRPCRouter({
       // Get available missions (unassigned DRAFT)
       const missions = await ctx.db.mission.findMany({
         where: { status: "DRAFT", assigneeId: null },
-        include: { driver: true, strategy: { select: { name: true, advertis_vector: true } } },
+        // `advertis_vector` (scoring ADVE interne de la marque) retiré : le mur
+        // des missions ouvertes ne doit pas exposer le vecteur stratégique aux
+        // créateurs (le matching utilise `mission.id`, pas le vecteur — audit
+        // round-8). Cohérent avec le mur public Guilde qui le rédige déjà.
+        include: { driver: true, strategy: { select: { name: true } } },
         orderBy: { createdAt: "desc" },
         take: 50,
       });
@@ -282,7 +337,8 @@ export const missionRouter = createTRPCRouter({
   /** Suggest top 3 talent candidates for a mission (used by fixers/admins) */
   suggestTalent: protectedProcedure
     .input(z.object({ missionId: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      await enforceMissionAccess(ctx, input.missionId);
       return matchingEngine.suggest(input.missionId);
     }),
 
@@ -303,6 +359,12 @@ export const missionRouter = createTRPCRouter({
         where: { id: input.missionId },
       });
 
+      // anti-IDOR (round-10) : le self-assign ne concerne QUE le mur public de la
+      // Guilde. Sans ce gate, une mission DRAFT PRIVÉE (interne, non publiée)
+      // était revendicable par n'importe quel talent (mirroir mission-applications.submit).
+      if (!mission.guildPublished) {
+        throw new Error("Mission non disponible sur le mur de la Guilde");
+      }
       if (mission.status !== "DRAFT") {
         throw new Error("Mission déjà prise ou non disponible");
       }
@@ -342,6 +404,7 @@ export const missionRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      await enforceMissionAccess(ctx, input.missionId); // anti-IDOR : hijack de mission (assigne n'importe quelle mission)
       const updated = await ctx.db.mission.update({
         where: { id: input.missionId },
         data: { assigneeId: input.assigneeId, status: "IN_PROGRESS" },
@@ -595,6 +658,7 @@ export const missionRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      await enforceDeliverableAccess(ctx, input.deliverableId); // anti-IDOR
       // Update or create quality review
       const existing = await ctx.db.qualityReview.findFirst({
         where: { deliverableId: input.deliverableId, reviewerId: ctx.session.user.id },
@@ -669,6 +733,7 @@ export const missionRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      await enforceDeliverableAccess(ctx, input.deliverableId); // anti-IDOR
       return ctx.db.missionDeliverable.update({
         where: { id: input.deliverableId },
         data: { status: "ACCEPTED" },
@@ -689,6 +754,7 @@ export const missionRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      await enforceMissionAccess(ctx, input.id); // anti-IDOR
       return ctx.db.mission.update({
         where: { id: input.id },
         data: { status: "CANCELLED" },
@@ -706,6 +772,7 @@ export const missionRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      await enforceMissionAccess(ctx, input.id); // anti-IDOR
       return ctx.db.mission.update({
         where: { id: input.id },
         data: { slaDeadline: new Date(input.deadline) },
@@ -753,6 +820,7 @@ export const missionRouter = createTRPCRouter({
     inputSchema: z.object({ id: z.string() }),
     caller: "mission:complete",
   }).mutation(async ({ ctx, input }) => {
+    await enforceMissionAccess(ctx, input.id); // anti-IDOR
     return ctx.db.mission.update({ where: { id: input.id }, data: { status: "COMPLETED" } });
   }),
 
@@ -762,6 +830,7 @@ export const missionRouter = createTRPCRouter({
     inputSchema: z.object({ id: z.string(), reason: z.string().max(500).optional() }),
     caller: "mission:cancel",
   }).mutation(async ({ ctx, input }) => {
+    await enforceMissionAccess(ctx, input.id); // anti-IDOR
     const m = await ctx.db.mission.findUniqueOrThrow({ where: { id: input.id }, select: { briefData: true } });
     const bd = (m.briefData ?? {}) as Record<string, unknown>;
     return ctx.db.mission.update({
@@ -778,7 +847,8 @@ export const missionRouter = createTRPCRouter({
     kind: "LEGACY_MISSION_SUBMIT_TO_GUILD",
     inputSchema: z.object({ id: z.string() }),
     caller: "mission:submitToGuild",
-  }).mutation(async ({ input }) => {
+  }).mutation(async ({ ctx, input }) => {
+    await enforceMissionAccess(ctx, input.id); // anti-IDOR : publie une mission privée au marketplace sinon
     return cm.submitMissionToGuild(input.id);
   }),
 
@@ -789,12 +859,18 @@ export const missionRouter = createTRPCRouter({
   /** Liste les activités d'une mission. */
   listActivities: protectedProcedure
     .input(z.object({ missionId: z.string() }))
-    .query(({ input }) => cm.listMissionActivities(input.missionId)),
+    .query(async ({ ctx, input }) => {
+      await enforceMissionAccess(ctx, input.missionId);
+      return cm.listMissionActivities(input.missionId);
+    }),
 
   /** Avancement agrégé via activités (progression + budget + KPI). */
   activityHealth: protectedProcedure
     .input(z.object({ missionId: z.string() }))
-    .query(({ input }) => cm.getMissionActivityHealth(input.missionId)),
+    .query(async ({ ctx, input }) => {
+      await enforceMissionAccess(ctx, input.missionId);
+      return cm.getMissionActivityHealth(input.missionId);
+    }),
 
   /** Crée une activité (asset/terrain, budget, KPI). */
   createActivity: governedProcedure({
@@ -811,59 +887,86 @@ export const missionRouter = createTRPCRouter({
       concludesMission: z.boolean().optional(),
     }),
     caller: "mission:createActivity",
-  }).mutation(({ input }) => cm.createMissionActivity(input)),
+  }).mutation(async ({ ctx, input }) => {
+    await enforceMissionAccess(ctx, input.missionId);
+    return cm.createMissionActivity(input);
+  }),
 
   /** Génère le brief propre d'une activité (déterministe). */
   generateActivityBrief: governedProcedure({
     kind: "LEGACY_MISSION_GENERATE_ACTIVITY_BRIEF",
     inputSchema: z.object({ activityId: z.string() }),
     caller: "mission:generateActivityBrief",
-  }).mutation(({ input }) => cm.generateMissionActivityBrief(input.activityId)),
+  }).mutation(async ({ ctx, input }) => {
+    await enforceActivityAccess(ctx, input.activityId);
+    return cm.generateMissionActivityBrief(input.activityId);
+  }),
 
   /** Édite le brief d'une activité (manuel, avant exécution). */
   updateActivityBrief: governedProcedure({
     kind: "LEGACY_MISSION_UPDATE_ACTIVITY_BRIEF",
     inputSchema: z.object({ activityId: z.string(), briefContent: z.record(z.string(), z.unknown()) }),
     caller: "mission:updateActivityBrief",
-  }).mutation(({ input }) => cm.updateMissionActivityBrief(input.activityId, input.briefContent)),
+  }).mutation(async ({ ctx, input }) => {
+    await enforceActivityAccess(ctx, input.activityId);
+    return cm.updateMissionActivityBrief(input.activityId, input.briefContent);
+  }),
 
   /** Complète une activité (+ KPI réel) → progression / conclusion mission. */
   completeActivity: governedProcedure({
     kind: "LEGACY_MISSION_COMPLETE_ACTIVITY",
     inputSchema: z.object({ activityId: z.string(), kpiActual: z.number().nonnegative().optional() }),
     caller: "mission:completeActivity",
-  }).mutation(({ input }) => cm.completeMissionActivity(input.activityId, input.kpiActual)),
+  }).mutation(async ({ ctx, input }) => {
+    await enforceActivityAccess(ctx, input.activityId);
+    return cm.completeMissionActivity(input.activityId, input.kpiActual);
+  }),
 
   /** Annule une activité. */
   cancelActivity: governedProcedure({
     kind: "LEGACY_MISSION_CANCEL_ACTIVITY",
     inputSchema: z.object({ activityId: z.string() }),
     caller: "mission:cancelActivity",
-  }).mutation(({ input }) => cm.cancelMissionActivity(input.activityId)),
+  }).mutation(async ({ ctx, input }) => {
+    await enforceActivityAccess(ctx, input.activityId);
+    return cm.cancelMissionActivity(input.activityId);
+  }),
 
   /** Régénère les activités par défaut (déterministe) — vide + re-seed depuis le brief/action. */
   regenerateActivities: governedProcedure({
     kind: "LEGACY_MISSION_REGENERATE_ACTIVITIES",
     inputSchema: z.object({ missionId: z.string() }),
     caller: "mission:regenerateActivities",
-  }).mutation(({ input }) => cm.regenerateMissionActivities(input.missionId)),
+  }).mutation(async ({ ctx, input }) => {
+    await enforceMissionAccess(ctx, input.missionId);
+    return cm.regenerateMissionActivities(input.missionId);
+  }),
 
   /** Attribue (ou retire) un prestataire à une activité (mirroir de mission.assign). */
   assignActivity: governedProcedure({
     kind: "LEGACY_MISSION_ASSIGN_ACTIVITY",
     inputSchema: z.object({ activityId: z.string(), assigneeId: z.string().nullable() }),
     caller: "mission:assignActivity",
-  }).mutation(({ input }) => cm.assignMissionActivity(input.activityId, input.assigneeId)),
+  }).mutation(async ({ ctx, input }) => {
+    await enforceActivityAccess(ctx, input.activityId);
+    return cm.assignMissionActivity(input.activityId, input.assigneeId);
+  }),
 
   /** Rétroplanning de la mission ancré sur T0 (date de lancement → SLA → aujourd'hui). Déterministe. */
   retroplan: protectedProcedure
     .input(z.object({ missionId: z.string(), t0: z.string().optional() }))
-    .query(({ input }) => cm.getMissionRetroplan(input.missionId, input.t0 ? new Date(input.t0) : undefined)),
+    .query(async ({ ctx, input }) => {
+      await enforceMissionAccess(ctx, input.missionId);
+      return cm.getMissionRetroplan(input.missionId, input.t0 ? new Date(input.t0) : undefined);
+    }),
 
   /** Fixe (ou efface) la durée d'une activité — bascule FIXÉE/DÉRIVÉE pour le rétroplanning. */
   setActivityDuration: governedProcedure({
     kind: "LEGACY_MISSION_SET_ACTIVITY_DURATION",
     inputSchema: z.object({ activityId: z.string(), durationDays: z.number().int().positive().nullable() }),
     caller: "mission:setActivityDuration",
-  }).mutation(({ input }) => cm.setMissionActivityDuration(input.activityId, input.durationDays)),
+  }).mutation(async ({ ctx, input }) => {
+    await enforceActivityAccess(ctx, input.activityId);
+    return cm.setMissionActivityDuration(input.activityId, input.durationDays);
+  }),
 });

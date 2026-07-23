@@ -146,7 +146,7 @@ export const en = {
   "oracle.forge.button.icon": "Forge icon",
   "oracle.forge.button.design": "Forge deck",
   "oracle.forge.button.pending": "Forging…",
-  "oracle.forge.dialog.title": "Confirm Ptah materialisation",
+  "oracle.forge.dialog.title": "Confirm deliverable production",
   "oracle.forge.dialog.cancel": "Cancel",
   "oracle.forge.dialog.confirm": "Confirm forge",
   "oracle.forge.result.heading": "Last forge",

@@ -20,6 +20,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, operatorProcedure, protectedProcedure } from "../init";
 import { db } from "@/lib/db";
+import { assertTalentProfileAccess } from "./_talent-access-guard";
 import * as imhotep from "@/server/services/imhotep";
 import { emitIntentTyped } from "@/server/services/mestor/intents";
 
@@ -137,7 +138,11 @@ export const imhotepRouter = createTRPCRouter({
 
   // ── Queries ─────────────────────────────────────────────────────
 
-  matchTalent: protectedProcedure
+  // IDOR round-10 : énumère les candidats classés (matchScore/reasons) pour
+  // n'importe quel missionId — c'est la moitié LECTURE de l'orchestration crew,
+  // dont toutes les mutations sœurs sont operatorProcedure. Routage = staff.
+  // (Le founder voit les suggestions de SA mission via mission.suggestTalent, gardé.)
+  matchTalent: operatorProcedure
     .input(
       z.object({
         missionId: z.string(),
@@ -149,7 +154,11 @@ export const imhotepRouter = createTRPCRouter({
 
   evaluateTier: protectedProcedure
     .input(z.object({ talentProfileId: z.string() }))
-    .query(async ({ input }) => imhotep.evaluateTier(input)),
+    .query(async ({ ctx, input }) => {
+      // IDOR round-10 : évaluation tier + reco PROMOTE/DEMOTE = télémétrie carrière privée.
+      await assertTalentProfileAccess(ctx.session.user.id, input.talentProfileId);
+      return imhotep.evaluateTier(input);
+    }),
 
   recommendFormation: protectedProcedure
     .input(z.object({ userId: z.string(), skillGap: z.string().optional() }))

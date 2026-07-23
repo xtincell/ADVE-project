@@ -27,6 +27,7 @@
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { type CultIndexTier, getCultIndexTier } from "@/domain/cult-index-tier";
+import { calculateDevotion } from "@/server/services/devotion-engine";
 
 /**
  * Cult Index tier — canonical scale now lives in `@/domain/cult-index-tier`
@@ -271,14 +272,17 @@ export async function getCultIndexTrend(strategyId: string): Promise<{
   });
 
   const current = snapshots[0]?.compositeScore ?? 0;
-  const previous = snapshots[1]?.compositeScore ?? 0;
+  // Sans snapshot précédent, `?? 0` fabriquait un delta = current → « UP »
+  // fantôme au tout premier snapshot (absence ≠ zéro). Défaut = current → delta 0.
+  const hasPrevious = snapshots.length >= 2;
+  const previous = snapshots[1]?.compositeScore ?? current;
   const delta = current - previous;
 
   return {
     current,
     previous,
     delta,
-    trend: delta > 2 ? "UP" : delta < -2 ? "DOWN" : "STABLE",
+    trend: !hasPrevious ? "STABLE" : delta > 2 ? "UP" : delta < -2 ? "DOWN" : "STABLE",
   };
 }
 
@@ -396,32 +400,37 @@ export async function reconcileAmbassadors(strategyId: string): Promise<{
   const evangelisteCount = program.members.filter((m) => topTiers.includes(m.tier)).length;
   const ambassadeurCount = program.members.length - evangelisteCount;
 
-  // Get current devotion snapshot to reconcile
+  // Base de devotion à réconcilier — le dernier snapshot mesuré, ou À DÉFAUT la
+  // distribution RÉELLE recalculée par le devotion-engine (superfans par
+  // engagementDepth, missions, signaux, reviews). Audit adversarial 2026-07-22 :
+  // on ne SEED PLUS une pyramide inventée 50/20/15/8 — on part de données mesurées
+  // (0 honnête si rien de mesuré), en pourcentages 0-100 (même unité que le snapshot).
   const currentSnapshot = await db.devotionSnapshot.findFirst({
     where: { strategyId },
     orderBy: { measuredAt: "desc" },
   });
+  const base = currentSnapshot
+    ? {
+        spectateur: currentSnapshot.spectateur,
+        interesse: currentSnapshot.interesse,
+        participant: currentSnapshot.participant,
+        engage: currentSnapshot.engage,
+        ambassadeur: currentSnapshot.ambassadeur,
+        evangeliste: currentSnapshot.evangeliste,
+      }
+    : (await calculateDevotion(strategyId)).distribution;
 
-  // Create a reconciled snapshot incorporating ambassador data.
-  // ADR-0134 (résidu ADR-0126 T16) : DevotionSnapshot est en POURCENTAGES
-  // 0-100 — les fallbacks fractions (0.5/0.2/…) et le clamp à 1
-  // dataient du monde pré-fix. Alignés en points de % ; magnitude de
-  // l'incrément préservée (totalBase ≈ 100 en monde %, ≈ totalBase×100 en
-  // monde fraction — même dénominateur).
-  const baseAmbassadeur = currentSnapshot?.ambassadeur ?? 0;
-  const baseEvangeliste = currentSnapshot?.evangeliste ?? 0;
-  const totalBase = (currentSnapshot?.spectateur ?? 50) + (currentSnapshot?.interesse ?? 20) +
-    (currentSnapshot?.participant ?? 15) + (currentSnapshot?.engage ?? 8) +
-    baseAmbassadeur + baseEvangeliste;
+  const totalBase =
+    base.spectateur + base.interesse + base.participant + base.engage + base.ambassadeur + base.evangeliste;
 
-  const adjustedAmbassadeur = Math.min(100, baseAmbassadeur + (ambassadeurCount / Math.max(1, totalBase)) * 0.5);
-  const adjustedEvangeliste = Math.min(100, baseEvangeliste + (evangelisteCount / Math.max(1, totalBase)) * 0.5);
+  const adjustedAmbassadeur = Math.min(100, base.ambassadeur + (ambassadeurCount / Math.max(1, totalBase)) * 0.5);
+  const adjustedEvangeliste = Math.min(100, base.evangeliste + (evangelisteCount / Math.max(1, totalBase)) * 0.5);
 
   await captureDevotionSnapshot(strategyId, {
-    spectateur: currentSnapshot?.spectateur ?? 50,
-    interesse: currentSnapshot?.interesse ?? 20,
-    participant: currentSnapshot?.participant ?? 15,
-    engage: currentSnapshot?.engage ?? 8,
+    spectateur: base.spectateur,
+    interesse: base.interesse,
+    participant: base.participant,
+    engage: base.engage,
     ambassadeur: adjustedAmbassadeur,
     evangeliste: adjustedEvangeliste,
   }, "ambassador_reconciliation");

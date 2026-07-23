@@ -100,11 +100,18 @@ export async function buildCompensatingIntent(input: CompensateInput): Promise<C
     throw new Error(`compensating-intents: no compensator declared for ${original.intentKind}`);
   }
 
+  // G (ADR-0176) — le handler ROLLBACK_PILLAR a besoin du pilier ciblé : on
+  // propage `key` depuis le payload de l'écriture d'origine (WRITE_PILLAR porte
+  // `{ strategyId, key, content }`). Absent pour les autres compensateurs.
+  const origPayload = (original.payload ?? {}) as Record<string, unknown>;
+  const originalKey = typeof origPayload.key === "string" ? origPayload.key : undefined;
+
   const reverseIntent = {
     kind: reverseKind,
     strategyId: original.strategyId,
     compensatedFrom: input.originalIntentId,
     reason: input.reason,
+    ...(originalKey ? { key: originalKey } : {}),
     ...(input.payloadOverride ?? {}),
   } as unknown as Intent;
 
