@@ -128,7 +128,7 @@ function TonDeVoix({ value, status }: { value: unknown; status?: string }) {
             </div>
             <div className="ck-d-voice__col neg">
               <span className="ck-d-voice__h">✕ On ne dit pas</span>
-              {isEmpty(obj.onNeditPas) ? <EmptyValue /> : <ul>{(Array.isArray(obj.onNeditPas) ? obj.onNeditPas : [obj.onNeditPas]).map((x, i) => <li key={i}>{str(x)}</li>)}</ul>}
+              {(() => { const v = obj.onNeditPas ?? obj.onNeDitPas; return isEmpty(v) ? <EmptyValue /> : <ul>{(Array.isArray(v) ? v : [v]).map((x, i) => <li key={i}>{str(x)}</li>)}</ul>; })()}
             </div>
           </div>
         </div>

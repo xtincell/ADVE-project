@@ -198,7 +198,7 @@ export const PILLAR_D = {
   tonDeVoix: {
     personnalite: ["Autoritaire", "Visionnaire", "Précis", "Aéronautique"],
     onDit: ["palier", "trajectoire", "ignition", "score /200", "superfans", "obligation d'effet", "protocole"],
-    onNeDitPas: ["buzz", "viral garanti", "petite agence", "feeling créatif", "best-in-class"],
+    onNeditPas: ["buzz", "viral garanti", "petite agence", "feeling créatif", "best-in-class"],
   },
   assetsLinguistiques: {
     languePrincipale: "fr",

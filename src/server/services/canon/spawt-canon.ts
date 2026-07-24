@@ -198,7 +198,7 @@ export const PILLAR_D = {
   tonDeVoix: {
     personnalite: ["Complice", "Curieux", "Indépendant", "Jamais condescendant"],
     onDit: ["spawter", "trouvaille", "ton Palais", "la Meute", "Djidji", "Coup de Cœur", "le Chat flaire"],
-    onNeDitPas: ["utilisateur", "restaurant noté 4.2 étoiles", "classement", "top 10", "le meilleur resto de Cocody"],
+    onNeditPas: ["utilisateur", "restaurant noté 4.2 étoiles", "classement", "top 10", "le meilleur resto de Cocody"],
   },
   assetsLinguistiques: {
     languePrincipale: "fr",
