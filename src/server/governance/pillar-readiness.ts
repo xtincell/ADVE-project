@@ -156,6 +156,7 @@ export function evaluatePillarReadiness(
         missing: contract.stages.COMPLETE.map((r) => r.path),
         derivable: contract.stages.COMPLETE.filter((r) => r.derivable).map((r) => r.path),
         needsHuman: contract.stages.COMPLETE.filter((r) => !r.derivable).map((r) => r.path),
+        optionalFillable: [],
         completionPct: 0,
         readyForGlory: false,
       };

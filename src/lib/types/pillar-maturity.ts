@@ -98,6 +98,15 @@ export interface PillarAssessment {
   derivable: string[];
   /** Among missing, which require human input */
   needsHuman: string[];
+  /**
+   * Cellules/feuilles OPTIONNELLES remplissables (personas[i].lifestyle,
+   * produitsCatalogue[i].*, feuilles imbriquées optionnelles qualitatives) — ce
+   * que « Enrichir remplit tout en profondeur » (ADR-0177) peut encore combler.
+   * DÉCOUPLÉ de la complétude : JAMAIS dans completionPct/missing/currentStage/
+   * satisfied/readiness (les optionnelles ne gatent pas COMPLET — pas de pression
+   * à fabriquer). Alimente uniquement le gate du bouton Enrichir. Jamais un nombre.
+   */
+  optionalFillable: string[];
   /** Percentage of COMPLETE requirements satisfied */
   completionPct: number;
   /** True when currentStage === "COMPLETE" */

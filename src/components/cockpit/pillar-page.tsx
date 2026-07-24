@@ -335,13 +335,19 @@ export function PillarPage({ pageKey }: PillarPageProps) {
         return;
       }
 
+      // Enrichir remplit TOUT en profondeur (ADR-0177) : requis (derivable/needsHuman)
+      // + profondeur OPTIONNELLE (personas[i].*, matrice, feuilles optionnelles) via
+      // `optionalFillable`. Ces chemins de cellule exacts sont admis par `inScope` de
+      // l'auto-filler → il les remplit (INFERRED). Sans ça, un pilier « 100 % Complet »
+      // (requis fait) disait « tout rempli » alors que les personas étaient squelettiques.
       let derivableFields = [
         ...(assessQuery.data?.derivable ?? []),
-        ...(assessQuery.data?.needsHuman ?? []).filter(path => path !== "traction")
+        ...(assessQuery.data?.needsHuman ?? []).filter(path => path !== "traction"),
+        ...(assessQuery.data?.optionalFillable ?? []),
       ];
       if (derivableFields.length === 0) {
         if (assessQuery.data) {
-          setEnrichResult({ type: "warning", message: "Tous les champs dérivables et inférables sont déjà remplis" });
+          setEnrichResult({ type: "warning", message: "Tous les champs dérivables, inférables et approfondis sont déjà remplis" });
           return;
         }
       }
@@ -545,8 +551,8 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                 disabled={isRegenerating}
                 title={
                   (assess?.needsHuman?.length ?? 0) > 0
-                    ? `Enrichir remplit les ${assess?.derivable?.length ?? 0} champ(s) dérivable(s). ${assess?.needsHuman?.length} champ(s) nécessitent votre saisie — voir liste ci-dessous.`
-                    : "Enrichir auto-remplit les champs manquants via vault, calculs et IA."
+                    ? `Enrichir remplit les ${(assess?.derivable?.length ?? 0) + (assess?.optionalFillable?.length ?? 0)} champ(s) remplissables (dont ${assess?.optionalFillable?.length ?? 0} en profondeur). ${assess?.needsHuman?.length} champ(s) nécessitent votre saisie — voir liste ci-dessous.`
+                    : `Enrichir auto-remplit les champs manquants${(assess?.optionalFillable?.length ?? 0) > 0 ? ` + ${assess?.optionalFillable?.length} champ(s) à approfondir (personas, matrice)` : ""} via vault, calculs et IA.`
                 }
                 className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                   isAdve ? "bg-accent/20 text-accent hover:bg-accent/30" : "bg-info/20 text-info hover:bg-info/30"
@@ -561,6 +567,14 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                   <>
                     <Sparkles className="h-3.5 w-3.5" />
                     <span>Enrichir</span>
+                    {(assess?.optionalFillable?.length ?? 0) > 0 && (
+                      <span
+                        className="ml-0.5 inline-flex items-center rounded-full bg-accent/25 px-1.5 text-[10px] font-bold leading-4"
+                        title="Champs optionnels à approfondir (personas, matrice) — cliquez Enrichir"
+                      >
+                        +{assess?.optionalFillable?.length}
+                      </span>
+                    )}
                   </>
                 )}
               </button>

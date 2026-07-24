@@ -49,3 +49,13 @@ Le contrat plat **gate** le bouton Enrichir : `pillar-page.tsx` construit sa lis
 - **Canon nettoyé** : audit 4 marques × 8 piliers → **0 mismatch de casse/nom, 0 feuille requise vide**. `onNeditPas` corrigé partout.
 - **Tests** : 12 assertions de réconciliation HARD + score canon ADR-0102 préservé. tsc 0 · lint 0 · cycles 0 · 3367 tests verts. Cap APOGEE 7/7 · 0 modèle Prisma · 0 migration · 0 LLM.
 - **Déféré (RESIDUAL-DEBT)** : un garde Zod-`safeParse` canon↔schema (au-delà de la casse — types, enums) formaliserait la prévention DATA complète.
+
+## Addendum 2026-07-24 (v6.27.325) — couche OPTIONNELLE câblée au bouton Enrichir
+
+Le fix ci-dessus a rendu honnête le REQUIS mais la **profondeur OPTIONNELLE** restait invisible : un pilier « 100 % Complet » (requis fait) avait ses personas squelettiques (`personas[i].lifestyle/.fears/.jobsToBeDone`) + Enrichir « tout rempli », car `assessPillar` n'appelait jamais `findEmptyArrayCellPaths` → le gate du bouton (`assess.derivable`) ne voyait pas ces cellules → l'auto-filler (capable) jamais invoqué.
+
+- **Décision** : nouveau champ `optionalFillable: string[]` sur `PillarAssessment`, peuplé dans `assessPillar` (**pillar-agnostic, identique pour les 8 piliers**) via `findEmptyArrayCellPaths` + feuilles imbriquées optionnelles qualitatives (jamais un nombre). **DÉCOUPLÉ du %** : hors `completionPct`/`missing`/`currentStage`/`satisfied`/readiness (les cellules optionnelles ne gatent pas COMPLET — ADR-0177, pas de pression à fabriquer) + exclusion au grain **topKey** (un tableau/objet déjà signalé par le contrat n'est pas redoublé). Le bouton Enrichir fold `optionalFillable` dans ses `fields` → `inScope` de l'auto-filler les admet → remplis INFERRED. Bannière + tooltip + badge « +N à enrichir » rendent la profondeur visible (« 100 % » ne ment plus par omission).
+- **Score gelé** : `satisfied`/contrat toujours intacts → ADR-0102 non touché (test canon vert).
+- **Tests HARD** (`pillar-completeness-reconciliation.test.ts`) : cellule persona optionnelle vide → dans `optionalFillable`, `%`/stage inchangés, jamais dans `missing` ; découplage topKey-disjoint sur les 8 piliers + zéro faux positif sur base pleine.
+- **Renderer** : `pillar-d-fields` affichait `lifestyle`/`familySituation` filled-but-hidden → ROWS ajoutées. **Déféré (RESIDUAL-DEBT)** : audit renderer per-pilier complet (le fill est uniforme sur les 8 ; V affiche déjà ses cellules).
+- **Déféré (RESIDUAL-DEBT)** : Gap B — le panneau recos de la page pilier `accepte` mais n'`applique` pas (flux à deux temps via le hub), séparé de ce chantier.
