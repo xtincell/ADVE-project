@@ -209,7 +209,7 @@ export const PILLAR_D = {
   tonDeVoix: {
     personnalite: ["Inspirante", "Professionnelle", "Sympathique", "Encourageante, sérieuse, agréable, enthousiaste, positive (ton, Brand Book §08)"],
     onDit: ["Talent", "Créatif / Créateur", "Concept, Idée, Solution", "Imagination, Inspiration, Audace", "Potentiel, Expression, Exploration", "Curiosité, Liberté, Qualité, Expertise, Maîtrise, Plaisir, Partage"],
-    onNeDitPas: ["la négation (tournures positives — règle officielle)", "le jargon inutile (sauf audience experte)", "parler depuis le confort de la marque (toujours depuis le bénéfice du lecteur)", "la voix passive (voix active, toujours, à l'écrit)"],
+    onNeditPas: ["la négation (tournures positives — règle officielle)", "le jargon inutile (sauf audience experte)", "parler depuis le confort de la marque (toujours depuis le bénéfice du lecteur)", "la voix passive (voix active, toujours, à l'écrit)"],
   }, // OFFICIEL — voix/ton/règles de contenu du Brand Book §08-09
   assetsLinguistiques: {
     languePrincipale: "fr",

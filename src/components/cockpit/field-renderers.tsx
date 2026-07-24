@@ -1067,6 +1067,7 @@ export function TonDeVoixCard({ ton }: { ton: Record<string, unknown> }) {
     : Array.isArray(ton.dos) ? ton.dos as string[] : [];
   const onNeditPas = Array.isArray(ton.onNeditPas)
     ? ton.onNeditPas as string[]
+    : Array.isArray(ton.onNeDitPas) ? ton.onNeDitPas as string[] // legacy (casse) toléré
     : Array.isArray(ton.donts) ? ton.donts as string[] : [];
 
   return (

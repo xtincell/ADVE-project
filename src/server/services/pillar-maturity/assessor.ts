@@ -17,6 +17,7 @@ import type {
   StrategyMaturityReport,
 } from "@/lib/types/pillar-maturity";
 import { MATURITY_ORDER } from "@/lib/types/pillar-maturity";
+import { findEmptyLeafPaths } from "@/lib/types/pillar-maturity-contracts";
 import { getContracts } from "./contracts-loader";
 
 // ─── Field Validation ───────────────────────────────────────────────────────
@@ -199,27 +200,63 @@ export function assessPillar(
     }
   }
 
-  const completionPct = completeReqs.length > 0
-    ? Math.round((satisfied.length / completeReqs.length) * 100)
+  // ── Profondeur HONNÊTE (réconciliation UI ↔ détecteur) ────────────────────
+  // Le contrat valide un objet imbriqué avec `is_object` (« présent + ≥1 clé »)
+  // → il est STRUCTURELLEMENT AVEUGLE aux sous-feuilles REQUISES vides
+  // (`tonDeVoix.onNeditPas`, `ikigai.love`, `aarrr.*`…). D'où le symptôme récurrent
+  // « 100 % Complet + tout rempli + champ visiblement vide » (22 feuilles / 6
+  // piliers à l'audit). On réconcilie ICI l'assessment UI (%, stage, missing,
+  // derivable) avec la source canonique de « feuille vide » = `findEmptyLeafPaths`.
+  //
+  // INVARIANT DE DÉCOUPLAGE (ADR-0102) : on NE touche NI `satisfied` NI le contrat
+  // (`completeReqs`). Le score structurel les lit (`advertis-scorer/structural`) et
+  // reste GELÉ — la maturité (chip/% honnête) et le score (palier) sont deux axes
+  // distincts (cf. CLAUDE.md). Anti-fabrication (interdit n°3) : un NOMBRE requis
+  // vide → `needsHuman` (donnée réelle/dérivée, jamais fabriquée par LLM), jamais
+  // `derivable`. `findEmptyLeafPaths` exclut déjà NEEDS_HUMAN + COMPLETE_OPTIONAL.
+  const deepSeen = new Set<string>();
+  for (const leaf of findEmptyLeafPaths(pillarKey, content)) {
+    if (leaf.optional || !leaf.path.includes(".")) continue; // feuille profonde REQUISE seulement
+    if (missing.includes(leaf.topKey)) continue;             // parent déjà signalé manquant
+    if (deepSeen.has(leaf.path)) continue;
+    deepSeen.add(leaf.path);
+    missing.push(leaf.path);
+    if (leaf.scalarKind === "number") needsHuman.push(leaf.path);
+    else derivable.push(leaf.path);
+  }
+  const deepGapCount = deepSeen.size;
+
+  // Total HONNÊTE = atomes du contrat + feuilles profondes requises manquantes.
+  // deepGapCount === 0 → `satisfied / completeReqs` (comportement inchangé) ;
+  // deepGapCount > 0 → dénominateur gonflé → % < 100 (honnête).
+  const honestTotal = completeReqs.length + deepGapCount;
+  const completionPct = honestTotal > 0
+    ? Math.round((satisfied.length / honestTotal) * 100)
     : 100;
+
+  // Un pilier avec une feuille REQUISE vide n'est PAS COMPLETE — le pill
+  // « Complet », `readyForGlory` et le gate DISPLAY_AS_COMPLETE le reflètent.
+  // (On ne rétrograde que COMPLETE→ENRICHED ; les stages inférieurs sont déjà honnêtes.)
+  const effectiveStage: MaturityStage | "EMPTY" =
+    deepGapCount > 0 && currentStage === "COMPLETE" ? "ENRICHED" : currentStage;
 
   // Determine next stage
   let nextStage: MaturityStage | null = null;
-  if (currentStage === "EMPTY") nextStage = "INTAKE";
-  else if (currentStage === "INTAKE") nextStage = "ENRICHED";
-  else if (currentStage === "ENRICHED") nextStage = "COMPLETE";
-  // currentStage === "COMPLETE" → nextStage = null (already at max)
+  if (effectiveStage === "EMPTY") nextStage = "INTAKE";
+  else if (effectiveStage === "INTAKE") nextStage = "ENRICHED";
+  else if (effectiveStage === "ENRICHED") nextStage = "COMPLETE";
+  // effectiveStage === "COMPLETE" → nextStage = null (already at max)
 
   return {
     pillarKey,
-    currentStage,
+    currentStage: effectiveStage,
     nextStage,
     satisfied,
     missing,
     derivable,
     needsHuman,
     completionPct,
-    readyForGlory: currentStage === "COMPLETE",
+    readyForGlory: effectiveStage === "COMPLETE",
   };
 }
 

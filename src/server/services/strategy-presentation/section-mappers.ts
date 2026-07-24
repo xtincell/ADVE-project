@@ -319,7 +319,9 @@ export function mapPlateformeStrategique(strategy: any): PlateformeStrategiqueSe
       ? {
           personnalite: safeArr(tonDeVoix.personnalite) as string[],
           onDit: safeArr(tonDeVoix.onDit) as string[],
-          onNeDitPas: safeArr(tonDeVoix.onNeDitPas) as string[],
+          // Champ canon = `onNeditPas` (schema) ; `onNeDitPas` = forme legacy
+          // tolérée (données DB écrites avant l'alignement de casse).
+          onNeDitPas: safeArr(tonDeVoix.onNeditPas ?? tonDeVoix.onNeDitPas) as string[],
         }
       : null,
     assetsLinguistiques: assets

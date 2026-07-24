@@ -189,7 +189,8 @@ export function composeSocialCopy(ctx: GloryComposerContext): Blob {
   const ton = (pick(d, "tonDeVoix") ?? {}) as Blob;
   const ling = (pick(d, "assetsLinguistiques") ?? {}) as Blob;
   const personnalite = strArr(pick(ton, "personnalite"));
-  const onNeDitPas = strArr(pick(ton, "onNeDitPas"));
+  // Canon = `onNeditPas` (schema) ; `onNeDitPas` toléré (données legacy).
+  const onNeDitPas = strArr(pick(ton, "onNeditPas") ?? pick(ton, "onNeDitPas"));
   const slogan = str(pick(ling, "slogan"));
   const lexique = strArr(pick(ling, "lexique"));
   const promesse = str(pick(d, "promesseMaitre")) ?? str(pick(d, "positionnement"));
@@ -330,7 +331,7 @@ export function composeContentCalendar(ctx: GloryComposerContext): Blob {
     cadenceParCanal,
     themesParPhaseOverton,
     hashtags: { signature, local },
-    doNot: strArr(pick(ton, "onNeDitPas")),
+    doNot: strArr(pick(ton, "onNeditPas") ?? pick(ton, "onNeDitPas")),
     posts,
   };
 }
