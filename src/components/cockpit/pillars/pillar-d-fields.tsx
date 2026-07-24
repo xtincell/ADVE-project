@@ -35,6 +35,7 @@ function Personas({ items, status }: { items: unknown; status?: string }) {
   const empty = isEmpty(items);
   const arr = asArr(items);
   const ROWS: Array<[string, string]> = [
+    ["lifestyle", "Style de vie"], ["familySituation", "Situation familiale"],
     ["whatTheyActuallyBuy", "Ce qu'ils achètent vraiment"], ["hiddenDesire", "Désir caché"],
     ["jobsToBeDone", "Jobs to be done"], ["decisionProcess", "Processus de décision"],
     ["mediaConsumption", "Conso média"], ["brandRelationships", "Relation aux marques"],

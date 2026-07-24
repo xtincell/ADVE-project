@@ -17,7 +17,7 @@ import type {
   StrategyMaturityReport,
 } from "@/lib/types/pillar-maturity";
 import { MATURITY_ORDER } from "@/lib/types/pillar-maturity";
-import { findEmptyLeafPaths } from "@/lib/types/pillar-maturity-contracts";
+import { findEmptyLeafPaths, findEmptyArrayCellPaths, isNonFabricableLeaf } from "@/lib/types/pillar-maturity-contracts";
 import { getContracts } from "./contracts-loader";
 
 // ─── Field Validation ───────────────────────────────────────────────────────
@@ -165,6 +165,7 @@ export function assessPillar(
       missing: ct?.stages.COMPLETE.map(r => r.path) ?? [],
       derivable: ct?.stages.COMPLETE.filter(r => r.derivable).map(r => r.path) ?? [],
       needsHuman: ct?.stages.COMPLETE.filter(r => !r.derivable).map(r => r.path) ?? [],
+      optionalFillable: [],
       completionPct: 0,
       readyForGlory: false,
     };
@@ -217,14 +218,48 @@ export function assessPillar(
   const deepSeen = new Set<string>();
   for (const leaf of findEmptyLeafPaths(pillarKey, content)) {
     if (leaf.optional || !leaf.path.includes(".")) continue; // feuille profonde REQUISE seulement
+    if (leaf.topKey === "computed") continue;                // sous-arbre déterministe (ni opérateur ni LLM)
     if (missing.includes(leaf.topKey)) continue;             // parent déjà signalé manquant
     if (deepSeen.has(leaf.path)) continue;
     deepSeen.add(leaf.path);
     missing.push(leaf.path);
-    if (leaf.scalarKind === "number") needsHuman.push(leaf.path);
+    // Non-fabricable (nombre / booléen / id·ref·url) → needsHuman (donnée réelle ou
+    // dérivée, jamais fabriquée par LLM — interdit n°3) ; qualitatif → derivable.
+    if (isNonFabricableLeaf(leaf)) needsHuman.push(leaf.path);
     else derivable.push(leaf.path);
   }
   const deepGapCount = deepSeen.size;
+
+  // ── Profondeur OPTIONNELLE remplissable (ADR-0177 — « Enrichir remplit tout ») ─
+  // Ce que l'auto-filler PEUT encore combler SANS gater COMPLET : cellules de
+  // matrice d'objets (`personas[i].lifestyle/.fears/.jobsToBeDone`,
+  // `produitsCatalogue[i].*`) + feuilles imbriquées OPTIONNELLES qualitatives.
+  // DÉCOUPLÉ du % : ce bloc s'exécute APRÈS `deepGapCount` et NE mute NI `satisfied`
+  // NI `missing`/`derivable`/`needsHuman` NI `honestTotal`/`completionPct`/
+  // `effectiveStage` (calculés ci-dessous à partir de ces seuls-là). Anti-fabrication :
+  // `findEmptyArrayCellPaths` est déjà qualitatif-only ; on exclut `number` sur les
+  // feuilles. Identique pour LES 8 PILIERS (assessor pillar-agnostic). Sert de signal
+  // au gate du bouton Enrichir — pas à la complétude.
+  const optionalSeen = new Set<string>();
+  // Exclusion au grain TOPKEY : si le contrat signale déjà ce tableau/objet
+  // (`personas` manquant via `array_items_complete`, `ikigai` via `is_object`…),
+  // ses cellules sont couvertes par ce chemin — pas la peine de les redoubler en
+  // optionalFillable. Résultat : `optionalFillable` = profondeur PUREMENT optionnelle
+  // de tableaux/objets par ailleurs satisfaits → découplé du % (les vider ne le baisse pas).
+  const trackedTopKeys = new Set<string>(
+    [...missing, ...derivable, ...needsHuman].map((p) => p.split(/[.[]/)[0]!),
+  );
+  for (const cell of findEmptyArrayCellPaths(pillarKey, content)) {
+    if (trackedTopKeys.has(cell.topKey) || optionalSeen.has(cell.path)) continue;
+    optionalSeen.add(cell.path);
+  }
+  for (const leaf of findEmptyLeafPaths(pillarKey, content)) {
+    if (!leaf.optional || !leaf.path.includes(".")) continue; // OPTIONNELLE imbriquée seulement
+    if (isNonFabricableLeaf(leaf)) continue;                  // nombre/booléen/computed/id·ref·url → jamais LLM
+    if (trackedTopKeys.has(leaf.topKey) || optionalSeen.has(leaf.path)) continue;
+    optionalSeen.add(leaf.path);
+  }
+  const optionalFillable = Array.from(optionalSeen);
 
   // Total HONNÊTE = atomes du contrat + feuilles profondes requises manquantes.
   // deepGapCount === 0 → `satisfied / completeReqs` (comportement inchangé) ;
@@ -255,6 +290,7 @@ export function assessPillar(
     missing,
     derivable,
     needsHuman,
+    optionalFillable,
     completionPct,
     readyForGlory: effectiveStage === "COMPLETE",
   };

@@ -554,6 +554,23 @@ const EVIDENCE_ARRAY_TOPKEYS: Record<string, Set<string>> = {
  *  string/array : un enum « …Ref » (channelRef = choix borné) reste inférable. */
 const REF_KEY_SUFFIX = /(Id|Ids|Ref|Refs|Url|Urls)$/;
 
+/**
+ * Frontière anti-fabrication UNIQUE pour une feuille/cellule (interdit n°3) — true si
+ * elle NE doit JAMAIS être draftée par LLM :
+ *   - nombre / booléen / objet (`!isInferableKind`) : donnée réelle, dérivée ou calculée ;
+ *   - sous-arbre `computed` : déterministe, zéro-LLM (`computePillarS`…) ;
+ *   - clé id/ref/url non-enum (`REF_KEY_SUFFIX`) : uuid/URL/ref inventé = référence morte
+ *     (backbone ADR-0088) ou faux fait. Un enum « …Ref » (choix borné) reste inférable.
+ * Partagée par l'assessor (`optionalFillable`) ET l'auto-filler (`findEmptyLeafPaths`
+ * loop-1) — `findEmptyArrayCellPaths` applique déjà ces mêmes gardes en interne.
+ */
+export function isNonFabricableLeaf(leaf: { path: string; topKey: string; scalarKind: ScalarKind }): boolean {
+  if (!isInferableKind(leaf.scalarKind)) return true;
+  if (leaf.topKey === "computed") return true;
+  const last = leaf.path.split(".").pop() ?? leaf.path;
+  return leaf.scalarKind !== "enum" && REF_KEY_SUFFIX.test(last);
+}
+
 export function findEmptyArrayCellPaths(pillarKey: string, content: Record<string, unknown>): SchemaLeaf[] {
   const needsHuman = NEEDS_HUMAN_BY_PILLAR[pillarKey.toLowerCase()] ?? new Set<string>();
   const completeOptional = COMPLETE_OPTIONAL_BY_PILLAR[pillarKey.toLowerCase()] ?? new Set<string>();

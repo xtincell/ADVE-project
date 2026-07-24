@@ -16,7 +16,7 @@ import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
 
 import { db } from "@/lib/db";
 import { setNestedValue, resolvePillarPath } from "@/lib/pillar-path";
-import { findEmptyLeafPaths, findEmptyArrayCellPaths } from "@/lib/types/pillar-maturity-contracts";
+import { findEmptyLeafPaths, findEmptyArrayCellPaths, isNonFabricableLeaf } from "@/lib/types/pillar-maturity-contracts";
 import type { Prisma } from "@prisma/client";
 import type { MaturityStage, AutoFillResult, FieldRequirement } from "@/lib/types/pillar-maturity";
 import { assessPillar } from "./assessor";
@@ -264,7 +264,10 @@ async function runFillPass(
       // feuilles unit-economics QUALITATIVES (ex. `pointMort` string) restent en
       // ai_generation (deriveByCalculation ne les couvre pas → elles resteraient vides).
       const isCalcLeaf = key === "v" && leaf.path.startsWith("unitEconomics.") && leaf.scalarKind === "number";
-      if (leaf.scalarKind === "number" && !isCalcLeaf) continue;
+      // Non-fabricable (nombre/booléen/computed/id·ref·url) → JAMAIS le LLM (interdit n°3),
+      // SAUF les ratios unit-economics calculables (chemin `calculation` déterministe).
+      // Garde unifiée avec l'assessor (`optionalFillable`) + `findEmptyArrayCellPaths`.
+      if (!isCalcLeaf && isNonFabricableLeaf(leaf)) continue;
       missingReqs.push({
         path: leaf.path,
         validator: leaf.isArray ? "min_items" : "non_empty",

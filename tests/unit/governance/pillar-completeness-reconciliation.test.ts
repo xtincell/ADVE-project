@@ -22,7 +22,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { assessPillar } from "@/server/services/pillar-maturity/assessor";
-import { listSchemaLeafPaths, findEmptyLeafPaths } from "@/lib/types/pillar-maturity-contracts";
+import { listSchemaLeafPaths, findEmptyLeafPaths, isNonFabricableLeaf } from "@/lib/types/pillar-maturity-contracts";
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
 import { setNestedValue, resolvePillarPath } from "@/lib/pillar-path";
 import { LAFUSEE_CANON_PILLARS } from "@/server/services/canon/lafusee-canon";
@@ -171,4 +171,103 @@ describe("réconciliation complétude — aucune feuille requise vide ne peut co
       expect(av.derivable).not.toContain("unitEconomics.caVise");
     }
   });
+
+  // ── Profondeur OPTIONNELLE (ADR-0177) — « Enrichir remplit tout » sans bouger le % ──
+  // Le vrai bug re-remonté (capture SPAWT) : personas squelettiques à « 100 % Complet »
+  // + Enrichir « tout rempli ». Cause : les cellules OPTIONNELLES (personas[i].*, matrice)
+  // n'étaient dans AUCUN champ de l'assessment → le gate Enrichir ne les voyait pas.
+  it("D — une cellule persona OPTIONNELLE vide a du travail (optionalFillable) SANS bouger le %/stage", () => {
+    const base = synth((PILLAR_SCHEMAS as any).D); // personas ×2, toutes cellules pleines
+    for (const cell of ["personas[0].fears", "personas[0].jobsToBeDone", "personas[0].lifestyle"]) {
+      const emptied = structuredClone(base);
+      setNestedValue(emptied, cell, "");
+      const a = assessPillar("d", emptied);
+      expect(a.completionPct, `${cell} vide fait chuter le %`).toBe(100);
+      expect(a.currentStage, `${cell} vide bouge le stage`).toBe(assessPillar("d", base).currentStage);
+      expect(a.missing, `${cell} optionnelle polluerait missing`).not.toContain(cell);
+      expect(a.derivable, `${cell} optionnelle polluerait derivable`).not.toContain(cell);
+      expect(a.optionalFillable, `${cell} invisible à Enrichir`).toContain(cell);
+    }
+  });
+
+  // ── Anti-fabrication de optionalFillable (findings adversariaux 2026-07-24) ──
+  // Le bug : la boucle feuille-OPTIONNELLE ne gardait que `number` → les id/ref/url
+  // (gloryOutputId, sourceRef, publicProofUrl) + le sous-arbre `computed` + les
+  // booléens fuyaient dans optionalFillable → LLM fabriquait des FK/URLs (interdit n°3).
+  it("isNonFabricableLeaf : nombre/booléen/computed/id·ref·url exclus, texte/enum inférables", () => {
+    const L = (path: string, topKey: string, scalarKind: any) => ({ path, topKey, scalarKind });
+    expect(isNonFabricableLeaf(L("x.age", "x", "number"))).toBe(true);
+    expect(isNonFabricableLeaf(L("x.flag", "x", "boolean"))).toBe(true);
+    expect(isNonFabricableLeaf(L("computed.overtonPosition.current", "computed", "string"))).toBe(true);
+    expect(isNonFabricableLeaf(L("indexReputation.publicProofUrl", "indexReputation", "string"))).toBe(true);
+    expect(isNonFabricableLeaf(L("directionArtistique.moodboard.gloryOutputId", "directionArtistique", "string"))).toBe(true);
+    expect(isNonFabricableLeaf(L("tamSamSom.tam.sourceRef", "tamSamSom", "array"))).toBe(true);
+    expect(isNonFabricableLeaf(L("personas.lifestyle", "personas", "string"))).toBe(false); // qualitatif
+    expect(isNonFabricableLeaf(L("touchpoints.channelRef", "touchpoints", "enum"))).toBe(false); // enum borné → inférable
+  });
+
+  it("optionalFillable NE fuit PLUS id/url/ref ni le sous-arbre computed (feuilles OPTIONNELLES)", () => {
+    const REF = /(Id|Ids|Ref|Refs|Url|Urls)$/;
+    for (const p of PILLARS) {
+      const schema = (PILLAR_SCHEMAS as any)[p.toUpperCase()];
+      const c = synth(schema);
+      // Vide TOUTE feuille optionnelle imbriquée à suffixe ref/url/id, + tout `computed`.
+      for (const leaf of listSchemaLeafPaths(p)) {
+        if (!leaf.optional || !leaf.path.includes(".")) continue;
+        const last = leaf.path.split(".").pop()!;
+        if (REF.test(last) || leaf.topKey === "computed") setNestedValue(c, leaf.path, leaf.isArray ? [] : "" as any);
+      }
+      const of = assessPillar(p, c).optionalFillable;
+      expect(of.some((x) => x.split(/[.[]/)[0] === "computed"), `${p} : computed fuit dans optionalFillable`).toBe(false);
+      // Aucun suffixe ref/url/id — sauf enum (choix borné) : les feuilles vidées ci-dessus
+      // sont des string/array (REF.test sur non-enum), donc leur exclusion est prouvée.
+      for (const path of of) {
+        const last = path.split(/[.[\]]/).filter(Boolean).pop()!;
+        // On tolère un enum « …Ref » ; les leaks trouvés (gloryOutputId/sourceRef/publicProofUrl) sont string/array.
+        if (["gloryOutputId", "sourceRef", "publicProofUrl", "personaRef"].includes(last)) {
+          throw new Error(`${p} : ${path} (ref/url/id string) fuit dans optionalFillable`);
+        }
+      }
+    }
+  });
+
+  it("découplage optionalFillable ↔ complétude (les 8 piliers) : disjoint + pas de faux positif", () => {
+    for (const p of PILLARS) {
+      const schema = (PILLAR_SCHEMAS as any)[p.toUpperCase()];
+      const base = synth(schema);
+      // (i) Sur une base PLEINE, rien à approfondir (pas de faux positif).
+      expect(assessPillar(p, base).optionalFillable, `${p} : faux positif optionalFillable sur base pleine`).toEqual([]);
+      // (ii) Vide toutes les cellules de tableau → optionalFillable ne partage AUCUN
+      //      topKey avec le contrat (missing/derivable/needsHuman) : découplage strict
+      //      (un tableau déjà signalé par le contrat n'est jamais redoublé en optionnel).
+      const emptied = structuredClone(base);
+      for (const cell of allArrayCellPaths(p, base)) setNestedValue(emptied, cell, "");
+      const a = assessPillar(p, emptied);
+      const trackedTopKeys = new Set([...a.missing, ...a.derivable, ...a.needsHuman].map((x) => x.split(/[.[]/)[0]!));
+      for (const path of a.optionalFillable) {
+        expect(path.includes("."), `${p}.${path} : optionalFillable doit être un chemin profond`).toBe(true);
+        const topKey = path.split(/[.[]/)[0]!;
+        expect(trackedTopKeys.has(topKey), `${p}.${path} : topKey ${topKey} déjà tracé par le contrat`).toBe(false);
+      }
+    }
+  });
 });
+
+/** Tous les chemins de cellule (string/array) des tableaux d'objets d'un contenu. */
+function allArrayCellPaths(pillarKey: string, content: Record<string, unknown>): string[] {
+  const out: string[] = [];
+  for (const leaf of listSchemaLeafPaths(pillarKey)) {
+    if (!leaf.isArray) continue;
+    const arr = resolvePillarPath(content, leaf.path);
+    if (!Array.isArray(arr)) continue;
+    for (let i = 0; i < arr.length; i++) {
+      const item = arr[i];
+      if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+      for (const k of Object.keys(item as Record<string, unknown>)) {
+        const v = (item as Record<string, unknown>)[k];
+        if (typeof v === "string" || Array.isArray(v)) out.push(`${leaf.path}[${i}].${k}`);
+      }
+    }
+  }
+  return out;
+}
