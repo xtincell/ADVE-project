@@ -382,6 +382,28 @@ export function buildExampleForPath(pillarKey: string, path: string): unknown {
 
 // ─── Inventaire canonique des feuilles de schema (chemins de REMPLISSAGE) ─────
 
+/** Nature scalaire d'une feuille — dicte si elle est inférable par LLM (texte/enum/
+ *  liste = QUALITATIF, inférable) ou NON (nombre = donnée réelle/dérivée/score,
+ *  jamais fabriqué ; objet = non-feuille terminale). */
+export type ScalarKind = "string" | "number" | "enum" | "boolean" | "array" | "object";
+
+/** true = feuille QUALITATIVE inférable par LLM (draft INFERRED). false = nombre
+ *  (prix/score/dérivé — jamais fabriqué), booléen ou objet. Source unique de la
+ *  frontière anti-fabrication (interdit n°3) au grain de la feuille. */
+export function isInferableKind(kind: ScalarKind): boolean {
+  return kind === "string" || kind === "enum" || kind === "array";
+}
+
+/** Mappe un nom de constructeur Zod (déjà unwrappé) → ScalarKind. */
+export function scalarKindOf(ctorName?: string): ScalarKind {
+  if (ctorName === "ZodString") return "string";
+  if (ctorName === "ZodNumber" || ctorName === "ZodBigInt") return "number";
+  if (ctorName === "ZodEnum" || ctorName === "ZodLiteral" || ctorName === "ZodNativeEnum") return "enum";
+  if (ctorName === "ZodBoolean") return "boolean";
+  if (ctorName === "ZodArray") return "array";
+  return "object"; // ZodObject / ZodRecord / ZodMap / inconnu
+}
+
 export interface SchemaLeaf {
   /** Chemin dot vers la feuille (`prophecy.pioneers`) ; top-level = clé seule. */
   path: string;
@@ -391,6 +413,8 @@ export interface SchemaLeaf {
   isArray: boolean;
   /** true si la feuille (ou un ancêtre) est optionnelle dans le schema. */
   optional: boolean;
+  /** Nature scalaire — pour la frontière anti-fabrication (nombre jamais fabriqué). */
+  scalarKind: ScalarKind;
 }
 
 /**
@@ -428,7 +452,7 @@ export function listSchemaLeafPaths(pillarKey: string, maxDepth = 4): SchemaLeaf
         return;
       }
     }
-    out.push({ path, topKey, isArray: ctor === "ZodArray", optional: opt });
+    out.push({ path, topKey, isArray: ctor === "ZodArray", optional: opt, scalarKind: scalarKindOf(ctor) });
   };
 
   for (const [k, v] of Object.entries(rootShape)) walk(v, k, k, 1, false);
@@ -485,6 +509,93 @@ export function findEmptyLeafPaths(pillarKey: string, content: Record<string, un
     if (completeOptional.has(leaf.topKey)) continue;
     if (leaf.path.includes(".") && ancestorNotDescendable(leaf.path)) continue;
     if (isEmpty(resolvePillarPath(content, leaf.path))) out.push(leaf);
+  }
+  return out;
+}
+
+/**
+ * Cellules de tableau VIDES et QUALITATIVES à draft. `findEmptyLeafPaths` s'ARRÊTE
+ * aux tableaux ; les CELLULES d'un tableau d'objets (matrice produit
+ * `produitsCatalogue[i].gainMarqueConcret`, sous-champs de persona
+ * `personas[i].lifestyle`) tombaient donc entre TOUS les chemins de remplissage →
+ * « — » partout, à 100 % Complet. Cette fonction les rend remplissables,
+ * DÉCOUPLÉ du contrat de maturité (les cellules optionnelles ne gatent pas COMPLET
+ * — le % reste honnête ; seule la profondeur se remplit).
+ *
+ * Anti-fabrication (interdit n°3), stricte :
+ *   - items EXISTANTS uniquement (jamais fabriquer un nouvel item de la liste) ;
+ *   - cellules RÉELLEMENT vides uniquement (jamais écraser le réel) ;
+ *   - cellules QUALITATIVES uniquement (`isInferableKind` : texte/enum/liste) —
+ *     JAMAIS un NOMBRE (prix, `scoreEmotionnelADVE`, ratio dérivé = donnée réelle ou
+ *     calculée, que l'opérateur/le calcul renseigne), ni un objet imbriqué ;
+ *   - exclut les clés top-level NEEDS_HUMAN / COMPLETE_OPTIONAL (mêmes exclusions
+ *     que le contrat).
+ * Ne descend que d'UN niveau dans l'item (clés directes). Un sous-objet imbriqué
+ * d'item reste au grain objet (laissé à l'opérateur — deep-item tracé RESIDUAL-DEBT).
+ */
+/** Clés d'item purement TECHNIQUES (identifiants / FK) — jamais fabriquées par le LLM :
+ *  un id inventé casserait la cohérence des références (`targetsPersonaIds` → persona.id). */
+const TECHNICAL_ITEM_KEYS = new Set(["id", "skuRef", "ref", "slug"]);
+
+/** Tableaux dont chaque item est une DONNÉE RÉELLE vérifiable (preuve/évidence/métrique)
+ *  — jamais fabriqués par LLM (interdit n°3 : une preuve inventée est un faux fait, plus
+ *  dangereux qu'une opinion stratégique ; cf. précédent `traction`). L'opérateur saisit
+ *  les vraies preuves. `equipeDirigeante` reste inférable (casting fictif, doctrine
+ *  opérateur) — seule sa `linkedinUrl` est exclue (URL réelle, par le garde de suffixe). */
+const EVIDENCE_ARRAY_TOPKEYS: Record<string, Set<string>> = {
+  a: new Set(["preuvesAuthenticite"]),
+  d: new Set(["proofPoints"]),
+  v: new Set(["roiProofs"]),
+};
+
+/** Suffixes de clé d'item signalant un IDENTIFIANT / RÉFÉRENCE / URL (donnée technique
+ *  ou réelle) typé texte|liste — un uuid/URL/ref inventé ne référence RIEN (corromprait
+ *  le backbone relationnel ADR-0088) ou invente une URL réelle. Appliqué UNIQUEMENT aux
+ *  string/array : un enum « …Ref » (channelRef = choix borné) reste inférable. */
+const REF_KEY_SUFFIX = /(Id|Ids|Ref|Refs|Url|Urls)$/;
+
+export function findEmptyArrayCellPaths(pillarKey: string, content: Record<string, unknown>): SchemaLeaf[] {
+  const needsHuman = NEEDS_HUMAN_BY_PILLAR[pillarKey.toLowerCase()] ?? new Set<string>();
+  const completeOptional = COMPLETE_OPTIONAL_BY_PILLAR[pillarKey.toLowerCase()] ?? new Set<string>();
+  const evidenceArrays = EVIDENCE_ARRAY_TOPKEYS[pillarKey.toLowerCase()] ?? new Set<string>();
+  const isEmpty = (v: unknown): boolean =>
+    v === null || v === undefined ||
+    (typeof v === "string" && v.trim() === "") ||
+    (Array.isArray(v) && v.length === 0) ||
+    (typeof v === "object" && !Array.isArray(v) && v !== null && Object.keys(v).length === 0);
+
+  const out: SchemaLeaf[] = [];
+  for (const arrLeaf of listSchemaLeafPaths(pillarKey)) {
+    if (!arrLeaf.isArray) continue;
+    if (needsHuman.has(arrLeaf.topKey) || completeOptional.has(arrLeaf.topKey)) continue;
+    if (arrLeaf.topKey === "computed") continue;      // sous-arbre pur-calculé (computePillarS, zéro LLM)
+    if (evidenceArrays.has(arrLeaf.topKey)) continue; // preuve/évidence/métrique = donnée réelle
+    const arrInner = unwrapZod(getFieldZod(pillarKey, arrLeaf.path)) as { constructor?: { name?: string }; _def?: Record<string, unknown> };
+    if (arrInner?.constructor?.name !== "ZodArray") continue;
+    const def = arrInner._def ?? {};
+    const element = unwrapZod(def.element ?? def.type ?? def.innerType) as { constructor?: { name?: string }; shape?: Record<string, unknown> };
+    if (element?.constructor?.name !== "ZodObject") continue; // tableau de scalaires → pas de cellule-objet
+    const shape = (element.shape ?? {}) as Record<string, unknown>;
+
+    const items = resolvePillarPath(content, arrLeaf.path);
+    if (!Array.isArray(items) || items.length === 0) continue;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (typeof item !== "object" || item === null || Array.isArray(item)) continue; // item non-objet → pas de cellule
+      const rec = item as Record<string, unknown>;
+      for (const [k, kSchema] of Object.entries(shape)) {
+        if (TECHNICAL_ITEM_KEYS.has(k)) continue; // id/skuRef/… → jamais fabriqués (cohérence FK)
+        const rawCtor = (kSchema as { constructor?: { name?: string } })?.constructor?.name ?? "";
+        const optional = rawCtor === "ZodOptional" || rawCtor === "ZodDefault" || rawCtor === "ZodNullable";
+        const kind = scalarKindOf((unwrapZod(kSchema) as { constructor?: { name?: string } })?.constructor?.name);
+        if (!isInferableKind(kind)) continue; // nombre / booléen / objet imbriqué → jamais fabriqué au grain cellule
+        // FK/id/URL/ref typés texte|liste (`riskId`, `targetsPersonaIds`, `linkedinUrl`…) →
+        // jamais fabriqués (uuid inventé = référence morte, backbone ADR-0088 ; URL réelle).
+        // Un enum « …Ref » (choix borné) reste inférable → on ne l'exclut PAS.
+        if (kind !== "enum" && REF_KEY_SUFFIX.test(k)) continue;
+        if (isEmpty(rec[k])) out.push({ path: `${arrLeaf.path}[${i}].${k}`, topKey: arrLeaf.topKey, isArray: kind === "array", optional, scalarKind: kind });
+      }
+    }
   }
   return out;
 }

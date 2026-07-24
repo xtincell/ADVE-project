@@ -10,7 +10,7 @@ import { callLLM } from "@/server/services/llm-gateway";
 import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import { extractJSON as _extractJSON } from "@/server/services/utils/llm";
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
-import { findEmptyLeafPaths, buildExampleFromZod, getFieldZod } from "@/lib/types/pillar-maturity-contracts";
+import { findEmptyLeafPaths, findEmptyArrayCellPaths, buildExampleFromZod, getFieldZod } from "@/lib/types/pillar-maturity-contracts";
 import type { PillarKey } from "@/lib/types/advertis-vector";
 import { getFormatInstructions } from "@/lib/types/variable-bible";
 import { Prisma } from "@prisma/client";
@@ -213,7 +213,23 @@ async function generateRecosForPillar(
   const allSchemaKeys = Object.keys(
     (PILLAR_SCHEMAS[targetKey.toUpperCase() as keyof typeof PILLAR_SCHEMAS] as { shape?: Record<string, unknown> })?.shape ?? {},
   );
-  const emptyLeaves = findEmptyLeafPaths(targetKey, currentContent);
+  // Feuilles d'objets vides — on EXCLUT les nombres : un nombre (prix, score, ratio
+  // dérivé) est une donnée réelle ou calculée, jamais fabriquée par LLM (interdit n°3 ;
+  // les ratios calculables sont remplis par l'auto-filler en `calculation`).
+  const emptyLeaves = findEmptyLeafPaths(targetKey, currentContent).filter((l) => l.scalarKind !== "number");
+  // CELLULES de tableau d'objets vides (matrice produit / sous-champs persona) —
+  // qualitatives uniquement (findEmptyArrayCellPaths exclut nombres/id/objets). Sans
+  // ça, `produitsCatalogue[i].gainMarqueConcret` restait « — » à 100 % Complet.
+  const emptyCells = findEmptyArrayCellPaths(targetKey, currentContent);
+  const cellsByItem = new Map<string, string[]>();
+  for (const c of emptyCells) {
+    const cut = c.path.lastIndexOf("].");
+    if (cut < 0) continue;
+    const item = c.path.slice(0, cut + 1); // "produitsCatalogue[0]"
+    const leaf = c.path.slice(cut + 2); // "gainMarqueConcret"
+    if (!cellsByItem.has(item)) cellsByItem.set(item, []);
+    cellsByItem.get(item)!.push(leaf);
+  }
   const filledFields = allSchemaKeys.filter((k) => {
     const v = currentContent[k];
     return !(v === null || v === undefined || v === "" || (Array.isArray(v) && v.length === 0));
@@ -243,15 +259,20 @@ async function generateRecosForPillar(
   // ── Inject Bible format rules for all fields ──
   const bibleInstructions = getFormatInstructions(targetKey, allSchemaKeys);
 
-  const emptyFieldsSection = emptyLeaves.length > 0
-    ? `\n⚠️ CHAMPS VIDES A REMPLIR EN PRIORITE (${emptyLeaves.length} feuille(s)):\n` +
+  const totalEmpty = emptyLeaves.length + emptyCells.length;
+  const cellsSection = cellsByItem.size > 0
+    ? `\nCellules de tableau vides (operation SET par cellule — chemin COMPLET avec index, ex. produitsCatalogue[0].gainMarqueConcret ; NE remplis QUE les items listes, n'en cree AUCUN) :\n${[...cellsByItem.entries()].map(([item, leaves]) => `  - ${item} : ${leaves.join(", ")}`).join("\n")}\n`
+    : "";
+  const emptyFieldsSection = totalEmpty > 0
+    ? `\n⚠️ CHAMPS VIDES A REMPLIR EN PRIORITE (${totalEmpty} feuille(s)/cellule(s)):\n` +
       (topLevelEmpty.length > 0
         ? `\nChamps de premier niveau (operation SET, une reco par champ) :\n${topLevelEmpty.map((f) => `  - ${f}`).join("\n")}\n`
         : "") +
       (nestedByParent.size > 0
         ? `\nSous-champs imbriques vides (operation EXTEND sur l'objet parent — preserve les sous-champs deja remplis, une reco EXTEND par parent) :\n${[...nestedByParent.entries()].map(([p, leaves]) => `  - ${p} : ${leaves.join(", ")}`).join("\n")}\n`
         : "") +
-      `\nToutes ces feuilles DOIVENT etre remplies. C'est la PRIORITE #1 — ne laisse AUCUNE feuille vide listee ci-dessus.`
+      cellsSection +
+      `\nToutes ces feuilles/cellules DOIVENT etre remplies. C'est la PRIORITE #1 — ne laisse AUCUNE entree vide listee ci-dessus.`
     : "\nTous les champs sont remplis en profondeur. Concentre-toi sur l'enrichissement et la correction.";
 
   const prompt = `SHAPE EXACTE du pilier ${targetKey.toUpperCase()} (arborescence complète, sous-clés + valeurs d'enum RÉELLES — respecte EXACTEMENT cette structure, n'invente aucune clé):
