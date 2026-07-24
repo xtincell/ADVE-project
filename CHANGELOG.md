@@ -1,5 +1,14 @@
 # Changelog — La Fusee
 
+## v6.27.322 — fix(notoria): les CELLULES de tableau vides se remplissent enfin (matrice produit, sous-champs persona) — qualitatif only ([ADR-0177](docs/governance/adr/0177-schema-leaf-inventory-and-notoria-depth.md)) (2026-07-24)
+
+**Constat opérateur (SPAWT) : matrice produit et personas montrent « — » partout à 100 % Complet, Enrichir dit « tout est rempli ». Cause SYSTÉMIQUE (pas isolée) : le socle « voit les vides » s'ARRÊTE aux tableaux → les cellules OPTIONNELLES d'items existants tombaient hors d'Enrichir ET de la notoria, dans TOUS les tableaux de TOUS les piliers.**
+
+- **Le trou** : `findEmptyLeafPaths` s'arrête aux tableaux ; la Phase-3 ne remplit que les cellules REQUISES via `array_items_complete`. Donc `produitsCatalogue[i].gainMarqueConcret`, `coutClientConcret`, `personas[i].lifestyle`/`fears`/`jobsToBeDone`… (toutes `.optional()`) n'étaient jamais ciblées. Le contrat de maturité ne les compte pas (COMPLET reste honnête) → Enrichir répondait « tout est rempli » de bonne foi.
+- **Le socle** : NOUVEAU `findEmptyArrayCellPaths(pillarKey, content)` (pur) — rend remplissables les cellules VIDES d'items EXISTANTS, câblé dans l'auto-filler (« Enrichir ») ET la notoria (SET `arr[i].leaf`, appliqué via le gateway déjà array-index-aware).
+- **Garde anti-fabrication STRICTE** (interdit n°3), via `scalarKind` : on ne remplit QUE le QUALITATIF (texte/enum/liste, `isInferableKind`). **JAMAIS un nombre** (prix, `scoreEmotionnelADVE`, ratio dérivé = donnée réelle ou calculée) — extension : la notoria + l'auto-filler ne demandent plus au LLM d'inférer un nombre nulle part (feuilles d'objets incluses ; les ratios calculables restent en `calculation`). **Jamais un id/skuRef** (cohérence FK). **Jamais un nouvel item** (items existants uniquement).
+- 4 tests (cellules qualitatives détectées / nombre exclu / id exclu / items existants only / persona). tsc 0 · lint 0 · cycles 0 · **3349 tests verts**. Cap APOGEE 7/7 · 0 modèle Prisma · 0 migration.
+
 ## v6.27.321 — fix(notoria): durcissement audit adversarial — 7 défauts trouvés + réparés (dont 1 fabrication, 1 destruction silencieuse) ([ADR-0177](docs/governance/adr/0177-schema-leaf-inventory-and-notoria-depth.md)) (2026-07-23)
 
 **Une passe adversariale (5 reviewers, un par surface, chacun avec repro `tsx`) sur le chantier profondeur a trouvé 7 vrais défauts — dont une FABRICATION (interdit n°3) et une DESTRUCTION silencieuse de donnée opérateur. Tous réparés, avec tests de non-régression.**

@@ -5,7 +5,7 @@
  * premier niveau → « la notoria ignore les champs vides ». Pur, sans DB.
  */
 import { describe, it, expect } from "vitest";
-import { listSchemaLeafPaths, findEmptyLeafPaths, buildExampleFromZod, getFieldZod } from "@/lib/types/pillar-maturity-contracts";
+import { listSchemaLeafPaths, findEmptyLeafPaths, findEmptyArrayCellPaths, buildExampleFromZod, getFieldZod } from "@/lib/types/pillar-maturity-contracts";
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
 
 describe("listSchemaLeafPaths — descend les objets, s'arrête aux tableaux", () => {
@@ -86,6 +86,44 @@ describe("findEmptyLeafPaths — vides réels, anti-fabrication", () => {
     // …mais findEmptyLeafPaths ne le propose JAMAIS (pas de fabrication d'un « Système
     // Palais » qu'un produit n'a pas — même exclusion que le contrat COMPLETE).
     expect(findEmptyLeafPaths("v", {}).some((l) => l.topKey === "productSystem")).toBe(false);
+  });
+});
+
+describe("findEmptyArrayCellPaths — cellules de tableau vides, QUALITATIF only (anti-fabrication)", () => {
+  it("pilier V : cellules vides de la matrice produit détectées, remplies exclues, NOMBRE exclu", () => {
+    const v = { produitsCatalogue: [{ nom: "Spawter Gold", categorie: "SERVICE_PREMIUM", gainClientConcret: "x", gainClientAbstrait: "y", coutMarqueConcret: 500 }] };
+    const cells = findEmptyArrayCellPaths("v", v).map((c) => c.path);
+    // Cellules qualitatives vides → cibles.
+    expect(cells).toContain("produitsCatalogue[0].gainMarqueConcret");
+    expect(cells).toContain("produitsCatalogue[0].coutClientConcret");
+    // Cellule remplie → PAS une cible.
+    expect(cells).not.toContain("produitsCatalogue[0].gainClientConcret");
+    // Nombre (coutMarqueConcret = currency) → JAMAIS fabriqué.
+    expect(cells.some((p) => p.includes("coutMarqueConcret"))).toBe(false);
+    // Clé technique (id/skuRef) → jamais fabriquée.
+    expect(cells.some((p) => p.endsWith(".id") || p.endsWith(".skuRef"))).toBe(false);
+  });
+
+  it("pilier D : sous-champs de persona qualitatifs détectés, `.age` (nombre) exclu, items EXISTANTS only", () => {
+    const d = { personas: [{ name: "Betsy", motivations: ["badge doré"] }, { name: "Awa", motivations: ["gratis"] }] };
+    const cells = findEmptyArrayCellPaths("d", d).map((c) => c.path);
+    expect(cells).toContain("personas[0].lifestyle");
+    expect(cells).toContain("personas[0].jobsToBeDone"); // array-of-strings qualitatif
+    expect(cells.some((p) => p.includes(".age"))).toBe(false); // nombre
+    expect(cells.some((p) => p.startsWith("personas[2]"))).toBe(false); // seulement 2 items existants
+    expect(cells.some((p) => p === "personas[0].motivations")).toBe(false); // déjà rempli
+  });
+
+  it("tableau absent / vide → aucune cellule (jamais fabriquer un item)", () => {
+    expect(findEmptyArrayCellPaths("v", {})).toEqual([]);
+    expect(findEmptyArrayCellPaths("v", { produitsCatalogue: [] })).toEqual([]);
+  });
+
+  it("scalarKind présent sur chaque feuille de l'inventaire", () => {
+    const leaves = listSchemaLeafPaths("v");
+    expect(leaves.every((l) => typeof l.scalarKind === "string")).toBe(true);
+    const cat = leaves.find((l) => l.path === "produitsCatalogue");
+    expect(cat!.scalarKind).toBe("array");
   });
 });
 

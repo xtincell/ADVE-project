@@ -16,7 +16,7 @@ import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
 
 import { db } from "@/lib/db";
 import { setNestedValue, resolvePillarPath } from "@/lib/pillar-path";
-import { findEmptyLeafPaths } from "@/lib/types/pillar-maturity-contracts";
+import { findEmptyLeafPaths, findEmptyArrayCellPaths } from "@/lib/types/pillar-maturity-contracts";
 import type { Prisma } from "@prisma/client";
 import type { MaturityStage, AutoFillResult, FieldRequirement } from "@/lib/types/pillar-maturity";
 import { assessPillar } from "./assessor";
@@ -245,20 +245,24 @@ async function runFillPass(
   {
     const already = new Set(missingReqs.map((r) => r.path));
     const contractTopKeys = new Set(missingReqs.map((r) => r.path.split(/[.[]/)[0]!));
-    const inScope = (p: string) =>
+    const inScope = (topKey: string, path: string) =>
       !fieldsToFill || fieldsToFill.length === 0 ||
-      fieldsToFill.includes(p) || fieldsToFill.includes(p.split(".")[0]!);
+      fieldsToFill.includes(path) || fieldsToFill.includes(topKey);
+
+    // (1) Feuilles PROFONDES d'objets imbriqués (prophecy.pioneers, ikigai.love) —
+    // découplées du contrat (le % de COMPLET ne bouge pas). On n'ajoute une feuille
+    // QUE si son objet parent n'est pas déjà régénéré en entier par le contrat.
     for (const leaf of findEmptyLeafPaths(key, content)) {
       if (!leaf.path.includes(".")) continue; // top-level : déjà couvert par le contrat
       if (already.has(leaf.path)) continue;
       if (contractTopKeys.has(leaf.topKey)) continue; // objet parent régénéré en entier
-      if (!inScope(leaf.path)) continue;
+      if (!inScope(leaf.topKey, leaf.path)) continue;
       // Feuilles financières CALCULABLES (ratios unit-economics : ltvCacRatio=ltv/cac,
       // roiEstime, payback…) → chemin `calculation` (déterministe, cohérent avec cac/ltv
-      // stockés), JAMAIS le LLM qui devinerait des valeurs incohérentes avec le reste.
-      // Si `deriveByCalculation` ne couvre pas une sous-feuille, elle reste vide (honnête,
-      // zéro fabrication). Audit adversarial 2026-07-23.
+      // stockés), JAMAIS le LLM. Tout AUTRE nombre (score, montant réel) → SKIP : un
+      // nombre n'est jamais inféré par LLM (donnée réelle / dérivée — interdit n°3).
       const isCalcLeaf = key === "v" && leaf.path.startsWith("unitEconomics.");
+      if (leaf.scalarKind === "number" && !isCalcLeaf) continue;
       missingReqs.push({
         path: leaf.path,
         validator: leaf.isArray ? "min_items" : "non_empty",
@@ -267,6 +271,29 @@ async function runFillPass(
         derivationSource: isCalcLeaf ? "calculation" : "ai_generation",
         description: `Feuille profonde ${key.toUpperCase()}.${leaf.path}`,
       });
+      already.add(leaf.path);
+    }
+
+    // (2) CELLULES de tableau d'objets (matrice produit `produitsCatalogue[i].gainMarqueConcret`,
+    // sous-champs persona `personas[i].lifestyle`) — tombaient entre TOUTES les mailles
+    // (findEmptyLeafPaths s'arrête aux tableaux) → « — » partout à 100 % Complet.
+    // `findEmptyArrayCellPaths` ne rend QUE les cellules QUALITATIVES vides d'items
+    // EXISTANTS (jamais un nombre, jamais un id, jamais un nouvel item). Toutes en
+    // ai_generation (INFERRED). Pas de garde contractTopKeys : le contrat ne régénère
+    // pas le tableau entier (Phase 3 remplit les cellules REQUISES par cellule), donc
+    // aucun conflit d'ordre d'écriture avec les cellules OPTIONNELLES d'ici.
+    for (const cell of findEmptyArrayCellPaths(key, content)) {
+      if (already.has(cell.path)) continue;
+      if (!inScope(cell.topKey, cell.path)) continue;
+      missingReqs.push({
+        path: cell.path,
+        validator: cell.isArray ? "min_items" : "non_empty",
+        ...(cell.isArray ? { validatorArg: 1 } : {}),
+        derivable: true,
+        derivationSource: "ai_generation",
+        description: `Cellule ${key.toUpperCase()}.${cell.path}`,
+      });
+      already.add(cell.path);
     }
   }
 
