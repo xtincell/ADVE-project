@@ -10,7 +10,7 @@ import { callLLM } from "@/server/services/llm-gateway";
 import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import { extractJSON as _extractJSON } from "@/server/services/utils/llm";
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
-import { findEmptyLeafPaths, findEmptyArrayCellPaths, buildExampleFromZod, getFieldZod } from "@/lib/types/pillar-maturity-contracts";
+import { findEmptyLeafPaths, findEmptyArrayCellPaths, buildExampleFromZod, getFieldZod, buildFieldAnchor } from "@/lib/types/pillar-maturity-contracts";
 import type { PillarKey } from "@/lib/types/advertis-vector";
 import { getFormatInstructions } from "@/lib/types/variable-bible";
 import { Prisma } from "@prisma/client";
@@ -261,7 +261,12 @@ async function generateRecosForPillar(
 
   const totalEmpty = emptyLeaves.length + emptyCells.length;
   const cellsSection = cellsByItem.size > 0
-    ? `\nCellules de tableau vides (operation SET par cellule — chemin COMPLET avec index, ex. produitsCatalogue[0].gainMarqueConcret ; NE remplis QUE les items listes, n'en cree AUCUN) :\n${[...cellsByItem.entries()].map(([item, leaves]) => `  - ${item} : ${leaves.join(", ")}`).join("\n")}\n`
+    ? `\nCellules de tableau vides (operation SET par cellule — chemin COMPLET avec index, ex. produitsCatalogue[0].gainMarqueConcret ; NE remplis QUE les items listes, n'en cree AUCUN ; chaque cellule DOIT rester STRICTEMENT cohérente avec l'ANCRE d'identité de son item — n'introduis AUCUNE autre identité/nom) :\n${[...cellsByItem.entries()].map(([item, leaves]) => {
+        // ANCRE d'identité inline (anti-contamination inter-items) : l'item est rappelé
+        // au grain de l'instruction, sans dépendre du LLM pour re-croiser le JSON complet.
+        const anchor = buildFieldAnchor(currentContent, `${item}.${leaves[0] ?? ""}`);
+        return `  - ${item} : ${leaves.join(", ")}${anchor ? `\n      ANCRE ${item} = ${anchor}` : ""}`;
+      }).join("\n")}\n`
     : "";
   const emptyFieldsSection = totalEmpty > 0
     ? `\n⚠️ CHAMPS VIDES A REMPLIR EN PRIORITE (${totalEmpty} feuille(s)/cellule(s)):\n` +

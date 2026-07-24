@@ -18,6 +18,7 @@ import { ADVE_KEYS } from "@/domain";
 import { callLLM } from "@/server/services/llm-gateway";
 import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import { db } from "@/lib/db";
+import { setNestedValue } from "@/lib/pillar-path";
 import { PILLAR_SCHEMAS, type PillarKey } from "@/lib/types/pillar-schemas";
 import { scoreObject } from "@/server/services/advertis-scorer";
 import type { AdvertisVector } from "@/lib/types/advertis-vector";
@@ -534,16 +535,12 @@ Retourne le pilier ${pillarKey} complet en JSON.`;
 
             for (const [path, value] of Object.entries(filled)) {
               if (value === undefined || value === null || value === "") continue;
-              const parts = path.split(".");
-              let cur: Record<string, unknown> = newContent;
-              for (let i = 0; i < parts.length - 1; i++) {
-                const part = parts[i]!;
-                if (cur[part] === undefined || cur[part] === null || typeof cur[part] !== "object") {
-                  cur[part] = {};
-                }
-                cur = cur[part] as Record<string, unknown>;
-              }
-              cur[parts[parts.length - 1]!] = value;
+              // Écriture profonde via LE mécanicien de chemin unifié (array-index +
+              // proto-guardé). L'ancien walk `split(".")` object-only aurait créé une
+              // clé littérale « foo[0] » au lieu d'indexer le tableau — exactement la
+              // corruption que `lib/pillar-path.ts` a supprimée ailleurs. Latent ici
+              // (les paths RTIS sont object-only), mais on ferme le piège.
+              setNestedValue(newContent, path, value);
             }
             console.log(
               `[rtis-cascade] ${pillarKey} completion: ${missingDerivable.length} missing → ${Object.keys(filled).length} filled via chunked LLM`,
