@@ -119,6 +119,39 @@ describe("applyResolvedRecoOps — corrections audit adversarial 2026-07-23", ()
   });
 });
 
+describe("applyResolvedRecoOps — garde ITEM-FANTÔME (audit adversarial 2026-07-24)", () => {
+  it("refuse un SET sur un index de tableau HORS-BORNE (pas d'item fantôme ni de trous null)", () => {
+    const base = { produitsCatalogue: [{ nom: "Produit réel" }] };
+    const { content, appliedCount, warnings } = applyResolvedRecoOps(base, [
+      op("produitsCatalogue[5].gainMarqueConcret", "SET", "gain fabriqué"),
+    ]);
+    expect(appliedCount).toBe(0);
+    expect(warnings.some((w) => w.includes("fantôme") || w.includes("hors-borne"))).toBe(true);
+    const cat = content.produitsCatalogue as unknown[];
+    expect(cat.length).toBe(1); // pas d'extension du tableau
+    expect(cat[0]).toEqual({ nom: "Produit réel" }); // item réel intact
+  });
+
+  it("autorise un SET sur une cellule d'item EXISTANT (index en borne)", () => {
+    const { content, appliedCount } = applyResolvedRecoOps({ produitsCatalogue: [{ nom: "A" }] }, [
+      op("produitsCatalogue[0].gainMarqueConcret", "SET", "gain réel"),
+    ]);
+    expect(appliedCount).toBe(1);
+    expect((content.produitsCatalogue as Array<Record<string, unknown>>)[0]!.gainMarqueConcret).toBe("gain réel");
+  });
+
+  it("ADD-puis-SET[nouvelIndex] dans le même lot passe (ADD étend le tableau avant le SET)", () => {
+    const { content, appliedCount } = applyResolvedRecoOps({ produitsCatalogue: [{ nom: "A" }] }, [
+      op("produitsCatalogue", "ADD", { nom: "B" }),
+      op("produitsCatalogue[1].gainMarqueConcret", "SET", "gain B"),
+    ]);
+    expect(appliedCount).toBe(2);
+    const cat = content.produitsCatalogue as Array<Record<string, unknown>>;
+    expect(cat.length).toBe(2);
+    expect(cat[1]!.gainMarqueConcret).toBe("gain B");
+  });
+});
+
 describe("applyResolvedRecoOps — sûreté", () => {
   it("ne mute JAMAIS la base (clone profond) — le snapshot précédent reste intact", () => {
     const base = { prophecy: { worldTransformed: "X" }, touchpoints: [{ nom: "Insta" }] };

@@ -537,9 +537,27 @@ export function findEmptyLeafPaths(pillarKey: string, content: Record<string, un
  *  un id inventé casserait la cohérence des références (`targetsPersonaIds` → persona.id). */
 const TECHNICAL_ITEM_KEYS = new Set(["id", "skuRef", "ref", "slug"]);
 
+/** Tableaux dont chaque item est une DONNÉE RÉELLE vérifiable (preuve/évidence/métrique)
+ *  — jamais fabriqués par LLM (interdit n°3 : une preuve inventée est un faux fait, plus
+ *  dangereux qu'une opinion stratégique ; cf. précédent `traction`). L'opérateur saisit
+ *  les vraies preuves. `equipeDirigeante` reste inférable (casting fictif, doctrine
+ *  opérateur) — seule sa `linkedinUrl` est exclue (URL réelle, par le garde de suffixe). */
+const EVIDENCE_ARRAY_TOPKEYS: Record<string, Set<string>> = {
+  a: new Set(["preuvesAuthenticite"]),
+  d: new Set(["proofPoints"]),
+  v: new Set(["roiProofs"]),
+};
+
+/** Suffixes de clé d'item signalant un IDENTIFIANT / RÉFÉRENCE / URL (donnée technique
+ *  ou réelle) typé texte|liste — un uuid/URL/ref inventé ne référence RIEN (corromprait
+ *  le backbone relationnel ADR-0088) ou invente une URL réelle. Appliqué UNIQUEMENT aux
+ *  string/array : un enum « …Ref » (channelRef = choix borné) reste inférable. */
+const REF_KEY_SUFFIX = /(Id|Ids|Ref|Refs|Url|Urls)$/;
+
 export function findEmptyArrayCellPaths(pillarKey: string, content: Record<string, unknown>): SchemaLeaf[] {
   const needsHuman = NEEDS_HUMAN_BY_PILLAR[pillarKey.toLowerCase()] ?? new Set<string>();
   const completeOptional = COMPLETE_OPTIONAL_BY_PILLAR[pillarKey.toLowerCase()] ?? new Set<string>();
+  const evidenceArrays = EVIDENCE_ARRAY_TOPKEYS[pillarKey.toLowerCase()] ?? new Set<string>();
   const isEmpty = (v: unknown): boolean =>
     v === null || v === undefined ||
     (typeof v === "string" && v.trim() === "") ||
@@ -550,6 +568,8 @@ export function findEmptyArrayCellPaths(pillarKey: string, content: Record<strin
   for (const arrLeaf of listSchemaLeafPaths(pillarKey)) {
     if (!arrLeaf.isArray) continue;
     if (needsHuman.has(arrLeaf.topKey) || completeOptional.has(arrLeaf.topKey)) continue;
+    if (arrLeaf.topKey === "computed") continue;      // sous-arbre pur-calculé (computePillarS, zéro LLM)
+    if (evidenceArrays.has(arrLeaf.topKey)) continue; // preuve/évidence/métrique = donnée réelle
     const arrInner = unwrapZod(getFieldZod(pillarKey, arrLeaf.path)) as { constructor?: { name?: string }; _def?: Record<string, unknown> };
     if (arrInner?.constructor?.name !== "ZodArray") continue;
     const def = arrInner._def ?? {};
@@ -569,6 +589,10 @@ export function findEmptyArrayCellPaths(pillarKey: string, content: Record<strin
         const optional = rawCtor === "ZodOptional" || rawCtor === "ZodDefault" || rawCtor === "ZodNullable";
         const kind = scalarKindOf((unwrapZod(kSchema) as { constructor?: { name?: string } })?.constructor?.name);
         if (!isInferableKind(kind)) continue; // nombre / booléen / objet imbriqué → jamais fabriqué au grain cellule
+        // FK/id/URL/ref typés texte|liste (`riskId`, `targetsPersonaIds`, `linkedinUrl`…) →
+        // jamais fabriqués (uuid inventé = référence morte, backbone ADR-0088 ; URL réelle).
+        // Un enum « …Ref » (choix borné) reste inférable → on ne l'exclut PAS.
+        if (kind !== "enum" && REF_KEY_SUFFIX.test(k)) continue;
         if (isEmpty(rec[k])) out.push({ path: `${arrLeaf.path}[${i}].${k}`, topKey: arrLeaf.topKey, isArray: kind === "array", optional, scalarKind: kind });
       }
     }

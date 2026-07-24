@@ -119,6 +119,42 @@ describe("findEmptyArrayCellPaths — cellules de tableau vides, QUALITATIF only
     expect(findEmptyArrayCellPaths("v", { produitsCatalogue: [] })).toEqual([]);
   });
 
+  // ── Corrections audit adversarial 2026-07-24 (F1/F2/F3) ──────────────────
+  it("F1 — cellule FK/id/ref/url exclue (uuid inventé = référence morte, backbone ADR-0088)", () => {
+    // riskMitigationActions[i] : `riskId` (FK entityId) + `riskRef` (@deprecated text ref)
+    // ne DOIVENT jamais être fabriqués ; `canal`/`expectedImpact` (qualitatif) oui.
+    const cells = findEmptyArrayCellPaths("i", { riskMitigationActions: [{ action: "riposte X" }] }).map((c) => c.path);
+    expect(cells).toContain("riskMitigationActions[0].canal"); // qualitatif vide → cible
+    expect(cells).toContain("riskMitigationActions[0].expectedImpact");
+    expect(cells.some((p) => p.endsWith(".riskId"))).toBe(false); // FK → jamais
+    expect(cells.some((p) => p.endsWith(".riskRef"))).toBe(false); // ref texte → jamais
+    expect(cells.some((p) => p.endsWith(".action"))).toBe(false); // déjà rempli
+  });
+
+  it("F2 — sous-arbre `computed` (pur-calculé, zéro LLM) jamais proposé au remplissage cellule", () => {
+    // S.computed.roadmapRoutes[] : projections déterministes (ADR-0088/0089) — un LLM
+    // ne fabrique JAMAIS un `label`/`description` de route calculée.
+    const cells = findEmptyArrayCellPaths("s", { computed: { roadmapRoutes: [{ key: "TARGET" }] } }).map((c) => c.path);
+    expect(cells.every((p) => !p.startsWith("computed"))).toBe(true);
+  });
+
+  it("F3 — tableau de PREUVES exclu en bloc, `linkedinUrl` exclue, casting `equipeDirigeante` gardé", () => {
+    // preuvesAuthenticite = donnée réelle vérifiable (interdit n°3 : une preuve inventée
+    // est un faux fait) → exclu en bloc. equipeDirigeante = casting fictif inférable
+    // (doctrine opérateur) SAUF `linkedinUrl` (URL réelle → garde de suffixe).
+    const a = {
+      equipeDirigeante: [{ nom: "Awa Ngo" }],
+      preuvesAuthenticite: [{ type: "heritage", claim: "c", evidence: "e", source: "s" }],
+    };
+    const cells = findEmptyArrayCellPaths("a", a).map((c) => c.path);
+    expect(cells).toContain("equipeDirigeante[0].role"); // qualitatif → cible
+    expect(cells).toContain("equipeDirigeante[0].bio");
+    expect(cells).toContain("equipeDirigeante[0].experiencePasse"); // array-of-strings qualitatif
+    expect(cells.some((p) => p.endsWith(".linkedinUrl"))).toBe(false); // URL réelle → jamais
+    expect(cells.some((p) => p.endsWith(".allocationPct"))).toBe(false); // nombre → jamais
+    expect(cells.some((p) => p.startsWith("preuvesAuthenticite"))).toBe(false); // preuve → jamais
+  });
+
   it("scalarKind présent sur chaque feuille de l'inventaire", () => {
     const leaves = listSchemaLeafPaths("v");
     expect(leaves.every((l) => typeof l.scalarKind === "string")).toBe(true);

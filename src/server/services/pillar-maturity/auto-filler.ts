@@ -257,11 +257,13 @@ async function runFillPass(
       if (already.has(leaf.path)) continue;
       if (contractTopKeys.has(leaf.topKey)) continue; // objet parent régénéré en entier
       if (!inScope(leaf.topKey, leaf.path)) continue;
-      // Feuilles financières CALCULABLES (ratios unit-economics : ltvCacRatio=ltv/cac,
+      // Feuilles financières CALCULABLES (ratios unit-economics NOMBRES : ltvCacRatio=ltv/cac,
       // roiEstime, payback…) → chemin `calculation` (déterministe, cohérent avec cac/ltv
       // stockés), JAMAIS le LLM. Tout AUTRE nombre (score, montant réel) → SKIP : un
-      // nombre n'est jamais inféré par LLM (donnée réelle / dérivée — interdit n°3).
-      const isCalcLeaf = key === "v" && leaf.path.startsWith("unitEconomics.");
+      // nombre n'est jamais inféré par LLM (donnée réelle / dérivée — interdit n°3). Les
+      // feuilles unit-economics QUALITATIVES (ex. `pointMort` string) restent en
+      // ai_generation (deriveByCalculation ne les couvre pas → elles resteraient vides).
+      const isCalcLeaf = key === "v" && leaf.path.startsWith("unitEconomics.") && leaf.scalarKind === "number";
       if (leaf.scalarKind === "number" && !isCalcLeaf) continue;
       missingReqs.push({
         path: leaf.path,
@@ -308,7 +310,16 @@ async function runFillPass(
   );
 
   // Enrichissement SURGICAL des matrices (Phase 3) — voir `expandArrayItemRequirements`.
-  const expanded = expandArrayItemRequirements(sorted, content);
+  // Dedup par path : une cellule REQUISE de matrice peut être émise DEUX fois — par
+  // l'expansion Phase-3 de la requirement `array_items_complete` ET par l'injection de
+  // cellules ci-dessus (`findEmptyArrayCellPaths` retourne AUSSI les cellules requises
+  // vides). Sans dedup, le champ est listé 2× dans le prompt LLM → chunks gaspillés.
+  const seenExpanded = new Set<string>();
+  const expanded = expandArrayItemRequirements(sorted, content).filter((r) => {
+    if (seenExpanded.has(r.path)) return false;
+    seenExpanded.add(r.path);
+    return true;
+  });
 
   const filled: string[] = [];
   const failed: Array<{ path: string; reason: string }> = [];
