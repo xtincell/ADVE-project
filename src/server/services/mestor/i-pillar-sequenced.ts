@@ -65,7 +65,24 @@ function compactPillar(content: unknown, cap = 1100): string {
   for (const [k, v] of Object.entries(content as Record<string, unknown>)) {
     if (v == null || v === "") continue;
     if (typeof v === "string") summary[k] = v.length > 150 ? v.slice(0, 150) + "…" : v;
-    else if (Array.isArray(v)) summary[k] = `[${v.length} éléments]`;
+    else if (Array.isArray(v)) {
+      // Garde les IDENTITÉS des items (name/nom/label) au lieu d'un opaque « [N éléments] » —
+      // sans ça, une action I ne peut pas citer un persona par son nom (D condensé). Cap serré.
+      const ids = v
+        .slice(0, 5)
+        .map((it) => {
+          if (it && typeof it === "object" && !Array.isArray(it)) {
+            const r = it as Record<string, unknown>;
+            const id = r.name ?? r.nom ?? r.label ?? r.titre ?? r.title;
+            if (typeof id === "string" && id.trim()) return id.length > 40 ? id.slice(0, 40) + "…" : id;
+          }
+          return null;
+        })
+        .filter(Boolean);
+      summary[k] = ids.length > 0
+        ? `[${v.length} éléments : ${ids.join(", ")}${v.length > ids.length ? ", …" : ""}]`
+        : `[${v.length} éléments]`;
+    }
     else if (typeof v === "object") summary[k] = `{${Object.keys(v as object).slice(0, 6).join(", ")}}`;
     else summary[k] = v;
   }

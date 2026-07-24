@@ -618,6 +618,59 @@ export function findEmptyArrayCellPaths(pillarKey: string, content: Record<strin
 }
 
 /**
+ * ANCRE d'identité d'un champ profond — le contexte DÉJÀ défini de l'emplacement
+ * exact que l'on s'apprête à remplir, extrait DIRECTEMENT du `content` (jamais du
+ * résumé tronqué du pilier). C'est le rempart anti-contamination inter-items.
+ *
+ * Sans lui : remplir `personas[2].fears` fournissait au LLM un contexte où le
+ * tableau `personas` avait été condensé en « [Array×3] » (budget de contexte,
+ * `summarizePillar`) → l'identité du persona (« Awa ») effacée → le LLM inventait
+ * une autre identité (« Betsy ») et l'écrivait dans la case d'Awa. Ici on recolle
+ * au champ l'identité EXACTE de l'item/objet parent (nom + champs déjà remplis) :
+ *
+ *   - `arr[i].leaf`  → ancre = digest de l'item `arr[i]` (name/nom/label + scalaires courts).
+ *   - `parent.leaf`  → ancre = digest des sœurs déjà remplies de `parent`.
+ *   - top-level      → "" (aucune ambiguïté d'identité ; le contexte pilier suffit).
+ *
+ * Pure, légère (cap ~600 chars ; ne descend pas dans les objets/tableaux-d'objets
+ * imbriqués de l'ancre — on garde l'IDENTITÉ, pas la profondeur). Réutilisée par
+ * l'auto-filler ET la notoria (même défaut de génération de cellule).
+ */
+export function buildFieldAnchor(content: Record<string, unknown>, path: string): string {
+  const tokens = tokenizePillarPath(path);
+  if (tokens.length < 2) return ""; // top-level → pas d'ambiguïté d'identité
+  // Résout le conteneur PARENT (tous les tokens sauf le dernier) — array-index compris.
+  let parent: unknown = content;
+  for (let i = 0; i < tokens.length - 1; i++) {
+    if (parent === null || typeof parent !== "object") { parent = undefined; break; }
+    parent = (parent as Record<string | number, unknown>)[tokens[i]!];
+  }
+  if (!parent || typeof parent !== "object" || Array.isArray(parent)) return "";
+  const rec = parent as Record<string, unknown>;
+  const digest: Record<string, unknown> = {};
+  const short = (v: string, cap: number) => (v.length > cap ? v.slice(0, cap) + "…" : v);
+  // Identité d'abord (nom/label) — c'est ce qui ancre le LLM sur la BONNE entité.
+  for (const k of ["name", "nom", "label", "titre", "title", "segment"]) {
+    const v = rec[k];
+    if (typeof v === "string" && v.trim()) digest[k] = short(v, 80);
+  }
+  // Puis les scalaires courts déjà remplis (contexte, sans gonfler le prompt).
+  for (const [k, v] of Object.entries(rec)) {
+    if (k in digest) continue;
+    if (Object.keys(digest).length >= 8) break;
+    if (typeof v === "string" && v.trim()) digest[k] = short(v, 120);
+    else if (typeof v === "number" || typeof v === "boolean") digest[k] = v;
+    else if (Array.isArray(v) && v.length > 0 && v.every((x) => typeof x === "string")) {
+      digest[k] = (v as string[]).slice(0, 4).map((s) => short(s, 60));
+    }
+    // objets / tableaux-d'objets imbriqués → ignorés (l'ancre reste une identité)
+  }
+  if (Object.keys(digest).length === 0) return "";
+  const json = JSON.stringify(digest);
+  return json.length > 600 ? json.slice(0, 600) + "…}" : json;
+}
+
+/**
  * Dérive un FieldRequirement[] depuis la shape top-level d'un PillarSchema Zod.
  * Tous les champs (required + optional) deviennent des requirements pour la
  * stage COMPLETE — c'est ce qui matérialise la promesse "100% = tous remplis".
