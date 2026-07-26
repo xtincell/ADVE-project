@@ -53,6 +53,21 @@ npx @modelcontextprotocol/inspector --cli https://powerupgraders.com/api/mcp/rpc
   --header "x-api-key: lfk_xxx" --method tools/list
 ```
 
+### 2-ter. Se connecter depuis le connecteur claude.ai (OAuth 2.1 — ADR-0183)
+
+L'app **claude.ai** (web/mobile, Réglages → Connecteurs) exige un flux OAuth —
+pas de header. La Fusée est maintenant serveur d'autorisation : ajoute simplement
+le connecteur avec l'URL du endpoint et **laisse le flux OAuth se faire** (plus
+besoin d'« OAuth Client ID » — l'enregistrement est dynamique) :
+
+- URL du connecteur : `https://powerupgraders.com/api/mcp/rpc`
+- Le connecteur découvre tout seul le serveur d'autorisation (`.well-known`),
+  s'enregistre (DCR), t'envoie sur une **page de consentement** La Fusée où tu
+  choisis la portée (toutes tes marques si tu es opérateur, sinon UNE marque),
+  puis revient connecté. Tu dois être **connecté à powerupgraders.com** au
+  moment du consentement (sinon il te renvoie vers `/login`).
+- Aucune clé à copier : le connecteur gère le token (rafraîchi automatiquement).
+
 ### 2-bis. Voie REST maison (agents non-MCP)
 
 Pour un agent qui ne parle PAS MCP (ex. les tools `lafusee_*` de galahad) :

@@ -4237,6 +4237,68 @@ model McpUsageStatement {
   @@index([status, period])
 }
 
+/// ADR-0183 — serveur OAuth 2.1 du endpoint MCP (pour le connecteur claude.ai
+/// web/mobile, qui exige OAuth + enregistrement dynamique de client — DCR).
+/// Distinct de `McpApiKey` (auth par header, agents headless/Claude Code) : ici
+/// c'est un client OAuth public (PKCE, pas de secret) enregistré dynamiquement.
+model McpOAuthClient {
+  id           String   @id @default(cuid())
+  /// client_id public émis à l'enregistrement (format `lfc_<hex>`).
+  clientId     String   @unique
+  clientName   String?
+  /// URIs de redirection autorisées (validation stricte anti open-redirect).
+  redirectUris String[]
+  createdAt    DateTime @default(now())
+
+  codes  McpOAuthCode[]
+  tokens McpOAuthToken[]
+}
+
+/// Code d'autorisation OAuth (usage unique, TTL court, lié au PKCE challenge).
+model McpOAuthCode {
+  id              String    @id @default(cuid())
+  /// code opaque (`lfa_<hex>`) — jamais re-dérivable après consommation.
+  code            String    @unique
+  clientId        String
+  userId          String
+  redirectUri     String
+  /// PKCE S256 (RFC 7636) — le verifier est validé à l'échange.
+  codeChallenge   String
+  /// Portée choisie au consentement (même modèle que McpApiKey).
+  scopeKind       String // SYSTEM | BRAND
+  scopeStrategyId String?
+  /// RFC 8707 resource indicator (facultatif).
+  resource        String?
+  expiresAt       DateTime
+  consumedAt      DateTime?
+  createdAt       DateTime  @default(now())
+
+  client McpOAuthClient @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+
+  @@index([clientId])
+}
+
+/// Jeton d'accès (+ refresh) OAuth. Seuls les HASH SHA-256 sont stockés.
+model McpOAuthToken {
+  id               String    @id @default(cuid())
+  accessTokenHash  String    @unique
+  refreshTokenHash String?   @unique
+  clientId         String
+  userId           String
+  scopeKind        String // SYSTEM | BRAND
+  scopeStrategyId  String?
+  expiresAt        DateTime
+  refreshExpiresAt DateTime?
+  revokedAt        DateTime?
+  lastUsedAt       DateTime?
+  createdAt        DateTime  @default(now())
+
+  client McpOAuthClient @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([clientId])
+}
+
 // ============================================================================
 // SECONDARY MODELS (V2 completude)
 // ============================================================================
