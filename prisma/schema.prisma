@@ -2118,6 +2118,39 @@ model Message {
   @@index([channel])
 }
 
+/// ADR-0181 — fil de conversation de l'ASSISTANT DE MARQUE (chat cockpit).
+/// DISTINCT de `Conversation`/`Message` ci-dessus (inbox SOCIALE user↔user,
+/// channels Instagram/Facebook/WhatsApp…) : ici c'est le dialogue founder↔IA,
+/// scoping par (strategyId, userId), advisory pur — aucune donnée de marque
+/// n'y est mutée. v1 mono-thread par (marque, utilisateur) ; `strategyId` en
+/// String indexée sans FK (même style que Conversation.strategyId).
+model AssistantThread {
+  id         String   @id @default(cuid())
+  strategyId String
+  userId     String
+  title      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  messages AssistantMessage[]
+
+  @@index([strategyId, userId])
+}
+
+model AssistantMessage {
+  id       String @id @default(cuid())
+  threadId String
+  /// "user" | "assistant"
+  role     String
+  content  String @db.Text
+
+  thread AssistantThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([threadId, createdAt])
+}
+
 model QuickIntake {
   id                 String            @id @default(cuid())
   contactName        String

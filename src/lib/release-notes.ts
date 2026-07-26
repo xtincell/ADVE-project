@@ -34,6 +34,28 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.330",
+    date: "2026-07-26",
+    headline: "Votre assistant de marque, enfin à la hauteur",
+    highlights: [
+      {
+        emoji: "💬",
+        title: "L'assistant répond vraiment",
+        body: "Le chat de votre cockpit fonctionne de bout en bout et connaît désormais tout votre dossier de marque — vos quatre piliers, votre score, votre communauté. Fini les réponses vides.",
+      },
+      {
+        emoji: "🧠",
+        title: "Un conseil d'experts derrière chaque réponse",
+        body: "Vos réponses s'appuient sur un coordinateur qui maîtrise toute votre stratégie et quatre experts spécialisés — Authenticité, Distinction, Valeur, Engagement — qui challengent chaque recommandation.",
+      },
+      {
+        emoji: "🔌",
+        title: "Réfléchir dans votre cockpit depuis vos outils",
+        body: "Votre marque est maintenant accessible depuis un assistant IA externe : une clé sécurisée suffit pour l'interroger sur votre stratégie où que vous travailliez.",
+      },
+    ],
+  },
+  {
     version: "6.27.250",
     date: "2026-07-22",
     headline: "La Fusée compile : vos livrables prennent vie",

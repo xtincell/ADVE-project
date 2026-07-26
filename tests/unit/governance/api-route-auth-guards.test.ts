@@ -63,6 +63,16 @@ describe("API route auth + ownership guards (round-3 adversarial)", () => {
     expect(s).toMatch(/if\s*\(!verifySocialSignature\([^)]*\)\)\s*\{[\s\S]*?status:\s*401/);
   });
 
+  it("/api/mcp/rpc (transport MCP JSON-RPC) exige authenticateMcpRequest (ADR-0182)", () => {
+    const s = src("src/app/api/mcp/rpc/route.ts");
+    expect(s).toMatch(/authenticateMcpRequest\(/);
+    // Refus explicite si la gate échoue, AVANT tout handling MCP.
+    expect(s).toMatch(/if\s*\(!gate\.ok\)/);
+    expect(s).toMatch(/handleMcpRequest\(/);
+    // Pas de flux server-initiated v1 → GET/DELETE = 405.
+    expect(s).toMatch(/methodNotAllowed\(/);
+  });
+
   it("OAuth state : clé de signature fail-closed en prod, plus de fallback public dans les routes", () => {
     const helper = src("src/server/services/oauth-integrations/index.ts");
     expect(helper).toMatch(/export function oauthStateSigningKey\(/);

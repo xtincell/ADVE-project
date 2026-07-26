@@ -1,10 +1,15 @@
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "../init";
+import { createTRPCRouter, operatorProcedure, protectedProcedure } from "../init";
 import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { generateInsights } from "@/server/services/mestor/insights";
 import * as mestor from "@/server/services/mestor";
 import { auditedProcedure, governedProcedure } from "@/server/governance/governed-procedure";
+import { db } from "@/lib/db";
 /* lafusee:governed-active */
+
+// ── ADR-0181 — fil Assistant : clear = mutation user-owned advisory, voie
+// auditée (kind LEGACY générique) ; pas une mutation métier de marque.
+const auditedStrategyScoped = auditedProcedure(strategyScopedProcedure, "mestor-router");
 
 export const mestorRouter = createTRPCRouter({
   /** Get proactive AI insights for a strategy (Artemis) */
@@ -14,24 +19,55 @@ export const mestorRouter = createTRPCRouter({
       return generateInsights(input.strategyId);
     }),
 
-  /** Chat with Mestor AI coach */
-  chat: governedProcedure({
+  // NB : l'ancienne procédure `chat` (LEGACY_MESTOR_ROUTER_CHAT) — inerte, elle
+  // renvoyait le system prompt au client sans jamais appeler de LLM, zéro
+  // caller — a été DÉPOSÉE (ADR-0179). Le chat vit sur POST /api/chat
+  // (streaming) ; le kind reste catalogué (historique d'émissions).
 
-    kind: "LEGACY_MESTOR_ROUTER_CHAT",
+  // ── Assistant de marque — historique persisté (ADR-0181) ─────────────
 
-    inputSchema: z.object({
-      message: z.string().min(1),
-      context: z.enum(["cockpit", "creator", "console", "intake"]),
-      strategyId: z.string().optional(),
-      creatorTier: z.string().optional(),
+  /** Historique du fil Assistant (40 derniers messages, ordre chronologique). */
+  assistantHistory: strategyScopedProcedure
+    .input(z.object({ strategyId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const thread = await db.assistantThread.findFirst({
+        where: { strategyId: input.strategyId, userId: ctx.session.user.id },
+        select: { id: true },
+      });
+      if (!thread) return { threadId: null, messages: [] };
+      const rows = await db.assistantMessage.findMany({
+        where: { threadId: thread.id },
+        orderBy: { createdAt: "desc" },
+        take: 40,
+        select: { id: true, role: true, content: true, createdAt: true },
+      });
+      return { threadId: thread.id, messages: rows.reverse() };
     }),
 
-    caller: "mestor-router:chat",
+  /** Nouvelle conversation : supprime le fil (cascade messages). */
+  assistantClear: auditedStrategyScoped
+    .input(z.object({ strategyId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      await db.assistantThread.deleteMany({
+        where: { strategyId: input.strategyId, userId: ctx.session.user.id },
+      });
+      return { cleared: true };
+    }),
 
-  })
-    .mutation(async ({ input }) => {
-      const systemPrompt = mestor.getSystemPrompt(input.context, null);
-      return { systemPrompt, context: input.context };
+  // ── Conseil de marque — délibération adversariale (ADR-0180) ─────────
+  // Query (zéro écriture — advisory pur, précédent previewAmend « lecture LLM ») ;
+  // opérateur only en v1 : 6 appels LLM, le coût reste une décision UPgraders.
+  councilDeliberate: operatorProcedure
+    .input(
+      z.object({
+        strategyId: z.string(),
+        topic: z.string().min(3).max(2_000),
+        draft: z.string().max(8_000).optional(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const { deliberate } = await import("@/server/services/mestor/council");
+      return deliberate(input);
     }),
 
   /** Get context label for Mestor */

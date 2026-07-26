@@ -147,6 +147,48 @@ export const tools: ToolDefinition[] = [
     },
   },
 
+  // ---- Contenu COMPLET des piliers (verbatim) — pour raisonnement agent ----
+  {
+    name: "getPillarContent",
+    description:
+      "Contenu COMPLET et verbatim des piliers ADVE-RTIS d'une marque (objet Pillar.content intégral par pilier, non tronqué). À utiliser quand un agent doit raisonner en profondeur sur la stratégie (personas, système produit, direction artistique, roadmap…) — getAdveRtis ne renvoie qu'un résumé de tête. Lecture seule, scopée à strategyId.",
+    inputSchema: z.object({
+      strategyId: z.string().describe("ID de la marque"),
+      keys: z
+        .array(z.enum(PILLAR_KEYS as unknown as [PillarKey, ...PillarKey[]]))
+        .optional()
+        .describe("Piliers à renvoyer (défaut : les 8)"),
+    }),
+    handler: async (input) => {
+      const strategyId = input.strategyId as string;
+      const strategy = await db.strategy.findUnique({
+        where: { id: strategyId },
+        select: { id: true, advertis_vector: true },
+      });
+      if (!strategy) return { error: "NOT_FOUND", strategyId };
+      const requested = (input.keys as PillarKey[] | undefined) ?? (PILLAR_KEYS as readonly PillarKey[]);
+      const rows = await db.pillar.findMany({
+        where: { strategyId, key: { in: requested as string[] } },
+        select: { key: true, content: true, updatedAt: true },
+      });
+      const byKey = new Map(rows.map((r) => [r.key, r]));
+      const vec = asRecord(strategy.advertis_vector);
+      const pillars = requested.map((key) => {
+        const row = byKey.get(key);
+        const content = asRecord(row?.content);
+        return {
+          key,
+          name: PILLAR_NAMES[key],
+          score: typeof vec[key] === "number" ? (vec[key] as number) : null,
+          present: Object.keys(content).length > 0,
+          updatedAt: row?.updatedAt ?? null,
+          content, // ← intégral, non tronqué
+        };
+      });
+      return { strategyId, method: "ADVE-RTIS", pillars };
+    },
+  },
+
   // ---- Édition gouvernée d'un pilier ADVE (write) — scopée au token (ADR-0145) ----
   {
     name: "amendPillar",

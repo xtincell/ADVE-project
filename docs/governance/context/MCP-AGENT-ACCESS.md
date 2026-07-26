@@ -16,22 +16,54 @@ marque** de La Fusée, avec un token scopé, sans être « coincé dehors ».
 - **Créer** → le secret `lfk_…` s'affiche **une seule fois** (copie-le).
 - **Roter** (sur une clé) → nouveau secret, l'ancien meurt, config conservée.
 
-## 2. Paramètres de connexion
+## 2. Se connecter depuis Claude Code / Claude Desktop (MCP JSON-RPC — ADR-0182)
+
+**LE moyen de « réfléchir dans le cockpit »** : l'endpoint `/api/mcp/rpc` parle le
+vrai protocole MCP (JSON-RPC Streamable HTTP). C'est celui que les clients Claude
+consomment. Config du projet (`.mcp.json` pour Claude Code, config Desktop) :
+
+```json
+{
+  "mcpServers": {
+    "lafusee": {
+      "type": "http",
+      "url": "https://powerupgraders.com/api/mcp/rpc",
+      "headers": { "x-api-key": "lfk_xxx" }
+    }
+  }
+}
+```
+
+- **Auth** : header **`x-api-key: lfk_…`** (une clé BRAND ne touche que sa marque).
+- **Outils exposés** (`tools/list`) : un sous-ensemble curé haute-valeur —
+  `advertis_getBrandCard` / `advertis_getAdveRtis` / `advertis_getPillarContent`
+  (contenu intégral des piliers) / `advertis_amendPillar` · `oracle_list_sections` /
+  `oracle_get_section` / `oracle_snapshot` · `council_ask` / `council_deliberate` ·
+  `intelligence_rag_search` / `intelligence_knowledge_graph_query` · `pulse_*` ·
+  `seshat_*`. Tous scopés à un `strategyId`.
+- **Longue traîne** : `lafusee_catalog` (manifeste complet des serveurs/outils) puis
+  `lafusee_invoke {server, tool, params}` pour appeler tout outil non curé.
+- **Environnements sandboxés** (Claude Code web) : autoriser l'egress vers
+  `powerupgraders.com`.
+
+Smoke test (MCP Inspector) :
+
+```bash
+npx @modelcontextprotocol/inspector --cli https://powerupgraders.com/api/mcp/rpc \
+  --header "x-api-key: lfk_xxx" --method tools/list
+```
+
+### 2-bis. Voie REST maison (agents non-MCP)
+
+Pour un agent qui ne parle PAS MCP (ex. les tools `lafusee_*` de galahad) :
 
 - **Endpoint agrégé** : `POST https://powerupgraders.com/api/mcp`
   body : `{ "server": "<serveur>", "tool": "<outil>", "params": { … } }`
 - **Endpoint par serveur** : `POST https://powerupgraders.com/api/mcp/advertis`
   body : `{ "tool": "<outil>", "params": { … } }`
 - **Auth** : header **`x-api-key: lfk_…`**
-- **Découverte** : `GET https://powerupgraders.com/api/mcp` → manifeste (serveurs + outils).
-
-Config type Claude Desktop / client MCP :
-
-```json
-{ "mcpServers": { "lafusee": { "url": "https://powerupgraders.com/api/mcp" } } }
-```
-
-(Un agent headless ajoute le header `x-api-key`.)
+- **Découverte** : `GET https://powerupgraders.com/api/mcp` → manifeste (accepte
+  désormais une clé API, plus seulement une session — fix ADR-0182).
 
 ## 3. Toucher un ADVE
 

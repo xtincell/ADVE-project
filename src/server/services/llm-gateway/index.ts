@@ -12,7 +12,10 @@
  *   callLLMAndParse()  — text → JSON extraction (most common)
  *   extractJSON()      — standalone JSON parser (3-step robust)
  *   withRetry()        — exponential backoff wrapper
+ *   (streaming)        — `streamChatText()` vit dans `./streaming.ts` (ADR-0179)
  */
+
+import { applySonnet5Parity } from "./parity";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -133,7 +136,7 @@ const DEFAULT_MAX_TOKENS = 6000;
  * because the policy table is unreachable is worse than one that uses a
  * known-safe default for the duration of the outage.
  */
-const FALLBACK_POLICY: Record<GatewayPurpose, {
+export const FALLBACK_POLICY: Record<GatewayPurpose, {
   anthropicModel: string;
   ollamaModel: string | null;
   allowOllamaSubstitution: boolean;
@@ -150,11 +153,11 @@ const INPUT_PRICE_PER_M = 3;
 const OUTPUT_PRICE_PER_M = 15;
 
 // v4 — Model priority for budget downgrade (cheaper = higher index)
-const MODEL_PRIORITY = ["claude-opus-4-6", "claude-opus-4-20250514", "claude-sonnet-5", "claude-haiku-4-5", "claude-haiku-4-5-20251001"];
+export const MODEL_PRIORITY = ["claude-opus-4-6", "claude-opus-4-20250514", "claude-sonnet-5", "claude-haiku-4-5", "claude-haiku-4-5-20251001"];
 
 // ── v4 — Multi-vendor LLM provider abstraction ────────────────────────────
 
-type LLMProvider = "anthropic" | "openai" | "ollama" | "openrouter";
+export type LLMProvider = "anthropic" | "openai" | "ollama" | "openrouter";
 
 interface ProviderState {
   available: boolean;
@@ -209,8 +212,10 @@ function selectProvider(): LLMProvider | null {
 
 /**
  * Returns true iff the provider is currently available (key present + circuit closed).
+ * Export réservé aux surfaces INTERNES du Gateway (`llm-gateway/*` — ex.
+ * streaming.ts) : un import hors de ce dossier est un bypass (test anti-drift).
  */
-function isProviderHealthy(p: LLMProvider): boolean {
+export function isProviderHealthy(p: LLMProvider): boolean {
   const s = providerStates[p];
   const now = Date.now();
   return s.available && (s.circuitOpenUntil === 0 || s.circuitOpenUntil < now);
@@ -231,7 +236,8 @@ export function isTextLLMAvailable(): boolean {
   return (["anthropic", "ollama", "openrouter"] as const).some((p) => isProviderHealthy(p));
 }
 
-function recordProviderFailure(provider: LLMProvider, forceTrip = false): void {
+/** Export intra-Gateway uniquement (cf. isProviderHealthy). */
+export function recordProviderFailure(provider: LLMProvider, forceTrip = false): void {
   const state = providerStates[provider];
   state.failureCount++;
   if (state.failureCount >= CIRCUIT_BREAKER_THRESHOLD || forceTrip) {
@@ -240,7 +246,8 @@ function recordProviderFailure(provider: LLMProvider, forceTrip = false): void {
   }
 }
 
-function recordProviderSuccess(provider: LLMProvider): void {
+/** Export intra-Gateway uniquement (cf. isProviderHealthy). */
+export function recordProviderSuccess(provider: LLMProvider): void {
   providerStates[provider].failureCount = 0;
   providerStates[provider].circuitOpenUntil = 0;
 }
@@ -317,6 +324,108 @@ function resolveOpenRouterModel(_policyModel: string): string {
   return DEFAULT_OPENROUTER_MODEL;
 }
 
+// ── Construction du modèle AI-SDK par provider — PARTAGÉE callLLM/streaming ──
+// Extraction ADR-0179 (surface streaming) : la logique de résolution modèle par
+// provider est UNIQUE — la dupliquer dans streaming.ts aurait créé un drift
+// silencieux (ex. le pin OLLAMA_MODEL qui gagne sur les overrides par-appel).
+
+export interface BuiltProviderModel {
+  /** Instance de modèle AI-SDK prête pour generateText/streamText. */
+  aiModel: unknown;
+  /** Modèle effectivement servi — clé de la police de débit par modèle. */
+  servedModel: string;
+  /** Fabrique de modèle pour le repli intra-OpenRouter (chaîne gratuite) ; null ailleurs. */
+  orFallback: ((m: string) => unknown) | null;
+}
+
+/** Export intra-Gateway uniquement (cf. isProviderHealthy). */
+export async function buildProviderModel(
+  provider: LLMProvider,
+  anthropicModel: string,
+  opts: { policyOllamaModel?: string | null; ollamaCallOverride?: string } = {},
+): Promise<BuiltProviderModel> {
+  if (provider === "anthropic") {
+    const { anthropic, createAnthropic } = await import("@ai-sdk/anthropic");
+    const aiModel = process.env.HEADROOM_PROXY_URL
+      ? createAnthropic({ baseURL: process.env.HEADROOM_PROXY_URL })(anthropicModel)
+      : anthropic(anthropicModel);
+    return { aiModel, servedModel: anthropicModel, orFallback: null };
+  }
+  if (provider === "openai") {
+    const { openai, createOpenAI } = await import("@ai-sdk/openai");
+    const openaiModel = OPENAI_MODEL_MAP[anthropicModel] ?? "gpt-4o";
+    const aiModel = process.env.HEADROOM_PROXY_URL
+      ? createOpenAI({ baseURL: process.env.HEADROOM_PROXY_URL })(openaiModel)
+      : openai(openaiModel);
+    return { aiModel, servedModel: openaiModel, orFallback: null };
+  }
+  if (provider === "openrouter") {
+    // OpenRouter via its OpenAI-compatible endpoint. Model slug is
+    // operator-pinnable via OPENROUTER_MODEL (slugs evolve). Optional
+    // ranking headers are best-effort.
+    const { createOpenAI } = await import("@ai-sdk/openai");
+    const openrouter = createOpenAI({
+      baseURL: process.env.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1",
+      apiKey: process.env.OPENROUTER_API_KEY,
+      headers: {
+        "HTTP-Referer": process.env.NEXTAUTH_URL ?? "https://lafusee.app",
+        "X-Title": "La Fusee",
+      },
+    });
+    const servedModel = resolveOpenRouterModel(anthropicModel);
+    return {
+      aiModel: openrouter(servedModel),
+      servedModel,
+      orFallback: (m: string) => openrouter(m), // repli intra-OpenRouter si le modèle courant est sans endpoint
+    };
+  }
+  // Ollama — local OU Ollama Cloud (https://ollama.com/v1 + clé API).
+  // createOpenAI accepte une apiKey (requise pour le cloud ; le local
+  // accepte n'importe quelle valeur). Modèle : OLLAMA_MODEL (pin global
+  // opérateur, ex. deepseek-v4-flash) > override par appel > police >
+  // nom Claude. Le pin global GAGNE sur les overrides par-appel : ces
+  // derniers épinglent des alias LOCAUX (hermes3-fast, hermes3:8b…)
+  // taillés pour un GPU 8 GB — inexistants sur Ollama Cloud, ils
+  // 404eraient chaque appel du chemin primaire.
+  const { createOpenAI } = await import("@ai-sdk/openai");
+  const ollama = createOpenAI({
+    baseURL: process.env.OLLAMA_BASE_URL,
+    apiKey: process.env.OLLAMA_API_KEY ?? "ollama",
+  });
+  const servedModel =
+    process.env.OLLAMA_MODEL ?? opts.ollamaCallOverride ?? opts.policyOllamaModel ?? anthropicModel;
+  return { aiModel: ollama(servedModel), servedModel, orFallback: null };
+}
+
+/**
+ * Candidats providers texte dans l'ordre structurel (avant resolveTextProviderOrder).
+ * Extraction ADR-0179 — partagée callLLM/streaming. OpenAI volontairement exclu
+ * (réservé aux embeddings, directive opérateur 2026-06-24).
+ * Export intra-Gateway uniquement.
+ */
+export function buildTextProviderCandidates(ollamaPreferred: boolean): LLMProvider[] {
+  const providersToTry: LLMProvider[] = [];
+  if (ollamaPreferred && isProviderHealthy("ollama")) providersToTry.push("ollama");
+  if (isProviderHealthy("anthropic")) providersToTry.push("anthropic");
+  // OpenRouter — appended after Anthropic so it's only reached once Anthropic
+  // (and Ollama if preferred) are unavailable.
+  if (isProviderHealthy("openrouter")) providersToTry.push("openrouter");
+  // Ollama non-préféré reste un repli local valable avant le dernier recours.
+  if (!ollamaPreferred && isProviderHealthy("ollama")) providersToTry.push("ollama");
+  // Ensure at least anthropic is tried as the last-resort fallback.
+  if (providersToTry.length === 0) providersToTry.push("anthropic");
+  return providersToTry;
+}
+
+/**
+ * Erreur provider « transitoire » (modèle sans endpoint / 404 / 429 / surcharge)
+ * qui justifie un repli (intra-OpenRouter ou provider suivant) plutôt qu'un
+ * échec franc. Export intra-Gateway uniquement.
+ */
+export function isTransientProviderError(message: string): boolean {
+  return /no endpoints found|not found|404|429|rate.?limit|provider returned error|overloaded|503|502/i.test(message);
+}
+
 /**
  * Premium mode toggle (`LLM_PREMIUM_MODE`).
  *
@@ -343,7 +452,7 @@ export function isPremiumMode(): boolean {
  *      tête quand configuré ; sinon OpenRouter. Anthropic reste le dernier repli
  *      — le chemin nominal ne touche aucun crédit payant.
  */
-function resolveTextProviderOrder(
+export function resolveTextProviderOrder(
   candidates: LLMProvider[],
   opts: { premium: boolean; explicitPrimary?: LLMProvider },
 ): LLMProvider[] {
@@ -513,8 +622,9 @@ function findBalancedJSON(text: string): string | null {
 
 // ── Cost tracking helper ────────────────────────────────────────────────────
 
-async function trackCost(
-  options: GatewayCallOptions,
+/** Export intra-Gateway uniquement (cf. isProviderHealthy) — consommé par streaming.ts. */
+export async function trackCost(
+  options: Pick<GatewayCallOptions, "strategyId" | "caller">,
   usage: { inputTokens: number; outputTokens: number },
   model: string,
 ): Promise<void> {
@@ -595,18 +705,7 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
   //     (cf. `embed()` / `selectEmbedProvider`). On ne convertit/génère jamais
   //     de texte avec ChatGPT — le texte reste Anthropic, avec Ollama (local)
   //     et OpenRouter (qui sert du Claude) comme seuls replis.
-  const providersToTry: LLMProvider[] = [];
-  if (ollamaPreferred && isProviderHealthy("ollama")) providersToTry.push("ollama");
-  if (isProviderHealthy("anthropic")) providersToTry.push("anthropic");
-  // OpenRouter — appended after Anthropic so it's only reached once Anthropic
-  // (and Ollama if preferred) are unavailable. OpenRouter route vers Claude
-  // (resolveOpenRouterModel → anthropic/claude-*), donc reste cohérent avec la
-  // directive « texte = Anthropic ». Jamais OpenAI ici.
-  if (isProviderHealthy("openrouter")) providersToTry.push("openrouter");
-  // Ollama non-préféré reste un repli local valable avant le dernier recours.
-  if (!ollamaPreferred && isProviderHealthy("ollama")) providersToTry.push("ollama");
-  // Ensure at least anthropic is tried as the last-resort fallback.
-  if (providersToTry.length === 0) providersToTry.push("anthropic");
+  const providersToTry: LLMProvider[] = buildTextProviderCandidates(ollamaPreferred);
 
   // ── Ordre des providers texte — Ollama Cloud primaire, premium opt-in ─────
   // Architecture opérateur 2026-07-16 : Ollama Cloud (OLLAMA_MODEL) est LE
@@ -625,61 +724,14 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
   for (const provider of orderedProviders) {
     try {
       const result = await withRetry(async () => {
-        let aiModel;
-        let orFallback: ((m: string) => unknown) | null = null;
+        const built = await buildProviderModel(provider, anthropicModel, {
+          policyOllamaModel: ollamaModel,
+          ollamaCallOverride: options.ollamaModel,
+        });
+        const aiModel = built.aiModel;
+        const orFallback = built.orFallback;
         // Modèle effectivement servi — clé de la police de débit par modèle.
-        let servedModel = anthropicModel;
-        if (provider === "anthropic") {
-          const { anthropic, createAnthropic } = await import("@ai-sdk/anthropic");
-          if (process.env.HEADROOM_PROXY_URL) {
-            const customAnthropic = createAnthropic({ baseURL: process.env.HEADROOM_PROXY_URL });
-            aiModel = customAnthropic(anthropicModel);
-          } else {
-            aiModel = anthropic(anthropicModel);
-          }
-        } else if (provider === "openai") {
-          const { openai, createOpenAI } = await import("@ai-sdk/openai");
-          const openaiModel = OPENAI_MODEL_MAP[anthropicModel] ?? "gpt-4o";
-          servedModel = openaiModel;
-          if (process.env.HEADROOM_PROXY_URL) {
-            const customOpenAI = createOpenAI({ baseURL: process.env.HEADROOM_PROXY_URL });
-            aiModel = customOpenAI(openaiModel);
-          } else {
-            aiModel = openai(openaiModel);
-          }
-        } else if (provider === "openrouter") {
-          // OpenRouter via its OpenAI-compatible endpoint. Model slug is
-          // operator-pinnable via OPENROUTER_MODEL (slugs evolve). Optional
-          // ranking headers are best-effort.
-          const { createOpenAI } = await import("@ai-sdk/openai");
-          const openrouter = createOpenAI({
-            baseURL: process.env.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1",
-            apiKey: process.env.OPENROUTER_API_KEY,
-            headers: {
-              "HTTP-Referer": process.env.NEXTAUTH_URL ?? "https://lafusee.app",
-              "X-Title": "La Fusee",
-            },
-          });
-          servedModel = resolveOpenRouterModel(anthropicModel);
-          aiModel = openrouter(servedModel);
-          orFallback = (m: string) => openrouter(m); // repli intra-OpenRouter si owl-alpha sans endpoint
-        } else {
-          // Ollama — local OU Ollama Cloud (https://ollama.com/v1 + clé API).
-          // createOpenAI accepte une apiKey (requise pour le cloud ; le local
-          // accepte n'importe quelle valeur). Modèle : OLLAMA_MODEL (pin global
-          // opérateur, ex. deepseek-v4-flash) > override par appel > police >
-          // nom Claude. Le pin global GAGNE sur les overrides par-appel : ces
-          // derniers épinglent des alias LOCAUX (hermes3-fast, hermes3:8b…)
-          // taillés pour un GPU 8 GB — inexistants sur Ollama Cloud, ils
-          // 404eraient chaque appel du chemin primaire.
-          const { createOpenAI } = await import("@ai-sdk/openai");
-          const ollama = createOpenAI({
-            baseURL: process.env.OLLAMA_BASE_URL,
-            apiKey: process.env.OLLAMA_API_KEY ?? "ollama",
-          });
-          servedModel = process.env.OLLAMA_MODEL ?? options.ollamaModel ?? ollamaModel ?? anthropicModel;
-          aiModel = ollama(servedModel);
-        }
+        let servedModel = built.servedModel;
 
         // ── F-A3 (ADR-0067) — responseFormat propagation ────────────────
         // OpenAI + Ollama (via OpenAI-compatible API) support `response_format`
@@ -687,18 +739,20 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
         // upstream callers MUST inject a strict JSON contract in `system` (cf.
         // executeStructuredLLMCall in utils/llm-structured.ts). We log a warn
         // here so any drift is surfaced.
-        // Migration Sonnet 5 (RESIDUAL-DEBT ADR-0143 suite) — parité de
-        // comportement : Sonnet 5 pense par défaut quand `thinking` est omis
-        // (troncature possible sur maxOutputTokens court) et rejette une
-        // `temperature` non-défaut en 400. On préserve le comportement 4.x.
-        const anthropicSonnet5 = provider === "anthropic" && anthropicModel.startsWith("claude-sonnet-5");
+        // Parité Sonnet 5 (thinking disabled + température strippée) —
+        // helper PARTAGÉ `parity.ts` (ADR-0179), consommé aussi par la
+        // surface streaming. Comportement identique au bloc historique.
         const baseProviderOptions =
           options.responseFormat === "json_object" && (provider === "openai" || provider === "ollama" || provider === "openrouter")
             ? { openai: { responseFormat: { type: "json_object" as const } } }
             : undefined;
-        const providerOptions = anthropicSonnet5
-          ? { ...(baseProviderOptions ?? {}), anthropic: { thinking: { type: "disabled" as const } } }
-          : baseProviderOptions;
+        const parity = applySonnet5Parity({
+          provider,
+          model: anthropicModel,
+          baseProviderOptions,
+          temperature: options.temperature,
+        });
+        const providerOptions = parity.providerOptions;
         if (options.responseFormat === "json_object" && provider === "anthropic") {
           // best-effort: rely on caller's system prompt; not a hard error.
           // Silent in tests, warn once otherwise.
@@ -728,9 +782,14 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
           system: hr.system,
           prompt: hr.prompt,
           maxOutputTokens: options.maxOutputTokens ?? DEFAULT_MAX_TOKENS,
-          temperature: anthropicSonnet5 ? undefined : options.temperature,
+          temperature: parity.temperature,
           ...(options.signal ? { abortSignal: options.signal } : {}),
-          ...(providerOptions ? { providerOptions } : {}),
+          // Le helper partagé type providerOptions en Record générique ; le
+          // contenu est byte-identique aux littéraux historiques (json_object
+          // openai + thinking disabled anthropic) — cast de ré-attachement SDK.
+          ...(providerOptions
+            ? { providerOptions: providerOptions as Parameters<typeof generateText>[0]["providerOptions"] }
+            : {}),
         };
         const slotKey = await acquireSlot(servedModel);
         let text!: string;
@@ -746,8 +805,7 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
           // souvent "No endpoints found" / 404 / 429 sous charge → on parcourt la
           // chaîne de modèles GRATUITS jusqu'à ce qu'un réponde, au lieu de tout
           // faire échouer. Tout reste sur OpenRouter et gratuit.
-          const unavailable = (m: string) =>
-            /no endpoints found|not found|404|429|rate.?limit|provider returned error|overloaded|503|502/i.test(m);
+          const unavailable = isTransientProviderError;
           releaseSlot(slotKey);
           slotReleased = true;
           let lastErr: unknown = genErr;
