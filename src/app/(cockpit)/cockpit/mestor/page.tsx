@@ -3,8 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";
-import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { AiBadge } from "@/components/shared/ai-badge";
+import { EmptyState } from "@/components/shared/empty-state";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import {
   Bot,
@@ -18,6 +18,7 @@ import {
   Target,
   BarChart3,
   BookOpen,
+  CloudOff,
 } from "lucide-react";
 
 interface ChatMessage {
@@ -33,12 +34,12 @@ function getQuickPrompts(brandName?: string) {
     {
       icon: Target,
       label: "Diagnostic rapide",
-      prompt: `Fais un diagnostic rapide de ${name} et identifie les 3 priorites principales.`,
+      prompt: `Fais un diagnostic rapide de ${name} et identifie les 3 priorités principales.`,
     },
     {
       icon: BarChart3,
       label: "Analyse SWOT",
-      prompt: `Analyse SWOT de ${name} : forces, faiblesses, opportunites et menaces.`,
+      prompt: `Analyse SWOT de ${name} : forces, faiblesses, opportunités et menaces.`,
     },
     {
       icon: BookOpen,
@@ -47,10 +48,19 @@ function getQuickPrompts(brandName?: string) {
     },
     {
       icon: Lightbulb,
-      label: "Idees de campagne",
-      prompt: `Propose-moi 3 idees de campagne alignees avec la strategie de ${name}.`,
+      label: "Idées de campagne",
+      prompt: `Propose-moi 3 idées de campagne alignées avec la stratégie de ${name}.`,
     },
   ];
+}
+
+/** Erreurs pré-flux renvoyées par la route en JSON (statut ≠ 200). */
+function errorMessageFor(status: number): string {
+  if (status === 503)
+    return "Le service intelligent est momentanément indisponible. Vos données sont intactes — réessayez dans quelques minutes.";
+  if (status === 429)
+    return "Vous avez envoyé beaucoup de messages en peu de temps. Patientez quelques minutes avant de réessayer.";
+  return "Désolé, une erreur est survenue lors de la génération de la réponse.";
 }
 
 export default function MestorPage() {
@@ -60,6 +70,7 @@ export default function MestorPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [streamError, setStreamError] = useState<{ failedContent: string } | null>(null);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -68,12 +79,46 @@ export default function MestorPage() {
     { enabled: !!strategyId },
   );
 
+  // Historique persisté (ADR-0181) — chargé au montage, une seule fois.
+  const historyQuery = trpc.mestor.assistantHistory.useQuery(
+    { strategyId: strategyId! },
+    { enabled: !!strategyId, refetchOnWindowFocus: false },
+  );
+  const clearMutation = trpc.mestor.assistantClear.useMutation();
+
+  useEffect(() => {
+    if (historyLoaded || !historyQuery.data) return;
+    setMessages(
+      historyQuery.data.messages.map((m) => ({
+        id: m.id,
+        role: m.role as "user" | "assistant",
+        content: m.content,
+        timestamp: new Date(m.createdAt),
+      })),
+    );
+    setHistoryLoaded(true);
+  }, [historyQuery.data, historyLoaded]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
 
   if (!strategyId) {
-    return <SkeletonPage />;
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Assistant"
+          description="Votre assistant de marque intelligent."
+          badge={<AiBadge />}
+          breadcrumbs={[{ label: "Cockpit", href: "/cockpit" }, { label: "Assistant" }]}
+        />
+        <EmptyState
+          icon={CloudOff}
+          title="Aucune marque sélectionnée"
+          description="Sélectionnez une marque pour dialoguer avec votre assistant."
+        />
+      </div>
+    );
   }
 
   const strategy = strategyQuery.data;
@@ -90,33 +135,40 @@ export default function MestorPage() {
       timestamp: new Date(),
     };
 
-    const allMessages = [...messages, userMessage];
-    setMessages(allMessages);
+    setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
     setStreamError(null);
 
     try {
-      // Real streaming call to Claude via /api/chat
+      // L'historique vit CÔTÉ SERVEUR (ADR-0181) — on n'envoie que le message.
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: allMessages.map((m) => ({ role: m.role, content: m.content })),
-          context: "cockpit" as const,
-          strategyId,
-        }),
+        body: JSON.stringify({ message: content, strategyId }),
       });
 
-      if (!response.ok) throw new Error("Erreur de l'assistant");
+      if (!response.ok) {
+        setStreamError({ failedContent: content });
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `error-${Date.now()}`,
+            role: "assistant",
+            content: errorMessageFor(response.status),
+            timestamp: new Date(),
+          },
+        ]);
+        return;
+      }
 
-      // Handle streaming response
+      // Flux TEXTE BRUT (ADR-0179) — chaque chunk décodé est du contenu, on
+      // l'ajoute tel quel. Zéro parsing de préfixe.
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       let assistantContent = "";
       const assistantId = `assistant-${Date.now()}`;
 
-      // Add empty assistant message that we'll stream into
       setMessages((prev) => [
         ...prev,
         { id: assistantId, role: "assistant", content: "", timestamp: new Date() },
@@ -126,50 +178,35 @@ export default function MestorPage() {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-
-          const chunk = decoder.decode(value, { stream: true });
-          // Parse SSE data chunks from AI SDK streaming format
-          const lines = chunk.split("\n");
-          for (const line of lines) {
-            if (line.startsWith("0:")) {
-              // AI SDK text chunk format: 0:"text content"
-              try {
-                const textContent = JSON.parse(line.slice(2));
-                if (typeof textContent === "string") {
-                  assistantContent += textContent;
-                  setMessages((prev) =>
-                    prev.map((m) =>
-                      m.id === assistantId ? { ...m, content: assistantContent } : m
-                    )
-                  );
-                }
-              } catch {
-                // Skip malformed chunks
-              }
-            }
-          }
+          assistantContent += decoder.decode(value, { stream: true });
+          const current = assistantContent;
+          setMessages((prev) =>
+            prev.map((m) => (m.id === assistantId ? { ...m, content: current } : m)),
+          );
         }
+        assistantContent += decoder.decode();
       }
 
-      // If streaming produced no content, set a fallback
+      // Filet : flux terminé sans aucun contenu (ne devrait plus arriver — la
+      // route ne répond 200 qu'après le premier fragment reçu).
       if (!assistantContent) {
+        setStreamError({ failedContent: content });
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantId
               ? { ...m, content: "Je n'ai pas pu générer de réponse. Veuillez réessayer." }
-              : m
-          )
+              : m,
+          ),
         );
       }
     } catch {
-      // Track the failed content for retry
       setStreamError({ failedContent: content });
       setMessages((prev) => [
         ...prev,
         {
           id: `error-${Date.now()}`,
           role: "assistant",
-          content: "Desole, une erreur est survenue lors de la generation de la reponse.",
+          content: "Désolé, une erreur est survenue lors de la génération de la réponse.",
           timestamp: new Date(),
         },
       ]);
@@ -194,6 +231,9 @@ export default function MestorPage() {
   const handleReset = () => {
     setMessages([]);
     setInput("");
+    setStreamError(null);
+    // Efface aussi le fil persisté — « Nouvelle conversation » = vraie remise à zéro.
+    clearMutation.mutate({ strategyId });
   };
 
   return (
@@ -234,8 +274,9 @@ export default function MestorPage() {
                 Bienvenue sur votre assistant
               </h3>
               <p className="mt-1 max-w-sm text-center text-sm text-foreground-secondary">
-                Je suis votre assistant de marque. Posez-moi vos questions sur
-                {strategyName ? ` ${strategyName},` : ""} vos guidelines, ou demandez un diagnostic.
+                Je suis votre assistant de marque. Je connais votre dossier complet — posez-moi vos
+                questions sur{strategyName ? ` ${strategyName},` : ""} votre stratégie, ou demandez un
+                diagnostic.
               </p>
 
               {/* Quick prompts */}
@@ -347,7 +388,7 @@ export default function MestorPage() {
                     className="flex items-center gap-2 rounded-lg border border-error/30 bg-error/20 px-4 py-2 text-sm text-error transition-colors hover:bg-error/40"
                   >
                     <RotateCcw className="h-4 w-4" />
-                    Reessayer
+                    Réessayer
                   </button>
                 </div>
               )}
@@ -360,7 +401,7 @@ export default function MestorPage() {
         {strategy && (
           <div className="border-t border-border/50 bg-background/40 px-4 py-1.5">
             <p className="text-2xs text-foreground-muted">
-              Contexte : {strategy.name} - Score {(strategy.composite ?? 0).toFixed(0)}/200 ({strategy.classification})
+              Contexte : {strategy.name} - Score {(strategy.composite ?? 0).toFixed(0)}/200
             </p>
           </div>
         )}

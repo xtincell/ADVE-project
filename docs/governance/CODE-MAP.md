@@ -32,7 +32,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 221 models, 71 enums
+## Prisma — 223 models, 71 enums
 
 ### Models
 
@@ -80,6 +80,8 @@ Ces correspondances évitent la réinvention :
 - **DeliverableTracking** (10 fields)
 - **Conversation** (14 fields)
 - **Message** (12 fields)
+- **AssistantThread** (7 fields) — ADR-0181 — fil de conversation de l'ASSISTANT DE MARQUE (chat cockpit). DISTINCT de `Conversation`/`Message` ci-dessus (
+- **AssistantMessage** (6 fields)
 - **QuickIntake** (32 fields)
 - **MediaPlan** (13 fields)
 - **MediaPlanLine** (18 fields)

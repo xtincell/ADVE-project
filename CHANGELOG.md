@@ -1,5 +1,37 @@
 # Changelog — La Fusee
 
+## v6.27.330 — feat(anubis): endpoint MCP JSON-RPC réel — le client Claude « réfléchit dans le cockpit » (ADR-0182) (2026-07-26)
+
+**Le cockpit est enfin accessible en MCP : un vrai endpoint JSON-RPC (`/api/mcp/rpc`) que Claude Code (web/CLI) et Claude Desktop consomment — pas le dialecte REST maison qui ne pouvait se brancher nulle part.**
+
+- **Le trou** : `/api/mcp/*` parlait `{server,tool,params}` (REST maison), pas le protocole MCP. `@modelcontextprotocol/sdk@1.29` était déclaré mais importé nulle part → le snippet de config documenté ne pouvait PAS marcher. En prime : piliers tronqués à 280 c, Oracle zéro exposition, RAG exposé nulle part, `knowledge_graph_query` buggé, manifest racine inaccessible par clé API.
+- **Le transport** : `WebStandardStreamableHTTPServerTransport` (Request/Response natifs, aucun adaptateur Node), mode **stateless** (sûr multi-process pm2/Coolley), auth `x-api-key`/session ADMIN. Scoping BRAND fail-closed + metering (`McpApiCall`) préservés (`meterMcp` extrait de `meterAndRun`). `tools/list` **curé** (~17 tools haute-valeur + génériques `lafusee_catalog`/`lafusee_invoke` pour la longue traîne).
+- **Contenu enfin complet** : `advertis.getPillarContent` (Pillar.content intégral) · nouveaux serveurs MCP `oracle` (list/get/snapshot des 35 sections) + `council` (ask/deliberate, ADR-0180) · `intelligence.rag_search` (dégrade honnêtement sans embeddings) · fix `knowledge_graph_query` (utilise `input.query`, apparie le strategyId sur `data` pas `sector`) · fix `GET /api/mcp` (session OU clé API). Docs `MCP-AGENT-ACCESS.md` réécrites (config Claude Code + egress allowlist). Cap APOGEE 7/7 préservé.
+
+## v6.27.329 — feat(mestor): conseil de marque — coordinateur ADVE + 4 experts A/D/V/E adversariaux (ADR-0180) (2026-07-26)
+
+**Une équipe d'experts vit dans La Fusée : un coordinateur qui connaît tout le dossier de marque + 4 experts (Authenticité/Distinction/Valeur/Engagement) qui challengent chaque position au nom de leur pilier.**
+
+- **Sous-service MESTOR** (`mestor/council/`), advisory LECTURE SEULE — **pas un Neter** (cap 7/7 intact), aucun Intent, aucune écriture pilier. Anti-doublon tracé (swarm/commandant/pillar-directors ≠ panel producteur-vs-critique).
+- **5 personas TS** : le coordinateur cite les champs précis du dossier verbatim et ne fabrique jamais un chiffre ; chaque expert a un mandat adversarial explicite (« un APPROVE sans critique substantielle est un échec de mandat »). Contexte via `serializePillar` + RAG hybride + communauté mesurée, chaque bloc `wrapUntrusted`.
+- **Deux modes** : `askCouncilStream` (chat interactif, 1 appel streamé) et `deliberate` (draft coordinateur → 4 critiques en parallèle → synthèse avec `dissent`). Dégradations honnêtes (0 expert OK → draft seul ; pas de provider → UNAVAILABLE). Exposé au cockpit via le chat + en `operatorProcedure`/tool MCP pour la délibération (coût).
+
+## v6.27.328 — fix(cockpit): le chat Assistant marche enfin — stream réparé, contexte ADVE réel, historique persisté (ADR-0179/0181) (2026-07-26)
+
+**« Mestor ne marche pas : le chat interactif des cockpit client » — chaque message finissait en « Je n'ai pas pu générer de réponse ». Réparé de bout en bout.**
+
+- **Cause n°1** : le client parsait le format stream AI SDK v3/v4 (`0:"…"`) alors que la route renvoyait du texte brut (ai@6) → aucune ligne ne matchait → échec systématique. Protocole désormais : **texte brut streamé**, zéro parsing de préfixe.
+- **Causes aggravantes** : Sonnet 5 appelé en direct sans `thinking:{disabled}` (cap 2048 → réponse mangée par le raisonnement), bypass total du Gateway, **zéro contenu ADVE injecté** (8 chiffres + un nom). Désormais servi par le conseil de marque (`askCouncilStream`, ADR-0180) → cascade providers + parité Sonnet 5 + dossier complet.
+- **Robustesse** : pre-flight `isTextLLMAvailable` (503 honnête avant tout header) + rate-limit par utilisateur + EmptyState sans marque (fin du skeleton infini) + **historique persisté** (`AssistantThread`/`AssistantMessage`, ADR-0181, chargé côté serveur — anti-forgeage). Procédure morte `mestorRouter.chat` déposée.
+
+## v6.27.327 — feat(llm-gateway): surface streaming (`streamChatText`) — le chat passe enfin par le Gateway (ADR-0179) (2026-07-26)
+
+**Le LLM Gateway sait enfin streamer — ferme la dette « /api/chat routé hors Gateway » qui privait le chat de cascade providers, parité Sonnet 5, budget et coût.**
+
+- Nouveau `llm-gateway/streaming.ts` (`streamChatText`) : cascade providers résolue (jamais hardcodée), budget Thot, circuit breaker, cost tracking, police de débit — mêmes gardes que `callLLM`.
+- **Parité Sonnet 5 partagée** : extraction du garde-fou (thinking disabled + température strippée) dans `llm-gateway/parity.ts`, consommé par `callLLM` ET la surface streaming (fin de la duplication qui avait déjà cassé le chat une fois).
+- **Fallback pré-premier-octet** : probe du premier delta sous timeout 15 s → provider suivant si échec/flux-vide ; une fois le flux committé, erreur mid-stream = texte partiel conservé (honnêteté). Cap APOGEE 7/7 préservé.
+
 ## v6.27.326 — fix(pillar-maturity): « le nom de Betsy apparaît dans Awa » — la contamination inter-items de l'auto-fill tuée à la racine (ancre d'identité par champ) (2026-07-24)
 
 **Constat opérateur (capture SPAWT) : le persona « Awa » se remplit enfin (fix v6.27.325 OK) MAIS son contenu décrit « Betsy » de bout en bout (craintes, style de vie, conso média…). « le nom de betsy apparait dans awa pourquoi ? ». Et sur les guidelines : « les infos ici sont fausses, les bonnes ont pourtant été définies — l'ensemble n'est plus cohérent ».**

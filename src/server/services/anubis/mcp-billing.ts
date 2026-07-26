@@ -182,6 +182,47 @@ export async function recordMcpCall(input: RecordMcpCallInput): Promise<void> {
 }
 
 /**
+ * Exécute + mètre un call MCP déjà authentifié (succès comme échec) et retourne
+ * la VALEUR brute (ou relance l'erreur). Cœur partagé entre la voie REST
+ * (`meterAndRun`, qui l'enveloppe en NextResponse) et le transport MCP
+ * JSON-RPC (`/api/mcp/rpc`, ADR-0182 — qui ne parle pas NextResponse et doit
+ * renvoyer un `CallToolResult`). Le metering (Q1 traçabilité) est identique
+ * quel que soit le transport.
+ */
+export async function meterMcp<T>(
+  gate: McpAuthResult,
+  server: string,
+  tool: string,
+  fn: () => Promise<T>,
+): Promise<T> {
+  const started = Date.now();
+  try {
+    const result = await fn();
+    recordMcpCall({
+      apiKeyId: gate.apiKeyId,
+      userId: gate.userId,
+      ratePerCallUsd: gate.ratePerCallUsd,
+      server,
+      tool,
+      status: "OK",
+      durationMs: Date.now() - started,
+    }).catch((err) => console.warn("[mcp-billing] metering failed:", err instanceof Error ? err.message : err));
+    return result;
+  } catch (err) {
+    recordMcpCall({
+      apiKeyId: gate.apiKeyId,
+      userId: gate.userId,
+      ratePerCallUsd: gate.ratePerCallUsd,
+      server,
+      tool,
+      status: "ERROR",
+      durationMs: Date.now() - started,
+    }).catch(() => {});
+    throw err;
+  }
+}
+
+/**
  * Exécute + mètre un call MCP déjà authentifié (succès comme échec).
  * Retourne la NextResponse prête. Usage type dans une route :
  *
@@ -196,30 +237,11 @@ export async function meterAndRun(
   tool: string,
   fn: () => Promise<unknown>,
 ): Promise<NextResponse> {
-  const started = Date.now();
   try {
-    const result = await fn();
-    recordMcpCall({
-      apiKeyId: gate.apiKeyId,
-      userId: gate.userId,
-      ratePerCallUsd: gate.ratePerCallUsd,
-      server,
-      tool,
-      status: "OK",
-      durationMs: Date.now() - started,
-    }).catch((err) => console.warn("[mcp-billing] metering failed:", err instanceof Error ? err.message : err));
+    const result = await meterMcp(gate, server, tool, fn);
     return NextResponse.json({ result });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    recordMcpCall({
-      apiKeyId: gate.apiKeyId,
-      userId: gate.userId,
-      ratePerCallUsd: gate.ratePerCallUsd,
-      server,
-      tool,
-      status: "ERROR",
-      durationMs: Date.now() - started,
-    }).catch(() => {});
     console.error(`[mcp/${server}] error:`, message);
     return NextResponse.json({ error: message }, { status: 500 });
   }

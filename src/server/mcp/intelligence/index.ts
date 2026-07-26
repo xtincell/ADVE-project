@@ -58,17 +58,118 @@ export const tools: ToolDefinition[] = [
     inputSchema: z.object({
       query: z.string().describe("Requête sémantique en langage naturel"),
       strategyId: z.string().optional().describe("ID de la stratégie pour filtrer le contexte"),
+      entryType: z.string().optional().describe("Filtre optionnel sur le type d'entrée"),
       limit: z.number().int().min(1).max(50).default(10).describe("Nombre max de résultats"),
     }),
     handler: async (input) => {
-      const entries = await db.knowledgeEntry.findMany({
-        where: {
-          ...(input.strategyId ? { sector: input.strategyId as string } : {}),
-        },
+      // FIX (ADR-0182) : l'ancien handler appariait le strategyId sur le champ
+      // `sector` (confusion de type — un id de marque n'est PAS un secteur) et
+      // IGNORAIT complètement `input.query`. Désormais : le strategyId est
+      // apparié sur le JSON `data` (où il vit réellement), et la query CLASSE
+      // les résultats par recouvrement de mots-clés (déterministe, zéro LLM).
+      const limit = (input.limit as number) ?? 10;
+      const query = String(input.query ?? "").toLowerCase();
+      const strategyId = typeof input.strategyId === "string" ? input.strategyId : null;
+      const entryType = typeof input.entryType === "string" ? input.entryType : null;
+
+      const pool = await db.knowledgeEntry.findMany({
+        where: entryType
+          ? { entryType: entryType as import("@prisma/client").KnowledgeType }
+          : {},
         orderBy: { createdAt: "desc" },
-        take: (input.limit as number) ?? 10,
+        take: 200,
       });
-      return { entries, count: entries.length };
+
+      const scoped = strategyId
+        ? pool.filter((e) => {
+            const data = (e.data ?? {}) as Record<string, unknown>;
+            return data.strategyId === strategyId;
+          })
+        : pool;
+
+      const terms = query.split(/\s+/).filter((t) => t.length > 2);
+      const ranked = scoped
+        .map((e) => {
+          const hay = JSON.stringify(e.data ?? {}).toLowerCase();
+          const score = terms.reduce((s, t) => (hay.includes(t) ? s + 1 : s), 0);
+          return { entry: e, score };
+        })
+        .sort((a, b) => b.score - a.score)
+        .slice(0, limit);
+
+      return {
+        entries: ranked.map((r) => r.entry),
+        count: ranked.length,
+        query,
+        matchedByQuery: terms.length > 0,
+      };
+    },
+  },
+
+  // ---- Recherche sémantique dans la connaissance de marque (RAG) ----
+  {
+    name: "rag_search",
+    description:
+      "Recherche sémantique dans la connaissance d'une marque (piliers, narratifs, sources ingérées, benchmarks). Retourne les extraits les plus pertinents pour une requête. Utilise les embeddings quand ils sont disponibles ; sinon dégrade honnêtement vers un filtrage par métadonnées + mots-clés (le champ usedVectorSearch le signale). Lecture seule, scopée à strategyId.",
+    inputSchema: z.object({
+      strategyId: z.string().describe("ID de la marque"),
+      query: z.string().min(2).describe("Requête en langage naturel"),
+      pillarKey: z.string().optional().describe("Restreindre à un pilier (a/d/v/e/r/t/i/s)"),
+      topK: z.number().int().min(1).max(20).default(8).describe("Nombre d'extraits"),
+    }),
+    handler: async (input) => {
+      const strategyId = input.strategyId as string;
+      const query = input.query as string;
+      const pillarKey = typeof input.pillarKey === "string" ? input.pillarKey.toLowerCase() : undefined;
+      const topK = (input.topK as number) ?? 8;
+
+      const { topKWithinStrategy, listByMetadata } = await import(
+        "@/server/services/seshat/context-store/ranker"
+      );
+      const vectorHits = await topKWithinStrategy(strategyId, query, { pillarKey, topK });
+      if (vectorHits.length > 0) {
+        return {
+          strategyId,
+          query,
+          usedVectorSearch: true,
+          results: vectorHits.map((h) => ({
+            kind: h.kind,
+            pillarKey: h.pillarKey,
+            field: h.field,
+            similarity: h.similarity,
+            payload: h.payload,
+          })),
+        };
+      }
+
+      // Aucun embedding (provider "none") → repli déterministe métadonnées + mots-clés.
+      const candidates = await listByMetadata({
+        strategyId,
+        kinds: ["PILLAR_FIELD", "NARRATIVE", "BRAND_SOURCE"],
+        pillarKey,
+        candidateLimit: 200,
+      });
+      const terms = query.toLowerCase().split(/\s+/).filter((t) => t.length > 2);
+      const ranked = candidates
+        .map((c) => {
+          const hay = JSON.stringify(c.payload ?? {}).toLowerCase();
+          const score = terms.reduce((s, t) => (hay.includes(t) ? s + 1 : s), 0);
+          return { c, score };
+        })
+        .filter((r) => r.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, topK);
+      return {
+        strategyId,
+        query,
+        usedVectorSearch: false,
+        results: ranked.map((r) => ({
+          kind: r.c.kind,
+          pillarKey: r.c.pillarKey,
+          field: r.c.field,
+          payload: r.c.payload,
+        })),
+      };
     },
   },
 

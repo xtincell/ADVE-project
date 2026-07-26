@@ -7,20 +7,22 @@ export const dynamic = "force-dynamic";
  * GET  /api/mcp          → manifest agrégé (servers + tools list)
  * POST /api/mcp          → dispatcher unifié { server, tool, params }
  *
- * Auth ADMIN-only sur le POST. GET reste accessible authentifié pour permettre
- * à un client externe de découvrir les tools sans privilège exécution.
+ * NB : ce endpoint sert le dialecte REST maison `{server,tool,params}`. Le VRAI
+ * protocole MCP JSON-RPC (pour Claude Code/Desktop) vit sur /api/mcp/rpc
+ * (ADR-0182). Ce endpoint reste pour les agents non-MCP (ex. galahad, ADR-0182).
+ *
+ * GET : accessible par session OU x-api-key (fix ADR-0182 — l'ancienne garde
+ * `session?.user` 401ait tout porteur de clé, contredisant MCP-AGENT-ACCESS §2).
  */
 
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth/config";
 import { authenticateMcpRequest, meterAndRun, scopeMcpParams } from "@/server/services/anubis/mcp-billing";
 import { buildAggregatedManifest, dispatchTool } from "@/server/services/anubis/mcp-server";
 
-export async function GET() {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+export async function GET(request: Request) {
+  // Manifest = découverte, lecture seule → session ADMIN OU x-api-key valide.
+  const gate = await authenticateMcpRequest(request, "*");
+  if (!gate.ok) return gate.response!;
   const manifest = await buildAggregatedManifest();
   return NextResponse.json(manifest);
 }
