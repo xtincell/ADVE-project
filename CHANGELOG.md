@@ -1,5 +1,16 @@
 # Changelog — La Fusee
 
+## v6.27.332 — fix(thot): connecteur CinetPay migré vers l'API « Aurore » v1 (OAuth token) (2026-07-26)
+
+**Constat opérateur : « validation sandbox CinetPay » impossible. Le compte marchand d'UPgraders est sur la nouvelle plateforme CinetPay « Aurore » (`api.cinetpay.net`, v1), que le connecteur — écrit pour l'API checkout classique (`api-checkout.cinetpay.com/v2`, `apikey`+`site_id`) — ne sait pas parler. Contrat Aurore lu dans la doc du panel marchand + le SDK officiel `cinetpay-js`.**
+
+- **Provider (`cinetpay.ts`) réécrit** : login OAuth `POST /v1/oauth/login` (`api_key`+`api_password`) → token bearer caché en process (~24 h via `expires_in`) → `POST /v1/payment` (header `Authorization: Bearer`). Base URL pilotée par env `CINETPAY_BASE_URL` (défaut sandbox `https://api.cinetpay.net`, prod par override). `verifyPayment` via `GET /v1/payment/{ref}`. Plus de `site_id` (inexistant dans le modèle Aurore).
+- **Webhook (`/api/payment/webhook/cinetpay`) réécrit** : notification Aurore `{merchantTransactionId, transactionId, notifyToken, status}` + **re-vérification autoritaire** via l'API statut (défense en profondeur ; fallback sur `status` + `notifyToken` optionnel si l'appel statut est indisponible). Claim atomique idempotent (`updateMany status not PAID`) + fulfillment + cycle d'abonnement **conservés à l'identique**.
+- **Schéma env (ADR-0075 — secrets en env, jamais en DB)** : `CINETPAY_API_KEY` + `CINETPAY_API_PASSWORD` + `CINETPAY_BASE_URL` (fin de `CINETPAY_SITE_ID`/`CINETPAY_SECRET_KEY`). Registry (message d'erreur), guide Console (`payment-provider-guide.tsx` → panel `panel.cinetpay.net`), **test HARD `payment-secrets-stay-in-env` réaligné** (`SITE_ID` → `API_PASSWORD`) et commentaire router mis à jour.
+- **`scripts/verify-cinetpay.ts`** (nouveau) : exerce le vrai provider (login + init `/v1/payment`) sans encaissement, n'affiche aucun secret. À lancer depuis une IP présente dans la « Liste Blanche IP » du panel (sinon 401/403).
+- tsc 0 · eslint 0 · **1295 tests de gouvernance verts**. Cap APOGEE 7/7 · 0 modèle Prisma · 0 migration · 0 LLM ajouté.
+- **Résidus (à confirmer par un 1er appel réel — tracés)** : jeu de champs requis exact de `/v1/payment` (envoi « page hébergée », sans téléphone ni `channel`) ; endpoint de statut `GET /v1/payment/{ref}` (hypothèse SDK — le webhook retombe sur la notif si divergent) ; whitelist IP serveur + prod à poser ; ADR « migration CinetPay classique → Aurore » à formaliser.
+
 ## v6.27.331 — feat(anubis): serveur OAuth 2.1 du endpoint MCP — le connecteur claude.ai peut enfin s'inscrire (ADR-0183) (2026-07-26)
 
 **« Impossible de s'inscrire auprès du service de connexion de La Fusée » — le connecteur claude.ai exige OAuth, notre endpoint n'authentifiait que par clé. Serveur d'autorisation OAuth 2.1 complet bâti.**

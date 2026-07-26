@@ -10,7 +10,7 @@
 // [x] Verify payment status by reference
 // [x] Persisted in DB via IntakePayment model
 // [x] Webhook receivers (CinetPay + Stripe at /api/payment/webhook/{provider})
-// [ ] Real CinetPay integration (requires CINETPAY_API_KEY + CINETPAY_SITE_ID)
+// [x] Real CinetPay integration — Aurore v1 API (requires CINETPAY_API_KEY + CINETPAY_API_PASSWORD)
 // [ ] Real Stripe integration (requires STRIPE_SECRET_KEY)
 // ============================================================================
 

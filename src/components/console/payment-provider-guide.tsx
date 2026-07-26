@@ -34,12 +34,12 @@ const GUIDES: ReadonlyArray<ProviderGuideEntry> = [
     id: "CINETPAY",
     label: "CinetPay (Mobile Money + cards — marchés africains)",
     envVars: [
-      { name: "CINETPAY_API_KEY", description: "Clé API depuis le dashboard CinetPay > Intégration." },
-      { name: "CINETPAY_SITE_ID", description: "ID du site marchand (visible à côté de l'API key)." },
-      { name: "CINETPAY_SECRET_KEY", description: "Clé HMAC pour vérifier les webhooks (sécurité défense en profondeur)." },
+      { name: "CINETPAY_API_KEY", description: "Clé API (panel CinetPay > Ressources > API & sécurité)." },
+      { name: "CINETPAY_API_PASSWORD", description: "Mot de passe API (même page) — sert à obtenir le token OAuth Aurore." },
+      { name: "CINETPAY_BASE_URL", description: "https://api.cinetpay.net (Sandbox) — endpoint de l'API Aurore v1." },
     ],
     webhookPath: "/api/payment/webhook/cinetpay",
-    providerDashboardUrl: "https://app.cinetpay.com",
+    providerDashboardUrl: "https://panel.cinetpay.net",
   },
   {
     id: "STRIPE",

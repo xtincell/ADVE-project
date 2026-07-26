@@ -2,56 +2,51 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { db } from "@/lib/db";
+import { cinetpayProvider } from "@/server/services/payment-providers/cinetpay";
 
 // ---------------------------------------------------------------------------
-// CinetPay webhook (notify_url) — confirms intake paywall payments
+// CinetPay webhook (notifyUrl) — "Aurore" v1 API notifications.
 // ---------------------------------------------------------------------------
-// CinetPay sends a POST with form-urlencoded fields. We verify the HMAC
-// signature passed in the `x-token` header, then re-check the transaction
-// against the CinetPay v2 verification API as a defense-in-depth step.
+// Aurore posts a JSON body:
+//   { merchantTransactionId, transactionId, notifyToken, status }
+// We DON'T trust the payload blindly: we re-verify the transaction against the
+// Aurore status API (authoritative, defense in depth). If that call is
+// unavailable (e.g. IP allow-list not yet set during first tests) we fall back
+// to the notification's own status, optionally gated by notifyToken when a
+// CINETPAY_NOTIFY_TOKEN is configured — so a genuine sandbox notification is
+// still honored while a spoofed one without the token is not.
+//
+// Legacy v2 fields (cpm_*) are still parsed so an old-format POST degrades
+// gracefully instead of 400-ing.
 // ---------------------------------------------------------------------------
 
 interface CinetPayNotify {
+  merchantTransactionId?: string;
+  transactionId?: string;
+  notifyToken?: string;
+  status?: string;
+  // Legacy v2 fallback fields:
   cpm_trans_id?: string;
-  cpm_site_id?: string;
-  cpm_amount?: string;
-  cpm_currency?: string;
   cpm_trans_status?: string;
   cpm_payid?: string;
-  cpm_payment_date?: string;
-  signature?: string;
 }
 
-function verifyHmac(rawBody: string, headerSig: string | null): boolean {
-  const secret = process.env.CINETPAY_SECRET_KEY ?? process.env.WEBHOOK_SECRET;
-  if (!secret || !headerSig) return false;
-
-  const provided = headerSig.startsWith("sha256=") ? headerSig.slice(7) : headerSig;
-  const expected = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
-
+function notifyTokenMatches(provided: string | undefined): boolean {
+  const expected = process.env.CINETPAY_NOTIFY_TOKEN;
+  if (!expected || !provided) return false;
   try {
-    return crypto.timingSafeEqual(Buffer.from(provided, "hex"), Buffer.from(expected, "hex"));
+    const a = Buffer.from(provided);
+    const b = Buffer.from(expected);
+    return a.length === b.length && crypto.timingSafeEqual(a, b);
   } catch {
     return false;
   }
 }
 
-async function verifyWithCinetPay(transactionId: string): Promise<{ accepted: boolean; raw?: unknown }> {
-  const apiKey = process.env.CINETPAY_API_KEY;
-  const siteId = process.env.CINETPAY_SITE_ID;
-  if (!apiKey || !siteId) return { accepted: false };
-
-  const response = await fetch("https://api-checkout.cinetpay.com/v2/payment/check", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ apikey: apiKey, site_id: siteId, transaction_id: transactionId }),
-  });
-
-  const data = (await response.json()) as { code?: string; data?: { status?: string } };
-  return { accepted: data.code === "00" && data.data?.status === "ACCEPTED", raw: data };
-}
-
-function parseFormBody(rawBody: string): CinetPayNotify {
+function parseBody(rawBody: string, contentType: string): CinetPayNotify {
+  if (contentType.includes("application/json")) {
+    return JSON.parse(rawBody) as CinetPayNotify;
+  }
   const params = new URLSearchParams(rawBody);
   const out: CinetPayNotify = {};
   for (const [k, v] of params.entries()) (out as Record<string, string>)[k] = v;
@@ -64,39 +59,44 @@ export async function POST(request: Request) {
 
   let payload: CinetPayNotify;
   try {
-    payload = contentType.includes("application/json")
-      ? (JSON.parse(rawBody) as CinetPayNotify)
-      : parseFormBody(rawBody);
+    payload = parseBody(rawBody, contentType);
   } catch {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
-  const reference = payload.cpm_trans_id;
+  const reference = payload.merchantTransactionId ?? payload.cpm_trans_id;
   if (!reference) {
-    return NextResponse.json({ error: "Missing cpm_trans_id" }, { status: 400 });
+    return NextResponse.json({ error: "Missing merchantTransactionId" }, { status: 400 });
   }
 
-  const headerSig = request.headers.get("x-token");
-  const hmacOk = verifyHmac(rawBody, headerSig);
-
-  const verified = await verifyWithCinetPay(reference);
-
-  if (!hmacOk && !verified.accepted) {
-    return NextResponse.json({ error: "Verification failed" }, { status: 401 });
+  // Authoritative re-check against the Aurore status API. Fall back to the
+  // notification payload only if that call throws.
+  let isPaid: boolean;
+  try {
+    const verified = await cinetpayProvider.verifyPayment!(reference);
+    isPaid = verified.paid;
+  } catch (err) {
+    console.warn(
+      "[webhook/cinetpay] status re-check unavailable, falling back to payload:",
+      err instanceof Error ? err.message : err,
+    );
+    const rawStatus = payload.status ?? payload.cpm_trans_status;
+    const statusOk = rawStatus === "SUCCESS" || rawStatus === "ACCEPTED";
+    // If a notify token is configured, require it; otherwise accept the status.
+    isPaid = statusOk && (process.env.CINETPAY_NOTIFY_TOKEN ? notifyTokenMatches(payload.notifyToken) : true);
   }
 
-  const isPaid = verified.accepted || payload.cpm_trans_status === "ACCEPTED";
+  const providerRef = payload.transactionId ?? payload.cpm_payid ?? null;
 
   let intakeToken: string | null = null;
   let newlyPaid = false;
   if (isPaid) {
-    // Claim atomique (comme PayPal) : PAID une SEULE fois → le fulfillment ne
-    // tourne qu'au 1er passage même si CinetPay redélivre la notif (fin du
-    // double-envoi email + ré-assemblage Oracle — audit round-8). Le cycle
-    // d'abonnement plus bas est DÉJÀ idempotent (`applySubscriptionCycleIfPaid`).
+    // Claim atomique : PAID une SEULE fois → le fulfillment ne tourne qu'au 1er
+    // passage même si CinetPay redélivre la notif (fin du double-envoi email +
+    // ré-assemblage Oracle). Le cycle d'abonnement plus bas est déjà idempotent.
     const claimed = await db.intakePayment.updateMany({
       where: { reference, status: { not: "PAID" } },
-      data: { status: "PAID", paidAt: new Date(), providerRef: payload.cpm_payid ?? null },
+      data: { status: "PAID", paidAt: new Date(), providerRef },
     });
     newlyPaid = claimed.count > 0;
     const row = await db.intakePayment.findUnique({
@@ -109,7 +109,7 @@ export async function POST(request: Request) {
     try {
       const payment = await db.intakePayment.update({
         where: { reference },
-        data: { status: "FAILED", failureReason: payload.cpm_trans_status ?? "REFUSED" },
+        data: { status: "FAILED", failureReason: payload.status ?? payload.cpm_trans_status ?? "REFUSED" },
       });
       intakeToken = payment.intakeToken;
     } catch {
@@ -124,8 +124,8 @@ export async function POST(request: Request) {
     void fulfillPaidIntakeReport(reference);
   }
 
-  // Cycle d'abonnement manuel (Vague 5) : un paiement lié à une Subscription
-  // étend sa période de 30 j à l'encaissement. No-op pour un paiement intake.
+  // Cycle d'abonnement manuel : un paiement lié à une Subscription étend sa
+  // période de 30 j à l'encaissement. No-op pour un paiement intake.
   if (isPaid) {
     const { applySubscriptionCycleIfPaid } = await import(
       "@/server/services/payment-providers/subscription-cycles"

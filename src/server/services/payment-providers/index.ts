@@ -70,7 +70,7 @@ export function pickProvider(ctx: PickContext): PaymentProvider {
   }
 
   throw new Error(
-    "No payment provider configured. Set CINETPAY_API_KEY+CINETPAY_SITE_ID, STRIPE_SECRET_KEY, or PAYPAL_CLIENT_ID+PAYPAL_CLIENT_SECRET.",
+    "No payment provider configured. Set CINETPAY_API_KEY+CINETPAY_API_PASSWORD, STRIPE_SECRET_KEY, or PAYPAL_CLIENT_ID+PAYPAL_CLIENT_SECRET.",
   );
 }
 

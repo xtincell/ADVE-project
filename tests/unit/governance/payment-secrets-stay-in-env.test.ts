@@ -46,7 +46,7 @@ describe("ADR-0075 — Payment provider secrets stay in env vars", () => {
     const file = path.join(PROVIDERS_DIR, "cinetpay.ts");
     const src = fs.readFileSync(file, "utf8");
     expect(src).toContain("process.env.CINETPAY_API_KEY");
-    expect(src).toContain("process.env.CINETPAY_SITE_ID");
+    expect(src).toContain("process.env.CINETPAY_API_PASSWORD");
     // Aucun lookup DB pour les secrets dans le provider.
     for (const pattern of FORBIDDEN_DB_PATTERNS) {
       expect(src, `Pattern interdit dans cinetpay.ts: ${pattern}`).not.toContain(pattern);
