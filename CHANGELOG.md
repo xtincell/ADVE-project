@@ -1,5 +1,13 @@
 # Changelog — La Fusee
 
+## v6.27.331 — feat(anubis): serveur OAuth 2.1 du endpoint MCP — le connecteur claude.ai peut enfin s'inscrire (ADR-0183) (2026-07-26)
+
+**« Impossible de s'inscrire auprès du service de connexion de La Fusée » — le connecteur claude.ai exige OAuth, notre endpoint n'authentifiait que par clé. Serveur d'autorisation OAuth 2.1 complet bâti.**
+
+- **Le trou** : le connecteur claude.ai (web/mobile) refuse l'auth par header et exige un flux OAuth 2.1 (découverte RFC 8414/9728 → enregistrement dynamique de client RFC 7591 → code + PKCE RFC 7636 → token). ADR-0182 avait livré l'auth par `x-api-key` (Claude Code) et déféré l'OAuth — c'est ce qui manquait à l'erreur `ofid_…`.
+- **Le serveur d'autorisation** : 3 modèles additifs (`McpOAuthClient`/`Code`/`Token`, secrets **hashés** SHA-256) + service déterministe `anubis/mcp-oauth.ts` (DCR, PKCE S256 en comparaison longueur-constante, codes usage-unique TTL 10 min, refresh roté) + 5 endpoints (`.well-known` ×2, `register`, `authorize` avec page de consentement, `token`). Portée **identique à McpApiKey** (SYSTEM|BRAND) résolue au consentement depuis les marques accessibles et **re-vérifiée serveur-side**.
+- **Intégration** : `authenticateMcpRequest` accepte désormais `Authorization: Bearer` (validé par hash, non facturé — usage interactif) ; `/api/mcp/rpc` renvoie `WWW-Authenticate` sur 401 → déclenche la découverte du connecteur. Sécurité : redirect_uri validé exactement (anti open-redirect), PKCE obligatoire, session NextAuth réelle. Les deux voies coexistent (header pour Claude Code, OAuth pour claude.ai). Cap APOGEE 7/7 préservé.
+
 ## v6.27.330 — feat(anubis): endpoint MCP JSON-RPC réel — le client Claude « réfléchit dans le cockpit » (ADR-0182) (2026-07-26)
 
 **Le cockpit est enfin accessible en MCP : un vrai endpoint JSON-RPC (`/api/mcp/rpc`) que Claude Code (web/CLI) et Claude Desktop consomment — pas le dialecte REST maison qui ne pouvait se brancher nulle part.**

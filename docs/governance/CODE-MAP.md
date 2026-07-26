@@ -32,7 +32,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 223 models, 71 enums
+## Prisma — 226 models, 71 enums
 
 ### Models
 
@@ -171,6 +171,9 @@ Ces correspondances évitent la réinvention :
 - **McpApiKey** (19 fields)
 - **McpApiCall** (10 fields) — Un call API MCP à la frontière HTTP (billable si apiKeyId, tracé sinon). Source de vérité unique du metering — les state
 - **McpUsageStatement** (14 fields) — Relevé mensuel gelé à l'émission : billable = max(0, calls − franchise) × tarif.
+- **McpOAuthClient** (7 fields) — ADR-0183 — serveur OAuth 2.1 du endpoint MCP (pour le connecteur claude.ai web/mobile, qui exige OAuth + enregistrement 
+- **McpOAuthCode** (13 fields) — Code d'autorisation OAuth (usage unique, TTL court, lié au PKCE challenge).
+- **McpOAuthToken** (13 fields) — Jeton d'accès (+ refresh) OAuth. Seuls les HASH SHA-256 sont stockés.
 - **BrandOSConfig** (8 fields)
 - **CampaignTemplate** (12 fields)
 - **InterventionRequest** (13 fields)

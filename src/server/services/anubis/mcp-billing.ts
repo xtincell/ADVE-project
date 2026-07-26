@@ -57,7 +57,25 @@ export async function authenticateMcpRequest(
     return { ok: true, userId: session.user.id, scopeKind: "SYSTEM" };
   }
 
-  // 2) x-api-key (client externe facturé)
+  // 2) Bearer OAuth 2.1 (connecteur claude.ai — ADR-0183). Token émis par notre
+  // serveur d'autorisation, portée identique (SYSTEM|BRAND) ; non facturé
+  // (usage interactif, comme la session ADMIN). Validé par hash.
+  const authz = request.headers.get("authorization");
+  if (authz?.startsWith("Bearer ")) {
+    const { validateAccessToken } = await import("@/server/services/anubis/mcp-oauth");
+    const tok = await validateAccessToken(authz.slice("Bearer ".length).trim());
+    if (tok) {
+      return {
+        ok: true,
+        userId: tok.userId,
+        scopeKind: tok.scopeKind,
+        scopeStrategyId: tok.scopeStrategyId,
+      };
+    }
+    // Bearer présent mais invalide → on tombe au 401 (le client relancera l'OAuth).
+  }
+
+  // 3) x-api-key (client externe facturé)
   const apiKey = request.headers.get("x-api-key");
   if (apiKey) {
     const keyHash = createHash("sha256").update(apiKey).digest("hex");
