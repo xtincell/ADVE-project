@@ -303,7 +303,7 @@ protocole opérationnel : skill `nefer-ops` TEMPS 2).
 
 ## Stack
 
-Next.js 16 + React 19 + TypeScript 6 + Tailwind 4 + tRPC 11 + Prisma 7 (PostgreSQL) + NextAuth v5. LLM Gateway central (multi-provider — cascade Anthropic→OpenAI→Ollama→OpenRouter, circuit breaker, cost tracking, headroom) in `src/server/services/llm-gateway/`. Hybrid RAG + multi-provider embeddings (Ollama → OpenAI → no-op) since V5.2. Vitest 4 + Playwright 1.59 for tests. CVA 0.7 for design-system variants. ESLint 10 + madge 8 enforce the layering cascade.
+Next.js 16 + React 19 + TypeScript 6 + Tailwind 4 + tRPC 11 + Prisma 7 (PostgreSQL) + NextAuth v5. LLM Gateway central (multi-provider — **Ollama Cloud primaire → OpenRouter repli → Anthropic dernier recours** ; `LLM_PREMIUM_MODE=1` promeut Anthropic, `LLM_PRIMARY_PROVIDER` gagne sur tout ; **OpenAI exclu du texte, réservé aux embeddings** ; circuit breaker, cost tracking, headroom) in `src/server/services/llm-gateway/`. Hybrid RAG + multi-provider embeddings (Ollama → OpenAI → no-op) since V5.2. Vitest 4 + Playwright 1.59 for tests. CVA 0.7 for design-system variants. ESLint 10 + madge 8 enforce the layering cascade.
 
 ## Conventions (already enforced or in flight via refonte)
 

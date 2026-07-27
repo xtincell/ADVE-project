@@ -12,12 +12,31 @@
  */
 
 import type { z } from "zod";
+import { db } from "@/lib/db";
+
+/**
+ * Portée d'un tool vis-à-vis des marques.
+ *
+ * - `BRAND` (défaut implicite) — le tool lit ou écrit de la donnée DE MARQUE.
+ *   Son schéma DOIT porter `strategyId`, sinon il est inatteignable avec une
+ *   clé limitée à une marque (et, avec une clé système, il rend la donnée de
+ *   TOUTES les marques — c'est exactement la fuite `content_calendar_get`).
+ * - `GLOBAL` — le tool ne rend aucune donnée propre à une marque (référentiel
+ *   marché, codes secteur, annuaire de la Guilde). Il reste joignable par une
+ *   clé de marque : il n'y a rien à scoper.
+ *
+ * Le marqueur est EXPLICITE de sorte qu'un tool de marque qui oublie
+ * `strategyId` reste refusé par défaut — fail-closed conservé.
+ */
+export type McpToolScope = "BRAND" | "GLOBAL";
 
 export interface McpToolDefinition {
   name: string;
   description: string;
   inputSchema: z.ZodType;
   handler: (input: Record<string, unknown>) => Promise<unknown>;
+  /** Voir `McpToolScope`. Absent = BRAND (le défaut sûr). */
+  scope?: McpToolScope;
 }
 
 export interface McpServerModule {

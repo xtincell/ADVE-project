@@ -407,8 +407,6 @@ export function buildTextProviderCandidates(ollamaPreferred: boolean): LLMProvid
   const providersToTry: LLMProvider[] = [];
   if (ollamaPreferred && isProviderHealthy("ollama")) providersToTry.push("ollama");
   if (isProviderHealthy("anthropic")) providersToTry.push("anthropic");
-  // OpenRouter — appended after Anthropic so it's only reached once Anthropic
-  // (and Ollama if preferred) are unavailable.
   if (isProviderHealthy("openrouter")) providersToTry.push("openrouter");
   // Ollama non-préféré reste un repli local valable avant le dernier recours.
   if (!ollamaPreferred && isProviderHealthy("ollama")) providersToTry.push("ollama");
@@ -451,7 +449,17 @@ export function isPremiumMode(): boolean {
  *   3. premium OFF (default) → Ollama (Cloud ou local, gratuit/forfaitaire) en
  *      tête quand configuré ; sinon OpenRouter. Anthropic reste le dernier repli
  *      — le chemin nominal ne touche aucun crédit payant.
+ *
+ * Le point 3 ne tenait qu'à moitié jusqu'au 2026-07-27 : la fonction hissait bien
+ * Ollama en tête, mais laissait derrière lui l'ordre STRUCTUREL des candidats, où
+ * Anthropic (payant) précède OpenRouter (gratuit). Dès qu'Ollama échouait, le
+ * repli était donc facturé — l'inverse de la doctrine écrite trois lignes plus
+ * haut. Le tri payant-en-dernier ci-dessous ferme l'écart.
  */
+
+/** Providers texte qui consomment des crédits payants (repli de dernier rang). */
+const PAID_TEXT_PROVIDERS: readonly LLMProvider[] = ["anthropic"];
+
 export function resolveTextProviderOrder(
   candidates: LLMProvider[],
   opts: { premium: boolean; explicitPrimary?: LLMProvider },
@@ -465,7 +473,19 @@ export function resolveTextProviderOrder(
       : "openrouter";
   const primary =
     explicit ?? (fallbackPrimary && candidates.includes(fallbackPrimary) ? fallbackPrimary : undefined);
-  return primary ? [primary, ...candidates.filter((p) => p !== primary)] : candidates;
+  const ordered = primary ? [primary, ...candidates.filter((p) => p !== primary)] : candidates;
+
+  // Premium ON = crédits chargés, l'ordre structurel (Anthropic d'abord) est
+  // celui qu'on veut. Un primaire explicite reste en tête dans les deux modes :
+  // l'opérateur gagne toujours.
+  if (opts.premium) return ordered;
+  const [head, ...tail] = ordered;
+  if (!head) return ordered;
+  return [
+    head,
+    ...tail.filter((p) => !PAID_TEXT_PROVIDERS.includes(p)),
+    ...tail.filter((p) => PAID_TEXT_PROVIDERS.includes(p)),
+  ];
 }
 
 /** Test-only string-typed wrapper around `resolveTextProviderOrder`. */
