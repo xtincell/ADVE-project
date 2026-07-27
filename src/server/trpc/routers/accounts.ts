@@ -190,6 +190,23 @@ export const accountsRouter = createTRPCRouter({
         password: z.string().min(8).max(200),
         teamRole: z.enum(TEAM_ROLES).default("DIGITAL_DIRECTOR"),
         accountRole: z.enum(BRAND_LOGIN_ACCOUNT_ROLES).default("FOUNDER"),
+        /**
+         * Nature du rattachement à la marque.
+         *
+         * `COLLABORATOR` (défaut, comportement historique) : accès DÉLÉGUÉ,
+         * scopé par `teamRole` et soumis au firewall de zones (ADR-0131) —
+         * un community manager opère le calendrier, pas la fondation.
+         *
+         * `OWNER` : le compte devient PROPRIÉTAIRE (`Strategy.userId`), comme
+         * Stéphanie sur SPAWT. Le firewall de zones ne s'applique pas au
+         * propriétaire (`collaborator-firewall.ts` sort dès
+         * `strategy.userId === userId`) : il a la main sur toute sa marque.
+         *
+         * La distinction manquait : le mécanisme ne savait produire QUE des
+         * collaborateurs, alors qu'un dirigeant à qui l'on remet sa marque
+         * n'est pas un délégué de son propre bien.
+         */
+        attachAs: z.enum(["COLLABORATOR", "OWNER"]).default("COLLABORATOR"),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -198,7 +215,7 @@ export const accountsRouter = createTRPCRouter({
 
       const strategy = await db.strategy.findUnique({
         where: { id: input.strategyId },
-        select: { id: true, name: true },
+        select: { id: true, name: true, userId: true },
       });
       if (!strategy) throw new TRPCError({ code: "NOT_FOUND", message: "Marque introuvable." });
 
@@ -225,6 +242,7 @@ export const accountsRouter = createTRPCRouter({
           name: input.name,
           teamRole: input.teamRole,
           accountRole: input.accountRole,
+          attachAs: input.attachAs,
           actor: actor.id,
         },
         caller: "accounts:createBrandLogin",
@@ -246,6 +264,32 @@ export const accountsRouter = createTRPCRouter({
               data: { name: input.name, email, hashedPassword, role: input.accountRole, passwordChangeInvited: true },
               select: { id: true, email: true },
             });
+
+        // ── Propriété (attachAs: "OWNER") ────────────────────────────────
+        // `Strategy.userId` EST la propriété : `canAccessStrategy` y court-
+        // circuite, et le firewall de zones aussi. On suit le motif Stéphanie
+        // (seed SPAWT) : le nouveau propriétaire prend la marque, l'ancien
+        // devient collaborateur DIGITAL_DIRECTOR — la paternité de la stratégie
+        // est conservée, personne ne perd son accès en silence.
+        if (input.attachAs === "OWNER") {
+          const previousOwnerId = strategy.userId;
+          await db.strategy.update({ where: { id: strategy.id }, data: { userId: user.id } });
+          if (previousOwnerId && previousOwnerId !== user.id) {
+            await db.strategyCollaborator.upsert({
+              where: { strategyId_userId: { strategyId: strategy.id, userId: previousOwnerId } },
+              update: { role: "DIGITAL_DIRECTOR", status: "ACTIVE", revokedAt: null },
+              create: {
+                strategyId: strategy.id,
+                userId: previousOwnerId,
+                role: "DIGITAL_DIRECTOR",
+                scopes: [] as unknown as Prisma.InputJsonValue,
+                status: "ACTIVE",
+                grantedByUserId: actor.id,
+                note: "Propriétaire précédent — accès conservé après transfert de propriété.",
+              },
+            });
+          }
+        }
 
         // Rattache le login à la marque — upsert ACTIVE (ADR-0129).
         const collab = await db.strategyCollaborator.upsert({
@@ -282,6 +326,9 @@ export const accountsRouter = createTRPCRouter({
           userId: user.id,
           email: user.email,
           brandName: strategy.name ?? strategy.id,
+          attachedAs: input.attachAs,
+          /** Vrai propriétaire de la marque après cet acte. */
+          isOwner: input.attachAs === "OWNER",
           teamRole: collab.role,
           accountRole: input.accountRole,
           claimed: Boolean(existing),

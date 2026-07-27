@@ -235,12 +235,16 @@ function CreateBrandLoginCard() {
   const [password, setPassword] = useState("");
   const [teamRole, setTeamRole] = useState<(typeof TEAM_ROLE_OPTIONS)[number]["value"]>("DIGITAL_DIRECTOR");
   const [accountRole, setAccountRole] = useState<(typeof ACCOUNT_ROLE_OPTIONS)[number]["value"]>("FOUNDER");
+  // Propriétaire ≠ collaborateur : le dirigeant à qui l'on remet SA marque
+  // n'est pas un délégué de son propre bien. Le formulaire ne savait créer que
+  // des accès délégués (scopés par le firewall de zones).
+  const [attachAs, setAttachAs] = useState<"COLLABORATOR" | "OWNER">("COLLABORATOR");
   const [ok, setOk] = useState<string | null>(null);
 
   const create = trpc.accounts.createBrandLogin.useMutation({
     onSuccess: (r) => {
       setOk(
-        `Login créé : ${r.email} → ${r.brandName} (${r.teamRole})${r.claimed ? " · compte existant réclamé" : ""}. La personne peut se connecter sur /login.`,
+        `Login créé : ${r.email} → ${r.brandName} (${r.isOwner ? "PROPRIÉTAIRE" : r.teamRole})${r.claimed ? " · compte existant réclamé" : ""}. La personne peut se connecter sur /login.`,
       );
       setName("");
       setEmail("");
@@ -307,6 +311,17 @@ function CreateBrandLoginCard() {
           />
         </label>
         <label className={labelCls}>
+          Nature de l&apos;accès
+          <select
+            value={attachAs}
+            onChange={(e) => setAttachAs(e.target.value as typeof attachAs)}
+            className={inputCls}
+          >
+            <option value="COLLABORATOR">Collaborateur — accès délégué, limité à son métier</option>
+            <option value="OWNER">Propriétaire — la marque lui appartient, accès complet</option>
+          </select>
+        </label>
+        <label className={labelCls}>
           Rôle sur la marque
           <select value={teamRole} onChange={(e) => setTeamRole(e.target.value as typeof teamRole)} className={inputCls}>
             {TEAM_ROLE_OPTIONS.map((r) => (
@@ -337,7 +352,7 @@ function CreateBrandLoginCard() {
           type="button"
           onClick={() => {
             setOk(null);
-            create.mutate({ strategyId, email, name, password, teamRole, accountRole });
+            create.mutate({ strategyId, email, name, password, teamRole, accountRole, attachAs });
           }}
           disabled={disabled}
           className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground hover:opacity-90 disabled:opacity-40"
