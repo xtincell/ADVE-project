@@ -1,5 +1,15 @@
 # Changelog — La Fusee
 
+## v6.27.351 — fix(cockpit): une seule liste de secteurs/pays, et créer une marque l'ouvre (2026-07-27)
+
+**Deux défauts rapportés par l'opérateur sur `/cockpit/new`, mêmes causes que d'habitude : une liste dupliquée, et une redirection au mauvais endroit.**
+
+- **« L'intake interne n'est pas synchro avec l'intake externe. »** Le wizard portait SES PROPRES listes — **17 secteurs contre 24, 11 pays contre 23**. Ce n'était pas un décalage d'affichage : le préremplissage depuis l'intake public fait `SECTORS.includes(s) ? s : "AUTRE"`, donc un dirigeant qui déclarait **Culture, Tourisme, Logistique, Agro, Alimentation, Conseil, Services, B2B, ONG, Public ou Assurance** voyait son secteur **réécrit en « AUTRE » à la création de sa marque, en silence**. Idem pour tout pays hors des onze retenus. Et comme le secteur est **la clé de ligue du scoreur** ([ADR-0149](docs/governance/adr/0149-scoreur-force-revelee.md)), la marque atterrissait dans la ligue des inclassables.
+- Quatre valeurs n'existaient **que** dans cette liste (`HOSPITALITY`, `AGRICULTURE`, `BEAUTE`, `TRANSPORT`) là où le canon dit `TOURISME`, `AGRO`, `MODE`, `LOGISTIQUE` ; et `RCA` n'est pas un code ISO-2 (Centrafrique = `CF`), donc il ne pouvait correspondre à rien en aval — ni routage de paiement, ni zone économique, ni ligue. Le wizard consomme désormais `INTAKE_SECTORS`/`INTAKE_COUNTRIES`, et les libellés accentués du canon remplacent les codes bruts affichés jusqu'ici (« SANTE », « ENERGIE »). Le repli du préremplissage pays va sur `AUTRE`, l'échappatoire du canon — surtout pas sur « CM », qui déclarerait le Cameroun à la place du dirigeant.
+- **« J'ai créé fantribe mais je n'arrivais pas à l'ouvrir. »** Deux causes cumulées dans le même `handleSubmit` : (1) la redirection **ne portait pas l'id de la marque créée** — le sélecteur retient la DERNIÈRE marque active (`lf-active-strategy`) et ignore tout de la nouvelle, on atterrissait donc sur la marque précédente ; elle porte maintenant `?strategy=<id>` et vise le **hub Fondation** (les 4 piliers A/D/V/E et leur avancement) plutôt qu'un pilier isolé. (2) la redirection vivait **DANS le `try` de l'initialisation** : une initialisation en échec = aucune navigation, avec une marque pourtant déjà créée, et le dirigeant bloqué sur le formulaire ; elle en sort, le message d'erreur dit que la marque existe et son bouton l'ouvre (il renvoyait vers `/cockpit`, donc encore vers la marque précédente).
+- Verrou CI `intake-options-single-source.test.ts` (9) : le wizard consomme le canon sans le recopier, **aucune liste rivale** ailleurs dans `src/`, la taxonomie du scoreur couvre tous les secteurs de l'intake, les pays sont des codes ISO-2 (`AUTRE` excepté, échappatoire documentée), et les trois mécanismes d'ouverture de la marque créée.
+- tsc 0 · lint 0 · cycles 0 · **1436 tests gouvernance verts**.
+
 ## v6.27.350 — fix: absence ≠ zéro + ordre déterministe du fil Assistant (2026-07-27)
 
 **Dernier lot du round 4 adversarial. Cinq surfaces affichaient « 0 » là où la mesure n'avait jamais tourné.**
