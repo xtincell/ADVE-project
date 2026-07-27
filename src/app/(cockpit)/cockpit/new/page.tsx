@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { trpc } from "@/lib/trpc/client";
+import { INTAKE_SECTORS, INTAKE_COUNTRIES } from "@/lib/constants/intake-options";
 import { PageHeader } from "@/components/shared/page-header";
 import {
   Rocket, Building2, Globe, DollarSign, Users, ArrowRight,
@@ -39,20 +40,31 @@ const SALES_CHANNELS = [
   { key: "HYBRID", label: "Hybride", desc: "Les deux — direct et via distributeurs" },
 ];
 
-const SECTORS = [
-  "FMCG", "BTP", "BANQUE", "TELECOM", "TECH", "RETAIL", "HOSPITALITY",
-  "EDUCATION", "SANTE", "MEDIA", "AGRICULTURE", "MODE", "BEAUTE",
-  "TRANSPORT", "ENERGIE", "IMMOBILIER", "AUTRE",
-];
-
-const COUNTRIES = [
-  { code: "CM", name: "Cameroun" }, { code: "CI", name: "Cote d'Ivoire" },
-  { code: "SN", name: "Senegal" }, { code: "GA", name: "Gabon" },
-  { code: "CG", name: "Congo" }, { code: "TD", name: "Tchad" },
-  { code: "RCA", name: "Centrafrique" }, { code: "CD", name: "RD Congo" },
-  { code: "BJ", name: "Benin" }, { code: "TG", name: "Togo" },
-  { code: "OTHER", name: "Autre" },
-];
+/**
+ * Secteurs et pays — LA MÊME LISTE que l'intake public (`INTAKE_SECTORS` /
+ * `INTAKE_COUNTRIES`), pas une copie.
+ *
+ * Ce fichier portait ses propres listes, plus courtes et divergentes : 17
+ * secteurs contre 24, 11 pays contre 23. Ce n'était pas qu'un décalage
+ * d'affichage — le préremplissage depuis l'intake fait
+ * `SECTORS.includes(s) ? s : "AUTRE"`. Un dirigeant qui déclarait **Culture,
+ * Tourisme, Logistique, Agro, Alimentation, Conseil, Services, B2B, ONG,
+ * Public ou Assurance** dans l'intake public voyait donc son secteur RÉÉCRIT
+ * en « AUTRE » à la création de sa marque, sans un mot. Idem hors des 11 pays
+ * retenus. Et comme le secteur est la clé de ligue du scoreur (ADR-0149), la
+ * marque atterrissait dans la ligue des inclassables.
+ *
+ * Quatre valeurs n'existaient que dans cette liste — `HOSPITALITY`,
+ * `AGRICULTURE`, `BEAUTE`, `TRANSPORT` — là où le canon dit `TOURISME`,
+ * `AGRO`, `MODE` (« Mode & beauté ») et `LOGISTIQUE`. Et `RCA` n'est pas un
+ * code ISO-2 (la Centrafrique, c'est `CF`) : il ne pouvait correspondre à rien
+ * en aval.
+ *
+ * Une seule liste, donc. Les libellés accentués du canon remplacent au passage
+ * les codes bruts (« SANTE », « ENERGIE ») affichés jusqu'ici.
+ */
+const SECTORS = INTAKE_SECTORS;
+const COUNTRIES = INTAKE_COUNTRIES;
 
 // ============================================================================
 // COMPONENT
@@ -64,6 +76,8 @@ export default function NewBrandPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [bootError, setBootError] = useState<string | null>(null);
+  /** Marque créée — retenue pour que chaque sortie ouvre CELLE-CI. */
+  const [createdId, setCreatedId] = useState<string | null>(null);
 
   // Form state
   const [brandName, setBrandName] = useState("");
@@ -113,11 +127,13 @@ export default function NewBrandPage() {
     if (intakeData.companyName && !brandName) setBrandName(intakeData.companyName);
     if (intakeData.sector) {
       const s = intakeData.sector.toUpperCase();
-      setSector(SECTORS.includes(s) ? s : "AUTRE");
+      setSector(SECTORS.some((x) => x.value === s) ? s : "AUTRE");
     }
     if (intakeData.country) {
       const c = intakeData.country.toUpperCase();
-      setCountry(COUNTRIES.some((x) => x.code === c) ? c : "OTHER");
+      // Repli sur `AUTRE`, l'échappatoire du canon — surtout pas sur « CM »,
+      // qui déclarerait le Cameroun à la place du dirigeant.
+      setCountry(COUNTRIES.some((x) => x.value === c) ? c : "AUTRE");
     }
     if (intakeData.businessModel && BUSINESS_MODELS.some((m) => m.key === intakeData.businessModel)) {
       setBusinessModel(intakeData.businessModel);
@@ -167,20 +183,31 @@ export default function NewBrandPage() {
         },
       });
 
+      setCreatedId(result.id);
+
       // Auto-launch Boot Sequence
       try {
         await startBoot.mutateAsync({ strategyId: result.id });
-        // Land on the brand foundation (a real page). Deep onboarding is run by
-        // the UPgraders team — no founder-facing boot wizard exists in the cockpit.
-        router.push("/cockpit/brand/identity");
       } catch (bootErr) {
-        // Boot failed — show error with option to continue
+        // L'initialisation a échoué — mais LA MARQUE EXISTE. On le dit, et on
+        // laisse quand même entrer : la redirection était à l'intérieur de ce
+        // `try`, donc un échec d'initialisation laissait le dirigeant BLOQUÉ
+        // sur le formulaire avec une marque déjà créée, sans aucun moyen de
+        // l'ouvrir.
         setBootError(
           bootErr instanceof Error
             ? bootErr.message
-            : "L'initialisation n'a pas pu démarrer. Vous pouvez continuer vers votre tableau de bord.",
+            : "L'initialisation n'a pas pu démarrer — votre marque est créée, vous pouvez l'ouvrir.",
         );
+        return;
       }
+      // `?strategy=` : le sélecteur de marque retient la DERNIÈRE marque active
+      // (`lf-active-strategy`) et ne connaît pas encore celle qu'on vient de
+      // créer. Sans ce paramètre — que le provider lit et persiste — on
+      // atterrissait sur la marque précédente, d'où « je ne pouvais pas
+      // l'ouvrir ». On vise le hub Fondation, qui présente les 4 piliers A/D/V/E
+      // et leur avancement, plutôt qu'un pilier isolé.
+      router.push(`/cockpit/brand/fondation?strategy=${result.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur lors de la creation");
     } finally {
@@ -285,7 +312,7 @@ export default function NewBrandPage() {
         {step === 1 && (
           <div className="space-y-5">
             <div>
-              <h3 className="text-lg font-semibold text-foreground mb-1">Ou opere cette marque ?</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-1">Où opère cette marque ?</h3>
               <p className="text-sm text-foreground-secondary">Secteur d'activité et marché principal.</p>
             </div>
             <div>
@@ -293,15 +320,15 @@ export default function NewBrandPage() {
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                 {SECTORS.map((s) => (
                   <button
-                    key={s}
-                    onClick={() => setSector(s)}
+                    key={s.value}
+                    onClick={() => setSector(s.value)}
                     className={`rounded-lg border px-3 py-2 text-xs transition-all ${
-                      sector === s
+                      sector === s.value
                         ? "border-accent bg-accent/15 text-accent font-medium"
                         : "border-border bg-background text-foreground-secondary hover:border-border"
                     }`}
                   >
-                    {s}
+                    {s.label}
                   </button>
                 ))}
               </div>
@@ -311,15 +338,15 @@ export default function NewBrandPage() {
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                 {COUNTRIES.map((c) => (
                   <button
-                    key={c.code}
-                    onClick={() => setCountry(c.code)}
+                    key={c.value}
+                    onClick={() => setCountry(c.value)}
                     className={`rounded-lg border px-3 py-2 text-xs transition-all ${
-                      country === c.code
+                      country === c.value
                         ? "border-accent bg-accent/15 text-accent font-medium"
                         : "border-border bg-background text-foreground-secondary hover:border-border"
                     }`}
                   >
-                    {c.name}
+                    {c.label}
                   </button>
                 ))}
               </div>
@@ -434,11 +461,11 @@ export default function NewBrandPage() {
               )}
               <div className="flex justify-between px-4 py-3">
                 <span className="text-xs text-foreground-muted">Secteur</span>
-                <span className="text-sm text-foreground-secondary">{sector}</span>
+                <span className="text-sm text-foreground-secondary">{SECTORS.find((x) => x.value === sector)?.label ?? sector}</span>
               </div>
               <div className="flex justify-between px-4 py-3">
                 <span className="text-xs text-foreground-muted">Pays</span>
-                <span className="text-sm text-foreground-secondary">{COUNTRIES.find((c) => c.code === country)?.name ?? country}</span>
+                <span className="text-sm text-foreground-secondary">{COUNTRIES.find((c) => c.value === country)?.label ?? country}</span>
               </div>
               <div className="flex justify-between px-4 py-3">
                 <span className="text-xs text-foreground-muted">Modele</span>
@@ -478,10 +505,14 @@ export default function NewBrandPage() {
                 <p className="text-sm font-medium text-warning">L&apos;initialisation n&apos;a pas pu démarrer</p>
                 <p className="mt-1 text-xs text-warning/80">{bootError}</p>
                 <button
-                  onClick={() => router.push("/cockpit")}
+                  onClick={() =>
+                    router.push(
+                      createdId ? `/cockpit/brand/fondation?strategy=${createdId}` : "/cockpit",
+                    )
+                  }
                   className="mt-3 rounded-lg bg-warning px-4 py-2 text-sm font-medium text-white hover:bg-warning"
                 >
-                  Continuer vers le dashboard
+                  Ouvrir ma marque
                 </button>
               </div>
             )}
