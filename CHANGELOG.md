@@ -1,5 +1,14 @@
 # Changelog — La Fusee
 
+## v6.27.353 — feat(governance): retrouver une personne dans le contenu de toutes les marques (2026-07-27)
+
+**On ne corrige pas ce qu'on n'a pas lu.**
+
+- `GET /api/admin/brand-scan?q=<nom>` (CRON_SECRET, **lecture seule**) répond à une question qu'aucune surface ne savait poser : *où, dans toutes les marques, cette chaîne apparaît-elle ?* Cas réel qui l'a motivée : une personne nommée dans le contenu ADVE d'une marque à laquelle elle n'appartient pas. Les champs porteurs de personnes (`a.equipeDirigeante`, `a.messieFondateur`…) sont remplis **par inférence** — un nom peut donc s'y retrouver sans que personne ne l'ait décidé, et il n'existait aucun moyen de le **constater** : l'inventaire ne voit que les comptes, et le cockpit ne montre qu'une marque à la fois.
+- Rend le **chemin JSON exact**, index de tableau compris (`equipeDirigeante[2].nom`) : sans l'index, on saurait qu'il y a un intrus sans savoir lequel retirer. Couvre aussi les rattachements de comptes (collaborateur, propriétaire) — un nom peut n'être nulle part dans le contenu et pourtant lier quelqu'un à la marque.
+- Comparaison insensible casse **et accents**, plage de marques combinantes écrite en échappements : en littéral, elles survivent mal aux copies de fichier et échoueraient en silence — et une recherche qui ne trouve rien ressemble à « il n'y a rien ».
+- La **correction** reste sur la voie gouvernée `OPERATOR_AMEND_PILLAR` (chokepoint `writePillar`), jamais par cette route. Bornes dures sur le parcours récursif (profondeur 12, 200 occurrences).
+
 ## v6.27.352 — feat(governance): inventaire des comptes, mot de passe provisoire, purge fail-closed (2026-07-27)
 
 **Un mot de passe existant est irrécupérable. La seule réponse honnête à « redonne-moi les accès » est d'en poser un nouveau — encore fallait-il pouvoir.**
