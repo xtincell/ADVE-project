@@ -104,6 +104,17 @@ describe("brand-scores — le canon des trois mesures", () => {
     expect(t.forceRevelee.value).toBeNull();
     expect(t.forceRevelee.coveragePct).toBeNull();
   });
+
+  it("est SERVI par une surface de production, pas seulement par ce test", () => {
+    // Le canon a vécu un temps sans aucun appelant : chaque surface continuait
+    // de servir « le score » comme un nombre unique — exactement la confusion
+    // qu'il existe pour dissiper. Un canon que personne n'appelle n'est pas un
+    // canon, c'est un fichier (relecture adversariale 2026-07-27).
+    const card = readFileSync(join(SRC, "server", "mcp", "advertis", "index.ts"), "utf8");
+    expect(card).toMatch(/describeScores\(\{/);
+    expect(card).toMatch(/cultIndexScore:/);
+    expect(card).toMatch(/revealedForce:/);
+  });
 });
 
 describe("le vecteur ADVERTIS n'a qu'un seul lecteur", () => {

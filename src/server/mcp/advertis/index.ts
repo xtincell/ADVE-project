@@ -21,7 +21,7 @@
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { effectiveTier } from "@/domain/brand-tier";
-import { ADVE_COMPOSITE_MAX, readCompositeFromVector } from "@/domain/brand-scores";
+import { ADVE_COMPOSITE_MAX, describeScores, readCompositeFromVector } from "@/domain/brand-scores";
 import { computeProvenanceBreakdown } from "@/domain/field-provenance";
 import { PILLAR_KEYS, PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
 import { ADVE_KEYS } from "@/domain";
@@ -173,6 +173,29 @@ export const tools: ToolDefinition[] = [
         loadPillar(strategyId, "d"),
       ]);
       const composite = readCompositeFromVector(strategy.advertis_vector);
+
+      // Les TROIS mesures, nommées et servies ensemble (`domain/brand-scores`).
+      // Le module portait ce canon depuis L1 mais n'avait aucun appelant de
+      // production : chaque surface continuait de servir « le score » comme un
+      // nombre unique, ce qui est précisément la confusion qu'il existe pour
+      // dissiper. Un agent qui lit cette carte voit désormais qu'il y en a
+      // trois, ce que chacune mesure, et laquelle n'est pas mesurée (`null`).
+      const [cultIndex, verdict] = await Promise.all([
+        // `CultIndexSnapshot.compositeScore` = indice d'ATTACHEMENT /100.
+        // Aliasé tout de suite en `attachement` : le nom est homonyme d'une
+        // autre mesure et c'est précisément ce que ce module dissipe.
+        db.cultIndexSnapshot.findFirst({
+          where: { strategyId: strategy.id },
+          orderBy: { measuredAt: "desc" },
+          select: { compositeScore: true },
+        }).then((r) => (r ? { attachement: r.compositeScore } : null)),
+        db.scoreVerdict.findFirst({
+          where: { subjectStrategyId: strategy.id },
+          orderBy: { computedAt: "desc" },
+          select: { force: true, coveragePct: true },
+        }),
+      ]);
+
       return {
         strategyId: strategy.id,
         name: strategy.name,
@@ -186,6 +209,14 @@ export const tools: ToolDefinition[] = [
         completudeStructurelle: { value: composite, max: ADVE_COMPOSITE_MAX },
         /** @deprecated alias de compatibilité — lire `completudeStructurelle`. */
         compositeScore: composite,
+        // Les trois mesures ne se fusionnent JAMAIS (D9) — `null` = non mesurée.
+        scores: describeScores({
+          advertisVector: strategy.advertis_vector,
+          cultIndexScore: cultIndex?.attachement ?? null,
+          revealedForce: verdict
+            ? { force: verdict.force, coveragePct: verdict.coveragePct }
+            : null,
+        }),
         // Palier OFFICIEL s'il a été posé par une transition gouvernée
         // (ADR-0167), sinon dérivé du composite. Jamais `classifyTier` en direct.
         tier:
