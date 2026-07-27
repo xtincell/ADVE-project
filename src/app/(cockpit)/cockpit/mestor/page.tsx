@@ -27,6 +27,16 @@ interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
+  /**
+   * Message d'ÉCHEC affiché à la place d'une réponse (service indisponible,
+   * flux vide, exception). Il porte le rôle « assistant » pour s'afficher au
+   * bon endroit, mais ce n'est pas une position de la marque : sans ce
+   * drapeau, « Analyse approfondie » soumettait « Le service intelligent est
+   * momentanément indisponible » aux quatre experts — 5 appels LLM dépensés à
+   * critiquer un message d'erreur, affiché ensuite sous « Position soumise »
+   * comme la position stratégique de la marque.
+   */
+  isError?: boolean;
 }
 
 function getQuickPrompts(brandName?: string) {
@@ -158,6 +168,7 @@ export default function MestorPage() {
             role: "assistant",
             content: errorMessageFor(response.status),
             timestamp: new Date(),
+            isError: true,
           },
         ]);
         return;
@@ -195,7 +206,7 @@ export default function MestorPage() {
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantId
-              ? { ...m, content: "Je n'ai pas pu générer de réponse. Veuillez réessayer." }
+              ? { ...m, content: "Je n'ai pas pu générer de réponse. Veuillez réessayer.", isError: true }
               : m,
           ),
         );
@@ -209,6 +220,7 @@ export default function MestorPage() {
           role: "assistant",
           content: "Désolé, une erreur est survenue lors de la génération de la réponse.",
           timestamp: new Date(),
+          isError: true,
         },
       ]);
     } finally {
@@ -231,7 +243,10 @@ export default function MestorPage() {
 
   // La réponse que les quatre experts vont réellement contester (passée en
   // `draft` par le panneau — cf. son en-tête).
-  const lastAssistantMessage = [...messages].reverse().find((m) => m.role === "assistant") ?? null;
+  // Un message d'échec n'est pas une position soumissible au conseil.
+  const lastAssistantMessage =
+    [...messages].reverse().find((m) => m.role === "assistant" && !m.isError && m.content.trim()) ??
+    null;
 
   const handleReset = () => {
     setMessages([]);

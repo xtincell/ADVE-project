@@ -71,11 +71,11 @@ export default function ImhotepDashboardPage() {
             <div className="flex items-center gap-3">
               <div
                 className="rounded-lg p-2"
-                style={{ backgroundColor: "var(--color-division-imhotep-subtle, var(--color-bg-subtle))" }}
+                style={{ backgroundColor: "var(--color-division-imhotep-subtle, var(--color-background-subtle))" }}
               >
                 <s.icon
                   className="h-5 w-5"
-                  style={{ color: "var(--color-division-imhotep, var(--color-fg-default))" }}
+                  style={{ color: "var(--color-division-imhotep, var(--color-foreground))" }}
                 />
               </div>
               <div>

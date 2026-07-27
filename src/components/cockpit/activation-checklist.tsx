@@ -25,7 +25,7 @@ export function ActivationChecklist({ strategyId }: { strategyId: string }) {
   return (
     <section
       className="rounded-2xl border p-5"
-      style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
+      style={{ borderColor: "var(--color-border)", background: "var(--color-surface-raised)" }}
       aria-label="Activation de votre espace"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">

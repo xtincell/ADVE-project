@@ -65,7 +65,7 @@ function formatRelative(iso: string): string {
 
 function statusTone(status: SentinelRunSummary["status"]): string {
   if (status === "OK") return "var(--color-success)";
-  if (status === "FAILED") return "var(--color-danger)";
+  if (status === "FAILED") return "var(--color-destructive)";
   return "var(--color-muted)";
 }
 
@@ -81,7 +81,7 @@ export function ApogeeMaintenanceDashboard(props: ApogeeMaintenanceDashboardProp
 
   const driftCount = runs.filter((r) => r.driftDetected).length;
   const headingTone =
-    composite < 80 ? "var(--color-danger)" :
+    composite < 80 ? "var(--color-destructive)" :
     composite < 90 ? "var(--color-warning)" :
     "var(--color-success)";
 

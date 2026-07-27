@@ -223,13 +223,13 @@ export default function CampaignPostmortemPage() {
             <SkeletonPage />
           ) : reconcileQuery.data?.ok ? (
             reconcileQuery.data.proposals.length === 0 ? (
-              <div className="rounded-lg bg-surface p-4 text-sm text-foreground-secondary ring-1 ring-inset ring-border">
+              <div className="rounded-lg bg-surface-raised p-4 text-sm text-foreground-secondary ring-1 ring-inset ring-border">
                 Aucune proposition générée.
               </div>
             ) : (
               <ul className="space-y-2">
                 {reconcileQuery.data.proposals.map((p, i) => (
-                  <li key={i} className="rounded-lg bg-surface p-3 text-xs ring-1 ring-inset ring-border">
+                  <li key={i} className="rounded-lg bg-surface-raised p-3 text-xs ring-1 ring-inset ring-border">
                     <div className="font-mono text-cyan-400">
                       {p.pillarKey.toUpperCase()}.{p.fieldPath} — {p.mode}
                     </div>
@@ -249,13 +249,13 @@ export default function CampaignPostmortemPage() {
             <SkeletonPage />
           ) : enrichVbQuery.data?.ok ? (
             enrichVbQuery.data.proposals.length === 0 ? (
-              <div className="rounded-lg bg-surface p-4 text-sm text-foreground-secondary ring-1 ring-inset ring-border">
+              <div className="rounded-lg bg-surface-raised p-4 text-sm text-foreground-secondary ring-1 ring-inset ring-border">
                 Aucune action ≥0.7 coherence — pas de pattern à capitaliser.
               </div>
             ) : (
               <ul className="space-y-2">
                 {enrichVbQuery.data.proposals.map((p, i) => (
-                  <li key={i} className="rounded-lg bg-surface p-3 text-xs ring-1 ring-inset ring-border">
+                  <li key={i} className="rounded-lg bg-surface-raised p-3 text-xs ring-1 ring-inset ring-border">
                     <div className="font-mono text-emerald-400">
                       {p.bibleScope} — confiance {p.confidence.toFixed(2)}
                     </div>
@@ -270,7 +270,7 @@ export default function CampaignPostmortemPage() {
         <button
           type="button"
           onClick={() => setSubmitted(false)}
-          className="rounded bg-surface px-4 py-2 text-sm text-foreground ring-1 ring-inset ring-border hover:bg-surface-secondary"
+          className="rounded bg-surface-raised px-4 py-2 text-sm text-foreground ring-1 ring-inset ring-border hover:bg-surface-elevated"
         >
           Re-éditer le postmortem
         </button>
@@ -286,7 +286,7 @@ export default function CampaignPostmortemPage() {
       />
 
       {/* Progress + axe */}
-      <div className="flex items-center justify-between rounded-lg bg-surface p-3 ring-1 ring-inset ring-border">
+      <div className="flex items-center justify-between rounded-lg bg-surface-raised p-3 ring-1 ring-inset ring-border">
         <div className="flex items-center gap-3">
           <span className="font-mono text-xs text-foreground-secondary">
             {step + 1} / {totalSteps}
@@ -305,7 +305,7 @@ export default function CampaignPostmortemPage() {
       </div>
 
       {/* Question */}
-      <div className="rounded-lg bg-surface p-6 ring-1 ring-inset ring-border">
+      <div className="rounded-lg bg-surface-raised p-6 ring-1 ring-inset ring-border">
         <div className="flex items-start gap-3">
           <ScrollText className="mt-1 h-5 w-5 flex-shrink-0 text-cyan-400" />
           <div className="flex-1">
@@ -323,7 +323,7 @@ export default function CampaignPostmortemPage() {
             onChange={(e) => updateAnswer("answer", e.target.value)}
             rows={5}
             placeholder="Réponse factuelle — citations, chiffres, évidence URLs si dispo."
-            className="w-full rounded border border-border bg-surface-secondary px-3 py-2 text-sm text-foreground"
+            className="w-full rounded border border-border bg-surface-elevated px-3 py-2 text-sm text-foreground"
           />
 
           <div className="flex items-center gap-3">
@@ -335,7 +335,7 @@ export default function CampaignPostmortemPage() {
               step={0.05}
               value={currentAns.score}
               onChange={(e) => updateAnswer("score", parseFloat(e.target.value))}
-              className="w-24 rounded border border-border bg-surface-secondary px-2 py-1 text-sm text-foreground"
+              className="w-24 rounded border border-border bg-surface-elevated px-2 py-1 text-sm text-foreground"
             />
             <span className="text-xs text-foreground-secondary">
               0 = totalement échoué · 1 = parfait
@@ -356,7 +356,7 @@ export default function CampaignPostmortemPage() {
               }
               rows={2}
               placeholder="https://..."
-              className="mt-1 w-full rounded border border-border bg-surface-secondary px-3 py-2 text-xs text-foreground"
+              className="mt-1 w-full rounded border border-border bg-surface-elevated px-3 py-2 text-xs text-foreground"
             />
           </div>
         </div>
@@ -368,7 +368,7 @@ export default function CampaignPostmortemPage() {
           type="button"
           disabled={step === 0}
           onClick={() => setStep((s) => Math.max(0, s - 1))}
-          className="inline-flex items-center gap-1 rounded bg-surface px-3 py-1.5 text-sm text-foreground ring-1 ring-inset ring-border hover:bg-surface-secondary disabled:opacity-50"
+          className="inline-flex items-center gap-1 rounded bg-surface-raised px-3 py-1.5 text-sm text-foreground ring-1 ring-inset ring-border hover:bg-surface-elevated disabled:opacity-50"
         >
           <ArrowLeft className="h-4 w-4" />
           Précédent

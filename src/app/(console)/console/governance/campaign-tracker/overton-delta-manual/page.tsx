@@ -75,7 +75,7 @@ export default function OvertonDeltaManualPage() {
             autoFocus
             value={strategyId}
             onChange={(e) => setStrategyId(e.target.value)}
-            className="w-full rounded-md bg-surface px-3 py-2 text-sm text-foreground ring-1 ring-inset ring-border focus:ring-2 focus:ring-accent focus:outline-none"
+            className="w-full rounded-md bg-surface-raised px-3 py-2 text-sm text-foreground ring-1 ring-inset ring-border focus:ring-2 focus:ring-accent focus:outline-none"
             placeholder="cuid de la Strategy"
           />
         </div>
@@ -90,7 +90,7 @@ export default function OvertonDeltaManualPage() {
             required
             value={campaignActionId}
             onChange={(e) => setCampaignActionId(e.target.value)}
-            className="w-full rounded-md bg-surface px-3 py-2 text-sm text-foreground ring-1 ring-inset ring-border focus:ring-2 focus:ring-accent focus:outline-none"
+            className="w-full rounded-md bg-surface-raised px-3 py-2 text-sm text-foreground ring-1 ring-inset ring-border focus:ring-2 focus:ring-accent focus:outline-none"
             placeholder="cuid de la CampaignAction"
           />
         </div>
@@ -108,7 +108,7 @@ export default function OvertonDeltaManualPage() {
             required
             value={overtonDeltaManual}
             onChange={(e) => setOvertonDeltaManual(e.target.value)}
-            className="w-full rounded-md bg-surface px-3 py-2 text-sm font-mono text-foreground ring-1 ring-inset ring-border focus:ring-2 focus:ring-accent focus:outline-none"
+            className="w-full rounded-md bg-surface-raised px-3 py-2 text-sm font-mono text-foreground ring-1 ring-inset ring-border focus:ring-2 focus:ring-accent focus:outline-none"
           />
           <p className="text-xs text-foreground-secondary">
             +1 = secteur déplacé vers l&apos;hypothèse de marque · -1 = secteur résiste / s&apos;éloigne.
@@ -125,7 +125,7 @@ export default function OvertonDeltaManualPage() {
             maxLength={500}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            className="w-full rounded-md bg-surface px-3 py-2 text-sm text-foreground ring-1 ring-inset ring-border focus:ring-2 focus:ring-accent focus:outline-none"
+            className="w-full rounded-md bg-surface-raised px-3 py-2 text-sm text-foreground ring-1 ring-inset ring-border focus:ring-2 focus:ring-accent focus:outline-none"
             placeholder="Pourquoi cette valeur manuelle vs la voie algorithmique ?"
           />
         </div>
@@ -134,7 +134,7 @@ export default function OvertonDeltaManualPage() {
           <button
             type="submit"
             disabled={mutation.isPending}
-            className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-on-accent disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+            className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
           >
             {mutation.isPending ? "Émission Intent…" : "Tagger overtonDeltaManual"}
           </button>
@@ -158,7 +158,7 @@ export default function OvertonDeltaManualPage() {
         </div>
       ) : null}
 
-      <footer className="rounded-lg bg-surface-secondary p-4 text-xs text-foreground-secondary ring-1 ring-inset ring-border">
+      <footer className="rounded-lg bg-surface-elevated p-4 text-xs text-foreground-secondary ring-1 ring-inset ring-border">
         <div className="font-semibold text-foreground">Pourquoi ce surface manuel ?</div>
         <p className="mt-2">
           ADR-0060 manual-first parity invariant : toute mesure LLM/algorithmique

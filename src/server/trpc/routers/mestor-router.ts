@@ -99,6 +99,17 @@ export const mestorRouter = createTRPCRouter({
           configureUrl: gate.configureUrl ?? "/pricing",
         };
       }
+      // Disponibilité AVANT budget. Dans l'ordre inverse, fournisseurs à terre
+      // = quatre clics et le fondateur était bloqué dix minutes sans qu'une
+      // seule analyse ait été tentée — avec un message (« trop d'analyses en
+      // peu de temps ») qui était faux.
+      const { isTextLLMAvailable } = await import("@/server/services/llm-gateway");
+      if (!isTextLLMAvailable()) {
+        return {
+          status: "UNAVAILABLE" as const,
+          reason: "Aucun fournisseur d'intelligence disponible — réessayez plus tard.",
+        };
+      }
       const { consumeDeliberationBudget } = await import(
         "@/server/services/mestor/council/rate-limit"
       );

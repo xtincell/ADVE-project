@@ -72,9 +72,25 @@ export function CouncilDeliberationPanel({
   const topic = answer.slice(0, TOPIC_MAX);
   const truncated = answer.length > DRAFT_MAX;
 
+  // Une délibération coûte 5 appels LLM sur le budget de la marque : elle ne
+  // doit partir QUE sur un clic. `refetchOnWindowFocus: false` et `retry: false`
+  // n'y suffisaient pas — `refetchOnReconnect` vaut `true` par défaut et le
+  // `staleTime` global n'est que de 30 s. Une coupure réseau de dix secondes
+  // (capot fermé, passage en 4G) relançait donc l'analyse toute seule, sans
+  // clic, en consommant le budget posé pour l'en empêcher ; et comme
+  // `isLoading` est faux pendant un refetch, l'écran remplaçait l'analyse en
+  // silence — ou par le bloc RATE_LIMITED que ce même refetch venait de
+  // déclencher.
   const query = trpc.mestor.councilDeliberate.useQuery(
     { strategyId, topic, draft },
-    { enabled: requested && topic.trim().length >= 3, refetchOnWindowFocus: false, retry: false },
+    {
+      enabled: requested && topic.trim().length >= 3,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      refetchOnMount: false,
+      retry: false,
+      staleTime: Infinity,
+    },
   );
 
   if (!requested) {

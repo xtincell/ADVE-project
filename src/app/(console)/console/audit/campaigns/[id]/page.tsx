@@ -107,7 +107,7 @@ export default function CampaignAuditPage() {
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {/* Credentials chain snapshot */}
-          <div className="rounded-lg bg-surface p-4 ring-1 ring-inset ring-border">
+          <div className="rounded-lg bg-surface-raised p-4 ring-1 ring-inset ring-border">
             <div className="flex items-center justify-between">
               <div className="text-sm font-semibold text-foreground">Credentials chain of custody</div>
               <ShieldCheck className="h-4 w-4 text-emerald-400" />
@@ -121,7 +121,7 @@ export default function CampaignAuditPage() {
                   {credSnap.connectorIds.length} ExternalConnector{credSnap.connectorIds.length > 1 ? "s" : ""} référencé
                   {credSnap.connectorIds.length > 1 ? "s" : ""}
                 </div>
-                <div className="mt-2 break-all rounded bg-surface-secondary px-2 py-1 font-mono text-[10px] text-foreground-secondary">
+                <div className="mt-2 break-all rounded bg-surface-elevated px-2 py-1 font-mono text-[10px] text-foreground-secondary">
                   audit hash : {credSnap.auditHash}
                 </div>
               </div>
@@ -133,7 +133,7 @@ export default function CampaignAuditPage() {
           </div>
 
           {/* Compliance check info */}
-          <div className="rounded-lg bg-surface p-4 ring-1 ring-inset ring-border">
+          <div className="rounded-lg bg-surface-raised p-4 ring-1 ring-inset ring-border">
             <div className="flex items-center justify-between">
               <div className="text-sm font-semibold text-foreground">Compliance check (par CampaignFieldOp)</div>
               <ShieldAlert className="h-4 w-4 text-amber-400" />
@@ -163,7 +163,7 @@ export default function CampaignAuditPage() {
         )}
       </section>
 
-      <footer className="rounded-lg bg-surface-secondary p-4 text-xs text-foreground-secondary ring-1 ring-inset ring-border">
+      <footer className="rounded-lg bg-surface-elevated p-4 text-xs text-foreground-secondary ring-1 ring-inset ring-border">
         <div className="flex items-center gap-2 font-semibold text-foreground">
           <Layers className="h-4 w-4" />
           Audit cross-Neteru
@@ -258,7 +258,7 @@ function NegativeSpaceFindingsView({ data }: { data: NegativeSpaceData }) {
 
       {/* Degradation codes */}
       {data.degradationCodes.length > 0 && (
-        <div className="rounded-lg bg-surface-secondary p-3 ring-1 ring-inset ring-border">
+        <div className="rounded-lg bg-surface-elevated p-3 ring-1 ring-inset ring-border">
           <div className="flex items-center gap-2 text-xs font-semibold text-foreground-secondary">
             <ScrollText className="h-3.5 w-3.5" />
             Codes de dégradation

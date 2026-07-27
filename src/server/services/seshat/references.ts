@@ -150,17 +150,25 @@ export async function feedbackRelevance(
   try {
     // Update local knowledge entry with relevance feedback
     const entry = await db.knowledgeEntry.findUnique({ where: { id: referenceId } });
-    if (entry) {
-      const currentScore = entry.successScore ?? 0.5;
-      const newScore = (currentScore * entry.sampleSize + score) / (entry.sampleSize + 1);
-      await db.knowledgeEntry.update({
-        where: { id: referenceId },
-        data: {
-          successScore: newScore,
-          sampleSize: entry.sampleSize + 1,
-        },
-      });
+    if (!entry) {
+      // L'entrée introuvable tombait jusqu'au `return true` du bas : succès
+      // rapporté, zéro écriture. C'est le cas courant des ids `fw-03`/`fw-07…`
+      // (références de framework, sans ligne en base) — l'autre famille d'ids
+      // exposée par ce service.
+      console.warn(
+        `[seshat-bridge] feedbackRelevance : aucune entrée « ${referenceId} » — rien à noter.`,
+      );
+      return false;
     }
+    const currentScore = entry.successScore ?? 0.5;
+    const newScore = (currentScore * entry.sampleSize + score) / (entry.sampleSize + 1);
+    await db.knowledgeEntry.update({
+      where: { id: referenceId },
+      data: {
+        successScore: newScore,
+        sampleSize: entry.sampleSize + 1,
+      },
+    });
 
     // Also forward to external API if available
     if (SESHAT_API_URL) {
@@ -323,6 +331,18 @@ export async function submitFeedback(
 ): Promise<{ success: boolean; referenceId: string; newScore: number | null }> {
   // Clamp relevance to [0, 1]
   const clampedRelevance = Math.max(0, Math.min(1, relevance));
+
+  // Même garde que `feedbackRelevance` — elle manquait à son jumeau. Les
+  // références exposées portent un id HACHÉ (`kg-<hash>`) qui ne résout nulle
+  // part : la fonction tombait alors dans la branche « source externe », POSTait
+  // le hash inutilisable à un tiers, et rendait `success: true` pour une
+  // opération qui n'avait rien écrit.
+  if (referenceId.startsWith("kg-")) {
+    console.warn(
+      "[seshat-bridge] submitFeedback appelé avec un id de référence exposé (haché) — non résolvable.",
+    );
+    return { success: false, referenceId, newScore: null };
+  }
 
   const entry = await db.knowledgeEntry.findUnique({
     where: { id: referenceId },

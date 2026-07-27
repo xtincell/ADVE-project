@@ -51,11 +51,11 @@ export default function CrmPage() {
       />
 
       <div className="flex flex-wrap gap-2">
-        <span className="rounded-full bg-bg-subtle px-2.5 py-1 font-mono text-[11px] text-foreground">{stats?.total ?? 0} contacts</span>
+        <span className="rounded-full bg-background-subtle px-2.5 py-1 font-mono text-[11px] text-foreground">{stats?.total ?? 0} contacts</span>
         <span className="rounded-full bg-success/15 px-2.5 py-1 font-mono text-[11px] text-success">{stats?.optIn ?? 0} opt-in newsletter</span>
-        <span className="rounded-full bg-bg-subtle px-2.5 py-1 font-mono text-[11px] text-foreground-muted">{stats?.sentMessages ?? 0} emails envoyés</span>
+        <span className="rounded-full bg-background-subtle px-2.5 py-1 font-mono text-[11px] text-foreground-muted">{stats?.sentMessages ?? 0} emails envoyés</span>
         {Object.entries(stats?.bySource ?? {}).map(([src, n]) => (
-          <span key={src} className="rounded-full bg-bg-subtle px-2.5 py-1 font-mono text-[10px] text-foreground-muted">{src} · {n as number}</span>
+          <span key={src} className="rounded-full bg-background-subtle px-2.5 py-1 font-mono text-[10px] text-foreground-muted">{src} · {n as number}</span>
         ))}
       </div>
 
@@ -101,7 +101,7 @@ export default function CrmPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-foreground">{c.name ?? c.email}</span>
-                    <span className="rounded-full bg-bg-subtle px-2 py-0.5 font-mono text-[10px] text-foreground-muted">{c.source}</span>
+                    <span className="rounded-full bg-background-subtle px-2 py-0.5 font-mono text-[10px] text-foreground-muted">{c.source}</span>
                     {c.newsletterOptIn && <span className="rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-bold text-success">OPT-IN</span>}
                   </div>
                   <p className="text-xs text-foreground-muted">
@@ -145,7 +145,7 @@ export default function CrmPage() {
                 <div className="flex items-center gap-2 text-xs">
                   {m.direction === "OUT" ? <Send className="h-3 w-3 text-accent" /> : <Inbox className="h-3 w-3 text-success" />}
                   <span className="font-medium text-foreground">{m.contact.name ?? m.contact.email}</span>
-                  <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${m.status === "SENT" ? "bg-success/15 text-success" : m.status === "FAILED" ? "bg-error/15 text-error" : "bg-bg-subtle text-foreground-muted"}`}>{m.status}</span>
+                  <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${m.status === "SENT" ? "bg-success/15 text-success" : m.status === "FAILED" ? "bg-error/15 text-error" : "bg-background-subtle text-foreground-muted"}`}>{m.status}</span>
                   {m.provider && <span className="text-foreground-muted">{m.provider}</span>}
                   <span className="ml-auto text-foreground-muted">{new Date(m.createdAt).toLocaleString("fr-FR")}</span>
                 </div>
@@ -197,7 +197,7 @@ export default function CrmPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-foreground">{c.subject}</span>
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${c.status === "SENT" ? "bg-success/15 text-success" : c.status === "FAILED" ? "bg-error/15 text-error" : c.status === "SENDING" ? "bg-warning/15 text-warning" : "bg-bg-subtle text-foreground-muted"}`}>{c.status}</span>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${c.status === "SENT" ? "bg-success/15 text-success" : c.status === "FAILED" ? "bg-error/15 text-error" : c.status === "SENDING" ? "bg-warning/15 text-warning" : "bg-background-subtle text-foreground-muted"}`}>{c.status}</span>
                   </div>
                   <p className="text-xs text-foreground-muted">
                     {c.status === "SENT" || c.status === "FAILED"

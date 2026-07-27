@@ -22,7 +22,7 @@ export default function McpManagementPage() {
     <div className="max-w-5xl space-y-6 p-6">
       <header>
         <h1 className="text-2xl font-semibold">MCP — Model Context Protocol</h1>
-        <p className="text-sm text-[var(--color-text-muted)]">
+        <p className="text-sm text-[var(--color-foreground-muted)]">
           Connecteurs entrants/sortants pour outils IA externes (Slack, Notion, Drive, Calendar, Figma, GitHub) et exposition des outils La Fusée à Claude Desktop / Claude Code. Cf. ADR-0026.
         </p>
       </header>
@@ -34,8 +34,8 @@ export default function McpManagementPage() {
             type="button"
             className={`px-4 py-2 text-sm border-b-2 -mb-px ${
               tab === t
-                ? "border-[var(--color-accent)] text-[var(--color-text)]"
-                : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                ? "border-[var(--color-accent)] text-[var(--color-foreground)]"
+                : "border-transparent text-[var(--color-foreground-muted)] hover:text-[var(--color-foreground)]"
             }`}
             onClick={() => setTab(t)}
           >
@@ -84,7 +84,7 @@ function InboundTab() {
           />
           <button
             type="button"
-            className="px-3 py-1 bg-[var(--color-accent)] text-[var(--color-on-accent)] rounded text-sm"
+            className="px-3 py-1 bg-[var(--color-accent)] text-[var(--color-accent-foreground)] rounded text-sm"
             onClick={() =>
               register.mutate({ direction: "INBOUND", serverName, endpoint })
             }
@@ -93,7 +93,7 @@ function InboundTab() {
             Enregistrer
           </button>
         </div>
-        <p className="text-xs text-[var(--color-text-muted)]">
+        <p className="text-xs text-[var(--color-foreground-muted)]">
           Les credentials s'enregistrent ensuite dans{" "}
           <Link href="/console/anubis/credentials" className="underline">
             Credentials Center
@@ -105,12 +105,12 @@ function InboundTab() {
       <div>
         <h3 className="font-medium mb-2">Servers enregistrés</h3>
         <table className="w-full text-sm">
-          <thead className="text-xs text-[var(--color-text-muted)]">
+          <thead className="text-xs text-[var(--color-foreground-muted)]">
             <tr><th className="text-left py-1">Server</th><th className="text-left">Endpoint</th><th>Status</th><th>Tools</th><th></th></tr>
           </thead>
           <tbody>
             {(list.data ?? []).map((r) => (
-              <tr key={r.id} className="border-t border-[var(--color-border-muted)]">
+              <tr key={r.id} className="border-t border-[var(--color-border-subtle)]">
                 <td className="py-2 font-mono text-xs">{r.serverName}</td>
                 <td className="py-2 truncate max-w-xs text-xs">{r.endpoint}</td>
                 <td className="py-2 text-xs">{r.status}</td>
@@ -127,7 +127,7 @@ function InboundTab() {
               </tr>
             ))}
             {list.data && list.data.length === 0 && (
-              <tr><td colSpan={5} className="py-4 text-center text-[var(--color-text-muted)]">Aucun server enregistré.</td></tr>
+              <tr><td colSpan={5} className="py-4 text-center text-[var(--color-foreground-muted)]">Aucun server enregistré.</td></tr>
             )}
           </tbody>
         </table>
@@ -137,10 +137,10 @@ function InboundTab() {
         <h3 className="font-medium mb-2">Invocations récentes</h3>
         <ul className="text-xs space-y-1">
           {(invocations.data ?? []).map((inv) => (
-            <li key={inv.id} className="flex justify-between gap-2 py-1 border-b border-[var(--color-border-muted)]">
+            <li key={inv.id} className="flex justify-between gap-2 py-1 border-b border-[var(--color-border-subtle)]">
               <span className="font-mono">{inv.toolName}</span>
               <span>{inv.status}</span>
-              <span className="text-[var(--color-text-muted)]">{inv.durationMs ?? "?"}ms</span>
+              <span className="text-[var(--color-foreground-muted)]">{inv.durationMs ?? "?"}ms</span>
             </li>
           ))}
         </ul>
@@ -167,7 +167,7 @@ function OutboundTab() {
     <section className="space-y-4">
       <div className="rounded border border-[var(--color-border)] p-4">
         <h3 className="font-medium mb-2">Configuration Claude Desktop / Claude Code</h3>
-        <pre className="text-xs bg-[var(--color-surface-active)] p-3 rounded overflow-x-auto">
+        <pre className="text-xs bg-[var(--color-surface-elevated)] p-3 rounded overflow-x-auto">
 {claudeDesktopConfig}
         </pre>
         <button
@@ -184,12 +184,12 @@ function OutboundTab() {
         {manifest.data?.servers.map((s) => (
           <details key={s.name} className="border border-[var(--color-border)] rounded mb-2">
             <summary className="px-3 py-2 cursor-pointer text-sm font-medium">
-              {s.name} <span className="text-[var(--color-text-muted)]">({s.tools.length} tools)</span>
+              {s.name} <span className="text-[var(--color-foreground-muted)]">({s.tools.length} tools)</span>
             </summary>
             <ul className="px-4 py-2 text-xs space-y-1">
               {s.tools.map((t) => (
                 <li key={t.name}>
-                  <strong className="font-mono">{t.name}</strong> — <span className="text-[var(--color-text-muted)]">{t.description}</span>
+                  <strong className="font-mono">{t.name}</strong> — <span className="text-[var(--color-foreground-muted)]">{t.description}</span>
                 </li>
               ))}
             </ul>
@@ -233,7 +233,7 @@ function TemplatesTab() {
         </div>
         <button
           type="button"
-          className="px-3 py-1 bg-[var(--color-accent)] text-[var(--color-on-accent)] rounded text-sm"
+          className="px-3 py-1 bg-[var(--color-accent)] text-[var(--color-accent-foreground)] rounded text-sm"
           onClick={() =>
             upsert.mutate({
               slug, channel, subject: subject || undefined, bodyHbs,
@@ -250,7 +250,7 @@ function TemplatesTab() {
         <h3 className="font-medium mb-2">Templates existants</h3>
         <ul className="text-sm space-y-1">
           {(list.data ?? []).map((t) => (
-            <li key={t.id} className="flex justify-between gap-2 py-1 border-b border-[var(--color-border-muted)]">
+            <li key={t.id} className="flex justify-between gap-2 py-1 border-b border-[var(--color-border-subtle)]">
               <span className="font-mono">{t.slug}</span>
               <span className="text-xs">{t.channel} · {t.category}</span>
               <button

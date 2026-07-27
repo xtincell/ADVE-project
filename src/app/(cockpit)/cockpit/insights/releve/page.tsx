@@ -75,7 +75,7 @@ export default function RelevePage() {
           value={month ?? ""}
           onChange={(e) => setMonth(e.target.value || undefined)}
           className="rounded-md border px-3 py-2 text-sm"
-          style={{ borderColor: "var(--color-border)", background: "var(--color-surface)", color: "var(--color-foreground)" }}
+          style={{ borderColor: "var(--color-border)", background: "var(--color-surface-raised)", color: "var(--color-foreground)" }}
           aria-label="Choisir le mois"
         >
           <option value="">Mois courant (par défaut)</option>

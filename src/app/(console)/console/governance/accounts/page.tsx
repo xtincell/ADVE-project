@@ -33,7 +33,7 @@ const ROLE_TONE: Record<string, string> = {
   PARTNER: "bg-warning/15 text-warning",
   CREATOR: "bg-success/15 text-success",
   FREELANCE: "bg-success/15 text-success",
-  FOUNDER: "bg-bg-subtle text-foreground",
+  FOUNDER: "bg-background-subtle text-foreground",
 };
 
 export default function AccountsSupervisorPage() {
@@ -74,7 +74,7 @@ export default function AccountsSupervisorPage() {
       {/* Répartition par rôle */}
       <div className="flex flex-wrap gap-2">
         {Object.entries(stats ?? {}).map(([role, count]) => (
-          <span key={role} className={`rounded-full px-2.5 py-1 font-mono text-[11px] ${ROLE_TONE[role] ?? "bg-bg-subtle text-foreground-muted"}`}>
+          <span key={role} className={`rounded-full px-2.5 py-1 font-mono text-[11px] ${ROLE_TONE[role] ?? "bg-background-subtle text-foreground-muted"}`}>
             {role} · {count as number}
           </span>
         ))}
@@ -98,11 +98,11 @@ export default function AccountsSupervisorPage() {
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-foreground">{u.name ?? "—"}</span>
-                <span className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${ROLE_TONE[u.role] ?? "bg-bg-subtle text-foreground-muted"}`}>
+                <span className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${ROLE_TONE[u.role] ?? "bg-background-subtle text-foreground-muted"}`}>
                   {u.role}
                 </span>
                 {u.talentProfile && (
-                  <span className="rounded-full bg-bg-subtle px-2 py-0.5 text-[10px] text-foreground-muted">
+                  <span className="rounded-full bg-background-subtle px-2 py-0.5 text-[10px] text-foreground-muted">
                     Guilde {u.talentProfile.tier} · {u.talentProfile.totalMissions} mission(s)
                   </span>
                 )}

@@ -134,14 +134,14 @@ export function PledgePanel({ strategyId }: { strategyId: string }) {
           placeholder="Ex : « D'ici le 30 septembre, notre audience cumulée dépasse 8 000 abonnés. » (20 caractères min)"
           rows={2}
           className="w-full rounded-md border px-3 py-2 text-sm"
-          style={{ borderColor: "var(--color-border)", background: "var(--color-surface)", color: "var(--color-foreground)" }}
+          style={{ borderColor: "var(--color-border)", background: "var(--color-surface-raised)", color: "var(--color-foreground)" }}
         />
         <div className="flex flex-wrap items-center gap-3">
           <select
             value={form.subjectType}
             onChange={(e) => setForm((f) => ({ ...f, subjectType: e.target.value }))}
             className="rounded-md border px-2 py-1.5 text-xs"
-            style={{ borderColor: "var(--color-border)", background: "var(--color-surface)", color: "var(--color-foreground)" }}
+            style={{ borderColor: "var(--color-border)", background: "var(--color-surface-raised)", color: "var(--color-foreground)" }}
             aria-label="Sujet du pari"
           >
             {SUBJECTS.map((s) => (
@@ -154,7 +154,7 @@ export function PledgePanel({ strategyId }: { strategyId: string }) {
             placeholder="Valeur visée (si mesurable)"
             inputMode="numeric"
             className="w-44 rounded-md border px-2 py-1.5 text-xs"
-            style={{ borderColor: "var(--color-border)", background: "var(--color-surface)", color: "var(--color-foreground)" }}
+            style={{ borderColor: "var(--color-border)", background: "var(--color-surface-raised)", color: "var(--color-foreground)" }}
           />
           <label className="flex items-center gap-1.5 text-xs text-foreground-secondary">
             Échéance
@@ -165,7 +165,7 @@ export function PledgePanel({ strategyId }: { strategyId: string }) {
               value={form.horizonDays}
               onChange={(e) => setForm((f) => ({ ...f, horizonDays: Number(e.target.value) }))}
               className="w-16 rounded-md border px-2 py-1.5 text-xs"
-              style={{ borderColor: "var(--color-border)", background: "var(--color-surface)", color: "var(--color-foreground)" }}
+              style={{ borderColor: "var(--color-border)", background: "var(--color-surface-raised)", color: "var(--color-foreground)" }}
             />
             jours
           </label>
@@ -178,7 +178,7 @@ export function PledgePanel({ strategyId }: { strategyId: string }) {
               value={Math.round(form.confidence * 100)}
               onChange={(e) => setForm((f) => ({ ...f, confidence: Number(e.target.value) / 100 }))}
               className="w-16 rounded-md border px-2 py-1.5 text-xs"
-              style={{ borderColor: "var(--color-border)", background: "var(--color-surface)", color: "var(--color-foreground)" }}
+              style={{ borderColor: "var(--color-border)", background: "var(--color-surface-raised)", color: "var(--color-foreground)" }}
             />
             %
           </label>
@@ -262,7 +262,7 @@ export function PledgePanel({ strategyId }: { strategyId: string }) {
                     onChange={(e) => setResolveNote((m) => ({ ...m, [p.id]: e.target.value }))}
                     placeholder="Note de résolution (10 caractères min — la preuve)"
                     className="min-w-[220px] flex-1 rounded-md border px-2 py-1.5 text-xs"
-                    style={{ borderColor: "var(--color-border)", background: "var(--color-surface)", color: "var(--color-foreground)" }}
+                    style={{ borderColor: "var(--color-border)", background: "var(--color-surface-raised)", color: "var(--color-foreground)" }}
                   />
                   {(["HIT", "MISS", "UNRESOLVED"] as const).map((o) => (
                     <Button

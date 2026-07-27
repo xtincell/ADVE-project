@@ -13,11 +13,11 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { trpc } from "@/lib/trpc/client";
 
 const priorityRow = cva(
-  "px-3 py-2 border-l-4 hover:bg-[var(--color-surface-hover)] transition-colors",
+  "px-3 py-2 border-l-4 hover:bg-[var(--color-card-hover)] transition-colors",
   {
     variants: {
       priority: {
-        LOW: "border-[var(--priority-low,var(--color-border-muted))]",
+        LOW: "border-[var(--priority-low,var(--color-border-subtle))]",
         NORMAL: "border-[var(--priority-normal,var(--color-border))]",
         HIGH: "border-[var(--priority-high,var(--color-warning))]",
         CRITICAL:
@@ -71,7 +71,7 @@ export function NotificationCenter({ onClose }: Props) {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+            className="text-xs text-[var(--color-foreground-muted)] hover:text-[var(--color-foreground)]"
             onClick={() => markAllRead.mutate({})}
           >
             Tout marquer lu
@@ -79,7 +79,7 @@ export function NotificationCenter({ onClose }: Props) {
           <button
             type="button"
             aria-label="Fermer"
-            className="text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+            className="text-[var(--color-foreground-muted)] hover:text-[var(--color-foreground)]"
             onClick={onClose}
           >
             ×
@@ -94,8 +94,8 @@ export function NotificationCenter({ onClose }: Props) {
             type="button"
             className={`px-2 py-1 rounded ${
               filter === f
-                ? "bg-[var(--color-surface-active)] text-[var(--color-text)]"
-                : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                ? "bg-[var(--color-surface-elevated)] text-[var(--color-foreground)]"
+                : "text-[var(--color-foreground-muted)] hover:text-[var(--color-foreground)]"
             }`}
             onClick={() => setFilter(f)}
           >
@@ -104,12 +104,12 @@ export function NotificationCenter({ onClose }: Props) {
         ))}
       </div>
 
-      <ul className="max-h-96 overflow-y-auto divide-y divide-[var(--color-border-muted)]">
+      <ul className="max-h-96 overflow-y-auto divide-y divide-[var(--color-border-subtle)]">
         {list.isLoading && (
-          <li className="px-3 py-4 text-sm text-[var(--color-text-muted)]">Chargement…</li>
+          <li className="px-3 py-4 text-sm text-[var(--color-foreground-muted)]">Chargement…</li>
         )}
         {!list.isLoading && items.length === 0 && (
-          <li className="px-3 py-6 text-center text-sm text-[var(--color-text-muted)]">
+          <li className="px-3 py-6 text-center text-sm text-[var(--color-foreground-muted)]">
             Aucune notification.
           </li>
         )}
@@ -132,7 +132,7 @@ export function NotificationCenter({ onClose }: Props) {
       <div className="px-3 py-2 border-t border-[var(--color-border)] text-xs">
         <Link
           href="/console/anubis/notifications"
-          className="text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+          className="text-[var(--color-foreground-muted)] hover:text-[var(--color-foreground)]"
           onClick={onClose}
         >
           Préférences →
@@ -163,8 +163,8 @@ function NotificationRow({
       <div className="flex justify-between items-start gap-2">
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium truncate">{title}</p>
-          <p className="text-xs text-[var(--color-text-muted)] line-clamp-2">{body}</p>
-          <p className="text-[10px] text-[var(--color-text-muted)] mt-1">
+          <p className="text-xs text-[var(--color-foreground-muted)] line-clamp-2">{body}</p>
+          <p className="text-[10px] text-[var(--color-foreground-muted)] mt-1">
             {date.toLocaleString()} · {type}
           </p>
         </div>
@@ -176,7 +176,7 @@ function NotificationRow({
               e.stopPropagation();
               onMarkRead();
             }}
-            className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+            className="text-xs text-[var(--color-foreground-muted)] hover:text-[var(--color-foreground)]"
           >
             ✓
           </button>

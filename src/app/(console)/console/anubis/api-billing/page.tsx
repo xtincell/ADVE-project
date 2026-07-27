@@ -132,13 +132,13 @@ export default function McpApiBillingPage() {
           {keys?.map((k) => (
             <div key={k.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
               <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-bg-subtle p-2">
+                <div className="rounded-lg bg-background-subtle p-2">
                   <Key className="h-4 w-4 text-foreground-muted" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-foreground">{k.name}</span>
-                    <span className="rounded-full bg-bg-subtle px-2 py-0.5 font-mono text-[10px] text-foreground-muted">
+                    <span className="rounded-full bg-background-subtle px-2 py-0.5 font-mono text-[10px] text-foreground-muted">
                       {k.server}
                     </span>
                     <span
@@ -151,7 +151,7 @@ export default function McpApiBillingPage() {
                       {k.scopeKind === "BRAND" ? `marque ${(k.scopeStrategyId ?? "").slice(0, 14)}` : "SYSTÈME"}
                     </span>
                     {!k.expiresAt && (
-                      <span className="rounded-full bg-bg-subtle px-2 py-0.5 text-[10px] text-foreground-muted" title="Aucune expiration">∞</span>
+                      <span className="rounded-full bg-background-subtle px-2 py-0.5 text-[10px] text-foreground-muted" title="Aucune expiration">∞</span>
                     )}
                     {!k.isActive && (
                       <span className="rounded-full bg-error/15 px-2 py-0.5 text-[10px] font-bold text-error">
@@ -265,7 +265,7 @@ export default function McpApiBillingPage() {
         </div>
 
         {/* Portée d'accès + durée (ADR-0145) */}
-        <div className="mt-3 flex flex-wrap items-center gap-4 rounded-lg border border-border bg-bg-subtle p-3">
+        <div className="mt-3 flex flex-wrap items-center gap-4 rounded-lg border border-border bg-background-subtle p-3">
           <span className="text-xs font-semibold text-foreground">Accès</span>
           <label className="flex cursor-pointer items-center gap-1.5 text-xs text-foreground">
             <input type="radio" name="scopeKind" checked={form.scopeKind === "SYSTEM"} onChange={() => setForm({ ...form, scopeKind: "SYSTEM" })} />
@@ -342,7 +342,7 @@ export default function McpApiBillingPage() {
                       st.status === "SETTLED"
                         ? "bg-success/15 text-success"
                         : st.status === "WAIVED"
-                          ? "bg-bg-subtle text-foreground-muted"
+                          ? "bg-background-subtle text-foreground-muted"
                           : "bg-warning/15 text-warning"
                     }`}
                   >
