@@ -52,6 +52,7 @@ import { generateText } from "ai";
 import * as gloryTools from "@/server/services/glory-tools";
 import * as guidelinesRenderer from "@/server/services/guidelines-renderer";
 import * as seshatBridge from "@/server/services/seshat-bridge";
+import { buildStrategyCalendar } from "@/server/mcp/_shared/strategy-activity";
 
 // ---------------------------------------------------------------------------
 // Creative MCP Server
@@ -72,6 +73,12 @@ export interface ToolDefinition {
   description: string;
   inputSchema: z.ZodType;
   handler: (input: Record<string, unknown>) => Promise<unknown>;
+  /**
+   * Portée vis-à-vis des marques — cf. `McpToolScope` (anubis/mcp-server.ts).
+   * Union écrite en clair plutôt qu'importée : `mcp-server` importe déjà ces
+   * modules dynamiquement, un import retour créerait un cycle.
+   */
+  scope?: "BRAND" | "GLOBAL" | "SELF_SCOPED";
 }
 
 export interface ResourceDefinition {
@@ -542,47 +549,53 @@ Structure le brief avec : contexte, insight, promesse, preuve, ton & style, do/d
   {
     name: "content_calendar_get",
     description:
-      "Récupère le calendrier éditorial d'une campagne avec les missions planifiées par canal et par semaine.",
+      "Le calendrier digital d'une marque, par semaine : le plan d'actions daté (ce qui est prévu), les missions de production (ce qui est commandé) et les publications déjà parties (ce qui est en ligne). Chaque entrée porte sa nature et sa source — le planifié n'est jamais confondu avec le publié. Lecture seule.",
     inputSchema: z.object({
-      campaignId: z.string().describe("ID de la campagne"),
-      weeksAhead: z.number().int().min(1).max(12).default(4).describe("Nombre de semaines à afficher"),
+      strategyId: z.string().describe("ID (ou slug public) de la marque"),
+      weeksAhead: z
+        .number().int().min(1).max(12).default(4)
+        .describe("Fenêtre à venir, en semaines"),
+      weeksBack: z
+        .number().int().min(0).max(12).default(2)
+        .describe("Fenêtre passée, en semaines (pour voir ce qui a déjà été publié)"),
+      kinds: z
+        .array(z.enum(["ACTION", "MISSION", "PUBLICATION"]))
+        .optional()
+        .describe("Restreindre aux natures voulues (défaut : les trois)"),
     }),
     handler: async (input) => {
+      // Cet outil lisait `db.mission` filtré sur le SEUL `campaignId` — un
+      // `strategyId` passé par l'appelant était silencieusement ignoré (Zod le
+      // retire, Prisma ignore `campaignId: undefined`), et l'outil renvoyait
+      // alors les missions de TOUTES les marques de la base (audit MCP P0 :
+      // quatre marques rendues pour une seule demandée). Il ne montrait par
+      // ailleurs que les missions d'agence — jamais le plan d'actions du
+      // cockpit, qui EST le calendrier du fondateur.
       const weeksAhead = (input.weeksAhead as number) ?? 4;
-      const horizon = new Date(Date.now() + weeksAhead * 7 * 24 * 60 * 60 * 1000);
-      const missions = await db.mission.findMany({
-        where: {
-          campaignId: input.campaignId as string,
-          slaDeadline: { lte: horizon },
-        },
-        include: { driver: true },
-        orderBy: { slaDeadline: "asc" },
+      const weeksBack = (input.weeksBack as number) ?? 2;
+      const week = 7 * 24 * 60 * 60 * 1000;
+      const calendar = await buildStrategyCalendar({
+        strategyId: input.strategyId as string,
+        from: new Date(Date.now() - weeksBack * week),
+        to: new Date(Date.now() + weeksAhead * week),
+        kinds: input.kinds as Array<"ACTION" | "MISSION" | "PUBLICATION"> | undefined,
       });
-      // Group by week
-      const byWeek: Record<string, Array<{ id: string; title: string; channel: string | null; status: string; deadline: string | null }>> = {};
-      for (const m of missions) {
-        if (!m.slaDeadline) continue;
-        const weekStart = new Date(m.slaDeadline);
-        weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-        const key = weekStart.toISOString().slice(0, 10);
-        if (!byWeek[key]) byWeek[key] = [];
-        byWeek[key].push({
-          id: m.id,
-          title: m.title,
-          channel: m.driver?.channel ?? null,
-          status: m.status,
-          deadline: m.slaDeadline?.toISOString() ?? null,
-        });
-      }
-      return { campaignId: input.campaignId, weeksAhead, totalMissions: missions.length, calendar: byWeek };
+      return {
+        strategyId: input.strategyId,
+        window: { weeksBack, weeksAhead },
+        counts: calendar.counts,
+        total: calendar.entries.length,
+        calendar: calendar.byWeek,
+      };
     },
   },
 
   {
     name: "content_calendar_slot_create",
     description:
-      "Crée un créneau dans le calendrier éditorial pour planifier une mission future.",
+      "Crée un créneau dans le calendrier de production pour planifier une mission future.",
     inputSchema: z.object({
+      strategyId: z.string().describe("ID (ou slug public) de la marque"),
       campaignId: z.string().describe("ID de la campagne"),
       driverId: z.string().describe("ID du driver"),
       title: z.string().describe("Titre du créneau"),
@@ -590,7 +603,22 @@ Structure le brief avec : contexte, insight, promesse, preuve, ton & style, do/d
       missionType: z.string().optional().describe("Type de contenu"),
     }),
     handler: async (input) => {
+      const strategyId = input.strategyId as string;
       const driver = await db.driver.findUniqueOrThrow({ where: { id: input.driverId as string } });
+      // Écriture : les deux parents doivent appartenir à la marque demandée.
+      // Sans ces gardes, l'outil créait une mission sur n'importe quelle
+      // campagne à partir d'un identifiant deviné.
+      if (driver.strategyId !== strategyId) {
+        throw new Error("Ce driver n'appartient pas à la marque demandée — accès refusé.");
+      }
+      const campaign = await db.campaign.findUnique({
+        where: { id: input.campaignId as string },
+        select: { strategyId: true },
+      });
+      if (!campaign) throw new Error(`Campagne introuvable : ${String(input.campaignId)}`);
+      if (campaign.strategyId !== strategyId) {
+        throw new Error("Cette campagne n'appartient pas à la marque demandée — accès refusé.");
+      }
       const mission = await db.mission.create({
         data: {
           driverId: input.driverId as string,

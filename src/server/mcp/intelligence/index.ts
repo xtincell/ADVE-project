@@ -43,6 +43,12 @@ export interface ToolDefinition {
   description: string;
   inputSchema: z.ZodType;
   handler: (input: Record<string, unknown>) => Promise<unknown>;
+  /**
+   * Portée vis-à-vis des marques — cf. `McpToolScope` (anubis/mcp-server.ts).
+   * Union écrite en clair plutôt qu'importée : `mcp-server` importe déjà ces
+   * modules dynamiquement, un import retour créerait un cycle.
+   */
+  scope?: "BRAND" | "GLOBAL" | "SELF_SCOPED";
 }
 
 // ---------------------------------------------------------------------------
@@ -187,12 +193,22 @@ export const tools: ToolDefinition[] = [
       market: z.string().optional().describe("Marché géographique"),
     }),
     handler: async (input) => {
+      // `strategyId` était EXIGÉ, décrit comme « la stratégie associée »… et
+      // jamais écrit : chaque entrée ingérée naissait orpheline de sa marque.
+      // `KnowledgeEntry` n'a pas de colonne `strategyId` — la convention du repo
+      // (cf. `diagnostic-engine`) est de le porter dans `data` + `sourceHash`.
+      const strategyId = input.strategyId as string;
+      const payload = {
+        strategyId,
+        ...((input.data as Record<string, unknown>) ?? {}),
+      };
       const entry = await db.knowledgeEntry.create({
         data: {
           entryType: input.entryType as "DIAGNOSTIC_RESULT" | "MISSION_OUTCOME" | "BRIEF_PATTERN" | "CREATOR_PATTERN" | "SECTOR_BENCHMARK" | "CAMPAIGN_TEMPLATE",
-          data: ((input.data as Record<string, unknown>) ?? {}) as unknown as import("@prisma/client").Prisma.InputJsonValue,
+          data: payload as unknown as import("@prisma/client").Prisma.InputJsonValue,
           sector: input.sector as string | undefined,
           market: input.market as string | undefined,
+          sourceHash: `mcp-ingest-${strategyId}-${String(input.entryType)}`,
         },
       });
       return entry;
@@ -298,10 +314,14 @@ export const tools: ToolDefinition[] = [
   {
     name: "sector_insights",
     description:
-      "Génère des insights stratégiques pour un secteur donné en agrégeant les données du knowledge graph.",
+      "Génère des insights stratégiques pour un secteur donné en agrégeant les données du knowledge graph. Vue SECTORIELLE — ne contient aucune donnée propre à une marque.",
+    // Agrégat de secteur : rien à scoper par marque.
+    scope: "GLOBAL",
+    // `strategyId` était déclaré « pour contextualiser » et n'était jamais lu —
+    // un paramètre décoratif qui laissait croire à un scoping inexistant. Retiré
+    // plutôt que faussement honoré.
     inputSchema: z.object({
       sector: z.string().describe("Secteur d'activité"),
-      strategyId: z.string().optional().describe("ID stratégie pour contextualiser"),
     }),
     handler: async (input) => {
       const entries = await db.knowledgeEntry.findMany({

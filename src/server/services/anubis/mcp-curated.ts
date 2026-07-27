@@ -9,6 +9,10 @@
  */
 
 export const CURATED_MCP_TOOLS: Array<{ server: string; tool: string }> = [
+  // Découverte — À APPELER EN PREMIER. Tous les autres outils exigent un
+  // strategyId ; jusqu'au 2026-07-27 aucun outil ne permettait de l'obtenir,
+  // et il fallait le déduire d'un digest via la recherche sémantique.
+  { server: "advertis", tool: "listStrategies" },
   // La stratégie ADVE-RTIS
   { server: "advertis", tool: "getBrandCard" },
   { server: "advertis", tool: "getAdveRtis" },
@@ -31,6 +35,13 @@ export const CURATED_MCP_TOOLS: Array<{ server: string; tool: string }> = [
   // Marché
   { server: "seshat", tool: "market_context_get" },
   { server: "seshat", tool: "benchmark_search" },
+  // L'activité réelle — campagnes en cours et calendrier digital
+  { server: "operations", tool: "campaign_list" },
+  { server: "operations", tool: "campaign_state_get" },
+  { server: "operations", tool: "campaign_budget_overview" },
+  { server: "operations", tool: "mission_list" },
+  { server: "operations", tool: "milestone_track" },
+  { server: "creative", tool: "content_calendar_get" },
 ];
 
 /** Regex de nom MCP (pas de points — `${server}_${tool}`). */

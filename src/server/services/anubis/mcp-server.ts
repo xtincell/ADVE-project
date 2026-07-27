@@ -24,11 +24,16 @@ import { db } from "@/lib/db";
  * - `GLOBAL` — le tool ne rend aucune donnée propre à une marque (référentiel
  *   marché, codes secteur, annuaire de la Guilde). Il reste joignable par une
  *   clé de marque : il n'y a rien à scoper.
+ * - `SELF_SCOPED` — le tool rend de la donnée de marque mais **n'a pas** de
+ *   `strategyId` en entrée parce qu'il énumère (« quelles marques puis-je
+ *   voir ? »). Il lit `__auth` LUI-MÊME et restreint sa propre requête. À
+ *   n'employer que là où l'énumération est le sujet ; un test de gouvernance
+ *   vérifie que ces tools référencent bien `__auth`.
  *
  * Le marqueur est EXPLICITE de sorte qu'un tool de marque qui oublie
  * `strategyId` reste refusé par défaut — fail-closed conservé.
  */
-export type McpToolScope = "BRAND" | "GLOBAL";
+export type McpToolScope = "BRAND" | "GLOBAL" | "SELF_SCOPED";
 
 export interface McpToolDefinition {
   name: string;
@@ -142,9 +147,11 @@ function schemaAcceptsStrategyId(schema: z.ZodType): boolean {
  * `__auth` — une clé « limitée à la marque » opérait en réalité n'importe
  * quelle marque, la portée affichée en console était décorative).
  *
- * Règles : clé BRAND sans strategyId de portée → refus ; tool sans champ
- * `strategyId` dans son schéma → refus (pas de scoping possible = pas d'accès) ;
- * `strategyId` client divergent → refus ; absent → injecté depuis la portée.
+ * Règles : clé BRAND sans strategyId de portée → refus ; tool de marque sans
+ * champ `strategyId` dans son schéma → refus (pas de scoping possible = pas
+ * d'accès) ; `strategyId` client divergent → refus ; absent → injecté depuis la
+ * portée. Un tool explicitement `scope: "GLOBAL"` (référentiel marché, annuaire)
+ * passe : il ne rend aucune donnée de marque, il n'y a rien à scoper.
  */
 function enforceBrandScope(
   tool: McpToolDefinition,
@@ -152,6 +159,9 @@ function enforceBrandScope(
 ): Record<string, unknown> {
   const auth = params.__auth as { scopeKind?: string | null; scopeStrategyId?: string | null } | undefined;
   if (auth?.scopeKind !== "BRAND") return params;
+  // GLOBAL = rien à scoper. SELF_SCOPED = le handler scope lui-même sur `__auth`
+  // (qui reste dans les params — il est injecté par `scopeMcpParams`).
+  if (tool.scope === "GLOBAL" || tool.scope === "SELF_SCOPED") return params;
   const scopeId = auth.scopeStrategyId;
   if (!scopeId) throw new Error("Clé scopée marque sans marque de portée — accès refusé.");
   if (!schemaAcceptsStrategyId(tool.inputSchema)) {
@@ -166,6 +176,66 @@ function enforceBrandScope(
   return { ...params, strategyId: scopeId };
 }
 
+/**
+ * Résout un `strategyId` fourni par l'appelant qui serait en réalité un
+ * `publicSlug` (« spawt », « motion19 »).
+ *
+ * Un agent externe découvre les marques par leur nom, pas par leur identifiant
+ * technique : exiger l'id exact obligeait à passer par une recherche sémantique
+ * pour déduire un identifiant enfoui dans un digest (audit MCP P1). La résolution
+ * se fait AVANT le contrôle de portée — sinon une clé de marque légitime qui
+ * passe son propre slug serait refusée pour divergence.
+ *
+ * Ne fabrique rien : un identifiant inconnu est laissé tel quel, et le tool
+ * répondra son `NOT_FOUND` habituel.
+ */
+async function resolveStrategyRef(params: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const ref = params.strategyId;
+  if (typeof ref !== "string" || ref.length === 0) return params;
+  const found = await db.strategy.findFirst({
+    where: { OR: [{ id: ref }, { publicSlug: ref }] },
+    select: { id: true },
+  });
+  return found ? { ...params, strategyId: found.id } : params;
+}
+
+/** Code d'erreur métier stable, sans détail d'implémentation. */
+export class McpToolError extends Error {
+  constructor(
+    readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = "McpToolError";
+  }
+}
+
+/**
+ * Normalise une exception de handler en erreur d'API.
+ *
+ * Les exceptions Prisma sont **rendues muettes** : `PrismaClientValidationError`
+ * énumère l'intégralité des champs et relations du modèle fautif, et cette
+ * énumération partait telle quelle à l'appelant (audit MCP P0 — `getBrandCard`
+ * a divulgué les 60+ champs de `Strategy`, dont `llmBudget`, `superfanProfiles`,
+ * `strictModeGates`). Le détail reste dans les logs serveur.
+ */
+function normalizeToolError(err: unknown, serverName: string, toolName: string): McpToolError {
+  if (err instanceof McpToolError) return err;
+  const raw = err instanceof Error ? err.message : String(err);
+  console.error(`[mcp] ${serverName}.${toolName} a échoué :`, err);
+  const isOrm =
+    /PrismaClient|Unknown field|Unknown arg|Available options|Argument `\w+`|invalid `prisma\./i.test(raw);
+  if (isOrm) {
+    return new McpToolError(
+      "SCHEMA_ERROR",
+      `L'outil ${serverName}.${toolName} est en dérive de schéma côté serveur. Le détail est journalisé ; réessayer ne le corrigera pas.`,
+    );
+  }
+  // Les refus de portée sont des messages métier volontaires — on les préserve.
+  if (/portée|accès refusé|SCOPE_DENIED/i.test(raw)) return new McpToolError("SCOPE_DENIED", raw);
+  return new McpToolError("TOOL_ERROR", raw);
+}
+
 export async function dispatchTool(
   serverName: string,
   toolName: string,
@@ -173,16 +243,20 @@ export async function dispatchTool(
 ): Promise<unknown> {
   const servers = await loadAllServers();
   const server = servers.find((s) => s.serverName === serverName);
-  if (!server) throw new Error(`Unknown MCP server: ${serverName}`);
+  if (!server) throw new McpToolError("UNKNOWN_SERVER", `Serveur MCP inconnu : ${serverName}`);
   const tool = server.tools.find((t) => t.name === toolName);
   if (!tool) {
-    throw new Error(
-      `Unknown tool ${toolName} on ${serverName}. Available: ${server.tools
-        .map((t) => t.name)
-        .join(", ")}`,
+    throw new McpToolError(
+      "UNKNOWN_TOOL",
+      `Outil ${toolName} inconnu sur ${serverName}. Disponibles : ${server.tools.map((t) => t.name).join(", ")}`,
     );
   }
-  return tool.handler(enforceBrandScope(tool, params));
+  try {
+    const resolved = await resolveStrategyRef(params);
+    return await tool.handler(enforceBrandScope(tool, resolved));
+  } catch (err) {
+    throw normalizeToolError(err, serverName, toolName);
+  }
 }
 
 export function clearCache(): void {

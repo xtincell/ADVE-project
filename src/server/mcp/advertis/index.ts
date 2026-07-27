@@ -34,6 +34,12 @@ export interface ToolDefinition {
   description: string;
   inputSchema: z.ZodType;
   handler: (input: Record<string, unknown>) => Promise<unknown>;
+  /**
+   * Portée vis-à-vis des marques — cf. `McpToolScope` (anubis/mcp-server.ts).
+   * Union écrite en clair plutôt qu'importée : `mcp-server` importe déjà ces
+   * modules dynamiquement, un import retour créerait un cycle.
+   */
+  scope?: "BRAND" | "GLOBAL" | "SELF_SCOPED";
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -66,6 +72,73 @@ function pillarHeadline(content: Record<string, unknown>, max = 4): Record<strin
 // ── Tools ────────────────────────────────────────────────────────────────
 
 export const tools: ToolDefinition[] = [
+  // ---- Découverte : quelles marques puis-je voir ? ----
+  {
+    name: "listStrategies",
+    description:
+      "Liste les marques accessibles avec cette clé : identifiant, nom, slug public, statut, palier de maturité, date de dernière mise à jour. C'EST LE POINT D'ENTRÉE — appelle-le en premier pour obtenir un strategyId, que tous les autres outils exigent. Une clé limitée à une marque ne renvoie que celle-ci. Lecture seule.",
+    // Énumération : pas de `strategyId` en entrée par nature — le handler lit
+    // `__auth` et restreint lui-même (cf. McpToolScope.SELF_SCOPED).
+    scope: "SELF_SCOPED",
+    inputSchema: z.object({
+      query: z
+        .string()
+        .optional()
+        .describe("Filtre optionnel sur le nom ou le slug (insensible à la casse)"),
+      limit: z.number().int().min(1).max(100).default(50),
+    }),
+    handler: async (input) => {
+      const auth = input.__auth as { scopeKind?: string | null; scopeStrategyId?: string | null } | undefined;
+      const query = typeof input.query === "string" ? input.query.trim() : "";
+      const rows = await db.strategy.findMany({
+        where: {
+          // Clé limitée à une marque → cette marque, un point. Le filtre est
+          // posé ICI parce qu'aucun `strategyId` d'entrée ne peut l'être.
+          ...(auth?.scopeKind === "BRAND" ? { id: auth.scopeStrategyId ?? "__aucune__" } : {}),
+          ...(query
+            ? {
+                OR: [
+                  { name: { contains: query, mode: "insensitive" as const } },
+                  { publicSlug: { contains: query, mode: "insensitive" as const } },
+                ],
+              }
+            : {}),
+        },
+        select: {
+          id: true,
+          name: true,
+          publicSlug: true,
+          status: true,
+          apogeeTier: true,
+          advertis_vector: true,
+          updatedAt: true,
+          client: { select: { sector: true } },
+        },
+        orderBy: { updatedAt: "desc" },
+        take: (input.limit as number) ?? 50,
+      });
+      return {
+        count: rows.length,
+        strategies: rows.map((s) => {
+          const composite = readCompositeFromVector(s.advertis_vector);
+          return {
+            strategyId: s.id,
+            name: s.name,
+            publicSlug: s.publicSlug,
+            sector: s.client?.sector ?? null,
+            status: s.status,
+            tier:
+              composite != null || s.apogeeTier
+                ? effectiveTier({ apogeeTier: s.apogeeTier, composite })
+                : null,
+            completudeStructurelle: { value: composite, max: ADVE_COMPOSITE_MAX },
+            updatedAt: s.updatedAt.toISOString(),
+          };
+        }),
+      };
+    },
+  },
+
   // ---- Carte d'identité ADVERTIS ----
   {
     name: "getBrandCard",

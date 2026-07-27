@@ -18,7 +18,12 @@ interface ScheduleEntry {
   id: string;
   name: string;
   type: ProcessType;
+  /** Statut DÉCLARÉ en base — peut mentir, cf. `deriveProcessHealth`. */
   status: ProcessStatus;
+  /** Statut DÉRIVÉ de l'échéance : `STALLED` quand RUNNING ne tient plus. */
+  effectiveStatus: string;
+  stalled: boolean;
+  stalledReason: string | null;
   priority: number;
   frequency: string | null;
   lastRunAt: Date | null;
@@ -118,12 +123,55 @@ export async function stopProcess(processId: string): Promise<void> {
 }
 
 /**
- * Return all active processes with next run times.
+ * Statut EFFECTIF d'un processus, dérivé de son échéance plutôt que cru sur
+ * parole.
+ *
+ * Un `status: "RUNNING"` avec `nextRunAt` nul ou dans le passé est une
+ * contradiction : le processus se déclare actif alors que plus rien ne le
+ * réveillera. L'audit du 2026-07-27 a trouvé « Social Sync BLISS » marqué
+ * RUNNING, `runCount: 720`, **dernier passage il y a trois mois et demi**,
+ * `nextRunAt: null` — et le tableau de bord le comptait comme sain.
+ *
+ * On ne réécrit PAS la colonne (Loi 1, pas de mutation silencieuse) : on expose
+ * la dérivation à côté du statut déclaré, et l'écart devient visible.
  */
-export async function getSchedule(): Promise<ScheduleEntry[]> {
+export function deriveProcessHealth(p: {
+  status: string;
+  nextRunAt: Date | null;
+  lastRunAt: Date | null;
+}): { effectiveStatus: string; stalled: boolean; reason: string | null } {
+  if (p.status !== "RUNNING") {
+    return { effectiveStatus: p.status, stalled: false, reason: null };
+  }
+  if (!p.nextRunAt) {
+    return {
+      effectiveStatus: "STALLED",
+      stalled: true,
+      reason: "déclaré RUNNING mais aucune prochaine exécution planifiée",
+    };
+  }
+  if (p.nextRunAt.getTime() < Date.now()) {
+    return {
+      effectiveStatus: "STALLED",
+      stalled: true,
+      reason: `déclaré RUNNING mais l'échéance ${p.nextRunAt.toISOString()} est dépassée`,
+    };
+  }
+  return { effectiveStatus: "RUNNING", stalled: false, reason: null };
+}
+
+/**
+ * Return active processes with next run times, optionally scoped to a strategy.
+ *
+ * Le filtre `strategyId` était exposé par le tool MCP `process_schedule_list`
+ * et… jamais transmis ici : la fonction ne prenait aucun argument. Tout appel
+ * « filtré » rendait donc la planification de TOUTES les marques.
+ */
+export async function getSchedule(filters: { strategyId?: string; status?: ProcessStatus } = {}): Promise<ScheduleEntry[]> {
   const processes = await db.process.findMany({
     where: {
-      status: { in: ["RUNNING", "PAUSED"] },
+      ...(filters.strategyId ? { strategyId: filters.strategyId } : {}),
+      ...(filters.status ? { status: filters.status } : { status: { in: ["RUNNING", "PAUSED"] } }),
     },
     orderBy: [
       { priority: "asc" },
@@ -131,18 +179,24 @@ export async function getSchedule(): Promise<ScheduleEntry[]> {
     ],
   });
 
-  return processes.map((p) => ({
-    id: p.id,
-    name: p.name,
-    type: p.type,
-    status: p.status,
-    priority: p.priority,
-    frequency: p.frequency,
-    lastRunAt: p.lastRunAt,
-    nextRunAt: p.nextRunAt,
-    runCount: p.runCount,
-    assigneeId: p.assigneeId,
-  }));
+  return processes.map((p) => {
+    const health = deriveProcessHealth(p);
+    return {
+      id: p.id,
+      name: p.name,
+      type: p.type,
+      status: p.status,
+      effectiveStatus: health.effectiveStatus,
+      stalled: health.stalled,
+      stalledReason: health.reason,
+      priority: p.priority,
+      frequency: p.frequency,
+      lastRunAt: p.lastRunAt,
+      nextRunAt: p.nextRunAt,
+      runCount: p.runCount,
+      assigneeId: p.assigneeId,
+    };
+  });
 }
 
 /**

@@ -22,6 +22,12 @@ export interface ToolDefinition {
   description: string;
   inputSchema: z.ZodType;
   handler: (input: Record<string, unknown>) => Promise<unknown>;
+  /**
+   * Portée vis-à-vis des marques — cf. `McpToolScope` (anubis/mcp-server.ts).
+   * Union écrite en clair plutôt qu'importée : `mcp-server` importe déjà ces
+   * modules dynamiquement, un import retour créerait un cycle.
+   */
+  scope?: "BRAND" | "GLOBAL" | "SELF_SCOPED";
 }
 
 // ---------------------------------------------------------------------------
@@ -34,6 +40,8 @@ export const tools: ToolDefinition[] = [
     name: "benchmark_search",
     description:
       "Recherche des benchmarks externes par secteur et marché. Combine les données SESHAT et le knowledge graph interne.",
+    // Référentiel de benchmarks sectoriels — aucune donnée propre à une marque.
+    scope: "GLOBAL",
     inputSchema: z.object({
       sector: z.string().describe("Secteur d'activité (ex: FMCG, Tech, Finance, Mode)"),
       market: z.string().optional().describe("Marché géographique (ex: Cameroun, Nigeria, Côte d'Ivoire)"),
@@ -118,6 +126,8 @@ export const tools: ToolDefinition[] = [
     name: "market_context_get",
     description:
       "Récupère le contexte d'un marché : taille, croissance, acteurs clés, comportements consommateurs.",
+    // Contexte d'un MARCHÉ (taille, croissance, acteurs) — référentiel sectoriel, aucune donnée propre à une marque.
+    scope: "GLOBAL",
     inputSchema: z.object({
       market: z.string().describe("Marché géographique (ex: Cameroun, Afrique de l'Ouest, Nigeria)"),
       sector: z.string().optional().describe("Secteur pour contextualiser"),
