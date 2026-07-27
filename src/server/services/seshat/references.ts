@@ -8,6 +8,7 @@ import { PILLAR_STORAGE_KEYS } from "@/domain";
  * Fallback: always returns local results, enriched by external if available.
  */
 
+import { createHash } from "node:crypto";
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
@@ -93,7 +94,7 @@ export async function enrichBrief(
   for (const bp of briefPatterns) {
     const data = bp.data as Record<string, unknown>;
     results.push({
-      id: bp.id,
+      id: `kg-${hashRef(bp.id)}`,
       title: `Brief Pattern: ${bp.channel ?? "Général"}`,
       type: "benchmark",
       relevance: bp.successScore ?? 0.5,
@@ -106,7 +107,7 @@ export async function enrichBrief(
   for (const bm of benchmarks) {
     const data = bm.data as Record<string, unknown>;
     results.push({
-      id: bm.id,
+      id: `kg-${hashRef(bm.id)}`,
       title: `Benchmark ${bm.sector ?? ""} ${bm.market ?? ""}`,
       type: "benchmark",
       relevance: bm.successScore ?? 0.5,
@@ -130,6 +131,18 @@ export async function feedbackRelevance(
   referenceId: string,
   score: number
 ): Promise<boolean> {
+  // ATTENTION — attend l'identifiant BRUT d'une `KnowledgeEntry`, pas le `id`
+  // porté par une `SeshatReference`. Depuis que les références exposent un id
+  // haché (`kg-<hash>` — certains ids réels encodent le `strategyId` d'une autre
+  // marque, cf. `knowledgeEntryToReference`), les deux espaces sont disjoints
+  // par construction. Un id haché ne résout pas : la fonction rend `false`, pas
+  // un succès silencieux.
+  if (referenceId.startsWith("kg-")) {
+    console.warn(
+      "[seshat-bridge] feedbackRelevance appelé avec un id de référence exposé (haché) — non résolvable.",
+    );
+    return false;
+  }
   try {
     // Update local knowledge entry with relevance feedback
     const entry = await db.knowledgeEntry.findUnique({ where: { id: referenceId } });
@@ -206,7 +219,7 @@ export async function searchReferences(
     });
 
     for (const e of channelEntries) {
-      if (!localResults.some((r) => r.id === e.id)) {
+      if (!localResults.some((r) => r.id === `kg-${hashRef(e.id)}`)) {
         localResults.push(knowledgeEntryToReference(e));
       }
     }
@@ -390,7 +403,7 @@ async function queryLocalKnowledgeGraph(query: SeshatQuery, limit: number): Prom
       take: limit - results.length,
     });
     for (const e of entries) {
-      if (!results.some((r) => r.id === e.id)) {
+      if (!results.some((r) => r.id === `kg-${hashRef(e.id)}`)) {
         results.push(knowledgeEntryToReference(e));
       }
     }
@@ -404,25 +417,20 @@ async function queryLocalKnowledgeGraph(query: SeshatQuery, limit: number): Prom
       take: limit - results.length,
     });
     for (const e of entries) {
-      if (!results.some((r) => r.id === e.id)) {
+      if (!results.some((r) => r.id === `kg-${hashRef(e.id)}`)) {
         results.push(knowledgeEntryToReference(e));
       }
     }
   }
 
-  // Fallback: general top entries
-  if (results.length < limit) {
-    const entries = await db.knowledgeEntry.findMany({
-      orderBy: { successScore: "desc" },
-      take: limit - results.length,
-    });
-    for (const e of entries) {
-      if (!results.some((r) => r.id === e.id)) {
-        results.push(knowledgeEntryToReference(e));
-      }
-    }
-  }
-
+  // PAS de repli « meilleures entrées toutes marques confondues ».
+  //
+  // Il existait : un `findMany({ orderBy: { successScore: "desc" } })` SANS
+  // aucun `where`, qui complétait n'importe quelle requête avec les entrées les
+  // mieux notées de toute la base. Un `market_context_get` sur « Cameroun »
+  // ramenait ainsi des références d'autres marques dès que le filtre légitime
+  // rendait peu de lignes. Rendre moins de références est honnête ; en fabriquer
+  // avec la donnée d'autrui ne l'est pas.
   return results.slice(0, limit);
 }
 
@@ -471,7 +479,11 @@ function knowledgeEntryToReference(entry: {
   };
 
   return {
-    id: entry.id,
+    // `id` n'est PAS l'identifiant technique de l'entrée : `knowledge-aggregator`
+    // en fabrique certains sous la forme `study-<strategyId>-<hash>`, qui
+    // encodent donc l'id d'une autre marque. On le hache — la déduplication
+    // (seul usage réel de ce champ) fonctionne à l'identique.
+    id: `kg-${hashRef(entry.id)}`,
     title: generateTitle(entry),
     type: typeMap[entry.entryType] ?? "article",
     relevance: entry.successScore ?? 0.5,
@@ -479,6 +491,11 @@ function knowledgeEntryToReference(entry: {
     source: "Knowledge Graph (local)",
     tags: [entry.sector, entry.market, entry.channel].filter(Boolean) as string[],
   };
+}
+
+/** Hash court et stable d'un id d'entrée — la déduplication garde son sens sans exposer un id qui peut encoder un strategyId. */
+function hashRef(id: string): string {
+  return createHash("sha256").update(id).digest("hex").slice(0, 16);
 }
 
 function generateTitle(entry: { entryType: string; sector: string | null; market: string | null; channel: string | null }): string {
@@ -493,6 +510,21 @@ function generateTitle(entry: { entryType: string; sector: string | null; market
   }
 }
 
+/**
+ * Extrait lisible d'une entrée de connaissance — **liste blanche par type**.
+ *
+ * La branche `default` faisait `JSON.stringify(data).slice(0, 200)` : un dump
+ * BRUT du payload. Or `KnowledgeEntry` est transverse aux marques et son `data`
+ * est nominatif — `knowledge-seeder` y écrit `missionTitle`, `avgQcScore`,
+ * `firstPassRate` pour `MISSION_OUTCOME`, précisément l'un des deux types que
+ * cette branche attrapait. Cette fonction alimente `queryReferences`, appelé par
+ * des outils MCP **curés et transverses** : le dump repartait donc à une clé de
+ * marque, en contournant la projection posée côté serveurs MCP (le verrou CI ne
+ * scanne que `src/server/mcp/**` — relecture adversariale 2026-07-27).
+ *
+ * Les types non couverts rendent désormais un libellé générique. Perdre un
+ * extrait vaut mieux que fuiter un payload dont le schéma n'est pas garanti.
+ */
 function generateExcerpt(entryType: string, data: Record<string, unknown>): string {
   switch (entryType) {
     case "SECTOR_BENCHMARK":
@@ -504,7 +536,7 @@ function generateExcerpt(entryType: string, data: Record<string, unknown>): stri
     case "DIAGNOSTIC_RESULT":
       return `Type: ${data.type ?? "diagnostic"}`;
     default:
-      return JSON.stringify(data).slice(0, 200);
+      return `Entrée ${entryType} du graphe de connaissances.`;
   }
 }
 

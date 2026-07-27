@@ -64,7 +64,19 @@ export const mestorRouter = createTRPCRouter({
    * fondateur ne puisse les atteindre, et le coordinateur du chat les niait
    * quand on l'interrogeait. Ouverte au fondateur de SA marque
    * (`strategyScopedProcedure` = garde d'appartenance) sous condition
-   * d'abonnement — 6 appels LLM par délibération (1 position + 4 critiques + 1 synthèse), ce n'est pas gratuit.
+   * d'abonnement ET d'un budget dédié — **5 appels LLM** quand une position est
+   * fournie (4 critiques + 1 synthèse), **6** sinon (+ 1 position rédigée par le
+   * coordinateur). Le panneau cockpit fournit toujours la position : le chemin
+   * fondateur coûte donc 5.
+   *
+   * Le rate-limit est SÉPARÉ de celui du chat : celui-ci autorise 20 messages à
+   * 1 appel, il aurait autorisé 20 délibérations à 5 — une centaine d'appels sur
+   * le budget de la marque.
+   *
+   * `strategyScopedProcedure` admet aussi les **collaborateurs délégués**
+   * (ADR-0129) : un community manager peut donc déclencher une délibération sur
+   * le budget de la marque. C'est cohérent avec le reste du cockpit (il opère
+   * déjà le calendrier), et c'est ce budget qui en borne le coût.
    *
    * Reste une LECTURE : advisory pur, zéro écriture pilier, zéro Intent
    * (ADR-0180).
@@ -85,6 +97,16 @@ export const mestorRouter = createTRPCRouter({
           status: "TIER_GATE_DENIED" as const,
           reason: gate.reason ?? "Abonnement payant requis pour l'analyse approfondie.",
           configureUrl: gate.configureUrl ?? "/pricing",
+        };
+      }
+      const { consumeDeliberationBudget } = await import(
+        "@/server/services/mestor/council/rate-limit"
+      );
+      if (!(await consumeDeliberationBudget(ctx.session.user.id))) {
+        return {
+          status: "RATE_LIMITED" as const,
+          reason:
+            "Trop d'analyses approfondies en peu de temps — chacune mobilise le conseil au complet. Réessayez dans quelques minutes.",
         };
       }
       const { deliberate } = await import("@/server/services/mestor/council");

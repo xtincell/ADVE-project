@@ -123,6 +123,15 @@ export function CouncilDeliberationPanel({
     );
   }
 
+  if (d.status === "RATE_LIMITED") {
+    return (
+      <div className="flex items-start gap-2 rounded-lg border border-warning p-3 text-sm text-warning">
+        <AlertTriangle className="h-4 w-4 shrink-0" />
+        <span>{d.reason}</span>
+      </div>
+    );
+  }
+
   if (d.status === "UNAVAILABLE") {
     return (
       <div className="flex items-start gap-2 rounded-lg border border-warning p-3 text-sm text-warning">

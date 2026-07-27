@@ -31,6 +31,7 @@
 import type { Prisma, SocialPlatform } from "@prisma/client";
 import { db } from "@/lib/db";
 import type { ConnectorResult } from "@/domain";
+import { describeConnectorConfig } from "./connector-projection";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -506,8 +507,18 @@ export async function upsertSocialConnector(
   });
 }
 
+/**
+ * Connecteurs sociaux de l'opérateur, **sans leurs secrets**.
+ *
+ * Le `select` portait `config: true` et la seule appelante est une procédure
+ * tRPC (`social.listSocialConnectors`) : le jeton de page Meta et la clé Apify
+ * partaient donc au navigateur, alors que la procédure d'écriture juste en
+ * dessous porte l'avertissement « ne jamais logger le token renvoyé ».
+ * L'écran a besoin de savoir si c'est configuré et avec quelles clés — jamais
+ * de leur valeur (`describeConnectorConfig`).
+ */
 export async function getSocialConnectors(operatorId: string) {
-  return db.externalConnector.findMany({
+  const rows = await db.externalConnector.findMany({
     where: {
       operatorId,
       connectorType: { in: [SOCIAL_CONNECTOR_META, SOCIAL_CONNECTOR_APIFY] },
@@ -515,4 +526,5 @@ export async function getSocialConnectors(operatorId: string) {
     select: { id: true, connectorType: true, status: true, lastSyncAt: true, config: true },
     orderBy: { createdAt: "asc" },
   });
+  return rows.map(({ config, ...rest }) => ({ ...rest, ...describeConnectorConfig(config) }));
 }

@@ -11,6 +11,12 @@
  * opérateur → lecture/écriture/suppression des credentials d'un AUTRE opérateur.
  * Désormais `operatorProcedure` + l'`operatorId` est résolu/validé côté serveur
  * (un opérateur ne gère QUE ses propres connecteurs ; ADMIN gère tous).
+ *
+ * Cette passe fermait QUI peut lire, pas CE QUI est lu : les lectures
+ * renvoyaient toujours la ligne entière, donc les jetons — au navigateur du
+ * propriétaire légitime, mais dans le navigateur quand même. Les trois lectures
+ * passent désormais par `CONNECTOR_PUBLIC_SELECT` (liste blanche partagée),
+ * `get` remplaçant `config` par sa description (`configured` + noms de clés).
  */
 
 import { z } from "zod";
@@ -20,6 +26,10 @@ import { createTRPCRouter, operatorProcedure } from "../init";
 import { getConnector, listConnectorTypes } from "@/server/services/advertis-connectors";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { getOperatorContext } from "@/server/services/operator-isolation";
+import {
+  CONNECTOR_PUBLIC_SELECT,
+  readPublicConnector,
+} from "@/server/services/anubis/connector-projection";
 /* lafusee:governed-active */
 
 /**
@@ -51,6 +61,7 @@ export const connectorsRouter = createTRPCRouter({
       const connectors = await ctx.db.externalConnector.findMany({
         where: { operatorId },
         orderBy: { updatedAt: "desc" },
+        select: CONNECTOR_PUBLIC_SELECT,
       });
       return {
         connectors,
@@ -66,14 +77,9 @@ export const connectorsRouter = createTRPCRouter({
     }))
     .query(async ({ ctx, input }) => {
       const operatorId = await scopedOperatorId(ctx, input.operatorId);
-      return ctx.db.externalConnector.findUnique({
-        where: {
-          operatorId_connectorType: {
-            operatorId,
-            connectorType: input.connectorType,
-          },
-        },
-      });
+      // `config` reste au serveur : le service le charge, le décrit, et ne rend
+      // que `configured` + les NOMS de clés. Le routeur ne voit jamais le secret.
+      return readPublicConnector(operatorId, input.connectorType);
     }),
 
   // Create or update a connector
@@ -118,8 +124,11 @@ export const connectorsRouter = createTRPCRouter({
     }),
     caller: "connectors:sync",
   }).mutation(async ({ ctx, input }) => {
+    // Deux champs suffisent ici (routage adapter + garde d'appartenance) : les
+    // credentials, c'est l'adapter qui les lit côté serveur, pas cette voie.
     const connector = await ctx.db.externalConnector.findUnique({
       where: { id: input.connectorId },
+      select: { id: true, operatorId: true, connectorType: true },
     });
     if (!connector) {
       throw new Error("Connector not found");
@@ -163,6 +172,7 @@ export const connectorsRouter = createTRPCRouter({
       const operatorId = await scopedOperatorId(ctx, input.operatorId);
       const connectors = await ctx.db.externalConnector.findMany({
         where: { operatorId },
+        select: CONNECTOR_PUBLIC_SELECT,
       });
 
       return {
