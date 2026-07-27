@@ -1,5 +1,15 @@
 # Changelog — La Fusee
 
+## v6.27.336 — docs(deploy): le protocole dit enfin que la prod se déploie par image (2026-07-27)
+
+**Le skill `nefer-ops` affirmait « le déploiement est AUTOMATIQUE au merge sur `main` » et « NEVER déclencher un déploiement manuel ». Depuis la bascule build-déporté, les deux sont FAUX et inversés — une session future aurait mergé, attendu un déploiement qui n'arrive jamais, et annoncé « shippé en prod » sur du vide.**
+
+- **`nefer-ops` TEMPS 2 réécrit** avec un bandeau de changement de régime explicite : merger ne déploie rien (aucun webhook, `build-image.yml` sans trigger) ; livrer = construire l'image (Actions) **puis** redémarrer la ressource, deux gestes manuels et peu coûteux (`docker pull` + swap). L'ancienne peur du « build en double » n'a plus d'objet puisque le VPS ne compile plus.
+- **Table des deux UUID** dans les trois sources (`nefer-ops`, `BUILD-DEPORT`, `CLAUDE.md`) : PROD = `q9b4m57yh93gxbjykj470giy` (`dockerimage`) · l'app git `rfkgtj7us50jlbaiz1tjke2a` est **arrêtée volontairement = le rollback**, son `exited` est NORMAL, la redéployer relancerait un `next build` sur le VPS. **`BUILD-DEPORT.md` donnait précisément ce mauvais UUID** comme `COOLIFY_APP_UUID` — corrigé ; un handoff avait déjà commis l'erreur le jour même.
+- **`CLAUDE.md` gagne une section « Déploiement prod »** (fichier auto-chargé = la première chose que lit une session neuve), avec le diagnostic `EAI_AGAIN` et le compteur de migrations comme preuve de quelle base est jointe.
+- **Pièges d'API Coolify consignés** : une variable d'env n'est lue qu'au boot ; `PATCH /envs` ne met à jour que l'existant (404 sinon), la création c'est `POST /envs`.
+- Documentation + skill seuls — 0 code, 0 migration.
+
 ## v6.27.335 — fix(anubis): OAuth MCP — la redirection vers /login pointait sur l'adresse de bind (2026-07-27)
 
 **Le connecteur claude.ai atteignait `/api/mcp/oauth/authorize`, qui le renvoyait vers `https://0.0.0.0:80/login?…` — injoignable (Safari : « Non autorisé à utiliser le port réseau limité »). Le flux OAuth d'ADR-0183 mourait donc à l'étape session.**
