@@ -57,7 +57,20 @@ export const mestorRouter = createTRPCRouter({
   // ── Conseil de marque — délibération adversariale (ADR-0180) ─────────
   // Query (zéro écriture — advisory pur, précédent previewAmend « lecture LLM ») ;
   // opérateur only en v1 : 6 appels LLM, le coût reste une décision UPgraders.
-  councilDeliberate: operatorProcedure
+  /**
+   * Analyse approfondie — convoque RÉELLEMENT les quatre experts contradictoires
+   * (draft du coordinateur → 4 critiques en parallèle → synthèse avec dissensus).
+   *
+   * Était `operatorProcedure` : les experts existaient donc sans qu'aucun
+   * fondateur ne puisse les atteindre, et le coordinateur du chat les niait
+   * quand on l'interrogeait. Ouverte au fondateur de SA marque
+   * (`strategyScopedProcedure` = garde d'appartenance) sous condition
+   * d'abonnement — 5 appels LLM par délibération, ce n'est pas gratuit.
+   *
+   * Reste une LECTURE : advisory pur, zéro écriture pilier, zéro Intent
+   * (ADR-0180).
+   */
+  councilDeliberate: strategyScopedProcedure
     .input(
       z.object({
         strategyId: z.string(),
@@ -65,7 +78,16 @@ export const mestorRouter = createTRPCRouter({
         draft: z.string().max(8_000).optional(),
       }),
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      const { checkPaidTier } = await import("@/server/services/glory-tools/tier-gate");
+      const gate = await checkPaidTier(ctx.session.user.id, undefined, input.strategyId);
+      if (!gate.allowed) {
+        return {
+          status: "TIER_GATE_DENIED" as const,
+          reason: gate.reason ?? "Abonnement payant requis pour l'analyse approfondie.",
+          configureUrl: gate.configureUrl ?? "/pricing",
+        };
+      }
       const { deliberate } = await import("@/server/services/mestor/council");
       return deliberate(input);
     }),

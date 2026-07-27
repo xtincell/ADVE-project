@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { AiBadge } from "@/components/shared/ai-badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
+import { CouncilDeliberationPanel } from "@/components/cockpit/council-deliberation-panel";
 import {
   Bot,
   Send,
@@ -228,6 +229,10 @@ export default function MestorPage() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  // Le sujet soumis au conseil = la dernière réponse de l'assistant, celle que
+  // les experts vont attaquer.
+  const lastAssistantMessage = [...messages].reverse().find((m) => m.role === "assistant") ?? null;
+
   const handleReset = () => {
     setMessages([]);
     setInput("");
@@ -248,13 +253,26 @@ export default function MestorPage() {
         ]}
       >
         {messages.length > 0 && (
-          <button
-            onClick={handleReset}
-            className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground-secondary hover:bg-surface-raised"
-          >
-            <RotateCcw className="h-4 w-4" />
-            Nouvelle conversation
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Convoque les quatre experts contradictoires sur le dernier
+                échange. Sans ce bouton, ils existaient sans être atteignables
+                par un fondateur — et le coordinateur niait leur existence
+                quand on l'interrogeait. */}
+            {lastAssistantMessage && (
+              <CouncilDeliberationPanel
+                key={lastAssistantMessage.id}
+                strategyId={strategyId}
+                topic={lastAssistantMessage.content.slice(0, 2_000)}
+              />
+            )}
+            <button
+              onClick={handleReset}
+              className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground-secondary hover:bg-surface-raised"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Nouvelle conversation
+            </button>
+          </div>
         )}
       </PageHeader>
 

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { db } from "@/lib/db";
 import * as seshatBridge from "@/server/services/seshat-bridge";
+import { countByEntryType, toSectorMeta } from "@/server/mcp/_shared/knowledge-projection";
 
 // ---------------------------------------------------------------------------
 // SESHAT MCP Server
@@ -56,16 +57,27 @@ export const tools: ToolDefinition[] = [
           market: input.market as string | undefined,
           limit: (input.limit as number) ?? 10,
         }),
+        // `entryType` est un paramètre LIBRE de `knowledge_graph_ingest` : une
+        // marque peut donc écrire des lignes SECTOR_BENCHMARK. Le filtre par
+        // type ne suffit pas à garantir l'absence de donnée propriétaire —
+        // métadonnées seules (cf. `_shared/knowledge-projection.ts`).
         db.knowledgeEntry.findMany({
           where: {
             entryType: "SECTOR_BENCHMARK",
             sector: input.sector as string,
           },
+          select: { entryType: true, sector: true, market: true, createdAt: true },
           orderBy: { createdAt: "desc" },
           take: 5,
         }),
       ]);
-      return { externalBenchmarks: seshatResults, internalBenchmarks };
+      return {
+        externalBenchmarks: seshatResults,
+        internalBenchmarkActivity: {
+          entryCount: internalBenchmarks.length,
+          latest: internalBenchmarks.map(toSectorMeta),
+        },
+      };
     },
   },
 
@@ -136,16 +148,30 @@ export const tools: ToolDefinition[] = [
       const topic = input.sector ? `${input.market} ${input.sector} market` : `${input.market} market`;
       const [seshatData, knowledgeEntries] = await Promise.all([
         seshatBridge.queryReferences({ topic, market: input.market as string, limit: 10 }),
+        // Métadonnées SEULES : `KnowledgeEntry.data` porte des payloads
+        // nominatifs de marque (strategyName, composite, pillarScores). Sur un
+        // outil GLOBAL, les rendre en clair laissait une clé de marque lire ses
+        // concurrents — cf. `_shared/knowledge-projection.ts`.
         db.knowledgeEntry.findMany({
           where: {
             market: input.market as string,
             ...(input.sector ? { sector: input.sector as string } : {}),
           },
+          select: { entryType: true, sector: true, market: true, createdAt: true },
           orderBy: { createdAt: "desc" },
           take: 10,
         }),
       ]);
-      return { market: input.market, sector: input.sector, externalData: seshatData, internalData: knowledgeEntries };
+      return {
+        market: input.market,
+        sector: input.sector,
+        externalData: seshatData,
+        internalActivity: {
+          entryCount: knowledgeEntries.length,
+          byType: countByEntryType(knowledgeEntries),
+          latest: knowledgeEntries.map(toSectorMeta),
+        },
+      };
     },
   },
 

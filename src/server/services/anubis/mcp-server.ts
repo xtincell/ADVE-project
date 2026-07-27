@@ -158,7 +158,19 @@ function enforceBrandScope(
   params: Record<string, unknown>,
 ): Record<string, unknown> {
   const auth = params.__auth as { scopeKind?: string | null; scopeStrategyId?: string | null } | undefined;
-  if (auth?.scopeKind !== "BRAND") return params;
+
+  // FAIL-CLOSED sur l'absence de contexte d'authentification. Sans cette garde,
+  // un appelant qui atteint `dispatchTool` sans passer par `scopeMcpParams` /
+  // `scopeParamsForTool` obtenait un accès NON SCOPÉ — et `dispatchTool` est
+  // ré-exporté publiquement (`anubis/index.ts`), donc à un import de distance.
+  // Le cas était latent ; `listStrategies` l'aurait transformé en énumération
+  // complète de la base (relecture adversariale 2026-07-27).
+  if (!auth) {
+    throw new Error(
+      `Contexte d'authentification absent sur ${tool.name} — la portée ne peut pas être établie, accès refusé.`,
+    );
+  }
+  if (auth.scopeKind !== "BRAND") return params;
   // GLOBAL = rien à scoper. SELF_SCOPED = le handler scope lui-même sur `__auth`
   // (qui reste dans les params — il est injecté par `scopeMcpParams`).
   if (tool.scope === "GLOBAL" || tool.scope === "SELF_SCOPED") return params;
@@ -182,9 +194,20 @@ function enforceBrandScope(
  *
  * Un agent externe découvre les marques par leur nom, pas par leur identifiant
  * technique : exiger l'id exact obligeait à passer par une recherche sémantique
- * pour déduire un identifiant enfoui dans un digest (audit MCP P1). La résolution
- * se fait AVANT le contrôle de portée — sinon une clé de marque légitime qui
- * passe son propre slug serait refusée pour divergence.
+ * pour déduire un identifiant enfoui dans un digest (audit MCP P1).
+ *
+ * **Portée réelle : les clés SYSTEM.** Les deux points d'entrée
+ * (`scopeMcpParams` côté REST, `scopeParamsForTool` côté transport MCP)
+ * comparent le `strategyId` BRUT à la portée de la clé AVANT d'arriver ici :
+ * une clé de marque qui passe son propre slug est donc refusée en amont. Ce
+ * n'est pas une régression — une clé de marque n'a aucun besoin de résoudre
+ * un slug, sa portée lui est injectée. La note antérieure prétendait l'inverse ;
+ * elle était fausse (relecture adversariale 2026-07-27).
+ *
+ * **Précédence explicite id → slug** : `id` et `publicSlug` partagent le même
+ * espace de noms (aucune contrainte de forme en base). Un `findFirst` avec un
+ * `OR` laissait Postgres arbitrer — donc, pour une clé SYSTEM, la possibilité
+ * d'opérer sur une marque autre que celle visée, écritures comprises.
  *
  * Ne fabrique rien : un identifiant inconnu est laissé tel quel, et le tool
  * répondra son `NOT_FOUND` habituel.
@@ -192,11 +215,12 @@ function enforceBrandScope(
 async function resolveStrategyRef(params: Record<string, unknown>): Promise<Record<string, unknown>> {
   const ref = params.strategyId;
   if (typeof ref !== "string" || ref.length === 0) return params;
-  const found = await db.strategy.findFirst({
-    where: { OR: [{ id: ref }, { publicSlug: ref }] },
-    select: { id: true },
-  });
-  return found ? { ...params, strategyId: found.id } : params;
+  // L'identifiant technique prime, toujours : deux requêtes ordonnées plutôt
+  // qu'un OR arbitré par le planificateur.
+  const byId = await db.strategy.findUnique({ where: { id: ref }, select: { id: true } });
+  if (byId) return params;
+  const bySlug = await db.strategy.findUnique({ where: { publicSlug: ref }, select: { id: true } });
+  return bySlug ? { ...params, strategyId: bySlug.id } : params;
 }
 
 /** Code d'erreur métier stable, sans détail d'implémentation. */
@@ -220,20 +244,31 @@ export class McpToolError extends Error {
  * `strictModeGates`). Le détail reste dans les logs serveur.
  */
 function normalizeToolError(err: unknown, serverName: string, toolName: string): McpToolError {
-  if (err instanceof McpToolError) return err;
-  const raw = err instanceof Error ? err.message : String(err);
+  // Le détail complet reste côté serveur, TOUJOURS — quelle que soit la suite.
   console.error(`[mcp] ${serverName}.${toolName} a échoué :`, err);
-  const isOrm =
-    /PrismaClient|Unknown field|Unknown arg|Available options|Argument `\w+`|invalid `prisma\./i.test(raw);
-  if (isOrm) {
-    return new McpToolError(
-      "SCHEMA_ERROR",
-      `L'outil ${serverName}.${toolName} est en dérive de schéma côté serveur. Le détail est journalisé ; réessayer ne le corrigera pas.`,
-    );
+
+  // Seul un message que NOUS avons rédigé franchit la frontière. Une liste noire
+  // de motifs Prisma était poreuse par construction : elle laissait passer
+  // P2021 (« The table `public.SocialPost` does not exist »), P2022 (colonne),
+  // P2003 (nom d'index), P1000/P1001 (hôte, port et **utilisateur** de la base)
+  // et P2010 (SQL brut) — dont, ironiquement, les deux codes qui signalent
+  // littéralement la dérive de schéma qu'elle prétendait attraper. Toute erreur
+  // non explicitement fabriquée ici devient générique (relecture adversariale
+  // 2026-07-27).
+  if (err instanceof McpToolError) return err;
+
+  const raw = err instanceof Error ? err.message : String(err);
+  // Les refus de portée sont nos propres messages métier — ils portent une
+  // information actionnable pour l'appelant et aucune structure interne.
+  if (/portée|accès refusé|n'appartient pas à la marque|SCOPE_DENIED/i.test(raw)) {
+    return new McpToolError("SCOPE_DENIED", raw);
   }
-  // Les refus de portée sont des messages métier volontaires — on les préserve.
-  if (/portée|accès refusé|SCOPE_DENIED/i.test(raw)) return new McpToolError("SCOPE_DENIED", raw);
-  return new McpToolError("TOOL_ERROR", raw);
+  if (/introuvable|NOT_FOUND/i.test(raw)) return new McpToolError("NOT_FOUND", raw);
+
+  return new McpToolError(
+    "TOOL_ERROR",
+    `L'outil ${serverName}.${toolName} a échoué côté serveur. Le détail est journalisé.`,
+  );
 }
 
 export async function dispatchTool(
@@ -253,7 +288,28 @@ export async function dispatchTool(
   }
   try {
     const resolved = await resolveStrategyRef(params);
-    return await tool.handler(enforceBrandScope(tool, resolved));
+    const scoped = enforceBrandScope(tool, resolved);
+
+    // VALIDATION DU SCHÉMA — elle ne tournait NULLE PART. Les routes REST
+    // `/api/mcp/<server>` passaient les params bruts, et `dispatchTool`
+    // appelait le handler directement : un `strategyId` déclaré « requis »
+    // ne l'était donc pas à l'exécution. Avec une clé SYSTEM, omettre le
+    // paramètre donnait `where: { strategyId: undefined }`, que Prisma ignore
+    // — soit exactement la fuite multi-marques que ce chantier ferme, par une
+    // autre porte (relecture adversariale 2026-07-27).
+    //
+    // `__auth` est retiré avant parse (il n'est pas au schéma) puis réinjecté :
+    // les handlers `SELF_SCOPED` le lisent.
+    const { __auth, ...toValidate } = scoped;
+    const parsed = tool.inputSchema.safeParse(toValidate);
+    if (!parsed.success) {
+      const detail = parsed.error.issues
+        .map((i) => `${i.path.join(".") || "(racine)"} : ${i.message}`)
+        .join(" · ");
+      throw new McpToolError("INVALID_PARAMS", `Paramètres invalides pour ${toolName} — ${detail}`);
+    }
+
+    return await tool.handler({ ...(parsed.data as Record<string, unknown>), __auth });
   } catch (err) {
     throw normalizeToolError(err, serverName, toolName);
   }

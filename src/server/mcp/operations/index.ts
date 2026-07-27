@@ -297,7 +297,10 @@ export const tools: ToolDefinition[] = [
       "Liste les processus planifiés (récurrents et ponctuels) d'une marque avec leur prochain déclenchement. Chaque ligne porte son statut DÉCLARÉ et son statut EFFECTIF : un processus « RUNNING » sans prochaine échéance est rapporté STALLED, pas sain.",
     inputSchema: z.object({
       strategyId: z.string().describe("ID (ou slug public) de la marque"),
-      status: z.enum(["RUNNING", "PAUSED", "STOPPED", "COMPLETED", "FAILED"]).optional(),
+      // Valeurs RÉELLES de l'enum Prisma `ProcessStatus`. « FAILED » n'existe
+      // pas : le proposer envoyait l'appelant droit dans une erreur de schéma,
+      // pour une valeur que l'outil lui-même annonçait.
+      status: z.enum(["RUNNING", "PAUSED", "STOPPED", "COMPLETED"]).optional(),
     }),
     handler: async (input) => {
       // Le filtre `strategyId` était exposé et jamais transmis — la fonction ne
@@ -345,9 +348,12 @@ export const tools: ToolDefinition[] = [
   {
     name: "team_allocation_overview",
     description:
-      "Vue d'ensemble de l'allocation des équipes de la Guilde : charge de travail, utilisation, goulots d'étranglement. Transverse aux marques (vue opérateur) — ne contient aucune donnée de stratégie.",
-    // Charge des créateurs de la Guilde : ni scopable ni scopé par marque.
-    scope: "GLOBAL",
+      "Vue d'ensemble de l'allocation des équipes de la Guilde : charge de travail, utilisation, goulots d'étranglement. Outil OPÉRATEUR — inaccessible avec une clé limitée à une marque.",
+    // PAS de `scope: "GLOBAL"` : la sortie nomme les talents (`userId`,
+    // `displayName`, taux d'occupation) — c'est le carnet d'adresses freelance
+    // de l'agence et de la PII, pas un référentiel public. L'avoir marqué GLOBAL
+    // l'aurait ouvert à tout fondateur client (relecture adversariale
+    // 2026-07-27). Sans `strategyId` au schéma, il reste fail-closed en BRAND.
     inputSchema: z.object({
       operatorId: z.string().describe("ID de l'opérateur"),
     }),

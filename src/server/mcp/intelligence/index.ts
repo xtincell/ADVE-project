@@ -23,6 +23,7 @@ import * as mestor from "@/server/services/mestor";
 import * as knowledgeAggregator from "@/server/services/knowledge-aggregator";
 import * as feedbackLoop from "@/server/services/feedback-loop";
 import * as seshatBridge from "@/server/services/seshat-bridge";
+import { countByEntryType, toSectorMeta } from "@/server/mcp/_shared/knowledge-projection";
 
 // ---------------------------------------------------------------------------
 // Intelligence MCP Server
@@ -198,9 +199,14 @@ export const tools: ToolDefinition[] = [
       // `KnowledgeEntry` n'a pas de colonne `strategyId` — la convention du repo
       // (cf. `diagnostic-engine`) est de le porter dans `data` + `sourceHash`.
       const strategyId = input.strategyId as string;
+      // `strategyId` en DERNIER : le spread de `input.data` est contrôlé par
+      // l'appelant. Placé avant, un `data: { strategyId: "<autre marque>" }`
+      // écrasait l'attribution autoritaire — et comme `KnowledgeEntry` n'a pas
+      // de colonne `strategyId`, `data.strategyId` EST l'unique attribution.
+      // Une clé scopée sur A aurait écrit une entrée attribuée à B.
       const payload = {
-        strategyId,
         ...((input.data as Record<string, unknown>) ?? {}),
+        strategyId,
       };
       const entry = await db.knowledgeEntry.create({
         data: {
@@ -314,8 +320,9 @@ export const tools: ToolDefinition[] = [
   {
     name: "sector_insights",
     description:
-      "Génère des insights stratégiques pour un secteur donné en agrégeant les données du knowledge graph. Vue SECTORIELLE — ne contient aucune donnée propre à une marque.",
-    // Agrégat de secteur : rien à scoper par marque.
+      "Volumétrie sectorielle du graphe de connaissances : combien d'entrées, de quels types, sur quelle période. AGRÉGATS SEULS — le contenu des entrées appartient aux marques qui les ont produites et n'est jamais rendu ici.",
+    // Agrégat de secteur : rien à scoper par marque — À CONDITION que la sortie
+    // reste agrégée (cf. `_shared/knowledge-projection.ts`).
     scope: "GLOBAL",
     // `strategyId` était déclaré « pour contextualiser » et n'était jamais lu —
     // un paramètre décoratif qui laissait croire à un scoping inexistant. Retiré
@@ -324,19 +331,23 @@ export const tools: ToolDefinition[] = [
       sector: z.string().describe("Secteur d'activité"),
     }),
     handler: async (input) => {
+      // `KnowledgeEntry.data` porte des payloads NOMINATIFS (strategyName,
+      // composite, pillarScores — cf. knowledge-seeder). Rendre les lignes
+      // entières sur un outil GLOBAL laissait une clé de marque lire le nom et
+      // le score de ses concurrents du même secteur. On ne projette que des
+      // métadonnées (liste blanche).
       const entries = await db.knowledgeEntry.findMany({
         where: { sector: input.sector as string },
+        select: { entryType: true, sector: true, market: true, createdAt: true },
         orderBy: { createdAt: "desc" },
         take: 20,
       });
-      const typeCounts = entries.reduce(
-        (acc, e) => {
-          acc[e.entryType] = (acc[e.entryType] ?? 0) + 1;
-          return acc;
-        },
-        {} as Record<string, number>
-      );
-      return { sector: input.sector, totalEntries: entries.length, byType: typeCounts, latestEntries: entries.slice(0, 5) };
+      return {
+        sector: input.sector,
+        totalEntries: entries.length,
+        byType: countByEntryType(entries),
+        latest: entries.slice(0, 5).map(toSectorMeta),
+      };
     },
   },
 

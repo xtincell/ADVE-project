@@ -39,6 +39,8 @@ interface ParsedTool {
   scope: "BRAND" | "GLOBAL" | "SELF_SCOPED";
   declaresStrategyId: boolean;
   handlerUsesStrategyId: boolean;
+  /** Le handler DE CET OUTIL lit-il `__auth` ? (pas le fichier — le bloc). */
+  handlerUsesAuth: boolean;
 }
 
 /**
@@ -73,6 +75,7 @@ function parseServer(server: string): ParsedTool[] {
       scope: (scopeMatch?.[1] as ParsedTool["scope"]) ?? "BRAND",
       declaresStrategyId: /\bstrategyId\b/.test(schema),
       handlerUsesStrategyId: /\bstrategyId\b/.test(handler),
+      handlerUsesAuth: /__auth/.test(handler),
     });
   });
   return out;
@@ -153,30 +156,68 @@ describe("surface MCP — les exceptions de portée sont explicites", () => {
     expect(brandButUnscopable.filter((n) => curated.has(n))).toEqual([]);
   });
 
-  it("un outil SELF_SCOPED lit bien `__auth` pour se restreindre", () => {
+  it("un outil SELF_SCOPED lit bien `__auth` DANS SON PROPRE BLOC", () => {
+    // Le contrôle portait d'abord sur le FICHIER entier. `advertis/index.ts`
+    // contient déjà `__auth` dans `amendPillar` — donc tout futur outil
+    // SELF_SCOPED ajouté à ce fichier passait sans jamais lire `__auth` :
+    // un garde-fou vide (relecture adversariale 2026-07-27).
     const offenders = ALL_TOOLS.filter((t) => t.scope === "SELF_SCOPED")
-      .filter((t) => {
-        const src = readFileSync(join(MCP_DIR, t.server, "index.ts"), "utf8");
-        return !src.includes("__auth");
-      })
+      .filter((t) => !t.handlerUsesAuth)
       .map((t) => `${t.server}.${t.name}`);
     expect(
       offenders,
-      "SELF_SCOPED signifie « je me scope moi-même » — sans lecture de `__auth`, c'est une portée non appliquée.",
+      "SELF_SCOPED signifie « je me scope moi-même » — sans lecture de `__auth` dans SON handler, c'est une portée non appliquée.",
     ).toEqual([]);
   });
 });
 
 describe("surface MCP — aucune exception ORM ne repart à l'appelant", () => {
-  it("le dispatcher normalise les erreurs Prisma en code métier", () => {
+  it("le dispatcher est en REFUS PAR DÉFAUT sur les messages d'erreur", () => {
     const src = readFileSync(
       join(ROOT, "src", "server", "services", "anubis", "mcp-server.ts"),
       "utf8",
     );
-    expect(src).toContain("SCHEMA_ERROR");
     expect(src).toMatch(/normalizeToolError/);
-    // `getBrandCard` a renvoyé la liste des 60+ champs de `Strategy` à un agent
-    // externe — l'énumération Prisma ne doit plus jamais franchir la frontière.
-    expect(src).toMatch(/Unknown field/);
+
+    // Première version : une liste NOIRE de motifs Prisma. Elle était poreuse
+    // par construction — elle laissait passer P2021 (« The table
+    // `public.X` does not exist »), P2022 (colonne), P1000/P1001 (hôte, port et
+    // utilisateur de la base) — dont les deux codes qui signalent littéralement
+    // la dérive de schéma qu'elle prétendait attraper.
+    expect(
+      src,
+      "Une liste noire de motifs ORM ne peut pas être exhaustive — le défaut doit être le refus.",
+    ).not.toMatch(/Unknown field\|Unknown arg/);
+
+    // Le message générique final ne contient AUCUNE variable d'erreur brute :
+    // seul `serverName`/`toolName`, que nous contrôlons.
+    const fn = src.slice(src.indexOf("function normalizeToolError"));
+    const generic = fn.slice(fn.indexOf("return new McpToolError(\n    \"TOOL_ERROR\""));
+    expect(generic.slice(0, 300)).not.toMatch(/\braw\b/);
+    expect(generic).toMatch(/journalisé/);
+  });
+
+  it("le dispatcher valide les paramètres avant d'appeler le handler", () => {
+    const src = readFileSync(
+      join(ROOT, "src", "server", "services", "anubis", "mcp-server.ts"),
+      "utf8",
+    );
+    // Zod ne tournait NULLE PART : ni les routes REST ni `dispatchTool` ne
+    // parsaient. Un `strategyId` « requis » ne l'était donc pas à l'exécution —
+    // omis avec une clé système, il donnait `where: { strategyId: undefined }`,
+    // que Prisma ignore. Soit la fuite multi-marques par une autre porte.
+    expect(src).toMatch(/inputSchema\.safeParse/);
+    expect(src).toMatch(/INVALID_PARAMS/);
+  });
+
+  it("le dispatcher refuse un appel sans contexte d'authentification", () => {
+    const src = readFileSync(
+      join(ROOT, "src", "server", "services", "anubis", "mcp-server.ts"),
+      "utf8",
+    );
+    // `enforceBrandScope` retournait les params intacts quand `__auth` était
+    // absent — fail-OPEN. `dispatchTool` étant ré-exporté publiquement, c'était
+    // un accès non scopé à un import de distance.
+    expect(src).toMatch(/if \(!auth\) \{[\s\S]{0,300}throw new Error/);
   });
 });

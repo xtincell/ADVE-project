@@ -90,12 +90,18 @@ export const tools: ToolDefinition[] = [
     }),
     handler: async (input) => {
       const auth = input.__auth as { scopeKind?: string | null; scopeStrategyId?: string | null } | undefined;
+      // Défense en profondeur : `dispatchTool` refuse déjà un appel sans
+      // `__auth`, mais cet outil ÉNUMÈRE — sans contexte d'authentification il
+      // rendrait toute la base. On ne se repose pas sur la garde d'en face.
+      if (!auth) {
+        return { error: "NO_AUTH_CONTEXT", count: 0, strategies: [] };
+      }
       const query = typeof input.query === "string" ? input.query.trim() : "";
       const rows = await db.strategy.findMany({
         where: {
           // Clé limitée à une marque → cette marque, un point. Le filtre est
           // posé ICI parce qu'aucun `strategyId` d'entrée ne peut l'être.
-          ...(auth?.scopeKind === "BRAND" ? { id: auth.scopeStrategyId ?? "__aucune__" } : {}),
+          ...(auth.scopeKind === "BRAND" ? { id: auth.scopeStrategyId ?? "__aucune__" } : {}),
           ...(query
             ? {
                 OR: [
