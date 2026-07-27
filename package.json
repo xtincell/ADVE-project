@@ -64,6 +64,7 @@
     "db:seed:scoreur": "node --env-file-if-exists=.env.local --env-file-if-exists=.env --import tsx scripts/seed-scoreur-demo.ts",
     "verify:scoreur-canon": "node --env-file-if-exists=.env.local --env-file-if-exists=.env --import tsx scripts/verify-scoreur-canon.ts",
     "verify:brand-owner": "node --env-file-if-exists=.env.local --env-file-if-exists=.env --import tsx scripts/verify-brand-owner.ts",
+    "transfer:owner": "node --env-file-if-exists=.env.local --env-file-if-exists=.env --import tsx scripts/transfer-brand-ownership.ts",
     "verify:intake-async": "node --env-file-if-exists=.env.local --env-file-if-exists=.env --import tsx scripts/verify-intake-async.ts",
     "db:migrate:brand-slugs": "node --env-file-if-exists=.env.local --env-file-if-exists=.env --import tsx scripts/migrate-brand-slugs.ts",
     "db:purge:wakanda": "node --env-file-if-exists=.env.local --import tsx scripts/seed-wakanda/purge.ts",

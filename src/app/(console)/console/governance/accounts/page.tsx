@@ -241,6 +241,19 @@ function CreateBrandLoginCard() {
   const [attachAs, setAttachAs] = useState<"COLLABORATOR" | "OWNER">("COLLABORATOR");
   const [ok, setOk] = useState<string | null>(null);
 
+  // Transfert de propriété — voie SÉPARÉE de la création. `createBrandLogin`
+  // refuse un email déjà pourvu d'un mot de passe : un dirigeant déjà
+  // provisionné (donc resté collaborateur délégué) ne pouvait par aucun chemin
+  // devenir propriétaire de sa marque.
+  const transfer = trpc.accounts.transferBrandOwnership.useMutation({
+    onSuccess: (r) => {
+      setOk(
+        r.alreadyOwner
+          ? `${r.email} est déjà propriétaire de ${r.brandName}.`
+          : `${r.email} est désormais PROPRIÉTAIRE de ${r.brandName}. L'ancien propriétaire garde un accès (directeur digital).`,
+      );
+    },
+  });
   const create = trpc.accounts.createBrandLogin.useMutation({
     onSuccess: (r) => {
       setOk(
@@ -359,8 +372,21 @@ function CreateBrandLoginCard() {
         >
           {create.isPending ? "Création…" : "Créer le login"}
         </button>
+        <button
+          type="button"
+          onClick={() => {
+            setOk(null);
+            transfer.mutate({ strategyId, email });
+          }}
+          disabled={!strategyId || !email || transfer.isPending}
+          title="Le compte doit déjà exister. Ne touche ni au compte ni au mot de passe — déplace seulement la propriété de la marque."
+          className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground-secondary hover:bg-surface-raised disabled:opacity-40"
+        >
+          {transfer.isPending ? "Transfert…" : "Rendre propriétaire (compte existant)"}
+        </button>
         {ok && <p className="text-xs text-success">{ok}</p>}
         {create.error && <p className="text-xs text-error">{create.error.message}</p>}
+        {transfer.error && <p className="text-xs text-error">{transfer.error.message}</p>}
       </div>
     </div>
   );

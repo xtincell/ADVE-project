@@ -95,6 +95,7 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "SUBMIT_FEEDBACK", p95LatencyMs: 800, errorRatePct: 0.02, costP95Usd: 0 },
   { kind: "TRIAGE_FEEDBACK", p95LatencyMs: 500, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "ADMIN_CREATE_BRAND_LOGIN", p95LatencyMs: 1_200, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "ADMIN_TRANSFER_BRAND_OWNERSHIP", p95LatencyMs: 1_000, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "APPLY_TO_MISSION", p95LatencyMs: 1_000, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "DECIDE_MISSION_APPLICATION", p95LatencyMs: 1_500, errorRatePct: 0.01, costP95Usd: 0 },
   // La Guilde — portail public (ADR-0098). Mutations DB-only, zéro LLM.
