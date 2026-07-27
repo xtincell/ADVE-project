@@ -55,8 +55,7 @@ export const mestorRouter = createTRPCRouter({
     }),
 
   // ── Conseil de marque — délibération adversariale (ADR-0180) ─────────
-  // Query (zéro écriture — advisory pur, précédent previewAmend « lecture LLM ») ;
-  // opérateur only en v1 : 6 appels LLM, le coût reste une décision UPgraders.
+  // Query (zéro écriture — advisory pur, précédent previewAmend « lecture LLM »).
   /**
    * Analyse approfondie — convoque RÉELLEMENT les quatre experts contradictoires
    * (draft du coordinateur → 4 critiques en parallèle → synthèse avec dissensus).
@@ -65,7 +64,7 @@ export const mestorRouter = createTRPCRouter({
    * fondateur ne puisse les atteindre, et le coordinateur du chat les niait
    * quand on l'interrogeait. Ouverte au fondateur de SA marque
    * (`strategyScopedProcedure` = garde d'appartenance) sous condition
-   * d'abonnement — 5 appels LLM par délibération, ce n'est pas gratuit.
+   * d'abonnement — 6 appels LLM par délibération (1 position + 4 critiques + 1 synthèse), ce n'est pas gratuit.
    *
    * Reste une LECTURE : advisory pur, zéro écriture pilier, zéro Intent
    * (ADR-0180).

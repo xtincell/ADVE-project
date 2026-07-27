@@ -229,8 +229,8 @@ export default function MestorPage() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  // Le sujet soumis au conseil = la dernière réponse de l'assistant, celle que
-  // les experts vont attaquer.
+  // La réponse que les quatre experts vont réellement contester (passée en
+  // `draft` par le panneau — cf. son en-tête).
   const lastAssistantMessage = [...messages].reverse().find((m) => m.role === "assistant") ?? null;
 
   const handleReset = () => {
@@ -253,28 +253,27 @@ export default function MestorPage() {
         ]}
       >
         {messages.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Convoque les quatre experts contradictoires sur le dernier
-                échange. Sans ce bouton, ils existaient sans être atteignables
-                par un fondateur — et le coordinateur niait leur existence
-                quand on l'interrogeait. */}
-            {lastAssistantMessage && (
-              <CouncilDeliberationPanel
-                key={lastAssistantMessage.id}
-                strategyId={strategyId}
-                topic={lastAssistantMessage.content.slice(0, 2_000)}
-              />
-            )}
-            <button
-              onClick={handleReset}
-              className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground-secondary hover:bg-surface-raised"
-            >
-              <RotateCcw className="h-4 w-4" />
-              Nouvelle conversation
-            </button>
-          </div>
+          <button
+            onClick={handleReset}
+            className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground-secondary hover:bg-surface-raised"
+          >
+            <RotateCcw className="h-4 w-4" />
+            Nouvelle conversation
+          </button>
         )}
       </PageHeader>
+
+      {/* Analyse approfondie — convoque les quatre experts contradictoires sur
+          la dernière réponse. Placée dans le CORPS de page et non dans le slot
+          d'actions de l'en-tête : celui-ci est un `flex shrink-0` prévu pour des
+          boutons, une carte de délibération y déborderait. */}
+      {lastAssistantMessage && (
+        <CouncilDeliberationPanel
+          key={lastAssistantMessage.id}
+          strategyId={strategyId}
+          answer={lastAssistantMessage.content}
+        />
+      )}
 
       <div
         className="flex flex-col overflow-hidden rounded-xl border border-border"

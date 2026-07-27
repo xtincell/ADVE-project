@@ -33,25 +33,47 @@ const VERDICT_LABEL: Record<string, string> = {
   REJECT: "Rejette",
 };
 
-/** Sévérité → token de couleur DS (jamais de couleur brute). */
+/**
+ * Sévérité → token de couleur DS.
+ *
+ * Écrit d'abord avec `danger` — un token qui **n'existe pas** dans le DS (le
+ * canon est `error`, cf. `styles/globals.css`). Tailwind ne générait donc
+ * aucune classe : une critique HIGH s'affichait exactement comme une LOW, et la
+ * bannière d'erreur n'était pas rouge. Le test DS ne l'a pas vu — il interdit
+ * les palettes BRUTES, pas les tokens inexistants (relecture adversariale).
+ */
 const SEVERITY_CLASS: Record<string, string> = {
-  HIGH: "border-danger text-danger",
+  HIGH: "border-error text-error",
   MEDIUM: "border-warning text-warning",
   LOW: "border-border text-foreground-secondary",
 };
 
+/** Bornes du schéma tRPC — tronquer ici évite un refus serveur silencieux. */
+const TOPIC_MAX = 2_000;
+const DRAFT_MAX = 8_000;
+
 export function CouncilDeliberationPanel({
   strategyId,
-  topic,
+  answer,
 }: {
   strategyId: string;
-  /** Sujet soumis au conseil — typiquement le dernier échange du chat. */
-  topic: string;
+  /** La réponse de l'assistant que les experts doivent contester. */
+  answer: string;
 }) {
   const [requested, setRequested] = useState(false);
 
+  // La réponse est passée en `draft`, PAS seulement en `topic`.
+  //
+  // Sans `draft`, `deliberate()` fait rédiger au coordinateur une position
+  // NEUVE que les experts attaquent ensuite : la réponse affichée à l'écran
+  // n'était jamais soumise à personne, alors que le bouton promettait de la
+  // soumettre. Le champ existait déjà côté serveur — il n'était pas branché.
+  const draft = answer.slice(0, DRAFT_MAX);
+  const topic = answer.slice(0, TOPIC_MAX);
+  const truncated = answer.length > DRAFT_MAX;
+
   const query = trpc.mestor.councilDeliberate.useQuery(
-    { strategyId, topic },
+    { strategyId, topic, draft },
     { enabled: requested && topic.trim().length >= 3, refetchOnWindowFocus: false, retry: false },
   );
 
@@ -80,7 +102,7 @@ export function CouncilDeliberationPanel({
 
   if (query.error) {
     return (
-      <div className="flex items-start gap-2 rounded-lg border border-danger p-3 text-sm text-danger">
+      <div className="flex items-start gap-2 rounded-lg border border-error p-3 text-sm text-error">
         <AlertTriangle className="h-4 w-4 shrink-0" />
         <span>L&apos;analyse approfondie n&apos;a pas pu aboutir. Réessayez dans quelques minutes.</span>
       </div>
@@ -173,6 +195,25 @@ export function CouncilDeliberationPanel({
             );
           })}
         </section>
+      )}
+
+      {/* `deliberated: true` + `synthesis: null` = l'arbitrage a échoué APRÈS
+          les critiques. Faire disparaître le bloc en silence serait le mensonge
+          par omission symétrique de celui qu'on corrige juste au-dessus. */}
+      {d.deliberated && !d.synthesis && (
+        <div className="flex items-start gap-2 rounded-lg border border-warning p-3 text-sm text-warning">
+          <ShieldQuestion className="h-4 w-4 shrink-0" />
+          <span>
+            Les experts se sont prononcés, mais la synthèse n&apos;a pas abouti — il n&apos;y a
+            pas de position retenue à afficher. Les critiques ci-dessus restent valables.
+          </span>
+        </div>
+      )}
+
+      {truncated && (
+        <p className="text-xs text-foreground-secondary">
+          La réponse analysée a été tronquée à {DRAFT_MAX.toLocaleString("fr-FR")} caractères.
+        </p>
       )}
 
       {d.synthesis && (

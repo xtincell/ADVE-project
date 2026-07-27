@@ -81,7 +81,7 @@ describe("la délibération est atteignable par le fondateur", () => {
     expect(router).toMatch(/councilDeliberate:\s*strategyScopedProcedure/);
   });
 
-  it("reste gardée par l'abonnement (5 appels LLM par délibération)", () => {
+  it("reste gardée par l'abonnement (6 appels LLM par délibération)", () => {
     const seg = router.slice(router.indexOf("councilDeliberate:"));
     expect(seg.slice(0, 1_500)).toMatch(/checkPaidTier/);
   });

@@ -1,5 +1,20 @@
 # Changelog — La Fusee
 
+## v6.27.345 — feat(cockpit)+fix: le conseil adversarial ouvert au fondateur, et ses promesses tenues (2026-07-27)
+
+**Le conseil de marque (ADR-0180) existait depuis sa livraison — coordinateur + 4 experts A/D/V/E à mandat contradictoire — mais aucun fondateur ne pouvait l'atteindre, et interrogé sur ses confrères le coordinateur répondait qu'ils « ne font pas partie de votre dossier ». Ouverture + honnêteté, puis correction de ce que la relecture adversariale a trouvé dans ma propre livraison.**
+
+- **La persona coordinateur connaît sa structure.** Elle sait qu'elle coordonne quatre experts contradictoires, qu'ils **ne sont pas consultés** en conversation courante, et qu'une question sur le conseil porte sur **elle**, pas sur le dossier de la marque — elle n'ira donc plus chercher « agents adverses » dans le pilier R avant de conclure que ça n'existe pas.
+- **`councilDeliberate` passe d'`operatorProcedure` à `strategyScopedProcedure`** (garde d'appartenance) + `checkPaidTier` : le fondateur de sa marque peut convoquer les experts. C'est un **élargissement de frontière d'autorisation**, tracé comme tel. Reste une LECTURE — zéro écriture pilier, zéro Intent.
+- **Panneau « Analyse approfondie »** dans le cockpit : position soumise, ce que chaque expert conteste (avec le champ qui fonde la critique), position retenue, et les **désaccords non résolus rendus tels quels**.
+- **Trois défauts de ma propre livraison, trouvés par la relecture adversariale :**
+  - **Le bouton promettait de soumettre la dernière réponse aux experts — c'était faux.** Sans `draft`, `deliberate()` fait rédiger au coordinateur une position **neuve** que les experts attaquent ; la réponse affichée n'était soumise à personne. Le champ `draft` existait côté serveur, il n'était pas branché. Il l'est.
+  - **Les classes `text-danger`/`border-danger` ne peignaient rien** — ce token **n'existe pas** dans le DS (le canon est `error`). Une critique HIGH s'affichait exactement comme une LOW et la bannière d'erreur n'était pas rouge. Le test DS ne pouvait pas le voir : il interdit les palettes brutes, pas les tokens inexistants.
+  - **`synthesis: null` faisait disparaître le bloc en silence** — l'arbitrage peut échouer APRÈS les critiques, et l'omission était le mensonge symétrique de celui que le panneau corrige juste au-dessus. Message explicite. Idem pour la troncature de la réponse analysée, désormais annoncée.
+- **Deux comptes d'appels LLM contradictoires dans le même fichier, tous deux faux** (« 5 » en JSDoc, « opérateur only » dans un commentaire périmé) : le compte réel est **6** (1 position + 4 critiques + 1 synthèse).
+- **Placement corrigé** : le panneau était monté dans le slot d'actions de `PageHeader`, un `flex shrink-0` prévu pour des boutons — une carte de délibération y débordait. Il vit dans le corps de page.
+- 325 fichiers / 3501 tests verts. 0 modèle, 0 migration.
+
 ## v6.27.344 — fix(anubis): round 2 adversarial — la classe fermée, pas les instances (2026-07-27)
 
 **Le round 1 avait corrigé les trois outils que j'avais touchés. Le round 2 en a trouvé douze autres dans les mêmes fichiers. Réparer les instances ne fermait pas la classe — ce commit la ferme.**
