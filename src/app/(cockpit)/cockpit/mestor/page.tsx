@@ -418,7 +418,10 @@ export default function MestorPage() {
         {strategy && (
           <div className="border-t border-border/50 bg-background/40 px-4 py-1.5">
             <p className="text-2xs text-foreground-muted">
-              Contexte : {strategy.name} - Score {(strategy.composite ?? 0).toFixed(0)}/200
+              Contexte : {strategy.name}
+              {typeof strategy.composite === "number"
+                ? ` - Score ${strategy.composite.toFixed(0)}/200`
+                : " - marque pas encore évaluée"}
             </p>
           </div>
         )}

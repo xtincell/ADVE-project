@@ -10,6 +10,27 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, adminProcedure } from "../init";
 import { db } from "@/lib/db";
+
+/**
+ * Projection publique d'une `McpApiKey` — `keyHash` (condensat de la clé) ne
+ * sort jamais. Les LECTURES la portaient déjà ; les deux mutations, non : leur
+ * retour Prisma non projeté renvoyait la ligne entière (relecture adversariale
+ * 2026-07-27 — le premier verrou ne scannait que les lectures).
+ */
+const MCP_KEY_PUBLIC_SELECT = {
+  id: true,
+  name: true,
+  server: true,
+  isActive: true,
+  lastUsedAt: true,
+  expiresAt: true,
+  ratePerCallUsd: true,
+  includedMonthlyCalls: true,
+  ownerEmail: true,
+  createdAt: true,
+  scopeKind: true,
+  scopeStrategyId: true,
+} as const;
 import {
   createApiKey,
   rotateApiKey,
@@ -80,9 +101,12 @@ export const mcpBillingRouter = createTRPCRouter({
   setKeyActive: adminProcedure
     .input(z.object({ keyId: z.string(), isActive: z.boolean() }))
     .mutation(({ input }) =>
+      // Sans `select`, le retour porte `keyHash` — le condensat de la clé,
+      // renvoyé au navigateur à chaque bascule.
       db.mcpApiKey.update({
         where: { id: input.keyId },
         data: { isActive: input.isActive },
+        select: MCP_KEY_PUBLIC_SELECT,
       }),
     ),
 
@@ -103,6 +127,7 @@ export const mcpBillingRouter = createTRPCRouter({
           ...(input.includedMonthlyCalls !== undefined ? { includedMonthlyCalls: input.includedMonthlyCalls } : {}),
           ...(input.ownerEmail !== undefined ? { ownerEmail: input.ownerEmail } : {}),
         },
+        select: MCP_KEY_PUBLIC_SELECT,
       }),
     ),
 

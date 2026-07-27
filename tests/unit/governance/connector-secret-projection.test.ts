@@ -44,6 +44,10 @@ const SECRET_MODELS = [
   "mcpApiKey",
   "mcpOAuthClient",
   "mcpOAuthToken",
+  // ADR-0183 énumère les trois modèles OAuth ensemble ; en omettre un ici
+  // rouvrait le tiers du périmètre (relecture adversariale : « le test qui
+  // prétend refuser la FAMILLE » en laissait sortir un membre).
+  "mcpOAuthCode",
 ] as const;
 
 /** Champs qui ne doivent jamais figurer dans une projection publique. */
@@ -55,6 +59,8 @@ const SECRET_FIELDS = [
   "credentials",
   "keyHash",
   "clientSecretHash",
+  "codeHash",
+  "tokenHash",
 ] as const;
 
 /** Surfaces qui répondent à un client. Les services internes en sont exclus. */
@@ -84,7 +90,15 @@ function clientFacingFiles(): string[] {
  */
 function readCalls(source: string, model: string): { body: string; line: number }[] {
   const out: { body: string; line: number }[] = [];
-  const opener = new RegExp(`\\.${model}\\.(findMany|findUnique|findFirst|findUniqueOrThrow|findFirstOrThrow)\\s*\\(\\s*\\{`, "g");
+  // `create`/`update`/`upsert` renvoient la ligne ENTIÈRE par défaut — ils
+  // fuient donc exactement comme un `find*` (relecture adversariale : la
+  // première version de ce test ne scannait que les lectures).
+  // `createMany`/`updateMany` sont exclus : ils rendent un `{ count }`, jamais
+  // de lignes — les inclure produisait un faux positif (`brand-mcp.revokeKey`).
+  const opener = new RegExp(
+    `\\.${model}\\.(findMany|findUnique|findFirst|findUniqueOrThrow|findFirstOrThrow|create|update|upsert)\\s*\\(\\s*\\{`,
+    "g",
+  );
   let m: RegExpExecArray | null;
   while ((m = opener.exec(source)) !== null) {
     const start = source.indexOf("{", m.index + m[0].length - 1);
@@ -107,6 +121,35 @@ function readCalls(source: string, model: string): { body: string; line: number 
     });
   }
   return out;
+}
+
+/**
+ * Un `select` compte s'il est à la RACINE des options.
+ *
+ * La première version testait `/\bselect\s*:/` n'importe où dans le corps : un
+ * `select` niché dans un `include` pour une AUTRE relation satisfaisait donc le
+ * contrôle pendant que la ligne principale sortait entière. C'est le motif
+ * « le verrou passe, la fuite reste » que ce fichier est censé rendre
+ * impossible (relecture adversariale 2026-07-27).
+ */
+function hasTopLevelSelect(body: string): boolean {
+  let depth = 0;
+  for (let i = 0; i < body.length; i++) {
+    const ch = body[i];
+    if (ch === "{" || ch === "[" || ch === "(") depth++;
+    else if (ch === "}" || ch === "]" || ch === ")") depth--;
+    // depth === 1 ⇒ on est juste à l'intérieur de l'accolade d'options.
+    else if (depth === 1 && /[a-zA-Z_]/.test(ch ?? "")) {
+      const rest = body.slice(i);
+      const m = /^(\w+)\s*:/.exec(rest);
+      const key = m?.[1];
+      if (key) {
+        if (key === "select" || key === "omit") return true;
+        i += key.length; // saute le nom de clé, pas sa valeur
+      }
+    }
+  }
+  return false;
 }
 
 describe("les projections publiques ne portent aucun secret", () => {
@@ -147,13 +190,23 @@ describe("HARD — toute lecture client-facing d'un modèle à secrets est proje
     expect(files.length).toBeGreaterThan(50);
   });
 
+  it("le détecteur de `select` racine ne se laisse pas berner par un select niché", () => {
+    expect(hasTopLevelSelect("{ where: { id }, select: { id: true } }")).toBe(true);
+    expect(hasTopLevelSelect("{ where: { id } }")).toBe(false);
+    // LE faux positif corrigé : le `select` appartient à une relation incluse,
+    // la ligne principale sort entière.
+    expect(hasTopLevelSelect("{ where: { id }, include: { posts: { select: { id: true } } } }")).toBe(
+      false,
+    );
+  });
+
   it("aucune lecture sans `select`", () => {
     const offenders: string[] = [];
     for (const file of files) {
       const src = readFileSync(file, "utf8");
       for (const model of SECRET_MODELS) {
         for (const call of readCalls(src, model)) {
-          if (!/\bselect\s*:/.test(call.body)) {
+          if (!hasTopLevelSelect(call.body)) {
             offenders.push(`${file.replace(`${ROOT}/`, "")}:${call.line} — ${model} sans select`);
           }
         }

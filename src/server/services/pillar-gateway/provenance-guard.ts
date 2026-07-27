@@ -109,6 +109,47 @@ export function applyProvenanceGuard(input: ProvenanceGuardInput): ProvenanceGua
     }
   }
 
+  // ── Suppression par OMISSION ────────────────────────────────────────────
+  //
+  // La boucle ci-dessus n'itère que sur `Object.keys(newContent)` : une clé
+  // présente AVANT et absente APRÈS n'était jamais examinée. Un `REPLACE_FULL`
+  // venant d'un écrivain dérivé (Mestor, canon-sync…) dont le contenu
+  // reconstruit omettait une clé portant `HUMAN` effaçait donc la valeur
+  // humaine — sans DENY, sans CHALLENGE, sans avertissement. Le contrat annoncé
+  // (« jamais d'écriture silencieuse ») ne couvrait pas l'effacement, qui est
+  // pourtant l'écriture la plus destructrice.
+  //
+  // On arbitre la suppression comme une écriture d'une valeur vide : même
+  // table de décision, même reversion.
+  for (const key of Object.keys(previousContent)) {
+    if (key.startsWith("_")) continue;
+    if (key in newContent) continue; // déjà arbitré ci-dessus
+    const existing = coerceProvenance(provenance[key]);
+    const decision = decideOverwrite(incomingFor(key), existing);
+    if (decision === "ALLOW") continue; // suppression légitime
+
+    content[key] = previousContent[key];
+    if (decision === "DENY") {
+      denied.push(key);
+      warnings.push(
+        `Provenance: champ "${key}" conservé — une écriture ${incomingFor(key)} ne peut SUPPRIMER une valeur ${existing} (suppression par omission refusée).`,
+      );
+    } else {
+      challenged.push(key);
+      warnings.push(
+        `Provenance: champ "${key}" — suppression par omission d'une valeur saisie par l'humain, remontée en arbitrage (CHALLENGE).`,
+      );
+    }
+  }
+
+  // Purge des entrées de provenance devenues orphelines : sans elle, la carte
+  // gardait — et `computeProvenanceBreakdown` NOMMAIT — des champs supprimés
+  // depuis longtemps, dans ce qui est présenté comme « la liste de travail de
+  // l'opérateur ».
+  for (const key of Object.keys(provenance)) {
+    if (!(key in content)) delete provenance[key];
+  }
+
   return { content, provenance, denied, challenged, warnings };
 }
 

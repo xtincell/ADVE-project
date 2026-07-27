@@ -499,6 +499,22 @@ export type Intent =
       overrideLocked?: boolean;
       /** Optimistic concurrency. Pillar.version (Pillar.updatedAt fallback). */
       expectedVersion?: number;
+      /**
+       * L'amendement vient-il d'un AGENT et non d'un humain ?
+       *
+       * Le handler écrivait `author.system: "OPERATOR"` quel que soit
+       * l'appelant. Or `provenance-guard` mappe OPERATOR → `HUMAN`, et
+       * `field-provenance` traite un entrant `HUMAN` comme un ALLOW
+       * inconditionnel. La surface MCP `advertis.amendPillar` héritait donc de
+       * l'autorité de provenance la PLUS haute : un agent externe écrasait
+       * silencieusement un champ déclaré par un humain — sans DENY, sans
+       * CHALLENGE, sans avertissement — et gonflait au passage le
+       * `declaredRatio`, la mesure censée dire ce qui est déclaré vs inféré.
+       *
+       * Posé par la voie MCP, jamais par le cockpit : un agent écrit donc avec
+       * une provenance dérivée, et le verrou DECLARED/OFFICIAL le concerne.
+       */
+      viaAgent?: boolean;
     }
   | {
       // Lot 1b (ADR-0173) — ingestion d'un brand book officiel : écrit une extraction

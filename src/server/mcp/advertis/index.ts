@@ -343,6 +343,10 @@ export const tools: ToolDefinition[] = [
           kind: "OPERATOR_AMEND_PILLAR",
           strategyId,
           operatorId,
+          // Un agent n'hérite pas de l'autorité de provenance d'un humain :
+          // sans ce drapeau, cette écriture écrasait un champ DECLARED/OFFICIAL
+          // sans opposition, et se comptait comme « déclarée » dans le ratio.
+          viaAgent: true,
           pillarKey: String(input.pillarKey ?? "").toLowerCase() as "a" | "d" | "v" | "e",
           mode,
           field: String(input.field ?? ""),

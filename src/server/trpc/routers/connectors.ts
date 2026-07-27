@@ -94,6 +94,8 @@ export const connectorsRouter = createTRPCRouter({
     caller: "connectors:upsert",
   }).mutation(async ({ ctx, input }) => {
     const operatorId = await scopedOperatorId(ctx, input.operatorId);
+    // Le retour d'un `upsert` porte la ligne ENTIÈRE — donc `config`, le secret
+    // qu'on vient d'écrire, renvoyé en écho au navigateur.
     return ctx.db.externalConnector.upsert({
       where: {
         operatorId_connectorType: {
@@ -111,6 +113,7 @@ export const connectorsRouter = createTRPCRouter({
         config: input.config as Prisma.InputJsonValue,
         status: "ACTIVE",
       },
+      select: CONNECTOR_PUBLIC_SELECT,
     });
   }),
 

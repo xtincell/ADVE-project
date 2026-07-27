@@ -165,11 +165,19 @@ export async function operatorAmendPillar(intent: AmendIntent): Promise<HandlerR
   });
 
   // ── 5. Apply via Pillar Gateway (LOI 1, audit/version/staleAt auto) ─
+  // `system` dépend de QUI amende. « OPERATOR » vaut provenance HUMAN, donc
+  // ALLOW inconditionnel face au verrou DECLARED/OFFICIAL — l'autorité la plus
+  // haute du système. Elle était accordée à tout appelant, agent MCP compris.
+  // Un agent écrit désormais comme un dérivé : le verrou s'applique à lui.
   const writeResult = await writePillarAndScore({
     strategyId,
     pillarKey,
     operation: { type: "SET_FIELDS", fields: [{ path: field, value: proposedValue }] },
-    author: { system: "OPERATOR", userId: operatorId, reason },
+    author: {
+      system: intent.viaAgent ? "MESTOR" : "OPERATOR",
+      userId: operatorId,
+      reason: intent.viaAgent ? `${reason} (via agent MCP)` : reason,
+    },
   });
   if (!writeResult.success) {
     await db.recommendation.update({

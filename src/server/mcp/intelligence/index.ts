@@ -82,20 +82,22 @@ export const tools: ToolDefinition[] = [
       // Lecture COMPLÈTE assumée : le filtre par marque et le classement par
       // mots-clés opèrent tous deux sur `data`. Ce qui compte, c'est que `data`
       // ne SORTE pas — la projection est faite au retour, pas à la requête.
-      const pool = await db.knowledgeEntry.findMany({
-        where: entryType
-          ? { entryType: entryType as import("@prisma/client").KnowledgeType }
-          : {},
+      // Le filtre de marque était appliqué APRÈS un `take: 200` global : une
+      // marque dont les entrées ne figuraient pas parmi les 200 plus récentes
+      // de TOUTE la table recevait `{ entries: [], count: 0 }` — « pas de
+      // connaissance », alors que la donnée existait. La réponse changeait
+      // d'une semaine à l'autre pour des raisons étrangères à la marque.
+      // Le scoping descend donc dans la requête.
+      const scoped = await db.knowledgeEntry.findMany({
+        where: {
+          ...(entryType
+            ? { entryType: entryType as import("@prisma/client").KnowledgeType }
+            : {}),
+          ...(strategyId ? { data: { path: ["strategyId"], equals: strategyId } } : {}),
+        },
         orderBy: { createdAt: "desc" },
         take: 200,
       });
-
-      const scoped = strategyId
-        ? pool.filter((e) => {
-            const data = (e.data ?? {}) as Record<string, unknown>;
-            return data.strategyId === strategyId;
-          })
-        : pool;
 
       const terms = query.split(/\s+/).filter((t) => t.length > 2);
       const ranked = scoped
@@ -663,7 +665,17 @@ export const tools: ToolDefinition[] = [
       strategyId: z.string().optional().describe("Filtrer par stratégie (optionnel)"),
     }),
     handler: async (input) => {
-      const where = input.strategyId ? { sector: input.strategyId as string } : {};
+      // `{ sector: strategyId }` — la confusion de type corrigée 590 lignes plus
+      // haut sur `knowledge_graph_query`, restée ici : un id de marque n'est PAS
+      // un secteur, donc la clause ne matchait jamais et le tool répondait
+      // « graphe vide » (0 partout) à une clé BRAND, qui porte TOUJOURS un
+      // strategyId injecté. Zéro fabriqué, indistinguable d'un vrai zéro.
+      //
+      // L'attribution canonique est `data.strategyId` (la table n'a pas de
+      // colonne dédiée) — un filtre JSON, pas un champ scalaire.
+      const where: import("@prisma/client").Prisma.KnowledgeEntryWhereInput = input.strategyId
+        ? { data: { path: ["strategyId"], equals: input.strategyId as string } }
+        : {};
       const [total, byType, bySector] = await Promise.all([
         db.knowledgeEntry.count({ where }),
         db.knowledgeEntry.groupBy({ by: ["entryType"], _count: true, where }),

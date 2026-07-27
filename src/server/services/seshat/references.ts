@@ -10,7 +10,9 @@ import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 import { createHash } from "node:crypto";
 import { db } from "@/lib/db";
-import type { Prisma } from "@prisma/client";
+// `Prisma` en import de VALEUR : `Prisma.DbNull` est utilisé à l'exécution
+// dans le prédicat de portée transverse ci-dessous.
+import { Prisma } from "@prisma/client";
 import { PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
 
 const SESHAT_API_URL = process.env.SESHAT_API_URL;
@@ -68,6 +70,7 @@ export async function enrichBrief(
   // Get channel-specific brief patterns
   const briefPatterns = await db.knowledgeEntry.findMany({
     where: {
+      ...CROSS_BRAND_WHERE,
       entryType: "BRIEF_PATTERN",
       ...(briefContext.channel ? { channel: briefContext.channel } : {}),
     },
@@ -77,6 +80,7 @@ export async function enrichBrief(
   // Get sector benchmarks
   const benchmarks = await db.knowledgeEntry.findMany({
     where: {
+      ...CROSS_BRAND_WHERE,
       entryType: "SECTOR_BENCHMARK",
       ...(briefContext.sector ? { sector: briefContext.sector } : {}),
       ...(briefContext.market ? { market: briefContext.market } : {}),
@@ -205,15 +209,12 @@ export async function searchReferences(
 
   // Also search by channel if provided
   if (channel) {
+    // `MISSION_OUTCOME` a été retiré de cette liste : c'est un type PAR MARQUE
+    // (`knowledge-seeder` en écrit un par mission, avec le titre de la mission
+    // et ses notes QC dans `data`). Il n'avait rien à faire dans une recherche
+    // transverse par canal.
     const channelEntries = await db.knowledgeEntry.findMany({
-      where: {
-        channel,
-        OR: [
-          { entryType: "BRIEF_PATTERN" },
-          { entryType: "CAMPAIGN_TEMPLATE" },
-          { entryType: "MISSION_OUTCOME" },
-        ],
-      },
+      where: { ...CROSS_BRAND_WHERE, channel },
       orderBy: { successScore: "desc" },
       take: 5,
     });
@@ -380,13 +381,67 @@ export async function submitFeedback(
 
 // --- Internal functions ---
 
+/**
+ * Types d'entrée AGRÉGÉS — les seuls qui peuvent traverser la frontière de marque.
+ *
+ * `KnowledgeEntry` est une table TRANSVERSE aux marques, mais elle mélange trois
+ * natures que rien ne distinguait à la lecture :
+ *
+ *  1. des **agrégats** de secteur (`SECTOR_BENCHMARK`, `BRIEF_PATTERN`,
+ *     `CAMPAIGN_TEMPLATE`) — partageables, c'est leur raison d'être ;
+ *  2. des lignes **par marque** : `knowledge-seeder` écrit un `DIAGNOSTIC_RESULT`
+ *     par stratégie avec `successScore = vector.composite / 200`, et un
+ *     `MISSION_OUTCOME` / `CREATOR_PATTERN` par mission et par créateur ;
+ *  3. des lignes **ingérées par un appelant** (`knowledge_graph_ingest`), dont
+ *     `entryType`, `sector` et tout le `data` sont contrôlés par cet appelant.
+ *
+ * Servies uniformément par les outils MCP curés `benchmark_search` et
+ * `market_context_get` (portée GLOBAL), ça faisait deux fuites croisées :
+ *
+ *  - le `successScore` d'un `DIAGNOSTIC_RESULT` EST le composite d'une autre
+ *    marque ; exposé en `relevance` et trié décroissant, il rendait le
+ *    classement des scores du secteur à n'importe quelle clé de marque ;
+ *  - une marque pouvait ingérer un `SECTOR_BENCHMARK` avec le secteur d'une
+ *    autre et un `insight` arbitraire, rendu VERBATIM à celle-ci comme un
+ *    benchmark externe faisant autorité.
+ *
+ * La correction précédente avait projeté le NOM hors des résultats et bouché le
+ * dump `default` ; elle avait traité deux instances d'une classe qui en comptait
+ * quatre (relecture adversariale 2026-07-27).
+ */
+const CROSS_BRAND_ENTRY_TYPES = ["SECTOR_BENCHMARK", "BRIEF_PATTERN", "CAMPAIGN_TEMPLATE"] as const;
+
+/**
+ * Taille d'échantillon minimale d'un agrégat servi hors de sa marque.
+ *
+ * Un « benchmark de secteur » calculé sur UNE marque n'est pas un agrégat :
+ * c'est le score de cette marque avec une autre étiquette. Trois est le plus
+ * petit seuil qui empêche de ré-identifier par différence.
+ */
+const MIN_AGGREGATE_SAMPLE = 3;
+
+/**
+ * Fragment `where` commun à toutes les lectures transverses.
+ *
+ * `data.strategyId` est l'attribution canonique du repo (la table n'a pas de
+ * colonne `strategyId`) : toute ligne qui en porte un appartient à une marque —
+ * qu'elle vienne du seeder ou d'une ingestion — et ne sort donc jamais. C'est
+ * ce même prédicat qui écarte les lignes plantées par un appelant, puisque
+ * `knowledge_graph_ingest` force `strategyId` dans `data`.
+ */
+const CROSS_BRAND_WHERE = {
+  entryType: { in: [...CROSS_BRAND_ENTRY_TYPES] },
+  sampleSize: { gte: MIN_AGGREGATE_SAMPLE },
+  NOT: { data: { path: ["strategyId"], not: Prisma.DbNull } },
+} satisfies Prisma.KnowledgeEntryWhereInput;
+
 async function queryLocalKnowledgeGraph(query: SeshatQuery, limit: number): Promise<SeshatReference[]> {
   const results: SeshatReference[] = [];
 
   // Search by sector
   if (query.sector) {
     const entries = await db.knowledgeEntry.findMany({
-      where: { sector: query.sector },
+      where: { ...CROSS_BRAND_WHERE, sector: query.sector },
       orderBy: { successScore: "desc" },
       take: limit,
     });
@@ -398,7 +453,7 @@ async function queryLocalKnowledgeGraph(query: SeshatQuery, limit: number): Prom
   // Search by market
   if (query.market && results.length < limit) {
     const entries = await db.knowledgeEntry.findMany({
-      where: { market: query.market },
+      where: { ...CROSS_BRAND_WHERE, market: query.market },
       orderBy: { successScore: "desc" },
       take: limit - results.length,
     });
@@ -412,7 +467,7 @@ async function queryLocalKnowledgeGraph(query: SeshatQuery, limit: number): Prom
   // Search by pillar
   if (query.pillarFocus && results.length < limit) {
     const entries = await db.knowledgeEntry.findMany({
-      where: { pillarFocus: query.pillarFocus },
+      where: { ...CROSS_BRAND_WHERE, pillarFocus: query.pillarFocus },
       orderBy: { successScore: "desc" },
       take: limit - results.length,
     });

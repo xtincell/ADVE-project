@@ -85,7 +85,10 @@ export default function DiagnosticsPage() {
   for (const k of PILLAR_KEYS) {
     scores[k] = vector[k] ?? 0;
   }
-  const composite = strategy?.composite ?? 0;
+  // Absence ≠ zéro : une marque jamais évaluée n'a pas de composite. Le `?? 0`
+  // affichait « 0 » avec une tendance « down », indistinguable d'un score
+  // réellement au plancher.
+  const composite = strategy?.composite ?? null;
 
   const signals = (signalsQuery.data ?? []) as unknown as Array<{
     data: Record<string, unknown> | null;
@@ -124,9 +127,9 @@ export default function DiagnosticsPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
           title="Score composite"
-          value={composite.toFixed(0)}
-          trend={composite > 120 ? "up" : composite > 80 ? "flat" : "down"}
-          trendValue="/ 200"
+          value={composite === null ? "—" : composite.toFixed(0)}
+          trend={composite === null ? "flat" : composite > 120 ? "up" : composite > 80 ? "flat" : "down"}
+          trendValue={composite === null ? "pas encore évaluée" : "/ 200"}
           icon={Activity}
         />
         <StatCard

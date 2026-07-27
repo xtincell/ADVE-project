@@ -465,8 +465,9 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 124
+## tRPC routers — 125
 
+- `_pillar-write-guard` (`src/server/trpc/routers/_pillar-write-guard.ts`)
 - `_strategy-read-guard` (`src/server/trpc/routers/_strategy-read-guard.ts`)
 - `_talent-access-guard` (`src/server/trpc/routers/_talent-access-guard.ts`)
 - `accounts` (`src/server/trpc/routers/accounts.ts`)

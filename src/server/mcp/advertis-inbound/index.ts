@@ -56,6 +56,9 @@ async function updateConnectorStats(
         signalCount,
         avgConfidence,
       },
+      // Retour projeté par principe : cet upsert n'expose rien aujourd'hui (la
+      // valeur est ignorée), mais un `return` ajouté demain sortirait `config`.
+      select: { id: true, status: true, lastSyncAt: true },
     });
   } catch {
     // Non-fatal — stats update failure shouldn't break ingestion

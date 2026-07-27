@@ -15,6 +15,57 @@
 
 import { z } from "zod";
 import { askCouncilOnce, deliberate } from "@/server/services/mestor/council";
+import { db } from "@/lib/db";
+import { checkPaidTier } from "@/server/services/glory-tools/tier-gate";
+import {
+  consumeAssistantBudget,
+  consumeDeliberationBudget,
+} from "@/server/services/mestor/council/rate-limit";
+
+/**
+ * Garde de coût de la voie MCP.
+ *
+ * La voie tRPC porte un gate d'abonnement et un budget dédié (4 délibérations
+ * / 10 min) — posés précisément parce qu'une délibération coûte 5 appels LLM
+ * sur le budget de la marque. Cette voie-ci, ouverte le même sprint, n'avait
+ * NI l'un NI l'autre : un agent externe pouvait boucler `deliberate` sans
+ * limite. Fermer une porte et laisser l'autre ouverte ne ferme rien
+ * (relecture adversariale 2026-07-27).
+ *
+ * Le budget est keyé sur la MARQUE et non sur un utilisateur : côté MCP
+ * l'appelant est une clé d'API, et c'est le budget de la marque qu'on protège.
+ * Préfixe distinct ⇒ un agent ne ferme pas le chat du fondateur, et
+ * réciproquement.
+ */
+async function assertCouncilAffordable(
+  strategyId: string,
+  kind: "ask" | "deliberate",
+): Promise<{ error: string } | null> {
+  const strategy = await db.strategy.findUnique({
+    where: { id: strategyId },
+    select: { operatorId: true },
+  });
+  if (!strategy?.operatorId) {
+    return { error: "TIER_GATE_DENIED: marque introuvable ou sans opérateur rattaché." };
+  }
+  const gate = await checkPaidTier(strategy.operatorId, undefined, strategyId);
+  if (!gate.allowed) {
+    return {
+      error: `TIER_GATE_DENIED: ${gate.reason ?? "abonnement payant requis pour le conseil de marque."}`,
+    };
+  }
+  const ok =
+    kind === "deliberate"
+      ? await consumeDeliberationBudget(`mcp:${strategyId}`)
+      : await consumeAssistantBudget(`mcp:${strategyId}`);
+  if (!ok) {
+    return {
+      error:
+        "RATE_LIMITED: budget du conseil épuisé pour cette marque — chaque analyse mobilise plusieurs appels. Réessayez dans quelques minutes.",
+    };
+  }
+  return null;
+}
 
 export const serverName = "council";
 export const serverDescription =
@@ -39,6 +90,8 @@ export const tools: ToolDefinition[] = [
     handler: async (input) => {
       const strategyId = input.strategyId as string;
       const question = input.question as string;
+      const denied = await assertCouncilAffordable(strategyId, "ask");
+      if (denied) return denied;
       const r = await askCouncilOnce({ strategyId, question });
       return { strategyId, question, answer: r.text };
     },
@@ -56,6 +109,8 @@ export const tools: ToolDefinition[] = [
       const strategyId = input.strategyId as string;
       const topic = input.topic as string;
       const draft = typeof input.draft === "string" ? input.draft : undefined;
+      const denied = await assertCouncilAffordable(strategyId, "deliberate");
+      if (denied) return denied;
       return deliberate({ strategyId, topic, draft });
     },
   },
