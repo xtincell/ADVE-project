@@ -80,10 +80,12 @@ export async function GET(request: Request) {
   const needle = fold(q.trim());
   const strategyId = params.get("strategyId");
 
+  // `Pillar.key`, pas `pillarKey` — le champ s'appelle `key` en base (le nom
+  // `pillarKey` est celui des payloads d'Intent, pas de la colonne).
   const pillars = await db.pillar.findMany({
     where: strategyId ? { strategyId } : {},
     select: {
-      pillarKey: true,
+      key: true,
       content: true,
       strategy: { select: { id: true, name: true, publicSlug: true } },
     },
@@ -105,7 +107,7 @@ export async function GET(request: Request) {
         strategyId: p.strategy.id,
         brand: p.strategy.name,
         slug: p.strategy.publicSlug,
-        pillarKey: p.pillarKey,
+        pillarKey: p.key,
         hits,
       });
     }

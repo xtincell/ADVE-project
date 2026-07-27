@@ -1,5 +1,20 @@
 # Changelog — La Fusee
 
+## v6.27.354 — fix: un `select` Prisma qui nomme une colonne inexistante est invisible à `tsc` (2026-07-27)
+
+**`tsc` ne peut PAS attraper cette classe. Prisma type une clé `select` inconnue en `never` — et `never` est assignable à tout.**
+
+```ts
+const rows = await db.pillar.findMany({ select: { pillarKey: true } }); // compile
+rows[0].pillarKey;                                                     // type `never` → assignable à `string`
+```
+
+tsc vert, lint vert, tests verts, **route morte au runtime** (`PrismaClientValidationError`, 500 nu). C'est ce qui est arrivé à `/api/admin/brand-scan` : la colonne s'appelle `key` sur `Pillar` (`pillarKey` est le nom du champ dans les payloads d'Intent, pas en base).
+
+- **Verrou CI `prisma-select-fields-exist.test.ts`** — lit `prisma/schema.prisma` comme source de vérité et vérifie chaque clé d'un `select` littéral contre le modèle appelé. Volontairement conservateur : n'analyse que `db.<modèle>.<méthode>({ … })` résolvable sans ambiguïté, et ne juge que le `select` de **premier niveau** (un `select` imbriqué porte sur le modèle de la relation — c'est le faux positif qui a fait sonner le test sur `strategy.findUniqueOrThrow({ include: { client: { select: { sector } } } })`).
+- **Deux bugs pré-existants trouvés à la première exécution** : `buildFootprintSeries` (`seshat/prediction`) et `buildValueStatement` (`value-statement`) sélectionnaient `Strategy.websiteUrl` — colonne **inexistante**. Les deux fonctions levaient à chaque appel. Le site d'une marque est déclaré à l'intake (`QuickIntake.websiteUrl`, relation `quickIntakes`) : les deux chemins y sont branchés, avec repli honnête sur le slug du nom quand aucun site n'est déclaré (`normalizeBrandKey` le fait déjà) — on ne fabrique pas un domaine.
+- **`APP_VERSION` resynchronisée** (6.27.345 → 6.27.354) : un bump fait avec `npm version` au lieu de `scripts/bump-version.mjs` laisse `src/lib/version.ts` en arrière — donc `/api/version`, le pied de page et le **watcher de déploiement** annoncent tous une version périmée. Exactement le faux signal que ce watcher existe pour éviter.
+
 ## v6.27.353 — feat(governance): retrouver une personne dans le contenu de toutes les marques (2026-07-27)
 
 **On ne corrige pas ce qu'on n'a pas lu.**
