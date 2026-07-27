@@ -18,7 +18,7 @@
  *   5. l'ancien propriétaire garde un accès   → personne n'est éjecté en silence
  *
  * Usage :
- *   npm run transfer:owner -- lionel@motion19.cm motion19
+ *   npm run transfer:owner -- lionel@motion19.com motion19
  *   npm run transfer:owner -- jlombat@gmail.com fantribe
  */
 
