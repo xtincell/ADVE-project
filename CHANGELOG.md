@@ -1,5 +1,18 @@
 # Changelog — La Fusee
 
+## v6.27.352 — feat(governance): inventaire des comptes, mot de passe provisoire, purge fail-closed (2026-07-27)
+
+**Un mot de passe existant est irrécupérable. La seule réponse honnête à « redonne-moi les accès » est d'en poser un nouveau — encore fallait-il pouvoir.**
+
+- **Trou opérationnel fermé.** `hashedPassword` est une empreinte bcrypt (coût 12), à sens unique : ni l'opérateur ni personne ne relit un mot de passe. Et `createBrandLogin` **refuse par construction** un email déjà pourvu d'un mot de passe. Un identifiant perdu n'avait donc **aucune** voie de remplacement depuis la console — il fallait passer par « mot de passe oublié », c'est-à-dire par la boîte mail du dirigeant, qu'on n'a pas sous la main au moment de lui remettre ses accès.
+- **`accounts.inventory`** — qui existe, qui **possède** quelle marque, qui n'y est que **délégué** (et à quel titre), qui peut seulement se connecter (`hasPassword`). `list` ne rendait qu'un `_count.Strategy` : un nombre, muet sur la nature du lien. Le `select` réduit `hashedPassword` à un booléen **avant** de sortir — structurel, pas affaire de discipline.
+- **`accounts.resetPassword`** — mot de passe provisoire (`passwordChangeInvited`), rendu **une fois** par la réponse. Comme `createBrandLogin`, n'utilise PAS `governedProcedure` (qui persisterait l'input verbatim dans l'`IntentEmission` hash-chaînée) : émission manuelle via le spine ([ADR-0124](docs/governance/adr/0124-emission-spine-unified.md)) avec payload redacté. Le booléen `generated` est **hissé hors du littéral** pour que le verrou CI puisse interdire toute occurrence de « password » dans cette zone.
+- **`accounts.purgeAccount`** — supprime un compte créé par erreur (faute de frappe, doublon). **Fail-closed sur deux fronts** : refuse un compte qui **possède** une marque (elle serait orphelinée ; la relation est requise côté base, donc la suppression échouerait de toute façon — mais tard et sans explication), et refuse tout compte `ADMIN`/`OPERATOR` ainsi que l'auto-suppression. Les `StrategyCollaborator` tombent en cascade.
+- **`GET/POST /api/admin/accounts`** (CRON_SECRET) — la base de prod a un hostname interne : les actes ponctuels s'exécutent côté serveur, comme `prod-finish`. La route **exerce les procédures réelles** (parité manual-first [ADR-0060](docs/governance/adr/0060-llm-as-ui-orchestrator-manual-first.md)) : rien n'est réimplémenté, donc rien ne peut diverger.
+- **Défaut corrigé en passant** : `createBrandLogin` en mode `attachAs: "OWNER"` reposait une ligne de collaboration **sur le propriétaire**, juste après l'avoir fait propriétaire — alors que `transferBrandOwnership` la supprime explicitement (« redondante au mieux, trompeuse au pire »). Les deux voies d'attribution de la propriété ne produisaient pas le même état final. Verrouillé par test.
+- **Typo prod réparée** : `lionel@motion19.cm` → `.com` (défaut de `prod-finish`, deux scripts, registre des résidus). Le `.cm` avait créé un compte fantôme propriétaire de Motion19 — d'où la purge ci-dessus.
+- 2 Intent kinds `INFRASTRUCTURE` + SLOs. Verrou CI `account-credentials.test.ts` (12). Cap APOGEE 7/7 · 0 modèle Prisma · 0 migration · 0 LLM. tsc 0 · lint 0 · **1448 tests gouvernance verts**.
+
 ## v6.27.351 — fix(cockpit): une seule liste de secteurs/pays, et créer une marque l'ouvre (2026-07-27)
 
 **Deux défauts rapportés par l'opérateur sur `/cockpit/new`, mêmes causes que d'habitude : une liste dupliquée, et une redirection au mauvais endroit.**

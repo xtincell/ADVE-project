@@ -7,6 +7,7 @@
  * soi-même, et on ne touche pas au dernier ADMIN.
  */
 
+import crypto from "node:crypto";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import type { Prisma } from "@prisma/client";
@@ -384,19 +385,34 @@ export const accountsRouter = createTRPCRouter({
         }
 
         // Rattache le login à la marque — upsert ACTIVE (ADR-0129).
-        const collab = await db.strategyCollaborator.upsert({
-          where: { strategyId_userId: { strategyId: strategy.id, userId: user.id } },
-          update: { role: input.teamRole, status: "ACTIVE", revokedAt: null, grantedByUserId: actor.id },
-          create: {
-            strategyId: strategy.id,
-            userId: user.id,
-            role: input.teamRole,
-            scopes: [] as unknown as Prisma.InputJsonValue,
-            status: "ACTIVE",
-            grantedByUserId: actor.id,
-          },
-          select: { id: true, role: true, status: true },
-        });
+        //
+        // SAUF si le compte vient d'être fait PROPRIÉTAIRE : une ligne de
+        // collaboration sur le propriétaire est au mieux redondante (le
+        // firewall de zones sort dès `strategy.userId === userId`), au pire
+        // elle donne à lire un rôle restrictif sur quelqu'un qui ne l'est
+        // plus. `transferBrandOwnership` la supprime déjà explicitement pour
+        // cette raison ; ce chemin-ci la reposait juste après, donc les deux
+        // voies d'attribution de la propriété ne produisaient pas le même
+        // état final.
+        const collab =
+          input.attachAs === "OWNER"
+            ? (await db.strategyCollaborator.deleteMany({
+                where: { strategyId: strategy.id, userId: user.id },
+              }),
+              { role: null as string | null })
+            : await db.strategyCollaborator.upsert({
+                where: { strategyId_userId: { strategyId: strategy.id, userId: user.id } },
+                update: { role: input.teamRole, status: "ACTIVE", revokedAt: null, grantedByUserId: actor.id },
+                create: {
+                  strategyId: strategy.id,
+                  userId: user.id,
+                  role: input.teamRole,
+                  scopes: [] as unknown as Prisma.InputJsonValue,
+                  status: "ACTIVE",
+                  grantedByUserId: actor.id,
+                },
+                select: { id: true, role: true, status: true },
+              });
 
         auditTrail
           .log({
@@ -436,4 +452,217 @@ export const accountsRouter = createTRPCRouter({
         throw err;
       }
     }),
+
+  /**
+   * Inventaire des comptes AVEC leur rattachement aux marques.
+   *
+   * `list` rend un `_count.Strategy` — un nombre. Il ne dit ni QUELLE marque,
+   * ni si le compte en est propriétaire ou simple délégué, ni s'il peut même
+   * se connecter (un compte sans `hashedPassword` est un stub OAuth/invitation,
+   * pas un identifiant). C'est pourtant exactement ce qu'on doit lire pour
+   * remettre ses accès à un dirigeant.
+   *
+   * Ne rend JAMAIS l'empreinte du mot de passe — seulement `hasPassword`. Le
+   * `select` est explicite pour que ce soit structurel et non affaire de
+   * discipline (leçon des projections de connecteurs).
+   */
+  inventory: adminProcedure
+    .input(z.object({ search: z.string().max(120).optional(), limit: z.number().int().min(1).max(500).default(200) }))
+    .query(async ({ input }) => {
+      const users = await db.user.findMany({
+        where: input.search
+          ? {
+              OR: [
+                { email: { contains: input.search, mode: "insensitive" as const } },
+                { name: { contains: input.search, mode: "insensitive" as const } },
+              ],
+            }
+          : {},
+        orderBy: { createdAt: "asc" },
+        take: input.limit,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          hashedPassword: true, // réduit à un booléen juste en dessous — jamais rendu
+          passwordChangeInvited: true,
+          createdAt: true,
+          Strategy: { select: { id: true, name: true } },
+          strategyCollaborations: {
+            where: { status: "ACTIVE" },
+            select: { role: true, strategy: { select: { id: true, name: true } } },
+          },
+        },
+      });
+
+      return users.map((u) => ({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        /** Peut se connecter par email + mot de passe. Faux = stub à provisionner. */
+        hasPassword: Boolean(u.hashedPassword),
+        /** Mot de passe posé par un admin, pas encore personnalisé. */
+        provisionalPassword: u.passwordChangeInvited,
+        createdAt: u.createdAt,
+        owns: u.Strategy.map((s) => ({ id: s.id, name: s.name })),
+        delegatedOn: u.strategyCollaborations.map((c) => ({
+          id: c.strategy.id,
+          name: c.strategy.name,
+          teamRole: c.role,
+        })),
+      }));
+    }),
+
+  /**
+   * Pose un mot de passe PROVISOIRE sur un compte existant, et le rend UNE fois.
+   *
+   * Trou opérationnel que cela comble : les mots de passe sont des empreintes
+   * bcrypt, donc **irrécupérables** — ni par l'opérateur, ni par personne. Et
+   * `createBrandLogin` REFUSE par construction un email déjà pourvu d'un mot de
+   * passe. Un identifiant perdu n'avait donc aucune voie de remplacement depuis
+   * la console : il fallait passer par « mot de passe oublié », c'est-à-dire par
+   * la boîte mail du dirigeant, qu'on n'a pas toujours sous la main quand on
+   * remet ses accès à quelqu'un.
+   *
+   * `passwordChangeInvited` est reposé : le mot de passe rendu ici est
+   * provisoire par nature et l'app invite à le personnaliser.
+   *
+   * Comme `createBrandLogin`, on N'UTILISE PAS `governedProcedure` — il
+   * persisterait le secret verbatim dans l'`IntentEmission` hash-chaînée. On
+   * émet manuellement via le spine (ADR-0124) avec un payload redacté.
+   */
+  resetPassword: adminProcedure
+    .input(
+      z.object({
+        email: z.string().email(),
+        /** Laisser vide pour en faire générer un — préférable à un mot choisi à la main. */
+        password: z.string().min(8).max(200).optional(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const actor = ctx.session.user;
+      if (actor.role !== "ADMIN") throw new TRPCError({ code: "FORBIDDEN", message: "ADMIN requis." });
+      const email = input.email.toLowerCase();
+
+      const user = await db.user.findUnique({ where: { email }, select: { id: true, name: true, role: true } });
+      if (!user) throw new TRPCError({ code: "NOT_FOUND", message: `Aucun compte pour ${email}.` });
+
+      const generated = !input.password;
+      const password = input.password ?? crypto.randomBytes(9).toString("base64url");
+
+      // Le payload ne nomme même pas le champ : `generated` dit qu'un secret a
+      // été fabriqué, sans rien en révéler. Le verrou CI interdit toute
+      // occurrence de « password » dans cette zone — un booléen dérivé en
+      // ligne (`!input.password`) suffirait à la faire passer et rendrait le
+      // verrou inutile le jour où quelqu'un y met la vraie valeur.
+      const intentId = await openEmission({
+        kind: "ADMIN_RESET_USER_PASSWORD",
+        payload: { email, targetUserId: user.id, generated, actor: actor.id },
+        caller: "accounts:resetPassword",
+      });
+
+      try {
+        const hashedPassword = await bcrypt.hash(password, 12);
+        await db.user.update({
+          where: { id: user.id },
+          data: { hashedPassword, passwordChangeInvited: true },
+          select: { id: true }, // un `update` rend la LIGNE ENTIÈRE sans `select` — donc l'empreinte
+        });
+
+        auditTrail
+          .log({
+            action: "UPDATE",
+            entityType: "User",
+            entityId: user.id,
+            newValue: { passwordReset: true, actor: actor.id },
+          })
+          .catch(() => undefined);
+
+        // Le secret sort par la RÉPONSE (à transmettre par un canal privé),
+        // jamais par l'émission ni par l'audit.
+        await closeEmission({ intentId, result: { userId: user.id, email }, status: "OK" });
+        return { userId: user.id, email, name: user.name, role: user.role, password, provisional: true };
+      } catch (err) {
+        await closeEmission({
+          intentId,
+          result: { error: err instanceof Error ? err.message : String(err) },
+          status: "FAILED",
+        });
+        throw err;
+      }
+    }),
+
+  /**
+   * Supprime un compte créé par erreur (faute de frappe sur l'email, doublon).
+   *
+   * Fail-closed sur deux fronts, parce qu'une suppression de compte est
+   * irréversible et qu'un compte porte des accès :
+   *  - il **possède** une marque (`Strategy.userId`) → refus, avec les noms.
+   *    La propriété se transfère d'abord (`transferBrandOwnership`) ; sinon on
+   *    orphelinerait une marque, et la relation est de toute façon requise côté
+   *    base (la suppression échouerait, mais tard et sans explication).
+   *  - c'est un compte `ADMIN` ou `OPERATOR` → refus. Cette route ne doit pas
+   *    pouvoir se retourner contre la maison.
+   *
+   * Les lignes `StrategyCollaborator` tombent en cascade (`onDelete: Cascade`) :
+   * les accès délégués disparaissent avec le compte, ce qui est le but.
+   */
+  purgeAccount: governedProcedure({
+    kind: "ADMIN_PURGE_USER_ACCOUNT",
+    requireOperator: true,
+    inputSchema: z.object({
+      email: z.string().email(),
+      reason: z.string().min(3).max(500),
+    }),
+    caller: "accounts:purgeAccount",
+  }).mutation(async ({ input, ctx }) => {
+    const actor = ctx.session.user;
+    if (actor.role !== "ADMIN") throw new TRPCError({ code: "FORBIDDEN", message: "ADMIN requis." });
+    const email = input.email.toLowerCase();
+
+    const user = await db.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        Strategy: { select: { id: true, name: true } },
+        strategyCollaborations: { select: { id: true } },
+      },
+    });
+    if (!user) return { deleted: false, reason: "not-found" as const, email };
+
+    if (user.id === actor.id) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "Auto-suppression refusée." });
+    }
+    if (user.role === "ADMIN" || user.role === "OPERATOR") {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: `${email} est un compte ${user.role} — rétrograde-le d'abord si c'est vraiment l'intention.`,
+      });
+    }
+    if (user.Strategy.length > 0) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: `${email} est PROPRIÉTAIRE de ${user.Strategy.map((s) => s.name).join(", ")}. Transfère la propriété avant de supprimer le compte.`,
+      });
+    }
+
+    const collaborationsRemoved = user.strategyCollaborations.length;
+    await db.user.delete({ where: { id: user.id } });
+
+    auditTrail
+      .log({
+        action: "DELETE",
+        entityType: "User",
+        entityId: user.id,
+        oldValue: { email, role: user.role, collaborationsRemoved },
+        newValue: { reason: input.reason, actor: actor.id },
+      })
+      .catch(() => undefined);
+
+    return { deleted: true, reason: "purged" as const, email, collaborationsRemoved };
+  }),
 });

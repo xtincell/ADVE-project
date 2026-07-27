@@ -18,7 +18,7 @@ import { appRouter } from "../src/server/trpc/router";
 import { canAccessStrategy } from "../src/server/services/operator-isolation";
 import bcrypt from "bcryptjs";
 
-const EMAIL = "lionel@motion19.cm";
+const EMAIL = "lionel@motion19.com";
 const PASSWORD = "12345678";
 
 async function main() {

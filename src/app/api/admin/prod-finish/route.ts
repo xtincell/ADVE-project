@@ -52,7 +52,7 @@ export async function POST(request: Request) {
   const url = new URL(request.url);
   const loginBrand = url.searchParams.get("loginBrand") ?? "motion19";
   const postBrand = url.searchParams.get("postBrand") ?? "xtincell";
-  const loginEmail = (url.searchParams.get("loginEmail") ?? "lionel@motion19.cm").toLowerCase();
+  const loginEmail = (url.searchParams.get("loginEmail") ?? "lionel@motion19.com").toLowerCase();
   const loginName = url.searchParams.get("loginName") ?? "Lionel";
   // Aucun mot de passe par défaut hardcodé (audit adversarial 2026-07-22) :
   // le `"12345678"` précédent était un identifiant FOUNDER trivialement
