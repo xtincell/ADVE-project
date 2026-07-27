@@ -1,5 +1,60 @@
 # Changelog — La Fusee
 
+## v6.27.350 — fix: absence ≠ zéro + ordre déterministe du fil Assistant (2026-07-27)
+
+**Dernier lot du round 4 adversarial. Cinq surfaces affichaient « 0 » là où la mesure n'avait jamais tourné.**
+
+- **Diagnostics** — `vector[k] ?? 0` faisait entrer un pilier **jamais évalué** dans la liste des « piliers faibles » et l'affichait `0.0`, indistinguable d'un pilier réellement au plancher. **Oracle §veille** — « 0 tendances macro / 0 signaux faibles / 0 concurrents » alors qu'aucune veille n'avait tourné. **Pyramide d'engagement** — « Score: 0.0 » pour une mesure absente (le prop accepte désormais `null` et dit « non mesuré »). **Onglet amplifications** — le `??` portait sur le **résultat** de `toLocaleString`, donc un budget inconnu s'affichait « 0 XAF » : « nous n'avons rien dépensé » au lieu de « nous ne le savons pas ».
+- **Fil Assistant — la question disparaissait** de l'historique quand la réponse était vide (les deux lignes étaient écrites ensemble ou pas du tout) alors qu'elle restait à l'écran : au tour suivant, l'écran et le contexte serveur divergeaient.
+- **Fil Assistant — l'ordre des deux messages d'un tour n'était pas déterministe.** `createdAt` a pour défaut `CURRENT_TIMESTAMP`, l'instant de **début de transaction** : les deux lignes d'un même `createMany` recevaient une valeur strictement identique, et les relectures triaient **sans départage**. Le tour pouvait être rejoué « assistant » avant « user » — un historique qui ment sur la conversation, et une séquence que les fournisseurs à alternance stricte refusent. Horodatages explicites à l'écriture + départage par `id` aux deux lectures.
+- tsc 0 · lint 0 · **1408 tests gouvernance verts**.
+
+## v6.27.349 — fix(ui): mensonges d'interface + tokens de design fantômes (2026-07-27)
+
+**Volet « surfaces » du round 4. Un défaut qui ne fait aucun bruit a besoin d'un test, pas d'une relecture.**
+
+- **« Analyse approfondie » soumettait les messages d'ERREUR aux quatre experts.** Les trois chemins d'échec du chat poussent un message de rôle « assistant » ; `lastAssistantMessage` les ramassait. On dépensait 5 appels LLM à faire critiquer « Le service intelligent est momentanément indisponible » par l'expert Authenticité, affiché ensuite sous **« Position soumise »** comme la position stratégique de la marque.
+- **La délibération partait toute seule.** `refetchOnWindowFocus: false` et `retry: false` ne suffisaient pas : `refetchOnReconnect` vaut `true` par défaut et le `staleTime` global est de 30 s — une coupure réseau de dix secondes relançait l'analyse **sans clic**, en consommant le budget posé pour l'en empêcher, et remplaçait l'affichage en silence (`isLoading` est faux pendant un refetch).
+- **Budget consommé avant de savoir si un fournisseur répond** : providers à terre = quatre clics et le fondateur bloqué dix minutes sans qu'une analyse ait été tentée, avec un message faux. Ordre inversé.
+- **`arguments: ["(position fournie…)", "—"]`** : le tiret n'existait que pour satisfaire un `.min(2)` et partait aux experts comme argumentation à attaquer — systématiquement, sur le chemin fondateur. **`topic`** échappait à `wrapUntrusted`, seul point d'entrée externe non ceinturé du conseil.
+- **SESHAT — la boucle de feedback rapportait un succès sans rien écrire** : `feedbackRelevance` tombait sur `return true` quand l'entrée n'existait pas, et `submitFeedback` n'avait jamais reçu la garde de son jumeau (sur un id haché, il POSTait ce hash inutilisable à l'API externe puis rendait `success: true`).
+- **Design System — la cause racine du round 2 était restée ouverte.** Aucun test ne vérifiait qu'un token **consommé** existe : Tailwind ne génère rien pour un token inconnu, `tsc` ne voit rien, le rendu ne jette pas — la couleur est juste absente. **165 sites vivants, ~20 familles fantômes**, dont `bg-rocket-red … text-white` (bouton **blanc sur transparent**, illisible) et `var(--color-on-accent)` sur la pastille de notifications. Alias remappés vers le canon ; tokens réellement **manquants** ajoutés au tier Domaine plutôt que détournés — `division-anubis` / `division-imhotep` (deux des sept Neteru) et `portal-agency` / `portal-guilde`, rediriger aurait menti sur l'appartenance. Nouveau verrou `design-tokens-exist.test.ts`.
+
+## v6.27.348 — fix(seshat): deux fuites inter-marques + la surautorité des agents (2026-07-27)
+
+**Round 4. Deux P0 croisés, tous deux dans la moitié NON corrigée d'une classe traitée au round 3.**
+
+- **P0 — le score des concurrents fuyait par `relevance`.** `KnowledgeEntry` est transverse aux marques mais mélange trois natures que rien ne distinguait à la lecture : des **agrégats** de secteur (partageables), des lignes **par marque** (`knowledge-seeder` écrit un `DIAGNOSTIC_RESULT` par stratégie avec `successScore = composite / 200`), et des lignes **ingérées par un appelant**. `queryLocalKnowledgeGraph` les servait uniformément, triées par `successScore` décroissant, à des outils curés de portée GLOBAL : une clé de marque obtenait le **classement des scores de son secteur**.
+- **P0 — canal d'écriture→lecture inter-marques.** `knowledge_graph_ingest` laisse l'appelant choisir `entryType`, `sector` et tout le `data` ; `generateExcerpt` rendait `data.insight` **verbatim**. Une marque pouvait planter un « benchmark » avec le secteur d'une autre et un texte arbitraire, servi à celle-ci comme référence externe faisant autorité — et injecté dans ses briefs.
+- **Un seul discriminant ferme les deux, sans migration** : `CROSS_BRAND_WHERE` — types agrégés uniquement, `sampleSize >= 3` (un « benchmark » calculé sur une marque est le score de cette marque avec une autre étiquette), `data.strategyId` absent. Appliqué aux **quatre** lectures transverses, `enrichBrief` et `searchReferences` comprises — cette dernière servait `MISSION_OUTCOME`, type par marque, dans une recherche par canal.
+- **`advertis.amendPillar` donnait à un agent MCP l'autorité de provenance la plus haute** : `author.system: "OPERATOR"` → `HUMAN` → ALLOW inconditionnel. Un agent écrasait silencieusement un champ déclaré par un humain et se comptait comme « déclaré » dans le ratio censé distinguer déclaré et inféré. Nouveau `viaAgent` : un agent écrit comme un dérivé.
+- **`confirmInferredField` ne retirait que le badge** : la provenance restait INFERRED et la passe suivante écrasait la valeur que l'opérateur venait de valider. Confirmer écrit désormais la provenance — **via la gateway** (C5), ce qui date au passage la confirmation.
+- **Le garde de provenance n'arbitrait jamais les SUPPRESSIONS** : il n'itérait que sur les clés du contenu candidat, donc un `REPLACE_FULL` omettant une clé HUMAN l'effaçait sans DENY ni avertissement — l'effacement est pourtant l'écriture la plus destructrice. La carte est aussi purgée de ses entrées orphelines, qui faisaient **nommer** des champs disparus dans la « liste de travail de l'opérateur ».
+- **Le conseil côté MCP n'avait ni gate d'abonnement ni budget**, alors que la voie tRPC recevait les deux le même sprint. **`knowledge_graph_stats`** appariait un strategyId sur `sector` (« graphe vide » à toute clé BRAND) ; **`knowledge_graph_query`** filtrait par marque **après** un `take: 200` global.
+- **`strategy.getWithScore` fabriquait `composite = 0`** pour une marque jamais évaluée et la classait au palier plancher — mensonge **serveur**, donc partagé par tous ses consommateurs. Rendu `null` ; les quatre écrans qui le re-fabriquaient disent « pas encore évaluée ».
+- **Les trous du verrou posé au round 3, trouvés dans mon propre test** : il ne scannait que les **lectures** (or `create`/`update`/`upsert` renvoient la ligne entière — trois sites échoïsaient `config` ou `keyHash`), acceptait un `select` niché dans un `include`, et omettait `McpOAuthCode`.
+
+## v6.27.347 — fix(domain): le verdict d'écriture pilier cesse d'être jeté (2026-07-27)
+
+**Le lot L2 était planifié sur une hypothèse fausse. La vraie cause est un succès menteur — la faute cardinale de ce repo.**
+
+- **L'hypothèse planifiée ne tenait pas** (vérification faite) : tous les écrivains utilisent déjà la clé canon `onNeditPas`, la validation Zod au chokepoint existe depuis ADR-0063, et `completionPct` peut mathématiquement atteindre 100 (les feuilles profondes gonflent le dénominateur, elles ne bloquent rien). **Rien à normaliser.**
+- **Sur 50 sites d'appel de la gateway, 25 jetaient son verdict.** Elle refuse pour **cinq** raisons (pilier LOCKED, validation stricte, SHAPE gate, garde de provenance, catch-all sur toute exception de transaction) et, dans ces cas, n'écrit **rien**.
+- **`auto-filler`** jetait le verdict puis ré-évaluait `content`, l'objet **en mémoire** portant les valeurs qu'il venait de ne pas persister → « N champs remplis, pilier COMPLET » sur une base inchangée. **C'est le symptôme rapporté** : on enrichit, l'écran félicite, on recharge, rien n'a bougé.
+- **`pillar.addProduct/addPersona/addTouchpoint/addRitual/addValue`** jetaient le verdict **et** retournaient un `{ success: true }` écrit en dur, avec un compteur calculé sur le tableau en mémoire — il grimpait à chaque clic sur un catalogue resté vide. **`quick-intake`** : un pilier refusé amputait d'un pilier **entier** la marque d'un fondateur qui venait de payer.
+- **Trois traitements selon qui attend une réponse** : routeurs → `assertWritten` lève un `CONFLICT` portant la raison de la gateway ; remplisseur → `persisted: false` + raison en clair + stage mesuré sur le contenu **persisté** ; services → `reportRefusedWrite`, on continue mais le refus n'est plus invisible.
+- **Verrou CI `pillar-write-verdict-honored.test.ts`** — TypeScript n'a pas d'équivalent de `#[must_use]`, ce test le remplace.
+
+## v6.27.346 — fix(anubis): les secrets de connecteur ne sortent plus du serveur (2026-07-27)
+
+**Round 3. La règle existait — « JAMAIS `config` ici — sécurité ADR-0021 » — appliquée à un seul site.**
+
+- **Sept lectures renvoyaient la ligne entière** d'un modèle porteur de secrets : `getConnectorStatus` (**MCP** — donc une clé d'API tierce), `connectors.list/get/stats/sync`, `getSocialConnectors` (jeton Meta, clé Apify), `driver.getSocialConnection` (`accessToken`), `driver.getMediaConnection` (`credentials`).
+- **La passe anti-IDOR de 2026-07-22 avait fermé QUI peut lire ces lignes sans jamais toucher à CE QUI en sort** : la garde d'appartenance était bonne, c'est la projection qui manquait. Le porteur d'une clé MCP de marque pouvait lire les jetons OAuth de l'opérateur.
+- **Forme unique** `anubis/connector-projection.ts` : trois listes blanches + `describeConnectorConfig` (rend `configured` et les **noms** de clés, jamais les valeurs — une UI peut dire « il manque apifyToken » sans afficher de jeton) + `readPublicConnector`, qui vit dans le service parce que décrire la config oblige à la **charger**.
+- **Verrou CI `connector-secret-projection.test.ts`** — refuse la **famille**, pas les sept sites.
+- Au passage : `seshat/references` ne dumpe plus `JSON.stringify(data)`, le `findMany` de repli **sans `where`** est retiré, l'id exposé est haché ; budget de délibération **séparé** de celui du chat (4 / 10 min — une délibération coûte 5 appels, le budget du chat en autorisait 20).
+
 ## v6.27.345 — feat(cockpit)+fix: le conseil adversarial ouvert au fondateur, et ses promesses tenues (2026-07-27)
 
 **Le conseil de marque (ADR-0180) existait depuis sa livraison — coordinateur + 4 experts A/D/V/E à mandat contradictoire — mais aucun fondateur ne pouvait l'atteindre, et interrogé sur ses confrères le coordinateur répondait qu'ils « ne font pas partie de votre dossier ». Ouverture + honnêteté, puis correction de ce que la relecture adversariale a trouvé dans ma propre livraison.**
