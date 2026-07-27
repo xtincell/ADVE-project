@@ -81,9 +81,12 @@ export default function DiagnosticsPage() {
 
   const strategy = strategyQuery.data;
   const vector = (strategy?.advertis_vector as Record<string, number>) ?? {};
+  // Absence ≠ zéro : un pilier absent du vecteur n'a pas été ÉVALUÉ. Le
+  // remplir de 0 le faisait entrer dans « piliers faibles » et s'afficher
+  // « 0.0 », indistinguable d'un pilier réellement au plancher.
   const scores: Partial<Record<PillarKey, number>> = {};
   for (const k of PILLAR_KEYS) {
-    scores[k] = vector[k] ?? 0;
+    if (typeof vector[k] === "number") scores[k] = vector[k];
   }
   // Absence ≠ zéro : une marque jamais évaluée n'a pas de composite. Le `?? 0`
   // affichait « 0 » avec une tendance « down », indistinguable d'un score
@@ -95,7 +98,7 @@ export default function DiagnosticsPage() {
     createdAt: string;
   }>;
 
-  const weakPillars = PILLAR_KEYS.filter((k) => (scores[k] ?? 0) < 15);
+  const weakPillars = PILLAR_KEYS.filter((k) => typeof scores[k] === "number" && scores[k]! < 15);
   const strongPillars = PILLAR_KEYS.filter((k) => (scores[k] ?? 0) >= 20);
 
   const recalculateMutation = trpc.advertisScorer.scoreObject.useMutation({
@@ -258,7 +261,7 @@ export default function DiagnosticsPage() {
             {weakPillars
               .map(
                 (k) =>
-                  `${PILLAR_NAMES[k]} (${(scores[k] ?? 0).toFixed(1)})`,
+                  `${PILLAR_NAMES[k]} (${scores[k]!.toFixed(1)})`,
               )
               .join(", ")}
           </p>
@@ -285,7 +288,7 @@ export default function DiagnosticsPage() {
                   </div>
                 </div>
                 <span className="text-sm font-semibold text-warning">
-                  {(scores[k] ?? 0).toFixed(1)}
+                  {scores[k]!.toFixed(1)}
                 </span>
               </div>
             ))}

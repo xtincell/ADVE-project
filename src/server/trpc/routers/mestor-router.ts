@@ -37,7 +37,9 @@ export const mestorRouter = createTRPCRouter({
       if (!thread) return { threadId: null, messages: [] };
       const rows = await db.assistantMessage.findMany({
         where: { threadId: thread.id },
-        orderBy: { createdAt: "desc" },
+        // `id` en départage : deux messages du même tour peuvent partager
+        // l'horodatage (lignes historiques écrites avant l'horodatage explicite).
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take: 40,
         select: { id: true, role: true, content: true, createdAt: true },
       });

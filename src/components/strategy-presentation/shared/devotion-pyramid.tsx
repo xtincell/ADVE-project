@@ -11,7 +11,12 @@ const LEVELS = [
 
 interface DevotionPyramidProps {
   data: Record<string, number>;
-  score: number;
+  /**
+   * `null` = score d'engagement NON MESURÉ. L'appelant passait `?? 0`, ce qui
+   * affichait « Score: 0.0 » — soit « engagement nul », alors que la mesure
+   * n'avait simplement jamais tourné (absence ≠ zéro).
+   */
+  score: number | null;
 }
 
 export function DevotionPyramid({ data, score }: DevotionPyramidProps) {
@@ -22,7 +27,7 @@ export function DevotionPyramid({ data, score }: DevotionPyramidProps) {
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-semibold text-foreground-secondary">Pyramide d'engagement</h4>
         <span className="rounded-full bg-background px-3 py-1 text-xs font-bold text-orange-400">
-          Score: {score.toFixed(1)}
+          Score: {score === null ? "non mesuré" : score.toFixed(1)}
         </span>
       </div>
       <div className="space-y-1.5">
