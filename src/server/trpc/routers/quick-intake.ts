@@ -33,6 +33,7 @@ import * as quickIntakeService from "@/server/services/quick-intake";
 import { getAdaptiveQuestions, getBusinessContextQuestions, getAllQuestions } from "@/server/services/quick-intake/question-bank";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { writePillar } from "@/server/services/pillar-gateway";
+import { assertWritten } from "./_pillar-write-guard";
 import { db } from "@/lib/db";
 import { assertStrategyRead } from "./_strategy-read-guard";
 import { getOperatorContext } from "@/server/services/operator-isolation";
@@ -79,13 +80,17 @@ async function seedPillarFromIntake(
     rawContent && typeof rawContent === "object" && !Array.isArray(rawContent)
       ? (rawContent as Record<string, unknown>)
       : {};
-  await writePillar({
+  const w = await writePillar({
     strategyId,
     pillarKey: key,
     operation: { type: "REPLACE_FULL", content },
     author: { system: "INGESTION", reason: "Conversion intake → Strategy (C1 reroute via gateway)" },
     options: { confidenceDelta: confidence },
   });
+  // Conversion intake → Strategy : un pilier refusé ici produit une marque
+  // amputée d'un pilier ENTIER pour un fondateur qui vient de payer. Le verdict
+  // était jeté — l'intake se déclarait converti quoi qu'il arrive.
+  assertWritten(w, `Conversion intake — pilier ${key.toUpperCase()}`);
 }
 
 /**

@@ -36,6 +36,7 @@ import { propagateFromPillar } from "@/server/services/staleness-propagator";
 import { getStrategyReadiness } from "@/server/governance/pillar-readiness";
 import { scoreObject } from "@/server/services/advertis-scorer";
 import { writePillarAndScore } from "@/server/services/pillar-gateway";
+import { assertWritten } from "./_pillar-write-guard";
 import { getNestedArray } from "@/lib/pillar-path";
 import { ensureProductIds } from "@/domain/product-catalog";
 import type { PillarKey as PK } from "@/lib/types/advertis-vector";
@@ -282,11 +283,12 @@ export const pillarRouter = createTRPCRouter({
       // déterministe → les gammes/système peuvent référencer de façon fiable (ADR-0171).
       const withIds = ensureProductIds(catalogue as Array<Record<string, unknown>>);
 
-      await writePillarAndScore({
+      const w = await writePillarAndScore({
         strategyId: input.strategyId, pillarKey: "v",
         operation: { type: "SET_FIELDS", fields: [{ path: "produitsCatalogue", value: withIds }] },
         author: { system: "OPERATOR", userId: ctx.session.user.id, reason: "addProduct" },
       });
+      assertWritten(w, "addProduct");
       return { success: true, productCount: withIds.length };
     }),
 
@@ -313,11 +315,12 @@ export const pillarRouter = createTRPCRouter({
       const personas = getArraySafe(content.personas);
       personas.push(input.persona);
 
-      await writePillarAndScore({
+      const w = await writePillarAndScore({
         strategyId: input.strategyId, pillarKey: "d",
         operation: { type: "SET_FIELDS", fields: [{ path: "personas", value: personas }] },
         author: { system: "OPERATOR", userId: ctx.session.user.id, reason: "addPersona" },
       });
+      assertWritten(w, "addPersona");
       return { success: true, personaCount: personas.length };
     }),
 
@@ -343,11 +346,12 @@ export const pillarRouter = createTRPCRouter({
       const touchpoints = getArraySafe(content.touchpoints);
       touchpoints.push(input.touchpoint);
 
-      await writePillarAndScore({
+      const w = await writePillarAndScore({
         strategyId: input.strategyId, pillarKey: "e",
         operation: { type: "SET_FIELDS", fields: [{ path: "touchpoints", value: touchpoints }] },
         author: { system: "OPERATOR", userId: ctx.session.user.id, reason: "addTouchpoint" },
       });
+      assertWritten(w, "addTouchpoint");
       return { success: true, touchpointCount: touchpoints.length };
     }),
 
@@ -373,11 +377,12 @@ export const pillarRouter = createTRPCRouter({
       const rituels = getArraySafe(content.rituels);
       rituels.push(input.ritual);
 
-      await writePillarAndScore({
+      const w = await writePillarAndScore({
         strategyId: input.strategyId, pillarKey: "e",
         operation: { type: "SET_FIELDS", fields: [{ path: "rituels", value: rituels }] },
         author: { system: "OPERATOR", userId: ctx.session.user.id, reason: "addRitual" },
       });
+      assertWritten(w, "addRitual");
       return { success: true, ritualCount: rituels.length };
     }),
 
@@ -411,11 +416,12 @@ export const pillarRouter = createTRPCRouter({
 
       valeurs.push(input.value);
 
-      await writePillarAndScore({
+      const w = await writePillarAndScore({
         strategyId: input.strategyId, pillarKey: "a",
         operation: { type: "SET_FIELDS", fields: [{ path: "valeurs", value: valeurs }] },
         author: { system: "OPERATOR", userId: ctx.session.user.id, reason: "addValue" },
       });
+      assertWritten(w, "addValue");
       return { success: true, valueCount: valeurs.length };
     }),
 

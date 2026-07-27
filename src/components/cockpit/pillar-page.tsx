@@ -67,6 +67,29 @@ const PILLAR_CONFIG: Record<string, {
 
 // ── RecoValuePreview — compact preview of proposed/current value ──────
 
+/**
+ * Lit le verdict d'écriture d'un `autoFill` et rend le message à afficher —
+ * ou `null` si l'écriture est bien passée.
+ *
+ * Le remplisseur pouvait rapporter « 0 champ rempli » pour deux raisons
+ * radicalement différentes : soit il n'y avait rien à remplir (cas banal,
+ * message rassurant), soit la base a REFUSÉ l'écriture (pilier verrouillé,
+ * forme invalide, garde de provenance). L'écran affichait le même
+ * « avertissement » dans les deux cas, et le fondateur en concluait que l'IA
+ * ne servait à rien. La raison exacte existait côté serveur — elle n'était
+ * simplement jamais remontée jusqu'ici.
+ */
+function readWriteRefusal(data: Record<string, unknown>): string | null {
+  if (data?.persisted !== false) return null;
+  const reasons = Array.isArray(data.failed)
+    ? (data.failed as Array<{ reason?: unknown }>)
+        .map((f) => (typeof f?.reason === "string" ? f.reason : null))
+        .filter((x): x is string => Boolean(x))
+    : [];
+  const detail = reasons.length > 0 ? reasons.join(" · ") : "raison non communiquée";
+  return `Aucune modification enregistrée — la sauvegarde a été refusée : ${detail}`;
+}
+
 function RecoValuePreview({ value }: { value: unknown }) {
   if (value == null || value === "") return <span className="text-2xs text-foreground-muted/50 italic">vide</span>;
   if (typeof value === "string") return <p className="text-2xs text-white/80 line-clamp-3">{value}</p>;
@@ -386,6 +409,11 @@ export function PillarPage({ pageKey }: PillarPageProps) {
       if (derivableFields.length === 0) {
         const r = await autoFillMutation.mutateAsync({ strategyId, pillarKey: config.pillarKey });
         const data = r as unknown as Record<string, unknown>;
+        const refusal = readWriteRefusal(data);
+        if (refusal) {
+          setEnrichResult({ type: "error", message: refusal });
+          return;
+        }
         const filledCount = Array.isArray(data?.filled) ? (data.filled as string[]).length : 0;
         const failedCount = Array.isArray(data?.failed) ? (data.failed as unknown[]).length : 0;
         const needsHumanAfter = Array.isArray(data?.needsHuman) ? (data.needsHuman as string[]) : [];
@@ -423,6 +451,11 @@ export function PillarPage({ pageKey }: PillarPageProps) {
         });
 
         const data = r as unknown as Record<string, unknown>;
+        const refusal = readWriteRefusal(data);
+        if (refusal) {
+          setEnrichResult({ type: "error", message: refusal });
+          return;
+        }
         const filledCount = Array.isArray(data?.filled) ? (data.filled as string[]).length : 0;
         const failedCount = Array.isArray(data?.failed) ? (data.failed as unknown[]).length : 0;
         const needsHumanChunk = Array.isArray(data?.needsHuman) ? (data.needsHuman as string[]) : [];

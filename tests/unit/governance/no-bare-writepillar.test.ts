@@ -40,13 +40,13 @@ const ALLOWED_BARE_CALLERS: ReadonlyArray<{ file: string; line: number; reason: 
   },
   {
     file: "src/server/services/ingestion-pipeline/ai-filler.ts",
-    line: 451,
+    line: 453,
     reason:
       "AI RTIS filler (ingestion) — bare writePillar VOLONTAIRE : draft AI_PROPOSED MERGE_DEEP mi-ingestion, scoré à l'activation comme C1/C2. Site historique qui échappait au test via l'alias `writePillarRTIS` (audit 2026-07-13, T5) — dé-aliasé et catalogué ; la cascade staleness Oracle s'applique désormais dans writePillar lui-même.",
   },
   {
     file: "src/server/trpc/routers/quick-intake.ts",
-    line: 82,
+    line: 83,
     reason:
       "seedPillarFromIntake (reroute C1, P2-b) — bare writePillar VOLONTAIRE : préserve l'advertis_vector calculé à l'intake. writePillarAndScore recalculerait le score depuis le contenu brut partiel → régression du score affiché. Validation Zod + PillarVersion + cascade staleness + author trail sont appliqués (le gap C1) ; le reconcile completionLevel + le score se font sur la prochaine écriture réelle / l'activation.",
   },

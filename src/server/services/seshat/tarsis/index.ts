@@ -12,6 +12,7 @@ import { db } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { collectMarketSignals, type CollectionStrategy } from "./signal-collector";
 import { analyzeWeakSignals, buildSearchContext, type WeakSignal } from "./weak-signal-analyzer";
+import { reportRefusedWrite } from "../../pillar-gateway/refusal";
 
 // ── Campaign capture sessions API (Phase 19, ADR-0052 Cluster D support) ──
 // Câblage Seshat Tarsis pour la promotion `culture.tarsisBridge` STUB → MVP
@@ -306,13 +307,14 @@ Format JSON strict conforme au schema PillarT :
   const confidence = sectorReused ? 0.75 : 0.80;
   // Persist via Gateway
   const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
-  await writePillarAndScore({
+  const _w0 = await writePillarAndScore({
     strategyId,
     pillarKey: "t" as import("@/lib/types/advertis-vector").PillarKey,
     operation: { type: "MERGE_DEEP", patch: pillarContent as Record<string, unknown> },
     author: { system: "MESTOR", reason: "Market intelligence T pillar generation" },
     options: { confidenceDelta: 0.05 },
   });
+  reportRefusedWrite(_w0, "seshat:tarsis");
 
   // 8. Store as sector knowledge for cross-brand reuse — country-scoped (ADR-0037 PR-E)
   if (!sectorReused && searchContext.sector) {
