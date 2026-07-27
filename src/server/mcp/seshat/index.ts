@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { db } from "@/lib/db";
 import * as seshatBridge from "@/server/services/seshat-bridge";
-import { countByEntryType, toSectorMeta } from "@/server/mcp/_shared/knowledge-projection";
+import { SECTOR_META_SELECT, countByEntryType, toSectorMeta } from "@/server/mcp/_shared/knowledge-projection";
 
 // ---------------------------------------------------------------------------
 // SESHAT MCP Server
@@ -62,11 +62,11 @@ export const tools: ToolDefinition[] = [
         // type ne suffit pas à garantir l'absence de donnée propriétaire —
         // métadonnées seules (cf. `_shared/knowledge-projection.ts`).
         db.knowledgeEntry.findMany({
+          select: SECTOR_META_SELECT,
           where: {
             entryType: "SECTOR_BENCHMARK",
             sector: input.sector as string,
           },
-          select: { entryType: true, sector: true, market: true, createdAt: true },
           orderBy: { createdAt: "desc" },
           take: 5,
         }),
@@ -117,6 +117,7 @@ export const tools: ToolDefinition[] = [
     }),
     handler: async (input) => {
       const entries = await db.knowledgeEntry.findMany({
+        select: SECTOR_META_SELECT,
         where: {
           sector: input.sector as string,
           entryType: "SECTOR_BENCHMARK",
@@ -153,11 +154,11 @@ export const tools: ToolDefinition[] = [
         // outil GLOBAL, les rendre en clair laissait une clé de marque lire ses
         // concurrents — cf. `_shared/knowledge-projection.ts`.
         db.knowledgeEntry.findMany({
+          select: SECTOR_META_SELECT,
           where: {
             market: input.market as string,
             ...(input.sector ? { sector: input.sector as string } : {}),
           },
-          select: { entryType: true, sector: true, market: true, createdAt: true },
           orderBy: { createdAt: "desc" },
           take: 10,
         }),
@@ -191,6 +192,7 @@ export const tools: ToolDefinition[] = [
         limit: 10,
       });
       const internalIntel = await db.knowledgeEntry.findMany({
+        select: SECTOR_META_SELECT,
         where: {
           entryType: "SECTOR_BENCHMARK",
         },
@@ -228,6 +230,7 @@ export const tools: ToolDefinition[] = [
           limit: 10,
         }),
         db.knowledgeEntry.findMany({
+          select: SECTOR_META_SELECT,
           where: {
             sector: input.sector as string,
           },
@@ -258,6 +261,7 @@ export const tools: ToolDefinition[] = [
           limit: 10,
         }),
         db.knowledgeEntry.findMany({
+          select: SECTOR_META_SELECT,
           where: {
             entryType: "SECTOR_BENCHMARK",
             ...(input.sector ? { sector: input.sector as string } : {}),
@@ -290,6 +294,7 @@ export const tools: ToolDefinition[] = [
           limit: (input.limit as number) ?? 10,
         }),
         db.knowledgeEntry.findMany({
+          select: SECTOR_META_SELECT,
           where: {
             entryType: "MISSION_OUTCOME",
             ...(input.sector ? { sector: input.sector as string } : {}),
@@ -336,6 +341,7 @@ export const tools: ToolDefinition[] = [
       });
       const benchmarks = input.sector
         ? await db.knowledgeEntry.findMany({
+        select: SECTOR_META_SELECT,
             where: { entryType: "SECTOR_BENCHMARK", sector: input.sector as string },
             take: 3,
           })
@@ -366,6 +372,7 @@ export const tools: ToolDefinition[] = [
     inputSchema: z.object({}),
     handler: async () => {
       const entries = await db.knowledgeEntry.findMany({
+        select: SECTOR_META_SELECT,
         where: { entryType: { in: ["SECTOR_BENCHMARK", "MISSION_OUTCOME", "BRIEF_PATTERN", "CAMPAIGN_TEMPLATE"] } },
       });
       const sectors = [...new Set(entries.map((e) => e.sector).filter(Boolean))];

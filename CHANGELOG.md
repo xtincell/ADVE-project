@@ -1,5 +1,16 @@
 # Changelog — La Fusee
 
+## v6.27.344 — fix(anubis): round 2 adversarial — la classe fermée, pas les instances (2026-07-27)
+
+**Le round 1 avait corrigé les trois outils que j'avais touchés. Le round 2 en a trouvé douze autres dans les mêmes fichiers. Réparer les instances ne fermait pas la classe — ce commit la ferme.**
+
+- **P0 — `competitor_analysis` : fuite toujours ouverte, 60 lignes au-dessus du correctif.** `sector: { contains: competitorName }` avec `competitorName: ""` donne `LIKE '%%'` → **toutes** les entrées à secteur non nul, lignes entières, atteignable par une clé de marque légitime. `.min(1)` posé + projection.
+- **P0 — `scopeKind` était fail-OPEN.** `record.scopeKind === "BRAND" ? "BRAND" : "SYSTEM"` sur une colonne `String` **libre** (pas un enum Prisma, défaut `"SYSTEM"`) : toute valeur inattendue — `"brand"`, `" BRAND"`, `""`, un null laissé par un import — produisait une clé **silencieusement globale**. Nouveau `normalizeScopeKind` : seul `"SYSTEM"` exact ouvre la portée globale, tout le reste restreint. Le durcissement du round 1 avait été posé sur la branche inatteignable (`!auth`) et pas sur celle-ci.
+- **P1 — `pulse.ugc_track` / `ritual_adoption_measure` filtraient la marque sur `sector`.** Confusion de type (un id de marque n'est pas un secteur) — et `sector` est un champ **libre** de `knowledge_graph_ingest` : une marque pouvait écrire `sector: "<id d'une autre marque>"` et faire apparaître son contenu chez elle. Filtrage sur `data.strategyId`, la vraie attribution.
+- **P1 — `knowledge_graph_query`, outil CURÉ, rendait `data` et `sourceHash` bruts.** Le filtre par marque protégeait du cross-tenant, pas de la sur-exposition. Il lit toujours `data` en interne (filtrage + classement en dépendent) mais **projette sa sortie**.
+- **La classe est fermée par un verrou CI** — `mcp-knowledge-projection.test.ts` : toute lecture de `KnowledgeEntry` sous `src/server/mcp/**` porte un `select`, ou figure dans une **liste blanche explicite et justifiée** de handlers qui ont besoin de `data` en interne — et ceux-là doivent projeter leur sortie. 15 lectures brutes recensées, 15 traitées.
+- 325 fichiers / **3501 tests verts**. 0 modèle Prisma, 0 migration, 0 LLM.
+
 ## v6.27.343 — fix(cockpit): « Tout accepter » écrit enfin dans le pilier, et on peut revenir à Fondation (2026-07-27)
 
 **Deux points du rapport UX opérateur, tous deux dus à un maillon déclaré mais jamais câblé.**

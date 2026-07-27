@@ -28,6 +28,21 @@
  * depuis `knowledge_graph_ingest`).
  */
 
+/**
+ * `select` Prisma canonique pour toute lecture de `KnowledgeEntry` depuis un
+ * serveur MCP. Passer par cette constante plutôt que d'omettre `select` est
+ * vérifié en CI (`mcp-knowledge-projection.test.ts`) : le premier round de
+ * remédiation avait corrigé les trois outils que j'avais touchés et laissé
+ * **douze autres lectures brutes** dans les mêmes fichiers — la classe n'était
+ * pas fermée, seulement les instances.
+ */
+export const SECTOR_META_SELECT = {
+  entryType: true,
+  sector: true,
+  market: true,
+  createdAt: true,
+} as const;
+
 /** Métadonnées d'une entrée de connaissance, sans rien de propriétaire. */
 export interface SectorKnowledgeMeta {
   entryType: string;

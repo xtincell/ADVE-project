@@ -23,7 +23,7 @@ import * as mestor from "@/server/services/mestor";
 import * as knowledgeAggregator from "@/server/services/knowledge-aggregator";
 import * as feedbackLoop from "@/server/services/feedback-loop";
 import * as seshatBridge from "@/server/services/seshat-bridge";
-import { countByEntryType, toSectorMeta } from "@/server/mcp/_shared/knowledge-projection";
+import { SECTOR_META_SELECT, countByEntryType, toSectorMeta } from "@/server/mcp/_shared/knowledge-projection";
 
 // ---------------------------------------------------------------------------
 // Intelligence MCP Server
@@ -79,6 +79,9 @@ export const tools: ToolDefinition[] = [
       const strategyId = typeof input.strategyId === "string" ? input.strategyId : null;
       const entryType = typeof input.entryType === "string" ? input.entryType : null;
 
+      // Lecture COMPLÈTE assumée : le filtre par marque et le classement par
+      // mots-clés opèrent tous deux sur `data`. Ce qui compte, c'est que `data`
+      // ne SORTE pas — la projection est faite au retour, pas à la requête.
       const pool = await db.knowledgeEntry.findMany({
         where: entryType
           ? { entryType: entryType as import("@prisma/client").KnowledgeType }
@@ -105,7 +108,11 @@ export const tools: ToolDefinition[] = [
         .slice(0, limit);
 
       return {
-        entries: ranked.map((r) => r.entry),
+        // Métadonnées seulement : cet outil est CURÉ (présent dans `tools/list`
+        // de tout client MCP) et rendait les lignes entières — `data` et
+        // `sourceHash` compris. Le filtre par marque protège du cross-tenant,
+        // pas de la sur-exposition.
+        entries: ranked.map((r) => toSectorMeta(r.entry)),
         count: ranked.length,
         query,
         matchedByQuery: terms.length > 0,
@@ -234,6 +241,7 @@ export const tools: ToolDefinition[] = [
     handler: async (input) => {
       const [internalEntries, seshatRefs] = await Promise.all([
         db.knowledgeEntry.findMany({
+          select: SECTOR_META_SELECT,
           where: {
             entryType: "SECTOR_BENCHMARK",
             sector: input.sector as string,
@@ -259,7 +267,9 @@ export const tools: ToolDefinition[] = [
       "Analyse le positionnement d'un concurrent par rapport à la stratégie ADVE de la marque cliente.",
     inputSchema: z.object({
       strategyId: z.string().describe("ID de la stratégie de la marque cliente"),
-      competitorName: z.string().describe("Nom du concurrent"),
+      // `.min(1)` : une chaîne vide donnait `contains: ""` → `LIKE '%%'`,
+      // soit TOUTES les entrées à secteur non nul, pour n'importe quelle clé.
+      competitorName: z.string().min(1).describe("Nom du concurrent"),
       dimensions: z
         .array(z.enum(["pricing", "positioning", "creative", "digital", "distribution", "community"]))
         .optional()
@@ -271,6 +281,7 @@ export const tools: ToolDefinition[] = [
           where: { id: input.strategyId as string },
         }),
         db.knowledgeEntry.findMany({
+          select: SECTOR_META_SELECT,
           where: {
             entryType: "SECTOR_BENCHMARK",
             sector: { contains: input.competitorName as string },
@@ -304,6 +315,7 @@ export const tools: ToolDefinition[] = [
     }),
     handler: async (input) => {
       const benchmarks = await db.knowledgeEntry.findMany({
+        select: SECTOR_META_SELECT,
         where: {
           entryType: "SECTOR_BENCHMARK",
           sector: input.sector as string,
@@ -337,8 +349,8 @@ export const tools: ToolDefinition[] = [
       // le score de ses concurrents du même secteur. On ne projette que des
       // métadonnées (liste blanche).
       const entries = await db.knowledgeEntry.findMany({
+        select: SECTOR_META_SELECT,
         where: { sector: input.sector as string },
-        select: { entryType: true, sector: true, market: true, createdAt: true },
         orderBy: { createdAt: "desc" },
         take: 20,
       });
@@ -484,6 +496,9 @@ export const tools: ToolDefinition[] = [
       const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
       const entries = await db.knowledgeEntry.findMany({
+        // `pillarFocus` est une métadonnée de classement, pas du contenu de
+        // marque — elle s'ajoute à la projection sans rouvrir `data`.
+        select: { ...SECTOR_META_SELECT, pillarFocus: true },
         where: {
           createdAt: { gte: since },
           ...(input.sector ? { sector: input.sector as string } : {}),

@@ -24,6 +24,7 @@ import { createHash, randomBytes } from "crypto";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth/config";
+import { normalizeScopeKind } from "@/server/services/anubis/mcp-scope-kind";
 
 // ── Auth ───────────────────────────────────────────────────────────────
 
@@ -93,7 +94,7 @@ export async function authenticateMcpRequest(
         ok: true,
         apiKeyId: record.id,
         ratePerCallUsd: record.ratePerCallUsd,
-        scopeKind: record.scopeKind === "BRAND" ? "BRAND" : "SYSTEM",
+        scopeKind: normalizeScopeKind(record.scopeKind),
         scopeStrategyId: record.scopeStrategyId,
       };
     }

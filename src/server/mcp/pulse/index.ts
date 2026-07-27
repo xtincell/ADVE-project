@@ -19,6 +19,7 @@
 import { z } from "zod";
 import { db } from "@/lib/db";
 import * as cultIndexEngine from "@/server/services/cult-index-engine";
+import { SECTOR_META_SELECT, countByEntryType, toSectorMeta } from "@/server/mcp/_shared/knowledge-projection";
 
 // ---------------------------------------------------------------------------
 // Pulse MCP Server
@@ -299,14 +300,20 @@ export const tools: ToolDefinition[] = [
       const daysMap: Record<string, number> = { "7d": 7, "30d": 30, "90d": 90 };
       const days = daysMap[(input.period as string) ?? "30d"] ?? 30;
       const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-      const entries = await db.knowledgeEntry.findMany({
-        where: {
-          sector: input.strategyId as string,
-          entryType: "CREATOR_PATTERN",
-          createdAt: { gte: since },
-        },
+      // `sector: strategyId` était une CONFUSION DE TYPE : un id de marque
+      // n'est pas un secteur. Or `sector` est un champ LIBRE de
+      // `knowledge_graph_ingest` — n'importe quelle marque pouvait donc écrire
+      // `sector: "<id d'une autre marque>"` et faire apparaître son contenu
+      // ici. L'attribution réelle vit dans `data.strategyId` (convention du
+      // repo, cf. `diagnostic-engine`), on filtre là.
+      const rawEntries = await db.knowledgeEntry.findMany({
+        where: { entryType: "CREATOR_PATTERN", createdAt: { gte: since } },
         orderBy: { createdAt: "desc" },
+        take: 500,
       });
+      const entries = rawEntries
+        .filter((e) => ((e.data ?? {}) as Record<string, unknown>).strategyId === input.strategyId)
+        .map(toSectorMeta);
       return {
         strategyId: input.strategyId,
         period: input.period,
@@ -328,13 +335,16 @@ export const tools: ToolDefinition[] = [
       const strategy = await db.strategy.findUniqueOrThrow({
         where: { id: input.strategyId as string },
       });
-      const ritualEntries = await db.knowledgeEntry.findMany({
-        where: {
-          sector: input.strategyId as string,
-          entryType: "BRIEF_PATTERN",
-        },
+      // Même confusion de type que `ugc_track` : `sector` n'est pas une
+      // dimension de marque, et c'est un champ libre de l'ingestion.
+      const rawRituals = await db.knowledgeEntry.findMany({
+        where: { entryType: "BRIEF_PATTERN" },
         orderBy: { createdAt: "desc" },
+        take: 500,
       });
+      const ritualEntries = rawRituals
+        .filter((e) => ((e.data ?? {}) as Record<string, unknown>).strategyId === input.strategyId)
+        .map(toSectorMeta);
       return {
         brand: strategy.name,
         rituals: ritualEntries,
