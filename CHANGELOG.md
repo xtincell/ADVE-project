@@ -1,5 +1,14 @@
 # Changelog — La Fusee
 
+## v6.27.334 — docs(deploy): BUILD-DEPORT — « Docker Image » n'est pas un Build Pack (2026-07-27)
+
+**La doc de bascule décrivait une manip qui n'existe pas. Suivie à la lettre, elle a coûté une heure à l'opérateur et vidé le champ des domaines de l'app de prod.**
+
+- **Le défaut** : l'étape 2 disait « *General* → **Build Pack → « Docker Image »** ». Dans Coolify, le Build Pack d'une app git ne propose que Nixpacks / Railpack / Static / Dockerfile / Docker Compose — « Docker Image » est un **type de ressource** choisi à la création, et une app créée depuis un dépôt git ne peut pas y être convertie.
+- **Le piège associé, maintenant documenté** : la section *Docker Registry* (« Docker Image » + « Docker Image Tag ») du même écran ne choisit **pas** une image à tirer — elle nomme l'image que Coolify **construit sur le VPS**. La renseigner ne déporte rien (le build local continue, il change de tag) ; c'est ce qui a fait croire à une bascule effective.
+- **Étape 2 réécrite** en manip réelle et ordonnée : copier les variables → `+ New → Docker Image` (même projet **et même serveur**, pour le réseau `coolify` qui joint le Postgres) → coller les variables → déployer **sans domaine** et vérifier les logs → basculer les 3 domaines (`powerupgraders.com`, `www.`, `lafuseev6.`) seulement ensuite → arrêter l'ancienne app sans la supprimer (c'est le rollback). Rollback et pré-requis `COOLIFY_APP_UUID` réalignés sur cette procédure.
+- Documentation seule — 0 code, 0 migration.
+
 ## v6.27.333 — fix(thot): build cassé — `splitName` CinetPay sous noUncheckedIndexedAccess (2026-07-27)
 
 **Le déploiement Coolify de `main` (f247dd7) échouait au `next build` : `cinetpay.ts:66` — `parts[0]` est `string | undefined` sous `noUncheckedIndexedAccess`, assigné à `first: string`. Introduit par la migration Aurore (v6.27.332), qui n'avait pas été type-checkée avant push. TOUT déploiement était bloqué.**
