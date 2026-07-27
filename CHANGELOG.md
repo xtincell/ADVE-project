@@ -1,5 +1,14 @@
 # Changelog — La Fusee
 
+## v6.27.340 — fix(ci): tests alignés sur la doctrine corrigée + 5 tests qui mesuraient la machine (2026-07-27)
+
+**Deux tests contredisaient la doctrine qu'ils prétendaient garder ; cinq autres étaient verts en CI et rouges en local — ils mesuraient l'environnement, pas le code.**
+
+- **`llm-gateway` — le titre et l'assertion se contredisaient.** Le cas « Ollama Cloud first, **OpenRouter repli** (2026-07-16) » asseyait `["ollama", "anthropic", "openrouter"]` : Anthropic (payant) en deuxième. Le repli nominal était donc facturé dès qu'Ollama échouait — l'inverse de « la Fusée ne dépend pas d'un crédit payant ». L'assertion rejoint son propre titre après le tri payant-en-dernier de v6.27.338.
+- **`advertis-mcp` — l'invariant « strategyId requis partout » exempte l'outil d'énumération.** `listStrategies` ne peut pas exiger l'identifiant qu'il sert à découvrir ; il porte `scope: "SELF_SCOPED"` et se restreint sur `__auth`. Un cas dédié vérifie que c'est **la seule** exception et qu'elle lit bien `__auth` — sans quoi « SELF_SCOPED » serait une portée non appliquée.
+- **Cinq tests dépendants des credentials ambiants, réparés (même classe que `llm-routing`)** : `social-connect.providerReadiness` ×2 décrivaient « sans env creds » mais lisaient les variables OAuth réellement posées sur la machine ; `quick-intake` ×3 partaient en **appel réseau réel** vers le LLM quand une clé traînait, et **expiraient à 30 s**. Verts en CI (aucune clé), rouges sur un poste d'opérateur : ils protégeaient l'absence de credentials, pas le comportement. Environnement neutralisé explicitement dans les deux fichiers.
+- Suite complète : **322 fichiers, 3480 tests verts**. tsc 0 · lint 0.
+
 ## v6.27.339 — fix(anubis): le MCP voit enfin les campagnes et le calendrier — et ne fuit plus entre marques (2026-07-27)
 
 **Trois verrous cumulés empêchaient un agent de voir l'activité d'une marque, et un quatrième laissait fuir celle des autres. Demande opérateur : « le MCP n'arrive pas à surfacer les campagnes en cours, les calendriers digitaux ».**

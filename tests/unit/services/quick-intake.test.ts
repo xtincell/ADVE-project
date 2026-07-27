@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
   getAdaptiveQuestions,
   getAllQuestions,
@@ -8,6 +8,20 @@ import { classifyBrand } from "@/lib/types/advertis-vector";
 
 describe("Quick Intake Question Bank", () => {
   const pillars = ["a", "d", "v", "e", "r", "t", "i", "s"] as const;
+
+  // `getAdaptiveQuestions` consulte le LLM quand un provider est configuré. Un
+  // test unitaire ne doit PAS sortir sur le réseau : sur une machine où des clés
+  // traînent dans l'environnement, ces trois cas partaient en appel réel et
+  // expiraient à 30 s — verts en CI (aucune clé), rouges en local. Le test
+  // mesurait la présence de credentials, pas le banc de questions.
+  beforeEach(() => {
+    for (const key of [
+      "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "OLLAMA_BASE_URL",
+      "OLLAMA_API_KEY", "OPENROUTER_API_KEY", "LLM_PRIMARY_PROVIDER",
+    ]) {
+      vi.stubEnv(key, "");
+    }
+  });
 
   it("returns questions for each pillar", async () => {
     for (const pillar of pillars) {

@@ -320,10 +320,16 @@ describe("LLM gateway — owl-alpha default + premium toggle", () => {
     ).toEqual(["openrouter", "anthropic"]);
   });
 
-  it("default (premium OFF) avec Ollama configuré → Ollama Cloud first, OpenRouter repli (2026-07-16)", () => {
+  it("default (premium OFF) avec Ollama configuré → Ollama Cloud first, OpenRouter repli, Anthropic dernier (2026-07-16, corrigé 2026-07-27)", () => {
+    // Le titre de ce cas disait « OpenRouter repli » depuis le 2026-07-16, mais
+    // son assertion plaçait **Anthropic** en deuxième : le repli nominal était
+    // donc facturé dès qu'Ollama échouait, l'inverse de la doctrine « la Fusée
+    // ne dépend pas d'un crédit payant ». `resolveTextProviderOrder` trie
+    // désormais les providers payants en dernier hors mode premium ; l'assertion
+    // rejoint le titre.
     expect(
       _resolveTextProviderOrderForTest(["anthropic", "ollama", "openrouter"], { premium: false }),
-    ).toEqual(["ollama", "anthropic", "openrouter"]);
+    ).toEqual(["ollama", "openrouter", "anthropic"]);
   });
 
   it("premium ON keeps the Anthropic-first historical order", () => {
