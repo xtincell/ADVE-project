@@ -31,19 +31,59 @@ sont **inchangés** — c'est la même image, construite ailleurs.
    - **Privé** : Coolify → *Sources* / *Docker Registries* → ajouter `ghcr.io` avec
      un PAT GitHub `read:packages`. Coolify tire avec ce token.
 
-2. **Pointer l'application sur l'image.** Coolify → l'app *Upgraders & La fusée* →
-   *General* → **Build Pack → « Docker Image »** → image :
-   `ghcr.io/xtincell/adve-project:latest` · port `3000`.
-   **Ne touche PAS aux variables d'environnement** — elles restent injectées au
-   runtime (DATABASE_URL, NEXTAUTH_SECRET, INTEGRATION_TOKEN_KEY, META_LOGIN_CONFIG_ID,
-   les OAuth…). L'image ne les contient pas.
+2. **Pointer le déploiement sur l'image — via une NOUVELLE ressource.**
+
+   > ⚠️ **« Docker Image » n'est PAS un Build Pack.** Le menu *General → Build Pack*
+   > d'une app git ne propose que Nixpacks / Railpack / Static / Dockerfile /
+   > Docker Compose. « Docker Image » est un **type de ressource**, choisi à la
+   > création — une app créée depuis un dépôt git ne peut pas y être convertie.
+   > (Corrigé le 2026-07-27 : cette étape décrivait une bascule impossible.)
+   >
+   > ⚠️ **Piège associé** : la section *Docker Registry* (« Docker Image » +
+   > « Docker Image Tag ») de l'écran General **ne choisit pas une image à tirer** —
+   > elle nomme l'image que Coolify **construit** sur le VPS. La renseigner ne
+   > déporte rien : le build local continue, il change juste de tag.
+
+   **La manip réelle** (le domaine ne bouge qu'à la toute fin) :
+
+   a. **Copier les variables d'environnement** de l'app actuelle : *Environment
+      Variables* → vue développeur / éditeur brut si ta version l'a → tout copier.
+   b. **+ New → Docker Image** dans le même projet **et sur le même serveur** (il
+      faut le réseau `coolify` pour joindre le Postgres par son nom de conteneur) :
+      image `ghcr.io/xtincell/adve-project`, tag `latest`, port `3000`.
+   c. **Coller les variables**, puis **déployer SANS domaine**. L'entrypoint
+      applique les migrations et démarre — vérifier dans les logs avant d'aller
+      plus loin. L'image ne contient aucun secret : ils sont injectés au runtime
+      (DATABASE_URL, NEXTAUTH_SECRET, INTEGRATION_TOKEN_KEY, les OAuth…).
+
+      > ⚠️ **Vérifier `DATABASE_URL` caractère par caractère** (incident
+      > 2026-07-27). Recopié à la main, il avait atterri avec l'hôte `base` au
+      > lieu de `qosouizh7eszymg7z4dupsa7` → l'app démarrait, servait les pages
+      > statiques, **et toute lecture base échouait** en `getaddrinfo EAI_AGAIN
+      > base` : login mort (`prisma.user.findUnique`), `/leaderboard` 500, crons
+      > 500. Diagnostiqué à tort comme « base vide / perdue ». Le tell dans les
+      > logs du conteneur est `EAI_AGAIN <hôte>` — c'est une panne de **résolution
+      > de nom**, jamais une perte de données. Valeur attendue :
+      > `postgres://lafusee:<mdp>@qosouizh7eszymg7z4dupsa7:5432/lafusee`.
+      > Contrôle : `[migrate] N migration(s) appliquée(s) sur 91 (le reste déjà
+      > en base)` prouve que la base historique est bien celle qui est jointe —
+      > `91 sur 91` sur une base censée être peuplée signale au contraire une
+      > base neuve.
+   d. **Basculer les domaines** seulement une fois le conteneur sain : les retirer
+      de l'ancienne app (sinon Traefik voit deux fois le même hôte), les poser sur
+      la nouvelle, redéployer. Les 3 domaines servis : `powerupgraders.com`,
+      `www.powerupgraders.com`, `lafuseev6.powerupgraders.com` (+ le wildcard des
+      pages publiques de marque `<slug>.powerupgraders.com` s'il est configuré).
+   e. **Arrêter l'ancienne app** (la garder *stopped*, pas supprimée — c'est le
+      rollback). Vérifier : `curl https://powerupgraders.com/api/version`.
 
 3. **Secrets GitHub pour le redeploy** : repo → *Settings* → *Secrets and
    variables* → *Actions* → ajouter `COOLIFY_URL` (`https://coolify.powerupgraders.com`),
    `COOLIFY_TOKEN`, `COOLIFY_APP_UUID` (`rfkgtj7us50jlbaiz1tjke2a`). Ils servent
    au redeploy **manuel** (`workflow_dispatch` avec `notify_coolify` coché). **⚠
-   Pré-requis** : Build Pack = « Docker Image » (étape 2) — sinon la notification
-   déclenche un `next build` sur le VPS (OOM).
+   Pré-requis** : `COOLIFY_APP_UUID` doit être celui de la **ressource Docker
+   Image** (étape 2) — pointé sur l'ancienne app git, le redeploy relancerait un
+   `next build` sur le VPS (OOM).
 
 > **DÉPLOIEMENT 100 % MANUEL (décision opérateur 2026-07-15).** `build-image.yml`
 > n'a **plus aucun trigger automatique** : le push sur `main` ne construit plus
@@ -64,9 +104,10 @@ Le VPS ne compile plus jamais. Un déploiement devient un pull de quelques secon
 
 ## Rollback
 
-Revenir en source **« Dockerfile »** (ou « Nixpacks ») dans le même écran Coolify
-*General* → Build Pack. Rien d'autre à défaire ; le workflow peut rester (il
-publie une image inutilisée, sans effet).
+L'ancienne app git est **conservée à l'arrêt** (étape 2e) : rendre les domaines à
+cette app et la redémarrer restaure l'état d'avant, au prix d'un `next build` sur
+le VPS. Rien d'autre à défaire ; le workflow peut rester (il publie une image
+inutilisée, sans effet).
 
 ## Vérifier une image avant de basculer
 

@@ -21,7 +21,13 @@ import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { getOperatorContext } from "@/server/services/operator-isolation";
 import { accessibleStrategyIds } from "@/server/trpc/middleware/strategy-scope";
-import { getClient, issueAuthCode, redirectUriAllowed, type OAuthScope } from "@/server/services/anubis/mcp-oauth";
+import {
+  getClient,
+  issueAuthCode,
+  redirectUriAllowed,
+  resolveOrigin,
+  type OAuthScope,
+} from "@/server/services/anubis/mcp-oauth";
 
 interface AuthzParams {
   clientId: string;
@@ -131,8 +137,13 @@ export async function GET(request: Request) {
 
   const session = await auth();
   if (!session?.user) {
+    // Origine PUBLIQUE obligatoire : `url.origin` vient de `request.url`, qui
+    // derrière Traefik/Coolify porte l'adresse de bind du conteneur
+    // (`0.0.0.0:80`) → le navigateur ne peut pas suivre la redirection
+    // (incident OAuth 2026-07-27). `resolveOrigin` lit x-forwarded-host/proto.
     const callbackUrl = url.pathname + url.search;
-    return NextResponse.redirect(new URL(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`, url.origin), { status: 302 });
+    const target = new URL(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`, resolveOrigin(request));
+    return NextResponse.redirect(target, { status: 302 });
   }
 
   const options = await scopeOptions(session.user.id);

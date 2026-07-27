@@ -1,5 +1,24 @@
 # Changelog — La Fusee
 
+## v6.27.335 — fix(anubis): OAuth MCP — la redirection vers /login pointait sur l'adresse de bind (2026-07-27)
+
+**Le connecteur claude.ai atteignait `/api/mcp/oauth/authorize`, qui le renvoyait vers `https://0.0.0.0:80/login?…` — injoignable (Safari : « Non autorisé à utiliser le port réseau limité »). Le flux OAuth d'ADR-0183 mourait donc à l'étape session.**
+
+- **La cause** : le handler `GET` construisait la redirection sur `new URL(request.url).origin`. Derrière Traefik/Coolify, `request.url` porte l'**adresse d'écoute du conteneur** (`0.0.0.0:80`), pas l'origine publique. `resolveOrigin()` — qui lit `x-forwarded-host`/`x-forwarded-proto` — existait déjà dans le même module mais n'était pas appelée là (les `.well-known` l'utilisaient, d'où une découverte correcte et un échec seulement à `/login`).
+- **Le correctif** : la redirection passe par `resolveOrigin(request)`. En défense en profondeur, `resolveOrigin` **refuse désormais toute adresse de bind** (`0.0.0.0`, `127.0.0.1`, `localhost`, `::`, `::1`, y compris en IPv6 entre crochets) même portée par l'en-tête `host`, et retombe sur `NEXTAUTH_URL` → `NEXT_PUBLIC_BASE_URL`.
+- **Test `mcp-oauth-origin`** (5 cas) — il a d'ailleurs attrapé un trou dans la première version du correctif : `[::]:80` échappait à la détection, `split(":")` découpant à l'intérieur de l'adresse IPv6.
+- tsc 0 · lint 0 · 28 tests OAuth/MCP verts. 0 modèle Prisma, 0 migration, 0 LLM.
+
+## v6.27.334 — docs(deploy): BUILD-DEPORT — « Docker Image » n'est pas un Build Pack (2026-07-27)
+
+**La doc de bascule décrivait une manip qui n'existe pas. Suivie à la lettre, elle a coûté une heure à l'opérateur et vidé le champ des domaines de l'app de prod.**
+
+- **Le défaut** : l'étape 2 disait « *General* → **Build Pack → « Docker Image »** ». Dans Coolify, le Build Pack d'une app git ne propose que Nixpacks / Railpack / Static / Dockerfile / Docker Compose — « Docker Image » est un **type de ressource** choisi à la création, et une app créée depuis un dépôt git ne peut pas y être convertie.
+- **Le piège associé, maintenant documenté** : la section *Docker Registry* (« Docker Image » + « Docker Image Tag ») du même écran ne choisit **pas** une image à tirer — elle nomme l'image que Coolify **construit sur le VPS**. La renseigner ne déporte rien (le build local continue, il change de tag) ; c'est ce qui a fait croire à une bascule effective.
+- **Étape 2 réécrite** en manip réelle et ordonnée : copier les variables → `+ New → Docker Image` (même projet **et même serveur**, pour le réseau `coolify` qui joint le Postgres) → coller les variables → déployer **sans domaine** et vérifier les logs → basculer les 3 domaines (`powerupgraders.com`, `www.`, `lafuseev6.`) seulement ensuite → arrêter l'ancienne app sans la supprimer (c'est le rollback). Rollback et pré-requis `COOLIFY_APP_UUID` réalignés sur cette procédure.
+- **Piège `DATABASE_URL` documenté (incident du jour)** : recopié à la main lors de la création de la ressource Docker Image, il avait atterri avec l'hôte `base` → l'app démarrait mais toute lecture base échouait (`getaddrinfo EAI_AGAIN base`) : login mort, `/leaderboard` 500, crons 500 — diagnostiqué à tort comme « base vide / perdue ». La doc impose désormais la vérification caractère par caractère et donne les deux signaux discriminants : `EAI_AGAIN <hôte>` dans les logs (résolution de nom, jamais perte de données) et le compteur de migrations au boot (`N sur 91, le reste déjà en base` = base historique bien jointe). Entrée PATCHED-SYMPTOMS dédiée.
+- Documentation seule — 0 code, 0 migration.
+
 ## v6.27.333 — fix(thot): build cassé — `splitName` CinetPay sous noUncheckedIndexedAccess (2026-07-27)
 
 **Le déploiement Coolify de `main` (f247dd7) échouait au `next build` : `cinetpay.ts:66` — `parts[0]` est `string | undefined` sous `noUncheckedIndexedAccess`, assigné à `first: string`. Introduit par la migration Aurore (v6.27.332), qui n'avait pas été type-checkée avant push. TOUT déploiement était bloqué.**
