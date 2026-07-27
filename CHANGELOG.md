@@ -1,5 +1,14 @@
 # Changelog — La Fusee
 
+## v6.27.335 — fix(anubis): OAuth MCP — la redirection vers /login pointait sur l'adresse de bind (2026-07-27)
+
+**Le connecteur claude.ai atteignait `/api/mcp/oauth/authorize`, qui le renvoyait vers `https://0.0.0.0:80/login?…` — injoignable (Safari : « Non autorisé à utiliser le port réseau limité »). Le flux OAuth d'ADR-0183 mourait donc à l'étape session.**
+
+- **La cause** : le handler `GET` construisait la redirection sur `new URL(request.url).origin`. Derrière Traefik/Coolify, `request.url` porte l'**adresse d'écoute du conteneur** (`0.0.0.0:80`), pas l'origine publique. `resolveOrigin()` — qui lit `x-forwarded-host`/`x-forwarded-proto` — existait déjà dans le même module mais n'était pas appelée là (les `.well-known` l'utilisaient, d'où une découverte correcte et un échec seulement à `/login`).
+- **Le correctif** : la redirection passe par `resolveOrigin(request)`. En défense en profondeur, `resolveOrigin` **refuse désormais toute adresse de bind** (`0.0.0.0`, `127.0.0.1`, `localhost`, `::`, `::1`, y compris en IPv6 entre crochets) même portée par l'en-tête `host`, et retombe sur `NEXTAUTH_URL` → `NEXT_PUBLIC_BASE_URL`.
+- **Test `mcp-oauth-origin`** (5 cas) — il a d'ailleurs attrapé un trou dans la première version du correctif : `[::]:80` échappait à la détection, `split(":")` découpant à l'intérieur de l'adresse IPv6.
+- tsc 0 · lint 0 · 28 tests OAuth/MCP verts. 0 modèle Prisma, 0 migration, 0 LLM.
+
 ## v6.27.334 — docs(deploy): BUILD-DEPORT — « Docker Image » n'est pas un Build Pack (2026-07-27)
 
 **La doc de bascule décrivait une manip qui n'existe pas. Suivie à la lettre, elle a coûté une heure à l'opérateur et vidé le champ des domaines de l'app de prod.**

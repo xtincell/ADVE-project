@@ -25,12 +25,31 @@ import { db } from "@/lib/db";
  * prod, `request.url` est interne — on privilégie `x-forwarded-*` / `host`.
  * Fallback `NEXTAUTH_URL` puis powerupgraders.com.
  */
+/**
+ * Hôtes d'écoute internes du conteneur — jamais une origine publique valide.
+ * Derrière Traefik/Coolify, `request.url` et parfois l'en-tête `host` portent
+ * l'adresse de bind (`0.0.0.0:80`) : construire une redirection dessus produit
+ * une URL injoignable par le navigateur (incident OAuth 2026-07-27 — Safari :
+ * « Non autorisé à utiliser le port réseau limité »).
+ */
+function isBindAddress(host: string): boolean {
+  const h = host.trim().toLowerCase();
+  // IPv6 littéral entre crochets (`[::]:80`, `[::1]:3000`) — `split(":")` le
+  // découperait à l'intérieur de l'adresse, d'où l'extraction dédiée.
+  const bracketed = /^\[([^\]]*)\]/.exec(h);
+  const bare = bracketed ? (bracketed[1] ?? "") : (h.split(":")[0] ?? "");
+  return bare === "0.0.0.0" || bare === "127.0.0.1" || bare === "localhost" || bare === "::" || bare === "::1";
+}
+
 export function resolveOrigin(request: Request): string {
   const h = request.headers;
   const proto = h.get("x-forwarded-proto")?.split(",")[0]?.trim() || "https";
   const host = h.get("x-forwarded-host")?.split(",")[0]?.trim() || h.get("host")?.trim();
-  if (host) return `${proto}://${host}`;
-  return (process.env.NEXTAUTH_URL || "https://powerupgraders.com").replace(/\/+$/, "");
+  if (host && !isBindAddress(host)) return `${proto}://${host}`;
+  return (process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_BASE_URL || "https://powerupgraders.com").replace(
+    /\/+$/,
+    "",
+  );
 }
 
 /** Métadonnée RFC 9728 — ressource protégée → serveur(s) d'autorisation. */
