@@ -69,7 +69,14 @@ export async function captureEvent(
         channel: enrichedContext.channel,
         pillarFocus: enrichedContext.pillarFocus,
         businessModel: enrichedContext.businessModel,
-        data: enrichedContext.data as Prisma.InputJsonValue,
+        // Attribution canonique : la fonction REÇOIT `strategyId` et ne
+        // l'écrivait nulle part — l'entrée naissait orpheline de sa marque,
+        // donc invisible au prédicat de portée transverse. Même défaut que
+        // `knowledge_graph_ingest`, autre fichier.
+        data: {
+          ...(enrichedContext.data as Record<string, unknown>),
+          ...(strategyId ? { strategyId } : {}),
+        } as Prisma.InputJsonValue,
         successScore: enrichedContext.successScore,
         sourceHash,
       },

@@ -328,6 +328,14 @@ Format JSON strict conforme au schema PillarT :
           type: "market_intelligence_t_pillar",
           pillarContent: JSON.parse(JSON.stringify(pillarContent)),
           weakSignals: JSON.parse(JSON.stringify(weakSignals)),
+          // ATTRIBUTION CANONIQUE. Cette ligne portait `generatedFor` seul —
+          // un nom maison que le prédicat de portée transverse
+          // (`CROSS_BRAND_WHERE`, `seshat/references.ts`) ne connaît pas. Elle
+          // échappait donc au filtre alors qu'elle contient le pilier T
+          // COMPLET d'une marque, et repartait à toute clé de marque via les
+          // outils curés `benchmark_search` / `market_context_get`
+          // (relecture adversariale 2026-07-27).
+          strategyId,
           generatedFor: strategyId,
           generatedAt: new Date().toISOString(),
         } as Prisma.InputJsonValue,

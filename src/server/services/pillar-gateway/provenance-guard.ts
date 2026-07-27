@@ -32,6 +32,21 @@ export interface ProvenanceGuardInput {
   existingProvenance: Record<string, unknown> | null | undefined;
   /** Provenance de l'écriture entrante pour un champ donné. */
   incomingFor: (path: string) => FieldProvenance;
+  /**
+   * Provenance DÉCLARÉE explicitement par l'appelant pour un champ (sinon
+   * `undefined`) — distincte du défaut déduit du système auteur.
+   *
+   * Existe pour un cas que le garde ignorait : **confirmer** une valeur.
+   * Confirmer, c'est laisser la valeur telle quelle et en changer l'AUTORITÉ.
+   * Or le garde court-circuite les champs inchangés (`jsonEqual → continue`) :
+   * l'opérateur qui validait un champ inféré ne posait donc aucune provenance,
+   * la passe suivante obtenait `ALLOW` et écrasait sa validation — pendant que
+   * la procédure lui répondait `provenanceLocked`.
+   *
+   * Ne sert qu'à MONTER en autorité : une déclaration ne peut jamais dégrader
+   * une provenance déjà tracée.
+   */
+  declaredFor?: (path: string) => FieldProvenance | undefined;
 }
 
 export interface ProvenanceGuardResult {
@@ -77,8 +92,16 @@ export function applyProvenanceGuard(input: ProvenanceGuardInput): ProvenanceGua
     const prevVal = previousContent[key];
     const nextVal = newContent[key];
 
-    // Champ inchangé → rien à arbitrer (mais on conserve sa provenance tracée).
-    if (jsonEqual(prevVal, nextVal)) continue;
+    // Champ inchangé → rien à arbitrer sur la VALEUR. Mais si l'appelant
+    // déclare explicitement une provenance supérieure, c'est une confirmation :
+    // on l'enregistre (jamais une dégradation).
+    if (jsonEqual(prevVal, nextVal)) {
+      const declared = input.declaredFor?.(key);
+      if (declared && decideOverwrite(declared, coerceProvenance(provenance[key])) === "ALLOW") {
+        provenance[key] = declared;
+      }
+      continue;
+    }
 
     const existing = coerceProvenance(provenance[key]);
     const incoming = incomingFor(key);

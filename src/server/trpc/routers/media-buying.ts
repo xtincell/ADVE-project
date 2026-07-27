@@ -275,6 +275,11 @@ export const mediaBuyingRouter = createTRPCRouter({
             benchmarks,
             sampleSize: signals.length,
             generatedAt: new Date().toISOString(),
+            // Ces CPM/CPC/CTR sont ceux d'UNE marque (`signals` est filtré sur
+            // `input.strategyId`) publiés sous l'étiquette « benchmark de
+            // secteur » : sans attribution, l'économie média d'une marque
+            // repartait à ses concurrents.
+            strategyId: input.strategyId,
           } as Prisma.InputJsonValue,
           sampleSize: signals.length,
         },

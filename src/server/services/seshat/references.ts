@@ -434,9 +434,15 @@ const CROSS_BRAND_ENTRY_TYPES = ["SECTOR_BENCHMARK", "BRIEF_PATTERN", "CAMPAIGN_
 /**
  * Taille d'échantillon minimale d'un agrégat servi hors de sa marque.
  *
- * Un « benchmark de secteur » calculé sur UNE marque n'est pas un agrégat :
- * c'est le score de cette marque avec une autre étiquette. Trois est le plus
- * petit seuil qui empêche de ré-identifier par différence.
+ * Défense SECONDAIRE, et il faut savoir pourquoi : `sampleSize` ne veut pas
+ * dire la même chose selon l'écrivain. `knowledge-seeder` y met un nombre de
+ * MARQUES agrégées (le sens attendu) ; les écrivains Tarsis y mettent un
+ * nombre de SIGNAUX, qui dépasse 3 trivialement pour une seule marque. Ce
+ * seuil ne peut donc pas porter la garde à lui seul — c'est l'ATTRIBUTION
+ * (`data.strategyId`) qui la porte (relecture adversariale 2026-07-27).
+ *
+ * On le garde quand même : sur les écrivains dont le compte est bien un compte
+ * de marques, il empêche de ré-identifier par différence.
  */
 const MIN_AGGREGATE_SAMPLE = 3;
 

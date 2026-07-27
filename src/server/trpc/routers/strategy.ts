@@ -204,8 +204,11 @@ export const strategyRouter = createTRPCRouter({
             entryType: "SECTOR_BENCHMARK",
             sector: sector,
             market: country ?? "",
-            data: { source: "initial_seed", benchmarkType: "sector_defaults" },
-            successScore: 50,
+            data: { source: "initial_seed", benchmarkType: "sector_defaults", strategyId: strategy.id },
+            // `successScore` est une pertinence 0-1 (elle est servie telle quelle
+            // en `relevance`) : la valeur 50 classait ce placeholder loin devant
+            // toute référence réelle. Rien n'a été mesuré ici — donc `null`.
+            successScore: null,
             sampleSize: 0,
             sourceHash: `seed-${strategy.id}`,
           },

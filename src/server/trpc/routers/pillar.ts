@@ -1386,11 +1386,10 @@ Propose une nouvelle valeur cohérente avec l'intention, en respectant le schém
         : qualifiedPath;
       const topKey = bare.split(/[.[]/)[0];
 
-      await ctx.db.pillar.update({
-        where: { id: pillar.id },
-        data: { fieldCertainty: certainty as Prisma.InputJsonValue },
-      });
-
+      // La PROVENANCE d'abord, le badge ensuite : l'ordre inverse laissait le
+      // badge supprimé quand la gateway refusait l'écriture — l'opérateur
+      // voyait « confirmé » sur un champ dont l'autorité n'avait pas bougé.
+      let provenanceLocked: string | null = null;
       if (topKey && topKey in content) {
         const w = await writePillarAndScore({
           strategyId: input.strategyId,
@@ -1401,11 +1400,22 @@ Propose une nouvelle valeur cohérente avec l'intention, en respectant le schém
             userId: ctx.session.user.id,
             reason: `Confirmation opérateur de « ${qualifiedPath} » — provenance HUMAN`,
           },
+          // DÉCLARATION explicite : la valeur ne change pas, seule son autorité
+          // change. Sans elle le garde court-circuite le champ inchangé et
+          // n'écrit rien — la confirmation était un no-op qui se déclarait
+          // verrou (relecture adversariale 2026-07-27).
+          options: { fieldProvenance: { [topKey]: "HUMAN" } },
         });
         assertWritten(w, "confirmInferredField");
+        provenanceLocked = topKey;
       }
 
-      return { ok: true, alreadyConfirmed: false, provenanceLocked: topKey ?? null };
+      await ctx.db.pillar.update({
+        where: { id: pillar.id },
+        data: { fieldCertainty: certainty as Prisma.InputJsonValue },
+      });
+
+      return { ok: true, alreadyConfirmed: false, provenanceLocked };
     }),
 });
 
