@@ -22,6 +22,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { effectiveTier } from "@/domain/brand-tier";
 import { ADVE_COMPOSITE_MAX, readCompositeFromVector } from "@/domain/brand-scores";
+import { computeProvenanceBreakdown } from "@/domain/field-provenance";
 import { PILLAR_KEYS, PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
 import { ADVE_KEYS } from "@/domain";
 
@@ -193,7 +194,7 @@ export const tools: ToolDefinition[] = [
   {
     name: "getAdveRtis",
     description:
-      "La stratégie ADVE-RTIS de la marque : les 8 piliers (A Authenticité, D Distinction, V Valeur, E Engagement, R Risk, T Track, I Innovation, S Strategy). Pour chaque pilier : son nom, un résumé lisible et son score. C'est le cœur de l'exposition de l'ADVERTIS à un agent.",
+      "La stratégie ADVE-RTIS de la marque : les 8 piliers (A Authenticité, D Distinction, V Valeur, E Engagement, R Risk, T Track, I Innovation, S Strategy). Pour chaque pilier : son nom, un résumé lisible, son score de complétude structurelle, et sa PROVENANCE (part de champs déclarés vs inférés par l'IA, et la liste des champs inférés). Le score mesure la complétude, PAS la fiabilité : deux piliers au même score peuvent reposer l'un sur du déclaré, l'autre sur du généré — lire `provenance.declaredRatio` pour trancher (`null` = provenance non tracée sur ce pilier, pas « tout inféré »).",
     inputSchema: z.object({
       strategyId: z.string().describe("ID de la marque"),
       keys: z
@@ -220,11 +221,27 @@ export const tools: ToolDefinition[] = [
       const pillars = requested.map((key) => {
         const content = byKey.get(key) ?? {};
         const score = typeof vec[key] === "number" ? (vec[key] as number) : null;
+        // La provenance était TRACÉE à l'écriture et exposée nulle part : un
+        // lecteur voyait un pilier scoré sans savoir si son socle est déclaré ou
+        // généré (audit MCP §6). Le score ne bouge PAS — `scoring.ts` est le
+        // canon figé d'une complétude structurelle (ADR-0102) ; pondérer par la
+        // provenance serait un changement de doctrine, décision opérateur.
+        const prov = computeProvenanceBreakdown(
+          (content._fieldProvenance ?? null) as unknown,
+        );
         return {
           key,
           name: PILLAR_NAMES[key],
           score,
           present: Object.keys(content).length > 0,
+          provenance: {
+            // `null` = aucune provenance tracée sur ce pilier. Surtout pas 0,
+            // qui se lirait « tout est inféré ».
+            declaredRatio: prov.declaredRatio,
+            trackedFields: prov.tracked,
+            counts: prov.counts,
+            inferredFields: prov.inferredFields,
+          },
           headline: pillarHeadline(content),
         };
       });

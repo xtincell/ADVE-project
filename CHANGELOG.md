@@ -1,5 +1,15 @@
 # Changelog — La Fusee
 
+## v6.27.341 — feat(seshat): la provenance cesse d'être décorative (2026-07-27)
+
+**Audit MCP §6 : « `_fieldProvenance` existe et ne sert à rien ». Le champ était tracé à l'écriture depuis des mois — sur le pilier A de SPAWT, `doctrine`, `prophecy`, `originMyth` sont marqués INFERRED — et exposé nulle part. Un lecteur voyait un pilier scoré 17,4 sans pouvoir distinguer un socle réel d'un socle généré.**
+
+- **`computeProvenanceBreakdown`** (Layer 0, pur) : compte les champs par niveau, rend `declaredRatio` (part HUMAN+SOURCE) et **nomme les champs inférés** — la liste de travail de l'opérateur, pas un pourcentage opaque.
+- **`null` n'est pas 0.** Un pilier sans provenance tracée rend `declaredRatio: null` — « non tracé ». Rendre 0 se lirait « tout est inféré » et serait un mensonge sur tous les piliers antérieurs au garde de provenance.
+- **Exposé dans `getAdveRtis`**, par pilier, avec une description d'outil qui dit explicitement ce que le score n'est pas : « le score mesure la complétude, PAS la fiabilité ; deux piliers au même score peuvent reposer l'un sur du déclaré, l'autre sur du généré ».
+- **Le score ne bouge pas — et c'est délibéré.** L'audit recommandait de « plafonner le score d'un pilier majoritairement inféré ». `scoring.ts` est le canon **figé** d'une complétude structurelle (ADR-0102, gardé par `scoring-base-canon`) ; y injecter la provenance est un **changement de doctrine** qui appartient à l'opérateur et exige un ADR — pas un effet de bord d'une fonction d'affichage. La mesure est désormais visible ; la décision de la faire peser reste à prendre.
+- 5 tests dédiés. Suite complète : **323 fichiers, 3485 tests verts**. 0 modèle Prisma, 0 migration, 0 LLM.
+
 ## v6.27.340 — fix(ci): tests alignés sur la doctrine corrigée + 5 tests qui mesuraient la machine (2026-07-27)
 
 **Deux tests contredisaient la doctrine qu'ils prétendaient garder ; cinq autres étaient verts en CI et rouges en local — ils mesuraient l'environnement, pas le code.**

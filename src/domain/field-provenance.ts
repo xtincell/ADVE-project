@@ -102,3 +102,62 @@ export const FIELD_PROVENANCE_LABEL: Record<FieldProvenance, string> = {
   INFERRED: "Inféré IA",
   UNKNOWN: "Origine inconnue",
 };
+
+/**
+ * Part de la matière d'un pilier qui repose sur du DÉCLARÉ plutôt que sur de
+ * l'inféré.
+ *
+ * Motivation (audit MCP 2026-07-27, §6) : « `_fieldProvenance` existe et ne sert
+ * à rien ». La provenance est tracée à l'écriture — sur le pilier A de SPAWT,
+ * `doctrine`, `prophecy`, `originMyth` sont marqués INFERRED — mais **rien ne
+ * l'expose** : un lecteur voit un pilier scoré 17,4 sans savoir si ce socle est
+ * réel ou généré. Deux marques au même score peuvent être dans deux situations
+ * radicalement différentes.
+ *
+ * Ce que cette fonction fait : elle **compte**. Ce qu'elle ne fait PAS :
+ * modifier un score. `scoring.ts` est le canon figé d'une **complétude
+ * structurelle** (ADR-0102) ; y injecter la provenance serait un changement de
+ * doctrine, qui appartient à l'opérateur et exige un ADR — pas un effet de bord
+ * d'une fonction d'affichage.
+ *
+ * Honnêteté sur l'absence : quand aucun champ n'est tracé (le cas de tous les
+ * piliers antérieurs au garde), `declaredRatio` vaut **`null`** — « non tracé »
+ * — et surtout pas 0, qui se lirait « tout est inféré » et serait un mensonge.
+ */
+export interface ProvenanceBreakdown {
+  /** Nombre de champs tracés par niveau. */
+  counts: Record<FieldProvenance, number>;
+  /** Total de champs portant une provenance tracée. */
+  tracked: number;
+  /**
+   * Part HUMAN+SOURCE sur les champs tracés, 0-1. `null` si rien n'est tracé —
+   * « on ne sait pas » ne se rend jamais par un chiffre.
+   */
+  declaredRatio: number | null;
+  /** Champs tracés INFERRED — ceux qu'un opérateur devrait confirmer. */
+  inferredFields: string[];
+}
+
+/**
+ * @param provenanceMap `commentary._fieldProvenance` d'un pilier (path → niveau).
+ */
+export function computeProvenanceBreakdown(provenanceMap: unknown): ProvenanceBreakdown {
+  const counts: Record<FieldProvenance, number> = { HUMAN: 0, SOURCE: 0, INFERRED: 0, UNKNOWN: 0 };
+  const inferredFields: string[] = [];
+
+  if (provenanceMap && typeof provenanceMap === "object" && !Array.isArray(provenanceMap)) {
+    for (const [path, raw] of Object.entries(provenanceMap as Record<string, unknown>)) {
+      const level = coerceProvenance(raw);
+      counts[level] += 1;
+      if (level === "INFERRED") inferredFields.push(path);
+    }
+  }
+
+  const tracked = counts.HUMAN + counts.SOURCE + counts.INFERRED + counts.UNKNOWN;
+  return {
+    counts,
+    tracked,
+    declaredRatio: tracked === 0 ? null : (counts.HUMAN + counts.SOURCE) / tracked,
+    inferredFields: inferredFields.sort(),
+  };
+}
