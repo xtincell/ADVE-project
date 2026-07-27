@@ -1,5 +1,13 @@
 # Changelog — La Fusee
 
+## v6.27.333 — fix(thot): build cassé — `splitName` CinetPay sous noUncheckedIndexedAccess (2026-07-27)
+
+**Le déploiement Coolify de `main` (f247dd7) échouait au `next build` : `cinetpay.ts:66` — `parts[0]` est `string | undefined` sous `noUncheckedIndexedAccess`, assigné à `first: string`. Introduit par la migration Aurore (v6.27.332), qui n'avait pas été type-checkée avant push. TOUT déploiement était bloqué.**
+
+- Fix : assertion non-nulle `parts[0]!` sur les deux retours — sûre, la longueur est vérifiée juste avant (`parts.length === 1` / implicitement ≥ 2).
+- Réparé en passant : désync de version laissée par v6.27.332 (`package.json` bumpé mais pas `src/lib/version.ts`, resté à 6.27.331) — resynchronisée par le bump atomique.
+- tsc 0. Zéro changement de comportement runtime.
+
 ## v6.27.332 — fix(thot): connecteur CinetPay migré vers l'API « Aurore » v1 (OAuth token) (2026-07-26)
 
 **Constat opérateur : « validation sandbox CinetPay » impossible. Le compte marchand d'UPgraders est sur la nouvelle plateforme CinetPay « Aurore » (`api.cinetpay.net`, v1), que le connecteur — écrit pour l'API checkout classique (`api-checkout.cinetpay.com/v2`, `apikey`+`site_id`) — ne sait pas parler. Contrat Aurore lu dans la doc du panel marchand + le SDK officiel `cinetpay-js`.**

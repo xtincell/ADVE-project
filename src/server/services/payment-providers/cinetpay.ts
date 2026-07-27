@@ -63,8 +63,8 @@ async function getAccessToken(): Promise<string> {
 function splitName(name: string | undefined): { first: string; last: string } {
   const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return { first: "Client", last: "-" };
-  if (parts.length === 1) return { first: parts[0], last: "-" };
-  return { first: parts[0], last: parts.slice(1).join(" ") };
+  if (parts.length === 1) return { first: parts[0]!, last: "-" };
+  return { first: parts[0]!, last: parts.slice(1).join(" ") };
 }
 
 export const cinetpayProvider: PaymentProvider = {
