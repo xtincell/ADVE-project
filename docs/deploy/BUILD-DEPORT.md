@@ -1,5 +1,15 @@
 # Build déporté — l'image se construit en CI, le VPS ne fait que la tirer
 
+> ✅ **BASCULE FAITE — 2026-07-27.** La prod est servie par la ressource Coolify
+> **« Docker Image »** `q9b4m57yh93gxbjykj470giy`, qui tire
+> `ghcr.io/xtincell/adve-project:latest`. **Le VPS ne compile plus.**
+> L'ancienne app git `Upgraders & La fusée` (`rfkgtj7us50jlbaiz1tjke2a`) est
+> **arrêtée volontairement — c'est le rollback** ; son statut `exited` est
+> normal et ne doit JAMAIS être lu comme « app à redémarrer » (un déploiement
+> dessus relancerait un `next build` sur le VPS). La section « Bascule Coolify »
+> ci-dessous est conservée comme **archive de la procédure**, pas comme un
+> reste à faire.
+
 ## Le problème (nuit du 2026-07-12)
 
 Coolify était configuré pour **construire l'app sur le VPS de prod** (`next build`
@@ -79,7 +89,9 @@ sont **inchangés** — c'est la même image, construite ailleurs.
 
 3. **Secrets GitHub pour le redeploy** : repo → *Settings* → *Secrets and
    variables* → *Actions* → ajouter `COOLIFY_URL` (`https://coolify.powerupgraders.com`),
-   `COOLIFY_TOKEN`, `COOLIFY_APP_UUID` (`rfkgtj7us50jlbaiz1tjke2a`). Ils servent
+   `COOLIFY_TOKEN`, `COOLIFY_APP_UUID` (**`q9b4m57yh93gxbjykj470giy`** — la
+   ressource Docker Image ; surtout PAS `rfkgtj7us50jlbaiz1tjke2a`, l'app git
+   arrêtée, qui relancerait un build VPS). Ils servent
    au redeploy **manuel** (`workflow_dispatch` avec `notify_coolify` coché). **⚠
    Pré-requis** : `COOLIFY_APP_UUID` doit être celui de la **ressource Docker
    Image** (étape 2) — pointé sur l'ancienne app git, le redeploy relancerait un

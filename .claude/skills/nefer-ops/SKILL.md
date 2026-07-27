@@ -49,18 +49,42 @@ Puis livrer le code+seed par la lane normale (skill `nefer-ship`).
 
 ---
 
-## TEMPS 2 — DÉPLOIEMENT (le code arrive en ligne — AUTOMATIQUE)
+## TEMPS 2 — DÉPLOIEMENT (le code arrive en ligne — MANUEL, image ghcr)
 
-**Le déploiement est AUTOMATIQUE au merge sur `main`** (webhook Coolify ; l'opérateur en lance parfois un aussi de son côté). **NEVER déclencher un déploiement manuel** (`POST /api/v1/deploy`) : il fait un **build EN DOUBLE** de la même image — et sur ce VPS où `next build` OOM, deux (ou trois) builds concurrents = fenêtre d'indispo multipliée + charge serveur inutile. Incident 2026-07-14, consigne opérateur explicite : « le déploiement est automatique après le merge […] ça fait beaucoup d'action sur le serveur ». **Le merge suffit. On attend, on ne pousse pas de build.**
+> ⚠️ **CHANGEMENT DE RÉGIME — 2026-07-27. Ce qui suit remplace la consigne « le déploiement est automatique au merge, ne jamais déployer à la main », qui était vraie du build-sur-VPS et est FAUSSE depuis la bascule build-déporté.** Suivre l'ancienne consigne aujourd'hui = merger, attendre un déploiement qui n'arrive jamais, et annoncer « shippé en prod » alors que rien n'est en ligne.
+
+**La prod est une ressource Coolify de type « Docker Image »** qui tire `ghcr.io/xtincell/adve-project:latest`. **Le VPS ne compile plus rien.** Conséquences directes :
+
+- **Merger sur `main` ne déploie RIEN.** Ni webhook git, ni build. `build-image.yml` n'a aucun trigger automatique (décision opérateur 2026-07-15).
+- **Le déploiement est en DEUX temps, tous deux manuels et peu coûteux** :
+  1. **Construire l'image** — Actions → *Build image (ghcr)* → *Run workflow* sur `main`. Elle est bootée contre un Postgres jetable et n'est publiée que si elle sert `/login` en 200 : une image cassée n'atteint jamais le registre.
+  2. **Faire tirer la prod** — redéploiement/redémarrage de la ressource. C'est un `docker pull` + swap de conteneur : **quelques secondes, aucun build, aucun risque d'OOM**. L'ancienne peur du « build en double » n'a plus d'objet.
+
+**Les deux UUID — ne jamais les confondre :**
+
+| Ressource | UUID | Rôle |
+|---|---|---|
+| **PROD** — `docker-image-…` (build pack `dockerimage`) | `q9b4m57yh93gxbjykj470giy` | Sert les 3 domaines. **C'est la seule à déployer.** |
+| ~~`Upgraders & La fusée`~~ (build pack `dockerfile`, git) | `rfkgtj7us50jlbaiz1tjke2a` | **ARRÊTÉE VOLONTAIREMENT = le rollback.** Son statut `exited` est NORMAL, ce n'est pas une panne. |
+
+**NEVER redéployer `rfkgtj…`** : elle est en build pack `dockerfile`, donc un déploiement y relance un `next build` **sur le VPS** — l'OOM qu'on a fui — en concurrence RAM avec la prod vivante, et pour rien puisqu'elle n'a plus de domaines. Un handoff a déjà commis cette erreur (2026-07-27) en lisant son `exited` comme « app DOWN à redémarrer ».
+
+```bash
+# redéploiement de la PROD (pull + swap) — UUID de la ressource Docker Image
+curl -sS -X GET -H "Authorization: Bearer $COOLIFY_TOKEN" \
+  "https://coolify.powerupgraders.com/api/v1/applications/q9b4m57yh93gxbjykj470giy/restart"
+```
+
+**Une variable d'environnement n'est lue qu'au boot** : la poser ne suffit pas, il faut redémarrer. Et un `PATCH /envs` ne met à jour que l'existant (404 sinon) — pour créer, c'est `POST /envs`.
 
 - **Surveiller PASSIVEMENT** la bascule via l'endpoint version (simple GET, zéro charge) — jamais `sleep` bloquant en boucle ; un timer background qui ré-réveille le turn :
   ```bash
   curl -sS --max-time 15 https://powerupgraders.com/api/version   # → {"version":"6.27.XYZ"}
   ```
   Comparer à `src/lib/version.ts` (`APP_VERSION`). Version servie == version mergée → image en ligne → enchaîner TEMPS 3.
-- **Blackout OOM** : `next build` sur le VPS peut OOM (7-20 min, se rétablit seul). Bascule build-déporté (image CI, VPS tire seulement) = runbook `docs/deploy/BUILD-DEPORT.md` (action opérateur, réversible). Ne pas paniquer sur une fenêtre d'indispo pendant un build.
-- **Exception — déploiement manuel autorisé UNIQUEMENT si** l'auto-déploiement a échoué / ne s'est pas déclenché, ET après confirmation opérateur explicite. Jamais « pour être sûr » en doublon.
-- **Migrations** : le CLI Prisma est mort dans l'image standalone ; le boot applique via `scripts/apply-migrations.mjs`. Une migration se propage donc au **prochain déploiement** — ne pas suggérer `prisma migrate deploy` dans le conteneur.
+- **Blackout OOM — HISTORIQUE, plus d'actualité.** La bascule build-déporté est **FAITE** (2026-07-27) : le VPS ne compile plus, donc plus de fenêtre d'indispo au déploiement. Runbook + pièges : `docs/deploy/BUILD-DEPORT.md`.
+- **Diagnostic quand la version ne bouge pas** : logs du conteneur via `GET /api/v1/applications/q9b4m57yh93gxbjykj470giy/logs?lines=120`. Le tell d'une base injoignable est `getaddrinfo EAI_AGAIN <hôte>` — c'est une panne de **résolution de nom**, JAMAIS une perte de données ; le compteur `[migrate] N migration(s) appliquée(s) sur M (le reste déjà en base)` prouve quelle base est réellement jointe.
+- **Migrations** : le CLI Prisma est mort dans l'image standalone ; le boot applique via `scripts/apply-migrations.mjs`. Une migration se propage donc au **prochain déploiement — qu'il faut déclencher** (voir ci-dessus) — ne pas suggérer `prisma migrate deploy` dans le conteneur.
 
 ---
 

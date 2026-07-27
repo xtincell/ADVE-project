@@ -274,6 +274,33 @@ Refactor Code of Conduct (Phase 0, mandatory):
 
 For semantic project context (pillar semantics, philosophy, Mestor swarm details, Console levels, LLM architecture decisions, the 9 stub routers from the Windows machine), see [docs/governance/context/MEMORY.md](docs/governance/context/MEMORY.md) and the files it indexes.
 
+## Déploiement prod (à lire avant toute action « mettre en ligne »)
+
+**La prod tourne sur une ressource Coolify de type « Docker Image »** qui tire
+`ghcr.io/xtincell/adve-project:latest`. **Le VPS ne compile plus rien** (bascule
+build-déporté faite le 2026-07-27 — runbook + pièges : [docs/deploy/BUILD-DEPORT.md](docs/deploy/BUILD-DEPORT.md),
+protocole opérationnel : skill `nefer-ops` TEMPS 2).
+
+- **Merger sur `main` ne déploie RIEN.** Aucun webhook, aucun build automatique.
+  Livrer = (1) Actions → *Build image (ghcr)* → *Run workflow* sur `main`, puis
+  (2) redémarrer la ressource prod. C'est un `docker pull` + swap : quelques
+  secondes, aucun risque d'OOM. Annoncer « shippé en prod » après un simple merge
+  est **faux**.
+- **Deux UUID Coolify, à ne jamais confondre** — PROD = `q9b4m57yh93gxbjykj470giy`
+  (build pack `dockerimage`, sert les 3 domaines). L'app git
+  `Upgraders & La fusée` = `rfkgtj7us50jlbaiz1tjke2a` est **arrêtée
+  volontairement : c'est le rollback**. Son statut `exited` est NORMAL —
+  la redéployer relancerait un `next build` sur le VPS (l'OOM qu'on a fui), en
+  concurrence avec la prod vivante et sans domaines. Un handoff a déjà commis
+  cette erreur le 2026-07-27.
+- **Une variable d'environnement n'est lue qu'au boot** : la poser ne suffit pas,
+  il faut redémarrer. Côté API Coolify, `PATCH /envs` ne met à jour que
+  l'existant (404 sinon) ; pour créer, c'est `POST /envs`.
+- **Diagnostic** : `GET /api/v1/applications/<uuid>/logs`. Le tell d'une base
+  injoignable est `getaddrinfo EAI_AGAIN <hôte>` — panne de **résolution de nom**,
+  JAMAIS une perte de données ; le compteur `[migrate] N migration(s)
+  appliquée(s) sur M (le reste déjà en base)` prouve quelle base est jointe.
+
 ## Stack
 
 Next.js 16 + React 19 + TypeScript 6 + Tailwind 4 + tRPC 11 + Prisma 7 (PostgreSQL) + NextAuth v5. LLM Gateway central (multi-provider — cascade Anthropic→OpenAI→Ollama→OpenRouter, circuit breaker, cost tracking, headroom) in `src/server/services/llm-gateway/`. Hybrid RAG + multi-provider embeddings (Ollama → OpenAI → no-op) since V5.2. Vitest 4 + Playwright 1.59 for tests. CVA 0.7 for design-system variants. ESLint 10 + madge 8 enforce the layering cascade.
