@@ -55,6 +55,20 @@ sont **inchangés** — c'est la même image, construite ailleurs.
       applique les migrations et démarre — vérifier dans les logs avant d'aller
       plus loin. L'image ne contient aucun secret : ils sont injectés au runtime
       (DATABASE_URL, NEXTAUTH_SECRET, INTEGRATION_TOKEN_KEY, les OAuth…).
+
+      > ⚠️ **Vérifier `DATABASE_URL` caractère par caractère** (incident
+      > 2026-07-27). Recopié à la main, il avait atterri avec l'hôte `base` au
+      > lieu de `qosouizh7eszymg7z4dupsa7` → l'app démarrait, servait les pages
+      > statiques, **et toute lecture base échouait** en `getaddrinfo EAI_AGAIN
+      > base` : login mort (`prisma.user.findUnique`), `/leaderboard` 500, crons
+      > 500. Diagnostiqué à tort comme « base vide / perdue ». Le tell dans les
+      > logs du conteneur est `EAI_AGAIN <hôte>` — c'est une panne de **résolution
+      > de nom**, jamais une perte de données. Valeur attendue :
+      > `postgres://lafusee:<mdp>@qosouizh7eszymg7z4dupsa7:5432/lafusee`.
+      > Contrôle : `[migrate] N migration(s) appliquée(s) sur 91 (le reste déjà
+      > en base)` prouve que la base historique est bien celle qui est jointe —
+      > `91 sur 91` sur une base censée être peuplée signale au contraire une
+      > base neuve.
    d. **Basculer les domaines** seulement une fois le conteneur sain : les retirer
       de l'ancienne app (sinon Traefik voit deux fois le même hôte), les poser sur
       la nouvelle, redéployer. Les 3 domaines servis : `powerupgraders.com`,
