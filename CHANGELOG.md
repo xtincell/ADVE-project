@@ -1,5 +1,14 @@
 # Changelog — La Fusee
 
+## v6.27.343 — fix(cockpit): « Tout accepter » écrit enfin dans le pilier, et on peut revenir à Fondation (2026-07-27)
+
+**Deux points du rapport UX opérateur, tous deux dus à un maillon déclaré mais jamais câblé.**
+
+- **Le cycle de recommandation était coupé en deux, et seule la première moitié existait.** « Accepter » enregistre la décision de revue (PENDING → ACCEPTED) ; c'est `applyRecos` qui écrit dans le pilier, via le gate de remplacement pondéré (ADR-0090). Or `applyRecosMutation` était **déclarée et jamais appelée** : les recommandations acceptées restaient en attente indéfiniment et « Tout accepter » semblait sans effet sur la fiche. Nouvelle barre « Appliquer au pilier » alimentée par une requête sur les ACCEPTED, plus une infobulle qui dit ce que fait « accepter ». Le découpage en deux temps est **conservé** — il existe pour que le gate arbitre l'écriture, le collapser en un clic supprimerait l'arbitrage.
+- **Les avertissements du gate sont rendus.** `applyRecos` retourne `{applied, warnings}` et peut REFUSER une écriture ; n'afficher que `applied` laissait croire à un succès total. Le message dit désormais combien ont été écrites **et** combien ont été écartées, avec la raison.
+- **Retour au hub depuis une page pilier.** Il n'existait aucun chemin de retour : on ne remontait à « Fondation » qu'en re-cliquant l'item de navigation. Les hubs existent depuis ADR-0122 — ils n'étaient pas atteignables de là. Lien de retour posé (Fondation pour les piliers fondateurs, Stratégie pour les dérivés).
+- 324 fichiers / 3496 tests verts. 0 modèle, 0 migration, 0 LLM.
+
 ## v6.27.342 — fix(anubis): remédiation de la relecture adversariale — dont deux fuites que j'avais ouvertes (2026-07-27)
 
 **Deux relecteurs adversariaux passés sur le diff du mégasprint. Verdict utile : le fail-closed tenait sur les outils corrigés, mais le diff lui-même ouvrait trois contournements neufs — dont une fuite inter-marques exploitable. Corrigés avant tout usage client.**

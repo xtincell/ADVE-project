@@ -24,7 +24,7 @@ import {
 } from "./field-renderers";
 import {
   RefreshCw, AlertCircle, CheckCircle, Sparkles, Loader2,
-  ThumbsUp, ThumbsDown, ChevronRight, ChevronDown, Pencil,
+  ThumbsUp, ThumbsDown, ChevronRight, ChevronDown, Pencil, ArrowLeft,
 } from "lucide-react";
 import Link from "next/link";
 import { AmendPillarModal } from "@/components/pillars/amend-pillar-modal";
@@ -209,6 +209,18 @@ export function PillarPage({ pageKey }: PillarPageProps) {
     { enabled: !!strategyId && isAdve },
   );
 
+  // Recommandations ACCEPTÉES mais pas encore écrites dans le pilier.
+  //
+  // Le cycle est en DEUX temps volontairement : « accepter » enregistre la
+  // décision de revue (PENDING → ACCEPTED), « appliquer » écrit dans le pilier
+  // en passant par le gate de remplacement pondéré (ADR-0090). Or seul le
+  // premier temps était câblé côté UI : `applyRecos` était déclaré et jamais
+  // appelé, donc « Tout accepter » ne changeait effectivement rien au pilier.
+  const acceptedRecosQuery = trpc.notoria.getRecosByPillar.useQuery(
+    { strategyId: strategyId ?? "", pillarKey: upperKey, status: "ACCEPTED" },
+    { enabled: !!strategyId && isAdve },
+  );
+
   // RTIS pages: aggregate ADVE pending reco counts via Notoria
   const pendingCountsQuery = trpc.notoria.getPendingCounts.useQuery(
     { strategyId: strategyId ?? "" },
@@ -232,7 +244,13 @@ export function PillarPage({ pageKey }: PillarPageProps) {
     onSuccess: () => {
       pillarQuery.refetch();
       recosQuery.refetch();
-      setEnrichResult({ type: "success", message: "Recommandations acceptees." });
+      // Rafraîchir la file des acceptées : c'est elle qui fait apparaître le
+      // bouton « Appliquer au pilier », le geste qui écrit réellement.
+      acceptedRecosQuery.refetch();
+      setEnrichResult({
+        type: "success",
+        message: "Recommandations acceptées — reste à les appliquer au pilier.",
+      });
     },
     onError: (err: any) => {
       const raw = err?.data?.message ?? err?.message ?? "Erreur lors de l'acceptation";
@@ -241,10 +259,22 @@ export function PillarPage({ pageKey }: PillarPageProps) {
     },
   });
   const applyRecosMutation = trpc.notoria.applyRecos.useMutation({
-    onSuccess: () => {
+    onSuccess: (res: { applied: number; warnings: string[] }) => {
       pillarQuery.refetch();
       recosQuery.refetch();
-      setEnrichResult({ type: "success", message: "Recommandations appliquees sur le pilier." });
+      acceptedRecosQuery.refetch();
+      assessQuery.refetch();
+      // Le gate de remplacement pondéré (ADR-0090) peut REFUSER une écriture :
+      // rendre `applied` seul laisserait croire à un succès total alors qu'une
+      // partie a été écartée. Les avertissements sont la moitié du résultat.
+      const warned = res.warnings?.length ?? 0;
+      setEnrichResult({
+        type: warned > 0 ? "error" : "success",
+        message:
+          warned > 0
+            ? `${res.applied} recommandation(s) écrite(s) dans le pilier · ${warned} écartée(s) : ${res.warnings.join(" · ")}`
+            : `${res.applied} recommandation(s) écrite(s) dans le pilier.`,
+      });
     },
     onError: (err: any) => { setEnrichResult({ type: "error", message: err?.message ?? "Erreur lors de l'application" }); },
   });
@@ -434,6 +464,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
   // moins efficaces » restait invisible. On trie les meilleures d'abord.
   const recoScore = (r: Record<string, unknown>) => (typeof r.weightedScore === "number" ? r.weightedScore : -1);
   const sortedRecos = [...pendingRecos].sort((a, b) => recoScore(b) - recoScore(a));
+  const acceptedRecos = (acceptedRecosQuery.data ?? []) as Array<{ id: string }>;
 
   // RTIS pages: pending counts from Notoria
   const pendingCounts = pendingCountsQuery?.data ?? {};
@@ -475,6 +506,18 @@ export function PillarPage({ pageKey }: PillarPageProps) {
           }}
         />
       ) : null}
+
+      {/* ── Retour au hub ────────────────────────────────────────────
+          Une page pilier n'avait AUCUN chemin de retour : on ne pouvait
+          remonter à son hub qu'en re-cliquant l'item de nav. Les hubs existent
+          depuis ADR-0122 — ils n'étaient simplement pas atteignables d'ici. */}
+      <Link
+        href={isAdve ? "/cockpit/brand/fondation" : "/cockpit/brand/strategie"}
+        className="inline-flex items-center gap-1.5 text-sm text-foreground-secondary hover:text-foreground"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        {isAdve ? "Fondation" : "Stratégie"}
+      </Link>
 
       {/* ── Header — 3-level scoring ─────────────────────────────── */}
       <div className="rounded-lg border border-white/5 bg-surface-raised px-4 py-3">
@@ -952,6 +995,35 @@ export function PillarPage({ pageKey }: PillarPageProps) {
         );
       })() : null}
 
+      {/* ── Recommandations acceptées, en attente d'écriture ──────────
+          Deuxième temps du cycle : « accepter » enregistre la décision de
+          revue, « appliquer » écrit dans le pilier via le gate de remplacement
+          pondéré. Sans cette barre, les recommandations acceptées restaient en
+          attente indéfiniment et « Tout accepter » semblait sans effet. */}
+      {isAdve && acceptedRecos.length > 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-success/20 bg-success/5 p-4">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="h-4 w-4 text-success" />
+            <span className="text-sm text-foreground">
+              {acceptedRecos.length} recommandation(s) acceptée(s), pas encore écrite(s) dans le pilier.
+            </span>
+          </div>
+          <button
+            onClick={() =>
+              applyRecosMutation.mutate({
+                strategyId: strategyId!,
+                recoIds: acceptedRecos.map((r) => r.id),
+              })
+            }
+            disabled={applyRecosMutation.isPending}
+            className="flex items-center gap-1 rounded px-3 py-1.5 text-xs font-medium bg-success/20 text-success hover:bg-success/30 disabled:opacity-40"
+          >
+            <CheckCircle className="h-3 w-3" />
+            {applyRecosMutation.isPending ? "Écriture en cours…" : "Appliquer au pilier"}
+          </button>
+        </div>
+      ) : null}
+
       {/* ── Recommendation review panel ────────────────────────────── */}
       {isAdve && pendingRecos.length > 0 ? (
         <div className="rounded-lg border border-warning/20 bg-warning/5 p-4">
@@ -967,6 +1039,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                 acceptRecosMutation.mutate({ strategyId: strategyId!, recoIds: ids });
                 setSelectedRecos(new Set());
               }} disabled={acceptRecosMutation.isPending || pendingRecos.length === 0}
+                title="Enregistre la décision de revue. L'écriture dans le pilier se fait ensuite via « Appliquer au pilier »."
                 className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-success/20 text-success hover:bg-success/30 disabled:opacity-40">
                 <CheckCircle className="h-3 w-3" /> Tout accepter
               </button>
