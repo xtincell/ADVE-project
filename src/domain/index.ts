@@ -16,6 +16,7 @@ export * from "./brand-asset-kinds";
 export * from "./connector-result";
 export * from "./overton-radar-signal";
 export * from "./brand-tier";
+export * from "./brand-scores";
 export * from "./cult-index-tier";
 export * from "./field-provenance";
 export * from "./market-scale";

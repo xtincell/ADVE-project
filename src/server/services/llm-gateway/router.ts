@@ -97,6 +97,21 @@ function idealIndex(ctx: RoutingContext): number {
 }
 
 /**
+ * The routing DECISION alone — quel modèle la matrice choisit pour ce contexte,
+ * **sans regarder quel provider est configuré ici**.
+ *
+ * Séparé de `pickModel` parce que les deux répondent à deux questions
+ * différentes, et que les confondre rendait la matrice de routage intestable :
+ * une machine où seule `OPENAI_API_KEY` est posée voyait « tier S → opus »
+ * retomber sur `gpt-4o-mini` par simple indisponibilité, et le test de
+ * gouvernance passait ou échouait selon les clés présentes dans
+ * l'environnement, pas selon le code.
+ */
+export function idealModel(ctx: RoutingContext): ModelChoice {
+  return CATALOG[Math.min(idealIndex(ctx), CATALOG.length - 1)]!;
+}
+
+/**
  * Pick the best model given the routing context. Falls back through the
  * catalog if the preferred model is unavailable. Returns null only if
  * no model is configured at all.

@@ -20,7 +20,8 @@
 
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { classifyTier } from "@/domain/brand-tier";
+import { effectiveTier } from "@/domain/brand-tier";
+import { ADVE_COMPOSITE_MAX, readCompositeFromVector } from "@/domain/brand-scores";
 import { PILLAR_KEYS, PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
 import { ADVE_KEYS } from "@/domain";
 
@@ -75,25 +76,42 @@ export const tools: ToolDefinition[] = [
       const strategyId = input.strategyId as string;
       const strategy = await db.strategy.findUnique({
         where: { id: strategyId },
-        select: { id: true, name: true, sector: true, advertis_vector: true },
+        // `sector` vit sur `Client`, PAS sur `Strategy` (le sélectionner ici
+        // levait une PrismaClientValidationError qui renvoyait à l'appelant la
+        // liste complète des champs du modèle — fuite de schéma, audit MCP P0).
+        select: {
+          id: true,
+          name: true,
+          advertis_vector: true,
+          apogeeTier: true,
+          client: { select: { sector: true } },
+        },
       });
       if (!strategy) return { error: "NOT_FOUND", strategyId };
       const [pillarA, pillarD] = await Promise.all([
         loadPillar(strategyId, "a"),
         loadPillar(strategyId, "d"),
       ]);
-      const vec = asRecord(strategy.advertis_vector);
-      const composite = typeof vec.compositeScore === "number" ? vec.compositeScore : null;
+      const composite = readCompositeFromVector(strategy.advertis_vector);
       return {
         strategyId: strategy.id,
         name: strategy.name,
-        sector: strategy.sector ?? pillarA.secteur ?? null,
+        sector: strategy.client?.sector ?? pillarA.secteur ?? null,
         archetype: pillarA.archetype ?? null,
         accroche: pillarA.accroche ?? null,
         positionnement: pillarD.positionnement ?? null,
         promesseMaitre: pillarD.promesseMaitre ?? null,
+        // Nommée : c'est la COMPLÉTUDE STRUCTURELLE /200 (ADR-0102), pas
+        // l'indice d'attachement ni la force révélée (cf. domain/brand-scores).
+        completudeStructurelle: { value: composite, max: ADVE_COMPOSITE_MAX },
+        /** @deprecated alias de compatibilité — lire `completudeStructurelle`. */
         compositeScore: composite,
-        tier: composite != null ? classifyTier(composite) : null,
+        // Palier OFFICIEL s'il a été posé par une transition gouvernée
+        // (ADR-0167), sinon dérivé du composite. Jamais `classifyTier` en direct.
+        tier:
+          composite != null || strategy.apogeeTier
+            ? effectiveTier({ apogeeTier: strategy.apogeeTier, composite })
+            : null,
       };
     },
   },
@@ -138,10 +156,13 @@ export const tools: ToolDefinition[] = [
         };
       });
 
+      const composite = readCompositeFromVector(strategy.advertis_vector);
       return {
         strategyId,
         method: "ADVE-RTIS",
-        compositeScore: typeof vec.compositeScore === "number" ? vec.compositeScore : null,
+        completudeStructurelle: { value: composite, max: ADVE_COMPOSITE_MAX },
+        /** @deprecated alias de compatibilité — lire `completudeStructurelle`. */
+        compositeScore: composite,
         pillars,
       };
     },

@@ -1,5 +1,17 @@
 # Changelog — La Fusee
 
+## v6.27.337 — fix(seshat): une mesure = un nom = un lecteur (le score n'était pas absent, il était mal lu) (2026-07-27)
+
+**`getBrandCard` jetait une exception Prisma complète — avec la liste des 60+ champs du modèle `Strategy` — et `getAdveRtis` servait `compositeScore: null` sur des marques que le cockpit affichait à « 164/200 ». Ni la mesure ni le scoreur n'étaient en cause : trois lecteurs cherchaient une clé qui n'existe pas.**
+
+- **Le canon des trois mesures** — nouveau `src/domain/brand-scores.ts` (Layer 0, pur) : La Fusée porte trois nombres légitimes et distincts, dont deux portent presque le même nom. **Complétude structurelle** `advertis_vector.composite` /200 (ce que la marque a DÉCLARÉ, ADR-0102, plafonnée par l'évidence ADR-0126) · **indice d'attachement** `CultIndexSnapshot.compositeScore` /100 · **force révélée** `ScoreVerdict.force` /200 (les victoires comptées, ADR-0149). `readCompositeFromVector` est la lecture unique ; `describeScores` les rend côte à côte, **jamais additionnées** (D9). Une mesure absente vaut `null` — « non mesuré » — jamais 0.
+- **Les trois lectures fantômes réparées** : `mcp/advertis` (`getBrandCard`, `getAdveRtis`) et `campaign-canon` lisaient `advertis_vector.compositeScore` — le nom de la mesure d'ATTACHEMENT appliqué au vecteur de COMPLÉTUDE, où il n'a jamais existé (le scorer écrit `composite`). Conséquences réelles : score et palier `null` pour tout agent MCP, et **tier LATENT systématique dans le cadrage de campagne canon** (donc budgets conseillés sous-dimensionnés).
+- **Fuite de schéma fermée** : `getBrandCard` sélectionnait `sector` sur `Strategy` — colonne qui vit sur `Client`. La `PrismaClientValidationError` renvoyée à l'appelant énumérait tout le modèle (`llmBudget`, `superfanProfiles`, `strictModeGates`…). Corrigé en `client: { select: { sector: true } }` — **seul site du repo** à faire cette erreur (les cinq autres candidats lisent bien `Client.sector`, `QuickIntake.sector` ou `CampaignReferenceDossier.sector`).
+- **Le palier passe par `effectiveTier`** (ADR-0167) au lieu de `classifyTier` direct : un palier officiel posé par une transition gouvernée n'est plus ignoré en silence par les surfaces MCP.
+- **Test HARD `score-single-truth`** (8 cas) : clé canon asserted contre le scorer, interdiction de relire `.compositeScore` sur un `advertis_vector`, non-fusion des trois mesures, `null` jamais 0, et zéro `classifyTier` direct sous `src/server/mcp`.
+- **Réparé en passant** — `llm-routing.test.ts` était **rouge sur arbre propre** (3 cas) : il asseyait la matrice de routage sur `routeModel`, qui descend le catalogue selon les clés *présentes sur la machine*. Avec seulement `OPENAI_API_KEY` posée, « tier S → opus » retombait légitimement sur `gpt-4o-mini` — test vert ou rouge selon l'environnement, pas selon le code. Nouvelle fonction `idealModel(ctx)` = la décision de routage seule ; le test sépare décision (6 cas déterministes) et choix runtime (1 cas : ne remonte jamais au-dessus de la décision).
+- 0 modèle Prisma, 0 migration, 0 LLM. tsc 0 · lint 0.
+
 ## v6.27.336 — docs(deploy): le protocole dit enfin que la prod se déploie par image (2026-07-27)
 
 **Le skill `nefer-ops` affirmait « le déploiement est AUTOMATIQUE au merge sur `main` » et « NEVER déclencher un déploiement manuel ». Depuis la bascule build-déporté, les deux sont FAUX et inversés — une session future aurait mergé, attendu un déploiement qui n'arrive jamais, et annoncé « shippé en prod » sur du vide.**
