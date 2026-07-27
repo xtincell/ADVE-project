@@ -37,7 +37,9 @@ export const mestorRouter = createTRPCRouter({
       if (!thread) return { threadId: null, messages: [] };
       const rows = await db.assistantMessage.findMany({
         where: { threadId: thread.id },
-        orderBy: { createdAt: "desc" },
+        // `id` en départage : deux messages du même tour peuvent partager
+        // l'horodatage (lignes historiques écrites avant l'horodatage explicite).
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take: 40,
         select: { id: true, role: true, content: true, createdAt: true },
       });
@@ -55,9 +57,33 @@ export const mestorRouter = createTRPCRouter({
     }),
 
   // ── Conseil de marque — délibération adversariale (ADR-0180) ─────────
-  // Query (zéro écriture — advisory pur, précédent previewAmend « lecture LLM ») ;
-  // opérateur only en v1 : 6 appels LLM, le coût reste une décision UPgraders.
-  councilDeliberate: operatorProcedure
+  // Query (zéro écriture — advisory pur, précédent previewAmend « lecture LLM »).
+  /**
+   * Analyse approfondie — convoque RÉELLEMENT les quatre experts contradictoires
+   * (draft du coordinateur → 4 critiques en parallèle → synthèse avec dissensus).
+   *
+   * Était `operatorProcedure` : les experts existaient donc sans qu'aucun
+   * fondateur ne puisse les atteindre, et le coordinateur du chat les niait
+   * quand on l'interrogeait. Ouverte au fondateur de SA marque
+   * (`strategyScopedProcedure` = garde d'appartenance) sous condition
+   * d'abonnement ET d'un budget dédié — **5 appels LLM** quand une position est
+   * fournie (4 critiques + 1 synthèse), **6** sinon (+ 1 position rédigée par le
+   * coordinateur). Le panneau cockpit fournit toujours la position : le chemin
+   * fondateur coûte donc 5.
+   *
+   * Le rate-limit est SÉPARÉ de celui du chat : celui-ci autorise 20 messages à
+   * 1 appel, il aurait autorisé 20 délibérations à 5 — une centaine d'appels sur
+   * le budget de la marque.
+   *
+   * `strategyScopedProcedure` admet aussi les **collaborateurs délégués**
+   * (ADR-0129) : un community manager peut donc déclencher une délibération sur
+   * le budget de la marque. C'est cohérent avec le reste du cockpit (il opère
+   * déjà le calendrier), et c'est ce budget qui en borne le coût.
+   *
+   * Reste une LECTURE : advisory pur, zéro écriture pilier, zéro Intent
+   * (ADR-0180).
+   */
+  councilDeliberate: strategyScopedProcedure
     .input(
       z.object({
         strategyId: z.string(),
@@ -65,7 +91,37 @@ export const mestorRouter = createTRPCRouter({
         draft: z.string().max(8_000).optional(),
       }),
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      const { checkPaidTier } = await import("@/server/services/glory-tools/tier-gate");
+      const gate = await checkPaidTier(ctx.session.user.id, undefined, input.strategyId);
+      if (!gate.allowed) {
+        return {
+          status: "TIER_GATE_DENIED" as const,
+          reason: gate.reason ?? "Abonnement payant requis pour l'analyse approfondie.",
+          configureUrl: gate.configureUrl ?? "/pricing",
+        };
+      }
+      // Disponibilité AVANT budget. Dans l'ordre inverse, fournisseurs à terre
+      // = quatre clics et le fondateur était bloqué dix minutes sans qu'une
+      // seule analyse ait été tentée — avec un message (« trop d'analyses en
+      // peu de temps ») qui était faux.
+      const { isTextLLMAvailable } = await import("@/server/services/llm-gateway");
+      if (!isTextLLMAvailable()) {
+        return {
+          status: "UNAVAILABLE" as const,
+          reason: "Aucun fournisseur d'intelligence disponible — réessayez plus tard.",
+        };
+      }
+      const { consumeDeliberationBudget } = await import(
+        "@/server/services/mestor/council/rate-limit"
+      );
+      if (!(await consumeDeliberationBudget(ctx.session.user.id))) {
+        return {
+          status: "RATE_LIMITED" as const,
+          reason:
+            "Trop d'analyses approfondies en peu de temps — chacune mobilise le conseil au complet. Réessayez dans quelques minutes.",
+        };
+      }
       const { deliberate } = await import("@/server/services/mestor/council");
       return deliberate(input);
     }),

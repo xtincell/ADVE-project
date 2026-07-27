@@ -34,6 +34,7 @@ import { executeFirstValueProtocol } from "@/server/services/pipeline-orchestrat
 import { getCrossRefSummary } from "@/server/services/cross-validator";
 import type { IngestionStatus, PillarFillResult } from "./types";
 import type { Prisma } from "@prisma/client";
+import { reportRefusedWrite } from "../pillar-gateway/refusal";
 
 export { analyzeAndMapSources } from "./ai-filler";
 
@@ -282,13 +283,14 @@ export async function validatePillar(
 
   // Persist via Gateway — operator validation write
   const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
-  await writePillarAndScore({
+  const _w0 = await writePillarAndScore({
     strategyId,
     pillarKey: pillarKey as import("@/lib/types/advertis-vector").PillarKey,
     operation: { type: "MERGE_DEEP", patch: finalContent },
     author: { system: "INGESTION", reason: `Operator validated pillar ${pillarKey}` },
     options: { targetStatus: "VALIDATED", confidenceDelta: 0.05 },
   });
+  reportRefusedWrite(_w0, "ingestion-pipeline");
 
   // Check if all 4 ADVE pillars are validated → auto-trigger RTIS
   const advePillars = await db.pillar.findMany({

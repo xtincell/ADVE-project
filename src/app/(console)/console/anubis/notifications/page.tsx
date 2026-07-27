@@ -75,7 +75,7 @@ function NotificationsInner() {
     <div className="max-w-3xl space-y-8 p-6">
       <header>
         <h1 className="text-2xl font-semibold">Préférences de notification</h1>
-        <p className="text-sm text-[var(--color-text-muted)]">
+        <p className="text-sm text-[var(--color-foreground-muted)]">
           Contrôle quels canaux reçoivent quoi, et quand tu veux être laissé tranquille.
         </p>
       </header>
@@ -118,7 +118,7 @@ function NotificationsInner() {
             />
           </label>
         </div>
-        <p className="text-xs text-[var(--color-text-muted)]">
+        <p className="text-xs text-[var(--color-foreground-muted)]">
           Pendant cette plage, seules les notifications priorité CRITICAL seront poussées.
         </p>
       </section>
@@ -142,7 +142,7 @@ function NotificationsInner() {
         {push.state !== "subscribed" && push.state !== "unsupported" && (
           <button
             type="button"
-            className="px-3 py-1 rounded bg-[var(--color-accent)] text-[var(--color-on-accent)]"
+            className="px-3 py-1 rounded bg-[var(--color-accent)] text-[var(--color-accent-foreground)]"
             disabled={!push.vapidPublicKey || push.state === "registering"}
             onClick={() => push.requestPushPermission()}
           >
@@ -150,7 +150,7 @@ function NotificationsInner() {
           </button>
         )}
         {!push.vapidPublicKey && push.state !== "unsupported" && (
-          <p className="text-xs text-[var(--color-text-muted)]">
+          <p className="text-xs text-[var(--color-foreground-muted)]">
             VAPID non configuré. Configure-le dans{" "}
             <a className="underline" href="/console/anubis/credentials?connector=vapid">
               /console/anubis/credentials
@@ -160,7 +160,7 @@ function NotificationsInner() {
         <ul className="space-y-1 text-sm">
           {subs.map((s) => (
             <li key={s.id} className="flex justify-between gap-2">
-              <span className="truncate text-xs text-[var(--color-text-muted)]">
+              <span className="truncate text-xs text-[var(--color-foreground-muted)]">
                 {s.userAgent ?? s.endpoint.slice(0, 60)}
               </span>
               <button
@@ -178,7 +178,7 @@ function NotificationsInner() {
       <section className="flex gap-3 border-t pt-4">
         <button
           type="button"
-          className="px-4 py-2 rounded bg-[var(--color-accent)] text-[var(--color-on-accent)] disabled:opacity-50"
+          className="px-4 py-2 rounded bg-[var(--color-accent)] text-[var(--color-accent-foreground)] disabled:opacity-50"
           onClick={save}
           disabled={updatePrefs.isPending}
         >
@@ -195,7 +195,7 @@ function NotificationsInner() {
       </section>
 
       {testPush.data && (
-        <pre className="text-xs p-2 bg-[var(--color-surface-active)] rounded">
+        <pre className="text-xs p-2 bg-[var(--color-surface-elevated)] rounded">
           {JSON.stringify(testPush.data, null, 2)}
         </pre>
       )}

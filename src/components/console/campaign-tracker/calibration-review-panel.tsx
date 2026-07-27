@@ -244,7 +244,7 @@ function PanelBody({
       </Tabs>
 
       {mode === "MANUAL_COEFFICIENTS" && (
-        <div className="space-y-2 rounded-md border border-border bg-surface/40 p-3">
+        <div className="space-y-2 rounded-md border border-border bg-surface-raised/40 p-3">
           <p className="text-xs text-foreground-secondary">
             Saisie manuelle des coefficients (pair manuel-first de la régression — FR25). ROC AUC /
             RMSE sont quand même calculés sur le fit manuel.
@@ -271,7 +271,7 @@ function PanelBody({
         type="button"
         onClick={runNow}
         disabled={busy}
-        className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-secondary disabled:opacity-50"
+        className="inline-flex items-center gap-2 rounded-md border border-border bg-surface-raised px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-elevated disabled:opacity-50"
       >
         {runCalibration.isPending ? (
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -312,7 +312,7 @@ function PanelBody({
       </div>
 
       {insufficient && (
-        <p className="flex items-start gap-2 rounded-md border border-border bg-surface/40 p-2.5 text-xs text-foreground-secondary">
+        <p className="flex items-start gap-2 rounded-md border border-border bg-surface-raised/40 p-2.5 text-xs text-foreground-secondary">
           <MinusCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           Données insuffisantes — aucun snapshot produit. La promotion PRODUCTION restera refusée
           tant qu&apos;une calibration valide n&apos;a pas été acceptée (P22-2 / ADR-0046).
@@ -346,7 +346,7 @@ function PanelBody({
       )}
 
       {confirmation && (
-        <p className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-surface/60 p-2.5 text-xs text-foreground">
+        <p className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-surface-raised/60 p-2.5 text-xs text-foreground">
           <CheckCircle2 className="h-4 w-4 text-accent" aria-hidden="true" />
           Calibration acceptée par <span className="font-semibold">{confirmation.actor}</span> —{" "}
           <span className="font-mono">{subClusterSlug}</span> promu{" "}
@@ -412,7 +412,7 @@ function MetricCard({
 }) {
   const g = grade ? GRADE_PRESENTATION[grade] : null;
   return (
-    <div className="rounded-lg border border-border bg-surface/60 p-3">
+    <div className="rounded-lg border border-border bg-surface-raised/60 p-3">
       <div className="flex items-center justify-between">
         <span className="text-[10px] uppercase tracking-wide text-foreground-secondary">{label}</span>
         <span className="text-[10px] text-foreground-muted">{thresholdLabel}</span>

@@ -14,6 +14,7 @@ import { executeTool as executeGloryTool } from "@/server/services/glory-tools";
 import { getToolsByPillar } from "@/server/services/glory-tools/registry";
 import type { PillarFillResult, SourceProvenance, GloryToolUsage } from "./types";
 import type { Prisma } from "@prisma/client";
+import { reportRefusedWrite } from "../pillar-gateway/refusal";
 
 // ============================================================================
 // PILLAR → GLORY TOOL MAPPING (which tools refine which pillar fields)
@@ -363,13 +364,14 @@ INSTRUCTIONS:
 
   // --- Step 5: Persist to DB via Gateway ---
   const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
-  await writePillarAndScore({
+  const _w0 = await writePillarAndScore({
     strategyId,
     pillarKey: pillarKey as import("@/lib/types/advertis-vector").PillarKey,
     operation: { type: "MERGE_DEEP", patch: content },
     author: { system: "INGESTION", reason: `AI ADVE filler: pillar ${pillarKey}` },
     options: { targetStatus: "AI_PROPOSED", confidenceDelta: 0.05 },
   });
+  reportRefusedWrite(_w0, "ingestion:ai-filler");
 
   return {
     pillarKey,
@@ -448,13 +450,14 @@ Reponds en JSON valide. Sois precis et actionnable. Base tes recommandations sur
   // scoré à l'activation — famille C1/C2). Import NON aliasé : l'alias
   // `writePillarRTIS` échappait au test HARD no-bare-writepillar (T5).
   const { writePillar } = await import("@/server/services/pillar-gateway");
-  await writePillar({
+  const _w1 = await writePillar({
     strategyId,
     pillarKey: pillarKey as import("@/lib/types/advertis-vector").PillarKey,
     operation: { type: "MERGE_DEEP", patch: content },
     author: { system: "INGESTION", reason: `AI RTIS filler: pillar ${pillarKey}` },
     options: { targetStatus: "AI_PROPOSED", confidenceDelta: 0.05 },
   });
+  reportRefusedWrite(_w1, "ingestion:ai-filler");
 
   return {
     pillarKey,

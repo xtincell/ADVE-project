@@ -229,7 +229,12 @@ export default function CockpitDashboard() {
     a: vector.a ?? 0, d: vector.d ?? 0, v: vector.v ?? 0, e: vector.e ?? 0,
     r: vector.r ?? 0, t: vector.t ?? 0, i: vector.i ?? 0, s: vector.s ?? 0,
   };
-  const composite = strategy?.composite ?? 0;
+  // Absence ≠ zéro : `composite === null` = marque jamais évaluée. Le `?? 0`
+  // qui était ici affichait « 0/200 » et un palier au plancher à une marque
+  // qu'on n'avait simplement pas encore mesurée — même faute que le proxy
+  // fabriqué corrigé juste en dessous.
+  const composite = strategy?.composite ?? null;
+  const hasComposite = typeof composite === "number";
   // Plus JAMAIS de proxy fabriqué composite/2 présenté comme « indice
   // d'attachement » (audit 2026-07-16, `cult-index-fabricated-proxy`) : sans
   // mesure réelle (CultIndexSnapshot), on affiche « — » + comment débloquer.
@@ -506,11 +511,18 @@ export default function CockpitDashboard() {
             </div>
             <div className="ck-kpi">
               <div className="ck-kpi__top"><span className="ck-kpi__lbl">Score de marque</span><span className="ck-kpi__spark"><Sparkline data={scoreTrend} width={60} height={20} /></span></div>
-              <p className="ck-kpi__val">{Math.round(composite)}<span className="m">/200</span></p>
+              <p className="ck-kpi__val">
+                {hasComposite ? <>{Math.round(composite)}<span className="m">/200</span></> : "—"}
+              </p>
               {/* ADR-0126 — le palier ne s'affiche jamais sans son référentiel d'échelle.
                   ADR-0167 — palier EFFECTIF (officiel apogeeTier s'il est posé,
-                  sinon dérivé du score). Loi 1 : pas de rétrogradation silencieuse. */}
-              <span className="ck-kpi__delta">{formatTierReferential(effectiveTier({ apogeeTier: strategy?.apogeeTier, composite }), strategy?.marketScale ?? null)}</span>
+                  sinon dérivé du score). Loi 1 : pas de rétrogradation silencieuse.
+                  Sans score mesuré, on ne dérive AUCUN palier — on dit pourquoi. */}
+              <span className="ck-kpi__delta">
+                {hasComposite
+                  ? formatTierReferential(effectiveTier({ apogeeTier: strategy?.apogeeTier, composite }), strategy?.marketScale ?? null)
+                  : "Pas encore évaluée"}
+              </span>
             </div>
           </div>
         </>

@@ -19,6 +19,7 @@ import { db } from "@/lib/db";
 import { PILLAR_KEYS, type PillarKey } from "@/lib/types/advertis-vector";
 import { assessAllDirectors, type PillarHealthReport } from "@/server/services/neteru-shared/pillar-directors";
 import { assessStrategy } from "@/server/services/pillar-maturity/assessor";
+import { reportRefusedWrite } from "../pillar-gateway/refusal";
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -599,13 +600,14 @@ export async function executeNextStep(
           { key: "e", content: { briefSeed: true, corePrimary: briefData.targeting.corePrimary, secondaryTargets: briefData.targeting.secondary, deliverables: briefData.deliverables.map(d => d.type), campaignType: briefData.campaignType } },
         ];
         for (const seed of seeds) {
-          await writePillarAndScore({
+          const _w0 = await writePillarAndScore({
             strategyId: plan.strategyId,
             pillarKey: seed.key as import("@/lib/types/advertis-vector").PillarKey,
             operation: { type: "MERGE_DEEP", patch: seed.content },
             author: { system: "BRIEF_INGEST", reason: `Seed from brief — ${briefData.campaignName}` },
             options: { targetStatus: "AI_PROPOSED", confidenceDelta: 0.03 },
           });
+          reportRefusedWrite(_w0, "mestor:hyperviseur");
         }
         nextStep.result = { seeded: [...ADVE_STORAGE_KEYS] };
         nextStep.status = "COMPLETED";

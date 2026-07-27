@@ -259,7 +259,7 @@ function McpCard({ strategyId }: { strategyId: string }) {
           </p>
 
           {/* Endpoint */}
-          <div className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2">
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-surface-raised px-3 py-2">
             <span className="min-w-0 flex-1 truncate font-mono text-xs text-foreground">{data?.endpoint}</span>
             {data?.endpoint ? <CopyButton value={data.endpoint} label="" /> : null}
           </div>

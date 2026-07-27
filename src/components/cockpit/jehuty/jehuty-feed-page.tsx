@@ -257,7 +257,7 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
             <ArticleThumb
               src={brandLogo}
               fit="contain"
-              className="mb-4 h-16 w-16 !rounded-2xl border-2 bg-surface"
+              className="mb-4 h-16 w-16 !rounded-2xl border-2 bg-surface-raised"
             />
           )}
           <h1

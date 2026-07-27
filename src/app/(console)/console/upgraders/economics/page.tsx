@@ -80,7 +80,7 @@ export default function UpgradersEconomicsPage() {
       </div>
 
       {/* Sélecteur strategy + période */}
-      <div className="rounded-lg bg-surface p-4 ring-1 ring-inset ring-border">
+      <div className="rounded-lg bg-surface-raised p-4 ring-1 ring-inset ring-border">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <div>
             <label className="text-xs font-medium text-foreground-secondary">Strategy ID (caller scope)</label>
@@ -89,7 +89,7 @@ export default function UpgradersEconomicsPage() {
               value={strategyId}
               onChange={(e) => setStrategyId(e.target.value)}
               placeholder="ex: cl_xxx"
-              className="mt-1 w-full rounded border border-border bg-surface-secondary px-3 py-1.5 text-sm text-foreground"
+              className="mt-1 w-full rounded border border-border bg-surface-elevated px-3 py-1.5 text-sm text-foreground"
             />
           </div>
           <div>
@@ -98,7 +98,7 @@ export default function UpgradersEconomicsPage() {
               type="date"
               value={periodStart.toISOString().slice(0, 10)}
               onChange={(e) => setPeriodStart(new Date(e.target.value))}
-              className="mt-1 w-full rounded border border-border bg-surface-secondary px-3 py-1.5 text-sm text-foreground"
+              className="mt-1 w-full rounded border border-border bg-surface-elevated px-3 py-1.5 text-sm text-foreground"
             />
           </div>
           <div>
@@ -107,14 +107,14 @@ export default function UpgradersEconomicsPage() {
               type="date"
               value={periodEnd.toISOString().slice(0, 10)}
               disabled
-              className="mt-1 w-full rounded border border-border bg-surface-secondary px-3 py-1.5 text-sm text-foreground-secondary"
+              className="mt-1 w-full rounded border border-border bg-surface-elevated px-3 py-1.5 text-sm text-foreground-secondary"
             />
           </div>
         </div>
       </div>
 
       {!strategyId && (
-        <div className="rounded-lg bg-surface p-8 text-center text-sm text-foreground-secondary ring-1 ring-inset ring-border">
+        <div className="rounded-lg bg-surface-raised p-8 text-center text-sm text-foreground-secondary ring-1 ring-inset ring-border">
           Renseigner une <code>strategyId</code> pour afficher les agrégats.
         </div>
       )}
@@ -131,13 +131,13 @@ export default function UpgradersEconomicsPage() {
             <SkeletonPage />
           ) : marginsQuery.data?.ok ? (
             marginsQuery.data.margins.length === 0 ? (
-              <div className="rounded-lg bg-surface p-8 text-center text-sm text-foreground-secondary ring-1 ring-inset ring-border">
+              <div className="rounded-lg bg-surface-raised p-8 text-center text-sm text-foreground-secondary ring-1 ring-inset ring-border">
                 Aucun bucket avec k≥5 sur cette période. Élargir la période ou attendre plus de campaigns.
               </div>
             ) : (
               <div className="overflow-hidden rounded-lg ring-1 ring-inset ring-border">
                 <table className="w-full text-sm">
-                  <thead className="bg-surface-secondary text-xs uppercase tracking-wide text-foreground-secondary">
+                  <thead className="bg-surface-elevated text-xs uppercase tracking-wide text-foreground-secondary">
                     <tr>
                       <th className="px-4 py-2 text-left">Catégorie</th>
                       <th className="px-4 py-2 text-left">Sub-type</th>
@@ -150,7 +150,7 @@ export default function UpgradersEconomicsPage() {
                   </thead>
                   <tbody className="divide-y divide-border">
                     {marginsQuery.data.margins.map((m, i) => (
-                      <tr key={`${m.category}-${m.subType}-${m.market}-${i}`} className="bg-surface">
+                      <tr key={`${m.category}-${m.subType}-${m.market}-${i}`} className="bg-surface-raised">
                         <td className="px-4 py-2 font-mono text-xs">{m.category}</td>
                         <td className="px-4 py-2 text-foreground">{m.subType ?? "—"}</td>
                         <td className="px-4 py-2 text-foreground-secondary">{m.market ?? "—"}</td>
@@ -250,14 +250,14 @@ export default function UpgradersEconomicsPage() {
               })}
             </div>
           ) : (
-            <div className="rounded-lg bg-surface p-8 text-center text-sm text-foreground-secondary ring-1 ring-inset ring-border">
+            <div className="rounded-lg bg-surface-raised p-8 text-center text-sm text-foreground-secondary ring-1 ring-inset ring-border">
               Pas de forecast disponible — capacity reader Imhotep non câblé (MVP placeholder)
             </div>
           )}
         </section>
       )}
 
-      <footer className="rounded-lg bg-surface-secondary p-4 text-xs text-foreground-secondary ring-1 ring-inset ring-border">
+      <footer className="rounded-lg bg-surface-elevated p-4 text-xs text-foreground-secondary ring-1 ring-inset ring-border">
         <div className="flex items-center gap-2 font-semibold text-foreground">
           <Globe className="h-4 w-4" />
           Anonymisation par construction

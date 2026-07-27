@@ -56,6 +56,7 @@ import { salvageRawResponses } from "./salvage-responses";
 import * as auditTrail from "@/server/services/audit-trail";
 import type { BusinessContext, BusinessModelKey, BrandNatureKey, EconomicModelKey, PositioningArchetypeKey, SalesChannel, PremiumScope } from "@/lib/types/business-context";
 import { POSITIONING_ARCHETYPES, BRAND_NATURES } from "@/lib/types/business-context";
+import { reportRefusedWrite } from "../pillar-gateway/refusal";
 
 export type IntakeMethodType = "GUIDED" | "IMPORT" | "LONG" | "SHORT" | "INGEST" | "INGEST_PLUS";
 
@@ -988,7 +989,7 @@ export async function complete(token: string) {
       const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
       for (const section of narrativeReport.adve) {
         try {
-          await writePillarAndScore({
+          const _w0 = await writePillarAndScore({
             strategyId: strategy.id,
             pillarKey: section.key as import("@/lib/types/advertis-vector").PillarKey,
             operation: {
@@ -1001,6 +1002,7 @@ export async function complete(token: string) {
             author: { system: "MESTOR", reason: `Quick intake narrative ${section.key.toUpperCase()}` },
             options: { confidenceDelta: 0.03 },
           });
+          reportRefusedWrite(_w0, "quick-intake");
         } catch (err) {
           console.warn(
             `[quick-intake] could not persist narrativeFull for pillar ${section.key}:`,
@@ -1093,7 +1095,7 @@ export async function complete(token: string) {
       const intentKey = extractKeyFromOption(financialResponses.biz_marketing_budget_intent);
       const lastKey = extractKeyFromOption(financialResponses.biz_marketing_budget_last);
       const budgetComNumeric = (BUDGET_RANGE_FCFA[intentKey] ?? 0) || (BUDGET_RANGE_FCFA[lastKey] ?? 0);
-      await writePillarAndScore({
+      const _w1 = await writePillarAndScore({
         strategyId: strategy.id,
         pillarKey: "v" as import("@/lib/types/advertis-vector").PillarKey,
         operation: {
@@ -1111,6 +1113,7 @@ export async function complete(token: string) {
         author: { system: "INGESTION", reason: "Quick intake: mirror financial anchors into V (+ budgetCom précis)" },
         options: { confidenceDelta: 0.02 },
       });
+      reportRefusedWrite(_w1, "quick-intake");
     } catch (err) {
       console.warn("[quick-intake] could not mirror financial anchors into V:", err instanceof Error ? err.message : err);
     }
@@ -1321,13 +1324,14 @@ export async function regenerateAnalysis(
         : safeBase;
     if (Object.keys(sealed).length === 0) continue;
     const normalized = normalizePillarForIntake(pillar, sealed);
-    await writePillarAndScore({
+    const _w2 = await writePillarAndScore({
       strategyId: strategy.id,
       pillarKey: pillar as import("@/lib/types/advertis-vector").PillarKey,
       operation: { type: "REPLACE_FULL", content: normalized as Record<string, unknown> },
       author: { system: "INGESTION", reason: `Quick intake regeneration: pillar ${pillar}` },
       options: { confidenceDelta: 0.05 },
     });
+    reportRefusedWrite(_w2, "quick-intake");
   }
 
   // Re-score with refreshed pillar atoms.

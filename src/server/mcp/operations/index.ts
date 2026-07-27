@@ -20,10 +20,11 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import * as campaignManager from "@/server/services/campaign-manager";
 import type { CampaignState } from "@/server/services/campaign-manager/state-machine";
-import type { ProcessType } from "@prisma/client";
+import type { ProcessStatus, ProcessType } from "@prisma/client";
 import * as processScheduler from "@/server/services/process-scheduler";
 import * as slaTracker from "@/server/services/sla-tracker";
 import * as teamAllocator from "@/server/services/team-allocator";
+import { listStrategyMissions } from "@/server/mcp/_shared/strategy-activity";
 
 // ---------------------------------------------------------------------------
 // Operations MCP Server
@@ -44,6 +45,48 @@ export interface ToolDefinition {
   description: string;
   inputSchema: z.ZodType;
   handler: (input: Record<string, unknown>) => Promise<unknown>;
+  /**
+   * Portée vis-à-vis des marques — cf. `McpToolScope` (anubis/mcp-server.ts).
+   * Union écrite en clair plutôt qu'importée : `mcp-server` importe déjà ce
+   * module dynamiquement, un import retour créerait un cycle.
+   */
+  scope?: "BRAND" | "GLOBAL" | "SELF_SCOPED";
+}
+
+// ---------------------------------------------------------------------------
+// Garde d'appartenance
+// ---------------------------------------------------------------------------
+
+/**
+ * Vérifie qu'une campagne appartient bien à la marque demandée.
+ *
+ * Sans cette garde, un outil qui prend un `campaignId` seul rend la donnée de
+ * n'importe quelle marque à quiconque devine un identifiant — et un outil qui
+ * prend un `strategyId` **sans s'en servir** le rend sans même avoir à deviner
+ * (audit MCP P0 : `content_calendar_get` a renvoyé les missions de quatre
+ * marques pour un `strategyId` unique).
+ */
+async function assertCampaignInStrategy(campaignId: string, strategyId: string): Promise<void> {
+  const campaign = await db.campaign.findUnique({
+    where: { id: campaignId },
+    select: { strategyId: true },
+  });
+  if (!campaign) throw new Error(`Campagne introuvable : ${campaignId}`);
+  if (campaign.strategyId !== strategyId) {
+    throw new Error("Cette campagne n'appartient pas à la marque demandée — accès refusé.");
+  }
+}
+
+/** Même garde pour une mission — `mission_dispatch` MUTE, elle ne peut pas être aveugle. */
+async function assertMissionInStrategy(missionId: string, strategyId: string): Promise<void> {
+  const mission = await db.mission.findUnique({
+    where: { id: missionId },
+    select: { strategyId: true },
+  });
+  if (!mission) throw new Error(`Mission introuvable : ${missionId}`);
+  if (mission.strategyId !== strategyId) {
+    throw new Error("Cette mission n'appartient pas à la marque demandée — accès refusé.");
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -51,22 +94,94 @@ export interface ToolDefinition {
 // ---------------------------------------------------------------------------
 
 export const tools: ToolDefinition[] = [
+  // ---- Découverte : les campagnes d'une marque ----
+  {
+    name: "campaign_list",
+    description:
+      "Liste les campagnes d'une marque (en cours et passées) : nom, état, type canon, fenêtre de dates, budget, nombre de missions et de jalons. C'EST LE POINT D'ENTRÉE des campagnes — les autres outils exigent un campaignId, que seul celui-ci fournit. Lecture seule.",
+    inputSchema: z.object({
+      strategyId: z.string().describe("ID (ou slug public) de la marque"),
+      state: z
+        .enum([
+          "BRIEF_DRAFT", "BRIEF_VALIDATED", "PLANNING", "CREATIVE_DEV", "PRODUCTION",
+          "PRE_PRODUCTION", "APPROVAL", "READY_TO_LAUNCH", "LIVE", "POST_CAMPAIGN",
+          "ARCHIVED", "CANCELLED",
+        ])
+        .optional()
+        .describe("Filtre optionnel sur l'état de la machine à états"),
+      limit: z.number().int().min(1).max(100).default(50),
+    }),
+    handler: async (input) => {
+      const strategyId = input.strategyId as string;
+      const campaigns = await db.campaign.findMany({
+        where: {
+          strategyId,
+          ...(input.state ? { state: input.state as CampaignState } : {}),
+        },
+        select: {
+          id: true,
+          name: true,
+          state: true,
+          canonType: true,
+          routeKey: true,
+          startDate: true,
+          endDate: true,
+          budget: true,
+          budgetCurrency: true,
+          isAlwaysOn: true,
+          _count: { select: { missions: true, milestones: true, brandActions: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        take: (input.limit as number) ?? 50,
+      });
+      const now = Date.now();
+      return {
+        strategyId,
+        count: campaigns.length,
+        campaigns: campaigns.map((c) => ({
+          campaignId: c.id,
+          name: c.name,
+          state: c.state,
+          canonType: c.canonType,
+          routeKey: c.routeKey,
+          // « En cours » est DÉRIVÉ des dates, pas d'un booléen déclaré qui
+          // pourrait mentir (cf. les process au statut RUNNING arrêtés depuis
+          // trois mois — audit MCP P3).
+          enCours:
+            c.isAlwaysOn ||
+            (!!c.startDate && c.startDate.getTime() <= now && (!c.endDate || c.endDate.getTime() >= now)),
+          startDate: c.startDate?.toISOString() ?? null,
+          endDate: c.endDate?.toISOString() ?? null,
+          budget: c.budget,
+          budgetCurrency: c.budgetCurrency,
+          missionsCount: c._count.missions,
+          milestonesCount: c._count.milestones,
+          actionsCount: c._count.brandActions,
+        })),
+      };
+    },
+  },
+
   // ---- État de campagne ----
   {
     name: "campaign_state_get",
     description:
-      "Récupère l'état actuel d'une campagne et les transitions disponibles dans la machine à états.",
+      "Récupère l'état actuel d'une campagne et les transitions disponibles dans la machine à états. Obtenir un campaignId via campaign_list.",
     inputSchema: z.object({
+      strategyId: z.string().describe("ID (ou slug public) de la marque propriétaire"),
       campaignId: z.string().describe("ID de la campagne"),
     }),
     handler: async (input) => {
+      const campaignId = input.campaignId as string;
+      await assertCampaignInStrategy(campaignId, input.strategyId as string);
       const campaign = await db.campaign.findUniqueOrThrow({
-        where: { id: input.campaignId as string },
+        where: { id: campaignId },
         include: { missions: true, milestones: true, teamMembers: true },
       });
       const availableTransitions = campaignManager.getAvailableTransitions(campaign.state as CampaignState);
       return {
         campaignId: campaign.id,
+        strategyId: campaign.strategyId,
         name: campaign.name,
         state: campaign.state,
         availableTransitions,
@@ -81,11 +196,13 @@ export const tools: ToolDefinition[] = [
     description:
       "Effectue une transition d'état sur une campagne (ex: DRAFT -> ACTIVE). Valide les gates automatiquement.",
     inputSchema: z.object({
+      strategyId: z.string().describe("ID (ou slug public) de la marque propriétaire"),
       campaignId: z.string().describe("ID de la campagne"),
       toState: z.string().describe("État cible (ex: ACTIVE, PAUSED, COMPLETED)"),
       approverId: z.string().optional().describe("ID de l'approbateur si requis"),
     }),
     handler: async (input) => {
+      await assertCampaignInStrategy(input.campaignId as string, input.strategyId as string);
       return campaignManager.transitionCampaign(
         input.campaignId as string,
         input.toState as CampaignState,
@@ -100,12 +217,14 @@ export const tools: ToolDefinition[] = [
     description:
       "Dispatch une mission à un créateur de la Guilde en fonction du matching compétences/disponibilité.",
     inputSchema: z.object({
+      strategyId: z.string().describe("ID (ou slug public) de la marque propriétaire de la mission"),
       missionId: z.string().describe("ID de la mission à dispatcher"),
       assigneeId: z.string().describe("ID du créateur assigné"),
       deadline: z.string().optional().describe("Date limite (ISO)"),
       priority: z.enum(["low", "normal", "high", "urgent"]).default("normal"),
     }),
     handler: async (input) => {
+      await assertMissionInStrategy(input.missionId as string, input.strategyId as string);
       const mission = await db.mission.update({
         where: { id: input.missionId as string },
         data: {
@@ -121,8 +240,9 @@ export const tools: ToolDefinition[] = [
   {
     name: "mission_list",
     description:
-      "Liste les missions d'une campagne ou d'un driver avec filtrage par statut.",
+      "Liste les missions d'une marque, filtrables par campagne, driver ou statut. SOURCE UNIQUE des missions d'une marque — le calendrier éditorial consomme la même requête.",
     inputSchema: z.object({
+      strategyId: z.string().describe("ID (ou slug public) de la marque"),
       campaignId: z.string().optional().describe("Filtrer par campagne"),
       driverId: z.string().optional().describe("Filtrer par driver"),
       status: z
@@ -132,17 +252,16 @@ export const tools: ToolDefinition[] = [
       limit: z.number().int().min(1).max(100).default(20),
     }),
     handler: async (input) => {
-      const missions = await db.mission.findMany({
-        where: {
-          ...(input.campaignId ? { campaignId: input.campaignId as string } : {}),
-          ...(input.driverId ? { driverId: input.driverId as string } : {}),
-          ...(input.status ? { status: input.status as string } : {}),
-        },
-        include: { driver: true },
-        orderBy: { createdAt: "desc" },
-        take: (input.limit as number) ?? 20,
+      const strategyId = input.strategyId as string;
+      if (input.campaignId) await assertCampaignInStrategy(input.campaignId as string, strategyId);
+      const missions = await listStrategyMissions({
+        strategyId,
+        campaignId: input.campaignId as string | undefined,
+        driverId: input.driverId as string | undefined,
+        status: input.status as string | undefined,
+        limit: (input.limit as number) ?? 20,
       });
-      return { missions, count: missions.length };
+      return { strategyId, missions, count: missions.length };
     },
   },
 
@@ -175,13 +294,29 @@ export const tools: ToolDefinition[] = [
   {
     name: "process_schedule_list",
     description:
-      "Liste les processus planifiés (récurrents et ponctuels) avec leur prochain déclenchement.",
+      "Liste les processus planifiés (récurrents et ponctuels) d'une marque avec leur prochain déclenchement. Chaque ligne porte son statut DÉCLARÉ et son statut EFFECTIF : un processus « RUNNING » sans prochaine échéance est rapporté STALLED, pas sain.",
     inputSchema: z.object({
-      strategyId: z.string().optional().describe("Filtrer par stratégie"),
-      status: z.enum(["ACTIVE", "PAUSED", "COMPLETED", "CANCELLED"]).optional(),
+      strategyId: z.string().describe("ID (ou slug public) de la marque"),
+      // Valeurs RÉELLES de l'enum Prisma `ProcessStatus`. « FAILED » n'existe
+      // pas : le proposer envoyait l'appelant droit dans une erreur de schéma,
+      // pour une valeur que l'outil lui-même annonçait.
+      status: z.enum(["RUNNING", "PAUSED", "STOPPED", "COMPLETED"]).optional(),
     }),
     handler: async (input) => {
-      return processScheduler.getSchedule();
+      // Le filtre `strategyId` était exposé et jamais transmis — la fonction ne
+      // prenait aucun argument. Tout appel « filtré » rendait la planification
+      // de toutes les marques.
+      const entries = await processScheduler.getSchedule({
+        strategyId: input.strategyId as string,
+        status: input.status as ProcessStatus | undefined,
+      });
+      const stalled = entries.filter((e) => e.stalled);
+      return {
+        strategyId: input.strategyId,
+        count: entries.length,
+        stalledCount: stalled.length,
+        processes: entries,
+      };
     },
   },
 
@@ -213,7 +348,12 @@ export const tools: ToolDefinition[] = [
   {
     name: "team_allocation_overview",
     description:
-      "Vue d'ensemble de l'allocation des équipes : charge de travail, utilisation, goulots d'étranglement.",
+      "Vue d'ensemble de l'allocation des équipes de la Guilde : charge de travail, utilisation, goulots d'étranglement. Outil OPÉRATEUR — inaccessible avec une clé limitée à une marque.",
+    // PAS de `scope: "GLOBAL"` : la sortie nomme les talents (`userId`,
+    // `displayName`, taux d'occupation) — c'est le carnet d'adresses freelance
+    // de l'agence et de la PII, pas un référentiel public. L'avoir marqué GLOBAL
+    // l'aurait ouvert à tout fondateur client (relecture adversariale
+    // 2026-07-27). Sans `strategyId` au schéma, il reste fail-closed en BRAND.
     inputSchema: z.object({
       operatorId: z.string().describe("ID de l'opérateur"),
     }),
@@ -231,11 +371,13 @@ export const tools: ToolDefinition[] = [
     description:
       "Suggère le meilleur créateur disponible pour une mission en fonction des compétences et de la charge.",
     inputSchema: z.object({
+      strategyId: z.string().describe("ID (ou slug public) de la marque propriétaire de la mission"),
       missionId: z.string().describe("ID de la mission"),
       requiredSkills: z.array(z.string()).optional().describe("Compétences requises"),
       preferredTier: z.enum(["APPRENTI", "COMPAGNON", "MAITRE", "ASSOCIE"]).optional(),
     }),
     handler: async (input) => {
+      await assertMissionInStrategy(input.missionId as string, input.strategyId as string);
       return teamAllocator.suggestAllocation(
         input.missionId as string,
       );
@@ -248,9 +390,11 @@ export const tools: ToolDefinition[] = [
     description:
       "Vue d'ensemble du budget d'une campagne : dépenses, reste à dépenser, ventilation par driver.",
     inputSchema: z.object({
+      strategyId: z.string().describe("ID (ou slug public) de la marque propriétaire"),
       campaignId: z.string().describe("ID de la campagne"),
     }),
     handler: async (input) => {
+      await assertCampaignInStrategy(input.campaignId as string, input.strategyId as string);
       const campaign = await db.campaign.findUniqueOrThrow({
         where: { id: input.campaignId as string },
         include: {
@@ -281,10 +425,12 @@ export const tools: ToolDefinition[] = [
     description:
       "Génère un rapport AARRR (Acquisition, Activation, Rétention, Referral, Revenue) pour une campagne.",
     inputSchema: z.object({
+      strategyId: z.string().describe("ID (ou slug public) de la marque propriétaire"),
       campaignId: z.string().describe("ID de la campagne"),
       period: z.enum(["weekly", "monthly", "quarterly"]).default("monthly"),
     }),
     handler: async (input) => {
+      await assertCampaignInStrategy(input.campaignId as string, input.strategyId as string);
       const campaign = await db.campaign.findUniqueOrThrow({
         where: { id: input.campaignId as string },
         include: { milestones: true, missions: true },
@@ -310,17 +456,20 @@ export const tools: ToolDefinition[] = [
   {
     name: "field_ops_status",
     description:
-      "Statut des opérations terrain : missions actives, livrables en cours, deadlines imminentes.",
+      "Statut des opérations terrain d'une marque : missions actives et échéances imminentes.",
     inputSchema: z.object({
-      operatorId: z.string().describe("ID de l'opérateur"),
+      strategyId: z.string().describe("ID (ou slug public) de la marque"),
       daysAhead: z.number().int().min(1).max(30).default(7).describe("Horizon en jours"),
     }),
     handler: async (input) => {
       const daysAhead = (input.daysAhead as number) ?? 7;
       const horizon = new Date(Date.now() + daysAhead * 24 * 60 * 60 * 1000);
+      // Filtrait par `operatorId` — un opérateur voit toutes ses marques d'un
+      // bloc, ce qui rendait l'outil inutilisable côté marque ET impossible à
+      // scoper. La marque est désormais la dimension, l'opérateur en découle.
       const missions = await db.mission.findMany({
         where: {
-          strategy: { operatorId: input.operatorId as string },
+          strategyId: input.strategyId as string,
           status: { in: ["ASSIGNED", "IN_PROGRESS", "IN_REVIEW"] },
           slaDeadline: { lte: horizon },
         },
@@ -328,7 +477,7 @@ export const tools: ToolDefinition[] = [
         orderBy: { slaDeadline: "asc" },
       });
       return {
-        operatorId: input.operatorId,
+        strategyId: input.strategyId,
         horizon: `${daysAhead} jours`,
         upcomingMissions: missions.length,
         missions,
@@ -342,9 +491,11 @@ export const tools: ToolDefinition[] = [
     description:
       "Suivi des jalons d'une campagne : progression, retards, prochains jalons à atteindre.",
     inputSchema: z.object({
+      strategyId: z.string().describe("ID (ou slug public) de la marque propriétaire"),
       campaignId: z.string().describe("ID de la campagne"),
     }),
     handler: async (input) => {
+      await assertCampaignInStrategy(input.campaignId as string, input.strategyId as string);
       const milestones = await db.campaignMilestone.findMany({
         where: { campaignId: input.campaignId as string },
         orderBy: { dueDate: "asc" },

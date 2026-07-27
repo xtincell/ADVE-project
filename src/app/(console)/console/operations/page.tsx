@@ -70,7 +70,7 @@ export default function OperationsPage() {
               <div className="min-w-0">
                 <p className="text-sm font-medium text-foreground">
                   {app.applicant.name ?? app.applicant.email}{" "}
-                  <span className="rounded-full bg-bg-subtle px-2 py-0.5 font-mono text-[10px] text-foreground-muted">{app.applicant.role}</span>
+                  <span className="rounded-full bg-background-subtle px-2 py-0.5 font-mono text-[10px] text-foreground-muted">{app.applicant.role}</span>
                   <span className="text-foreground-muted"> → </span>
                   {app.mission.title}
                 </p>
@@ -83,7 +83,7 @@ export default function OperationsPage() {
                     2026-07-16 `application-decision-blind-profile-dropped`). */}
                 {app.talentProfile && (
                   <p className="mt-1 text-xs text-foreground-secondary">
-                    <span className="rounded-full bg-bg-subtle px-2 py-0.5 font-mono text-[10px]">{app.talentProfile.tier}</span>
+                    <span className="rounded-full bg-background-subtle px-2 py-0.5 font-mono text-[10px]">{app.talentProfile.tier}</span>
                     {" "}· {app.talentProfile.totalMissions} mission{app.talentProfile.totalMissions > 1 ? "s" : ""}
                     {app.talentProfile.avgScore > 0 ? ` · score moyen ${Math.round(app.talentProfile.avgScore * 10) / 10}` : ""}
                     {app.talentProfile.firstPassRate > 0 ? ` · ${Math.round(app.talentProfile.firstPassRate * 100)} % validé du premier coup` : ""}
@@ -142,7 +142,7 @@ export default function OperationsPage() {
               </div>
               <div className="flex items-center gap-3 text-xs">
                 <span className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${
-                  m.status === "IN_PROGRESS" ? "bg-accent/15 text-accent" : m.status === "REVIEW" ? "bg-warning/15 text-warning" : "bg-bg-subtle text-foreground-muted"
+                  m.status === "IN_PROGRESS" ? "bg-accent/15 text-accent" : m.status === "REVIEW" ? "bg-warning/15 text-warning" : "bg-background-subtle text-foreground-muted"
                 }`}>{m.status}</span>
                 {m.budget != null && <span className="font-mono text-foreground">{fcfa(m.budget)}</span>}
               </div>
@@ -197,7 +197,7 @@ export default function OperationsPage() {
                       {fcfa(b.actual)} / {fcfa(b.planned)}
                     </span>
                   </div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-bg-subtle">
+                  <div className="h-1.5 overflow-hidden rounded-full bg-background-subtle">
                     <div
                       className={`h-full ${ratio > 1 ? "bg-error" : "bg-accent"}`}
                       style={{ width: `${Math.min(100, ratio * 100)}%` }}

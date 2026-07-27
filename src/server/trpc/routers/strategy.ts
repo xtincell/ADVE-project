@@ -12,6 +12,7 @@ import { governedProcedure } from "@/server/governance/governed-procedure";
 import * as strategyArchive from "@/server/services/strategy-archive";
 import { emitIntent, type Intent } from "@/server/services/mestor/intents";
 import { PILLAR_STORAGE_KEYS } from "@/domain";
+import { readCompositeFromVector } from "@/domain/brand-scores";
 import {
   evaluatePalierTransition,
   tierTransitionKind,
@@ -203,8 +204,11 @@ export const strategyRouter = createTRPCRouter({
             entryType: "SECTOR_BENCHMARK",
             sector: sector,
             market: country ?? "",
-            data: { source: "initial_seed", benchmarkType: "sector_defaults" },
-            successScore: 50,
+            data: { source: "initial_seed", benchmarkType: "sector_defaults", strategyId: strategy.id },
+            // `successScore` est une pertinence 0-1 (elle est servie telle quelle
+            // en `relevance`) : la valeur 50 classait ce placeholder loin devant
+            // toute référence réelle. Rien n'a été mesuré ici — donc `null`.
+            successScore: null,
             sampleSize: 0,
             sourceHash: `seed-${strategy.id}`,
           },
@@ -827,11 +831,26 @@ export const strategyRouter = createTRPCRouter({
         where: { id: input.id },
         include: { pillars: true, client: { select: { id: true, name: true } } },
       });
+      // Absence ≠ zéro (canon du repo). Une marque jamais évaluée n'a pas
+      // `advertis_vector` : le code fabriquait alors `composite = 0` puis la
+      // classait au palier le plus bas, et le cockpit affichait « Score 0/200 »
+      // à un fondateur dont la marque n'avait simplement jamais été mesurée.
+      // Le mensonge était SERVEUR-side, donc partagé par tous les consommateurs.
+      //
+      // La somme des 8 piliers est par ailleurs une re-dérivation : la clé
+      // canon est `composite` (L1, `readCompositeFromVector`) — on la lit, on
+      // ne la recalcule pas. La somme ne sert plus que de repli pour les
+      // vecteurs anciens qui ne portent pas encore la clé.
       const vector = strategy.advertis_vector as Record<string, number> | null;
-      const composite = vector
-        ? [...PILLAR_STORAGE_KEYS].reduce((sum, k) => sum + (vector[k] ?? 0), 0)
-        : 0;
-      return { ...strategy, composite, classification: classifyScore(composite) };
+      const canonical = readCompositeFromVector(vector);
+      const composite =
+        canonical ??
+        (vector ? [...PILLAR_STORAGE_KEYS].reduce((sum, k) => sum + (vector[k] ?? 0), 0) : null);
+      return {
+        ...strategy,
+        composite,
+        classification: composite === null ? null : classifyScore(composite),
+      };
     }),
 
   // Admin: migrate existing strategies to v4 pillar structure

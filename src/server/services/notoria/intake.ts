@@ -16,6 +16,7 @@ import { normalizePillarForIntake } from "@/server/services/pillar-normalizer";
 import { writePillarAndScore } from "@/server/services/pillar-gateway";
 import type { PillarKey } from "@/lib/types/advertis-vector";
 import type { Prisma } from "@prisma/client";
+import { reportRefusedWrite } from "../pillar-gateway/refusal";
 
 // ── Types ─────────────────────────────────────────────────────────
 
@@ -96,13 +97,14 @@ export async function advanceConsoleIntake(
   const normalized = normalizePillarForIntake(pillarKey, data);
 
   // Write via Gateway
-  await writePillarAndScore({
+  const _w0 = await writePillarAndScore({
     strategyId,
     pillarKey,
     operation: { type: "MERGE_DEEP", patch: normalized },
     author: { system: "OPERATOR", reason: "Console intake wizard" },
     options: { targetStatus: "VALIDATED", confidenceDelta: 0.1 },
   });
+  reportRefusedWrite(_w0, "notoria:intake");
 
   // Create Recommendation records for audit trail
   const batch = await db.recommendationBatch.create({

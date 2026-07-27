@@ -283,10 +283,15 @@ Format JSON strict — tableau de WeakSignal :
           type: "weak_signal_analysis",
           signals: weakSignals,
           analyzedAt: new Date().toISOString(),
+          // Attribution canonique — sans elle, cette analyse dérivée d'UNE
+          // marque échappe au prédicat de portée transverse et se fait servir
+          // aux autres comme un benchmark de secteur.
+          strategyId,
         })),
+        // Absence ≠ zéro : sans signal, il n'y a pas de confiance moyenne.
         successScore: weakSignals.length > 0
           ? weakSignals.reduce((sum, ws) => sum + ws.confidence, 0) / weakSignals.length
-          : 0,
+          : null,
         sampleSize: signals.length,
       },
     });

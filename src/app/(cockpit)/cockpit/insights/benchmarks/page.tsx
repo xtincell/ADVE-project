@@ -77,7 +77,11 @@ export default function BenchmarksPage() {
   for (const k of PILLAR_KEYS) {
     scores[k] = vector[k] ?? 0;
   }
-  const composite = strategy?.composite ?? 0;
+  // Absence ≠ zéro. Sans mesure, la comparaison au secteur n'a pas de sens :
+  // un `0` fabriqué plaçait la marque dernière de son secteur par défaut.
+  const compositeOrNull = strategy?.composite ?? null;
+  const composite = compositeOrNull ?? 0;
+  const hasComposite = compositeOrNull !== null;
 
   const benchmark = benchmarkQuery.data;
   const sectorAvg = benchmark?.avgComposite ?? 0;
@@ -156,15 +160,17 @@ export default function BenchmarksPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
           title="Votre score"
-          value={composite.toFixed(0)}
+          value={hasComposite ? composite.toFixed(0) : "—"}
           trend={
-            composite > sectorAvg
-              ? "up"
-              : composite < sectorAvg
-                ? "down"
-                : "flat"
+            !hasComposite
+              ? "flat"
+              : composite > sectorAvg
+                ? "up"
+                : composite < sectorAvg
+                  ? "down"
+                  : "flat"
           }
-          trendValue={CLASSIFICATION_LABELS[myClassification]}
+          trendValue={hasComposite ? CLASSIFICATION_LABELS[myClassification] : "pas encore évaluée"}
           icon={Target}
         />
         <StatCard

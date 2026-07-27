@@ -228,6 +228,17 @@
   --color-division-academie:       var(--ref-amber);
   --color-division-academie-subtle: color-mix(in oklab, var(--ref-amber) 18%, transparent);
   --color-division-academie-text:  var(--ref-amber);
+  /* Anubis (adresse/diffusion) et Imhotep (crew) manquaient à l'appel alors que
+     leurs écrans les consommaient déjà : sur un token non déclaré Tailwind ne
+     génère rien, donc la couleur de division était simplement absente — sans
+     erreur, sans avertissement. On COMPLÈTE le tier Domaine plutôt que de
+     rediriger vers une autre division, qui aurait menti sur l'appartenance. */
+  --color-division-anubis:         var(--ref-blue);
+  --color-division-anubis-subtle:  color-mix(in oklab, var(--ref-blue) 18%, transparent);
+  --color-division-anubis-text:    var(--ref-blue);
+  --color-division-imhotep:        var(--ref-amber);
+  --color-division-imhotep-subtle: color-mix(in oklab, var(--ref-amber) 18%, transparent);
+  --color-division-imhotep-text:   var(--ref-amber);
 
   /* ══════════════════════════════════════════════════════════════
      ADVE-RTIS PILLAR (legacy `--color-pillar-*`) → Domain
@@ -275,6 +286,11 @@
   --color-portal-cockpit:  var(--ref-rouge);
   --color-portal-creator:  var(--ref-rouge);
   --color-portal-console:  var(--ref-rouge);
+  /* Les quatre portails du produit sont Console / Agency / Creator / Cockpit,
+     plus La Guilde (face publique d'IMHOTEP) : `agency` et `guilde` étaient
+     consommés sans être déclarés. Même valeur signature que leurs pairs. */
+  --color-portal-agency:   var(--ref-rouge);
+  --color-portal-guilde:   var(--ref-rouge);
 }
 
 /* ═══ BASE LAYER ═══ */

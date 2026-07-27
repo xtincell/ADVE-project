@@ -124,7 +124,7 @@ export default function AnubisCredentialsPage() {
           {credentials?.map((cred) => (
             <div key={cred.id} className="flex items-center justify-between p-4">
               <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-bg-subtle p-2">
+                <div className="rounded-lg bg-background-subtle p-2">
                   <Key className="h-4 w-4 text-foreground-muted" />
                 </div>
                 <div>

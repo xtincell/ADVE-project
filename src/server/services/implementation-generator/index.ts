@@ -18,6 +18,7 @@ import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrust
 import { PASS1_SYSTEM, PASS2_SYSTEM, PASS3_SYSTEM } from "./prompts";
 import { createCampaignDrafts } from "./campaign-bridge";
 import { PILLAR_KEYS } from "@/domain/pillars";
+import { reportRefusedWrite } from "../pillar-gateway/refusal";
 
 export interface ImplementationConfig {
   strategyId: string;
@@ -180,13 +181,14 @@ export async function generateImplementation(
   const confidence = Math.min(0.85, qualityScore / 100);
   // Persist via Gateway
   const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
-  await writePillarAndScore({
+  const _w0 = await writePillarAndScore({
     strategyId,
     pillarKey: "i" as import("@/lib/types/advertis-vector").PillarKey,
     operation: { type: "MERGE_DEEP", patch: pillarContent as Record<string, unknown> },
     author: { system: "MESTOR", reason: "Implementation generator I pillar creation" },
     options: { confidenceDelta: 0.05 },
   });
+  reportRefusedWrite(_w0, "implementation-generator");
 
   // ── Phase 4: Campaign Activation Bridge ─────────────────────────────────
   let campaignDraftIds: string[] = [];

@@ -114,7 +114,7 @@ export default function MarketStudiesPage() {
         <button
           type="button"
           onClick={() => setOpenUpload(true)}
-          className="inline-flex items-center gap-2 rounded-lg bg-rocket-red px-4 py-2 text-sm font-semibold text-white hover:bg-rocket-red/90"
+          className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover"
         >
           <Upload className="h-4 w-4" /> Injecter une étude
         </button>
@@ -134,7 +134,7 @@ export default function MarketStudiesPage() {
             <div key={entry.id} className="flex items-start justify-between rounded-lg border border-white/8 bg-white/[0.02] p-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-rocket-red" />
+                  <FileText className="h-4 w-4 text-accent" />
                   <h3 className="text-base font-semibold text-foreground">{entry.studyTitle}</h3>
                 </div>
                 <p className="mt-1 text-xs text-foreground-muted">

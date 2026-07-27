@@ -134,18 +134,18 @@ function AttributionLineagePanel({ strategyId, campaignId }: { strategyId: strin
   return (
     <div className="space-y-4 px-4 py-4">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-        <div className="rounded-lg bg-surface-secondary p-3 ring-1 ring-inset ring-border">
+        <div className="rounded-lg bg-surface-elevated p-3 ring-1 ring-inset ring-border">
           <div className="text-[10px] uppercase tracking-wide text-foreground-secondary">Score d&apos;attribution</div>
           <div className="text-xl font-bold tracking-tight text-foreground">{data.score.toFixed(3)}</div>
         </div>
-        <div className="rounded-lg bg-surface-secondary p-3 ring-1 ring-inset ring-border">
+        <div className="rounded-lg bg-surface-elevated p-3 ring-1 ring-inset ring-border">
           <div className="text-[10px] uppercase tracking-wide text-foreground-secondary">Évangélistes attribués</div>
           <div className="flex items-center gap-1.5 text-xl font-bold tracking-tight text-emerald-400">
             <Users className="h-4 w-4" />
             {data.evangelistCount}
           </div>
         </div>
-        <div className="rounded-lg bg-surface-secondary p-3 ring-1 ring-inset ring-border">
+        <div className="rounded-lg bg-surface-elevated p-3 ring-1 ring-inset ring-border">
           <div className="text-[10px] uppercase tracking-wide text-foreground-secondary">Transitions tracées</div>
           <div className="text-xl font-bold tracking-tight text-foreground">{data.lineage.length}</div>
         </div>
@@ -160,7 +160,7 @@ function AttributionLineagePanel({ strategyId, campaignId }: { strategyId: strin
           {data.lineage.map((t, i) => (
             <li
               key={`${t.campaignId}-${t.transitionFrom}-${t.transitionTo}-${t.observedAt}-${i}`}
-              className="flex items-center gap-3 rounded-lg bg-surface p-2.5 ring-1 ring-inset ring-border"
+              className="flex items-center gap-3 rounded-lg bg-surface-raised p-2.5 ring-1 ring-inset ring-border"
             >
               <GitBranch className="h-3.5 w-3.5 shrink-0 text-foreground-secondary" />
               <span className="font-mono text-xs text-foreground">
@@ -229,11 +229,11 @@ function AttributionLineageSection() {
             {campaigns.map((c) => {
               const isOpen = expanded === c.id;
               return (
-                <li key={c.id} className="bg-surface">
+                <li key={c.id} className="bg-surface-raised">
                   <button
                     type="button"
                     onClick={() => setExpanded(isOpen ? null : c.id)}
-                    className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-secondary"
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-elevated"
                   >
                     {isOpen ? (
                       <ChevronDown className="h-4 w-4 shrink-0 text-foreground-secondary" />
@@ -359,7 +359,7 @@ export default function CampaignTrackerGovernancePage() {
 
               <div className="overflow-hidden rounded-lg ring-1 ring-inset ring-border">
                 <table className="w-full text-sm">
-                  <thead className="bg-surface-secondary text-xs uppercase tracking-wide text-foreground-secondary">
+                  <thead className="bg-surface-elevated text-xs uppercase tracking-wide text-foreground-secondary">
                     <tr>
                       <th className="px-4 py-2 text-left">Sous-cluster</th>
                       <th className="px-4 py-2 text-left">État</th>
@@ -374,7 +374,7 @@ export default function CampaignTrackerGovernancePage() {
                       const stateStyle = STATE_STYLES[c.state] ?? STATE_STYLES.STUB!;
                       const StateIcon = stateStyle.Icon;
                       return (
-                        <tr key={c.slug} className="bg-surface align-top">
+                        <tr key={c.slug} className="bg-surface-raised align-top">
                           <td className="px-4 py-3 font-mono text-xs text-foreground">{c.slug}</td>
                           <td className="px-4 py-3">
                             <span
@@ -397,7 +397,7 @@ export default function CampaignTrackerGovernancePage() {
                               {c.degradationCodes.map((code) => (
                                 <code
                                   key={code}
-                                  className="rounded bg-surface-secondary px-1.5 py-0.5 text-[10px] text-foreground-secondary"
+                                  className="rounded bg-surface-elevated px-1.5 py-0.5 text-[10px] text-foreground-secondary"
                                 >
                                   {code}
                                 </code>
@@ -431,7 +431,7 @@ export default function CampaignTrackerGovernancePage() {
       <AttributionLineageSection />
 
       {/* Footer doc */}
-      <footer className="rounded-lg bg-surface-secondary p-4 text-xs text-foreground-secondary ring-1 ring-inset ring-border">
+      <footer className="rounded-lg bg-surface-elevated p-4 text-xs text-foreground-secondary ring-1 ring-inset ring-border">
         <div className="font-semibold text-foreground">Comment lire cette page</div>
         <ul className="mt-2 list-disc space-y-1 pl-5">
           <li>

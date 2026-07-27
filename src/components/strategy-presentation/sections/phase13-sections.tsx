@@ -514,15 +514,15 @@ export function BcgStrategyPalette({ data }: Props) {
           {sig ? (
             <Grid cols={3} gap={2}>
               <Stack direction="col" gap={1}>
-                <Heading level={4}>{sig.tendances_macro ?? 0}</Heading>
+                <Heading level={4}>{sig.tendances_macro ?? "—"}</Heading>
                 <Text variant="caption" tone="muted">Tendances macro</Text>
               </Stack>
               <Stack direction="col" gap={1}>
-                <Heading level={4}>{sig.signaux_faibles ?? 0}</Heading>
+                <Heading level={4}>{sig.signaux_faibles ?? "—"}</Heading>
                 <Text variant="caption" tone="muted">Signaux faibles</Text>
               </Stack>
               <Stack direction="col" gap={1}>
-                <Heading level={4}>{sig.concurrents_declares ?? 0}</Heading>
+                <Heading level={4}>{sig.concurrents_declares ?? "—"}</Heading>
                 <Text variant="caption" tone="muted">Concurrents déclarés</Text>
               </Stack>
             </Grid>
@@ -755,7 +755,7 @@ export function DevotionLadder({ data }: Props) {
       {hasAny ? (
         <Stack direction="col" gap={4}>
           {hasPyramid ? (
-            <DevotionPyramid data={distribution} score={dl?.devotionScore ?? 0} />
+            <DevotionPyramid data={distribution} score={dl?.devotionScore ?? null} />
           ) : null}
           {superfans !== null ? (
             <Stack direction="row" align="center" gap={2}>

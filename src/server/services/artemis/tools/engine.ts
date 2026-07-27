@@ -18,6 +18,7 @@ import { EXTENDED_GLORY_TOOLS, getGloryTool, getBrandPipelineDependencyOrder, ty
 import { checkPaidTier, tierGateDenied } from "@/server/services/glory-tools/tier-gate";
 import { invokeExternalTool as anubisInvokeExternalTool } from "@/server/services/anubis/mcp-client";
 import { hasGloryComposer, composeGloryDeterministic } from "./glory-composers";
+import { reportRefusedWrite } from "../../pillar-gateway/refusal";
 
 /**
  * Load full strategy context for enriching GLORY tool prompts.
@@ -903,7 +904,7 @@ export async function executeBrandPipeline(
           // Migrated to Pillar Gateway — LOI 1
           const { _meta, ...cleanOutput } = output;
           const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
-          await writePillarAndScore({
+          const _w0 = await writePillarAndScore({
             strategyId,
             pillarKey: "d",
             operation: {
@@ -913,6 +914,7 @@ export async function executeBrandPipeline(
             author: { system: "GLORY", reason: `Brand pipeline — ${slug} → D.directionArtistique.${targetField}` },
             options: { confidenceDelta: 0.02 },
           });
+          reportRefusedWrite(_w0, "artemis:executeTool writeback");
         } catch (applyErr) {
           console.warn(`[glory-pipeline] auto-apply ${slug} → D.${targetField} failed:`, applyErr instanceof Error ? applyErr.message : applyErr);
         }

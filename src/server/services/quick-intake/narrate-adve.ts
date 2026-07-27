@@ -22,6 +22,7 @@ import { ADVE_STORAGE_KEYS, type PillarStorageKey } from "@/domain";
 import { db } from "@/lib/db";
 import { callLLM, extractJSON } from "@/server/services/llm-gateway";
 import { sanitizeInline } from "@/server/services/utils/untrusted-content";
+import { reportRefusedWrite } from "../pillar-gateway/refusal";
 
 type AdvePillar = "a" | "d" | "v" | "e";
 
@@ -249,7 +250,7 @@ export async function narrateAdvePillars(
   for (const item of items) {
     if (!item.generated) continue;
     try {
-      await writePillarAndScore({
+      const _w0 = await writePillarAndScore({
         strategyId: input.strategyId,
         pillarKey: item.key as PillarStorageKey,
         operation: {
@@ -265,6 +266,7 @@ export async function narrateAdvePillars(
         },
         options: { confidenceDelta: 0.02 },
       });
+      reportRefusedWrite(_w0, "quick-intake:narrate-adve");
     } catch (err) {
       console.warn(
         `[narrate-adve] persist failed for pillar ${item.key}:`,

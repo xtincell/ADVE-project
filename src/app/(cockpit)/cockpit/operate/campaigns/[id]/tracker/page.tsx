@@ -326,7 +326,7 @@ export default function CampaignTrackerPage() {
       </section>
 
       {/* Footer info */}
-      <footer className="rounded-lg bg-surface-secondary p-4 text-xs text-foreground-secondary ring-1 ring-inset ring-border">
+      <footer className="rounded-lg bg-surface-elevated p-4 text-xs text-foreground-secondary ring-1 ring-inset ring-border">
         <div className="flex items-center gap-2 font-semibold text-foreground">
           <Layers className="h-4 w-4" />
           Pourquoi cette page existe ?
@@ -358,7 +358,7 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg bg-surface p-4 ring-1 ring-inset ring-border">
+    <div className="rounded-lg bg-surface-raised p-4 ring-1 ring-inset ring-border">
       <div className="flex items-baseline justify-between">
         <div className="text-sm font-semibold text-foreground">{title}</div>
         {subtitle && <div className="text-2xs text-foreground-secondary">{subtitle}</div>}

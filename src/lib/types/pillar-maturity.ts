@@ -162,13 +162,27 @@ export interface BindingValidationReport {
 export interface AutoFillResult {
   pillarKey: string;
   targetStage: MaturityStage;
-  /** Fields that were successfully filled */
+  /** Fields that were successfully filled — vide si rien n'a été persisté. */
   filled: string[];
   /** Fields that failed to fill (with reason) */
   failed: Array<{ path: string; reason: string }>;
   /** Fields that need human input */
   needsHuman: string[];
-  /** The maturity stage after filling */
+  /**
+   * L'écriture a-t-elle réellement atteint la base ?
+   *
+   * Ce champ existe parce qu'elle pouvait ne pas y arriver sans que personne
+   * ne le sache : le remplisseur jetait le verdict de la gateway (pilier
+   * LOCKED, validation stricte, SHAPE gate, garde de provenance, exception de
+   * transaction) puis rapportait le stage calculé sur son brouillon EN
+   * MÉMOIRE — donc un succès, toujours. « L'IA remplit et le score ne monte
+   * jamais » : voilà d'où ça venait.
+   *
+   * `false` ⇒ `filled` est vide et `failed` porte la raison de la gateway.
+   * Absent (legacy) ⇒ traiter comme `true`.
+   */
+  persisted?: boolean;
+  /** The maturity stage after filling — mesuré sur le contenu PERSISTÉ. */
   newStage: MaturityStage | "EMPTY";
   /** Duration of the fill operation */
   durationMs: number;

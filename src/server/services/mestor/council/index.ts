@@ -129,12 +129,30 @@ export async function deliberate(input: DeliberateInput): Promise<CouncilDeliber
   // ── 1. Draft du coordinateur (skippé si une position est fournie) ──────
   let draft: CouncilDraft;
   if (input.draft) {
-    draft = { position: input.draft, arguments: ["(position fournie par l'opérateur)", "—"], risks: [] };
+    // `arguments` a un `.min(2)` au schéma ; le second élément était un tiret
+    // fabriqué UNIQUEMENT pour le satisfaire. Cet objet est ensuite sérialisé
+    // et soumis aux quatre experts comme la position à attaquer : ils
+    // critiquaient donc une argumentation dont un élément était « — ». Sur le
+    // chemin fondateur — le seul du cockpit — c'était systématique.
+    // On dit ce qui est : la position vient d'ailleurs, elle n'est pas
+    // argumentée ici, et c'est le texte lui-même qui porte le raisonnement.
+    draft = {
+      position: input.draft,
+      arguments: [
+        "Position soumise telle quelle par l'utilisateur — non argumentée par le coordinateur.",
+        "Le raisonnement à évaluer est celui contenu dans la position ci-dessus.",
+      ],
+      risks: [],
+    };
   } else {
     llmCalls++;
     const res = await executeStructuredLLMCall({
       system: coordinatorSystem,
-      prompt: `Sujet soumis au conseil : ${input.topic}\n\nRédige la POSITION stratégique initiale du conseil sur ce sujet (position, arguments ancrés dans le dossier, risques identifiés).`,
+      // `topic` vient du client (2 000 caractères) et, via le panneau cockpit,
+      // c'est la sortie d'un LLM qui a lui-même lu du contenu de marque
+      // éditable par le fondateur. Tout le reste du fichier est ceinturé
+      // (`draft`, contexte) ; ce point d'entrée-ci ne l'était pas.
+      prompt: `${wrapUntrusted("sujet soumis par l'utilisateur", input.topic)}\n\nRédige la POSITION stratégique initiale du conseil sur ce sujet (position, arguments ancrés dans le dossier, risques identifiés).`,
       schema: councilDraftSchema,
       caller: "mestor:council:draft",
       strategyId: input.strategyId,

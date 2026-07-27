@@ -38,7 +38,13 @@ export function AmplificationsTab({ campaignId }: { campaignId: string }) {
       {metrics && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
           {[
-            { label: "Budget total", value: `${metrics.totals.budget?.toLocaleString("fr-FR") ?? 0} XAF`, color: "text-error" },
+            { label: "Budget total", // Le `??` portait sur le RÉSULTAT de `toLocaleString` : un budget absent
+            // s'affichait « 0 XAF », soit « nous n'avons rien dépensé » au lieu de
+            // « nous ne le savons pas ».
+            value:
+              typeof metrics.totals.budget === "number"
+                ? `${metrics.totals.budget.toLocaleString("fr-FR")} XAF`
+                : "—", color: "text-error" },
             { label: "Impressions", value: metrics.totals.impressions?.toLocaleString("fr-FR") ?? "0", color: "text-info" },
             { label: "Clicks", value: metrics.totals.clicks?.toLocaleString("fr-FR") ?? "0", color: "text-success" },
             { label: "CTR", value: metrics.calculated.ctr != null ? `${(metrics.calculated.ctr * 100).toFixed(2)}%` : "—", color: "text-warning" },

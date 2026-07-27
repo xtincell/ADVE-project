@@ -36,6 +36,7 @@ import { propagateFromPillar } from "@/server/services/staleness-propagator";
 import { getStrategyReadiness } from "@/server/governance/pillar-readiness";
 import { scoreObject } from "@/server/services/advertis-scorer";
 import { writePillarAndScore } from "@/server/services/pillar-gateway";
+import { assertWritten } from "./_pillar-write-guard";
 import { getNestedArray } from "@/lib/pillar-path";
 import { ensureProductIds } from "@/domain/product-catalog";
 import type { PillarKey as PK } from "@/lib/types/advertis-vector";
@@ -282,11 +283,12 @@ export const pillarRouter = createTRPCRouter({
       // déterministe → les gammes/système peuvent référencer de façon fiable (ADR-0171).
       const withIds = ensureProductIds(catalogue as Array<Record<string, unknown>>);
 
-      await writePillarAndScore({
+      const w = await writePillarAndScore({
         strategyId: input.strategyId, pillarKey: "v",
         operation: { type: "SET_FIELDS", fields: [{ path: "produitsCatalogue", value: withIds }] },
         author: { system: "OPERATOR", userId: ctx.session.user.id, reason: "addProduct" },
       });
+      assertWritten(w, "addProduct");
       return { success: true, productCount: withIds.length };
     }),
 
@@ -313,11 +315,12 @@ export const pillarRouter = createTRPCRouter({
       const personas = getArraySafe(content.personas);
       personas.push(input.persona);
 
-      await writePillarAndScore({
+      const w = await writePillarAndScore({
         strategyId: input.strategyId, pillarKey: "d",
         operation: { type: "SET_FIELDS", fields: [{ path: "personas", value: personas }] },
         author: { system: "OPERATOR", userId: ctx.session.user.id, reason: "addPersona" },
       });
+      assertWritten(w, "addPersona");
       return { success: true, personaCount: personas.length };
     }),
 
@@ -343,11 +346,12 @@ export const pillarRouter = createTRPCRouter({
       const touchpoints = getArraySafe(content.touchpoints);
       touchpoints.push(input.touchpoint);
 
-      await writePillarAndScore({
+      const w = await writePillarAndScore({
         strategyId: input.strategyId, pillarKey: "e",
         operation: { type: "SET_FIELDS", fields: [{ path: "touchpoints", value: touchpoints }] },
         author: { system: "OPERATOR", userId: ctx.session.user.id, reason: "addTouchpoint" },
       });
+      assertWritten(w, "addTouchpoint");
       return { success: true, touchpointCount: touchpoints.length };
     }),
 
@@ -373,11 +377,12 @@ export const pillarRouter = createTRPCRouter({
       const rituels = getArraySafe(content.rituels);
       rituels.push(input.ritual);
 
-      await writePillarAndScore({
+      const w = await writePillarAndScore({
         strategyId: input.strategyId, pillarKey: "e",
         operation: { type: "SET_FIELDS", fields: [{ path: "rituels", value: rituels }] },
         author: { system: "OPERATOR", userId: ctx.session.user.id, reason: "addRitual" },
       });
+      assertWritten(w, "addRitual");
       return { success: true, ritualCount: rituels.length };
     }),
 
@@ -411,11 +416,12 @@ export const pillarRouter = createTRPCRouter({
 
       valeurs.push(input.value);
 
-      await writePillarAndScore({
+      const w = await writePillarAndScore({
         strategyId: input.strategyId, pillarKey: "a",
         operation: { type: "SET_FIELDS", fields: [{ path: "valeurs", value: valeurs }] },
         author: { system: "OPERATOR", userId: ctx.session.user.id, reason: "addValue" },
       });
+      assertWritten(w, "addValue");
       return { success: true, valueCount: valeurs.length };
     }),
 
@@ -1341,7 +1347,7 @@ Propose une nouvelle valeur cohérente avec l'intention, en respectant le schém
   }).mutation(async ({ ctx, input }) => {
       const pillar = await ctx.db.pillar.findUnique({
         where: { strategyId_key: { strategyId: input.strategyId, key: input.pillarKey.toLowerCase() } },
-        select: { id: true, fieldCertainty: true },
+        select: { id: true, fieldCertainty: true, content: true },
       });
       if (!pillar) return { ok: false, alreadyConfirmed: false, reason: "pillar_not_found" as const };
 
@@ -1359,12 +1365,57 @@ Propose une nouvelle valeur cohérente avec l'intention, en respectant le schém
       delete certainty[qualifiedPath];
       delete certainty[input.fieldPath];
 
+      // Confirmer n'accordait AUCUNE protection : seul le badge `fieldCertainty`
+      // disparaissait, la provenance restait INFERRED, et la prochaine passe
+      // d'ingestion ou de remplissage (`SOURCE`/`INFERRED` sur `INFERRED` =
+      // ALLOW) écrasait silencieusement la valeur que l'opérateur venait de
+      // valider. Le geste de confirmation doit donc écrire la provenance, sinon
+      // il ne veut rien dire.
+      //
+      // Le grain est celui du garde (`provenance-guard` arbitre les clés de
+      // TÊTE) : confirmer `a.identite.archetype` verrouille `identite`.
+      //
+      // On passe par la GATEWAY plutôt que d'écrire `content` en direct (C5) :
+      // ré-écrire la valeur courante sous l'autorité OPERATOR fait poser la
+      // provenance HUMAN par le chemin normal, et laisse au passage une
+      // `PillarVersion` qui date la confirmation. Idempotent — la valeur ne
+      // change pas, seule son autorité change.
+      const content = (pillar.content ?? {}) as Record<string, unknown>;
+      const bare = qualifiedPath.startsWith(`${input.pillarKey.toLowerCase()}.`)
+        ? qualifiedPath.slice(input.pillarKey.length + 1)
+        : qualifiedPath;
+      const topKey = bare.split(/[.[]/)[0];
+
+      // La PROVENANCE d'abord, le badge ensuite : l'ordre inverse laissait le
+      // badge supprimé quand la gateway refusait l'écriture — l'opérateur
+      // voyait « confirmé » sur un champ dont l'autorité n'avait pas bougé.
+      let provenanceLocked: string | null = null;
+      if (topKey && topKey in content) {
+        const w = await writePillarAndScore({
+          strategyId: input.strategyId,
+          pillarKey: input.pillarKey.toLowerCase() as Lowercase<PillarKey>,
+          operation: { type: "SET_FIELDS", fields: [{ path: topKey, value: content[topKey] }] },
+          author: {
+            system: "OPERATOR",
+            userId: ctx.session.user.id,
+            reason: `Confirmation opérateur de « ${qualifiedPath} » — provenance HUMAN`,
+          },
+          // DÉCLARATION explicite : la valeur ne change pas, seule son autorité
+          // change. Sans elle le garde court-circuite le champ inchangé et
+          // n'écrit rien — la confirmation était un no-op qui se déclarait
+          // verrou (relecture adversariale 2026-07-27).
+          options: { fieldProvenance: { [topKey]: "HUMAN" } },
+        });
+        assertWritten(w, "confirmInferredField");
+        provenanceLocked = topKey;
+      }
+
       await ctx.db.pillar.update({
         where: { id: pillar.id },
         data: { fieldCertainty: certainty as Prisma.InputJsonValue },
       });
 
-      return { ok: true, alreadyConfirmed: false };
+      return { ok: true, alreadyConfirmed: false, provenanceLocked };
     }),
 });
 

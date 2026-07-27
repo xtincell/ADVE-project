@@ -40,7 +40,7 @@ export function NewsletterCapture({ source }: { source: string }) {
         placeholder={t("lb.nl.placeholder")}
         aria-label={t("lb.nl.aria")}
         className="min-w-[220px] flex-1 rounded-md border px-3 py-2 text-sm"
-        style={{ borderColor: "var(--color-border)", background: "var(--color-surface)", color: "var(--color-foreground)" }}
+        style={{ borderColor: "var(--color-border)", background: "var(--color-surface-raised)", color: "var(--color-foreground)" }}
       />
       <button
         type="submit"

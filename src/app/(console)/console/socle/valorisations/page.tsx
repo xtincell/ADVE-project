@@ -84,7 +84,7 @@ export default function ValorisationsPage() {
           value={strategyId}
           onChange={(e) => setStrategyId(e.target.value)}
           className="rounded-md border px-3 py-2 text-sm"
-          style={{ borderColor: "var(--color-border)", background: "var(--color-surface)", color: "var(--color-foreground)" }}
+          style={{ borderColor: "var(--color-border)", background: "var(--color-surface-raised)", color: "var(--color-foreground)" }}
           aria-label="Marque"
         >
           <option value="">Choisir une marque…</option>
@@ -98,7 +98,7 @@ export default function ValorisationsPage() {
           placeholder="CA annuel déclaré (XAF, optionnel)"
           inputMode="numeric"
           className="w-64 rounded-md border px-3 py-2 text-sm"
-          style={{ borderColor: "var(--color-border)", background: "var(--color-surface)", color: "var(--color-foreground)" }}
+          style={{ borderColor: "var(--color-border)", background: "var(--color-surface-raised)", color: "var(--color-foreground)" }}
         />
         <Button
           size="sm"

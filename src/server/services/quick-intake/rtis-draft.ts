@@ -35,6 +35,7 @@ import {
   getOracleBrandContextByQuery,
   findComparableBrands,
 } from "@/server/services/seshat/context-store";
+import { reportRefusedWrite } from "../pillar-gateway/refusal";
 
 // `Pillar` + `SHAPE_PER_PILLAR` extraits dans ./pillar-shapes (leaf) — rompt le
 // cycle rtis-draft ⇄ multi-agent-orchestrator (madge).
@@ -332,13 +333,14 @@ export async function generateAndPersistRtisDraft(input: DraftInput): Promise<Rt
   // Persist R, T, I immediately so the true S protocol can read them
   const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
   for (const [key, content] of [["r", r], ["t", t], ["i", i]] as const) {
-    await writePillarAndScore({
+    const _w0 = await writePillarAndScore({
       strategyId: input.strategyId,
       pillarKey: key as PillarStorageKey,
       operation: { type: "REPLACE_FULL", content },
       author: { system: "INGESTION", reason: `V3 RTIS draft — pillar ${key}` },
       options: { confidenceDelta: 0.05 },
     });
+    reportRefusedWrite(_w0, "quick-intake:rtis-draft");
   }
 
   // Phase 2 — S synthesizes using the REAL engine so roadmapRoutes & budget are computed
@@ -347,13 +349,14 @@ export async function generateAndPersistRtisDraft(input: DraftInput): Promise<Rt
   const s = sResult.content;
 
   // Persist S
-  await writePillarAndScore({
+  const _w1 = await writePillarAndScore({
     strategyId: input.strategyId,
     pillarKey: "s",
     operation: { type: "REPLACE_FULL", content: s },
     author: { system: "INGESTION", reason: `V3 RTIS draft — pillar s` },
     options: { confidenceDelta: 0.05 },
   });
+  reportRefusedWrite(_w1, "quick-intake:rtis-draft");
 
   return { r, t, i, s };
 }

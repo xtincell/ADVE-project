@@ -394,12 +394,28 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
           newContent,
           existingProvenance,
           incomingFor: (path) => explicit?.[path] ?? defaultProv,
+          // Déclaration EXPLICITE (≠ défaut déduit de l'auteur) — seule voie
+          // par laquelle une confirmation d'un champ inchangé pose sa provenance.
+          declaredFor: (path) => explicit?.[path],
         });
-        // Reverte en place les champs DENY/CHALLENGE sur le contenu candidat.
+        // Le garde rend le contenu ARBITRÉ — c'est lui qui fait foi, pas le
+        // candidat.
+        //
+        // Cette boucle itérait sur `Object.keys(newContent)`, ce qui ne pouvait
+        // par construction jamais contenir une clé ABSENTE de `newContent` :
+        // la restauration d'un champ supprimé par omission n'était donc jamais
+        // réinjectée, et c'est `newContent` qui est persisté. Le garde
+        // produisait la bonne valeur, écrivait l'avertissement « suppression
+        // refusée » — et la valeur humaine était effacée quand même. Un
+        // avertissement qui affirme le contraire de ce qui se passe est pire
+        // que pas d'avertissement du tout.
         for (const key of Object.keys(newContent)) {
           if (key.startsWith("_")) continue;
-          if (!(key in guard.content)) delete newContent[key];
-          else newContent[key] = guard.content[key];
+          if (!(key in guard.content)) delete newContent[key]; // suppression ARBITRÉE, donc légitime
+        }
+        for (const [key, value] of Object.entries(guard.content)) {
+          if (key.startsWith("_")) continue;
+          newContent[key] = value; // couvre reverts ET restaurations
         }
         newContent._fieldProvenance = guard.provenance;
         challenged = guard.challenged;

@@ -87,7 +87,7 @@ export default function TrackPage() {
         <div className="space-y-6">
           {Object.entries(grouped).map(([cat, vars]) => (
             <section key={cat}>
-              <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-rocket-red">
+              <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-accent">
                 {CATEGORY_LABELS[cat] ?? cat} ({vars.length})
               </h3>
               <div className="overflow-x-auto rounded-lg border border-white/8">
@@ -107,7 +107,7 @@ export default function TrackPage() {
                       const value = tracker.data?.values?.[v.code];
                       return (
                         <tr key={v.code} className="border-t border-white/5">
-                          <td className="px-3 py-2 font-mono text-xs text-rocket-red">{v.code}</td>
+                          <td className="px-3 py-2 font-mono text-xs text-accent">{v.code}</td>
                           <td className="px-3 py-2 text-foreground">{v.label}</td>
                           <td className="px-3 py-2 text-xs text-foreground-muted">{v.unit}</td>
                           <td className="px-3 py-2">
@@ -137,7 +137,7 @@ export default function TrackPage() {
       {/* TAM / Concurrents / Segments — synthèse */}
       {intel.data ? (
         <section className="space-y-3">
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-rocket-red">Synthèse études ingérées</h3>
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-accent">Synthèse études ingérées</h3>
           <div className="grid grid-cols-3 gap-3">
             {intel.data.tamSamSom ? (
               <div className="rounded-lg border border-white/8 bg-white/[0.02] p-3 text-xs">

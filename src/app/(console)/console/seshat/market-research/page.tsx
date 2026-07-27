@@ -121,7 +121,7 @@ export default function MarketResearchPage() {
             onChange={(e) => setQuery(e.target.value)}
             rows={4}
             placeholder="Ex : Quel est le paysage concurrentiel de la skincare premium en Afrique du Sud en 2025 ? Concurrents principaux, segments consommateurs, prix moyens, signaux faibles…"
-            className="w-full rounded border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-rocket-red/30"
+            className="w-full rounded border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-accent/30"
           />
         </div>
 
@@ -205,7 +205,7 @@ export default function MarketResearchPage() {
             onChange={(e) => setSourceUrlsRaw(e.target.value)}
             rows={3}
             placeholder="https://www.statista.com/... · https://www.euromonitor.com/... · vide → mode mémoire-modèle"
-            className="w-full rounded border border-white/10 bg-white/5 px-3 py-2 text-xs text-white placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-rocket-red/30"
+            className="w-full rounded border border-white/10 bg-white/5 px-3 py-2 text-xs text-white placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-accent/30"
           />
           {sourceUrls.length === 0 ? (
             <p className="mt-1 flex items-center gap-1 text-xs text-amber-400">
@@ -222,7 +222,7 @@ export default function MarketResearchPage() {
             type="button"
             onClick={handleRun}
             disabled={!canSubmit}
-            className="inline-flex items-center gap-2 rounded bg-rocket-red px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-rocket-red/90 disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex items-center gap-2 rounded bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground shadow-sm hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40"
           >
             {runResearch.isPending ? (
               <>

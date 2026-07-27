@@ -125,7 +125,7 @@ function ScanProgress() {
               {Math.min(elapsed, SCAN_TOTAL_S)}s / ~{SCAN_TOTAL_S}s
             </Text>
           </div>
-          <div className="h-2 w-full overflow-hidden rounded-full" style={{ background: "var(--color-surface)" }}>
+          <div className="h-2 w-full overflow-hidden rounded-full" style={{ background: "var(--color-surface-raised)" }}>
             <div
               className="h-full rounded-full transition-all duration-500 ease-linear"
               style={{ width: `${pct}%`, background: "var(--color-accent)" }}
@@ -290,7 +290,7 @@ function foundationSentence(key: string, facts: FactsView, dim: Dim | undefined,
 /** Jauge éditoriale (barre fine) — tokens only. */
 function Meter({ value }: { value: number }) {
   return (
-    <div className="h-1.5 w-full overflow-hidden rounded-full" style={{ background: "var(--color-surface)" }} aria-hidden>
+    <div className="h-1.5 w-full overflow-hidden rounded-full" style={{ background: "var(--color-surface-raised)" }} aria-hidden>
       <div className="h-full rounded-full" style={{ width: `${Math.max(2, Math.min(100, value))}%`, background: "var(--color-accent)" }} />
     </div>
   );
@@ -461,7 +461,7 @@ export default function ScorerPage() {
               onChange={(e) => setSocialLinksRaw(e.target.value)}
               rows={3}
               className="rounded-md border p-3 text-sm"
-              style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
+              style={{ borderColor: "var(--color-border)", background: "var(--color-surface-raised)" }}
             />
             <Button type="submit" disabled={score.isPending || !brandName.trim()}>
               {score.isPending ? t("scorer.form.submitting") : t("scorer.form.submit")}

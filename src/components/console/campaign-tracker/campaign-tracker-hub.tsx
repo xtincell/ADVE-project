@@ -188,7 +188,7 @@ function ReviewButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-surface-secondary"
+      className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface-raised px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-surface-elevated"
     >
       <FlaskConical className="h-3.5 w-3.5" aria-hidden="true" /> Réviser la calibration
     </button>
@@ -199,7 +199,7 @@ function HubTableView({ pivots, onReview, deriveConnector }: ViewProps) {
   return (
     <div className="overflow-hidden rounded-lg ring-1 ring-inset ring-border">
       <table className="w-full text-sm">
-        <thead className="bg-surface-secondary text-xs uppercase tracking-wide text-foreground-secondary">
+        <thead className="bg-surface-elevated text-xs uppercase tracking-wide text-foreground-secondary">
           <tr>
             <th className="px-4 py-2 text-left">Sous-cluster pivot</th>
             <th className="px-4 py-2 text-left">État</th>
@@ -208,7 +208,7 @@ function HubTableView({ pivots, onReview, deriveConnector }: ViewProps) {
         </thead>
         <tbody className="divide-y divide-border">
           {pivots.map((cap) => (
-            <tr key={cap.slug} className="bg-surface align-middle">
+            <tr key={cap.slug} className="bg-surface-raised align-middle">
               <td className="px-4 py-3">
                 <SubClusterStatusCell
                   subClusterSlug={cap.slug}
@@ -232,7 +232,7 @@ function HubCardView({ pivots, onReview, deriveConnector }: ViewProps) {
   return (
     <div className="@container grid grid-cols-1 gap-3 @md:grid-cols-2 @xl:grid-cols-3">
       {pivots.map((cap) => (
-        <div key={cap.slug} className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4">
+        <div key={cap.slug} className="flex flex-col gap-3 rounded-lg border border-border bg-surface-raised p-4">
           <SubClusterStatusCell
             subClusterSlug={cap.slug}
             lifecycleState={cap.lifecycle as SubClusterLifecycleState}
@@ -276,7 +276,7 @@ function HubDetailView({
                 aria-selected={active}
                 onClick={() => onSelect(cap.slug as PivotSlug)}
                 className={`w-full px-3 py-3 text-left transition-colors ${
-                  active ? "bg-surface-secondary" : "bg-surface hover:bg-surface-secondary"
+                  active ? "bg-surface-elevated" : "bg-surface-raised hover:bg-surface-elevated"
                 }`}
               >
                 <SubClusterStatusCell

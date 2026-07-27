@@ -20,7 +20,9 @@
 
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { classifyTier } from "@/domain/brand-tier";
+import { effectiveTier } from "@/domain/brand-tier";
+import { ADVE_COMPOSITE_MAX, describeScores, readCompositeFromVector } from "@/domain/brand-scores";
+import { computeProvenanceBreakdown } from "@/domain/field-provenance";
 import { PILLAR_KEYS, PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
 import { ADVE_KEYS } from "@/domain";
 
@@ -33,6 +35,12 @@ export interface ToolDefinition {
   description: string;
   inputSchema: z.ZodType;
   handler: (input: Record<string, unknown>) => Promise<unknown>;
+  /**
+   * Portée vis-à-vis des marques — cf. `McpToolScope` (anubis/mcp-server.ts).
+   * Union écrite en clair plutôt qu'importée : `mcp-server` importe déjà ces
+   * modules dynamiquement, un import retour créerait un cycle.
+   */
+  scope?: "BRAND" | "GLOBAL" | "SELF_SCOPED";
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -65,6 +73,79 @@ function pillarHeadline(content: Record<string, unknown>, max = 4): Record<strin
 // ── Tools ────────────────────────────────────────────────────────────────
 
 export const tools: ToolDefinition[] = [
+  // ---- Découverte : quelles marques puis-je voir ? ----
+  {
+    name: "listStrategies",
+    description:
+      "Liste les marques accessibles avec cette clé : identifiant, nom, slug public, statut, palier de maturité, date de dernière mise à jour. C'EST LE POINT D'ENTRÉE — appelle-le en premier pour obtenir un strategyId, que tous les autres outils exigent. Une clé limitée à une marque ne renvoie que celle-ci. Lecture seule.",
+    // Énumération : pas de `strategyId` en entrée par nature — le handler lit
+    // `__auth` et restreint lui-même (cf. McpToolScope.SELF_SCOPED).
+    scope: "SELF_SCOPED",
+    inputSchema: z.object({
+      query: z
+        .string()
+        .optional()
+        .describe("Filtre optionnel sur le nom ou le slug (insensible à la casse)"),
+      limit: z.number().int().min(1).max(100).default(50),
+    }),
+    handler: async (input) => {
+      const auth = input.__auth as { scopeKind?: string | null; scopeStrategyId?: string | null } | undefined;
+      // Défense en profondeur : `dispatchTool` refuse déjà un appel sans
+      // `__auth`, mais cet outil ÉNUMÈRE — sans contexte d'authentification il
+      // rendrait toute la base. On ne se repose pas sur la garde d'en face.
+      if (!auth) {
+        return { error: "NO_AUTH_CONTEXT", count: 0, strategies: [] };
+      }
+      const query = typeof input.query === "string" ? input.query.trim() : "";
+      const rows = await db.strategy.findMany({
+        where: {
+          // Clé limitée à une marque → cette marque, un point. Le filtre est
+          // posé ICI parce qu'aucun `strategyId` d'entrée ne peut l'être.
+          ...(auth.scopeKind === "BRAND" ? { id: auth.scopeStrategyId ?? "__aucune__" } : {}),
+          ...(query
+            ? {
+                OR: [
+                  { name: { contains: query, mode: "insensitive" as const } },
+                  { publicSlug: { contains: query, mode: "insensitive" as const } },
+                ],
+              }
+            : {}),
+        },
+        select: {
+          id: true,
+          name: true,
+          publicSlug: true,
+          status: true,
+          apogeeTier: true,
+          advertis_vector: true,
+          updatedAt: true,
+          client: { select: { sector: true } },
+        },
+        orderBy: { updatedAt: "desc" },
+        take: (input.limit as number) ?? 50,
+      });
+      return {
+        count: rows.length,
+        strategies: rows.map((s) => {
+          const composite = readCompositeFromVector(s.advertis_vector);
+          return {
+            strategyId: s.id,
+            name: s.name,
+            publicSlug: s.publicSlug,
+            sector: s.client?.sector ?? null,
+            status: s.status,
+            tier:
+              composite != null || s.apogeeTier
+                ? effectiveTier({ apogeeTier: s.apogeeTier, composite })
+                : null,
+            completudeStructurelle: { value: composite, max: ADVE_COMPOSITE_MAX },
+            updatedAt: s.updatedAt.toISOString(),
+          };
+        }),
+      };
+    },
+  },
+
   // ---- Carte d'identité ADVERTIS ----
   {
     name: "getBrandCard",
@@ -75,25 +156,73 @@ export const tools: ToolDefinition[] = [
       const strategyId = input.strategyId as string;
       const strategy = await db.strategy.findUnique({
         where: { id: strategyId },
-        select: { id: true, name: true, sector: true, advertis_vector: true },
+        // `sector` vit sur `Client`, PAS sur `Strategy` (le sélectionner ici
+        // levait une PrismaClientValidationError qui renvoyait à l'appelant la
+        // liste complète des champs du modèle — fuite de schéma, audit MCP P0).
+        select: {
+          id: true,
+          name: true,
+          advertis_vector: true,
+          apogeeTier: true,
+          client: { select: { sector: true } },
+        },
       });
       if (!strategy) return { error: "NOT_FOUND", strategyId };
       const [pillarA, pillarD] = await Promise.all([
         loadPillar(strategyId, "a"),
         loadPillar(strategyId, "d"),
       ]);
-      const vec = asRecord(strategy.advertis_vector);
-      const composite = typeof vec.compositeScore === "number" ? vec.compositeScore : null;
+      const composite = readCompositeFromVector(strategy.advertis_vector);
+
+      // Les TROIS mesures, nommées et servies ensemble (`domain/brand-scores`).
+      // Le module portait ce canon depuis L1 mais n'avait aucun appelant de
+      // production : chaque surface continuait de servir « le score » comme un
+      // nombre unique, ce qui est précisément la confusion qu'il existe pour
+      // dissiper. Un agent qui lit cette carte voit désormais qu'il y en a
+      // trois, ce que chacune mesure, et laquelle n'est pas mesurée (`null`).
+      const [cultIndex, verdict] = await Promise.all([
+        // `CultIndexSnapshot.compositeScore` = indice d'ATTACHEMENT /100.
+        // Aliasé tout de suite en `attachement` : le nom est homonyme d'une
+        // autre mesure et c'est précisément ce que ce module dissipe.
+        db.cultIndexSnapshot.findFirst({
+          where: { strategyId: strategy.id },
+          orderBy: { measuredAt: "desc" },
+          select: { compositeScore: true },
+        }).then((r) => (r ? { attachement: r.compositeScore } : null)),
+        db.scoreVerdict.findFirst({
+          where: { subjectStrategyId: strategy.id },
+          orderBy: { computedAt: "desc" },
+          select: { force: true, coveragePct: true },
+        }),
+      ]);
+
       return {
         strategyId: strategy.id,
         name: strategy.name,
-        sector: strategy.sector ?? pillarA.secteur ?? null,
+        sector: strategy.client?.sector ?? pillarA.secteur ?? null,
         archetype: pillarA.archetype ?? null,
         accroche: pillarA.accroche ?? null,
         positionnement: pillarD.positionnement ?? null,
         promesseMaitre: pillarD.promesseMaitre ?? null,
+        // Nommée : c'est la COMPLÉTUDE STRUCTURELLE /200 (ADR-0102), pas
+        // l'indice d'attachement ni la force révélée (cf. domain/brand-scores).
+        completudeStructurelle: { value: composite, max: ADVE_COMPOSITE_MAX },
+        /** @deprecated alias de compatibilité — lire `completudeStructurelle`. */
         compositeScore: composite,
-        tier: composite != null ? classifyTier(composite) : null,
+        // Les trois mesures ne se fusionnent JAMAIS (D9) — `null` = non mesurée.
+        scores: describeScores({
+          advertisVector: strategy.advertis_vector,
+          cultIndexScore: cultIndex?.attachement ?? null,
+          revealedForce: verdict
+            ? { force: verdict.force, coveragePct: verdict.coveragePct }
+            : null,
+        }),
+        // Palier OFFICIEL s'il a été posé par une transition gouvernée
+        // (ADR-0167), sinon dérivé du composite. Jamais `classifyTier` en direct.
+        tier:
+          composite != null || strategy.apogeeTier
+            ? effectiveTier({ apogeeTier: strategy.apogeeTier, composite })
+            : null,
       };
     },
   },
@@ -102,7 +231,7 @@ export const tools: ToolDefinition[] = [
   {
     name: "getAdveRtis",
     description:
-      "La stratégie ADVE-RTIS de la marque : les 8 piliers (A Authenticité, D Distinction, V Valeur, E Engagement, R Risk, T Track, I Innovation, S Strategy). Pour chaque pilier : son nom, un résumé lisible et son score. C'est le cœur de l'exposition de l'ADVERTIS à un agent.",
+      "La stratégie ADVE-RTIS de la marque : les 8 piliers (A Authenticité, D Distinction, V Valeur, E Engagement, R Risk, T Track, I Innovation, S Strategy). Pour chaque pilier : son nom, un résumé lisible, son score de complétude structurelle, et sa PROVENANCE (part de champs déclarés vs inférés par l'IA, et la liste des champs inférés). Le score mesure la complétude, PAS la fiabilité : deux piliers au même score peuvent reposer l'un sur du déclaré, l'autre sur du généré — lire `provenance.declaredRatio` pour trancher (`null` = provenance non tracée sur ce pilier, pas « tout inféré »).",
     inputSchema: z.object({
       strategyId: z.string().describe("ID de la marque"),
       keys: z
@@ -129,19 +258,38 @@ export const tools: ToolDefinition[] = [
       const pillars = requested.map((key) => {
         const content = byKey.get(key) ?? {};
         const score = typeof vec[key] === "number" ? (vec[key] as number) : null;
+        // La provenance était TRACÉE à l'écriture et exposée nulle part : un
+        // lecteur voyait un pilier scoré sans savoir si son socle est déclaré ou
+        // généré (audit MCP §6). Le score ne bouge PAS — `scoring.ts` est le
+        // canon figé d'une complétude structurelle (ADR-0102) ; pondérer par la
+        // provenance serait un changement de doctrine, décision opérateur.
+        const prov = computeProvenanceBreakdown(
+          (content._fieldProvenance ?? null) as unknown,
+        );
         return {
           key,
           name: PILLAR_NAMES[key],
           score,
           present: Object.keys(content).length > 0,
+          provenance: {
+            // `null` = aucune provenance tracée sur ce pilier. Surtout pas 0,
+            // qui se lirait « tout est inféré ».
+            declaredRatio: prov.declaredRatio,
+            trackedFields: prov.tracked,
+            counts: prov.counts,
+            inferredFields: prov.inferredFields,
+          },
           headline: pillarHeadline(content),
         };
       });
 
+      const composite = readCompositeFromVector(strategy.advertis_vector);
       return {
         strategyId,
         method: "ADVE-RTIS",
-        compositeScore: typeof vec.compositeScore === "number" ? vec.compositeScore : null,
+        completudeStructurelle: { value: composite, max: ADVE_COMPOSITE_MAX },
+        /** @deprecated alias de compatibilité — lire `completudeStructurelle`. */
+        compositeScore: composite,
         pillars,
       };
     },
@@ -226,6 +374,10 @@ export const tools: ToolDefinition[] = [
           kind: "OPERATOR_AMEND_PILLAR",
           strategyId,
           operatorId,
+          // Un agent n'hérite pas de l'autorité de provenance d'un humain :
+          // sans ce drapeau, cette écriture écrasait un champ DECLARED/OFFICIAL
+          // sans opposition, et se comptait comme « déclarée » dans le ratio.
+          viaAgent: true,
           pillarKey: String(input.pillarKey ?? "").toLowerCase() as "a" | "d" | "v" | "e",
           mode,
           field: String(input.field ?? ""),

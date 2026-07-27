@@ -57,7 +57,7 @@ export function LegalTable({ headers, rows }: { headers: string[]; rows: string[
         <thead>
           <tr>
             {headers.map((h) => (
-              <th key={h} className="border border-border bg-bg-subtle px-3 py-2 text-left font-semibold text-foreground">
+              <th key={h} className="border border-border bg-background-subtle px-3 py-2 text-left font-semibold text-foreground">
                 {h}
               </th>
             ))}

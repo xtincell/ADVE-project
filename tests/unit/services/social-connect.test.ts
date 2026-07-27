@@ -274,6 +274,17 @@ describe("discoverSocialAccounts", () => {
 // ── (5) Readiness honnête (env creds) ────────────────────────────────────────
 
 describe("providerReadiness", () => {
+  // Ces cas décrivent un déploiement SANS credentials. Sur une machine où des
+  // clés OAuth traînent dans l'environnement (le cas d'un poste d'opérateur),
+  // ils échouaient — ils mesuraient la machine, pas le code. On neutralise
+  // explicitement les credentials de tous les providers avant chaque cas.
+  beforeEach(() => {
+    for (const p of ["META", "GOOGLE", "X", "TIKTOK", "LINKEDIN", "SHOPIFY"]) {
+      vi.stubEnv(`${p}_OAUTH_CLIENT_ID`, "");
+      vi.stubEnv(`${p}_OAUTH_CLIENT_SECRET`, "");
+    }
+  });
+
   it("sans env creds → aucun provider prêt (l'UI dira « Bientôt disponible »)", () => {
     const readiness = providerReadiness();
     for (const provider of BRAND_SOCIAL_PROVIDERS) {

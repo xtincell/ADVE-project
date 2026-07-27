@@ -16,7 +16,7 @@ const STATUS_TONE: Record<string, string> = {
   ACTIVE: "bg-success/15 text-success",
   FROZEN: "bg-warning/15 text-warning",
   SHADOWBANNED: "bg-error/15 text-error",
-  PURGED: "bg-bg-subtle text-foreground-muted",
+  PURGED: "bg-background-subtle text-foreground-muted",
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -64,7 +64,7 @@ export default function MarketsKillSwitchPage() {
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-xs text-foreground-muted">{m.code}</span>
                   <span className="text-sm font-medium text-foreground">{m.name}</span>
-                  <span className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${STATUS_TONE[m.status] ?? "bg-bg-subtle text-foreground-muted"}`}>
+                  <span className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${STATUS_TONE[m.status] ?? "bg-background-subtle text-foreground-muted"}`}>
                     {STATUS_LABEL[m.status] ?? m.status}
                   </span>
                 </div>

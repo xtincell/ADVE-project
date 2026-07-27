@@ -297,7 +297,7 @@ function ProposalCard({
   const inferredBy = typeof meta?.classifierInferredBy === "string" ? meta.classifierInferredBy : null;
 
   return (
-    <div className="rounded border border-white/5 bg-surface p-3">
+    <div className="rounded border border-white/5 bg-surface-raised p-3">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
@@ -501,7 +501,7 @@ function SourceEditModal({
                 type="text"
                 value={titleValue}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full rounded border border-white/10 bg-surface px-3 py-2 text-sm text-foreground"
+                className="w-full rounded border border-white/10 bg-surface-raised px-3 py-2 text-sm text-foreground"
               />
             </div>
           )}
@@ -550,7 +550,7 @@ function SourceEditModal({
                             value={value as string}
                             onChange={(e) => handleResponseChange(q.id, e.target.value)}
                             rows={3}
-                            className="w-full rounded border border-white/10 bg-surface px-3 py-2 text-xs text-foreground placeholder-foreground-muted outline-none focus:border-accent"
+                            className="w-full rounded border border-white/10 bg-surface-raised px-3 py-2 text-xs text-foreground placeholder-foreground-muted outline-none focus:border-accent"
                             placeholder="Votre réponse..."
                           />
                         )}
@@ -559,7 +559,7 @@ function SourceEditModal({
                           <select
                             value={value as string}
                             onChange={(e) => handleResponseChange(q.id, e.target.value)}
-                            className="w-full rounded border border-white/10 bg-surface px-3 py-2 text-xs text-foreground placeholder-foreground-muted outline-none focus:border-accent"
+                            className="w-full rounded border border-white/10 bg-surface-raised px-3 py-2 text-xs text-foreground placeholder-foreground-muted outline-none focus:border-accent"
                           >
                             <option value="">— Sélectionner —</option>
                             {q.options?.map((opt: string) => {
@@ -629,7 +629,7 @@ function SourceEditModal({
                 value={contentValue}
                 onChange={(e) => setContent(e.target.value)}
                 rows={14}
-                className="w-full rounded border border-white/10 bg-surface px-3 py-2 font-mono text-xs text-foreground"
+                className="w-full rounded border border-white/10 bg-surface-raised px-3 py-2 font-mono text-xs text-foreground"
               />
             </div>
           )}

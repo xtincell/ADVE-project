@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { PillarSignalSchema, enforceConfidenceFloor } from "@/lib/types/pillar-signal";
 import { PILLAR_KEYS } from "@/lib/types/advertis-vector";
 import { writePillarAndScore } from "@/server/services/pillar-gateway";
+import { CONNECTOR_PUBLIC_SELECT } from "@/server/services/anubis/connector-projection";
 
 // ---------------------------------------------------------------------------
 // ADVERTIS INBOUND MCP Server
@@ -55,6 +56,9 @@ async function updateConnectorStats(
         signalCount,
         avgConfidence,
       },
+      // Retour projeté par principe : cet upsert n'expose rien aujourd'hui (la
+      // valeur est ignorée), mais un `return` ajouté demain sortirait `config`.
+      select: { id: true, status: true, lastSyncAt: true },
     });
   } catch {
     // Non-fatal — stats update failure shouldn't break ingestion
@@ -259,9 +263,13 @@ export const tools: ToolDefinition[] = [
       const operatorId = input.operatorId as string;
       const connectorType = input.connectorType as string | undefined;
 
+      // Projection liste-blanche : `config` porte les jetons OAuth du Vault et
+      // `errorLog` les réponses brutes du fournisseur. Renvoyer la ligne
+      // entière les livrait au porteur d'une clé MCP.
       if (connectorType) {
         const connector = await db.externalConnector.findUnique({
           where: { operatorId_connectorType: { operatorId, connectorType } },
+          select: CONNECTOR_PUBLIC_SELECT,
         });
         return connector ?? { status: "NOT_CONFIGURED", connectorType };
       }
@@ -269,6 +277,7 @@ export const tools: ToolDefinition[] = [
       const connectors = await db.externalConnector.findMany({
         where: { operatorId },
         orderBy: { updatedAt: "desc" },
+        select: CONNECTOR_PUBLIC_SELECT,
       });
 
       return {

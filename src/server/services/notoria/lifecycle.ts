@@ -12,6 +12,7 @@ import type { PillarKey } from "@/lib/types/advertis-vector";
 import type { ResolvedRecoOperation, CompletionLevel } from "./types";
 import { parseRecommendationPayload } from "@/lib/types/recommendation-payload";
 import { dispatchTypedRecos } from "./apply-payload";
+import { reportRefusedWrite } from "../pillar-gateway/refusal";
 
 // ── Accept ────────────────────────────────────────────────────────
 
@@ -376,7 +377,7 @@ export async function revertReco(
   }
 
   // Restore content via Gateway
-  await writePillarAndScore({
+  const _w0 = await writePillarAndScore({
     strategyId,
     pillarKey: reco.targetPillarKey as PillarKey,
     operation: {
@@ -388,6 +389,7 @@ export async function revertReco(
       reason: `Notoria revert: ${reason}`,
     },
   });
+  reportRefusedWrite(_w0, "notoria:lifecycle");
 
   // Mark reco as REVERTED
   await db.recommendation.update({

@@ -84,8 +84,43 @@ export async function POST(request: Request) {
         select: { id: true, hashedPassword: true },
       });
       if (existing?.hashedPassword) {
-        log.push(`[SKIP] login ${loginEmail} existe déjà (mot de passe non réécrit)`);
-        report.login = { done: false, reason: "already-has-password", email: loginEmail, brand: brand.name };
+        // Le mot de passe existe → on ne le réécrit pas. Mais la PROPRIÉTÉ est
+        // orthogonale au mot de passe : sauter tout le bloc laissait le
+        // dirigeant en collaborateur délégué à vie, puisque c'est précisément
+        // le cas d'un compte déjà provisionné. On transfère donc quand même.
+        const admin = await db.user.findFirst({ where: { role: "ADMIN" }, select: { id: true } });
+        const previousOwnerId = brand.userId;
+        if (previousOwnerId !== existing.id) {
+          await db.strategy.update({ where: { id: brand.id }, data: { userId: existing.id } });
+          await db.strategyCollaborator.deleteMany({
+            where: { strategyId: brand.id, userId: existing.id },
+          });
+          if (previousOwnerId) {
+            await db.strategyCollaborator.upsert({
+              where: { strategyId_userId: { strategyId: brand.id, userId: previousOwnerId } },
+              update: { role: "DIGITAL_DIRECTOR", status: "ACTIVE", revokedAt: null },
+              create: {
+                strategyId: brand.id,
+                userId: previousOwnerId,
+                role: "DIGITAL_DIRECTOR",
+                scopes: [],
+                status: "ACTIVE",
+                grantedByUserId: admin?.id ?? existing.id,
+                note: "Propriétaire précédent — accès conservé après transfert de propriété.",
+              },
+            });
+          }
+          log.push(`[OK] ${loginEmail} est désormais PROPRIÉTAIRE de ${brand.name} (mot de passe inchangé)`);
+        } else {
+          log.push(`[SKIP] ${loginEmail} est déjà propriétaire de ${brand.name}`);
+        }
+        report.login = {
+          done: true,
+          reason: "password-kept-ownership-ensured",
+          email: loginEmail,
+          brand: brand.name,
+          owner: true,
+        };
       } else {
         const admin = await db.user.findFirst({ where: { role: "ADMIN" }, select: { id: true } });
         const hashedPassword = await bcrypt.hash(loginPassword, 12);
@@ -99,19 +134,38 @@ export async function POST(request: Request) {
               data: { name: loginName, email: loginEmail, hashedPassword, role: "FOUNDER", passwordChangeInvited: true },
               select: { id: true },
             });
-        await db.strategyCollaborator.upsert({
-          where: { strategyId_userId: { strategyId: brand.id, userId: user.id } },
-          update: { role: "DIGITAL_DIRECTOR", status: "ACTIVE", revokedAt: null, grantedByUserId: admin?.id ?? user.id },
-          create: {
-            strategyId: brand.id,
-            userId: user.id,
-            role: "DIGITAL_DIRECTOR",
-            scopes: [],
-            status: "ACTIVE",
-            grantedByUserId: admin?.id ?? user.id,
-          },
-        });
-        log.push(`[OK] login ${loginEmail} créé → ${brand.name} (DIGITAL_DIRECTOR)`);
+        // PROPRIÉTAIRE, pas collaborateur délégué.
+        //
+        // Ce bloc posait un `StrategyCollaborator DIGITAL_DIRECTOR` : un accès
+        // DÉLÉGUÉ, scopé par le firewall de zones (ADR-0131), qui refuse par
+        // défaut toute écriture hors du métier déclaré. C'est juste pour un
+        // prestataire ; c'est faux pour le dirigeant de la marque — il n'est
+        // pas le délégué de son propre bien. La propriété, ici, c'est
+        // `Strategy.userId` (motif Stéphanie/SPAWT) : `canAccessStrategy` ET
+        // `collaborator-firewall` y court-circuitent tous les deux.
+        const previousOwnerId = brand.userId;
+        await db.strategy.update({ where: { id: brand.id }, data: { userId: user.id } });
+        // Une ligne de collaboration sur le propriétaire serait au mieux
+        // redondante, au pire elle donnerait à lire un rôle restrictif sur
+        // quelqu'un qui ne l'est plus.
+        await db.strategyCollaborator.deleteMany({ where: { strategyId: brand.id, userId: user.id } });
+        if (previousOwnerId && previousOwnerId !== user.id) {
+          // L'ancien propriétaire garde son accès — paternité conservée.
+          await db.strategyCollaborator.upsert({
+            where: { strategyId_userId: { strategyId: brand.id, userId: previousOwnerId } },
+            update: { role: "DIGITAL_DIRECTOR", status: "ACTIVE", revokedAt: null },
+            create: {
+              strategyId: brand.id,
+              userId: previousOwnerId,
+              role: "DIGITAL_DIRECTOR",
+              scopes: [],
+              status: "ACTIVE",
+              grantedByUserId: admin?.id ?? user.id,
+              note: "Propriétaire précédent — accès conservé après transfert de propriété.",
+            },
+          });
+        }
+        log.push(`[OK] login ${loginEmail} → ${brand.name} (PROPRIÉTAIRE)`);
         report.login = {
           done: true,
           email: loginEmail,

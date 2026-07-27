@@ -151,13 +151,64 @@ export async function fillToStage(
       else if (fieldProvenance[topKey] !== "SOURCE") fieldProvenance[topKey] = "INFERRED";
     }
     const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
-    await writePillarAndScore({
+    const write = await writePillarAndScore({
       strategyId,
       pillarKey: key as import("@/lib/types/advertis-vector").PillarKey,
       operation: { type: "REPLACE_FULL", content },
       author: { system: "AUTO_FILLER", reason: `fillToStage(${targetStage}) — ${aggregateFilled.length} fields filled across ${MAX_PASSES} max passes` },
       options: { confidenceDelta: 0.03 * aggregateFilled.length, fieldProvenance },
     });
+
+    // ── Le verdict de la gateway DÉCIDE — il n'est plus jeté ────────────────
+    //
+    // Ce `await` était nu : la valeur de retour partait à la poubelle. Or la
+    // gateway refuse pour cinq raisons (pilier LOCKED, validation stricte,
+    // SHAPE gate, garde de provenance, et un catch-all sur toute exception de
+    // transaction) et, dans ces cas, **rien n'est écrit**. Le code repartait
+    // ensuite évaluer `content` — l'objet EN MÉMOIRE, celui qui porte
+    // justement les valeurs qu'on vient de ne pas persister — et rapportait
+    // « 22 champs remplis, pilier COMPLET ».
+    //
+    // C'est le symptôme rapporté par l'opérateur : on enrichit, l'écran
+    // félicite, on recharge, rien n'a bougé et le score n'a pas monté. Un
+    // succès menteur — la faute cardinale de ce repo.
+    //
+    // Désormais : si l'écriture est refusée, on le DIT (aucun `filled`
+    // revendiqué, la raison de la gateway en clair), et on ré-évalue sur le
+    // contenu réellement persisté, jamais sur le brouillon mémoire.
+    if (!write.success) {
+      console.warn(
+        `[auto-filler] écriture REFUSÉE pillar=${key} strategyId=${strategyId}: ${write.error ?? "raison non fournie"}`,
+      );
+      const persisted = assessPillar(key, write.previousContent ?? {}, contract);
+      return {
+        pillarKey: key,
+        targetStage,
+        filled: [],
+        failed: [
+          {
+            path: "*",
+            reason: write.error ?? "Écriture refusée par la gouvernance des piliers.",
+          },
+          // Les avertissements de la gateway nomment le CHAMP fautif
+          // (« Validation: ton.onNeditPas — … ») : c'est exactement ce que
+          // l'opérateur doit voir pour débloquer, plutôt qu'un pourcentage muet.
+          ...write.warnings.map((w) => ({ path: "*", reason: w })),
+        ],
+        needsHuman: Array.from(aggregateNeedsHuman),
+        persisted: false,
+        newStage: (persisted.currentStage as MaturityStage) ?? "EMPTY",
+        durationMs: Date.now() - start,
+      };
+    }
+    // Sur succès, la vérité est ce que la gateway a écrit (elle peut normaliser).
+    if (write.newContent && typeof write.newContent === "object") {
+      for (const k of Object.keys(content)) delete content[k];
+      Object.assign(content, write.newContent);
+    }
+    for (const w of write.warnings) {
+      aggregateFailed.push({ path: "*", reason: w });
+    }
 
     // Update fieldCertainty with INFERRED for any newly AI-filled fields
     const updatedCertainty = { ...existingCertainty };
@@ -206,6 +257,10 @@ export async function fillToStage(
     filled: aggregateFilled,
     failed: finalFailed,
     needsHuman: Array.from(aggregateNeedsHuman),
+    // Vrai au sens strict : soit la gateway a accepté (on est passé par la
+    // branche de succès), soit il n'y avait rien à écrire (`aggregateFilled`
+    // vide) — dans les deux cas la base est cohérente avec ce qu'on rapporte.
+    persisted: true,
     newStage: after.currentStage as MaturityStage ?? "EMPTY",
     durationMs: Date.now() - start,
   };

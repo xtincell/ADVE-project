@@ -111,7 +111,7 @@ export function ApogeeTrajectoryPanel({ strategyId }: { strategyId: string }) {
             onClick={() => { setPending("PROMOTE"); setReason(""); setError(null); }}
             disabled={!promote.allowed || mutation.isPending}
             title={promote.allowed ? undefined : promote.reason}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface-raised px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-50"
           >
             <TrendingUp className="h-3.5 w-3.5" />
             Promouvoir <ArrowRight className="h-3 w-3" /> <TierChip tier={promote.targetTier} />
@@ -123,7 +123,7 @@ export function ApogeeTrajectoryPanel({ strategyId }: { strategyId: string }) {
           <button
             onClick={() => { setPending("DEMOTE"); setReason(""); setError(null); }}
             disabled={mutation.isPending}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-3 py-1.5 text-xs font-medium text-foreground-muted transition-colors hover:text-error disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface-raised px-3 py-1.5 text-xs font-medium text-foreground-muted transition-colors hover:text-error disabled:opacity-50"
           >
             <TrendingDown className="h-3.5 w-3.5" />
             Rétrograder <ArrowRight className="h-3 w-3" /> <TierChip tier={demote.targetTier} />
@@ -146,7 +146,7 @@ export function ApogeeTrajectoryPanel({ strategyId }: { strategyId: string }) {
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             rows={2}
-            className="w-full resize-none rounded-md border border-border-subtle bg-surface px-2.5 py-1.5 text-xs text-foreground focus:border-accent focus:outline-none"
+            className="w-full resize-none rounded-md border border-border-subtle bg-surface-raised px-2.5 py-1.5 text-xs text-foreground focus:border-accent focus:outline-none"
             placeholder="Ex. Masse de superfans atteinte et cult-index confirmé sur le trimestre."
           />
           {error && <p className="text-2xs text-error">{error}</p>}

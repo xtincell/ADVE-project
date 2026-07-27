@@ -77,14 +77,14 @@ export function NotificationBell() {
         ref={triggerRef}
         type="button"
         aria-label={`Notifications${count > 0 ? ` (${count} non lues)` : ""}`}
-        className="relative inline-flex items-center justify-center rounded-md p-2 hover:bg-[var(--color-surface-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)]"
+        className="relative inline-flex items-center justify-center rounded-md p-2 hover:bg-[var(--color-card-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
         onClick={() => setOpen((v) => !v)}
       >
         <BellIcon />
         {count > 0 && (
           <span
             aria-hidden
-            className="absolute -top-0.5 -right-0.5 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-[var(--color-accent)] px-1 text-[0.625rem] font-semibold text-[var(--color-on-accent)]"
+            className="absolute -top-0.5 -right-0.5 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-[var(--color-accent)] px-1 text-[0.625rem] font-semibold text-[var(--color-accent-foreground)]"
           >
             {count > 99 ? "99+" : count}
           </span>

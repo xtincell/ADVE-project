@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { db } from "@/lib/db";
 import * as seshatBridge from "@/server/services/seshat-bridge";
+import { SECTOR_META_SELECT, countByEntryType, toSectorMeta } from "@/server/mcp/_shared/knowledge-projection";
 
 // ---------------------------------------------------------------------------
 // SESHAT MCP Server
@@ -22,6 +23,12 @@ export interface ToolDefinition {
   description: string;
   inputSchema: z.ZodType;
   handler: (input: Record<string, unknown>) => Promise<unknown>;
+  /**
+   * Portée vis-à-vis des marques — cf. `McpToolScope` (anubis/mcp-server.ts).
+   * Union écrite en clair plutôt qu'importée : `mcp-server` importe déjà ces
+   * modules dynamiquement, un import retour créerait un cycle.
+   */
+  scope?: "BRAND" | "GLOBAL" | "SELF_SCOPED";
 }
 
 // ---------------------------------------------------------------------------
@@ -34,6 +41,8 @@ export const tools: ToolDefinition[] = [
     name: "benchmark_search",
     description:
       "Recherche des benchmarks externes par secteur et marché. Combine les données SESHAT et le knowledge graph interne.",
+    // Référentiel de benchmarks sectoriels — aucune donnée propre à une marque.
+    scope: "GLOBAL",
     inputSchema: z.object({
       sector: z.string().describe("Secteur d'activité (ex: FMCG, Tech, Finance, Mode)"),
       market: z.string().optional().describe("Marché géographique (ex: Cameroun, Nigeria, Côte d'Ivoire)"),
@@ -48,7 +57,12 @@ export const tools: ToolDefinition[] = [
           market: input.market as string | undefined,
           limit: (input.limit as number) ?? 10,
         }),
+        // `entryType` est un paramètre LIBRE de `knowledge_graph_ingest` : une
+        // marque peut donc écrire des lignes SECTOR_BENCHMARK. Le filtre par
+        // type ne suffit pas à garantir l'absence de donnée propriétaire —
+        // métadonnées seules (cf. `_shared/knowledge-projection.ts`).
         db.knowledgeEntry.findMany({
+          select: SECTOR_META_SELECT,
           where: {
             entryType: "SECTOR_BENCHMARK",
             sector: input.sector as string,
@@ -57,7 +71,13 @@ export const tools: ToolDefinition[] = [
           take: 5,
         }),
       ]);
-      return { externalBenchmarks: seshatResults, internalBenchmarks };
+      return {
+        externalBenchmarks: seshatResults,
+        internalBenchmarkActivity: {
+          entryCount: internalBenchmarks.length,
+          latest: internalBenchmarks.map(toSectorMeta),
+        },
+      };
     },
   },
 
@@ -97,6 +117,7 @@ export const tools: ToolDefinition[] = [
     }),
     handler: async (input) => {
       const entries = await db.knowledgeEntry.findMany({
+        select: SECTOR_META_SELECT,
         where: {
           sector: input.sector as string,
           entryType: "SECTOR_BENCHMARK",
@@ -118,6 +139,8 @@ export const tools: ToolDefinition[] = [
     name: "market_context_get",
     description:
       "Récupère le contexte d'un marché : taille, croissance, acteurs clés, comportements consommateurs.",
+    // Contexte d'un MARCHÉ (taille, croissance, acteurs) — référentiel sectoriel, aucune donnée propre à une marque.
+    scope: "GLOBAL",
     inputSchema: z.object({
       market: z.string().describe("Marché géographique (ex: Cameroun, Afrique de l'Ouest, Nigeria)"),
       sector: z.string().optional().describe("Secteur pour contextualiser"),
@@ -126,7 +149,12 @@ export const tools: ToolDefinition[] = [
       const topic = input.sector ? `${input.market} ${input.sector} market` : `${input.market} market`;
       const [seshatData, knowledgeEntries] = await Promise.all([
         seshatBridge.queryReferences({ topic, market: input.market as string, limit: 10 }),
+        // Métadonnées SEULES : `KnowledgeEntry.data` porte des payloads
+        // nominatifs de marque (strategyName, composite, pillarScores). Sur un
+        // outil GLOBAL, les rendre en clair laissait une clé de marque lire ses
+        // concurrents — cf. `_shared/knowledge-projection.ts`.
         db.knowledgeEntry.findMany({
+          select: SECTOR_META_SELECT,
           where: {
             market: input.market as string,
             ...(input.sector ? { sector: input.sector as string } : {}),
@@ -135,7 +163,16 @@ export const tools: ToolDefinition[] = [
           take: 10,
         }),
       ]);
-      return { market: input.market, sector: input.sector, externalData: seshatData, internalData: knowledgeEntries };
+      return {
+        market: input.market,
+        sector: input.sector,
+        externalData: seshatData,
+        internalActivity: {
+          entryCount: knowledgeEntries.length,
+          byType: countByEntryType(knowledgeEntries),
+          latest: knowledgeEntries.map(toSectorMeta),
+        },
+      };
     },
   },
 
@@ -155,6 +192,7 @@ export const tools: ToolDefinition[] = [
         limit: 10,
       });
       const internalIntel = await db.knowledgeEntry.findMany({
+        select: SECTOR_META_SELECT,
         where: {
           entryType: "SECTOR_BENCHMARK",
         },
@@ -192,6 +230,7 @@ export const tools: ToolDefinition[] = [
           limit: 10,
         }),
         db.knowledgeEntry.findMany({
+          select: SECTOR_META_SELECT,
           where: {
             sector: input.sector as string,
           },
@@ -222,6 +261,7 @@ export const tools: ToolDefinition[] = [
           limit: 10,
         }),
         db.knowledgeEntry.findMany({
+          select: SECTOR_META_SELECT,
           where: {
             entryType: "SECTOR_BENCHMARK",
             ...(input.sector ? { sector: input.sector as string } : {}),
@@ -254,6 +294,7 @@ export const tools: ToolDefinition[] = [
           limit: (input.limit as number) ?? 10,
         }),
         db.knowledgeEntry.findMany({
+          select: SECTOR_META_SELECT,
           where: {
             entryType: "MISSION_OUTCOME",
             ...(input.sector ? { sector: input.sector as string } : {}),
@@ -300,6 +341,7 @@ export const tools: ToolDefinition[] = [
       });
       const benchmarks = input.sector
         ? await db.knowledgeEntry.findMany({
+        select: SECTOR_META_SELECT,
             where: { entryType: "SECTOR_BENCHMARK", sector: input.sector as string },
             take: 3,
           })
@@ -330,6 +372,7 @@ export const tools: ToolDefinition[] = [
     inputSchema: z.object({}),
     handler: async () => {
       const entries = await db.knowledgeEntry.findMany({
+        select: SECTOR_META_SELECT,
         where: { entryType: { in: ["SECTOR_BENCHMARK", "MISSION_OUTCOME", "BRIEF_PATTERN", "CAMPAIGN_TEMPLATE"] } },
       });
       const sectors = [...new Set(entries.map((e) => e.sector).filter(Boolean))];

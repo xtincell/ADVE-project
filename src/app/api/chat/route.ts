@@ -88,7 +88,9 @@ export async function POST(request: Request) {
     const threadId = await ensureThread(strategyId, userId);
     const rows = await db.assistantMessage.findMany({
       where: { threadId },
-      orderBy: { createdAt: "desc" },
+      // Départage par `id` — deux messages du même tour peuvent partager
+      // l'horodatage (lignes écrites avant l'horodatage explicite ci-dessous).
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: HISTORY_LIMIT,
       select: { role: true, content: true },
     });
@@ -105,13 +107,28 @@ export async function POST(request: Request) {
     // ── Persistance best-effort à la fin du flux (jamais bloquante) ─────
     result.finished
       .then(async ({ text }) => {
-        if (!text.trim()) return;
-        await db.assistantMessage.createMany({
-          data: [
-            { threadId, role: "user", content: message },
-            { threadId, role: "assistant", content: text },
-          ],
-        });
+        // La QUESTION est persistée même si la réponse est vide : le `return`
+        // anticipé faisait disparaître le message de l'utilisateur de
+        // l'historique alors qu'il restait affiché à l'écran — au tour suivant,
+        // l'écran et le contexte serveur divergeaient.
+        //
+        // Horodatages EXPLICITES et distincts. `createdAt` a pour défaut
+        // `CURRENT_TIMESTAMP`, qui en PostgreSQL est l'instant de DÉBUT DE
+        // TRANSACTION : les deux lignes d'un même `createMany` recevaient donc
+        // une valeur strictement identique. Les relectures trient par
+        // `createdAt` sans départage — sur égalité, l'ordre rendu est celui du
+        // plan d'exécution. Le tour pouvait être rejoué « assistant » AVANT
+        // « user », ce qui ment sur la conversation et produit une séquence
+        // que les fournisseurs à alternance stricte refusent.
+        const askedAt = new Date();
+        const answeredAt = new Date(askedAt.getTime() + 1);
+        const rows = [
+          { threadId, role: "user", content: message, createdAt: askedAt },
+        ];
+        if (text.trim()) {
+          rows.push({ threadId, role: "assistant", content: text, createdAt: answeredAt });
+        }
+        await db.assistantMessage.createMany({ data: rows });
         await db.assistantThread.update({
           where: { id: threadId },
           data: { updatedAt: new Date() },

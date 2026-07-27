@@ -18,6 +18,7 @@
 
 import { createHash, randomBytes } from "crypto";
 import { db } from "@/lib/db";
+import { normalizeScopeKind } from "@/server/services/anubis/mcp-scope-kind";
 
 // ── Origine publique (derrière Cloudflare/Traefik/Coolify) ───────────────
 /**
@@ -221,7 +222,7 @@ export async function exchangeCode(input: ExchangeCodeInput): Promise<IssuedToke
   });
   if (consumed.count !== 1) throw new Error("invalid_grant: code déjà utilisé (course)");
   return mintTokens(row.clientId, row.userId, {
-    scopeKind: row.scopeKind === "BRAND" ? "BRAND" : "SYSTEM",
+    scopeKind: normalizeScopeKind(row.scopeKind),
     scopeStrategyId: row.scopeStrategyId,
   });
 }
@@ -243,7 +244,7 @@ export async function refreshTokens(input: RefreshInput): Promise<IssuedTokens> 
   }
   await db.mcpOAuthToken.update({ where: { id: row.id }, data: { revokedAt: new Date() } });
   return mintTokens(row.clientId, row.userId, {
-    scopeKind: row.scopeKind === "BRAND" ? "BRAND" : "SYSTEM",
+    scopeKind: normalizeScopeKind(row.scopeKind),
     scopeStrategyId: row.scopeStrategyId,
   });
 }
@@ -268,7 +269,7 @@ export async function validateAccessToken(token: string): Promise<ValidatedToken
   db.mcpOAuthToken.update({ where: { id: row.id }, data: { lastUsedAt: new Date() } }).catch(() => {});
   return {
     userId: row.userId,
-    scopeKind: row.scopeKind === "BRAND" ? "BRAND" : "SYSTEM",
+    scopeKind: normalizeScopeKind(row.scopeKind),
     scopeStrategyId: row.scopeStrategyId,
   };
 }

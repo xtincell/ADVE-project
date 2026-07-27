@@ -32,6 +32,10 @@ import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { generateSpecs as engineGenerateSpecs, translateBrief as engineTranslateBrief } from "@/server/services/driver-engine";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { db } from "@/lib/db";
+import {
+  MEDIA_CONNECTION_PUBLIC_SELECT,
+  SOCIAL_CONNECTION_PUBLIC_SELECT,
+} from "@/server/services/anubis/connector-projection";
 /* lafusee:governed-active */
 
 /**
@@ -377,6 +381,7 @@ export const driverRouter = createTRPCRouter({
 
       const connection = await ctx.db.socialConnection.findFirst({
         where: { strategyId: driver.strategyId, platform: platform as SocialPlatform, status: "ACTIVE" },
+        select: SOCIAL_CONNECTION_PUBLIC_SELECT,
       });
       return { driver: driver.name, channel: driver.channel, connection, linked: !!connection };
     }),
@@ -455,6 +460,7 @@ export const driverRouter = createTRPCRouter({
 
       const connection = await ctx.db.mediaPlatformConnection.findFirst({
         where: { strategyId: driver.strategyId, platform, status: "ACTIVE" },
+        select: MEDIA_CONNECTION_PUBLIC_SELECT,
       });
       return { driver: driver.name, channel: driver.channel, platform, connection, linked: !!connection };
     }),

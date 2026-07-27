@@ -74,7 +74,7 @@ export default function ParrainagesPage() {
                     onChange={(e) => setNoteById((m) => ({ ...m, [r.id]: e.target.value }))}
                     placeholder="Note (ex : -20 % appliqué + 1 mois parrain)"
                     className="min-w-[240px] flex-1 rounded-md border px-3 py-2 text-sm"
-                    style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
+                    style={{ borderColor: "var(--color-border)", background: "var(--color-surface-raised)" }}
                   />
                   <Button
                     size="sm"

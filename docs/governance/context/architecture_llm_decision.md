@@ -11,6 +11,27 @@ type: feedback
 - Commandant = lead DÉCISIONNEL du swarm Mestor, pas gate technique
 - Tous les services passent par le Gateway pour les appels LLM
 
+## Cascade de providers texte (canon 2026-07-16, réaffirmé 2026-07-27)
+
+**Ollama Cloud est le provider PRIMAIRE** (modèle piloté par `OLLAMA_MODEL`),
+**OpenRouter le repli**, **Anthropic le dernier recours**. Le chemin nominal ne
+consomme aucun crédit payant — c'est le cœur de « la Fusée non-dépendante du LLM ».
+
+- `LLM_PREMIUM_MODE=1` → inverse : Anthropic promu en tête (une fois les crédits chargés).
+- `LLM_PRIMARY_PROVIDER` → gagne sur les deux (l'opérateur tranche).
+- **OpenAI est HORS des candidats texte** (directive opérateur 2026-06-24) : il est
+  réservé aux **embeddings**. On ne génère jamais de texte avec GPT.
+
+Ordre résolu par `resolveTextProviderOrder` + `buildTextProviderCandidates`
+(`src/server/services/llm-gateway/index.ts`) — les deux seules fonctions qui
+décident. Gardées par `tests/unit/governance/llm-routing.test.ts`.
+
+> ⚠️ Formulation périmée à ne plus reprendre : « cascade Anthropic→OpenAI→Ollama→OpenRouter ».
+> Elle décrivait l'état de PR #258 (juin 2026) et fut corrigée le 2026-07-16 ; elle a
+> survécu dans plusieurs index de docs jusqu'au 2026-07-27, où elle a induit une
+> session en erreur (elle place le provider payant en tête et fait croire que GPT
+> génère du texte).
+
 ## GLORY Tools — Exécution déterministe
 
 **Chaque outil GLORY a :**

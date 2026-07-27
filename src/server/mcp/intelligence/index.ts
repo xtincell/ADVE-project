@@ -23,6 +23,7 @@ import * as mestor from "@/server/services/mestor";
 import * as knowledgeAggregator from "@/server/services/knowledge-aggregator";
 import * as feedbackLoop from "@/server/services/feedback-loop";
 import * as seshatBridge from "@/server/services/seshat-bridge";
+import { SECTOR_META_SELECT, countByEntryType, toSectorMeta } from "@/server/mcp/_shared/knowledge-projection";
 
 // ---------------------------------------------------------------------------
 // Intelligence MCP Server
@@ -43,6 +44,12 @@ export interface ToolDefinition {
   description: string;
   inputSchema: z.ZodType;
   handler: (input: Record<string, unknown>) => Promise<unknown>;
+  /**
+   * Portée vis-à-vis des marques — cf. `McpToolScope` (anubis/mcp-server.ts).
+   * Union écrite en clair plutôt qu'importée : `mcp-server` importe déjà ces
+   * modules dynamiquement, un import retour créerait un cycle.
+   */
+  scope?: "BRAND" | "GLOBAL" | "SELF_SCOPED";
 }
 
 // ---------------------------------------------------------------------------
@@ -72,20 +79,25 @@ export const tools: ToolDefinition[] = [
       const strategyId = typeof input.strategyId === "string" ? input.strategyId : null;
       const entryType = typeof input.entryType === "string" ? input.entryType : null;
 
-      const pool = await db.knowledgeEntry.findMany({
-        where: entryType
-          ? { entryType: entryType as import("@prisma/client").KnowledgeType }
-          : {},
+      // Lecture COMPLÈTE assumée : le filtre par marque et le classement par
+      // mots-clés opèrent tous deux sur `data`. Ce qui compte, c'est que `data`
+      // ne SORTE pas — la projection est faite au retour, pas à la requête.
+      // Le filtre de marque était appliqué APRÈS un `take: 200` global : une
+      // marque dont les entrées ne figuraient pas parmi les 200 plus récentes
+      // de TOUTE la table recevait `{ entries: [], count: 0 }` — « pas de
+      // connaissance », alors que la donnée existait. La réponse changeait
+      // d'une semaine à l'autre pour des raisons étrangères à la marque.
+      // Le scoping descend donc dans la requête.
+      const scoped = await db.knowledgeEntry.findMany({
+        where: {
+          ...(entryType
+            ? { entryType: entryType as import("@prisma/client").KnowledgeType }
+            : {}),
+          ...(strategyId ? { data: { path: ["strategyId"], equals: strategyId } } : {}),
+        },
         orderBy: { createdAt: "desc" },
         take: 200,
       });
-
-      const scoped = strategyId
-        ? pool.filter((e) => {
-            const data = (e.data ?? {}) as Record<string, unknown>;
-            return data.strategyId === strategyId;
-          })
-        : pool;
 
       const terms = query.split(/\s+/).filter((t) => t.length > 2);
       const ranked = scoped
@@ -98,7 +110,11 @@ export const tools: ToolDefinition[] = [
         .slice(0, limit);
 
       return {
-        entries: ranked.map((r) => r.entry),
+        // Métadonnées seulement : cet outil est CURÉ (présent dans `tools/list`
+        // de tout client MCP) et rendait les lignes entières — `data` et
+        // `sourceHash` compris. Le filtre par marque protège du cross-tenant,
+        // pas de la sur-exposition.
+        entries: ranked.map((r) => toSectorMeta(r.entry)),
         count: ranked.length,
         query,
         matchedByQuery: terms.length > 0,
@@ -187,12 +203,27 @@ export const tools: ToolDefinition[] = [
       market: z.string().optional().describe("Marché géographique"),
     }),
     handler: async (input) => {
+      // `strategyId` était EXIGÉ, décrit comme « la stratégie associée »… et
+      // jamais écrit : chaque entrée ingérée naissait orpheline de sa marque.
+      // `KnowledgeEntry` n'a pas de colonne `strategyId` — la convention du repo
+      // (cf. `diagnostic-engine`) est de le porter dans `data` + `sourceHash`.
+      const strategyId = input.strategyId as string;
+      // `strategyId` en DERNIER : le spread de `input.data` est contrôlé par
+      // l'appelant. Placé avant, un `data: { strategyId: "<autre marque>" }`
+      // écrasait l'attribution autoritaire — et comme `KnowledgeEntry` n'a pas
+      // de colonne `strategyId`, `data.strategyId` EST l'unique attribution.
+      // Une clé scopée sur A aurait écrit une entrée attribuée à B.
+      const payload = {
+        ...((input.data as Record<string, unknown>) ?? {}),
+        strategyId,
+      };
       const entry = await db.knowledgeEntry.create({
         data: {
           entryType: input.entryType as "DIAGNOSTIC_RESULT" | "MISSION_OUTCOME" | "BRIEF_PATTERN" | "CREATOR_PATTERN" | "SECTOR_BENCHMARK" | "CAMPAIGN_TEMPLATE",
-          data: ((input.data as Record<string, unknown>) ?? {}) as unknown as import("@prisma/client").Prisma.InputJsonValue,
+          data: payload as unknown as import("@prisma/client").Prisma.InputJsonValue,
           sector: input.sector as string | undefined,
           market: input.market as string | undefined,
+          sourceHash: `mcp-ingest-${strategyId}-${String(input.entryType)}`,
         },
       });
       return entry;
@@ -212,6 +243,7 @@ export const tools: ToolDefinition[] = [
     handler: async (input) => {
       const [internalEntries, seshatRefs] = await Promise.all([
         db.knowledgeEntry.findMany({
+          select: SECTOR_META_SELECT,
           where: {
             entryType: "SECTOR_BENCHMARK",
             sector: input.sector as string,
@@ -237,7 +269,9 @@ export const tools: ToolDefinition[] = [
       "Analyse le positionnement d'un concurrent par rapport à la stratégie ADVE de la marque cliente.",
     inputSchema: z.object({
       strategyId: z.string().describe("ID de la stratégie de la marque cliente"),
-      competitorName: z.string().describe("Nom du concurrent"),
+      // `.min(1)` : une chaîne vide donnait `contains: ""` → `LIKE '%%'`,
+      // soit TOUTES les entrées à secteur non nul, pour n'importe quelle clé.
+      competitorName: z.string().min(1).describe("Nom du concurrent"),
       dimensions: z
         .array(z.enum(["pricing", "positioning", "creative", "digital", "distribution", "community"]))
         .optional()
@@ -249,6 +283,7 @@ export const tools: ToolDefinition[] = [
           where: { id: input.strategyId as string },
         }),
         db.knowledgeEntry.findMany({
+          select: SECTOR_META_SELECT,
           where: {
             entryType: "SECTOR_BENCHMARK",
             sector: { contains: input.competitorName as string },
@@ -282,6 +317,7 @@ export const tools: ToolDefinition[] = [
     }),
     handler: async (input) => {
       const benchmarks = await db.knowledgeEntry.findMany({
+        select: SECTOR_META_SELECT,
         where: {
           entryType: "SECTOR_BENCHMARK",
           sector: input.sector as string,
@@ -298,25 +334,34 @@ export const tools: ToolDefinition[] = [
   {
     name: "sector_insights",
     description:
-      "Génère des insights stratégiques pour un secteur donné en agrégeant les données du knowledge graph.",
+      "Volumétrie sectorielle du graphe de connaissances : combien d'entrées, de quels types, sur quelle période. AGRÉGATS SEULS — le contenu des entrées appartient aux marques qui les ont produites et n'est jamais rendu ici.",
+    // Agrégat de secteur : rien à scoper par marque — À CONDITION que la sortie
+    // reste agrégée (cf. `_shared/knowledge-projection.ts`).
+    scope: "GLOBAL",
+    // `strategyId` était déclaré « pour contextualiser » et n'était jamais lu —
+    // un paramètre décoratif qui laissait croire à un scoping inexistant. Retiré
+    // plutôt que faussement honoré.
     inputSchema: z.object({
       sector: z.string().describe("Secteur d'activité"),
-      strategyId: z.string().optional().describe("ID stratégie pour contextualiser"),
     }),
     handler: async (input) => {
+      // `KnowledgeEntry.data` porte des payloads NOMINATIFS (strategyName,
+      // composite, pillarScores — cf. knowledge-seeder). Rendre les lignes
+      // entières sur un outil GLOBAL laissait une clé de marque lire le nom et
+      // le score de ses concurrents du même secteur. On ne projette que des
+      // métadonnées (liste blanche).
       const entries = await db.knowledgeEntry.findMany({
+        select: SECTOR_META_SELECT,
         where: { sector: input.sector as string },
         orderBy: { createdAt: "desc" },
         take: 20,
       });
-      const typeCounts = entries.reduce(
-        (acc, e) => {
-          acc[e.entryType] = (acc[e.entryType] ?? 0) + 1;
-          return acc;
-        },
-        {} as Record<string, number>
-      );
-      return { sector: input.sector, totalEntries: entries.length, byType: typeCounts, latestEntries: entries.slice(0, 5) };
+      return {
+        sector: input.sector,
+        totalEntries: entries.length,
+        byType: countByEntryType(entries),
+        latest: entries.slice(0, 5).map(toSectorMeta),
+      };
     },
   },
 
@@ -453,6 +498,9 @@ export const tools: ToolDefinition[] = [
       const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
       const entries = await db.knowledgeEntry.findMany({
+        // `pillarFocus` est une métadonnée de classement, pas du contenu de
+        // marque — elle s'ajoute à la projection sans rouvrir `data`.
+        select: { ...SECTOR_META_SELECT, pillarFocus: true },
         where: {
           createdAt: { gte: since },
           ...(input.sector ? { sector: input.sector as string } : {}),
@@ -617,7 +665,17 @@ export const tools: ToolDefinition[] = [
       strategyId: z.string().optional().describe("Filtrer par stratégie (optionnel)"),
     }),
     handler: async (input) => {
-      const where = input.strategyId ? { sector: input.strategyId as string } : {};
+      // `{ sector: strategyId }` — la confusion de type corrigée 590 lignes plus
+      // haut sur `knowledge_graph_query`, restée ici : un id de marque n'est PAS
+      // un secteur, donc la clause ne matchait jamais et le tool répondait
+      // « graphe vide » (0 partout) à une clé BRAND, qui porte TOUJOURS un
+      // strategyId injecté. Zéro fabriqué, indistinguable d'un vrai zéro.
+      //
+      // L'attribution canonique est `data.strategyId` (la table n'a pas de
+      // colonne dédiée) — un filtre JSON, pas un champ scalaire.
+      const where: import("@prisma/client").Prisma.KnowledgeEntryWhereInput = input.strategyId
+        ? { data: { path: ["strategyId"], equals: input.strategyId as string } }
+        : {};
       const [total, byType, bySector] = await Promise.all([
         db.knowledgeEntry.count({ where }),
         db.knowledgeEntry.groupBy({ by: ["entryType"], _count: true, where }),

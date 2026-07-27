@@ -52,7 +52,7 @@ export function FeedbackButton() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Signaler un bug ou envoyer un retour"
-        className="fixed bottom-[calc(var(--mobile-tab-height,0px)+env(safe-area-inset-bottom)+16px)] right-4 z-[var(--z-sticky)] inline-flex items-center gap-2 rounded-full border border-border bg-surface px-4 py-2.5 text-sm font-medium text-foreground shadow-lg transition-colors hover:border-accent md:bottom-6"
+        className="fixed bottom-[calc(var(--mobile-tab-height,0px)+env(safe-area-inset-bottom)+16px)] right-4 z-[var(--z-sticky)] inline-flex items-center gap-2 rounded-full border border-border bg-surface-raised px-4 py-2.5 text-sm font-medium text-foreground shadow-lg transition-colors hover:border-accent md:bottom-6"
       >
         <MessageSquarePlus className="h-4 w-4 text-[color:var(--color-accent)]" aria-hidden />
         <span className="hidden sm:inline">Un souci ? Un retour ?</span>

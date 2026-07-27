@@ -15,7 +15,8 @@
  */
 
 import { db } from "@/lib/db";
-import { BRAND_TIERS, classifyTier, type BrandTier } from "@/domain/brand-tier";
+import { BRAND_TIERS, effectiveTier, type BrandTier } from "@/domain/brand-tier";
+import { readCompositeFromVector } from "@/domain/brand-scores";
 import { planCanonicalCampaigns, type InitiativeLite, type CanonTemplateLite, type PlannedCampaign } from "./plan";
 import { ensureCanonTemplates } from "./reference";
 
@@ -29,11 +30,16 @@ function tierToOrdinal(tier: BrandTier): number {
 
 /** Résout le tier de marque depuis le score composite courant (best-effort → LATENT). */
 async function resolveTierOrdinal(strategyId: string): Promise<number> {
-  const strat = await db.strategy.findUnique({ where: { id: strategyId }, select: { advertis_vector: true } });
-  const vec = (strat?.advertis_vector ?? {}) as Record<string, unknown>;
-  const composite = typeof vec.compositeScore === "number" ? vec.compositeScore : null;
-  if (composite == null) return 0;
-  return tierToOrdinal(classifyTier(composite));
+  const strat = await db.strategy.findUnique({
+    where: { id: strategyId },
+    select: { advertis_vector: true, apogeeTier: true },
+  });
+  // Lecture canon du composite (`composite`, PAS `compositeScore` — cf.
+  // `domain/brand-scores.ts` : cette confusion de nom servait `null` ici, donc
+  // un tier LATENT systématique, donc un cadrage de campagne sous-dimensionné.
+  const composite = readCompositeFromVector(strat?.advertis_vector);
+  if (composite == null && !strat?.apogeeTier) return 0;
+  return tierToOrdinal(effectiveTier({ apogeeTier: strat?.apogeeTier, composite }));
 }
 
 /** Budget global conseillé (Pilier S computed.globalBudget → Pilier V → 0). */
