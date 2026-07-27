@@ -60,7 +60,22 @@ export async function buildValueStatement(strategyId: string, monthRef?: Date): 
   const { start, end, label } = monthBounds(ref);
   const strategy = await db.strategy.findUniqueOrThrow({
     where: { id: strategyId },
-    select: { id: true, name: true, countryCode: true, websiteUrl: true },
+    // `Strategy` ne porte PAS de `websiteUrl` — le site est déclaré à l'intake.
+    // Le `select` en demandait un : Prisma type une clé inconnue en `never`
+    // (assignable à tout), donc tsc restait vert et le relevé de valeur levait
+    // un `PrismaClientValidationError` à chaque appel. Verrou CI
+    // `prisma-select-fields-exist`.
+    select: {
+      id: true,
+      name: true,
+      countryCode: true,
+      quickIntakes: {
+        where: { websiteUrl: { not: null } },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { websiteUrl: true },
+      },
+    },
   });
 
   const [followers, community, actionsDone, publications, costAgg, verdict] = await Promise.all([
@@ -108,7 +123,8 @@ export async function buildValueStatement(strategyId: string, monthRef?: Date): 
   // Empreinte : snapshots du répertoire par brandKey (le /scorer public).
   const brandKey = normalizeBrandKey({
     name: strategy.name,
-    websiteUrl: strategy.websiteUrl,
+    // Absent → repli sur le slug du nom. On ne fabrique pas un domaine.
+    websiteUrl: strategy.quickIntakes[0]?.websiteUrl ?? null,
     countryCode: strategy.countryCode,
   });
   const footprints = await db.brandFootprintSnapshot.findMany({

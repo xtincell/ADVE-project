@@ -137,15 +137,31 @@ export async function buildCommunityHealthSeries(strategyId: string): Promise<Se
 
 /** Série empreinte publique (/scorer) par brandKey de la marque. */
 export async function buildFootprintSeries(strategyId: string): Promise<SeriesPoint[]> {
+  // `Strategy` ne porte PAS de `websiteUrl` — le site est déclaré à l'intake.
+  // Ce `select` en demandait un : Prisma type une clé inconnue en `never`
+  // (assignable à tout), donc tsc restait vert et la fonction levait un
+  // `PrismaClientValidationError` à chaque appel. Cf. verrou CI
+  // `prisma-select-fields-exist`.
   const strategy = await db.strategy.findUnique({
     where: { id: strategyId },
-    select: { name: true, websiteUrl: true, countryCode: true },
+    select: {
+      name: true,
+      countryCode: true,
+      quickIntakes: {
+        where: { websiteUrl: { not: null } },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { websiteUrl: true },
+      },
+    },
   });
   if (!strategy) return [];
   const { normalizeBrandKey } = await import("@/server/services/seshat/brand-registry");
   const brandKey = normalizeBrandKey({
     name: strategy.name,
-    websiteUrl: strategy.websiteUrl,
+    // Absent → `normalizeBrandKey` retombe sur le slug du nom. Honnête : on ne
+    // fabrique pas un domaine.
+    websiteUrl: strategy.quickIntakes[0]?.websiteUrl ?? null,
     countryCode: strategy.countryCode,
   });
   const rows = await db.brandFootprintSnapshot.findMany({
