@@ -171,7 +171,18 @@ export const ingestionRouter = createTRPCRouter({
   })
     .mutation(async ({ ctx, input }) => {
       await assertSourceAccess(ctx.session.user.id, input.id);
-      return ctx.db.brandDataSource.delete({ where: { id: input.id } });
+      // Retirer le document SANS retirer son index laissait des fragments
+      // orphelins : `BrandContextNode.sourceId` est un `String?` nu — pas de clé
+      // étrangère, donc aucune cascade. Ces fragments restent récupérables par
+      // le RAG et cités avec un `sourceId` qui ne désigne plus rien. Depuis
+      // l'ancrage documentaire (ADR-0184), une citation se vérifie PAR cette
+      // ancre : un orphelin est donc une citation qui paraît vérifiée et ne
+      // l'est pas. Les deux suppressions vont ensemble, en transaction.
+      const [, deleted] = await ctx.db.$transaction([
+        ctx.db.brandContextNode.deleteMany({ where: { sourceId: input.id } }),
+        ctx.db.brandDataSource.delete({ where: { id: input.id } }),
+      ]);
+      return deleted;
     }),
 
   // Update a manual source (title + content + certainty per PR-A/ADR-0032).

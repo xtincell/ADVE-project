@@ -1,5 +1,26 @@
 # Changelog — La Fusee
 
+## v6.27.366 — fix(seshat): retirer un document laissait son index derrière (2026-07-28)
+
+Trouvé en préparant le retrait des cinq sources SPAWT polluées en base64 :
+`ingestion.deleteSource` supprimait la `BrandDataSource` **et rien d'autre**.
+`BrandContextNode.sourceId` est un `String?` nu — un index, pas une clé étrangère, donc
+**aucune cascade**. Les fragments survivaient au document, restaient récupérables par le
+RAG partagé (conseil de marque, livre de marque, `rag_search` MCP, contexte source de la
+Notoria) et citables avec une ancre morte.
+
+Depuis l'ancrage documentaire ([ADR-0184](docs/governance/adr/0184-source-grounding-measured-not-claimed.md))
+c'est précisément la pire forme : une citation se vérifie **par** `sourceId`, donc un
+fragment orphelin est une citation qui **paraît vérifiée** et ne l'est pas — l'inverse exact
+de ce que la mesure d'ancrage doit produire. Un porteur qui retire un document se croirait
+débarrassé de son contenu ; il continuerait à nourrir ses livrables.
+
+Les deux suppressions vont désormais ensemble, en transaction, sur les **deux** sites qui
+retirent une source (`ingestion.deleteSource` et `purge-and-reingest`). La ré-indexation,
+elle, était déjà correcte (`indexBrandSource` purge ses fragments avant de réécrire).
+Verrou étendu : tout suppresseur de source doit purger ses fragments, et l'apparition d'un
+nouveau site de suppression fait tomber le test.
+
 ## v6.27.365 — fix(cockpit): trois pages mortes, et la méthode qui ne les voyait pas (2026-07-28)
 
 Diagnostic opérateur : « *le `/cockpit/brand/bible` ne marche toujours pas. je t'ai

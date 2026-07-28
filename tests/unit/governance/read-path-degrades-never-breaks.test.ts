@@ -28,7 +28,7 @@
  * l'exception remonte.
  */
 
-import { readFileSync } from "node:fs";
+import { readFileSync, globSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -121,6 +121,39 @@ describe("une panne d'embedding dégrade, elle ne casse pas", () => {
     expect(fn).toMatch(/isCreditExhaustionError\(err\)/);
     // Et les jambes gardent un `throw err` pour le reste.
     expect(src).toMatch(/throw err;/);
+  });
+});
+
+describe("retirer un document retire son index", () => {
+  /**
+   * `BrandContextNode.sourceId` est un `String?` **nu** — index, pas clé
+   * étrangère, donc aucune cascade. Un `brandDataSource.delete` seul laisse des
+   * fragments récupérables par le RAG et citables avec une ancre morte. Depuis
+   * ADR-0184 une citation se vérifie PAR cette ancre : un orphelin est une
+   * citation qui paraît vérifiée et ne l'est pas.
+   */
+  const DELETERS = [
+    "src/server/trpc/routers/ingestion.ts",
+    "src/server/services/quick-intake/purge-and-reingest.ts",
+  ];
+
+  it("tout suppresseur de source purge aussi ses fragments", () => {
+    for (const rel of DELETERS) {
+      const src = read(rel);
+      expect(src, `${rel} supprime une source`).toMatch(/brandDataSource\.delete\(/);
+      expect(src, `${rel} doit purger les fragments de la même source`).toMatch(
+        /brandContextNode\.deleteMany\(\{\s*where:\s*\{\s*sourceId/,
+      );
+    }
+  });
+
+  it("aucun autre suppresseur de source n'existe hors scripts", () => {
+    // Un nouveau site de suppression doit passer par cette revue.
+    const srcFiles = globSync("src/**/*.ts", { cwd: ROOT }) as unknown as string[];
+    const deleters = srcFiles.filter((rel) =>
+      /brandDataSource\.delete(Many)?\(/.test(readFileSync(join(ROOT, rel), "utf8")),
+    );
+    expect(deleters.sort()).toEqual([...DELETERS].sort());
   });
 });
 
