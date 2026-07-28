@@ -1,5 +1,18 @@
 # Changelog — La Fusee
 
+## v6.27.362 — fix(intake): les sélecteurs de fichiers ne proposent plus des formats qu'on rejette (2026-07-28)
+
+Question opérateur : « l'import via un xls également ? » — vérification faite, la réponse n'était pas celle qu'affichait l'interface.
+
+L'upload Console annonçait « PDF, DOCX, XLSX, Images » et acceptait `.xls` **et** les images. Or :
+
+- **`.xls` legacy est refusé** par le pipeline (`exceljs` ne lit pas le BIFF binaire — `extractAuto` lève « convertir en .xlsx ou .csv ») ;
+- **les images ne sont plus lues du tout** depuis v6.27.357 (leur extraction inventait une description).
+
+L'opérateur découvrait donc le refus **après** le dépôt, sur une source déjà créée en `FAILED`. Les deux sélecteurs — Console et cockpit fondateur — ne proposent plus que ce qui est réellement lisible : `.pdf .docx .doc .xlsx .csv .txt .md`. Libellés alignés.
+
+**`.xlsx` fonctionne** de bout en bout : `extractXLSX` (exceljs) rend chaque feuille en CSV lisible, ce qui en fait une source citable comme n'importe quel document. À ne pas confondre avec `/launchpad/portfolio-bulk-import`, qui parse la première feuille d'un `.xlsx` pour un import de **portefeuille multi-marques** — parsing pur, sans persistance, autre flux.
+
 ## v6.27.361 — fix(ci): un `env:` en double rendait le workflow de build INLANÇABLE (2026-07-28)
 
 Le correctif de v6.27.359 avait ajouté un **second** bloc `env:` au step de redeploy, qui en avait déjà un. Rien ne l'a vu : ni `tsc`, ni le lint, ni les tests. Le défaut ne se manifeste qu'au **lancement** — `422 … 'env' is already defined` — c'est-à-dire précisément au moment de livrer.

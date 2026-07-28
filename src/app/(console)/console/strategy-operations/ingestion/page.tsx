@@ -172,9 +172,17 @@ export default function IngestionPage() {
             <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-background/50 p-8 transition-colors hover:border-accent">
               <Upload className="mb-3 h-10 w-10 text-foreground-muted" />
               <span className="text-sm font-medium text-foreground-secondary">Uploader des fichiers</span>
-              <span className="mt-1 text-[10px] text-foreground-muted">PDF, DOCX, XLSX, Images — Max 10 MB par fichier</span>
+              <span className="mt-1 text-[10px] text-foreground-muted">PDF, DOCX, XLSX, CSV, texte — Max 10 MB par fichier</span>
+              {/* Le sélecteur ne propose plus que ce que le pipeline sait
+                  RÉELLEMENT lire (`extractAuto`) :
+                  - `.xls` legacy → refusé (exceljs ne lit pas le BIFF binaire) ;
+                  - images → plus lues du tout depuis v6.27.357 (l'extraction
+                    inventait une description au lieu de voir l'image).
+                  Les proposer, c'est promettre un format qu'on va rejeter :
+                  l'opérateur découvrait le refus APRÈS coup, sur une source
+                  déjà créée en FAILED. */}
               <input type="file" className="hidden" multiple
-                accept=".pdf,.docx,.doc,.xlsx,.xls,.csv,.png,.jpg,.jpeg,.webp,.txt"
+                accept=".pdf,.docx,.doc,.xlsx,.csv,.txt,.md"
                 onChange={handleFileUpload} />
             </label>
 
