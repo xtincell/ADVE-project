@@ -1,5 +1,22 @@
 # Changelog — La Fusee
 
+## v6.27.355 — fix(notoria): la documentation de la marque était lue à hauteur de 500 caractères (2026-07-28)
+
+**Notoria lisait déjà les sources. Le défaut n'était pas l'absence de lecture — il était pire.**
+
+```ts
+take: 5                                // 5 documents max, sans tri
+.slice(0, 500)                         // 500 caractères par document
+if (missionType === "ADVE_UPDATE")     // 1 mission sur 7
+```
+
+- Un PRD de 62 pages fait **~95 000 caractères** : le moteur *possédait* la documentation de la marque et n'en lisait que la page de garde. C'est la cause mécanique des « approximations » constatées par l'opérateur, pas un défaut de prompt.
+- **Six missions sur sept ne voyaient aucun document** — dont `ADVE_INTAKE_PARTIAL` et `ADVE_BOOT_FILL`, celles qui bâtissent le noyau A/D/V/E **à la naissance de la marque**. Une fiche fondatrice était produite par inférence pure même quand la marque avait déposé son brand book.
+- **`source-context.ts`** remplace la troncature aveugle par : un **ordre** (`certainty` — qui n'était même pas dans le `select`, donc une pièce `OFFICIAL` et une note `ARBITRARY` pesaient pareil) · un **budget explicite** de 24 000 caractères réparti entre les documents (contre 4 000 de plafond global, quand le seul contenu du pilier courant en recevait déjà 8 000) · une **sélection de passages par pertinence** (paragraphes scorés, remis dans l'ordre du document, coupes signalées) · un **identifiant de source par extrait** — sans lui, aucune vérification adversariale n'est possible en aval · une **exigence d'ancrage au prompt** (`ai-filler`/`auto-filler` la portaient depuis toujours ; le générateur principal des piliers, non).
+- `wrapUntrusted` **conservé** : le contenu uploadé reste non fiable (OWASP LLM01). On augmente le budget, on ne retire pas la ceinture. **Zéro LLM ajouté.**
+- **Deux bugs de mon propre module corrigés avant commit** : tri de certitude **inversé** (`compareCertainty` rend positif quand `a` est plus fiable → dans un `sort` cela le place *après* : les notes arbitraires passaient en premier) et marques combinantes littérales en regex.
+- Cap APOGEE 7/7 · 0 modèle Prisma · 0 migration · 0 Intent kind. tsc 0 · lint 0 · **1450 tests gouvernance verts**.
+
 ## v6.27.354 — fix: un `select` Prisma qui nomme une colonne inexistante est invisible à `tsc` (2026-07-27)
 
 **`tsc` ne peut PAS attraper cette classe. Prisma type une clé `select` inconnue en `never` — et `never` est assignable à tout.**
