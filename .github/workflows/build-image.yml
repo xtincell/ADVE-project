@@ -131,7 +131,6 @@ jobs:
           COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
           COOLIFY_APP_UUID: ${{ secrets.COOLIFY_APP_UUID }}
-        env:
           # Sert à VÉRIFIER que la prod a réellement basculé. Sans cette URL, on
           # ne peut que constater l'accusé de réception — et on le dit.
           PROD_URL: ${{ vars.PROD_URL }}

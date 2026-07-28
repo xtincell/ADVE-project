@@ -1,5 +1,13 @@
 # Changelog — La Fusee
 
+## v6.27.361 — fix(ci): un `env:` en double rendait le workflow de build INLANÇABLE (2026-07-28)
+
+Le correctif de v6.27.359 avait ajouté un **second** bloc `env:` au step de redeploy, qui en avait déjà un. Rien ne l'a vu : ni `tsc`, ni le lint, ni les tests. Le défaut ne se manifeste qu'au **lancement** — `422 … 'env' is already defined` — c'est-à-dire précisément au moment de livrer.
+
+Les deux blocs sont fusionnés. Et un verrou est posé : `tests/unit/governance/workflows-yaml-valid.test.ts` charge **chaque** workflow en mode strict (`js-yaml`, `json: false`), où une clé répétée lève au lieu d'écraser silencieusement la première. Vérifié en réintroduisant le défaut : le test devient rouge, puis vert une fois retiré.
+
+18 assertions (un test par workflow + garde de non-vacuité).
+
 ## v6.27.360 — feat(console): lire et écrire une marque depuis un exécutant serveur, par les voies gouvernées (2026-07-28)
 
 Déposer la documentation d'un client, ou consolider deux fiches de marque, sont des gestes d'opérateur qui n'avaient qu'**une** surface : le navigateur, avec une session. Depuis un exécutant serveur — le cas d'un agent qui range le vault — il n'existait aucun chemin. Faute de chemin, la tentation est d'écrire en base directement : exactement ce que le chokepoint interdit.
