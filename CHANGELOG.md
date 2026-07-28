@@ -1,5 +1,17 @@
 # Changelog — La Fusee
 
+## v6.27.360 — feat(console): lire et écrire une marque depuis un exécutant serveur, par les voies gouvernées (2026-07-28)
+
+Déposer la documentation d'un client, ou consolider deux fiches de marque, sont des gestes d'opérateur qui n'avaient qu'**une** surface : le navigateur, avec une session. Depuis un exécutant serveur — le cas d'un agent qui range le vault — il n'existait aucun chemin. Faute de chemin, la tentation est d'écrire en base directement : exactement ce que le chokepoint interdit.
+
+**`GET /api/admin/brand-dump`** — lecture seule. `brand-scan` répond « où cette chaîne apparaît-elle ? » ; il ne répond pas « que contient CETTE marque ? ». Or c'est la question à poser avant toute consolidation : on ne fusionne pas deux fiches sans avoir lu les deux. Rend les piliers (contenu intégral, `validationStatus`, provenance ET certitude par champ, version, péremption), les sources (avec le **compte réel de fragments indexés** — « déposé » ≠ « exploitable ») et les assets.
+
+**`POST /api/admin/brand-write`** — n'écrit **rien** elle-même : elle exerce les procédures existantes sous identité ADMIN (`ingestion.uploadFile`, `pillar.amend` → `OPERATOR_AMEND_PILLAR`, `strategy.archive`). Spine d'émission, gates pre-flight, `writePillar`, provenance, versionnement et cascade de péremption s'appliquent tels quels. **`dryRun: true` par défaut** : une écriture demande un `false` explicite — on ne mute pas une marque cliente par inadvertance de paramètre. L'ingestion rapporte ce qui a **réellement** été extrait (statut, caractères, erreur), pas seulement que le dépôt a été accepté.
+
+Attrapé par nos propres verrous en écrivant ces routes : `pillar.select.status` — colonne **inexistante** (`validationStatus`). Le test `prisma-select-fields-exist` (posé plus tôt dans cette session, précisément parce que `tsc` type une clé inconnue en `never` et ne la voit pas) l'a refusée avant le premier appel.
+
+0 nouveau modèle · 0 migration · 0 Intent kind · 0 LLM · cap APOGEE 7/7.
+
 ## v6.27.359 — fix(ci): un « échec au build » qui n'en était pas un (2026-07-28)
 
 Le job *Build image (ghcr)* est sorti **rouge** alors que l'image était construite, testée et **poussée sur GHCR**. Seule la dernière étape avait échoué : `curl` exit **28** sur `POST /api/v1/deploy`.
