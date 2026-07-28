@@ -83,7 +83,7 @@ function ResetPasswordForm() {
       <div className="w-full rounded-xl border border-border-subtle bg-surface-raised/50 p-6 shadow-xl">
         <h2 className="mb-6 text-center text-lg font-semibold text-foreground">Nouveau mot de passe</h2>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit} method="post" className="flex flex-col gap-4">
           {error && (
             <div className="rounded-lg border border-error/50 bg-error/10 px-4 py-3 text-sm text-error">
               {error}

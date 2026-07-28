@@ -97,7 +97,16 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
           Connexion
         </h2>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        {/*
+          `method="post"` alors qu'aucune route ne reçoit ce POST : c'est
+          volontaire. Sans lui, un envoi AVANT hydratation (connexion lente,
+          saisie rapide, agent automatisé) part en **GET** — et le mot de passe
+          se retrouve en clair dans l'URL, donc dans l'historique du navigateur,
+          les journaux d'accès et l'en-tête `Referer`. Constaté en exerçant la
+          page (2026-07-28) : `/login?email=…&password=…`. Le POST échoue
+          proprement au lieu de fuir. Idem sur register / reset / forgot.
+        */}
+        <form onSubmit={handleSubmit} method="post" className="flex flex-col gap-4">
           {error && (
             <div className="rounded-lg border border-error/50 bg-error/10 px-4 py-3 text-sm text-error">
               {error}

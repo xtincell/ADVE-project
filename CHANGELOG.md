@@ -1,5 +1,61 @@
 # Changelog — La Fusee
 
+## v6.27.365 — fix(cockpit): trois pages mortes, et la méthode qui ne les voyait pas (2026-07-28)
+
+Diagnostic opérateur : « *le `/cockpit/brand/bible` ne marche toujours pas. je t'ai
+demandé un adversarial et tu as manqué ça* », puis « *l'onglet de score détaillé, tu en as
+fait quoi ?* ». Les deux questions ont la même racine : la vérification s'arrêtait au
+compilateur.
+
+**Ce qui cassait le livre de marque — deux défauts empilés.** (1) *La lecture indexait* :
+`loadBrandSourceContext` appelait `ensureSourcesIndexed` inconditionnellement ; le livre
+compose quatre volets, donc quatre passes complètes d'indexation + embedding à chaque
+affichage. L'indexation appartient à l'ingestion (`INDEX_BRAND_SOURCE`, déjà branchée sur
+le dépôt) — le drapeau devient opt-in, `false` par défaut, et seule la mission Notoria
+(asynchrone) l'active. (2) *Une panne de confort devenait une panne de page* :
+`searchByQuery` promet depuis toujours « rend `[]` quand aucun fournisseur d'embedding
+n'est disponible », mais la promesse ne couvrait que « aucune clé configurée ». En
+production, Ollama injoignable + OpenAI `billing_not_active` (vérifié dans les journaux
+Coolify, `caller=seshat:ranker`) faisait remonter l'exception jusqu'à la page. Le Gateway
+portait pourtant déjà la doctrine — « l'étage embeddings est skippable, jamais sur le
+chemin critique », ADR-0108 — appliquée à la jambe OpenRouter et **pas** à la jambe OpenAI.
+Les deux jambes dégradent désormais en vecteurs vides (`isEmbedProviderUnavailable`), et un
+défaut d'appel (400, schéma) remonte toujours. Le mode de récupération
+(`SEMANTIC`/`DETERMINISTIC`/`NONE`) est annoncé jusqu'à l'écran.
+
+**Le score détaillé était mort, et personne ne pouvait le voir.**
+`/cockpit/insights/diagnostics` déclarait un `useMutation` **après** un `if (isLoading)
+return <Skeleton/>` : N hooks au premier rendu, N+1 au second → « Rendered more hooks than
+during the previous render » → « Une erreur est survenue ». Même défaut sur
+`/cockpit/settings`. Le serveur répond 200 dans les deux cas : ni `tsc`, ni le lint, ni les
+tests ne peuvent le voir. Cause systémique : `react-hooks/rules-of-hooks` **ne voit aucun
+hook tRPC** — son heuristique reconnaît `useX()` et `Ns.useX()`, pas
+`trpc.a.b.useQuery()` (vérifié en lui soumettant le cas : 0 erreur). Tout le cockpit était
+donc hors de sa garde. Nouveau verrou HARD `hooks-after-early-return.test.ts` : la règle
+rejouée sur l'AST TypeScript, fonctions imbriquées exclues, prouvée rouge sur le défaut réel.
+
+**Trois surfaces orphelines de menu.** « Rapports & analyses » déclarait
+`diagnostics`/`benchmarks`/`attribution` en `activePrefixes` — le menu s'allume dessus —
+mais la page ne portait **aucun lien** vers elles. Le score détaillé n'avait plus qu'un
+seul chemin (« Voir le radar → » du tableau de bord) ; les deux autres, aucun. Sous-navigation
+posée ; page renommée « Score détaillé » (le nom que l'opérateur emploie) ;
+`apogee-maintenance` volontairement exclue (segment `<OperatorSurface>`).
+
+**Mot de passe en clair dans l'URL.** Constaté en exerçant la page : un envoi du
+formulaire **avant hydratation** part en GET → `/login?email=…&password=…`, donc historique
+du navigateur, journaux d'accès et `Referer`. `method="post"` posé sur les quatre
+formulaires d'authentification (login, register, reset, forgot) : l'envoi pré-hydratation
+échoue proprement au lieu de fuir.
+
+**La méthode, corrigée.** Skill `nefer-ship` §5-bis « exercer la surface livrée » —
+bloquante : toute page / route / export / cron ajouté ou modifié doit être **appelé** avant
+le commit, chiffres relevés (statut, ms au DOM, ms au titre, 5xx, `pageerror`), avec le
+mode opératoire exact d'un environnement vivant en bac à sable et les trois pièges déjà
+payés (`AUTH_URL` local sinon le cookie `__Secure-` fait rebondir sur `/login` ; bannière
+cookies qui intercepte le clic ; `networkidle` inutilisable — le cockpit tient un flux SSE
+ouvert, on mesure le timeout, pas la page). §5-bis.3 : un verrou CI doit avoir été **vu
+rouge**. NEFER.md : deux anti-patterns ajoutés, checklist étendue.
+
 ## v6.27.364 — fix(seshat): les études d'un client fuitaient dans le cockpit des autres (2026-07-28)
 
 **Constaté en prod, capture à l'appui** : le cockpit de SPAWT affichait, sous « **Vos** études ingérées », des études « Ciment », « Agence-opérateur de marque / Industry OS » et « La passion pour propulseur » — toutes déposées pour **d'autres marques**. Aucune de SPAWT.

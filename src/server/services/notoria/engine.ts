@@ -643,6 +643,9 @@ export async function generateBatch(
   // qui en est tiré reste vérifiable en aval.
   const sourceCtx = await loadBrandSourceContext(strategyId, {
     query: targets.join(" "),
+    // Mission ASYNCHRONE : ici, payer une passe d'indexation est acceptable —
+    // c'est le seul endroit qui rattrape un document deposé jamais indexé.
+    ensureIndexed: true,
   });
   if (!sourceCtx.empty) {
     // round-15a : contenu opérateur-uploadé → fencé (parité avec

@@ -983,6 +983,34 @@ function emptyEmbeddings(inputs: string[], model: string): EmbedResult {
 }
 
 /**
+ * Le fournisseur est-il *indisponible* (condition d'exploitation) plutôt que
+ * mal appelé (défaut de code) ?
+ *
+ * La distinction porte tout le reste : la doctrine ADR-0108 dit que l'étage
+ * embeddings est **skippable, jamais sur le chemin critique** — mais elle ne
+ * dit pas d'avaler un `400 invalid_request` qui, lui, signale un bug qu'il faut
+ * voir. Indisponibilité = crédit épuisé, compte inactif, clé refusée, service
+ * injoignable. Tout le reste remonte.
+ */
+function isEmbedProviderUnavailable(err: unknown): boolean {
+  if (isCreditExhaustionError(err)) return true;
+  const s = String(err instanceof Error ? err.message : err).toLowerCase();
+  return (
+    s.includes("fetch failed") ||
+    s.includes("econnrefused") ||
+    s.includes("enotfound") ||
+    s.includes("eai_again") ||
+    s.includes("etimedout") ||
+    s.includes("socket hang up") ||
+    s.includes("network") ||
+    s.includes("billing") ||
+    s.includes("401") ||
+    s.includes("403") ||
+    s.includes("unauthorized")
+  );
+}
+
+/**
  * OpenRouter embeddings avec dégradation gracieuse : si OpenRouter est « à sec »
  * (crédit épuisé) on renvoie des vecteurs vides (no-op) au lieu de lever ; un
  * échec transitoire (réseau) est re-levé pour laisser l'appelant décider.
@@ -1265,6 +1293,22 @@ export async function embed(options: EmbedOptions): Promise<EmbedResult> {
         );
         return embedViaOpenRouterGraceful(inputs, orModel, options.caller);
       }
+      // Dernier fournisseur de la cascade, et il est indisponible.
+      //
+      // Cette branche levait. Or la doctrine est écrite vingt lignes plus haut
+      // pour OpenRouter — « l'étage embeddings est skippable, jamais sur le
+      // chemin critique » (ADR-0108) — et la jambe OpenAI ne l'appliquait pas.
+      // Conséquence observée en production (compte OpenAI `billing_not_active`
+      // + Ollama injoignable) : chaque recherche sémantique remontait une
+      // exception jusqu'à la page appelante. Le livre de marque rendait 500
+      // pour une panne de confort.
+      if (isEmbedProviderUnavailable(err)) {
+        markOpenAiEmbedDry();
+        console.warn(
+          `[llm-gateway.embed] OpenAI embeddings indisponibles (${err instanceof Error ? err.message : err}) — désactivés 24h, vecteurs vides pour caller=${options.caller}`,
+        );
+        return emptyEmbeddings(inputs, openaiModel);
+      }
       throw err;
     }
   };
@@ -1286,6 +1330,15 @@ export async function embed(options: EmbedOptions): Promise<EmbedResult> {
           `[llm-gateway.embed] Ollama failed (${err instanceof Error ? err.message : err}), falling back to OpenRouter for caller=${options.caller}`,
         );
         return embedViaOpenRouterGraceful(inputs, orModel, options.caller);
+      }
+      // Ollama injoignable et plus aucun repli utilisable (OpenAI déjà « à sec »,
+      // pas d'OpenRouter) : même doctrine ADR-0108 que ci-dessus — on rend des
+      // vecteurs vides et on le DIT, on ne casse pas l'appelant.
+      if (isEmbedProviderUnavailable(err)) {
+        console.warn(
+          `[llm-gateway.embed] aucun fournisseur d'embedding joignable (${err instanceof Error ? err.message : err}) — vecteurs vides pour caller=${options.caller}`,
+        );
+        return emptyEmbeddings(inputs, model);
       }
       throw err;
     }

@@ -10,6 +10,7 @@ import { AiBadge } from "@/components/shared/ai-badge";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { PILLAR_KEYS, PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
+import Link from "next/link";
 import {
   FileText,
   TrendingUp,
@@ -18,7 +19,36 @@ import {
   Plus,
   ChevronRight,
   AlertTriangle,
+  Stethoscope,
+  BarChart3,
+  GitBranch,
 } from "lucide-react";
+
+/**
+ * Les trois vues fondateur regroupées sous « Rapports & analyses » dans le menu
+ * (`activePrefixes`, portal-configs). `apogee-maintenance` en est absente
+ * volontairement : ce segment est gardé `<OperatorSurface>`.
+ */
+const SIBLING_VIEWS = [
+  {
+    href: "/cockpit/insights/diagnostics",
+    label: "Score détaillé",
+    blurb: "Le détail pilier par pilier",
+    icon: Stethoscope,
+  },
+  {
+    href: "/cockpit/insights/benchmarks",
+    label: "Comparatifs",
+    blurb: "Votre marque face à son marché",
+    icon: BarChart3,
+  },
+  {
+    href: "/cockpit/insights/attribution",
+    label: "Attribution",
+    blurb: "Ce qui a fait bouger vos fans",
+    icon: GitBranch,
+  },
+] as const;
 
 interface ReportItem {
   period: string;
@@ -151,6 +181,32 @@ export default function ReportsPage() {
           { label: "Rapports" },
         ]}
       />
+
+      {/*
+        Cette page est le point d'entrée de nav de « Rapports & analyses » : elle
+        déclare ses trois voisines en `activePrefixes` (portal-configs) — donc le
+        menu s'allume dessus — mais elle ne portait AUCUN lien vers elles. Le
+        détail du score par pilier n'avait plus qu'un seul chemin d'accès (le
+        « Voir le radar → » du tableau de bord) ; l'attribution et les
+        comparatifs, aucun. Trois URL vivantes, orphelines du menu.
+      */}
+      <nav className="grid gap-3 sm:grid-cols-3">
+        {SIBLING_VIEWS.map(({ href, label, blurb, icon: Icon }) => (
+          <Link
+            key={href}
+            href={href}
+            className="group flex items-center gap-3 rounded-xl border border-border-subtle bg-background-raised p-4 transition-colors hover:border-accent/40"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-background-overlay">
+              <Icon className="h-5 w-5 text-accent" />
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate font-semibold text-foreground">{label}</span>
+              <span className="block truncate text-sm text-foreground-secondary">{blurb}</span>
+            </span>
+          </Link>
+        ))}
+      </nav>
 
       {/* Stat cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
