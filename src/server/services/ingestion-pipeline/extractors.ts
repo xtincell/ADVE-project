@@ -3,8 +3,6 @@
  * Converts raw files into structured text for AI analysis
  */
 
-import { callLLM } from "@/server/services/llm-gateway";
-import { sanitizeInline, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import { readXlsxWorkbook } from "@/server/services/utils/xlsx-read";
 import type { ExtractionResult } from "./types";
 
@@ -67,37 +65,35 @@ export async function extractXLSX(buffer: Buffer): Promise<ExtractionResult> {
 }
 
 /**
- * Extract description from an image using Claude vision
+ * Lecture d'image — REFUS HONNÊTE, en attendant une vraie voie vision.
+ *
+ * Cette fonction envoyait `rawBase64.slice(0, 200)` — deux cents caractères
+ * d'en-tête base64 — à un modèle **texte**, avec la consigne de décrire
+ * l'image « de manière détaillée » : couleurs dominantes, typographies,
+ * textes lisibles. Aucun de ces éléments n'était transmis. **Tout ce qui
+ * ressortait était inventé**, puis stocké en `rawContent` d'une
+ * `BrandDataSource` — c'est-à-dire présenté au reste de l'OS comme un document
+ * de la marque.
+ *
+ * Depuis l'ancrage documentaire (ADR-0184), c'est devenu franchement dangereux :
+ * une description fabriquée deviendrait une source « recouvrante », et la
+ * mécanique censée détecter l'invention l'aurait au contraire blanchie.
+ *
+ * Le Gateway n'expose aucune surface vision (`callLLM` ne transporte pas
+ * d'image). Tant qu'elle n'existe pas, on refuse en le disant : le fichier
+ * reste tracé côté `BrandDataSource`, avec un message qui dit quoi faire.
+ *
+ * @throws toujours — `ingestFile` marque la source FAILED + `errorMessage`.
  */
 export async function extractImage(
-  base64Data: string,
-  strategyId: string,
+  _base64Data: string,
+  _strategyId: string,
 ): Promise<ExtractionResult> {
-  const mediaType = base64Data.startsWith("data:image/png") ? "image/png" as const
-    : base64Data.startsWith("data:image/gif") ? "image/gif" as const
-    : base64Data.startsWith("data:image/webp") ? "image/webp" as const
-    : "image/jpeg" as const;
-
-  // Strip data URL prefix if present
-  const rawBase64 = base64Data.replace(/^data:image\/[^;]+;base64,/, "");
-
-  // LOT 1e — entrée non fiable neutralisée (anti-injection) : la charge base64
-  // de l'image est fournie par l'utilisateur (upload attaquant-contrôlable).
-  const result = await callLLM({
-    system: `${UNTRUSTED_NOTICE}\n\nTu es un expert en analyse visuelle de marque. Reponds en francais.`,
-    prompt: `[Image base64 fournie — mediaType: ${mediaType}]\n\nDecris cette image de maniere detaillee dans le contexte d'une marque/entreprise.\nIdentifie : type de document (logo, charte, photo produit, affiche, etc.),\ncouleurs dominantes, typographies visibles, textes lisibles, elements graphiques,\nton general, et toute information utile pour definir l'identite de marque.\nReponds en francais.\n\n[IMAGE_DATA:${sanitizeInline(rawBase64.slice(0, 200), { max: 200 })}...]`,
-    caller: "ingestion:image-extract",
-    strategyId,
-    maxOutputTokens: 1500,
-  });
-
-  return {
-    text: result.text,
-    metadata: {
-      dimensions: "image",
-      wordCount: result.text.split(/\s+/).length,
-    },
-  };
+  throw new Error(
+    "Lecture d'image non disponible : nous ne savons pas encore lire le contenu d'une image. " +
+      "Déposez la version PDF ou texte du document, ou décrivez-le en note — " +
+      "nous préférons ne rien écrire plutôt que d'inventer une description.",
+  );
 }
 
 /**

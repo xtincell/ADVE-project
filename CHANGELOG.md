@@ -1,5 +1,37 @@
 # Changelog — La Fusee
 
+## v6.27.357 — feat(intake): le porteur de marque peut enfin déposer ses documents (2026-07-28)
+
+Suite de v6.27.356. L'ancrage documentaire est en place — encore faut-il que la marque puisse **déposer** sa documentation, et que ce dépôt soit honnête sur ce qu'il produit.
+
+### Le fondateur ne pouvait déposer aucun fichier
+
+`/cockpit/brand/sources` n'avait **aucun** `<input type="file">` : le porteur pouvait coller du texte, jamais déposer son PRD ou son brand book. C'est pourtant lui qui les a. La voie serveur existait pourtant (`ingestion.uploadFile`, gouvernée, `canAccessStrategy` appliqué) — elle n'était atteignable que depuis la Console.
+
+Zone de dépôt multi-fichiers, résultat **par fichier** (déposé / refusé avec la raison), plafond 10 Mo annoncé en amont plutôt qu'une erreur illisible côté serveur. `fileType` porte l'**extension**, jamais le type MIME du navigateur : `extractAuto` compare à `"PDF"`/`"DOCX"`/… et retombe sinon sur « traiter comme du texte » — un `application/pdf` y aurait stocké du base64 en guise de contenu lisible.
+
+### « Déposé » ne veut pas dire « exploitable »
+
+L'indexation est best-effort (`void` + `console.warn`) : une source `EXTRACTED` jamais indexée ne se signalait **nulle part**, et le porteur croyait sa documentation prise en compte. `listSources` remonte désormais le compte réel de fragments indexés → « Lisible par vos analyses (N fragments) » ou « Pas encore analysable ».
+
+### `extractImage` fabriquait
+
+La fonction envoyait **200 caractères d'en-tête base64** à un modèle **texte**, avec la consigne de décrire l'image « de manière détaillée » : couleurs dominantes, typographies, textes lisibles. Rien de tout cela n'était transmis. **Tout ce qui ressortait était inventé**, puis stocké en `rawContent` d'une `BrandDataSource` — présenté au reste de l'OS comme un document de la marque.
+
+Depuis l'ancrage documentaire, c'était devenu franchement dangereux : une description fabriquée serait devenue une source « recouvrante », et la mécanique censée détecter l'invention l'aurait blanchie.
+
+Le Gateway n'expose aucune surface vision. Tant qu'elle n'existe pas : **refus honnête**, avec le geste à faire à la place (déposer le PDF, ou décrire en note). Verrou CI structurel — plus aucun appel modèle depuis l'extraction de fichiers.
+
+### L'asset `BRAND_BOOK` promis cinq fois, jamais écrit
+
+`brand-book-ingestion/persister.ts` affirmait **cinq fois** que le contenu non mappé était « conservé dans l'asset BRAND_BOOK pour promotion opérateur ultérieure ». Seuls `CHROMATIC_STRATEGY` et `TYPOGRAPHY_SYSTEM` étaient créés : vision, manifeste, archétype, voix, système produit ne survivaient que dans le payload de l'`IntentEmission`. Commentaire menteur **et** perte de donnée. L'asset est désormais créé, avec l'extraction complète + la liste de ce qui est déjà parti dans les piliers (l'opérateur voit ce qu'il reste à promouvoir sans comparer à la main).
+
+### Le brand book se lit enfin
+
+`previewBrandBook` / `ingestBrandBook` (ADR-0173) étaient livrés côté serveur avec **zéro appelant** : un brand book officiel déposé restait un texte comme un autre. Action opérateur sur la source → lecture (structurée déterministe **ou** assistée, avec la conséquence sur la provenance dite explicitement) → revue → écriture. Rien ne s'écrit sans geste explicite (ADR-0085, STOP à Jehuty).
+
+tsc 0 · lint 0 erreur · **1462 gouvernance + 1629 services verts** (1 fichier anti-drift neuf, 8 assertions).
+
 ## v6.27.356 — feat(notoria): l'ancrage documentaire se mesure, il ne se revendique pas (2026-07-28)
 
 **Suite directe de v6.27.355.** Le moteur voit désormais la documentation de la marque et on lui demande de citer ses sources. Restait le plus important : **vérifier**. Une consigne d'ancrage qu'on ne contrôle pas est une politesse adressée au modèle — il peut écrire `source:abc` sans que rien de ce qu'il propose ne vienne du document.

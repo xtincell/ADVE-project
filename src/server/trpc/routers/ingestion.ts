@@ -104,7 +104,7 @@ export const ingestionRouter = createTRPCRouter({
   listSources: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
-      return ctx.db.brandDataSource.findMany({
+      const sources = await ctx.db.brandDataSource.findMany({
         where: { strategyId: input.strategyId },
         orderBy: { createdAt: "desc" },
         select: {
@@ -122,6 +122,29 @@ export const ingestionRouter = createTRPCRouter({
           origin: true,
         },
       });
+
+      // ADR-0184 — « déposé » ne veut pas dire « exploitable ». L'indexation est
+      // best-effort (`void` + `console.warn`) : une source EXTRACTED jamais
+      // indexée ne se signalait NULLE PART, et le porteur croyait sa
+      // documentation prise en compte. On lit le compte réel de chunks.
+      const indexed = await ctx.db.brandContextNode.groupBy({
+        by: ["sourceId"],
+        where: {
+          strategyId: input.strategyId,
+          kind: "BRAND_SOURCE",
+          sourceId: { in: sources.map((s) => s.id) },
+        },
+        _count: { _all: true },
+      });
+      const chunksBySource = new Map(
+        indexed.map((row) => [row.sourceId, row._count._all] as const),
+      );
+
+      return sources.map((s) => ({
+        ...s,
+        /** Nombre de fragments indexés — 0 = pas encore exploitable en analyse. */
+        indexedChunks: chunksBySource.get(s.id) ?? 0,
+      }));
     }),
 
   // Get ONE source with its raw content (lazy — listSources omits rawContent
