@@ -775,7 +775,7 @@ function BrandBookIngestModal({
               })
             }
             disabled={pending || extraction == null}
-            className="flex items-center gap-1.5 rounded bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded bg-accent px-3 py-1.5 text-xs font-medium text-accent-foreground hover:bg-accent disabled:opacity-50"
             title={extraction == null ? "Lisez le document d'abord" : undefined}
           >
             {ingestMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
@@ -1019,7 +1019,7 @@ export default function SourcesPage() {
                 }
               }}
               disabled={!noteContent.trim() || isSubmitting}
-              className="flex items-center gap-1.5 rounded bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded bg-accent px-3 py-1.5 text-xs font-medium text-accent-foreground hover:bg-accent disabled:opacity-50"
             >
               {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
               Sauvegarder

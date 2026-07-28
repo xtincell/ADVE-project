@@ -199,6 +199,8 @@ export const zh = {
   "nav.strategie": "战略",
   "nav.strategie.sub": "从诊断到计划",
   "nav.proposition": "神谕报告",
+  "nav.bible": "品牌手册",
+  "nav.bible.sub": "您的品牌是什么，以及依据何在",
   "nav.proposition.sub": "您的完整战略",
   "nav.livrables": "交付物",
   "nav.livrables.sub": "规范 · 素材 · 导出",

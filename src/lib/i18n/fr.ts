@@ -201,6 +201,8 @@ export const fr = {
   "nav.strategie": "Stratégie",
   "nav.strategie.sub": "Du diagnostic au plan",
   "nav.proposition": "L'Oracle",
+  "nav.bible": "Livre de marque",
+  "nav.bible.sub": "Ce qu'est votre marque, et d'où ça vient",
   "nav.proposition.sub": "Votre stratégie complète",
   "nav.livrables": "Livrables",
   "nav.livrables.sub": "Chartes · Assets · Exports",

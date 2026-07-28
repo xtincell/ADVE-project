@@ -200,6 +200,8 @@ export const en = {
   "nav.strategie": "Strategy",
   "nav.strategie.sub": "From diagnosis to plan",
   "nav.proposition": "The Oracle",
+  "nav.bible": "Brand book",
+  "nav.bible.sub": "What your brand is, and where it comes from",
   "nav.proposition.sub": "Your full strategy",
   "nav.livrables": "Deliverables",
   "nav.livrables.sub": "Guidelines · Assets · Exports",

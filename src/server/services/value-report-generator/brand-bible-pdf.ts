@@ -92,6 +92,166 @@ export async function exportBrandBibleAsPdf(
   };
 }
 
+/**
+ * Rend le LIVRE DE MARQUE composé (ADR-0185) : ce que la marque déclare et ce
+ * que ses documents en disent, page par page, avec l'origine de chaque élément.
+ *
+ * Distinct du deck `exportBrandBibleAsPdf` ci-dessus, qui compile les sorties
+ * créatives de la séquence `BRANDBOOK-D` (pilier Distinction seul, produites
+ * par modèle). Ici : zéro modèle, zéro invention — ce qui n'est ni déclaré ni
+ * documenté est **nommé comme manquant**.
+ */
+export async function exportComposedBrandBibleAsPdf(
+  strategyId: string,
+  opts?: { includeDerived?: boolean; themeOverride?: BrandTheme },
+): Promise<BrandBiblePdfResult> {
+  const { composeBrandBible } = await import("@/server/services/brand-bible/compose");
+  const bible = await composeBrandBible(strategyId, { includeDerived: opts?.includeDerived });
+  const theme = opts?.themeOverride ?? (await resolveBrandTheme(strategyId));
+
+  const doc = new jsPDF({ orientation: "landscape", unit: "px", format: [W, H] });
+  // `null` = complétude non mesurée → jamais « complet » par défaut.
+  const complete = bible.coverage.pct != null && bible.coverage.pct >= 100;
+  await renderCover(doc, theme, bible.brandName, complete);
+
+  let slideCount = 1;
+  bible.sections.forEach((section, idx) => {
+    doc.addPage([W, H], "landscape");
+    slideCount += 1;
+    renderBibleSection(doc, theme, section, idx + 1, bible.sections.length, bible.brandName);
+  });
+
+  return {
+    pdf: Buffer.from(doc.output("arraybuffer")),
+    slideCount,
+    isComplete: complete,
+    generatedAt: new Date(),
+  };
+}
+
+/** Une page de livre : les éléments déclarés, les manquants nommés, les citations. */
+function renderBibleSection(
+  doc: jsPDF,
+  t: BrandTheme,
+  section: {
+    title: string;
+    blurb: string;
+    entries: Array<{ label: string; value: unknown; provenance: string }>;
+    missing: Array<{ label: string }>;
+    citations: Array<{ fileName: string; excerpt: string }>;
+  },
+  index: number,
+  total: number,
+  brand: string,
+): void {
+  doc.setFillColor(...t.sectionBg);
+  doc.rect(0, 0, W, H, "F");
+  doc.setFillColor(...t.band);
+  doc.rect(0, 0, W, 132, "F");
+  doc.setTextColor(...t.bandText);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(14);
+  doc.text(`LIVRE DE MARQUE · ${truncate(brand, 28).toUpperCase()}`, MARGIN, 56);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(34);
+  doc.text(truncate(section.title, 52), MARGIN, 100);
+
+  let y = 186;
+  const colW = 560;
+
+  if (section.entries.length === 0) {
+    doc.setTextColor(...t.muted);
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(16);
+    doc.text(
+      `Rien de declare sur ce volet — ${section.missing.length} element(s) a renseigner.`,
+      MARGIN,
+      y,
+    );
+  } else {
+    for (const entry of section.entries) {
+      if (y > H - 150) break;
+      doc.setTextColor(...t.accentOnLight);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(15);
+      doc.text(truncate(entry.label, 46), MARGIN, y);
+      // La provenance suit le libellé : lire une valeur sans savoir d'où elle
+      // vient, c'est ce qu'on cherche justement à ne plus faire.
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      doc.setTextColor(...t.muted);
+      doc.text(`(${entry.provenance})`, MARGIN + 300, y);
+      y += 20;
+      doc.setTextColor(...t.ink);
+      doc.setFontSize(13);
+      const lines = flatten(entry.value, 0)
+        .map((l) => (l.kind === "label" ? `${l.text} :` : l.text))
+        .slice(0, 6);
+      for (const line of lines) {
+        if (y > H - 130) break;
+        for (const wrapped of doc.splitTextToSize(truncate(line, 300), colW) as string[]) {
+          if (y > H - 130) break;
+          doc.text(wrapped, MARGIN + 12, y);
+          y += 17;
+        }
+      }
+      y += 12;
+    }
+  }
+
+  // Colonne droite — les documents, cités par leur nom.
+  let cy = 186;
+  const cx = MARGIN + colW + 48;
+  const cw = W - cx - MARGIN;
+  doc.setTextColor(...t.muted);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.text(
+    section.citations.length > 0 ? "CE QUE VOS DOCUMENTS EN DISENT" : "AUCUN DOCUMENT SUR CE VOLET",
+    cx,
+    cy,
+  );
+  cy += 22;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(11);
+  for (const c of section.citations) {
+    if (cy > H - 130) break;
+    doc.setTextColor(...t.accentOnLight);
+    doc.text(truncate(c.fileName, 44), cx, cy);
+    cy += 16;
+    doc.setTextColor(...t.ink);
+    for (const wrapped of doc.splitTextToSize(truncate(c.excerpt, 700), cw) as string[]) {
+      if (cy > H - 130) break;
+      doc.text(wrapped, cx, cy);
+      cy += 14;
+    }
+    cy += 10;
+  }
+
+  // Pied : ce qui manque, nommé — un livre honnête affiche ses trous.
+  if (section.missing.length > 0) {
+    doc.setTextColor(...t.muted);
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(11);
+    doc.text(
+      truncate(
+        `Non renseigne (${section.missing.length}) : ${section.missing.map((m) => m.label).join(", ")}`,
+        170,
+      ),
+      MARGIN,
+      H - 92,
+    );
+  }
+
+  doc.setTextColor(...t.muted);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(13);
+  doc.text(`${String(index).padStart(2, "0")} / ${String(total).padStart(2, "0")}`, MARGIN, H - 40);
+  doc.text("Propulsé par La Fusée", W - MARGIN, H - 40, { align: "right" });
+  doc.setFillColor(...t.accentBar);
+  doc.rect(MARGIN, H - 58, 48, 4, "F");
+}
+
 // ── Rendu : couverture ───────────────────────────────────────────────────────
 async function renderCover(doc: jsPDF, t: BrandTheme, brand: string, isComplete: boolean): Promise<void> {
   // Fond de marque plein (sombre).

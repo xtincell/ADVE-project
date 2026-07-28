@@ -339,7 +339,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Services backend — 121
+## Services backend — 122
 
 - `src/server/services/advertis-connectors/` ✓ manifest
 - `src/server/services/advertis-scorer/` ✓ manifest
@@ -352,6 +352,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/auto-promotion/` ✓ manifest
 - `src/server/services/board-export/` ✓ manifest
 - `src/server/services/boot-sequence/` ✓ manifest
+- `src/server/services/brand-bible/`
 - `src/server/services/brand-book-ingestion/` ✓ manifest
 - `src/server/services/brand-node/` ✓ manifest
 - `src/server/services/brand-theme/`
@@ -465,7 +466,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 125
+## tRPC routers — 126
 
 - `_pillar-write-guard` (`src/server/trpc/routers/_pillar-write-guard.ts`)
 - `_strategy-read-guard` (`src/server/trpc/routers/_strategy-read-guard.ts`)
@@ -482,6 +483,7 @@ Ces correspondances évitent la réinvention :
 - `blog` (`src/server/trpc/routers/blog.ts`)
 - `boot-sequence` (`src/server/trpc/routers/boot-sequence.ts`)
 - `boutique` (`src/server/trpc/routers/boutique.ts`)
+- `brand-bible` (`src/server/trpc/routers/brand-bible.ts`)
 - `brand-mcp` (`src/server/trpc/routers/brand-mcp.ts`)
 - `brand-node` (`src/server/trpc/routers/brand-node.ts`)
 - `brand-vault` (`src/server/trpc/routers/brand-vault.ts`)
@@ -595,7 +597,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 280 (par deck)
+## Pages — 281 (par deck)
 
 ### Agency (12)
 
@@ -612,10 +614,11 @@ Ces correspondances évitent la réinvention :
 - `/agency/revenue`
 - `/agency/signals`
 
-### Cockpit (59)
+### Cockpit (60)
 
 - `/cockpit`
 - `/cockpit/brand/assets`
+- `/cockpit/brand/bible`
 - `/cockpit/brand/deliverables`
 - `/cockpit/brand/deliverables/[key]`
 - `/cockpit/brand/diagnostic`

@@ -82,6 +82,7 @@ import { campaignTrackerRouter } from "./routers/campaign-tracker";
 import { sequenceVaultRouter } from "./routers/sequence-vault";
 import { notoriaRouter } from "./routers/notoria";
 import { oracleRouter } from "./routers/oracle";
+import { brandBibleRouter } from "./routers/brand-bible";
 import { ptahRouter } from "./routers/ptah";
 import { imhotepRouter } from "./routers/imhotep";
 import { anubisRouter } from "./routers/anubis";
@@ -225,6 +226,7 @@ export const appRouter = createTRPCRouter({
   notoria: notoriaRouter,
   // Phase 21 (ADR-0070) — OracleSection génération unitaire (manual-first)
   oracle: oracleRouter,
+  brandBible: brandBibleRouter,
   jehuty: jehutyRouter,
   // Phase 9 — Ptah Forge (ADR-0009) — matérialisation des briefs Artemis en assets
   ptah: ptahRouter,

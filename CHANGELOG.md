@@ -1,5 +1,39 @@
 # Changelog — La Fusee
 
+## v6.27.358 — feat(oracle): le livre de marque composé, référence et rang 2 de l'ancrage (2026-07-28)
+
+Demande opérateur, formulée deux fois dans les mêmes termes : *« un brandbook au format de la Fusée est censé exister et **puiser dans les sources et l'advertis** pour se formaliser afin de devenir la seule source de vérité (avec **vue html et export pdf, comme l'oracle**) »*.
+
+Ce qui existait ne répondait pas à ça. `brand-bible-pdf.ts` compile les sorties de la séquence Glory `BRANDBOOK-D` : douze briefs **produits par modèle**, sur le **seul pilier Distinction**. Un livrable créatif — pas un état des lieux. Il ne lisait ni les piliers fondateurs, ni un seul document de la marque, et n'avait aucune vue HTML.
+
+Le manque s'était aggravé avec l'ancrage documentaire (v6.27.356) : quand aucun document ne parle du champ visé, il ne restait rien entre « ancré » et « inventé ». La cascade annoncée avait un rang 2 vide.
+
+### Le livre ([ADR-0185](docs/governance/adr/0185-composed-brand-bible-rank-2-anchor.md))
+
+`brand-bible/compose.ts` — déterministe, **zéro modèle**. On assemble ce qui est déjà déclaré et documenté :
+
+- les piliers champ par champ, dans l'ordre canonique du registre, avec la **provenance réelle** de chaque valeur (Décidé / Tiré d'un document / Déduit) ;
+- les extraits de documentation qui parlent de chaque volet, **avec leur document et leur certitude**, via le RAG partagé — le même pool que le conseil et le MCP ;
+- **les manquants nommés**, volet par volet.
+
+Par défaut le livre publie le socle fondateur ; les piliers dérivés sont disponibles sur demande.
+
+### Une seule mesure de complétude
+
+Le livre **consomme** `completionPct` (contrats de maturité) — le chiffre déjà montré partout dans le cockpit — au lieu d'en calculer un second. Deux chiffres rivaux sur le même sujet, c'est la dérive qu'on passe notre temps à réparer ailleurs. Complétude indisponible → « non mesurée », et **jamais présenté comme complet**.
+
+### Deux surfaces, parité Oracle
+
+**Vue HTML** `/cockpit/brand/bible` (lecture seule, provenance par élément, citations par volet, manquants dépliables) · **Export PDF** sur la route existante, qui sert désormais le livre composé par défaut ; le deck créatif `BRANDBOOK-D` reste servi sous `?deck=1` — c'est un livrable à part entière, pas une régression à supprimer. Les deux rendus passent par `resolveBrandTheme` : le livre est aux couleurs de la marque.
+
+### Ce que le livre ne fait pas
+
+**Il ne comble aucun trou.** Un document de référence qui remplirait ses blancs serait la fabrication la mieux reliée du système — plus dangereuse qu'un champ vide, parce qu'elle porterait l'autorité du livre, et que l'ancrage l'aurait ensuite comptée comme source recouvrante. Un livre à moitié vide s'affiche à moitié vide et le dit en tête.
+
+**Il n'écrit rien** : aucun Intent, aucune mutation, aucun amendement de pilier. L'écriture ADVE reste la décision opérateur.
+
+0 nouveau modèle Prisma · 0 migration · 0 Intent kind · **0 LLM** · cap APOGEE 7/7 préservé. tsc 0 · lint 0 erreur · cycles 0 · **3599 tests unitaires verts** (1 fichier anti-drift neuf, 12 assertions).
+
 ## v6.27.357 — feat(intake): le porteur de marque peut enfin déposer ses documents (2026-07-28)
 
 Suite de v6.27.356. L'ancrage documentaire est en place — encore faut-il que la marque puisse **déposer** sa documentation, et que ce dépôt soit honnête sur ce qu'il produit.
