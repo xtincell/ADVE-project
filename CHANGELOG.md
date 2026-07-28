@@ -1,5 +1,20 @@
 # Changelog — La Fusee
 
+## v6.27.363 — fix(intake): tout `.txt` déposé était stocké en base64 (2026-07-28)
+
+**Constaté en prod**, en déposant les documents SPAWT par la console serveur : 92 746 caractères envoyés, **126 152 stockés** — exactement le gonflement 4/3 du base64. Le contenu enregistré n'était pas le document, c'était son encodage.
+
+`extractAuto` a deux familles d'appelants et le contrat n'avait jamais été tranché :
+
+- `ingestFile` passe du **base64** (c'est ce que l'upload transmet) ;
+- les chemins de **ré-extraction** passent `source.rawContent`, du texte déjà extrait.
+
+La branche texte faisait `extractText(content)` sans distinguer. Donc **tout `.txt` ou `.md` déposé par un utilisateur — Console comme cockpit — était stocké en base64 verbatim**, puis indexé, puis servi au moteur comme « documentation de la marque ». Du charabia présenté comme une source : pire que rien, puisque depuis l'ancrage documentaire (v6.27.356) ce charabia compterait comme un document recouvrant.
+
+Correctif : on ne suppose pas, on **vérifie**. `decodeIfBase64` ne décode que si le contenu a strictement le jeu de caractères base64 **et** que le décodage suivi du ré-encodage rend exactement l'entrée. Du texte ordinaire (espaces, accents, ponctuation, retours à la ligne) échoue immédiatement au test — et le chemin de ré-extraction reste intact. Le CSV, qui décodait en dur, passe par le même helper.
+
+9 assertions, dont le piège explicite (une chaîne au jeu de caractères compatible mais qui n'est pas du base64) et la non-régression du chemin de ré-extraction.
+
 ## v6.27.362 — fix(intake): les sélecteurs de fichiers ne proposent plus des formats qu'on rejette (2026-07-28)
 
 Question opérateur : « l'import via un xls également ? » — vérification faite, la réponse n'était pas celle qu'affichait l'interface.
