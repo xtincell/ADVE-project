@@ -15,6 +15,7 @@ import type { PillarKey } from "@/lib/types/advertis-vector";
 import { getFormatInstructions } from "@/lib/types/variable-bible";
 import { Prisma } from "@prisma/client";
 import { applyQualityGates, validateFinancialReco } from "./gates";
+import { loadBrandSourceContext, renderSourceContext, DEFAULT_SOURCE_BUDGET } from "./source-context";
 import type {
   GenerateBatchInput,
   GenerateBatchResult,
@@ -585,24 +586,35 @@ export async function generateBatch(
     extraContext += wrapUntrusted("Observation Seshat", seshatObservation, { max: 4000 });
   }
 
-  // Load vault context for ADVE_UPDATE
-  if (missionType === "ADVE_UPDATE") {
-    const sources = await db.brandDataSource.findMany({
-      where: {
-        strategyId,
-        processingStatus: { in: ["EXTRACTED", "PROCESSED"] },
-      },
-      select: { rawContent: true, fileName: true },
-      take: 5,
-    });
-    if (sources.length > 0) {
-      const vaultSummary = sources
-        .map((s) => `[${s.fileName}] ${(s.rawContent ?? "").slice(0, 500)}`)
-        .join("\n");
-      // round-15a : contenu de documents opérateur-uploadés → fencé (parité avec
-      // serializePillar). `rawContent` est non fiable (OWASP LLM01).
-      extraContext += `\n${wrapUntrusted("Documents Vault", vaultSummary, { max: 4000 })}`;
-    }
+  // ── Documentation déclarée de la marque — TOUTES les missions ───────────
+  //
+  // Avant : `if (missionType === "ADVE_UPDATE")` + `take: 5` + `.slice(0, 500)`.
+  // Six missions sur sept ne voyaient donc AUCUN document — dont
+  // `ADVE_INTAKE_PARTIAL` et `ADVE_BOOT_FILL`, celles qui bâtissent le noyau
+  // A/D/V/E à la naissance de la marque. Et la septième n'en voyait que
+  // 500 caractères par fichier : sur un PRD de 62 pages, la page de garde.
+  // C'est la cause des « approximations » — le moteur possédait la
+  // documentation et n'en lisait que le titre.
+  //
+  // `loadBrandSourceContext` trie par certitude (OFFICIELLE d'abord), répartit
+  // un budget explicite, et porte l'identifiant de chaque source pour que ce
+  // qui en est tiré reste vérifiable en aval.
+  const sourceCtx = await loadBrandSourceContext(strategyId, {
+    query: targets.join(" "),
+  });
+  if (!sourceCtx.empty) {
+    // round-15a : contenu opérateur-uploadé → fencé (parité avec
+    // serializePillar). `rawContent` reste non fiable (OWASP LLM01).
+    extraContext += `\n${wrapUntrusted("Documents de la marque", renderSourceContext(sourceCtx), {
+      max: DEFAULT_SOURCE_BUDGET + 2_000,
+    })}`;
+    // Exigence d'ancrage — absente jusqu'ici. `ai-filler` et `auto-filler` la
+    // portent depuis toujours ; le générateur principal des piliers, non.
+    extraContext +=
+      "\nANCRAGE — Ces documents sont la documentation officielle de la marque. " +
+      "Quand un champ y est traité, tu reprends CE QU'ILS DISENT et tu cites l'identifiant " +
+      "de la source dans `justification` (format `source:<id>`). Tu n'inventes rien qu'ils " +
+      "contredisent. Ce qu'ils ne disent pas, tu ne le présentes pas comme un fait.\n\n";
   }
 
   // Generate recos per target pillar — PARALLEL
