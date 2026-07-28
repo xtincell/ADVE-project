@@ -131,14 +131,72 @@ jobs:
           COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
           COOLIFY_APP_UUID: ${{ secrets.COOLIFY_APP_UUID }}
+        env:
+          # Sert à VÉRIFIER que la prod a réellement basculé. Sans cette URL, on
+          # ne peut que constater l'accusé de réception — et on le dit.
+          PROD_URL: ${{ vars.PROD_URL }}
+          EXPECTED_VERSION: ${{ steps.ver.outputs.v }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
           if [ -z "${COOLIFY_URL:-}" ] || [ -z "${COOLIFY_TOKEN:-}" ] || [ -z "${COOLIFY_APP_UUID:-}" ]; then
             echo "Secrets Coolify absents — push effectué, redeploy à déclencher manuellement."
             exit 0
           fi
-          curl -sf -X POST "${COOLIFY_URL%/}/api/v1/deploy?uuid=${COOLIFY_APP_UUID}" \
-            -H "Authorization: Bearer ${COOLIFY_TOKEN}" && echo "Redeploy Coolify déclenché."
+
+          # Déclenchement borné + réessayé.
+          #
+          # L'appel était `curl -sf` NU sous `set -e` : ni délai maximum, ni
+          # réessai, ni `force`. Un accusé de réception lent (exit 28) faisait
+          # donc échouer tout le job — alors que le déploiement était bel et
+          # bien mis en file côté serveur. C'est le rouge observé le 2026-07-28 :
+          # l'image était publiée, la prod n'avait simplement jamais été
+          # redéployée, et le job disait « échec du build ».
+          #
+          # `force=true` : sur une ressource « Docker Image » au tag MUTABLE
+          # (`latest`), c'est ce qui garantit le `docker pull` plutôt qu'un
+          # redémarrage sur l'image déjà présente (cf. CLAUDE.md § Déploiement).
+          triggered=0
+          for attempt in 1 2 3; do
+            code=$(curl -s -o /tmp/deploy.json -w '%{http_code}' --max-time 60 \
+              -X POST "${COOLIFY_URL%/}/api/v1/deploy?uuid=${COOLIFY_APP_UUID}&force=true" \
+              -H "Authorization: Bearer ${COOLIFY_TOKEN}") || code="000"
+            if [ "$code" = "200" ]; then
+              echo "Redeploy Coolify déclenché (tentative $attempt)."
+              cat /tmp/deploy.json 2>/dev/null || true
+              triggered=1
+              break
+            fi
+            echo "::warning::Déclenchement Coolify — code=$code (tentative $attempt/3)."
+            sleep $((attempt * 10))
+          done
+
+          # Sans URL publique, on ne peut pas vérifier : on reste sur le verdict
+          # du déclenchement, honnêtement annoncé comme tel.
+          if [ -z "${PROD_URL:-}" ]; then
+            if [ "$triggered" = "1" ]; then
+              echo "::notice::Déclenché. Bascule NON vérifiée (variable PROD_URL absente)."
+              exit 0
+            fi
+            echo "::error::Déclenchement Coolify impossible après 3 tentatives."
+            exit 1
+          fi
+
+          # Le job ne dit vert que si la prod SERT la nouvelle version. Un
+          # déclenchement accepté n'est pas un déploiement réussi ; et un
+          # déclenchement expiré n'est pas forcément un échec — seule la version
+          # servie tranche.
+          echo "Attente de la bascule vers v${EXPECTED_VERSION} sur ${PROD_URL} …"
+          for i in $(seq 1 60); do
+            served=$(curl -s --max-time 15 "${PROD_URL%/}/api/version" | tr -d ' \n')
+            case "$served" in
+              *"${EXPECTED_VERSION}"*)
+                echo "✓ prod sert v${EXPECTED_VERSION}."
+                exit 0;;
+            esac
+            sleep 15
+          done
+          echo "::error::Après 15 min, la prod ne sert toujours pas v${EXPECTED_VERSION} (dernier relevé : ${served:-vide})."
+          exit 1
 
       - name: Résumé
         run: |

@@ -144,3 +144,34 @@ Ceci ne change ni le Dockerfile, ni l'entrypoint, ni la stratégie de migration
 `scripts/docker-entrypoint.sh`). Seul l'**endroit** où l'image est construite
 change. Vercel (cible canonique) n'est pas concerné — ce chantier ne vaut que
 pour la cible self-host/Coolify.
+
+## Incident 2026-07-28 — « échec au build » qui n'en était pas un
+
+Le job *Build image (ghcr)* est sorti **rouge** alors que l'image était
+construite, testée et **poussée sur GHCR**. Seule la dernière étape avait
+échoué : `curl` exit **28** (timeout) sur `POST /api/v1/deploy`.
+
+Conséquence réelle : la prod est restée **une version en arrière** (elle servait
+`6.27.354` pendant que `main` était à `6.27.355`), et le rouge du job faisait
+croire à un échec de build. Le déploiement relancé à la main a abouti
+immédiatement — l'API a répondu `200 … deployment queued` et la prod a basculé.
+
+Trois défauts dans l'étape, tous corrigés :
+
+1. **`curl -sf` nu sous `set -e`** — ni `--max-time`, ni réessai. Un accusé de
+   réception lent tuait le job, alors que le déploiement pouvait être mis en
+   file côté serveur.
+2. **Pas de `force=true`** — sur une ressource « Docker Image » au tag MUTABLE
+   (`latest`), c'est lui qui garantit le `docker pull` plutôt qu'un redémarrage
+   sur l'image déjà présente.
+3. **Aucune vérification** — le job jugeait sur la réponse HTTP du
+   déclenchement, pas sur ce que la prod sert réellement.
+
+L'étape borne et réessaie désormais le déclenchement, puis **attend la bascule**
+en interrogeant `/api/version` : le job n'est vert que si la prod sert bien la
+version construite. Un déclenchement accepté n'est pas un déploiement réussi ;
+un déclenchement expiré n'est pas forcément un échec.
+
+Cette vérification demande la variable de dépôt **`PROD_URL`** (ex.
+`https://powerupgraders.com`). Absente, le job reste sur le verdict du
+déclenchement et l'annonce explicitement comme non vérifié.

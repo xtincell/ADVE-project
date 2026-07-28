@@ -1,5 +1,23 @@
 # Changelog — La Fusee
 
+## v6.27.359 — fix(ci): un « échec au build » qui n'en était pas un (2026-07-28)
+
+Le job *Build image (ghcr)* est sorti **rouge** alors que l'image était construite, testée et **poussée sur GHCR**. Seule la dernière étape avait échoué : `curl` exit **28** sur `POST /api/v1/deploy`.
+
+Le vrai dégât n'était pas le rouge — c'était son effet : **la prod est restée une version en arrière** (elle servait `6.27.354` pendant que `main` était à `6.27.355`), et le job laissait croire à un échec de build. Relancé à la main, le déploiement a abouti immédiatement (`200 … deployment queued`) et la prod a basculé.
+
+Trois défauts dans l'étape :
+
+1. **`curl -sf` nu sous `set -e`** — ni délai maximum, ni réessai. Un accusé de réception lent tuait le job alors que le déploiement pouvait être mis en file côté serveur.
+2. **Pas de `force=true`** — sur une ressource « Docker Image » au tag MUTABLE (`latest`), c'est lui qui garantit le `docker pull` plutôt qu'un redémarrage sur l'image déjà présente.
+3. **Aucune vérification** — le job jugeait sur la réponse HTTP du déclenchement, pas sur ce que la prod sert réellement.
+
+L'étape borne et réessaie désormais le déclenchement (3 tentatives, `--max-time`, backoff), puis **attend la bascule** en interrogeant `/api/version` : le job n'est vert que si la prod sert la version construite. Un déclenchement accepté n'est pas un déploiement réussi ; un déclenchement expiré n'est pas forcément un échec — seule la version servie tranche.
+
+La vérification demande la variable de dépôt `PROD_URL`. Absente, le job reste sur le verdict du déclenchement et l'annonce comme **non vérifié** plutôt que de le présenter comme un succès.
+
+Incident consigné dans [docs/deploy/BUILD-DEPORT.md](docs/deploy/BUILD-DEPORT.md).
+
 ## v6.27.358 — feat(oracle): le livre de marque composé, référence et rang 2 de l'ancrage (2026-07-28)
 
 Demande opérateur, formulée deux fois dans les mêmes termes : *« un brandbook au format de la Fusée est censé exister et **puiser dans les sources et l'advertis** pour se formaliser afin de devenir la seule source de vérité (avec **vue html et export pdf, comme l'oracle**) »*.
