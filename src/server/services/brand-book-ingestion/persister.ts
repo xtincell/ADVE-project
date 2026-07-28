@@ -147,6 +147,37 @@ export async function persistBrandBookExtraction(args: {
     }
   }
 
+  // ── L'extraction complète, conservée (ADR-0184) ────────────────────────
+  //
+  // Ce fichier affirmait CINQ fois que le contenu non mappé était « conservé
+  // dans l'asset BRAND_BOOK pour promotion opérateur ultérieure ». Cet asset
+  // n'était jamais créé : seuls `CHROMATIC_STRATEGY` et `TYPOGRAPHY_SYSTEM`
+  // l'étaient. Tout ce qui ne tombait pas dans un champ de pilier — vision,
+  // manifeste, archétype, voix, système produit — ne survivait que dans le
+  // payload de l'`IntentEmission`, c'est-à-dire nulle part d'exploitable.
+  // Commentaire menteur ET perte de donnée. On crée l'asset promis.
+  const brandBookAsset = await createBrandAsset({
+    strategyId,
+    operatorId,
+    name: args.sourceFilename ? `Brand book — ${args.sourceFilename}` : "Brand book officiel",
+    kind: "BRAND_BOOK",
+    content: {
+      extraction,
+      source: "brand-book-ingestion",
+      extractionMode: args.extractionMode ?? "LLM",
+      // Ce qui est DÉJÀ parti dans les piliers — pour que l'opérateur voie en
+      // revue ce qui reste à promouvoir, sans avoir à comparer à la main.
+      mappedToPillars: Object.fromEntries(
+        (["a", "d", "v"] as const).map((k) => [k, writes[k].map((f) => f.path)]),
+      ),
+    },
+    pillarSource: "A",
+    state: "DRAFT",
+    metadata: { sourceDataSourceId: args.sourceDataSourceId, ingested: true },
+  });
+  if (brandBookAsset?.id) assetsCreated.push(brandBookAsset.id);
+  else warnings.push("Asset brand book non créé — le contenu non mappé n'est pas conservé.");
+
   // ── Assets vault visuels (DRAFT — l'opérateur promeut, cf. source-classifier) ──
   const vis = extraction.visual;
   const officialColors = vis?.colors?.filter((c) => c.hex) ?? [];

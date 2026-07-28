@@ -36,6 +36,17 @@ import {
   type SourceCertainty,
 } from "@/domain/source-certainty";
 
+/**
+ * Plafond de dépôt. Le contenu transite en base64 dans le corps tRPC (+33 %) —
+ * au-delà, la requête casse côté serveur avec une erreur illisible. Mieux vaut
+ * un refus clair, en amont, avec le poids réel du fichier.
+ */
+const MAX_UPLOAD_MB = 10;
+const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1_048_576;
+
+/** Ce que le pipeline sait réellement lire (`ingestion-pipeline/extractors.ts`). */
+const ACCEPTED_UPLOAD = ".pdf,.docx,.doc,.txt,.md,.csv,.xlsx,.png,.jpg,.jpeg,.webp";
+
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof CheckCircle }> = {
   PENDING: { label: "En attente", color: "text-foreground-muted", icon: Clock },
   EXTRACTING: { label: "Extraction...", color: "text-warning", icon: Loader2 },
@@ -656,6 +667,126 @@ function SourceEditModal({
   );
 }
 
+/**
+ * Lecture d'un document comme BRAND BOOK OFFICIEL — revue puis écriture.
+ *
+ * `previewBrandBook` / `ingestBrandBook` (ADR-0173) étaient livrés côté serveur
+ * et n'avaient **aucun appelant** : un brand book officiel déposé restait un
+ * texte comme un autre, et rien n'en tirait les piliers ni les assets. Ce
+ * panneau ferme l'écart, en respectant la doctrine : **rien ne s'écrit sans un
+ * geste explicite** de l'opérateur (ADR-0085, STOP à Jehuty).
+ */
+function BrandBookIngestModal({
+  strategyId,
+  sourceId,
+  sourceLabel,
+  onClose,
+  onDone,
+}: {
+  strategyId: string;
+  sourceId: string;
+  sourceLabel: string;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [mode, setMode] = useState<"LLM" | "STRUCTURED">("STRUCTURED");
+  const [extraction, setExtraction] = useState<unknown>(null);
+
+  const previewMutation = trpc.ingestion.previewBrandBook.useMutation({
+    onSuccess: (r) => setExtraction(r.extraction),
+  });
+  const ingestMutation = trpc.ingestion.ingestBrandBook.useMutation({
+    onSuccess: () => {
+      onDone();
+      onClose();
+    },
+  });
+
+  const pending = previewMutation.isPending || ingestMutation.isPending;
+  const error = previewMutation.error ?? ingestMutation.error;
+
+  return (
+    <Modal open={true} onClose={onClose} title="Lire comme brand book officiel" size="lg">
+      <div className="space-y-4">
+        <p className="text-sm text-foreground-secondary">
+          Document : <span className="text-foreground">{sourceLabel}</span>
+        </p>
+        <p className="text-xs text-foreground-muted">
+          Extraction d&apos;abord, écriture ensuite — et seulement si vous la validez. Rien n&apos;est
+          écrit dans les piliers tant que vous n&apos;avez pas confirmé.
+        </p>
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setMode("STRUCTURED")}
+            className={`rounded-lg px-3 py-1.5 text-xs font-medium ${mode === "STRUCTURED" ? "bg-accent/20 text-accent" : "border border-white/10 text-foreground-secondary hover:text-foreground"}`}
+          >
+            Lecture structurée
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("LLM")}
+            className={`rounded-lg px-3 py-1.5 text-xs font-medium ${mode === "LLM" ? "bg-accent/20 text-accent" : "border border-white/10 text-foreground-secondary hover:text-foreground"}`}
+          >
+            Lecture assistée
+          </button>
+        </div>
+        <p className="text-xs text-foreground-muted">
+          {mode === "STRUCTURED"
+            ? "Déterministe : ce qui est écrit noir sur blanc dans le document. Les champs obtenus valent comme faits observés."
+            : "Assistée : couvre les documents en prose libre, mais les champs obtenus sont des interprétations à valider (marqués comme tels)."}
+        </p>
+
+        {error ? (
+          <div className="rounded-lg border border-error/40 bg-error/10 p-3 text-sm text-error">
+            {error.message}
+          </div>
+        ) : null}
+
+        {extraction != null ? (
+          <div className="max-h-80 overflow-y-auto rounded-lg border border-white/10 bg-black/20 p-3">
+            <pre className="whitespace-pre-wrap text-2xs text-foreground-secondary">
+              {JSON.stringify(extraction, null, 2)}
+            </pre>
+          </div>
+        ) : null}
+
+        <div className="flex justify-end gap-2">
+          <button onClick={onClose} className="rounded px-3 py-1.5 text-xs text-foreground-muted hover:bg-white/5">
+            Annuler
+          </button>
+          <button
+            onClick={() => previewMutation.mutate({ strategyId, sourceId, mode })}
+            disabled={pending}
+            className="flex items-center gap-1.5 rounded border border-white/10 px-3 py-1.5 text-xs text-foreground hover:bg-white/5 disabled:opacity-50"
+          >
+            {previewMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+            {extraction != null ? "Relire" : "Lire le document"}
+          </button>
+          <button
+            onClick={() =>
+              ingestMutation.mutate({
+                strategyId,
+                extraction,
+                sourceFilename: sourceLabel,
+                sourceDataSourceId: sourceId,
+                extractionMode: mode,
+              })
+            }
+            disabled={pending || extraction == null}
+            className="flex items-center gap-1.5 rounded bg-accent px-3 py-1.5 text-xs font-medium text-accent-foreground hover:bg-accent disabled:opacity-50"
+            title={extraction == null ? "Lisez le document d'abord" : undefined}
+          >
+            {ingestMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+            Écrire dans la marque
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 export default function SourcesPage() {
   const strategyId = useCurrentStrategyId();
   // Founder = lecture (liste + certitude) ; édition/purge/suppression =
@@ -666,12 +797,21 @@ export default function SourcesPage() {
   const [noteContent, setNoteContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Dépôt de fichier par le porteur de marque. La voie serveur existait
+  // (`ingestion.uploadFile`, gouvernée) mais n'était atteignable QUE depuis la
+  // Console : le fondateur pouvait coller du texte, jamais déposer son PRD ou
+  // son brand book. C'est pourtant lui qui les a.
+  const [uploading, setUploading] = useState(false);
+  const [uploadResults, setUploadResults] = useState<Array<{ name: string; ok: boolean; message?: string }>>([]);
+
   // PR-B (ADR-0033) — purge + re-ingest modal state. Holds the source row
   // currently targeted for atomic depollution + the operator's confirmName
   // echo. Brand name is read from the strategyDetail query (sole call site
   // that needs the canonical name to validate the echo client-side).
   const [purgeTarget, setPurgeTarget] = useState<{ sourceId: string; sourceLabel: string } | null>(null);
   const [purgeConfirmName, setPurgeConfirmName] = useState("");
+  // Source ciblée par une lecture « brand book officiel » (ADR-0173).
+  const [bookTarget, setBookTarget] = useState<{ sourceId: string; sourceLabel: string } | null>(null);
   // Source en cours d'édition (titre + contenu). Toute source est éditable.
   const [editSourceId, setEditSourceId] = useState<string | null>(null);
 
@@ -717,6 +857,59 @@ export default function SourcesPage() {
     },
   });
 
+  const uploadMutation = trpc.ingestion.uploadFile.useMutation();
+
+  /**
+   * Dépôt de fichiers, un par un, avec un résultat honnête par fichier.
+   *
+   * `fileType` porte l'EXTENSION, jamais le type MIME du navigateur : côté
+   * serveur `extractAuto` compare à "PDF"/"DOCX"/… et retombe sinon sur
+   * « traiter comme du texte » — un `application/pdf` y aurait stocké du base64
+   * en guise de contenu lisible.
+   */
+  async function handleFiles(files: FileList | null) {
+    if (!files || files.length === 0 || !strategyId) return;
+    setUploading(true);
+    const results: Array<{ name: string; ok: boolean; message?: string }> = [];
+    try {
+      for (const file of Array.from(files)) {
+        if (file.size > MAX_UPLOAD_BYTES) {
+          results.push({
+            name: file.name,
+            ok: false,
+            message: `Trop volumineux (${(file.size / 1_048_576).toFixed(1)} Mo, maximum ${MAX_UPLOAD_MB} Mo).`,
+          });
+          continue;
+        }
+        try {
+          const base64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (ev) => resolve(((ev.target?.result as string) ?? "").split(",")[1] ?? "");
+            reader.onerror = () => reject(new Error("Lecture du fichier impossible."));
+            reader.readAsDataURL(file);
+          });
+          await uploadMutation.mutateAsync({
+            strategyId,
+            fileName: file.name,
+            fileType: file.name.split(".").pop()?.toUpperCase() ?? "TXT",
+            content: base64,
+          });
+          results.push({ name: file.name, ok: true });
+        } catch (err) {
+          results.push({
+            name: file.name,
+            ok: false,
+            message: err instanceof Error ? err.message : "Dépôt refusé.",
+          });
+        }
+      }
+    } finally {
+      setUploadResults(results);
+      setUploading(false);
+      sourcesQuery.refetch();
+    }
+  }
+
   if (!strategyId) return <SkeletonPage />;
   if (sourcesQuery.isLoading) return <SkeletonPage />;
 
@@ -738,6 +931,56 @@ export default function SourcesPage() {
           <MessageSquare className="h-3.5 w-3.5" />
           Ajouter une note
         </button>
+      </div>
+
+      {/* Dépôt de document — le porteur de marque a les documents ; il ne
+          pouvait jusqu'ici que les recopier à la main. */}
+      <div className="rounded-lg border border-dashed border-white/10 p-4">
+        <label className={`flex cursor-pointer flex-col items-center justify-center gap-1 py-4 ${uploading ? "pointer-events-none opacity-60" : ""}`}>
+          {uploading ? (
+            <Loader2 className="h-6 w-6 animate-spin text-accent" />
+          ) : (
+            <Upload className="h-6 w-6 text-foreground-muted" />
+          )}
+          <span className="text-sm text-foreground">
+            {uploading ? "Lecture en cours…" : "Déposez vos documents de marque"}
+          </span>
+          <span className="text-xs text-foreground-muted">
+            PDF, Word, texte, tableur, images — {MAX_UPLOAD_MB} Mo par fichier maximum
+          </span>
+          <input
+            type="file"
+            multiple
+            accept={ACCEPTED_UPLOAD}
+            className="hidden"
+            disabled={uploading}
+            onChange={(e) => {
+              void handleFiles(e.target.files);
+              e.target.value = "";
+            }}
+          />
+        </label>
+        <p className="text-center text-xs text-foreground-muted">
+          Ce que vous déposez ici sert de référence : vos analyses s&apos;y ancrent, et ce qui
+          n&apos;en vient pas est signalé comme tel.
+        </p>
+        {uploadResults.length > 0 ? (
+          <ul className="mt-3 space-y-1">
+            {uploadResults.map((r) => (
+              <li key={r.name} className="flex items-start gap-1.5 text-xs">
+                {r.ok ? (
+                  <CheckCircle className="mt-px h-3.5 w-3.5 flex-shrink-0 text-success" />
+                ) : (
+                  <AlertCircle className="mt-px h-3.5 w-3.5 flex-shrink-0 text-error" />
+                )}
+                <span className={r.ok ? "text-foreground-muted" : "text-error"}>
+                  {r.name}
+                  {r.ok ? " — déposé" : ` — ${r.message ?? "échec"}`}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </div>
 
       {/* Add manual source form */}
@@ -776,7 +1019,7 @@ export default function SourcesPage() {
                 }
               }}
               disabled={!noteContent.trim() || isSubmitting}
-              className="flex items-center gap-1.5 rounded bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded bg-accent px-3 py-1.5 text-xs font-medium text-accent-foreground hover:bg-accent disabled:opacity-50"
             >
               {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
               Sauvegarder
@@ -813,6 +1056,22 @@ export default function SourcesPage() {
                         {source.fileType as string ?? source.sourceType as string}
                         {source.createdAt ? ` — ${new Date(source.createdAt as string).toLocaleDateString("fr")}` : ""}
                       </p>
+                      {/* « Déposé » ≠ « exploitable ». L'indexation est
+                          best-effort ; sans ce compte, une source jamais
+                          indexée passait pour prise en compte. */}
+                      {typeof source.indexedChunks === "number" ? (
+                        source.indexedChunks > 0 ? (
+                          <p className="text-2xs text-success">
+                            Lisible par vos analyses ({source.indexedChunks} fragment
+                            {source.indexedChunks > 1 ? "s" : ""})
+                          </p>
+                        ) : source.processingStatus === "EXTRACTED" ||
+                          source.processingStatus === "PROCESSED" ? (
+                          <p className="text-2xs text-warning">
+                            Pas encore analysable — sera indexé à la prochaine analyse de marque.
+                          </p>
+                        ) : null
+                      ) : null}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -864,6 +1123,27 @@ export default function SourcesPage() {
                         <RefreshCw className="h-3.5 w-3.5" />
                       </button>
                     ) : null}
+                    {/* ADR-0173 — `previewBrandBook`/`ingestBrandBook` étaient
+                        livrés côté serveur et n'avaient AUCUN appelant : un
+                        brand book officiel déposé restait un simple texte. */}
+                    {canOperate &&
+                    typeof source.id === "string" &&
+                    (source.processingStatus === "EXTRACTED" ||
+                      source.processingStatus === "PROCESSED") ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setBookTarget({
+                            sourceId: source.id as string,
+                            sourceLabel: (source.fileName as string) ?? "Document",
+                          });
+                        }}
+                        className="rounded p-1 text-foreground-muted/40 hover:text-accent hover:bg-accent/10 transition-colors"
+                        title="Lire comme brand book officiel (revue avant écriture)"
+                      >
+                        <Sparkles className="h-3.5 w-3.5" />
+                      </button>
+                    ) : null}
                     {canOperate && source.sourceType === "MANUAL_INPUT" ? (
                       <button
                         onClick={(e) => { e.stopPropagation(); deleteMutation.mutate({ id: source.id as string }); }}
@@ -904,6 +1184,16 @@ export default function SourcesPage() {
           })}
         </div>
       )}
+
+      {bookTarget && strategyId ? (
+        <BrandBookIngestModal
+          strategyId={strategyId}
+          sourceId={bookTarget.sourceId}
+          sourceLabel={bookTarget.sourceLabel}
+          onClose={() => setBookTarget(null)}
+          onDone={() => sourcesQuery.refetch()}
+        />
+      ) : null}
 
       {/* Modal d'édition de source (titre + contenu) — toute source. */}
       {editSourceId !== null ? (

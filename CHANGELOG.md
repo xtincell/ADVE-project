@@ -1,5 +1,153 @@
 # Changelog — La Fusee
 
+## v6.27.360 — feat(console): lire et écrire une marque depuis un exécutant serveur, par les voies gouvernées (2026-07-28)
+
+Déposer la documentation d'un client, ou consolider deux fiches de marque, sont des gestes d'opérateur qui n'avaient qu'**une** surface : le navigateur, avec une session. Depuis un exécutant serveur — le cas d'un agent qui range le vault — il n'existait aucun chemin. Faute de chemin, la tentation est d'écrire en base directement : exactement ce que le chokepoint interdit.
+
+**`GET /api/admin/brand-dump`** — lecture seule. `brand-scan` répond « où cette chaîne apparaît-elle ? » ; il ne répond pas « que contient CETTE marque ? ». Or c'est la question à poser avant toute consolidation : on ne fusionne pas deux fiches sans avoir lu les deux. Rend les piliers (contenu intégral, `validationStatus`, provenance ET certitude par champ, version, péremption), les sources (avec le **compte réel de fragments indexés** — « déposé » ≠ « exploitable ») et les assets.
+
+**`POST /api/admin/brand-write`** — n'écrit **rien** elle-même : elle exerce les procédures existantes sous identité ADMIN (`ingestion.uploadFile`, `pillar.amend` → `OPERATOR_AMEND_PILLAR`, `strategy.archive`). Spine d'émission, gates pre-flight, `writePillar`, provenance, versionnement et cascade de péremption s'appliquent tels quels. **`dryRun: true` par défaut** : une écriture demande un `false` explicite — on ne mute pas une marque cliente par inadvertance de paramètre. L'ingestion rapporte ce qui a **réellement** été extrait (statut, caractères, erreur), pas seulement que le dépôt a été accepté.
+
+Attrapé par nos propres verrous en écrivant ces routes : `pillar.select.status` — colonne **inexistante** (`validationStatus`). Le test `prisma-select-fields-exist` (posé plus tôt dans cette session, précisément parce que `tsc` type une clé inconnue en `never` et ne la voit pas) l'a refusée avant le premier appel.
+
+0 nouveau modèle · 0 migration · 0 Intent kind · 0 LLM · cap APOGEE 7/7.
+
+## v6.27.359 — fix(ci): un « échec au build » qui n'en était pas un (2026-07-28)
+
+Le job *Build image (ghcr)* est sorti **rouge** alors que l'image était construite, testée et **poussée sur GHCR**. Seule la dernière étape avait échoué : `curl` exit **28** sur `POST /api/v1/deploy`.
+
+Le vrai dégât n'était pas le rouge — c'était son effet : **la prod est restée une version en arrière** (elle servait `6.27.354` pendant que `main` était à `6.27.355`), et le job laissait croire à un échec de build. Relancé à la main, le déploiement a abouti immédiatement (`200 … deployment queued`) et la prod a basculé.
+
+Trois défauts dans l'étape :
+
+1. **`curl -sf` nu sous `set -e`** — ni délai maximum, ni réessai. Un accusé de réception lent tuait le job alors que le déploiement pouvait être mis en file côté serveur.
+2. **Pas de `force=true`** — sur une ressource « Docker Image » au tag MUTABLE (`latest`), c'est lui qui garantit le `docker pull` plutôt qu'un redémarrage sur l'image déjà présente.
+3. **Aucune vérification** — le job jugeait sur la réponse HTTP du déclenchement, pas sur ce que la prod sert réellement.
+
+L'étape borne et réessaie désormais le déclenchement (3 tentatives, `--max-time`, backoff), puis **attend la bascule** en interrogeant `/api/version` : le job n'est vert que si la prod sert la version construite. Un déclenchement accepté n'est pas un déploiement réussi ; un déclenchement expiré n'est pas forcément un échec — seule la version servie tranche.
+
+La vérification demande la variable de dépôt `PROD_URL`. Absente, le job reste sur le verdict du déclenchement et l'annonce comme **non vérifié** plutôt que de le présenter comme un succès.
+
+Incident consigné dans [docs/deploy/BUILD-DEPORT.md](docs/deploy/BUILD-DEPORT.md).
+
+## v6.27.358 — feat(oracle): le livre de marque composé, référence et rang 2 de l'ancrage (2026-07-28)
+
+Demande opérateur, formulée deux fois dans les mêmes termes : *« un brandbook au format de la Fusée est censé exister et **puiser dans les sources et l'advertis** pour se formaliser afin de devenir la seule source de vérité (avec **vue html et export pdf, comme l'oracle**) »*.
+
+Ce qui existait ne répondait pas à ça. `brand-bible-pdf.ts` compile les sorties de la séquence Glory `BRANDBOOK-D` : douze briefs **produits par modèle**, sur le **seul pilier Distinction**. Un livrable créatif — pas un état des lieux. Il ne lisait ni les piliers fondateurs, ni un seul document de la marque, et n'avait aucune vue HTML.
+
+Le manque s'était aggravé avec l'ancrage documentaire (v6.27.356) : quand aucun document ne parle du champ visé, il ne restait rien entre « ancré » et « inventé ». La cascade annoncée avait un rang 2 vide.
+
+### Le livre ([ADR-0185](docs/governance/adr/0185-composed-brand-bible-rank-2-anchor.md))
+
+`brand-bible/compose.ts` — déterministe, **zéro modèle**. On assemble ce qui est déjà déclaré et documenté :
+
+- les piliers champ par champ, dans l'ordre canonique du registre, avec la **provenance réelle** de chaque valeur (Décidé / Tiré d'un document / Déduit) ;
+- les extraits de documentation qui parlent de chaque volet, **avec leur document et leur certitude**, via le RAG partagé — le même pool que le conseil et le MCP ;
+- **les manquants nommés**, volet par volet.
+
+Par défaut le livre publie le socle fondateur ; les piliers dérivés sont disponibles sur demande.
+
+### Une seule mesure de complétude
+
+Le livre **consomme** `completionPct` (contrats de maturité) — le chiffre déjà montré partout dans le cockpit — au lieu d'en calculer un second. Deux chiffres rivaux sur le même sujet, c'est la dérive qu'on passe notre temps à réparer ailleurs. Complétude indisponible → « non mesurée », et **jamais présenté comme complet**.
+
+### Deux surfaces, parité Oracle
+
+**Vue HTML** `/cockpit/brand/bible` (lecture seule, provenance par élément, citations par volet, manquants dépliables) · **Export PDF** sur la route existante, qui sert désormais le livre composé par défaut ; le deck créatif `BRANDBOOK-D` reste servi sous `?deck=1` — c'est un livrable à part entière, pas une régression à supprimer. Les deux rendus passent par `resolveBrandTheme` : le livre est aux couleurs de la marque.
+
+### Ce que le livre ne fait pas
+
+**Il ne comble aucun trou.** Un document de référence qui remplirait ses blancs serait la fabrication la mieux reliée du système — plus dangereuse qu'un champ vide, parce qu'elle porterait l'autorité du livre, et que l'ancrage l'aurait ensuite comptée comme source recouvrante. Un livre à moitié vide s'affiche à moitié vide et le dit en tête.
+
+**Il n'écrit rien** : aucun Intent, aucune mutation, aucun amendement de pilier. L'écriture ADVE reste la décision opérateur.
+
+0 nouveau modèle Prisma · 0 migration · 0 Intent kind · **0 LLM** · cap APOGEE 7/7 préservé. tsc 0 · lint 0 erreur · cycles 0 · **3599 tests unitaires verts** (1 fichier anti-drift neuf, 12 assertions).
+
+## v6.27.357 — feat(intake): le porteur de marque peut enfin déposer ses documents (2026-07-28)
+
+Suite de v6.27.356. L'ancrage documentaire est en place — encore faut-il que la marque puisse **déposer** sa documentation, et que ce dépôt soit honnête sur ce qu'il produit.
+
+### Le fondateur ne pouvait déposer aucun fichier
+
+`/cockpit/brand/sources` n'avait **aucun** `<input type="file">` : le porteur pouvait coller du texte, jamais déposer son PRD ou son brand book. C'est pourtant lui qui les a. La voie serveur existait pourtant (`ingestion.uploadFile`, gouvernée, `canAccessStrategy` appliqué) — elle n'était atteignable que depuis la Console.
+
+Zone de dépôt multi-fichiers, résultat **par fichier** (déposé / refusé avec la raison), plafond 10 Mo annoncé en amont plutôt qu'une erreur illisible côté serveur. `fileType` porte l'**extension**, jamais le type MIME du navigateur : `extractAuto` compare à `"PDF"`/`"DOCX"`/… et retombe sinon sur « traiter comme du texte » — un `application/pdf` y aurait stocké du base64 en guise de contenu lisible.
+
+### « Déposé » ne veut pas dire « exploitable »
+
+L'indexation est best-effort (`void` + `console.warn`) : une source `EXTRACTED` jamais indexée ne se signalait **nulle part**, et le porteur croyait sa documentation prise en compte. `listSources` remonte désormais le compte réel de fragments indexés → « Lisible par vos analyses (N fragments) » ou « Pas encore analysable ».
+
+### `extractImage` fabriquait
+
+La fonction envoyait **200 caractères d'en-tête base64** à un modèle **texte**, avec la consigne de décrire l'image « de manière détaillée » : couleurs dominantes, typographies, textes lisibles. Rien de tout cela n'était transmis. **Tout ce qui ressortait était inventé**, puis stocké en `rawContent` d'une `BrandDataSource` — présenté au reste de l'OS comme un document de la marque.
+
+Depuis l'ancrage documentaire, c'était devenu franchement dangereux : une description fabriquée serait devenue une source « recouvrante », et la mécanique censée détecter l'invention l'aurait blanchie.
+
+Le Gateway n'expose aucune surface vision. Tant qu'elle n'existe pas : **refus honnête**, avec le geste à faire à la place (déposer le PDF, ou décrire en note). Verrou CI structurel — plus aucun appel modèle depuis l'extraction de fichiers.
+
+### L'asset `BRAND_BOOK` promis cinq fois, jamais écrit
+
+`brand-book-ingestion/persister.ts` affirmait **cinq fois** que le contenu non mappé était « conservé dans l'asset BRAND_BOOK pour promotion opérateur ultérieure ». Seuls `CHROMATIC_STRATEGY` et `TYPOGRAPHY_SYSTEM` étaient créés : vision, manifeste, archétype, voix, système produit ne survivaient que dans le payload de l'`IntentEmission`. Commentaire menteur **et** perte de donnée. L'asset est désormais créé, avec l'extraction complète + la liste de ce qui est déjà parti dans les piliers (l'opérateur voit ce qu'il reste à promouvoir sans comparer à la main).
+
+### Le brand book se lit enfin
+
+`previewBrandBook` / `ingestBrandBook` (ADR-0173) étaient livrés côté serveur avec **zéro appelant** : un brand book officiel déposé restait un texte comme un autre. Action opérateur sur la source → lecture (structurée déterministe **ou** assistée, avec la conséquence sur la provenance dite explicitement) → revue → écriture. Rien ne s'écrit sans geste explicite (ADR-0085, STOP à Jehuty).
+
+tsc 0 · lint 0 erreur · **1462 gouvernance + 1629 services verts** (1 fichier anti-drift neuf, 8 assertions).
+
+## v6.27.356 — feat(notoria): l'ancrage documentaire se mesure, il ne se revendique pas (2026-07-28)
+
+**Suite directe de v6.27.355.** Le moteur voit désormais la documentation de la marque et on lui demande de citer ses sources. Restait le plus important : **vérifier**. Une consigne d'ancrage qu'on ne contrôle pas est une politesse adressée au modèle — il peut écrire `source:abc` sans que rien de ce qu'il propose ne vienne du document.
+
+Trois trous fermés, tous vérifiés dans le code avant d'écrire une ligne ([ADR-0184](docs/governance/adr/0184-source-grounding-measured-not-claimed.md)).
+
+### 1. Un index documentaire, pas deux
+
+Le repo portait **deux index du même texte** : `BRAND_SOURCE` (voie gouvernée `INDEX_BRAND_SOURCE`, branchée sur l'ingestion, lue par le conseil et le MCP) et `SOURCE_CHUNK` (écrit par `vault-enrichment/source-rag.ts` pour son seul usage). Deux écrivains, deux pools disjoints, coût d'embedding doublé — et surtout : **un extrait récupéré dans l'un restait invisible de l'autre**. Le producteur et le critique ne lisaient pas les mêmes documents ; la vérification était structurellement impossible.
+
+- `ensureSourcesIndexed` **délègue** à `indexBrandSource`. Plus rien n'écrit de `SOURCE_CHUNK` ; le kind reste lu (aucune migration de données, les nœuds existants ne deviennent pas muets).
+- `indexBrandSource` devient **idempotent par contenu** (`alreadyFresh`) — s'assurer qu'une source est indexée ne repaie plus l'embedding complet. C'est ce coût qui avait justifié le second index.
+- `RankedNode` porte enfin `sourceId` : sans cette ancre, un extrait n'est rattachable à aucun document, donc ni citable ni vérifiable.
+- Notoria récupère par le RAG partagé ; la sélection par recouvrement de termes devient une **voie de repli annoncée** (`retrieval: SEMANTIC | DETERMINISTIC | NONE`, mentionnée dans le prompt) — plus un chemin nominal déguisé.
+
+### 2. Les quatre experts adversariaux voyaient zéro document
+
+`council/context.ts` appelait `getOracleBrandContextByQuery` **sans** `includeSources`. Sans ce drapeau, le filtre se réduit à `[{pillarKey}, {BRANDLEVEL}]` et **exclut les chunks `BRAND_SOURCE` du pool** : les experts vérifiaient des piliers contre des piliers. Le coordinateur, lui, passait le drapeau — l'asymétrie était accidentelle.
+
+Et `ragUsed` était calculé puis **jeté** : un avis rendu sans sources ne le disait à personne.
+
+- `includeSources: true` côté experts + `sourcesSeen` remonté ; un expert sans documentation reçoit la consigne explicite de dire que sa critique porte sur la cohérence interne, pas sur la conformité aux sources.
+- `ragUsed` descend dans le prompt du coordinateur et remonte dans `deliberate().grounding` jusqu'au panneau fondateur.
+
+### 3. L'ancrage mesuré, la citation vérifiée
+
+`notoria/grounding.ts` — fonction **pure**, zéro I/O, zéro LLM, sur le tokeniseur déjà utilisé par la gate de cohérence brief↔ADVE (on réutilise le cœur, on n'en écrit pas un second).
+
+| Champ | Ce qu'il dit |
+|---|---|
+| `groundedSourceIds` | Documents qui **soutiennent réellement** la proposition |
+| `citedSourceIds` | Documents que la justification **revendique** |
+| `unverifiedCitations` | Revendiqués **sans** appui mesuré — signal de fabrication |
+
+Le recouvrement porte sur la **valeur proposée**, pas sur la justification : une justification bien tournée ne doit pas pouvoir faire passer une proposition sortie de nulle part. Bandes `GROUNDED ≥ 0.35` · `WEAK ≥ 0.15` · `UNGROUNDED` · `NO_SOURCE` (aucune documentation soumise — ce n'est pas un échec d'ancrage, et une citation dans ce cas est nécessairement fabriquée). Une citation non vérifiée force `requires_review`.
+
+### 4. La provenance suit la mesure
+
+`provenanceFromAuthorSystem` mappe `MESTOR → INFERRED` : **une reco littéralement tirée d'un document était tamponnée « inféré »**. Désormais les champs dont la reco est `GROUNDED` et pointe un document réel s'écrivent `fieldProvenance: "SOURCE"`. Conséquence assumée — un champ `SOURCE` peut corriger un `INFERRED` et *challenge* un `HUMAN` (arbitrage humain, jamais d'écriture silencieuse) : c'est pourquoi la promotion est réservée à l'ancrage **mesuré**, jamais revendiqué.
+
+### Surface
+
+Puce par recommandation dans le cockpit : « Tirée de vos documents » / « Documents effleurés » / « Hors de vos documents ». Aucune puce quand rien n'a été mesuré — on n'affirme pas. Le panneau d'analyse du conseil dit contre quels piliers ses experts ont pu confronter vos documents, ou qu'aucun n'était disponible.
+
+**Des recos vont s'afficher « Hors de vos documents ». C'est le but** : une complétude qui se croyait documentée valait moins qu'un plafond expliqué.
+
+### Portée
+
+5 champs additifs nullable sur `Recommendation` (migration backfill-safe — `null` se lit « non mesuré », jamais « non ancré ») · 0 nouveau modèle · 0 Intent kind · **0 LLM ajouté** · cap APOGEE 7/7 préservé. Réparé en passant : `brief-adve-coherence-score.ts` écrivait sa plage de marques combinantes en clair dans une regex (invisible à la relecture, avalable par une passe d'outil) → forme échappée.
+
+tsc 0 · lint 0 erreur · **1462 tests gouvernance + 1807 services/domaine verts** (2 fichiers anti-drift neufs, 25 assertions).
+
 ## v6.27.355 — fix(notoria): la documentation de la marque était lue à hauteur de 500 caractères (2026-07-28)
 
 **Notoria lisait déjà les sources. Le défaut n'était pas l'absence de lecture — il était pire.**

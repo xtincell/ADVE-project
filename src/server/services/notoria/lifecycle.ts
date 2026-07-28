@@ -9,6 +9,7 @@ import { db } from "@/lib/db";
 import { writePillarAndScore } from "@/server/services/pillar-gateway";
 import { scoreObject } from "@/server/services/advertis-scorer";
 import type { PillarKey } from "@/lib/types/advertis-vector";
+import type { FieldProvenance } from "@/domain/field-provenance";
 import type { ResolvedRecoOperation, CompletionLevel } from "./types";
 import { parseRecommendationPayload } from "@/lib/types/recommendation-payload";
 import { dispatchTypedRecos } from "./apply-payload";
@@ -167,6 +168,20 @@ export async function applyRecos(
       recoId: r.id,
     }));
 
+    // ── ADR-0184 — provenance par champ selon l'ancrage MESURÉ ──────────
+    // `author.system = "MESTOR"` mappe sur `INFERRED` : toute reco, même
+    // littéralement tirée d'un document de la marque, était tamponnée
+    // « inféré » — d'où des champs fondateurs marqués comme devinés alors
+    // qu'ils étaient documentés. On promeut en `SOURCE` les seuls champs dont
+    // le recouvrement avec un document a été mesuré (pas ceux dont le modèle
+    // AFFIRME qu'ils le sont : la revendication ne vaut pas preuve).
+    const fieldProvenance: Record<string, FieldProvenance> = {};
+    for (const r of pillarRecos) {
+      if (r.groundingBand === "GROUNDED" && r.groundedSourceIds.length > 0) {
+        fieldProvenance[r.targetField] = "SOURCE";
+      }
+    }
+
     // Apply via Gateway
     const result = await writePillarAndScore({
       strategyId,
@@ -176,7 +191,11 @@ export async function applyRecos(
         system: "MESTOR",
         reason: `Notoria: apply ${operations.length} recommendation(s)`,
       },
-      options: { targetStatus: "AI_PROPOSED", confidenceDelta: 0.05 },
+      options: {
+        targetStatus: "AI_PROPOSED",
+        confidenceDelta: 0.05,
+        ...(Object.keys(fieldProvenance).length > 0 ? { fieldProvenance } : {}),
+      },
     });
 
     if (result.success) {

@@ -35,6 +35,12 @@ export interface RankedNode {
   kind: string;
   pillarKey: string | null;
   field: string | null;
+  /**
+   * Entité d'origine du nœud (`BrandDataSource.id` pour un chunk `BRAND_SOURCE`,
+   * `recoId`, `assetId`…). Sans lui, un extrait récupéré n'est plus rattachable à
+   * son document : aucune citation, donc aucune vérification possible en aval.
+   */
+  sourceId: string | null;
   payload: unknown;
   metadata: unknown;
   similarity: number;
@@ -122,6 +128,7 @@ export async function searchByQuery(
       kind: true,
       pillarKey: true,
       field: true,
+      sourceId: true,
       payload: true,
       metadata: true,
       embedding: true,
@@ -136,6 +143,7 @@ export async function searchByQuery(
       kind: c.kind,
       pillarKey: c.pillarKey,
       field: c.field,
+      sourceId: c.sourceId,
       payload: c.payload,
       metadata: c.metadata,
       similarity: cosineSimilarity(qVec, c.embedding ?? []),
@@ -222,6 +230,7 @@ export async function listByMetadata(
       kind: true,
       pillarKey: true,
       field: true,
+      sourceId: true,
       payload: true,
       metadata: true,
     },

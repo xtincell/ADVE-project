@@ -12,12 +12,15 @@ export const dynamic = "force-dynamic";
  */
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/config";
-import { exportBrandBibleAsPdf } from "@/server/services/value-report-generator/brand-bible-pdf";
+import {
+  exportBrandBibleAsPdf,
+  exportComposedBrandBibleAsPdf,
+} from "@/server/services/value-report-generator/brand-bible-pdf";
 import { canAccessStrategy } from "@/server/services/operator-isolation";
 import { db } from "@/lib/db";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ strategyId: string }> },
 ) {
   const session = await auth();
@@ -49,8 +52,15 @@ export async function GET(
   }
 
   try {
-    const { pdf } = await exportBrandBibleAsPdf(strategyId);
-    const filename = `bible-de-marque-${slugify(strategy.name)}-${new Date()
+    // Par défaut : le LIVRE composé (ADR-0185) — ce que la marque déclare + ce
+    // que ses documents en disent, avec l'origine de chaque élément. C'est lui
+    // qui fait référence. `?deck=1` sert l'ancien deck créatif BRANDBOOK-D,
+    // qui reste un livrable à part entière.
+    const wantsDeck = new URL(request.url).searchParams.get("deck") === "1";
+    const { pdf } = wantsDeck
+      ? await exportBrandBibleAsPdf(strategyId)
+      : await exportComposedBrandBibleAsPdf(strategyId);
+    const filename = `${wantsDeck ? "deck-de-marque" : "livre-de-marque"}-${slugify(strategy.name)}-${new Date()
       .toISOString()
       .slice(0, 10)}.pdf`;
     const body = new Uint8Array(pdf);

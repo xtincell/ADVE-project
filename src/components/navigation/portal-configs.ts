@@ -134,6 +134,10 @@ export const cockpitNavGroups: NavGroup[] = [
         labelKey: "nav.proposition", sublabelKey: "nav.proposition.sub", icon: FileSignature,
       },
       {
+        href: "/cockpit/brand/bible", label: "Livre de marque", sublabel: "Ce qu'est votre marque, et d'où ça vient",
+        labelKey: "nav.bible", sublabelKey: "nav.bible.sub", icon: BookOpen,
+      },
+      {
         href: "/cockpit/brand/deliverables", label: "Livrables", sublabel: "Chartes · Assets · Exports",
         labelKey: "nav.livrables", sublabelKey: "nav.livrables.sub", icon: FileText,
         activePrefixes: ["/cockpit/brand/guidelines", "/cockpit/brand/assets"],

@@ -52,15 +52,27 @@ export interface AskCouncilInput {
   history: StreamChatMessage[];
 }
 
-function buildCoordinatorSystem(contextBlock: string): string {
-  return [COUNCIL_PERSONAS.coordinator.systemPrompt, UNTRUSTED_NOTICE, contextBlock].join("\n\n");
+/**
+ * `ragUsed` était calculé par `buildAssistantContext` puis **jeté** : sans
+ * fournisseur d'embeddings, le bloc de recherche vaut `null` et personne
+ * n'apprenait que le conseil avait répondu sans consulter la documentation. Le
+ * signal descend désormais dans le prompt : le coordinateur sait ce qu'il n'a
+ * pas lu, et doit le dire au lieu de le laisser croire.
+ */
+function buildCoordinatorSystem(contextBlock: string, ragUsed: boolean): string {
+  const grounding = ragUsed
+    ? "ANCRAGE — Des extraits de la documentation de la marque figurent dans ton dossier. Quand tu t'appuies dessus, cite le document."
+    : "ANCRAGE — La recherche documentaire n'a rien remonté sur ce dossier (aucun document indexé, ou recherche sémantique indisponible). Tu réponds donc sur les piliers et les mesures fournis. N'affirme pas qu'un point est confirmé par la documentation de la marque.";
+  return [COUNCIL_PERSONAS.coordinator.systemPrompt, UNTRUSTED_NOTICE, contextBlock, grounding].join(
+    "\n\n",
+  );
 }
 
 /** Tour de chat : le coordinateur répond en streaming avec le dossier complet. */
 export async function askCouncilStream(input: AskCouncilInput): Promise<StreamChatResult> {
-  const { contextBlock } = await buildAssistantContext(input.strategyId, input.question);
+  const { contextBlock, ragUsed } = await buildAssistantContext(input.strategyId, input.question);
   return streamChatText({
-    system: buildCoordinatorSystem(contextBlock),
+    system: buildCoordinatorSystem(contextBlock, ragUsed),
     messages: [...input.history, { role: "user", content: input.question }],
     caller: "mestor:council:coordinator",
     strategyId: input.strategyId,
@@ -96,6 +108,17 @@ export type CouncilDeliberation =
       synthesis: CouncilSynthesis | null;
       /** Nombre d'appels LLM réellement effectués (transparence coût). */
       llmCalls: number;
+      /**
+       * Sur quoi la délibération s'est réellement appuyée. Une critique rendue
+       * sans documentation vaut comme avis de cohérence, pas comme vérification
+       * — l'opérateur doit pouvoir faire la différence sans deviner.
+       */
+      grounding: {
+        /** La recherche sémantique a contribué au dossier du coordinateur. */
+        ragUsed: boolean;
+        /** Experts ayant réellement vu des documents de la marque. */
+        expertsWithSources: FounderPillarKey[];
+      };
     };
 
 export interface DeliberateInput {
@@ -123,8 +146,8 @@ export async function deliberate(input: DeliberateInput): Promise<CouncilDeliber
   }
 
   let llmCalls = 0;
-  const { contextBlock } = await buildAssistantContext(input.strategyId, input.topic);
-  const coordinatorSystem = buildCoordinatorSystem(contextBlock);
+  const { contextBlock, ragUsed } = await buildAssistantContext(input.strategyId, input.topic);
+  const coordinatorSystem = buildCoordinatorSystem(contextBlock, ragUsed);
 
   // ── 1. Draft du coordinateur (skippé si une position est fournie) ──────
   let draft: CouncilDraft;
@@ -170,7 +193,11 @@ export async function deliberate(input: DeliberateInput): Promise<CouncilDeliber
   const settled = await Promise.allSettled(
     COUNCIL_EXPERTS.map(async (expert) => {
       const pillarKey = expert.pillarKey as FounderPillarKey;
-      const expertContext = await buildExpertContext(input.strategyId, pillarKey, input.topic);
+      const { contextBlock: expertContext, sourcesSeen } = await buildExpertContext(
+        input.strategyId,
+        pillarKey,
+        input.topic,
+      );
       const h = healthByKey.get(pillarKey);
       const healthLine = h
         ? `État mesuré du pilier : complétude ${h.completeness}% (${h.completionLevel}), ${h.criticalGaps.length} manque(s) critique(s)${h.criticalGaps.length ? ` : ${h.criticalGaps.slice(0, 5).join(", ")}` : ""}.`
@@ -188,17 +215,19 @@ export async function deliberate(input: DeliberateInput): Promise<CouncilDeliber
         EXPERT_TIMEOUT_MS,
         `expert-${pillarKey}`,
       );
-      return { pillarKey, critique: res.data };
+      return { pillarKey, critique: res.data, sourcesSeen };
     }),
   );
 
   const critiques: Partial<Record<FounderPillarKey, ExpertCritique | { failed: string }>> = {};
   const succeeded: Array<{ pillarKey: FounderPillarKey; critique: ExpertCritique }> = [];
+  const expertsWithSources: FounderPillarKey[] = [];
   settled.forEach((s, i) => {
     const pillarKey = COUNCIL_EXPERTS[i]!.pillarKey as FounderPillarKey;
     if (s.status === "fulfilled") {
       critiques[pillarKey] = s.value.critique;
-      succeeded.push(s.value);
+      succeeded.push({ pillarKey: s.value.pillarKey, critique: s.value.critique });
+      if (s.value.sourcesSeen) expertsWithSources.push(pillarKey);
     } else {
       critiques[pillarKey] = {
         failed: s.reason instanceof Error ? s.reason.message : String(s.reason),
@@ -207,8 +236,18 @@ export async function deliberate(input: DeliberateInput): Promise<CouncilDeliber
   });
 
   // ── 3. Synthèse du coordinateur (si au moins un expert a répondu) ──────
+  const grounding = { ragUsed, expertsWithSources };
+
   if (succeeded.length === 0) {
-    return { status: "OK", deliberated: false, draft, critiques, synthesis: null, llmCalls };
+    return {
+      status: "OK",
+      deliberated: false,
+      draft,
+      critiques,
+      synthesis: null,
+      llmCalls,
+      grounding,
+    };
   }
 
   llmCalls++;
@@ -237,5 +276,5 @@ export async function deliberate(input: DeliberateInput): Promise<CouncilDeliber
     synthesis = null; // les critiques restent livrées telles quelles
   }
 
-  return { status: "OK", deliberated: true, draft, critiques, synthesis, llmCalls };
+  return { status: "OK", deliberated: true, draft, critiques, synthesis, llmCalls, grounding };
 }

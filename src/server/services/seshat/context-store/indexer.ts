@@ -329,6 +329,11 @@ export interface BrandSourceIndexResult {
   strategyId: string;
   chunks: number;
   durationMs: number;
+  /**
+   * Vrai quand l'index était déjà à jour pour ce contenu — rien n'a été
+   * réécrit, rien n'a été ré-embeddé. Ce qui rend l'appel sûr en boucle.
+   */
+  alreadyFresh?: boolean;
 }
 
 /**
@@ -336,6 +341,12 @@ export interface BrandSourceIndexResult {
  * existing BRAND_SOURCE nodes for this sourceId are deleted before
  * re-indexing so re-extraction (incrementalUpdate) doesn't accumulate
  * duplicates. Triggers embedding pass at the end (best-effort).
+ *
+ * Idempotence **par contenu** : si le premier chunk indexé porte déjà le hash
+ * du contenu courant, l'index est à jour et l'appel ne fait rien. Sans ce
+ * court-circuit, tout appelant qui veut simplement *s'assurer* qu'une source
+ * est indexée repayait la totalité de l'embedding à chaque passage — c'est
+ * précisément ce qui avait poussé à écrire un second index parallèle.
  */
 export async function indexBrandSource(sourceId: string): Promise<BrandSourceIndexResult> {
   const t0 = Date.now();
@@ -362,11 +373,6 @@ export async function indexBrandSource(sourceId: string): Promise<BrandSourceInd
     return { sourceId, strategyId: source.strategyId, chunks: 0, durationMs: Date.now() - t0 };
   }
 
-  // Drop stale chunks for this source (idempotent re-index).
-  await db.brandContextNode.deleteMany({
-    where: { strategyId: source.strategyId, kind: "BRAND_SOURCE", sourceId: source.id },
-  });
-
   const chunks = chunkText(raw);
   const sharedMetadata = {
     sourceDataSourceId: source.id,
@@ -375,18 +381,55 @@ export async function indexBrandSource(sourceId: string): Promise<BrandSourceInd
     fileType: source.fileType,
   };
 
+  const payloadFor = (chunk: (typeof chunks)[number]) => ({
+    text: chunk.text,
+    fileName: source.fileName,
+    sourceType: source.sourceType,
+    fileType: source.fileType,
+    chunkIndex: chunk.index,
+    charStart: chunk.charStart,
+    charEnd: chunk.charEnd,
+    pillarMapping: source.pillarMapping ?? null,
+  });
+
+  // Déjà indexé à l'identique ? Le hash du premier chunk suffit : il dépend du
+  // texte de tête ET du découpage, qui bougent dès que le contenu change.
+  const head = chunks[0];
+  if (head) {
+    const fresh = await db.brandContextNode.findFirst({
+      where: {
+        strategyId: source.strategyId,
+        kind: "BRAND_SOURCE",
+        sourceId: source.id,
+        field: `chunk_${head.index}`,
+        contentHash: hashPayload(payloadFor(head)),
+      },
+      select: { id: true },
+    });
+    if (fresh) {
+      const chunkCount = await db.brandContextNode.count({
+        where: { strategyId: source.strategyId, kind: "BRAND_SOURCE", sourceId: source.id },
+      });
+      if (chunkCount === chunks.length) {
+        return {
+          sourceId,
+          strategyId: source.strategyId,
+          chunks: chunkCount,
+          durationMs: Date.now() - t0,
+          alreadyFresh: true,
+        };
+      }
+    }
+  }
+
+  // Drop stale chunks for this source (idempotent re-index).
+  await db.brandContextNode.deleteMany({
+    where: { strategyId: source.strategyId, kind: "BRAND_SOURCE", sourceId: source.id },
+  });
+
   let inserted = 0;
   for (const chunk of chunks) {
-    const payload = {
-      text: chunk.text,
-      fileName: source.fileName,
-      sourceType: source.sourceType,
-      fileType: source.fileType,
-      chunkIndex: chunk.index,
-      charStart: chunk.charStart,
-      charEnd: chunk.charEnd,
-      pillarMapping: source.pillarMapping ?? null,
-    };
+    const payload = payloadFor(chunk);
     const contentHash = hashPayload(payload);
     try {
       await db.brandContextNode.create({
