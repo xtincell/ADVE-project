@@ -6,7 +6,9 @@ Le correctif de v6.27.359 avait ajouté un **second** bloc `env:` au step de red
 
 Les deux blocs sont fusionnés. Et un verrou est posé : `tests/unit/governance/workflows-yaml-valid.test.ts` charge **chaque** workflow en mode strict (`js-yaml`, `json: false`), où une clé répétée lève au lieu d'écraser silencieusement la première. Vérifié en réintroduisant le défaut : le test devient rouge, puis vert une fois retiré.
 
-18 assertions (un test par workflow + garde de non-vacuité).
+Le premier jet du verrou s'appuyait sur `js-yaml` — présent en **transitif**, sans déclarations de types (`tsc` l'a refusé en CI) et surtout **jamais déclaré** : un verrou de CI adossé à un paquet qui peut disparaître au prochain bump de dépendances n'est pas un verrou. Le détecteur est donc **sans dépendance** — le contrôle nécessaire est de toute façon bien plus étroit qu'un parseur complet : on ne valide pas le YAML, on cherche une clé qui revient deux fois dans le même bloc. Les corps de `run: |` sont sautés (ce sont des shells, pas des mappings — sinon tout script un peu long lèverait un faux positif, et un verrou qui crie à tort finit désactivé).
+
+21 assertions : un test par workflow + trois qui vérifient que **le détecteur détecte** (le défaut exact reproduit, deux steps légitimes non confondus, un `env:` dans un script shell ignoré).
 
 ## v6.27.360 — feat(console): lire et écrire une marque depuis un exécutant serveur, par les voies gouvernées (2026-07-28)
 
