@@ -2042,12 +2042,21 @@ model KnowledgeEntry {
   sampleSize    Int           @default(1)
   sourceHash    String?
 
+  /// Marque à l'origine du dépôt, quand il y en a une (ADR-0186).
+  /// Une étude déposée POUR un client reste SON document : la lister à un autre
+  /// client est une fuite de confidentialité, même si la connaissance sectorielle
+  /// qui en est dérivée (`MarketBenchmark`) est, elle, mutualisée.
+  /// `null` = entrée non attribuable (seed sectoriel, legacy) → jamais présentée
+  /// à un fondateur comme « sa » documentation.
+  originStrategyId String?
+
   tenantId String? // v4 — multi-tenant RLS
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([entryType])
+  @@index([originStrategyId])
   @@index([sector])
   @@index([market])
   @@index([countryCode])

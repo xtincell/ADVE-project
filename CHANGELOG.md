@@ -1,5 +1,22 @@
 # Changelog — La Fusee
 
+## v6.27.364 — fix(seshat): les études d'un client fuitaient dans le cockpit des autres (2026-07-28)
+
+**Constaté en prod, capture à l'appui** : le cockpit de SPAWT affichait, sous « **Vos** études ingérées », des études « Ciment », « Agence-opérateur de marque / Industry OS » et « La passion pour propulseur » — toutes déposées pour **d'autres marques**. Aucune de SPAWT.
+
+Deux défauts cumulés ([ADR-0186](docs/governance/adr/0186-market-study-origin-tenant-scope.md)) :
+
+1. **L'origine était reçue puis jetée.** L'ingestion accepte un `strategyId` et le **valide** comme appartenant à l'appelant (ADR-0166) — puis le persister ne l'écrivait nulle part. La marque d'origine était structurellement inconnue après coup.
+2. **Aucune lecture n'était scopée.** `list` rendait les titres de **toutes** les études de la base ; `getDetail` et `exportResearchPdf` rendaient l'**extraction complète** (et son PDF) de n'importe laquelle, à tout compte authentifié connaissant un identifiant.
+
+Les deux dernières figuraient dans l'allowlist **`SAFE_BY_DESIGN`** du scan IDOR, au motif d'une « intelligence sectorielle globale ». C'est cette justification qui était fausse : elle vaut pour la connaissance **dérivée** (`MarketBenchmark`, agrégats secteur × pays, toujours mutualisés), pas pour le document déposé par un client — celui-là reste le sien.
+
+Correctif : `KnowledgeEntry.originStrategyId` (additif, nullable, indexé) écrit par le persister · les trois lectures scopées sur `accessibleStrategyIds` · refus **indiscernable d'une absence** (on ne confirme pas l'existence d'un document qu'on n'a pas le droit de lire) · les deux entrées d'allowlist purgées, raison du retrait inscrite à leur place.
+
+Les entrées historiques (toutes sans origine) disparaissent du cockpit fondateur : elles n'étaient attribuables à personne, et deviner une propriété est précisément ce qu'on cherche à ne plus faire.
+
+7 assertions dédiées ; le verrou `entity-id-idor-proactive` a lui-même exigé la purge des deux entrées devenues caduques.
+
 ## v6.27.363 — fix(intake): tout `.txt` déposé était stocké en base64 (2026-07-28)
 
 **Constaté en prod**, en déposant les documents SPAWT par la console serveur : 92 746 caractères envoyés, **126 152 stockés** — exactement le gonflement 4/3 du base64. Le contenu enregistré n'était pas le document, c'était son encodage.
