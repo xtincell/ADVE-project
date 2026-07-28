@@ -47,6 +47,19 @@ export interface AssistantContextResult {
   ragUsed: boolean;
 }
 
+/** Contexte d'un expert + ce qu'il a réellement pu lire. */
+export interface ExpertContextResult {
+  contextBlock: string;
+  /** True si des extraits sémantiques ont contribué. */
+  ragUsed: boolean;
+  /**
+   * True si au moins un document de la marque figure dans le contexte. Un
+   * expert qui critique SANS documentation le dit ; il ne fait pas passer une
+   * opinion pour une vérification.
+   */
+  sourcesSeen: boolean;
+}
+
 /**
  * Contexte du COORDINATEUR (chat interactif + délibération) : dossier complet.
  */
@@ -118,26 +131,38 @@ export async function buildAssistantContext(
 
 /**
  * Contexte d'UN expert de pilier fondateur : SON pilier en profondeur + les
- * extraits sémantiques scopés à son pilier. Il ne voit PAS les autres piliers
- * (indépendance des critiques — c'est le coordinateur qui arbitre).
+ * extraits sémantiques scopés à son pilier + **la documentation de la marque**.
+ * Il ne voit PAS les autres piliers (indépendance des critiques — c'est le
+ * coordinateur qui arbitre).
+ *
+ * `includeSources` manquait ici alors que le coordinateur le passait : sans ce
+ * drapeau, `oracle-augment` réduit le filtre à `[{pillarKey}, {BRANDLEVEL}]` et
+ * **exclut les chunks `BRAND_SOURCE` du pool**. Les quatre experts adversariaux
+ * n'ont donc jamais vu un seul document — ils vérifiaient des piliers contre
+ * des piliers. L'asymétrie était accidentelle, pas doctrinale.
  */
 export async function buildExpertContext(
   strategyId: string,
   pillarKey: "a" | "d" | "v" | "e",
   topic: string,
-): Promise<string> {
+): Promise<ExpertContextResult> {
   const [pillar, rag, communityBlock] = await Promise.all([
     db.pillar.findFirst({
       where: { strategyId, key: { in: [pillarKey, pillarKey.toUpperCase()] } },
       select: { content: true, updatedAt: true },
     }),
-    getOracleBrandContextByQuery(strategyId, topic, { pillarKey, limit: 6 })
-      .then((r) => r?.text ?? null)
+    getOracleBrandContextByQuery(strategyId, topic, {
+      pillarKey,
+      limit: 6,
+      includeSources: true,
+    })
+      .then((r) => r ?? null)
       .catch(() => null),
     // L'expert Engagement juge sur la communauté RÉELLE ; les autres l'ignorent.
     pillarKey === "e" ? buildCommunityBlock(strategyId) : Promise.resolve(null),
   ]);
 
+  const sourcesSeen = (rag?.sourceReferences?.length ?? 0) > 0;
   const sections: string[] = [];
   if (pillar?.content && Object.keys(pillar.content as object).length > 0) {
     sections.push(
@@ -152,16 +177,24 @@ export async function buildExpertContext(
       `[Pilier ${pillarKey.toUpperCase()}] NON RENSEIGNÉ — c'est en soi une information critique pour ta critique.`,
     );
   }
-  if (rag) {
+  if (rag?.text) {
     sections.push(
-      wrapUntrusted("extraits pertinents du pilier", capBlock(rag, RAG_BLOCK_MAX), {
+      wrapUntrusted("extraits pertinents du pilier", capBlock(rag.text, RAG_BLOCK_MAX), {
         max: RAG_BLOCK_MAX + 200,
       }),
     );
   }
   if (communityBlock) sections.push(communityBlock);
 
-  return sections.join("\n\n");
+  // Dit à l'expert ce qu'il a — et surtout ce qu'il n'a pas. Une critique sans
+  // documentation reste recevable ; se prétendre vérifié sans elle, non.
+  sections.push(
+    sourcesSeen
+      ? "[Documentation] Des extraits de la documentation officielle de la marque figurent ci-dessus. Une affirmation qu'ils contredisent est une erreur factuelle, pas une divergence d'opinion — cite l'extrait."
+      : "[Documentation] AUCUN document de la marque n'est disponible sur ce sujet. Ta critique porte donc sur la cohérence interne, pas sur la conformité aux sources — dis-le explicitement plutôt que d'affirmer qu'un point est vérifié.",
+  );
+
+  return { contextBlock: sections.join("\n\n"), ragUsed: !!rag?.text, sourcesSeen };
 }
 
 /**

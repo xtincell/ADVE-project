@@ -57,7 +57,9 @@ const STOPWORDS = new Set([
 ]);
 
 function stripAccents(s: string): string {
-  return s.normalize("NFD").replace(/[̀-ͯ]/g, "");
+  // Plage ÉCHAPPÉE : écrites en clair, les marques combinantes sont invisibles
+  // à la relecture et une passe d'outil peut les avaler sans bruit.
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
 /**

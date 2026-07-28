@@ -198,7 +198,7 @@ Ces correspondances évitent la réinvention :
 - **VariableStoreConfig** (7 fields)
 - **OrchestrationPlan** (13 fields)
 - **OrchestrationStep** (17 fields)
-- **Recommendation** (46 fields)
+- **Recommendation** (51 fields)
 - **RecommendationBatch** (17 fields)
 - **BrandMoment** (11 fields)
 - **CampaignCanonTemplate** (12 fields)

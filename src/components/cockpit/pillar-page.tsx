@@ -1142,6 +1142,19 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                       ? { label: "À revoir", cls: "bg-warning/15 text-warning" }
                       : { label: "Amélioration", cls: "bg-success/15 text-success" };
 
+              // ── Ancrage documentaire (ADR-0184) ──
+              // Mesuré, jamais revendiqué. `null` = non mesuré (reco antérieure
+              // ou règle déterministe) → aucune puce : on n'affirme rien.
+              const band = typeof reco.groundingBand === "string" ? reco.groundingBand : null;
+              const grounding =
+                band === "GROUNDED"
+                  ? { label: "Tirée de vos documents", cls: "bg-success/15 text-success", title: "Le contenu proposé reprend le vocabulaire d'un document que vous avez déposé." }
+                  : band === "WEAK"
+                    ? { label: "Documents effleurés", cls: "bg-info/15 text-info", title: "Contact partiel avec vos documents — à relire avant d'appliquer." }
+                    : band === "UNGROUNDED"
+                      ? { label: "Hors de vos documents", cls: "bg-warning/15 text-warning", title: "Votre marque a de la documentation, mais cette proposition n'en reprend rien." }
+                      : null;
+
               return (
                 <div key={recoId} onClick={() => { const s = new Set(selectedRecos); if (isSelected) s.delete(recoId); else s.add(recoId); setSelectedRecos(s); }}
                   className={`cursor-pointer rounded-lg border p-3 transition-colors ${isSelected ? "border-success/30 bg-success/10" : "border-white/5 bg-white/[0.02] hover:bg-white/5"}`}>
@@ -1155,6 +1168,11 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                         {weightedScore != null ? (
                           <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[9px] text-foreground-secondary" title="Score pondéré de la reco (ruler déterministe + impact + confiance)">
                             score {weightedScore}
+                          </span>
+                        ) : null}
+                        {grounding ? (
+                          <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${grounding.cls}`} title={grounding.title}>
+                            {grounding.label}
                           </span>
                         ) : null}
                         {reco.impact ? <span className={`rounded-full px-1.5 py-0.5 text-[9px] ${reco.impact === "HIGH" ? "bg-error/15 text-error" : reco.impact === "MEDIUM" ? "bg-warning/15 text-warning" : "bg-white/10 text-foreground-muted"}`}>{String(reco.impact)}</span> : null}

@@ -1,5 +1,57 @@
 # Changelog — La Fusee
 
+## v6.27.356 — feat(notoria): l'ancrage documentaire se mesure, il ne se revendique pas (2026-07-28)
+
+**Suite directe de v6.27.355.** Le moteur voit désormais la documentation de la marque et on lui demande de citer ses sources. Restait le plus important : **vérifier**. Une consigne d'ancrage qu'on ne contrôle pas est une politesse adressée au modèle — il peut écrire `source:abc` sans que rien de ce qu'il propose ne vienne du document.
+
+Trois trous fermés, tous vérifiés dans le code avant d'écrire une ligne ([ADR-0184](docs/governance/adr/0184-source-grounding-measured-not-claimed.md)).
+
+### 1. Un index documentaire, pas deux
+
+Le repo portait **deux index du même texte** : `BRAND_SOURCE` (voie gouvernée `INDEX_BRAND_SOURCE`, branchée sur l'ingestion, lue par le conseil et le MCP) et `SOURCE_CHUNK` (écrit par `vault-enrichment/source-rag.ts` pour son seul usage). Deux écrivains, deux pools disjoints, coût d'embedding doublé — et surtout : **un extrait récupéré dans l'un restait invisible de l'autre**. Le producteur et le critique ne lisaient pas les mêmes documents ; la vérification était structurellement impossible.
+
+- `ensureSourcesIndexed` **délègue** à `indexBrandSource`. Plus rien n'écrit de `SOURCE_CHUNK` ; le kind reste lu (aucune migration de données, les nœuds existants ne deviennent pas muets).
+- `indexBrandSource` devient **idempotent par contenu** (`alreadyFresh`) — s'assurer qu'une source est indexée ne repaie plus l'embedding complet. C'est ce coût qui avait justifié le second index.
+- `RankedNode` porte enfin `sourceId` : sans cette ancre, un extrait n'est rattachable à aucun document, donc ni citable ni vérifiable.
+- Notoria récupère par le RAG partagé ; la sélection par recouvrement de termes devient une **voie de repli annoncée** (`retrieval: SEMANTIC | DETERMINISTIC | NONE`, mentionnée dans le prompt) — plus un chemin nominal déguisé.
+
+### 2. Les quatre experts adversariaux voyaient zéro document
+
+`council/context.ts` appelait `getOracleBrandContextByQuery` **sans** `includeSources`. Sans ce drapeau, le filtre se réduit à `[{pillarKey}, {BRANDLEVEL}]` et **exclut les chunks `BRAND_SOURCE` du pool** : les experts vérifiaient des piliers contre des piliers. Le coordinateur, lui, passait le drapeau — l'asymétrie était accidentelle.
+
+Et `ragUsed` était calculé puis **jeté** : un avis rendu sans sources ne le disait à personne.
+
+- `includeSources: true` côté experts + `sourcesSeen` remonté ; un expert sans documentation reçoit la consigne explicite de dire que sa critique porte sur la cohérence interne, pas sur la conformité aux sources.
+- `ragUsed` descend dans le prompt du coordinateur et remonte dans `deliberate().grounding` jusqu'au panneau fondateur.
+
+### 3. L'ancrage mesuré, la citation vérifiée
+
+`notoria/grounding.ts` — fonction **pure**, zéro I/O, zéro LLM, sur le tokeniseur déjà utilisé par la gate de cohérence brief↔ADVE (on réutilise le cœur, on n'en écrit pas un second).
+
+| Champ | Ce qu'il dit |
+|---|---|
+| `groundedSourceIds` | Documents qui **soutiennent réellement** la proposition |
+| `citedSourceIds` | Documents que la justification **revendique** |
+| `unverifiedCitations` | Revendiqués **sans** appui mesuré — signal de fabrication |
+
+Le recouvrement porte sur la **valeur proposée**, pas sur la justification : une justification bien tournée ne doit pas pouvoir faire passer une proposition sortie de nulle part. Bandes `GROUNDED ≥ 0.35` · `WEAK ≥ 0.15` · `UNGROUNDED` · `NO_SOURCE` (aucune documentation soumise — ce n'est pas un échec d'ancrage, et une citation dans ce cas est nécessairement fabriquée). Une citation non vérifiée force `requires_review`.
+
+### 4. La provenance suit la mesure
+
+`provenanceFromAuthorSystem` mappe `MESTOR → INFERRED` : **une reco littéralement tirée d'un document était tamponnée « inféré »**. Désormais les champs dont la reco est `GROUNDED` et pointe un document réel s'écrivent `fieldProvenance: "SOURCE"`. Conséquence assumée — un champ `SOURCE` peut corriger un `INFERRED` et *challenge* un `HUMAN` (arbitrage humain, jamais d'écriture silencieuse) : c'est pourquoi la promotion est réservée à l'ancrage **mesuré**, jamais revendiqué.
+
+### Surface
+
+Puce par recommandation dans le cockpit : « Tirée de vos documents » / « Documents effleurés » / « Hors de vos documents ». Aucune puce quand rien n'a été mesuré — on n'affirme pas. Le panneau d'analyse du conseil dit contre quels piliers ses experts ont pu confronter vos documents, ou qu'aucun n'était disponible.
+
+**Des recos vont s'afficher « Hors de vos documents ». C'est le but** : une complétude qui se croyait documentée valait moins qu'un plafond expliqué.
+
+### Portée
+
+5 champs additifs nullable sur `Recommendation` (migration backfill-safe — `null` se lit « non mesuré », jamais « non ancré ») · 0 nouveau modèle · 0 Intent kind · **0 LLM ajouté** · cap APOGEE 7/7 préservé. Réparé en passant : `brief-adve-coherence-score.ts` écrivait sa plage de marques combinantes en clair dans une regex (invisible à la relecture, avalable par une passe d'outil) → forme échappée.
+
+tsc 0 · lint 0 erreur · **1462 tests gouvernance + 1807 services/domaine verts** (2 fichiers anti-drift neufs, 25 assertions).
+
 ## v6.27.355 — fix(notoria): la documentation de la marque était lue à hauteur de 500 caractères (2026-07-28)
 
 **Notoria lisait déjà les sources. Le défaut n'était pas l'absence de lecture — il était pire.**

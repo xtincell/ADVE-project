@@ -15,7 +15,13 @@ import type { PillarKey } from "@/lib/types/advertis-vector";
 import { getFormatInstructions } from "@/lib/types/variable-bible";
 import { Prisma } from "@prisma/client";
 import { applyQualityGates, validateFinancialReco } from "./gates";
-import { loadBrandSourceContext, renderSourceContext, DEFAULT_SOURCE_BUDGET } from "./source-context";
+import {
+  loadBrandSourceContext,
+  renderSourceContext,
+  DEFAULT_SOURCE_BUDGET,
+  type BrandSourceContext,
+} from "./source-context";
+import { computeRecoGrounding, flattenProposedValue } from "./grounding";
 import type {
   GenerateBatchInput,
   GenerateBatchResult,
@@ -368,6 +374,12 @@ async function persistBatch(
   strategyId: string,
   missionType: MissionType,
   recosByPillar: Map<string, RawLLMReco[]>,
+  /**
+   * Les extraits RÉELLEMENT soumis au générateur. C'est contre eux — et pas
+   * contre la totalité du vault — que l'ancrage est mesuré : juger une reco
+   * sur des documents qu'on ne lui a jamais montrés n'aurait aucun sens.
+   */
+  sourceCtx: BrandSourceContext,
 ): Promise<{ batchId: string; totalRecos: number; autoApplied: number }> {
   const config = MISSION_CONFIG[missionType];
   const allRecos = [...recosByPillar.entries()].flatMap(([key, recos]) =>
@@ -387,6 +399,12 @@ async function persistBatch(
   });
 
   let autoApplied = 0;
+
+  // ── ADR-0184 — extraits d'ancrage, préparés UNE fois par batch ──
+  const groundingExcerpts = sourceCtx.excerpts.map((e) => ({
+    sourceId: e.sourceId,
+    text: e.text,
+  }));
 
   // ── ADR-0090 — contexte de simulation chargé UNE fois par batch ──
   // Ruler déterministe par champ + preview d'impact score, zéro LLM.
@@ -450,9 +468,28 @@ async function persistBatch(
       }
     }
 
+    // ── ADR-0184 — ancrage documentaire, mesuré et non pas supposé ──
+    const justification = reco.justification ?? "";
+    const grounding = computeRecoGrounding(
+      flattenProposedValue(reco.proposedValue),
+      justification,
+      groundingExcerpts,
+    );
+    // Une citation revendiquée que la mesure ne retrouve pas est le symptôme le
+    // plus net de fabrication : elle force la relecture humaine.
+    let groundingWarning: string | undefined;
+    if (grounding.unverifiedCitations.length > 0) {
+      gateResult.applyPolicy = "requires_review";
+      groundingWarning = `Source(s) citée(s) sans appui dans les documents fournis : ${grounding.unverifiedCitations.join(", ")}`;
+    } else if (grounding.band === "UNGROUNDED" && groundingExcerpts.length > 0) {
+      groundingWarning =
+        "La marque a de la documentation, mais cette proposition n'en reprend rien.";
+    }
+
     const validationWarning = [
       (reco as Record<string, unknown>)._validationWarning as string | undefined,
       rulerWarning,
+      groundingWarning,
       ...(finResult.warnings ?? []),
     ]
       .filter(Boolean)
@@ -487,6 +524,11 @@ async function persistBatch(
         rulerVerdict: rulerVerdict as unknown as Prisma.InputJsonValue,
         scoreImpactEstimate,
         weightedScore,
+        groundingScore: grounding.score,
+        groundingBand: grounding.band,
+        groundedSourceIds: grounding.groundedSourceIds,
+        citedSourceIds: grounding.citedSourceIds,
+        unverifiedCitations: grounding.unverifiedCitations,
         status: "PENDING",
         batchId: batch.id,
         missionType,
@@ -666,6 +708,7 @@ export async function generateBatch(
     strategyId,
     missionType,
     recosByPillar,
+    sourceCtx,
   );
 
   // ── Emit Signal for Jehuty feed + notify recipients via Anubis (ADR-0031) ──

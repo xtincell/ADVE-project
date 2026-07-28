@@ -30,6 +30,10 @@
 
 import { db } from "@/lib/db";
 import { compareCertainty, type SourceCertainty } from "@/domain/source-certainty";
+import {
+  ensureSourcesIndexed,
+  retrieveSourceChunksForField,
+} from "@/server/services/vault-enrichment/source-rag";
 
 /** Un extrait de source, traçable jusqu'au document dont il sort. */
 export type SourceExcerpt = {
@@ -40,6 +44,13 @@ export type SourceExcerpt = {
   offset: number;
   text: string;
 };
+
+/**
+ * Comment les extraits ont été choisis. Ce n'est pas de la décoration : un
+ * contexte assemblé sans embeddings est moins bien ciblé, et l'appelant a le
+ * droit de le savoir plutôt que de le découvrir dans la qualité du résultat.
+ */
+export type SourceRetrievalMode = "SEMANTIC" | "DETERMINISTIC" | "NONE";
 
 export type BrandSourceContext = {
   excerpts: SourceExcerpt[];
@@ -54,6 +65,8 @@ export type BrandSourceContext = {
    * honnêtement plutôt que de produire comme si de rien n'était.
    */
   empty: boolean;
+  /** Voie de sélection réellement empruntée. */
+  retrieval: SourceRetrievalMode;
 };
 
 /**
@@ -69,14 +82,16 @@ const MIN_EXCERPT = 800;
 /**
  * Sélection des passages les plus pertinents d'un document pour une requête.
  *
- * Déterministe et sans embeddings : on découpe en paragraphes, on score par
- * recouvrement de termes de la requête, on garde les meilleurs dans l'ordre du
+ * **Voie de repli.** Le chemin nominal est le RAG à embeddings du repo
+ * (`vault-enrichment/source-rag.ts` → index canonique `BRAND_SOURCE`) ; ceci ne
+ * sert QUE lorsqu'aucun fournisseur d'embedding n'est configuré, cas fréquent
+ * en local et en préproduction. Déterministe : on découpe en paragraphes, on
+ * score par recouvrement de termes, on garde les meilleurs dans l'ordre du
  * document (un texte lu en désordre perd son sens). Sans requête, on prend la
  * tête du document.
  *
  * Ce n'est pas un moteur de recherche — c'est ce qui évite de ne montrer que la
- * page de garde. Le RAG à embeddings reste disponible pour les chemins qui le
- * consomment déjà (`vault-enrichment/source-rag.ts`).
+ * page de garde quand le moteur n'est pas branché.
  */
 function selectPassages(raw: string, query: string | undefined, budget: number): { text: string; offset: number } {
   const text = raw.trim();
@@ -134,6 +149,72 @@ function selectPassages(raw: string, query: string | undefined, budget: number):
 }
 
 /**
+ * Récupération sémantique sur l'index canonique `BRAND_SOURCE` — le MÊME pool
+ * que celui lu par le conseil de marque. C'est ce partage qui rend la
+ * vérification adversariale possible : sans lui, le producteur et le critique
+ * ne regardent pas les mêmes documents.
+ *
+ * Renvoie `null` quand le retrieval ne rend rien (pas de fournisseur
+ * d'embedding, ou index vide) — l'appelant retombe alors sur la voie
+ * déterministe, et le dit.
+ */
+async function retrieveSemantic(
+  strategyId: string,
+  query: string,
+  budget: number,
+  maxDocuments: number,
+): Promise<SourceExcerpt[] | null> {
+  try {
+    // Idempotent par contenu : ne réécrit et ne ré-embedde rien si l'index est
+    // à jour. Un document déposé et jamais indexé le devient ici.
+    await ensureSourcesIndexed(strategyId);
+  } catch (err) {
+    console.warn(
+      "[notoria:source-context] indexation préalable ignorée :",
+      err instanceof Error ? err.message : err,
+    );
+  }
+
+  // Assez de chunks pour remplir le budget, borné pour ne pas balayer l'index.
+  const topK = Math.min(40, Math.max(6, Math.ceil(budget / MIN_EXCERPT)));
+  const hits = await retrieveSourceChunksForField(strategyId, query, topK);
+  if (hits.length === 0) return null;
+
+  // Le plus fiable d'abord, puis le plus pertinent — une pièce OFFICIELLE prime
+  // une note ARBITRAIRE même si cette dernière colle mieux à la requête.
+  const ordered = [...hits].sort((a, b) => {
+    const c = compareCertainty(
+      (b.certainty ?? "ARBITRARY") as SourceCertainty,
+      (a.certainty ?? "ARBITRARY") as SourceCertainty,
+    );
+    if (c !== 0) return c;
+    return b.similarity - a.similarity;
+  });
+
+  const excerpts: SourceExcerpt[] = [];
+  const documents = new Set<string>();
+  let remaining = budget;
+  for (const h of ordered) {
+    if (remaining < MIN_EXCERPT) break;
+    if (!h.sourceId) continue;
+    if (!documents.has(h.sourceId) && documents.size >= maxDocuments) continue;
+    const text = h.text.length > remaining ? h.text.slice(0, remaining) : h.text;
+    if (!text) continue;
+    documents.add(h.sourceId);
+    excerpts.push({
+      sourceId: h.sourceId,
+      fileName: h.fileName,
+      certainty: (h.certainty ?? "INFERRED") as SourceCertainty,
+      offset: h.charStart ?? 0,
+      text,
+    });
+    remaining -= text.length;
+  }
+
+  return excerpts.length > 0 ? excerpts : null;
+}
+
+/**
  * Charge la documentation déclarée d'une marque, ordonnée par certitude et
  * bornée par un budget explicite.
  *
@@ -171,6 +252,34 @@ export async function loadBrandSourceContext(
     return b.updatedAt.getTime() - a.updatedAt.getTime();
   });
 
+  if (usable.length === 0) {
+    return {
+      excerpts: [],
+      documentsUsed: 0,
+      documentsSkipped: 0,
+      charsUsed: 0,
+      empty: true,
+      retrieval: "NONE",
+    };
+  }
+
+  // Chemin nominal : le RAG du repo, sur l'index que le conseil lit aussi.
+  const query = opts.query?.trim();
+  if (query && query.length >= 3) {
+    const semantic = await retrieveSemantic(strategyId, query, budget, maxDocuments);
+    if (semantic) {
+      const used = new Set(semantic.map((e) => e.sourceId)).size;
+      return {
+        excerpts: semantic,
+        documentsUsed: used,
+        documentsSkipped: Math.max(0, usable.length - used),
+        charsUsed: semantic.reduce((n, e) => n + e.text.length, 0),
+        empty: false,
+        retrieval: "SEMANTIC",
+      };
+    }
+  }
+
   const candidates = usable.slice(0, maxDocuments);
   const excerpts: SourceExcerpt[] = [];
   let remaining = budget;
@@ -199,6 +308,7 @@ export async function loadBrandSourceContext(
     documentsSkipped: Math.max(0, usable.length - excerpts.length),
     charsUsed,
     empty: excerpts.length === 0,
+    retrieval: excerpts.length === 0 ? "NONE" : "DETERMINISTIC",
   };
 }
 
@@ -217,5 +327,11 @@ export function renderSourceContext(ctx: BrandSourceContext): string {
     ctx.documentsSkipped > 0
       ? `\n\n(${ctx.documentsSkipped} document(s) supplémentaire(s) non inclus — budget de contexte atteint.)`
       : "";
-  return parts.join("\n\n---\n\n") + skipped;
+  // Dégradation dite, pas subie : sans embeddings, les extraits sont choisis par
+  // recouvrement de termes — moins bien ciblés, et le lecteur doit le savoir.
+  const degraded =
+    ctx.retrieval === "DETERMINISTIC"
+      ? "\n\n(Sélection par recouvrement de termes — recherche sémantique indisponible sur cet environnement.)"
+      : "";
+  return parts.join("\n\n---\n\n") + skipped + degraded;
 }

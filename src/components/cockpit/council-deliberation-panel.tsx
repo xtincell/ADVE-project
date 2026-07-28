@@ -178,6 +178,24 @@ export function CouncilDeliberationPanel({
         </div>
       )}
 
+      {/* Sur quoi l'analyse s'appuie. Un avis rendu sans document est un avis de
+          cohérence, pas une vérification — le dire est la moitié de sa valeur. */}
+      {d.grounding.expertsWithSources.length > 0 ? (
+        <p className="text-xs text-foreground-secondary">
+          Vérifiée contre vos documents pour :{" "}
+          {d.grounding.expertsWithSources.map((k) => PILLAR_LABEL[k] ?? k.toUpperCase()).join(", ")}.
+        </p>
+      ) : (
+        <div className="flex items-start gap-2 rounded-lg border border-border p-3 text-sm text-foreground-secondary">
+          <ShieldQuestion className="h-4 w-4 shrink-0" />
+          <span>
+            Aucun document de votre marque n&apos;a pu être consulté : cette analyse porte sur la
+            cohérence de vos piliers, pas sur la conformité à vos documents. Déposez-les dans vos
+            sources pour qu&apos;ils servent de référence.
+          </span>
+        </div>
+      )}
+
       <section>
         <h5 className="text-sm font-medium text-foreground-secondary">Position soumise</h5>
         <p className="mt-1 text-sm text-foreground">{d.draft.position}</p>

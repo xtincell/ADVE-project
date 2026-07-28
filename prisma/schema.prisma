@@ -4757,6 +4757,17 @@ model Recommendation {
   // ── Chaîne de preuve (ADR-0113) — le « pourquoi » remonte à une hypothèse ──
   hypothesisId String? // reco adossée à une hypothèse traçable (évidence datée)
 
+  // ── Ancrage documentaire (ADR-0184) — la reco tient-elle des documents ? ──
+  // Mesure DÉTERMINISTE (recouvrement de vocabulaire, zéro LLM) entre ce que la
+  // reco propose et les extraits de source réellement soumis au générateur.
+  // Nullable : une reco produite avant cette mesure n'en porte pas — l'absence
+  // se lit « non mesuré », jamais « non ancré ».
+  groundingScore     Float? // 0..1 — recouvrement avec l'union des extraits
+  groundingBand      String? // GROUNDED|WEAK|UNGROUNDED|NO_SOURCE
+  groundedSourceIds  String[] @default([]) // BrandDataSource.id réellement recouvrants
+  citedSourceIds     String[] @default([]) // `source:<id>` revendiqués dans la justification
+  unverifiedCitations String[] @default([]) // revendiqués SANS recouvrement — signal de fabrication
+
   // ── Lifecycle ──
   status       String    @default("PENDING") // PENDING|ACCEPTED|REJECTED|APPLIED|REVERTED|EXPIRED
   reviewedBy   String? // userId
