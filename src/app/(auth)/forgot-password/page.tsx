@@ -56,7 +56,7 @@ function ForgotPasswordForm() {
               Entrez votre email et nous vous enverrons un lien de reinitialisation.
             </p>
 
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <form onSubmit={handleSubmit} method="post" className="flex flex-col gap-4">
               {error && (
                 <div className="rounded-lg border border-error/50 bg-error/10 px-4 py-3 text-sm text-error">
                   {error}

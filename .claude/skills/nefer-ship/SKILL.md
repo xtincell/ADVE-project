@@ -33,6 +33,77 @@ npx vitest run tests/unit/governance/ 2>&1 | tail -6          # attendu : suite 
 
 **Sortie attendue (bloquante)** : 0 erreur INTRODUITE. Sinon → corriger, re-gauntlet complet.
 
+## PHASE 5-bis — EXERCER LA SURFACE LIVRÉE (bloquante, non négociable)
+
+**Le gauntlet ci-dessus prouve que le code compile et que les invariants tiennent. Il ne
+prouve PAS que la surface répond.** Ces deux propositions ont été confondues une fois de
+trop : le livre de marque a été livré (2026-07-28) avec `tsc` 0, lint 0, 3 599 tests verts
+et un PDF vérifié en le re-parsant — **sans que la page HTML ait jamais été ouverte**. Elle
+ne rendait pas. La cause (une passe d'indexation + embedding par volet, puis une exception
+d'embedding non rattrapée) était invisible à chacune des commandes de la Phase 5, et
+visible à la première seconde d'affichage.
+
+**Règle** : toute modification qui ajoute ou change une surface qu'un humain ou un client
+atteint — **page**, route API, export (PDF/MD/CSV), commande CLI, cron, outil MCP — doit
+être **exercée** avant le commit. Pas « inspectée », pas « raisonnée » : appelée, et le
+résultat lu.
+
+### 5-bis.1 — Ce qui compte comme preuve (par type de surface)
+
+| Surface | Preuve exigée |
+|---|---|
+| Page cockpit/console/publique | Chargée **sous une session réelle** du rôle visé. Relever : statut HTTP · ms jusqu'au DOM · ms jusqu'au premier titre · nombre de réponses ≥ 500 · nombre de `pageerror` · les 1 000 premiers caractères du texte rendu. |
+| Route API / tRPC | Appelée avec un corps réel + l'auth réelle. Relever statut + corps. |
+| Export (PDF/MD/CSV) | Fichier produit **puis relu** (re-parse). **Ne dispense JAMAIS** de la surface HTML jumelle : deux surfaces = deux vérifications. |
+| Cron / job | Déclenché une fois ; effets observés en base (compteurs avant/après). |
+| Outil MCP | `tools/list` puis un `tools/call` réel. |
+
+- **MUST** : citer les chiffres relevés dans le corps du commit (`Verify :`) et dans le PR.
+- **NEVER** : écrire « vérifié » pour une surface dont on n'a lu que le code.
+- **NEVER** : conclure d'un export réussi que la vue HTML fonctionne (l'inverse non plus).
+
+### 5-bis.2 — Monter l'environnement vivant (sandbox managée) — commandes exactes
+
+```bash
+pg_ctlcluster 16 main start                       # postgres est installé, jamais démarré
+su postgres -c "psql -c \"CREATE ROLE lafusee LOGIN SUPERUSER PASSWORD 'lafusee'\""
+su postgres -c "createdb -O lafusee lafusee"
+export L="postgresql://lafusee:lafusee@localhost:5432/lafusee?schema=public"
+DATABASE_URL=$L DIRECT_URL=$L npx prisma migrate deploy
+DATABASE_URL=$L DIRECT_URL=$L npx tsx prisma/seed.ts        # + seed métier si besoin
+DATABASE_URL=$L DIRECT_URL=$L AUTH_URL="http://localhost:3100" \
+  NEXTAUTH_URL="http://localhost:3100" AUTH_TRUST_HOST=1 npx next dev --turbopack -p 3100
+```
+
+Trois pièges déjà payés — **ne pas les re-découvrir** :
+
+1. **`AUTH_URL` doit pointer sur le local.** L'environnement de session porte les variables
+   de PROD ; un `AUTH_URL` en `https://` fait poser le cookie `__Secure-authjs.session-token`
+   alors que `proxy.ts` cherche `authjs.session-token` en HTTP → **toute page protégée
+   renvoie sur `/login`** et on croit à un bug de droits.
+2. **Bannière cookies** : cliquer « Essentiels uniquement » AVANT de remplir le formulaire,
+   sinon le clic de soumission est intercepté et l'échec ressemble à un mot de passe faux.
+3. **JAMAIS `waitForLoadState("networkidle")`** sur le cockpit : il tient un flux SSE ouvert
+   en permanence (notifications). Le réseau n'est jamais au repos → on mesure la durée du
+   timeout (240 s observées), pas celle de la page. Attendre un sélecteur (`h1`).
+
+Chromium est pré-installé : `chromium.launch({ executablePath:
+"/opt/pw-browsers/chromium-1194/chrome-linux/chrome" })` — ne jamais lancer
+`playwright install`.
+
+### 5-bis.3 — Quand un verrou CI est posé, prouver qu'il mord
+
+Un test anti-drift qui n'a jamais échoué ne prouve rien. **MUST** : réintroduire le défaut
+exact (une ligne, restaurée juste après), constater le test ROUGE, restaurer, constater
+VERT. C'est cette manipulation — pas la lecture du test — qui atteste du verrou.
+
+### 5-bis.4 — Condition STOP
+
+Surface non exerçable (base injoignable, clé/contrat externe manquant, environnement
+absent) → **NE PAS annoncer la surface comme livrée**. Dire en une phrase ce qui n'a pas pu
+être exercé et pourquoi, dans le commit ET à l'opérateur, et inscrire la vérification
+restante à `RESIDUAL-DEBT.md`. « Compile, lint et tests verts » n'est pas « ça marche ».
+
 ## PHASE 6 — Documentation (déléguée, obligatoire)
 
 Invoquer **`nefer-docs`**. Règle dure ici : **NEVER committer un `feat`/`fix` impactant/`refactor` structurel/`chore` significatif/`docs` sans entrée CHANGELOG dans LE MÊME commit** (hook pre-commit `audit-changelog-coverage` le bloque).

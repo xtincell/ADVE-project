@@ -127,6 +127,7 @@ Items MEDIUM à régression-risquée ou à coordination, déférés de la boucle
 | **Ratification bandes de redevance/VAN** (valorisation §4) | ADR-0160 — trigger : première vente réelle |
 | **Tunnels live SPAWT** : re-datation Sprint Abidjan (7–21 août, `?op=patch actions[]`) + réconciliation `spawt-strategy-001` (reparent missions → GTM_90, archive placeholder) | ADR-0144 — post-deploy, après `?diag` |
 | **Revue des 16 Glory tools candidats `forgeOutput`** ([glory-forgeoutput-audit.md](glory-forgeoutput-audit.md)) | Phase 9 — instrumentation après revue humaine |
+| **Rétablir un fournisseur d'embeddings en production** — Ollama injoignable (`fetch failed`) + compte OpenAI `billing_not_active` + aucune clé OpenRouter. Vérifié dans les journaux Coolify (`caller=seshat:ranker`, `caller=seshat:embed-brand-context`) | v6.27.365. **Ne casse plus rien** : la cascade dégrade en vecteurs vides (ADR-0108 appliqué aux deux jambes) et le mode de récupération est annoncé à l'écran (`DETERMINISTIC`). Mais **toute recherche sémantique du produit** — livre de marque, conseil de marque, `rag_search` MCP, contexte source de la Notoria — tourne en repli par recouvrement de termes tant qu'aucun fournisseur ne répond. Une clé suffit (`OPENROUTER_API_KEY` étant le moins cher), puis redémarrer la ressource (une variable n'est lue qu'au boot) |
 
 ### Externe réel vs faux « gated » (audit 2026-07-23 vérifié contre le code)
 

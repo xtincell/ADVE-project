@@ -15,7 +15,7 @@
 
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
-import { assertRawStrategyScope } from "../middleware/strategy-scope";
+import { assertRawStrategyScope, accessibleStrategyIds } from "../middleware/strategy-scope";
 import { previewMarketStudy } from "@/server/services/seshat/market-study-ingestion";
 import { MarketStudyExtractionSchema } from "@/server/services/seshat/market-study-ingestion/types";
 import { TREND_TRACKER_49, trendTrackerByCategory } from "@/server/services/seshat/knowledge/trend-tracker-49";
@@ -98,15 +98,32 @@ export const marketStudyIngestionRouter = createTRPCRouter({
       return result;
     }),
 
+  /**
+   * Les études DE L'APPELANT — jamais celles des autres clients (ADR-0186).
+   *
+   * Cette procédure rendait TOUTES les entrées `MARKET_STUDY_RAW` de la base à
+   * tout compte authentifié, sous un libellé cockpit « Vos études ingérées ».
+   * Un fondateur voyait donc les documents déposés pour d'autres marques —
+   * constaté sur SPAWT, qui affichait des études « Ciment » et « La passion
+   * pour propulseur ». La justification (« pool marché global ») vaut pour la
+   * connaissance sectorielle DÉRIVÉE (`MarketBenchmark`), pas pour le document
+   * déposé par un client : celui-là reste le sien.
+   *
+   * Les entrées non attribuables (`originStrategyId` nul — seeds sectoriels,
+   * legacy) ne sont montrées à personne comme « ses » études : faute de pouvoir
+   * dire à qui elles appartiennent, on ne les attribue pas.
+   */
   list: protectedProcedure
     .input(z.object({
-      // ADR-0166 : champ marque retiré — jamais consommé (pool marché global).
       countryCode: z.string().length(2).optional(),
       sector: z.string().optional(),
       limit: z.number().int().min(1).max(200).default(50),
     }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      const allowed = await accessibleStrategyIds(ctx.session.user.id);
       const where: Record<string, unknown> = { entryType: "MARKET_STUDY_RAW" };
+      // `null` = ADMIN (voit tout, y compris le non-attribué).
+      if (allowed !== null) where.originStrategyId = { in: allowed };
       if (input.countryCode) where.countryCode = input.countryCode;
       if (input.sector) where.sector = { contains: input.sector, mode: "insensitive" };
       const entries = await db.knowledgeEntry.findMany({
@@ -137,11 +154,24 @@ export const marketStudyIngestionRouter = createTRPCRouter({
       });
     }),
 
+  /**
+   * Le détail d'une étude — même garde que la liste (ADR-0186).
+   *
+   * Plus grave encore que la liste : celle-ci ne fuitait que des titres, tandis
+   * qu'ici c'est l'EXTRACTION COMPLÈTE qui était rendue à tout authentifié
+   * connaissant un identifiant.
+   */
   getDetail: protectedProcedure
     .input(z.object({ rawEntryId: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const raw = await db.knowledgeEntry.findUnique({ where: { id: input.rawEntryId } });
       if (!raw || raw.entryType !== "MARKET_STUDY_RAW") {
+        throw new Error("Market study not found");
+      }
+      const allowed = await accessibleStrategyIds(ctx.session.user.id);
+      if (allowed !== null && (!raw.originStrategyId || !allowed.includes(raw.originStrategyId))) {
+        // Même message qu'une étude absente : ne pas confirmer l'existence d'un
+        // document qu'on n'a pas le droit de lire.
         throw new Error("Market study not found");
       }
       const derived = await db.knowledgeEntry.findMany({
@@ -257,11 +287,16 @@ export const marketStudyIngestionRouter = createTRPCRouter({
    * Generate a PDF for a previously persisted MARKET_STUDY_RAW entry.
    * Returns the PDF as a base64 string for the client to download.
    */
+  /** Export PDF — même garde que `getDetail` : c'est l'étude ENTIÈRE (ADR-0186). */
   exportResearchPdf: protectedProcedure
     .input(z.object({ rawEntryId: z.string() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const raw = await db.knowledgeEntry.findUnique({ where: { id: input.rawEntryId } });
       if (!raw || raw.entryType !== "MARKET_STUDY_RAW") {
+        throw new Error("Market study not found");
+      }
+      const allowed = await accessibleStrategyIds(ctx.session.user.id);
+      if (allowed !== null && (!raw.originStrategyId || !allowed.includes(raw.originStrategyId))) {
         throw new Error("Market study not found");
       }
       const data = raw.data as {

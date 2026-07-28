@@ -76,7 +76,7 @@ Ces correspondances évitent la réinvention :
 - **Commission** (18 fields)
 - **Membership** (11 fields)
 - **DevotionSnapshot** (12 fields)
-- **KnowledgeEntry** (15 fields)
+- **KnowledgeEntry** (16 fields)
 - **DeliverableTracking** (10 fields)
 - **Conversation** (14 fields)
 - **Message** (12 fields)

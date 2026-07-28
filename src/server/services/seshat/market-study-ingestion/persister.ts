@@ -45,6 +45,12 @@ export async function persistMarketStudy(
       countryCode: opts.countryCode,
       market: opts.countryCode, // legacy mirror for backwards compat
       sourceHash: opts.sha256,
+      // ADR-0186 — la marque d'origine etait RECUE puis jetee : `strategyId`
+      // arrivait jusqu'ici (valide comme appartenant a l'appelant) et n'etait
+      // ecrit nulle part. Consequence : la liste des etudes ne pouvait plus
+      // distinguer le document d'un client de celui d'un autre, et les rendait
+      // tous a tout le monde.
+      originStrategyId: opts.strategyId ?? null,
       data: JSON.parse(JSON.stringify({
         fullExtraction: extraction,
         sourceUrl: opts.sourceUrl,

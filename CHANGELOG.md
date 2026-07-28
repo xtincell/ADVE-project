@@ -1,5 +1,127 @@
 # Changelog — La Fusee
 
+## v6.27.366 — fix(seshat): retirer un document laissait son index derrière (2026-07-28)
+
+Trouvé en préparant le retrait des cinq sources SPAWT polluées en base64 :
+`ingestion.deleteSource` supprimait la `BrandDataSource` **et rien d'autre**.
+`BrandContextNode.sourceId` est un `String?` nu — un index, pas une clé étrangère, donc
+**aucune cascade**. Les fragments survivaient au document, restaient récupérables par le
+RAG partagé (conseil de marque, livre de marque, `rag_search` MCP, contexte source de la
+Notoria) et citables avec une ancre morte.
+
+Depuis l'ancrage documentaire ([ADR-0184](docs/governance/adr/0184-source-grounding-measured-not-claimed.md))
+c'est précisément la pire forme : une citation se vérifie **par** `sourceId`, donc un
+fragment orphelin est une citation qui **paraît vérifiée** et ne l'est pas — l'inverse exact
+de ce que la mesure d'ancrage doit produire. Un porteur qui retire un document se croirait
+débarrassé de son contenu ; il continuerait à nourrir ses livrables.
+
+Les deux suppressions vont désormais ensemble, en transaction, sur les **deux** sites qui
+retirent une source (`ingestion.deleteSource` et `purge-and-reingest`). La ré-indexation,
+elle, était déjà correcte (`indexBrandSource` purge ses fragments avant de réécrire).
+Verrou étendu : tout suppresseur de source doit purger ses fragments, et l'apparition d'un
+nouveau site de suppression fait tomber le test.
+
+## v6.27.365 — fix(cockpit): trois pages mortes, et la méthode qui ne les voyait pas (2026-07-28)
+
+Diagnostic opérateur : « *le `/cockpit/brand/bible` ne marche toujours pas. je t'ai
+demandé un adversarial et tu as manqué ça* », puis « *l'onglet de score détaillé, tu en as
+fait quoi ?* ». Les deux questions ont la même racine : la vérification s'arrêtait au
+compilateur.
+
+**Ce qui cassait le livre de marque — deux défauts empilés.** (1) *La lecture indexait* :
+`loadBrandSourceContext` appelait `ensureSourcesIndexed` inconditionnellement ; le livre
+compose quatre volets, donc quatre passes complètes d'indexation + embedding à chaque
+affichage. L'indexation appartient à l'ingestion (`INDEX_BRAND_SOURCE`, déjà branchée sur
+le dépôt) — le drapeau devient opt-in, `false` par défaut, et seule la mission Notoria
+(asynchrone) l'active. (2) *Une panne de confort devenait une panne de page* :
+`searchByQuery` promet depuis toujours « rend `[]` quand aucun fournisseur d'embedding
+n'est disponible », mais la promesse ne couvrait que « aucune clé configurée ». En
+production, Ollama injoignable + OpenAI `billing_not_active` (vérifié dans les journaux
+Coolify, `caller=seshat:ranker`) faisait remonter l'exception jusqu'à la page. Le Gateway
+portait pourtant déjà la doctrine — « l'étage embeddings est skippable, jamais sur le
+chemin critique », ADR-0108 — appliquée à la jambe OpenRouter et **pas** à la jambe OpenAI.
+Les deux jambes dégradent désormais en vecteurs vides (`isEmbedProviderUnavailable`), et un
+défaut d'appel (400, schéma) remonte toujours. Le mode de récupération
+(`SEMANTIC`/`DETERMINISTIC`/`NONE`) est annoncé jusqu'à l'écran.
+
+**Le score détaillé était mort, et personne ne pouvait le voir.**
+`/cockpit/insights/diagnostics` déclarait un `useMutation` **après** un `if (isLoading)
+return <Skeleton/>` : N hooks au premier rendu, N+1 au second → « Rendered more hooks than
+during the previous render » → « Une erreur est survenue ». Même défaut sur
+`/cockpit/settings`. Le serveur répond 200 dans les deux cas : ni `tsc`, ni le lint, ni les
+tests ne peuvent le voir. Cause systémique : `react-hooks/rules-of-hooks` **ne voit aucun
+hook tRPC** — son heuristique reconnaît `useX()` et `Ns.useX()`, pas
+`trpc.a.b.useQuery()` (vérifié en lui soumettant le cas : 0 erreur). Tout le cockpit était
+donc hors de sa garde. Nouveau verrou HARD `hooks-after-early-return.test.ts` : la règle
+rejouée sur l'AST TypeScript, fonctions imbriquées exclues, prouvée rouge sur le défaut réel.
+
+**Trois surfaces orphelines de menu.** « Rapports & analyses » déclarait
+`diagnostics`/`benchmarks`/`attribution` en `activePrefixes` — le menu s'allume dessus —
+mais la page ne portait **aucun lien** vers elles. Le score détaillé n'avait plus qu'un
+seul chemin (« Voir le radar → » du tableau de bord) ; les deux autres, aucun. Sous-navigation
+posée ; page renommée « Score détaillé » (le nom que l'opérateur emploie) ;
+`apogee-maintenance` volontairement exclue (segment `<OperatorSurface>`).
+
+**Mot de passe en clair dans l'URL.** Constaté en exerçant la page : un envoi du
+formulaire **avant hydratation** part en GET → `/login?email=…&password=…`, donc historique
+du navigateur, journaux d'accès et `Referer`. `method="post"` posé sur les quatre
+formulaires d'authentification (login, register, reset, forgot) : l'envoi pré-hydratation
+échoue proprement au lieu de fuir.
+
+**La méthode, corrigée.** Skill `nefer-ship` §5-bis « exercer la surface livrée » —
+bloquante : toute page / route / export / cron ajouté ou modifié doit être **appelé** avant
+le commit, chiffres relevés (statut, ms au DOM, ms au titre, 5xx, `pageerror`), avec le
+mode opératoire exact d'un environnement vivant en bac à sable et les trois pièges déjà
+payés (`AUTH_URL` local sinon le cookie `__Secure-` fait rebondir sur `/login` ; bannière
+cookies qui intercepte le clic ; `networkidle` inutilisable — le cockpit tient un flux SSE
+ouvert, on mesure le timeout, pas la page). §5-bis.3 : un verrou CI doit avoir été **vu
+rouge**. NEFER.md : deux anti-patterns ajoutés, checklist étendue.
+
+## v6.27.364 — fix(seshat): les études d'un client fuitaient dans le cockpit des autres (2026-07-28)
+
+**Constaté en prod, capture à l'appui** : le cockpit de SPAWT affichait, sous « **Vos** études ingérées », des études « Ciment », « Agence-opérateur de marque / Industry OS » et « La passion pour propulseur » — toutes déposées pour **d'autres marques**. Aucune de SPAWT.
+
+Deux défauts cumulés ([ADR-0186](docs/governance/adr/0186-market-study-origin-tenant-scope.md)) :
+
+1. **L'origine était reçue puis jetée.** L'ingestion accepte un `strategyId` et le **valide** comme appartenant à l'appelant (ADR-0166) — puis le persister ne l'écrivait nulle part. La marque d'origine était structurellement inconnue après coup.
+2. **Aucune lecture n'était scopée.** `list` rendait les titres de **toutes** les études de la base ; `getDetail` et `exportResearchPdf` rendaient l'**extraction complète** (et son PDF) de n'importe laquelle, à tout compte authentifié connaissant un identifiant.
+
+Les deux dernières figuraient dans l'allowlist **`SAFE_BY_DESIGN`** du scan IDOR, au motif d'une « intelligence sectorielle globale ». C'est cette justification qui était fausse : elle vaut pour la connaissance **dérivée** (`MarketBenchmark`, agrégats secteur × pays, toujours mutualisés), pas pour le document déposé par un client — celui-là reste le sien.
+
+Correctif : `KnowledgeEntry.originStrategyId` (additif, nullable, indexé) écrit par le persister · les trois lectures scopées sur `accessibleStrategyIds` · refus **indiscernable d'une absence** (on ne confirme pas l'existence d'un document qu'on n'a pas le droit de lire) · les deux entrées d'allowlist purgées, raison du retrait inscrite à leur place.
+
+Les entrées historiques (toutes sans origine) disparaissent du cockpit fondateur : elles n'étaient attribuables à personne, et deviner une propriété est précisément ce qu'on cherche à ne plus faire.
+
+7 assertions dédiées ; le verrou `entity-id-idor-proactive` a lui-même exigé la purge des deux entrées devenues caduques.
+
+## v6.27.363 — fix(intake): tout `.txt` déposé était stocké en base64 (2026-07-28)
+
+**Constaté en prod**, en déposant les documents SPAWT par la console serveur : 92 746 caractères envoyés, **126 152 stockés** — exactement le gonflement 4/3 du base64. Le contenu enregistré n'était pas le document, c'était son encodage.
+
+`extractAuto` a deux familles d'appelants et le contrat n'avait jamais été tranché :
+
+- `ingestFile` passe du **base64** (c'est ce que l'upload transmet) ;
+- les chemins de **ré-extraction** passent `source.rawContent`, du texte déjà extrait.
+
+La branche texte faisait `extractText(content)` sans distinguer. Donc **tout `.txt` ou `.md` déposé par un utilisateur — Console comme cockpit — était stocké en base64 verbatim**, puis indexé, puis servi au moteur comme « documentation de la marque ». Du charabia présenté comme une source : pire que rien, puisque depuis l'ancrage documentaire (v6.27.356) ce charabia compterait comme un document recouvrant.
+
+Correctif : on ne suppose pas, on **vérifie**. `decodeIfBase64` ne décode que si le contenu a strictement le jeu de caractères base64 **et** que le décodage suivi du ré-encodage rend exactement l'entrée. Du texte ordinaire (espaces, accents, ponctuation, retours à la ligne) échoue immédiatement au test — et le chemin de ré-extraction reste intact. Le CSV, qui décodait en dur, passe par le même helper.
+
+9 assertions, dont le piège explicite (une chaîne au jeu de caractères compatible mais qui n'est pas du base64) et la non-régression du chemin de ré-extraction.
+
+## v6.27.362 — fix(intake): les sélecteurs de fichiers ne proposent plus des formats qu'on rejette (2026-07-28)
+
+Question opérateur : « l'import via un xls également ? » — vérification faite, la réponse n'était pas celle qu'affichait l'interface.
+
+L'upload Console annonçait « PDF, DOCX, XLSX, Images » et acceptait `.xls` **et** les images. Or :
+
+- **`.xls` legacy est refusé** par le pipeline (`exceljs` ne lit pas le BIFF binaire — `extractAuto` lève « convertir en .xlsx ou .csv ») ;
+- **les images ne sont plus lues du tout** depuis v6.27.357 (leur extraction inventait une description).
+
+L'opérateur découvrait donc le refus **après** le dépôt, sur une source déjà créée en `FAILED`. Les deux sélecteurs — Console et cockpit fondateur — ne proposent plus que ce qui est réellement lisible : `.pdf .docx .doc .xlsx .csv .txt .md`. Libellés alignés.
+
+**`.xlsx` fonctionne** de bout en bout : `extractXLSX` (exceljs) rend chaque feuille en CSV lisible, ce qui en fait une source citable comme n'importe quel document. À ne pas confondre avec `/launchpad/portfolio-bulk-import`, qui parse la première feuille d'un `.xlsx` pour un import de **portefeuille multi-marques** — parsing pur, sans persistance, autre flux.
+
 ## v6.27.361 — fix(ci): un `env:` en double rendait le workflow de build INLANÇABLE (2026-07-28)
 
 Le correctif de v6.27.359 avait ajouté un **second** bloc `env:` au step de redeploy, qui en avait déjà un. Rien ne l'a vu : ni `tsc`, ni le lint, ni les tests. Le défaut ne se manifeste qu'au **lancement** — `422 … 'env' is already defined` — c'est-à-dire précisément au moment de livrer.

@@ -61,6 +61,20 @@ export default function DiagnosticsPage() {
     { enabled: !!strategyId },
   );
 
+  // Ce `useMutation` vivait APRÈS les deux retours anticipés ci-dessous. Premier
+  // rendu (chargement) : 2 hooks. Second rendu : 3. React lève « Rendered more
+  // hooks than during the previous render » et la frontière d'erreur remplace la
+  // page par « Une erreur est survenue » — **à chaque affichage, pour tout le
+  // monde**. Le score détaillé était donc mort, en silence : rien ne le signale
+  // côté serveur (la page répond 200), et aucune commande du gauntlet ne l'ouvre.
+  // Un hook ne se place jamais après un `return` conditionnel.
+  const recalculateMutation = trpc.advertisScorer.scoreObject.useMutation({
+    onSuccess: () => {
+      strategyQuery.refetch();
+      signalsQuery.refetch();
+    },
+  });
+
   if (!strategyId || strategyQuery.isLoading) {
     return <SkeletonPage />;
   }
@@ -68,7 +82,7 @@ export default function DiagnosticsPage() {
   if (strategyQuery.error) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Diagnostics ADVE" />
+        <PageHeader title="Score détaillé" />
         <div className="rounded-xl border border-error/50 bg-error/20 p-6 text-center">
           <AlertTriangle className="mx-auto h-8 w-8 text-error" />
           <p className="mt-2 text-sm text-error">
@@ -101,13 +115,6 @@ export default function DiagnosticsPage() {
   const weakPillars = PILLAR_KEYS.filter((k) => typeof scores[k] === "number" && scores[k]! < 15);
   const strongPillars = PILLAR_KEYS.filter((k) => (scores[k] ?? 0) >= 20);
 
-  const recalculateMutation = trpc.advertisScorer.scoreObject.useMutation({
-    onSuccess: () => {
-      strategyQuery.refetch();
-      signalsQuery.refetch();
-    },
-  });
-
   const handleDiagnostic = () => {
     if (!strategyId) return;
     recalculateMutation.mutate({ type: "strategy", id: strategyId });
@@ -116,13 +123,13 @@ export default function DiagnosticsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Diagnostics ADVE"
-        description="Analyse pilier par pilier de votre marque"
+        title="Score détaillé"
+        description="Votre score pilier par pilier — d'où viennent vos points, et où ils manquent."
         badge={<AiBadge />}
         breadcrumbs={[
           { label: "Cockpit", href: "/cockpit" },
-          { label: "Insights" },
-          { label: "Diagnostics" },
+          { label: "Rapports & analyses", href: "/cockpit/insights/reports" },
+          { label: "Score détaillé" },
         ]}
       />
 

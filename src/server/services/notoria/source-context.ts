@@ -163,16 +163,29 @@ async function retrieveSemantic(
   query: string,
   budget: number,
   maxDocuments: number,
+  ensureIndexed: boolean,
 ): Promise<SourceExcerpt[] | null> {
-  try {
-    // Idempotent par contenu : ne réécrit et ne ré-embedde rien si l'index est
-    // à jour. Un document déposé et jamais indexé le devient ici.
-    await ensureSourcesIndexed(strategyId);
-  } catch (err) {
-    console.warn(
-      "[notoria:source-context] indexation préalable ignorée :",
-      err instanceof Error ? err.message : err,
-    );
+  // L'indexation N'EST PAS un effet de bord de la lecture.
+  //
+  // Ce bloc appelait `ensureSourcesIndexed` inconditionnellement, « au cas où
+  // un document déposé n'aurait jamais été indexé ». Conséquence : le livre de
+  // marque, qui compose QUATRE volets, déclenchait quatre passes complètes
+  // d'indexation + embedding à chaque ouverture de page — des dizaines
+  // d'appels sérialisés sur une marque documentée. La page ne rendait jamais.
+  //
+  // L'indexation appartient à l'ingestion (`INDEX_BRAND_SOURCE`, déjà branché
+  // sur le dépôt). Un chemin de LECTURE lit ce qui est indexé ; si rien ne
+  // l'est, il le dit (la page Sources affiche « Pas encore analysable »)
+  // plutôt que de le réparer en silence au prix d'un temps de réponse.
+  if (ensureIndexed) {
+    try {
+      await ensureSourcesIndexed(strategyId);
+    } catch (err) {
+      console.warn(
+        "[notoria:source-context] indexation préalable ignorée :",
+        err instanceof Error ? err.message : err,
+      );
+    }
   }
 
   // Assez de chunks pour remplir le budget, borné pour ne pas balayer l'index.
@@ -223,7 +236,18 @@ async function retrieveSemantic(
  */
 export async function loadBrandSourceContext(
   strategyId: string,
-  opts: { query?: string; budget?: number; maxDocuments?: number } = {},
+  opts: {
+    query?: string;
+    budget?: number;
+    maxDocuments?: number;
+    /**
+     * Indexer les sources non encore indexées avant de lire. **Faux par
+     * défaut** : réservé aux chemins ASYNCHRONES (enrichissement, mission
+     * Notoria). Un chemin de lecture qui l'active fait payer une passe
+     * d'embedding à chaque affichage.
+     */
+    ensureIndexed?: boolean;
+  } = {},
 ): Promise<BrandSourceContext> {
   const budget = opts.budget ?? DEFAULT_SOURCE_BUDGET;
   const maxDocuments = opts.maxDocuments ?? 12;
@@ -266,7 +290,13 @@ export async function loadBrandSourceContext(
   // Chemin nominal : le RAG du repo, sur l'index que le conseil lit aussi.
   const query = opts.query?.trim();
   if (query && query.length >= 3) {
-    const semantic = await retrieveSemantic(strategyId, query, budget, maxDocuments);
+    const semantic = await retrieveSemantic(
+      strategyId,
+      query,
+      budget,
+      maxDocuments,
+      opts.ensureIndexed ?? false,
+    );
     if (semantic) {
       const used = new Set(semantic.map((e) => e.sourceId)).size;
       return {

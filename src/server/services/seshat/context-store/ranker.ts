@@ -97,12 +97,27 @@ function buildWhere(
 // ── Public API ───────────────────────────────────────────────────────
 
 /**
- * Semantic search by query string. Embeds the query, ranks candidates by
- * cosine similarity, returns top-K. Filters by metadata before scoring
- * to keep candidate set small.
+ * Recherche sémantique par requête. Embedde la requête, classe les candidats
+ * par similarité cosinus, rend le top-K. Filtre sur les métadonnées avant de
+ * scorer pour garder l'ensemble candidat petit.
  *
- * Returns [] when no embedding provider available — never throws on missing
- * keys (graceful degradation: callers fall back to non-vector retrieval).
+ * **Rend `[]` — jamais une exception — quand aucun embedding n'est obtenable.**
+ *
+ * Ce contrat était écrit ici depuis toujours, mais ne couvrait qu'un seul cas :
+ * « pas de clé configurée » (`provider === "none"`, seul chemin gracieux du
+ * Gateway). Un fournisseur **configuré mais qui refuse** — Ollama injoignable,
+ * OpenAI `429 billing_not_active`, OpenRouter absent — remontait l'exception à
+ * travers tous les appelants. Or ces appelants sont des surfaces de LECTURE
+ * (livre de marque, conseil, `rag_search` MCP, contexte source de la Notoria) :
+ * ils sont tous écrits contre la promesse ci-dessus et retombent sur une
+ * sélection déterministe. Résultat observé : le livre de marque rendait 500
+ * parce qu'un fournisseur d'embedding était à sec — une panne de confort
+ * transformée en panne de page.
+ *
+ * « Aucun fournisseur disponible » veut donc dire *aucun embedding obtenable*,
+ * pas *aucune clé posée*. La dégradation n'est pas silencieuse pour autant :
+ * elle est journalisée ici, et les appelants ANNONCENT le mode de récupération
+ * (`SEMANTIC` / `DETERMINISTIC` / `NONE`) jusqu'à l'écran.
  */
 export async function searchByQuery(
   query: string,
@@ -113,9 +128,19 @@ export async function searchByQuery(
   const minSimilarity = filter.minSimilarity ?? 0;
 
   // Embed the query
-  const embedResult = await embed({ input: query, caller: "seshat:ranker" });
+  let embedResult: Awaited<ReturnType<typeof embed>>;
+  try {
+    embedResult = await embed({ input: query, caller: "seshat:ranker" });
+  } catch (err) {
+    console.warn(
+      "[seshat:ranker] cascade d'embedding épuisée — recherche sémantique abandonnée, " +
+        "l'appelant retombe sur sa voie déterministe :",
+      err instanceof Error ? err.message : err,
+    );
+    return [];
+  }
   const qVec = embedResult.embeddings[0] ?? [];
-  if (qVec.length === 0) return []; // No provider — graceful empty
+  if (qVec.length === 0) return []; // Aucun embedding obtenable — vide gracieux
 
   const where = buildWhere(filter, /*mustHaveEmbedding*/ true, qVec.length, embedResult.model);
 

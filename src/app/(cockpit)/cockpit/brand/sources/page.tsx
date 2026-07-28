@@ -44,8 +44,15 @@ import {
 const MAX_UPLOAD_MB = 10;
 const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1_048_576;
 
-/** Ce que le pipeline sait réellement lire (`ingestion-pipeline/extractors.ts`). */
-const ACCEPTED_UPLOAD = ".pdf,.docx,.doc,.txt,.md,.csv,.xlsx,.png,.jpg,.jpeg,.webp";
+/**
+ * Ce que le pipeline sait RÉELLEMENT lire (`ingestion-pipeline/extractors.ts`).
+ *
+ * Ni `.xls` (exceljs ne lit pas le BIFF binaire legacy) ni les images (leur
+ * extraction inventait une description — refus honnête depuis v6.27.357).
+ * Proposer un format qu'on va rejeter, c'est faire découvrir le refus APRÈS le
+ * dépôt, sur une source déjà créée en échec.
+ */
+const ACCEPTED_UPLOAD = ".pdf,.docx,.doc,.txt,.md,.csv,.xlsx";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof CheckCircle }> = {
   PENDING: { label: "En attente", color: "text-foreground-muted", icon: Clock },
@@ -946,7 +953,7 @@ export default function SourcesPage() {
             {uploading ? "Lecture en cours…" : "Déposez vos documents de marque"}
           </span>
           <span className="text-xs text-foreground-muted">
-            PDF, Word, texte, tableur, images — {MAX_UPLOAD_MB} Mo par fichier maximum
+            PDF, Word, texte, tableur (.xlsx, .csv) — {MAX_UPLOAD_MB} Mo par fichier maximum
           </span>
           <input
             type="file"

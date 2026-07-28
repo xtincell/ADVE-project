@@ -68,6 +68,12 @@ const bodySchema = z.discriminatedUnion("action", [
     reason: z.string().min(8),
   }),
   z.object({
+    action: z.literal("DELETE_SOURCE"),
+    dryRun: z.boolean().default(true),
+    strategyId: z.string().min(1),
+    sourceId: z.string().min(1),
+  }),
+  z.object({
     action: z.literal("ARCHIVE_STRATEGY"),
     dryRun: z.boolean().default(true),
     strategyId: z.string().min(1),
@@ -150,6 +156,12 @@ export async function POST(request: Request) {
         });
         return NextResponse.json({ ok: true, amend: out });
       }
+      case "DELETE_SOURCE": {
+        // Une source mal extraite (contenu illisible) vaut moins que pas de
+        // source du tout : elle serait indexee et citee comme documentation.
+        const out = await caller.ingestion.deleteSource({ id: body.sourceId });
+        return NextResponse.json({ ok: true, deleted: out });
+      }
       case "ARCHIVE_STRATEGY": {
         const out = await caller.strategy.archive({
           id: body.strategyId,
@@ -174,6 +186,8 @@ function describe(body: z.infer<typeof bodySchema>, brand: string): string {
       return `Déposer « ${body.fileName} » (${body.fileType}, ${Math.round(body.contentBase64.length * 0.75 / 1024)} Ko) sur ${brand}, certitude ${body.certainty}.`;
     case "AMEND_PILLAR":
       return `Amender ${body.pillarKey.toUpperCase()}.${body.field} sur ${brand} (voie OPERATOR_AMEND_PILLAR, PATCH_DIRECT).`;
+    case "DELETE_SOURCE":
+      return `Retirer la source ${body.sourceId} de ${brand}.`;
     case "ARCHIVE_STRATEGY":
       return `Archiver ${brand} (réversible).`;
   }

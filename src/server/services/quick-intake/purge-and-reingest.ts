@@ -149,7 +149,11 @@ export async function purgeAndReingest(
   // ── Atomic purge + reset + re-create ──
 
   const result = await db.$transaction(async (tx) => {
-    // 1. Delete the polluted source.
+    // 1. Delete the polluted source — AND its index. `BrandContextNode.sourceId`
+    //    n'a pas de clé étrangère : sans cette ligne, les fragments survivent au
+    //    document et restent récupérables/citables avec une ancre morte
+    //    (cf. `ingestion.deleteSource`, même invariant).
+    await tx.brandContextNode.deleteMany({ where: { sourceId } });
     await tx.brandDataSource.delete({ where: { id: sourceId } });
 
     // 2. Delete the INTAKE_REPORT BrandAsset (deleteMany is idempotent —

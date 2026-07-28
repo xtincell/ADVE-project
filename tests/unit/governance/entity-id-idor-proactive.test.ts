@@ -93,8 +93,11 @@ const SAFE_BY_DESIGN: Record<string, string> = {
   "event.ts:unregister": "self-scopé : updateMany where { eventId, userId: session }",
   "editorial.ts:addComment": "self-scopé : authorId = session, sur un article global",
   "translation.ts:get": "TranslationDocument = pool de mémoire de traduction partagé (aucun champ owner)",
-  "market-study-ingestion.ts:getDetail": "KnowledgeEntry MARKET_STUDY_RAW = intelligence sectorielle globale (secteur+pays, pas par-marque)",
-  "market-study-ingestion.ts:exportResearchPdf": "idem getDetail — étude de marché sectorielle globale",
+  // `market-study-ingestion.ts:getDetail` + `:exportResearchPdf` RETIRÉS le
+  // 2026-07-28 (ADR-0186) : ils étaient déclarés « sûrs par conception » au
+  // motif d'une intelligence sectorielle globale. C'était faux — un fondateur
+  // voyait, et pouvait exporter, les études déposées pour d'AUTRES marques.
+  // Les deux sont désormais scopées sur `originStrategyId`.
   // ── Marketplace public (surface profil publique délibérée) ──
   "guilde.ts:getGuildMetrics": "métriques agrégées d'org (memberCount/avgScore…), aucune PII par-personne",
   "guilde.ts:getPortfolio": "portfolio = travaux vitrine (déjà publics via getProfile)",

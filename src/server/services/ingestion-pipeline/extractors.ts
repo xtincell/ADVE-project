@@ -107,11 +107,53 @@ export function extractText(content: string): ExtractionResult {
 }
 
 /**
+ * Decode `content` s'il s'agit REELLEMENT de base64, le rend tel quel sinon.
+ *
+ * `extractAuto` a deux familles d'appelants, et le contrat n'a jamais ete
+ * tranche entre elles :
+ *   - `ingestFile` passe du **base64** (c'est ce que l'upload transmet) ;
+ *   - les chemins de RE-extraction passent `source.rawContent`, c'est-a-dire du
+ *     **texte deja extrait**.
+ *
+ * La branche texte faisait `extractText(content)` sans distinguer : tout `.txt`
+ * ou `.md` depose se retrouvait stocke **en base64 verbatim** dans
+ * `rawContent` -- puis indexe, puis servi au moteur comme « documentation de la
+ * marque ». Du charabia presente comme une source, ce qui est pire que rien :
+ * depuis l'ancrage documentaire, ce charabia compterait comme un document.
+ *
+ * On ne suppose donc pas, on VERIFIE : un texte n'est traite comme du base64
+ * que s'il en a strictement le jeu de caracteres ET que le decodage suivi du
+ * re-encodage rend exactement l'entree. Du texte ordinaire (espaces, accents,
+ * retours a la ligne, ponctuation) echoue immediatement a ce test.
+ */
+export function decodeIfBase64(content: string): string {
+  const compact = content.trim();
+  if (compact.length < 16) return content; // trop court pour trancher
+  if (!/^[A-Za-z0-9+/\r\n]+={0,2}$/.test(compact)) return content;
+  const stripped = compact.replace(/[\r\n]/g, "");
+  if (stripped.length % 4 !== 0) return content;
+  try {
+    const buf = Buffer.from(stripped, "base64");
+    // Aller-retour strict : c'est ce qui distingue un vrai base64 d'un texte
+    // qui n'en aurait que l'apparence.
+    if (buf.toString("base64") !== stripped) return content;
+    const decoded = buf.toString("utf8");
+    // Un decodage qui produit des octets de remplacement n'etait pas du texte.
+    if (decoded.includes("\uFFFD")) return content;
+    return decoded;
+  } catch {
+    return content;
+  }
+}
+
+/**
  * Auto-dispatch extraction based on file type
  */
 export async function extractAuto(
   fileType: string,
-  content: string, // base64 for files, raw text for text
+  /** Base64 depuis l'upload, texte deja extrait depuis la re-extraction.
+   *  Les types binaires decodent ; les types texte passent par `decodeIfBase64`. */
+  content: string,
   strategyId: string,
 ): Promise<ExtractionResult> {
   const ft = fileType.toUpperCase();
@@ -134,11 +176,12 @@ export async function extractAuto(
   }
   if (ft === "CSV") {
     // CSV = texte délimité ; pas besoin d'un moteur tableur.
-    return extractText(Buffer.from(content, "base64").toString("utf8"));
+    return extractText(decodeIfBase64(content));
   }
   if (ft === "IMG" || ft === "PNG" || ft === "JPG" || ft === "JPEG" || ft === "WEBP" || ft === "GIF" || ft === "SVG") {
     return extractImage(content, strategyId);
   }
-  // Default: treat as text
-  return extractText(content);
+  // Texte (TXT/MD/inconnu) : decoder SI c'est du base64 (chemin upload),
+  // sinon passer tel quel (chemin re-extraction). Cf. `decodeIfBase64`.
+  return extractText(decodeIfBase64(content));
 }

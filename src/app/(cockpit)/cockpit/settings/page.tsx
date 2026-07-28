@@ -196,6 +196,11 @@ function ConnectedSourcesSection() {
 export default function CockpitSettingsPage() {
   const { data: session, status } = useSession();
   const { t } = useLocale();
+  // Ce `useQuery` était placé APRÈS le retour anticipé « Chargement... » : deux
+  // hooks au premier rendu, trois au suivant → React lève « Rendered more hooks
+  // than during the previous render » et la page devient « Une erreur est
+  // survenue ». Un hook se déclare avant toute garde, sans exception.
+  const subsQuery = trpc.payment.mySubscriptions.useQuery();
 
   if (status === "loading") {
     return (
@@ -207,7 +212,6 @@ export default function CockpitSettingsPage() {
   }
 
   const user = session?.user;
-  const subsQuery = trpc.payment.mySubscriptions.useQuery();
   const sub = (subsQuery.data ?? [])[0];
 
   return (

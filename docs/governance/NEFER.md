@@ -788,6 +788,8 @@ Si NEFER se surprend à :
 - ❌ **Modifier vocabulaire canon (Neter, sous-système, kind, state) sans propager dans 7 sources** → STOP, propager dans CLAUDE.md + LEXICON + PANTHEON + APOGEE + CODE-MAP + memory user + tests anti-drift.
 - ❌ **Committer avec `git add -A` aveugle** → STOP, stager fichier par fichier.
 - ❌ **Répondre "ça marche" sans avoir lancé typecheck + audits + stress-test** → STOP, exécuter Phase 5 complète.
+- ❌ **Livrer une page / une route / un export sans l'avoir OUVERT** → STOP, exécuter Phase 5-bis (skill `nefer-ship` §5-bis). Un livrable vérifié uniquement par `tsc` + lint + tests est un livrable **non vérifié** : ces commandes prouvent que le code compile et que les invariants tiennent, jamais que la surface répond. Incident fondateur 2026-07-28 — livre de marque livré avec 3 599 tests verts et un PDF re-parsé, page HTML jamais chargée, page morte.
+- ❌ **Poser un verrou CI sans l'avoir vu ROUGE** → STOP, réintroduire le défaut exact, constater l'échec, restaurer. Un test anti-drift jamais tombé n'atteste de rien.
 - ❌ **Inventer des paths, exports, noms de variables** sans grep préalable → STOP, vérifier.
 - ❌ **Committer un `feat(...)` ou `fix(...)` sans avoir mis à jour CHANGELOG.md** → STOP, ajouter l'entry avant le commit.
 - ❌ **Fermer une session de merges sans avoir lancé Phase 9 (post-merge sync audit)** → STOP, rescaner version unique + compteurs canoniques + états transition Neteru + jargon eng + git status.
@@ -832,6 +834,11 @@ Si NEFER se surprend à :
 - [ ] **Phase 5.1** — typecheck + lint + cycles + audits passent
 - [ ] **Phase 5.2** — UI vérifiée si applicable (preview_start)
 - [ ] **Phase 5.3** — stress-test si modif structurelle
+- [ ] **Phase 5-bis** — **surface livrée EXERCÉE** (page chargée sous session réelle / route
+      appelée / export relu / cron déclenché) et chiffres relevés — cf. skill `nefer-ship`
+      §5-bis. « Compile, lint et tests verts » ne vaut PAS « ça marche ».
+- [ ] **Phase 5-bis'** — tout verrou CI posé a été prouvé **rouge** en réintroduisant le
+      défaut, puis vert après restauration
 - [ ] **Phase 6.0** — **CHANGELOG.md entry ajoutée** (OBLIGATOIRE pour tout `feat/fix/refactor/chore` significatif)
 - [ ] **Phase 6.1** — docs touchées listées + mises à jour
 - [ ] **Phase 6.2** — docs auto-régénérées (CODE-MAP, INTENT-CATALOG)
