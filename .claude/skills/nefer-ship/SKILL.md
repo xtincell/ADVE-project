@@ -86,6 +86,15 @@ Trois pièges déjà payés — **ne pas les re-découvrir** :
 3. **JAMAIS `waitForLoadState("networkidle")`** sur le cockpit : il tient un flux SSE ouvert
    en permanence (notifications). Le réseau n'est jamais au repos → on mesure la durée du
    timeout (240 s observées), pas celle de la page. Attendre un sélecteur (`h1`).
+4. **`curl` + grep de marqueur ne vérifie PAS une page cliente.** La plupart des pages
+   cockpit sont `"use client"` et peuplent leur corps par tRPC APRÈS hydratation : le HTML
+   rendu-serveur ne contient jamais leurs titres de section. L'absence d'un marqueur n'y
+   prouve donc **rien**, et sa présence peut venir de la barre de navigation — deux
+   mensonges symétriques. Payé le 2026-07-29 : trois « KO » sur des pages parfaitement
+   saines. Pour une page cliente, la preuve serveur est **la procédure tRPC qu'elle
+   appelle** (statut + corps + durée) ; le rendu, lui, exige un vrai navigateur. Quand le
+   navigateur n'est pas atteignable (proxy du bac à sable vers la prod), le dire — §5-bis.4
+   — au lieu de faire passer un test HTTP pour une vérification d'écran.
 
 Chromium est pré-installé : `chromium.launch({ executablePath:
 "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" })` — ne jamais lancer

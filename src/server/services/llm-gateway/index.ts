@@ -991,9 +991,21 @@ function emptyEmbeddings(inputs: string[], model: string): EmbedResult {
  * dit pas d'avaler un `400 invalid_request` qui, lui, signale un bug qu'il faut
  * voir. Indisponibilité = crédit épuisé, compte inactif, clé refusée, service
  * injoignable. Tout le reste remonte.
+ *
+ * Un **dépassement du plafond de patience** (`EMBED_TIMEOUT_MS`) compte ici :
+ * un service saturé qui ne répond plus est indisponible au même titre qu'un
+ * service éteint. Sa signature diffère de celle du noyau (`ETIMEDOUT`) — le
+ * rejet d'`AbortSignal.timeout` est une `TimeoutError` dont le message dit
+ * « aborted due to timeout » — d'où les deux motifs : sans eux, la saturation
+ * remonterait en exception au lieu de dégrader, ce qui est exactement le
+ * défaut que le plafond répare.
  */
 function isEmbedProviderUnavailable(err: unknown): boolean {
   if (isCreditExhaustionError(err)) return true;
+  // Lu sur l'objet, pas sur `instanceof Error` : le rejet est une `DOMException`,
+  // dont l'héritage d'`Error` dépend de la version du moteur.
+  const name = typeof err === "object" && err !== null && "name" in err ? String(err.name) : "";
+  if (name === "TimeoutError" || name === "AbortError") return true;
   const s = String(err instanceof Error ? err.message : err).toLowerCase();
   return (
     s.includes("fetch failed") ||
@@ -1001,6 +1013,8 @@ function isEmbedProviderUnavailable(err: unknown): boolean {
     s.includes("enotfound") ||
     s.includes("eai_again") ||
     s.includes("etimedout") ||
+    s.includes("timeout") ||
+    s.includes("aborted") ||
     s.includes("socket hang up") ||
     s.includes("network") ||
     s.includes("billing") ||
@@ -1058,6 +1072,25 @@ export interface EmbedResult {
   /** Token count (OpenAI only — Ollama doesn't report) */
   inputTokens: number;
 }
+
+/**
+ * Plafond de patience sur UN appel d'embedding.
+ *
+ * Constaté le 2026-07-29, en production : une passe d'indexation en masse (5
+ * documents lancés ensemble) a saturé l'Ollama local du VPS — 2 cœurs. Les
+ * requêtes suivantes ne sont pas tombées en erreur, elles ont **pendu**. Sans
+ * plafond, `fetch` attend indéfiniment : la sonde de diagnostic n'a plus jamais
+ * répondu, et n'importe quelle page passant par le RAG aurait fait de même.
+ *
+ * C'est la MÊME famille que le défaut réparé le matin (une panne de confort qui
+ * devient une panne de page), par blocage au lieu d'exception — et en pire, car
+ * un blocage ne se voit dans aucun journal. Un dépassement rend la main à la
+ * cascade, qui dégrade honnêtement (ADR-0108).
+ *
+ * 20 s : large pour un embedding local sous charge normale (~850 ms mesuré),
+ * court devant le temps de rendu d'une page.
+ */
+const EMBED_TIMEOUT_MS = 20_000;
 
 const OLLAMA_DIM_BY_MODEL: Record<string, number> = {
   "nomic-embed-text": 768,
@@ -1124,6 +1157,7 @@ async function embedViaOpenRouter(
         "X-Title": "La Fusee",
       },
       body: JSON.stringify({ model, input: slice }),
+      signal: AbortSignal.timeout(EMBED_TIMEOUT_MS),
     });
     if (!res.ok) {
       const errText = await res.text().catch(() => res.statusText);
@@ -1180,6 +1214,7 @@ async function embedViaOllama(
         method: "POST",
         headers,
         body: JSON.stringify({ model, input: inputs.slice(i, i + BATCH) }),
+        signal: AbortSignal.timeout(EMBED_TIMEOUT_MS),
       });
       if (!res.ok) {
         const errText = await res.text().catch(() => res.statusText);
@@ -1202,6 +1237,7 @@ async function embedViaOllama(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ model, prompt: text }),
+      signal: AbortSignal.timeout(EMBED_TIMEOUT_MS),
     });
     if (!res.ok) {
       const errText = await res.text().catch(() => res.statusText);
@@ -1236,6 +1272,7 @@ async function embedViaOpenAI(
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({ model, input: slice }),
+      signal: AbortSignal.timeout(EMBED_TIMEOUT_MS),
     });
     if (!res.ok) {
       const errText = await res.text().catch(() => res.statusText);

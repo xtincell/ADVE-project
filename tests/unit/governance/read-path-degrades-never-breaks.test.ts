@@ -109,6 +109,29 @@ describe("une panne d'embedding dégrade, elle ne casse pas", () => {
     expect(legBody).toMatch(/emptyEmbeddings\(/);
   });
 
+  it("un appel d'embedding a un plafond de patience", () => {
+    const src = read(GATEWAY);
+    expect(src).toMatch(/const EMBED_TIMEOUT_MS = /);
+    // Les QUATRE appels réseau d'embedding le portent — un seul site oublié
+    // suffit à rendre la saturation invisible, puisque c'est celui-là qui
+    // pendra. Constaté en production : un service saturé ne renvoie pas
+    // d'erreur, il ne renvoie RIEN.
+    const sites = src.match(/signal:\s*AbortSignal\.timeout\(EMBED_TIMEOUT_MS\)/g) ?? [];
+    expect(sites.length).toBe(4);
+  });
+
+  it("un service saturé est traité comme indisponible, pas comme un bug", () => {
+    // Sans ça, le plafond transformerait la pendaison en exception — la panne
+    // de page qu'on vient de fermer, par une autre porte.
+    const src = read(GATEWAY);
+    const fn = src.slice(
+      src.indexOf("function isEmbedProviderUnavailable"),
+      src.indexOf("function isEmbedProviderUnavailable") + 1200,
+    );
+    expect(fn).toMatch(/TimeoutError/);
+    expect(fn).toMatch(/"timeout"/);
+  });
+
   it("un défaut d'appel (400 / schéma) remonte quand même", () => {
     const src = read(GATEWAY);
     // La distinction est ce qui empêche la dégradation de masquer un vrai bug :
