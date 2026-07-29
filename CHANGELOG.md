@@ -47,6 +47,15 @@ procédure tRPC qu'elle appelle** ; le rendu, lui, exige un vrai navigateur — 
 celui-ci n'est pas atteignable, on le dit (§5-bis.4) au lieu de faire passer un test HTTP
 pour une vérification d'écran.
 
+**État d'exploitation, dit et tracé** — le conteneur `ollama-embed` est ressorti `exited`
+après la saturation, et **n'est pas relevable d'ici** : `start`/`restart` via l'API Coolify
+sont acceptés (« queued ») sans effet, l'API n'expose pas de route `logs` pour un *service*
+(404, contrairement aux *applications*), et le SSH est refusé au niveau bannière. Consigné
+en action opérateur à [RESIDUAL-DEBT.md](docs/governance/RESIDUAL-DEBT.md) avec la piste à
+vérifier (OOM) et les deux sorties possibles (plafonner Ollama, ou déporter l'embedding sur
+une clé). Le produit, lui, ne casse pas : mesuré **service éteint**, `brandBible.get` rend
+200 en 1 051 ms, `retrieval: DETERMINISTIC`, 97/99 éléments, 3 documents cités.
+
 ## v6.27.368 — fix(brand-bible): le livre masquait les champs hors registre (2026-07-29)
 
 Trouve **en production**, sur SPAWT, en appelant le composeur sous une session reelle
