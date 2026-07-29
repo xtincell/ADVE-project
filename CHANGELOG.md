@@ -1,5 +1,42 @@
 # Changelog — La Fusee
 
+## v6.27.369 — fix(llm-gateway): un embedding qui pend n'emporte plus la page (2026-07-29)
+
+Constaté **en production**, dans l'heure qui a suivi la mise en ligne de v6.27.368. Les
+embeddings venaient d'être réparés (le service `ollama-embed` n'était rattaché à aucun
+réseau partagé — sonde à 854 ms, `provider: ollama`, `dim: 768`). J'ai alors relancé
+l'indexation des cinq documents SPAWT **d'un seul coup**, sur un VPS à 2 cœurs.
+
+Ollama a saturé. Et il n'a pas rendu d'erreur : il a cessé de répondre. La sonde de
+diagnostic, qui répondait en 22 ms, n'a plus jamais rendu la main ; `brandBible.get` a
+tenu 300 secondes avant d'être coupé côté client. Aucune trace dans les journaux — un
+appel bloqué ne s'écrit nulle part.
+
+C'est la même famille que le défaut réparé le matin même (une panne de confort qui
+devient une panne de page), par **blocage** au lieu d'exception. Et c'est la pire des
+deux : une exception se voit, se classe et se dégrade ; une attente infinie ne se voit
+pas. `fetch` n'a pas de plafond par défaut, et les quatre appels réseau d'embedding du
+Gateway n'en portaient aucun.
+
+- **Plafond de patience** `EMBED_TIMEOUT_MS = 20 s` sur les **quatre** sites (OpenRouter,
+  Ollama `/v1/embeddings`, Ollama natif `/api/embeddings`, OpenAI). 20 s est large pour un
+  embedding local sous charge normale (~850 ms mesuré) et court devant un rendu de page.
+  Le verrou CI compte les quatre : un seul site oublié suffirait, puisque c'est
+  précisément celui-là qui pendrait.
+- **Un service saturé est indisponible, pas buggé.** Le rejet d'`AbortSignal.timeout` est
+  une `TimeoutError` dont le message ne ressemble à aucun des motifs déjà reconnus
+  (`ETIMEDOUT` du noyau, `fetch failed`…) : sans l'ajouter à `isEmbedProviderUnavailable`,
+  le plafond aurait transformé la pendaison en exception — la panne de page qu'on venait
+  de fermer, par une autre porte. Le nom est lu sur l'objet et non via `instanceof Error`,
+  l'héritage de `DOMException` dépendant de la version du moteur.
+
+La distinction de fond tient : indisponibilité d'exploitation → vecteurs vides et
+dégradation annoncée (ADR-0108, « l'étage embeddings est skippable, jamais sur le chemin
+critique ») ; défaut d'appel (400, schéma) → l'exception remonte.
+
+2 tests ajoutés à `read-path-degrades-never-breaks` (12 au total). 0 modèle · 0 migration ·
+0 Intent kind · 0 LLM · cap APOGEE 7/7 préservé.
+
 ## v6.27.368 — fix(brand-bible): le livre masquait les champs hors registre (2026-07-29)
 
 Trouve **en production**, sur SPAWT, en appelant le composeur sous une session reelle
