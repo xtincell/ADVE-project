@@ -34,6 +34,10 @@ défaut exact puis verts après restauration. 0 modèle · 0 migration · 0 Inte
 réelles : SPAWT 200/1 279 ms 97/99 3 documents · Motion19 200/928 ms 97/99 1 document ·
 FanTribe 200/539 ms 9/55 1 document — toutes en `retrieval: DETERMINISTIC`.
 
+**Re-vérifié après déploiement** (v6.27.370) : les trois marques répondent toujours 200 en
+`DETERMINISTIC` (1 735 / 1 160 / 700 ms), et l'identifiant inexistant rend désormais
+**404 `NOT_FOUND` « Marque introuvable »** au lieu d'un livre.
+
 ## v6.27.369 — fix(llm-gateway): un embedding qui pend n'emporte plus la page (2026-07-29)
 
 Constaté **en production**, dans l'heure qui a suivi la mise en ligne de v6.27.368. Les
