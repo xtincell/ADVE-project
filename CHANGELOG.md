@@ -1,5 +1,26 @@
 # Changelog — La Fusee
 
+## v6.27.367 — feat(ops): savoir si les embeddings marchent, en une requete (2026-07-29)
+
+Constat d'exploitation : **rien dans le produit ne disait si l'etage embeddings fonctionne.**
+La seule facon de l'apprendre etait de lire les journaux du conteneur en esperant qu'un
+appel passe au bon moment. Consequence vecue le jour meme — un `EMBED_SERVICE_URL` pointant
+sur un nom d'hote injoignable est reste invisible, puis a coute plusieurs redemarrages de
+production a diagnostiquer **a l'aveugle** : changer une variable, redemarrer, relire les
+journaux, recommencer.
+
+`GET /api/admin/embed-check` (garde `CRON_SECRET`) rend trois choses. **La configuration** :
+hote de l'endpoint (jamais une cle — seules leur presence est rapportee), modele, cles
+posees ou absentes. **Une sonde de joignabilite brute** sur `/api/tags`, AVANT le Gateway :
+elle distingue « le nom d'hote ne resout pas / le port est ferme » (panne d'infrastructure)
+de « l'endpoint repond mais refuse » (configuration ou quota). **Un vrai embedding** sur une
+chaine minuscule, par le chemin que le produit emprunte : fournisseur retenu, modele,
+dimension, duree — ou le message d'erreur exact.
+
+L'interpretation est ecrite dans la reponse : `provider: "none"` + dimension 0 est une
+**degradation honnete** (ADR-0108), pas une panne — le produit tourne en repli deterministe.
+Une exception, en revanche, est un defaut du Gateway, pas de l'infrastructure.
+
 ## v6.27.366 — fix(seshat): retirer un document laissait son index derrière (2026-07-28)
 
 Trouvé en préparant le retrait des cinq sources SPAWT polluées en base64 :
