@@ -1,18 +1,28 @@
 # Ops SSH — bras d'exécution vers le VPS Coolify (incident prod / réconciliation
-# migrations). Le conteneur de session Claude n'a d'egress que sur 443 : les
-# opérations docker/DB passent par un runner GitHub (egress libre).
+# migrations, diagnostic conteneur). Le conteneur de session Claude n'a d'egress
+# que sur 443 et son SSH sortant peut être coupé côté VPS : les opérations
+# docker/DB passent par un runner GitHub (egress libre).
 #
-# Sécurité : la clé transite en input workflow_dispatch (repo privé — payload
-# visible des seuls collaborateurs) et est masquée dès la première ligne.
-# Après l'incident : révoquer/rotater la clé et le token Coolify exposés.
+# DEUX SOURCES POUR LA CLÉ, dans cet ordre :
+#
+#  1. `secrets.VPS_SSH_KEY` — **la voie normale**. Poser une fois la clé privée
+#     (PEM complet, non encodé) dans Settings → Secrets → Actions. Elle n'est
+#     alors JAMAIS visible : ni dans les inputs du run, ni dans l'historique.
+#     Le dispatch ne porte plus que la commande.
+#  2. `inputs.b64key` — **repli d'incident uniquement**, quand le secret n'est
+#     pas encore posé. La clé transite en input : masquée dans les logs, mais
+#     **visible dans les métadonnées du run** pour tout collaborateur, et
+#     persistée dans l'historique. Un run lancé par cette voie impose la
+#     rotation de la clé après coup. Ne pas en faire l'habitude.
 name: ops-ssh
 
 on:
   workflow_dispatch:
     inputs:
       b64key:
-        description: "Clé privée SSH (PEM complet) encodée base64"
-        required: true
+        description: "REPLI D'INCIDENT — clé privée SSH base64. Laisser VIDE si le secret VPS_SSH_KEY est posé."
+        required: false
+        default: ""
       cmd:
         description: "Commande à exécuter sur le VPS"
         required: true
@@ -31,12 +41,22 @@ jobs:
     steps:
       - name: Exécute sur le VPS
         env:
+          SECRET_KEY: ${{ secrets.VPS_SSH_KEY }}
           B64KEY: ${{ inputs.b64key }}
           REMOTE_CMD: ${{ inputs.cmd }}
         run: |
           echo "::add-mask::$B64KEY"
           mkdir -p ~/.ssh
-          printf '%s' "$B64KEY" | base64 -d > ~/.ssh/id_ed25519
+          if [ -n "$SECRET_KEY" ]; then
+            echo "→ clé lue depuis le secret VPS_SSH_KEY (aucune exposition)"
+            printf '%s\n' "$SECRET_KEY" > ~/.ssh/id_ed25519
+          elif [ -n "$B64KEY" ]; then
+            echo "::warning::Clé passée en INPUT (repli d'incident) — la rotation de la clé est due après ce run."
+            printf '%s' "$B64KEY" | base64 -d > ~/.ssh/id_ed25519
+          else
+            echo "::error::Aucune clé. Poser le secret VPS_SSH_KEY (recommandé) ou fournir b64key."
+            exit 1
+          fi
           chmod 600 ~/.ssh/id_ed25519
           ssh -i ~/.ssh/id_ed25519 \
               -o StrictHostKeyChecking=no \

@@ -411,6 +411,29 @@ export async function indexBrandSource(sourceId: string): Promise<BrandSourceInd
         where: { strategyId: source.strategyId, kind: "BRAND_SOURCE", sourceId: source.id },
       });
       if (chunkCount === chunks.length) {
+        // « Découpé » n'est pas « vectorisé ». L'écriture des fragments et le
+        // calcul de leurs vecteurs sont deux étapes, et la seconde est
+        // best-effort : quand le fournisseur d'embeddings est indisponible, les
+        // fragments sont écrits avec `embeddedAt: null`. La fraîcheur testée
+        // ici ne porte QUE sur le texte — sortir maintenant laisserait ces
+        // fragments
+        // sans vecteur **définitivement**, puisque toute ré-indexation
+        // ultérieure retomberait sur ce même retour anticipé.
+        //
+        // Constaté en production le 2026-07-29 : cinq documents SPAWT déposés
+        // pendant une panne du service d'embeddings restaient introuvables en
+        // recherche sémantique une fois le service rétabli — le livre de marque
+        // et le conseil tournaient en repli par recouvrement de termes sans
+        // qu'aucun chemin ne puisse les rattraper.
+        //
+        // On relance donc le remplissage des vecteurs manquants (il ne traite
+        // que `embeddedAt: null` — sans arriéré, il ne coûte rien).
+        void embedBrandContext(source.strategyId).catch((err) => {
+          console.warn(
+            "[seshat:indexer] rattrapage des vecteurs manquants échoué (non bloquant) :",
+            err instanceof Error ? err.message : err,
+          );
+        });
         return {
           sourceId,
           strategyId: source.strategyId,

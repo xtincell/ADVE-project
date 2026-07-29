@@ -1,5 +1,37 @@
 # Changelog — La Fusee
 
+## v6.27.371 — fix(seshat): « découpé » n'était pas « vectorisé », et rien ne rattrapait (2026-07-29)
+
+Trouvé en remettant les embeddings en service. Le vrai défaut n'était pas la panne — c'est
+qu'**elle laissait une cicatrice permanente**.
+
+L'écriture des fragments d'un document et le calcul de leurs vecteurs sont deux étapes, et
+la seconde est best-effort : fournisseur indisponible → les fragments s'écrivent avec
+`embeddedAt: null`. Or l'indexation est **idempotente par contenu** : une ré-indexation
+ultérieure retrouve le même texte, conclut « déjà à jour » et **sort avant** le remplissage
+des vecteurs. Le document restait donc introuvable en recherche sémantique **définitivement**,
+même service rétabli — et le seul chemin de rattrapage (`embedBrandContext`) était appelé
+*après* ce retour anticipé, donc inatteignable.
+
+Constaté sur les cinq documents SPAWT déposés pendant la panne : livre de marque et conseil
+tournaient en repli par recouvrement de termes sans qu'aucun geste ne puisse les guérir.
+
+- **À la source** : le retour « déjà à jour » relance le remplissage des vecteurs manquants
+  avant de sortir. `embedBrandContext` ne traite que `embeddedAt: null` — sans arriéré, il
+  ne coûte rien ; sans fournisseur, il compte en « skipped » et **ne fabrique rien**.
+- **Le filet pour l'arriéré déjà en base** : le balayage nocturne `ops-sweep` draine les
+  fragments sans vecteur, toutes marques confondues (plafond 2 000 par run), et rend le
+  compte dans sa réponse. Le correctif à la source ne vaut que pour les ré-indexations
+  futures ; il fallait les deux.
+
+2 tests ajoutés à `read-path-degrades-never-breaks` (14 au total), **vus rouges** sur
+retrait du rattrapage puis verts après restauration. 0 modèle · 0 migration · 0 Intent kind ·
+0 LLM · cap APOGEE 7/7 préservé.
+
+**Méthode (`ops-ssh`)** — le workflow lit désormais `secrets.VPS_SSH_KEY` en priorité ;
+l'input `b64key` devient un **repli d'incident** explicite (avertissement dans le run +
+rotation due). Poser le secret une fois supprime toute exposition de clé.
+
 ## v6.27.370 — fix(oracle): une marque inexistante n'a pas de livre de marque (2026-07-29)
 
 Trouvé en vérifiant v6.27.369 en production, sur un identifiant de marque erroné (une
