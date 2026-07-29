@@ -44,17 +44,29 @@ const SECTION_REGISTRY_BY_NUMBER = (() => {
 type AssembleScope = "ALL" | "MISSING" | "STALE";
 
 const SCOPE_OPTIONS: ReadonlyArray<{ value: AssembleScope; label: string; hint: string }> = [
-  { value: "ALL", label: "Tout (35 sections)", hint: "REGEN forcé même sur sections COMPLETE" },
-  { value: "MISSING", label: "Manquantes (PENDING)", hint: "Uniquement les sections jamais générées" },
-  { value: "STALE", label: "Périmées (STALE / FAILED)", hint: "Reprise après échec ou amont muté" },
+  { value: "ALL", label: "Tout réécrire", hint: "Reprend les 35 sections, y compris celles déjà rédigées" },
+  { value: "MISSING", label: "Les manquantes", hint: "Uniquement celles qui n'ont jamais été rédigées" },
+  { value: "STALE", label: "À réactualiser", hint: "Celles en échec, ou dont un pilier source a changé depuis" },
 ];
 
 export interface OracleProgressivePanelProps {
   strategyId: string;
+  /**
+   * Matière réellement présente par section (`strategyPresentation.completeness`),
+   * indexée par identifiant de section.
+   *
+   * C'est une mesure DIFFÉRENTE du statut de génération porté par ce panneau :
+   * l'une dit « le job a tourné », l'autre « il y a quelque chose dedans ». Les
+   * deux vivaient dans deux grilles empilées sur la même page, avec la même
+   * pastille verte — sur SPAWT, l'une annonçait 35/35 quand l'autre comptait
+   * 21 complètes, 13 partielles et 1 vide. Une seule grille désormais : celle-ci,
+   * qui porte les deux faits sous deux noms distincts.
+   */
+  contentFillById?: Readonly<Record<string, "complete" | "partial" | "empty">>;
 }
 
 export function OracleProgressivePanel(props: OracleProgressivePanelProps): React.ReactElement {
-  const { strategyId } = props;
+  const { strategyId, contentFillById } = props;
 
   // ── Data : DB persisté + live stream ──────────────────────────────
   const sectionsQuery = trpc.oracle.listSections.useQuery(
@@ -118,16 +130,16 @@ export function OracleProgressivePanel(props: OracleProgressivePanelProps): Reac
       <div className="rounded-xl border border-border bg-surface-raised p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-sm">
-            <h3 className="font-semibold text-foreground">Génération progressive</h3>
+            <h3 className="font-semibold text-foreground">Les 35 sections</h3>
             <span className="rounded-full bg-info/15 px-2 py-0.5 text-2xs font-bold uppercase tracking-wider text-info">
-              Section par section
+              Rédigées une à une
             </span>
           </div>
           <div className="flex items-center gap-3 text-xs">
-            <span className="text-success">{stats.complete} complets</span>
-            <span className="text-error">{stats.failed} ratés</span>
-            <span className="text-warning">{stats.stale} périmés</span>
-            <span className="text-foreground-muted">{stats.pending + stats.generating} en attente</span>
+            <span className="text-success">{stats.complete} rédigées</span>
+            <span className="text-error">{stats.failed} en échec</span>
+            <span className="text-warning">{stats.stale} à réactualiser</span>
+            <span className="text-foreground-muted">{stats.pending + stats.generating} à produire</span>
           </div>
         </div>
 
@@ -143,15 +155,15 @@ export function OracleProgressivePanel(props: OracleProgressivePanelProps): Reac
             onClick={() => assembleMutation.mutate({ strategyId, scope })}
             disabled={anyMutationPending || !canOperate}
             className="flex items-center gap-2 rounded-lg bg-error px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-error disabled:opacity-40"
-            title={`Assemble les sections (portée : ${scope === "ALL" ? "toutes" : scope === "MISSING" ? "manquantes" : "à rafraîchir"}) — chaque section est générée puis validée individuellement.`}
+            title={`Rédige les sections (${scope === "ALL" ? "toutes" : scope === "MISSING" ? "les manquantes" : "celles à réactualiser"}) — chacune est produite puis vérifiée séparément.`}
           >
             {isAssemblerRunning ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" /> Assembler en cours…
+                <Loader2 className="h-4 w-4 animate-spin" /> Rédaction en cours…
               </>
             ) : (
               <>
-                <Sparkles className="h-4 w-4" /> Assembler L&apos;Oracle
+                <Sparkles className="h-4 w-4" /> Rédiger les sections
               </>
             )}
           </button>
@@ -164,7 +176,7 @@ export function OracleProgressivePanel(props: OracleProgressivePanelProps): Reac
               disabled={anyMutationPending || !canOperate}
               className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium text-foreground-secondary transition-colors hover:bg-surface-raised disabled:opacity-40"
             >
-              Scope: <span className="font-bold text-foreground">{SCOPE_OPTIONS.find((o) => o.value === scope)?.label}</span>
+              Portée : <span className="font-bold text-foreground">{SCOPE_OPTIONS.find((o) => o.value === scope)?.label}</span>
               <ChevronDown className="h-3 w-3" />
             </button>
             {scopeMenuOpen && (
@@ -245,6 +257,7 @@ export function OracleProgressivePanel(props: OracleProgressivePanelProps): Reac
               confidence={streamConfidence ?? dbSection.confidence}
               lastError={dbSection.lastError as { errorCode?: string | null; errorMessage?: string | null } | null}
               isStale={dbSection.staleAt != null}
+              contentFill={contentFillById?.[String(dbSection.sectionId)]}
               disabled={!canOperate || anyMutationPending || isAssemblerRunning}
               onAction={(mode) => {
                 if (mode === "RETRY") {

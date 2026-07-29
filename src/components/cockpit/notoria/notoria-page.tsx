@@ -190,7 +190,7 @@ export function NotoriaPage() {
       // ADR-0030 Axe 3 — gate RTIS_CASCADE refusé : ADVE pas prêt
       const msg = err?.message ?? "Veille R+T refusée";
       if (msg.includes("readiness/RTIS_CASCADE") || msg.includes("ReadinessVetoError")) {
-        setRtVetoMessage("ADVE n'est pas prêt pour la cascade R+T. Compléter A/D/V/E à 100% (au moins ENRICHED) avant de lancer la veille.");
+        setRtVetoMessage("Vos fondations ne sont pas encore assez complètes pour lancer la veille. Renseignez d'abord vos quatre piliers fondateurs.");
       } else {
         setRtVetoMessage(msg);
       }

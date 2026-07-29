@@ -386,7 +386,7 @@ function ProposalCard({
                 onClick={() => onAccept()}
                 disabled={pending}
                 className="rounded bg-success/20 p-1.5 text-success hover:bg-success/30 disabled:opacity-50"
-                title="Accepter (DRAFT → SELECTED)"
+                title="Accepter cette proposition — elle rejoint le coffre de votre marque"
               >
                 <Check className="h-3.5 w-3.5" />
               </button>

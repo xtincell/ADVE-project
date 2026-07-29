@@ -1,5 +1,53 @@
 # Changelog — La Fusee
 
+## v6.27.373 — fix(oracle): la page du livrable phare se contredisait à l'écran (2026-07-29)
+
+Signalement opérateur : « *l'UX de cette page est incompréhensible par moments* », sur
+`/cockpit/brand/proposition` — la surface du **livrable vendu** (l'Oracle, diagnostic
+dynamique de 35 sections, cargaison payante).
+
+**Elle affichait les mêmes 35 sections DEUX FOIS, empilées, depuis deux sources qui se
+contredisent.** Mesuré en production sur SPAWT : la grille du haut (`oracle.listSections`)
+annonçait **35 COMPLETE**, celle du bas (`strategyPresentation.completeness`) comptait
+**21 complètes · 13 partielles · 1 vide** — et le héros, alimenté par la seconde, titrait
+« 60 % » au-dessus d'un panneau qui disait que tout était fait.
+
+Les deux mesurent des faits **différents et tous deux légitimes** — « le travail de
+rédaction a tourné » contre « la section dit quelque chose ». Elles portaient la même
+pastille verte et le même mot, « Complète ».
+
+- **Une seule grille.** La matière rejoint la carte de section sous son propre nom :
+  « Rédigée · à approfondir » se lit, « Complète » deux fois ne se lisait pas.
+- **Un seul jeu de compteurs.** Il y en avait trois — héros, bandeau, panneau — dont un
+  pourcentage « assemblé » qui mesurait en réalité le contenu.
+- **Un seul bouton de rédaction.** Celui de la page ne rédigeait **jamais** : dans ses
+  trois branches il ouvrait une modale de préparation, tout en s'intitulant « Assembler la
+  proposition » quand tout était prêt. Il n'apparaît plus que si une préparation est
+  réellement requise, et dit laquelle.
+- **« Ouvrir le livrable » ne fait plus rien au premier clic** — il créait le lien sans
+  l'ouvrir : on cliquait, rien ne se passait, on recliquait. Un clic, un résultat.
+- **Plus de modale non sollicitée** au chargement (la cascade s'auto-proposait une fois par
+  marque). L'information est portée en clair et en permanence par la carte et le bouton.
+
+**Le vocabulaire, ensuite** — la vraie question posée : *cette page a-t-elle été inspectée
+pour ce qu'elle EST ?* Le canon (KB §3) la définit comme un livrable **analytique**, qui se
+vend : sa promesse est de **savoir**. Or ses contrôles parlaient en valeurs d'énumération de
+la base : « Manquantes (PENDING) », « REGEN forcé même sur sections COMPLETE », « Périmées
+(STALE / FAILED) », « Complétez A·D·V·E (au moins ENRICHED) », « cascade R+T → I → S ».
+Réécrits dans le registre du document : *rédigée · à réactualiser · à produire · en échec*
+pour le travail, *complète · à approfondir · sans contenu* pour la matière.
+
+**Le verrou CI ne voyait pas cette classe de fuite** — il attrapait la mythologie et les
+réfs internes, pas les états bruts du modèle de données, et c'est par là que le jargon
+revenait. Motif ajouté (`PENDING|GENERATING|COMPLETE|FAILED|STALE|REGEN|ENRICHED|DRAFT|…`),
+avec deux discriminants pour qu'il reste utilisable plutôt que d'être allowlisté par
+lassitude : les chaînes de **classes CSS** et les fragments de **code** sont écartés. Vu
+ROUGE sur 15 occurrences, dont **6 vraies fuites hors Oracle** (sources, veille, piliers,
+modale d'amendement) — toutes corrigées, allowlist toujours vide.
+
+0 modèle · 0 migration · 0 Intent kind · 0 LLM · cap APOGEE 7/7 préservé.
+tsc 0 · lint 0 · cycles 0 · **1517 tests gouvernance verts**.
+
 ## v6.27.372 — docs(governance): la recherche sémantique est rétablie, et le protocole ops apprend (2026-07-29)
 
 Documentation seule. Deux registres remis sur les faits.

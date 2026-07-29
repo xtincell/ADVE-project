@@ -16,7 +16,6 @@ import {
   Loader2,
   CheckCircle,
   AlertCircle,
-  Circle,
   Sparkles,
 } from "lucide-react";
 import { AiBadge } from "@/components/shared/ai-badge";
@@ -31,12 +30,6 @@ interface BlockerHint {
   missingFields?: readonly string[];
 }
 
-const STATUS_CONFIG = {
-  complete: { icon: CheckCircle, color: "text-success", bg: "bg-success/20", border: "border-success/30", label: "Complete" },
-  partial: { icon: AlertCircle, color: "text-warning", bg: "bg-warning/20", border: "border-warning/30", label: "Partial" },
-  empty: { icon: Circle, color: "text-foreground-muted", bg: "bg-background/20", border: "border-border", label: "Vide" },
-};
-
 export default function PropositionPage() {
   const strategyId = useCurrentStrategyId();
   const toast = useToast();
@@ -49,8 +42,6 @@ export default function PropositionPage() {
   // l'orchestrateur manual-first `oracle.assembleOracle` (ADR-0071) ; le
   // détail par section vit dans le panel progressif SSE (ADR-0073).
   const [isAssembling, setIsAssembling] = useState(false);
-  const [prevReport, setPrevReport] = useState<Record<string, string>>({});
-  const [changedSections, setChangedSections] = useState<Set<string>>(new Set());
   const [launchModalOpen, setLaunchModalOpen] = useState(false);
   const [cascadeModalOpen, setCascadeModalOpen] = useState(false);
   const [externalBlockers, setExternalBlockers] = useState<BlockerHint[] | undefined>(undefined);
@@ -110,44 +101,17 @@ export default function PropositionPage() {
   // bouton vert. Bouton vert = vraie promesse "compile sans heurt".
   const oracleReadyToCompile = adveAllComplete && rtisReady;
 
-  // Auto-prompt the cascade modal once when ADVE reaches 100% and RTIS is
-  // still empty/incomplete. Tracked per-strategy via localStorage so the
-  // user is never re-prompted after dismissing or completing once.
-  useEffect(() => {
-    if (!strategyId) return;
-    if (!adveAllComplete) return;
-    if (rtisReady) return;
-    if (cascadeModalOpen) return;
-    const flagKey = `lafusee:rtis-cascade-prompted:${strategyId}`;
-    try {
-      if (window.localStorage.getItem(flagKey) === "yes") return;
-      window.localStorage.setItem(flagKey, "yes");
-      setCascadeModalOpen(true);
-    } catch {
-      // localStorage indispo (private mode) — on n'auto-prompt pas pour
-      // éviter une boucle. User peut toujours déclencher via le bouton rouge.
-    }
-  }, [strategyId, adveAllComplete, rtisReady, cascadeModalOpen]);
-
-  // Detect section changes during polling
-  useEffect(() => {
-    const report = completeness.data ?? {};
-    if (Object.keys(prevReport).length > 0) {
-      const newChanges = new Set(changedSections);
-      for (const [id, status] of Object.entries(report)) {
-        if (prevReport[id] && prevReport[id] !== status) {
-          newChanges.add(id);
-        }
-      }
-      setChangedSections(newChanges);
-    }
-    setPrevReport(report);
-  }, [completeness.data]);
+  // Une modale s'ouvrait SEULE au chargement (une fois par marque, mémorisée en
+  // localStorage) pour proposer la cascade. Arriver sur une page et se faire
+  // interrompre par une boîte qu'on n'a pas demandée, c'est le genre de moment
+  // où l'écran devient illisible — d'autant que rien n'expliquait d'où elle
+  // venait. La même information est désormais portée, en clair et en
+  // permanence, par la carte « Piliers stratégiques » et par le bouton
+  // « Préparer la stratégie ». Le geste reste à l'utilisateur.
 
   const assembleMutation = trpc.oracle.assembleOracle.useMutation({
     onMutate: () => {
       setIsAssembling(true);
-      setChangedSections(new Set());
     },
     onSuccess: (data) => {
       completeness.refetch();
@@ -183,33 +147,35 @@ export default function PropositionPage() {
   const completeSections = Object.values(report).filter((s) => s === "complete").length;
   const partialSections = Object.values(report).filter((s) => s === "partial").length;
   const emptySections = Object.values(report).filter((s) => s === "empty").length;
-  // lafusee:allow-adhoc-completion: display-only assembled% (Oracle section-count ratio, not the canonical pillar completion gate)
-  const pct = totalSections > 0 ? Math.round((completeSections / totalSections) * 100) : 0;
   const staleSections = (Array.isArray(oracleSections.data) ? [] : (oracleSections.data?.sections ?? []))
     .filter((s) => s.status === "STALE").length;
 
-  // ── 3 cartes de préparation — état RÉEL de la cascade (pas de prose mock) ──
+  // ── Ce qu'il faut avant que le diagnostic tienne debout ──
+  // Ces trois cartes parlaient en interne : « au moins ENRICHED » (une valeur
+  // d'énumération), « la cascade R+T → I → S » (le nom du pipeline). Le porteur
+  // de marque n'a aucun moyen de savoir ce qu'on lui demande. Elles disent
+  // désormais ce qui manque et à quoi ça sert.
   const readinessCards = [
     {
-      key: "adve", title: "Fondations ADVE",
+      key: "adve", title: "Vos fondations",
       ready: adveAllComplete,
       body: adveAllComplete
-        ? "Les 4 piliers fondateurs (A·D·V·E) sont enrichis — socle prêt à dériver."
-        : "Complétez A·D·V·E (au moins ENRICHED) : c'est le socle qui nourrit toute la cascade.",
+        ? "Qui vous êtes, ce qui vous distingue, ce que vous valez, comment vous engagez : les quatre fondations de votre marque sont posées."
+        : "Renseignez les quatre fondations de votre marque — ADVE, Architecture des Expériences. Tout le diagnostic se déduit d'elles.",
     },
     {
-      key: "rtis", title: "Piliers stratégiques",
+      key: "rtis", title: "Votre lecture stratégique",
       ready: rtisReady,
       body: rtisReady
-        ? "R·T·I·S dérivés depuis ADVE — diagnostic, marché, potentiel et stratégie consolidés."
-        : "Lancez la cascade R+T → I → S pour dériver le diagnostic et la stratégie depuis ADVE.",
+        ? "Diagnostic, marché, actions et stratégie ont été déduits de vos fondations."
+        : "Déduisez de vos fondations votre diagnostic, votre marché, vos actions et votre stratégie.",
     },
     {
-      key: "oracle", title: "Assemblage Oracle",
+      key: "oracle", title: "Votre diagnostic",
       ready: oracleReadyToCompile,
       body: oracleReadyToCompile
-        ? `${completeSections}/${totalSections} sections — le livrable peut être compilé sans heurt.`
-        : `${totalSections - completeSections} sections restantes — préparez fondation et stratégie pour débloquer l'assemblage.`,
+        ? `${completeSections} de ses ${totalSections} sections sont complètes — le document est prêt à être ouvert et partagé.`
+        : "Disponible dès que vos fondations et votre lecture stratégique sont en place.",
     },
   ];
 
@@ -219,10 +185,10 @@ export default function PropositionPage() {
       <div>
         <h1 className="flex items-center gap-3 text-2xl font-bold text-foreground">
           <FileText className="h-7 w-7 text-accent" />
-          L&apos;Oracle — Proposition Stratégique
+          L&apos;Oracle — votre diagnostic de marque
         </h1>
         <p className="mt-1 text-sm text-foreground-muted">
-          Document vivant assemblé depuis vos piliers de marque et vos analyses.
+          Document vivant de {SECTION_REGISTRY.length} sections, réévalué à chaque évolution de votre marque.
         </p>
       </div>
 
@@ -232,26 +198,32 @@ export default function PropositionPage() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img className="ck-oracle-hero__rocket" src="/brand/illustrations/rocket-3d.png" alt="" />
         <span className="ck-oracle-hero__eyebrow"><Sparkles /> Synthèse vivante · réévaluée en continu</span>
+        {/* Le chiffre mis en avant est celui de la MATIÈRE (sections qui
+            contiennent tout ce qu'on en attend), pas celui des générations
+            réussies — les deux étaient appelés « assemblé » indifféremment. */}
         <h2 className="ck-oracle-hero__h">
-          {oracleReadyToCompile
-            ? <>Votre proposition stratégique est <span className="hl">prête à compiler</span> — {completeSections}/{totalSections} sections assemblées.</>
-            : <>Votre proposition s&apos;assemble en continu — <span className="hl">{pct}%</span> du livrable est consolidé.</>}
+          {completeSections === totalSections
+            ? <>Votre diagnostic est <span className="hl">complet</span> — les {totalSections} sections disent tout ce qu&apos;elles ont à dire.</>
+            : <><span className="hl">{completeSections}</span> de vos {totalSections} sections sont complètes — {totalSections - completeSections} restent à approfondir.</>}
         </h2>
         {staleSections > 0 && (
           <p className="ck-oracle-hero__p">
-            {staleSections} section{staleSections > 1 ? "s" : ""} à actualiser depuis vos dernières
-            modifications de piliers — régénérez-les depuis le panneau ci-dessous.
+            {staleSections} section{staleSections > 1 ? "s" : ""} à réactualiser : un pilier de votre marque a
+            changé depuis leur rédaction. Reprenez-les dans la liste ci-dessous.
           </p>
         )}
         <p className="ck-oracle-hero__p">
-          L&apos;Oracle est un livrable consulting de {totalSections} sections, assemblé et réévalué en continu par votre équipe (méthode ADVE-RTIS).
-          {isAssembling ? " Assemblage en cours — les sections se mettent à jour en temps réel." : ` ${totalSections - completeSections} section(s) restantes.`}
+          Chaque section est un volet de conseil rédigé à partir de vos piliers de marque. Vous pouvez l&apos;ouvrir, l&apos;exporter et le partager à tout moment.
+          {isAssembling ? " Rédaction en cours — les sections se mettent à jour en temps réel." : ""}
         </p>
+        {/* Un seul jeu de compteurs sur la page. Il portait « Complètes /
+            Partielles / Vides / Assemblé % » ici, puis « X complètes /
+            Y partielles / Z vides » cinq centimètres plus bas, puis encore
+            « X complets / Y ratés / Z périmés » dans le panneau. */}
         <div className="ck-oracle-hero__stats">
           <div><span className="k">Complètes</span><b className="text-success">{completeSections}/{totalSections}</b></div>
-          <div><span className="k">Partielles</span><b>{partialSections}</b></div>
-          <div><span className="k">Vides</span><b>{emptySections}</b></div>
-          <div><span className="k">Assemblé</span><b style={{ color: "var(--accent)" }}>{pct}%</b></div>
+          <div><span className="k">À approfondir</span><b>{partialSections}</b></div>
+          <div><span className="k">À produire</span><b>{emptySections}</b></div>
         </div>
       </div>
 
@@ -276,59 +248,59 @@ export default function PropositionPage() {
       <div className="ck-orc">
         <div className="ck-orc__head">
           <div className="ck-orc__head-l">
-            <h3>{canOperate ? <>Assembler L&apos;Oracle</> : <>Votre livrable</>}</h3>
-            <span className="ck-orc__adr">{pct}% assemblé · méthode ADVE</span>
+            <h3>Votre livrable</h3>
             <AiBadge />
-          </div>
-          <div className="ck-orc__tally">
-            <span className="ok">{completeSections} complètes</span>
-            <span className="stale">{partialSections} partielles</span>
-            <span className="idle">{emptySections} vides</span>
           </div>
         </div>
 
-        {/* ADR — bouton contextuel (préparer ADVE / RTIS / assembler) — wiring
-            inchangé ; rendu opérateur uniquement (le founder lit + exporte). */}
+        {/* Ce bouton n'a JAMAIS assemblé — dans les trois branches il ouvrait une
+            modale de préparation. Il s'appelait pourtant « Assembler la
+            proposition » quand tout était prêt, en doublon du vrai assembleur du
+            panneau ci-dessous. Il ne s'affiche donc plus que lorsqu'une
+            préparation est réellement requise, et il dit laquelle. */}
         <div className="ck-orc__controls">
-          {canOperate ? (
+          {canOperate && !oracleReadyToCompile ? (
           <button
             className="ck-orc__assemble"
-            data-variant={oracleReadyToCompile ? "ready" : undefined}
-            disabled={assembleMutation.isPending}
             title={
-              oracleReadyToCompile
-                ? "Fondation et stratégie prêtes — l'Oracle peut compiler les 35 sections sans heurt."
-                : !adveAllComplete
-                  ? "Vos 4 fondations ADVE ne sont pas encore enrichies. Un clic ouvre la préparation automatique."
-                  : "Piliers stratégiques pas encore dérivés — un clic ouvre la préparation pour l'Oracle."
+              !adveAllComplete
+                ? "Vos 4 fondations ne sont pas encore enrichies — ouvre la préparation."
+                : "Vos piliers stratégiques ne sont pas encore dérivés — ouvre la préparation."
             }
             onClick={() => {
               if (!adveAllComplete) { setExternalBlockers(undefined); setLaunchModalOpen(true); return; }
-              if (!rtisReady) { setCascadeModalOpen(true); return; }
-              setExternalBlockers(undefined); setLaunchModalOpen(true);
+              setCascadeModalOpen(true);
             }}
           >
-            {assembleMutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Assemblage en cours…</>
-              : oracleReadyToCompile ? <><Sparkles /> Assembler la proposition</>
-              : !adveAllComplete ? <><AlertCircle /> Préparer la fondation d&apos;abord</>
-              : <><AlertCircle /> Préparer la stratégie d&apos;abord</>}
+            <AlertCircle />
+            {!adveAllComplete ? "Préparer la fondation" : "Préparer la stratégie"}
           </button>
           ) : null}
           <button
             className="ck-orc__preview"
-            onClick={() => { if (shareUrl) window.open(shareUrl, "_blank"); else shareMutation.mutate({ strategyId: strategyId! }); }}
+            disabled={shareMutation.isPending}
+            onClick={async () => {
+              // Le premier clic créait le lien SANS rien ouvrir : le porteur
+              // cliquait, il ne se passait rien, il recliquait. On attend le
+              // lien puis on ouvre — un clic, un résultat.
+              if (shareUrl) { window.open(shareUrl, "_blank"); return; }
+              try {
+                const res = await shareMutation.mutateAsync({ strategyId: strategyId! });
+                window.open(res.url, "_blank");
+              } catch {
+                toast.error("Le lien du livrable n'a pas pu être créé. Réessayez dans un instant.");
+              }
+            }}
           >
-            <ExternalLink /> Ouvrir le livrable
+            {shareMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink />}
+            Ouvrir le livrable
           </button>
         </div>
 
-        {/* Progress (pendant Artemis) */}
-        {isAssembling && (
-          <div className="ck-orc__progress">
-            <div className="ck-orc__progress-meta"><span>{completeSections}/{totalSections} sections</span><span>Assemblage en cours</span></div>
-            <div className="ck-orc__progress-track"><div className="ck-orc__progress-fill" style={{ width: `${pct}%` }} /></div>
-          </div>
-        )}
+        {/* La barre de progression vit dans le panneau, alimentée par le flux
+            temps réel (section courante, échecs). Celle qui était ici affichait
+            un pourcentage de MATIÈRE pendant une génération — deux barres, deux
+            unités, sur le même écran. */}
 
         {/* ─ Lien public / partage (strategyPresentation.shareLink) — geste
             opérateur (vues persona destinées au partage vers le client). ─ */}
@@ -358,37 +330,17 @@ export default function PropositionPage() {
         ) : null}
       </div>
 
-      {/* Phase 21 F-F (ADR-0073) — Génération progressive avec stream SSE (granulaire). */}
-      <OracleProgressivePanel strategyId={strategyId} />
-
-      {/* ─ Grille des 35 sections (statut live) ─ */}
-      <div className="space-y-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Les {totalSections} sections</h2>
-        <div className="ck-orc__grid">
-          {SECTION_REGISTRY.map((section) => {
-            const status = report[section.id] ?? "empty";
-            const st = status === "complete" ? "ok" : status === "partial" ? "stale" : "idle";
-            const StatusIcon = STATUS_CONFIG[status].icon;
-            const justChanged = changedSections.has(section.id);
-            const tier = (section as { tier?: string }).tier;
-            return (
-              <div key={section.id} className={`ck-orc__sec${justChanged ? " changed" : ""}`} data-st={st}>
-                <span className="ck-orc__sec-ic" data-st={st}><StatusIcon /></span>
-                <div className="ck-orc__sec-b">
-                  <div className="ck-orc__sec-top">
-                    <span className="ck-orc__sec-n">{section.number}</span>
-                    <span className="ck-orc__sec-title">{section.title}</span>
-                    {tier ? <span className="ck-orc__sec-tier" data-t={tier}>{tier === "CORE" ? "Core" : tier === "BIG4_BASELINE" ? "Big4" : "Distinct"}</span> : null}
-                  </div>
-                  <div className="ck-orc__sec-meta">
-                    <span className="ck-orc__sec-st" data-st={st}>{STATUS_CONFIG[status].label}</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      {/* ─ LA grille des 35 sections (ADR-0073) ─
+          Il y en avait DEUX, empilées : celle-ci, et une seconde juste en
+          dessous alimentée par `strategyPresentation.completeness`. Les deux
+          affichaient les mêmes 35 sections avec la même pastille verte et le
+          même mot « Complète », alors qu'elles mesurent des faits différents —
+          « le job de génération a tourné » contre « la section contient de la
+          matière ». Mesuré sur SPAWT : 35 COMPLETE en haut, 21 complètes /
+          13 partielles / 1 vide en bas, dans le même écran.
+          Une seule grille désormais, et la matière y est dite sous son propre
+          nom (« nourrie » / « à étoffer » / « sans matière »). */}
+      <OracleProgressivePanel strategyId={strategyId} contentFillById={report} />
 
       {/* Export PDF (server-side jspdf walk) */}
       <div className="flex flex-wrap gap-3">

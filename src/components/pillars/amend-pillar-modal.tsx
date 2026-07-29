@@ -336,7 +336,7 @@ export function AmendPillarModal({
             <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
               <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
               <div>
-                Mode destructif. Tous les BrandAssets ACTIVE liés à ce pilier seront marqués <code>staleAt</code> pour
+                Réécriture profonde. Toutes les créations en vigueur rattachées à ce pilier seront signalées à revoir, pour
                 régénération suggérée. Les piliers stratégiques dépendants devront être recalculés.
               </div>
             </div>
