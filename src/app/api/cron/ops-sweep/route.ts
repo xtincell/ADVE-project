@@ -149,12 +149,41 @@ export async function GET(request: Request) {
       data: { status: "FAILED" },
     });
 
+    // ── Rattrapage des vecteurs manquants ────────────────────────────────────
+    // Le calcul des vecteurs est best-effort et découplé de l'écriture des
+    // fragments : quand le fournisseur d'embeddings est indisponible, les
+    // fragments sont écrits avec `embeddedAt: null` et le document devient
+    // introuvable en recherche sémantique. Rien ne le rattrapait — l'indexation
+    // est idempotente par CONTENU, donc une ré-indexation ressortait
+    // « déjà à jour » sans jamais combler les vecteurs (corrigé aussi à la
+    // source dans `indexBrandSource`, mais seulement pour les ré-indexations).
+    //
+    // Ici : le filet pour l'arriéré déjà en base. `embedBrandContext` ne traite
+    // que `embeddedAt: null` — sans arriéré, il ne coûte rien ; sans
+    // fournisseur, il compte les fragments en « skipped » et ne fabrique rien.
+    const embedBackfill = { scanned: 0, embedded: 0, skipped: 0, failed: 0 };
+    try {
+      const { embedBrandContext } = await import("@/server/services/seshat/context-store");
+      // `null` = toutes marques confondues ; le plafond borne le coût d'un run.
+      const r = await embedBrandContext(null, { safetyLimit: 2000 });
+      embedBackfill.scanned = r.scanned;
+      embedBackfill.embedded = r.embedded;
+      embedBackfill.skipped = r.skipped;
+      embedBackfill.failed = r.failed;
+    } catch (err) {
+      console.warn(
+        "[ops-sweep] rattrapage des vecteurs échoué (non bloquant) :",
+        err instanceof Error ? err.message : err,
+      );
+    }
+
     return NextResponse.json({
       ok: true,
       subscriptionsPastDue: pastDue.count,
       recommendationsExpired: expiredRecos.count,
       oracleStaleRefresh: oracleRefresh,
       emissionStaleness: { observationStale: staleObs.count, orphanFailed: orphanEmissions.count },
+      embedBackfill,
       ...(statements ? { mcpStatements: statements } : {}),
     });
   } catch (err) {

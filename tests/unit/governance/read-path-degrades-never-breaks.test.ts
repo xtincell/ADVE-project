@@ -147,6 +147,39 @@ describe("une panne d'embedding dégrade, elle ne casse pas", () => {
   });
 });
 
+describe("« découpé » n'est pas « vectorisé »", () => {
+  /**
+   * L'écriture des fragments et le calcul de leurs vecteurs sont deux étapes,
+   * et la seconde est best-effort. Quand le fournisseur d'embeddings est
+   * indisponible, les fragments s'écrivent avec `embeddedAt: null`.
+   *
+   * L'indexation étant idempotente par CONTENU, une ré-indexation ultérieure
+   * ressortait « déjà à jour » et **ne comblait jamais** les vecteurs : le
+   * document restait introuvable en recherche sémantique **définitivement**.
+   * Constaté en production le 2026-07-29 sur les cinq documents SPAWT déposés
+   * pendant la panne du service d'embeddings.
+   */
+  const INDEXER = "src/server/services/seshat/context-store/indexer.ts";
+  const SWEEP = "src/app/api/cron/ops-sweep/route.ts";
+
+  it("le retour anticipé « déjà à jour » relance le remplissage des vecteurs", () => {
+    const src = read(INDEXER);
+    const at = src.indexOf("alreadyFresh: true");
+    expect(at).toBeGreaterThan(-1);
+    // Le rattrapage est déclenché AVANT de sortir, pas après (code mort).
+    const before = src.slice(Math.max(0, at - 1500), at);
+    expect(before).toMatch(/embedBrandContext\(source\.strategyId\)/);
+  });
+
+  it("le balayage nocturne rattrape l'arriéré déjà en base", () => {
+    // Le correctif à la source ne vaut que pour les ré-indexations futures ;
+    // les fragments déjà écrits sans vecteur ont besoin d'un filet.
+    const src = read(SWEEP);
+    expect(src).toMatch(/embedBrandContext/);
+    expect(src).toMatch(/embedBackfill/);
+  });
+});
+
 describe("retirer un document retire son index", () => {
   /**
    * `BrandContextNode.sourceId` est un `String?` **nu** — index, pas clé
