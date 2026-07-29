@@ -168,6 +168,30 @@ export async function composeBrandBible(
       });
     }
 
+    // Le registre n'est PAS l'inventaire du pilier — il en décrit un sous-ensemble
+    // (13 champs sur A, quand une marque documentée en porte 32). Ne parcourir que
+    // le registre rendait donc **invisible** toute valeur déclarée hors registre :
+    // ni affichée, ni comptée, ni nommée parmi les manquants. Le lecteur voyait
+    // « 98 % complété · 0 manquant » pendant que l'équipe dirigeante — corrigée à
+    // la main le jour même — n'apparaissait nulle part.
+    //
+    // Ce n'est pas de la fabrication, mais c'est la même famille : une omission
+    // silencieuse dans un document dont la promesse est « ce qui manque est
+    // NOMMÉ ». On parcourt donc l'union, registre d'abord (il porte le libellé
+    // canonique et l'ordre), puis le reste du pilier — libellé = nom du champ,
+    // faute de mieux, ce qui est honnête et vérifiable.
+    const known = new Set(Object.keys(registry));
+    for (const [field, value] of Object.entries(content)) {
+      if (field.startsWith("_") || known.has(field)) continue;
+      if (isEmptyValue(value)) continue;
+      entries.push({
+        field,
+        label: field,
+        value,
+        provenance: coerceProvenance(provenanceMap[field]),
+      });
+    }
+
     // Les extraits qui parlent de CE pilier. La requête est faite des libellés
     // réellement renseignés — on cherche ce dont la marque parle, pas un thème
     // abstrait.

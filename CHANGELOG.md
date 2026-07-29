@@ -1,5 +1,53 @@
 # Changelog — La Fusee
 
+## v6.27.368 — fix(brand-bible): le livre masquait les champs hors registre (2026-07-29)
+
+Trouve **en production**, sur SPAWT, en appelant le composeur sous une session reelle
+(compte NEFER) : le livre annoncait « 98 % complete · 0 manquant » sur le volet
+Authenticite, alors que le pilier porte **32 champs** et que le livre n'en montrait que
+**13**.
+
+Cause : la boucle parcourait `FIELD_REGISTRY`, qui ne decrit qu'un **sous-ensemble** du
+pilier (13 champs sur A). Toute valeur declaree hors registre etait donc **invisible** :
+ni affichee, ni comptee, ni nommee parmi les manquants. `equipeDirigeante` — corrige a la
+main le jour meme sur piece officielle, provenance `HUMAN` — n'apparaissait nulle part.
+
+Ce n'est pas de la fabrication, mais c'est la meme famille : une omission silencieuse dans
+un document dont la promesse tient en deux points — n'ecrire que ce qui est declare ou
+documente, et **nommer ce qui manque** ([ADR-0185](docs/governance/adr/0185-composed-brand-bible-rank-2-anchor.md)).
+Un lecteur concluait « complet, rien ne manque » sur un volet aux deux tiers absent.
+
+Le composeur parcourt desormais **l'union** : le registre d'abord (il porte le libelle
+canonique et l'ordre), puis le reste du pilier — libelle = nom du champ, faute de mieux,
+ce qui est honnete et verifiable. Les cles techniques (`_fieldProvenance`…) restent
+dehors ; le test de vacuite s'applique aussi au complement, sans quoi un champ vide
+gonflerait la couverture.
+
+Verrou `brand-bible-compose.test.ts` (6) : parcours de l'union, priorite du registre,
+vacuite appliquee, completude CONSOMMEE jamais recalculee, zero appel de modele. Prouve
+rouge en retirant le complement.
+
+## v6.27.367 — feat(ops): savoir si les embeddings marchent, en une requete (2026-07-29)
+
+Constat d'exploitation : **rien dans le produit ne disait si l'etage embeddings fonctionne.**
+La seule facon de l'apprendre etait de lire les journaux du conteneur en esperant qu'un
+appel passe au bon moment. Consequence vecue le jour meme — un `EMBED_SERVICE_URL` pointant
+sur un nom d'hote injoignable est reste invisible, puis a coute plusieurs redemarrages de
+production a diagnostiquer **a l'aveugle** : changer une variable, redemarrer, relire les
+journaux, recommencer.
+
+`GET /api/admin/embed-check` (garde `CRON_SECRET`) rend trois choses. **La configuration** :
+hote de l'endpoint (jamais une cle — seules leur presence est rapportee), modele, cles
+posees ou absentes. **Une sonde de joignabilite brute** sur `/api/tags`, AVANT le Gateway :
+elle distingue « le nom d'hote ne resout pas / le port est ferme » (panne d'infrastructure)
+de « l'endpoint repond mais refuse » (configuration ou quota). **Un vrai embedding** sur une
+chaine minuscule, par le chemin que le produit emprunte : fournisseur retenu, modele,
+dimension, duree — ou le message d'erreur exact.
+
+L'interpretation est ecrite dans la reponse : `provider: "none"` + dimension 0 est une
+**degradation honnete** (ADR-0108), pas une panne — le produit tourne en repli deterministe.
+Une exception, en revanche, est un defaut du Gateway, pas de l'infrastructure.
+
 ## v6.27.366 — fix(seshat): retirer un document laissait son index derrière (2026-07-28)
 
 Trouvé en préparant le retrait des cinq sources SPAWT polluées en base64 :
