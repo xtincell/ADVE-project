@@ -48,6 +48,40 @@ describe("aucune valeur déclarée n'est invisible", () => {
   });
 });
 
+describe("une marque inexistante n'a pas de livre", () => {
+  /**
+   * Constaté en production le 2026-07-29 : appelé sur un identifiant qui
+   * n'existe pas, le composeur rendait un document parfaitement plausible —
+   * « Marque », 0/46, « rien de déclaré sur ce volet ». Atteignable par un
+   * identifiant périmé (marque supprimée, onglet resté ouvert) ou une faute de
+   * frappe d'opérateur.
+   *
+   * Décrire avec aplomb une marque qui n'existe pas est de la même famille que
+   * combler un trou : ça a juste l'air d'un vide honnête.
+   */
+  it("le composeur rend `null` au lieu d'un livre vide plausible", () => {
+    expect(SRC).toMatch(/Promise<BrandBibleDocument \| null>/);
+    expect(SRC).toMatch(/if \(!strategy\) return null;/);
+  });
+
+  it("le nom de marque n'est plus un repli inventé", () => {
+    // `strategy?.name ?? "Marque"` produisait le nom de couverture du livre
+    // fantôme. Le nom vient désormais d'une marque dont l'existence est établie.
+    expect(SRC).not.toMatch(/\?\?\s*"Marque"/);
+    expect(SRC).toMatch(/brandName:\s*strategy\.name/);
+  });
+
+  it("les deux surfaces refusent, chacune dans sa langue", () => {
+    const router = readFileSync(join(ROOT, "src/server/trpc/routers/brand-bible.ts"), "utf8");
+    expect(router).toMatch(/code:\s*"NOT_FOUND"/);
+    const pdf = readFileSync(
+      join(ROOT, "src/server/services/value-report-generator/brand-bible-pdf.ts"),
+      "utf8",
+    );
+    expect(pdf).toMatch(/if \(!bible\) throw new Error/);
+  });
+});
+
 describe("le livre ne fabrique aucune mesure", () => {
   it("la complétude est CONSOMMÉE, jamais recalculée", () => {
     // `completionPct` (contrats de maturité) est le chiffre montré partout

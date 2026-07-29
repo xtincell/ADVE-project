@@ -7,6 +7,7 @@
  */
 
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { createTRPCRouter } from "../init";
 import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { composeBrandBible } from "@/server/services/brand-bible/compose";
@@ -20,7 +21,13 @@ export const brandBibleRouter = createTRPCRouter({
         includeDerived: z.boolean().optional().default(false),
       }),
     )
-    .query(async ({ input }) =>
-      composeBrandBible(input.strategyId, { includeDerived: input.includeDerived }),
-    ),
+    .query(async ({ input }) => {
+      const doc = await composeBrandBible(input.strategyId, {
+        includeDerived: input.includeDerived,
+      });
+      // Marque inexistante ≠ marque vide : sans ce refus, un identifiant périmé
+      // rendait un livre plausible sur une marque qui n'existe pas.
+      if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Marque introuvable" });
+      return doc;
+    }),
 });
