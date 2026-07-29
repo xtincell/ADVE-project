@@ -1,5 +1,32 @@
 # Changelog — La Fusee
 
+## v6.27.372 — docs(governance): la recherche sémantique est rétablie, et le protocole ops apprend (2026-07-29)
+
+Documentation seule. Deux registres remis sur les faits.
+
+**RESIDUAL-DEBT — deux lignes CLOSES, une ouverte honnêtement.** L'entrée « relever le
+conteneur `ollama-embed` » décrivait un blocage et une hypothèse d'OOM ; les deux étaient
+faux. Diagnostic réel : le conteneur **n'existait pas**, et `docker compose up` échouait sur
+un **réseau externe fantôme introduit par mon propre PATCH de compose** — donc `start`,
+`restart` et `deploy` ne pouvaient rien faire, et le statut Coolify `exited` était périmé.
+Résolu sans ressusciter un second daemon : un Ollama tournait déjà avec le modèle
+d'embedding, connecté au réseau de l'app et repointé. `retrieval: SEMANTIC` vérifié sur
+SPAWT. Reste ouverte, et dite : Motion19 et FanTribe restent en `DETERMINISTIC` — leurs
+fragments viennent du pool `SOURCE_CHUNK` legacy, dette déjà inscrite (ADR-0184).
+
+**`nefer-ops` — quatre pièges payés cette session.** (1) `restart` **ne suffit pas** pour
+une variable d'environnement : l'env d'un conteneur est figé à sa *création*, seul `deploy`
+le relit — et le symptôme (API acceptée, app redémarrée, ancienne valeur servie) ressemble
+à un cache applicatif. (2) `start`/`restart` n'agissent que sur un conteneur **existant** :
+sur un service jamais créé ils sont acceptés et ne font rien. (3) **Le statut Coolify peut
+mentir** — `exited` rapporté 45 min pour un conteneur inexistant ; ne jamais diagnostiquer
+sur le seul statut d'API. (4) Un réseau externe fantôme fait échouer `compose up` **avant**
+toute création : aucun conteneur, aucun log, rien à inspecter.
+
+Et le levier qui a débloqué le diagnostic : quand le SSH du bac à sable est refusé, le
+workflow `ops-ssh` exécute depuis un runner GitHub — indispensable ici, l'API Coolify
+n'exposant **pas** de route `logs` pour un *service* (404, contrairement aux *applications*).
+
 ## v6.27.371 — fix(seshat): « découpé » n'était pas « vectorisé », et rien ne rattrapait (2026-07-29)
 
 Trouvé en remettant les embeddings en service. Le vrai défaut n'était pas la panne — c'est
