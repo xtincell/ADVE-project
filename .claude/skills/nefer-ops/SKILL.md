@@ -77,6 +77,23 @@ curl -sS -X GET -H "Authorization: Bearer $COOLIFY_TOKEN" \
 
 **Une variable d'environnement n'est lue qu'au boot** : la poser ne suffit pas, il faut redémarrer. Et un `PATCH /envs` ne met à jour que l'existant (404 sinon) — pour créer, c'est `POST /envs`.
 
+> ⚠️ **`restart` ne suffit PAS pour une variable d'environnement** (payé le 2026-07-29).
+> L'env d'un conteneur Docker est figé **à sa création**, pas à son démarrage :
+> `POST /restart` relance le même conteneur, avec les mêmes valeurs. Seul
+> `GET /deploy?uuid=…&force=true` le **recrée** et relit l'env. Symptôme trompeur :
+> l'API accepte le `PATCH /envs`, l'app redémarre proprement, et la sonde affiche
+> toujours l'ancienne valeur — on croit à un cache applicatif.
+
+**Trois pièges Coolify déjà payés — ne pas les re-découvrir :**
+
+1. **`start`/`restart` n'agissent que sur un conteneur EXISTANT.** Sur un service dont le conteneur n'a jamais été créé (ou a été supprimé), ils sont acceptés (« queued ») et **ne font rien**. Ce qui crée le conteneur, c'est `GET /deploy?uuid=…`. Corollaire : trois « queued » sans effet ≠ un service qui refuse de démarrer.
+2. **Le statut Coolify peut MENTIR.** `status: exited` a été rapporté pendant ~45 min pour un conteneur qui **n'existait pas** (`docker inspect` → `no such object`). Ne jamais bâtir un diagnostic sur le seul statut de l'API : le confirmer côté hôte.
+3. **Un réseau externe fantôme fait échouer `compose up` AVANT toute création.** `network <nom> declared as external, but could not be found` → aucun conteneur, aucun log, rien à inspecter. Vérifier qu'un réseau déclaré `external: true` **existe** (`docker network ls`) — attention : le réseau d'une app Coolify porte souvent le nom `coolify`, PAS l'UUID de la ressource.
+
+**Quand le SSH du bac à sable est refusé** (bannière `Connection reset by peer`, alors que le proxy est sain — typiquement un plafond de connexions côté VPS) : le repli est le workflow **`ops-ssh`**, qui exécute la commande depuis un runner GitHub (egress libre). Poser une fois `secrets.VPS_SSH_KEY` (clé privée PEM) : le dispatch ne porte alors plus que la commande, et **aucune clé n'est exposée**. L'input `b64key` reste un repli d'incident — il publie la clé dans les métadonnées du run et impose sa rotation.
+
+C'est ce levier qui a permis, le 2026-07-29, de sortir d'un diagnostic bloqué : l'API Coolify n'expose **pas** de route `logs` pour un *service* (404, contrairement aux *applications*), donc sans accès hôte il n'y avait littéralement rien à lire.
+
 - **Surveiller PASSIVEMENT** la bascule via l'endpoint version (simple GET, zéro charge) — jamais `sleep` bloquant en boucle ; un timer background qui ré-réveille le turn :
   ```bash
   curl -sS --max-time 15 https://powerupgraders.com/api/version   # → {"version":"6.27.XYZ"}
