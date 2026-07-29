@@ -66,7 +66,7 @@ export function RecalculateRtisButton({
       // ADR-0030 Axe 3 — gate RTIS_CASCADE friendly error.
       const raw = err.message ?? "Erreur lors de l'actualisation";
       const friendly = raw.includes("readiness/RTIS_CASCADE") || raw.includes("ReadinessVetoError")
-        ? "ADVE pas prêt — A/D/V/E doivent être au moins ENRICHED. Compléter le socle d'abord (page identité/positionnement/offre/engagement)."
+        ? "Fondations incomplètes — renseignez d'abord votre identité, votre positionnement, votre offre et votre engagement."
         : raw;
       setFeedback({ kind: "err", msg: friendly });
     },

@@ -35,6 +35,20 @@ export interface OracleSectionCardProps {
   lastError?: { errorCode?: string | null; errorMessage?: string | null } | null;
   /** Section a une dépendance amont mutée (UI badge stale-aware). */
   isStale?: boolean;
+  /**
+   * Matière réellement présente dans la section — mesure **distincte** de
+   * `dbStatus`, qui ne décrit que le cycle de vie de la génération.
+   *
+   * Les deux se contredisent légitimement : une section peut avoir été générée
+   * (`COMPLETE`) tout en restant `partial` en contenu. Elles étaient jusqu'ici
+   * rendues dans DEUX grilles empilées, avec la même pastille verte et le même
+   * mot « Complète » — sur SPAWT, la grille du haut disait 35/35 pendant que
+   * celle du bas disait 21 complètes, 13 partielles, 1 vide.
+   *
+   * Une seule grille désormais, et chaque fait porte son propre nom.
+   * `undefined` = non mesuré, on n'affiche rien (jamais « vide » par défaut).
+   */
+  contentFill?: "complete" | "partial" | "empty";
   /** Disable le bouton si l'opérateur n'a pas le droit ou si une autre op est en cours. */
   disabled?: boolean;
   /** Click "Générer" / "Régénérer" / "Retry" — caller émet le tRPC mutation. */
@@ -49,6 +63,32 @@ const TIER_CHIPS: Record<OracleSectionCardProps["tier"], string> = {
   DISTINCTIVE: "bg-accent/10 text-accent border-accent/30",
 };
 
+/**
+ * Matière de la section — vocabulaire volontairement DISJOINT de celui du cycle
+ * de génération (« Complète » / « Échec » / « Périmée »…). Deux mesures qui se
+ * ressemblent sont deux mesures qu'on confond.
+ */
+const CONTENT_FILL_CHIPS: Record<
+  NonNullable<OracleSectionCardProps["contentFill"]>,
+  { label: string; className: string; title: string }
+> = {
+  complete: {
+    label: "complète",
+    className: "text-success",
+    title: "La section dit tout ce qu'elle a à dire.",
+  },
+  partial: {
+    label: "à approfondir",
+    className: "text-warning",
+    title: "La section a été rédigée mais reste incomplète — il lui manque de la matière.",
+  },
+  empty: {
+    label: "sans contenu",
+    className: "text-foreground-muted",
+    title: "La section ne contient encore rien d'exploitable.",
+  },
+};
+
 export function OracleSectionCard(props: OracleSectionCardProps): React.ReactElement {
   const {
     sectionNumber,
@@ -60,6 +100,7 @@ export function OracleSectionCard(props: OracleSectionCardProps): React.ReactEle
     confidence,
     lastError,
     isStale,
+    contentFill,
     disabled,
     onAction,
     onShowError,
@@ -91,11 +132,21 @@ export function OracleSectionCard(props: OracleSectionCardProps): React.ReactEle
         </div>
         <div className="mt-0.5 flex items-center gap-2 text-2xs text-foreground-muted">
           <span className={`font-medium ${visual.color}`}>{visual.label}</span>
+          {/* La matière, dite à part du cycle de génération — « générée » et
+              « nourrie » ne sont pas le même fait. */}
+          {contentFill ? (
+            <span
+              className={CONTENT_FILL_CHIPS[contentFill].className}
+              title={CONTENT_FILL_CHIPS[contentFill].title}
+            >
+              · {CONTENT_FILL_CHIPS[contentFill].label}
+            </span>
+          ) : null}
           {effectivePhase === "completed" && typeof confidence === "number" && (
-            <span>· conf {confidence.toFixed(2)}</span>
+            <span title="Estimation de fiabilité de la rédaction de cette section.">· fiabilité {Math.round(confidence * 100)}&nbsp;%</span>
           )}
           {isStale && effectivePhase !== "generating" && (
-            <span className="text-warning">· un pilier amont a muté</span>
+            <span className="text-warning">· un pilier source a changé</span>
           )}
         </div>
       </div>
@@ -156,7 +207,7 @@ function getVisual(phase: ReturnType<typeof resolveEffectivePhase>, isStale: boo
       color: "text-info",
       bg: "bg-info/15",
       border: "border-info/40",
-      label: "Génération en cours",
+      label: "Rédaction en cours",
     };
   }
   if (phase === "completed") {
@@ -165,7 +216,7 @@ function getVisual(phase: ReturnType<typeof resolveEffectivePhase>, isStale: boo
       color: "text-success",
       bg: "bg-success/10",
       border: "border-success/30",
-      label: isStale ? "Complète (périmée)" : "Complète",
+      label: "Rédigée",
     };
   }
   if (phase === "failed") {
@@ -174,7 +225,7 @@ function getVisual(phase: ReturnType<typeof resolveEffectivePhase>, isStale: boo
       color: "text-error",
       bg: "bg-error/15",
       border: "border-error/40",
-      label: "Échec",
+      label: "Échec de rédaction",
     };
   }
   if (phase === "stale") {
@@ -183,7 +234,7 @@ function getVisual(phase: ReturnType<typeof resolveEffectivePhase>, isStale: boo
       color: "text-warning",
       bg: "bg-warning/10",
       border: "border-warning/30",
-      label: "Périmée",
+      label: "À réactualiser",
     };
   }
   return {
@@ -191,7 +242,7 @@ function getVisual(phase: ReturnType<typeof resolveEffectivePhase>, isStale: boo
     color: "text-foreground-muted",
     bg: "bg-background/30",
     border: "border-border",
-    label: "En attente",
+    label: "À produire",
   };
 }
 
@@ -219,7 +270,7 @@ function getButtonConfig(
   if (phase === "failed" || dbStatus === "FAILED") {
     return {
       Icon: RefreshCw,
-      label: "Retry",
+      label: "Réessayer",
       mode: "RETRY",
       title: "Reprendre après échec (mode RETRY)",
       className: "border-error/40 bg-error/20 text-error hover:bg-error/40",
@@ -239,7 +290,7 @@ function getButtonConfig(
       Icon: RefreshCw,
       label: "Régénérer",
       mode: "REGEN",
-      title: "Régénère cette section (mode REGEN)",
+      title: "Réécrit entièrement cette section.",
       className: "border-border bg-background text-foreground-secondary hover:bg-surface-raised",
     };
   }

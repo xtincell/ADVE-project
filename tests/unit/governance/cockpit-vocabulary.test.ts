@@ -63,6 +63,25 @@ const FORBIDDEN: Array<{ name: string; re: RegExp }> = [
   { name: "réf ADR", re: /\bADR-\d{4}\b/ },
   { name: "function-calling", re: /function-calling/ },
   { name: "RTIS (Lot 0 — ADR-0123)", re: /\bADVE-RTIS\b|\bRTIS\b/ },
+  /**
+   * Valeurs d'énumération rendues telles quelles.
+   *
+   * Le verrou attrapait la mythologie et les réfs internes, pas les états
+   * bruts du modèle de données — et c'est par là que le jargon revenait.
+   * Relevé le 2026-07-29 sur le LIVRABLE PHARE (`/cockpit/brand/proposition`),
+   * lu par le porteur de marque : « Manquantes (PENDING) », « REGEN forcé même
+   * sur sections COMPLETE », « Périmées (STALE / FAILED) », « Complétez A·D·V·E
+   * (au moins ENRICHED) ». Aucun de ces mots ne veut dire quoi que ce soit
+   * hors du code.
+   *
+   * Seules les occurrences DANS une phrase sont visées : un littéral qui n'est
+   * QUE l'identifiant (`"PENDING"`, comparaison de statut) est déjà exclu par
+   * `IDENTIFIER_CHUNK`.
+   */
+  {
+    name: "état interne brut rendu au client",
+    re: /\b(PENDING|GENERATING|COMPLETE|FAILED|STALE|REGEN|ENRICHED|DRAFT|ACTIVE|ARCHIVED)\b/,
+  },
 ];
 
 /**
@@ -72,6 +91,29 @@ const FORBIDDEN: Array<{ name: string; re: RegExp }> = [
  * comparaisons de kinds ou de messages d'erreur.
  */
 const IDENTIFIER_CHUNK = /RTIS_|_RTIS|readiness\/|^["'`][A-Z][A-Z0-9_]{2,}["'`]$/;
+
+/**
+ * Chaînes de CLASSES CSS — jamais lues par un humain.
+ *
+ * Un gabarit de `className` contient couramment une comparaison de statut
+ * (`${d.status === "PENDING" ? "text-success" : …}`) : le littéral entier
+ * remonte alors comme un seul morceau et déclenche un faux positif sur les
+ * états internes. On les écarte à la signature Tailwind, jamais au nom de
+ * fichier — un vrai texte n'a pas de `rounded-full px-2 py-0.5`.
+ */
+const CSS_CLASS_CHUNK =
+  /\b(?:rounded-|text-\[?(?:xs|sm|base|lg|xl|2xs)|bg-|border-|px-\d|py-\d|h-\d|w-\d|flex-|gap-\d|font-(?:medium|semibold|bold)|tracking-|shrink-0)/;
+
+/**
+ * Morceaux qui sont du CODE, pas de la prose.
+ *
+ * L'extracteur ratisse large (littéraux + texte JSX) : il capte donc aussi des
+ * fragments d'expression — `r.status === "PENDING"`, `.filter(n => …)`. Une
+ * phrase destinée à l'écran ne contient ni `===`, ni `=>`, ni `.status`.
+ * Sans ce discriminant, le motif « état interne » serait noyé de faux positifs
+ * et finirait allowlisté par lassitude — c'est-à-dire désarmé.
+ */
+const CODE_CHUNK = /===|!==|=>|\.status\b|\.filter\(|\.map\(|\?\?|&&/;
 
 function walk(dir: string, acc: string[] = []): string[] {
   if (!existsSync(dir)) return acc;
@@ -149,7 +191,7 @@ describe("Marketing — vocabulaire lead (audit 2026-07-16)", () => {
       const rel = relative(ROOT, file);
       const src = stripComments(readFileSync(file, "utf-8"));
       for (const { chunk, line } of renderableChunks(src)) {
-        if (IDENTIFIER_CHUNK.test(chunk)) continue;
+        if (IDENTIFIER_CHUNK.test(chunk) || CSS_CLASS_CHUNK.test(chunk) || CODE_CHUNK.test(chunk)) continue;
         for (const { name, re } of MARKETING_FORBIDDEN) {
           const m = chunk.match(re);
           if (m) violations.push(`${rel}:${line} [${name}] → ${m[0]} dans ${chunk.slice(0, 80)}`);
@@ -177,7 +219,7 @@ describe("Cockpit — vocabulaire client (lot 11, T1)", () => {
       if (OPERATOR_GATED_ALLOWLIST.includes(rel)) continue;
       const src = stripComments(readFileSync(file, "utf-8"));
       for (const { chunk, line } of renderableChunks(src)) {
-        if (IDENTIFIER_CHUNK.test(chunk)) continue;
+        if (IDENTIFIER_CHUNK.test(chunk) || CSS_CLASS_CHUNK.test(chunk) || CODE_CHUNK.test(chunk)) continue;
         for (const { name, re } of FORBIDDEN) {
           const m = chunk.match(re);
           if (m) violations.push(`${rel}:${line} [${name}] → ${m[0]} dans ${chunk.slice(0, 80)}`);
@@ -205,7 +247,7 @@ describe("Cockpit — vocabulaire client (lot 11, T1)", () => {
       if (OPERATOR_GATED_ALLOWLIST.includes(rel)) continue;
       const src = stripComments(readFileSync(file, "utf-8"));
       for (const { chunk, line } of renderableChunks(src)) {
-        if (IDENTIFIER_CHUNK.test(chunk)) continue;
+        if (IDENTIFIER_CHUNK.test(chunk) || CSS_CLASS_CHUNK.test(chunk) || CODE_CHUNK.test(chunk)) continue;
         const m = chunk.match(MISSING_ACCENT);
         if (m) violations.push(`${rel}:${line} → « ${m[0]} » dans ${chunk.slice(0, 80)}`);
       }

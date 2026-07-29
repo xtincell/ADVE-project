@@ -1260,7 +1260,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-warning" />
-              <span className="text-sm font-semibold text-warning" title="PENDING + ACCEPTED (en attente d'apply)">
+              <span className="text-sm font-semibold text-warning" title="Propositions reçues et acceptées, pas encore appliquées à votre marque">
                 {totalPendingADVE} reco(s) ADVE en attente de traitement
               </span>
             </div>
