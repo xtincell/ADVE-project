@@ -108,6 +108,14 @@ const MAX_CITATIONS_PER_SECTION = 3;
 /**
  * Compose le livre de marque d'une stratégie.
  *
+ * Rend `null` quand la marque **n'existe pas** — à distinguer d'une marque qui
+ * existe et n'a rien déclaré. Sans cette distinction, un identifiant périmé
+ * (marque supprimée, onglet resté ouvert) ou une faute de frappe d'opérateur
+ * produisait un livre parfaitement plausible : « Marque », 0/46, « rien de
+ * déclaré sur ce volet ». Un document de référence qui décrit avec aplomb une
+ * marque inexistante est un mensonge de la même famille que combler un trou —
+ * il a juste l'air d'un vide honnête. Constaté le 2026-07-29 en production.
+ *
  * @param opts.includeDerived Inclure les piliers dérivés R/T/I/S (diagnostic).
  *        Par défaut on ne publie que le socle fondateur A/D/V/E : c'est lui qui
  *        fait référence ; le reste est un outil de lecture, pas une déclaration.
@@ -115,13 +123,15 @@ const MAX_CITATIONS_PER_SECTION = 3;
 export async function composeBrandBible(
   strategyId: string,
   opts: { includeDerived?: boolean } = {},
-): Promise<BrandBibleDocument> {
+): Promise<BrandBibleDocument | null> {
   const includeDerived = opts.includeDerived ?? false;
 
   const [strategy, pillars] = await Promise.all([
     db.strategy.findUnique({ where: { id: strategyId }, select: { name: true } }),
     db.pillar.findMany({ where: { strategyId }, select: { key: true, content: true } }),
   ]);
+
+  if (!strategy) return null;
 
   const byKey = new Map(
     pillars.map((p) => [p.key.toLowerCase(), (p.content ?? {}) as Record<string, unknown>]),
@@ -228,7 +238,7 @@ export async function composeBrandBible(
 
   return {
     strategyId,
-    brandName: strategy?.name ?? "Marque",
+    brandName: strategy.name,
     generatedAt: new Date(),
     sections,
     coverage: {

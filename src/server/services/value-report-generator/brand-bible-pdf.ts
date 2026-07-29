@@ -107,6 +107,9 @@ export async function exportComposedBrandBibleAsPdf(
 ): Promise<BrandBiblePdfResult> {
   const { composeBrandBible } = await import("@/server/services/brand-bible/compose");
   const bible = await composeBrandBible(strategyId, { includeDerived: opts?.includeDerived });
+  // Marque inexistante : on refuse d'imprimer un PDF de référence sur une marque
+  // qui n'existe pas — il aurait l'air d'un livre honnêtement vide.
+  if (!bible) throw new Error(`brand-bible: marque ${strategyId} introuvable`);
   const theme = opts?.themeOverride ?? (await resolveBrandTheme(strategyId));
 
   const doc = new jsPDF({ orientation: "landscape", unit: "px", format: [W, H] });

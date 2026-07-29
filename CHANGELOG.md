@@ -1,5 +1,39 @@
 # Changelog — La Fusee
 
+## v6.27.370 — fix(oracle): une marque inexistante n'a pas de livre de marque (2026-07-29)
+
+Trouvé en vérifiant v6.27.369 en production, sur un identifiant de marque erroné (une
+faute de frappe de ma part) : `composeBrandBible` rendait un document **parfaitement
+plausible** — couverture au nom de « Marque », `0/46 éléments renseignés`, et sur chaque
+volet « Rien de déclaré sur ce volet — 13 éléments à renseigner ».
+
+Rien dans cette page ne disait que la marque n'existait pas. Elle avait l'aspect d'un
+livre honnêtement vide, celui d'une marque qui vient d'ouvrir son compte.
+
+C'est la même famille que combler un trou, prise par l'autre bout : le livre de marque
+([ADR-0185](docs/governance/adr/0185-composed-brand-bible-rank-2-anchor.md)) sert de
+**référence** — il est le rang 2 de la cascade d'ancrage, ce qui fait foi quand aucun
+document ne parle d'un champ. Un document de référence qui décrit avec aplomb une marque
+inexistante est exactement ce que l'ancrage documentaire cherche à empêcher.
+
+Chemins réels : un identifiant périmé (marque supprimée, onglet resté ouvert) ou une
+faute de frappe d'opérateur — le god-mode ADMIN passant outre le cadrage par marque.
+
+- `composeBrandBible` rend désormais `BrandBibleDocument | **null**` : marque inexistante
+  et marque vide cessent d'être le même objet. Le repli `strategy?.name ?? "Marque"` —
+  qui fabriquait le nom de couverture du livre fantôme — disparaît.
+- Les **deux** surfaces refusent, chacune dans sa langue : la vue HTML par un `NOT_FOUND`
+  tRPC, l'export PDF en levant plutôt qu'en imprimant un livre de référence sur une marque
+  qui n'existe pas.
+
+3 tests ajoutés à `brand-bible-compose` (9 au total), **vus rouges** sur réintroduction du
+défaut exact puis verts après restauration. 0 modèle · 0 migration · 0 Intent kind ·
+0 LLM · cap APOGEE 7/7 préservé.
+
+**Vérifié en production** (v6.27.369, service d'embeddings éteint) sur trois marques
+réelles : SPAWT 200/1 279 ms 97/99 3 documents · Motion19 200/928 ms 97/99 1 document ·
+FanTribe 200/539 ms 9/55 1 document — toutes en `retrieval: DETERMINISTIC`.
+
 ## v6.27.369 — fix(llm-gateway): un embedding qui pend n'emporte plus la page (2026-07-29)
 
 Constaté **en production**, dans l'heure qui a suivi la mise en ligne de v6.27.368. Les
