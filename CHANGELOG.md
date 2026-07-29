@@ -37,6 +37,16 @@ critique ») ; défaut d'appel (400, schéma) → l'exception remonte.
 2 tests ajoutés à `read-path-degrades-never-breaks` (12 au total). 0 modèle · 0 migration ·
 0 Intent kind · 0 LLM · cap APOGEE 7/7 préservé.
 
+**Méthode (`nefer-ship` §5-bis.2, 4ᵉ piège déjà payé)** — en vérifiant ce correctif, un
+contrôle `curl` + grep de marqueur a rendu trois « KO » sur des pages parfaitement saines.
+Cause : la plupart des pages cockpit sont `"use client"` et peuplent leur corps par tRPC
+**après** hydratation — le HTML rendu-serveur ne contient jamais leurs titres de section.
+L'absence d'un marqueur n'y prouve donc rien, et sa présence peut venir de la barre de
+navigation : deux mensonges symétriques. Pour une page cliente, la preuve serveur est **la
+procédure tRPC qu'elle appelle** ; le rendu, lui, exige un vrai navigateur — et quand
+celui-ci n'est pas atteignable, on le dit (§5-bis.4) au lieu de faire passer un test HTTP
+pour une vérification d'écran.
+
 ## v6.27.368 — fix(brand-bible): le livre masquait les champs hors registre (2026-07-29)
 
 Trouve **en production**, sur SPAWT, en appelant le composeur sous une session reelle
