@@ -212,6 +212,37 @@ const COUNTRY_DEMONYMS: Record<string, string[]> = {
 };
 
 /** Villes majeures par ISO-2 — exportées pour les requêtes géo-scopées (presse). */
+/**
+ * Population par marché, en ORDRE DE GRANDEUR (millions, arrondi) — borne de
+ * vraisemblance pour les audiences relevées, jamais une donnée démographique
+ * à publier.
+ *
+ * Mesuré 2026-07-30 : « Orange Cameroun » remontait 31 737 324 abonnés
+ * Facebook pour un pays de ~28 M d'habitants — le compte du groupe Orange,
+ * pas celui du marché camerounais. Sans cette borne, le score social du
+ * client était calculé sur une audience qui ne lui appartient pas.
+ *
+ * Statique et volontairement grossier : une valeur périmée de 10 % ne change
+ * rien à un verdict qui ne se déclenche que sur l'absurde. Mêmes marchés que
+ * `COUNTRY_CITIES` ci-dessous — un pays absent désactive simplement la garde.
+ */
+export const COUNTRY_POPULATION: Record<string, number> = {
+  CM: 28_000_000,
+  CI: 29_000_000,
+  SN: 18_000_000,
+  FR: 68_000_000,
+  MA: 37_000_000,
+  NG: 223_000_000,
+  GH: 34_000_000,
+  TN: 12_000_000,
+  CD: 102_000_000,
+  BJ: 13_000_000,
+  TG: 9_000_000,
+  GA: 2_400_000,
+  BF: 23_000_000,
+  ML: 23_000_000,
+};
+
 export const COUNTRY_CITIES: Record<string, string[]> = {
   CM: ["douala", "yaounde"],
   CI: ["abidjan"],

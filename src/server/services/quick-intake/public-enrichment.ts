@@ -34,6 +34,7 @@ import {
 import { admitSignal } from "@/server/services/seshat/signal-gateway";
 import {
   COUNTRY_CITIES,
+  COUNTRY_POPULATION,
   assessNameExtension,
   assessHandleExtension,
   compactTextHasDiscriminant,
@@ -372,6 +373,20 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
         Math.min(12_000, Math.max(3_000, Math.floor(budgetMs * 0.4)), remaining()),
         footprint,
       );
+
+      // Domaine du GROUPE vs domaine du MARCHÉ (audit 2026-07-30) : « Burger
+      // King » scoré sur la Côte d'Ivoire retenait `burgerking.com` et
+      // créditait 31,7 ans d'ancienneté au franchisé ivoirien. Le site est
+      // bien celui de la marque — son âge et son e-mail sont ceux du groupe.
+      // On le marque ici ; le score cesse alors de porter ces deux signaux au
+      // crédit du marché local, sans rien retirer au site lui-même.
+      if (footprint.site) {
+        const { looksLikeGroupDomain, hostOf } = await import("./web-footprint");
+        const host = hostOf(footprint.site.url);
+        if (host && looksLikeGroupDomain(host, countryCodeGuess(input.country), gate.discriminants)) {
+          footprint.site.groupDomain = true;
+        }
+      }
     } catch (err) {
       errors.push(`footprint: ${err instanceof Error ? err.message : String(err)}`);
     }
@@ -604,7 +619,30 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
       switch (result.state) {
         case "LIVE": {
           apifyStatus = "LIVE";
+          // Vraisemblance (audit 2026-07-30) : un compte rattaché à UN marché
+          // ne peut pas compter plus d'abonnés que ce marché n'a d'habitants.
+          // Mesuré : « Orange Cameroun » remontait 31 737 324 abonnés pour
+          // ~28 M d'habitants — le compte du GROUPE. Sans cette borne, le
+          // score social du client se calculait sur une audience qui ne lui
+          // appartient pas. Le relevé est écarté, pas remplacé : l'audience
+          // devient « non relevée », un état honnête.
+          const marketPopulation = COUNTRY_POPULATION[countryCodeGuess(input.country) ?? ""] ?? null;
           for (const d of result.data) {
+            const v = admitSignal({
+              kind: "social",
+              gate,
+              source: "DIRECT_LOOKUP",
+              candidateName: d.handle,
+              evidence: `${d.handle} ${input.companyName}`,
+              claimedMagnitude: d.followerCount,
+              marketPopulation,
+            });
+            if (!v.admitted && v.reason === "REJECTED_IMPLAUSIBLE") {
+              errors.push(
+                `audience écartée (${d.platform} @${d.handle}) : ${d.followerCount} abonnés pour un marché de ${marketPopulation} habitants`,
+              );
+              continue;
+            }
             followerCounts.push({
               platform: d.platform,
               handle: d.handle,

@@ -176,7 +176,14 @@ export function computeFootprintScore(f: EnrichedFootprint): FootprintScore {
   }
 
   // ── Email pro (10) ──
-  if (f.emailInfra?.status === "LIVE") {
+  // Même raison que la maturité du domaine : le Google Workspace du groupe
+  // n'est pas l'infrastructure e-mail du franchisé local.
+  if (f.site?.groupDomain) {
+    dims.push({
+      key: "email", label: "Email professionnel", weight: 10, measured: false, score: null,
+      details: "infrastructure du groupe, pas de votre marché — non comptée",
+    });
+  } else if (f.emailInfra?.status === "LIVE") {
     let s = 0;
     const parts: string[] = [];
     if (f.emailInfra.hasMx) { s += 50; parts.push(f.emailInfra.mxProvider ?? "MX"); }
@@ -197,7 +204,17 @@ export function computeFootprintScore(f: EnrichedFootprint): FootprintScore {
   }
 
   // ── Maturité domaine (5) ──
-  if (f.domain?.status === "LIVE" && f.domain.ageYears !== null) {
+  // Domaine du GROUPE (audit 2026-07-30) : `burgerking.com` a 31,7 ans, mais
+  // le franchisé d'Abidjan n'a pas trente ans de présence en ligne. Quand un
+  // marché est déclaré et que le domaine retenu est celui du groupe,
+  // l'ancienneté n'est pas portée à son crédit — dimension NON mesurée, avec
+  // la raison dite (jamais un zéro qui ferait croire à une faiblesse).
+  if (f.site?.groupDomain) {
+    dims.push({
+      key: "domain", label: "Maturité du domaine", weight: 5, measured: false, score: null,
+      details: "domaine du groupe, pas de votre marché — ancienneté non comptée",
+    });
+  } else if (f.domain?.status === "LIVE" && f.domain.ageYears !== null) {
     dims.push({
       key: "domain", label: "Maturité du domaine", weight: 5, measured: true,
       score: clamp((f.domain.ageYears / 10) * 100),
