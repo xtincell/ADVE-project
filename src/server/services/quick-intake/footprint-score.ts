@@ -115,7 +115,20 @@ export function computeFootprintScore(f: EnrichedFootprint): FootprintScore {
       dims.push({ key: "reviews", label: "Avis Google", weight: 15, measured: true, score: 0, details: "aucune fiche Google Business trouvée" });
     }
   } else {
-    dims.push({ key: "reviews", label: "Avis Google", weight: 15, measured: false, score: null, details: "collecteur non configuré" });
+    // Détail HONNÊTE de la raison (boucle adversariale 2026-07-30) : « non
+    // configuré » était affiché pour TOUS les cas non-LIVE — y compris quand
+    // la clé EST posée et que l'actor a bel et bien tourné, mais que la
+    // RÉCOLTE a expiré dans la fenêtre du scan. Mesuré : run Apify
+    // `SUCCEEDED` à 14:52 pendant que le rapport annonçait « collecteur non
+    // configuré ». Même classe de mensonge que le « nécessite votre site »
+    // affiché alors que le site était fourni (corrigé le 2026-07-16).
+    dims.push({
+      key: "reviews", label: "Avis Google", weight: 15, measured: false, score: null,
+      details:
+        f.maps?.status === "ERROR"
+          ? "relevé des avis en échec, réessayez"
+          : "collecteur non configuré",
+    });
   }
 
   // ── Presse (10) — mesurée dès que le flux a tourné (press défini) ──

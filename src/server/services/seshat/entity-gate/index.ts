@@ -49,6 +49,32 @@ export function mentionsEntity(text: string, name: string): boolean {
 }
 
 /**
+ * Variante HANDLE d'`assessNameExtension`. Un handle est collé et sans
+ * espaces (`dovvmusic`, `irawostudio`, `chococamfmcg`) : la frontière de mot
+ * n'existe pas, la fonction ci-dessous serait donc toujours `unrelated`.
+ *
+ * Trouvé par la boucle adversariale 2026-07-30 : après avoir fermé
+ * l'extension de nom sur les hosts et les fiches Maps, le canal SOCIAL
+ * restait ouvert — « Dovv » captait `@dovvmusic`. Même classe de défaut, un
+ * canal de moins.
+ *
+ * - `exact`    : le handle EST le slug (`@dovv`).
+ * - `extended` : le handle commence par le slug et ajoute autre chose.
+ * - `unrelated`: le handle ne commence pas par le slug.
+ */
+export function assessHandleExtension(
+  handle: string,
+  brandName: string,
+): "exact" | "extended" | "unrelated" {
+  const compact = (s: string) => normalizeEntityText(s).replace(/[^a-z0-9]/g, "");
+  const h = compact(handle);
+  const b = compact(brandName);
+  if (!h || !b || b.length < 3) return "unrelated";
+  if (h === b) return "exact";
+  return h.startsWith(b) ? "extended" : "unrelated";
+}
+
+/**
  * Formes juridiques et liants neutres : les seuls mots qu'une raison sociale
  * peut AJOUTER au nom de marque sans devenir une autre entité (« Chococam
  * SA » est Chococam ; « Irawo Studio » ne l'est pas). Délibérément courte :
