@@ -2191,6 +2191,14 @@ model QuickIntake {
   /// (extraction | llm_unavailable | internal | timeout) — affichée
   /// honnêtement au client, jamais un état muet. Nettoyée au re-claim.
   failureReason      String?
+  /// Jalon RÉEL du traitement en cours (2026-07-30) : started | footprint |
+  /// extracted | scored | narrative. Les emitters NSP existent depuis
+  /// 2026-05-12 mais AUCUN client ne peut les lire (le SSE exige une session,
+  /// 401 pour un lead anonyme) — l'écran affichait donc une progression
+  /// simulée pendant un traitement mesuré à 264 s. Cette colonne est le canal
+  /// que `getByToken` (déjà sondé par le client) sait porter. Nettoyée au
+  /// re-claim, jamais lue comme un état terminal.
+  processingStage    String?
   convertedToId      String?
   // ADR-0029 — FK with onDelete: SetNull. The Strategy archive BFS purge
   // (cf. ADR-0028) reads information_schema for FKs and cascades DELETE on

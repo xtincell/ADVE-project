@@ -33,6 +33,7 @@ import {
 } from "./web-footprint";
 import {
   COUNTRY_CITIES,
+  assessNameExtension,
   compactTextHasDiscriminant,
   createEntityGate,
   mentionsEntity,
@@ -239,10 +240,19 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
       // affamer le probe qui suit.
       const hits = await withTimeout(acceptedHitsPromise, Math.min(5_000, remaining()), []);
       const corroboratedHosts = corroboratedHostsFromHits(hits);
+      // Un host qui ÉTEND le slug (irawostudio pour « Irawo ») n'est candidat
+      // que si son hit porte un discriminant du gate — en frontière de mot
+      // dans le texte, ou en forme compacte dans l'URL. Sans secteur/pays
+      // (déclaré ou extrait), aucune extension ne passe : mesuré 2026-07-30,
+      // le rapport d'« Irawo » (edtech) contenait la boutique de mode
+      // homonyme de Lagos.
+      const hitHasDiscriminant = (h: { url: string; title?: string; description?: string }) =>
+        gate.judge(`${h.title ?? ""} ${h.description ?? ""}`).matchedDiscriminants.length > 0 ||
+        compactTextHasDiscriminant(h.url, gate.discriminants);
       const found = await withTimeout(
         discoverOfficialSite(input.companyName, countryCodeGuess(input.country), {
           timeoutMs: 4_000,
-          extraCandidates: officialSiteCandidatesFromHits(hits, input.companyName),
+          extraCandidates: officialSiteCandidatesFromHits(hits, input.companyName, { hitHasDiscriminant }),
           corroboratedHosts,
           // Verdict entity-gate complet : pour un nom ambigu, la page candidate
           // doit co-mentionner un discriminant (secteur/pays) — `top.com` qui
@@ -282,7 +292,14 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
         );
         proposerStatus = proposal.status;
         proposedSocialUrls = proposal.socialUrls;
-        if (proposal.siteHost) {
+        // Même règle superset que les candidats déterministes : un host qui
+        // ÉTEND le slug n'est vérifiable QUE si le gate a des discriminants
+        // (la page devra en co-mentionner un) — sinon la piste est
+        // indécidable et n'est même pas testée (audit Irawo 2026-07-30).
+        const { hostLabelMatchesSlug, brandDomainSlug: slugOf } = await import("./web-footprint");
+        const proposedIsSuperset =
+          !!proposal.siteHost && !hostLabelMatchesSlug(proposal.siteHost, slugOf(input.companyName));
+        if (proposal.siteHost && (!proposedIsSuperset || gate.discriminants.length > 0)) {
           const verified = await withTimeout(
             discoverOfficialSite(input.companyName, countryCodeGuess(input.country), {
               timeoutMs: 4_000,
@@ -290,7 +307,12 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
               // LLM, on ne relance pas la devinette par slug déjà jouée.
               extraCandidates: [`https://${proposal.siteHost}`],
               corroboratedHosts,
-              validate: (pageText) => gate.judge(pageText).accepted,
+              // Superset → la page doit co-mentionner un discriminant, la
+              // mention seule ne tranche pas entre la marque et l'homonyme.
+              validate: (pageText) => {
+                const v = gate.judge(pageText);
+                return v.accepted && (!proposedIsSuperset || v.matchedDiscriminants.length > 0);
+              },
             }),
             Math.min(6_000, remaining()),
             null,
@@ -797,10 +819,25 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
         // pas le verdict (mention + discriminant si nom ambigu — « Top
         // Voyages » n'est pas le soda Top) est rejetée (NOT_FOUND honnête,
         // jamais les avis d'un autre). L'adresse participe à l'évidence.
+        //
+        // DURCISSEMENT extension-de-nom (audit intake 2026-07-30) : une fiche
+        // dont le nom ÉTEND celui de la marque par des mots de CONTENU
+        // (« Irawo Studio » pour « Irawo ») est LE motif d'homonymie —
+        // mesuré : le rapport d'une edtech contenait la fiche, la note et les
+        // avis d'une boutique de mode homonyme de Lagos. Une telle extension
+        // n'est acceptée que si la fiche porte un discriminant du gate
+        // (secteur/pays/ville) ; sans aucun discriminant disponible elle est
+        // indécidable → rejetée. Le nom exact et l'extension purement
+        // juridique (« Chococam SA ») restent acceptés sur la mention.
+        const mapsEvidence = `${maps.placeName ?? ""} ${maps.address ?? ""}`;
+        const mapsVerdict = maps.status === "LIVE" && maps.placeName ? gate.judge(mapsEvidence) : null;
+        const mapsExtension = maps.placeName
+          ? assessNameExtension(maps.placeName, input.companyName)
+          : "unrelated";
         const mapsRejected =
-          maps.status === "LIVE" &&
-          maps.placeName &&
-          !gate.judge(`${maps.placeName} ${maps.address ?? ""}`).accepted;
+          !!mapsVerdict &&
+          (!mapsVerdict.accepted ||
+            (mapsExtension === "extended" && mapsVerdict.matchedDiscriminants.length === 0));
         if (mapsRejected) filtered.maps += 1;
         enrichedExtras.maps = mapsRejected
           ? { ...maps, status: "NOT_FOUND", placeName: null, rating: null, reviewCount: null, address: null, topReviews: [] }

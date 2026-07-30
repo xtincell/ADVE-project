@@ -1,5 +1,51 @@
 # Changelog — La Fusee
 
+## v6.27.375 — fix(intake): le rapport contenait l'entreprise d'un autre (2026-07-30)
+
+Question opérateur : « *ce process est flawless ?* » — sur `/intake/[token]/ingest`.
+
+**Recette E2E du cas réel** (marque « Irawo », 117 caractères de texte libre, ni site ni
+documents ni secteur ni pays) :
+
+```
+COMPLETED en 264 s
+pilier E → fiche Google « Irawo Studio », 4,3/5, Osborne Rd, Ikoyi, Lagos, Nigeria
+           avis affiché : « I've bought two pieces from them already… »
+           touchpoints : irawostudio.com · instagram/irawostudio · tiktok/@irawostudio
+```
+
+**Le rapport livré décrivait une boutique de mode de Lagos.** L'extraction ADVE était
+pourtant honnête (5 champs, tous marqués `SOURCE`) : tout le poison venait de la collecte
+d'empreinte, qui travaillait sans le moindre discriminant.
+
+- **Le texte du prospect arme enfin le gate.** Il contenait les discriminants (« plateforme »,
+  « talents africains ») ; ils étaient extraits… puis jamais réinjectés — `complete()`
+  collectait avec `sector: null, country: null`. L'extraction rend désormais secteur et pays
+  **dans le même appel LLM** (zéro coût), et ils remplissent les colonnes **si le prospect n'a
+  rien déclaré** : la déclaration prime toujours sur l'inférence.
+- **Une extension de nom n'est plus la marque.** « Irawo Studio » mentionne authentiquement
+  « Irawo » — la mention seule ne pouvait pas trancher. Nouveau verdict : nom exact et
+  extension juridique (« Chococam SA ») restent acceptés ; une extension par mot de contenu
+  **exige un discriminant**, sinon elle est indécidable. Appliqué à la fiche Google, aux
+  candidats site et aux pistes du proposeur LLM. « Burger King Abidjan » — extension **avec**
+  discriminants — reste accepté : la règle discrimine, elle n'interdit pas.
+- **L'extraction ne lit plus que ce que le prospect a fourni.** Un appel Brave **sans aucun
+  gate**, à la requête logiquement cassée (`"X" OR site:twitter.com…`), injectait du bruit
+  homonyme au cœur du prompt — en doublon de l'appel que l'empreinte fait déjà. Supprimé. Le
+  préambule du prompt, qui annonçait « la documentation fondatrice de La Fusée » là où le
+  texte est celui du prospect, est corrigé.
+- **SSRF fermé** : `fetchUrlAsText` faisait un `fetch()` nu sur une URL utilisateur, or
+  `z.string().url()` accepte `http://10.x.x.x/…` — depuis le conteneur, cela atteint le réseau
+  docker interne. Elle passe par la garde `ssrfSafeFetch` déjà utilisée par le /scorer.
+- **L'attente ne ment plus.** Les jalons temps-réel existaient depuis mai mais **aucun client
+  ne pouvait les lire** (SSE session-only, 401 pour un lead anonyme) : l'écran affichait 7
+  étapes pilotées par un chronomètre calé sur 46 s, pour un traitement mesuré à **264 s** — on
+  voyait « Synthèse du rapport » au bout de 46 secondes, puis trois minutes d'immobilité. Le
+  serveur écrit maintenant son étape réelle, que l'écran affiche (barre plafonnée à 90 % tant
+  que la fin n'est pas lue).
+
+ADR-0188. Migration additive `QuickIntake.processingStage`. 3693 tests verts.
+
 ## v6.27.374 — fix(scorer): le score notait 100/100 sur 20 % de preuves (2026-07-30)
 
 Signalement opérateur : « *je ne peux pas mettre une marque et le système devine les champs

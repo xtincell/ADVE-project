@@ -48,6 +48,47 @@ export function mentionsEntity(text: string, name: string): boolean {
   return ` ${normalizeEntityText(text)} `.includes(` ${brand} `);
 }
 
+/**
+ * Formes juridiques et liants neutres : les seuls mots qu'une raison sociale
+ * peut AJOUTER au nom de marque sans devenir une autre entité (« Chococam
+ * SA » est Chococam ; « Irawo Studio » ne l'est pas). Délibérément courte :
+ * aucun descripteur métier (studio, shop, market…) — c'est précisément par
+ * eux que les homonymes arrivent.
+ */
+const LEGAL_NAME_WORDS = new Set<string>([
+  "sa", "sarl", "sas", "sasu", "sc", "sci", "snc", "inc", "ltd", "llc", "plc",
+  "gmbh", "srl", "spa", "co", "corp", "cie", "company", "group", "groupe",
+  "holding", "ets", "etablissements", "societe", "ste", "the", "le", "la", "les",
+]);
+
+/**
+ * Verdict d'EXTENSION DE NOM : le candidat (fiche Maps, raison sociale, page)
+ * porte-t-il le nom de la marque PLUS d'autres mots de contenu ?
+ *
+ * Mesuré 2 fois le 2026-07-30 : « Irawo » (edtech) recevait la fiche, la note
+ * et les avis d'« Irawo Studio » (mode, Lagos) ; « Dovv » adoptait
+ * dovvstudio.com. L'extension d'un nom est LE motif d'homonymie — un
+ * candidat étendu n'est décidable qu'avec un discriminant (secteur/pays).
+ *
+ * - `exact`     : même nom une fois normalisé — acceptable sur la mention.
+ * - `benign`    : n'ajoute que des formes juridiques/liants (« Chococam SA »).
+ * - `extended`  : ajoute des mots de CONTENU → exiger un discriminant.
+ * - `unrelated` : ne mentionne même pas le nom.
+ */
+export function assessNameExtension(
+  candidateName: string,
+  brandName: string,
+): "exact" | "benign" | "extended" | "unrelated" {
+  const brand = normalizeEntityText(brandName);
+  const cand = normalizeEntityText(candidateName);
+  if (!brand || !cand) return "unrelated";
+  if (cand === brand) return "exact";
+  if (!` ${cand} `.includes(` ${brand} `)) return "unrelated";
+  const brandWords = new Set(brand.split(" "));
+  const extraWords = cand.split(" ").filter((w) => !brandWords.has(w));
+  return extraWords.every((w) => LEGAL_NAME_WORDS.has(w)) ? "benign" : "extended";
+}
+
 // ── 1. PLAN — ambiguïté du nom + discriminants du contexte ─────────────
 
 /**

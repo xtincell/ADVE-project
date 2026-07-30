@@ -52,7 +52,7 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
   // jusqu'à l'état TERMINAL réel — redirection sur COMPLETED uniquement,
   // message honnête sur FAILED (retry sans rien perdre). Couvre aussi la
   // coupure réseau (row restée IN_PROGRESS = lancement perdu → « timeout »).
-  const { watching, startWatching } = useIntakeProcessingWatch(token, (outcome) => {
+  const { watching, stage, startWatching } = useIntakeProcessingWatch(token, (outcome) => {
     if (outcome.status === "COMPLETED") {
       router.push(`/intake/${token}/result`);
       return;
@@ -104,6 +104,7 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
       <IntakeProcessingScreen
         companyName={intake.companyName}
         isPending
+        stage={stage}
         errorMessage={error || undefined}
       />
     );

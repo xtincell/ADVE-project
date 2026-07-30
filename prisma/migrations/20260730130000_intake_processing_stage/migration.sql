@@ -1,0 +1,12 @@
+-- Jalon réel du traitement d'intake (audit UX 2026-07-30).
+-- Additive et backfill-safe : colonne nullable, aucun défaut, aucune donnée
+-- existante touchée. NULL se lit « jalon inconnu » — le client retombe alors
+-- sur le libellé générique, jamais sur une étape inventée.
+--
+-- POURQUOI une colonne plutôt que le stream : les emitters NSP `intake_*`
+-- existent depuis 2026-05-12 mais aucun client ne peut les consommer — le seul
+-- endpoint SSE exige une session et répond 401 à un lead anonyme. L'écran
+-- affichait donc une progression SIMULÉE pendant un traitement mesuré à 264 s.
+-- `getByToken` est déjà sondé par le client : la colonne suffit, sans nouvel
+-- endpoint ni session.
+ALTER TABLE "QuickIntake" ADD COLUMN "processingStage" TEXT;
