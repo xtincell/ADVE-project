@@ -52,6 +52,9 @@ export const scorerFr = {
   // `provisional` prime sur les paliers de niveau quand trop peu de dimensions
   // ont été mesurées : un score bâti sur une fraction du spectre s'annonce
   // comme provisoire, jamais comme un verdict établi (audit 2026-07-30).
+  "scorer.ambiguity.title": "Plusieurs entreprises peuvent porter ce nom",
+  "scorer.ambiguity.body":
+    "Sans votre secteur, nous ne pouvons pas distinguer votre marque d'une homonyme : les signaux ci-dessous reposent sur le seul nom. Ajoutez votre site pour lever le doute.",
   "scorer.verdict.provisional":
     "Score provisoire : nous n'avons pu mesurer qu'une partie de votre empreinte. Ajoutez votre site pour un score complet.",
   "scorer.cover.provisional": "provisoire",
@@ -234,6 +237,9 @@ export const scorerEn: Record<keyof typeof scorerFr, string> = {
   "scorer.scan.honesty":
     "We query everything in parallel and keep only what's verifiable — nothing is invented.",
 
+  "scorer.ambiguity.title": "Several companies may share this name",
+  "scorer.ambiguity.body":
+    "Without your sector, we cannot tell your brand apart from a namesake: the signals below rest on the name alone. Add your website to remove the doubt.",
   "scorer.verdict.provisional":
     "Provisional score: we could only measure part of your footprint. Add your website for a complete score.",
   "scorer.cover.provisional": "provisional",
@@ -403,6 +409,8 @@ export const scorerZh: Record<keyof typeof scorerFr, string> = {
   "scorer.scan.step5": "正在汇总所有发现……",
   "scorer.scan.honesty": "我们并行查询所有来源，只保留可验证的内容——绝不虚构。",
 
+  "scorer.ambiguity.title": "可能有多家公司使用该名称",
+  "scorer.ambiguity.body": "在不知道您所属行业的情况下，我们无法将您的品牌与同名者区分开：以下信号仅依据名称。请补充您的网站以消除歧义。",
   "scorer.verdict.provisional": "暂定评分：我们只能测量到您影响力的一部分。请补充您的网站以获得完整评分。",
   "scorer.cover.provisional": "暂定",
   "scorer.verdict.strong": "您的线上影响力强劲——是打造狂热品牌的良好基础。",

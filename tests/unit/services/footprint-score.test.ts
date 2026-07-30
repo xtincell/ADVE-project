@@ -255,3 +255,47 @@ describe("narratif template (déterministe, fallback du LLM)", () => {
     expect(facts.join(" ")).toContain("Aucune publicité Meta active"); // NOT_FOUND → dit
   });
 });
+
+/**
+ * Signalement opérateur 2026-07-30 : « facebook.com/orangecameroun existe
+ * pourtant — "non relevé" ne devrait être là que si ça n'existe VRAIMENT
+ * pas ». Écarter un chiffre invraisemblable est juste ; le présenter comme
+ * une absence ne l'est pas. Le compte existe, l'audience a bien été relevée,
+ * elle est simplement incohérente avec son marché.
+ */
+describe("audience relevée mais écartée ≠ audience absente", () => {
+  const withAnomaly = () =>
+    base({
+      socials: [{ platform: "FACEBOOK", url: "https://facebook.com/orangecameroun", handle: "orangecameroun" }],
+      enrichment: {
+        apify: "LIVE",
+        press: "ERROR",
+        totalMs: 0,
+        errors: [],
+        audienceAnomalies: [
+          { platform: "FACEBOOK", handle: "orangecameroun", followerCount: 31_737_324, marketPopulation: 28_000_000 },
+        ],
+      },
+    });
+
+  it("dit que l'audience a été RELEVÉE puis écartée, jamais « non relevée »", () => {
+    const social = computeFootprintScore(withAnomaly()).dimensions.find((d) => d.key === "social")!;
+    expect(social.details).toContain("incohérente avec le marché");
+    expect(social.details).toContain("écartée");
+    expect(social.details).not.toContain("non relevée");
+  });
+
+  it("le compte reste listé : il existe (seul le chiffre est écarté)", () => {
+    const social = computeFootprintScore(withAnomaly()).dimensions.find((d) => d.key === "social")!;
+    expect(social.measured).toBe(true);
+    expect(social.details).toContain("facebook");
+  });
+
+  it("sans anomalie ET sans relevé → « non relevée » reste le mot juste", () => {
+    const f = base({
+      socials: [{ platform: "FACEBOOK", url: "https://facebook.com/x", handle: "x" }],
+    });
+    const social = computeFootprintScore(f).dimensions.find((d) => d.key === "social")!;
+    expect(social.details).toContain("audience non relevée");
+  });
+});

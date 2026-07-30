@@ -118,3 +118,32 @@ describe("buildFootprintFacts", () => {
     expect(parseFootprintFacts({ pas: "des facts" })).toBeNull();
   });
 });
+
+/**
+ * Ambiguïté IRRÉDUCTIBLE (audit 2026-07-30). Mesuré : « Irawo » scoré sans
+ * secteur ni pays retombe sur une association homonyme — au nom EXACT, donc
+ * aucune règle d'extension ne peut trancher. Le rapport doit l'ANNONCER au
+ * lieu de laisser croire à une certitude.
+ */
+describe("undiscriminated — le rapport dit quand il ne peut pas trancher", () => {
+  const withGate = (discriminants: string[]) =>
+    buildFootprintFacts({
+      site: null, socials: [], articles: [], channels: [],
+      collectedAt: "2026-07-30T00:00:00Z", errors: [], followerCounts: [], press: [],
+      discovery: { attempted: true, queries: [], status: "OK" },
+      enrichment: { apify: "SKIPPED", press: "EMPTY", totalMs: 0, errors: [] },
+      entityGate: {
+        ambiguousName: false, ambiguityReason: null, discriminants,
+        judge: "DETERMINISTIC_ONLY",
+        filtered: { press: 0, discovery: 0, maps: 0, site: 0, citations: 0, adversarial: 0 },
+      },
+    });
+
+  it("aucun discriminant → le rapport le déclare", () => {
+    expect(withGate([]).undiscriminated).toBe(true);
+  });
+
+  it("un secteur ou un pays suffit à lever la déclaration", () => {
+    expect(withGate(["cameroun"]).undiscriminated).toBe(false);
+  });
+});

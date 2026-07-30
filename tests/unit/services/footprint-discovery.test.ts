@@ -63,6 +63,7 @@ import {
   looksLikeBotWall,
   officialSiteCandidatesFromHits,
   corroboratedHostsFromHits,
+  looksLikeGroupDomain,
   hostOf,
 } from "@/server/services/quick-intake/web-footprint";
 
@@ -197,5 +198,32 @@ describe("corroboration — une page qui VEND le domaine n'atteste rien", () => 
 
   it("hits sans titre ni description (forme minimale) → toujours exploitables", () => {
     expect(corroboratedHostsFromHits([{ url: "https://chococam.cm/x" }])).toEqual(["chococam.cm"]);
+  });
+});
+
+/**
+ * Domaine du GROUPE vs domaine du MARCHÉ (boucle adversariale 2026-07-30).
+ * Mesuré : « Burger King » scoré sur la Côte d'Ivoire retenait
+ * `burgerking.com` et créditait 31,7 ans d'ancienneté au franchisé ivoirien.
+ * Le site est bien celui de la marque — son âge est celui du groupe.
+ */
+describe("looksLikeGroupDomain", () => {
+  it("le .com mondial sur un marché africain déclaré → domaine de groupe", () => {
+    expect(looksLikeGroupDomain("burgerking.com", "CI", ["cote d ivoire", "abidjan"])).toBe(true);
+  });
+
+  it("le TLD du marché déclaré n'est JAMAIS un domaine de groupe", () => {
+    expect(looksLikeGroupDomain("burgerking.ci", "CI", ["cote d ivoire"])).toBe(false);
+    expect(looksLikeGroupDomain("www.chococam.cm", "CM", ["cameroun"])).toBe(false);
+  });
+
+  it("un .com qui porte le marché dans son host reste local", () => {
+    expect(looksLikeGroupDomain("burgerking-abidjan.com", "CI", ["abidjan"])).toBe(false);
+    expect(looksLikeGroupDomain("bkcotedivoire.com", "CI", ["cote d ivoire"])).toBe(false);
+  });
+
+  it("sans marché déclaré, la question ne se pose pas", () => {
+    expect(looksLikeGroupDomain("burgerking.com", null, [])).toBe(false);
+    expect(looksLikeGroupDomain("burgerking.com", "US", [])).toBe(false); // TLD inconnu de la carte
   });
 });

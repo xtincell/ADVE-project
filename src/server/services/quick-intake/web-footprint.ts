@@ -69,6 +69,13 @@ export interface WebFootprint {
      * analyser le HTML du challenge produirait des faits faux.
      */
     botWall?: boolean;
+    /**
+     * Le site retenu est celui du GROUPE mondial, pas du marché déclaré
+     * (`burgerking.com` pour un franchisé de Côte d'Ivoire). Le site existe et
+     * porte bien la marque — mais son ancienneté et son infrastructure e-mail
+     * appartiennent au groupe : les créditer au client local serait faux.
+     */
+    groupDomain?: boolean;
     /** ADR-0121 vague A — analyse tech/SEO déterministe du site. */
     tech?: SiteTech;
   } | null;
@@ -471,6 +478,41 @@ export async function discoverOfficialSite(
  * le domaine DE la marque, pas une page qui parle d'elle.
  */
 const NON_OFFICIAL_HOST = /(^|\.)(facebook|instagram|tiktok|linkedin|twitter|x|youtube|wikipedia|wikiwand|google|bing|yahoo|amazon|ebay|tripadvisor|yelp|pagesjaunes|annuaire|glassdoor|indeed|crunchbase|bloomberg|societe|infogreffe|verif|pappers|medium|wordpress|blogspot|github|apple|play\.google|news|rss)\./i;
+
+/**
+ * Le domaine retenu est-il celui du GROUPE plutôt que du marché déclaré ?
+ *
+ * Mesuré 2026-07-30 : « Burger King » scoré sur la Côte d'Ivoire retenait
+ * `burgerking.com` et créditait **31,7 ans d'ancienneté** au franchisé
+ * ivoirien. Le site est authentiquement celui de la marque — mais son âge et
+ * son infrastructure e-mail sont ceux du groupe mondial. Un franchisé
+ * d'Abidjan n'a pas trente ans de présence en ligne.
+ *
+ * Vrai UNIQUEMENT quand un marché est déclaré, que ce marché a un TLD connu,
+ * que le host ne le porte pas, et qu'aucun discriminant du marché n'apparaît
+ * dans le host (`burgerking-ci.com`, `bk-abidjan.com` restent locaux). Pur.
+ */
+export function looksLikeGroupDomain(
+  host: string,
+  countryCode: string | null | undefined,
+  discriminants: readonly string[] = [],
+): boolean {
+  const cc = countryCode?.trim().toUpperCase();
+  const tld = cc ? COUNTRY_TLD[cc] : undefined;
+  if (!tld) return false;
+  const h = host.replace(/^www\./, "").toLowerCase();
+  if (h.endsWith(`.${tld}`)) return false;
+  return !compactHasAny(h, discriminants);
+}
+
+/** Un discriminant apparaît-il dans le host, forme compacte comprise ? */
+function compactHasAny(host: string, discriminants: readonly string[]): boolean {
+  const compact = host.replace(/[^a-z0-9]/g, "");
+  return discriminants.some((d) => {
+    const dc = d.replace(/[^a-z0-9]/g, "");
+    return dc.length >= 2 && compact.includes(dc);
+  });
+}
 
 export interface SearchHitLike {
   url: string;

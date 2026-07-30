@@ -67,6 +67,7 @@ export function computeFootprintScore(f: EnrichedFootprint): FootprintScore {
   const realCounts = f.followerCounts ?? [];
   const ytSubs = f.youtube?.status === "LIVE" && f.youtube.subscriberCount ? f.youtube.subscriberCount : 0;
   const totalAudience = realCounts.reduce((sum, c) => sum + c.followerCount, 0) + ytSubs;
+  const anomalies = f.enrichment.audienceAnomalies ?? [];
   const socialMeasured = f.socials.length > 0 || realCounts.length > 0 || ytSubs > 0;
   if (socialMeasured) {
     const presence = clamp(f.socials.length * 15, 0, 40); // multi-canal
@@ -88,7 +89,20 @@ export function computeFootprintScore(f: EnrichedFootprint): FootprintScore {
     dims.push({
       key: "social", label: "Réseaux sociaux", weight: 30, measured: true,
       score: clamp(presence + audience),
-      details: `${platforms}${totalAudience > 0 ? ` · ${new Intl.NumberFormat("fr-FR").format(totalAudience)} abonnés mesurés` : " · audience non relevée"}`,
+      // Détail HONNÊTE de l'audience (signalement opérateur 2026-07-30 :
+      // « facebook.com/orangecameroun existe pourtant — "non relevé" ne
+      // devrait être là que si ça n'existe VRAIMENT pas »). Trois états
+      // distincts, jamais confondus : mesurée · relevée puis écartée parce
+      // qu'incohérente avec le marché · réellement absente.
+      details: `${platforms}${
+        totalAudience > 0
+          ? ` · ${new Intl.NumberFormat("fr-FR").format(totalAudience)} abonnés mesurés`
+          : anomalies.length > 0
+            ? ` · audience relevée mais incohérente avec le marché (${anomalies
+                .map((a) => new Intl.NumberFormat("fr-FR").format(a.followerCount))
+                .join(", ")}) — écartée du score`
+            : " · audience non relevée"
+      }`,
     });
   } else {
     dims.push({
@@ -176,7 +190,14 @@ export function computeFootprintScore(f: EnrichedFootprint): FootprintScore {
   }
 
   // ── Email pro (10) ──
-  if (f.emailInfra?.status === "LIVE") {
+  // Même raison que la maturité du domaine : le Google Workspace du groupe
+  // n'est pas l'infrastructure e-mail du franchisé local.
+  if (f.site?.groupDomain) {
+    dims.push({
+      key: "email", label: "Email professionnel", weight: 10, measured: false, score: null,
+      details: "infrastructure du groupe, pas de votre marché — non comptée",
+    });
+  } else if (f.emailInfra?.status === "LIVE") {
     let s = 0;
     const parts: string[] = [];
     if (f.emailInfra.hasMx) { s += 50; parts.push(f.emailInfra.mxProvider ?? "MX"); }
@@ -197,7 +218,17 @@ export function computeFootprintScore(f: EnrichedFootprint): FootprintScore {
   }
 
   // ── Maturité domaine (5) ──
-  if (f.domain?.status === "LIVE" && f.domain.ageYears !== null) {
+  // Domaine du GROUPE (audit 2026-07-30) : `burgerking.com` a 31,7 ans, mais
+  // le franchisé d'Abidjan n'a pas trente ans de présence en ligne. Quand un
+  // marché est déclaré et que le domaine retenu est celui du groupe,
+  // l'ancienneté n'est pas portée à son crédit — dimension NON mesurée, avec
+  // la raison dite (jamais un zéro qui ferait croire à une faiblesse).
+  if (f.site?.groupDomain) {
+    dims.push({
+      key: "domain", label: "Maturité du domaine", weight: 5, measured: false, score: null,
+      details: "domaine du groupe, pas de votre marché — ancienneté non comptée",
+    });
+  } else if (f.domain?.status === "LIVE" && f.domain.ageYears !== null) {
     dims.push({
       key: "domain", label: "Maturité du domaine", weight: 5, measured: true,
       score: clamp((f.domain.ageYears / 10) * 100),
