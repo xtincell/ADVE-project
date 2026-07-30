@@ -341,8 +341,23 @@ async function dispatchRunner(
     }
 
     // 2. Compute vector and classification dynamically
+    //
+    // CLÉ FANTÔME corrigée le 2026-07-30 (mesurée sur SPAWT) : cette ligne
+    // cherchait parmi les piliers celui dont la clé aurait été « vector ». Ce
+    // pilier N'EXISTE PAS — les clés sont a/d/v/e/r/t/i/s. Le `find` rendait
+    // donc toujours `undefined`, le
+    // repli `createEmptyVector()` s'appliquait, et l'Executive Summary — la
+    // PREMIÈRE section du livrable payant — annonçait un score de 0 partout
+    // pour une marque dont `advertis_vector.composite` valait 160/200. La
+    // classification en héritait (`classifyBrand(0)` → palier le plus bas).
+    //
+    // La source canonique est la colonne `Strategy.advertis_vector`, que
+    // `assemblePresentation` lit correctement — cette fonction en avait une
+    // copie divergente, exactement comme l'include quelques lignes plus haut
+    // (même classe que les « lecteurs de la clé fantôme `compositeScore` »,
+    // cf. scope-drift #646).
     const { sanitizeVector, classifyBrand, createEmptyVector } = await import("@/lib/types/advertis-vector");
-    const rawVector = (strategy.pillars.find((p: any) => p.key === "vector")?.content as any) ?? createEmptyVector();
+    const rawVector = (strategy.advertis_vector as any) ?? createEmptyVector();
     const { vector } = sanitizeVector(rawVector);
     const classification = classifyBrand(vector.composite);
 

@@ -41,7 +41,22 @@ export const oracleRouter = createTRPCRouter({
   listSections: strategyScopedProcedure
     .input(z.object({ strategyId: z.string().min(1) }))
     .query(async ({ input }) => {
-      const sections = await getSectionsForStrategy(input.strategyId);
+      const rows = await getSectionsForStrategy(input.strategyId);
+      // Le PAYLOAD ne voyage plus avec la liste (2026-07-30). Il était envoyé
+      // au navigateur pour les 35 sections — ~100 Ko à chaque visite, dont une
+      // section de 34 Ko — alors que la page n'affichait que des pastilles de
+      // statut. Le contenu se charge désormais à la demande par `getSection`,
+      // à l'ouverture d'une section. La liste gagne `payloadSize` : le poids
+      // du contenu devient un signal lisible (« 3,3 Ko rédigés ») sans avoir
+      // à le transporter.
+      //
+      // La projection est faite ICI et non dans `getSectionsForStrategy` : ce
+      // service est aussi consommé par l'assembleur et le MCP, qui ont besoin
+      // du payload complet.
+      const sections = rows.map(({ payload, ...rest }) => ({
+        ...rest,
+        payloadSize: payload == null ? 0 : JSON.stringify(payload).length,
+      }));
       return { sections };
     }),
 

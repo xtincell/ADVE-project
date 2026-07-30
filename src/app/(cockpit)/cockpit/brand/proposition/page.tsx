@@ -147,8 +147,15 @@ export default function PropositionPage() {
   const completeSections = Object.values(report).filter((s) => s === "complete").length;
   const partialSections = Object.values(report).filter((s) => s === "partial").length;
   const emptySections = Object.values(report).filter((s) => s === "empty").length;
-  const staleSections = (Array.isArray(oracleSections.data) ? [] : (oracleSections.data?.sections ?? []))
-    .filter((s) => s.status === "STALE").length;
+  const oracleRows = Array.isArray(oracleSections.data) ? [] : (oracleSections.data?.sections ?? []);
+  const staleSections = oracleRows.filter((s) => s.status === "STALE").length;
+  /**
+   * Sections effectivement RÉDIGÉES par le moteur (payload produit) — mesure
+   * distincte de `completeSections`, qui compte la matière venue des piliers.
+   * Les deux portaient le même dénominateur 35 sans être nommées : sur SPAWT,
+   * 35 sections étaient rédigées et la page n'affichait que « 21/35 ».
+   */
+  const writtenSections = oracleRows.filter((s) => s.status === "COMPLETE").length;
 
   // ── Ce qu'il faut avant que le diagnostic tienne debout ──
   // Ces trois cartes parlaient en interne : « au moins ENRICHED » (une valeur
@@ -221,10 +228,22 @@ export default function PropositionPage() {
             Y partielles / Z vides » cinq centimètres plus bas, puis encore
             « X complets / Y ratés / Z périmés » dans le panneau. */}
         <div className="ck-oracle-hero__stats">
-          <div><span className="k">Complètes</span><b className="text-success">{completeSections}/{totalSections}</b></div>
-          <div><span className="k">À approfondir</span><b>{partialSections}</b></div>
-          <div><span className="k">À produire</span><b>{emptySections}</b></div>
+          <div><span className="k">Rédigées</span><b className="text-success">{writtenSections}/{totalSections}</b></div>
+          <div><span className="k">Nourries par vos piliers</span><b>{completeSections}/{totalSections}</b></div>
+          <div><span className="k">À approfondir</span><b>{partialSections + emptySections}</b></div>
         </div>
+        {/* Deux mesures DIFFÉRENTES portaient le même dénominateur 35 sans que
+            rien ne les distingue — d'où « toujours 21/35 » sur une page dont
+            les 35 sections étaient pourtant rédigées (signalement opérateur
+            2026-07-30). « Rédigées » compte les sections que le moteur a
+            produites ; « nourries » compte celles que VOS piliers alimentent
+            en matière. Un chiffre qui ne dit pas ce qu'il compte est une boîte
+            noire, même juste. */}
+        <p className="mt-2 text-xs text-foreground-muted">
+          « Rédigées » : les sections que le moteur a produites. « Nourries par vos piliers » :
+          celles dont la matière vient de vos fondations — les autres sont écrites, mais
+          gagneront à être enrichies. Ouvrez une section pour lire son contenu.
+        </p>
       </div>
 
       {/* ─ 3 cartes de préparation — état réel de la cascade ─ */}
