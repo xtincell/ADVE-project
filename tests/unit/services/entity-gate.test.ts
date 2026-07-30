@@ -15,6 +15,7 @@ import {
   mentionsEntity,
   normalizeEntityText,
   assessNameExtension,
+  assessHandleExtension,
 } from "@/server/services/seshat/entity-gate";
 
 describe("assessBrandNameAmbiguity", () => {
@@ -180,5 +181,35 @@ describe("assessNameExtension", () => {
   it("un mot qui CONTIENT le nom sans frontière n'est pas une extension", () => {
     // « Irawopolis » n'est pas « Irawo » + un mot : c'est un autre mot.
     expect(assessNameExtension("Irawopolis", "Irawo")).toBe("unrelated");
+  });
+});
+
+/**
+ * Variante HANDLE (boucle adversariale 2026-07-30). Après fermeture du
+ * vecteur extension-de-nom sur les hosts et les fiches Maps, le canal SOCIAL
+ * restait ouvert : le scan de « Dovv » captait `@dovvmusic`. Les handles sont
+ * collés — `assessNameExtension` (frontières de mots) les voit tous
+ * « unrelated », d'où cette variante.
+ */
+describe("assessHandleExtension", () => {
+  it("handle = nom → exact", () => {
+    expect(assessHandleExtension("dovv", "Dovv")).toBe("exact");
+    expect(assessHandleExtension("Chococam", "chococam")).toBe("exact");
+    expect(assessHandleExtension("orange-cameroun", "Orange Cameroun")).toBe("exact");
+  });
+
+  it("handle qui PROLONGE le nom → extended (exige un discriminant)", () => {
+    expect(assessHandleExtension("dovvmusic", "Dovv")).toBe("extended");
+    expect(assessHandleExtension("irawostudio", "Irawo")).toBe("extended");
+    expect(assessHandleExtension("chococamfmcg", "Chococam")).toBe("extended");
+  });
+
+  it("handle qui ne commence pas par le nom → unrelated", () => {
+    expect(assessHandleExtension("associationlocale", "Irawo")).toBe("unrelated");
+    expect(assessHandleExtension("musicdovv", "Dovv")).toBe("unrelated");
+  });
+
+  it("nom trop court → jamais de verdict (pas de devinette)", () => {
+    expect(assessHandleExtension("abcdef", "AB")).toBe("unrelated");
   });
 });

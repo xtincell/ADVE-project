@@ -34,6 +34,7 @@ import {
 import {
   COUNTRY_CITIES,
   assessNameExtension,
+  assessHandleExtension,
   compactTextHasDiscriminant,
   createEntityGate,
   mentionsEntity,
@@ -382,10 +383,33 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
     status: "SKIPPED_DECLARED",
   };
   const seenSocial = new Set(footprint.socials.map((s) => `${s.platform}:${(s.handle ?? s.url).toLowerCase()}`));
-  /** Ajoute un profil découvert + son évidence (pour la passe adversariale). */
+  /**
+   * Ajoute un profil DÉCOUVERT (recherche/LLM) + son évidence.
+   *
+   * Garde extension-de-nom sur le HANDLE (boucle adversariale 2026-07-30) :
+   * après avoir fermé ce vecteur sur les hosts et les fiches Maps, le canal
+   * social restait ouvert — « Dovv » captait `@dovvmusic`. Un handle qui
+   * ÉTEND le nom (`@dovvmusic`, `@irawostudio`) n'est retenu que si son
+   * évidence porte un discriminant du gate — et seulement quand le gate en a
+   * : sans contexte disponible, rien ne permet de trancher et on ne rejette
+   * pas à l'aveugle (`@chococamfmcg` est authentique).
+   *
+   * Ne s'applique QU'AUX découvertes : les profils déclarés par le prospect
+   * et ceux lus sur SON site sont un chemin de confiance, jamais filtrés.
+   */
   const addDiscovered = (p: SocialProfile, evidence: string) => {
     const key = `${p.platform}:${(p.handle ?? p.url).toLowerCase()}`;
     if (seenSocial.has(key)) return;
+    if (
+      p.handle &&
+      gate.discriminants.length > 0 &&
+      assessHandleExtension(p.handle, input.companyName) === "extended" &&
+      gate.judge(evidence).matchedDiscriminants.length === 0 &&
+      !compactTextHasDiscriminant(p.handle, gate.discriminants)
+    ) {
+      filtered.discovery += 1;
+      return;
+    }
     footprint.socials.push(p);
     seenSocial.add(key);
     discoveredSocialEvidence.set(key, evidence.slice(0, 300));
