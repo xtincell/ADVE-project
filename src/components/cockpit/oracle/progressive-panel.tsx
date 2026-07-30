@@ -30,6 +30,7 @@ import { SECTION_REGISTRY } from "@/server/services/strategy-presentation/types"
 import { OracleSectionCard, type SectionDbStatus } from "./section-card";
 import { OracleLiveConsole } from "./live-console";
 import { OracleSectionFailureModal } from "./section-failure-modal";
+import { OracleSectionReader } from "./section-reader";
 import { Sparkles, Loader2, ChevronDown } from "lucide-react";
 
 const SECTION_REGISTRY_BY_NUMBER = (() => {
@@ -90,6 +91,13 @@ export function OracleProgressivePanel(props: OracleProgressivePanelProps): Reac
   const [scope, setScope] = useState<AssembleScope>("MISSING");
   const [scopeMenuOpen, setScopeMenuOpen] = useState(false);
   const [failureModalSectionId, setFailureModalSectionId] = useState<number | null>(null);
+  /**
+   * Section ouverte en LECTURE (2026-07-30). Jusqu'ici seul un ÉCHEC était
+   * consultable : une section réussie — 3 à 34 Ko de contenu rédigé — n'avait
+   * aucun geste d'ouverture, et `oracle.getSection` n'était appelé nulle part.
+   * Le livrable payant était intégralement écrit et invisible.
+   */
+  const [readerSectionId, setReaderSectionId] = useState<number | null>(null);
 
   // ── Derive joined view (DB × stream) ──────────────────────────────
   const sections = sectionsQuery.data?.sections ?? [];
@@ -123,6 +131,16 @@ export function OracleProgressivePanel(props: OracleProgressivePanelProps): Reac
   // ── Render ────────────────────────────────────────────────────────
   const failedSection = failureModalSectionId !== null ? sectionsById.get(failureModalSectionId) : null;
   const failedMeta = failureModalSectionId !== null ? SECTION_REGISTRY_BY_NUMBER.get(failureModalSectionId) : null;
+
+  // Contenu chargé À LA DEMANDE : la liste ne transporte plus les payloads
+  // (jusqu'ici ~100 Ko arrivaient au navigateur à chaque visite pour n'afficher
+  // que des pastilles de statut). On ne paie le contenu que quand on l'ouvre.
+  const readerMeta = readerSectionId !== null ? SECTION_REGISTRY_BY_NUMBER.get(readerSectionId) : null;
+  const readerRow = readerSectionId !== null ? sectionsById.get(readerSectionId) : null;
+  const readerQuery = trpc.oracle.getSection.useQuery(
+    { strategyId, sectionId: readerSectionId ?? 1 },
+    { enabled: readerSectionId !== null },
+  );
 
   return (
     <div className="space-y-4">
@@ -269,10 +287,47 @@ export function OracleProgressivePanel(props: OracleProgressivePanelProps): Reac
               onShowError={
                 dbSection.status === "FAILED" ? () => setFailureModalSectionId(dbSection.sectionId) : undefined
               }
+              onRead={
+                dbSection.status === "COMPLETE" ? () => setReaderSectionId(dbSection.sectionId) : undefined
+              }
             />
           );
         })}
       </div>
+
+      {/* Lecteur de section — le contenu, enfin lisible */}
+      {readerSectionId !== null && readerMeta ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setReaderSectionId(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Section ${readerMeta.number} — ${readerMeta.title}`}
+            className="max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-xl border border-border bg-surface-raised p-5 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <OracleSectionReader
+              sectionNumber={readerMeta.number}
+              sectionTitle={readerMeta.title}
+              payload={readerQuery.data?.section?.payload ?? null}
+              confidence={readerRow?.confidence ?? null}
+              generatedAt={readerRow?.lastGenerationCompletedAt ?? null}
+              loading={readerQuery.isLoading}
+            />
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setReaderSectionId(null)}
+                className="rounded-md border border-border px-3 py-1.5 text-sm text-foreground-secondary hover:text-foreground"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* Failure modal */}
       {failedSection && failedMeta && (

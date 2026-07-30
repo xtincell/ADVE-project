@@ -55,6 +55,12 @@ export interface OracleSectionCardProps {
   onAction: (mode: "FRESH" | "REGEN" | "RETRY") => void;
   /** Click sur la card FAILED ouvre le modal d'erreur détaillé. */
   onShowError?: () => void;
+  /**
+   * Ouvre le LECTEUR de la section (2026-07-30). Fourni uniquement pour une
+   * section COMPLETE : jusqu'ici seul un ECHEC etait consultable, et le
+   * contenu redige — 3 a 34 Ko par section — n'avait aucun geste d'ouverture.
+   */
+  onRead?: () => void;
 }
 
 const TIER_CHIPS: Record<OracleSectionCardProps["tier"], string> = {
@@ -104,6 +110,7 @@ export function OracleSectionCard(props: OracleSectionCardProps): React.ReactEle
     disabled,
     onAction,
     onShowError,
+    onRead,
   } = props;
 
   // Stream phase wins for transient "generating" state; otherwise DB status.
@@ -151,6 +158,16 @@ export function OracleSectionCard(props: OracleSectionCardProps): React.ReactEle
         </div>
       </div>
       <div className="flex shrink-0 flex-col items-end gap-1">
+        {onRead && (
+          <button
+            type="button"
+            onClick={onRead}
+            className="rounded border border-border px-2 py-0.5 text-2xs font-medium text-foreground-secondary transition-colors hover:border-[color:var(--color-accent)] hover:text-foreground"
+            title="Lire le contenu rédigé de cette section"
+          >
+            lire
+          </button>
+        )}
         {effectivePhase === "failed" && lastError?.errorCode && onShowError && (
           <button
             type="button"
