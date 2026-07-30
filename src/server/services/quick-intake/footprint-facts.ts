@@ -45,6 +45,18 @@ export interface FootprintFacts {
   performance: { performanceScore: number | null; lcpMs: number | null } | null;
   youtube: { channelTitle: string | null; handle: string | null; subscriberCount: number | null; videoCount: number | null } | null;
   site: { url: string | null; reachable: boolean } | null;
+  /**
+   * Aucun contexte ne permettait de DISCRIMINER les homonymes : ni secteur ni
+   * pays, déclaré ou inférable. Les signaux ci-dessus reposent alors sur le
+   * seul nom de la marque.
+   *
+   * Limite mesurée le 2026-07-30 : « Irawo » scoré sans contexte retombe sur
+   * une association homonyme au nom EXACT — aucune règle d'extension ne peut
+   * trancher entre deux entités qui portent le même nom. Le rapport doit le
+   * DIRE et proposer au prospect de préciser son secteur, au lieu d'en
+   * choisir une au hasard en silence.
+   */
+  undiscriminated: boolean;
 }
 
 /** Projection factuelle de l'empreinte — que du mesuré, JSON-safe, déterministe. */
@@ -135,6 +147,10 @@ export function buildFootprintFacts(f: EnrichedFootprint): FootprintFacts {
         ? { channelTitle: f.youtube.channelTitle, handle: f.youtube.handle, subscriberCount: f.youtube.subscriberCount, videoCount: f.youtube.videoCount }
         : null,
     site: f.site ? { url: f.site.url ?? null, reachable: f.site.reachable } : null,
+    // Le gate n'avait AUCUN discriminant : tout ce qui précède tient sur le
+    // seul nom. Deux entités homonymes au nom exact sont alors indécidables —
+    // on l'annonce plutôt que de laisser croire à une certitude.
+    undiscriminated: (f.entityGate?.discriminants.length ?? 0) === 0,
   };
 }
 

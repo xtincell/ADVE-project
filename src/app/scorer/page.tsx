@@ -186,6 +186,8 @@ interface FactsView {
   performance: { performanceScore: number | null; lcpMs: number | null } | null;
   youtube: { channelTitle: string | null; subscriberCount: number | null; videoCount: number | null } | null;
   site: { url: string | null; reachable: boolean } | null;
+  /** Aucun contexte pour départager les homonymes — cf. bandeau d'ambiguïté. */
+  undiscriminated?: boolean;
 }
 
 /**
@@ -536,6 +538,23 @@ export default function ScorerPage() {
                     )}
                   </div>
                 </div>
+
+                {/* Ambiguïté IRRÉDUCTIBLE (audit 2026-07-30) : sans secteur ni
+                    pays, rien ne départage deux entités qui portent le MÊME
+                    nom exact — mesuré, « Irawo » retombe alors sur une
+                    association homonyme. Aucune règle ne peut trancher ; on le
+                    dit et on propose au prospect de lever le doute lui-même,
+                    au lieu de choisir en silence. */}
+                {facts.undiscriminated ? (
+                  <div className="rounded-lg border border-warning/40 bg-warning/[0.06] p-3">
+                    <Text className="text-sm font-medium text-foreground">
+                      {t("scorer.ambiguity.title")}
+                    </Text>
+                    <Text className="mt-1 text-xs text-[color:var(--color-foreground-muted)]">
+                      {t("scorer.ambiguity.body")}
+                    </Text>
+                  </div>
+                ) : null}
 
                 {/* Chapo éditorial — prose déterministe depuis les faits mesurés */}
                 {(() => {
