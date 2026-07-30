@@ -143,8 +143,25 @@ function ScanProgress() {
   );
 }
 
-/** Verdict en langage clair du /100 (le prospect comprend ce que ça VEUT dire). */
-function scoreVerdict(total: number, t: I18nCtx["t"]): string {
+/**
+ * Sous ce % de poids mesuré, le total est calculé sur trop peu de dimensions
+ * pour porter un verdict tranché : le /100 reste renormalisé (l'absence de
+ * mesure n'est PAS une preuve de faiblesse — ADR-0046, jamais de faux zéro),
+ * mais il est annoncé pour ce qu'il est : provisoire.
+ */
+const COVERAGE_PROVISIONAL = 50;
+
+/**
+ * Verdict en langage clair du /100 (le prospect comprend ce que ça VEUT dire).
+ *
+ * Garde de calibration (audit 2026-07-30) : « Chococam » nom-seul sortait
+ * 100/100 « présence forte » alors que SEULES la presse et les citations
+ * avaient été mesurées (20 % du poids), sans site ni réseau trouvé. Un score
+ * bâti sur une fraction du spectre ne peut pas se présenter comme un verdict
+ * établi — d'où le palier « provisoire » AVANT les paliers de niveau.
+ */
+function scoreVerdict(total: number, coveragePct: number, t: I18nCtx["t"]): string {
+  if (coveragePct < COVERAGE_PROVISIONAL) return t("scorer.verdict.provisional");
   if (total >= 80) return t("scorer.verdict.strong");
   if (total >= 60) return t("scorer.verdict.solid");
   if (total >= 40) return t("scorer.verdict.building");
@@ -496,7 +513,7 @@ export default function ScorerPage() {
                       {brandName.trim() || t("scorer.cover.yourBrand")}
                     </Heading>
                     {result.total !== null ? (
-                      <Text className="mt-2 text-base text-foreground">{scoreVerdict(result.total, t)}</Text>
+                      <Text className="mt-2 text-base text-foreground">{scoreVerdict(result.total, coveragePct, t)}</Text>
                     ) : (
                       <Text className="mt-2 text-base text-[color:var(--color-foreground-muted)]">
                         {t("scorer.cover.noSignal")}
@@ -505,7 +522,15 @@ export default function ScorerPage() {
                   </div>
                   <div className="flex shrink-0 flex-col items-center gap-1">
                     {result.total !== null ? (
-                      <ScoreBadge score={result.total} maxScore={100} mode="cockpit" size="xl" />
+                      <>
+                        <ScoreBadge score={result.total} maxScore={100} mode="cockpit" size="xl" />
+                        {/* Le chiffre ne voyage jamais seul quand il repose sur
+                            une fraction du spectre : le badge le qualifie à
+                            l'endroit exact où l'œil se pose (audit 2026-07-30). */}
+                        {coveragePct < COVERAGE_PROVISIONAL ? (
+                          <Badge tone="warning">{t("scorer.cover.provisional")}</Badge>
+                        ) : null}
+                      </>
                     ) : (
                       <span className="font-mono text-4xl text-[color:var(--color-foreground-muted)]">—/100</span>
                     )}

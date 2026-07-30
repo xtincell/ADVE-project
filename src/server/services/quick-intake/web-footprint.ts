@@ -63,6 +63,12 @@ export interface WebFootprint {
     description: string | null;
     ogImage: string | null;
     language: string | null;
+    /**
+     * Le serveur répond mais refuse les bots (Cloudflare/WAF/captcha) : le
+     * site EXISTE, son contenu n'a pas pu être lu. `tech` reste donc vide —
+     * analyser le HTML du challenge produirait des faits faux.
+     */
+    botWall?: boolean;
     /** ADR-0121 vague A — analyse tech/SEO déterministe du site. */
     tech?: SiteTech;
   } | null;
@@ -230,7 +236,31 @@ function decodeEntities(s: string): string {
 
 // ── Fetch borné (garde SSRF partagée `@/lib/net/ssrf-guard`) ─────────────
 
-async function fetchPublic(rawUrl: string): Promise<{ ok: boolean; status: number; body: string }> {
+/**
+ * Détection déterministe d'un MUR ANTI-BOT (Cloudflare, captcha, WAF).
+ *
+ * Distinction critique (audit 2026-07-30) : « le serveur refuse de me parler »
+ * n'est PAS « le domaine n'existe pas ». L'ancien probe faisait
+ * `if (!res.ok) return null` — un 403 Cloudflare classait donc la marque
+ * « aucun site détecté », lui coûtant d'un coup les 45 points de poids
+ * site + email + domaine + performance. Un mur anti-bot PROUVE au contraire
+ * qu'un serveur sert ce domaine.
+ *
+ * Attention à la contrepartie : derrière un mur, `looksLikeParkedDomain` est
+ * aveugle faute de contenu. L'adoption est donc conditionnée à une
+ * corroboration indépendante, elle-même purgée des pages de vente de domaine
+ * (cf. `corroboratedHostsFromHits`) — sinon on rouvrirait le piège Dovv.
+ *
+ * Pur (testé sans IO) : l'appelant décide quoi faire de l'information.
+ */
+export function looksLikeBotWall(status: number, body: string): boolean {
+  if (status === 401 || status === 403 || status === 429 || status === 503) return true;
+  return /just a moment|attention required|checking your browser|cf-browser-verification|captcha|enable javascript and cookies|access denied|ddos-guard/i.test(
+    body.slice(0, 4_000),
+  );
+}
+
+async function fetchPublic(rawUrl: string): Promise<{ ok: boolean; status: number; body: string; blocked: boolean }> {
   // 3 tentatives sur échec RÉSEAU pur (connect ETIMEDOUT quasi instantané —
   // résolveurs round-robin servant parfois une IP injoignable, mesuré test BK
   // Abidjan 2026-07-20). Une réponse HTTP (même 4xx/5xx) est déterministe →
@@ -265,7 +295,7 @@ async function fetchPublic(rawUrl: string): Promise<{ ok: boolean; status: numbe
         }
       }
       const body = Buffer.concat(chunks.map((c) => Buffer.from(c))).toString("utf8");
-      return { ok: res.ok, status: res.status, body };
+      return { ok: res.ok, status: res.status, body, blocked: looksLikeBotWall(res.status, body) };
     } catch (err) {
       lastErr = err;
       clearTimeout(timer);
@@ -354,43 +384,154 @@ export function looksLikeParkedDomain(pageText: string): boolean {
   );
 }
 
+export interface DiscoveredSite {
+  url: string;
+  /**
+   * true = domaine adopté sur CORROBORATION derrière un mur anti-bot : son
+   * existence est prouvée, son contenu n'a pas pu être lu (pas de tech/SEO).
+   */
+  blocked: boolean;
+}
+
+/** Host normalisé (sans `www.`) d'une URL — null si malformée. */
+export function hostOf(rawUrl: string): string | null {
+  try {
+    return new URL(rawUrl).hostname.replace(/^www\./, "").toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
 export async function discoverOfficialSite(
   name: string,
   countryCode?: string | null,
-  opts: { timeoutMs?: number; validate?: (pageText: string) => boolean } = {},
-): Promise<string | null> {
-  const candidates = candidateDomains(name, countryCode);
+  opts: {
+    timeoutMs?: number;
+    validate?: (pageText: string) => boolean;
+    /**
+     * Hosts déjà validés par une source INDÉPENDANTE (hits de recherche
+     * gate-validés). Seul un candidat corroboré peut être adopté derrière un
+     * mur anti-bot : la garde anti-faux-positif tient toujours, elle change
+     * juste de preuve — la page ne pouvant pas parler d'elle-même, c'est le
+     * web qui atteste que ce domaine est bien celui de la marque.
+     */
+    corroboratedHosts?: readonly string[];
+    /** Candidats supplémentaires (ex. extraits des résultats de recherche). */
+    extraCandidates?: readonly string[];
+  } = {},
+): Promise<DiscoveredSite | null> {
+  const corroborated = new Set((opts.corroboratedHosts ?? []).map((h) => h.replace(/^www\./, "").toLowerCase()));
+  // Les candidats issus de la recherche passent D'ABORD : un host réellement
+  // cité par le web bat un domaine fabriqué depuis le slug.
+  const candidates = [...new Set([...(opts.extraCandidates ?? []), ...candidateDomains(name, countryCode)])];
   if (candidates.length === 0) return null;
   const perProbe = opts.timeoutMs ?? 4_000;
   const validate = opts.validate ?? ((pageText: string) => mentionsEntity(pageText, name));
 
   const results = await Promise.all(
-    candidates.map(async (url) => {
+    candidates.map(async (url): Promise<DiscoveredSite | null> => {
       try {
         const raced = await Promise.race([
           fetchPublic(url),
-          new Promise<{ ok: false; status: 0; body: "" }>((r) =>
-            setTimeout(() => r({ ok: false, status: 0, body: "" }), perProbe),
+          new Promise<{ ok: false; status: 0; body: ""; blocked: false }>((r) =>
+            setTimeout(() => r({ ok: false, status: 0, body: "", blocked: false }), perProbe),
           ),
         ]);
-        if (!raced.ok) return null;
+        if (!raced.ok) {
+          // Mur anti-bot : le contenu est illisible, donc `validate` ne peut
+          // pas trancher. On n'adopte QUE si une source indépendante a déjà
+          // rattaché ce host à la marque.
+          const host = hostOf(url);
+          if (raced.blocked && host && corroborated.has(host)) return { url, blocked: true };
+          return null;
+        }
         const meta = parseHtmlMeta(raced.body);
         const pageText = `${meta.title ?? ""} ${meta.description ?? ""} ${raced.body.slice(0, 4_000)}`;
         if (looksLikeParkedDomain(pageText)) return null;
-        return validate(pageText) ? url : null;
+        return validate(pageText) ? { url, blocked: false } : null;
       } catch {
         return null;
       }
     }),
   );
-  for (let i = 0; i < candidates.length; i++) {
-    const r = results[i];
-    if (r) return r;
-  }
+  // Préférence : un site LISIBLE bat un site seulement corroboré (on préfère
+  // toujours la mesure directe à l'attestation), puis l'ordre des candidats.
+  for (const r of results) if (r && !r.blocked) return r;
+  for (const r of results) if (r) return r;
   return null;
 }
 
+/**
+ * Hosts candidats au site officiel extraits de résultats de RECHERCHE — le
+ * chemin que la devinette par slug ne peut pas couvrir (domaine abrégé, avec
+ * tiret, TLD inattendu). Pur, testé sans IO.
+ *
+ * Garde : le host doit contenir le slug de la marque, et les plateformes
+ * tierces (réseaux, annuaires, presse, agrégateurs) sont exclues — on cherche
+ * le domaine DE la marque, pas une page qui parle d'elle.
+ */
+const NON_OFFICIAL_HOST = /(^|\.)(facebook|instagram|tiktok|linkedin|twitter|x|youtube|wikipedia|wikiwand|google|bing|yahoo|amazon|ebay|tripadvisor|yelp|pagesjaunes|annuaire|glassdoor|indeed|crunchbase|bloomberg|societe|infogreffe|verif|pappers|medium|wordpress|blogspot|github|apple|play\.google|news|rss)\./i;
+
+export interface SearchHitLike {
+  url: string;
+  title?: string;
+  description?: string;
+}
+
+/**
+ * Un hit qui VEND le domaine n'atteste rien (« ChocoCam.com is for sale |
+ * HugeDomains »). Mesuré 2026-07-30 : `chococam.com` est un domaine parqué, et
+ * le gate d'entité l'ACCEPTE puisque la page de vente cite bel et bien la
+ * marque. Sans ce filtre, un tel host devient « corroboré » et pourrait être
+ * adopté derrière un mur anti-bot — où `looksLikeParkedDomain` est aveugle,
+ * faute de contenu lisible. C'est exactement le piège Dovv (2026-07-20), qu'on
+ * ne rouvre pas par la porte de la corroboration.
+ */
+function hitSellsDomain(h: SearchHitLike): boolean {
+  return looksLikeParkedDomain(`${h.title ?? ""} ${h.description ?? ""}`);
+}
+
+export function officialSiteCandidatesFromHits(
+  hits: ReadonlyArray<SearchHitLike>,
+  brandName: string,
+): string[] {
+  const slug = brandDomainSlug(brandName);
+  if (slug.length < 3) return [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const h of hits) {
+    const host = hostOf(h.url);
+    if (!host || seen.has(host)) continue;
+    seen.add(host);
+    if (NON_OFFICIAL_HOST.test(`${host}.`)) continue;
+    if (hitSellsDomain(h)) continue;
+    if (!host.replace(/[^a-z0-9]/g, "").includes(slug)) continue;
+    out.push(`https://${host}`);
+    if (out.length >= 3) break;
+  }
+  return out;
+}
+
+/**
+ * Hosts qu'une source indépendante rattache à la marque — la preuve de
+ * remplacement quand un site est illisible derrière un mur anti-bot. Les hits
+ * qui vendent un domaine sont écartés (cf. `hitSellsDomain`) : ils citent la
+ * marque sans lui appartenir.
+ */
+export function corroboratedHostsFromHits(hits: ReadonlyArray<SearchHitLike>): string[] {
+  const out = new Set<string>();
+  for (const h of hits) {
+    if (hitSellsDomain(h)) continue;
+    const host = hostOf(h.url);
+    if (host) out.add(host);
+  }
+  return [...out];
+}
+
 // ── Collecteur ─────────────────────────────────────────────────────────
+
+/** Signal interne : le site est derrière un mur anti-bot, on saute son analyse. */
+class BotWallSkip extends Error {}
 
 export interface CollectFootprintInput {
   websiteUrl?: string | null;
@@ -437,8 +578,33 @@ export async function collectWebFootprint(input: CollectFootprintInput): Promise
     const normalized = /^https?:\/\//i.test(siteUrl) ? siteUrl : `https://${siteUrl}`;
     try {
       const res = await budgetedFetch(normalized);
-      const meta = parseHtmlMeta(res.body);
       siteHost = new URL(normalized).hostname.replace(/^www\./, "");
+
+      // Mur anti-bot (audit 2026-07-30) : le serveur répond mais ne nous parle
+      // pas. Le site EXISTE — le compter « injoignable » était faux et coûtait
+      // à la marque les 45 points de poids site/email/domaine/perf. En
+      // revanche on n'analyse RIEN : le HTML du challenge Cloudflare
+      // produirait un CMS, des og:tags et une description qui ne sont pas ceux
+      // de la marque. Honnête dans les deux sens : existence oui, contenu non.
+      // (Un site DÉCLARÉ par le prospect est corroboré par définition ; un
+      // site découvert n'arrive ici qu'après corroboration — cf.
+      // `discoverOfficialSite`.)
+      if (res.blocked) {
+        footprint.site = {
+          url: normalized,
+          reachable: true,
+          botWall: true,
+          title: null,
+          description: null,
+          ogImage: null,
+          language: null,
+        };
+        // On saute l'analyse DU SITE uniquement — les étages suivants
+        // (enrichissement des profils sociaux, canaux) doivent continuer.
+        throw new BotWallSkip();
+      }
+
+      const meta = parseHtmlMeta(res.body);
       const tech = analyzeSiteTech(res.body, normalized);
       // robots.txt : 1 fetch bon marché (best-effort, null = non vérifié)
       try {
@@ -481,8 +647,12 @@ export async function collectWebFootprint(input: CollectFootprintInput): Promise
         footprint.articles.push({ url: candidate.url, title, source: candidate.source });
       }
     } catch (err) {
-      footprint.site = { url: normalized, reachable: false, title: null, description: null, ogImage: null, language: null };
-      errors.push(`site: ${err instanceof Error ? err.message : String(err)}`);
+      // Mur anti-bot : `footprint.site` est déjà posé (existence attestée,
+      // contenu non lu) — ce n'est pas une erreur de collecte.
+      if (!(err instanceof BotWallSkip)) {
+        footprint.site = { url: normalized, reachable: false, title: null, description: null, ogImage: null, language: null };
+        errors.push(`site: ${err instanceof Error ? err.message : String(err)}`);
+      }
     }
   }
 

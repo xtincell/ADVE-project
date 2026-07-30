@@ -1,5 +1,57 @@
 # Changelog — La Fusee
 
+## v6.27.374 — fix(scorer): le score notait 100/100 sur 20 % de preuves (2026-07-30)
+
+Signalement opérateur : « *je ne peux pas mettre une marque et le système devine les champs
+manquant ? le site internet, les social media, etc... c'est censé être plus intelligent que
+les scrapeurs sans llm* ».
+
+**Mesuré en production avant d'écrire une ligne** — « Chococam », nom seul :
+
+```
+total: 100/100   couverture: 20 %
+site      non mesuré  « aucun site déclaré ni détecté »
+social    non mesuré  « aucun profil social détecté »
+press     mesuré 100  · citations mesuré 100
+```
+
+La marque la plus visible du chocolat camerounais décrochait la **note maximale** sur
+**20 % du spectre**, sans site ni réseau trouvés — alors que cinq pages publiques la citant
+avaient été ramenées **dans le même scan**.
+
+- **La note ne peut plus être maximale sur des traces web seules.** Presse et citations
+  saturaient à 4 items (`n × 25`), or les deux sources en rendent ~5 pour toute marque un
+  peu connue : une fois renormalisées, ces deux dimensions triviales portaient le 100.
+  Courbes désaturées (plafonds 75 et 60). Sous 50 % de couverture, le score s'annonce
+  **provisoire** — verdict dédié et badge accolé au chiffre. Le total reste affiché tel
+  quel : on ne truque pas le chiffre, on dit ce qu'il vaut.
+- **Un mur anti-bot n'est plus une absence de site.** `if (!ok) return null` traitait un 403
+  Cloudflare comme « ce domaine n'existe pas », et la marque perdait d'un coup les 45 points
+  de poids site + email + domaine + performance. Le site est désormais adopté **sur
+  corroboration** d'une source indépendante, crédité de son existence et **jamais** de sa
+  tech — analyser le HTML d'un challenge fabriquerait un CMS et des balises qui ne sont pas
+  ceux de la marque. Contrepartie fermée dans le même geste : derrière un mur, la garde
+  anti-parking est aveugle, et une page de vente de domaine *cite* la marque donc le gate
+  l'accepte — les hits qui vendent un domaine sont écartés de la corroboration, sinon le
+  piège Dovv rentrait par cette porte.
+- **Une seule recherche, trois usages.** Elle tournait *après* la découverte du site et des
+  réseaux et n'alimentait que l'affichage des citations : les pages trouvées citaient le
+  domaine et les comptes, et l'information était jetée. Elle part maintenant en premier et
+  sert corroboration, réseaux et citations — pour un seul appel réseau. La découverte parse
+  le hit **entier** (url + titre + résumé) et non plus la seule URL.
+- **Le LLM propose, le déterministe décide** (ADR-0187). Précision qui change le remède :
+  aucun LLM ne devinait quoi que ce soit ici — la collecte était déjà 100 % déterministe.
+  Le nouvel étage lit les extraits déjà collectés et nomme le domaine et les comptes
+  probables ; **aucune de ses propositions n'entre dans les faits sans preuve déterministe
+  récoltée après coup** (fetch + entity-gate). Sans clé LLM : no-op déclaré.
+- **Un échec de collecte ne se fige plus une semaine** : une observation à faible couverture
+  est resservie 24 h au lieu de 7 jours — sinon un correctif de collecte resterait invisible
+  pour toutes les marques déjà scannées.
+
+Gardes de calibration ajoutées (elles n'existaient pas) : « traces web seules → jamais
+100/100 », plafonds presse/citations, détection de mur anti-bot, assainissement des
+propositions LLM. 3682 tests verts.
+
 ## v6.27.373 — fix(oracle): la page du livrable phare se contredisait à l'écran (2026-07-29)
 
 Signalement opérateur : « *l'UX de cette page est incompréhensible par moments* », sur

@@ -35,7 +35,14 @@ export function computeFootprintScore(f: EnrichedFootprint): FootprintScore {
   if (f.site) {
     let s = 0;
     const parts: string[] = [];
-    if (f.site.reachable) {
+    if (f.site.botWall) {
+      // Site attesté mais illisible (Cloudflare/WAF) : on crédite l'existence
+      // — un site protégé reste un site — sans jamais créditer une tech/SEO
+      // qu'on n'a pas pu mesurer. 40/100 = exactement la part « le site
+      // répond », le reste de l'échelle demeure non prouvé (ADR-0046).
+      s = 40;
+      parts.push("site protégé (anti-bot) — existence confirmée, contenu non analysable");
+    } else if (f.site.reachable) {
       s += 40;
       const t = f.site.tech;
       if (t?.https) { s += 10; parts.push("https"); }
@@ -112,9 +119,16 @@ export function computeFootprintScore(f: EnrichedFootprint): FootprintScore {
   }
 
   // ── Presse (10) — mesurée dès que le flux a tourné (press défini) ──
+  // Courbe DÉSATURÉE (audit calibration 2026-07-30) : l'ancien `n * 25`
+  // atteignait 100 dès 4 items, or le flux Google News rend ~5 items pour
+  // toute marque un peu connue — la dimension était donc quasi toujours au
+  // maximum. Avec peu d'autres dimensions mesurées, la renormalisation en
+  // faisait un 100/100 (mesuré : « Chococam » nom-seul → 100/100 sur 20 % de
+  // couverture). Le plafond 75 réserve le haut de l'échelle à une couverture
+  // presse qu'un flux RSS borné à 5 items ne peut pas prouver.
   if (f.enrichment.press === "LIVE" || f.enrichment.press === "EMPTY") {
     const n = (f.press ?? []).length;
-    dims.push({ key: "press", label: "Presse", weight: 10, measured: true, score: clamp(n * 25), details: n > 0 ? `${n} mention(s) récente(s)` : "aucune mention récente" });
+    dims.push({ key: "press", label: "Presse", weight: 10, measured: true, score: clamp(n * 15, 0, 75), details: n > 0 ? `${n} mention(s) récente(s)` : "aucune mention récente" });
   } else {
     dims.push({ key: "press", label: "Presse", weight: 10, measured: false, score: null, details: "flux presse indisponible" });
   }
@@ -122,6 +136,10 @@ export function computeFootprintScore(f: EnrichedFootprint): FootprintScore {
   // ── Citations web (10, ADR-0164) — toute trace publique hors presse ──
   // Mesurée dès que la recherche a tourné (LIVE/EMPTY) ; une marque micro
   // avec 2 citations réelles sort d'un « 0 » sec — honnête dans les 2 sens.
+  // Courbe DÉSATURÉE (même audit que la presse) : la recherche est bornée à 6
+  // items retenus — `n * 25` saturait à 4. Plafond 60 : une citation est la
+  // trace publique la plus FAIBLE du panel (un annuaire n'est pas une preuve
+  // de marque forte), elle ne doit jamais porter seule le haut de l'échelle.
   if (f.webMentions?.status === "LIVE" || f.webMentions?.status === "EMPTY") {
     const n = f.webMentions.items.length;
     dims.push({
@@ -129,7 +147,7 @@ export function computeFootprintScore(f: EnrichedFootprint): FootprintScore {
       label: "Citations web",
       weight: 10,
       measured: true,
-      score: clamp(n * 25),
+      score: clamp(n * 10, 0, 60),
       details: n > 0 ? `${n} page(s) publique(s) parlent de vous` : "aucune page publique trouvée à votre nom",
     });
   } else {
