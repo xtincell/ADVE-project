@@ -54,3 +54,77 @@ describe("looksLikeParkedDomain", () => {
     expect(looksLikeParkedDomain("Chococam — chocolat camerounais depuis 1968. Nos produits en vente ici.")).toBe(false);
   });
 });
+
+// ── Audit 2026-07-30 : « le serveur refuse de me parler » ≠ « ça n'existe pas » ──
+// Mesuré sur chococam.com : 403 + challenge Cloudflare, y compris avec un
+// User-Agent de navigateur réel. L'ancien probe classait la marque « aucun site
+// détecté » et lui coûtait 45 points de poids (site, email, domaine, perf).
+import { looksLikeBotWall, officialSiteCandidatesFromHits, hostOf } from "@/server/services/quick-intake/web-footprint";
+
+describe("looksLikeBotWall", () => {
+  it("détecte les statuts de refus (le domaine sert bel et bien)", () => {
+    expect(looksLikeBotWall(403, "")).toBe(true);
+    expect(looksLikeBotWall(503, "")).toBe(true);
+    expect(looksLikeBotWall(429, "")).toBe(true);
+  });
+
+  it("détecte le challenge dans le corps même en 200", () => {
+    expect(looksLikeBotWall(200, "<title>Just a moment...</title>")).toBe(true);
+    expect(looksLikeBotWall(200, "Attention Required! | Cloudflare")).toBe(true);
+    expect(looksLikeBotWall(200, "Please enable JavaScript and cookies to continue")).toBe(true);
+  });
+
+  it("ne confond pas une vraie page ni une vraie absence", () => {
+    expect(looksLikeBotWall(200, "<h1>Chococam — chocolat camerounais</h1>")).toBe(false);
+    expect(looksLikeBotWall(404, "Not Found")).toBe(false); // vraie absence
+  });
+});
+
+describe("officialSiteCandidatesFromHits", () => {
+  const hits = (...urls: string[]) => urls.map((url) => ({ url }));
+
+  it("retient le domaine de la marque cité par le web (ce que le slug seul rate)", () => {
+    const c = officialSiteCandidatesFromHits(
+      hits("https://www.chococam-cameroun.com/produits", "https://news.example/article"),
+      "Chococam",
+    );
+    expect(c).toContain("https://chococam-cameroun.com");
+  });
+
+  it("exclut les plateformes tierces : on cherche le site DE la marque", () => {
+    const c = officialSiteCandidatesFromHits(
+      hits(
+        "https://facebook.com/chococam",
+        "https://fr.wikipedia.org/wiki/Chococam",
+        "https://www.linkedin.com/company/chococam",
+      ),
+      "Chococam",
+    );
+    expect(c).toEqual([]);
+  });
+
+  it("exclut un host qui ne porte pas le nom (pas de faux positif)", () => {
+    expect(officialSiteCandidatesFromHits(hits("https://actucameroun.com/x"), "Chococam")).toEqual([]);
+  });
+
+  it("déduplique, borne à 3, et reste déterministe", () => {
+    const c = officialSiteCandidatesFromHits(
+      hits("https://chococam.cm/a", "https://www.chococam.cm/b", "https://chococam.com/c"),
+      "Chococam",
+    );
+    expect(c).toEqual(["https://chococam.cm", "https://chococam.com"]);
+  });
+
+  it("nom trop court → aucune devinette", () => {
+    expect(officialSiteCandidatesFromHits(hits("https://x.com/a"), "X")).toEqual([]);
+  });
+});
+
+describe("hostOf", () => {
+  it("normalise sans www et en minuscules", () => {
+    expect(hostOf("https://WWW.Chococam.CM/produits")).toBe("chococam.cm");
+  });
+  it("URL malformée → null (jamais de throw)", () => {
+    expect(hostOf("pas-une-url")).toBeNull();
+  });
+});

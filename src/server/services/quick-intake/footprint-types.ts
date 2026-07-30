@@ -98,6 +98,16 @@ export interface EnrichedFootprint extends WebFootprint {
   enrichment: {
     apify: "LIVE" | "DEFERRED" | "DEGRADED" | "SKIPPED";
     press: "LIVE" | "EMPTY" | "ERROR";
+    /**
+     * Étage LLM proposeur (2026-07-30) : pistes site/réseaux tirées des
+     * extraits web quand le déterministe n'a rien trouvé. Optionnel —
+     * rétro-compat avec les JSON persistés avant cet étage. Le LLM ne fait
+     * que PROPOSER : toute piste retenue a été vérifiée déterministiquement,
+     * donc ce statut trace un effort, jamais une source de faits.
+     */
+    proposer?: import("./llm-proposer").ProposerStatus;
+    /** true = le site retenu vient d'une piste LLM vérifiée (traçabilité). */
+    siteFromProposer?: boolean;
     totalMs: number;
     errors: string[];
   };

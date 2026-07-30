@@ -223,6 +223,12 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
   let effectiveWebsiteUrl = input.websiteUrl ?? null;
   /** Site adopté derrière un mur anti-bot : existence corroborée, contenu illisible. */
   let siteBehindBotWall = false;
+  /** Statut de l'étage LLM proposeur — exposé dans le rapport, jamais silencieux. */
+  let proposerStatus: import("./llm-proposer").ProposerStatus = "SKIPPED_NO_INPUT";
+  /** Profils proposés par le LLM, en attente de vérification déterministe (étage 2ter). */
+  let proposedSocialUrls: string[] = [];
+  /** Le site retenu vient d'une piste LLM vérifiée (traçabilité du rapport). */
+  let siteFromProposer = false;
   if (!effectiveWebsiteUrl && remaining() > 6_000) {
     try {
       const { discoverOfficialSite, officialSiteCandidatesFromHits, hostOf } = await import("./web-footprint");
@@ -252,6 +258,50 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
       if (found) {
         effectiveWebsiteUrl = found.url;
         siteBehindBotWall = found.blocked;
+      }
+
+      // ── 0.0bis. LLM PROPOSEUR — le filet quand le déterministe a échoué ──
+      // (mandat 2026-07-30) C'est ici que le LLM bat le parseur : il comprend
+      // qu'un extrait « Chococam, filiale de Tiger Brands » désigne la même
+      // entreprise, là où une regex sur le slug ne voit rien. Il PROPOSE un
+      // host ; la vérification qui suit reste strictement déterministe
+      // (fetch + entity-gate via `discoverOfficialSite`), donc une proposition
+      // fausse ne peut pas entrer dans les faits — elle est simplement jetée.
+      if (!effectiveWebsiteUrl && hits.length > 0 && remaining() > 8_000) {
+        const { proposeBrandIdentity } = await import("./llm-proposer");
+        const proposal = await withTimeout(
+          proposeBrandIdentity({
+            brandName: input.companyName,
+            country: input.country,
+            sector: input.sector,
+            hits,
+          }),
+          Math.min(6_000, remaining()),
+          { status: "ERROR" as const, siteHost: null, socialUrls: [] },
+        );
+        proposerStatus = proposal.status;
+        proposedSocialUrls = proposal.socialUrls;
+        if (proposal.siteHost) {
+          const verified = await withTimeout(
+            discoverOfficialSite(input.companyName, countryCodeGuess(input.country), {
+              timeoutMs: 4_000,
+              // Le host proposé est le SEUL candidat : on teste la piste du
+              // LLM, on ne relance pas la devinette par slug déjà jouée.
+              extraCandidates: [`https://${proposal.siteHost}`],
+              corroboratedHosts,
+              validate: (pageText) => gate.judge(pageText).accepted,
+            }),
+            Math.min(6_000, remaining()),
+            null,
+          );
+          // `discoverOfficialSite` réintroduit les candidats slug : on n'adopte
+          // que si la piste VÉRIFIÉE est bien celle proposée par le LLM.
+          if (verified && hostOf(verified.url) === proposal.siteHost) {
+            effectiveWebsiteUrl = verified.url;
+            siteBehindBotWall = verified.blocked;
+            siteFromProposer = true;
+          }
+        }
       }
     } catch {
       /* best-effort — l'absence de site reste un état honnête */
@@ -389,6 +439,38 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
     } catch (err) {
       discovery.status = "ERROR";
       errors.push(`discovery: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  // ── 2ter. Profils PROPOSÉS par le LLM — vérifiés avant d'entrer ──
+  // Le LLM a nommé des comptes plausibles à l'étage 0.0bis ; aucun n'est un
+  // fait tant qu'il n'a pas passé les MÊMES gardes que les autres : forme
+  // reconnue par le parseur déterministe (`detectSocialLinks` — donc une URL
+  // de profil réelle, pas un lien de partage ni un chemin de plateforme), et
+  // entity-gate sur l'évidence qui l'accompagne. Une proposition qui ne passe
+  // pas est jetée en silence : le LLM ne peut RIEN ajouter que le
+  // déterministe n'aurait pas validé.
+  if (footprint.socials.length === 0 && proposedSocialUrls.length > 0) {
+    const evidenceByUrl = new Map<string, string>();
+    for (const h of await withTimeout(acceptedHitsPromise, 1_000, [])) {
+      evidenceByUrl.set(h.url.toLowerCase(), `${h.title} ${h.description}`);
+    }
+    for (const url of proposedSocialUrls) {
+      for (const p of detectSocialLinks(url)) {
+        // Évidence = le hit d'origine si l'URL en vient, sinon le nom du
+        // profil lui-même soumis au gate (jamais d'acceptation sans verdict).
+        const evidence = evidenceByUrl.get(url.toLowerCase()) ?? `${p.handle ?? ""} ${p.url}`;
+        if (!gate.judge(evidence).accepted) {
+          filtered.adversarial += 1;
+          continue;
+        }
+        addDiscovered(p, evidence);
+      }
+    }
+    if (footprint.socials.length > 0) {
+      discovery.attempted = true;
+      discovery.status = "OK";
+      discovery.queries.push("(pistes LLM vérifiées)");
     }
   }
 
@@ -847,6 +929,8 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
     enrichment: {
       apify: apifyStatus,
       press: pressStatus,
+      proposer: proposerStatus,
+      siteFromProposer,
       totalMs: Date.now() - t0,
       errors: [...footprint.errors, ...errors],
     },
