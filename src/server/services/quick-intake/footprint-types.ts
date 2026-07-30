@@ -108,6 +108,21 @@ export interface EnrichedFootprint extends WebFootprint {
     proposer?: import("./llm-proposer").ProposerStatus;
     /** true = le site retenu vient d'une piste LLM vérifiée (traçabilité). */
     siteFromProposer?: boolean;
+    /**
+     * Audiences RELEVÉES mais écartées du score (2026-07-30) : le compte
+     * existe bel et bien, le chiffre est incohérent avec son marché.
+     * Mesuré : `facebook.com/orangecameroun` (compte réel) remontait
+     * 31 737 324 abonnés pour un pays de ~28 M d'habitants — le compteur du
+     * groupe. Sans ce bloc, le rapport disait « audience non relevée », ce
+     * qui est FAUX : elle a été relevée, et jugée invraisemblable. Un compte
+     * qui existe ne doit jamais être présenté comme inexistant.
+     */
+    audienceAnomalies?: Array<{
+      platform: string;
+      handle: string;
+      followerCount: number;
+      marketPopulation: number;
+    }>;
     totalMs: number;
     errors: string[];
   };

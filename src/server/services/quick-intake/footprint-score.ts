@@ -67,6 +67,7 @@ export function computeFootprintScore(f: EnrichedFootprint): FootprintScore {
   const realCounts = f.followerCounts ?? [];
   const ytSubs = f.youtube?.status === "LIVE" && f.youtube.subscriberCount ? f.youtube.subscriberCount : 0;
   const totalAudience = realCounts.reduce((sum, c) => sum + c.followerCount, 0) + ytSubs;
+  const anomalies = f.enrichment.audienceAnomalies ?? [];
   const socialMeasured = f.socials.length > 0 || realCounts.length > 0 || ytSubs > 0;
   if (socialMeasured) {
     const presence = clamp(f.socials.length * 15, 0, 40); // multi-canal
@@ -88,7 +89,20 @@ export function computeFootprintScore(f: EnrichedFootprint): FootprintScore {
     dims.push({
       key: "social", label: "Réseaux sociaux", weight: 30, measured: true,
       score: clamp(presence + audience),
-      details: `${platforms}${totalAudience > 0 ? ` · ${new Intl.NumberFormat("fr-FR").format(totalAudience)} abonnés mesurés` : " · audience non relevée"}`,
+      // Détail HONNÊTE de l'audience (signalement opérateur 2026-07-30 :
+      // « facebook.com/orangecameroun existe pourtant — "non relevé" ne
+      // devrait être là que si ça n'existe VRAIMENT pas »). Trois états
+      // distincts, jamais confondus : mesurée · relevée puis écartée parce
+      // qu'incohérente avec le marché · réellement absente.
+      details: `${platforms}${
+        totalAudience > 0
+          ? ` · ${new Intl.NumberFormat("fr-FR").format(totalAudience)} abonnés mesurés`
+          : anomalies.length > 0
+            ? ` · audience relevée mais incohérente avec le marché (${anomalies
+                .map((a) => new Intl.NumberFormat("fr-FR").format(a.followerCount))
+                .join(", ")}) — écartée du score`
+            : " · audience non relevée"
+      }`,
     });
   } else {
     dims.push({

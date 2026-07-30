@@ -543,6 +543,8 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
   //     préfère au scraping Apify (estimation) — plateformes couvertes
   //     retirées de la liste à scraper, provenance SOURCE conservée.
   const followerCounts: FollowerCountEntry[] = [];
+  /** Audiences relevees mais ecartees (compte reel, chiffre incoherent). */
+  const audienceAnomalies: NonNullable<EnrichedFootprint["enrichment"]["audienceAnomalies"]> = [];
   const connectedProfiles: ConnectedProfileEntry[] = [];
   const connectorCovered = new Set<string>();
   try {
@@ -638,9 +640,15 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
               marketPopulation,
             });
             if (!v.admitted && v.reason === "REJECTED_IMPLAUSIBLE") {
-              errors.push(
-                `audience écartée (${d.platform} @${d.handle}) : ${d.followerCount} abonnés pour un marché de ${marketPopulation} habitants`,
-              );
+              // Le compte EXISTE : on écarte le CHIFFRE, pas le profil, et on
+              // le consigne pour que le rapport dise « relevé puis écarté »
+              // et non « non relevé » — ce serait faux.
+              audienceAnomalies.push({
+                platform: String(d.platform),
+                handle: d.handle,
+                followerCount: d.followerCount,
+                marketPopulation: marketPopulation ?? 0,
+              });
               continue;
             }
             followerCounts.push({
@@ -1078,6 +1086,7 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
       press: pressStatus,
       proposer: proposerStatus,
       siteFromProposer,
+      audienceAnomalies: audienceAnomalies.length > 0 ? audienceAnomalies : undefined,
       totalMs: Date.now() - t0,
       errors: [...footprint.errors, ...errors],
     },
