@@ -1,7 +1,7 @@
 /**
  * eslint-plugin-lafusee — governance lint rules.
  *
- * 8 rules. All registered as `lafusee/<name>`. Severities are configured by
+ * 9 rules. All registered as `lafusee/<name>`. Severities are configured by
  * the consumer (see `eslint.config.js`) — the rules themselves are neutral.
  */
 
@@ -15,11 +15,12 @@ const noAdhocCompletionMath = require("./rules/no-adhoc-completion-math");
 const designTokenOnly = require("./rules/design-token-only");
 const noDirectLucideImport = require("./rules/no-direct-lucide-import");
 const noViMockToplevelVar = require("./rules/no-vi-mock-toplevel-var");
+const noUngatedFootprintSignal = require("./rules/no-ungated-footprint-signal");
 
 module.exports = {
   meta: {
     name: "eslint-plugin-lafusee",
-    version: "0.4.0",
+    version: "0.5.0",
   },
   rules: {
     "no-direct-service-from-router": noDirectServiceFromRouter,
@@ -30,5 +31,6 @@ module.exports = {
     "design-token-only": designTokenOnly,
     "no-direct-lucide-import": noDirectLucideImport,
     "no-vi-mock-toplevel-var": noViMockToplevelVar,
+    "no-ungated-footprint-signal": noUngatedFootprintSignal,
   },
 };

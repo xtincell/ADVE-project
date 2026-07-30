@@ -31,6 +31,7 @@ import {
   type SocialProfile,
   type WebFootprint,
 } from "./web-footprint";
+import { admitSignal } from "@/server/services/seshat/signal-gateway";
 import {
   COUNTRY_CITIES,
   assessNameExtension,
@@ -775,9 +776,55 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
         }
       }
       enrichedExtras.performance = performance;
-      enrichedExtras.ads = ads;
-      enrichedExtras.wikipedia = wikipedia;
       enrichedExtras.searchAutocomplete = searchAutocomplete;
+
+      // ── Canaux longtemps NON gardés (audit 2026-07-30) ──
+      // `ads` et `wikipedia` étaient interrogés SUR LE NOM SEUL et écrits
+      // sans le moindre verdict d'appartenance — le vecteur exact qui a mis
+      // une boutique de mode de Lagos dans le rapport d'une plateforme de
+      // formation. Ils passent désormais la MÊME porte que tout le reste :
+      // les deux exposent un nom (`pageName`, `title`), donc l'extension de
+      // nom y est décidable comme ailleurs.
+      const adsName = ads?.status === "LIVE" ? ads.pageName : null;
+      if (ads && adsName) {
+        const v = admitSignal({
+          kind: "ads",
+          gate,
+          source: "DIRECT_LOOKUP",
+          candidateName: adsName,
+          evidence: adsName,
+        });
+        if (v.admitted) enrichedExtras.ads = ads;
+        else {
+          filtered.discovery += 1;
+          enrichedExtras.ads = { ...ads, status: "NOT_FOUND", activeAdsCount: null, pageName: null };
+        }
+      } else if (ads) {
+        enrichedExtras.ads = ads;
+      }
+
+      if (wikipedia?.state === "LIVE" && wikipedia.data.hasPage && wikipedia.data.title) {
+        const v = admitSignal({
+          kind: "wikipedia",
+          gate,
+          source: "DIRECT_LOOKUP",
+          candidateName: wikipedia.data.title,
+          evidence: `${wikipedia.data.title} ${wikipedia.data.extract ?? ""}`,
+        });
+        if (v.admitted) {
+          enrichedExtras.wikipedia = wikipedia;
+        } else {
+          // Page d'un homonyme : négatif HONNÊTE (« pas de page à ce nom »),
+          // jamais la notabilité d'une autre entité portée au crédit du client.
+          filtered.discovery += 1;
+          enrichedExtras.wikipedia = {
+            ...wikipedia,
+            data: { ...wikipedia.data, hasPage: false, title: null, extract: null, url: null },
+          };
+        }
+      } else if (wikipedia) {
+        enrichedExtras.wikipedia = wikipedia;
+      }
     } catch (err) {
       errors.push(`collectors: ${err instanceof Error ? err.message : String(err)}`);
     }

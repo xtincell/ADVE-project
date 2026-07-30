@@ -77,6 +77,10 @@ export default [
       "lafusee/no-direct-service-from-router": "warn",
       "lafusee/no-cross-portal-import": "warn",
       "lafusee/no-numbered-duplicates": "error",
+      // Invariant d'architecture : un signal externe ne peut pas entrer dans un
+      // rapport client sans verdict d'appartenance. `error` d'emblee — la
+      // regression que cette regle previent a deja eu lieu trois fois.
+      "lafusee/no-ungated-footprint-signal": "error",
       "lafusee/no-adhoc-completion-math": "warn",
       "lafusee/no-vi-mock-toplevel-var": "error",
 
