@@ -26,6 +26,12 @@ export function useIntakeProcessingWatch(
 ) {
   const utils = trpc.useUtils();
   const [watching, setWatching] = useState(false);
+  // Étape RÉELLE en cours, lue en base (2026-07-30). Le traitement dure ~4 min
+  // mesurées : sans elle l'écran ne peut afficher qu'un libellé générique ou —
+  // ce qu'il faisait — une progression simulée. `null` = jalon pas encore posé
+  // (ou row legacy) → l'appelant retombe sur le libellé générique, jamais sur
+  // une étape inventée.
+  const [stage, setStage] = useState<string | null>(null);
   const onTerminalRef = useRef(onTerminal);
   onTerminalRef.current = onTerminal;
 
@@ -43,6 +49,7 @@ export function useIntakeProcessingWatch(
       try {
         const latest = await utils.quickIntake.getByToken.fetch({ token }, { staleTime: 0 });
         if (cancelled || !latest) return;
+        setStage((latest as { processingStage?: string | null }).processingStage ?? null);
         if (latest.status === "COMPLETED" || latest.status === "CONVERTED") {
           finish({ status: "COMPLETED" });
         } else if (latest.status === "FAILED") {
@@ -68,8 +75,38 @@ export function useIntakeProcessingWatch(
 
   return {
     watching,
-    startWatching: useCallback(() => setWatching(true), []),
+    /** Jalon réel courant (`started` | `footprint` | `extracted` | `scored` | `narrative`), null si inconnu. */
+    stage,
+    startWatching: useCallback(() => {
+      setStage(null);
+      setWatching(true);
+    }, []),
   };
+}
+
+/**
+ * Les jalons dans l'ordre réel d'exécution de `complete()` — sert à afficher
+ * une progression HONNÊTE (part mesurée du chemin), jamais une animation
+ * calée sur une durée devinée.
+ */
+export const INTAKE_STAGES = ["started", "footprint", "extracted", "scored", "narrative"] as const;
+
+/** Clé i18n du libellé d'un jalon ; libellé générique si inconnu/absent. */
+export function intakeStageKey(stage: string | null): string {
+  return stage && (INTAKE_STAGES as readonly string[]).includes(stage)
+    ? `intakeProcessing.stage.${stage}`
+    : "intakeProcessing.stage.generic";
+}
+
+/**
+ * Progression en % : position du jalon dans la séquence, PLAFONNÉE à 90 %
+ * tant que l'état terminal n'est pas lu — jamais un faux 100 % (même
+ * doctrine que le `ScanProgress` du /scorer).
+ */
+export function intakeStageProgress(stage: string | null): number {
+  const i = stage ? (INTAKE_STAGES as readonly string[]).indexOf(stage) : -1;
+  if (i < 0) return 5;
+  return Math.min(90, Math.round(((i + 1) / INTAKE_STAGES.length) * 100));
 }
 
 /** Mappe une failureReason serveur vers sa clé i18n client (défaut : internal). */

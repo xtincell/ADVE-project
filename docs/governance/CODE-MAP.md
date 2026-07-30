@@ -82,7 +82,7 @@ Ces correspondances évitent la réinvention :
 - **Message** (12 fields)
 - **AssistantThread** (7 fields) — ADR-0181 — fil de conversation de l'ASSISTANT DE MARQUE (chat cockpit). DISTINCT de `Conversation`/`Message` ci-dessus (
 - **AssistantMessage** (6 fields)
-- **QuickIntake** (32 fields)
+- **QuickIntake** (33 fields)
 - **MediaPlan** (13 fields)
 - **MediaPlanLine** (18 fields)
 - **CampaignAction** (29 fields)

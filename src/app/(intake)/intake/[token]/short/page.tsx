@@ -38,7 +38,7 @@ export default function ShortIntakePage({ params }: { params: Promise<{ token: s
   // F1 async : le serveur rend la main immédiatement ({ status: "PROCESSING" }),
   // le hook sonde getByToken jusqu'à l'état terminal RÉEL — redirection sur
   // COMPLETED uniquement, message honnête sur FAILED (retry sans rien perdre).
-  const { watching, startWatching } = useIntakeProcessingWatch(token, (outcome) => {
+  const { watching, stage, startWatching } = useIntakeProcessingWatch(token, (outcome) => {
     if (outcome.status === "COMPLETED") {
       router.push(`/intake/${token}/result`);
       return;
@@ -86,6 +86,7 @@ export default function ShortIntakePage({ params }: { params: Promise<{ token: s
       <IntakeProcessingScreen
         companyName={intake.companyName}
         isPending
+        stage={stage}
         errorMessage={error || undefined}
       />
     );

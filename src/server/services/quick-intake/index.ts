@@ -392,6 +392,21 @@ export async function complete(token: string) {
 
   emitIntakeStarted({ intakeToken: token, companyName: intake.companyName });
 
+  /**
+   * Jalon RÉEL persisté (2026-07-30). Les emitters NSP ci-dessus n'ont aucun
+   * consommateur possible (SSE session-only, 401 pour un lead anonyme), et le
+   * traitement dure ~4 min mesurées : l'écran affichait une progression
+   * simulée. `getByToken` est déjà sondé par le client — on y pose l'étape
+   * réelle. Best-effort strict : un échec d'écriture de jalon ne casse JAMAIS
+   * un complete() qui réussit.
+   */
+  const stage = async (name: string): Promise<void> => {
+    await db.quickIntake
+      .updateMany({ where: { id: intake.id, status: "PROCESSING" }, data: { processingStage: name } })
+      .catch(() => undefined);
+  };
+  await stage("started");
+
   // ── Vague 10 + ADR-0121 — EMPREINTE WEB PUBLIQUE ENRICHIE. ──
   // Cache : un footprint enrichi déjà persisté (re-run) est réutilisé tel
   // quel. La collecte elle-même est déplacée APRÈS la création de la
@@ -492,6 +507,7 @@ export async function complete(token: string) {
   // L'intake est asynchrone (F1 v6.27.223) : le fondateur voit des jalons,
   // pas un spinner — les ~20 s de plus sont invisibles.
   if (!webFootprint) {
+    await stage("footprint");
     try {
       const { enrichPublicFootprint } = await import("./public-enrichment");
       webFootprint = await Promise.race([
@@ -675,6 +691,7 @@ export async function complete(token: string) {
     filledPillars,
     durationMs: elapsed(),
   });
+  await stage("extracted");
 
   // Score the strategy — ADVE only for intake, composite /100
   // NOTE: this is the COMPLETION score (form-fill rate). The brand-level
@@ -692,6 +709,7 @@ export async function complete(token: string) {
   }
 
   // Jalon 2 : composite ADVE /100 calculé (~12s)
+  await stage("scored");
   emitIntakeScored({
     intakeToken: token,
     compositeScore: adveComposite,
@@ -1049,6 +1067,7 @@ export async function complete(token: string) {
   }
 
   // Jalon 3 : narrative report ADVE + RTIS produit (~50s)
+  await stage("narrative");
   emitIntakeNarrativeDone({
     intakeToken: token,
     hasRtis: !!narrativeReport?.rtis,

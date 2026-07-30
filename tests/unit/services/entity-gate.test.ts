@@ -14,6 +14,7 @@ import {
   createEntityGate,
   mentionsEntity,
   normalizeEntityText,
+  assessNameExtension,
 } from "@/server/services/seshat/entity-gate";
 
 describe("assessBrandNameAmbiguity", () => {
@@ -142,5 +143,42 @@ describe("mentionsEntity (source canonique de mentionsBrand)", () => {
 describe("normalizeEntityText", () => {
   it("casse, diacritiques, ponctuation → tokens espacés", () => {
     expect(normalizeEntityText("Côte-d'Ivoire !")).toBe("cote d ivoire");
+  });
+});
+
+/**
+ * Verdict d'EXTENSION DE NOM (audit intake 2026-07-30). Mesuré en prod : le
+ * rapport d'« Irawo » (edtech, secteur/pays non déclarés) contenait la fiche
+ * Google, la note 4,3/5 et les avis d'« Irawo Studio » — une boutique de mode
+ * de Lagos. L'extension d'un nom est LE motif d'homonymie ; elle n'est
+ * décidable qu'avec un discriminant.
+ */
+describe("assessNameExtension", () => {
+  it("nom identique → exact (acceptable sur la mention seule)", () => {
+    expect(assessNameExtension("Irawo", "Irawo")).toBe("exact");
+    expect(assessNameExtension("CHOCOCAM", "Chococam")).toBe("exact");
+    expect(assessNameExtension("Côte-d'Ivoire", "Cote d Ivoire")).toBe("exact");
+  });
+
+  it("forme juridique ajoutée → benign (une raison sociale reste la marque)", () => {
+    expect(assessNameExtension("Chococam SA", "Chococam")).toBe("benign");
+    expect(assessNameExtension("Irawo Ltd", "Irawo")).toBe("benign");
+    expect(assessNameExtension("Groupe Dovv", "Dovv")).toBe("benign");
+  });
+
+  it("mot de CONTENU ajouté → extended (exige un discriminant)", () => {
+    expect(assessNameExtension("Irawo Studio", "Irawo")).toBe("extended");
+    expect(assessNameExtension("Dovv Studio", "Dovv")).toBe("extended");
+    expect(assessNameExtension("Burger King Abidjan", "Burger King")).toBe("extended");
+  });
+
+  it("nom absent → unrelated", () => {
+    expect(assessNameExtension("Boutique Mode Lagos", "Irawo")).toBe("unrelated");
+    expect(assessNameExtension("", "Irawo")).toBe("unrelated");
+  });
+
+  it("un mot qui CONTIENT le nom sans frontière n'est pas une extension", () => {
+    // « Irawopolis » n'est pas « Irawo » + un mot : c'est un autre mot.
+    expect(assessNameExtension("Irawopolis", "Irawo")).toBe("unrelated");
   });
 });

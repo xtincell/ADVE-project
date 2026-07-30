@@ -88,12 +88,34 @@ describe("looksLikeBotWall", () => {
 describe("officialSiteCandidatesFromHits", () => {
   const hits = (...urls: string[]) => urls.map((url) => ({ url }));
 
-  it("retient le domaine de la marque cité par le web (ce que le slug seul rate)", () => {
+  it("retient le domaine EXACT de la marque cité par le web (ce que le slug seul rate)", () => {
     const c = officialSiteCandidatesFromHits(
-      hits("https://www.chococam-cameroun.com/produits", "https://news.example/article"),
+      hits("https://www.chococam.cm/produits", "https://news.example/article"),
       "Chococam",
     );
-    expect(c).toContain("https://chococam-cameroun.com");
+    expect(c).toContain("https://chococam.cm");
+  });
+
+  /**
+   * Durcissement 2026-07-30 : un host qui ÉTEND le slug est le motif
+   * d'homonymie n°1 (« Irawo » edtech → irawostudio.com, boutique de mode à
+   * Lagos ; « Dovv » → dovvstudio.com). Sans discriminant, l'extension est
+   * indécidable — on ne devine pas.
+   */
+  it("host SUPERSET du slug : rejeté sans discriminant, retenu avec", () => {
+    const superset = hits("https://www.chococam-cameroun.com/produits");
+    expect(officialSiteCandidatesFromHits(superset, "Chococam")).toEqual([]);
+    expect(
+      officialSiteCandidatesFromHits(superset, "Chococam", { hitHasDiscriminant: () => true }),
+    ).toEqual(["https://chococam-cameroun.com"]);
+  });
+
+  it("le label EXACT n'exige jamais de discriminant (marque sans contexte déclaré)", () => {
+    expect(officialSiteCandidatesFromHits(hits("https://irawo.com/a"), "Irawo")).toEqual([
+      "https://irawo.com",
+    ]);
+    // …alors que l'extension de ce même nom tombe.
+    expect(officialSiteCandidatesFromHits(hits("https://irawostudio.com/a"), "Irawo")).toEqual([]);
   });
 
   it("exclut les plateformes tierces : on cherche le site DE la marque", () => {

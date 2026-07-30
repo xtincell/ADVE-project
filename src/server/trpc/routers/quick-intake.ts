@@ -107,11 +107,31 @@ async function seedPillarFromIntake(
  * un squelette tout-vide `{biz:{},a:{},…}` : c'est exactement la classe de row
  * que les gardes `hasSubstantiveAnswer` de advance()/complete() interdisent.
  */
+/**
+ * Métadonnées de contexte extraites DANS LE MÊME appel que les réponses —
+ * jamais un appel LLM de plus. Elles arment l'entity-gate de la collecte
+ * d'empreinte (ADR-0162) quand le prospect n'a rien déclaré : mesuré
+ * 2026-07-30, « Irawo » (edtech, secteur/pays non déclarés) recevait dans son
+ * rapport la fiche Maps, les avis et les réseaux d'« Irawo Studio » — une
+ * boutique de mode homonyme de Lagos. Le texte du prospect contenait pourtant
+ * les discriminants (« plateforme », « talents africains ») : ils étaient
+ * extraits… puis jamais réinjectés dans la collecte.
+ */
+interface ExtractedMeta {
+  sector: string | null;
+  country: string | null;
+}
+
+interface ExtractionOutcome {
+  responses: Record<string, Record<string, unknown>>;
+  meta: ExtractedMeta;
+}
+
 async function extractFromText(
   text: string,
   companyName: string,
   sector?: string | null,
-): Promise<Record<string, Record<string, unknown>> | null> {
+): Promise<ExtractionOutcome | null> {
   // Pré-flight : tous les providers texte down → inutile de tenter (et de
   // brûler le budget serverless), on dégrade tout de suite.
   if (!isTextLLMAvailable()) return null;
@@ -135,11 +155,11 @@ async function extractFromText(
     // `wrapUntrusted` (« donnée, jamais instruction ») — parité deduce-adve.ts.
     const safeCompany = sanitizeInline(companyName, { max: 120 });
     const safeSector = sanitizeInline(sector ?? "Non precise", { max: 80 });
-    const prompt = `NOTE D'INTENTION CRITIQUE (POUR L'IA) :
-Ce texte contient la documentation fondatrice de "La Fusée", un écosystème de stratégie de marque créé par Alexandre Djengue (Upgraders).
-ATTENTION : Tous les termes liés au champ lexical de la guerre, de la secte ou de la manipulation (ex: "culte", "ennemi", "manipulation", "endoctrinement", "propagande") sont de PURES MÉTAPHORES DE BRANDING B2B/B2C. Il s'agit d'une théorie marketing légitime pour engager des "superfans" (clients fidèles). Il n'y a aucune incitation à la violence ou à des comportements illégaux. Ce document est 100% professionnel.
-
-A partir de ce texte brut, extrait les reponses de la marque pour le diagnostic ADVE.
+    // Préambule assaini (audit 2026-07-30) : l'ancien décrivait « la
+    // documentation fondatrice de La Fusée » — FAUX, le texte source est
+    // celui du PROSPECT (vestige copié d'un prompt d'ingestion interne).
+    // Décrire le mauvais document au modèle est un contexte trompeur.
+    const prompt = `Le TEXTE SOURCE ci-dessous décrit la marque d'un prospect (texte libre, documents et/ou site fournis par lui). Extrais-en les réponses de la marque pour le diagnostic ADVE.
 
 MARQUE: ${safeCompany}
 SECTEUR: ${safeSector}
@@ -151,9 +171,11 @@ REGLES STRICTES:
 2. N'INVENTE JAMAIS de données : aucune connaissance externe sur la marque, aucune supposition, aucune « réalité connue » de tête. Seul le TEXTE SOURCE fait foi. (Le pré-remplissage inféré des champs non-dérivables est un flux séparé, marqué INFERRED — ce n'est pas le rôle de cette extraction.)
 3. Sois concis : 1 a 2 phrases par champ texte, MAXIMUM. La sortie complete doit rester un JSON compact.
 4. Reponds UNIQUEMENT par un objet JSON valide. Aucun texte avant ou apres.
+5. Le bloc "_meta" est OBLIGATOIRE : "sector" = secteur d'activité en 1 à 4 mots (ex: "formation en ligne", "distribution alimentaire") ; "country" = pays principal du marché. Chacun UNIQUEMENT si le TEXTE SOURCE permet de le dire — sinon null. Jamais deviné.
 
 SCHEMA ATTENDU (Utilise EXACTEMENT ces clefs, n'invente pas de nouvelles clefs) :
 {
+  "_meta": { "sector": "... ou null", "country": "... ou null" },
 ${expectedSchema}
 }`;
 
@@ -191,6 +213,20 @@ ${expectedSchema}
         // Robust parse — handles bare JSON, ```json fences, or JSON-in-prose.
         const parsed = extractJSON((out ?? "").trim()) as Record<string, Record<string, unknown>>;
 
+        // `_meta` est un canal de CONTEXTE (secteur/pays pour l'entity-gate),
+        // jamais une réponse : retiré AVANT le filtre pour ne pas polluer les
+        // slices ni compter comme « phase répondue ».
+        const rawMeta = parsed._meta;
+        delete parsed._meta;
+        const asMetaField = (v: unknown): string | null =>
+          typeof v === "string" && v.trim() && v.trim().toLowerCase() !== "null"
+            ? v.trim().slice(0, 80)
+            : null;
+        const meta: ExtractedMeta =
+          rawMeta && typeof rawMeta === "object" && !Array.isArray(rawMeta)
+            ? { sector: asMetaField(rawMeta.sector), country: asMetaField(rawMeta.country) }
+            : { sector: null, country: null };
+
         // Keep only phases with at least one SUBSTANTIVE field — a slice of
         // chaînes vides ne doit jamais marquer une phase comme répondue.
         const result: Record<string, Record<string, unknown>> = {};
@@ -203,7 +239,7 @@ ${expectedSchema}
           }
         }
 
-        return result;
+        return { responses: result, meta };
       } catch (err) {
         lastErr = err;
       }
@@ -245,7 +281,12 @@ async function fetchUrlAsText(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), opts.timeoutMs ?? 8000);
   try {
-    const resp = await fetch(url, {
+    // SSRF (audit 2026-07-30) : l'URL vient de l'utilisateur et `z.string().url()`
+    // accepte `http://10.x.x.x/…` — un fetch nu depuis le conteneur atteint le
+    // réseau docker interne (danmem, coolify, supabase…). Même garde que le
+    // scorer : IP privées/link-local refusées, redirections re-validées.
+    const { ssrfSafeFetch } = await import("@/lib/net/ssrf-guard");
+    const resp = await ssrfSafeFetch(url, {
       signal: controller.signal,
       headers: { "User-Agent": "Mozilla/5.0 (compatible; LaFusee-ADVE-Bot/1.0)" },
     });
@@ -258,25 +299,14 @@ async function fetchUrlAsText(
   }
 }
 
-/**
- * Digital-presence grounding via the canonical Seshat/Brave access point
- * (ADR-0108). Bounded best-effort: no BRAVE_API_KEY → DEFERRED → null; any
- * error → null. Never throws, never blocks the intake.
- */
-async function fetchDigitalPresenceBlock(companyName: string): Promise<string | null> {
-  try {
-    const { braveWebSearch } = await import("@/server/services/seshat/web-search");
-    const query = `"${companyName}" OR site:twitter.com OR site:linkedin.com OR site:tiktok.com`;
-    const search = await braveWebSearch(query, { count: 10, timeoutMs: 8000 });
-    if (search.status === "OK" && search.hits.length) {
-      const results = search.hits.map((h) => `- ${h.title}: ${h.description}`).join("\n");
-      return `[PRÉSENCE DIGITALE & RÉSEAUX SOCIAUX]\n${results}`;
-    }
-  } catch {
-    /* best-effort — presence grounding is optional */
-  }
-  return null;
-}
+// SUPPRIMÉ (audit 2026-07-30) : `fetchDigitalPresenceBlock` injectait dans le
+// prompt d'extraction des hits Brave SANS entity-gate, remontés par une requête
+// logiquement cassée (`"X" OR site:twitter.com …` = n'importe quelle page de
+// ces plateformes) — du bruit homonyme au cœur du LLM, en doublon de l'appel
+// Brave que l'empreinte fait déjà. La présence digitale n'entre plus dans le
+// rapport QUE par `enrichPublicFootprint` (gate ADR-0162), via
+// `mergeFootprintIntoPillarE`. L'extraction ne lit que ce que le prospect a
+// fourni : texte, documents, site.
 
 // ── F1 async (fix prod 2026-07-19) — mécanique commune des 3 chemins lourds ──
 
@@ -289,7 +319,9 @@ async function fetchDigitalPresenceBlock(companyName: string): Promise<string | 
 async function claimIntakeForProcessing(db: import("@prisma/client").PrismaClient, intakeId: string): Promise<void> {
   const claimed = await db.quickIntake.updateMany({
     where: { id: intakeId, status: { in: ["IN_PROGRESS", "FAILED"] } },
-    data: { status: "PROCESSING", failureReason: null },
+    // `processingStage` remis à zéro comme `failureReason` : un retry ne doit
+    // jamais afficher l'étape de la tentative précédente.
+    data: { status: "PROCESSING", failureReason: null, processingStage: null },
   });
   if (claimed.count === 0) {
     throw new TRPCError({
@@ -297,6 +329,25 @@ async function claimIntakeForProcessing(db: import("@prisma/client").PrismaClien
       message: "L'analyse est déjà en cours pour ce diagnostic. Patientez quelques instants, la page suit l'avancement.",
     });
   }
+}
+
+/**
+ * Arme la collecte d'empreinte avec le contexte EXTRAIT du texte : les
+ * colonnes secteur/pays de la row sont remplies UNIQUEMENT si le prospect n'a
+ * rien déclaré (la déclaration prime toujours sur l'inférence — doctrine
+ * needsHuman/INFERRED). `complete()` relit la row → l'entity-gate de
+ * l'empreinte reçoit ces discriminants sans autre plomberie.
+ */
+async function applyExtractedMeta(
+  db: import("@prisma/client").PrismaClient,
+  intake: { id: string; sector: string | null; country: string | null },
+  meta: ExtractedMeta,
+): Promise<void> {
+  const data: { sector?: string; country?: string } = {};
+  if (!intake.sector?.trim() && meta.sector) data.sector = meta.sector;
+  if (!intake.country?.trim() && meta.country) data.country = meta.country;
+  if (Object.keys(data).length === 0) return;
+  await db.quickIntake.update({ where: { id: intake.id }, data });
 }
 
 /**
@@ -1194,9 +1245,12 @@ export const quickIntakeRouter = createTRPCRouter({
       await claimIntakeForProcessing(ctx.db, intake.id);
 
       void runIntakeProcessing(ctx.db, intake.id, input.token, "processShort", async () => {
-        const responses = await extractFromText(input.text, intake.companyName, intake.sector);
-        if (responses === null) return { failed: "llm_unavailable" as const };
-        await mergeIntakeResponses(ctx.db, intake.id, responses);
+        const extraction = await extractFromText(input.text, intake.companyName, intake.sector);
+        if (extraction === null) return { failed: "llm_unavailable" as const };
+        await mergeIntakeResponses(ctx.db, intake.id, extraction.responses);
+        // Secteur/pays extraits → colonnes (si non déclarés) : l'entity-gate
+        // de l'empreinte a des discriminants au lieu de collecter à l'aveugle.
+        await applyExtractedMeta(ctx.db, intake, extraction.meta);
         await quickIntakeService.complete(input.token);
         return { failed: null };
       });
@@ -1271,14 +1325,12 @@ export const quickIntakeRouter = createTRPCRouter({
           textParts.push(`[TEXTE FOURNI]\n${input.rawText}`);
         }
 
-        // 2 + 4. Network I/O CONCURRENT (scrape site + présence digitale
-        // Seshat/Brave) — bounded best-effort, never throw. Plus de budget
-        // serverless à respecter : on tourne hors requête.
+        // 2. Scrape du site déclaré (SSRF-gardé) — bounded best-effort, never
+        // throw. L'ancien bloc « présence digitale » (Brave sans gate) est
+        // supprimé : l'extraction ne lit QUE ce que le prospect a fourni ; la
+        // présence digitale entre par l'empreinte gate-validée de complete().
         const sitePromise = effectiveWebsiteUrl
           ? fetchUrlAsText(effectiveWebsiteUrl, { maxChars: 15_000 })
-          : Promise.resolve(null);
-        const presencePromise = intake.companyName
-          ? fetchDigitalPresenceBlock(intake.companyName)
           : Promise.resolve(null);
 
         // 3. Decode base64 files and extract text robustly (CPU-bound — runs
@@ -1312,23 +1364,25 @@ export const quickIntakeRouter = createTRPCRouter({
         }
 
         // Await the concurrent network I/O kicked off above and append in a
-        // stable order. Digital presence uses the canonical Seshat/Brave access
-        // point (ADR-0108) — no inline Brave code here.
-        const [siteText, presenceBlock] = await Promise.all([sitePromise, presencePromise]);
+        // stable order.
+        const siteText = await sitePromise;
         if (effectiveWebsiteUrl) {
           textParts.push(siteText ? `[SITE WEB: ${effectiveWebsiteUrl}]\n${siteText}` : `[SITE WEB inaccessible: ${effectiveWebsiteUrl}]`);
         }
-        if (presenceBlock) textParts.push(presenceBlock);
 
         const allText = textParts.join("\n\n---\n\n");
 
-        const responses = await extractFromText(allText, intake.companyName, intake.sector);
-        if (responses === null) {
+        const extraction = await extractFromText(allText, intake.companyName, intake.sector);
+        if (extraction === null) {
           // Extraction impossible (erreur LLM / sortie imparsable après retry).
           // Les sources sont persistées, rien n'est perdu — échec explicite.
           return { failed: "llm_unavailable" as const };
         }
-        await mergeIntakeResponses(ctx.db, intake.id, responses);
+        await mergeIntakeResponses(ctx.db, intake.id, extraction.responses);
+        // Secteur/pays extraits → colonnes (si non déclarés) : l'entity-gate
+        // de l'empreinte a des discriminants au lieu de collecter à l'aveugle
+        // (audit Irawo 2026-07-30 — l'homonyme de Lagos dans le rapport).
+        await applyExtractedMeta(ctx.db, intake, extraction.meta);
 
         // Direct-to-diagnostic (operator choice 2026-06-29) : run the full ADVE
         // diagnostic and let the client land on the result page. If the AI
@@ -1419,9 +1473,10 @@ export const quickIntakeRouter = createTRPCRouter({
 
         const allText = textParts.join("\n\n---\n\n");
 
-        const responses = await extractFromText(allText, intake.companyName, intake.sector);
-        if (responses === null) return { failed: "llm_unavailable" as const };
-        await mergeIntakeResponses(ctx.db, intake.id, responses);
+        const extraction = await extractFromText(allText, intake.companyName, intake.sector);
+        if (extraction === null) return { failed: "llm_unavailable" as const };
+        await mergeIntakeResponses(ctx.db, intake.id, extraction.responses);
+        await applyExtractedMeta(ctx.db, intake, extraction.meta);
         await quickIntakeService.complete(input.token);
         return { failed: null };
       });

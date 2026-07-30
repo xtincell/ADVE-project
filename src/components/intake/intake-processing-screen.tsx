@@ -6,16 +6,18 @@ import {
   FileText,
   ScanSearch,
   Sparkles,
-  ShieldCheck,
-  Diamond,
   Gem,
-  HeartHandshake,
   Award,
   Loader2,
 } from "lucide-react";
 import { useT } from "@/lib/i18n/use-t";
 
-type StageKey = "read" | "id" | "a" | "d" | "v" | "e" | "synth";
+/**
+ * Clés des jalons SERVEUR (`QuickIntake.processingStage`) — la source de
+ * vérité de l'avancement. Toute valeur ajoutée ici doit l'être aussi côté
+ * serveur (`complete()`), sinon l'étape ne s'allumera jamais.
+ */
+type StageKey = "started" | "footprint" | "extracted" | "scored" | "narrative";
 
 interface Stage {
   key: StageKey;
@@ -27,14 +29,26 @@ interface Stage {
 }
 
 // label / sub = i18n keys — resolved with t() at render time (fragment intake-result.ts).
+/**
+ * Les étapes RÉELLES de `complete()`, dans son ordre d'exécution — chaque clé
+ * correspond à un jalon écrit en base par le serveur (`processingStage`).
+ *
+ * Avant le 2026-07-30, cet écran affichait 7 étapes pilotées par un simple
+ * CHRONOMÈTRE CLIENT (`startsAt` : 0 → 46 s), pour un traitement mesuré à
+ * 264 s : le prospect voyait « Synthèse du rapport » au bout de 46 secondes,
+ * puis restait dessus trois minutes. Les étapes nommées d'après les piliers
+ * (Authenticité, Distinction…) ne correspondaient à aucune phase réelle —
+ * les 4 piliers sont extraits en UN seul appel.
+ *
+ * `startsAt` ne subsiste que comme repli quand le jalon serveur est inconnu
+ * (row antérieure à la colonne, jalon pas encore posé).
+ */
 const STAGES: Stage[] = [
-  { key: "read",  label: "intakeProcessing.stage.read.label",  sub: "intakeProcessing.stage.read.sub",  icon: FileText,       startsAt: 0  },
-  { key: "id",    label: "intakeProcessing.stage.id.label",    sub: "intakeProcessing.stage.id.sub",    icon: ScanSearch,     startsAt: 5  },
-  { key: "a",     label: "intakeProcessing.stage.a.label",     sub: "intakeProcessing.stage.a.sub",     icon: ShieldCheck,    startsAt: 11 },
-  { key: "d",     label: "intakeProcessing.stage.d.label",     sub: "intakeProcessing.stage.d.sub",     icon: Diamond,        startsAt: 19 },
-  { key: "v",     label: "intakeProcessing.stage.v.label",     sub: "intakeProcessing.stage.v.sub",     icon: Gem,            startsAt: 28 },
-  { key: "e",     label: "intakeProcessing.stage.e.label",     sub: "intakeProcessing.stage.e.sub",     icon: HeartHandshake, startsAt: 37 },
-  { key: "synth", label: "intakeProcessing.stage.synth.label", sub: "intakeProcessing.stage.synth.sub", icon: Award,          startsAt: 46 },
+  { key: "started",   label: "intakeProcessing.stage.read.label",      sub: "intakeProcessing.stage.read.sub",      icon: FileText,   startsAt: 0   },
+  { key: "footprint", label: "intakeProcessing.stage.id.label",        sub: "intakeProcessing.stage.id.sub",        icon: ScanSearch, startsAt: 10  },
+  { key: "extracted", label: "intakeProcessing.stage.extracted.label", sub: "intakeProcessing.stage.extracted.sub", icon: Gem,        startsAt: 60  },
+  { key: "scored",    label: "intakeProcessing.stage.scored.label",    sub: "intakeProcessing.stage.scored.sub",    icon: Award,      startsAt: 120 },
+  { key: "narrative", label: "intakeProcessing.stage.synth.label",     sub: "intakeProcessing.stage.synth.sub",     icon: Sparkles,   startsAt: 180 },
 ];
 
 type FactKind = "verite" | "methode" | "atelier" | "lafusee";
@@ -103,9 +117,15 @@ interface Props {
   isPending: boolean;
   /** Optional error to surface inline (still keeps the screen up so the user has context). */
   errorMessage?: string;
+  /**
+   * Jalon RÉEL lu en base (`useIntakeProcessingWatch().stage`). Quand il est
+   * fourni, il pilote l'étape active et la barre : l'écran montre où en est
+   * vraiment le serveur. `null`/absent → repli sur le chronomètre.
+   */
+  stage?: string | null;
 }
 
-export function IntakeProcessingScreen({ companyName, isPending, errorMessage }: Props) {
+export function IntakeProcessingScreen({ companyName, isPending, errorMessage, stage }: Props) {
   const { t } = useT();
   const [elapsed, setElapsed] = useState(0);
   const [factIndex, setFactIndex] = useState(0);
@@ -125,25 +145,32 @@ export function IntakeProcessingScreen({ companyName, isPending, errorMessage }:
     };
   }, []);
 
-  // ── Progress curve ───────────────────────────────────────────────
-  // Asymptotic toward 92 % over ~50 s so we never look "stuck at 100".
-  // Snap to 100 % the moment the mutation resolves.
-  const progress = useMemo(() => {
-    if (!isPending) return 100;
-    const target = 50;
-    const eased = (1 - Math.exp(-elapsed / target)) * 92;
-    return Math.max(2, Math.min(95, eased));
-  }, [elapsed, isPending]);
-
-  // Active stage = last stage whose startsAt <= elapsed (or the last one when done).
+  // Étape active : le JALON SERVEUR fait foi dès qu'il est connu ; le
+  // chronomètre n'est plus qu'un repli (row legacy / jalon pas encore posé).
   const activeIdx = useMemo(() => {
     if (!isPending) return STAGES.length - 1;
+    const fromServer = stage ? STAGES.findIndex((s) => s.key === stage) : -1;
+    if (fromServer >= 0) return fromServer;
     let idx = 0;
     for (let i = 0; i < STAGES.length; i++) {
       if (elapsed >= STAGES[i]!.startsAt) idx = i;
     }
     return idx;
-  }, [elapsed, isPending]);
+  }, [elapsed, isPending, stage]);
+
+  // ── Progression ──────────────────────────────────────────────────
+  // Adossée à l'étape RÉELLE atteinte (part mesurée du chemin), plafonnée à
+  // 90 % tant que la fin n'est pas lue — jamais un faux 100 %, même doctrine
+  // que le ScanProgress du /scorer. Sans jalon serveur : ancienne courbe
+  // asymptotique, mais calibrée sur la durée réellement mesurée (~264 s) au
+  // lieu de 50 s, sinon la barre stagne à 92 % pendant trois minutes.
+  const progress = useMemo(() => {
+    if (!isPending) return 100;
+    if (stage) return Math.min(90, Math.round(((activeIdx + 1) / STAGES.length) * 100));
+    const target = 260;
+    const eased = (1 - Math.exp(-elapsed / target)) * 88;
+    return Math.max(2, Math.min(90, eased));
+  }, [elapsed, isPending, stage, activeIdx]);
 
   return (
     <main className="fixed inset-0 z-50 flex flex-col bg-background">

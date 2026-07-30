@@ -69,7 +69,7 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
   // COMPLETED uniquement, écran de décision honnête sur FAILED (retry /
   // questionnaire pré-rempli, sans rien perdre). Le hook couvre aussi la
   // coupure réseau : row restée IN_PROGRESS = lancement perdu → « timeout ».
-  const { watching, startWatching } = useIntakeProcessingWatch(token, (outcome) => {
+  const { watching, stage, startWatching } = useIntakeProcessingWatch(token, (outcome) => {
     if (outcome.status === "COMPLETED") {
       router.push(`/intake/${token}/result`);
       return;
@@ -214,6 +214,7 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
       <IntakeProcessingScreen
         companyName={intake.companyName}
         isPending
+        stage={stage}
         errorMessage={error || undefined}
       />
     );

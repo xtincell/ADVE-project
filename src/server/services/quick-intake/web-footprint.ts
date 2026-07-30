@@ -491,9 +491,33 @@ function hitSellsDomain(h: SearchHitLike): boolean {
   return looksLikeParkedDomain(`${h.title ?? ""} ${h.description ?? ""}`);
 }
 
+/**
+ * true si un label du host EST le slug de la marque, à l'identique une fois
+ * compacté (`irawo.com`, `irawo.ci`, `www.irawo.bj`). C'est le seul match que
+ * l'on accepte SANS discriminant : un label qui ne fait que CONTENIR le slug
+ * (`irawostudio`, `dovvstudio`) est structurellement le nom d'une AUTRE
+ * entreprise autant que celui de la marque — mesuré 2 fois le 2026-07-30 :
+ * « Irawo » (edtech) adoptait irawostudio.com (boutique de mode, Lagos),
+ * « Dovv » (distribution) adoptait dovvstudio.com. Pur, testé.
+ */
+export function hostLabelMatchesSlug(host: string, slug: string): boolean {
+  return host
+    .split(".")
+    .some((label) => label.replace(/[^a-z0-9]/g, "") === slug);
+}
+
 export function officialSiteCandidatesFromHits(
   hits: ReadonlyArray<SearchHitLike>,
   brandName: string,
+  opts: {
+    /**
+     * Verdict discriminant du hit (secteur/pays/villes du gate d'entité,
+     * ADR-0162). Requis pour accepter un host SUPERSET du slug : sans preuve
+     * de marché/secteur, `irawostudio.com` n'est pas plus « Irawo » que
+     * n'importe quel homonyme. Absent → seuls les labels exacts passent.
+     */
+    hitHasDiscriminant?: (hit: SearchHitLike) => boolean;
+  } = {},
 ): string[] {
   const slug = brandDomainSlug(brandName);
   if (slug.length < 3) return [];
@@ -505,7 +529,12 @@ export function officialSiteCandidatesFromHits(
     seen.add(host);
     if (NON_OFFICIAL_HOST.test(`${host}.`)) continue;
     if (hitSellsDomain(h)) continue;
-    if (!host.replace(/[^a-z0-9]/g, "").includes(slug)) continue;
+    const compact = host.replace(/[^a-z0-9]/g, "");
+    if (!compact.includes(slug)) continue;
+    // Superset du slug (irawostudio, irawo-talents, dovvstudio…) : candidat
+    // UNIQUEMENT si le hit porte un discriminant — l'extension d'un nom est
+    // le motif n°1 d'homonymie inter-marchés.
+    if (!hostLabelMatchesSlug(host, slug) && !opts.hitHasDiscriminant?.(h)) continue;
     out.push(`https://${host}`);
     if (out.length >= 3) break;
   }
