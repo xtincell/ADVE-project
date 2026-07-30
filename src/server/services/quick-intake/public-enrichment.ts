@@ -170,6 +170,50 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
     }
   })();
 
+  // ── 0bis. Recherche de marque lancée TÔT, partagée par tout le pipeline ──
+  // (audit 2026-07-30) Cette requête existait déjà, mais à l'étage 4ter — donc
+  // APRÈS la découverte du site et des réseaux, et son résultat n'alimentait
+  // qu'un affichage de citations. Or c'est la source la plus riche du pipeline :
+  // les pages qui parlent d'une marque citent son domaine et ses profils.
+  // Mesuré sur « Chococam » : 5 citations trouvées, 0 site et 0 réseau détectés.
+  // Elle part maintenant en parallèle dès l'étage 0 et sert TROIS usages —
+  // corroboration du site (0.0), découverte des réseaux (2), citations (4ter) —
+  // pour UN seul appel réseau.
+  const brandSearchPromise: Promise<
+    ReadonlyArray<{ title: string; description: string; url: string }>
+  > = (async () => {
+    try {
+      const { braveWebSearch, isBraveConfigured } = await import("@/server/services/seshat/web-search");
+      if (!isBraveConfigured()) return [];
+      const q = `"${input.companyName}" ${input.country?.trim() ?? input.sector ?? ""}`.trim();
+      const res = await braveWebSearch(q, { count: 10, timeoutMs: 6_000 });
+      return res.status === "OK" ? res.hits : [];
+    } catch {
+      return [];
+    }
+  })();
+
+  /**
+   * Hits jugés par l'entity-gate (ADR-0162) + filtre marché — la MÊME doctrine
+   * que la presse et la découverte sociale : le marché déclaré, ou rien.
+   * `filtered.citations` compte les rejets (le compteur du rapport honnête).
+   */
+  const acceptedHitsPromise: Promise<
+    ReadonlyArray<{ title: string; description: string; url: string }>
+  > = brandSearchPromise.then((hits) => {
+    const marketScoped = Boolean(input.country?.trim()) && gate.discriminants.length > 0;
+    return hits.filter((h) => {
+      const verdict = gate.judge(`${h.title} ${h.description}`);
+      const marketOk =
+        !marketScoped ||
+        verdict.matchedDiscriminants.length > 0 ||
+        compactTextHasDiscriminant(h.url, gate.discriminants);
+      const ok = verdict.accepted && marketOk;
+      if (!ok) filtered.citations += 1;
+      return ok;
+    });
+  });
+
   // ── 0.0. Auto-découverte du site officiel si RIEN n'est déclaré ──
   // Précondition de l'évidence révélée (ADR-0149) : sans site ni Brave, une
   // marque nationale n'a ni domaine daté (RDAP) ni tech site → le Scoreur la
@@ -177,12 +221,22 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
   // (le candidat DOIT mentionner la marque). Payé UNIQUEMENT quand rien n'est
   // déclaré (site fourni → aucun coût). Borné pour ne pas affamer l'aval.
   let effectiveWebsiteUrl = input.websiteUrl ?? null;
+  /** Site adopté derrière un mur anti-bot : existence corroborée, contenu illisible. */
+  let siteBehindBotWall = false;
   if (!effectiveWebsiteUrl && remaining() > 6_000) {
     try {
-      const { discoverOfficialSite } = await import("./web-footprint");
-      effectiveWebsiteUrl = await withTimeout(
+      const { discoverOfficialSite, officialSiteCandidatesFromHits, hostOf } = await import("./web-footprint");
+      // Les hits gate-validés servent de candidats (domaine réellement cité,
+      // là où la devinette par slug échoue) ET de corroboration (adoption
+      // possible derrière un mur anti-bot). Borné : la recherche ne doit pas
+      // affamer le probe qui suit.
+      const hits = await withTimeout(acceptedHitsPromise, Math.min(5_000, remaining()), []);
+      const corroboratedHosts = hits.map((h) => hostOf(h.url)).filter((h): h is string => !!h);
+      const found = await withTimeout(
         discoverOfficialSite(input.companyName, countryCodeGuess(input.country), {
           timeoutMs: 4_000,
+          extraCandidates: officialSiteCandidatesFromHits(hits, input.companyName),
+          corroboratedHosts,
           // Verdict entity-gate complet : pour un nom ambigu, la page candidate
           // doit co-mentionner un discriminant (secteur/pays) — `top.com` qui
           // contient juste le mot « top » est rejeté (filtered.site).
@@ -195,6 +249,10 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
         Math.min(6_000, remaining()),
         null,
       );
+      if (found) {
+        effectiveWebsiteUrl = found.url;
+        siteBehindBotWall = found.blocked;
+      }
     } catch {
       /* best-effort — l'absence de site reste un état honnête */
     }
@@ -250,6 +308,37 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
     queries: [],
     status: "SKIPPED_DECLARED",
   };
+  const seenSocial = new Set(footprint.socials.map((s) => `${s.platform}:${(s.handle ?? s.url).toLowerCase()}`));
+  /** Ajoute un profil découvert + son évidence (pour la passe adversariale). */
+  const addDiscovered = (p: SocialProfile, evidence: string) => {
+    const key = `${p.platform}:${(p.handle ?? p.url).toLowerCase()}`;
+    if (seenSocial.has(key)) return;
+    footprint.socials.push(p);
+    seenSocial.add(key);
+    discoveredSocialEvidence.set(key, evidence.slice(0, 300));
+  };
+
+  // ── 2.0. Réseaux tirés de la recherche de marque DÉJÀ en vol (0bis) ──
+  // (audit 2026-07-30) L'ancien code ne parsait que l'URL du résultat
+  // (`detectSocialLinks(h.url)`) : un hit dont le titre ou le résumé cite
+  // « instagram.com/lamarque » ne donnait rien. On parse désormais le hit
+  // ENTIER — les regex de `detectSocialLinks` opèrent sur du texte libre, donc
+  // la fonction existante suffit. Zéro appel réseau supplémentaire : ce sont
+  // les hits déjà jugés par le gate.
+  if (footprint.socials.length === 0 && remaining() > 1_000) {
+    const hits = await withTimeout(acceptedHitsPromise, Math.min(4_000, remaining()), []);
+    for (const h of hits) {
+      const blob = `${h.url} ${h.title} ${h.description}`;
+      for (const p of detectSocialLinks(blob)) addDiscovered(p, `${h.title} ${h.description}`);
+    }
+    if (footprint.socials.length > 0) {
+      discovery.attempted = true;
+      discovery.status = "OK";
+      discovery.queries.push(`(recherche de marque partagée) "${input.companyName}"`);
+    }
+  }
+
+  // ── 2. Découverte Brave DÉDIÉE — filet si 2.0 n'a rien donné ──
   if (footprint.socials.length === 0 && remaining() > 2_000) {
     discovery.attempted = true;
     const query = `"${input.companyName}" ${input.country ?? ""} instagram OR facebook OR tiktok OR linkedin`.trim();
@@ -285,15 +374,10 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
           if (!ok) filtered.discovery += 1;
           return ok;
         });
-        const seen = new Set(footprint.socials.map((s) => `${s.platform}:${(s.handle ?? s.url).toLowerCase()}`));
         for (const h of accepted) {
-          for (const p of detectSocialLinks(h.url)) {
-            const key = `${p.platform}:${(p.handle ?? p.url).toLowerCase()}`;
-            if (!seen.has(key)) {
-              footprint.socials.push(p);
-              seen.add(key);
-              discoveredSocialEvidence.set(key, `${h.title} ${h.description}`.slice(0, 300));
-            }
+          // Hit ENTIER (url + titre + résumé), même correctif qu'à l'étage 2.0.
+          for (const p of detectSocialLinks(`${h.url} ${h.title} ${h.description}`)) {
+            addDiscovered(p, `${h.title} ${h.description}`);
           }
         }
       } else if (result.status === "DEFERRED_NO_KEY") {
@@ -574,52 +658,32 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
   // TOUJOURS des traces publiques (annuaire, avis, blog, page sociale). Le
   // rapport doit les montrer au fondateur au lieu d'un « 0 » sec. Gate
   // d'entité + filtre marché appliqués (jamais l'homonyme d'un autre pays).
+  // La recherche et le jugement ont déjà eu lieu à l'étage 0bis (un seul appel
+  // réseau pour trois usages) : il ne reste ici qu'à mettre en forme.
   let webMentions: EnrichedFootprint["webMentions"] = undefined;
-  if (remaining() > 3_000) {
+  {
     try {
-      const { braveWebSearch, isBraveConfigured } = await import("@/server/services/seshat/web-search");
+      const { isBraveConfigured } = await import("@/server/services/seshat/web-search");
       if (!isBraveConfigured()) {
         webMentions = { status: "DEFERRED_NO_KEY", items: [] };
       } else {
-        const q = `"${input.companyName}" ${input.country?.trim() ?? input.sector ?? ""}`.trim();
-        const res = await withTimeout(
-          braveWebSearch(q, { count: 10, timeoutMs: Math.min(6_000, remaining()) }),
-          Math.min(7_000, remaining()),
-          { status: "ERROR" as const, error: "timeout" },
-        );
-        if (res.status === "OK") {
-          const marketScoped = Boolean(input.country?.trim()) && gate.discriminants.length > 0;
-          const seenUrls = new Set(press.map((p) => p.url));
-          const items: NonNullable<EnrichedFootprint["webMentions"]>["items"] = [];
-          for (const h of res.hits) {
-            if (seenUrls.has(h.url)) continue;
-            const verdict = gate.judge(`${h.title} ${h.description}`);
-            const marketOk =
-              !marketScoped ||
-              verdict.matchedDiscriminants.length > 0 ||
-              compactTextHasDiscriminant(h.url, gate.discriminants);
-            if (!(verdict.accepted && marketOk)) {
-              filtered.citations += 1;
-              continue;
-            }
-            try {
-              items.push({
-                title: (h.title || h.url).slice(0, 160),
-                url: h.url,
-                host: new URL(h.url).hostname.replace(/^www\./, ""),
-              });
-              seenUrls.add(h.url);
-            } catch {
-              /* URL malformée — ignorée */
-            }
+        const accepted = await withTimeout(acceptedHitsPromise, Math.min(7_000, Math.max(1_000, remaining())), []);
+        const seenUrls = new Set(press.map((p) => p.url));
+        const items: NonNullable<EnrichedFootprint["webMentions"]>["items"] = [];
+        for (const h of accepted) {
+          if (seenUrls.has(h.url)) continue;
+          try {
+            items.push({
+              title: (h.title || h.url).slice(0, 160),
+              url: h.url,
+              host: new URL(h.url).hostname.replace(/^www\./, ""),
+            });
+            seenUrls.add(h.url);
+          } catch {
+            /* URL malformée — ignorée */
           }
-          webMentions = { status: items.length > 0 ? "LIVE" : "EMPTY", items: items.slice(0, 6) };
-        } else if (res.status === "DEFERRED_NO_KEY") {
-          webMentions = { status: "DEFERRED_NO_KEY", items: [] };
-        } else {
-          webMentions = { status: "ERROR", items: [] };
-          errors.push(`citations: ${res.error ?? "erreur"}`);
         }
+        webMentions = { status: items.length > 0 ? "LIVE" : "EMPTY", items: items.slice(0, 6) };
       }
     } catch (err) {
       webMentions = { status: "ERROR", items: [] };

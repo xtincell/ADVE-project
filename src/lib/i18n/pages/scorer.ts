@@ -49,6 +49,12 @@ export const scorerFr = {
     "On interroge tout en parallèle et on ne garde que le vérifiable — rien n'est inventé.",
 
   // ── Verdict /100 en langage clair ──────────────────────────────────────
+  // `provisional` prime sur les paliers de niveau quand trop peu de dimensions
+  // ont été mesurées : un score bâti sur une fraction du spectre s'annonce
+  // comme provisoire, jamais comme un verdict établi (audit 2026-07-30).
+  "scorer.verdict.provisional":
+    "Score provisoire : nous n'avons pu mesurer qu'une partie de votre empreinte. Ajoutez votre site pour un score complet.",
+  "scorer.cover.provisional": "provisoire",
   "scorer.verdict.strong":
     "Votre présence en ligne est forte — une bonne base pour bâtir une marque culte.",
   "scorer.verdict.solid":
@@ -228,6 +234,9 @@ export const scorerEn: Record<keyof typeof scorerFr, string> = {
   "scorer.scan.honesty":
     "We query everything in parallel and keep only what's verifiable — nothing is invented.",
 
+  "scorer.verdict.provisional":
+    "Provisional score: we could only measure part of your footprint. Add your website for a complete score.",
+  "scorer.cover.provisional": "provisional",
   "scorer.verdict.strong":
     "Your online presence is strong — a solid base for building a cult brand.",
   "scorer.verdict.solid":
@@ -394,6 +403,8 @@ export const scorerZh: Record<keyof typeof scorerFr, string> = {
   "scorer.scan.step5": "正在汇总所有发现……",
   "scorer.scan.honesty": "我们并行查询所有来源，只保留可验证的内容——绝不虚构。",
 
+  "scorer.verdict.provisional": "暂定评分：我们只能测量到您影响力的一部分。请补充您的网站以获得完整评分。",
+  "scorer.cover.provisional": "暂定",
   "scorer.verdict.strong": "您的线上影响力强劲——是打造狂热品牌的良好基础。",
   "scorer.verdict.solid": "您的线上影响力扎实，但仍有可挖掘的增长杠杆。",
   "scorer.verdict.building": "您的线上影响力仍在搭建中——多项关键信号尚缺。",

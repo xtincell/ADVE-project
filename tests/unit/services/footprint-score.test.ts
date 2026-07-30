@@ -187,6 +187,64 @@ describe("narratif template (déterministe, fallback du LLM)", () => {
     expect(text).toContain("n'a pas pu être mesurée");
   });
 
+  /**
+   * Garde de CALIBRATION (audit 2026-07-30). Régression mesurée en prod :
+   * « Chococam » entré nom-seul sortait 100/100 « présence forte » alors que
+   * seules la presse et les citations avaient été mesurées (20 % du poids) —
+   * ni site ni réseau trouvés. Deux dimensions triviales à saturer (les deux
+   * sources rendent ~5 items pour toute marque un peu connue) suffisaient donc
+   * à décrocher la note maximale une fois renormalisées.
+   */
+  it("traces web seules (presse + citations saturées) → jamais 100/100", () => {
+    const f = base({
+      press: Array.from({ length: 5 }, (_, i) => ({
+        title: `Chococam article ${i}`,
+        url: `https://news.example/${i}`,
+        sourceName: "EcoMatin",
+        publishedAt: null,
+      })),
+      webMentions: {
+        status: "LIVE",
+        items: Array.from({ length: 5 }, (_, i) => ({
+          title: `Chococam cité ${i}`,
+          url: `https://annuaire.example/${i}`,
+          host: "annuaire.example",
+        })),
+      },
+      enrichment: { apify: "SKIPPED", press: "LIVE", totalMs: 0, errors: [] },
+    });
+    const score = computeFootprintScore(f);
+
+    // Seules presse (10) + citations (10) sont mesurées : la couverture reste
+    // le signal d'alerte, et le front l'utilise pour annoncer « provisoire ».
+    expect(score.measuredWeight).toBe(20);
+    // Le cœur de la garde : plus de note maximale sur des traces web seules.
+    expect(score.total).not.toBe(100);
+    expect(score.total!).toBeLessThanOrEqual(75);
+
+    // Les deux courbes sont désaturées indépendamment.
+    expect(score.dimensions.find((d) => d.key === "press")!.score).toBe(75);
+    expect(score.dimensions.find((d) => d.key === "citations")!.score).toBe(50);
+  });
+
+  it("presse et citations plafonnent (une source bornée ne prouve pas le maximum)", () => {
+    const f = base({
+      press: Array.from({ length: 20 }, (_, i) => ({
+        title: `art ${i}`, url: `https://n.example/${i}`, sourceName: null, publishedAt: null,
+      })),
+      webMentions: {
+        status: "LIVE",
+        items: Array.from({ length: 20 }, (_, i) => ({
+          title: `cit ${i}`, url: `https://c.example/${i}`, host: "c.example",
+        })),
+      },
+      enrichment: { apify: "SKIPPED", press: "LIVE", totalMs: 0, errors: [] },
+    });
+    const score = computeFootprintScore(f);
+    expect(score.dimensions.find((d) => d.key === "press")!.score).toBe(75);
+    expect(score.dimensions.find((d) => d.key === "citations")!.score).toBe(60);
+  });
+
   it("collectFootprintFacts ne fabrique rien (DEFERRED omis, NOT_FOUND dit)", () => {
     const f = base({
       maps: { status: "DEFERRED_NO_KEY", placeName: null, rating: null, reviewCount: null, address: null, topReviews: [] },

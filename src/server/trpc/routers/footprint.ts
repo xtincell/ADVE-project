@@ -44,6 +44,15 @@ import {
 } from "@/server/services/seshat/brand-registry";
 import { resolveClientIp, consumeScanBudget } from "@/server/services/seshat/scan-rate-limit";
 
+/**
+ * Seuil de « faible couverture » (% du poids des dimensions effectivement
+ * mesurées). Aligné sur `COVERAGE_PROVISIONAL` côté /scorer : sous ce seuil le
+ * front annonce un score provisoire, et le cache ci-dessous se raccourcit.
+ */
+const LOW_COVERAGE_PCT = 50;
+/** Durée de cache d'une observation à faible couverture (vs 7 j en normal). */
+const LOW_COVERAGE_CACHE_MS = 24 * 60 * 60 * 1000;
+
 export const footprintRouter = createTRPCRouter({
   /**
    * Score d'empreinte instantané d'une marque (public, éphémère, ne persiste rien).
@@ -75,7 +84,19 @@ export const footprintRouter = createTRPCRouter({
       if (!input.refresh) {
         const cached = await lookupLatestFootprint(brandKey);
         const cachedFacts = cached ? parseFootprintFacts(cached.facts) : null;
-        if (cached && cachedFacts) {
+        // Une observation À FAIBLE COUVERTURE n'a pas droit aux 7 jours de
+        // cache normaux (audit calibration 2026-07-30) : c'est le symptôme
+        // d'une collecte qui a échoué (site non trouvé, réseaux non détectés),
+        // pas d'une marque sans empreinte. La resservir une semaine fige
+        // l'échec — y compris après un correctif de collecte. 24 h, puis on
+        // retente pour de vrai.
+        // `measuredWeight` null = observation legacy sans couverture connue :
+        // traitée comme faible (on ne fige pas une inconnue 7 jours).
+        const lowCoverageExpired =
+          !!cached &&
+          (cached.measuredWeight ?? 0) < LOW_COVERAGE_PCT &&
+          Date.now() - cached.capturedAt.getTime() > LOW_COVERAGE_CACHE_MS;
+        if (cached && cachedFacts && !lowCoverageExpired) {
           return {
             total: cached.total,
             outOf: 100,
