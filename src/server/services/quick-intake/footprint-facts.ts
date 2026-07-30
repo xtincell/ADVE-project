@@ -27,6 +27,18 @@ export interface FactSocial {
   followerCount: number | null;
   /** Provenance du relevé quand mesuré. */
   source: string | null;
+  /**
+   * POURQUOI ce compte a été retenu — la preuve, pas juste le fait
+   * (2026-07-30). Sans elle, ni le lecteur ni un audit ne peuvent distinguer
+   * un compte au nom EXACT d'une extension retenue parce qu'un discriminant
+   * de marché l'attestait : « @chococamfmcg » est authentique, « @dovvmusic »
+   * ne l'est pas, et les deux se ressemblent de l'extérieur.
+   *
+   * Absent sur les profils déclarés par la marque ou lus sur son propre site
+   * (chemin de confiance, jamais jugé) et sur les JSON persistés avant cette
+   * date.
+   */
+  admission?: import("@/server/services/seshat/signal-gateway").AdmissionReason;
 }
 
 export interface FactPress {
@@ -87,6 +99,7 @@ export function buildFootprintFacts(f: EnrichedFootprint): FootprintFacts {
       url: s.url ?? null,
       followerCount: m?.count ?? null,
       source: m?.source ?? null,
+      admission: f.enrichment.socialAdmissions?.[key],
     });
   }
   // Relevés mesurés sans profil parsé correspondant (ex. connecteur OAuth seul).
