@@ -240,14 +240,18 @@ function decodeEntities(s: string): string {
  * Détection déterministe d'un MUR ANTI-BOT (Cloudflare, captcha, WAF).
  *
  * Distinction critique (audit 2026-07-30) : « le serveur refuse de me parler »
- * n'est PAS « le domaine n'existe pas ». Mesuré sur `chococam.com` — 403 +
- * « Just a moment » Cloudflare, y compris avec un User-Agent de navigateur
- * réel : la découverte de site le classait « aucun site détecté » et la marque
- * perdait 45 points de poids (site, email, domaine, perf). Un mur anti-bot
- * PROUVE au contraire qu'un serveur sert ce domaine.
+ * n'est PAS « le domaine n'existe pas ». L'ancien probe faisait
+ * `if (!res.ok) return null` — un 403 Cloudflare classait donc la marque
+ * « aucun site détecté », lui coûtant d'un coup les 45 points de poids
+ * site + email + domaine + performance. Un mur anti-bot PROUVE au contraire
+ * qu'un serveur sert ce domaine.
  *
- * Pur (testé sans IO) : l'appelant décide quoi faire de l'information — ici,
- * l'adoption reste conditionnée à une corroboration indépendante.
+ * Attention à la contrepartie : derrière un mur, `looksLikeParkedDomain` est
+ * aveugle faute de contenu. L'adoption est donc conditionnée à une
+ * corroboration indépendante, elle-même purgée des pages de vente de domaine
+ * (cf. `corroboratedHostsFromHits`) — sinon on rouvrirait le piège Dovv.
+ *
+ * Pur (testé sans IO) : l'appelant décide quoi faire de l'information.
  */
 export function looksLikeBotWall(status: number, body: string): boolean {
   if (status === 401 || status === 403 || status === 429 || status === 503) return true;
@@ -468,8 +472,27 @@ export async function discoverOfficialSite(
  */
 const NON_OFFICIAL_HOST = /(^|\.)(facebook|instagram|tiktok|linkedin|twitter|x|youtube|wikipedia|wikiwand|google|bing|yahoo|amazon|ebay|tripadvisor|yelp|pagesjaunes|annuaire|glassdoor|indeed|crunchbase|bloomberg|societe|infogreffe|verif|pappers|medium|wordpress|blogspot|github|apple|play\.google|news|rss)\./i;
 
+export interface SearchHitLike {
+  url: string;
+  title?: string;
+  description?: string;
+}
+
+/**
+ * Un hit qui VEND le domaine n'atteste rien (« ChocoCam.com is for sale |
+ * HugeDomains »). Mesuré 2026-07-30 : `chococam.com` est un domaine parqué, et
+ * le gate d'entité l'ACCEPTE puisque la page de vente cite bel et bien la
+ * marque. Sans ce filtre, un tel host devient « corroboré » et pourrait être
+ * adopté derrière un mur anti-bot — où `looksLikeParkedDomain` est aveugle,
+ * faute de contenu lisible. C'est exactement le piège Dovv (2026-07-20), qu'on
+ * ne rouvre pas par la porte de la corroboration.
+ */
+function hitSellsDomain(h: SearchHitLike): boolean {
+  return looksLikeParkedDomain(`${h.title ?? ""} ${h.description ?? ""}`);
+}
+
 export function officialSiteCandidatesFromHits(
-  hits: ReadonlyArray<{ url: string }>,
+  hits: ReadonlyArray<SearchHitLike>,
   brandName: string,
 ): string[] {
   const slug = brandDomainSlug(brandName);
@@ -481,11 +504,28 @@ export function officialSiteCandidatesFromHits(
     if (!host || seen.has(host)) continue;
     seen.add(host);
     if (NON_OFFICIAL_HOST.test(`${host}.`)) continue;
+    if (hitSellsDomain(h)) continue;
     if (!host.replace(/[^a-z0-9]/g, "").includes(slug)) continue;
     out.push(`https://${host}`);
     if (out.length >= 3) break;
   }
   return out;
+}
+
+/**
+ * Hosts qu'une source indépendante rattache à la marque — la preuve de
+ * remplacement quand un site est illisible derrière un mur anti-bot. Les hits
+ * qui vendent un domaine sont écartés (cf. `hitSellsDomain`) : ils citent la
+ * marque sans lui appartenir.
+ */
+export function corroboratedHostsFromHits(hits: ReadonlyArray<SearchHitLike>): string[] {
+  const out = new Set<string>();
+  for (const h of hits) {
+    if (hitSellsDomain(h)) continue;
+    const host = hostOf(h.url);
+    if (host) out.add(host);
+  }
+  return [...out];
 }
 
 // ── Collecteur ─────────────────────────────────────────────────────────

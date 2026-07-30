@@ -30,8 +30,16 @@ citations mesuré 100  « 5 page(s) publique(s) parlent de vous »
 
 La marque la plus visible du chocolat camerounais obtenait la **note maximale**
 sur **20 % du spectre**, sans qu'aucun site ni aucun réseau n'ait été trouvé —
-alors que `chococam.com` existe (403 Cloudflare, vérifié) et que cinq pages
-publiques la citant avaient été ramenées dans le même scan.
+alors que cinq pages publiques la citant avaient été ramenées dans le même scan.
+
+Note d'enquête, gardée ici parce qu'elle a servi : `chococam.com` semblait
+d'abord être un site officiel bloqué (403 en curl). Vérification faite depuis le
+runtime : c'est un **domaine parqué en vente chez HugeDomains**, et le pipeline
+le rejetait à raison (garde `looksLikeParkedDomain`, fix Dovv 2026-07-20). Le
+« site non détecté » de Chococam est donc **honnête** — `chococam.cm` n'a aucun
+enregistrement DNS. Cette marque illustre §1 (calibration) et §4 (recherche
+sous-exploitée), **pas** §2. Le §2 tient sur son mérite général — beaucoup de
+sites réels sont derrière Cloudflare — et non sur cet exemple.
 
 Précision de vocabulaire, parce qu'elle change le remède : **aucun LLM ne
 devinait quoi que ce soit dans ce chemin**. La collecte du /scorer était déjà
@@ -76,6 +84,14 @@ change de preuve — la page ne pouvant pas parler d'elle-même, c'est le web qu
 atteste. Le site est alors crédité de son **existence** (40/100) et **jamais**
 de sa tech : analyser le HTML d'un challenge Cloudflare fabriquerait un CMS, des
 og:tags et une description qui ne sont pas ceux de la marque.
+
+**Contrepartie fermée explicitement.** Derrière un mur, `looksLikeParkedDomain`
+est aveugle faute de contenu. Or une page de vente de domaine *cite* la marque,
+donc le gate d'entité l'**accepte** — un domaine parqué protégé par un anti-bot
+aurait donc pu être adopté comme site officiel, et le piège Dovv serait rentré
+par la porte de la corroboration. `corroboratedHostsFromHits` écarte donc les
+hits qui vendent un domaine, avant même qu'ils puissent attester quoi que ce
+soit. Découvert en vérifiant le correctif sur le terrain, pas par revue.
 
 ### 3. Le LLM propose, le déterministe décide
 

@@ -56,10 +56,15 @@ describe("looksLikeParkedDomain", () => {
 });
 
 // ── Audit 2026-07-30 : « le serveur refuse de me parler » ≠ « ça n'existe pas » ──
-// Mesuré sur chococam.com : 403 + challenge Cloudflare, y compris avec un
-// User-Agent de navigateur réel. L'ancien probe classait la marque « aucun site
-// détecté » et lui coûtait 45 points de poids (site, email, domaine, perf).
-import { looksLikeBotWall, officialSiteCandidatesFromHits, hostOf } from "@/server/services/quick-intake/web-footprint";
+// L'ancien probe faisait `if (!res.ok) return null` : un 403 Cloudflare classait
+// la marque « aucun site détecté » et lui coûtait 45 points de poids (site,
+// email, domaine, perf) alors qu'un serveur sert bel et bien ce domaine.
+import {
+  looksLikeBotWall,
+  officialSiteCandidatesFromHits,
+  corroboratedHostsFromHits,
+  hostOf,
+} from "@/server/services/quick-intake/web-footprint";
 
 describe("looksLikeBotWall", () => {
   it("détecte les statuts de refus (le domaine sert bel et bien)", () => {
@@ -126,5 +131,49 @@ describe("hostOf", () => {
   });
   it("URL malformée → null (jamais de throw)", () => {
     expect(hostOf("pas-une-url")).toBeNull();
+  });
+});
+
+/**
+ * Trou fermé le 2026-07-30, découvert en vérifiant le fix sur le terrain :
+ * `chococam.com` n'est PAS le site de Chococam — c'est un domaine parqué en
+ * vente chez HugeDomains (« ChocoCam.com is for sale »). Le gate d'entité
+ * l'ACCEPTE, puisque la page de vente cite bel et bien la marque.
+ *
+ * Sans filtre, ce host devenait « corroboré » — et un domaine parqué protégé
+ * par un anti-bot aurait donc pu être adopté comme site officiel, là où
+ * `looksLikeParkedDomain` est aveugle faute de contenu lisible. C'est le piège
+ * Dovv (2026-07-20) qui serait rentré par la porte de la corroboration.
+ */
+describe("corroboration — une page qui VEND le domaine n'atteste rien", () => {
+  const sellHit = {
+    url: "https://chococam.com",
+    title: "ChocoCam.com is for sale | HugeDomains",
+    description: "100% satisfaction guaranteed on every domain we sell.",
+  };
+  const realHit = {
+    url: "https://www.jeuneafrique.com/chococam-tiger-brands",
+    title: "Chococam, filiale de Tiger Brands",
+    description: "Le chocolatier camerounais…",
+  };
+
+  it("exclut le host mis en vente des hosts corroborés", () => {
+    const hosts = corroboratedHostsFromHits([sellHit, realHit]);
+    expect(hosts).not.toContain("chococam.com");
+    expect(hosts).toContain("jeuneafrique.com");
+  });
+
+  it("exclut aussi le host mis en vente des candidats site", () => {
+    expect(officialSiteCandidatesFromHits([sellHit], "Chococam")).toEqual([]);
+  });
+
+  it("laisse passer un host normal qui porte le nom de la marque", () => {
+    const hit = { url: "https://chococam.cm/produits", title: "Chococam — nos produits", description: "" };
+    expect(corroboratedHostsFromHits([hit])).toContain("chococam.cm");
+    expect(officialSiteCandidatesFromHits([hit], "Chococam")).toEqual(["https://chococam.cm"]);
+  });
+
+  it("hits sans titre ni description (forme minimale) → toujours exploitables", () => {
+    expect(corroboratedHostsFromHits([{ url: "https://chococam.cm/x" }])).toEqual(["chococam.cm"]);
   });
 });

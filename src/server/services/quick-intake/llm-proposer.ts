@@ -46,7 +46,7 @@ const proposalSchema = z.object({
   officialSiteHost: z
     .string()
     .nullable()
-    .describe("Nom d'hôte du site officiel de CETTE marque (ex: 'chococam.com'), sans https:// ni chemin. null si aucun ne ressort clairement des extraits."),
+    .describe("Nom d'hôte du site officiel de CETTE marque (ex: 'lamarque.cm'), sans https:// ni chemin. null si aucun ne ressort clairement des extraits."),
   socialProfileUrls: z
     .array(z.string())
     .max(8)

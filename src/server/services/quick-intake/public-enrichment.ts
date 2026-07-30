@@ -231,13 +231,14 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
   let siteFromProposer = false;
   if (!effectiveWebsiteUrl && remaining() > 6_000) {
     try {
-      const { discoverOfficialSite, officialSiteCandidatesFromHits, hostOf } = await import("./web-footprint");
+      const { discoverOfficialSite, officialSiteCandidatesFromHits, corroboratedHostsFromHits, hostOf } =
+        await import("./web-footprint");
       // Les hits gate-validés servent de candidats (domaine réellement cité,
       // là où la devinette par slug échoue) ET de corroboration (adoption
       // possible derrière un mur anti-bot). Borné : la recherche ne doit pas
       // affamer le probe qui suit.
       const hits = await withTimeout(acceptedHitsPromise, Math.min(5_000, remaining()), []);
-      const corroboratedHosts = hits.map((h) => hostOf(h.url)).filter((h): h is string => !!h);
+      const corroboratedHosts = corroboratedHostsFromHits(hits);
       const found = await withTimeout(
         discoverOfficialSite(input.companyName, countryCodeGuess(input.country), {
           timeoutMs: 4_000,
