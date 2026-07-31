@@ -205,9 +205,56 @@ function parseIntentKinds(): Array<{ kind: string; governor: string; handler: st
   return out;
 }
 
+/**
+ * Modules de domaine (`src/domain/*.ts`) — le cœur métier pur.
+ *
+ * Ajouté le 2026-07-31 : l'audit anti-réinvention a montré que les machines
+ * les plus réinventées (échelle de marché ADR-0126, paliers/must-have items,
+ * graphes) vivent PRÉCISÉMENT ici — et que cette couche n'était pas indexée.
+ * Un module de domaine hors carte est une roue que personne ne trouvera.
+ */
+function listDomainModules(): Array<{ name: string; doc: string }> {
+  let entries: string[];
+  try {
+    entries = readdirSync(join(ROOT, "src/domain"));
+  } catch {
+    return [];
+  }
+  const out: Array<{ name: string; doc: string }> = [];
+  for (const e of entries.sort()) {
+    const full = join(ROOT, "src/domain", e);
+    let s;
+    try { s = statSync(full); } catch { continue; }
+    if (s.isDirectory()) {
+      // sous-dossier (ex. scoreur/) : indexer chaque fichier
+      for (const f of readdirSync(full).filter((x) => x.endsWith(".ts")).sort()) {
+        const src = read(`src/domain/${e}/${f}`);
+        out.push({ name: `${e}/${f.replace(/\.ts$/, "")}`, doc: firstDocLine(src) });
+      }
+      continue;
+    }
+    if (!e.endsWith(".ts") || e === "index.ts") continue;
+    const src = read(`src/domain/${e}`);
+    out.push({ name: e.replace(/\.ts$/, ""), doc: firstDocLine(src) });
+  }
+  return out;
+}
+
+/** Première ligne utile du doc-comment d'en-tête — le résumé greppable. */
+function firstDocLine(src: string): string {
+  const m = src.match(/\/\*\*\s*\n((?:\s*\*[^\n]*\n)+?)\s*\*\//);
+  if (!m) return "";
+  const lines = m[1]!
+    .split("\n")
+    .map((l) => l.replace(/^\s*\*\s?/, "").trim())
+    .filter((l) => l && !l.startsWith("@"));
+  return (lines[0] ?? "").slice(0, 160);
+}
+
 // ── Renderer ───────────────────────────────────────────────────────
 
 function render(): string {
+  const domainModules = listDomainModules();
   const models = parsePrismaModels();
   const enums = parsePrismaEnums();
   const services = listServices();
@@ -272,6 +319,35 @@ Ces correspondances évitent la réinvention :
 | **forge multimodale Magnific/Adobe/Figma/Canva** | \`GenerativeTask\` + provider \`src/server/services/ptah/providers/\` |
 | **manipulation mode** | \`Strategy.manipulationMix\` + \`BrandAsset.manipulationMode\` + \`GenerativeTask.manipulationMode\` |
 | **ROI superfan** | \`expectedSuperfans\` / \`realisedSuperfans\` sur GenerativeTask + \`cultIndexDeltaObserved\` AssetVersion |
+| **classement** / "rang" / "percentile" / "force marché" / "leaderboard" / "étalonnage" | Scoreur Seshat \`seshat/scoreur/\` (ADR-0149/0150) — θ Bradley-Terry, \`Epreuve\`, \`BrandRef\` | On ne note pas des attributs, on compte des VICTOIRES. Ne jamais bâtir un axe percentile à côté |
+| **ligue** / "échelle de marché" / "standard du rang" | \`league {sectorSlug, marketScale, countryCode}\` + \`EVIDENCE_TARGETS_BY_SCALE\` \`src/domain/market-scale.ts\` (ADR-0126) | Chaque marque dans SA ligue — planchers par échelle QUARTIER→MONDE |
+| **must-have du rang** / "critères de palier" / "promotion" | \`MUST_HAVE_ITEMS\` \`src/domain/scoreur/palier.ts\` + gate \`PALIER_PROMOTION_PROOFS\` (ADR-0086/0167) | Items par palier disputés en épreuves — le rang se PROUVE |
+| **palier officiel** / "niveau de marque persisté" / "ratchet" | \`Strategy.apogeeTier\` + \`effectiveTier()\` (ADR-0167) | Mû par transition gouvernée seulement — distinct du niveau d'INTAKE (\`brand-level-evaluator\`, prospects) |
+| **plafond de preuve** / "evidence ceiling" | Composite : \`advertis-scorer/evidence.ts\` (ADR-0126) · Niveau intake : \`evidenceCeiling\` \`brand-level-evaluator.ts\` (miroir côté prospect) | Un chiffre ne dépasse jamais sa preuve |
+| **plancher de visibilité** / "marque constatée" | \`observedVisibility\` + floor \`brand-level-evaluator.ts\` | Une marque CONSTATÉE n'est jamais « invisible » (LATENT) |
+| **force révélée /200** | \`getForceByToken\` (quick-intake router) → \`seshat/scoreur\` \`compileMeasuredEpreuves\` (ADR-0149) | DÉJÀ affichée au rapport d'intake |
+| **empreinte** / "scan public" / "collecte" | \`quick-intake/web-footprint.ts\` + \`public-enrichment.ts\` → \`FootprintFacts\` | Admission via \`signal-gateway\` (ADR-0188) ; site/sameAs = preuve d'appartenance max |
+| **rescan** / "recalcul" | \`regenerateAnalysis\` (collecte+extraction) · \`rescoreIntake\` (recompte seul, gratuit) — \`POST /api/admin/rescore-intakes\` | Deux modes d'UNE machine — ne pas en créer une 3ᵉ |
+| **corpus** / "registre de marques scannées" | \`BrandFootprintSnapshot\` + \`getRegistryPosition\` (\`seshat/brand-registry\`, ADR-0151) | Alimente \`MarketBenchmark\` p10/p50/p90 (cron, ≥5 marques) |
+
+### Machines & état de câblage — lu AVANT de concevoir (2026-07-31)
+
+La leçon de l'audit : la machinerie DORMANTE est invisible au runtime — « prévu mais
+non effectué » ne se voit ni dans un grep de symptôme ni dans les données. Cette
+table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existant, on ne réinvente jamais** (loi opérateur).
+
+| Machine | Câblé (WIRED) | Dormant (à brancher, PAS à réinventer) |
+|---|---|---|
+| Scoreur (ADR-0149) | Arène E (audience vs plancher de ligue) · arène T (Overton) · épreuves persistées · \`getForceByToken\` au rapport | Presse/publications/distinctions collectées → JAMAIS compilées en épreuves ; items \`MUST_HAVE_ITEMS\` jamais disputés depuis la collecte |
+| Collecteur d'empreinte | Site (déclaré ou découvert) · sameAs/JSON-LD/flux (ADR-0190) · Apify audiences · presse · Wikipédia (langue = pays) | Découverte NON ÉPINGLÉE : un rescan peut élire un homonyme (mesuré : \`irawo.net\`, association de Cotonou, a écrasé \`irawotalents.com\`) — épingler le site corroboré |
+| Niveau d'intake (\`brand-level-evaluator\`) | 2 voies (LLM+déterministe) · plancher visibilité · plafond de preuve · \`basis\` 2 axes | Fusion à terme avec \`apogeeTier\`/\`palier.ts\` via épreuves (3 systèmes de palier coexistent — n'en créer AUCUN 4ᵉ) |
+| Benchmarks marché (ADR-0156) | Agrégation cron ≥5 marques | Registre mince (5 lignes post-purge) ; percentile s'abstient sous 10 pairs |
+
+---
+
+## Domain — ${domainModules.length} modules (src/domain, cœur métier pur)
+
+${domainModules.map((d) => `- **${d.name}**${d.doc ? ` — ${d.doc}` : ""}`).join("\n")}
 
 ---
 

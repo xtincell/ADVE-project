@@ -79,9 +79,23 @@ Phase 8 — Auto-correction si drift détecté
 
 ---
 
-## ⚠️ ANTI-DRIFT — Avant tout ajout d'entité
+## ⚠️ ANTI-DRIFT — Avant tout ajout d'entité **ou de concept**
 
-**Avant d'ajouter un model Prisma, un service, un router, une page, un Glory tool, une séquence ou un Intent kind** :
+**Loi opérateur (2026-07-31) : on câble l'existant, on ne réinvente jamais — tout court.**
+
+Le périmètre ne se limite PAS aux entités structurelles. Sont couverts au même titre :
+**toute métrique, score, axe, plafond/plancher, système de niveau/palier, chemin
+d'admission, mode de recalcul/rescan** — c'est à ce grain (fonctions, pas tables) que la
+réinvention du 2026-07-31 a eu lieu : un axe percentile conçu alors que le Scoreur
+(ADR-0149 : épreuves, ligues, θ) existait ; un plafond de preuve réécrit alors
+qu'ADR-0126/0167 en portaient un ; un recalcul écrit alors que `regenerateAnalysis`
+existait. Les greps du concepteur (« percentile », « force marché ») ne matchaient pas les
+noms internes (« épreuve », « ligue », « palier ») → la table des synonymes de CODE-MAP
+est LA traduction, et sa section **« Machines & état de câblage »** dit ce qui est
+construit-mais-DORMANT — le dormant est invisible au runtime, seul l'index le révèle.
+Brancher une machine dormante ≠ créer ; créer ce qui dort = faute.
+
+**Avant d'ajouter un model Prisma, un service, un router, une page, un Glory tool, une séquence, un Intent kind — ou l'un des concepts ci-dessus** :
 
 1. **GREP [docs/governance/CODE-MAP.md](docs/governance/CODE-MAP.md)** avec mots-clés synonymes (auto-généré pre-commit, contient table "mot du métier" ↔ "entité dans le code")
 2. **Si entité similaire existe → étendre, ne PAS doubler.** Doublons identifiés : `SuperAsset` doublait `BrandAsset` ; `/cockpit/forges` doublait `/cockpit/operate/*`.

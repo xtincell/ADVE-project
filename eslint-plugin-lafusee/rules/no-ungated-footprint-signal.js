@@ -97,14 +97,21 @@ module.exports = {
         }
       },
 
-      // <container>.push(…)
+      // <container>.push(…) — y compris via un membre imbriqué.
+      //
+      // Trou mesuré le 2026-07-31 : `footprint.channels.push(…)` (MemberExpression
+      // imbriqué) passait sans bruit — la règle n'acceptait qu'un Identifier nu
+      // (`channels.push`). Un conteneur de signaux reste un conteneur de signaux,
+      // quel que soit le chemin qui y mène.
       "CallExpression > MemberExpression.callee"(node) {
-        if (
-          node.property.type === "Identifier" &&
-          node.property.name === "push" &&
-          node.object.type === "Identifier" &&
-          SIGNAL_CONTAINERS.has(node.object.name)
-        ) {
+        if (node.property.type !== "Identifier" || node.property.name !== "push") return;
+        const container =
+          node.object.type === "Identifier"
+            ? node.object.name
+            : node.object.type === "MemberExpression" && node.object.property.type === "Identifier"
+              ? node.object.property.name
+              : null;
+        if (container && SIGNAL_CONTAINERS.has(container)) {
           offenders.push(node);
         }
       },

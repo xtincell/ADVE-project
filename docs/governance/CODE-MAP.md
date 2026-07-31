@@ -29,6 +29,69 @@ Ces correspondances évitent la réinvention :
 | **forge multimodale Magnific/Adobe/Figma/Canva** | `GenerativeTask` + provider `src/server/services/ptah/providers/` |
 | **manipulation mode** | `Strategy.manipulationMix` + `BrandAsset.manipulationMode` + `GenerativeTask.manipulationMode` |
 | **ROI superfan** | `expectedSuperfans` / `realisedSuperfans` sur GenerativeTask + `cultIndexDeltaObserved` AssetVersion |
+| **classement** / "rang" / "percentile" / "force marché" / "leaderboard" / "étalonnage" | Scoreur Seshat `seshat/scoreur/` (ADR-0149/0150) — θ Bradley-Terry, `Epreuve`, `BrandRef` | On ne note pas des attributs, on compte des VICTOIRES. Ne jamais bâtir un axe percentile à côté |
+| **ligue** / "échelle de marché" / "standard du rang" | `league {sectorSlug, marketScale, countryCode}` + `EVIDENCE_TARGETS_BY_SCALE` `src/domain/market-scale.ts` (ADR-0126) | Chaque marque dans SA ligue — planchers par échelle QUARTIER→MONDE |
+| **must-have du rang** / "critères de palier" / "promotion" | `MUST_HAVE_ITEMS` `src/domain/scoreur/palier.ts` + gate `PALIER_PROMOTION_PROOFS` (ADR-0086/0167) | Items par palier disputés en épreuves — le rang se PROUVE |
+| **palier officiel** / "niveau de marque persisté" / "ratchet" | `Strategy.apogeeTier` + `effectiveTier()` (ADR-0167) | Mû par transition gouvernée seulement — distinct du niveau d'INTAKE (`brand-level-evaluator`, prospects) |
+| **plafond de preuve** / "evidence ceiling" | Composite : `advertis-scorer/evidence.ts` (ADR-0126) · Niveau intake : `evidenceCeiling` `brand-level-evaluator.ts` (miroir côté prospect) | Un chiffre ne dépasse jamais sa preuve |
+| **plancher de visibilité** / "marque constatée" | `observedVisibility` + floor `brand-level-evaluator.ts` | Une marque CONSTATÉE n'est jamais « invisible » (LATENT) |
+| **force révélée /200** | `getForceByToken` (quick-intake router) → `seshat/scoreur` `compileMeasuredEpreuves` (ADR-0149) | DÉJÀ affichée au rapport d'intake |
+| **empreinte** / "scan public" / "collecte" | `quick-intake/web-footprint.ts` + `public-enrichment.ts` → `FootprintFacts` | Admission via `signal-gateway` (ADR-0188) ; site/sameAs = preuve d'appartenance max |
+| **rescan** / "recalcul" | `regenerateAnalysis` (collecte+extraction) · `rescoreIntake` (recompte seul, gratuit) — `POST /api/admin/rescore-intakes` | Deux modes d'UNE machine — ne pas en créer une 3ᵉ |
+| **corpus** / "registre de marques scannées" | `BrandFootprintSnapshot` + `getRegistryPosition` (`seshat/brand-registry`, ADR-0151) | Alimente `MarketBenchmark` p10/p50/p90 (cron, ≥5 marques) |
+
+### Machines & état de câblage — lu AVANT de concevoir (2026-07-31)
+
+La leçon de l'audit : la machinerie DORMANTE est invisible au runtime — « prévu mais
+non effectué » ne se voit ni dans un grep de symptôme ni dans les données. Cette
+table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existant, on ne réinvente jamais** (loi opérateur).
+
+| Machine | Câblé (WIRED) | Dormant (à brancher, PAS à réinventer) |
+|---|---|---|
+| Scoreur (ADR-0149) | Arène E (audience vs plancher de ligue) · arène T (Overton) · épreuves persistées · `getForceByToken` au rapport | Presse/publications/distinctions collectées → JAMAIS compilées en épreuves ; items `MUST_HAVE_ITEMS` jamais disputés depuis la collecte |
+| Collecteur d'empreinte | Site (déclaré ou découvert) · sameAs/JSON-LD/flux (ADR-0190) · Apify audiences · presse · Wikipédia (langue = pays) | Découverte NON ÉPINGLÉE : un rescan peut élire un homonyme (mesuré : `irawo.net`, association de Cotonou, a écrasé `irawotalents.com`) — épingler le site corroboré |
+| Niveau d'intake (`brand-level-evaluator`) | 2 voies (LLM+déterministe) · plancher visibilité · plafond de preuve · `basis` 2 axes | Fusion à terme avec `apogeeTier`/`palier.ts` via épreuves (3 systèmes de palier coexistent — n'en créer AUCUN 4ᵉ) |
+| Benchmarks marché (ADR-0156) | Agrégation cron ≥5 marques | Registre mince (5 lignes post-purge) ; percentile s'abstient sous 10 pairs |
+
+---
+
+## Domain — 35 modules (src/domain, cœur métier pur)
+
+- **__tests__/pillars.test**
+- **brand-asset-kinds** — BrandAsset.kind — taxonomie complète des actifs de marque.
+- **brand-nature-archetypes** — Phase 18 (ADR-0061) — `BRAND_NATURE_ARCHETYPES` source de vérité unique.
+- **brand-scores** — src/domain/brand-scores.ts — Layer 0. Les TROIS mesures d'une marque, nommées
+- **brand-slug** — Format standard des `publicSlug` de marque (page publique `/b/[slug]`).
+- **brand-tier** — src/domain/brand-tier.ts — Layer 0. The single source of truth for the
+- **campaign-code** — Phase 18-A1-α (audit MATANGA V4) — auto-générateur `Campaign.code` aligné
+- **classification-coherence** — Domain helper — invariants APOGEE de cohérence Classification ↔ Superfans ↔ Cult Tier.
+- **collaborator-access** — ADR-0131 — Zones d'accès des collaborateurs délégués par marque.
+- **connector-result** — ConnectorResult<T> — discriminated union returned by every external connector
+- **cult-index-tier** — Domain — Cult Index tier (échelle de maturité culturelle de la marque).
+- **devotion-ladder** — Domain — Devotion Ladder canonique (rungs du parcours superfan).
+- **field-provenance** — FieldProvenance — qui a posé la valeur d'un champ de pilier ADVE.
+- **forecast** — ADR-0156 — Moteur de forecast déterministe (pur, zéro IO, zéro LLM).
+- **identity-graph** — ADR-0147 — Identity Graph : cœur déterministe (Layer 0, pur, zéro-LLM, zéro-IO).
+- **intent-progress** — src/domain/intent-progress.ts — IntentPhase + IntentProgressEvent.
+- **lifecycle** — src/domain/lifecycle.ts — Strategy lifecycle state machine.
+- **market-scale** — src/domain/market-scale.ts — Layer 0. Échelle de marché déclarée d'une marque
+- **overton-graph** — ADR-0148 — Overton Graph : cœur déterministe (Layer 0, pur, zéro-LLM zéro-IO).
+- **overton-radar-signal** — OvertonRadarSignal — Layer-0 presentational view-model for `<OvertonRadar>`
+- **pillar-reference-edges** — pillar-reference-edges.ts — intégrité des arêtes de référence inter-piliers
+- **pillars** — src/domain/pillars.ts — Single source of truth for ADVERTIS pillars.
+- **product-catalog** — product-catalog.ts — intégrité du socle produit (ADR-0171).
+- **product-system** — product-system.ts — le SYSTÈME produit d'une marque (ADR-0170, pilier V).
+- **schema-normalizer** — schema-normalizer.ts — normalisation déterministe vers le schéma STRICT (ADR-0172).
+- **scoreur/anchors** — ADR-0149 — ancres-étalons + jauge de ligue (canon, θ fixé — la seule main
+- **scoreur/bradley-terry** — ADR-0149 — estimateur Bradley-Terry / Rasch (pur TS, déterministe, zéro-LLM).
+- **scoreur/index** — ADR-0149 — Scoreur à force révélée : orchestrateur PUR (Layer 0, déterministe).
+- **scoreur/palier** — ADR-0149 — modulateurs (cohérence R, tenue) + palier = min(bande, items).
+- **scoreur/revealed-gates** — ADR-0149/0150 — Portes Michelin franchies par ÉVIDENCE PUBLIQUE RÉVÉLÉE.
+- **scoreur/types** — ADR-0149 — Scoreur à force révélée : types canon (Layer 0, pur).
+- **sector-taxonomy** — Taxonomie de secteurs CANONIQUE — la clé de ligue universelle du scoreur.
+- **source-certainty** — SourceCertainty — niveau de certitude opérateur sur une `BrandDataSource`.
+- **superfan-conditions** — Domain — Superfan à conditions strictes (ADR-0141).
+- **touchpoints** — src/domain/touchpoints.ts — Touchpoint families & AARRR pirate metrics.
 
 ---
 
