@@ -37,6 +37,7 @@
 
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 import { verifyCronSecret } from "@/lib/cron-auth";
 import { rescoreIntake, regenerateAnalysis } from "@/server/services/quick-intake";
 
@@ -76,6 +77,39 @@ export async function POST(request: Request) {
       where: { shareToken: token },
       select: { companyName: true, advertis_vector: true },
     });
+
+    // ── Pays déclaré par l'OPÉRATEUR (audit 2026-07-31) ──
+    //
+    // Mesuré sur Irawo : `country` vide produisait trois dégâts en cascade —
+    // aucun ancrage marché, Wikipédia interrogée en ANGLAIS pour une marque
+    // francophone (`wikipediaLangForCountry` dérive du pays), et tout futur
+    // rang « au Bénin » impossible. L'opérateur qui connaît la marque peut le
+    // poser ici : c'est une donnée HUMAINE déclarée, pas une inférence — on ne
+    // devine JAMAIS un pays (ADR-0046), on accepte qu'un humain le dise.
+    const declaredCountry = url.searchParams.get("country");
+    if (declaredCountry && /^[A-Za-z]{2}$/.test(declaredCountry)) {
+      await db.quickIntake.update({
+        where: { shareToken: token },
+        data: { country: declaredCountry.toUpperCase() },
+      });
+    }
+
+    // ── Vider le cache d'empreinte, sinon le rescan ne rescanne pas ──
+    //
+    // Mesuré en production le 2026-07-31 : un premier `mode=rescan` a tourné
+    // 156 s sans rien recollecter. `complete()` reprend `intake.webFootprint`
+    // quand il existe et SAUTE la collecte — seule la ré-extraction LLM avait
+    // tourné. Le pilier E restait sans `structured` ni `feed`, avec 4 réseaux
+    // au lieu de 5, alors que le collecteur corrigé était bien déployé.
+    //
+    // Une porte qui annonce « rescan » et sert du cache ment sur ce qu'elle
+    // fait : c'est le reproche adressé au reste du système, il ne peut pas
+    // valoir pour l'outillage.
+    await db.quickIntake.update({
+      where: { shareToken: token },
+      data: { webFootprint: Prisma.DbNull },
+    });
+
     const r = await regenerateAnalysis(token, { force: true });
     const after = await db.quickIntake.findUnique({
       where: { shareToken: token },
