@@ -1,5 +1,6 @@
 # Changelog — La Fusee
 
+<<<<<<< HEAD
 ## v6.27.388 — fix(governance): V6 canons · V7 anti-fabrication (2026-07-31)
 
 Dernières vagues du plan « debt free ».
@@ -35,6 +36,8 @@ Verrou `numbers-are-never-fabricated.test.ts`. Lignes du registre rayées : cano
 0 nouveau Neter · 0 modèle Prisma · 0 migration · 0 LLM ajouté · cap APOGEE 7/7.
 3846 tests verts.
 
+=======
+>>>>>>> origin/main
 ## v6.27.387 — fix(cockpit): V5 « un seul palier » — l'''officiel fait foi partout (2026-07-31)
 
 Ligne du registre RESIDUAL-DEBT ouverte depuis l'''ADR-0167 : `Strategy.apogeeTier` est un
