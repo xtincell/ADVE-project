@@ -616,6 +616,19 @@ export default function ScorerPage() {
                         <Text className="mt-1 font-mono text-[11px] uppercase tracking-wide text-[color:var(--color-foreground-muted)]">
                           {buildClassificationLine(dims, coveragePct, i18n)}
                         </Text>
+                        {/* V4 (2026-07-31) — la position dans SON marché, quand
+                            elle a du sens. Le serveur s'abstient sous 10 pairs
+                            et sans pays déclaré : ici, `null` signifie « pas de
+                            rang à annoncer », jamais un rang fabriqué. */}
+                        {result.registryPosition ? (
+                          <Text className="mt-1 text-sm text-foreground">
+                            {t("scorer.cover.marketPosition")
+                              .replace("{rank}", String(result.registryPosition.rank))
+                              .replace("{total}", String(result.registryPosition.total))
+                              .replace("{country}", result.registryPosition.countryCode)
+                              .replace("{ahead}", String(result.registryPosition.aheadOfPct))}
+                          </Text>
+                        ) : null}
                       </>
                     ) : (
                       <Text className="mt-2 text-base text-[color:var(--color-foreground-muted)]">

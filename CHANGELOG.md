@@ -1,5 +1,48 @@
 # Changelog — La Fusee
 
+## v6.27.387 — fix(cockpit): V5 « un seul palier » — l'''officiel fait foi partout (2026-07-31)
+
+Ligne du registre RESIDUAL-DEBT ouverte depuis l'''ADR-0167 : `Strategy.apogeeTier` est un
+ratchet mû par transition gouvernée (Loi 1 « conservation d'''altitude »), mais une douzaine
+de surfaces dérivaient encore le palier du SEUL score. Après une promotion gouvernée suivie
+d'''une baisse de score, elles affichaient l'''ancien palier pendant que les autres affichaient
+le nouveau — la Loi 1 ne tenait que sur une partie des écrans.
+
+**Le pire cas était le widget PUBLIC** `/api/widget/score` : la régression silencieuse
+s'''affichait chez le client, sur son propre site.
+
+Les trois surfaces nommées au registre — widget public, portefeuille console, sélecteur
+cockpit — servent désormais `effectiveTier`. `strategy.list` renvoyait DÉJÀ `apogeeTier`
+(`include`, pas `select`) : il suffisait de le lire.
+
+Verrou `single-tier-truth.test.ts` : toute surface d'''affichage de palier consomme
+`effectiveTier` et n'''appelle plus `classifyTier` nu. Les usages internes de `classifyTier`
+(calcul, landings, canon) restent légitimes — c'''est la fonction de dérivation, pas un
+affichage de palier officiel.
+
+Lignes du registre rayées : V1, V2, V3, V4, V5 + « Cohérence de palier — partielle ».
+
+0 nouveau Neter · 0 modèle Prisma · 0 migration · 0 LLM ajouté · cap APOGEE 7/7.
+3841 tests verts.
+
+## v6.27.386 — feat(scorer): V4 — le rang de marché, ou le silence (2026-07-31)
+
+`getRegistryPosition` était écrit depuis la veille et **appelé nulle part** : une métrique
+dérivée sans consommateur est un livrable invisible (même classe que `oracle.getSection`).
+`scoreInstant` la rend, `/scorer` l'affiche (FR/EN/ZH).
+
+**La garde est le cœur de la livraison, pas l'affichage.** Le rang vaut `null` — et l'écran
+reste muet — sans pays déclaré (un rang « mondial » mêlerait des marchés incomparables) ou
+sous 10 pairs scannés (« 2ᵉ sur 3 » n'est pas une information, c'est un accident
+d'échantillon). Le registre comptant 5 marques prouvées justes après la purge du matin,
+**la garde s'exerce dès aujourd'hui** : l'écran restera silencieux jusqu'à ce que le corpus
+mérite un classement, et s'activera de lui-même sans redéploiement.
+
+Rang sportif : nombre de marques strictement devant, +1 — deux ex æquo partagent leur rang.
+
+ADR-0192. 0 nouveau Neter · 0 modèle Prisma · 0 migration · 0 LLM ajouté · cap APOGEE 7/7.
+3834 tests verts.
+
 ## v6.27.385 — feat(scorer): V3 « le tournoi » — les faits collectés disputent le rang (2026-07-31)
 
 Directive opérateur : « *le collecteur doit chercher aux bons endroits ce que le standard de

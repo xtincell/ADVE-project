@@ -1,6 +1,6 @@
 "use client";
 
-import { PILLAR_STORAGE_KEYS, classifyTier, MARKET_SCALES, MARKET_SCALE_LABELS, type MarketScale } from "@/domain";
+import { PILLAR_STORAGE_KEYS, effectiveTier, MARKET_SCALES, MARKET_SCALE_LABELS, type MarketScale } from "@/domain";
 
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
@@ -37,8 +37,17 @@ const CLASS_COLORS: Record<string, string> = {
   ICONE: "bg-amber-500/15 text-amber-300",
 };
 
-function getClassification(composite: number): string {
-  return classifyTier(composite);
+/**
+ * V5 « un seul palier » (2026-07-31) — le palier OFFICIEL fait foi.
+ *
+ * `Strategy.apogeeTier` est un ratchet mû par transition gouvernée (ADR-0167).
+ * Le dériver du seul composite faisait rétrograder la marque en SILENCE dès
+ * que le score baissait : la Loi 1 « pas de régression silencieuse » ne tenait
+ * que sur les écrans déjà routés. `strategy.list` renvoie déjà le champ
+ * (`include`, pas `select`) — il suffisait de le lire.
+ */
+function getClassification(composite: number, apogeeTier?: string | null): string {
+  return effectiveTier({ apogeeTier, composite });
 }
 
 export default function MarquesPage() {
@@ -74,7 +83,7 @@ export default function MarquesPage() {
   const allBrands = (strategies ?? []).map((s) => {
     const vec = (s.advertis_vector ?? {}) as Record<string, number>;
     const composite = vec.composite ?? 0;
-    const classification = getClassification(composite);
+    const classification = getClassification(composite, (s as { apogeeTier?: string | null }).apogeeTier);
     const pillarScores = [...PILLAR_STORAGE_KEYS].map(k => vec[k] ?? 0);
     const weakPillars = PILLAR_KEYS.filter((_, i) => pillarScores[i]! < 15);
     const isDrift = weakPillars.length >= 3;

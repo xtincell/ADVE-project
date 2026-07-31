@@ -90,6 +90,7 @@ export const scorerFr = {
   "scorer.verdict.provisional":
     "Score provisoire : nous n'avons pu mesurer qu'une partie de votre empreinte. Ajoutez votre site pour un score complet.",
   "scorer.cover.provisional": "provisoire",
+  "scorer.cover.marketPosition": "{rank}ᵉ sur {total} marques {country} déjà scannées — devant {ahead} % d'entre elles.",
   "scorer.verdict.strong":
     "Votre présence en ligne est forte — une bonne base pour bâtir une marque culte.",
   "scorer.verdict.solid":
@@ -300,6 +301,7 @@ export const scorerEn: Record<keyof typeof scorerFr, string> = {
   "scorer.verdict.provisional":
     "Provisional score: we could only measure part of your footprint. Add your website for a complete score.",
   "scorer.cover.provisional": "provisional",
+  "scorer.cover.marketPosition": "{rank}th of {total} {country} brands scanned so far — ahead of {ahead}% of them.",
   "scorer.verdict.strong":
     "Your online presence is strong — a solid base for building a cult brand.",
   "scorer.verdict.solid":
@@ -495,6 +497,7 @@ export const scorerZh: Record<keyof typeof scorerFr, string> = {
   "scorer.ambiguity.body": "在不知道您所属行业的情况下，我们无法将您的品牌与同名者区分开：以下信号仅依据名称。请补充您的网站以消除歧义。",
   "scorer.verdict.provisional": "暂定评分：我们只能测量到您影响力的一部分。请补充您的网站以获得完整评分。",
   "scorer.cover.provisional": "暂定",
+  "scorer.cover.marketPosition": "在已扫描的 {total} 个 {country} 品牌中排第 {rank} — 领先其中 {ahead}%。",
   "scorer.verdict.strong": "您的线上影响力强劲——是打造狂热品牌的良好基础。",
   "scorer.verdict.solid": "您的线上影响力扎实，但仍有可挖掘的增长杠杆。",
   "scorer.verdict.building": "您的线上影响力仍在搭建中——多项关键信号尚缺。",
