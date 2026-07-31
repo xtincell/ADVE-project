@@ -22,6 +22,7 @@
 
 import { mentionsEntity } from "@/server/services/seshat/entity-gate";
 import { ssrfSafeFetch } from "@/lib/net/ssrf-guard";
+import { CHANNELS, type Channel } from "@/lib/types/taxonomies";
 
 // `assertPublicUrl` est désormais la garde SSRF partagée (`@/lib/net/ssrf-guard`)
 // — ré-exportée ici pour conserver le chemin d'import historique (tests
@@ -81,8 +82,12 @@ export interface WebFootprint {
   } | null;
   socials: SocialProfile[];
   articles: FootprintArticle[];
-  /** Canaux déduits — alimentent e.touchpoints (canal + url). */
-  channels: Array<{ canal: string; url: string; source: "EMPREINTE_WEB" }>;
+  /**
+   * Canaux déduits — alimentent e.touchpoints (canal + url).
+   * `channelRef` = la plateforme dans la taxonomie canonique quand elle l'y
+   * couvre ; absente sinon (jamais rangée de force dans une case voisine).
+   */
+  channels: Array<{ canal: string; url: string; channelRef?: Channel; source: "EMPREINTE_WEB" }>;
   collectedAt: string;
   errors: string[];
 }
@@ -746,14 +751,45 @@ export async function collectWebFootprint(input: CollectFootprintInput): Promise
   footprint.socials = [...socialsByKey.values()];
 
   // ── 3. Canaux pour le pilier E ──
-  if (footprint.site?.reachable) {
-    footprint.channels.push({ canal: "Site web", url: footprint.site.url, source: "EMPREINTE_WEB" });
-  }
-  for (const p of footprint.socials) {
-    footprint.channels.push({ canal: platformLabel(p.platform), url: p.url, source: "EMPREINTE_WEB" });
-  }
+  footprint.channels = buildChannels(footprint);
 
   return footprint;
+}
+
+/**
+ * Canaux du pilier E depuis l'empreinte — PUR, donc vérifiable sans réseau.
+ *
+ * `channelRef` porte la plateforme dans la taxonomie CANONIQUE (T.08) : elle
+ * est MESURÉE (on sait quel réseau on a trouvé), elle doit donc voyager avec
+ * le canal au lieu de se perdre dans un libellé lisible. C'est cette perte qui
+ * empêchait les touchpoints détectés de satisfaire quoi que ce soit.
+ */
+export function buildChannels(footprint: WebFootprint): WebFootprint["channels"] {
+  // PROJECTION, pas admission : `site` et `socials` ont déjà passé le gate en
+  // amont de ce fichier. On les re-exprime en canaux — aucun fait nouveau
+  // n'entre ici, d'où la forme déclarative plutôt qu'une accumulation.
+  return [
+    ...(footprint.site?.reachable
+      ? [{ canal: "Site web", url: footprint.site.url, channelRef: "WEBSITE" as Channel, source: "EMPREINTE_WEB" as const }]
+      : []),
+    ...footprint.socials.map((p) => ({
+      canal: platformLabel(p.platform),
+      url: p.url,
+      channelRef: channelRefOf(p.platform),
+      source: "EMPREINTE_WEB" as const,
+    })),
+  ];
+}
+
+/**
+ * Plateforme détectée → `Channel` de la taxonomie canonique (T.08).
+ *
+ * Rend `undefined` quand la taxonomie ne porte PAS la plateforme (WhatsApp au
+ * 2026-07-31) : un canal hors-nomenclature reste sans `channelRef` plutôt que
+ * d'être rangé de force dans une case voisine (ADR-0046).
+ */
+function channelRefOf(p: SocialProfile["platform"]): Channel | undefined {
+  return (CHANNELS as readonly string[]).includes(p) ? (p as Channel) : undefined;
 }
 
 function platformLabel(p: SocialProfile["platform"]): string {
@@ -789,9 +825,34 @@ export function mergeFootprintIntoPillarE(
       .map((c) => c.toLowerCase().trim())
       .filter(Boolean),
   );
+  // ── Ce qu'un canal DÉTECTÉ peut honnêtement porter (2026-07-31) ──
+  //
+  // Défaut mesuré en prod : 25 touchpoints issus de l'empreinte, 0 comptés par
+  // le score. Deux causes, toutes deux ici :
+  //
+  //   1. Le VOCABULAIRE. On écrivait `stadeAarrr` quand le contrat de maturité
+  //      exige `aarrStage`, et `type: "Présence détectée"` quand la taxonomie
+  //      n'admet que PHYSIQUE|DIGITAL|HUMAIN. L'écran ne l'a jamais montré :
+  //      `section-mappers` lit les deux orthographes (`pickStr`), le scoreur
+  //      une seule. Affichage tolérant + score strict = défaut invisible.
+  //
+  //   2. La SUBSTANCE. Un canal découvert n'a ni `role` ni `devotionLevel`
+  //      MESURÉS — seul le fondateur les déclare. On ne les fabrique donc pas,
+  //      et ce touchpoint reste « non qualifié » au sens du contrat : c'est le
+  //      résultat CORRECT. Le crédit de la présence réelle vient d'une exigence
+  //      séparée (`webPresence`), pas d'un remplissage de complaisance.
+  //
+  // On n'écrit que le mesuré : le canal, sa nature digitale, sa référence de
+  // taxonomie, son URL, sa provenance.
   for (const ch of footprint.channels) {
     if (!existingCanals.has(ch.canal.toLowerCase())) {
-      existing.push({ canal: ch.canal, type: "Présence détectée", url: ch.url, stadeAarrr: "Acquisition", source: "EMPREINTE_WEB" });
+      existing.push({
+        canal: ch.canal,
+        type: "DIGITAL",
+        ...(ch.channelRef ? { channelRef: ch.channelRef } : {}),
+        url: ch.url,
+        source: "EMPREINTE_WEB",
+      });
       existingCanals.add(ch.canal.toLowerCase());
     }
   }

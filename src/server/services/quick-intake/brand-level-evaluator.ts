@@ -10,6 +10,14 @@ import {
   normalizePalier,
 } from "@/domain";
 import { sectorDisplayLabel } from "@/domain/sector-taxonomy";
+import { getAllQuestions } from "./question-bank";
+
+/**
+ * Nombre de volets du diagnostic, DÉRIVÉ de la banque de questions plutôt
+ * qu'écrit en dur : ajouter un pilier au questionnaire ne doit pas laisser
+ * cette base mentir en silence (aujourd'hui 9 — biz + A/D/V/E + R/T/I/S).
+ */
+const TOTAL_INTAKE_PHASES = Object.keys(getAllQuestions()).length;
 
 // ============================================================================
 // MODULE — Brand Level Evaluator
@@ -51,6 +59,31 @@ export interface BrandLevelEvaluation {
   level: BrandLevel;
   /** Confidence 0–1 — how confident the evaluator is about the placement */
   confidence: number;
+  /**
+   * SUR QUOI ce niveau repose (2026-07-31).
+   *
+   * Signalement opérateur : « Irawo est LATENT alors que c'est une marque
+   * forte ». Vérifié en base — l'intake ne portait qu'UNE phase déclarée sur
+   * neuf, le pilier D était vide, et la règle canon (« la fondation la plus
+   * faible tire le placement ») produisait donc LATENT. Le calcul était
+   * juste ; ce que le rapport en disait ne l'était pas : il annonçait un
+   * VERDICT SUR LA MARQUE là où il ne mesurait qu'un formulaire peu rempli.
+   *
+   * Le niveau ne peut plus voyager sans sa base. Quand elle est trop mince,
+   * `provisional` passe à vrai et le rapport doit le dire au lieu de laisser
+   * croire à un jugement établi — même doctrine que le « score provisoire »
+   * du /scorer (ADR-0187).
+   */
+  basis: {
+    /** Phases du questionnaire réellement renseignées. */
+    declaredPhases: number;
+    /** Phases attendues au total. */
+    totalPhases: number;
+    /** Piliers ADVE entièrement vides — ceux qui tirent le placement vers le bas. */
+    emptyPillars: Array<"a" | "d" | "v" | "e">;
+    /** true = trop peu déclaré pour qu'un palier soit un verdict. */
+    provisional: boolean;
+  };
   /** 2–3 sentence justification citing extracted values */
   justification: string;
   /** Per-pillar level signals (which pillars hit which level) */
@@ -275,14 +308,50 @@ Le pathToIcone DOIT inclure tous les paliers du niveau actuel jusqu'a ICONE (san
     level: normalizePalier(step?.level) ?? normLevel,
   }));
 
+  // La base vaut pour LES DEUX voies (2026-07-31). Le `as` ci-dessous masquait
+  // son absence sur le chemin LLM — c'est-à-dire sur la voie PRINCIPALE : le
+  // rapport aurait annoncé un palier sans jamais dire sur combien de volets il
+  // reposait, exactement le défaut signalé sur Irawo.
+  const basis = computeLevelBasis({ responses, extractedValues });
+
   return {
     ...parsed,
     level: normLevel,
+    basis,
     pillarSignals,
     nextMilestone,
     pathToIcone,
     confidence: typeof parsed.confidence === "number" ? Math.max(0, Math.min(1, parsed.confidence)) : 0.7,
   } as BrandLevelEvaluation;
+}
+
+/**
+ * Sur quoi un niveau repose — partagé par les DEUX voies (LLM et règles).
+ *
+ * Un palier calculé sur un volet déclaré sur neuf n'est pas un verdict sur la
+ * marque : c'est la mesure d'un formulaire peu rempli. Signalement opérateur
+ * 2026-07-31 sur « Irawo », vérifié en base — 1 phase déclarée, pilier D vide,
+ * donc LATENT par la règle canon. Le calcul était juste, sa restitution non.
+ */
+function computeLevelBasis(input: {
+  responses: Record<string, Record<string, string>> | null;
+  extractedValues: Record<"a" | "d" | "v" | "e", Record<string, unknown>>;
+}): BrandLevelEvaluation["basis"] {
+  const declaredPhases = Object.values(input.responses ?? {}).filter(
+    (slice) => slice && typeof slice === "object" && Object.values(slice).some((v) => v != null && v !== ""),
+  ).length;
+  const emptyPillars = (ADVE_STORAGE_KEYS as readonly ("a" | "d" | "v" | "e")[]).filter(
+    (k) => Object.values(input.extractedValues[k] ?? {}).filter((v) => v != null && v !== "").length === 0,
+  );
+  return {
+    declaredPhases,
+    totalPhases: TOTAL_INTAKE_PHASES,
+    emptyPillars,
+    // Provisoire dès qu'un pilier ADVE entier manque OU que moins d'un tiers
+    // du questionnaire a été renseigné : dans les deux cas le palier mesure
+    // l'entrée, pas la marque.
+    provisional: emptyPillars.length > 0 || declaredPhases * 3 < TOTAL_INTAKE_PHASES,
+  };
 }
 
 // ============================================================================
@@ -360,12 +429,21 @@ export function deriveBrandLevelDeterministic(input: {
     keyMilestone: MILESTONE_MOVE[t],
   }));
 
+  const basis = computeLevelBasis({ responses: input.responses, extractedValues });
+  const { declaredPhases, emptyPillars } = basis;
+
   return {
     level,
+    basis,
     confidence: 0.55, // honest: a rules read is less certain than a substance read
     // Langage fondateur (2026-07-20) : « Évaluation déterministe (sans LLM) »
     // est du jargon interne — le client n'a pas à connaître notre machinerie.
-    justification: `Évaluation automatique à partir de vos réponses : chaque marque est tirée par sa fondation la plus faible — la vôtre place ${companyName} au niveau ${TIER_DEFINITIONS[level].label}. ${TIER_DEFINITIONS[level].signals}`,
+    // Depuis le 2026-07-31, la justification DIT SA BASE quand elle est mince :
+    // annoncer « LATENT » sur un formulaire vide se lisait comme un jugement
+    // sur la marque alors que c'était un constat sur l'entrée.
+    justification: basis.provisional
+      ? `Évaluation provisoire : ${companyName} n'a renseigné que ${declaredPhases} des ${TOTAL_INTAKE_PHASES} volets du diagnostic${emptyPillars.length > 0 ? ` et ${emptyPillars.length === 1 ? "une fondation reste vide" : `${emptyPillars.length} fondations restent vides`}` : ""}. Le niveau ${TIER_DEFINITIONS[level].label} reflète donc ce qui a été déclaré, pas la valeur réelle de la marque — complétez le diagnostic pour un placement établi.`
+      : `Évaluation automatique à partir de vos réponses : chaque marque est tirée par sa fondation la plus faible — la vôtre place ${companyName} au niveau ${TIER_DEFINITIONS[level].label}. ${TIER_DEFINITIONS[level].signals}`,
     pillarSignals,
     nextMilestone,
     pathToIcone,

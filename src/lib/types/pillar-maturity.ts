@@ -51,6 +51,19 @@ export interface FieldRequirement {
   /** Human-readable description of what this field should contain */
   description?: string;
   /**
+   * Exigence CONDITIONNELLE : elle n'entre au dénominateur que si ce chemin est
+   * présent dans le contenu. Absent → l'exigence est retirée du compte, ni
+   * satisfaite ni manquante.
+   *
+   * Motif (2026-07-31) : les exigences de « présence mesurée » (`webPresence.*`)
+   * ne peuvent être satisfaites que si un scan d'empreinte a eu lieu. Une
+   * stratégie créée au cockpit n'a jamais été scannée — lui compter ces champs
+   * comme manquants présenterait une ABSENCE DE MESURE comme un manque réel,
+   * exactement ce qu'interdit l'ADR-0046. L'absence de scan doit être neutre,
+   * pas pénalisante.
+   */
+  appliesWhen?: string;
+  /**
    * Sub-keys attendues dans la shape Zod (uniquement pour les fields ZodObject
    * dérivés du schema). Sert à détecter les shapes corrompues où le LLM a
    * inventé des aliases (ex: ikigai {good,love,paid,skill} alors que le
