@@ -2199,6 +2199,12 @@ model QuickIntake {
   /// que `getByToken` (déjà sondé par le client) sait porter. Nettoyée au
   /// re-claim, jamais lue comme un état terminal.
   processingStage    String?
+  /// Quarantaine opérateur (V2 debt-free 2026-07-31) : intake de TEST ou de
+  /// démonstration, exclu des lots de recalcul et de tout futur corpus.
+  /// NULL = marque réelle. Mesuré avant pose : 41 intakes de test en prod
+  /// (33 « GoldenPath Brand » écrits par un script pointé prod, Naruto,
+  /// TEST-NEFER×6, Top).
+  quarantinedAt      DateTime?
   convertedToId      String?
   // ADR-0029 — FK with onDelete: SetNull. The Strategy archive BFS purge
   // (cf. ADR-0028) reads information_schema for FKs and cascades DELETE on

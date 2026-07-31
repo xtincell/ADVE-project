@@ -141,10 +141,33 @@ export async function lookupLatestFootprint(
  * throw — une base indisponible ne casse pas le score renvoyé au prospect.
  * Renvoie la row persistée (ou null si l'écriture a échoué).
  */
+/**
+ * Garde d'entrée du registre (V2 « debt free », 2026-07-31).
+ *
+ * Mesuré avant la purge du même jour : le registre public hébergeait des
+ * noms-sonde — `<script>alert(1)</script>`, `RateLimitProbe1-8`, `NeferRL1-5`,
+ * `ZzTestNefer*`, un nom vide, « a » — qui polluaient le leaderboard et tout
+ * futur percentile. La purge a nettoyé le stock ; cette garde ferme le flux.
+ *
+ * Volontairement GROSSIÈRE : elle refuse l'évident (vide, 1 caractère,
+ * balisage HTML, motifs de sonde connus), jamais le douteux — un vrai nom de
+ * marque exotique doit toujours passer.
+ */
+function isProbeName(name: string): boolean {
+  const n = name.trim();
+  if (n.length <= 1) return true;
+  if (/[<>]/.test(n)) return true;
+  return /^(neferrl|ratelimitprobe|zztestnefer|testproto|goldenpath brand)/i.test(n);
+}
+
 export async function recordFootprintObservation(
   input: RecordFootprintInput,
 ): Promise<FootprintObservation | null> {
   const brandKey = normalizeBrandKey(input);
+  if (isProbeName(input.name)) {
+    console.warn(`[brand-registry] nom-sonde refusé au registre: ${JSON.stringify(input.name.slice(0, 60))}`);
+    return null;
+  }
   try {
     const row = await db.brandFootprintSnapshot.create({
       data: {
