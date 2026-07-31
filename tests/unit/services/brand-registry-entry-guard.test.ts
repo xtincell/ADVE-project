@@ -14,7 +14,7 @@ vi.mock("@/lib/db", () => ({
 import { recordFootprintObservation } from "@/server/services/seshat/brand-registry";
 import { db } from "@/lib/db";
 
-const base = { total: 15, measuredWeight: 20, dimensions: [] } as never;
+const base = { total: 15, measuredWeight: 20, dimensions: [] as unknown[] };
 
 describe("recordFootprintObservation — garde d'entrée", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -28,15 +28,15 @@ describe("recordFootprintObservation — garde d'entrée", () => {
     ["ZzTestNeferInexistant", "sonde ZzTest"],
     ["GoldenPath Brand 2026-07-31", "création du script E2E"],
   ])("refuse le nom-sonde %j (%s) sans écrire", async (name) => {
-    const out = await recordFootprintObservation({ ...base, name } as never);
+    const out = await recordFootprintObservation({ ...base, name } as Parameters<typeof recordFootprintObservation>[0]);
     expect(out).toBeNull();
     expect(db.brandFootprintSnapshot.create).not.toHaveBeenCalled();
   });
 
   it("laisse passer un vrai nom de marque, même exotique", async () => {
     // La garde refuse l'évident, jamais le douteux.
-    await recordFootprintObservation({ ...base, name: "Kmer Chan" } as never);
-    await recordFootprintObservation({ ...base, name: "Ño & Fils" } as never);
+    await recordFootprintObservation({ ...base, name: "Kmer Chan" } as Parameters<typeof recordFootprintObservation>[0]);
+    await recordFootprintObservation({ ...base, name: "Ño & Fils" } as Parameters<typeof recordFootprintObservation>[0]);
     expect(db.brandFootprintSnapshot.create).toHaveBeenCalledTimes(2);
   });
 });
