@@ -83,6 +83,21 @@ export interface BrandLevelEvaluation {
     emptyPillars: Array<"a" | "d" | "v" | "e">;
     /** true = trop peu déclaré pour qu'un palier soit un verdict. */
     provisional: boolean;
+    /**
+     * Le SECOND axe : ce que le public constate, indépendamment de ce que la
+     * marque a déclaré. `null` = aucun scan, donc rien à constater.
+     *
+     * Le niveau se lit sur les deux : le déclaratif dit ce que la marque SAIT
+     * d'elle-même, la constatation dit ce que le monde VOIT. Une marque peut
+     * être muette au questionnaire et parfaitement visible dehors — c'était le
+     * cas d'Irawo, classée « invisible » avec cinq réseaux et un prix.
+     */
+    observed?: { site: boolean; socials: number; press: number; publishing: boolean; signals: number } | null;
+    /**
+     * Renseigné quand la présence constatée a RELEVÉ le palier : le rapport
+     * doit dire qu'un plancher s'est appliqué, et depuis quoi.
+     */
+    visibilityFloorApplied?: { from: BrandTier; to: BrandTier } | null;
   };
   /** 2–3 sentence justification citing extracted values */
   justification: string;
@@ -333,6 +348,45 @@ Le pathToIcone DOIT inclure tous les paliers du niveau actuel jusqu'a ICONE (san
  * 2026-07-31 sur « Irawo », vérifié en base — 1 phase déclarée, pilier D vide,
  * donc LATENT par la règle canon. Le calcul était juste, sa restitution non.
  */
+/**
+ * Présence PUBLIQUE constatée, lue dans l'empreinte du pilier E.
+ *
+ * ── Pourquoi ce garde-fou existe (2026-07-31) ──
+ *
+ * Mandat opérateur : « je veux que le déclaratif ET la constatation jouent de
+ * pair pour afficher le vrai niveau — une marque qui n'est pas latente ne peut
+ * pas être dans le même lot que le reste ».
+ *
+ * L'échelle définit LATENT comme « **Invisible**. Fondations absentes. » Or le
+ * placement se prend sur le pilier ADVE le plus FAIBLE : un `d` vide suffit à
+ * classer « invisible » une marque dotée d'un site joignable, de cinq réseaux,
+ * de trois retombées presse et d'un prix international (cas Irawo, mesuré).
+ * Le classement contredisait donc sa propre définition.
+ *
+ * Sur les six échelons, LATENT est le SEUL qui parle de visibilité — les cinq
+ * autres parlent de substance stratégique. Le niveau mélangeait deux
+ * dimensions et n'en mesurait qu'une.
+ *
+ * `null` = aucun scan (rien à constater, aucun plancher). Deux signaux
+ * indépendants sont exigés : un site seul peut être une coquille vide, deux
+ * sources concordantes attestent une existence publique réelle.
+ */
+export function observedVisibility(
+  eContent: Record<string, unknown> | undefined,
+): { site: boolean; socials: number; press: number; publishing: boolean; signals: number } | null {
+  const wp = eContent?.webPresence as Record<string, unknown> | undefined;
+  if (!wp || typeof wp !== "object") return null;
+  const site = (wp.site as Record<string, unknown> | null)?.reachable === true;
+  const socials = Array.isArray(wp.socials) ? wp.socials.length : 0;
+  const press = Array.isArray(wp.press) ? wp.press.length : 0;
+  const publishing = Boolean((wp.feed as Record<string, unknown> | undefined)?.lastPublishedAt);
+  const signals = [site, socials >= 2, press >= 1, publishing].filter(Boolean).length;
+  return { site, socials, press, publishing, signals };
+}
+
+/** Deux signaux concordants = la marque existe publiquement, donc pas « invisible ». */
+const VISIBILITY_FLOOR_SIGNALS = 2;
+
 function computeLevelBasis(input: {
   responses: Record<string, Record<string, string>> | null;
   extractedValues: Record<"a" | "d" | "v" | "e", Record<string, unknown>>;
@@ -351,6 +405,10 @@ function computeLevelBasis(input: {
     // du questionnaire a été renseigné : dans les deux cas le palier mesure
     // l'entrée, pas la marque.
     provisional: emptyPillars.length > 0 || declaredPhases * 3 < TOTAL_INTAKE_PHASES,
+    // Le SECOND axe. Sans lui, le rapport n'énoncerait que le déclaratif et le
+    // plancher de visibilité s'appliquerait en silence — une nouvelle boîte
+    // noire, exactement ce qu'on vient de fermer ailleurs.
+    observed: observedVisibility(input.extractedValues.e),
   };
 }
 
@@ -399,7 +457,23 @@ export function deriveBrandLevelDeterministic(input: {
   // Overall = the WEAKEST ADVE pillar pulls the placement down (canon rule:
   // "le niveau le plus bas atteint sur les 4 piliers tire le placement").
   const overallScore = Math.min(...(ADVE_STORAGE_KEYS as readonly ("a" | "d" | "v" | "e")[]).map(pillarScore));
-  const level = capAtForte(classifyTier(overallScore * 100, 100));
+  const declaredLevel = capAtForte(classifyTier(overallScore * 100, 100));
+
+  // ── Plancher de visibilité : le déclaratif et le constaté jouent de pair ──
+  //
+  // La règle du pilier le plus faible est juste pour la SUBSTANCE — un `d` vide
+  // est une fondation manquante. Mais elle produisait « LATENT », défini par
+  // l'échelle comme « **Invisible** », pour une marque dont on constate le
+  // site, cinq réseaux, trois retombées presse et un prix international.
+  //
+  // Une existence publique CONSTATÉE ne relève donc que LATENT, et rien
+  // au-dessus : l'empreinte prouve que la marque n'est pas invisible, elle ne
+  // prouve rien sur sa substance stratégique. Prétendre l'inverse gonflerait
+  // le palier sur du vide — le défaut qu'on passe la journée à corriger.
+  const observed = observedVisibility(extractedValues.e);
+  const floorApplies =
+    declaredLevel === "LATENT" && (observed?.signals ?? 0) >= VISIBILITY_FLOOR_SIGNALS;
+  const level: BrandTier = floorApplies ? "FRAGILE" : declaredLevel;
 
   const pillarSignals = (ADVE_STORAGE_KEYS as readonly ("a" | "d" | "v" | "e")[]).map((k) => {
     const fields = extractedValues[k] ?? {};
@@ -429,7 +503,13 @@ export function deriveBrandLevelDeterministic(input: {
     keyMilestone: MILESTONE_MOVE[t],
   }));
 
-  const basis = computeLevelBasis({ responses: input.responses, extractedValues });
+  const basis = {
+    ...computeLevelBasis({ responses: input.responses, extractedValues }),
+    // Dit à l'écran qu'un plancher s'est appliqué, et depuis quel palier : un
+    // relèvement silencieux serait aussi opaque que le « LATENT » sans raison
+    // qu'il corrige.
+    visibilityFloorApplied: floorApplies ? { from: declaredLevel, to: level } : null,
+  };
   const { declaredPhases, emptyPillars } = basis;
 
   return {
@@ -441,14 +521,49 @@ export function deriveBrandLevelDeterministic(input: {
     // Depuis le 2026-07-31, la justification DIT SA BASE quand elle est mince :
     // annoncer « LATENT » sur un formulaire vide se lisait comme un jugement
     // sur la marque alors que c'était un constat sur l'entrée.
-    justification: basis.provisional
-      ? `Évaluation provisoire : ${companyName} n'a renseigné que ${declaredPhases} des ${TOTAL_INTAKE_PHASES} volets du diagnostic${emptyPillars.length > 0 ? ` et ${emptyPillars.length === 1 ? "une fondation reste vide" : `${emptyPillars.length} fondations restent vides`}` : ""}. Le niveau ${TIER_DEFINITIONS[level].label} reflète donc ce qui a été déclaré, pas la valeur réelle de la marque — complétez le diagnostic pour un placement établi.`
-      : `Évaluation automatique à partir de vos réponses : chaque marque est tirée par sa fondation la plus faible — la vôtre place ${companyName} au niveau ${TIER_DEFINITIONS[level].label}. ${TIER_DEFINITIONS[level].signals}`,
+    justification: buildJustification({ companyName, level, basis, declaredPhases, emptyPillars }),
     pillarSignals,
     nextMilestone,
     pathToIcone,
     iconeVision: `Au statut Icône, ${companyName} deviendrait la référence de ${sectorLabel} : catégorie redéfinie autour d'elle, transmission générationnelle, masse de superfans en orbite stable.`,
   };
+}
+
+/**
+ * Le texte du palier ÉNONCE les deux axes.
+ *
+ * Le déclaratif dit ce que la marque sait d'elle-même, la constatation dit ce
+ * que le public voit. Les taire l'un ou l'autre, c'est ce qui a produit un
+ * « LATENT » sans explication devant un fondateur qui savait sa marque visible.
+ */
+function buildJustification(input: {
+  companyName: string;
+  level: BrandTier;
+  basis: BrandLevelEvaluation["basis"];
+  declaredPhases: number;
+  emptyPillars: Array<"a" | "d" | "v" | "e">;
+}): string {
+  const { companyName, level, basis, declaredPhases, emptyPillars } = input;
+  const obs = basis.observed;
+
+  // Ce que le public constate — énoncé AVANT le reproche sur le déclaratif :
+  // un fondateur dont la marque est vivante doit lire d'abord ce qui est vu.
+  const constate: string[] = [];
+  if (obs?.site) constate.push("un site actif");
+  if (obs && obs.socials > 0) constate.push(`${obs.socials} réseau${obs.socials > 1 ? "x" : ""}`);
+  if (obs && obs.press > 0) constate.push(`${obs.press} retombée${obs.press > 1 ? "s" : ""} presse`);
+  if (obs?.publishing) constate.push("des publications datées");
+  const vu = constate.length > 0 ? `Ce que le public voit : ${constate.join(", ")}.` : "";
+
+  if (basis.visibilityFloorApplied) {
+    return `${vu} ${companyName} n'est donc pas une marque invisible — le niveau ${TIER_DEFINITIONS[level].label} le reconnaît. Ce qui manque n'est pas la présence mais la SUBSTANCE déclarée : ${declaredPhases} des ${TOTAL_INTAKE_PHASES} volets renseignés${emptyPillars.length > 0 ? `, ${emptyPillars.length === 1 ? "une fondation vide" : `${emptyPillars.length} fondations vides`}` : ""}. Le diagnostic complet est ce qui permettrait de juger votre stratégie, pas seulement votre visibilité.`.trim();
+  }
+
+  if (basis.provisional) {
+    return `${vu} Évaluation provisoire : ${companyName} n'a renseigné que ${declaredPhases} des ${TOTAL_INTAKE_PHASES} volets du diagnostic${emptyPillars.length > 0 ? ` et ${emptyPillars.length === 1 ? "une fondation reste vide" : `${emptyPillars.length} fondations restent vides`}` : ""}. Le niveau ${TIER_DEFINITIONS[level].label} reflète donc ce qui a été déclaré, pas la valeur réelle de la marque — complétez le diagnostic pour un placement établi.`.trim();
+  }
+
+  return `${vu} Évaluation automatique à partir de vos réponses : chaque marque est tirée par sa fondation la plus faible — la vôtre place ${companyName} au niveau ${TIER_DEFINITIONS[level].label}. ${TIER_DEFINITIONS[level].signals}`.trim();
 }
 
 function capAtForte(t: BrandTier): BrandTier {
