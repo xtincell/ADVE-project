@@ -1,5 +1,30 @@
 # Changelog — La Fusee
 
+## v6.27.387 — fix(cockpit): V5 « un seul palier » — l'''officiel fait foi partout (2026-07-31)
+
+Ligne du registre RESIDUAL-DEBT ouverte depuis l'''ADR-0167 : `Strategy.apogeeTier` est un
+ratchet mû par transition gouvernée (Loi 1 « conservation d'''altitude »), mais une douzaine
+de surfaces dérivaient encore le palier du SEUL score. Après une promotion gouvernée suivie
+d'''une baisse de score, elles affichaient l'''ancien palier pendant que les autres affichaient
+le nouveau — la Loi 1 ne tenait que sur une partie des écrans.
+
+**Le pire cas était le widget PUBLIC** `/api/widget/score` : la régression silencieuse
+s'''affichait chez le client, sur son propre site.
+
+Les trois surfaces nommées au registre — widget public, portefeuille console, sélecteur
+cockpit — servent désormais `effectiveTier`. `strategy.list` renvoyait DÉJÀ `apogeeTier`
+(`include`, pas `select`) : il suffisait de le lire.
+
+Verrou `single-tier-truth.test.ts` : toute surface d'''affichage de palier consomme
+`effectiveTier` et n'''appelle plus `classifyTier` nu. Les usages internes de `classifyTier`
+(calcul, landings, canon) restent légitimes — c'''est la fonction de dérivation, pas un
+affichage de palier officiel.
+
+Lignes du registre rayées : V1, V2, V3, V4, V5 + « Cohérence de palier — partielle ».
+
+0 nouveau Neter · 0 modèle Prisma · 0 migration · 0 LLM ajouté · cap APOGEE 7/7.
+3841 tests verts.
+
 ## v6.27.386 — feat(scorer): V4 — le rang de marché, ou le silence (2026-07-31)
 
 `getRegistryPosition` était écrit depuis la veille et **appelé nulle part** : une métrique

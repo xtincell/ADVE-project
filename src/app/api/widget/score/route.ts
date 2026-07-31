@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 import { PILLAR_STORAGE_KEYS } from "@/domain";
-import { classifyTier } from "@/domain";
+import { effectiveTier } from "@/domain";
 
 /**
  * Public /200 Score Widget — Embeddable widget for external sites
@@ -19,8 +19,17 @@ const CLASSIFICATION_COLORS: Record<string, string> = {
   ICONE: "#f472b6",
 };
 
-function getClassification(score: number): string {
-  return classifyTier(score);
+/**
+ * V5 « un seul palier » (2026-07-31) — le palier OFFICIEL fait foi.
+ *
+ * `Strategy.apogeeTier` est un ratchet mû par transition gouvernée (ADR-0167,
+ * Loi 1 « conservation d'altitude »). Le dériver du seul score faisait
+ * RÉTROGRADER la marque en silence dès que le score baissait — et ce widget
+ * est PUBLIC : la régression était visible chez le client, sur son propre
+ * site. `effectiveTier` sert l'officiel s'il est posé, le dérivé sinon.
+ */
+function getClassification(score: number, apogeeTier?: string | null): string {
+  return effectiveTier({ apogeeTier, composite: score });
 }
 
 export async function GET(request: Request) {
@@ -42,7 +51,16 @@ export async function GET(request: Request) {
     const composite = vec
       ? [...PILLAR_STORAGE_KEYS].reduce((sum, k) => sum + (vec[k] ?? 0), 0)
       : 0;
-    const classification = intake.classification ?? getClassification(composite);
+    // Le palier officiel de la stratégie convertie prime sur tout dérivé.
+    const strategy = intake.convertedToId
+      ? await db.strategy.findUnique({
+          where: { id: intake.convertedToId },
+          select: { apogeeTier: true },
+        })
+      : null;
+    const classification = strategy?.apogeeTier
+      ? getClassification(composite, strategy.apogeeTier)
+      : (intake.classification ?? getClassification(composite));
     const color = CLASSIFICATION_COLORS[classification] ?? "#71717a";
 
     if (format === "svg") {

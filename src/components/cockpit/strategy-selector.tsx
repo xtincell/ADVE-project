@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { classifyTier, type BrandTier } from "@/domain";
+import { effectiveTier, type BrandTier } from "@/domain";
 import { createPortal } from "react-dom";
 import { lockBodyScroll, unlockBodyScroll } from "@/lib/scroll-lock";
 import {
@@ -140,9 +140,14 @@ const KIND_LABELS: Record<string, string> = {
   PRODUCT_LINE:     "Gamme",
 };
 
-function classifyComposite(c: number | null): BrandClassification | null {
-  if (c == null) return null;
-  return classifyTier(c);
+/**
+ * V5 : le palier officiel prime (ADR-0167). Sans lui, le sélecteur affichait un
+ * palier dérivé du score pendant que le cockpit affichait l'officiel — deux
+ * vérités sur le même écran.
+ */
+function classifyComposite(c: number | null, apogeeTier?: string | null): BrandClassification | null {
+  if (c == null && !apogeeTier) return null;
+  return effectiveTier({ apogeeTier, composite: c }) as BrandClassification;
 }
 
 function BrandPickerModal({
@@ -203,7 +208,7 @@ function BrandPickerModal({
         strategyId: effectiveStrategy?.id ?? null,
         strategyStatus: effectiveStrategy?.status ?? null,
         composite: isDuplicate ? null : composite,
-        classification: isDuplicate ? null : classifyComposite(composite),
+        classification: isDuplicate ? null : classifyComposite(composite, (n.strategy as { apogeeTier?: string | null } | undefined)?.apogeeTier),
         name: n.name,
         slug: n.slug,
         nodeKind: n.nodeKind,
@@ -223,7 +228,7 @@ function BrandPickerModal({
         strategyId: s.id,
         strategyStatus: s.status,
         composite,
-        classification: classifyComposite(composite),
+        classification: classifyComposite(composite, (s as { apogeeTier?: string | null }).apogeeTier),
         name: s.name,
         slug: null,
         nodeKind: "STANDALONE_BRAND",
