@@ -56,6 +56,29 @@ export const ADVE_VECTOR_COMPOSITE_KEY = "composite" as const;
  * pas un nombre fini — jamais 0 par défaut. Tolère un vecteur legacy portant
  * `compositeScore` (des snapshots anciens en ont), mais `composite` prime.
  */
+/**
+ * Échelle d'un vecteur ADVE-RTIS (V7, 2026-07-31).
+ *
+ * Piège inscrit au registre : l'INTAKE persiste un composite 4 piliers × 25
+ * (échelle /100) sous la MÊME clé `composite` que le canon 8 piliers (/200).
+ * Une surface qui pointerait sur une ligne d'intake servirait donc un /100
+ * avec l'étiquette « /200 » — la marque paraîtrait deux fois plus faible
+ * qu'elle n'est. Aucune surface ne le fait aujourd'hui ; cette fonction rend
+ * le piège INOFFENSIF avant qu'une le fasse.
+ *
+ * Le discriminant est structurel, pas heuristique : un vecteur d'intake ne
+ * porte QUE les 4 clés ADVE non nulles (r/t/i/s valent 0 — les piliers RTIS
+ * sont dérivés plus tard), là où un vecteur canon en a au moins une.
+ */
+export function compositeScaleOf(vector: unknown): 100 | 200 {
+  if (!vector || typeof vector !== "object" || Array.isArray(vector)) return 200;
+  const rec = vector as Record<string, number | undefined>;
+  const rtisMeasured = (["r", "t", "i", "s"] as const).some(
+    (k) => typeof rec[k] === "number" && (rec[k] as number) > 0,
+  );
+  return rtisMeasured ? 200 : 100;
+}
+
 export function readCompositeFromVector(vector: unknown): number | null {
   if (!vector || typeof vector !== "object" || Array.isArray(vector)) return null;
   const rec = vector as Record<string, unknown>;

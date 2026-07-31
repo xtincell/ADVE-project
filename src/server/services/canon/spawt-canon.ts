@@ -377,12 +377,12 @@ export const PILLAR_E = {
     "Te découvrir à travers tes trouvailles : chaque spawt enrichit ton Palais, fait progresser ton titre, accumule tes badges — l'app devient le miroir de ton identité culinaire, pas un catalogue à fouiller.",
   primaryChannel: "App mobile SPAWT (Android-first) — le compagnon quotidien du spawter",
   touchpoints: [
-    { canal: "Landing + Quiz Palais (waitlist)", type: "Acquisition", stadeAarrr: "Acquisition" },
-    { canal: "App SPAWT (3 modes)", type: "Découverte quotidienne", stadeAarrr: "Retention" },
-    { canal: "WhatsApp Community « La Meute Abidjan »", type: "Weekly Digest + relation", stadeAarrr: "Retention" },
-    { canal: "Le Chat (notifications)", type: "Conciergerie & relances contextuelles", stadeAarrr: "Activation" },
-    { canal: "Créateurs / TikTok / Instagram", type: "Trouvailles & viralité", stadeAarrr: "Acquisition" },
-    { canal: "Kit « Spawté ici » (QR en lieu)", type: "Pont physique → digital", stadeAarrr: "Referral" },
+    { canal: "Landing + Quiz Palais (waitlist)", type: "DIGITAL", channelRef: "WEBSITE", role: "Acquisition", aarrStage: "ACQUISITION" },
+    { canal: "App SPAWT (3 modes)", type: "DIGITAL", channelRef: "WEBSITE", role: "Découverte quotidienne", aarrStage: "RETENTION" },
+    { canal: "WhatsApp Community « La Meute Abidjan »", type: "HUMAIN", channelRef: "WHATSAPP", role: "Weekly Digest + relation", aarrStage: "RETENTION" },
+    { canal: "Le Chat (notifications)", type: "HUMAIN", role: "Conciergerie & relances contextuelles", aarrStage: "ACTIVATION" },
+    { canal: "Créateurs / TikTok / Instagram", type: "DIGITAL", channelRef: "INSTAGRAM", role: "Trouvailles & viralité", aarrStage: "ACQUISITION" },
+    { canal: "Kit « Spawté ici » (QR en lieu)", type: "PHYSIQUE", role: "Pont physique → digital", aarrStage: "REFERRAL" },
   ],
   channelTouchpointMap: [
     { salesChannel: "Acquisition organique (quiz viral + créateurs)", touchpointRefs: ["landing", "quiz Palais", "carte archétype partageable", "codes créateurs UTM"] },

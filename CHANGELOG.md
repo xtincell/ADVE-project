@@ -1,5 +1,40 @@
 # Changelog — La Fusee
 
+## v6.27.388 — fix(governance): V6 canons · V7 anti-fabrication (2026-07-31)
+
+Dernières vagues du plan « debt free ».
+
+### V6 — les canons de démonstration disent enfin la vérité
+
+Spawt et Motion19 sont les **démos commerciales** : leurs touchpoints portaient
+`stadeAarrr: "Acquisition"` (le contrat exige `aarrStage: "ACQUISITION"`) et rangeaient le
+RÔLE réel du canal dans `type` (« La vitrine du faire », « Conseil personnalisé + SAV »)
+là où la taxonomie n'admet que `PHYSIQUE|DIGITAL|HUMAIN`. Leur score E était donc faux.
+
+Remapping **déterministe, sans une seule invention** : le rôle passe dans `role`, `type`
+reçoit sa nature d'enum déduite du canal, `aarrStage` prend la valeur canonique,
+`channelRef` est posé quand la taxonomie couvre la plateforme. 14 touchpoints.
+`devotionLevel` reste **absent** — il relève d'une déclaration stratégique humaine.
+
+### V7 — un nombre réel ne se fabrique jamais
+
+- **`a.turnoverRate` → `needsHuman`** : un taux de rotation clients est une donnée
+  d'entreprise réelle, aucune IA ne la connaît.
+- **`i.totalActions` → `calculation`** : son compteur **exact** existait déjà
+  (`auto-filler.deriveByCalculation`, somme des actions du catalogue par canal) et le
+  routage par défaut le rendait **mort** — le LLM **estimait** ce que le code savait
+  **compter**.
+- **`compositeScaleOf(vector)`** désamorce le piège /100 vs /200 : l'intake persiste un
+  composite 4 piliers sous la MÊME clé que le canon 8 piliers. Discriminant **structurel**
+  (un vecteur d'intake a ses RTIS à zéro), valeur illisible ⇒ /200 — jamais une supposition
+  basse.
+
+Verrou `numbers-are-never-fabricated.test.ts`. Lignes du registre rayées : canons, nombres
+`ai_generation`, composite /100.
+
+0 nouveau Neter · 0 modèle Prisma · 0 migration · 0 LLM ajouté · cap APOGEE 7/7.
+3846 tests verts.
+
 ## v6.27.387 — fix(cockpit): V5 « un seul palier » — l'''officiel fait foi partout (2026-07-31)
 
 Ligne du registre RESIDUAL-DEBT ouverte depuis l'''ADR-0167 : `Strategy.apogeeTier` est un
