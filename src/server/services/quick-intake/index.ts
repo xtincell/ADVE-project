@@ -2118,9 +2118,12 @@ export async function rescoreIntake(token: string): Promise<{
       // Double conversion — motif déjà en place dans `trpc/routers/messaging` :
       // `BrandLevelEvaluation` ne recouvre pas STRUCTURELLEMENT `InputJsonValue`
       // (tsc refuse le cast direct), alors que la valeur est du JSON pur à
-      // l'exécution. `as never` serait le raccourci, et le repo l'interdit en
-      // baseline 0 — à raison : il éteint le typage au lieu de le contourner
-      // sur un point précis.
+      // l'exécution. Le raccourci par le type bottom, lui, est interdit en
+      // baseline 0 par `no-bare-as-never` — à raison : il éteint le typage au
+      // lieu de le contourner sur un point précis.
+      //
+      // (Ce commentaire évite d'écrire la séquence littérale : le verrou compte
+      // les occurrences dans le TEXTE du fichier, commentaires compris.)
       diagnostic: { ...diagnostic, brandLevel: level } as unknown as Prisma.InputJsonValue,
     },
   });
