@@ -150,6 +150,25 @@ function isFieldSatisfied(content: Record<string, unknown>, req: FieldRequiremen
 /**
  * Assess a single pillar's maturity against its contract.
  */
+/**
+ * Retire les exigences CONDITIONNELLES dont la condition n'est pas remplie
+ * (`appliesWhen` pointe un chemin absent du contenu).
+ *
+ * Point unique : l'assesseur ET le scoreur structurel filtrent par ici, sinon
+ * les deux comptent des dénominateurs différents — la divergence silencieuse
+ * entre deux lecteurs d'une même règle est précisément la classe de défaut que
+ * ce chantier corrige.
+ */
+export function applicableRequirements(
+  requirements: FieldRequirement[],
+  content: Record<string, unknown> | null,
+): FieldRequirement[] {
+  if (!content) return requirements.filter((r) => !r.appliesWhen);
+  return requirements.filter(
+    (r) => !r.appliesWhen || resolvePillarPath(content, r.appliesWhen) !== undefined,
+  );
+}
+
 export function assessPillar(
   pillarKey: string,
   content: Record<string, unknown> | null,
@@ -175,7 +194,7 @@ export function assessPillar(
   let currentStage: MaturityStage | "EMPTY" = "EMPTY";
 
   for (const stage of MATURITY_ORDER) {
-    const requirements = ct.stages[stage];
+    const requirements = applicableRequirements(ct.stages[stage], content);
     const allSatisfied = requirements.every(req => isFieldSatisfied(content, req));
     if (allSatisfied) {
       currentStage = stage;
@@ -185,7 +204,7 @@ export function assessPillar(
   }
 
   // Compute missing fields against COMPLETE
-  const completeReqs = ct.stages.COMPLETE;
+  const completeReqs = applicableRequirements(ct.stages.COMPLETE, content);
   const satisfied: string[] = [];
   const missing: string[] = [];
   const derivable: string[] = [];

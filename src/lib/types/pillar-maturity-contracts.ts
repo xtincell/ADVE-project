@@ -118,6 +118,26 @@ const ENRICHED_E: FieldRequirement[] = [
   // ADR-0037 PR-K3 — fields canon manuel inférables E
   { path: "programmeEvangelisation", validator: "is_object", derivable: true, derivationSource: "ai_generation", description: "Programme d'Évangélisation (manuel E §4.7) — referral/advocacy/recruitment" },
   { path: "communityBuilding", validator: "is_object", derivable: true, derivationSource: "ai_generation", description: "Community Building (manuel E §4.8) — platforms/moderationRules/growthMechanics" },
+
+  // ── Présence MESURÉE — le second niveau (2026-07-31) ──
+  //
+  // Tout ce qui précède est DÉCLARATIF : la marque dit comment elle engage.
+  // Ce qui suit est MESURÉ : le scan a constaté une présence publique réelle.
+  // Ce sont deux qualités d'information, donc deux exigences distinctes — un
+  // canal détecté vaut moins qu'un canal piloté, mais plus que rien.
+  //
+  // Avant cette date, l'empreinte ne comptait NULLE PART : `webPresence`
+  // n'apparaissait dans aucun contrat, et les touchpoints détectés échouaient
+  // au validateur qualifié faute de `role`/`devotionLevel` — qu'on ne peut pas
+  // mesurer. Mesuré en prod : 25 touchpoints issus du scan, 0 comptés.
+  //
+  // `appliesWhen` est ce qui rend l'ajout honnête : sans scan, pas de
+  // `webPresence`, donc ces exigences sortent du dénominateur au lieu de
+  // pénaliser une marque qu'on n'a simplement jamais regardée (ADR-0046).
+  // `derivable: false` — aucune IA ne peut les produire, seul un scan le peut.
+  { path: "webPresence.site", validator: "is_object", derivable: false, appliesWhen: "webPresence", description: "Site officiel identifié et joignable (mesuré)" },
+  { path: "webPresence.socials", validator: "min_items", validatorArg: 1, derivable: false, appliesWhen: "webPresence", description: "Au moins un compte social public constaté (mesuré)" },
+  { path: "webPresence.press", validator: "min_items", validatorArg: 1, derivable: false, appliesWhen: "webPresence", description: "Au moins une retombée presse relevée (mesuré)" },
 ];
 
 const ENRICHED_R: FieldRequirement[] = [
@@ -793,6 +813,14 @@ export function buildContracts(
     // dans ENRICHED_A/D/V (héritage Phase 13) et la nouvelle politique
     // "Enrichir = exhaustif" décidée par l'opérateur.
     const overrideDerivable = (r: FieldRequirement): FieldRequirement => {
+      // Une exigence de PRÉSENCE MESURÉE (conditionnelle) n'est dérivable par
+      // personne : ni l'IA ni le fondateur ne peuvent produire un site officiel
+      // ou un compte social — seul un scan les CONSTATE. La promotion
+      // automatique en `derivable: true` ferait pire que fausser un compteur :
+      // elle inviterait la notoria à FABRIQUER une empreinte (ADR-0046).
+      if (r.appliesWhen) {
+        return { ...r, derivable: false, derivationSource: undefined };
+      }
       const isHuman = needsHuman.has(r.path);
       if (isHuman) {
         return { ...r, derivable: false, derivationSource: undefined };

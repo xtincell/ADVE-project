@@ -1,5 +1,98 @@
 # Changelog — La Fusee
 
+## v6.27.376 — fix(scorer): l'empreinte mesurée ne comptait nulle part dans le score (2026-07-31)
+
+Signalement opérateur : « *je note que l'intake ingère et calcule mal ses valeurs —
+Engagement est à zéro malgré une forte présence web, des activités, une forte couverture
+presse et social media, une newsletter existante ; si c'est déjà inexact à ce stade,
+comment être sûr de la qualité du pdf payant ?* »
+
+**Mesuré en base avant d'écrire une ligne**, sur les 110 touchpoints existants :
+
+| origine des touchpoints | en base | comptés par le score |
+|---|---:|---:|
+| déclarés au questionnaire | 85 | 62 |
+| **issus du scan d'empreinte** | **25** | **0** |
+
+Pas « mal pondéré » — zéro, systématiquement.
+
+### Deux causes indépendantes
+
+**1. Le vocabulaire.** Le collecteur écrivait `stadeAarrr` là où le contrat de maturité
+exige `aarrStage`, et `type: "Présence détectée"` là où la taxonomie n'admet que
+`PHYSIQUE|DIGITAL|HUMAIN`. Le validateur `array_items_complete` rejetait donc chaque
+touchpoint détecté — sur le contenu de production d'Irawo, `assessPillar("e")` rendait
+**0 satisfait sur 23**.
+
+**2. L'orphelin.** `webPresence` — site, réseaux, presse, domaine, performance,
+publicités, Wikipédia — n'était référencé par **aucun** contrat. Il pouvait peser 5 Ko de
+faits mesurés sans valoir un point, par construction.
+
+**Pourquoi personne ne l'a vu.** `section-mappers` lit
+`pickStr(t, ["stadeAarrr", "aarrStage", "stade"])` : **l'affichage tolère les deux
+orthographes, le score n'en accepte qu'une.** L'écran montrait fidèlement une richesse
+que le score n'avait jamais comptée. Aucun type ne peut attraper cela — tout transite en
+`Record<string, unknown>` — et aucun test ne confrontait les deux moitiés du système.
+Même famille que la clé fantôme `key === "vector"` de l'Oracle (v6.27.373).
+
+### Défaut adjacent, trouvé en mesurant
+
+`enrichWithKeys` **promeut** les `min_items` en `array_items_complete` au stage COMPLETE.
+Le filtre qui compte la dimension « collections » était resté sur le seul `min_items` :
+
+| pilier | exigences COMPLETE | `min_items` purs | `array_items_complete` |
+|---|---:|---:|---:|
+| a | 36 | **0** | 5 |
+| d | 20 | **0** | 7 |
+| v | 25 | 8 | 5 |
+| e | 23 | **0** | 14 |
+
+`collectionsTotales` retombait sur `max(0, 1)` avec un numérateur toujours nul : **les 7
+points de cette dimension étaient inatteignables sur a, d et e**, pour toute marque. Seul
+`v` y échappait — ce qui explique un vecteur où `v` domine (19,3 contre 1,21 sur `a`)
+sans que la stratégie soit meilleure de ce côté.
+
+### Décision — deux niveaux distincts
+
+Le **déclaratif** garde son validateur à six clés : un canal *piloté*, dont on connaît le
+rôle, l'étape AARRR et le palier de dévotion, est une information que seul le fondateur
+produit. Le **mesuré** compte à part, via trois exigences `webPresence.*`.
+
+Le collecteur n'écrit que ce qu'il mesure : `channelRef` voyage désormais avec le canal
+(la plateforme *est* mesurée, elle ne doit pas se perdre dans un libellé) ; `role` et
+`devotionLevel` restent **absents** — les fabriquer gonflerait le score sur du vide, et un
+touchpoint détecté qui reste « non qualifié » est le résultat correct.
+
+`appliesWhen` rend l'ajout honnête : sans scan, pas de `webPresence`, donc ces exigences
+**sortent du dénominateur** au lieu de pénaliser une marque qu'on n'a jamais regardée
+(ADR-0046). Et `overrideDerivable` ne les promeut plus en dérivables — sans ce garde-fou,
+la notoria proposerait de **fabriquer** un site officiel.
+
+### Mesuré après correction, sur le contenu de production inchangé
+
+| cas | atomes | structural E |
+|---|---:|---:|
+| Irawo, contenu prod tel quel | 3/26 | **0 → 3,25** |
+| Irawo, collecteur corrigé | 3/26 | 3,25 |
+| marque **jamais scannée** | 0/**23** | 0,00 |
+
+**Aucune migration de données** : le crédit vient de `webPresence`, que les enregistrements
+existants portent déjà — un recalcul de vecteur suffit. Le score reste modeste et c'est
+juste : le scan mesure une *présence*, pas un *engagement*.
+
+### Verrou
+
+`collector-speaks-the-contract-language.test.ts`, éprouvé dans les deux sens : 6/6 avec le
+code corrigé ; en réintroduisant le défaut, il le nomme — « clés inconnues du schema — le
+score les ignorera en silence : stadeAarrr ». Il ferme la **classe** : toute clé écrite
+appartient au vocabulaire canonique, tout bloc posé est réclamé par une exigence.
+
+Inclut `basis` sur `BrandLevelEvaluation` : le niveau déclare sur combien de volets
+déclarés il se prononce, calcul partagé entre le chemin LLM et le chemin déterministe.
+
+ADR-0189. 0 nouveau Neter · 0 modèle Prisma · 0 migration · 0 LLM ajouté · cap APOGEE 7/7.
+3781 tests verts, build local vert.
+
 ## v6.27.375 — fix(intake): le rapport contenait l'entreprise d'un autre (2026-07-30)
 
 Question opérateur : « *ce process est flawless ?* » — sur `/intake/[token]/ingest`.

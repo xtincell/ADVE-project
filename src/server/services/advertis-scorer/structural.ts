@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import type { PillarKey } from "@/lib/types/advertis-vector";
 import { PILLAR_KEYS } from "@/lib/types/advertis-vector";
 import { scorePillarStructural, type PillarScoreInput } from "@/lib/utils/scoring";
-import { assessPillar } from "@/server/services/pillar-maturity/assessor";
+import { assessPillar, applicableRequirements } from "@/server/services/pillar-maturity/assessor";
 import { getContract } from "@/server/services/pillar-maturity/contracts-loader";
 import type { ScorableType } from "./types";
 
@@ -108,12 +108,26 @@ export function getStrategyPillarInputsFromContent(
   const assessment = assessPillar(pillar, content, contract);
 
   // atomes = COMPLETE requirements satisfied (what Glory needs)
-  const atomesRequis = contract.stages.COMPLETE.length || 1;
+  // Les exigences CONDITIONNELLES non applicables (aucun scan d'empreinte, donc
+  // pas de `webPresence`) sortent du dénominateur — même filtre que l'assesseur,
+  // sinon les deux comptent des totaux différents.
+  const completeReqs = applicableRequirements(contract.stages.COMPLETE, content);
+  const atomesRequis = completeReqs.length || 1;
   const atomesValides = assessment.satisfied.length;
 
   // collections = array fields with sufficient items
-  const arrayReqs = contract.stages.COMPLETE.filter(r =>
-    r.validator === "min_items"
+  //
+  // `array_items_complete` compte ici depuis le 2026-07-31. Le stage COMPLETE
+  // est construit par `enrichWithKeys`, qui PROMEUT les `min_items` en
+  // `array_items_complete` dès que le schema décrit un tableau d'objets. Le
+  // filtre, resté sur le seul `min_items`, ne voyait donc plus RIEN sur a/d/e
+  // (0 exigence pure sur les trois, mesuré) : `collectionsTotales` retombait
+  // sur `max(0, 1)` avec un numérateur toujours nul, et les 7 points de cette
+  // dimension étaient inatteignables sur ces piliers, pour toute marque.
+  // Seul `v` y échappait (8 `min_items` purs) — ce qui explique un vecteur où
+  // v domine sans que la stratégie soit meilleure de ce côté.
+  const arrayReqs = completeReqs.filter(r =>
+    r.validator === "min_items" || r.validator === "array_items_complete"
   );
   const collectionsTotales = Math.max(arrayReqs.length, 1);
   const collectionsCompletes = arrayReqs.filter(r =>
@@ -142,7 +156,9 @@ function countArrayRequirements(
   contract: import("@/lib/types/pillar-maturity").PillarMaturityContract | null
 ): number {
   if (!contract) return 2;
-  return contract.stages.COMPLETE.filter(r => r.validator === "min_items").length || 1;
+  return contract.stages.COMPLETE.filter(
+    r => r.validator === "min_items" || r.validator === "array_items_complete"
+  ).length || 1;
 }
 
 // ============================================================================

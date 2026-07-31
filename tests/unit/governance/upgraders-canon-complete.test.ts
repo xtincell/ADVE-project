@@ -14,7 +14,7 @@
 import { describe, it, expect } from "vitest";
 import { UPGRADERS_CANON_PILLARS } from "@/server/services/canon/upgraders-canon";
 import { getContract } from "@/server/services/pillar-maturity/contracts-loader";
-import { assessPillar } from "@/server/services/pillar-maturity/assessor";
+import { assessPillar, applicableRequirements } from "@/server/services/pillar-maturity/assessor";
 
 describe("Canon UPgraders — 100 % sur les 8 piliers (HARD)", () => {
   for (const pillar of UPGRADERS_CANON_PILLARS) {
@@ -26,9 +26,18 @@ describe("Canon UPgraders — 100 % sur les 8 piliers (HARD)", () => {
         pillar.content as Record<string, unknown>,
         contract!,
       );
-      const failed = contract!.stages.COMPLETE.filter(
-        (req) => !assessment.satisfied.includes(req.path),
-      ).map((req) => `${req.path}:${req.validator}`);
+      // Les exigences CONDITIONNELLES non applicables sortent du compte, comme
+      // pour l'assesseur et le scoreur. Le canon est un contenu de référence
+      // rédigé, jamais passé au scan d'empreinte : lui réclamer `webPresence.*`
+      // reviendrait à exiger une MESURE qui n'a pas eu lieu (ADR-0046). Le test
+      // doit lire la règle avec le même filtre qu'elle, sinon il compare le
+      // canon à un contrat qui ne s'applique pas à lui.
+      const failed = applicableRequirements(
+        contract!.stages.COMPLETE,
+        pillar.content as Record<string, unknown>,
+      )
+        .filter((req) => !assessment.satisfied.includes(req.path))
+        .map((req) => `${req.path}:${req.validator}`);
       expect(failed, `exigences non satisfaites: ${failed.join(" | ")}`).toEqual([]);
       expect(Math.round(assessment.completionPct)).toBe(100);
     });

@@ -225,3 +225,71 @@ export async function listBrandDirectory(limit = 200): Promise<BrandDirectoryEnt
   const out = [...latest.values()].map((e) => ({ ...e, observations: counts.get(e.brandKey) ?? 1 }));
   return out.slice(0, limit);
 }
+
+// ── A4 · Position dans le registre (métrique DÉRIVÉE, ADR-0189) ──────────
+
+/**
+ * Effectif minimal du marché sous lequel aucun rang n'est rendu.
+ *
+ * Un classement n'a de sens que s'il classe. « 2ᵉ sur 4 » ne dit rien de la
+ * marque et dit beaucoup du registre : à petit effectif, le rang mesure notre
+ * corpus, pas la performance du client. Mesuré au 2026-07-31 : 34 marques au
+ * registre, dont 29 SANS pays déclaré — le marché le plus fourni (Cameroun)
+ * en compte 4. Le bloc s'abstiendra donc tant que le registre n'aura pas
+ * grossi, ce qui est le comportement voulu et non une panne.
+ */
+export const REGISTRY_POSITION_MIN_PEERS = 10;
+
+export interface RegistryPosition {
+  /** Rang de la marque, 1 = meilleur score d'empreinte du marché. */
+  rank: number;
+  /** Effectif du marché comparé (marques distinctes ayant un score). */
+  total: number;
+  /** Part des marques du marché que celle-ci devance, en pourcentage entier. */
+  aheadOfPct: number;
+  /** Code pays du marché comparé — le rang n'a de sens que borné à un marché. */
+  countryCode: string;
+}
+
+/**
+ * Position d'une marque parmi celles de SON marché déjà scannées.
+ *
+ * Déterministe et lu du registre : aucune donnée nouvelle n'est collectée.
+ * Rend `null` — jamais un rang approximatif — dès que la comparaison serait
+ * malhonnête : pas de pays déclaré (on ne compare pas une marque camerounaise
+ * au monde entier), marché trop petit, ou marque absente/sans score.
+ */
+export async function getRegistryPosition(
+  brandKey: string,
+  countryCode: string | null | undefined,
+): Promise<RegistryPosition | null> {
+  const cc = countryCode?.trim().toUpperCase();
+  // Sans marché déclaré, il n'y a pas de population de comparaison
+  // légitime : un rang mondial mélangerait des marchés incomparables.
+  if (!cc || cc.length !== 2) return null;
+
+  const rows = await db.brandFootprintSnapshot.findMany({
+    where: { countryCode: cc, total: { not: null } },
+    orderBy: { capturedAt: "desc" },
+    distinct: ["brandKey"],
+    select: { brandKey: true, total: true },
+  });
+
+  const scored = rows.filter((r): r is { brandKey: string; total: number } => typeof r.total === "number");
+  if (scored.length < REGISTRY_POSITION_MIN_PEERS) return null;
+
+  const me = scored.find((r) => r.brandKey === brandKey);
+  if (!me) return null;
+
+  // Rang au sens sportif : le nombre de marques STRICTEMENT devant, +1. Deux
+  // marques à égalité partagent donc le même rang (jamais départagées par un
+  // critère qu'on n'a pas mesuré).
+  const ahead = scored.filter((r) => r.total > me.total).length;
+  const behind = scored.filter((r) => r.total < me.total).length;
+  return {
+    rank: ahead + 1,
+    total: scored.length,
+    aheadOfPct: Math.round((behind / scored.length) * 100),
+    countryCode: cc,
+  };
+}
