@@ -38,6 +38,7 @@ function asFollowerCounts(value: unknown): FollowerCountEntry[] | null {
 }
 import {
   normalizeBrandKey,
+  getRegistryPosition,
   lookupLatestFootprint,
   recordFootprintObservation,
   listBrandDirectory,
@@ -212,9 +213,22 @@ export const footprintRouter = createTRPCRouter({
         })();
       }
 
+      // V4 (2026-07-31) — la position dans le marché, quand elle a du SENS.
+      // `getRegistryPosition` s'abstient sous 10 pairs et sans pays déclaré :
+      // un rang sur 3 marques ne dit rien, et un rang « mondial » mêlerait des
+      // marchés incomparables. `null` = pas de rang à annoncer, jamais un rang
+      // fabriqué (ADR-0046).
+      let registryPosition: Awaited<ReturnType<typeof getRegistryPosition>> = null;
+      try {
+        registryPosition = await getRegistryPosition(brandKey, input.country);
+      } catch (err) {
+        console.warn("[scorer] position registre indisponible:", err instanceof Error ? err.message : err);
+      }
+
       return {
         total: score.total, // number | null
         outOf: score.outOf, // 100
+        registryPosition,
         measuredWeight: score.measuredWeight,
         dimensions,
         followerCounts: asFollowerCounts(enriched.followerCounts),

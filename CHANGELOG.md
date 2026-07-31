@@ -1,5 +1,23 @@
 # Changelog — La Fusee
 
+## v6.27.386 — feat(scorer): V4 — le rang de marché, ou le silence (2026-07-31)
+
+`getRegistryPosition` était écrit depuis la veille et **appelé nulle part** : une métrique
+dérivée sans consommateur est un livrable invisible (même classe que `oracle.getSection`).
+`scoreInstant` la rend, `/scorer` l'affiche (FR/EN/ZH).
+
+**La garde est le cœur de la livraison, pas l'affichage.** Le rang vaut `null` — et l'écran
+reste muet — sans pays déclaré (un rang « mondial » mêlerait des marchés incomparables) ou
+sous 10 pairs scannés (« 2ᵉ sur 3 » n'est pas une information, c'est un accident
+d'échantillon). Le registre comptant 5 marques prouvées justes après la purge du matin,
+**la garde s'exerce dès aujourd'hui** : l'écran restera silencieux jusqu'à ce que le corpus
+mérite un classement, et s'activera de lui-même sans redéploiement.
+
+Rang sportif : nombre de marques strictement devant, +1 — deux ex æquo partagent leur rang.
+
+ADR-0192. 0 nouveau Neter · 0 modèle Prisma · 0 migration · 0 LLM ajouté · cap APOGEE 7/7.
+3834 tests verts.
+
 ## v6.27.385 — feat(scorer): V3 « le tournoi » — les faits collectés disputent le rang (2026-07-31)
 
 Directive opérateur : « *le collecteur doit chercher aux bons endroits ce que le standard de
