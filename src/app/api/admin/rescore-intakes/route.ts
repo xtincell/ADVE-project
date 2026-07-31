@@ -133,7 +133,8 @@ export async function POST(request: Request) {
     ? [token]
     : (
         await db.quickIntake.findMany({
-          where: { status: "COMPLETED", convertedToId: { not: null } },
+          // V2 : les intakes en quarantaine (tests, démos) sortent des lots.
+          where: { status: "COMPLETED", convertedToId: { not: null }, quarantinedAt: null },
           orderBy: { createdAt: "desc" },
           take: limit,
           select: { shareToken: true },

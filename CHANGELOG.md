@@ -1,5 +1,32 @@
 # Changelog — La Fusee
 
+## v6.27.384 — fix(governance): V2 « hygiène des populations » — le test ne pollue plus le réel (2026-07-31)
+
+Deuxième vague du plan « debt free ». Mesuré avant d'écrire : **41 intakes de test en
+production** — 33 « GoldenPath Brand » (le script `test-golden-path.ts` pointé sur la prod
+via `HARVEST_BASE_URL` entre le 08 et le 12/07 ; le CI, lui, vise bien localhost), Naruto
+(CULTE fabriqué, écrêté depuis #690), TEST-NEFER ×6, « Top ».
+
+- **`QuickIntake.quarantinedAt`** (migration additive, backfill-safe) : intake de test =
+  exclu des lots de recalcul et de tout futur corpus. Le marquage des 41 se fait
+  post-déploiement (opération opérateur, documentée).
+- **Garde anti-prod du script Golden Path** : toute cible non-locale est REFUSÉE sans
+  `ALLOW_REMOTE_HARVEST=1` ; en distant consenti, les créations portent ` [TEST]`. Un
+  outil de test qui peut écrire chez les clients sans le dire est un défaut, pas une
+  souplesse.
+- **Garde d'entrée du registre de marques** : les noms-sonde (`<script>…`,
+  RateLimitProbe*, NeferRL*, vide, 1 caractère, GoldenPath) sont refusés à l'écriture —
+  la purge du matin a nettoyé le stock, la garde ferme le flux. Volontairement grossière :
+  elle refuse l'évident, jamais le douteux.
+- Table d'archive `BrandFootprintSnapshot_archive_2026_07_31` : **conservée documentée**
+  (défaut) — « drop » sur arbitrage opérateur.
+
+Le verrou CODE-MAP (posé hier) a exigé sa régénération sur le changement de schéma —
+c'est son travail.
+
+0 nouveau Neter · **1 migration additive** · 0 LLM ajouté · cap APOGEE 7/7.
+3824 tests verts (8 neufs sur la garde d'entrée).
+
 ## v6.27.383 — fix(intake): V1 « faits épinglés » — un fait mesuré ne s'évapore jamais (2026-07-31)
 
 Mandat opérateur « **debt free culture** » : plan V0→V7 inscrit au registre

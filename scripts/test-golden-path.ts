@@ -34,6 +34,26 @@ import { homedir } from "node:os";
 const ROOT = join(__dirname, "..");
 const BASE_URL = process.env.HARVEST_BASE_URL ?? "http://localhost:3000";
 
+// ── Garde anti-prod (V2 « debt free », 2026-07-31) ──
+//
+// Mesuré : 33 intakes « GoldenPath Brand » ont été écrits EN PRODUCTION entre
+// le 08 et le 12/07 — ce script, pointé sur la prod via HARVEST_BASE_URL,
+// remplissait le vrai funnel public à chaque exécution. Le CI, lui, vise bien
+// localhost. Un outil de test qui peut écrire chez les clients sans le dire
+// est un défaut, pas une souplesse : toute cible non-locale exige désormais
+// un consentement EXPLICITE.
+const isLocalTarget = /^https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/i.test(BASE_URL);
+if (!isLocalTarget && process.env.ALLOW_REMOTE_HARVEST !== "1") {
+  console.error(
+    `✗ Cible non-locale refusée: ${BASE_URL}\n` +
+      "  Ce script CRÉE des intakes réels sur sa cible. Pour viser un environnement\n" +
+      "  distant en connaissance de cause: ALLOW_REMOTE_HARVEST=1 (les créations\n" +
+      "  porteront le suffixe [TEST] pour la quarantaine).",
+  );
+  process.exit(1);
+}
+const BRAND_SUFFIX = isLocalTarget ? "" : " [TEST]";
+
 interface Finding {
   step: string;
   class: string;
@@ -202,7 +222,7 @@ async function main() {
   const contact = await runStep("2-contact-form", async () => {
     await page.fill("#contactName", "Test Founder");
     await page.fill("#contactEmail", `test+${Date.now()}@golden-path.test`);
-    await page.fill("#companyName", `GoldenPath Brand ${new Date().toISOString().slice(0,10)}`);
+    await page.fill("#companyName", `GoldenPath Brand ${new Date().toISOString().slice(0,10)}${BRAND_SUFFIX}`);
     // Step indicator should still show step 1
     // Click Continuer (submit form → setStep("method"))
     const submitBtn = page.locator('button[type="submit"]').first();
