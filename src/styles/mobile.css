@@ -113,3 +113,30 @@
   .up-drawer, .up-scrim { transition: none; }
   .up-sheet { animation: none !important; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   GARDE ANTI-DÉBORDEMENT (2026-07-31)
+
+   Critère dur du chantier responsive : un contenu large (tableau, grille
+   dense, bloc de code) scrolle DANS son conteneur — la page, elle, ne part
+   jamais de côté. Un body qui scrolle latéralement casse la lecture au pouce
+   et déplace tout le layout, y compris les en-têtes collants.
+
+   Filet de sécurité au niveau du document : il ne corrige pas un composant
+   fautif (c'est au composant de se contenir), il empêche qu'un seul oubli
+   rende toute une page inutilisable sur téléphone.
+   ═══════════════════════════════════════════════════════════════════════ */
+html, body { max-width: 100%; overflow-x: hidden; }
+
+@media (max-width: 767.98px) {
+  /* Un média sans dimension explicite ne déborde jamais de son parent. */
+  img, svg, video, canvas { max-width: 100%; height: auto; }
+
+  /* Les mots interminables (URL, identifiants, e-mails) se coupent au lieu
+     d'élargir leur colonne. */
+  .up-break-anywhere { overflow-wrap: anywhere; }
+
+  /* Cibles tactiles : 44 px est le plancher confortable au pouce.
+     `min-height` seulement — la largeur reste au flux. */
+  button, [role="button"], a.up-tap, summary { min-height: 44px; }
+}

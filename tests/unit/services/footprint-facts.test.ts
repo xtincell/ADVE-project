@@ -192,9 +192,9 @@ describe("projection des faits de première impression", () => {
     const facts = withSignals({
       wikipedia: {
         state: "LIVE",
-        connectorId: "wikipedia",
+        observedAt: "2026-07-31T00:00:00Z",
         data: { hasPage: false, title: null, extract: null, url: null, lang: "fr" },
-      } as EnrichedFootprint["wikipedia"],
+      },
     });
     expect(facts.wikipedia).toBeNull();
   });
@@ -203,12 +203,12 @@ describe("projection des faits de première impression", () => {
     const facts = withSignals({
       wikipedia: {
         state: "LIVE",
-        connectorId: "wikipedia",
+        observedAt: "2026-07-31T00:00:00Z",
         data: {
           hasPage: true, title: "Chococam",
           extract: "Chocolatier camerounais.", url: "https://fr.wikipedia.org/wiki/Chococam", lang: "fr",
         },
-      } as EnrichedFootprint["wikipedia"],
+      },
     });
     expect(facts.wikipedia?.title).toBe("Chococam");
     expect(facts.wikipedia?.url).toContain("wikipedia.org");
