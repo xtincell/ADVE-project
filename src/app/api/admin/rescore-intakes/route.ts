@@ -37,7 +37,6 @@
 
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { Prisma } from "@prisma/client";
 import { verifyCronSecret } from "@/lib/cron-auth";
 import { rescoreIntake, regenerateAnalysis } from "@/server/services/quick-intake";
 
@@ -94,23 +93,25 @@ export async function POST(request: Request) {
       });
     }
 
-    // ── Vider le cache d'empreinte, sinon le rescan ne rescanne pas ──
+    // ── Site déclaré par l'OPÉRATEUR (V1, même logique que `country`) ──
     //
-    // Mesuré en production le 2026-07-31 : un premier `mode=rescan` a tourné
-    // 156 s sans rien recollecter. `complete()` reprend `intake.webFootprint`
-    // quand il existe et SAUTE la collecte — seule la ré-extraction LLM avait
-    // tourné. Le pilier E restait sans `structured` ni `feed`, avec 4 réseaux
-    // au lieu de 5, alors que le collecteur corrigé était bien déployé.
-    //
-    // Une porte qui annonce « rescan » et sert du cache ment sur ce qu'elle
-    // fait : c'est le reproche adressé au reste du système, il ne peut pas
-    // valoir pour l'outillage.
-    await db.quickIntake.update({
-      where: { shareToken: token },
-      data: { webFootprint: Prisma.DbNull },
-    });
+    // Le rescan v3 d'Irawo a élu l'HOMONYME (`irawo.net`, association de
+    // Cotonou) parce que la découverte re-tirait au sort. L'opérateur qui
+    // connaît le site le pose ici ; sinon, l'épinglage automatique du premier
+    // scan corroboré (dans `regenerateAnalysis`) prend le relais.
+    const declaredSite = url.searchParams.get("site");
+    if (declaredSite && /^https?:\/\/[^\s]+$/i.test(declaredSite)) {
+      await db.quickIntake.update({
+        where: { shareToken: token },
+        data: { websiteUrl: declaredSite },
+      });
+    }
 
-    const r = await regenerateAnalysis(token, { force: true });
+    // V1 : plus de WIPE du cache — `forceCollect` re-collecte, et
+    // `mergeFootprints` conserve les faits que la re-collecte rend vides
+    // (presse, audiences…) au lieu de les évaporer. Le wipe détruisait le
+    // filet du merge.
+    const r = await regenerateAnalysis(token, { force: true, forceCollect: true });
     const after = await db.quickIntake.findUnique({
       where: { shareToken: token },
       select: { advertis_vector: true, diagnostic: true },

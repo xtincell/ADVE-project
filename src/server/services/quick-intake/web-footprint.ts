@@ -849,7 +849,8 @@ export function buildChannels(footprint: WebFootprint): WebFootprint["channels"]
  *
  * Rend `undefined` quand la taxonomie ne porte PAS la plateforme (WhatsApp au
  * 2026-07-31) : un canal hors-nomenclature reste sans `channelRef` plutôt que
- * d'être rangé de force dans une case voisine (ADR-0046).
+ * d'être rangé de force dans une case voisine (ADR-0046). WhatsApp y est
+ * entré le 2026-07-31 (V1) — canal majeur du marché cible.
  */
 function channelRefOf(p: SocialProfile["platform"]): Channel | undefined {
   return (CHANNELS as readonly string[]).includes(p) ? (p as Channel) : undefined;

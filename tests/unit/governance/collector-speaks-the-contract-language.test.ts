@@ -97,13 +97,15 @@ describe("Collecteur d'empreinte — il parle la langue du contrat", () => {
     }
   });
 
-  it("porte `channelRef` quand la taxonomie couvre la plateforme, et l'omet sinon", () => {
+  it("porte `channelRef` pour CHAQUE plateforme que le collecteur sait détecter", () => {
     const insta = touchpoints.find((t) => String(t.canal).includes("Instagram"));
     expect(insta?.channelRef, "Instagram EST dans la taxonomie — la mesure ne doit pas se perdre").toBe("INSTAGRAM");
-    // WhatsApp n'est pas dans CHANNELS : on l'omet plutôt que de le ranger de
-    // force dans une case voisine (ADR-0046).
+    // WhatsApp est entré dans CHANNELS le 2026-07-31 (V1) — canal majeur du
+    // marché cible, il restait sans référence de taxonomie. La branche
+    // « omission plutôt que case voisine » (ADR-0046) reste dans le code pour
+    // toute future plateforme hors nomenclature.
     const wa = touchpoints.find((t) => String(t.canal).includes("WhatsApp"));
-    expect(wa?.channelRef).toBeUndefined();
+    expect(wa?.channelRef).toBe("WHATSAPP");
   });
 
   it("n'invente NI `role` NI `devotionLevel` — ils ne se mesurent pas", () => {

@@ -1,5 +1,41 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
+## Session « calcul honnête + anti-réinvention » 2026-07-31 (ADR-0189/0190 + gouvernance CODE-MAP) — plan de fermeture V1→V7 (mandat « debt free culture »)
+
+Définition de « fermé » (loi opérateur) : fonctionnel en prod + verrou CI + trace (ADR si concept) + ligne rayée ici. Une vague ne se ferme pas avec une dette nouvelle non tracée.
+
+### V1 — Faits épinglés (en cours)
+- **Site non épinglé par défaut (HIGH, classe homonyme)**. La découverte re-tire au sort à chaque rescan : mesuré, le rescan v3 d'Irawo a élu `irawo.net` (association de Cotonou — les discriminants pays validaient les DEUX Irawo béninoises) et écrasé le pilier E de la vraie marque. **Fermeture** : persister `QuickIntake.websiteUrl` au premier scan CORROBORÉ (provenance SOURCE) + paramètre `&site=` opérateur sur la route rescore. **Déclencheur** : V1 (immédiat). Effort ~½ session.
+- **Faits mesurés remplacés par du vide au rescan (HIGH, « jamais perdu » violé)**. Mesuré : 3 retombées presse réelles (CANAL+ CI, Mylène Flicka, ANKA) perdues quand la re-collecte rend `press: EMPTY` — le REPLACE_FULL du pilier E repart d'une base vierge. **Fermeture** : `mergeFootprints(previous, fresh)` — un bloc frais non-vide gagne, un bloc frais VIDE conserve le précédent (avec son `capturedAt`) ; plus de wipe du cache sur la route (remplacé par `forceCollect`). Esprit ADR-0151. **Déclencheur** : V1 (immédiat). Effort ~½ session.
+- **WHATSAPP hors taxonomie CHANNELS (LOW)**. `channelRef` reste `undefined` pour un canal massivement utilisé au marché cible. **Fermeture** : valeur additive dans `CHANNELS` (T.08). V1.
+- **Compteur YouTube=6 sur Irawo (OBSERVATION, pas d'action)**. Possiblement réel (chaîne peu abonnée) — aucune règle sans preuve ; à regarder si récurrent.
+
+### V2 — Hygiène des populations
+- **Intakes de test mêlés aux vraies marques en prod (MED)** : « Naruto » (CULTE fabriqué, écrêté depuis #690), TEST-NEFER×2, GoldenPath×3 (écrits par l'E2E CI en PROD), « Top ». **Fermeture** : flag/quarantaine (exclus des vues, comparaisons, futurs corpus) + le Golden Path tagge ses créations. Effort ~½ session.
+- **Garde d'entrée du registre de marques (MED, sécurité)** : des noms-sonde (`<script>alert(1)</script>`, RateLimitProbe*) ont vécu dans `BrandFootprintSnapshot` jusqu'à la purge du 2026-07-31. **Fermeture** : validation du nom à l'écriture du snapshot. Effort ~¼ session.
+- **Table d'archive hors schéma (INFO, arbitrage opérateur)** : `BrandFootprintSnapshot_archive_2026_07_31` (48 lignes, filet de la purge) vit hors Prisma. **Fermeture** : garder documentée OU drop après validation — 1 ligne d'arbitrage.
+
+### V3 — Le tournoi (AUD-3, cœur produit)
+- **La ligue existe, le tournoi n'a jamais lieu (HIGH, produit)** : `compileMeasuredEpreuves` ne compile que E (audience vs plancher) + T (Overton) ; presse/publications/distinctions collectées ne deviennent JAMAIS des épreuves ; les `MUST_HAVE_ITEMS` ne sont jamais disputés depuis la collecte (« dirigeant identifiable » est pourtant prouvable par la presse Flicka dès aujourd'hui). **Fermeture** : étendre le compilateur (presse→épreuve vs standard de ligue · publication/cadence→épreuve · distinctions→items) + le plafond de preuve du niveau prend sa forme finale « déclaré OU prouvé en épreuves » (résout le cas Naruto par la preuve, pas l'interdit) + ADR + recette force /200 multi-arènes sur Irawo. Effort ~2 sessions.
+- **sameAs comme corroboration d'ÉLECTION de site (MED)** : un candidat dont les sameAs recoupent les réseaux déjà connus bat un homonyme — complète l'épinglage V1 pour les PREMIERS scans. Rattaché V3 (même chantier d'admission).
+
+### V4 — Restitution & rang
+- **AUD-4 : les deux axes côte à côte (MED)** — « Stratégie déclarée : X · Force constatée : Y » sur result + /scorer ; le plancher/plafond déjà tracés dans `basis` s'affichent. Effort ~½ session.
+- **A4 rang bloqué par corpus mince (MED)** : 5 marques < garde de 10. **Fermeture** : re-scans des 7 marques purgées (Cimencam, Motion19, MTN, Matanga Agency, Blue by Camtel, kmer chan, hôtel Akwa Palace — ~20 min, centimes Apify) → registre ≥ 12 → câbler `getRegistryPosition` à l'écran + mini-ADR. Effort ~½ session.
+- **Pays non collecté par /scorer (MED)** : bloque les ligues par pays et affaiblit le gate. Effort ~¼ session.
+
+### V5 — Un seul palier
+- **3 systèmes de palier coexistent (MED, structurel)** : `brand-level-evaluator` (intake) · `palier.ts` items (Scoreur) · `apogeeTier` (officiel ratcheté ADR-0167) — plus la ligne existante « Cohérence de palier partielle » (douzaine de surfaces sur `classifyTier`). **Fermeture** : `effectiveTier` partout + le niveau d'intake consomme les items/épreuves — un seul vocabulaire, verrou élargi. Effort ~1 session.
+
+### V6 — Finitions produit
+- **Canons Spawt/Motion19 : vocabulaire touchpoints faux (MED, démos commerciales)** — `stadeAarrr` + rôle rangé dans `type` ; leurs scores E sont faux. Effort ~½ session.
+- **R7 chantier B du rapport payant (B1·B5→B2·B4→B3)** + **R6 respiration visuelle** (plan handoff). Effort ~2 sessions.
+- **AUD-5 : vérifier sur une éval LLM réelle en prod** que la justification sort en français (règle 8 posée #690).
+
+### V7 — Solde du registre historique
+- Les lignes antérieures ci-dessus (Root 2a/2b, nombres `ai_generation`, composite /100 vs /200, Zod safeParse canons, L6 UX, landings…) — MED d'abord. Registre à ZÉRO.
+
+
 ## Mégasprint « couche de vérité » 2026-07-27 (lots L0→L6 + rounds adversariaux 3-5) — déférés
 
 - **L6 — recos en tiroir (`Sheet`) : NON FAIT (LOW, UX)**. La primitive `Sheet` existe avec **0 consommateur** ; le plan prévoyait d'y déplacer le panneau « Recommandations » pour cesser d'empiler un second signal dans la page pilier. Le bouton « Appliquer au pilier » est en revanche **branché** (`applyRecosMutation`, v6.27.343) — c'était le défaut de correction ; le tiroir n'est qu'un confort. **Déclencheur** : prochaine passe UX de la page pilier. Effort ~½ session.

@@ -1272,7 +1272,7 @@ export async function complete(token: string) {
  */
 export async function regenerateAnalysis(
   token: string,
-  options: { force?: boolean; premium?: boolean } = {},
+  options: { force?: boolean; premium?: boolean; forceCollect?: boolean } = {},
 ): Promise<{ strategyId: string; classification: string; vector: Record<string, number> }> {
   const intake = await db.quickIntake.findUnique({
     where: { shareToken: token },
@@ -1318,13 +1318,14 @@ export async function regenerateAnalysis(
   //      n'y a échappé que parce que son extraction E, vide, sautait l'écriture).
   //
   // Même séquence que `complete()` : collecte bornée, jamais bloquante, persistée.
-  let webFootprint = intake.webFootprint as unknown as
+  const previousFootprint = intake.webFootprint as unknown as
     | import("./footprint-types").EnrichedFootprint
     | null;
+  let webFootprint = options.forceCollect ? null : previousFootprint;
   if (!webFootprint) {
     try {
       const { enrichPublicFootprint } = await import("./public-enrichment");
-      webFootprint = await Promise.race([
+      const fresh = await Promise.race([
         enrichPublicFootprint({
           companyName: intake.companyName,
           country: intake.country,
@@ -1336,17 +1337,37 @@ export async function regenerateAnalysis(
         }),
         new Promise<null>((resolve) => setTimeout(() => resolve(null), 45_000)),
       ]);
-      if (webFootprint) {
+      if (fresh) {
+        // V1 « faits épinglés » (2026-07-31) : un bloc que la re-collecte rend
+        // VIDE conserve le relevé précédent — mesuré, 3 retombées presse
+        // réelles (CANAL+, Flicka, ANKA) s'évaporaient sur un `press: EMPTY`
+        // de variance. Garde d'identité incluse : site élu différent ⇒ zéro
+        // report (leçon irawo.net).
+        const { mergeFootprints } = await import("./footprint-merge");
+        webFootprint = mergeFootprints(previousFootprint, fresh);
         await db.quickIntake.update({
           where: { id: intake.id },
           data: { webFootprint: webFootprint as unknown as Prisma.InputJsonValue },
         });
+        // Épinglage du site : la découverte a corroboré un site (gate passé,
+        // joignable) et l'intake n'en déclarait aucun → on le PERSISTE, pour
+        // que plus aucun rescan ne rejoue la loterie des homonymes. Provenance
+        // SOURCE — c'est un fait mesuré, pas une déclaration.
+        if (!intake.websiteUrl && webFootprint.site?.reachable && webFootprint.site.url) {
+          await db.quickIntake.update({
+            where: { id: intake.id },
+            data: { websiteUrl: webFootprint.site.url },
+          });
+        }
+      } else {
+        webFootprint = previousFootprint;
       }
     } catch (err) {
       console.warn(
         "[quick-intake.regen] collecte d'empreinte échouée (non bloquante):",
         err instanceof Error ? err.message : err,
       );
+      webFootprint = previousFootprint;
     }
   }
 
