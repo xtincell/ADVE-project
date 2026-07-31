@@ -1,5 +1,25 @@
 # Changelog — La Fusee
 
+## v6.27.380 — fix(intake): la régénération collecte enfin — et n'écrase plus le mesuré (2026-07-31)
+
+Troisième temps d'une vérification en boucle sur le « rescan » d'Irawo :
+
+1. v6.27.378 : `mode=rescan` servait le CACHE — 156 s sans rien recollecter ;
+2. v6.27.379 : cache vidé… et toujours rien — `regenerateAnalysis` ne faisait que
+   ré-extraire, la collecte d'empreinte lui était inconnue (`webFootprint` restait NULL) ;
+3. et le pire, latent : le pilier E s'écrivait en REPLACE_FULL **sans merge d'empreinte**
+   — une régénération sur une marque au pilier E déclaré non vide aurait **écrasé le
+   `webPresence` mesuré**. Irawo n'y a échappé que parce que son extraction E, vide,
+   sautait l'écriture.
+
+`regenerateAnalysis` a désormais la parité avec `complete()` : collecte bornée (40 s de
+budget, 45 s de course, jamais bloquante, persistée) quand l'empreinte manque, merge
+`mergeEnrichedFootprintIntoPillarE` AVANT l'écriture du pilier E, et le composer narratif
+lit l'empreinte FRAÎCHE au lieu de l'état d'avant le rescan.
+
+0 nouveau Neter · 0 modèle Prisma · 0 migration · 0 LLM ajouté · cap APOGEE 7/7.
+3802 tests verts.
+
 ## v6.27.379 — feat(intake): le déclaratif et le constaté jouent de pair (2026-07-31)
 
 Mandat opérateur : « *je veux que le déclaratif ET la constatation jouent de pair pour
