@@ -138,6 +138,22 @@ const ENRICHED_E: FieldRequirement[] = [
   { path: "webPresence.site", validator: "is_object", derivable: false, appliesWhen: "webPresence", description: "Site officiel identifié et joignable (mesuré)" },
   { path: "webPresence.socials", validator: "min_items", validatorArg: 1, derivable: false, appliesWhen: "webPresence", description: "Au moins un compte social public constaté (mesuré)" },
   { path: "webPresence.press", validator: "min_items", validatorArg: 1, derivable: false, appliesWhen: "webPresence", description: "Au moins une retombée presse relevée (mesuré)" },
+
+  // ── Activité PUBLIÉE, lue dans ce que le site déclare (2026-07-31) ──
+  //
+  // Signalement opérateur : « les masterclass, formations et newsletter ne sont
+  // relevées par aucun collecteur — le collecteur doit être parfait. » Elles le
+  // sont désormais quand le site les expose de façon structurée (JSON-LD, flux,
+  // formulaire d'inscription). Ce sont des marques d'ENGAGEMENT, à leur place
+  // dans le pilier E : une marque qui publie et entretient une liste entretient
+  // une relation, là où un simple compte ouvert n'établit qu'une présence.
+  //
+  // Conditionnées à `webPresence` comme les précédentes : sans scan, hors du
+  // dénominateur. Et le gisement est INÉGAL — 3 des 4 sites mesurés n'exposent
+  // aucun JSON-LD — d'où des exigences qui portent sur ce que le site publie,
+  // jamais sur ce qu'on suppose qu'il fait.
+  { path: "webPresence.feed", validator: "is_object", derivable: false, appliesWhen: "webPresence", description: "Publications datées relevées sur un flux déclaré (mesuré)" },
+  { path: "webPresence.structured", validator: "is_object", derivable: false, appliesWhen: "webPresence", description: "Le site expose des données structurées sur la marque (mesuré)" },
 ];
 
 const ENRICHED_R: FieldRequirement[] = [

@@ -1,5 +1,75 @@
 # Changelog — La Fusee
 
+## v6.27.377 — feat(scorer): le collecteur lit ce qu'il télécharge déjà (2026-07-31)
+
+Signalement opérateur, en réponse à une limite que j'avais moi-même énoncée (« *les
+masterclass, formations et newsletter ne sont relevées par aucun collecteur* ») :
+**« c'est un problème. Le collecteur doit être parfait. »**
+
+`parseHtmlMeta` ne retenait de chaque page que `title`, `description`, `og:image`. Le
+corps entier était téléchargé, servait à valider l'entité, puis **jeté**.
+
+### Ce que le scan d'Irawo jetait à chaque passage
+
+Dans 326 Ko déjà en main, plus **une** requête de flux :
+
+```
+sameAs : facebook · x · instagram · linkedin · youtube   (5)
+         …la découverte par recherche n'en trouvait que 4 — YouTube manquait
+flux   : /feed/ → 6 entrées datées
+           13 juil. 2026 — Bâtir des entreprises performantes en Afrique
+           30 mars 2026 — Irawo reçoit le prix Cartier Women's Initiative Award
+           16 sept. 2025 — Irawo & LemFi s'associent
+```
+
+Le prix, le partenariat, la cadence de publication et un cinquième réseau.
+
+### Mesuré, avant / après
+
+| | avant | après |
+|---|---:|---|
+| réseaux trouvés | 4 | **5** |
+| doublon LinkedIn | oui | résolu |
+| newsletter | non détectée | **MailerLite** |
+| publications | 0 | **6 entrées datées** |
+| dernière parution | — | **13 juil. 2026** |
+| cadence médiane | — | 104,6 j |
+
+Le doublon venait du réel : le footer porte `linkedin.com/company/irawotalents`, le JSON-LD
+`linkedin.com/company/11200805` — **même page, deux URL**. La déclaration fait autorité.
+
+### Ce qui a été refusé
+
+**Aucune détection par mots-clés.** Trouver « masterclass » dans un menu n'établit pas
+qu'une masterclass existe. Un test le verrouille : une page truffée de « masterclass »,
+« formations » et « événements » rend `events: []` et `courses: []`. Seul un `@type`
+déclaré compte (ADR-0046).
+
+### L'honnêteté sur la couverture
+
+Sur quatre sites mesurés, **trois n'exposent aucun JSON-LD** (motion19, chococam, orange.cm).
+Le collecteur n'est pas « parfait » et le prétendre serait malhonnête : le gisement dépend
+de ce que chaque site publie. Trois états sont donc distingués — `undefined` (site non lu),
+`null` (lu, rien de structuré), valeur (fait mesuré) — pour que le rapport dise « ce site
+n'expose pas de données structurées » et **jamais** « cette marque ne publie rien ».
+
+### Entités numériques décodées
+
+WordPress publie l'apostrophe en `&#8217;` et l'esperluette en `&#038;` : le rapport
+affichait « Irawo &#038; LemFi s&#8217;associent ». `decodeEntities` ne couvrait que les
+entités nommées — le défaut portait **déjà** sur les retombées presse collectées.
+
+### Recalcul des rapports déjà produits
+
+Un correctif de calcul ne répare que les rapports à venir. `rescoreIntake` recompte vecteur,
+classification et niveau (chemin **déterministe** — le chemin LLM ferait dériver le texte
+d'un rapport peut-être déjà lu), **sans aucun appel externe ni re-collecte**. Exposé en
+`POST /api/admin/rescore-intakes` (guardé `CRON_SECRET`, idempotent), rendant l'AVANT/APRÈS
+de chaque intake : un recalcul muet serait invérifiable.
+
+ADR-0190. 0 nouveau Neter · 0 modèle Prisma · 0 migration · 0 LLM ajouté · cap APOGEE 7/7.
+3793 tests verts, build local vert.
+
 ## v6.27.376 — fix(scorer): l'empreinte mesurée ne comptait nulle part dans le score (2026-07-31)
 
 Signalement opérateur : « *je note que l'intake ingère et calcule mal ses valeurs —

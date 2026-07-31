@@ -66,6 +66,34 @@ export interface FootprintFacts {
   /** Publicités Meta actives — preuve d'investissement média visible du public. */
   ads?: { activeAdsCount: number; pageName: string | null } | null;
   /**
+   * ── Ce que la marque déclare et publie elle-même (2026-07-31) ──
+   *
+   * Signalement opérateur : « les masterclass, formations et newsletter ne sont
+   * relevées par aucun collecteur ». Elles l'étaient en partie — dans un HTML
+   * déjà téléchargé, jamais lu au-delà des balises `og:`.
+   *
+   * `null` = le site a été lu et n'expose AUCUNE donnée structurée (négatif
+   * mesuré, à dire tel quel — ce n'est pas un constat d'inactivité).
+   * `undefined` = le site n'a pas été lu du tout.
+   */
+  declared?: {
+    /** Réseaux revendiqués par la marque sur son propre site (`sameAs`). */
+    profiles: Array<{ url: string; platform: string | null }>;
+    hasNewsletter: boolean;
+    newsletterProvider: string | null;
+    events: Array<{ name: string; startDate: string | null; location: string | null }>;
+    courses: Array<{ name: string; provider: string | null }>;
+  } | null;
+  /**
+   * Rythme de publication réel, depuis le flux déclaré par le site.
+   * `null` = aucun flux déclaré ; `undefined` = site non lu.
+   */
+  publishing?: {
+    lastPublishedAt: string | null;
+    medianDaysBetweenPosts: number | null;
+    recentTitles: Array<{ title: string; url: string | null; publishedAt: string | null }>;
+  } | null;
+  /**
    * Aucun contexte ne permettait de DISCRIMINER les homonymes : ni secteur ni
    * pays, déclaré ou inférable. Les signaux ci-dessus reposent alors sur le
    * seul nom de la marque.
@@ -201,6 +229,31 @@ export function buildFootprintFacts(f: EnrichedFootprint): FootprintFacts {
         : f.ads?.status === "NOT_FOUND"
           ? null
           : undefined,
+    // Le site a-t-il été LU ? Sans lecture, rien à dire (undefined). Lu sans
+    // données structurées → `null` : un négatif mesuré, qui doit s'énoncer
+    // « ce site n'expose pas de données structurées » et jamais « cette marque
+    // ne publie rien » (3 des 4 sites mesurés le 2026-07-31 sont dans ce cas).
+    declared: f.structured
+      ? f.structured.hasStructuredData || f.structured.hasNewsletter
+        ? {
+            profiles: f.structured.declaredProfiles.map((p) => ({ url: p.url, platform: p.platform })),
+            hasNewsletter: f.structured.hasNewsletter,
+            newsletterProvider: f.structured.newsletterProvider,
+            events: f.structured.events.slice(0, 6),
+            courses: f.structured.courses.slice(0, 6),
+          }
+        : null
+      : undefined,
+    publishing: f.structured
+      ? f.feed
+        ? {
+            lastPublishedAt: f.feed.lastPublishedAt,
+            medianDaysBetweenPosts: f.feed.medianDaysBetweenPosts,
+            recentTitles: f.feed.entries.slice(0, 5).map((e) => ({ title: e.title, url: e.link, publishedAt: e.publishedAt })),
+          }
+        : null
+      : undefined,
+
     // Le gate n'avait AUCUN discriminant : tout ce qui précède tient sur le
     // seul nom. Deux entités homonymes au nom exact sont alors indécidables —
     // on l'annonce plutôt que de laisser croire à une certitude.
