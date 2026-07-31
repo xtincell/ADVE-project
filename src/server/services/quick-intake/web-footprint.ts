@@ -20,7 +20,8 @@
  * jamais propagée — l'intake n'échoue JAMAIS à cause de l'empreinte.
  */
 
-import { mentionsEntity } from "@/server/services/seshat/entity-gate";
+import { mentionsEntity, createEntityGate } from "@/server/services/seshat/entity-gate";
+import { admitSignal } from "@/server/services/seshat/signal-gateway";
 import { ssrfSafeFetch } from "@/lib/net/ssrf-guard";
 import { CHANNELS, type Channel } from "@/lib/types/taxonomies";
 import { decodeEntities } from "@/lib/html-entities";
@@ -619,6 +620,9 @@ export interface CollectFootprintInput {
 
 export async function collectWebFootprint(input: CollectFootprintInput): Promise<WebFootprint> {
   const errors: string[] = [];
+  // Porte d'admission locale — chemin OWN_SITE aujourd'hui (jamais jugé) ;
+  // toute future source EXTERNE d'articles héritera du jugement d'entité.
+  const articleGate = createEntityGate(input.companyName, {});
   let fetches = 0;
   const budgetedFetch = async (url: string) => {
     if (fetches >= MAX_FETCHES) throw new Error("Budget de fetch épuisé");
@@ -763,7 +767,23 @@ export async function collectWebFootprint(input: CollectFootprintInput): Promise
             /* titre best-effort */
           }
         }
-        footprint.articles.push({ url: candidate.url, title, source: candidate.source });
+        // Porte d'admission (ADR-0188/0176) : ces articles viennent du site
+        // ÉLU — chemin de confiance OWN_SITE, jamais jugé. Le passage par
+        // `admitSignal` n'est pas décoratif : le jour où une source d'articles
+        // EXTERNE s'ajoute ici, elle héritera du jugement au lieu de passer
+        // par le trou que la règle `no-ungated-footprint-signal` a bouché le
+        // 2026-07-31 (les push sur membre imbriqué étaient invisibles).
+        const verdict = admitSignal({
+          kind: "press",
+          gate: articleGate,
+          source: "OWN_SITE",
+          candidateName: title,
+          evidence: title,
+          url: candidate.url,
+        });
+        if (verdict.admitted) {
+          footprint.articles.push({ url: candidate.url, title, source: candidate.source });
+        }
       }
     } catch (err) {
       // Mur anti-bot : `footprint.site` est déjà posé (existence attestée,

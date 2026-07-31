@@ -1,5 +1,54 @@
 # Changelog — La Fusee
 
+## v6.27.382 — governance: le système anti-réinvention a des dents (2026-07-31)
+
+Loi opérateur : « *je ne cautionne pas la réinvention de la roue — tout court* », suivie du
+mandat « *corrige la raison pour laquelle toutes ces erreurs et tous ces oublis ont eu
+lieu — un module parfaitement gouverné que les grep ne ratent plus ; tout ce qui est non
+gouverné redevient gouverné et indexé* ».
+
+**La cause racine, mesurée** : une même journée a vu se (re)concevoir un axe percentile
+(le Scoreur ADR-0149 existait — épreuves, ligues, θ, `MUST_HAVE_ITEMS`), un plafond de
+preuve (ADR-0126/0167 en portaient), un recalcul (`regenerateAnalysis` existait) — et
+presque une carte de concepts (CODE-MAP.md existait, avec sa règle ANTI-DRIFT). Les greps
+du concepteur (« percentile », « force marché ») ne matchaient pas les noms internes
+(« épreuve », « ligue », « palier »), et RIEN ne signalait la machinerie DORMANTE —
+construite mais non branchée, invisible au runtime.
+
+### Ce qui est livré
+
+1. **CODE-MAP parle le métier** : 12 traductions nouvelles (percentile/classement/force
+   marché → Scoreur · must-have du rang → `palier.ts` · ligue → `market-scale` · palier
+   officiel → `apogeeTier` · plafond de preuve · plancher de visibilité · rescan · corpus…)
+   + section « **Machines & état de câblage** » (WIRED vs DORMANT) — le dormant devient
+   lisible AVANT de concevoir. + **`src/domain` enfin indexé** (29 modules du cœur métier,
+   dont `market-scale` et `scoreur/palier`, étaient hors carte).
+2. **Verrou CI** `code-map-is-the-anti-reinvention-wheel.test.ts` : carte fraîche vis-à-vis
+   du générateur (jamais éditée à la main), mots du MÉTIER greppables (les greps qui ont
+   échoué le 2026-07-31 doivent matcher à jamais), état de câblage déclaré, chaque module
+   de domaine indexé.
+3. **ANTI-DRIFT élargi** (CLAUDE.md) : le périmètre couvre désormais métriques, scores,
+   axes, plafonds/planchers, systèmes de niveau, chemins d'admission, modes de recalcul —
+   le grain exact où la réinvention a eu lieu.
+4. **Règle `no-ungated-footprint-signal` débouchée** : les `push` sur membre imbriqué
+   (`footprint.channels.push`) étaient invisibles. Élargie, elle a immédiatement attrapé un
+   vrai passager clandestin — les articles du sitemap entraient au rapport sans passer par
+   `admitSignal` ; ils passent désormais la porte (chemin OWN_SITE). Prouvée dans les deux
+   sens.
+
+### Recette Irawo (rescans v3/v4, même session)
+
+Le rescan v3 a élu **l'homonyme** `irawo.net` (association de Cotonou — les discriminants
+pays validaient les DEUX Irawo béninoises) et écrasé le pilier E. Sortie gouvernée : site
+ÉPINGLÉ (`websiteUrl` opérateur) → rescan v4 **vérifié** : `irawotalents.com`, 5 réseaux,
+**audience enfin mesurée (Instagram 24 156 · Facebook 41 126 ≈ 65k, au-dessus du plancher
+de ligue NATION 50k)**, sameAs 5, MailerLite, flux (prix Cartier). Niveau **ORDINAIRE**
+payé en preuve. Dettes tracées : presse instable (0 ce run vs 3 réels), découverte non
+épinglée par défaut.
+
+0 nouveau Neter · 0 modèle Prisma · 0 migration · 0 LLM ajouté · cap APOGEE 7/7.
+3810 tests verts.
+
 ## v6.27.381 — fix(intake): le niveau se paie en preuve (2026-07-31)
 
 Signalement opérateur : « *fragile me semble toujours malplacé — le calibrage me semble
