@@ -1338,6 +1338,18 @@ export function mergeEnrichedFootprintIntoPillarE(
   if (enriched.wikipedia && enriched.wikipedia.state === "LIVE") {
     webPresence.wikipedia = enriched.wikipedia.data;
   }
+  // Ce que la marque DÉCLARE dans son propre HTML (2026-07-31) : réseaux
+  // revendiqués, newsletter, événements et formations en JSON-LD. Écrit même
+  // quand `hasStructuredData` est faux — c'est un négatif MESURÉ (« le site
+  // n'expose pas de données structurées »), à distinguer d'un site jamais lu.
+  if (enriched.structured) {
+    webPresence.structured = enriched.structured;
+  }
+  // Activité réelle : dernière parution et cadence. Omis si aucun flux n'est
+  // déclaré — on ne présente jamais l'absence d'un canal comme une inactivité.
+  if (enriched.feed) {
+    webPresence.feed = enriched.feed;
+  }
   if (enriched.searchAutocomplete && enriched.searchAutocomplete.state === "LIVE") {
     webPresence.searchAutocomplete = enriched.searchAutocomplete.data;
   }

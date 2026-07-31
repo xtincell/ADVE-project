@@ -2045,3 +2045,85 @@ function analyzePillarResponses(
       };
   }
 }
+
+/**
+ * Recalcul du SCORE seul, sur les données déjà collectées.
+ *
+ * ── Pourquoi cette fonction existe (2026-07-31) ──
+ *
+ * Un correctif de calcul ne répare que les rapports À VENIR : ceux déjà
+ * produits gardent en base le vecteur faux. Après l'ADR-0189, Irawo affichait
+ * toujours `e = 0` alors que le même contenu, recompté, donne 3,25 — un
+ * rapport payant continuait donc de porter un chiffre que le code savait faux.
+ *
+ * Distincte de `regenerateAnalysis`, qui refait l'extraction et le narratif
+ * (donc rappelle le LLM et peut faire dériver le texte livré au client). Ici :
+ * **aucun appel externe, aucun LLM, aucune re-collecte**. On ne re-scanne pas,
+ * on RECOMPTE ce qui est déjà là. Idempotent — deux exécutions successives
+ * rendent le même résultat.
+ *
+ * Le niveau de marque est repris par le chemin DÉTERMINISTE : le chemin LLM
+ * produirait une formulation différente à chaque passage, ce qui ferait varier
+ * le texte d'un rapport que le client a peut-être déjà lu.
+ */
+export async function rescoreIntake(token: string): Promise<{
+  companyName: string;
+  before: Record<string, number> | null;
+  after: Record<string, number>;
+  levelBefore: string | null;
+  levelAfter: string | null;
+}> {
+  const intake = await db.quickIntake.findUnique({ where: { shareToken: token } });
+  if (!intake) throw new Error(`Intake introuvable : ${token}`);
+  if (!intake.convertedToId) throw new Error(`Intake ${token} sans stratégie associée`);
+
+  const before = (intake.advertis_vector as Record<string, number> | null) ?? null;
+  const diagnostic = (intake.diagnostic ?? {}) as Record<string, unknown>;
+  const levelBefore = ((diagnostic.brandLevel as Record<string, unknown> | undefined)?.level as string) ?? null;
+
+  const vector = await scoreObject("strategy", intake.convertedToId);
+  const adveComposite = (vector.a ?? 0) + (vector.d ?? 0) + (vector.v ?? 0) + (vector.e ?? 0);
+  vector.composite = adveComposite;
+
+  const pillars = await db.pillar.findMany({
+    where: { strategyId: intake.convertedToId, key: { in: [...ADVE_STORAGE_KEYS] } },
+    select: { key: true, content: true },
+  });
+  const extractedValues = { a: {}, d: {}, v: {}, e: {} } as Record<"a" | "d" | "v" | "e", Record<string, unknown>>;
+  for (const p of pillars) {
+    const k = p.key as "a" | "d" | "v" | "e";
+    if (k in extractedValues) extractedValues[k] = (p.content ?? {}) as Record<string, unknown>;
+  }
+
+  const { deriveBrandLevelDeterministic } = await import("./brand-level-evaluator");
+  const level = deriveBrandLevelDeterministic({
+    companyName: intake.companyName,
+    sector: intake.sector,
+    country: intake.country,
+    responses: intake.responses as Record<string, Record<string, string>> | null,
+    extractedValues,
+    completionByPillar: {
+      a: (vector.a ?? 0) / 25,
+      d: (vector.d ?? 0) / 25,
+      v: (vector.v ?? 0) / 25,
+      e: (vector.e ?? 0) / 25,
+    },
+  });
+
+  await db.quickIntake.update({
+    where: { id: intake.id },
+    data: {
+      advertis_vector: vector,
+      classification: classifyIntakeBrand(adveComposite),
+      diagnostic: { ...diagnostic, brandLevel: level } as Prisma.InputJsonValue,
+    },
+  });
+
+  return {
+    companyName: intake.companyName,
+    before,
+    after: vector as unknown as Record<string, number>,
+    levelBefore,
+    levelAfter: level.level ?? null,
+  };
+}

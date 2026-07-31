@@ -1,0 +1,90 @@
+/**
+ * Recalcul des scores d'intakes déjà produits (utilitaire opérateur,
+ * guardé `CRON_SECRET` — même esprit que `/api/admin/prod-finish`).
+ *
+ * ── Pourquoi (2026-07-31) ──
+ *
+ * Un correctif de calcul ne répare que les rapports À VENIR. Après l'ADR-0189,
+ * les rapports déjà livrés gardaient en base le vecteur faux : Irawo affichait
+ * `e = 0` alors que le même contenu, recompté, donne 3,25. Un rapport payant
+ * continuait de porter un chiffre que le code savait faux.
+ *
+ * **Aucun appel externe, aucun LLM, aucune re-collecte** : on ne re-scanne pas,
+ * on RECOMPTE ce qui est déjà en base. Gratuit et idempotent — deux exécutions
+ * successives rendent le même résultat.
+ *
+ * POST /api/admin/rescore-intakes?token=<shareToken>
+ * POST /api/admin/rescore-intakes?all=1&limit=50
+ *   Header: Authorization: Bearer <CRON_SECRET>
+ *
+ * La réponse porte l'AVANT et l'APRÈS de chaque intake : un recalcul muet
+ * serait invérifiable, et c'est précisément ce qu'on reproche au défaut qu'il
+ * corrige.
+ */
+
+import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { verifyCronSecret } from "@/lib/cron-auth";
+import { rescoreIntake } from "@/server/services/quick-intake";
+
+export const dynamic = "force-dynamic";
+export const maxDuration = 300;
+
+/** Borne de sécurité : un recalcul de masse reste une écriture en base. */
+const MAX_BATCH = 100;
+
+export async function POST(request: Request) {
+  if (!verifyCronSecret(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const url = new URL(request.url);
+  const token = url.searchParams.get("token");
+  const all = url.searchParams.get("all") === "1";
+  const limit = Math.min(Number(url.searchParams.get("limit") ?? 25) || 25, MAX_BATCH);
+
+  if (!token && !all) {
+    return NextResponse.json({ error: "Passer ?token=<shareToken> ou ?all=1" }, { status: 400 });
+  }
+
+  const tokens: string[] = token
+    ? [token]
+    : (
+        await db.quickIntake.findMany({
+          where: { status: "COMPLETED", convertedToId: { not: null } },
+          orderBy: { createdAt: "desc" },
+          take: limit,
+          select: { shareToken: true },
+        })
+      )
+        .map((i) => i.shareToken)
+        .filter((t): t is string => Boolean(t));
+
+  const results: Array<Record<string, unknown>> = [];
+  for (const t of tokens) {
+    try {
+      const r = await rescoreIntake(t);
+      const beforeE = r.before?.e ?? null;
+      const afterE = r.after.e ?? 0;
+      results.push({
+        token: t,
+        companyName: r.companyName,
+        e: { before: beforeE, after: afterE },
+        composite: { before: r.before?.composite ?? null, after: r.after.composite ?? 0 },
+        level: { before: r.levelBefore, after: r.levelAfter },
+        changed: beforeE !== afterE || r.before?.composite !== r.after.composite,
+      });
+    } catch (err) {
+      // Un intake illisible ne doit pas arrêter le lot — et son échec est DIT,
+      // jamais avalé.
+      results.push({ token: t, error: err instanceof Error ? err.message : String(err) });
+    }
+  }
+
+  return NextResponse.json({
+    scanned: results.length,
+    changed: results.filter((r) => r.changed === true).length,
+    failed: results.filter((r) => r.error).length,
+    results,
+  });
+}

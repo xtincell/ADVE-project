@@ -23,6 +23,8 @@
 import { mentionsEntity } from "@/server/services/seshat/entity-gate";
 import { ssrfSafeFetch } from "@/lib/net/ssrf-guard";
 import { CHANNELS, type Channel } from "@/lib/types/taxonomies";
+import { decodeEntities } from "@/lib/html-entities";
+import { extractStructuredSiteData, parseFeed, type StructuredSiteData, type FeedActivity } from "./site-structured-data";
 
 // `assertPublicUrl` est désormais la garde SSRF partagée (`@/lib/net/ssrf-guard`)
 // — ré-exportée ici pour conserver le chemin d'import historique (tests
@@ -88,6 +90,15 @@ export interface WebFootprint {
    * couvre ; absente sinon (jamais rangée de force dans une case voisine).
    */
   channels: Array<{ canal: string; url: string; channelRef?: Channel; source: "EMPREINTE_WEB" }>;
+  /**
+   * Ce que la marque DÉCLARE dans son propre HTML (JSON-LD, flux, inscription).
+   * `undefined` = le site n'a pas été lu ; un site lu sans données structurées
+   * rend l'objet avec `hasStructuredData: false` — l'absence de canal de
+   * lecture n'est pas une absence d'activité.
+   */
+  structured?: StructuredSiteData;
+  /** Activité réelle mesurée sur le flux déclaré — `undefined` si aucun flux. */
+  feed?: FeedActivity;
   collectedAt: string;
   errors: string[];
 }
@@ -234,16 +245,6 @@ export function pickArticleCandidates(urls: string[], siteHost: string): string[
       }
     })
     .slice(0, MAX_ARTICLES);
-}
-
-function decodeEntities(s: string): string {
-  return s
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#0?39;|&apos;/g, "'")
-    .replace(/&nbsp;/g, " ");
 }
 
 // ── Fetch borné (garde SSRF partagée `@/lib/net/ssrf-guard`) ─────────────
@@ -691,8 +692,50 @@ export async function collectWebFootprint(input: CollectFootprintInput): Promise
       }
       footprint.site = { url: normalized, reachable: res.ok, ...meta, tech };
 
-      // 1b. Sociaux découverts SUR le site (footer/header)
-      for (const p of detectSocialLinks(res.body)) addSocial(p);
+      // 1a-bis. Ce que la marque DÉCLARE elle-même dans son HTML (2026-07-31).
+      // Le corps était déjà en main et n'en livrait que title/description/og —
+      // « les masterclass, formations et newsletter ne sont relevées par aucun
+      // collecteur ». JSON-LD, flux et inscription sont du déclaré STRUCTURÉ :
+      // aucune interprétation, aucune détection par mots-clés.
+      const structured = extractStructuredSiteData(res.body);
+      footprint.structured = structured;
+
+      // Le flux mesure une activité RÉELLE : dernière parution et cadence. Un
+      // fetch de plus, borné et best-effort — jamais bloquant pour le reste.
+      if (structured.feedUrl) {
+        try {
+          const feedRes = await budgetedFetch(new URL(structured.feedUrl, normalized).toString());
+          if (feedRes.ok) footprint.feed = parseFeed(feedRes.body);
+        } catch {
+          /* flux injoignable : reste `undefined`, jamais présenté comme vide */
+        }
+      }
+
+      // 1b. `sameAs` D'ABORD : les comptes que la marque REVENDIQUE sur son
+      // propre site. C'est la preuve d'appartenance la plus forte dont on
+      // dispose — plus forte qu'une corroboration par recherche, et elle
+      // tranche l'homonymie. Mesuré sur Irawo : la découverte trouvait 4
+      // réseaux, le site en déclare 5 (YouTube manquait).
+      const declaredPlatforms = new Set<SocialProfile["platform"]>();
+      for (const p of structured.declaredProfiles) {
+        const detected = detectSocialLinks(p.url)[0];
+        if (!detected) continue;
+        addSocial(detected);
+        declaredPlatforms.add(detected.platform);
+      }
+
+      // 1c. Sociaux repérés dans le corps (footer/header) — en COMPLÉMENT.
+      //
+      // Une plateforme déjà revendiquée n'en accepte pas un second exemplaire
+      // issu du MÊME document : les deux formes désignent la même page sous
+      // deux URL. Mesuré sur Irawo — le footer porte
+      // `linkedin.com/company/irawotalents`, le JSON-LD
+      // `linkedin.com/company/11200805` : même page, et le rapport affichait
+      // deux comptes LinkedIn. La déclaration fait autorité.
+      for (const p of detectSocialLinks(res.body)) {
+        if (declaredPlatforms.has(p.platform)) continue;
+        addSocial(p);
+      }
 
       // 1c. Articles : sitemap d'abord, heuristique de liens internes sinon
       const links = extractLinks(res.body, normalized);
