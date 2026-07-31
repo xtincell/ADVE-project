@@ -329,9 +329,29 @@ Le pathToIcone DOIT inclure tous les paliers du niveau actuel jusqu'a ICONE (san
   // reposait, exactement le défaut signalé sur Irawo.
   const basis = computeLevelBasis({ responses, extractedValues });
 
+  // Le plancher de visibilité vaut aussi ici — trouvé par l'audit du
+  // 2026-07-31 : il n'était appliqué qu'à la voie déterministe, c'est-à-dire
+  // à la voie de SECOURS. La voie principale aurait continué de rendre
+  // « invisible » une marque constatée. Même règle, même seuil, même trace.
+  const observedLlm = basis.observed ?? null;
+  const floorAppliesLlm =
+    normLevel === "LATENT" && (observedLlm?.signals ?? 0) >= VISIBILITY_FLOOR_SIGNALS;
+  const finalLevel: BrandTier = floorAppliesLlm ? "FRAGILE" : normLevel;
+  if (floorAppliesLlm) {
+    basis.visibilityFloorApplied = { from: normLevel, to: finalLevel };
+  }
+
+  // Le LLM a rédigé sa justification en croyant LATENT : si le plancher
+  // relève le palier, on énonce le constat AVANT son texte — sinon le rapport
+  // affiche « Fragile » au-dessus d'un paragraphe qui explique « invisible ».
+  const justification = floorAppliesLlm
+    ? `${describeObserved(observedLlm)} ${companyName} n'est donc pas une marque invisible — le niveau Fragile le reconnaît, et ce qui suit décrit la substance déclarée, qui reste le vrai chantier. ${parsed.justification}`
+    : parsed.justification;
+
   return {
     ...parsed,
-    level: normLevel,
+    level: finalLevel,
+    justification,
     basis,
     pillarSignals,
     nextMilestone,
@@ -386,6 +406,17 @@ export function observedVisibility(
 
 /** Deux signaux concordants = la marque existe publiquement, donc pas « invisible ». */
 const VISIBILITY_FLOOR_SIGNALS = 2;
+
+/** « Ce que le public voit : … » — partagé par les deux voies (LLM et règles). */
+function describeObserved(obs: ReturnType<typeof observedVisibility>): string {
+  if (!obs) return "";
+  const constate: string[] = [];
+  if (obs.site) constate.push("un site actif");
+  if (obs.socials > 0) constate.push(`${obs.socials} réseau${obs.socials > 1 ? "x" : ""}`);
+  if (obs.press > 0) constate.push(`${obs.press} retombée${obs.press > 1 ? "s" : ""} presse`);
+  if (obs.publishing) constate.push("des publications datées");
+  return constate.length > 0 ? `Ce que le public voit : ${constate.join(", ")}.` : "";
+}
 
 function computeLevelBasis(input: {
   responses: Record<string, Record<string, string>> | null;
@@ -544,16 +575,10 @@ function buildJustification(input: {
   emptyPillars: Array<"a" | "d" | "v" | "e">;
 }): string {
   const { companyName, level, basis, declaredPhases, emptyPillars } = input;
-  const obs = basis.observed;
 
   // Ce que le public constate — énoncé AVANT le reproche sur le déclaratif :
   // un fondateur dont la marque est vivante doit lire d'abord ce qui est vu.
-  const constate: string[] = [];
-  if (obs?.site) constate.push("un site actif");
-  if (obs && obs.socials > 0) constate.push(`${obs.socials} réseau${obs.socials > 1 ? "x" : ""}`);
-  if (obs && obs.press > 0) constate.push(`${obs.press} retombée${obs.press > 1 ? "s" : ""} presse`);
-  if (obs?.publishing) constate.push("des publications datées");
-  const vu = constate.length > 0 ? `Ce que le public voit : ${constate.join(", ")}.` : "";
+  const vu = describeObserved(basis.observed ?? null);
 
   if (basis.visibilityFloorApplied) {
     return `${vu} ${companyName} n'est donc pas une marque invisible — le niveau ${TIER_DEFINITIONS[level].label} le reconnaît. Ce qui manque n'est pas la présence mais la SUBSTANCE déclarée : ${declaredPhases} des ${TOTAL_INTAKE_PHASES} volets renseignés${emptyPillars.length > 0 ? `, ${emptyPillars.length === 1 ? "une fondation vide" : `${emptyPillars.length} fondations vides`}` : ""}. Le diagnostic complet est ce qui permettrait de juger votre stratégie, pas seulement votre visibilité.`.trim();

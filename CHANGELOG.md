@@ -1,5 +1,50 @@
 # Changelog — La Fusee
 
+## v6.27.379 — feat(intake): le déclaratif et le constaté jouent de pair (2026-07-31)
+
+Mandat opérateur : « *je veux que le déclaratif ET la constatation jouent de pair pour
+afficher le vrai niveau — une marque qui n'est pas latente ne peut pas être dans le même
+lot que le reste* », suivi d'un audit en profondeur du scoreur et du collecteur.
+
+### Le plancher de visibilité
+
+L'échelle définit LATENT comme « **Invisible**. Fondations absentes. » Or le placement se
+prend sur le pilier ADVE le plus faible : mesuré en production, un `d` vide classait
+« invisible » une marque dotée d'un site joignable, de quatre réseaux et de trois retombées
+presse. Le classement contredisait sa propre définition. Sur les six échelons, LATENT est
+le SEUL qui parle de visibilité — les cinq autres parlent de substance.
+
+Une existence publique CONSTATÉE (≥2 signaux indépendants parmi : site joignable, ≥2
+réseaux, presse, publications datées) relève désormais LATENT → FRAGILE, **et rien
+au-dessus** : l'empreinte prouve qu'une marque n'est pas invisible, elle ne prouve rien sur
+sa substance stratégique. Appliqué aux DEUX voies (LLM et déterministe — l'audit a trouvé
+le plancher absent de la voie principale). Le relèvement est TOUJOURS dit : `basis.observed`
+porte le constat, `basis.visibilityFloorApplied` la trace, et la justification énonce
+d'abord « Ce que le public voit », puis ce qui manque.
+
+Vérifié sur le contenu prod d'Irawo : LATENT → FRAGILE, texte « Ce que le public voit : un
+site actif, 4 réseaux, 3 retombées presse. Irawo n'est donc pas une marque invisible ».
+Sans scan : aucun plancher (`observed: null`) — l'absence de mesure ne fabrique rien.
+Un site seul : aucun plancher (1 signal < 2) — une coquille vide ne se relève pas.
+
+### Le rescan qui rescanne
+
+Défaut mesuré : un premier `mode=rescan` a tourné 156 s sans RIEN recollecter —
+`complete()` réutilise `intake.webFootprint` en cache et saute la collecte ; seule la
+ré-extraction LLM avait tourné. Pire : le cache FIGE les échecs — l'audience d'Irawo est à
+zéro depuis le 30/07 sur un `apify: VENDOR_OUTAGE` jamais retenté. `mode=rescan` vide
+désormais le cache avant de relancer.
+
+### Le pays déclaré par l'opérateur
+
+`country` vide produisait trois dégâts en cascade : aucun ancrage marché, Wikipédia
+interrogée en ANGLAIS pour une marque francophone (la langue dérive du pays), tout rang
+« au Bénin » impossible. `&country=BJ` sur la route opérateur pose une donnée HUMAINE
+déclarée — on ne devine jamais un pays (ADR-0046), on accepte qu'un humain le dise.
+
+0 nouveau Neter · 0 modèle Prisma · 0 migration · 0 LLM ajouté · cap APOGEE 7/7.
+3802 tests verts.
+
 ## v6.27.378 — feat(intake): une porte serveur pour le rescan (2026-07-31)
 
 Le recalcul livré en 6.27.377 recompte ce qui est en base, mais ne ramasse rien de neuf.
