@@ -1306,6 +1306,50 @@ export async function regenerateAnalysis(
     positioning: intake.positioning,
   };
 
+  // ── Parité complete() : l'empreinte se COLLECTE quand elle manque ──
+  //
+  // Trouvé par vérifications successives le 2026-07-31, en trois temps :
+  //   1. `mode=rescan` servait le cache (156 s sans rien recollecter) ;
+  //   2. cache vidé, le « rescan » n'a TOUJOURS rien collecté — cette fonction
+  //      ne faisait que ré-extraire, elle ne connaissait pas la collecte ;
+  //   3. pire : le pilier E s'écrit ici en REPLACE_FULL SANS merge d'empreinte
+  //      — une régénération sur une marque au pilier E déclaré non vide aurait
+  //      ÉCRASÉ le `webPresence` mesuré (perte de données silencieuse ; Irawo
+  //      n'y a échappé que parce que son extraction E, vide, sautait l'écriture).
+  //
+  // Même séquence que `complete()` : collecte bornée, jamais bloquante, persistée.
+  let webFootprint = intake.webFootprint as unknown as
+    | import("./footprint-types").EnrichedFootprint
+    | null;
+  if (!webFootprint) {
+    try {
+      const { enrichPublicFootprint } = await import("./public-enrichment");
+      webFootprint = await Promise.race([
+        enrichPublicFootprint({
+          companyName: intake.companyName,
+          country: intake.country,
+          sector: intake.sector,
+          websiteUrl: intake.websiteUrl,
+          socialLinksRaw: intake.socialLinksRaw,
+          strategyId: strategy.id,
+          budgetMs: 40_000,
+        }),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 45_000)),
+      ]);
+      if (webFootprint) {
+        await db.quickIntake.update({
+          where: { id: intake.id },
+          data: { webFootprint: webFootprint as unknown as Prisma.InputJsonValue },
+        });
+      }
+    } catch (err) {
+      console.warn(
+        "[quick-intake.regen] collecte d'empreinte échouée (non bloquante):",
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+
   // Re-extract structured pillar content with the canonical context now
   // baked into the prompt (prevents the original drift) and seal declared
   // fields on top so the LLM cannot ship contradictions.
@@ -1337,10 +1381,17 @@ export async function regenerateAnalysis(
       );
     }
     const safeBase = scrubbed.content;
-    const sealed =
+    let sealed =
       pillar === "a" || pillar === "d" || pillar === "v" || pillar === "e"
         ? sealCanonicalPillarFields(pillar, safeBase, canonicalContext)
         : safeBase;
+    // Parité complete() (2026-07-31) : l'empreinte MESURÉE rejoint le pilier E
+    // AVANT l'écriture. Sans ce merge, le REPLACE_FULL ci-dessous écrasait le
+    // `webPresence` mesuré dès que l'extraction E rendait du contenu.
+    if (pillar === "e" && webFootprint) {
+      const { mergeEnrichedFootprintIntoPillarE } = await import("./public-enrichment");
+      sealed = mergeEnrichedFootprintIntoPillarE(sealed, webFootprint).content;
+    }
     if (Object.keys(sealed).length === 0) continue;
     const normalized = normalizePillarForIntake(pillar, sealed);
     const _w2 = await writePillarAndScore({
@@ -1450,7 +1501,9 @@ export async function regenerateAnalysis(
         compositeScore: adveComposite,
         // ADR-0164 — parité avec complete().
         pillarScores: { a: vector.a ?? 0, d: vector.d ?? 0, v: vector.v ?? 0, e: vector.e ?? 0 },
-        footprint: (intake.webFootprint as unknown as import("./footprint-types").EnrichedFootprint | null) ?? null,
+        // L'empreinte FRAÎCHE quand la collecte vient de tourner — relire
+        // `intake.webFootprint` servirait l'état d'avant le rescan.
+        footprint: webFootprint ?? null,
         sectorLabel: (await import("@/domain/sector-taxonomy")).sectorDisplayLabel(intake.sector),
       });
     } catch (err) {
