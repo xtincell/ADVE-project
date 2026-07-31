@@ -52,6 +52,38 @@ export const scorerFr = {
   // `provisional` prime sur les paliers de niveau quand trop peu de dimensions
   // ont été mesurées : un score bâti sur une fraction du spectre s'annonce
   // comme provisoire, jamais comme un verdict établi (audit 2026-07-30).
+  // ── A2 · la première impression (2026-07-31) ───────────────────────────
+  // Faits collectés et gate-validés de longue date, restés invisibles faute
+  // de projection. Aucune note : ils n'entrent dans aucun score.
+  "scorer.firstImpression.title": "La première impression",
+  "scorer.firstImpression.lede": "Ce qu'une personne qui cherche votre marque trouve réellement, avant même d'arriver chez vous.",
+  "scorer.firstImpression.citations": "{count} page(s) publique(s) parlent de vous",
+  "scorer.firstImpression.wikipedia": "Fiche Wikipédia",
+  "scorer.firstImpression.noWikipedia": "Aucune fiche Wikipédia à votre nom — vérifié, pas supposé.",
+  "scorer.firstImpression.suggestions": "Ce que la recherche propose autour de votre nom",
+  // ── A5 · le pont vers l'intake devient du contenu ──────────────────────
+  // Le prospect doit savoir ce qu'il achète AVANT de donner son email.
+  // Libellés alignés sur les 4 piliers fondateurs (A/D/V/E).
+  "scorer.ch4.paidTitle": "Ce que le diagnostic complet mesure en plus",
+  "scorer.paid.a.label": "Authenticité",
+  "scorer.paid.a.body": "votre raison d'être, votre récit fondateur, ce qui vous rend crédible.",
+  "scorer.paid.d.label": "Distinction",
+  "scorer.paid.d.body": "ce qui vous rend reconnaissable, et l'écart avec vos concurrents directs.",
+  "scorer.paid.v.label": "Valeur",
+  "scorer.paid.v.body": "votre promesse, votre modèle économique, le prix que le marché accepte.",
+  "scorer.paid.e.label": "Engagement",
+  "scorer.paid.e.body": "la profondeur du lien avec votre audience, au-delà du nombre d'abonnés.",
+  // ── A1 · la une éditoriale (2026-07-31) ────────────────────────────────
+  // Composées depuis les dimensions RÉELLEMENT mesurées / non mesurées :
+  // aucune de ces phrases ne peut parler d'un signal absent (ADR-0046).
+  "scorer.cover.classification": "{measured} des {total} signaux mesurés · {coverage} % du poids",
+  "scorer.cover.saysTitle": "Ce que le scan dit",
+  "scorer.cover.silentTitle": "Ce qu'il ne dit pas encore",
+  "scorer.says.audience": "Une audience comptée sur {count} réseaux, portée par {top}.",
+  "scorer.says.presence": "Une présence détectée sur {count} réseaux, audience non relevée.",
+  "scorer.says.foundations": "Des fondations techniques mesurées : site, domaine, email.",
+  "scorer.says.reviews": "Une réputation locale attestée par une fiche notée {rating}/5.",
+  "scorer.says.press": "{count} retombées presse récentes, vérifiables une à une.",
   "scorer.ambiguity.title": "Plusieurs entreprises peuvent porter ce nom",
   "scorer.ambiguity.body":
     "Sans votre secteur, nous ne pouvons pas distinguer votre marque d'une homonyme : les signaux ci-dessous reposent sur le seul nom. Ajoutez votre site pour lever le doute.",
@@ -75,6 +107,8 @@ export const scorerFr = {
   "scorer.dim.email": "Infrastructure email",
   "scorer.dim.domain": "Ancienneté du domaine",
   "scorer.dim.perf": "Performance du site",
+  "scorer.dim.ads": "Publicité en ligne",
+  "scorer.foundation.ads": "{count} publicité(s) Meta active(s) — un investissement média visible du public.",
 
   // ── Hints signaux non mesurés ──────────────────────────────────────────
   "scorer.hint.site": "Ajoutez votre site web",
@@ -237,6 +271,29 @@ export const scorerEn: Record<keyof typeof scorerFr, string> = {
   "scorer.scan.honesty":
     "We query everything in parallel and keep only what's verifiable — nothing is invented.",
 
+  "scorer.firstImpression.title": "First impression",
+  "scorer.firstImpression.lede": "What someone searching for your brand actually finds, before ever reaching you.",
+  "scorer.firstImpression.citations": "{count} public page(s) mention you",
+  "scorer.firstImpression.wikipedia": "Wikipedia entry",
+  "scorer.firstImpression.noWikipedia": "No Wikipedia entry under your name — checked, not assumed.",
+  "scorer.firstImpression.suggestions": "What search suggests around your name",
+  "scorer.ch4.paidTitle": "What the full diagnostic measures on top",
+  "scorer.paid.a.label": "Authenticity",
+  "scorer.paid.a.body": "your reason for being, your founding story, what makes you credible.",
+  "scorer.paid.d.label": "Distinction",
+  "scorer.paid.d.body": "what makes you recognizable, and the gap with your direct competitors.",
+  "scorer.paid.v.label": "Value",
+  "scorer.paid.v.body": "your promise, your business model, the price the market accepts.",
+  "scorer.paid.e.label": "Engagement",
+  "scorer.paid.e.body": "the depth of the bond with your audience, beyond follower counts.",
+  "scorer.cover.classification": "{measured} of {total} signals measured · {coverage} % of the weight",
+  "scorer.cover.saysTitle": "What the scan shows",
+  "scorer.cover.silentTitle": "What it cannot say yet",
+  "scorer.says.audience": "An audience counted across {count} networks, led by {top}.",
+  "scorer.says.presence": "A presence detected on {count} networks, audience not measured.",
+  "scorer.says.foundations": "Measured technical foundations: website, domain, email.",
+  "scorer.says.reviews": "Local reputation backed by a {rating}/5 rating.",
+  "scorer.says.press": "{count} recent press mentions, each one verifiable.",
   "scorer.ambiguity.title": "Several companies may share this name",
   "scorer.ambiguity.body":
     "Without your sector, we cannot tell your brand apart from a namesake: the signals below rest on the name alone. Add your website to remove the doubt.",
@@ -259,6 +316,8 @@ export const scorerEn: Record<keyof typeof scorerFr, string> = {
   "scorer.dim.email": "Email infrastructure",
   "scorer.dim.domain": "Domain age",
   "scorer.dim.perf": "Website performance",
+  "scorer.dim.ads": "Online advertising",
+  "scorer.foundation.ads": "{count} active Meta ad(s) — media investment visible to the public.",
 
   "scorer.hint.site": "Add your website",
   "scorer.hint.email": "Requires your website",
@@ -409,6 +468,29 @@ export const scorerZh: Record<keyof typeof scorerFr, string> = {
   "scorer.scan.step5": "正在汇总所有发现……",
   "scorer.scan.honesty": "我们并行查询所有来源，只保留可验证的内容——绝不虚构。",
 
+  "scorer.firstImpression.title": "第一印象",
+  "scorer.firstImpression.lede": "有人搜索您的品牌时真正会看到什么——在还没进入您的官网之前。",
+  "scorer.firstImpression.citations": "有 {count} 个公开页面提到您",
+  "scorer.firstImpression.wikipedia": "维基百科词条",
+  "scorer.firstImpression.noWikipedia": "未找到以您品牌命名的维基词条——已核实，并非假设。",
+  "scorer.firstImpression.suggestions": "搜索围绕您品牌名给出的联想词",
+  "scorer.ch4.paidTitle": "完整诊断另外测量什么",
+  "scorer.paid.a.label": "真实性",
+  "scorer.paid.a.body": "您的存在意义、创始故事，以及让您可信的根据。",
+  "scorer.paid.d.label": "辨识度",
+  "scorer.paid.d.body": "让您被认出的特质，以及与直接竞争者的差距。",
+  "scorer.paid.v.label": "价值",
+  "scorer.paid.v.body": "您的承诺、商业模式，以及市场愿意接受的价格。",
+  "scorer.paid.e.label": "参与",
+  "scorer.paid.e.body": "您与受众连接的深度，而不只是粉丝数量。",
+  "scorer.cover.classification": "已测量 {measured}/{total} 项信号 · 占权重 {coverage} %",
+  "scorer.cover.saysTitle": "本次扫描能说明什么",
+  "scorer.cover.silentTitle": "尚无法说明什么",
+  "scorer.says.audience": "已在 {count} 个平台统计到受众，以 {top} 为主。",
+  "scorer.says.presence": "已在 {count} 个平台发现账号，受众数据未采集。",
+  "scorer.says.foundations": "技术基础已测量：网站、域名、邮箱。",
+  "scorer.says.reviews": "本地口碑有据可依，评分 {rating}/5。",
+  "scorer.says.press": "近期 {count} 条媒体报道，逐条可核。",
   "scorer.ambiguity.title": "可能有多家公司使用该名称",
   "scorer.ambiguity.body": "在不知道您所属行业的情况下，我们无法将您的品牌与同名者区分开：以下信号仅依据名称。请补充您的网站以消除歧义。",
   "scorer.verdict.provisional": "暂定评分：我们只能测量到您影响力的一部分。请补充您的网站以获得完整评分。",
@@ -425,6 +507,8 @@ export const scorerZh: Record<keyof typeof scorerFr, string> = {
   "scorer.dim.email": "邮件设施",
   "scorer.dim.domain": "域名年限",
   "scorer.dim.perf": "网站性能",
+  "scorer.dim.ads": "线上广告",
+  "scorer.foundation.ads": "{count} 条投放中的 Meta 广告——公众可见的媒体投入。",
 
   "scorer.hint.site": "请添加您的网站",
   "scorer.hint.email": "需要先提供网站",

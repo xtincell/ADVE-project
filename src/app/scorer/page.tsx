@@ -46,6 +46,8 @@ const DIMENSION_LABEL_KEYS: Record<string, string> = {
   email: "scorer.dim.email",
   domain: "scorer.dim.domain",
   perf: "scorer.dim.perf",
+  // A3 — fait mesuré SANS note : la publicité active n'entre dans aucun score.
+  ads: "scorer.dim.ads",
 };
 
 const PLATFORM_LABELS: Record<string, string> = {
@@ -188,6 +190,17 @@ interface FactsView {
   site: { url: string | null; reachable: boolean } | null;
   /** Aucun contexte pour départager les homonymes — cf. bandeau d'ambiguïté. */
   undiscriminated?: boolean;
+  /**
+   * Ce qu'une personne qui cherche la marque trouve vraiment (2026-07-31).
+   * Collectés et gate-validés depuis longtemps, projetés seulement maintenant.
+   * `undefined` = collecteur non exécuté (rien à dire) · `null` = il a tourné
+   * et n'a rien trouvé (négatif mesuré, honnête). L'écran ne doit jamais
+   * confondre les deux.
+   */
+  citations?: Array<{ title: string; url: string; host: string }>;
+  searchSuggestions?: { suggestions: string[]; brandAppearsInOwnSuggest: boolean } | null;
+  wikipedia?: { title: string; extract: string | null; url: string | null; lang: string } | null;
+  ads?: { activeAdsCount: number; pageName: string | null } | null;
 }
 
 /**
@@ -195,6 +208,75 @@ interface FactsView {
  * depuis les faits mesurés. Chaque phrase a sa condition de mesure : on ne
  * raconte jamais un signal non relevé comme un fait.
  */
+/**
+ * A1 — LA UNE ÉDITORIALE (2026-07-31).
+ *
+ * Le verdict tenait en une ligne posée à côté d'un chiffre. Il devient un
+ * bloc : ce que le scan établit, et — aussi important — ce qu'il n'établit
+ * pas. Les deux colonnes sont composées UNIQUEMENT depuis les dimensions
+ * réellement mesurées et non mesurées : aucune phrase ne peut parler d'un
+ * signal absent (ADR-0046), et chacune nomme sa raison plutôt que de laisser
+ * un trou muet.
+ */
+function buildWhatScanSays(dims: Dim[], facts: FactsView, i: I18nCtx): string[] {
+  const out: string[] = [];
+  const by = new Map(dims.map((d) => [d.key, d]));
+  const social = by.get("social");
+  if (social?.measured && facts.socials.length > 0) {
+    const withAudience = facts.socials.filter((s) => s.followerCount !== null);
+    const top = [...withAudience].sort((a, b) => (b.followerCount ?? 0) - (a.followerCount ?? 0))[0];
+    out.push(
+      top
+        ? i.tf("scorer.says.audience", {
+            count: facts.socials.length,
+            top: PLATFORM_LABELS[top.platform.toLowerCase()] ?? top.platform,
+          })
+        : i.tf("scorer.says.presence", { count: facts.socials.length }),
+    );
+  }
+  const site = by.get("site");
+  const domain = by.get("domain");
+  const email = by.get("email");
+  if (site?.measured || domain?.measured || email?.measured) {
+    out.push(i.t("scorer.says.foundations"));
+  }
+  if (by.get("reviews")?.measured && facts.reviews?.rating != null) {
+    out.push(i.tf("scorer.says.reviews", { rating: facts.reviews.rating }));
+  }
+  if (by.get("press")?.measured && facts.press.length > 0) {
+    out.push(i.tf("scorer.says.press", { count: facts.press.length }));
+  }
+  return out;
+}
+
+/**
+ * Ce que le scan NE dit pas — avec la raison serveur telle quelle. C'est la
+ * moitié honnête de la une : un rapport qui n'énonce que ses forces se lit
+ * comme une plaquette, pas comme un diagnostic.
+ */
+function buildWhatItDoesntSay(dims: Dim[], i: I18nCtx): Array<{ key: string; label: string; why: string }> {
+  return dims
+    .filter((d) => !d.measured)
+    .slice(0, 4)
+    .map((d) => ({
+      key: d.key,
+      label: d.label ?? d.key,
+      // `details` porte déjà la raison réelle (« nécessite votre site »,
+      // « relevé des avis en échec »…) — on ne la reformule pas.
+      why: d.details ?? i.t("scorer.hint.pending"),
+    }));
+}
+
+/** Ligne de classification : le niveau, le compte de signaux, le poids couvert. */
+function buildClassificationLine(dims: Dim[], coveragePct: number, i: I18nCtx): string {
+  const measured = dims.filter((d) => d.measured).length;
+  return i.tf("scorer.cover.classification", {
+    measured,
+    total: dims.length,
+    coverage: Math.round(coveragePct),
+  });
+}
+
 function buildLeadProse(brand: string, facts: FactsView, totalFollowers: number, i: I18nCtx): string {
   const s: string[] = [];
   const nPlatforms = new Set(facts.socials.map((x) => x.platform.toLowerCase())).size;
@@ -301,6 +383,14 @@ function foundationSentence(key: string, facts: FactsView, dim: Dim | undefined,
         lcpPart: p.lcpMs ? i.tf("scorer.foundation.perfLcp", { seconds: (p.lcpMs / 1000).toFixed(1) }) : "",
       });
     }
+    // A3 — les faits mesurés mais MUETS rejoignent le rapport (2026-07-31).
+    // La publicité Meta active était collectée depuis longtemps sans jamais
+    // être racontée : c'est pourtant une preuve d'investissement média que le
+    // public voit, au même titre qu'un site qui répond.
+    case "ads": {
+      if (!facts.ads) return "";
+      return i.tf("scorer.foundation.ads", { count: facts.ads.activeAdsCount });
+    }
     default:
       return dim?.details ?? "";
   }
@@ -401,11 +491,14 @@ export default function ScorerPage() {
     ? new Date(result.capturedAt).toLocaleDateString(intlTag, { day: "numeric", month: "long", year: "numeric" })
     : null;
 
-  const foundationKeys = ["site", "domain", "email", "perf"] as const;
+  const foundationKeys = ["site", "domain", "email", "perf", "ads"] as const;
   const foundationRows = facts
     ? foundationKeys
         .map((k) => ({ key: k, dim: dimByKey.get(k), sentence: foundationSentence(k, facts, dimByKey.get(k), i18n) }))
-        .filter((r) => r.sentence && r.dim?.measured)
+        // `ads` n'est pas une dimension NOTÉE : c'est un fait mesuré qui
+        // n'entre dans aucun score. Il n'a donc pas de `dim` — la garde
+        // `dim?.measured` ne peut pas s'y appliquer (A3, 2026-07-31).
+        .filter((r) => r.sentence && (r.key === "ads" || r.dim?.measured))
     : [];
 
   return (
@@ -515,7 +608,15 @@ export default function ScorerPage() {
                       {brandName.trim() || t("scorer.cover.yourBrand")}
                     </Heading>
                     {result.total !== null ? (
-                      <Text className="mt-2 text-base text-foreground">{scoreVerdict(result.total, coveragePct, t)}</Text>
+                      <>
+                        <Text className="mt-2 text-base text-foreground">{scoreVerdict(result.total, coveragePct, t)}</Text>
+                        {/* Le niveau, le compte de signaux et le poids couvert
+                            sur une seule ligne — le lecteur sait immédiatement
+                            sur quelle base le chiffre repose. */}
+                        <Text className="mt-1 font-mono text-[11px] uppercase tracking-wide text-[color:var(--color-foreground-muted)]">
+                          {buildClassificationLine(dims, coveragePct, i18n)}
+                        </Text>
+                      </>
                     ) : (
                       <Text className="mt-2 text-base text-[color:var(--color-foreground-muted)]">
                         {t("scorer.cover.noSignal")}
@@ -564,6 +665,48 @@ export default function ScorerPage() {
                       {lead}
                     </Text>
                   ) : null;
+                })()}
+
+                {/* A1 — les deux colonnes de la une : ce que le scan établit,
+                    et ce qu'il n'établit pas encore (avec sa raison). Un
+                    rapport qui n'énoncerait que ses forces se lirait comme une
+                    plaquette ; celui-ci reste un diagnostic. */}
+                {(() => {
+                  const says = buildWhatScanSays(dims, facts, i18n);
+                  const silent = buildWhatItDoesntSay(dims, i18n);
+                  if (says.length === 0 && silent.length === 0) return null;
+                  return (
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {says.length > 0 ? (
+                        <div className="flex flex-col gap-2">
+                          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[color:var(--color-accent)]">
+                            {t("scorer.cover.saysTitle")}
+                          </p>
+                          <ul className="flex flex-col gap-1.5">
+                            {says.map((s) => (
+                              <li key={s} className="text-sm leading-relaxed text-foreground">
+                                {s}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null}
+                      {silent.length > 0 ? (
+                        <div className="flex flex-col gap-2">
+                          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[color:var(--color-foreground-muted)]">
+                            {t("scorer.cover.silentTitle")}
+                          </p>
+                          <ul className="flex flex-col gap-1.5">
+                            {silent.map((s) => (
+                              <li key={s.key} className="text-sm leading-relaxed text-[color:var(--color-foreground-muted)]">
+                                <span className="text-foreground-secondary">{s.label}</span> — {s.why}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null}
+                    </div>
+                  );
                 })()}
 
                 {/* Tuiles de stats — les trois chiffres de couverture du rapport */}
@@ -678,6 +821,103 @@ export default function ScorerPage() {
             </Card>
           ) : null}
 
+          {/* ── A2 · LA PREMIÈRE IMPRESSION ────────────────────────────────
+              Ce qu'une personne qui cherche la marque trouve RÉELLEMENT :
+              les pages publiques qui la citent, les recherches associées, la
+              fiche Wikipédia. Ces faits étaient collectés et gate-validés
+              depuis longtemps sans jamais atteindre l'écran — « la
+              restitution est plus pauvre que la collecte ».
+
+              Aucune note ajoutée : rien de tout cela n'entre dans le /100.
+              Des faits sourcés, cliquables, vérifiables un par un. */}
+          {(facts.citations?.length ?? 0) > 0 ||
+          facts.wikipedia !== undefined ||
+          (facts.searchSuggestions?.suggestions.length ?? 0) > 0 ? (
+            <Card>
+              <CardBody>
+                <div className="flex flex-col gap-4">
+                  <ChapterHead
+                    n="03"
+                    title={t("scorer.firstImpression.title")}
+                    art="/brand/illustrations/sphere-3d.png"
+                  />
+                  <Text className="text-sm leading-relaxed">{t("scorer.firstImpression.lede")}</Text>
+
+                  {/* Les pages publiques qui parlent de la marque */}
+                  {(facts.citations?.length ?? 0) > 0 ? (
+                    <div className="flex flex-col gap-2">
+                      <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[color:var(--color-foreground-muted)]">
+                        {tf("scorer.firstImpression.citations", { count: facts.citations!.length })}
+                      </p>
+                      <div className="flex flex-col gap-1.5">
+                        {facts.citations!.map((c) => (
+                          <a
+                            key={c.url}
+                            href={c.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex flex-col gap-0.5 rounded-md border px-3 py-2 transition-colors hover:border-[color:var(--color-accent)]"
+                            style={{ borderColor: "var(--color-border)" }}
+                          >
+                            <span className="text-sm text-foreground">{c.title}</span>
+                            <span className="font-mono text-[11px] text-[color:var(--color-foreground-muted)]">{c.host}</span>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {/* Wikipédia — `null` est un négatif MESURÉ, on le dit */}
+                  {facts.wikipedia !== undefined ? (
+                    facts.wikipedia ? (
+                      <a
+                        href={facts.wikipedia.url ?? "#"}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex flex-col gap-1 rounded-md border px-3 py-2 transition-colors hover:border-[color:var(--color-accent)]"
+                        style={{ borderColor: "var(--color-border)" }}
+                      >
+                        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[color:var(--color-foreground-muted)]">
+                          {t("scorer.firstImpression.wikipedia")}
+                        </span>
+                        <span className="text-sm font-medium text-foreground">{facts.wikipedia.title}</span>
+                        {facts.wikipedia.extract ? (
+                          <span className="text-xs leading-relaxed text-[color:var(--color-foreground-muted)]">
+                            {facts.wikipedia.extract}
+                          </span>
+                        ) : null}
+                      </a>
+                    ) : (
+                      <Text className="text-xs text-[color:var(--color-foreground-muted)]">
+                        {t("scorer.firstImpression.noWikipedia")}
+                      </Text>
+                    )
+                  ) : null}
+
+                  {/* Recherches associées — ce que Google propose autour du nom */}
+                  {(facts.searchSuggestions?.suggestions.length ?? 0) > 0 ? (
+                    <div className="flex flex-col gap-2">
+                      <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[color:var(--color-foreground-muted)]">
+                        {t("scorer.firstImpression.suggestions")}
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {facts.searchSuggestions!.suggestions.map((s) => (
+                          <span
+                            key={s}
+                            className="rounded-full border px-2.5 py-1 text-xs text-foreground-secondary"
+                            style={{ borderColor: "var(--color-border)" }}
+                          >
+                            {s}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              </CardBody>
+            </Card>
+          ) : null}
+
           {/* ── 03 · VOS FONDATIONS (site, domaine, email, performance) ───── */}
           {foundationRows.length > 0 ? (
             <Card>
@@ -760,6 +1000,25 @@ export default function ScorerPage() {
                     <Text className="mt-1 text-xs text-[color:var(--color-foreground-muted)]">
                       {t("scorer.ch4.note")}
                     </Text>
+
+                    {/* A5 — le pont vers l'intake devient du CONTENU : au lieu
+                        d'un CTA générique, on nomme ce que le diagnostic
+                        payant mesure vraiment. Le prospect sait ce qu'il
+                        achète avant de donner son email. */}
+                    <div className="mt-4 flex flex-col gap-2 rounded-lg border border-accent/25 bg-accent/[0.04] p-3">
+                      <Text className="text-sm font-semibold text-foreground">
+                        {t("scorer.ch4.paidTitle")}
+                      </Text>
+                      <ul className="flex flex-col gap-1">
+                        {(["a", "d", "v", "e"] as const).map((k) => (
+                          <li key={k} className="text-xs leading-relaxed text-[color:var(--color-foreground-muted)]">
+                            <span className="text-foreground-secondary">{t(`scorer.paid.${k}.label`)}</span>
+                            {" — "}
+                            {t(`scorer.paid.${k}.body`)}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   </div>
                 </div>
               </CardBody>

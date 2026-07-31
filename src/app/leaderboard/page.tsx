@@ -205,10 +205,14 @@ export default async function LeaderboardPage() {
                             <span className="lb__chev" aria-hidden>▸</span> {row.subjectLabel}
                             {row.cappedReason ? <span className="lb__cap"> · {row.cappedReason}</span> : null}
                           </span>
-                          <span><span className="lb__tier">{row.tier}</span></span>
-                          <span className="lb__force">{row.force}/200</span>
-                          <span className="lb__cov">{row.coveragePct}%</span>
-                          <span className="lb__cov">{row.coherence}</span>
+                          {/* `data-label` : sous 768 px l'en-tête de colonnes
+                              disparaît (il ne décrit plus rien, cf.
+                              leaderboard.css) et chaque valeur porte son
+                              propre libellé — un nombre nu ne dit rien. */}
+                          <span data-label={t("lb.col.tier", locale)}><span className="lb__tier">{row.tier}</span></span>
+                          <span className="lb__force" data-label={t("lb.col.force", locale)}>{row.force}/200</span>
+                          <span className="lb__cov" data-label={t("lb.col.coverage", locale)}>{row.coveragePct}%</span>
+                          <span className="lb__cov" data-label={t("lb.col.coherence", locale)}>{row.coherence}</span>
                         </div>
                       </summary>
                       <div className="lb__palmares">

@@ -46,6 +46,26 @@ export interface FootprintFacts {
   youtube: { channelTitle: string | null; handle: string | null; subscriberCount: number | null; videoCount: number | null } | null;
   site: { url: string | null; reachable: boolean } | null;
   /**
+   * ── Ce qu'une personne qui cherche la marque trouve vraiment (2026-07-31) ──
+   *
+   * Ces quatre signaux étaient COLLECTÉS et gate-validés depuis longtemps, et
+   * n'atteignaient jamais l'écran : la projection ne les portait pas. « La
+   * restitution est plus pauvre que la collecte » — le rapport taisait des
+   * faits qu'il possédait.
+   *
+   * Aucun n'ajoute de note au score : ce sont des faits sourcés et
+   * vérifiables. Tous facultatifs, pour rester lisibles depuis un snapshot
+   * persisté avant cette date (`parseFootprintFacts` ne les exige jamais).
+   */
+  /** Pages publiques qui citent la marque — gate-validées (ADR-0164). */
+  citations?: Array<{ title: string; url: string; host: string }>;
+  /** Recherches associées au nom de marque (autocomplete). */
+  searchSuggestions?: { suggestions: string[]; brandAppearsInOwnSuggest: boolean } | null;
+  /** Fiche Wikipédia si elle existe — `null` est un négatif HONNÊTE, pas une absence de mesure. */
+  wikipedia?: { title: string; extract: string | null; url: string | null; lang: string } | null;
+  /** Publicités Meta actives — preuve d'investissement média visible du public. */
+  ads?: { activeAdsCount: number; pageName: string | null } | null;
+  /**
    * Aucun contexte ne permettait de DISCRIMINER les homonymes : ni secteur ni
    * pays, déclaré ou inférable. Les signaux ci-dessus reposent alors sur le
    * seul nom de la marque.
@@ -147,6 +167,40 @@ export function buildFootprintFacts(f: EnrichedFootprint): FootprintFacts {
         ? { channelTitle: f.youtube.channelTitle, handle: f.youtube.handle, subscriberCount: f.youtube.subscriberCount, videoCount: f.youtube.videoCount }
         : null,
     site: f.site ? { url: f.site.url ?? null, reachable: f.site.reachable } : null,
+
+    // ── Les quatre signaux longtemps collectés puis tus ──
+    // Chacun n'est projeté QUE s'il porte un fait : un collecteur qui n'a pas
+    // tourné (clé absente, erreur) reste absent des faits — l'écran ne doit
+    // pas pouvoir confondre « rien trouvé » avec « pas cherché ».
+    citations:
+      f.webMentions?.status === "LIVE" ? f.webMentions.items.slice(0, 6) : undefined,
+    searchSuggestions:
+      f.searchAutocomplete?.state === "LIVE" && f.searchAutocomplete.data.suggestions.length > 0
+        ? {
+            suggestions: f.searchAutocomplete.data.suggestions.slice(0, 8),
+            brandAppearsInOwnSuggest: f.searchAutocomplete.data.brandAppearsInOwnSuggest,
+          }
+        : undefined,
+    // `hasPage: false` est un négatif MESURÉ (l'API a répondu 404) : on le
+    // rend comme `null` pour que l'écran puisse dire « aucune fiche », alors
+    // qu'un collecteur non exécuté reste `undefined` (rien à dire).
+    wikipedia:
+      f.wikipedia?.state === "LIVE"
+        ? f.wikipedia.data.hasPage && f.wikipedia.data.title
+          ? {
+              title: f.wikipedia.data.title,
+              extract: f.wikipedia.data.extract,
+              url: f.wikipedia.data.url,
+              lang: f.wikipedia.data.lang,
+            }
+          : null
+        : undefined,
+    ads:
+      f.ads?.status === "LIVE" && (f.ads.activeAdsCount ?? 0) > 0
+        ? { activeAdsCount: f.ads.activeAdsCount ?? 0, pageName: f.ads.pageName }
+        : f.ads?.status === "NOT_FOUND"
+          ? null
+          : undefined,
     // Le gate n'avait AUCUN discriminant : tout ce qui précède tient sur le
     // seul nom. Deux entités homonymes au nom exact sont alors indécidables —
     // on l'annonce plutôt que de laisser croire à une certitude.

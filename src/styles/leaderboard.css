@@ -72,3 +72,59 @@ details[open] .lb__chev { transform: rotate(90deg); }
 .lb__gate { font-family: var(--font-mono, monospace); font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--lb-hair); color: var(--lb-fg3); }
 .lb__gate[data-ok="1"] { color: var(--lb-green); border-color: color-mix(in srgb, var(--lb-green) 45%, transparent); }
 .lb__palmares-meta { font-size: 12.5px; color: var(--lb-fg3); margin-top: 8px; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   MOBILE — le classement se lit au pouce (2026-07-31)
+
+   Le tableau est une grille de six colonnes en `min-width: 640px`. Sur un
+   téléphone de 375 px, il scrollait latéralement dans son conteneur : les
+   colonnes de droite (couverture, cohérence) n'étaient jamais vues, et la
+   comparaison entre marques — la raison d'être d'un classement — devenait
+   impossible.
+
+   Sous 768 px, chaque ligne devient une CARTE : rang + marque en tête, puis
+   les métriques en grille fluide sous elles. Aucun chiffre n'est retiré, ils
+   changent de disposition. L'en-tête de colonnes disparaît (il ne décrit plus
+   rien) et chaque valeur porte son propre libellé via `data-label`.
+   ═══════════════════════════════════════════════════════════════════════ */
+@media (max-width: 767.98px) {
+  /* L'en-tête de colonnes n'a plus de colonnes à nommer. */
+  .lb__gridhead { display: none; }
+
+  /* Plus de largeur plancher : la carte s'adapte à l'écran. */
+  .lb__sumrow {
+    grid-template-columns: auto minmax(0, 1fr);
+    min-width: 0;
+    gap: 6px 10px;
+    padding: 12px 14px;
+  }
+
+  /* Rang et nom de marque tiennent la première ligne. */
+  .lb__sumrow > .lb__rank { grid-column: 1; }
+  .lb__sumrow > .lb__brand { grid-column: 2; }
+
+  /* Les métriques passent dessous, sur toute la largeur, en ligne fluide. */
+  .lb__sumrow > :nth-child(n + 3) {
+    grid-column: 1 / -1;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+  /* Chaque valeur porte son libellé : sans en-tête, un nombre nu ne dit rien. */
+  .lb__sumrow > :nth-child(n + 3)::before {
+    content: attr(data-label);
+    font-family: var(--font-mono, monospace);
+    font-size: 10.5px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--lb-fg3);
+  }
+
+  /* Les cartes d'arène s'étirent au lieu de forcer un débordement. */
+  .lb__arena { min-width: 0; flex: 1 1 calc(50% - 8px); }
+}
+
+/* Très petits écrans : une arène par ligne plutôt que deux illisibles. */
+@media (max-width: 419.98px) {
+  .lb__arena { flex-basis: 100%; }
+}
