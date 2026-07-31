@@ -1,5 +1,36 @@
 # Changelog — La Fusee
 
+## v6.27.385 — feat(scorer): V3 « le tournoi » — les faits collectés disputent le rang (2026-07-31)
+
+Directive opérateur : « *le collecteur doit chercher aux bons endroits ce que le standard de
+la ligue de la marque concernée considère comme le must-have du rang disputé — c'est déjà
+prévu mais non effectué, j'ai l'impression* ». **L'impression était exacte, jusqu'au
+vocabulaire** : ligues, planchers par échelle (ADR-0126), catalogue `MUST_HAVE_ITEMS` par
+palier, compilateur d'épreuves (ADR-0149) — tout existait. Le compilateur ne compilait que
+l'audience (A/V), les superfans (E) et l'Overton (T) : la presse et les publications
+collectées à chaque scan ne devenaient JAMAIS des épreuves. **La ligue existait, le tournoi
+n'avait jamais lieu.**
+
+- **`compilePresenceEpreuves`** — arène **A** : retombées presse **vs `tarsisTarget` de la
+  ligue** ; arène **E** : publication fraîche (< 90 j) et cadence tenue. La même marque,
+  avec la même presse, **gagne au QUARTIER et perd au MONDE** — c'est la ligue qui décide.
+- **Poids honnêtes** : la presse est une preuve tierce mais son comptage dépend du moteur du
+  jour → **moyen** ; une cadence ≤ 1 mois est **forte**, une parution isolée **moyenne**.
+- **Absence honnête (P22-2)** : pas de `webPresence` ⇒ aucune épreuve ; pas de flux ⇒ pas
+  d'épreuve E — on ne punit pas l'absence d'un canal.
+- **Le plafond de preuve prend sa forme finale : déclaré OU PROUVÉ.** Directive : « *Naruto
+  restera culte, n'est-ce pas ? le traqueur doit juste le prouver.* » Le plafond de la veille
+  n'acceptait que le déclaré — il **interdisait** ce qu'il aurait dû faire **mériter**.
+  `evidenceCeiling` reçoit les items GAGNÉS en épreuves : les deux must-have CULTE remportés
+  ⇒ CULTE sans un seul volet déclaré ; un seul des deux ne suffit pas ; sans items, zéro
+  régression.
+
+Les deux nouveaux items sont **automatiquement calibrés** (`anchor-seed` boucle sur
+`ITEM_OPPONENTS`) — l'architecture ADR-0149 attendait ce branchement.
+
+ADR-0191. 0 nouveau Neter · 0 modèle Prisma · 0 migration · 0 LLM ajouté · cap APOGEE 7/7.
+3834 tests verts (10 neufs).
+
 ## v6.27.384 — fix(governance): V2 « hygiène des populations » — le test ne pollue plus le réel (2026-07-31)
 
 Deuxième vague du plan « debt free ». Mesuré avant d'écrire : **41 intakes de test en

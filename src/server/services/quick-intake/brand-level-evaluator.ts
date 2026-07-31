@@ -466,12 +466,31 @@ export function evidenceCeiling(input: {
   declaredPhases: number;
   observedSignals: number;
   extractedE: Record<string, unknown>;
+  /**
+   * Items du rang GAGNÉS en épreuves (Scoreur ADR-0149) — la preuve par le
+   * MONDE, à côté de la preuve par la déclaration.
+   *
+   * Forme finale du plafond (V3, 2026-07-31), sur directive opérateur :
+   * « Naruto restera culte, n'est-ce pas ? le traqueur doit juste le
+   * prouver. » Un palier se paie en preuve — déclarée **ou** prouvée. Sans
+   * cet argument, le plafond interdisait ce qu'il aurait dû faire mériter.
+   */
+  wonItems?: ReadonlySet<string>;
 }): BrandTier {
   const { declaredPhases: d, observedSignals: s } = input;
   const e = input.extractedE ?? {};
+  const won = input.wonItems ?? new Set<string>();
   const cultMarkers = ["rituels", "sacraments", "commandments", "ritesDePassage", "sacredCalendar"].some(
     (k) => Array.isArray(e[k]) && (e[k] as unknown[]).length > 0,
   );
+  // Les deux must-have du rang CULTE, gagnés en arène (`palier.ts`) : masse
+  // superfan au-dessus du plancher de ligue, et duel de cadre remporté. Une
+  // marque qui les prouve est culte, qu'elle ait rempli le questionnaire ou
+  // non — c'est exactement ce que l'échelle décrit.
+  if (won.has("masse-superfan") && won.has("duel-cadre-overton")) return "CULTE";
+  if (won.has("actif-distinctif") || won.has("coherence-seuil")) return "FORTE";
+  if (won.has("mythe-fondateur") || won.has("market-fit")) return "ORDINAIRE";
+  if (won.has("dirigeant-identifiable")) return d >= 2 || s >= 3 ? "ORDINAIRE" : "FRAGILE";
   if (d >= 4 && cultMarkers) return "CULTE";
   if (d >= 4) return "FORTE";
   if (d >= 2 || s >= 3) return "ORDINAIRE";

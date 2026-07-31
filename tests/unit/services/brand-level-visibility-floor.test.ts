@@ -161,3 +161,32 @@ describe("plafond de preuve — un palier se paie en preuve (cas « Naruto »)",
     }
   });
 });
+
+describe("plafond, forme finale : déclaré OU PROUVÉ (V3 « le tournoi »)", () => {
+  const { evidenceCeiling } = evaluatorExports;
+  // Directive opérateur : « Naruto restera culte, n'est-ce pas ? le traqueur
+  // doit juste le prouver. » Sans l'argument `wonItems`, le plafond
+  // INTERDISAIT ce qu'il aurait dû faire mériter.
+
+  it("les deux must-have CULTE gagnés en arène ⇒ CULTE, sans un seul volet déclaré", () => {
+    expect(
+      evidenceCeiling({
+        declaredPhases: 0,
+        observedSignals: 0,
+        extractedE: {},
+        wonItems: new Set(["masse-superfan", "duel-cadre-overton"]),
+      }),
+    ).toBe("CULTE");
+  });
+
+  it("un seul des deux ne suffit pas — le rang exige SES must-have", () => {
+    expect(
+      evidenceCeiling({ declaredPhases: 0, observedSignals: 0, extractedE: {}, wonItems: new Set(["masse-superfan"]) }),
+    ).not.toBe("CULTE");
+  });
+
+  it("sans items gagnés, le comportement d'origine tient (aucune régression)", () => {
+    expect(evidenceCeiling({ declaredPhases: 1, observedSignals: 0, extractedE: {} })).toBe("FRAGILE");
+    expect(evidenceCeiling({ declaredPhases: 9, observedSignals: 4, extractedE: {} })).toBe("FORTE");
+  });
+});

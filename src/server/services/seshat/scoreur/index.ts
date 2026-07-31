@@ -189,6 +189,9 @@ export async function scoreBrand(
     nowIso,
     superfanFloor: targets.superfansTarget,
     audienceFloor: targets.audienceFloor,
+    // V3 : le standard de SIGNAUX TIERS du rang disputé (ADR-0126) — la presse
+    // collectée s'y mesure enfin au lieu de rester décorative.
+    thirdPartyFloor: targets.tarsisTarget,
   });
   const persistedRows = await db.epreuve.findMany({
     where: { subjectStrategyId: strategyId },
