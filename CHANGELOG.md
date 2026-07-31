@@ -1,5 +1,22 @@
 # Changelog — La Fusee
 
+## v6.27.378 — feat(intake): une porte serveur pour le rescan (2026-07-31)
+
+Le recalcul livré en 6.27.377 recompte ce qui est en base, mais ne ramasse rien de neuf.
+Pour qu'un rapport bénéficie du COLLECTEUR corrigé, il faut relancer la collecte — or
+`regenerateAnalysis` n'était exposé qu'en `adminProcedure` tRPC, donc inatteignable sans
+session navigateur.
+
+`POST /api/admin/rescore-intakes?token=<shareToken>&mode=rescan` (guardé `CRON_SECRET`)
+relance la collecte publique ET la ré-extraction, et rend l'AVANT/APRÈS du vecteur.
+
+**Le rescan reste NOMINATIF** : il consomme des appels externes (Apify, PageSpeed, Maps) et
+des jetons LLM. `mode=rescan` sans `token` est refusé — le lancer en masse par mégarde
+coûterait un budget sans que personne l'ait décidé. Le recalcul, lui, reste gratuit et
+autorisé en lot.
+
+0 nouveau Neter · 0 modèle Prisma · 0 migration · 0 LLM ajouté · cap APOGEE 7/7.
+
 ## v6.27.377 — feat(scorer): le collecteur lit ce qu'il télécharge déjà (2026-07-31)
 
 Signalement opérateur, en réponse à une limite que j'avais moi-même énoncée (« *les
