@@ -1,5 +1,38 @@
 # Changelog — La Fusee
 
+## v6.27.381 — fix(intake): le niveau se paie en preuve (2026-07-31)
+
+Signalement opérateur : « *fragile me semble toujours malplacé — le calibrage me semble
+mauvais avec les autres marques* ». Mesuré sur tous les intakes :
+
+| marque | niveau | composite |
+|---|---|---:|
+| Maï Beauté | FORTE | 72,0 |
+| **Irawo (la star réelle)** | **FRAGILE** | 46,8 |
+| **TEST-NEFER (marque de test)** | **ORDINAIRE** | 35,2 |
+| **Naruto (un anime tapé au formulaire)** | **CULTE** | 16,5 |
+
+« Naruto » : justification entièrement FABRIQUÉE depuis la notoriété de l'anime
+(« communauté mondiale structurée, rituels ancrés ») — `observed=absent`, rien de déclaré.
+Le LLM jugeait sur sa culture générale ; rien ne le bornait. L'inverse exact du problème
+d'Irawo : le nom célèbre gonfle, la vraie marque inconnue du modèle est écrasée.
+
+**`evidenceCeiling`** — miroir du plafond de preuve du composite, appliqué au niveau :
+un palier doit être PAYABLE en preuve, déclarée ou constatée. CULTE exige une déclaration
+substantielle ET des marqueurs de culte déclarés (rituels, sacrements, commandements…) ;
+FORTE exige ≥4 volets ; ORDINAIRE ≥2 volets OU ≥3 signaux constatés ; FRAGILE ≥1 volet ou
+le plancher de visibilité ; ICONE reste inaccessible depuis un intake. Quand le plafond
+écrête, la justification LLM ENTIÈRE est suspecte — elle cite des preuves inexistantes :
+la voie déterministe fait foi, avec trace `basis.evidenceCeilingApplied` (jamais
+d'ajustement silencieux, même doctrine que le plancher).
+
+Prompt durci en parallèle — cécité au nom (« un nom célèbre avec une substance vide est
+une substance vide ») et réponse intégralement en français (un rapport client sortait
+mi-FR mi-EN). Mais le prompt est un vœu : le plafond est la garantie.
+
+0 nouveau Neter · 0 modèle Prisma · 0 migration · 0 LLM ajouté · cap APOGEE 7/7.
+3806 tests verts.
+
 ## v6.27.380 — fix(intake): la régénération collecte enfin — et n'écrase plus le mesuré (2026-07-31)
 
 Troisième temps d'une vérification en boucle sur le « rescan » d'Irawo :

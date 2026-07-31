@@ -98,6 +98,13 @@ export interface BrandLevelEvaluation {
      * doit dire qu'un plancher s'est appliqué, et depuis quoi.
      */
     visibilityFloorApplied?: { from: BrandTier; to: BrandTier } | null;
+    /**
+     * Renseigné quand la preuve disponible a ÉCRÊTÉ le palier : le LLM
+     * annonçait plus haut que ce que la déclaration + la constatation peuvent
+     * payer (cas « Naruto » classé CULTE sur du vide). Même doctrine que le
+     * plancher : jamais d'ajustement silencieux.
+     */
+    evidenceCeilingApplied?: { from: BrandTier; to: BrandTier } | null;
   };
   /** 2–3 sentence justification citing extracted values */
   justification: string;
@@ -153,6 +160,14 @@ persona stereotype, pas d'ennemi.
 6. La cible ULTIME est ICONE pour TOUTES les marques. La trajectoire pathToIcone \
 montre les paliers intermediaires entre le niveau actuel et ICONE — specifique \
 a cette marque, pas de generalites.
+7. CECITE AU NOM (imperatif) : tu ne sais RIEN de cette marque en dehors des \
+valeurs extraites ci-dessus. Si le nom t'est celebre — personnage de fiction, \
+franchise, entreprise mondialement connue — tu n'importes RIEN de ta culture \
+generale : ni communaute, ni rituels, ni mythologie que les valeurs extraites \
+ne contiennent pas. Un nom celebre avec une substance vide est une substance \
+vide. (Defaut mesure : « Naruto » saisi dans le formulaire a ete classe CULTE \
+sur une justification entierement fabriquee depuis la notoriete de l'anime.)
+8. Tu reponds INTEGRALEMENT en francais — c'est un rapport client francophone.
 
 Reponds UNIQUEMENT avec un objet JSON valide. Pas de markdown.`;
 
@@ -336,9 +351,25 @@ Le pathToIcone DOIT inclure tous les paliers du niveau actuel jusqu'a ICONE (san
   const observedLlm = basis.observed ?? null;
   const floorAppliesLlm =
     normLevel === "LATENT" && (observedLlm?.signals ?? 0) >= VISIBILITY_FLOOR_SIGNALS;
-  const finalLevel: BrandTier = floorAppliesLlm ? "FRAGILE" : normLevel;
+  let finalLevel: BrandTier = floorAppliesLlm ? "FRAGILE" : normLevel;
   if (floorAppliesLlm) {
     basis.visibilityFloorApplied = { from: normLevel, to: finalLevel };
+  }
+
+  // Plafond de preuve — le LLM ne peut pas annoncer un palier que la
+  // déclaration + la constatation ne peuvent pas payer (cas « Naruto »,
+  // classé CULTE sur une justification fabriquée depuis la notoriété de
+  // l'anime). Quand le plafond écrête, ce n'est pas seulement le palier qui
+  // tombe : la justification ENTIÈRE est suspecte — elle cite des preuves qui
+  // n'existent pas. La voie déterministe fait alors foi, avec la trace.
+  const ceilingLlm = evidenceCeiling({
+    declaredPhases: basis.declaredPhases,
+    observedSignals: observedLlm?.signals ?? 0,
+    extractedE: extractedValues.e ?? {},
+  });
+  if (compareTiers(finalLevel, ceilingLlm) > 0) {
+    deterministic.basis.evidenceCeilingApplied = { from: finalLevel, to: deterministic.level };
+    return deterministic;
   }
 
   // Le LLM a rédigé sa justification en croyant LATENT : si le plancher
@@ -406,6 +437,47 @@ export function observedVisibility(
 
 /** Deux signaux concordants = la marque existe publiquement, donc pas « invisible ». */
 const VISIBILITY_FLOOR_SIGNALS = 2;
+
+/**
+ * Plafond de PREUVE du niveau — miroir du plafond de preuve du composite.
+ *
+ * Défaut mesuré en production (2026-07-31) : « Naruto » saisi dans le
+ * formulaire a été classé **CULTE** (composite 16,5) sur une justification
+ * entièrement fabriquée depuis la notoriété de l'anime — « communauté mondiale
+ * structurée, rituels ancrés » — sans un volet déclaré ni un signal constaté.
+ * Pendant ce temps une marque de test (TEST-NEFER) lisait ORDINAIRE au-dessus
+ * du FRAGILE de la vraie star du corpus. Le LLM jugeait sur sa culture
+ * générale ; rien ne le bornait.
+ *
+ * La règle : un palier doit être PAYABLE en preuve — déclarée ou constatée.
+ * Le plafond ne relève jamais (c'est le rôle du plancher de visibilité) ; il
+ * écrête ce que la preuve disponible ne peut pas soutenir :
+ *
+ *   CULTE   exige une déclaration substantielle ET des marqueurs de culte
+ *           déclarés (rituels, sacrements, commandements, rites) — c'est la
+ *           définition même de l'échelon ;
+ *   FORTE   exige une déclaration substantielle (≥4 volets sur 9) ;
+ *   ORDINAIRE exige un début de déclaration (≥2 volets) OU une visibilité
+ *           constatée nette (≥3 signaux) ;
+ *   FRAGILE exige au moins UN volet déclaré ou la visibilité plancher ;
+ *   ICONE   n'est jamais accessible depuis un intake (règle existante).
+ */
+export function evidenceCeiling(input: {
+  declaredPhases: number;
+  observedSignals: number;
+  extractedE: Record<string, unknown>;
+}): BrandTier {
+  const { declaredPhases: d, observedSignals: s } = input;
+  const e = input.extractedE ?? {};
+  const cultMarkers = ["rituels", "sacraments", "commandments", "ritesDePassage", "sacredCalendar"].some(
+    (k) => Array.isArray(e[k]) && (e[k] as unknown[]).length > 0,
+  );
+  if (d >= 4 && cultMarkers) return "CULTE";
+  if (d >= 4) return "FORTE";
+  if (d >= 2 || s >= 3) return "ORDINAIRE";
+  if (d >= 1 || s >= VISIBILITY_FLOOR_SIGNALS) return "FRAGILE";
+  return "LATENT";
+}
 
 /** « Ce que le public voit : … » — partagé par les deux voies (LLM et règles). */
 function describeObserved(obs: ReturnType<typeof observedVisibility>): string {

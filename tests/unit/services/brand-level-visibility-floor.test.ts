@@ -24,7 +24,9 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { deriveBrandLevelDeterministic, observedVisibility } from "@/server/services/quick-intake/brand-level-evaluator";
+import { deriveBrandLevelDeterministic, observedVisibility, evidenceCeiling } from "@/server/services/quick-intake/brand-level-evaluator";
+
+const evaluatorExports = { evidenceCeiling };
 
 /** Empreinte réelle d'Irawo, telle que mesurée en production. */
 const EMPREINTE_REELLE = {
@@ -112,5 +114,50 @@ describe("le texte énonce les DEUX axes", () => {
     const r = derive({});
     expect(r.justification).not.toContain("Ce que le public voit");
     expect(r.justification).toContain("provisoire");
+  });
+});
+
+describe("plafond de preuve — un palier se paie en preuve (cas « Naruto »)", () => {
+  // Mesuré en prod : « Naruto » classé CULTE (composite 16,5) sur une
+  // justification fabriquée depuis la notoriété de l'anime — communauté
+  // mondiale, rituels hebdomadaires — sans un volet déclaré ni un signal
+  // constaté. Le plafond rend cette classe d'inflation impossible.
+  const { evidenceCeiling } = evaluatorExports;
+
+  it("nom célèbre, substance vide, aucun scan → FRAGILE au mieux", () => {
+    expect(evidenceCeiling({ declaredPhases: 1, observedSignals: 0, extractedE: {} })).toBe("FRAGILE");
+    expect(evidenceCeiling({ declaredPhases: 0, observedSignals: 0, extractedE: {} })).toBe("LATENT");
+  });
+
+  it("CULTE exige déclaration substantielle ET marqueurs de culte déclarés", () => {
+    // 9 volets remplis mais aucun rituel/sacrement déclaré → FORTE au mieux :
+    // CULTE se définit par la communauté structurée, pas par le volume.
+    expect(evidenceCeiling({ declaredPhases: 9, observedSignals: 4, extractedE: {} })).toBe("FORTE");
+    expect(
+      evidenceCeiling({ declaredPhases: 4, observedSignals: 0, extractedE: { rituels: [{ nom: "x" }] } }),
+    ).toBe("CULTE");
+    // Les marqueurs sans la déclaration ne suffisent pas non plus.
+    expect(
+      evidenceCeiling({ declaredPhases: 1, observedSignals: 0, extractedE: { rituels: [{ nom: "x" }] } }),
+    ).toBe("FRAGILE");
+  });
+
+  it("la visibilité constatée nette ouvre ORDINAIRE, jamais plus", () => {
+    // Le cas Irawo : 1 volet déclaré mais 3 signaux publics — le plafond ne
+    // bride pas le plancher, et n'autorise pas FORTE sans substance déclarée.
+    expect(evidenceCeiling({ declaredPhases: 1, observedSignals: 3, extractedE: {} })).toBe("ORDINAIRE");
+  });
+
+  it("le plancher ne peut jamais dépasser le plafond", () => {
+    // Invariant : pour toute entrée, floor(FRAGILE sur 2 signaux) ≤ ceiling.
+    for (const d of [0, 1, 2, 4]) {
+      for (const s of [0, 2, 3, 4]) {
+        const c = evidenceCeiling({ declaredPhases: d, observedSignals: s, extractedE: {} });
+        if (s >= 2) {
+          // là où le plancher s'applique, le plafond admet au moins FRAGILE
+          expect(["FRAGILE", "ORDINAIRE", "FORTE", "CULTE"]).toContain(c);
+        }
+      }
+    }
   });
 });
