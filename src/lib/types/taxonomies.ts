@@ -147,6 +147,7 @@ export type DevotionLevel = (typeof DEVOTION_LEVELS)[number];
 export const CHANNELS = [
   "INSTAGRAM", "FACEBOOK", "TIKTOK", "LINKEDIN", "YOUTUBE", "TWITTER",
   "WEBSITE", "APP", "EMAIL", "SMS",
+  "WHATSAPP",
   "PACKAGING", "PLV", "OOH", "PRINT",
   "EVENT", "POPUP",
   "PR", "TV", "RADIO", "VIDEO",

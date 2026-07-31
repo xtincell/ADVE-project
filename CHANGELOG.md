@@ -1,5 +1,31 @@
 # Changelog — La Fusee
 
+## v6.27.383 — fix(intake): V1 « faits épinglés » — un fait mesuré ne s'évapore jamais (2026-07-31)
+
+Mandat opérateur « **debt free culture** » : plan V0→V7 inscrit au registre
+`RESIDUAL-DEBT.md` (V0), première vague livrée ici.
+
+**Les deux scénarios se sont produits en production, à une heure d'intervalle, sur la même
+marque** : (1) une re-collecte à `press: EMPTY` évaporait 3 retombées réelles gate-validées
+(CANAL+ CI, Mylène Flicka, ANKA) — non pas réfutées, juste non re-trouvées ce jour-là ;
+(2) la découverte re-tirait au sort et a élu l'HOMONYME (`irawo.net`, association de
+Cotonou) en écrasant le pilier E de la vraie marque.
+
+- **`mergeFootprints(previous, fresh)`** : le frais fait foi ; un bloc frais VIDE (presse,
+  articles, audiences, structured, feed) conserve le relevé précédent avec sa date de
+  capture. **Garde d'identité** : site élu différent ⇒ zéro report — les faits de
+  l'ancienne entité ne contaminent jamais la nouvelle. Pas une fabrication (ADR-0046) :
+  chaque fait conservé a été mesuré et gate-validé ; esprit ADR-0151 « jamais perdu ».
+- **Site épinglé** : `QuickIntake.websiteUrl` persisté au premier scan corroboré
+  (provenance SOURCE) — plus aucun rescan ne rejoue la loterie des homonymes. + `&site=`
+  opérateur sur la route (même logique que `&country=`). Le wipe du cache disparaît
+  (`forceCollect` le remplace — le wipe détruisait le filet du merge).
+- **WHATSAPP entre dans la taxonomie CHANNELS** (T.08) — canal majeur du marché cible,
+  son `channelRef` restait `undefined`.
+
+0 nouveau Neter · 0 modèle Prisma · 0 migration · 0 LLM ajouté · cap APOGEE 7/7.
+3816 tests verts (6 nouveaux sur les scénarios réels).
+
 ## v6.27.382 — governance: le système anti-réinvention a des dents (2026-07-31)
 
 Loi opérateur : « *je ne cautionne pas la réinvention de la roue — tout court* », suivie du
