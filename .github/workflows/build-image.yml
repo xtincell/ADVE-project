@@ -61,7 +61,7 @@ jobs:
 
       # 1) Build + chargement LOCAL (pas encore poussé) avec cache gha.
       - name: Build (load local)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           load: true
@@ -110,7 +110,7 @@ jobs:
 
       # 3) Push (cache chaud → quasi instantané) : latest + version + sha.
       - name: Push ghcr
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
