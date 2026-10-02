@@ -117,6 +117,13 @@ export interface EnrichedFootprint extends WebFootprint {
      * qui est FAUX : elle a été relevée, et jugée invraisemblable. Un compte
      * qui existe ne doit jamais être présenté comme inexistant.
      */
+    /**
+     * Raison d'admission par profil découvert, clé `PLATFORM:handle` en
+     * minuscules (2026-07-30). Rend la PREUVE lisible : « nom exact » et
+     * « nom étendu, marché confirmé » sont deux niveaux de certitude
+     * différents que rien ne distinguait à l'arrivée.
+     */
+    socialAdmissions?: Record<string, import("@/server/services/seshat/signal-gateway").AdmissionReason>;
     audienceAnomalies?: Array<{
       platform: string;
       handle: string;
