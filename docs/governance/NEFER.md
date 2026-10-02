@@ -133,7 +133,7 @@ Critère valide d'arrêt :
 **Quatre interdits absolus** :
 
 1. **Réinventer la roue** — toute entité métier nouvelle DOIT être justifiée par un audit en deux passes :
-   - **Passe 1 — Glory tools first** (ADR-0048). Avant tout nouveau service, Intent kind, route tRPC ou page : ouvrir [`glory-tools-inventory.md`](glory-tools-inventory.md) (113 tools EXTENDED registry) et grep `src/server/services/artemis/tools/registry.ts` sur synonymes du besoin. **Présomption par défaut** : toute capacité métier atomique exposée à un opérateur ou à un Neter aval EST un Glory tool, sauf preuve explicite que le Glory tool ne peut pas porter le besoin. La charge de la preuve repose sur le NON-Glory-tool. Détail décisionnel cf. §3.1.
+   - **Passe 1 — Glory tools first** (ADR-0048). Avant tout nouveau service, Intent kind, route tRPC ou page : ouvrir [`glory-tools-inventory.md`](glory-tools-inventory.md) (registre complet généré depuis `EXTENDED_GLORY_TOOLS`) et grep `src/server/services/artemis/tools/registry.ts` sur synonymes du besoin. **Présomption par défaut** : toute capacité métier atomique exposée à un opérateur ou à un Neter aval EST un Glory tool, sauf preuve explicite que le Glory tool ne peut pas porter le besoin. La charge de la preuve repose sur le NON-Glory-tool. Détail décisionnel cf. §3.1.
    - **Passe 2 — `grep CODE-MAP`** négatif sur synonymes + ADR si le besoin survit aux deux audits.
 2. **Bypass governance** — toute mutation passe par `mestor.emitIntent()`. Pas de raccourci. Voir §3.2 pour le mapping Neter ↔ responsabilité.
 3. **Drift narratif silencieux** — toute modification de vocabulaire/concept canon DOIT propager dans les 7 sources de vérité simultanément (cf. PANTHEON §6).
@@ -241,11 +241,11 @@ NEFER consulte ces sources dans l'ordre, sans skip, à chaque session :
 | Document | Contenu | Auto-régen |
 |---|---|---|
 | [CODE-MAP.md](CODE-MAP.md) | **Knowledge graph** — synonymes mot-du-métier ↔ entité, tous models Prisma, services, routers, pages, Glory tools, séquences, intent kinds | ✓ pre-commit hook |
-| [INTENT-CATALOG.md](INTENT-CATALOG.md) | 561 Intent kinds (recompte 2026-07-13 — registre `INTENT_KINDS`) avec governor/handler/SLO/description | ✓ `npx tsx scripts/gen-intent-catalog.ts` |
-| [glory-tools-inventory.md](glory-tools-inventory.md) | Glory tools indexés par layer — 56 CORE / 149 au registre étendu (recompte 2026-07-11 ; décomposition CORE : 40 legacy + 9 P13 + 4 P14 + 3 P15) | ✓ `npm run glory:inventory` |
-| [SERVICE-MAP.md](SERVICE-MAP.md) | 118 répertoires services backend par sous-système APOGEE (recompte 2026-07-21 ; tous classifiés, « À classifier » refermée) | manuel |
-| [ROUTER-MAP.md](ROUTER-MAP.md) | 123 fichiers routers tRPC par sous-système (122 routers + 1 helper ; recompte 2026-07-21 ; tous classifiés, « À classifier » refermée) | manuel |
-| [PAGE-MAP.md](PAGE-MAP.md) | 165+ pages par deck (Console/Cockpit/Agency/Creator/Launchpad) | manuel |
+| [INTENT-CATALOG.md](INTENT-CATALOG.md) | Intent kinds du registre `INTENT_KINDS`, avec governor/handler/SLO/description | ✓ `npx tsx scripts/gen-intent-catalog.ts` |
+| [glory-tools-inventory.md](glory-tools-inventory.md) | Glory tools indexés par layer, dérivés du registre complet à chaque génération | ✓ `npm run glory:inventory` |
+| [SERVICE-MAP.md](SERVICE-MAP.md) | Rôles des services par sous-système APOGEE ; inventaire actuel dans CODE-MAP | manuel |
+| [ROUTER-MAP.md](ROUTER-MAP.md) | Rôles des routers et helpers par sous-système ; inventaire actuel dans CODE-MAP | manuel |
+| [PAGE-MAP.md](PAGE-MAP.md) | Pages par deck ; inventaire actuel dans CODE-MAP | manuel |
 
 ### 4.3 Code source — surfaces structurelles à connaître
 

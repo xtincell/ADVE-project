@@ -1,30 +1,30 @@
 # ROUTER-MAP — Tous les routers tRPC mappés sur APOGEE
 
-**123 fichiers** sous `src/server/trpc/routers/` (recompte 2026-07-21) : **122 routers** tous classifiés par **Sous-système APOGEE** + **Tier** dans les tables ci-dessous, et **1 helper hors compte** (`_strategy-read-guard.ts` — garde de lecture par marque ADR-0129/0166, pas un router). La reclassification du delta post-Phase 19 (46 routers apparus entre les recomptes) est intégrée — la section « À classifier » est refermée.
+**126 fichiers** sous `src/server/trpc/routers/` (recompte 2026-10-02) : **123 routers** et **3 helpers** hors compte (`_strategy-read-guard.ts`, `_pillar-write-guard.ts`, `_talent-access-guard.ts`). Le livre de marque ajoute une lecture sans nouveau writer. Les chemins actuels sont générés dans [CODE-MAP.md](CODE-MAP.md).
+
+Les tableaux de rôle conservent le vocabulaire de migration historique ; leur colonne de statut est un relevé statique du 2 octobre, pas une preuve que tous les chemins sont gouvernés ni une recette en production.
 
 Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
 **Statut governance** :
-- `governed` : déjà migré sur `governedProcedure` (passe `mestor.emitIntent` + pre-conditions)
-- `audited` : utilise `auditedProcedure` (strangler — log seulement, pas de pre-conditions)
-- `bypass` : utilise encore `protectedProcedure`/`operatorProcedure` direct (à migrer Phase 3)
-- `none` : query-only readonly (pas de governance requise pour lectures)
-
+- `point gouverné présent` : présence de `governedProcedure` ou d'un appel `emitIntent` dans le code du router ; la couverture de chaque mutation se vérifie séparément.
+- `appels à suivre` : mutations présentes sans ces marqueurs directs ; vérifier leurs services et leurs justifications avant de conclure à un contournement.
+- `lecture seule` : aucune déclaration `.mutation(...)` dans le router.
 ---
 
 ## Synthèse globale
 
-| Sous-système | Tier | Count | Statut governance majoritaire |
+| Sous-système | Tier | Count | Relevé statique des routers |
 |---|---|---|---|
-| Propulsion | M | 20 | mixte — nouveaux governed, legacy bypass (cf. §10) |
-| Guidance | M | 18 | mixte — nouveaux governed, legacy bypass |
-| Telemetry | M | 24 | mixte — governed + public (surfaces funnel/leaderboard) |
-| Sustainment | M | 5 | bypass (legacy) |
-| Operations | G | 21 | mixte — nouveaux governed, legacy bypass |
-| Crew Programs | G | 15 | mixte |
-| Comms | G | 6 | mixte |
-| Admin | G | 13 | mixte — governed/admin |
-| **TOTAL** | | **122** (+1 helper hors compte) | **104/122 sur la voie gouvernée** (`governedProcedure`/`emitIntent`, recompte 2026-07-21) — cf. §10 |
+| Propulsion | M | 20 | 19 point gouverné présent · 1 appels à suivre |
+| Guidance | M | 19 | 17 point gouverné présent · 2 lecture seule |
+| Telemetry | M | 24 | 19 point gouverné présent · 3 lecture seule · 2 appels à suivre |
+| Sustainment | M | 5 | 5 point gouverné présent |
+| Operations | G | 21 | 16 point gouverné présent · 2 lecture seule · 3 appels à suivre |
+| Crew Programs | G | 15 | 14 point gouverné présent · 1 appels à suivre |
+| Comms | G | 6 | 3 point gouverné présent · 3 appels à suivre |
+| Admin | G | 13 | 7 point gouverné présent · 1 lecture seule · 5 appels à suivre |
+| **TOTAL** | | **123** (+3 helpers hors compte) | **100 points gouvernés présents · 8 lectures seules · 15 appels à suivre** — scan statique, cf. §10 |
 
 ---
 
@@ -32,51 +32,52 @@ Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE
 
 | Router | Rôle | Tier | Statut |
 |---|---|---|---|
-| `glory.ts` | Glory tools API | M | bypass |
-| `campaign.ts` | Campagnes lecture/édition | M | bypass |
-| `campaign-manager.ts` | Orchestration campagnes (49KB) | M | bypass |
-| `mission.ts` | Missions (21KB) | M | governed (cf. plan P3) |
-| `intervention.ts` | Interventions tactiques | M | bypass |
-| `media-buying.ts` | Plan media + buying | M | bypass |
-| `pr.ts` | RP / publications | M | bypass |
-| `social.ts` | Orchestration social | M | bypass |
-| `editorial.ts` | Editorial / content calendar | M | bypass |
-| `publication.ts` | Publication multi-canal | M | bypass |
-| `driver.ts` | Drivers d'engagement | M | bypass |
-| `notoria.ts` | Pipeline production | M | governed (V5+) |
-| `sequence-vault.ts` | Séquences GLORY | M | bypass |
-| `deliverable-orchestrator.ts` | **Deliverable Forge tRPC** (Phase 17b, ADR-0050 — anciennement ADR-0037) — `listSupportedKinds` query, `resolveRequirements` query auditée, `compose` mutation auditée hash-chained via `mestor.emitIntent({ kind: "COMPOSE_DELIVERABLE" })` | M | governed |
-| `actions.ts` | Base d'actions canonique du Pilier I — `BrandAction` + calendrier/plan d'actions (ADR-0094) | M | governed (emitIntent) |
-| `creative-proposal.ts` | Proposition Créative — gate de génération de production (ADR-0120) | M | governed |
-| `intention.ts` | Intention dirigeant → brief candidat, validation (ADR-0106) | M | governed (emitIntent) |
-| `media-plan.ts` | Plan média (acteur Média, ADR-0115) | M | governed |
-| `oracle.ts` | Génération unitaire sections Oracle (Phase 21 F-C, ADR-0070) — `GENERATE_ORACLE_SECTION` / assembler | M | governed (emitIntent) |
-| `ptah.ts` | Forge Ptah — matérialisation briefs → assets (ADR-0009) | M | governed (emitIntent) |
+| `glory.ts` | Glory tools API | M | point gouverné présent |
+| `campaign.ts` | Campagnes lecture/édition | M | point gouverné présent |
+| `campaign-manager.ts` | Orchestration campagnes (49KB) | M | point gouverné présent |
+| `mission.ts` | Missions (21KB) | M | point gouverné présent |
+| `intervention.ts` | Interventions tactiques | M | point gouverné présent |
+| `media-buying.ts` | Plan media + buying | M | point gouverné présent |
+| `pr.ts` | RP / publications | M | point gouverné présent |
+| `social.ts` | Orchestration social | M | point gouverné présent |
+| `editorial.ts` | Editorial / content calendar | M | point gouverné présent |
+| `publication.ts` | Publication multi-canal | M | point gouverné présent |
+| `driver.ts` | Drivers d'engagement | M | point gouverné présent |
+| `notoria.ts` | Pipeline production | M | point gouverné présent |
+| `sequence-vault.ts` | Séquences GLORY | M | point gouverné présent |
+| `deliverable-orchestrator.ts` | **Deliverable Forge tRPC** (Phase 17b, ADR-0050 — anciennement ADR-0037) — `listSupportedKinds` query, `resolveRequirements` query auditée, `compose` mutation auditée hash-chained via `mestor.emitIntent({ kind: "COMPOSE_DELIVERABLE" })` | M | point gouverné présent |
+| `actions.ts` | Base d'actions canonique du Pilier I — `BrandAction` + calendrier/plan d'actions (ADR-0094) | M | point gouverné présent |
+| `creative-proposal.ts` | Proposition Créative — gate de génération de production (ADR-0120) | M | point gouverné présent |
+| `intention.ts` | Intention dirigeant → brief candidat, validation (ADR-0106) | M | point gouverné présent |
+| `media-plan.ts` | Plan média (acteur Média, ADR-0115) | M | point gouverné présent |
+| `oracle.ts` | Génération unitaire sections Oracle (Phase 21 F-C, ADR-0070) — `GENERATE_ORACLE_SECTION` / assembler | M | point gouverné présent |
+| `ptah.ts` | Forge Ptah — matérialisation briefs → assets (ADR-0009) | M | appels à suivre |
 
 ---
 
-## 2. Guidance (18 routers)
+## 2. Guidance (19 routers)
 
 | Router | Rôle | Tier | Statut |
 |---|---|---|---|
-| `mestor-router.ts` | Mestor chat + Intent dispatch | M | governed |
-| `pillar.ts` | Pillars CRUD (35KB — pire offender bypass) | M | bypass (priorité P3) |
-| `strategy.ts` | Strategy CRUD + comparables | M | bypass (mixed governed) |
-| `strategy-presentation.ts` | Oracle 35 sections (assemblage read-time + exports ; génération via router `oracle` — legacy `enrichOracle` déposé ADR-0125) | M | governed |
-| `framework.ts` | Frameworks Artemis | M | bypass |
-| `guidelines.ts` | Brand guidelines render | M | bypass |
-| `boot-sequence.ts` | Boot sequence trigger | M | bypass |
-| `brand-vault.ts` | Vault brand content | M | bypass |
-| `implementation-generator.ts` | Plans d'implémentation | M | bypass |
-| `cohort.ts` | Cohort analysis (segmentation strat) | M | bypass |
-| `campaign-tracker.ts` | **Campaign tracker L2 Instrumental** (Phase 19, ADR-0052) — 6 procedures Vague 1 (Cluster A trajectory + B coherence) toutes via `auditedProcedure("campaign-tracker")` ; helper `listClusterCapabilities` query non-auditée. Délégation pure aux handlers du service `campaign-tracker`. **Phase 23 SHIPPED (Epic 6)** — `runAttributionCalibration` + `promotePivotSubcluster` (gouvernés via `mestor.emitIntent`) + `listCalibrationSnapshots` (read). Cf. ADR-0080 + ADR-0081. **Cockpit founder Overton read (Epic 7 Story 7.4)** : `cockpitDashboard.overtonSignal` (`protectedProcedure`, tenant-scoped + ownership guard, paid-tier-gated `TIER_GATE_DENIED` arm) retourne `ConnectorResult<OvertonRadarSignal>` — composé depuis `sector-intelligence.getSectorAxis` + pillar-D + Tarsis façade `fetchSectorSignal`. Cf. ADR-0078. | M | governed |
-| `brand-node.ts` | Arbre de marque (Phase 18, ADR-0059) : nœuds, piliers effectifs, recherche contexte — garde par chaîne ancêtre/descendant (ADR-0166) | M | governed (emitIntent) |
-| `campaign-change-request.ts` | Demandes de changement campagne (Phase 18-A1) | M | governed |
-| `campaign-deliverable.ts` | Matrice 6D livrables campagne (ADR-0059), manual-first parity ADR-0060 | M | governed |
-| `consulting.ts` | Acteur Conseil — priorisation RICE + chaîne de preuve (ADR-0109) | M | governed (emitIntent) |
-| `markets.ts` | Kill-switch marché (ADR-0105) : NEUTRALIZE / REINSTATE / PURGE_MARKET | M | governed (emitIntent) + admin |
-| `morning-batch.ts` | Morning Brief batch ingestion + validation (ADR-0062) | M | governed |
-| `operator-action.ts` | OperatorAction (Phase 18-A1) | M | governed |
+| `brand-bible.ts` | Livre de marque déterministe, assemblé depuis les sources et piliers (ADR-0185) | M | lecture seule |
+| `mestor-router.ts` | Mestor chat + Intent dispatch | M | point gouverné présent |
+| `pillar.ts` | Pillars CRUD et gardes d’écriture | M | point gouverné présent |
+| `strategy.ts` | Strategy CRUD + comparables | M | point gouverné présent |
+| `strategy-presentation.ts` | Oracle 35 sections (assemblage read-time + exports ; génération via router `oracle` — legacy `enrichOracle` déposé ADR-0125) | M | point gouverné présent |
+| `framework.ts` | Frameworks Artemis | M | point gouverné présent |
+| `guidelines.ts` | Brand guidelines render | M | point gouverné présent |
+| `boot-sequence.ts` | Boot sequence trigger | M | point gouverné présent |
+| `brand-vault.ts` | Vault brand content | M | point gouverné présent |
+| `implementation-generator.ts` | Plans d'implémentation | M | point gouverné présent |
+| `cohort.ts` | Cohort analysis (segmentation strat) | M | lecture seule |
+| `campaign-tracker.ts` | **Campaign tracker L2 Instrumental** (Phase 19, ADR-0052) — 6 procedures Vague 1 (Cluster A trajectory + B coherence) toutes via `auditedProcedure("campaign-tracker")` ; helper `listClusterCapabilities` query non-auditée. Délégation pure aux handlers du service `campaign-tracker`. **Phase 23 SHIPPED (Epic 6)** — `runAttributionCalibration` + `promotePivotSubcluster` (gouvernés via `mestor.emitIntent`) + `listCalibrationSnapshots` (read). Cf. ADR-0080 + ADR-0081. **Cockpit founder Overton read (Epic 7 Story 7.4)** : `cockpitDashboard.overtonSignal` (`protectedProcedure`, tenant-scoped + ownership guard, paid-tier-gated `TIER_GATE_DENIED` arm) retourne `ConnectorResult<OvertonRadarSignal>` — composé depuis `sector-intelligence.getSectorAxis` + pillar-D + Tarsis façade `fetchSectorSignal`. Cf. ADR-0078. | M | point gouverné présent |
+| `brand-node.ts` | Arbre de marque (Phase 18, ADR-0059) : nœuds, piliers effectifs, recherche contexte — garde par chaîne ancêtre/descendant (ADR-0166) | M | point gouverné présent |
+| `campaign-change-request.ts` | Demandes de changement campagne (Phase 18-A1) | M | point gouverné présent |
+| `campaign-deliverable.ts` | Matrice 6D livrables campagne (ADR-0059), manual-first parity ADR-0060 | M | point gouverné présent |
+| `consulting.ts` | Acteur Conseil — priorisation RICE + chaîne de preuve (ADR-0109) | M | point gouverné présent |
+| `markets.ts` | Kill-switch marché (ADR-0105) : NEUTRALIZE / REINSTATE / PURGE_MARKET | M | point gouverné présent |
+| `morning-batch.ts` | Morning Brief batch ingestion + validation (ADR-0062) | M | point gouverné présent |
+| `operator-action.ts` | OperatorAction (Phase 18-A1) | M | point gouverné présent |
 
 ---
 
@@ -84,30 +85,30 @@ Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE
 
 | Router | Rôle | Tier | Statut |
 |---|---|---|---|
-| `seshat-search.ts` | Recherche sémantique cross-strategy (V5.4) | M | none (query-only) |
-| `jehuty.ts` | Cross-brand intelligence feed (V5.4) | M | bypass |
-| `signal.ts` | Signaux faibles | M | bypass |
-| `source-insights.ts` | Insights sources | M | none |
-| `attribution-router.ts` | Attribution canaux | M | bypass |
-| `analytics.ts` | Analytics général | M | none |
-| `cult-index.ts` | Cult index measurement | M | bypass |
-| `devotion-ladder.ts` | Devotion ladder calculation | M | bypass |
-| `superfan.ts` | Segments superfans | M | bypass |
-| `ambassador.ts` | Ambassadeurs (segment supérieur) | M | bypass |
-| `advertis-scorer.ts` | Score composite | M | bypass |
-| `knowledge-graph.ts` | Knowledge graph | M | bypass |
-| `market-intelligence.ts` | Intel marché | M | bypass |
-| `market-study.ts` | Études marché | M | bypass |
-| `error-vault.ts` | Capture/triage errors runtime + `oracleIncidents` cluster par code ORACLE-NNN (ADR-0022) | INFRA | bypass (queries) + adminProcedure |
-| `argos.ts` | Argos by LaFusée — dossiers de référence + projection publique (ADR-0100) | M | governed + public |
-| `bureau-etudes.ts` | Vagues d'étude time-spine, significativité (ADR-0110/0114) | M | governed (emitIntent) |
-| `footprint.ts` | Score d'empreinte public instantané (funnel « Scorer ma marque ») — rate-limité ADR-0161, gate homonymes ADR-0162 | M | public (éphémère, sans compte) |
-| `identity.ts` | Identity Graph — portes gouvernées, PII redactée via le spine (ADR-0147/0124) | M | governed (spine) |
-| `market-study-ingestion.ts` | Ingestion études marché → vault | M | governed (emitIntent) + admin |
-| `overton.ts` | Axes Overton par polity + tags delta opérateur (ADR-0127) | M | governed |
-| `prediction.ts` | Registre des paris — déclaration/résolution gouvernées + registre public /paris (ADR-0159) | M | governed + public |
-| `scoreur.ts` | Scoreur à force révélée (ADR-0149/0150) : épreuves, verdicts, leaderboard public, canon éditable opérateur | M | governed + public |
-| `source-classifier.ts` | Classification BrandDataSource → BrandAsset DRAFTs | M | governed (emitIntent) + scoped |
+| `seshat-search.ts` | Recherche sémantique cross-strategy (V5.4) | M | lecture seule |
+| `jehuty.ts` | Cross-brand intelligence feed (V5.4) | M | point gouverné présent |
+| `signal.ts` | Signaux faibles | M | point gouverné présent |
+| `source-insights.ts` | Insights sources | M | lecture seule |
+| `attribution-router.ts` | Attribution canaux | M | point gouverné présent |
+| `analytics.ts` | Analytics général | M | point gouverné présent |
+| `cult-index.ts` | Cult index measurement | M | point gouverné présent |
+| `devotion-ladder.ts` | Devotion ladder calculation | M | point gouverné présent |
+| `superfan.ts` | Segments superfans | M | point gouverné présent |
+| `ambassador.ts` | Ambassadeurs (segment supérieur) | M | lecture seule |
+| `advertis-scorer.ts` | Score composite | M | point gouverné présent |
+| `knowledge-graph.ts` | Knowledge graph | M | point gouverné présent |
+| `market-intelligence.ts` | Intel marché | M | point gouverné présent |
+| `market-study.ts` | Études marché | M | point gouverné présent |
+| `error-vault.ts` | Capture/triage errors runtime + `oracleIncidents` cluster par code ORACLE-NNN (ADR-0022) | INFRA | appels à suivre |
+| `argos.ts` | Argos by LaFusée — dossiers de référence + projection publique (ADR-0100) | M | point gouverné présent |
+| `bureau-etudes.ts` | Vagues d'étude time-spine, significativité (ADR-0110/0114) | M | point gouverné présent |
+| `footprint.ts` | Score d'empreinte public instantané (funnel « Scorer ma marque ») — rate-limité ADR-0161, gate homonymes ADR-0162 | M | appels à suivre |
+| `identity.ts` | Identity Graph — portes gouvernées, PII redactée via le spine (ADR-0147/0124) | M | point gouverné présent |
+| `market-study-ingestion.ts` | Ingestion études marché → vault | M | point gouverné présent |
+| `overton.ts` | Axes Overton par polity + tags delta opérateur (ADR-0127) | M | point gouverné présent |
+| `prediction.ts` | Registre des paris — déclaration/résolution gouvernées + registre public /paris (ADR-0159) | M | point gouverné présent |
+| `scoreur.ts` | Scoreur à force révélée (ADR-0149/0150) : épreuves, verdicts, leaderboard public, canon éditable opérateur | M | point gouverné présent |
+| `source-classifier.ts` | Classification BrandDataSource → BrandAsset DRAFTs | M | point gouverné présent |
 
 ---
 
@@ -115,11 +116,11 @@ Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE
 
 | Router | Rôle | Tier | Statut |
 |---|---|---|---|
-| `process.ts` | Process scheduler / queue | M | bypass |
-| `staleness.ts` | Staleness propagator API | M | bypass |
-| `quality-review.ts` | Quality review (post-conditions) | M | bypass |
-| `deliverable-tracking.ts` | Tracking livrables (SLA) | M | bypass |
-| `connectors.ts` | Connectors monitoring | M | bypass |
+| `process.ts` | Process scheduler / queue | M | point gouverné présent |
+| `staleness.ts` | Staleness propagator API | M | point gouverné présent |
+| `quality-review.ts` | Quality review (post-conditions) | M | point gouverné présent |
+| `deliverable-tracking.ts` | Tracking livrables (SLA) | M | point gouverné présent |
+| `connectors.ts` | Connectors monitoring | M | point gouverné présent |
 
 ---
 
@@ -127,27 +128,27 @@ Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE
 
 | Router | Rôle | Tier | Statut |
 |---|---|---|---|
-| `client.ts` | CRM clients | G | bypass |
-| `crm.ts` | CRM extended | G | bypass |
-| `contract.ts` | Contrats | G | bypass |
-| `commission.ts` | Commissions | G | bypass |
-| `payment.ts` | Paiements | G | bypass |
-| `mobile-money.ts` | Mobile money integration | G | bypass |
-| `value-report.ts` | Value reports clients | G | bypass |
-| `upsell.ts` | Upsell detection | G | bypass |
-| `market-pricing.ts` | Pricing marché | G | bypass |
-| `onboarding.ts` | Onboarding flows | G | bypass |
-| `brief-ingest.ts` | PDF brief ingestion | G | bypass |
-| `crm-contacts.ts` | Contacts CRM (lane opérateur) | G | governed + operator |
-| `escrow-arbitration.ts` | Séquestre + payouts mobile money (Guilde, ADR-0116) | G | governed (emitIntent) |
-| `market-cost.ts` | MarketCostSnapshot par période (ADR-0099) | G | governed |
-| `mcp-billing.ts` | Metering MCP billable + relevés gelés + console api-billing (ADR-0092) | G | admin |
-| `mission-quote.ts` | Devis missions Guilde (ADR-0118) | G | governed |
-| `monetization.ts` | Abonnements deux-rails + grille /pricing + validation manuelle WhatsApp (ADR-0092) | G | governed + admin + public |
-| `operations-overview.ts` | Traque opérationnelle unifiée `/console/operations` (Vague 7) — lecture composée | G | operator (read-only) |
-| `production.ts` | Acteur Production — specs livrable + droits d'usage + devis AICP (ADR-0111) | G | governed (emitIntent) |
-| `referral.ts` | Parrainage manual-first (ADR-0157) : code self-service + récompenses appliquées à la main | G | admin (manual-first) |
-| `thot.ts` | Coût d'action atomisé par marché (ADR-0093) : estimateur + ZoneIndex + ProviderCostRate | G | governed (emitIntent) |
+| `client.ts` | CRM clients | G | point gouverné présent |
+| `crm.ts` | CRM extended | G | point gouverné présent |
+| `contract.ts` | Contrats | G | point gouverné présent |
+| `commission.ts` | Commissions | G | point gouverné présent |
+| `payment.ts` | Paiements | G | appels à suivre |
+| `mobile-money.ts` | Mobile money integration | G | point gouverné présent |
+| `value-report.ts` | Value reports clients | G | point gouverné présent |
+| `upsell.ts` | Upsell detection | G | point gouverné présent |
+| `market-pricing.ts` | Pricing marché | G | lecture seule |
+| `onboarding.ts` | Onboarding flows | G | point gouverné présent |
+| `brief-ingest.ts` | PDF brief ingestion | G | point gouverné présent |
+| `crm-contacts.ts` | Contacts CRM (lane opérateur) | G | point gouverné présent |
+| `escrow-arbitration.ts` | Séquestre + payouts mobile money (Guilde, ADR-0116) | G | point gouverné présent |
+| `market-cost.ts` | MarketCostSnapshot par période (ADR-0099) | G | point gouverné présent |
+| `mcp-billing.ts` | Metering MCP billable + relevés gelés + console api-billing (ADR-0092) | G | appels à suivre |
+| `mission-quote.ts` | Devis missions Guilde (ADR-0118) | G | point gouverné présent |
+| `monetization.ts` | Abonnements deux-rails + grille /pricing + validation manuelle WhatsApp (ADR-0092) | G | point gouverné présent |
+| `operations-overview.ts` | Traque opérationnelle unifiée `/console/operations` (Vague 7) — lecture composée | G | lecture seule |
+| `production.ts` | Acteur Production — specs livrable + droits d'usage + devis AICP (ADR-0111) | G | point gouverné présent |
+| `referral.ts` | Parrainage manual-first (ADR-0157) : code self-service + récompenses appliquées à la main | G | appels à suivre |
+| `thot.ts` | Coût d'action atomisé par marché (ADR-0093) : estimateur + ZoneIndex + ProviderCostRate | G | point gouverné présent |
 
 ---
 
@@ -155,21 +156,21 @@ Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE
 
 | Router | Rôle | Tier | Statut |
 |---|---|---|---|
-| `guilde.ts` | Guild creators | G | bypass |
-| `guild-tier.ts` | Tiers APPRENTI/COMPAGNON/MAÎTRE/ASSOCIÉ | G | bypass |
-| `guild-org.ts` | Organisations partenaires | G | bypass |
-| `club.ts` | Club ambassadeurs | G | bypass |
-| `event.ts` | Events networking | G | bypass |
-| `membership.ts` | Memberships | G | bypass |
-| `matching.ts` | Match creator ↔ mission | G | bypass |
-| `learning.ts` | Académie / learning | G | bypass |
-| `boutique.ts` | Boutique formation | G | bypass |
-| `quick-intake.ts` | Pipeline intake (rev 9, 30KB) | G | governed (V5+) |
-| `ingestion.ts` | Ingestion data externe | G | bypass |
-| `imhotep.ts` | Orchestrateur Crew Programs (Phase 14, ADR-0019) | G | governed (emitIntent) |
-| `laguilde.ts` | Portail public Guilde (ADR-0098) : mur missions, dépôt marque, inscriptions, modération | G | governed + public |
-| `mission-applications.ts` | Candidatures missions (Vague 7) — fin du premier-arrivé | G | governed |
-| `talent-services.ts` | Gigs offre-side à prix fixe (ADR-0117) | G | governed + public |
+| `guilde.ts` | Guild creators | G | point gouverné présent |
+| `guild-tier.ts` | Tiers APPRENTI/COMPAGNON/MAÎTRE/ASSOCIÉ | G | point gouverné présent |
+| `guild-org.ts` | Organisations partenaires | G | point gouverné présent |
+| `club.ts` | Club ambassadeurs | G | point gouverné présent |
+| `event.ts` | Events networking | G | point gouverné présent |
+| `membership.ts` | Memberships | G | point gouverné présent |
+| `matching.ts` | Match creator ↔ mission | G | point gouverné présent |
+| `learning.ts` | Académie / learning | G | point gouverné présent |
+| `boutique.ts` | Boutique formation | G | point gouverné présent |
+| `quick-intake.ts` | Pipeline intake (rev 9, 30KB) | G | point gouverné présent |
+| `ingestion.ts` | Ingestion data externe | G | point gouverné présent |
+| `imhotep.ts` | Orchestrateur Crew Programs (Phase 14, ADR-0019) | G | appels à suivre |
+| `laguilde.ts` | Portail public Guilde (ADR-0098) : mur missions, dépôt marque, inscriptions, modération | G | point gouverné présent |
+| `mission-applications.ts` | Candidatures missions (Vague 7) — fin du premier-arrivé | G | point gouverné présent |
+| `talent-services.ts` | Gigs offre-side à prix fixe (ADR-0117) | G | point gouverné présent |
 
 ---
 
@@ -177,12 +178,12 @@ Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE
 
 | Router | Rôle | Tier | Statut |
 |---|---|---|---|
-| `messaging.ts` | Messages cross-portail (garde participant-ou-marque ADR-0166) | G | bypass |
-| `notification.ts` | Notifications + alerts | G | bypass |
-| `anubis.ts` | Orchestrateur Comms — broadcast, ad networks, credentials, OAuth device flow, connexions sociales + sync (ADR-0020/0021/0128) | G | governed (emitIntent) |
-| `blog.ts` | CMS « Notes de cabinet » site public — CRUD éditorial console Anubis, direct-`db` documenté | G | bypass assumé (éditorial) |
-| `commerce.ts` | Boutique Shopify par marque (ADR-0132) : status zéro-secret, sync ventes gouvernée, disconnect | G | governed |
-| `newsletter.ts` | Newsletter (abonnés, envois) | G | bypass (operator + scoped) |
+| `messaging.ts` | Messages cross-portail (garde participant-ou-marque ADR-0166) | G | point gouverné présent |
+| `notification.ts` | Notifications + alerts | G | point gouverné présent |
+| `anubis.ts` | Orchestrateur Comms — broadcast, ad networks, credentials, OAuth device flow, connexions sociales + sync (ADR-0020/0021/0128) | G | appels à suivre |
+| `blog.ts` | CMS « Notes de cabinet » site public — CRUD éditorial console Anubis, direct-`db` documenté | G | appels à suivre |
+| `commerce.ts` | Boutique Shopify par marque (ADR-0132) : status zéro-secret, sync ventes gouvernée, disconnect | G | point gouverné présent |
+| `newsletter.ts` | Newsletter (abonnés, envois) | G | appels à suivre |
 
 ---
 
@@ -190,19 +191,19 @@ Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE
 
 | Router | Rôle | Tier | Statut |
 |---|---|---|---|
-| `auth.ts` | Authentication | G | none |
-| `operator.ts` | Multi-operator admin | G | bypass |
-| `system-config.ts` | System settings | G | bypass |
-| `translation.ts` | i18n | G | none |
-| `cockpit-router.ts` | Cockpit-specific aggregator (piliers scopés ADR-0166) | G | bypass |
-| `accounts.ts` | Console Superviseur (Vague 7) : rôles comptes + `createBrandLogin` (ADR-0140, payload redacté) | G | governed + admin |
-| `brand-mcp.ts` | Clés MCP scopées à la marque — surface founder self-service (ADR-0145) | G | bypass (protected) |
-| `canon-sync.ts` | Push canon UPgraders → base live (Vague 10 ; god-mode best-effort C3) | G | governed + admin |
-| `feedback.ts` | Remontées testeurs (ADR-0155) : dépôt + inbox opérateur | G | governed + operator |
-| `governance.ts` | Audit trail IntentEmission + compensating intents (anticipé §11 — livré) | G | governed + admin |
-| `phase18-residuals.ts` | Formulaire résiduels Phase 18 (`upsert/resolve/dismiss/list/stats`) | G | bypass (formulaire opérateur) |
-| `prod-ops.ts` | Cycle prod en 3 temps (skill `nefer-ops`) : registre seeds + déclenche Coolify + crons/finaliseur gardés ; zéro secret exposé | G | admin |
-| `xlsx-parser.ts` | Parsing XLSX pur (import sheets Phase 18) — sans persistance | G | public (parsing pur) |
+| `auth.ts` | Authentication | G | appels à suivre |
+| `operator.ts` | Multi-operator admin | G | point gouverné présent |
+| `system-config.ts` | System settings | G | point gouverné présent |
+| `translation.ts` | i18n | G | point gouverné présent |
+| `cockpit-router.ts` | Cockpit-specific aggregator (piliers scopés ADR-0166) | G | lecture seule |
+| `accounts.ts` | Console Superviseur (Vague 7) : rôles comptes + `createBrandLogin` (ADR-0140, payload redacté) | G | point gouverné présent |
+| `brand-mcp.ts` | Clés MCP scopées à la marque — surface founder self-service (ADR-0145) | G | appels à suivre |
+| `canon-sync.ts` | Push canon UPgraders → base live (Vague 10 ; god-mode best-effort C3) | G | point gouverné présent |
+| `feedback.ts` | Remontées testeurs (ADR-0155) : dépôt + inbox opérateur | G | point gouverné présent |
+| `governance.ts` | Audit trail IntentEmission + compensating intents (anticipé §11 — livré) | G | point gouverné présent |
+| `phase18-residuals.ts` | Formulaire résiduels Phase 18 (`upsert/resolve/dismiss/list/stats`) | G | appels à suivre |
+| `prod-ops.ts` | Cycle prod en 3 temps (skill `nefer-ops`) : registre seeds + déclenche Coolify + crons/finaliseur gardés ; zéro secret exposé | G | appels à suivre |
+| `xlsx-parser.ts` | Parsing XLSX pur (import sheets Phase 18) — sans persistance | G | appels à suivre |
 
 ---
 
@@ -222,7 +223,7 @@ Tous les routers absorbés par les 8 sous-systèmes. Cas notables :
 
 ## 10. Plan d'action governance — migration des bypass
 
-**Recompte 2026-07-21** : **104/122 routers sur la voie gouvernée** (`governedProcedure` ou `mestor.emitIntent` présent), **7 query-only**, **11 à mutations directes** — tous des cas documentés : `auth` (compte, hors métier) · `blog` (éditorial direct-db assumé) · `brand-mcp` (clés self-service) · `error-vault` (collecteur) · `footprint` (public éphémère) · `mcp-billing` (metering admin) · `newsletter` · `payment` (webhooks/init — cf. Vague 4 ci-dessous) · `phase18-residuals` (formulaire) · `referral` (manual-first ADR-0157) · `xlsx-parser` (parsing pur sans DB). Les gardes d'ownership par marque sont par ailleurs verrouillées CI sur les 122 (ADR-0166, `strategy-ownership-guard.test.ts`).
+**Recompte statique 2026-10-02** : **100/123 routers** portent un appel `emitIntent` ou `governedProcedure` hors commentaires ; **8** n'ont aucune mutation déclarée ; **15** nécessitent de suivre les appels délégués et exceptions. Ce scan ne constitue pas un taux de conformité. Les gardes CI par stratégie restent nécessaires, ainsi que la lecture des chemins exécutés. Les vagues ci-dessous sont le plan historique de migration, à confronter au code avant de relancer un chantier.
 
 Historique (recensement pré-Phase 19) : 6 routers governed sur 71 (8.5 %). Cible Phase 3 : **100 % des mutations métier passent par `mestor.emitIntent`**.
 

@@ -1,5 +1,13 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
+## Couverture documentaire des extensions de marque — 2026-10-02
+
+- `brand-bible`, `brand-theme` et `brand-tier-transition` n'ont pas de manifest propre.
+  Vérifier leur couverture dans les manifests de leurs services parents et les
+  catalogues existants ; ajouter uniquement les capacités manquantes aux parents,
+  sans créer de Neter. Déclencheur : prochaine passe d'admission/compilation de marque.
+  Le relevé physique 119/122 n'est pas un taux de conformité.
+
 ## Intégration des marques — 2026-10-02 (ADR-0193)
 
 - **Admission ADVE des marques issues de La Barre** : les sources sont consultables,

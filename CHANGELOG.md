@@ -2,6 +2,12 @@
 
 ## v6.27.390 — fix(portfolio): ouvrir les fichiers natifs des assets (2026-10-02)
 
+Audit de cohérence après livraison : l'inventaire GLORY lit désormais le registre
+réel (150 outils) ; le scan de fichiers en omettait dix et désalignait des champs.
+Catalogue des intents régénéré, rôles des extensions de marque classifiés,
+comptages datés et statut Argos aligné sur l'ADR-0100 amendée. Ces relevés statiques
+ne déclarent aucune capacité supplémentaire validée en production.
+
 **Les logos, visuels et fichiers déjà hébergés retrouvent leurs aperçus et leurs liens.**
 
 - La recette en production a révélé que les chemins internes étaient exclus par

@@ -1,12 +1,14 @@
 # SERVICE-MAP — Tous les services backend mappés sur APOGEE
 
-**118 répertoires** sous `src/server/services/` (recompte 2026-07-21) : **117 services métier** classifiés par **Sous-système APOGEE** + **Tier**, et **1 répertoire helper** (`utils/`) hors classification. La reclassification du delta post-Phase 19 (26 services apparus entre les recomptes 2026-07-11 et 2026-07-21) est intégrée aux tables ci-dessous — la section « À classifier » est refermée. Le **Governor Neteru** indique sous quelle gouvernance le service tombe : MESTOR / ARTEMIS / SESHAT / THOT / **PTAH** (Phase 9) / **IMHOTEP** (Phase 14, ADR-0019) / **ANUBIS** (Phase 15, ADR-0020) / INFRASTRUCTURE.
+**122 répertoires** sous `src/server/services/` (recompte 2026-10-02) : **121 services métier** et **1 helper** (`utils/`). Les rôles restent classifiés par sous-système ci-dessous. Le recensement des chemins est généré dans [CODE-MAP.md](CODE-MAP.md) ; ces nombres ne mesurent pas la maturité ni l'exécution réelle.
+
+Ajouts au relevé du 21 juillet : `brand-bible/` (composition du livre de marque), `brand-theme/` (thème des livrables), `brand-tier-transition/` (transition gouvernée de palier). Ces trois modules sont des extensions de services existants, sans nouveau Neter.
 
 **Cap APOGEE atteint — 7/7 Neteru actifs** depuis Phase 14/15.
 
 Source de vérité : `find src/server/services -mindepth 1 -maxdepth 1 -type d`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
-Phase 2.6 du REFONTE-PLAN exige un `manifest.ts` co-localisé pour chaque service métier — **objectif atteint et re-fermé 2026-07-21** : **118/118 manifests** (les 3 manquants `referral/` · `tester-feedback/` · `value-statement/` comblés à la reclassification ; `utils/` en a un aussi depuis). Audit `npm run manifests:audit` clean, zéro warn.
+Couverture physique des manifests au 2026-10-02 : **119/122 répertoires**. Les trois extensions ci-dessus ne portent pas de manifest co-localisé ; leur rattachement aux services parents reste à vérifier dans le registre de gouvernance. Le relevé 118/118 du 2026-07-21 est historique et ne décrit plus tout le répertoire.
 
 ---
 
@@ -16,14 +18,14 @@ Phase 2.6 du REFONTE-PLAN exige un `manifest.ts` co-localisé pour chaque servic
 |---|---|---|---|
 | Propulsion (briefs) | M | 19 (incl. `deliverable-orchestrator/` Phase 17b + acteurs Phase 24) | ARTEMIS (+ INFRASTRUCTURE acteurs) |
 | Propulsion (forge) | M | 1 (`ptah/` Phase 9 ✅ shipped) | **PTAH** (ADR-0009) |
-| Guidance | M | 21 | MESTOR (+ INFRASTRUCTURE) |
-| Telemetry | M | 25 | SESHAT (+ INFRASTRUCTURE / THOT) |
+| Guidance | M | 24 | MESTOR (+ INFRASTRUCTURE) |
+| Telemetry | M | 26 | SESHAT (+ INFRASTRUCTURE / THOT) |
 | Sustainment | M | 13 | THOT / MESTOR / INFRASTRUCTURE |
 | Operations | G | 15 | THOT (extension) / INFRASTRUCTURE |
 | Crew Programs | G | 6 satellites + `imhotep/` orchestrateur (Phase 14 ✅) | **IMHOTEP** (ADR-0019, supersedes ADR-0017) |
 | Comms | G | 2 satellites + `anubis/` orchestrateur (Phase 15 ✅) | **ANUBIS** (ADR-0020, supersedes ADR-0018) |
 | Admin | G | 13 | INFRASTRUCTURE |
-| **TOTAL** | | **117 services métier** + 1 helper (`utils/`) = **118 répertoires** | 7 Neteru actifs + INFRASTRUCTURE |
+| **TOTAL** | | **121 services métier** + 1 helper (`utils/`) = **122 répertoires** | 7 Neteru actifs + INFRASTRUCTURE |
 
 ### Imhotep — service Phase 14 ✅ shipped (ADR-0019)
 
@@ -123,12 +125,15 @@ Génèrent la poussée vers l'apogée. **19 services briefs (incl. `deliverable-
 
 ---
 
-## 2. Guidance (21 services — Mission Tier)
+## 2. Guidance (24 services — Mission Tier)
 
 Dirigent la trajectoire. Décisions, validations, plans.
 
 | Service | Rôle guidance | Governor | Manifest |
 |---|---|---|---|
+| `brand-bible/` | Composition déterministe du livre de marque, lecture seule (ADR-0185) | Extension de Guidance | sans manifest propre |
+| `brand-theme/` | Thème de rendu dérivé des assets et du pilier D (ADR-0169) | Extension de Guidance | sans manifest propre |
+| `brand-tier-transition/` | Handler de transition de palier après gate (ADR-0167) | MESTOR | sans manifest propre |
 | `mestor/` | Computer de guidage central — Intent dispatcher (`emitIntent`) | MESTOR | partiel (`intents.ts:179`) |
 | `pillar-gateway/` | Écriture gouvernée des Pillars (`writePillarAndScore`) | MESTOR | ✅ existant |
 | `pillar-maturity/` | Évaluation maturity N0-N6 + assessor | MESTOR | ✅ existant |
@@ -159,9 +164,9 @@ Dirigent la trajectoire. Décisions, validations, plans.
 
 ---
 
-## 3. Telemetry (25 services — Mission Tier)
+## 3. Telemetry (26 services — Mission Tier)
 
-Observent, mesurent, archivent. **25 répertoires** ; la table contient 3 lignes supplémentaires (`seshat/tarsis/connector.ts` · `seshat/scan-rate-limit.ts` · `seshat/entity-gate/`) qui sont des **sous-modules de `seshat/`** — documentés ici pour la traçabilité, hors compte.
+Observent, mesurent, archivent. **26 répertoires** ; la table contient 3 lignes supplémentaires (`seshat/tarsis/connector.ts` · `seshat/scan-rate-limit.ts` · `seshat/entity-gate/`) qui sont des **sous-modules de `seshat/`** — documentés ici pour la traçabilité, hors compte.
 
 | Service | Rôle telemetry | Governor | Manifest |
 |---|---|---|---|
