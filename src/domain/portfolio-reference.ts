@@ -29,6 +29,21 @@ export function readPortfolioReferences(value: unknown): PortfolioReference[] {
   return parsed.success ? parsed.data : [];
 }
 
+/** Browser links to native files may be root-relative. Never accept credentials,
+ * executable schemes, protocol-relative hosts or ambiguous backslashes. */
+export function portfolioFileUrl(value: string | null | undefined): string | null {
+  if (!value || /[\u0000-\u0020\\]/.test(value)) return null;
+  try {
+    if (value.startsWith("/")) {
+      const decoded = decodeURIComponent(value);
+      if (decoded.startsWith("//") || decoded.includes("\\")) return null;
+      return value;
+    }
+    const url = new URL(value);
+    return ["http:", "https:"].includes(url.protocol) && !url.username && !url.password ? url.href : null;
+  } catch { return null; }
+}
+
 export const PORTFOLIO_KIND_LABELS: Record<string, string> = {
   CORPORATE: "Groupe", MASTER_BRAND: "Marque", STANDALONE_BRAND: "Marque",
   REGIONAL_CLUSTER: "Région", REGIONAL_BRAND: "Marché", PRODUCT_LINE: "Gamme",

@@ -1,5 +1,17 @@
 # Changelog — La Fusee
 
+## v6.27.390 — fix(portfolio): ouvrir les fichiers natifs des assets (2026-10-02)
+
+**Les logos, visuels et fichiers déjà hébergés retrouvent leurs aperçus et leurs liens.**
+
+- La recette en production a révélé que les chemins internes étaient exclus par
+  les cartes et la fiche de contenu. Une résolution partagée les accepte, sans
+  accepter de protocole exécutable, d’hôte implicite ni d’identifiants dans le lien.
+- Une ancienne génération en échec est signalée dans sa fiche. Son historique est
+  conservé. Le pied de navigation affiche la version courante de l’application.
+- Aucune modification des stratégies ou des assets enregistrés ; contrôle des
+  liens et de l’affichage avec le corpus SPAWT dans le portefeuille natif.
+
 ## v6.27.389 — feat(portfolio): dossiers de marque reliés et ventilation manuelle (2026-10-02)
 
 **Les éléments du portefeuille retrouvent leurs sources et leurs dossiers de travail.**

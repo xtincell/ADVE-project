@@ -7,6 +7,7 @@ import { PanelLeftClose, PanelLeft, Star, Home } from "lucide-react";
 import type { NavGroup, NavItem } from "./types";
 import { resolveActiveHref, navItemLabel, navItemSublabel } from "./nav-active";
 import { useLocale } from "@/lib/i18n/locale-context";
+import { APP_VERSION } from "@/lib/version";
 
 interface SidebarProps {
   navGroups: NavGroup[];
@@ -241,7 +242,7 @@ export function Sidebar({ navGroups, portalAccentVar, headerContent, mobile = fa
         </Link>
         {!collapsed ? (
           <p className="mt-1 px-2 text-[9px] text-foreground-muted/40">
-            La Fusée v5.0
+            La Fusée v{APP_VERSION}
           </p>
         ) : null}
       </div>

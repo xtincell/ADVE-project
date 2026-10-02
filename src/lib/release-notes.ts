@@ -34,6 +34,15 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.390",
+    date: "2026-10-02",
+    headline: "Vos fichiers de marque accessibles",
+    highlights: [
+      { emoji: "🖼️", title: "Retrouvez les visuels existants", body: "Le portefeuille affiche les logos et visuels déjà hébergés dans La Fusée. Leurs fiches permettent aussi d’ouvrir le fichier associé." },
+      { emoji: "🔎", title: "Un historique lisible", body: "Une tentative de génération échouée est signalée lorsque vous ouvrez sa fiche." },
+    ],
+  },
+  {
     version: "6.27.389",
     date: "2026-10-02",
     headline: "Les dossiers de vos marques réunis",

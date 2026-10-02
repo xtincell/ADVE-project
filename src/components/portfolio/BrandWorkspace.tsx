@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowUpRight, ArrowRight, Search, Layers3, FolderOpen, ImageIcon, FileText, AlertCircle, RefreshCw, Link2 } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { useStrategy } from "@/components/cockpit/strategy-context";
-import { PORTFOLIO_KIND_LABELS, PORTFOLIO_LIFECYCLE_LABELS, readPortfolioReferences } from "@/domain/portfolio-reference";
+import { PORTFOLIO_KIND_LABELS, PORTFOLIO_LIFECYCLE_LABELS, portfolioFileUrl, readPortfolioReferences } from "@/domain/portfolio-reference";
 import type { PortfolioWorkspace } from "@/server/services/brand-node/workspace";
 import type { WorkspaceAsset } from "@/domain/portfolio-barre";
 import { AssetContent } from "./AssetContent";
@@ -56,8 +56,8 @@ function WorkspaceContent({ data, refresh, refreshing }: { data: PortfolioWorksp
   const assets = useMemo(() => {
     const native: WorkspaceAsset[] = data.strategies.flatMap((s) => s.brandAssets.map((a) => ({
       id: a.id, nativeId: a.id, name: a.name, brand: s.name, kind: a.kind.replace(/_/g, " ").toLowerCase(), state: label(a.state),
-      preview: a.fileUrl && (/^https?:\/\//.test(a.fileUrl) || /^data:image\//.test(a.fileUrl)) ? a.fileUrl : null,
-      url: a.fileUrl && /^https?:\/\//.test(a.fileUrl) ? a.fileUrl : null,
+      preview: portfolioFileUrl(a.fileUrl) ?? (a.fileUrl?.startsWith("data:image/") ? a.fileUrl : null),
+      url: portfolioFileUrl(a.fileUrl),
       source: "La Fusée", note: [data.inheritedFrom?.strategyId === s.id ? `Asset du socle partagé de ${data.inheritedFrom.name}.` : "", a.staleAt ? "À revoir : la stratégie a changé depuis sa création." : ""].filter(Boolean).join(" "),
     })));
     return [...native, ...(barre?.assets ?? [])];

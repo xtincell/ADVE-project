@@ -2,6 +2,7 @@
 
 import { trpc } from "@/lib/trpc/client";
 import { Modal } from "@/components/shared/modal";
+import { portfolioFileUrl } from "@/domain/portfolio-reference";
 
 function Content({ value }: { value: unknown }) {
   if (value == null || value === "") return null;
@@ -13,14 +14,18 @@ function Content({ value }: { value: unknown }) {
 /** Existing vault read API: load the full payload only when a person opens it. */
 export function AssetContent({ assetId, onClose }: { assetId: string; onClose: () => void }) {
   const asset = trpc.brandVault.get.useQuery({ id: assetId });
+  const fileUrl = portfolioFileUrl(asset.data?.fileUrl);
+  const content = asset.data?.content;
+  const failed = content != null && typeof content === "object" && !Array.isArray(content) && content.status === "FAILED";
   return <Modal open onClose={onClose} title={asset.data?.name ?? "Contenu de l’asset"} size="lg">
     {asset.isLoading && <p role="status" className="text-sm text-foreground-secondary">Lecture du contenu…</p>}
     {asset.error && <p role="alert" className="text-sm text-error">{asset.error.message}</p>}
     {asset.data && <div className="space-y-5">
       <p className="text-xs text-foreground-secondary">Version {asset.data.version} · conservée dans La Fusée</p>
+      {failed && <p role="status" className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning">Cette tentative de génération a échoué. Elle est conservée pour son historique.</p>}
       {asset.data.summary && <p className="text-sm leading-relaxed">{asset.data.summary}</p>}
       {asset.data.content ? <Content value={asset.data.content} /> : <p className="text-sm text-foreground-secondary">Aucun contenu textuel enregistré dans cette fiche.</p>}
-      {asset.data.fileUrl && /^https?:\/\//.test(asset.data.fileUrl) && <a className="inline-block text-sm text-accent underline" href={asset.data.fileUrl} target="_blank" rel="noreferrer">Ouvrir le fichier associé</a>}
+      {fileUrl && <a className="inline-block text-sm text-accent underline" href={fileUrl} target="_blank" rel="noreferrer">Ouvrir le fichier associé</a>}
     </div>}
   </Modal>;
 }

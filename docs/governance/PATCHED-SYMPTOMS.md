@@ -30,6 +30,11 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+Recette portfolio du 2026-10-02 : le pied de navigation conservait `v5.0` en dur.
+Il lit désormais `APP_VERSION` (v6.27.390). Cause : une surface d’affichage restée
+hors de la factorisation de version. Le correctif des chemins d’assets introduits
+avec le portfolio est documenté au CHANGELOG, sans dette de donnée supplémentaire.
+
 | Date | Symptôme patché (où / quoi) | Commit | Hypothèse cause racine | Dette liée (RESIDUAL-DEBT) |
 |---|---|---|---|---|
 | 2026-07-27 | **Test de gouvernance vert ou rouge selon les clés d'API de la machine — `llm-routing.test.ts` rouge sur arbre propre** (3 cas sur 5) : il asseyait la matrice de routage sur `routeModel`, qui applique la décision **puis descend le catalogue** selon les providers réellement configurés. Sur un environnement où seule `OPENAI_API_KEY` est posée, « tier S → opus » retombe légitimement sur `gpt-4o-mini` — comportement runtime CORRECT, assertion FAUSSE. Le test passait en CI (aucune clé) et échouait en local : il protégeait en réalité l'absence de clés, pas la matrice. **Correction de ce constat le jour même (v6.27.338)** : la première réparation avait extrait un `idealModel(ctx)` pour asseoir la matrice — mais l'inspection suivante a montré que **cette matrice était morte ET périmée** (zéro appelant, doctrine « tier S → Opus, Ollama en tier C » contredisant la cascade réelle Ollama Cloud → OpenRouter → Anthropic). `idealModel` et `routeModel` ont donc été SUPPRIMÉS avec les deux modules de routage morts ; le test a été réécrit sur `resolveTextProviderOrder`/`isPremiumMode`, les fonctions pures qui décident vraiment. L'état final ne contient ni `idealModel` ni `routeModel`. | `fix(seshat)` v6.27.337 | **Classe (nouvelle)** : un test qui asserte une **décision** à travers une fonction qui mêle décision **et** disponibilité de l'environnement mesure l'environnement, pas le code — et son verdict s'inverse selon la machine. Signal : un test de gouvernance qui lit une fonction dont le résultat dépend de `process.env` sans le stubber. Remède : extraire la décision pure et l'asserter elle ; garder un cas séparé, à assertion *relationnelle* (ici « jamais plus cher que la décision »), pour le chemin runtime. | — (clos par le fix) |
