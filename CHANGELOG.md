@@ -1,5 +1,16 @@
 # Changelog — La Fusee
 
+## v6.27.388 — fix(navigation): préserver le contexte des liens de portefeuille (2026-10-02)
+
+**La navigation reste active lorsqu’un lien porte son équipe dans l’URL.**
+
+- La résolution de l’entrée active compare le chemin sans paramètres et conserve
+  l’URL complète pour naviguer. La racine ne capture pas toutes ses sous-pages.
+- Recette dans le portefeuille et test du paramètre d’équipe, de la racine et d’une
+  route inconnue. Aucun changement de permission.
+
+
+
 ## v6.27.387 — fix(cockpit): V5 « un seul palier » — l'''officiel fait foi partout (2026-07-31)
 
 Ligne du registre RESIDUAL-DEBT ouverte depuis l'''ADR-0167 : `Strategy.apogeeTier` est un

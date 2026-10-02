@@ -17,7 +17,8 @@ import type { NavGroup, NavItem } from "./types";
  * portail — mais ses `activePrefixes` matchent normalement.
  */
 export function resolveActiveHref(navGroups: NavGroup[], pathname: string): string | null {
-  const basePath = navGroups[0]?.items[0]?.href || "/";
+  const routePath = (href: string) => href.split(/[?#]/)[0]!;
+  const basePath = routePath(navGroups[0]?.items[0]?.href || "/");
 
   const prefixMatches = (prefix: string): boolean => {
     if (prefix === basePath) return pathname === basePath;
@@ -28,7 +29,7 @@ export function resolveActiveHref(navGroups: NavGroup[], pathname: string): stri
   let bestLen = -1;
   for (const group of navGroups) {
     for (const item of group.items) {
-      for (const prefix of [item.href, ...(item.activePrefixes ?? [])]) {
+      for (const prefix of [item.href, ...(item.activePrefixes ?? [])].map(routePath)) {
         if (prefixMatches(prefix) && prefix.length > bestLen) {
           bestLen = prefix.length;
           bestHref = item.href;
