@@ -149,3 +149,12 @@ Avant tout ajout/modif d'un champ/surface/livrable :
 ## 8. Maintenance
 
 Document hand-authored (comme `DIMENSIONS.md`). Arêtes dispersées (`variable-bible.feedsInto`, `staleness-propagator.PILLAR_DEPENDENCIES`, `rtis-cascade`, composers, `SECTION_REGISTRY`, entrées A1-A12). **Améliorations futures** : (a) `scripts/gen-propagation-map.ts` qui moissonne `feedsInto`+`PILLAR_DEPENDENCIES` ; (b) le test CI C5 (gateway-only) qui rendrait Q3 enforced. Ré-auditer ce registre quand une entrée, un transformer, un composer, un Glory tool ou une section Oracle est ajouté/modifié.
+
+## Raccordement des dossiers existants — 2026-10-02 (ADR-0193)
+
+`BrandNode.sourceRefs` → `brandNode.workspace` → pages portfolio : les identités
+sont écrites par les commandes gouvernées BrandNode ; le contenu La Barre est lu
+sans le recopier dans les stratégies. Les références Strategy passent le contrôle
+d’accès natif. Le lecteur ne modifie ni validation, ni ADVE, ni score, ni campagne.
+Une identité client/marque contradictoire reste une anomalie visible. Une source
+injoignable reste indisponible, et ne produit pas un ensemble vide réputé complet.

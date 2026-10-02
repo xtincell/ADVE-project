@@ -1,3 +1,4 @@
+import type { PortfolioReference } from "@/domain/portfolio-reference";
 import { ADVE_STORAGE_KEYS, type BrandTier } from "@/domain";
 
 /**
@@ -820,6 +821,7 @@ export type Intent =
       clusterTag?: string | null;
       /** Optional link to existing Strategy (operationnel REGIONAL_BRAND/SKU). */
       attachStrategyId?: string | null;
+      sourceRefs?: PortfolioReference[];
     }
   | {
       kind: "OPERATOR_UPDATE_BRAND_NODE";
@@ -835,6 +837,7 @@ export type Intent =
         lifecycle?: string;
         inheritanceLocked?: boolean;
         pillarOverrides?: unknown;
+        sourceRefs?: PortfolioReference[];
       };
     }
   | {

@@ -1,5 +1,13 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## Raccordement opérationnel du portefeuille — 2026-10-02
+
+ADR-0193 étend les BrandNode et les pages portfolio existants : identités externes,
+lecture vivante des dossiers et raccordements manuels. Il ne crée ni agent ni
+modèle concurrent et ne clôt pas les noyaux ADVE, la parité de tous les parcours
+ou la release transversale Shinkiro. Réception : tests de conservation et de
+relance, interface avec données réelles en recette, puis reçu d’import en production.
+
 ## Context
 
 La Fusée est un **Industry OS** (codé comme tel) bâti sur la méthode ADVE/RTIS, dont la vision est de transformer les marques en culte/phénomène culturel via l'accumulation de superfans qui font bouger la fenêtre d'Overton. Il sert 4 portails (Console/UPgraders, Agency, Creator/Freelance, Cockpit/brands) et un produit phare : l'**Oracle** (livrable conseil dynamique modulaire).

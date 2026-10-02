@@ -11,6 +11,8 @@
  */
 
 import { z } from "zod";
+import { PortfolioReferencesSchema } from "@/domain/portfolio-reference";
+import { getPortfolioWorkspace } from "@/server/services/brand-node/workspace";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
@@ -132,6 +134,7 @@ export const brandNodeRouter = createTRPCRouter({
       countryCode: z.string().length(2).nullable().optional(),
       clusterTag: z.string().nullable().optional(),
       attachStrategyId: StringId.nullable().optional(),
+      sourceRefs: PortfolioReferencesSchema.optional(),
     }),
   }).mutation(async ({ ctx, input }) => {
     // Anti-IDOR (round-9) : le caller ne peut créer un nœud QUE dans un arbre
@@ -153,6 +156,7 @@ export const brandNodeRouter = createTRPCRouter({
         countryCode: input.countryCode ?? null,
         clusterTag: input.clusterTag ?? null,
         attachStrategyId: input.attachStrategyId ?? null,
+        sourceRefs: input.sourceRefs,
       });
       return { ok: true as const, node };
     } catch (err) {
@@ -177,6 +181,7 @@ export const brandNodeRouter = createTRPCRouter({
         nodeRole: z.array(z.string()).optional(),
         lifecycle: z.string().optional(),
         inheritanceLocked: z.boolean().optional(),
+        sourceRefs: PortfolioReferencesSchema.optional(),
       }).passthrough(),
     }),
   }).mutation(async ({ ctx, input }) => {
@@ -280,6 +285,21 @@ export const brandNodeRouter = createTRPCRouter({
     }
   }),
 
+  /** Read model of existing nodes, native records and source references. */
+  workspace: protectedProcedure.input(z.object({ nodeId: StringId })).query(async ({ ctx, input }) => {
+    await assertNodeAccess(ctx.session.user.id, input.nodeId);
+    const node = await db.brandNode.findUniqueOrThrow({ where: { id: input.nodeId } });
+    const opCtx = await getOperatorContext(ctx.session.user.id);
+    // A portfolio can contain several clients. Ancestor access for a founder
+    // must never grant the agency-wide workspace.
+    if (opCtx.role !== "ADMIN" && opCtx.operatorId !== node.operatorId) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Cet espace est réservé à votre équipe." });
+    }
+    const allowedBarre = opCtx.role === "ADMIN" ||
+      (process.env.PORTFOLIO_BARRE_OPERATOR_IDS ?? "").split(",").includes(node.operatorId);
+    return getPortfolioWorkspace(node, { allowBarre: allowedBarre, actor: opCtx });
+  }),
+
   // ── Read queries ─────────────────────────────────────────────────────
   get: protectedProcedure
     .input(z.object({ nodeId: StringId }))
@@ -376,10 +396,11 @@ export const brandNodeRouter = createTRPCRouter({
       await assertNodeAccess(ctx.session.user.id, input.nodeId);
       const ancestorIds = await getAncestorIds(input.nodeId);
       if (ancestorIds.length === 0) return [];
-      return db.brandNode.findMany({
+      const ancestors = await db.brandNode.findMany({
         where: { id: { in: ancestorIds } },
         select: { id: true, name: true, slug: true, nodeKind: true, parentNodeId: true },
       });
+      return ancestorIds.flatMap((id) => ancestors.filter((node) => node.id === id));
     }),
 
   /**

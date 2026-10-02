@@ -12,6 +12,9 @@
 
 "use client";
 
+import { usePortfolioOperator } from "@/components/portfolio/use-portfolio-operator";
+import { BrandWorkspace } from "@/components/portfolio/BrandWorkspace";
+import { PORTFOLIO_KIND_LABELS, PORTFOLIO_LIFECYCLE_LABELS } from "@/domain/portfolio-reference";
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { trpc } from "@/lib/trpc/client";
@@ -34,7 +37,7 @@ export default function PortfolioNodeDetailPage() {
   // plus bas — sinon Rules of Hooks violée (React #310).
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
 
-  const { data: operator } = trpc.operator.getOwn.useQuery();
+  const { operator, isLoading: operatorLoading, error: operatorError } = usePortfolioOperator();
   const { data: node, isLoading } = trpc.brandNode.getBySlug.useQuery(
     { operatorId: operator?.id ?? "", slug },
     { enabled: Boolean(operator?.id) },
@@ -48,13 +51,15 @@ export default function PortfolioNodeDetailPage() {
     },
   });
 
-  if (isLoading || !operator) return <div className="p-6 text-sm text-foreground-secondary">Loading…</div>;
+  if (operatorError) return <p role="alert" className="p-6 text-error">{operatorError.message}</p>;
+  if (!operatorLoading && !operator) return <p className="p-6">Aucune équipe accessible pour ce portefeuille.</p>;
+  if (isLoading || !operator) return <div className="p-6 text-sm text-foreground-secondary">Chargement…</div>;
   if (!node) {
     return (
       <div className="p-6">
         <NodeBreadcrumb nodeId="" />
         <div className="mt-4 rounded border border-error/30 bg-error/10 p-4 text-sm">
-          BrandNode "<code>{slug}</code>" introuvable pour operator {operator.name}.
+          Marque "<code>{slug}</code>" introuvable dans l’équipe {operator.name}.
         </div>
       </div>
     );
@@ -70,21 +75,20 @@ export default function PortfolioNodeDetailPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 p-4 sm:p-8">
       <header className="flex flex-col gap-2">
         <NodeBreadcrumb nodeId={node.id} />
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="flex items-baseline gap-3 text-2xl font-semibold">
+            <h1 className="flex flex-wrap items-baseline gap-3 font-display text-3xl font-semibold">
               {node.name}
               <span className="rounded bg-info/15 px-2 py-0.5 text-xs uppercase tracking-wide text-info">
-                {node.nodeKind}
+                {PORTFOLIO_KIND_LABELS[node.nodeKind] ?? "Élément du portefeuille"}
               </span>
               <span className="rounded bg-surface-overlay px-2 py-0.5 text-xs uppercase tracking-wide">
-                {node.nodeNature}
+                {PORTFOLIO_LIFECYCLE_LABELS[node.lifecycle] ?? node.lifecycle}
               </span>
             </h1>
-            <code className="text-xs text-foreground-secondary">slug: {node.slug}</code>
           </div>
           <div className="flex flex-wrap gap-2">
             <BrandPlatformCta
@@ -105,7 +109,7 @@ export default function PortfolioNodeDetailPage() {
               onClick={() => setMode((m) => (m === "CREATE_CHILD" ? "VIEW" : "CREATE_CHILD"))}
               className="inline-flex items-center gap-1 rounded border border-border px-3 py-1.5 text-sm hover:bg-card"
             >
-              <Plus className="h-4 w-4" /> Ajouter enfant
+              <Plus className="h-4 w-4" /> Ajouter un élément
             </button>
             <button
               onClick={() => setArchiveConfirmOpen(true)}
@@ -160,28 +164,14 @@ export default function PortfolioNodeDetailPage() {
         </div>
       )}
 
-      {/* Metadata */}
-      <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <MetaItem icon={<MapPin className="h-4 w-4" />} label="Country" value={node.countryCode ?? "—"} />
-        <MetaItem icon={<MapPin className="h-4 w-4" />} label="Cluster" value={node.clusterTag ?? "—"} />
-        <MetaItem icon={<Calendar className="h-4 w-4" />} label="Lifecycle" value={node.lifecycle} />
-        <MetaItem
-          icon={<Tag className="h-4 w-4" />}
-          label="Roles"
-          value={node.nodeRole.length === 0 ? "—" : node.nodeRole.join(", ")}
-        />
-      </section>
-
-      {/* Phase 18-N1/N8 — Inheritance résolue (badges) */}
-      <InheritanceSection nodeId={node.id} />
-
-      {/* Children */}
-      <section>
-        <h2 className="mb-3 text-sm font-medium uppercase tracking-wide text-foreground-secondary">
-          Descendance directe
-        </h2>
-        <PortfolioTreeView operatorId={operator.id} parentNodeId={node.id} maxDepth={4} />
-      </section>
+      <BrandWorkspace nodeId={node.id} />
+      <details className="border-t border-border pt-4">
+        <summary className="cursor-pointer text-sm text-foreground-secondary">Arbre complet et héritage stratégique</summary>
+        <div className="mt-5 space-y-6">
+          <InheritanceSection nodeId={node.id} />
+          <PortfolioTreeView operatorId={operator.id} parentNodeId={node.id} maxDepth={4} />
+        </div>
+      </details>
     </div>
   );
 }

@@ -12,6 +12,7 @@
 
 "use client";
 
+import { PORTFOLIO_KIND_LABELS, PORTFOLIO_LIFECYCLE_LABELS } from "@/domain/portfolio-reference";
 import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
 import { Folder, Box, Package, MapPin, Tag } from "lucide-react";
@@ -38,16 +39,6 @@ const KIND_ICONS: Record<string, React.ComponentType<{ className?: string }>> = 
   STANDALONE_BRAND: Box,
 };
 
-const KIND_BADGE_COLOR: Record<string, string> = {
-  CORPORATE: "bg-amber-500/15 text-amber-300",
-  MASTER_BRAND: "bg-blue-500/15 text-blue-300",
-  REGIONAL_CLUSTER: "bg-violet-500/15 text-violet-300",
-  REGIONAL_BRAND: "bg-violet-500/10 text-violet-200",
-  PRODUCT_LINE: "bg-emerald-500/15 text-emerald-300",
-  PRODUCT_VARIANT: "bg-emerald-500/10 text-emerald-200",
-  SKU: "bg-zinc-500/15 text-zinc-300",
-  STANDALONE_BRAND: "bg-zinc-500/15 text-zinc-300",
-};
 
 export function PortfolioTreeView({
   operatorId,
@@ -60,30 +51,30 @@ export function PortfolioTreeView({
     parentNodeId,
   });
 
-  if (isLoading) return <div className="text-sm text-foreground-secondary">Loading…</div>;
+  if (isLoading) return <div className="text-sm text-foreground-secondary">Chargement…</div>;
   if (!data || data.length === 0) {
     return depth === 0 ? (
-      <div className="rounded border border-dashed border-zinc-700 p-6 text-center text-sm text-foreground-secondary">
-        Aucun BrandNode racine. Crée un premier nœud (CORPORATE pour FrieslandCampina, ou STANDALONE_BRAND pour une marque solo).
+      <div className="rounded border border-dashed border-border p-6 text-center text-sm text-foreground-secondary">
+        Aucune marque à ce niveau. Ajoutez une marque pour organiser son dossier.
       </div>
     ) : null;
   }
 
   return (
-    <ul className="space-y-1" style={{ paddingLeft: depth > 0 ? `${depth * 16}px` : 0 }}>
+    <ul className="space-y-1" style={{ paddingLeft: depth > 0 ? "12px" : 0 }}>
       {data.map((node) => {
         const Icon = KIND_ICONS[node.nodeKind] ?? Box;
-        const badgeColor = KIND_BADGE_COLOR[node.nodeKind] ?? "bg-zinc-500/15 text-zinc-300";
+
         return (
           <li key={node.id}>
             <Link
-              href={`/cockpit/portfolio/${node.slug}`}
-              className="flex items-center gap-2 rounded p-1.5 hover:bg-zinc-800"
+              href={`/cockpit/portfolio/${node.slug}?operator=${encodeURIComponent(operatorId)}`}
+              className="flex flex-wrap items-center gap-2 rounded-lg px-3 py-3 hover:bg-surface-raised focus-visible:outline-2 focus-visible:outline-accent"
             >
               <Icon className="h-4 w-4 opacity-70" />
               <span className="font-medium">{node.name}</span>
-              <span className={`rounded px-1.5 py-0.5 text-[10px] uppercase tracking-wide ${badgeColor}`}>
-                {node.nodeKind}
+              <span className="rounded bg-accent/10 px-2 py-1 text-xs text-accent">
+                {PORTFOLIO_KIND_LABELS[node.nodeKind] ?? "Élément du portefeuille"}
               </span>
               {node.countryCode && (
                 <span className="text-xs text-foreground-secondary">[{node.countryCode}]</span>
@@ -104,7 +95,7 @@ export function PortfolioTreeView({
                 </span>
               )}
               {node.lifecycle !== "ACTIVE" && (
-                <span className="rounded bg-error/10 px-1.5 py-0.5 text-[10px] uppercase text-error">{node.lifecycle}</span>
+                <span className="rounded bg-error/10 px-1.5 py-0.5 text-[10px] uppercase text-error">{PORTFOLIO_LIFECYCLE_LABELS[node.lifecycle] ?? node.lifecycle}</span>
               )}
             </Link>
             {depth < maxDepth - 1 && (

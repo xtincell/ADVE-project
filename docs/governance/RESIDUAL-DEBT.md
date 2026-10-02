@@ -1,5 +1,31 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
+## Intégration des marques — 2026-10-02 (ADR-0193)
+
+- **Admission ADVE des marques issues de La Barre** : les sources sont consultables,
+  mais leur projection n’est pas une stratégie native validée. Avant admission,
+  corriger les valeurs par défaut non renseignées de `strategy.create` (intake :
+  loyauté 10–30 %, expérience 5, etc.), puis mapper les faits sourcés via le gateway,
+  conserver les inférences et relire la stratégie. Effort : plusieurs passages de
+  qualification ; reprise dès la réception du raccord portfolio, dans le chantier Shinkiro.
+- **Dossiers de stratégie multiples** : conserver les assets et sources des anciennes
+  stratégies sans confondre leurs validations. Réconcilier champ par champ avec le
+  corpus le plus récent, historiser les décisions puis archiver le doublon via la
+  commande native. Effort : revue de corpus ; reprise après ventilation vérifiée.
+- **Fichiers produit de mêmes caractéristiques** : les références sont conservées et
+  signalées. Comparer les fichiers, versions, droits et marchés avant rapprochement ;
+  ne pas prendre une signature de champs pour une identité SKU. Effort : revue des
+  groupes signalés ; reprise lors de la qualification du catalogue La Barre.
+- **Périmètre et droits du connecteur La Barre** : dépôt source fixe, activation par
+  opérateur entier. Ajouter la sélection du dépôt et des clients autorisés dans les
+  connexions existantes avant d’équiper un second locataire ; tester le refus croisé
+  avec deux dépôts. Aucun engagement de multitenance générale avec ce premier raccord.
+- **Autres flux du Shinkiro** : la projection ne synchronise pas les décisions Radar,
+  les exécutions spécialisées ni les reprises agentiques. Continuer les contrats et
+  tests de traversée du plan Shinkiro après l’import effectif ; ne pas publier de
+  taux global ou déclarer l’intégralité des IP opérationnelle à partir de ce lot.
+
+
 ## Session « calcul honnête + anti-réinvention » 2026-07-31 (ADR-0189/0190 + gouvernance CODE-MAP) — plan de fermeture V1→V7 (mandat « debt free culture »)
 
 Définition de « fermé » (loi opérateur) : fonctionnel en prod + verrou CI + trace (ADR si concept) + ligne rayée ici. Une vague ne se ferme pas avec une dette nouvelle non tracée.

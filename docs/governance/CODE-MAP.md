@@ -55,7 +55,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Domain — 35 modules (src/domain, cœur métier pur)
+## Domain — 37 modules (src/domain, cœur métier pur)
 
 - **__tests__/pillars.test**
 - **brand-asset-kinds** — BrandAsset.kind — taxonomie complète des actifs de marque.
@@ -79,6 +79,8 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **overton-radar-signal** — OvertonRadarSignal — Layer-0 presentational view-model for `<OvertonRadar>`
 - **pillar-reference-edges** — pillar-reference-edges.ts — intégrité des arêtes de référence inter-piliers
 - **pillars** — src/domain/pillars.ts — Single source of truth for ADVERTIS pillars.
+- **portfolio-barre**
+- **portfolio-reference**
 - **product-catalog** — product-catalog.ts — intégrité du socle produit (ADR-0171).
 - **product-system** — product-system.ts — le SYSTÈME produit d'une marque (ADR-0170, pilier V).
 - **schema-normalizer** — schema-normalizer.ts — normalisation déterministe vers le schéma STRICT (ADR-0172).
@@ -307,7 +309,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **BroadcastJob** (16 fields) — Job de broadcast persistent (queue + retry + tracking). Créé par ANUBIS_BROADCAST_MESSAGE / ANUBIS_SCHEDULE_BROADCAST.
 - **EmailTemplate** (11 fields) — Template email réutilisable. Peuplé par operator via Templates UI.
 - **SmsTemplate** (8 fields) — Template SMS réutilisable.
-- **BrandNode** (27 fields)
+- **BrandNode** (28 fields)
 - **CampaignDeliverable** (25 fields)
 - **CampaignChangeRequest** (16 fields)
 - **OperatorAction** (18 fields)

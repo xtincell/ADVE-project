@@ -19,6 +19,7 @@
 import type { Intent, IntentResult } from "@/server/services/mestor/intents";
 import type { BrandNode, BrandNature, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
+import { PortfolioReferencesSchema, type PortfolioReference } from "@/domain/portfolio-reference";
 import { validateNodeTransition } from "@/domain/brand-nature-archetypes";
 import { invalidateNodeAndDescendants } from "./inheritance";
 
@@ -54,6 +55,7 @@ export async function createBrandNodeHandler(intent: CreateIntent): Promise<Hand
       countryCode: intent.countryCode ?? null,
       clusterTag: intent.clusterTag ?? null,
       attachStrategyId: intent.attachStrategyId ?? null,
+      sourceRefs: intent.sourceRefs,
     });
     return {
       status: "OK",
@@ -164,6 +166,7 @@ export interface CreateBrandNodeArgs {
   countryCode: string | null;
   clusterTag: string | null;
   attachStrategyId: string | null;
+  sourceRefs?: PortfolioReference[];
 }
 
 export async function createBrandNode(args: CreateBrandNodeArgs): Promise<BrandNode> {
@@ -231,6 +234,7 @@ export async function createBrandNode(args: CreateBrandNodeArgs): Promise<BrandN
       clusterTag: args.clusterTag,
       lifecycle: "ACTIVE",
       strategyId: args.attachStrategyId,
+      sourceRefs: PortfolioReferencesSchema.parse(args.sourceRefs ?? []),
     },
   });
 }
@@ -246,7 +250,7 @@ export async function updateBrandNode(
   // Whitelist : nodeKind + nodeNature sont immutables (utiliser MOVE pour position structurelle).
   const allowedKeys = [
     "name", "slug", "clusterTag", "countryCode",
-    "nodeRole", "lifecycle", "inheritanceLocked", "pillarOverrides",
+    "nodeRole", "lifecycle", "inheritanceLocked", "pillarOverrides", "sourceRefs",
   ];
   const data: Prisma.BrandNodeUpdateInput = {};
   let pillarOverridesChanged = false;
@@ -255,7 +259,7 @@ export async function updateBrandNode(
       throw new Error(`Field "${key}" is immutable or unknown for OPERATOR_UPDATE_BRAND_NODE. Allowed: ${allowedKeys.join(", ")}`);
     }
     // Type narrowing intentionnellement permissif — Prisma valide au runtime.
-    (data as Record<string, unknown>)[key] = value;
+    (data as Record<string, unknown>)[key] = key === "sourceRefs" ? PortfolioReferencesSchema.parse(value) : value;
     if (key === "pillarOverrides") pillarOverridesChanged = true;
   }
 

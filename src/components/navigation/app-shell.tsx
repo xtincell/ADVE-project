@@ -18,6 +18,8 @@ interface AppShellProps {
   children: React.ReactNode;
   userName?: string;
   notificationCount?: number;
+  /** Global portfolio pages have no active strategy for the brand assistant. */
+  assistantEnabled?: boolean;
 }
 
 export function AppShell({
@@ -28,6 +30,7 @@ export function AppShell({
   children,
   userName,
   notificationCount = 0,
+  assistantEnabled = true,
 }: AppShellProps) {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -40,7 +43,7 @@ export function AppShell({
   // Page assistant par portail. Seul le Cockpit en a une aujourd'hui — sur
   // les autres portails le bouton topbar n'est pas rendu (l'ancien toggle
   // `mestorOpen` n'était consommé par aucun panneau — lot 10, [M01-04]).
-  const assistantHref = portal === "cockpit" ? "/cockpit/mestor" : undefined;
+  const assistantHref = portal === "cockpit" && assistantEnabled ? "/cockpit/mestor" : undefined;
 
   // Tiroir mobile : ESC ferme + verrou de scroll du fond (anti-bleed).
   useEffect(() => {

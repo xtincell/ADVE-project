@@ -43,6 +43,11 @@ const SCAN_DIRS = [
 // Composants hors components/cockpit mais rendus dans le portail founder,
 // + sources de chaînes rendues au prospect (grille /pricing).
 const EXTRA_FILES = [
+  join(ROOT, "src/components/portfolio/BrandWorkspace.tsx"),
+  join(ROOT, "src/components/portfolio/PortfolioReferencesForm.tsx"),
+  join(ROOT, "src/components/portfolio/PortfolioTreeView.tsx"),
+  join(ROOT, "src/components/portfolio/PortfolioShell.tsx"),
+  join(ROOT, "src/components/portfolio/AssetContent.tsx"),
   join(ROOT, "src/components/neteru/overton-radar.tsx"),
   join(ROOT, "src/components/neteru/apogee-maintenance-dashboard.tsx"),
   join(ROOT, "src/server/services/monetization/pricing-tiers.ts"),

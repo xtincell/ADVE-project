@@ -96,3 +96,12 @@ Lignes dérivées purgées :
 |---|---|---|
 | ~~2026-07-18~~ | ~~`src/app/api/trpc/[trpc]/route.ts` — `maxDuration = 300` (inerte sous Coolify, contrat Vercel-only)~~ | Root fix F1 v6.27.223 — plus aucune requête longue à plafonner ; `maxDuration` reste inoffensif. |
 | ~~2026-07-18~~ | ~~`intake/[token]/ingest*` — sondage de récupération ~45 s après coupure réseau (mitigation de surface)~~ | Root fix F1 v6.27.223 — remplacé par le suivi de statut `use-intake-processing-watch` (terminal réel, jamais de faux succès, couvre aussi la coupure réseau via row restée `IN_PROGRESS` → « timeout »). |
+
+## 2026-10-02 — Contexte du portefeuille
+
+- Fil d’ancêtres rendu dans un ordre aléatoire : restauration de l’ordre de la chaîne
+  après la requête `IN`. Cause : l’ordre SQL était confondu avec l’ordre hiérarchique.
+- Administrateur sans équipe personnelle laissé en chargement : résolution par les
+  équipes autorisées et paramètre d’URL. Cause : `getOwn` utilisé comme accès global.
+- Navigation inactive avec un paramètre d’équipe : comparaison des chemins sans
+  paramètres tout en conservant le lien complet. Cause : URL confondue avec pathname.

@@ -6176,6 +6176,10 @@ model BrandNode {
   /// LOCAL_VARIANT, PROMO_RAMADAN_2026, PROMO_BACK_TO_SCHOOL_2025, etc.
   nodeRole   String[]    @default([])
 
+  /// ADR-0193 — identités dans les outils sources. Références typées, sans copie
+  /// de statut, de brief ou de décision. La source conserve son autorité.
+  sourceRefs Json?
+
   // Inheritance & overrides (Phase 18 noyau cabling — Phase 18-A0 stocke seulement, ne résout pas encore)
   /// JSON des champs ADVE/RTIS overridés au niveau de ce nœud (vs hérités du parent)
   pillarOverrides   Json?
