@@ -7,6 +7,9 @@ import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { CheckCircle2, XCircle, AlertCircle, RefreshCw, Trash2, Key, Plus, MinusCircle } from "lucide-react";
 
 const KNOWN_CONNECTOR_TYPES = [
+  { type: "youtube-data", label: "YouTube Data API (contenus et métriques)", fields: ["apiKey"] },
+  { type: "foreplay", label: "Foreplay (archive de publicités)", fields: ["apiKey"] },
+  { type: "argos-studio", label: "Argos-studio (bibliothèque canonique)", fields: ["baseUrl", "apiKey"] },
   { type: "meta-ads", label: "Meta Ads (Facebook + Instagram)", fields: ["accessToken", "businessAccountId", "adAccountId"] },
   { type: "google-ads", label: "Google Ads", fields: ["developerToken", "customerId", "refreshToken"] },
   { type: "x-ads", label: "X Ads (Twitter)", fields: ["apiKey", "apiSecret", "accountId"] },

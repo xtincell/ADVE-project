@@ -101,7 +101,7 @@ Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE
 | `market-study.ts` | Études marché | M | point gouverné présent |
 | `error-vault.ts` | Capture/triage errors runtime + `oracleIncidents` cluster par code ORACLE-NNN (ADR-0022) | INFRA | appels à suivre |
 | `argos.ts` | Argos by LaFusée — dossiers de référence + projection publique (ADR-0100) | M | point gouverné présent |
-| `creative-intelligence.ts` | Sous-router `argos.intelligence` (ADR-0194) : corpus et recettes opérateur, lectures brand-scopées, projection publique revue, hypothèses `opportunities` qualifiées par la couverture, watchlist et essais (`startTrial` pour déclarer). Mutations `governedProcedure`, ownership explicite des lectures de marque ; aucun nouveau namespace racine. | M | point gouverné présent (parcours local validé 2026-10-06, reçu ADR-0194) |
+| `creative-intelligence.ts` | Sous-router `argos.intelligence` (ADR-0194/0195) : corpus/recettes/essais/opportunités, capacités et collecte de sources, export atomique, veille opt-in, brouillons assistés et revue MANUAL. Mutations gouvernées, lectures de marque scopées ; aucun namespace racine nouveau. `argos.ts` conserve revue de dossier et ajoute projection explicite Argos-studio. | M | point gouverné présent ; ADR-0195 Accepted, parcours et stress local PASS |
 | `bureau-etudes.ts` | Vagues d'étude time-spine, significativité (ADR-0110/0114) | M | point gouverné présent |
 | `footprint.ts` | Score d'empreinte public instantané (funnel « Scorer ma marque ») — rate-limité ADR-0161, gate homonymes ADR-0162 | M | appels à suivre |
 | `identity.ts` | Identity Graph — portes gouvernées, PII redactée via le spine (ADR-0147/0124) | M | point gouverné présent |

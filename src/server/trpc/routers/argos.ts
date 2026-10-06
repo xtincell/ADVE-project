@@ -19,6 +19,9 @@ import {
 } from "@/server/services/seshat/argos";
 import { manualDossierInputSchema } from "@/server/services/seshat/argos/schemas";
 import { creativeIntelligenceRouter } from "./creative-intelligence";
+import { projectArgosInput } from "@/domain/argos-projection";
+import { projectToArgosStudio } from "@/server/services/seshat/argos/studio-client";
+import { getOperatorContext } from "@/server/services/operator-isolation";
 
 function assertOperator(role: string | null | undefined) {
   if (role !== "ADMIN" && role !== "OPERATOR") {
@@ -32,6 +35,7 @@ function intentIdOf(ctx: unknown): string | undefined {
 
 export const argosRouter = createTRPCRouter({
   intelligence: creativeIntelligenceRouter,
+  projectToStudio: governedProcedure({ kind: "SESHAT_PROJECT_ARGOS_DOSSIER", inputSchema: projectArgosInput, requireOperator: true, caller: "argos:studio-projection" }).mutation(async ({ ctx, input }) => projectToArgosStudio(input, (await getOperatorContext(ctx.session.user.id)).operatorId)),
   // ── Hunter (LLM via Gateway) ──────────────────────────────────────────────
   hunt: governedProcedure({
     kind: "SESHAT_HARVEST_REFERENCE",

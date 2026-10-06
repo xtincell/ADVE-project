@@ -34,6 +34,15 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.392",
+    date: "2026-10-06",
+    headline: "Une veille créative suivie dans le temps",
+    highlights: [
+      { emoji: "🔎", title: "Des observations qui restent consultables", body: "Votre équipe peut collecter des publications et conserver leurs relevés successifs. Les comptes compatibles de votre veille peuvent être actualisés automatiquement, sur activation." },
+      { emoji: "🛡️", title: "Des analyses vérifiées avant utilisation", body: "Les annotations assistées restent des brouillons. Votre équipe vérifie leurs observations avant de les utiliser dans vos recettes créatives." },
+    ],
+  },
+  {
     version: "6.27.391",
     date: "2026-10-06",
     headline: "Des références créatives aux essais mesurables",

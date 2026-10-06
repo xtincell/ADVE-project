@@ -31,6 +31,14 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "SESHAT_APPLY_RECIPE", governor: "SESHAT", handler: "creative-intelligence", async: false, description: "ADR-0194 — apply recipe; scoped evidence, zero LLM." },
   { kind: "SESHAT_RESOLVE_RECIPE_APPLICATION", governor: "SESHAT", handler: "creative-intelligence", async: false, description: "ADR-0194 — resolve recipe application; scoped evidence, zero LLM." },
   { kind: "SESHAT_CAPTURE_NATIVE_CREATIVE_INSIGHTS", governor: "SESHAT", handler: "creative-intelligence", async: false, description: "ADR-0194 — capture native creative insights; scoped evidence, zero LLM." },
+  { kind: "SESHAT_COLLECT_CREATIVE_SOURCE", governor: "SESHAT", handler: "creative-intelligence", async: false, description: "ADR-0195 — registered Glory source delegate; bounded vendor reads and immutable corpus snapshots." },
+  { kind: "SESHAT_REFRESH_CREATIVE_WATCHLIST", governor: "SESHAT", handler: "creative-intelligence", async: false, description: "ADR-0195 — refresh two declared native accounts from the brand watchlist; report each source separately." },
+  { kind: "SESHAT_SET_CREATIVE_WATCH_AUTOMATION", governor: "SESHAT", handler: "creative-intelligence", async: false, description: "ADR-0195 — explicitly enable or disable the existing Argos cron's corpus mode per brand." },
+  { kind: "SESHAT_IMPORT_CREATIVE_EXPORT", governor: "SESHAT", handler: "creative-intelligence", async: false, description: "ADR-0195 — atomic scoped import of explicitly sourced creative-source-export-v1 observations." },
+  { kind: "SESHAT_DRAFT_CREATIVE_ANALYSIS", governor: "SESHAT", handler: "creative-intelligence", async: false, description: "ADR-0195 — Glory HYBRID assisted observation; MODEL_DRAFT excluded from empirical recipes." },
+  { kind: "SESHAT_REVIEW_CREATIVE_DRAFT", governor: "SESHAT", handler: "creative-intelligence", async: false, description: "ADR-0195 — append an operator-reviewed observation, preserving the model draft." },
+  { kind: "SESHAT_PROJECT_ARGOS_DOSSIER", governor: "SESHAT", handler: "creative-intelligence", async: false, description: "ADR-0195 / SHK-0002 — project a reviewed PASS journal to canonical Argos-studio; separate remote receipt." },
+  { kind: "SESHAT_REVIEW_REFERENCE_DOSSIER", governor: "SESHAT", handler: "creative-intelligence", async: false, description: "ADR-0195 — govern the existing operator safety review of a reference dossier." },
   // ── Mestor v1 ──
   { kind: "FILL_ADVE", governor: "MESTOR", handler: "mestor", async: false, description: "Fill ADVE pillars from sources." },
   // ADR-0023 — manual operator amend (ADVE only, RTIS forbidden at type level).

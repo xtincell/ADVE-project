@@ -47,13 +47,14 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
+# ffmpeg/ffprobe for bounded, local frame extraction (ADR-0195).
 # Chromium for puppeteer (Oracle / intake PDF). Remove this block + the two
 # PUPPETEER_* envs to slim the image by ~300 MB if you don't need PDF export;
 # the PDF routes then return a clean 500 instead of generating.
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      chromium ca-certificates fonts-liberation \
+      chromium ffmpeg ca-certificates fonts-liberation \
       libnss3 libatk-bridge2.0-0 libatk1.0-0 libcups2 libdrm2 libxkbcommon0 \
       libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 \
     && rm -rf /var/lib/apt/lists/*

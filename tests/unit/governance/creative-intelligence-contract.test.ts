@@ -21,13 +21,23 @@ describe("creative evidence guardrails (HARD)", () => {
     expect(source).toContain("originStrategyId: null");
     expect(source).toContain('equals: "creative-recipe-v1"');
   });
-  it("registers every mutation, zero-cost and under the existing observation governor", () => {
+  it("registers every mutation under the observation governor and budgets only assisted analysis", () => {
     for (const kind of manifest.acceptsIntents ?? []) {
       expect(INTENT_KINDS.find(k => k.kind === kind)).toMatchObject({ governor: "SESHAT", handler: "creative-intelligence" });
-      expect(INTENT_SLOS.find(k => k.kind === kind)?.costP95Usd).toBe(0);
+      const cost = INTENT_SLOS.find(k => k.kind === kind)?.costP95Usd;
+      if (kind === "SESHAT_DRAFT_CREATIVE_ANALYSIS") expect(cost).toBe(0.15);
+      else expect(cost).toBe(0);
     }
     const registry = readFileSync("src/server/governance/__generated__/manifest-imports.ts", "utf8");
     expect(registry).toContain("creative-intelligence/manifest");
+  });
+  it("never admits model drafts into the empirical recipe corpus", () => {
+    const source = readFileSync("src/server/services/seshat/creative-intelligence/index.ts", "utf8");
+    expect(source).toContain('analyses: { where: { taxonomyVersion: TAXONOMY_VERSION, method: "MANUAL",');
+    const draft = readFileSync("src/server/services/seshat/creative-intelligence/assisted-analysis.ts", "utf8");
+    expect(draft).toContain('method: "MODEL_DRAFT"');
+    expect(draft).toContain("return annotateSpecimen(");
+    expect(draft).not.toMatch(/creativeAnalysis\.update\(/);
   });
   it("never maps ad impressions to video views", () => {
     const source = readFileSync("src/server/services/seshat/creative-intelligence/index.ts", "utf8");

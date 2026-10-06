@@ -78,5 +78,6 @@ export async function bootstrapDelegates(): Promise<void> {
   // Dynamic imports break the circular dependency. Each module's top-level
   // `registerDelegateHandler(...)` calls run as side-effects.
   await import("@/server/services/artemis/market-research/delegates");
+  await import("@/server/services/seshat/creative-intelligence/source-collection");
   bootstrapped = true;
 }

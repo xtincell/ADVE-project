@@ -11,19 +11,20 @@ export const specimenInputSchema = z.object({
   strategyId: z.string().min(1).optional(), visibility: visibilitySchema,
   platform: platformSchema, accountId: text, externalId: text,
   sourceUrl: url, mediaUrl: url.optional(), caption: z.string().max(10000).optional(),
-  format: z.enum(["SHORT_VIDEO", "LONG_VIDEO", "IMAGE", "TEXT"]),
+  format: z.enum(["SHORT_VIDEO", "LONG_VIDEO", "VIDEO_UNCLASSIFIED", "IMAGE", "TEXT"]),
   sector: text, countryCode: z.string().regex(/^[A-Z]{2}$/),
   publishedAt: z.coerce.date(), source: text,
 }).refine(v => v.visibility === "BRAND" ? !!v.strategyId : !v.strategyId, "Un contenu privé doit être rattaché à une marque ; un contenu public ne porte pas de marque privée.");
 
 const count = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).nullable();
-export const metricInputSchema = z.object({
-  strategyId: z.string().optional(), specimenId: text, observedAt: z.coerce.date(),
+export const metricValuesSchema = z.object({
+  observedAt: z.coerce.date(),
   views: count.optional(), reach: count.optional(), likes: count.optional(),
   comments: count.optional(), shares: count.optional(), followersAtObservation: count.optional(),
   paidStatus: z.enum(["ORGANIC", "PAID", "UNKNOWN"]).default("UNKNOWN"),
   source: text, sourceUrl: url,
 }).refine(v => [v.views, v.reach, v.likes, v.comments, v.shares].some(x => x != null), "Au moins une mesure observée est requise.");
+export const metricInputSchema = metricValuesSchema.safeExtend({ strategyId: z.string().optional(), specimenId: text });
 
 export const annotationSchema = z.object({
   hook: z.enum(["CURIOSITY", "CONTRARIAN", "QUESTION", "DEMONSTRATION", "CONFESSION", "RESULT_FIRST", "OTHER"]),
@@ -76,6 +77,7 @@ const contentIdentity = (o: Observation) => o.externalId == null ? o.specimenId 
 export function normalizedPerformance(target: Observation, corpus: Observation[]) {
   const result = (reason: string, n = 0) => ({ ratio: null as number | null, expected: null as number | null, n, reason, method: "prior-account-median-age-v1", baselineMetricIds: [] as string[] });
   if (target.value == null || target.value < 0 || age(target) < 0 || target.paidStatus !== "ORGANIC") return result("UNMEASURED_OR_PAID_UNKNOWN");
+  if (target.format === "VIDEO_UNCLASSIFIED") return result("UNCLASSIFIED_VIDEO_FORMAT");
   // One comparable snapshot per prior post; no self, no future observation/publication.
   const candidates = corpus.filter(o => contentIdentity(o) !== contentIdentity(target) && o.accountId === target.accountId && o.platform === target.platform && o.format === target.format && o.sector === target.sector && o.countryCode === target.countryCode && o.paidStatus === "ORGANIC" && o.value != null && o.value >= 0 && o.publishedAt < target.publishedAt && o.observedAt <= target.observedAt && age(o) >= 0 && Math.abs(age(o) - age(target)) <= Math.max(0.5, age(target) * 0.2));
   const unique = new Map<string, Observation>();

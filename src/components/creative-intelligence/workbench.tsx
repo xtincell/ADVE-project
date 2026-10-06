@@ -9,6 +9,8 @@ import { Label } from "@/components/primitives/label";
 import { Card, CardBody } from "@/components/primitives/card";
 import { specimenInputSchema, metricInputSchema, analysisInputSchema, recipeInputSchema, annotationSchema, watchlistSchema } from "@/domain/creative-intelligence";
 import { RecipeCards, creativeLabels } from "./recipe-cards";
+import { CreativeSourceAcquisition } from "./source-acquisition";
+import { AssistedCreativeObservation } from "./assisted-observation";
 
 function Picker({ label, options, value, change }: { label: string; options: readonly string[]; value: string; change: (v: string) => void }) {
   return <Label className="flex flex-col gap-1">{label}<Select value={value} onChange={e => change(e.target.value)}>{options.map(o => <option key={o} value={o}>{creativeLabels[o] ?? o}</option>)}</Select></Label>;
@@ -38,7 +40,7 @@ export function CreativeWorkbench() {
   const apply = trpc.argos.intelligence.startTrial.useMutation({ onSuccess: invalidate, onError });
   const resolve = trpc.argos.intelligence.resolve.useMutation({ onSuccess: invalidate, onError });
   const saveWatch = trpc.argos.intelligence.saveWatchlist.useMutation({ onSuccess: invalidate, onError });
-  const [form, setForm] = useState({ platform: "TIKTOK", accountId: "", externalId: "", sourceUrl: "", publishedAt: "", sector: "", countryCode: "CI", format: "SHORT_VIDEO" });
+  const [form, setForm] = useState({ platform: "TIKTOK", accountId: "", externalId: "", sourceUrl: "", mediaUrl: "", publishedAt: "", sector: "", countryCode: "CI", format: "SHORT_VIDEO" });
   const field = (key: keyof typeof form, value: string) => setForm(f => ({ ...f, [key]: value }));
   const [specimenId, setSpecimenId] = useState("");
   const [measurement, setMeasurement] = useState({ value: "", observedAt: "", metric: "views", paidStatus: "UNKNOWN", sourceUrl: "" });
@@ -54,17 +56,19 @@ export function CreativeWorkbench() {
   const selected = corpus.data?.find(s => s.id === specimenId);
   return <section className="space-y-4">
     <h2 className="text-xl font-semibold">Atelier d'intelligence créative et concurrentielle</h2>
-    <p className="text-sm text-muted-foreground">Import de sources réelles, annotations manuelles, recettes empiriques et essais. Aucun accès tiers n'est simulé. La bibliothèque documentaire canonique reste dans Argos-studio.</p>
+    <p className="text-sm text-muted-foreground">Sources collectées, observations manuelles ou assistées à revoir, recettes empiriques et essais. Chaque fournisseur affiche son état réel. La bibliothèque documentaire canonique reste dans Argos-studio.</p>
     <TextField label="Identifiant de la marque (vide : corpus public opérateur)" value={strategyId} change={v => { setStrategyId(v); setSpecimenId(""); }} />
     {error && <p role="alert" className="text-sm text-error">{error}</p>}{success && <p role="status" className="text-sm text-success">{success}</p>}
     {(corpus.error || recipes.error) && <p role="alert">Corpus indisponible ou accès refusé.</p>}
+    <CreativeSourceAcquisition strategyId={strategyId} sector={form.sector} countryCode={form.countryCode} />
     <div className="grid gap-4 lg:grid-cols-2"><Card><CardBody className="space-y-3">
       <h3 className="font-semibold">1. Importer un contenu {strategyId ? "privé" : "public"}</h3>
       <Picker label="Plateforme" options={specimenInputSchema.shape.platform.options} value={form.platform} change={v => field("platform", v)} />
       <Picker label="Format" options={specimenInputSchema.shape.format.options} value={form.format} change={v => field("format", v)} />
       {(["accountId", "externalId", "sourceUrl", "sector", "countryCode"] as const).map(k => <TextField key={k} label={{ accountId: "Compte natif", externalId: "Identifiant natif du contenu", sourceUrl: "Source HTTPS", sector: "Secteur", countryCode: "Pays ISO-2" }[k]} value={form[k]} change={v => field(k, v)} />)}
       <TextField label="Date de publication" type="datetime-local" value={form.publishedAt} change={v => field("publishedAt", v)} />
-      <Button loading={imp.isPending} onClick={() => void run(() => { imp.mutate(specimenInputSchema.parse({ ...form, ...scope, visibility: strategyId ? "BRAND" : "PUBLIC", source: "MANUAL_SOURCE", publishedAt: new Date(form.publishedAt) })); })}>Importer</Button>
+      <TextField label="Média HTTPS autorisé pour analyse (facultatif)" value={form.mediaUrl} change={v => field("mediaUrl", v)} />
+      <Button loading={imp.isPending} onClick={() => void run(() => { imp.mutate(specimenInputSchema.parse({ ...form, mediaUrl: form.mediaUrl || undefined, ...scope, visibility: strategyId ? "BRAND" : "PUBLIC", source: "MANUAL_SOURCE", publishedAt: new Date(form.publishedAt) })); })}>Importer</Button>
     </CardBody></Card><Card><CardBody className="space-y-3">
       <h3 className="font-semibold">2. Mesurer et annoter</h3>
       <Label>Contenu<Select value={specimenId} onChange={e => setSpecimenId(e.target.value)}><option value="">Choisir un contenu</option>{corpus.data?.map(s => <option key={s.id} value={s.id}>{s.platform} · {s.accountId} · {s.externalId}</option>)}</Select></Label>
@@ -77,6 +81,7 @@ export function CreativeWorkbench() {
       <Button disabled={!selected || !measurement.value} loading={measure.isPending} onClick={() => void run(() => { measure.mutate(metricInputSchema.parse({ ...scope, specimenId, [measurement.metric]: Number(measurement.value), observedAt: new Date(measurement.observedAt), paidStatus: measurement.paidStatus, source: "MANUAL_SOURCE", sourceUrl: measurement.sourceUrl })); })}>Ajouter la mesure</Button>
       {(["hook", "narrative", "visual", "socialDriver"] as const).map(k => <div key={k} className="space-y-1"><Picker label={{ hook: "Accroche", narrative: "Récit", visual: "Image", socialDriver: "Mécanique sociale" }[k]} options={annotationSchema.shape[k].options} value={tags[k]} change={v => setTags(t => ({ ...t, [k]: v }))} /><Textarea aria-label={`Observation ${k}`} placeholder="Observation précise et repère temporel éventuel" value={proof[k]} onChange={e => setProof(p => ({ ...p, [k]: e.target.value }))} /></div>)}
       <Label>Texte ou transcription effectivement observé<Textarea value={observedText} onChange={e => setObservedText(e.target.value)} /></Label>
+      {selected?.strategyId === strategyId && <AssistedCreativeObservation key={`${strategyId}:${specimenId}`} strategyId={strategyId} specimenId={specimenId} observedText={observedText} />}
       <Button disabled={!selected || !observedText.trim()} loading={annotate.isPending} onClick={() => void run(async () => {
         const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(observedText));
         const contentHash = [...new Uint8Array(bytes)].map(b => b.toString(16).padStart(2, "0")).join("");

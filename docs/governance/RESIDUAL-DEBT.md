@@ -1,37 +1,55 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
-## Accès aux sources créatives externes — 2026-10-06 (ADR-0194)
+## Accès aux sources créatives externes — 2026-10-06 (ADR-0194/0195)
 
-- **Campagne de stress globale locale interrompue** : les trois surfaces V1 ont
-  leur reçu navigateur ciblé PASS (Console import, Argos recettes, vrai FOUNDER
-  sur `/cockpit/intelligence/social`, zéro erreur). Le stress du site entier a
-  validé 31 pages avant l'arrêt de Next par OOM cgroup (~10 Go) à
-  `/cockpit/brand/potential` ; ensuite 250 erreurs fetch et trois erreurs tRPC,
-  plus deux avertissements de préconditions fixture. Fermer par une nouvelle
-  campagne globale sur un serveur disposant d'assez de mémoire (ou un build
-  production), avec fixtures qualifiées, en surveillant mémoire/vie du serveur
-  et en conservant un rapport complet. Effort : une campagne de validation.
-  Reprise : prochain environnement CI/local adapté et serveur confirmé vivant.
-  Les pages restantes ne sont ni réputées vertes ni diagnostiquées à partir
-  des erreurs après arrêt ; les contrôles dédiés V1 relancés restent PASS.
-- **Acquisition durable TikTok/Instagram et fournisseurs de bibliothèques** :
-  les imports opérateur et les observations des comptes propres ne prouvent aucun
-  accès tiers. Fermer source par source : documenter contrat/droits, credentials
-  Vault, capacités réellement disponibles (média, métriques publiques/privées,
-  historique), quotas et fenêtre de fraîcheur ; fournir un connecteur au contrat
-  commun avec état indisponible explicite et recette de reprise idempotente.
-  Où : Seshat / acquisition du corpus. Effort : un lot par fournisseur, dépendant
-  de son contrat. Reprise : dès réception d'un accès autorisé ou d'un export réel.
-  Ne pas renommer les voies manuelles déjà codées « connecteurs à construire ».
-- **Projection vers la bibliothèque canonique Argos-studio (SHK-0002)** :
-  distinguer journal gouverné local et fonds documentaire distant. Fermer par
-  qualification du contrat `POST /api/v1/ingest/dossier`, configuration de la
-  connexion existante et test de traversée (slug idempotent, panne/reprise,
-  gates historiques des dossiers et revue explicite des recettes, aucune preuve
-  BRAND dans la projection des recettes). Où : client gouverné
-  Seshat/Argos. Effort : un lot d'intégration borné. Reprise : au prochain raccord
-  Argos-studio avec accès à son environnement et reçu conservé hors corpus privé.
-  La présence de `/argos` local ne constitue pas ce reçu.
+- **Acquisition externe — parcours local reçu, providers authentifiés à recevoir** : adaptateurs
+  YouTube Data API, Bluesky public et Foreplay codés, bridge métadonnées FB/IG et
+  export atomique existants étendus. Les appels authentifiés YouTube/Foreplay
+  n'ont pas leur reçu ; Bluesky a deux collectes réelles et snapshots append-only
+  sur PostgreSQL local. Isolation et rollback d'export reçus PASS.
+  Gauntlet, navigateur et stress FULL locaux PASS ; fermer par réception réseau autorisée
+  par source avec credentials/quotas réels. Autres fournisseurs : qualifier
+  contrat/permissions/export avant un adaptateur direct ; conserver capacité et
+  état indisponible explicites. Où : creative-intelligence/source-adapters et
+  registre creative-sources. Effort : un reçu par chemin, un lot par nouveau
+  fournisseur ; reprise dès accès autorisé et credentials disponibles.
+- **Observation assistée — réception provider et déploiement vidéo cible** : TEXT/MEDIA,
+  MODEL_DRAFT puis revue MANUAL sont codés ; exclusion/admission append et cinq
+  frames d'un MP4 synthétique reçues localement PASS. Le LLM reste différé sans
+  clé. Bornes Gateway/média et garde HARD reçues PASS. ffmpeg/ffprobe sont
+  embarqués au runner Docker ; helper réel sur même base Node/UID 1000 reçu
+  PASS (cinq frames sans audio). Le build Docker complet/déploiement ne sont
+  pas reçus. Fermer par une réponse vision explicitement configurée et une
+  extraction dans le conteneur complet déployé. Où : assisted-analysis/media-observations/vision.
+  Effort : un reçu provider et une recette du conteneur cible ; reprise dès
+  configuration vision et image runtime vérifiées. Ni observation vidéo
+  intégrale ni observation audio revendiquée.
+- **Veille créative opt-in — exécution scheduler à recevoir** : code/cron/schedulers
+  prévoient mode=corpus toutes les six heures, désactivé par défaut, fenêtre
+  500 marques et passages deux marques/deux comptes. Passage local HTTP 200 avec
+  une émission close OK reçu ; rotation inclut les tentatives différées/échouées.
+  Gates, rotation/reports et cron HTTPS local HTTP 200/LIVE (anonymous 401) reçus.
+  Fermer par reçu d'un scheduler cible avec marques ayant
+  activé l'option, credentials réels et compteurs datés. Où : watch-collection,
+  argos-hunt et schedulers existants. Effort : une recette de passage/reprise ;
+  déclencheur : prochaine activation de scheduler autorisée.
+- **Projection Argos-studio (SHK-0002) — client codé, POST réel non reçu** :
+  contrat `research-dossier-v1`, gates PASS+revue, sources du journal et payload
+  opérateur qualifié, reçu/spine séparé ; aucune seconde bibliothèque. Fermer par
+  POST authentifié autorisé vers l'environnement canonique ; les tests de
+  contrat/scope/secret/panne/reprise sont déjà reçus sur fixtures. Le GET Vault de handshake ne constitue pas
+  ce reçu. Où : seshat/argos/studio-client et domaine argos-projection.
+  Effort : un lot d'intégration ; reprise dès accès à Argos-studio et
+  credentials/contrat complet qualifiés. La publication locale
+  des dossiers PASS ne prouve pas la projection distante.
+- **Rétention durable des médias — conservation temporaire seulement** : URLs
+  source et hashes sont conservés ; les médias téléchargés pour analyse et les
+  frames sont bornés et supprimés après traitement. Pas d'archive média durable
+  reçue. Fermer par une politique de droits/rétention qualifiée par source,
+  stockage chiffré scopé, durée et purge vérifiable, puis essais de retrait/reprise.
+  Où : media-observations, ContentSpecimen.mediaUrl et stockage existant.
+  Effort : un lot de stockage/rétention ; reprise dès source/licence et backend
+  de conservation validés, avant de promettre une archive permanente.
 
 ## Couverture documentaire des extensions de marque — 2026-10-02
 

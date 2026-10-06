@@ -38,6 +38,8 @@ import {
 import { UNTRUSTED_NOTICE } from "./untrusted-content";
 
 export interface StructuredLLMOptions<T> {
+  images?: readonly import("@/server/services/llm-gateway/vision").GatewayImage[];
+  signal?: AbortSignal;
   /** System prompt — la directive "Réponds en JSON" est ajoutée automatiquement. */
   system: string;
   /** User prompt. */
@@ -123,6 +125,8 @@ export async function executeStructuredLLMCall<T>(
 
   for (let attempt = 1; attempt <= 1 + retries; attempt++) {
     const { text } = await callLLM({
+      images: options.images,
+      signal: options.signal,
       system: baseSystem,
       prompt: userPrompt,
       caller: `${options.caller}:struct${attempt > 1 ? `:retry${attempt - 1}` : ""}`,

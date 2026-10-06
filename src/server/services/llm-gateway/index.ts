@@ -57,6 +57,8 @@ export type GatewayPurpose =
   | "extraction";
 
 export interface GatewayCallOptions {
+  /** Bounded local image bytes. URLs are never fetched by the provider SDK. */
+  images?: readonly import("./vision").GatewayImage[];
   /** System prompt */
   system: string;
   /** User prompt */
@@ -342,7 +344,7 @@ export interface BuiltProviderModel {
 export async function buildProviderModel(
   provider: LLMProvider,
   anthropicModel: string,
-  opts: { policyOllamaModel?: string | null; ollamaCallOverride?: string } = {},
+  opts: { policyOllamaModel?: string | null; ollamaCallOverride?: string; exactModel?: string } = {},
 ): Promise<BuiltProviderModel> {
   if (provider === "anthropic") {
     const { anthropic, createAnthropic } = await import("@ai-sdk/anthropic");
@@ -372,7 +374,7 @@ export async function buildProviderModel(
         "X-Title": "La Fusee",
       },
     });
-    const servedModel = resolveOpenRouterModel(anthropicModel);
+    const servedModel = opts.exactModel ?? resolveOpenRouterModel(anthropicModel);
     return {
       aiModel: openrouter(servedModel),
       servedModel,
@@ -393,7 +395,7 @@ export async function buildProviderModel(
     apiKey: process.env.OLLAMA_API_KEY ?? "ollama",
   });
   const servedModel =
-    process.env.OLLAMA_MODEL ?? opts.ollamaCallOverride ?? opts.policyOllamaModel ?? anthropicModel;
+    opts.exactModel ?? process.env.OLLAMA_MODEL ?? opts.ollamaCallOverride ?? opts.policyOllamaModel ?? anthropicModel;
   return { aiModel: ollama(servedModel), servedModel, orFallback: null };
 }
 
@@ -677,6 +679,10 @@ export async function trackCost(
  * Use this when you need to parse the response yourself.
  */
 export async function callLLM(options: GatewayCallOptions): Promise<GatewayResult> {
+  const { validateGatewayImages, visionConfiguration } = await import("./vision");
+  validateGatewayImages(options.images);
+  const vision = options.images ? visionConfiguration() : null;
+  if (options.images && !vision) throw new Error("Connecteur vision non configuré.");
   const { generateText } = await import("ai");
 
   // ── Resolve policy from the governed registry ────────────────────────
@@ -694,7 +700,7 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
   // The caller can still override `model` explicitly — that takes
   // precedence over the policy. Useful for tests and one-off experiments
   // (e.g. trying Opus for an agent call to compare quality).
-  let anthropicModel = options.model ?? policy.anthropicModel;
+  let anthropicModel = vision?.model ?? options.model ?? policy.anthropicModel;
   const ollamaModel = policy.ollamaModel;
   const ollamaPreferred =
     policy.allowOllamaSubstitution && providerStates.ollama.available && !!ollamaModel;
@@ -708,7 +714,7 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
     if (!budget.allowed) {
       throw new Error(`LLM budget exceeded for strategy ${options.strategyId}. Spent: ${(budget.utilization * 100).toFixed(0)}% of monthly cap.`);
     }
-    if (budget.alertLevel !== "none" && MODEL_PRIORITY.indexOf(budget.suggestedModel) > MODEL_PRIORITY.indexOf(anthropicModel)) {
+    if (!vision && budget.alertLevel !== "none" && MODEL_PRIORITY.indexOf(budget.suggestedModel) > MODEL_PRIORITY.indexOf(anthropicModel)) {
       console.warn(`[llm-gateway] Budget ${budget.alertLevel}: downgrading ${anthropicModel} → ${budget.suggestedModel} for strategy ${options.strategyId}`);
       anthropicModel = budget.suggestedModel;
     }
@@ -734,7 +740,7 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
   // `LLM_PREMIUM_MODE` (Anthropic d'abord, une fois les crédits chargés) >
   // défaut premium OFF (Ollama si configuré, sinon OpenRouter ; Anthropic en
   // dernier repli sans coût).
-  const orderedProviders = resolveTextProviderOrder(providersToTry, {
+  const orderedProviders = vision ? [vision.provider] : resolveTextProviderOrder(providersToTry, {
     premium: isPremiumMode(),
     explicitPrimary: process.env.LLM_PRIMARY_PROVIDER as LLMProvider | undefined,
   });
@@ -743,10 +749,12 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
 
   for (const provider of orderedProviders) {
     try {
+      if (vision && !isProviderHealthy(provider)) throw new Error("Provider vision indisponible.");
       const result = await withRetry(async () => {
         const built = await buildProviderModel(provider, anthropicModel, {
           policyOllamaModel: ollamaModel,
           ollamaCallOverride: options.ollamaModel,
+          exactModel: vision?.model,
         });
         const aiModel = built.aiModel;
         const orFallback = built.orFallback;
@@ -800,7 +808,7 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
         // plutôt que de partir et de se prendre un 429. Local au process.
         const callParams = {
           system: hr.system,
-          prompt: hr.prompt,
+          ...(options.images ? { messages: [{ role: "user" as const, content: [{ type: "text" as const, text: hr.prompt }, ...options.images.map(i => ({ type: "image" as const, image: i.bytes, mediaType: i.mediaType }))] }] } : { prompt: hr.prompt }),
           maxOutputTokens: options.maxOutputTokens ?? DEFAULT_MAX_TOKENS,
           temperature: parity.temperature,
           ...(options.signal ? { abortSignal: options.signal } : {}),
@@ -829,7 +837,7 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
           releaseSlot(slotKey);
           slotReleased = true;
           let lastErr: unknown = genErr;
-          if (provider !== "openrouter" || orFallback == null || !unavailable(String((genErr as Error)?.message ?? genErr))) {
+          if (vision || provider !== "openrouter" || orFallback == null || !unavailable(String((genErr as Error)?.message ?? genErr))) {
             throw genErr;
           }
           let recovered = false;

@@ -16,6 +16,7 @@ import { Field, FieldError } from "@/components/primitives/field";
 import { Label } from "@/components/primitives/label";
 import { Badge } from "@/components/primitives/badge";
 import { CreativeWorkbench } from "@/components/creative-intelligence/workbench";
+import { ArgosStudioProjection } from "@/components/creative-intelligence/studio-projection";
 
 const csv = (s: string) => s.split(/[,\n]/).map((x) => x.trim()).filter(Boolean);
 
@@ -33,7 +34,7 @@ export default function ConsoleArgosPage() {
   const setVerdict = trpc.argos.setVerdict.useMutation({ onSuccess: invalidate });
 
   const [h, setH] = React.useState({ brand: "", sector: "", market: "", topics: "" });
-  const [m, setM] = React.useState({ brand: "", campaign: "", sector: "", voice: "", keyPhrases: "", palette: "", axes: "", secTitle: "", secBody: "" });
+  const [m, setM] = React.useState({ brand: "", campaign: "", sector: "", market: "", sources: "", voice: "", keyPhrases: "", palette: "", axes: "", secTitle: "", secBody: "" });
 
   const rows = list.data ?? [];
 
@@ -47,6 +48,7 @@ export default function ConsoleArgosPage() {
         </p>
       </header>
       <CreativeWorkbench />
+      <ArgosStudioProjection />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Hunter LLM */}
@@ -127,6 +129,9 @@ export default function ConsoleArgosPage() {
                 <Input id="m-axes" value={m.axes} onChange={(e) => setM({ ...m, axes: e.target.value })} placeholder="dépassement de soi" />
               </Field>
             </div>
+            <Field><Label htmlFor="m-sector">Secteur du dossier</Label><Input id="m-sector" value={m.sector} onChange={e => setM({ ...m, sector: e.target.value })} /></Field>
+            <Field><Label htmlFor="m-market">Marché du dossier</Label><Input id="m-market" value={m.market} onChange={e => setM({ ...m, market: e.target.value })} /></Field>
+            <Field><Label htmlFor="m-sources">Sources HTTPS (une URL par ligne)</Label><Textarea id="m-sources" value={m.sources} onChange={e => setM({ ...m, sources: e.target.value })} /></Field>
             {manual.isError && <FieldError>{manual.error.message}</FieldError>}
             <div>
               <Button
@@ -139,6 +144,8 @@ export default function ConsoleArgosPage() {
                     brand: m.brand,
                     campaign: m.campaign || undefined,
                     sector: m.sector || undefined,
+                    market: m.market || undefined,
+                    sources: m.sources.split("\n").map(s => s.trim()).filter(Boolean).map(url => ({ title: url, url })),
                     dna: {
                       palette: csv(m.palette),
                       typography: [],

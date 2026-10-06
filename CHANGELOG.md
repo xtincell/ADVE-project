@@ -1,5 +1,38 @@
 # Changelog — La Fusee
 
+## v6.27.392 — feat(intelligence): acquisition sourcée et analyse assistée revue (2026-10-06)
+
+**Le corpus reçoit des sources externes bornées et des brouillons d'observation à revoir.**
+
+- Collecte YouTube, Bluesky, Foreplay et publications Facebook/Instagram déjà
+  synchronisées ; import d'exports sourcés par lots atomiques. Capacités et
+  prérequis distingués par fournisseur : une archive publicitaire ne fabrique
+  ni vues ni ROAS, et les compteurs historiques par défaut restent exclus. Les
+  vidéos YouTube/Foreplay restent VIDEO_UNCLASSIFIED par défaut, sans Shorts inférés.
+- Veille créative activable par marque, désactivée par défaut ; passages bornés
+  via le cron Argos existant, avec états par compte et reports explicites.
+- Analyse assistée TEXT/MEDIA dans la Console : vision explicitement configurée,
+  images/vidéos bornées et frames sans audio. Timecodes limités aux frames
+  réellement décodées, durée exacte et caveat de couverture obligatoires.
+  Les MODEL_DRAFT n'alimentent pas
+  les recettes avant revue ; annotation manuelle conservée sans modèle.
+- ffmpeg/ffprobe inclus dans le runner Docker ; extraction réelle du helper
+  sur même base Node, UID 1000, cinq frames PASS. Formulaire de dossier manuel
+  avec secteur/marché/sources, conservation vérifiée au POST navigateur réel.
+  Ni build Docker complet ni déploiement déduit de ces reçus ciblés.
+- Projection opérateur vers Argos-studio sur dossier PASS revu et payload
+  `research-dossier-v1` qualifié, sources/licences explicites et reçu distant
+  séparé. La publication locale des dossiers PASS reste conservée.
+- Parcours PostgreSQL/réseau local PASS : lectures Bluesky répétées, snapshots
+  append-only, isolation, rollback d'export, exclusion puis revue MANUAL des
+  brouillons, cron HTTP 200 avec émission close OK et cinq frames MP4 réelles.
+  YouTube/LLM différés sans clé, Argos-studio sans endpoint/credential ; publication
+  distante non testée. Navigateur HTTPS (quatre surfaces), 3909 tests, deux
+  builds production locaux et stress FULL 281 pages PASS sans erreur ni avertissement.
+  Dette du stress OOM précédent fermée ; ADR-0195 Accepted localement, CI après
+  commit encore attendue. Aucun déploiement ni cadence de production revendiqué.
+
+
 ## v6.27.391 — feat(intelligence): corpus créatif et essais concurrentiels (2026-10-06)
 
 **Les références créatives peuvent devenir des recettes documentées puis des essais de marque.**
