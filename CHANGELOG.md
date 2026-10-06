@@ -4,7 +4,9 @@
 
 **Le corpus reçoit des sources externes bornées et des brouillons d'observation à revoir.**
 
-- Livraison PR #965 : périmètre hors phases enregistré dans scope-drift.
+- Livraison PR #965 fusionnée : 15 contrôles CI verts, périmètre hors phases
+  enregistré. Audit après fusion : version, inventaires et vocabulaire cohérents ;
+  référence du correctif legacy consignée dans PATCHED-SYMPTOMS.
 
 - Collecte YouTube, Bluesky, Foreplay et publications Facebook/Instagram déjà
   synchronisées ; import d'exports sourcés par lots atomiques. Capacités et
