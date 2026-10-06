@@ -198,6 +198,14 @@ Decision rationale in [ADR-0001](docs/governance/adr/0001-framework-name-apogee.
 
 ## Phase status (état réel du repo)
 
+### Originaux de sources — ADR-0197 (2026-10-06)
+
+Le dépôt réutilise `FileUpload` et l’archive privée chiffrée. Admission par empreinte,
+reçu vérifié, téléchargement authentifié et reprise sans écraser le texte corrigé.
+Parcours PostgreSQL et navigateur locaux reçus ; activation cible suivie dans
+RESIDUAL-DEBT. Le partage documentaire entre marques reste un raccord distinct.
+
+
 ### Preuves, modèles et boucle mesurée — ADR-0196 (2026-10-06)
 
 [ADR-0196](docs/governance/adr/0196-creative-intelligence-evidence-retention-and-live-loop.md)

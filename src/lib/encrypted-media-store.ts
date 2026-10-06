@@ -57,7 +57,12 @@ export async function getEncryptedMedia(store: MediaStore, objectKey: string) {
     try { if ((await file.stat()).size > 25_000_100) throw new Error("Archive trop volumineuse."); bytes = await file.readFile(); } finally { await file.close(); }
   } else {
     const response = await remote(store, objectKey, "GET");
-    if (!response.ok || !response.body) { await response.body?.cancel(); throw new Error("Archive indisponible."); }
+    if (!response.ok || !response.body) {
+      await response.body?.cancel();
+      const error: NodeJS.ErrnoException = new Error("Archive indisponible.");
+      if ([404, 410].includes(response.status)) error.code = "ENOENT";
+      throw error;
+    }
     const reader = response.body.getReader(), chunks: Uint8Array[] = []; let size = 0;
     try { for (;;) { const r = await reader.read(); if (r.done) break; size += r.value.length; if (size > 25_000_100) throw new Error("Archive trop volumineuse."); chunks.push(r.value); } }
     finally { await reader.cancel().catch(() => {}); }

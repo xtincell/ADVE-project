@@ -86,7 +86,8 @@ export async function purgeExpiredCreativeMedia(client: PrismaClient = db, budge
   const store = mediaStoreConfiguration(); let orphanedRemoved = 0;
   if (store?.kind === "VOLUME") for (const key of await oldVolumeObjects(store, new Date(Date.now() - 86400000))) {
     const owner = await client.contentSpecimen.count({ where: { mediaArchive: { path: ["objectKey"], equals: key } } });
-    if (!owner) { await deleteEncryptedMedia(store, key); orphanedRemoved++; }
+    const sourceOwner = await client.fileUpload.count({ where: { storageReceipt: { path: ["objectKey"], equals: key } } });
+    if (!owner && !sourceOwner) { await deleteEncryptedMedia(store, key); orphanedRemoved++; }
   }
   return { scanned: expired.length, receipts, deferredByTimeBudget: expired.length - receipts.length, orphanedRemoved };
 }

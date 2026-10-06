@@ -1810,6 +1810,8 @@ model BrandDataSource {
   origin String?
 
   strategy Strategy @relation(fields: [strategyId], references: [id])
+  /// Original immutable du dépôt ; le texte de travail peut ensuite être corrigé.
+  originalUpload FileUpload?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -4624,6 +4626,10 @@ model FileUpload {
   entityType String?
   entityId   String?
   pillarTags Json?
+  /// Raccord du registre de fichiers à une source, sans dupliquer son contenu.
+  sourceId String? @unique
+  source BrandDataSource? @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  storageReceipt Json?
 
   createdAt DateTime @default(now())
 

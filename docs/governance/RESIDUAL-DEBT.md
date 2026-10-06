@@ -1,5 +1,19 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
+## Continuité des originaux de sources — 2026-10-06 (ADR-0197)
+
+- Stockage privé et reçu local éprouvés ; réception de l’image cible, du volume et
+  de sa sauvegarde/restauration à terminer avant de déclarer le corpus reçu.
+  Déclencheur : livraison 400. Effort : un lot de réception sur le fichier pilote.
+- Le stockage HTTP conserve les reçus actifs ; son inventaire d’orphelins après
+  suppression du propriétaire reste à contractualiser avec le backend distant.
+  L’installation cible utilise le volume privé, dont ce nettoyage est reçu.
+  Déclencheur : activation d’un backend HTTP ; effort : un lot de maintenance.
+- Une même source doit pouvoir servir plusieurs marques sous des droits explicites,
+  avec propagation de péremption aux actifs/recommandations. L’original ne crée pas
+  ce partage. Déclencheur : raccord du brief multimarque après réception de 400 ;
+  effort : un lot d’autorité documentaire et de recettes concurrentes.
+
 ## Accès aux sources créatives externes — 2026-10-06 (ADR-0194/0195/0196)
 
 ADR-0196 Accepted localement : suite, navigateur dev, build et stress FULL
@@ -88,7 +102,7 @@ Procédure de reprise : [runbook](../deploy/CREATIVE-INTELLIGENCE.md).
 
 ## Avertissements de lint préexistants — relevé 2026-10-06
 
-- **25 warnings de lint/gouvernance, zéro erreur** : relevés au gauntlet ADR-0196,
+- **24 warnings de lint/gouvernance, zéro erreur** : relevés au gauntlet 400 (25 au gauntlet ADR-0196),
   déjà présents avant cette extension. Classes observées : import inter-portails,
   littéraux de piliers, calcul de complétude ad hoc et imports directs de services
   depuis routeurs. Fermer par inventaire fichier/règle, distinguer lecture et

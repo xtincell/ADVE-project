@@ -8,6 +8,7 @@ import { createTRPCRouter, protectedProcedure, adminProcedure, operatorProcedure
 import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import * as ingestion from "@/server/services/ingestion-pipeline";
 import { AdveKeySchema } from "@/domain";
+import { sourceOriginalSummary } from "@/domain/source-original";
 import { SourceCertaintySchema } from "@/domain/source-certainty";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { db } from "@/lib/db";
@@ -65,9 +66,10 @@ export const ingestionRouter = createTRPCRouter({
 
     inputSchema: z.object({
       strategyId: z.string(),
-      fileName: z.string(),
-      fileType: z.string(),
-      content: z.string(), // base64
+      fileName: z.string().min(1).max(255),
+      fileType: z.string().min(1).max(8),
+      content: z.string().max(13_981_016), // base64, 10 MiB
+      sourceId: z.string().optional(), // Explicit recovery of a legacy file source
       prepareAnalysis: z.boolean().default(false),
     }),
 
@@ -75,11 +77,13 @@ export const ingestionRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      if (input.sourceId) await assertSourceAccess(ctx.session.user.id, input.sourceId);
       const sourceId = await ingestion.ingestFile(input.strategyId, {
         name: input.fileName,
         type: input.fileType,
         content: input.content,
-      });
+        sourceId: input.sourceId,
+      }, ctx.session.user.id);
       if (input.prepareAnalysis) {
         fireSourcePreparationHooks(input.strategyId, sourceId, ctx.session.user.id);
       }
@@ -129,6 +133,7 @@ export const ingestionRouter = createTRPCRouter({
           // PR-A (ADR-0032)
           certainty: true,
           origin: true,
+          originalUpload: { select: { storageReceipt: true } },
         },
       });
 
@@ -151,6 +156,8 @@ export const ingestionRouter = createTRPCRouter({
 
       return sources.map((s) => ({
         ...s,
+        originalUpload: undefined,
+        original: sourceOriginalSummary(s.originalUpload?.storageReceipt),
         /** Nombre de fragments indexés — 0 = pas encore exploitable en analyse. */
         indexedChunks: chunksBySource.get(s.id) ?? 0,
       }));

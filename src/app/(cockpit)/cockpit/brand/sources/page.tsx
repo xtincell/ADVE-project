@@ -893,7 +893,7 @@ export default function SourcesPage() {
    * « traiter comme du texte » — un `application/pdf` y aurait stocké du base64
    * en guise de contenu lisible.
    */
-  async function handleFiles(files: FileList | null) {
+  async function handleFiles(files: FileList | null, sourceId?: string) {
     if (!files || files.length === 0 || !strategyId) return;
     setUploading(true);
     const results: Array<{ name: string; ok: boolean; message?: string }> = [];
@@ -919,7 +919,8 @@ export default function SourcesPage() {
             fileName: file.name,
             fileType: file.name.split(".").pop()?.toUpperCase() ?? "TXT",
             content: base64,
-            prepareAnalysis,
+            sourceId,
+            prepareAnalysis: sourceId ? false : prepareAnalysis,
           });
           results.push({ name: file.name, ok: true });
         } catch (err) {
@@ -940,6 +941,13 @@ export default function SourcesPage() {
 
   if (!strategyId) return <SkeletonPage />;
   if (sourcesQuery.isLoading) return <SkeletonPage />;
+  if (sourcesQuery.error) return (
+    <div className="mx-auto max-w-5xl space-y-4 p-6">
+      <h1 className="text-2xl font-bold text-foreground">Sources de marque</h1>
+      <p role="alert" className="text-error">La liste des sources n’a pas pu être reçue. Vos documents ne sont pas déclarés absents.</p>
+      <button onClick={() => void sourcesQuery.refetch()} className="text-accent underline">Réessayer</button>
+    </div>
+  );
 
   const sources = (sourcesQuery.data ?? []) as Array<Record<string, unknown>>;
 
@@ -1075,6 +1083,7 @@ export default function SourcesPage() {
         <div className="space-y-3">
           {sources.map((source, i) => {
             const status = STATUS_CONFIG[source.processingStatus as string] ?? STATUS_CONFIG.PENDING!;
+            const original = source.original as { state: string; contentHash: string; byteLength: number } | null;
             const TypeIcon = TYPE_ICONS[source.sourceType as string] ?? FileText;
             const StatusIcon = status.icon;
 
@@ -1197,6 +1206,35 @@ export default function SourcesPage() {
                     ) : null}
                   </div>
                 </div>
+
+                {source.sourceType === "FILE" && typeof source.id === "string" ? (
+                  <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
+                    {original?.state === "STORED" ? (
+                      <a href={`/api/brand-sources/${encodeURIComponent(source.id)}/original`}
+                        className="text-accent underline underline-offset-4"
+                        title={`Empreinte du fichier reçu : ${original.contentHash}`}>
+                        Télécharger l’original · {Math.ceil(original.byteLength / 1024)} Ko
+                      </a>
+                    ) : (
+                      <>
+                        <span className="text-warning">
+                          {original ? "Conservation de l’original à reprendre." : source.processingStatus === "EXTRACTED" || source.processingStatus === "PROCESSED"
+                            ? "Texte conservé ; fichier original à ajouter." : "Fichier original non conservé."}
+                        </span>
+                        <label className="cursor-pointer text-accent underline underline-offset-4">
+                          {original ? "Redéposer le même fichier" : "Ajouter l’original"}
+                          <input type="file" accept={ACCEPTED_UPLOAD} className="sr-only"
+                            aria-label={`Original de ${String(source.fileName ?? "cette source")}`}
+                            disabled={uploading}
+                            onChange={(e) => { void handleFiles(e.target.files, source.id as string); e.target.value = ""; }} />
+                        </label>
+                      </>
+                    )}
+                    {original?.state === "STORED" ? (
+                      <span className="text-foreground-muted">Le texte corrigé ne remplace pas le fichier reçu.</span>
+                    ) : null}
+                  </div>
+                ) : null}
 
                 {/* Extracted fields preview */}
                 {source.extractedFields != null && typeof source.extractedFields === "object" && !Array.isArray(source.extractedFields) && Object.keys(source.extractedFields).length > 0 ? (

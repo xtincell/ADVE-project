@@ -320,6 +320,7 @@ Ces correspondances évitent la réinvention :
 | **manipulation mode** | \`Strategy.manipulationMix\` + \`BrandAsset.manipulationMode\` + \`GenerativeTask.manipulationMode\` |
 | **ROI superfan** | \`expectedSuperfans\` / \`realisedSuperfans\` sur GenerativeTask + \`cultIndexDeltaObserved\` AssetVersion |
 | **classement** / "rang" / "percentile" / "force marché" / "leaderboard" / "étalonnage" | Scoreur Seshat \`seshat/scoreur/\` (ADR-0149/0150) — θ Bradley-Terry, \`Epreuve\`, \`BrandRef\` | On ne note pas des attributs, on compte des VICTOIRES. Ne jamais bâtir un axe percentile à côté |
+| **original de source** / "fichier reçu" / "pièce jointe" | \`BrandDataSource.originalUpload\` → \`FileUpload.storageReceipt\` + \`ingestion-pipeline/original.ts\` (ADR-0197) | Conservation privée vérifiée ; texte corrigé distinct, téléchargement autorisé |
 | **ligue** / "échelle de marché" / "standard du rang" | \`league {sectorSlug, marketScale, countryCode}\` + \`EVIDENCE_TARGETS_BY_SCALE\` \`src/domain/market-scale.ts\` (ADR-0126) | Chaque marque dans SA ligue — planchers par échelle QUARTIER→MONDE |
 | **must-have du rang** / "critères de palier" / "promotion" | \`MUST_HAVE_ITEMS\` \`src/domain/scoreur/palier.ts\` + gate \`PALIER_PROMOTION_PROOFS\` (ADR-0086/0167) | Items par palier disputés en épreuves — le rang se PROUVE |
 | **palier officiel** / "niveau de marque persisté" / "ratchet" | \`Strategy.apogeeTier\` + \`effectiveTier()\` (ADR-0167) | Mû par transition gouvernée seulement — distinct du niveau d'INTAKE (\`brand-level-evaluator\`, prospects) |

@@ -72,46 +72,7 @@ function fireSourceExtractedHooks(strategyId: string, sourceId: string): void {
 // INGEST FILE — Creates a BrandDataSource and extracts content
 // ============================================================================
 
-export async function ingestFile(
-  strategyId: string,
-  file: { name: string; content: string; type: string },
-): Promise<string> {
-  const source = await db.brandDataSource.create({
-    data: {
-      strategyId,
-      sourceType: "FILE",
-      fileName: file.name,
-      fileType: file.type.toUpperCase(),
-      processingStatus: "EXTRACTING",
-    },
-  });
-
-  try {
-    const result = await extractAuto(file.type, file.content, strategyId);
-    await db.brandDataSource.update({
-      where: { id: source.id },
-      data: {
-        rawContent: result.text,
-        rawData: result.structured as Prisma.InputJsonValue ?? undefined,
-        extractedFields: result.metadata as Prisma.InputJsonValue,
-        processingStatus: "EXTRACTED",
-      },
-    });
-  } catch (error) {
-    await db.brandDataSource.update({
-      where: { id: source.id },
-      data: {
-        processingStatus: "FAILED",
-        errorMessage: error instanceof Error ? error.message : "Extraction failed",
-      },
-    });
-    // A retained FAILED source is useful for recovery, but it is not a
-    // successful deposit receipt. The UI must receive the extraction failure.
-    throw error;
-  }
-
-  return source.id;
-}
+export { retainSourceFile as ingestFile } from "./original";
 
 // ============================================================================
 // INGEST TEXT — Manual text input

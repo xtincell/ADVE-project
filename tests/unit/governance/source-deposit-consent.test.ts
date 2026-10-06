@@ -4,15 +4,25 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // dispatch are recorded. Auth/spine are exercised separately against Postgres.
 const recorded = vi.hoisted(() => ({
   db: {
-    brandDataSource: { create: vi.fn(), update: vi.fn(), findUniqueOrThrow: vi.fn() },
+    brandDataSource: { create: vi.fn(), update: vi.fn(), findUniqueOrThrow: vi.fn(), findFirst: vi.fn() },
+    fileUpload: { create: vi.fn(), update: vi.fn(), findUnique: vi.fn(), findUniqueOrThrow: vi.fn() },
+    $queryRaw: vi.fn(), $executeRaw: vi.fn(),
     brandContextNode: { deleteMany: vi.fn() },
     $transaction: vi.fn(),
   },
   assertRead: vi.fn(),
   extract: vi.fn(),
   emit: vi.fn(),
+  source: {} as any,
+  upload: {} as any,
+  bytes: null as Buffer | null,
 }));
 vi.mock("@/lib/db", () => ({ db: recorded.db }));
+vi.mock("@/lib/encrypted-media-store", () => ({
+  mediaStoreConfiguration: () => ({ kind: "VOLUME", backendId: "test", keyId: "test" }),
+  putEncryptedMedia: async (_store: unknown, _key: string, bytes: Buffer) => { recorded.bytes = bytes; },
+  getEncryptedMedia: async () => { if (recorded.bytes) return recorded.bytes; throw Object.assign(new Error("absent"), { code: "ENOENT" }); },
+}));
 vi.mock("@/server/trpc/routers/_strategy-read-guard", () => ({ assertStrategyRead: recorded.assertRead }));
 vi.mock("@/server/trpc/init", async () => {
   const { initTRPC } = await import("@trpc/server");
@@ -45,14 +55,20 @@ async function settleHooks() {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  recorded.db.brandDataSource.create.mockImplementation(async ({ data }) => ({ id: "source-test", ...data }));
-  recorded.db.brandDataSource.update.mockImplementation(async ({ data }) => ({ id: "source-test", ...data }));
+  recorded.bytes = null; recorded.source = { id: "source-test", strategyId: "brand" }; recorded.upload = {};
+  recorded.db.brandDataSource.findFirst.mockResolvedValue(null);
+  recorded.db.brandDataSource.create.mockImplementation(async ({ data }) => (recorded.source = { id: "source-test", ...data }));
+  recorded.db.brandDataSource.update.mockImplementation(async ({ data }) => Object.assign(recorded.source, data));
   recorded.extract.mockResolvedValue({ text: "Document conservé à l’identique.", metadata: { pages: 1 } });
   recorded.emit.mockResolvedValue({ status: "OK" });
   recorded.assertRead.mockResolvedValue(undefined);
-  recorded.db.brandDataSource.findUniqueOrThrow.mockResolvedValue({ strategyId: "brand" });
+  recorded.db.brandDataSource.findUniqueOrThrow.mockImplementation(async () => recorded.source);
+  recorded.db.fileUpload.findUnique.mockResolvedValue(null);
+  recorded.db.fileUpload.findUniqueOrThrow.mockImplementation(async () => recorded.upload);
+  recorded.db.fileUpload.create.mockImplementation(async ({ data }) => (recorded.upload = { id: "upload-test", ...data }));
+  recorded.db.fileUpload.update.mockImplementation(async ({ data }) => Object.assign(recorded.upload, data));
   recorded.db.brandContextNode.deleteMany.mockResolvedValue({ count: 2 });
-  recorded.db.$transaction.mockImplementation(async (operations) => Promise.all(operations));
+  recorded.db.$transaction.mockImplementation(async (operations) => typeof operations === "function" ? operations(recorded.db) : Promise.all(operations));
 });
 
 describe("manual source correction retires the previous analysis atomically", () => {
@@ -123,7 +139,7 @@ describe("source deposit requires an explicit choice for assisted preparation", 
 
   it("preserves an extraction failure, reports it, and launches no preparation even when opted in", async () => {
     recorded.extract.mockRejectedValueOnce(new Error("Format non lisible"));
-    await expect(caller().uploadFile({ strategyId: "brand", fileName: "broken.pdf", fileType: "PDF", content: "invalid", prepareAnalysis: true })).rejects.toThrow("Format non lisible");
+    await expect(caller().uploadFile({ strategyId: "brand", fileName: "broken.pdf", fileType: "PDF", content: "aW52YWxpZA==", prepareAnalysis: true })).rejects.toThrow("Format non lisible");
     await settleHooks();
     expect(recorded.db.brandDataSource.update).toHaveBeenCalledWith(expect.objectContaining({ data: { processingStatus: "FAILED", errorMessage: "Format non lisible" } }));
     expect(recorded.emit).not.toHaveBeenCalled();

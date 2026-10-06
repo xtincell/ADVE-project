@@ -1,5 +1,23 @@
 # Changelog — La Fusee
 
+## v6.27.400 — fix(sources): conserver les originaux et reprendre un dépôt sans doublon (2026-10-06)
+
+**Le texte corrigé et le fichier reçu restent deux pièces distinctes et retrouvables.**
+
+- Raccord de `BrandDataSource` au registre `FileUpload` et au stockage privé chiffré
+  existant. Reçu PENDING puis STORED après relecture et vérification d’empreinte.
+- Admission sérialisée par marque/empreinte, reprise d’un dépôt interrompu et
+  conservation des corrections lors d’un redépôt. Un fichier historique ne peut
+  être rattaché que si son texte extrait correspond exactement à la source.
+- Téléchargement authentifié sans cache public ; absence d’original ou de stockage
+  explicite. La maintenance du magasin protège aussi les pièces documentaires.
+- Quinze tests comportementaux ; garde rouge puis verte sur le redépôt qui
+  écraserait une correction. Recette PostgreSQL : six dépôts simultanés, panne du
+  reçu après écriture et reprise, conservation après maintenance. Dépôt, correction,
+  redépôt, rechargement et téléchargement reçus dans le navigateur local.
+- La réception du stockage cible et le partage des références entre marques restent
+  suivis séparément ; aucun accord client ou statut de véracité n’est fabriqué.
+
 ## v6.27.399 — fix(sources): indexer la version complète sans doublon (2026-10-06)
 
 **Une correction en fin de document est prise en compte lors de sa préparation.**

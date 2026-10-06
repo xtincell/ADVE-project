@@ -34,6 +34,15 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.400",
+    date: "2026-10-06",
+    headline: "Vos fichiers reçus restent retrouvables",
+    highlights: [{
+      emoji: "📄", title: "L’original reste distinct de vos corrections",
+      body: "Retrouvez le fichier reçu depuis vos sources. Redéposer le même document conserve vos corrections et reprend un dépôt interrompu. Les anciens documents indiquent quand leur original reste à ajouter.",
+    }],
+  },
+  {
     version: "6.27.399",
     date: "2026-10-06",
     headline: "Vos références corrigées se préparent sans doublon",

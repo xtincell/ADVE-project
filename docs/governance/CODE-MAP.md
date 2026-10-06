@@ -30,6 +30,7 @@ Ces correspondances évitent la réinvention :
 | **manipulation mode** | `Strategy.manipulationMix` + `BrandAsset.manipulationMode` + `GenerativeTask.manipulationMode` |
 | **ROI superfan** | `expectedSuperfans` / `realisedSuperfans` sur GenerativeTask + `cultIndexDeltaObserved` AssetVersion |
 | **classement** / "rang" / "percentile" / "force marché" / "leaderboard" / "étalonnage" | Scoreur Seshat `seshat/scoreur/` (ADR-0149/0150) — θ Bradley-Terry, `Epreuve`, `BrandRef` | On ne note pas des attributs, on compte des VICTOIRES. Ne jamais bâtir un axe percentile à côté |
+| **original de source** / "fichier reçu" / "pièce jointe" | `BrandDataSource.originalUpload` → `FileUpload.storageReceipt` + `ingestion-pipeline/original.ts` (ADR-0197) | Conservation privée vérifiée ; texte corrigé distinct, téléchargement autorisé |
 | **ligue** / "échelle de marché" / "standard du rang" | `league {sectorSlug, marketScale, countryCode}` + `EVIDENCE_TARGETS_BY_SCALE` `src/domain/market-scale.ts` (ADR-0126) | Chaque marque dans SA ligue — planchers par échelle QUARTIER→MONDE |
 | **must-have du rang** / "critères de palier" / "promotion" | `MUST_HAVE_ITEMS` `src/domain/scoreur/palier.ts` + gate `PALIER_PROMOTION_PROOFS` (ADR-0086/0167) | Items par palier disputés en épreuves — le rang se PROUVE |
 | **palier officiel** / "niveau de marque persisté" / "ratchet" | `Strategy.apogeeTier` + `effectiveTier()` (ADR-0167) | Mû par transition gouvernée seulement — distinct du niveau d'INTAKE (`brand-level-evaluator`, prospects) |
@@ -55,7 +56,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Domain — 43 modules (src/domain, cœur métier pur)
+## Domain — 44 modules (src/domain, cœur métier pur)
 
 - **__tests__/pillars.test**
 - **argos-projection**
@@ -98,6 +99,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **scoreur/types** — ADR-0149 — Scoreur à force révélée : types canon (Layer 0, pur).
 - **sector-taxonomy** — Taxonomie de secteurs CANONIQUE — la clé de ligue universelle du scoreur.
 - **source-certainty** — SourceCertainty — niveau de certitude opérateur sur une `BrandDataSource`.
+- **source-original**
 - **superfan-conditions** — Domain — Superfan à conditions strictes (ADR-0141).
 - **touchpoints** — src/domain/touchpoints.ts — Touchpoint families & AARRR pirate metrics.
 
@@ -136,7 +138,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **BrandAsset** (50 fields) — BrandAsset = vault de la marque, réceptacle unique pour TOUS les actifs.  Couvre deux familles :  - Actifs **intellectue
 - **Pillar** (18 fields)
 - **PillarVersion** (10 fields)
-- **BrandDataSource** (16 fields)
+- **BrandDataSource** (17 fields)
 - **Invoice** (14 fields)
 - **Driver** (20 fields)
 - **DriverGloryTool** (4 fields)
@@ -262,7 +264,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **McpRegistry** (12 fields)
 - **McpToolInvocation** (12 fields)
 - **WebhookConfig** (10 fields)
-- **FileUpload** (10 fields)
+- **FileUpload** (13 fields)
 - **BadgeDefinition** (11 fields)
 - **UserBadge** (6 fields)
 - **MestorThread** (9 fields)

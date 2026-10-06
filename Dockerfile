@@ -63,6 +63,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN groupadd --system --gid 1001 nodejs \
     && useradd --system --uid 1001 --gid nodejs nextjs
 
+# Docker initializes the private named volume with the non-root ownership.
+RUN install -d -m 0700 -o nextjs -g nodejs /app/private-media
+
 # Standalone server + assets. `server.js` is emitted by the standalone build;
 # `public/` and `.next/static` are not included in standalone and must be copied.
 COPY --from=builder /app/public ./public
