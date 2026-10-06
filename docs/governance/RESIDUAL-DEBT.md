@@ -18,9 +18,10 @@
   frames d'un MP4 synthétique reçues localement PASS. Le LLM reste différé sans
   clé. Bornes Gateway/média et garde HARD reçues PASS. ffmpeg/ffprobe sont
   embarqués au runner Docker ; helper réel sur même base Node/UID 1000 reçu
-  PASS (cinq frames sans audio). Le build Docker complet/déploiement ne sont
-  pas reçus. Fermer par une réponse vision explicitement configurée et une
-  extraction dans le conteneur complet déployé. Où : assisted-analysis/media-observations/vision.
+  PASS (cinq frames sans audio). Build complet et activation v6.27.392 reçus ;
+  helper bundlé dans image exacte UID 1001, réseau coupé/root readonly PASS.
+  Fermer par une réponse vision explicitement configurée et une extraction
+  métier dans le processus VPS déployé. Où : assisted-analysis/media-observations/vision.
   Effort : un reçu provider et une recette du conteneur cible ; reprise dès
   configuration vision et image runtime vérifiées. Ni observation vidéo
   intégrale ni observation audio revendiquée.
@@ -50,6 +51,37 @@
   Où : media-observations, ContentSpecimen.mediaUrl et stockage existant.
   Effort : un lot de stockage/rétention ; reprise dès source/licence et backend
   de conservation validés, avant de promettre une archive permanente.
+
+- **Réception navigateur et parcours protégés de production** : sondes version
+  v6.27.392/HTML/RPC public reçues, mais Chromium échoue sur CA proxy. Fermer par
+  confiance CA qualifiée puis hydratation, erreurs navigateur et parcours protégé
+  avec rôle/fixture autorisés. Où : validation HTTPS production. Effort : une
+  campagne ciblée ; reprise dès chaîne CA et session autorisée disponibles.
+- **Sonde automatique `PROD_URL` non configurée** : variable GitHub absente,
+  écriture refusée 403 par l'intégration ; sondes manuelles reçues. Fermer par
+  configuration explicite du domaine et exécution du contrôle workflow, sans
+  assimiler notification Coolify et validation métier. Effort : un réglage et
+  un contrôle ; reprise dès droits de configuration GitHub disponibles.
+
+## Maintenance des voies de livraison et dépendances — 2026-10-06
+
+- **Workflow de déploiement legacy sans script — préexistant** :
+  `.github/workflows/deploy.yml` appelle `scripts/deploy-coolify.sh`, absent.
+  La voie canonique `build-image.yml` est utilisée ; le workflow legacy n'est
+  pas un chemin de reprise valide en l'état. Fermer en retirant cette voie ou
+  en la remplaçant par un appel explicite au workflow canonique, puis vérifier
+  références de documentation, dispatch/inputs et garde de notification Coolify.
+  Effort : un lot de maintenance workflow ; déclencheur : prochaine maintenance
+  des workflows de livraison. Aucun refactor CI dans la présente reprise.
+- **Alertes npm préexistantes au build Docker — qualification de sécurité** :
+  `npm ci` signale 50 vulnérabilités (7 low, 16 moderate, 22 high, 5 critical).
+  Ce relevé n'établit pas l'exposition des routes ni une compromission. Fermer
+  par un audit JSON daté, distinguer runtime/build/dev et portée atteignable,
+  prioriser les chemins exposés puis remédier par mises à jour ciblées avec
+  tests/build et contrôle du lockfile ; tracer toute exception motivée restante.
+  Où : package/lockfile et image de build. Effort : un triage puis lots bornés
+  par dépendance ; déclencheur : prochaine maintenance des dépendances, priorité
+  accrue si exposition runtime confirmée. Aucun `audit fix --force` automatique.
 
 ## Couverture documentaire des extensions de marque — 2026-10-02
 

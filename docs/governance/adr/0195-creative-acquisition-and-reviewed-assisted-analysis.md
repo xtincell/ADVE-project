@@ -1,6 +1,6 @@
 # ADR-0195 — Acquisition créative et analyse assistée avec revue
 
-- **Status** : Accepted — design et parcours vérifiés localement ; aucun déploiement de production
+- **Status** : Accepted — parcours locaux vérifiés ; activation applicative reçue, intégrations production à qualifier
 - **Date** : 2026-10-06
 - **Phase** : extension Telemetry — acquisition, analyse assistée et projection Argos-studio
 - **Depends on** : ADR-0060, ADR-0083, ADR-0100 amendée, ADR-0124, ADR-0166, ADR-0194, SHK-0002
@@ -241,3 +241,49 @@ activation scheduler de production, POST Argos réel et rétention durable des
 médias restent à recevoir. Aucun secret, droit d'usage, succès distant ou
 publication de production n'est inféré. Plans de reprise dans RESIDUAL-DEBT et
 le [plan existant](../plans/2026-10-06-intelligence-creative-concurrentielle.md).
+
+
+### Reprise opérationnelle — observations initiales avant bascule, 2026-10-06
+
+Main `84fa59c` porte v6.27.392. Les sondes `/api/version` ont répondu HTTP 200
+avec v6.27.390 sur `powerupgraders.com` et `lafuseev6.powerupgraders.com` : aucune
+bascule de cette extension n'est encore reçue. La voie officielle
+`build-image.yml` est lancée sur main avec `notify_coolify=true`, run
+[37509162119](https://github.com/xtincell/ADVE-project/actions/runs/37509162119).
+Dispatch et exécution en cours ne constituent pas un reçu de déploiement.
+L'image complète, UID 1001 et le helper vidéo restent à vérifier ; le reçu
+antérieur même base Node/UID 1000 reste une preuve ciblée distincte.
+
+Aucun credential provider/vision ni endpoint Argos prêt n'est reçu dans cet
+environnement cloud. Deux défauts préexistants sont bornés dans RESIDUAL-DEBT :
+voie legacy `deploy.yml` appelant un script absent, et alertes `npm ci` à trier
+par exposition réelle. Ils ne sont pas réparés par cette documentation.
+
+
+### Addendum — image complète et activation applicative reçues, 2026-10-06
+
+Le run [37509162119](https://github.com/xtincell/ADVE-project/actions/runs/37509162119)
+est SUCCESS, source `84fa59c` : build Docker complet, boot/migrations/login HTTP
+200, push GHCR et notification Coolify acceptée (demande
+`z104gthv4hhqbtay2o4xagxr`). Les deux domaines `powerupgraders.com` et
+`lafuseev6.powerupgraders.com` servent `/api/version` HTTP 200 v6.27.392 ; ce reçu
+remplace l'état initial v6.27.390 et ferme l'attente d'activation applicative.
+
+Image exacte : `ghcr.io/xtincell/adve-project:sha-84fa59cfd32120783ae00a59b4110633734dcb64`,
+digest `sha256:ed27362d12d2cc70eea9b51a639eb7ef097e84554f0444aad0afa3420ae040e8`.
+Le helper source bundlé exécuté dans cette image complète, UID 1001, réseau
+coupé et root readonly, donne cinq frames [0, 1, 2, 3, 3.8], audio non observé.
+Ce reçu ferme la vérification d'image complète ; il ne prouve pas une extraction
+sur média de marque dans le processus VPS déployé ni une réponse vision.
+
+Sondes production : RPC `publicRecipes` HTTP 200, tableau vide (zéro recette
+publiée), `/argos` HTML HTTP 200/titre présent ; cron corpus et sourceCapabilities
+401 anonymes. Aucun test protégé/admin ni provider authentifié en production.
+Le navigateur a échoué sur le certificat CA Chromium/proxy : hydratation, DOM
+et absence de pageerror ne sont pas réputés vérifiés. Les preuves navigateur
+locales demeurent distinctes. `PROD_URL` GitHub absent et écriture refusée 403
+par l'intégration ; sondes manuelles reçues, configuration non modifiée.
+
+Credentials provider/vision, endpoint Argos, cadence opt-in réellement activée,
+rétention durable et traversée métier protégée restent à qualifier. Aucun POST
+Argos distant ni recette publique ne sont inférés du déploiement de l'application.

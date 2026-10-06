@@ -220,6 +220,13 @@ Runner Docker équipé ffmpeg/ffprobe ; helper testé sur la même base Node,
 UID 1000, cinq frames sans audio. Formulaire manuel secteur/marché/sources
 traversé en navigateur ADMIN (POST 200, contexte préservé). Build Docker complet
 et déploiement ne sont pas attestés par ces vérifications ciblées.
+Reprise opérationnelle 2026-10-06 : run officiel 37509162119 SUCCESS, image
+complète build/boot/migrations/login 200, GHCR publié et demande Coolify acceptée.
+Les deux domaines servent `/api/version` HTTP 200 v6.27.392. Helper vidéo dans
+l’image exacte UID 1001, réseau coupé/root readonly : cinq frames sans audio PASS.
+RPC publicRecipes 200/vide ; HTML Argos 200. Navigateur production bloqué par CA
+proxy : hydratation/DOM/pageerror non vérifiés, aucun parcours protégé ni provider
+authentifié reçu. Credentials provider/vision et endpoint Argos indisponibles.
 Comptes courants : 629 Intent kinds ; 56 CORE / 152 registry Glory tools ;
 94 séquences dont 91 DRAFT ; 28 frameworks (recompte des registres 2026-10-06).
 
