@@ -20,7 +20,7 @@
 - Migration et parcours gouverné exercés sur PostgreSQL local. Les accès TikTok,
   YouTube et aux bibliothèques publicitaires, l'analyse vidéo automatique et la
   projection Argos-studio restent à qualifier avec leurs contrats externes.
-  Aucun déploiement ni branchement fournisseur en production revendiqué. ADR-0194.
+  Aucun déploiement ni branchement fournisseur en production revendiqué. ADR-0194 ; PR #963.
 
 ## v6.27.390 — fix(portfolio): ouvrir les fichiers natifs des assets (2026-10-02)
 
