@@ -27,6 +27,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   try {
+    if (new URL(request.url).searchParams.get("mode") === "corpus") {
+      const { runCreativeWatchCron } = await import("@/server/services/seshat/creative-intelligence/watch-collection");
+      return NextResponse.json({ ok: true, ...(await runCreativeWatchCron()) });
+    }
     const { isTextLLMAvailable } = await import("@/server/services/llm-gateway");
     if (!isTextLLMAvailable()) {
       return NextResponse.json({ ok: true, deferred: "no_text_llm", hunts: 0 });

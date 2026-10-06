@@ -121,7 +121,7 @@ La Fusée est un OS, traité comme tel. 8 couches concrètes :
 | 3 | **Protocoles** | Intent bus (`mestor.emitIntent`) · NSP SSE · hash-chain SHA256 · MCP bidirectionnel · OAuth 2.1 device flow · `ConnectorResult<T>` · Pattern P22-* | ✅ |
 | 4 | **Substrats** | Yggdrasil per-brand · tenantScopedDb isolation · layering cascade (ADR-0002) · BrandContextNode tree · Variable Bible | ✅ |
 | 5 | **Services système (daemons)** | 7 Neteru + INFRASTRUCTURE | ✅ |
-| 6 | **APIs** | tRPC routers (112) · Glory tools (56 CORE / 149 registry) · Frameworks (28) · Sequences (94 dont 91 DRAFT) · Intent kinds (548) — recompte 2026-07-11 PM sur les registres code (`INTENT_KINDS`, `CORE_GLORY_TOOLS`/`EXTENDED_GLORY_TOOLS`, `ALL_SEQUENCES`, `FRAMEWORKS`) | ✅ |
+| 6 | **APIs** | tRPC (127 fichiers, dont 124 routeurs et 3 helpers) · Glory tools (56 CORE / 152 registry) · Frameworks (28) · Sequences (94 dont 91 DRAFT) · Intent kinds (629) — recompte 2026-10-06 sur les registres code (`INTENT_KINDS`, `CORE_GLORY_TOOLS`/`EXTENDED_GLORY_TOOLS`, `ALL_SEQUENCES`, `FRAMEWORKS`) | ✅ |
 | 7 | **Applications** | Cockpit · Console · Agency · Creator · Intake · Argos (surfaces présentes) | 🟡 (3 surfaces manquantes) |
 | 8 | **Funnel commercial** | Wow-effect onboarding · free analysis · paid PDF · CTA retainer · Cockpit subscription | 🟡 (metrics absents) |
 
@@ -1066,8 +1066,8 @@ V1 backend validée localement (v6.27.391) : migration depuis vide, parcours tRP
 et contrôles documentés dans l’ADR. Réception navigateur ciblée PASS : Console
 import, Argos recettes publiques et vrai FOUNDER `/cockpit/intelligence/social`,
 zéro erreur. Track conserve `OperatorSurface` pour sa lecture opérateur complémentaire.
-Le stress global reste interrompu par OOM local après 31 pages OK (reprise dans
-RESIDUAL-DEBT) ; aucune production revendiquée. Aucun nouveau Neter.
+Le stress FULL repris sous fixtures qualifiées est PASS : 281 pages, zéro erreur
+ou avertissement ; dette de l'OOM précédent fermée. Aucune production revendiquée. Aucun nouveau Neter.
 
 ```text
 Hunter / imports manuels / comptes propres
@@ -1105,6 +1105,30 @@ une donnée privée ne devient pas publiable par changement de statut.
 Le comportement historique des `CampaignReferenceDossier` reste conservé :
 `PASS` entraîne leur publication selon ADR-0100. Ce verdict éditorial ne
 certifie pas une surperformance et n'est pas une admission dans le Scoreur.
+
+### 19.2-bis Acquisition et observation assistée — vérifiée localement
+
+[ADR-0195](adr/0195-creative-acquisition-and-reviewed-assisted-analysis.md), Accepted localement.
+Le moteur Seshat et les surfaces existantes reçoivent acquisition bornée,
+imports atomiques, veille opt-in et analyse assistée TEXT/MEDIA. Aucun nouveau
+modèle/Neter/router/page. YouTube/Bluesky/Foreplay ont un adaptateur direct ;
+CONNECTED_SOCIAL importe des métadonnées propres FB/IG, pas des compteurs par défaut.
+La matrice distingue code, accès/configuration et collecte réellement reçue.
+
+MODEL_DRAFT n'est pas une preuve admise : les lecteurs de recettes prennent
+MANUAL uniquement et la revue ajoute une annotation distincte. Frames vidéo
+échantillonnées sans audio, vision explicite et bornes documentées dans l'ADR.
+La projection distante Argos-studio requiert PASS + revue + payload opérateur
+validé, avec sources/licences qualifiées ; reçu séparé de la publication locale.
+Le parcours local a son reçu PASS : collectes Bluesky répétées et snapshots,
+rollback/isolation, admission MANUAL, cron HTTP 200/close OK et cinq frames MP4.
+YouTube/LLM sans clé et projection sans endpoint/credential restent différés ;
+publication externe non testée. Le scheduler six heures est câblé opt-in, sans
+réception de cadence en production. Vidéos VIDEO_UNCLASSIFIED par défaut, aucune
+déduction Shorts. Quatre surfaces navigateur HTTPS et mutations réelles reçues,
+3909 tests, deux builds production locaux et stress FULL 281 pages PASS sans
+erreur/avertissement. Contrôles CI suivis dans la PR #965. Providers authentifiés, vision,
+POST Argos, cadence prod et rétention des médias restent bornés dans RESIDUAL-DEBT.
 
 ### 19.3 Gouvernance et accès aux sources
 
@@ -1951,6 +1975,12 @@ Primitives d'ADR-0194 : une publication identifiable ; ses relevés datés conse
 sans écrasement ; son annotation descriptive versionnée. Périmètre PUBLIC ou
 BRAND, propriétaire explicite pour BRAND. Une métrique inconnue reste inconnue.
 `SocialPost` reste le post connecté ; son état courant ne remplace pas les relevés.
+
+### **Observation assistée — MODEL_DRAFT (ADR-0195)**
+Annotation proposée par le modèle sur texte fourni ou images réellement soumises,
+avec couverture bornée. Pas une preuve admise : exclue des recettes jusqu'à revue
+humaine, qui ajoute une observation MANUAL distincte. Ni score ni Neter nouveau.
+La vidéo échantillonnée sans audio n'est pas une observation intégrale du montage.
 
 ### **PatternEvidence / RecipeApplication**
 Primitives d'ADR-0194 : lien d'un pattern à ses observations et contrôles ;

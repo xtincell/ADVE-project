@@ -5,6 +5,7 @@ import { Card, CardBody } from "@/components/primitives/card";
 import { Badge } from "@/components/primitives/badge";
 
 export const creativeLabels: Record<string, string> = {
+  SHORT_VIDEO: "Vidéo courte", LONG_VIDEO: "Vidéo standard", VIDEO_UNCLASSIFIED: "Vidéo non classée", IMAGE: "Image", TEXT: "Texte",
   CURIOSITY: "Curiosité", CONTRARIAN: "À contre-courant", QUESTION: "Question", DEMONSTRATION: "Démonstration", CONFESSION: "Confession", RESULT_FIRST: "Résultat d'abord", OTHER: "Autre",
   PROBLEM_SOLUTION: "Problème puis solution", TRANSFORMATION: "Transformation", CHALLENGE: "Défi", REVELATION: "Révélation", COMPARISON: "Comparaison", LOOP: "Boucle",
   POV: "Vue subjective", TALKING_HEAD: "Face caméra", MACRO: "Gros plan", SPLIT_SCREEN: "Écran partagé", SCREENSHOT: "Capture d'écran", REACTION: "Réaction",

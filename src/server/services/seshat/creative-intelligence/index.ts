@@ -79,7 +79,7 @@ async function observations(store: Store, strategyId: string | undefined, asOf: 
     where: { ...scope(strategyId), ...context, publishedAt: { lte: asOf } }, orderBy: { publishedAt: "desc" }, take: 1000,
     include: {
       metrics: { where: { observedAt: { lte: asOf } }, orderBy: { observedAt: "desc" }, take: 30 },
-      analyses: { where: { taxonomyVersion: TAXONOMY_VERSION, createdAt: { lte: asOf } }, orderBy: { createdAt: "desc" }, take: 1 },
+      analyses: { where: { taxonomyVersion: TAXONOMY_VERSION, method: "MANUAL", createdAt: { lte: asOf } }, orderBy: { createdAt: "desc" }, take: 1 },
     },
   });
   const rows: Observation[] = [];

@@ -198,6 +198,31 @@ Decision rationale in [ADR-0001](docs/governance/adr/0001-framework-name-apogee.
 
 ## Phase status (état réel du repo)
 
+### Acquisition et analyse assistée — vérifiée localement (ADR-0195)
+
+[ADR-0195](docs/governance/adr/0195-creative-acquisition-and-reviewed-assisted-analysis.md)
+Accepted : PostgreSQL/réseau et quatre surfaces navigateur HTTPS PASS ;
+3909 tests, deux builds production locaux et stress FULL 281 pages, zéro erreur
+ou avertissement. Contrôles CI suivis dans la PR #965 ; aucune production revendiquée.
+Étendre le moteur Seshat existant,
+sans nouveau modèle/Neter/router/page. Sources directes YouTube/Bluesky/Foreplay,
+bridge métadonnées propres FB/IG et export borné ; capacités séparées du statut live.
+Vision configurée explicitement, aucun fallback texte qui perd les images.
+MODEL_DRAFT exclu des recettes avant revue MANUAL append-only. Veille par marque
+opt-in, cron Argos existant six heures, passages bornés ; aucune cadence prod reçue.
+Projection Argos-studio opérateur sur dossier PASS/revu, contrat de source/licence
+qualifié et reçu externe distinct ; pas d'auto-projection ni changement de la
+publication locale PASS. Bluesky collecté deux fois avec snapshots append-only,
+rollback/isolation/revue et extraction vidéo locale reçus ; cron HTTP 200/close OK.
+YouTube/LLM sans clé et Argos-studio sans endpoint/credential sont différés ; aucun
+POST distant reçu. Vidéos VIDEO_UNCLASSIFIED par défaut, sans déduction Shorts.
+Runner Docker équipé ffmpeg/ffprobe ; helper testé sur la même base Node,
+UID 1000, cinq frames sans audio. Formulaire manuel secteur/marché/sources
+traversé en navigateur ADMIN (POST 200, contexte préservé). Build Docker complet
+et déploiement ne sont pas attestés par ces vérifications ciblées.
+Comptes courants : 629 Intent kinds ; 56 CORE / 152 registry Glory tools ;
+94 séquences dont 91 DRAFT ; 28 frameworks (recompte des registres 2026-10-06).
+
 ### Extension intelligence créative et concurrentielle — 2026-10-06
 
 [ADR-0194](docs/governance/adr/0194-creative-corpus-and-competitive-intelligence.md)
@@ -213,8 +238,8 @@ la publication des dossiers `CampaignReferenceDossier` sur PASS est conservée.
 V1 backend validée sur PostgreSQL local (v6.27.391), reçu détaillé dans l’ADR ;
 Réception navigateur ciblée PASS : Console import, Argos recettes publiques et
 vrai FOUNDER `/cockpit/intelligence/social`, zéro erreur. Track reste opérateur
-(`OperatorSurface`). Stress global interrompu par OOM local après 31 pages OK :
-reprise bornée dans RESIDUAL-DEBT, aucun stress global vert ni production revendiqué.
+(`OperatorSurface`). La reprise du stress FULL sous fixtures qualifiées est PASS
+(281 pages, zéro erreur/avertissement), fermant la dette OOM ; aucune production revendiquée.
 `opportunities` et `recipeContext` alimentent Artemis/Notoria avec des hypothèses
 qualifiées par la couverture, sans mutation ADVE. Les sources tierces non configurées
 restent bornées dans RESIDUAL-DEBT ; aucune mutation automatique d'ADVE.

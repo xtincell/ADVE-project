@@ -19,6 +19,9 @@ import {
 } from "@/server/services/seshat/argos";
 import { manualDossierInputSchema } from "@/server/services/seshat/argos/schemas";
 import { creativeIntelligenceRouter } from "./creative-intelligence";
+import { projectArgosInput } from "@/domain/argos-projection";
+import { projectToArgosStudio } from "@/server/services/seshat/argos/studio-client";
+import { getOperatorContext } from "@/server/services/operator-isolation";
 
 function assertOperator(role: string | null | undefined) {
   if (role !== "ADMIN" && role !== "OPERATOR") {
@@ -32,6 +35,7 @@ function intentIdOf(ctx: unknown): string | undefined {
 
 export const argosRouter = createTRPCRouter({
   intelligence: creativeIntelligenceRouter,
+  projectToStudio: governedProcedure({ kind: "SESHAT_PROJECT_ARGOS_DOSSIER", inputSchema: projectArgosInput, requireOperator: true, caller: "argos:studio-projection" }).mutation(async ({ ctx, input }) => projectToArgosStudio(input, (await getOperatorContext(ctx.session.user.id)).operatorId)),
   // ── Hunter (LLM via Gateway) ──────────────────────────────────────────────
   hunt: governedProcedure({
     kind: "SESHAT_HARVEST_REFERENCE",
@@ -69,8 +73,7 @@ export const argosRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .query(({ input }) => getDossierById(input.id)),
 
-  setVerdict: operatorProcedure
-    .input(z.object({ id: z.string(), verdict: z.enum(["PASS", "QUARANTINE", "REJECT"]) }))
+  setVerdict: governedProcedure({ kind: "SESHAT_REVIEW_REFERENCE_DOSSIER", requireOperator: true, inputSchema: z.object({ id: z.string(), verdict: z.enum(["PASS", "QUARANTINE", "REJECT"]) }), caller: "argos:review-reference" })
     .mutation(({ ctx, input }) => {
       assertOperator(ctx.session.user.role);
       return setDossierVerdict({ id: input.id, verdict: input.verdict, reviewedBy: ctx.session.user.id });

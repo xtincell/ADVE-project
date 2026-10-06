@@ -3329,6 +3329,7 @@ import { PHASE19_TOOLS } from "./phase19-tools";
 // GlorySequence `MARKET-RESEARCH`. Ajouté à EXTENDED — pas CORE (préserve
 // cardinalité 56).
 import { MARKET_RESEARCH_TOOLS } from "./market-research-tools";
+import { CREATIVE_INTELLIGENCE_TOOLS } from "./creative-intelligence-tools";
 
 // ─── Sales Response Tree — Glory tool commercial (ADR-0104) ───────────────────
 // 1 outil HYBRID `sales-response-tree` : arbre de réponse pour les commerciaux
@@ -3368,6 +3369,7 @@ export const EXTENDED_GLORY_TOOLS: GloryToolDef[] = [
   ...ADOPS_TOOLS,
   ...PHASE19_TOOLS,
   ...MARKET_RESEARCH_TOOLS,
+  ...CREATIVE_INTELLIGENCE_TOOLS,
   ...SALES_RESPONSE_TREE_TOOLS,
   ...SEQUENCE_GAP_TOOLS, // 6 outils comblant les refs fantômes des séquences (scan NEFER 2026-06-30)
 ];
@@ -3438,4 +3440,3 @@ export function getBrandPipelineDependencyOrder(): string[] {
 
   return sorted;
 }
-

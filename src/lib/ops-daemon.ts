@@ -54,6 +54,7 @@ const CADENCES: Cadence[] = [
       "/api/cron/auto-promotion",
       "/api/cron/ops-sweep",
       "/api/cron/external-feeds",
+      "/api/cron/argos-hunt?mode=corpus", // ADR-0195 : veilles explicitement activées, sans LLM.
     ],
   },
   {
@@ -128,7 +129,7 @@ async function fireCadence(cadence: Cadence, bucket: string): Promise<void> {
     try {
       const res = await fetch(`${baseUrl()}${path}`, {
         headers: secret ? { authorization: `Bearer ${secret}` } : {},
-        signal: AbortSignal.timeout(120_000),
+        signal: AbortSignal.timeout(path === "/api/cron/argos-hunt?mode=corpus" ? 240_000 : 120_000),
       });
       if (!res.ok) {
         console.warn(`[ops-daemon] ${path} → HTTP ${res.status}`);

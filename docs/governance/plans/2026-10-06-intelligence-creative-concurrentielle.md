@@ -16,7 +16,9 @@ import, Argos recettes et vrai FOUNDER `/cockpit/intelligence/social`, zéro err
 Le typecheck et les contrats/runtime dédiés finaux sont exit 0. Le stress global
 a validé 31 pages avant OOM local (~10 Go) à `/cockpit/brand/potential`, suivi
 de 250 erreurs fetch/trois tRPC et deux avertissements de préconditions fixture ;
-il reste interrompu, avec reprise dans RESIDUAL-DEBT. Aucune migration ou
+ce premier reçu reste historique. La reprise FULL sous fixtures qualifiées
+(v6.27.392) a validé 281 pages, zéro erreur/avertissement, et ferme cette dette.
+Aucune migration ou
 publication de production revendiquée. Le reste du document conserve la spécification source et sa cible plus large.
 
 - Domaine : `src/domain/creative-intelligence.ts`, taxonomie `creative-v1` et payload
@@ -218,3 +220,167 @@ Lancement initial proposé : un secteur, un pays, une plateforme bénéficiant d
 - `src/server/services/campaign-tracker/learnings.ts`, `src/server/services/seshat/asset-impact-tracker.ts`
 - `src/server/services/seshat/prediction/index.ts`, `src/server/services/anubis/social-insights.ts`
 - `prisma/schema.prisma`, `docs/governance/STATE_FINAL_BLUEPRINT.md`, `docs/governance/CODE-MAP.md`
+
+
+## Extension acquisition et analyse assistée — cadrage ADR-0195
+
+Statut : **Accepted**, parcours PostgreSQL/réseau, navigateur et gauntlet locaux
+PASS ; version de livraison
+`v6.27.392`. Cette section décrit l’extension codée « Ratisse large », sans remplacer
+le reçu de la V1 `v6.27.391` ni déclarer une connexion déployée. Le code final et
+les vérifications sont décrits dans [ADR-0195](../adr/0195-creative-acquisition-and-reviewed-assisted-analysis.md).
+
+Étendre le moteur Seshat, `argos.intelligence`, le Gateway, les outils Glory et
+les objets existants, sans nouveau modèle/Neter/router/page. Les chemins codés sont YouTube Data API, Bluesky public, Foreplay Discovery,
+bridge métadonnées propres Facebook/Instagram et import d’export fournisseur borné. Les formats
+collectés conservent provenance, identités, pays/langue/audience distincts et
+périmètre PUBLIC ou BRAND. La disponibilité documentaire d'un fournisseur ne
+vaut ni accès authentifié ni reçu de collecte.
+
+### Matrice de capacités codée — sources primaires
+
+`CREATIVE_SOURCE_CAPABILITIES` porte 16 sources (recompte 2026-10-06 dans
+`src/domain/creative-sources.ts`). DIRECT et EXISTING_CONNECTION décrivent le
+chemin de code, pas la configuration effective ni un reçu live. Les lignes
+QUALIFY_OR_EXPORT, SIGNALS_ONLY et EXISTING_SIGNALS ne sont pas des connecteurs
+sociaux directs supplémentaires. Tous les liens du registre ont répondu HTTP 200
+au contrôle documentaire, avec redirections : cela ne prouve aucun accès de données.
+
+| Source / identifiant | État de capacité codé | Source primaire et limite |
+|---|---|---|
+| Bluesky / `BLUESKY` | DIRECT, public | [Lexicon getAuthorFeed](https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/feed/getAuthorFeed.json). Likes/réponses/republications, aucune vue ; deux lectures via l'adaptateur reçues avec snapshots append-only sur PostgreSQL local. |
+| YouTube / `YOUTUBE` | DIRECT, API_KEY | [videos.list](https://developers.google.com/youtube/v3/docs/videos/list), [channels.list](https://developers.google.com/youtube/v3/docs/channels/list). Chaîne native UC…, compteurs actuels ; ni média vidéo ni historique rétroactif. VIDEO_UNCLASSIFIED par défaut ; SHORT/LONG explicite, jamais inféré de la durée. Accès réel différé sans clé. |
+| Foreplay / `FOREPLAY` | DIRECT, API_KEY | [OpenAPI](https://public.api.foreplay.co/openapi.json), [documentation](https://docs.foreplay.co/). Discovery Ads sous BearerAuth, archives publicitaires ; aucun relevé de ROAS/vues fabriqué. Vidéos VIDEO_UNCLASSIFIED, pas de normalisation supposant Shorts. |
+| Réseaux propres / `CONNECTED_SOCIAL` | EXISTING_CONNECTION, OAuth | [Page Insights](https://developers.facebook.com/docs/graph-api/reference/insights), [Instagram Insights](https://developers.facebook.com/docs/instagram-platform/insights). Bridge FB/IG de métadonnées déjà synchronisées, pas les compteurs par défaut ; mesures natives réelles via le chemin séparé ADR-0194. |
+| Meta Ad Library / `META_AD_LIBRARY` | QUALIFY_OR_EXPORT, app approval | [ads_archive](https://developers.facebook.com/docs/graph-api/reference/ads_archive/). Périmètre autorisé et couverture pays à qualifier. |
+| TikTok Commercial / `TIKTOK_COMMERCIAL` | QUALIFY_OR_EXPORT, app approval | [Commercial Content API](https://developers.tiktok.com/docs/en/commercial-content-api-query-commercial-content). Contenu commercial et pays pris en charge, pas corpus organique mondial présumé. |
+| TikTok Research / `TIKTOK_RESEARCH` | QUALIFY_OR_EXPORT, eligibility | [Research API FAQ](https://developers.tiktok.com/docs/en/research-api-faq). Projet/éligibilité requis ; accès commercial non présumé. |
+| Instagram Discovery / `INSTAGRAM_DISCOVERY` | QUALIFY_OR_EXPORT, OAuth | [Business Discovery](https://developers.facebook.com/documentation/instagram-platform/instagram-api-with-facebook-login/business-discovery). Comptes professionnels selon permissions, pas les Insights privés des concurrents. |
+| BuzzSumo / `BUZZSUMO` | QUALIFY_OR_EXPORT, subscription | [API officielle](https://help.buzzsumo.com/en/articles/1633314-does-buzzsumo-have-an-api). Vérifier contrat et unités ; backlinks ne deviennent pas des vues. |
+| Exploding Topics / `EXPLODING_TOPICS` | SIGNALS_ONLY, subscription | [API docs](https://api.explodingtopics.com/docs/). Trajectoires de sujets ; volume de recherche distinct de performance d’un contenu. L’ancien lien `explodingtopics.com/api` renvoyait 404, ce host officiel est distinct. |
+| Brandwatch / `BRANDWATCH` | QUALIFY_OR_EXPORT, subscription | [Developer portal](https://developers.brandwatch.com/). Conversations et contexte suivant contrat, pas specimen vidéo sans source native. |
+| Apify / `APIFY` | QUALIFY_OR_EXPORT, actor contract | [API reference](https://docs.apify.com/api/v2). Acteur/version/sortie et droits à qualifier ; un token seul n’assure pas couverture ni métrique. |
+| RSS / `RSS` | EXISTING_SIGNALS, public | [RSS specification](https://www.rssboard.org/rss-specification). Radar Tarsis existant, articles/signaux sans compteurs inventés. |
+| Reddit / `REDDIT` | QUALIFY_OR_EXPORT, OAuth contract | [Data API terms](https://redditinc.com/policies/data-api-terms). Discussions/votes selon accès ; votes et vues distincts. |
+| X / `X` | QUALIFY_OR_EXPORT, API plan | [Posts lookup](https://docs.x.com/x-api/posts/lookup/introduction). Publications/métriques selon contrat ; concurrence générale non présumée. |
+| LinkedIn / `LINKEDIN` | QUALIFY_OR_EXPORT, OAuth approval | [Posts API](https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api). Comptes/pages autorisés ; aucun accès général aux concurrents. |
+
+vidIQ et TikTok Creative Center restent des benchmarks produit de la discussion
+initiale ; ils ne sont pas déclarés adaptateurs dans ce registre. Un export réel
+sourcé peut rejoindre le format commun après validation, sans simuler leur API.
+
+### Analyse assistée : observation bornée puis revue
+
+Le parcours codé utilise `creative-observation-draft` dans le moteur Glory HYBRID,
+pour un specimen BRAND et une stratégie réelle. Mode TEXT avec texte fourni,
+ou MEDIA avec `LLM_VISION_PROVIDER` (anthropic/ollama/openrouter) et
+`LLM_VISION_MODEL` explicites. Sans configuration vision, état différé ; aucun
+fallback texte qui abandonne les images. Le Gateway accepte au plus huit images,
+1 Mo chacune et 4 Mo cumulés. Média HTTPS JPEG/PNG ou MP4, 25 Mo maximum ; vidéo
+jusqu'à cinq minutes, ffmpeg/ffprobe requis, frames échantillonnées sans audio.
+Les repères conservés sont les timestamps émis par le décodeur. Les annotations
+acceptent uniquement ces `frameTimes`, jamais des timecodes de texte/image
+statique ; durée exactement celle du média et caveat audio non observé imposés.
+Une lecture opérateur scopée reprend le draft après reload sans altérer son original.
+
+Le résultat suit le schéma strict et reste `MODEL_DRAFT`. Les observations des
+recettes filtrent SQL `method: MANUAL`. La revue `reviewCreativeDraft` ajoute
+une nouvelle annotation MANUAL attribuée à l'opérateur, en laissant le brouillon
+intact. L'exclusion/admission a son reçu PostgreSQL local PASS ; la réponse d'un
+modèle vision reste différée sans clé/configuration.
+L’annotation manuelle ADR-0194 continue sans provider. L'outil de collecte
+`creative-source-fetcher` partage le delegate enregistré ; les mutations sont
+les Intents SESHAT existants étendus, pas des écritures derrière une lecture.
+
+Collecte/import : format `creative-source-export-v1`, 50 éléments maximum,
+validation du périmètre/dates puis transaction atomique. Les métriques externes
+observées gardent paid UNKNOWN ; archives ads Foreplay sans mesure de performance.
+La clé révoquée d'un opérateur ne se masque pas par une clé système de repli.
+
+Veille : `creativeWatchAutomation` est un opt-in désactivé par défaut, préservé
+dans businessContext. Cron `argos-hunt?mode=corpus` avant le contrôle LLM ; cadence
+planifiée six heures dans les schedulers existants, pas reçue en production.
+Fenêtre 500 marques, deux marques/deux comptes par passage, rotation par dernières
+tentatives, y compris les états différés/échoués. Refresh automatique de comptes natifs YouTube UC…/Bluesky did:… ; reports,
+comptes non pris en charge et états par source apparaissent dans les résultats.
+
+### Argos-studio : contrat documentaire, pas copie implicite
+
+La projection distante conserve SHK-0002 et le contrat `research-dossier-v1`.
+Un dossier local PASS et revu est accompagné d'un payload opérateur validé :
+licences, classifications, sources et preuves ne sont pas inventées depuis le
+DNA local. Le schéma source refuse notamment une licence inconnue. Le reçu
+externe est audité séparément du verdict et de la publication locale historique.
+Configuration/clé dans les mécanismes Vault existants ; échec/réponse distante
+bornés, reprise idempotente et aucune donnée privée transformée en référence
+publique par défaut. Le client de projection est codé : minimums locaux validés, schéma distant
+autoritaire sur les enums complets, dossier PASS/reviewedBy et safety recalculée,
+marque/campagne/secteur/marché exactement ceux du journal, sources URL autorisées
+par le journal. `payloadHash` et reçu dans le spine distinct, pas d’auto-projection.
+Les templates Vault youtube-data/foreplay/argos-studio et tests GET read-only sont
+codés ; ils ne prouvent pas un POST authentifié. La projection distante reste
+DEFERRED_NO_ENDPOINT_OR_CREDENTIAL, sans publication externe testée.
+
+### Reçu local intermédiaire — 2026-10-06
+
+`/workspace/scratch/acquisition-live.log` : PASS. Bluesky reçu deux fois par le
+parcours réel avec snapshots append-only ; isolation founder/opérateur ; rollback
+atomique d'export ; MODEL_DRAFT exclu puis annotation MANUAL ajoutée après revue ;
+cron HTTP 200 avec une émission close OK ; vidéo MP4 synthétique donnant cinq
+images effectivement émises. YouTube/LLM restent DEFERRED_NO_KEY, Argos-studio
+DEFERRED_NO_ENDPOINT_OR_CREDENTIAL. Extraction locale de frames ne prouve aucune
+réponse vision. Foreplay authentifié et cadence du scheduler cible sans reçu.
+Suite gouvernance : 157 fichiers / 1547 tests PASS (159 / 1566 avec sources/média).
+Émission de `setVerdict` vérifiée ; baseline Q3 argos 2→1. Comptes des registres
+2026-10-06 : 629 Intents, 56 CORE / 152 registry tools, 94 séquences / 91 DRAFT,
+28 frameworks.
+### Livraison vérifiée localement — 2026-10-06
+
+ADR-0195 Accepted : 368 fichiers / 3909 tests PASS, typecheck sans erreur,
+lint/gouvernance sans erreur (25 warnings existants), cycles zéro, Prisma valid,
+deux builds production locaux PASS. Vision bytes/provider/aucun repli, autorité
+du delegate et contrat Argos sur fixtures reçus ; aucune projection distante
+réelle. Réinjection du défaut d'exclusion MODEL_DRAFT : RED puis restauration
+GREEN (5 tests).
+
+Navigateur HTTPS : Console Argos et Credentials ADMIN, Argos public et rapport
+Social FOUNDER HTTP 200, zéro pageerror/réponse >=500. Formulaires réellement
+soumis : collecte Bluesky LIVE, annotation texte DEFERRED, projection Argos
+DEFERRED. Liste de veille du propriétaire lue. Cron HTTPS HTTP 200/LIVE et
+anonymous 401, émission persistée close OK. Corpus six heures opt-in ; timeout
+ciblé 240 s contre batch maximum ~200 s, modes antérieurs conservés à 120 s.
+
+Stress FULL : fixtures opérateur/stratégie qualifiées, 281 pages sans erreur ni
+avertissement, trois queries tRPC, sept kinds Ptah et state machine asset
+traversés. Les providers sans clés exercent des voies différées. Ce reçu ferme
+la dette de validation OOM initiale. Reçus acquisition-browser, cron-http,
+all-tests-final, stress-full dans `/workspace/scratch` ; rapport ignoré
+`logs/stress-test-2026-10-06T09-36-29.json`. Reproduction avec
+`scripts/verify-creative-acquisition.ts` et `scripts/stress-test.ts`, serveur
+HTTPS vivant, PostgreSQL et fixtures qualifiées.
+
+Complément ciblé : ffmpeg/ffprobe embarqués au runner Docker. Helper réel
+sur même base `node:22-bookworm-slim`, UID 1000 : cinq frames [0, 1, 2, 3, 3.8],
+sans audio, PASS (`acquisition-container-media.log`). Ce reçu n'est pas un build
+Docker complet ni un déploiement. Formulaire manuel secteur/marché/sources soumis
+par ADMIN réel : `createManual` HTTP 200, contexte conservé et zéro erreur/500
+(`acquisition-manual-browser.log`). Gauntlet après diffs : typecheck/lint/
+gouvernance/cycles sans erreur, gouvernance 157 fichiers / 1547 tests PASS.
+
+Contrôles CI suivis dans la PR #965. Restes explicites : accès authentifiés YouTube/Foreplay,
+réponse vision et runtime vidéo cible, activation/cadence scheduler de production,
+POST Argos réel, droits/rétention média durable. Ces limites ont leur plan et
+déclencheur dans RESIDUAL-DEBT ; aucun déploiement ou succès distant revendiqué.
+
+### Parcours de validation et reprises externes
+
+1. Inspecter les adaptateurs et la matrice de capacités après leur écriture.
+2. Vérifier les sorties fournisseur avec fixtures, puis conserver séparément
+   les reçus réseau autorisés. Toute clé manquante doit donner un état explicite.
+3. Traverser collecte → specimen/snapshot sans réécriture et sans fuite BRAND.
+4. Traverser analyse assistée → MODEL_DRAFT → revue → recette, avec refus avant
+   revue et un parcours MANUAL identique sur les contraintes descriptives.
+5. Traverser payload validé → projection Argos-studio → reçu/panne/reprise,
+   sans faux droits d'usage ni clé dans le spine.
+6. Vérifier les surfaces et outils réellement raccordés, les coûts/SLO/gates et
+   les limites, puis seulement actualiser le statut de livraison ADR-0195.

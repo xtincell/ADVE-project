@@ -2,6 +2,11 @@ import { z } from "zod";
 import { createTRPCRouter, operatorProcedure, publicProcedure } from "../init";
 import { strategyScopedProcedure, assertRawStrategyScope } from "../middleware/strategy-scope";
 import { governedProcedure } from "@/server/governance/governed-procedure";
+import { CREATIVE_SOURCE_CAPABILITIES, collectCreativeSourceSchema, creativeExportSchema } from "@/domain/creative-sources";
+import { collectCreativeSource, importCreativeExport } from "@/server/services/seshat/creative-intelligence/source-collection";
+import { assistedAnalysisInput, draftCreativeAnalysis, reviewDraftInput, reviewCreativeDraft } from "@/server/services/seshat/creative-intelligence/assisted-analysis";
+import { getOperatorContext } from "@/server/services/operator-isolation";
+import { refreshCreativeWatchlist, watchAutomationSchema, setCreativeWatchAutomation } from "@/server/services/seshat/creative-intelligence/watch-collection";
 /* lafusee:governed-active */
 import { specimenInputSchema, metricInputSchema, analysisInputSchema, recipeInputSchema, watchlistSchema } from "@/domain/creative-intelligence";
 import { importSpecimen, recordMetric, annotateSpecimen, discoverRecipe, reviewRecipe, corpusOverview, listRecipes, saveWatchlist, applyRecipeSchema, applyRecipe, resolveApplication, creativeOpportunities } from "@/server/services/seshat/creative-intelligence";
@@ -10,6 +15,21 @@ const brandInput = z.object({ strategyId: z.string().min(1) });
 const optionalBrandInput = z.object({ strategyId: z.string().min(1).optional() });
 
 export const creativeIntelligenceRouter = createTRPCRouter({
+  refreshWatchlist: governedProcedure({ kind: "SESHAT_REFRESH_CREATIVE_WATCHLIST", inputSchema: brandInput, requireOperator: true, caller: "argos:creative-watch-refresh" }).mutation(async ({ ctx, input }) => refreshCreativeWatchlist(input.strategyId, (await getOperatorContext(ctx.session.user.id)).operatorId)),
+  setWatchAutomation: governedProcedure({ kind: "SESHAT_SET_CREATIVE_WATCH_AUTOMATION", inputSchema: watchAutomationSchema, requireOperator: true, caller: "argos:creative-watch-automation" }).mutation(({ input }) => setCreativeWatchAutomation(input)),
+  watchAutomation: strategyScopedProcedure.input(brandInput).query(async ({ ctx, input }) => { const s = await ctx.db.strategy.findUnique({ where: { id: input.strategyId }, select: { businessContext: true } }); return { enabled: (s?.businessContext as Record<string, unknown> | null)?.creativeWatchAutomation === true }; }),
+  sourceCapabilities: operatorProcedure.query(() => CREATIVE_SOURCE_CAPABILITIES),
+  collectSource: governedProcedure({ kind: "SESHAT_COLLECT_CREATIVE_SOURCE", inputSchema: collectCreativeSourceSchema, requireOperator: true, caller: "argos:creative-source" }).mutation(async ({ ctx, input }) => collectCreativeSource(input, (await getOperatorContext(ctx.session.user.id)).operatorId, ctx.db)),
+  importExport: governedProcedure({ kind: "SESHAT_IMPORT_CREATIVE_EXPORT", inputSchema: creativeExportSchema, requireOperator: true, caller: "argos:creative-export" }).mutation(({ ctx, input }) => importCreativeExport(input, ctx.db)),
+  draftAnalysis: governedProcedure({ kind: "SESHAT_DRAFT_CREATIVE_ANALYSIS", inputSchema: assistedAnalysisInput, requireOperator: true, caller: "argos:creative-draft" }).mutation(({ ctx, input }) => draftCreativeAnalysis(input, ctx.session.user.id)),
+  reviewDraft: governedProcedure({ kind: "SESHAT_REVIEW_CREATIVE_DRAFT", inputSchema: reviewDraftInput, requireOperator: true, caller: "argos:creative-draft-review" }).mutation(({ ctx, input }) => reviewCreativeDraft(input, ctx.session.user.id)),
+  savedDraft: operatorProcedure.input(brandInput.extend({ specimenId: z.string().min(1) })).query(async ({ ctx, input }) => {
+    await assertRawStrategyScope(ctx.session.user.id, input);
+    const draft = await ctx.db.creativeAnalysis.findFirst({ where: { method: "MODEL_DRAFT", specimenId: input.specimenId, specimen: { strategyId: input.strategyId, visibility: "BRAND" } }, orderBy: { createdAt: "desc" } });
+    if (!draft) return null;
+    const reviewed = await ctx.db.creativeAnalysis.findFirst({ where: { specimenId: draft.specimenId, method: "MANUAL", contentHash: draft.contentHash, createdAt: { gte: draft.createdAt } }, select: { id: true } });
+    return reviewed ? null : { analysisId: draft.id, annotation: analysisInputSchema.shape.annotation.parse(draft.annotation), createdAt: draft.createdAt };
+  }),
   corpus: operatorProcedure.input(optionalBrandInput).query(async ({ ctx, input }) => {
     await assertRawStrategyScope(ctx.session.user.id, input, { optional: true });
     return corpusOverview(input.strategyId, ctx.db);
