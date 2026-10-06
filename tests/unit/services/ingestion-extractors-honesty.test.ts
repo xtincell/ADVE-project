@@ -93,8 +93,10 @@ describe("dépôt fondateur", () => {
     expect(PAGE).toMatch(/type="file"/);
   });
 
-  it("« déposé » ne se fait pas passer pour « exploitable »", () => {
+  it("distingue la lecture manuelle de la préparation assistée", () => {
     expect(PAGE).toMatch(/indexedChunks/);
-    expect(PAGE).toMatch(/Pas encore analysable/);
+    expect(PAGE).toMatch(/source\.indexedChunks > 0/);
+    expect(PAGE).toMatch(/Conservé pour lecture/);
+    expect(PAGE).toMatch(/préparation pour l’analyse reste disponible à la demande/);
   });
 });
