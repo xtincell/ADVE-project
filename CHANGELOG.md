@@ -24,6 +24,9 @@
   projection Argos-studio restent à qualifier avec leurs contrats externes.
   Aucun déploiement ni branchement fournisseur en production revendiqué. ADR-0194 ; PR #963.
 
+- Contrôle après fusion PR #963 : cartographies alignées sur 124 routers
+  (127 fichiers) et 123 répertoires de services ; vocabulaire cockpit revalidé.
+
 ## v6.27.390 — fix(portfolio): ouvrir les fichiers natifs des assets (2026-10-02)
 
 Audit de cohérence après livraison : l'inventaire GLORY lit désormais le registre

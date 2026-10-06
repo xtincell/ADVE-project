@@ -164,7 +164,7 @@ Dirigent la trajectoire. Décisions, validations, plans.
 
 ---
 
-## 3. Telemetry (26 services — Mission Tier)
+## 3. Telemetry (27 services — Mission Tier)
 
 Observent, mesurent, archivent. **27 répertoires** (recompte 2026-10-06) ; la table contient 3 lignes supplémentaires (`seshat/tarsis/connector.ts` · `seshat/scan-rate-limit.ts` · `seshat/entity-gate/`) qui sont des **sous-modules de `seshat/`** — documentés ici pour la traçabilité, hors compte.
 

@@ -1,8 +1,8 @@
 # ROUTER-MAP — Tous les routers tRPC mappés sur APOGEE
 
-**126 fichiers** sous `src/server/trpc/routers/` (recompte 2026-10-02) : **123 routers** et **3 helpers** hors compte (`_strategy-read-guard.ts`, `_pillar-write-guard.ts`, `_talent-access-guard.ts`). Le livre de marque ajoute une lecture sans nouveau writer. Les chemins actuels sont générés dans [CODE-MAP.md](CODE-MAP.md).
+**127 fichiers** sous `src/server/trpc/routers/` (recompte 2026-10-06) : **124 routers** et **3 helpers** hors compte (`_strategy-read-guard.ts`, `_pillar-write-guard.ts`, `_talent-access-guard.ts`). Le livre de marque ajoute une lecture sans nouveau writer. Les chemins actuels sont générés dans [CODE-MAP.md](CODE-MAP.md).
 
-Les tableaux de rôle conservent le vocabulaire de migration historique ; leur colonne de statut est un relevé statique du 2 octobre, pas une preuve que tous les chemins sont gouvernés ni une recette en production.
+Le recompte global du 6 octobre inclut le sous-router `creative-intelligence.ts` ajouté par ADR-0194. Les autres lignes des tableaux de rôle conservent leur relevé statique du 2 octobre et le vocabulaire de migration historique ; ces statuts ne prouvent ni la gouvernance de chaque chemin ni une recette en production.
 
 Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
@@ -18,13 +18,13 @@ Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE
 |---|---|---|---|
 | Propulsion | M | 20 | 19 point gouverné présent · 1 appels à suivre |
 | Guidance | M | 19 | 17 point gouverné présent · 2 lecture seule |
-| Telemetry | M | 24 | 19 point gouverné présent · 3 lecture seule · 2 appels à suivre |
+| Telemetry | M | 25 | 20 point gouverné présent · 3 lecture seule · 2 appels à suivre |
 | Sustainment | M | 5 | 5 point gouverné présent |
 | Operations | G | 21 | 16 point gouverné présent · 2 lecture seule · 3 appels à suivre |
 | Crew Programs | G | 15 | 14 point gouverné présent · 1 appels à suivre |
 | Comms | G | 6 | 3 point gouverné présent · 3 appels à suivre |
 | Admin | G | 13 | 7 point gouverné présent · 1 lecture seule · 5 appels à suivre |
-| **TOTAL** | | **123** (+3 helpers hors compte) | **100 points gouvernés présents · 8 lectures seules · 15 appels à suivre** — scan statique, cf. §10 |
+| **TOTAL** | | **124** (+3 helpers hors compte) | **101 points gouvernés présents · 8 lectures seules · 15 appels à suivre** — scan statique, cf. §10 |
 
 ---
 
@@ -81,7 +81,7 @@ Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE
 
 ---
 
-## 3. Telemetry (24 routers)
+## 3. Telemetry (25 routers)
 
 | Router | Rôle | Tier | Statut |
 |---|---|---|---|
@@ -224,7 +224,7 @@ Tous les routers absorbés par les 8 sous-systèmes. Cas notables :
 
 ## 10. Plan d'action governance — migration des bypass
 
-**Recompte statique 2026-10-02** : **100/123 routers** portent un appel `emitIntent` ou `governedProcedure` hors commentaires ; **8** n'ont aucune mutation déclarée ; **15** nécessitent de suivre les appels délégués et exceptions. Ce scan ne constitue pas un taux de conformité. Les gardes CI par stratégie restent nécessaires, ainsi que la lecture des chemins exécutés. Les vagues ci-dessous sont le plan historique de migration, à confronter au code avant de relancer un chantier.
+**Recompte statique 2026-10-06** : **101/124 routers** portent un appel `emitIntent` ou `governedProcedure` hors commentaires ; **8** n'ont aucune mutation déclarée ; **15** nécessitent de suivre les appels délégués et exceptions. Ce scan ne constitue pas un taux de conformité. Les gardes CI par stratégie restent nécessaires, ainsi que la lecture des chemins exécutés. Les vagues ci-dessous sont le plan historique de migration, à confronter au code avant de relancer un chantier.
 
 Historique (recensement pré-Phase 19) : 6 routers governed sur 71 (8.5 %). Cible Phase 3 : **100 % des mutations métier passent par `mestor.emitIntent`**.
 
