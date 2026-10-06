@@ -3,7 +3,9 @@
 ## Accès aux sources créatives externes — 2026-10-06 (ADR-0194/0195/0196)
 
 ADR-0196 Accepted localement : suite, navigateur dev, build et stress FULL
-authentifié reçus ; CI et déploiement de l’extension à venir. Les lignes suivantes
+authentifié reçus ; fusion PR #968 et CI 15/15 SUCCESS reçues. Livraison image suivie par
+[run 37521228164](https://github.com/xtincell/ADVE-project/actions/runs/37521228164),
+réception applicative datée dans [PR #968](https://github.com/xtincell/ADVE-project/pull/968). Les lignes suivantes
 portent les réceptions externes/exploitation restantes, pas des fonctions absentes.
 Procédure de reprise : [runbook](../deploy/CREATIVE-INTELLIGENCE.md).
 
@@ -98,6 +100,16 @@ Procédure de reprise : [runbook](../deploy/CREATIVE-INTELLIGENCE.md).
 
 ## Maintenance des voies de livraison et dépendances — 2026-10-06
 
+- **Nettoyage checkout CI — gitlink documentaire sans déclaration** : le run
+  37520314508 réussit, mais le post-checkout signale `No url found for submodule
+  path scratch/la-fusee-blueprint in .gitmodules`. Le gitlink 160000 est présent
+  sur main avant ADR-0196 ; le supprimer ou déclarer un sous-module change le
+  contrat de référence documentaire. Fermer en qualifiant son usage, puis
+  déclarer le sous-module canonique ou retirer le gitlink devenu
+  obsolète en conservant les références, et vérifier checkout/nettoyage CI.
+  Effort : un lot de maintenance documentaire Git ; déclencheur : prochaine
+  maintenance des workflows ou actualisation de cette référence. Aucun fichier
+  documentaire supprimé pour masquer cet avertissement non bloquant.
 - **Workflow de déploiement legacy sans script — préexistant** :
   `.github/workflows/deploy.yml` appelle `scripts/deploy-coolify.sh`, absent.
   La voie canonique `build-image.yml` est utilisée ; le workflow legacy n'est
