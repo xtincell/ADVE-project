@@ -34,6 +34,15 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.393",
+    date: "2026-10-06",
+    headline: "Une nouvelle marque part de vos informations",
+    highlights: [
+      { emoji: "✍️", title: "Les inconnues restent visibles", body: "Créer une plateforme de marque ne renseigne plus de fidélité client, de budget ou de qualité d’expérience à votre place. Seules les informations que vous fournissez deviennent des réponses." },
+      { emoji: "🧭", title: "Accédez aux fondations de la bonne marque", body: "Le bouton de plateforme dans le portefeuille ouvre les fondations de la marque choisie. Vous pouvez y poursuivre son cadrage." },
+    ],
+  },
+  {
     version: "6.27.392",
     date: "2026-10-06",
     headline: "Une veille créative suivie dans le temps",

@@ -1,5 +1,22 @@
 # Changelog — La Fusee
 
+## v6.27.393 — fix(strategy): conserver les inconnues à la création (2026-10-06)
+
+Créer une plateforme depuis le portefeuille ne répond plus au questionnaire de
+marque à la place de l’opérateur : fidélité, expérience, communauté, identité,
+mesure, budget et équipe restent inconnus. Le nom n’est plus pris pour une phrase
+identitaire, ni le français pour une langue déclarée.
+
+- Seul le contexte économique explicitement fourni entre dans les réponses.
+  Une réponse négative explicite est conservée ; une absence ne devient pas « NONE ».
+- La source de création conserve les métadonnées réellement saisies et ne revendique
+  pas de couverture des axes vides. Les piliers vides n’obtiennent pas de confiance.
+- Depuis le portefeuille, ouvrir ou créer la plateforme mène à ses fondations,
+  avec l’identité de stratégie dans l’URL. Le lien ouvrait l’étage stratégique dérivé.
+- Correction du chemin existant, sans service, modèle, commande ou génération ajouté.
+  Aucun dossier antérieur n’est réécrit : ses valeurs exigent une qualification de provenance.
+
+
 ## v6.27.392 — feat(intelligence): acquisition sourcée et analyse assistée revue (2026-10-06)
 
 **Le corpus reçoit des sources externes bornées et des brouillons d'observation à revoir.**

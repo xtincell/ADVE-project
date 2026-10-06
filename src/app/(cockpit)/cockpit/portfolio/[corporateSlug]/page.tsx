@@ -225,7 +225,7 @@ function BrandPlatformCta({
         type="button"
         onClick={() => {
           setStrategyId(strategyId);
-          router.push("/cockpit/brand/strategy");
+          router.push(`/cockpit/brand/fondation?strategy=${encodeURIComponent(strategyId)}`);
         }}
         className="inline-flex items-center gap-1.5 rounded bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent/80"
         title={`Plateforme de marque ${nodeName} (Strategy attachée)`}
@@ -248,7 +248,7 @@ function BrandPlatformCta({
       await utils.brandNode.invalidate();
       await utils.strategy.invalidate();
       setStrategyId(newStrategy.id);
-      router.push("/cockpit/brand/strategy");
+      router.push(`/cockpit/brand/fondation?strategy=${encodeURIComponent(newStrategy.id)}`);
     } catch (err) {
       toast.error(`Création échouée : ${err instanceof Error ? err.message : String(err)}`);
     }

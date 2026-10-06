@@ -63,10 +63,15 @@
 
 - **Admission ADVE des marques issues de La Barre** : les sources sont consultables,
   mais leur projection n’est pas une stratégie native validée. Avant admission,
-  corriger les valeurs par défaut non renseignées de `strategy.create` (intake :
-  loyauté 10–30 %, expérience 5, etc.), puis mapper les faits sourcés via le gateway,
+  mapper les faits sourcés via le gateway (valeurs par défaut non renseignées de
+  `strategy.create` retirées en v6.27.393),
   conserver les inférences et relire la stratégie. Effort : plusieurs passages de
   qualification ; reprise dès la réception du raccord portfolio, dans le chantier Shinkiro.
+- **Anciennes sources de création** : les dossiers ouverts avant v6.27.393 peuvent
+  contenir les anciennes réponses implicites de `strategy.create`. Ne pas retirer
+  une vraie déclaration au motif qu’elle vaut aussi « 5 » ou « Non ». Comparer
+  date, auteur, intake et historique avant tout amendement gouverné. Déclencheur :
+  qualification des noyaux SPAWT/FrieslandCampina ; le correctif n’a fait aucun backfill.
 - **Dossiers de stratégie multiples** : conserver les assets et sources des anciennes
   stratégies sans confondre leurs validations. Réconcilier champ par champ avec le
   corpus le plus récent, historiser les décisions puis archiver le doublon via la

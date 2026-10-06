@@ -30,6 +30,17 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-05 · `strategy.create` persistait des réponses non données comme source
+`DECLARED` (fidélité 10–30 %, expérience 5, budget <2 %, etc.). v6.27.393 initialise
+le diagnostic vide et conserve seulement le contexte fourni. Cause : confusion
+entre les valeurs proposées par un formulaire et un témoignage effectivement reçu.
+La qualification des anciennes sources reste dans RESIDUAL-DEBT ; aucune purge automatique.
+
+2026-10-06 · Le bouton de plateforme du portefeuille ouvrait l’étage stratégique
+dérivé. v6.27.393 ouvre les fondations et porte l’identité de la stratégie dans
+l’URL. Cause : lien générique d’exploitation réutilisé au point d’entrée du cadrage.
+Création et réouverture reçues en navigateur local, sans changement de contrat.
+
 Recette portfolio du 2026-10-02 : le pied de navigation conservait `v5.0` en dur.
 Il lit désormais `APP_VERSION` (v6.27.390). Cause : une surface d’affichage restée
 hors de la factorisation de version. Le correctif des chemins d’assets introduits

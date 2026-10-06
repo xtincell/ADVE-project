@@ -65,7 +65,7 @@ export const strategyRouter = createTRPCRouter({
           secteur: sector ?? "",
           pays: country ?? "",
           brandNature: biz?.brandNature ?? undefined,
-          langue: (biz as Record<string, unknown> | undefined)?.language ?? "fr",
+          langue: biz?.language,
         },
         d: {},
         v: {
@@ -93,74 +93,16 @@ export const strategyRouter = createTRPCRouter({
             strategyId: strategy.id,
             key,
             content: pillarSeeds[key] as Prisma.InputJsonValue,
-            confidence: key === "a" || key === "v" ? 0.1 : 0,
+            confidence: Object.keys(pillarSeeds[key] ?? {}).length > 0 ? 0.1 : 0,
           },
         });
       }
 
       // Initialize structured responses object
       const bizCtx = (biz ?? {}) as Record<string, unknown>;
-      const initialResponses = {
-        biz: {
-          biz_model: bizCtx.businessModel ?? null,
-          biz_nature: bizCtx.brandNature ?? null,
-          biz_revenue: bizCtx.economicModels ?? [],
-          biz_positioning: bizCtx.positioningArchetype ?? null,
-          biz_sales_channel: bizCtx.salesChannel ?? null,
-          biz_free_element: bizCtx.freeLayer ? (bizCtx.freeLayer as any).whatIsFree : "NONE",
-          biz_free_detail: bizCtx.freeLayer ? (bizCtx.freeLayer as any).whatIsPaid : "",
-          biz_premium_scope: bizCtx.premiumScope ?? "NONE",
-        },
-        a: {
-          a_vision: "",
-          a_mission: "",
-          a_noyau: input.name,
-          a_values: "",
-          a_origin: "",
-          a_archetype: "",
-          a_citation: "",
-        },
-        d: {
-          d_positioning: "",
-          d_promise: "",
-          d_persona_principal: "",
-          d_persona_secondary: "",
-          d_visual: "Inexistante",
-          d_voice: "Pas defini",
-          d_competitors: "",
-        },
-        v: {
-          v_promise: "",
-          v_products: "",
-          v_experience: "5",
-        },
-        e: {
-          e_community: "Aucune",
-          e_loyalty: "10-30%",
-          e_advocates: "Rarement",
-          e_rituals: "",
-        },
-        r: {
-          r_threats: "",
-          r_crisis: "Non",
-          r_reputation: "Pas du tout",
-        },
-        t: {
-          t_kpis: "",
-          t_measurement: "Jamais",
-          t_nps: "Non",
-        },
-        i: {
-          i_roadmap: "Non",
-          i_budget: "< 2%",
-          i_team: "Personne de dedie",
-        },
-        s: {
-          s_guidelines: "Non",
-          s_coherence: "5",
-          s_ambition: "",
-        }
-      };
+      // Creating a dossier is not answering its diagnostic questionnaire.
+      // Only the business facts actually supplied are admitted as declared input.
+      const initialResponses = buildInitialIntakeResponses(bizCtx);
 
       // Auto-create QuickIntake to act as the biz intake for the cockpit-created brand
       const quickIntake = await ctx.db.quickIntake.create({
@@ -181,7 +123,14 @@ export const strategyRouter = createTRPCRouter({
       });
 
       // Auto-create BrandDataSource of type MANUAL_INPUT linked to the QuickIntake
-      const rawContent = formatIntakeRawContent(input.name, initialResponses);
+      const rawContent = [
+        formatIntakeRawContent(input.name, initialResponses),
+        input.description && `Description: ${input.description}`,
+        sector && `Secteur: ${sector}`,
+        country && `Pays: ${country}`,
+        bizCtx.language && `Langue: ${String(bizCtx.language)}`,
+      ].filter(Boolean).join("\n");
+      const hasValueContext = Object.keys(initialResponses.biz).some((key) => key !== "biz_nature");
       await ctx.db.brandDataSource.create({
         data: {
           strategyId: strategy.id,
@@ -190,7 +139,7 @@ export const strategyRouter = createTRPCRouter({
           rawContent,
           rawData: initialResponses as Prisma.InputJsonValue,
           extractedFields: initialResponses as Prisma.InputJsonValue,
-          pillarMapping: { a: true, d: true, v: true, e: true } as Prisma.InputJsonValue,
+          pillarMapping: { a: true, ...(hasValueContext ? { v: true } : {}) } as Prisma.InputJsonValue,
           processingStatus: "PROCESSED",
           certainty: "DECLARED",
           origin: `intake:${quickIntake.id}`,
@@ -1499,6 +1448,30 @@ function classifyScore(composite: number): string {
   return classifyTier(composite);
 }
 
+/** Seed a linked intake without inventing answers to its brand diagnostic. */
+export function buildInitialIntakeResponses(businessContext: Record<string, unknown> = {}) {
+  const freeLayer = businessContext.freeLayer;
+  const free = typeof freeLayer === "object" && freeLayer !== null && !Array.isArray(freeLayer)
+    ? freeLayer as Record<string, unknown>
+    : {};
+  const supplied = {
+    biz_model: businessContext.businessModel,
+    biz_nature: businessContext.brandNature,
+    biz_revenue: businessContext.economicModels,
+    biz_positioning: businessContext.positioningArchetype,
+    biz_sales_channel: businessContext.salesChannel,
+    biz_free_element: free.whatIsFree,
+    biz_free_detail: free.whatIsPaid,
+    biz_premium_scope: businessContext.premiumScope,
+  };
+  const biz = Object.fromEntries(Object.entries(supplied).filter(([, value]) =>
+    value !== undefined && value !== null && value !== "" &&
+    (!Array.isArray(value) || value.length > 0),
+  ));
+  // The brand name is metadata, not an answer to the identity-core question.
+  return { biz, a: {}, d: {}, v: {}, e: {}, r: {}, t: {}, i: {}, s: {} };
+}
+
 export function formatIntakeRawContent(name: string, responses: Record<string, any>): string {
   const parts: string[] = [];
   parts.push(`=== Fiche d'Intake : ${name} ===`);
@@ -1506,7 +1479,7 @@ export function formatIntakeRawContent(name: string, responses: Record<string, a
   const biz = responses.biz ?? {};
   if (biz.biz_model) parts.push(`Modèle d'affaires: ${biz.biz_model}`);
   if (biz.biz_nature) parts.push(`Nature de marque: ${biz.biz_nature}`);
-  if (biz.biz_revenue) parts.push(`Modèle économique: ${Array.isArray(biz.biz_revenue) ? biz.biz_revenue.join(", ") : biz.biz_revenue}`);
+  if (biz.biz_revenue && (!Array.isArray(biz.biz_revenue) || biz.biz_revenue.length > 0)) parts.push(`Modèle économique: ${Array.isArray(biz.biz_revenue) ? biz.biz_revenue.join(", ") : biz.biz_revenue}`);
   if (biz.biz_positioning) parts.push(`Positionnement prix: ${biz.biz_positioning}`);
   if (biz.biz_sales_channel) parts.push(`Canal de vente: ${biz.biz_sales_channel}`);
   if (biz.biz_free_element) parts.push(`Partie gratuite: ${biz.biz_free_element}`);
