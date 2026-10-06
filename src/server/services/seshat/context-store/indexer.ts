@@ -209,45 +209,12 @@ export async function indexBrandContext(
     }
   }
 
-  // ── 5. Brand sources (operator-uploaded files / notes / URLs) ──
-  // Always indexed (both INTAKE_ONLY and FULL) — sources feed every pillar
-  // and are the bedrock of the RAG retrieval surface for Artemis briefs.
+  // Sources use the same atomic writer as single-document preparation.
+  // Never recreate their chunks from an earlier snapshot of rawContent here.
   const sources = await db.brandDataSource.findMany({
-    where: {
-      strategyId,
-      processingStatus: { in: ["EXTRACTED", "PROCESSED"] },
-    },
-    select: {
-      id: true,
-      sourceType: true,
-      fileName: true,
-      fileType: true,
-      rawContent: true,
-      pillarMapping: true,
-    },
+    where: { strategyId },
+    select: { id: true },
   });
-  for (const src of sources) {
-    const raw = src.rawContent ?? "";
-    if (!raw.trim()) continue;
-    const chunks = chunkText(raw);
-    for (const chunk of chunks) {
-      nodes.push({
-        kind: "BRAND_SOURCE",
-        sourceId: src.id,
-        field: `chunk_${chunk.index}`,
-        payload: {
-          text: chunk.text,
-          fileName: src.fileName,
-          sourceType: src.sourceType,
-          fileType: src.fileType,
-          chunkIndex: chunk.index,
-          charStart: chunk.charStart,
-          charEnd: chunk.charEnd,
-          pillarMapping: src.pillarMapping ?? null,
-        },
-      });
-    }
-  }
 
   // ── 6. Compute filtering metadata (shared across all nodes) ─────
   const strategy = await db.strategy.findUnique({
@@ -300,6 +267,12 @@ export async function indexBrandContext(
     }
   }
 
+  for (const source of sources) {
+    const indexed = await writeSourceIndex(source.id);
+    byKind.BRAND_SOURCE = (byKind.BRAND_SOURCE ?? 0) + indexed.chunks;
+    inserted += indexed.chunks;
+  }
+
   // Fire-and-forget embedding pass (graceful no-op when no embed provider).
   // Static import above — robust across runtimes (Next, tsx, node ESM).
   // The indexing API returns as soon as nodes are persisted; embedding happens
@@ -337,146 +310,15 @@ export interface BrandSourceIndexResult {
 }
 
 /**
- * Index ONE BrandDataSource into BRAND_SOURCE chunks. Idempotent:
- * existing BRAND_SOURCE nodes for this sourceId are deleted before
- * re-indexing so re-extraction (incrementalUpdate) doesn't accumulate
- * duplicates. Triggers embedding pass at the end (best-effort).
- *
- * Idempotence **par contenu** : si le premier chunk indexé porte déjà le hash
- * du contenu courant, l'index est à jour et l'appel ne fait rien. Sans ce
- * court-circuit, tout appelant qui veut simplement *s'assurer* qu'une source
- * est indexée repayait la totalité de l'embedding à chaque passage — c'est
- * précisément ce qui avait poussé à écrire un second index parallèle.
+ * Prepare one source using the same writer as full context preparation.
+ * Text persistence is atomic; optional embedding starts only after commit.
  */
 export async function indexBrandSource(sourceId: string): Promise<BrandSourceIndexResult> {
   const t0 = Date.now();
-  const source = await db.brandDataSource.findUnique({
-    where: { id: sourceId },
-    select: {
-      id: true,
-      strategyId: true,
-      sourceType: true,
-      fileName: true,
-      fileType: true,
-      rawContent: true,
-      pillarMapping: true,
-      processingStatus: true,
-    },
-  });
-  if (!source) throw new Error(`BrandDataSource ${sourceId} not found`);
-  if (source.processingStatus !== "EXTRACTED" && source.processingStatus !== "PROCESSED") {
-    return { sourceId, strategyId: source.strategyId, chunks: 0, durationMs: Date.now() - t0 };
-  }
-
-  const raw = source.rawContent ?? "";
-  if (!raw.trim()) {
-    return { sourceId, strategyId: source.strategyId, chunks: 0, durationMs: Date.now() - t0 };
-  }
-
-  const chunks = chunkText(raw);
-  const sharedMetadata = {
-    sourceDataSourceId: source.id,
-    sourceType: source.sourceType,
-    fileName: source.fileName,
-    fileType: source.fileType,
-  };
-
-  const payloadFor = (chunk: (typeof chunks)[number]) => ({
-    text: chunk.text,
-    fileName: source.fileName,
-    sourceType: source.sourceType,
-    fileType: source.fileType,
-    chunkIndex: chunk.index,
-    charStart: chunk.charStart,
-    charEnd: chunk.charEnd,
-    pillarMapping: source.pillarMapping ?? null,
-  });
-
-  // Déjà indexé à l'identique ? Le hash du premier chunk suffit : il dépend du
-  // texte de tête ET du découpage, qui bougent dès que le contenu change.
-  const head = chunks[0];
-  if (head) {
-    const fresh = await db.brandContextNode.findFirst({
-      where: {
-        strategyId: source.strategyId,
-        kind: "BRAND_SOURCE",
-        sourceId: source.id,
-        field: `chunk_${head.index}`,
-        contentHash: hashPayload(payloadFor(head)),
-      },
-      select: { id: true },
-    });
-    if (fresh) {
-      const chunkCount = await db.brandContextNode.count({
-        where: { strategyId: source.strategyId, kind: "BRAND_SOURCE", sourceId: source.id },
-      });
-      if (chunkCount === chunks.length) {
-        // « Découpé » n'est pas « vectorisé ». L'écriture des fragments et le
-        // calcul de leurs vecteurs sont deux étapes, et la seconde est
-        // best-effort : quand le fournisseur d'embeddings est indisponible, les
-        // fragments sont écrits avec `embeddedAt: null`. La fraîcheur testée
-        // ici ne porte QUE sur le texte — sortir maintenant laisserait ces
-        // fragments
-        // sans vecteur **définitivement**, puisque toute ré-indexation
-        // ultérieure retomberait sur ce même retour anticipé.
-        //
-        // Constaté en production le 2026-07-29 : cinq documents SPAWT déposés
-        // pendant une panne du service d'embeddings restaient introuvables en
-        // recherche sémantique une fois le service rétabli — le livre de marque
-        // et le conseil tournaient en repli par recouvrement de termes sans
-        // qu'aucun chemin ne puisse les rattraper.
-        //
-        // On relance donc le remplissage des vecteurs manquants (il ne traite
-        // que `embeddedAt: null` — sans arriéré, il ne coûte rien).
-        void embedBrandContext(source.strategyId).catch((err) => {
-          console.warn(
-            "[seshat:indexer] rattrapage des vecteurs manquants échoué (non bloquant) :",
-            err instanceof Error ? err.message : err,
-          );
-        });
-        return {
-          sourceId,
-          strategyId: source.strategyId,
-          chunks: chunkCount,
-          durationMs: Date.now() - t0,
-          alreadyFresh: true,
-        };
-      }
-    }
-  }
-
-  // Drop stale chunks for this source (idempotent re-index).
-  await db.brandContextNode.deleteMany({
-    where: { strategyId: source.strategyId, kind: "BRAND_SOURCE", sourceId: source.id },
-  });
-
-  let inserted = 0;
-  for (const chunk of chunks) {
-    const payload = payloadFor(chunk);
-    const contentHash = hashPayload(payload);
-    try {
-      await db.brandContextNode.create({
-        data: {
-          strategyId: source.strategyId,
-          kind: "BRAND_SOURCE",
-          pillarKey: null,
-          field: `chunk_${chunk.index}`,
-          sourceId: source.id,
-          payload: payload as Prisma.InputJsonValue,
-          metadata: sharedMetadata as Prisma.InputJsonValue,
-          contentHash,
-        },
-      });
-      inserted++;
-    } catch (err) {
-      console.warn(
-        `[seshat:indexer] BRAND_SOURCE chunk ${chunk.index} for ${source.id} skipped:`,
-        err instanceof Error ? err.message : err,
-      );
-    }
-  }
-
-  if (inserted > 0) {
+  const source = await writeSourceIndex(sourceId);
+  if (source.chunks > 0) {
+    // Even unchanged text can lack vectors after a provider outage. The worker
+    // only processes missing vectors; preserve existing ids and embeddings.
     void embedBrandContext(source.strategyId).catch((err) => {
       console.warn(
         "[seshat:indexer] post-source embedding failed (non-blocking):",
@@ -484,6 +326,67 @@ export async function indexBrandSource(sourceId: string): Promise<BrandSourceInd
       );
     });
   }
+  return {
+    sourceId,
+    strategyId: source.strategyId,
+    chunks: source.chunks,
+    durationMs: Date.now() - t0,
+    ...(source.reused ? { alreadyFresh: true } : {}),
+  };
+}
 
-  return { sourceId, strategyId: source.strategyId, chunks: inserted, durationMs: Date.now() - t0 };
+/**
+ * Lock the canonical source BEFORE reading it. An editor updates the same row:
+ * either its update commits first and we index the new text, or it runs after
+ * this commit and invalidates our chunks. Two preparers cannot interleave.
+ * No network work or embedding is held inside this transaction.
+ */
+async function writeSourceIndex(sourceId: string) {
+  return db.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM "BrandDataSource" WHERE id = ${sourceId} FOR UPDATE`;
+    const source = await tx.brandDataSource.findUnique({
+      where: { id: sourceId },
+      select: {
+        id: true, strategyId: true, sourceType: true, fileName: true,
+        fileType: true, rawContent: true, pillarMapping: true, processingStatus: true,
+      },
+    });
+    if (!source) throw new Error(`BrandDataSource ${sourceId} not found`);
+    const scope = { strategyId: source.strategyId, sourceId: source.id };
+    const readable = source.processingStatus === "EXTRACTED" || source.processingStatus === "PROCESSED";
+    const chunks = readable ? chunkText(source.rawContent ?? "") : [];
+    const desired = chunks.map((chunk) => {
+      const payload = {
+        text: chunk.text, fileName: source.fileName, sourceType: source.sourceType,
+        fileType: source.fileType, chunkIndex: chunk.index,
+        charStart: chunk.charStart, charEnd: chunk.charEnd,
+        pillarMapping: source.pillarMapping ?? null,
+      };
+      return {
+        ...scope, kind: "BRAND_SOURCE", pillarKey: null, field: `chunk_${chunk.index}`,
+        payload: payload as Prisma.InputJsonValue,
+        contentHash: hashPayload(payload),
+        metadata: {
+          sourceDataSourceId: source.id, sourceType: source.sourceType,
+          fileName: source.fileName, fileType: source.fileType,
+        } as Prisma.InputJsonValue,
+      };
+    });
+    const existing = await tx.brandContextNode.findMany({
+      where: { ...scope, kind: "BRAND_SOURCE" },
+      select: { field: true, contentHash: true },
+    });
+    const current = new Map(existing.map((node) => [node.field, node.contentHash]));
+    const reused = existing.length === desired.length && current.size === desired.length
+      && desired.every((node) => current.get(node.field) === node.contentHash);
+
+    // Old SOURCE_CHUNK rows remain readable for migration compatibility.
+    // Once this source is prepared, retaining those rows would resurrect old text.
+    await tx.brandContextNode.deleteMany({ where: { ...scope, kind: "SOURCE_CHUNK" } });
+    if (!reused) {
+      await tx.brandContextNode.deleteMany({ where: { ...scope, kind: "BRAND_SOURCE" } });
+      if (desired.length > 0) await tx.brandContextNode.createMany({ data: desired });
+    }
+    return { strategyId: source.strategyId, chunks: desired.length, reused };
+  }, { maxWait: 10_000, timeout: 30_000 });
 }

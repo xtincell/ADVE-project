@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.399",
+    date: "2026-10-06",
+    headline: "Vos références corrigées se préparent sans doublon",
+    highlights: [
+      { emoji: "📄", title: "Toute la référence est relue", body: "Lors de la préparation d’une source, une correction en fin de document est aussi prise en compte. Une interruption ne laisse plus une préparation partielle affichée comme réussie." },
+    ],
+  },
+  {
     version: "6.27.398",
     date: "2026-10-06",
     headline: "Votre travail en cours reste lisible",

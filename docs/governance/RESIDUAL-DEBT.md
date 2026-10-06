@@ -138,15 +138,17 @@ Procédure de reprise : [runbook](../deploy/CREATIVE-INTELLIGENCE.md).
 
 ## Intégration des marques — 2026-10-02 (ADR-0193)
 
-- **Fraîcheur documentaire sur tous les écrivains** : v6.27.398 retire l’ancien
-  index dans la transaction de `ingestion.updateSource`. L’indexeur canonique
-  teste cependant encore la fraîcheur sur le premier fragment et le nombre de
-  fragments, ce qui ne détecte pas une correction plus loin dans un document
-  changé par une autre voie. Il écrit les fragments hors transaction. Fermer
-  par comparaison de tous les hashes et exercice indexation/édition concurrentes,
-  puis vérifier la propagation vers les propositions et actifs déjà dérivés.
-  Reprise : cycle d’irrigation Shinkiro avant réception R07. Effort : un lot de
-  cohérence documentaire dans `seshat/context-store/indexer.ts` et ses consommateurs.
+- **Fraîcheur des dérivés et autres écrivains** : v6.27.398 invalide atomiquement
+  l’index lors de la correction manuelle ; v6.27.399 factorise les deux préparations,
+  compare tous les fragments et reçoit la concurrence/panne sur PostgreSQL.
+  Restent l’invalidation depuis les autres écrivains de `BrandDataSource`, les
+  propositions/actifs dérivés (`sourceDataSourceId`, `staleAt`) et recommandations
+  ancrées (`groundedSourceIds`). Fermer par raccord aux mécanismes existants,
+  sans écraser les décisions appliquées, et réception édition/revue concurrentes.
+  Le contexte non documentaire dans `indexBrandContext` reste additif : réconcilier
+  ses propres types sans retirer les contextes écrits par d’autres services.
+  Reprise : lot suivant d’irrigation Shinkiro avant réception R07. Effort : un lot
+  de propagation puis un lot de réconciliation des contextes dérivés.
 - **Ventes historiques issues de la création de marque** : `strategy.create`
   créait un Deal `WON` sans décision commerciale, source `COCKPIT_CREATE`.
   Couplage supprimé en v6.27.394. Rapprocher les lignes existantes avec contrats,

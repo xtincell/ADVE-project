@@ -30,6 +30,12 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-06 · La fraîcheur documentaire ne comparait que la tête du texte et son
+nombre de fragments ; la préparation complète réécrivait un second jeu. v6.27.399
+factorise l’écrivain, compare toutes les empreintes et verrouille la source avant
+le remplacement atomique. Six régressions reproduites ; panne et deux ordres de
+concurrence reçus sur PostgreSQL. Cause : snapshot et projections sans frontière commune.
+
 2026-10-06 · Le tableau de bord cherchait des piliers en majuscules alors que
 les lignes portent les clés de stockage minuscules : A/D renseignés apparaissaient
 vides. v6.27.398 réutilise la maturité canonique et distingue commencé/complet.

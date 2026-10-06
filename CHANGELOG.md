@@ -1,5 +1,23 @@
 # Changelog — La Fusee
 
+## v6.27.399 — fix(sources): indexer la version complète sans doublon (2026-10-06)
+
+**Une correction en fin de document est prise en compte lors de sa préparation.**
+
+- Le contrôle de fraîcheur compare tous les fragments, même si le début et le
+  nombre de fragments restent identiques. Les fragments inchangés gardent leurs
+  identifiants et leurs vecteurs ; les vecteurs manquants peuvent être rattrapés.
+- La préparation d’une source et celle du contexte complet partagent le même
+  écrivain documentaire. Les anciens fragments parallèles de cette source sont retirés.
+- La source est verrouillée avant lecture et son index remplacé dans une transaction.
+  Une panne ne laisse pas de fragments partiels ; une édition simultanée ne peut
+  ressusciter le texte précédent. Les embeddings démarrent après le commit.
+- Sept tests comportementaux, dont six rouges sur le code précédent ; recette réelle
+  PostgreSQL : six préparations concurrentes, les deux ordres édition/préparation,
+  panne d’insertion, reprise et préservation d’une autre marque.
+- La fraîcheur des actifs et recommandations dérivés ainsi que les autres écrivains
+  de sources restent des écarts distincts suivis dans RESIDUAL-DEBT.
+
 ## v6.27.398 — fix(cockpit): refléter le travail saisi et les sources corrigées (2026-10-06)
 
 **Une fondation commencée reste visible comme telle ; une source corrigée ne conserve
