@@ -27,6 +27,7 @@
   collecte, isolation et vecteurs de test ; Bluesky réel et vidéo synthétique
   avec/sans piste audio. Providers authentifiés et Argos-studio restent sans reçu.
   ADR-0196, plan et RESIDUAL-DEBT distinguent capacité codée et activation distante.
+- Livraison managée : PR #968, périmètre et mandat reliés au registre scope-drift.
 - Vérifications : 3938 tests / 370 fichiers, gouvernance 1551 tests, typecheck,
   deux lints sans erreur (25 avertissements préexistants), zéro cycle, build
   production et stress authentifié 281 pages/0 finding. Navigateur local quatre
