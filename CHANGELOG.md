@@ -14,6 +14,8 @@
 - Concurrents commerciaux, concurrents d'attention et inspirations déclarés dans
   une veille par marque. T et analytics filtrent les snapshots par secteur, pays
   et provenance ; les anciennes observations sans provenance restent en quarantaine.
+- Une création simultanée d'essai vérifie aussi le résultat de l'insertion :
+  une clé déjà gagnée par une autre marque ou hypothèse est refusée.
 - Les portées réellement reçues des connexions Facebook/Instagram rejoignent
   l'historique. Ni impressions assimilées à des vues, ni paid supposé organique.
   Recettes revues disponibles dans le contexte d'idéation et de recommandation.

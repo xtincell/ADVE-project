@@ -1,6 +1,6 @@
 /** Seshat telemetry, not the canonical Argos-studio documentary library (SHK-0002). */
 import { createHash } from "node:crypto";
-import { Prisma, type PrismaClient } from "@prisma/client";
+import { Prisma, type PrismaClient, type RecipeApplication } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -237,11 +237,12 @@ export const applyRecipeSchema = z.object({
 });
 export async function applyRecipe(input: z.infer<typeof applyRecipeSchema>, store: Store = db) {
   input = applyRecipeSchema.parse(input);
+  const checkedReplay = (application: RecipeApplication) => {
+    if (application.strategyId !== input.strategyId || application.recipeId !== input.recipeId || application.hypothesis !== input.hypothesis || application.variant !== input.variant || application.primaryMetric !== input.primaryMetric || application.baselineValue !== input.baselineValue || application.targetValue !== input.targetValue || application.deadline.getTime() !== input.deadline.getTime() || application.assetId !== (input.assetId ?? null) || application.actionId !== (input.actionId ?? null)) fail("Clé d'essai déjà utilisée.");
+    return application;
+  };
   const existing = await store.recipeApplication.findUnique({ where: { applicationKey: input.applicationKey } });
-  if (existing) {
-    if (existing.strategyId !== input.strategyId || existing.recipeId !== input.recipeId || existing.hypothesis !== input.hypothesis || existing.variant !== input.variant || existing.primaryMetric !== input.primaryMetric || existing.baselineValue !== input.baselineValue || existing.targetValue !== input.targetValue || existing.deadline.getTime() !== input.deadline.getTime() || existing.assetId !== (input.assetId ?? null) || existing.actionId !== (input.actionId ?? null)) fail("Clé d'essai déjà utilisée.");
-    return existing;
-  }
+  if (existing) return checkedReplay(existing);
   const { row, data } = await getRecipe(store, input.recipeId, input.strategyId);
   if (!data.reviewedBy) fail("La recette doit être revue avant application.");
   const strategy = await store.strategy.findUnique({ where: { id: input.strategyId }, select: { countryCode: true } }) ?? notFound();
@@ -250,7 +251,8 @@ export async function applyRecipe(input: z.infer<typeof applyRecipeSchema>, stor
   if (input.deadline <= new Date()) fail("L'échéance doit être future.");
   if (input.actionId && !await store.campaignAction.findFirst({ where: { id: input.actionId, campaign: { strategyId: input.strategyId } }, select: { id: true } })) notFound();
   if (input.assetId && !await store.brandAsset.findFirst({ where: { id: input.assetId, strategyId: input.strategyId }, select: { id: true } })) notFound();
-  return store.recipeApplication.upsert({ where: { applicationKey: input.applicationKey }, update: {}, create: { ...input, frozenRecipe: json({ recipeId: row.id, ...data }) } });
+  // Another writer may win after the initial read; validate the database winner too.
+  return checkedReplay(await store.recipeApplication.upsert({ where: { applicationKey: input.applicationKey }, update: {}, create: { ...input, frozenRecipe: json({ recipeId: row.id, ...data }) } }));
 }
 
 export async function resolveApplication(input: { strategyId: string; applicationId: string; specimenId: string; metricId: string }, store: Store = db) {

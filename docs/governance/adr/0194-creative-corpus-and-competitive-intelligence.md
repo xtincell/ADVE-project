@@ -67,6 +67,7 @@ Les lecteurs historiques restent compatibles. Une application gèle la recette
 utilisée ; une édition ultérieure ne réécrit pas l'hypothèse de l'essai.
 Inconnue reste `null`, jamais zéro inventé. Import relançable et relevés
 idempotents ; aucune collecte ne remplace destructivement un relevé précédent.
+Après une course sur la clé d'essai, la ligne renvoyée par l'upsert est vérifiée : un gagnant identique est réutilisé, une stratégie ou prescription incompatible est refusée (quatre cas de collision vérifiés dans `creative-application.test.ts`).
 
 ### Concurrence et méthode
 
