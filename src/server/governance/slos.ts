@@ -18,6 +18,15 @@ export interface IntentSlo {
 }
 
 export const INTENT_SLOS: readonly IntentSlo[] = [
+  { kind: "SESHAT_IMPORT_SPECIMEN", p95LatencyMs: 5000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "SESHAT_RECORD_CONTENT_METRIC", p95LatencyMs: 5000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "SESHAT_ANNOTATE_CREATIVE", p95LatencyMs: 5000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "SESHAT_DISCOVER_RECIPE", p95LatencyMs: 5000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "SESHAT_REVIEW_RECIPE", p95LatencyMs: 5000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "SESHAT_SAVE_CREATIVE_WATCHLIST", p95LatencyMs: 5000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "SESHAT_APPLY_RECIPE", p95LatencyMs: 5000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "SESHAT_RESOLVE_RECIPE_APPLICATION", p95LatencyMs: 5000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "SESHAT_CAPTURE_NATIVE_CREATIVE_INSIGHTS", p95LatencyMs: 5000, errorRatePct: 0.02, costP95Usd: 0 },
   { kind: "FILL_ADVE", p95LatencyMs: 25_000, errorRatePct: 0.03, costP95Usd: 0.25 },
   // ADR-0023 — small-scope edit; PATCH_DIRECT zero LLM cost, LLM_REPHRASE bounded.
   { kind: "OPERATOR_AMEND_PILLAR", p95LatencyMs: 5_000, errorRatePct: 0.02, costP95Usd: 0.05 },

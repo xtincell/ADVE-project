@@ -110,6 +110,16 @@ export async function enrichRecentPostInsights(
           ...(reach != null && reach > 0 ? { reach: Math.round(reach) } : {}),
         },
       });
+      // Separate telemetry emission. Failure is visible in the spine and does not undo native insights.
+      const { openEmission, closeEmission } = await import("@/server/governance/emission-spine");
+      const { captureNativeInsights } = await import("@/server/services/seshat/creative-intelligence");
+      const emission = await openEmission({ kind: "SESHAT_CAPTURE_NATIVE_CREATIVE_INSIGHTS", strategyId, payload: { postId: post.id }, caller: "anubis:insights" });
+      try {
+        const captured = await captureNativeInsights(strategyId, post.id, m, new Date());
+        await closeEmission({ intentId: emission, status: "OK", result: captured, costUsd: 0 });
+      } catch (error) {
+        await closeEmission({ intentId: emission, status: "FAILED", result: { error: error instanceof Error ? error.message : "Capture indisponible" } });
+      }
       measured++;
     }
     rows.push({ platform: String(conn.platform), postsMeasured: measured });

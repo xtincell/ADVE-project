@@ -6,6 +6,8 @@ import { createTRPCReact } from "@trpc/react-query";
 import { useState } from "react";
 import superjson from "superjson";
 import type { AppRouter } from "@/server/trpc/router";
+import type { inferRouterOutputs } from "@trpc/server";
+export type RouterOutputs = inferRouterOutputs<AppRouter>;
 import { emitToast } from "@/lib/toast-bus";
 
 export const trpc = createTRPCReact<AppRouter>();

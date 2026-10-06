@@ -1,5 +1,29 @@
 # Changelog — La Fusee
 
+## v6.27.391 — feat(intelligence): corpus créatif et essais concurrentiels (2026-10-06)
+
+**Les références créatives peuvent devenir des recettes documentées puis des essais de marque.**
+
+- Atelier opérateur dans la Console Argos : import de publications sourcées,
+  observations datées, annotations manuelles avec preuves, combinaisons évaluées
+  et revue explicite des recettes. Historique conservé, inconnues distinctes de zéro.
+- Lecture privée par marque dans le rapport Social (`/cockpit/intelligence/social`) ;
+  le Trend Tracker reste une lecture complémentaire opérateur sous `OperatorSurface`.
+  Projection publique des seules recettes revues. Hypothèses d'essais avec objectifs, échéance, recette gelée et
+  rattachement à une action ou un actif existant ; résultat observé, sans causalité revendiquée.
+- Concurrents commerciaux, concurrents d'attention et inspirations déclarés dans
+  une veille par marque. T et analytics filtrent les snapshots par secteur, pays
+  et provenance ; les anciennes observations sans provenance restent en quarantaine.
+- Une création simultanée d'essai vérifie aussi le résultat de l'insertion :
+  une clé déjà gagnée par une autre marque ou hypothèse est refusée.
+- Les portées réellement reçues des connexions Facebook/Instagram rejoignent
+  l'historique. Ni impressions assimilées à des vues, ni paid supposé organique.
+  Recettes revues disponibles dans le contexte d'idéation et de recommandation.
+- Migration et parcours gouverné exercés sur PostgreSQL local. Les accès TikTok,
+  YouTube et aux bibliothèques publicitaires, l'analyse vidéo automatique et la
+  projection Argos-studio restent à qualifier avec leurs contrats externes.
+  Aucun déploiement ni branchement fournisseur en production revendiqué. ADR-0194 ; PR #963.
+
 ## v6.27.390 — fix(portfolio): ouvrir les fichiers natifs des assets (2026-10-02)
 
 Audit de cohérence après livraison : l'inventaire GLORY lit désormais le registre

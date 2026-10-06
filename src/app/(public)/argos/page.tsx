@@ -6,6 +6,7 @@
 
 import { ArgosWall } from "@/components/argos/argos-wall";
 import { NewsletterCapture } from "@/components/public/newsletter-capture";
+import { PublicCreativeRecipes } from "@/components/creative-intelligence/recipe-cards";
 
 export default function ArgosPage() {
   return (
@@ -29,6 +30,7 @@ export default function ArgosPage() {
       </section>
       <div className="mx-auto max-w-[var(--maxw-content)] px-[var(--pad-page)] py-10">
         <ArgosWall />
+        <PublicCreativeRecipes />
         <div className="mt-12 rounded-2xl border border-border p-6">
           <p className="text-sm font-semibold text-foreground">Recevez les prochains dossiers</p>
           <p className="mb-3 mt-1 text-sm text-foreground-secondary">

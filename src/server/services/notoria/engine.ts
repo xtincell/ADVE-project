@@ -163,6 +163,9 @@ async function generateRecosForPillar(
   const sourceContext = config.sourcePillars
     .map((k) => serializePillar(k.toUpperCase(), pillars[k.toUpperCase()]))
     .join("\n\n");
+  const { recipeContext } = await import("@/server/services/seshat/creative-intelligence");
+  const empiricalCreativeContext = missionType === "SESHAT_OBSERVATION" || missionType === "I_GENERATION"
+    ? await recipeContext(strategyId) : "";
 
   const sourceLabel =
     missionType === "SESHAT_OBSERVATION"
@@ -299,6 +302,7 @@ ${emptyFieldsSection}
 
 Contexte source (${sourceLabel}):
 ${sourceContext}
+${empiricalCreativeContext ? wrapUntrusted("Recettes et observations créatives revues", empiricalCreativeContext, { max: 12000 }) : ""}
 ${extraContext ? `\nContexte supplementaire:\n${extraContext}` : ""}${fewShotBlock}
 
 Produis les recommandations d'enrichissement GRANULAIRES pour le pilier ${targetKey.toUpperCase()}.

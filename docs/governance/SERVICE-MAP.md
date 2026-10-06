@@ -1,6 +1,6 @@
 # SERVICE-MAP — Tous les services backend mappés sur APOGEE
 
-**122 répertoires** sous `src/server/services/` (recompte 2026-10-02) : **121 services métier** et **1 helper** (`utils/`). Les rôles restent classifiés par sous-système ci-dessous. Le recensement des chemins est généré dans [CODE-MAP.md](CODE-MAP.md) ; ces nombres ne mesurent pas la maturité ni l'exécution réelle.
+**123 répertoires** sous `src/server/services/` (recompte 2026-10-06) : **122 services métier/enregistrements** et **1 helper** (`utils/`). Les rôles restent classifiés par sous-système ci-dessous. Le recensement des chemins est généré dans [CODE-MAP.md](CODE-MAP.md) ; ces nombres ne mesurent pas la maturité ni l'exécution réelle.
 
 Ajouts au relevé du 21 juillet : `brand-bible/` (composition du livre de marque), `brand-theme/` (thème des livrables), `brand-tier-transition/` (transition gouvernée de palier). Ces trois modules sont des extensions de services existants, sans nouveau Neter.
 
@@ -8,7 +8,7 @@ Ajouts au relevé du 21 juillet : `brand-bible/` (composition du livre de marque
 
 Source de vérité : `find src/server/services -mindepth 1 -maxdepth 1 -type d`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
-Couverture physique des manifests au 2026-10-02 : **119/122 répertoires**. Les trois extensions ci-dessus ne portent pas de manifest co-localisé ; leur rattachement aux services parents reste à vérifier dans le registre de gouvernance. Le relevé 118/118 du 2026-07-21 est historique et ne décrit plus tout le répertoire.
+Couverture physique des manifests au 2026-10-06 : **120/123 répertoires**. `creative-intelligence/manifest.ts` réexporte le manifest du moteur sous Seshat, car le registre découvre les manifests racines. Les trois extensions ci-dessus ne portent pas de manifest co-localisé ; leur rattachement aux services parents reste à vérifier dans le registre de gouvernance. Le relevé 118/118 du 2026-07-21 est historique et ne décrit plus tout le répertoire.
 
 ---
 
@@ -19,13 +19,13 @@ Couverture physique des manifests au 2026-10-02 : **119/122 répertoires**. Les 
 | Propulsion (briefs) | M | 19 (incl. `deliverable-orchestrator/` Phase 17b + acteurs Phase 24) | ARTEMIS (+ INFRASTRUCTURE acteurs) |
 | Propulsion (forge) | M | 1 (`ptah/` Phase 9 ✅ shipped) | **PTAH** (ADR-0009) |
 | Guidance | M | 24 | MESTOR (+ INFRASTRUCTURE) |
-| Telemetry | M | 26 | SESHAT (+ INFRASTRUCTURE / THOT) |
+| Telemetry | M | 27 | SESHAT (+ INFRASTRUCTURE / THOT) |
 | Sustainment | M | 13 | THOT / MESTOR / INFRASTRUCTURE |
 | Operations | G | 15 | THOT (extension) / INFRASTRUCTURE |
 | Crew Programs | G | 6 satellites + `imhotep/` orchestrateur (Phase 14 ✅) | **IMHOTEP** (ADR-0019, supersedes ADR-0017) |
 | Comms | G | 2 satellites + `anubis/` orchestrateur (Phase 15 ✅) | **ANUBIS** (ADR-0020, supersedes ADR-0018) |
 | Admin | G | 13 | INFRASTRUCTURE |
-| **TOTAL** | | **121 services métier** + 1 helper (`utils/`) = **122 répertoires** | 7 Neteru actifs + INFRASTRUCTURE |
+| **TOTAL** | | **122 services métier/enregistrements** + 1 helper (`utils/`) = **123 répertoires** | 7 Neteru actifs + INFRASTRUCTURE |
 
 ### Imhotep — service Phase 14 ✅ shipped (ADR-0019)
 
@@ -166,7 +166,7 @@ Dirigent la trajectoire. Décisions, validations, plans.
 
 ## 3. Telemetry (26 services — Mission Tier)
 
-Observent, mesurent, archivent. **26 répertoires** ; la table contient 3 lignes supplémentaires (`seshat/tarsis/connector.ts` · `seshat/scan-rate-limit.ts` · `seshat/entity-gate/`) qui sont des **sous-modules de `seshat/`** — documentés ici pour la traçabilité, hors compte.
+Observent, mesurent, archivent. **27 répertoires** (recompte 2026-10-06) ; la table contient 3 lignes supplémentaires (`seshat/tarsis/connector.ts` · `seshat/scan-rate-limit.ts` · `seshat/entity-gate/`) qui sont des **sous-modules de `seshat/`** — documentés ici pour la traçabilité, hors compte.
 
 | Service | Rôle telemetry | Governor | Manifest |
 |---|---|---|---|
@@ -180,6 +180,8 @@ Observent, mesurent, archivent. **26 répertoires** ; la table contient 3 lignes
 | `seshat/tarsis/connector.ts` | **Tarsis-monitoring API façade — Phase 23 PENDING (Epic 2 Story 2.2)**. Retourne `ConnectorResult<TarsisSignal>` per pattern P22-1. Credentials via Vault (ADR-0021 + ADR-0079). Cf. ADR-0077, architecture D4. | SESHAT | 🟡 PENDING (Phase 23) |
 | `seshat/scan-rate-limit.ts` | Rate-limit PARTAGÉ entre workers des scans frais du scoreur public (table `ScanRateHit`, 6/min/IP, fail-open, purge auto) + résolution IP réelle derrière Cloudflare/Traefik (ADR-0161). Le cache ne consomme jamais. | SESHAT | ✅ shippé (2026-07-19) |
 | `seshat/entity-gate/` | Gate adversarial de collecte publique (ADR-0162) : ambiguïté du nom (lexique mots communs) + discriminants du contexte déclaré + verdict déterministe avec preuves + réfutation LLM optionnelle demote-only. Consommé par `quick-intake/public-enrichment` (presse, Brave, Maps, découverte de site). | SESHAT | ✅ shippé (2026-07-20) |
+| `seshat/creative-intelligence/` | Extension Telemetry ADR-0194 : corpus PUBLIC/BRAND, import et annotation manuels, relevés append-only, recettes versionnées dans KnowledgeEntry, watchlist BrandRef, hypothèses d’opportunités qualifiées par couverture et essais avec recette gelée. Contexte Artemis/Notoria. Calculs purs dans `domain/creative-intelligence.ts`. Ne remplace pas la bibliothèque Argos-studio (SHK-0002). Sous-module de Seshat, hors compte des répertoires racines. | SESHAT | V1 backend locale validée 2026-10-06 (ADR-0194) ; réception navigateur ciblée Console/Argos/FOUNDER PASS ; stress global interrompu OOM |
+| `creative-intelligence/` | Enregistrement du manifest ADR-0194 : réexport du moteur `seshat/creative-intelligence/`, nécessaire au scanner de manifests racines. Aucune duplication du moteur. | SESHAT | code présent (inspection 2026-10-06) |
 | `source-classifier/` | Reads BrandDataSource → BrandAsset DRAFTs (taxonomie canonique) | SESHAT | ✅ existant |
 | `brand-book-ingestion/` | Ingestion d'un brand book officiel → piliers A/D/V (gateway) + assets vault DRAFT. Deux extracteurs (LLM structuré + parseur déterministe, parité manual-first), preview→confirm, zéro fabrication (null sur absence). Intent `INGEST_BRAND_BOOK` (ADR-0173). | MESTOR | ✅ shippé (2026-07-22, Lot 1b) |
 | `playbook-capitalization/` | Cross-brand learning loop (MISSION drift 5.10) | SESHAT | ✅ existant |

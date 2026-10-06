@@ -198,6 +198,28 @@ Decision rationale in [ADR-0001](docs/governance/adr/0001-framework-name-apogee.
 
 ## Phase status (état réel du repo)
 
+### Extension intelligence créative et concurrentielle — 2026-10-06
+
+[ADR-0194](docs/governance/adr/0194-creative-corpus-and-competitive-intelligence.md)
+et [plan opérationnel](docs/governance/plans/2026-10-06-intelligence-creative-concurrentielle.md).
+Sous-domaine SESHAT, sans nouveau Neter/score. Corpus PUBLIC ou BRAND ; patterns
+et recettes dans `KnowledgeEntry` avec payload versionné. Hunter et Argos existent
+(ADR-0100) ; ne pas réinventer une bibliothèque séparée. Import et annotation
+manuels gouvernés, relevés append-only, comparaison à âge/cohorte sans futur.
+Concurrence via `BrandRef`/`CompetitorSnapshot` avec ownership explicite.
+Les effets sont associatifs ; `PASS` ne certifie pas la performance et la publication
+des recettes Argos exige une revue explicite avec preuves publiques ;
+la publication des dossiers `CampaignReferenceDossier` sur PASS est conservée.
+V1 backend validée sur PostgreSQL local (v6.27.391), reçu détaillé dans l’ADR ;
+Réception navigateur ciblée PASS : Console import, Argos recettes publiques et
+vrai FOUNDER `/cockpit/intelligence/social`, zéro erreur. Track reste opérateur
+(`OperatorSurface`). Stress global interrompu par OOM local après 31 pages OK :
+reprise bornée dans RESIDUAL-DEBT, aucun stress global vert ni production revendiqué.
+`opportunities` et `recipeContext` alimentent Artemis/Notoria avec des hypothèses
+qualifiées par la couverture, sans mutation ADVE. Les sources tierces non configurées
+restent bornées dans RESIDUAL-DEBT ; aucune mutation automatique d'ADVE.
+
+
 - **Phase 9** (Ptah Forge, ADR-0009) — ✅ shipped
 - **Phase 10** (BrandAsset / Brand Vault, [ADR-0012](docs/governance/adr/0012-brand-vault-superassets.md)) — ✅ shipped
 - **Phase 11** (Design System panda + rouge fusée, [ADR-0013](docs/governance/adr/0013-design-system-panda-rouge.md)) — ✅ shipped (PR #18) · **canon refresh 2026-06-14 → UPgraders DS [ADR-0097](docs/governance/adr/0097-design-system-upgraders-canon.md)** (corail #E56458 + or + Clash/Satoshi, supersedes 0013)

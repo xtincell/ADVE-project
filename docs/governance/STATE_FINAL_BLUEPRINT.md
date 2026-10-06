@@ -105,7 +105,7 @@ La Fusée équipe UPgraders pour couvrir **toutes les surfaces nécessaires à l
 | Comms + broadcast + diffusion | Anubis | ✅ shipped |
 | Crew + matching + formation Académie | Imhotep | ✅ shipped |
 | Admin (paiements, mobile money, escrow, facturation) | Thot | 🟡 partial |
-| Publication ouverte (références) | Seshat/Argos | 📋 planifié |
+| Publication ouverte (références) | Seshat/Argos | 🟡 surfaces présentes ; recettes : revue explicite et périmètre PUBLIC (ADR-0194) |
 | Hub des tâches + freelance marketplace | Imhotep + Thot | 📋 chantier complet (cf. §16) |
 
 ---
@@ -122,7 +122,7 @@ La Fusée est un OS, traité comme tel. 8 couches concrètes :
 | 4 | **Substrats** | Yggdrasil per-brand · tenantScopedDb isolation · layering cascade (ADR-0002) · BrandContextNode tree · Variable Bible | ✅ |
 | 5 | **Services système (daemons)** | 7 Neteru + INFRASTRUCTURE | ✅ |
 | 6 | **APIs** | tRPC routers (112) · Glory tools (56 CORE / 149 registry) · Frameworks (28) · Sequences (94 dont 91 DRAFT) · Intent kinds (548) — recompte 2026-07-11 PM sur les registres code (`INTENT_KINDS`, `CORE_GLORY_TOOLS`/`EXTENDED_GLORY_TOOLS`, `ALL_SEQUENCES`, `FRAMEWORKS`) | ✅ |
-| 7 | **Applications** | Cockpit · Console · Agency · Creator · Intake · Argos (planifié) | 🟡 (3 surfaces manquantes) |
+| 7 | **Applications** | Cockpit · Console · Agency · Creator · Intake · Argos (surfaces présentes) | 🟡 (3 surfaces manquantes) |
 | 8 | **Funnel commercial** | Wow-effect onboarding · free analysis · paid PDF · CTA retainer · Cockpit subscription | 🟡 (metrics absents) |
 
 **Modularité OS** : chaque couche peut être swappée indépendamment si le contrat avec la couche supérieure tient. Test anti-drift : aucun service inter-Neter ne doit s'importer directement — passage obligé par Intent typé via Mestor.
@@ -321,11 +321,11 @@ Check préventif → Examen APOGEE → Audit anti-doublon → Conception → Ex�
 
 Pas des Neteru. Pas dans BRAINS const. Cap 7/7 préservé.
 
-### 9.1 Hunter — sub-agent Seshat 📋 ABSENT
+### 9.1 Hunter — sub-agent Seshat 🟡 présent, acquisition externe bornée
 
 **Doctrine** : tracking externe 4-phases (harvest → coerce Zod → ingest → projection-decide), produit `CampaignReferenceDossier` signés + alimente Seshat avec indices marché.
 
-**État code** : ❌ **n'existe pas**. Phase 22 Argos planifié, vendorisé `docs/external-design/argos-hunter-v1/` + ZIP local `ARGOS STUDIO.zip`. Non porté.
+**État code inspecté le 2026-10-06** : `src/server/services/seshat/argos/`, le router `argos`, la console et les pages publiques existent (ADR-0100). Récolte de dossiers via recherche web/LLM Gateway et création manuelle ; chasse de candidates à épreuves distincte. Ce constat ne prouve pas une acquisition systématique des médias, des métriques concurrentes ni le fonctionnement des crons en production. Extension du corpus : [ADR-0194](adr/0194-creative-corpus-and-competitive-intelligence.md).
 
 **Rôle étendu (doctrine v4)** : Hunter joue aussi un rôle **économique** — alimente Seshat zone-indices avec TJM benchmarks, marketing budgets sectoriels, tarifs production type. C'est l'oracle économique de l'OS.
 
@@ -370,7 +370,7 @@ Pas des Neteru. Pas dans BRAINS const. Cap 7/7 préservé.
 |-----------|-------|-------------------|
 | **Neter** | Mestor, Artemis, Seshat, Thot, Ptah, Imhotep, Anubis | OUI |
 | **Driver système** | INFRASTRUCTURE | NON |
-| **Sub-agent Seshat** | Hunter (📋), Tarsis (✅), Jehuty (🟡) | NON |
+| **Sub-agent Seshat** | Hunter (🟡 dossiers présents), Tarsis (✅), Jehuty (🟡) | NON |
 | **Sub-agent Mestor** | Notoria (✅) | NON |
 | **Opérateur LLM** | NEFER | NON |
 | **Substrat** | Yggdrasil per-brand, NSP, hash-chain, layering cascade, tenantScopedDb, Variable Bible, BrandContextNode tree | NON |
@@ -416,7 +416,7 @@ Thot (facture, met à jour fuel ledger, gère escrow si applicable)
 ### 11.1 Phase 1 — Acquisition (automatique selon tier)
 
 ```
-Hunter (📋 tracking externe)
+Hunter (🟡 dossiers présents ; acquisition externe bornée)
     ↓
 Seshat ✅ (ingestion + normalisation)
     ↓
@@ -547,7 +547,7 @@ Le score multi-dimensions étalonne la maturité d'une marque sur sa trajectoire
 | Cockpit Communities | ✅ 100% | ❌ 0% | L | P1 | §17 |
 | Personal Brand Cockpit | 🟡 40% | ❌ 0% | L | P1 | §18 |
 | Hub-Escrow Cockpit | ✅ 90% | ❌ 0% | M | P1 | §16 |
-| Argos (frontend + Hunter backend) | 📋 vendorisé | ❌ 0% | XL | P2 | §19 |
+| Argos (frontend + Hunter backend) | 🟡 présents ; projection bibliothèque à qualifier | inspection code 2026-10-06, pas reçu prod | XL | P2 | §19 / ADR-0194 |
 | Portfolio multi-brand cockpit | ✅ shipped Phase 18 | ✅ shipped | - | - | §20 |
 | Funnel metrics + gates | 🟡 partial | 🟡 partial | M | P2 | §15 |
 
@@ -1050,54 +1050,73 @@ Une célébrité est **Talent + Marque cumulés** (cf. §20). Le portail unifié
 
 **Hiérarchie marque** : UPgraders > La Fusée > Argos (sous-marque éditoriale).
 
-### 19.1 État actuel
+### 19.1 État inspecté le 2026-10-06
 
-- 📋 Frontend hardcodé existant : `docs/external-design/argos-hunter-v1/` + `C:\Users\x-tin\Downloads\ARGOS STUDIO.zip` (local Alexandre)
-- ❌ Backend Hunter sub-agent : absent
-- ❌ Port `apps/argos/` : non commencé
+Le service `src/server/services/seshat/argos/`, le router `argos`, la console
+`/console/seshat/argos`, les pages `/argos` et `/argos/[ref]` et le cron
+`argos-hunt` sont présents (ADR-0100). Le vendor de référence reste gelé.
+L'existence de ces chemins ne vaut pas reçu de production ni preuve de données
+externes durablement accessibles.
 
-### 19.2 Architecture cible (chantier complet Phase 26-27)
+### 19.2 Extension du corpus créatif et de la concurrence
 
-#### Backend Hunter
+Décision et critères : [ADR-0194](adr/0194-creative-corpus-and-competitive-intelligence.md).
+Plan opérationnel : [intelligence créative et concurrentielle](plans/2026-10-06-intelligence-creative-concurrentielle.md).
+V1 backend validée localement (v6.27.391) : migration depuis vide, parcours tRPC
+et contrôles documentés dans l’ADR. Réception navigateur ciblée PASS : Console
+import, Argos recettes publiques et vrai FOUNDER `/cockpit/intelligence/social`,
+zéro erreur. Track conserve `OperatorSurface` pour sa lecture opérateur complémentaire.
+Le stress global reste interrompu par OOM local après 31 pages OK (reprise dans
+RESIDUAL-DEBT) ; aucune production revendiquée. Aucun nouveau Neter.
 
+```text
+Hunter / imports manuels / comptes propres
+   → spécimens + observations datées + annotations versionnées (Seshat)
+   → patterns et recettes documentés (KnowledgeEntry)
+   ├→ contexte Artemis / prescription opérateur → essai → retour mesuré
+   └→ revue éditoriale explicite → projection publique Argos
 ```
-Hunter (sub-agent Seshat) 4-phases :
-  1. Harvest (crawl externe configurable par tenant scope)
-  2. Coerce Zod (normalisation schema strict)
-  3. Ingest (Seshat persistance + indexation)
-  4. Projection-decide (safety.verdict: PASS | QUARANTINE | REJECT)
 
-Output : CampaignReferenceDossier JSON signé
-   ├─ Projection (a) Artemis interne : enrichBrief avec références
-   └─ Projection (b) Public : auto-publish on safety.verdict === 'PASS'
-```
+L’amendement d’ADR-0100 du 2026-09-14 / SHK-0002 conserve `Argos-studio`
+comme bibliothèque canonique. La Fusée conserve la gouvernance et la télémétrie ;
+`CampaignReferenceDossier` est son journal, pas un second fonds documentaire.
+La projection `POST /api/v1/ingest/dossier` exige un reçu de traversée distinct.
 
-#### Frontend ARGOS STUDIO
+Le corpus porte des périmètres PUBLIC ou BRAND, jamais une autorisation implicite
+par URL. Les cinq primitives sont `ContentSpecimen`, `ContentMetricSnapshot`,
+`CreativeAnalysis`, `PatternEvidence` et `RecipeApplication`. Patterns et recettes
+étendent `KnowledgeEntry` via payload versionné ; `CampaignReferenceDossier`
+reste le journal gouverné du dossier de marque/campagne. La concurrence réutilise `BrandRef`
+et `CompetitorSnapshot`. La watchlist référence les acteurs de veille ; les
+lecteurs d’études filtrent secteur, pays et propriété, sans filtre d’identité
+par acteurs ni score concurrentiel nouveau. `opportunities` compare séparément
+les recettes revues au corpus propre et aux comptes publics surveillés ; ses
+hypothèses qualifiées par la couverture alimentent Artemis et Notoria via
+`recipeContext` (`SESHAT_OBSERVATION` / `I_GENERATION`).
 
-- Vendoriser `ARGOS STUDIO.zip` dans `apps/argos/` (turborepo monorepo)
-- Code hardcodé tel quel (3 interdits absolus du VENDOR-NOTICE déjà documentés)
-- Consomme le JSON Hunter via endpoint Seshat dédié
-- 3 swaps UI minimaux pour brand consistency La Fusée
-- Cross-links bilatéraux landing↔Argos
+Une recette exprime une association et ses limites. Le ratio d'outlier compare
+des contenus antérieurs à âge/cohorte comparable, sans données futures. Il ne
+constitue aucun nouveau score de marque ni une admission automatique dans le Scoreur.
+La diffusion observée dans le corpus ne mesure pas la saturation de tout le marché.
 
-#### Rôle économique Hunter (étendu doctrine v4)
+La publication des **recettes** dans Argos exige une revue opérateur explicite
+et des preuves PUBLIC. Une nouvelle découverte ne publie pas sa recette ;
+une donnée privée ne devient pas publiable par changement de statut.
+Le comportement historique des `CampaignReferenceDossier` reste conservé :
+`PASS` entraîne leur publication selon ADR-0100. Ce verdict éditorial ne
+certifie pas une surperformance et n'est pas une admission dans le Scoreur.
 
-Hunter ne crawle pas que des références créatives — il crawle aussi les **indices marché** pour alimenter Seshat zone-indices :
-- TJM benchmarks par skill/zone
-- Marketing budgets sectoriels
-- Tarifs production type (KV simple/complexe, video, événement)
-- Mobile money fees actuels
+### 19.3 Gouvernance et accès aux sources
 
-Argos = **oracle économique** de l'OS en plus de référence créative.
+Les voies manuelles sont la base du premier parcours. Les mutations passent par
+les Intents SESHAT et les permissions canoniques. Les références alimentent
+Artemis ; toute écriture ADVE reste `OPERATOR_AMEND_PILLAR` explicite.
+Les connaissances de marque restent cloisonnées selon ADR-0166/0186.
 
-### 19.3 Intent kinds à créer
-
-- `HUNTER_HARVEST` (governor: SESHAT, async)
-- `HUNTER_COERCE` (governor: SESHAT)
-- `HUNTER_INGEST` (governor: SESHAT)
-- `HUNTER_PROJECT_DECIDE` (governor: SESHAT)
-- `ARGOS_PUBLISH_DOSSIER` (governor: SESHAT)
-- `ARGOS_FEATURE_BRAND` (governor: SESHAT)
+Le rôle économique de Hunter — indices TJM, budgets sectoriels, coûts de
+production — demeure un objectif distinct. Les connecteurs tiers, acquisition
+multimodale et jobs durables nécessitent leurs capacités, credentials et droits
+réels ; ils ne sont pas déduits de l'existence du corpus manuel.
 
 ### 19.4 Cap APOGEE 7/7 préservé
 
@@ -1192,7 +1211,7 @@ Inventaire exhaustif des drifts identifiés post-audit complet 2026-05-16.
 | **D-5.7** `PALIER_PROMOTION_PROOFS` gate absent | H | Transitions paliers sans preuves |
 | **D-5.8** Service `scoring-engine/` absent | H | Système de score §12 non agrégé |
 | **D-5.9** Mestor gates explicites sparse (2 fichiers seulement) | M | Beaucoup de validations inline |
-| **D-5.10** Hunter sub-agent absent | M | Planifié Phase 22, non porté |
+| **D-5.10** Hunter : acquisition externe bornée | M | Dossiers et chasse présents ; médias/métriques tiers selon accès réel (ADR-0194) |
 | **D-5.11** Jehuty minimal (curations table, pas notification queue) | M | Doctrine v4 demande extension |
 | **D-5.12** Scheduler tier-aware pas câblé | M | process-scheduler générique, pas tier-variated |
 | **D-5.13** Trigger bus événementiel partiel | M | event bus light, zéro handler refresh-trigger |
@@ -1214,7 +1233,7 @@ Inventaire exhaustif des drifts identifiés post-audit complet 2026-05-16.
 | **D-7.1** Cockpit Communities UI 0% | **H** | Backend 100% prêt, UI à créer (§17) |
 | **D-7.2** Personal Brand Cockpit UI 0% | H | Backend 40%, UI à créer (§18) |
 | **D-7.3** Hub-Escrow Cockpit UI 0% | **H** | Chantier majeur (§16) |
-| **D-7.4** Argos port non commencé | M | Frontend vendorisé, backend Hunter absent (§19) |
+| **D-7.4** Argos : profondeur de preuve et publication | M | Backend/pages présents ; extension empirique et revue explicite (§19, ADR-0194) |
 | **D-7.5** Agency conseil portal généralisation partielle | L | Cas Matanga shipped, généralisation à formaliser |
 
 ### 21.7 Couche 8 — Funnel
@@ -1290,7 +1309,7 @@ La Fusée d'UPgraders est un Industry OS d'**ampleur réelle** : 99 services bac
 **Les drifts sont opérationnels**, pas structurels :
 - **CRITIQUE** : `BRIEF_VS_ADVE_COHERENCE` gate absent + `MANIPULATION_COHERENCE` non consommée → 2 trous de sécurité doctrinale
 - **MAJEUR** : 3 surfaces UI manquantes (Communities, Personal, Hub-Escrow) malgré backend prêt
-- **STRUCTURANT** : Seshat zone-indices 0/7 + Système de score non agrégé + Hunter absent
+- **STRUCTURANT** : Seshat zone-indices 0/7 + Système de score non agrégé + acquisition externe Hunter bornée
 
 **Top action immédiate** : finir Phase 23 (35 stories) + démarrer chantiers prioritaires (§22.1).
 
@@ -1905,13 +1924,42 @@ Personne qui recrute, défend, sacrifie pour, et internalise une brand. Pas un c
 Sous-domaine de Seshat dédié aux **weak signals temps-réel** : presse, conversations, tendances, vocabulaire sectoriel, claim-imitation, embedding deltas. **Pas un Neter** — sub-domaine de Seshat (frère d'Argos). Source : `seshat/tarsis/`. Cf. [ADR-0083](adr/0083-argos-placement-seshat-yggdrasil-seam.md).
 
 ### **Argos**
-Sous-domaine de Seshat dédié aux **références culturelles historiques curées** — campagnes mondiales iconiques décodées en `CampaignReferenceDossier` signés (palette/typo/voice/visualCodes/keyPhrases/axes). **Pas un Neter** — sous-domaine Seshat (frère de Tarsis), formalisé Phase 22. Deux projections via Yggdrasil : (a) interne via `seshat/references.queryReferences()` + `enrichBrief()` (consumé par Artemis briefs), (b) publique via le site éditorial sœur `apps/argos/` (auto-publish on `safety.verdict === 'PASS'`). Pattern média Stripe Press / Red Bull Media House appliqué à La Fusée comme sub-brand de service. Cf. [ADR-0083](adr/0083-argos-placement-seshat-yggdrasil-seam.md), [REFONTE-PLAN.md Phase 22](REFONTE-PLAN.md). Code vendorisé `docs/external-design/argos-hunter-v1/` (gelé). Source au port : `src/server/services/seshat/argos/`.
+Sous-domaine éditorial de Seshat et sous-marque visible de La Fusée. La bibliothèque
+canonique est `Argos-studio` (amendement ADR-0100 / SHK-0002) ; La Fusée conserve
+les `CampaignReferenceDossier` comme journal gouverné et projette les références internes vers Artemis et
+les dossiers revus vers `/argos`. Source : `src/server/services/seshat/argos/`.
+La publication des recettes exige une revue explicite et des preuves publiques
+([ADR-0194](adr/0194-creative-corpus-and-competitive-intelligence.md)).
+Le comportement des dossiers `CampaignReferenceDossier` reste celui d'ADR-0100 :
+auto-publication sur `PASS`, sans certification de performance. Ni Neter ni score.
 
 ### **Hunter**
-Sub-agent 4-phases (harvest → coerce Zod → ingest → projection-decide) qui produit les `CampaignReferenceDossier` du sous-domaine Argos. **Ni Neter ni opérateur** — c'est un *sub-agent* exécuteur d'Intents sous gouvernance Mestor (Intent emission par run), Thot (LLM Gateway cost gate), Anubis (NSP SSE progress), Seshat (rattachement manifest). Distinction tranchée : Neter = gouverneur (compte 7/7) ; sub-agent = exécuteur (ne compte pas). Cf. [ADR-0083 §2](adr/0083-argos-placement-seshat-yggdrasil-seam.md).
+Sub-agent Seshat de récolte des dossiers de référence et candidates à épreuves.
+Ni Neter ni opérateur. Recherche et synthèse gouvernées ; une piste trouvée sur
+le web n'atteste pas l'observation du média. Le corpus manuel et les comptes
+propres apportent des observations mesurables sans supposer un accès externe.
 
 ### **CampaignReferenceDossier**
-Artefact Prisma (à créer au port Phase 22-A0) — dossier signé produit par Hunter qui capture le **DNA exploitable** d'une campagne référence (palette physique + type metrics + voice + visualCodes + keyPhrases + axes culturels) + un `safety.verdict` ∈ `PASS | QUARANTINE | REJECT`. Consommé par Artemis via `seshat/references.queryReferences()` + `enrichBrief()`. PASS → publication automatique sur `apps/argos/`. Cf. [ADR-0083](adr/0083-argos-placement-seshat-yggdrasil-seam.md).
+Dossier éditorial Prisma de marque/campagne produit manuellement ou par Hunter :
+DNA, sources et verdict éditorial `PASS | QUARANTINE | REJECT`. Présent depuis
+ADR-0100. Il reste distinct d'une publication élémentaire et de ses métriques.
+La publication des dossiers sur `PASS` est conservée (ADR-0100) ; la nouvelle
+revue explicite avec preuves PUBLIC concerne les recettes (ADR-0194).
+
+### **Corpus créatif — ContentSpecimen / ContentMetricSnapshot / CreativeAnalysis**
+Primitives d'ADR-0194 : une publication identifiable ; ses relevés datés conservés
+sans écrasement ; son annotation descriptive versionnée. Périmètre PUBLIC ou
+BRAND, propriétaire explicite pour BRAND. Une métrique inconnue reste inconnue.
+`SocialPost` reste le post connecté ; son état courant ne remplace pas les relevés.
+
+### **PatternEvidence / RecipeApplication**
+Primitives d'ADR-0194 : lien d'un pattern à ses observations et contrôles ;
+essai propre à une stratégie avec recette gelée, objectif et observations de
+résultat. Patterns/recettes V1 utilisent `BRIEF_PATTERN` / `creative-recipe-v1`
+de `KnowledgeEntry` via payload versionné ; `CAMPAIGN_TEMPLATE` demeure sa
+famille historique, sans table ni score de recette nouveau.
+Une association documentée ne démontre pas une causalité ; une recette n'est
+pas une séquence Glory. Statut d'implémentation et critères de livraison : ADR-0194.
 
 ### **Ptah**
 Le 5ème Neter actif (Phase 9, ADR-0009). **Forge master** — matérialise les briefs Artemis en assets concrets (image/vidéo/audio/icône/design/stock/classification) via providers externes (Magnific, Adobe Firefly, Figma, Canva). Démiurge égyptien créateur par le verbe — métaphore directe `prompt → asset`. Sous-système APOGEE = Propulsion (downstream Artemis). Source : `src/server/services/ptah/`.
@@ -2272,7 +2320,7 @@ Combler les gaps manuel ADVE :
 
 ### `/cockpit/intelligence/market-studies` + `/cockpit/intelligence/track`
 
-Deux nouvelles pages cockpit (ADR-0037 PR-J). La première permet à l'opérateur d'injecter une étude PDF/DOCX/XLSX. La seconde affiche les 49 variables Trend Tracker pour le pays + secteur du brand actif, avec coverage % et synthèse TAM / concurrents / segments.
+Deux nouvelles pages cockpit (ADR-0037 PR-J). La première permet à l'opérateur d'injecter une étude PDF/DOCX/XLSX. La seconde affiche les 49 variables Trend Tracker pour le pays + secteur du brand actif, avec coverage % et synthèse TAM / concurrents / segments. Son segment reste gardé par `OperatorSurface` ; la lecture propriétaire du corpus créatif ADR-0194 se trouve dans `/cockpit/intelligence/social`.
 
 ### `/console/seshat/market-studies`
 
