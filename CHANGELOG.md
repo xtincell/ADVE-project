@@ -4,6 +4,7 @@
 
 **Le corpus reçoit des sources externes bornées et des brouillons d'observation à revoir.**
 
+- Réception opérationnelle documentée dans PR #967, périmètre enregistré.
 - Reprise opérationnelle reçue : build officiel 37509162119 réussi, image complète
   démarrée/migrations/login 200, publication GHCR et demande Coolify acceptée.
   Les deux domaines servent `/api/version` HTTP 200 v6.27.392. Helper vidéo dans
