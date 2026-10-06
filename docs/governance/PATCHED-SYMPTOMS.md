@@ -30,6 +30,14 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-06 · Un amendement manuel persisté laissait le contenu de la page pilier
+inchangé, et le formulaire suivant pouvait garder l’ancienne version. v6.27.395
+rafraîchit `pillar.get` et invalide `listEditableFields` au succès. Cause : seul
+`pillar.assess` était rafraîchi ; le score bougeait sans que le champ soit relu.
+Reproduit sur le parcours local réel, puis vérifié par deux amendements consécutifs.
+La bannière assimilait aussi le stade de maturité EMPTY à zéro donnée : elle indique
+désormais « à compléter » pour un contenu partiel, sans compteur inventé.
+
 2026-10-06 · Créer une plateforme par `strategy.create` ajoutait un Deal `WON`
 avec le nom de la marque et le contact de l’opérateur. Couplage retiré en v6.27.394.
 Cause : assimilation d’un dossier opérationnel à une conversion commerciale ; le

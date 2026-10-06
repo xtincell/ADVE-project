@@ -1,5 +1,17 @@
 # Changelog — La Fusee
 
+## v6.27.395 — fix(cockpit): afficher le résultat des amendements manuels (2026-10-06)
+
+**Un champ de fondation modifié apparaît immédiatement, sans recharger la page.**
+
+- Le retour d’amendement actualisait les pourcentages mais conservait le contenu
+  précédent à l’écran. La lecture du pilier est maintenant rafraîchie également.
+- Le cache du formulaire est invalidé : la prochaine modification repart du contenu
+  et de la version courants, sans conflit provoqué par sa propre saisie précédente.
+- Une fondation partielle n’est plus dite « vierge — 0 champs ». La consigne
+  présente la saisie manuelle avant l’aide à l’enrichissement.
+- Correction du parcours existant, sans génération ni changement des validations.
+
 ## v6.27.394 — fix(cockpit): distinguer dossier de marque et vente (2026-10-06)
 
 **Créer une plateforme de marque n’enregistre plus une vente gagnée dans le CRM.**

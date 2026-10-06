@@ -535,6 +535,8 @@ export function PillarPage({ pageKey }: PillarPageProps) {
               type: "success",
               message: `Pilier amendé v${res.version}. ${res.stalePillars.length} pilier(s) stratégique(s) à rafraîchir, ${res.staleAssets} asset(s) à régénérer.`,
             });
+            void pillarQuery.refetch();
+            void utils.pillar.listEditableFields.invalidate({ strategyId, pillarKey: adveKey });
             assessQuery.refetch();
           }}
         />
@@ -836,7 +838,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
             <Sparkles className="mt-0.5 h-4 w-4 flex-shrink-0 text-info" />
             <div className="flex-1">
               <div className="text-sm font-semibold text-info">
-                Pilier vierge — 0/{(assess.derivable?.length ?? 0) + (assess.satisfied?.length ?? 0)} champs renseignés
+                {allKeys.some((key) => isFilled(content[key])) ? "Pilier à compléter" : "Pilier à renseigner"}
               </div>
               {/* P1-5 (audit onboarding 2026-07-19) — la consigne pointait le
                   bouton « Enrichir », masqué hors opérateur : un founder lisait
@@ -844,7 +846,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
               <p className="mt-1 text-2xs text-foreground-muted">
                 {canOperate ? (
                   isAdve
-                    ? <>Clique sur <strong>Enrichir</strong> pour démarrer l&apos;auto-remplissage via vault, calculs et IA.</>
+                    ? <>Utilisez <strong>Modifier</strong> pour saisir les informations connues. <strong>Enrichir</strong> peut vous aider à compléter la marque à partir de vos sources.</>
                     : <>Les piliers stratégiques se dérivent de votre fondation. <strong>Enrichir</strong> ci-dessus pour générer ce pilier depuis ADVE (nécessite ADVE complété au préalable).</>
                 ) : (
                   isAdve

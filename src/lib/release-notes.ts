@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.395",
+    date: "2026-10-06",
+    headline: "Vos modifications de marque sont visibles immédiatement",
+    highlights: [
+      { emoji: "✍️", title: "Continuez votre saisie sans recharger", body: "Après une modification manuelle des fondations, le champ affiche la valeur enregistrée. La modification suivante repart de cette dernière version." },
+    ],
+  },
+  {
     version: "6.27.394",
     date: "2026-10-06",
     headline: "Vos dossiers de marque gardent leur juste rôle",
