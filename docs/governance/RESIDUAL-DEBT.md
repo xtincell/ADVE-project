@@ -93,6 +93,12 @@
 
 ## Intégration des marques — 2026-10-02 (ADR-0193)
 
+- **Ventes historiques issues de la création de marque** : `strategy.create`
+  créait un Deal `WON` sans décision commerciale, source `COCKPIT_CREATE`.
+  Couplage supprimé en v6.27.394. Rapprocher les lignes existantes avec contrats,
+  factures et historique avant une correction par les commandes CRM gouvernées ;
+  ne pas supprimer une vraie vente sur son seul code source. Effort : revue des
+  lignes concernées ; reprise lors du rapprochement commercial SPAWT/FrieslandCampina.
 - **Admission ADVE des marques issues de La Barre** : les sources sont consultables,
   mais leur projection n’est pas une stratégie native validée. Avant admission,
   mapper les faits sourcés via le gateway (valeurs par défaut non renseignées de

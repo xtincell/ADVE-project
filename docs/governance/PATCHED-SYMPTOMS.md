@@ -30,6 +30,11 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-06 · Créer une plateforme par `strategy.create` ajoutait un Deal `WON`
+avec le nom de la marque et le contact de l’opérateur. Couplage retiré en v6.27.394.
+Cause : assimilation d’un dossier opérationnel à une conversion commerciale ; le
+CRM dispose déjà de ses propres commandes. Les anciennes lignes restent à qualifier.
+
 2026-10-05 · `strategy.create` persistait des réponses non données comme source
 `DECLARED` (fidélité 10–30 %, expérience 5, budget <2 %, etc.). v6.27.393 initialise
 le diagnostic vide et conserve seulement le contexte fourni. Cause : confusion

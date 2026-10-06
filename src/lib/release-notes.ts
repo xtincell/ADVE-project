@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.394",
+    date: "2026-10-06",
+    headline: "Vos dossiers de marque gardent leur juste rôle",
+    highlights: [
+      { emoji: "🗂️", title: "Une marque créée, des ventes fidèles", body: "Créer une plateforme de marque depuis votre portefeuille n’ajoute plus une vente gagnée à votre suivi commercial. Les ventes restent enregistrées par vos actions commerciales." },
+    ],
+  },
+  {
     version: "6.27.393",
     date: "2026-10-06",
     headline: "Une nouvelle marque part de vos informations",

@@ -1,5 +1,17 @@
 # Changelog — La Fusee
 
+## v6.27.394 — fix(cockpit): distinguer dossier de marque et vente (2026-10-06)
+
+**Créer une plateforme de marque n’enregistre plus une vente gagnée dans le CRM.**
+
+- Le parcours du portefeuille créait un Deal `WON` au nom de la marque et avec
+  les coordonnées de l’opérateur, sans opportunité ni décision commerciale.
+  Ce couplage est retiré ; les commandes commerciales existantes restent propriétaires
+  des opportunités, conversions et résultats de vente.
+- Aucun dossier antérieur n’est supprimé ou requalifié automatiquement. Les lignes
+  historiques `COCKPIT_CREATE` exigent un rapprochement avec leurs pièces commerciales.
+- Défaut reproduit en base locale et par test rouge, puis création manuelle recettée.
+
 ## v6.27.393 — fix(strategy): conserver les inconnues à la création (2026-10-06)
 
 Créer une plateforme depuis le portefeuille ne répond plus au questionnaire de

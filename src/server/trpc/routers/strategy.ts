@@ -174,19 +174,8 @@ export const strategyRouter = createTRPCRouter({
         data: { strategyId: strategy.id, config: { currency: "XAF", language: "fr" } },
       }).catch((err) => { console.warn("[strategy] brandOS config creation failed:", err instanceof Error ? err.message : err); });
 
-      // Auto-create Deal in CRM
-      await ctx.db.deal.create({
-        data: {
-          strategyId: strategy.id,
-          userId,
-          contactName: ctx.session.user.name ?? "",
-          contactEmail: ctx.session.user.email ?? "",
-          companyName: input.name,
-          stage: "WON",
-          source: "COCKPIT_CREATE",
-          wonAt: new Date(),
-        },
-      }).catch((err) => { console.warn("[strategy] CRM deal creation failed:", err instanceof Error ? err.message : err); });
+      // A brand dossier is not a sale. Commercial opportunities and their
+      // outcomes belong to the existing explicit CRM commands.
 
       // Audit trail (non-blocking)
       auditTrail.log({

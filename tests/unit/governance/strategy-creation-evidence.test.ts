@@ -32,6 +32,19 @@ function persistence() {
 }
 
 describe("creation source does not fabricate diagnostic evidence", () => {
+  it("opening a brand dossier does not invent a commercial opportunity or win", async () => {
+    const db = persistence();
+    const caller = strategyRouter.createCaller({
+      db,
+      session: { user: { id: "operator-user", name: "Operator", email: "operator@example.test" } },
+    } as any);
+    await caller.create({ name: "Existing client brand", operatorId: "agency", clientId: "client" });
+    expect(db.deal.create).not.toHaveBeenCalled();
+    expect(db.strategy.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ name: "Existing client brand", operatorId: "agency", clientId: "client" }),
+    }));
+  });
+
   it("creating a name-only platform persists no diagnostic answers or invented language", async () => {
     const db = persistence();
     const caller = strategyRouter.createCaller({
