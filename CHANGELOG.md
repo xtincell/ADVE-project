@@ -4,6 +4,8 @@
 
 **Le corpus reçoit des sources externes bornées et des brouillons d'observation à revoir.**
 
+- Livraison PR #965 : périmètre hors phases enregistré dans scope-drift.
+
 - Collecte YouTube, Bluesky, Foreplay et publications Facebook/Instagram déjà
   synchronisées ; import d'exports sourcés par lots atomiques. Capacités et
   prérequis distingués par fournisseur : une archive publicitaire ne fabrique
@@ -31,8 +33,7 @@
   YouTube/LLM différés sans clé, Argos-studio sans endpoint/credential ; publication
   distante non testée. Navigateur HTTPS (quatre surfaces), 3909 tests, deux
   builds production locaux et stress FULL 281 pages PASS sans erreur ni avertissement.
-  Dette du stress OOM précédent fermée ; ADR-0195 Accepted localement, CI après
-  commit encore attendue. Aucun déploiement ni cadence de production revendiqué.
+  Dette du stress OOM précédent fermée ; ADR-0195 Accepted localement, contrôles CI suivis dans la PR #965. Aucun déploiement ni cadence de production revendiqué.
 
 
 ## v6.27.391 — feat(intelligence): corpus créatif et essais concurrentiels (2026-10-06)

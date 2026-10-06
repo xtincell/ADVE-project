@@ -236,8 +236,7 @@ Reçus locaux : `/workspace/scratch/acquisition-browser.log`,
 Parcours reproductibles : `scripts/verify-creative-acquisition.ts` et
 `scripts/stress-test.ts` avec PostgreSQL, serveur HTTPS et fixtures qualifiées.
 
-Accepted porte sur la conception et les parcours locaux. CI attendue après
-commit ; YouTube/Foreplay authentifiés, réponse vision, runtime vidéo cible,
+Accepted porte sur la conception et les parcours locaux. Contrôles CI suivis dans la PR #965 ; YouTube/Foreplay authentifiés, réponse vision, runtime vidéo cible,
 activation scheduler de production, POST Argos réel et rétention durable des
 médias restent à recevoir. Aucun secret, droit d'usage, succès distant ou
 publication de production n'est inféré. Plans de reprise dans RESIDUAL-DEBT et

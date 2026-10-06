@@ -203,7 +203,7 @@ Decision rationale in [ADR-0001](docs/governance/adr/0001-framework-name-apogee.
 [ADR-0195](docs/governance/adr/0195-creative-acquisition-and-reviewed-assisted-analysis.md)
 Accepted : PostgreSQL/réseau et quatre surfaces navigateur HTTPS PASS ;
 3909 tests, deux builds production locaux et stress FULL 281 pages, zéro erreur
-ou avertissement. CI après commit attendue ; aucune production revendiquée.
+ou avertissement. Contrôles CI suivis dans la PR #965 ; aucune production revendiquée.
 Étendre le moteur Seshat existant,
 sans nouveau modèle/Neter/router/page. Sources directes YouTube/Bluesky/Foreplay,
 bridge métadonnées propres FB/IG et export borné ; capacités séparées du statut live.

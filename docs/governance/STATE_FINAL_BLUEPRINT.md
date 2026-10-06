@@ -1127,7 +1127,7 @@ publication externe non testée. Le scheduler six heures est câblé opt-in, san
 réception de cadence en production. Vidéos VIDEO_UNCLASSIFIED par défaut, aucune
 déduction Shorts. Quatre surfaces navigateur HTTPS et mutations réelles reçues,
 3909 tests, deux builds production locaux et stress FULL 281 pages PASS sans
-erreur/avertissement. CI après commit attendue. Providers authentifiés, vision,
+erreur/avertissement. Contrôles CI suivis dans la PR #965. Providers authentifiés, vision,
 POST Argos, cadence prod et rétention des médias restent bornés dans RESIDUAL-DEBT.
 
 ### 19.3 Gouvernance et accès aux sources

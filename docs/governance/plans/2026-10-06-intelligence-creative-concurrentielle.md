@@ -367,7 +367,7 @@ par ADMIN réel : `createManual` HTTP 200, contexte conservé et zéro erreur/50
 (`acquisition-manual-browser.log`). Gauntlet après diffs : typecheck/lint/
 gouvernance/cycles sans erreur, gouvernance 157 fichiers / 1547 tests PASS.
 
-CI attendue après commit. Restes explicites : accès authentifiés YouTube/Foreplay,
+Contrôles CI suivis dans la PR #965. Restes explicites : accès authentifiés YouTube/Foreplay,
 réponse vision et runtime vidéo cible, activation/cadence scheduler de production,
 POST Argos réel, droits/rétention média durable. Ces limites ont leur plan et
 déclencheur dans RESIDUAL-DEBT ; aucun déploiement ou succès distant revendiqué.
