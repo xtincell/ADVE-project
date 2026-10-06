@@ -10,7 +10,7 @@ Deux contrats vérifiés par nœud : **sortie** (validation Zod stricte) et **en
 
 | Catégorie | Total | Protégés (sortie) | Couverture | Sans garde |
 |---|---|---|---|---|
-| Glory tools (LLM/HYBRID) | 77 | 77 | 100% | 0 |
+| Glory tools (LLM/HYBRID) | 78 | 78 | 100% | 0 |
 | Frameworks | 28 | 28 | 100% | 0 |
 | Appels LLM directs (bypass wrapper) | 39 | 39 (entrée durcie) | 100% | 0 bruts |
 
@@ -31,7 +31,7 @@ Ces points appellent `callLLM`/`callLLMAndParse` sans passer par `executeStructu
 |---|---|---|---|---|
 | `src/server/services/artemis/index.ts` | 228 | 1 | ✅ FENCED | oui (mixte) |
 | `src/server/services/artemis/market-research/delegates.ts` | 96 | 1 | 🔒 INTERNAL | non |
-| `src/server/services/artemis/tools/engine.ts` | 336 | 1 | ✅ FENCED | oui (mixte) |
+| `src/server/services/artemis/tools/engine.ts` | 341 | 1 | ✅ FENCED | oui (mixte) |
 | `src/server/services/asset-tagger/index.ts` | 181 | 1 | ✅ FENCED | non |
 | `src/server/services/boot-sequence/index.ts` | 69 | 1 | ✅ FENCED | non |
 | `src/server/services/brief-ingest/analyzer.ts` | 154 | 1 | ✅ FENCED | non |

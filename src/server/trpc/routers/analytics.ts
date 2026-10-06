@@ -115,7 +115,7 @@ export const analyticsRouter = createTRPCRouter({
     requireOperator: true,
 
     inputSchema: z.object({
-      sector: z.string(), market: z.string(), name: z.string(),
+      sector: z.string(), market: z.string(), name: z.string(), brandRefId: z.string().min(1).optional(),
       strengths: z.record(z.string(), z.unknown()).optional(), weaknesses: z.record(z.string(), z.unknown()).optional(),
       positioning: z.string().optional(), estimatedScore: z.number().optional(),
       strategyId: z.string().min(1).optional(), studyId: z.string().min(1).optional(),
@@ -129,6 +129,7 @@ export const analyticsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       if (input.visibility === "PUBLIC" ? !!input.strategyId || !!input.studyId : !input.strategyId) throw new TRPCError({ code: "BAD_REQUEST", message: "Provenance concurrentielle incohérente." });
       await assertActiveMarket(ctx.db, input.countryCode);
+      if (input.brandRefId && !await ctx.db.brandRef.findUnique({ where: { id: input.brandRefId }, select: { id: true } })) throw new TRPCError({ code: "NOT_FOUND", message: "Référence concurrentielle inconnue." });
       if (input.studyId && !await ctx.db.marketStudy.findFirst({ where: { id: input.studyId, strategyId: input.strategyId }, select: { id: true } })) throw new TRPCError({ code: "NOT_FOUND", message: "Étude indisponible pour cette marque." });
       return ctx.db.competitorSnapshot.create({ data: { ...input, strengths: input.strengths as Prisma.InputJsonValue, weaknesses: input.weaknesses as Prisma.InputJsonValue } });
     }),

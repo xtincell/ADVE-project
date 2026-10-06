@@ -10,6 +10,7 @@ import { Card, CardBody } from "@/components/primitives/card";
 import { specimenInputSchema, metricInputSchema, analysisInputSchema, recipeInputSchema, annotationSchema, watchlistSchema } from "@/domain/creative-intelligence";
 import { RecipeCards, creativeLabels } from "./recipe-cards";
 import { CreativeSourceAcquisition } from "./source-acquisition";
+import { CreativeMediaRetention, CreativeModelDetails } from "./advanced-observations";
 import { AssistedCreativeObservation } from "./assisted-observation";
 
 function Picker({ label, options, value, change }: { label: string; options: readonly string[]; value: string; change: (v: string) => void }) {
@@ -38,6 +39,8 @@ export function CreativeWorkbench() {
   const discover = trpc.argos.intelligence.discover.useMutation({ onSuccess: invalidate, onError });
   const review = trpc.argos.intelligence.review.useMutation({ onSuccess: invalidate, onError });
   const apply = trpc.argos.intelligence.startTrial.useMutation({ onSuccess: invalidate, onError });
+  const indexPatterns = trpc.argos.intelligence.indexPatterns.useMutation({ onSuccess: data => { invalidate(); setSuccess(JSON.stringify(data)); }, onError });
+  const bindPublication = trpc.argos.intelligence.bindPublication.useMutation({ onSuccess: invalidate, onError });
   const resolve = trpc.argos.intelligence.resolve.useMutation({ onSuccess: invalidate, onError });
   const saveWatch = trpc.argos.intelligence.saveWatchlist.useMutation({ onSuccess: invalidate, onError });
   const [form, setForm] = useState({ platform: "TIKTOK", accountId: "", externalId: "", sourceUrl: "", mediaUrl: "", publishedAt: "", sector: "", countryCode: "CI", format: "SHORT_VIDEO" });
@@ -49,7 +52,7 @@ export function CreativeWorkbench() {
   const [observedText, setObservedText] = useState("");
   const [trial, setTrial] = useState({ recipeId: "", hypothesis: "", variant: "", baseline: "", target: "", deadline: "", assetId: "", actionId: "" });
   const [watchJson, setWatchJson] = useState("[]");
-  const [rival, setRival] = useState({ name: "", positioning: "", source: "", studyId: "" });
+  const [rival, setRival] = useState({ name: "", positioning: "", source: "", studyId: "", brandRefId: "" });
   const competitors = trpc.analytics.getCompetitors.useQuery({ ...scope, sector: form.sector, countryCode: form.countryCode }, { enabled: !!form.sector && /^[A-Z]{2}$/.test(form.countryCode) });
   const recordCompetitor = trpc.analytics.recordCompetitor.useMutation({ onSuccess: () => { invalidate(); void utils.analytics.getCompetitors.invalidate(); }, onError });
   const run = async (fn: () => void | Promise<void>) => { try { setError(""); setSuccess(""); await fn(); } catch (e) { setError(e instanceof Error ? e.message : "Saisie invalide."); } };
@@ -82,6 +85,7 @@ export function CreativeWorkbench() {
       {(["hook", "narrative", "visual", "socialDriver"] as const).map(k => <div key={k} className="space-y-1"><Picker label={{ hook: "Accroche", narrative: "Récit", visual: "Image", socialDriver: "Mécanique sociale" }[k]} options={annotationSchema.shape[k].options} value={tags[k]} change={v => setTags(t => ({ ...t, [k]: v }))} /><Textarea aria-label={`Observation ${k}`} placeholder="Observation précise et repère temporel éventuel" value={proof[k]} onChange={e => setProof(p => ({ ...p, [k]: e.target.value }))} /></div>)}
       <Label>Texte ou transcription effectivement observé<Textarea value={observedText} onChange={e => setObservedText(e.target.value)} /></Label>
       {selected?.strategyId === strategyId && <AssistedCreativeObservation key={`${strategyId}:${specimenId}`} strategyId={strategyId} specimenId={specimenId} observedText={observedText} />}
+      {selected && selected.strategyId === (strategyId || null) && <CreativeMediaRetention key={`archive:${specimenId}`} strategyId={strategyId || undefined} specimenId={specimenId} receipt={selected.mediaArchive} />}
       <Button disabled={!selected || !observedText.trim()} loading={annotate.isPending} onClick={() => void run(async () => {
         const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(observedText));
         const contentHash = [...new Uint8Array(bytes)].map(b => b.toString(16).padStart(2, "0")).join("");
@@ -92,8 +96,9 @@ export function CreativeWorkbench() {
       <p className="text-sm text-muted-foreground">Le secteur, le pays, le format et la plateforme viennent du formulaire d'import ; la combinaison vient des trois premières annotations. Incluez des contenus ordinaires pour constituer les contrôles.</p>
       <Button loading={discover.isPending} onClick={() => void run(() => { discover.mutate(recipeInputSchema.parse({ ...scope, sector: form.sector, countryCode: form.countryCode, platform: form.platform, format: form.format, hook: tags.hook, narrative: tags.narrative, visual: tags.visual, metric: measurement.metric === "reach" ? "reach" : "views", asOf: new Date() })); })}>Évaluer la combinaison</Button>
       {recipes.isLoading ? <p className="text-sm text-muted-foreground">Chargement des recettes…</p> : <RecipeCards recipes={recipes.data ?? []} />}
-      {recipes.data?.map(r => <div key={r.id} className="flex flex-wrap gap-2"><span className="text-sm">Version {r.revision} · {r.context.hook}</span><Button size="sm" loading={review.isPending} onClick={() => review.mutate({ ...scope, recipeId: r.id, publish: false })}>Valider pour essais privés</Button>{!strategyId && <Button size="sm" disabled={r.evaluation.status !== "OBSERVED"} loading={review.isPending} onClick={() => review.mutate({ recipeId: r.id, publish: !r.published })}>{r.published ? "Retirer de la publication" : "Publier dans Argos"}</Button>}<Button size="sm" onClick={() => setTrial(t => ({ ...t, recipeId: r.id }))}>Préparer un essai</Button></div>)}
+      {recipes.data?.map(r => <div key={r.id} className="flex flex-wrap gap-2"><span className="text-sm">Version {r.revision} · {r.context.hook}</span>{r.reviewed && <Button size="sm" loading={indexPatterns.isPending} onClick={() => indexPatterns.mutate({ ...scope, recipeIds: [r.id] })}>Indexer les descriptions revues</Button>}<Button size="sm" loading={review.isPending} onClick={() => review.mutate({ ...scope, recipeId: r.id, publish: false })}>Valider pour essais privés</Button>{!strategyId && <Button size="sm" disabled={r.evaluation.status !== "OBSERVED"} loading={review.isPending} onClick={() => review.mutate({ recipeId: r.id, publish: !r.published })}>{r.published ? "Retirer de la publication" : "Publier dans Argos"}</Button>}<Button size="sm" onClick={() => setTrial(t => ({ ...t, recipeId: r.id }))}>Préparer un essai</Button></div>)}
     </CardBody></Card>
+    {!!strategyId && <CreativeModelDetails strategyId={strategyId} specimenId={selected?.strategyId === strategyId ? specimenId : ""} recipeId={recipes.data?.find(r => r.id === trial.recipeId && r.reviewed)?.id ?? ""} />}
     {!!strategyId && <Card><CardBody className="space-y-3"><h3 className="font-semibold">4. Appliquer et mesurer</h3>
       {(["recipeId", "hypothesis", "variant", "baseline", "target", "assetId", "actionId"] as const).map(k => <TextField key={k} label={{ recipeId: "Recette", hypothesis: "Hypothèse", variant: "Variante adaptée à la marque", baseline: "Mesure de référence", target: "Cible", assetId: "Actif existant (facultatif)", actionId: "Action de campagne existante (facultatif)" }[k]} value={trial[k]} change={v => setTrial(t => ({ ...t, [k]: v }))} />)}
       <TextField label="Échéance" type="datetime-local" value={trial.deadline} change={v => setTrial(t => ({ ...t, deadline: v }))} />
@@ -101,7 +106,7 @@ export function CreativeWorkbench() {
         if (!trial.baseline.trim() || !trial.target.trim() || !trial.deadline) throw new Error("Renseignez référence, cible et échéance.");
         apply.mutate({ strategyId, recipeId: trial.recipeId, applicationKey: crypto.randomUUID(), hypothesis: trial.hypothesis, variant: trial.variant, primaryMetric: measurement.metric as "views" | "reach" | "likes" | "comments" | "shares", baselineValue: Number(trial.baseline), targetValue: Number(trial.target), deadline: new Date(trial.deadline), assetId: trial.assetId || undefined, actionId: trial.actionId || undefined });
       })}>Déclarer l'essai</Button>
-      {apps.data?.map(a => <div key={a.id} className="space-y-2 border-t border-border py-2"><p>{a.hypothesis} — {a.resolvedAt ? "Résultat enregistré" : "Mesure attendue"}</p>{a.outcome != null && <pre className="overflow-x-auto text-xs">{JSON.stringify(a.outcome, null, 2)}</pre>}{!a.resolvedAt && <Button size="sm" disabled={!selected?.metrics[0]} loading={resolve.isPending} onClick={() => resolve.mutate({ strategyId, applicationId: a.id, specimenId, metricId: selected!.metrics[0]!.id })}>Rattacher la mesure sélectionnée</Button>}</div>)}
+      {apps.data?.map(a => <div key={a.id} className="space-y-2 border-t border-border py-2"><p>{a.hypothesis} — {a.resolvedAt ? "Résultat enregistré" : "Mesure attendue"}</p>{a.outcome != null && <pre className="overflow-x-auto text-xs">{JSON.stringify(a.outcome, null, 2)}</pre>}{!a.resolvedAt && !a.publicationBinding && <Button size="sm" disabled={!selected || selected.strategyId !== strategyId || !(a.assetId || trial.assetId || a.actionId || trial.actionId)} loading={bindPublication.isPending} onClick={() => bindPublication.mutate({ strategyId, applicationId: a.id, specimenId, actionId: a.actionId ?? (trial.actionId || undefined), assetId: a.assetId ?? (trial.assetId || undefined), evidenceUrl: selected!.sourceUrl, attestation: "Je confirme que la publication sélectionnée est celle de l'action ou de l'actif déclaré pour cet essai." })}>Confirmer la publication testée</Button>}{!a.resolvedAt && <Button size="sm" disabled={!a.publicationBinding || !selected?.metrics[0]} loading={resolve.isPending} onClick={() => resolve.mutate({ strategyId, applicationId: a.id, specimenId, metricId: selected!.metrics[0]!.id })}>Rattacher la mesure sélectionnée</Button>}</div>)}
     </CardBody></Card>}
     {!!strategyId && <Card><CardBody className="space-y-3"><h3 className="font-semibold">5. Périmètre concurrentiel</h3>
       <p className="text-sm text-muted-foreground">Trois relations distinctes : concurrents commerciaux, concurrents d'attention, inspirations. Les comptes natifs sont déclarés explicitement, sans modifier le pilier de marque.</p>
@@ -109,15 +114,17 @@ export function CreativeWorkbench() {
       <p className="text-xs">Suivi actuel : {watches.data?.length ?? 0} marques.</p>
       <Button size="sm" onClick={() => setWatchJson(JSON.stringify(watches.data ?? [], null, 2))}>Charger le suivi actuel dans l'éditeur</Button>
       <Label>Liste structurée (brandRefId, relationship, accounts : platform, accountId, url)<Textarea value={watchJson} onChange={e => setWatchJson(e.target.value)} /></Label>
+      <p className="text-xs text-muted-foreground">Pour une source supplémentaire, chaque compte accepte collection : {`{"provider":"RSS","account":"https://exemple.com/feed.xml"}`}. Utilisez le fournisseur et l'identifiant du formulaire de collecte ; les accès restent dans le coffre.</p>
       <Button loading={saveWatch.isPending} onClick={() => void run(() => { saveWatch.mutate({ strategyId, watchlist: watchlistSchema.parse(JSON.parse(watchJson)) }); })}>Enregistrer la veille</Button>
     </CardBody></Card>}
     <Card><CardBody className="space-y-3"><h3 className="font-semibold">Observations concurrentielles du marché</h3>
       <p className="text-sm text-muted-foreground">Secteur et pays du formulaire d'import. {strategyId ? "Les observations enregistrées ici appartiennent à cette marque." : "Sans marque sélectionnée, seuls des faits explicitement publics peuvent être enregistrés."} Les anciennes données sans provenance restent exclues.</p>
+      <Label>Référence du concurrent<Select value={rival.brandRefId} onChange={e => setRival(r => ({ ...r, brandRefId: e.target.value }))}><option value="">Observation de marché non rattachée</option>{refs.data?.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</Select></Label>
       <TextField label="Nom du concurrent observé" value={rival.name} change={v => setRival(r => ({ ...r, name: v }))} />
       <TextField label="Positionnement observé" value={rival.positioning} change={v => setRival(r => ({ ...r, positioning: v }))} />
       <TextField label="Source HTTPS du fait concurrentiel" value={rival.source} change={v => setRival(r => ({ ...r, source: v }))} />
       {!!strategyId && <TextField label="Étude source de cette marque (facultatif)" value={rival.studyId} change={v => setRival(r => ({ ...r, studyId: v }))} />}
-      <Button loading={recordCompetitor.isPending} disabled={!rival.name.trim() || !rival.source.trim() || !form.sector.trim()} onClick={() => recordCompetitor.mutate({ ...scope, name: rival.name, positioning: rival.positioning || undefined, source: rival.source, sector: form.sector, countryCode: form.countryCode, market: form.countryCode, visibility: strategyId ? "BRAND" : "PUBLIC", studyId: strategyId && rival.studyId ? rival.studyId : undefined })}>Enregistrer le fait sourcé</Button>
+      <Button loading={recordCompetitor.isPending} disabled={!rival.name.trim() || !rival.source.trim() || !form.sector.trim()} onClick={() => recordCompetitor.mutate({ ...scope, name: rival.name, brandRefId: rival.brandRefId || undefined, positioning: rival.positioning || undefined, source: rival.source, sector: form.sector, countryCode: form.countryCode, market: form.countryCode, visibility: strategyId ? "BRAND" : "PUBLIC", studyId: strategyId && rival.studyId ? rival.studyId : undefined })}>Enregistrer le fait sourcé</Button>
       {competitors.error && <p role="alert">Les observations concurrentielles sont indisponibles.</p>}
       {competitors.data?.map(c => <div key={c.id} className="border-t border-border py-2 text-sm"><p className="font-medium">{c.name}</p><p>{c.positioning ?? "Positionnement non renseigné"}</p>{c.source?.startsWith("https:") && <a href={c.source} target="_blank" rel="noopener noreferrer" className="text-accent underline">Source · {new Date(c.measuredAt).toLocaleDateString("fr-FR")}</a>}</div>)}
     </CardBody></Card>

@@ -79,5 +79,6 @@ export async function bootstrapDelegates(): Promise<void> {
   // `registerDelegateHandler(...)` calls run as side-effects.
   await import("@/server/services/artemis/market-research/delegates");
   await import("@/server/services/seshat/creative-intelligence/source-collection");
+  await import("@/server/services/seshat/creative-intelligence/pattern-models");
   bootstrapped = true;
 }

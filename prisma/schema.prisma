@@ -3161,6 +3161,7 @@ model OvertonZoneTransition {
 /// canon). PAS un `Strategy` (brief §5.1) — registre léger pour les adversaires
 /// d'épreuve. `fixedTheta` = θ jaugé pour les ancres/items (la seule main humaine).
 model BrandRef {
+  competitorSnapshots CompetitorSnapshot[]
   id          String       @id @default(cuid())
   kind        String // RIVAL | ANCHOR | ITEM
   slug        String       @unique
@@ -3863,6 +3864,8 @@ model MarketSynthesis {
 }
 
 model CompetitorSnapshot {
+  brandRefId String?
+  brandRef BrandRef? @relation(fields: [brandRefId], references: [id], onDelete: SetNull)
   // Unknown legacy provenance is quarantined, never shared by default.
   visibility String @default("QUARANTINE")
   strategyId String?
@@ -3883,6 +3886,7 @@ model CompetitorSnapshot {
 
   study MarketStudy? @relation(fields: [studyId], references: [id])
 
+  @@index([brandRefId, measuredAt])
   @@index([sector])
   @@index([market])
   @@index([studyId])
@@ -7010,6 +7014,8 @@ model ContentSpecimen {
   externalId   String
   sourceUrl    String
   mediaUrl     String?
+  mediaArchive Json?
+  mediaRetentionUntil DateTime?
   caption      String?
   format       String
   sector       String
@@ -7027,6 +7033,7 @@ model ContentSpecimen {
   @@index([strategyId, visibility])
   @@index([platform, accountId, publishedAt])
   @@index([sector, countryCode, publishedAt])
+  @@index([mediaRetentionUntil])
 }
 
 model ContentMetricSnapshot {
@@ -7085,6 +7092,7 @@ model PatternEvidence {
 }
 
 model RecipeApplication {
+  publicationBinding Json?
   id               String           @id @default(cuid())
   strategyId       String
   applicationKey   String           @unique

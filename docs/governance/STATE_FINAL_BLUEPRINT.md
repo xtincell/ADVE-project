@@ -121,7 +121,7 @@ La Fusée est un OS, traité comme tel. 8 couches concrètes :
 | 3 | **Protocoles** | Intent bus (`mestor.emitIntent`) · NSP SSE · hash-chain SHA256 · MCP bidirectionnel · OAuth 2.1 device flow · `ConnectorResult<T>` · Pattern P22-* | ✅ |
 | 4 | **Substrats** | Yggdrasil per-brand · tenantScopedDb isolation · layering cascade (ADR-0002) · BrandContextNode tree · Variable Bible | ✅ |
 | 5 | **Services système (daemons)** | 7 Neteru + INFRASTRUCTURE | ✅ |
-| 6 | **APIs** | tRPC (127 fichiers, dont 124 routeurs et 3 helpers) · Glory tools (56 CORE / 152 registry) · Frameworks (28) · Sequences (94 dont 91 DRAFT) · Intent kinds (629) — recompte 2026-10-06 sur les registres code (`INTENT_KINDS`, `CORE_GLORY_TOOLS`/`EXTENDED_GLORY_TOOLS`, `ALL_SEQUENCES`, `FRAMEWORKS`) | ✅ |
+| 6 | **APIs** | tRPC (127 fichiers, dont 124 routeurs et 3 helpers) · Glory tools (56 CORE / 153 registry) · Frameworks (28) · Sequences (94 dont 91 DRAFT) · Intent kinds (633) — recompte 2026-10-06 sur les registres code (`INTENT_KINDS`, `CORE_GLORY_TOOLS`/`EXTENDED_GLORY_TOOLS`, `ALL_SEQUENCES`, `FRAMEWORKS`) | ✅ |
 | 7 | **Applications** | Cockpit · Console · Agency · Creator · Intake · Argos (surfaces présentes) | 🟡 (3 surfaces manquantes) |
 | 8 | **Funnel commercial** | Wow-effect onboarding · free analysis · paid PDF · CTA retainer · Cockpit subscription | 🟡 (metrics absents) |
 
@@ -1137,6 +1137,17 @@ sans réseau/root readonly : cinq frames sans audio. RPC publicRecipes 200/vide
 et HTML Argos 200 ne prouvent pas une hydratation navigateur ; celle-ci reste
 bloquée par CA Chromium/proxy. Aucun parcours protégé/provider authentifié de
 production reçu. Credentials provider/vision et endpoint Argos indisponibles.
+
+Complément du 2026-10-06 — [ADR-0196](adr/0196-creative-intelligence-evidence-retention-and-live-loop.md) :
+archive privée chiffrée avec droits/échéance et retrait vérifié ; MP4/audio natif
+sur configuration explicite ; voisinage de recettes revues dans les context nodes,
+modèle conditionnel hors comptes/période et trajectoires avec couverture d'annotation.
+Treize sources directes et bridge social, collection planifiée explicitement déclarée,
+verrou partagé opérateur/cron, passage de rétention séparé toutes les quinze minutes.
+Publication confirmée liée à l'action/actif avant mesure immuable. Aucun changement
+ADVE automatique, aucune causalité ni saturation de marché présumée.
+Archive NASA/relecture/purge et parcours PostgreSQL/tRPC reçus localement ; sources
+avec accès et Argos-studio distant restent à recevoir (RESIDUAL-DEBT).
 
 ### 19.3 Gouvernance et accès aux sources
 

@@ -34,6 +34,15 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.396",
+    date: "2026-10-06",
+    headline: "Des recettes créatives reliées à leurs preuves",
+    highlights: [
+      { emoji: "🔎", title: "Une comparaison qui montre ses limites", body: "Consultez la performance attendue, la diffusion observée et les recettes voisines. Lorsque les observations manquent, votre tableau de bord le signale sans inventer de tendance." },
+      { emoji: "🎯", title: "Chaque essai retrouve sa publication", body: "Votre équipe confirme la publication correspondant à l’action ou à l’actif testé avant d’enregistrer son résultat. La mesure reste consultable et ne peut pas être remplacée par une autre." },
+    ],
+  },
+  {
     version: "6.27.395",
     date: "2026-10-06",
     headline: "Vos modifications de marque sont visibles immédiatement",

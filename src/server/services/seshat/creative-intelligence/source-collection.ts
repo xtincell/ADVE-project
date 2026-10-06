@@ -2,7 +2,7 @@ import { Prisma, type PrismaClient } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { collectCreativeSourceSchema, creativeExportSchema } from "@/domain/creative-sources";
+import { collectCreativeSourceSchema, creativeExportSchema, CREATIVE_SOURCE_CONNECTIONS, type CreativeCredentials } from "@/domain/creative-sources";
 import { connectorResultSchema } from "@/domain/connector-result";
 import { acquiredContentSchema } from "@/domain/creative-sources";
 import { credentialVault } from "@/server/services/anubis/credential-vault";
@@ -12,16 +12,20 @@ import { assertActiveMarket, importSpecimen, recordMetric } from ".";
 import { getOperatorContext } from "@/server/services/operator-isolation";
 import { fetchCreativeSource } from "./source-adapters";
 
-export async function readCreativeCredentials(operatorId: string | null, provider: "YOUTUBE" | "FOREPLAY") {
-  const type = provider === "YOUTUBE" ? "youtube-data" : "foreplay";
-  const credential = operatorId ? await credentialVault.get(operatorId, type) : null;
-  // An inactive/revoked per-operator key must not silently fall back to a system credential.
+export async function readCreativeCredentials(operatorId: string | null, provider: keyof typeof CREATIVE_SOURCE_CONNECTIONS): Promise<CreativeCredentials> {
+  const connection = CREATIVE_SOURCE_CONNECTIONS[provider];
+  const credential = operatorId ? await credentialVault.get(operatorId, connection.type) : null;
   if (operatorId) {
-    const exists = await db.externalConnector.count({ where: { operatorId, connectorType: type } });
+    const exists = await db.externalConnector.count({ where: { operatorId, connectorType: connection.type } });
     if (exists && !credential) return {};
   }
-  const apiKey = credential?.config.apiKey ?? (provider === "YOUTUBE" ? process.env.YOUTUBE_API_KEY : process.env.FOREPLAY_API_KEY);
-  return typeof apiKey === "string" && apiKey.trim() ? { apiKey } : {};
+  const result: Record<string, string> = {};
+  for (const field of ["apiKey", "apiVersion", "actorId", "projectId", "adType", "userAgent"]) {
+    const value = credential?.config[field];
+    if (typeof value === "string" && value.trim()) result[field] = value.trim();
+  }
+  if (!credential && connection.env && process.env[connection.env]) result.apiKey = process.env[connection.env]!;
+  return result;
 }
 // Only server-created context objects can bind the authenticated operator's vault.
 const operatorBindings = new WeakMap<object, string | null>();
@@ -33,7 +37,7 @@ registerDelegateHandler("creative-intelligence:fetch-source", async (input, ctx)
     const strategy = await db.strategy.findUniqueOrThrow({ where: { id: ctx.strategyId }, select: { operatorId: true, userId: true, client: { select: { operatorId: true } } } });
     operatorId = strategy.operatorId ?? strategy.client?.operatorId ?? (await getOperatorContext(strategy.userId)).operatorId;
   }
-  const credentials = ["YOUTUBE", "FOREPLAY"].includes(source.provider) ? await readCreativeCredentials(operatorId, source.provider as "YOUTUBE" | "FOREPLAY") : {};
+  const credentials = source.provider in CREATIVE_SOURCE_CONNECTIONS ? await readCreativeCredentials(operatorId, source.provider as keyof typeof CREATIVE_SOURCE_CONNECTIONS) : {};
   return fetchCreativeSource(source, credentials) as unknown as Record<string, unknown>;
 });
 

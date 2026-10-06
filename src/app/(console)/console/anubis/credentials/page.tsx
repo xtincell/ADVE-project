@@ -1,5 +1,6 @@
 "use client";
 
+import { CREATIVE_SOURCE_CONNECTIONS, CREATIVE_SOURCE_CAPABILITIES } from "@/domain/creative-sources";
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";
@@ -7,6 +8,7 @@ import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { CheckCircle2, XCircle, AlertCircle, RefreshCw, Trash2, Key, Plus, MinusCircle } from "lucide-react";
 
 const KNOWN_CONNECTOR_TYPES = [
+  ...Object.entries(CREATIVE_SOURCE_CONNECTIONS).filter(([id]) => !["YOUTUBE", "FOREPLAY"].includes(id)).map(([id, c]) => ({ type: c.type, label: CREATIVE_SOURCE_CAPABILITIES.find(s => s.id === id)?.name ?? id, fields: [...c.fields, "testAccount"] })),
   { type: "youtube-data", label: "YouTube Data API (contenus et métriques)", fields: ["apiKey"] },
   { type: "foreplay", label: "Foreplay (archive de publicités)", fields: ["apiKey"] },
   { type: "argos-studio", label: "Argos-studio (bibliothèque canonique)", fields: ["baseUrl", "apiKey"] },

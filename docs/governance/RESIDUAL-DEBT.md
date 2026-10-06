@@ -1,10 +1,16 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
-## Accès aux sources créatives externes — 2026-10-06 (ADR-0194/0195)
+## Accès aux sources créatives externes — 2026-10-06 (ADR-0194/0195/0196)
+
+ADR-0196 Accepted localement : suite, navigateur dev, build et stress FULL
+authentifié reçus ; CI et déploiement de l’extension à venir. Les lignes suivantes
+portent les réceptions externes/exploitation restantes, pas des fonctions absentes.
+Procédure de reprise : [runbook](../deploy/CREATIVE-INTELLIGENCE.md).
 
 - **Acquisition externe — parcours local reçu, providers authentifiés à recevoir** : adaptateurs
-  YouTube Data API, Bluesky public et Foreplay codés, bridge métadonnées FB/IG et
-  export atomique existants étendus. Les appels authentifiés YouTube/Foreplay
+  YouTube/Bluesky/Foreplay, Meta/IG/TikTok Research et Commercial/Reddit/X/
+  LinkedIn/Brandwatch/RSS, dataset Apify et bridge FB/IG sont codés (ADR-0196).
+  Export atomique conservé, BuzzSumo export qualifié et Exploding Topics signaux. Les appels authentifiés YouTube/Foreplay
   n'ont pas leur reçu ; Bluesky a deux collectes réelles et snapshots append-only
   sur PostgreSQL local. Isolation et rollback d'export reçus PASS.
   Gauntlet, navigateur et stress FULL locaux PASS ; fermer par réception réseau autorisée
@@ -14,7 +20,9 @@
   registre creative-sources. Effort : un reçu par chemin, un lot par nouveau
   fournisseur ; reprise dès accès autorisé et credentials disponibles.
 - **Observation assistée — réception provider et déploiement vidéo cible** : TEXT/MEDIA,
-  MODEL_DRAFT puis revue MANUAL sont codés ; exclusion/admission append et cinq
+  AUDIOVISUAL natif OpenRouter google/gemini explicite est codé en plus de
+  TEXT/MEDIA, avec scènes/transcript assistés et revue MANUAL ; provider AV réel
+  non reçu. MODEL_DRAFT exclu avant revue ; exclusion/admission append et cinq
   frames d'un MP4 synthétique reçues localement PASS. Le LLM reste différé sans
   clé. Bornes Gateway/média et garde HARD reçues PASS. ffmpeg/ffprobe sont
   embarqués au runner Docker ; helper réel sur même base Node/UID 1000 reçu
@@ -29,6 +37,8 @@
   prévoient mode=corpus toutes les six heures, désactivé par défaut, fenêtre
   500 marques et passages deux marques/deux comptes. Passage local HTTP 200 avec
   une émission close OK reçu ; rotation inclut les tentatives différées/échouées.
+  Watch multi-provider explicite et fallback UC/did, lock transaction PG commun
+  manuel/cron codés ; refus concurrent ALREADY_RUNNING reçu localement.
   Gates, rotation/reports et cron HTTPS local HTTP 200/LIVE (anonymous 401) reçus.
   Fermer par reçu d'un scheduler cible avec marques ayant
   activé l'option, credentials réels et compteurs datés. Où : watch-collection,
@@ -43,14 +53,25 @@
   Effort : un lot d'intégration ; reprise dès accès à Argos-studio et
   credentials/contrat complet qualifiés. La publication locale
   des dossiers PASS ne prouve pas la projection distante.
-- **Rétention durable des médias — conservation temporaire seulement** : URLs
-  source et hashes sont conservés ; les médias téléchargés pour analyse et les
-  frames sont bornés et supprimés après traitement. Pas d'archive média durable
-  reçue. Fermer par une politique de droits/rétention qualifiée par source,
-  stockage chiffré scopé, durée et purge vérifiable, puis essais de retrait/reprise.
-  Où : media-observations, ContentSpecimen.mediaUrl et stockage existant.
-  Effort : un lot de stockage/rétention ; reprise dès source/licence et backend
-  de conservation validés, avant de promettre une archive permanente.
+- **Archive durable — exploitation cible et lifecycle distant à recevoir** :
+  archive AES/scopée avec droits attestés, échéance, backendId et purge physique
+  est codée ; parcours réel NASA local PASS (relecture/hash, expiration et cron
+  HTTP 200 supprimant le fichier). Mode retention séparé toutes les quinze
+  minutes, rotation orphelins volume ; activation cible pas reçue. Fermer par
+  montage/configuration chiffrés, droits/rétention qualifiés, reprise après crash
+  et vérification cadence réelle. HTTP_BLOB exige lifecycle/inventaire externe
+  pour objets orphelins après suppression du propriétaire ; contrat distant et
+  suppression distante à recevoir. Où : media-archive/encrypted-media-store et
+  schedulers. Effort : un lot d'exploitation par backend ; reprise dès stockage,
+  clé/lifecycle et runtime cible qualifiés. Pas d'archive permanente publique.
+- **Voisinage et modèle conditionnel — corpus/provider réels à recevoir** :
+  index context nodes et comparaison ridge sont codés ; voisins vérifiés sur
+  vecteurs synthétiques, index sans clé DEFERRED, conditionnel/trajectoire en
+  abstention dans le parcours réel. Fermer par embeddings réels/configurés et
+  corpus revu de volume/contexte suffisants, diagnostics hors comptes/temps et
+  comparaison au baseline, sans prétendre représentativité ou causalité.
+  Où : pattern-models/creative-models. Effort : un lot de réception provider et
+  une campagne de calibration ; reprise dès accès embeddings et corpus qualifiés.
 
 - **Réception navigateur et parcours protégés de production** : sondes version
   v6.27.392/HTML/RPC public reçues, mais Chromium échoue sur CA proxy. Fermer par
@@ -62,6 +83,18 @@
   configuration explicite du domaine et exécution du contrôle workflow, sans
   assimiler notification Coolify et validation métier. Effort : un réglage et
   un contrôle ; reprise dès droits de configuration GitHub disponibles.
+
+## Avertissements de lint préexistants — relevé 2026-10-06
+
+- **25 warnings de lint/gouvernance, zéro erreur** : relevés au gauntlet ADR-0196,
+  déjà présents avant cette extension. Classes observées : import inter-portails,
+  littéraux de piliers, calcul de complétude ad hoc et imports directs de services
+  depuis routeurs. Fermer par inventaire fichier/règle, distinguer lecture et
+  mutation, migrer chaque écart vers le contrat existant puis lint et tests ciblés.
+  Ne pas désactiver les règles ou élargir les exceptions pour obtenir zéro.
+  Où : surfaces et routeurs signalés par lint. Effort : un lot par classe ;
+  déclencheur : prochaine maintenance gouvernance/portails ou modification de
+  l'un des fichiers signalés. Le gauntlet zéro erreur ne ferme pas ces warnings.
 
 ## Maintenance des voies de livraison et dépendances — 2026-10-06
 

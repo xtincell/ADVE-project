@@ -11,10 +11,22 @@ import { refreshCreativeWatchlist, watchAutomationSchema, setCreativeWatchAutoma
 import { specimenInputSchema, metricInputSchema, analysisInputSchema, recipeInputSchema, watchlistSchema } from "@/domain/creative-intelligence";
 import { importSpecimen, recordMetric, annotateSpecimen, discoverRecipe, reviewRecipe, corpusOverview, listRecipes, saveWatchlist, applyRecipeSchema, applyRecipe, resolveApplication, creativeOpportunities } from "@/server/services/seshat/creative-intelligence";
 
+import { archiveMediaInput, removeMediaInput } from "@/domain/creative-media";
+import { archiveCreativeMedia, removeArchivedMedia } from "@/server/services/seshat/creative-intelligence/media-archive";
+import { indexCreativePatterns, patternIndexInput, similarCreativeRecipes, contentPerformanceModel, creativePatternTrajectory } from "@/server/services/seshat/creative-intelligence/pattern-models";
+import { bindRecipePublication, bindPublicationInput } from "@/server/services/seshat/creative-intelligence/publication-binding";
+
 const brandInput = z.object({ strategyId: z.string().min(1) });
 const optionalBrandInput = z.object({ strategyId: z.string().min(1).optional() });
 
 export const creativeIntelligenceRouter = createTRPCRouter({
+  archiveMedia: governedProcedure({ kind: "SESHAT_ARCHIVE_CREATIVE_MEDIA", inputSchema: archiveMediaInput, requireOperator: true, caller: "argos:archive-media" }).mutation(({ ctx, input }) => archiveCreativeMedia(input, ctx.session.user.id)),
+  removeMedia: governedProcedure({ kind: "SESHAT_REMOVE_CREATIVE_MEDIA", inputSchema: removeMediaInput, requireOperator: true, caller: "argos:remove-media" }).mutation(({ input }) => removeArchivedMedia(input)),
+  indexPatterns: governedProcedure({ kind: "SESHAT_INDEX_CREATIVE_PATTERNS", inputSchema: patternIndexInput, requireOperator: true, caller: "argos:index-patterns" }).mutation(({ input }) => indexCreativePatterns(input)),
+  bindPublication: governedProcedure({ kind: "SESHAT_BIND_RECIPE_PUBLICATION", inputSchema: bindPublicationInput, requireOperator: true, caller: "argos:bind-publication" }).mutation(({ ctx, input }) => bindRecipePublication(input, ctx.session.user.id)),
+  conditionalPerformance: strategyScopedProcedure.input(brandInput.extend({ specimenId: z.string().min(1) })).query(({ input }) => contentPerformanceModel(input.strategyId, input.specimenId)),
+  similarRecipes: strategyScopedProcedure.input(brandInput.extend({ recipeId: z.string().min(1) })).query(({ input }) => similarCreativeRecipes(input.strategyId, input.recipeId)),
+  patternTrajectory: strategyScopedProcedure.input(brandInput.extend({ recipeId: z.string().min(1) })).query(({ input }) => creativePatternTrajectory(input.strategyId, input.recipeId)),
   refreshWatchlist: governedProcedure({ kind: "SESHAT_REFRESH_CREATIVE_WATCHLIST", inputSchema: brandInput, requireOperator: true, caller: "argos:creative-watch-refresh" }).mutation(async ({ ctx, input }) => refreshCreativeWatchlist(input.strategyId, (await getOperatorContext(ctx.session.user.id)).operatorId)),
   setWatchAutomation: governedProcedure({ kind: "SESHAT_SET_CREATIVE_WATCH_AUTOMATION", inputSchema: watchAutomationSchema, requireOperator: true, caller: "argos:creative-watch-automation" }).mutation(({ input }) => setCreativeWatchAutomation(input)),
   watchAutomation: strategyScopedProcedure.input(brandInput).query(async ({ ctx, input }) => { const s = await ctx.db.strategy.findUnique({ where: { id: input.strategyId }, select: { businessContext: true } }); return { enabled: (s?.businessContext as Record<string, unknown> | null)?.creativeWatchAutomation === true }; }),

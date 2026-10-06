@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { watchlistSchema } from "@/domain/creative-intelligence";
 import { db } from "@/lib/db";
 
 /** ADR-0194: external market evidence + this brand's studies, never global private history. */
@@ -19,5 +20,6 @@ export async function loadScopedCompetitors(strategyId: string) {
   const strategy = await db.strategy.findUnique({ where: { id: strategyId }, select: { countryCode: true, businessContext: true } });
   const sector = (strategy?.businessContext as { sector?: string } | null)?.sector;
   if (!sector || !strategy?.countryCode) return [];
-  return db.competitorSnapshot.findMany({ where: competitorScope(strategyId, sector, strategy.countryCode), orderBy: { measuredAt: "desc" }, take: 10 });
+  const watched = watchlistSchema.safeParse((strategy.businessContext as Record<string, unknown> | null)?.creativeWatchlist);
+  return db.competitorSnapshot.findMany({ where: { ...competitorScope(strategyId, sector, strategy.countryCode), ...(watched.success && watched.data.length ? { brandRefId: { in: watched.data.map(w => w.brandRefId) } } : {}) }, orderBy: { measuredAt: "desc" }, take: 10 });
 }

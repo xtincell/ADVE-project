@@ -55,7 +55,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Domain — 40 modules (src/domain, cœur métier pur)
+## Domain — 43 modules (src/domain, cœur métier pur)
 
 - **__tests__/pillars.test**
 - **argos-projection**
@@ -69,6 +69,9 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **collaborator-access** — ADR-0131 — Zones d'accès des collaborateurs délégués par marque.
 - **connector-result** — ConnectorResult<T> — discriminated union returned by every external connector
 - **creative-intelligence**
+- **creative-media**
+- **creative-models**
+- **creative-source-types**
 - **creative-sources**
 - **cult-index-tier** — Domain — Cult Index tier (échelle de maturité culturelle de la marque).
 - **devotion-ladder** — Domain — Devotion Ladder canonique (rungs du parcours superfan).
@@ -187,7 +190,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **OvertonPosition** (14 fields) — ADR-0148 — Overton Graph. Une POSITION tenue dans un débat sectoriel, avec sa zone d'acceptabilité PAR POLITY (secteur ×
 - **OvertonActorLink** (9 fields) — ADR-0148 — arête acteur→position (qui tient / propage / oppose / déplace).
 - **OvertonZoneTransition** (11 fields) — ADR-0148 — le Δ MESURÉ : une position migre de zone, daté + attribué (last-touch ADR-0135). C'est la seule « mesure » de
-- **BrandRef** (11 fields) — ADR-0149 — Scoreur : marque hors-plateforme (rival, ancre-étalon, ou item canon). PAS un `Strategy` (brief §5.1) — regis
+- **BrandRef** (12 fields) — ADR-0149 — Scoreur : marque hors-plateforme (rival, ancre-étalon, ou item canon). PAS un `Strategy` (brief §5.1) — regis
 - **Epreuve** (14 fields) — ADR-0149 — le REGISTRE d'épreuves (append-only). LA seule donnée du scoreur : un résultat dyadique OBSERVÉ (jamais estim
 - **ScoreVerdict** (16 fields) — ADR-0149 — snapshot de verdict (leaderboard public + trajectoire pour la tenue).
 - **EpreuveCandidate** (18 fields) — ADR-0154 — quarantaine des victoires proposées par Hunter (LLM) AVANT revue. SÉPARÉE d'`Epreuve` (le registre du scoreur
@@ -218,7 +221,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **MethodologyReference** (13 fields)
 - **MarketSource** (11 fields)
 - **MarketSynthesis** (8 fields)
-- **CompetitorSnapshot** (16 fields)
+- **CompetitorSnapshot** (18 fields)
 - **InsightReport** (9 fields)
 - **AttributionEvent** (13 fields)
 - **CohortSnapshot** (11 fields)
@@ -330,11 +333,11 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **Post** (15 fields) — Article de blog public du site UPgraders (« Notes de cabinet »). CMS natif éditorial — distinct des livrables client (`B
 - **PredictionRecord** (21 fields) — ADR-0156 — Registre des prédictions. Chaque prédiction (forecast déterministe de série OU thèse de signal faible) est en
 - **Referral** (12 fields) — ADR-0157 — Parrainage manual-first. Un filleul déclare « recommandé par » à l'intake (code) → PENDING. À l'activation d'
-- **ContentSpecimen** (22 fields)
+- **ContentSpecimen** (24 fields)
 - **ContentMetricSnapshot** (16 fields)
 - **CreativeAnalysis** (12 fields)
 - **PatternEvidence** (12 fields)
-- **RecipeApplication** (20 fields)
+- **RecipeApplication** (21 fields)
 
 ### Enums
 
@@ -1143,10 +1146,14 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Intent kinds — 629 (par governor)
+## Intent kinds — 633 (par governor)
 
-### SESHAT (59)
+### SESHAT (63)
 
+- `SESHAT_ARCHIVE_CREATIVE_MEDIA` → creative-intelligence (sync) — ADR-0196 — archive authorized media with encrypted storage and dated retention.…
+- `SESHAT_REMOVE_CREATIVE_MEDIA` → creative-intelligence (sync) — ADR-0196 — physically remove retained media and keep an audit tombstone.…
+- `SESHAT_INDEX_CREATIVE_PATTERNS` → creative-intelligence (sync) — ADR-0196 — index reviewed recipe evidence through the existing embedding Gateway…
+- `SESHAT_BIND_RECIPE_PUBLICATION` → creative-intelligence (sync) — ADR-0196 — bind the tested publication to its declared action and asset.…
 - `SESHAT_IMPORT_SPECIMEN` → creative-intelligence (sync) — ADR-0194 — import specimen; scoped evidence, zero LLM.…
 - `SESHAT_RECORD_CONTENT_METRIC` → creative-intelligence (sync) — ADR-0194 — record content metric; scoped evidence, zero LLM.…
 - `SESHAT_ANNOTATE_CREATIVE` → creative-intelligence (sync) — ADR-0194 — annotate creative; scoped evidence, zero LLM.…

@@ -26,7 +26,7 @@ export async function assertActiveMarket(store: Store, countryCode: string) {
 async function getSpecimen(store: Store, id: string, strategyId?: string) {
   return await store.contentSpecimen.findFirst({ where: { id, ...scope(strategyId) } }) ?? notFound();
 }
-async function assertWritableSpecimen(store: Store, id: string, strategyId?: string) {
+export async function assertWritableSpecimen(store: Store, id: string, strategyId?: string) {
   const specimen = await getSpecimen(store, id, strategyId);
   // Brand-scoped mutations cannot rewrite or annotate a shared public observation.
   if (strategyId && specimen.strategyId !== strategyId) notFound();
@@ -74,7 +74,7 @@ export async function annotateSpecimen(input: z.infer<typeof analysisInputSchema
   });
 }
 
-async function observations(store: Store, strategyId: string | undefined, asOf: Date, metric: "views" | "reach", context: { sector?: string; countryCode?: string; platform?: string; format?: string } = {}) {
+export async function observations(store: Store, strategyId: string | undefined, asOf: Date, metric: "views" | "reach", context: { sector?: string; countryCode?: string; platform?: string; format?: string } = {}) {
   const specimens = await store.contentSpecimen.findMany({
     where: { ...scope(strategyId), ...context, publishedAt: { lte: asOf } }, orderBy: { publishedAt: "desc" }, take: 1000,
     include: {
@@ -85,7 +85,7 @@ async function observations(store: Store, strategyId: string | undefined, asOf: 
   const rows: Observation[] = [];
   for (const s of specimens) {
     const analysis = s.analyses[0], annotation = annotationSchema.safeParse(analysis?.annotation);
-    for (const m of s.metrics) rows.push({ specimenId: s.id, externalId: s.externalId, accountId: s.accountId, platform: s.platform, format: s.format, sector: s.sector, countryCode: s.countryCode, publishedAt: s.publishedAt, observedAt: m.observedAt, value: m[metric], paidStatus: m.paidStatus, metricId: m.id, ...(analysis && annotation.success ? { analysisId: analysis.id, annotation: annotation.data } : {}) });
+    for (const m of s.metrics) rows.push({ specimenId: s.id, externalId: s.externalId, accountId: s.accountId, platform: s.platform, format: s.format, sector: s.sector, countryCode: s.countryCode, publishedAt: s.publishedAt, observedAt: m.observedAt, value: m[metric], paidStatus: m.paidStatus, metricId: m.id, ...(analysis && annotation.success ? { analysisId: analysis.id, annotation: annotation.data, annotationObservedAt: analysis.createdAt } : {}) });
   }
   return { rows, specimens };
 }
@@ -196,7 +196,7 @@ export async function creativeOpportunities(strategyId: string, store: Store = d
   const recipes = (await listRecipes(strategyId, store)).filter(r => r.reviewed && r.context.sector === sector && r.context.countryCode === strategy.countryCode);
   return recipes.map(r => {
     const cohort = specimens.filter(s => s.platform === r.context.platform && s.format === r.context.format);
-    const own = cohort.filter(s => s.strategyId === strategyId), rivals = cohort.filter(s => s.visibility === "PUBLIC" && accounts.has(`${s.platform}:${s.accountId}`));
+    const own = cohort.filter(s => s.strategyId === strategyId && !!s.socialPostId), rivals = cohort.filter(s => accounts.has(`${s.platform}:${s.accountId}`));
     const matching = (s: typeof specimens[number]) => {
       const a = annotationSchema.safeParse(s.analyses[0]?.annotation);
       return a.success && a.data.hook === r.context.hook && a.data.narrative === r.context.narrative && a.data.visual === r.context.visual;
@@ -211,7 +211,7 @@ export async function corpusOverview(strategyId?: string, store: Store = db) {
   const { rows, specimens } = await observations(store, strategyId, new Date(), "views");
   const invisible = await store.country.findMany({ where: { status: { in: ["SHADOWBANNED", "PURGED"] } }, select: { code: true } });
   return specimens.filter(s => !invisible.some(c => c.code === s.countryCode)).slice(0, 100).map(s => ({
-    ...s, performance: rows.find(o => o.specimenId === s.id) ? normalizedPerformance(rows.find(o => o.specimenId === s.id)!, rows) : { ratio: null, reason: "UNMEASURED" },
+    ...s, mediaArchive: s.mediaArchive ? (({ state, contentHash, retainUntil, rights, byteLength }) => ({ state, contentHash, retainUntil, rights, byteLength }))(s.mediaArchive as Record<string, unknown>) : null, performance: rows.find(o => o.specimenId === s.id) ? normalizedPerformance(rows.find(o => o.specimenId === s.id)!, rows) : { ratio: null, reason: "UNMEASURED" },
   }));
 }
 
@@ -257,15 +257,23 @@ export async function applyRecipe(input: z.infer<typeof applyRecipeSchema>, stor
 
 export async function resolveApplication(input: { strategyId: string; applicationId: string; specimenId: string; metricId: string }, store: Store = db) {
   const app = await store.recipeApplication.findFirst({ where: { id: input.applicationId, strategyId: input.strategyId } }) ?? notFound();
-  if (app.resolvedAt) return app;
+  if (app.resolvedAt) {
+    if (app.resultSpecimenId !== input.specimenId || (app.outcome as { metricId?: string } | null)?.metricId !== input.metricId) fail("Cet essai possède déjà un autre résultat.");
+    return app;
+  }
+  const binding = app.publicationBinding as { specimenId?: string; sourceUrl?: string } | null;
+  if (!binding || binding.specimenId !== input.specimenId) fail("Confirmer d'abord la publication correspondant à l'action ou à l'actif de l'essai.");
   const s = await assertWritableSpecimen(store, input.specimenId, input.strategyId);
+  if (binding.sourceUrl !== s.sourceUrl) fail("La publication ne correspond plus au rattachement confirmé.");
   if (s.publishedAt < app.createdAt || s.publishedAt > app.deadline) fail("La publication doit se situer entre la déclaration et l'échéance de l'essai.");
   const m = await store.contentMetricSnapshot.findFirst({ where: { id: input.metricId, specimenId: s.id, observedAt: { gte: app.deadline } } }) ?? notFound();
   const value = m[app.primaryMetric as "views" | "reach" | "likes" | "comments" | "shares"];
   if (value == null) fail("La mesure principale n'est pas disponible.");
   const outcome = { value, baselineValue: app.baselineValue, targetValue: app.targetValue, hit: value >= app.targetValue, delta: value - app.baselineValue, metricId: m.id, observedAt: m.observedAt.toISOString(), paidStatus: m.paidStatus, attribution: "OBSERVED_NOT_CAUSAL" };
   await store.recipeApplication.updateMany({ where: { id: app.id, resolvedAt: null }, data: { resolvedAt: new Date(), resultSpecimenId: s.id, outcome: json(outcome) } });
-  return store.recipeApplication.findUniqueOrThrow({ where: { id: app.id } });
+  const winner = await store.recipeApplication.findUniqueOrThrow({ where: { id: app.id } });
+  if (winner.resultSpecimenId !== input.specimenId || (winner.outcome as { metricId?: string } | null)?.metricId !== input.metricId) fail("Cet essai possède déjà un autre résultat.");
+  return winner;
 }
 
 export async function recipeContext(strategyId: string, store: Store = db): Promise<string> {
@@ -282,7 +290,7 @@ export async function captureNativeInsights(strategyId: string, postId: string, 
   if (!post?.publishedAt || !post.permalinkUrl?.startsWith("https:") || !post.strategy.countryCode || !sector) return { captured: false, reason: "MISSING_CONTEXT" };
   const platform = post.connection.platform;
   if (platform !== "FACEBOOK" && platform !== "INSTAGRAM") return { captured: false, reason: "UNSUPPORTED_SOURCE" };
-  const specimen = await importSpecimen({ strategyId, visibility: "BRAND", platform, accountId: post.connection.accountId, externalId: post.externalPostId, sourceUrl: post.permalinkUrl, format: post.mediaType?.toLowerCase().includes("video") ? "SHORT_VIDEO" : "IMAGE", sector, countryCode: post.strategy.countryCode, publishedAt: post.publishedAt, source: "NATIVE_INSIGHTS" }, store);
+  const specimen = await importSpecimen({ strategyId, visibility: "BRAND", platform, accountId: post.connection.accountId, externalId: post.externalPostId, sourceUrl: post.permalinkUrl, format: post.mediaType?.toLowerCase().includes("video") ? "VIDEO_UNCLASSIFIED" : "IMAGE", sector, countryCode: post.strategy.countryCode, publishedAt: post.publishedAt, source: "NATIVE_INSIGHTS" }, store);
   await store.contentSpecimen.updateMany({ where: { id: specimen.id, socialPostId: null }, data: { socialPostId: post.id } });
   const reach = platform === "FACEBOOK" ? metrics.post_impressions_unique : metrics.reach;
   if (reach == null) return { captured: false, reason: "UNMEASURED" };

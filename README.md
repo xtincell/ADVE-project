@@ -157,6 +157,16 @@ Toute mutation crée une ligne `IntentEmission` hash-chainée (tampering détect
 
 ---
 
+## Intelligence créative et concurrentielle
+
+Hunter et Argos alimentent le corpus Seshat : sources et relevés datés, annotations
+revues, recettes documentées, puis essais liés à une publication et à son résultat.
+La conservation chiffrée respecte les droits et l'échéance déclarés. Comparaisons
+conditionnelles et diffusion affichent leur couverture ; elles ne prouvent pas une cause.
+Les connecteurs, le modèle audiovisuel et le stockage doivent être configurés pour
+leurs parcours distants. Voir le [plan et les reçus](docs/governance/plans/2026-10-06-intelligence-creative-concurrentielle.md)
+et les [accès restants](docs/governance/RESIDUAL-DEBT.md).
+
 ## ADVE-RTIS — la cascade qui propulse
 
 8 piliers, scoring sur 200, cascade unidirectionnelle `A → D → V → E → R → T → I → S` :

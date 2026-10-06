@@ -2,6 +2,7 @@
 import { db } from "@/lib/db";
 import { fetchCreativeSource, readBoundedJson } from "@/server/services/seshat/creative-intelligence/source-adapters";
 import { studioEndpoint } from "@/server/services/seshat/argos/studio-client";
+import { CREATIVE_SOURCE_CONNECTIONS, type CreativeCredentials } from "@/domain/creative-sources";
 import { z } from "zod";
 
 export async function testCreativeSourceCredential(operatorId: string, connectorType: string): Promise<{ success: boolean; reason?: string }> {
@@ -17,7 +18,11 @@ export async function testCreativeSourceCredential(operatorId: string, connector
       return contract.success ? { success: true, reason: "Contrat GET vérifié ; l'autorisation POST sera vérifiée lors d'une projection réelle." } : { success: false, reason: "Contrat Argos-studio incompatible." };
     }
     if (typeof config.apiKey !== "string" || !config.apiKey.trim()) return { success: false, reason: "Clé API requise." };
-    const result = await fetchCreativeSource({ provider: connectorType === "youtube-data" ? "YOUTUBE" : "FOREPLAY", account: connectorType === "youtube-data" ? "@YouTube" : "", sector: "credential-test", countryCode: "CI", limit: 1, youtubeFormat: "LONG_VIDEO" }, { apiKey: config.apiKey });
+    const provider = (Object.keys(CREATIVE_SOURCE_CONNECTIONS) as Array<keyof typeof CREATIVE_SOURCE_CONNECTIONS>).find(p => CREATIVE_SOURCE_CONNECTIONS[p].type === connectorType);
+    if (!provider) return { success: false, reason: "Connecteur créatif inconnu." };
+    const account = typeof config.testAccount === "string" && config.testAccount.trim() ? config.testAccount : provider === "YOUTUBE" ? "@YouTube" : provider === "FOREPLAY" ? "advertising" : null;
+    if (!account) return { success: false, reason: "Renseigner testAccount pour vérifier la permission sur un compte ou une requête autorisée." };
+    const result = await fetchCreativeSource({ provider, account, sector: "credential-test", countryCode: "CI", limit: 1, youtubeFormat: "LONG_VIDEO" }, config as CreativeCredentials);
     return result.state === "LIVE" || result.state === "DEGRADED" && result.reason === "INSUFFICIENT_DATA" ? { success: true } : { success: false, reason: result.state === "DEGRADED" ? result.reason : "Clé manquante." };
   } catch { return { success: false, reason: "Connexion externe indisponible ou endpoint refusé." }; }
 }

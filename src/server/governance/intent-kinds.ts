@@ -22,6 +22,10 @@ export interface IntentKindMeta {
 }
 
 export const INTENT_KINDS: readonly IntentKindMeta[] = [
+  { kind: "SESHAT_ARCHIVE_CREATIVE_MEDIA", governor: "SESHAT", handler: "creative-intelligence", async: false, description: "ADR-0196 — archive authorized media with encrypted storage and dated retention." },
+  { kind: "SESHAT_REMOVE_CREATIVE_MEDIA", governor: "SESHAT", handler: "creative-intelligence", async: false, description: "ADR-0196 — physically remove retained media and keep an audit tombstone." },
+  { kind: "SESHAT_INDEX_CREATIVE_PATTERNS", governor: "SESHAT", handler: "creative-intelligence", async: false, description: "ADR-0196 — index reviewed recipe evidence through the existing embedding Gateway." },
+  { kind: "SESHAT_BIND_RECIPE_PUBLICATION", governor: "SESHAT", handler: "creative-intelligence", async: false, description: "ADR-0196 — bind the tested publication to its declared action and asset." },
   { kind: "SESHAT_IMPORT_SPECIMEN", governor: "SESHAT", handler: "creative-intelligence", async: false, description: "ADR-0194 — import specimen; scoped evidence, zero LLM." },
   { kind: "SESHAT_RECORD_CONTENT_METRIC", governor: "SESHAT", handler: "creative-intelligence", async: false, description: "ADR-0194 — record content metric; scoped evidence, zero LLM." },
   { kind: "SESHAT_ANNOTATE_CREATIVE", governor: "SESHAT", handler: "creative-intelligence", async: false, description: "ADR-0194 — annotate creative; scoped evidence, zero LLM." },

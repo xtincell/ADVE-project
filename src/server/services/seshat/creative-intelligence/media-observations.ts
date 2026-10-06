@@ -11,7 +11,10 @@ import { validateGatewayImages, type GatewayImage } from "@/server/services/llm-
 
 const exec = promisify(execFile);
 /** A model cannot attach invented timestamps to frames or supplied text. */
-export function annotationFitsCoverage(annotation: { durationSeconds?: number; evidence: Array<{ startSeconds?: number; endSeconds?: number }> }, coverage: { method: string; frameTimes?: number[]; durationSeconds?: number }) {
+export function annotationFitsCoverage(annotation: { scenes?: unknown[]; transcript?: unknown[]; durationSeconds?: number; evidence: Array<{ startSeconds?: number; endSeconds?: number }> }, coverage: { method: string; frameTimes?: number[]; durationSeconds?: number; audioObserved?: boolean }) {
+  if (coverage.method !== "NATIVE_VIDEO" && (annotation.scenes?.length || annotation.transcript?.length)) return false;
+  if (coverage.method === "NATIVE_VIDEO" && !coverage.audioObserved && annotation.transcript?.length) return false;
+  if (coverage.method === "NATIVE_VIDEO") return annotation.durationSeconds != null && Math.abs(annotation.durationSeconds - (coverage.durationSeconds ?? 0)) <= 0.05 && annotation.evidence.every(e => [e.startSeconds, e.endSeconds].every(t => t == null || t <= coverage.durationSeconds!));
   if (coverage.method !== "SAMPLED_FRAMES") return annotation.durationSeconds == null && annotation.evidence.every(e => e.startSeconds == null && e.endSeconds == null);
   if (annotation.durationSeconds != null && Math.abs(annotation.durationSeconds - (coverage.durationSeconds ?? 0)) > 0.05) return false;
   return annotation.evidence.every(e => [e.startSeconds, e.endSeconds].every(t => t == null || (coverage.frameTimes ?? []).some(frame => Math.abs(frame - t) <= 0.05)));
@@ -29,9 +32,10 @@ export function sampledFrameTimes(durationSeconds: number) {
   return [...new Set([0, Math.min(1, durationSeconds / 4), Math.min(2, durationSeconds / 2), ...[0.25, 0.5, 0.75, 0.95].map(f => Math.round(durationSeconds * f * 1000) / 1000)])].sort((a, b) => a - b);
 }
 const probeSchema = z.object({ format: z.object({ duration: z.string() }), streams: z.array(z.object({ codec_type: z.string(), width: z.number().optional(), height: z.number().optional() })) });
-export async function extractMediaObservations(bytes: Buffer, mediaType: string) {
+export async function extractMediaObservations(bytes: Buffer, mediaType: string, nativeVideo = false) {
   const contentHash = createHash("sha256").update(bytes).digest("hex");
   if (["image/jpeg", "image/png"].includes(mediaType)) {
+    if (nativeVideo) throw new Error("Le mode audiovisuel exige une vidéo MP4.");
     const image = { bytes, mediaType: mediaType as GatewayImage["mediaType"] }; validateGatewayImages([image]);
     return { contentHash, images: [image], coverage: { method: "SINGLE_IMAGE" as const, frameTimes: [0], audioObserved: false } };
   }
@@ -46,6 +50,11 @@ export async function extractMediaObservations(bytes: Buffer, mediaType: string)
     if (!parsed.streams.some(s => s.codec_type === "video")) throw new Error("Aucune piste vidéo.");
     if (parsed.streams.some(s => s.codec_type === "video" && (!s.width || !s.height || s.width > 4096 || s.height > 4096))) throw new Error("Dimensions vidéo hors limites.");
     const durationSeconds = Number(parsed.format.duration), times = sampledFrameTimes(durationSeconds);
+    if (nativeVideo) {
+      if (bytes.length > 20_000_000) throw new Error("Vidéo native limitée à vingt Mo.");
+      const hasAudio = parsed.streams.some(s => s.codec_type === "audio");
+      return { contentHash, images: undefined, video: { bytes, mediaType: "video/mp4" as const, durationSeconds, hasAudio }, coverage: { method: "NATIVE_VIDEO" as const, durationSeconds, audioObserved: hasAudio, audioEvidence: hasAudio ? "MODEL_OBSERVATION_REQUIRES_REVIEW" : "NO_AUDIO_TRACK" } };
+    }
     // One bounded decode; select the first frame at/after each requested time.
     const expression = times.map(t => `gte(t,${t})*lt(prev_selected_t,${t})`).join("+");
     const decoded = await exec("ffmpeg", ["-nostdin", "-v", "info", ...common, "-i", file, "-an", "-vf", `select='isnan(prev_selected_t)+${expression}',scale=512:512:force_original_aspect_ratio=decrease,showinfo`, "-fps_mode", "vfr", "-frames:v", String(times.length), "-q:v", "5", join(dir, "frame-%02d.jpg")], { timeout: 30000, maxBuffer: 100000 });
@@ -59,10 +68,15 @@ export async function extractMediaObservations(bytes: Buffer, mediaType: string)
     return { contentHash, images, coverage: { method: "SAMPLED_FRAMES" as const, frameTimes: actualTimes, durationSeconds, audioObserved: false } };
   } finally { await rm(dir, { recursive: true, force: true }); }
 }
-export async function fetchMediaObservations(url: string) {
+export async function downloadCreativeMedia(url: string) {
   if (new URL(url).protocol !== "https:") throw new Error("Média HTTPS requis.");
   const response = await ssrfSafeFetch(url, { signal: AbortSignal.timeout(20000) });
   const mediaType = (response.headers.get("content-type") ?? "").split(";")[0]!.trim().toLowerCase();
   if (!["video/mp4", "image/jpeg", "image/png"].includes(mediaType)) { await response.body?.cancel(); throw new Error("Type de média non pris en charge."); }
-  return extractMediaObservations(await readMediaBytes(response), mediaType);
+  return { bytes: await readMediaBytes(response), mediaType };
+}
+
+export async function fetchMediaObservations(url: string, nativeVideo = false) {
+  const { bytes, mediaType } = await downloadCreativeMedia(url);
+  return extractMediaObservations(bytes, mediaType, nativeVideo);
 }
