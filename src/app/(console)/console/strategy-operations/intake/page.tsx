@@ -14,6 +14,7 @@ import { StatCard } from "@/components/shared/stat-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
+import { SourcePreparationOption } from "@/components/brand/source-preparation-option";
 import {
   ClipboardList, CheckCircle, Clock, ArrowRightCircle, Upload,
   FileUp, FileText, Brain, Loader2, Plus, X, Trash2, Play, Eye,
@@ -381,6 +382,7 @@ function BriefIngestTab() {
 function SourcesTab() {
   const [selectedStrategy, setSelectedStrategy] = useState("");
   const [processing, setProcessing] = useState(false);
+  const [prepareAnalysis, setPrepareAnalysis] = useState(false);
 
   const { data: strategies } = trpc.strategy.list.useQuery({});
   const sourcesQuery = trpc.ingestion.listSources.useQuery(
@@ -394,10 +396,14 @@ function SourcesTab() {
 
   const utils = trpc.useUtils();
   const uploadMutation = trpc.ingestion.uploadFile.useMutation({
-    onSuccess: () => utils.ingestion.listSources.invalidate(),
+    onSuccess: () => { setPrepareAnalysis(false); utils.ingestion.listSources.invalidate(); },
+    onError: () => utils.ingestion.listSources.invalidate(),
   });
   const textMutation = trpc.ingestion.addText.useMutation({
-    onSuccess: () => utils.ingestion.listSources.invalidate(),
+    onSuccess: () => {
+      setPrepareAnalysis(false); setShowText(false); setTextInput(""); setTextLabel("");
+      utils.ingestion.listSources.invalidate();
+    },
   });
   const deleteMutation = trpc.ingestion.deleteSource.useMutation({
     onSuccess: () => utils.ingestion.listSources.invalidate(),
@@ -421,19 +427,19 @@ function SourcesTab() {
       reader.onload = (ev) => {
         const b64 = (ev.target?.result as string).split(",")[1] ?? "";
         const ext = file.name.split(".").pop()?.toUpperCase() ?? "TXT";
-        uploadMutation.mutate({ strategyId: selectedStrategy, fileName: file.name, fileType: ext, content: b64 });
+        uploadMutation.mutate({ strategyId: selectedStrategy, fileName: file.name, fileType: ext, content: b64, prepareAnalysis });
       };
       reader.readAsDataURL(file);
     }
     e.target.value = "";
-  }, [selectedStrategy, uploadMutation]);
+  }, [selectedStrategy, uploadMutation, prepareAnalysis]);
 
   return (
     <div className="space-y-4">
       {/* Strategy selector */}
       <select
         value={selectedStrategy}
-        onChange={(e) => setSelectedStrategy(e.target.value)}
+        onChange={(e) => { setSelectedStrategy(e.target.value); setPrepareAnalysis(false); }}
         className="w-full rounded-lg border border-border-subtle bg-card px-4 py-2.5 text-sm text-foreground outline-none focus:border-accent"
       >
         <option value="">Selectionnez une marque</option>
@@ -444,13 +450,15 @@ function SourcesTab() {
         <EmptyState icon={Database} title="Selectionnez une marque" description="Choisissez une marque pour uploader des sources." />
       ) : (
         <>
+          <SourcePreparationOption checked={prepareAnalysis} onChange={setPrepareAnalysis} disabled={uploadMutation.isPending || textMutation.isPending} />
+          {uploadMutation.error ? <p role="alert" className="text-sm text-error">{uploadMutation.error.message}</p> : null}
           {/* Upload zone */}
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border-subtle bg-card p-6 transition-colors hover:border-accent">
               <Upload className="mb-2 h-8 w-8 text-foreground-muted" />
               <span className="text-xs font-medium text-foreground">Uploader des fichiers</span>
-              <span className="text-[10px] text-foreground-muted">PDF, DOCX, XLSX, Images</span>
-              <input type="file" className="hidden" multiple accept=".pdf,.docx,.doc,.xlsx,.xls,.csv,.png,.jpg,.jpeg,.txt" onChange={handleUpload} />
+              <span className="text-[10px] text-foreground-muted">PDF, DOCX, XLSX, CSV, texte</span>
+              <input type="file" className="hidden" multiple accept=".pdf,.docx,.xlsx,.csv,.txt,.md" onChange={handleUpload} />
             </label>
             <button onClick={() => setShowText(true)}
               className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border-subtle bg-card p-6 transition-colors hover:border-accent">
@@ -469,11 +477,11 @@ function SourcesTab() {
                 className="w-full rounded-lg border border-border-subtle bg-background px-3 py-2 text-sm text-foreground" />
               <div className="flex gap-2">
                 <button onClick={() => {
-                  if (textInput.length > 10) textMutation.mutate({ strategyId: selectedStrategy, text: textInput, label: textLabel || undefined });
-                  setShowText(false); setTextInput(""); setTextLabel("");
-                }} className="rounded-lg bg-accent px-4 py-2 text-xs text-white hover:bg-accent">Ajouter</button>
+                  if (textInput.trim().length >= 10) textMutation.mutate({ strategyId: selectedStrategy, text: textInput, label: textLabel || undefined, prepareAnalysis });
+                }} disabled={textMutation.isPending || textInput.trim().length < 10} className="rounded-lg bg-accent px-4 py-2 text-xs text-accent-foreground hover:bg-accent disabled:opacity-50">Ajouter</button>
                 <button onClick={() => setShowText(false)} className="rounded-lg border border-border-subtle px-4 py-2 text-xs text-foreground-muted">Annuler</button>
               </div>
+              {textMutation.error ? <p role="alert" className="text-sm text-error">{textMutation.error.message}</p> : null}
             </div>
           )}
 

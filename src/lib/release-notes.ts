@@ -34,6 +34,15 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.397",
+    date: "2026-10-06",
+    headline: "Vos documents restent sous votre contrôle",
+    highlights: [
+      { emoji: "📄", title: "Déposez et consultez vos références", body: "Le texte des fichiers et des notes reste consultable depuis les sources. La lecture des PDF est rétablie et les fichiers illisibles sont signalés." },
+      { emoji: "✋", title: "Choisissez l’aide de l’IA", body: "Le dépôt seul ne lance plus de préparation assistée. Une option vous permet de la demander ; vos informations de marque restent inchangées au dépôt." },
+    ],
+  },
+  {
     version: "6.27.396",
     date: "2026-10-06",
     headline: "Des recettes créatives reliées à leurs preuves",

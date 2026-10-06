@@ -47,11 +47,9 @@ export { analyzeAndMapSources } from "./ai-filler";
  * failures are logged and never propagate to the caller, since RAG indexing
  * is auxiliary to the ADVERTIS pillar fill.
  *
- * Vault classification (PROPOSE_VAULT_FROM_SOURCE) requires an operatorId
- * to tag lineage on DRAFT BrandAssets, so the tRPC router fires it
- * explicitly via `ctx.session.user.id` rather than from this background
- * hook. Operators can also retrigger from the Cockpit Propositions vault
- * panel on demand.
+ * Used by the explicitly requested processing pipeline. A plain file/text
+ * deposit stops after deterministic extraction; optional preparation is
+ * dispatched by the router from the user's explicit choice.
  */
 function fireSourceExtractedHooks(strategyId: string, sourceId: string): void {
   void (async () => {
@@ -99,7 +97,6 @@ export async function ingestFile(
         processingStatus: "EXTRACTED",
       },
     });
-    fireSourceExtractedHooks(strategyId, source.id);
   } catch (error) {
     await db.brandDataSource.update({
       where: { id: source.id },
@@ -108,6 +105,9 @@ export async function ingestFile(
         errorMessage: error instanceof Error ? error.message : "Extraction failed",
       },
     });
+    // A retained FAILED source is useful for recovery, but it is not a
+    // successful deposit receipt. The UI must receive the extraction failure.
+    throw error;
   }
 
   return source.id;
@@ -134,7 +134,6 @@ export async function ingestText(
     },
   });
 
-  fireSourceExtractedHooks(strategyId, source.id);
   return source.id;
 }
 

@@ -23,6 +23,7 @@ import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { useCanOperate } from "@/components/cockpit/use-can-operate";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { Modal } from "@/components/shared/modal";
+import { SourcePreparationOption } from "@/components/brand/source-preparation-option";
 import {
   FileText, Upload, Image as ImageIcon, MessageSquare,
   Globe, Clock, CheckCircle, AlertCircle, Loader2,
@@ -52,7 +53,7 @@ const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1_048_576;
  * Proposer un format qu'on va rejeter, c'est faire découvrir le refus APRÈS le
  * dépôt, sur une source déjà créée en échec.
  */
-const ACCEPTED_UPLOAD = ".pdf,.docx,.doc,.txt,.md,.csv,.xlsx";
+const ACCEPTED_UPLOAD = ".pdf,.docx,.txt,.md,.csv,.xlsx";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof CheckCircle }> = {
   PENDING: { label: "En attente", color: "text-foreground-muted", icon: Clock },
@@ -148,7 +149,7 @@ function renderPillarMapping(mapping: unknown): React.ReactNode {
   if (keys.length === 0) return null;
   return (
     <div className="mt-2 flex flex-wrap gap-1">
-      <span className="text-2xs text-foreground-muted">Piliers nourris :</span>
+      <span className="text-2xs text-foreground-muted">Piliers visés :</span>
       {keys.map(key => (
         <span key={key} className="rounded-full bg-info/15 px-2 py-0.5 text-2xs text-info">
           {key.toUpperCase()}
@@ -426,10 +427,12 @@ function SourceEditModal({
   sourceId,
   onClose,
   onSaved,
+  readOnly = false,
 }: {
   sourceId: string;
   onClose: () => void;
   onSaved: () => void;
+  readOnly?: boolean;
 }) {
   const sourceQuery = trpc.ingestion.getSource.useQuery({ id: sourceId });
   const update = trpc.ingestion.updateSource.useMutation({
@@ -440,7 +443,7 @@ function SourceEditModal({
   const [content, setContent] = useState<string | null>(null);
 
   const data = sourceQuery.data;
-  const intakeId = data?.origin?.startsWith("intake:") ? data.origin.slice("intake:".length) : null;
+  const intakeId = !readOnly && data?.origin?.startsWith("intake:") ? data.origin.slice("intake:".length) : null;
 
   // Intake field-by-field editor state & queries
   const questionsQuery = trpc.quickIntake.getAllQuestions.useQuery(undefined, { enabled: !!intakeId });
@@ -475,6 +478,7 @@ function SourceEditModal({
   const isSaving = update.isPending || updateIntake.isPending;
 
   const handleSave = () => {
+    if (readOnly) return;
     if (intakeId && editedResponses) {
       updateIntake.mutate({
         id: intakeId,
@@ -507,9 +511,11 @@ function SourceEditModal({
   const questions = (questionsQuery.data?.[activeTab] ?? []) as any[];
 
   return (
-    <Modal open={true} onClose={onClose} title={intakeId ? "Modifier le diagnostic (Business Intake)" : "Éditer la source"} size={intakeId ? "xl" : "lg"}>
+    <Modal open={true} onClose={onClose} title={readOnly ? "Consulter la source" : intakeId ? "Modifier le diagnostic (Business Intake)" : "Éditer la source"} size={intakeId ? "xl" : "lg"}>
       {sourceQuery.isLoading || (intakeId && (intakeQuery.isLoading || questionsQuery.isLoading)) ? (
         <p className="text-sm text-foreground-muted">Chargement…</p>
+      ) : sourceQuery.error ? (
+        <p role="alert" className="text-sm text-error">{sourceQuery.error.message}</p>
       ) : (
         <div className="space-y-4 text-sm">
           {!intakeId && (
@@ -517,7 +523,9 @@ function SourceEditModal({
               <label className="mb-1 block text-xs font-medium text-foreground-muted">Titre</label>
               <input
                 type="text"
+                aria-label="Titre de la source"
                 value={titleValue}
+                readOnly={readOnly}
                 onChange={(e) => setTitle(e.target.value)}
                 className="w-full rounded border border-white/10 bg-surface-raised px-3 py-2 text-sm text-foreground"
               />
@@ -641,10 +649,12 @@ function SourceEditModal({
           ) : (
             <div>
               <label className="mb-1 block text-xs font-medium text-foreground-muted">
-                Contenu brut (exploité par l&apos;enrichissement + l&apos;auto-fill)
+                Texte de référence
               </label>
               <textarea
+                aria-label="Texte de référence"
                 value={contentValue}
+                readOnly={readOnly}
                 onChange={(e) => setContent(e.target.value)}
                 rows={14}
                 className="w-full rounded border border-white/10 bg-surface-raised px-3 py-2 font-mono text-xs text-foreground"
@@ -657,16 +667,16 @@ function SourceEditModal({
               onClick={onClose}
               className="rounded px-3 py-1.5 text-sm text-foreground-muted hover:bg-white/5"
             >
-              Annuler
+              {readOnly ? "Fermer" : "Annuler"}
             </button>
-            <button
+            {!readOnly ? <button
               disabled={isSaving || (!intakeId && !title && !content)}
               onClick={handleSave}
               className="flex items-center gap-1.5 rounded bg-accent px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
             >
               {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
               Enregistrer
-            </button>
+            </button> : null}
           </div>
         </div>
       )}
@@ -803,6 +813,8 @@ export default function SourcesPage() {
   const [noteTitle, setNoteTitle] = useState("");
   const [noteContent, setNoteContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [prepareAnalysis, setPrepareAnalysis] = useState(false);
+  useEffect(() => setPrepareAnalysis(false), [strategyId]);
 
   // Dépôt de fichier par le porteur de marque. La voie serveur existait
   // (`ingestion.uploadFile`, gouvernée) mais n'était atteignable QUE depuis la
@@ -821,6 +833,7 @@ export default function SourcesPage() {
   const [bookTarget, setBookTarget] = useState<{ sourceId: string; sourceLabel: string } | null>(null);
   // Source en cours d'édition (titre + contenu). Toute source est éditable.
   const [editSourceId, setEditSourceId] = useState<string | null>(null);
+  const [readSourceId, setReadSourceId] = useState<string | null>(null);
 
   const sourcesQuery = trpc.ingestion.listSources.useQuery(
     { strategyId: strategyId ?? "" },
@@ -861,6 +874,7 @@ export default function SourcesPage() {
       setShowAddForm(false);
       setNoteTitle("");
       setNoteContent("");
+      setPrepareAnalysis(false);
     },
   });
 
@@ -900,6 +914,7 @@ export default function SourcesPage() {
             fileName: file.name,
             fileType: file.name.split(".").pop()?.toUpperCase() ?? "TXT",
             content: base64,
+            prepareAnalysis,
           });
           results.push({ name: file.name, ok: true });
         } catch (err) {
@@ -913,6 +928,7 @@ export default function SourcesPage() {
     } finally {
       setUploadResults(results);
       setUploading(false);
+      setPrepareAnalysis(false);
       sourcesQuery.refetch();
     }
   }
@@ -942,6 +958,7 @@ export default function SourcesPage() {
 
       {/* Dépôt de document — le porteur de marque a les documents ; il ne
           pouvait jusqu'ici que les recopier à la main. */}
+      <SourcePreparationOption checked={prepareAnalysis} onChange={setPrepareAnalysis} disabled={uploading || isSubmitting} />
       <div className="rounded-lg border border-dashed border-white/10 p-4">
         <label className={`flex cursor-pointer flex-col items-center justify-center gap-1 py-4 ${uploading ? "pointer-events-none opacity-60" : ""}`}>
           {uploading ? (
@@ -968,8 +985,8 @@ export default function SourcesPage() {
           />
         </label>
         <p className="text-center text-xs text-foreground-muted">
-          Ce que vous déposez ici sert de référence : vos analyses s&apos;y ancrent, et ce qui
-          n&apos;en vient pas est signalé comme tel.
+          Vos documents sont conservés comme références. Vous choisissez quand les utiliser
+          dans une analyse ; aucune modification de votre marque n’est appliquée au dépôt.
         </p>
         {uploadResults.length > 0 ? (
           <ul className="mt-3 space-y-1">
@@ -1007,6 +1024,9 @@ export default function SourcesPage() {
             rows={6}
             className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-foreground placeholder-foreground-muted outline-none focus:border-accent resize-y"
           />
+          {addSourceMutation.error ? (
+            <p role="alert" className="text-xs text-error">{addSourceMutation.error.message}</p>
+          ) : null}
           <div className="flex justify-end gap-2">
             <button onClick={() => setShowAddForm(false)} className="rounded px-3 py-1.5 text-xs text-foreground-muted hover:bg-white/5">
               Annuler
@@ -1020,7 +1040,10 @@ export default function SourcesPage() {
                     strategyId,
                     title: noteTitle.trim() || "Note manuelle",
                     content: noteContent.trim(),
+                    prepareAnalysis,
                   });
+                } catch {
+                  // Keep the note in place; the mutation error is displayed above.
                 } finally {
                   setIsSubmitting(false);
                 }
@@ -1075,13 +1098,20 @@ export default function SourcesPage() {
                         ) : source.processingStatus === "EXTRACTED" ||
                           source.processingStatus === "PROCESSED" ? (
                           <p className="text-2xs text-warning">
-                            Pas encore analysable — sera indexé à la prochaine analyse de marque.
+                            Conservé pour lecture. La préparation pour l’analyse reste disponible à la demande.
                           </p>
                         ) : null
                       ) : null}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    {typeof source.id === "string" ? (
+                      <button onClick={() => setReadSourceId(source.id as string)}
+                        title="Consulter cette source"
+                        className="rounded p-1 text-foreground-muted hover:bg-accent/10 hover:text-accent">
+                        <FileText className="h-3.5 w-3.5" />
+                      </button>
+                    ) : null}
                     {/* PR-A (ADR-0032) — niveau de certitude éditable. Default
                         DECLARED côté DB pour les rows pré-migration et nouveaux
                         intakes ; INFERRED pour les sources extraites IA. */}
@@ -1209,6 +1239,10 @@ export default function SourcesPage() {
           onClose={() => setEditSourceId(null)}
           onSaved={() => sourcesQuery.refetch()}
         />
+      ) : null}
+
+      {readSourceId !== null ? (
+        <SourceEditModal sourceId={readSourceId} readOnly onClose={() => setReadSourceId(null)} onSaved={() => undefined} />
       ) : null}
 
       {/* PR-B (ADR-0033) — Re-ingest modal. Anti-foot-gun pattern : the

@@ -30,6 +30,18 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-06 · Les dépôts de fichier, texte et note lançaient de l’indexation et du
+classement sans choix utilisateur ; un échec de lecture renvoyait pourtant un id
+de succès. v6.27.397 expose le choix explicite et remonte l’échec sans perdre sa
+trace. Cause : dépôt, préparation et exploitation avaient été confondus.
+La consultation du texte réutilise la lecture scopée existante, sans droit d’édition.
+
+2026-10-06 · La lecture PDF appelait une fonction v1 absente de pdf-parse v2 ; le
+premier correctif passait en Node mais échouait dans Next, faute de worker à son
+chemin d’origine. v6.27.397 utilise PDFParse et conserve son worker au build.
+Cause : mise à jour de dépendance et packaging non exercés sur un vrai fichier.
+Une extraction de deux pages dans l’image exacte verrouille désormais cette frontière.
+
 2026-10-06 · Un amendement manuel persisté laissait le contenu de la page pilier
 inchangé, et le formulaire suivant pouvait garder l’ancienne version. v6.27.395
 rafraîchit `pillar.get` et invalide `listEditableFields` au succès. Cause : seul

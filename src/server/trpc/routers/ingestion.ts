@@ -28,30 +28,33 @@ async function assertSourceAccess(userId: string, sourceId: string): Promise<voi
 }
 
 /**
- * Fire PROPOSE_VAULT_FROM_SOURCE for a freshly extracted source. Best-effort,
- * non-blocking — the operator can also re-trigger from the cockpit
- * Propositions vault panel if this fails. Auto-classification per the user
- * choice "Auto + validation opérateur" (no auto-promotion to CANDIDATE).
+ * Prepare an extracted source only after an explicit request. Storage and
+ * deterministic extraction never imply consent to embeddings/classification.
+ * Both existing commands stay governed; proposals remain DRAFT.
  */
-function fireVaultProposalHook(
+function fireSourcePreparationHooks(
   strategyId: string,
   sourceId: string,
   operatorId: string,
 ): void {
   void (async () => {
-    try {
-      const { emitIntent } = await import("@/server/services/mestor/intents");
-      await emitIntent(
-        { kind: "PROPOSE_VAULT_FROM_SOURCE", strategyId, sourceId, operatorId },
-        { caller: "ingestion-router:propose-vault" },
-      );
-    } catch (err) {
-      console.warn(
-        "[ingestion] PROPOSE_VAULT_FROM_SOURCE hook failed (non-blocking):",
-        err instanceof Error ? err.message : err,
-      );
+    const { emitIntent } = await import("@/server/services/mestor/intents");
+    for (const intent of [
+      { kind: "INDEX_BRAND_SOURCE" as const, strategyId, sourceId },
+      { kind: "PROPOSE_VAULT_FROM_SOURCE" as const, strategyId, sourceId, operatorId },
+    ]) {
+      try {
+        await emitIntent(intent, { caller: "ingestion-router:prepare-source" });
+      } catch (err) {
+        console.warn(
+          `[ingestion] ${intent.kind} preparation failed (non-blocking):`,
+          err instanceof Error ? err.message : err,
+        );
+      }
     }
-  })();
+  })().catch((err: unknown) => {
+    console.warn("[ingestion] source preparation unavailable:", err instanceof Error ? err.message : err);
+  });
 }
 
 export const ingestionRouter = createTRPCRouter({
@@ -65,6 +68,7 @@ export const ingestionRouter = createTRPCRouter({
       fileName: z.string(),
       fileType: z.string(),
       content: z.string(), // base64
+      prepareAnalysis: z.boolean().default(false),
     }),
 
     caller: "ingestion:uploadFile",
@@ -76,7 +80,9 @@ export const ingestionRouter = createTRPCRouter({
         type: input.fileType,
         content: input.content,
       });
-      fireVaultProposalHook(input.strategyId, sourceId, ctx.session.user.id);
+      if (input.prepareAnalysis) {
+        fireSourcePreparationHooks(input.strategyId, sourceId, ctx.session.user.id);
+      }
       return { sourceId };
     }),
 
@@ -89,6 +95,7 @@ export const ingestionRouter = createTRPCRouter({
       strategyId: z.string(),
       text: z.string().min(10),
       label: z.string().optional(),
+      prepareAnalysis: z.boolean().default(false),
     }),
 
     caller: "ingestion:addText",
@@ -96,7 +103,9 @@ export const ingestionRouter = createTRPCRouter({
   })
     .mutation(async ({ ctx, input }) => {
       const sourceId = await ingestion.ingestText(input.strategyId, input.text, input.label);
-      fireVaultProposalHook(input.strategyId, sourceId, ctx.session.user.id);
+      if (input.prepareAnalysis) {
+        fireSourcePreparationHooks(input.strategyId, sourceId, ctx.session.user.id);
+      }
       return { sourceId };
     }),
 
@@ -313,6 +322,7 @@ export const ingestionRouter = createTRPCRouter({
       strategyId: z.string(),
       title: z.string().min(1),
       content: z.string().min(1),
+      prepareAnalysis: z.boolean().default(false),
     }),
 
     caller: "ingestion:addManualSource",
@@ -330,22 +340,9 @@ export const ingestionRouter = createTRPCRouter({
           pillarMapping: { a: true, d: true, v: true, e: true, r: true, t: true, i: true, s: true },
         },
       });
-      // Fire RAG indexing + vault classification (both non-blocking).
-      void (async () => {
-        try {
-          const { emitIntent } = await import("@/server/services/mestor/intents");
-          await emitIntent(
-            { kind: "INDEX_BRAND_SOURCE", strategyId: input.strategyId, sourceId: created.id },
-            { caller: "ingestion-router:addManualSource" },
-          );
-        } catch (err) {
-          console.warn(
-            "[ingestion] INDEX_BRAND_SOURCE hook failed (non-blocking):",
-            err instanceof Error ? err.message : err,
-          );
-        }
-      })();
-      fireVaultProposalHook(input.strategyId, created.id, ctx.session.user.id);
+      if (input.prepareAnalysis) {
+        fireSourcePreparationHooks(input.strategyId, created.id, ctx.session.user.id);
+      }
       return created;
     }),
 

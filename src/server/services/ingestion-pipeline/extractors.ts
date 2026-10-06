@@ -10,16 +10,23 @@ import type { ExtractionResult } from "./types";
  * Extract text from a PDF buffer
  */
 export async function extractPDF(buffer: Buffer): Promise<ExtractionResult> {
-  const pdfModule = await import("pdf-parse");
-  const pdfParse = (pdfModule as any).default ?? pdfModule;
-  const data = await (pdfParse as any)(buffer);
-  return {
-    text: data.text,
-    metadata: {
-      pages: data.numpages,
-      wordCount: data.text.split(/\s+/).length,
-    },
-  };
+  const { PDFParse } = await import("pdf-parse");
+  const parser = new PDFParse({ data: new Uint8Array(buffer) });
+  try {
+    const data = await parser.getText();
+    if (!data.pages.some((page) => page.text.trim().length > 0)) {
+      throw new Error("Ce PDF ne contient pas de texte lisible. Déposez une version avec texte sélectionnable ou ajoutez une note.");
+    }
+    return {
+      text: data.text,
+      metadata: {
+        pages: data.total,
+        wordCount: data.text.trim().split(/\s+/).filter(Boolean).length,
+      },
+    };
+  } finally {
+    await parser.destroy();
+  }
 }
 
 /**
@@ -162,9 +169,12 @@ export async function extractAuto(
     const buf = Buffer.from(content, "base64");
     return extractPDF(buf);
   }
-  if (ft === "DOCX" || ft === "DOC") {
+  if (ft === "DOCX") {
     const buf = Buffer.from(content, "base64");
     return extractDOCX(buf);
+  }
+  if (ft === "DOC") {
+    throw new Error("Format .doc (Word ancien) non supporté — convertir en .docx ou .pdf.");
   }
   if (ft === "XLSX") {
     return extractXLSX(Buffer.from(content, "base64"));

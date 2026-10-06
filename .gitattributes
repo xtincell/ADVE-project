@@ -1,0 +1,2 @@
+# Preserve fixture bytes; PDF cross-reference records contain meaningful spaces.
+tests/fixtures/*.pdf binary

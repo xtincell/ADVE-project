@@ -106,6 +106,21 @@ jobs:
             exit 1
           fi
           echo "✓ image saine — démarre, migre, sert /login."
+          # Le test unitaire ne détecte pas un worker PDF omis du standalone.
+          # Exercer le lecteur installé dans l'image exacte avant publication.
+          docker cp tests/fixtures/source-deposit.pdf app:/tmp/source-deposit.pdf
+          docker exec app node --input-type=module -e '
+            import { readFile } from "node:fs/promises";
+            import { PDFParse } from "pdf-parse";
+            const parser = new PDFParse({ data: new Uint8Array(await readFile("/tmp/source-deposit.pdf")) });
+            try {
+              const result = await parser.getText();
+              if (result.total !== 2 || !result.text.includes("Source one: budget unknown.") || !result.text.includes("Source two: no approval inferred.")) {
+                throw new Error("PDF standalone extraction failed");
+              }
+              console.log("PDF standalone: 2 pages, both source texts present");
+            } finally { await parser.destroy(); }
+          '
           docker rm -f app pg >/dev/null 2>&1 || true
 
       # 3) Push (cache chaud → quasi instantané) : latest + version + sha.

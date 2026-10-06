@@ -1,5 +1,23 @@
 # Changelog — La Fusee
 
+## v6.27.397 — fix(intake): conserver et consulter sans préparation implicite (2026-10-06)
+
+**Déposer une source conserve son texte ; l’analyse assistée devient un choix explicite.**
+
+- Les trois entrées de dépôt partagent une option désactivée par défaut. Les commandes
+  d’indexation et de classement existantes sont lancées uniquement sur ce choix.
+  Le traitement complet reste une action distincte ; aucun nouveau service ni Intent.
+- Le dirigeant peut consulter le titre et le texte des sources accessibles, sans droit
+  d’édition ajouté. Une note en erreur reste dans son formulaire ; une extraction
+  échouée est annoncée comme telle et conserve sa trace en base.
+- L’API PDF v1 était appelée avec pdf-parse v2 : tous les PDF échouaient. Le lecteur
+  utilise maintenant l’API installée, libère son worker et refuse un document sans
+  texte. Le worker est conservé au build ; l’image exacte lit deux pages avant publication.
+- Les sélecteurs cessent de proposer le Word binaire `.doc`, qui exige une conversion
+  en `.docx` ou PDF. « Piliers visés » distingue la destination prévue d’un enrichissement réalisé.
+- Régression reproduite puis corrigée par tests réels PDF et tests des trois dépôts.
+  Recettes navigateur locales : cockpit, deux consoles et consultation par un compte USER.
+
 ## v6.27.396 — feat(intelligence): preuves conservées et boucle de mesure (2026-10-06)
 
 **Les observations créatives gagnent une archive contrôlée et un lien vérifiable avec les essais.**

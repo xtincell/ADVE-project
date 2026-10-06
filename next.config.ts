@@ -50,7 +50,12 @@ const nextConfig: NextConfig = {
    * `mjml` retiré 2026-06 : remplacé par un renderer déterministe in-repo
    * (anubis/mjml-render.ts) — 0 dépendance, 0 vulnérabilité transitive.
    */
-  serverExternalPackages: ["web-push", "puppeteer"],
+  // PDF parsing loads a sibling worker at runtime. Bundling it into a Next
+  // chunk breaks that path even though direct Node/unit extraction works.
+  serverExternalPackages: ["web-push", "puppeteer", "pdf-parse", "@napi-rs/canvas"],
+  outputFileTracingIncludes: {
+    "/*": ["./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs"],
+  },
   // Standalone output — produces `.next/standalone/server.js`, a minimal
   // self-contained Node server (deps traced via nft). This is what the
   // Coolify Docker image runs (`node server.js`, cf. Dockerfile).

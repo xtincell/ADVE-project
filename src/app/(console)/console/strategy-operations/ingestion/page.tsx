@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Modal } from "@/components/shared/modal";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
+import { SourcePreparationOption } from "@/components/brand/source-preparation-option";
 import { PILLAR_NAMES } from "@/lib/types/advertis-vector";
 import { PILLAR_KEYS, ADVE_KEYS } from "@/domain/pillars";
 import {
@@ -44,6 +45,7 @@ export default function IngestionPage() {
   const [showTextModal, setShowTextModal] = useState(false);
   const [reviewPillar, setReviewPillar] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [prepareAnalysis, setPrepareAnalysis] = useState(false);
 
   const strategiesQuery = trpc.strategy.list.useQuery({});
   const sourcesQuery = trpc.ingestion.listSources.useQuery(
@@ -62,7 +64,8 @@ export default function IngestionPage() {
   const utils = trpc.useUtils();
 
   const uploadMutation = trpc.ingestion.uploadFile.useMutation({
-    onSuccess: () => utils.ingestion.listSources.invalidate(),
+    onSuccess: () => { setPrepareAnalysis(false); utils.ingestion.listSources.invalidate(); },
+    onError: () => utils.ingestion.listSources.invalidate(),
   });
   const textMutation = trpc.ingestion.addText.useMutation({
     onSuccess: () => {
@@ -70,6 +73,7 @@ export default function IngestionPage() {
       setShowTextModal(false);
       setTextInput("");
       setTextLabel("");
+      setPrepareAnalysis(false);
     },
   });
   const deleteMutation = trpc.ingestion.deleteSource.useMutation({
@@ -107,12 +111,13 @@ export default function IngestionPage() {
           fileName: file.name,
           fileType: ext,
           content: base64,
+          prepareAnalysis,
         });
       };
       reader.readAsDataURL(file);
     }
     e.target.value = "";
-  }, [selectedStrategy, uploadMutation]);
+  }, [selectedStrategy, uploadMutation, prepareAnalysis]);
 
   const handleProcess = () => {
     if (!selectedStrategy) return;
@@ -125,8 +130,8 @@ export default function IngestionPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Ingestion IA"
-        description="Importez des donnees brutes et laissez l'IA remplir les piliers ADVE"
+        title="Sources de marque"
+        description="Conservez vos documents et choisissez les analyses à lancer."
         breadcrumbs={[
           { label: "Console", href: "/console" },
           { label: "Oracle" },
@@ -138,7 +143,7 @@ export default function IngestionPage() {
       <div className="flex items-center gap-4">
         <select
           value={selectedStrategy}
-          onChange={(e) => setSelectedStrategy(e.target.value)}
+          onChange={(e) => { setSelectedStrategy(e.target.value); setPrepareAnalysis(false); }}
           className="rounded-lg border border-border bg-background px-4 py-2.5 text-sm text-white outline-none focus:border-accent"
         >
           <option value="">Selectionnez une marque</option>
@@ -167,6 +172,8 @@ export default function IngestionPage() {
             <StatCard title="Progres" value={`${Math.round((status?.progress ?? 0) * 100)}%`} icon={CheckCircle} />
           </div>
 
+          <SourcePreparationOption checked={prepareAnalysis} onChange={setPrepareAnalysis} disabled={uploadMutation.isPending || textMutation.isPending} />
+          {uploadMutation.error ? <p role="alert" className="text-sm text-error">{uploadMutation.error.message}</p> : null}
           {/* Upload zone */}
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-background/50 p-8 transition-colors hover:border-accent">
@@ -182,7 +189,7 @@ export default function IngestionPage() {
                   l'opérateur découvrait le refus APRÈS coup, sur une source
                   déjà créée en FAILED. */}
               <input type="file" className="hidden" multiple
-                accept=".pdf,.docx,.doc,.xlsx,.csv,.txt,.md"
+                accept=".pdf,.docx,.xlsx,.csv,.txt,.md"
                 onChange={handleFileUpload} />
             </label>
 
@@ -372,7 +379,7 @@ export default function IngestionPage() {
           </div>
           <button
             disabled={textInput.trim().length < 10 || textMutation.isPending}
-            onClick={() => textMutation.mutate({ strategyId: selectedStrategy, text: textInput, label: textLabel || undefined })}
+            onClick={() => textMutation.mutate({ strategyId: selectedStrategy, text: textInput, label: textLabel || undefined, prepareAnalysis })}
             className="w-full rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-foreground-muted hover:bg-foreground disabled:opacity-50"
           >
             {textMutation.isPending ? "Ajout..." : "Ajouter comme source"}

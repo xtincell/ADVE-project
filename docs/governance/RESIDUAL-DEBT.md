@@ -138,14 +138,18 @@ Procédure de reprise : [runbook](../deploy/CREATIVE-INTELLIGENCE.md).
 
 ## Intégration des marques — 2026-10-02 (ADR-0193)
 
-- **Dépôt manuel de source et traitements implicites (2026-10-06)** :
-  `ingestion.addManualSource` lance `INDEX_BRAND_SOURCE` et
-  `PROPOSE_VAULT_FROM_SOURCE` ; le second peut décomposer un texte par LLM et le
-  tagger peut également appeler un modèle. La saisie seule n’offre pas de choix
-  pour ces traitements. Reprendre les commandes existantes avec choix explicite
-  du traitement, puis prouver dépôt/relecture sans fournisseur ni file de travaux
-  automatiques. Déclencheur : admission des documents de marque, avant réception R05
-  du chantier Shinkiro ; aucune prétention actuelle de dépôt entièrement sans agents.
+- **Cohérence des résumés et gestes de sources** : le tableau de bord qualifie
+  encore huit piliers d’« absence de contenu » quand A/D contiennent des champs ;
+  le bouton « Sources » y lance un enrichissement assisté au lieu d’ouvrir les
+  références. Reproduit sur la fixture locale du 6 octobre. Fermer par lecture
+  du contenu canonique et libellé explicite de l’action existante, avec erreurs
+  visibles. Effort : un correctif de résumé/actions ; reprise au lot suivant de
+  la recette Shinkiro, avant réception du parcours manuel complet.
+- **Index d’une source modifiée** : `ingestion.updateSource` ne retire pas les
+  fragments de sa version précédente. Fermer par invalidation atomique des
+  fragments avec la mutation existante, puis exercice édition/relecture/recherche
+  et refus croisé de marque. Effort : un correctif de cycle de source ; reprise
+  avant le rapprochement des sources SPAWT/FrieslandCampina.
 - **Ventes historiques issues de la création de marque** : `strategy.create`
   créait un Deal `WON` sans décision commerciale, source `COCKPIT_CREATE`.
   Couplage supprimé en v6.27.394. Rapprocher les lignes existantes avec contrats,
