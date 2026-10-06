@@ -2,27 +2,14 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import type { ConnectorResult, ConnectorDegradationReason } from "@/domain/connector-result";
-import { acquiredContentSchema, type AcquiredContent, type CreativeSourceInput } from "@/domain/creative-sources";
+import type { ConnectorResult } from "@/domain/connector-result";
+import { acquiredContentSchema, type AcquiredContent, type CreativeSourceInput, type CreativeCredentials, CREATIVE_SOURCE_CONNECTIONS } from "@/domain/creative-sources";
 
 const count = z.union([z.string().regex(/^\d+$/), z.number().int().nonnegative()]).transform(Number).refine(Number.isSafeInteger);
 const optionalCount = count.optional();
-export class SourceReadError extends Error {
-  constructor(public readonly reason: ConnectorDegradationReason) { super(reason); }
-}
-export async function readBoundedJson(response: Response, maxBytes = 2_000_000): Promise<unknown> {
-  if (!response.ok) {
-    await response.body?.cancel();
-    throw new SourceReadError(response.status === 429 ? "RATE_LIMITED" : [401, 403].includes(response.status) ? "AUTH_REVOKED" : "VENDOR_OUTAGE");
-  }
-  if (!response.body || Number(response.headers.get("content-length") ?? 0) > maxBytes) { await response.body?.cancel(); throw new SourceReadError("VENDOR_OUTAGE"); }
-  const reader = response.body.getReader();
-  const chunks: Uint8Array[] = []; let bytes = 0;
-  try {
-    for (;;) { const { done, value } = await reader.read(); if (done) break; bytes += value.byteLength; if (bytes > maxBytes) throw new SourceReadError("VENDOR_OUTAGE"); chunks.push(value); }
-    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
-  } finally { await reader.cancel().catch(() => {}); }
-}
+export { readBoundedJson, SourceReadError } from "./source-http";
+import { readBoundedJson, SourceReadError } from "./source-http";
+import { fetchAdditionalSource } from "./additional-sources";
 async function jsonGet(url: URL, signal: AbortSignal, token?: string) {
   // These constructors use fixed vendor hosts; no user-supplied endpoint or query secret in errors.
   return readBoundedJson(await fetch(url, { signal, redirect: "error", headers: token ? { Authorization: `Bearer ${token}` } : undefined }));
@@ -103,14 +90,15 @@ async function connectedSocial(input: CreativeSourceInput, store: Prisma.Transac
   if (!input.strategyId) throw new SourceReadError("MISSING_PREREQUISITE");
   const posts = await store.socialPost.findMany({ where: { strategyId: input.strategyId, connection: { accountId: input.account, status: "ACTIVE", platform: { in: ["FACEBOOK", "INSTAGRAM"] } } }, include: { connection: { select: { platform: true, accountId: true } } }, orderBy: { publishedAt: "desc" }, take: input.limit });
   // No default-zero SocialPost counters or undated stored Insights become fresh observations.
-  return { rows: posts.filter(p => p.publishedAt && p.permalinkUrl?.startsWith("https:")).map(p => acquiredContentSchema.parse({ specimen: { ...context(input), platform: p.connection.platform, accountId: p.connection.accountId, externalId: p.externalPostId, sourceUrl: p.permalinkUrl, caption: p.content ?? undefined, format: p.mediaType?.toLowerCase().includes("video") ? "SHORT_VIDEO" : "IMAGE", publishedAt: p.publishedAt, source: "NATIVE_SYNC_STORED" } })), observedAt: new Date() };
+  return { rows: posts.filter(p => p.publishedAt && p.permalinkUrl?.startsWith("https:")).map(p => acquiredContentSchema.parse({ specimen: { ...context(input), platform: p.connection.platform, accountId: p.connection.accountId, externalId: p.externalPostId, sourceUrl: p.permalinkUrl, caption: p.content ?? undefined, format: p.mediaType?.toLowerCase().includes("video") ? "VIDEO_UNCLASSIFIED" : "IMAGE", publishedAt: p.publishedAt, source: "NATIVE_SYNC_STORED" } })), observedAt: new Date() };
 }
 
-export async function fetchCreativeSource(input: CreativeSourceInput, credentials: { apiKey?: string } = {}, store: Prisma.TransactionClient = db): Promise<ConnectorResult<AcquiredContent[]>> {
-  if (["YOUTUBE", "FOREPLAY"].includes(input.provider) && !credentials.apiKey) return { state: "DEFERRED_AWAITING_CREDENTIALS", connectorId: input.provider === "YOUTUBE" ? "youtube-data" : "foreplay" };
+export async function fetchCreativeSource(input: CreativeSourceInput, credentials: CreativeCredentials = {}, store: Prisma.TransactionClient = db): Promise<ConnectorResult<AcquiredContent[]>> {
+  const connection = input.provider in CREATIVE_SOURCE_CONNECTIONS ? CREATIVE_SOURCE_CONNECTIONS[input.provider as keyof typeof CREATIVE_SOURCE_CONNECTIONS] : null;
+  if (connection && !credentials.apiKey) return { state: "DEFERRED_AWAITING_CREDENTIALS", connectorId: connection.type };
   try {
     const signal = AbortSignal.timeout(25000);
-    const result = input.provider === "BLUESKY" ? await bluesky(input, signal) : input.provider === "YOUTUBE" ? await youtube(input, signal, credentials.apiKey!) : input.provider === "FOREPLAY" ? await foreplay(input, signal, credentials.apiKey!) : await connectedSocial(input, store);
+    const result = input.provider === "BLUESKY" ? await bluesky(input, signal) : input.provider === "YOUTUBE" ? await youtube(input, signal, credentials.apiKey!) : input.provider === "FOREPLAY" ? await foreplay(input, signal, credentials.apiKey!) : input.provider === "CONNECTED_SOCIAL" ? await connectedSocial(input, store) : await fetchAdditionalSource(input, credentials, signal);
     if (!result.rows.length) return { state: "DEGRADED", reason: "INSUFFICIENT_DATA" };
     return { state: "LIVE", data: result.rows, observedAt: result.observedAt.toISOString() };
   } catch (error) { return { state: "DEGRADED", reason: error instanceof SourceReadError ? error.reason : "VENDOR_OUTAGE" }; }

@@ -1,6 +1,10 @@
 "use client";
+import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { RecipeCards, creativeLabels } from "@/components/creative-intelligence/recipe-cards";
+import { CreativeModelDetails } from "@/components/creative-intelligence/advanced-observations";
+import { Label } from "@/components/primitives/label";
+import { Select } from "@/components/primitives/select";
 
 function measuredOutcome(value: unknown): string | null {
   if (!value || typeof value !== "object") return null;
@@ -9,6 +13,8 @@ function measuredOutcome(value: unknown): string | null {
 }
 
 export function BrandCreativeIntelligence({ strategyId }: { strategyId: string }) {
+  const [selection, setSelection] = useState({ strategyId, specimenId: "", recipeId: "" });
+  const selected = selection.strategyId === strategyId ? selection : { specimenId: "", recipeId: "" };
   const corpus = trpc.argos.intelligence.brandCorpus.useQuery({ strategyId });
   const recipes = trpc.argos.intelligence.brandRecipes.useQuery({ strategyId });
   const applications = trpc.argos.intelligence.applications.useQuery({ strategyId });
@@ -19,6 +25,11 @@ export function BrandCreativeIntelligence({ strategyId }: { strategyId: string }
     <p className="text-sm text-muted-foreground">{corpus.data?.length ?? "…"} contenus consultables · {watchlist.data?.length ?? "…"} marques suivies. Les données de votre marque restent privées. Votre équipe prépare et valide les essais.</p>
     {(corpus.error || recipes.error || applications.error || watchlist.error) && <p role="alert">Une partie des observations est indisponible. Réessayez plus tard.</p>}
     {recipes.isLoading ? <p className="text-sm text-muted-foreground">Chargement des recettes…</p> : <RecipeCards recipes={recipes.data ?? []} />}
+    <div className="grid gap-3 sm:grid-cols-2">
+      <Label>Contenu de votre marque<Select value={selected.specimenId} onChange={e => setSelection({ ...selected, strategyId, specimenId: e.target.value })}><option value="">Choisir un contenu</option>{corpus.data?.filter(s => s.strategyId === strategyId).map(s => <option key={s.id} value={s.id}>{s.platform} · {s.caption?.slice(0, 80) || s.externalId}</option>)}</Select></Label>
+      <Label>Recette à suivre<Select value={selected.recipeId} onChange={e => setSelection({ ...selected, strategyId, recipeId: e.target.value })}><option value="">Choisir une recette revue</option>{recipes.data?.filter(r => r.reviewed).map(r => <option key={r.id} value={r.id}>{creativeLabels[r.context.hook]} · {r.context.countryCode} · version {r.revision}</option>)}</Select></Label>
+    </div>
+    <CreativeModelDetails strategyId={strategyId} specimenId={selected.specimenId} recipeId={selected.recipeId} />
     {opportunities.data?.map(o => <div key={o.recipeId} className="text-sm"><p className="font-medium">{o.pattern.map(p => creativeLabels[p] ?? p).join(" + ")} : {o.suggestion === "TEST_CANDIDATE" ? "piste d'essai" : "collecte à compléter"}</p><p>{o.ownMatchingContents}/{o.ownObservedContents} contenus propres et {o.rivalMatchingContents}/{o.rivalObservedContents} contenus des comptes suivis utilisent cette combinaison. {o.limitation}</p></div>)}
     <h3 className="font-semibold">Essais déclarés</h3>
     {!applications.data?.length && <p className="text-sm text-muted-foreground">Aucun essai déclaré. Une recette revue peut devenir une variante de campagne avec une cible et une échéance.</p>}

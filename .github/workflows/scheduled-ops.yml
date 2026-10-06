@@ -99,6 +99,7 @@ jobs:
             hit /api/cron/scheduler "scheduler (séquences planifiées)"
             hit /api/cron/ptah-download "ptah-download (réconciliation forge)"
             hit "/api/cron/social-sync?mode=publish" "social-sync publish (posts planifiés dus — round-15b)"
+            hit "/api/cron/argos-hunt?mode=retention" "creative-media (échéances de conservation)" 90
           fi
 
           if [ "$T" = "sixhourly" ] || [ "$T" = "all" ]; then

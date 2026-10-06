@@ -57,6 +57,7 @@ export type GatewayPurpose =
   | "extraction";
 
 export interface GatewayCallOptions {
+  video?: import("./audiovisual").GatewayVideo;
   /** Bounded local image bytes. URLs are never fetched by the provider SDK. */
   images?: readonly import("./vision").GatewayImage[];
   /** System prompt */
@@ -649,6 +650,7 @@ export async function trackCost(
   options: Pick<GatewayCallOptions, "strategyId" | "caller">,
   usage: { inputTokens: number; outputTokens: number },
   model: string,
+  billing?: { provider: string; costUsd: number; estimated: boolean },
 ): Promise<void> {
   if (!options.strategyId) return;
 
@@ -657,14 +659,14 @@ export async function trackCost(
     await db.aICostLog.create({
       data: {
         strategyId: options.strategyId,
-        provider: "anthropic",
+        provider: billing?.provider ?? "anthropic",
         model,
         inputTokens: usage.inputTokens,
         outputTokens: usage.outputTokens,
-        cost:
+        cost: billing?.costUsd ?? (
           (usage.inputTokens / 1_000_000) * INPUT_PRICE_PER_M +
-          (usage.outputTokens / 1_000_000) * OUTPUT_PRICE_PER_M,
-        context: options.caller,
+          (usage.outputTokens / 1_000_000) * OUTPUT_PRICE_PER_M),
+        context: options.caller + (billing?.estimated ? ":estimated-cost" : ""),
       },
     });
   } catch {
@@ -681,7 +683,11 @@ export async function trackCost(
 export async function callLLM(options: GatewayCallOptions): Promise<GatewayResult> {
   const { validateGatewayImages, visionConfiguration } = await import("./vision");
   validateGatewayImages(options.images);
-  const vision = options.images ? visionConfiguration() : null;
+  const { videoConfiguration, validateGatewayVideo, callNativeVideo } = await import("./audiovisual");
+  if (options.video) validateGatewayVideo(options.video);
+  if (options.video && options.images) throw new Error("Un seul mode multimodal par appel.");
+  const vision = options.video ? videoConfiguration() : options.images ? visionConfiguration() : null;
+  if (options.video && !vision) throw new Error("Connecteur audiovisuel non configuré.");
   if (options.images && !vision) throw new Error("Connecteur vision non configuré.");
   const { generateText } = await import("ai");
 
@@ -821,13 +827,17 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
         };
         const slotKey = await acquireSlot(servedModel);
         let text!: string;
+        let nativeBilling: { provider: string; costUsd: number; estimated: boolean } | undefined;
         let usage!: Awaited<ReturnType<typeof generateText>>["usage"];
         let slotReleased = false;
         try {
-          ({ text, usage } = await generateText({
-            model: aiModel as Parameters<typeof generateText>[0]["model"],
-            ...callParams,
-          }));
+          if (options.video) {
+            const native = await callNativeVideo(options, options.video, servedModel);
+            text = native.text; usage = native.usage as typeof usage;
+            nativeBilling = { provider: "openrouter", costUsd: native.reportedCostUsd ?? 0.15, estimated: native.reportedCostUsd == null };
+          } else {
+            ({ text, usage } = await generateText({ model: aiModel as Parameters<typeof generateText>[0]["model"], ...callParams }));
+          }
         } catch (genErr) {
           // Repli intra-OpenRouter : owl-alpha (ou un modèle gratuit) renvoie
           // souvent "No endpoints found" / 404 / 429 sous charge → on parcourt la
@@ -873,8 +883,8 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
 
         // Non-blocking cost tracking. Use the actually-served model name
         // (anthropic name when on Anthropic/OpenAI, ollama name when free).
-        const billedModel = provider === "ollama" ? servedModel : anthropicModel;
-        trackCost(options, gatewayUsage, billedModel);
+        const billedModel = provider === "ollama" || options.video ? servedModel : anthropicModel;
+        trackCost(options, gatewayUsage, billedModel, nativeBilling);
 
         // PostgreSQL jsonb refuse le null byte U+0000 ("unsupported Unicode escape
         // sequence") — un modèle peut en émettre un (brut, ou un littéral qui le devient

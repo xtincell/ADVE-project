@@ -198,6 +198,20 @@ Decision rationale in [ADR-0001](docs/governance/adr/0001-framework-name-apogee.
 
 ## Phase status (état réel du repo)
 
+### Preuves, modèles et boucle mesurée — ADR-0196 (2026-10-06)
+
+[ADR-0196](docs/governance/adr/0196-creative-intelligence-evidence-retention-and-live-loop.md)
+étend Seshat sans nouveau Neter : archive privée chiffrée avec purge, transport
+MP4/audio natif explicitement configuré, index de recettes dans les context nodes,
+modèle conditionnel validé hors comptes/période et trajectoires avec couverture.
+Quatorze chemins de collecte (treize directs et bridge social) ; veilles explicites
+avec verrou de concurrence. Publication confirmée vers action/actif avant mesure
+immuable de l'essai. Cockpit, console et cron partagent les mêmes règles de périmètre.
+Parcours PostgreSQL/tRPC, archive NASA et purge physique reçus localement ;
+Bluesky réellement collecté, extraction MP4 synthétique avec/sans piste audio.
+Ni credentials fournisseurs, ni POST Argos-studio, ni stockage cible reçu :
+voir RESIDUAL-DEBT pour l'activation restante, sans assimiler code et exploitation.
+
 ### Acquisition et analyse assistée — vérifiée localement (ADR-0195)
 
 [ADR-0195](docs/governance/adr/0195-creative-acquisition-and-reviewed-assisted-analysis.md)
@@ -227,7 +241,7 @@ l’image exacte UID 1001, réseau coupé/root readonly : cinq frames sans audio
 RPC publicRecipes 200/vide ; HTML Argos 200. Navigateur production bloqué par CA
 proxy : hydratation/DOM/pageerror non vérifiés, aucun parcours protégé ni provider
 authentifié reçu. Credentials provider/vision et endpoint Argos indisponibles.
-Comptes courants : 629 Intent kinds ; 56 CORE / 152 registry Glory tools ;
+Comptes courants : 633 Intent kinds ; 56 CORE / 153 registry Glory tools ;
 94 séquences dont 91 DRAFT ; 28 frameworks (recompte des registres 2026-10-06).
 
 ### Extension intelligence créative et concurrentielle — 2026-10-06

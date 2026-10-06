@@ -1,5 +1,37 @@
 # Changelog — La Fusee
 
+## v6.27.396 — feat(intelligence): preuves conservées et boucle de mesure (2026-10-06)
+
+**Les observations créatives gagnent une archive contrôlée et un lien vérifiable avec les essais.**
+
+- Extension du corpus Seshat existant : 14 chemins de collecte, dont 13 directs
+  et le raccord social propre. Contrats explicites pour Meta, Instagram, TikTok,
+  Reddit, X, LinkedIn, Brandwatch, Apify normalisé et RSS. BuzzSumo reste en export
+  à qualifier ; Exploding Topics reste un signal, jamais une performance de contenu.
+- Médias privés chiffrés, droits/échéance, reçu avant transfert et vérification
+  après stockage. Lecture interdite à expiration, suppression physique vérifiée,
+  passage de rétention séparé toutes les quinze minutes. Stockage cible à configurer.
+- Observation audiovisuelle native MP4 via modèle explicitement configuré ;
+  scènes/transcription assistées restent MODEL_DRAFT jusqu'à revue humaine.
+  Le coût rapporté est conservé ; les provisions sans facture sont marquées estimées.
+- Modèle conditionnel comparé à la référence du compte, validation temporelle
+  sur comptes distincts et abstention sans gain. Diffusion observée avec couverture
+  d'annotation et stabilité des comptes ; aucun pourcentage de saturation inventé.
+- Voisinage sémantique des recettes revues dans les context nodes existants,
+  mécanismes compatibles et modèles d'embedding identiques, sans fusion de preuves.
+  Le cockpit expose ces lectures ; les indexations restent gouvernées et budgétées.
+- Concurrents rattachés aux références suivies ; sources planifiées explicites,
+  verrou par marque partagé par cron et opérateur. Une publication confirmée lie
+  désormais l'actif/action à l'essai avant tout résultat ; un résultat reste immuable.
+- Réception locale : PostgreSQL/tRPC, vrai média NASA relu puis purgé, verrou de
+  collecte, isolation et vecteurs de test ; Bluesky réel et vidéo synthétique
+  avec/sans piste audio. Providers authentifiés et Argos-studio restent sans reçu.
+  ADR-0196, plan et RESIDUAL-DEBT distinguent capacité codée et activation distante.
+- Vérifications : 3938 tests / 370 fichiers, gouvernance 1551 tests, typecheck,
+  deux lints sans erreur (25 avertissements préexistants), zéro cycle, build
+  production et stress authentifié 281 pages/0 finding. Navigateur local quatre
+  surfaces HTTP 200, zéro pageerror/500 ; garde vocabulaire éprouvée rouge/vert.
+
 ## v6.27.395 — fix(cockpit): afficher le résultat des amendements manuels (2026-10-06)
 
 **Un champ de fondation modifié apparaît immédiatement, sans recharger la page.**

@@ -26,6 +26,7 @@ describe("creative evidence guardrails (HARD)", () => {
       expect(INTENT_KINDS.find(k => k.kind === kind)).toMatchObject({ governor: "SESHAT", handler: "creative-intelligence" });
       const cost = INTENT_SLOS.find(k => k.kind === kind)?.costP95Usd;
       if (kind === "SESHAT_DRAFT_CREATIVE_ANALYSIS") expect(cost).toBe(0.15);
+      else if (kind === "SESHAT_INDEX_CREATIVE_PATTERNS") expect(cost).toBe(0.05);
       else expect(cost).toBe(0);
     }
     const registry = readFileSync("src/server/governance/__generated__/manifest-imports.ts", "utf8");

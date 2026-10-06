@@ -18,6 +18,10 @@ export interface IntentSlo {
 }
 
 export const INTENT_SLOS: readonly IntentSlo[] = [
+  { kind: "SESHAT_ARCHIVE_CREATIVE_MEDIA", p95LatencyMs: 60000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "SESHAT_REMOVE_CREATIVE_MEDIA", p95LatencyMs: 30000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "SESHAT_INDEX_CREATIVE_PATTERNS", p95LatencyMs: 60000, errorRatePct: 0.05, costP95Usd: 0.05 },
+  { kind: "SESHAT_BIND_RECIPE_PUBLICATION", p95LatencyMs: 5000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "SESHAT_IMPORT_SPECIMEN", p95LatencyMs: 5000, errorRatePct: 0.02, costP95Usd: 0 },
   { kind: "SESHAT_RECORD_CONTENT_METRIC", p95LatencyMs: 5000, errorRatePct: 0.02, costP95Usd: 0 },
   { kind: "SESHAT_ANNOTATE_CREATIVE", p95LatencyMs: 5000, errorRatePct: 0.02, costP95Usd: 0 },

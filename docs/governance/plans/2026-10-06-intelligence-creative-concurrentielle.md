@@ -419,3 +419,157 @@ sondes manuelles distinctes reçues. Reprises : CA navigateur valide puis traver
 protégée autorisée ; configuration workflow lorsque droits disponibles ; vision,
 POST Argos et scheduler réellement activé dès configuration qualifiée. Les dettes
 legacy/dépendances et rétention demeurent ouvertes, sans succès métier inféré.
+
+
+## Continuation — audit initial des écarts du plan (ADR-0196)
+
+État courant final : **Accepted localement**, réception du 2026-10-06 en fin de
+section. Les statuts Proposed intermédiaires conservent l’histoire du chantier.
+CI et déploiement de v6.27.396 restent à venir.
+
+État inspecté : main `c7123ca`, v6.27.394, 2026-10-06 ; branche
+`codex/creative-intelligence-completion`. [ADR-0196](../adr/0196-creative-intelligence-evidence-retention-and-live-loop.md)
+**Proposed** cadre les manques. Aucun nouveau code ni validation externe n'est
+revendiqué par cette section. Les réceptions d'ADR-0194/0195 restent acquises et
+distinctes ; credentials vision/providers et endpoint Argos toujours absents.
+
+| Axe du plan initial | Présent dans le code inspecté | Écart et critère de clôture proposés |
+|---|---|---|
+| Conservation (§4–6) | `mediaUrl`, hash et extraction temporaire bornée ; fichiers supprimés après traitement | Archive durable chiffrée avec droits/scope/rétention, lecture autorisée, purge physique et qualification des dérivés. Tester bytes absents après purge et refus croisés. |
+| Sources directes (§5–6) | Bluesky/YouTube/Foreplay, bridge métadonnées FB/IG, export atomique ; autres sources qualifiées | Adaptateurs officiels compatibles avec permissions/identifiants ; contrat fixture distinct de réseau authentifié. Media et métriques manquants explicites, aucun « tous réseaux accessibles » présumé. |
+| Audiovisuel (§6) | Frames échantillonnées, vision explicite, audio non observé ; annotations manuelles et MODEL_DRAFT revus | Audio extrait borné puis transcription sourcée/horodatée, couverture visuelle/temporelle explicite. Observer réellement montage/mouvement avant d'en tirer des tags ; provider absent = différé. |
+| Performance V2 (§7) | Médiane antérieure même compte/format/âge ; abstention paid/inconnu et formats non classés | Modèle conditionnel versionné, variables disponibles seulement ; évaluation hors comptes et hors temps, diagnostics/calibration/incertitude ou abstention. |
+| Recettes (§8) | Tags hook/narrative/visual exacts, exemples/contre-exemples, comptes indépendants et split temporel descriptif | Voisinage sémantique explicable distinct du sujet, dispersion/intervalle et contrôle des recherches multiples ; proximité seule n'admet pas une recette. |
+| Diffusion (§9) | Deux fenêtres hebdomadaires, part dans corpus annoté et couverture observed/annotated/normalized | Composition, sélection, fraîcheur, dénominateurs, nouveaux adoptants et fenêtres historiques ; relations de propagation observationnelles. Aucune « saturation marché » inférée. |
+| Concurrence (§3, §9) | Watchlist marque à relations ratifiées ; lecteur snapshots secteur/pays/provenance | Analyse créative par acteurs de la watchlist et part de voix sur corpus explicitement observé ; cross-marques privés refusés, aucun rival résolu au nom seul. |
+| Boucle live (§10) | Recette gelée, action/asset facultatifs, résolution manuelle specimen+snapshot, contexte Artemis/Notoria | Identité action/asset/version→publication→specimen vérifiée, collecte native ultérieure et clôture mesurée ; défaut d'observation = non résolu. Aucun succès fabriqué à deadline. |
+| Travaux durables (§11) | Crons bornés/rotation/Intents, import transactionnel | Qualifier prise/lease/reprise/backoff et budgets nécessaires aux nouvelles opérations ; prouver reprise concurrente sans doublon ni mutation silencieuse. |
+
+### Réserves ciblées relevées pendant l'audit
+
+`captureNativeInsights` (`creative-intelligence/index.ts`) classe toute vidéo
+comme SHORT_VIDEO sur `mediaType` seul : la collecte native doit conserver
+VIDEO_UNCLASSIFIED quand le format ne peut pas être corroboré. Les observations
+historiques ne se reclassent pas sans provenance. `resolveApplication` valide
+marque, dates et snapshot, mais ne lie pas encore ce specimen à l'action/asset
+ayant motivé l'essai ; compléter la correspondance d'identité avant de qualifier
+une boucle automatique d'essai. Ces constats sont des écarts de code, pas des
+réparations livrées.
+
+### Ordre proposé de clôture, avant décisions techniques
+
+1. Étendre contrats de preuve/scope/rétention, corriger format inconnu et identité
+   de résultat ; archive chiffrée et purge vérifiables avant promesse d'archive.
+2. Qualifier/admettre les adaptateurs officiels et le parcours audiovisuel borné,
+   en conservant les voies manuelles et tous les états différés sans credentials.
+3. Ajouter comparaison conditionnelle et voisinage avec diagnostics temporels,
+   séparation des comptes, couverture et repli explicitement nommé.
+4. Servir diffusion et comparaison des acteurs ratifiés, puis raccorder publication
+   et collecte à l'essai déjà gouverné. Déclarer les objectifs avant diffusion.
+5. Traverser chaque invariant par fixtures puis PostgreSQL/réseau autorisé ;
+   valider UI/image/runtime séparément. Ne faire Accepted et propagation du
+   statut qu'après réception du code final, tests et limites externes exactes.
+
+Les choix stockage/schéma/algorithmes/providers et seuils restent à décider par
+l'implémentation ; le présent cadrage n'invente ni clé, licence, quota, résultat
+statistique ni publication externe. Chaque écart non fermé aura un plan et un
+déclencheur au registre RESIDUAL-DEBT lors de la livraison.
+
+
+### ADR-0196 — implémentation en cours, décisions inspectées
+
+État du 2026-10-06 : code en cours, premiers tests locaux reçus ; ADR demeure **Proposed**.
+L'audit initial ci-dessus est conservé comme comparaison avant/après, pas comme
+état courant des nouveaux fichiers. Aucun credential externe n'est présumé.
+
+| Axe | Décision et code inspectés | Réception encore requise |
+|---|---|---|
+| Archive | Deux champs specimen, AES-256-GCM/AAD objectKey, volume privé ou BLOB PUT/GET/DELETE, droits attestés et rétention 366 jours maximum ; PENDING→relecture/hash→STORED puis purge/cron/orphelins volume ; backendId figé, DELETE HTTP puis GET 404/410 | Scopes, crash/reprise, backend figé, bytes absents après purge ; pas de stockage distant actif revendiqué. |
+| Audiovisuel | AUDIOVISUAL MP4 natif OpenRouter google/gemini explicitement configuré, 20 Mo/cinq minutes ; scènes/transcript stricts, MODEL_DRAFT puis revue MANUAL | Contrat vidéo/audio/schema, limites/coût/erreurs, provider réel distinct des fixtures ; piste audio détectée ≠ transcription reçue. |
+| Sources | Adaptateurs Meta/IG/TikTok Research et Commercial/Reddit/X/LinkedIn/Brandwatch/RSS, dataset Apify acquiredContent ; BuzzSumo/Exploding Topics restent non directs | Fixtures des enveloppes/identités/unités, limites/permissions, puis réseau authentifié autorisé ; docs HTTP 200 sauf Reddit 403 ne prouvent pas accès API. |
+| Modèle | conditional-log-ridge-v1 : médiane antérieure, âge/calendrier/topic revu ; cible exclue, temps ET comptes disjoints, minimums 60 lignes/huit comptes, intervalle empirique | Gate codé MAE modèle < baseline ×0,98 ; approfondir fuite temporelle/annotation, partitions, fit instable et échantillon insuffisant ; pas d'efficacité générale inférée. |
+| Voisinage | Recettes KnowledgeEntry, embeddings BrandContextNode/MarketContextNode existants, Glory DELEGATE index, provider/model/dim identiques, mécanismes compatibles et cosine ≥0,75 | Refus privés, embeddings absents/corrompus, méthode et provenance visibles ; aucune fusion de preuves. |
+| Diffusion | Huit semaines, comptes communs stables et états observés, chronologie non causale | Observed/annotated et couverture séparés, seuil couverture ≥60 % avant état ; recevoir validation de composition/source, pas de saturation marché. |
+| Essai | Binding publication confirmé immuable, identité/action/asset/version, résolution refuse autre contenu ; vidéo native non classée par défaut | Traversée PostgreSQL/action/asset/publication/snapshot, replay et refus croisés, puis collecte externe réelle avec accès autorisé. |
+
+Les quatre réserves ont été corrigées et relues : backendId dans receipt,
+GET 404/410 après DELETE HTTP, gain strict >2 % sur MAE log, dénominateurs
+observed/annotated et annotationCoverage. Les dates restent des observations/imports,
+jamais origine culturelle. Typecheck PASS ; neuf fichiers/71 tests créatifs PASS ;
+`verify-creative-intelligence.ts` réel PostgreSQL/tRPC gouverné PASS avec binding.
+Ce reçu partiel ne signifie ni suite globale complète ni validation externe.
+Watch multi-provider et verrou de concurrence codés ; ALREADY_RUNNING
+reçu localement, voir état étendu ci-dessous. Credentials absents ; providers live, production authentifiée et
+Argos distant restent non validés.
+Les décisions exactes et limites figurent dans ADR-0196 ; CHANGELOG final et
+propagation du statut attendent le code stabilisé et les preuves.
+
+
+### Réception runtime étendue — v6.27.396 en préparation
+
+Main v6.27.395 `fb970d0` intégré. ADR-0196 reste Proposed, tests complets/UI en
+cours. `completion-full-runtime.log` PASS sur PostgreSQL/tRPC gouverné : archive
+réelle NASA chiffrée AES/relecture/hash, expiration refusée puis cron retention
+HTTP 200 supprimant le fichier ; binding et résultat immuables, scopes, snapshots,
+lease watch concurrente ALREADY_RUNNING. Voisins sur vecteurs **synthétiques** ;
+index sans clé DEFERRED ; conditionnel/trajectoire en abstention. Aucun provider
+AV/embedding nouveau réellement reçu, aucune production authentifiée inférée.
+
+Watch par `accounts.collection{provider,account}`, fallback UC/did et lock PG
+transaction commun manuel/cron. Registre recompté 2026-10-06 : 14 chemins de
+collecte (13 DIRECT plus bridge existant), BuzzSumo export qualifié, Exploding
+Topics signaux. Cron retention séparé toutes les quinze minutes GitHub/ops-daemon,
+budget nominal 60 s et rotation de 50 orphelins volume ; HTTP requiert lifecycle
+ou inventaire externe après suppression du propriétaire. Réserve index SLO
+0,05 $ marquée estimée, AV coût provider déclaré ou provision estimée.
+
+La dette d'absence d'archive est remplacée par réception de stockage/runtime
+cible, exploitation des droits et lifecycle HTTP ; les validations live,
+embeddings/provider AV, comparaison sur corpus qualifié, cadence réelle et
+projection Argos ont leur reprise dans RESIDUAL-DEBT. Ne pas confondre un test
+qui démontre l'abstention avec une calibration performante sur marché réel.
+
+
+### Réception locale supplémentaire — suite et surfaces
+
+370 fichiers/3938 tests PASS (`completion-full-suite-final.log`), gouvernance
+158/1551 PASS, typecheck zéro, lint/gouvernance zéro erreur/25 warnings existants,
+audit zéro erreur/42 warnings, cycles zéro, Prisma valid et LLM stricts 78/78 +
+28/28. Verrou HARD vocabulaire élargi : défaut réinjecté RED puis restauré GREEN
+(cinq tests). Les warnings préexistants ont leur plan dans RESIDUAL-DEBT.
+
+Navigateur local (`completion-browser-verified.log`) : Console ADMIN, Credentials
+ADMIN, Argos public et rapport Social FOUNDER HTTP 200 ; zéro pageerror/réponse
+>=500. DOM/titre respectifs : 651/1184, 8047/8396 (dev compile), 1009/1110,
+738/2132 ms. Bluesky LIVE, texte/audiovisuel/Argos DEFERRED, archive affichée et
+conditionnel propriétaire en abstention. Ce reçu ne valide pas production/auth.
+
+Acquisition RSS (`completion-acquisition-rss-live.log`, script associé) PASS :
+Bluesky et RSS NASA réels, watch provider RSS explicite puis cron LIVE ; MP4 natif
+synthétique avec/sans audio préparé et testé, sans provider/transcript externe.
+Build production et stress encore attendus ; ADR-0196 reste Proposed. Aucune
+projection Argos, vision/AV réelle ou nouvelle production authentifiée inférée.
+
+
+### Clôture locale ADR-0196 — Accepted, CI/déploiement à venir
+
+Build production `npm run build` PASS (`completion-production-build.log`).
+Stress FULL **authentifié** PASS (`completion-stress-authenticated.log`, rapport
+`logs/stress-test-2026-10-06T19-30-40.json`) : 281 pages, trois queries tRPC,
+sept kinds de forge et state machine, zéro erreur/avertissement/finding. Fixture
+ADMIN vérifiée via session et Console HTTP 200 sans redirection avant crawl.
+Le premier stress 19-28-38 est exclu : redirections login possibles.
+
+La session Secure de fixture a été préparée et transmise localement pour le
+serveur de build ; les claims/salt respectent le contrat, aucun jeton exposé.
+Navigateur du build local HTTP redirige login, donc aucun PASS navigateur de ce
+build n'est revendiqué. Les quatre surfaces dev reçues demeurent la preuve UI.
+Il s'agit d'une contrainte du dispositif local d'authentification, pas d'une
+nouvelle dette du produit.
+
+ADR-0196 Accepted localement avec suite/guards et limites ci-dessus. Aucun
+provider AV/embedding nouveau, POST Argos ou cadence distante ne sont inférés ;
+CI et déploiement encore à venir. La réception des accès et du runtime cible
+suit le [runbook](../../deploy/CREATIVE-INTELLIGENCE.md), avec plans ouverts dans
+RESIDUAL-DEBT. Les résidus de droits/lifecycle, providers/corpus et warnings
+préexistants sont conservés ; pas de promesse de complétude externe sans reçu.

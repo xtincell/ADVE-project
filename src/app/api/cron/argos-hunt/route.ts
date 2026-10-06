@@ -27,6 +27,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   try {
+    if (new URL(request.url).searchParams.get("mode") === "retention") {
+      const { purgeExpiredCreativeMedia } = await import("@/server/services/seshat/creative-intelligence/media-archive");
+      return NextResponse.json({ ok: true, retention: await purgeExpiredCreativeMedia() });
+    }
     if (new URL(request.url).searchParams.get("mode") === "corpus") {
       const { runCreativeWatchCron } = await import("@/server/services/seshat/creative-intelligence/watch-collection");
       return NextResponse.json({ ok: true, ...(await runCreativeWatchCron()) });

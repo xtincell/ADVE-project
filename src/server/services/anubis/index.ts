@@ -297,7 +297,7 @@ export async function revokeCredential(
 export async function testChannel(
   payload: AnubisTestChannelPayload,
 ): Promise<AnubisChannelTestResult> {
-  if (["youtube-data", "foreplay", "argos-studio"].includes(payload.connectorType)) {
+  if (["youtube-data", "foreplay", "argos-studio"].includes(payload.connectorType) || payload.connectorType.startsWith("creative-")) {
     const { testCreativeSourceCredential } = await import("./creative-source-credentials");
     const result = await testCreativeSourceCredential(payload.operatorId, payload.connectorType);
     if (result.success) await credentialVault.markActive(payload.operatorId, payload.connectorType);

@@ -68,7 +68,13 @@ async function verify() {
   await assert.rejects(admin.intelligence.reviewDraft({ strategyId: otherStrategyId, analysisId: draft.id, annotation }), /Brouillon indisponible/);
 
   const ref = await db.brandRef.create({ data: { slug: prefix, name: "Bluesky — local watch fixture", kind: "RIVAL", countryCode: "CI" } });
-  await admin.intelligence.saveWatchlist({ strategyId, watchlist: [{ brandRefId: ref.id, relationship: "ATTENTION", accounts: [{ platform: "OTHER", accountId: target.accountId, url: `https://bsky.app/profile/${encodeURIComponent(target.accountId)}` }] }] });
+  const feed = "https://www.nasa.gov/feed/";
+  const rss = await admin.intelligence.collectSource({ ...input, provider: "RSS", account: feed });
+  assert.equal(rss.state, "LIVE", JSON.stringify(rss));
+  if (rss.state !== "LIVE") throw new Error("RSS not live");
+  const rssSpecimen = await db.contentSpecimen.findUniqueOrThrow({ where: { id: rss.receipts[0]!.specimenId } });
+  assert.equal(await db.contentMetricSnapshot.count({ where: { specimenId: rssSpecimen.id } }), 0);
+  await admin.intelligence.saveWatchlist({ strategyId, watchlist: [{ brandRefId: ref.id, relationship: "ATTENTION", accounts: [{ platform: "OTHER", accountId: target.accountId, url: `https://bsky.app/profile/${encodeURIComponent(target.accountId)}` }, { platform: "OTHER", accountId: rssSpecimen.accountId, url: feed, collection: { provider: "RSS", account: feed } }] }] });
   await admin.intelligence.setWatchAutomation({ strategyId, enabled: true });
   const cronResponse = await argosCron(new Request("http://localhost/api/cron/argos-hunt?mode=corpus", { headers: process.env.CRON_SECRET ? { Authorization: `Bearer ${process.env.CRON_SECRET}` } : {} }));
   assert.equal(cronResponse.status, 200, await cronResponse.clone().text());
@@ -77,6 +83,7 @@ async function verify() {
   const cronReceipt = cron.receipts.find((r: { strategyId: string }) => r.strategyId === strategyId);
   assert.equal(cronReceipt.result.status, "BATCH_COMPLETED");
   assert.equal(cronReceipt.result.results[0].result.state, "LIVE");
+  assert(cronReceipt.result.results.some((r: { provider: string; result: { state: string } }) => r.provider === "RSS" && r.result.state === "LIVE"));
   const cronEmission = await db.intentEmission.findUniqueOrThrow({ where: { id: cronReceipt.intentId } });
   assert.equal(cronEmission.status, "OK");
   assert(cronEmission.completedAt);
@@ -100,6 +107,12 @@ async function verify() {
     assert(media.images.length >= 4 && media.coverage.frameTimes.length === media.images.length);
     assert(media.coverage.frameTimes.at(-1)! > 3);
     frameCount = media.images.length;
+    const nativeSilent = await extractMediaObservations(await readFile(file), "video/mp4", true);
+    assert.equal(nativeSilent.coverage.method, "NATIVE_VIDEO"); assert.equal(nativeSilent.coverage.audioObserved, false);
+    const withAudio = join(dir, "fixture-audio.mp4");
+    await promisify(execFile)("ffmpeg", ["-nostdin", "-v", "error", "-i", file, "-f", "lavfi", "-i", "sine=frequency=440:duration=4", "-c:v", "copy", "-c:a", "aac", "-shortest", withAudio], { timeout: 10000 });
+    const audiovisual = await extractMediaObservations(await readFile(withAudio), "video/mp4", true);
+    assert.equal(audiovisual.coverage.audioObserved, true); assert.equal(audiovisual.coverage.method, "NATIVE_VIDEO");
   } finally { await rm(dir, { recursive: true, force: true }); }
   console.log(JSON.stringify({ result: "PASS", fixturePrefix: prefix, strategyId, adminEmail: `${adminId}@example.test`, founderEmail: `${founderId}@example.test`, liveProvider: "Bluesky public API", repeatedSnapshots: true, atomicRollback: true, scopeIsolation: true, modelDraftExcludedUntilReview: true, cronStatus: cronResponse.status, cronEmissions: cron.receipts.length, syntheticMediaFrameCount: frameCount, youtube: "DEFERRED_NO_KEY", llm: "DEFERRED_NO_KEY", argosStudio: "DEFERRED_NO_ENDPOINT_OR_CREDENTIAL", remotePublicationTested: false }));
 }

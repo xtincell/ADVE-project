@@ -111,11 +111,11 @@ export async function executeTool(
   toolSlug: string,
   strategyId: string,
   input: Record<string, string>,
-  media: { images?: readonly import("@/server/services/llm-gateway/vision").GatewayImage[]; signal?: AbortSignal } = {},
+  media: { video?: import("@/server/services/llm-gateway/audiovisual").GatewayVideo; images?: readonly import("@/server/services/llm-gateway/vision").GatewayImage[]; signal?: AbortSignal } = {},
 ): Promise<{ outputId: string; output: Record<string, unknown>; intentId: string | null }> {
   const tool = getGloryTool(toolSlug);
   if (!tool) throw new Error(`GLORY tool inconnu: ${toolSlug}`);
-  if (media.images && !tool.outputSchema) throw new Error("Un tool multimodal doit déclarer un schéma de sortie.");
+  if ((media.images || media.video) && !tool.outputSchema) throw new Error("Un tool multimodal doit déclarer un schéma de sortie.");
 
   // ── Phase 16-A — Paid tier gate (ADR-0048) ─────────────────────────────
   // Si le tool exige un abonnement payant, on récupère l'operator (Strategy.userId)
@@ -288,6 +288,7 @@ ${strategyContext}${referenceContext}`;
     try {
       const structured = await executeStructuredLLMCall({
         images: media.images,
+        video: media.video,
         signal: media.signal,
         system: systemPrompt,
         prompt: userPrompt,
@@ -455,7 +456,7 @@ export async function executeHybridTool(
   toolSlug: string,
   strategyId: string,
   input: Record<string, string>,
-  opts: { preferManual?: boolean; manualEntry?: Record<string, unknown>; fullAuto?: boolean; images?: readonly import("@/server/services/llm-gateway/vision").GatewayImage[]; signal?: AbortSignal } = {},
+  opts: { preferManual?: boolean; manualEntry?: Record<string, unknown>; fullAuto?: boolean; video?: import("@/server/services/llm-gateway/audiovisual").GatewayVideo; images?: readonly import("@/server/services/llm-gateway/vision").GatewayImage[]; signal?: AbortSignal } = {},
 ): Promise<HybridToolResult> {
   const tool = getGloryTool(toolSlug);
   if (!tool) throw new Error(`GLORY tool inconnu: ${toolSlug}`);
@@ -496,7 +497,7 @@ export async function executeHybridTool(
   }
 
   // ── Branche LLM (réutilise executeTool → executeStructuredLLMCall + retry x2) ──
-  const llm = await executeTool(toolSlug, strategyId, input, { images: opts.images, signal: opts.signal });
+  const llm = await executeTool(toolSlug, strategyId, input, { images: opts.images, video: opts.video, signal: opts.signal });
   const status = (llm.output as { status?: string }).status;
   const errorCode = (llm.output as { errorCode?: string }).errorCode;
   if (status === "FAILED" && errorCode === "ZOD_VALIDATION_FAILED") {

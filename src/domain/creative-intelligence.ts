@@ -1,5 +1,6 @@
 /** ADR-0194 — versioned observations, never a causal or brand-force score. */
 import { z } from "zod";
+import { creativeSourceSchema } from "./creative-source-types";
 
 export const TAXONOMY_VERSION = "creative-v1";
 export const RECIPE_SCHEMA = "creative-recipe-v1";
@@ -27,6 +28,7 @@ export const metricValuesSchema = z.object({
 export const metricInputSchema = metricValuesSchema.safeExtend({ strategyId: z.string().optional(), specimenId: text });
 
 export const annotationSchema = z.object({
+  topic: z.string().trim().min(1).max(100).optional(),
   hook: z.enum(["CURIOSITY", "CONTRARIAN", "QUESTION", "DEMONSTRATION", "CONFESSION", "RESULT_FIRST", "OTHER"]),
   narrative: z.enum(["PROBLEM_SOLUTION", "TRANSFORMATION", "CHALLENGE", "REVELATION", "COMPARISON", "LOOP", "OTHER"]),
   visual: z.enum(["POV", "TALKING_HEAD", "MACRO", "SPLIT_SCREEN", "SCREENSHOT", "REACTION", "OTHER"]),
@@ -39,11 +41,14 @@ export const annotationSchema = z.object({
     confidence: z.enum(["LOW", "MEDIUM", "HIGH"]),
   }).refine(v => v.endSeconds == null || (v.startSeconds != null && v.endSeconds >= v.startSeconds), "Intervalle temporel invalide.")).min(4).max(20),
   caveats: z.array(z.string().max(400)).max(10).default([]),
+  scenes: z.array(z.object({ startSeconds: z.number().nonnegative(), endSeconds: z.number().positive(), observation: z.string().min(1).max(1200) }).refine(v => v.endSeconds > v.startSeconds)).max(100).optional(),
+  transcript: z.array(z.object({ startSeconds: z.number().nonnegative(), endSeconds: z.number().positive(), text: z.string().min(1).max(2000) }).refine(v => v.endSeconds > v.startSeconds)).max(200).optional(),
 }).superRefine((v, ctx) => {
   for (const field of ["hook", "narrative", "visual", "socialDriver"] as const) {
     if (!v.evidence.some(e => e.field === field)) ctx.addIssue({ code: "custom", message: `Observation manquante : ${field}` });
   }
   if (v.durationSeconds != null && v.evidence.some(e => (e.endSeconds ?? e.startSeconds ?? 0) > v.durationSeconds!)) ctx.addIssue({ code: "custom", message: "Observation hors de la durée du contenu." });
+  for (const segment of [...(v.scenes ?? []), ...(v.transcript ?? [])]) if (v.durationSeconds == null || segment.endSeconds > v.durationSeconds) ctx.addIssue({ code: "custom", message: "Les segments doivent appartenir à la durée observée." });
 });
 export const analysisInputSchema = z.object({
   strategyId: z.string().optional(), specimenId: text, annotation: annotationSchema,
@@ -57,7 +62,9 @@ export const recipeInputSchema = z.object({
 });
 export const watchlistSchema = z.array(z.object({
   brandRefId: text, relationship: z.enum(["COMMERCIAL", "ATTENTION", "INSPIRATION"]),
-  accounts: z.array(z.object({ platform: platformSchema, accountId: text, url })).max(12),
+  accounts: z.array(z.object({ platform: platformSchema, accountId: text, url,
+    collection: z.object({ provider: creativeSourceSchema, account: z.string().trim().min(1).max(200) }).optional(),
+  })).max(12),
 })).max(30);
 export type Annotation = z.infer<typeof annotationSchema>;
 export type RecipeInput = z.infer<typeof recipeInputSchema>;
@@ -66,7 +73,7 @@ export interface Observation {
   externalId?: string;
   specimenId: string; accountId: string; platform: string; format: string; sector: string; countryCode: string;
   publishedAt: Date; observedAt: Date; value: number | null; paidStatus: string; metricId: string;
-  analysisId?: string; annotation?: Annotation;
+  analysisId?: string; annotation?: Annotation; annotationObservedAt?: Date;
 }
 export const median = (values: number[]): number | null => {
   const a = values.filter(Number.isFinite).toSorted((x, y) => x - y);

@@ -44,6 +44,7 @@ const SCAN_DIRS = [
 // + sources de chaînes rendues au prospect (grille /pricing).
 const EXTRA_FILES = [
   join(ROOT, "src/components/creative-intelligence/recipe-cards.tsx"),
+  join(ROOT, "src/components/creative-intelligence/advanced-observations.tsx"),
   join(ROOT, "src/components/portfolio/BrandWorkspace.tsx"),
   join(ROOT, "src/components/portfolio/PortfolioReferencesForm.tsx"),
   join(ROOT, "src/components/portfolio/PortfolioTreeView.tsx"),
