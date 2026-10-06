@@ -9,6 +9,8 @@
   prérequis distingués par fournisseur : une archive publicitaire ne fabrique
   ni vues ni ROAS, et les compteurs historiques par défaut restent exclus. Les
   vidéos YouTube/Foreplay restent VIDEO_UNCLASSIFIED par défaut, sans Shorts inférés.
+- La revue historique `argos.setVerdict` émet maintenant son Intent gouverné ;
+  baseline de mutation directe abaissée de 2 à 1 et émission vérifiée.
 - Veille créative activable par marque, désactivée par défaut ; passages bornés
   via le cron Argos existant, avec états par compte et reports explicites.
 - Analyse assistée TEXT/MEDIA dans la Console : vision explicitement configurée,

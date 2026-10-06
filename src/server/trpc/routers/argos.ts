@@ -73,8 +73,7 @@ export const argosRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .query(({ input }) => getDossierById(input.id)),
 
-  setVerdict: operatorProcedure
-    .input(z.object({ id: z.string(), verdict: z.enum(["PASS", "QUARANTINE", "REJECT"]) }))
+  setVerdict: governedProcedure({ kind: "SESHAT_REVIEW_REFERENCE_DOSSIER", requireOperator: true, inputSchema: z.object({ id: z.string(), verdict: z.enum(["PASS", "QUARANTINE", "REJECT"]) }), caller: "argos:review-reference" })
     .mutation(({ ctx, input }) => {
       assertOperator(ctx.session.user.role);
       return setDossierVerdict({ id: input.id, verdict: input.verdict, reviewedBy: ctx.session.user.id });

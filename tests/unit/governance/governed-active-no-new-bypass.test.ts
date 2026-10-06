@@ -83,7 +83,7 @@ const BASELINE: Readonly<Record<string, number>> = {
   "mcp-billing.ts": 6, // EXEMPT — infra facturation adminProcedure auto-auditée
   "crm-contacts.ts": 4, // PENDING — CRM
   "anubis.ts": 2, // PENDING — templatesUpsert/Delete (le reste émet via emitIntentTyped)
-  "argos.ts": 2, // mixte — setVerdict (PENDING) + subscribeNewsletter (public)
+  "argos.ts": 1, // subscribeNewsletter (public) ; setVerdict gouverné (ADR-0195)
   "brand-mcp.ts": 2, // EXEMPT — infra credential MCP (canAccessStrategy-gardé)
   "client.ts": 2, // PENDING — client create/addBrand
   "market-study-ingestion.ts": 2, // EXEMPT — preview (dry-run) + export PDF
