@@ -209,6 +209,9 @@ avec verrou de concurrence. Publication confirmée vers action/actif avant mesur
 immuable de l'essai. Cockpit, console et cron partagent les mêmes règles de périmètre.
 Parcours PostgreSQL/tRPC, archive NASA et purge physique reçus localement ;
 Bluesky réellement collecté, extraction MP4 synthétique avec/sans piste audio.
+PR #968 fusionnée (`1c1a0dd`, tête revue `c35d189`), 15/15 contrôles SUCCESS.
+Livraison de l’image : [run 37521228164](https://github.com/xtincell/ADVE-project/actions/runs/37521228164) ;
+réception applicative datée dans [PR #968](https://github.com/xtincell/ADVE-project/pull/968). Aucun provider AV/embedding payant reçu.
 Ni credentials fournisseurs, ni POST Argos-studio, ni stockage cible reçu :
 voir RESIDUAL-DEBT pour l'activation restante, sans assimiler code et exploitation.
 

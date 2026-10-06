@@ -1,6 +1,6 @@
 # ADR-0196 — Conservation des preuves et boucle créative mesurée
 
-- **Status** : Accepted — conception et parcours vérifiés localement ; CI et déploiement de cette extension à venir
+- **Status** : Accepted — fusion et CI reçues ; réception applicative suivie dans PR #968 et le run officiel
 - **Date** : 2026-10-06
 - **Phase** : extension Telemetry — conservation, observation audiovisuelle et comparaison
 - **Depends on** : ADR-0060, ADR-0100 amendée, ADR-0108, ADR-0166, ADR-0186, ADR-0194, ADR-0195, SHK-0002
@@ -292,3 +292,19 @@ sources, droits et volume privé/BLOB, cycle de vie distant, configuration AV,
 index et essais. Reproduction : `scripts/verify-creative-intelligence.ts`,
 `scripts/verify-creative-acquisition.ts` et `scripts/stress-test.ts` sur serveur
 et PostgreSQL qualifiés ; logs/fixtures ignorés ne sont pas livrés comme données.
+
+
+### Addendum de livraison — fusion, CI et suivi de réception
+
+PR [#968](https://github.com/xtincell/ADVE-project/pull/968) fusionnée à
+`1c1a0dd65eccf44a08e307f0c1dce6479a50888c` ; les 15 contrôles sont SUCCESS sur
+la tête revue `c35d189`. Le run officiel de livraison est
+[37521228164](https://github.com/xtincell/ADVE-project/actions/runs/37521228164).
+La réception applicative datée (image, migration, version/domaines et limites)
+est consignée dans PR #968 ; consulter ce reçu avant d’affirmer une activation.
+La fusion et CI seules ne prouvent pas la bascule ni les accès métier externes.
+
+Les reçus locaux et statuts intermédiaires ci-dessus restent historiques.
+Aucun provider AV, embedding payant, POST Argos-studio ou stockage cible live
+n'est reçu. Les résidus de droits/lifecycle, corpus calibré et cadence effective
+restent ouverts ; la construction de l'image ne les ferme pas.

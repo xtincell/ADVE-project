@@ -425,7 +425,8 @@ legacy/dépendances et rétention demeurent ouvertes, sans succès métier infé
 
 État courant final : **Accepted localement**, réception du 2026-10-06 en fin de
 section. Les statuts Proposed intermédiaires conservent l’histoire du chantier.
-CI et déploiement de v6.27.396 restent à venir.
+Fusion PR #968 et CI 15/15 reçues ; livraison officielle run 37521228164,
+réception applicative datée dans PR #968 (voir addendum de livraison).
 
 État inspecté : main `c7123ca`, v6.27.394, 2026-10-06 ; branche
 `codex/creative-intelligence-completion`. [ADR-0196](../adr/0196-creative-intelligence-evidence-retention-and-live-loop.md)
@@ -573,3 +574,14 @@ CI et déploiement encore à venir. La réception des accès et du runtime cible
 suit le [runbook](../../deploy/CREATIVE-INTELLIGENCE.md), avec plans ouverts dans
 RESIDUAL-DEBT. Les résidus de droits/lifecycle, providers/corpus et warnings
 préexistants sont conservés ; pas de promesse de complétude externe sans reçu.
+
+
+### Livraison managée — fusion, CI et suivi de réception
+
+PR #968 fusionnée à `1c1a0dd65eccf44a08e307f0c1dce6479a50888c`, 15/15 contrôles
+SUCCESS sur `c35d189`. Build officiel dispatché :
+[run 37521228164](https://github.com/xtincell/ADVE-project/actions/runs/37521228164).
+Le reçu applicatif daté de [PR #968](https://github.com/xtincell/ADVE-project/pull/968)
+rapporte image/migration/version/domaines, séparément des preuves métier externes.
+Les bilans locaux et étapes Proposed restent historiques. AV/embedding payant,
+POST Argos et stockage cible live non reçus ; leurs plans de reprise demeurent.
