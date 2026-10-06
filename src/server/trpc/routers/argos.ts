@@ -18,6 +18,7 @@ import {
   getPublicDossierByRef,
 } from "@/server/services/seshat/argos";
 import { manualDossierInputSchema } from "@/server/services/seshat/argos/schemas";
+import { creativeIntelligenceRouter } from "./creative-intelligence";
 
 function assertOperator(role: string | null | undefined) {
   if (role !== "ADMIN" && role !== "OPERATOR") {
@@ -30,6 +31,7 @@ function intentIdOf(ctx: unknown): string | undefined {
 }
 
 export const argosRouter = createTRPCRouter({
+  intelligence: creativeIntelligenceRouter,
   // ── Hunter (LLM via Gateway) ──────────────────────────────────────────────
   hunt: governedProcedure({
     kind: "SESHAT_HARVEST_REFERENCE",

@@ -15,6 +15,7 @@ import { Textarea } from "@/components/primitives/textarea";
 import { Field, FieldError } from "@/components/primitives/field";
 import { Label } from "@/components/primitives/label";
 import { Badge } from "@/components/primitives/badge";
+import { CreativeWorkbench } from "@/components/creative-intelligence/workbench";
 
 const csv = (s: string) => s.split(/[,\n]/).map((x) => x.trim()).filter(Boolean);
 
@@ -45,6 +46,7 @@ export default function ConsoleArgosPage() {
           Hunter = sub-agent Seshat (pas un Neter). Le LLM passe par le Gateway.
         </p>
       </header>
+      <CreativeWorkbench />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Hunter LLM */}

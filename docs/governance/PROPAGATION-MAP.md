@@ -158,3 +158,27 @@ sans le recopier dans les stratégies. Les références Strategy passent le cont
 d’accès natif. Le lecteur ne modifie ni validation, ni ADVE, ni score, ni campagne.
 Une identité client/marque contradictoire reste une anomalie visible. Une source
 injoignable reste indisponible, et ne produit pas un ensemble vide réputé complet.
+
+
+## Corpus créatif et concurrence — 2026-10-06 (ADR-0194)
+
+Arêtes inspectées dans le code et parcours backend local validé (v6.27.391) ;
+reçu dans l’ADR. Réception navigateur ciblée Console/Argos/vrai FOUNDER sur
+`/cockpit/intelligence/social` PASS ; Track conserve sa garde opérateur.
+Ce reçu ne ferme pas le stress global interrompu par OOM local.
+
+| Entrée | Transformation / mémoire | Sortie et limites |
+|---|---|---|
+| Import PUBLIC ou BRAND, relevé daté et annotation manuelle | `seshat/creative-intelligence/` → `ContentSpecimen` / `ContentMetricSnapshot` / `CreativeAnalysis` | Corpus isolé ; import/relevé/annotation relançables ; aucune écriture ADVE |
+| Signature hook × narration × visuel et cohorte datée | `domain/creative-intelligence.ts` → payload `creative-recipe-v1` dans `KnowledgeEntry` (`BRIEF_PATTERN`) + `PatternEvidence` | Médiane relative, contrôles et partition temporelle descriptive ; pas de score de marque ni preuve causale |
+| Recette revue compatible secteur/pays + hypothèses `creativeOpportunities` | `recipeContext` → `buildReferenceContextText` / Notoria engine (`SESHAT_OBSERVATION`, `I_GENERATION`) | Contexte Artemis/Notoria avec couverture et limites ; aucune application forcée ni mutation ADVE |
+| Essai déclaré par stratégie | `RecipeApplication` gèle recette/hypothèse/objectif/échéance et lie action/asset autorisé | Résolution à partir du specimen et relevé propre à la marque ; résultat observé, attribution non causale |
+| Watchlist propre à la stratégie | `Strategy.businessContext.creativeWatchlist` + `BrandRef` | Relations COMMERCIAL / ATTENTION / INSPIRATION → sujets `loadWatchSubjects` ; pas de score ni filtre d’identité des snapshots concurrentiels |
+| Lecture concurrentielle T / analytics | `competitorScope` → `CompetitorSnapshot` filtrés secteur × pays et propriété / observations publiques sourcées | Aucun repli sur l'historique privé global ; données inconnues non partagées |
+| Recette PUBLIC revue avec preuves publiques | Projection contrôlée Seshat/Argos | Agrégats et limites publiables, sans essais ni annotations privés ; bibliothèque canonique Argos-studio distincte (SHK-0002) |
+| Native Insights Facebook/Instagram des comptes propres | Anubis → émission SESHAT → `captureNativeInsights` → specimen BRAND et snapshot de reach | Compteur réellement reçu uniquement ; impressions non assimilées à vues, paid UNKNOWN donc abstention du ratio organique |
+
+Le lecteur générique de connaissances mutualisées exclut `creative-recipe-v1` :
+les recettes ont leur projection propre après revue. Les deux formes déclarées
+du pilier D (`concurrents`, `paysageConcurrentiel`) sont normalisées en lecture
+pour les sujets de veille, sans réécriture du pilier.

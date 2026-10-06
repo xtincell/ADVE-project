@@ -356,3 +356,23 @@ Aucune page n'est restée orpheline grâce à l'extension du framework. Les ajou
 | `/console/config/*`, `/console/ecosystem/*`, `/auth/*`, `/unauthorized` → **Sous-système Admin** ajouté |
 
 C'est l'application stricte du principe : *le framework sert La Fusée, pas l'inverse*. APOGEE absorbe tout ce qui existe.
+
+
+## Raccords intelligence créative et concurrence — 2026-10-06 (ADR-0194)
+
+Extensions de pages existantes, inspectées dans le code. Aucun nouveau portail.
+Parcours backend local validé dans ADR-0194. Réception navigateur ciblée PASS :
+Console import, Argos recettes publiques et vrai FOUNDER sur le rapport social,
+zéro erreur. Le stress global du site a été interrompu par OOM local après
+31 pages OK ; aucune validation globale ou de production implicite.
+
+| Page | Deck / sous-système | Raccord effectif |
+|---|---|---|
+| `/console/seshat/argos` | Mission Control / Telemetry | `CreativeWorkbench` : corpus public ou marque accessible, import/relevé/annotation manuels, évaluation/revue des recettes, déclaration/résolution d'essais, watchlist structurée et saisie/lecture de faits concurrentiels sourcés (`analytics.recordCompetitor` / `getCompetitors`). Mutations opérateur gouvernées. |
+| `/cockpit/intelligence/social` | Cockpit propriétaire / Telemetry | `BrandCreativeIntelligence` intégré au rapport de performance sociale accessible au propriétaire : corpus autorisé, recettes, hypothèses d’opportunités avec couverture propre/comptes suivis et essais de la marque. Réception navigateur FOUNDER PASS. |
+| `/cockpit/intelligence/track` | Cockpit opérateur / Telemetry | Lecture complémentaire du même module. La garde `<OperatorSurface>` du segment est conservée ; ce chemin ne constitue pas l’accès founder. |
+| `/argos` | Public / Telemetry | `PublicCreativeRecipes` : projection des recettes PUBLIC revues et publiées, avec exemples/contrôles/couverture. Aucune preuve ou application privée ; aucun nouveau fonds documentaire à côté d'Argos-studio. |
+
+L'atelier V1 reçoit des observations sourcées et une annotation descriptive
+manuelle. Il ne simule ni ingestion TikTok/Instagram externe ni analyse multimodale
+automatique. La lecture du cockpit reste distincte du formulaire opérateur.

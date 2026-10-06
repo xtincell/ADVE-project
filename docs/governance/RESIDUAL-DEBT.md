@@ -1,5 +1,38 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
+## Accès aux sources créatives externes — 2026-10-06 (ADR-0194)
+
+- **Campagne de stress globale locale interrompue** : les trois surfaces V1 ont
+  leur reçu navigateur ciblé PASS (Console import, Argos recettes, vrai FOUNDER
+  sur `/cockpit/intelligence/social`, zéro erreur). Le stress du site entier a
+  validé 31 pages avant l'arrêt de Next par OOM cgroup (~10 Go) à
+  `/cockpit/brand/potential` ; ensuite 250 erreurs fetch et trois erreurs tRPC,
+  plus deux avertissements de préconditions fixture. Fermer par une nouvelle
+  campagne globale sur un serveur disposant d'assez de mémoire (ou un build
+  production), avec fixtures qualifiées, en surveillant mémoire/vie du serveur
+  et en conservant un rapport complet. Effort : une campagne de validation.
+  Reprise : prochain environnement CI/local adapté et serveur confirmé vivant.
+  Les pages restantes ne sont ni réputées vertes ni diagnostiquées à partir
+  des erreurs après arrêt ; les contrôles dédiés V1 relancés restent PASS.
+- **Acquisition durable TikTok/Instagram et fournisseurs de bibliothèques** :
+  les imports opérateur et les observations des comptes propres ne prouvent aucun
+  accès tiers. Fermer source par source : documenter contrat/droits, credentials
+  Vault, capacités réellement disponibles (média, métriques publiques/privées,
+  historique), quotas et fenêtre de fraîcheur ; fournir un connecteur au contrat
+  commun avec état indisponible explicite et recette de reprise idempotente.
+  Où : Seshat / acquisition du corpus. Effort : un lot par fournisseur, dépendant
+  de son contrat. Reprise : dès réception d'un accès autorisé ou d'un export réel.
+  Ne pas renommer les voies manuelles déjà codées « connecteurs à construire ».
+- **Projection vers la bibliothèque canonique Argos-studio (SHK-0002)** :
+  distinguer journal gouverné local et fonds documentaire distant. Fermer par
+  qualification du contrat `POST /api/v1/ingest/dossier`, configuration de la
+  connexion existante et test de traversée (slug idempotent, panne/reprise,
+  gates historiques des dossiers et revue explicite des recettes, aucune preuve
+  BRAND dans la projection des recettes). Où : client gouverné
+  Seshat/Argos. Effort : un lot d'intégration borné. Reprise : au prochain raccord
+  Argos-studio avec accès à son environnement et reçu conservé hors corpus privé.
+  La présence de `/argos` local ne constitue pas ce reçu.
+
 ## Couverture documentaire des extensions de marque — 2026-10-02
 
 - `brand-bible`, `brand-theme` et `brand-tier-transition` n'ont pas de manifest propre.

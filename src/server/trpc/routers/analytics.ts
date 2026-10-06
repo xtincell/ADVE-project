@@ -5,7 +5,10 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
-import { strategyScopedProcedure } from "../middleware/strategy-scope";
+import { strategyScopedProcedure, assertRawStrategyScope } from "../middleware/strategy-scope";
+import { competitorScope } from "@/server/services/seshat/creative-intelligence/competition";
+import { assertActiveMarket } from "@/server/services/seshat/creative-intelligence";
+import { TRPCError } from "@trpc/server";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
 
@@ -109,26 +112,35 @@ export const analyticsRouter = createTRPCRouter({
   recordCompetitor: governedProcedure({
 
     kind: "LEGACY_ANALYTICS_RECORD_COMPETITOR",
+    requireOperator: true,
 
     inputSchema: z.object({
       sector: z.string(), market: z.string(), name: z.string(),
       strengths: z.record(z.string(), z.unknown()).optional(), weaknesses: z.record(z.string(), z.unknown()).optional(),
       positioning: z.string().optional(), estimatedScore: z.number().optional(),
+      strategyId: z.string().min(1).optional(), studyId: z.string().min(1).optional(),
+      visibility: z.enum(["PUBLIC", "BRAND"]), countryCode: z.string().regex(/^[A-Z]{2}$/),
+      source: z.url().refine(v => new URL(v).protocol === "https:"),
     }),
 
     caller: "analytics:recordCompetitor",
 
   })
     .mutation(async ({ ctx, input }) => {
+      if (input.visibility === "PUBLIC" ? !!input.strategyId || !!input.studyId : !input.strategyId) throw new TRPCError({ code: "BAD_REQUEST", message: "Provenance concurrentielle incohérente." });
+      await assertActiveMarket(ctx.db, input.countryCode);
+      if (input.studyId && !await ctx.db.marketStudy.findFirst({ where: { id: input.studyId, strategyId: input.strategyId }, select: { id: true } })) throw new TRPCError({ code: "NOT_FOUND", message: "Étude indisponible pour cette marque." });
       return ctx.db.competitorSnapshot.create({ data: { ...input, strengths: input.strengths as Prisma.InputJsonValue, weaknesses: input.weaknesses as Prisma.InputJsonValue } });
     }),
 
   getCompetitors: protectedProcedure
-    .input(z.object({ sector: z.string().optional(), market: z.string().optional() }))
+    .input(z.object({ strategyId: z.string().min(1).optional(), sector: z.string().min(1), countryCode: z.string().regex(/^[A-Z]{2}$/), market: z.string().optional() }))
     .query(async ({ ctx, input }) => {
+      await assertRawStrategyScope(ctx.session.user.id, input, { optional: true });
       return ctx.db.competitorSnapshot.findMany({
-        where: { ...(input.sector ? { sector: input.sector } : {}), ...(input.market ? { market: input.market } : {}) },
+        where: { ...competitorScope(input.strategyId, input.sector, input.countryCode), ...(input.market ? { market: input.market } : {}) },
         orderBy: { measuredAt: "desc" },
+        take: 100,
       });
     }),
 });

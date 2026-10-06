@@ -762,6 +762,9 @@ model Client {
 }
 
 model Strategy {
+  contentSpecimens ContentSpecimen[]
+  recipeApplications RecipeApplication[]
+  competitorObservations CompetitorSnapshot[]
   id                String         @id @default(cuid())
   name              String
   description       String?
@@ -2029,6 +2032,8 @@ model DevotionSnapshot {
 }
 
 model KnowledgeEntry {
+  patternEvidence PatternEvidence[]
+  recipeApplications RecipeApplication[]
   id            String        @id @default(cuid())
   entryType     KnowledgeType
   sector        String?
@@ -3858,6 +3863,11 @@ model MarketSynthesis {
 }
 
 model CompetitorSnapshot {
+  // Unknown legacy provenance is quarantined, never shared by default.
+  visibility String @default("QUARANTINE")
+  strategyId String?
+  countryCode String? @db.VarChar(2)
+  strategy Strategy? @relation(fields: [strategyId], references: [id], onDelete: Cascade)
   id             String   @id @default(cuid())
   sector         String
   market         String
@@ -3876,6 +3886,7 @@ model CompetitorSnapshot {
   @@index([sector])
   @@index([market])
   @@index([studyId])
+  @@index([strategyId, visibility])
 }
 
 model InsightReport {
@@ -6985,4 +6996,115 @@ model Referral {
   @@index([referrerUserId])
   @@index([referrerProfileId])
   @@index([refereeEmail])
+}
+
+
+// ADR-0194: content identity is scoped; measurements and annotations are append-only.
+model ContentSpecimen {
+  id           String                  @id @default(cuid())
+  identityKey  String                  @unique
+  strategyId   String?
+  visibility   String
+  platform     String
+  accountId    String
+  externalId   String
+  sourceUrl    String
+  mediaUrl     String?
+  caption      String?
+  format       String
+  sector       String
+  countryCode  String                  @db.VarChar(2)
+  publishedAt  DateTime
+  source       String
+  socialPostId String?
+  createdAt    DateTime                @default(now())
+  strategy     Strategy?               @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  metrics      ContentMetricSnapshot[]
+  analyses     CreativeAnalysis[]
+  evidence     PatternEvidence[]
+  applications RecipeApplication[]
+
+  @@index([strategyId, visibility])
+  @@index([platform, accountId, publishedAt])
+  @@index([sector, countryCode, publishedAt])
+}
+
+model ContentMetricSnapshot {
+  id                     String            @id @default(cuid())
+  specimenId             String
+  observationKey         String            @unique
+  observedAt             DateTime
+  views                  Float?
+  reach                  Float?
+  likes                  Float?
+  comments               Float?
+  shares                 Float?
+  followersAtObservation Float?
+  paidStatus             String            @default("UNKNOWN")
+  source                 String
+  sourceUrl              String
+  createdAt              DateTime          @default(now())
+  specimen               ContentSpecimen   @relation(fields: [specimenId], references: [id], onDelete: Cascade)
+  evidence               PatternEvidence[]
+
+  @@index([specimenId, observedAt])
+}
+
+model CreativeAnalysis {
+  id              String            @id @default(cuid())
+  specimenId      String
+  analysisKey     String            @unique
+  taxonomyVersion String
+  method          String
+  modelVersion    String?
+  contentHash     String
+  annotation      Json
+  createdBy       String
+  createdAt       DateTime          @default(now())
+  specimen        ContentSpecimen   @relation(fields: [specimenId], references: [id], onDelete: Cascade)
+  evidence        PatternEvidence[]
+
+  @@index([specimenId, createdAt])
+}
+
+model PatternEvidence {
+  id            String                @id @default(cuid())
+  recipeId      String
+  specimenId    String
+  analysisId    String
+  metricId      String
+  role          String
+  observedRatio Float?
+  baseline      Json
+  recipe        KnowledgeEntry        @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  specimen      ContentSpecimen       @relation(fields: [specimenId], references: [id], onDelete: Cascade)
+  analysis      CreativeAnalysis      @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  metric        ContentMetricSnapshot @relation(fields: [metricId], references: [id], onDelete: Cascade)
+
+  @@unique([recipeId, specimenId])
+}
+
+model RecipeApplication {
+  id               String           @id @default(cuid())
+  strategyId       String
+  applicationKey   String           @unique
+  recipeId         String
+  frozenRecipe     Json
+  hypothesis       String
+  variant          String
+  primaryMetric    String
+  baselineValue    Float
+  targetValue      Float
+  deadline         DateTime
+  actionId         String?
+  assetId          String?
+  resultSpecimenId String?
+  outcome          Json?
+  createdAt        DateTime         @default(now())
+  resolvedAt       DateTime?
+  specimen         ContentSpecimen? @relation(fields: [resultSpecimenId], references: [id])
+  strategy         Strategy         @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  recipe           KnowledgeEntry   @relation(fields: [recipeId], references: [id])
+
+  @@index([strategyId, createdAt])
 }

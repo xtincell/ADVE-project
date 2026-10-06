@@ -22,6 +22,15 @@ export interface IntentKindMeta {
 }
 
 export const INTENT_KINDS: readonly IntentKindMeta[] = [
+  { kind: "SESHAT_IMPORT_SPECIMEN", governor: "SESHAT", handler: "creative-intelligence", async: false, description: "ADR-0194 — import specimen; scoped evidence, zero LLM." },
+  { kind: "SESHAT_RECORD_CONTENT_METRIC", governor: "SESHAT", handler: "creative-intelligence", async: false, description: "ADR-0194 — record content metric; scoped evidence, zero LLM." },
+  { kind: "SESHAT_ANNOTATE_CREATIVE", governor: "SESHAT", handler: "creative-intelligence", async: false, description: "ADR-0194 — annotate creative; scoped evidence, zero LLM." },
+  { kind: "SESHAT_DISCOVER_RECIPE", governor: "SESHAT", handler: "creative-intelligence", async: false, description: "ADR-0194 — discover recipe; scoped evidence, zero LLM." },
+  { kind: "SESHAT_REVIEW_RECIPE", governor: "SESHAT", handler: "creative-intelligence", async: false, description: "ADR-0194 — review recipe; scoped evidence, zero LLM." },
+  { kind: "SESHAT_SAVE_CREATIVE_WATCHLIST", governor: "SESHAT", handler: "creative-intelligence", async: false, description: "ADR-0194 — save creative watchlist; scoped evidence, zero LLM." },
+  { kind: "SESHAT_APPLY_RECIPE", governor: "SESHAT", handler: "creative-intelligence", async: false, description: "ADR-0194 — apply recipe; scoped evidence, zero LLM." },
+  { kind: "SESHAT_RESOLVE_RECIPE_APPLICATION", governor: "SESHAT", handler: "creative-intelligence", async: false, description: "ADR-0194 — resolve recipe application; scoped evidence, zero LLM." },
+  { kind: "SESHAT_CAPTURE_NATIVE_CREATIVE_INSIGHTS", governor: "SESHAT", handler: "creative-intelligence", async: false, description: "ADR-0194 — capture native creative insights; scoped evidence, zero LLM." },
   // ── Mestor v1 ──
   { kind: "FILL_ADVE", governor: "MESTOR", handler: "mestor", async: false, description: "Fill ADVE pillars from sources." },
   // ADR-0023 — manual operator amend (ADVE only, RTIS forbidden at type level).

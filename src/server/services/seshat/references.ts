@@ -458,7 +458,12 @@ const MIN_AGGREGATE_SAMPLE = 3;
 const CROSS_BRAND_WHERE = {
   entryType: { in: [...CROSS_BRAND_ENTRY_TYPES] },
   sampleSize: { gte: MIN_AGGREGATE_SAMPLE },
-  NOT: { data: { path: ["strategyId"], not: Prisma.DbNull } },
+  originStrategyId: null,
+  NOT: [
+    { data: { path: ["strategyId"], not: Prisma.DbNull } },
+    // Recipes have their own reviewed projection; generic aggregate readers must not publish candidates.
+    { data: { path: ["schema"], equals: "creative-recipe-v1" } },
+  ],
 } satisfies Prisma.KnowledgeEntryWhereInput;
 
 async function queryLocalKnowledgeGraph(query: SeshatQuery, limit: number): Promise<SeshatReference[]> {

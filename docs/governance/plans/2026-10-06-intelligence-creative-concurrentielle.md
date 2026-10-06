@@ -1,0 +1,220 @@
+# Proposition d’implémentation — intelligence créative et concurrentielle de La Fusée
+
+Date : 6 octobre 2026. Référence inspectée : `xtincell/ADVE-project`, commit `e184c9fba7094f57597b33b42bf5f14a026de337`.
+
+Statut : spécification source proposée le 2026-10-06, conservée comme périmètre et séquencement. L'état réel des primitives et raccords de la livraison est décrit par [ADR-0194](../adr/0194-creative-corpus-and-competitive-intelligence.md) et les cartes, après inspection des fichiers et résultats de validation. Cette spécification ne constitue pas un reçu de production.
+
+**Frontière existante à préserver** : l'amendement du 2026-09-14 d'ADR-0100 / SHK-0002 désigne `Argos-studio` comme bibliothèque canonique. `CampaignReferenceDossier` est le journal gouverné de La Fusée ; le corpus décrit ici porte ses observations, métriques, analyses et essais, pas une bibliothèque éditoriale concurrente. Toute projection externe exige son contrat et un reçu de traversée. Aucun accès aux données ou aux crons de production n’a été effectué pour cette spécification.
+
+## État d'implémentation inspecté — parcours de la V1
+
+Ce relevé décrit la V1 backend validée localement (v6.27.391) ; la migration
+a été appliquée depuis une base PostgreSQL vide et le parcours tRPC réel est PASS.
+Les contrôles détaillés et le timeout web-push de la suite large avec sa relance
+verte sont consignés dans ADR-0194. Réception navigateur ciblée PASS : Console
+import, Argos recettes et vrai FOUNDER `/cockpit/intelligence/social`, zéro erreur.
+Le typecheck et les contrats/runtime dédiés finaux sont exit 0. Le stress global
+a validé 31 pages avant OOM local (~10 Go) à `/cockpit/brand/potential`, suivi
+de 250 erreurs fetch/trois tRPC et deux avertissements de préconditions fixture ;
+il reste interrompu, avec reprise dans RESIDUAL-DEBT. Aucune migration ou
+publication de production revendiquée. Le reste du document conserve la spécification source et sa cible plus large.
+
+- Domaine : `src/domain/creative-intelligence.ts`, taxonomie `creative-v1` et payload
+  `creative-recipe-v1`. Ratio organique à médiane antérieure avec au moins cinq
+  contenus comparables ; UNKNOWN/PAID, zéro ou manque de baseline → abstention.
+- Service : `seshat/creative-intelligence/` pour import, relevé, annotation manuelle,
+  découverte/revue, liste surveillée et application/résolution. Tables : les cinq
+  primitives de l'ADR. Recettes V1 dans `KnowledgeEntry.BRIEF_PATTERN`, sans
+  nouvelle table Recipe et sans promesse de modèle multimodal automatique.
+  Son manifest est réexporté depuis `services/creative-intelligence/manifest.ts`
+  pour le scanner racine, sans duplication du moteur.
+- API : `argos.intelligence` via le sous-router `creative-intelligence.ts`.
+  La déclaration d’essai est `startTrial` (nom `apply` réservé par tRPC).
+  Les mutations sont des Intents SESHAT opérateur ; lectures propres à une marque
+  vérifiées par le middleware canonique. Le public reçoit une projection revue.
+- Surfaces : atelier opérateur `/console/seshat/argos`, lecture de marque
+  `/cockpit/intelligence/social` et projection de recettes publiques `/argos`.
+  `/cockpit/intelligence/track` garde son `OperatorSurface` : lecture opérateur
+  complémentaire, pas accès founder. L’atelier comprend aussi la saisie/lecture
+  des faits concurrentiels sourcés via analytics.
+  Aucune publication de données BRAND ni création de portail séparé.
+- Concurrence : `CompetitorSnapshot` porte visibilité/pays/propriétaire/source ;
+  T et analytics partagent `competitorScope`. L'adaptateur des formes D reste
+  en lecture. La watchlist distingue commercial/attention/inspiration via BrandRef
+  et alimente `loadWatchSubjects`. Les snapshots restent filtrés par secteur, pays
+  et propriété ; ils ne sont pas filtrés par l’identité des acteurs de la watchlist.
+- Native Insights : Facebook/Instagram accroché au service Anubis existant,
+  snapshots BRAND de reach seulement ; impressions non assimilées à views et
+  paid UNKNOWN, donc pas de ratio organique fabriqué. La migration additive a
+  été exécutée sur PostgreSQL local réel, sans déploiement de production.
+- Raccord créatif : `recipeContext` nourrit `buildReferenceContextText` et
+  Notoria engine (`SESHAT_OBSERVATION`, `I_GENERATION`). `opportunities` compare
+  les recettes revues aux contenus propres et aux comptes publics surveillés :
+  hypothèses qualifiées par la couverture, pas preuve de marché libre. Le lecteur
+  générique de connaissances exclut le nouveau payload pour conserver la revue
+  explicite des recettes avant projection. ADVE reste sous décision opérateur.
+
+Parcours de recette opérationnelle :
+
+1. Créer un corpus PUBLIC contrôlé, puis un corpus BRAND distinct de deux marques.
+2. Importer une publication avec identité plateforme/compte/contenu ; réimporter
+   la même identité et vérifier absence de duplication ou de réécriture.
+3. Ajouter ses mesures datées et une annotation manuelle avec observations de
+   chaque axe ; conserver le hash du média et les incertitudes.
+4. Ajouter des contenus ordinaires et contrôles à âges comparables. Découvrir
+   une signature ; vérifier baseline antérieure et refus des métriques inconnues.
+5. Revoir une recette ; publier uniquement une recette PUBLIC étayée. La règle
+   historique PASS des dossiers `CampaignReferenceDossier` reste conservée. Refuser
+   preuves BRAND et vérifier l'absence d'annotations/essais privés dans le public.
+6. Appliquer une recette revue à une stratégie : déclarer hypothèse, variation,
+   métrique, baseline, cible et échéance ; rattacher action/asset de cette marque.
+7. Publier puis ajouter un specimen BRAND et une mesure à échéance ; résoudre
+   l'essai, en conservant `OBSERVED_NOT_CAUSAL` et la recette gelée.
+8. Couper/reprendre les accès aux sources disponibles ; l'absence de source
+   reste explicite. Les nouveaux fournisseurs et la traversée Argos-studio ont
+   leurs déclencheurs dans RESIDUAL-DEBT, pas un engagement implicite.
+
+## 1. Responsabilités et résultat attendu
+
+Sous-système principal : Telemetry, gouverneur SESHAT. Hunter recueille des observations et références ; Tarsis/Shaï détecte leur évolution ; la bibliothèque interne Per-Ankh en conserve les preuves et enseignements ; Argos publie leur projection éditoriale. Mestor/Sia contrôle les admissions et mutations. Thot contrôle les coûts. Artemis/Neith conçoit les adaptations, Ptah et les talents produisent, Anubis diffuse. Le retour mesuré revient à Seshat.
+
+Ne pas faire du renommage canonique un prérequis : le code utilise encore `seshat/argos`, `tarsis`, `artemis`, `mestor`. Étendre ces points existants, conserver leurs contrats ; effectuer tout renommage dans un chantier distinct.
+
+Une observation doit permettre de remonter à son contenu, sa source, sa date, son périmètre, sa méthode et son émission. Une recommandation doit également expliquer sa pertinence pour ADVE, ses contre-indications et le résultat à mesurer.
+
+## 2. Raccords existants à corriger avant extension
+
+- `src/server/services/rtis-protocols/track.ts`, `loadCompetitorData(strategyId)` : le paramètre de stratégie n’est pas exploité ; la requête prend dix snapshots récents sans filtre. Résoudre le secteur, pays, périmètre de l’étude et liste de rivaux de la marque, puis appliquer un filtre explicite. Aucun repli sur les derniers concurrents de toute la base.
+- `src/server/trpc/routers/analytics.ts` : les lectures de snapshots peuvent être filtrées seulement par des paramètres facultatifs ; distinguer les observations publiques des études privées et imposer la portée de l’étude. Une provenance inconnue n’est pas une permission de partage.
+- Les sujets de veille utilisent `D.concurrents`, tandis que d’autres lecteurs exploitent `D.paysageConcurrentiel`. Résoudre les deux formes par un adaptateur validé, dédupliqué, avec provenance ; traiter les divergences par revue, sans réécrire automatiquement D.
+- Le verdict Argos PASS atteste des règles éditoriales et de la complétude du DNA ; créer une indication de qualité de preuve distincte. PASS n’est pas un certificat de performance ni de fiabilité des sources.
+- Conserver `SocialPost` comme état courant, mais ne pas l’utiliser comme historique de performance : ses compteurs sont mis à jour en place.
+
+## 3. La concurrence : trois usages et un référentiel commun
+
+1. Concurrents commerciaux : même demande, offre ou territoire de marché.
+2. Concurrents d’attention : créateurs, médias ou communautés qui sollicitent la même audience.
+3. Références transférables : acteurs d’autres marchés ou catégories, utiles pour apprendre une mécanique sans les traiter comme rivaux commerciaux.
+
+Conserver `BrandRef` pour l’identité du rival, `BrandFootprintSnapshot` pour ses observations publiques, `CompetitorSnapshot` pour les résultats d’étude, `SectorPolityAxis` pour le contexte culturel et `Epreuve`/`ScoreVerdict` pour la force révélée. Ne pas créer un quatrième score de marque.
+
+La liste surveillée est propre à la stratégie : extension validée de `Strategy.businessContext` contenant les références d’acteurs, catégorie de relation, comptes publics corroborés, motif, statut de validation et cadence. La relation concurrentielle privée ne devient pas une information publique du registre. Hunter propose les acteurs et comptes découverts ; l’opérateur ratifie les identités et relations ambiguës.
+
+Les identités sont résolues par identifiants de plateforme, domaine et comptes corroborés, jamais par nom seul. Le pays de la marque, la langue du contenu et la géographie de l’audience sont trois données distinctes. Une audience géographique non mesurée reste inconnue.
+
+## 4. Modèle de données proposé
+
+Étendre d’abord les contrats existants. Les nouvelles tables suivantes sont justifiées par des besoins non couverts : unité externe de contenu, historique temporel, annotation multimodale versionnée, lien de preuve et application d’une recette.
+
+| Proposition | Fonction | Champs essentiels |
+|---|---|---|
+| `ContentSpecimen` | Un contenu observé, externe ou projection d’un post propre | plateforme, identifiant natif, compte natif, URL canonique, date de publication, durée, langue, source, visibilité, propriétaire de portée, `socialPostId` ou référence acteur, éventuel dossier parent |
+| `ContentMetricSnapshot` | Observation append-only | specimen, date de mesure, âge du contenu, métrique et valeur nullable, périmètre de mesure, fournisseur, audience du compte à la collecte si connue, statut paid/organic/unknown, source et émission |
+| `CreativeAnalysis` | Annotation descriptive versionnée | specimen, hash du média, version de taxonomie, modèle/prompt, méthode MANUAL/MULTIMODAL, scènes horodatées, tags, preuves locales, incertitudes, validation |
+| `PatternEvidence` | Relie un pattern à ses exemples et contre-exemples | entrée de connaissance et révision, analyse, snapshots utilisés, groupe comparatif, statut d’admission et exclusions |
+| `RecipeApplication` | Trace un essai de recette dans la machine | stratégie, campagne/action, brief/asset, révision de recette gelée, variante, objectif primaire, fenêtre d’observation, comparateur, résultat et limites |
+
+Patterns et recettes réutilisent `KnowledgeEntry` : payload typé/versionné, familles `BRIEF_PATTERN` et `CAMPAIGN_TEMPLATE`, validées sans casser leurs consommateurs historiques. La recipe inclut signature créative, contexte, exclusions, preuves, nombre de contenus ET de comptes, distributions, intervalle, méthode, statut, fraîcheur. Chaque révision est conservée ; une application gèle sa révision et son contenu, pas seulement un pointeur mutable.
+
+`CampaignReferenceDossier` demeure le dossier éditorial de campagne/marque : lui rattacher les spécimens et références de connaissances. Il ne devient pas un conteneur géant de vidéos et snapshots JSON.
+
+Invariants : identifiants natifs dédupliqués ; reprises de collecte idempotentes ; pas de mise à jour destructive des snapshots ; données privées scopées ; inconnue ≠ zéro ; sources et périodes explicites. Les observations et analyses suivent la suppression/rétention de leurs médias et des droits d’usage.
+
+## 5. Acquisition : une interface de fournisseur, plusieurs sources
+
+Contrat proposé sous Seshat : découvrir des contenus, importer un contenu, relever ses métriques et obtenir le média lorsque disponible. Chaque résultat utilise `ConnectorResult<T>` et indique capacités, périmètre, fraîcheur, provenance, accès aux médias et métriques réellement disponibles.
+
+Premières sources : comptes propres via Anubis/SocialPost, imports opérateur URL/fichier/CSV, recherche web existante de Hunter. Puis connecteurs autorisés vers sources sociales et ad libraries, selon accès réel. Une recherche web trouve une piste ; elle ne remplace pas une lecture de vidéo ou un relevé de performance.
+
+Les outils cités dans la discussion sont aussi un benchmark fonctionnel : archive/recherche de publicités pour Foreplay, performance relative pour vidIQ/Outliers, contenus et tendances pour TikTok Creative Center, contenus éditoriaux pour BuzzSumo, conversations pour Brandwatch, trajectoires pour Exploding Topics. Leur connexion effective dépend de contrats, exports et API vérifiés. Aucun MCP, quota, endpoint ou droit d’archivage n’est supposé acquis.
+
+Paid et organique restent des cohortes différentes. Les contenus concurrents n’exposent généralement pas conversions, dépenses, rétention ou audience géographique privée : ne pas les remplir depuis les métriques de nos comptes.
+
+## 6. Hunter devient un collecteur de preuves
+
+Étendre `seshat/argos` avec deux modes distincts : dossier éditorial historique, et récolte de spécimens mesurables. Réutiliser recherche, schémas, curation, provenance et gouvernance existants.
+
+Pipeline : découverte → résolution identité/URL → admission de la source → acquisition autorisée → persistance brute → snapshot → analyse descriptive → comparaison. Les échecs sont localisés par étape ; la présence d’un dossier texte n’implique pas qu’une vidéo a été analysée.
+
+La taxonomie initiale couvre hook, narrative, format visuel, preuve, reveal, CTA, durée et moteur social. Les éléments directement visibles citent leurs timecodes ; émotion et intention sont des inférences étiquetées. Commencer par quelques formats clairement annotables et permettre le manuel avec exactement les mêmes validateurs.
+
+## 7. Performance relative : méthode progressive et explicable
+
+V1 : comparer une métrique native à la médiane de contenus antérieurs du même compte, même plateforme, format et âge comparable. Le contenu évalué et les publications futures sont exclus du référentiel. Utiliser les valeurs réellement observées à cet âge ; sans historique comparable, produire INSUFFICIENT_DATA.
+
+`ratio = observed(metric, age) / median(prior comparable observations(metric, age))`
+
+Définir le traitement des dénominateurs nuls, petits référentiels, sujets exceptionnels et distributions instables. Conserver la version et les identifiants du référentiel, sa taille et l’incertitude. Les seuils d’admission sont configurables et validés sur des données historiques, pas présentés comme universels.
+
+V2 : modèle attendu conditionnel avec validation temporelle sur comptes tenus hors entraînement, ajustement par sujet, format, audience et saison seulement si ces variables existent. Ne pas promettre de neutraliser un budget paid inconnu.
+
+Séparer métrique relative de contenu, score structurel ADVE et force révélée des marques. Un outlier peut proposer une candidate Hunter ; il n’entre pas automatiquement comme victoire dans le Scoreur. Une épreuve exige son propre comparateur, une source et la revue existante.
+
+## 8. Patterns et recettes
+
+V1 : signatures explicites de tags et règles de rapprochement ; regrouper doublons/reposts et contrôler les contributions par compte. Les voisins sémantiques/embeddings viennent ensuite et ne fusionnent pas des mécaniques différentes sur la seule similarité de sujet.
+
+Comparer gagnants, ordinaires et échecs dans des cohortes comparables. Publier médiane, dispersion, nombre de comptes indépendants, contextes, échantillon de comparaison et résultats sur période tenue hors découverte. Contrôler la multiplicité des recherches de combinaisons ; un cluster fréquent n’est pas une preuve d’efficacité.
+
+États proposés : candidat, observé, reproduit, éprouvé dans des essais. Définir les critères de passage dans l’ADR ; aucune formule ne permet de déclarer une causalité à partir de vues seules.
+
+Recette utile : « preuve visuelle immédiate + transformation + reveal retardé », avec conditions, exemples, contre-exemples et niveau de preuve. Prescription propre à une marque : objectif, variation distinctive, moyens et protocole de mesure.
+
+## 9. Trends, concurrence et opportunités
+
+Construire les séries d’adoption par pattern × plateforme × contexte observé. Suivre part dans le corpus observé, nouveaux adoptants, performance relative et dispersion. Les états emerging/peaking/declining découlent de règles documentées, avec historique suffisant.
+
+Ne pas nommer « saturation du marché » la fréquence d’un pattern dans un échantillon sélectionné. Afficher « diffusion dans le corpus observé », couverture et composition. Une première observation n’est pas une origine ; une succession temporelle entre pays ne prouve pas une migration causale.
+
+Pour chaque marque, croiser recettes et rivaux surveillés : mécaniques adoptées, promesses répétées, preuves montrées, formats sous-observés. Une faible présence est une hypothèse d’opportunité, pas la preuve d’un marché libre. Les parts de voix indiquent corpus, fenêtre et dénominateur ; les prix précisent produits, unités, dates et devises comparables.
+
+Notoria reçoit une observation structurée avec preuves, contexte, limites et horizon. L’opérateur choisit d’adapter, tester, différencier, différer ou ignorer. Toute modification ADVE passe par `OPERATOR_AMEND_PILLAR`; RTIS et la création de campagnes respectent leurs Intents/gates existants.
+
+## 10. Activation et vérité terrain
+
+Étendre `reference-context.ts` et le Knowledge Gateway : retourner des recettes pertinentes avec preuves et incompatibilités, et expliciter tout repli de marché/secteur. Le consommateur continue sans LLM ni corpus pertinent.
+
+Artemis construit la direction et le brief à partir d’ADVE et de la recette ; la proposition créative suit sa validation existante. `RecipeApplication` rattache la prescription à `CampaignAction`, `BrandAsset`, `AssetVersion` et, dès publication, au specimen correspondant.
+
+Déclarer l’objectif avant diffusion : attention/rétention quand mesurable, activation, conversion, récurrence ou propagation superfan. Le retour renseigne les KPIs disponibles, les coûts et les facteurs de confusion. Un delta Cult Index autour d’un asset est une observation de marque ; sans comparaison, il n’attribue pas causalement le delta à cet asset.
+
+Réutiliser les apprentissages de campagne et le registre PredictionRecord pour les paris compatibles ; ne pas remplacer leurs méthodes par une note de succès universelle. Absence d’observation à échéance = non résolu.
+
+## 11. Exécution technique et produit
+
+Modules proposés sous `src/server/services/seshat/` : acquisition/observations, annotation créative, comparaison, patterns et trajectoires. Algorithmes purs sous `src/domain/`. Étendre `argos`, `knowledge-aggregator`, `reference-context`, Notoria et les apprentissages de campagne.
+
+Réutiliser Intents, émission-spine, NSP, Vault, cost gates et circuit breakers. Les nouveaux Intents d’observation sont SESHAT ; leur payload et mode global/scopé sont spécifiés avant mutation. `IntentQueue` impose actuellement un `strategyId` : qualifier ce contrat avant d’y mettre des jobs de corpus global, sans inventer une marque système.
+
+Collecte/annotation en tâches durables bornées : prise atomique, lease avec expiration, reprise idempotente, backoff, budgets par source/marque, code d’échec observable et file de revue. Les crons déclenchent les lots ; ils ne font pas l’analyse d’un corpus entier dans une requête UI. PostgreSQL et le stockage d’objets suffisent au premier périmètre ; ajouter des infrastructures après mesure des besoins.
+
+Console Seshat : sources/couverture, identité des rivaux, corpus, revue des annotations, preuves et recettes. Cockpit : rivaux suivis, changements observés, opportunités adaptées, statut des essais. Argos : dossiers et recettes éditorialisés dont les preuves et droits autorisent la publication. Étendre les surfaces existantes avant de multiplier les portails.
+
+## 12. Livraison par lots vérifiables
+
+| Lot | Livrable | Critère de sortie |
+|---|---|---|
+| 0 | Périmètre concurrentiel et provenance corrigés | T et lectures servent seulement les acteurs/études autorisés ; test de séparation de deux marques/deux marchés |
+| 1 | Corpus + snapshots + import manuel + source propre | Le même import ne duplique rien ; un nouveau relevé conserve le précédent ; fraîcheur et manques affichés |
+| 2 | Annotation versionnée + comparaison relative V1 | Pas d’analyse d’un média absent ; pas de données futures dans le référentiel ; comparaison explicable ou insuffisante |
+| 3 | Patterns/recettes + rivaux + trajectoires | Contre-exemples et comptes indépendants comptés ; diffusion qualifiée par la couverture ; pas d’auto-épreuve |
+| 4 | Notoria → brief → essai → mesure | Une recette remonte au brief, contenu publié et résultat ; ADVE n’a pas muté sans opérateur |
+| 5 | Projection Argos + connecteurs supplémentaires | Aucune donnée privée publiée ; provenance et niveau de preuve visibles ; quotas/failures maîtrisés |
+
+Vérifications de code : schéma/migrations, typecheck, lint, layering, gouvernance, tests ciblés d’idempotence/ownership/absence de données/fuite temporelle ; puis une traversée complète avec sources contrôlées. Tests de concurrence : deux workers ne revendiquent pas le même lot, crash/reprise ne crée pas de doublons.
+
+Lancement initial proposé : un secteur, un pays, une plateforme bénéficiant d’un accès réel, comptes propres + rivaux corroborés + références externes manuelles. Le corpus inclut contenus ordinaires et contre-exemples. Aucun seuil de volume ne garantit seul une confiance statistique. Étendre le périmètre après validation de la première boucle.
+
+## 13. Sources principales inspectées
+
+- `src/server/services/seshat/argos/index.ts`, `schemas.ts`, `safety.ts`, `victory-hunt.ts`
+- `src/app/api/cron/argos-hunt/route.ts`, `.github/workflows/scheduled-ops.yml`
+- `src/server/services/seshat/reference-context.ts`, `knowledge-gateway/index.ts`
+- `src/server/services/seshat/external-feeds/watch-subjects.ts`
+- `src/server/services/rtis-protocols/track.ts`, `src/server/trpc/routers/analytics.ts`
+- `src/server/services/seshat/scoreur/`, `src/server/services/sector-intelligence/index.ts`
+- `src/server/services/seshat/brand-registry/benchmark-aggregator.ts`
+- `src/server/services/knowledge-aggregator/index.ts`, `src/server/services/seshat/references.ts`
+- `src/server/services/campaign-tracker/learnings.ts`, `src/server/services/seshat/asset-impact-tracker.ts`
+- `src/server/services/seshat/prediction/index.ts`, `src/server/services/anubis/social-insights.ts`
+- `prisma/schema.prisma`, `docs/governance/STATE_FINAL_BLUEPRINT.md`, `docs/governance/CODE-MAP.md`

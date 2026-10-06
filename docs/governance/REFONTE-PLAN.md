@@ -1087,6 +1087,16 @@ Aucun nouveau Neter. Phase 18 = sous-domaine de Mestor governance (Brand Tree CR
 
 ## Phase 22 — Argos by LaFusée (Seshat reference harvester + propriété média indépendante) — 🟢 backend + app publique shippés (ADR-0100)
 
+**Actualisation 2026-10-06** : le découpage monorepo et la checklist ci-dessous
+conservent la conception historique, pas l'état d'exécution présent. La bibliothèque
+canonique est `Argos-studio` depuis l'amendement ADR-0100 / SHK-0002 ; le journal
+et les gates restent dans La Fusée. [ADR-0194](adr/0194-creative-corpus-and-competitive-intelligence.md)
+ajoute la revue explicite des recettes avec preuves publiques ; la publication
+des dossiers `CampaignReferenceDossier` sur PASS demeure conservée.
+Les surfaces natives `/argos` et `/console/seshat/argos` existent ; aucun second
+fonds documentaire ni déploiement de monorepo n'est créé par ce chantier.
+
+
 **Status** : porté SOUS gouvernance le 2026-06-14 ([ADR-0100](adr/0100-argos-hunter-backend-port.md), v6.25.27-31) — modèle `CampaignReferenceDossier` + Hunter via LLM Gateway + manual-first + verdict sûreté déterministe + app publique `src/app/(public)/argos` + console. Le code de référence vendorisé reste gelé intact dans [`docs/external-design/argos-hunter-v1/`](../external-design/argos-hunter-v1/) — lire [VENDOR-NOTICE.md](../external-design/argos-hunter-v1/VENDOR-NOTICE.md) (3 interdits) avant toute interaction avec le vendor. Restant : A4 newsletter (post-MVP).
 
 ### Mission contribution (north star)
@@ -1138,7 +1148,7 @@ Le coût LLM par hunt ($3-5 estimé) se justifie sur **les deux axes simultaném
 
 1. **Monorepo turborepo** — `apps/lafusee/` (repo actuel) + `apps/argos/` (nouveau) partageant `packages/db`, `packages/ui-tokens` (Tier 0 reference), `packages/llm-gateway`, etc. Deux apps Next.js, deux déploiements Vercel, deux domaines.
 2. **Sous-DS Argos** — ADR séparé pour l'identité visuelle. Hérite Tier 0 reference de LaFusée (palette physique, type metrics, motion primitives) mais Tier 2/3 distincts. Argos a son identité éditoriale propre.
-3. **Auto-publish on PASS** — `safety.verdict === 'PASS'` déclenche publication automatique sur Argos. Délai éditorial optionnel paramétrable (`CampaignReferenceDossier.publishedAt` + `holdUntil` + `reviewerOverride`). `QUARANTINE` = ingest Artemis only, pas de publication publique. `REJECT` = purge.
+3. **Dossiers : auto-publication sur PASS (ADR-0100)** — comportement existant conservé. `QUARANTINE` et `REJECT` restent exclus du public. **Recettes : revue explicite et preuves PUBLIC (ADR-0194)**, sans publication automatique d'une découverte.
 
 ### Anti-doublon (Phase 2 NEFER déjà fait — 2026-05-15)
 
@@ -1184,7 +1194,7 @@ Le coût LLM par hunt ($3-5 estimé) se justifie sur **les deux axes simultaném
   | `window.storage.list/get/del` localStorage | `fetch('/api/seshat/argos/dossiers...')` GET/DELETE |
 
 - Suppression du panel "Clé Anthropic" client-side (clé scellée server-side via LLM Gateway).
-- Verdict `PASS` → publication automatique sur l'index public d'Argos. `QUARANTINE` reste interne. `REJECT` purgé.
+- Dossiers : verdict `PASS` → publication existante (ADR-0100). Recettes : revue explicite avec preuves PUBLIC (ADR-0194). `QUARANTINE` et `REJECT` exclus du public.
 
 **22-A3 — Cross-link landing ↔ Argos footer (signal d'autorité bilatéral)**
 - **LaFusée landing** ([src/components/landing/marketing-footer.tsx](../../src/components/landing/marketing-footer.tsx)) : entrée meta-row "Argos by La Fusée — éditorial" → `https://argos.lafusee.com`. **Déjà préposée en mode "(bientôt)" 2026-05-15**, retire le marker au moment du go-live.
@@ -1218,7 +1228,7 @@ Aucun nouveau Neter. Argos = sous-domaine Seshat (comme Tarsis et market-study-i
 - [ ] **UI Argos déployée sur `argos.lafusee.com`** (code vendorisé réutilisé, identité visuelle préservée, 3 swaps API/storage appliqués).
 - [ ] Page éditoriale `argos.lafusee.com/apple/think-different` rendue + SEO meta + sources verbatim.
 - [ ] Artemis Glory tool brief consomme DNA Argos (test : générer un brief « campagne café Cameroun rebellion-tone » → DNA Apple Think Different cité comme référence avec source verbatim).
-- [ ] Verdict `PASS` auto-publish, `QUARANTINE` reste interne, `REJECT` purgé.
+- [ ] Dossiers : comportement PASS conservé. Recettes : revue explicite et preuves PUBLIC ; refus des preuves BRAND (ADR-0194).
 - [ ] NSP streaming events affichés temps-réel dans UI pendant le hunt.
 - [ ] Cost gate Thot : un hunt > budget alloué refusé pre-flight.
 - [ ] **Cross-link landing → Argos** : marker "(bientôt)" retiré du footer LaFusée, lien `https://argos.lafusee.com` fonctionnel.
@@ -1252,3 +1262,22 @@ Convergence indépendante = validation forte du pattern.
 - Archive originale : `/Users/imacmatanga1/Downloads/argos-hunter-v1.tar.gz` (locale Alexandre, source du vendoring)
 - Memory NEFER : `memory/project_argos_seshat_harvester.md` (persisté 2026-05-15)
 - Session de fondation : 2026-05-15 (questions architecturales tranchées : monorepo / sous-DS / auto-publish PASS / vendoring code-référence)
+
+
+## Extension Telemetry — intelligence créative et concurrence (2026-10-06)
+
+Décision : [ADR-0194](adr/0194-creative-corpus-and-competitive-intelligence.md).
+Plan source et critères par lot : [plan opérationnel](plans/2026-10-06-intelligence-creative-concurrentielle.md).
+
+Étendre Seshat/Argos, les références et KnowledgeEntry avant tout nouveau système.
+Le corpus PUBLIC/BRAND conserve publications, relevés et annotations ; les recettes
+restent des connaissances versionnées et les applications des essais propres à
+une marque. Concurrence via BrandRef/CompetitorSnapshot, pas un autre score.
+La gouvernance précède import, annotation, recette, application et publication.
+
+Ordre opérationnel : séparation des périmètres concurrents → corpus et relevés →
+annotation/ratio temporel → preuves et recettes → essai/résultat → projection
+Argos explicitement revue. Les lots manuels codés doivent être recensés dans les
+maps ; l'ADR consigne leur validation avant toute affirmation de livraison.
+Les accès externes et la traversée Argos-studio restent dans RESIDUAL-DEBT avec
+leurs déclencheurs réels, sans réinventer le fonds documentaire de SHK-0002.

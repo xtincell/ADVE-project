@@ -16,6 +16,8 @@
  * le dérivé quand il est non vide.
  */
 
+import { declaredCompetitorNames } from "@/domain/creative-intelligence";
+
 /** Mots génériques de catalogue — jamais des marques. */
 const GENERIC_PRODUCT_WORDS = new Set([
   "pack", "kit", "lot", "set", "cable", "câble", "support", "trepied", "trépied",
@@ -94,7 +96,7 @@ export function deriveWatchSubjects(input: DeriveWatchSubjectsInput): string[] {
   for (const brand of extractCatalogBrands(input.pillarV?.produitsCatalogue)) push(brand);
 
   // 2. Concurrents déclarés (pilier D).
-  const concurrents = input.pillarD?.concurrents;
+  const concurrents = declaredCompetitorNames(input.pillarD);
   if (Array.isArray(concurrents)) {
     for (const c of concurrents.slice(0, 2)) {
       const name =

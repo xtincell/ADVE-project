@@ -18,6 +18,7 @@ import { subjectSourcesFor, sectorHeadTerm } from "./feed-sources";
 import { fetchRssText, parseRssItems, toFeedItems, type RssItem } from "./rss";
 import { rankItemsByRelevance } from "./relevance";
 import { deriveWatchSubjects, effectiveWatchSubjects } from "./watch-subjects";
+import { watchlistSchema } from "@/domain/creative-intelligence";
 
 /**
  * Sujets de veille EFFECTIFS d'une marque (ADR-0165) : l'édition manuelle
@@ -34,6 +35,8 @@ export async function loadWatchSubjects(
 ): Promise<{ subjects: string[]; source: "MANUAL" | "DERIVED" | "NONE" }> {
   const manual = ((businessContext ?? {}) as Record<string, unknown>).watchSubjects;
   try {
+    const watch = watchlistSchema.safeParse(((businessContext ?? {}) as Record<string, unknown>).creativeWatchlist);
+    const declared = watch.success ? await db.brandRef.findMany({ where: { id: { in: watch.data.map(w => w.brandRefId) } }, select: { name: true } }) : [];
     const pillars = await db.pillar.findMany({
       where: { strategyId, key: { in: ["v", "d", "e"] } },
       select: { key: true, content: true },
@@ -47,7 +50,8 @@ export async function loadWatchSubjects(
       pillarE: byKey.e,
       countryName,
     });
-    return effectiveWatchSubjects(manual, derived);
+    // Explicit BrandRef watchlist feeds the same Hunter/news radar; no shadow rival taxonomy.
+    return effectiveWatchSubjects(manual, [...new Set([...declared.map(r => countryName ? `${r.name} ${countryName}` : r.name), ...derived])].slice(0, 8));
   } catch {
     return effectiveWatchSubjects(manual, []);
   }

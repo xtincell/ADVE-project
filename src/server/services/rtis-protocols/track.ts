@@ -144,10 +144,8 @@ function applyVerifiedTam(trackAnalysis: Record<string, unknown>, verified: TamS
 }
 
 async function loadCompetitorData(strategyId: string): Promise<Array<Record<string, unknown>>> {
-  const snapshots = await db.competitorSnapshot.findMany({
-    orderBy: { measuredAt: "desc" },
-    take: 10,
-  });
+  const { loadScopedCompetitors } = await import("@/server/services/seshat/creative-intelligence/competition");
+  const snapshots = await loadScopedCompetitors(strategyId);
   return snapshots.map(s => ({
     name: s.name,
     sector: s.sector,
