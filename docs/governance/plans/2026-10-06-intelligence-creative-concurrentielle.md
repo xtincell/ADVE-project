@@ -384,3 +384,38 @@ déclencheur dans RESIDUAL-DEBT ; aucun déploiement ou succès distant revendiq
    sans faux droits d'usage ni clé dans le spine.
 6. Vérifier les surfaces et outils réellement raccordés, les coûts/SLO/gates et
    les limites, puis seulement actualiser le statut de livraison ADR-0195.
+
+
+### Reprise image complète et production — observations initiales, 2026-10-06
+
+Main `84fa59c` / v6.27.392 ; production sondée HTTP 200 reste v6.27.390 sur les
+deux domaines. Workflow canonique `build-image.yml` dispatché sur main,
+`notify_coolify=true`, run 37509162119 en cours. Recevoir séparément image
+complète/UID 1001/extraction réelle, conclusion du workflow, puis version et
+santé des domaines après bascule. Aucun succès de production n'est inféré du
+dispatch. Credentials provider/vision et endpoint Argos indisponibles : garder
+les états différés et ne pas prétendre un POST ou une réponse vision.
+
+Maintenance ultérieure : retirer/remplacer le workflow legacy avec script
+absent et trier les 50 alertes npm préexistantes selon exposition, conformément
+aux plans/déclencheurs de RESIDUAL-DEBT. Pas de refactor CI ni mise à jour forcée
+des dépendances dans cette reprise de reçus.
+
+
+### Addendum — activation applicative reçue, 2026-10-06
+
+Run officiel 37509162119 SUCCESS depuis `84fa59c`, image complète buildée,
+boot/migrations/login 200, push GHCR et demande Coolify acceptée. Les deux
+domaines servent `/api/version` HTTP 200 v6.27.392. Image et digest exacts dans
+ADR-0195 ; helper bundlé UID 1001, réseau coupé/root readonly : cinq frames
+[0, 1, 2, 3, 3.8] sans audio PASS. La vérification d'image complète et l'activation
+applicative sont reçues, sans traversée vidéo du processus VPS déployé inférée.
+
+RPC publicRecipes 200/vide, HTML Argos 200/titre présent, cron corpus et
+sourceCapabilities anonymes 401. Navigateur production bloqué par CA proxy :
+aucune hydratation/DOM/pageerror production vérifiée ; aucun test protégé/admin
+ni provider authentifié. `PROD_URL` absent et écriture GitHub refusée 403,
+sondes manuelles distinctes reçues. Reprises : CA navigateur valide puis traversée
+protégée autorisée ; configuration workflow lorsque droits disponibles ; vision,
+POST Argos et scheduler réellement activé dès configuration qualifiée. Les dettes
+legacy/dépendances et rétention demeurent ouvertes, sans succès métier inféré.

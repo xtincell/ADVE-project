@@ -1130,6 +1130,14 @@ déduction Shorts. Quatre surfaces navigateur HTTPS et mutations réelles reçue
 erreur/avertissement. Contrôles CI suivis dans la PR #965. Providers authentifiés, vision,
 POST Argos, cadence prod et rétention des médias restent bornés dans RESIDUAL-DEBT.
 
+Reprise opérationnelle du 2026-10-06 : build officiel 37509162119 SUCCESS, image
+complète démarrée et demande Coolify acceptée ; les deux domaines servent
+`/api/version` HTTP 200 v6.27.392. Helper vidéo reçu dans l’image exacte UID 1001,
+sans réseau/root readonly : cinq frames sans audio. RPC publicRecipes 200/vide
+et HTML Argos 200 ne prouvent pas une hydratation navigateur ; celle-ci reste
+bloquée par CA Chromium/proxy. Aucun parcours protégé/provider authentifié de
+production reçu. Credentials provider/vision et endpoint Argos indisponibles.
+
 ### 19.3 Gouvernance et accès aux sources
 
 Les voies manuelles sont la base du premier parcours. Les mutations passent par

@@ -21,6 +21,12 @@ identitaire, ni le français pour une langue déclarée.
 
 **Le corpus reçoit des sources externes bornées et des brouillons d'observation à revoir.**
 
+- Réception opérationnelle documentée dans PR #967, périmètre enregistré.
+- Reprise opérationnelle reçue : build officiel 37509162119 réussi, image complète
+  démarrée/migrations/login 200, publication GHCR et demande Coolify acceptée.
+  Les deux domaines servent `/api/version` HTTP 200 v6.27.392. Helper vidéo dans
+  l’image exacte UID 1001 reçu PASS ; navigateur production bloqué par CA proxy,
+  aucun parcours protégé/provider authentifié reçu. Dettes restantes bornées.
 - Livraison PR #965 fusionnée : 15 contrôles CI verts, périmètre hors phases
   enregistré. Audit après fusion : version, inventaires et vocabulaire cohérents ;
   référence du correctif legacy consignée dans PATCHED-SYMPTOMS.
