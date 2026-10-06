@@ -30,6 +30,21 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-06 · Le tableau de bord cherchait des piliers en majuscules alors que
+les lignes portent les clés de stockage minuscules : A/D renseignés apparaissaient
+vides. v6.27.398 réutilise la maturité canonique et distingue commencé/complet.
+Le bouton « Sources » qui lançait l’IA porte désormais un verbe explicite et ses
+erreurs sont visibles. Cause : résumés et libellés découplés de leur acte réel.
+La recette a aussi montré que « Enrichir ADVE » appelait le remplissage des huit
+piliers et qu’un résultat contenant huit échecs pouvait afficher « Terminé » :
+le périmètre passe aux quatre fondations annoncées et les résultats partiels sont explicites.
+
+2026-10-06 · La correction d’un document laissait son ancien index et ses valeurs
+structurées disponibles pour l’extraction suivante. v6.27.398 invalide les fragments
+avec la correction dans une transaction et retire les valeurs issues du texte changé.
+Cause : les projections n’étaient invalidées qu’à la suppression de la source.
+L’indexation concurrente et les autres écrivains restent suivis dans RESIDUAL-DEBT.
+
 2026-10-06 · Les dépôts de fichier, texte et note lançaient de l’indexation et du
 classement sans choix utilisateur ; un échec de lecture renvoyait pourtant un id
 de succès. v6.27.397 expose le choix explicite et remonte l’échec sans perdre sa
@@ -41,6 +56,9 @@ premier correctif passait en Node mais échouait dans Next, faute de worker à s
 chemin d’origine. v6.27.397 utilise PDFParse et conserve son worker au build.
 Cause : mise à jour de dépendance et packaging non exercés sur un vrai fichier.
 Une extraction de deux pages dans l’image exacte verrouille désormais cette frontière.
+Cette recette a refusé l’image 397, dont le traçage omettait encore le chargeur et le
+binaire `@napi-rs/canvas`. Leur inclusion explicite est ajoutée en 398 ; la réception
+du conteneur demeure obligatoire, indépendamment des tests sur le poste de travail.
 
 2026-10-06 · Un amendement manuel persisté laissait le contenu de la page pilier
 inchangé, et le formulaire suivant pouvait garder l’ancienne version. v6.27.395

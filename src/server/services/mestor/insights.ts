@@ -8,7 +8,8 @@ import { PILLAR_STORAGE_KEYS } from "@/domain";
 import { callLLM } from "@/server/services/llm-gateway";
 import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import { db } from "@/lib/db";
-import { PILLAR_KEYS } from "@/domain/pillars";
+import { PILLAR_KEYS, PILLAR_METADATA } from "@/domain/pillars";
+import { evaluatePillarReadiness } from "@/server/governance/pillar-readiness";
 
 export type InsightSeverity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 export type InsightType = "COHERENCE" | "STALE_PILLAR" | "SIGNAL_ALERT" | "OPPORTUNITY" | "CULT_INDEX" | "SLA_RISK" | "DRIFT";
@@ -77,15 +78,16 @@ export async function generateInsights(strategyId: string): Promise<MestorInsigh
   }
 
   // === INCOMPLETE PILLARS ===
-  const allPillarKeys = [...PILLAR_KEYS];
-  const existingKeys = pillars.map((p) => p.key);
-  const missingKeys = allPillarKeys.filter((k) => !existingKeys.includes(k));
+  const missingKeys = PILLAR_KEYS.filter((key) => {
+    const pillar = pillars.find((p) => p.key.toUpperCase() === key) ?? null;
+    return evaluatePillarReadiness(pillar, key).stage !== "COMPLETE";
+  });
   if (missingKeys.length > 0) {
     insights.push({
       type: "STALE_PILLAR",
       severity: "HIGH",
       title: `${missingKeys.length} pilier(s) incomplet(s)`,
-      description: `Les piliers suivants n'ont pas de contenu: ${missingKeys.join(", ")}`,
+      description: `Les piliers suivants restent à compléter : ${missingKeys.map((key) => PILLAR_METADATA[key].displayName).join(", ")}. Les éléments déjà renseignés sont conservés.`,
       actionable: true,
       suggestedAction: "Compléter les piliers manquants depuis votre fiche de marque",
     });

@@ -434,9 +434,14 @@ function SourceEditModal({
   onSaved: () => void;
   readOnly?: boolean;
 }) {
+  const utils = trpc.useUtils();
   const sourceQuery = trpc.ingestion.getSource.useQuery({ id: sourceId });
   const update = trpc.ingestion.updateSource.useMutation({
-    onSuccess: () => { onSaved(); onClose(); },
+    onSuccess: () => {
+      void utils.ingestion.getSource.invalidate({ id: sourceId });
+      onSaved();
+      onClose();
+    },
   });
   
   const [title, setTitle] = useState<string | null>(null);
@@ -1194,7 +1199,7 @@ export default function SourcesPage() {
                 </div>
 
                 {/* Extracted fields preview */}
-                {source.extractedFields != null && typeof source.extractedFields === "object" && !Array.isArray(source.extractedFields) ? (
+                {source.extractedFields != null && typeof source.extractedFields === "object" && !Array.isArray(source.extractedFields) && Object.keys(source.extractedFields).length > 0 ? (
                   <div className="mt-3 rounded bg-white/5 p-3">
                     <p className="mb-1 text-xs font-medium text-foreground-muted">Champs extraits :</p>
                     <div className="flex flex-wrap gap-1">

@@ -3,11 +3,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // Real router + ingestion service. Only persistence, extraction and downstream
 // dispatch are recorded. Auth/spine are exercised separately against Postgres.
 const recorded = vi.hoisted(() => ({
-  db: { brandDataSource: { create: vi.fn(), update: vi.fn() } },
+  db: {
+    brandDataSource: { create: vi.fn(), update: vi.fn(), findUniqueOrThrow: vi.fn() },
+    brandContextNode: { deleteMany: vi.fn() },
+    $transaction: vi.fn(),
+  },
+  assertRead: vi.fn(),
   extract: vi.fn(),
   emit: vi.fn(),
 }));
 vi.mock("@/lib/db", () => ({ db: recorded.db }));
+vi.mock("@/server/trpc/routers/_strategy-read-guard", () => ({ assertStrategyRead: recorded.assertRead }));
 vi.mock("@/server/trpc/init", async () => {
   const { initTRPC } = await import("@trpc/server");
   const t = initTRPC.context<any>().create();
@@ -43,6 +49,44 @@ beforeEach(() => {
   recorded.db.brandDataSource.update.mockImplementation(async ({ data }) => ({ id: "source-test", ...data }));
   recorded.extract.mockResolvedValue({ text: "Document conservé à l’identique.", metadata: { pages: 1 } });
   recorded.emit.mockResolvedValue({ status: "OK" });
+  recorded.assertRead.mockResolvedValue(undefined);
+  recorded.db.brandDataSource.findUniqueOrThrow.mockResolvedValue({ strategyId: "brand" });
+  recorded.db.brandContextNode.deleteMany.mockResolvedValue({ count: 2 });
+  recorded.db.$transaction.mockImplementation(async (operations) => Promise.all(operations));
+});
+
+describe("manual source correction retires the previous analysis atomically", () => {
+  it.each([
+    { content: "Texte corrigé" },
+    { title: "Titre corrigé" },
+    { certainty: "OFFICIAL" as const },
+  ])("invalidates the source index for %j without launching preparation", async (patch) => {
+    await caller().updateSource({ id: "source-test", ...patch });
+    await settleHooks();
+    expect(recorded.assertRead).toHaveBeenCalledWith("operator-source-test", "brand");
+    expect(recorded.db.brandContextNode.deleteMany).toHaveBeenCalledWith({ where: { sourceId: "source-test" } });
+    const operations = recorded.db.$transaction.mock.calls[0]?.[0];
+    expect(operations).toHaveLength(2);
+    expect(operations).toContain(recorded.db.brandDataSource.update.mock.results[0]?.value);
+    expect(operations).toContain(recorded.db.brandContextNode.deleteMany.mock.results[0]?.value);
+    expect(recorded.emit).not.toHaveBeenCalled();
+  });
+
+  it("a corrected text cannot reuse structured fields extracted from its predecessor", async () => {
+    await caller().updateSource({ id: "source-test", content: "Le budget n'est plus confirmé." });
+    expect(recorded.db.brandDataSource.update).toHaveBeenCalledWith({
+      where: { id: "source-test" },
+      data: { rawContent: "Le budget n'est plus confirmé.", processingStatus: "EXTRACTED", errorMessage: null, extractedFields: {}, rawData: {} },
+    });
+  });
+
+  it("a forbidden source causes no write or index deletion", async () => {
+    recorded.assertRead.mockRejectedValueOnce(new Error("Accès refusé à cette marque"));
+    await expect(caller().updateSource({ id: "other-tenant", content: "wrong" })).rejects.toThrow("Accès refusé");
+    expect(recorded.db.$transaction).not.toHaveBeenCalled();
+    expect(recorded.db.brandDataSource.update).not.toHaveBeenCalled();
+    expect(recorded.db.brandContextNode.deleteMany).not.toHaveBeenCalled();
+  });
 });
 
 describe("source deposit requires an explicit choice for assisted preparation", () => {

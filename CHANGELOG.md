@@ -1,5 +1,28 @@
 # Changelog — La Fusee
 
+## v6.27.398 — fix(cockpit): refléter le travail saisi et les sources corrigées (2026-10-06)
+
+**Une fondation commencée reste visible comme telle ; une source corrigée ne conserve
+plus son ancien index de lecture.**
+
+- Le tableau de bord interroge les clés de stockage réelles et réutilise l’évaluation
+  canonique. Il distingue les quatre piliers commencés des piliers complets ; les
+  objets JSON simplement non vides ne suffisent plus à terminer la checklist.
+- « Enrichir ADVE » respecte ses quatre piliers annoncés ; la stratégie dérivée
+  reste une action séparée. Les résultats partiels et refus ne sont plus résumés
+  par un « Terminé » générique.
+- Les recommandations déterministes cessent d’affirmer que les piliers partiels sont
+  vides et de porter une étiquette IA. L’analyse facultative depuis les sources porte
+  un libellé explicite, affiche ses erreurs et efface le retour de l’action précédente.
+- La correction d’une source et le retrait de son index partagent une transaction.
+  Un texte modifié retire aussi les champs extraits de son prédécesseur ; aucune
+  nouvelle analyse ne démarre implicitement. La consultation recharge la version sauvée.
+- La recette de l’image 397 a détecté l’absence de la dépendance native du lecteur
+  PDF. Le traçage embarque maintenant son chargeur et le binaire de la plateforme ;
+  l’échec a empêché la publication de l’image défectueuse.
+- Tests de régression : défauts reproduits sur l’implémentation précédente, puis tests verts
+  sur les parcours de dépôt/correction et de progression. Isolation conservée.
+
 ## v6.27.397 — fix(intake): conserver et consulter sans préparation implicite (2026-10-06)
 
 **Déposer une source conserve son texte ; l’analyse assistée devient un choix explicite.**

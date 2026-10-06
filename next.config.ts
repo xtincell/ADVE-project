@@ -54,7 +54,14 @@ const nextConfig: NextConfig = {
   // chunk breaks that path even though direct Node/unit extraction works.
   serverExternalPackages: ["web-push", "puppeteer", "pdf-parse", "@napi-rs/canvas"],
   outputFileTracingIncludes: {
-    "/*": ["./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs"],
+    "/*": [
+      "./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs",
+      // pdfjs loads this optional native dependency via createRequire; the
+      // standalone tracer omits it even when it is externalized. Include
+      // both its JS loader and the binary installed for the build platform.
+      "./node_modules/@napi-rs/canvas/**/*",
+      "./node_modules/@napi-rs/canvas-*/**/*",
+    ],
   },
   // Standalone output — produces `.next/standalone/server.js`, a minimal
   // self-contained Node server (deps traced via nft). This is what the

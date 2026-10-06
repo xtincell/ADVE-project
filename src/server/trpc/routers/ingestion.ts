@@ -214,9 +214,24 @@ export const ingestionRouter = createTRPCRouter({
       await assertSourceAccess(ctx.session.user.id, input.id);
       const data: Record<string, unknown> = {};
       if (input.title !== undefined) data.fileName = input.title;
-      if (input.content !== undefined) data.rawContent = input.content;
+      if (input.content !== undefined) {
+        data.rawContent = input.content;
+        data.processingStatus = "EXTRACTED";
+        data.errorMessage = null;
+        // Structured values derived from the previous text must no longer
+        // outrank the corrected source in subsequent extraction.
+        data.extractedFields = {};
+        data.rawData = {};
+      }
       if (input.certainty !== undefined) data.certainty = input.certainty;
-      return ctx.db.brandDataSource.update({ where: { id: input.id }, data });
+      // Same atomic boundary as deletion: readers see either the old source
+      // with its index, or the revised source awaiting explicit preparation.
+      // No embedding or generation follows a manual correction implicitly.
+      const [updated] = await ctx.db.$transaction([
+        ctx.db.brandDataSource.update({ where: { id: input.id }, data }),
+        ctx.db.brandContextNode.deleteMany({ where: { sourceId: input.id } }),
+      ]);
+      return updated;
     }),
 
   // Launch the full processing pipeline

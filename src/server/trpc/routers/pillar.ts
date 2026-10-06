@@ -908,7 +908,7 @@ export const pillarRouter = createTRPCRouter({
     }),
   }).mutation(async ({ input }) => {
       const { fillStrategyToStage } = await import("@/server/services/pillar-maturity/auto-filler");
-      return fillStrategyToStage(input.strategyId, input.targetStage ?? "COMPLETE");
+      return fillStrategyToStage(input.strategyId, input.targetStage ?? "COMPLETE", ADVE_STORAGE_KEYS);
     }),
 
   /**
@@ -1422,4 +1422,3 @@ Propose une nouvelle valeur cohérente avec l'intention, en respectant le schém
 function getArraySafe(val: unknown): unknown[] {
   return Array.isArray(val) ? [...val] : [];
 }
-

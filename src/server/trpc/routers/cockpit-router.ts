@@ -5,6 +5,8 @@ import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { checkPaidTier } from "@/server/services/glory-tools/tier-gate";
 import { canAccessStrategy, getOperatorContext } from "@/server/services/operator-isolation";
 import { getOrBuildBrandFeed } from "@/server/services/seshat/external-feeds/brand-feed";
+import { ADVE_KEYS, ADVE_STORAGE_KEYS } from "@/domain";
+import { evaluatePillarReadiness } from "@/server/governance/pillar-readiness";
 import {
   shapeCommunityDashboard,
   latestFollowerPerPlatform,
@@ -533,23 +535,29 @@ export const cockpitRouter = createTRPCRouter({
           throw new TRPCError({ code: "FORBIDDEN", message: "Cette marque ne vous appartient pas" });
         }
       }
-      const [socialCount, logoCount, filledPillars, scheduledCount, sourceCount] = await Promise.all([
+      const [socialCount, logoCount, pillars, scheduledCount, sourceCount] = await Promise.all([
         ctx.db.socialConnection.count({ where: { strategyId: input.strategyId } }),
         ctx.db.brandAsset.count({
           where: { strategyId: input.strategyId, kind: { in: ["LOGO_FINAL", "LOGO_IDEA"] } },
         }),
-        ctx.db.pillar.count({
+        ctx.db.pillar.findMany({
           where: {
             strategyId: input.strategyId,
-            key: { in: ["A", "D", "V", "E"] },
-            NOT: { content: { equals: {} } },
+            key: { in: [...ADVE_KEYS, ...ADVE_STORAGE_KEYS] },
           },
+          select: { key: true, content: true, validationStatus: true, completionLevel: true, staleAt: true },
         }),
         ctx.db.brandAction.count({
           where: { strategyId: input.strategyId, status: { in: ["SCHEDULED", "IN_PROGRESS", "DONE"] } },
         }),
         ctx.db.knowledgeEntry.count({ where: { entryType: "MARKET_STUDY_TAM" } }).catch(() => 0),
       ]);
+      const foundation = ADVE_KEYS.map((key) => evaluatePillarReadiness(
+        pillars.find((pillar) => pillar.key.toUpperCase() === key) ?? null,
+        key,
+      ));
+      const startedPillars = foundation.filter((pillar) => pillar.completionPct > 0).length;
+      const completePillars = foundation.filter((pillar) => pillar.stage === "COMPLETE" && !pillar.stale).length;
       const items = [
         {
           key: "social",
@@ -575,8 +583,8 @@ export const cockpitRouter = createTRPCRouter({
         {
           key: "pillars",
           label: "Compléter vos 4 piliers de fondation",
-          detail: `${filledPillars}/4 piliers renseignés — le socle de toute la stratégie.`,
-          done: filledPillars >= 4,
+          detail: `${startedPillars}/${ADVE_KEYS.length} piliers commencés · ${completePillars}/${ADVE_KEYS.length} complets.`,
+          done: completePillars === ADVE_KEYS.length,
           href: "/cockpit/brand/fondation",
         },
         {

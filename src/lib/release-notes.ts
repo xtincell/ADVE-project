@@ -34,6 +34,15 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.398",
+    date: "2026-10-06",
+    headline: "Votre travail en cours reste lisible",
+    highlights: [
+      { emoji: "🧭", title: "Une progression fidèle", body: "Le tableau de bord distingue ce qui est commencé de ce qui est complet. Les informations déjà saisies restent reconnues." },
+      { emoji: "✏️", title: "Des corrections prises en compte", body: "Après la correction du texte d’une source, ses anciens extraits et valeurs préparées sont retirés. L’analyse assistée reste une action explicite et ses erreurs sont visibles." },
+    ],
+  },
+  {
     version: "6.27.397",
     date: "2026-10-06",
     headline: "Vos documents restent sous votre contrôle",
