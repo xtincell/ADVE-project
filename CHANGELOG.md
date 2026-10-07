@@ -21,6 +21,8 @@ sept cas. HTTP authentifié : reprise 200/200, résolution concurrente 200/409,
 refus étrangers 403, zéro delta IA/Process. Build et stress FULL passent :
 276 pages reçues, cinq identités demo non reçues ; forges explicitement simulées.
 La recette native après image et le cycle de livraison complet restent ouverts.
+Le garde de la base jetable reconnaît ses deux cibles explicites : port local
+55439 et service GitHub 5432. Hôte loopback et nom dédié restent obligatoires.
 
 ## v6.27.407 — fix(portfolio): lire les fichiers partagés avec tous leurs usages (2026-10-07)
 

@@ -48,7 +48,8 @@ async function existingTicket(f: Awaited<ReturnType<typeof fixture>>, index = 0,
 beforeAll(async () => {
   const url = new URL(process.env.DATABASE_URL!);
   expect(["127.0.0.1", "localhost"]).toContain(url.hostname);
-  expect(url.port).toBe("55439");
+  // Fixed disposable targets: local receipt DB or the existing GitHub service.
+  expect(url.port).toBe(process.env.GITHUB_ACTIONS === "true" ? "5432" : "55439");
   expect(url.pathname).toBe("/shinkiro_verify");
   for (const name of ["local", "foreign"]) {
     const op = await db.operator.create({ data: { name: `Change receipt ${name}`,
