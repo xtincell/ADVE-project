@@ -1,5 +1,23 @@
 # Changelog — La Fusee
 
+## v6.27.411 — docs(governance): clore les reçus du lot 410 (2026-10-07)
+
+**Les registres distinguent les corrections livrées des parcours encore ouverts.**
+
+- Drift post-merge du lot 410 : les lignes « correction locale à recevoir »
+  des actions et des raisons structurées Mestor sont retirées. CI : 4 073
+  unitaires et 87 PostgreSQL ; image et runtime 6.27.410 rapprochés, volume
+  privé conservé. Natif administrateur : cinq vues, deux équipes, campagnes
+  sans tâche et sélecteur par nom ; 101 réponses, zéro erreur HTTP/exception.
+  Le formulaire a été annulé, sans mutation métier de production.
+- Le symptôme de contexte 409 est purgé ; sa réception 410 est acquise.
+  Le rôle opérateur natif distinct, brouillons après interruption, versions,
+  transferts, santé automatique et cycle métier complet restent au registre
+  avec leurs plans de reprise. Aucune validation client déduite de ces tests.
+- Mise à jour documentaire seulement : aucune nouvelle capacité ou migration.
+  La réception native citée reste celle de 410 ; ce numéro ne reçoit pas une
+  nouvelle version servie.
+
 ## v6.27.410 — fix(console): recevoir les campagnes avant les tâches et borner les actions (2026-10-07)
 
 Les campagnes reçues restent visibles avant les premiers livrables. Le lecteur

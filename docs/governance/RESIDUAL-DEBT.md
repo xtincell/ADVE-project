@@ -2,17 +2,6 @@
 
 ## Reprises de campagne — 2026-10-07 (ADR-0202)
 
-- **Livré en 408** : identité complète tâche/reprise, verrouillage
-  PostgreSQL, retry explicite persistant, marque/opérateur réels, terminal conservé,
-  brief et responsable bornés. Erreurs et dialogues reçus en rendu statique ;
-  cela ne vaut pas recette navigateur. HTTP authentifié reçu sous deux comptes
-  synthétiques : retries 200/200, résolutions 200/409, refus étrangers 403,
-  zéro delta IA/Process. Build et stress FULL reçus : 276 réponses de pages,
-  cinq identités demo absentes non reçues, forges explicitement simulées.
-  CI 4 054 unitaires et 57 PostgreSQL, image exacte 7ef4f75 puis runtime 6.27.408
-  rapprochés ; conteneur unique et volume privé conservés. Natif : absence
-  d’équipe explicite reçue. Parcours natif sur campagne de recette identifiée
-  encore ouvert, sans simuler une validation Noël. Déclencheur : réception 409.
 - **Statut de campagne automatique absent** : retirer le statut manuel est refusé
   sans écriture ; pas de vert par défaut. Qualifier le calcul canonique avant
   raccord, éprouver retard, blocages et absence de données. Déclencheur : réception
@@ -32,38 +21,14 @@
 - **Cycle complet** : résoudre une reprise ne livre pas sa tâche. Production,
   preuve de validation, diffusion, mesure et reprise ultérieure restent à recevoir
   sur les vrais projets. Déclencheur : traversée C6 après recette 408.
-- **Contexte administrateur multi-équipe — livré en 409, reçu sous administrateur** :
-  tableau et détail réutilisent `usePortfolioOperator` et le choix existant.
-  Les liens conservent l’équipe ; un contexte demandé inaccessible est signalé,
-  sans autre équipe silencieuse. Les cinq vues distinguent erreur, chargement
-  et absence réelle. Quatorze contre-exemples rouges avant correction, quatre
-  reçus après seul raccord du contexte puis dix erreurs de lecture encore
-  rouges, enfin suite de rendu ciblée verte. Build final et HTTP authentifié
-  reçus : contextes propres/admin 200, quatre lectures étrangères 403, zéro
-  delta métier/IA/Process. Stress 276 pages, cinq identités demo non reçues,
-  zéro échec, forges simulées. CI 4 068 unitaires / 59 PostgreSQL, image/runtime
-  exacts et volume privé conservé. Natif administrateur : choix des deux équipes,
-  cinq vues chargées, tâche/reprise Wakanda de démonstration et retour dans la
-  même équipe ; 52 réponses sans erreur ni exception. Fermer le périmètre natif
-  restant sous rôle opérateur distinct, sans nouvelle permission ni rattachement.
-  Déclencheur : prochaine recette multi-rôle locale accessible ; effort : une recette.
-- **Périmètre des actions opérateur — correction 410 locale à recevoir** :
-  lecture livrée en 409. Les quatre écrivains vérifient équipe/action/liens et
-  utilisent le même service depuis le manuel et les handlers. Le pivot fictif
-  est retiré du formulaire ; la liste de campagnes existante fournit les noms,
-  y compris sans tâches. 23 contre-exemples initiaux rouges, puis deux refus de
-  sélecteur et deux rendus sans tâche rouges. Gauntlet vert : 63 portfolio,
-  1 592 gouvernance, 87 PostgreSQL, typage/lints/cycles/build. HTTP : 21 appels
-  locaux authentifiés reçus en 10–50 ms, comptes métier inchangés. Stress :
-  276 pages, cinq identités demo non reçues, zéro échec, forges simulées. Fermer
-  par image exacte et réception native, sans décisions client synthétiques en
-  production. Déclencheur : ce lot 410 ; effort : sa livraison/réception.
-- **Raisons structurées des refus Mestor — correction 410 locale à recevoir** :
-  CampaignScopeError.code est transmis sans dépendre de la langue du message,
-  dans les reprises, tâches et actions. Six émissions via le spine/dispatcher
-  Mestor reçoivent le résultat et l’audit attendus : FORBIDDEN/NOT_FOUND/CONFLICT
-  conservés, zéro delta IA/Process. Fermer par réception de la version livrée.
-  Déclencheur : ce lot 410.
+- **Rôle opérateur natif distinct** : le contexte administrateur est reçu en
+  production 409/410 : cinq vues, deux équipes, campagnes sans tâche et choix
+  par nom ; 101 réponses sans erreur HTTP ni exception en 410. Les mutations
+  et refus inter-équipes sont reçus sur fixtures PostgreSQL/HTTP locales ; cela
+  ne reçoit pas le parcours navigateur sous un compte opérateur distinct.
+  Fermer par cette recette, avec le rattachement existant, sans ajouter une
+  permission pour rendre le test passant. Déclencheur : prochaine recette
+  multi-rôle locale accessible ; effort : une recette.
 - **Éditions, transferts et création d’action interrompue** : les verrous de
   ligne sérialisent les écrivains d’action et doneAt reste stable au retry,
   mais ne valent pas version attendue d’une édition ouverte, identité de
