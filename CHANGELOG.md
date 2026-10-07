@@ -1,5 +1,23 @@
 # Changelog — La Fusee
 
+## v6.27.403 — fix(portfolio): qualifier les suivis Radar et protéger les raccordements (2026-10-07)
+
+**Un suivi retrouve son projet et ses marques sans dupliquer les décisions ni écraser un autre lien.**
+
+- Extension des références existantes par instance Radar, identifiant stable et
+  projet source facultatif. Même identité dans validation, lecture, import et
+  affichage ; un suivi partagé apparaît une seule fois sur le projet exact.
+  Le dépôt Barre actuel reste explicite, sans prétendre lire une autre instance.
+- Une entrée invalide ne masque plus les liens sains. Le diagnostic reste visible ;
+  formulaire et importeur refusent de réécrire un historique en l’amputant.
+- La commande gouvernée commune exige la version lue pour sourceRefs. Une édition
+  concurrente est refusée atomiquement ; l’import et le formulaire transmettent
+  leur version, le handler agentique applique le même contrôle.
+- Tests d’identité rouges puis verts ; concurrence, contrainte SQL et reprise
+  reçues sur PostgreSQL. Les commandes HTTP sont exercées sous rôles authentifiés.
+  Le rendu natif du raccord et l’association du vrai reçu Noël restent à recevoir
+  après déploiement ; aucun statut, accord ou résultat commercial n’est copié.
+
 ## v6.27.402 — fix(gazette): isoler les observations et demander explicitement l’IA (2026-10-07)
 
 **Un constat ne lance plus une prescription ; chaque marque conserve ses propres preuves.**

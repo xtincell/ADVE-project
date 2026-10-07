@@ -70,6 +70,7 @@ export const manifest = defineManifest({
         kind: z.literal("OPERATOR_UPDATE_BRAND_NODE"),
         operatorId: StringId,
         nodeId: StringId,
+        expectedUpdatedAt: z.string().datetime().optional(),
         patches: z.record(z.string(), z.unknown()),
       }).passthrough(),
       outputSchema: HandlerResult,

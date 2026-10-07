@@ -190,6 +190,15 @@ Procédure de reprise : [runbook](../deploy/CREATIVE-INTELLIGENCE.md).
 
 ## Intégration des marques — 2026-10-02 (ADR-0193)
 
+- **Réception native des raccordements Radar — v6.27.403, ADR-0200** : identité
+  d’instance, contexte projet, lecture partielle diagnostiquée et contrôle de
+  concurrence sont reçus par tests et commandes authentifiées locales. Le
+  navigateur local reste bloqué par sa politique de requêtes ; aucun test HTTP
+  ne vaut réception d’écran. Fermer par rendu sous session réelle, ajout/reprise
+  manuels et raccord des trois marques au reçu Noël id 491 dans Radar Matanga.
+  Effort : un parcours et une relecture des identités ; reprise dès déploiement
+  403 sur le portefeuille déjà accessible, avant réception Shinkiro R04/R06/R07.
+
 - **Fraîcheur des dérivés et autres écrivains** : v6.27.398 invalide atomiquement
   l’index lors de la correction manuelle ; v6.27.399 factorise les deux préparations,
   compare tous les fragments et reçoit la concurrence/panne sur PostgreSQL.

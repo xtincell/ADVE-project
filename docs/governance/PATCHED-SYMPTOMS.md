@@ -30,6 +30,12 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-07 · Portfolio : une référence invalide masquait tout le tableau ; deux
+éditions pouvaient écraser les liens récents. v6.27.403 préserve les entrées saines,
+signale les rejets et compare la version dans l’écriture commune. Cause : lecture
+all-or-nothing prise pour absence et remplacement de tableau sans précondition.
+Identité d’instance traitée en ADR-0200 ; réception native tracée au registre.
+
 2026-10-07 · Gazette : mesure à la une contredite par son état vide, qualifications
 fabriquées, demande assistée échouée affichée en exécution et reprise masquée.
 v6.27.402 rend le constat factuel, les inconnues et l’échec visibles, avec nouvel

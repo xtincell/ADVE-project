@@ -72,7 +72,7 @@ export async function createBrandNodeHandler(intent: CreateIntent): Promise<Hand
 
 export async function updateBrandNodeHandler(intent: UpdateIntent): Promise<HandlerResult> {
   try {
-    const node = await updateBrandNode(intent.nodeId, intent.patches);
+    const node = await updateBrandNode(intent.nodeId, intent.patches, intent.expectedUpdatedAt);
     return {
       status: "OK",
       summary: `BrandNode ${intent.nodeId} mis à jour`,
@@ -239,10 +239,16 @@ export async function createBrandNode(args: CreateBrandNodeArgs): Promise<BrandN
   });
 }
 
+export class BrandNodeUpdateConflictError extends Error {}
+
 export async function updateBrandNode(
   nodeId: string,
   patches: UpdateIntent["patches"],
+  expectedUpdatedAt?: string,
 ): Promise<BrandNode> {
+  if ("sourceRefs" in patches && (!expectedUpdatedAt || !Number.isFinite(Date.parse(expectedUpdatedAt)))) {
+    throw new BrandNodeUpdateConflictError("Relisez les raccordements avant de les enregistrer : leur version est requise.");
+  }
   const node = await db.brandNode.findUnique({ where: { id: nodeId }, select: { id: true, archivedAt: true } });
   if (!node) throw new Error(`BrandNode ${nodeId} not found`);
   if (node.archivedAt) throw new Error(`BrandNode ${nodeId} is archived — restore before update`);
@@ -263,7 +269,19 @@ export async function updateBrandNode(
     if (key === "pillarOverrides") pillarOverridesChanged = true;
   }
 
-  const updated = await db.brandNode.update({ where: { id: nodeId }, data });
+  let updated: BrandNode;
+  try {
+    // Even two writes in the same millisecond must consume distinct versions.
+    if (expectedUpdatedAt) data.updatedAt = new Date(Math.max(Date.now(), Date.parse(expectedUpdatedAt) + 1));
+    updated = await db.brandNode.update({ where: { id: nodeId, archivedAt: null,
+      ...(expectedUpdatedAt ? { updatedAt: new Date(expectedUpdatedAt) } : {}),
+    }, data });
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "P2025") {
+      throw new BrandNodeUpdateConflictError("Ce dossier a changé. Actualisez les sources puis reprenez vos raccordements.");
+    }
+    throw error;
+  }
   // Phase 18-N2 — invalidation cascade si la résolution effective change.
   if (pillarOverridesChanged) {
     await invalidateNodeAndDescendants(nodeId);

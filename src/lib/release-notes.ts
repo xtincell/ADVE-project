@@ -34,6 +34,15 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.403",
+    date: "2026-10-07",
+    headline: "Retrouvez le suivi de chaque projet",
+    highlights: [
+      { emoji: "🔗", title: "Des liens qui gardent leur contexte", body: "Reliez le suivi Radar au projet La Barre concerné. Deux espaces Radar peuvent porter le même numéro sans se confondre ; leurs décisions restent consultables dans leur outil d’origine." },
+      { emoji: "🛡️", title: "Vos raccordements sont protégés", body: "Une édition ancienne demande une actualisation avant d’enregistrer. Un lien mal formé est signalé et ne masque plus les autres références de la marque." },
+    ],
+  },
+  {
     version: "6.27.402",
     date: "2026-10-07",
     headline: "Une veille fidèle, une aide IA choisie",

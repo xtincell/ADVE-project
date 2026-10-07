@@ -69,7 +69,7 @@ jobs:
       - run: npm test -- --run
 
   feedback-postgres:
-    name: Brand-local drift (PostgreSQL)
+    name: Brand-local drift and portfolio (PostgreSQL)
     runs-on: ubuntu-latest
     services:
       postgres:

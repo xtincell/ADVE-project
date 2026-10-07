@@ -19,6 +19,7 @@ import { governedProcedure } from "@/server/governance/governed-procedure";
 import {
   createBrandNode,
   updateBrandNode,
+  BrandNodeUpdateConflictError,
   archiveBrandNode,
   moveBrandNode,
   attachStrategyToNode,
@@ -173,6 +174,7 @@ export const brandNodeRouter = createTRPCRouter({
       strategyId: StringId,
       operatorId: StringId,
       nodeId: StringId,
+      expectedUpdatedAt: z.string().datetime().optional(),
       patches: z.object({
         name: z.string().min(1).max(200).optional(),
         slug: z.string().min(1).max(80).regex(/^[a-z0-9-]+$/).optional(),
@@ -187,9 +189,10 @@ export const brandNodeRouter = createTRPCRouter({
   }).mutation(async ({ ctx, input }) => {
     await assertNodeAccess(ctx.session.user.id, input.nodeId);
     try {
-      const node = await updateBrandNode(input.nodeId, input.patches);
+      const node = await updateBrandNode(input.nodeId, input.patches, input.expectedUpdatedAt);
       return { ok: true as const, node };
     } catch (err) {
+      if (err instanceof BrandNodeUpdateConflictError) throw new TRPCError({ code: "CONFLICT", message: err.message });
       throw new TRPCError({
         code: "BAD_REQUEST",
         message: err instanceof Error ? err.message : "updateBrandNode failed",

@@ -9,7 +9,7 @@ import { readFileSync } from "node:fs";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { brandNodeRouter } from "@/server/trpc/routers/brand-node";
-import { PortfolioReferencesSchema, readPortfolioReferences } from "@/domain/portfolio-reference";
+import { PortfolioReferencesSchema, readPortfolioReferences, inspectPortfolioReferences, portfolioReferenceKey } from "@/domain/portfolio-reference";
 import { validateNodeTransition } from "@/domain/brand-nature-archetypes";
 import type { Context } from "@/server/trpc/context";
 
@@ -45,6 +45,11 @@ async function main() {
   // pre-existing hierarchy/ownership conflict, never silently move a node.
   for (const spec of plan.nodes) {
     const current = bySlug.get(spec.slug);
+    if (current && inspectPortfolioReferences(current.sourceRefs).issues.length) {
+      throw new Error(`Raccordements historiques invalides sur ${spec.slug} : les réparer avant tout import.`);
+    }
+    if (current) PortfolioReferencesSchema.parse([...new Map([...readPortfolioReferences(current.sourceRefs), ...spec.sourceRefs]
+      .map((r) => [portfolioReferenceKey(r), r])).values()]);
     const parent = plan.nodes.find((n) => n.key === spec.parentKey);
     if (current && (current.archivedAt || current.nodeKind !== spec.nodeKind || current.nodeNature !== spec.nodeNature ||
       current.parentNodeId !== (parent ? bySlug.get(parent.slug)?.id ?? "NEW_PARENT" : null) ||
@@ -75,10 +80,10 @@ async function main() {
     }
     if (current) {
       ids.set(spec.key, current.id);
-      const refs = [...new Map([...readPortfolioReferences(current.sourceRefs), ...spec.sourceRefs].map((r) => [`${r.system}:${r.kind}:${r.id}`, r])).values()];
+      const refs = [...new Map([...readPortfolioReferences(current.sourceRefs), ...spec.sourceRefs].map((r) => [portfolioReferenceKey(r), r])).values()];
       const changed = JSON.stringify(refs) !== JSON.stringify(readPortfolioReferences(current.sourceRefs)) || current.lifecycle !== spec.lifecycle;
       const attach = Boolean(spec.strategyId && !current.strategyId);
-      if (changed && apply) await caller.update({ strategyId: pivot, operatorId: operator.id, nodeId: current.id, patches: { sourceRefs: refs, lifecycle: spec.lifecycle } });
+      if (changed && apply) await caller.update({ strategyId: pivot, operatorId: operator.id, nodeId: current.id, expectedUpdatedAt: current.updatedAt.toISOString(), patches: { sourceRefs: refs, lifecycle: spec.lifecycle } });
       if (spec.strategyId && !current.strategyId && apply) await caller.attachStrategy({ strategyId: spec.strategyId, nodeId: current.id, operatorId: operator.id });
       if (!report.some((r) => r.slug === spec.slug)) report.push({ slug: spec.slug, action: changed || attach ? apply ? "LINKED" : "WOULD_LINK" : "UNCHANGED", id: current.id });
     }

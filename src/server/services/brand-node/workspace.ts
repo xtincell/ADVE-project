@@ -1,7 +1,7 @@
 import type { BrandNode } from "@prisma/client";
 import { canAccessStrategy } from "@/server/services/operator-isolation";
 import { db } from "@/lib/db";
-import { readPortfolioReferences } from "@/domain/portfolio-reference";
+import { inspectPortfolioReferences, portfolioReferenceKey } from "@/domain/portfolio-reference";
 import { BARRE_ORIGIN, projectBarreWorkspace, type BarreWorkspace } from "@/domain/portfolio-barre";
 
 /** Short, process-local read cache. A failed refresh is surfaced, never an empty portfolio. */
@@ -41,8 +41,10 @@ export async function getPortfolioWorkspace(root: BrandNode, options: { allowBar
     ancestors.push(parent); parentId = parent.parentNodeId;
   }
   const inheritedFrom = root.strategyId ? null : ancestors.find((n) => n.strategyId) ?? null;
-  const references = [...new Map(nodes.flatMap((n) => readPortfolioReferences(n.sourceRefs))
-    .map((r) => [`${r.system}:${r.kind}:${r.id}`, r])).values()];
+  const inspected = nodes.map((node) => ({ node, ...inspectPortfolioReferences(node.sourceRefs) }));
+  const referenceIssues = inspected.flatMap(({ node, issues }) => issues.map((i) => `${node.name} · ${i.message}`));
+  const references = [...new Map(inspected.flatMap((n) => n.references)
+    .map((r) => [portfolioReferenceKey(r), r])).values()];
   const strategyIds = [...new Set([...nodes.flatMap((n) => n.strategyId ? [n.strategyId] : []), ...(inheritedFrom?.strategyId ? [inheritedFrom.strategyId] : []),
     ...references.filter((r) => r.system === "LA_FUSEE" && r.kind === "strategy").map((r) => r.id)])];
   const accessibleIds = (await Promise.all(strategyIds.map(async (id) =>
@@ -71,6 +73,6 @@ export async function getPortfolioWorkspace(root: BrandNode, options: { allowBar
       sourceError = error instanceof Error ? error.message : "La Barre est momentanément indisponible.";
     }
   }
-  return { root, nodes, strategies, inheritedFrom: inheritedFrom ? { name: inheritedFrom.name, strategyId: inheritedFrom.strategyId } : null, barre, sourceStatus, sourceError, fetchedAt };
+  return { root, nodes, strategies, referenceIssues, inheritedFrom: inheritedFrom ? { name: inheritedFrom.name, strategyId: inheritedFrom.strategyId } : null, barre, sourceStatus, sourceError, fetchedAt };
 }
 export type PortfolioWorkspace = Awaited<ReturnType<typeof getPortfolioWorkspace>>;

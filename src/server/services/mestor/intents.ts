@@ -829,6 +829,8 @@ export type Intent =
       strategyId: string; // audit pivot
       operatorId: string;
       nodeId: string;
+      /** Required when replacing sourceRefs; guards an operator's read version. */
+      expectedUpdatedAt?: string;
       patches: {
         name?: string;
         slug?: string;
