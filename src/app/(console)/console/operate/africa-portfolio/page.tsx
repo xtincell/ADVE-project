@@ -20,6 +20,7 @@ import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
 import { Activity, AlertTriangle, CheckCircle2, Layers, Package, Ticket, ClipboardList } from "lucide-react";
 import { OperatorActionForm } from "@/components/portfolio/OperatorActionForm";
+import { Button } from "@/components/primitives/button";
 
 const TABS = ["KPIS", "PROJECTS", "DELIVERABLES", "ACTIONS", "TICKETS"] as const;
 type Tab = (typeof TABS)[number];
@@ -32,9 +33,16 @@ const RAG_COLORS: Record<string, string> = {
 
 export default function AfricaPortfolioPage() {
   const [tab, setTab] = useState<Tab>("KPIS");
-  const { data: operator } = trpc.operator.getOwn.useQuery();
-
-  if (!operator) return <div className="p-6 text-sm text-foreground-secondary">Loading…</div>;
+  const { data: operator, error, refetch } = trpc.operator.getOwn.useQuery();
+  if (error) return <div role="alert" className="space-y-3 p-6">
+    <p>{error.message}</p>
+    <Button variant="outline" onClick={() => { void refetch(); }}>Réessayer la lecture</Button>
+  </div>;
+  if (operator === null) return <div className="space-y-3 p-6">
+    <p>Aucune équipe rattachée à ce compte. Le suivi nécessite une équipe.</p>
+    <Link href="/console" className="text-accent hover:underline">Retour à la console</Link>
+  </div>;
+  if (!operator) return <div className="p-6 text-sm text-foreground-secondary">Chargement de l’équipe…</div>;
 
   return (
     <div className="flex flex-col gap-6 p-6">

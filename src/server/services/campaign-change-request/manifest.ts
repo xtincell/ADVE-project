@@ -4,11 +4,8 @@
  * 4 capabilities CRUD + workflow escalation pour `CampaignChangeRequest` (tickets de
  * modif client) gouvernées par MESTOR.
  *
- * Workflow décisionnel V4 (sheet PROTOCOLE ABSENCE) :
- * - COSMETIC → traiter directement (pas de ticket nécessaire)
- * - MINOR → ticket + traiter si direction claire
- * - MAJOR → ticket + STOP production + escalade Slack Alex+Nelson
- * - OUT_OF_SCOPE → REJETÉ + redirection Nelson
+ * Impact qualifié par l'opérateur ; arbitrage enregistré localement.
+ * Aucun message externe ni validation/livraison automatique (ADR-0202).
  *
  * Manual-first parity (ADR-0060) : routes tRPC `campaignChangeRequest.*`
  * consommables depuis `<CampaignChangeRequestForm />` UI standalone.
@@ -33,7 +30,7 @@ const HandlerResult = z.object({
 export const manifest = defineManifest({
   service: "campaign-change-request",
   governor: "MESTOR",
-  version: "1.0.0",
+  version: "1.0.1",
   acceptsIntents: [
     "OPERATOR_CREATE_CHANGE_REQUEST",
     "OPERATOR_UPDATE_CHANGE_REQUEST",
@@ -47,9 +44,11 @@ export const manifest = defineManifest({
       inputSchema: z.object({
         kind: z.literal("OPERATOR_CREATE_CHANGE_REQUEST"),
         operatorId: StringId,
+        strategyId: StringId,
         campaignDeliverableId: StringId,
-        requestedByName: z.string().min(1),
-        description: z.string().min(1),
+        requestId: z.string().uuid().optional(),
+        requestedByName: z.string().trim().min(1),
+        description: z.string().trim().min(1),
         impact: z.enum(["COSMETIC", "MINOR", "MAJOR", "OUT_OF_SCOPE"]),
       }).passthrough(),
       outputSchema: HandlerResult,
@@ -57,13 +56,14 @@ export const manifest = defineManifest({
       idempotent: false,
       missionContribution: "GROUND_INFRASTRUCTURE",
       groundJustification:
-        "Sans tracking des change requests client, le workflow PROTOCOLE ABSENCE V4 (cosmétique → mineur → majeur → escalade) reste tribal et perd l'audit. Indispensable pour réagir aux 10-30 modifs/mois en flow normal Matanga.",
+        "Conserve le besoin de reprise, sa tâche et son reçu avant production. La même identité explicite retrouve son reçu ; sans identité, les demandes restent distinctes.",
     },
     {
       name: "updateChangeRequestHandler",
       inputSchema: z.object({
         kind: z.literal("OPERATOR_UPDATE_CHANGE_REQUEST"),
         operatorId: StringId,
+        strategyId: StringId,
         ticketId: StringId,
         patches: z.record(z.string(), z.unknown()),
       }).passthrough(),
@@ -79,6 +79,7 @@ export const manifest = defineManifest({
       inputSchema: z.object({
         kind: z.literal("OPERATOR_RESOLVE_CHANGE_REQUEST"),
         operatorId: StringId,
+        strategyId: StringId,
         ticketId: StringId,
         resolutionNotes: z.string().min(1),
         newBriefVersionId: StringId.nullable().optional(),
@@ -95,6 +96,7 @@ export const manifest = defineManifest({
       inputSchema: z.object({
         kind: z.literal("OPERATOR_ESCALATE_CHANGE_REQUEST"),
         operatorId: StringId,
+        strategyId: StringId,
         ticketId: StringId,
         escalationNotes: z.string().min(1),
       }).passthrough(),
@@ -103,7 +105,7 @@ export const manifest = defineManifest({
       idempotent: true,
       missionContribution: "GROUND_INFRASTRUCTURE",
       groundJustification:
-        "Workflow MAJOR : STOP production + escalade Slack. Status passe à ESCALATED, audit trail Mestor obligatoire.",
+        "Enregistre un arbitrage motivé et son état ESCALATED ; aucun message externe. Un reçu terminal n'est pas rouvert.",
     },
   ],
   dependencies: [],
@@ -113,6 +115,6 @@ export const manifest = defineManifest({
   },
   missionContribution: "GROUND_INFRASTRUCTURE",
   groundJustification:
-    "Sans tracking des change requests, l'agence perd la traçabilité des modifs client (10-30/mois en flow normal Matanga). Le workflow PROTOCOLE ABSENCE V4 (cosmétique → escalade Slack) devient tribal sans ce model.",
+    "La traçabilité des reprises relie besoin, tâche et décision à la production sans réécrire les reçus terminaux ni dépendre d'un agent.",
   missionStep: 4,
 });

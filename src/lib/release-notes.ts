@@ -34,6 +34,15 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.408",
+    date: "2026-10-07",
+    headline: "Des reprises qui gardent leur contexte",
+    highlights: [
+      { emoji: "📝", title: "Retrouvez la même demande après un nouvel essai", body: "Une reprise garde sa tâche et son numéro. Réessayer le même envoi après une erreur retrouve la demande reçue. Deux besoins distincts conservent leurs propres tickets." },
+      { emoji: "📋", title: "Un compte rendu conservé", body: "Une résolution enregistrée reste consultable et ne se rouvre plus lors d’un arbitrage. Les erreurs de lecture ou de saisie restent visibles pour vous permettre de reprendre." },
+    ],
+  },
+  {
     version: "6.27.407",
     date: "2026-10-07",
     headline: "Un fichier partagé, tous ses usages visibles",

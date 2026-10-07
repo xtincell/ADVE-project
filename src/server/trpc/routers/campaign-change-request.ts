@@ -8,12 +8,13 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
-import { canAccessMission, getOperatorContext } from "@/server/services/operator-isolation";
+import { canAccessCampaign, getOperatorContext } from "@/server/services/operator-isolation";
 import { db } from "@/lib/db";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import {
 
 /* lafusee:governed-active — Phase 18/19 router. Toutes les mutations utilisent governedProcedure (ADR-0004 strict cible atteinte) ; tag corrigé 2026-05-06 strangler→governed (faux positif initial — le router a toujours utilisé governedProcedure depuis sa création). */
+  ChangeRequestError,
   createChangeRequest,
   updateChangeRequest,
   resolveChangeRequest,
@@ -34,8 +35,9 @@ export const campaignChangeRequestRouter = createTRPCRouter({
       strategyId: StringId,
       operatorId: StringId,
       campaignDeliverableId: StringId,
-      requestedByName: z.string().min(1).max(200),
-      description: z.string().min(1).max(5000),
+      requestId: z.string().uuid().optional(),
+      requestedByName: z.string().trim().min(1).max(200),
+      description: z.string().trim().min(1).max(5000),
       impact: ImpactEnum,
       assignedToUserId: StringId.nullable().optional(),
     }),
@@ -47,11 +49,12 @@ export const campaignChangeRequestRouter = createTRPCRouter({
         description: input.description,
         impact: input.impact,
         assignedToUserId: input.assignedToUserId ?? null,
+        strategyId: input.strategyId, operatorId: input.operatorId, requestId: input.requestId,
       });
       return { ok: true as const, ticket };
     } catch (err) {
       throw new TRPCError({
-        code: "BAD_REQUEST",
+        code: err instanceof ChangeRequestError ? err.code : "BAD_REQUEST",
         message: err instanceof Error ? err.message : "createChangeRequest failed",
       });
     }
@@ -74,11 +77,11 @@ export const campaignChangeRequestRouter = createTRPCRouter({
     }),
   }).mutation(async ({ input }) => {
     try {
-      const ticket = await updateChangeRequest(input.ticketId, input.patches);
+      const ticket = await updateChangeRequest(input.ticketId, input.patches, input);
       return { ok: true as const, ticket };
     } catch (err) {
       throw new TRPCError({
-        code: "BAD_REQUEST",
+        code: err instanceof ChangeRequestError ? err.code : "BAD_REQUEST",
         message: err instanceof Error ? err.message : "updateChangeRequest failed",
       });
     }
@@ -96,11 +99,11 @@ export const campaignChangeRequestRouter = createTRPCRouter({
     }),
   }).mutation(async ({ input }) => {
     try {
-      const ticket = await resolveChangeRequest(input.ticketId, input.resolutionNotes, input.newBriefVersionId ?? null);
+      const ticket = await resolveChangeRequest(input.ticketId, input.resolutionNotes, input.newBriefVersionId ?? null, input);
       return { ok: true as const, ticket };
     } catch (err) {
       throw new TRPCError({
-        code: "BAD_REQUEST",
+        code: err instanceof ChangeRequestError ? err.code : "BAD_REQUEST",
         message: err instanceof Error ? err.message : "resolveChangeRequest failed",
       });
     }
@@ -117,11 +120,11 @@ export const campaignChangeRequestRouter = createTRPCRouter({
     }),
   }).mutation(async ({ input }) => {
     try {
-      const ticket = await escalateChangeRequest(input.ticketId, input.escalationNotes);
+      const ticket = await escalateChangeRequest(input.ticketId, input.escalationNotes, input);
       return { ok: true as const, ticket };
     } catch (err) {
       throw new TRPCError({
-        code: "BAD_REQUEST",
+        code: err instanceof ChangeRequestError ? err.code : "BAD_REQUEST",
         message: err instanceof Error ? err.message : "escalateChangeRequest failed",
       });
     }
@@ -131,14 +134,14 @@ export const campaignChangeRequestRouter = createTRPCRouter({
   listForDeliverable: protectedProcedure
     .input(z.object({ deliverableId: StringId }))
     .query(async ({ ctx, input }) => {
-      // anti-IDOR (audit round-4) : tickets de modif d'un livrable d'autrui sinon.
-      const d = await db.missionDeliverable.findUnique({
+      // Resolve the actual campaign task, then apply the canonical campaign access rule.
+      const d = await db.campaignDeliverable.findUnique({
         where: { id: input.deliverableId },
-        select: { mission: { select: { id: true } } },
+        select: { campaignId: true },
       });
       if (!d) throw new TRPCError({ code: "NOT_FOUND", message: "Livrable introuvable" });
       const opCtx = await getOperatorContext(ctx.session.user.id);
-      if (!(await canAccessMission(d.mission.id, opCtx))) {
+      if (!(await canAccessCampaign(d.campaignId, opCtx))) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à ce livrable." });
       }
       return listChangeRequestsForDeliverable(input.deliverableId);
@@ -146,5 +149,11 @@ export const campaignChangeRequestRouter = createTRPCRouter({
 
   listOpenForOperator: operatorProcedure
     .input(z.object({ operatorId: StringId }))
-    .query(({ input }) => listOpenChangeRequestsForOperator(input.operatorId)),
+    .query(async ({ ctx, input }) => {
+      const scope = await getOperatorContext(ctx.session.user.id);
+      if (scope.role !== "ADMIN" && scope.operatorId !== input.operatorId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette équipe." });
+      }
+      return listOpenChangeRequestsForOperator(input.operatorId);
+    }),
 });

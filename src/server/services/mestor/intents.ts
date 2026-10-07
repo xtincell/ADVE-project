@@ -922,6 +922,8 @@ export type Intent =
   // ── Phase 18-A1-β (audit MATANGA V4 TICKETS MODIFS) ────────────────
   | {
       kind: "OPERATOR_CREATE_CHANGE_REQUEST";
+      /** Explicit retry identity persisted in CampaignChangeRequest.id. */
+      requestId?: string;
       strategyId: string; // audit pivot
       operatorId: string;
       campaignDeliverableId: string;

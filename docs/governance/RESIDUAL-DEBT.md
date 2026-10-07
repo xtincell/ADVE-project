@@ -1,5 +1,43 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
+## Reprises de campagne — 2026-10-07 (ADR-0202)
+
+- **Corrigé localement en 408** : identité complète tâche/reprise, verrouillage
+  PostgreSQL, retry explicite persistant, marque/opérateur réels, terminal conservé,
+  brief et responsable bornés. Erreurs et dialogues reçus en rendu statique ;
+  cela ne vaut pas recette navigateur. HTTP authentifié reçu sous deux comptes
+  synthétiques : retries 200/200, résolutions 200/409, refus étrangers 403,
+  zéro delta IA/Process. Build et stress FULL reçus : 276 réponses de pages,
+  cinq identités demo absentes non reçues, forges explicitement simulées.
+  Fermer la livraison par CI/image/runtime et parcours natif sur une campagne de recette
+  identifiée, sans simuler une validation Noël. Déclencheur : livraison 408.
+- **Statut de campagne automatique absent** : retirer le statut manuel est refusé
+  sans écriture ; pas de vert par défaut. Qualifier le calcul canonique avant
+  raccord, éprouver retard, blocages et absence de données. Déclencheur : réception
+  C6 de la santé campagne ; effort : un lot sur l'écrivain existant.
+- **Versions d'édition et liens métier** : les tickets terminaux sont verrouillés,
+  mais les éditions ouvertes n'ont pas de précondition de version ; les liens
+  BrandAsset/délégation des tâches et le transfert concurrent de campagne doivent
+  être reçus. Fermer par deux éditions concurrentes, changement de propriétaire
+  et refus de liens étrangers, sans second workflow. Déclencheur : prochain lot
+  C3/C6 des livrables ; effort : un lot de garde et recette PostgreSQL.
+- **Identité côté formulaire** : le retry garde son UUID pendant la même ouverture
+  du formulaire. Fermer/recharger cette page perd cet essai local ; le reçu serveur
+  reste persistant, mais une nouvelle saisie produit une nouvelle identité.
+  Recevoir cette interruption et raccorder la conservation au mécanisme de brouillon
+  existant, sans dédupliquer aveuglément les textes. Déclencheur : suite C6 de
+  reprise après interruption du navigateur ; effort : un lot formulaire/recette.
+- **Cycle complet** : résoudre une reprise ne livre pas sa tâche. Production,
+  preuve de validation, diffusion, mesure et reprise ultérieure restent à recevoir
+  sur les vrais projets. Déclencheur : traversée C6 après recette 408.
+- **Contexte administrateur multi-équipe** : reçu natif 407, operator.getOwn
+  répond 200/null et la page reste Loading. Absence et erreur explicites en 408 ;
+  aucun rattachement de compte inventé. Raccorder le choix d'équipe existant au
+  portefeuille et au détail, avec autorisation serveur, puis recevoir le parcours
+  admin et opérateur. Les autres vues du tableau doivent aussi distinguer erreur,
+  chargement et absence de mesure. Déclencheur : prochain lot C4/C6 sur ce suivi ;
+  effort : un lot de contexte et recette native, sans nouvelle permission.
+
 ## Dossier SPAWT — réception des assets partagés (2026-10-07)
 
 - **Reçu en production 407 le 7 octobre** : une carte et deux références pour
@@ -63,11 +101,8 @@
   confirmé le 7 octobre : dernier bouton ouvert, besoin exact et dialogue dans
   le viewport ; neuf réponses sans erreur HTTP ni exception observée. Les rôles
   distincts et les autres parcours mobiles restent au chantier C4.
-- **Tickets de reprise de campagne** : le code formé à partir du préfixe campagne
-  et d'un compteur par livrable peut entrer en collision entre deux livrables.
-  Fermer sur l'identité/numérotation déjà existante, avec deux créations simultanées
-  et reprise idempotente. Déclencheur : réception du cycle de reprise Noël C6 ;
-  effort : un lot workflow et test PostgreSQL.
+- **Tickets de reprise de campagne** : collisions et reprise corrigées localement
+  en 408 ; réception native et autres liens métier suivis sous ADR-0202 ci-dessus.
 - **Prescriptions historiques** : les anciens Process de prescription ne sont
   ni supprimés ni requalifiés en décisions humaines. Inventorier leurs usages et
   afficher leur état historique si nécessaire. Déclencheur : réconciliation C1/C6 ;

@@ -3,7 +3,7 @@ import { isGodModeEmail } from "@/lib/auth/god-mode";
 
 // ============================================================================
 // MODULE M05 — Operator Isolation (Multi-tenant)
-// Score: 100/100 | Priority: P0 | Status: FUNCTIONAL
+// Priority: P0 | Helpers présents ; réception bornée par parcours, pas de score global.
 // Spec: §1.5 + §2.2.1 | Division: Transversal
 // ============================================================================
 //
@@ -19,7 +19,7 @@ import { isGodModeEmail } from "@/lib/auth/god-mode";
 // [x] REQ-9  enforceOperatorIsolation middleware (tRPC middleware)
 // [x] REQ-10 Applied to campaign-manager router (all procedures)
 // [x] REQ-11 Applied to strategy router (list, get, update)
-// [x] REQ-12 Applied to ALL remaining routers (driver, mission, glory, signal, etc.)
+// [ ] REQ-12 Réception exhaustive des routers et écritures directes : audit C3/C7 ouvert.
 // [x] REQ-13 Applied to CRM router (deal→strategy→operator chain)
 // [x] REQ-14 Operator dashboard with cross-strategy metrics in /console/ecosystem
 //
@@ -206,6 +206,29 @@ export async function canAccessCampaign(
   // (ex. directeur du digital) passait `canAccessStrategy` mais était REFUSÉ sur
   // les campagnes/sous-entités de sa propre marque.
   return canAccessStrategy(campaign.strategyId, ctx);
+}
+
+/** Bind an already-governed command to its actual campaign, never a supplied audit pivot.
+ * This verifies resource identity; caller authorization remains in Mestor/the router.
+ */
+export interface CampaignScope { strategyId: string; operatorId: string }
+export class CampaignScopeError extends Error {
+  constructor(public readonly code: "NOT_FOUND" | "FORBIDDEN" | "CONFLICT" | "BAD_REQUEST", message: string) {
+    super(message); this.name = "CampaignScopeError";
+  }
+}
+export async function assertCampaignScope(campaignId: string, scope: CampaignScope,
+  client: Pick<Prisma.TransactionClient, "campaign"> = db) {
+  const campaign = await client.campaign.findUnique({ where: { id: campaignId }, select: {
+    id: true, code: true, strategyId: true,
+    strategy: { select: { operatorId: true, client: { select: { operatorId: true } } } },
+  } });
+  if (!campaign) throw new CampaignScopeError("NOT_FOUND", "Campagne introuvable.");
+  const operatorId = campaign.strategy.operatorId ?? campaign.strategy.client?.operatorId;
+  if (campaign.strategyId !== scope.strategyId || operatorId !== scope.operatorId) {
+    throw new CampaignScopeError("FORBIDDEN", "La ressource ne relève pas de la marque et de l’équipe indiquées.");
+  }
+  return campaign;
 }
 
 /**

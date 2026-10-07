@@ -1,5 +1,27 @@
 # Changelog — La Fusee
 
+## v6.27.408 — fix(campaigns): conserver l’identité et le reçu des reprises (2026-10-07)
+
+Les reprises utilisent le code de leur tâche et une identité explicite de demande.
+Deux créations simultanées ont des numéros distincts ; rejouer la même demande
+retrouve son reçu. Aucun historique n'est renommé. Une résolution ne peut plus
+être rouverte par arbitrage et un brief lié doit relever de la même campagne.
+
+ADR-0202 : les écrivains existants vérifient campagne, marque et opérateur réels.
+La lecture cherche CampaignDeliverable et le détail transmet la vraie marque.
+Erreurs, chargement et reprise restent visibles ; dialogues intégrés et double
+soumission bloquée pendant l'appel. Agents facultatifs, aucun message externe.
+Un compte sans équipe ne reste plus sur Loading ; choix admin multi-équipe à
+raccorder avant réception native du cycle de reprise sous ce rôle.
+
+Retirer le statut manuel d'une tâche recalcule son état ; un retard ne devient
+plus vert. Sans calcul de campagne disponible, sa remise automatique est refusée
+sans modifier le statut. PostgreSQL : 57 cas ; gouvernance : 1 592 ; rendu :
+sept cas. HTTP authentifié : reprise 200/200, résolution concurrente 200/409,
+refus étrangers 403, zéro delta IA/Process. Build et stress FULL passent :
+276 pages reçues, cinq identités demo non reçues ; forges explicitement simulées.
+La recette native après image et le cycle de livraison complet restent ouverts.
+
 ## v6.27.407 — fix(portfolio): lire les fichiers partagés avec tous leurs usages (2026-10-07)
 
 Réception complémentaire du 7 octobre, image exacte `be89e909` : une carte,

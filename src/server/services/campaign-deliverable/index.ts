@@ -15,6 +15,8 @@
 import type { Intent, IntentResult } from "@/server/services/mestor/intents";
 import type { CampaignDeliverable, Campaign, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
+import { generateTaskCode } from "@/domain/campaign-code";
+import { assertCampaignScope, CampaignScopeError, type CampaignScope } from "@/server/services/operator-isolation";
 
 type HandlerResult = Pick<
   IntentResult,
@@ -44,6 +46,7 @@ export async function createCampaignDeliverableHandler(intent: CreateIntent): Pr
       promoTag: intent.promoTag ?? null,
       dueDate: intent.dueDate ? new Date(intent.dueDate) : null,
       notes: intent.notes ?? null,
+      strategyId: intent.strategyId, operatorId: intent.operatorId,
     });
     return {
       status: "OK",
@@ -59,7 +62,7 @@ export async function createCampaignDeliverableHandler(intent: CreateIntent): Pr
 
 export async function updateCampaignDeliverableHandler(intent: UpdateIntent): Promise<HandlerResult> {
   try {
-    const deliverable = await updateCampaignDeliverable(intent.deliverableId, intent.patches);
+    const deliverable = await updateCampaignDeliverable(intent.deliverableId, intent.patches, intent);
     return {
       status: "OK",
       summary: `CampaignDeliverable ${intent.deliverableId} mis à jour (status=${deliverable.status}, rag=${deliverable.rag})`,
@@ -74,7 +77,7 @@ export async function updateCampaignDeliverableHandler(intent: UpdateIntent): Pr
 
 export async function deleteCampaignDeliverableHandler(intent: DeleteIntent): Promise<HandlerResult> {
   try {
-    await deleteCampaignDeliverable(intent.deliverableId);
+    await deleteCampaignDeliverable(intent.deliverableId, intent);
     return {
       status: "OK",
       summary: `CampaignDeliverable ${intent.deliverableId} supprimé`,
@@ -106,7 +109,7 @@ export async function overrideRagHandler(intent: OverrideRagIntent): Promise<Han
 // Business helpers
 // ──────────────────────────────────────────────────────────────────────────
 
-export interface CreateCampaignDeliverableArgs {
+export interface CreateCampaignDeliverableArgs extends CampaignScope {
   campaignId: string;
   targetNodeId: string;
   countryCode: string | null;
@@ -119,61 +122,57 @@ export interface CreateCampaignDeliverableArgs {
 }
 
 export async function createCampaignDeliverable(args: CreateCampaignDeliverableArgs): Promise<CampaignDeliverable> {
-  // Verify campaign and target node exist
-  const [campaign, node] = await Promise.all([
-    db.campaign.findUnique({ where: { id: args.campaignId }, select: { id: true } }),
-    db.brandNode.findUnique({
-      where: { id: args.targetNodeId },
-      select: { id: true, nodeKind: true, archivedAt: true },
-    }),
-  ]);
-  if (!campaign) throw new Error(`Campaign ${args.campaignId} not found`);
-  if (!node) throw new Error(`Target BrandNode ${args.targetNodeId} not found`);
-  if (node.archivedAt) throw new Error(`Target BrandNode ${args.targetNodeId} is archived`);
-
-  // Anti-drift CI test campaign-deliverable-matrix.test.ts vérifiera ça aussi côté DB.
-  // Ici on protège runtime : un deliverable ne peut cibler qu'un SKU ou PRODUCT_VARIANT
-  // (ou STANDALONE_BRAND fallback pendant la phase de transition Phase 18-A0).
-  const allowedKinds = ["SKU", "PRODUCT_VARIANT", "STANDALONE_BRAND"];
-  if (!allowedKinds.includes(node.nodeKind)) {
-    throw new Error(
-      `Target BrandNode ${args.targetNodeId} has nodeKind="${node.nodeKind}" — deliverables doivent cibler SKU ou PRODUCT_VARIANT (ou STANDALONE_BRAND legacy).`,
-    );
-  }
-
-  const created = await db.campaignDeliverable.create({
-    data: {
-      campaignId: args.campaignId,
-      targetNodeId: args.targetNodeId,
-      countryCode: args.countryCode,
-      clusterTag: args.clusterTag,
-      deliverableType: args.deliverableType,
-      language: args.language,
-      promoTag: args.promoTag,
-      status: "TODO",
-      rag: "GREEN", // initial GREEN, recomputed if dueDate proche / status changed
-      dueDate: args.dueDate,
-      notes: args.notes,
-    },
+  return db.$transaction(async tx => {
+    await tx.$queryRaw`SELECT "id" FROM "Campaign" WHERE "id" = ${args.campaignId} FOR UPDATE`;
+    const campaign = await assertCampaignScope(args.campaignId, args, tx);
+    const node = await tx.brandNode.findUnique({ where: { id: args.targetNodeId },
+      select: { nodeKind: true, archivedAt: true, operatorId: true } });
+    if (!node) throw new CampaignScopeError("NOT_FOUND", "Produit cible introuvable.");
+    if (node.operatorId !== args.operatorId) throw new CampaignScopeError("FORBIDDEN", "Ce produit relève d’une autre équipe.");
+    if (node.archivedAt || !["SKU", "PRODUCT_VARIANT", "STANDALONE_BRAND"].includes(node.nodeKind)) {
+      throw new CampaignScopeError("BAD_REQUEST", "Le livrable doit cibler un produit actif compatible.");
+    }
+    let taskCode: string | null = null;
+    if (campaign.code) {
+      if (await tx.campaign.count({ where: { code: campaign.code, id: { not: campaign.id } } })) {
+        throw new CampaignScopeError("CONFLICT", "Code de campagne partagé : qualifier les identités avant de numéroter une tâche.");
+      }
+      const tasks = await tx.campaignDeliverable.findMany({ where: { campaignId: campaign.id }, select: { taskCode: true } });
+      let maxIndex = tasks.length;
+      for (const task of tasks) {
+        if (task.taskCode?.startsWith(`${campaign.code}.`)) {
+          const suffix = task.taskCode.slice(campaign.code.length + 1);
+          const index = /^[0-9]+$/.test(suffix) ? Number(suffix) : NaN;
+          if (!Number.isSafeInteger(index) || index < 1 || index >= Number.MAX_SAFE_INTEGER) {
+            throw new CampaignScopeError("CONFLICT", "Numérotation des tâches à qualifier.");
+          }
+          maxIndex = Math.max(maxIndex, index);
+        }
+      }
+      taskCode = generateTaskCode(campaign.code, maxIndex + 1);
+    }
+    const rag = computeRAG({ status: "TODO", dueDate: args.dueDate, deliveredAt: null, manualOverride: null });
+    return tx.campaignDeliverable.create({ data: {
+      campaignId: args.campaignId, targetNodeId: args.targetNodeId, taskCode,
+      countryCode: args.countryCode, clusterTag: args.clusterTag, deliverableType: args.deliverableType,
+      language: args.language, promoTag: args.promoTag, status: "TODO", rag,
+      dueDate: args.dueDate, notes: args.notes,
+    } });
   });
+}
 
-  // Recompute RAG après création (cas où dueDate déjà serrée à l'import)
-  const computed = computeRAG({
-    status: created.status,
-    dueDate: created.dueDate,
-    deliveredAt: created.deliveredAt,
-    manualOverride: created.manualRagOverride,
-  });
-  if (computed !== created.rag) {
-    return db.campaignDeliverable.update({ where: { id: created.id }, data: { rag: computed } });
-  }
-  return created;
+async function assertDeliverableScope(deliverableId: string, scope: CampaignScope) {
+  const row = await db.campaignDeliverable.findUnique({ where: { id: deliverableId }, select: { campaignId: true } });
+  if (!row) throw new CampaignScopeError("NOT_FOUND", "Livrable introuvable.");
+  await assertCampaignScope(row.campaignId, scope);
 }
 
 export async function updateCampaignDeliverable(
   deliverableId: string,
   patches: UpdateIntent["patches"],
+  scope: CampaignScope,
 ): Promise<CampaignDeliverable> {
+  await assertDeliverableScope(deliverableId, scope);
   const existing = await db.campaignDeliverable.findUnique({ where: { id: deliverableId } });
   if (!existing) throw new Error(`CampaignDeliverable ${deliverableId} not found`);
 
@@ -206,7 +205,8 @@ export async function updateCampaignDeliverable(
   return updated;
 }
 
-export async function deleteCampaignDeliverable(deliverableId: string): Promise<void> {
+export async function deleteCampaignDeliverable(deliverableId: string, scope: CampaignScope): Promise<void> {
+  await assertDeliverableScope(deliverableId, scope);
   const existing = await db.campaignDeliverable.findUnique({
     where: { id: deliverableId },
     select: { id: true, brandAssetId: true },
@@ -228,9 +228,13 @@ export async function overrideRag(intent: OverrideRagIntent): Promise<{ kind: "c
   }
 
   if (hasCampaign && intent.campaignId) {
+    await assertCampaignScope(intent.campaignId, intent);
+    if (intent.ragOverride === null) {
+      throw new CampaignScopeError("BAD_REQUEST", "Le calcul automatique de santé de campagne n’est pas disponible. Le statut manuel est conservé ; choisissez un statut motivé.");
+    }
     const updated = await db.campaign.update({
       where: { id: intent.campaignId },
-      data: { manualRagOverride: intent.ragOverride, healthSignal: intent.ragOverride ?? "GREEN" },
+      data: { manualRagOverride: intent.ragOverride, healthSignal: intent.ragOverride },
       select: { id: true, manualRagOverride: true },
     });
     return { kind: "campaign", id: updated.id, rag: updated.manualRagOverride };
@@ -238,12 +242,20 @@ export async function overrideRag(intent: OverrideRagIntent): Promise<{ kind: "c
 
   // Deliverable
   const deliverableId = intent.deliverableId!;
-  const updated = await db.campaignDeliverable.update({
-    where: { id: deliverableId },
-    data: { manualRagOverride: intent.ragOverride, rag: intent.ragOverride ?? "GREEN" },
-    select: { id: true, manualRagOverride: true },
+  return db.$transaction(async tx => {
+    await tx.$queryRaw`SELECT "id" FROM "CampaignDeliverable" WHERE "id" = ${deliverableId} FOR UPDATE`;
+    const existing = await tx.campaignDeliverable.findUnique({ where: { id: deliverableId } });
+    if (!existing) throw new CampaignScopeError("NOT_FOUND", "Livrable introuvable.");
+    await assertCampaignScope(existing.campaignId, intent, tx);
+    const rag = computeRAG({ status: existing.status, dueDate: existing.dueDate,
+      deliveredAt: existing.deliveredAt, manualOverride: intent.ragOverride });
+    const updated = await tx.campaignDeliverable.update({
+      where: { id: deliverableId },
+      data: { manualRagOverride: intent.ragOverride, rag },
+      select: { id: true, manualRagOverride: true },
+    });
+    return { kind: "deliverable", id: updated.id, rag: updated.manualRagOverride };
   });
-  return { kind: "deliverable", id: updated.id, rag: updated.manualRagOverride };
 }
 
 // ──────────────────────────────────────────────────────────────────────────

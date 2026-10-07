@@ -12,7 +12,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
-import { canAccessCampaign, getOperatorContext } from "@/server/services/operator-isolation";
+import { canAccessCampaign, getOperatorContext, CampaignScopeError } from "@/server/services/operator-isolation";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import {
 
@@ -57,11 +57,12 @@ export const campaignDeliverableRouter = createTRPCRouter({
         promoTag: input.promoTag ?? null,
         dueDate: input.dueDate ? new Date(input.dueDate) : null,
         notes: input.notes ?? null,
+        strategyId: input.strategyId, operatorId: input.operatorId,
       });
       return { ok: true as const, deliverable };
     } catch (err) {
       throw new TRPCError({
-        code: "BAD_REQUEST",
+        code: err instanceof CampaignScopeError ? err.code : "BAD_REQUEST",
         message: err instanceof Error ? err.message : "createCampaignDeliverable failed",
       });
     }
@@ -86,11 +87,11 @@ export const campaignDeliverableRouter = createTRPCRouter({
     }),
   }).mutation(async ({ input }) => {
     try {
-      const deliverable = await updateCampaignDeliverable(input.deliverableId, input.patches);
+      const deliverable = await updateCampaignDeliverable(input.deliverableId, input.patches, input);
       return { ok: true as const, deliverable };
     } catch (err) {
       throw new TRPCError({
-        code: "BAD_REQUEST",
+        code: err instanceof CampaignScopeError ? err.code : "BAD_REQUEST",
         message: err instanceof Error ? err.message : "updateCampaignDeliverable failed",
       });
     }
@@ -106,11 +107,11 @@ export const campaignDeliverableRouter = createTRPCRouter({
     }),
   }).mutation(async ({ input }) => {
     try {
-      await deleteCampaignDeliverable(input.deliverableId);
+      await deleteCampaignDeliverable(input.deliverableId, input);
       return { ok: true as const, id: input.deliverableId };
     } catch (err) {
       throw new TRPCError({
-        code: "BAD_REQUEST",
+        code: err instanceof CampaignScopeError ? err.code : "BAD_REQUEST",
         message: err instanceof Error ? err.message : "deleteCampaignDeliverable failed",
       });
     }
@@ -141,7 +142,7 @@ export const campaignDeliverableRouter = createTRPCRouter({
       return { ok: true as const, result };
     } catch (err) {
       throw new TRPCError({
-        code: "BAD_REQUEST",
+        code: err instanceof CampaignScopeError ? err.code : "BAD_REQUEST",
         message: err instanceof Error ? err.message : "overrideRag failed",
       });
     }
@@ -169,7 +170,11 @@ export const campaignDeliverableRouter = createTRPCRouter({
         rag: z.array(z.enum(["GREEN", "AMBER", "RED"])).optional(),
       }),
     )
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
+      const scope = await getOperatorContext(ctx.session.user.id);
+      if (scope.role !== "ADMIN" && scope.operatorId !== input.operatorId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette équipe." });
+      }
       return listDeliverablesForOperator({
         operatorId: input.operatorId,
         countryCodes: input.countryCodes,
@@ -185,6 +190,10 @@ export const campaignDeliverableRouter = createTRPCRouter({
   statsForOperator: operatorProcedure
     .input(z.object({ operatorId: StringId }))
     .query(async ({ input, ctx }) => {
+      const scope = await getOperatorContext(ctx.session.user.id);
+      if (scope.role !== "ADMIN" && scope.operatorId !== input.operatorId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette équipe." });
+      }
       const all = await ctx.db.campaignDeliverable.findMany({
         where: { campaign: { strategy: { operatorId: input.operatorId } } },
         select: { status: true, rag: true },

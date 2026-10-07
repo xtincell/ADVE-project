@@ -256,3 +256,22 @@ Lignes dérivées purgées :
 - Les versions de piliers étaient écrites sur une autre connexion que leur contenu.
   Le gateway transmet désormais sa transaction ; rollback multi-piliers et snapshots
   reçus ensemble sur PostgreSQL. Cause : versionnement sorti de la frontière atomique.
+
+## 2026-10-07 — Reprises de campagne (ADR-0202)
+
+- Deux tâches produisaient le même code de reprise, et leur propre code n'était
+  pas généré. Verrou PostgreSQL, code tâche et maximum historique rétablis ;
+  retry explicite persistant dans l'identifiant existant. Cause : identité de
+  campagne utilisée au niveau tâche et absence de frontière atomique.
+- Les commandes acceptaient un pivot marque sans comparer la campagne réelle ;
+  le détail utilisait une marque fictive et la liste cherchait MissionDeliverable.
+  Garde commune réelle et bon modèle rétablis, refus visibles. Cause : plusieurs
+  identités supposées équivalentes entre lecture, router et handler.
+- Un arbitrage rouvrait un ticket résolu ; remise automatique du statut de tâche
+  forçait GREEN. Terminaux et reçu protégés, calcul existant réutilisé ; campagne
+  sans calcul refusée explicitement. Cause : écriture de statut sans transition
+  ni preuve de calcul. Réception native et cycle complet restent ouverts.
+- Le portefeuille et le détail chargeaient indéfiniment un compte sans équipe,
+  reçu nativement en 407 avec HTTP 200/null. Absence et refus de contexte rendus
+  explicitement en 408. Cause : null métier assimilé à une requête en cours.
+  Le choix admin multi-équipe reste à raccorder au contexte existant.
