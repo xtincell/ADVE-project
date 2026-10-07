@@ -167,7 +167,7 @@ Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE
 | `learning.ts` | Académie / learning | G | point gouverné présent |
 | `boutique.ts` | Boutique formation | G | point gouverné présent |
 | `quick-intake.ts` | Pipeline intake (rev 9, 30KB) | G | point gouverné présent |
-| `ingestion.ts` | Ingestion data externe | G | point gouverné présent |
+| `ingestion.ts` | Ingestion data externe ; lecture des usages et lien/révocation via `updateSource` gouverné (ADR-0198) | G | point gouverné présent |
 | `imhotep.ts` | Orchestrateur Crew Programs (Phase 14, ADR-0019) | G | appels à suivre |
 | `laguilde.ts` | Portail public Guilde (ADR-0098) : mur missions, dépôt marque, inscriptions, modération | G | point gouverné présent |
 | `mission-applications.ts` | Candidatures missions (Vague 7) — fin du premier-arrivé | G | point gouverné présent |

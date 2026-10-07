@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { trpc } from "@/lib/trpc/client";
 
 interface StrategyOption {
@@ -42,8 +43,11 @@ const StrategyContext = createContext<StrategyContextValue>({
 const ACTIVE_STRATEGY_STORAGE_KEY = "lf-active-strategy";
 
 export function StrategyProvider({ children }: { children: ReactNode }) {
-  const { data, isLoading, isError } = trpc.strategy.list.useQuery({});
+  const router = useRouter();
+  const { data, isLoading, isError, refetch } = trpc.strategy.list.useQuery({});
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [explicitSelection, setExplicitSelection] = useState(false);
+  const [refreshingSelection, setRefreshingSelection] = useState(false);
 
   // Deep-link Console → Cockpit : `?strategy=<id>` sélectionne la marque cible
   // (prioritaire sur la sélection persistée). La Console adresse les marques
@@ -77,15 +81,29 @@ export function StrategyProvider({ children }: { children: ReactNode }) {
     (s) => s.status !== "DELETED" && s.status !== "ARCHIVED" && s.status !== "QUICK_INTAKE",
   );
   const selectedStillExists = selectedId != null && activeStrategies.some((s) => s.id === selectedId);
-  const strategyId = (selectedStillExists ? selectedId : null) ?? activeStrategies[0]?.id ?? strategies[0]?.id ?? null;
+  const strategyId = selectedStillExists ? selectedId : explicitSelection ? null
+    : activeStrategies[0]?.id ?? strategies[0]?.id ?? null;
 
   const setStrategyId = useCallback((id: string) => {
     setSelectedId(id);
+    setExplicitSelection(true);
     localStorage.setItem(ACTIVE_STRATEGY_STORAGE_KEY, id);
-  }, []);
+    const url = new URL(window.location.href);
+    if (url.searchParams.has("strategy")) {
+      url.searchParams.set("strategy", id);
+      router.replace(`${url.pathname}${url.search}${url.hash}`, { scroll: false });
+    }
+    // The picker has its own fresh query. A newly created brand can be absent
+    // from this older cache. Never silently operate on the first brand instead.
+    if (!data?.some((s) => s.id === id)) {
+      setRefreshingSelection(true);
+      void refetch().finally(() => setRefreshingSelection(false));
+    }
+  }, [data, refetch, router]);
 
   return (
-    <StrategyContext.Provider value={{ strategyId, strategies, isLoading, isError, setStrategyId }}>
+    <StrategyContext.Provider value={{ strategyId, strategies, isLoading: isLoading || refreshingSelection,
+      isError: isError || (explicitSelection && !selectedStillExists && !isLoading && !refreshingSelection), setStrategyId }}>
       {children}
     </StrategyContext.Provider>
   );

@@ -22,7 +22,8 @@ import {
   type RecommendationPayload,
 } from "@/lib/types/recommendation-payload";
 import { computePillarS } from "@/server/services/rtis-protocols/strategy";
-import { writePillarAndScore } from "@/server/services/pillar-gateway";
+import { writePillarAndScore, writePillarsAtomically } from "@/server/services/pillar-gateway";
+import type { SourceReceipt } from "@/server/services/ingestion-pipeline/source-usage";
 
 type PillarBlob = Record<string, unknown>;
 type PillarMap = Record<string, PillarBlob>;
@@ -83,7 +84,13 @@ export function applyPayloadToPillars(
       const cat = (i.catalogueParCanal ??= {}) as Record<string, unknown[]>;
       const channel = payload.channel ?? "GENERAL";
       if (!Array.isArray(cat[channel])) cat[channel] = [];
-      cat[channel].push(payload.initiative);
+      const existing = findInitiativeById(pillars.i, payload.initiative.id);
+      if (existing) {
+        if (JSON.stringify(existing) !== JSON.stringify(payload.initiative)) {
+          warnings.push(`ADD_INITIATIVE: initiative ${payload.initiative.id} already exists with different content`);
+          break;
+        }
+      } else cat[channel].push(payload.initiative);
       changed.add("i");
       break;
     }
@@ -119,7 +126,7 @@ export function applyPayloadToPillars(
  */
 export async function dispatchTypedRecos(
   strategyId: string,
-  recos: Array<{ id: string; proposedValue: unknown }>,
+  recos: Array<{ id: string; proposedValue: unknown; sourceReceipts?: SourceReceipt[]; requiredSourceIds?: string[] }>,
 ): Promise<{ appliedRecoIds: string[]; warnings: string[] }> {
   const typed = recos
     .map((r) => ({ id: r.id, payload: parseRecommendationPayload(r.proposedValue) }))
@@ -136,9 +143,11 @@ export async function dispatchTypedRecos(
 
   const changed = new Set<string>();
   const warnings: string[] = [];
-  for (const { payload } of typed) {
+  const applicableIds: string[] = [];
+  for (const { id, payload } of typed) {
     const res = applyPayloadToPillars(pillars, payload);
     res.changed.forEach((k) => changed.add(k));
+    if (res.changed.size > 0) applicableIds.push(id);
     warnings.push(...res.warnings);
   }
 
@@ -151,19 +160,22 @@ export async function dispatchTypedRecos(
     changed.add("s");
   }
 
-  for (const key of changed) {
-    const result = await writePillarAndScore({
-      strategyId,
-      pillarKey: key as PillarKey,
-      operation: { type: "REPLACE_FULL", content: pillars[key]! },
-      author: { system: "MESTOR", reason: `Notoria function-calling: apply typed recommendation(s) (ADR-0088)` },
-      options: { targetStatus: "AI_PROPOSED", confidenceDelta: 0.05 },
-    });
-    if (!result.success) warnings.push(`Pilier ${key}: ${result.error ?? "écriture échouée"}`);
-    else warnings.push(...result.warnings.map((w) => `${key}: ${w}`));
+  try {
+    const results = await writePillarsAtomically([...changed].map((key) => ({
+      strategyId, pillarKey: key as PillarKey,
+      operation: { type: "REPLACE_FULL" as const, content: pillars[key]! },
+      author: { system: "MESTOR" as const, reason: "Notoria: application des recommandations révisées" },
+      options: { targetStatus: "AI_PROPOSED" as const, confidenceDelta: 0.05,
+        sourceReceipts: recos.flatMap((r) => r.sourceReceipts ?? []),
+        requiredSourceIds: recos.flatMap((r) => r.requiredSourceIds ?? []),
+      },
+    })));
+    for (const result of results) warnings.push(...result.warnings);
+  } catch (err) {
+    return { appliedRecoIds: [], warnings: [...warnings, err instanceof Error ? err.message : String(err)] };
   }
 
-  return { appliedRecoIds: typed.map((t) => t.id), warnings };
+  return { appliedRecoIds: applicableIds, warnings };
 }
 
 /**

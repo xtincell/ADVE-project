@@ -23,6 +23,7 @@
  */
 
 import { db } from "@/lib/db";
+import { sourceScope, type SourceReceipt } from "@/server/services/ingestion-pipeline/source-usage";
 import type { SourceCertainty } from "@/domain/source-certainty";
 import { indexBrandSource } from "@/server/services/seshat/context-store/indexer";
 import { topKWithinStrategy } from "@/server/services/seshat/context-store/ranker";
@@ -49,7 +50,7 @@ export async function ensureSourcesIndexed(
   strategyId: string,
 ): Promise<{ indexedChunks: number; embedded: boolean }> {
   const sources = await db.brandDataSource.findMany({
-    where: { strategyId, processingStatus: { in: ["EXTRACTED", "PROCESSED"] } },
+    where: { AND: [await sourceScope(strategyId)], processingStatus: { in: ["EXTRACTED", "PROCESSED"] } },
     select: { id: true, rawContent: true },
   });
 
@@ -57,7 +58,7 @@ export async function ensureSourcesIndexed(
   for (const s of sources) {
     if (!s.rawContent || s.rawContent.trim().length < 40) continue;
     try {
-      const r = await indexBrandSource(s.id);
+      const r = await indexBrandSource(s.id, strategyId);
       if (!r.alreadyFresh) indexedChunks += r.chunks;
     } catch (err) {
       console.warn(
@@ -78,6 +79,7 @@ export interface SourceContextHit {
    * sans elle, un extrait ne peut plus être rattaché — donc plus vérifié.
    */
   sourceId: string | null;
+  contentHash?: string;
   text: string;
   fileName: string;
   /** Certitude déclarée du document (OFFICIAL > DECLARED > INFERRED > ARBITRARY). */
@@ -121,6 +123,7 @@ export async function retrieveSourceChunksForField(
       const p = (h.payload ?? {}) as Record<string, unknown>;
       return {
         sourceId: h.sourceId,
+        contentHash: typeof p.sourceContentHash === "string" ? p.sourceContentHash : undefined,
         text: typeof p.text === "string" ? p.text : "",
         fileName: typeof p.fileName === "string" ? p.fileName : "source",
         certainty: null as SourceCertainty | null,
@@ -149,7 +152,7 @@ export async function retrieveSourceChunksForField(
 export async function buildRetrievedSourceBrief(
   strategyId: string,
   fieldQueries: Array<{ field: string; query: string }>,
-  opts: { perFieldTopK?: number; maxChars?: number } = {},
+  opts: { perFieldTopK?: number; maxChars?: number; sourceReceipts?: SourceReceipt[] } = {},
 ): Promise<string> {
   const perFieldTopK = opts.perFieldTopK ?? 3;
   const maxChars = opts.maxChars ?? 9000;
@@ -167,6 +170,7 @@ export async function buildRetrievedSourceBrief(
       const block = `[${field} ← ${h.fileName}] ${h.text}`;
       if (totalChars + block.length > maxChars) continue;
       blocks.push(block);
+      if (h.sourceId && h.contentHash) opts.sourceReceipts?.push({ sourceId: h.sourceId, contentHash: h.contentHash });
       totalChars += block.length;
     }
   }

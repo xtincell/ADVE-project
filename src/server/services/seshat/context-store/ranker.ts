@@ -26,6 +26,23 @@ import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { embed } from "@/server/services/llm-gateway";
 import { cosineSimilarity } from "./embedder";
+import { sourceScope, sourceFingerprint } from "@/server/services/ingestion-pipeline/source-usage";
+
+/** A saved fragment is a cache, never an access grant or current proof. */
+async function currentDocumentNodes<T extends { kind: string; sourceId: string | null; payload: unknown }>(nodes: T[], filter: RankerFilter): Promise<T[]> {
+  const isDocument = (n: T) => n.kind === "BRAND_SOURCE" || n.kind === "SOURCE_CHUNK";
+  const documentIds = nodes.filter(isDocument).flatMap((n) => n.sourceId ? [n.sourceId] : []);
+  if (!documentIds.length) return nodes;
+  // Comparables cannot turn a private document into global training context.
+  if (!filter.strategyId || filter.excludeStrategyId) return nodes.filter((n) => !isDocument(n));
+  const sources = await db.brandDataSource.findMany({ where: {
+    AND: [await sourceScope(filter.strategyId)], id: { in: documentIds },
+    processingStatus: { in: ["EXTRACTED", "PROCESSED"] },
+  } });
+  const hashes = new Map(sources.map((s) => [s.id, sourceFingerprint(s)]));
+  return nodes.filter((n) => !isDocument(n) || Boolean(n.sourceId && hashes.has(n.sourceId)
+    && (n.payload as Record<string, unknown> | null)?.sourceContentHash === hashes.get(n.sourceId)));
+}
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -161,7 +178,7 @@ export async function searchByQuery(
     },
   });
 
-  return candidates
+  return (await currentDocumentNodes(candidates, filter))
     .map((c) => ({
       id: c.id,
       strategyId: c.strategyId,
@@ -260,5 +277,5 @@ export async function listByMetadata(
       metadata: true,
     },
   });
-  return rows;
+  return currentDocumentNodes(rows, filter);
 }

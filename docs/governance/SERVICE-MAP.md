@@ -292,7 +292,7 @@ Configuration, boot, ingestion système, support, security, collaboration intern
 |---|---|---|---|
 | `boot-sequence/` | Initialisation système au démarrage | INFRASTRUCTURE | ✅ existant |
 | `process-scheduler/` | Cron + queue intents async | INFRASTRUCTURE | ✅ existant |
-| `ingestion-pipeline/` | Pipeline d'ingestion data externe | INFRASTRUCTURE | ✅ existant |
+| `ingestion-pipeline/` | Pipeline d'ingestion data externe ; `source-usage` factorise usages documentaires, reçus de version et invalidation (ADR-0198). Aucun nouveau worker. | INFRASTRUCTURE | ✅ existant |
 | `quick-intake/` | Pipeline onboarding intake (rev 9) | INFRASTRUCTURE | ✅ existant |
 | `brief-ingest/` | Ingestion PDF briefs | MESTOR | ✅ existant |
 | `demo-data/` | Seeding pour staging/demo | INFRASTRUCTURE | ✅ existant |

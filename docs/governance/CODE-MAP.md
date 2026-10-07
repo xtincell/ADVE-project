@@ -105,7 +105,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Prisma — 231 models, 71 enums
+## Prisma — 232 models, 71 enums
 
 ### Models
 
@@ -116,7 +116,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **Operator** (30 fields)
 - **ClientAllocation** (14 fields)
 - **Client** (17 fields)
-- **Strategy** (85 fields)
+- **Strategy** (86 fields)
 - **Intention** (14 fields)
 - **Campaign** (80 fields)
 - **Mission** (36 fields)
@@ -138,7 +138,8 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **BrandAsset** (50 fields) — BrandAsset = vault de la marque, réceptacle unique pour TOUS les actifs.  Couvre deux familles :  - Actifs **intellectue
 - **Pillar** (18 fields)
 - **PillarVersion** (10 fields)
-- **BrandDataSource** (17 fields)
+- **BrandDataSource** (18 fields)
+- **BrandSourceUse** (14 fields) — ADR-0198 — an explicit document use, never a copy of its text or original.
 - **Invoice** (14 fields)
 - **Driver** (20 fields)
 - **DriverGloryTool** (4 fields)
@@ -271,7 +272,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **VariableStoreConfig** (7 fields)
 - **OrchestrationPlan** (13 fields)
 - **OrchestrationStep** (17 fields)
-- **Recommendation** (51 fields)
+- **Recommendation** (52 fields)
 - **RecommendationBatch** (17 fields)
 - **BrandMoment** (11 fields)
 - **CampaignCanonTemplate** (12 fields)

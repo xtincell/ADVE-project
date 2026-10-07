@@ -13,6 +13,8 @@ import { SourceCertaintySchema } from "@/domain/source-certainty";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { db } from "@/lib/db";
 import { assertStrategyRead } from "./_strategy-read-guard";
+import { getOperatorContext } from "@/server/services/operator-isolation";
+import { sourceScope, sourceFingerprint, sharedSourceAnalysis, resolveBrandSource, setSourceUse, invalidateSourceDerivatives } from "@/server/services/ingestion-pipeline/source-usage";
 /* lafusee:governed-active */
 
 /**
@@ -118,16 +120,20 @@ export const ingestionRouter = createTRPCRouter({
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
       const sources = await ctx.db.brandDataSource.findMany({
-        where: { strategyId: input.strategyId },
+        where: await sourceScope(input.strategyId, ctx.db),
         orderBy: { createdAt: "desc" },
         select: {
           id: true,
+          strategyId: true,
+          strategy: { select: { name: true } },
+          uses: { where: { strategyId: input.strategyId, revokedAt: null }, select: { analysisStatus: true, pillarMapping: true, analyzedSourceHash: true } },
           sourceType: true,
           fileName: true,
           fileType: true,
           processingStatus: true,
           pillarMapping: true,
           extractedFields: true,
+          rawContent: true, rawData: true,
           errorMessage: true,
           createdAt: true,
           // PR-A (ADR-0032)
@@ -141,22 +147,29 @@ export const ingestionRouter = createTRPCRouter({
       // best-effort (`void` + `console.warn`) : une source EXTRACTED jamais
       // indexée ne se signalait NULLE PART, et le porteur croyait sa
       // documentation prise en compte. On lit le compte réel de chunks.
-      const indexed = await ctx.db.brandContextNode.groupBy({
-        by: ["sourceId"],
-        where: {
-          strategyId: input.strategyId,
-          kind: "BRAND_SOURCE",
-          sourceId: { in: sources.map((s) => s.id) },
-        },
-        _count: { _all: true },
+      const fingerprints = new Map(sources.map((s) => [s.id, sourceFingerprint(s)]));
+      const indexed = await ctx.db.brandContextNode.findMany({
+        where: { strategyId: input.strategyId, kind: "BRAND_SOURCE", sourceId: { in: sources.map((s) => s.id) } },
+        select: { sourceId: true, payload: true },
       });
-      const chunksBySource = new Map(
-        indexed.map((row) => [row.sourceId, row._count._all] as const),
-      );
+      const chunksBySource = new Map<string, number>();
+      for (const row of indexed) {
+        if (row.sourceId && (row.payload as Record<string, unknown> | null)?.sourceContentHash === fingerprints.get(row.sourceId)) {
+          chunksBySource.set(row.sourceId, (chunksBySource.get(row.sourceId) ?? 0) + 1);
+        }
+      }
 
       return sources.map((s) => ({
         ...s,
+        shared: s.strategyId !== input.strategyId,
+        ownerBrandName: s.strategy.name,
+        ownerStrategyId: s.strategyId,
+        processingStatus: s.strategyId === input.strategyId ? s.processingStatus : sharedSourceAnalysis(s, s.uses[0]).analysisStatus,
+        pillarMapping: s.strategyId === input.strategyId ? s.pillarMapping : sharedSourceAnalysis(s, s.uses[0]).pillarMapping,
+        strategy: undefined,
+        uses: undefined,
         originalUpload: undefined,
+        rawContent: undefined, rawData: undefined,
         original: sourceOriginalSummary(s.originalUpload?.storageReceipt),
         /** Nombre de fragments indexés — 0 = pas encore exploitable en analyse. */
         indexedChunks: chunksBySource.get(s.id) ?? 0,
@@ -166,13 +179,36 @@ export const ingestionRouter = createTRPCRouter({
   // Get ONE source with its raw content (lazy — listSources omits rawContent
   // car volumineux). Consommé par le panneau d'édition de source du cockpit.
   getSource: protectedProcedure
+    .input(z.object({ id: z.string(), strategyId: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
+      const { source, consumerStrategyId } = await resolveBrandSource(input.id, input.strategyId, ctx.db);
+      await assertStrategyRead(ctx.session.user.id, consumerStrategyId);
+      return { id: source.id, fileName: source.fileName, rawContent: source.rawContent,
+        certainty: source.certainty, sourceType: source.sourceType, origin: source.origin };
+    }),
+
+  // Owner chooses a destination in the existing portfolio; no document is copied.
+  sourceUses: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       await assertSourceAccess(ctx.session.user.id, input.id);
-      return ctx.db.brandDataSource.findUnique({
-        where: { id: input.id },
-        select: { id: true, fileName: true, rawContent: true, certainty: true, sourceType: true, origin: true },
-      });
+      const { source } = await resolveBrandSource(input.id, undefined, ctx.db);
+      const op = await getOperatorContext(ctx.session.user.id);
+      const canManageOwner = op.role === "ADMIN" || source.strategy.userId === op.userId || Boolean(op.operatorId && source.strategy.operatorId === op.operatorId);
+      if (!canManageOwner) return [];
+      const targets = await ctx.db.strategy.findMany({ where: {
+        id: { not: source.strategyId }, OR: [
+          ...(source.strategy.operatorId ? [{ operatorId: source.strategy.operatorId,
+            ...(op.role === "ADMIN" || op.operatorId === source.strategy.operatorId ? {} : { userId: op.userId }) }] : []),
+          { sourceUses: { some: { sourceId: input.id, revokedAt: null } } },
+        ],
+      }, select: { id: true, name: true, operatorId: true, sourceUses: { where: { sourceId: input.id, revokedAt: null }, select: { id: true, operatorId: true } } },
+      orderBy: { name: "asc" } });
+      return targets.map((t) => ({ id: t.id,
+        name: t.operatorId && t.operatorId === source.strategy.operatorId ? t.name : "Dossier hors de votre portefeuille",
+        linked: t.sourceUses.length > 0,
+        suspended: t.sourceUses.length > 0 && (!t.operatorId || t.operatorId !== source.strategy.operatorId || t.sourceUses[0]?.operatorId !== t.operatorId),
+      }));
     }),
 
   // Delete a data source
@@ -194,11 +230,11 @@ export const ingestionRouter = createTRPCRouter({
       // l'ancrage documentaire (ADR-0184), une citation se vérifie PAR cette
       // ancre : un orphelin est donc une citation qui paraît vérifiée et ne
       // l'est pas. Les deux suppressions vont ensemble, en transaction.
-      const [, deleted] = await ctx.db.$transaction([
-        ctx.db.brandContextNode.deleteMany({ where: { sourceId: input.id } }),
-        ctx.db.brandDataSource.delete({ where: { id: input.id } }),
-      ]);
-      return deleted;
+      return ctx.db.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT id FROM "BrandDataSource" WHERE id = ${input.id} FOR UPDATE`;
+        await invalidateSourceDerivatives(tx, input.id);
+        return tx.brandDataSource.delete({ where: { id: input.id } });
+      });
     }),
 
   // Update a manual source (title + content + certainty per PR-A/ADR-0032).
@@ -212,14 +248,22 @@ export const ingestionRouter = createTRPCRouter({
       title: z.string().min(1).optional(),
       content: z.string().min(1).optional(),
       certainty: SourceCertaintySchema.optional(),
-    }),
+      use: z.object({ strategyId: z.string(), revoke: z.boolean().default(false) }).optional(),
+    }).refine((v) => v.use || v.title !== undefined || v.content !== undefined || v.certainty !== undefined,
+      "Choisir une correction ou un usage du document.").refine((v) => !v.use || (v.title === undefined && v.content === undefined && v.certainty === undefined),
+      "Lier un usage et corriger le document sont deux gestes distincts."),
 
     caller: "ingestion:updateSource",
 
   })
     .mutation(async ({ ctx, input }) => {
       await assertSourceAccess(ctx.session.user.id, input.id);
-      const data: Record<string, unknown> = {};
+      if (input.use) {
+        const op = await getOperatorContext(ctx.session.user.id);
+        return setSourceUse({ sourceId: input.id, strategyId: input.use.strategyId, revoke: input.use.revoke,
+          userId: op.userId, operatorId: op.operatorId, admin: op.role === "ADMIN" });
+      }
+      const data: Record<string, unknown> = { processingStatus: "EXTRACTED", pillarMapping: {} };
       if (input.title !== undefined) data.fileName = input.title;
       if (input.content !== undefined) {
         data.rawContent = input.content;
@@ -234,11 +278,11 @@ export const ingestionRouter = createTRPCRouter({
       // Same atomic boundary as deletion: readers see either the old source
       // with its index, or the revised source awaiting explicit preparation.
       // No embedding or generation follows a manual correction implicitly.
-      const [updated] = await ctx.db.$transaction([
-        ctx.db.brandDataSource.update({ where: { id: input.id }, data }),
-        ctx.db.brandContextNode.deleteMany({ where: { sourceId: input.id } }),
-      ]);
-      return updated;
+      return ctx.db.$transaction(async (tx) => {
+        const updated = await tx.brandDataSource.update({ where: { id: input.id }, data });
+        await invalidateSourceDerivatives(tx, input.id);
+        return updated;
+      });
     }),
 
   // Launch the full processing pipeline
@@ -374,10 +418,8 @@ export const ingestionRouter = createTRPCRouter({
   previewBrandBook: operatorProcedure
     .input(z.object({ strategyId: z.string(), sourceId: z.string(), mode: z.enum(["LLM", "STRUCTURED"]).default("LLM") }))
     .mutation(async ({ ctx, input }) => {
-      const source = await ctx.db.brandDataSource.findFirst({
-        where: { id: input.sourceId, strategyId: input.strategyId },
-        select: { rawContent: true, fileName: true },
-      });
+      await assertStrategyRead(ctx.session.user.id, input.strategyId);
+      const { source, contentHash } = await resolveBrandSource(input.sourceId, input.strategyId, ctx.db);
       if (!source?.rawContent) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Source introuvable ou sans texte extrait — uploade d'abord le brand book." });
       }
@@ -389,7 +431,7 @@ export const ingestionRouter = createTRPCRouter({
         caller: `operator:${ctx.session.user.id}`,
         sourceFilename: source.fileName ?? undefined,
       });
-      return { extraction };
+      return { extraction, sourceReceipt: { sourceId: source.id, contentHash } };
     }),
 
   /** PERSISTE une extraction RÉVISÉE via l'Intent gouverné (gateway + assets DRAFT). */
@@ -399,18 +441,17 @@ export const ingestionRouter = createTRPCRouter({
       extraction: z.unknown(),
       sourceFilename: z.string().optional(),
       sourceDataSourceId: z.string().optional(),
+      sourceReceipt: z.object({ sourceId: z.string(), contentHash: z.string().regex(/^[a-f0-9]{64}$/) }).optional(),
       // C3 — le front transmet le mode utilisé au preview (LLM/STRUCTURED) pour
       // que le persister pose la bonne provenance (INFERRED vs SOURCE).
       extractionMode: z.enum(["LLM", "STRUCTURED"]).default("LLM"),
     }))
     .mutation(async ({ ctx, input }) => {
-      // Marque la source « OFFICIELLE » (fait vérifié) si fournie.
-      if (input.sourceDataSourceId) {
-        await ctx.db.brandDataSource.updateMany({
-          where: { id: input.sourceDataSourceId, strategyId: input.strategyId },
-          data: { certainty: "OFFICIAL" },
-        });
+      await assertStrategyRead(ctx.session.user.id, input.strategyId);
+      if (input.sourceDataSourceId && input.sourceReceipt?.sourceId !== input.sourceDataSourceId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Relisez ce document avant d’appliquer son extraction." });
       }
+      // Reading a document as a brand book does not certify its authority.
       const { emitIntent } = await import("@/server/services/mestor/intents");
       return emitIntent(
         {
@@ -420,6 +461,7 @@ export const ingestionRouter = createTRPCRouter({
           extraction: input.extraction,
           sourceFilename: input.sourceFilename,
           sourceDataSourceId: input.sourceDataSourceId,
+          sourceReceipt: input.sourceReceipt,
           extractionMode: input.extractionMode,
         },
         { caller: "trpc.ingestion.ingestBrandBook" },

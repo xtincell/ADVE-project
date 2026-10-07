@@ -34,6 +34,15 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.401",
+    date: "2026-10-07",
+    headline: "Une référence commune, des usages propres à chaque marque",
+    highlights: [
+      { emoji: "📄", title: "Partagez sans recopier", body: "Liez un document aux autres marques que vous gérez. Son original et ses corrections restent uniques ; chaque marque conserve ses propres analyses. Vous pouvez retirer un usage sans effacer les décisions passées." },
+      { emoji: "✏️", title: "Les propositions suivent leurs références", body: "Une proposition fondée sur une ancienne version demande une nouvelle lecture avant application. La lecture d’un document reste distincte de sa validation." },
+    ],
+  },
+  {
     version: "6.27.400",
     date: "2026-10-06",
     headline: "Vos fichiers reçus restent retrouvables",

@@ -8,6 +8,10 @@ const recorded = vi.hoisted(() => ({
     fileUpload: { create: vi.fn(), update: vi.fn(), findUnique: vi.fn(), findUniqueOrThrow: vi.fn() },
     $queryRaw: vi.fn(), $executeRaw: vi.fn(),
     brandContextNode: { deleteMany: vi.fn() },
+    brandSourceUse: { updateMany: vi.fn() },
+    brandAsset: { updateMany: vi.fn(), findMany: vi.fn(async () => []) },
+    recommendation: { findMany: vi.fn(async () => []) },
+    pillar: { findMany: vi.fn(async () => []) },
     $transaction: vi.fn(),
   },
   assertRead: vi.fn(),
@@ -82,9 +86,9 @@ describe("manual source correction retires the previous analysis atomically", ()
     expect(recorded.assertRead).toHaveBeenCalledWith("operator-source-test", "brand");
     expect(recorded.db.brandContextNode.deleteMany).toHaveBeenCalledWith({ where: { sourceId: "source-test" } });
     const operations = recorded.db.$transaction.mock.calls[0]?.[0];
-    expect(operations).toHaveLength(2);
-    expect(operations).toContain(recorded.db.brandDataSource.update.mock.results[0]?.value);
-    expect(operations).toContain(recorded.db.brandContextNode.deleteMany.mock.results[0]?.value);
+    expect(typeof operations).toBe("function");
+    expect(recorded.db.brandSourceUse.updateMany).toHaveBeenCalled();
+    expect(recorded.db.brandAsset.updateMany).toHaveBeenCalled();
     expect(recorded.emit).not.toHaveBeenCalled();
   });
 
@@ -92,7 +96,7 @@ describe("manual source correction retires the previous analysis atomically", ()
     await caller().updateSource({ id: "source-test", content: "Le budget n'est plus confirmé." });
     expect(recorded.db.brandDataSource.update).toHaveBeenCalledWith({
       where: { id: "source-test" },
-      data: { rawContent: "Le budget n'est plus confirmé.", processingStatus: "EXTRACTED", errorMessage: null, extractedFields: {}, rawData: {} },
+      data: { rawContent: "Le budget n'est plus confirmé.", processingStatus: "EXTRACTED", pillarMapping: {}, errorMessage: null, extractedFields: {}, rawData: {} },
     });
   });
 

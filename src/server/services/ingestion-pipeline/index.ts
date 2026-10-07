@@ -27,6 +27,7 @@ import { ADVE_KEYS } from "@/domain";
  */
 
 import { db } from "@/lib/db";
+import { sourceScope } from "./source-usage";
 import { extractAuto } from "./extractors";
 import { analyzeAndMapSources, fillPillar, fillRTISPillar } from "./ai-filler";
 import { scoreObject } from "@/server/services/advertis-scorer";
@@ -174,19 +175,12 @@ export async function processStrategy(
       // If no specific sources mapped, use all extracted sources
       const effectiveSourceIds = sourceIds.length > 0
         ? sourceIds
-        : (await db.brandDataSource.findMany({ where: { strategyId, processingStatus: "EXTRACTED" }, select: { id: true } })).map((s) => s.id);
+        : (await db.brandDataSource.findMany({ where: { AND: [await sourceScope(strategyId)], processingStatus: { in: ["EXTRACTED", "PROCESSED"] } }, select: { id: true } })).map((s) => s.id);
 
       try {
         const result = await fillPillar(strategyId, key, effectiveSourceIds);
         status.results.push(result);
 
-        // Mark sources as processed
-        for (const sid of effectiveSourceIds) {
-          await db.brandDataSource.update({
-            where: { id: sid },
-            data: { processingStatus: "PROCESSED" },
-          }).catch((err) => { console.warn("[ingestion] source status update failed:", err instanceof Error ? err.message : err); });
-        }
       } catch (error) {
         const errMsg = error instanceof Error ? error.message : "Erreur inconnue";
         status.errors.push(`Remplissage pilier ${key} echoue: ${errMsg}`);
@@ -293,7 +287,7 @@ export async function triggerRTIS(strategyId: string): Promise<void> {
 
 export async function getIngestionStatus(strategyId: string): Promise<IngestionStatus> {
   const sources = await db.brandDataSource.findMany({
-    where: { strategyId },
+    where: await sourceScope(strategyId),
     select: { processingStatus: true },
   });
 

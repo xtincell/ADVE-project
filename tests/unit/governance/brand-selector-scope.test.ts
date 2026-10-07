@@ -79,7 +79,7 @@ describe("Dégradation honnête — une panne de strategy.list ne ment plus", ()
     // schéma prod 2026-07-11) : strategy.list 500 → data undefined → le
     // cockpit affichait « Créez votre première marque » alors que le founder
     // A des marques. Le provider doit distinguer erreur de vide.
-    expect(contextSrc).toContain("const { data, isLoading, isError }");
+    expect(contextSrc).toContain("const { data, isLoading, isError, refetch }");
     expect(contextSrc).toContain("isError");
   });
 

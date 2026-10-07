@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const h = vi.hoisted(() => ({ auth: vi.fn(), source: vi.fn(), scope: vi.fn(), access: vi.fn(), original: vi.fn() }));
 vi.mock("@/lib/auth/config", () => ({ auth: h.auth }));
-vi.mock("@/lib/db", () => ({ db: { brandDataSource: { findUnique: h.source } } }));
+vi.mock("@/server/services/ingestion-pipeline/source-usage", () => ({ resolveBrandSource: h.source }));
 vi.mock("@/server/services/operator-isolation", () => ({ canAccessStrategy: h.access, getOperatorContext: h.scope }));
 vi.mock("@/server/services/ingestion-pipeline/original", () => ({ readSourceOriginal: h.original }));
 import { GET } from "@/app/api/brand-sources/[sourceId]/original/route";
@@ -9,7 +9,7 @@ const request = () => GET(new Request("http://localhost/api/brand-sources/source
 beforeEach(() => {
   vi.resetAllMocks();
   h.auth.mockResolvedValue({ user: { id: "owner" } });
-  h.source.mockResolvedValue({ strategyId: "brand-a" });
+  h.source.mockResolvedValue({ consumerStrategyId: "brand-a" });
   h.scope.mockResolvedValue({ userId: "owner", role: "USER", operatorId: null });
   h.access.mockResolvedValue(true);
   h.original.mockResolvedValue({ bytes: Buffer.from("original bytes"), fileName: "brief\"\r\n<script>.txt", receipt: { contentHash: "hash" } });
@@ -23,6 +23,15 @@ describe("original download authorization", () => {
     h.access.mockResolvedValue(false); expect((await request()).status).toBe(404);
     expect(h.access).toHaveBeenCalledWith("brand-a", { userId: "owner", role: "USER", operatorId: null });
     expect(h.original).not.toHaveBeenCalled();
+  });
+  it("uses the consumer grant and denies revoked documents", async () => {
+    h.source.mockResolvedValueOnce({ consumerStrategyId: "consumer" });
+    const url = "http://localhost/api/brand-sources/source-a/original?strategyId=consumer";
+    expect((await GET(new Request(url), { params: Promise.resolve({ sourceId: "source-a" }) })).status).toBe(200);
+    expect(h.source).toHaveBeenCalledWith("source-a", "consumer");
+    expect(h.access).toHaveBeenLastCalledWith("consumer", expect.any(Object));
+    h.original.mockClear(); h.source.mockRejectedValueOnce(new Error("SOURCE_UNAVAILABLE"));
+    expect((await request()).status).toBe(404); expect(h.original).not.toHaveBeenCalled();
   });
   it("downloads exact bytes without public caching or executable content", async () => {
     const response = await request();

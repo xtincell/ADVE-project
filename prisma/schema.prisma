@@ -840,6 +840,7 @@ model Strategy {
   cohortSnapshots    CohortSnapshot[]
   scoreSnapshots     ScoreSnapshot[]
   dataSources        BrandDataSource[]
+  sourceUses         BrandSourceUse[]
   orchestrationPlans OrchestrationPlan[]
   recommendations    Recommendation[]
   recoBatches        RecommendationBatch[]
@@ -1812,6 +1813,7 @@ model BrandDataSource {
   strategy Strategy @relation(fields: [strategyId], references: [id])
   /// Original immutable du dépôt ; le texte de travail peut ensuite être corrigé.
   originalUpload FileUpload?
+  uses BrandSourceUse[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1820,6 +1822,27 @@ model BrandDataSource {
   @@index([processingStatus])
   @@index([certainty])
   @@index([origin])
+}
+
+/// ADR-0198 — an explicit document use, never a copy of its text or original.
+model BrandSourceUse {
+  id String @id @default(cuid())
+  sourceId String
+  strategyId String
+  /// Both strategies must still belong to this operator on every read.
+  operatorId String
+  createdById String
+  updatedById String
+  revokedAt DateTime?
+  analysisStatus String @default("EXTRACTED")
+  pillarMapping Json?
+  analyzedSourceHash String?
+  source BrandDataSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  strategy Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([sourceId, strategyId])
+  @@index([strategyId, revokedAt])
 }
 
 model Invoice {
@@ -4809,6 +4832,8 @@ model Recommendation {
   groundingScore     Float? // 0..1 — recouvrement avec l'union des extraits
   groundingBand      String? // GROUNDED|WEAK|UNGROUNDED|NO_SOURCE
   groundedSourceIds  String[] @default([]) // BrandDataSource.id réellement recouvrants
+  /// ADR-0198 — fingerprints of documents actually supplied to the generator.
+  sourceReceipts Json?
   citedSourceIds     String[] @default([]) // `source:<id>` revendiqués dans la justification
   unverifiedCitations String[] @default([]) // revendiqués SANS recouvrement — signal de fabrication
 

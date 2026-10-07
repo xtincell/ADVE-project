@@ -1163,7 +1163,7 @@ async function indexBrandSource(
     const { indexBrandSource: runIndex } = await import(
       "@/server/services/seshat/context-store"
     );
-    const result = await runIndex(intent.sourceId);
+    const result = await runIndex(intent.sourceId, intent.strategyId);
     return {
       status: "OK",
       summary: `Brand source ${intent.sourceId} indexed: ${result.chunks} chunks in ${result.durationMs}ms`,
@@ -1189,7 +1189,7 @@ async function classifyBrandSource(
     const { classifySource } = await import(
       "@/server/services/source-classifier"
     );
-    const result = await classifySource(intent.sourceId);
+    const result = await classifySource(intent.sourceId, intent.strategyId);
     return {
       status: "OK",
       summary: `Source ${intent.sourceId} classified: ${result.proposals.length} proposals in ${result.durationMs}ms`,
@@ -1215,7 +1215,7 @@ async function proposeVaultFromSource(
     const { proposeBrandAssetsFromSource } = await import(
       "@/server/services/source-classifier"
     );
-    const result = await proposeBrandAssetsFromSource(intent.sourceId, intent.operatorId);
+    const result = await proposeBrandAssetsFromSource(intent.sourceId, intent.operatorId, intent.strategyId);
     return {
       status: "OK",
       summary: `Vault proposals persisted: ${result.brandAssetIds.length} BrandAsset DRAFTs from source ${intent.sourceId}`,

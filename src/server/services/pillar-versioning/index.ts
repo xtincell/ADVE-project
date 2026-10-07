@@ -18,14 +18,14 @@ interface VersionEntry {
  * Snapshot the current pillar state before applying changes.
  * Called before each update to preserve the previous version.
  */
-export async function createVersion(entry: VersionEntry): Promise<string> {
-  const pillar = await db.pillar.findUnique({ where: { id: entry.pillarId } });
+export async function createVersion(entry: VersionEntry, client: Prisma.TransactionClient = db): Promise<string> {
+  const pillar = await client.pillar.findUnique({ where: { id: entry.pillarId } });
   if (!pillar) throw new Error(`Pillar ${entry.pillarId} not found`);
 
   const previousContent = (pillar.content as Record<string, unknown>) ?? {};
   const diff = computeDiff(previousContent, entry.content);
 
-  const version = await db.pillarVersion.create({
+  const version = await client.pillarVersion.create({
     data: {
       pillarId: entry.pillarId,
       version: pillar.currentVersion ?? 1,
@@ -38,8 +38,7 @@ export async function createVersion(entry: VersionEntry): Promise<string> {
   });
 
   // round-13a (CRITICAL) — createVersion ne bumpe PLUS `Pillar.currentVersion`.
-  // Il tourne sur le client `db` global (hors de la tx interactive du gateway, cf.
-  // pillar-gateway/index.ts:324-325). Bumper ici committait N→N+1 sur une connexion
+  // Historiquement exécuté sur le client global, il faisait alors N→N+1 sur une connexion
   // SÉPARÉE, AVANT le persist conditionnel du gateway (`updateMany where
   // currentVersion = N` — verrou optimiste posé round-12). Sous READ COMMITTED, ce
   // persist re-snapshottait la ligne à N+1 (déjà committée par ce bump), matchait
@@ -48,6 +47,8 @@ export async function createVersion(entry: VersionEntry): Promise<string> {
   // Le bump du compteur appartient désormais au SEUL persist atomique du gateway,
   // qui devient un verrou optimiste réel. Les callers hors gateway (rollback ci-dessous)
   // bumpent explicitement. Invariant verrouillé par create-version-no-bump.test.ts.
+  // ADR-0198 : le gateway passe maintenant sa transaction ; snapshot et contenu
+  // sont annulés ensemble si un pilier du lot est refusé.
   return version.id;
 }
 

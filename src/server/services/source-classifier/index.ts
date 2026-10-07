@@ -21,6 +21,7 @@
  */
 
 import { db } from "@/lib/db";
+import { resolveBrandSource, assertCurrentSourceReceipts, type SourceReceipt } from "@/server/services/ingestion-pipeline/source-usage";
 import { createBrandAsset } from "@/server/services/brand-vault/engine";
 import { tagAsset } from "@/server/services/asset-tagger";
 import { isBrandAssetKind, type BrandAssetKind } from "@/domain/brand-asset-kinds";
@@ -39,6 +40,7 @@ const HEURISTIC_DECOMPOSER_TRIGGERS = new Set<BrandAssetKind>([
 
 export interface ClassifierResult {
   sourceId: string;
+  sourceReceipt: SourceReceipt;
   strategyId: string;
   proposals: SourceClassificationProposal[];
   durationMs: number;
@@ -53,24 +55,13 @@ export interface VaultProposalResult extends ClassifierResult {
  * Classify a single BrandDataSource into N proposals (no DB writes).
  * Returns proposals in confidence-descending order.
  */
-export async function classifySource(sourceId: string): Promise<ClassifierResult> {
+export async function classifySource(sourceId: string, strategyId?: string): Promise<ClassifierResult> {
   const t0 = Date.now();
-  const source = await db.brandDataSource.findUnique({
-    where: { id: sourceId },
-    select: {
-      id: true,
-      strategyId: true,
-      sourceType: true,
-      fileName: true,
-      fileType: true,
-      rawContent: true,
-      rawData: true,
-      processingStatus: true,
-    },
-  });
-  if (!source) throw new Error(`BrandDataSource ${sourceId} not found`);
+  const resolved = await resolveBrandSource(sourceId, strategyId);
+  const { source, consumerStrategyId } = resolved;
+  const sourceReceipt = { sourceId, contentHash: resolved.contentHash };
   if (source.processingStatus !== "EXTRACTED" && source.processingStatus !== "PROCESSED") {
-    return { sourceId, strategyId: source.strategyId, proposals: [], durationMs: Date.now() - t0 };
+    return { sourceId, sourceReceipt, strategyId: consumerStrategyId, proposals: [], durationMs: Date.now() - t0 };
   }
 
   const mimeType = inferMimeType(source.fileType, source.sourceType);
@@ -110,7 +101,7 @@ export async function classifySource(sourceId: string): Promise<ClassifierResult
           base64Data: base64,
           fileName: source.fileName,
           mimeType,
-          strategyId: source.strategyId,
+          strategyId: consumerStrategyId,
         });
         if (visionProposal && visionProposal.confidence > heuristic.confidence) {
           proposals.unshift(visionProposal);
@@ -118,7 +109,7 @@ export async function classifySource(sourceId: string): Promise<ClassifierResult
       }
     }
 
-    return finalize(source.id, source.strategyId, proposals, t0);
+    return finalize(source.id, consumerStrategyId, proposals, t0, sourceReceipt);
   }
 
   // ── Document / text path ─────────────────────────────────────
@@ -143,7 +134,7 @@ export async function classifySource(sourceId: string): Promise<ClassifierResult
       fileName: source.fileName,
       mimeType,
       fileType: source.fileType,
-      strategyId: source.strategyId,
+      strategyId: consumerStrategyId,
     });
     for (const proposal of decomposed) {
       // Drop duplicate kinds (heuristic-only + LLM same kind) when LLM has higher confidence.
@@ -158,7 +149,7 @@ export async function classifySource(sourceId: string): Promise<ClassifierResult
     }
   }
 
-  return finalize(source.id, source.strategyId, proposals, t0);
+  return finalize(source.id, consumerStrategyId, proposals, t0, sourceReceipt);
 }
 
 function finalize(
@@ -166,9 +157,10 @@ function finalize(
   strategyId: string,
   proposals: SourceClassificationProposal[],
   t0: number,
+  sourceReceipt: SourceReceipt,
 ): ClassifierResult {
   proposals.sort((a, b) => b.confidence - a.confidence);
-  return { sourceId, strategyId, proposals, durationMs: Date.now() - t0 };
+  return { sourceId, sourceReceipt, strategyId, proposals, durationMs: Date.now() - t0 };
 }
 
 /**
@@ -178,77 +170,46 @@ function finalize(
 export async function proposeBrandAssetsFromSource(
   sourceId: string,
   operatorId: string,
+  strategyId?: string,
 ): Promise<VaultProposalResult> {
-  const classification = await classifySource(sourceId);
-  if (classification.proposals.length === 0) {
-    return { ...classification, brandAssetIds: [] };
-  }
-
-  // Drop any prior DRAFTs from the same source so re-classification doesn't
-  // accumulate stale proposals (operator-promoted CANDIDATE/SELECTED/ACTIVE
-  // assets are NEVER touched — they are committed work).
-  const stale = await db.brandAsset.findMany({
-    where: { strategyId: classification.strategyId, state: "DRAFT" },
-    select: { id: true, metadata: true },
-  });
-  const staleIds = stale
-    .filter((a: { id: string; metadata: unknown }) => {
-      const meta = (a.metadata as Record<string, unknown> | null) ?? null;
-      return meta?.sourceDataSourceId === sourceId;
-    })
-    .map((a: { id: string }) => a.id);
-  if (staleIds.length > 0) {
-    await db.brandAsset.deleteMany({ where: { id: { in: staleIds } } });
-  }
-
-  const source = await db.brandDataSource.findUnique({
-    where: { id: sourceId },
-    select: { fileType: true, fileName: true, sourceType: true },
-  });
-
-  const brandAssetIds: string[] = [];
-  for (const proposal of classification.proposals) {
-    const safeKind: BrandAssetKind = isBrandAssetKind(proposal.kind) ? proposal.kind : "GENERIC";
-    // V1: classifier produces INTELLECTUAL DRAFTs. Operator can later
-    // upload a proper fileUrl via the brand-vault router (`supersede`)
-    // when promoting LOGO_FINAL/KV_VISUAL/PACKAGING_LAYOUT to ACTIVE.
-    const family = guessFamily(safeKind);
-    try {
+  const classification = await classifySource(sourceId, strategyId);
+  const brandAssetIds = await db.$transaction(async (tx) => {
+    // An old in-flight classification cannot retire current proposals or write stale ones.
+    await tx.$queryRaw`SELECT id FROM "BrandDataSource" WHERE id = ${sourceId} FOR UPDATE`;
+    await assertCurrentSourceReceipts(tx, classification.strategyId, [classification.sourceReceipt]);
+    const { source } = await resolveBrandSource(sourceId, classification.strategyId, tx);
+    // Preserve decisions AND superseded drafts for inspection; retries are idempotent.
+    const existing = await tx.brandAsset.findMany({ where: {
+      strategyId: classification.strategyId, metadata: { path: ["sourceDataSourceId"], equals: sourceId },
+      state: { notIn: ["ARCHIVED", "SUPERSEDED"] }, staleAt: null,
+    }, select: { id: true, metadata: true } });
+    const current = existing.filter((a) => (a.metadata as Record<string, unknown> | null)?.sourceContentHash === classification.sourceReceipt.contentHash);
+    if (current.length) return current.map((a) => a.id);
+    await tx.brandAsset.updateMany({ where: {
+      strategyId: classification.strategyId, state: "DRAFT", metadata: { path: ["sourceDataSourceId"], equals: sourceId },
+    }, data: { state: "SUPERSEDED" } });
+    const ids: string[] = [];
+    for (const proposal of classification.proposals) {
+      const kind: BrandAssetKind = isBrandAssetKind(proposal.kind) ? proposal.kind : "GENERIC";
       const asset = await createBrandAsset({
-        strategyId: classification.strategyId,
-        operatorId,
-        name: proposal.name || `Source ${sourceId.slice(0, 6)}`,
-        kind: safeKind,
-        family,
-        content: proposal.content,
-        summary: proposal.summary || undefined,
-        pillarSource: proposal.pillarSource,
-        state: "DRAFT",
-        metadata: {
-          sourceDataSourceId: sourceId,
-          classifierConfidence: proposal.confidence,
-          classifierInferredBy: proposal.inferredBy,
+        strategyId: classification.strategyId, operatorId,
+        name: proposal.name || `Source ${sourceId.slice(0, 6)}`, kind, family: guessFamily(kind),
+        content: proposal.content, summary: proposal.summary || undefined, pillarSource: proposal.pillarSource,
+        state: "DRAFT", metadata: {
+          sourceDataSourceId: sourceId, sourceContentHash: classification.sourceReceipt.contentHash,
+          classifierConfidence: proposal.confidence, classifierInferredBy: proposal.inferredBy,
           ...(proposal.sourceCitation ? { sourceCitation: proposal.sourceCitation } : {}),
-          ...(source?.fileName ? { sourceFileName: source.fileName } : {}),
-          ...(source?.fileType ? { sourceFileType: source.fileType } : {}),
+          sourceFileName: source.fileName, sourceFileType: source.fileType,
         },
-      });
-      brandAssetIds.push(asset.id);
-      // Asset-tagger fills pillarTags multi-pillar (non-blocking).
-      void tagAsset(asset.id).catch((err: unknown) => {
-        console.warn(
-          "[source-classifier] tagAsset failed (non-blocking):",
-          err instanceof Error ? err.message : err,
-        );
-      });
-    } catch (err) {
-      console.warn(
-        `[source-classifier] createBrandAsset failed for proposal ${proposal.kind}:`,
-        err instanceof Error ? err.message : err,
-      );
+      }, tx);
+      ids.push(asset.id);
     }
-  }
-
+    return ids;
+  });
+  // Never launch a worker against uncommitted rows.
+  for (const id of brandAssetIds) void tagAsset(id).catch((err: unknown) => {
+    console.warn("[source-classifier] tagAsset failed:", err instanceof Error ? err.message : err);
+  });
   return { ...classification, brandAssetIds };
 }
 

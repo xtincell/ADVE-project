@@ -4,11 +4,14 @@ const harness = vi.hoisted(() => {
   const state = { sources: [] as any[], nodes: [] as any[], failWrite: false, nextId: 0 };
   function matches(row: any, where: any = {}): boolean {
     return Object.entries(where).every(([key, value]: [string, any]) =>
+      key === "AND" ? value.every((clause: any) => matches(row, clause)) :
+      key === "OR" ? value.some((clause: any) => matches(row, clause)) :
       value && typeof value === "object" && "in" in value
         ? value.in.includes(row[key]) : row[key] === value);
   }
   const db: any = {
     brandDataSource: {
+      findFirst: vi.fn(async ({ where }) => structuredClone(state.sources.find((s) => matches(s, where)) ?? null)),
       findUnique: vi.fn(async ({ where }) => structuredClone(state.sources.find((s) => matches(s, where)) ?? null)),
       findMany: vi.fn(async ({ where }) => structuredClone(state.sources.filter((s) => matches(s, where)))),
     },
@@ -77,7 +80,8 @@ describe("one complete, current document index", () => {
     source().rawContent = `${head}\n\n${tail.replaceAll("hypothèse", "inconnue.")}`;
     const result = await indexBrandSource("source-a");
     expect(ownNodes()).toHaveLength(before.length);
-    expect(ownNodes()[0].contentHash).toBe(before[0].contentHash);
+    expect(ownNodes()[0].payload.text).toBe(before[0].payload.text);
+    expect(ownNodes()[0].contentHash).not.toBe(before[0].contentHash);
     expect(ownNodes().map((n) => n.payload.text).join(" ")).toContain("inconnue.");
     expect(ownNodes().map((n) => n.payload.text).join(" ")).not.toContain("hypothèse");
     expect(result.alreadyFresh).not.toBe(true);

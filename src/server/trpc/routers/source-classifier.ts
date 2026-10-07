@@ -18,6 +18,7 @@ import { auditedProcedure } from "@/server/governance/governed-procedure";
 import { promoteToActive as enginePromoteToActive } from "@/server/services/brand-vault/engine";
 import { canAccessStrategy, getOperatorContext } from "@/server/services/operator-isolation";
 import { db } from "@/lib/db";
+import { assertAssetSourceCurrent, resolveBrandSource } from "@/server/services/ingestion-pipeline/source-usage";
 
 /**
  * Anti-IDOR (audit adversarial 2026-07-22) : `acceptProposal`/`rejectProposal`
@@ -46,7 +47,12 @@ const auditedProtected = auditedProcedure(protectedProcedure, "source-classifier
   // ADR-0166 — garde d'ownership à la base : toutes les procédures de cette
   // lane prennent un strategyId ; un id étranger est refusé avant le handler.
   await assertRawStrategyScope(ctx.session.user.id, await getRawInput(), { optional: true });
-  return next();
+  const result = await next();
+  if (!result.ok && /^SOURCE_(CHANGED|RECEIPT_MISSING|UNAVAILABLE):/.test(result.error.message)) {
+    throw new TRPCError({ code: result.error.message.startsWith("SOURCE_UNAVAILABLE:") ? "NOT_FOUND" : "CONFLICT",
+      message: result.error.message, cause: result.error });
+  }
+  return result;
 });
 
 const ACCEPT_AS_ACTIVE_KINDS: ReadonlySet<string> = new Set([
@@ -68,6 +74,7 @@ export const sourceClassifierRouter = createTRPCRouter({
       sourceId: z.string(),
     }))
     .mutation(async ({ ctx, input }) => {
+      await resolveBrandSource(input.sourceId, input.strategyId);
       const { emitIntent } = await import("@/server/services/mestor/intents");
       const result = await emitIntent(
         {
@@ -127,7 +134,9 @@ export const sourceClassifierRouter = createTRPCRouter({
       }
 
       const promoteToActiveDirect = ACCEPT_AS_ACTIVE_KINDS.has(nextKind);
-      await ctx.db.brandAsset.update({
+      await ctx.db.$transaction(async (tx) => {
+        await assertAssetSourceCurrent(tx, asset);
+        return tx.brandAsset.update({
         where: { id: input.brandAssetId },
         data: {
           kind: nextKind,
@@ -136,6 +145,7 @@ export const sourceClassifierRouter = createTRPCRouter({
           selectedById: ctx.session.user.id,
           selectedReason: input.reason ?? "Operator accepted classifier proposal.",
         },
+        });
       });
 
       if (promoteToActiveDirect) {
@@ -193,7 +203,9 @@ export const sourceClassifierRouter = createTRPCRouter({
       const acceptedIds: string[] = [];
       for (const draft of matching) {
         const promoteToActiveDirect = ACCEPT_AS_ACTIVE_KINDS.has(draft.kind);
-        await ctx.db.brandAsset.update({
+        await ctx.db.$transaction(async (tx) => {
+          await assertAssetSourceCurrent(tx, draft);
+          return tx.brandAsset.update({
           where: { id: draft.id },
           data: {
             state: "SELECTED",
@@ -201,6 +213,7 @@ export const sourceClassifierRouter = createTRPCRouter({
             selectedById: ctx.session.user.id,
             selectedReason: "Batch accept (high confidence ≥ 0.8).",
           },
+          });
         });
         if (promoteToActiveDirect) {
           await enginePromoteToActive({

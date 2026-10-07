@@ -1,5 +1,15 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## Autorité documentaire par marque — 2026-10-07
+
+ADR-0198 étend les sources, usages et dérivés existants : une pièce canonique,
+des classements locaux et la version réellement consommée. Correction/révocation
+retirent les anciens index et signalent les décisions à revoir ; une proposition
+périmée est refusée dans la transaction d'écriture. Le lot Notoria multi-piliers
+et ses versions sont atomiques. PostgreSQL et parcours natifs synthétiques reçus.
+Ce lot ne clôt ni les échanges avec La Barre, ni tous les dérivés transitifs,
+ni la qualification du corpus ; ils restent au contrat de release Shinkiro.
+
 ## Raccordement opérationnel du portefeuille — 2026-10-02
 
 ADR-0193 étend les BrandNode et les pages portfolio existants : identités externes,

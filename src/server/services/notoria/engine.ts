@@ -531,6 +531,9 @@ async function persistBatch(
         groundingScore: grounding.score,
         groundingBand: grounding.band,
         groundedSourceIds: grounding.groundedSourceIds,
+        sourceReceipts: Array.from(new Map(sourceCtx.excerpts
+          .filter((e) => e.contentHash)
+          .map((e) => [e.sourceId, { sourceId: e.sourceId, contentHash: e.contentHash! }])).values()),
         citedSourceIds: grounding.citedSourceIds,
         unverifiedCitations: grounding.unverifiedCitations,
         status: "PENDING",

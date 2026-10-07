@@ -10,3 +10,9 @@
 `BrandDataSource.originalUpload` relie le `FileUpload` reçu et chiffré. Son empreinte
 identifie les octets déposés, indépendamment du texte de travail corrigible. Un
 reçu de stockage ne vaut ni confirmation d’une assertion ni accord du client.
+
+### Usage documentaire — ADR-0198 (2026-10-07)
+
+Voir la définition dans [la bible, annexe L](STATE_FINAL_BLUEPRINT.md#usage-documentaire).
+`BrandSourceUse` relie une pièce canonique à une marque consommatrice ; les reçus
+enregistrent la version lue, sans copier le document ni confirmer son contenu.

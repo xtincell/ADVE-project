@@ -13,6 +13,7 @@
  */
 
 import { db } from "@/lib/db";
+import { assertAssetSourceCurrent } from "@/server/services/ingestion-pipeline/source-usage";
 import type { BrandAssetState, Prisma } from "@prisma/client";
 import { randomBytes } from "node:crypto";
 
@@ -161,10 +162,15 @@ export interface CreateBrandAssetInput {
  * Crée un BrandAsset avec lineage hash-chain. Idempotent best-effort sur
  * (sourceGloryOutputId, batchIndex) pour éviter les doublons en cas de replay.
  */
-export async function createBrandAsset(input: CreateBrandAssetInput) {
+export async function createBrandAsset(input: CreateBrandAssetInput, client: Prisma.TransactionClient = db): Promise<import("@prisma/client").BrandAsset> {
+  // Source-derived assets are committed under the same evidence lock as corrections.
+  if (client === db && typeof input.metadata?.sourceDataSourceId === "string") {
+    return db.$transaction((tx) => createBrandAsset(input, tx));
+  }
+  await assertAssetSourceCurrent(client, { strategyId: input.strategyId, metadata: input.metadata });
   const family = input.family ?? (input.fileUrl ? "MATERIAL" : input.content ? "INTELLECTUAL" : "HYBRID");
   const state = input.state ?? "DRAFT";
-  return db.brandAsset.create({
+  return client.brandAsset.create({
     data: {
       strategyId: input.strategyId,
       operatorId: input.operatorId,
@@ -265,9 +271,11 @@ export async function selectFromBatch(args: {
     throw new Error(`BrandAsset ${args.selectedAssetId} doesn't belong to batch ${args.batchId}`);
   }
 
-  // Mark selected → SELECTED (or ACTIVE if promoteToActive)
   const targetState = args.promoteToActive ? "ACTIVE" : "SELECTED";
-  const updated = await db.brandAsset.update({
+  const updated = await db.$transaction(async (tx) => {
+    await assertAssetSourceCurrent(tx, selected);
+  // Mark selected → SELECTED (or ACTIVE if promoteToActive)
+  const updated = await tx.brandAsset.update({
     where: { id: args.selectedAssetId },
     data: {
       state: targetState,
@@ -278,7 +286,7 @@ export async function selectFromBatch(args: {
   });
 
   // Mark others in batch as REJECTED
-  await db.brandAsset.updateMany({
+  await tx.brandAsset.updateMany({
     where: { batchId: args.batchId, id: { not: args.selectedAssetId }, state: "CANDIDATE" },
     data: { state: "REJECTED" },
   });
@@ -287,12 +295,15 @@ export async function selectFromBatch(args: {
   if (args.promoteToActive && selected.campaignId) {
     const fieldName = CAMPAIGN_ACTIVE_KIND_FIELDS[selected.kind];
     if (fieldName) {
-      await db.campaign.update({
+      await tx.campaign.update({
         where: { id: selected.campaignId },
         data: { [fieldName]: args.selectedAssetId } as Prisma.CampaignUpdateInput,
       });
     }
   }
+
+    return updated;
+  });
 
   // Best-effort IntentEmission for hash-chain
   try {
@@ -374,7 +385,9 @@ export async function promoteToActive(args: {
     }
   }
 
-  const updated = await db.brandAsset.update({
+  const updated = await db.$transaction(async (tx) => {
+    await assertAssetSourceCurrent(tx, asset);
+  const updated = await tx.brandAsset.update({
     where: { id: args.brandAssetId },
     data: { state: "ACTIVE" },
   });
@@ -382,12 +395,15 @@ export async function promoteToActive(args: {
   if (asset.campaignId) {
     const fieldName = CAMPAIGN_ACTIVE_KIND_FIELDS[asset.kind];
     if (fieldName) {
-      await db.campaign.update({
+      await tx.campaign.update({
         where: { id: asset.campaignId },
         data: { [fieldName]: args.brandAssetId } as Prisma.CampaignUpdateInput,
       });
     }
   }
+
+    return updated;
+  });
 
   try {
     await db.intentEmission.create({

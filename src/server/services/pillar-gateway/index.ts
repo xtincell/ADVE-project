@@ -28,6 +28,7 @@ import { validatePillarPartial } from "@/lib/types/pillar-schemas";
 import { validateAgainstBible } from "@/lib/types/variable-bible";
 import { createVersion } from "@/server/services/pillar-versioning";
 import * as auditTrail from "@/server/services/audit-trail";
+import { assertCurrentSourceReceipts, readSourceReceipts, type SourceReceipt } from "@/server/services/ingestion-pipeline/source-usage";
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -56,6 +57,8 @@ type PillarWriteOperation =
   | { type: "APPLY_RECOS_RESOLVED"; operations: Array<{ field: string; operation: string; proposedValue: unknown; targetMatch?: { key: string; value: string }; recoId: string }> };
 
 interface PillarWriteOptions {
+  sourceReceipts?: SourceReceipt[];
+  requiredSourceIds?: string[];
   skipValidation?: boolean;
   targetStatus?: ValidationStatus;
   confidenceDelta?: number;
@@ -220,21 +223,24 @@ function applyRecos(
 
 // ── Main Gateway ──────────────────────────────────────────────────────
 
-export async function writePillar(request: PillarWriteRequest): Promise<PillarWriteResult> {
+export async function writePillar(request: PillarWriteRequest, transaction?: Prisma.TransactionClient): Promise<PillarWriteResult> {
   const { strategyId, pillarKey, operation, author, options } = request;
   const warnings: string[] = [];
 
-  // Auto-create pillar row BEFORE the transaction so that createVersion (which
-  // uses the global `db` client, not `tx`) can find the row via its id.
-  // upsert is race-safe: concurrent writes for the same key both succeed.
-  await db.pillar.upsert({
+  // Single writes keep their historical upsert; an atomic batch includes it in
+  // its transaction. createVersion uses that same transaction, so a refusal
+  // rolls back both content and snapshots. The key upsert remains race-safe.
+  await (transaction ?? db).pillar.upsert({
     where: { strategyId_key: { strategyId, key: pillarKey } },
     create: { strategyId, key: pillarKey, content: {}, confidence: 0, currentVersion: 1 },
     update: {},
   });
 
   try {
-    const result = await db.$transaction(async (tx) => {
+    const perform = async (tx: Prisma.TransactionClient): Promise<PillarWriteResult> => {
+      if (options?.sourceReceipts || options?.requiredSourceIds?.length) {
+        await assertCurrentSourceReceipts(tx, strategyId, options.sourceReceipts ?? [], options.requiredSourceIds);
+      }
       // ── Load current pillar ──────────────────────────────────────
       const pillar = await tx.pillar.findUnique({
         where: { strategyId_key: { strategyId, key: pillarKey } },
@@ -433,7 +439,7 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
         author: `${author.system}${author.userId ? `:${author.userId}` : ""}`,
         reason: author.reason,
         intentId: author.intentId,
-      });
+      }, tx);
 
       const newVersion = (pillar.currentVersion ?? 1) + 1;
 
@@ -492,6 +498,10 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
           validationStatus: targetStatus,
           staleAt: null, // This pillar is now fresh
           currentVersion: newVersion,
+          ...(options?.sourceReceipts?.length ? { sources: [
+            ...(Array.isArray(pillar.sources) ? pillar.sources.filter((entry) => !readSourceReceipts([entry]).some((old) => options.sourceReceipts!.some((r) => r.sourceId === old.sourceId))) : []),
+            ...options.sourceReceipts,
+          ] as Prisma.InputJsonValue } : {}),
         },
       });
       if (persisted.count !== 1) {
@@ -535,7 +545,8 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
         warnings,
         challenged,
       };
-    }, {
+    };
+    const result = transaction ? await perform(transaction) : await db.$transaction(perform, {
       // Supabase EU = latence réseau élevée (cf. DB_POOL_CONN_MS=30000). Le défaut
       // Prisma de 5s pour les transactions interactives expirait sur les écritures
       // RTIS lourdes (gros blob + versioning + staleness propagation) → écriture
@@ -552,14 +563,7 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
     // l'Oracle. Le chemin commun est ici. Idempotent (COMPLETE→STALE
     // uniquement — no-op à l'intake où aucune section n'existe) et
     // conservateur : sur-invalider est sûr, sous-invalider était le bug.
-    if (result.success) {
-      try {
-        const { markAllSectionsStale } = await import("@/server/services/oracle-section");
-        await markAllSectionsStale(strategyId);
-      } catch {
-        // Non-fatal — la staleness Oracle ne doit jamais casser l'écriture pilier.
-      }
-    }
+    if (result.success && !transaction) await invalidateOracleAfterCommit(strategyId);
     return result;
   } catch (err) {
     return {
@@ -572,6 +576,28 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
       error: err instanceof Error ? err.message : String(err),
     };
   }
+}
+
+/** One typed recommendation can touch several pillars: all persist or none do. */
+export async function writePillarsAtomically(requests: PillarWriteRequest[]): Promise<PillarWriteResult[]> {
+  if (!requests.length) return [];
+  const strategyId = requests[0]!.strategyId;
+  if (requests.some((r) => r.strategyId !== strategyId)) throw new Error("PILLAR_BATCH_STRATEGY_MISMATCH");
+  const results = await db.$transaction(async (tx) => {
+    await assertCurrentSourceReceipts(tx, strategyId, requests.flatMap((r) => r.options?.sourceReceipts ?? []),
+      requests.flatMap((r) => r.options?.requiredSourceIds ?? []));
+    const written: PillarWriteResult[] = [];
+    for (const request of requests) {
+      const result = await writePillar(request, tx);
+      if (!result.success) throw new Error(result.error ?? "Écriture de pilier refusée.");
+      written.push(result);
+    }
+    return written;
+  }, { timeout: 30_000, maxWait: 15_000 });
+  await invalidateOracleAfterCommit(strategyId);
+  await postWriteScore(strategyId);
+  for (const request of requests) await reconcileAndPublishPillar(request);
+  return results;
 }
 
 /**
@@ -594,6 +620,20 @@ export async function writePillarAndScore(request: PillarWriteRequest): Promise<
   const result = await writePillar(request);
   if (result.success) {
     await postWriteScore(request.strategyId);
+    await reconcileAndPublishPillar(request);
+  }
+  return result;
+}
+
+/** The same post-commit effects serve single writes and atomic batches. */
+async function invalidateOracleAfterCommit(strategyId: string): Promise<void> {
+  try {
+    const { markAllSectionsStale } = await import("@/server/services/oracle-section");
+    await markAllSectionsStale(strategyId);
+  } catch { /* Oracle staleness cannot roll back an already committed pillar. */ }
+}
+
+async function reconcileAndPublishPillar(request: PillarWriteRequest): Promise<void> {
     // D-2 — reconcile Pillar.completionLevel cache against the canonical
     // pillar-readiness verdict on every write. Any caller that mutates
     // pillar content goes through this function (LOI 1), so this single
@@ -611,8 +651,6 @@ export async function writePillarAndScore(request: PillarWriteRequest): Promise<
           ? String((request.author as { system: unknown }).system)
           : "unknown",
     });
-  }
-  return result;
 }
 
 /**

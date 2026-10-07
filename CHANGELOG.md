@@ -1,5 +1,26 @@
 # Changelog — La Fusee
 
+## v6.27.401 — fix(sources): partager une pièce et vérifier la version réellement utilisée (2026-10-07)
+
+**Un document peut servir plusieurs marques sans dupliquer sa vérité ni ses corrections.**
+
+- Association source/marque révocable, sans copie du texte ou de l’original. Les
+  lectures, recherches et analyses existantes conservent la marque destinataire,
+  ses classements et son périmètre d’accès ; aucun lien ne lance d’IA.
+- Empreinte documentaire portée jusqu’aux propositions et aux écritures. Correction
+  ou retrait invalident index, actifs et recommandations concernés sans effacer
+  les décisions. L’application périmée est refusée dans la transaction d’écriture.
+- Un lot de recommandations touchant plusieurs piliers conserve ou annule aussi
+  ses versions ; score, cache et événements suivent le commit. Une prévisualisation
+  de livre de marque ne certifie pas implicitement la pièce reçue.
+- Huit scénarios PostgreSQL, quatre tests de reçu et verrou rouge/vert. Parcours
+  navigateur sur trois dossiers synthétiques : original identique, texte corrigé,
+  retrait puis reprise. Le sélecteur rafraîchit une marque absente de son cache
+  au lieu d’activer silencieusement un autre dossier.
+- Réception du magasin privé 400 en production et restauration isolée du document
+  pilote terminées. Les échanges entre outils, les autres dérivés transitifs et
+  la réception complète du corpus restent suivis au contrat Shinkiro.
+
 ## v6.27.400 — fix(sources): conserver les originaux et reprendre un dépôt sans doublon (2026-10-06)
 
 **Le texte corrigé et le fichier reçu restent deux pièces distinctes et retrouvables.**

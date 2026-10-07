@@ -2,17 +2,27 @@
 
 ## Continuité des originaux de sources — 2026-10-06 (ADR-0197)
 
-- Stockage privé et reçu local éprouvés ; réception de l’image cible, du volume et
-  de sa sauvegarde/restauration à terminer avant de déclarer le corpus reçu.
-  Déclencheur : livraison 400. Effort : un lot de réception sur le fichier pilote.
+- **Fermé le 2026-10-07 pour le document pilote** : image 400, volume privé,
+  téléchargement identique et restauration isolée du fichier/reçu reçus en production.
+  La restauration complète du SI et sur un autre hôte reste au chantier C7 Shinkiro.
 - Le stockage HTTP conserve les reçus actifs ; son inventaire d’orphelins après
   suppression du propriétaire reste à contractualiser avec le backend distant.
   L’installation cible utilise le volume privé, dont ce nettoyage est reçu.
   Déclencheur : activation d’un backend HTTP ; effort : un lot de maintenance.
-- Une même source doit pouvoir servir plusieurs marques sous des droits explicites,
-  avec propagation de péremption aux actifs/recommandations. L’original ne crée pas
-  ce partage. Déclencheur : raccord du brief multimarque après réception de 400 ;
-  effort : un lot d’autorité documentaire et de recettes concurrentes.
+- **Implémenté et reçu localement en 401 (ADR-0198)** : usages révocables, reçus de
+  version et péremption des dérivés documentaires directs. Réception du brief réel
+  dans les trois dossiers natifs à effectuer sur l’image 401. Déclencheur :
+  déploiement 401 ; effort : un lot de réception sans analyse ni validation client.
+- **Dérivés transitifs** : les actifs/recommandations liés à une source sont invalidés
+  et leurs index retirés. Les consommateurs de piliers/actifs dans les autres chaînes
+  métier doivent encore propager leurs propres reçus et refuser une entrée périmée.
+  Fermer par un parcours corrigé/révoqué jusqu’au livrable final, sans dépendre de la
+  seule suppression d’index. Déclencheur : circulation C3/C6 ; effort : un lot par chaîne.
+- **Recommandations typées et concurrence métier** : la transaction multi-piliers
+  protège le commit et les sources, mais le contenu REPLACE_FULL est composé avant
+  son ouverture. Ajouter la version des piliers lus à la précondition, puis éprouver
+  deux modifications concurrentes. Déclencheur : prochaine recette C3/C6 ; effort :
+  un lot gateway/apply-payload. Une reprise ne doit pas écraser une correction humaine.
 
 ## Accès aux sources créatives externes — 2026-10-06 (ADR-0194/0195/0196)
 

@@ -1,5 +1,5 @@
 import { auth } from "@/lib/auth/config";
-import { db } from "@/lib/db";
+import { resolveBrandSource } from "@/server/services/ingestion-pipeline/source-usage";
 import { canAccessStrategy, getOperatorContext } from "@/server/services/operator-isolation";
 import { readSourceOriginal } from "@/server/services/ingestion-pipeline/original";
 
@@ -9,8 +9,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ sou
   const headers = { "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" };
   if (!session?.user?.id) return Response.json({ error: "Connexion requise." }, { status: 401, headers });
   const { sourceId } = await params;
-  const source = await db.brandDataSource.findUnique({ where: { id: sourceId }, select: { strategyId: true } });
-  if (!source || !await canAccessStrategy(source.strategyId, await getOperatorContext(session.user.id))) {
+  const requestedStrategy = new URL(_request.url).searchParams.get("strategyId") ?? undefined;
+  const resolved = await resolveBrandSource(sourceId, requestedStrategy).catch(() => null);
+  if (!resolved || !await canAccessStrategy(resolved.consumerStrategyId, await getOperatorContext(session.user.id))) {
     return Response.json({ error: "Original inaccessible." }, { status: 404, headers });
   }
   try {

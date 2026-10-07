@@ -528,6 +528,7 @@ export type Intent =
       extraction: unknown;
       sourceFilename?: string;
       sourceDataSourceId?: string;
+      sourceReceipt?: { sourceId: string; contentHash: string };
       /**
        * C3 (audit 2026-07-22) — mode d'extraction qui a produit les champs.
        * STRUCTURED = parseur déterministe → provenance SOURCE (fait observé) ;

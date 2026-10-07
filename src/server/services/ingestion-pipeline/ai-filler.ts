@@ -9,6 +9,7 @@ import { ADVE_KEYS } from "@/domain";
 import { callLLM } from "@/server/services/llm-gateway";
 import { wrapUntrusted, sanitizeInline, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import { db } from "@/lib/db";
+import { loadBrandSources, recordSourceAnalysis, assertCurrentSourceReceipts, type SourceReceipt } from "./source-usage";
 import { PILLAR_SCHEMAS, validatePillarPartial } from "@/lib/types/pillar-schemas";
 import { executeTool as executeGloryTool } from "@/server/services/glory-tools";
 import { getToolsByPillar } from "@/server/services/glory-tools/registry";
@@ -107,15 +108,15 @@ function getPillarFieldNames(pillarKey: string): string[] {
 async function buildSourceContext(strategyId: string, sourceIds?: string[]): Promise<{
   fullText: string;
   sourceMap: Map<string, string>;
+  sourceReceipts: SourceReceipt[];
   strategy: { name: string; sector?: string; country?: string; businessContext?: Record<string, unknown> };
 }> {
   const where: Prisma.BrandDataSourceWhereInput = {
-    strategyId,
-    processingStatus: "EXTRACTED",
+    processingStatus: { in: ["EXTRACTED", "PROCESSED"] },
     ...(sourceIds ? { id: { in: sourceIds } } : {}),
   };
 
-  const sources = await db.brandDataSource.findMany({ where });
+  const sources = await loadBrandSources(strategyId, where);
   const strategy = await db.strategy.findUniqueOrThrow({
     where: { id: strategyId },
     select: { name: true, description: true, businessContext: true },
@@ -133,6 +134,7 @@ async function buildSourceContext(strategyId: string, sourceIds?: string[]): Pro
   return {
     fullText: textParts.join("\n\n"),
     sourceMap,
+    sourceReceipts: sources.map((s) => ({ sourceId: s.id, contentHash: s.contentHash })),
     strategy: {
       name: strategy.name,
       businessContext: strategy.businessContext as Record<string, unknown> | undefined,
@@ -179,31 +181,23 @@ Retourne le mapping JSON source → pilier.`,
       const mapping: Record<string, string[]> = {};
       for (const key of [...ADVE_KEYS]) {
         const val = parsed[key];
-        mapping[key] = Array.isArray(val) ? val.map(String) : [];
+        mapping[key] = Array.isArray(val) ? val.map(String).filter((id) => ctx.sourceMap.has(id)) : [];
       }
 
-      // Update pillarMapping on each source
-      for (const src of await db.brandDataSource.findMany({ where: { strategyId, processingStatus: "EXTRACTED" } })) {
-        const pillars: Record<string, boolean> = {};
-        for (const [key, ids] of Object.entries(mapping)) {
-          if (ids.includes(src.id)) pillars[key.toLowerCase()] = true;
+      await db.$transaction(async (tx) => {
+        await assertCurrentSourceReceipts(tx, strategyId, ctx.sourceReceipts);
+        for (const receipt of ctx.sourceReceipts) {
+          const pillars: Record<string, boolean> = {};
+          for (const [key, ids] of Object.entries(mapping)) if (ids.includes(receipt.sourceId)) pillars[key.toLowerCase()] = true;
+          await recordSourceAnalysis(tx, strategyId, receipt, { pillarMapping: pillars });
         }
-        await db.brandDataSource.update({
-          where: { id: src.id },
-          data: { pillarMapping: pillars as Prisma.InputJsonValue },
-        });
-      }
-
-      // Update BusinessContext if detected
-      if (parsed.businessContext && typeof parsed.businessContext === "object") {
-        const existing = (await db.strategy.findUnique({ where: { id: strategyId } }))?.businessContext as Record<string, unknown> | null;
-        await db.strategy.update({
-          where: { id: strategyId },
-          data: {
+        if (parsed.businessContext && typeof parsed.businessContext === "object") {
+          const existing = (await tx.strategy.findUnique({ where: { id: strategyId } }))?.businessContext as Record<string, unknown> | null;
+          await tx.strategy.update({ where: { id: strategyId }, data: {
             businessContext: { ...(existing ?? {}), ...(parsed.businessContext as Record<string, unknown>) } as Prisma.InputJsonValue,
-          },
-        });
-      }
+          } });
+        }
+      });
 
       return mapping;
     }
@@ -369,9 +363,13 @@ INSTRUCTIONS:
     pillarKey: pillarKey as import("@/lib/types/advertis-vector").PillarKey,
     operation: { type: "MERGE_DEEP", patch: content },
     author: { system: "INGESTION", reason: `AI ADVE filler: pillar ${pillarKey}` },
-    options: { targetStatus: "AI_PROPOSED", confidenceDelta: 0.05 },
+    options: { targetStatus: "AI_PROPOSED", confidenceDelta: 0.05, sourceReceipts: ctx.sourceReceipts },
   });
   reportRefusedWrite(_w0, "ingestion:ai-filler");
+  if (!_w0.success) throw new Error(_w0.error ?? "Écriture refusée.");
+  await db.$transaction(async (tx) => {
+    for (const receipt of ctx.sourceReceipts) await recordSourceAnalysis(tx, strategyId, receipt, { analysisStatus: "PROCESSED" });
+  });
 
   return {
     pillarKey,

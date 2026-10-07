@@ -29,6 +29,7 @@
  */
 
 import { db } from "@/lib/db";
+import { sourceScope, sourceFingerprint } from "@/server/services/ingestion-pipeline/source-usage";
 import { compareCertainty, type SourceCertainty } from "@/domain/source-certainty";
 import {
   ensureSourcesIndexed,
@@ -38,6 +39,7 @@ import {
 /** Un extrait de source, traçable jusqu'au document dont il sort. */
 export type SourceExcerpt = {
   sourceId: string;
+  contentHash?: string;
   fileName: string;
   certainty: SourceCertainty;
   /** Position du début de l'extrait dans `rawContent` — rend l'extrait retrouvable. */
@@ -216,6 +218,7 @@ async function retrieveSemantic(
     documents.add(h.sourceId);
     excerpts.push({
       sourceId: h.sourceId,
+      contentHash: h.contentHash,
       fileName: h.fileName,
       certainty: (h.certainty ?? "INFERRED") as SourceCertainty,
       offset: h.charStart ?? 0,
@@ -254,13 +257,13 @@ export async function loadBrandSourceContext(
 
   const rows = await db.brandDataSource.findMany({
     where: {
-      strategyId,
+      AND: [await sourceScope(strategyId)],
       processingStatus: { in: ["EXTRACTED", "PROCESSED"] },
       NOT: { rawContent: null },
     },
     // `certainty` était absent du select : une pièce OFFICIELLE et une note
     // ARBITRAIRE pesaient exactement pareil dans le prompt.
-    select: { id: true, fileName: true, certainty: true, rawContent: true, updatedAt: true },
+    select: { id: true, fileName: true, fileType: true, sourceType: true, certainty: true, rawContent: true, rawData: true, extractedFields: true, updatedAt: true },
   });
 
   const usable = rows.filter((r) => (r.rawContent ?? "").trim().length > 0);
@@ -323,6 +326,7 @@ export async function loadBrandSourceContext(
     if (!text) continue;
     excerpts.push({
       sourceId: row.id,
+      contentHash: sourceFingerprint(row),
       fileName: row.fileName ?? "(sans nom)",
       certainty: row.certainty as SourceCertainty,
       offset,

@@ -14,6 +14,7 @@ import type { ResolvedRecoOperation, CompletionLevel } from "./types";
 import { parseRecommendationPayload } from "@/lib/types/recommendation-payload";
 import { dispatchTypedRecos } from "./apply-payload";
 import { reportRefusedWrite } from "../pillar-gateway/refusal";
+import { assertCurrentSourceReceipts, readSourceReceipts } from "@/server/services/ingestion-pipeline/source-usage";
 
 // ── Accept ────────────────────────────────────────────────────────
 
@@ -22,7 +23,10 @@ export async function acceptRecos(
   recoIds: string[],
   reviewerId: string,
 ): Promise<{ accepted: number }> {
-  const result = await db.recommendation.updateMany({
+  const result = await db.$transaction(async (tx) => {
+    const pending = await tx.recommendation.findMany({ where: { id: { in: recoIds }, strategyId, status: "PENDING" } });
+    await assertCurrentSourceReceipts(tx, strategyId, pending.flatMap((r) => readSourceReceipts(r.sourceReceipts)), pending.flatMap((r) => r.groundedSourceIds));
+    return tx.recommendation.updateMany({
     where: {
       id: { in: recoIds },
       strategyId,
@@ -33,6 +37,7 @@ export async function acceptRecos(
       reviewedBy: reviewerId,
       reviewedAt: new Date(),
     },
+    });
   });
 
   // Update batch counts
@@ -138,7 +143,8 @@ export async function applyRecos(
   if (typedRecos.length > 0) {
     const { appliedRecoIds, warnings } = await dispatchTypedRecos(
       strategyId,
-      typedRecos.map((r) => ({ id: r.id, proposedValue: r.proposedValue })),
+      typedRecos.map((r) => ({ id: r.id, proposedValue: r.proposedValue,
+        sourceReceipts: readSourceReceipts(r.sourceReceipts), requiredSourceIds: r.groundedSourceIds })),
     );
     if (appliedRecoIds.length > 0) {
       await db.recommendation.updateMany({
@@ -194,6 +200,8 @@ export async function applyRecos(
       options: {
         targetStatus: "AI_PROPOSED",
         confidenceDelta: 0.05,
+        sourceReceipts: pillarRecos.flatMap((r) => readSourceReceipts(r.sourceReceipts)),
+        requiredSourceIds: pillarRecos.flatMap((r) => r.groundedSourceIds),
         ...(Object.keys(fieldProvenance).length > 0 ? { fieldProvenance } : {}),
       },
     });

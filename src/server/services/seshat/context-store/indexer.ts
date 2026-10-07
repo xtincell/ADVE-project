@@ -23,6 +23,7 @@ import type { Prisma } from "@prisma/client";
 import crypto from "crypto";
 import { embedBrandContext } from "./embedder";
 import { chunkText } from "./chunker";
+import { sourceScope, resolveBrandSource } from "@/server/services/ingestion-pipeline/source-usage";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -146,7 +147,7 @@ export async function indexBrandContext(
   // ── 3. Accepted recommendations (FULL scope only) ──────────────
   if (scope === "FULL") {
     const recos = await db.recommendation.findMany({
-      where: { strategyId, status: { in: ["ACCEPTED", "APPLIED"] } },
+      where: { strategyId, status: { in: ["ACCEPTED", "APPLIED"] }, OR: [{ validationWarning: null }, { NOT: { validationWarning: { startsWith: "SOURCE_CHANGED:" } } }] },
       take: 100,
       orderBy: [{ confidence: "desc" }, { impact: "desc" }],
       select: {
@@ -183,7 +184,7 @@ export async function indexBrandContext(
   // ── 4. Brand assets (FULL scope only) ──────────────────────────
   if (scope === "FULL") {
     const assets = await db.brandAsset.findMany({
-      where: { strategyId },
+      where: { strategyId, staleAt: null },
       take: 50,
       select: {
         id: true,
@@ -212,7 +213,7 @@ export async function indexBrandContext(
   // Sources use the same atomic writer as single-document preparation.
   // Never recreate their chunks from an earlier snapshot of rawContent here.
   const sources = await db.brandDataSource.findMany({
-    where: { strategyId },
+    where: await sourceScope(strategyId),
     select: { id: true },
   });
 
@@ -268,7 +269,7 @@ export async function indexBrandContext(
   }
 
   for (const source of sources) {
-    const indexed = await writeSourceIndex(source.id);
+    const indexed = await writeSourceIndex(source.id, strategyId);
     byKind.BRAND_SOURCE = (byKind.BRAND_SOURCE ?? 0) + indexed.chunks;
     inserted += indexed.chunks;
   }
@@ -313,9 +314,9 @@ export interface BrandSourceIndexResult {
  * Prepare one source using the same writer as full context preparation.
  * Text persistence is atomic; optional embedding starts only after commit.
  */
-export async function indexBrandSource(sourceId: string): Promise<BrandSourceIndexResult> {
+export async function indexBrandSource(sourceId: string, strategyId?: string): Promise<BrandSourceIndexResult> {
   const t0 = Date.now();
-  const source = await writeSourceIndex(sourceId);
+  const source = await writeSourceIndex(sourceId, strategyId);
   if (source.chunks > 0) {
     // Even unchanged text can lack vectors after a provider outage. The worker
     // only processes missing vectors; preserve existing ids and embeddings.
@@ -341,18 +342,12 @@ export async function indexBrandSource(sourceId: string): Promise<BrandSourceInd
  * this commit and invalidates our chunks. Two preparers cannot interleave.
  * No network work or embedding is held inside this transaction.
  */
-async function writeSourceIndex(sourceId: string) {
+async function writeSourceIndex(sourceId: string, strategyId?: string) {
   return db.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM "BrandDataSource" WHERE id = ${sourceId} FOR UPDATE`;
-    const source = await tx.brandDataSource.findUnique({
-      where: { id: sourceId },
-      select: {
-        id: true, strategyId: true, sourceType: true, fileName: true,
-        fileType: true, rawContent: true, pillarMapping: true, processingStatus: true,
-      },
-    });
-    if (!source) throw new Error(`BrandDataSource ${sourceId} not found`);
-    const scope = { strategyId: source.strategyId, sourceId: source.id };
+    const resolved = await resolveBrandSource(sourceId, strategyId, tx);
+    const { source } = resolved;
+    const scope = { strategyId: resolved.consumerStrategyId, sourceId: source.id };
     const readable = source.processingStatus === "EXTRACTED" || source.processingStatus === "PROCESSED";
     const chunks = readable ? chunkText(source.rawContent ?? "") : [];
     const desired = chunks.map((chunk) => {
@@ -360,7 +355,8 @@ async function writeSourceIndex(sourceId: string) {
         text: chunk.text, fileName: source.fileName, sourceType: source.sourceType,
         fileType: source.fileType, chunkIndex: chunk.index,
         charStart: chunk.charStart, charEnd: chunk.charEnd,
-        pillarMapping: source.pillarMapping ?? null,
+        pillarMapping: resolved.pillarMapping ?? null,
+        sourceContentHash: resolved.contentHash,
       };
       return {
         ...scope, kind: "BRAND_SOURCE", pillarKey: null, field: `chunk_${chunk.index}`,
@@ -387,6 +383,6 @@ async function writeSourceIndex(sourceId: string) {
       await tx.brandContextNode.deleteMany({ where: { ...scope, kind: "BRAND_SOURCE" } });
       if (desired.length > 0) await tx.brandContextNode.createMany({ data: desired });
     }
-    return { strategyId: source.strategyId, chunks: desired.length, reused };
+    return { strategyId: resolved.consumerStrategyId, chunks: desired.length, reused };
   }, { maxWait: 10_000, timeout: 30_000 });
 }

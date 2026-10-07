@@ -1877,6 +1877,15 @@ d'invariants spécifiques (cf. `tests/integration/`).
 
 # ANNEXE CANON L — LEXIQUE NORMATIF
 
+### Usage documentaire
+
+ADR-0198, 2026-10-07 : une `BrandDataSource` garde son propriétaire, son original
+(`FileUpload`, ADR-0197) et son texte de travail. `BrandSourceUse` donne à une autre
+marque du même opérateur un usage révocable, avec classement et état d'analyse
+locaux. Un reçu `{sourceId, contentHash}` identifie la version réellement lue par
+un index, une proposition ou une écriture. Il ne remplace ni la certitude de la
+source ni la validation d'une décision ; une correction invalide les dérivés.
+
 > Canon absorbé depuis `LEXICON.md` (consolidation bible 2026-05). Source = stub de redirection.
 
 

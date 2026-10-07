@@ -15,6 +15,7 @@ import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
  */
 
 import { db } from "@/lib/db";
+import { loadBrandSources, type SourceReceipt } from "@/server/services/ingestion-pipeline/source-usage";
 import { setNestedValue, resolvePillarPath } from "@/lib/pillar-path";
 import { findEmptyLeafPaths, findEmptyArrayCellPaths, isNonFabricableLeaf, buildFieldAnchor } from "@/lib/types/pillar-maturity-contracts";
 import type { Prisma } from "@prisma/client";
@@ -99,6 +100,7 @@ export async function fillToStage(
   const content = ((pillar?.content ?? {}) as Record<string, unknown>);
   const existingCertainty = ((pillar?.fieldCertainty ?? {}) as Record<string, string>);
 
+  const sourceReceipts: SourceReceipt[] = [];
   const aggregateFilled: string[] = [];
   const aggregateSourceFilled = new Set<string>(); // champs SOURCE (ÉTAPE 0)
   const aggregateAiFilled: string[] = [];
@@ -107,7 +109,7 @@ export async function fillToStage(
   const MAX_PASSES = targetStage === "COMPLETE" ? 3 : 2;
 
   for (let pass = 1; pass <= MAX_PASSES; pass++) {
-    const passResult = await runFillPass(strategyId, key, content, targetStage, contract, fieldsToFill);
+    const passResult = await runFillPass(strategyId, key, content, targetStage, contract, fieldsToFill, sourceReceipts);
     for (const p of passResult.filled) if (!aggregateFilled.includes(p)) aggregateFilled.push(p);
     for (const p of passResult.sourceFilled) aggregateSourceFilled.add(p);
     for (const p of passResult.aiFilled) if (!aggregateAiFilled.includes(p)) aggregateAiFilled.push(p);
@@ -156,7 +158,7 @@ export async function fillToStage(
       pillarKey: key as import("@/lib/types/advertis-vector").PillarKey,
       operation: { type: "REPLACE_FULL", content },
       author: { system: "AUTO_FILLER", reason: `fillToStage(${targetStage}) — ${aggregateFilled.length} fields filled across ${MAX_PASSES} max passes` },
-      options: { confidenceDelta: 0.03 * aggregateFilled.length, fieldProvenance },
+      options: { confidenceDelta: 0.03 * aggregateFilled.length, fieldProvenance, sourceReceipts },
     });
 
     // ── Le verdict de la gateway DÉCIDE — il n'est plus jeté ────────────────
@@ -278,6 +280,7 @@ async function runFillPass(
   targetStage: MaturityStage,
   contract: import("@/lib/types/pillar-maturity").PillarMaturityContract,
   fieldsToFill?: string[],
+  sourceReceipts?: SourceReceipt[],
 ): Promise<{ filled: string[]; failed: Array<{ path: string; reason: string }>; needsHuman: string[]; sourceFilled: string[]; aiFilled: string[] }> {
   // Assess current state
   const before = assessPillar(key, content, contract);
@@ -412,7 +415,7 @@ async function runFillPass(
 
   // ── 0. Extract from BrandDataSource (zero-cost — source of truth) ───────
   try {
-    const sourceExtracted = await extractFromSources(strategyId, key, missingReqs.map(r => r.path));
+    const sourceExtracted = await extractFromSources(strategyId, key, missingReqs.map(r => r.path), sourceReceipts);
     for (const [path, value] of Object.entries(sourceExtracted)) {
       if (value !== undefined && value !== null && value !== "") {
         setNestedValue(content, path, value);
@@ -466,7 +469,7 @@ async function runFillPass(
   // ── 3. AI generation (batched — single LLM call for all remaining) ──────
   if (aiFields.length > 0) {
     try {
-      const aiResults = await generateMissingFields(strategyId, key, content, pillarMap, aiFields);
+      const aiResults = await generateMissingFields(strategyId, key, content, pillarMap, aiFields, sourceReceipts);
       for (const req of aiFields) {
         if (aiResults[req.path] !== undefined) {
           setNestedValue(content, req.path, aiResults[req.path]);
@@ -1070,6 +1073,7 @@ Retourne UNIQUEMENT le JSON, rien d'autre. Pas de markdown, pas de commentaire.`
  * `"rtis-cascade-completion:i"`). Each chunk appends `:chunk-N/M`.
  */
 export async function runChunkedFieldGeneration(args: {
+  sourceReceipts?: SourceReceipt[];
   strategyId: string;
   pillarKey: string;
   currentContent: Record<string, unknown>;
@@ -1091,15 +1095,9 @@ export async function runChunkedFieldGeneration(args: {
   const hasFinancialFields = missingReqs.some(r => r.path.startsWith("unitEconomics"));
 
   // Load sources context (ADVE-project V3.3 correction)
-  const sources = await db.brandDataSource.findMany({
-    where: {
-      strategyId,
-      processingStatus: { in: ["EXTRACTED", "PROCESSED"] },
-    },
-    select: {
-      rawContent: true,
-    },
-  });
+  const sources = await loadBrandSources(strategyId, { processingStatus: { in: ["EXTRACTED", "PROCESSED"] } });
+  args.sourceReceipts?.push(...sources.map((s) => ({ sourceId: s.id, contentHash: s.contentHash })));
+
   const sourcesContext = sources
     .map(s => s.rawContent)
     .filter(Boolean)
@@ -1171,6 +1169,7 @@ async function generateMissingFields(
   currentContent: Record<string, unknown>,
   allPillars: Record<string, Record<string, unknown>>,
   missingReqs: FieldRequirement[],
+  sourceReceipts?: SourceReceipt[],
 ): Promise<Record<string, unknown>> {
   return runChunkedFieldGeneration({
     strategyId,
@@ -1179,6 +1178,7 @@ async function generateMissingFields(
     allPillars,
     missingReqs,
     caller: `auto-filler:${pillarKey}`,
+    sourceReceipts,
   });
 }
 
@@ -1198,23 +1198,13 @@ async function extractFromSources(
   strategyId: string,
   pillarKey: string,
   missingPaths: string[],
+  sourceReceipts?: SourceReceipt[],
 ): Promise<Record<string, unknown>> {
   if (missingPaths.length === 0) return {};
 
   // Load all processed sources for this strategy
-  const sources = await db.brandDataSource.findMany({
-    where: {
-      strategyId,
-      processingStatus: { in: ["EXTRACTED", "PROCESSED"] },
-    },
-    select: {
-      extractedFields: true,
-      rawData: true,
-      rawContent: true,
-      pillarMapping: true,
-      sourceType: true,
-    },
-  });
+  const sources = await loadBrandSources(strategyId, { processingStatus: { in: ["EXTRACTED", "PROCESSED"] } });
+  sourceReceipts?.push(...sources.map((s) => ({ sourceId: s.id, contentHash: s.contentHash })));
 
   if (sources.length === 0) return {};
 

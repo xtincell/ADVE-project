@@ -211,15 +211,24 @@ function ProposalsPanel({
     metadata: unknown;
   }>;
   const kinds = (kindsQuery.data ?? []) as readonly string[];
+  const error = draftsQuery.error ?? kindsQuery.error ?? proposeMutation.error
+    ?? acceptMutation.error ?? rejectMutation.error ?? acceptAllMutation.error;
+  const outdated = /SOURCE_(CHANGED|RECEIPT_MISSING)/.test(error?.message ?? "");
+  const requestProposals = () => {
+    acceptMutation.reset(); acceptAllMutation.reset(); rejectMutation.reset();
+    proposeMutation.mutate({ strategyId, sourceId });
+  };
 
   if (!canOperate) return null;
 
   return (
     <div className="mt-3 rounded-lg border border-accent/15 bg-accent/5">
+      <div className="flex items-center justify-between gap-2 px-3 py-2">
       <button
         type="button"
+        aria-expanded={open}
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between px-3 py-2 text-left text-xs font-medium text-accent hover:bg-accent/10"
+        className="flex flex-1 items-center text-left text-xs font-medium text-accent hover:bg-accent/10"
       >
         <div className="flex items-center gap-2">
           {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
@@ -231,6 +240,7 @@ function ProposalsPanel({
             </span>
           ) : null}
         </div>
+      </button>
         {open && drafts.length > 0 ? (
           <button
             type="button"
@@ -244,20 +254,24 @@ function ProposalsPanel({
             {acceptAllMutation.isPending ? "Acceptation..." : "Tout accepter (≥0.8)"}
           </button>
         ) : null}
-      </button>
+      </div>
 
       {open ? (
         <div className="space-y-2 border-t border-accent/10 p-3">
+          {error ? <p role="alert" className="text-xs text-error">{error.message.replace(/^SOURCE_(?:CHANGED|UNAVAILABLE|RECEIPT_MISSING):\s*/, "")}</p> : null}
+          {outdated ? <button type="button" onClick={requestProposals} disabled={proposeMutation.isPending} className="text-xs text-accent underline disabled:opacity-50">
+            Refaire les propositions avec l’IA
+          </button> : null}
           {draftsQuery.isLoading ? (
             <p className="text-xs text-foreground-muted">Chargement des propositions…</p>
           ) : drafts.length === 0 ? (
             <div className="flex items-center justify-between gap-2">
               <p className="text-xs text-foreground-muted">
-                Aucune proposition. Le filtreur tourne automatiquement après upload — vous pouvez le relancer manuellement.
+                Aucune proposition. Vous pouvez demander une analyse de cette source pour cette marque.
               </p>
               <button
                 type="button"
-                onClick={() => proposeMutation.mutate({ strategyId, sourceId })}
+                onClick={requestProposals}
                 disabled={proposeMutation.isPending}
                 className="flex items-center gap-1 rounded bg-accent/20 px-2 py-1 text-2xs text-accent hover:bg-accent/30 disabled:opacity-50"
               >
@@ -423,22 +437,56 @@ function ProposalCard({
  * Toute source est éditable — y compris la source intake et les fichiers
  * uploadés (le formulaire d'intake atterrit comme BrandDataSource exploitable).
  */
+function SourceUses({ sourceId }: { sourceId: string }) {
+  const [open, setOpen] = useState(false);
+  const utils = trpc.useUtils();
+  const query = trpc.ingestion.sourceUses.useQuery({ id: sourceId }, { enabled: open });
+  const update = trpc.ingestion.updateSource.useMutation({ onSuccess: async () => {
+    await utils.ingestion.sourceUses.invalidate({ id: sourceId });
+    await utils.ingestion.listSources.invalidate();
+    await utils.ingestion.getSource.invalidate({ id: sourceId });
+  } });
+  return <div className="mt-3 border-t border-border pt-3">
+    <button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className="text-xs text-accent underline underline-offset-4">
+      Utiliser ce document dans d’autres marques
+    </button>
+    {open ? <div className="mt-2 space-y-2">
+      <p className="text-xs text-foreground-secondary">Un seul document, sans copie. Une correction sera visible dans tous les dossiers liés. Chaque marque conserve ses propres analyses.</p>
+      {query.isLoading ? <p className="text-xs text-foreground-muted">Chargement des marques…</p> : null}
+      {query.error || update.error ? <p role="alert" className="text-xs text-error">{query.error?.message ?? update.error?.message}</p> : null}
+      {query.data?.length === 0 ? <p className="text-xs text-foreground-muted">Aucune autre marque que vous gérez dans ce portefeuille.</p> : null}
+      {query.data?.map((target) => <div key={target.id} className="flex items-center justify-between gap-3 rounded border border-border p-2">
+        <span className="text-xs text-foreground">{target.name}{target.suspended ? <span className="block text-foreground-muted">Accès suspendu : le portefeuille a changé.</span> : null}</span>
+        <button type="button" disabled={update.isPending} className="text-xs text-accent disabled:opacity-50"
+          aria-label={`${target.linked ? "Retirer le document de" : "Lier le document à"} ${target.name}`}
+          onClick={() => update.mutate({ id: sourceId, use: { strategyId: target.id, revoke: target.linked } })}>
+          {target.linked ? "Retirer l’usage" : "Lier ce document"}
+        </button>
+      </div>)}
+      <p className="text-xs text-foreground-muted">Retirer un usage conserve les décisions passées et signale celles dont la source doit être revue.</p>
+    </div> : null}
+  </div>;
+}
+
 function SourceEditModal({
   sourceId,
+  strategyId,
   onClose,
   onSaved,
   readOnly = false,
 }: {
   sourceId: string;
+  strategyId: string;
   onClose: () => void;
   onSaved: () => void;
   readOnly?: boolean;
 }) {
   const utils = trpc.useUtils();
-  const sourceQuery = trpc.ingestion.getSource.useQuery({ id: sourceId });
+  const sourceQuery = trpc.ingestion.getSource.useQuery({ id: sourceId, strategyId }, { staleTime: 0, refetchOnMount: "always" });
   const update = trpc.ingestion.updateSource.useMutation({
     onSuccess: () => {
       void utils.ingestion.getSource.invalidate({ id: sourceId });
+      void utils.ingestion.listSources.invalidate();
       onSaved();
       onClose();
     },
@@ -713,9 +761,10 @@ function BrandBookIngestModal({
 }) {
   const [mode, setMode] = useState<"LLM" | "STRUCTURED">("STRUCTURED");
   const [extraction, setExtraction] = useState<unknown>(null);
+  const [sourceReceipt, setSourceReceipt] = useState<{ sourceId: string; contentHash: string } | undefined>();
 
   const previewMutation = trpc.ingestion.previewBrandBook.useMutation({
-    onSuccess: (r) => setExtraction(r.extraction),
+    onSuccess: (r) => { setExtraction(r.extraction); setSourceReceipt(r.sourceReceipt); },
   });
   const ingestMutation = trpc.ingestion.ingestBrandBook.useMutation({
     onSuccess: () => {
@@ -741,14 +790,16 @@ function BrandBookIngestModal({
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => setMode("STRUCTURED")}
+            disabled={pending}
+            onClick={() => { setMode("STRUCTURED"); setExtraction(null); setSourceReceipt(undefined); }}
             className={`rounded-lg px-3 py-1.5 text-xs font-medium ${mode === "STRUCTURED" ? "bg-accent/20 text-accent" : "border border-white/10 text-foreground-secondary hover:text-foreground"}`}
           >
             Lecture structurée
           </button>
           <button
             type="button"
-            onClick={() => setMode("LLM")}
+            disabled={pending}
+            onClick={() => { setMode("LLM"); setExtraction(null); setSourceReceipt(undefined); }}
             className={`rounded-lg px-3 py-1.5 text-xs font-medium ${mode === "LLM" ? "bg-accent/20 text-accent" : "border border-white/10 text-foreground-secondary hover:text-foreground"}`}
           >
             Lecture assistée
@@ -793,6 +844,7 @@ function BrandBookIngestModal({
                 extraction,
                 sourceFilename: sourceLabel,
                 sourceDataSourceId: sourceId,
+                sourceReceipt,
                 extractionMode: mode,
               })
             }
@@ -1088,7 +1140,7 @@ export default function SourcesPage() {
             const StatusIcon = status.icon;
 
             return (
-              <div key={i} className="rounded-lg border border-white/5 bg-surface-raised p-4">
+              <div key={String(source.id ?? i)} className="rounded-lg border border-white/5 bg-surface-raised p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/5">
@@ -1134,7 +1186,7 @@ export default function SourcesPage() {
                         sourceId={source.id}
                         current={(source.certainty as SourceCertainty | undefined) ?? "DECLARED"}
                         pending={updateSourceMutation.isPending}
-                        readOnly={!canOperate}
+                        readOnly={!canOperate || source.shared === true}
                         onChange={(next) =>
                           updateSourceMutation.mutate({ id: source.id as string, certainty: next })
                         }
@@ -1146,7 +1198,7 @@ export default function SourcesPage() {
                     </div>
                     {/* Édition de source (titre + contenu) — toute source est
                         éditable. updateSource passe par le gateway d'ingestion. */}
-                    {canOperate && typeof source.id === "string" ? (
+                    {canOperate && source.shared !== true && typeof source.id === "string" ? (
                       <button
                         onClick={(e) => { e.stopPropagation(); setEditSourceId(source.id as string); }}
                         className="rounded p-1 text-foreground-muted/40 hover:text-accent hover:bg-accent/10 transition-colors"
@@ -1158,7 +1210,7 @@ export default function SourcesPage() {
                     {/* PR-B (ADR-0033) — Re-ingest button, only on intake-origin
                         sources. The full purge happens server-side via Mestor
                         Intent ; this button just opens the confirm modal. */}
-                    {canOperate && typeof source.origin === "string" && source.origin.startsWith("intake:") ? (
+                    {canOperate && source.shared !== true && typeof source.origin === "string" && source.origin.startsWith("intake:") ? (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1195,7 +1247,7 @@ export default function SourcesPage() {
                         <Sparkles className="h-3.5 w-3.5" />
                       </button>
                     ) : null}
-                    {canOperate && source.sourceType === "MANUAL_INPUT" ? (
+                    {canOperate && source.shared !== true && source.sourceType === "MANUAL_INPUT" ? (
                       <button
                         onClick={(e) => { e.stopPropagation(); deleteMutation.mutate({ id: source.id as string }); }}
                         className="rounded p-1 text-foreground-muted/40 hover:text-error hover:bg-error/10 transition-colors"
@@ -1210,7 +1262,7 @@ export default function SourcesPage() {
                 {source.sourceType === "FILE" && typeof source.id === "string" ? (
                   <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
                     {original?.state === "STORED" ? (
-                      <a href={`/api/brand-sources/${encodeURIComponent(source.id)}/original`}
+                      <a href={`/api/brand-sources/${encodeURIComponent(source.id)}/original?strategyId=${encodeURIComponent(strategyId!)}`}
                         className="text-accent underline underline-offset-4"
                         title={`Empreinte du fichier reçu : ${original.contentHash}`}>
                         Télécharger l’original · {Math.ceil(original.byteLength / 1024)} Ko
@@ -1221,13 +1273,13 @@ export default function SourcesPage() {
                           {original ? "Conservation de l’original à reprendre." : source.processingStatus === "EXTRACTED" || source.processingStatus === "PROCESSED"
                             ? "Texte conservé ; fichier original à ajouter." : "Fichier original non conservé."}
                         </span>
-                        <label className="cursor-pointer text-accent underline underline-offset-4">
+                        {source.shared !== true && canOperate ? <label className="cursor-pointer text-accent underline underline-offset-4">
                           {original ? "Redéposer le même fichier" : "Ajouter l’original"}
                           <input type="file" accept={ACCEPTED_UPLOAD} className="sr-only"
                             aria-label={`Original de ${String(source.fileName ?? "cette source")}`}
                             disabled={uploading}
                             onChange={(e) => { void handleFiles(e.target.files, source.id as string); e.target.value = ""; }} />
-                        </label>
+                        </label> : null}
                       </>
                     )}
                     {original?.state === "STORED" ? (
@@ -1235,6 +1287,12 @@ export default function SourcesPage() {
                     ) : null}
                   </div>
                 ) : null}
+
+                {source.shared === true ? (
+                  <p className="mt-3 text-xs text-foreground-secondary">
+                    Document partagé depuis <a className="text-accent underline" href={`/cockpit/brand/sources?strategy=${encodeURIComponent(String(source.ownerStrategyId))}`}>{String(source.ownerBrandName ?? "une autre marque")}</a>. Les corrections se font dans le dossier propriétaire ; vos analyses restent propres à cette marque.
+                  </p>
+                ) : canOperate && typeof source.id === "string" ? <SourceUses sourceId={source.id} /> : null}
 
                 {/* Extracted fields preview */}
                 {source.extractedFields != null && typeof source.extractedFields === "object" && !Array.isArray(source.extractedFields) && Object.keys(source.extractedFields).length > 0 ? (
@@ -1278,6 +1336,7 @@ export default function SourcesPage() {
       {/* Modal d'édition de source (titre + contenu) — toute source. */}
       {editSourceId !== null ? (
         <SourceEditModal
+          strategyId={strategyId!}
           sourceId={editSourceId}
           onClose={() => setEditSourceId(null)}
           onSaved={() => sourcesQuery.refetch()}
@@ -1285,7 +1344,7 @@ export default function SourcesPage() {
       ) : null}
 
       {readSourceId !== null ? (
-        <SourceEditModal sourceId={readSourceId} readOnly onClose={() => setReadSourceId(null)} onSaved={() => undefined} />
+        <SourceEditModal strategyId={strategyId!} sourceId={readSourceId} readOnly onClose={() => setReadSourceId(null)} onSaved={() => undefined} />
       ) : null}
 
       {/* PR-B (ADR-0033) — Re-ingest modal. Anti-foot-gun pattern : the

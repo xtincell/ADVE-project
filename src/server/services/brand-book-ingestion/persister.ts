@@ -114,6 +114,7 @@ export async function persistBrandBookExtraction(args: {
   extraction: BrandBookExtraction;
   sourceFilename?: string;
   sourceDataSourceId?: string;
+  sourceReceipt?: { sourceId: string; contentHash: string };
   /** C3 — mode d'extraction : STRUCTURED → SOURCE, LLM (défaut) → INFERRED. */
   extractionMode?: "LLM" | "STRUCTURED";
 }): Promise<BrandBookPersistResult> {
@@ -137,7 +138,10 @@ export async function persistBrandBookExtraction(args: {
       pillarKey: key,
       operation: { type: "SET_FIELDS", fields: fw.map((f) => ({ path: f.path, value: f.value })) },
       author: { system: "INGESTION", userId: operatorId, reason: `Ingestion brand book${args.sourceFilename ? ` (${args.sourceFilename})` : ""}` },
-      options: { fieldProvenance, targetStatus: "DRAFT" },
+      options: { fieldProvenance, targetStatus: "DRAFT",
+        sourceReceipts: args.sourceReceipt ? [args.sourceReceipt] : [],
+        requiredSourceIds: args.sourceDataSourceId ? [args.sourceDataSourceId] : [],
+      },
     });
     if (res.success) {
       pillarsWritten.push(key.toUpperCase());
@@ -173,7 +177,7 @@ export async function persistBrandBookExtraction(args: {
     },
     pillarSource: "A",
     state: "DRAFT",
-    metadata: { sourceDataSourceId: args.sourceDataSourceId, ingested: true },
+    metadata: { sourceDataSourceId: args.sourceDataSourceId, sourceContentHash: args.sourceReceipt?.contentHash, ingested: true },
   });
   if (brandBookAsset?.id) assetsCreated.push(brandBookAsset.id);
   else warnings.push("Asset brand book non créé — le contenu non mappé n'est pas conservé.");
@@ -190,7 +194,7 @@ export async function persistBrandBookExtraction(args: {
       content: { colors: officialColors, source: "brand-book-ingestion" },
       pillarSource: "D",
       state: "DRAFT",
-      metadata: { sourceDataSourceId: args.sourceDataSourceId, ingested: true },
+      metadata: { sourceDataSourceId: args.sourceDataSourceId, sourceContentHash: args.sourceReceipt?.contentHash, ingested: true },
     });
     if (asset?.id) assetsCreated.push(asset.id);
   }
@@ -203,7 +207,7 @@ export async function persistBrandBookExtraction(args: {
       content: { fonts: vis.fonts, source: "brand-book-ingestion" },
       pillarSource: "D",
       state: "DRAFT",
-      metadata: { sourceDataSourceId: args.sourceDataSourceId, ingested: true },
+      metadata: { sourceDataSourceId: args.sourceDataSourceId, sourceContentHash: args.sourceReceipt?.contentHash, ingested: true },
     });
     if (asset?.id) assetsCreated.push(asset.id);
   }

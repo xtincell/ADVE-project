@@ -173,3 +173,19 @@ Lignes dérivées purgées :
   équipes autorisées et paramètre d’URL. Cause : `getOwn` utilisé comme accès global.
 - Navigation inactive avec un paramètre d’équipe : comparaison des chemins sans
   paramètres tout en conservant le lien complet. Cause : URL confondue avec pathname.
+
+
+## Sources multimarques — 2026-10-07 (401)
+
+- Le sélecteur acceptait une marque issue d’une liste plus récente que celle du
+  contexte, puis revenait silencieusement à la première marque. Rafraîchissement
+  du contexte à la sélection, sans fallback durant ce choix explicite ; cas reçu
+  avec une marque créée après ouverture du cockpit. Le paramètre de lien profond
+  suit aussi le choix afin de le conserver au rechargement. Cause : deux caches indépendants.
+- Une erreur d’acceptation d’une proposition était invisible, et le bouton groupé
+  était imbriqué dans le bouton d’ouverture. Refus documentaire
+  renvoyé comme conflit 409, erreur lisible avec reprise explicite et contrôles séparés.
+  Cause : affichage des succès seul, sans parcours de refus reçu.
+- Les versions de piliers étaient écrites sur une autre connexion que leur contenu.
+  Le gateway transmet désormais sa transaction ; rollback multi-piliers et snapshots
+  reçus ensemble sur PostgreSQL. Cause : versionnement sorti de la frontière atomique.
