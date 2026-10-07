@@ -56,7 +56,7 @@ export async function createCampaignDeliverableHandler(intent: CreateIntent): Pr
       estimatedCost: ZERO_COST,
     };
   } catch (err) {
-    return vetoed("campaign-deliverable.create", err instanceof Error ? err.message : String(err));
+    return vetoed("campaign-deliverable.create", err);
   }
 }
 
@@ -71,7 +71,7 @@ export async function updateCampaignDeliverableHandler(intent: UpdateIntent): Pr
       estimatedCost: ZERO_COST,
     };
   } catch (err) {
-    return vetoed("campaign-deliverable.update", err instanceof Error ? err.message : String(err));
+    return vetoed("campaign-deliverable.update", err);
   }
 }
 
@@ -86,7 +86,7 @@ export async function deleteCampaignDeliverableHandler(intent: DeleteIntent): Pr
       estimatedCost: ZERO_COST,
     };
   } catch (err) {
-    return vetoed("campaign-deliverable.delete", err instanceof Error ? err.message : String(err));
+    return vetoed("campaign-deliverable.delete", err);
   }
 }
 
@@ -101,7 +101,7 @@ export async function overrideRagHandler(intent: OverrideRagIntent): Promise<Han
       estimatedCost: ZERO_COST,
     };
   } catch (err) {
-    return vetoed("campaign-deliverable.override-rag", err instanceof Error ? err.message : String(err));
+    return vetoed("campaign-deliverable.override-rag", err);
   }
 }
 
@@ -340,12 +340,13 @@ export async function listDeliverablesForOperator(args: {
 // Internal
 // ──────────────────────────────────────────────────────────────────────────
 
-function vetoed(tool: string, msg: string): HandlerResult {
+function vetoed(tool: string, error: unknown): HandlerResult {
+  const msg = error instanceof Error ? error.message : String(error);
   return {
     status: "VETOED",
     summary: msg,
     tool,
-    reason: classifyError(msg),
+    reason: error instanceof CampaignScopeError ? error.code : classifyError(msg),
     estimatedCost: ZERO_COST,
   };
 }

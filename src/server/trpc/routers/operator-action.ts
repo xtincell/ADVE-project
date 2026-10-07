@@ -7,16 +7,16 @@
 
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
+import { createTRPCRouter, operatorProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import {
   createOperatorAction,
   updateOperatorAction,
   toggleActionDone,
+  deleteOperatorAction,
   listActionsForOperator,
 } from "@/server/services/operator-action";
-import { db } from "@/lib/db";
-import { getOperatorContext } from "@/server/services/operator-isolation";
+import { CampaignScopeError, getOperatorContext } from "@/server/services/operator-isolation";
 
 /* lafusee:governed-active — Phase 18/19 router. Toutes les mutations utilisent governedProcedure (ADR-0004 strict cible atteinte) ; tag corrigé 2026-05-06 strangler→governed (faux positif initial — le router a toujours utilisé governedProcedure depuis sa création). */
 
@@ -25,17 +25,14 @@ const PriorityEnum = z.enum(["CRITIQUE", "HAUTE", "MOYENNE", "BASSE"]);
 const CategoryEnum = z.enum(["BEFORE_DEPARTURE", "SYSTEM", "FOLLOWUPS", "PRODUCTION", "OTHER"]);
 const SourceEnum = z.enum(["GMAIL", "SLACK", "WHATSAPP", "VERBAL", "BRIEF", "SYSTEM", "OTHER"]);
 
-// Tâches OPÉRATEUR (console Matanga) = surface STAFF. Audit round-4 : le
-// `strategyId` de tête était un LEURRE — la garde ADR-0175 le vérifiait mais la
-// mutation ciblait `operatorId`/`actionId` (jamais résolus) → un founder passant
-// SA marque éditait/supprimait la tâche de n'importe quel opérateur. requireOperator
-// sur toutes les mutations (base operatorProcedure = staff, plus de leurre).
+// Actions transverses : équipe réelle obligatoire, marque de contexte facultative.
+// Caller authorization stays here; services bind action/campaign/task/assignee identities.
 export const operatorActionRouter = createTRPCRouter({
   create: governedProcedure({
     kind: "OPERATOR_CREATE_ACTION",
     requireOperator: true,
     inputSchema: z.object({
-      strategyId: StringId,
+      strategyId: StringId.optional(),
       operatorId: StringId,
       label: z.string().min(1).max(500),
       context: z.string().nullable().optional(),
@@ -47,9 +44,11 @@ export const operatorActionRouter = createTRPCRouter({
       assigneeUserId: StringId.nullable().optional(),
       dueDate: z.string().nullable().optional(),
     }),
-  }).mutation(async ({ input }) => {
+  }).mutation(async ({ input, ctx }) => {
+    await assertCallerTeam(ctx.session.user.id, input.operatorId);
     try {
       const action = await createOperatorAction({
+        strategyId: input.strategyId,
         operatorId: input.operatorId,
         label: input.label,
         context: input.context ?? null,
@@ -64,7 +63,7 @@ export const operatorActionRouter = createTRPCRouter({
       return { ok: true as const, action };
     } catch (err) {
       throw new TRPCError({
-        code: "BAD_REQUEST",
+        code: err instanceof CampaignScopeError ? err.code : "BAD_REQUEST",
         message: err instanceof Error ? err.message : "createOperatorAction failed",
       });
     }
@@ -74,7 +73,7 @@ export const operatorActionRouter = createTRPCRouter({
     kind: "OPERATOR_UPDATE_ACTION",
     requireOperator: true,
     inputSchema: z.object({
-      strategyId: StringId,
+      strategyId: StringId.optional(),
       operatorId: StringId,
       actionId: StringId,
       patches: z.object({
@@ -89,13 +88,14 @@ export const operatorActionRouter = createTRPCRouter({
         dueDate: z.string().nullable().optional(),
       }).passthrough(),
     }),
-  }).mutation(async ({ input }) => {
+  }).mutation(async ({ input, ctx }) => {
+    await assertCallerTeam(ctx.session.user.id, input.operatorId);
     try {
-      const action = await updateOperatorAction(input.actionId, input.patches);
+      const action = await updateOperatorAction(input.actionId, input.patches, input);
       return { ok: true as const, action };
     } catch (err) {
       throw new TRPCError({
-        code: "BAD_REQUEST",
+        code: err instanceof CampaignScopeError ? err.code : "BAD_REQUEST",
         message: err instanceof Error ? err.message : "updateOperatorAction failed",
       });
     }
@@ -105,18 +105,19 @@ export const operatorActionRouter = createTRPCRouter({
     kind: "OPERATOR_TOGGLE_ACTION_DONE",
     requireOperator: true,
     inputSchema: z.object({
-      strategyId: StringId,
+      strategyId: StringId.optional(),
       operatorId: StringId,
       actionId: StringId,
       done: z.boolean(),
     }),
-  }).mutation(async ({ input }) => {
+  }).mutation(async ({ input, ctx }) => {
+    await assertCallerTeam(ctx.session.user.id, input.operatorId);
     try {
-      const action = await toggleActionDone(input.actionId, input.done);
+      const action = await toggleActionDone(input.actionId, input.done, input);
       return { ok: true as const, action };
     } catch (err) {
       throw new TRPCError({
-        code: "BAD_REQUEST",
+        code: err instanceof CampaignScopeError ? err.code : "BAD_REQUEST",
         message: err instanceof Error ? err.message : "toggleActionDone failed",
       });
     }
@@ -126,17 +127,18 @@ export const operatorActionRouter = createTRPCRouter({
     kind: "OPERATOR_DELETE_ACTION",
     requireOperator: true,
     inputSchema: z.object({
-      strategyId: StringId,
+      strategyId: StringId.optional(),
       operatorId: StringId,
       actionId: StringId,
     }),
-  }).mutation(async ({ input }) => {
+  }).mutation(async ({ input, ctx }) => {
+    await assertCallerTeam(ctx.session.user.id, input.operatorId);
     try {
-      await db.operatorAction.delete({ where: { id: input.actionId } });
+      await deleteOperatorAction(input.actionId, input);
       return { ok: true as const, id: input.actionId };
     } catch (err) {
       throw new TRPCError({
-        code: "BAD_REQUEST",
+        code: err instanceof CampaignScopeError ? err.code : "BAD_REQUEST",
         message: err instanceof Error ? err.message : "deleteOperatorAction failed",
       });
     }
@@ -153,10 +155,7 @@ export const operatorActionRouter = createTRPCRouter({
       }),
     )
     .query(async ({ input, ctx }) => {
-      const scope = await getOperatorContext(ctx.session.user.id);
-      if (scope.role !== "ADMIN" && scope.operatorId !== input.operatorId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette équipe." });
-      }
+      await assertCallerTeam(ctx.session.user.id, input.operatorId);
       return listActionsForOperator({
         operatorId: input.operatorId,
         done: input.done,
@@ -165,3 +164,10 @@ export const operatorActionRouter = createTRPCRouter({
       });
     }),
 });
+
+async function assertCallerTeam(userId: string, operatorId: string) {
+  const scope = await getOperatorContext(userId);
+  if (scope.role !== "ADMIN" && scope.operatorId !== operatorId) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette équipe." });
+  }
+}

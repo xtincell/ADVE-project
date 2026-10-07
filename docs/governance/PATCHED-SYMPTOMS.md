@@ -283,3 +283,10 @@ Lignes dérivées purgées :
   reçu nativement en 407 avec HTTP 200/null. Absence et refus de contexte rendus
   explicitement en 408. Cause : null métier assimilé à une requête en cours.
   Le choix admin multi-équipe reste à raccorder au contexte existant.
+
+- **2026-10-07 — 410, actions et arrivée des campagnes** : pivot de marque fictif,
+  liens non bornés et campagne sans tâche invisible reproduits sur PostgreSQL
+  et rendu. Extension des écrivains et du lecteur existants ; mêmes règles
+  manuel/handler et refus typés. Cause : contexte transverse d’équipe confondu
+  avec un contexte de marque et projection de campagnes dérivée des seules tâches.
+  Réception finale à suivre dans RESIDUAL-DEBT, sans clôture du cycle métier.

@@ -66,3 +66,27 @@ décisions ; elle ne valide ni le brief, ni le livrable, ni un résultat ADVE.
   de la réception native, suivis dans RESIDUAL-DEBT.
 - Résolution de ticket n'est pas livraison : le cycle production, validation,
   diffusion et mesure de Noël reste ouvert au chantier C6.
+
+## Extension — actions transverses et arrivée du brief (2026-10-07)
+
+OperatorAction appartient à une équipe, sans Strategy obligatoire au schéma.
+Le contexte de marque reste facultatif sur la voie tRPC ; le spine existant
+reçoit l’absence de marque, avec l’équipe réelle dans la commande. Un contexte
+fourni doit exister dans cette équipe. Les Intents d’agents gardent leur contexte
+actuel ; aucun privilège ni écrivain nouveau. Le router vérifie le rattachement
+réel du compte, les services communs vérifient celui des ressources. Cette
+cohérence de handler ne remplace pas l’autorisation de l’émetteur Mestor.
+
+Campagne, tâches et responsable sont vérifiés dans la transaction. Sans campagne
+liée, une action transverse peut concerner plusieurs campagnes de son équipe.
+Avec campagne liée, toutes ses tâches doivent en relever. Modifier un seul lien
+réévalue aussi les liens conservés. Les actions existantes incohérentes ne sont
+pas réparées automatiquement ; leur suppression autorisée reste possible.
+L’action est verrouillée avant édition/basculement/suppression et un même état
+FAIT rejoué ne change pas doneAt. Les transferts concurrents des ressources liées,
+versions d’édition et identités de création après interruption restent ouverts.
+
+Le registre campaign.list existant est filtré par équipe avec refus des demandes
+étrangères. Le tableau et le formulaire le consomment : une campagne sans tâche
+reste visible dès réception ; l’absence de tâche ne produit aucun état vert.
+Le domaine des actions est conservé, sans nouvelle couche de suivi.

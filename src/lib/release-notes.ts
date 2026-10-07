@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.410", date: "2026-10-07",
+    headline: "Vos campagnes sont visibles dès leur arrivée",
+    highlights: [
+      { emoji: "📥", title: "Avant les premières tâches", body: "Le suivi affiche aussi les campagnes qui viennent d’être reçues. Une campagne sans livrable conserve cet état explicite." },
+      { emoji: "🧭", title: "Actions dans la bonne équipe", body: "Créez une action transverse ou choisissez sa campagne par nom. Les tâches et responsables liés doivent appartenir à cette équipe." },
+    ],
+  },
+  {
     version: "6.27.409",
     date: "2026-10-07",
     headline: "Votre équipe accompagne le suivi des campagnes",

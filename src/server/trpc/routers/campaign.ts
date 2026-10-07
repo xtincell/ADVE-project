@@ -116,9 +116,12 @@ export const campaignRouter = createTRPCRouter({
     }),
 
   list: protectedProcedure
-    .input(z.object({ strategyId: z.string().optional(), status: z.string().optional() }))
+    .input(z.object({ strategyId: z.string().optional(), operatorId: z.string().min(1).optional(), status: z.string().optional() }))
     .query(async ({ ctx, input }) => {
       const opCtx = await getOperatorContext(ctx.session.user.id);
+      if (input.operatorId && opCtx.role !== "ADMIN" && opCtx.operatorId !== input.operatorId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette équipe." });
+      }
       if (input.strategyId && !(await canAccessStrategy(input.strategyId, opCtx))) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette marque" });
       }
@@ -129,6 +132,10 @@ export const campaignRouter = createTRPCRouter({
           ...(input.strategyId ? {} : scopeCampaigns(opCtx)),
           ...(input.strategyId ? { strategyId: input.strategyId } : {}),
           ...(input.status ? { status: input.status } : {}),
+          ...(input.operatorId ? { AND: [{ strategy: { OR: [
+            { operatorId: input.operatorId },
+            { operatorId: null, client: { operatorId: input.operatorId } },
+          ] } }] } : {}),
         },
         include: {
           missions: {

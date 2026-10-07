@@ -1,5 +1,37 @@
 # Changelog — La Fusee
 
+## v6.27.410 — fix(console): recevoir les campagnes avant les tâches et borner les actions (2026-10-07)
+
+Les campagnes reçues restent visibles avant les premiers livrables. Le lecteur
+`campaign.list` existant reçoit un filtre d’équipe autorisé et le tableau le
+réutilise ; aucun faux état de santé pour une campagne sans tâche. Le formulaire
+d’action propose les noms de campagnes et permet une action transverse sans
+marque fictive ni identifiant à recopier. Les libellés du suivi sont en français.
+
+Les quatre écrivains d’OperatorAction et leurs handlers partagent le contrôle
+réel d’équipe et de liens. Campagne, tâches et responsable doivent exister dans
+la même équipe ; une campagne explicitement liée borne ses tâches, une action
+transverse peut conserver des tâches de plusieurs campagnes. Les éditions,
+basculements et suppressions verrouillent l’action ; rejouer done conserve son
+horodatage. Les refus typés Mestor gardent FORBIDDEN/CONFLICT/NOT_FOUND au lieu
+d’être reclassés depuis le seul texte anglais. Aucun nouveau modèle ou Intent.
+
+Console/Admin, INFRASTRUCTURE, Mestor : extension des entités existantes. La
+qualification PostgreSQL reproduit 23 échecs d’action et de motifs, puis deux
+contre-exemples du sélecteur. Deux rendus rouges démontrent la disparition d’une
+campagne sans tâche et son erreur masquée. 63 tests portfolio, 1 592 gouvernance,
+87 PostgreSQL, typage/lints/cycles et build passent. HTTP authentifié : 21 appels
+attendus en 10–50 ms, reçu done stable, action étrangère intacte et comptes
+métier inchangés. Six émissions réelles Mestor reçoivent leurs résultats et
+statuts d’audit, dont FORBIDDEN/NOT_FOUND/CONFLICT, sans delta IA/Process. Stress :
+276 pages reçues, cinq identités demo non reçues, zéro échec, forges simulées.
+Native après livraison suivie dans RESIDUAL-DEBT ; aucun accord Noël fabriqué.
+
+Réception 409 : CI 4 068 unitaires / 59 PostgreSQL, image et runtime exacts,
+volume privé conservé. Administrateur : cinq vues chargées, changement d’équipe,
+reprise de démonstration existante et retour au même contexte. 52 réponses sans
+erreur HTTP ni exception. Rôle opérateur natif et cycle métier complet ouverts.
+
 ## v6.27.409 — fix(portfolio): garder l’équipe dans le suivi des campagnes (2026-10-07)
 
 **Le suivi reprend l’équipe accessible choisie dans le portefeuille.**

@@ -7,8 +7,9 @@
 
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { trpc } from "@/lib/trpc/client";
+import { Button } from "@/components/primitives/button";
 
 const PRIORITY_OPTIONS = ["CRITIQUE", "HAUTE", "MOYENNE", "BASSE"] as const;
 const CATEGORY_OPTIONS = [
@@ -23,7 +24,7 @@ const SOURCE_OPTIONS = [
 ] as const;
 
 export interface OperatorActionFormProps {
-  strategyId: string;
+  strategyId?: string;
   operatorId: string;
   defaultCampaignId?: string | null;
   onSuccess?: (actionId: string) => void;
@@ -46,6 +47,8 @@ export function OperatorActionForm({
   const [dueDate, setDueDate] = useState("");
   const [error, setError] = useState<string | null>(null);
 
+  const submitting = useRef(false);
+  const campaigns = trpc.campaign.list.useQuery({ operatorId });
   const utils = trpc.useUtils();
   const createMutation = trpc.operatorAction.create.useMutation({
     onSuccess: (res) => {
@@ -53,13 +56,16 @@ export function OperatorActionForm({
       if (res.ok) onSuccess?.(res.action.id);
     },
     onError: (err) => setError(err.message),
+    onSettled: () => { submitting.current = false; },
   });
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting.current) return;
     setError(null);
     if (!label.trim()) return setError("Label requis");
-    await createMutation.mutateAsync({
+    submitting.current = true;
+    try { await createMutation.mutateAsync({
       strategyId,
       operatorId,
       label,
@@ -69,7 +75,7 @@ export function OperatorActionForm({
       source,
       campaignId: campaignId.trim() || null,
       dueDate: dueDate || null,
-    });
+    }); } catch { /* onError keeps the form and its exact content visible. */ }
   };
 
   return (
@@ -83,6 +89,7 @@ export function OperatorActionForm({
         <input
           type="text"
           required
+          maxLength={500}
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           className="rounded border border-border bg-surface-raised px-2 py-1.5"
@@ -124,17 +131,21 @@ export function OperatorActionForm({
 
       <div className="grid grid-cols-2 gap-2">
         <label className="flex flex-col gap-1 text-xs">
-          <span className="font-medium">Campaign liée (cuid optionnel)</span>
-          <input
-            type="text"
-            value={campaignId}
-            onChange={(e) => setCampaignId(e.target.value)}
-            className="rounded border border-border bg-surface-raised px-2 py-1 font-mono"
-            placeholder="cmou..."
-          />
+          <span className="font-medium">Campagne liée (optionnelle)</span>
+          <select value={campaignId} onChange={(event) => setCampaignId(event.target.value)}
+            disabled={campaigns.isLoading || !!campaigns.error}
+            className="rounded border border-border bg-surface-raised px-2 py-1">
+            <option value="">Action transverse à l’équipe</option>
+            {campaignId && !campaigns.data?.some(campaign => campaign.id === campaignId) && <option value={campaignId}>Campagne à relire</option>}
+            {campaigns.data?.map(campaign => <option key={campaign.id} value={campaign.id}>{campaign.name}</option>)}
+          </select>
+          {campaigns.isLoading && <span role="status">Chargement des campagnes…</span>}
+          {campaigns.error && <span role="alert">{campaigns.error.message}
+            <Button type="button" variant="outline" onClick={() => { void campaigns.refetch(); }}>Réessayer la lecture</Button>
+          </span>}
         </label>
         <label className="flex flex-col gap-1 text-xs">
-          <span className="font-medium">Due date</span>
+          <span className="font-medium">Échéance</span>
           <input
             type="date"
             value={dueDate}

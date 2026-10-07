@@ -17,12 +17,13 @@ type EscalateIntent = Extract<Intent, { kind: "OPERATOR_ESCALATE_CHANGE_REQUEST"
 
 const ZERO_COST = { amount: 0, currency: "USD" } as const;
 
-function vetoed(tool: string, msg: string): HandlerResult {
+function vetoed(tool: string, error: unknown): HandlerResult {
+  const msg = error instanceof Error ? error.message : String(error);
   return {
     status: "VETOED",
     summary: msg,
     tool,
-    reason: msg.includes("not found") ? "NOT_FOUND" : msg.includes("already") ? "ALREADY_RESOLVED" : "VALIDATION_FAILED",
+    reason: error instanceof ChangeRequestError ? error.code : msg.includes("not found") ? "NOT_FOUND" : msg.includes("already") ? "ALREADY_RESOLVED" : "VALIDATION_FAILED",
     estimatedCost: ZERO_COST,
   };
 }
@@ -49,7 +50,7 @@ export async function createChangeRequestHandler(intent: CreateIntent): Promise<
       estimatedCost: ZERO_COST,
     };
   } catch (err) {
-    return vetoed("campaign-change-request.create", err instanceof Error ? err.message : String(err));
+    return vetoed("campaign-change-request.create", err);
   }
 }
 
@@ -64,7 +65,7 @@ export async function updateChangeRequestHandler(intent: UpdateIntent): Promise<
       estimatedCost: ZERO_COST,
     };
   } catch (err) {
-    return vetoed("campaign-change-request.update", err instanceof Error ? err.message : String(err));
+    return vetoed("campaign-change-request.update", err);
   }
 }
 
@@ -79,7 +80,7 @@ export async function resolveChangeRequestHandler(intent: ResolveIntent): Promis
       estimatedCost: ZERO_COST,
     };
   } catch (err) {
-    return vetoed("campaign-change-request.resolve", err instanceof Error ? err.message : String(err));
+    return vetoed("campaign-change-request.resolve", err);
   }
 }
 
@@ -94,7 +95,7 @@ export async function escalateChangeRequestHandler(intent: EscalateIntent): Prom
       estimatedCost: ZERO_COST,
     };
   } catch (err) {
-    return vetoed("campaign-change-request.escalate", err instanceof Error ? err.message : String(err));
+    return vetoed("campaign-change-request.escalate", err);
   }
 }
 

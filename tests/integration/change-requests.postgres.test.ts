@@ -7,8 +7,11 @@ vi.mock("next-auth", () => ({}));
 import { db } from "@/lib/db";
 import { campaignChangeRequestRouter } from "@/server/trpc/routers/campaign-change-request";
 import { campaignDeliverableRouter } from "@/server/trpc/routers/campaign-deliverable";
+import { campaignRouter } from "@/server/trpc/routers/campaign";
 import { operatorActionRouter } from "@/server/trpc/routers/operator-action";
 import { createChangeRequestHandler } from "@/server/services/campaign-change-request";
+import { createCampaignDeliverableHandler } from "@/server/services/campaign-deliverable";
+import { createOperatorActionHandler, updateOperatorActionHandler, toggleActionDoneHandler, deleteOperatorActionHandler } from "@/server/services/operator-action";
 
 const operators: string[] = [], users: string[] = [], brands: string[] = [];
 const campaigns: string[] = [], deliverables: string[] = [], nodes: string[] = [];
@@ -82,6 +85,140 @@ afterAll(async () => {
 });
 
 describe.sequential("campaign change requests through the existing governed boundary", () => {
+  it("runs an own transverse action without inventing a brand audit pivot", async () => {
+    const actions = operatorActionRouter.createCaller({ db, headers: undefined, session: session() });
+    const created = await actions.create({ operatorId: localOperator, label: "Relance transversale exacte" });
+    const args = { operatorId: localOperator, actionId: created.action.id };
+    const done = await actions.toggleDone({ ...args, done: true });
+    const replay = await actions.toggleDone({ ...args, done: true });
+    expect(replay.action.doneAt).toEqual(done.action.doneAt);
+    expect(done.action.done).toBe(true);
+    const updated = await actions.update({ ...args, patches: { context: "Contexte conservé" } });
+    expect(updated.action.context).toBe("Contexte conservé");
+    await actions.delete(args);
+    expect(await db.operatorAction.findUnique({ where: { id: args.actionId } })).toBeNull();
+  });
+  it("refuses creating an action for another team with an accessible brand pivot", async () => {
+    const actions = operatorActionRouter.createCaller({ db, headers: undefined, session: session() });
+    const before = await db.operatorAction.count({ where: { operatorId: foreignOperator } });
+    await expect(actions.create({ strategyId: brand, operatorId: foreignOperator, label: "Interdit" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(await db.operatorAction.count({ where: { operatorId: foreignOperator } })).toBe(before);
+  });
+  it.each(["campaign", "deliverables", "assignee", "pivot"] as const)("refuses a foreign %s in an action", async link => {
+    const f = await fixture(true);
+    const actions = operatorActionRouter.createCaller({ db, headers: undefined, session: session() });
+    const input = { strategyId: brand, operatorId: localOperator, label: "Refus lien étranger",
+      ...(link === "campaign" ? { campaignId: f.campaign.id } : {}),
+      ...(link === "deliverables" ? { deliverableIds: [f.tasks[0]!.id] } : {}),
+      ...(link === "assignee" ? { assigneeUserId: stranger } : {}),
+      ...(link === "pivot" ? { strategyId: foreignBrand } : {}),
+    };
+    await expect(actions.create(input)).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+  it.each(["campaign", "deliverables", "assignee"] as const)("reports a missing %s instead of accepting a dangling action", async link => {
+    const actions = operatorActionRouter.createCaller({ db, headers: undefined, session: session() });
+    await expect(actions.create({ strategyId: brand, operatorId: localOperator, label: "Lien absent",
+      ...(link === "campaign" ? { campaignId: "missing-action-link" } : {}),
+      ...(link === "deliverables" ? { deliverableIds: ["missing-action-link"] } : {}),
+      ...(link === "assignee" ? { assigneeUserId: "missing-action-link" } : {}),
+    })).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+  it("requires linked tasks to match an explicitly linked campaign", async () => {
+    const a = await fixture(); const b = await fixture();
+    const actions = operatorActionRouter.createCaller({ db, headers: undefined, session: session() });
+    await expect(actions.create({ strategyId: brand, operatorId: localOperator, label: "Mauvaise campagne",
+      campaignId: a.campaign.id, deliverableIds: [b.tasks[0]!.id],
+    })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+  it("keeps a legitimate transverse action across campaigns in the same team", async () => {
+    const a = await fixture(); const b = await fixture();
+    const actions = operatorActionRouter.createCaller({ db, headers: undefined, session: session() });
+    const row = await actions.create({ strategyId: brand, operatorId: localOperator, label: "Préparer deux projets",
+      deliverableIds: [b.tasks[0]!.id, a.tasks[0]!.id], assigneeUserId: owner,
+    });
+    expect(row.action.campaignId).toBeNull();
+    expect(row.action.deliverableIds).toEqual([b.tasks[0]!.id, a.tasks[0]!.id]);
+  });
+  it.each(["update", "toggle", "delete"] as const)("cannot %s a foreign action under the own team", async operation => {
+    const row = await db.operatorAction.create({ data: { operatorId: foreignOperator, label: "À préserver" } });
+    const actions = operatorActionRouter.createCaller({ db, headers: undefined, session: session() });
+    const args = { strategyId: brand, operatorId: localOperator, actionId: row.id };
+    const call = operation === "update" ? actions.update({ ...args, patches: { label: "Interdit" } })
+      : operation === "toggle" ? actions.toggleDone({ ...args, done: true }) : actions.delete(args);
+    await expect(call).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(await db.operatorAction.findUnique({ where: { id: row.id } })).toEqual(row);
+  });
+  it.each(["campaign", "deliverables", "assignee"] as const)("validates the resulting action when updating %s", async link => {
+    const own = await fixture(); const other = await fixture(true);
+    const row = await db.operatorAction.create({ data: { operatorId: localOperator, label: "À préserver",
+      campaignId: own.campaign.id, deliverableIds: [own.tasks[0]!.id], assigneeUserId: owner } });
+    const actions = operatorActionRouter.createCaller({ db, headers: undefined, session: session() });
+    await expect(actions.update({ strategyId: brand, operatorId: localOperator, actionId: row.id, patches: {
+      ...(link === "campaign" ? { campaignId: other.campaign.id } : {}),
+      ...(link === "deliverables" ? { deliverableIds: [other.tasks[0]!.id] } : {}),
+      ...(link === "assignee" ? { assigneeUserId: stranger } : {}),
+    } })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(await db.operatorAction.findUnique({ where: { id: row.id } })).toEqual(row);
+  });
+  it("validates retained task links when changing only the campaign", async () => {
+    const a = await fixture(); const b = await fixture();
+    const row = await db.operatorAction.create({ data: { operatorId: localOperator, label: "À préserver",
+      campaignId: a.campaign.id, deliverableIds: [a.tasks[0]!.id] } });
+    const actions = operatorActionRouter.createCaller({ db, headers: undefined, session: session() });
+    await expect(actions.update({ strategyId: brand, operatorId: localOperator, actionId: row.id,
+      patches: { campaignId: b.campaign.id } })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(await db.operatorAction.findUnique({ where: { id: row.id } })).toEqual(row);
+  });
+  it.each(["blank", "date"] as const)("rejects an invalid %s action explicitly", async invalid => {
+    const actions = operatorActionRouter.createCaller({ db, headers: undefined, session: session() });
+    await expect(actions.create({ strategyId: brand, operatorId: localOperator,
+      label: invalid === "blank" ? "   " : "Action datée", ...(invalid === "date" ? { dueDate: "bad-date" } : {}),
+    })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+  it("applies the linked campaign boundary in the direct action handler", async () => {
+    const other = await fixture(true);
+    const result = await createOperatorActionHandler({ kind: "OPERATOR_CREATE_ACTION", strategyId: brand,
+      operatorId: localOperator, label: "Interdit", campaignId: other.campaign.id });
+    expect(result).toMatchObject({ status: "VETOED", reason: "FORBIDDEN" });
+  });
+  it.each(["update", "toggle", "delete"] as const)("binds the direct %s action handler to the real action", async operation => {
+    const row = await db.operatorAction.create({ data: { operatorId: foreignOperator, label: "Reçu à préserver" } });
+    const args = { strategyId: brand, operatorId: localOperator, actionId: row.id };
+    const result = operation === "update" ? await updateOperatorActionHandler({ kind: "OPERATOR_UPDATE_ACTION", ...args, patches: { label: "Interdit" } })
+      : operation === "toggle" ? await toggleActionDoneHandler({ kind: "OPERATOR_TOGGLE_ACTION_DONE", ...args, done: true })
+      : await deleteOperatorActionHandler({ kind: "OPERATOR_DELETE_ACTION", ...args });
+    expect(result).toMatchObject({ status: "VETOED", reason: "FORBIDDEN" });
+    expect(await db.operatorAction.findUnique({ where: { id: row.id } })).toEqual(row);
+  });
+  it("preserves the structured scope refusal on the change request handler", async () => {
+    const f = await fixture(true);
+    const result = await createChangeRequestHandler({ kind: "OPERATOR_CREATE_CHANGE_REQUEST", ...command(f),
+      strategyId: brand, operatorId: localOperator });
+    expect(result).toMatchObject({ status: "VETOED", reason: "FORBIDDEN" });
+  });
+  it("preserves the structured scope refusal on the task handler", async () => {
+    const f = await fixture(true);
+    const result = await createCampaignDeliverableHandler({ kind: "OPERATOR_CREATE_CAMPAIGN_DELIVERABLE",
+      strategyId: brand, operatorId: localOperator, campaignId: f.campaign.id,
+      targetNodeId: f.tasks[0]!.targetNodeId, deliverableType: "POSTER_60x40" });
+    expect(result).toMatchObject({ status: "VETOED", reason: "FORBIDDEN" });
+  });
+
+  it("refuses a foreign team campaign selector instead of ignoring the requested team", async () => {
+    const campaigns = campaignRouter.createCaller({ db, headers: undefined, session: session() });
+    await expect(campaigns.list({ operatorId: foreignOperator })).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+  it("scopes an administrator campaign selector to the requested team, including campaigns without tasks", async () => {
+    const own = await fixture(); const other = await fixture(true);
+    const empty = await db.campaign.create({ data: { name: "Campagne reçue sans tâche", strategyId: brand } });
+    campaigns.push(empty.id);
+    const admin = await db.user.create({ data: { email: `actions-admin-${randomUUID()}@example.invalid`, role: "ADMIN" } });
+    users.push(admin.id);
+    const caller = campaignRouter.createCaller({ db, headers: undefined, session: { ...session(admin.id), user: { id: admin.id, role: "ADMIN" } } });
+    const rows = await caller.list({ operatorId: localOperator });
+    expect(rows.map(row => row.id)).toEqual(expect.arrayContaining([own.campaign.id, empty.id]));
+    expect(rows.map(row => row.id)).not.toContain(other.campaign.id);
+  });
   it("lists the own operator action without including another team", async () => {
     const ownAction = await db.operatorAction.create({ data: { operatorId: localOperator, label: "Action de recette locale" } });
     const foreignAction = await db.operatorAction.create({ data: { operatorId: foreignOperator, label: "Action de recette étrangère" } });

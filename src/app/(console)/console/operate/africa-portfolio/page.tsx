@@ -26,6 +26,9 @@ import { PortfolioOperatorSelect } from "@/components/portfolio/PortfolioOperato
 
 const TABS = ["KPIS", "PROJECTS", "DELIVERABLES", "ACTIONS", "TICKETS"] as const;
 type Tab = (typeof TABS)[number];
+const TAB_LABELS: Record<Tab, string> = { KPIS: "Indicateurs", PROJECTS: "Campagnes", DELIVERABLES: "Livrables", ACTIONS: "Actions du jour", TICKETS: "Reprises" };
+const RAG_LABELS: Record<string, string> = { GREEN: "Sans alerte", AMBER: "À surveiller", RED: "En alerte" };
+const STATUS_LABELS: Record<string, string> = { TODO: "À faire", IN_PROGRESS: "En cours", DELIVERED: "Livré", VALIDATED: "Validé" };
 
 const RAG_COLORS: Record<string, string> = {
   GREEN: "bg-emerald-500/15 text-emerald-300",
@@ -49,9 +52,9 @@ export default function AfricaPortfolioPage() {
   return (
     <div className="flex flex-col gap-6 p-6">
       <header>
-        <h1 className="text-2xl font-semibold">Africa Portfolio — {operator.name}</h1>
+        <h1 className="text-2xl font-semibold">Suivi des campagnes — {operator.name}</h1>
         <p className="text-sm text-foreground-secondary">
-          Dashboard cross-clients : campagnes en vol, livrables matrice 6D, KPIs agrégés Afrique.
+          Campagnes reçues, livrables à produire, actions du jour et demandes de reprise de cette équipe.
         </p>
       </header>
 
@@ -68,11 +71,7 @@ export default function AfricaPortfolioPage() {
                 : "border-b-2 border-transparent text-foreground-secondary hover:text-foreground"
             }`}
           >
-            {t === "KPIS" ? "KPIs Agency"
-              : t === "PROJECTS" ? "Projects (Project Tracker)"
-              : t === "DELIVERABLES" ? "Deliverables (Checklist)"
-              : t === "ACTIONS" ? "Actions du jour"
-              : "Tickets modifs"}
+            {TAB_LABELS[t]}
           </button>
         ))}
       </nav>
@@ -129,9 +128,12 @@ function KpisView({ operatorId }: { operatorId: string }) {
 
 function ProjectsView({ operatorId }: { operatorId: string }) {
   const { data: deliverables, error, isLoading, refetch } = trpc.campaignDeliverable.listForOperator.useQuery({ operatorId });
-  if (error || isLoading || !deliverables) return <PortfolioReadState error={error} onRetry={refetch} label="Chargement des campagnes…" />;
-  // Group by campaignId
+  const campaigns = trpc.campaign.list.useQuery({ operatorId });
+  if (error || campaigns.error || isLoading || campaigns.isLoading || !deliverables || !campaigns.data) {
+    return <PortfolioReadState error={error ?? campaigns.error} onRetry={() => Promise.all([refetch(), campaigns.refetch()])} label="Chargement des campagnes…" />;
+  }
   const byCampaign = new Map<string, { campaign: { id: string; name: string; strategyId: string }; total: number; ragCounts: Record<string, number> }>();
+  for (const campaign of campaigns.data) byCampaign.set(campaign.id, { campaign, total: 0, ragCounts: { GREEN: 0, AMBER: 0, RED: 0 } });
   for (const d of deliverables ?? []) {
     const entry = byCampaign.get(d.campaignId) ?? {
       campaign: d.campaign,
@@ -149,7 +151,7 @@ function ProjectsView({ operatorId }: { operatorId: string }) {
   if (projects.length === 0) {
     return (
       <div className="rounded border border-dashed border-zinc-700 p-6 text-center text-sm text-foreground-secondary">
-        Aucune campagne avec des livrables. Crée des CampaignDeliverable depuis une page campagne pour les voir ici.
+        Aucune campagne enregistrée pour cette équipe. Les projets apparaîtront dès leur réception, avant les premiers livrables.
       </div>
     );
   }
@@ -161,9 +163,9 @@ function ProjectsView({ operatorId }: { operatorId: string }) {
           <tr>
             <th className="p-2 text-left">Campagne</th>
             <th className="p-2 text-right">Livrables</th>
-            <th className="p-2 text-right">🔴 RED</th>
-            <th className="p-2 text-right">🟡 AMBER</th>
-            <th className="p-2 text-right">🟢 GREEN</th>
+            <th className="p-2 text-right">En alerte</th>
+            <th className="p-2 text-right">À surveiller</th>
+            <th className="p-2 text-right">Sans alerte</th>
             <th className="p-2 text-left">Lien</th>
           </tr>
         </thead>
@@ -171,10 +173,10 @@ function ProjectsView({ operatorId }: { operatorId: string }) {
           {projects.map((p) => (
             <tr key={p.campaign.id} className="border-t border-zinc-800 hover:bg-zinc-900/50">
               <td className="p-2 font-medium">{p.campaign.name}</td>
-              <td className="p-2 text-right">{p.total}</td>
-              <td className="p-2 text-right">{p.ragCounts.RED ?? 0}</td>
-              <td className="p-2 text-right">{p.ragCounts.AMBER ?? 0}</td>
-              <td className="p-2 text-right">{p.ragCounts.GREEN ?? 0}</td>
+              <td className="p-2 text-right">{p.total === 0 ? "Aucun livrable" : p.total}</td>
+              <td className="p-2 text-right">{p.total ? p.ragCounts.RED ?? 0 : "—"}</td>
+              <td className="p-2 text-right">{p.total ? p.ragCounts.AMBER ?? 0 : "—"}</td>
+              <td className="p-2 text-right">{p.total ? p.ragCounts.GREEN ?? 0 : "—"}</td>
               <td className="p-2">
                 <Link
                   href={`/cockpit/operate/campaigns/${p.campaign.id}?operator=${encodeURIComponent(operatorId)}`}
@@ -206,14 +208,14 @@ function DeliverablesView({ operatorId }: { operatorId: string }) {
     <section className="flex flex-col gap-3">
       {/* Filtres */}
       <div className="flex flex-wrap gap-3 rounded border border-zinc-800 p-3">
-        <FilterGroup label="RAG" options={["GREEN", "AMBER", "RED"]} selected={filterRag} onChange={setFilterRag} />
-        <FilterGroup label="Status" options={["TODO", "IN_PROGRESS", "DELIVERED", "VALIDATED"]} selected={filterStatus} onChange={setFilterStatus} />
+        <FilterGroup label="État" options={["GREEN", "AMBER", "RED"]} selected={filterRag} onChange={setFilterRag} labels={RAG_LABELS} />
+        <FilterGroup label="Avancement" options={["TODO", "IN_PROGRESS", "DELIVERED", "VALIDATED"]} selected={filterStatus} onChange={setFilterStatus} labels={STATUS_LABELS} />
       </div>
 
       {/* Table */}
       {!deliverables || deliverables.length === 0 ? (
         <div className="rounded border border-dashed border-zinc-700 p-6 text-center text-sm text-foreground-secondary">
-          Aucun livrable correspondant. Crée des CampaignDeliverable matrice 6D depuis une page campagne.
+          Aucun livrable correspondant. Ouvrez une campagne pour préparer ses premières tâches.
         </div>
       ) : (
         <div className="overflow-x-auto rounded border border-zinc-700">
@@ -321,7 +323,6 @@ function ActionsView({ operatorId }: { operatorId: string }) {
         <div className="rounded border border-zinc-700 bg-zinc-900/50">
           <OperatorActionForm
             operatorId={operatorId}
-            strategyId={`audit:${operatorId}`}
             onSuccess={() => setShowForm(false)}
             onCancel={() => setShowForm(false)}
           />
@@ -344,7 +345,6 @@ function ActionsView({ operatorId }: { operatorId: string }) {
                 checked={a.done}
                 onChange={(e) =>
                   toggleMutation.mutate({
-                    strategyId: `audit:${operatorId}`,
                     operatorId,
                     actionId: a.id,
                     done: e.target.checked,
@@ -408,13 +408,13 @@ function TicketsView({ operatorId }: { operatorId: string }) {
         <Ticket className="h-4 w-4" />
         <span className="text-sm text-foreground-secondary">{tickets?.length ?? 0} tickets ouverts</span>
         <span className="text-xs text-foreground-secondary ml-2">
-          (création depuis page CampaignDeliverable détail — workflow PROTOCOLE ABSENCE V4)
+          (demandes enregistrées depuis le détail d’un livrable)
         </span>
       </div>
 
       {!tickets || tickets.length === 0 ? (
         <div className="rounded border border-dashed border-zinc-700 p-6 text-center text-sm text-foreground-secondary">
-          Aucun ticket ouvert. Les tickets de modif sont créés depuis la page d'un CampaignDeliverable.
+          Aucune reprise ouverte. Les demandes de modification sont enregistrées depuis le détail d’un livrable.
         </div>
       ) : (
         <div className="overflow-x-auto rounded border border-zinc-700">
@@ -484,9 +484,11 @@ function FilterGroup({
   options,
   selected,
   onChange,
+  labels,
 }: {
   label: string;
   options: string[];
+  labels?: Record<string, string>;
   selected: string[];
   onChange: (next: string[]) => void;
 }) {
@@ -505,7 +507,7 @@ function FilterGroup({
                 : "bg-zinc-800 text-foreground-secondary hover:bg-zinc-700"
             }`}
           >
-            {opt}
+            {labels?.[opt] ?? opt}
           </button>
         );
       })}
