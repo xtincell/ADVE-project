@@ -23,6 +23,8 @@ Un System token consomme **uniquement** un Reference token. Jamais un autre Syst
 | `--color-surface-raised` | `--ref-ink-1` | Cards, panels, sidebar |
 | `--color-surface-elevated` | `--ref-ink-2` | Hover state, modals fond |
 | `--color-surface-overlay` | `--ref-ink-3` | Tooltips, popovers, dropdowns |
+| `--color-media-light` | `--ref-bone` | Fond clair fixe des aperçus transparents, indépendant du thème |
+| `--color-media-dark` | `--ref-ink-0` | Fond sombre fixe des aperçus transparents, indépendant du thème |
 
 ## Foreground
 

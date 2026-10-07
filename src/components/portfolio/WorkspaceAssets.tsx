@@ -2,13 +2,31 @@
 
 import { useState } from "react";
 import { ArrowUpRight, ImageIcon } from "lucide-react";
+import { cva } from "class-variance-authority";
 import { groupWorkspaceAssets, type WorkspaceAsset } from "@/domain/portfolio-barre";
 
+const media = cva("relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-lg", {
+  variants: { backing: {
+    light: "bg-[var(--asset-preview-bg-light)]",
+    dark: "bg-[var(--asset-preview-bg-dark)]",
+    empty: "bg-surface-raised",
+  } },
+});
+
 export function WorkspaceAssetMedia({ asset }: { asset: WorkspaceAsset }) {
-  const [failed, setFailed] = useState(false);
-  return <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-lg bg-surface-raised">
-    {asset.preview && !failed ? <img src={asset.preview} alt={asset.name} loading="lazy" className="h-full w-full object-contain p-3" onError={() => setFailed(true)} />
-      : <div className="px-6 text-center text-foreground-secondary"><ImageIcon className="mx-auto mb-2 h-6 w-6" /><span className="text-xs">{failed ? "Aperçu indisponible" : "Sans aperçu"}</span></div>}
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const [backing, setBacking] = useState<"light" | "dark">("light");
+  const failed = Boolean(asset.preview && failedUrl === asset.preview);
+  const hasPreview = Boolean(asset.preview && !failed);
+  return <div>
+    <div className={media({ backing: hasPreview ? backing : "empty" })}>
+      {hasPreview ? <img src={asset.preview!} alt={asset.name} loading="lazy" className="h-full w-full object-contain p-3" onError={() => setFailedUrl(asset.preview)} />
+        : <div className="px-6 text-center text-foreground-secondary"><ImageIcon className="mx-auto mb-2 h-6 w-6" /><span className="text-xs">{failed ? "Aperçu indisponible" : "Sans aperçu"}</span></div>}
+    </div>
+    {hasPreview && <div role="group" aria-label={`Fond de l’aperçu · ${asset.name}`} className="mt-2 flex flex-wrap gap-3 text-xs text-foreground-secondary">
+      <button type="button" aria-pressed={backing === "light"} onClick={() => setBacking("light")} className="min-h-8 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-accent">Fond clair</button>
+      <button type="button" aria-pressed={backing === "dark"} onClick={() => setBacking("dark")} className="min-h-8 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-accent">Fond sombre</button>
+    </div>}
   </div>;
 }
 

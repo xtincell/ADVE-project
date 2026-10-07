@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.412", date: "2026-10-08",
+    headline: "Vos fichiers et leurs origines restent lisibles",
+    highlights: [
+      { emoji: "🖼️", title: "Aperçus contrastés", body: "Les aperçus s’ouvrent sur fond clair. Vous pouvez choisir un fond sombre pour les variantes blanches, sans modifier le fichier." },
+      { emoji: "📚", title: "Versions et décisions distinctes", body: "Le dossier de marque indique la version et la dernière écriture conservée. Un état importé ne vaut pas preuve d’approbation." },
+    ],
+  },
+  {
     version: "6.27.410", date: "2026-10-07",
     headline: "Vos campagnes sont visibles dès leur arrivée",
     highlights: [

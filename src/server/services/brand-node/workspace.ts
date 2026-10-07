@@ -53,7 +53,12 @@ export async function getPortfolioWorkspace(root: BrandNode, options: { allowBar
   const strategies = await db.strategy.findMany({
     where: { id: { in: accessibleIds } },
     select: { id: true, name: true, status: true,
-      pillars: { select: { key: true, validationStatus: true, completionLevel: true, staleAt: true, currentVersion: true } },
+      pillars: { select: { key: true, validationStatus: true, completionLevel: true, staleAt: true, currentVersion: true,
+        // A recorded status does not establish who approved it. Read only the
+        // latest write metadata, never the potentially large historic content.
+        versions: { orderBy: [{ version: "desc" }, { createdAt: "desc" }], take: 1,
+          select: { version: true, author: true, createdAt: true } },
+      } },
       dataSources: { select: { id: true, fileName: true, certainty: true, processingStatus: true, updatedAt: true } },
       brandAssets: { select: { id: true, name: true, kind: true, state: true, fileUrl: true, staleAt: true } },
       campaigns: { select: { id: true, name: true, status: true } },

@@ -19,6 +19,14 @@ const label = (s: string) => STATE_LABELS[s] ?? s;
 const normalize = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 const dateLabel = (s: string) => { const d = new Date(s); return Number.isNaN(d.getTime()) ? s : d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }); };
 
+/** Write provenance, deliberately independent from the recorded approval status. */
+export function writeOrigin(author: string | null) {
+  if (author && /^seed(?:[-:]|$)/i.test(author)) return "Import initial";
+  if (author?.startsWith("OPERATOR:")) return "Modification par un opérateur";
+  if (author && ["AUTO_FILLER", "MESTOR", "NOTORIA", "JEHUTY", "ARTEMIS"].includes(author.split(":")[0]!)) return "Traitement assisté";
+  return "Origine à qualifier";
+}
+
 function Empty({ children }: { children: React.ReactNode }) {
   return <div className="rounded-xl border border-dashed border-border p-8 text-sm text-foreground-secondary">{children}</div>;
 }
@@ -106,7 +114,19 @@ function WorkspaceContent({ data, refresh, refreshing }: { data: PortfolioWorksp
     {section === "identity" && <div className="space-y-5">
       <p className="max-w-3xl text-sm leading-relaxed text-foreground-secondary">Authenticité, Distinction, Valeur, Engagement : le socle durable de la marque. Les informations issues d’un brief restent distinctes des décisions de marque. Une référence à une source ne vaut pas validation.</p>
       {data.strategies.length > 1 && <p role="status" className="rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm text-warning">Plusieurs dossiers de stratégie sont reliés. Leurs contenus et validations restent distincts ; un rapprochement est nécessaire avant de les traiter comme une stratégie unique.</p>}
-      {data.strategies.map((s) => <div key={s.id} className="rounded-xl border border-border p-5"><p className="mb-2 text-xs text-foreground-secondary">{s.id === data.root.strategyId ? "Dossier principal" : s.id === data.inheritedFrom?.strategyId ? `Socle partagé de ${data.inheritedFrom.name}` : "Dossier associé · historique à rapprocher"}</p><div className="flex flex-wrap items-center justify-between gap-3"><h2 className="font-medium">{s.name}</h2><Link href={`/cockpit/brand/strategy?strategy=${encodeURIComponent(s.id)}`} onClick={() => setStrategyId(s.id)} className="inline-flex items-center gap-2 text-sm text-accent">Ouvrir la stratégie <ArrowRight className="h-4 w-4" /></Link></div><div className="mt-4 flex flex-wrap gap-2">{s.pillars.map((p) => <span key={p.key} className="rounded-lg bg-surface-raised px-3 py-2 text-xs"><b className="mr-2 uppercase">{p.key}</b>{label(p.validationStatus)}{p.staleAt ? " · À revoir" : ""}</span>)}</div></div>)}
+      {data.strategies.map((s) => <div key={s.id} className="rounded-xl border border-border p-5"><p className="mb-2 text-xs text-foreground-secondary">{s.id === data.root.strategyId ? "Dossier principal" : s.id === data.inheritedFrom?.strategyId ? `Socle partagé de ${data.inheritedFrom.name}` : "Dossier associé · historique à rapprocher"}</p><div className="flex flex-wrap items-center justify-between gap-3"><h2 className="font-medium">{s.name}</h2><Link href={`/cockpit/brand/strategy?strategy=${encodeURIComponent(s.id)}`} onClick={() => setStrategyId(s.id)} className="inline-flex items-center gap-2 text-sm text-accent">Ouvrir la stratégie <ArrowRight className="h-4 w-4" /></Link></div>
+        <p className="mt-3 text-xs leading-relaxed text-foreground-secondary">L’état enregistré et la dernière écriture sont présentés séparément. Un import ou une modification ne constitue pas une preuve d’approbation du contenu actuel.</p>
+        <dl className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{s.pillars.map((p) => {
+          const latest = p.versions[0];
+          return <div key={p.key} className="min-w-0 rounded-lg bg-surface-raised p-3 text-xs">
+            <dt className="font-medium uppercase">{p.key} · version {p.currentVersion}</dt>
+            <dd className="mt-2">État enregistré : {label(p.validationStatus)}{p.staleAt ? " · À revoir" : ""}</dd>
+            <dd className="mt-2 break-words text-foreground-secondary">{latest
+              ? <>Dernière écriture : {writeOrigin(latest.author)} · {dateLabel(latest.createdAt.toISOString())}</>
+              : "Historique d’écriture indisponible"}</dd>
+          </div>;
+        })}</dl>
+      </div>)}
       {knowledge.map((k) => <article key={k.id} className="grid gap-3 border-b border-border py-5 md:grid-cols-[180px_minmax(0,1fr)]"><div><p className="text-xs text-accent">{k.brand}</p><h3 className="mt-1 text-sm font-medium capitalize">{k.title}</h3><p className="mt-2 text-xs text-foreground-secondary">{k.certainty === "INFERRED" ? "Inféré · à confirmer" : k.certainty === "REFERENCED" ? "Source mentionnée" : "Provenance à qualifier"}</p></div><div><p className="whitespace-pre-line text-sm leading-relaxed">{k.value}</p>{k.evidence && <p className="mt-3 text-xs leading-relaxed text-foreground-secondary">{k.evidence}</p>}</div></article>)}
       {!knowledge.length && !data.strategies.length && <Empty>Aucun socle de marque relié. Les éléments inconnus restent à documenter.</Empty>}
     </div>}

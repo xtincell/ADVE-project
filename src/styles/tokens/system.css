@@ -12,6 +12,9 @@
   --color-surface-raised:       var(--ref-ink-1);
   --color-surface-elevated:     var(--ref-ink-2);
   --color-surface-overlay:      var(--ref-ink-3);
+  /* Fixed media backings: a transparent file must remain readable in both themes. */
+  --color-media-light:          var(--ref-bone);
+  --color-media-dark:           var(--ref-ink-0);
 
   /* ──── Foreground ──── */
   --color-foreground:           var(--ref-bone);

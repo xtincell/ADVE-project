@@ -1,5 +1,30 @@
 # Changelog — La Fusee
 
+## v6.27.412 — fix(portfolio): distinguer les écritures des approbations (2026-10-08)
+
+**Le dossier de marque expose les versions sans fabriquer leur validation.**
+
+- Lecture PostgreSQL de SPAWT : les huit états VALIDATED du dossier associé
+  portent une seule version `seed-spawt`, sans émission de validation retrouvée.
+  Le principal possède cinq sources et des versions ultérieures. La projection
+  existante reçoit la dernière métadonnée de version, sans contenu historique,
+  puis sépare état enregistré, numéro et origine d’écriture. Aucune décision
+  humaine, absorption des dossiers ni modification des seuils déduite.
+- Le média commun garde les fichiers intacts et propose deux fonds fixes du
+  système de design. Un fond clair par défaut rend le wordmark sombre lisible
+  dans les deux thèmes ; les variantes blanches peuvent utiliser le fond sombre.
+  L’échec d’une adresse ne masque plus l’aperçu d’une nouvelle adresse.
+- Console/Admin, INFRASTRUCTURE ; lecteur BrandNode existant, sous Mestor.
+  Une identité lisible et sourcée évite que la production de marque réutilise
+  une ancienne proposition comme un choix approuvé. Aucun modèle ou Intent créé.
+  La réception native, le rapprochement sémantique des deux dossiers et
+  l’irrigation d’une version approuvée vers les produits restent ouverts.
+- Vérification locale : quatre contre-exemples de rendu et deux PostgreSQL
+  rouges avant correction ; 1 659 tests gouvernance/portfolio et 89 PostgreSQL
+  verts après correction. Typage, lints sans erreur (24 warnings historiques),
+  cycles et build passent. HTTP authentifié : 200/403/404 en 11–54 ms ; page
+  serveur 200. Ce reçu HTTP ne remplace pas la réception native hydratée.
+
 ## v6.27.411 — docs(governance): clore les reçus du lot 410 (2026-10-07)
 
 **Les registres distinguent les corrections livrées des parcours encore ouverts.**

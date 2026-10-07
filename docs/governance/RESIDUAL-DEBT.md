@@ -47,9 +47,10 @@
   390 × 844 confirmé : aucun débordement horizontal, dialogue dans le viewport.
   Ces reçus bornent la lecture ; le corpus et le cycle métier restent ouverts.
 - **Contraste des aperçus transparents** : le wordmark sombre SPAWT est difficile
-  à lire sur le fond sombre de la carte. Préserver le fichier et adopter le fond
-  d’aperçu neutre du système de design, puis recevoir modes jour/nuit et mobile.
-  Déclencheur : prochain lot UX portfolio ; effort : un correctif du média commun.
+  à lire sur le fond sombre de la carte. Correctif local 412 : fonds clair/sombre
+  fixes via le média commun, sans altération du fichier. Fermer après réception
+  native en modes jour/nuit et mobile. Déclencheur : déploiement 412 ; effort :
+  une recette des aperçus SPAWT et non-régression produits FrieslandCampina.
 - **Dossiers stratégiques distincts** : le dossier principal contient une
   fondation renseignée et cinq documents ; le dossier associé garde son histoire.
   Le regroupement de fichiers ne les rapproche pas sémantiquement. Fermer en
@@ -63,6 +64,13 @@
   validation humaine. Une provenance du positionnement de l’application cite
   Motion19, UPgraders et Akwa Palace : qualifier la source exacte, conserver
   l’historique et corriger la filiation via les écrivains existants.
+  Lecture RO du 8 octobre : huit versions uniques `seed-spawt` et aucune émission
+  pillar/ADVE dans l’associé. Comparaison structurelle : 166 champs top-level,
+  trois identiques, 131 différents, 32 absents d’un côté ; cela ne mesure pas
+  leur équivalence sémantique. Le principal conserve 78 provenances de champ
+  dans `_fieldProvenance`, distinctes des anciennes colonnes sources/certainty
+  vides. Le lot 412 rend version et origine d’écriture visibles sans déclarer
+  une approbation. Réception native et rapprochement de contenu encore requis.
 
 ## Réception des observations et décisions — 2026-10-07 (ADR-0199)
 
