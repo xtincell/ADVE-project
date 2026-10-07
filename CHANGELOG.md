@@ -4,6 +4,10 @@
 
 **Un suivi retrouve son projet et ses marques sans dupliquer les décisions ni écraser un autre lien.**
 
+- Présentation publique des sept fonctions corrigée séparément : rôles exprimés
+  dans le travail de l’entreprise, aide IA facultative et résultats à recevoir.
+  Les anciens compteurs promotionnels et promesses d’exécution automatique sont
+  retirés ; leur réception dans le navigateur reste à faire après livraison 403.
 - Extension des références existantes par instance Radar, identifiant stable et
   projet source facultatif. Même identité dans validation, lecture, import et
   affichage ; un suivi partagé apparaît une seule fois sur le projet exact.

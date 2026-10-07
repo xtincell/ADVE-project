@@ -198,6 +198,17 @@ Procédure de reprise : [runbook](../deploy/CREATIVE-INTELLIGENCE.md).
   manuels et raccord des trois marques au reçu Noël id 491 dans Radar Matanga.
   Effort : un parcours et une relecture des identités ; reprise dès déploiement
   403 sur le portefeuille déjà accessible, avant réception Shinkiro R04/R06/R07.
+  Recevoir aussi la présentation publique des sept fonctions : rôles, aide IA
+  facultative et absence de promesses automatiques ou de compteurs périmés.
+
+- **Portée du stress HTTP** : le script suit les redirections et accepte les
+  réponses 401/403/404 ; ses 281 réponses ne prouvent pas 281 écrans authentifiés.
+  Il ne sonde que trois procédures de lecture. Conserver la distinction avec les
+  commandes métier authentifiées et la réception native. Fermer par reçus de
+  route finale/rôle/statut et par couverture déclarée des appels, puis contre-test
+  login et route absente. Déclencheur : recette transverse C4/R10 après 403 ;
+  effort : correction bornée de l’observabilité du script existant, sans navigateur
+  alternatif ni assouplissement de ses invariants.
 
 - **Fraîcheur des dérivés et autres écrivains** : v6.27.398 invalide atomiquement
   l’index lors de la correction manuelle ; v6.27.399 factorise les deux préparations,

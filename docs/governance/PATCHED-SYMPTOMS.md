@@ -30,6 +30,12 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-07 · Présentation publique : compteurs Artemis périmés, catalogue confondu
+avec disponibilité, révision automatique et fin du travail manuel promises.
+Le correctif de copy 403 décrit les rôles, choix humains et services configurés.
+Cause : copy promotionnelle non confrontée aux registres et aux reçus de release.
+Réception native de la présentation à faire à la livraison 403.
+
 2026-10-07 · Portfolio : une référence invalide masquait tout le tableau ; deux
 éditions pouvaient écraser les liens récents. v6.27.403 préserve les entrées saines,
 signale les rejets et compare la version dans l’écriture commune. Cause : lecture

@@ -22,57 +22,57 @@ const GOVS = {
     func: "Décision",
     tag: "Mestor",
     role: "Coeur stratégique de l'OS",
-    rule: { k: "RÈGLE 01", t: "Chaque mutation traverse un point unique — aucune exception." },
-    desc: "Le décideur. Point d'entrée pour toute action métier. Analyse le contexte, tranche les arbitrages, recommande la priorité. Chaque diagnostic, chaque plan, chaque décision passe par lui — et reste auditable à vie.",
-    caps: ["Point d'écriture unique", "Recommandations priorisées", "Cascade ADVE → RTIS", "Arbitrage de priorités", "Plan d'orchestration", "Insights cross-pilier"],
+    rule: { k: "RÈGLE 01", t: "Une proposition attend votre décision avant de changer la marque." },
+    desc: "Le point de décision. Rassemble le contexte, les diagnostics et les propositions pour vous aider à choisir la suite. Vous pouvez travailler à la main ou demander une aide IA ; les décisions conservées restent consultables dans le dossier.",
+    caps: ["Contexte de marque", "Propositions à examiner", "Fondations et stratégie", "Arbitrage de priorités", "Plan de travail", "Historique des décisions"],
   },
   artemis: {
     func: "Production",
     tag: "Artemis",
     role: "Exécution créative",
     rule: { k: "RÈGLE 02", t: "Le producteur ne décide pas. Il exécute." },
-    desc: "Le producteur créatif. 56 outils, 57 séquences, 24 frameworks diagnostiques. Transforme la stratégie en livrables — et pilote l'Oracle, ton document conseil dynamique de 35 sections qui se met à jour seul quand le marché bouge.",
-    caps: ["56 outils créatifs", "57 séquences orchestrées", "24 frameworks", "Oracle dynamique 35 sections", "Campaign manager", "Pipeline orchestrator"],
+    desc: "Le producteur créatif. Relie la stratégie aux outils et aux parcours de création. Vous préparez vos livrables, conservez les versions et examinez le résultat. Les analyses et générations assistées se demandent selon les services disponibles ; le document conseil peut être révisé au fil des décisions.",
+    caps: ["Outils créatifs", "Parcours de production", "Cadres de diagnostic", "Document conseil", "Campagnes", "Versions des livrables"],
   },
   seshat: {
     func: "Observation",
     tag: "Seshat",
     role: "Capteur de marché",
-    rule: { k: "RÈGLE 03", t: "L'observateur n'écrit jamais. Il observe — et nourrit la décision." },
-    desc: "Le capteur. Surveille le marché en continu, interprète les signaux faibles avant qu'ils ne deviennent évidents, anticipe les tendances sectorielles — et nourrit chaque décision d'un fil d'intelligence marché à jour.",
-    caps: ["Signaux faibles sectoriels", "Indice d'attachement (mesure du lien client)", "Moteur d'engagement", "Knowledge graph sectoriel", "Cross-brand benchmark", "Fil d'intelligence marché"],
+    rule: { k: "RÈGLE 03", t: "Une observation éclaire la décision ; elle ne la remplace pas." },
+    desc: "Le capteur de marché. Rassemble les observations disponibles et présente les variations constatées. Vous choisissez les sources et les collectes à activer. Une observation peut conduire à une proposition, que vous examinez avant de l'appliquer.",
+    caps: ["Observations de marché", "Sources consultables", "Variations constatées", "Contexte sectoriel", "Comparaisons de marques", "Fil de veille"],
   },
   thot: {
     func: "Finances",
     tag: "Thot",
     role: "Verrou budgétaire",
-    rule: { k: "RÈGLE 04", t: "Pas de combustion sans propellant." },
-    desc: "Le verrou financier. Veto, downgrade, validation budget. Aucune mission ne décolle sans son OK. 40+ règles de validation, benchmarks sectoriels intégrés, mobile money pour les paiements ouest-africains.",
-    caps: ["Cost-gate (Pillar 6)", "40+ règles validation", "Benchmarks secteur", "Commission engine", "Mobile money", "Reconciliation automatique"],
+    rule: { k: "RÈGLE 04", t: "Un coût prévu doit rester distinct d'une dépense constatée." },
+    desc: "Le repère financier. Aide à préparer un budget et à examiner les coûts d'une opération. Les estimations servent à arbitrer ; les dépenses et paiements nécessitent leurs propres pièces et les services configurés pour votre entreprise.",
+    caps: ["Budget d'opération", "Estimations de coût", "Dépenses constatées", "Arbitrages budgétaires", "Pièces de paiement", "Suivi économique"],
   },
   ptah: {
     func: "Forge",
     tag: "Ptah",
     role: "Matérialisation des assets",
-    rule: { k: "RÈGLE 05", t: "Aucun brief n'existe tant qu'il n'est pas matérialisé." },
-    desc: "Le forgeron multimodal. Transforme les briefs en assets concrets via providers externes : images (Magnific), vidéos (Adobe Firefly), design layered (Figma), templates (Canva). Cascade Glory→Brief→Forge — Ptah ferme la boucle production.",
-    caps: ["Magnific · upscaler", "Adobe Firefly", "Figma export", "Canva templates", "AssetVersion lineage", "Provenance auditable"],
+    rule: { k: "RÈGLE 05", t: "Un résultat produit attend encore votre revue." },
+    desc: "L'atelier de fabrication. Relie le brief à un résultat visuel, sonore ou vidéo et conserve sa provenance. Vous pouvez apporter vos fichiers ou demander une génération à un service configuré, puis examiner les versions avant de retenir un actif.",
+    caps: ["Brief de fabrication", "Fichiers apportés", "Génération sur demande", "Versions des actifs", "Revue du résultat", "Provenance consultable"],
   },
   imhotep: {
     func: "Équipage",
     tag: "Imhotep",
     role: "Matching talent + formation",
-    rule: { k: "RÈGLE 06", t: "Pas de mission sans crew apparié au talent juste." },
-    desc: "Le matcheur d'équipage. Apparie talents et missions sans prospection humaine, compose les équipes selon le brief, évalue les progressions de tier sur les livraisons réelles, recommande la formation Académie pour combler les gaps avant qu'ils ne coûtent.",
-    caps: ["Matching talent ↔ mission", "Composition d'équipe", "Évaluation tier objective", "Formation Académie", "Certifications portables", "QC routing intelligent"],
+    rule: { k: "RÈGLE 06", t: "Une mission a besoin d'un responsable et d'attentes claires." },
+    desc: "Le repère d'équipe. Rapproche les besoins d'une mission et les profils disponibles pour préparer une affectation. Vous gardez la main sur l'équipe, les attentes de qualité et les besoins de formation ; une proposition d'affectation reste à confirmer.",
+    caps: ["Profils et compétences", "Besoins de mission", "Affectations", "Composition d'équipe", "Formation", "Attentes de qualité"],
   },
   anubis: {
     func: "Diffusion",
     tag: "Anubis",
     role: "Hub de diffusion",
-    rule: { k: "RÈGLE 07", t: "Aucun message n'atteint l'audience sans audit budget et segment." },
-    desc: "Le hub broadcast. Orchestre la diffusion multi-canal, l'achat d'inventaire ads (Meta / Google / X / TikTok), l'email transactionnel (Mailgun), le SMS (Twilio), et un notification center persistant. Les API keys de tous tes clients vivent dans un Credentials Vault sécurisé back-office.",
-    caps: ["Broadcast multi-canal", "Ad networks (4 régies)", "Mailgun + Twilio", "Notification Center", "Credentials Vault", "cost_per_superfan tracking"],
+    rule: { k: "RÈGLE 07", t: "Préparer une diffusion ne signifie pas l'avoir publiée." },
+    desc: "Le point de diffusion. Prépare les canaux, audiences et contenus d'une opération. L'envoi dépend des connexions et autorisations propres à votre entreprise ; son résultat doit être reçu avant de compter la diffusion comme réalisée.",
+    caps: ["Plan de diffusion", "Canaux configurés", "Audiences", "Contenus à publier", "Notifications", "Résultats de diffusion"],
   },
 } as const;
 
@@ -95,7 +95,7 @@ export function MarketingGouverneurs() {
             Sept cerveaux. <span className="font-serif italic font-medium">Un seul</span> opérateur.
           </h2>
           <p className="text-foreground-secondary text-pretty text-base md:text-lg max-w-[60ch]">
-            L&rsquo;OS est gouverné par sept fonctions spécialisées : décision, production, observation, finances, forge, équipage, diffusion. L&rsquo;humain supervise. Il ne produit plus.
+            Sept fonctions spécialisées relient décision, production, observation, finances, forge, équipage et diffusion. Vous gardez la main sur le travail ; l&rsquo;aide IA reste un choix.
           </p>
         </div>
 
