@@ -1,5 +1,23 @@
 # Changelog — La Fusee
 
+## v6.27.402 — fix(gazette): isoler les observations et demander explicitement l’IA (2026-10-07)
+
+**Un constat ne lance plus une prescription ; chaque marque conserve ses propres preuves.**
+
+- La boucle de retour conserve score et observations sans fournisseur ni file de
+  prescriptions parallèle. La demande assistée passe par les recommandations
+  existantes, en attente de décision humaine ; le rafraîchissement est sans
+  génération par défaut.
+- Diagnostics et compteurs filtrent les marques accessibles avant pagination.
+  Une capture orpheline ou contradictoire ne remplace pas une référence propre.
+  Le contrôle de dérive expose son reçu et distingue absence et zéro réel.
+- La Gazette présente la variation observée et les qualifications réellement
+  disponibles. Une analyse échouée ne prétend plus exécuter une recommandation ;
+  son erreur et le nouvel essai restent accessibles, y compris après une ancienne demande.
+- PostgreSQL neuf, huit scénarios de portée/reprise et vingt tests ciblés reçus.
+  Le navigateur authentifié reçoit le constat, l’option facultative et le refus
+  sans fournisseur. Les cycles métier et la réception de toutes les IP restent ouverts.
+
 ## v6.27.401 — fix(sources): partager une pièce et vérifier la version réellement utilisée (2026-10-07)
 
 **Un document peut servir plusieurs marques sans dupliquer sa vérité ni ses corrections.**

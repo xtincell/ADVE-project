@@ -68,6 +68,33 @@ jobs:
       - run: npx prisma generate
       - run: npm test -- --run
 
+  feedback-postgres:
+    name: Brand-local drift (PostgreSQL)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: receipt-ci
+          POSTGRES_DB: shinkiro_verify
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d shinkiro_verify"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:receipt-ci@127.0.0.1:5432/shinkiro_verify
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx prisma migrate deploy
+      - run: npx vitest run --config vitest.feedback-postgres.config.mts
+
   prisma-validate:
     name: Prisma schema validate
     runs-on: ubuntu-latest

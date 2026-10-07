@@ -34,6 +34,15 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.402",
+    date: "2026-10-07",
+    headline: "Une veille fidèle, une aide IA choisie",
+    highlights: [
+      { emoji: "🔎", title: "Vos observations restent propres à vos marques", body: "La Gazette présente les variations constatées. Une qualification absente reste signalée comme telle ; les dossiers des autres entreprises restent exclus de votre vue." },
+      { emoji: "✋", title: "Choisissez quand demander des propositions", body: "Le rafraîchissement ne génère pas de propositions IA par défaut. Une demande assistée affiche son résultat ou son échec et permet de réessayer. Vous examinez les propositions avant de les appliquer." },
+    ],
+  },
+  {
     version: "6.27.401",
     date: "2026-10-07",
     headline: "Une référence commune, des usages propres à chaque marque",

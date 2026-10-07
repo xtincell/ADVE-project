@@ -1,5 +1,33 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
+## Réception des observations et décisions — 2026-10-07 (ADR-0199)
+
+- **Fermé localement en 402** : le leaf LLM synchrone et la prescription RUNNING
+  parallèle sont retirés. Notoria explicite reste la file de propositions PENDING.
+  La génération automatique au rafraîchissement est décochée par défaut ; les
+  erreurs sans proposition ne créent pas une curation de réussite.
+- **Réentrance et réception de score** : la garde `_scoringInProgress` est en mémoire
+  et `processSignal` peut relire un score déjà recalculé ; le reçu de dérive n'est
+  pas un historique de chaque écriture. Fermer en consommant les variations du
+  Signal existant, avec deux ordres de recalcul, concurrence et reprise sans
+  doublon. Déclencheur : prochaine traversée C3/C6 après livraison 402 ; effort :
+  un lot scoreur/feedback, sans ajouter une nouvelle métrique ou file.
+- **Interventions opérateur** : la surface de demandes attend des états en minuscules
+  alors que le router émet PENDING/CONVERTED/DISMISSED ; la conversion concurrente
+  et le rejet d'une demande déjà convertie restent à recevoir. Reprendre les
+  états et commandes existants, puis éprouver auteur, affectation, conversion et
+  résolution depuis l'UX. Déclencheur : recette C4/C6 après 402 ; effort : un lot.
+- **Tickets de reprise de campagne** : le code formé à partir du préfixe campagne
+  et d'un compteur par livrable peut entrer en collision entre deux livrables.
+  Fermer sur l'identité/numérotation déjà existante, avec deux créations simultanées
+  et reprise idempotente. Déclencheur : réception du cycle de reprise Noël C6 ;
+  effort : un lot workflow et test PostgreSQL.
+- **Prescriptions historiques** : les anciens Process de prescription ne sont
+  ni supprimés ni requalifiés en décisions humaines. Inventorier leurs usages et
+  afficher leur état historique si nécessaire. Déclencheur : réconciliation C1/C6 ;
+  effort : une lecture runtime puis rapprochement sans exécution.
+
+
 ## Continuité des originaux de sources — 2026-10-06 (ADR-0197)
 
 - **Fermé le 2026-10-07 pour le document pilote** : image 400, volume privé,
@@ -9,10 +37,10 @@
   suppression du propriétaire reste à contractualiser avec le backend distant.
   L’installation cible utilise le volume privé, dont ce nettoyage est reçu.
   Déclencheur : activation d’un backend HTTP ; effort : un lot de maintenance.
-- **Implémenté et reçu localement en 401 (ADR-0198)** : usages révocables, reçus de
-  version et péremption des dérivés documentaires directs. Réception du brief réel
-  dans les trois dossiers natifs à effectuer sur l’image 401. Déclencheur :
-  déploiement 401 ; effort : un lot de réception sans analyse ni validation client.
+- **Reçu en production le 2026-10-07 en 401 (ADR-0198)** : une source Noël unique
+  dans Bonnet Rouge, Peak et Belle Hollandaise, téléchargements identiques,
+  sans duplication de texte, index ou asset. Cette réception ne qualifie pas le
+  corpus complet ni les autres dérivés transitifs.
 - **Dérivés transitifs** : les actifs/recommandations liés à une source sont invalidés
   et leurs index retirés. Les consommateurs de piliers/actifs dans les autres chaînes
   métier doivent encore propager leurs propres reçus et refuser une entrée périmée.
@@ -292,7 +320,6 @@ Items MEDIUM à régression-risquée ou à coordination, déférés de la boucle
 - **`pillar.rollbackVersion` — restauration opérateur non gouvernée** *(trouvé à l'audit G, 2026-07-22)* : la mutation `operatorProcedure` `pillar.rollbackVersion` (restaure vers une `versionId` choisie) appelle `pillarVersioning.rollback` qui **bare-write `Pillar.content`** (C5-allowlisté) SANS émission (Q1/Q2 absents) ni scoring gateway (juste `propagateFromPillar` manuel). **Fermeture** : router la restauration via un chemin gateway (comme `rollbackPillar`) + émettre → ferme l'entrée allowlist C5 ET le trou d'émission. **Déclencheur** : rattaché au chantier **B2** (gouverner les mutations directes).
 - **J4 — `text-white` en mode jour** — 🟢 **CLOS (v6.27.306, 2026-07-23)** : les **330** `text-white` du cockpit ont été traités **par occurrence** (fond gouvernant tracé, pas de sweep aveugle) — **303 remplacés** (`text-foreground` sur fonds theme-inversants `bg-background`/`bg-surface-*` + tints ≤20 % qui composent clair en mode jour ; **+4 `text-foreground-inverse`** pour les `hover:bg-foreground` — blancs invisibles en mode NUIT, corrigés en passant) et **27 GARDÉS** (tous sur couleur fixe `bg-accent`/`bg-success`/`bg-warning`/`bg-info`/`bg-rocket-red` — blanc correct dans les deux thèmes). Périmètre = `(cockpit)` UNIQUEMENT (le toggle mode-jour n'est monté que là ; `(console)`/`(creator)`/`(agency)` sont dark-only → hors périmètre, ne pas toucher). Garde CI dédiée `cockpit-day-mode-readability.test.ts` (baseline décroissant 27, bloque tout nouveau `text-white` régressant sur un fond inversant) — plus honnête qu'étendre `design-tokens-canonical` (un ban total casserait les 27 keeps légitimes).
 - **E5 — armes `z.unknown()` des `S.computed`** (`pillar-schemas.ts:1447+`) : `budgetByPhase`/`devotionFunnel` acceptent tout objet/array → gate SHAPE neutralisé pour ces champs. **Fermeture** : resserrer vers les formes concrètes de `computePillarS` **en coordination avec le seed spawt** (qui portait des formes divergentes — risque de re-casser le seed sinon). **Déclencheur** : passe seed spawt / computePillarS.
-- **Réaction de drift LLM synchrone dans le chemin d'écriture (MED)** *(round-13b, sous-agent determinism)* : `scoreObject` calcule + persiste la VALEUR déterministe (0-LLM, load-bearing ADR-0102 — figé par `scoring-base-canon`), PUIS `detectAndSignalScoreChange` crée un Signal et `await processSignal` (feedback-loop) qui, sur drift sévère, appelle un LLM (`runArtemisDiagnostic`). Donc un `writePillarAndScore` qui fait CHUTER le score déclenche un LLM SYNCHRONE dans la latence de réponse d'écriture (post-commit, best-effort). **Le couplage synchrone est VOULU** : il préserve la garde de ré-entrance `scoreObject ↔ processSignal` (`_scoringInProgress`) — un fire-and-forget la casserait (le recompute de processSignal ne serait plus détecté ré-entrant → signal-storm). **La valeur reste 0-LLM** (c'est ce qui compte) ; commentaire du test LOI-9 rendu honnête (« valeur » vs « chemin ») + scan élargi aux fichiers de calcul réellement purs (evidence/semantic/assessor). **Plan** : décorréler la réaction async proprement = une file/flag durable (`Signal.processedAt` + un cron qui traite les SCORE_DECLINE non-traités) OU refactor de `processSignal` pour différer son leaf LLM — les deux préservent la ré-entrance ET la fiabilité (un fire-and-forget nu ne le fait pas). **Effort** : ~1 session (schéma `processedAt` + cron + test anti-storm). **Déclencheur** : passe latence d'écriture / si le diagnostic de drift alourdit les writes en prod.
 - **Sweep des émissions PENDING orphelines (LOW)** — 🟢 **BÂTI (purge dette)** : `ops-sweep §5` réconcilie désormais les émissions non-terminales (status PENDING + completedAt null > 6 h → FAILED ; observationStatus figé sur OK/DOWNGRADED > 6 h → STALE_OBSERVATION), via `updateMany` DIRECT (aucun event bus → aucun fan-out de compensation ; un close réel ultérieur écrase, idempotent). Plafond 6 h ≫ tout SLO → aucun job async légitime n'est fail-flaggé. Commentaires `emission-spine`/`mestor.close` corrigés (pointent le sweep). Le schéma promettait déjà « flip à STALE_OBSERVATION par cron staleness » — la promesse est tenue. *(Ancien texte : `closeEmission` + le `close()` best-effort promettaient « le cron staleness la flaggera » — ce sweep n'existait PAS.)* Si `closeEmission` throw (blip DB à l'update) ou si le process meurt entre `openEmission` et `closeEmission`, la row `IntentEmission` reste `PENDING`/`PENDING_OBSERVATION` à vie, non réconciliée. **Intégrité PAS en jeu** (fail-closed : la mutation a commit ou non, jamais à moitié) — pur trou d'observabilité ; commentaires rendus honnêtes. **Plan** : un sweep dans `ops-sweep` passant en terminal (état `STALE`/`ABANDONED`, **PAS `FAILED`** → éviter le fan-out de compensation) les `IntentEmission` non-terminales dont `emittedAt` dépasse un plafond GÉNÉREUX (≫ tous les SLO, ex. 1 h). **Prudence obligatoire** : ne pas fail-closer une émission `async:true` légitimement encore en vol (threader le SLO du kind, ou plafond fixe très large). **Effort** : ~½ session (design état-terminal + test anti-faux-positif). **Déclencheur** : prochaine passe observabilité gouvernance / si des PENDING orphelines s'accumulent en prod.
 - **Digest crons — `KnowledgeEntry.sourceHash` TOCTOU (LOW)** — ⚖️ **PLAN CORRIGÉ + tradeoff ACCEPTÉ (purge dette)** : l'audit des writers a montré que le plan initial (`@@unique([sourceHash])`) était **FAUX** — `sourceHash` est légitimement NON-unique (`market-study-ingestion` crée 5 lignes/`sha256`, entryTypes distincts ; re-ingestion → répétitions). Une contrainte unique CASSERAIT l'ingestion market-study + exigerait une migration DESTRUCTIVE (dédup live). Le TOCTOU digest (doublon d'email rare sous fire concurrent, JAMAIS de corruption) reste donc le **pattern d'idempotence accepté** du codebase (identique à `webhooks/mobile-money`). **Vraie fermeture si besoin** : `claimOnce` Redis autour du send (gated Redis + choix d'UNE topologie scheduler — ops) OU une table de marqueur dédiée. **Bug RÉEL trouvé en auditant** : `signal.configureThresholds` faisait `upsert({ where: { sourceHash } })` (casté) → **jetait au runtime** (`PrismaClientValidationError`, sourceHash non-unique) → **corrigé** (upsert sur PK `id` déterministe, pattern seeder/aggregator ; PATCHED-SYMPTOMS).
 - **`createVersion` : instantané `PillarVersion` orphelin sur conflit de version (LOW)** — ⚖️ **TRADEOFF ACCEPTÉ (purge dette)** : sur conflit de version (rollback tx), l'instantané `PillarVersion` committé sur `db` global n'est pas annulé → ligne d'historique orpheline. **Intégrité intacte** (`ROLLBACK_PILLAR` restaure par `versionId`, pas par numéro) — pollution d'audit pure. Round-13a réduit l'occurrence (conflit réel seul). **Décision de NE PAS fixer maintenant** : la seule vraie fermeture (déplacer `createVersion` DANS la tx du gateway) touche le chemin keystone-C5 que les rounds 12-13 viennent de stabiliser au prix d'un CRITICAL — le risque de régression sur le FONDEMENT ADVE dépasse largement la valeur (nettoyer une ligne d'audit bénigne). Rouvrir seulement si l'historique se pollue visiblement en prod.

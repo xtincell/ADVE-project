@@ -6,6 +6,7 @@
  */
 
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
 import { accessibleStrategyIds } from "../middleware/strategy-scope";
 import { assertStrategyRead } from "./_strategy-read-guard";
@@ -20,6 +21,8 @@ import {
 import type { JehutyFeedItem } from "@/lib/types/jehuty";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { refreshBrandGazette } from "@/server/services/jehuty/refresh";
+import { signalObservation } from "@/domain/signal-observation";
+import { knowledgeStrategyScope } from "@/server/services/operator-isolation/knowledge-scope";
 
 /* lafusee:governed-active */
 
@@ -78,6 +81,12 @@ export const jehutyRouter = createTRPCRouter({
         }
       }
 
+      // Resolve actual readable brands before LIMIT, including the agency view.
+      // Being an operator is not permission to read every operator's portfolio.
+      const accessible = await accessibleStrategyIds(ctx.session.user.id);
+      const feedIds = strategyId ? [strategyId] : accessible;
+      const strategyFilter = feedIds === null ? {} : { strategyId: { in: feedIds } };
+
       // ── Parallel source queries ──
       // When strategyId is provided we also pull signals from OTHER strategies
       // whose Tarsis-tagged affectedStrategyIds includes us — cross-brand spread
@@ -87,7 +96,7 @@ export const jehutyRouter = createTRPCRouter({
             where: {
               type: "WEAK_SIGNAL_ALERT",
               createdAt: { gte: thirtyDaysAgo },
-              strategyId: { not: strategyId },
+              strategyId: { not: strategyId, ...(accessible === null ? {} : { in: accessible }) },
               data: {
                 path: ["affectedStrategyIds"],
                 array_contains: [strategyId],
@@ -102,7 +111,7 @@ export const jehutyRouter = createTRPCRouter({
         // 1. Signals (own strategy or all when no strategyId)
         db.signal.findMany({
           where: {
-            ...(strategyId ? { strategyId } : {}),
+            ...strategyFilter,
             type: { in: SIGNAL_TYPES_FOR_FEED },
             createdAt: { gte: thirtyDaysAgo },
           },
@@ -115,7 +124,7 @@ export const jehutyRouter = createTRPCRouter({
         // 2. Published recommendations
         db.recommendation.findMany({
           where: {
-            ...(strategyId ? { strategyId } : {}),
+            ...strategyFilter,
             publishedAt: { not: null },
             createdAt: { gte: thirtyDaysAgo },
           },
@@ -128,6 +137,7 @@ export const jehutyRouter = createTRPCRouter({
           where: {
             entryType: "DIAGNOSTIC_RESULT",
             createdAt: { gte: thirtyDaysAgo },
+            ...(feedIds === null ? {} : knowledgeStrategyScope(feedIds)),
           },
           orderBy: { createdAt: "desc" },
           take: 50,
@@ -136,13 +146,13 @@ export const jehutyRouter = createTRPCRouter({
         // 4. Curations (for join)
         db.jehutyCuration.findMany({
           where: {
-            ...(strategyId ? { strategyId } : {}),
+            ...strategyFilter,
           },
         }),
 
         // 5. Strategy names (for agency mode)
         !strategyId ? db.strategy.findMany({
-          where: { status: "ACTIVE" },
+          where: { status: "ACTIVE", ...(feedIds === null ? {} : { id: { in: feedIds } }) },
           select: { id: true, name: true },
         }) : Promise.resolve([]),
       ]);
@@ -322,7 +332,7 @@ export const jehutyRouter = createTRPCRouter({
     kind: "JEHUTY_FEED_REFRESH",
     inputSchema: z.object({
       strategyId: z.string(),
-      withRecos: z.boolean().default(true),
+      withRecos: z.boolean().default(false),
     }),
   }).mutation(async ({ input, ctx }) => {
     await assertStrategyRead(ctx.session.user.id, input.strategyId);
@@ -353,7 +363,10 @@ export const jehutyRouter = createTRPCRouter({
           where: { ...where, type: { in: SIGNAL_TYPES_FOR_FEED }, createdAt: { gte: thirtyDaysAgo } },
         }),
         db.signal.count({
-          where: { ...where, type: "WEAK_SIGNAL_ALERT", createdAt: { gte: thirtyDaysAgo } },
+          where: { ...where, type: { in: SIGNAL_TYPES_FOR_FEED }, createdAt: { gte: thirtyDaysAgo }, OR: [
+            { data: { path: ["severity"], equals: "critical" } },
+            { data: { path: ["severity"], equals: "high" } },
+          ] },
         }),
         strategyId ? db.recommendation.groupBy({
           by: ["status"],
@@ -371,17 +384,19 @@ export const jehutyRouter = createTRPCRouter({
       );
       const accepted = (recoStatusMap.ACCEPTED ?? 0) + (recoStatusMap.APPLIED ?? 0);
       const rejected = recoStatusMap.REJECTED ?? 0;
-      const acceptanceRate = accepted + rejected > 0 ? accepted / (accepted + rejected) : 0;
+      const acceptanceRate = accepted + rejected > 0 ? accepted / (accepted + rejected) : null;
 
       const publishedRecos = await db.recommendation.count({
-        where: { ...(strategyId ? { strategyId } : {}), publishedAt: { not: null }, createdAt: { gte: thirtyDaysAgo } },
+        where: { ...where, publishedAt: { not: null }, createdAt: { gte: thirtyDaysAgo } },
       });
 
       return {
         totalItems: signalCount + publishedRecos,
         criticalCount: criticalSignals,
         acceptanceRate,
-        marketHealthScore: (marketPillar?.confidence ?? 0) * 100,
+        marketHealthScore: typeof marketPillar?.confidence === "number" && Number.isFinite(marketPillar.confidence)
+          && marketPillar.confidence >= 0 && marketPillar.confidence <= 1
+          ? marketPillar.confidence * 100 : null,
       };
     }),
 
@@ -467,14 +482,7 @@ export const jehutyRouter = createTRPCRouter({
       }
 
       // Extract observation text
-      const data = (signal.data ?? {}) as Record<string, unknown>;
-      const observationText = [
-        data.title,
-        data.content,
-        data.thesis,
-        data.brandImpact,
-        data.recommendedAction,
-      ].filter(Boolean).join("\n\n");
+      const observationText = signalObservation(signal).observation;
 
       if (!observationText) throw new Error("Signal vide — pas de contenu a analyser.");
 
@@ -485,6 +493,13 @@ export const jehutyRouter = createTRPCRouter({
         missionType: "SESHAT_OBSERVATION",
         seshatObservation: observationText,
       });
+
+      if (result.totalRecos === 0) {
+        if (result.errors.length > 0) {
+          throw new TRPCError({ code: "PRECONDITION_FAILED", message: "L’analyse n’a pas pu produire de propositions. Vérifiez les sources et la configuration IA, puis réessayez." });
+        }
+        return { batchId: result.batchId, totalRecos: 0, failedParts: 0 };
+      }
 
       // Mark curation
       await db.jehutyCuration.upsert({
@@ -509,6 +524,6 @@ export const jehutyRouter = createTRPCRouter({
         },
       });
 
-      return { batchId: result.batchId, totalRecos: result.totalRecos };
+      return { batchId: result.batchId, totalRecos: result.totalRecos, failedParts: result.errors.length };
     }),
 });

@@ -30,6 +30,13 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-07 · Gazette : mesure à la une contredite par son état vide, qualifications
+fabriquées, demande assistée échouée affichée en exécution et reprise masquée.
+v6.27.402 rend le constat factuel, les inconnues et l’échec visibles, avec nouvel
+examen explicite. Cause : la curation d’une demande était prise pour l’état de son
+résultat. Portée de marque et séparation observation/décision traitées en ADR-0199 ;
+cycle métier, concurrence et anciennes prescriptions restent au registre de dette.
+
 2026-10-06 · La fraîcheur documentaire ne comparait que la tête du texte et son
 nombre de fragments ; la préparation complète réécrivait un second jeu. v6.27.399
 factorise l’écrivain, compare toutes les empreintes et verrouille la source avant

@@ -1,5 +1,14 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## Observation et décision séparées — 2026-10-07
+
+ADR-0199 retire le diagnostic LLM implicite et la file de prescriptions parallèle.
+Les observations restent dans Signal/KnowledgeEntry ; la demande explicite utilise
+Notoria et ses propositions PENDING existantes. La Gazette et le contrôle de
+référence filtrent les marques avant pagination. Les inconnues et les échecs sont
+visibles, avec nouvel essai. PostgreSQL neuf et réception native locale reçus ;
+qualité provider, réentrance et cycle complet restent des réceptions distinctes.
+
 ## Autorité documentaire par marque — 2026-10-07
 
 ADR-0198 étend les sources, usages et dérivés existants : une pièce canonique,

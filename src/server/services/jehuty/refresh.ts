@@ -127,7 +127,7 @@ export async function refreshBrandGazette(
   opts: { force?: boolean; withRecos?: boolean; client?: PrismaClient } = {},
 ): Promise<RefreshGazetteResult> {
   const prisma = opts.client ?? db;
-  const withRecos = opts.withRecos ?? true;
+  const withRecos = opts.withRecos ?? false;
   const sections: GazetteSectionResult[] = [];
 
   const strategy = await prisma.strategy.findUnique({

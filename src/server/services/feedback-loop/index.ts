@@ -1,17 +1,15 @@
-import { ADVE_STORAGE_KEYS } from "@/domain";
-
 // ============================================================================
 // MODULE M15 — Feedback Loop (Nervous System)
-// Score: 100/100 | Priority: P0 | Status: FUNCTIONAL
+// Deterministic observation; assisted recommendations use the explicit Jehuty/Notoria path.
 // Spec: §4.1 | Division: Transversal
 // ============================================================================
 //
 // CdC REQUIREMENTS (V1):
-// [x] REQ-1  processSignal(signalId) — full feedback chain: Signal→Score→Drift→ARTEMIS→Prescription
-// [x] REQ-2  Drift detection per pillar (configurable threshold, default 15%)
-// [x] REQ-3  ARTEMIS diagnostic on severe drift (Claude AI-powered root cause analysis)
-// [x] REQ-4  Prescription creation (KnowledgeEntry + Process for corrective actions)
-// [x] REQ-5  Dashboard notification to strategy owner on prescription
+// [x] REQ-1  processSignal(signalId) — Signal→Score→Drift→manual review
+// [x] REQ-2  Drift detection per pillar (existing absolute score thresholds)
+// [x] REQ-3  Assisted diagnosis is explicit: Jehuty.triggerNotoria → governed recommendations
+// [x] REQ-4  One Recommendation queue; no parallel auto-running prescription Process
+// [x] REQ-5  Signals and drift receipts surface through the existing Jehuty feed
 // [x] REQ-6  recalibrate(strategyId, pillarKey) — manual recalibration
 // [x] REQ-7  detectStrategyDrift(strategyId, pillarKey) — standalone drift check
 // [x] REQ-8  Auto-trigger via signal.create → detectAndSignalScoreChange in advertis-scorer
@@ -21,7 +19,7 @@ import { ADVE_STORAGE_KEYS } from "@/domain";
 // [x] REQ-12 Configurable thresholds per strategy (via BrandOSConfig)
 //
 // EXPORTS: processSignal, recalibrate, detectStrategyDrift, processSocialMetrics, processMediaPerformance, processPressClippings, getThresholds
-// CHAIN: Signal → scoreObject → detectDrift → runArtemisDiagnostic → createPrescription → notify
+// CHAIN: Signal → scoreObject → detectDrift → receipt; explicit assisted action → Notoria
 // ============================================================================
 
 import { db } from "@/lib/db";
@@ -29,11 +27,8 @@ import { scoreObject } from "@/server/services/advertis-scorer";
 import { captureEvent } from "@/server/services/knowledge-capture";
 import { detectDrift } from "./drift-detector";
 import type { PillarKey } from "@/lib/types/advertis-vector";
-import { PILLAR_KEYS, PILLAR_NAMES } from "@/lib/types/advertis-vector";
-import { callLLM } from "@/server/services/llm-gateway";
-import { UNTRUSTED_NOTICE, wrapUntrusted, sanitizeInline } from "@/server/services/utils/untrusted-content";
-
-const DRIFT_THRESHOLD_PERCENT = 15;
+import { PILLAR_KEYS } from "@/lib/types/advertis-vector";
+import { knowledgeStrategyScope } from "@/server/services/operator-isolation/knowledge-scope";
 
 interface FeedbackAlert {
   signalId: string;
@@ -49,7 +44,8 @@ interface FeedbackAlert {
 
 /**
  * Process an incoming signal through the feedback loop.
- * Signal -> recalculate pillar score -> if drift > threshold -> diagnostic -> alert
+ * Signal -> recalculate pillar score -> observed drift -> alert.
+ * No provider call or autonomous prescription during an ordinary write/replay.
  */
 export async function processSignal(signalId: string): Promise<FeedbackAlert[]> {
   const signal = await db.signal.findUniqueOrThrow({
@@ -67,15 +63,15 @@ export async function processSignal(signalId: string): Promise<FeedbackAlert[]> 
 
   // Check for drift on each pillar
   for (const pillar of PILLAR_KEYS) {
-    const previous = previousVector[pillar] ?? 0;
-    const current = newVector[pillar] ?? 0;
+    const previous = pillarScore(previousVector[pillar]);
+    const current = pillarScore(newVector[pillar]);
+    if (previous === null || current === null) continue;
     const drift = detectDrift(pillar, previous, current);
 
     if (drift.isDrifting) {
       // Calculate percentage drift relative to previous score
-      const driftPercent = previous > 0
-        ? Math.abs(((current - previous) / previous) * 100)
-        : Math.abs(drift.delta) * 10; // fallback if previous was 0
+      // A valid declining score has a strictly positive baseline.
+      const driftPercent = Math.abs(((current - previous) / previous) * 100);
 
       // Log the drift event
       await captureEvent("DIAGNOSTIC_RESULT", {
@@ -90,71 +86,7 @@ export async function processSignal(signalId: string): Promise<FeedbackAlert[]> 
           severity: drift.severity,
         },
         sourceId: signal.strategyId,
-      });
-
-      let diagnostic: string | null = null;
-      let prescriptionId: string | null = null;
-
-      // Trigger ARTEMIS diagnostic for severe drifts (above threshold)
-      if (driftPercent >= DRIFT_THRESHOLD_PERCENT || drift.severity === "high" || drift.severity === "critical") {
-        diagnostic = await runArtemisDiagnostic(
-          signal.strategyId,
-          pillar,
-          previous,
-          current,
-          drift.severity
-        );
-
-        // Create prescription from diagnostic
-        prescriptionId = await createPrescription(
-          signal.strategyId,
-          pillar,
-          diagnostic,
-          drift.severity
-        );
-
-        // v4 — Store validated feedback for RAG injection into Mestor/Glory prompts
-        await captureEvent("FEEDBACK_VALIDATED", {
-          pillarFocus: pillar,
-          data: {
-            type: "drift_feedback",
-            signalId,
-            strategyId: signal.strategyId,
-            diagnostic,
-            prescriptionId,
-            driftPercent: Math.round(driftPercent),
-            severity: drift.severity,
-            previousScore: previous,
-            currentScore: current,
-          },
-          sourceId: signal.strategyId,
-        });
-
-        // ── Notoria auto-trigger via Mestor.emitIntent on severe drift ──
-        if (drift.severity === "critical" || drift.severity === "high") {
-          try {
-            const adveKeys: readonly string[] = ADVE_STORAGE_KEYS;
-            if (adveKeys.includes(pillar)) {
-              const { emitIntent } = await import(
-                "@/server/services/mestor/intents"
-              );
-              await emitIntent(
-                {
-                  kind: "PROPOSE_ADVE_UPDATE_FROM_RT",
-                  strategyId: signal.strategyId,
-                  trigger: "DRIFT",
-                },
-                { caller: "feedback-loop" },
-              );
-            }
-          } catch (err) {
-            console.warn(
-              "[feedback-loop] Drift intent emission failed:",
-              err instanceof Error ? err.message : err,
-            );
-          }
-        }
-      }
+      }, signal.strategyId);
 
       alerts.push({
         signalId,
@@ -164,8 +96,8 @@ export async function processSignal(signalId: string): Promise<FeedbackAlert[]> 
         currentScore: current,
         driftPercent: Math.round(driftPercent * 100) / 100,
         severity: drift.severity,
-        diagnostic,
-        prescriptionId,
+        diagnostic: null,
+        prescriptionId: null,
       });
     }
   }
@@ -187,172 +119,64 @@ export async function recalibrate(strategyId: string, _pillarKey: PillarKey): Pr
 export async function detectStrategyDrift(
   strategyId: string,
   pillarKey: PillarKey
-): Promise<{ driftPercent: number; current: number; previous: number }> {
+): Promise<{
+  status: "COMPARABLE" | "INSUFFICIENT_DATA" | "ZERO_BASELINE";
+  driftPercent: number | null;
+  current: number | null;
+  previous: number | null;
+  baselineId: string | null;
+  baselineAt: Date | null;
+}> {
   const strategy = await db.strategy.findUniqueOrThrow({
     where: { id: strategyId },
+    select: { advertis_vector: true },
   });
 
-  const currentVector = (strategy.advertis_vector as Record<string, number>) ?? {};
-  const currentScore = currentVector[pillarKey] ?? 0;
+  const currentVector = strategy.advertis_vector;
+  const currentScore = pillarScore(
+    currentVector && typeof currentVector === "object" && !Array.isArray(currentVector)
+      ? currentVector[pillarKey] : undefined,
+  );
 
-  // Get the last knowledge entry for this strategy/pillar to find the previous score
+  // A hash is neither attribution nor permission. Filter brand AND diagnostic
+  // subtype before ordering; a newer prescription is not a score baseline.
+  // Legacy captures already carry data.strategyId. Conflicting canonical
+  // ownership is rejected, and unattributed entries are never borrowed.
   const lastSnapshot = await db.knowledgeEntry.findFirst({
     where: {
       entryType: "DIAGNOSTIC_RESULT",
       pillarFocus: pillarKey,
-      sourceHash: { not: undefined },
+      AND: [
+        knowledgeStrategyScope([strategyId]),
+        { data: { path: ["type"], equals: "drift_detected" } },
+      ],
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    select: { id: true, createdAt: true, data: true },
   });
 
-  let previousScore = 0;
-  if (lastSnapshot) {
-    const data = lastSnapshot.data as Record<string, unknown>;
-    if (data.type === "drift_detected" && typeof data.previous === "number") {
-      previousScore = data.previous;
-    }
-  }
-
-  const driftPercent = previousScore > 0
-    ? ((currentScore - previousScore) / previousScore) * 100
-    : 0;
+  const data = lastSnapshot?.data;
+  const previousScore = pillarScore(
+    data && typeof data === "object" && !Array.isArray(data) ? data.previous : undefined,
+  );
+  const status = currentScore === null || previousScore === null
+    ? "INSUFFICIENT_DATA" : previousScore === 0 ? "ZERO_BASELINE" : "COMPARABLE";
 
   return {
-    driftPercent: Math.round(driftPercent * 100) / 100,
+    status,
+    driftPercent: status === "COMPARABLE"
+      ? Math.round(((currentScore! - previousScore!) / previousScore!) * 10_000) / 100
+      : null,
     current: currentScore,
     previous: previousScore,
+    baselineId: lastSnapshot?.id ?? null,
+    baselineAt: lastSnapshot?.createdAt ?? null,
   };
 }
 
-/**
- * Run ARTEMIS diagnostic using Claude AI to analyze pillar drift and produce recommendations.
- */
-async function runArtemisDiagnostic(
-  strategyId: string,
-  pillar: PillarKey,
-  previousScore: number,
-  currentScore: number,
-  severity: string
-): Promise<string> {
-  try {
-    const strategy = await db.strategy.findUniqueOrThrow({
-      where: { id: strategyId },
-      include: { pillars: true },
-    });
-
-    const pillarContent = strategy.pillars.find((p) => p.key === pillar);
-
-    const { text: responseText } = await callLLM({
-      system: UNTRUSTED_NOTICE,
-      caller: "feedback-loop:drift-diagnostic",
-      purpose: "intermediate",
-      responseFormat: "json_object",
-      maxOutputTokens: 1024,
-      temperature: 0,
-      prompt: `You are ARTEMIS, the brand strategy diagnostic engine for the ADVERTIS framework.
-
-A drift has been detected on the "${PILLAR_NAMES[pillar]}" pillar (key: ${pillar}) for strategy "${sanitizeInline(strategy.name, { max: 200 })}".
-
-Previous score: ${previousScore}/25
-Current score: ${currentScore}/25
-Severity: ${sanitizeInline(severity, { max: 40 })}
-${wrapUntrusted("Pillar content", JSON.stringify(pillarContent?.content ?? {}, null, 2), { max: 6000 })}
-
-Analyze this drift and provide:
-1. Root cause analysis (what likely caused the score drop)
-2. Impact assessment (what this means for overall brand health)
-3. Recommended corrective actions (specific, actionable steps)
-
-Be concise and actionable. Respond in JSON format:
-{
-  "rootCause": "...",
-  "impact": "...",
-  "actions": ["action1", "action2", ...]
-}`,
-    });
-
-    return responseText || "Diagnostic unavailable";
-  } catch {
-    return `Drift detected on ${PILLAR_NAMES[pillar]}: score dropped from ${previousScore} to ${currentScore} (${severity}). Manual review recommended.`;
-  }
-}
-
-/**
- * Create a prescription (knowledge entry) from an ARTEMIS diagnostic result.
- */
-async function createPrescription(
-  strategyId: string,
-  pillar: PillarKey,
-  diagnostic: string,
-  severity: string
-): Promise<string> {
-  const entry = await db.knowledgeEntry.create({
-    data: {
-      entryType: "DIAGNOSTIC_RESULT",
-      pillarFocus: pillar,
-      data: {
-        type: "prescription",
-        strategyId,
-        diagnostic,
-        severity,
-        prescribedAt: new Date().toISOString(),
-        status: "PENDING",
-      },
-      successScore: severity === "critical" ? 0 : severity === "high" ? 0.25 : 0.5,
-    },
-  });
-
-  // Parse diagnostic to extract actionable steps
-  let actions: string[] = [];
-  try {
-    const parsed = JSON.parse(diagnostic);
-    actions = Array.isArray(parsed.actions) ? parsed.actions : [];
-  } catch {
-    // Diagnostic is plain text, no structured actions
-  }
-
-  // Create an actionable Process for the prescription
-  if (actions.length > 0) {
-    await db.process.create({
-      data: {
-        strategyId,
-        type: "TRIGGERED",
-        name: `prescription-${pillar}-${Date.now()}`,
-        description: `Prescription ARTEMIS: corrective actions for pillar ${PILLAR_NAMES[pillar]} (${severity})`,
-        status: "RUNNING",
-        priority: severity === "critical" ? 10 : severity === "high" ? 8 : 5,
-        playbook: {
-          type: "prescription",
-          pillar,
-          severity,
-          knowledgeEntryId: entry.id,
-          actions: actions.map((a: string) => ({
-            description: a,
-            status: "PENDING",
-          })),
-        },
-        nextRunAt: new Date(), // Immediately available for execution
-      },
-    }).catch((err) => { console.warn("[feedback-loop] prescription process creation failed:", err instanceof Error ? err.message : err); });
-  }
-
-  // Surface prescription as a dashboard notification for the strategy owner (non-blocking)
-  db.strategy.findUnique({ where: { id: strategyId }, select: { userId: true, name: true } })
-    .then((strategy) => {
-      if (!strategy) return;
-      return db.notification.create({
-        data: {
-          userId: strategy.userId,
-          channel: "IN_APP",
-          title: `Prescription ARTEMIS — ${PILLAR_NAMES[pillar]} (${severity})`,
-          body: `Drift detected on pillar ${PILLAR_NAMES[pillar]} for strategy "${strategy.name}". A corrective prescription is ready for review.`,
-          link: `/cockpit/strategies/${strategyId}?tab=prescriptions&id=${entry.id}`,
-        },
-      });
-    })
-    .catch((err) => { console.warn("[feedback-loop] prescription notification failed:", err instanceof Error ? err.message : err); });
-
-  return entry.id;
+function pillarScore(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 25
+    ? value : null;
 }
 
 // ── REQ-9: Social metrics → Signal auto ──────────────────────────────────────

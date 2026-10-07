@@ -32,9 +32,9 @@ export interface JehutyFeedItem {
   strategyName?: string;
 
   // Qualification
-  urgency: "NOW" | "SOON" | "LATER";
-  impact: "LOW" | "MEDIUM" | "HIGH";
-  confidence: number;
+  urgency: "NOW" | "SOON" | "LATER" | null;
+  impact: "LOW" | "MEDIUM" | "HIGH" | null;
+  confidence: number | null;
   priority: number;
 
   // Editorial
@@ -59,16 +59,17 @@ const URGENCY_NORM: Record<string, number> = { NOW: 1.0, SOON: 0.6, LATER: 0.3 }
 const IMPACT_NORM: Record<string, number> = { HIGH: 1.0, MEDIUM: 0.6, LOW: 0.3 };
 
 export function computePriority(
-  urgency: string,
-  impact: string,
-  confidence: number,
+  urgency: string | null,
+  impact: string | null,
+  confidence: number | null,
   createdAt: Date | string,
 ): number {
-  const u = URGENCY_NORM[urgency] ?? 0.5;
-  const i = IMPACT_NORM[impact] ?? 0.5;
+  const u = urgency === null ? 0.5 : URGENCY_NORM[urgency] ?? 0.5;
+  const i = impact === null ? 0.5 : IMPACT_NORM[impact] ?? 0.5;
   const ageHours = (Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60);
   const freshness = Math.max(0, Math.min(1, 1 - ageHours / 168)); // clamped [0,1]
-  const c = Math.max(0, Math.min(1, Number.isFinite(confidence) ? confidence : 0.5));
+  // Neutral ranking weight is not a measured confidence displayed to the user.
+  const c = Math.max(0, Math.min(1, typeof confidence === "number" && Number.isFinite(confidence) ? confidence : 0.5));
   return u * i * freshness * Math.max(0.1, c);
 }
 
@@ -77,8 +78,8 @@ export function computePriority(
 export interface JehutyDashboard {
   totalItems: number;
   criticalCount: number;
-  acceptanceRate: number;
-  marketHealthScore: number;
+  acceptanceRate: number | null;
+  marketHealthScore: number | null;
 }
 
 // ── Category Config ───────────────────────────────────────────────

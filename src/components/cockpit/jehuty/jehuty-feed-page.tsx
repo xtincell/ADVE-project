@@ -69,11 +69,11 @@ const CATEGORY_DESCRIPTION: Record<JehutyCategory, { about: string; whenEmpty: s
   },
   WEAK_SIGNAL: {
     about: "Les frémissements de votre marché détectés tôt — tendances naissantes, mouvements discrets à surveiller.",
-    whenEmpty: "Aucun signal faible détecté sur la période. C'est aussi une information : votre marché est calme.",
+    whenEmpty: "Aucun signal faible disponible dans cette vue. Cela ne permet pas de conclure à l’absence de changement sur votre marché.",
   },
   SCORE_DRIFT: {
     about: "Les variations de votre score de marque — ce qui monte, ce qui baisse, et depuis quand.",
-    whenEmpty: "Votre score n'a pas bougé récemment. Chaque nouvelle mesure ou action peut le faire évoluer.",
+    whenEmpty: "Aucune variation de score disponible dans cette vue.",
   },
   DIAGNOSTIC: {
     about: "Les examens automatiques de vos fondations : points de friction détectés et grilles d'analyse mobilisées.",
@@ -81,7 +81,7 @@ const CATEGORY_DESCRIPTION: Record<JehutyCategory, { about: string; whenEmpty: s
   },
   EXTERNAL_SIGNAL: {
     about: "Votre veille : ce que la presse et le web publient autour de votre marque, votre secteur et votre marché.",
-    whenEmpty: "La veille n'a rien capté de récent sur vos sujets suivis — la collecte tourne chaque jour.",
+    whenEmpty: "Aucun article disponible dans cette vue. Vérifiez les sujets suivis et la dernière collecte.",
   },
 };
 
@@ -146,7 +146,14 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
     onSuccess: () => feedQuery.refetch(),
   });
   const triggerNotoriaMutation = trpc.jehuty.triggerNotoria.useMutation({
-    onSuccess: () => feedQuery.refetch(),
+    onSuccess: (result) => {
+      if (result.totalRecos > 0) {
+        const message = `${result.totalRecos} proposition(s) préparée(s). Examinez-les dans Recommandations avant de les appliquer.`;
+        if (result.failedParts > 0) toast.warning(`${message} L’analyse reste partielle.`);
+        else toast.success(message);
+      } else toast.info("Analyse terminée sans proposition. Vous pouvez réessayer après avoir précisé le contexte.");
+      feedQuery.refetch();
+    },
   });
   // ADR-0085/0090 — application directe d'une reco depuis le feed (acte
   // opérateur explicite ; le gate de remplacement pondéré s'applique).
@@ -156,6 +163,7 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
 
   // Rafraîchit les 6 rubriques (veille, diagnostic, score, audience, recos,
   // signaux faibles). Toast récapitulatif honnête par rubrique.
+  const [withRecos, setWithRecos] = useState(false);
   const refreshMutation = trpc.jehuty.refreshFeed.useMutation({
     onSuccess: (res) => {
       const filled = res.sections.filter((s) => s.status === "FILLED");
@@ -171,7 +179,7 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
   });
   const handleRefresh = () => {
     if (!strategyId) return;
-    refreshMutation.mutate({ strategyId, withRecos: true });
+    refreshMutation.mutate({ strategyId, withRecos });
   };
 
   const items: JehutyFeedItem[] = feedQuery.data ?? [];
@@ -271,19 +279,31 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
           </p>
         </div>
         {mode === "brand" && (
+          <div className="flex flex-col items-start gap-3">
+          <label className="flex items-center gap-2 text-sm text-foreground-secondary">
+            <input type="checkbox" checked={withRecos} onChange={(event) => setWithRecos(event.target.checked)} disabled={refreshMutation.isPending} />
+            Inclure des propositions IA (facultatif)
+          </label>
           <button
             onClick={handleRefresh}
             disabled={refreshMutation.isPending || !strategyId}
             className="shrink-0 inline-flex items-center gap-2 rounded-full border border-border-subtle bg-surface-elevated px-5 py-2.5 font-mono text-2xs uppercase tracking-widest text-foreground hover:bg-surface-sunken transition-colors disabled:opacity-50"
-            title="Collecte la veille, examine vos fondations, relève votre audience et votre score, et génère des recommandations."
+            title="Collecte la veille, examine vos fondations et relève votre audience et votre score. Les propositions IA nécessitent l’option explicite."
           >
             {refreshMutation.isPending
               ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
               : <RefreshCw className="h-3.5 w-3.5" />}
             {refreshMutation.isPending ? "Rafraîchissement…" : "Rafraîchir la gazette"}
           </button>
+          </div>
         )}
       </section>
+
+      {triggerNotoriaMutation.error && (
+        <p role="alert" className="mb-6 rounded-lg border border-warning/30 bg-warning/10 p-4 text-warning">
+          L’analyse assistée n’a pas abouti : {triggerNotoriaMutation.error.message}
+        </p>
+      )}
 
       {/* ═══ Indicators row ═════════════════════════════════════════ */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-5 border-y border-border-subtle py-6 mb-12">
@@ -293,20 +313,20 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
           hint="Total intelligence active"
         />
         <Indicator
-          label="Critiques"
+          label="Sévérité forte"
           value={dashboard?.criticalCount ?? 0}
-          hint="Urgence NOW · impact HIGH"
+          hint="Signaux qualifiés hauts ou critiques"
           accent={dashboard?.criticalCount ? "accent" : undefined}
         />
         <Indicator
           label="Acceptation"
-          value={`${Math.round((dashboard?.acceptanceRate ?? 0) * 100)}%`}
-          hint="Taux de pin / total proposé"
+          value={dashboard?.acceptanceRate == null ? "—" : `${Math.round(dashboard.acceptanceRate * 100)} %`}
+          hint="Recommandations acceptées parmi celles décidées"
         />
         <Indicator
-          label="Santé marché"
-          value={`${Math.round(dashboard?.marketHealthScore ?? 0)}`}
-          hint="Indice marché · /100"
+          label="Confiance du contexte"
+          value={dashboard?.marketHealthScore == null ? "—" : `${Math.round(dashboard.marketHealthScore)} %`}
+          hint="Estimation du contexte marché renseigné"
         />
       </section>
 
@@ -398,7 +418,7 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
                 {CATEGORY_DESCRIPTION[cat].about}
               </p>
               <p className="mt-1.5 max-w-2xl font-mono text-2xs uppercase tracking-widest text-foreground-muted/60">
-                {CATEGORY_DESCRIPTION[cat].whenEmpty}
+                {lead?.category === cat ? "La dépêche de cette rubrique est présentée à la une." : CATEGORY_DESCRIPTION[cat].whenEmpty}
               </p>
             </section>
           );
@@ -541,14 +561,14 @@ function DispatchActions({
       <button onClick={onDismiss} className="flex items-center gap-1.5 text-foreground-muted hover:text-error transition-colors">
         <X className="h-3 w-3" /> Écarter
       </button>
-      {item.sourceType === "SIGNAL" && !isTriggered && (
+      {item.sourceType === "SIGNAL" && (
         <button
           onClick={onNotoria}
           disabled={isNotoriaPending}
           className="flex items-center gap-1.5 text-accent hover:opacity-80 transition-opacity disabled:opacity-40"
         >
           {isNotoriaPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
-          Générer une recommandation
+          {isTriggered ? "Réexaminer avec l’IA" : "Proposer des actions avec l’IA"}
         </button>
       )}
       {item.sourceType === "RECOMMENDATION" && !isTriggered && onApply && (
@@ -701,15 +721,15 @@ function LeadStory({
           <dl className="space-y-3">
             <div>
               <dt className="font-mono text-2xs uppercase tracking-widest text-foreground-muted/60">Urgence</dt>
-              <dd className="font-display text-2xl font-semibold tracking-tight text-foreground">{URGENCY_LABEL[item.urgency] ?? item.urgency}</dd>
+              <dd className="font-display text-2xl font-semibold tracking-tight text-foreground">{item.urgency === null ? "Non renseignée" : URGENCY_LABEL[item.urgency] ?? item.urgency}</dd>
             </div>
             <div>
               <dt className="font-mono text-2xs uppercase tracking-widest text-foreground-muted/60">Impact</dt>
-              <dd className="font-display text-2xl font-semibold tracking-tight text-foreground">{IMPACT_LABEL[item.impact] ?? item.impact}</dd>
+              <dd className="font-display text-2xl font-semibold tracking-tight text-foreground">{item.impact === null ? "Non renseigné" : IMPACT_LABEL[item.impact] ?? item.impact}</dd>
             </div>
             <div>
-              <dt className="font-mono text-2xs uppercase tracking-widest text-foreground-muted/60">Confiance</dt>
-              <dd className="font-display text-2xl font-semibold tracking-tight text-foreground">{Math.round(item.confidence * 100)}%</dd>
+              <dt className="font-mono text-2xs uppercase tracking-widest text-foreground-muted/60">Confiance déclarée</dt>
+              <dd className="font-display text-2xl font-semibold tracking-tight text-foreground">{item.confidence === null ? "Non renseignée" : `${Math.round(item.confidence * 100)} %`}</dd>
             </div>
           </dl>
         </aside>
@@ -726,7 +746,7 @@ function LeadStory({
 
       {isTriggered && (
         <div className="lg:col-span-2 border-t border-border-subtle pt-4 -mt-2 font-mono text-2xs uppercase tracking-widest text-accent flex items-center gap-2">
-          <Zap className="h-3 w-3" /> Recommandation en cours d&rsquo;exécution
+          <Zap className="h-3 w-3" /> Analyse assistée déjà demandée
         </div>
       )}
     </article>
@@ -843,4 +863,3 @@ function Dispatch({
     </article>
   );
 }
-

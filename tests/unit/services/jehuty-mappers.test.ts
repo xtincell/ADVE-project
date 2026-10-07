@@ -11,7 +11,21 @@ import {
   diagnosticBelongsToFeed,
   mapDiagnosticToFeedItem,
   mapExternalArticleToFeedItem,
+  mapSignalToFeedItem,
 } from "@/server/services/jehuty/mappers";
+
+describe("qualifications declared in the actual source", () => {
+  const signal = { id: "signal-a", strategyId: "s1", type: "SCORE_DECLINE", createdAt: new Date() };
+  it("keeps missing qualifications unknown instead of urgent, low impact and 50% confidence", () => {
+    expect(mapSignalToFeedItem({ ...signal, data: {} }, undefined)).toMatchObject({ urgency: null, impact: null, confidence: null });
+  });
+  it("recognizes the declared weak-signal urgency and retains a real zero confidence", () => {
+    expect(mapSignalToFeedItem({ ...signal, type: "WEAK_SIGNAL_ALERT", data: { urgency: "CRITICAL", confidence: 0 } }, undefined)).toMatchObject({ urgency: "NOW", impact: null, confidence: 0 });
+  });
+  it("uses a valid severity and refuses a malformed confidence", () => {
+    expect(mapSignalToFeedItem({ ...signal, data: { severity: "HIGH", confidence: 75 } }, undefined)).toMatchObject({ urgency: "NOW", impact: "HIGH", confidence: null });
+  });
+});
 
 describe("diagnosticBelongsToFeed — anti-fuite cross-tenant", () => {
   it("mode marque : un événement funnel SANS strategyId est exclu (le cas Motion19)", () => {
