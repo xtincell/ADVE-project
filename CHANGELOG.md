@@ -1,5 +1,25 @@
 # Changelog — La Fusee
 
+## v6.27.405 — fix(missions): retrouver les missions et leur besoin exact (2026-10-07)
+
+La console masquait les missions non assignées à un administrateur pourtant
+autorisé à les ouvrir. PostgreSQL reproduit le défaut : une mission assignée
+visible sur quatre, puis quatre après correction. Les modes guilde et assigné
+restent restrictifs ; propriétaire, opérateur, collaborateur et tiers sont éprouvés.
+
+Les vues existantes lisent mode, échéance et responsable dans leurs champs métier.
+Les deux détails conservent le besoin exact. Un échec de liste est visible sans
+compteurs à zéro ; les 200 missions chargées ne valent pas inventaire complet.
+Les comparaisons temporelles fictives et le taux de livraison calculé à partir
+des missions actives sont retirés. Sans reçu de livraison daté : « Non mesuré ».
+Les boutons de fermeture des modales sont nommés pour le clavier et le lecteur.
+
+Réception native 404 : création, conversion, conflit/relecture, mission exacte
+dans les deux portails et retrait motivé reçus sur BLISS, marque de démonstration.
+Deux demandes, une seule mission DRAFT, besoin conservé et aucun delta IA/Process.
+Le cycle production → validation → livraison reste ouvert ; recette native 405
+à recevoir après image et déploiement, tracée dans RESIDUAL-DEBT.
+
 ## v6.27.404 — fix(intervention): recevoir une seule mission par demande (2026-10-07)
 
 **Une demande garde son besoin, sa marque et sa décision humaine sans inventer une livraison.**

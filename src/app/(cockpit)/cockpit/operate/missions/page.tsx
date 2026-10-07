@@ -339,24 +339,9 @@ export default function MissionsPage() {
           ) / scoredDeliverables.length
         : 0;
 
-    // On-time rate
-    const withDeadline = allMissions.filter((m) => {
-      const meta = m.advertis_vector as Record<string, unknown> | null;
-      return (m as Record<string, unknown>).slaDeadline || meta?.deadline;
-    });
-    const onTime = withDeadline.filter((m) => {
-      const meta = m.advertis_vector as Record<string, unknown> | null;
-      if (m.status !== "COMPLETED") return true;
-      const dl = (m as Record<string, unknown>).slaDeadline ? new Date((m as Record<string, unknown>).slaDeadline as string).toISOString() : (meta?.deadline as string);
-      return new Date(dl).getTime() >= Date.now();
-    }).length;
-    const onTimeRate =
-      withDeadline.length > 0
-        // lafusee:allow-adhoc-completion: UI mission/request progress display (count-based, not pillar completion)
-        ? Math.round((onTime / withDeadline.length) * 100)
-        : 100;
-
-    return { total, completed, completionRate, avgQc, onTimeRate };
+    // Mission.updatedAt is not a delivery receipt. Without a delivered-at event,
+    // neither an active mission nor an absent deadline proves on-time delivery.
+    return { total, completed, completionRate, avgQc };
   }, [allMissions]);
 
   if (!strategyId || missionsQuery.isLoading || teamWorkloadQuery.isLoading) {
@@ -439,11 +424,9 @@ export default function MissionsPage() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard title="Total missions" value={stats.total} icon={Rocket} />
         <StatCard
-          title="Taux d'achevement"
+          title={`Taux d'achevement (${stats.completed}/${stats.total})`}
           value={`${stats.completionRate}%`}
           icon={CheckCircle2}
-          trend={stats.completionRate >= 70 ? "up" : stats.completionRate >= 40 ? "flat" : "down"}
-          trendValue={`${stats.completed}/${stats.total}`}
         />
         <StatCard
           title="Score QC moyen"
@@ -452,9 +435,8 @@ export default function MissionsPage() {
         />
         <StatCard
           title="Livraison a l'heure"
-          value={`${stats.onTimeRate}%`}
+          value="Non mesuré"
           icon={Timer}
-          trend={stats.onTimeRate >= 80 ? "up" : "down"}
         />
       </div>
 
@@ -929,7 +911,7 @@ export default function MissionsPage() {
           const meta = detailData.advertis_vector as Record<string, unknown> | null;
           const deadline = (detailData as Record<string, unknown>).slaDeadline ? new Date((detailData as Record<string, unknown>).slaDeadline as string).toISOString() : (meta?.deadline as string | undefined);
           const budget = ((detailData as Record<string, unknown>).budget as number | undefined) ?? (meta?.budget as number | undefined);
-          const briefDesc = meta?.briefDescription as string | undefined;
+          const briefDesc = detailData.description ?? (meta?.briefDescription as string | undefined);
           const briefData = (detailData as Record<string, unknown>).briefData as Record<string, unknown> | null;
           const deliverables = detailData.deliverables ?? [];
           const hoursLeft = deadline ? hoursUntilDeadline(deadline) : null;
@@ -974,7 +956,7 @@ export default function MissionsPage() {
               {briefDesc && (
                 <div className="rounded-lg border border-border bg-background/50 p-4">
                   <p className="mb-1 text-xs font-medium text-foreground-muted">Description du brief</p>
-                  <p className="text-sm leading-relaxed text-foreground-secondary">{briefDesc}</p>
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground-secondary">{briefDesc}</p>
                 </div>
               )}
 

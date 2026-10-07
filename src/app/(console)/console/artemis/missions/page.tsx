@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 
 export default function FuseeMissionsPage() {
-  const { data: missions, isLoading } = trpc.mission.list.useQuery({
+  const { data: missions, isLoading, error: listError, refetch: reloadList } = trpc.mission.list.useQuery({
     limit: 200,
   });
   const { data: slaAlerts } = trpc.mission.checkSla.useQuery();
@@ -79,10 +79,9 @@ export default function FuseeMissionsPage() {
   // Tab filtering
   const tabFiltered = allMissions.filter((m) => {
     const status = (m.status ?? "DRAFT").toUpperCase();
-    const meta = m.advertis_vector as Record<string, unknown> | null;
-    const deadline = meta?.deadline as string | undefined;
+    const deadline = m.slaDeadline;
     const isOverdue =
-      deadline && new Date(deadline).getTime() < Date.now() && status !== "COMPLETED";
+      deadline && new Date(deadline).getTime() < Date.now() && !["COMPLETED", "CANCELLED"].includes(status);
 
     switch (activeTab) {
       case "draft":
@@ -106,9 +105,7 @@ export default function FuseeMissionsPage() {
       return false;
     if (filterValues.status && m.status !== filterValues.status) return false;
     if (filterValues.mode) {
-      const meta = m.advertis_vector as Record<string, unknown> | null;
-      const mode = (meta?.mode as string) ?? "";
-      if (mode !== filterValues.mode) return false;
+      if (m.mode !== filterValues.mode) return false;
     }
     if (filterValues.channel && m.driver?.channel !== filterValues.channel)
       return false;
@@ -117,14 +114,13 @@ export default function FuseeMissionsPage() {
 
   // Build table data
   const tableData = filtered.map((m) => {
-    const meta = m.advertis_vector as Record<string, unknown> | null;
-    const deadline = meta?.deadline as string | undefined;
-    const mode = (meta?.mode as string) ?? "-";
-    const assignee = (meta?.assignee as string) ?? "-";
+    const deadline = m.slaDeadline;
+    const mode = m.mode ?? "-";
+    const assignee = m.assignee?.name ?? m.assignee?.email ?? "Non attribué";
     const isOverdue =
       deadline &&
       new Date(deadline).getTime() < Date.now() &&
-      m.status !== "COMPLETED";
+      !["COMPLETED", "CANCELLED"].includes(m.status);
 
     return {
       id: m.id,
@@ -162,9 +158,8 @@ export default function FuseeMissionsPage() {
       key: "overdue",
       label: "En retard",
       count: allMissions.filter((m) => {
-        const meta = m.advertis_vector as Record<string, unknown> | null;
-        const dl = meta?.deadline as string | undefined;
-        return dl && new Date(dl).getTime() < Date.now() && m.status !== "COMPLETED";
+        const dl = m.slaDeadline;
+        return dl && new Date(dl).getTime() < Date.now() && !["COMPLETED", "CANCELLED"].includes(m.status);
       }).length,
     },
   ];
@@ -179,7 +174,7 @@ export default function FuseeMissionsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Missions"
-        description="Vue d'ensemble de toutes les missions cross-strategies"
+        description="Suivi des missions des marques accessibles"
         breadcrumbs={[
           { label: "Console", href: "/console" },
           { label: "Fusee" },
@@ -194,31 +189,30 @@ export default function FuseeMissionsPage() {
         </button>
       </PageHeader>
 
+      {listError && <div role="alert" className="space-y-2 rounded-lg border border-warning/30 bg-warning/10 p-4 text-warning"><p>Les missions n’ont pas pu être lues. Leurs compteurs sont indisponibles.</p><button onClick={() => void reloadList()} className="text-sm underline">Relire les missions</button></div>}
+      {allMissions.length === 200 && <p className="text-sm text-foreground-muted">Les 200 missions les plus récentes sont chargées. Les compteurs portent sur cette liste.</p>}
+
       {/* Stat Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Total missions"
-          value={allMissions.length}
+          title="Missions chargées"
+          value={listError ? "—" : allMissions.length}
           icon={Rocket}
         />
         <StatCard
           title="En cours"
-          value={byStatus("IN_PROGRESS")}
+          value={listError ? "—" : byStatus("IN_PROGRESS")}
           icon={Clock}
         />
         <StatCard
           title="QC en attente"
-          value={pendingQcCount}
+          value={listError ? "—" : pendingQcCount}
           icon={FileCheck}
-          trend={pendingQcCount > 0 ? "up" : "flat"}
-          trendValue={pendingQcCount > 0 ? "a valider" : ""}
         />
         <StatCard
           title="Alertes SLA"
           value={alerts.length}
           icon={AlertTriangle}
-          trend={alerts.length > 0 ? "down" : "flat"}
-          trendValue={alerts.length > 0 ? "urgentes" : "aucune"}
         />
       </div>
 
@@ -266,7 +260,7 @@ export default function FuseeMissionsPage() {
       )}
 
       {/* Tabs */}
-      <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+      {!listError && <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />}
 
       {/* Search + Filters */}
       <SearchFilter
@@ -306,11 +300,11 @@ export default function FuseeMissionsPage() {
       />
 
       {/* Data Table */}
-      {tableData.length === 0 ? (
+      {listError ? null : tableData.length === 0 ? (
         <EmptyState
           icon={Rocket}
           title="Aucune mission"
-          description="Les missions apparaitront ici une fois creees depuis les campagnes."
+          description="Aucune mission ne correspond à cette lecture et à ces filtres."
         />
       ) : (
         <DataTable
@@ -402,6 +396,7 @@ export default function FuseeMissionsPage() {
               sortable: false,
               render: (item) => (
                 <button
+                  aria-label={`Ouvrir la mission ${item.title}`}
                   onClick={(e) => {
                     e.stopPropagation();
                     setSelectedId(item.id as string);
@@ -428,6 +423,7 @@ export default function FuseeMissionsPage() {
         {detailError && <div role="alert" className="space-y-2 text-warning"><p>La mission n’a pas pu être lue.</p><button onClick={() => void reloadDetail()} className="text-sm underline">Relire la mission</button></div>}
         {detail ? (
           <div className="space-y-6">
+            {detail.description && <div className="rounded-lg border border-border bg-background/50 p-4"><p className="mb-1 text-xs font-medium text-foreground-muted">Besoin</p><p className="whitespace-pre-wrap text-sm text-foreground-secondary">{detail.description}</p></div>}
             {/* Mission info */}
             <div className="grid grid-cols-2 gap-4">
               <div className="rounded-lg border border-border bg-background/50 p-4">
@@ -467,9 +463,9 @@ export default function FuseeMissionsPage() {
                 </p>
                 <div className="mt-1 flex items-center gap-2">
                   <StatusBadge status={detail.status} />
-                  {!!detailMeta?.mode && (
+                  {detail.mode && (
                     <span className="text-xs text-foreground-secondary">
-                      {String(detailMeta.mode)}
+                      {detail.mode}
                     </span>
                   )}
                 </div>
@@ -477,7 +473,7 @@ export default function FuseeMissionsPage() {
             </div>
 
             {/* Deadline */}
-            {!!detailMeta?.deadline && (
+            {detail.slaDeadline && (
               <div className="flex items-center gap-3 rounded-lg border border-border bg-background/50 p-4">
                 <Clock className="h-4 w-4 text-foreground-secondary" />
                 <div>
@@ -486,7 +482,7 @@ export default function FuseeMissionsPage() {
                   </p>
                   <p className="mt-0.5 text-sm text-white">
                     {new Date(
-                      detailMeta.deadline as string,
+                      detail.slaDeadline,
                     ).toLocaleDateString("fr-FR", {
                       day: "numeric",
                       month: "long",

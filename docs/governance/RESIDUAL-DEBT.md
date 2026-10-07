@@ -12,11 +12,11 @@
   Signal existant, avec deux ordres de recalcul, concurrence et reprise sans
   doublon. Déclencheur : prochaine traversée C3/C6 après livraison 402 ; effort :
   un lot scoreur/feedback, sans ajouter une nouvelle métrique ou file.
-- **Interventions — réception native 404** : ADR-0201 répare localement les états,
-  concurrence, droits et faux SLA/affectation. Les scénarios PostgreSQL passent ;
-  cela ne reçoit pas l’UX. Fermer par demande manuelle, conversion/rejet, conflit
-  et ouverture de la mission exacte depuis les deux portails après livraison.
-  Déclencheur : image 404 reçue ; effort : une recette native sans génération.
+- **Interventions — réception native 404 reçue le 7 octobre** : sur BLISS,
+  deux demandes synthétiques, conversion vers une Mission DRAFT et retrait motivé.
+  Le conflit d'une lecture périmée reçoit 409 puis relit la mission ; le besoin
+  exact et le lien s'ouvrent depuis les deux portails. Aucun delta IA/Process.
+  Cette réception borne demande → décision → mission, pas production/livraison.
 - **InterventionRequest au schéma** : aucune lecture/écriture identifiée dans src ;
   le seed Wakanda en crée une, retrouvée seule en production le 7 octobre, déjà
   COMPLETED. Le parcours actif persiste ses demandes client dans Signal ; les
@@ -24,11 +24,13 @@
   de rôle et la filiation avant une éventuelle absorption conservant les
   historiques ; aucun second écrivain ni suppression anticipée. Déclencheur :
   audit C1/C3 des doublons avant gel du modèle ; effort : un lot de réconciliation.
-- **Projection des missions console** : mode/affectation/échéance sont encore lus
-  dans advertis_vector plutôt que dans leurs colonnes dédiées sur plusieurs vues.
-  Raccorder leurs champs et états existants, sans inventer d’affectation ; éprouver
-  changement manuel puis retour depuis la demande. Déclencheur : cycle C4/C6 après
-  réception 404 ; effort : un lot de projection/recette.
+- **Missions — réception native 405** : la liste admin vide est reproduite puis
+  corrigée sur PostgreSQL, sans élargir les droits des autres rôles. Mode,
+  affectation et échéance console utilisent leurs colonnes ; les détails montrent
+  le besoin. Le taux de livraison sans événement daté reste « Non mesuré ».
+  Recevoir liste/détail/filtres sur l'image 405, y compris la mission de recette
+  non assignée et l'ouverture depuis la demande. Déclencheur : image 405 reçue ;
+  effort : une recette native sans IA ni engagement client. Cycle C6 toujours ouvert.
 - **Tickets de reprise de campagne** : le code formé à partir du préfixe campagne
   et d'un compteur par livrable peut entrer en collision entre deux livrables.
   Fermer sur l'identité/numérotation déjà existante, avec deux créations simultanées

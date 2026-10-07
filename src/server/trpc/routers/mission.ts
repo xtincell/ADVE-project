@@ -488,7 +488,9 @@ export const missionRouter = createTRPCRouter({
           ? { assigneeId: ctx.session.user.id }
           : input.strategyId
             ? {}
-            : { OR: [scopeMissions(opCtx), { assigneeId: ctx.session.user.id }] };
+            : opCtx.role === "ADMIN"
+              ? {}
+              : { OR: [scopeMissions(opCtx), { assigneeId: ctx.session.user.id }] };
       const missions = await ctx.db.mission.findMany({
         where: { ...filters, ...accessWhere },
         include: {

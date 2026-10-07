@@ -116,6 +116,7 @@ export function Modal({
             <h2 className="text-lg font-semibold text-white">{title}</h2>
             <button
               onClick={onClose}
+              aria-label="Fermer"
               className="rounded-lg p-1.5 text-foreground-secondary transition-colors hover:bg-background hover:text-white"
             >
               <X className="h-4 w-4" />
@@ -127,6 +128,7 @@ export function Modal({
         {!title && (
           <button
             onClick={onClose}
+            aria-label="Fermer"
             className="absolute right-4 top-4 rounded-lg p-1.5 text-foreground-secondary transition-colors hover:bg-background hover:text-white"
           >
             <X className="h-4 w-4" />

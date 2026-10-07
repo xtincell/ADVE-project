@@ -9,6 +9,13 @@ agent, table ou Intent ; données historiques et modèle InterventionRequest dor
 à qualifier avant convergence. Les preuves serveur et réception native restent
 distinctes ; la réception complète du cycle de mission reste au chantier C6.
 
+En 404, demande/conversion/conflit/relecture/retrait et liens exacts sont reçus
+nativement sur BLISS sans IA. Cette recette découvre la liste console admin vide.
+Le lot 405 rétablit sa portée existante et ses colonnes métier, montre le besoin
+dans les deux détails et retire les taux/comparaisons temporels sans preuve.
+Quatre scénarios PostgreSQL vérifient visibilité et isolation ; la réception
+native du lot 405 reste distincte de la réception complète du cycle C6.
+
 ## Observation et décision séparées — 2026-10-07
 
 ADR-0199 retire le diagnostic LLM implicite et la file de prescriptions parallèle.

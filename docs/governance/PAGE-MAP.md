@@ -65,7 +65,7 @@ Artemis pilote les thrusters. Ces pages opèrent les Glory tools, sequences, mis
 | `/console/artemis/drivers/page.tsx` | Propulsion | M | active | Drivers d'engagement |
 | `/console/artemis/interventions/page.tsx` | Propulsion | M | active | Examen versionné, mission liée, rejet motivé (ADR-0201) |
 | `/console/artemis/media/page.tsx` | Propulsion | M | active | Media buy/plan |
-| `/console/artemis/missions/page.tsx` | Propulsion | M | active | Missions production |
+| `/console/artemis/missions/page.tsx` | Propulsion | M | active | Missions accessibles, colonnes métier, besoin exact ; réception native 405 au registre |
 | `/console/artemis/pr/page.tsx` | Propulsion | M | active | RP / publications |
 | `/console/artemis/scheduler/page.tsx` | Propulsion | M | active | Calendrier |
 | `/console/artemis/skill-tree/page.tsx` | Propulsion | M | active | Sequences (skill tree) |

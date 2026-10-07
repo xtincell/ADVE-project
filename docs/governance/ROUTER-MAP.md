@@ -35,7 +35,7 @@ Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE
 | `glory.ts` | Glory tools API | M | point gouverné présent |
 | `campaign.ts` | Campagnes lecture/édition | M | point gouverné présent |
 | `campaign-manager.ts` | Orchestration campagnes (49KB) | M | point gouverné présent |
-| `mission.ts` | Missions (21KB) | M | point gouverné présent |
+| `mission.ts` | Missions et droits de lecture | M | point gouverné présent ; portée admin reçue sur PostgreSQL, modes guilde/assigné conservés |
 | `intervention.ts` | Demandes Signal → Mission / rejet motivé | M | commandes gouvernées versionnées, transaction atomique, ADR-0201 |
 | `media-buying.ts` | Plan media + buying | M | point gouverné présent |
 | `pr.ts` | RP / publications | M | point gouverné présent |

@@ -20,6 +20,13 @@ SLA, responsable ou génération déduits. Erreur/conflit → relire puis décid
 Le modèle InterventionRequest sans consommateur src identifié n’est pas un
 second chemin d’écriture ; sa réconciliation runtime reste au registre C1/C3.
 
+Réception native 404 : deux besoins synthétiques BLISS, une seule Mission DRAFT,
+retrait motivé et conflit/relecture reçus dans les deux portails. Le suivi 405
+lit les colonnes Mission (mode/slaDeadline/assignee) et le besoin description,
+sans confondre absence de mesure datée et livraison à l'heure. La portée admin
+ne s'exprime pas par un OR contenant un objet vide, qui masque les non-assignées.
+Les tests PostgreSQL gardent la séparation des opérateurs et les modes restreints.
+
 ```
    ENTRÉES (templates)            TRANSFORMATION (mécanique)              SORTIES (templates)
    intake · brief · sources  ──►  pillar-gateway (writePillarAndScore)  ──►  Oracle 35 · Glory/BrandAsset
